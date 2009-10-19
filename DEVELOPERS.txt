@@ -92,8 +92,8 @@ a) Adding files to the library :
 
   In this case, the file you'll have to modify is 'src/CMakeLists.txt'. You'll
 just need to add your .c files in the library target (both static and dynamic)
-which means add your file to the "add_library (ckaapi SHARED ..." and
-"add_library (ckaapi-static STATIC ...)" command.
+which means add your file to the "add_library (xkaapi SHARED ..." and
+"add_library (xkaapi-static STATIC ...)" command.
 
   Then you may need to have some steps done during the build system creation
 (cmake command), I recommend you have a look at what we currently do during this

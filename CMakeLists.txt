@@ -1,6 +1,6 @@
 ##
 ##  CMakeLists.txt
-##  ckaapi
+##  xkaapi
 ##
 ##  Created by CL and TG on 04/02/09.
 ##  Copyright 2009 INRIA. All rights reserved.
@@ -62,7 +62,7 @@ macro(cpack_optional_append _list _cond _item)
 endmacro(cpack_optional_append _list _cond _item)
 
 set (CPACK_DEBIAN_PACKAGE_MAINTAINER "christophe laferriere")
-set (CPACK_DEBIAN_PACKAGE_NAME "libckaapi-dev")
+set (CPACK_DEBIAN_PACKAGE_NAME "libxkaapi-dev")
 set (CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${ARCH})
 set (CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.3.1-6), libgcc1 (>= 1:3.4.2-12)")
 
@@ -97,14 +97,14 @@ endif(NOT CPACK_GENERATOR)
 
 set (CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.txt")
 set (CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.txt")
-set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "CKaapi is a C library that allows to
+set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "X-Kaapi is a C library that allows to
   execute multithreaded computation with data flow synchronization between
   threads")
 
 #set (CPACK_PACKAGE_INSTALL_DIRECTORY "/usr/local")
 #set (CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMake_VERSION_MAJOR}.${CMake_VERSION_MINOR}")
 
-set (CPACK_PACKAGE_NAME "libckaapi")
+set (CPACK_PACKAGE_NAME "libxkaapi")
 set (CPACK_PACKAGE_VENDOR "INRIA")
 set (CPACK_PACKAGE_VERSION_MAJOR "1")
 set (CPACK_PACKAGE_VERSION_MINOR "0")

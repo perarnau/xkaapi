@@ -1,6 +1,6 @@
 ##
 ##  CMakeLists.txt
-##  ckaapi
+##  xkaapi
 ##
 ##  Created by CL and TG on 04/02/09.
 ##  Copyright 2009 INRIA. All rights reserved.
@@ -16,7 +16,7 @@ add_definitions ( "-Wall -std=c99 -pedantic -g" )
 ## LIBRARY BEG ##
 
 # Shared lib :
-add_library (ckaapi SHARED 
+add_library (xkaapi SHARED 
   thread/kaapi_attr_affinity.c thread/kaapi_attr_destroy.c
   thread/kaapi_attr_detach.c thread/kaapi_attr_inheritedsched.c thread/kaapi_attr_init.c
   thread/kaapi_attr_schedparam.c thread/kaapi_attr_schedpolicy.c thread/kaapi_attr_scope.c
@@ -46,10 +46,10 @@ add_library (ckaapi SHARED
 )
 
 # Version number :
-set_target_properties(ckaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
+set_target_properties(xkaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
 
 # Static lib :
-add_library (ckaapi-static STATIC 
+add_library (xkaapi-static STATIC 
   thread/kaapi_attr_affinity.c thread/kaapi_attr_destroy.c
   thread/kaapi_attr_detach.c thread/kaapi_attr_inheritedsched.c thread/kaapi_attr_init.c
   thread/kaapi_attr_schedparam.c thread/kaapi_attr_schedpolicy.c thread/kaapi_attr_scope.c
@@ -78,12 +78,12 @@ add_library (ckaapi-static STATIC
   workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
 )
 
-set_target_properties(ckaapi-static PROPERTIES OUTPUT_NAME "ckaapi")
+set_target_properties(xkaapi-static PROPERTIES OUTPUT_NAME "xkaapi")
 
 # These next two lines are required but it is unclear exactly what they do.
 # The CMake FAQ mentions they are necessary and it does not work otherwise.
-set_target_properties(ckaapi PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-set_target_properties(ckaapi-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(xkaapi PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(xkaapi-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 ## LIBRARY END ##
 #################
@@ -200,7 +200,7 @@ try_run (
   KAAPI_MUTEX_INITIALIZER_COMPILE_RESULT
   ${CMAKE_BINARY_DIR}
   ${CMAKE_SOURCE_DIR}/config/mutex_initializer.c
-  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src"
+  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
   RUN_OUTPUT_VARIABLE KAAPI_MUTEX_INITIALIZER)
 
 if (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
@@ -215,7 +215,7 @@ try_run (
   KAAPI_COND_INITIALIZER_COMPILE_RESULT
   ${CMAKE_BINARY_DIR}
   ${CMAKE_SOURCE_DIR}/config/cond_initializer.c
-  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src"
+  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
   RUN_OUTPUT_VARIABLE KAAPI_COND_INITIALIZER)
 
 if (KAAPI_COND_INITIALIZER_RUN_RESULT)
@@ -230,7 +230,7 @@ try_run (
   KAAPI_ONCE_INITIALIZER_COMPILE_RESULT
   ${CMAKE_BINARY_DIR}
   ${CMAKE_SOURCE_DIR}/config/once_initializer.c
-  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src"
+  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
   RUN_OUTPUT_VARIABLE KAAPI_ONCE_INIT)
 
 if (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
@@ -293,15 +293,15 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/kaapi_type.h.in ${CMAKE_CURRENT_BINA
 
 find_library(PTHREAD_LIBRARY pthread)
 
-target_link_libraries(ckaapi ${PTHREAD_LIBRARY})
-target_link_libraries(ckaapi-static ${PTHREAD_LIBRARY})
+target_link_libraries(xkaapi ${PTHREAD_LIBRARY})
+target_link_libraries(xkaapi-static ${PTHREAD_LIBRARY})
 
 if (HAVE_NUMA_H)
   find_library(NUMA_LIBRARY numa)
-  target_link_libraries(ckaapi ${NUMA_LIBRARY})
+  target_link_libraries(xkaapi ${NUMA_LIBRARY})
 endif (HAVE_NUMA_H)
 
-install(TARGETS ckaapi ckaapi-static
+install(TARGETS xkaapi xkaapi-static
   LIBRARY DESTINATION local/lib
   ARCHIVE DESTINATION local/lib/static)
 

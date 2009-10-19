@@ -1,17 +1,17 @@
 ##
 ##  CMakeLists.txt
-##  ckaapi
+##  xkaapi
 ##
 ##  Created by CL and TG on 04/02/09.
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
-include_directories (${CMAKE_SOURCE_DIR}/src/ ${CMAKE_BINARY_DIR}/src/) 
+include_directories (${CMAKE_SOURCE_DIR}/src/ ${CMAKE_BINARY_DIR}/src/ ${CMAKE_SOURCE_DIR}/src/thread ${CMAKE_SOURCE_DIR}/src//workstealing ${CMAKE_SOURCE_DIR}/src/dfg) 
 link_directories (${CMAKE_BINARY_DIR}/src/ /usr/lib ) 
 
 add_definitions ( "-Wall -pedantic -g" )
 set (CMAKE_C_FLAGS "-std=c99")
-set (CKAAPI_TEST_LINK_LIBS ckaapi-static)
+set (CKAAPI_TEST_LINK_LIBS xkaapi-static)
 
 # Executable Section :
 add_executable (print_sizestruct     print_sizestruct.c) 
