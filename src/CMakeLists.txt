@@ -161,7 +161,7 @@ set (CMAKE_REQUIRED_LIBRARIES "pthread")
 check_function_exists ("pthread_attr_setaffinity_np" KAAPI_USE_SCHED_AFFINITY)
 
 if (KAAPI_USE_SCHED_AFFINITY)
-  message ("++ CKaapi configured for affinity")
+  message ("++ X-Kaapi configured for affinity")
 endif (KAAPI_USE_SCHED_AFFINITY)
 
 ## CHECK FUNCTION END ##
