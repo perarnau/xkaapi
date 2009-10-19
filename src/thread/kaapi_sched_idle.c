@@ -1,6 +1,6 @@
 /*
 ** kaapi_sched_idle.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
@@ -82,7 +82,7 @@ redo_post:
 
 ////WARNING/ HERE GARBAGE !!! if (i==currbloc->_top) currbloc->_top = currbloc->_bottom = 0;
 
-        ckaapi_assert( thread->_state == KAAPI_THREAD_SUSPEND )
+        xkaapi_assert( thread->_state == KAAPI_THREAD_SUSPEND )
 
         /* activate thread */
         thread->_state = KAAPI_THREAD_RUNNING;
@@ -156,15 +156,15 @@ redo_post:
   
   /* lock victim and process my request and may be other request 
   */
-  ckaapi_assert( 0 == kaapi_mutex_lock( &victim_processor->_lock ) );
+  xkaapi_assert( 0 == kaapi_mutex_lock( &victim_processor->_lock ) );
   while (kaapi_thief_request_status(&proc->_the_steal_processor->_request) == KAAPI_REQUEST_S_POSTED)
   {
     /* here request should be cancelled... */
     kaapi_steal_processor( victim_processor );
   }
-  ckaapi_assert( 0 == kaapi_mutex_unlock( &victim_processor->_lock ) );
+  xkaapi_assert( 0 == kaapi_mutex_unlock( &victim_processor->_lock ) );
 
-  ckaapi_assert( kaapi_thief_request_status(&proc->_the_steal_processor->_request) != KAAPI_REQUEST_S_POSTED );
+  xkaapi_assert( kaapi_thief_request_status(&proc->_the_steal_processor->_request) != KAAPI_REQUEST_S_POSTED );
 
   /* test if my request is ok
   */

@@ -1,6 +1,6 @@
 /*
  *  test_copy.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by DT on fevrier 2009.
  *  Copyright 2009 INRIA. All rights reserved.

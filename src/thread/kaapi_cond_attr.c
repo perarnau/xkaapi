@@ -1,6 +1,6 @@
 /*
 ** kaapi_cond_attr.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:20:03 2009
 ** Copyright 2009 INRIA.
@@ -45,7 +45,7 @@
 */
 #include "kaapi_impl.h"
 
-/* The ckaapi implementation supports no attributes for
+/* The xkaapi implementation supports no attributes for
    conditions. The functions on condition attributes are included only
    for compliance with the POSIX standard.
 */

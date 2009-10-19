@@ -1,6 +1,6 @@
 /*
 ** kaapi_specific_get.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:17:43 2009
 ** Copyright 2009 INRIA.
@@ -47,7 +47,7 @@
 
 void* kaapi_getspecific(kaapi_key_t key)
 {
-  ckaapi_assert (kaapi_global_keys[key].next == -1);
+  xkaapi_assert (kaapi_global_keys[key].next == -1);
   
   kaapi_t thread = kaapi_self();
   

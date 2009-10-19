@@ -1,6 +1,6 @@
 /*
 ** kaapi_specific_set.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:17:37 2009
 ** Copyright 2009 INRIA.

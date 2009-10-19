@@ -1,6 +1,6 @@
 /*
  * test_create2.c
- * ckaapi
+ * xkaapi
  *
  * Output :
  * n lines of thread creation

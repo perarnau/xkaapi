@@ -1,6 +1,6 @@
 /*
 ** kaapi_mutex_destroy.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:46 2009
 ** Copyright 2009 INRIA.
@@ -52,7 +52,7 @@ int kaapi_mutex_destroy(kaapi_mutex_t *mutex)
   if (KAAPI_ATOMIC_READ(&mutex->_lock) == 1)
     return EBUSY;
   
-  ckaapi_assert ( 0 == pthread_mutex_destroy(&mutex->_mutex));
+  xkaapi_assert ( 0 == pthread_mutex_destroy(&mutex->_mutex));
   
   return 0;
 }

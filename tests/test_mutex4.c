@@ -1,6 +1,6 @@
 /*
  *  test_mutex4.c
- *  ckaapi
+ *  xkaapi
  *
  *  Created by CL and TG on 13/03/09.
  *  Copyright 2009 INRIA. All rights reserved.

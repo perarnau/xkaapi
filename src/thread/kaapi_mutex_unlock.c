@@ -1,6 +1,6 @@
 /*
 ** kaapi_mutex_unlock.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:16 2009
 ** Copyright 2009 INRIA.
@@ -50,7 +50,7 @@
 */
 int kaapi_mutex_unlock(kaapi_mutex_t *mutex)
 {
-  ckaapi_assert ( 0 == pthread_mutex_lock (&mutex->_mutex) );
+  xkaapi_assert ( 0 == pthread_mutex_lock (&mutex->_mutex) );
   
   kaapi_t thread = kaapi_self();
   
@@ -59,7 +59,7 @@ int kaapi_mutex_unlock(kaapi_mutex_t *mutex)
     if (mutex->_nb_lock > 1)
     { 
       mutex->_nb_lock--;
-      ckaapi_assert ( 0 == pthread_mutex_unlock (&mutex->_mutex) );
+      xkaapi_assert ( 0 == pthread_mutex_unlock (&mutex->_mutex) );
       return 0;
     }
     else
@@ -73,7 +73,7 @@ int kaapi_mutex_unlock(kaapi_mutex_t *mutex)
   {
     KAAPI_ATOMIC_WRITE( &mutex->_lock, 0);
     
-    ckaapi_assert ( 0 == pthread_mutex_unlock (&mutex->_mutex) );
+    xkaapi_assert ( 0 == pthread_mutex_unlock (&mutex->_mutex) );
     
     return 0;
   }
@@ -88,9 +88,9 @@ int kaapi_mutex_unlock(kaapi_mutex_t *mutex)
   
   // Only for SYSTEM_SCOPE threads ...
   if (thread->_scope == KAAPI_SYSTEM_SCOPE)
-    ckaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
+    xkaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
 
-  ckaapi_assert ( 0 == pthread_mutex_unlock (&mutex->_mutex) ); 
+  xkaapi_assert ( 0 == pthread_mutex_unlock (&mutex->_mutex) ); 
   
   return 0;
 }

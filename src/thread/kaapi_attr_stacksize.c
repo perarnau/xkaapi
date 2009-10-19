@@ -1,6 +1,6 @@
 /*
 ** kaapi_attr_stacksize.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:20:07 2009
 ** Copyright 2009 INRIA.

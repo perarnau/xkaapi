@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:17:57 2009
 ** Copyright 2009 INRIA.
@@ -47,9 +47,9 @@
 void* kaapi_sched_run_processor( void* arg )
 {
   kaapi_processor_t* proc = (kaapi_processor_t*)arg;
-  ckaapi_assert( proc != 0);
+  xkaapi_assert( proc != 0);
   
-  ckaapi_assert ( 0 == pthread_setspecific( kaapi_current_processor_key, proc ) );
+  xkaapi_assert ( 0 == pthread_setspecific( kaapi_current_processor_key, proc ) );
   
   /* change the scope of the running thread to be a KAAPI_PROCESSOR_SCOPE */
   kaapi_thread_descr_t* td = (kaapi_thread_descr_t*)pthread_getspecific(kaapi_current_thread_key);

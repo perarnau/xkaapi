@@ -1,6 +1,6 @@
 /*
 ** kaapi_cond_destroy.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:55 2009
 ** Copyright 2009 INRIA.
@@ -53,7 +53,7 @@ int kaapi_cond_destroy(kaapi_cond_t *cond)
   if (!KAAPI_QUEUE_EMPTY(&cond->_th_q)) return EBUSY;
   if (!KAAPI_QUEUE_EMPTY(&cond->_kttl_q)) return EBUSY;
   
-  ckaapi_assert ( pthread_mutex_destroy(&cond->_mutex) == 0);
-  //ckaapi_assert ( pthread_cond_destroy(&cond->_cond) == 0);
+  xkaapi_assert ( pthread_mutex_destroy(&cond->_mutex) == 0);
+  //xkaapi_assert ( pthread_cond_destroy(&cond->_cond) == 0);
   return 0;
 }

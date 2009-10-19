@@ -1,6 +1,6 @@
 /*
  *  test_transform.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by TG on 18/02/09.
  *  Copyright 2009 INRIA. All rights reserved.
@@ -85,7 +85,7 @@ protected:
           output_work->_ibeg = local_end-bloc;
           local_end -= bloc;
           output_work->_obeg = obeg + (output_work->_ibeg - ibeg);
-          ckaapi_assert( output_work->_iend - output_work->_ibeg >0);
+          xkaapi_assert( output_work->_iend - output_work->_ibeg >0);
           output_work->_op   = op;
 
           /* reply ok (1) to the request */
@@ -101,7 +101,7 @@ protected:
     }
   /* mute the end of input work of the victim */
   iend  = middle;
-  ckaapi_assert( iend - ibeg >0);
+  xkaapi_assert( iend - ibeg >0);
   return;
       
 reply_failed:

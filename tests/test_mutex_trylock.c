@@ -1,6 +1,6 @@
 /*
  * test_mutex_trylock.c
- * ckaapi
+ * xkaapi
  *
  * Output :
  *

@@ -1,6 +1,6 @@
 /*
  * test_cond2.c
- * ckaapi
+ * xkaapi
  *
  * Output :
  *

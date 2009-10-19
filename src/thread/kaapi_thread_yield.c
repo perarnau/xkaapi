@@ -1,6 +1,6 @@
 /*
 ** kaapi_thread_yield.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:16:23 2009
 ** Copyright 2009 INRIA.
@@ -51,7 +51,7 @@ static int kaapi_always_true(void* dummy)
 void kaapi_yield(void)
 {
   kaapi_t thread = kaapi_self();
-  ckaapi_assert( thread !=0 );
+  xkaapi_assert( thread !=0 );
   
   if (thread->_scope == KAAPI_PROCESS_SCOPE)
   {

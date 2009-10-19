@@ -1,6 +1,6 @@
 /*
  *  test_sort.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by DT on juin 2009.
  *  Copyright 2009 INRIA. All rights reserved.
@@ -169,7 +169,7 @@ protected:
          //output_work->_work_list = new std::list<typename std::pair<RandomAccessIterator, RandomAccessIterator> >(); 
          victim_data->_work_list->pop_back();
 
-         //ckaapi_assert( output_work->_iend - output_work->_ibeg >=0);
+         //xkaapi_assert( output_work->_iend - output_work->_ibeg >=0);
         //std::cout << "output_work->_iend-output_work->_ibeg=" << output_work->_iend-output_work->_ibeg << std::endl;
           /* reply ok (1) to the request */
          kaapi_request_reply( request[i], stealcontext, &thief_entrypoint, 1, CKAAPI_MASTER_FINALIZE_FLAG);
@@ -188,7 +188,7 @@ protected:
   /* mute the beg and end of input work of the victim */
   victim_data->_iend  = local_end;
   victim_data->_ibeg  = local_beg;
-  ckaapi_assert( victim_data->_iend - victim_data->_ibeg >=0);
+  xkaapi_assert( victim_data->_iend - victim_data->_ibeg >=0);
   return;
 
    reply_failed :
@@ -205,7 +205,7 @@ protected:
    /* mute the beg and end of input work of the victim */
   victim_data->_iend  = local_end;
   victim_data->_ibeg  = local_beg;
-  ckaapi_assert( victim_data->_iend - victim_data->_ibeg >=0);
+  xkaapi_assert( victim_data->_iend - victim_data->_ibeg >=0);
  }
 
 

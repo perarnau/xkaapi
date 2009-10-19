@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** Created on Tue Mar 31 15:21:08 2009
 ** Copyright 2009 INRIA.
 **
@@ -73,7 +73,7 @@ typedef struct kaapi_synchro_opfunc_t {
 enum { KAAPI_SSTRUCTURE_DATA_MAX= (KAAPI_CACHE_LINE-sizeof(int)) };
 
 #define KAAPI_INHERITE_FROM_SSTRUCT_T \
-  int volatile _status
+  int _status
 
 typedef struct kaapi_s_structure_t {
   KAAPI_INHERITE_FROM_SSTRUCT_T;

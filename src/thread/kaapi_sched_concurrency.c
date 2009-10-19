@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:17:57 2009
 ** Copyright 2009 INRIA.
@@ -70,8 +70,8 @@ int kaapi_setconcurrency( int concurrency )
   {
     /* set attr to the posix thread */
     kaapi_attr_t attr;
-    ckaapi_assert ( 0 == kaapi_attr_init( &attr ) );
-    ckaapi_assert ( 0 == kaapi_attr_setdetachstate( &attr, 1 ) );
+    xkaapi_assert ( 0 == kaapi_attr_init( &attr ) );
+    xkaapi_assert ( 0 == kaapi_attr_setdetachstate( &attr, 1 ) );
     attr._scope = KAAPI_PROCESSOR_SCOPE;
 #if defined(KAAPI_USE_SCHED_AFFINITY)
     if (default_param.usecpuset !=0)
@@ -85,12 +85,12 @@ int kaapi_setconcurrency( int concurrency )
     stsize = KAAPI_STACK_MIN;
     staddr = malloc(stsize);
 
-    ckaapi_assert ( 0 == kaapi_attr_setstacksize( &attr, stsize ));
-    ckaapi_assert ( 0 == kaapi_attr_setstackaddr( &attr, staddr ));
+    xkaapi_assert ( 0 == kaapi_attr_setstacksize( &attr, stsize ));
+    xkaapi_assert ( 0 == kaapi_attr_setstackaddr( &attr, staddr ));
 
     /* increment number of running thread */
     kaapi_barrier_td_setactive( &kaapi_stealapi_barrier_term, 1 );
-    ckaapi_assert( 0 == kaapi_create( &thread, &attr, &kaapi_sched_run_processor, all_processors[i-1] ));    
+    xkaapi_assert( 0 == kaapi_create( &thread, &attr, &kaapi_sched_run_processor, all_processors[i-1] ));    
   }
   
   return 0;

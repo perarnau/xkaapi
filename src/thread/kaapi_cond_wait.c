@@ -1,6 +1,6 @@
 /*
 ** kaapi_cond_wait.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:38 2009
 ** Copyright 2009 INRIA.
@@ -70,7 +70,7 @@ int kaapi_cond_wait(kaapi_cond_t *__restrict cond, kaapi_mutex_t *__restrict mut
   
   if (thread->_scope == KAAPI_SYSTEM_SCOPE)
   {
-    ckaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+    xkaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
     
     kaapi_mutex_unlock (mutex);
     
@@ -79,9 +79,9 @@ int kaapi_cond_wait(kaapi_cond_t *__restrict cond, kaapi_mutex_t *__restrict mut
     
     while (thread->_state != KAAPI_THREAD_RUNNING)
     {
-      ckaapi_assert ( 0 == pthread_cond_wait (&thread->_cond, &cond->_mutex) );
+      xkaapi_assert ( 0 == pthread_cond_wait (&thread->_cond, &cond->_mutex) );
     }
-    ckaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+    xkaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
     kaapi_mutex_lock (mutex);
     
     return 0;

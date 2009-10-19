@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:22:28 2009
 ** Copyright 2009 INRIA.
@@ -78,9 +78,9 @@ redo:
   else if (c->_state == KAAPI_CLOSURE_STEAL) 
   { 
     kaapi_t thread = kaapi_self();
-    ckaapi_assert( thread->_scope == KAAPI_PROCESS_SCOPE );
+    xkaapi_assert( thread->_scope == KAAPI_PROCESS_SCOPE );
     kaapi_sched_suspend ( thread->_proc, thread, &kaapi_dfg_closure_is_term, c );
-    ckaapi_assert( KAAPI_DFG_CLOSURE_GETSTATE(c) == KAAPI_CLOSURE_TERM );
+    xkaapi_assert( KAAPI_DFG_CLOSURE_GETSTATE(c) == KAAPI_CLOSURE_TERM );
   }
   if (KAAPI_DFG_CLOSURE_GETSTATE(c) == KAAPI_CLOSURE_TERM) 
   { /* execute the terminaison code */

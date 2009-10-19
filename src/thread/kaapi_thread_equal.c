@@ -1,6 +1,6 @@
 /*
 ** kaapi_thread_equal.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:16:43 2009
 ** Copyright 2009 INRIA.

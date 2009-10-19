@@ -1,6 +1,6 @@
 /*
  *  test_find_if.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by TG on 18/02/09.
  *  Copyright 2009 INRIA. All rights reserved.

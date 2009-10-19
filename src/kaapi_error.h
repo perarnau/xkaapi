@@ -1,6 +1,6 @@
 /*
 ** kaapi_error.h
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:09 2009
 ** Copyright 2009 INRIA.
@@ -51,13 +51,13 @@ extern "C" {
 #endif
 
 #if defined(NDEBUG)
-#  define ckaapi_assert( cond ) if (!(cond)) abort();
-#  define ckaapi_assert_debug( cond )
+#  define xkaapi_assert( cond ) if (!(cond)) abort();
+#  define xkaapi_assert_debug( cond )
 #else
 #  include <stdio.h>
 #  include <stdlib.h>
-#  define ckaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
-#  define ckaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
+#  define xkaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
+#  define xkaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
 #endif
 
 #if defined(__cplusplus)

@@ -1,6 +1,6 @@
 /*
 ** kaapi_dfg.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:22:28 2009
 ** Copyright 2009 INRIA.

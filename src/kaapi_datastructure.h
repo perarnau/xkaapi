@@ -1,6 +1,6 @@
 /*
 ** kaapi_datastructure.h
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:27 2009
 ** Copyright 2009 INRIA.

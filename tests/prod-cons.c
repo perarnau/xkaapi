@@ -1,6 +1,6 @@
 /*
  * prod-cons.c
- * ckaapi
+ * xkaapi
  *
  * Output :
  *

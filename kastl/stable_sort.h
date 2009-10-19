@@ -1,6 +1,6 @@
 /*
  *  test_stable_sort.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by DT on fevrier 2009.
  *  Copyright 2009 INRIA. All rights reserved.
@@ -99,7 +99,7 @@ protected:
           //std::cout << "output_work->_ibeg - ibeg=" << output_work->_ibeg - ibeg << std::endl;
           std::cout << "output_work->_buf-buf=" << output_work->_buf-buf << std::endl;
           output_work->_comp = comp;
-          ckaapi_assert( output_work->_iend - output_work->_ibeg >0);
+          xkaapi_assert( output_work->_iend - output_work->_ibeg >0);
 
           /* reply ok (1) to the request */
           kaapi_request_reply( request[i], stealcontext, &thief_entrypoint, 1, CKAAPI_MASTER_FINALIZE_FLAG);
@@ -114,7 +114,7 @@ protected:
     }
   /* mute the end of input work of the victim */
   iend  = local_end;
-  ckaapi_assert( iend - ibeg >0);
+  xkaapi_assert( iend - ibeg >0);
   return;
 
 reply_failed:

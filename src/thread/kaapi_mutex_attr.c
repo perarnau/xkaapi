@@ -1,6 +1,6 @@
 /*
 ** kaapi_mutex_attr.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:49 2009
 ** Copyright 2009 INRIA.

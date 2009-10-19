@@ -1,6 +1,6 @@
 /*
 ** kaapi_thread_exit.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:16:40 2009
 ** Copyright 2009 INRIA.

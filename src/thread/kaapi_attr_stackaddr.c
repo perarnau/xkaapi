@@ -1,6 +1,6 @@
 /*
 ** kaapi_attr_stackaddr.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:20:16 2009
 ** Copyright 2009 INRIA.

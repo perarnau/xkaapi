@@ -1,6 +1,6 @@
 /*
 ** kaapi_param.h
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:11 2009
 ** Copyright 2009 INRIA.

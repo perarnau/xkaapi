@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:17:57 2009
 ** Copyright 2009 INRIA.
@@ -126,12 +126,12 @@ struct kaapi_thread_descr_t* allocate_thread_descriptor( int scope, int detachst
   
   /* init its conditions, mutex */
   if (scope != KAAPI_PROCESS_SCOPE)
-    ckaapi_assert ( 0 == pthread_cond_init(&td->_cond, 0) );
+    xkaapi_assert ( 0 == pthread_cond_init(&td->_cond, 0) );
 
   if (detachstate ==0)
   {
-    ckaapi_assert ( 0 == pthread_mutex_init(&td->_mutex_join, 0) );
-    ckaapi_assert ( 0 == pthread_cond_init(&td->_cond_join, 0) );
+    xkaapi_assert ( 0 == pthread_mutex_init(&td->_mutex_join, 0) );
+    xkaapi_assert ( 0 == pthread_cond_init(&td->_cond_join, 0) );
   }
   return td;
 }

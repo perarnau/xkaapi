@@ -1,6 +1,6 @@
 /*
  * test_once.c
- * ckaapi
+ * xkaapi
  *
  * Output :
  *

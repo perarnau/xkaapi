@@ -1,6 +1,6 @@
 /*
 ** kaapi_cond_broadcast.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:20:00 2009
 ** Copyright 2009 INRIA.
@@ -47,7 +47,7 @@
 
 int kaapi_cond_broadcast(kaapi_cond_t *cond)
 {
-  ckaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+  xkaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
   
   struct timeval now;
   kaapi_t thread;
@@ -58,7 +58,7 @@ int kaapi_cond_broadcast(kaapi_cond_t *cond)
     KAAPI_QUEUE_POP_FRONT(&cond->_th_q, thread);
     thread->_state = KAAPI_THREAD_RUNNING;
     
-    ckaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
+    xkaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
   }
   
   while (!KAAPI_QUEUE_EMPTY(&cond->_kttl_q))
@@ -74,7 +74,7 @@ int kaapi_cond_broadcast(kaapi_cond_t *cond)
     }
   }
   
-  ckaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+  xkaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
   
   return 0;
 }

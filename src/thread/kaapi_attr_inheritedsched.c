@@ -1,6 +1,6 @@
 /*
 ** kaapi_attr_inheritedsched.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:20:23 2009
 ** Copyright 2009 INRIA.

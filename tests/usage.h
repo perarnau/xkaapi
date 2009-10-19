@@ -1,6 +1,6 @@
 /*
  *  usage.h
- *  ckaapi
+ *  xkaapi
  *
  *  Created by CL and TG on 25/02/09.
  *  Copyright 2009 INRIA. All rights reserved.

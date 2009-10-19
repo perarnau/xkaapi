@@ -1,6 +1,6 @@
 /*
 ** kaapi_private_structure.h
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:09 2009
 ** Copyright 2009 INRIA.
@@ -262,7 +262,7 @@ extern kaapi_atomic_t kaapi_global_keys_front;
  */
 #if defined(KAAPI_USE_SCHED_AFFINITY)
 /** Mapping of virtual kaapi processor to physical cpu.
- In the execution model of KAAPI, a set of physical cpus is used to schedule kernel threads created by ckaapi.
+ In the execution model of KAAPI, a set of physical cpus is used to schedule kernel threads created by xkaapi.
  This set of physicall cpus is called virtual kaapi processors: KAAPI maintains a mapping of a virtual kaapi
  processor to a physical cpu.
  A kernel thread in KAAPI could be attached to a cpuset of virtual kaapi processors that is mapped on physical

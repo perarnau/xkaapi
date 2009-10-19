@@ -1,6 +1,6 @@
 /*
  *  test_max_element.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by TD on Avril 09.
  *  Copyright 2009 INRIA. All rights reserved.

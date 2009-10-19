@@ -1,6 +1,6 @@
 /*
 ** kaapi_thread_self.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:16:30 2009
 ** Copyright 2009 INRIA.
@@ -48,7 +48,7 @@
 kaapi_t kaapi_self(void)
 {
   kaapi_thread_descr_t* td = (kaapi_thread_descr_t*)pthread_getspecific(kaapi_current_thread_key);
-  ckaapi_assert_debug( td !=0 );
+  xkaapi_assert_debug( td !=0 );
 
   if (td->_scope == KAAPI_PROCESSOR_SCOPE) 
   {
@@ -57,6 +57,6 @@ kaapi_t kaapi_self(void)
     return td->_proc->_sc_thread._active_thread;
   }
 
-  ckaapi_assert_debug( td->_scope == KAAPI_SYSTEM_SCOPE);
+  xkaapi_assert_debug( td->_scope == KAAPI_SYSTEM_SCOPE);
   return td;
 }

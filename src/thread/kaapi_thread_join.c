@@ -1,6 +1,6 @@
 /*
 ** kaapi_thread_join.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:16:38 2009
 ** Copyright 2009 INRIA.
@@ -57,7 +57,7 @@ int kaapi_join(kaapi_t thread, void **value_ptr)
   {
     err = pthread_cond_wait( &thread->_cond_join, &thread->_mutex_join );
     if (err !=0) {
-      ckaapi_assert ( 0 == pthread_mutex_unlock( &thread->_mutex_join ));
+      xkaapi_assert ( 0 == pthread_mutex_unlock( &thread->_mutex_join ));
       return err;
     }
   }

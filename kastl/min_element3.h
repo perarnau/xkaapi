@@ -1,6 +1,6 @@
 /*
  *  test_min_element.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by DT on fevrier 2009.
  *  Copyright 2009 INRIA. All rights reserved.
@@ -107,7 +107,7 @@ protected:
           output_work->_comp = comp;
           output_work->_min_element_pos = output_work->_ibeg;
           output_work->_steal_count = 0;
-          //ckaapi_assert( output_work->_iend - output_work->_ibeg >0);
+          //xkaapi_assert( output_work->_iend - output_work->_ibeg >0);
 
           /* reply ok (1) to the request */
           kaapi_request_reply( request[i], stealcontext, &thief_entrypoint, 1, CKAAPI_MASTER_FINALIZE_FLAG);
@@ -122,7 +122,7 @@ protected:
     }
   /* mute the end of input work of the victim */
   iend  = local_end;
-  //ckaapi_assert( iend - ibeg >0);
+  //xkaapi_assert( iend - ibeg >0);
   return;
       
 reply_failed:
@@ -139,7 +139,7 @@ reply_failed:
 
     /* mute the end of input work of the victim */
     iend  = local_end;
-  //ckaapi_assert( iend - ibeg >0);
+  //xkaapi_assert( iend - ibeg >0);
   }
 
 

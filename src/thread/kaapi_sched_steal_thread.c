@@ -1,6 +1,6 @@
 /*
 ** kaapi_sched_steal.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:02 2009
 ** Copyright 2009 INRIA.
@@ -80,7 +80,7 @@ int kaapi_sched_steal_sc_thread(
   kaapi_processor_t* proc = (kaapi_processor_t*)((char*)kpsp - sizeof(kaapi_processor_t));
   kaapi_steal_thread_context_t* scthread = (kaapi_steal_thread_context_t*)sc;
 
-  ckaapi_assert_debug( &proc->_sc_thread == scthread );
+  xkaapi_assert_debug( &proc->_sc_thread == scthread );
   
   /* my be concurrency between thief and the victim, kpss */
   if (count ==0) return 0;

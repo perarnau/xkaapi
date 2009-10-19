@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:21:08 2009
 ** Copyright 2009 INRIA.
@@ -57,7 +57,7 @@ int kaapi_steal_processor_init( kaapi_steal_processor_t* kpss, int index, int sz
   kpss->_stackaddr = kpss->_sp = (char*)(staddr);
   kpss->_stackend  = sz+(char*)(staddr);
   kpss->_state = KAAPI_PROCESSOR_S_CREATED;
-  ckaapi_assert(0 == kaapi_mutex_init(&kpss->_lock, 0) );
+  xkaapi_assert(0 == kaapi_mutex_init(&kpss->_lock, 0) );
   kaapi_writemem_barrier();
 
   kaapi_all_stealprocessor[ index ] = kpss;

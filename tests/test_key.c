@@ -1,6 +1,6 @@
 /*
  * test_key.c
- * ckaapi
+ * xkaapi
  *
  * Output :
  *

@@ -1,6 +1,6 @@
 /*
 ** kaapi_mutex_lock.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:32 2009
 ** Copyright 2009 INRIA.
@@ -86,7 +86,7 @@ int kaapi_mutex_lock (kaapi_mutex_t *mutex)
   
   if (thread->_scope == KAAPI_SYSTEM_SCOPE)
   {
-    ckaapi_assert( 0 == pthread_mutex_lock (&mutex->_mutex) );
+    xkaapi_assert( 0 == pthread_mutex_lock (&mutex->_mutex) );
     
     if (KAAPI_ATOMIC_CAS (&mutex->_lock, 0, 1))
     {
@@ -95,7 +95,7 @@ int kaapi_mutex_lock (kaapi_mutex_t *mutex)
         mutex->_owner = thread;
         mutex->_nb_lock++;
       }
-      ckaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
+      xkaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
       return 0;
     }
 
@@ -103,14 +103,14 @@ int kaapi_mutex_lock (kaapi_mutex_t *mutex)
     KAAPI_QUEUE_PUSH_FRONT (mutex, thread);
         
     while (thread->_state != KAAPI_THREAD_RUNNING)
-      ckaapi_assert( 0 == pthread_cond_wait (&thread->_cond, &mutex->_mutex) );
+      xkaapi_assert( 0 == pthread_cond_wait (&thread->_cond, &mutex->_mutex) );
     
     if (mutex->_type == KAAPI_MUTEX_RECURSIVE)
     { 
       mutex->_owner = thread;
       mutex->_nb_lock++;
     }
-    ckaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
+    xkaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
     
     return 0;
   }

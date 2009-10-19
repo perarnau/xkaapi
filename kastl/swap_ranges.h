@@ -1,6 +1,6 @@
 /*
  *  test_swap_ranges.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by DT on fevrier 2009.
  *  Copyright 2009 INRIA. All rights reserved.
@@ -83,7 +83,7 @@ protected:
           output_work->_ibeg = local_end-bloc;
           local_end -= bloc;
           output_work->_obeg = obeg + (output_work->_ibeg - ibeg);
-          ckaapi_assert( output_work->_iend - output_work->_ibeg >0);
+          xkaapi_assert( output_work->_iend - output_work->_ibeg >0);
 
           /* reply ok (1) to the request */
           kaapi_request_reply( request[i], stealcontext, &thief_entrypoint, 1, CKAAPI_MASTER_FINALIZE_FLAG);
@@ -98,7 +98,7 @@ protected:
     }
   /* mute the end of input work of the victim */
   iend  = local_end;
-  ckaapi_assert( iend - ibeg >0);
+  xkaapi_assert( iend - ibeg >0);
   return;
       
 reply_failed:

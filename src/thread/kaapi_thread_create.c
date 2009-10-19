@@ -1,6 +1,6 @@
 /*
 ** kaapi_thread_create.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:16:47 2009
 ** Copyright 2009 INRIA.
@@ -56,7 +56,7 @@
    is always this.
 */
 #define KAAPI_SAVE_SPACE (16)
-#define ckaapi_update_context( jb, f, sp, bz )\
+#define xkaapi_update_context( jb, f, sp, bz )\
   ((unsigned long*)jb)[0]  = (((unsigned long)sp)+bz-KAAPI_SAVE_SPACE) & ~0x1f;\
   ((unsigned long*)jb)[21] = (unsigned long)f;
 
@@ -73,7 +73,7 @@
    is always this.
 */
 #define KAAPI_SAVE_SPACE (16)
-#define ckaapi_update_context( jb, f, sp, bz )\
+#define xkaapi_update_context( jb, f, sp, bz )\
   ((unsigned long*)jb)[7]  = (((unsigned long)sp)+bz-KAAPI_SAVE_SPACE) & ~0x1f;\
   ((unsigned long*)jb)[8] = ((unsigned long)f);
 
@@ -95,7 +95,7 @@
 #define KAAPI_SAVE_SPACE (16+4)/*l ajout de 4+4*nb_arg une fois 
                                  l allignement sur 16 est effectue 
                                  pour l emplacement de l adresse de retour*/
-#define ckaapi_update_context( jb, f, sp, bz )\
+#define xkaapi_update_context( jb, f, sp, bz )\
   ((unsigned long*)jb)[8]  = (((unsigned long)sp)+bz-KAAPI_SAVE_SPACE);\
   ((unsigned long*)jb)[9]  = ((unsigned long*)jb)[8];\
   ((unsigned long*)jb)[10] = (unsigned long)0x1f;\
@@ -164,7 +164,7 @@ int kaapi_create(kaapi_t *__restrict thread, const kaapi_attr_t *__restrict attr
   {
     /* set attr to the posix thread */
     pthread_attr_t posix_attr;
-    ckaapi_assert ( 0 == pthread_attr_init( &posix_attr ));
+    xkaapi_assert ( 0 == pthread_attr_init( &posix_attr ));
     if (td->_stackaddr !=0) 
     {
 #if defined(KAAPI_USE_APPLE)
@@ -186,7 +186,7 @@ int kaapi_create(kaapi_t *__restrict thread, const kaapi_attr_t *__restrict attr
 
     /* detach state */
     if (td->_detachstate !=0) 
-      ckaapi_assert( 0 == pthread_attr_setdetachstate(&posix_attr, td->_detachstate) );
+      xkaapi_assert( 0 == pthread_attr_setdetachstate(&posix_attr, td->_detachstate) );
       
     /* set cpu set for affinity, only for kernel thread */
 #if defined(KAAPI_USE_SCHED_AFFINITY)
@@ -199,7 +199,7 @@ int kaapi_create(kaapi_t *__restrict thread, const kaapi_attr_t *__restrict attr
         if (CPU_ISSET( i, &attr->_cpuset))
           CPU_SET( kaapi_kproc2cpu[i % kaapi_countcpu], &td->_cpuset);
       }
-      ckaapi_assert( 0 == pthread_attr_setaffinity_np( &posix_attr, sizeof(cpu_set_t), &td->_cpuset));
+      xkaapi_assert( 0 == pthread_attr_setaffinity_np( &posix_attr, sizeof(cpu_set_t), &td->_cpuset));
     }
 #endif    
 
@@ -218,7 +218,7 @@ int kaapi_create(kaapi_t *__restrict thread, const kaapi_attr_t *__restrict attr
   /* create a context for a user thread */
 #if defined(KAAPI_USE_UCONTEXT)
   err = getcontext(&td->_ctxt);
-  ckaapi_assert( err == 0);
+  xkaapi_assert( err == 0);
   td->_ctxt.uc_link = 0;
   td->_ctxt.uc_stack.ss_sp    = td->_stackaddr;
   td->_ctxt.uc_stack.ss_size  = td->_stacksize;
@@ -230,17 +230,17 @@ int kaapi_create(kaapi_t *__restrict thread, const kaapi_attr_t *__restrict attr
   _setjmp(td->_ctxt);
   td->_stackaddr=(int *)((unsigned long)td->_stackaddr-((unsigned long)td->_stackaddr % (unsigned long)16)+16);
   td->_stacksize=td->_stacksize-((unsigned long)td->_stacksize % (unsigned long)16);
-  ckaapi_update_context(td->_ctxt, &kaapi_start_process_handler, ((char*)td->_stackaddr), td->_stacksize );
+  xkaapi_update_context(td->_ctxt, &kaapi_start_process_handler, ((char*)td->_stackaddr), td->_stacksize );
 #  elif defined(KAAPI_USE_ARCH_ARM)
   _setjmp(_self);
   td->_stackaddr=(int *)((unsigned long)td->_stackaddr-((unsigned long)td->_stackaddr % (unsigned long)16)+16);
   td->_stacksize=td->_stacksize-((unsigned long)td->_stacksize % (unsigned long)16);
-  ckaapi_update_context(_self, &kaapi_start_process_handler, ((char*)td->_stackaddr), td->_stacksize );
+  xkaapi_update_context(_self, &kaapi_start_process_handler, ((char*)td->_stackaddr), td->_stacksize );
 #  endif
 #else 
 #  error "not implemented"  
 #endif  
-  ckaapi_assert(running_proc != 0) 
+  xkaapi_assert(running_proc != 0) 
   /* no lock because, the running proc is doing that operation + no concurrency */
   KAAPI_WORKQUEUE_READY_PUSH(&running_proc->_sc_thread._ready_list, td );
 
@@ -257,25 +257,25 @@ void* kaapi_start_system_handler(void *arg)
   kaapi_thread_descr_t* td = (kaapi_thread_descr_t*)arg;
   
   /* set the current running thread as td */
-  ckaapi_assert( 0 == pthread_setspecific( kaapi_current_thread_key, td ) );
+  xkaapi_assert( 0 == pthread_setspecific( kaapi_current_thread_key, td ) );
   
   td->_state = KAAPI_THREAD_RUNNING;
 
   td->_return_value = (*td->_run_entrypoint)(td->_arg_entrypoint);
 
   if (td->_detachstate ==0)
-    ckaapi_assert ( 0 == pthread_mutex_lock( &td->_mutex_join ) );
+    xkaapi_assert ( 0 == pthread_mutex_lock( &td->_mutex_join ) );
   td->_state = KAAPI_THREAD_TERMINATED;
   if (td->_detachstate ==0)
-    ckaapi_assert ( 0 == pthread_cond_broadcast( &td->_cond_join ) );
+    xkaapi_assert ( 0 == pthread_cond_broadcast( &td->_cond_join ) );
   
   kaapi_dataspecific_destructor (td);
   
   if (td->_detachstate ==0)
-    ckaapi_assert ( 0 == pthread_mutex_unlock( &td->_mutex_join ) );
+    xkaapi_assert ( 0 == pthread_mutex_unlock( &td->_mutex_join ) );
 
   /* set the current running thread as 0 */
-  ckaapi_assert( 0 == pthread_setspecific( kaapi_current_thread_key, 0 ) );
+  xkaapi_assert( 0 == pthread_setspecific( kaapi_current_thread_key, 0 ) );
   
   return td->_return_value;
 }
@@ -312,29 +312,29 @@ static void* kaapi_start_process_handler(void *arg)
   kaapi_thread_descr_t* td = (kaapi_thread_descr_t*)arg;
 #endif
   
-  ckaapi_assert_debug( td->_proc == (kaapi_processor_t*)pthread_getspecific( kaapi_current_processor_key ) );
+  xkaapi_assert_debug( td->_proc == (kaapi_processor_t*)pthread_getspecific( kaapi_current_processor_key ) );
   td->_state = KAAPI_THREAD_RUNNING;
   
   /* set the current running thread as the running thread of the processor */
   td->_proc->_sc_thread._active_thread = td;
-  /*ckaapi_assert( 0 == pthread_setspecific( current_thread_key, td ) ); */
+  /*xkaapi_assert( 0 == pthread_setspecific( current_thread_key, td ) ); */
 
 redo_compute:  
   td->_return_value = (*td->_run_entrypoint)(td->_arg_entrypoint);
 
   if (td->_detachstate ==0)
-    ckaapi_assert( 0 == pthread_mutex_lock( &td->_mutex_join ) );
+    xkaapi_assert( 0 == pthread_mutex_lock( &td->_mutex_join ) );
   td->_state = KAAPI_THREAD_TERMINATED;
   if (td->_detachstate ==0)
-    ckaapi_assert( 0 == pthread_cond_broadcast( &td->_cond_join ));
+    xkaapi_assert( 0 == pthread_cond_broadcast( &td->_cond_join ));
   
   kaapi_dataspecific_destructor (td);
   
   if (td->_detachstate ==0)
-    ckaapi_assert( 0 == pthread_mutex_unlock( &td->_mutex_join ) );
+    xkaapi_assert( 0 == pthread_mutex_unlock( &td->_mutex_join ) );
   if (kaapi_sched_terminate_or_redo( td->_proc, td )) goto redo_compute;
 
-  ckaapi_assert( 0 );
+  xkaapi_assert( 0 );
   return NULL;  
 }
 

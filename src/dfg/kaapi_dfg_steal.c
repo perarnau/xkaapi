@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:22:28 2009
 ** Copyright 2009 INRIA.
@@ -64,7 +64,7 @@ void kaapi_dfg_reify_closure( kaapi_dfg_closure_t* c )
 */
 void kaapi_dfg_update_access( kaapi_access_t* a, kaapi_dfg_closure_t* clo, int i )
 {
-  ckaapi_assert_debug( KAAPI_FORMAT_GET_MODE(KAAPI_DFG_CLOSURE_GETFORMAT(clo), i) != KAAPI_ACCESS_MODE_V );
+  xkaapi_assert_debug( KAAPI_FORMAT_GET_MODE(KAAPI_DFG_CLOSURE_GETFORMAT(clo), i) != KAAPI_ACCESS_MODE_V );
   if (KAAPI_DFG_ACCESS_NEW_VERSION(a)) 
   {
     /* test if user shared points to the same data or not */

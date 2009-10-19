@@ -1,6 +1,6 @@
 /*
 ** kaapi_init.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:03 2009
 ** Copyright 2009 INRIA.
@@ -123,7 +123,7 @@ void __attribute__ ((constructor)) my_init(void)
   int i;
   default_param.stacksize = getpagesize()*4;
 
-  ckaapi_assert( 0 == pthread_key_create( &kaapi_current_thread_key, 0 ) );
+  xkaapi_assert( 0 == pthread_key_create( &kaapi_current_thread_key, 0 ) );
   kaapi_thread_descr_t* td_main_thread;  
   td_main_thread = allocate_thread_descriptor(KAAPI_SYSTEM_SCOPE, 1);
   td_main_thread->_scope = KAAPI_SYSTEM_SCOPE;
@@ -138,7 +138,7 @@ void __attribute__ ((constructor)) my_init(void)
   kaapi_global_keys[KAAPI_KEYS_MAX - 1].next = -1;
 
   /* should be the first kaapi key with value == 0 */
-  ckaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
+  xkaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
@@ -283,8 +283,8 @@ printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
   
   /* initialize kaapi_main_processor */
   kaapi_processor_t* kaapi_main_processor = kaapi_allocate_processor();
-  ckaapi_assert( kaapi_main_processor !=0 );
-  ckaapi_assert( 0 == pthread_setspecific(kaapi_current_processor_key, kaapi_main_processor ) );
+  xkaapi_assert( kaapi_main_processor !=0 );
+  xkaapi_assert( 0 == pthread_setspecific(kaapi_current_processor_key, kaapi_main_processor ) );
 
   /* TODO : set to 1  default_param.cpuset; */
   printf("[KAAPI::INIT] Current thread is: %lu\n", (unsigned long)pthread_self() );

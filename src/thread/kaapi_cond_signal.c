@@ -1,6 +1,6 @@
 /*
 ** kaapi_cond_signal.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:47 2009
 ** Copyright 2009 INRIA.
@@ -48,14 +48,14 @@
 
 int kaapi_cond_signal(kaapi_cond_t *cond)
 {
-  ckaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+  xkaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
   
   if (!KAAPI_QUEUE_EMPTY(&cond->_th_q))
   {
     kaapi_t thread;
     KAAPI_QUEUE_POP_FRONT(&cond->_th_q, thread);
     thread->_state      = KAAPI_THREAD_RUNNING;    
-    ckaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
+    xkaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
   }
   else if (!KAAPI_QUEUE_EMPTY(&cond->_kttl_q))
   {
@@ -73,6 +73,6 @@ int kaapi_cond_signal(kaapi_cond_t *cond)
     //thread->_state      = KAAPI_THREAD_RUNNING;
   }
 
-  ckaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+  xkaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
   return 0;
 }

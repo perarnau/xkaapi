@@ -1,6 +1,6 @@
 /*
 ** kaapi_cond_timedwait.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:43 2009
 ** Copyright 2009 INRIA.
@@ -78,7 +78,7 @@ int kaapi_cond_timedwait(kaapi_cond_t *__restrict cond, kaapi_mutex_t *__restric
   {
     int err = 0;
     
-    ckaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+    xkaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
     
     kaapi_mutex_unlock (mutex);
     
@@ -92,14 +92,14 @@ int kaapi_cond_timedwait(kaapi_cond_t *__restrict cond, kaapi_mutex_t *__restric
       {
         thread->_state = KAAPI_THREAD_RUNNING;
         KAAPI_QUEUE_REMOVE(&cond->_th_q, thread);
-        ckaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
+        xkaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
         kaapi_mutex_lock (mutex);
         return err;
       }
     }
-    ckaapi_assert (err == 0);
+    xkaapi_assert (err == 0);
     kaapi_mutex_lock (mutex);
-    ckaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
+    xkaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
     
     return 0;
   }

@@ -1,6 +1,6 @@
 /*
 ** kaapi_cond_init.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:51 2009
 ** Copyright 2009 INRIA.
@@ -51,7 +51,7 @@ int kaapi_cond_init(kaapi_cond_t *__restrict cond, const kaapi_condattr_t *__res
   if (cond ==0) return EINVAL;
   KAAPI_QUEUE_CLEAR( &cond->_th_q );
   KAAPI_QUEUE_CLEAR( &cond->_kttl_q );
-  ckaapi_assert ( pthread_mutex_init(&cond->_mutex, 0) == 0);
-  //ckaapi_assert ( pthread_cond_init(&cond->_cond, 0) == 0);
+  xkaapi_assert ( pthread_mutex_init(&cond->_mutex, 0) == 0);
+  //xkaapi_assert ( pthread_cond_init(&cond->_cond, 0) == 0);
   return 0;
 }

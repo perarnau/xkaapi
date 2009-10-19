@@ -1,6 +1,6 @@
 /*
 ** kaapi_sched_suspend.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:01 2009
 ** Copyright 2009 INRIA.
@@ -49,11 +49,11 @@ int kaapi_sched_suspend ( kaapi_processor_t* proc, kaapi_thread_descr_t* thread,
 {
   int previous_errno = errno;
   
-  ckaapi_assert_debug( proc !=0 );
-  ckaapi_assert_debug( thread != 0 );
-  ckaapi_assert_debug( thread->_scope == KAAPI_PROCESS_SCOPE );
-  ckaapi_assert_debug( proc == thread->_proc );
-  ckaapi_assert_debug( proc->_sc_thread._active_thread == thread );
+  xkaapi_assert_debug( proc !=0 );
+  xkaapi_assert_debug( thread != 0 );
+  xkaapi_assert_debug( thread->_scope == KAAPI_PROCESS_SCOPE );
+  xkaapi_assert_debug( proc == thread->_proc );
+  xkaapi_assert_debug( proc->_sc_thread._active_thread == thread );
 
   proc->_sc_thread._active_thread = 0;
   thread->_state = KAAPI_THREAD_SUSPEND;

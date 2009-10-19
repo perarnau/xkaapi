@@ -1,6 +1,6 @@
 /*
 ** kaapi_sched_steal.c
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:02 2009
 ** Copyright 2009 INRIA.

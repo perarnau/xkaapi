@@ -1,6 +1,6 @@
 /*
  * test_mutex1.c
- * ckaapi
+ * xkaapi
  *
  * Output :
  *

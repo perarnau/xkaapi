@@ -1,6 +1,6 @@
 /*
 ** kaapi_type.h.in
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:16:12 2009
 ** Copyright 2009 INRIA.
