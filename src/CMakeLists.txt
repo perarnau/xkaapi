@@ -7,7 +7,7 @@
 ##
 
 # Add the binary directory for generated headers :
-include_directories (${CMAKE_CURRENT_BINARY_DIR})
+include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/thread ${CMAKE_CURRENT_BINARY_DIR}/workstealing ${CMAKE_CURRENT_BINARY_DIR}/dfg)
 
 # Global definitions for compile comand :
 add_definitions ( "-Wall -std=c99 -pedantic -g" )
@@ -17,28 +17,32 @@ add_definitions ( "-Wall -std=c99 -pedantic -g" )
 
 # Shared lib :
 add_library (ckaapi SHARED 
-  kaapi_atomic.h kaapi_attr_affinity.c kaapi_attr_destroy.c
-  kaapi_attr_detach.c kaapi_attr_inheritedsched.c kaapi_attr_init.c
-  kaapi_attr_schedparam.c kaapi_attr_schedpolicy.c kaapi_attr_scope.c
-  kaapi_attr_stack.c kaapi_attr_stackaddr.c kaapi_attr_stacksize.c
-  kaapi_cond_attr.c kaapi_cond_broadcast.c kaapi_cond_destroy.c
-  kaapi_cond_init.c kaapi_cond_signal.c kaapi_cond_timedwait.c
-  kaapi_cond_wait.c kaapi_init.c kaapi_mutex_attr.c
-  kaapi_mutex_destroy.c kaapi_mutex_init.c kaapi_mutex_lock.c
-  kaapi_mutex_trylock.c kaapi_mutex_unlock.c kaapi_sched_alloc.c
-  kaapi_sched_concurrency.c kaapi_sched_run.c
-  kaapi_sched_steal_thread.c kaapi_sched_steal_inside_thread.c kaapi_sched_suspend.c kaapi_sched_idle.c
-  kaapi_sched_term.c kaapi_specific_create.c kaapi_specific_delete.c
-  kaapi_specific_get.c kaapi_specific_set.c kaapi_thread_create.c
-  kaapi_thread_detach.c kaapi_thread_equal.c kaapi_thread_exit.c
-  kaapi_thread_join.c kaapi_thread_once.c kaapi_thread_self.c
-  kaapi_thread_yield.c kaapi_stealapi.h
-  kaapi_stealapi_processor_init.c kaapi_stealapi_request_wait.c
-  kaapi_stealapi_stealcontext_init.c kaapi_stealapi_stealcontext_finalize.c
-  kaapi_stealapi_processor_selectvictim.c
-  kaapi_stealapi_stealcontext_pushpop.c kaapi_stealapi_init.c
-  kaapi_stealapi_processor_steal.c kaapi_stealapi_synchro.h
-  kaapi_stealapi_processor_alloc.c kaapi_stealapi_request_post.c
+  thread/kaapi_attr_affinity.c thread/kaapi_attr_destroy.c
+  thread/kaapi_attr_detach.c thread/kaapi_attr_inheritedsched.c thread/kaapi_attr_init.c
+  thread/kaapi_attr_schedparam.c thread/kaapi_attr_schedpolicy.c thread/kaapi_attr_scope.c
+  thread/kaapi_attr_stack.c thread/kaapi_attr_stackaddr.c thread/kaapi_attr_stacksize.c
+  thread/kaapi_cond_attr.c thread/kaapi_cond_broadcast.c thread/kaapi_cond_destroy.c
+  thread/kaapi_cond_init.c thread/kaapi_cond_signal.c thread/kaapi_cond_timedwait.c
+  thread/kaapi_cond_wait.c 
+  thread/kaapi_mutex_attr.c
+  thread/kaapi_mutex_destroy.c thread/kaapi_mutex_init.c thread/kaapi_mutex_lock.c
+  thread/kaapi_mutex_trylock.c thread/kaapi_mutex_unlock.c thread/kaapi_sched_alloc.c
+  thread/kaapi_sched_concurrency.c thread/kaapi_sched_run.c
+  thread/kaapi_sched_steal_thread.c thread/kaapi_sched_steal_inside_thread.c thread/kaapi_sched_suspend.c thread/kaapi_sched_idle.c
+  thread/kaapi_sched_term.c thread/kaapi_specific_create.c thread/kaapi_specific_delete.c
+  thread/kaapi_specific_get.c thread/kaapi_specific_set.c thread/kaapi_thread_create.c
+  thread/kaapi_thread_detach.c thread/kaapi_thread_equal.c thread/kaapi_thread_exit.c
+  thread/kaapi_thread_join.c thread/kaapi_thread_once.c thread/kaapi_thread_self.c
+  thread/kaapi_thread_yield.c 
+  kaapi_init.c 
+  kaapi_atomic.h 
+  workstealing/kaapi_stealapi.h
+  workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
+  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
+  workstealing/kaapi_stealapi_processor_selectvictim.c
+  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
+  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
+  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
 )
 
 # Version number :
@@ -46,28 +50,32 @@ set_target_properties(ckaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
 
 # Static lib :
 add_library (ckaapi-static STATIC 
-  kaapi_atomic.h kaapi_attr_affinity.c kaapi_attr_destroy.c
-  kaapi_attr_detach.c kaapi_attr_inheritedsched.c kaapi_attr_init.c
-  kaapi_attr_schedparam.c kaapi_attr_schedpolicy.c kaapi_attr_scope.c
-  kaapi_attr_stack.c kaapi_attr_stackaddr.c kaapi_attr_stacksize.c
-  kaapi_cond_attr.c kaapi_cond_broadcast.c kaapi_cond_destroy.c
-  kaapi_cond_init.c kaapi_cond_signal.c kaapi_cond_timedwait.c
-  kaapi_cond_wait.c kaapi_init.c kaapi_mutex_attr.c
-  kaapi_mutex_destroy.c kaapi_mutex_init.c kaapi_mutex_lock.c
-  kaapi_mutex_trylock.c kaapi_mutex_unlock.c kaapi_sched_alloc.c
-  kaapi_sched_concurrency.c kaapi_sched_run.c
-  kaapi_sched_steal_thread.c kaapi_sched_steal_inside_thread.c kaapi_sched_suspend.c kaapi_sched_idle.c
-  kaapi_sched_term.c kaapi_specific_create.c kaapi_specific_delete.c
-  kaapi_specific_get.c kaapi_specific_set.c kaapi_thread_create.c
-  kaapi_thread_detach.c kaapi_thread_equal.c kaapi_thread_exit.c
-  kaapi_thread_join.c kaapi_thread_once.c kaapi_thread_self.c
-  kaapi_thread_yield.c kaapi_stealapi.h
-  kaapi_stealapi_processor_init.c kaapi_stealapi_request_wait.c
-  kaapi_stealapi_stealcontext_init.c kaapi_stealapi_stealcontext_finalize.c
-  kaapi_stealapi_processor_selectvictim.c
-  kaapi_stealapi_stealcontext_pushpop.c kaapi_stealapi_init.c
-  kaapi_stealapi_processor_steal.c kaapi_stealapi_synchro.h
-  kaapi_stealapi_processor_alloc.c kaapi_stealapi_request_post.c
+  thread/kaapi_attr_affinity.c thread/kaapi_attr_destroy.c
+  thread/kaapi_attr_detach.c thread/kaapi_attr_inheritedsched.c thread/kaapi_attr_init.c
+  thread/kaapi_attr_schedparam.c thread/kaapi_attr_schedpolicy.c thread/kaapi_attr_scope.c
+  thread/kaapi_attr_stack.c thread/kaapi_attr_stackaddr.c thread/kaapi_attr_stacksize.c
+  thread/kaapi_cond_attr.c thread/kaapi_cond_broadcast.c thread/kaapi_cond_destroy.c
+  thread/kaapi_cond_init.c thread/kaapi_cond_signal.c thread/kaapi_cond_timedwait.c
+  thread/kaapi_cond_wait.c 
+  thread/kaapi_mutex_attr.c
+  thread/kaapi_mutex_destroy.c thread/kaapi_mutex_init.c thread/kaapi_mutex_lock.c
+  thread/kaapi_mutex_trylock.c thread/kaapi_mutex_unlock.c thread/kaapi_sched_alloc.c
+  thread/kaapi_sched_concurrency.c thread/kaapi_sched_run.c
+  thread/kaapi_sched_steal_thread.c thread/kaapi_sched_steal_inside_thread.c thread/kaapi_sched_suspend.c thread/kaapi_sched_idle.c
+  thread/kaapi_sched_term.c thread/kaapi_specific_create.c thread/kaapi_specific_delete.c
+  thread/kaapi_specific_get.c thread/kaapi_specific_set.c thread/kaapi_thread_create.c
+  thread/kaapi_thread_detach.c thread/kaapi_thread_equal.c thread/kaapi_thread_exit.c
+  thread/kaapi_thread_join.c thread/kaapi_thread_once.c thread/kaapi_thread_self.c
+  thread/kaapi_thread_yield.c 
+  kaapi_init.c 
+  kaapi_atomic.h 
+  workstealing/kaapi_stealapi.h
+  workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
+  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
+  workstealing/kaapi_stealapi_processor_selectvictim.c
+  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
+  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
+  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
 )
 
 set_target_properties(ckaapi-static PROPERTIES OUTPUT_NAME "ckaapi")
