@@ -1,0 +1,9 @@
+This is a list of people who have contributed to Kaapi.
+
+Name:           Thierry Gautier
+Email:          Thierry.Gautier@inrialpes.fr
+Organisation:   INRIA, Researcher, project MOAIS
+
+Name:           Christophe Laferriere
+Email:          Christophe.Laferriere@inrialpes.fr
+Organisation:   INRIA, Ingeneer, project MOAIS
