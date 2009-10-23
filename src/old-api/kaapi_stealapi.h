@@ -1,5 +1,5 @@
 /*
-** ckaapi
+** xkaapi
 ** 
 ** Created on Tue Mar 31 15:21:03 2009
 ** Copyright 2009 INRIA.
@@ -93,9 +93,9 @@ typedef struct kaapi_steal_request_t {
   KAAPI_INHERITE_FROM_SSTRUCT_T;                                   /* read-write synchro status field */
   unsigned long                    _tpid;                          /* system wide index of the thief */
   kaapi_steal_thief_entrypoint_t   _entrypoint;                    /* entry point to execute the request */
-  struct kaapi_steal_context_t*    _victim_sc;                     /* victim context */
+  struct kaapi_steal_context_t*    _victim_sc;                     /* victim steal context */
   char                             _data[KAAPI_REQUEST_DATA_SIZE]; /* where to store application dependent data */
-} kaapi_steal_request_t;
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_steal_request_t;
  
 
 /**
@@ -111,14 +111,15 @@ enum kaapi_steal_request_status_t {
 
 
 /* ========================================================================= */
-/** This data structure is the list of request stored in any steal context
+/** This data structure is the list of requests stored in any steal context
     \field count is the number of request
     \field request is the array of request
 */
 typedef struct kaapi_list_request_t {
   kaapi_atomic_t         _count;                                   /* used to store number of posted requests in the list */
-  cpu_set_t              _cpuset;                                  /* cpu set all requests, generated just before stealing */
-  kaapi_steal_request_t* _request[1+KAAPI_MAXSTACK_STEAL];
+  struct { 
+    __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_steal_request_t* _request
+  } _array[1+KAAPI_MAXSTACK_STEAL];
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_list_request_t;
 
 
@@ -137,19 +138,20 @@ typedef struct kaapi_list_request_t {
 typedef int (*kaapi_splitter_t)(
     struct kaapi_steal_processor_t* /*kpss*/, 
     struct kaapi_steal_context_t* /* sc */,
-    int /*count*/, kaapi_steal_request_t** /*requests*/
+    int /*count*/, 
+    kaapi_steal_request_t** /*requests*/
 );
 
 typedef struct kaapi_steal_context_t {
+  KAAPI_QUEUE_FIELD( struct kaapi_steal_context_t );                           /* to link steal context together in a stack */
+  char*                                                       _saved_sp ;      /* saved stack pointer in _stack */
   int volatile                                                _wsreqflag;      /* 0: reject all steal requests
                                                                                   1: non concurrent request
                                                                                   2: concurrent request
                                                                                 */
-  struct kaapi_steal_processor_t*                             _stack;          /* stack where I'am pushed */
+  struct kaapi_steal_processor_t*                             _kprocessor;     /* k-processor owner where I'am pushed */
   kaapi_splitter_t                                            _splitter;       /* !=0 if steal context is pushed or _wsreqflag == 2*/
-  KAAPI_QUEUE_FIELD( struct kaapi_steal_context_t );                           /* to link steal context together in a stack */
-  char*                                                       _saved_sp ;      /* saved stack pointer in _stack */
-  kaapi_atomic_t                                              _count_thief;    /* number of stealer */
+  kaapi_atomic_t                                              _count_thief;    /* number of stealer of this context */
 } kaapi_steal_context_t; 
 
 enum kaapi_steal_context_{
@@ -161,25 +163,25 @@ enum kaapi_steal_context_{
 
 
 /* ========================================================================= */
-/** This data structure defines the context of a work stealer processor
-    The order of stealing into a stack depend on the thief algorithm.
+/** This data structure defines the context of a work stealer processor thread
+    The way of stealing into the thread depend on the thief algorithm.
 */
-typedef struct kaapi_steal_processor_t {
-  volatile int                                                _state;         /* see above */
+typedef struct kaapi_steal_thread_t {
+  int                                                         _state;         /* see above */
   unsigned long                                               _processor_id;  /* system wide id, low 0xFF bits are index in local table */
-  kaapi_mutex_t                                               _lock;          /* for a T.H.E like algorithm */
   kaapi_list_request_t                                        _list_request;  /* list of steal requests */
   kaapi_steal_request_t                                       _request;       /* request if I'am a thief, else never used */
   KAAPI_QUEUE_DECLARE_FIELD_VOLATILE( kaapi_steal_context_t );
   char*                                                       _sp;            /* stack pointer */
   char*                                                       _stackaddr;     /* base stack pointer */
   char*                                                       _stackend;      /* end stack pointer */
-} __attribute__ ((aligned (KAAPI_CACHE_LINE))) kaapi_steal_processor_t;
+} __attribute__ ((aligned (KAAPI_CACHE_LINE))) kaapi_steal_thread_t;
 
-enum {
+enum kaapi_steal_processor_state_t {
   KAAPI_PROCESSOR_S_CREATED    = 1,
-  KAAPI_PROCESSOR_S_TERMINATED = 2,
-  KAAPI_PROCESSOR_S_DESTROY    = 3
+  KAAPI_PROCESSOR_S_WAITING    = 2,
+  KAAPI_PROCESSOR_S_TERMINATED = 3,
+  KAAPI_PROCESSOR_S_DESTROY    = 4
 };
 
 #define KAAPI_STEAL_PROCESSOR_DECODEINDEX( i ) \
