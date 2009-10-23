@@ -7,7 +7,7 @@
 ##
 
 # Add the binary directory for generated headers :
-include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/thread ${CMAKE_CURRENT_BINARY_DIR}/workstealing ${CMAKE_CURRENT_BINARY_DIR}/dfg)
+include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/thread ${CMAKE_CURRENT_SOURCE_DIR}/workstealing ${CMAKE_CURRENT_SOURCE_DIR}/dfg)
 
 # Global definitions for compile comand :
 add_definitions ( "-Wall -pedantic -g" )
