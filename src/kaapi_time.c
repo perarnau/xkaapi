@@ -1,8 +1,8 @@
 /*
-** kaapi_error.h
+** kaapi_time.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,27 +43,14 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_ERROR_H
-#define _KAAPI_ERROR_H 1
+#include "kaapi_time.h"
+#include <sys/time.h>
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
 
-#if defined(NDEBUG)
-#  define xkaapi_assert( cond ) if (!(cond)) abort();
-#  define xkaapi_assert_debug( cond )
-#else
-#  include <errno.h>
-#  include <stdio.h>
-#  include <stdlib.h>
-#  define xkaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
-#  define xkaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
-#endif
-
-#if defined(__cplusplus)
+double kaapi_get_elapsedtime()
+{
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
-#endif
-
-
-#endif

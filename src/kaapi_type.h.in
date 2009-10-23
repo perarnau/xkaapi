@@ -46,6 +46,19 @@
 #ifndef _KAAPI_TYPE_H
 #define _KAAPI_TYPE_H 1
 
+#include <stdint.h> /* constant size type definitions */
+
+/* ========================================================================= */
+/* Kaapi name for stdint typedefs.
+ */
+typedef uint8_t  kaapi_uint8_t;
+typedef uint16_t kaapi_uint16_t;
+typedef uint32_t kaapi_uint32_t;
+typedef int8_t   kaapi_int8_t;
+typedef int16_t  kaapi_int16_t;
+typedef int32_t  kaapi_int32_t;
+
+
 /* =============================== Struct Size ============================== */
 
 #define KAAPI_SIZEOF_MUTEXATTR_T ${KAAPI_SIZEOF_MUTEXATTR_T}
@@ -59,6 +72,12 @@
 #define KAAPI_SIZEOF_ATTR_T ${KAAPI_SIZEOF_ATTR_T}
 
 #define KAAPI_SIZEOF_ONCE_T ${KAAPI_SIZEOF_ONCE_T}
+
+#define KAAPI_SIZEOF_STACK_T ${KAAPI_SIZEOF_STACK_T}
+
+#define KAAPI_SIZEOF_FRAME_T ${KAAPI_SIZEOF_FRAME_T}
+
+#define KAAPI_SIZEOF_TASK_COND_T ${KAAPI_SIZEOF_TASK_COND_T}
 
 /* ========================================================================= */
 /** Mutex attribut, data structure
@@ -89,8 +108,10 @@ typedef struct kaapi_cond_t {
 typedef struct kaapi_attr_t {
   char _opaque[ KAAPI_SIZEOF_ATTR_T ]; 
 } kaapi_attr_t;
-//TODO : initialiazer
-//#  define KAAPI_ATTR_INITIALIZER {0, KAAPI_SYSTEM_SCOPE, {~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0}, 0, 0, 0 }
+/*TODO : initialiazer 
+#  define KAAPI_ATTR_INITIALIZER {0, KAAPI_SYSTEM_SCOPE, {~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0}, 0, 0, 0 }
+*/
+
 
 /* ========================================================================= */
 /** Once 
@@ -99,4 +120,78 @@ typedef struct kaapi_once_t {
   char _opaque[KAAPI_SIZEOF_ONCE_T];
 } kaapi_once_t;
 
-#endif // _KAAPI_TYPE_H
+
+/* ========================================================================= */
+typedef struct kaapi_stack_t { 
+  char _opaque[KAAPI_SIZEOF_STACK_T];
+} kaapi_stack_t;
+
+typedef struct kaapi_frame_t { 
+  char _opaque[KAAPI_SIZEOF_FRAME_T];
+} kaapi_frame_t;
+
+typedef struct kaapi_task_condition_t { 
+  char _opaque[KAAPI_SIZEOF_TASK_COND_T];
+} kaapi_task_condition_t;
+
+/* Kaapi name for stdint typedefs.
+ */
+typedef uint8_t  kaapi_uint8_t;
+typedef uint16_t kaapi_uint16_t;
+typedef uint32_t kaapi_uint32_t;
+typedef int8_t   kaapi_int8_t;
+typedef int16_t  kaapi_int16_t;
+typedef int32_t  kaapi_int32_t;
+
+/*------- begin same as in kaapi_private_structure.h !!!!! */
+/** \defgroup Constants for number for fixed size parameter of a task
+*/
+/*@{*/
+#define KAAPI_TASK_MAX_DATA  24 /* allows 3 double */
+#define KAAPI_TASK_MAX_IDATA (KAAPI_TASK_MAX_DATA/sizeof(kaapi_uint32_t))
+#define KAAPI_TASK_MAX_SDATA (KAAPI_TASK_MAX_DATA/sizeof(kaapi_uint16_t))
+#define KAAPI_TASK_MAX_DDATA (KAAPI_TASK_MAX_DATA/sizeof(double))
+#define KAAPI_TASK_MAX_FDATA (KAAPI_TASK_MAX_DATA/sizeof(float))
+#define KAAPI_TASK_MAX_PDATA (KAAPI_TASK_MAX_DATA/sizeof(void*))
+/*@}*/
+
+/* ========================================================================= */
+/** Task body 
+*/
+typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* thread */);
+
+/** Kaapi task definition
+    A Kaapi task is the basic unit of computation. It has a constant size including some task's specific values.
+    Variable size task has to store pointer to the memory where found extra data.
+    The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
+*/
+typedef struct kaapi_task_t {
+  /* state is the public member: initialized with the values above. It is used
+     to initializ. istate is the internal state.
+*/     
+  kaapi_uint32_t     format;   /** */
+  union {
+    kaapi_uint16_t   locality; /** locality number see documentation */
+    kaapi_uint16_t   event;    /** in case of adaptive task */
+  };
+  union {
+    kaapi_uint16_t   state;    /** State of the task see above + flags in order to initialze both in 1 op */
+    struct { 
+      kaapi_uint8_t  xstate;   /** State of the task see above */
+      kaapi_uint8_t  flags;    /** flags of the task see above */
+    };
+  };
+  kaapi_task_body_t  body;     /** C function that represent the body to execute*/
+  union { /* union data to view task's immediate data with type information. Be carreful: this is an (anonymous) union  */
+    kaapi_uint32_t idata[ KAAPI_TASK_MAX_IDATA ];
+    kaapi_uint16_t sdata[ KAAPI_TASK_MAX_SDATA ];
+    double         ddata[ KAAPI_TASK_MAX_DDATA ];
+    float          fdata[ KAAPI_TASK_MAX_FDATA ];
+    void*          pdata[ KAAPI_TASK_MAX_PDATA ];
+    kaapi_task_condition_t* arg_condition;
+  };
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_task_t;
+/*------- end same as in kaapi_private_structure.h !!!!! */
+
+
+#endif /* _KAAPI_TYPE_H */

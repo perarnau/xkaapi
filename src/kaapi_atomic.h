@@ -53,11 +53,11 @@
 
 #if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
 || defined(__INTEL_COMPILER))
-// Note: ICC seems to also support these builtins functions
+/* Note: ICC seems to also support these builtins functions */
 #  if defined(__INTEL_COMPILER)
 #    warning Using ICC. Please, check if icc really support atomic operations
 /* ia64 impl using compare and exchange */
-//#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o )
+/*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
 #  endif
 
 #  define KAAPI_ATOMIC_CAS(a, o, n) \
@@ -78,7 +78,7 @@ __sync_sub_and_fetch( &((a)->_counter), value )
 #  define KAAPI_ATOMIC_WRITE(a, value) \
 (a)->_counter = value
 
-#elif defined(KAAPI_USE_APPLE) // if gcc version on Apple is less than 4.1
+#elif defined(KAAPI_USE_APPLE) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
 
@@ -102,7 +102,7 @@ OSAtomicAdd32Barrier( -value, &((a)->_counter) )
 
 #else
 #  error "Please add support for atomic operations on this system/architecture"
-#endif // GCC > 4.1
+#endif /* GCC > 4.1 */
 
 /* ========================================================================== */
 
@@ -114,14 +114,14 @@ OSAtomicAdd32Barrier( -value, &((a)->_counter) )
 static inline void kaapi_writemem_barrier()  
 {
   OSMemoryBarrier();
-  // Compiler fence to keep operations from
+  /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
 
 static inline void kaapi_readmem_barrier()  
 {
   OSMemoryBarrier();
-  // Compiler fence to keep operations from
+  /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
 
@@ -135,7 +135,7 @@ __sync_synchronize()
 
 #else
 #  error "Undefined barrier"
-#endif // KAAPI_USE_APPLE
+#endif /* KAAPI_USE_APPLE */
 
 
 /* ========================================================================== */
@@ -162,4 +162,4 @@ __sync_synchronize()
 #define kaapi_barrier_td_isterminated( kpb ) \
   (KAAPI_ATOMIC_READ(kpb ) == 0)
 
-#endif // _KAAPI_ATOMIC_H
+#endif /* _KAAPI_ATOMIC_H */

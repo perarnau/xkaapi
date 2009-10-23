@@ -10,7 +10,8 @@
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/thread ${CMAKE_CURRENT_BINARY_DIR}/workstealing ${CMAKE_CURRENT_BINARY_DIR}/dfg)
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -std=c99 -pedantic -g" )
+add_definitions ( "-Wall -pedantic -g" )
+#TG: delete -std=c99 because current version used anonymous union...
 
 #################
 ## LIBRARY BEG ##
@@ -36,13 +37,17 @@ add_library (xkaapi SHARED
   thread/kaapi_thread_yield.c 
   kaapi_init.c 
   kaapi_atomic.h 
-  workstealing/kaapi_stealapi.h
-  workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
-  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
-  workstealing/kaapi_stealapi_processor_selectvictim.c
-  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
-  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
-  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
+  kaapi_task.h 
+  kaapi_task.c
+  kaapi_time.h 
+  kaapi_time.c
+#  workstealing/kaapi_stealapi.h
+#  workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
+#  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
+#  workstealing/kaapi_stealapi_processor_selectvictim.c
+#  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
+#  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
+#  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
 )
 
 # Version number :
@@ -69,13 +74,17 @@ add_library (xkaapi-static STATIC
   thread/kaapi_thread_yield.c 
   kaapi_init.c 
   kaapi_atomic.h 
-  workstealing/kaapi_stealapi.h
-  workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
-  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
-  workstealing/kaapi_stealapi_processor_selectvictim.c
-  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
-  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
-  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
+  kaapi_task.h 
+  kaapi_task.c
+  kaapi_time.h 
+  kaapi_time.c
+#  workstealing/kaapi_stealapi.h
+# workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
+#  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
+#  workstealing/kaapi_stealapi_processor_selectvictim.c
+#  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
+#  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
+#  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
 )
 
 set_target_properties(xkaapi-static PROPERTIES OUTPUT_NAME "xkaapi")
@@ -272,6 +281,15 @@ check_type_size ("kaapi_attr_t" KAAPI_SIZEOF_ATTR_T)
 
 # Attribut :
 check_type_size ("kaapi_once_t" KAAPI_SIZEOF_ONCE_T)
+
+# Attribut :
+check_type_size ("kaapi_stack_t" KAAPI_SIZEOF_STACK_T)
+
+# Attribut :
+check_type_size ("kaapi_task_condition_t" KAAPI_SIZEOF_TASK_COND_T)
+
+# Attribut :
+check_type_size ("kaapi_frame_t" KAAPI_SIZEOF_FRAME_T)
 
 set (CMAKE_EXTRA_INCLUDE_FILES)
 

@@ -118,7 +118,7 @@ void _kaapi_dummy(void* foo)
 
 /**
 */
-void __attribute__ ((constructor)) my_init(void)
+void __attribute__ ((constructor)) kaapi_init(void)
 {
   int i;
   default_param.stacksize = getpagesize()*4;
@@ -293,7 +293,7 @@ printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
 
 /**
 */
-void __attribute__ ((destructor)) my_fini(void)
+void __attribute__ ((destructor)) kaapi_fini(void)
 {
   printf("[KAAPI::TERM] Current thread is: %lu\n", (unsigned long)pthread_self() );
   fflush( stdout );

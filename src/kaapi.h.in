@@ -54,12 +54,12 @@ extern "C" {
 #  include <time.h>
 #endif
 
-#include <sched.h> // for sched_param type.
+#include <sched.h> /* for sched_param type. */
 #include "kaapi_type.h"
 
 /* ============================== Cpu_set Mess ============================== */
 
-// TODO : DUPLICATE!!!
+/* TODO : DUPLICATE!!! */
 #ifndef HAVE_CPU_SET_T
 #define HAVE_CPU_SET_T
 #ifndef __cpu_set_t_defined
@@ -298,8 +298,16 @@ int kaapi_getconcurrency (void);
  */
 int kaapi_setconcurrency (int concurrency);
 
+
+/* ========================================================================== */
+/** kaapi_get_elapsedtime
+    The function kaapi_get_elapsedtime() will return the elapsed time since an epoch.
+*/
+extern double kaapi_get_elapsedtime();
+
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif // _KAAPI_H
+#endif /* _KAAPI_H */

@@ -55,9 +55,19 @@
 
 #include "kaapi_config.h"
 #include "kaapi_datastructure.h"
+#include <stdint.h>
 #include <pthread.h>
 #include <limits.h>
 
+/* ========================================================================= */
+/* Kaapi name for stdint typedefs.
+ */
+typedef uint8_t  kaapi_uint8_t;
+typedef uint16_t kaapi_uint16_t;
+typedef uint32_t kaapi_uint32_t;
+typedef int8_t   kaapi_int8_t;
+typedef int16_t  kaapi_int16_t;
+typedef int32_t  kaapi_int32_t;
 
 /* ========================================================================== */
 /** Typedef
@@ -87,7 +97,7 @@ typedef int (*kaapi_test_wakeup_t)(void*);
 #include <strings.h> /* for bzero in cpu set */
 
 
-//#ifndef __cpu_set_t_defined
+/*#ifndef __cpu_set_t_defined */
 /* Size definition for CPU sets. All */
 #  define __CPU_SETSIZE	64
 #  define __NCPUBITS	(8 * sizeof (__cpu_mask))
@@ -113,7 +123,7 @@ typedef struct {
 (1UL << (cpu -(cpu / __NCPUBITS)*__NCPUBITS))
 
 
-//#endif
+/*#endif*/
 #endif
 
 #define CPU_SETALL( pcpuset ) \
@@ -206,7 +216,6 @@ typedef struct kaapi_condattr_t {
 
 typedef struct kaapi_cond_t {
   pthread_mutex_t             _mutex;
-  //pthread_cond_t             _cond;
   kaapi_system_thread_queue_t _th_q;   /* List of only SYSTEM_SCOPE threads. */
   kaapi_kttl_queue_t          _kttl_q; /* List of only PROCESS_SCOPE threads. */
 } kaapi_cond_t;
@@ -306,4 +315,96 @@ extern kaapi_processor_t** kaapi_all_processors;
  */
 extern pthread_key_t kaapi_current_thread_key;
 
-#endif // _KAAPI_PRIVATE_STRUCTURE_H
+
+
+/* ========================================================================= */
+/** Task Condition structure 
+*/
+struct kaapi_task_t;
+struct kaapi_stack_t;
+struct kaapi_task_condition_t;
+
+/*------- begin same as in kaapi_type.h.in !!!!! */
+/** \defgroup Constants for number for fixed size parameter of a task
+*/
+/*@{*/
+#define KAAPI_TASK_MAX_DATA  24 /* allows 3 double */
+#define KAAPI_TASK_MAX_IDATA (KAAPI_TASK_MAX_DATA/sizeof(kaapi_uint32_t))
+#define KAAPI_TASK_MAX_SDATA (KAAPI_TASK_MAX_DATA/sizeof(kaapi_uint16_t))
+#define KAAPI_TASK_MAX_DDATA (KAAPI_TASK_MAX_DATA/sizeof(double))
+#define KAAPI_TASK_MAX_FDATA (KAAPI_TASK_MAX_DATA/sizeof(float))
+#define KAAPI_TASK_MAX_PDATA (KAAPI_TASK_MAX_DATA/sizeof(void*))
+/*@}*/
+
+/* ========================================================================= */
+/** Task body 
+*/
+typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* thread */);
+
+/** Kaapi task definition
+    A Kaapi task is the basic unit of computation. It has a constant size including some task's specific values.
+    Variable size task has to store pointer to the memory where found extra data.
+    The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
+*/
+typedef struct kaapi_task_t {
+  /* state is the public member: initialized with the values above. It is used
+     to initializ. istate is the internal state.
+*/     
+  kaapi_uint32_t     format;   /** */
+  union {
+    kaapi_uint16_t   locality; /** locality number see documentation */
+    kaapi_uint16_t   event;    /** in case of adaptive task */
+  };
+  union {
+    kaapi_uint16_t   state;    /** State of the task see above + flags in order to initialze both in 1 op */
+    struct { 
+      kaapi_uint8_t  xstate;   /** State of the task see above */
+      kaapi_uint8_t  flags;    /** flags of the task see above */
+    };
+  };
+  kaapi_task_body_t  body;     /** C function that represent the body to execute*/
+  union { /* union data to view task's immediate data with type information. Be carreful: this is an (anonymous) union  */
+    kaapi_uint32_t idata[ KAAPI_TASK_MAX_IDATA ];
+    kaapi_uint16_t sdata[ KAAPI_TASK_MAX_SDATA ];
+    double         ddata[ KAAPI_TASK_MAX_DDATA ];
+    float          fdata[ KAAPI_TASK_MAX_FDATA ];
+    void*          pdata[ KAAPI_TASK_MAX_PDATA ];
+    struct kaapi_task_condition_t* arg_condition;
+  };
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_task_t;
+/*------- end same as in kaapi_type.h.in !!!!! */
+
+/** Kaapi stack of task definition
+*/
+typedef struct kaapi_stack_t {
+  kaapi_task_t* pc;             /** task counter: next task to execute, 0 if empty stack */
+  kaapi_task_t* sp;             /** stack counter: next free task entry */
+#if defined(KAAPI_DEBUG)
+  kaapi_task_t* end_sp;         /** past the last stack counter: next entry after the last task in stack array */
+#endif
+  kaapi_task_t* task;           /** stack of tasks */
+
+  char*         sp_data;        /** stack counter for the data: next free data entry */
+#if defined(KAAPI_DEBUG)
+  char*         end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
+#endif
+  char*         data;           /** stack of data with the same scope than task */
+} kaapi_stack_t;
+
+/** Kaapi frame definition
+*/
+typedef struct kaapi_frame_t {
+    kaapi_task_t* pc;
+    kaapi_task_t* sp;
+    char*         sp_data;
+} kaapi_frame_t;
+
+/** Condition for task
+*/
+typedef struct kaapi_task_condition_t {
+  kaapi_task_body_t  save_body;            /** C function that represent the body to execute*/
+  void*              save_arg_condition;   /** used to restore correct task information */
+} kaapi_task_condition_t;
+
+
+#endif /* _KAAPI_PRIVATE_STRUCTURE_H */

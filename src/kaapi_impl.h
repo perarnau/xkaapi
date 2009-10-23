@@ -53,7 +53,7 @@ extern "C" {
 #include "kaapi_config.h"
 #include "kaapi_atomic.h"
 #include "kaapi_datastructure.h"
-// must be included before kaapi.h in order to avoid including kaapi_type.h :
+/* must be included before kaapi.h in order to avoid including kaapi_type.h : */
 #include "kaapi_private_structure.h"
 #include "kaapi.h"
 #include "kaapi_param.h"
@@ -63,11 +63,13 @@ extern "C" {
 #include <errno.h>
 #include <sys/time.h>
 #include <unistd.h> /* getpagesize */
+#include <stdint.h> /* fixed size int */
 
 #if defined(KAAPI_USE_APPLE)
 #  include <sys/types.h>
 #  include <sys/sysctl.h>
 #endif
+
 
 #ifdef HAVE_NUMA_H
 #  include <numa.h>
@@ -77,7 +79,8 @@ extern "C" {
   
 #define KAAPI_PROCESSOR_SCOPE (KAAPI_PROCESS_SCOPE + 1)
 
-#include "kaapi_stealapi.h"
+#include "kaapi_time.h"
+#include "kaapi_task.h"
 
 /* ========================================================================= */
 /* Dynamic list allocated by bloc of pagesize() size array
@@ -100,7 +103,6 @@ struct kaapi_thread_descr_t {
 
   kaapi_thread_context_t         _ctxt;            /* process scope thread context */
   kaapi_processor_t*             _proc;            /* iff scope == PROCESS_SCOPE, always schedule on a processor */
-  kaapi_splitter_t               _splitter;        /* code to call if work of a thread is steal */
 
   pthread_mutex_t                _mutex_join;
   pthread_cond_t                 _cond_join;
@@ -228,6 +230,7 @@ typedef struct kaapi_workqueue_ready_t {
   kaapi_writemem_barrier(); \
   KAAPI_ATOMIC_WRITE(&(kpwr)->_bottom_bloc->_data[(kpwr)->_bottom_bloc->_bottom++]._status, 1)
   
+#if 0 /* TG TO REDO API SPEC */
 /* ========================================================================= */
 /* INTERNAL steal context for threads managed by a processor 
    Such context allows to steal ready thread or suspended thread that becomes ready
@@ -253,17 +256,20 @@ typedef struct kaapi_steal_thread_context_t {
 */
 #define kaapi_steal_thread_context_destroy( kpstc ) 
 
+#endif
 
 /* ========================================================================= */
 /* INTERNAL a processor 
  */
 struct kaapi_processor_t {
+#if 0 /* TG TO REDO API SPEC */
   kaapi_steal_processor_t*     _the_steal_processor;                  /* the processor view as a steal processor */
   unsigned int                 _seed;                                 /* used for random generator rand_r */
   kaapi_thread_context_t       _ctxt;
   kaapi_thread_descr_t*        _term_thread;                          /* the current terminated user thread that could be reused... */
   kaapi_steal_thread_context_t _sc_thread;                            /* */
   kaapi_steal_context_t        _sc_inside;                            /* steal inside a thread */
+#endif
 };
 
 /* ========================================================================= */
@@ -313,6 +319,7 @@ struct kaapi_processor_t {
   */
   kaapi_processor_t* kaapi_allocate_processor();
 
+#if 0 /* TG TO REDO API SPEC */
   /** Steal thread in a kaapi_steal_thread_context_t 
   */
   int kaapi_sched_steal_sc_thread(
@@ -332,6 +339,7 @@ struct kaapi_processor_t {
       int count, kaapi_steal_request_t** requests
   );
   
+#endif
 
   /** Called when a thread is suspended on an instruction
   */
@@ -352,7 +360,7 @@ struct kaapi_processor_t {
   
   /** Client interface to steal a given kaapi_processor_t
    */
-//  kaapi_thread_descr_t* kaapi_sched_do_steal( kaapi_processor_t* proc );
+/*  kaapi_thread_descr_t* kaapi_sched_do_steal( kaapi_processor_t* proc ); */
   
   /**
    */
@@ -374,9 +382,9 @@ struct kaapi_processor_t {
   /* Initialization / destruction functions
    */
   
-  //void __attribute__ ((constructor)) my_init(void);
+  void __attribute__ ((constructor)) kaapi_init(void);
   
-  //void __attribute__ ((destructor)) my_fini(void);
+  void __attribute__ ((destructor)) kaapi_fini(void);
   
   /**
    */
@@ -389,9 +397,14 @@ struct kaapi_processor_t {
     _kaapi_dummy(NULL);
   }
   
+  /* ========================================================================== */
+  /** kaapi_get_elapsedtime
+      The function kaapi_get_elapsedtime() will return the elapsed time since an epoch.
+  */
+  extern double kaapi_get_elapsedtime();
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // _KAAPI_IMPL_H
+#endif /* _KAAPI_IMPL_H */

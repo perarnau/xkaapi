@@ -46,7 +46,6 @@
 #ifndef _KAAPI_DATASTRUCTURE_H
 #define _KAAPI_DATASTRUCTURE_H 1
 
-
 /* ========================================================================== */
 /** Generic fifo double linked queue
  Declare a fifo queue necessary data structure for a queue structure
@@ -371,4 +370,4 @@ else { \
 
 
 
-#endif // _KAAPI_DATASTRUCTURE_H
+#endif /* _KAAPI_DATASTRUCTURE_H */
