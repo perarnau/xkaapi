@@ -38,11 +38,12 @@ class MatrixVectorProductWork : public kaapi_work_t {
 public:
   /* cstor */
   MatrixVectorProductWork(
-    int K, 
+    int K0, int K, 
     double* A, int lda, int N, int M,         /* A of size N x M */
     double* X, int ldX, int L,                /* X of size M x L */
     double* Y, int ldY                        /* Y of size N x L */
-  ) : _A(A), _lda(lda), _N(N), _M(M),
+  ) : _K0(K0), _K(K)
+      _A(A), _lda(lda), _N(N), _M(M),
       _X(X), _ldX(ldX), _L(L)
       _Y(Y), _ldY(ldY)
   {
@@ -63,7 +64,7 @@ protected:
   /** splitter_work is called within the context of the steal point
   */
   static void splitter( kaapi_task_t* self_task, int count, kaapi_steal_request_t** request, 
-                        MatrixVectorProductWork* w, int ibegin, int* N
+                        MatrixVectorProductWork* w, int k, int K, int ibegin, int* N
                       )
   {
     int i = 0;
@@ -88,7 +89,8 @@ protected:
       /* generate work for blocsize rows between [thief_end..thief_end - blocsize-1] */
       if (request[i] !=0)
       {
-        output_work->_K   = 1;
+        output_work->_K0  = k;
+        output_work->_K   = K;
         output_work->_A   = w->_A+(thief_end-blocsize)*w->_ldA;
         output_work->_lda = w->_ldA;
         output_work->_N   = blocsize;
@@ -137,7 +139,7 @@ void MatrixVectorProductWork::doit()
   int N = _N;
   int K = _K;
 
-  for (int k=0; k<K; ++k)
+  for (int k= _K0; k<K; ++k)
   {
     
     /* here all the following code is a bloc-matrix-vector product that could be replaced by
@@ -150,7 +152,7 @@ void MatrixVectorProductWork::doit()
          The splitter cannot give more than WINDOW_SIZE size work to all other threads.
          Thus each thief thread cannot have more than WINDOW_SIZE size work.
       */
-      kaapi_stealpoint( self_task, splitter, this, &i, &N );
+      kaapi_stealpoint( self_task, splitter, this, k, K, &i, &N );
 
       cblas_dgemm( CblasRowMajor, CblasNoTrans, CblasRowMajor,
                    _M, BLOC_SIZE_I, _M, 
@@ -162,7 +164,12 @@ void MatrixVectorProductWork::doit()
       );
     }
     
-    kaapi_finalize_steal();
+    /* Wait all thiefs to reach the barrier k. The number of thiefs depends on the 
+       steal operation and may varies between timestep.
+       In order to avoid this synchronisation, the task must be suspended... and could be
+       preempted by the main task.
+    */
+    kaapi_barrier_steal(k);
     
     /* swap X and Y */
     std::swap( _X, _Y );
