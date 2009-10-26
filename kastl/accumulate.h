@@ -94,7 +94,7 @@ protected:
           output_work->_local_accumulate = 0;
           output_work->_op = op;
           output_work->_is_master = false;
-          xkaapi_assert( output_work->_iend - output_work->_ibeg >0);
+          kaapi_assert( output_work->_iend - output_work->_ibeg >0);
 
           /* reply ok (1) to the request */
           kaapi_request_reply( request[i], stealcontext, &thief_entrypoint, 1, CKAAPI_MASTER_FINALIZE_FLAG);
@@ -109,7 +109,7 @@ protected:
     }
   /* mute the end of input work of the victim */
   iend  = local_end;
-  xkaapi_assert( iend - ibeg >0);
+  kaapi_assert( iend - ibeg >0);
   return;
       
 reply_failed:

@@ -27,20 +27,18 @@ add_library (xkaapi SHARED
   thread/kaapi_cond_wait.c 
   thread/kaapi_mutex_attr.c
   thread/kaapi_mutex_destroy.c thread/kaapi_mutex_init.c thread/kaapi_mutex_lock.c
-  thread/kaapi_mutex_trylock.c thread/kaapi_mutex_unlock.c thread/kaapi_sched_alloc.c
-  thread/kaapi_sched_concurrency.c thread/kaapi_sched_run.c
-  thread/kaapi_sched_steal_thread.c thread/kaapi_sched_steal_inside_thread.c thread/kaapi_sched_suspend.c thread/kaapi_sched_idle.c
-  thread/kaapi_sched_term.c thread/kaapi_specific_create.c thread/kaapi_specific_delete.c
+  thread/kaapi_mutex_trylock.c thread/kaapi_mutex_unlock.c 
   thread/kaapi_specific_get.c thread/kaapi_specific_set.c thread/kaapi_thread_create.c
   thread/kaapi_thread_detach.c thread/kaapi_thread_equal.c thread/kaapi_thread_exit.c
   thread/kaapi_thread_join.c thread/kaapi_thread_once.c thread/kaapi_thread_self.c
   thread/kaapi_thread_yield.c 
   kaapi_init.c 
   kaapi_atomic.h 
-  kaapi_task.h 
   kaapi_task.c
-  kaapi_time.h 
   kaapi_time.c
+  thread/kaapi_sched_alloc.c thread/kaapi_sched_concurrency.c thread/kaapi_sched_run.c
+  thread/kaapi_sched_steal_thread.c thread/kaapi_sched_steal_inside_thread.c thread/kaapi_sched_suspend.c thread/kaapi_sched_idle.c
+  thread/kaapi_sched_term.c thread/kaapi_specific_create.c thread/kaapi_specific_delete.c
 #  workstealing/kaapi_stealapi.h
 #  workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
 #  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c

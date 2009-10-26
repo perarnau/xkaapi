@@ -206,7 +206,7 @@ type* _back
 typedef struct name {\
 type* _front;\
 type* _back;\
-} name;
+} name
 
 /** Generic fifo queue
  Declare a fifo queue, a double linked list of typed element.
@@ -218,7 +218,7 @@ type* _back;\
 typedef struct name {\
 type* volatile _front;\
 type* volatile _back;\
-} name;
+} name
 
 /** q: queue*
  */

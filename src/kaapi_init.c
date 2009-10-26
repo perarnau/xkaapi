@@ -44,7 +44,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "kaapi_stealapi.h"
 #include <stdlib.h>
 
 /*
@@ -121,12 +120,12 @@ void _kaapi_dummy(void* foo)
 void __attribute__ ((constructor)) kaapi_init(void)
 {
   int i;
+  kaapi_thread_descr_processor_t* kaapi_main_processor;
+  kaapi_thread_descr_t* td_main_thread;  
   default_param.stacksize = getpagesize()*4;
 
-  xkaapi_assert( 0 == pthread_key_create( &kaapi_current_thread_key, 0 ) );
-  kaapi_thread_descr_t* td_main_thread;  
-  td_main_thread = allocate_thread_descriptor(KAAPI_SYSTEM_SCOPE, 1);
-  td_main_thread->_scope = KAAPI_SYSTEM_SCOPE;
+  kaapi_assert( 0 == pthread_key_create( &kaapi_current_thread_key, 0 ) );
+  td_main_thread = kaapi_allocate_thread_descriptor(KAAPI_SYSTEM_SCOPE, 1, 0, default_param.stacksize);
   pthread_setspecific( kaapi_current_thread_key, td_main_thread );
   
   /* init dataspecific table */
@@ -138,7 +137,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_global_keys[KAAPI_KEYS_MAX - 1].next = -1;
 
   /* should be the first kaapi key with value == 0 */
-  xkaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
+  kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
@@ -278,13 +277,10 @@ printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
     else if ((i & (1<<7)) !=0) kaapi_min_index_cpu_set[ i ] = 7;
   }
   
-  /* steal api part */
-  kaapi_stealapi_initialize();
-  
   /* initialize kaapi_main_processor */
-  kaapi_processor_t* kaapi_main_processor = kaapi_allocate_processor();
-  xkaapi_assert( kaapi_main_processor !=0 );
-  xkaapi_assert( 0 == pthread_setspecific(kaapi_current_processor_key, kaapi_main_processor ) );
+  kaapi_main_processor = kaapi_allocate_processor();
+  kaapi_assert( kaapi_main_processor !=0 );
+  kaapi_assert( 0 == pthread_setspecific(kaapi_current_processor_key, kaapi_main_processor ) );
 
   /* TODO : set to 1  default_param.cpuset; */
   printf("[KAAPI::INIT] Current thread is: %lu\n", (unsigned long)pthread_self() );
@@ -297,9 +293,6 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 {
   printf("[KAAPI::TERM] Current thread is: %lu\n", (unsigned long)pthread_self() );
   fflush( stdout );
-  
-  /* steal api part */
-  kaapi_stealapi_terminate();
 
 #if defined(KAAPI_USE_SCHED_AFFINITY)
   free(kaapi_kproc2cpu);

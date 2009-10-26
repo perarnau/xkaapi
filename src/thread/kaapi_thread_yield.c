@@ -51,12 +51,12 @@ static int kaapi_always_true(void* dummy)
 void kaapi_yield(void)
 {
   kaapi_t thread = kaapi_self();
-  xkaapi_assert( thread !=0 );
+  kaapi_assert( thread !=0 );
   
   if (thread->_scope == KAAPI_PROCESS_SCOPE)
   {
     /* suspend the thread in the ready list of thread */
-    kaapi_sched_suspend( thread->_proc, thread, &kaapi_always_true, 0 );
+    kaapi_sched_suspend( thread->th.p._proc, thread, &kaapi_always_true, 0 );
   }
   else {
     /* ok for user defined kernel thread or kaapi processor */

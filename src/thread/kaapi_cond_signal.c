@@ -48,14 +48,17 @@
 
 int kaapi_cond_signal(kaapi_cond_t *cond)
 {
-  xkaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
-  
+  kaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+
   if (!KAAPI_QUEUE_EMPTY(&cond->_th_q))
   {
     kaapi_t thread;
-    KAAPI_QUEUE_POP_FRONT(&cond->_th_q, thread);
-    thread->_state      = KAAPI_THREAD_RUNNING;    
-    xkaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
+    if (!KAAPI_QUEUE_EMPTY(&cond->_th_q))
+    {
+      KAAPI_QUEUE_POP_FRONT(&cond->_th_q, thread);
+      kaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+      thread->_state      = KAAPI_THREAD_S_RUNNING;
+    }
   }
   else if (!KAAPI_QUEUE_EMPTY(&cond->_kttl_q))
   {
@@ -70,9 +73,13 @@ int kaapi_cond_signal(kaapi_cond_t *cond)
       else if (now.tv_sec < kttl->abstime->tv_sec) kttl->retval = 0;
       else if (now.tv_usec > kttl->abstime->tv_nsec / 1000) kttl->retval = ETIMEDOUT;
     }
-    //thread->_state      = KAAPI_THREAD_RUNNING;
+/*
+   // TG: why not here ?
+    //thread->_state      = KAAPI_THREAD_S_RUNNING;
+*/
   }
 
-  xkaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+  kaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+
   return 0;
 }

@@ -109,8 +109,8 @@ protected:
          output_work->_iend2 = local_end2;
          local_end2 = split2;
          output_work->_res = res + ((local_end - ibeg) + (local_end2 - ibeg2));
-         //xkaapi_assert( output_work->_iend - output_work->_ibeg >=0);
-         //xkaapi_assert( output_work->_iend2 - output_work->_ibeg2 >=0);
+         //kaapi_assert( output_work->_iend - output_work->_ibeg >=0);
+         //kaapi_assert( output_work->_iend2 - output_work->_ibeg2 >=0);
          output_work->_comp   = comp;
 
          /* reply ok (1) to the request */
@@ -128,8 +128,8 @@ protected:
         output_work->_iend2 = local_end2;
         local_end2 = mid2;
         output_work->_res = res + ((local_end - ibeg) + (local_end2 - ibeg2));
-        xkaapi_assert( output_work->_iend - output_work->_ibeg >=0);
-        xkaapi_assert( output_work->_iend2 - output_work->_ibeg2 >=0);
+        kaapi_assert( output_work->_iend - output_work->_ibeg >=0);
+        kaapi_assert( output_work->_iend2 - output_work->_ibeg2 >=0);
         output_work->_comp   = comp;
 
         /* reply ok (1) to the request */
@@ -148,8 +148,8 @@ protected:
   /* mute the end of input work of the victim */
   iend  = local_end;
   iend2  = local_end2;
-  xkaapi_assert( iend - ibeg >=0);
-  xkaapi_assert( iend2 - ibeg2 >=0);
+  kaapi_assert( iend - ibeg >=0);
+  kaapi_assert( iend2 - ibeg2 >=0);
   return;
 
 
@@ -167,8 +167,8 @@ protected:
    /* mute the end of input work of the victim */
    iend  = local_end;
    iend2  = local_end2;
-   //xkaapi_assert( iend - ibeg >=0);
-   //xkaapi_assert( iend2 - ibeg2 >=0);
+   //kaapi_assert( iend - ibeg >=0);
+   //kaapi_assert( iend2 - ibeg2 >=0);
 
    
   }

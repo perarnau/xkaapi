@@ -47,10 +47,11 @@
 
 int kaapi_setspecific(kaapi_key_t key, const void *value_ptr)
 {
+  int i;
+  kaapi_t thread;
   if (kaapi_global_keys[key].next != -1) return EINVAL;
   
-  int i;
-  kaapi_t thread = kaapi_self();
+  thread = kaapi_self();
   
   if (thread->_key_table == NULL)
   {

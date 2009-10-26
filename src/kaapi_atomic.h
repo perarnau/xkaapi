@@ -47,7 +47,6 @@
 #define _KAAPI_ATOMIC_H 1
 
 #include "kaapi_config.h"
-#include "kaapi_private_structure.h"
 
 /* ============================= Atomic Function ============================ */
 
@@ -161,5 +160,67 @@ __sync_synchronize()
 */
 #define kaapi_barrier_td_isterminated( kpb ) \
   (KAAPI_ATOMIC_READ(kpb ) == 0)
+
+
+
+/* ========================================================================== */
+/** Communication structure buffer
+*/
+struct kaapi_s_structure_t;
+
+/** The size of data part for structure for synchronisation
+*/
+enum { KAAPI_SSTRUCTURE_DATA_MAX= (KAAPI_CACHE_LINE-sizeof(int)) };
+
+#define KAAPI_INHERITE_FROM_SSTRUCT_T \
+  int _status
+
+typedef struct kaapi_s_structure_t {
+  KAAPI_INHERITE_FROM_SSTRUCT_T;
+  char  _data[KAAPI_SSTRUCTURE_DATA_MAX];
+} kaapi_s_structure_t;
+
+
+/** Initialize the struct for synchronization with given type
+    \param kpss should have the _status field defined by KAAPI_INHERITE_SSTRUCT_T
+*/
+#define kaapi_sstruct_init( kpss, value ) \
+  (kpss)->_status =value
+
+/** Destroy the struct for synchronisation
+*/
+#define kaapi_sstruct_destroy( kpss )
+
+/** Flush write operation on the structure and write the status
+    \param kpss should have the _status field defined by KAAPI_INHERITE_SSTRUCT_T
+*/
+#define kaapi_sstruct_flush_write( kpss, value ) \
+    kaapi_writemem_barrier();\
+    (kpss)->_status = value
+
+/** Write the status
+    \param kpss should have the _status field defined by KAAPI_INHERITE_SSTRUCT_T
+*/
+#define kaapi_sstruct_write( kpss, value ) \
+    (kpss)->_status = value
+
+
+/** Read the status
+    \param kpss should have the _status field defined by KAAPI_INHERITE_SSTRUCT_T
+*/
+#define kaapi_sstruct_read( kpss ) \
+    (kpss)->_status
+
+
+/** Return 1 iff the sstructure is ready depending of the operation
+*/
+#define kaapi_sstruct_isready_eq( kpss, value )  \
+  ((kpss)->_status == value)
+
+
+/** Wait the pis is ready
+*/
+#define kaapi_sstruct_waitready_eq( kpss, value ) \
+  { while (kaapi_sstruct_isready_eq(kpss, value)); kaapi_readmem_barrier(); }
 
 #endif /* _KAAPI_ATOMIC_H */

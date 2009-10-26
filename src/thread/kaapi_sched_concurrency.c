@@ -59,7 +59,7 @@ int kaapi_setconcurrency( int concurrency )
   
   if (KAAPI_ATOMIC_READ(&kaapi_stealapi_barrier_term) !=1) return ENOSYS; /* cannot be changed dynamically should be implemented */
   
-  kaapi_processor_t** all_processors = kaapi_allocate_processors( concurrency-1, default_param.cpuset );
+  kaapi_thread_descr_processor_t** all_processors = kaapi_allocate_processors( concurrency-1, default_param.cpuset );
   
 #if defined(KAAPI_USE_SCHED_AFFINITY)
   cpu_set_t cpuset;
@@ -70,8 +70,8 @@ int kaapi_setconcurrency( int concurrency )
   {
     /* set attr to the posix thread */
     kaapi_attr_t attr;
-    xkaapi_assert ( 0 == kaapi_attr_init( &attr ) );
-    xkaapi_assert ( 0 == kaapi_attr_setdetachstate( &attr, 1 ) );
+    kaapi_assert ( 0 == kaapi_attr_init( &attr ) );
+    kaapi_assert ( 0 == kaapi_attr_setdetachstate( &attr, 1 ) );
     attr._scope = KAAPI_PROCESSOR_SCOPE;
 #if defined(KAAPI_USE_SCHED_AFFINITY)
     if (default_param.usecpuset !=0)
@@ -85,12 +85,12 @@ int kaapi_setconcurrency( int concurrency )
     stsize = KAAPI_STACK_MIN;
     staddr = malloc(stsize);
 
-    xkaapi_assert ( 0 == kaapi_attr_setstacksize( &attr, stsize ));
-    xkaapi_assert ( 0 == kaapi_attr_setstackaddr( &attr, staddr ));
+    kaapi_assert ( 0 == kaapi_attr_setstacksize( &attr, stsize ));
+    kaapi_assert ( 0 == kaapi_attr_setstackaddr( &attr, staddr ));
 
     /* increment number of running thread */
     kaapi_barrier_td_setactive( &kaapi_stealapi_barrier_term, 1 );
-    xkaapi_assert( 0 == kaapi_create( &thread, &attr, &kaapi_sched_run_processor, all_processors[i-1] ));    
+    kaapi_assert( 0 == kaapi_create( &thread, &attr, &kaapi_sched_run_processor, all_processors[i-1] ));    
   }
   
   return 0;

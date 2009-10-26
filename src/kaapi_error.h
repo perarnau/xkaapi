@@ -51,14 +51,14 @@ extern "C" {
 #endif
 
 #if defined(NDEBUG)
-#  define xkaapi_assert( cond ) if (!(cond)) abort();
-#  define xkaapi_assert_debug( cond )
+#  define kaapi_assert( cond ) if (!(cond)) abort();
+#  define kaapi_assert_debug( cond )
 #else
 #  include <errno.h>
 #  include <stdio.h>
 #  include <stdlib.h>
-#  define xkaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
-#  define xkaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
+#  define kaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
+#  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
 #endif
 
 #if defined(__cplusplus)

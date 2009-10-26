@@ -51,18 +51,14 @@ int kaapi_join(kaapi_t thread, void **value_ptr)
   if (thread == kaapi_self ()) return EDEADLK;
   if (thread->_detachstate ==1) return EINVAL;
   
-  int err = pthread_mutex_lock( &thread->_mutex_join );
-  if (err !=0) return err;
-  while (thread->_state != KAAPI_THREAD_TERMINATED)
+  
+  if (thread->_scope == KAAPI_SYSTEM_SCOPE)
   {
-    err = pthread_cond_wait( &thread->_cond_join, &thread->_mutex_join );
-    if (err !=0) {
-      xkaapi_assert ( 0 == pthread_mutex_unlock( &thread->_mutex_join ));
-      return err;
-    }
+    return pthread_join( thread->th.s._pthid, value_ptr );
   }
-  *value_ptr = thread->_return_value;
-  err = pthread_mutex_unlock( &thread->_mutex_join );
-  if (err !=0) return err;
+  else {
+    return ENOSYS;
+    *value_ptr = thread->_return_value;
+  }
   return 0;
 }

@@ -97,13 +97,19 @@ typedef struct {
 
 /* ================================ Constants =============================== */
 
-/* Define the number of key destructor iterations. */
+/** \ingroup THREAD 
+    Define the number of key destructor iterations. 
+*/
 #cmakedefine KAAPI_DESTRUCTOR_ITERATIONS ${KAAPI_DESTRUCTOR_ITERATIONS}
 
-/* Define the minimum stack size. */
+/** \ingroup THREAD
+   Define the minimum stack size. 
+*/
 #cmakedefine KAAPI_STACK_MIN ${KAAPI_STACK_MIN}
 
-/* Define the number of keys. */
+/** \ingroup THREAD
+    Define the number of keys. 
+*/
 #cmakedefine KAAPI_KEYS_MAX ${KAAPI_KEYS_MAX}
 
 /* Define the cache line size. */
@@ -114,7 +120,10 @@ typedef struct {
 
 /* =============================== Initializer ============================== */
 
+/** \ingroup THREAD */
 #cmakedefine KAAPI_MUTEX_INITIALIZER ${KAAPI_MUTEX_INITIALIZER}
+
+/** \ingroup THREAD */
 #cmakedefine KAAPI_COND_INITIALIZER ${KAAPI_COND_INITIALIZER}
 
 /* ========================================================================== */
@@ -125,33 +134,34 @@ typedef struct {
 /* ========================================================================== */
 /** Mutex interface
  */
-
 typedef enum kaapi_mutex_type_t {
+  /** \ingroup THREAD */
   KAAPI_MUTEX_NORMAL    =0,
+  /** \ingroup THREAD */
   KAAPI_MUTEX_RECURSIVE =1
-}kaapi_mutex_type_t;
+} kaapi_mutex_type_t;
 
 /* ========================================================================== */
 /** Thread descriptor
  */
 
 typedef enum kaapi_scope_t {
+  /** \ingroup THREAD */
   KAAPI_SYSTEM_SCOPE  = 0,
+  /** \ingroup THREAD */
   KAAPI_PROCESS_SCOPE = 1
 } kaapi_scope_t;
   
 typedef struct kaapi_thread_descr_t* kaapi_t;
     
 /* ========================================================================== */
-/** Dataspecific data structures and functions
- */
-
+/* Dataspecific data structures and functions */
+/** \ingroup THREAD */
 typedef unsigned long kaapi_key_t;
   
 /* ========================================================================== */
-/** Once data structure: same structure as atomic_t
- */
-
+/* Once data structure: same structure as atomic_t */
+/** \ingroup THREAD */
 #cmakedefine KAAPI_ONCE_INIT ${KAAPI_ONCE_INIT}
   
 /* ========================================================================== */
@@ -163,122 +173,167 @@ typedef unsigned long kaapi_key_t;
 /* ========================================================================== */
 /** Mutex interface
  */
-
+/** \ingroup THREAD */
 int kaapi_mutexattr_destroy (kaapi_mutexattr_t *);
 
+/** \ingroup THREAD */
 int kaapi_mutexattr_init (kaapi_mutexattr_t *);
 
+/** \ingroup THREAD */
 int kaapi_mutexattr_gettype (const kaapi_mutexattr_t *__restrict, int *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_mutexattr_settype (kaapi_mutexattr_t *, int);
 
+/** \ingroup THREAD */
 int kaapi_mutex_destroy (kaapi_mutex_t *);
 
+/** \ingroup THREAD */
 int kaapi_mutex_init (kaapi_mutex_t *__restrict, const kaapi_mutexattr_t *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_mutex_lock (kaapi_mutex_t *);
 
+/** \ingroup THREAD */
 int kaapi_mutex_trylock (kaapi_mutex_t *);
 
+/** \ingroup THREAD */
 int kaapi_mutex_unlock (kaapi_mutex_t *);
 
 /* ========================================================================== */
 /** Condition interface 
  */
-
+/** \ingroup THREAD */
 int kaapi_condattr_init (kaapi_condattr_t *);
 
+/** \ingroup THREAD */
 int kaapi_condattr_destroy (kaapi_condattr_t *);
 
+/** \ingroup THREAD */
 int kaapi_cond_broadcast (kaapi_cond_t *);
 
+/** \ingroup THREAD */
 int kaapi_cond_destroy (kaapi_cond_t *);
 
+/** \ingroup THREAD */
 int kaapi_cond_init (kaapi_cond_t *__restrict, const kaapi_condattr_t *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_cond_signal (kaapi_cond_t *);
 
+/** \ingroup THREAD */
 int kaapi_cond_timedwait (kaapi_cond_t *__restrict, kaapi_mutex_t *__restrict,
                           const struct timespec *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_cond_wait (kaapi_cond_t *__restrict, kaapi_mutex_t *__restrict);
 
 /* ========================================================================== */
 /** Dataspecific interface
  */
-
+/** \ingroup THREAD */
 int kaapi_key_create (kaapi_key_t *, void (*)(void*));
 
+/** \ingroup THREAD */
 int kaapi_key_delete (kaapi_key_t);
 
+/** \ingroup THREAD */
 void *kaapi_getspecific (kaapi_key_t);
 
+/** \ingroup THREAD */
 int kaapi_setspecific (kaapi_key_t, const void *);
 
 /* ========================================================================== */
 /** Thread interface
  */
 
+/** \ingroup THREAD */
 int kaapi_create (kaapi_t *__restrict, const kaapi_attr_t *__restrict,
                   void *(*)(void*), void *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_detach (kaapi_t);
 
+/** \ingroup THREAD */
 int kaapi_equal (kaapi_t, kaapi_t);
 
+/** \ingroup THREAD */
 int kaapi_exit (void *);
 
+/** \ingroup THREAD */
 int kaapi_join (kaapi_t, void **);
 
+/** \ingroup THREAD */
 int kaapi_once (kaapi_once_t *, void (*)(void));
 
+/** \ingroup THREAD */
 kaapi_t kaapi_self (void);
 
 /* Not in POSIX spec anymore : */
+/** \ingroup THREAD */
 void kaapi_yield (void);
 
+/** \ingroup THREAD */
 int kaapi_attr_destroy (kaapi_attr_t *);
 
+/** \ingroup THREAD */
 int kaapi_attr_getinheritsched (const kaapi_attr_t *__restrict, int *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_attr_getschedparam (const kaapi_attr_t *__restrict,
                               struct sched_param *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_attr_getschedpolicy (const kaapi_attr_t *__restrict, int *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_attr_getscope (const kaapi_attr_t *__restrict, int *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_attr_getstack (const kaapi_attr_t *__restrict, void **__restrict,
                          size_t *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_attr_getstacksize (const kaapi_attr_t *__restrict, size_t *__restrict);
 
 /* Not in POSIX spec anymore : */
+/** \ingroup THREAD */
 int kaapi_attr_getstackaddr (const kaapi_attr_t *__restrict, void **__restrict);
 
+/** \ingroup THREAD */
 int kaapi_attr_getdetachstate (const kaapi_attr_t *, int *);
 
 /* Not in POSIX : */
+/** \ingroup THREAD */
 int kaapi_attr_getaffinity (kaapi_attr_t *, size_t, cpu_set_t *);
 
+/** \ingroup THREAD */
 int kaapi_attr_init (kaapi_attr_t *);
 
+/** \ingroup THREAD */
 int kaapi_attr_setinheritsched (kaapi_attr_t *, int);
 
+/** \ingroup THREAD */
 int kaapi_attr_setschedparam (kaapi_attr_t *__restrict,
                               const struct sched_param *__restrict);
 
+/** \ingroup THREAD */
 int kaapi_attr_setschedpolicy (kaapi_attr_t *, int);
 
+/** \ingroup THREAD */
 int kaapi_attr_setscope (kaapi_attr_t *, int);
 
+/** \ingroup THREAD */
 int kaapi_attr_setstack (kaapi_attr_t *, void *, size_t);
 
+/** \ingroup THREAD */
 int kaapi_attr_setstacksize (kaapi_attr_t *, size_t);
 
 /* Not in POSIX spec anymore : */
+/** \ingroup THREAD */
 int kaapi_attr_setstackaddr (kaapi_attr_t *, void *);
 
+/** \ingroup THREAD */
 int kaapi_attr_setdetachstate (kaapi_attr_t *, int);
 
 /* Not in POSIX : */
@@ -286,15 +341,17 @@ int kaapi_attr_setaffinity (kaapi_attr_t *, size_t, const cpu_set_t *);
 
 /* ========================================================================== */
 
-/** Get the workstealing concurrency number, i.e. the number of kernel
- activities to execute the user level thread. If kaapi_setconcurrency was no
- called before then return 0, else return the number set by
- kaapi_setconcurrency.
+/** \ingroup THREAD
+    Get the workstealing concurrency number, i.e. the number of kernel
+    activities to execute the user level thread. If kaapi_setconcurrency was no
+    called before then return 0, else return the number set by
+    kaapi_setconcurrency.
  */
 int kaapi_getconcurrency (void);
 
-/** Set the workstealing concurrency number, i.e. the number of kernel
- activities to execute the user level thread.
+/** \ingroup THREAD
+    Set the workstealing concurrency number, i.e. the number of kernel
+    activities to execute the user level thread.
  */
 int kaapi_setconcurrency (int concurrency);
 

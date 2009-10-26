@@ -77,50 +77,6 @@ extern void kaapi_stealapi_initialize( );
 extern void kaapi_stealapi_terminate();
 
 
-/* ========================================================================= */
-/** This data structure is stored on the thief side of the protocol.
-    A thief that emits a request to steal a context should link this data structure
-    into the victim kaapi_steal_processor_t. When the request is processed, 
-    in case of success of the steal, the request is unlinked to the victim steal context 
-    and the state of the request is set to KAAPI_REQUEST_S_SUCCESS.
-    Application dependent data (of size at most KAAPI_REQUEST_DATA_SIZE) may be passed in the 
-    structure which is aligned to the size of a cache line (64 bytes).
-*/
-typedef  void (*kaapi_steal_thief_entrypoint_t)(struct kaapi_steal_processor_t*, struct kaapi_steal_request_t*); 
-enum { KAAPI_REQUEST_DATA_SIZE = (KAAPI_SSTRUCTURE_DATA_MAX-sizeof(kaapi_steal_thief_entrypoint_t)-sizeof(int)) };
-
-typedef struct kaapi_steal_request_t {
-  KAAPI_INHERITE_FROM_SSTRUCT_T;                                   /* read-write synchro status field */
-  unsigned long                    _tpid;                          /* system wide index of the thief */
-  kaapi_steal_thief_entrypoint_t   _entrypoint;                    /* entry point to execute the request */
-  struct kaapi_steal_context_t*    _victim_sc;                     /* victim steal context */
-  char                             _data[KAAPI_REQUEST_DATA_SIZE]; /* where to store application dependent data */
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_steal_request_t;
- 
-
-/**
-*/
-enum kaapi_steal_request_status_t {
-  KAAPI_REQUEST_S_CREATED = 0,
-  KAAPI_REQUEST_S_POSTED  = 1,
-  KAAPI_REQUEST_S_SUCCESS = 2,
-  KAAPI_REQUEST_S_FAIL    = 3,
-  KAAPI_REQUEST_S_ERROR   = 4,
-  KAAPI_REQUEST_S_QUIT    = 5
-};
-
-
-/* ========================================================================= */
-/** This data structure is the list of requests stored in any steal context
-    \field count is the number of request
-    \field request is the array of request
-*/
-typedef struct kaapi_list_request_t {
-  kaapi_atomic_t         _count;                                   /* used to store number of posted requests in the list */
-  struct { 
-    __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_steal_request_t* _request
-  } _array[1+KAAPI_MAXSTACK_STEAL];
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_list_request_t;
 
 
 /* ========================================================================= */
@@ -163,26 +119,6 @@ enum kaapi_steal_context_{
 
 
 /* ========================================================================= */
-/** This data structure defines the context of a work stealer processor thread
-    The way of stealing into the thread depend on the thief algorithm.
-*/
-typedef struct kaapi_steal_thread_t {
-  int                                                         _state;         /* see above */
-  unsigned long                                               _processor_id;  /* system wide id, low 0xFF bits are index in local table */
-  kaapi_list_request_t                                        _list_request;  /* list of steal requests */
-  kaapi_steal_request_t                                       _request;       /* request if I'am a thief, else never used */
-  KAAPI_QUEUE_DECLARE_FIELD_VOLATILE( kaapi_steal_context_t );
-  char*                                                       _sp;            /* stack pointer */
-  char*                                                       _stackaddr;     /* base stack pointer */
-  char*                                                       _stackend;      /* end stack pointer */
-} __attribute__ ((aligned (KAAPI_CACHE_LINE))) kaapi_steal_thread_t;
-
-enum kaapi_steal_processor_state_t {
-  KAAPI_PROCESSOR_S_CREATED    = 1,
-  KAAPI_PROCESSOR_S_WAITING    = 2,
-  KAAPI_PROCESSOR_S_TERMINATED = 3,
-  KAAPI_PROCESSOR_S_DESTROY    = 4
-};
 
 #define KAAPI_STEAL_PROCESSOR_DECODEINDEX( i ) \
   (i & 0xFF )

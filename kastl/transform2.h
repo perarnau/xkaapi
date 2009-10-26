@@ -85,7 +85,7 @@ protected:
           output_work->_ibeg = local_end-bloc;
           local_end -= bloc;
           output_work->_obeg = obeg + (output_work->_ibeg - ibeg);
-          xkaapi_assert( output_work->_iend - output_work->_ibeg >0);
+          kaapi_assert( output_work->_iend - output_work->_ibeg >0);
           output_work->_op   = op;
 
           /* reply ok (1) to the request */
@@ -101,7 +101,7 @@ protected:
     }
   /* mute the end of input work of the victim */
   iend  = middle;
-  xkaapi_assert( iend - ibeg >0);
+  kaapi_assert( iend - ibeg >0);
   return;
       
 reply_failed:

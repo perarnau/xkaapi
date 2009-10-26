@@ -47,14 +47,16 @@
 
 void* kaapi_getspecific(kaapi_key_t key)
 {
-  xkaapi_assert (kaapi_global_keys[key].next == -1);
+  kaapi_t thread;
+  void* result;  
+  kaapi_assert (kaapi_global_keys[key].next == -1);
   
-  kaapi_t thread = kaapi_self();
+  thread = kaapi_self();
   
   /* TG: add next line:
   */
   if (thread->_key_table ==0) return 0;
-  void* result = thread->_key_table[key]; 
+  result = thread->_key_table[key]; 
   
   return result;
 }

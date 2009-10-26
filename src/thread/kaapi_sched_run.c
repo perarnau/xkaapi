@@ -47,9 +47,9 @@
 void* kaapi_sched_run_processor( void* arg )
 {
   kaapi_processor_t* proc = (kaapi_processor_t*)arg;
-  xkaapi_assert( proc != 0);
+  kaapi_assert( proc != 0);
   
-  xkaapi_assert ( 0 == pthread_setspecific( kaapi_current_processor_key, proc ) );
+  kaapi_assert ( 0 == pthread_setspecific( kaapi_current_processor_key, proc ) );
   
   /* change the scope of the running thread to be a KAAPI_PROCESSOR_SCOPE */
   kaapi_thread_descr_t* td = (kaapi_thread_descr_t*)pthread_getspecific(kaapi_current_thread_key);
@@ -68,9 +68,9 @@ void* kaapi_sched_run_processor( void* arg )
 
 /*
 */
-kaapi_processor_t* kaapi_sched_get_processor()
+kaapi_thread_descr_processor_t* kaapi_sched_get_processor()
 {
-  kaapi_processor_t* proc = 0;
-  proc = pthread_getspecific( kaapi_current_processor_key );
+  kaapi_thread_descr_processor_t* proc = 0;
+  proc = (kaapi_thread_descr_processor_t*)pthread_getspecific( kaapi_current_processor_key );
   return proc;
 }

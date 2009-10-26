@@ -86,7 +86,7 @@ int kaapi_mutex_lock (kaapi_mutex_t *mutex)
   
   if (thread->_scope == KAAPI_SYSTEM_SCOPE)
   {
-    xkaapi_assert( 0 == pthread_mutex_lock (&mutex->_mutex) );
+    kaapi_assert( 0 == pthread_mutex_lock (&mutex->_mutex) );
     
     if (KAAPI_ATOMIC_CAS (&mutex->_lock, 0, 1))
     {
@@ -95,36 +95,38 @@ int kaapi_mutex_lock (kaapi_mutex_t *mutex)
         mutex->_owner = thread;
         mutex->_nb_lock++;
       }
-      xkaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
+      kaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
       return 0;
     }
 
-    thread->_state = KAAPI_THREAD_SUSPEND;
+    thread->_state = KAAPI_THREAD_S_SUSPEND;
     KAAPI_QUEUE_PUSH_FRONT (mutex, thread);
         
-    while (thread->_state != KAAPI_THREAD_RUNNING)
-      xkaapi_assert( 0 == pthread_cond_wait (&thread->_cond, &mutex->_mutex) );
+    while (thread->_state != KAAPI_THREAD_S_RUNNING)
+      kaapi_assert( 0 == pthread_cond_wait (&thread->th.s._cond, &mutex->_mutex) );
     
     if (mutex->_type == KAAPI_MUTEX_RECURSIVE)
     { 
       mutex->_owner = thread;
       mutex->_nb_lock++;
     }
-    xkaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
+    kaapi_assert( 0 == pthread_mutex_unlock (&mutex->_mutex) );
     
     return 0;
   }
-  
-  kaapi_test_and_lock__t ktl;
-  ktl.mutex = mutex;
-  ktl.thread = thread;
-  kaapi_sched_suspend (thread->_proc, thread, &kaapi_test_and_lock_mutex, &ktl );
+
+  {  
+    kaapi_test_and_lock__t ktl;
+    ktl.mutex = mutex;
+    ktl.thread = thread;
+    kaapi_sched_suspend (thread->th.p._proc, thread, &kaapi_test_and_lock_mutex, &ktl );
+  }
 
   return 0;
 }
 
 
-
+/* TG: better algorithm with exponential backoff */
 int kaapi_mutex_spinlock (kaapi_mutex_t *mutex)
 {
   while (!KAAPI_ATOMIC_CAS (&mutex->_lock, 0, 1)) sched_yield();

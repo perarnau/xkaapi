@@ -45,11 +45,11 @@
 */
 #include "kaapi_impl.h"
 
-void kaapi_sched_idle ( kaapi_processor_t* proc )
+void kaapi_sched_idle ( kaapi_thread_descr_processor_t* proc )
 {
   int i,victim;
-  kaapi_steal_processor_t* victim_processor;
-  kaapi_thread_descr_t* td __attribute__((__unused__))= (kaapi_thread_descr_t*)pthread_getspecific(kaapi_current_thread_key);
+  kaapi_thread_descr_processor_t* victim_processor;
+  kaapi_thread_descr_t*           td __attribute__((__unused__))= (kaapi_thread_descr_t*)pthread_getspecific(kaapi_current_thread_key);
 
   if (proc ==0) 
   {
@@ -82,10 +82,10 @@ redo_post:
 
 ////WARNING/ HERE GARBAGE !!! if (i==currbloc->_top) currbloc->_top = currbloc->_bottom = 0;
 
-        xkaapi_assert( thread->_state == KAAPI_THREAD_SUSPEND )
+        kaapi_assert( thread->_state == KAAPI_THREAD_S_SUSPEND )
 
         /* activate thread */
-        thread->_state = KAAPI_THREAD_RUNNING;
+        thread->_state = KAAPI_THREAD_S_RUNNING;
         thread->_proc = proc;
         proc->_sc_thread._active_thread = thread;
         /* jmp to thread context, never store processor context */
@@ -120,7 +120,7 @@ redo_post:
 //WARNING/ HERE GARBAGE !!!        if (i==currbloc->_top) currbloc->_top = currbloc->_bottom = 0;
 
         /* activate thread */
-        thread->_state = KAAPI_THREAD_RUNNING;
+        thread->_state = KAAPI_THREAD_S_RUNNING;
         thread->_proc = proc;
         proc->_sc_thread._active_thread = thread;
 #if defined(KAAPI_USE_UCONTEXT)
@@ -156,15 +156,15 @@ redo_post:
   
   /* lock victim and process my request and may be other request 
   */
-  xkaapi_assert( 0 == kaapi_mutex_lock( &victim_processor->_lock ) );
+  kaapi_assert( 0 == kaapi_mutex_lock( &victim_processor->_lock ) );
   while (kaapi_thief_request_status(&proc->_the_steal_processor->_request) == KAAPI_REQUEST_S_POSTED)
   {
     /* here request should be cancelled... */
     kaapi_steal_processor( victim_processor );
   }
-  xkaapi_assert( 0 == kaapi_mutex_unlock( &victim_processor->_lock ) );
+  kaapi_assert( 0 == kaapi_mutex_unlock( &victim_processor->_lock ) );
 
-  xkaapi_assert( kaapi_thief_request_status(&proc->_the_steal_processor->_request) != KAAPI_REQUEST_S_POSTED );
+  kaapi_assert( kaapi_thief_request_status(&proc->_the_steal_processor->_request) != KAAPI_REQUEST_S_POSTED );
 
   /* test if my request is ok
   */

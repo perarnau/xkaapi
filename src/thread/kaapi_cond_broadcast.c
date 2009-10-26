@@ -47,20 +47,22 @@
 
 int kaapi_cond_broadcast(kaapi_cond_t *cond)
 {
-  xkaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
-  
   struct timeval now;
-  kaapi_t thread;
+  kaapi_thread_descr_t* thread;
   struct kaapi_timed_test_and_lock__t *kttl;
   
+  kaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+  
+  /* broadcast system scope threads first */
   while (!KAAPI_QUEUE_EMPTY(&cond->_th_q))
   {
     KAAPI_QUEUE_POP_FRONT(&cond->_th_q, thread);
-    thread->_state = KAAPI_THREAD_RUNNING;
+    thread->_state = KAAPI_THREAD_S_RUNNING;
     
-    xkaapi_assert ( 0 == pthread_cond_signal (&thread->_cond) );
+    kaapi_assert ( 0 == pthread_cond_signal (&thread->th.s._cond) );
   }
   
+  /* broadcast process scope threads */
   while (!KAAPI_QUEUE_EMPTY(&cond->_kttl_q))
   {
     KAAPI_QUEUE_POP_FRONT(&cond->_kttl_q, kttl);
@@ -74,7 +76,7 @@ int kaapi_cond_broadcast(kaapi_cond_t *cond)
     }
   }
   
-  xkaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+  kaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
   
   return 0;
 }

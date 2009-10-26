@@ -53,7 +53,9 @@ int kaapi_attr_init(kaapi_attr_t *attr)
   if (attr ==0) return EINVAL;
   attr->_detachstate = 0;
   attr->_scope = KAAPI_SYSTEM_SCOPE;
+#if 0 /* affinity !!! */
   CPU_SETALL(&attr->_cpuset);
+#endif
   attr->_stacksize = 0;
   attr->_stackaddr = 0;
   return 0;

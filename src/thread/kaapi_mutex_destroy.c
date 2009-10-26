@@ -52,7 +52,7 @@ int kaapi_mutex_destroy(kaapi_mutex_t *mutex)
   if (KAAPI_ATOMIC_READ(&mutex->_lock) == 1)
     return EBUSY;
   
-  xkaapi_assert ( 0 == pthread_mutex_destroy(&mutex->_mutex));
+  kaapi_assert ( 0 == pthread_mutex_destroy(&mutex->_mutex));
   
   return 0;
 }

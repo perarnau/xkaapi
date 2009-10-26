@@ -55,24 +55,16 @@
 
 #include "kaapi_config.h"
 #include "kaapi_datastructure.h"
-#include <stdint.h>
+#include "kaapi_atomic.h"
 #include <pthread.h>
 #include <limits.h>
+#include <stddef.h>
+#include "kaapi_common.h"
 
-/* ========================================================================= */
-/* Kaapi name for stdint typedefs.
- */
-typedef uint8_t  kaapi_uint8_t;
-typedef uint16_t kaapi_uint16_t;
-typedef uint32_t kaapi_uint32_t;
-typedef int8_t   kaapi_int8_t;
-typedef int16_t  kaapi_int16_t;
-typedef int32_t  kaapi_int32_t;
 
 /* ========================================================================== */
 /** Typedef
  */
-
 #if defined(KAAPI_USE_SETJMP)
 #  include <setjmp.h>
 typedef jmp_buf kaapi_thread_context_t;
@@ -83,85 +75,23 @@ typedef ucontext_t kaapi_thread_context_t;
 #  error "Unknown context definition"
 #endif
 
+/* fwd decl */
+struct kaapi_thread_descr_t;
 typedef struct kaapi_thread_descr_t kaapi_thread_descr_t;
-typedef struct kaapi_processor_t kaapi_processor_t;
 typedef void* (*kaapi_run_entrypoint_t)(void*);
 typedef int (*kaapi_test_wakeup_t)(void*);
 
-
-/* ========================================================================== */
-/** Cpu_set
- */
-#ifndef HAVE_CPU_SET_T
-#define HAVE_CPU_SET_T
-#include <strings.h> /* for bzero in cpu set */
-
-
-/*#ifndef __cpu_set_t_defined */
-/* Size definition for CPU sets. All */
-#  define __CPU_SETSIZE	64
-#  define __NCPUBITS	(8 * sizeof (__cpu_mask))
-
-/* Type for array elements in 'cpu_set_t'.  */
-typedef unsigned long int __cpu_mask;
-
-/* Data structure to describe CPU mask.  */
-typedef struct {
-  __cpu_mask __bits[__CPU_SETSIZE / __NCPUBITS];
-} cpu_set_t;
-
-
-#define CPU_ZERO( pcpuset ) bzero( pcpuset, sizeof(cpu_set_t) )
-  
-#define CPU_SET( cpu, pcpuset ) (pcpuset)->__bits[ cpu / __NCPUBITS] |= \
-(1UL << (cpu -(cpu / __NCPUBITS)*__NCPUBITS))
-
-#define CPU_CLR( cpu, pcpuset ) (pcpuset)->__bits[ cpu / __NCPUBITS] &= \
-~(1UL << (cpu -(cpu / __NCPUBITS)*__NCPUBITS))
-
-#define CPU_ISSET( cpu, pcpuset ) (pcpuset)->__bits[ cpu / __NCPUBITS] & \
-(1UL << (cpu -(cpu / __NCPUBITS)*__NCPUBITS))
-
-
-/*#endif*/
-#endif
-
-#define CPU_SETALL( pcpuset ) \
-  { int i; \
-    for (i=0; i<__CPU_SETSIZE / __NCPUBITS; ++i)\
-      (pcpuset)->__bits[ i ] = ~0UL;\
-  }
-
-/* min_index_cpu_set[ cpu_set & 0xFF ] returns the smallest index i such that 2^i is the least significant bit of cpu_set & 0xFF
-   kaapi_min_index_cpu_set[0] = -1.
+/** \defgroup THREAD Thread
+    This group defines the functions of the subset of POSIX Thread implemented in Kaapi.
 */
-extern int kaapi_min_index_cpu_set[256]; 
-
-/* Returns the least significant index i such that 2^i is the least significant bit of the intersection 
-   If no intersection returns -1
+/** \defgroup WS Workstealing
+    This group defines the functions to manage workstealing
 */
-static inline int CPU_INTERSECT( cpu_set_t* pcpuset1, cpu_set_t* pcpuset2 ) 
-{
-  int i, j;
-  __cpu_mask retval;
-  for (i=0; i< __CPU_SETSIZE / __NCPUBITS; ++i)
-  {
-    retval = (pcpuset1->__bits[i] & pcpuset2->__bits[i]);
-    if (retval !=0) 
-    {
-      for (j=0; j<__NCPUBITS/8; ++j)
-      {
-        int idx = kaapi_min_index_cpu_set[ (retval >> j*8) & 0xFF ];
-        if (idx !=-1) return idx;
-      }
-    }
-  }
-  return -1;
-}
 
 
 /* ========================================================================== */
 /** Atomic type
+    \ingroup THREAD
  */
 typedef struct kaapi_atomic_t {
   volatile int _counter;
@@ -170,16 +100,22 @@ typedef struct kaapi_atomic_t {
 
 /* ========================================================================== */
 /** Termination dectecting barrier
+    \ingroup THREAD
 */
 typedef kaapi_atomic_t kaapi_barrier_td_t;
 
+
 /* ========================================================================== */
-/** Mutex attribut, data structure
+/** Mutex attribut data structure
+    \ingroup THREAD
  */
 typedef struct kaapi_mutexattr_t {
   int _type;
 } kaapi_mutexattr_t;
 
+/** Mutex attribut
+    \ingroup THREAD
+ */
 typedef struct kaapi_mutex_t {
   kaapi_atomic_t        _lock;   /* 0: free, 1: locked */
   kaapi_thread_descr_t* _owner;
@@ -197,8 +133,6 @@ typedef struct kaapi_test_and_lock__t {
 
 
 /* ========================================================================= */
-/** Condition attribut, data structure
- */
 typedef struct kaapi_timed_test_and_lock__t {
   kaapi_thread_descr_t  *thread;
   const struct timespec *abstime;
@@ -207,13 +141,21 @@ typedef struct kaapi_timed_test_and_lock__t {
   KAAPI_QUEUE_FIELD (struct kaapi_timed_test_and_lock__t);
 } kaapi_timed_test_and_lock__t;
 
-KAAPI_QUEUE_DECLARE( kaapi_system_thread_queue_t, struct kaapi_thread_descr_t );
 KAAPI_QUEUE_DECLARE( kaapi_kttl_queue_t, kaapi_timed_test_and_lock__t );
 
+/** Condition attribut data structure
+    \ingroup THREAD
+ */
 typedef struct kaapi_condattr_t {
   int _unused;
 } kaapi_condattr_t;
 
+
+KAAPI_QUEUE_DECLARE( kaapi_system_thread_queue_t, struct kaapi_thread_descr_t );
+
+/** Condition data structure
+    \ingroup THREAD
+ */
 typedef struct kaapi_cond_t {
   pthread_mutex_t             _mutex;
   kaapi_system_thread_queue_t _th_q;   /* List of only SYSTEM_SCOPE threads. */
@@ -222,21 +164,15 @@ typedef struct kaapi_cond_t {
 
 
 /* ========================================================================= */
-/** Thread descr, attribut
+/** Thread descr attribut
+    \ingroup THREAD
  */
-typedef enum kaapi_thread_state_t {
-  KAAPI_THREAD_ALLOCATED,
-  KAAPI_THREAD_LAZY,
-  KAAPI_THREAD_CREATED,
-  KAAPI_THREAD_RUNNING,
-  KAAPI_THREAD_SUSPEND,
-  KAAPI_THREAD_TERMINATED
-} kaapi_thread_state_t;
-
 typedef struct kaapi_attr_t {
   int                      _detachstate;
   int                      _scope;
+#if 0
   cpu_set_t                _cpuset;
+#endif
   size_t                   _stacksize;
   void*                    _stackaddr;
 } kaapi_attr_t;
@@ -247,14 +183,199 @@ extern kaapi_attr_t kaapi_default_attr;
 
 
 /* ========================================================================= */
-/** Once_t
+/** Thread identifier
+    \ingroup THREAD
+    A thread identifier is a system wide identifier of thread that allows
+    to retreive the location of the thread. 
+    The identifier is unique between all threads on all process.
+*/
+typedef kaapi_uint32_t kaapi_thread_id_t;
+
+
+/** Request send by a processor
+    \ingroup WS
+*/
+typedef struct kaapi_steal_request_t {
+  KAAPI_INHERITE_FROM_SSTRUCT_T;                  /* read-write synchro status field */
+  kaapi_thread_id_t              _tid;            /* system wide id of the thief (in) or the victim (out) */
+  kaapi_uint32_t                 _site;           /* identifier of the thief process (in) or the victim process (out) */
+  kaapi_stack_t*                 _thiefstack;     /* system wide index of the thief stack where to store result of the thief */
+  char _data[1];                                  /* where to store application dependent data */
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_steal_request_t;
+ 
+#define KAAPI_REQUEST_DATA_SIZE (sizeof(kaapi_steal_request_t) - offsetof( kaapi_steal_request_t, data))
+
+/** Status of a request
+    \ingroup WS
+*/
+enum kaapi_steal_request_status_t {
+  KAAPI_REQUEST_S_CREATED = 0,
+  KAAPI_REQUEST_S_POSTED  = 1,
+  KAAPI_REQUEST_S_SUCCESS = 2,
+  KAAPI_REQUEST_S_FAIL    = 3,
+  KAAPI_REQUEST_S_ERROR   = 4,
+  KAAPI_REQUEST_S_QUIT    = 5
+};
+
+
+/* ========================================================================= */
+/** Kaapi thread state 
+    \ingroup THREAD
+    In Kaapi, 2 kind of thread exists: POSIX like process scope thread (called user thread),
+    POSIX like system scope thread (called kernel thread).
+    A kernel thread responsible for stealing work is called k-processor. During work stealing
+    algorithm, a K-processor tries to steal work, this work is called k-thread. A K-thread is
+    a user level thread. 
+    At the beginning of the execution, a K-processor executes the main K-thread with is defined
+    by the control flow executing the main entry point of the program.
+
+    \dot
+    digraph StateThread {
+      Created   [label="Created", shape=ellipse, style=filled, color=gray]
+      Running   [label="Running", shape=ellipse, style=filled, color=gray]
+      Suspended [label="Suspended", shape=ellipse, style=filled, color=blue]
+      Stopped   [label="Stopped", shape=ellipse, style=filled, color=gray]
+      Thief     [label="Thief", shape=ellipse, style=filled, color=indianred]
+
+      Terminated [label="Terminated", shape=ellipse, style=filled, color=gray]
+
+      Created -> Running [label ="Start of the thread"]
+      Running -> Suspended [label="Thread suspended on a lock,\na condition or\nany other synchronization"]
+      Running -> Thief [label="The K-thread is\n stealing work"]
+      Running -> Stopped [label="Signal to stop"]
+      Suspended -> Running [label="Condition is satisfied"]
+      Thief   -> Running [label="The K-processor runs K-thread"]
+      Thief   -> Stopped [label="The K-processor was stopped"]
+      Thief   -> Suspended [label="Post unbound request"]
+      Stopped -> Running [label="Signal to continue"]
+      Stopped -> Thief [label="Signal continue\non a K-processor "]
+      Suspended -> Stopped [label="Signal to stop"]
+      Suspended  -> Thief [label="Receive reply"]
+      Stopped -> Suspended [label="Thread suspended,\nSignal to continue"]
+      Running -> Terminated [label="End of the computation"]
+    }
+    \enddot
+    
+    A REVOIR:
+    Depending of the type of the thread, not all states are reachable. POSIX (user threads and kernel threads)
+    will be able to take each transition except those move to a state in read ('Thief' state).
+    Moreover, K-processor thread may by suspended (blue state) only when is post request with unbound delay in the
+    replay (such that doing remote work stealing operation).
+    If the K-processor switches to running, it means that a K-thread has being to executed by the K-processor.
+    When the K-thread suspends, the K-processor switches to execute the work stealing algorithm until work was found
+    (2 changements d'état: K-thread Running -> Suspend, K-processor Running -> Thief.... ça fait beaucoup.
+    
+    When a K-thread (=user level thread) is under beging suspended, it call a function kaapi_sched_suspend that
+    will but it on the queue of suspended thread of its processor. In order that the thread may be wakeup from
+    the queue, it evaluates a condition_function on the suspended threads and some data. In this way, a K-thread
+    may be suspended because it tries to acquire a lock, waiting on a condition or waiting on a data flow constraints.
+*/
+typedef enum kaapi_thread_state_t {
+  KAAPI_THREAD_S_ALLOCATED  = 0,
+  KAAPI_THREAD_S_CREATED    = 1,
+  KAAPI_THREAD_S_RUNNING    = 2,
+  KAAPI_THREAD_S_SUSPEND    = 3,
+  KAAPI_THREAD_S_STEALING   = 4,
+  KAAPI_THREAD_S_TERMINATED = 5,
+  KAAPI_THREAD_S_DESTROY    = 6
+} kaapi_thread_state_t;
+
+/** Linked list used to manage list of suspended threads on a condition or the list of ready threads
+    \ingroup THREAD
+    The cell data structure should has a scope at least until the thread resume its executions.
+    Typically this data structure is an automatic variable allocated in the call of kaapi_sched_suspend:
+    when the thread resume its executions, the thread has been removed from the workqueue and the cell
+    data structure could be deleted.
+*/
+typedef struct kaapi_cellsuspended_t {
+  struct kaapi_thread_descr_t*  _thread;      /* the thread */
+  kaapi_test_wakeup_t           _fwakeup;     /* != 0 if the thread is suspended */
+  void*                         _arg_fwakeup; /* arg to func twakeup */
+  struct kaapi_cellsuspended_t* _next;
+} kaapi_cellsuspended_t;
+
+
+/** Workqueue of suspended threads
+    \ingroup THREAD
+*/
+typedef struct kaapi_workqueue_suspended_t {
+  kaapi_cellsuspended_t* _head;
+} kaapi_workqueue_suspended_t;
+
+KAAPI_FIFO_DECLARE( kaapi_workqueue_ready_t, struct kaapi_thread_descr_t);
+
+/** This data structure defines a work stealer processor thread
+    \ingroup THREAD WS
+    WARNING: Note that begining of the data structure should shared the same fields, in the same order,
+    that the kaapi_thread_descr_system_t data structure.
+*/
+typedef struct kaapi_thread_descr_processor_t {
+  pthread_t                        _pthid;             /* iff scope system or processor */
+  pthread_cond_t                   _cond;              /* use by system scope thread to be signaled */  
+  struct kaapi_thread_descr_t*     _stealer_thread;    /* the thread that will store results of a steal */
+  struct kaapi_thread_descr_t*     _active_thread;     /* the active thread or 0 */
+  struct kaapi_thread_descr_t*     _kill_thread;       /* the thread to kill */
+
+  kaapi_workqueue_ready_t          _ready_threads;     /* the suspended thread that directly call sched_idle */
+  kaapi_workqueue_suspended_t      _suspended_threads; /* the suspended thread that directly call sched_idle */
+} __attribute__ ((aligned (KAAPI_CACHE_LINE))) kaapi_thread_descr_processor_t;
+
+
+/** System scope thread attribut
+    \ingroup THREAD
+*/
+typedef struct kaapi_thread_descr_system_t {
+  pthread_t                        _pthid;           /* iff scope system or processor */
+  pthread_cond_t                   _cond;            /* use by system scope thread to be signaled */  
+} kaapi_thread_descr_system_t;
+
+/** Process scope thread descriptor
+    \ingroup THREAD
+*/
+typedef struct kaapi_thread_descr_process_t {
+  kaapi_thread_context_t           _ctxt;           /* process scope thread context */
+  kaapi_thread_descr_processor_t*  _proc;           /* iff scope == PROCESS_SCOPE, always schedule by a processor */
+
+} kaapi_thread_descr_process_t;
+
+
+/** Thread data structure
+    \ingroup THREAD
+*/
+struct kaapi_thread_descr_t {
+  volatile kaapi_thread_state_t    _state;            /* see definition */
+  kaapi_uint16_t                   _scope;            /* contention scope of the lazy thread == PROCESS_SCOPE */
+  kaapi_uint16_t                   _pagesize;         /* number of pages or the thread descriptor */
+  
+  KAAPI_QUEUE_FIELD(struct kaapi_thread_descr_t);     /* system scope attribut to be used in Queue, Stack and Fifo. */
+  kaapi_stack_t                    _stack;            /* stack of tasks (rfo, dfg, adaptive) for user threads (process & system only) */
+  kaapi_run_entrypoint_t           _run_entrypoint;   /* the entry point */
+  void*                            _arg_entrypoint;   /* the argument of the entry point */
+  void*                            _return_value;     /* POSIX return value */
+  kaapi_uint16_t                   _detachstate;      /* 1 iff the thread is created in datachstate (then x_join fields are not init */
+  kaapi_uint16_t                   _affinity;         /* affinity attribut */
+  size_t                           _stacksize;        /* stack size attribut */
+  void*                            _stackaddr;        /* thread stack base pointer */
+  void**                           _key_table;        /* thread data specific */
+
+  union {
+    kaapi_thread_descr_process_t   p;
+    kaapi_thread_descr_system_t    s;
+    kaapi_thread_descr_processor_t k;
+  } th;
+};
+
+
+/* ========================================================================= */
+/** Once data structure
+    \ingroup THREAD
 */
 typedef kaapi_atomic_t kaapi_once_t;
 
 /* ========================================================================= */
 /** Dataspecific data structures and functions
+    \ingroup THREAD
  */
-
 typedef void (*kaapi_dataspecific_destructor_t)(void *);
 
 typedef struct kaapi_global_key{
@@ -306,8 +427,8 @@ typedef kaapi_neighbor_t kaapi_kprocneighbor_t[KAAPI_L3+1];
 extern kaapi_kprocneighbor_t* kaapi_kprocneighbor;
 #endif
 
-/* global data */
-extern kaapi_processor_t** kaapi_all_processors;
+/* global data: array of all K-processors  */
+extern kaapi_thread_descr_t** kaapi_all_processors;
 
 /* points to the current running thread
  If the running thread is of kind PROCESSOR_SCOPE, then it is a kaapi processor and the running (active)
@@ -316,90 +437,9 @@ extern kaapi_processor_t** kaapi_all_processors;
 extern pthread_key_t kaapi_current_thread_key;
 
 
-
-/* ========================================================================= */
-/** Task Condition structure 
-*/
-struct kaapi_task_t;
-struct kaapi_stack_t;
-struct kaapi_task_condition_t;
-
-/*------- begin same as in kaapi_type.h.in !!!!! */
-/** \defgroup Constants for number for fixed size parameter of a task
-*/
-/*@{*/
-#define KAAPI_TASK_MAX_DATA  24 /* allows 3 double */
-#define KAAPI_TASK_MAX_IDATA (KAAPI_TASK_MAX_DATA/sizeof(kaapi_uint32_t))
-#define KAAPI_TASK_MAX_SDATA (KAAPI_TASK_MAX_DATA/sizeof(kaapi_uint16_t))
-#define KAAPI_TASK_MAX_DDATA (KAAPI_TASK_MAX_DATA/sizeof(double))
-#define KAAPI_TASK_MAX_FDATA (KAAPI_TASK_MAX_DATA/sizeof(float))
-#define KAAPI_TASK_MAX_PDATA (KAAPI_TASK_MAX_DATA/sizeof(void*))
-/*@}*/
-
-/* ========================================================================= */
-/** Task body 
-*/
-typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* thread */);
-
-/** Kaapi task definition
-    A Kaapi task is the basic unit of computation. It has a constant size including some task's specific values.
-    Variable size task has to store pointer to the memory where found extra data.
-    The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
-*/
-typedef struct kaapi_task_t {
-  /* state is the public member: initialized with the values above. It is used
-     to initializ. istate is the internal state.
-*/     
-  kaapi_uint32_t     format;   /** */
-  union {
-    kaapi_uint16_t   locality; /** locality number see documentation */
-    kaapi_uint16_t   event;    /** in case of adaptive task */
-  };
-  union {
-    kaapi_uint16_t   state;    /** State of the task see above + flags in order to initialze both in 1 op */
-    struct { 
-      kaapi_uint8_t  xstate;   /** State of the task see above */
-      kaapi_uint8_t  flags;    /** flags of the task see above */
-    };
-  };
-  kaapi_task_body_t  body;     /** C function that represent the body to execute*/
-  union { /* union data to view task's immediate data with type information. Be carreful: this is an (anonymous) union  */
-    kaapi_uint32_t idata[ KAAPI_TASK_MAX_IDATA ];
-    kaapi_uint16_t sdata[ KAAPI_TASK_MAX_SDATA ];
-    double         ddata[ KAAPI_TASK_MAX_DDATA ];
-    float          fdata[ KAAPI_TASK_MAX_FDATA ];
-    void*          pdata[ KAAPI_TASK_MAX_PDATA ];
-    struct kaapi_task_condition_t* arg_condition;
-  };
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_task_t;
-/*------- end same as in kaapi_type.h.in !!!!! */
-
-/** Kaapi stack of task definition
-*/
-typedef struct kaapi_stack_t {
-  kaapi_task_t* pc;             /** task counter: next task to execute, 0 if empty stack */
-  kaapi_task_t* sp;             /** stack counter: next free task entry */
-#if defined(KAAPI_DEBUG)
-  kaapi_task_t* end_sp;         /** past the last stack counter: next entry after the last task in stack array */
-#endif
-  kaapi_task_t* task;           /** stack of tasks */
-
-  char*         sp_data;        /** stack counter for the data: next free data entry */
-#if defined(KAAPI_DEBUG)
-  char*         end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
-#endif
-  char*         data;           /** stack of data with the same scope than task */
-} kaapi_stack_t;
-
-/** Kaapi frame definition
-*/
-typedef struct kaapi_frame_t {
-    kaapi_task_t* pc;
-    kaapi_task_t* sp;
-    char*         sp_data;
-} kaapi_frame_t;
-
+/* ========================================================================== */
 /** Condition for task
+    \ingroup TASK
 */
 typedef struct kaapi_task_condition_t {
   kaapi_task_body_t  save_body;            /** C function that represent the body to execute*/

@@ -53,7 +53,6 @@ int kaapi_cond_destroy(kaapi_cond_t *cond)
   if (!KAAPI_QUEUE_EMPTY(&cond->_th_q)) return EBUSY;
   if (!KAAPI_QUEUE_EMPTY(&cond->_kttl_q)) return EBUSY;
   
-  xkaapi_assert ( pthread_mutex_destroy(&cond->_mutex) == 0);
-  //xkaapi_assert ( pthread_cond_destroy(&cond->_cond) == 0);
+  kaapi_assert ( pthread_mutex_destroy(&cond->_mutex) == 0);
   return 0;
 }

@@ -48,15 +48,15 @@
 kaapi_t kaapi_self(void)
 {
   kaapi_thread_descr_t* td = (kaapi_thread_descr_t*)pthread_getspecific(kaapi_current_thread_key);
-  xkaapi_assert_debug( td !=0 );
+  kaapi_assert_debug( td !=0 );
 
   if (td->_scope == KAAPI_PROCESSOR_SCOPE) 
   {
-    /* case where the kernel thread do not schedule user thread */
-    if (td->_proc->_sc_thread._active_thread ==0) return td;
-    return td->_proc->_sc_thread._active_thread;
+    /* never return the K-processor thread descriptor */
+    return td->th.k._active_thread;
   }
 
-  xkaapi_assert_debug( td->_scope == KAAPI_SYSTEM_SCOPE);
+  /* must be a system scope thread */
+  kaapi_assert_debug( td->_scope == KAAPI_SYSTEM_SCOPE);
   return td;
 }

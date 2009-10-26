@@ -43,32 +43,20 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <sys/types.h>
+#include <sys/mman.h>
 
 /**
 */
-kaapi_processor_t** kaapi_allocate_processors( int kproc, cpu_set_t cpuset)
+kaapi_thread_descr_processor_t** kaapi_allocate_processors( int kproc, cpu_set_t cpuset)
 {
   int i;
   
-  kaapi_processor_t** kap = malloc( sizeof(kaapi_processor_t*) * kproc );
+  kaapi_thread_descr_processor_t** kap = malloc( sizeof(kaapi_thread_descr_processor_t*) * kproc );
 
   for (i=0; i<kproc; ++i)
   {
-    kaapi_processor_t* proc = malloc( getpagesize() );
-    proc->_the_steal_processor = (kaapi_steal_processor_t*)(((char*)proc)+sizeof(kaapi_processor_t));
-    kaapi_steal_processor_init(proc->_the_steal_processor, KAAPI_ATOMIC_INCR(&kaapi_index_stacksteal)-1, 
-        getpagesize()-(sizeof(kaapi_steal_processor_t) + sizeof(kaapi_processor_t)), 
-        sizeof(kaapi_steal_processor_t)+ ((char*)proc->_the_steal_processor));
-
-    /* initialize the steal context of threads */
-    kaapi_steal_thread_context_init( &proc->_sc_thread );
-    
-    /* push it on top of the stack of the kaapi_steal_processor_t object */
-    kaapi_steal_context_push( proc->_the_steal_processor, &proc->_sc_thread._sc, &kaapi_sched_steal_sc_thread );
-
-    /* push it on top of the stack of the kaapi_steal_processor_t object */
-    kaapi_steal_context_push( proc->_the_steal_processor, &proc->_sc_inside, &kaapi_sched_steal_sc_inside );
-    
+    kaapi_thread_descr_processor_t* proc = kaapi_allocate_processor();
     kap[i] = proc;
   }
   return kap;
@@ -76,95 +64,99 @@ kaapi_processor_t** kaapi_allocate_processors( int kproc, cpu_set_t cpuset)
 
 /**
 */
-kaapi_processor_t* kaapi_allocate_processor()
+kaapi_thread_descr_processor_t* kaapi_allocate_processor()
 {
-  kaapi_processor_t* proc = malloc( getpagesize() );
-  proc->_the_steal_processor = (kaapi_steal_processor_t*)(((char*)proc)+sizeof(kaapi_processor_t));
-  kaapi_steal_processor_init(proc->_the_steal_processor, KAAPI_ATOMIC_INCR(&kaapi_index_stacksteal)-1, 
-      getpagesize()-(sizeof(kaapi_steal_processor_t) + sizeof(kaapi_processor_t)), 
-      sizeof(kaapi_steal_processor_t)+ ((char*)proc->_the_steal_processor));
+  kaapi_thread_descr_t* proc = kaapi_allocate_thread_descriptor( 
+        KAAPI_PROCESSOR_SCOPE, 
+        1, 
+        default_param.stacksize, 
+        default_param.stacksize );
 
-  /* initialize the steal context of threads */
-  kaapi_steal_thread_context_init( &proc->_sc_thread );
-  
-  /* push it on top of the stack of the kaapi_steal_processor_t object */
-  kaapi_steal_context_push( proc->_the_steal_processor, &proc->_sc_thread._sc, &kaapi_sched_steal_sc_thread );
-
-  /* push it on top of the stack of the kaapi_steal_processor_t object */
-  kaapi_steal_context_push( proc->_the_steal_processor, &proc->_sc_inside, &kaapi_sched_steal_sc_inside );
-
-  return proc;
+  return &proc->th.k;
 }
 
 
 /** deallocate the processors
 */
-void kaapi_deallocate_processor(kaapi_processor_t** procs, int kproc)
+void kaapi_deallocate_processor(kaapi_thread_descr_processor_t** procs, int kproc)
 {
   int i;
   for (i=0; i<kproc; ++i)
   {
-    free(procs[i]);
+    char* td = (char*)procs[i];
+    if (td !=0)
+    {
+      td -= offsetof(kaapi_thread_descr_t, th.k);
+      kaapi_deallocate_thread_descriptor( (kaapi_thread_descr_t*)td );
+    }
   }
 }
 
 
 /** allocate a thread descriptor on a given processor
 */
-struct kaapi_thread_descr_t* allocate_thread_descriptor( int scope, int detachstate )
+struct kaapi_thread_descr_t* kaapi_allocate_thread_descriptor( int scope, int detachstate, size_t c_stacksize, size_t k_stacksize )
 {
+  size_t pagesize;
+  size_t count_pages;
   kaapi_thread_descr_t* td;
-  td = (kaapi_thread_descr_t*)malloc( sizeof(struct kaapi_thread_descr_t) );
+  size_t k_sizetask;
+  size_t k_sizedata;
+  char* buffer;
 
-  td->_state = KAAPI_THREAD_ALLOCATED;
+
+  kaapi_assert_debug( (scope == KAAPI_PROCESS_SCOPE) || (scope -= KAAPI_SYSTEM_SCOPE) || (scope == KAAPI_PROCESSOR_SCOPE) );
+
+  if (k_stacksize < 256) return 0;
+  k_sizetask = k_stacksize / 4;
+  k_sizedata = k_stacksize - k_sizetask;
+              
+  pagesize = getpagesize();
+  count_pages = (c_stacksize + k_stacksize + sizeof(kaapi_thread_descr_t) + pagesize -1 ) / pagesize;
+  td = (kaapi_thread_descr_t*)mmap( 0, count_pages*pagesize, PROT_READ|PROT_WRITE, MAP_ANON, -1, 0 );
+  kaapi_assert(td !=(kaapi_thread_descr_t*)-1); 
+
+  td->_state          = KAAPI_THREAD_S_ALLOCATED;
+  td->_scope          = scope;
+  td->_pagesize       = count_pages;
   td->_run_entrypoint = 0;
-  td->_td             = td;
-  td->_stackaddr      = 0;
-  td->_stacksize      = 0;
+  td->_arg_entrypoint = 0;
+  td->_return_value   = 0;
+  td->_detachstate    = (detachstate == 0 ? 0 : 1);
+  td->_affinity       = (kaapi_uint16_t)-1;
+  td->_stacksize      = c_stacksize;
+  td->_stackaddr      = td+1;
   td->_key_table      = 0;
-  td->_next           = 0;
-  
-  /* init its conditions, mutex */
-  if (scope != KAAPI_PROCESS_SCOPE)
-    xkaapi_assert ( 0 == pthread_cond_init(&td->_cond, 0) );
 
-  if (detachstate ==0)
+  buffer = (char*)td;
+  buffer += sizeof(kaapi_thread_descr_t)+c_stacksize;
+  
+  kaapi_assert( 0 == kaapi_stack_init( &td->_stack, k_sizetask, buffer, k_sizedata, buffer + k_sizetask ) );
+
+  switch (scope )
   {
-    xkaapi_assert ( 0 == pthread_mutex_init(&td->_mutex_join, 0) );
-    xkaapi_assert ( 0 == pthread_cond_init(&td->_cond_join, 0) );
+    case KAAPI_PROCESS_SCOPE:
+      td->th.p._proc = 0;
+    break;
+    case KAAPI_PROCESSOR_SCOPE:
+      td->th.k._stealer_thread = 0;
+      td->th.k._active_thread  = 0;
+      td->th.k._kill_thread    = 0;
+      KAAPI_FIFO_CLEAR( &td->th.k._ready_threads);
+      td->th.k._suspended_threads._head = 0;
+    case KAAPI_SYSTEM_SCOPE:
+      kaapi_assert( 0 == ptread_cond_init( &td->th.s._cond,0) );
+    break;
   }
+  
   return td;
 }
 
 
 /** deallocate a thread descriptor on a given processor
 */
-void deallocate_thread_descriptor( struct kaapi_processor_t* proc, struct kaapi_thread_descr_t* thread )
+void kaapi_deallocate_thread_descriptor( struct kaapi_thread_descr_t* thread )
 {
-#if !defined(KAAPI_USE_SCHED_AFFINITY)
-  free(thread);
-#else
-#endif  
-}
-
-/*
-*/
-void kaapi_workqueue_alloc_bloc(void* ptr )
-{
-  kaapi_workqueue_head_t* head = (kaapi_workqueue_head_t*)ptr;
-  
-  kaapi_workqueue_bloc_t* bloc = malloc( 4096 ); /* TO DEFINE AS CONSTANT DURING CONFIGURATION */
-  bloc->_top = bloc->_bottom = 0;
-  bloc->_nextbloc = 0;
-  bloc->_prevbloc = head->_bottom_bloc;
-  if (head->_bottom_bloc != 0)
-    head->_bottom_bloc->_nextbloc = bloc;
-  
-  head->_bottom_bloc = bloc;
-  kaapi_writemem_barrier();
-  if (head->_first_bloc == 0) 
-    head->_first_bloc = head->_top_bloc = bloc;
-
-  return;
+  munmap(thread, thread->_pagesize * getpagesize());
 }
 

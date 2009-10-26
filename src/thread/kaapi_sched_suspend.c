@@ -45,18 +45,18 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_sched_suspend ( kaapi_processor_t* proc, kaapi_thread_descr_t* thread, kaapi_test_wakeup_t fwakeup, void* argwakeup )
+int kaapi_sched_suspend ( kaapi_thread_descr_processor_t* proc, kaapi_thread_descr_t* thread, kaapi_test_wakeup_t fwakeup, void* argwakeup )
 {
   int previous_errno = errno;
   
-  xkaapi_assert_debug( proc !=0 );
-  xkaapi_assert_debug( thread != 0 );
-  xkaapi_assert_debug( thread->_scope == KAAPI_PROCESS_SCOPE );
-  xkaapi_assert_debug( proc == thread->_proc );
-  xkaapi_assert_debug( proc->_sc_thread._active_thread == thread );
+  kaapi_assert_debug( proc !=0 );
+  kaapi_assert_debug( thread != 0 );
+  kaapi_assert_debug( thread->_scope == KAAPI_PROCESS_SCOPE );
+  kaapi_assert_debug( proc == thread->_proc );
+  kaapi_assert_debug( proc->_active_thread == thread );
 
-  proc->_sc_thread._active_thread = 0;
-  thread->_state = KAAPI_THREAD_SUSPEND;
+  proc->_active_thread = 0;
+  thread->_state = KAAPI_THREAD_S_SUSPEND;
   
   /* capture the current context of the suspended thread */
 #if defined(KAAPI_USE_UCONTEXT)
@@ -65,13 +65,13 @@ int kaapi_sched_suspend ( kaapi_processor_t* proc, kaapi_thread_descr_t* thread,
   _setjmp( thread->_ctxt );
 #endif
 
-  if (thread->_state == KAAPI_THREAD_SUSPEND)
+  /* case of return from setjmp / getcontext */
+  if (thread->_state == KAAPI_THREAD_S_SUSPEND)
   {
     /* put thread in internal list */
-    KAAPI_WORKQUEUE_SUSPEND_PUSH( &proc->_sc_thread._suspended_thread, thread, fwakeup, argwakeup );
+    KAAPI_WORKQUEUE_SUSPEND_PUSH( &proc->_suspended_thread, thread, fwakeup, argwakeup );
     kaapi_sched_idle( proc );
   }
-
 
   errno = previous_errno;
 

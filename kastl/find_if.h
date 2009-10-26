@@ -95,7 +95,7 @@ public:
           output_work->_ibeg = output_work->_iend-bloc;
           output_work->_pred = pred;
           output_work->_is_master = false;
-          xkaapi_assert( output_work->_iend - output_work->_ibeg >0);
+          kaapi_assert( output_work->_iend - output_work->_ibeg >0);
 
 #if defined(LOG)
           std::cout << request[i]->_index 
@@ -120,7 +120,7 @@ public:
     }
     /* mute the input work !! */
     iend = local_end;
-    xkaapi_assert( iend - ibeg >0);
+    kaapi_assert( iend - ibeg >0);
   }
 
 

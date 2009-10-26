@@ -165,7 +165,7 @@ protected:
          output_work->_work_list = new std::list<typename std::pair<RandomAccessIterator, RandomAccessIterator> >(); 
          work_list->pop_back();
 
-         //xkaapi_assert( output_work->_iend - output_work->_ibeg >=0);
+         //kaapi_assert( output_work->_iend - output_work->_ibeg >=0);
         //std::cout << "output_work->_iend-output_work->_ibeg=" << output_work->_iend-output_work->_ibeg << std::endl;
           /* reply ok (1) to the request */
          kaapi_request_reply( request[i], stealcontext, &thief_entrypoint, 1, CKAAPI_MASTER_FINALIZE_FLAG);
@@ -182,7 +182,7 @@ protected:
   /* mute the beg and end of input work of the victim */
   iend  = local_end;
   ibeg  = local_beg;
-  xkaapi_assert( iend - ibeg >=0);
+  kaapi_assert( iend - ibeg >=0);
   return;
 
    reply_failed :
@@ -199,7 +199,7 @@ protected:
    /* mute the beg and end of input work of the victim */
   iend  = local_end;
   ibeg  = local_beg;
-  xkaapi_assert( iend - ibeg >=0);
+  kaapi_assert( iend - ibeg >=0);
  }
 
 

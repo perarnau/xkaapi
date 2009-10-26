@@ -58,7 +58,7 @@ void kaapi_steal_thief_entrypoint_thread(struct kaapi_steal_processor_t* kpsp, s
   memcpy( &thread, &request->_data[0], sizeof(kaapi_thread_descr_t*));
 
   /* jmp to thread context */
-  thread->_state = KAAPI_THREAD_RUNNING;
+  thread->_state = KAAPI_THREAD_S_RUNNING;
   thread->_proc = proc;
   proc->_sc_thread._active_thread = thread;
 #if defined(KAAPI_USE_UCONTEXT)
@@ -80,7 +80,7 @@ int kaapi_sched_steal_sc_thread(
   kaapi_processor_t* proc = (kaapi_processor_t*)((char*)kpsp - sizeof(kaapi_processor_t));
   kaapi_steal_thread_context_t* scthread = (kaapi_steal_thread_context_t*)sc;
 
-  xkaapi_assert_debug( &proc->_sc_thread == scthread );
+  kaapi_assert_debug( &proc->_sc_thread == scthread );
   
   /* my be concurrency between thief and the victim, kpss */
   if (count ==0) return 0;

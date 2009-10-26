@@ -50,7 +50,7 @@
 int kaapi_attr_setaffinity(kaapi_attr_t* attr, size_t cpusetsize, const cpu_set_t *cpuset)
 {
   if (attr ==0) return EINVAL;
-  attr->_cpuset = *cpuset;
+  return ENOSYS;
   return 0;
 }
 

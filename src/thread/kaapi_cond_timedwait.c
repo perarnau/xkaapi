@@ -78,44 +78,48 @@ int kaapi_cond_timedwait(kaapi_cond_t *__restrict cond, kaapi_mutex_t *__restric
   {
     int err = 0;
     
-    xkaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+    kaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
     
     kaapi_mutex_unlock (mutex);
     
-    thread->_state = KAAPI_THREAD_SUSPEND;
+    thread->_state = KAAPI_THREAD_S_SUSPEND;
     KAAPI_QUEUE_PUSH_FRONT(&cond->_th_q, thread);
     
-    while (thread->_state != KAAPI_THREAD_RUNNING)
+    while (thread->_state != KAAPI_THREAD_S_RUNNING)
     {
-      err = pthread_cond_timedwait (&thread->_cond, &cond->_mutex, abstime);
+      err = pthread_cond_timedwait (&thread->th.s._cond, &cond->_mutex, abstime);
       if (err == ETIMEDOUT) 
       {
-        thread->_state = KAAPI_THREAD_RUNNING;
+        thread->_state = KAAPI_THREAD_S_RUNNING;
         KAAPI_QUEUE_REMOVE(&cond->_th_q, thread);
-        xkaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
+        kaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
         kaapi_mutex_lock (mutex);
         return err;
       }
     }
-    xkaapi_assert (err == 0);
+    kaapi_assert (err == 0);
     kaapi_mutex_lock (mutex);
-    xkaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
+    kaapi_assert (0 == pthread_mutex_unlock (&cond->_mutex));
     
     return 0;
   }
   
-  // opérations atomic?
+  /* operations atomic */
   kaapi_mutex_unlock (mutex);
   
   /* ICI: revoir la gestion des threads en attente: un signal qui reveil un thread suspendu
      devrait pouvoir aussi le deplacer dans sa liste des threads ready...
   */
-  kaapi_timed_test_and_lock__t kttl;
-  kttl.thread  = thread;
-  kttl.abstime = abstime;
-  kttl.mutex   = mutex;
-  kttl.retval  = EINVAL;
-  KAAPI_QUEUE_PUSH_FRONT (&cond->_kttl_q, &kttl);
-  kaapi_sched_suspend (thread->_proc, thread, &kaapi_timed_test_and_lock_mutex, &kttl );
-  return kttl.retval;
+  {
+    kaapi_timed_test_and_lock__t kttl;
+    kttl.thread  = thread;
+    kttl.abstime = abstime;
+    kttl.mutex   = mutex;
+    kttl.retval  = EINVAL;
+    kaapi_assert ( 0 == pthread_mutex_lock (&cond->_mutex) );
+    KAAPI_QUEUE_PUSH_FRONT (&cond->_kttl_q, &kttl);
+    kaapi_assert ( 0 == pthread_mutex_unlock (&cond->_mutex) );
+    kaapi_sched_suspend (thread->th.p._proc, thread, &kaapi_timed_test_and_lock_mutex, &kttl );
+    return kttl.retval;
+  }
 }

@@ -51,7 +51,7 @@
 */
 int kaapi_sched_terminate_or_redo (kaapi_processor_t* proc, kaapi_thread_descr_t* thread)
 {
-  xkaapi_assert( proc->_sc_thread._active_thread == thread );
+  kaapi_assert( proc->_sc_thread._active_thread == thread );
   kaapi_mutex_spinlock( &proc->_the_steal_processor->_lock );
   proc->_sc_thread._active_thread = 0;
   kaapi_mutex_unlock( &proc->_the_steal_processor->_lock );

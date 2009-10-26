@@ -43,7 +43,7 @@
 ** terms.
 ** 
 */
-#include "kaapi_imp.h"
+#include "kaapi_impl.h"
 
 /** Nop task 
 */
@@ -55,7 +55,7 @@ void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
 */
 void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-  kaapi_frame_t* frame = (kaapi_frame_t*)task->pdata;
+  kaapi_frame_t* frame = (kaapi_frame_t*)task->param.pdata;
   kaapi_stack_restore_frame( stack, frame );
 }
 
@@ -64,10 +64,10 @@ void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
 int kaapi_task_condeval(kaapi_stack_t* stack, kaapi_task_t* task)
 {
   if (task ==0) return EINVAL;
-  if (task->xstate != KAAPI_TASK_WAITING) return EINVAL;
+  if (task->sf.sf.xstate != KAAPI_TASK_WAITING) return EINVAL;
   /* here task should not change its state.... body restaure value ?*/
   if (task->body !=0) (*task->body)( task, stack );
-  if (task->xstate == KAAPI_TASK_WAITING) return EAGAIN;
+  if (task->sf.sf.xstate == KAAPI_TASK_WAITING) return EAGAIN;
   return 0;
 }
 
@@ -179,11 +179,13 @@ int kaapi_stack_taskexec(kaapi_stack_t* stack)
 */
 int kaapi_stack_taskexecall(kaapi_stack_t* stack) 
 {
-  if (stack ==0) return EINVAL;
-  register kaapi_task_t* task = stack->pc;
+  register kaapi_task_t* task;
   kaapi_task_t* saved_sp;
   char*         saved_sp_data;
   kaapi_task_t* retn;
+
+  if (stack ==0) return EINVAL;
+  task = stack->pc;
 
 redo_work: 
   {
@@ -203,9 +205,9 @@ redo_work:
         retn = kaapi_stack_top(stack);
         retn->body  = &kaapi_retn_body;
         /* next line is equiv to saving a frame. retn->pdata should be viewed as a kaapi_frame_t */
-        retn->pdata[0] = task; /* <=> save pc */
-        retn->pdata[1] = saved_sp;
-        retn->pdata[2] = saved_sp_data;
+        retn->param.pdata[0] = task; /* <=> save pc */
+        retn->param.pdata[1] = saved_sp;
+        retn->param.pdata[2] = saved_sp_data;
         kaapi_stack_push(stack);
 
         /* update pc to the first forked task */

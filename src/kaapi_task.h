@@ -72,54 +72,23 @@ extern "C" {
 struct kaapi_task_t;
 struct kaapi_stack_t;
 
-
-/** \defgroup State for the task.
-    - KAAPI_TASK_INIT: the task may be executed or stolen.
-    - KAAPI_TASK_STOLEN: the task has been stolen.
-    - KAAPI_TASK_EXEC: the task is under execution.
-    - KAAPI_TASK_TERM: the task has been executed.
-    - KAAPI_TASK_WAITING: the task as unsatisfied condition to be executed. 
-      In this case, the body points to the function to evaluate the condition
-      and pdata[0] points to data structure necessary to evalute the condition.
-      After execution of this function, the state of the task may have changed to INIT
-      and both the task body and pdata[0] has been restaured.
-    - KAAPI_TASK_SUSPENDED: the task is suspending its execution. This normally occurs
-      only for adaptive task when it cannot directly process interrupt.
+/** \defgroup TASK Task
+    This group defines functions to create and initialize and use task.
 */
-/*@{*/
-#define KAAPI_TASK_INIT      0
-#define KAAPI_TASK_STOLEN    1
-#define KAAPI_TASK_EXEC      2
-#define KAAPI_TASK_TERM      3
-#define KAAPI_TASK_WAITING   4
-#define KAAPI_TASK_SUSPENDED 5
-/*@}*/
-
-/** \defgroup Flags for task.
-   DEFAULT flags is for normal task that can be stolen and executed every where.
-    - KAAPI_TASK_F_STICKY: if set, the task could not be theft else the task can (default).
-    - KAAPI_TASK_F_LOCALITY: if set, the task as locality constraint defined in locality data field.
-    - KAAPI_TASK_F_ADAPTIVE: if set, the task is an adaptative task that could be stolen or preempted.
-*/
-/*@{*/
-#define KAAPI_TASK_F_STICKY     (0x1 <<8)
-#define KAAPI_TASK_F_LOCALITY   (0x2 <<8)
-#define KAAPI_TASK_F_ADAPTIVE   (0x4 <<8)
-/*@}*/
-
-
-/** body of the nop task */
-extern void kaapi_nop_body( kaapi_task_t*, kaapi_stack_t*);
-
-/** body of the task that restore the frame pointer */
-extern void kaapi_retn_body( kaapi_task_t*, kaapi_stack_t*);
-
-/* Interface definition */
-
-
-/** \defgroup STACK Stack creation
+/** \defgroup STACK Stack
     This group defines functions to create and initialize stack.
 */
+
+
+/** Body of the nop task 
+    \ingroup TASK
+*/
+extern void kaapi_nop_body( kaapi_task_t*, kaapi_stack_t*);
+
+/** Body of the task that restore the frame pointer 
+    \ingroup TASK
+*/
+extern void kaapi_retn_body( kaapi_task_t*, kaapi_stack_t*);
 
 
 /** \ingroup STACK
@@ -184,11 +153,7 @@ static inline int kaapi_stack_isempty(const kaapi_stack_t* stack)
   return (stack !=0) && (stack->pc >= stack->sp);
 }
 
-/** \defgroup TC Task creation
-    This group defines functions to create task and push it into a stack.
-*/
-
-/** \ingroup TC
+/** \ingroup TASK
     The function kaapi_stack_top() will return the top task.
     The top task is not part of the stack.
     If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
@@ -208,7 +173,7 @@ static inline kaapi_stack_t* kaapi_stack_top(kaapi_stack_t* stack)
   (stack)->sp
 #endif
 
-/** \ingroup TC
+/** \ingroup TASK
     The function kaapi_stack_push() pushes the top task into the stack.
     If successful, the kaapi_stack_push() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
@@ -228,7 +193,7 @@ static inline int kaapi_stack_push(kaapi_stack_t* stack)
   (++(stack)->sp, 0)
 #endif
 
-/** \ingroup TC
+/** \ingroup TASK
     The function kaapi_stack_pushdata() will return the pointer to the next top data.
     The top data is not yet into the stack.
     If successful, the kaapi_stack_pushdata() function will return a pointer to the next data to push.
@@ -255,36 +220,33 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, size_t count)
 #endif
 
 
-/** \defgroup TE Task execution
-    This group defines functions to execute task.
-*/
-/** \ingroup TE
+/** \ingroup TASK
     The function kaapi_task_isstealable() will return non-zero value iff the task may be stolen.
     If the task pointer is an invalid pointer, then the function will return 0 as if the task may not be stolen.
     \param task IN a pointer to the kaapi_task_t to test.
 */
 static inline int kaapi_task_isstealable(const kaapi_task_t* task)
-{ return (task !=0) && !(task->flags & (KAAPI_TASK_F_STICKY>>8)) && (task->body != &kaapi_retn_body); }
+{ return (task !=0) && !(task->sf.sf.flags & (KAAPI_TASK_F_STICKY>>8)) && (task->body != &kaapi_retn_body); }
 
-/**
+/** \ingroup TASK
     The function kaapi_task_haslocality() will return non-zero value iff the task has locality constraints.
     In this case, the field locality my be read to resolved locality constraints.
     If the task pointer is an invalid pointer, then the function will return 0 as if the task has no locality constraints.
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline extern int kaapi_task_haslocality(const kaapi_task_t* task)
-{ return (task == 0 ? 0 : task->flags & (KAAPI_TASK_F_LOCALITY>>8)); }
+{ return (task == 0 ? 0 : task->sf.sf.flags & (KAAPI_TASK_F_LOCALITY>>8)); }
 
-/** 
+/** \ingroup TASK
     The function kaapi_task_isadaptive() will return non-zero value iff the task is an adaptive task.
     If the task pointer is an invalid pointer, then the function will return 0 as if the task is not an adaptive task.
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline extern int kaapi_task_isadaptive(const kaapi_task_t* task)
-{ return (task == 0 ? 0 : task->flags & (KAAPI_TASK_F_ADAPTIVE>>8)); }
+{ return (task == 0 ? 0 : task->sf.sf.flags & (KAAPI_TASK_F_ADAPTIVE>>8)); }
 
 
-/** \ingroup TE
+/** \ingroup TASK
     The function kaapi_stack_save_frame() saves the current frame of a stack into
     the frame data structure.
     If successful, the kaapi_stack_save_frame() function will return zero.
@@ -305,7 +267,7 @@ static inline int kaapi_stack_save_frame( kaapi_stack_t* stack, kaapi_frame_t* f
 }
 
 
-/** \ingroup TE
+/** \ingroup TASK
     The function kaapi_stack_restore_frame() restores the frame context of a stack into
     the stack data structure.
     If successful, the kaapi_stack_restore_frame() function will return zero.
@@ -325,7 +287,7 @@ static inline int kaapi_stack_restore_frame( kaapi_stack_t* stack, kaapi_frame_t
   return 0;  
 }
 
-/** \ingroup TE
+/** \ingroup TASK
     The function kaapi_stack_taskexec() executes the next task.
     On return and after execution of the task, the PC is updated to the next task to execute.
     If successful, the kaapi_stack_taskexec() function will return zero.
@@ -361,9 +323,9 @@ static inline int kaapi_stack_taskexec(kaapi_stack_t* stack)
     kaapi_task_t* retn = kaapi_stack_top(stack);
     retn->body  = &kaapi_retn_body;
     /* next line is equiv to saving a frame. retn->pdata should be viewed as a kaapi_frame_t */
-    retn->pdata[0] = task; /* <=> saved_pc */
-    retn->pdata[1] = saved_sp;
-    retn->pdata[2] = saved_sp_data;
+    retn->param.pdata[0] = task; /* <=> saved_pc */
+    retn->param.pdata[1] = saved_sp;
+    retn->param.pdata[2] = saved_sp_data;
     kaapi_stack_push(stack);
 
     /* update pc to the first forked task */
@@ -375,7 +337,7 @@ static inline int kaapi_stack_taskexec(kaapi_stack_t* stack)
 }
 #endif
 
-/** \ingroup TE
+/** \ingroup TASK
     The function kaapi_stack_taskexecall() execute all the tasks in the RFO order.
     If successful, the kaapi_stack_taskexecall() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
@@ -388,7 +350,7 @@ static inline int kaapi_stack_taskexec(kaapi_stack_t* stack)
 extern int kaapi_stack_taskexecall(kaapi_stack_t* stack);
 
 
-/** \ingroup TE
+/** \ingroup TASK
     The function kaapi_task_condeval() executes the condition function pointed by body for
     a task in the state KAAPI_TASK_WAITING. And, if the condition
     becomes true, then it restaures body to the task body function and pdata[0].
