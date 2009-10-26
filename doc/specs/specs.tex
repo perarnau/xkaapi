@@ -10,14 +10,15 @@
 \usepackage{bibtopic}
 \usepackage{graphicx}
 \usepackage{enumitem}
+\usepackage{dot2texi}
 
-\newcommand{\kaapi}{\textsc{X}-Kaapi}
+\newcommand{\kaapi}{\textsc{X}-Kaapi\xspace}
 \newcommand{\inote}[1]{\textit{\textbf{  \center \hrule Implementation note\hrule}}\vspace*{1ex}\textit{#1}\vspace{1ex} \hrule\vspace*{2ex}}
 
 \newcounter{subsubsubsection}[subsubsection]
 \newcommand{\subsubsubsection}[1]{~\\ \addtocounter{subsubsubsection}{1} \noindent\textit{\textbf{\thesubsubsection.\thesubsubsubsection. #1\\}}}
 
-\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{\textbf{\thesubsubsection\hspec #1\\}}}
+%\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{\textbf{\thesubsubsection\hspec #1\\}}}
 
 \begin{document}
 
@@ -220,6 +221,107 @@ Il s'agit ici de se poser la question d'une interface uniforme pour la communica
 	\item quelle interface de communication ?
 \end{enumerate}
 
+
+%%%
+%%%
+%%%
+\newpage
+\chapter{Overview of the API}
+
+In this chapter, we presents an overview of the API. Next chapter will presents the specification for each function of the API, especially the functions that deal with posting and waiting for requests, accessing to the topology, that are not strictly required for the standard developer of parallel algorithm with \kaapi.
+  
+\section{Multithreaded execution model}
+In \kaapi, we assume that a parallel program is composed by a set of (UNIX) process. During the initialization, a certain number of process are created, and one of them is called the \textit{main process}. Each process is multithreaded: the user can create threads (process or system level thread). Each thread is structured as a ordered sequence of tasks. The task is the basic unit of execution: it may be stolen, stopped and preempted. In addition to the user's created threads, the  library maintains a set of kernel threads to execute the task of the program.
+
+Thread API is closed is subset of the POSIX Thread API (thread, mutex, condition within their attributs). The only missing part of the API is functions to cancel thread.
+
+Each process has a \textit{global identifier} which is unique for all the execution of a computation. The global identifiers are not continuous values, which is slightly 
+
+\subsection{Process startup}
+
+The \kaapi library is initialized before the main entry point of process (\textit{main} function). Options may be passed either by environment variable or by the command line arguments. When the control flow begins to execute the main function, all \kaapi options are deleted from the command line arguments\footnote{Je suppose qu'il doit êre possible de faire cela... bien que je ne sache toujours pas comment.}.
+
+\subsection{Process termination}
+Each process terminates either when the whole computation is terminated or because process has been killed.
+
+\section{Memory model}
+As for most of the modern parallel language (Titanium, UPC, X10, Fortress) it is important to provide referential transparency to the user data in order to simply parallel programming of algorithm. 
+
+The physical memory is hierarchical: several cache levels between cores and the shared memory (non-uniform access) of multiprocessor; memory of the multiprocessors inside a cluster, etc...
+
+The main basic assumption made by \kaapi is to that: 1/ if a sequential code pass user data to the library, then it can only be read after the parallel computation or at certain synchronization points; between sequential phase, this user data will contains intermediate versions or partial version of the computation. 2/ user data will never by freed by the library.
+
+\section{Task model}
+
+A parallel \kaapi program is composed by a sequence of tasks. Tasks are pushed into a stack. 
+A task may creates several tasks. The order of creation follows the \textit{reference order} proposed since few years in Athapascan/Kaapi: When a task finish to execute, it begins to execute its children tasks following their order of creation.
+(the first created task is the first executed task).
+
+A task is a constant size structure with fixed set of parameters, which are called \textit{immediate parameters}. If more parameters are required, then  the user should pass them into the stack. 
+
+A task is composed of the following data:
+\begin{description}
+\item [a state]: the state of task. The state of task varies following the state diagram of figure~\ref{fig:state}.
+\item [an entrypoint]:
+\item [parameters]:
+\end{description}
+
+%\begin{figure}
+%\begin{dot2tex}[neato,options=-tmath]
+%  digraph G {
+%  node [shape="circle"];
+%  a_1 -> a_2 -> a_3 -> a_4 -> a_1;
+%}
+%\end{dot2tex}
+%\caption{State diagram of task}
+%\end{figure}
+
+\subsection{Stack of tasks}
+A task
+
+\subsection{Task entry point}
+
+\subsection{Passing arguments}
+
+A task may have at most \verb+KAAPI_TASK_MAX_DATA+ bytes for immediate parameters. These parameters could be viewed as integer (32 bits) or short (16 bits) or double (64 bits) or float (32 bits) or pointer (32 or 64 bits). All these parameters shared the same memory and not all these parameters must be used at the same time!
+
+The name of parameters are the following.
+\begin{itemize}
+\item \verb+idata[0..KAAPI_TASK_MAX_IDATA-1]+: integer (32 bits) parameters.
+\item \verb+sdata[0..KAAPI_TASK_MAX_SDATA-1]+: short (16 bits) parameters.
+\item \verb+ddata[0..KAAPI_TASK_MAX_DDATA-1]+: double (64 bits) parameters.
+\item \verb+fdata[0..KAAPI_TASK_MAX_FDATA-1]+: float (32 bits) parameters.
+\item \verb+pdata[0..KAAPI_TASK_MAX_PDATA-1]+: pointer (32 or 64 bits depending on the OS/architecture) parameters.
+\end{itemize}
+
+The invariants maintained by the library are: integer parameters are 32 bits long; short are 16 bits long;  and the following equalities.
+$$
+\begin{array}{ccc}
+4 * KAAPI\_TASK\_MAX\_SDATA &   = & 2 * KAAPI\_TASK\_MAX\_IDATA \\
+ & = & 2 * KAAPI\_TASK\_MAX\_FDATA \\
+ & = &  KAAPI\_TASK\_MAX\_DDATA
+\end{array}
+$$
+Due the variable size of pointer, we have:
+$$ 
+\begin{array}{ccc}
+KAAPI\_TASK\_MAX\_PDATA &   = &  KAAPI\_TASK\_MAX\_DDATA \\
+ & or &\\
+2*KAAPI\_TASK\_MAX\_PDATA &   = &  KAAPI\_TASK\_MAX\_DDATA \\
+\end{array}
+$$
+
+\subsection{Examples}
+
+\subsubsection{Fibonacci example}
+
+\subsubsection{Transform example}
+
+\subsubsection{Prefix example}
+
+\section{Data flow graph representation}
+
+\section{Work stealing algorithm}
 
 %%%
 %%%
