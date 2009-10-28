@@ -13,6 +13,7 @@
 \usepackage{dot2texi}
 
 \newcommand{\kaapi}{\textsc{X}-Kaapi\xspace}
+\newcommand{\new}{\hspace*{10ex}\textbf{\textsc{New in \kaapi.}~\\}\xspace}
 \newcommand{\inote}[1]{\textit{\textbf{  \center \hrule Implementation note\hrule}}\vspace*{1ex}\textit{#1}\vspace{1ex} \hrule\vspace*{2ex}}
 
 \newcounter{subsubsubsection}[subsubsection]
@@ -262,9 +263,12 @@ A task is a constant size structure with fixed set of parameters, which are call
 A task is composed of the following data:
 \begin{description}
 \item [a state]: the state of task. The state of task varies following the state diagram of figure~\ref{fig:state}.
-\item [an entrypoint]:
-\item [parameters]:
+\item [a body]: a C function used to execute the instructions of a task.
+\item [parameters]: a set of parameters. See section~\ref{sec:param} how to pass parameters to a task.
 \end{description}
+
+A task is a unit of computation. Before or after the execution of a task, the state of computation is only defined
+by the state of the stacks: the C-stack used to execute the body of a task does not need to be saved.
 
 %\begin{figure}
 %\begin{dot2tex}[neato,options=-tmath]
@@ -277,13 +281,52 @@ A task is composed of the following data:
 %\end{figure}
 
 \subsection{Stack of tasks}
-A task
+The creation of a task is done by storing the data that defined a task into a \textit{stack}. A stack contains
+created tasks. A stack could also store data. In fact the \kaapi stack should be viewed as two stacks
+a stack to store tasks and a stack to store data. The current execution state of stack is defined by three
+fields (see figure~\ref{fig:stack}).
+\begin{description}
+\item [pc]: the program counter that points to the next task to execute.
+\item [sp]: the stack pointer that points to the next task to push into the stack.
+\item [sp\_data]: the data stack pointer that points to the next memory where to store data.
+\end{description}
 
-\subsection{Task entry point}
+Each of the tasks and data stacks is represented by a contiguous memory  (an array).
+A \kaapi stack is associated with all of the \kaapi thread.
 
-\subsection{Passing arguments}
+They are two reason to not used C-stack for storing tasks or data:
+\begin{itemize}
+\item when the runtime does not execute the body of a task, the C-stack could not be saved.
+\item this allows to optimize context switch on most situation if task does not wait on POSIX like synchronisation.
+\end{itemize}
 
-A task may have at most \verb+KAAPI_TASK_MAX_DATA+ bytes for immediate parameters. These parameters could be viewed as integer (32 bits) or short (16 bits) or double (64 bits) or float (32 bits) or pointer (32 or 64 bits). All these parameters shared the same memory and not all these parameters must be used at the same time!
+\begin{figure}
+\hrule
+\begin{center}
+\includegraphics[width=0.5\linewidth]{stack}
+\end{center}
+\hrule
+\caption{\kaapi stack: a dual stacks structure. At the left part of the figure, the stack of tasks with both \texttt{PC} (program counter) and \texttt{SP} pointer (stack pointer). At the right, the stack of data.}
+\label{fig:stack}
+\end{figure}
+
+\subsection{Task body}
+
+The task body is a C-function that takes only two parameters:
+\begin{description}
+\item [kaapi\_task\_t*]: a pointer to the task to execute which also contains the list of parameters.
+\item [kaapi\_stack\_t*]: the stack to store child  tasks created during execution of the task body.
+\end{description}
+
+When a task body returns, the \kaapi runtime test is child tasks have been created.
+If it is the case, the runtime enqueue a special task (unstealable) which will restore the
+context of the stack before execution the task body\footnote{This task is very similar to blr PowerPC instruction or ret/retn instruction in the X86 instructions set.}
+
+The task body may wait on any POSIX synchronisation primitives (kaapi\_cond\_wait, kaapi\_ cond\_timedwait, kaapi\_mutex\_lock). In this case, the K-processor that executes the task, save the \kaapi stack context as well as the C-stack context in order to resume execution when synchronisation will be satisfied.
+
+\subsection{Passing arguments} \label{sec:param}
+
+A task may have at most \verb+KAAPI_TASK_MAX_DATA+ bytes for immediate parameters\footnote{This valuer is by default KAAPI\_TASK\_MAX\_DATA=32 bytes. A better value should be defined depending of average number of parameters for tasks}. These parameters could be viewed as integer (32 bits) or short (16 bits) or double (64 bits) or float (32 bits) or pointer (32 or 64 bits). All these parameters shared the same memory and not all these parameters must be used at the same time!
 
 The name of parameters are the following.
 \begin{itemize}
@@ -295,6 +338,7 @@ The name of parameters are the following.
 \end{itemize}
 
 The invariants maintained by the library are: integer parameters are 32 bits long; short are 16 bits long;  and the following equalities.
+\begin{small}
 $$
 \begin{array}{ccc}
 4 * KAAPI\_TASK\_MAX\_SDATA &   = & 2 * KAAPI\_TASK\_MAX\_IDATA \\
@@ -310,10 +354,157 @@ KAAPI\_TASK\_MAX\_PDATA &   = &  KAAPI\_TASK\_MAX\_DDATA \\
 2*KAAPI\_TASK\_MAX\_PDATA &   = &  KAAPI\_TASK\_MAX\_DDATA \\
 \end{array}
 $$
+\end{small}
+
+If a task has more parameters, then it should used the stack data to pass extra parameters. The following rules must be respected by all tasks. The purpose of these rules are to define exactly the location of parameters of a task given only the type
+of each parameter.
+\begin{itemize}
+\item if all parameters of a task may be pass on immediate parameters then they should not be passed into the stack.
+%The first parameter of type integer, short, double, float or pointer should used the free parameter data. The second parameter 
+%of type integer, short, double, float or pointer is put on the next free parameter data. etc... If a parameter could not be store in 
+%immediate parameters should be pass on the stack: then all the next parameter
+\item if they are not enough immediate parameters, then pdata[{\small KAAPI\_TASK\_MAX\_PDATA-1}] is the pointer to the stack of data on the first parameter passed on the stack.
+\end{itemize}
+Note: some architecture / operating system defined such convention (parameter passing rule) between the caller and the callee. In theory, a task represents a function call, thus it should be necessary to adopt the same parameter passing rule.
+
+
+\subsection{Shared objects}
+A shared object allows to define a set of writers and readers that are synchronized through the produced value.
+Two tasks that share a value through a shared object have been created together from a unique point in the past of the computation.This shared object is the classical shared object in Athapascan/Kaapi.\\
+
+\new
+In order to extend a little bit the kind of coordination between task. We introduce a fifo shared object. Such object could be \textit{anonymous} and after its creation both the producers and consumers have to be forked with the fifo shared object as parameter. Producers and consumers are concurrents. A consumer could only be started iff a value has been produced into the fifo shared object.
+
+Nevertheless, we also introduce a \textit{named} fifo shared that could be defined by parallel tasks: two tasks without a priori any relationship could defined the fifo shared object given a \textit{name}. \kaapi will manage the localisation of the producers and concumers in order to transport data from a task to an other.
+
+
+
+\subsection{Access mode}
+Each type should declare the access mode and type of each of its parameters. The access modes are the same than in Athapascan/Kaapi:
+\begin{description}
+\item [v]: the parameter is passed by value. A copy was made and the task may modify the copy without change the value of the effective parameter.
+\item [r]: shared read access. The task may read the value of the shared object.
+\item [rp]: shared read postponed access. The task may create a task that will read the value, but it cannot read itself the value.
+\item [w]: shared write access. The task may write the value of the shared object. If the task do not write a value, then an undefined value is write to the shared value.
+\item [wp]: shared write postponed access. The task may create a task that will write the value, but it cannot write itself the value.
+\item [rw]: shared exclusive access. The task may read and write the value of the shared object.
+\item [rwp]: shared exclusive postponed access. The task may create a task that will read or write the value, but it cannot read or write itself the value.
+\item [c]: shared concurrent write access. The task may accumulate a value of the shared object. The final value depend on the number of created task with concurrent write access.
+\item [cp]: shared concurrent write postponed access. The task may create a task that will accumulate a value, but it cannot accumulate itself a value.
+%\item [fw]: shared fifo write access. The task may write a value to this kind of shared: the next value read from this shared will be the first write value produced with fw access mode.
+\end{description}
 
 \subsection{Examples}
 
 \subsubsection{Fibonacci example}
+
+Figure~\ref{fig:fibo} presents the code for Fibonacci example using the supid recursive code:
+$$
+fibo(n) = 
+\left\{
+\begin{array}{ll}
+n & \mbox{if } n<2\\
+fibo(n-1)+fibo(n-2) & \mbox{else}
+\end{array}
+\right.
+$$
+The calling convention used to create Fibonacci task is:
+\begin{itemize}
+\item \verb+idata[0]+: the input parameter $n$.
+\item \verb+pdata[1]+: the pointer to the integer that store data computed by Fibo task.
+\end{itemize}
+Note that this code, could be easily generated by a compiler.
+
+\begin{figure}[!h]
+\hrule
+\begin{verbatim}
+/* Fibonacci task body */
+void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
+{
+  if (task->idata[0] < 2)
+  { /* store the input 'n' to the output value */
+    *(int*)task->pdata[1] = task->idata[0];
+  }
+  else {
+    int* result1 = (int*)kaapi_stack_pushshared(stack, sizeof(int));
+    int* result2 = (int*)kaapi_stack_pushshared(stack, sizeof(int));
+
+    kaapi_task_t* task1 = kaapi_stack_top(stack);
+    task1->state    = KAAPI_TASK_INIT;
+    task1->body     = &fibo_body;
+    task1->idata[0] = task->idata[0]-1;
+    task1->pdata[1] = result1;
+    kaapi_stack_push(stack);
+
+    kaapi_task_t* task2 = kaapi_stack_top(stack);
+    task2->state    = KAAPI_TASK_INIT;
+    task2->body     = &fibo_body;
+    task2->idata[0] = task->idata[0]-2;
+    task2->pdata[1] = result2;
+    kaapi_stack_push(stack);
+
+    kaapi_task_t* task_sum = kaapi_stack_top(stack);
+    task_sum->state    = KAAPI_TASK_INIT;
+    task_sum->body     = &sum_body;
+    task_sum->pdata[0] = task->pdata[1];
+    task_sum->pdata[1] = result1;
+    task_sum->pdata[2] = result2;
+    kaapi_stack_push(stack);    
+ }
+}
+\end{verbatim}
+\hrule
+\caption{Classical Fibonacci example}
+\label{fig:fibo}
+\end{figure}
+The access modes are defined by explicitly register the format of the task:
+
+\begin{figure}
+\hrule
+\begin{verbatim}
+kaapi_register_task("fibo", "viwi" ); 
+\end{verbatim}
+\hrule
+\caption{Definition of the format of a tasks}
+\label{fig:fibo}
+\end{figure}
+
+\begin{figure}[!h]
+\hrule
+\begin{verbatim}
+int main(int argc, char** argv)
+{
+  int err = 0;
+  kaapi_stack_t* stack = kaapi_self_stack();
+
+  int result = 0;
+  
+  /* t0 */
+  double t0 = kaapi_get_elapsedtime();
+  
+  /* create the main task */
+  kaapi_task_t* maintask = kaapi_stack_top(&stack);
+  maintask->body  = &fibo_body;
+  maintask->state = KAAPI_TASK_INIT;
+  maintask->idata[0] = atoi(argv[1]);
+  maintask->pdata[1] = &result;
+  kaapi_stack_push(&stack);
+  
+  /* force execution of all tasks */
+  kaapi_sync(&stack);
+  /* here result contains the correct value */
+
+  /*  t1 */
+  double t1 = kaapi_get_elapsedtime();
+
+  return 0;
+}
+\end{verbatim}
+\hrule
+\caption{Main function for Fibonacci example}
+\label{fig:fibomain}
+\end{figure}
+
 
 \subsubsection{Transform example}
 
