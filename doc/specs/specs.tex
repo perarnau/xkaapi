@@ -591,9 +591,37 @@ Line 7 is required memory barrier to ensure that previous write operations will 
 
 \subsection{Thread creation}
 
+\begin{description}
+
+\vspace*{3ex} \hrule width 4cm
+\item [\texttt{int kaapi\_create(kaapi\_t* \_\_restrict thread, }]~\\
+\textbf{\texttt{const kaapi\_attr\_t* \_\_restrict attr, void*(*start\_routine)(void *), void* \_\_restrict arg)}}: 
+create a thread that may be a system thread (KAAPI_SYSTEM_SCOPE or KAAPI_PROCESSOR_SCOPE) or a user thread (KAAPI_PROCESS_SCOPE).
+After this call, the thread descriptor \verb+thread+ is allocated
+For system threads, a thread is created with \verb+kaapi\_start\_system\_handler+ as starting function.
+For user threads, a thread is also created but with \verb+kaapi\_start\_process\_handler+ as starting function.
+
+\verb+count+ bytes from the internal request buffer to \verb+kpr+.
+Upon successful completion the number of bytes which were read is returned (non negative integer).
+If a negative integer is return then the absolute value indicate the error:
+\begin{description}
+\item [KAAPI\_EINVAL]: invalid argument, typically passing $0$ for \verb+thread+ pointer or \verb+start\_routine+, having a stack size of $0$ in case of non-null \verb+arg+.
+\item [KAAPI\_ENOMEM]: the request lacked the necessary resources to store count byte.
+\end{description}
+\end{description}
+
+\verb+kaapi\_start\_system\_handler+ as starting function.
+\verb+kaapi\_start\_process\_handler+ as starting function.
+
+
+
 \subsection{Mutex}
 
 \subsection{Condition}
+
+\subsection{Data specifics}
+
+\subsection{Not Implemented}
 
 %%
 %%
