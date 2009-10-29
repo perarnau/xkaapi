@@ -65,5 +65,6 @@ extern "C" {
 }
 #endif
 
+#define KAAPI_EINVAL EINVAL
 
 #endif

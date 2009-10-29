@@ -49,7 +49,7 @@
  */
 int kaapi_mutexattr_destroy(kaapi_mutexattr_t *attr)
 {
-  if (attr == 0) return EINVAL;
+  if (attr == 0) return KAAPI_EINVAL;
   
   return 0;
 }
@@ -58,8 +58,6 @@ int kaapi_mutexattr_destroy(kaapi_mutexattr_t *attr)
  */
 int kaapi_mutexattr_init(kaapi_mutexattr_t *attr)
 {
-  if (attr == 0) return EINVAL;
-  
   attr->_type  = KAAPI_MUTEX_NORMAL;
   
   return 0;
@@ -69,7 +67,7 @@ int kaapi_mutexattr_init(kaapi_mutexattr_t *attr)
  */
 int kaapi_mutexattr_gettype(const kaapi_mutexattr_t *__restrict attr, int *__restrict type)
 {
-  if (attr == 0) return EINVAL;
+  if (attr == 0) return KAAPI_EINVAL;
   
   type = (int*) &attr->_type;
   
@@ -80,7 +78,9 @@ int kaapi_mutexattr_gettype(const kaapi_mutexattr_t *__restrict attr, int *__res
  */
 int kaapi_mutexattr_settype(kaapi_mutexattr_t *attr, int type)
 {
-  if (attr == 0) return EINVAL;
+  if (attr == 0) return KAAPI_EINVAL;
+
+  if ((type != KAAPI_MUTEX_NORMAL)||(type != KAAPI_MUTEX_RECURSIVE)) return KAAPI_EINVAL;
   
   attr->_type = type;
   
