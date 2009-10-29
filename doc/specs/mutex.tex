@@ -1,0 +1,95 @@
+\begin{description}
+\vspace*{3ex} \hrule width 4cm
+\item [\texttt{int kaapi\_mutexattr\_init (kaapi\_mutexattr\_t *attr)}]
+\item [\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr)}]~\\
+%\textbf{\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr)}} :
+
+The kaapi\_mutexattr\_destroy() function shall destroy a mutex attributes
+object. A destroyed attr attributes object can be reinitialized using
+kaapi\_mutexattr\_init(); the results of otherwise referencing the object
+after it has been destroyed are undefined.
+
+The kaapi\_mutexattr\_init() function shall initialize a mutex attributes
+object attr with the default value for all of the attributes defined by the
+implementation.
+
+Results are undefined if kaapi\_mutexattr\_init() is called specifying an
+already initialized attr attributes object.
+
+After a mutex attributes object has been used to initialize one or more
+mutexes, any function affecting the attributes object (including destruction)
+shall not affect any previously initialized mutexes.
+
+Upon successful completion, kaapi\_mutexattr\_destroy() and
+kaapi\_mutexattr\_init() shall return zero; otherwise, an error number shall
+be returned to indicate the error.
+
+The kaapi\_mutexattr\_destroy() function may fail if:
+
+\begin{description}
+\item [KAAPI\_EINVAL]: The value specified by attr is invalid.
+\end{description}
+
+The kaapi\_mutexattr\_init() function shall fail if:
+
+\begin{description}
+\item [KAAPI\_ENOMEM]: Insufficient memory exists to initialize the mutex
+  attributes object. 
+\end{description}
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+\vspace*{3ex} \hrule width 4cm
+\item [\texttt{int kaapi\_mutexattr\_gettype (const kaapi\_mutexattr\_t *\_\_restrict, int *\_\_restrict)}]
+\item [\texttt{int kaapi\_mutexattr\_settype (kaapi\_mutexattr\_t *, int)}]~\\
+%\textbf{\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr)}} :
+
+The kaapi\_mutexattr\_gettype() and kaapi\_mutexattr\_settype() functions,
+respectively, shall get and set the mutex type attribute. This attribute is
+set in the type parameter to these functions. The default value of the type
+attribute is KAAPI\_MUTEX\_NORMAL.
+
+The type of mutex is contained in the type attribute of the mutex attributes.
+
+The type of mutex is contained in the type attribute of the mutex
+attributes. Valid mutex types include:
+
+KAAPI\_MUTEX\_NORMAL: This type of mutex does not detect deadlock. A thread
+attempting to relock this mutex without first unlocking it shall
+deadlock. Attempting to unlock a mutex locked by a different thread results in
+undefined behavior. Attempting to unlock an unlocked mutex results in
+undefined behavior.
+
+KAAPI\_MUTEX\_RECURSIVE: A thread attempting to relock this mutex without
+first unlocking it shall succeed in locking the mutex. The relocking deadlock
+which can occur with mutexes of type KAAPI\_MUTEX\_NORMAL cannot occur with
+this type of mutex. Multiple locks of this mutex shall require the same number
+of unlocks to release the mutex before another thread can acquire the mutex. A
+thread attempting to unlock a mutex which another thread has locked shall
+return with an error. A thread attempting to unlock an unlocked mutex shall
+return with an error.
+
+Upon successful completion, the kaapi\_mutexattr\_gettype() function shall
+return zero and store the value of the type attribute of attr into the object
+referenced by the type parameter. Otherwise, an error shall be returned to
+indicate the error.
+
+If successful, the kaapi\_mutexattr\_settype() function shall return zero;
+otherwise, an error number shall be returned to indicate the error.
+
+The kaapi\_mutexattr\_settype() function shall fail if:
+
+\begin{description}
+\item [KAAPI\_EINVAL]: The value type is invalid.
+\end{description}
+
+The kaapi\_mutexattr\_gettype() and kapai\_mutexattr\_settype() functions may
+fail if:
+
+\begin{description}
+\item [KAAPI\_EINVAL]: The value specified by attr is invalid.
+\end{description}
+\end{description}
+

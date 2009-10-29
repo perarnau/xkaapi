@@ -1,4 +1,4 @@
-\documentclass[12pt]{report}
+\documentclass{report}
 \usepackage[utf8x]{inputenc}
 %\usepackage[mac]{inputenc}
 
@@ -783,30 +783,41 @@ Line 7 is required memory barrier to ensure that previous write operations will 
 \subsection{Thread creation}
 
 \begin{description}
-
 \vspace*{3ex} \hrule width 4cm
-\item [\texttt{int kaapi\_create(kaapi\_t* \_\_restrict thread, }]~\\
-\textbf{\texttt{const kaapi\_attr\_t* \_\_restrict attr, void*(*start\_routine)(void *), void* \_\_restrict arg)}}: 
-create a thread that may be a system thread (KAAPI_SYSTEM_SCOPE or KAAPI_PROCESSOR_SCOPE) or a user thread (KAAPI_PROCESS_SCOPE).
-After this call, the thread descriptor \verb+thread+ is allocated
-For system threads, a thread is created with \verb+kaapi\_start\_system\_handler+ as starting function.
-For user threads, a thread is also created but with \verb+kaapi\_start\_process\_handler+ as starting function.
+\item [\texttt{int kaapi\_create(kaapi\_t* \_\_restrict thread, const kaapi\_attr\_t* \_\_restrict attr,}]~\\
+\textbf{\texttt{void*(*start\_routine)(void *), void* \_\_restrict arg)}} :
 
-\verb+count+ bytes from the internal request buffer to \verb+kpr+.
-Upon successful completion the number of bytes which were read is returned (non negative integer).
-If a negative integer is return then the absolute value indicate the error:
+create a thread that may be a system thread (\verb+KAAPI_SYSTEM_SCOPE+ or
+\verb+KAAPI_PROCESSOR_SCOPE+) or a user thread (\verb+KAAPI_PROCESS_SCOPE+).
+After this call, the thread descriptor \verb+thread+ is allocated For system
+threads, a thread is created with \verb+kaapi_start_system_handler+ as
+starting function.  For user threads, a thread is also created but with
+\verb+kaapi_start_process_handler+ as starting function.
+
+If successful, the kaapi\_create() function shall return zero; otherwise, an
+error number shall be returned to indicate the error.
+
+The kaapi\_create() function shall fail if:
+
 \begin{description}
-\item [KAAPI\_EINVAL]: invalid argument, typically passing $0$ for \verb+thread+ pointer or \verb+start\_routine+, having a stack size of $0$ in case of non-null \verb+arg+.
-\item [KAAPI\_ENOMEM]: the request lacked the necessary resources to store count byte.
-\end{description}
+\item [KAAPI\_EAGAIN]: The system lacked the necessary resources to create
+  another thread, or the system-imposed limit on the total number of threads
+  in a process {PTHREAD\_THREADS\_MAX} would be exceeded.
+\item [KAAPI\_EPERM]: The caller does not have appropriate permission to set
+  the required scheduling parameters or scheduling policy.
+\item [KAAPI\_EINVAL]: The attributes specified by attr are invalid.
 \end{description}
 
-\verb+kaapi\_start\_system\_handler+ as starting function.
-\verb+kaapi\_start\_process\_handler+ as starting function.
+\end{description}
+
+\verb+kaapi_start_system_handler+ as starting function.
+\verb+kaapi_start_process_handler+ as starting function.
 
 
 
 \subsection{Mutex}
+
+\input{mutex}
 
 \subsection{Condition}
 
