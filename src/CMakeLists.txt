@@ -74,7 +74,6 @@ add_library (xkaapi-static STATIC
   kaapi_atomic.h 
   kaapi_task.h 
   kaapi_task.c
-  kaapi_time.h 
   kaapi_time.c
 #  workstealing/kaapi_stealapi.h
 # workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
