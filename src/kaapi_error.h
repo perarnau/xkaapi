@@ -66,5 +66,9 @@ extern "C" {
 #endif
 
 #define KAAPI_EINVAL EINVAL
+#define KAAPI_EBUSY EBUSY
+#define KAAPI_EAGAIN EAGAIN
+#define KAAPI_ENOMEM ENOMEM
+#define KAAPI_EPERM EPERM
 
 #endif
