@@ -50,8 +50,6 @@
 */
 int kaapi_mutex_init(kaapi_mutex_t *__restrict mutex, const kaapi_mutexattr_t *__restrict attr)
 {
-  if (mutex == 0) return EINVAL;
-  
   KAAPI_ATOMIC_WRITE( &mutex->_lock, 0);
   
   mutex->_owner = NULL;
