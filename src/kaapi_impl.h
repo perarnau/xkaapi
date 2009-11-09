@@ -81,7 +81,6 @@ extern "C" {
 */
 #define KAAPI_PROCESSOR_SCOPE (KAAPI_PROCESS_SCOPE + 1)
 
-#include "kaapi_time.h"
 #include "kaapi_task.h"
 
 /* ========================================================================= */
