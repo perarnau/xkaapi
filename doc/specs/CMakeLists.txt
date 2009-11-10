@@ -1,6 +1,6 @@
 INCLUDE(UseLATEX.cmake)
 ADD_LATEX_DOCUMENT(specs.tex
-  INPUTS mutex.tex
+  INPUTS mutex.tex cond.tex
   IMAGES stack.pdf
 )
 

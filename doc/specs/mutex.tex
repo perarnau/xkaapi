@@ -1,13 +1,50 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% MUTEX ATTRIBUTES
+% MUTEX
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Our mutexes are implemented same way as POSIX mutexes are blablabla. We do not
+currently implement the following  function :
+
+\begin{verbatim}
+int   kaapi_mutex_consistent(kaapi_mutex_t *);
+
+int   kaapi_mutex_getprioceiling(const kaapi_mutex_t *restrict,
+          int *restrict);
+
+int   kaapi_mutex_setprioceiling(kaapi_mutex_t *restrict, int,
+          int *restrict);
+
+int   kaapi_mutex_timedlock(kaapi_mutex_t *restrict,
+          const struct timespec *restrict);
+
+int   kaapi_mutexattr_getprioceiling(
+          const kaapi_mutexattr_t *restrict, int *restrict);
+
+int   kaapi_mutexattr_getprotocol(const kaapi_mutexattr_t *restrict,
+          int *restrict);
+
+int   kaapi_mutexattr_getpshared(const kaapi_mutexattr_t *restrict,
+          int *restrict);
+
+int   kaapi_mutexattr_getrobust(const kaapi_mutexattr_t *restrict,
+          int *restrict);
+
+int   kaapi_mutexattr_setprioceiling(kaapi_mutexattr_t *, int);
+
+int   kaapi_mutexattr_setprotocol(kaapi_mutexattr_t *, int);
+
+int   kaapi_mutexattr_setpshared(kaapi_mutexattr_t *, int);
+
+int   kaapi_mutexattr_setrobust(kaapi_mutexattr_t *, int);
+\end{verbatim}
+
 \begin{description}
 \vspace*{3ex} \hrule width 4cm
-\vspace*{3ex} 
-\item [\texttt{int kaapi\_mutexattr\_init (kaapi\_mutexattr\_t *attr)}]
-\item [\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr)}]~\\
+\vspace*{3ex}
+\item [\texttt{int kaapi\_mutexattr\_init (kaapi\_mutexattr\_t *attr);}]
+\item [\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr);}]~\\
 %\textbf{\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr)}} :
 
+\paragraph{Description}~\\
 The kaapi\_mutexattr\_destroy() function shall destroy a mutex attributes
 object. A destroyed attr attributes object can be reinitialized using
 kaapi\_mutexattr\_init(); the results of otherwise referencing the object
@@ -24,10 +61,12 @@ After a mutex attributes object has been used to initialize one or more
 mutexes, any function affecting the attributes object (including destruction)
 shall not affect any previously initialized mutexes.
 
+\paragraph{Return Value}~\\
 Upon successful completion, kaapi\_mutexattr\_destroy() and
 kaapi\_mutexattr\_init() shall return zero; otherwise, an error number shall
 be returned to indicate the error.
 
+\paragraph{Errors}~\\
 The kaapi\_mutexattr\_destroy() function may fail if:
 
 \begin{description}
@@ -45,9 +84,10 @@ These functions shall not return an error code of \verb+KAAPI_ENOMEM+.
 \vspace*{3ex} \hrule width 4cm
 \vspace*{3ex} 
 \item [\texttt{int kaapi\_mutexattr\_gettype (const kaapi\_mutexattr\_t
-    *\_\_restrict, int *\_\_restrict)}]
-\item [\texttt{int kaapi\_mutexattr\_settype (kaapi\_mutexattr\_t *, int)}]~\\
+    *\_\_restrict, int *\_\_restrict);}]
+\item [\texttt{int kaapi\_mutexattr\_settype (kaapi\_mutexattr\_t *, int);}]~\\
 
+\paragraph{Description}~\\
 The kaapi\_mutexattr\_gettype() and kaapi\_mutexattr\_settype() functions,
 respectively, shall get and set the mutex type attribute. This attribute is
 set in the type parameter to these functions. The default value of the type
@@ -71,6 +111,7 @@ another thread can acquire the mutex. A thread attempting to unlock a mutex
 which another thread has locked shall return with an error. A thread
 attempting to unlock an unlocked mutex shall return with an error.
 
+\paragraph{Return Value}~\\
 Upon successful completion, the kaapi\_mutexattr\_gettype() function shall
 return zero and store the value of the type attribute of attr into the object
 referenced by the type parameter. Otherwise, an error shall be returned to
@@ -79,6 +120,7 @@ indicate the error.
 If successful, the kaapi\_mutexattr\_settype() function shall return zero;
 otherwise, an error number shall be returned to indicate the error.
 
+\paragraph{Errors}~\\
 The kaapi\_mutexattr\_settype() function shall fail if:
 
 \begin{description}
@@ -103,10 +145,13 @@ fail if:
 \vspace*{3ex} \hrule width 4cm
 \vspace*{3ex} 
 \item [\texttt{int kaapi\_mutex\_init (kaapi\_mutex\_t *\_\_restrict mutex,}]~\\
-\textbf{\texttt{ const kaapi\_mutexattr\_t *\_\_restrict attr)}}
-\item [\texttt{int kaapi\_mutex\_destroy (kaapi\_mutex\_t *mutex)}]~\\
+\textbf{\texttt{ const kaapi\_mutexattr\_t *\_\_restrict attr);}}
+\item [\texttt{int kaapi\_mutex\_destroy (kaapi\_mutex\_t *mutex);}]
+\item [\texttt{kaapi\_mutex\_t mutex = KAAPI\_MUTEX\_INITIALIZER;}]~\\
+
 %\textbf{\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr)}} :
 
+\paragraph{Description}~\\
 The kaapi\_mutex\_destroy() function shall destroy the mutex object referenced
 by mutex; the mutex object becomes, in effect, uninitialized. An
 implementation may cause kaapi\_mutex\_destroy() to set the object referenced
@@ -137,10 +182,12 @@ statically allocated. The effect shall be equivalent to dynamic initialization
 by a call to kaapi\_mutex\_init() with parameter attr specified as NULL,
 except that no error checks are performed.
 
+\paragraph{Return Value}~\\
 If successful, the kaapi\_mutex\_destroy() and kaapi\_mutex\_init() functions
 shall return zero; otherwise, an error number shall be returned to indicate
 the error.
 
+\paragraph{Errors}~\\
 The kaapi\_mutex\_destroy() function may fail if:
 
 \begin{description}
@@ -176,11 +223,12 @@ The kaapi\_mutex\_init() function may fail if:
 \begin{description}
 \vspace*{3ex} \hrule width 4cm
 \vspace*{3ex} 
-\item [\texttt{int kaapi\_mutex\_lock (kaapi\_mutex\_t *mutex)}]
-\item [\texttt{int kaapi\_mutex\_trylock (kaapi\_mutex\_t *mutex)}]
-\item [\texttt{int kaapi\_mutex\_unlock (kaapi\_mutex\_t *mutex)}]~\\
+\item [\texttt{int kaapi\_mutex\_lock (kaapi\_mutex\_t *mutex);}]
+\item [\texttt{int kaapi\_mutex\_trylock (kaapi\_mutex\_t *mutex);}]
+\item [\texttt{int kaapi\_mutex\_unlock (kaapi\_mutex\_t *mutex);}]~\\
 %\textbf{\texttt{int kaapi\_mutexattr\_destroy (kaapi\_mutexattr\_t *attr)}} :
 
+\paragraph{Description}~\\
 The mutex object referenced by mutex shall be locked by calling
 kaapi\_mutex\_lock(). If the mutex is already locked, the calling thread shall
 block until the mutex becomes available. This operation shall return with the
@@ -235,6 +283,7 @@ If a signal is delivered to a thread waiting for a mutex, upon return from the
 signal handler the thread shall resume waiting for the mutex as if it was not
 interrupted.
 
+\paragraph{Return Value}~\\
 If successful, the kaapi\_mutex\_lock() and kaapi\_mutex\_unlock() functions
 shall return zero; otherwise, an error number shall be returned to indicate
 the error.
@@ -243,6 +292,7 @@ The kaapi\_mutex\_trylock() function shall return zero if a lock on the mutex
 object referenced by mutex is acquired. Otherwise, an error number is returned
 to indicate the error.
 
+\paragraph{Errors}~\\
 The kaapi\_mutex\_lock() and kaapi\_mutex\_trylock() functions shall fail if:
 
 \begin{description}
