@@ -48,17 +48,45 @@ int   kaapi_condattr_setpshared(kaapi_condattr_t *, int);
 \item [\texttt{int kaapi\_cond\_signal(kaapi\_cond\_t *cond);}]~\\
 
 \paragraph{Description}~\\
-Texte
+These functions shall unblock threads blocked on a condition variable.
+
+The kaapi\_cond\_broadcast() function shall unblock all threads currently
+blocked on the specified condition variable cond.
+
+The kaapi\_cond\_signal() function shall unblock at least one of the threads
+that are blocked on the specified condition variable cond (if any threads are
+blocked on cond).
+
+If more than one thread is blocked on a condition variable, the scheduling
+policy shall determine the order in which threads are unblocked. When each
+thread unblocked as a result of a kaapi\_cond\_broadcast() or
+kaapi\_cond\_signal() returns from its call to kaapi\_cond\_wait() or
+kaapi\_cond\_timedwait(), the thread shall own the mutex with which it called
+kaapi\_cond\_wait() or kaapi\_cond\_timedwait(). The thread(s) that are
+unblocked shall contend for the mutex according to the scheduling policy (if
+applicable), and as if each had called kaapi\_mutex\_lock().
+
+The kaapi\_cond\_broadcast() or kaapi\_cond\_signal() functions may be called
+by a thread whether or not it currently owns the mutex that threads calling
+kaapi\_cond\_wait() or kaapi\_cond\_timedwait() have associated with the
+condition variable during their waits; however, if predictable scheduling
+behavior is required, then that mutex shall be locked by the thread calling
+kaapi\_cond\_broadcast() or kaapi\_cond\_signal().
+
+The kaapi\_cond\_broadcast() and kaapi\_cond\_signal() functions shall have no
+effect if there are no threads currently blocked on cond.
+
+The behavior is undefined if the value specified by the cond argument to
+kaapi\_cond\_broadcast() or kaapi\_cond\_signal() does not refer to an
+initialized condition variable.
 
 \paragraph{Return Value}~\\
-Texte
+If successful, the kaapi\_cond\_broadcast() and kaapi\_cond\_signal()
+functions shall return zero; otherwise, an error number shall be returned to
+indicate the error.
 
 \paragraph{Errors}~\\
-Texte
-
-\begin{description}
-\item [KAAPI\_EINVAL]: 
-\end{description}
+These functions shall not return an error code of [KAAPI\_EINTR].
 
 \end{description}
 
