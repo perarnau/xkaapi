@@ -99,7 +99,7 @@ set (CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.txt")
 set (CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.txt")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "X-Kaapi is a C library that allows to
   execute multithreaded computation with data flow synchronization between
-  threads")
+  tasks")
 
 #set (CPACK_PACKAGE_INSTALL_DIRECTORY "/usr/local")
 #set (CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMake_VERSION_MAJOR}.${CMake_VERSION_MINOR}")

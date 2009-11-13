@@ -22,17 +22,24 @@ public:
   }
   
   /* do computation */
-  void doit();
+  void doit(kaapi_task_t* task, kaapi_stack_t* data);
 
 protected:  
   InputIterator  _ibeg;
   InputIterator  _iend;
   
-  /* Entry in case of thief execution */
-  static void thief_entrypoint(kaapi_steal_context_t* sc, kaapi_work_t* data)
+  /* Entry in case of main execution */
+  static void main_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
   {
-    SlidingWindowWork* w = (SlidingWindowWork*)data;
-    w->doit();
+    SlidingWindowWork* w = (SlidingWindowWork*)task->pdata[0];
+    w->doit(task, data);
+  }
+
+  /* Entry in case of thief execution */
+  static void thief_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
+  {
+    SlidingWindowWork* w = (SlidingWindowWork*)task->pdata[0];
+    w->doit(task, data);
   }
 
   /** splitter_work is called within the context of the steal point
@@ -127,10 +134,8 @@ reply_failed: /* to all other request */
 
 /** Main entry point
 */
-void MarcProblem::doit()
+void MarcProblem::doit( kaapi_task_t* task, kaapi_stack_t* stack )
 {
-  kaapi_task_t* self_task = kaapi_self_task();
-
 
   /* local iterator for the nano loop */
   double* nano_iend;
@@ -150,7 +155,7 @@ redo_work:
        The splitter cannot give more than WINDOW_SIZE size work to all other threads.
        Thus each thief thread cannot have more than WINDOW_SIZE size work.
     */
-    kaapi_stealpoint( self_task, splitter, _ibeg, &local_iend ))
+    kaapi_stealpoint( task, splitter, _ibeg, &local_iend ))
 
     tmp_size = local_iend-_ibeg;
     if (tmp_size < unit_size ) {
@@ -170,7 +175,7 @@ redo_work:
        here no function is called on the preemption point and the data 'this' is passed 
        to the thread that initiates the preemption.
     */
-    if (kaapi_preempoint( self_task, 
+    if (kaapi_preempoint( task, 
                           0,             /* function to call in case of preemption */
                           this           /* arg to pass to the thread that do preemption */
                                          /* here possible extra arguments to pass to the function call */
@@ -184,7 +189,7 @@ redo_work:
      If work has been preempted, then ibeg != local_iend and should be done locally. See reducer function.
      If no more work has been preempted, it means that all the computation is finished.
   */
-  if (kaapi_preempt_theft( self_task, 
+  if (kaapi_preempt_theft( task, 
                            &reducer,                  /* function to call if a preempt exist */
                            0,                         /* arg to pass to the thief */
                            this, &ibeg, &local_iend   /* arg to pass to the function call reducer */
@@ -195,7 +200,7 @@ redo_work:
      After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
      could be read (...)
   */
-  kaapi_finalize_steal( _sc );
+  kaapi_finalize_steal( task );
 }
 
 
@@ -207,12 +212,23 @@ void marc_problem ( double* begin, double* end )
     - master finalization: the main thread will waits the end of the computation.
     - master preemption: the main thread will be able to preempt all thiefs.
   */
-  kaapi_task_t task;
-  kaapi_self_push_task( &task, KAAPI_MASTER_PREEMPT_FLAG | KAAPI_MASTER_FINALIZE_FLAG );
-
+  kaapi_stack_t* stack = kaapi_self_stack();
+  kaapi_frame_t  frame;
   SlidingWindowWork work( begin, end);
-  work.doit();
 
-  kaapi_self_pop_task();
+  kaapi_stack_save_frame( stack, &frame );
+  
+  /* create the task on the top of the stack */
+  kaapi_task_t* task = kaapi_stack_top(stack);
+  task1->state       = KAAPI_TASK_INIT | KAAPI_TASK_F_ADAPTIVE;
+  task1->body        = &SlidingWindowWork::main_entry;
+  task1->pdata[0]    = &work;
+
+  /* push_it task on the top of the stack */
+  kaapi_stack_push(stack);
+
+  /* wait its execution */
+  kaapi_stack_wait_exec( stack, task );
+
+  kaapi_stack_restore_frame( stack, &frame );
 }
-#endif

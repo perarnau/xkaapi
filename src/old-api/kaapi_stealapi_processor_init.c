@@ -48,7 +48,7 @@
 int kaapi_steal_processor_init( kaapi_steal_processor_t* kpss, int index, int sz, void* staddr ) 
 { 
   KAAPI_ATOMIC_WRITE(&(kpss->_list_request._count), 0);
-  { int i; for (i=0; i<KAAPI_MAXSTACK_STEAL; ++i)
+  { int i; for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     {  kpss->_list_request._request[i] = 0; }
   }
   kpss->_processor_id = 0;
@@ -75,7 +75,7 @@ int kaapi_steal_processor_terminate( kaapi_steal_processor_t* kpss )
 {
   /* here should reply FAIL to all posted request (if any ) */
   KAAPI_ATOMIC_WRITE(&(kpss->_list_request._count), 0);
-  { int i; for (i=0; i<KAAPI_MAXSTACK_STEAL; ++i)
+  { int i; for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     {  kpss->_list_request._request[i] = 0; }
   }
   kpss->_state = KAAPI_PROCESSOR_S_TERMINATED;

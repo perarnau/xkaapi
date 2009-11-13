@@ -57,7 +57,7 @@ extern "C" {
 #include "kaapi_param.h"
 #include "kaapi_stealapi_synchro.h"
 
-#define KAAPI_MAXSTACK_STEAL KAAPI_MAX_PROCESSOR
+#define KAAPI_MAX_PROCESSOR KAAPI_MAX_PROCESSOR
 
 #define KAAPI_STEALCONTEXT_STACKSIZE 4096
 
@@ -123,15 +123,13 @@ enum kaapi_steal_context_{
 #define KAAPI_STEAL_PROCESSOR_DECODEINDEX( i ) \
   (i & 0xFF )
 
-#define KAAPI_STEAL_PROCESSOR_GETINDEX( kpsp ) \
-  ((kpsp)->_processor_id & 0xFF )
 
 #define KAAPI_STEAL_PROCESSOR_SETINDEX( kpsp, index ) \
   ((kpsp)->_processor_id = ((kpsp)->_processor_id & ~0xFF) | index )
 
 /** All available kaapi_steal processor context
 */
-extern kaapi_steal_processor_t* kaapi_all_stealprocessor[1+KAAPI_MAXSTACK_STEAL];
+extern kaapi_steal_processor_t* kaapi_all_stealprocessor[1+KAAPI_MAX_PROCESSOR];
 
 /** Index for the next stack to declare
 */
@@ -140,11 +138,6 @@ extern kaapi_atomic_t kaapi_index_stacksteal;
 /** !=0 iff program should terminate
 */
 extern int volatile kaapi_stealapi_term;
-
-/** Barrier to detect the end of all worker threads
-*/
-kaapi_barrier_td_t kaapi_stealapi_barrier_term;
-
 
 /* ========================================================================= */
 /** Victim part of the protocol
@@ -172,20 +165,10 @@ int kaapi_steal_processor_terminate( kaapi_steal_processor_t* kpss );
 /** Thread entry point for a kernel thread processor
     \param argv should the index of the processor in the stealprocessor global table
     \retval Always return 0
-    The function call until terminaison kaapi_steal_processor_select_victim + post request + kaapi_steal_processor.
+    The function call until terminaison kaapi_sched_select_victim + post request + kaapi_steal_processor.
 */
 void* kaapi_steal_processor_run(void* argv);
 
-/** Select a victim for next steal request
-    \param kpss the kaapi_steal_processor_t that emits the request
-    \retval the index of the processor to steal in kaapi_all_stealprocessor
-    \retval -1 in case of terminaison of the program
-    The user of the library may define the pointer kaapi_steal_processor_select_victim_function in order 
-    to change the behavior of the victim selection.
-    By default, the method makes a uniform random choice of the victim processor.
-*/
-extern int (*kaapi_steal_processor_select_victim_function)( kaapi_steal_processor_t* kpss );
-int kaapi_steal_processor_select_victim( kaapi_steal_processor_t* kpss );
 
 /** Steal a kaapi_processor
     \param kpss the kaapi_steal_processor_t to steal
@@ -295,15 +278,6 @@ extern int kaapi_finalize_steal (
 */
 #define kaapi_thief_request_destroy( kpsr ) 
 
-
-/** Post a request to a given steal context
-  This method post a request to a steal context. When the request is processed
-  \param kpsr the sender of the request (a kaapi_steal_context_t)
-  \param kpsc the receiver (victim) of the request (a kaapi_steal_context_t)
-  \param return 0 if the request has been successully posted
-  \param return !=0 if the request been not been successully posted and the status of the request contains the error code
-*/  
-extern int kaapi_thief_request_post( kaapi_steal_processor_t* kpss, kaapi_steal_processor_t* kpsssrc, kaapi_steal_request_t* kpsr );
 
 
 /** Return true or false when the request has been processed

@@ -81,7 +81,7 @@ public:
     int i = 0;
     InputIterator local_end = iend;
 
-    while ((count >0) && (i<CKAAPI_MAXSTACK_STEAL))
+    while ((count >0) && (i<CKAAPI_MAX_PROCESSOR))
     {
       if (request[i] !=0)
       {

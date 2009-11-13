@@ -63,7 +63,7 @@ void splitter_work( kaapi_steal_context_t* stealcontext, int count, kaapi_steal_
   med = (*size+i) / 2;
   newsize = *size-med;
 
-  for (i=0; i<KAAPI_MAXSTACK_STEAL; ++i)
+  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
     if (request[i] !=0) 
     {

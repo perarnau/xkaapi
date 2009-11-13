@@ -7,45 +7,32 @@
 ##
 
 # Add the binary directory for generated headers :
-include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/thread ${CMAKE_CURRENT_SOURCE_DIR}/workstealing ${CMAKE_CURRENT_SOURCE_DIR}/dfg)
+include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/misc ${CMAKE_CURRENT_SOURCE_DIR}/machine ${CMAKE_CURRENT_SOURCE_DIR}/workstealing ${CMAKE_CURRENT_SOURCE_DIR}/dfg)
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -g" )
-#TG: delete -std=c99 because current version used anonymous union...
+add_definitions ( "-Wall -pedantic -std=c99 -g" )
 
 #################
 ## LIBRARY BEG ##
 
 # Shared lib :
 add_library (xkaapi SHARED 
-  thread/kaapi_attr_affinity.c thread/kaapi_attr_destroy.c
-  thread/kaapi_attr_detach.c thread/kaapi_attr_inheritedsched.c thread/kaapi_attr_init.c
-  thread/kaapi_attr_schedparam.c thread/kaapi_attr_schedpolicy.c thread/kaapi_attr_scope.c
-  thread/kaapi_attr_stack.c thread/kaapi_attr_stackaddr.c thread/kaapi_attr_stacksize.c
-  thread/kaapi_cond_attr.c thread/kaapi_cond_broadcast.c thread/kaapi_cond_destroy.c
-  thread/kaapi_cond_init.c thread/kaapi_cond_signal.c thread/kaapi_cond_timedwait.c
-  thread/kaapi_cond_wait.c 
-  thread/kaapi_mutex_attr.c
-  thread/kaapi_mutex_destroy.c thread/kaapi_mutex_init.c thread/kaapi_mutex_lock.c
-  thread/kaapi_mutex_trylock.c thread/kaapi_mutex_unlock.c 
-  thread/kaapi_specific_get.c thread/kaapi_specific_set.c thread/kaapi_thread_create.c
-  thread/kaapi_thread_detach.c thread/kaapi_thread_equal.c thread/kaapi_thread_exit.c
-  thread/kaapi_thread_join.c thread/kaapi_thread_once.c thread/kaapi_thread_self.c
-  thread/kaapi_thread_yield.c 
   kaapi_init.c 
-  kaapi_atomic.h 
-  kaapi_task.c
-  kaapi_time.c
-  thread/kaapi_sched_alloc.c thread/kaapi_sched_concurrency.c thread/kaapi_sched_run.c
-  thread/kaapi_sched_steal_thread.c thread/kaapi_sched_steal_inside_thread.c thread/kaapi_sched_suspend.c thread/kaapi_sched_idle.c
-  thread/kaapi_sched_term.c thread/kaapi_specific_create.c thread/kaapi_specific_delete.c
-#  workstealing/kaapi_stealapi.h
-#  workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
-#  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
-#  workstealing/kaapi_stealapi_processor_selectvictim.c
-#  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
-#  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
-#  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
+  machine/mt/kaapi_mt_init.c
+  machine/mt/kaapi_mt_topology.c
+  machine/mt/kaapi_mt_setconcurrency.c
+  machine/mt/kaapi_mt_getconcurrency.c
+  machine/mt/kaapi_mt_selftask.c
+  machine/mt/kaapi_mt_sched_idle.c
+  machine/mt/kaapi_mt_stack_alloc.c
+  machine/mt/kaapi_mt_stack_free.c
+  misc/kaapi_init.c
+  misc/kaapi_time.c
+  dfg/kaapi_stack_init.c
+  dfg/kaapi_stack_clear.c
+  dfg/kaapi_stack_execall.c
+  dfg/kaapi_stack_execchild.c
+  dfg/kaapi_task_standard.c
 )
 
 # Version number :
@@ -53,36 +40,22 @@ set_target_properties(xkaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
 
 # Static lib :
 add_library (xkaapi-static STATIC 
-  thread/kaapi_attr_affinity.c thread/kaapi_attr_destroy.c
-  thread/kaapi_attr_detach.c thread/kaapi_attr_inheritedsched.c thread/kaapi_attr_init.c
-  thread/kaapi_attr_schedparam.c thread/kaapi_attr_schedpolicy.c thread/kaapi_attr_scope.c
-  thread/kaapi_attr_stack.c thread/kaapi_attr_stackaddr.c thread/kaapi_attr_stacksize.c
-  thread/kaapi_cond_attr.c thread/kaapi_cond_broadcast.c thread/kaapi_cond_destroy.c
-  thread/kaapi_cond_init.c thread/kaapi_cond_signal.c thread/kaapi_cond_timedwait.c
-  thread/kaapi_cond_wait.c 
-  thread/kaapi_mutex_attr.c
-  thread/kaapi_mutex_destroy.c thread/kaapi_mutex_init.c thread/kaapi_mutex_lock.c
-  thread/kaapi_mutex_trylock.c thread/kaapi_mutex_unlock.c thread/kaapi_sched_alloc.c
-  thread/kaapi_sched_concurrency.c thread/kaapi_sched_run.c
-  thread/kaapi_sched_steal_thread.c thread/kaapi_sched_steal_inside_thread.c thread/kaapi_sched_suspend.c thread/kaapi_sched_idle.c
-  thread/kaapi_sched_term.c thread/kaapi_specific_create.c thread/kaapi_specific_delete.c
-  thread/kaapi_specific_get.c thread/kaapi_specific_set.c thread/kaapi_thread_create.c
-  thread/kaapi_thread_detach.c thread/kaapi_thread_equal.c thread/kaapi_thread_exit.c
-  thread/kaapi_thread_join.c thread/kaapi_thread_once.c thread/kaapi_thread_self.c
-  thread/kaapi_thread_yield.c 
   kaapi_init.c 
-  kaapi_atomic.h 
-  kaapi_task.h 
-  kaapi_task.c
-  kaapi_time.h 
-  kaapi_time.c
-#  workstealing/kaapi_stealapi.h
-# workstealing/kaapi_stealapi_processor_init.c workstealing/kaapi_stealapi_request_wait.c
-#  workstealing/kaapi_stealapi_stealcontext_init.c workstealing/kaapi_stealapi_stealcontext_finalize.c
-#  workstealing/kaapi_stealapi_processor_selectvictim.c
-#  workstealing/kaapi_stealapi_stealcontext_pushpop.c workstealing/kaapi_stealapi_init.c
-#  workstealing/kaapi_stealapi_processor_steal.c workstealing/kaapi_stealapi_synchro.h
-#  workstealing/kaapi_stealapi_processor_alloc.c workstealing/kaapi_stealapi_request_post.c
+  machine/mt/kaapi_mt_init.c
+  machine/mt/kaapi_mt_topology.c
+  machine/mt/kaapi_mt_setconcurrency.c
+  machine/mt/kaapi_mt_getconcurrency.c
+  machine/mt/kaapi_mt_selftask.c
+  machine/mt/kaapi_mt_sched_idle.c
+  machine/mt/kaapi_mt_stack_alloc.c
+  machine/mt/kaapi_mt_stack_free.c
+  misc/kaapi_init.c
+  misc/kaapi_time.c
+  dfg/kaapi_stack_init.c
+  dfg/kaapi_stack_clear.c
+  dfg/kaapi_stack_execall.c
+  dfg/kaapi_stack_execchild.c
+  dfg/kaapi_task_standard.c
 )
 
 set_target_properties(xkaapi-static PROPERTIES OUTPUT_NAME "xkaapi")
@@ -126,6 +99,14 @@ check_include_files (stdio.h      HAVE_STDIO_H     )
 
 #######################
 ## SET CONSTANTS BEG ##
+
+#Maximum number of arguments of a task
+set(KAAPI_MAX_PROCESSOR 16)
+
+#Maximum number of architecture depending on the installation (1 or 2 in case of mixing CPU/GPU, 3 in case of mixing CPU/GPU/MPSoC)
+# This number may be also depend on the caracteristic of the processors.... and one could consider having N different architectures
+# For each architecture, task should have a specific entry point
+set(KAAPI_MAX_ARCH 3)      
 
 # Get the number of online processors using getconf :
 execute_process (COMMAND getconf _NPROCESSORS_ONLN OUTPUT_VARIABLE KAAPI_MAX_PROCESSOR)
@@ -251,15 +232,6 @@ endif (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
 #########################
 
 
-###########################
-## CONFIGURE KAAPI.H BEG ##
-
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/kaapi.h.in ${CMAKE_CURRENT_BINARY_DIR}/kaapi.h)
-
-## CONFIGURE KAAPI.H END ##
-###########################
-
-
 ###################################
 ## SET SIZEOF PRIVATE STRUCT BEG ##
 
@@ -293,15 +265,6 @@ set (CMAKE_EXTRA_INCLUDE_FILES)
 
 ## set SIZEOF PRIVATE STRUCT END ##
 ###################################
-
-
-################################
-## CONFIGURE KAAPI_TYPE.H BEG ##
-
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/kaapi_type.h.in ${CMAKE_CURRENT_BINARY_DIR}/kaapi_type.h)
-
-## CONFIGURE KAAPI_TYPE.H END ##
-################################
 
 
 #######################

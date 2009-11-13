@@ -13,11 +13,19 @@
 \usepackage{dot2texi}
 
 \newcommand{\kaapi}{\textsc{X}-Kaapi\xspace}
-\newcommand{\new}{\hspace*{10ex}\textbf{\textsc{New in \kaapi.}~\\}\xspace}
+%%\newcommand{\new}{\hspace*{10ex}\textbf{\textsc{New in \kaapi.}~\\}\xspace}
+\newcommand{\new}{}
 \newcommand{\inote}[1]{\textit{\textbf{  \center \hrule Implementation note\hrule}}\vspace*{1ex}\textit{#1}\vspace{1ex} \hrule\vspace*{2ex}}
+
+%\newcounter{subsubsection}[subsection]
+\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{
+%\textbf{\thesubsection.
+\thesubsubsection. #1\\}}
+
 
 \newcounter{subsubsubsection}[subsubsection]
 \newcommand{\subsubsubsection}[1]{~\\ \addtocounter{subsubsubsection}{1} \noindent\textit{\textbf{\thesubsubsection.\thesubsubsubsection. #1\\}}}
+\newtheorem{proposition}{Proposition}
 
 %\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{\textbf{\thesubsubsection\hspec #1\\}}}
 
@@ -270,6 +278,14 @@ A task is composed of the following data:
 A task is a unit of computation. Before or after the execution of a task, the state of computation is only defined
 by the state of the stacks: the C-stack used to execute the body of a task does not need to be saved.
 
+The states of a task are:
+\begin{description}
+\item [KAAPI\_TASK\_INIT]: set on the creation of a task
+\item [KAAPI\_TASK\_WAITING]: specific creation of a task that wait for external condition. The condition will then move the state of the task to \textbf{KAAPI\_TASK\_INIT}.
+\item [KAAPI\_TASK\_EXEC]: set during the execution of a task.
+\item [KAAPI\_TASK\_TERM]: set at the end of the execution of a task.
+\end{description}
+
 %\begin{figure}
 %\begin{dot2tex}[neato,options=-tmath]
 %  digraph G {
@@ -308,6 +324,54 @@ They are two reason to not used C-stack for storing tasks or data:
 \hrule
 \caption{\kaapi stack: a dual stacks structure. At the left part of the figure, the stack of tasks with both \texttt{PC} (program counter) and \texttt{SP} pointer (stack pointer). At the right, the stack of data.}
 \label{fig:stack}
+\end{figure}
+
+The algorithm to execute all tasks of a stack does not required recursion between task's bodies. 
+\begin{figure}
+\hrule
+{\small
+\begin{verbatim}
+redo_work: 
+  {
+    if (task->body ==0) return 0;
+    if (task->state == KAAPI_TASK_INIT) 
+    { /* save stack pointers, pc is equal to task ! */
+      saved_sp      = stack->sp;
+      saved_sp_data = stack->sp_data;
+      (*task->body)(task, stack);
+      task->body = 0;
+    
+      /* push restore_frame task if newly created tasks */
+      if (saved_sp < stack->sp) 
+      { /* push retn task that will restore stack pointers 
+           before executing the task 'task' */
+        retn = kaapi_stack_top(stack);
+        retn->body  = &kaapi_retn_body;
+        /* next line is equiv to saving a frame. 
+           retn->pdata must be equiv. to a kaapi_frame_t */
+        retn->param.pdata[0] = task;   /* <=> save pc */
+        retn->param.pdata[1] = saved_sp; 
+        retn->param.pdata[2] = saved_sp_data;
+        kaapi_stack_push(stack);
+
+        /* update pc to the first forked task */
+        task = stack->pc = saved_sp;
+        goto redo_work;
+      }
+       
+      task = ++stack->pc;
+      goto redo_work;
+    }
+  }
+  task = ++stack->pc;
+  if (stack->pc >= stack->sp) return 0;
+  goto redo_work;
+}
+\end{verbatim}
+}
+\hrule
+\caption{Algorithm to execute tasks of a stack.}
+\label{fig:stackalgo}
 \end{figure}
 
 \subsection{Task body}
@@ -373,14 +437,15 @@ A shared object allows to define a set of writers and readers that are synchroni
 Two tasks that share a value through a shared object have been created together from a unique point in the past of the computation.This shared object is the classical shared object in Athapascan/Kaapi.\\
 
 \new
-In order to extend a little bit the kind of coordination between task. We introduce a fifo shared object. Such object could be \textit{anonymous} and after its creation both the producers and consumers have to be forked with the fifo shared object as parameter. Producers and consumers are concurrents. A consumer could only be started iff a value has been produced into the fifo shared object.
+In order to extend the kind of coordination between tasks that is permitted with \kaapi, we introduce a fifo shared object. Such object could be \textit{anonymous} and after its creation both the producers and consumers have to be forked with the fifo shared object as parameter. Producers and consumers not synchronized by a read / write dependency but by the availability of data into the fifo shared object. A consumer could only be started iff a value has been produced into the fifo shared object.
 
-Nevertheless, we also introduce a \textit{named} fifo shared that could be defined by parallel tasks: two tasks without a priori any relationship could defined the fifo shared object given a \textit{name}. \kaapi will manage the localisation of the producers and concumers in order to transport data from a task to an other.
+Nevertheless, we also introduce a \textit{named} fifo shared that could be defined by parallel tasks: two tasks without a priori any relationship could defined the fifo shared object given the same \textit{name}. \kaapi will manage the localisation of the producers and concumers in order to transport data from a task to an other.
 
 
 
 \subsection{Access mode}
-Each type should declare the access mode and type of each of its parameters. The access modes are the same than in Athapascan/Kaapi:
+
+Each type should declare the access mode and type of each of its parameters. The access modes are the same than in Athapascan/Kaapi. Please refer to documentation about Athapascan to have a complete description of the semantic.
 \begin{description}
 \item [v]: the parameter is passed by value. A copy was made and the task may modify the copy without change the value of the effective parameter.
 \item [r]: shared read access. The task may read the value of the shared object.
@@ -389,14 +454,14 @@ Each type should declare the access mode and type of each of its parameters. The
 \item [wp]: shared write postponed access. The task may create a task that will write the value, but it cannot write itself the value.
 \item [rw]: shared exclusive access. The task may read and write the value of the shared object.
 \item [rwp]: shared exclusive postponed access. The task may create a task that will read or write the value, but it cannot read or write itself the value.
-\item [c]: shared concurrent write access. The task may accumulate a value of the shared object. The final value depend on the number of created task with concurrent write access.
-\item [cp]: shared concurrent write postponed access. The task may create a task that will accumulate a value, but it cannot accumulate itself a value.
+\item [cw]: shared concurrent write access. The task may accumulate a value of the shared object. The final value depend on the number of created task with concurrent write access.
+\item [cwp]: shared concurrent write postponed access. The task may create a task that will accumulate a value, but it cannot accumulate itself a value.
+\item [E]: is a special coding for empty mode, either because the access mode is unknown or has not yet be set.
 %\item [fw]: shared fifo write access. The task may write a value to this kind of shared: the next value read from this shared will be the first write value produced with fw access mode.
 \end{description}
 
-\subsection{Examples}
 
-\subsubsection{Fibonacci example}
+\subsection{Fibonacci example}
 
 Figure~\ref{fig:fibo} presents the code for Fibonacci example using the supid recursive code:
 $$
@@ -417,6 +482,7 @@ Note that this code, could be easily generated by a compiler.
 
 \begin{figure}[!h]
 \hrule
+\small
 \begin{verbatim}
 /* Fibonacci task body */
 void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
@@ -457,16 +523,160 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 \caption{Classical Fibonacci example}
 \label{fig:fibo}
 \end{figure}
-The access modes are defined by explicitly register the format of the task:
+The access modes are defined by explicitly register the format of the task.
+The figures~\ref{fig:stackfibo1} and~\ref{fig:stackfibo2} present a detailed of the content of the \kaapi stack.
+\begin{figure}[!h]
+\hrule
+\hspace*{+12ex}
+\begin{minipage}[t]{1\linewidth}
+\begin{center}
+\includegraphics[width=1.0\linewidth]{stackfibo1}
+\end{center}
+\end{minipage}
+\vspace*{-45ex}
+\hrule
+\caption{\kaapi stack before executing one instance of Fibonacci task. Task is pushed into the stack of tasks and the global data is pushed into the stack of data of the same \kaapi stack. Such construction is done during each recursive creation of Fibonacci task in the algorithm in figure~\ref{fig:fibo}.}
+\label{fig:stackfibo1}
+\end{figure}
+
+\begin{figure}[!h]
+\hrule
+\hspace*{-5ex}
+\begin{minipage}[t]{1\linewidth}
+\begin{center}
+\includegraphics[width=1.0\linewidth]{stackfibo2}
+\end{center}
+\end{minipage}
+\hrule
+\caption{\kaapi stack after executing one instance of Fibonacci task of figure~\ref{fig:stackfibo1}.
+The figure presents how accesses are represented. At the difference of the previous version of Kaapi,
+the access to a same global data are not linked together, but they points to the same global data.
+An other important difference: a task (retn) is added in order to restore stack pointers before executing the first (orange)  Fibonacci task.
+}
+\label{fig:stackfibo2}
+\end{figure}
+
+
+\newpage
+\subsection{Data flow graph computation}
+The purpose of this section is to present the new algorithm used in \kaapi to compute data flow constraints: \textit{i.e} how to compute the fact that a data is ready to be used in as parameter of task.
+
+Some propositions are naturally deduced from the access mode and the semantic of Athapascan API.
+\begin{proposition}
+Let us consider a task $t$ with $k$ parameters. The following propositions are true: 
+\begin{enumerate} \label{prop1}
+\item \label{p1a} A task without parameters is always ready to execute.
+\item \label{p1b} A effective parameter with access mode \textbf{[v]} is always ready to execute the task $t$.
+\item \label{p1c} A effective parameter with access mode \textbf{[w]} or \textbf{[wp]} is always ready to execute the task $t$.
+\item \label{p1d} A effective parameter with access mode \textbf{[r]} or \textbf{[rp]} is ready to execute the task $t$ iff the previous access(es) 
+that write (\textbf{[w]}, \textbf{[wp]}, \textbf{[rw]}, \textbf{[rwp]}, \textbf{[cw]} or \textbf{[cwp]}) the value are parameters of tasks that have been already executed. 
+\end{enumerate}
+\end{proposition}
+
+The following proposition also holds:
+\begin{proposition}\label{prop2} 
+The first task of a stack is always ready except iff its state is \textbf{KAAPI\_TASK\_INIT}.
+\end{proposition}
+
+Sequential execution of a \kaapi program, could be view as a repeated use of proposition~\ref{prop2}: the first task is created in state \textbf{KAAPI\_TASK\_INIT}, then it is ready. Thus it is executed and poped. The next task becomes the first of the stack.
+\begin{proposition}
+The sequential execution of a \kaapi program is to repeatedly execute the next task pointed by \texttt{pc} of the stack attached to the current flow of control using the algorithm~\ref{fig:stackalgo}.\\
+No data flow constraints need to be computed.
+\end{proposition}
+
+
+\subsubsection{Representation of objets}
+
+An access is an effective parameter of a task to a shared object.
+An access to a shared object is a pointer to the global data and an optional range interval of values.
+The global data stores a data, and the last version of the data and its access mode; these fields 
+are only used by the work stealing algorithm to detect concurrent access.
+The figure~\ref{fig:repobject} shows definitions of access and shared object.
+\begin{figure}[!h]
+\hrule
+\small
+\begin{verbatim}
+struct kaapi_access_t  {
+  kaapi_gd_t* gd;     /* global data that store value to use during
+                         the execution of the task */
+  /* optional value */
+};
+
+struct kaapi_access_steal_t  {
+  void* data;         /* data to use during the execution of the task */
+  /* optional value */
+};
+
+struct kaapi_gd_t {
+  void*         data;         /* data used during normal execution */
+  kaapi_amode_t last_mode;    /* access mode of the last version */
+  void*         last_version; /* last version, used during work stealing */
+};
+\end{verbatim}
+\hrule
+\caption{Definition of access and shared object data structures}
+\label{fig:repobject}
+\end{figure}
+In previous version of Kaapi, all accesses to the same shared object are linked together following the order of creation of the task. This chain of accesses was used to computed the readiness property of tasks. In the next sections, we propose an other algorithm that does not need to chain together accesses: it will improve both the memory usage of the graph representation as well as the overhead of $T_1$ versus $T_s$. The complexity of the algorithm that runs on each steal request remains equivalent.
+
+\subsubsection{Execution by workstealing}
+Using a work stealing algorithm will change the sequential execution: a thief may has stolen (a ready) task that will produce results read by next tasks in the execution order. At the instant of the work stealing decision to steal a task, the next tasks are probably not known. In order to avoid the computation of the data flow constraints before execution of each task, like in the first version of Athapascan, \kaapi is based on the following strategy:
+\begin{enumerate}
+\item The stolen task in the stack is marked as 'stolen'.
+\item The algorithm~\ref{fig:stackalgo} executes tasks until the next task to execute is marked 'stolen'.
+\end{enumerate}
+Thus next tasks of a stolen task may have dependencies, the sequential execution is suspended and the thread begins to steal task from other threads, eventually from itself. 
+
+Using such strategy, the data flow constraints are only computed during work stealing operations that are, in theory, not very many. This strategy was already implemented in Kaapi, the previous version of \kaapi.
+
+\subsubsection{Computation of data flow constraints during work stealing operation}
+The most important difference between Kaapi and \kaapi is that, in \kaapi the data flow graph representation is lighter: accesses to a shared object is not linked together; tasks in the stack are not linked together.
+In order to detect ready task, the selection algorithm during work stealing operation uses \verb+last_XX+ data fields of the \verb+kaapi_gd_t+ data structure (see above, figure~\ref{fig:repobject}) to compute \textit{version} of a chain of accesses:
+the selection algorithm iterates through all tasks in the stack, and then try to detect if all accesses of task is ready (and then the task will be ready to be stolen). The detection of readiness property of an access is done using the following rules:
+\begin{itemize}
+\item if the task is not executed (candidate task): let us note by \verb+m+ the access mode of the considered access and by \verb+(last_mode,+ \verb+last_version)+ the corresponding data fields of the associated \verb+kaapi_gd_t+ data structure.
+\begin{itemize}
+\item if $m$ is a postponed mode, then the access is ready. Then set \verb+last_+ \verb+mode+ to \verb+m+.
+\item if $m$ is a write mode (\verb+w+ or \verb+cw+) then the access is ready. Then set \verb+last_+ \verb+mode+ to \verb+m+ 
+and \verb+last_version+ to \verb+0+.
+\item if $m$ is a read mode (\verb+r+) then the access is ready iff \verb+last_mode == E+ or \verb+last_mode+ \verb+== r+ and \verb+last_version !=0+ (the value has been produced). Then set \verb+last_+ \verb+mode+ to \verb+r+. The field \verb+last_version+ represent the data that will be read by the task.
+\item if $m$ is a exclusive mode (\verb+rw+) then the access is ready iff \verb+last_mode == E+  and \verb+last_version !=0+ (the value has been produced). Then set \verb+last_+ \verb+mode+ to \verb+rw+. The field \verb+last_version+ represent the data that will be accessed by the task.
+\end{itemize}
+\item if the task was terminated (already stolen and marked as terminated), then:
+\begin{itemize}
+\item if $m$ is a write access, then set \verb+(last_mode,last_version)+ to \verb+(w, value_+ \verb+produced)+.
+\item if $m$ is a read access, then set \verb+last_mode = r+
+\item if $m$ is a exclusive access, then set \verb+(last_mode,last_version)+ to \verb+(rw, value_+ \verb+modified)+.
+\end{itemize}
+\end{itemize}
+
+
+
+\subsection{Examples}
+
 
 \begin{figure}
 \hrule
 \begin{verbatim}
-kaapi_register_task("fibo", "viwi" ); 
+kaapi_uint16_t array_modes[] = { KAAPI_MODE_V, KAAPI_MODE_W };
+kaapi_format_t array_formats[] = { KAAPI_INT, KAAPI_INT };
+
+/* register the task format: a name, the body, the number of parameters
+   and the access modes and types for each parameter.
+   Not that the type of a shared (second parameter) is the type of 
+   the value referenced by a shared.
+*/
+kaapi_register_taskformat(
+                     "fibo",       /* the name */
+                     &fibo_body,   /* the body */
+                     2,            /* number of parameters */
+                     array_modes,  /* access mode for each parameter */
+                     array_formats /* type for each parameter */
+); 
 \end{verbatim}
 \hrule
 \caption{Definition of the format of a tasks}
-\label{fig:fibo}
+\label{fig:fiboformat}
 \end{figure}
 
 \begin{figure}[!h]

@@ -46,19 +46,11 @@
 
 /*
 */
-kaapi_steal_processor_t* kaapi_all_stealprocessor[1+KAAPI_MAXSTACK_STEAL];
-
-/*
-*/
-kaapi_atomic_t kaapi_index_stacksteal = { 0 };
-
-/*
-*/
 int volatile kaapi_stealapi_term = 0;
 
 /*
 */
-kaapi_barrier_td_t kaapi_stealapi_barrier_term;
+kaapi_barrier_td_t kaapi_barrier_term;
 
 /**
 */
@@ -78,16 +70,16 @@ void kaapi_stealapi_initialize()
   if (called) return;
   called = 1;
 
-  for (i=0; i<KAAPI_MAXSTACK_STEAL; ++i)
+  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
     kaapi_all_stealprocessor[i] = 0;
   }
 
   /* barrier to detect terminaison */
-  kaapi_barrier_td_init( &kaapi_stealapi_barrier_term, 0);
+  kaapi_barrier_td_init( &kaapi_barrier_term, 0);
 
   /* count self thread as stealer */
-  kaapi_barrier_td_setactive( &kaapi_stealapi_barrier_term, 1 );
+  kaapi_barrier_td_setactive( &kaapi_barrier_term, 1 );
 }
 
 
@@ -100,9 +92,9 @@ void kaapi_stealapi_terminate()
   called = 1;
 
   kaapi_stealapi_term = 1;
-  kaapi_barrier_td_setactive( &kaapi_stealapi_barrier_term, 0 );
+  kaapi_barrier_td_setactive( &kaapi_barrier_term, 0 );
 
-  while (!kaapi_barrier_td_isterminated( &kaapi_stealapi_barrier_term)) kaapi_yield(); 
+  while (!kaapi_barrier_td_isterminated( &kaapi_barrier_term)) kaapi_yield(); 
 
 #if 0 /* seems that kss is already delete (...) */
   kaapi_steal_stack_t* kss = (kaapi_steal_stack_t*)pthread_getspecific(kaapi_current_stack_key);

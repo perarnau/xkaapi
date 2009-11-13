@@ -58,7 +58,7 @@ int kaapi_steal_processor( kaapi_steal_processor_t* kpss )
   kaapi_steal_request_t** requests = kpss->_list_request._request;
 
   CPU_ZERO( &kpss->_list_request._cpuset );
-  for (i=0; i<KAAPI_MAXSTACK_STEAL; ++i)
+  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
     if (requests[i] !=0)
       CPU_SET( i, &kpss->_list_request._cpuset );
@@ -75,7 +75,7 @@ int kaapi_steal_processor( kaapi_steal_processor_t* kpss )
   }
   
   /* reply failed to remaining requests */
-  for (i=0; i<KAAPI_MAXSTACK_STEAL; ++i)
+  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
     if (requests[i] !=0) kaapi_thief_reply_request( current_sc, requests, i, 0 );
   }
