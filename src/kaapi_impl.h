@@ -94,8 +94,6 @@ typedef struct kaapi_victim_t {
 */
 typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi_victim_t* );
 
-
-
 /** Initialize a request
     \param kpsr a pointer to a kaapi_steal_request_t
 */
