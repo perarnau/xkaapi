@@ -744,6 +744,16 @@ static inline int kaapi_stealpoint( kaapi_stack_t* stack, kaapi_task_t* task, ka
   return *stack->hasrequest !=0;
 }
 
+/** \ingroup ADAPTIVE
+    Test if the current execution should process preemt request into the task
+    and then call the splitter function with given arguments.
+    \retval !=0 if they are a steal request(s) to process onto the given task.
+    \retval 0 else
+    
+    TODO: should put ATOMIC OP into public interface. Cut & Paste kaapi_sched_stealtask.c
+*/
+#define kaapi_stealpoint_macro( stack, task, splitter, ...)  ((stack)->hasrequest !=0)
+
 
 /** Return true iff the request correctly posted
   \param pksr kaapi_request_t
@@ -768,6 +778,14 @@ extern int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task
 */
 extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_reducer_t reducer, void* arg_victim, ...);
 
+/** \ingroup ADAPTIVE
+    Test if the current execution should process preemt request into the task
+    and then pass arg_victim argument to the victim and call the reducer function with extra arguments.
+    \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
+    \retval 0 else
+*/
+#define kaapi_preemptpoint_macro( stack, task, reducer, arg_victim, ...) (0)
+
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
@@ -782,14 +800,22 @@ extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_
     \retval !=0 if they are a steal request(s) to process onto the given task.
     \retval 0 else
 */
-extern int kaapi_task_beginstealaction(kaapi_task_t* task, kaapi_task_splitter_t splitter);
+static inline int kaapi_task_setaction(kaapi_task_t* task, kaapi_task_splitter_t splitter)
+{
+  task->splitter = splitter;
+  return 0;
+}
 
 /** \ingroup ADAPTIVE
     Erase the previously splitter action and avoid concurrent steal on return.
     \retval 0 in case of success
     \retval !=0 in case of error code
 */
-extern int kaapi_task_endstealaction(kaapi_task_t* task);
+static inline int kaapi_task_getaction(kaapi_task_t* task)
+{
+  task->splitter = 0;
+  return 0;
+}
 
 /** \ingroup ADAPTIVE
    Try to preempt next thief in the reverse order defined by steal reponse.
@@ -803,7 +829,22 @@ extern int kaapi_task_endstealaction(kaapi_task_t* task);
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 
 */
-extern int kaapi_preempt_nextthief( kaapi_task_t* task, void* arg_thief, kaapi_task_reducer_t reducer, ... );  
+extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_thief, kaapi_task_reducer_t reducer, ... );  
+
+
+/** \ingroup ADAPTIVE
+   Try to preempt next thief in the reverse order defined by steal reponse.
+   Return true iff some work have been preempted and should be processed locally.
+   If no more thief can been preempted, it means then the function return false (0).
+   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
+   value the call to reducer function.
+   
+   reducer function should has the following signature:
+      int (*)( kaapi_task_t* task, void* thief_work, ... )
+   where ... is the same arguments as passed to kaapi_preempt_nextthief.
+
+*/
+#define kaapi_preempt_nextthief_macro( stack, task, arg_thief, reducer, ... ) 0
 
 
 /** \ingroup ADAPTIVE

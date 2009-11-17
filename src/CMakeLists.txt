@@ -10,7 +10,7 @@
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -O3")
+add_definitions ( "-Wall -pedantic -O3 -std=c99")
 #add_definitions ( "-Wall -pedantic -g -DKAAPI_DEBUG")
 # -std=c99 -g" )
 

@@ -150,12 +150,12 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
     else nano_iend = _ibeg + unit_size;
     
     /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
-    task->splitter = &static_splitter;
-/*    kaapi_stack_pushtask(stack, task, &static_splitter); */
+    kaapi_task_setaction( task, &static_splitter );
     _obeg = std::transform( _ibeg, nano_iend, _obeg, _op );
 
-    /* return from sequential computation: pop task action in order to disable any steal at this point while I'm doing seq computation */
-/*    kaapi_stack_poptask(stack); */
+    /* return from sequential computation: remove concurrent task action 
+       in order to disable any steal at this point while I'm doing seq computation */
+    kaapi_task_getaction( task );
 
     _ibeg += unit_size;
   }
