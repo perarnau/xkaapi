@@ -66,7 +66,7 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   {
     if ( kaapi_request_ok( &stack->requests[i] ) )
     {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
+      kaapi_request_reply( &kproc->stack, 0, &stack->requests[i], 0, 0 );
       ++replied;
       if (replied == count) break;
     }

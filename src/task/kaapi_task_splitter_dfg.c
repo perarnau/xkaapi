@@ -77,7 +77,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
         kaapi_task_setbody( copy, body);
         kaapi_stack_pushtask( thief_stack );
         
-        kaapi_request_reply( stack, task, thief_stack, &array[i], 1 ); /* success of steal */
+        kaapi_request_reply( stack, task, &array[i], thief_stack, 1 ); /* success of steal */
         return 1;
       }
     }

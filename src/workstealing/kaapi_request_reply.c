@@ -43,7 +43,7 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_stack_t* thief_stack, kaapi_request_t* request, int retval )
+int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
 {
   kaapi_assert_debug( stack != 0 );
   if (retval)

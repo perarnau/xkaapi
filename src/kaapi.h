@@ -774,7 +774,7 @@ extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_t
     has successfully adapt to steal work. Else 0.
     This function is machine dependent.
 */
-extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_stack_t* thief_stack, kaapi_request_t* request, int retval );
+extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval );
 
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction
