@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -45,7 +45,3 @@
 */
 #include "kaapi_impl.h"
 
-kaapi_stack_t* kaapi_self_stack(void)
-{
-  return _kaapi_self_stack();
-}

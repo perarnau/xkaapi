@@ -1,0 +1,12 @@
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_private_structure.h:397: Error: More #endif's than #if's found.
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_datastructure.h:189: Warning: argument `name' of command @param is not found in the argument list of KAAPI_FIFO_DECLARE_FIELD(type)
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_datastructure.h:180: Warning: argument `name' of command @param is not found in the argument list of KAAPI_FIFO_FIELD(type)
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_datastructure.h:60: Warning: argument `name' of command @param is not found in the argument list of KAAPI_QUEUE_DECLARE_FIELD(type)
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_datastructure.h:70: Warning: argument `name' of command @param is not found in the argument list of KAAPI_QUEUE_DECLARE_FIELD_VOLATILE(type)
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_datastructure.h:50: Warning: argument `name' of command @param is not found in the argument list of KAAPI_QUEUE_FIELD(type)
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_datastructure.h:282: Warning: argument `name' of command @param is not found in the argument list of KAAPI_STACK_DECLARE_FIELD(type)
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_datastructure.h:272: Warning: argument `name' of command @param is not found in the argument list of KAAPI_STACK_FIELD(type)
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_task.h:196: Warning: The following parameters of kaapi_stack_pushdata(kaapi_stack_t *stack, size_t count) are not documented:
+  parameter count
+/Users/thierry/Developpment/KAAPI/kaapi/git/xkaapi/xkaapi/src/kaapi_task.h:353: Warning: The following parameters of kaapi_task_condeval(kaapi_stack_t *stack, kaapi_task_t *task) are not documented:
+  parameter stack

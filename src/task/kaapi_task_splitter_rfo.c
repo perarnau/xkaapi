@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_sched_steal.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -7,7 +7,6 @@
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -45,42 +44,37 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/** Return the number of splitted parts (here 1: only steal the whole task)
+    Currently assume independent task only.
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_task_splitter_rfo(struct kaapi_task_t* task, int count, struct kaapi_request_t* array)
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
-
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
+  int i;
+  kaapi_assert_debug (task !=0);
   
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  kaapi_task_body_t body = task->body;
+  
+  /** CAS not required in this implementation (cooperative) 
+  if (KAAPI_ATOMIC_CASPTR( &task->body, body, &kaapi_suspend_body))
+  */
+  task->body = &kaapi_suspend_body;
   {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
+    /* update steal operation: */
+    for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
+      if (kaapi_request_ok( &array[i] )) 
+      {
+        kaapi_stack_t* thief_stack = array[i].stack;
+        kaapi_task_t* copy = kaapi_stack_toptask( thief_stack );
+        *copy = *task;
+        copy->body = body;
+        kaapi_stack_pushtask( thief_stack );
+        
+        kaapi_request_reply( task, thief_stack, &array[i], 1 ); // sucess of steal
+        return 1;
+      }
     }
   }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
-
+  
   return 0;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

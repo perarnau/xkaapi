@@ -7,32 +7,62 @@
 ##
 
 # Add the binary directory for generated headers :
-include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/misc ${CMAKE_CURRENT_SOURCE_DIR}/machine ${CMAKE_CURRENT_SOURCE_DIR}/workstealing ${CMAKE_CURRENT_SOURCE_DIR}/dfg)
+include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -std=c99 -g" )
+add_definitions ( "-Wall -pedantic -O3")
+#add_definitions ( "-Wall -pedantic -g -DKAAPI_DEBUG")
+# -std=c99 -g" )
 
 #################
 ## LIBRARY BEG ##
 
+# Set up compilation of the hardware depend part
+if (KAAPI_TARGET_MT)
+  execute_process( 
+    COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/machine/mt/kaapi_mt_machine.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_machine.h
+  )
+#elif (KAAPI_TARGET_GPU)
+#  execute_process( 
+#      ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/machine/gpu/kaapi_gpu_machine.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_machine.h
+#  )
+#elif (MPSOC_ST)
+#  execute_process( 
+#      ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/machine/mpsoc/kaapi_gpu_machine.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_machine.h
+#  )
+endif (KAAPI_TARGET_MT)
+
 # Shared lib :
 add_library (xkaapi SHARED 
-  kaapi_init.c 
-  machine/mt/kaapi_mt_init.c
+  workstealing/kaapi_sched_select_rand_level.c
+  workstealing/kaapi_sched_select_rand_first.c
+  workstealing/kaapi_sched_select_rand.c
+  workstealing/kaapi_sched_steal.c
+  workstealing/kaapi_sched_stealtask.c
+  workstealing/kaapi_request_reply.c
+  misc/kaapi_init.c
+  misc/kaapi_time.c
+  task/kaapi_stack_init.c
+  task/kaapi_stack_clear.c
+  task/kaapi_stack_execall.c
+  task/kaapi_stack_execchild.c
+  task/kaapi_task_standard.c
+  task/kaapi_task_splitter_dfg.c
+  task/kaapi_task_finalize.c
+  machine/mt/kaapi_mt_processorinit.c
   machine/mt/kaapi_mt_topology.c
   machine/mt/kaapi_mt_setconcurrency.c
   machine/mt/kaapi_mt_getconcurrency.c
-  machine/mt/kaapi_mt_selftask.c
+  machine/mt/kaapi_mt_getcontext.c
+  machine/mt/kaapi_mt_setcontext.c
+  machine/mt/kaapi_mt_makecontext.c
+  machine/mt/kaapi_mt_selfstack.c
   machine/mt/kaapi_mt_sched_idle.c
+#  machine/mt/kaapi_mt_sched_suspend.c
+  machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_stack_alloc.c
   machine/mt/kaapi_mt_stack_free.c
-  misc/kaapi_init.c
-  misc/kaapi_time.c
-  dfg/kaapi_stack_init.c
-  dfg/kaapi_stack_clear.c
-  dfg/kaapi_stack_execall.c
-  dfg/kaapi_stack_execchild.c
-  dfg/kaapi_task_standard.c
+  machine/mt/kaapi_mt_init.c
 )
 
 # Version number :
@@ -40,22 +70,35 @@ set_target_properties(xkaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
 
 # Static lib :
 add_library (xkaapi-static STATIC 
-  kaapi_init.c 
-  machine/mt/kaapi_mt_init.c
+  workstealing/kaapi_sched_select_rand_level.c
+  workstealing/kaapi_sched_select_rand_first.c
+  workstealing/kaapi_sched_select_rand.c
+  workstealing/kaapi_sched_steal.c
+  workstealing/kaapi_sched_stealtask.c
+  workstealing/kaapi_request_reply.c
+  misc/kaapi_init.c
+  misc/kaapi_time.c
+  task/kaapi_stack_init.c
+  task/kaapi_stack_clear.c
+  task/kaapi_stack_execall.c
+  task/kaapi_stack_execchild.c
+  task/kaapi_task_standard.c
+  task/kaapi_task_splitter_dfg.c
+  task/kaapi_task_finalize.c
+  machine/mt/kaapi_mt_processorinit.c
   machine/mt/kaapi_mt_topology.c
   machine/mt/kaapi_mt_setconcurrency.c
   machine/mt/kaapi_mt_getconcurrency.c
-  machine/mt/kaapi_mt_selftask.c
+  machine/mt/kaapi_mt_getcontext.c
+  machine/mt/kaapi_mt_setcontext.c
+  machine/mt/kaapi_mt_makecontext.c
+  machine/mt/kaapi_mt_selfstack.c
   machine/mt/kaapi_mt_sched_idle.c
+#  machine/mt/kaapi_mt_sched_suspend.c
+  machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_stack_alloc.c
   machine/mt/kaapi_mt_stack_free.c
-  misc/kaapi_init.c
-  misc/kaapi_time.c
-  dfg/kaapi_stack_init.c
-  dfg/kaapi_stack_clear.c
-  dfg/kaapi_stack_execall.c
-  dfg/kaapi_stack_execchild.c
-  dfg/kaapi_task_standard.c
+  machine/mt/kaapi_mt_init.c
 )
 
 set_target_properties(xkaapi-static PROPERTIES OUTPUT_NAME "xkaapi")
@@ -100,9 +143,6 @@ check_include_files (stdio.h      HAVE_STDIO_H     )
 #######################
 ## SET CONSTANTS BEG ##
 
-#Maximum number of arguments of a task
-set(KAAPI_MAX_PROCESSOR 16)
-
 #Maximum number of architecture depending on the installation (1 or 2 in case of mixing CPU/GPU, 3 in case of mixing CPU/GPU/MPSoC)
 # This number may be also depend on the caracteristic of the processors.... and one could consider having N different architectures
 # For each architecture, task should have a specific entry point
@@ -120,20 +160,20 @@ try_run (
   RUN_OUTPUT_VARIABLE KAAPI_STACK_MIN )
 
 # Get maximum number of keys from pthread constant :
-try_run (
-  KAAPI_KEYS_MAX_RUN_RESULT
-  KAAPI_KEYS_MAX_COMPILE_RESULT
-  ${CMAKE_BINARY_DIR}
-  ${CMAKE_SOURCE_DIR}/config/check_pthread_max_keys.c
-  RUN_OUTPUT_VARIABLE KAAPI_KEYS_MAX )
+#try_run (
+#  KAAPI_KEYS_MAX_RUN_RESULT
+# KAAPI_KEYS_MAX_COMPILE_RESULT
+# ${CMAKE_BINARY_DIR}
+# ${CMAKE_SOURCE_DIR}/config/check_pthread_max_keys.c
+# RUN_OUTPUT_VARIABLE KAAPI_KEYS_MAX )
 
 # Get number of iteration for dataspecific desctructors from pthread constant :
-try_run (
-  KAAPI_DESTRUCTOR_ITERATIONS_RUN_RESULT
-  KAAPI_DESTRUCTOR_ITERATIONS_COMPILE_RESULT
-  ${CMAKE_BINARY_DIR}
-  ${CMAKE_SOURCE_DIR}/config/check_pthread_destructor_iterations.c
-  RUN_OUTPUT_VARIABLE KAAPI_DESTRUCTOR_ITERATIONS )
+#try_run (
+#  KAAPI_DESTRUCTOR_ITERATIONS_RUN_RESULT
+#  KAAPI_DESTRUCTOR_ITERATIONS_COMPILE_RESULT
+#  ${CMAKE_BINARY_DIR}
+#  ${CMAKE_SOURCE_DIR}/config/check_pthread_destructor_iterations.c
+#  RUN_OUTPUT_VARIABLE KAAPI_DESTRUCTOR_ITERATIONS )
 
 ## SET CONSTANTS END ##
 #######################
@@ -155,11 +195,19 @@ endif (KAAPI_USE_SCHED_AFFINITY)
 ## CHECK FUNCTION END ##
 ########################
 
+include (CheckTypeSize)
+
+###################
+## void* BEG ##
+
+check_type_size ("void*" KAAPI_SIZEOF_VOIDP)
+
+## CPU_SET_T END ##
+###################
+
 
 ###################
 ## CPU_SET_T BEG ##
-
-include (CheckTypeSize)
 
 # Cpu_set_t :
 set (CMAKE_EXTRA_INCLUDE_FILES "sched.h")
@@ -183,49 +231,49 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/kaapi_config.h.in ${CMAKE_CURRENT_BI
 ## SET INITIALIZER BEG ##
 
 # Mutex Initializer :
-try_run (
-  KAAPI_MUTEX_INITIALIZER_RUN_RESULT
-  KAAPI_MUTEX_INITIALIZER_COMPILE_RESULT
-  ${CMAKE_BINARY_DIR}
-  ${CMAKE_SOURCE_DIR}/config/mutex_initializer.c
-  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
-  RUN_OUTPUT_VARIABLE KAAPI_MUTEX_INITIALIZER)
+#try_run (
+#  KAAPI_MUTEX_INITIALIZER_RUN_RESULT
+#  KAAPI_MUTEX_INITIALIZER_COMPILE_RESULT
+#  ${CMAKE_BINARY_DIR}
+#  ${CMAKE_SOURCE_DIR}/config/mutex_initializer.c
+#  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
+#  RUN_OUTPUT_VARIABLE KAAPI_MUTEX_INITIALIZER)
 
-if (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
-  message ("++ Creating Mutex Fast Initializer - done")
-else (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
-  message ("++ Creating Mutex Fast Initializer - failed")
-endif (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
+#if (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
+#  message ("++ Creating Mutex Fast Initializer - done")
+#else (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
+#  message ("++ Creating Mutex Fast Initializer - failed")
+#endif (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
 
 # Condition Initializer :
-try_run (
-  KAAPI_COND_INITIALIZER_RUN_RESULT
-  KAAPI_COND_INITIALIZER_COMPILE_RESULT
-  ${CMAKE_BINARY_DIR}
-  ${CMAKE_SOURCE_DIR}/config/cond_initializer.c
-  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
-  RUN_OUTPUT_VARIABLE KAAPI_COND_INITIALIZER)
+#try_run (
+#  KAAPI_COND_INITIALIZER_RUN_RESULT
+#  KAAPI_COND_INITIALIZER_COMPILE_RESULT
+#  ${CMAKE_BINARY_DIR}
+# ${CMAKE_SOURCE_DIR}/config/cond_initializer.c
+#  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
+#  RUN_OUTPUT_VARIABLE KAAPI_COND_INITIALIZER)
 
-if (KAAPI_COND_INITIALIZER_RUN_RESULT)
-  message ("++ Creating Condition Fast Initializer - done")
-else (KAAPI_COND_INITIALIZER_RUN_RESULT)
-  message ("++ Creating Condition Fast Initializer - failed")
-endif (KAAPI_COND_INITIALIZER_RUN_RESULT)
+#if (KAAPI_COND_INITIALIZER_RUN_RESULT)
+#  message ("++ Creating Condition Fast Initializer - done")
+#else (KAAPI_COND_INITIALIZER_RUN_RESULT)
+#  message ("++ Creating Condition Fast Initializer - failed")
+#endif (KAAPI_COND_INITIALIZER_RUN_RESULT)
 
 # Once Initializer :
-try_run (
-  KAAPI_ONCE_INITIALIZER_RUN_RESULT
-  KAAPI_ONCE_INITIALIZER_COMPILE_RESULT
-  ${CMAKE_BINARY_DIR}
-  ${CMAKE_SOURCE_DIR}/config/once_initializer.c
-  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
-  RUN_OUTPUT_VARIABLE KAAPI_ONCE_INIT)
+#try_run (
+#  KAAPI_ONCE_INITIALIZER_RUN_RESULT
+#  KAAPI_ONCE_INITIALIZER_COMPILE_RESULT
+#  ${CMAKE_BINARY_DIR}
+#  ${CMAKE_SOURCE_DIR}/config/once_initializer.c
+#  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
+#  RUN_OUTPUT_VARIABLE KAAPI_ONCE_INIT)
 
-if (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
-  message ("++ Creating Once Fast Initializer - done")
-else (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
-  message ("++ Creating Once Fast Initializer - failed")
-endif (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
+#if (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
+#  message ("++ Creating Once Fast Initializer - done")
+#else (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
+#  message ("++ Creating Once Fast Initializer - failed")
+#endif (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
 
 
 ## SET INITIALIZER END ##
@@ -238,28 +286,30 @@ endif (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
 set (CMAKE_REQUIRED_INCLUDES ${CMAKE_CURRENT_BINARY_DIR})
 set (CMAKE_EXTRA_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/kaapi_private_structure.h)
 
+
+
 # Mutex :
-check_type_size ("kaapi_mutex_t" KAAPI_SIZEOF_MUTEX_T)
-check_type_size ("kaapi_mutexattr_t" KAAPI_SIZEOF_MUTEXATTR_T)
+#check_type_size ("kaapi_mutex_t" KAAPI_SIZEOF_MUTEX_T)
+#check_type_size ("kaapi_mutexattr_t" KAAPI_SIZEOF_MUTEXATTR_T)
 
 # Condition :
-check_type_size ("kaapi_cond_t" KAAPI_SIZEOF_COND_T)
-check_type_size ("kaapi_condattr_t" KAAPI_SIZEOF_CONDATTR_T)
+#check_type_size ("kaapi_cond_t" KAAPI_SIZEOF_COND_T)
+#check_type_size ("kaapi_condattr_t" KAAPI_SIZEOF_CONDATTR_T)
 
 # Attribut :
-check_type_size ("kaapi_attr_t" KAAPI_SIZEOF_ATTR_T)
+#check_type_size ("kaapi_attr_t" KAAPI_SIZEOF_ATTR_T)
 
 # Attribut :
-check_type_size ("kaapi_once_t" KAAPI_SIZEOF_ONCE_T)
+#check_type_size ("kaapi_once_t" KAAPI_SIZEOF_ONCE_T)
 
 # Attribut :
-check_type_size ("kaapi_stack_t" KAAPI_SIZEOF_STACK_T)
+#check_type_size ("kaapi_stack_t" KAAPI_SIZEOF_STACK_T)
 
 # Attribut :
-check_type_size ("kaapi_task_condition_t" KAAPI_SIZEOF_TASK_COND_T)
+#check_type_size ("kaapi_task_condition_t" KAAPI_SIZEOF_TASK_COND_T)
 
 # Attribut :
-check_type_size ("kaapi_frame_t" KAAPI_SIZEOF_FRAME_T)
+#check_type_size ("kaapi_frame_t" KAAPI_SIZEOF_FRAME_T)
 
 set (CMAKE_EXTRA_INCLUDE_FILES)
 
@@ -281,10 +331,10 @@ if (HAVE_NUMA_H)
 endif (HAVE_NUMA_H)
 
 install(TARGETS xkaapi xkaapi-static
-  LIBRARY DESTINATION local/lib
-  ARCHIVE DESTINATION local/lib/static)
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/kaapi.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_type.h DESTINATION local/include/)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/kaapi.h ${CMAKE_CURRENT_SOURCE_DIR}/kaapi_error.h DESTINATION include/)
 
 ## INSTALL RULES BEG ##
 #######################

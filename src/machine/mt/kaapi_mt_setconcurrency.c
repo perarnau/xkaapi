@@ -7,7 +7,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -65,10 +65,11 @@ static kaapi_atomic_t barrier_init2 = {0};
                       (ou amortir une creation ultérieur des threads en les mettant en attente de se terminer apres un timeout)
       - proteger l'appel d'appel concurrents.
 */
-int kaapi_setconcurrency( int concurrency )
+int kaapi_setconcurrency( unsigned int concurrency )
 {
   static int isinit = 0;
   pthread_t tid;
+  int i;
     
   if (concurrency <1) return EINVAL;
   if (concurrency > default_param.syscpucount) return EINVAL;
@@ -77,7 +78,7 @@ int kaapi_setconcurrency( int concurrency )
   isinit = 1;
   
   /* */
-  kaapi_all_kprocessors = calloc( concurrency, sizeof(kaapi_processor_t*) );
+  kaapi_all_kprocessors = calloc( (kaapi_uint32_t)concurrency, sizeof(kaapi_processor_t*) );
   if (kaapi_all_kprocessors ==0) return ENOMEM;
 
   /* default processor number */
@@ -92,7 +93,7 @@ int kaapi_setconcurrency( int concurrency )
     if (i>0)
     {
       kaapi_barrier_td_setactive(&barrier_init, 1);
-      if (EAGAIN == pthread_create(tid, 0, &kaapi_sched_run_processor, (void*)i))
+      if (EAGAIN == pthread_create(&tid, 0, &kaapi_sched_run_processor, (void*)(long)i))
       {
         kaapi_count_kprocessors = i;
         kaapi_barrier_td_setactive(&barrier_init, 0);
@@ -101,19 +102,18 @@ int kaapi_setconcurrency( int concurrency )
     }
     else {
       kaapi_all_kprocessors[i] = calloc( 1, sizeof(kaapi_processor_t) );
-      kaapi_all_kprocessors[i]->kid = i;
-      kaapi_stack_init( &kaapi_all_kprocessors[i]->stack, 0, 0, 0, 0 );
 
-      /* TODO: allocate the hierarchy information -> hrequest data structure */
-      kaapi_all_kprocessors[i]->hlevel   = 0;
-      kaapi_all_kprocessors[i]->hlkid    = 0;
-      kaapi_all_kprocessors[i]->hrequest = 0;
       if (kaapi_all_kprocessors[i] ==0) 
       {
         free(kaapi_all_kprocessors);
         kaapi_all_kprocessors = 0;
         return ENOMEM;
       }
+      kaapi_assert_debug( 0 == kaapi_processor_init( kaapi_all_kprocessors[i] ) );
+      kaapi_all_kprocessors[i]->kid = 0;
+
+      /* Initialize the hierarchy information and data structure */
+      kaapi_assert_debug( 0 == kaapi_processor_setuphierarchy( kaapi_all_kprocessors[i] ) );
 
       /* register the processor */
       kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
@@ -122,7 +122,13 @@ int kaapi_setconcurrency( int concurrency )
 
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init );
-  
+
+  /* here is the number of correctly initialized processor, may be less than requested */
+  kaapi_count_kprocessors = KAAPI_ATOMIC_READ( &kaapi_term_barrier );
+    
+  /* Initialize the hierarchy information and data structure: AFTER kaapi_count_kprocessors is known  */
+  kaapi_processor_setuphierarchy( kaapi_all_kprocessors[0] );
+
   /* broadcast to all threads that they have been started */
   kaapi_barrier_td_setactive(&barrier_init2, 0);
   
@@ -136,8 +142,7 @@ int kaapi_setconcurrency( int concurrency )
 void* kaapi_sched_run_processor( void* arg )
 {
   kaapi_processor_t* kproc =0;
-  int i;
-  int kid = (int)arg;
+  int kid = (long)arg;
   
   /* force reschedule of the posix thread, we that the thread will be mapped on the correct processor ? */
   sched_yield();
@@ -149,34 +154,24 @@ void* kaapi_sched_run_processor( void* arg )
   }
   kaapi_assert_debug( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
 
-  kproc->kid = i;
-  kaapi_stack_init( &kproc->stack, 0, 0, 0, 0 );
-
-  KAAPI_STACK_CLEAR( &kproc->lsuspend );
+  kaapi_assert_debug( 0 == kaapi_processor_init( kproc ) );
+  kproc->kid = kid;
 
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
 
-  /* quit initialization process */
+  /* quit first steap of the initialization */
   kaapi_barrier_td_setactive(&barrier_init, 0);
 
-  /* wait end of the first steal initialization */
-  kaapi_barrier_td_waitterminated( &barrier_init2 );
-
-  nkproc = KAAPI_ATOMIC_READ( &kaapi_term_barrier );
+  /* Initialize the hierarchy information and data structure */
+  kaapi_processor_setuphierarchy( kproc );
   
-  /* TODO: allocate the hierarchy information and initialize the hrequest data structure */
-  kproc->hlevel   = 1;
-  kproc->hlkid    = calloc( kproc->hlevel, sizeof(kaapi_uint16_t) );
-  kproc->hrequest = calloc( kproc->hlevel, sizeof(kaapi_list_request) );
-  for (i=0; i<kproc->hlevel; ++i)
-  {
-    kproc->hlkid[i] = kproc->kid; /* only one level !!!! */
-    kaapi_listrequest_init( &kproc->hrequest[i] );
-  }  
-      
-  /* may wait startup here ? */
+  /* wait end of the initialization */
+  kaapi_barrier_td_waitterminated( &barrier_init2 );
   
   kaapi_sched_idle( kproc );
+
+  /* kprocessor correctly initialize */
+  kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
   return 0;
 }

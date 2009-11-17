@@ -1,13 +1,12 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_task_standard.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -44,43 +43,58 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdio.h>
 
-int kaapi_advance ( void )
+
+/**
+*/
+void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
+}
+
+/**
+*/
+void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
+{
+/*  kaapi_stack_restore_frame( stack, &task->param.frame ); */
+   kaapi_frame_t* frame = (kaapi_frame_t*)task;
+   kaapi_stack_restore_frame( stack, frame ); 
 }
 
 /*
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
-
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
-  }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
-
-  return 0;
 }
 
 
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
+/**
+*/
+static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-  _kaapi_dummy(NULL);
+}
+
+/**
+*/
+void kaapi_sig_body( kaapi_task_t* task, kaapi_stack_t* stack)
+{
+/*
+  printf("Thief end, @stack: 0x%x\n", stack);
+  fflush( stdout );
+*/
+  kaapi_task_t* task2sig;
+
+  /* flush in memory all pending write */  
+  kaapi_writemem_barrier();
+
+  task2sig = kaapi_task_argst( task, kaapi_task_t);
+  if (kaapi_task_isadaptive(task))
+  {
+    kaapi_taskadaptive_t* ta = task2sig->sp;
+    kaapi_assert_debug( ta !=0 );
+    KAAPI_ATOMIC_DECR( &ta->thievescount );
+  } else {
+    task2sig->body = &kaapi_aftersteal_body;
+  }
 }
 

@@ -1,13 +1,11 @@
 /*
-** kaapi_sched_advance.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:21:00 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -45,42 +43,33 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/** Do one random selection at the given hierarchy level
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
-{
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
-
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
+int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi_victim_t* victim )
+{  
+  unsigned int victimid = 0;
+  int nbproc;
   
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
-  }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
+  victim->level = level;
+  victim->kproc = kaapi_all_kprocessors[0];
+  return 0;
+  
+  kaapi_assert_debug( kproc !=0 );
+  kaapi_assert_debug( victim !=0 );
+
+  if (kproc->hlevel < level) return EINVAL;
+  if (kproc->fnc_selecarg ==0) kproc->fnc_selecarg = (void*)rand();
+
+  victim->level = level;
+
+redo_select:
+  nbproc = kproc->hlcount[level];
+  if (nbproc <=1) return EINVAL;
+  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
+
+  /* Get the k-processor */    
+  victim->kproc = kaapi_all_kprocessors[ kproc->hkids[level][victimid] ];
+  if (victim->kproc ==0) goto redo_select; 
 
   return 0;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

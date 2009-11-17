@@ -1,0 +1,94 @@
+\relax 
+\catcode`:\active
+\catcode`;\active
+\catcode`!\active
+\catcode`?\active
+\select@language{american}
+\@writefile{toc}{\select@language{american}}
+\@writefile{lof}{\select@language{american}}
+\@writefile{lot}{\select@language{american}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {1}Introduction}{1}}
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\@writefile{toc}{\contentsline {section}{\numberline {1.1}Histoire}{1}}
+\@writefile{toc}{\contentsline {section}{\numberline {1.2}Objectifs et probl\IeC {\'e}matiques}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2.1}API pour le calcul}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2.2}Runtime pour l'ordonnancement local}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2.3}Communication inter "memory domain"}{6}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {2}Overview of the API}{8}}
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\@writefile{toc}{\contentsline {section}{\numberline {2.1}Introduction to the task model}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1.1}Target architecture}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1.2}Memory model}{9}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.2}KAAPI API levels}{9}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.3}Task model}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.1}Stack of tasks}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.1}{\ignorespaces \relax \fontsize  {10.95}{13.6}\selectfont  \abovedisplayskip 11\p@ plus3\p@ minus6\p@ \abovedisplayshortskip \z@ plus3\p@ \belowdisplayshortskip 6.5\p@ plus3.5\p@ minus3\p@ \def \leftmargin \leftmargini \parsep 5\p@ plus2.5\p@ minus\p@ \topsep 10\p@ plus4\p@ minus6\p@ \itemsep 5\p@ plus2.5\p@ minus\p@ {\leftmargin \leftmargini \topsep 9\p@ plus3\p@ minus5\p@ \parsep 4.5\p@ plus2\p@ minus\p@ \itemsep \parsep }\belowdisplayskip \abovedisplayskip \textsc  {X}-Kaapi\xspace  stack: a dual stacks structure. At the left part of the figure, the stack of tasks with both \texttt  {PC} (program counter) and \texttt  {SP} pointer (stack pointer). At the right, the stack of data.}}{11}}
+\newlabel{fig:stack}{{2.1}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.2}Task body}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.3}Passing arguments}{11}}
+\newlabel{sec:param}{{2.3.3}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.2}{\ignorespaces Algorithm to execute tasks of a stack.}}{12}}
+\newlabel{fig:stackalgo}{{2.2}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.4}Shared objects}{13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.5}Access mode}{13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.6}Fibonacci example}{14}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.3}{\ignorespaces Classical Fibonacci example}}{14}}
+\newlabel{fig:fibo}{{2.3}{14}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.4}{\ignorespaces \relax \fontsize  {10.95}{13.6}\selectfont  \abovedisplayskip 11\p@ plus3\p@ minus6\p@ \abovedisplayshortskip \z@ plus3\p@ \belowdisplayshortskip 6.5\p@ plus3.5\p@ minus3\p@ \def \leftmargin \leftmargini \parsep 5\p@ plus2.5\p@ minus\p@ \topsep 10\p@ plus4\p@ minus6\p@ \itemsep 5\p@ plus2.5\p@ minus\p@ {\leftmargin \leftmargini \topsep 9\p@ plus3\p@ minus5\p@ \parsep 4.5\p@ plus2\p@ minus\p@ \itemsep \parsep }\belowdisplayskip \abovedisplayskip \textsc  {X}-Kaapi\xspace  stack before executing one instance of Fibonacci task. Task is pushed into the stack of tasks and the global data is pushed into the stack of data of the same \textsc  {X}-Kaapi\xspace  stack. Such construction is done during each recursive creation of Fibonacci task in the algorithm in figure~\ref  {fig:fibo}.}}{15}}
+\newlabel{fig:stackfibo1}{{2.4}{15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.7}Data flow graph computation}{15}}
+\newlabel{prop1}{{1}{15}}
+\newlabel{p1a}{{1}{15}}
+\newlabel{p1b}{{2}{15}}
+\newlabel{p1c}{{3}{15}}
+\newlabel{p1d}{{4}{15}}
+\newlabel{prop2}{{2}{15}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.5}{\ignorespaces Definition of access and shared object data structures}}{16}}
+\newlabel{fig:repobject}{{2.5}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.8}Examples}{18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.6}{\ignorespaces Adaptive version of the Fibonacci example}}{18}}
+\newlabel{fig:fiboadapt}{{2.6}{18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.7}{\ignorespaces Splitter function that export a task in case of steal request}}{19}}
+\newlabel{fig:splitterfiboadapt}{{2.7}{19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.8}{\ignorespaces Splitter function that export a task in case of steal request}}{20}}
+\newlabel{fig:splitterfiboadapt}{{2.8}{20}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.4}Process startup and termination}{21}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {3}API specification}{22}}
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\@writefile{toc}{\contentsline {section}{\numberline {3.1}Architecture model}{22}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.2}Execution model}{22}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.1}Memory operations ordering API}{23}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.3}Topology API}{23}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.4}Workstealing API}{23}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.1}$k$-processor management}{23}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.2}Adding or deleting $k$-processors}{23}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.3}Posting a request}{24}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.4}Access to user defined arguments of a request}{26}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.5}Selection of victim $k$-processor}{26}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.5}StealContext}{26}}
+\@writefile{toc}{\contentsline {paragraph}{Pushing and poping a StealContext structure}{26}}
+\@writefile{toc}{\contentsline {paragraph}{Cooperative processing of steal request}{27}}
+\@writefile{toc}{\contentsline {paragraph}{Concurrent processing of steal request}{27}}
+\@writefile{toc}{\contentsline {paragraph}{Finalization point}{27}}
+\@writefile{toc}{\contentsline {paragraph}{Preemption and preemption point}{27}}
+\@writefile{toc}{\contentsline {paragraph}{StealContext data structure}{27}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.6}Implementation}{27}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.1}\texttt  {kaapi\_processor\_t} data structure}{27}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.2}\texttt  {kaapi\_request\_t} data structure}{27}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.3}Algorithm to post a request}{27}}
+\csname bt@set@cnt\endcsname{0}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.4}Management of data}{28}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.7}Threads and synchronizations API}{28}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7.1}Thread creation}{28}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7.2}Mutex}{28}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7.3}Condition}{28}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.8}Communication API}{28}}
+\newlabel{comapi}{{3.8}{28}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.9}Parallel programming API}{28}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.10}Deployment of program}{28}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.1}Environment variables}{28}}
+\newlabel{envvar}{{3.10.1}{28}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.2}Extension of the library}{28}}

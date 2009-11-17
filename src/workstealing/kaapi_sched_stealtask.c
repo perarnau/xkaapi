@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_sched_stealtask.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -45,42 +45,22 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/** 
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_sched_stealtask( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_splitter_t splitter )
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
+  int count;
+  int retval;
+  
+  kaapi_readmem_barrier();
 
+  count = *stack->hasrequest;
   if (count ==0) return 0;
 
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
-  }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
+  retval = (*splitter)(stack, task, count, stack->requests);
+  kaapi_assert_debug( retval <= count );
+  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, retval );
   kaapi_assert_debug( *stack->hasrequest >= 0 );
 
-  return 0;
+  return retval;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

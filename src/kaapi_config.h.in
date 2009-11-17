@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -104,6 +104,9 @@
 #cmakedefine KAAPI_KEYS_MAX ${KAAPI_KEYS_MAX}
 
 #define KAAPI_CACHE_LINE 64
+
+/* */
+#cmakedefine KAAPI_SIZEOF_VOIDP ${KAAPI_SIZEOF_VOIDP}
 
 /* Define if Kaapi uses sched affinity. */
 #cmakedefine KAAPI_USE_SCHED_AFFINITY ${KAAPI_USE_SCHED_AFFINITY}

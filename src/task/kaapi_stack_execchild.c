@@ -1,13 +1,12 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_task_exec.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -45,42 +44,76 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
 
-/*
+/**kaapi_stack_execchild
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* task)
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
+  kaapi_frame_t frame;
+  kaapi_frame_t* pframe;
+  kaapi_task_t* stop_sp;
+  kaapi_task_t* retn;
+  if (stack ==0) return EINVAL;
+  if (task ==0) return 0;
 
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  if (task->body ==0) 
+    return 0;
+  if (task->body == &kaapi_suspend_body) 
+      return EWOULDBLOCK;
+  kaapi_stack_save_frame(stack, &frame);
+  (*task->body)(task, stack);
+  task->body = 0;
+    
+  /* if no pushed tasks return */
+  if (frame.sp == stack->sp)
   {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
+    kaapi_stack_restore_frame(stack, &frame);
+    return 0;
   }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
+  
+  /* stop execution until sp reach stop_sp, the saved stack pointer */
+  stop_sp = frame.sp;
+  goto push_retn;
 
-  return 0;
+redo_work:
+  if (stack->pc == stop_sp) return 0;
+  if (task->body ==0) goto next_task;
+  if (task->body == &kaapi_suspend_body) 
+    return EWOULDBLOCK;
+
+  frame.pc      = task;
+  frame.sp      = stack->sp;
+  frame.sp_data = stack->sp_data;
+  (*task->body)(task, stack);
+  task->body = 0;
+
+push_retn:    
+  /* push restore_frame task if pushed tasks */
+  if (frame.sp < stack->sp)
+  {
+    retn = kaapi_stack_toptask(stack);
+    kaapi_task_init(stack, retn, KAAPI_TASK_STICKY);
+    retn->body  = &kaapi_retn_body;
+    pframe = (kaapi_frame_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
+    retn->sp = (void*)pframe;
+    *pframe = frame;
+    kaapi_stack_pushtask(stack);
+
+    /* update pc to the first forked task */
+    task = stack->pc = frame.sp;
+    goto redo_work;
+  }
+     
+  task = ++stack->pc;
+  goto redo_work;
+
+next_task:
+  task = ++stack->pc;
+  if (stack->pc >= stack->sp) 
+  {
+    /* empty stack: reset pointer to begin of the stack */
+    stack->pc = stack->sp = stack->task;
+    return 0;
+  }
+  goto redo_work;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

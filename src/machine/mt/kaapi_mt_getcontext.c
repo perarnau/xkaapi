@@ -1,8 +1,8 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_mt_threadcontext.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:16:47 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -45,42 +45,30 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/**
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_getcontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt )
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
+  kaapi_assert_debug( proc == _kaapi_get_current_processor() );
+  ctxt->kstack = proc->stack;
+  return 0;
+#if 0  /* TODO: next version when also saving the stack context */
+  ctxt->flags        = proc->flags;
+  ctxt->dataspecific = proc->dataspecific;
 
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
   {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
+    ctxt->kstack     = proc->kstack;
   }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
 
+  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
+  {
+#if defined(KAAPI_USE_UCONTEXT)
+    getcontext( &ctxt->mcontext );
+#elif defined(KAAPI_USE_SETJMP)
+    _setjmp( ctxt->mcontext );
+#endif
+  }
+#endif  /* TODO: next version when also saving the stack context */
   return 0;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

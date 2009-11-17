@@ -123,5 +123,5 @@ include (CPack)
 ######################
 
 add_subdirectory (src)
-add_subdirectory (tests)
-add_subdirectory (doc)
+add_subdirectory (examples)
+#TODO TG add_subdirectory (doc)

@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_task_finalize.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -7,7 +7,6 @@
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -45,42 +44,18 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/** Return the number of splitted parts (here 1: only steal the whole task)
+    Currently assume independent task only.
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
-
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  if (kaapi_task_isadaptive(task))
   {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
+    kaapi_taskadaptive_t* ta = task->sp;
+    kaapi_assert_debug( ta !=0 );
+    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
+    kaapi_readmem_barrier();
+    kaapi_assert( ta->thievescount._counter == 0);
   }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
-
   return 0;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

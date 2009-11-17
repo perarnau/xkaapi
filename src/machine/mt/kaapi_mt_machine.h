@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,14 +43,19 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_ATOMIC_H
-#define _KAAPI_ATOMIC_H 1
+#ifndef _KAAPI_MT_MACHINE_H_
+#define _KAAPI_MT_MACHINE_H_ 1
 
 #include "kaapi_config.h"
-#include "kaapi_task.h"
 #include "kaapi_datastructure.h"
 #include <stdint.h>
 #include <pthread.h>
+
+#if defined(KAAPI_USE_SETJMP)
+#  include <setjmp.h>
+#elif defined(KAAPI_USE_UCONTEXT)
+#  include <ucontext.h>
+#endif
 
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
@@ -64,17 +69,18 @@
 */
 
 struct kaapi_processor_t;
+typedef kaapi_uint32_t kaapi_processor_id_t;
+
 
 /* ========================================================================= */
-/** Atomic type
-*/
-typedef struct kaapi_atomic_t {
-  volatile kaapi_uint32_t _counter;
-} kaapi_atomic_t;
-
 /** Termination detecting barrier
 */
 extern kaapi_atomic_t kaapi_term_barrier;
+
+/* ========================================================================= */
+/** Termination detecting barrier
+*/
+extern volatile int kaapi_isterm;
 
 /* ========================================================================= */
 /* Functions to manipulate thread context 
@@ -94,10 +100,18 @@ extern kaapi_atomic_t kaapi_term_barrier;
 /** The thread context data structure
     This data structure should be extend in case where the C-stack is required to be suspended and resumed.
 */
-typedef struct kaapi_thread_context_t
-{
-  kaapi_thread_context_t* next;            /* link */
-  kaapi_stack_t           kstack;          /* the kaapi stack */
+typedef struct kaapi_thread_context_t {
+  KAAPI_STACK_FIELD_CELL(struct kaapi_thread_context_t);
+  kaapi_stack_t                  kstack;              /* the kaapi stack */
+#if defined(KAAPI_USE_SETJMP)
+  jmp_buf                        mcontext;
+#elif defined(KAAPI_USE_UCONTEXT)
+  ucontext_t                     mcontext;
+#endif
+  void*                          cstackaddr;
+  size_t                         cstacksize;
+  void                         (*entrypoint)(void*);  /* first call after makecontext */
+  void*                          arg;                 /* arg */
 } kaapi_thread_context_t;
 
 /* list of suspended threadcontext */
@@ -109,7 +123,9 @@ typedef struct kaapi_listthreadctxt_t {
     Higher level context manipulation.
     This function is machine dependent.
 */
-extern int kaapi_makecontext( struct kaapi_processor_t* proc, struct kaapi_thread_context_t* ctxt );
+extern int kaapi_makecontext( struct kaapi_processor_t* proc, struct kaapi_thread_context_t* ctxt, 
+                              void (*entrypoint)(void* arg), void* arg 
+                            );
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -130,37 +146,51 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, struct kaapi_thread
 
 /* ============================= Kprocessor ============================ */
 /** \ingroup WS
-    Client side of the request
 */
-typedef struct kaapi_reply_t {
-  volatile kaapi_uint16_t  status;          /* reply status */
-  kaapi_stack_t*           data;            /* output data */
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
+typedef struct kaapi_listrequest_t {
+  kaapi_atomic_t  __attribute__((aligned (KAAPI_CACHE_LINE))) count;
+  kaapi_request_t requests[KAAPI_MAX_PROCESSOR];
+} kaapi_listrequest_t;
 
 
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
     The kid is a system wide identifier. In the current version it only contains a local counter value
     from 0 to N-1.
-    The implementation (machine dependent)
+    Each kprocessor stores neighbor information in a hierarchical as defined by the topology.
+    When a kprocessor i wants to send a steal request to the kprocessor j, it should 
+      - have j in its neighbor set
+      - use its requests in the kprocessor j at position kproc_j->request[kproc_i->hindex[level]],
+      where level is the lower level set in kprocessor i that contains the kprocessor j.
+    
+    On each kprocessor i, hkids[l][j] points to the j-th kprocessor at level l.
+    
+    
+    TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
 typedef struct kaapi_processor_t {
-  kaapi_processor_id_t     kid;                /* Kprocessor id */
-  kaapi_stack_t            stack;              /* current stack (current active thread) */
-  kaapi_uint32_t           hlevel;             /* number of level for this Kprocessor */
-  kaapi_uint16_t*          hlkid;              /* kid local identifier at each level of the hierarchy, size hlevel */
-  kaapi_listrequest_t*     hrequest;           /* hierarchy of requests, size hlevel */
-  kaapi_listthreadctxt_t   lsuspend;        
+  kaapi_stack_t            stack;                         /* current stack (current active thread) */
+  kaapi_processor_id_t     kid;                           /* Kprocessor id */
+  kaapi_uint32_t           hlevel;                        /* number of level for this Kprocessor >0 */
+  kaapi_uint16_t*          hindex;                        /* id local identifier of request at each level of the hierarchy, size hlevel */
+  kaapi_uint16_t*          hlcount;                       /* count of proc. at each level of the hierarchy, size hlevel */
+  kaapi_processor_id_t**   hkids;                         /* ids of all processors at each level of the hierarchy, size hlevel */
+  kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
+
+  void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
+
+  kaapi_listthreadctxt_t   lsuspend;              /* list of suspended stacks */
+  void*                    fnc_selecarg;          /* arguments for select victim function, 0 at initialization */
+  kaapi_selectvictim_fnc_t fnc_select;            /* function to select a victim */
 } kaapi_processor_t;
 
-
-/** \ingroup WS
+/*
 */
-typedef struct kaapi_listrequest_t {
-  kaapi_atomic_t  count;
-  kaapi_request_t requests[KAAPI_MAX_PROCESSOR];
-} kaapi_listrequest_t;
+extern int kaapi_processor_init( kaapi_processor_t* kproc );
 
+/*
+*/
+extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 
 /** \ingroup WS
     Number of used cores
@@ -187,20 +217,7 @@ extern pthread_key_t kaapi_current_processor_key;
     Returns the current stack of tasks
 */
 #define _kaapi_self_stack() \
-  (kaapi_get_current_processor()->stack)
-
-/** \ingroup WS
-*/
-static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr ) 
-{
-  int i; 
-  KAAPI_ATOMIC_WRITE(&pklr->count, KAAPI_REQUEST_S_EMPTY);
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {  
-    pklr->requests[i].status = 0; 
-  }
-  return 0;
-}
+  (&_kaapi_get_current_processor()->stack)
 
 
 /* ============================= Hierarchy ============================ */
@@ -243,27 +260,6 @@ extern kaapi_neighbors_t** kaapi_neighbors;
 extern int kaapi_setup_topology(void);
 
 
-/* ============================= Private functions, machine dependent ============================ */
-inline extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* reply, kaapi_request_t* req, kaapi_listrequest_t* lreq );
-{
-  if (src ==0) return EINVAL;
-  if (req ==0) return EINVAL
-  if (lreq ==0) return EINVAL
-
-  reply->status = KAAPI_REQUEST_S_POSTED;
-  req->reply    = reply;
-  req->stack    = &src->stack;
-  kaapi_writemem_barrier();
-  reply->data   = &src->stack;
-  req->status   = KAAPI_REQUEST_S_POSTED;
-  
-  /* add without barrier here if the victim see the request status as ok is enough,
-     even if the new counter is not yet view
-  */
-  KAAPI_ATOMIC_INCR( &lreq->count );
-  
-  return 0;
-}
 
 
 /* ============================= Atomic Function ============================ */
@@ -279,6 +275,9 @@ inline extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* rep
 /** TODO: try to use same function without barrier
 */
 #  define KAAPI_ATOMIC_CAS(a, o, n) \
+    __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+
+#  define KAAPI_ATOMIC_CAS64(a, o, n) \
     __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
 
 #  define KAAPI_ATOMIC_INCR(a) \
@@ -303,6 +302,9 @@ inline extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* rep
 #  define KAAPI_ATOMIC_CAS(a, o, n) \
     OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
 
+#  define KAAPI_ATOMIC_CAS64(a, o, n) \
+    OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+
 #  define KAAPI_ATOMIC_INCR(a) \
     OSAtomicIncrement32( &((a)->_counter) ) 
 
@@ -321,6 +323,14 @@ inline extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* rep
 #else
 #  error "Please add support for atomic operations on this system/architecture"
 #endif /* GCC > 4.1 */
+
+#if (KAAPI_SIZEOF_VOIDP == 4)
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, o, n )
+#else
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)a, o, n )
+#endif
 
 
 /* ========================================================================== */
@@ -347,10 +357,10 @@ static inline void kaapi_readmem_barrier()
 #elif defined(KAAPI_USE_LINUX)
 
 #  define kaapi_writemem_barrier() \
-__sync_synchronize()
+    __sync_synchronize()
 
 #  define kaapi_readmem_barrier() \
-__sync_synchronize()
+    __sync_synchronize()
 
 #else
 #  error "Undefined barrier"
@@ -384,15 +394,52 @@ __sync_synchronize()
 /**
 */
 #define kaapi_barrier_td_waitterminated( kpb ) \
-  while (KAAPI_ATOMIC_READ(kpb ) == 0)
+  while (KAAPI_ATOMIC_READ(kpb ) != 0)
 
 
 /** Private interface
 */
-inline extern int kaapi_isterminated(void)
+static inline int kaapi_isterminated(void)
 {
-  return kaapi_barrier_td_isterminated(&kaapi_term_barrier);
+  return kaapi_isterm !=0;
 }
 
+/** \ingroup WS
+*/
+static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr ) 
+{
+  int i; 
+  KAAPI_ATOMIC_WRITE(&pklr->count, 0);
+  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  {  
+    kaapi_request_init(&pklr->requests[i]);
+  }
+  return 0;
+}
+
+
+/* ============================= Private functions, machine dependent ============================ */
+static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* reply, kaapi_victim_t* victim )
+{
+  kaapi_request_t* req;
+  if (kproc ==0) return EINVAL;
+  if (victim ==0) return EINVAL;
+
+  req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
+  reply->status    = KAAPI_REQUEST_S_POSTED;
+  req->reply       = reply;
+  req->stack       = &kproc->stack;
+  reply->data      = 0;
+  req->status      = KAAPI_REQUEST_S_POSTED;
+
+  kaapi_writemem_barrier();
+  
+  /* incr without mem. barrier here if the victim see the request status as ok is enough,
+     even if the new counter is not yet view
+  */
+  KAAPI_ATOMIC_INCR( &victim->kproc->hlrequests.count );
+  
+  return 0;
+}
 
 #endif /* _KAAPI_ATOMIC_H */

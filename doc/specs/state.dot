@@ -1,0 +1,12 @@
+digraph {
+  node [shape="circle"];
+  Wait -> Init
+  Init -> Exec
+  Exec -> Term
+
+  Normal -> Stopped
+  Stopped -> Normal
+
+  Local -> Stolen
+  Stolen -> Local
+}

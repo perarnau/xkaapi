@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -275,9 +275,9 @@ if ((q)->_front ==0) (q)->_back = 0; \
  \param name the name of the typedef
  \param type the type of the queue.
  */
-#define KAAPI_STACK_FIELD( type )\
+#define KAAPI_STACK_FIELD_CELL( type )\
 type* _next;\
-type* _prev;
+type* _prev
 
 /** Generic stack (lifo order)
  Declare a fifo queue necessary data structure for a stack structure
@@ -287,7 +287,7 @@ type* _prev;
  */
 #define KAAPI_STACK_DECLARE_FIELD( type )\
 type* _front; \
-type* _back;
+type* _back
 
 
 /** Generic stack (lifo order)

@@ -1,14 +1,12 @@
 /*
-** kaapi_sched_advance.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:21:00 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
-** thierry.gautier@inrialpes.fr
+** thierry.gautier@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -45,42 +43,39 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
+int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_stack_t* thief_stack, kaapi_request_t* request, int retval )
 {
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
-*/
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
-{
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
-
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  kaapi_assert_debug( stack != 0 );
+  if (retval)
   {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
+    kaapi_task_t* sig;
+    
+    if (kaapi_task_isadaptive(task))
     {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
+      kaapi_taskadaptive_t* ta = task->sp;
+      kaapi_assert_debug( ta !=0 );
+      KAAPI_ATOMIC_INCR( &ta->thievescount );
     }
-  }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
+    else {
+      kaapi_assert_debug( task->body == &kaapi_suspend_body);
+    }
+    sig = kaapi_stack_toptask( thief_stack );
+    kaapi_task_init(thief_stack, sig, KAAPI_TASK_STICKY | (kaapi_task_isadaptive(task) ? KAAPI_TASK_ADAPTIVE : 0U) );
+    kaapi_task_setbody( sig, &kaapi_sig_body );
+    kaapi_task_setargs( sig, task );
+    kaapi_stack_pushtask( thief_stack );
 
+    request->status = KAAPI_REQUEST_S_EMPTY;
+/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
+    request->reply->data = thief_stack;
+    kaapi_writemem_barrier();
+    request->reply->status = KAAPI_REQUEST_S_SUCCESS;
+  }
+  else {
+    request->status = KAAPI_REQUEST_S_EMPTY;
+/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
+    kaapi_writemem_barrier();
+    request->reply->status = KAAPI_REQUEST_S_FAIL;
+  }
   return 0;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

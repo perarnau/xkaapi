@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -59,9 +59,17 @@ kaapi_processor_t** kaapi_all_kprocessors = 0;
 */
 pthread_key_t kaapi_current_processor_key;
 
+/*
+*/
+pthread_key_t c;
+
 /* 
 */
 kaapi_atomic_t kaapi_term_barrier = { 0 };
+
+/* 
+*/
+volatile int kaapi_isterm = 0;
 
 /** Should be with the same file as kaapi_init
  */
@@ -69,27 +77,33 @@ void _kaapi_dummy(void* foo)
 {
 }
 
+/** Dependencies with kaapi_stack_t* kaapi_self_stack(void)
+*/
+kaapi_stack_t* kaapi_self_stack(void)
+{
+  return _kaapi_self_stack();
+}
+
 /**
 */
 void __attribute__ ((constructor)) kaapi_init(void)
 {
-
+  kaapi_isterm = 0;
+  
   /* set up runtime parameters */
   kaapi_setup_param(0,0);
   
   /* initialize the kprocessor key */
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
-  pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
     
-  /* setup kaapi_sched_select_victim_function */
-  kaapi_sched_select_victim_function = &kaapi_sched_select_victim_rand;
-
   /* setup topology information */
   kaapi_setup_topology();
 
   /* set the kprocessor AFTER topology !!! */
-  kaapi_setconcurrency( default_param.cpucount; );
+  kaapi_setconcurrency( default_param.cpucount );
   
+  pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
+
   /* dump output information */
   printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
 }
@@ -99,9 +113,20 @@ void __attribute__ ((constructor)) kaapi_init(void)
 */
 void __attribute__ ((destructor)) kaapi_fini(void)
 {
+  int i;
+  
   printf("[KAAPI::TERM]\n");
   fflush( stdout );
 
+  /* wait end of the initialization */
+  kaapi_isterm = 1;
+  kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
+  
+  while (!kaapi_barrier_td_isterminated( &kaapi_term_barrier ))
+  {
+    kaapi_sched_advance( kaapi_all_kprocessors[0] );
+  }
+  
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
     free(kaapi_all_kprocessors[i]);

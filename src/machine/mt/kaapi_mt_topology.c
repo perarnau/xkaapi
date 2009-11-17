@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -109,10 +109,10 @@ kaapi_neighbors_t** kaapi_neighbors = 0;
 */
 int kaapi_setup_topology(void)
 {
-  int i;
   
   /* this function should be called during the initialization of kaapi, after havind decoding the
      default parameters and the array of kaapi_all_kprocessors has tobe already defined at correct
      memory location.
   */
+  return 0;
 }

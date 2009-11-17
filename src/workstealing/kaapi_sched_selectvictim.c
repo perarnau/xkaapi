@@ -43,46 +43,47 @@
 */
 #include "kaapi_impl.h"
 
-/**
+
+/** This is random at the first hierarchy level
 */
-kaapi_thread_processor_t* kaapi_sched_select_victim_rand( kaapi_thread_processor_t* kpss )
+kaapi_request_t* kaapi_sched_select_victim_rand_first( kaapi_processor_t* kproc, kaapi_listrequest_t** plistreq )
 {
-  unsigned int seed = 0;
-  unsigned int victim = 0;
-  kaapi_thread_processor_t* victim_proc;
-
-  /** Select a victim 
-  */
+  kaapi_request_t* request;
   do {
-    int nbproc = KAAPI_ATOMIC_READ( &kaapi_count_tid );
-    if ( nbproc>0)
-      victim = rand_r( &seed ) % nbproc;
-    else 
-      victim = 0;
+    /* Is terminated ? -> abort & return 0 */
+    if (kaapi_isterminated()) return (kaapi_request_t*)-1;
 
-    /** Is terminated 
-    */
-    if (kaapi_barrier_td_isterminated(&kaapi_barrier_term)) return (kaapi_thread_processor_t*)-1;
-
-    /** return the k-processor 
-    */    
-    victim_proc = kaapi_all_kprocessors[victim];
-    if (victim_proc ==0) continue; 
-    return victim_proc;
-
+    request = kaapi_select_victim_rand_atlevel( kproc, 0, plistreq );
+    if (request !=0) return request;
   } while(1);
-
 }
 
-/**
-*/
-kaapi_thread_processor_t* (*kaapi_sched_select_victim_function)( kaapi_thread_processor_t* kpss ) =0;
 
-/**
+/** Do rand selection level by level:
 */
-kaapi_thread_processor_t* kaapi_sched_select_victim( kaapi_thread_processor_t* thief_proc )
+kaapi_request_t* kaapi_sched_select_victim_rand_incr( kaapi_processor_t* kproc, kaapi_listrequest_t** plistreq )
 {
-  if (kaapi_sched_select_victim_function !=0)
-    return (*kaapi_sched_select_victim_function)(thief_proc);
-  return kaapi_sched_select_victim_rand( thief_proc );
+  kaapi_request_t* request;
+  int levelmax  = 0;
+  int levelcurr = 0;
+  do {
+    /* Is terminated ? -> abort & return 0 */
+    if (kaapi_isterminated()) return (kaapi_request_t*)-1;
+
+    request = kaapi_select_victim_rand_atlevel( kproc, levelcurr, plistreq );
+    if (request !=0) return request;
+
+    ++levelcurr;
+    if (levelcurr >levelmax) 
+    {
+      ++levelmax;
+      levelcurr = 0;
+      if (levelmax > kproc->hlevel) 
+      {
+        levelmax  = 0;
+        levelcurr = 0;
+      }
+    }
+  } while(1);
+
 }

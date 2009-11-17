@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -45,6 +45,10 @@
 */
 #include "kaapi_impl.h"
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
+
 
 /*
 */
@@ -52,7 +56,7 @@ kaapi_rtparam_t default_param;
 
 /**
 */
-extern int kaapi_setup_param( int argc, char** argv );
+extern int kaapi_setup_param( int argc, char** argv )
 {
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
@@ -70,10 +74,13 @@ extern int kaapi_setup_param( int argc, char** argv );
   #warning "Could not compute number of physical cpu of the system. Default value==1"
   default_param.syscpucount = 1;
 #endif
-  
+  /* adjust system limit, if library is compiled with greather number of processors that available */
+  if (default_param.syscpucount < KAAPI_MAX_PROCESSOR)
+    default_param.syscpucount = KAAPI_MAX_PROCESSOR;
+    
   /* Set default values */
   default_param.cpucount  = default_param.syscpucount;
-  default_param.stacksize = 4096;
+  default_param.stacksize = 8*4096;
   
   /* Get values from environment variable */
   if (getenv("KAAPI_STACKSIZE") !=0)
@@ -84,6 +91,11 @@ extern int kaapi_setup_param( int argc, char** argv );
   {
     default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
   }
+  
+  /* default workstealing selection function */
+  default_param.wsselect = &kaapi_sched_select_victim_rand;
 
   /* TODO: here parse command line option */
+  
+  return 0;
 }

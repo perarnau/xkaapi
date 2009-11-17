@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -45,10 +45,7 @@
 */
 #include "kaapi_impl.h"
 
-/** TO DO !!!!
-- avoid cas ? 
-- avoid incr ?
-
+/** 
 1/ entièrement coopératif !
   task -> pile de task
   begin_concurrent( event -> action ) & mask
@@ -62,30 +59,41 @@
    ABA problème -> ll/sc ou cas + version
    1 cas: task: pc & sp ?  pc->sp
 */
-int kaapi_sched_steal ( kaapi_thread_descr_t* victim_thread )
+int kaapi_sched_steal ( kaapi_stack_t* stack, kaapi_task_t* task )
 {
-  kaapi_task_t* task;
+  kaapi_task_t*  task_top;
+  kaapi_task_t*  task_bot;
+  int count;
+  
+  kaapi_readmem_barrier();
+  count = KAAPI_ATOMIC_READ( (kaapi_atomic_t*)stack->hasrequest );
+  if (count ==0) return 0;
 
-  kaapi_assert_debug (victim_thread !=0);
+  if (kaapi_stack_isempty( stack)) return ESRCH;
 
-  if (kaapi_stack_isempty( &victim_thread->_stack)) return ESRCH;
-  if (kaapi_barrier_td_isterminated(&kaapi_barrier_term)) return EINTR; /* terminaison */
-
-    
-  /* iterate through all the tasks */
-  task_bot = kaapi_stack_bottom(&victim_proc->_stack);
-  task_top = kaapi_stack_top(&victim_proc->_stack);
+  /* reset dfg constraints evaluation */
+  
+  /* iterate through all the tasks from task_bot until task_top */
+  task_bot = kaapi_stack_bottomtask(stack);
+  task_top = kaapi_stack_toptask(stack);
 
   while (task_bot != task_top)
   {
-    if ( (task_bot !=0) && (task_bot->body != &kaapi_retn_body) && (task_bot->body != 0) &&
-         (kaapi_task_state(task_bot) == KAAPI_TASK_INIT) )
+    if (task_bot == task) return count;
+
+    kaapi_assert_debug( task_bot != 0 );
+    /* task body == 0 no task after can stop 
+       task body == retn : no steal
+       
+    */
+    if ( (task_bot != stack->pc) && kaapi_task_isstealable(task_bot) && (task_bot->splitter !=0) ) 
     {
-      /* steal the task */
-      *kaapi_stack_top( &victim_proc->_stack ) = *task_bot;
-      kaapi_task_state(task_bot) = KAAPI_TASK_STOLEN;
-      kaapi_stack_push( &victim_proc->_stack );
-      return 0;
+      int retval = (*task_bot->splitter)(stack, task_bot, count, stack->requests);
+      kaapi_assert_debug( retval <= count );
+      KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, retval );
+      kaapi_assert_debug( *stack->hasrequest >= 0 );
+      count = *stack->hasrequest;
+      if (count ==0) return 0;
     }
 
     /* test next task */  

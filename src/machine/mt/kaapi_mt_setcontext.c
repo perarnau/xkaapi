@@ -1,8 +1,8 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_mt_threadcontext.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:16:47 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -45,42 +45,32 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/**
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_setcontext( kaapi_processor_t* proc, const kaapi_thread_context_t* ctxt )
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
-
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
-  }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
-
+  kaapi_assert_debug( proc == _kaapi_get_current_processor() );
+  proc->stack = ctxt->kstack;
+  proc->stack.requests = proc->hlrequests.requests;
   return 0;
+
+#if 0  /* TODO: next version when also saving the stack context */
+  proc->flags        = ctxt->flags;
+  proc->dataspecific = ctxt->dataspecific;
+
+  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
+  {
+    proc->kstack     = ctxt->kstack;
+  }
+
+  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
+  {
+#if defined(KAAPI_USE_UCONTEXT)
+    setcontext( &proc->_ctxt );
+#elif defined(KAAPI_USE_SETJMP)
+    _longjmp( proc->_ctxt,  (int)(long)ctxt);
+#endif
+  }
+  return 0;
+#endif  /* TODO: next version when also saving the stack context */
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

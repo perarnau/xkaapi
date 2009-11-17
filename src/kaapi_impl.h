@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** christophe.laferriere@imag.fr
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -55,41 +55,13 @@ extern "C" {
 
 #include "kaapi_config.h"
 #include "kaapi.h"
-#include "kaapi_machine.h"
 #include "kaapi_error.h"
-#include "kaapi_task.h"
 
-
-/** Definition of parameters for the runtime system
+/* Fwd declaration 
 */
-typedef struct kaapi_rtparam_t {
-  size_t       stacksize;              /* default stack size */
-  unsigned int syscpucount;            /* number of physical cpus of the system */
-  unsigned int cpucount;               /* number of physical cpu used for execution */
-} kaapi_rtparam_t;
+struct kaapi_processor_t;
+struct kaapi_listrequest_t;
 
-extern kaapi_rtparam_t default_param;
-
-/** Setup KAAPI parameter from
-    1/ the command line option
-    2/ form the environment variable
-    3/ default values
-*/
-extern int kaapi_setup_param( int argc, char** argv );
-    
-/** Select a victim for next steal request
-    \param kpss the kaapi_processor_t that emits the request
-    \retval a pointer to the processor to steal
-    \retval -1 in case of terminaison of the program
-    The user of the library may define the pointer kaapi_sched_select_victim_function in order 
-    to change the behavior of the victim selection.
-    By default, the method makes a uniform random choice of the victim processor.
-*/
-extern kaapi_processor_t* (*kaapi_sched_select_victim_function)( kaapi_processor_t* kpss );
-extern kaapi_processor_t* kaapi_sched_select_victim( kaapi_processor_t* kpss );
-extern kaapi_processor_t* kaapi_sched_select_victim_rand( kaapi_processor_t* kpss );
-
-/* ============================= Commun function for server side (no public) ============================ */
 /** Private status of request
     \ingroup WS
 */
@@ -102,20 +74,94 @@ enum kaapi_request_status_t {
   KAAPI_REQUEST_S_QUIT    = 5
 };
 
+/** \ingroup WS
+    This data structure should contains all necessary informations to post a request to a selected node.
+    It should be extended in case of remote work stealing.
+*/
+typedef struct kaapi_victim_t {
+  struct kaapi_processor_t* kproc; /** the victim processor */
+  kaapi_uint16_t            level; /** level in the hierarchy of the source k-processor to reach kproc */
+} kaapi_victim_t;
+
+/** \ingroup WS
+    Select a victim for next steal request
+    \param kproc [IN] the kaapi_processor_t that want to emit a request
+    \param victim [OUT] the selection of the victim
+    \retval 0 in case of success 
+    \retval EINTR in case of detection of the termination 
+    \retval else error code
+    
+*/
+typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi_victim_t* );
+
+
+
+/** Initialize a request
+    \param kpsr a pointer to a kaapi_steal_request_t
+*/
+#define kaapi_request_init( pkr ) \
+  (pkr)->status = KAAPI_REQUEST_S_EMPTY; (pkr)->reply = 0; (pkr)->stack = 0
+
+
+
+#include "kaapi_machine.h"
+
+
+/** Setup KAAPI parameter from
+    1/ the command line option
+    2/ form the environment variable
+    3/ default values
+*/
+extern int kaapi_setup_param( int argc, char** argv );
+    
+/** Definition of parameters for the runtime system
+*/
+typedef struct kaapi_rtparam_t {
+  size_t                   stacksize;              /* default stack size */
+  unsigned int             syscpucount;            /* number of physical cpus of the system */
+  unsigned int             cpucount;               /* number of physical cpu used for execution */
+  kaapi_selectvictim_fnc_t wsselect;               /* default method to select a victim */
+} kaapi_rtparam_t;
+
+extern kaapi_rtparam_t default_param;
+
 
 
 /* ============================= Commun function for server side (no public) ============================ */
-/** Try to steal victim_proc.
-    Cooperative implementation.
-    On return in case of sccessfull steal either thief_proc->_active_thread is not nul and should be started,
-    either thief_proc->_steal_thread is full with task(s).
-    \retval 0 in case of successfull steal of work
-    \retval ESRCH if not task has been found
-    \retval EINTR if termination flag has been set
-*/
-extern int kaapi_sched_steal ( kaapi_processor_t* victim_proc, kaapi_processor_t* thief_proc  );
 
-/** Enter in the infinite loop of trying to steal work.
+/** Useful
+*/
+#define kaapi_get_current_processor() _kaapi_get_current_processor();
+
+/** \ingroup WS
+    Select a victim for next steal request using uniform random selection over all cores.
+*/
+extern int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim);
+
+/** \ingroup WS
+    Select a victim for next steal request using random selection level by level. Each time the method
+    try to steal at level i, it first try to steal at level 0 until i.
+    The idea of the algorithm is the following. Initial values are: level=0, toplevel=0
+       1- the method do random selection at level and increment toplevel
+       2- it increment level, if level >= toplevel then level=0, toplevel++
+       3- if toplevel > maximal level then level=0, toplevel=0
+*/
+extern int kaapi_sched_select_victim_rand_incr( kaapi_processor_t* kproc, kaapi_victim_t* victim);
+
+/** \ingroup WS
+    Only do rando ws on the first level of the hierarchy. Assume that all cores are connected
+    together using the first level hierarchy information.
+*/
+extern int kaapi_sched_select_victim_rand_first( kaapi_processor_t* kproc, kaapi_victim_t* victim);
+
+/** \ingroup WS
+    Helper function for some of the above random selection of victim
+*/
+extern int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi_victim_t* victim );
+
+
+/** \ingroup WS
+    Enter in the infinite loop of trying to steal work.
     Never return from this function...
     If proc is null pointer, then the function allocate a new kaapi_processor_t and 
     assigns it to the current processor.
@@ -124,12 +170,22 @@ extern int kaapi_sched_steal ( kaapi_processor_t* victim_proc, kaapi_processor_t
 */
 extern void kaapi_sched_idle ( kaapi_processor_t* proc );
 
-/** Advance polling of request for the current running thread.
+/** \ingroup WS
+    Advance polling of request for the current running thread.
     If this method is called from an other running thread than proc,
     the behavious is unexpected.
     \param proc should be the current running thread
 */
 extern int kaapi_sched_advance ( kaapi_processor_t* proc );
+
+
+/** \ingroup WS
+    Splitter for DFG task
+    \param proc should be the current running thread
+*/
+extern int kaapi_task_splitter_dfg(struct kaapi_stack_t* stack, struct kaapi_task_t* task, int count, struct kaapi_request_t* array);
+
+
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PRIVATE INTERFACE ........................................*/
@@ -164,13 +220,7 @@ extern int kaapi_stack_free( kaapi_stack_t* stack );
   \param return 0 if the request has been successully posted
   \param return !=0 if the request been not been successully posted and the status of the request contains the error code
 */  
-extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* reply, kaapi_request_t* req, kaapi_listrequest_t* lreq );
-
-/** Initialize a request
-    \param kpsr a pointer to a kaapi_steal_request_t
-*/
-#define kaapi_request_init( kpsr, kpss ) \
-  (kpsr)->status = KAAPI_REQUEST_S_EMPTY; (kpsr)->reply = 0; (kpsr)->stack = 0
+/*extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* reply, kaapi_victim_t* victim );*/
 
 /** Destroy a request
     A posted request could not be destroyed until a reply has been made
@@ -185,18 +235,24 @@ extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* reply, kaa
   \retval KAAPI_REQUEST_S_ERROR steal request has failed to be posted because the victim refused request
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
-extern int kaapi_request_wait( kaapi_reply_t* ksr );
+extern int kaapi_reply_wait( kaapi_reply_t* ksr );
+
+/** Return true iff the request has been posted
+  \param pksr kaapi_request_t
+*/
+static inline int kaapi_request_test( kaapi_request_t* kpsr )
+{ return (kpsr->status == KAAPI_REQUEST_S_POSTED); }
 
 /** Return true iff the request has been processed
   \param pksr kaapi_reply_t
 */
-inline extern int kaapi_request_test( kaapi_reply_t* kpsr )
+static inline int kaapi_reply_test( kaapi_reply_t* kpsr )
 { return (kpsr->status != KAAPI_REQUEST_S_POSTED); }
 
 /** Return true iff the request is a success steal
   \param pksr kaapi_reply_t
 */
-inline extern int kaapi_request_ok( kaapi_reply_t* kpsr )
+static inline int kaapi_reply_ok( kaapi_reply_t* kpsr )
 { return (kpsr->status == KAAPI_REQUEST_S_SUCCESS); }
 
 /** Return the request status
@@ -205,21 +261,21 @@ inline extern int kaapi_request_ok( kaapi_reply_t* kpsr )
   \retval KAAPI_REQUEST_S_FAIL steal request has failed
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
-inline extern int kaapi_request_status( kaapi_reply_t* reply ) 
-{ return kpsr->status; }
+static inline int kaapi_request_status( kaapi_reply_t* reply ) 
+{ return reply->status; }
 
 /** Return the data associated with the reply
   \param pksr kaapi_reply_t
 */
-inline extern kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply ) 
+static inline kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply ) 
 { 
   kaapi_readmem_barrier();
-  return kpsr->stack; 
+  return reply->data; 
 }
 
 /** Return true if the whole application is terminated 
 */
-extern int kaapi_isterminated(void);
+/*extern int kaapi_isterminated(void);*/
 
 /** Here: kaapi_atomic_t + functions ; termination detecting barrier, see mt_machine.h
 */
@@ -227,10 +283,6 @@ extern int kaapi_isterminated(void);
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
-
-/**
-*/
-extern int kaapi_request_reply( kaapi_task_t* task, kaapi_request_t* request, int retval );
 
 
 #endif /* _KAAPI_IMPL_H */

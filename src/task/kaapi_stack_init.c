@@ -1,13 +1,12 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_stack_init.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -45,42 +44,40 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/** kaapi_stack_init
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_stack_init( kaapi_stack_t* stack, 
+                      kaapi_uint32_t size_task_buffer, void* task_buffer,
+                      kaapi_uint32_t size_data_buffer, void* data_buffer 
+)
 {
-  int i, replied = 0;
-  kaapi_stack_t* stack = &kproc->stack;
-  int count = *stack->hasrequest;
-
-  if (count ==0) return 0;
-
-  kaapi_readmem_barrier();
-  
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    if ( kaapi_request_ok( &stack->requests[i] ) )
-    {
-      kaapi_request_reply( &kproc->stack, 0, 0, &stack->requests[i], 0 );
-      ++replied;
-      if (replied == count) break;
-    }
+  if (stack == 0) return EINVAL;
+  stack->hasrequest =0;
+  if (size_task_buffer ==0) 
+  { 
+    stack->pc = stack->sp = stack->task = 0; 
+#if defined(KAAPI_DEBUG)
+    stack->end_sp = 0;
+#endif
   }
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replied ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
-
+  else {
+    if (size_task_buffer / sizeof(kaapi_task_t) ==0) return EINVAL;    
+    stack->task = (kaapi_task_t*)task_buffer;
+    stack->pc = stack->sp = stack->task;
+#if defined(KAAPI_DEBUG)
+    stack->end_sp      = stack->task + size_task_buffer/sizeof(kaapi_task_t);
+#endif
+  }
+  if (size_data_buffer ==0) 
+  {
+    stack->sp_data = stack->data = 0;
+  }
+  else 
+  {
+    stack->sp_data = stack->data = data_buffer;
+#if defined(KAAPI_DEBUG)
+    stack->end_sp_data = stack->data + size_data_buffer;
+#endif
+  }
   return 0;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-
