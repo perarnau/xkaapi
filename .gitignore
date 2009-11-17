@@ -1,13 +1,9 @@
 TAGS
+.DS_Store
 .gitignore
 CMakeCache.txt
-CTestTestfile.cmake
 CMakeFiles/
 Makefile
-src/Makefile
-cmake_install.cmake
-kaapi.h
-kaapi_config.h
-kaapi_type.h
+doc/html
 *.a
 *.dylib
