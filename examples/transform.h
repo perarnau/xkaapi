@@ -49,9 +49,7 @@ protected:
   static void static_thiefentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
   {
     Self_t* self_work = kaapi_task_argst(task, Self_t);
-//    std::cout << "BEGIN Thief: [" << self_work->_ibeg - beg0 << ", " << self_work->_iend - beg0 << "], offout:" << self_work->_obeg - obeg0 << std::endl << std::flush;
     self_work->doit(task, stack);
-//    std::cout << "END Thief: [" << self_work->_ibeg - beg0 << ", " << self_work->_iend - beg0 << "], offout:" << self_work->_obeg - obeg0 << std::endl << std::flush;
   }
 
   /** splitter_work is called within the context of the steal point
@@ -70,7 +68,6 @@ protected:
     
     bloc = size / (1+count);
     if (bloc < 128) { count = size/128 -1; bloc = 128; }
-//    std::cout << "\n#count=" << count << std::endl;
     while (count >0)
     {
       if ( kaapi_request_ok(&request[i]) )
@@ -91,10 +88,8 @@ protected:
 
         kaapi_stack_pushtask( thief_stack );
 
-//        std::cout << "@thief_stack:" << thief_stack << "::Split: [" << output_work->_ibeg - beg0 << ", " << output_work->_iend - beg0 << "], offout:" << output_work->_obeg - obeg0 << std::endl << std::flush;
-
         /* reply ok (1) to the request */
-        kaapi_request_reply( victim_stack, task, thief_stack, &request[i], 1 );
+        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 1 );
         --count; 
         ++reply_count;
       }
@@ -111,7 +106,7 @@ reply_failed:
       if (kaapi_request_ok(&request[i]))
       {
         /* reply failed (=last 0 in parameter) to the request */
-        kaapi_request_reply( victim_stack, task, 0, &request[i], 0 );
+        kaapi_request_reply( victim_stack, task, &request[i], 0, 0 );
         --count; 
         ++reply_count;
       }

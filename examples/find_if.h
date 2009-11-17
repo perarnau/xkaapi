@@ -1,6 +1,6 @@
 /*
  *  test_find_if.cpp
- *  ckaapi
+ *  xkaapi
  *
  *  Created by TG on 18/02/09.
  *  Copyright 2009 INRIA. All rights reserved.
@@ -36,6 +36,7 @@ public:
   InputIterator          _ibeg;
   InputIterator          _iend;
   InputIterator          _ifound;
+  InputIterator          _macro_iend;
   Predicate              _pred;
   
   /* Entry in case of thief execution */
@@ -47,64 +48,64 @@ public:
 
   /** splitter_work is called within the context of the steal point
   */
-  int splitter( kaapi_task_t* task, int count, kaapi_request_t* request )
+  int splitter( kaapi_stack_t* stack, kaapi_task_t* task, int count, kaapi_request_t* request )
   {
     FindIfStruct<InputIterator, Predicate>* output_work =0;
+    int reply_count = 0;
 
-    size_t size = (iend - ibeg);
-    if (iend- ibeg < 128) return;
+    size_t size = (_macro_iend - _ibeg);
+    if (size < 128) return;
     
     size_t bloc = size / (1+count);
     if (bloc < 128) { count = (size+127)/128 -1; bloc = 128; }
 
     int i = 0;
-    InputIterator local_end = iend;
+    InputIterator local_end = _macro_iend;
 
     while ((count >0) && (i<KAAPI_MAXSTACK_STEAL))
     {
-      if (request[i] !=0)
+      if (kaapi_request_ok(&request[i]))
       {
-        if (kaapi_steal_context_alloc_result( stealcontext, 
-                                              request[i], 
-                                              (void**)&output_work, 
-                                              sizeof(FindIfStruct<InputIterator, Predicate>) 
-                                            ) ==0)
-        {
-          output_work->_iend = local_end;
-          output_work->_ibeg = output_work->_iend-bloc;
-          output_work->_pred = pred;
-          ckaapi_assert( output_work->_iend - output_work->_ibeg >0);
+        kaapi_stack_t* thief_stack = request[i].stack;
+        kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
+        kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
+        kaapi_task_setbody( thief_task, &static_thiefentrypoint );
+        kaapi_task_setargs(thief_task, kaapi_stack_pushdata(thief_stack, sizeof(Self_t)));
+        output_work = kaapi_task_argst(thief_task, Self_t);
+
+        output_work->_iend = local_end;
+        output_work->_ibeg = output_work->_iend-bloc;
+        output_work->_pred = pred;
+        ckaapi_assert( output_work->_iend - output_work->_ibeg >0);
+        kaapi_stack_pushtask( thief_stack );
 
 #if defined(LOG)
-          std::cout << request[i]->_index 
-                    << "::Extract from " << stealcontext->_stack->_index 
-                    << " work [" << *output_work->_ibeg 
-                    << ":" << *output_work->_iend << "]" << std::endl;
+        std::cout << request[i]->_index 
+                  << "::Extract from " << stealcontext->_stack->_index 
+                  << " work [" << *output_work->_ibeg 
+                  << ":" << *output_work->_iend << "]" << std::endl;
 #endif
 
-          /* update end of the local work !! */
-          local_end  = output_work->_ibeg;
+        /* update end of the local work !! */
+        local_end  = output_work->_ibeg;
 
-          /* reply ok (1) to the request */
-          kaapi_request_reply( request[i], stealcontext, &thief_entrypoint, 1, KAAPI_SELF_FINALIZE_FLAG);
-        }
-        else {
-          /* reply failed (=last 0 in parameter) to the request */
-          kaapi_request_reply( request[i], stealcontext, 0, 0, KAAPI_DEFAULT_FINALIZE_FLAG);
-        }
+        /* reply ok (1) to the request */
+        kaapi_request_reply( stack, task, &request[i], thief_stack, 1 );
+        ++reply_count;
         --count; 
       }
       ++i;
     }
     /* mute the input work !! */
-    iend = local_end;
-    kaapi_assert_debug( iend - ibeg >0);
+    _macro_iend = local_end;
+    kaapi_assert_debug( _macro_iend - _ibeg >0);
+    return reply_count;
   }
 
-  static int static_splitter( kaapi_task_t* task, int count, kaapi_request_t* request )
+  static int static_splitter( kaapi_stack_t* stack, kaapi_task_t* task, int count, kaapi_request_t* request )
   {
     Self_t* self_work = kaapi_task_argst(task, Self_t);
-    return self_work->splitter( task, count, request );
+    return self_work->splitter( stack, task, count, request );
   }
 
 
@@ -118,24 +119,13 @@ public:
       (FindIfStruct<InputIterator, Predicate>* )victim_data;
     InputIterator iend = (InputIterator)iend_data;
 
-#if defined(LOG)
-    std::cout << "In reducer : ifound_thief " << thief_work->_sc->_stack->_index << " ="  << *thief_work->_ifound << std::endl;
-    std::cout << "In reducer : ifound_victim " << victim_work->_sc->_stack->_index << " =" << *victim_work->_ifound << std::endl;
-#endif
-
     if (victim_work->_ifound != iend)
     {
-#if defined(LOG)
-      std::cout << "Victim has found the work !!!" << std::endl;
-#endif
       return;
     }
 
     if (thief_work->_ifound != thief_work->_iend)
     {
-#if defined(LOG)
-      std::cout << "Thief " << thief_work->_sc->_stack->_index << " has found the work !!!" << std::endl;
-#endif
       victim_work->_ifound = thief_work->_ifound;
       return;
     }
@@ -148,11 +138,6 @@ public:
   {
     FindIfStruct<InputIterator, Predicate>* victim_work = 
       (FindIfStruct<InputIterator, Predicate>* )victim_data;
-#if defined(LOG)
-    std::cout << thief_work->_sc->_stack->_index 
-              << "::Preempted by " << victim_work->_sc->_stack->_index 
-              << std::endl; 
-#endif
     thief_work->_ifound = iend;
     return 1;
   }
@@ -165,9 +150,6 @@ public:
 template<class InputIterator, class Predicate>
 void FindIfStruct<InputIterator, Predicate>::doit(kaapi_task_t* task, kaapi_stack_t* stack)
 {
-  /* local iterator for the macro loop */
-  InputIterator macro_iend;
-
   /* local iterator for the nano loop */
   InputIterator nano_iend;
   
@@ -177,35 +159,34 @@ void FindIfStruct<InputIterator, Predicate>::doit(kaapi_task_t* task, kaapi_stac
   while (_ibeg != _iend)
   {
     /* macro loop */
-    macro_iend = _ibeg + unit_macro_step;
-    if ((_iend - macro_iend) <0 ) macro_iend = _iend;
-    _ifound = macro_iend; 
+    _macro_iend = _ibeg + unit_macro_step;
+    if ((_iend - _macro_iend) <0 ) _macro_iend = _iend;
+    _ifound = _macro_iend; 
     
     /* amount of work before testing request */
     int unit_size = 512;
 
-    while (_ibeg != macro_iend)
+    while (_ibeg != _macro_iend)
     {
       if (kaapi_preemptpoint( task, &preempt, this, _iend )) return;  
 
       /* definition of the steal point where steal_work may be called in case of steal request 
          -here size is pass as parameter and updated in case of steal.
       */
-      kaapi_stealpoint( stack, task, &splitter, _ibeg, macro_iend, _pred );
+      kaapi_stealpoint( stack, task, &splitter );
 
-      if (unit_size > macro_iend-_ibeg) unit_size = macro_iend-_ibeg;
+      if (unit_size > macro_iend-_ibeg) unit_size = _macro_iend-_ibeg;
       nano_iend = _ibeg + unit_size;
       
       /* sequential computation */
       _ifound = std::find_if( _ibeg, nano_iend, _pred);
       if (_ifound != nano_iend)
       {
+        /* preempt my thiefs */
+        kaapi_pre( stack, task)
+
         /* finalize my thiefs */
-#if defined(LOG)
-        std::cout << _sc->_stack->_index << ":: found value: " << *_ifound 
-                  << " @:" << _ifound << std::endl;
-#endif
-        kaapi_finalize_steal( _sc, this, &reducer, this, nano_iend );
+        kaapi_finalize_steal( stack, task)
         return;
       }
       _ibeg = nano_iend;

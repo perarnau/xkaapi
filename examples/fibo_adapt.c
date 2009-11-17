@@ -1,34 +1,47 @@
-#include "kaapi_task.h"
-#include "kaapi_time.h"
-#include "kaapi_error.h"
+#include "kaapi.h"
+#include <string.h>
 
-#define KAAPI_EVENT_STEAL 1
-#define KAAPI_EVENT_EXEC 0
+/** C Adaptive version of fibo
+*/
+typedef struct fibo_arg_t {
+    int n;
+    int* res;
+    kaapi_stack_t* stack;
+} fibo_arg_t;
 
-void fibo_body( kaapi_stack_t* stack, int n, int* result )
+void fibo( kaapi_stack_t* stack, int n, int* result )
 {
-    int result1;
-    int result2;
+  int result1;
+  int result2;
 
-    void splitter( int event, kaapi_stack_t* thief_stack )
-    { 
-      typedef struct arg_fibo {
-        int n;
-        int* res;
-      } arg_fibo;
-      void entrypoint( kaapi_task_t* task, kaapi_stack_t* stack ) 
-      {
-        arg_fibo* a = (arg_fibo*)task->sp;
-        fibo_body( stack, a->n, a->res );
-      }
-      kaapi_task_t* task = kaapi_stack_top(thief_stack);
-      arg_fibo* a = (arg_fibo*)kaapi_stack_pushdata( thief_stack, sizeof(arg_fibo));
-      task->sp = a;
-      a->n   = n-1;
-      a->res = &result2;
-      task->body[KAAPI_EVENT_EXEC] = (kaapi_task_body_t)&entrypoint;
-      kaapi_stack_push( thief_stack );
+  int splitter( kaapi_stack_t* victim_stack, kaapi_task_t* task, int count, kaapi_request_t* request )
+  { 
+    void entrypoint( kaapi_task_t* task, kaapi_stack_t* stack ) 
+    {
+      fibo_arg_t* arg = kaapi_task_argst( task, fibo_arg_t);
+      fibo( stack, arg->n, arg->res );
     }
+    int i;
+    for (i=0; ; ++i)
+    {
+      if ( kaapi_request_ok(&request[i]) )
+      {
+        fibo_arg_t* arg;
+        kaapi_stack_t* thief_stack = request[i].stack;
+        kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
+        kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
+        kaapi_task_setbody( thief_task, &entrypoint );
+        kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(fibo_arg_t)));
+        arg = kaapi_task_argst(thief_task, fibo_arg_t);                
+        arg->n   = n-1;
+        arg->res = &result2;
+        kaapi_stack_pushtask( thief_stack );
+        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 1 );
+        return 1;
+      }
+    }
+    return 0;
+  }
     
   if (n < 2)
   {
@@ -36,18 +49,24 @@ void fibo_body( kaapi_stack_t* stack, int n, int* result )
   }
   else {
     /* set an action to reply to a steal request*/
-    kaapi_task_t* task = kaapi_stack_top(stack);
-    task->event = KAAPI_TASK_F_ADAPTIVE|KAAPI_EVENT_STEAL;
-    task->body[KAAPI_EVENT_STEAL] = &splitter;
-    kaapi_stack_push( stack );
-        
-    /* recursive call */
-    fibo_body( stack, n-2, &result2 );
+    fibo_arg_t* arg;
+    kaapi_task_t* task = kaapi_stack_toptask(stack);
+    kaapi_task_init( stack, task, KAAPI_TASK_ADAPTIVE);
+    kaapi_task_setargs( task, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)));
+    arg = kaapi_task_argst(task, fibo_arg_t);                
+    arg->n   = n-1;
+    arg->res = &result1;
+    kaapi_stack_pushtask( stack );
+
+    /* recursive sequential call */
+    task->splitter = &splitter;
+    fibo( stack, n-2, &result2 );
+    task->splitter = 0;
     
     if (kaapi_finalize_steal(stack, task) == 0) 
     {
       /* no theft task, do it in sequential on n-1 */
-      fibo_body(stack, n-1, &result1 );
+      fibo(stack, n-1, &result1 );
     } /* else wait */
 
     /* return with sum */
@@ -59,24 +78,18 @@ void fibo_body( kaapi_stack_t* stack, int n, int* result )
 int main(int argc, char** argv)
 {
   int err = 0;
-  kaapi_stack_t stack;
-  kaapi_stack_alloc(&stack, 1024, 1024);
-
-  printf("sizeof(kaapi_task_t)=%i\n", sizeof(kaapi_task_t));
   int result = 0;
-  double t0 = kaapi_get_elapsedtime();
-  fibo_body( &stack, atoi(argv[1]), &result );
+  double t0, t1;
+  
+  printf("sizeof(kaapi_task_t)=%lu\n", sizeof(kaapi_task_t));
+  printf("sizeof(kaapi_stack_t)=%lu\n", sizeof(kaapi_stack_t));
 
-#if 1
-  do {
-//    fibo_body( maintask, &stack ); err = 1;
-    kaapi_stack_taskexecall(&stack);
-  } while (!kaapi_stack_isempty(&stack));
-#endif
-  double t1 = kaapi_get_elapsedtime();
+  t0 = kaapi_get_elapsedtime();
+  fibo( kaapi_self_stack(), atoi(argv[1]), &result );
+  t1 = kaapi_get_elapsedtime();
+
   if ((err != 0) && (err != ENOEXEC)) printf("error in executing task: %i, '%s'\n", err, strerror(err) );
   printf("Fibo(%i) = %i *** Time: %e(s)\n", atoi(argv[1]), result, t1-t0 );
   
-  kaapi_stack_free(&stack);
   return 0;
 }
