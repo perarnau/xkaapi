@@ -766,6 +766,8 @@ static inline int kaapi_request_ok( kaapi_request_t* kpsr )
     and then pass arg_victim argument to the victim and return !=0 value
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
+
+   TODO 
 */
 extern int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_victim );
 
@@ -775,6 +777,8 @@ extern int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task
     and then pass arg_victim argument to the victim and call the reducer function with extra arguments.
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
+
+   TODO 
 */
 extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_reducer_t reducer, void* arg_victim, ...);
 
@@ -783,6 +787,8 @@ extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_t
     and then pass arg_victim argument to the victim and call the reducer function with extra arguments.
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
+
+   TODO 
 */
 #define kaapi_preemptpoint_macro( stack, task, reducer, arg_victim, ...) (0)
 
@@ -828,6 +834,7 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
       int (*)( kaapi_task_t* task, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 
+   TODO 
 */
 extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_thief, kaapi_task_reducer_t reducer, ... );  
 
@@ -843,12 +850,14 @@ extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, vo
       int (*)( kaapi_task_t* task, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 
+   TODO
 */
 #define kaapi_preempt_nextthief_macro( stack, task, arg_thief, reducer, ... ) 0
 
 
 /** \ingroup ADAPTIVE
     Wait the end of all the stealer of the adaptive task 
+    TODO with preemption
 */
 extern int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task );
 
