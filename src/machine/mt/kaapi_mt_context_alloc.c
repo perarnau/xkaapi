@@ -69,8 +69,8 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   /* round to the nearest closest value */
   size_task = default_param.stacksize / 2;
   size_data = default_param.stacksize - size_task;
-  size_task = (size_task + sizeof(kaapi_task_t) -1) / sizeof(kaapi_task_t);
-  size_data = (size_data + KAAPI_MAX_DATA_ALIGNMENT -1) / KAAPI_MAX_DATA_ALIGNMENT;
+  size_task = ((size_task + sizeof(kaapi_task_t) -1) / sizeof(kaapi_task_t)) * sizeof(kaapi_task_t);
+  size_data = ((size_data + KAAPI_MAX_DATA_ALIGNMENT -1) / KAAPI_MAX_DATA_ALIGNMENT) * KAAPI_MAX_DATA_ALIGNMENT;
   
   /* allocate a stack */
   pagesize = getpagesize();
