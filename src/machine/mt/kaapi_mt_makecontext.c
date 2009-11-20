@@ -150,10 +150,10 @@ int kaapi_makecontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, vo
 
 /** This method is only call during the first call to the entrypoint on the context
 */
-static void kaapi_trampoline_context( kaapi_thread_context_t* shouldbe_ctxt )
+static void __attribute__((unused)) kaapi_trampoline_context ( kaapi_thread_context_t* shouldbe_ctxt )
 {
 #if defined(KAAPI_USE_UCONTEXT)
-  kaapi_thread_context_t* ctxt = shouldbe_ctxt;
+  kaapi_thread_context_t* ctxt __attribute__((unused))= shouldbe_ctxt;
 #else
 #if defined(KAAPI_USE_APPLE) && defined(KAAPI_USE_ARCH_PPC)
   /* should be parameter, but ... ? */
