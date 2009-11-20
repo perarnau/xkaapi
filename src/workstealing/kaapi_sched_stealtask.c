@@ -64,3 +64,10 @@ int kaapi_sched_stealtask( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_
 
   return retval;
 }
+
+
+void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count )
+{
+  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, count );
+  kaapi_assert_debug( *stack->hasrequest >= 0 );
+}

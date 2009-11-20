@@ -1,12 +1,13 @@
 /*
+** kaapi_task_signal.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:21:00 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,40 +43,37 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdio.h>
 
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+/**
+*/
+static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-  kaapi_assert_debug( stack != 0 );
-  if (retval)
-  {
-    kaapi_task_t* sig;
-    
-    if (kaapi_task_isadaptive(task))
-    {
-      kaapi_taskadaptive_t* ta = task->sp;
-      kaapi_assert_debug( ta !=0 );
-      KAAPI_ATOMIC_INCR( &ta->thievescount );
-    }
-    else {
-      kaapi_assert_debug( task->body == &kaapi_suspend_body);
-    }
-    sig = kaapi_stack_toptask( thief_stack );
-    kaapi_task_init(thief_stack, sig, KAAPI_TASK_STICKY | (kaapi_task_isadaptive(task) ? KAAPI_TASK_ADAPTIVE : 0U) );
-    kaapi_task_setbody( sig, &kaapi_tasksig_body );
-    kaapi_task_setargs( sig, task );
-    kaapi_stack_pushtask( thief_stack );
-
-    request->status = KAAPI_REQUEST_S_EMPTY;
-/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
-    request->reply->data = thief_stack;
-    kaapi_writemem_barrier();
-    request->reply->status = KAAPI_REQUEST_S_SUCCESS;
-  }
-  else {
-    request->status = KAAPI_REQUEST_S_EMPTY;
-/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
-    kaapi_writemem_barrier();
-    request->reply->status = KAAPI_REQUEST_S_FAIL;
-  }
-  return 0;
+  printf("IN %s\n", __PRETTY_FUNCTION__ );
 }
+
+
+/**
+*/
+void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
+{
+/*
+  printf("Thief end, @stack: 0x%x\n", stack);
+  fflush( stdout );
+*/
+  kaapi_task_t* task2sig;
+
+  /* flush in memory all pending write */  
+  kaapi_writemem_barrier();
+
+  task2sig = kaapi_task_argst( task, kaapi_task_t);
+  if (kaapi_task_isadaptive(task))
+  {
+    kaapi_taskadaptive_t* ta = task2sig->sp;
+    kaapi_assert_debug( ta !=0 );
+    KAAPI_ATOMIC_DECR( &ta->thievescount );
+  } else {
+    task2sig->body = &kaapi_aftersteal_body;
+  }
+}
+

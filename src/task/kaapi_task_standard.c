@@ -56,8 +56,7 @@ void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
 */
 void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-/*  kaapi_stack_restore_frame( stack, &task->param.frame ); */
-   kaapi_frame_t* frame = (kaapi_frame_t*)task;
+   kaapi_frame_t* frame = kaapi_task_argst( task, kaapi_frame_t);
    kaapi_stack_restore_frame( stack, frame ); 
 }
 
@@ -67,34 +66,4 @@ void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
 }
 
-
-/**
-*/
-static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
-{
-}
-
-/**
-*/
-void kaapi_sig_body( kaapi_task_t* task, kaapi_stack_t* stack)
-{
-/*
-  printf("Thief end, @stack: 0x%x\n", stack);
-  fflush( stdout );
-*/
-  kaapi_task_t* task2sig;
-
-  /* flush in memory all pending write */  
-  kaapi_writemem_barrier();
-
-  task2sig = kaapi_task_argst( task, kaapi_task_t);
-  if (kaapi_task_isadaptive(task))
-  {
-    kaapi_taskadaptive_t* ta = task2sig->sp;
-    kaapi_assert_debug( ta !=0 );
-    KAAPI_ATOMIC_DECR( &ta->thievescount );
-  } else {
-    task2sig->body = &kaapi_aftersteal_body;
-  }
-}
 

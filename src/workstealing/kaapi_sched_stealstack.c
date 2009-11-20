@@ -1,12 +1,14 @@
 /*
+** kaapi_sched_steal.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:21:00 2009
+** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@imag.fr
+** christophe.laferriere@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,39 +45,67 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
-{
-  kaapi_assert_debug( stack != 0 );
-  if (retval)
-  {
-    kaapi_task_t* sig;
-    
-    if (kaapi_task_isadaptive(task))
-    {
-      kaapi_taskadaptive_t* ta = task->sp;
-      kaapi_assert_debug( ta !=0 );
-      KAAPI_ATOMIC_INCR( &ta->thievescount );
-    }
-    else {
-      kaapi_assert_debug( task->body == &kaapi_suspend_body);
-    }
-    sig = kaapi_stack_toptask( thief_stack );
-    kaapi_task_init(thief_stack, sig, KAAPI_TASK_STICKY | (kaapi_task_isadaptive(task) ? KAAPI_TASK_ADAPTIVE : 0U) );
-    kaapi_task_setbody( sig, &kaapi_tasksig_body );
-    kaapi_task_setargs( sig, task );
-    kaapi_stack_pushtask( thief_stack );
+/** 
+1/ entièrement coopératif !
+  task -> pile de task
+  begin_concurrent( event -> action ) & mask
+  event= steal, stop, save, restore:
+      steal(task) -> task
+      stop() -> ()
+      save(taks) -> continuation task
+      restore(continuation task)->()
 
-    request->status = KAAPI_REQUEST_S_EMPTY;
-/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
-    request->reply->data = thief_stack;
-    kaapi_writemem_barrier();
-    request->reply->status = KAAPI_REQUEST_S_SUCCESS;
+2/ comment le rendre concurrent ?
+   ABA problème -> ll/sc ou cas + version
+   1 cas: task: pc & sp ?  pc->sp
+*/
+int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* task )
+{
+  kaapi_task_t*  task_top;
+  kaapi_task_t*  task_bot;
+  int count;
+  int replycount;  
+
+  kaapi_readmem_barrier();
+  count = KAAPI_ATOMIC_READ( (kaapi_atomic_t*)stack->hasrequest );
+  if (count ==0) return 0;
+
+  if (kaapi_stack_isempty( stack)) return ESRCH;
+
+  /* reset dfg constraints evaluation */
+  
+  /* iterate through all the tasks from task_bot until task_top */
+  task_bot = kaapi_stack_bottomtask(stack);
+  task_top = kaapi_stack_toptask(stack);
+
+  replycount = 0;
+
+  while ((count >0) && (task_bot !=0) && (task_bot != task_top))
+  {
+    if (task_bot == 0) return replycount;
+
+    kaapi_assert_debug( task_bot != 0 );
+    /* task body == 0 no task after can stop 
+       task body == retn : no steal
+       
+    */
+    if (task_bot->splitter !=0)
+    {
+      int retval = (*task_bot->splitter)(stack, task_bot, count, stack->requests);
+      count -= retval;
+      replycount += retval;
+      kaapi_assert_debug( count >=0 );
+    }
+
+    /* test next task */  
+    ++task_bot;
   }
-  else {
-    request->status = KAAPI_REQUEST_S_EMPTY;
-/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
-    kaapi_writemem_barrier();
-    request->reply->status = KAAPI_REQUEST_S_FAIL;
+
+  if (replycount >0)
+  {
+    KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replycount );
+    kaapi_assert_debug( *stack->hasrequest >= 0 );
   }
-  return 0;
+
+  return replycount;
 }

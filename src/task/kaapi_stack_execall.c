@@ -43,6 +43,9 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <unistd.h>
+
+#define KAAPI_TRACE_DEBUG
 
 /**kaapi_stack_taskexecall
 */
@@ -53,6 +56,11 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   char*                  saved_sp_data;
   kaapi_task_t*          retn;
   void** arg_retn;
+  kaapi_task_body_t      body;
+
+#if defined(KAAPI_TRACE_DEBUG)  
+  int level =0;
+#endif  
 
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
@@ -60,27 +68,46 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
 
 redo_work: 
   {
-    if (task->body ==0) goto next_task;
+    if (task->body ==0) return 0;
     if (task->body == &kaapi_suspend_body)
     {
       if (kaapi_task_issync(task))
+      {
+        printf("Would block IN %s\n", __PRETTY_FUNCTION__ );
         return EWOULDBLOCK;
+      }
 
+      /* ignore the task */
       ++stack->pc;
       task = stack->pc;
       goto redo_work;
     }
-#if 0 /* optimization at the expense of a test... */
-    else if (task->body[0] == &kaapi_retn_body) 
+    else if (task->body == &kaapi_retn_body) 
+    {
       /* do not save stack frame before execution */
       kaapi_retn_body(task, stack);
+      ++stack->pc;
+      task = stack->pc;
+#if defined(KAAPI_TRACE_DEBUG)  
+      --level;
+#endif  
+      goto redo_work;
+    }
     else
-#endif
     {
       saved_sp      = stack->sp;
       saved_sp_data = stack->sp_data;
-      (*task->body)(task, stack);
+#if defined(KAAPI_TRACE_DEBUG)  
+      { int k; for (k=0; k<level; ++k) printf("--------"); }
+      printf("level:%i  ", level);
+#endif  
+      body = task->body;
+      task->format = body;
+      (*body)(task, stack);
       task->body = 0;
+      /* process steal request */
+      kaapi_stealpoint_isactive( stack, task );
+    
     
       /* push restore_frame task if pushed tasks */
       if (saved_sp < stack->sp)
@@ -97,6 +124,9 @@ redo_work:
 
         /* update pc to the first forked task */
         task = stack->pc = saved_sp;
+#if defined(KAAPI_TRACE_DEBUG)  
+        ++level;
+#endif  
         goto redo_work;
       }
 
@@ -105,7 +135,7 @@ redo_work:
       goto redo_work;
     }
   }
-next_task:
+/*next_task: */
   task = ++stack->pc;
   if (stack->pc >= stack->sp) return 0;
   goto redo_work;
