@@ -103,7 +103,11 @@
 /* Define the maximum number of keys. */
 #cmakedefine KAAPI_KEYS_MAX ${KAAPI_KEYS_MAX}
 
-#define KAAPI_CACHE_LINE 64
+/* Define the maximum alignment constraint for dat. */
+#cmakedefine KAAPI_MAX_DATA_ALIGNMENT ${KAAPI_MAX_DATA_ALIGNMENT}
+
+/* Define the cache line size. */
+#cmakedefine KAAPI_CACHE_LINE ${KAAPI_CACHE_LINE}
 
 /* */
 #cmakedefine KAAPI_SIZEOF_VOIDP ${KAAPI_SIZEOF_VOIDP}

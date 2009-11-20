@@ -57,6 +57,28 @@ extern "C" {
 #include "kaapi.h"
 #include "kaapi_error.h"
 
+#if defined(KAAPI_DEBUG)
+#  include <string.h>
+#  define kaapi_assert_debug_m(val, x, msg) \
+      { int __kaapi_err = x; \
+        if (__kaapi_err != val) \
+        { \
+          printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+        }\
+      }
+#else
+#  define kaapi_assert_debug_m(val, x, msg)
+#endif
+
+/** Global hash table of all formats: body -> fmt
+*/
+extern kaapi_format_t* kaapi_all_format_bybody[256];
+
+/** Global hash table of all formats: fmtid -> fmt
+*/
+extern kaapi_format_t* kaapi_all_format_byfmtid[256];
+
+
 /* Fwd declaration 
 */
 struct kaapi_processor_t;
@@ -101,7 +123,6 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
   (pkr)->status = KAAPI_REQUEST_S_EMPTY; (pkr)->reply = 0; (pkr)->stack = 0
 
 
-
 #include "kaapi_machine.h"
 
 
@@ -123,6 +144,10 @@ typedef struct kaapi_rtparam_t {
 
 extern kaapi_rtparam_t default_param;
 
+
+/** COmpute a hash value from a string
+*/
+extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
 /* ============================= Commun function for server side (no public) ============================ */
@@ -163,10 +188,37 @@ extern int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level
     Never return from this function...
     If proc is null pointer, then the function allocate a new kaapi_processor_t and 
     assigns it to the current processor.
-    This method may be called by 'host' thread in order to become executor thread.
+    This method may be called by 'host' current thread in order to become an executor thread.
     The method returns only in case of terminaison.
 */
 extern void kaapi_sched_idle ( kaapi_processor_t* proc );
+
+/** \ingroup WS
+    Suspend the current context due to unsatisfied condition and do stealing until the condition becomes true.
+    \retval 0 in case of success
+    \retval EINTR in case of termination detection
+    \TODO reprendre specs
+*/
+int kaapi_sched_suspend ( kaapi_processor_t* kproc );
+
+
+/** \ingroup WS
+    \TODO faire specs ici
+*/
+kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc );
+
+/** \ingroup WS
+    The method starts a work stealing operation and return until a sucessfull steal
+    operation or in case of termination detection.
+    The kprocessor kproc should have its stack ready to receive a work after a steal request.
+    If the stack returned is not 0, either it is equal to the stack of the processor or it may
+    be different. In the first case, some work has been insert on the top of the stack. On the
+    second case, a whole stack has been stolen. It is to the responsability of the caller
+    to treat the both case.
+    \retval 0 in case of termination detection
+    \retval a pointer to a stack that is the result of one workstealing operation.
+*/
+extern kaapi_stack_t* kaapi_sched_steal ( kaapi_processor_t* kproc );
 
 /** \ingroup WS
     Advance polling of request for the current running thread.
@@ -186,29 +238,6 @@ extern int kaapi_task_splitter_dfg(struct kaapi_stack_t* stack, struct kaapi_tas
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
-/* ........................................ PRIVATE INTERFACE ........................................*/
-/** \ingroup STACK
-    The function kaapi_stack_alloc() allocates in the heap a stack with at most count number of tasks.
-    If successful, the kaapi_stack_alloc() function will return zero.  
-    Otherwise, an error number will be returned to indicate the error.
-    This function is machine dependent.
-    \param stack INOUT a pointer to the kaapi_stack_t to allocate.
-    \param count_task IN the maximal number of tasks in the stack.
-    \param size_data IN the amount of stack data.
-    \retval ENOMEM cannot allocate memory.
-    \retval EINVAL invalid argument: bad stack pointer or capacity is 0.
-*/
-extern int kaapi_stack_alloc( kaapi_stack_t* stack, kaapi_uint32_t count_task, kaapi_uint32_t size_data );
-
-/** \ingroup STACK
-    The function kaapi_stack_free() free the stack successfuly allocated with kaapi_stack_alloc.
-    If successful, the kaapi_stack_free() function will return zero.  
-    Otherwise, an error number will be returned to indicate the error.
-    This function is machine dependent.
-    \param stack INOUT a pointer to the kaapi_stack_t to allocate.
-    \retval EINVAL invalid argument: bad stack pointer.
-*/
-extern int kaapi_stack_free( kaapi_stack_t* stack );
 
 /** Post a request to a given k-processor
   This method posts a request to victim k-processor. 
@@ -271,9 +300,18 @@ static inline kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply )
   return reply->data; 
 }
 
-/** Return true if the whole application is terminated 
+/** Body of task steal created on thief stack to execute a task
 */
-/*extern int kaapi_isterminated(void);*/
+void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+
+/** Args for tasksteal
+*/
+typedef struct kaapi_tasksteal_arg_t {
+  kaapi_task_t*     origin_task;
+  kaapi_task_body_t origin_body;
+  void**            origin_task_args;
+} __attribute__((aligned(KAAPI_MAX_DATA_ALIGNMENT))) kaapi_tasksteal_arg_t;
+
 
 /** Here: kaapi_atomic_t + functions ; termination detecting barrier, see mt_machine.h
 */

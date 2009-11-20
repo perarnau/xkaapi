@@ -10,8 +10,8 @@
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -O3 -std=c99")
-#add_definitions ( "-Wall -pedantic -g -DKAAPI_DEBUG")
+#add_definitions ( "-Wall -pedantic -Os -std=c99")
+add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG")
 # -std=c99 -g" )
 
 #################
@@ -37,18 +37,26 @@ add_library (xkaapi SHARED
   workstealing/kaapi_sched_select_rand_level.c
   workstealing/kaapi_sched_select_rand_first.c
   workstealing/kaapi_sched_select_rand.c
-  workstealing/kaapi_sched_steal.c
+  workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
+  workstealing/kaapi_sched_idle.c
   workstealing/kaapi_request_reply.c
-  misc/kaapi_init.c
-  misc/kaapi_time.c
+  workstealing/kaapi_sched_wakeup.c
+  workstealing/kaapi_sched_suspend.c
   task/kaapi_stack_init.c
   task/kaapi_stack_clear.c
   task/kaapi_stack_execall.c
   task/kaapi_stack_execchild.c
   task/kaapi_task_standard.c
+  task/kaapi_task_signal.c
+  task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_fmt_taskregister.c
+  task/kaapi_fmt_structregister.c
+  task/kaapi_fmt_resolvebybody.c
+  task/kaapi_fmt_resolvebyfmtid.c
+#  task/kaapi_fmt_basictype.c
   machine/mt/kaapi_mt_processorinit.c
   machine/mt/kaapi_mt_topology.c
   machine/mt/kaapi_mt_setconcurrency.c
@@ -57,12 +65,14 @@ add_library (xkaapi SHARED
   machine/mt/kaapi_mt_setcontext.c
   machine/mt/kaapi_mt_makecontext.c
   machine/mt/kaapi_mt_selfstack.c
-  machine/mt/kaapi_mt_sched_idle.c
-#  machine/mt/kaapi_mt_sched_suspend.c
+  machine/mt/kaapi_mt_sched_steal.c
   machine/mt/kaapi_mt_sched_advance.c
-  machine/mt/kaapi_mt_stack_alloc.c
-  machine/mt/kaapi_mt_stack_free.c
+  machine/mt/kaapi_mt_context_alloc.c
+  machine/mt/kaapi_mt_context_free.c
   machine/mt/kaapi_mt_init.c
+  misc/kaapi_init.c
+  misc/kaapi_time.c
+  misc/kaapi_hashvalue.c
 )
 
 # Version number :
@@ -73,18 +83,26 @@ add_library (xkaapi-static STATIC
   workstealing/kaapi_sched_select_rand_level.c
   workstealing/kaapi_sched_select_rand_first.c
   workstealing/kaapi_sched_select_rand.c
-  workstealing/kaapi_sched_steal.c
+  workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
   workstealing/kaapi_request_reply.c
-  misc/kaapi_init.c
-  misc/kaapi_time.c
+  workstealing/kaapi_sched_idle.c
+  workstealing/kaapi_sched_wakeup.c
+  workstealing/kaapi_sched_suspend.c
   task/kaapi_stack_init.c
   task/kaapi_stack_clear.c
   task/kaapi_stack_execall.c
   task/kaapi_stack_execchild.c
   task/kaapi_task_standard.c
+  task/kaapi_task_signal.c
+  task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_fmt_taskregister.c
+  task/kaapi_fmt_structregister.c
+  task/kaapi_fmt_resolvebybody.c
+  task/kaapi_fmt_resolvebyfmtid.c
+#  task/kaapi_fmt_basictype.c
   machine/mt/kaapi_mt_processorinit.c
   machine/mt/kaapi_mt_topology.c
   machine/mt/kaapi_mt_setconcurrency.c
@@ -93,12 +111,14 @@ add_library (xkaapi-static STATIC
   machine/mt/kaapi_mt_setcontext.c
   machine/mt/kaapi_mt_makecontext.c
   machine/mt/kaapi_mt_selfstack.c
-  machine/mt/kaapi_mt_sched_idle.c
-#  machine/mt/kaapi_mt_sched_suspend.c
+  machine/mt/kaapi_mt_sched_steal.c
   machine/mt/kaapi_mt_sched_advance.c
-  machine/mt/kaapi_mt_stack_alloc.c
-  machine/mt/kaapi_mt_stack_free.c
+  machine/mt/kaapi_mt_context_alloc.c
+  machine/mt/kaapi_mt_context_free.c
   machine/mt/kaapi_mt_init.c
+  misc/kaapi_init.c
+  misc/kaapi_time.c
+  misc/kaapi_hashvalue.c
 )
 
 set_target_properties(xkaapi-static PROPERTIES OUTPUT_NAME "xkaapi")
@@ -174,6 +194,28 @@ try_run (
 #  ${CMAKE_BINARY_DIR}
 #  ${CMAKE_SOURCE_DIR}/config/check_pthread_destructor_iterations.c
 #  RUN_OUTPUT_VARIABLE KAAPI_DESTRUCTOR_ITERATIONS )
+
+
+# Get the cache line size :
+if (CMAKE_HOST_APPLE)
+  execute_process (
+    COMMAND sysctl -n hw.cachelinesize
+    RESULT_VARIABLE KAAPI_CACHE_LINE_RUN_RESULT
+    OUTPUT_VARIABLE KAAPI_CACHE_LINE
+  )
+else (CMAKE_HOST_APPLE)
+endif (CMAKE_HOST_APPLE)
+
+if (KAAPI_CACHE_LINE)
+  message ("++ Cache linesize found")
+else (KAAPI_CACHE_LINE)
+  message ("++ Cache linesize not found, use 64")
+  set(KAAPI_CACHE_LINE 64)
+endif (KAAPI_CACHE_LINE)
+
+
+# Get maximal data constraint alignment for natural type, assume it is double or void* on 64bits machine
+set( KAAPI_MAX_DATA_ALIGNMENT 8)
 
 ## SET CONSTANTS END ##
 #######################
