@@ -231,7 +231,7 @@ void marc_problem ( double* begin, double* end )
 
 /**
 */
-int main( int argc, char* argv )
+int main( int argc, char** argv )
 {
   /* */
   double* buffer = new double[8192];
