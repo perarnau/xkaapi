@@ -43,8 +43,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <unistd.h>
-#include <sys/mman.h>
 
 /*
 */
@@ -53,8 +51,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   size_t k_stacksize;
   size_t k_sizetask;
   size_t k_sizedata;
-  size_t pagesize;
-  size_t count_pages;
   char* buffer;
   
   kproc->kid          = -1U;
@@ -66,27 +62,21 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kaapi_listrequest_init( &kproc->hlrequests );
 
   KAAPI_STACK_CLEAR( &kproc->lsuspend );
+  KAAPI_STACK_CLEAR( &kproc->lfree );
 
   kproc->fnc_selecarg = 0;
   kproc->fnc_select   = default_param.wsselect;
   
   /* allocate a stack */
   k_stacksize = default_param.stacksize;
-  pagesize = getpagesize();
-  count_pages = (k_stacksize + pagesize -1 ) / pagesize;
-  k_stacksize = count_pages*pagesize;
-  buffer = (char*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
-  if (buffer == (char*)-1) {
-    int err __attribute__((unused)) = errno;
-    return ENOMEM;
-  }
-  
   k_sizetask = k_stacksize / 2;
   k_sizedata = k_stacksize - k_sizetask;
 
-  kaapi_stack_init( &kproc->stack, k_sizetask, buffer, k_sizedata, buffer + k_sizetask);
-  kproc->stack.requests   = kproc->hlrequests.requests;
-  kproc->stack.hasrequest = (volatile int*)&kproc->hlrequests.count;
+  kproc->ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
+  buffer += sizeof(kaapi_thread_context_t);
+  kaapi_stack_init( kproc->ctxt, k_sizetask, buffer, k_sizedata, buffer + k_sizetask);
+  kproc->ctxt->requests   = kproc->hlrequests.requests;
+  kproc->ctxt->hasrequest = (volatile int*)&kproc->hlrequests.count;
 
   return 0;
 }

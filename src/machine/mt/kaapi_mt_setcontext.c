@@ -50,8 +50,8 @@
 int kaapi_setcontext( kaapi_processor_t* proc, const kaapi_thread_context_t* ctxt )
 {
   kaapi_assert_debug( proc == _kaapi_get_current_processor() );
-  proc->stack = ctxt->kstack;
-  proc->stack.requests = proc->hlrequests.requests;
+  *proc->ctxt = *ctxt;
+  proc->ctxt->requests = proc->hlrequests.requests;
   return 0;
 
 #if 0  /* TODO: next version when also saving the stack context */

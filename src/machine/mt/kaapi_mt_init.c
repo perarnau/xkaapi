@@ -100,7 +100,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_setup_topology();
 
   /* set the kprocessor AFTER topology !!! */
-  kaapi_setconcurrency( default_param.cpucount );
+  kaapi_assert_debug_m( 0, kaapi_setconcurrency( default_param.cpucount ), "kaapi_setconcurrency" );
   
   pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
 

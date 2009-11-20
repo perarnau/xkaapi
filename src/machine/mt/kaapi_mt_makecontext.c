@@ -116,12 +116,13 @@
 #endif /* KAAPI_USE_SETJMP */
 
 
-static void kaapi_trampoline_context( struct kaapi_thread_context_t* ctxt );
+static void kaapi_trampoline_context( kaapi_thread_context_t * ctxt );
 
 /*
 */
 int kaapi_makecontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, void (*entrypoint)(void* arg), void* arg )
 {
+#if 0
   ctxt->arg = arg;
   ctxt->entrypoint = entrypoint;
   
@@ -141,6 +142,8 @@ int kaapi_makecontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, vo
 #else 
 #  error "not implemented"  
 #endif  
+
+#endif
   return 0;
 }
 
@@ -178,5 +181,7 @@ static void kaapi_trampoline_context( kaapi_thread_context_t* shouldbe_ctxt )
 #  endif
 #endif
 #endif
+#if 0
   (*ctxt->entrypoint)(ctxt->arg);
+#endif
 }

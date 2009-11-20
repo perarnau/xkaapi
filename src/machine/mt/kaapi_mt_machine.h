@@ -99,20 +99,9 @@ extern volatile int kaapi_isterm;
 
 /** The thread context data structure
     This data structure should be extend in case where the C-stack is required to be suspended and resumed.
+    The data structure inherits from kaapi_stack_t the stackable field in order to be linked in stack.
 */
-typedef struct kaapi_thread_context_t {
-  KAAPI_STACK_FIELD_CELL(struct kaapi_thread_context_t);
-  kaapi_stack_t                  kstack;              /* the kaapi stack */
-#if defined(KAAPI_USE_SETJMP)
-  jmp_buf                        mcontext;
-#elif defined(KAAPI_USE_UCONTEXT)
-  ucontext_t                     mcontext;
-#endif
-  void*                          cstackaddr;
-  size_t                         cstacksize;
-  void                         (*entrypoint)(void*);  /* first call after makecontext */
-  void*                          arg;                 /* arg */
-} kaapi_thread_context_t;
+typedef kaapi_stack_t kaapi_thread_context_t;
 
 /* list of suspended threadcontext */
 typedef struct kaapi_listthreadctxt_t {
@@ -123,7 +112,7 @@ typedef struct kaapi_listthreadctxt_t {
     Higher level context manipulation.
     This function is machine dependent.
 */
-extern int kaapi_makecontext( struct kaapi_processor_t* proc, struct kaapi_thread_context_t* ctxt, 
+extern int kaapi_makecontext( struct kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, 
                               void (*entrypoint)(void* arg), void* arg 
                             );
 
@@ -132,14 +121,14 @@ extern int kaapi_makecontext( struct kaapi_processor_t* proc, struct kaapi_threa
     Assign context onto the running processor proc.
     This function is machine dependent.
 */
-extern int kaapi_setcontext( struct kaapi_processor_t* proc, const struct kaapi_thread_context_t* ctxt );
+extern int kaapi_setcontext( struct kaapi_processor_t* proc, const kaapi_thread_context_t * ctxt );
 
 /** \ingroup WS
     Higher level context manipulation.
     Get the context of the running processor proc.
     This function is machine dependent.
 */
-extern int kaapi_getcontext( struct kaapi_processor_t* proc, struct kaapi_thread_context_t* ctxt );
+extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t * ctxt );
 /*@{*/
 
 
@@ -169,7 +158,7 @@ typedef struct kaapi_listrequest_t {
     TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
 typedef struct kaapi_processor_t {
-  kaapi_stack_t            stack;                         /* current stack (current active thread) */
+  kaapi_thread_context_t*  ctxt;                          /* current stack (next version = current active thread) */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
   kaapi_uint32_t           hlevel;                        /* number of level for this Kprocessor >0 */
   kaapi_uint16_t*          hindex;                        /* id local identifier of request at each level of the hierarchy, size hlevel */
@@ -179,7 +168,8 @@ typedef struct kaapi_processor_t {
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
-  kaapi_listthreadctxt_t   lsuspend;              /* list of suspended stacks */
+  kaapi_listthreadctxt_t   lsuspend;              /* list of suspended context */
+  kaapi_listthreadctxt_t   lfree;                 /* list of free context */
   void*                    fnc_selecarg;          /* arguments for select victim function, 0 at initialization */
   kaapi_selectvictim_fnc_t fnc_select;            /* function to select a victim */
 } kaapi_processor_t;
@@ -191,6 +181,31 @@ extern int kaapi_processor_init( kaapi_processor_t* kproc );
 /*
 */
 extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
+
+/* ........................................ PRIVATE INTERFACE ........................................*/
+/** \ingroup STACK
+    The function kaapi_context_alloc() allocates in the heap a context with a stack containing 
+    at bytes for tasks and bytes for data.
+    If successful, the kaapi_context_alloc() function will return a pointer to a kaapi_thread_context_t.  
+    Otherwise, an error number will be returned to indicate the error.
+    This function is machine dependent.
+    \param kproc IN/OUT the kprocessor that make allocation
+    \param size_data IN the amount of stack data.
+    \retval pointer to the stack 
+    \retval 0 if allocation failed
+*/
+extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc );
+
+/** \ingroup STACK
+    The function kaapi_context_free() free the context successfuly allocated with kaapi_context_alloc.
+    If successful, the kaapi_context_free() function will return zero.  
+    Otherwise, an error number will be returned to indicate the error.
+    This function is machine dependent.
+    \param ctxt INOUT a pointer to the kaapi_thread_context_t to allocate.
+    \retval EINVAL invalid argument: bad stack pointer.
+*/
+extern int kaapi_context_free( kaapi_thread_context_t* ctxt );
+
 
 /** \ingroup WS
     Number of used cores
@@ -217,7 +232,7 @@ extern pthread_key_t kaapi_current_processor_key;
     Returns the current stack of tasks
 */
 #define _kaapi_self_stack() \
-  (&_kaapi_get_current_processor()->stack)
+  (_kaapi_get_current_processor()->ctxt)
 
 
 /* ============================= Hierarchy ============================ */
@@ -428,7 +443,7 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
   reply->status    = KAAPI_REQUEST_S_POSTED;
   req->reply       = reply;
-  req->stack       = &kproc->stack;
+  req->stack       = kproc->ctxt;
   reply->data      = 0;
   req->status      = KAAPI_REQUEST_S_POSTED;
 
