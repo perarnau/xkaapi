@@ -69,41 +69,33 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 #if defined(KAAPI_TRACE_DEBUG)  
     printf("=@0x%x\n", kaapi_data(int, arg0->result));
 #endif
-    fibo_arg_t* argf;
+    fibo_arg_t* argf1;
+    fibo_arg_t* argf2;
     sum_arg_t*  args;
     kaapi_task_t* task_sum;
     kaapi_task_t* task1;
     kaapi_task_t* task2;
 
-    kaapi_access_t result1 = kaapi_stack_pushshareddata(stack, sizeof(int));
-    kaapi_access_t result2 = kaapi_stack_pushshareddata(stack, sizeof(int));
-
     task1 = kaapi_stack_toptask(stack);
-    kaapi_task_init( stack, task1, KAAPI_TASK_DFG);
-    kaapi_task_setbody( task1, &fibo_body );
-    kaapi_task_setargs( task1, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
-    argf = kaapi_task_getargst( task1, fibo_arg_t );
-    argf->n      = arg0->n - 1;
-    argf->result = result1;
+    kaapi_task_initdfg( stack, task1, &fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
+    argf1 = kaapi_task_getargst( task1, fibo_arg_t );
+    argf1->n      = arg0->n - 1;
+    argf1->result = kaapi_stack_pushshareddata(stack, sizeof(int));
     kaapi_stack_pushtask(stack);
 
     task2 = kaapi_stack_toptask(stack);
-    kaapi_task_init( stack, task2, KAAPI_TASK_DFG);
-    kaapi_task_setbody( task2, &fibo_body);
-    kaapi_task_setargs( task2, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
-    argf = kaapi_task_getargst( task2, fibo_arg_t);
-    argf->n      = arg0->n - 2;
-    argf->result = result2;
+    kaapi_task_initdfg( stack, task2, &fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
+    argf2 = kaapi_task_getargst( task2, fibo_arg_t);
+    argf2->n      = arg0->n - 2;
+    argf2->result = kaapi_stack_pushshareddata(stack, sizeof(int));
     kaapi_stack_pushtask(stack);
 
     task_sum = kaapi_stack_toptask(stack);
-    kaapi_task_init( stack, task_sum, KAAPI_TASK_DFG );
-    kaapi_task_setbody( task_sum, &sum_body );
-    kaapi_task_setargs( task_sum, kaapi_stack_pushdata(stack, sizeof(sum_arg_t)) );
+    kaapi_task_initdfg( stack, task_sum, &sum_body, kaapi_stack_pushdata(stack, sizeof(sum_arg_t)) );
     args = kaapi_task_getargst( task_sum, sum_arg_t);
     args->result     = arg0->result;
-    args->subresult1 = result1;
-    args->subresult2 = result2;
+    args->subresult1 = argf1->result;
+    args->subresult2 = argf2->result;
     kaapi_stack_pushtask(stack);    
  }
 }
