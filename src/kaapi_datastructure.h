@@ -270,45 +270,43 @@ if ((q)->_front ==0) (q)->_back = 0; \
 
 /* ========================================================================== */
 /** Generic stack (lifo order)
- Declare a fifo queue necessary data structure for a stack structure
- The type should contains the link field named _next and _prev
- \param name the name of the typedef
- \param type the type of the queue.
+     Declare a fifo queue necessary data structure for a stack structure
+     The type should contains the link field named _next
+     \param type the type of the queue.
  */
 #define KAAPI_STACK_FIELD_CELL( type )\
-type* _next;\
-type* _prev
+    type* _next
 
 /** Generic stack (lifo order)
- Declare a fifo queue necessary data structure for a stack structure
- The type should contains the link field named _next
- \param name the name of the typedef
- \param type the type of the queue.
+     Declare a fifo queue necessary data structure for a stack structure
+     The type should contains the link field named _next
+     \param type the type of the queue.
  */
 #define KAAPI_STACK_DECLARE_FIELD( type )\
-type* _front; \
-type* _back
-
+    type* _front
 
 /** Generic stack (lifo order)
- Declare a stack, a simple linked list of typed element.
- The type should contains the link field named _next
- \param name the name of the typedef
- \param type the type of the queue.
+     Declare a stack, a simple linked list of typed element.
+     The type should contains the link field named _next
+     \param name the name of the typedef
+     \param type the type of the queue.
  */
 #define KAAPI_STACK_DECLARE( name, type )\
 typedef struct name {\
-KAAPI_STACK_DECLARE_FIELD(type);\
+    KAAPI_STACK_DECLARE_FIELD(type);\
 } name;
 
 /** q: stack*
  */
-#define KAAPI_STACK_CLEAR( q) (q)->_front = (q)->_back = 0;
+#define KAAPI_STACK_CLEAR( q) (q)->_front =0
 
 /** q: stack*
  */
-#define KAAPI_STACK_CLEAR_FIELD( q) (q)->_next = (q)->_prev = 0;
+#define KAAPI_STACK_CLEAR_FIELD( q) (q)->_next = 0
 
+/** q: cell*
+ */
+#define KAAPI_STACK_NEXT_FIELD( q) (q)->_next
 
 /** q: stack*
  */
@@ -316,58 +314,36 @@ KAAPI_STACK_DECLARE_FIELD(type);\
 
 /** q: stack*
  */
-#define KAAPI_STACK_BACK( q ) ((q)->_back)
-
-/** q: stack*
- */
 #define KAAPI_STACK_TOP( q ) ((q)->_front)
 
 /** q: stack*
- v: the item to push
+   v: the item to push in the front (top)
  */
 #define KAAPI_STACK_PUSH( q, v ) \
-{ \
-(v)->_prev = (q)->_front; \
-(v)->_next = 0;\
-if ((q)->_front ==0) (q)->_back = (v); \
-else (q)->_front->_next = (v);\
-(q)->_front = (v);\
-}
+  do { \
+    (v)->_next = (q)->_front; \
+    (q)->_front = (v);\
+  } while (0)
 
 /** q: stack*
  */
 #define KAAPI_STACK_POP( q ) \
-{\
-(q)->_front = (q)->_front->_prev;\
-if ((q)->_front ==0) (q)->_back = 0;\
-else (q)->_front->_next =0;\
-}
+  do {\
+    (q)->_front = (q)->_front->_next;\
+  } while(0)
 
 /** q: stack*
- p: previous item, pop the next one if p != front(q)
+ p: previous item, pop the next one v
+ if p ==0, v is the top (front) of the stack
  v: the poped item
  */
-#define KAAPI_STACK_REMOVE( q, p, v ) {\
-if ((p) == (q)->_front) (q)->_front = (v)->_prev; \
-else (p)->_prev = (v)->_next; \
-}
-
-/** Merge l into q
- l should not be empty and becomes empty
- */
-#define KAAPI_STACK_MERGE( q, l) { \
-if ((q)->_front ==0) { \
-(q)->_front = (l)->_front; \
-(q)->_back = (l)->_back;\
-}\
-else { \
-(l)->_back->_prev = (q)->_front;\
-(q)->_front = (l)->_front;\
-}\
-(l)->_front = (l)->_back = 0;\
-}
-
-
+#define KAAPI_STACK_REMOVE( q, p, v ) \
+  do {\
+    if ((p) ==0) KAAPI_STACK_POP(q);\
+    else {\
+      (p)->_next = (v)->_next; \
+    }\
+  } while (0)
 
 
 #endif /* _KAAPI_DATASTRUCTURE_H */
