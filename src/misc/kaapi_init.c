@@ -49,10 +49,29 @@
 #include <sys/sysctl.h>
 #include <unistd.h>
 
-
 /*
 */
 kaapi_rtparam_t default_param;
+
+/** Predefined format
+*/
+kaapi_format_t kaapi_shared_format;
+
+kaapi_format_t kaapi_char_format;
+kaapi_format_t kaapi_short_format;
+kaapi_format_t kaapi_int_format;
+kaapi_format_t kaapi_long_format;
+kaapi_format_t kaapi_longlong_format;
+
+kaapi_format_t kaapi_uchar_format;
+kaapi_format_t kaapi_ushort_format;
+kaapi_format_t kaapi_uint_format;
+kaapi_format_t kaapi_ulong_format;
+kaapi_format_t kaapi_ulonglong_format;
+
+kaapi_format_t kaapi_float_format;
+kaapi_format_t kaapi_double_format;
+
 
 /**
 */
@@ -99,3 +118,47 @@ extern int kaapi_setup_param( int argc, char** argv )
   
   return 0;
 }
+
+
+
+/**
+*/
+#define KAAPI_REGISTER_BASICTYPEFORMAT( formatobject, type ) \
+  static void formatobject##_cstor(void* dest)  { *(type*)dest = 0; }\
+  static void formatobject##_dstor(void* dest) { *(type*)dest = 0; }\
+  static void formatobject##_cstorcopy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
+  static void formatobject##_copy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
+  static void formatobject##_assign( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
+  static inline kaapi_format_t* fnc_##formatobject(void) \
+  {\
+    return &formatobject;\
+  }\
+  static inline void __attribute__ ((constructor)) __kaapi_register_format_##formatobject (void)\
+  { \
+    static int isinit = 0;\
+    if (isinit) return;\
+    isinit = 1;\
+    kaapi_format_structregister( &fnc_##formatobject, \
+                                 #type, sizeof(type), \
+                                 &formatobject##_cstor, &formatobject##_dstor, &formatobject##_cstorcopy, \
+                                 &formatobject##_copy, &formatobject##_assign ); \
+  }
+
+
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_char_format, char)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_short_format, short)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int_format, int)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_long_format, long)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longlong_format, long long)
+
+
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uchar_format, unsigned char)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ushort_format, unsigned short)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint_format, unsigned int)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long)
+
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_float_format, float)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_double_format, double)
+
+
