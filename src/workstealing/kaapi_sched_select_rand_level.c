@@ -54,7 +54,7 @@ int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi
   kaapi_assert_debug( victim !=0 );
 
   if (kproc->hlevel < level) return EINVAL;
-  if (kproc->fnc_selecarg ==0) kproc->fnc_selecarg = (void*)rand();
+  if (kproc->fnc_selecarg ==0) kproc->fnc_selecarg = (void*)(long)rand();
 
   victim->level = level;
 
