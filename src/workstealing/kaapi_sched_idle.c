@@ -1,5 +1,5 @@
 /*
-** kaapi_mt_sched_idle.c
+** kaapi_sched_idle.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -45,78 +45,53 @@
 */
 #include "kaapi_impl.h"
 
+/* \TODO: utiliser ici les fonctions (a adapter si besoin): makecontext, getcontext, setcontext 
+   stack: objet de retour du vol
+   context: associe au flot d'execution, ie instancier a partir d'une stack ???
+*/
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
-  kaapi_victim_t       victim;
-  kaapi_reply_t        reply;
+  kaapi_stack_t* stack;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
-#if 0
-  /* */
-  if (current_proc->tosuspend_thread !=0)
-  {
-    KAAPI_STACK_PUSH( current_proc->suspended_threads, current_proc->tosuspend_thread );  
-    current_proc->tosuspend_thread->thread->state = KAAPI_THREAD_S_SUSPEND;
-  }
-#endif
+  do {
+    stack = kaapi_sched_steal( kproc );
+    if (stack ==0) break; /* terminaison */
     
-redo_post:
-  /* terminaison ? */
-  if (kaapi_isterminated()) goto terminate_program;
+    if (stack != kproc->ctxt)
+    {
+      /* swap stack */
+      kaapi_stack_t* tmp = kproc->ctxt;
+      kproc->ctxt = stack;
+      stack = tmp;
 
-  /* try to steal a victim processor */
-  err = (*kproc->fnc_select)( kproc, &victim );
-  if (err !=0) goto redo_post;
+      /* push it into the free list */
+      KAAPI_STACK_PUSH( &kproc->lfree, stack );
+    }
 
-  /* Fill & Post the request to the victim processor */
-  kaapi_stack_clear(&kproc->stack);
-  kaapi_request_post( kproc, &reply, &victim );
+redo_execute:
+    /* printf("Thief, 0x%x, pc:0x%x,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
+    err = kaapi_stack_execall( kproc->ctxt );
 
-  while (!kaapi_reply_test( &reply ))
-  {
-    /* here request should be cancelled... */
-    kaapi_sched_advance( kproc );
-  }
-  if (kaapi_isterminated()) return;
+    if (err == EWOULDBLOCK) 
+    {
+      kaapi_thread_context_t* ctxt = kproc->ctxt;
+      kproc->ctxt = 0;
 
-  kaapi_assert_debug( kaapi_request_status(&reply) != KAAPI_REQUEST_S_POSTED );
+      /* push it: suspended because top task is not ready */
+      KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
 
-  /* test if my request is ok
-  */
-  if (!kaapi_reply_ok(&reply)) 
-  {
-    goto redo_post;
-  }
+      kproc->ctxt = kaapi_sched_wakeup(kproc); 
+      if (kproc->ctxt !=0) goto redo_execute;
+
+      /* else reallocate a context */
+      kproc->ctxt = kaapi_context_alloc(kproc);
+      /* redo stealing... */
+    }
+  } while (1);
   
-  /* Do the local computation
-  */
-  {
-    kaapi_stack_t* stack = kaapi_request_data(&reply);
-/*    printf("Thief, 0x%x, pc:0x%x,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
-    err = kaapi_stack_execall( stack );
-  }
-  if (err == EWOULDBLOCK) 
-  {
-    /* push the task in a list of suspended stack and and reallocate a new one 
-       The C-stack is not saved.
-    */
-    kaapi_thread_context_t* ctxt = 0;
-    kaapi_getcontext( kproc, ctxt );
-    KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
-
-    /* make a new context */
-    kaapi_makecontext( kproc, ctxt, 0, 0 );
-
-    /* set the context on the current processor */
-    kaapi_setcontext( kproc, ctxt );
-  }
-  
-  goto redo_post;
-
-terminate_program:
-
   kaapi_barrier_td_setactive( &kaapi_term_barrier, 0 );  
 }
