@@ -140,6 +140,7 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;            /* number of physical cpus of the system */
   unsigned int             cpucount;               /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;               /* default method to select a victim */
+  unsigned int		   kid_to_cpu[KAAPI_MAX_PROCESSOR];
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t default_param;
@@ -154,7 +155,7 @@ extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 /** Useful
 */
-#define kaapi_get_current_processor() _kaapi_get_current_processor();
+extern kaapi_processor_t* kaapi_get_current_processor(void);
 
 /** \ingroup WS
     Select a victim for next steal request using uniform random selection over all cores.
@@ -203,22 +204,47 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc );
 
 
 /** \ingroup WS
-    \TODO faire specs ici
-*/
-kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc );
-
-/** \ingroup WS
     The method starts a work stealing operation and return until a sucessfull steal
-    operation or in case of termination detection.
+    operation or 0 if no work may be found.
     The kprocessor kproc should have its stack ready to receive a work after a steal request.
     If the stack returned is not 0, either it is equal to the stack of the processor or it may
     be different. In the first case, some work has been insert on the top of the stack. On the
     second case, a whole stack has been stolen. It is to the responsability of the caller
     to treat the both case.
-    \retval 0 in case of termination detection
+    \retval 0 in case of not stolen work 
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
-extern kaapi_stack_t* kaapi_sched_steal ( kaapi_processor_t* kproc );
+extern int kaapi_sched_stealprocessor ( kaapi_processor_t* kproc );
+
+
+/** \ingroup WS
+    \retval 0 if no context could be wakeup
+    \retval else a context to wakeup
+    \TODO faire specs ici
+*/
+extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc );
+
+
+/** \ingroup WS
+    This method tries to steal work from the tasks of a stack passed in argument.
+    The method iterates through all the tasks in the stack until it found a ready task
+    or until the request count reaches 0.
+    The current implementation is cooperative.
+    \retval the number of successfull stolen work
+*/
+extern int kaapi_sched_stealstack  ( kaapi_stack_t* stack );
+
+/** \ingroup WS
+    The method starts a work stealing operation and return the result of one steal request
+    The kprocessor kproc should have its stack ready to receive a work after a steal request.
+    If the stack returned is not 0, either it is equal to the stack of the processor or it may
+    be different. In the first case, some work has been insert on the top of the stack. On the
+    second case, a whole stack has been stolen. It is to the responsability of the caller
+    to treat the both case.
+    \retval 0 in case failure of stealing something
+    \retval a pointer to a stack that is the result of one workstealing operation.
+*/
+extern kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
 
 /** \ingroup WS
     Advance polling of request for the current running thread.
@@ -307,6 +333,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
 /** Args for tasksteal
 */
 typedef struct kaapi_tasksteal_arg_t {
+  kaapi_stack_t*    origin_stack;
   kaapi_task_t*     origin_task;
   kaapi_task_body_t origin_body;
   void**            origin_task_args;

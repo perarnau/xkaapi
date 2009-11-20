@@ -45,7 +45,7 @@
 #include "kaapi_impl.h"
 #include <unistd.h>
 
-#define KAAPI_TRACE_DEBUG
+/*#define KAAPI_TRACE_DEBUG*/
 
 /**kaapi_stack_taskexecall
 */
@@ -102,13 +102,13 @@ redo_work:
       printf("level:%i  ", level);
 #endif  
       body = task->body;
-      task->format = body;
+//      task->format = body;
       (*body)(task, stack);
       task->body = 0;
+
       /* process steal request */
       kaapi_stealpoint_isactive( stack, task );
-    
-    
+        
       /* push restore_frame task if pushed tasks */
       if (saved_sp < stack->sp)
       {

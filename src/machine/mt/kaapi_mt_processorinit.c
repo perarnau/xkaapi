@@ -48,11 +48,12 @@
 */
 int kaapi_processor_init( kaapi_processor_t* kproc )
 {
+  kaapi_thread_context_t* ctxt;
   size_t k_stacksize;
   size_t k_sizetask;
   size_t k_sizedata;
-  char* buffer;
-  
+
+  kproc->ctxt         = 0;  
   kproc->kid          = -1U;
   kproc->hlevel       = 0;
   kproc->hindex       = 0;
@@ -72,12 +73,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   k_sizetask = k_stacksize / 2;
   k_sizedata = k_stacksize - k_sizetask;
 
-  kproc->ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
-  buffer += sizeof(kaapi_thread_context_t);
-  kaapi_stack_init( kproc->ctxt, k_sizetask, buffer, k_sizedata, buffer + k_sizetask);
-  kproc->ctxt->requests   = kproc->hlrequests.requests;
-  kproc->ctxt->hasrequest = (volatile int*)&kproc->hlrequests.count;
-
+  ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
+  /* set new context to the kprocessor */
+  kaapi_setcontext(kproc, ctxt);
   return 0;
 }
 

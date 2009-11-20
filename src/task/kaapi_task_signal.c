@@ -49,7 +49,39 @@
 */
 static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
+  int i, countparam;
+  kaapi_format_t* fmt;           /* format of the task */
+  void* arg;
+  
+  /* the task has been stolen: format contains the original body */
+  fmt = kaapi_format_resolvebybody( task->format );
+  kaapi_assert_debug( fmt !=0 );
+
   printf("IN %s\n", __PRETTY_FUNCTION__ );
+
+  /* report data to version to global data */
+  arg = kaapi_task_getargs(task);
+  countparam = fmt->count_params;
+  for (i=0; i<countparam; ++i)
+  {
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
+
+    if (KAAPI_ACCESS_IS_ONLYWRITE(m))
+    {
+      void* param = (void*)(fmt->off_params[i] + (char*)arg);
+      kaapi_format_t* fmt_param = fmt->fmt_params[i];
+      kaapi_access_t* access = (kaapi_access_t*)(param);
+      /* TODO: improve management of shared data, if it is a big data or not... */
+      (*fmt_param->assign)( access->data, access->version );
+      (*fmt_param->dstor)( access->version );
+      free(((kaapi_gd_t*)access->version)-1);
+      access->version = 0;
+    }
+    else
+    { /* nothing to do ?
+      */    
+    }
+  }
 }
 
 
@@ -63,17 +95,26 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 */
   kaapi_task_t* task2sig;
 
-  /* flush in memory all pending write */  
-  kaapi_writemem_barrier();
-
-  task2sig = kaapi_task_argst( task, kaapi_task_t);
-  if (kaapi_task_isadaptive(task))
+  task2sig = kaapi_task_getargst( task, kaapi_task_t);
+  if (kaapi_task_isadaptive(task2sig))
   {
     kaapi_taskadaptive_t* ta = task2sig->sp;
     kaapi_assert_debug( ta !=0 );
+
+    /* flush in memory all pending write */  
+    kaapi_writemem_barrier();
+
     KAAPI_ATOMIC_DECR( &ta->thievescount );
-  } else {
-    task2sig->body = &kaapi_aftersteal_body;
+  } 
+  else if (kaapi_task_issync(task2sig))
+  {
+    /* */
+    kaapi_task_setflags( task2sig, KAAPI_TASK_STICKY );
+
+    /* flush in memory all pending write */  
+    kaapi_writemem_barrier();
+
+    task2sig->body   = &kaapi_aftersteal_body;
   }
 }
 

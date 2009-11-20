@@ -3,16 +3,16 @@
 #include <stddef.h>
 
 
-#define KAAPI_TRACE_DEBUG
+/*#define KAAPI_TRACE_DEBUG */
 
 void sum_body( kaapi_task_t* task, kaapi_stack_t* stack );
 void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack );
 void print_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 typedef struct sum_arg_t {
-  int* result;
-  int* subresult1;
-  int* subresult2;
+  kaapi_access_t result;
+  kaapi_access_t subresult1;
+  kaapi_access_t subresult2;
 } sum_arg_t;
 
 KAAPI_REGISTER_TASKFORMAT( sum_format,
@@ -22,24 +22,24 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     3,
     (kaapi_access_mode_t[]) { KAAPI_ACCESS_MODE_W, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R },
     (kaapi_offset_t[])      { offsetof(sum_arg_t, result), offsetof(sum_arg_t, subresult1), offsetof(sum_arg_t, subresult2) },
-    (kaapi_format_t*[])     { &kaapi_shared_format, &kaapi_shared_format, &kaapi_shared_format }
+    (kaapi_format_t*[])     { &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
 )
 
 void sum_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
-  sum_arg_t* arg0 = kaapi_task_argst( task, sum_arg_t);
-  *arg0->result = *arg0->subresult1 + *arg0->subresult2;
+  sum_arg_t* arg0 = kaapi_task_getargst( task, sum_arg_t);
+  *kaapi_data(int, arg0->result) = *kaapi_data(int, arg0->subresult1) + *kaapi_data(int, arg0->subresult2);
 #if defined(KAAPI_TRACE_DEBUG)  
   printf("Sum(@0x%x:%i,@0x%x:%i)=0x%x:%i\n", 
-        arg0->subresult1, *arg0->subresult1, 
-        arg0->subresult2, *arg0->subresult2, 
-        arg0->result, *arg0->result);
+        kaapi_data(int, arg0->subresult1), *kaapi_data(int, arg0->subresult1), 
+        kaapi_data(int, arg0->subresult2), *kaapi_data(int, arg0->subresult2), 
+        kaapi_data(int, arg0->result),     *kaapi_data(int, arg0->result) );
 #endif
 }
 
 typedef struct fibo_arg_t {
   int  n;
-  int* result;
+  kaapi_access_t result;
 } fibo_arg_t;
 
 KAAPI_REGISTER_TASKFORMAT( fibo_format,
@@ -49,25 +49,25 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
     2,
     (kaapi_access_mode_t[]) { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_W },
     (kaapi_offset_t[])      { offsetof(fibo_arg_t, n), offsetof(fibo_arg_t, result) },
-    (kaapi_format_t*[])     { &kaapi_int_format, &kaapi_shared_format }
+    (kaapi_format_t*[])     { &kaapi_int_format, &kaapi_int_format }
 )
 
 void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
-  fibo_arg_t* arg0 = kaapi_task_argst( task, fibo_arg_t);
+  fibo_arg_t* arg0 = kaapi_task_getargst( task, fibo_arg_t);
 #if defined(KAAPI_TRACE_DEBUG)  
   printf("Fibo(%i)", arg0->n);
 #endif
   if (arg0->n < 2)
   {
-    *arg0->result = arg0->n;
+    *kaapi_data(int, arg0->result) = arg0->n;
 #if defined(KAAPI_TRACE_DEBUG)  
-    printf("=@0x%x:%i\n", arg0->result, *arg0->result);
+    printf("=@0x%x:%i\n", kaapi_data(int, arg0->result), *kaapi_data(int, arg0->result));
 #endif
   }
   else {
 #if defined(KAAPI_TRACE_DEBUG)  
-    printf("=@0x%x\n", arg0->result);
+    printf("=@0x%x\n", kaapi_data(int, arg0->result));
 #endif
     fibo_arg_t* argf;
     sum_arg_t*  args;
@@ -75,14 +75,14 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
     kaapi_task_t* task1;
     kaapi_task_t* task2;
 
-    int* result1 = (int*)kaapi_stack_pushshareddata(stack, sizeof(int));
-    int* result2 = (int*)kaapi_stack_pushshareddata(stack, sizeof(int));
+    kaapi_access_t result1 = kaapi_stack_pushshareddata(stack, sizeof(int));
+    kaapi_access_t result2 = kaapi_stack_pushshareddata(stack, sizeof(int));
 
     task1 = kaapi_stack_toptask(stack);
     kaapi_task_init( stack, task1, KAAPI_TASK_DFG);
     kaapi_task_setbody( task1, &fibo_body );
     kaapi_task_setargs( task1, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
-    argf = kaapi_task_argst( task1, fibo_arg_t );
+    argf = kaapi_task_getargst( task1, fibo_arg_t );
     argf->n      = arg0->n - 1;
     argf->result = result1;
     kaapi_stack_pushtask(stack);
@@ -91,7 +91,7 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
     kaapi_task_init( stack, task2, KAAPI_TASK_DFG);
     kaapi_task_setbody( task2, &fibo_body);
     kaapi_task_setargs( task2, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
-    argf = kaapi_task_argst( task2, fibo_arg_t);
+    argf = kaapi_task_getargst( task2, fibo_arg_t);
     argf->n      = arg0->n - 2;
     argf->result = result2;
     kaapi_stack_pushtask(stack);
@@ -100,7 +100,7 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
     kaapi_task_init( stack, task_sum, KAAPI_TASK_DFG );
     kaapi_task_setbody( task_sum, &sum_body );
     kaapi_task_setargs( task_sum, kaapi_stack_pushdata(stack, sizeof(sum_arg_t)) );
-    args = kaapi_task_argst( task_sum, sum_arg_t);
+    args = kaapi_task_getargst( task_sum, sum_arg_t);
     args->result     = arg0->result;
     args->subresult1 = result1;
     args->subresult2 = result2;
@@ -111,7 +111,7 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 typedef struct print_arg_t {
   double t0;
   int n;
-  int* result;
+  kaapi_access_t result;
 } print_arg_t;
 
 KAAPI_REGISTER_TASKFORMAT( print_format,
@@ -126,17 +126,16 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
 
 void print_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
-  print_arg_t* arg0 = kaapi_task_argst( task, print_arg_t);
+  print_arg_t* arg0 = kaapi_task_getargst( task, print_arg_t);
   double t1 = kaapi_get_elapsedtime();
-  printf("Fibo(%i)=%i\n", arg0->n, *arg0->result);
+  printf("Fibo(%i)=%i\n", arg0->n, *kaapi_data(int,arg0->result));
   printf("Time: %e\n", t1-arg0->t0);
 }
 
 int main(int argc, char** argv)
 {
   double t0;
-  double t1;
-  int* result1 = 0;
+  kaapi_access_t result1;
   fibo_arg_t* argf;
   print_arg_t* argp;
   kaapi_task_t* task;
@@ -156,7 +155,7 @@ int main(int argc, char** argv)
   kaapi_task_init( stack, task, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
   kaapi_task_setbody( task, &fibo_body );
   kaapi_task_setargs( task, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
-  argf = kaapi_task_argst( task, fibo_arg_t );
+  argf = kaapi_task_getargst( task, fibo_arg_t );
   argf->n      = atoi(argv[1]);
   argf->result = result1;
   kaapi_stack_pushtask(stack);
@@ -166,21 +165,19 @@ int main(int argc, char** argv)
   kaapi_task_init( stack, task, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
   kaapi_task_setbody( task, &print_body );
   kaapi_task_setargs( task, kaapi_stack_pushdata(stack, sizeof(print_arg_t)) );
-  argp = kaapi_task_argst( task, print_arg_t );
+  argp = kaapi_task_getargst( task, print_arg_t );
   argp->t0     = t0;
   argp->n      = argf->n;
   argp->result = result1;
   kaapi_stack_pushtask(stack);
 
+redo:
   err = kaapi_stack_execall(stack);
   if (err == EWOULDBLOCK)
   {
-/*    kaapi_sched_suspend(<#* proc#>, <#* cell#>)*/
+    kaapi_sched_suspend( kaapi_get_current_processor() );
+    goto redo;
   }
-
-  t1 = kaapi_get_elapsedtime();
-  printf("Fibo(%i)=%i\n", argf->n, *result1);
-  printf("Time: %e\n", t1-t0);
   
   return 0;
 }

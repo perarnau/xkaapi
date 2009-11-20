@@ -49,6 +49,7 @@
 #include <sys/sysctl.h>
 #include <unistd.h>
 
+
 /*
 */
 kaapi_rtparam_t default_param;
@@ -71,6 +72,62 @@ kaapi_format_t kaapi_ulonglong_format;
 
 kaapi_format_t kaapi_float_format;
 kaapi_format_t kaapi_double_format;
+
+
+/** cpuset related routines
+*/
+static void fill_identity_kid_map
+    (
+     unsigned int* kid_map,
+     unsigned long ncpus
+    )
+{
+  unsigned long icpu;
+
+  for (icpu = 0; icpu < ncpus; ++icpu)
+    kid_map[icpu] = (unsigned int)icpu;
+}
+
+
+static unsigned long str_to_kid_map
+    (
+     unsigned int* kid_map,
+     const char* s,
+     unsigned int total_ncpus
+    )
+{
+  /* s contains a comma separated
+   list of cpus indices to use
+   */
+  
+  unsigned long icpu;
+  unsigned int used_ncpus;
+  char* e;
+  
+  used_ncpus = 0;
+  
+  while (1)
+  {
+    icpu = strtoul(s, &e, 10);
+    
+    s = e + 1;
+    
+    if (icpu >= total_ncpus)
+      continue ;
+    
+    kid_map[used_ncpus++] = icpu;
+    
+    if (used_ncpus >= total_ncpus)
+      break;
+    
+    if (!*e || (*e != ','))
+      break;
+  }
+  
+  /* return the acutal used cpu count */
+  
+  return used_ncpus;
+}
 
 
 /**
@@ -109,6 +166,19 @@ extern int kaapi_setup_param( int argc, char** argv )
   if (getenv("KAAPI_CPUCOUNT") !=0)
   {
     default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
+  }
+
+  if (getenv("KAAPI_CPUSET") != 0)
+  {
+    default_param.cpucount =
+      str_to_kid_map(default_param.kid_to_cpu,
+		     getenv("KAAPI_CPUSET"),
+		     default_param.syscpucount);
+  }
+  else
+  {
+    fill_identity_kid_map(default_param.kid_to_cpu,
+			  default_param.cpucount);
   }
   
   /* default workstealing selection function */

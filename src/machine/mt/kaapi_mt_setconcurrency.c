@@ -68,6 +68,7 @@ static kaapi_atomic_t barrier_init2 = {0};
 int kaapi_setconcurrency( unsigned int concurrency )
 {
   static int isinit = 0;
+  pthread_attr_t attr;
   pthread_t tid;
   int i;
     
@@ -86,6 +87,8 @@ int kaapi_setconcurrency( unsigned int concurrency )
 
   kaapi_barrier_td_init( &barrier_init, 0);
   kaapi_barrier_td_init( &barrier_init2, 1);
+
+  pthread_attr_init(&attr);
       
   /* TODO: allocate each kaapi_processor_t of the selected numa node if it exist */
   for (i=0; i<kaapi_count_kprocessors; ++i)
@@ -93,18 +96,38 @@ int kaapi_setconcurrency( unsigned int concurrency )
     if (i>0)
     {
       kaapi_barrier_td_setactive(&barrier_init, 1);
-      if (EAGAIN == pthread_create(&tid, 0, &kaapi_sched_run_processor, (void*)(long)i))
+
+#ifdef KAAPI_USE_SCHED_AFFINITY
+      {
+        cpu_set_t cpuset;
+        CPU_SET(default_param.kid_to_cpu[i], &cpuset);
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+      }
+#endif /* KAAPI_USE_SCHED_AFFINITY */
+
+      if (EAGAIN == pthread_create(&tid, &attr, &kaapi_sched_run_processor, (void*)(long)i))
       {
         kaapi_count_kprocessors = i;
         kaapi_barrier_td_setactive(&barrier_init, 0);
+        pthread_attr_destroy(&attr);
         return EAGAIN;
       }
     }
-    else {
+    else 
+    {
+#ifdef KAAPI_USE_SCHED_AFFINITY
+      {
+        cpu_set_t cpuset;
+        CPU_SET(default_param.kid_to_cpu[i], &cpuset);
+        pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+      }
+#endif /* KAAPI_USE_SCHED_AFFINITY */
+
       kaapi_all_kprocessors[i] = calloc( 1, sizeof(kaapi_processor_t) );
 
       if (kaapi_all_kprocessors[i] ==0) 
       {
+        pthread_attr_destroy(&attr);
         free(kaapi_all_kprocessors);
         kaapi_all_kprocessors = 0;
         return ENOMEM;
@@ -119,6 +142,8 @@ int kaapi_setconcurrency( unsigned int concurrency )
       kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
     }
   }
+
+  pthread_attr_destroy(&attr);
 
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init );

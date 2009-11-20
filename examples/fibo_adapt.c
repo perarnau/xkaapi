@@ -18,7 +18,7 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
   { 
     void entrypoint( kaapi_task_t* task, kaapi_stack_t* stack ) 
     {
-      fibo_arg_t* arg = kaapi_task_argst( task, fibo_arg_t);
+      fibo_arg_t* arg = kaapi_task_getargst( task, fibo_arg_t);
       fibo( stack, arg->n, arg->res );
     }
     int i;
@@ -32,7 +32,7 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
         kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
         kaapi_task_setbody( thief_task, &entrypoint );
         kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(fibo_arg_t)));
-        arg = kaapi_task_argst(thief_task, fibo_arg_t);                
+        arg = kaapi_task_getargst(thief_task, fibo_arg_t);                
         arg->n   = n-1;
         arg->res = &result2;
         kaapi_stack_pushtask( thief_stack );
@@ -53,7 +53,7 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
     kaapi_task_t* task = kaapi_stack_toptask(stack);
     kaapi_task_init( stack, task, KAAPI_TASK_ADAPTIVE);
     kaapi_task_setargs( task, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)));
-    arg = kaapi_task_argst(task, fibo_arg_t);                
+    arg = kaapi_task_getargst(task, fibo_arg_t);                
     arg->n   = n-1;
     arg->res = &result1;
     kaapi_stack_pushtask( stack );

@@ -1,5 +1,5 @@
 /*
-** kaapi_mt_sched_idle.c
+** kaapi_mt_selfstack.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -45,51 +45,7 @@
 */
 #include "kaapi_impl.h"
 
-kaapi_stack_t* kaapi_sched_steal ( kaapi_processor_t* kproc )
-{
-  kaapi_stack_t*       stack;
-  kaapi_victim_t       victim;
-  kaapi_reply_t        reply;
-  int err;
-  
-  kaapi_assert_debug( kproc !=0 );
-  kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
-
-  /* */
-  if (!KAAPI_STACK_EMPTY(&kproc->lsuspend))
-  {
-    /* try top wakeup a waiting stack */  
-  }
-    
-redo_post:
-  /* terminaison ? */
-  if (kaapi_isterminated()) return 0;
-
-  /* try to steal a victim processor */
-  err = (*kproc->fnc_select)( kproc, &victim );
-  if (err !=0) goto redo_post;
-
-  /* Fill & Post the request to the victim processor */
-  kaapi_stack_clear(kproc->ctxt);
-  kaapi_request_post( kproc, &reply, &victim );
-
-  while (!kaapi_reply_test( &reply ))
-  {
-    /* here request should be cancelled... */
-    kaapi_sched_advance( kproc );
-  }
-
-  kaapi_assert_debug( kaapi_request_status(&reply) != KAAPI_REQUEST_S_POSTED );
-
-  /* test if my request is ok
-  */
-  if (!kaapi_reply_ok(&reply)) 
-  {
-    goto redo_post;
-  }
-  
-  /* Do the local computation
-  */
-  stack = kaapi_request_data(&reply);
-  return stack;
+extern kaapi_processor_t* kaapi_get_current_processor(void)
+{ 
+  return _kaapi_get_current_processor();
 }

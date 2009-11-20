@@ -58,10 +58,15 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   
   body = task->body;
   
+  /* \TODO verify this line
+     In case of executed task: nothing has to be. The DFG access chains will be with the next task
+  */
+  if (body ==0) return 0;
+  
   /** CAS not required in this implementation (cooperative) 
   if (KAAPI_ATOMIC_CASPTR( &task->body, body, &kaapi_suspend_body))
   */
-  if (body ==0) fmt = kaapi_format_resolvebybody( task->format );
+  if ((body ==0) ||(body == &kaapi_suspend_body)) fmt = kaapi_format_resolvebybody( task->format );
   else fmt = kaapi_format_resolvebybody( body );
   if (fmt ==0) return 0;
   
@@ -81,13 +86,13 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
            by kaapi_stack_pushshareddata
         */
         void* data = *(void**)(fmt->off_params[i] + (char*)task->sp);
-        kaapi_access_t* access = ((kaapi_access_t*)data) -1;
+        kaapi_gd_t* access = ((kaapi_gd_t*)data) -1;
         if (KAAPI_ACCESS_IS_ONLYWRITE(m)) 
         {
           if (body ==0) 
           {
-            access->last_version = data;                  /* this is the data */
-            access->last_mode = KAAPI_ACCESS_MASK_MODE_R; /* and it could be read */
+            access->last_version = data;                        /* this is the data */
+            access->last_mode = KAAPI_ACCESS_MASK_MODE_R;       /* and it could be read */
           }
           else { 
             access->last_version = 0;
@@ -136,7 +141,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
         /* the access is just before the value pointed by the pointer (shared == pointer) returned
            by kaapi_stack_pushshareddata
         */
-        kaapi_access_t* access = ((kaapi_access_t*)*(void**)(fmt->off_params[i] + (char*)task->sp)) -1;
+        kaapi_gd_t* access = ((kaapi_gd_t*)*(void**)(fmt->off_params[i] + (char*)task->sp)) -1;
         
         if (KAAPI_ACCESS_IS_ONLYWRITE(m)) 
         {
@@ -192,14 +197,17 @@ steal_the_task:
     if (request ==0) return 0;
       
     task->body = &kaapi_suspend_body;
-
+    task->format = body;
+    
     /* - create the task steal that will execute the stolen task
     */
     thief_stack = request->stack;
+    
     steal_task = kaapi_stack_toptask( thief_stack );
     kaapi_task_init(thief_stack, steal_task, KAAPI_TASK_STICKY );
     kaapi_task_setargs( steal_task, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksteal_arg_t)+sizeof(void*)*countparam) );
-    kaapi_tasksteal_arg_t* arg = kaapi_task_argst( steal_task, kaapi_tasksteal_arg_t );
+    kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( steal_task, kaapi_tasksteal_arg_t );
+    arg->origin_stack     = stack;
     arg->origin_task      = task;
     arg->origin_body      = body;
     arg->origin_task_args = (void**)(arg+1);
@@ -207,9 +215,8 @@ steal_the_task:
       arg->origin_task_args[i] = param_data[i];
     
     kaapi_task_setbody( steal_task, &kaapi_tasksteal_body );
-
     kaapi_stack_pushtask( thief_stack );
-    
+
     kaapi_request_reply( stack, task, request, thief_stack, 1 ); /* success of steal */
     return 1;
   }

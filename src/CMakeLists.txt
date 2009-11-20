@@ -37,6 +37,7 @@ add_library (xkaapi SHARED
   workstealing/kaapi_sched_select_rand_level.c
   workstealing/kaapi_sched_select_rand_first.c
   workstealing/kaapi_sched_select_rand.c
+  workstealing/kaapi_sched_stealprocessor.c
   workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
   workstealing/kaapi_sched_idle.c
@@ -64,8 +65,9 @@ add_library (xkaapi SHARED
   machine/mt/kaapi_mt_getcontext.c
   machine/mt/kaapi_mt_setcontext.c
   machine/mt/kaapi_mt_makecontext.c
+  machine/mt/kaapi_mt_selfprocessor.c
   machine/mt/kaapi_mt_selfstack.c
-  machine/mt/kaapi_mt_sched_steal.c
+  machine/mt/kaapi_mt_sched_emitsteal.c
   machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_context_alloc.c
   machine/mt/kaapi_mt_context_free.c
@@ -83,6 +85,7 @@ add_library (xkaapi-static STATIC
   workstealing/kaapi_sched_select_rand_level.c
   workstealing/kaapi_sched_select_rand_first.c
   workstealing/kaapi_sched_select_rand.c
+  workstealing/kaapi_sched_stealprocessor.c
   workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
   workstealing/kaapi_request_reply.c
@@ -110,8 +113,9 @@ add_library (xkaapi-static STATIC
   machine/mt/kaapi_mt_getcontext.c
   machine/mt/kaapi_mt_setcontext.c
   machine/mt/kaapi_mt_makecontext.c
+  machine/mt/kaapi_mt_selfprocessor.c
   machine/mt/kaapi_mt_selfstack.c
-  machine/mt/kaapi_mt_sched_steal.c
+  machine/mt/kaapi_mt_sched_emitsteal.c
   machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_context_alloc.c
   machine/mt/kaapi_mt_context_free.c

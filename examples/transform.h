@@ -48,7 +48,7 @@ protected:
   /* Entry in case of thief execution */
   static void static_thiefentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
   {
-    Self_t* self_work = kaapi_task_argst(task, Self_t);
+    Self_t* self_work = kaapi_task_getargst(task, Self_t);
     self_work->doit(task, stack);
   }
 
@@ -77,7 +77,7 @@ protected:
         kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
         kaapi_task_setbody( thief_task, &static_thiefentrypoint );
         kaapi_task_setargs(thief_task, kaapi_stack_pushdata(thief_stack, sizeof(Self_t)));
-        output_work = kaapi_task_argst(thief_task, Self_t);
+        output_work = kaapi_task_getargst(thief_task, Self_t);
 
         output_work->_iend = local_end;
         output_work->_ibeg = local_end-bloc;
@@ -118,7 +118,7 @@ reply_failed:
 
   static int static_splitter( kaapi_stack_t* victim_stack, kaapi_task_t* task, int count, kaapi_request_t* request )
   {
-    Self_t* self_work = kaapi_task_argst(task, Self_t);
+    Self_t* self_work = kaapi_task_getargst(task, Self_t);
     return self_work->splitter( victim_stack, task, count, request );
   }
 

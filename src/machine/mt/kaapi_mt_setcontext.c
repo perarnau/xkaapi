@@ -47,11 +47,11 @@
 
 /**
 */
-int kaapi_setcontext( kaapi_processor_t* proc, const kaapi_thread_context_t* ctxt )
+int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt )
 {
-  kaapi_assert_debug( proc == _kaapi_get_current_processor() );
-  *proc->ctxt = *ctxt;
-  proc->ctxt->requests = proc->hlrequests.requests;
+  ctxt->requests   = kproc->hlrequests.requests;
+  ctxt->hasrequest = (volatile int*)&kproc->hlrequests.count;
+  kproc->ctxt = ctxt;
   return 0;
 
 #if 0  /* TODO: next version when also saving the stack context */

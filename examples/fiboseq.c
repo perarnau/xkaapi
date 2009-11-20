@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+
 /** The macro FIBOCODE and MAIN CODE are used to allows separate compilation
     of the fibo code and the main code.
 */

@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_steal.c
+** kaapi_sched_stealstack.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -46,31 +46,18 @@
 #include "kaapi_impl.h"
 
 /** 
-1/ entièrement coopératif !
-  task -> pile de task
-  begin_concurrent( event -> action ) & mask
-  event= steal, stop, save, restore:
-      steal(task) -> task
-      stop() -> ()
-      save(taks) -> continuation task
-      restore(continuation task)->()
-
-2/ comment le rendre concurrent ?
-   ABA problème -> ll/sc ou cas + version
-   1 cas: task: pc & sp ?  pc->sp
 */
-int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* task )
+int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 {
   kaapi_task_t*  task_top;
   kaapi_task_t*  task_bot;
   int count;
   int replycount;  
 
-  kaapi_readmem_barrier();
   count = KAAPI_ATOMIC_READ( (kaapi_atomic_t*)stack->hasrequest );
   if (count ==0) return 0;
 
-  if (kaapi_stack_isempty( stack)) return ESRCH;
+  if (kaapi_stack_isempty( stack)) return 0;
 
   /* reset dfg constraints evaluation */
   

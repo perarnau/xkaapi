@@ -71,29 +71,32 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   do {
     /* wakeup a context */
     kproc->ctxt = kaapi_sched_wakeup(kproc);
-    if (kproc->ctxt == ctxt_condition) {
+    if (kproc->ctxt == ctxt_condition) 
+    {
       kaapi_assert(kproc->ctxt->pc == task_condition);
       return 0;
     }
 
+#if 1 /* if 0 was only for debug */
     /* else steal a task */
     if (kproc->ctxt ==0)
     {
-      kproc->ctxt = kaapi_context_alloc(kproc);
-      stack = kaapi_sched_steal( kproc );
-      if (stack ==0) break; /* terminaison */
+      ctxt = kaapi_context_alloc(kproc);
+      kaapi_setcontext(kproc, ctxt);
 
-      if (stack != kproc->ctxt)
+      stack = kaapi_sched_emitsteal( kproc );
+
+      if ((stack !=0) && (stack != kproc->ctxt))
       {
-        /* swap stack */
-        kaapi_stack_t* tmp = kproc->ctxt;
-        kproc->ctxt = stack;
-        stack = tmp;
-
         /* push it into the free list */
-        KAAPI_STACK_PUSH( &kproc->lfree, stack );
+        KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
+        
+        /* reinstall new context */
+        kaapi_setcontext(kproc, stack);
       }
     }
+#endif    
+    if (kproc->ctxt ==0) continue;
 
     /* printf("Thief, 0x%x, pc:0x%x,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
     err = kaapi_stack_execall( kproc->ctxt );

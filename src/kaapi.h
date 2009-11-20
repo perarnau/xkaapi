@@ -392,18 +392,21 @@ typedef enum kaapi_access_mode_t {
 /** \ingroup DFG
 */
 typedef struct kaapi_gd_t {
-    void*        data;         /* access used by stolen task */
-} kaapi_gd_t;
+  kaapi_access_mode_t last_mode;    /* last access mode to the data */
+  void*               last_version; /* last verion of the data, 0 if not ready */
+}  __attribute__((aligned(KAAPI_MAX_DATA_ALIGNMENT))) kaapi_gd_t;
 
 
 /** \ingroup DFG
     Kaapi access
 */
 typedef struct kaapi_access_t {
-  kaapi_access_mode_t last_mode;    /* last access mode to the data */
-  void*               last_version; /* last verion of the data, 0 if not ready */
-} __attribute__((aligned(KAAPI_MAX_DATA_ALIGNMENT))) kaapi_access_t;
+  void* data;
+  void* version;
+} kaapi_access_t;
 
+#define kaapi_data(type, a)\
+  ((type*)a.data)
 
 /** \ingroup DFG
      Offset to access to parameter of a task
@@ -479,7 +482,12 @@ extern kaapi_format_t kaapi_double_format;
 /** \ingroup TASK
     Return the flags of the task
 */
-#define kaapi_task_flags(task) ((task)->flag & KAAPI_TASK_MASK_FLAGS)
+#define kaapi_task_getflags(task) ((task)->flag & KAAPI_TASK_MASK_FLAGS)
+
+/** \ingroup TASK
+    Return the flags of the task
+*/
+#define kaapi_task_setflags(task, f) ((task)->flag |= f)
 
 
 /** \ingroup TASK
@@ -491,12 +499,19 @@ extern kaapi_format_t kaapi_double_format;
 /** \ingroup TASK
     Return a pointer to parameter of the task (void*) pointer
 */
-static inline void* kaapi_task_args(kaapi_task_t* task) 
+static inline void* kaapi_task_getargs(kaapi_task_t* task) 
 {
   if (task->flag & KAAPI_TASK_ADAPTIVE) 
     return ((kaapi_taskadaptive_t*)task->sp)->user_sp;
   return task->sp;
 }
+
+/** \ingroup TASK
+    Return a reference to parameter of the task (type*) pointer
+*/
+#define kaapi_task_getargst(task,type) ((type*)kaapi_task_getargs(task))
+
+
 
 /** \ingroup TASK
     Set the pointer to parameter of the task (void*) pointer
@@ -515,12 +530,6 @@ static inline kaapi_task_body_t kaapi_task_setbody(kaapi_task_t* task, kaapi_tas
 {
   return task->body = body;
 }
-
-
-/** \ingroup TASK
-    Return a reference to parameter of the task (type*) pointer
-*/
-#define kaapi_task_argst(task,type) ((type*)kaapi_task_args(task))
 
 
 /** Body of the nop task 
@@ -657,29 +666,30 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
     \retval a pointer to the next task to push or 0.
 */
 #if defined(KAAPI_DEBUG)
-static inline void* kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
+static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
-  void* retval;
-  kaapi_access_t* access;
-  if (stack ==0) return 0;
-  if (stack->sp_data+count+sizeof(kaapi_access_t) >= stack->end_sp_data) return 0;
-  access = (kaapi_access_t*)stack->sp_data;
-  access->last_mode    = KAAPI_ACCESS_MODE_VOID;
-  stack->sp_data += sizeof(kaapi_access_t);
-  retval = stack->sp_data;
-  access->last_version = retval;
+  kaapi_access_t retval = {0, 0};
+  kaapi_gd_t* gd;
+  if (stack ==0) return retval;
+  if (stack->sp_data+count+sizeof(kaapi_gd_t) >= stack->end_sp_data) return retval;
+
+  gd              = (kaapi_gd_t*)stack->sp_data;
+  gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
+  stack->sp_data += sizeof(kaapi_gd_t);
+  retval.data     = stack->sp_data;
+  gd->last_version = retval.data;
   stack->sp_data += count;
   return retval;
 }
 #else
-static inline void* kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
+static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
-  void* retval;
-  kaapi_access_t* access = (kaapi_access_t*)stack->sp_data;
-  access->last_mode    = KAAPI_ACCESS_MODE_VOID;
-  stack->sp_data += sizeof(kaapi_access_t);
-  retval = stack->sp_data;
-  access->last_version = retval;
+  kaapi_access_t retval = {0, 0};
+  kaapi_gd_t* gd  = (kaapi_gd_t*)stack->sp_data;
+  gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
+  stack->sp_data += sizeof(kaapi_gd_t);
+  retval.data     = stack->sp_data;
+  gd->last_version = retval.data;
   stack->sp_data += count;
   return retval;
 }
@@ -878,18 +888,6 @@ extern int kaapi_stack_execall(kaapi_stack_t* stack);
 */
 extern int kaapi_sched_stealtask( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_splitter_t splitter );
 
-/** \ingroup WS
-    This method tries to steal work from the tasks of a stack passed in argument.
-    The method iterates through the tasks in the stack until it reaches the given task (which is not steal)
-    or until the request count reaches 0.
-    The current implementation is cooperative.
-    \retval 0 in case of successfull steal of work
-    \retval ESRCH if not task has been found
-    \retval EINTR if termination flag has been set
-*/
-extern int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* task );
-
-
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
@@ -907,7 +905,7 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
   int count = *stack->hasrequest;
   if (count) 
   {
-    kaapi_sched_stealstack(stack, task);
+    kaapi_advance(); /*    kaapi_sched_stealstack(stack); */
     count = *stack->hasrequest;
     return count;
   }

@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_sched_stealprocessor.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -45,44 +45,30 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
-{
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
+/** 
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 {
-  int i, replied = 0;
+  kaapi_thread_context_t*  ctxt_top;
+  int count =0;
+  int replycount = 0;  
 
   kaapi_readmem_barrier();
-  int count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+  count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   if (count ==0) return 0;
   
-  /* process request on the kprocessor */
-  kaapi_sched_stealprocessor( kproc );
-  
-  /* reply to all other request: no work ... */
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  ctxt_top = KAAPI_STACK_TOP(&kproc->lsuspend);
+  while ((ctxt_top !=0) && (count >0))
   {
-    if ( kaapi_request_ok( &kproc->hlrequests.requests[i] ) )
-    {
-      kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0 );
-      ++replied;
-      if (replied == count) break;
-    }
+    replycount += kaapi_sched_stealstack  ( ctxt_top );
+    kaapi_readmem_barrier();
+    count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+    ctxt_top = KAAPI_STACK_NEXT_FIELD( ctxt_top );
   }
-  KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replied ); 
-  kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
-
-  return 0;
+  if ((count >0) && (kproc->ctxt !=0)) 
+  {
+    replycount += kaapi_sched_stealstack  ( kproc->ctxt );
+  }
+  
+  return replycount;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

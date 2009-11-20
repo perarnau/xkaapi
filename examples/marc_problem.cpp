@@ -44,7 +44,7 @@ protected:
   /* Entry in case of main execution */
   static void static_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
   {
-    SlidingWindowWork* w = kaapi_task_argst(task, SlidingWindowWork);
+    SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
     w->doit(task, data);
   }
 
@@ -91,7 +91,7 @@ protected:
         kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
         kaapi_task_setbody( thief_task, &static_entrypoint );
         kaapi_task_setargs(thief_task, kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)));
-        output_work = kaapi_task_argst(thief_task, SlidingWindowWork);
+        output_work = kaapi_task_getargst(thief_task, SlidingWindowWork);
 
         output_work->_iend = thief_end;
         output_work->_ibeg = thief_end-blocsize;
@@ -231,7 +231,7 @@ void marc_problem ( double* begin, double* end )
 
 /**
 */
-int main( int argc, char** argv )
+int main( int argc, char* argv )
 {
   /* */
   double* buffer = new double[8192];

@@ -51,25 +51,47 @@
 */
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
+  kaapi_thread_context_t* ctxt;
   kaapi_stack_t* stack;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
+  /* push it into the free list */
+  
   do {
-    stack = kaapi_sched_steal( kproc );
+    /* terminaison ? */
+    if (kaapi_isterminated()) break;
+
+    /* local wake up first */
+    ctxt = kaapi_sched_wakeup(kproc); 
+    if (ctxt !=0) 
+    {
+      /* push kproc context into free list */
+      ctxt = kproc->ctxt;
+      kproc->ctxt = 0;
+      KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
+
+      /* set new context to the kprocessor */
+      kaapi_setcontext(kproc, ctxt);
+      goto redo_execute;
+    }
+    
+    /* steal request */
+    stack = kaapi_sched_emitsteal( kproc );
     if (stack ==0) break; /* terminaison */
     
     if (stack != kproc->ctxt)
     {
-      /* swap stack */
-      kaapi_stack_t* tmp = kproc->ctxt;
-      kproc->ctxt = stack;
-      stack = tmp;
+      ctxt = kproc->ctxt;
+      kproc->ctxt = 0;
 
       /* push it into the free list */
-      KAAPI_STACK_PUSH( &kproc->lfree, stack );
+      KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
+
+      /* set new context to the kprocessor */
+      kaapi_setcontext(kproc, stack);
     }
 
 redo_execute:
@@ -88,10 +110,10 @@ redo_execute:
       if (kproc->ctxt !=0) goto redo_execute;
 
       /* else reallocate a context */
-      kproc->ctxt = kaapi_context_alloc(kproc);
-      /* redo stealing... */
+      ctxt = kaapi_context_alloc(kproc);
+      /* set new context to the kprocessor */
+      kaapi_setcontext(kproc, ctxt);
     }
   } while (1);
   
-  kaapi_barrier_td_setactive( &kaapi_term_barrier, 0 );  
 }

@@ -121,7 +121,7 @@ extern int kaapi_makecontext( struct kaapi_processor_t* proc, kaapi_thread_conte
     Assign context onto the running processor proc.
     This function is machine dependent.
 */
-extern int kaapi_setcontext( struct kaapi_processor_t* proc, const kaapi_thread_context_t * ctxt );
+extern int kaapi_setcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t * ctxt );
 
 /** \ingroup WS
     Higher level context manipulation.

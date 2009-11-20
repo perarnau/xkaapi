@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_mt_sched_idle.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -45,44 +45,46 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_advance ( void )
+kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
-}
-
-/*
-*/
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
-{
-  int i, replied = 0;
-
-  kaapi_readmem_barrier();
-  int count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  if (count ==0) return 0;
+  kaapi_stack_t*       stack;
+  kaapi_victim_t       victim;
+  kaapi_reply_t        reply;
+  int err;
   
-  /* process request on the kprocessor */
-  kaapi_sched_stealprocessor( kproc );
-  
-  /* reply to all other request: no work ... */
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  kaapi_assert_debug( kproc !=0 );
+  kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
+
+  /* */
+  if (!KAAPI_STACK_EMPTY(&kproc->lsuspend))
   {
-    if ( kaapi_request_ok( &kproc->hlrequests.requests[i] ) )
-    {
-      kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0 );
-      ++replied;
-      if (replied == count) break;
-    }
+    /* try top wakeup a waiting stack */  
   }
-  KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replied ); 
-  kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
+    
+redo_post:
+  /* try to steal a victim processor */
+  err = (*kproc->fnc_select)( kproc, &victim );
+  if (err !=0) goto redo_post;
 
-  return 0;
+  /* Fill & Post the request to the victim processor */
+  kaapi_stack_clear(kproc->ctxt);
+  kaapi_request_post( kproc, &reply, &victim );
+
+  while (!kaapi_reply_test( &reply ))
+  {
+    /* here request should be cancelled... */
+    kaapi_sched_advance( kproc );
+  }
+
+  kaapi_assert_debug( kaapi_request_status(&reply) != KAAPI_REQUEST_S_POSTED );
+
+  /* test if my request is ok
+  */
+  if (!kaapi_reply_ok(&reply)) 
+    return 0;
+  
+  /* Do the local computation
+  */
+  stack = kaapi_request_data(&reply);
+  return stack;
 }
-
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-

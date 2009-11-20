@@ -11,6 +11,9 @@
 
 include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_DIR}../src) 
 link_directories (${CMAKE_CURRENT_BINARY_DIR}/../src/ /usr/lib ) 
+include (${CMAKE_CURRENT_SOURCE_DIR}/../CheckCCompilerFlag.cmake )
+
+CHECK_C_COMPILER_FLAG("-fnested-functions" HAS_NESTED_FUNCTIONS_FLAG)
 
 # GLOBAL, LANGUAGE INDEPEND OPTIONS
 add_definitions ( "-Wall -g -DKAAPI_DEBUG" )
@@ -34,9 +37,17 @@ set_target_properties(
 
 # PROPERTIES for C code
 set_target_properties( 
-              fibo fibo_adapt 
-              PROPERTIES COMPILE_FLAGS "-std=c99 -fnested-functions" 
+  fibo fibo_adapt 
+  PROPERTIES COMPILE_FLAGS "-std=c99" 
 )
+
+if (HAS_NESTED_FUNCTIONS_FLAG)
+  set_target_properties(
+    fibo fibo_adapt 
+    PROPERTIES COMPILE_FLAGS "-std=c99 -fnested-functions"
+    )
+endif(HAS_NESTED_FUNCTIONS_FLAG)
+
 
 # PROPERTIES for C++ code
 set_target_properties( 
