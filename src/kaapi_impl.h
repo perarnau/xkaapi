@@ -69,6 +69,13 @@ extern "C" {
 #else
 #  define kaapi_assert_debug_m(val, x, msg)
 #endif
+#  define kaapi_assert_m(val, x, msg) \
+      { int __kaapi_err = x; \
+        if (__kaapi_err != val) \
+        { \
+          printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+        }\
+      }
 
 /** Global hash table of all formats: body -> fmt
 */
