@@ -56,9 +56,9 @@ extern "C" {
 #include "kaapi_config.h"
 #include "kaapi.h"
 #include "kaapi_error.h"
+#include <string.h>
 
 #if defined(KAAPI_DEBUG)
-#  include <string.h>
 #  define kaapi_assert_debug_m(val, x, msg) \
       { int __kaapi_err = x; \
         if (__kaapi_err != val) \
@@ -66,9 +66,16 @@ extern "C" {
           printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
         }\
       }
+#  define KAAPI_LOG(l, fmt, ...) \
+      do { if (l<= 50) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
+
 #else
 #  define kaapi_assert_debug_m(val, x, msg)
+#  define KAAPI_LOG(l, fmt, ...) 
 #endif
+
+/**
+*/
 #  define kaapi_assert_m(val, x, msg) \
       { int __kaapi_err = x; \
         if (__kaapi_err != val) \
@@ -344,6 +351,7 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_task_t*     origin_task;
   kaapi_task_body_t origin_body;
   void**            origin_task_args;
+  void*             copy_arg;
 } __attribute__((aligned(KAAPI_MAX_DATA_ALIGNMENT))) kaapi_tasksteal_arg_t;
 
 

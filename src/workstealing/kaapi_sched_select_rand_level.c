@@ -50,10 +50,6 @@ int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi
   unsigned int victimid = 0;
   int nbproc;
   
-  victim->level = level;
-  victim->kproc = kaapi_all_kprocessors[0];
-  return 0;
-  
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( victim !=0 );
 

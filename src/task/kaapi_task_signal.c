@@ -57,7 +57,7 @@ static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
   fmt = kaapi_format_resolvebybody( task->format );
   kaapi_assert_debug( fmt !=0 );
 
-  printf("IN %s\n", __PRETTY_FUNCTION__ );
+  KAAPI_LOG(100, "aftersteal task: 0x%x\n", task );
 
   /* report data to version to global data */
   arg = kaapi_task_getargs(task);
@@ -96,6 +96,8 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
   kaapi_task_t* task2sig;
 
   task2sig = kaapi_task_getargst( task, kaapi_task_t);
+  KAAPI_LOG(100, "signaltask: 0x%x -> task2signal: 0x%x\n", task, task2sig );
+
   if (kaapi_task_isadaptive(task2sig))
   {
     kaapi_taskadaptive_t* ta = task2sig->sp;
@@ -115,6 +117,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     kaapi_writemem_barrier();
 
     task2sig->body   = &kaapi_aftersteal_body;
+    KAAPI_LOG(100, "signaltask DFG task stolen: 0x%x\n", task2sig );
   }
 }
 

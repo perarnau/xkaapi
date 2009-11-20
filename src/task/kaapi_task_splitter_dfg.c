@@ -177,6 +177,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   }
   
 steal_the_task:
+  KAAPI_LOG(50, "dfgsplitter task: 0x%x\n", task);
   kaapi_assert_debug( task->body !=0);
   kaapi_assert_debug( task->body !=kaapi_suspend_body);
   {
@@ -200,6 +201,12 @@ steal_the_task:
     task->format = body;
     
     /* - create the task steal that will execute the stolen task
+       The task stealtask stores:
+         - the original stack
+         - the original task pointer
+         - the original body
+         - the pointer to shared data with R / RW access data
+         - and at the end it reserve enough space to store original task arguments
     */
     thief_stack = request->stack;
     
@@ -211,6 +218,7 @@ steal_the_task:
     arg->origin_task      = task;
     arg->origin_body      = body;
     arg->origin_task_args = (void**)(arg+1);
+    arg->copy_arg = kaapi_stack_pushdata(thief_stack, fmt->size);
     for (i=0; i<countparam; ++i)
       arg->origin_task_args[i] = param_data[i];
     

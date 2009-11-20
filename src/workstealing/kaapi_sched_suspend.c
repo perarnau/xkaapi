@@ -55,6 +55,9 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_thread_context_t* ctxt_condition;
   kaapi_task_t*           task_condition;
   kaapi_stack_t*          stack;
+
+  double t0;
+  double t1;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
@@ -77,7 +80,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       return 0;
     }
 
-#if 1 /* if 0 was only for debug */
     /* else steal a task */
     if (kproc->ctxt ==0)
     {
@@ -86,21 +88,27 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
       stack = kaapi_sched_emitsteal( kproc );
 
-      if ((stack !=0) && (stack != kproc->ctxt))
+      if (kaapi_stack_isempty(stack))
       {
         /* push it into the free list */
         KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
         
-        /* reinstall new context */
-        kaapi_setcontext(kproc, stack);
+        continue;
       }
+      if (stack != kproc->ctxt)
+      {
+        /* push it into the free list */
+        KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
+      }
+      kaapi_setcontext(kproc, stack);
     }
-#endif    
-    if (kproc->ctxt ==0) continue;
 
     /* printf("Thief, 0x%x, pc:0x%x,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
+    t0 = kaapi_get_elapsedtime();
     err = kaapi_stack_execall( kproc->ctxt );
+    t1 = kaapi_get_elapsedtime();
     kaapi_assert( err != EINVAL);
+    KAAPI_LOG(50, "[SUSPEND] Work for %fs\n", t1-t0);
     
     ctxt = kproc->ctxt;
     kproc->ctxt = 0;

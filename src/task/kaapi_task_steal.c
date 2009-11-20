@@ -54,20 +54,20 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_format_t* fmt;           /* format of the task */
   void* stolen_task_sp;
   void** origin_task_args;
-  kaapi_tasksteal_arg_t* copy_arg;
+  void* copy_arg;
   
   kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( task, kaapi_tasksteal_arg_t );
 
-  printf("IN %s\n", __PRETTY_FUNCTION__ );
+  KAAPI_LOG(100, "tasksteal: 0x%x -> task stolen: 0x%x\n", task, arg->origin_task );
 
-  /* format of the original task */  
+  /* format of the original stolen task */  
   fmt = kaapi_format_resolvebybody( arg->origin_body );
   kaapi_assert_debug( fmt !=0 );
   
   /* push a copy of the task argument in the stack */
   stolen_task_sp = arg->origin_task->sp;
   origin_task_args = arg->origin_task_args;
-  copy_arg = (kaapi_tasksteal_arg_t*)kaapi_stack_pushdata(stack, fmt->size);
+  copy_arg = arg->copy_arg;
   
   /* recopy or allocate in the heap the shared objects in the arguments of the stolen task */
   countparam = fmt->count_params;
@@ -112,8 +112,10 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_task_setflags( task, arg->origin_task->flag );
   kaapi_task_setargs(  task, copy_arg );
 
-  /* execute my mutation */
+  /* ... and execute the  mutation */
   (*arg->origin_body)( task, stack );
+
+//  printf("IN %s: end exec/// task copy:@0x%x -> task stolen:@0x%x\n", __PRETTY_FUNCTION__, task, arg->origin_task );
   
   /* report data to original task */
   for (i=0; i<countparam; ++i)
@@ -139,6 +141,10 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
       */    
     }
   }
+  KAAPI_LOG(100, "tasksteal: 0x%x end exec, next task: 0x%x bodysignal: 0x%x, pc: 0x%x\n", 
+      task, 
+      (task+1), 
+      (task+1)->body, stack->pc );
 }
 
 

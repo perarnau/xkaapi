@@ -55,6 +55,9 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_stack_t* stack;
   int err;
   
+  double t0;
+  double t1;
+  
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
@@ -69,9 +72,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     if (ctxt !=0) 
     {
       /* push kproc context into free list */
-      ctxt = kproc->ctxt;
-      kproc->ctxt = 0;
-      KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
+      KAAPI_LOG(50, "[IDLE] free ctxt 0x%x\n", ctxt);
+      KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
 
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
@@ -80,13 +82,15 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     
     /* steal request */
     stack = kaapi_sched_emitsteal( kproc );
-    if (stack ==0) break; /* terminaison */
+    if (kaapi_stack_isempty(stack)) continue;
+    kaapi_assert_debug( stack != 0);
     
     if (stack != kproc->ctxt)
     {
       ctxt = kproc->ctxt;
       kproc->ctxt = 0;
 
+      KAAPI_LOG(50, "[IDLE] free ctxt 0x%x\n", ctxt);
       /* push it into the free list */
       KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
 
@@ -95,14 +99,19 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
 
 redo_execute:
+    t0 = kaapi_get_elapsedtime();
     /* printf("Thief, 0x%x, pc:0x%x,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
+    KAAPI_LOG(50, "[IDLE] execute ctxt 0x%x\n", kproc->ctxt);
     err = kaapi_stack_execall( kproc->ctxt );
+    t1 = kaapi_get_elapsedtime();
+    KAAPI_LOG(50, "[IDLE] Work for %fs\n", t1-t0);
 
     if (err == EWOULDBLOCK) 
     {
       kaapi_thread_context_t* ctxt = kproc->ctxt;
       kproc->ctxt = 0;
 
+      KAAPI_LOG(50, "[IDLE] suspend ctxt 0x%x\n", ctxt);
       /* push it: suspended because top task is not ready */
       KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
 

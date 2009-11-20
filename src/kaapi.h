@@ -627,7 +627,7 @@ extern int kaapi_stack_clear( kaapi_stack_t* stack );
 */
 static inline int kaapi_stack_isempty(const kaapi_stack_t* stack)
 {
-  return (stack !=0) && (stack->pc >= stack->sp);
+  return (stack ==0) || (stack->pc >= stack->sp);
 }
 
 /** \ingroup STACK
@@ -780,8 +780,12 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 */
 static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
 {
+#if defined(KAAPI_DEBUG)
   task->flag   = flag & KAAPI_TASK_MASK_FLAGS;
   task->format = 0;
+#else
+  task->flag   = flag;
+#endif
   if (flag & KAAPI_TASK_ADAPTIVE)
   {
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
@@ -796,6 +800,40 @@ static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaa
     task->splitter = &kaapi_task_splitter_dfg;
   return 0;
 }
+
+/** \ingroup TASK
+    Initialize a task with given flag
+*/
+static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
+{
+#if defined(KAAPI_DEBUG)
+  task->flag   = (flag | KAAPI_TASK_ADAPTIVE)& KAAPI_TASK_MASK_FLAGS;
+  task->format = 0;
+#else
+  task->flag   = flag | KAAPI_TASK_ADAPTIVE;
+#endif
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
+  ta->user_sp    = 0;
+  ta->thievescount._counter = 0;
+  kaapi_assert_debug( ta !=0 );
+  task->sp       = ta;
+  task->body     = 0;
+  task->splitter = 0;
+}
+
+#if defined(KAAPI_DEBUG)
+#  define kaapi_task_initdfg( stack, task ) \
+  do {  task->flag   = KAAPI_TASK_DFG; \
+        task->format = 0; \
+        task->splitter = &kaapi_task_splitter_dfg;\
+  } while (0)
+#else
+#  define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
+    (task)->body     = taskbody;\
+    (task)->splitter = &kaapi_task_splitter_dfg; \
+    (task)->sp       = (buffer);\
+    (task)->flag     = KAAPI_TASK_DFG
+#endif
 
 
 /** \ingroup STACK
