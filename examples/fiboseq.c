@@ -30,17 +30,28 @@ extern void fiboseq(int n, int* r);
 int main(int argc, char** argv)
 {
   int i;
-  int n = atoi(argv[1]);
-  int niter = atoi(argv[2]);
+  int n;
+  int niter;
   int result;
-  double t0 = kaapi_get_elapsedtime();
+  double t0, t1;
+
+  if (argc >1)
+    n = atoi(argv[1]);
+  else 
+    n = 20;
+  if (argc >2)
+    niter =  atoi(argv[2]);
+  else 
+    niter = 1;
+    
+  t0 = kaapi_get_elapsedtime();
   {
     for (i=0; i<niter; ++i)
     {
         fiboseq(n, &result);
     }
   }
-  double t1 = kaapi_get_elapsedtime();
+  t1 = kaapi_get_elapsedtime();
   printf("Fibo(%i) = %i *** Time: t1=%e(s), t0=%e(s)\n", n, result, t1,t0 );
   printf("Fibo(%i) = %i *** Time: %e(s)\n", n, result, (t1-t0)/(double)niter );
   return 0;
