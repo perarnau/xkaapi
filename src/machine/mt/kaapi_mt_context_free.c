@@ -1,5 +1,5 @@
 /*
-** kaapi_stack_alloc.c
+** kaapi_stack_free.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -44,22 +44,13 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <sys/mman.h>
 
-/** kaapi_stack_alloc
+/**
 */
-int kaapi_stack_alloc( kaapi_stack_t* stack, kaapi_uint32_t count_task, kaapi_uint32_t size_data )
+int kaapi_context_free( kaapi_thread_context_t* ctxt )
 {
-  if ((stack == 0) || (count_task ==0)) return EINVAL;
-  stack->task = (kaapi_task_t*)malloc(sizeof(kaapi_task_t)*count_task);
-  if (stack->task ==0) return ENOMEM;
-  stack->data = (char*)malloc(size_data);
-  if (stack->data ==0) return ENOMEM;
-
-  stack->pc = stack->sp = stack->task;
-  stack->sp_data = stack->data;
-#if defined(KAAPI_DEBUG)
-  stack->end_sp      = stack->task + count_task;
-  stack->end_sp_data = stack->data + size_data;
-#endif
+  if (ctxt ==0) return 0;
+  munmap( ctxt, ctxt->size );
   return 0;
 }
