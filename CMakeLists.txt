@@ -9,7 +9,9 @@
 # CMake minimum version :
 cmake_minimum_required (VERSION 2.6) 
 # Project name :
-project (CKAAPI)
+project (XKAAPI)
+set (XKAAPI_VERSION "0.1")
+set (XKAAPI_NAME    "X-KAAPI")
 
 ###################
 ## TEST AREA BEG ##

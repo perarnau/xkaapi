@@ -1,4 +1,4 @@
-This is the CKAAPI library. 
+This is the XKAAPI library. 
 
 ===========================================================================
 Find information at http://kaapi.gforge.inria.fr/
@@ -9,9 +9,9 @@ If you got the source files and want to compile and install the library,
 read the INSTALL file
 ===========================================================================
 
-== About CKAAPI ==
+== About XKAAPI ==
 
-CKAAPI means C implementation of Kernel for Adaptative, Asynchronous Parallel
+XKAAPI means C implementation of Kernel for Adaptative, Asynchronous Parallel
 and Interactive programming. It is a C library that allows to execute
 multithreaded computation with data flow synchronization between threads. The
 library is able to schedule fine/medium size grain program on distributed

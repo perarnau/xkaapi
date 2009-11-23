@@ -20,7 +20,7 @@ CHECK_C_COMPILER_FLAG("-fnested-functions" HAS_NESTED_FUNCTIONS_FLAG)
 #add_definitions ( "-Wall -g -DKAAPI_DEBUG" )
 add_definitions ( "-Wall -O3" )
 
-set (CKAAPI_TEST_LINK_LIBS xkaapi-static)
+set (XKAAPI_TEST_LINK_LIBS xkaapi-static)
 
 
 # NEW TARGET Executable Section :
@@ -59,8 +59,8 @@ set_target_properties(
 
 
 # Target Section :
-target_link_libraries (transform            ${CKAAPI_TEST_LINK_LIBS} m)
-target_link_libraries (marc_problem         ${CKAAPI_TEST_LINK_LIBS} m)
-target_link_libraries (fiboseq              ${CKAAPI_TEST_LINK_LIBS} m)
-target_link_libraries (fibo                 ${CKAAPI_TEST_LINK_LIBS} m)
-target_link_libraries (fibo_adapt           ${CKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (transform            ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (marc_problem         ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (fiboseq              ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (fibo                 ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (fibo_adapt           ${XKAAPI_TEST_LINK_LIBS} m)
