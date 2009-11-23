@@ -109,7 +109,7 @@ to add two lines in its CMakeLists.txt :
 * target_link_libraries (exec_name libraries)
 
   Currently, the X-Kaapi library is available in this file by using
-"${CKAAPI_TEST_LINK_LIBS}", if your test uses other libraries, simply add them
+"${XKAAPI_TEST_LINK_LIBS}", if your test uses other libraries, simply add them
 after X-Kaapi.
 
 IV. Adding types to the library :
