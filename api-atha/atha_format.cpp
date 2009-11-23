@@ -47,16 +47,8 @@ Format::Format(
   : _id( fmid ),
     _name(n),
     _size(sz),
-    _attr_fmt(0),
-    _attr_offset(0),
     _iscompiled(false),
     _iscontiguous(false)
-#ifdef KAAPI_USE_XDR
-    ,
-    _std_size(0),
-    _isreal(false),
-    _isunsigned(false)
-#endif
 {
 //  Format* fmt_prev = get_format( _id );
 //  KAAPI_ASSERT_M (fmt_prev ==0, "[Format::Format] already defined entry: collision of two object with the same name");
@@ -116,6 +108,7 @@ namespace FormatDef {
 }
 
 
+// --------------------------------------------------------------------
 KAAPI_DECL_SPEC_FORMAT(bool, FormatDef::Bool)
 KAAPI_DECL_SPEC_FORMAT(char, FormatDef::Char)
 KAAPI_DECL_SPEC_FORMAT(signed char, FormatDef::SChar)
@@ -157,32 +150,6 @@ void Format::init_format()
   FormatDef::Double.set_continuous();
   FormatDef::LDouble.set_continuous();
   FormatDef::Null._id =0;
-
-#ifdef KAAPI_USE_XDR
-  FormatDef::Bool.set_std_size(STD_SIZE_BOOL);
-  FormatDef::Char.set_std_size(STD_SIZE_CHAR);
-  FormatDef::SChar.set_std_size(STD_SIZE_CHAR);
-  FormatDef::UChar.set_std_size(STD_SIZE_CHAR);
-  FormatDef::UChar.set_unsigned(true);
-  FormatDef::Int.set_std_size(STD_SIZE_INT);
-  FormatDef::UInt.set_std_size(STD_SIZE_INT);
-  FormatDef::UInt.set_unsigned(true);
-  FormatDef::Short.set_std_size(STD_SIZE_SHORT);
-  FormatDef::UShort.set_std_size(STD_SIZE_SHORT);
-  FormatDef::UShort.set_unsigned(true);
-  FormatDef::Long.set_std_size(STD_SIZE_LONG);
-  FormatDef::ULong.set_std_size(STD_SIZE_LONG);
-  FormatDef::ULong.set_unsigned(true);
-  FormatDef::LLong.set_std_size(STD_SIZE_LONGLONG);
-  FormatDef::ULLong.set_std_size(STD_SIZE_LONGLONG);
-  FormatDef::ULLong.set_unsigned(true);
-  FormatDef::Float.set_std_size(STD_SIZE_FLOAT);
-  FormatDef::Float.set_real(true);
-  FormatDef::Double.set_std_size(STD_SIZE_DOUBLE);
-  FormatDef::Double.set_real(true);
-  FormatDef::LDouble.set_std_size(STD_SIZE_LONGDOUBLE);
-  FormatDef::LDouble.set_real(true);
-#endif
 
   while (_base_fmt !=0) 
   {

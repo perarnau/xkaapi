@@ -16,70 +16,10 @@
 
 namespace atha {
 
-// --------------------------------------------------------------------
-/* About data types between heterogeneous computers:
- *
- * Recognized data types are:
- * boolean,
- * [unsigned] char, [unsigned] short, [unsigned] int, [unsigned] long, [unsigned] long long,
- * float, double, long double.
- *
- * Conversion between little-endian and big-endian are made.
- * (It uses WORDS_BIGENDIAN in kaapi_config.h to determine endianess)
- *
- * For boolean:
- * The least significant byte is kept.
- * (Booleans are 4-bytes long on G5 with g++3)
- *
- * For [unsigned] char (1),
- *     [unsigned] short (2),
- *     [unsigned] int (4),
- *     [unsigned] long long (8),
- *     float (4 bytes with ieee single format),
- *     double (8 bytes with ieee double format):
- * the size and the format is the same everywhere.
- * 
- * For [unsigned] long (4 or 8):
- *     the guarantee precision is the lowest precision of all the computers:
- *     8 bytes if all computers use 8-bytes long,
- *     4 bytes else.
- *
- * For long double:
- *   the recognized long double formats are:
- *     - IEEE_DOUBLE                                  --> ppc with g++3
- *     - IEEE_EXTENDED (with sizeof(long double)=12)  --> i686 and compatible
- *     - IEEE_EXTENDED (with sizeof(long double)=16)  --> itanium
- *     - IEEE_QUADRUPLE                               --> sparc and ??? (not fully tested)
- *     - PPC_QUADWORD                                 --> ppc with g++4
- * (about ieee formats, see http://babbage.cs.qc.edu/courses/cs341/IEEE-754references.html)
- * 
- *   the guarantee precision is the lowest precision of all the computers:
- *     - with PPC_QUADWORD, garantee precision is a ieee double precision.
- *   so
- *     min, max, epsilon values of the lowest precision computer are preserved.
- *     nan are preserved.
- *
- *   if possible
- *      conversion between normalized and denormalized is made
- *   else
- *      +or- "too big value"     -->   +or- infinity
- *      +or- "too small value"   -->   +or- 0
- *
- *
- * Limitation:
- *   - conversion from PPC_QUADWORD transform sNAN in qNAN
- * 
- * 
- */
-
-
+class ODotStream;
 
 // --------------------------------------------------------------------
 /** \brief Definition of the format of a data type
-    \ingroup Serialization
- A Format is the definition of the format for a data structure,
- currently only XDR like format is supported. MPI like format will
- be supported as a compilation of XDR like format.
 */
 class Format {
 public:
@@ -132,7 +72,6 @@ public:
   void* allocate(size_t count) const
   { return allocate(0, count ); }
 
-
   /** Should be equivalent to free(sizeof(Class))
   */
   virtual void  deallocate(InterfaceDeallocator* a, void* d, size_t count) const =0;
@@ -179,18 +118,6 @@ public:
   */
   virtual void print( std::ostream& o, const void* t ) const;
 
-  /** Set the format object to the attr of this closure
-  */
-  void set_attr_format(const Format* f);
-
-  /** Return the format object to the attr of this closure
-  */
-  const Format* get_attr_format( ) const;
-
-  /** Return a pointer to the attribut
-   */
-  void* get_attr( void* base ) const;
-
   // - Set the size in bytes of a C++ data with format
   void set_size( size_t s )
   { _size =s; }
@@ -229,15 +156,13 @@ protected:
   std::string   _name;
   Format*       _prev_init;
   size_t        _size;
-  const Format* _attr_fmt;
-  size_t        _attr_offset;
 
   mutable bool  _iscompiled;
   mutable bool  _iscontiguous;
 
 private:
-  static std::map<Id,Format*> _all_fm; // map from Id to format object
-  static Format* _base_fmt;            // base format to initialize
+  static std::map<Id,Format*> _all_fm;    // map from Id to format object
+  static Format*              _base_fmt;  // base format to initialize
 private:
   /** Cannot be used
   */
@@ -246,47 +171,13 @@ private:
   /** Cannot be used
   */
   Format& operator=( const Format& fmt );
-
-#ifdef KAAPI_USE_XDR
-protected:
-  mutable size_t _std_size; // standard size used to send on the network
-                            // 0 if not a base type
-  mutable bool _isreal;     // true if it is a float, a double or a long double
-  mutable bool _isunsigned; // true if it is unsigned
-
-public:
-  inline size_t get_std_size() const{
-    return _std_size;
-  }
-
-  inline void set_std_size(size_t s) const {
-    _std_size = s;
-  }
-
-  inline bool is_real() const {
-    return _isreal;
-  }
-
-  inline void set_real(bool b) const {
-    _isreal = b;
-  }
-
-  inline bool is_unsigned() const {
-    return _isunsigned;
-  }
-
-  inline void set_unsigned(bool b) const {
-    _isunsigned = b;
-  }
-
-#endif
 };
 
 
 // --------------------------------------------------------------------
 /** \name FormatOperationCumul
     \brief Format for a cumul operation
-    \ingroup Serialization
+    \ingroup atha
 */
 class FormatOperationCumul : public Format {
 public:
@@ -307,7 +198,101 @@ public:
   /** Description of the cumul
   */
   virtual void cumul( void* d, const void* src ) const =0;
+};
 
+
+// -------------------------------------------------------------------------
+/** \brief Format for a closure
+    \ingroup atha
+  Describe for each C++ type of closure the format of all associated
+  objects.
+*/
+class ClosureFormat : public Format {
+public:
+  typedef void (*RunFunction)(kaapi_task_t*, kaapi_stack_t* );
+  
+  /** Constructor of basic function format
+    @param name : the name of the closure
+   */
+  ClosureFormat(
+    Format::Id            fid,
+    size_t                size,
+    const std::string&    name,
+    RunFunction           run
+  );
+
+  /** 
+  */  
+  RunFunction get_run() const;
+
+  /** 
+  */  
+  void set_run(RunFunction  rf);
+
+  /** Default for Inherited from Format
+  */
+  void write( OStream& o, const void* d, size_t count) const;
+
+  /** Default for Inherited from Format
+  */
+  void read( IStream& o, void* d, size_t count) const;
+
+  /** Release readiness of current accesses to the next accesses
+      Next accesses become ready.
+  */
+  virtual void release(kaapi_task_t* clo) const =0;
+
+  /** Return true iff the closure is ready for execution
+      The readiness state of access should be propagate 
+      to the first next concurrent access.
+  */
+  virtual bool is_ready(kaapi_task_t* clo) const =0;
+
+  /** Return the size in bytes of the closure
+  */
+  virtual size_t get_size( const kaapi_task_t* clo ) const =0;
+
+  /** Get the number of parameters
+   */
+  virtual int get_nparam(const kaapi_task_t* clo) const =0;
+
+  /** Get the format of the parameter i
+   */
+  virtual const Format* get_fmtparam(const kaapi_task_t* clo, int i) const =0;
+
+  /** Get the pointer to the parameter i
+   */
+  virtual void* get_param(const kaapi_task_t* clo, int i) const =0;
+
+  /** Get the mode of access to the parameter i
+   */
+  virtual kaapi_access_mode_t get_mode(const kaapi_task_t* clo, int i) const =0;
+
+  /** Return true if the i-th parameter is an Access
+      Default implantation return true iff the mode is not AccessMode::v
+   */
+  virtual bool is_access(const kaapi_task_t* t, int i) const =0;
+
+  /** Overloaded 'Format::set_name()' method 
+  */
+  void set_name( const std::string& n );
+
+  /** Overloaded 'Format::get_name()' method 
+  */
+  const std::string& get_name( ) const;
+  
+  /** Overloaded 'Format::print()' method 
+  */
+  void print( std::ostream& o, const void* t ) const;
+  
+  /** Dump representation in an ODotStream
+  */
+  virtual void dump( ODotStream& o, const kaapi_task_t* t ) const;
+  
+protected:
+  /* Information about this kind of closure : */
+  bool                         _iscannonicalname; // - true if cannonical name is set
+  mutable RunFunction _run;
 };
 
 
@@ -326,6 +311,7 @@ public:
 
   void* allocate( InterfaceAllocator* a, size_t count ) const
   { return a == 0 ? _kaapi_malloc(count*sizeof(T)) : a->allocate(count*sizeof(T)) ; }
+
   void* allocate( size_t count ) const
   { return _kaapi_malloc(count*sizeof(T)); }
 
@@ -428,7 +414,6 @@ inline const WrapperFormat<T>* WrapperFormat<T>::get_format()
 {
   return &WrapperFormat<T>::theformat;
 }
-
 
 
 // --------------------------------------------------------------------
@@ -760,7 +745,6 @@ public:\
   static const WrapperFormat<TYPE>* get_format()\
   { return format; }\
 };
-
 #else
 #define KAAPI_SPECIALIZED_VOIDFORMAT(TYPE)\
 template<>\
@@ -1007,15 +991,6 @@ inline Format* Format::get_format( Id id )
   if (curr == _all_fm.end()) return 0;
   return curr->second;
 }
-
-inline void* Format::get_attr( void* base ) const
-{ return _attr_fmt ==0 ? 0 : ((char*)base)+_attr_offset; }
-
-inline void Format::set_attr_format(const Format* f)
-{ _attr_fmt = f; }
-
-inline const Format* Format::get_attr_format( ) const
-{ return _attr_fmt; }
 
 inline bool Format::is_continuous() const
 { return _iscontiguous; }

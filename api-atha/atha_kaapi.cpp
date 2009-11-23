@@ -5,10 +5,9 @@
 // =========================================================================
 #include "athapascan-1"
 #include "kaapi_impl.h"
+#include "atha_parser.h"
+#include "atha_component.h"
 
-#include <signal.h>
-#include <cmath>
-#endif
 
 // autotools can prompt for this ...
 const char* get_kaapi_version()
@@ -16,10 +15,10 @@ const char* get_kaapi_version()
 
 namespace a1 {
 
-#if 0 \TODO
+#if 0 /*TODO*/
 const SpaceCollectionFormat SpaceCollectionFormat::theformat;
 const SpaceCollectionFormat* const SpaceCollectionFormat::format  = &SpaceCollectionFormat::theformat;
-#endid
+#endif
 
 SetStickyC SetSticky;
 SetStack SetInStack;
@@ -70,7 +69,7 @@ void Community::leave()
 Community System::initialize_community( int& argc, char**& argv )
   throw (RuntimeError, RestartException, ServerException)
 {
-  static bool is_called = false; if (is_called) return com; is_called = true;
+  static bool is_called = false; if (is_called) return Community(0); is_called = true;
 #if defined(KAAPI_USE_PAPI)
   /*if ajout pour papi*/
   int Events[NUM_EVENTS] = {PAPI_TOT_INS};
@@ -96,13 +95,13 @@ Community System::initialize_community( int& argc, char**& argv )
      exit(1);
   }
 #endif  
-  Util::Parser::Module a1_module("a1");
+  atha::Parser::Module a1_module("a1");
 
   /* initialization of options for athapascan */
   a1_module.add_option("verbose", "false", "true iff verbose mode is activated");
-  Util::KaapiComponentManager::parser.add_module( &a1_module, &Util::KaapiComponentManager::prop);
+  atha::KaapiComponentManager::parser.add_module( &a1_module, &atha::KaapiComponentManager::prop);
   
-  /* first initialize Util::KaapiComponentManager::prop from file $HOME/.a1rc */
+  /* first initialize KaapiComponentManager::prop from file $HOME/.a1rc */
   std::string filename;
   char* name = getenv("HOME");
   if (name !=0) 
@@ -110,8 +109,8 @@ Community System::initialize_community( int& argc, char**& argv )
     try {
       filename = name;
       filename = filename + "/.a1rc";
-      Util::KaapiComponentManager::prop.load( filename );
-    } catch (const Util::IOError& e) { 
+      atha::KaapiComponentManager::prop.load( filename );
+    } catch (const IOError& e) { 
     } catch (...) { 
     }
   }
@@ -122,16 +121,16 @@ Community System::initialize_community( int& argc, char**& argv )
     try {
       filename = name;
       filename = filename + "/.a1rc";
-      Util::KaapiComponentManager::prop.load( filename );
-    } catch (const Util::IOError& e) { 
+      atha::KaapiComponentManager::prop.load( filename );
+    } catch (const IOError& e) { 
     } catch (...) { 
     }
   }
 
-  if (Util::KaapiComponentManager::initialize( argc, argv ) != 0)
-    Util::Exception_throw( Util::RuntimeError("[a1::System::initialize], Kaapi not initialized") );
+  if (atha::KaapiComponentManager::initialize( argc, argv ) != 0)
+    atha::Exception_throw( RuntimeError("[a1::System::initialize], Kaapi not initialized") );
 
-  return Community();
+  return Community(0);
 }
 
 
@@ -148,7 +147,7 @@ Community System::join_community( int& argc, char**& argv )
 // --------------------------------------------------------------------
 void System::terminate()
 {
-  Util::KaapiComponentManager::terminate();
+  atha::KaapiComponentManager::terminate();
 }
 
 
