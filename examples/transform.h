@@ -6,8 +6,8 @@
  *  Copyright 2009 INRIA. All rights reserved.
  *
  */
-#ifndef _CKAAPI_TRANSFORM_H
-#define _CKAAPI_TRANSFORM_H
+#ifndef _XKAAPI_TRANSFORM_H
+#define _XKAAPI_TRANSFORM_H
 #include "kaapi.h"
 #include <algorithm>
 

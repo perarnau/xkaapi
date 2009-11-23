@@ -58,6 +58,9 @@ extern "C" {
 #include "kaapi_error.h"
 #include <string.h>
 
+/** Highest level, more trace generated */
+#define KAAPI_LOG_LEVEL 10
+
 #if defined(KAAPI_DEBUG)
 #  define kaapi_assert_debug_m(val, x, msg) \
       { int __kaapi_err = x; \
@@ -67,7 +70,7 @@ extern "C" {
         }\
       }
 #  define KAAPI_LOG(l, fmt, ...) \
-      do { if (l<= 50) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
+      do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
 
 #else
 #  define kaapi_assert_debug_m(val, x, msg)
@@ -158,11 +161,6 @@ typedef struct kaapi_rtparam_t {
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t default_param;
-
-
-/** COmpute a hash value from a string
-*/
-extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
 /* ============================= Commun function for server side (no public) ============================ */
@@ -362,5 +360,8 @@ typedef struct kaapi_tasksteal_arg_t {
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
 
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* _KAAPI_IMPL_H */

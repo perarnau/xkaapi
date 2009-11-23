@@ -177,7 +177,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   }
   
 steal_the_task:
-  KAAPI_LOG(50, "dfgsplitter task: 0x%x\n", task);
+  KAAPI_LOG(50, "dfgsplitter task: 0x%p\n", (void*)task);
   kaapi_assert_debug( task->body !=0);
   kaapi_assert_debug( task->body !=kaapi_suspend_body);
   {

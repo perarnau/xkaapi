@@ -115,15 +115,17 @@ extern "C" {
 
 /* Kaapi name for stdint typedefs.
  */
-typedef uint8_t  kaapi_uint8_t;
-typedef uint16_t kaapi_uint16_t;
-typedef uint32_t kaapi_uint32_t;
+typedef uintptr_t kaapi_uintptr_t;
+typedef uint8_t   kaapi_uint8_t;
+typedef uint16_t  kaapi_uint16_t;
+typedef uint32_t  kaapi_uint32_t;
 typedef uint64_t  kaapi_uint64_t;
 
-typedef int8_t   kaapi_int8_t;
-typedef int16_t  kaapi_int16_t;
-typedef int32_t  kaapi_int32_t;
-typedef int64_t  kaapi_int64_t;
+typedef intptr_t  kaapi_intptr_t;
+typedef int8_t    kaapi_int8_t;
+typedef int16_t   kaapi_int16_t;
+typedef int32_t   kaapi_int32_t;
+typedef int64_t   kaapi_int64_t;
 
 /** Atomic type
 */
@@ -204,12 +206,19 @@ extern int kaapi_advance(void);
 extern double kaapi_get_elapsedtime(void);
 
 
+/* ========================================================================== */
+/** COmpute a hash value from a string
+*/
+extern kaapi_uint32_t kaapi_hash_value(const char * data);
+
+
 
 /* ========================================================================= */
 /* Task and stack interface                                                  */
 /* ========================================================================= */
 struct kaapi_task_t;
 struct kaapi_stack_t;
+struct kaapi_processor_t;
 
 /* Stack identifier */
 typedef kaapi_uint32_t kaapi_stack_id_t;
@@ -290,23 +299,24 @@ typedef int (*kaapi_task_reducer_t)(struct kaapi_task_t* /* task */, void* thief
    \TODO save also the C-stack if we try to suspend execution during a task execution
 */
 typedef struct kaapi_stack_t {
-  volatile int         *hasrequest;     /** points to the k-processor structure */
-  struct kaapi_task_t  *pc;             /** task counter: next task to execute, 0 if empty stack */
-  struct kaapi_task_t  *sp;             /** stack counter: next free task entry */
+  volatile int             *hasrequest;     /** points to the k-processor structure */
+  struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
+  struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
 #if defined(KAAPI_DEBUG)
-  struct kaapi_task_t*  end_sp;         /** past the last stack counter: next entry after the last task in stack array */
+  struct kaapi_task_t*      end_sp;         /** past the last stack counter: next entry after the last task in stack array */
 #endif
-  struct kaapi_task_t*  task;           /** stack of tasks */
+  struct kaapi_task_t*      task;           /** stack of tasks */
 
-  char*                 sp_data;        /** stack counter for the data: next free data entry */
+  char*                     sp_data;        /** stack counter for the data: next free data entry */
 #if defined(KAAPI_DEBUG)
-  char*                 end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
+  char*                     end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
 #endif
-  char*                 data;           /** stack of data with the same scope than task */
+  char*                     data;           /** stack of data with the same scope than task */
 
-  kaapi_request_t      *requests;       /** points to the processor structure */
-  kaapi_uint32_t        size;           /** size of the data structure */
-  struct kaapi_stack_t* _next;          /** to be stackable */
+  kaapi_request_t          *requests;       /** points to the processor structure */
+  kaapi_uint32_t            size;           /** size of the data structure */
+  struct kaapi_stack_t*     _next;          /** to be stackable */
+  struct kaapi_processor_t* _proc;          /** (internal) access to the attached processor */
 } kaapi_stack_t;
 
 
@@ -822,10 +832,13 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 }
 
 #if defined(KAAPI_DEBUG)
-#  define kaapi_task_initdfg( stack, task ) \
-  do {  task->flag   = KAAPI_TASK_DFG; \
-        task->format = 0; \
-        task->splitter = &kaapi_task_splitter_dfg;\
+#  define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
+  do {  \
+    (task)->body     = taskbody;\
+    (task)->splitter = &kaapi_task_splitter_dfg;\
+    (task)->sp       = (buffer);\
+    (task)->flag     = KAAPI_TASK_DFG; \
+    (task)->format   = 0; \
   } while (0)
 #else
 #  define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
@@ -931,6 +944,11 @@ extern int kaapi_sched_stealtask( kaapi_stack_t* stack, kaapi_task_t* task, kaap
 /* API for adaptive algorithm                                                */
 /* ========================================================================= */
 
+
+/* only exported for kaapi_stealpoint. kprocessor is a opaque structure here
+*/
+extern int kaapi_sched_stealprocessor(struct kaapi_processor_t* kproc);
+
 /** \ingroup ADAPTIVE
     Test if the current execution should process steal request into the task.
     This function also poll for other requests on the thread of control,
@@ -943,7 +961,10 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
   int count = *stack->hasrequest;
   if (count) 
   {
-    kaapi_advance(); /*    kaapi_sched_stealstack(stack); */
+    /* \TODO: ici appel systematique a kaapi_sched_stealprocessor, qui retourne vite, (mais cout)
+       a voir comment bi-passer cet appel (rentre visible kproc->lsuspend ?)...
+    */
+    kaapi_sched_stealprocessor(stack->_proc);
     count = *stack->hasrequest;
     return count;
   }
@@ -960,6 +981,7 @@ static inline int kaapi_stealpoint( kaapi_stack_t* stack, kaapi_task_t* task, ka
 {
   if (kaapi_stealpoint_isactive(stack, task)) 
   {
+    /* with function call has interest to be inline */
     kaapi_sched_stealtask( stack, task, splitter );
   }
   return *stack->hasrequest !=0;
@@ -967,6 +989,7 @@ static inline int kaapi_stealpoint( kaapi_stack_t* stack, kaapi_task_t* task, ka
 
 
 extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
+
 /** \ingroup ADAPTIVE
     Adaptor to invoke the splitter in the user code without putting atomic function in the
     public interface.

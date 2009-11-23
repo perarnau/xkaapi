@@ -73,7 +73,7 @@ redo_work:
     {
       if (kaapi_task_issync(task))
       {
-        KAAPI_LOG(50,"Would block task: 0x%x\n", task );
+        KAAPI_LOG(50,"Would block task: 0x%p\n", (void*)task );
         return EWOULDBLOCK;
       }
 
@@ -86,7 +86,7 @@ redo_work:
     {
       /* do not save stack frame before execution */
       kaapi_retn_body(task, stack);
-      KAAPI_LOG(100, "stackexec: exec retn 0x%x, pc: 0x%x\n",task, stack->pc );
+      KAAPI_LOG(100, "stackexec: exec retn 0x%p, pc: 0x%p\n",(void*)task, (void*)stack->pc );
       ++stack->pc;
       task = stack->pc;
 #if defined(KAAPI_TRACE_DEBUG)  
@@ -104,7 +104,7 @@ redo_work:
 #endif  
       body = task->body;
 //      task->format = body;
-      KAAPI_LOG(100, "stackexec: task 0x%x, pc: 0x%x\n", task, stack->pc );
+      KAAPI_LOG(100, "stackexec: task 0x%p, pc: 0x%p\n", (void*)task, (void*)stack->pc );
       (*body)(task, stack);
       task->body = 0;
 
@@ -124,9 +124,9 @@ redo_work:
         arg_retn[2] = saved_sp_data;
         kaapi_stack_pushtask(stack);
 
-  KAAPI_LOG(100, "stackexec: push retn: 0x%x, pc: 0x%x\n", 
-      retn, 
-      stack->pc );
+  KAAPI_LOG(100, "stackexec: push retn: 0x%p, pc: 0x%p\n", 
+      (void*)retn, 
+      (void*)stack->pc );
 
         /* update pc to the first forked task */
         task = stack->pc = saved_sp;
