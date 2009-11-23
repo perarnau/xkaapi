@@ -1,0 +1,510 @@
+/* KAAPI public interface */
+// ==========================================================================
+// (c) INRIA, projet MOAIS, 2006
+// see the copyright file.
+// Authors: T. Gautier
+// [3/3/97]: based on givtimer.h from Givaro library.
+//
+//
+//
+// ==========================================================================
+#ifndef _UTILS_TIMER_H_
+#define _UTILS_TIMER_H_
+
+#include <iostream>
+#include <string>
+#include <limits.h>
+#if defined(KAAPI_USE_ARCH_IA32) || defined(KAAPI_USE_ARCH_IA64)
+#  ifndef rdtsc
+#    define rdtsc(low,high) \
+       __asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))
+#  endif
+#endif
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#ifdef KAAPI_USE_IRIX
+#include <time.h> // clock
+#endif
+
+namespace atha {
+
+/** \class WallTimer
+    \brief Wall clock timer class
+    \ingroup Misc
+*/
+class WallTimer {
+public:
+  /** */
+  static const std::string& unit();
+
+  typedef double type;
+
+  /** */
+  WallTimer( )
+   : _delta(0) {}
+
+  /** */
+  void clear();
+
+  /** */
+  void start();
+
+  /** */
+  void stop();
+
+  /** */
+  double time() const;
+
+  /** */
+  static double gettime();
+protected:
+  type _delta;
+};
+
+
+
+/** \class CpuTimer
+    \brief CPU timer class
+    \ingroup Misc
+*/
+class CpuTimer {
+public:
+  /** */
+  static const std::string& unit();
+
+  /** */
+  typedef double type;
+
+  /** */
+  CpuTimer( )
+   : _delta(0) {}
+
+  /** */
+  void clear();
+
+  /** */
+  void start();
+
+  /** */
+  void stop();
+
+  /** */
+  double time() const;
+
+  /** */
+  static double gettime();
+protected:
+  type _delta;
+};
+
+
+
+/** \class SysTimer
+    \brief SYS timer class
+    \ingroup Misc
+*/
+class SysTimer {
+public:
+  /** */
+  static const std::string& unit();
+
+  /** */
+  typedef double type;
+
+  /** */
+  SysTimer( )
+   : _delta(0) {}
+
+  /** */
+  void clear();
+
+  /** */
+  void start();
+
+  /** */
+  void stop();
+
+  /** */
+  double time() const;
+
+  /** */
+  static double gettime();
+protected:
+  type _delta;
+};
+
+
+// -- 
+// HighResolution timer class
+// --
+class HighResTimer {
+public:
+  /** */
+  static const std::string& unit();
+
+  /** */
+  typedef kaapi_uint64_t type;
+
+  /** */
+  HighResTimer( )
+   : _delta() {}
+
+  /** */
+  ~HighResTimer() {}
+
+  /** */
+  void clear();
+  /** */
+  void start();
+  /** */
+  void stop();
+
+  /** */
+  type tick() const
+  { return _delta; }
+
+  /** */
+  double time() const
+  { return double(_delta) * inv_dtick_per_s; }
+
+  /** */
+  static type gettick();
+
+  /** */
+  static double gettime();
+
+  /** number of tick per second */
+  static double dtick_per_s;
+
+  /** 1/ dtick_per_s*/
+  static double inv_dtick_per_s;
+
+protected:
+  friend class Init;
+  static void calibrate();
+  static kaapi_uint64_t latency;
+#ifdef KAAPI_USE_IRIX
+  static struct timespec tspec;
+#endif
+  type  _delta;
+};
+
+
+
+// -- 
+// LogicalTimer class:
+// --
+class LogicalTimer {
+public:
+  /** */
+  static const std::string& unit();
+
+  /** */
+  typedef unsigned short type;
+
+  /** */
+  LogicalTimer( )
+   : _delta(0) {}
+
+  /** */
+  void clear();
+
+  /** */
+  void start();
+
+  /** */
+  void stop();
+
+  /** */
+  type tick() const;
+
+  /** */
+  double time() const;
+
+protected:
+  type _delta;
+};
+
+
+// -- 
+// Timer class: contains three objects of the previous type
+// --
+/** Timer.
+Class that defines stop/start timers to get 
+timing informations (CPU time, System time, Wall time or wall clock).
+The value that stores a timer is defined after a call to stop method
+and represents the delay (interval of time) between the calls to start
+and stop.
+@author T. Gautier
+@version $Id: utils_timer.h,v 1.1.1.1 2006/01/11 15:24:34 thierry Exp $
+*/
+class Timer : protected HighResTimer, 
+              protected WallTimer,
+              protected CpuTimer,
+              protected SysTimer,
+              protected LogicalTimer {
+public :
+
+  /** Type for timer
+   */
+  struct type {
+    type& operator-=( const type& a );
+    type& operator+=( const type& a );
+    HighResTimer::type t_hr;
+    WallTimer::type    t_r;
+    CpuTimer::type     t_u;
+    SysTimer::type     t_s;
+    LogicalTimer::type t_l;
+  };
+
+  /** Clear timers. Reset internal value of the object.
+  */ 
+  void clear(); 
+
+  /** Start timers. 
+  */
+  void start();
+
+  /** Stop timers.
+     The different times spent between the start and the stop method calls
+     is given by methods usertime, systime, realtime.
+  */
+  void stop();
+
+  /** Return the total amount of second spent in user mode
+    (CPU time).
+  */
+  double usertime() const;
+
+  /** Return the total amount of second spent in system mode
+    (System time)
+  */
+  double systime () const;
+
+  /** Return the total amount of second spent by
+    a wall clock (or real time). High Resolution timer
+  */
+  double hrrealtime () const;
+
+  /** Return the total amount of second spent by
+    a wall clock (or real time).
+  */
+  double realtime () const;
+
+  /** Return the number of clock tick.
+  */
+  double tickcount () const;
+
+  /** Return the number of start/stop.
+  */
+  double callcount () const;
+
+  /** 
+     Return a seed value to initialize random generator.
+  */
+  static long seed();
+
+  /**
+    Output to a stream. 
+    operator<< is also defined.
+  */
+  std::ostream& print( std::ostream& ) const;
+
+private:
+};
+
+
+/*
+ * inline definitions
+ */
+inline void HighResTimer::clear()
+{ _delta =0; }
+
+inline void HighResTimer::start()
+{ _delta = HighResTimer::gettick(); }
+
+inline void HighResTimer::stop()
+{ _delta = HighResTimer::gettick() - _delta - HighResTimer::latency; }
+
+inline double HighResTimer::gettime()
+{ return double(HighResTimer::gettick()) * inv_dtick_per_s; }
+
+inline void WallTimer::clear()
+{ _delta =0; }
+
+inline double WallTimer::gettime()
+{ 
+   struct timeval tmp2 ;
+   gettimeofday (&tmp2, 0) ;
+
+   // real time 
+   return (double) tmp2.tv_sec + ((double) tmp2.tv_usec) * 1e-6;
+}
+
+inline void WallTimer::start()
+{ 
+  _delta = WallTimer::gettime();
+}
+
+inline void WallTimer::stop()
+{ 
+  _delta = WallTimer::gettime() - _delta;
+}
+
+inline double WallTimer::time() const
+{ 
+  return _delta;
+}
+
+
+inline void CpuTimer::clear()
+{ _delta =0; }
+
+inline double CpuTimer::gettime()
+{
+   struct rusage tmp;
+   getrusage (RUSAGE_SELF, &tmp) ;
+   // user time
+   return double(tmp.ru_utime.tv_sec) + double(tmp.ru_utime.tv_usec) * 1e-6;
+}
+
+inline void CpuTimer::start()
+{
+  _delta = CpuTimer::gettime();
+}
+
+inline void CpuTimer::stop()
+{
+  _delta = CpuTimer::gettime() - _delta;
+}
+
+inline double CpuTimer::time() const
+{
+  return _delta;
+}
+
+
+inline void SysTimer::clear()
+{ _delta =0; }
+
+inline double SysTimer::gettime()
+{
+   struct rusage tmp;
+   getrusage (RUSAGE_SELF, &tmp) ;
+   // user time
+   return double(tmp.ru_stime.tv_sec) + double(tmp.ru_stime.tv_usec) * 1e-6;
+}
+
+inline void SysTimer::start()
+{
+  _delta = SysTimer::gettime();
+}
+
+inline void SysTimer::stop()
+{
+  _delta = SysTimer::gettime() - _delta;
+}
+
+inline double SysTimer::time() const
+{
+  return _delta;
+}
+
+ 
+inline void LogicalTimer::clear()
+{ _delta =0; }
+
+inline void LogicalTimer::start()
+{
+  _delta =0;
+}
+
+inline void LogicalTimer::stop()
+{
+  _delta =1;
+}
+
+inline LogicalTimer::type LogicalTimer::tick() const
+{
+  return _delta;
+}
+
+inline double LogicalTimer::time() const
+{
+  return double(_delta);
+}
+
+inline Timer::type& Timer::type::operator-=( const Timer::type& a )
+{
+  t_hr -= a.t_hr;
+  t_r -= a.t_r;
+  t_u -= a.t_u;
+  t_s -= a.t_s;
+  t_l -= a.t_l;
+  return *this;
+}
+
+inline Timer::type& Timer::type::operator+=( const Timer::type& a )
+{
+  t_hr += a.t_hr;
+  t_r += a.t_r;
+  t_u += a.t_u;
+  t_s += a.t_s;
+  t_l += a.t_l;
+  return *this;
+}
+
+
+inline void Timer::clear()
+{ 
+  HighResTimer::clear();
+  WallTimer::clear();
+  CpuTimer::clear();
+  SysTimer::clear();
+  LogicalTimer::clear();
+}
+
+inline void Timer::start()
+{
+  HighResTimer::start();
+  WallTimer::start();
+  CpuTimer::start();
+  SysTimer::start();
+  LogicalTimer::start();
+}
+
+inline void Timer::stop()
+{
+  HighResTimer::stop();
+  WallTimer::stop();
+  CpuTimer::stop();
+  SysTimer::stop();
+  LogicalTimer::stop();
+}
+
+inline double Timer::usertime() const 
+{ return CpuTimer::time(); }
+
+inline double Timer::systime () const 
+{ return SysTimer::time(); }
+
+inline double Timer::hrrealtime () const 
+{ return HighResTimer::time(); }
+
+inline double Timer::realtime () const 
+{ return WallTimer::time(); }
+
+inline double Timer::tickcount () const 
+{ return HighResTimer::tick(); }
+
+inline double Timer::callcount () const 
+{ return LogicalTimer::time(); }
+
+} // - namespace
+
+inline std::ostream& operator<<( std::ostream& o, const atha::Timer& T)
+{ return T.print(o);}
+
+
+#endif 
