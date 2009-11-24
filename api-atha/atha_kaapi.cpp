@@ -62,6 +62,15 @@ bool Community::is_leader() const
 // --------------------------------------------------------------------
 void Community::leave() 
 { 
+  int err;
+  kaapi_stack_t* stack = kaapi_self_stack();
+redo:
+  err = kaapi_stack_execall(stack);
+  if (err == EWOULDBLOCK)
+  {
+    kaapi_sched_suspend( kaapi_get_current_processor() );
+    goto redo;
+  }
 }
 
 
