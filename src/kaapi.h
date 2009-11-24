@@ -302,15 +302,11 @@ typedef struct kaapi_stack_t {
   volatile int             *hasrequest;     /** points to the k-processor structure */
   struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
   struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
-#if defined(KAAPI_DEBUG)
   struct kaapi_task_t*      end_sp;         /** past the last stack counter: next entry after the last task in stack array */
-#endif
   struct kaapi_task_t*      task;           /** stack of tasks */
 
   char*                     sp_data;        /** stack counter for the data: next free data entry */
-#if defined(KAAPI_DEBUG)
   char*                     end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
-#endif
   char*                     data;           /** stack of data with the same scope than task */
 
   kaapi_request_t          *requests;       /** points to the processor structure */
