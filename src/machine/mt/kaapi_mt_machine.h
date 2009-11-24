@@ -196,6 +196,7 @@ extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 */
 extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc );
 
+
 /** \ingroup STACK
     The function kaapi_context_free() free the context successfuly allocated with kaapi_context_alloc.
     If successful, the kaapi_context_free() function will return zero.  
