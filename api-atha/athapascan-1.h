@@ -127,18 +127,17 @@ namespace a1 {
   class Shared {
   public:
     typedef T value_type;
-
+    operator kaapi_access_t&() { return _gd; }
     ~Shared ( ) 
     {
-#if 0
-      Thread* thread = System::get_current_thread(); 
-      destroy( thread );
+#if 0 /* optimize destructor: do nothing for basic type */
+      destroy( stack );
 #endif
     }
     
-    Shared ( value_type* data = 0 ) 
-    {
 #if 0
+    Shared ( value_type* data ) 
+    {
       Thread* thread = System::get_current_thread(); 
       if (!data) 
       {
@@ -160,24 +159,24 @@ namespace a1 {
           attr.set_inheap();
       }
       initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
-#endif
     }
+#endif
 
+#if 0
     Shared ( const SetStack& toto, value_type* data = 0) 
     {
-#if 0
       Thread* thread = System::get_current_thread(); 
       DFG::GlobalData::Attribut attr;
       attr.clear();
       attr.set_instack();
       if(!data) data = new (thread->allocate(sizeof(value_type))) value_type;
       initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
-#endif
     }
+#endif
 
+#if 0
     Shared ( const SetHeap& toto, value_type* data = 0) 
     {
-#if 0
       Thread* thread = System::get_current_thread(); 
       DFG::GlobalData::Attribut attr;
       attr.clear();
@@ -190,39 +189,39 @@ namespace a1 {
         0;
 #endif
       initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
+    }
 #endif
+
+    Shared()
+    {
+      kaapi_stack_t* stack = kaapi_self_stack();
+      _gd.data = kaapi_stack_pushdata(stack,sizeof(T));
+      new (_gd.data) T;
     }
 
     Shared(const value_type& value )
     {
-#if 0
-      if (sizeof(value_type) <= STACK_ALLOC_THRESHOLD) {
-        Thread* thread = System::get_current_thread(); 
-        _gd.data  = new (SharedAllocator, thread) T(value)
-        _gd._attr = 0;
-      } else {
-        _gd.data  = new (SharedAllocator) T(value)
-        _gd._attr = 1;
-      }
-#endif
+      kaapi_stack_t* stack = kaapi_self_stack();
+      _gd.data = kaapi_stack_pushdata(stack,sizeof(T));
+      new (_gd.data) T(value);
     }
 
+#if 0
     Shared(const SetStack& toto, const T& value )
     {
-#if 0
       Thread* thread = System::get_current_thread(); 
       _gd.data  = new (SharedAllocator, thread) T(value)
       _gd._attr = 0;
-#endif
     }
+#endif
 
+#if 0
     Shared(const SetHeap& toto, const T& value )
     {
-#if 0
       _gd.data  = new (SharedAllocator) T(value)
       _gd._attr = 1;
-#endif
     }
+#endif
 
     Shared(const Shared<value_type>& t) 
      : _gd(t._gd)
@@ -241,7 +240,6 @@ namespace a1 {
 
   private:
     kaapi_access_t _gd;
-    int            _attr; /* 0: in stack, 1: in heap */
   };
   
 
@@ -251,6 +249,7 @@ namespace a1 {
   public:
     typedef T value_type;
 
+    operator kaapi_access_t&() { return _gd; }
     Shared_rp( const kaapi_access_t& a )
      : _gd( a )
     { }
@@ -265,6 +264,7 @@ namespace a1 {
   public:
     typedef T value_type;
 
+    operator kaapi_access_t&() { return _gd; }
     Shared_r( const kaapi_access_t& a )
      : _gd( a )
     { }
@@ -282,6 +282,7 @@ namespace a1 {
   public:
     typedef T value_type;
 
+    operator kaapi_access_t&() { return _gd; }
     Shared_wp( const kaapi_access_t& a )
      : _gd( a )
     { }
@@ -296,6 +297,7 @@ namespace a1 {
   public:
     typedef T value_type;
 
+    operator kaapi_access_t&() { return _gd; }
     Shared_w( const kaapi_access_t& a )
      : _gd( a )
     { }
@@ -322,6 +324,7 @@ namespace a1 {
   public:
     typedef T value_type;
 
+    operator kaapi_access_t&() { return _gd; }
     Shared_rpwp( const kaapi_access_t& a )
      : _gd( a )
     { }
@@ -336,6 +339,7 @@ namespace a1 {
   public:
     typedef T value_type;
 
+    operator kaapi_access_t&() { return _gd; }
     Shared_rw( const kaapi_access_t& a )
      : _gd( a )
     { }
@@ -402,12 +406,10 @@ namespace a1 {
   // -------------------------------------------------------------------- VECTOR of Shared
 
 
-  // --------------------------------------------------------------------
-  typedef kaapi_task_t Closure;
-  
+  // --------------------------------------------------------------------  
   class DefaultAttribut {
   public:
-    Closure* operator()( Thread*, Closure* clo)
+    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
     { return clo; }
   };
   extern DefaultAttribut SetDefault;
@@ -415,7 +417,7 @@ namespace a1 {
   /* */
   class UnStealableAttribut {
   public:
-    Closure* operator()( Thread*, Closure* clo)
+    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
     { clo->flag |= KAAPI_TASK_STICKY; return clo; }
   };
   inline UnStealableAttribut SetUnStealable()
@@ -424,7 +426,7 @@ namespace a1 {
   /* like default attribut: not yet distributed computation */
   class SetLocalAttribut {
   public:
-    Closure* operator()( Thread*, Closure* clo)
+    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
     {  return clo; }
   };
   extern SetLocalAttribut SetLocal;
@@ -435,7 +437,7 @@ namespace a1 {
     float _cost;
   public:
     AttributSetCost( float c ) : _cost(c) {}
-    Closure* operator()( Thread*, Closure* clo)
+    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
     { return clo; }
   };
   inline AttributSetCost SetCost( float c )
@@ -447,7 +449,7 @@ namespace a1 {
     int _site;
   public:
     AttributSetSite( int s ) : _site(s) {}
-    Closure* operator()( Thread*, Closure* clo)
+    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
     { return clo; }
   };
 
@@ -462,7 +464,7 @@ namespace a1 {
     SetStaticSchedAttribut( int n, int m  ) 
      : _npart(n), _niter(m) {}
     template<class A1_CLO>
-    Closure* operator()( Thread* t, A1_CLO*& clo)
+    kaapi_task_t* operator()( kaapi_stack_t*, A1_CLO*& clo) const
     { 
       return clo; 
     }
@@ -475,91 +477,125 @@ namespace a1 {
 #endif
 
   // --------------------------------------------------------------------
+  /* typenames for access mode */
+  struct ACCESS_MODE_V {};
+  struct ACCESS_MODE_R {};
+  struct ACCESS_MODE_W {};
+  struct ACCESS_MODE_RW {};
+  struct ACCESS_MODE_CW {};
+  struct ACCESS_MODE_RP {};
+  struct ACCESS_MODE_WP {};
+  struct ACCESS_MODE_RPWP {};
+  struct ACCESS_MODE_CWP {};
+
   template<class T>
   struct Trait_ParamClosure {
     typedef T type_inclosure;
     enum { isshared = false };
-    enum { mode = KAAPI_ACCESS_MODE_V};
+    typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
+    template<class E>
+    static void link( type_inclosure& f, const E& e) { f = e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<const T&> {
     typedef T type_inclosure;
     enum { isshared = false };
-    enum { mode = KAAPI_ACCESS_MODE_V};
+    typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
+    template<class E>
+    static void link( type_inclosure& f, const E& e) { f = e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<Shared<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_RW | KAAPI_ACCESS_MODE_P };
+    typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = false };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<Shared_rw<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_RW };
+    typedef ACCESS_MODE_RW mode;
     enum { modepostponed = false };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<Shared_r<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_R };
+    typedef ACCESS_MODE_R mode;
     enum { modepostponed = false };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<Shared_w<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_W };
+    typedef ACCESS_MODE_W mode;
     enum { modepostponed = false };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
-  template<class T>
-  struct Trait_ParamClosure<Shared_cw<T> > {
+  template<class T, class F>
+  struct Trait_ParamClosure<Shared_cw<T, F> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_CW };
+    typedef ACCESS_MODE_CW mode;
     enum { modepostponed = false };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<Shared_rpwp<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_RW | KAAPI_ACCESS_MODE_P };
+    typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = true };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<Shared_rp<T> > {
+    typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_R | KAAPI_ACCESS_MODE_P };
+    typedef ACCESS_MODE_RP mode;
     enum { modepostponed = true };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
   template<class T>
   struct Trait_ParamClosure<Shared_wp<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_W | KAAPI_ACCESS_MODE_P };
+    typedef ACCESS_MODE_WP mode;
     enum { modepostponed = true };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cwp<T, F> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    enum { mode = KAAPI_ACCESS_MODE_CW | KAAPI_ACCESS_MODE_P };
+    typedef ACCESS_MODE_CWP mode;
     enum { modepostponed = true };
+    template<class S>
+    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
 
 
@@ -571,49 +607,53 @@ namespace a1 {
   /* for better understand error message */
   template<class TASK>
   struct FOR_TASKNAME {};
-
-  template<char ME, char MF, class PARAM, class TASK>
+  
+  template<class ME, class MF, class PARAM, class TASK>
   struct PassingRule {
-    static void IS_COMPATIBLE();
+//    static void IS_COMPATIBLE();
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_V, ACCESS_MODE_V, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_CW, KAAPI_ACCESS_MODE_CW, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_CW, ACCESS_MODE_CW, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_R, ACCESS_MODE_R, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_RW|KAAPI_ACCESS_MODE_P, KAAPI_ACCESS_MODE_RW, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_RW, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_RW|KAAPI_ACCESS_MODE_P, KAAPI_ACCESS_MODE_W, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_W, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_RW|KAAPI_ACCESS_MODE_P, KAAPI_ACCESS_MODE_CW, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_CW, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_RW|KAAPI_ACCESS_MODE_P, KAAPI_ACCESS_MODE_R, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_R, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_P, KAAPI_ACCESS_MODE_R, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_RP, ACCESS_MODE_R, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_W|KAAPI_ACCESS_MODE_P, KAAPI_ACCESS_MODE_W, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_WP, ACCESS_MODE_W, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK> /* this rule is only valid for terminal fork... */
+  struct PassingRule<ACCESS_MODE_W, ACCESS_MODE_W, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct PassingRule<KAAPI_ACCESS_MODE_CW|KAAPI_ACCESS_MODE_P, KAAPI_ACCESS_MODE_CW, PARAM, TASK> {
+  struct PassingRule<ACCESS_MODE_CWP, ACCESS_MODE_CW, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
 
@@ -628,47 +668,7 @@ namespace a1 {
     }
   };
 
-  // --------------------------------------------------------------------
-  template<class TASK, class F1>
-  struct KaapiTask1 {
-    F1 f1;
-    typedef KaapiTask1<TASK, F1> Self_t;
-    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
-    { 
-      static TASK dummy;
-      Self_t* args = kaapi_task_getargst( task, Self_t);
-      dummy(args->f1);
-    }
-  };
-
-  // --------------------------------------------------------------------
-  template<class TASK, class F1, class F2>
-  struct KaapiTask2 {
-    F1 f1;
-    F2 f2;
-    typedef KaapiTask2<TASK, F1, F2> Self_t;
-    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
-    { 
-      static TASK dummy;
-      Self_t* args = kaapi_task_getargst( task, Self_t);
-      dummy(args->f1, args->f2);
-    }
-  };
-
-  // --------------------------------------------------------------------
-  template<class TASK, class F1, class F2, class F3>
-  struct KaapiTask3 {
-    F1 f1;
-    F2 f2;
-    F3 f3;
-    typedef KaapiTask3<TASK, F1, F2, F3> Self_t;
-    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
-    { 
-      static TASK dummy;
-      Self_t* args = kaapi_task_getargst( task, Self_t);
-      dummy(args->f1, args->f2, args->f3);
-    }
-  };
+#include "athapascan_closure.h"
 
   // --------------------------------------------------------------------
   /* New API: thread.Fork<TASK>([ATTR])( args )
@@ -682,63 +682,8 @@ namespace a1 {
     public:
       Forker( kaapi_stack_t* s, const Attr& a ) : _stack(s), _attr(a) {}
 
-      template<class E1, class F1>
-      Closure* PushArg( void (TASK::*)(F1), const E1& e1 )
-      {
-        typedef typename Trait_ParamClosure<F1>::type_inclosure F1_CLO;
-        typedef KaapiTask1<TASK, F1_CLO> KaapiClosure;
-
-        PassingRule<Trait_ParamClosure<E1>::mode,Trait_ParamClosure<F1>::mode, ARG<1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
-
-        kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-        kaapi_task_initdfg( _stack, clo, KaapiClosure::body, kaapi_stack_pushdata(_stack, sizeof(KaapiClosure)) );
-        KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
-        arg->f1 = e1;
-        return clo;
-      }
-
-      template<class E1, class F1, class E2, class F2>
-      Closure* PushArg( void (TASK::*)(F1, F2), const E1& e1, const E2& e2 )
-      {
-        typedef typename Trait_ParamClosure<F1>::type_inclosure F1_CLO;
-        typedef typename Trait_ParamClosure<F2>::type_inclosure F2_CLO;
-        typedef KaapiTask2<TASK, F1_CLO, F2_CLO> KaapiClosure;
-
-        PassingRule< Trait_ParamClosure<E1>::mode,Trait_ParamClosure<F1>::mode, ARG<1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
-        PassingRule< Trait_ParamClosure<E2>::mode,Trait_ParamClosure<F2>::mode, ARG<2>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
-
-        kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-        kaapi_task_initdfg( _stack, clo, KaapiClosure::body, kaapi_stack_pushdata(_stack, sizeof(KaapiClosure)) );
-        KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
-        arg->f1 = e1;
-        arg->f2 = e2;
-        return clo;
-      }
-
-      template<class E1, class F1, class E2, class F2, class E3, class F3>
-      Closure* PushArg( void (TASK::*)(F1, F2, F3), const E1& e1, const E2& e2, const E3& e3 )
-      {
-        typedef typename Trait_ParamClosure<F1>::type_inclosure F1_CLO;
-        typedef typename Trait_ParamClosure<F2>::type_inclosure F2_CLO;
-        typedef typename Trait_ParamClosure<F3>::type_inclosure F3_CLO;
-        typedef KaapiTask3<TASK, F1_CLO, F2_CLO, F3_CLO> KaapiClosure;
-
-        PassingRule< Trait_ParamClosure<E1>::mode,Trait_ParamClosure<F1>::mode, ARG<1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
-        PassingRule< Trait_ParamClosure<E2>::mode,Trait_ParamClosure<F2>::mode, ARG<2>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
-        PassingRule< Trait_ParamClosure<E3>::mode,Trait_ParamClosure<F3>::mode, ARG<3>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
-
-        kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-        kaapi_task_initdfg( _stack, clo, KaapiClosure::body, kaapi_stack_pushdata(_stack, sizeof(KaapiClosure)) );
-        KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
-        arg->f1 = e1;
-        arg->f2 = e2;
-        arg->f3 = e3;
-        return clo;
-      }
-
       /**
-      **/
-      
+      **/      
       void operator()()
       { 
         kaapi_task_t* clo = kaapi_stack_toptask( _stack);
@@ -747,32 +692,11 @@ namespace a1 {
         kaapi_stack_pushtask( _stack);    
       }
 
-      template<class E1> 
-      void operator()(const E1& e1)
-      { 
-        kaapi_task_t* clo = PushArg( &TASK::operator(), e1 );
-        _attr(_stack, clo);
-        kaapi_stack_pushtask( _stack);    
-      }
+#include "athapascan_fork.h"
 
-      template<class E1, class E2> 
-      void operator()(const E1& e1, const E2& e2)
-      { 
-        kaapi_task_t* clo = PushArg( &TASK::operator(), e1, e2 );
-        _attr(_stack, clo);
-        kaapi_stack_pushtask( _stack);    
-      }
-
-      template<class E1, class E2, class E3> 
-      void operator()(const E1& e1, const E2& e2, const E3& e3)
-      { 
-        kaapi_task_t* clo = PushArg( &TASK::operator(), e1, e2, e3 );
-        _attr(_stack, clo);
-        kaapi_stack_pushtask( _stack);    
-      }
     protected:
       kaapi_stack_t* _stack;
-      Attr*          _attr;
+      const Attr&    _attr;
     };
         
     template<class TASK>
@@ -781,57 +705,181 @@ namespace a1 {
     template<class TASK, class Attr>
     Forker<TASK, Attr> Fork(const Attr& a) { return Forker<TASK, Attr>(&_stack, a); }
 
-#if 0   
- template<class TASK>
-    struct ForkerMain : protected Forker<MainTask<TASK>,DefaultAttribut> 
-    {
-      ForkerMain() 
-       : Forker<MainTask<TASK>,DefaultAttribut>(0,SetDefault)
-      { }
-
-      void operator()( int argc, char** argv)
-      {
-        TASK()( argc, argv );
-      }
-    };
-
-    template<class TASK>
-    ForkerMain<TASK> ForkMain()
-    { 
-      return ForkerMain<TASK>();
-    }
-#endif
-    
   protected:
     kaapi_stack_t _stack;
   };
 
-  template<class TASK>
-  class MainTask {};
   
+  
+  // --------------------------------------------------------------------
+  /** Top level Fork */
+  template<class TASK>
+  Thread::Forker<TASK, DefaultAttribut> Fork() { return Thread::Forker<TASK, DefaultAttribut>(kaapi_self_stack(), DefaultAttribut()); }
+
+  template<class TASK, class Attr>
+  Thread::Forker<TASK, Attr> Fork(const Attr& a) { return Thread::Forker<TASK, Attr>(kaapi_self_stack(), a); }
+
+
+
+  // --------------------------------------------------------------------
   /** Wait execution of all forked tasks of the running task */
   extern void Sync();
+
+
+
+  // --------------------------------------------------------------------
+  /* Main task */
+  template<class TASK>
+  struct MainTask {
+    int    argc;
+    char** argv;
+    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
+    {
+      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
+      TASK()( args->argc, args->argv );
+    }
+  };
+  
+  template<class TASK>
+  struct ForkerMain
+  {
+    ForkerMain() 
+    { }
+
+    void operator()( int argc, char** argv)
+    {
+      kaapi_stack_t* stack = kaapi_self_stack();
+      kaapi_task_t* clo = kaapi_stack_toptask( stack);
+      kaapi_task_initdfg( stack, clo, &MainTask<TASK>::body, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
+      MainTask<TASK>* arg = kaapi_task_getargst( clo, MainTask<TASK>);
+      arg->argc = argc;
+      arg->argv = argv;
+      kaapi_stack_pushtask( stack);    
+    }
+  };
+
+  template<class TASK>
+  ForkerMain<TASK> ForkMain()
+  { 
+    return ForkerMain<TASK>();
+  }
+    
+
+  template <class T>
+  class WrapperFormat {
+  public:
+    static Format* format;
+  };
+
+  template <class T>
+  Format* WrapperFormat<T>::format = 0;
 
 } // namespace a1
 
 
-#if 0 // \TODO: a reprendre correctement
-/* specialize the resize of vector of shared */
-namespace a1 {
-template<class T, class Alloc>
-inline void resize_vector(std::vector<a1::Shared<T>,Alloc>& v, typename std::vector<a1::Shared<T>,Alloc>::size_type __new_size)
-{
-  typename std::vector<a1::Shared<T>,Alloc>::size_type sz = v.size();
-  v.resize(__new_size);
-  for (typename std::vector<a1::Shared<T>,Alloc>::size_type i=sz; i<__new_size; ++i)
-    v[i] = Shared<T>();
-}
-}
-#endif
+// ---------------------------------------------------------------------------------
+/** Compatibility with old C++ Kaapi
+*/
+#include "atha_timer.h"
 
+namespace  atha {
+  extern std::ostream& logfile();
+}
+
+namespace Util {
+  using atha::WallTimer;
+  using atha::CpuTimer;
+  using atha::SysTimer;
+  using atha::HighResTimer;
+  using atha::logfile;
+  
+  /* old names */
+  typedef kaapi_uint8_t  ka_uint8_t;
+  typedef kaapi_uint16_t ka_uint16_t;
+  typedef kaapi_uint32_t ka_uint32_t;
+  typedef kaapi_uint64_t ka_uint64_t;
+
+  typedef kaapi_int8_t   ka_int8_t;
+  typedef kaapi_int16_t  ka_int16_t;
+  typedef kaapi_int32_t  ka_int32_t;
+  typedef kaapi_int64_t  ka_int64_t;
+  
+  using a1::WrapperFormat;
+};
 
 // ---------------------------------------------------------------------------------
-#if 0
+/* empty stream function: not in this version */
+namespace a1 {
+  struct IOStream_base {
+    enum Mode { 
+      IA,   /* immediate access of value */ 
+      DA,   /* differed access of value */
+      DAC   /* differed access of possibly cyclic pointer value */
+    };
+  };
+  struct OStream: public IOStream_base {
+    /** */
+    void write( const Format* f, Mode m, const void* data, size_t count ) {}
+  };
+  struct IStream: public IOStream_base {
+    /** */
+    void read( const Format* f, Mode m, void* const data, size_t count ) {}
+  };
+  
+  inline OStream& operator<< (OStream& m, const bool v )  { return m; }
+  inline OStream& operator<< (OStream& m, const char v )  { return m; }
+  inline OStream& operator<< (OStream& m, const signed char v )  { return m; }
+  inline OStream& operator<< (OStream& m, const unsigned char v )  { return m; }
+  inline OStream& operator<< (OStream& m, const short v )  { return m; }
+  inline OStream& operator<< (OStream& m, const unsigned short v )  { return m; }
+  inline OStream& operator<< (OStream& m, const int v )  { return m; }
+  inline OStream& operator<< (OStream& m, const unsigned int v )  { return m; }
+  inline OStream& operator<< (OStream& m, const long v )  { return m; }
+  inline OStream& operator<< (OStream& m, const unsigned long v )  { return m; }
+  inline OStream& operator<< (OStream& m, const long long v )  { return m; }
+  inline OStream& operator<< (OStream& m, const unsigned long long v )  { return m; }
+  inline OStream& operator<< (OStream& m, const float v )  { return m; }
+  inline OStream& operator<< (OStream& m, const double v )  { return m; }
+  inline OStream& operator<< (OStream& m, const long double v )  { return m; }
+  inline OStream& operator<< (OStream& m, const std::string& v )  { return m; }
+//TODO  inline OStream& operator<< (OStream& o, const Pointer& s)  { return m; }
+  template<class T>
+  inline OStream& operator<< (OStream& m, const std::vector<T>& v )  { return m; }
+  template<class Fst, class Snd>
+  inline  OStream& operator<< (OStream& m, const std::pair<Fst,Snd>& p )  { return m; }
+
+
+  /* -----------------------------------
+  */
+  #ifdef MACOSX_EDITOR
+  #pragma mark ----- Input
+  #endif
+  inline IStream& operator>> (IStream& m, bool& v )  { return m; }
+  inline IStream& operator>> (IStream& m, char& v )  { return m; }
+  inline IStream& operator>> (IStream& m, signed char& v )  { return m; }
+  inline IStream& operator>> (IStream& m, unsigned char& v )  { return m; }
+  inline IStream& operator>> (IStream& m, short& v )  { return m; }
+  inline IStream& operator>> (IStream& m, unsigned short& v )  { return m; }
+  inline IStream& operator>> (IStream& m, int& v )  { return m; }
+  inline IStream& operator>> (IStream& m, unsigned int& v )  { return m; }
+  inline IStream& operator>> (IStream& m, long& v )  { return m; }
+  inline IStream& operator>> (IStream& m, unsigned long& v )  { return m; }
+  inline IStream& operator>> (IStream& m, long long& v )  { return m; }
+  inline IStream& operator>> (IStream& m, unsigned long long& v )  { return m; }
+  inline IStream& operator>> (IStream& m, float& v )  { return m; }
+  inline IStream& operator>> (IStream& m, double& v )  { return m; }
+  inline IStream& operator>> (IStream& m, long double& v )  { return m; }
+  inline IStream& operator>> (IStream& m, std::string& v )  { return m; }
+//TODO  inline IStream& operator>> (IStream& i, Pointer& s)  { return m; }
+  template<class T> inline IStream& operator>> (IStream& m, std::vector<T>& v )  { return m; }
+  template<class Fst, class Snd> inline  IStream& operator>> (IStream& m, std::pair<Fst,Snd>& p )  { return m; }
+
+//  template<class T> inline void WrapperFormat<T>::write( OStream& s, const void* val, size_t count ) const{ }
+//  template<class T> inline void WrapperFormat<T>::read ( IStream& s, void* val, size_t count ) const {}
+};
+
+// ---------------------------------------------------------------------------------
+#if 0 // \TODO
 namespace a1 {
   class SyncGuard {
       Thread       *_thread;
@@ -855,3 +903,4 @@ using namespace a1;
 #endif
 
 #endif
+
