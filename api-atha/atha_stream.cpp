@@ -91,7 +91,7 @@ void OStream::write ( const Format* f, Mode m, const void* data, size_t count )
   size_t size = f->get_size();
   size_t size_byte = count*size;
 #ifndef KAAPI_USE_XDR
-  KAAPI_LOG( DEBUG_ASN, "[atha::OStream::write] ASN::write : count*size =" << count << "*" << size);
+  KAAPI_CPPLOG( DEBUG_ASN, "[atha::OStream::write] ASN::write : count*size =" << count << "*" << size);
   if ((m == OStream::IA) || (size_byte <16))
     write( OStream::IA, data, size_byte );
 //    _msg->pack( data, size_byte );
@@ -236,7 +236,7 @@ void IStream::read ( const Format* f, Mode m, void* const data, size_t count )
       && ((sent_sz_l  == sizeof(long)) || (!is_long))
       && ((sent_sz_ld == LongDouble::get_size(LongDouble::get_local_format())) || (!is_ldouble))  ) 
   {
-    KAAPI_LOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : sent_size = local_size");
+    KAAPI_CPPLOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : sent_size = local_size");
 
     /**** Get or Unpack ****/
     if ((m == IStream::IA) || (local_size*count <16)) 
@@ -247,7 +247,7 @@ void IStream::read ( const Format* f, Mode m, void* const data, size_t count )
       read( IStream::DA, data, local_size*count );
       //_cc->get( data, local_size*count );
     }
-    KAAPI_LOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : count*size = " << count << "*" << local_size);
+    KAAPI_CPPLOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : count*size = " << count << "*" << local_size);
 
     // long double conversion must be done in little-endian
     if (is_ldouble && (sent_fmt_ld != LongDouble::get_local_format())) 
@@ -296,7 +296,7 @@ void IStream::read ( const Format* f, Mode m, void* const data, size_t count )
 
     if (sent_size > local_size)
     {
-      KAAPI_LOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : sent_size > local_size");
+      KAAPI_CPPLOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : sent_size > local_size");
       /**** sent_size > local_size --- Alloc ****/
       unsigned char *d =  new unsigned char[count * sent_size];
     
@@ -309,7 +309,7 @@ void IStream::read ( const Format* f, Mode m, void* const data, size_t count )
         read( IStream::DA, d, sent_size*count );
         //_cc->get( d, sent_size*count );
       }
-      KAAPI_LOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : count*size = " << count << "*" << sent_size);
+      KAAPI_CPPLOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : count*size = " << count << "*" << sent_size);
 
       /**** sent_size > local_size --- Swap ****/
       if (sent_bigendian) {
@@ -344,7 +344,7 @@ void IStream::read ( const Format* f, Mode m, void* const data, size_t count )
 
     } else 
     {
-      KAAPI_LOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : sent_size < local_size");
+      KAAPI_CPPLOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : sent_size < local_size");
 
       /**** sent_size < local_size --- Get or Unpack ****/
       if ((m == IStream::IA) || (sent_size*count <16))
@@ -357,7 +357,7 @@ void IStream::read ( const Format* f, Mode m, void* const data, size_t count )
           read( IStream::DA, (unsigned char*)data + (i * local_size), sent_size );
           //_cc->get( (unsigned char*)data + (i * local_size), sent_size );
       }
-      KAAPI_LOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : count*size = " << count << "*" << sent_size);
+      KAAPI_CPPLOG( DEBUG_ASN, "[atha::IStream::read] ASN::read : count*size = " << count << "*" << sent_size);
 
       /**** sent_size < local_size --- Swap ****/
       if (sent_bigendian) 

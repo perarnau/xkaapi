@@ -9,6 +9,7 @@
 //
 // ==========================================================================
 #include "kaapi_impl.h"
+#include "atha_init.h"
 #include "atha_timer.h"
 #include "atha_error.h"
 #include "atha_debug.h"
@@ -251,8 +252,8 @@ void HighResTimer::calibrate()
 
   HighResTimer::latency = (t1-t0 - tick_loop)/10000;
   HighResTimer::inv_dtick_per_s = 1.0 / HighResTimer::dtick_per_s;
-  KAAPI_LOG( Util::Init::verboseon, "[Util::HighResTimer::calibrate] Ticks per second  :" << std::setprecision(10) << HighResTimer::dtick_per_s );
-  KAAPI_LOG( Util::Init::verboseon, "[Util::HighResTimer::calibrate] Latency start/stop:" << std::setprecision(10) << HighResTimer::latency );
+  KAAPI_CPPLOG( Init::verboseon, "[atha::HighResTimer::calibrate] Ticks per second  :" << std::setprecision(10) << HighResTimer::dtick_per_s );
+  KAAPI_CPPLOG( Init::verboseon, "[atha::HighResTimer::calibrate] Latency start/stop:" << std::setprecision(10) << HighResTimer::latency );
 }
 
 
