@@ -70,7 +70,7 @@ protected:
     if (bloc < 128) { count = size/128 -1; bloc = 128; }
     while (count >0)
     {
-      if ( kaapi_request_ok(&request[i]) )
+      if (kaapi_request_ok(&request[i]))
       {
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
@@ -81,7 +81,7 @@ protected:
 
         output_work->_iend = local_end;
         output_work->_ibeg = local_end-bloc;
-        local_end -= bloc;
+        local_end         -= bloc;
         output_work->_obeg = _obeg + (output_work->_ibeg - _ibeg);
         kaapi_assert_debug( output_work->_iend - output_work->_ibeg >0);
         output_work->_op   = _op;
@@ -121,8 +121,6 @@ reply_failed:
     Self_t* self_work = kaapi_task_getargst(task, Self_t);
     return self_work->splitter( victim_stack, task, count, request );
   }
-
-
 };
 
 
@@ -136,12 +134,12 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
   
   /* amount of work per iteration of the nano loop */
   int unit_size = 512;
-  int tmp_size = 0;
+  int tmp_size  = 0;
 
   while (_iend != _ibeg)
   {
     /* definition of the steal point where steal_work may be called in case of steal request 
-       -here size is pass as parameter and updated in case of steal.
+       -here size is pass as parameter and updated in case of steal
     */
     kaapi_stealpoint( stack, task, &static_splitter );
 
@@ -163,7 +161,7 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
   /* definition of the finalization point where all stolen work a interrupt and collected */
   kaapi_finalize_steal( stack, task );
 
-  /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function. */  
+  /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function */  
 }
 
 
