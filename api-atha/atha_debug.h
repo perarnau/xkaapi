@@ -124,7 +124,7 @@ namespace atha {
 #if defined(KAAPI_DEBUG)
 #define KAAPI_CPPLOG(cond, msg) \
   if ((cond)) {\
-    Util::logfile() << msg << ::std::endl;\
+    atha::logfile() << msg << ::std::endl;\
   }
 
 /*! \def KAAPI_LOG_INST(cond, inst)
