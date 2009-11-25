@@ -20,9 +20,9 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     &sum_body,
     sizeof(sum_arg_t),
     3,
-    (kaapi_access_mode_t[]) { KAAPI_ACCESS_MODE_W, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R },
-    (kaapi_offset_t[])      { offsetof(sum_arg_t, result), offsetof(sum_arg_t, subresult1), offsetof(sum_arg_t, subresult2) },
-    (kaapi_format_t*[])     { &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
+    (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_W, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R },
+    (kaapi_offset_t[])        { offsetof(sum_arg_t, result), offsetof(sum_arg_t, subresult1), offsetof(sum_arg_t, subresult2) },
+    (const kaapi_format_t*[]) { &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
 )
 
 void sum_body( kaapi_task_t* task, kaapi_stack_t* stack )
@@ -47,9 +47,9 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
     &fibo_body,
     sizeof(fibo_arg_t),
     2,
-    (kaapi_access_mode_t[]) { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_W },
-    (kaapi_offset_t[])      { offsetof(fibo_arg_t, n), offsetof(fibo_arg_t, result) },
-    (kaapi_format_t*[])     { &kaapi_int_format, &kaapi_int_format }
+    (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_W },
+    (kaapi_offset_t[])        { offsetof(fibo_arg_t, n), offsetof(fibo_arg_t, result) },
+    (const kaapi_format_t*[]) { &kaapi_int_format, &kaapi_int_format }
 )
 
 void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
@@ -111,9 +111,9 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
     &print_body,
     sizeof(print_arg_t),
     3,
-    (kaapi_access_mode_t[]) { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_R },
-    (kaapi_offset_t[])      { offsetof(print_arg_t, t0), offsetof(print_arg_t, n), offsetof(print_arg_t, result) },
-    (kaapi_format_t*[])     { &kaapi_double_format, &kaapi_int_format, &kaapi_shared_format }
+    (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_R },
+    (kaapi_offset_t[])        { offsetof(print_arg_t, t0), offsetof(print_arg_t, n), offsetof(print_arg_t, result) },
+    (const kaapi_format_t*[]) { &kaapi_double_format, &kaapi_int_format, &kaapi_shared_format }
 )
 
 void print_body( kaapi_task_t* task, kaapi_stack_t* stack )
