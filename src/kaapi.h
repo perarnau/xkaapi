@@ -211,13 +211,99 @@ extern double kaapi_get_elapsedtime(void);
 */
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
+/* ========================================================================= */
+/* Shared object and access mode                                             */
+/* ========================================================================= */
+/** Kaapi Access mode
+    \ingroup DFG
+*/
+/*@{*/
+typedef enum kaapi_access_mode_t {
+  KAAPI_ACCESS_MODE_VOID= 0,        /* 0000 0000 : */
+  KAAPI_ACCESS_MODE_V   = 1,        /* 0000 0001 : */
+  KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
+  KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
+  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
+  KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
+  KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W
+} kaapi_access_mode_t;
+/*@}*/
+
+
+/* ========================================================================== */
+struct kaapi_task_t;
+struct kaapi_stack_t;
+/** Task body
+    \ingroup TASK
+*/
+typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* stack */);
+
+/* ========================================================================= */
+/* Format of a task                                                          */
+/* ========================================================================= */
+/** \ingroup DFG
+     Format identifier of data structure or task
+*/
+typedef kaapi_uint32_t kaapi_format_id_t;
+
+/** \ingroup DFG
+     Offset to access to parameter of a task
+*/
+typedef kaapi_uint32_t kaapi_offset_t;
+
+
+/** \ingroup TASK
+    Kaapi task format
+    The format should be 1/ declared 2/ register before any use in task.
+    The format object is only used in order to interpret stack of task.    
+*/
+typedef struct kaapi_format_t {
+  kaapi_format_id_t          fmtid;                                   /* identifier of the format */
+  short                      isinit;                                  /* ==1 iff initialize */
+  const char*                name;                                    /* debug information */
+  
+  /* case of format for a structure or for a task */
+  kaapi_uint32_t             size;                                    /* sizeof the object */  
+  void                       (*cstor)( void* dest);
+  void                       (*dstor)( void* dest);
+  void                       (*cstorcopy)( void* dest, const void* src);
+  void                       (*copy)( void* dest, const void* src);
+  void                       (*assign)( void* dest, const void* src);
+
+  /* only if it is a format of a task  */
+  kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
+  int                        count_params;                            /* number of parameters */
+  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
+  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
+  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
+  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
+
+  struct kaapi_format_t      *next_bybody;                            /* link in hash table */
+  struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
+} kaapi_format_t;
+
+/** predefined format 
+*/
+/*@{*/
+extern kaapi_format_t kaapi_shared_format;
+extern kaapi_format_t kaapi_char_format;
+extern kaapi_format_t kaapi_short_format;
+extern kaapi_format_t kaapi_int_format;
+extern kaapi_format_t kaapi_long_format;
+extern kaapi_format_t kaapi_longlong_format;
+extern kaapi_format_t kaapi_uchar_format;
+extern kaapi_format_t kaapi_ushort_format;
+extern kaapi_format_t kaapi_uint_format;
+extern kaapi_format_t kaapi_ulong_format;
+extern kaapi_format_t kaapi_ulonglong_format;
+extern kaapi_format_t kaapi_float_format;
+extern kaapi_format_t kaapi_double_format;
+/*@}*/
 
 
 /* ========================================================================= */
 /* Task and stack interface                                                  */
 /* ========================================================================= */
-struct kaapi_task_t;
-struct kaapi_stack_t;
 struct kaapi_processor_t;
 
 /* Stack identifier */
@@ -265,11 +351,6 @@ typedef struct kaapi_request_t {
 #define KAAPI_TASK_PROC_GPU   0x20
 #define KAAPI_TASK_PROC_MPSOC 0x40
 /*@}*/
-
-/** Task body
-    \ingroup TASK
-*/
-typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* stack */);
 
 /** Task splitter
     \ingroup TASK
@@ -339,7 +420,7 @@ typedef struct kaapi_task_t {
   kaapi_task_body_t     body;      /** C function that represent the body to execute */
   kaapi_task_splitter_t splitter;  /** C function that represent the body to split a task */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
-  kaapi_task_body_t     format;    /** format, 0 if n def !!!  */
+  kaapi_format_t*       format;    /** format, 0 if not def !!!  */
   kaapi_uint32_t        flag;      /** flags: after a padding on 64 bit architecture !!!  */
 } kaapi_task_t;
 
@@ -358,18 +439,6 @@ typedef struct kaapi_taskadaptive_t {
 /** Kaapi Access mode
     \ingroup DFG
 */
-/*@{*/
-typedef enum kaapi_access_mode_t {
-  KAAPI_ACCESS_MODE_VOID= 0,        /* 0000 0000 : */
-  KAAPI_ACCESS_MODE_V   = 1,        /* 0000 0001 : */
-  KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
-  KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
-  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
-  KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
-  KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W
-} kaapi_access_mode_t;
-/*@}*/
-
 #define KAAPI_ACCESS_MASK_MODE   0x1F
 #define KAAPI_ACCESS_MASK_MODE_R 0x2
 #define KAAPI_ACCESS_MASK_MODE_W 0x4
@@ -391,7 +460,10 @@ typedef enum kaapi_access_mode_t {
   ((m) & KAAPI_ACCESS_MASK_MODE_P)
 
 #define KAAPI_ACCESS_IS_ONLYWRITE( m ) \
-  (((m) & KAAPI_ACCESS_MASK_MODE_W) && !((m) & KAAPI_ACCESS_MASK_MODE_R))
+  (KAAPI_ACCESS_IS_WRITE(m) && !KAAPI_ACCESS_IS_READ(m))
+
+#define KAAPI_ACCESS_IS_READWRITE( m ) \
+  (KAAPI_ACCESS_IS_WRITE(m) && KAAPI_ACCESS_IS_READ(m))
 /*@}*/
 
 
@@ -414,70 +486,11 @@ typedef struct kaapi_access_t {
 #define kaapi_data(type, a)\
   ((type*)a.data)
 
-/** \ingroup DFG
-     Offset to access to parameter of a task
-*/
-typedef kaapi_uint32_t kaapi_offset_t;
-
 
 /** \ingroup DFG
     Splitter for DFG task
 */
 int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count, struct kaapi_request_t* array);
-
-
-/* ========================================================================= */
-/* Format of a task                                                          */
-/* ========================================================================= */
-typedef kaapi_uint32_t kaapi_format_id_t;
-
-/** \ingroup TASK
-    Kaapi task format
-    The format should be 1/ declared 2/ register before any use in task.
-    The format object is only used in order to interpret stack of task.    
-*/
-typedef struct kaapi_format_t {
-  kaapi_format_id_t          fmtid;                                   /* identifier of the format */
-  short                      isinit;                                  /* ==1 iff initialize */
-  const char*                name;                                    /* debug information */
-  
-  /* case of format for a structure or for a task */
-  kaapi_uint32_t             size;                                    /* sizeof the object */  
-  void                       (*cstor)( void* dest);
-  void                       (*dstor)( void* dest);
-  void                       (*cstorcopy)( void* dest, const void* src);
-  void                       (*copy)( void* dest, const void* src);
-  void                       (*assign)( void* dest, const void* src);
-
-  /* only if it is a format of a task  */
-  kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
-  int                        count_params;                            /* number of parameters */
-  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
-  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
-  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
-  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
-
-  struct kaapi_format_t      *next_bybody;                            /* link in hash table */
-  struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
-} kaapi_format_t;
-
-/** predefined format 
-*/
-/*@{*/
-extern kaapi_format_t kaapi_shared_format;
-extern kaapi_format_t kaapi_char_format;
-extern kaapi_format_t kaapi_short_format;
-extern kaapi_format_t kaapi_int_format;
-extern kaapi_format_t kaapi_long_format;
-extern kaapi_format_t kaapi_longlong_format;
-extern kaapi_format_t kaapi_uchar_format;
-extern kaapi_format_t kaapi_ushort_format;
-extern kaapi_format_t kaapi_uint_format;
-extern kaapi_format_t kaapi_ulong_format;
-extern kaapi_format_t kaapi_ulonglong_format;
-extern kaapi_format_t kaapi_float_format;
-extern kaapi_format_t kaapi_double_format;
-/*@}*/
 
 
 /* ========================================================================= */
@@ -1135,7 +1148,7 @@ extern kaapi_format_id_t kaapi_format_taskregister(
         int                         count,
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
-        kaapi_format_t* const       fmt_params[]
+        const kaapi_format_t*       fmt_params[]
 );
 
 extern kaapi_format_id_t kaapi_format_structregister( 
