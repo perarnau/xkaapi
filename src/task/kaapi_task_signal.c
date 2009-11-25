@@ -54,7 +54,7 @@ static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
   void* arg;
   
   /* the task has been stolen: format contains the original body */
-  fmt = kaapi_format_resolvebybody( task->format );
+  fmt = task->format;
   kaapi_assert_debug( fmt !=0 );
 
   KAAPI_LOG(100, "aftersteal task: 0x%p\n", (void*)task );

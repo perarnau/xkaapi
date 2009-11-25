@@ -103,10 +103,10 @@ redo_work:
       printf("level:%i  ", level);
 #endif  
       body = task->body;
-//      task->format = body;
+      task->body = 0;
       KAAPI_LOG(100, "stackexec: task 0x%p, pc: 0x%p\n", (void*)task, (void*)stack->pc );
       (*body)(task, stack);
-      task->body = 0;
+      task->format = (kaapi_format_t*)body;
 
       /* process steal request */
       kaapi_stealpoint_isactive( stack, task );

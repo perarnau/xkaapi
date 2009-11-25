@@ -97,7 +97,7 @@ kaapi_format_id_t kaapi_format_taskregister(
         int                         count,
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
-        kaapi_format_t* const       fmt_param[]
+        const kaapi_format_t*       fmt_param[]
 )
 {
   kaapi_uint8_t        entry;
