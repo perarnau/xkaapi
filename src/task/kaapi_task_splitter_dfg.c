@@ -57,16 +57,11 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_assert_debug (task !=0);
   
   body = task->body;
-  
-  /* \TODO verify this line
-     In case of executed task: nothing has to be. The DFG access chains will be with the next task
+    
+  /** CAS required in concurrent implementation
   */
-  if (body ==0) return 0;
-  
-  /** CAS not required in this implementation (cooperative) 
-  if (KAAPI_ATOMIC_CASPTR( &task->body, body, &kaapi_suspend_body))
-  */
-  if ((body ==0) ||(body == &kaapi_suspend_body)) fmt = kaapi_format_resolvebybody( task->format );
+  if (body ==0) fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)task->format );
+  else if (body == &kaapi_suspend_body) fmt = task->format;
   else fmt = kaapi_format_resolvebybody( body );
   if (fmt ==0) return 0;
   
@@ -85,34 +80,34 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
         /* the access is just before the value pointed by the pointer (shared == pointer) returned
            by kaapi_stack_pushshareddata
         */
-        void* data = *(void**)(fmt->off_params[i] + (char*)task->sp);
-        kaapi_gd_t* access = ((kaapi_gd_t*)data) -1;
-        if (KAAPI_ACCESS_IS_ONLYWRITE(m)) 
+        kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)task->sp);
+        kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
+        if (KAAPI_ACCESS_IS_ONLYWRITE(m) || KAAPI_ACCESS_IS_READWRITE(m)) 
         {
           if (body ==0) 
           {
-            access->last_version = data;                        /* this is the data */
-            access->last_mode = KAAPI_ACCESS_MASK_MODE_R;       /* and it could be read */
+            gd->last_version = access->data;                        /* this is the data */
+            gd->last_mode = KAAPI_ACCESS_MASK_MODE_R;       /* and it could be read */
           }
           else { 
-            access->last_version = 0;
-            access->last_mode = m;
+            gd->last_version = 0;
+            gd->last_mode = m;
           }
         }
-        if (KAAPI_ACCESS_IS_READ(m)) /* also RW */
+        else if (KAAPI_ACCESS_IS_READ(m)) /* not also RW */
         { 
           /* test if concurrent access */
-          if (   (access->last_version !=0)                     /* version produced */
-              && (access->last_mode == m)                       /* same mode (R or RW) */
+          if (   (gd->last_version !=0)                     /* version produced */
+              && (gd->last_mode == m)                       /* same mode (R or RW) */
               && (m != KAAPI_ACCESS_MODE_RW)                    /* and not RW */
             )
           {
-            param_data[i] = access->last_version;
-            access->last_mode = m;
+            param_data[i] = gd->last_version;
+            gd->last_mode = m;
           }
           else /* no concurrent: set last_version to 0 ! */
           { 
-            access->last_version = 0;
+            gd->last_version = 0;
           }
         }
       }
@@ -141,31 +136,32 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
         /* the access is just before the value pointed by the pointer (shared == pointer) returned
            by kaapi_stack_pushshareddata
         */
-        kaapi_gd_t* access = ((kaapi_gd_t*)*(void**)(fmt->off_params[i] + (char*)task->sp)) -1;
+        kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)task->sp);
+        kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
         
         if (KAAPI_ACCESS_IS_ONLYWRITE(m)) 
         {
           --waitparam;
-          access->last_version = 0;
+          gd->last_version = 0;
           param_data[i] = 0; /* not use: but for correctness... & debugging */
         }
         if (KAAPI_ACCESS_IS_READ(m)) /* also RW */
         { 
           /* test if concurrent access */
-          if (   (access->last_version !=0)                     /* version produced */
-              && (access->last_mode == m)                       /* same mode (R or RW) */
+          if (   (gd->last_version !=0)                     /* version produced */
+              && (gd->last_mode == m)                       /* same mode (R or RW) */
               && (m != KAAPI_ACCESS_MODE_RW)                    /* and not RW */
             )
           {
             --waitparam;
-            param_data[i] = access->last_version;
+            param_data[i] = gd->last_version;
           }
           else /* no concurrent: set last_version to 0 ! */
           { 
-            access->last_version = 0;
+            gd->last_version = 0;
           }
         }
-        access->last_mode = m;
+        gd->last_mode = m;
       }
     }
     kaapi_assert_debug( waitparam >= 0);
@@ -196,9 +192,10 @@ steal_the_task:
     }
 
     if (request ==0) return 0;
-      
-    task->body = &kaapi_suspend_body;
-    task->format = body;
+    
+    /* should CAS in concurrent steal */
+    task->body   = &kaapi_suspend_body;
+    task->format = fmt;
     
     /* - create the task steal that will execute the stolen task
        The task stealtask stores:
@@ -217,6 +214,7 @@ steal_the_task:
     arg->origin_stack     = stack;
     arg->origin_task      = task;
     arg->origin_body      = body;
+    arg->origin_fmt       = fmt;
     arg->origin_task_args = (void**)(arg+1);
     arg->copy_arg = kaapi_stack_pushdata(thief_stack, fmt->size);
     for (i=0; i<countparam; ++i)
