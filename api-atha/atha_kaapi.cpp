@@ -27,6 +27,30 @@ SetLocalAttribut SetLocal;
 DefaultAttribut SetDefault;
 
 // --------------------------------------------------------------------------
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_int8_t>::format = &kaapi_char_format;
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_int16_t>::format = &kaapi_short_format;
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_int32_t>::format = &kaapi_int_format;
+/* TODO: switch vers format_longlong si int64_t == long long */
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_int64_t>::format = &kaapi_long_format;
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_uint8_t>::format = &kaapi_uchar_format;
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_uint16_t>::format = &kaapi_ushort_format;
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_uint32_t>::format = &kaapi_uint_format;
+/* TODO: switch vers format_longlong si int64_t == long long */
+template <>
+const kaapi_format_t* WrapperFormat<kaapi_uint64_t>::format = &kaapi_ulong_format;
+template <>
+const kaapi_format_t* WrapperFormat<float>::format = &kaapi_float_format;
+template <>
+const kaapi_format_t* WrapperFormat<double>::format = &kaapi_double_format;
+
+// --------------------------------------------------------------------------
 std::string get_localhost()
 {
   /* get canonical name from the syscall gethostname */

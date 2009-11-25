@@ -348,6 +348,7 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_stack_t*    origin_stack;
   kaapi_task_t*     origin_task;
   kaapi_task_body_t origin_body;
+  kaapi_format_t*   origin_fmt;
   void**            origin_task_args;
   void*             copy_arg;
 } __attribute__((aligned(KAAPI_MAX_DATA_ALIGNMENT))) kaapi_tasksteal_arg_t;

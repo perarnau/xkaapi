@@ -46,7 +46,7 @@ namespace a1 {
     KAAPI_DECL_EXT_FORMAT(double, Double)
     KAAPI_DECL_EXT_FORMAT(long double, LDouble)
   }
-  class Format;
+  typedef kaapi_format_t Format;
   class UpdateFunctionFormat;
 
   class IStream;
@@ -195,14 +195,14 @@ namespace a1 {
     Shared()
     {
       kaapi_stack_t* stack = kaapi_self_stack();
-      _gd.data = kaapi_stack_pushdata(stack,sizeof(T));
+      _gd = kaapi_stack_pushshareddata(stack,sizeof(T));
       new (_gd.data) T;
     }
 
     Shared(const value_type& value )
     {
       kaapi_stack_t* stack = kaapi_self_stack();
-      _gd.data = kaapi_stack_pushdata(stack,sizeof(T));
+      _gd = kaapi_stack_pushshareddata(stack,sizeof(T));
       new (_gd.data) T(value);
     }
 
@@ -210,7 +210,7 @@ namespace a1 {
     Shared(const SetStack& toto, const T& value )
     {
       Thread* thread = System::get_current_thread(); 
-      _gd.data  = new (SharedAllocator, thread) T(value)
+      _gd  = new (SharedAllocator, thread) T(value)
       _gd._attr = 0;
     }
 #endif
@@ -476,6 +476,36 @@ namespace a1 {
 #include "atha_spacecollection.h"
 #endif
 
+  template <class T>
+  class WrapperFormat {
+  public:
+    static const kaapi_format_t* format;
+  };
+
+  template <class T>
+  const kaapi_format_t* WrapperFormat<T>::format = 0;
+
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_int8_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_int16_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_int32_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_int64_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_uint8_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_uint16_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_uint32_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<kaapi_uint64_t>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<float>::format;
+  template <>
+  const kaapi_format_t* WrapperFormat<double>::format;
+
   // --------------------------------------------------------------------
   /* typenames for access mode */
   struct ACCESS_MODE_V {};
@@ -491,112 +521,166 @@ namespace a1 {
   template<class T>
   struct Trait_ParamClosure {
     typedef T type_inclosure;
+    typedef T value_type;
     enum { isshared = false };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<T>::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<const T&> {
     typedef T type_inclosure;
+    typedef T value_type;
     enum { isshared = false };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<const T&>::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = false };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<Shared<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rw<T> > {
     typedef kaapi_access_t type_inclosure;
+    typedef Shared_rw<T>   value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_RW mode;
     enum { modepostponed = false };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<Shared_rw<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_r<T> > {
     typedef kaapi_access_t type_inclosure;
+    typedef Shared_r<T>    value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_R mode;
     enum { modepostponed = false };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<Shared_r<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_w<T> > {
     typedef kaapi_access_t type_inclosure;
+    typedef Shared_w<T>    value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_W mode;
     enum { modepostponed = false };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<Shared_w<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cw<T, F> > {
     typedef kaapi_access_t type_inclosure;
+    typedef Shared_cw<T,F> value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_CW mode;
     enum { modepostponed = false };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T, class F>
+  const kaapi_format_t* Trait_ParamClosure<Shared_cw<T,F> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rpwp<T> > {
     typedef kaapi_access_t type_inclosure;
+    typedef Shared_rpwp<T> value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = true };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<Shared_rpwp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rp<T> > {
     typedef kaapi_access_t type_inclosure;
+    typedef Shared_rp<T>   value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_RP mode;
     enum { modepostponed = true };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<Shared_rp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_wp<T> > {
     typedef kaapi_access_t type_inclosure;
+    typedef Shared_wp<T>   value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_WP mode;
     enum { modepostponed = true };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T>
+  const kaapi_format_t* Trait_ParamClosure<Shared_wp<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cwp<T, F> > {
-    typedef kaapi_access_t type_inclosure;
+    typedef kaapi_access_t  type_inclosure;
+    typedef Shared_cwp<T,F> value_type;
     enum { isshared = true };
+    static const kaapi_format_t* format;
     typedef ACCESS_MODE_CWP mode;
     enum { modepostponed = true };
+    enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
+  template<class T, class F>
+  const kaapi_format_t* Trait_ParamClosure<Shared_cwp<T,F> >::format = WrapperFormat<T>::format;
 
 
   // --------------------------------------------------------------------
@@ -765,15 +849,6 @@ namespace a1 {
   }
     
 
-  template <class T>
-  class WrapperFormat {
-  public:
-    static Format* format;
-  };
-
-  template <class T>
-  Format* WrapperFormat<T>::format = 0;
-
 } // namespace a1
 
 
@@ -819,11 +894,11 @@ namespace a1 {
   };
   struct OStream: public IOStream_base {
     /** */
-    void write( const Format* f, Mode m, const void* data, size_t count ) {}
+    void write( const Format* const f, Mode m, const void* data, size_t count ) {}
   };
   struct IStream: public IOStream_base {
     /** */
-    void read( const Format* f, Mode m, void* const data, size_t count ) {}
+    void read( const Format* const f, Mode m, void* const data, size_t count ) {}
   };
   
   inline OStream& operator<< (OStream& m, const bool v )  { return m; }
