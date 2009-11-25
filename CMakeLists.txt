@@ -2,7 +2,7 @@
 ##  CMakeLists.txt
 ##  xkaapi
 ##
-##  Created by CL and TG on 04/02/09.
+##  Created by CL, TG and VD on 04/02/09.
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
@@ -66,7 +66,6 @@ endmacro(cpack_optional_append _list _cond _item)
 set (CPACK_DEBIAN_PACKAGE_MAINTAINER "christophe laferriere")
 set (CPACK_DEBIAN_PACKAGE_NAME "libxkaapi-dev")
 set (CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${ARCH})
-set (CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.3.1-6), libgcc1 (>= 1:3.4.2-12)")
 
 if(NOT CPACK_GENERATOR)
   if(UNIX)
