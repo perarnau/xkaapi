@@ -54,10 +54,6 @@
 extern "C" {
 #endif
 
-#if !defined(KAAPI_USE_VARIADIC_MACRO)
-#  define KAAPI_USE_VARIADIC_MACRO 1
-#endif
-
 #if !defined(KAAPI_MAX_DATA_ALIGNMENT)
 #  define KAAPI_MAX_DATA_ALIGNMENT 8
 #endif
@@ -977,8 +973,6 @@ extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
       _kaapi_post_invoke_splitter( stack, __reval_count );\
     }
     
-
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then call the splitter function with given arguments.
@@ -988,8 +982,6 @@ extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
     TODO: should put ATOMIC OP into public interface. Cut & Paste kaapi_sched_stealtask.c
 */
 #define kaapi_stealpoint_macro( stack, task, splitter, ...)  ((stack)->hasrequest !=0)
-
-#endif
 
 /** Return true iff the request correctly posted
   \param pksr kaapi_request_t
@@ -1018,7 +1010,6 @@ extern int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task
 */
 extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_reducer_t reducer, void* arg_victim, ...);
 
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then pass arg_victim argument to the victim and call the reducer function with extra arguments.
@@ -1028,8 +1019,6 @@ extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_t
    TODO 
 */
 #define kaapi_preemptpoint_macro( stack, task, reducer, arg_victim, ...) (0)
-#endif
-
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
@@ -1077,7 +1066,6 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
 extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_thief, kaapi_task_reducer_t reducer, ... );  
 
 
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 /** \ingroup ADAPTIVE
    Try to preempt next thief in the reverse order defined by steal reponse.
    Return true iff some work have been preempted and should be processed locally.
@@ -1092,7 +1080,6 @@ extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, vo
    TODO
 */
 #define kaapi_preempt_nextthief_macro( stack, task, arg_thief, reducer, ... ) 0
-#endif
 
 /** \ingroup ADAPTIVE
     Wait the end of all the stealer of the adaptive task 
@@ -1140,7 +1127,6 @@ extern kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_body_t key);
 */
 extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 #define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body, ... ) \
   static inline kaapi_format_t* formatobject(void) \
   {\
@@ -1169,7 +1155,6 @@ extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     isinit = 1;\
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
-#endif
 
 
 /**
