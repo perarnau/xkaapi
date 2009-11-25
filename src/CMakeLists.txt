@@ -79,7 +79,7 @@ add_library (xkaapi SHARED
 )
 
 # Version number :
-set_target_properties(xkaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
+set_target_properties(xkaapi PROPERTIES VERSION 0.0.1 SOVERSION 0)
 
 # Static lib :
 add_library (xkaapi-static STATIC 
