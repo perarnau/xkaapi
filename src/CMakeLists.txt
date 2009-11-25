@@ -10,7 +10,7 @@
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -O3 -std=c99")
+add_definitions ( "-Wall -pedantic -O3 -std=c99 -g")
 #add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG")
 #add_definitions ( "-Wall -pedantic -std=c99 -g")
 # -std=c99 -g" )
@@ -79,7 +79,7 @@ add_library (xkaapi SHARED
 )
 
 # Version number :
-set_target_properties(xkaapi PROPERTIES VERSION 0.0.1 SOVERSION 0)
+set_target_properties(xkaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
 
 # Static lib :
 add_library (xkaapi-static STATIC 
