@@ -289,20 +289,19 @@ typedef struct kaapi_stack_t {
   volatile int         *hasrequest;     /** points to the k-processor structure */
   struct kaapi_task_t  *pc;             /** task counter: next task to execute, 0 if empty stack */
   struct kaapi_task_t  *sp;             /** stack counter: next free task entry */
-#if defined(KAAPI_DEBUG)
-  struct kaapi_task_t*  end_sp;         /** past the last stack counter: next entry after the last task in stack array */
-#endif
   struct kaapi_task_t*  task;           /** stack of tasks */
 
   char*                 sp_data;        /** stack counter for the data: next free data entry */
-#if defined(KAAPI_DEBUG)
-  char*                 end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
-#endif
   char*                 data;           /** stack of data with the same scope than task */
 
   kaapi_request_t      *requests;       /** points to the processor structure */
   kaapi_uint32_t        size;           /** size of the data structure */
   struct kaapi_stack_t* _next;          /** to be stackable */
+
+  /* both next field are only used with KAAPI_DEBUG but they are always in the
+     structure to not break the ABI */
+  struct kaapi_task_t*  end_sp;         /** past the last stack counter: next entry after the last task in stack array */
+  char*                 end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
 } kaapi_stack_t;
 
 
@@ -634,24 +633,17 @@ static inline int kaapi_stack_isempty(const kaapi_stack_t* stack)
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
   void* retval;
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
   if (stack->sp_data+count >= stack->end_sp_data) return 0;
+#endif
   retval = stack->sp_data;
   stack->sp_data += count;
   return retval;
 }
-#else
-static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t count)
-{
-  void* retval = stack->sp_data;
-  stack->sp_data += count;
-  return retval;
-}
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_pushdata() will return the pointer to the next top data.
@@ -661,13 +653,15 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
   kaapi_access_t retval = {0, 0};
   kaapi_gd_t* gd;
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return retval;
-  if (stack->sp_data+count+sizeof(kaapi_gd_t) >= stack->end_sp_data) return retval;
+  if (stack->sp_data+count+sizeof(kaapi_gd_t) >= stack->end_sp_data)
+    return retval;
+#endif
 
   gd              = (kaapi_gd_t*)stack->sp_data;
   gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
@@ -677,19 +671,6 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
   stack->sp_data += count;
   return retval;
 }
-#else
-static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
-{
-  kaapi_access_t retval = {0, 0};
-  kaapi_gd_t* gd  = (kaapi_gd_t*)stack->sp_data;
-  gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
-  stack->sp_data += sizeof(kaapi_gd_t);
-  retval.data     = stack->sp_data;
-  gd->last_version = retval.data;
-  stack->sp_data += count;
-  return retval;
-}
-#endif
 
 #define kaapi_stack_topdata(stack) \
     (stack)->sp_data
@@ -702,17 +683,14 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack) 
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
   if (stack->sp <= stack->pc) return 0;
+#endif
   return stack->task;
 }
-#else
-#define kaapi_stack_bottomtask(stack) \
-  (stack)->task
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_top() will return the top task.
@@ -722,17 +700,14 @@ static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack)
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack) 
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
   if (stack->sp == stack->end_sp) return 0;
+#endif
   return stack->sp;
 }
-#else
-#  define kaapi_stack_toptask(stack) \
-    (stack)->sp
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_push() pushes the top task into the stack.
@@ -741,34 +716,28 @@ static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack)
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-#if defined(KAAPI_DEBUG)
 static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->end_sp) return EINVAL;
+#endif
   ++stack->sp;
   return 0;
 }
-#else
-#  define kaapi_stack_pushtask(stack) \
-        ++(stack)->sp
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_poptask() 
 */
-#if defined(KAAPI_DEBUG)
 static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->pc) return EINVAL;
+#endif
   --stack->sp;
   return 0;
 }
-#else
-#define kaapi_stack_poptask(stack) \
-  --(stack)->sp
-#endif
 
 
 /** \ingroup TASK
@@ -818,18 +787,23 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 }
 
 #if defined(KAAPI_DEBUG)
-#  define kaapi_task_initdfg( stack, task ) \
-  do {  task->flag   = KAAPI_TASK_DFG; \
-        task->format = 0; \
-        task->splitter = &kaapi_task_splitter_dfg;\
+#  define kaapi_task_initdfg_debug(task) \
+  do { \
+        (task)->format = 0; \
   } while (0)
 #else
-#  define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
-    (task)->body     = taskbody;\
+#  define kaapi_task_initdfg_debug(task) \
+  (void)(0)
+#endif
+
+#define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
+  do { \
+    (task)->body     = (taskbody);\
     (task)->splitter = &kaapi_task_splitter_dfg; \
     (task)->sp       = (buffer);\
-    (task)->flag     = KAAPI_TASK_DFG
-#endif
+    (task)->flag     = KAAPI_TASK_DFG;\
+    kaapi_task_initdfg_debug(task);\
+  } while (0)
 
 
 /** \ingroup STACK
