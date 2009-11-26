@@ -229,6 +229,14 @@ typedef enum kaapi_access_mode_t {
 } kaapi_access_mode_t;
 /*@}*/
 
+/** Kaapi access mode mask
+    \ingroup DFG
+*/
+#define KAAPI_ACCESS_MASK_MODE   0x1F
+#define KAAPI_ACCESS_MASK_MODE_R 0x2
+#define KAAPI_ACCESS_MASK_MODE_W 0x4
+#define KAAPI_ACCESS_MASK_MODE_P 0x10
+
 
 /* ========================================================================== */
 struct kaapi_task_t;
@@ -436,13 +444,6 @@ typedef struct kaapi_taskadaptive_t {
 /* ========================================================================= */
 /* Shared object and access mode                                             */
 /* ========================================================================= */
-/** Kaapi Access mode
-    \ingroup DFG
-*/
-#define KAAPI_ACCESS_MASK_MODE   0x1F
-#define KAAPI_ACCESS_MASK_MODE_R 0x2
-#define KAAPI_ACCESS_MASK_MODE_W 0x4
-#define KAAPI_ACCESS_MASK_MODE_P 0x10
 
 /** \ingroup DFG
 */
