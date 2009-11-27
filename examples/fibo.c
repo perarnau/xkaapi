@@ -29,12 +29,7 @@ void sum_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   sum_arg_t* arg0 = kaapi_task_getargst( task, sum_arg_t);
   *kaapi_data(int, arg0->result) = *kaapi_data(int, arg0->subresult1) + *kaapi_data(int, arg0->subresult2);
-#if defined(KAAPI_TRACE_DEBUG)  
-  printf("Sum(@0x%x:%i,@0x%x:%i)=0x%x:%i\n", 
-        kaapi_data(int, arg0->subresult1), *kaapi_data(int, arg0->subresult1), 
-        kaapi_data(int, arg0->subresult2), *kaapi_data(int, arg0->subresult2), 
-        kaapi_data(int, arg0->result),     *kaapi_data(int, arg0->result) );
-#endif
+  printf("Sum(%i,%i)=%i @:%p\n", *kaapi_data(int, arg0->subresult1), *kaapi_data(int, arg0->subresult2), *kaapi_data(int, arg0->result), kaapi_data(int, arg0->result) );
 }
 
 typedef struct fibo_arg_t {
@@ -92,6 +87,7 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 
     task_sum = kaapi_stack_toptask(stack);
     kaapi_task_initdfg( stack, task_sum, &sum_body, kaapi_stack_pushdata(stack, sizeof(sum_arg_t)) );
+//    kaapi_task_setflags( task_sum, KAAPI_TASK_STICKY );
     args = kaapi_task_getargst( task_sum, sum_arg_t);
     args->result     = arg0->result;
     args->subresult1 = argf1->result;
@@ -113,7 +109,7 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
     3,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_R },
     (kaapi_offset_t[])        { offsetof(print_arg_t, t0), offsetof(print_arg_t, n), offsetof(print_arg_t, result) },
-    (const kaapi_format_t*[]) { &kaapi_double_format, &kaapi_int_format, &kaapi_shared_format }
+    (const kaapi_format_t*[]) { &kaapi_double_format, &kaapi_int_format, &kaapi_int_format }
 )
 
 void print_body( kaapi_task_t* task, kaapi_stack_t* stack )
@@ -126,6 +122,7 @@ void print_body( kaapi_task_t* task, kaapi_stack_t* stack )
 
 int main(int argc, char** argv)
 {
+  kaapi_frame_t frame;
   double t0;
   kaapi_access_t result1;
   fibo_arg_t* argf;
@@ -140,7 +137,8 @@ int main(int argc, char** argv)
     exit(1);
   }
   stack = kaapi_self_stack();
-
+  kaapi_stack_save_frame(stack, &frame);
+  
   t0 = kaapi_get_elapsedtime();
   result1 = kaapi_stack_pushshareddata(stack, sizeof(int));
   task = kaapi_stack_toptask(stack);
@@ -162,7 +160,8 @@ int main(int argc, char** argv)
   argp->n      = argf->n;
   argp->result = result1;
   kaapi_stack_pushtask(stack);
-
+  kaapi_stack_pushretn( stack, &frame );
+  
 redo:
   err = kaapi_stack_execall(stack);
   if (err == EWOULDBLOCK)
