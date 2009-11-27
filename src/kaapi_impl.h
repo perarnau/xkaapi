@@ -164,6 +164,9 @@ extern kaapi_rtparam_t default_param;
 
 
 /* ============================= Commun function for server side (no public) ============================ */
+/** Useful
+*/
+extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
 
 /** Useful
 */
@@ -340,7 +343,15 @@ static inline kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply )
 
 /** Body of task steal created on thief stack to execute a task
 */
-void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+
+/** Write result after a steal 
+*/
+extern void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
+
+/** Merge result after a steal
+*/
+extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
 
 /** Args for tasksteal
 */
