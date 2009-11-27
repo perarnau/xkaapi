@@ -75,40 +75,49 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
     for (i=0; i<countparam; ++i)
     {
       kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
-      if (m != KAAPI_ACCESS_MODE_V) 
+      if (m == KAAPI_ACCESS_MODE_V) continue;
+
+      /* the access is just before the value pointed by the pointer (shared == pointer) returned
+         by kaapi_stack_pushshareddata
+      */
+      kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)task->sp);
+      kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
+      if (KAAPI_ACCESS_IS_ONLYWRITE(m) || KAAPI_ACCESS_IS_READWRITE(m)) 
       {
-        /* the access is just before the value pointed by the pointer (shared == pointer) returned
-           by kaapi_stack_pushshareddata
-        */
-        kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)task->sp);
-        kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
-        if (KAAPI_ACCESS_IS_ONLYWRITE(m) || KAAPI_ACCESS_IS_READWRITE(m)) 
+        if (body ==0) 
         {
-          if (body ==0) 
-          {
-            gd->last_version = access->data;                        /* this is the data */
-            gd->last_mode = KAAPI_ACCESS_MASK_MODE_R;       /* and it could be read */
-          }
-          else { 
-            gd->last_version = 0;
-            gd->last_mode = m;
-          }
+          gd->last_version = access->data;                /* this is the data */
+          gd->last_mode = KAAPI_ACCESS_MASK_MODE_R;       /* and it could be read */
+        printf("Steal task exec %s, W object: @:%p set last_version=%p, value:%i\n", fmt->name, access->data, gd->last_version, *(int*)gd->last_version );
         }
-        else if (KAAPI_ACCESS_IS_READ(m)) /* not also RW */
-        { 
-          /* test if concurrent access */
+        else { 
+          gd->last_version = 0;
+          gd->last_mode = m;
+        printf("Steal task suspend, W object: @:%p set last_version=%p\n", access->data, gd->last_version );
+        }
+      }
+      else if (KAAPI_ACCESS_IS_READ(m)) /* not also RW : see if just before*/
+      { 
+        if (body ==0) 
+        {
+          gd->last_version = access->data;                /* this is the data */
+          gd->last_mode = m;                              /* and it could be read */
+        printf("Steal task exec, R object: @:%p set last_version=%p\n", access->data, gd->last_version );
+        }
+        else {
+          /* test if concurrent accesses */
           if (   (gd->last_version !=0)                     /* version produced */
-              && (gd->last_mode == m)                       /* same mode (R or RW) */
-              && (m != KAAPI_ACCESS_MODE_RW)                    /* and not RW */
+              && (gd->last_mode == m)                       /* same mode (R but not RW) */
             )
           {
-            param_data[i] = gd->last_version;
-            gd->last_mode = m;
+            printf("Steal task suspend, concurrent R object: @:%p set last_version=%p\n", access->data, gd->last_version );
           }
           else /* no concurrent: set last_version to 0 ! */
           { 
             gd->last_version = 0;
+            printf("Steal task suspend, no concurrent R object: @:%p set last_version=%p\n", access->data, gd->last_version );
           }
+          gd->last_mode = m;
         }
       }
     }
@@ -143,9 +152,10 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
         {
           --waitparam;
           gd->last_version = 0;
+        printf("Steal task: W object: @:%p set last_version=%p\n", access->data, gd->last_version );
           param_data[i] = 0; /* not use: but for correctness... & debugging */
         }
-        if (KAAPI_ACCESS_IS_READ(m)) /* also RW */
+        else if (KAAPI_ACCESS_IS_READ(m)) /* also RW */
         { 
           /* test if concurrent access */
           if (   (gd->last_version !=0)                     /* version produced */
@@ -159,6 +169,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
           else /* no concurrent: set last_version to 0 ! */
           { 
             gd->last_version = 0;
+        printf("Steal task: R object: @:%p set last_version=%p\n", access->data, gd->last_version );
           }
         }
         gd->last_mode = m;
@@ -174,6 +185,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   
 steal_the_task:
   KAAPI_LOG(50, "dfgsplitter task: 0x%p\n", (void*)task);
+  kaapi_stack_print( 0, stack );
   kaapi_assert_debug( task->body !=0);
   kaapi_assert_debug( task->body !=kaapi_suspend_body);
   {
@@ -218,7 +230,25 @@ steal_the_task:
     arg->origin_task_args = (void**)(arg+1);
     arg->copy_arg = kaapi_stack_pushdata(thief_stack, fmt->size);
     for (i=0; i<countparam; ++i)
+    {
       arg->origin_task_args[i] = param_data[i];
+      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
+      void* param = (void*)(fmt->off_params[i] + (char*)task->sp);
+      if (m == KAAPI_ACCESS_MODE_V) 
+      {
+        printf("Steal task:%p, name: %s, value: %i\n", task, fmt->name, *(int*)param_data[i] );
+      } 
+      else if (KAAPI_ACCESS_IS_ONLYWRITE(m))
+      {
+        kaapi_access_t* access = (kaapi_access_t*)(param);
+        printf("Steal task:%p, name: %s, W object: @:%p, data: %i\n", task, fmt->name, access->data, *(int*)access->data );
+      } 
+      else if (KAAPI_ACCESS_IS_READ(m))
+      {
+        kaapi_access_t* access = (kaapi_access_t*)(param);
+        printf("Steal task:%p, name: %s, R object: @:%p, data: %i, version: %i, @v:%p\n", task, fmt->name, access->data, *(int*)access->data, *(int*)param_data[i], param_data[i] );
+      }
+    }
     
     kaapi_task_setbody( steal_task, &kaapi_tasksteal_body );
     kaapi_stack_pushtask( thief_stack );
