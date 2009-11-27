@@ -46,7 +46,6 @@
 #include <stdio.h>
 
 
-static void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 /**
 */
@@ -87,9 +86,12 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
       kaapi_access_t* copy_access     = (kaapi_access_t*)(copy_param);
       original_access->version        = copy_access->data;
     }
-    else
+    else if (KAAPI_ACCESS_IS_READ(m))
     { /* nothing to do ?
-      */    
+      */
+      /* FOR DEBUG: ALSO COPY INTIAL VALUE INTO VERSION PARAMETER */
+      kaapi_access_t* original_access = (kaapi_access_t*)(original_param);
+      original_access->version        = origin_task_args[i];
     }
   }
 }
