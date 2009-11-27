@@ -103,14 +103,11 @@ redo_work:
       printf("level:%i  ", level);
 #endif  
       body = task->body;
-      task->body = 0;
       KAAPI_LOG(100, "stackexec: task 0x%p, pc: 0x%p\n", (void*)task, (void*)stack->pc );
       (*body)(task, stack);
+      task->body = 0;
       task->format = (kaapi_format_t*)body;
 
-      /* process steal request */
-      kaapi_stealpoint_isactive( stack, task );
-        
       /* push restore_frame task if pushed tasks */
       if (saved_sp < stack->sp)
       {
@@ -133,9 +130,18 @@ redo_work:
 #if defined(KAAPI_TRACE_DEBUG)  
         ++level;
 #endif  
+        /* process steal request 
+           - here we always see the retn to split stack into frame.
+        */
+        if (*stack->hasrequest !=0) kaapi_sched_advance( stack->_proc );
+          
         goto redo_work;
       }
-
+      /* process steal request 
+         - here we always see the retn to split stack into frame.
+      */
+      if (*stack->hasrequest !=0) kaapi_sched_advance( stack->_proc );
+      
       ++stack->pc;
       task = stack->pc;
       goto redo_work;
