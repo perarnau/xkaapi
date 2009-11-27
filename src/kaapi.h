@@ -888,7 +888,7 @@ static inline int kaapi_stack_save_frame( kaapi_stack_t* stack, kaapi_frame_t* f
     \param frame IN a pointer to the kaapi_frame_t data structure.
     \retval EINVAL invalid argument: bad pointer.
 */
-static inline int kaapi_stack_restore_frame( kaapi_stack_t* stack, kaapi_frame_t* frame)
+static inline int kaapi_stack_restore_frame( kaapi_stack_t* stack, const kaapi_frame_t* frame)
 {
 #if defined(KAAPI_DEBUG)
   if ((stack ==0) || (frame ==0)) return EINVAL;
@@ -897,6 +897,22 @@ static inline int kaapi_stack_restore_frame( kaapi_stack_t* stack, kaapi_frame_t
   stack->sp      = frame->sp;
   stack->sp_data = frame->sp_data;
   return 0;  
+}
+
+/** TODO
+*/
+static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_t* frame)
+{
+  kaapi_task_t* retn;
+  kaapi_frame_t* arg_retn;
+  retn = kaapi_stack_toptask(stack);
+  kaapi_task_init(stack, retn, KAAPI_TASK_STICKY);
+  retn->body  = &kaapi_retn_body;
+  arg_retn = (kaapi_frame_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
+  retn->sp = (void*)arg_retn;
+  *arg_retn = *frame;
+  kaapi_stack_pushtask(stack);
+  return 0;
 }
 
 /** \ingroup STACK
