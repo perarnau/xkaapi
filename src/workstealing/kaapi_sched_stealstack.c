@@ -46,6 +46,50 @@
 #include "kaapi_impl.h"
 
 /** 
+L'algorithme actuel est un peu trop simple et ne marche que pour
+des tâches qui serait dans une même frame.
+Dans le cas de programme récursif, l'algorithme devrait être celui-ci:
+
+- 1/ identification de la frame courante:
+  - identification de la prochaine tâche retn
+  - les tâches après frame->save_sp et une autre tâche retn constitue
+  la frame de la tâche frame->save_pc.
+  Soit (ibeg,iend) les tâches: 1ère tâche forkée de la frame (et peut-être exécuté)
+  et iend la tâche retn qui marquent la frame.
+  
+- 2/ calcul des versions à lire:
+Input: (ibeg, iend), pc la tâche qui s'exécute ou va s'exécuter
+Output: version des gd de chacune des tâches qui pointe sur la version à lire (R ou RW) ou 0
+si l'accès n'est pas prêt.
+
+  - forall t in (ibeg,iend) trois cas:
+      (a) si t < pc: t est déjà exécutée ainsi que toute sa descendence. 
+      (b) si t == pc: 
+        (b.1) si sp > iend alors d'autres tâches ont été forkées
+        (b.2) sinon -> t est "en cours d'exécution".
+      (c) si t > pc et t < iend : les tâches ne sont pas encores exécutées.
+  - cas (a): forall gd in t => last_version : gd->data
+  - cas (b.1): 
+      - calcul des version de la frame (iend+1, ... next retn).
+  - cas (b.2):
+      - forall gd in t, mode(gd) = RW ou W ou CW alors last version =0
+  - cas (c): idem algo actuel
+
+- 3/ calcul d'une tâche à voler:
+  - parcours de la liste des tâches / ordre de la pile, prendre la première prête
+
+Remarque: il faudra bien identifier une tâche en cours d'exéc ou une tâche terminée.
+les cas (b.1) et (b.2) devront être unifié : en cours d'exécution == toute la descendance non encore
+exécutée.
+  - structure tâche:
+      - body (void*) -> 32 ou 64 bits
+      - sp (void*) -> 32 / 64 bits ou alors offset 32 bits ou moins ???? si offset / sp_data debut de frame ou data de la pile
+      - flags: 4 bits atributs, 3 bits processor types, -> 25 bits free !
+        - format: local number : < 256 -> 8bits + table
+        - attributs: 4 bits
+        - processor type: 4 bits
+        - state: 2 bits: Init (0) -> Exec(1) -> Steal (2) -> Term (3).
+      
 */
 int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 {
@@ -59,6 +103,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 
   if (kaapi_stack_isempty( stack)) return 0;
 
+printf("------ STEAL STACK @:%p\n", (void*)stack );
   /* reset dfg constraints evaluation */
   
   /* iterate through all the tasks from task_bot until task_top */
@@ -69,7 +114,10 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 
   while ((count >0) && (task_bot !=0) && (task_bot != task_top))
   {
-    if (task_bot == 0) return replycount;
+    if (task_bot == 0) {
+printf("------ END STEAL @:%p\n", (void*)stack );
+      return replycount;
+    }
 
     kaapi_assert_debug( task_bot != 0 );
     /* task body == 0 no task after can stop 
@@ -87,7 +135,8 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
     /* test next task */  
     ++task_bot;
   }
-
+printf("------ END STEAL @:%p\n", (void*)stack );
+  
   if (replycount >0)
   {
     KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replycount );
