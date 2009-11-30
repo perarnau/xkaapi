@@ -66,31 +66,36 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
 
+#if defined(KAAPI_DEBUG)
     if (m == KAAPI_ACCESS_MODE_V)
     {
       /* TODO: improve management of shared data, if it is a big data or not... */
-      void* param_data = (void*)(fmt->off_params[i] + (char*)task->sp);
-      printf("After steal task:%p, name: %s, value: %i\n", task, fmt->name, *(int*)param_data );
+      void* param_data __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)task->sp);
+//      printf("After steal task:%p, name: %s, value: %i\n", (void*)task, fmt->name, *(int*)param_data );
     }    
-    else if (KAAPI_ACCESS_IS_WRITE(m))
+    else 
+#endif
+    if (KAAPI_ACCESS_IS_WRITE(m))
     {
       void* param = (void*)(fmt->off_params[i] + (char*)arg);
       kaapi_format_t* fmt_param = fmt->fmt_params[i];
       kaapi_access_t* access = (kaapi_access_t*)(param);
       /* TODO: improve management of shared data, if it is a big data or not... */
-      printf("After steal task:%p, name: %s, W object: version: %i, data: %i\n", task, fmt->name, *(int*)access->version, *(int*)access->data );
+//      printf("After steal task:%p, name: %s, W object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
       (*fmt_param->assign)( access->data, access->version );
       (*fmt_param->dstor) ( access->version );
       free(((kaapi_gd_t*)access->version)-1);
       access->version = 0;
     }
+#if defined(KAAPI_DEBUG)
     else if (KAAPI_ACCESS_IS_READ(m)) /* rw : if above, not here */
     { /* nothing to do ?
       */    
-      void* param = (void*)(fmt->off_params[i] + (char*)arg);
-      kaapi_access_t* access = (kaapi_access_t*)(param);
-      printf("After steal task:%p, name: %s, R object: version: %i, data: %i\n", task, fmt->name, *(int*)access->version, *(int*)access->data );
+      void* param __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)arg);
+      kaapi_access_t* access __attribute__((unused)) = (kaapi_access_t*)(param);
+//      printf("After steal task:%p, name: %s, R object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
     }
+#endif
   }
 }
 
