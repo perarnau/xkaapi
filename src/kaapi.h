@@ -144,11 +144,6 @@ typedef struct kaapi_atomic64_t {
 } kaapi_atomic64_t;
 
 
-/** \ingroup THREAD
-   Define the minimum stack size. 
-*/
-#define KAAPI_STACK_MIN 8192
-
 /** Define the cache line size. 
 */
 #define KAAPI_CACHE_LINE 64
@@ -219,8 +214,8 @@ typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_V   = 1,        /* 0000 0001 : */
   KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
   KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
-  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
-  KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
+  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1100 : */
+  KAAPI_ACCESS_MODE_P   = 8,        /* 0001 0000 : */
   KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W
 } kaapi_access_mode_t;
 /*@}*/
@@ -228,10 +223,56 @@ typedef enum kaapi_access_mode_t {
 /** Kaapi access mode mask
     \ingroup DFG
 */
-#define KAAPI_ACCESS_MASK_MODE   0x1F
-#define KAAPI_ACCESS_MASK_MODE_R 0x2
-#define KAAPI_ACCESS_MASK_MODE_W 0x4
-#define KAAPI_ACCESS_MASK_MODE_P 0x10
+#define KAAPI_ACCESS_MASK_RIGHT_MODE   0x1f   /* 5 bits, ie bit 0, 1, 2, 3, 4, including P mode */
+#define KAAPI_ACCESS_MASK_MODE         0xf    /* without P mode */
+#define KAAPI_ACCESS_MASK_MODE_P       0x10   /* only P mode */
+
+#define KAAPI_ACCESS_MASK_MEMORY       0x20   /* memory location for the data:  */
+#define KAAPI_ACCESS_MEMORY_STACK      0x00   /* data is in the Kaapi stack */
+#define KAAPI_ACCESS_MEMORY_HEAP       0x20   /* data is in the heap */
+
+
+/** Flags for task
+   \ingroup TASK 
+   DEFAULT flags is for normal task that can be stolen and executed every where.
+    - KAAPI_TASK_STICKY: if set, the task could not be theft else the task can (default).
+    - KAAPI_TASK_ADAPTIVE: if set, the task is an adaptative task that could be stolen or preempted.
+    - KAAPI_TASK_LOCALITY: if set, the task as locality constraint defined in locality data field.
+    - KAAPI_TASK_SYNC: if set, the task does engender synchronisation, victim should stop on a stolen task
+    before continuing the fast execution using RFO schedule.
+*/
+/*@{*/
+#define KAAPI_TASK_MASK_FLAGS 0xf  /* 4 bits 0xf ie bit 0, 1, 2, 3 to type of the task */
+#define KAAPI_TASK_SYNC       0x0   /* 000 0000 */
+#define KAAPI_TASK_STICKY     0x1   /* 000 0001 */
+#define KAAPI_TASK_ADAPTIVE   0x2   /* 000 0010 !KAAPI_TASK_ADAPTIVE == KAAPI_TASK_SYNC*/ 
+#define KAAPI_TASK_LOCALITY   0x4   /* 000 0100 */
+#define KAAPI_TASK_DFG        KAAPI_TASK_SYNC
+
+/** Task state
+   \ingroup TASK 
+*/
+#define KAAPI_TASK_MASK_STATE 0x30  /* 2 bits 0x70 ie bit 5, 6 to encode the state of the task the task */
+/*@{*/
+typedef enum { 
+  KAAPI_TASK_S_INIT  =        0x00, /* 000 0000 */
+  KAAPI_TASK_S_EXEC  =        0x10, /* 001 0000 */
+  KAAPI_TASK_S_STEAL =        0x20, /* 010 0000 */
+  KAAPI_TASK_S_TERM  =        0x30  /* 011 0000 */
+} kaapi_task_state_t;
+
+#define KAAPI_TASK_MASK_READY 0x40  /* 100 0000 */ /* 1 bits 0x10 ie bit 7 to encode if the task is marked as ready */
+
+#define KAAPI_TASK_MASK_PROC  0x700 /* 3 bits 0x70 ie bit 8, 9, 10 to encode the processor type of the task */
+#define KAAPI_TASK_PROC_CPU   0x100
+#define KAAPI_TASK_PROC_GPU   0x200
+#define KAAPI_TASK_PROC_MPSOC 0x400
+
+/*@}*/
+
+/*@}*/
+
+
 
 
 /* ========================================================================== */
@@ -273,6 +314,7 @@ typedef struct kaapi_format_t {
   void                       (*cstorcopy)( void* dest, const void* src);
   void                       (*copy)( void* dest, const void* src);
   void                       (*assign)( void* dest, const void* src);
+  void                       (*print)( FILE* file, const void* src);
 
   /* only if it is a format of a task  */
   kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
@@ -332,29 +374,6 @@ typedef struct kaapi_request_t {
   struct kaapi_stack_t*    stack;          /* stack of the thief where to store result of the steal operation */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
-
-/** Flags for task
-   \ingroup TASK 
-   DEFAULT flags is for normal task that can be stolen and executed every where.
-    - KAAPI_TASK_STICKY: if set, the task could not be theft else the task can (default).
-    - KAAPI_TASK_ADAPTIVE: if set, the task is an adaptative task that could be stolen or preempted.
-    - KAAPI_TASK_LOCALITY: if set, the task as locality constraint defined in locality data field.
-    - KAAPI_TASK_SYNC: if set, the task does engender synchronisation, victim should stop on a stolen task
-    before continuing the fast execution using RFO schedule.
-*/
-/*@{*/
-#define KAAPI_TASK_STICKY     0x1
-#define KAAPI_TASK_ADAPTIVE   0x2
-#define KAAPI_TASK_LOCALITY   0x4
-#define KAAPI_TASK_SYNC       0x8
-#define KAAPI_TASK_DFG        KAAPI_TASK_SYNC
-#define KAAPI_TASK_MASK_FLAGS 0xf
-
-#define KAAPI_TASK_MASK_PROC  0x70  /* bits 0x70 ie bit 5 to bit 7 encode the processor type of the task */
-#define KAAPI_TASK_PROC_CPU   0x10
-#define KAAPI_TASK_PROC_GPU   0x20
-#define KAAPI_TASK_PROC_MPSOC 0x40
-/*@}*/
 
 /** Task splitter
     \ingroup TASK
@@ -421,12 +440,12 @@ typedef struct kaapi_frame_t {
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
-  kaapi_task_body_t     body;      /** C function that represent the body to execute */
-  kaapi_task_splitter_t splitter;  /** C function that represent the body to split a task */
-  void*                 sp;        /** data stack pointer of the data frame for the task  */
-  kaapi_format_t*       format;    /** format, 0 if not def !!!  */
   kaapi_uint32_t        flag;      /** flags: after a padding on 64 bit architecture !!!  */
-} kaapi_task_t;
+  kaapi_task_body_t     body;      /** C function that represent the body to execute */
+  void*                 sp;        /** data stack pointer of the data frame for the task  */
+  kaapi_task_splitter_t splitter;  /** C function that represent the body to split a task, interest only if isadaptive*/
+  kaapi_format_t*       format;    /** format, 0 if not def !!!  */
+} __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_task_t ;
 
 
 /** Extent data structure for adaptive task
@@ -448,10 +467,10 @@ typedef struct kaapi_taskadaptive_t {
   ((m) & KAAPI_ACCESS_MASK_MODE )
 
 #define KAAPI_ACCESS_IS_READ( m ) \
-  ((m) & KAAPI_ACCESS_MASK_MODE_R)
+  ((m) & KAAPI_ACCESS_MODE_R)
 
 #define KAAPI_ACCESS_IS_WRITE( m ) \
-  ((m) & KAAPI_ACCESS_MASK_MODE_W)
+  ((m) & KAAPI_ACCESS_MODE_W)
 
 #define KAAPI_ACCESS_IS_POSTPONED( m ) \
   ((m) & KAAPI_ACCESS_MASK_MODE_P)
@@ -460,7 +479,13 @@ typedef struct kaapi_taskadaptive_t {
   (KAAPI_ACCESS_IS_WRITE(m) && !KAAPI_ACCESS_IS_READ(m))
 
 #define KAAPI_ACCESS_IS_READWRITE( m ) \
-  (KAAPI_ACCESS_IS_WRITE(m) && KAAPI_ACCESS_IS_READ(m))
+  ((m) == (KAAPI_ACCESS_MODE_W|KAAPI_ACCESS_MODE_R))
+
+/** Return true if two modes are concurrents
+    a == b and a or b is R or CW
+    or a or b is postponed.
+*/
+#define KAAPI_ACCESS_IS_CONCURRENT(a,b) ((((a)==(b)) && (((b) & 2) !=0)) || ((a|b) & KAAPI_ACCESS_MODE_P))
 /*@}*/
 
 
@@ -484,16 +509,19 @@ typedef struct kaapi_access_t {
   ((type*)a.data)
 
 
-/** \ingroup DFG
-    Splitter for DFG task
-*/
-int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count, struct kaapi_request_t* array);
-
-
 /* ========================================================================= */
 /* Interface                                                                 */
 /* ========================================================================= */
 
+/** \ingroup TASK
+    Return the state of a task
+*/
+#define kaapi_task_getstate(task) ((task)->flag & KAAPI_TASK_MASK_STATE)
+
+/** \ingroup TASK
+    Set the state of the task
+*/
+#define kaapi_task_setstate(task, s) ((task)->flag |= s)
 
 /** \ingroup TASK
     Return the flags of the task
@@ -503,7 +531,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
 /** \ingroup TASK
     Return the flags of the task
 */
-#define kaapi_task_setflags(task, f) ((task)->flag |= f)
+#define kaapi_task_setflags(task, f) ((task)->flag |= f &KAAPI_TASK_MASK_FLAGS)
 
 
 /** \ingroup TASK
@@ -532,7 +560,7 @@ static inline void* kaapi_task_getargs(kaapi_task_t* task)
 /** \ingroup TASK
     Set the pointer to parameter of the task (void*) pointer
 */
-static inline void* kaapi_task_setargs(kaapi_task_t* task,void* arg) 
+static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg) 
 {
   if (task->flag & KAAPI_TASK_ADAPTIVE) 
     return ((kaapi_taskadaptive_t*)task->sp)->user_sp = arg;
@@ -574,8 +602,7 @@ extern void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack);
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_isstealable(const kaapi_task_t* task)
-{ return (task !=0) && (task->body != &kaapi_retn_body) && (task->body != &kaapi_suspend_body)
-     && !(task->flag & KAAPI_TASK_STICKY); }
+{ return !(task->flag & KAAPI_TASK_STICKY); }
 
 /** \ingroup TASK
     The function kaapi_task_haslocality() will return non-zero value iff the task has locality constraints.
@@ -583,14 +610,14 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_haslocality(const kaapi_task_t* task)
-{ return (task !=0) && (task->flag & KAAPI_TASK_LOCALITY); }
+{ return (task->flag & KAAPI_TASK_LOCALITY); }
 
 /** \ingroup TASK
     The function kaapi_task_isadaptive() will return non-zero value iff the task is an adaptive task.
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
-{ return (task !=0) && (task->flag & KAAPI_TASK_ADAPTIVE); }
+{ return (task->flag & KAAPI_TASK_ADAPTIVE); }
 
 
 /** \ingroup TASK
@@ -598,7 +625,7 @@ inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_issync(const kaapi_task_t* task)
-{ return (task !=0) && (task->flag & KAAPI_TASK_SYNC); }
+{ return !(task->flag & KAAPI_TASK_ADAPTIVE); }
 
 
 /** \ingroup STACK
@@ -782,8 +809,6 @@ static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaa
     task->body     = 0;
     task->splitter = 0;
   }
-  else if (flag & KAAPI_TASK_DFG)
-    task->splitter = &kaapi_task_splitter_dfg;
   return 0;
 }
 
@@ -808,23 +833,15 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 }
 
 #if defined(KAAPI_DEBUG)
-#  define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
-  do {  \
-    (task)->body     = taskbody;\
-    (task)->splitter = &kaapi_task_splitter_dfg;\
-    (task)->sp       = (buffer);\
-    (task)->flag     = KAAPI_TASK_DFG; \
-    (task)->format   = 0; \
-  } while (0)
-#else
 #  define kaapi_task_initdfg_debug(task) \
-  (void)(0)
+    (task)->format   = 0
+#else
+#  define kaapi_task_initdfg_debug(task)
 #endif
 
 #define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
   do { \
     (task)->body     = (taskbody);\
-    (task)->splitter = &kaapi_task_splitter_dfg; \
     (task)->sp       = (buffer);\
     (task)->flag     = KAAPI_TASK_DFG;\
     kaapi_task_initdfg_debug(task);\
@@ -1139,7 +1156,8 @@ extern kaapi_format_id_t kaapi_format_structregister(
         void                       (*dstor)( void* ),
         void                       (*cstorcopy)( void*, const void*),
         void                       (*copy)( void*, const void*),
-        void                       (*assign)( void*, const void*)
+        void                       (*assign)( void*, const void*),
+        void                       (*print)( FILE* file, const void* src)
 );
 
 /** \ingroup TASK
