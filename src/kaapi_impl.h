@@ -170,6 +170,10 @@ extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
 
 /** Useful
 */
+extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
+
+/** Useful
+*/
 extern kaapi_processor_t* kaapi_get_current_processor(void);
 
 /** \ingroup WS
@@ -274,7 +278,7 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
     Splitter for DFG task
     \param proc should be the current running thread
 */
-extern int kaapi_task_splitter_dfg(struct kaapi_stack_t* stack, struct kaapi_task_t* task, int count, struct kaapi_request_t* array);
+extern int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count, struct kaapi_request_t* array);
 
 
 
