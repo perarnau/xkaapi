@@ -57,6 +57,8 @@
 #  include <ucontext.h>
 #endif
 
+
+
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
    The purpose of the machine.h file is to give all machine dependent functions.
@@ -67,6 +69,13 @@
           en 1/ migrant the thread courant sur le processeur cible 2/ creation du thread sur ce processeur
           3/ revenir à la fin sur le processeur main.
 */
+
+
+/** \ingroup THREAD
+   Define the minimum stack size. 
+*/
+#define KAAPI_STACK_MIN 8192
+
 
 struct kaapi_processor_t;
 typedef kaapi_uint32_t kaapi_processor_id_t;
