@@ -54,10 +54,6 @@
 extern "C" {
 #endif
 
-#if !defined(KAAPI_USE_VARIADIC_MACRO)
-#  define KAAPI_USE_VARIADIC_MACRO 1
-#endif
-
 #if !defined(KAAPI_MAX_DATA_ALIGNMENT)
 #  define KAAPI_MAX_DATA_ALIGNMENT 8
 #endif
@@ -657,24 +653,17 @@ static inline int kaapi_stack_isempty(const kaapi_stack_t* stack)
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
   void* retval;
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
   if (stack->sp_data+count >= stack->end_sp_data) return 0;
+#endif
   retval = stack->sp_data;
   stack->sp_data += count;
   return retval;
 }
-#else
-static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t count)
-{
-  void* retval = stack->sp_data;
-  stack->sp_data += count;
-  return retval;
-}
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_pushdata() will return the pointer to the next top data.
@@ -684,13 +673,15 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
   kaapi_access_t retval = {0, 0};
   kaapi_gd_t* gd;
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return retval;
-  if (stack->sp_data+count+sizeof(kaapi_gd_t) >= stack->end_sp_data) return retval;
+  if (stack->sp_data+count+sizeof(kaapi_gd_t) >= stack->end_sp_data)
+    return retval;
+#endif
 
   gd              = (kaapi_gd_t*)stack->sp_data;
   gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
@@ -700,19 +691,6 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
   stack->sp_data += count;
   return retval;
 }
-#else
-static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
-{
-  kaapi_access_t retval = {0, 0};
-  kaapi_gd_t* gd  = (kaapi_gd_t*)stack->sp_data;
-  gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
-  stack->sp_data += sizeof(kaapi_gd_t);
-  retval.data     = stack->sp_data;
-  gd->last_version = retval.data;
-  stack->sp_data += count;
-  return retval;
-}
-#endif
 
 #define kaapi_stack_topdata(stack) \
     (stack)->sp_data
@@ -725,17 +703,14 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack) 
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
   if (stack->sp <= stack->pc) return 0;
+#endif
   return stack->task;
 }
-#else
-#define kaapi_stack_bottomtask(stack) \
-  (stack)->task
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_top() will return the top task.
@@ -745,17 +720,14 @@ static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack)
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval a pointer to the next task to push or 0.
 */
-#if defined(KAAPI_DEBUG)
 static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack) 
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
   if (stack->sp == stack->end_sp) return 0;
+#endif
   return stack->sp;
 }
-#else
-#  define kaapi_stack_toptask(stack) \
-    (stack)->sp
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_push() pushes the top task into the stack.
@@ -764,34 +736,28 @@ static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack)
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-#if defined(KAAPI_DEBUG)
 static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->end_sp) return EINVAL;
+#endif
   ++stack->sp;
   return 0;
 }
-#else
-#  define kaapi_stack_pushtask(stack) \
-        ++(stack)->sp
-#endif
 
 /** \ingroup STACK
     The function kaapi_stack_poptask() 
 */
-#if defined(KAAPI_DEBUG)
 static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 {
+#if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->pc) return EINVAL;
+#endif
   --stack->sp;
   return 0;
 }
-#else
-#define kaapi_stack_poptask(stack) \
-  --(stack)->sp
-#endif
 
 
 /** \ingroup TASK
@@ -841,21 +807,23 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 }
 
 #if defined(KAAPI_DEBUG)
-#  define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
-  do {  \
-    (task)->body     = taskbody;\
-    (task)->splitter = &kaapi_task_splitter_dfg;\
-    (task)->sp       = (buffer);\
-    (task)->flag     = KAAPI_TASK_DFG; \
-    (task)->format   = 0; \
+#  define kaapi_task_initdfg_debug(task) \
+  do { \
+        (task)->format = 0; \
   } while (0)
 #else
-#  define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
-    (task)->body     = taskbody;\
+#  define kaapi_task_initdfg_debug(task) \
+  (void)(0)
+#endif
+
+#define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
+  do { \
+    (task)->body     = (taskbody);\
     (task)->splitter = &kaapi_task_splitter_dfg; \
     (task)->sp       = (buffer);\
-    (task)->flag     = KAAPI_TASK_DFG
-#endif
+    (task)->flag     = KAAPI_TASK_DFG;\
+    kaapi_task_initdfg_debug(task);\
+  } while (0)
 
 
 /** \ingroup STACK
@@ -1009,8 +977,6 @@ extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
       _kaapi_post_invoke_splitter( stack, __reval_count );\
     }
     
-
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then call the splitter function with given arguments.
@@ -1020,8 +986,6 @@ extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
     TODO: should put ATOMIC OP into public interface. Cut & Paste kaapi_sched_stealtask.c
 */
 #define kaapi_stealpoint_macro( stack, task, splitter, ...)  ((stack)->hasrequest !=0)
-
-#endif
 
 /** Return true iff the request correctly posted
   \param pksr kaapi_request_t
@@ -1050,7 +1014,6 @@ extern int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task
 */
 extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_reducer_t reducer, void* arg_victim, ...);
 
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then pass arg_victim argument to the victim and call the reducer function with extra arguments.
@@ -1060,8 +1023,6 @@ extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_t
    TODO 
 */
 #define kaapi_preemptpoint_macro( stack, task, reducer, arg_victim, ...) (0)
-#endif
-
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
@@ -1109,7 +1070,6 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
 extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_thief, kaapi_task_reducer_t reducer, ... );  
 
 
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 /** \ingroup ADAPTIVE
    Try to preempt next thief in the reverse order defined by steal reponse.
    Return true iff some work have been preempted and should be processed locally.
@@ -1124,7 +1084,6 @@ extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, vo
    TODO
 */
 #define kaapi_preempt_nextthief_macro( stack, task, arg_thief, reducer, ... ) 0
-#endif
 
 /** \ingroup ADAPTIVE
     Wait the end of all the stealer of the adaptive task 
@@ -1172,7 +1131,6 @@ extern kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_body_t key);
 */
 extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
-#if defined(KAAPI_USE_VARIADIC_MACRO)
 #define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body, ... ) \
   static inline kaapi_format_t* formatobject(void) \
   {\
@@ -1201,7 +1159,6 @@ extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     isinit = 1;\
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
-#endif
 
 
 /**

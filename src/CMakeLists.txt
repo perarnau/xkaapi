@@ -2,7 +2,7 @@
 ##  CMakeLists.txt
 ##  xkaapi
 ##
-##  Created by CL and TG on 04/02/09.
+##  Created by CL, TG and VD on 04/02/09.
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
@@ -10,10 +10,8 @@
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Global definitions for compile comand :
-#add_definitions ( "-Wall -pedantic -O3 -std=c99")
-add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG")
-#add_definitions ( "-Wall -pedantic -std=c99 -g")
-# -std=c99 -g" )
+add_definitions ( "-Wall -pedantic -O3 -std=c99 -g")
+#add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG")
 
 #################
 ## LIBRARY BEG ##
@@ -79,7 +77,7 @@ add_library (xkaapi SHARED
 )
 
 # Version number :
-set_target_properties(xkaapi PROPERTIES VERSION 1.0.1 SOVERSION 1)
+set_target_properties(xkaapi PROPERTIES VERSION 0.0.1 SOVERSION 0)
 
 # Static lib :
 add_library (xkaapi-static STATIC 
@@ -171,6 +169,8 @@ check_include_files (stdio.h      HAVE_STDIO_H     )
 #Maximum number of architecture depending on the installation (1 or 2 in case of mixing CPU/GPU, 3 in case of mixing CPU/GPU/MPSoC)
 # This number may be also depend on the caracteristic of the processors.... and one could consider having N different architectures
 # For each architecture, task should have a specific entry point
+# This will lead to incompatible binary library and should be visible in the
+# library name
 set(KAAPI_MAX_ARCH 3)      
 
 # Get the number of online processors using getconf :
@@ -184,23 +184,7 @@ try_run (
   ${CMAKE_SOURCE_DIR}/config/check_pthread_stack_min.c
   RUN_OUTPUT_VARIABLE KAAPI_STACK_MIN )
 
-# Get maximum number of keys from pthread constant :
-#try_run (
-#  KAAPI_KEYS_MAX_RUN_RESULT
-# KAAPI_KEYS_MAX_COMPILE_RESULT
-# ${CMAKE_BINARY_DIR}
-# ${CMAKE_SOURCE_DIR}/config/check_pthread_max_keys.c
-# RUN_OUTPUT_VARIABLE KAAPI_KEYS_MAX )
-
-# Get number of iteration for dataspecific desctructors from pthread constant :
-#try_run (
-#  KAAPI_DESTRUCTOR_ITERATIONS_RUN_RESULT
-#  KAAPI_DESTRUCTOR_ITERATIONS_COMPILE_RESULT
-#  ${CMAKE_BINARY_DIR}
-#  ${CMAKE_SOURCE_DIR}/config/check_pthread_destructor_iterations.c
-#  RUN_OUTPUT_VARIABLE KAAPI_DESTRUCTOR_ITERATIONS )
-
-
+# TODO: This will break with cross-compilation
 # Get the cache line size :
 if (CMAKE_HOST_APPLE)
   execute_process (
@@ -274,89 +258,11 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/kaapi_config.h.in ${CMAKE_CURRENT_BI
 ##################################
 
 
-#########################
-## SET INITIALIZER BEG ##
-
-# Mutex Initializer :
-#try_run (
-#  KAAPI_MUTEX_INITIALIZER_RUN_RESULT
-#  KAAPI_MUTEX_INITIALIZER_COMPILE_RESULT
-#  ${CMAKE_BINARY_DIR}
-#  ${CMAKE_SOURCE_DIR}/config/mutex_initializer.c
-#  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
-#  RUN_OUTPUT_VARIABLE KAAPI_MUTEX_INITIALIZER)
-
-#if (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
-#  message ("++ Creating Mutex Fast Initializer - done")
-#else (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
-#  message ("++ Creating Mutex Fast Initializer - failed")
-#endif (KAAPI_MUTEX_INITIALIZER_RUN_RESULT)
-
-# Condition Initializer :
-#try_run (
-#  KAAPI_COND_INITIALIZER_RUN_RESULT
-#  KAAPI_COND_INITIALIZER_COMPILE_RESULT
-#  ${CMAKE_BINARY_DIR}
-# ${CMAKE_SOURCE_DIR}/config/cond_initializer.c
-#  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
-#  RUN_OUTPUT_VARIABLE KAAPI_COND_INITIALIZER)
-
-#if (KAAPI_COND_INITIALIZER_RUN_RESULT)
-#  message ("++ Creating Condition Fast Initializer - done")
-#else (KAAPI_COND_INITIALIZER_RUN_RESULT)
-#  message ("++ Creating Condition Fast Initializer - failed")
-#endif (KAAPI_COND_INITIALIZER_RUN_RESULT)
-
-# Once Initializer :
-#try_run (
-#  KAAPI_ONCE_INITIALIZER_RUN_RESULT
-#  KAAPI_ONCE_INITIALIZER_COMPILE_RESULT
-#  ${CMAKE_BINARY_DIR}
-#  ${CMAKE_SOURCE_DIR}/config/once_initializer.c
-#  COMPILE_DEFINITIONS "-I${CMAKE_BINARY_DIR}/src -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_SOURCE_DIR}/src/thread"
-#  RUN_OUTPUT_VARIABLE KAAPI_ONCE_INIT)
-
-#if (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
-#  message ("++ Creating Once Fast Initializer - done")
-#else (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
-#  message ("++ Creating Once Fast Initializer - failed")
-#endif (KAAPI_ONCE_INITIALIZER_RUN_RESULT)
-
-
-## SET INITIALIZER END ##
-#########################
-
-
 ###################################
 ## SET SIZEOF PRIVATE STRUCT BEG ##
 
 set (CMAKE_REQUIRED_INCLUDES ${CMAKE_CURRENT_BINARY_DIR})
 set (CMAKE_EXTRA_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/kaapi_private_structure.h)
-
-
-
-# Mutex :
-#check_type_size ("kaapi_mutex_t" KAAPI_SIZEOF_MUTEX_T)
-#check_type_size ("kaapi_mutexattr_t" KAAPI_SIZEOF_MUTEXATTR_T)
-
-# Condition :
-#check_type_size ("kaapi_cond_t" KAAPI_SIZEOF_COND_T)
-#check_type_size ("kaapi_condattr_t" KAAPI_SIZEOF_CONDATTR_T)
-
-# Attribut :
-#check_type_size ("kaapi_attr_t" KAAPI_SIZEOF_ATTR_T)
-
-# Attribut :
-#check_type_size ("kaapi_once_t" KAAPI_SIZEOF_ONCE_T)
-
-# Attribut :
-#check_type_size ("kaapi_stack_t" KAAPI_SIZEOF_STACK_T)
-
-# Attribut :
-#check_type_size ("kaapi_task_condition_t" KAAPI_SIZEOF_TASK_COND_T)
-
-# Attribut :
-#check_type_size ("kaapi_frame_t" KAAPI_SIZEOF_FRAME_T)
 
 set (CMAKE_EXTRA_INCLUDE_FILES)
 
