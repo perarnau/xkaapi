@@ -49,9 +49,6 @@ int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* vi
 {
   int err, i;
   do {
-    /* Is terminated ? -> abort & return 0 */
-    if (kaapi_isterminated()) return EINTR;
-    
     for (i=0; i<kproc->hlevel; ++i)
     {
       err = kaapi_select_victim_rand_atlevel( kproc, i, victim );

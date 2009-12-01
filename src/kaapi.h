@@ -834,6 +834,7 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   task->sp       = ta;
   task->body     = 0;
   task->splitter = 0;
+  return 0;
 }
 
 #if defined(KAAPI_DEBUG)
