@@ -127,7 +127,7 @@ int kaapi_task_print( FILE* file, kaapi_task_t* task )
         kaapi_getstatename(task), 
         kaapi_getflagsname(task->flag), 
         fmt->name, 
-        (void*)task->splitter,
+	(void*)(uintptr_t)task->splitter,
         fmt->count_params );
         
   /* access mode */
@@ -215,7 +215,7 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
             kaapi_getstatename(task_bot), 
             kaapi_getflagsname(task_bot->flag), 
             fname, 
-            (void*)task_bot->splitter );
+	    (void*)(uintptr_t)task_bot->splitter );
       
       if (task_bot->body == &kaapi_retn_body)
       {
