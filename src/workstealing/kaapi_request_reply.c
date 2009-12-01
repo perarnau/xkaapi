@@ -66,14 +66,12 @@ int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request
     kaapi_stack_pushtask( thief_stack );
 
     request->status = KAAPI_REQUEST_S_EMPTY;
-/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
     request->reply->data = thief_stack;
     kaapi_writemem_barrier();
     request->reply->status = KAAPI_REQUEST_S_SUCCESS;
   }
   else {
     request->status = KAAPI_REQUEST_S_EMPTY;
-/*    KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest );*/
     kaapi_writemem_barrier();
     request->reply->status = KAAPI_REQUEST_S_FAIL;
   }

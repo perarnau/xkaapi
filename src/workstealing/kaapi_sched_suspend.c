@@ -92,7 +92,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       {
         /* push it into the free list */
         KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
-        
         continue;
       }
       if (stack != kproc->ctxt)
