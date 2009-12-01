@@ -100,6 +100,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_format_t*     fmt_param;
   
   arg = kaapi_task_getargst( task, kaapi_tasksteal_arg_t );
+  /*printf("Recv: thiefstack:%p spdata:%p, arg:%p, task:%p, fmt:%p\n", stack, stack->sp_data, arg, arg->origin_task, arg->origin_fmt );*/
 
   KAAPI_LOG(100, "tasksteal: 0x%p -> task stolen: 0x%p\n", (void*)task, (void*)arg->origin_task );
 
@@ -110,7 +111,8 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   /* push a copy of the task argument in the stack */
   orig_task_args = arg->origin_task->sp;
   copy_task_args = kaapi_stack_pushdata(stack, fmt->size);
-  arg->copy_arg = copy_task_args;
+  arg->copy_arg  = copy_task_args;
+  /*printf("After allocate: thiefstack:%p spdata:%p, arg:%p, task:%p, fmt:%p\n", stack, stack->sp_data, arg, arg->origin_task, arg->origin_fmt );*/
   
   /* recopy or allocate in the heap the shared objects in the arguments of the stolen task */
   countparam = fmt->count_params;
