@@ -739,8 +739,10 @@ static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack)
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
-  if (stack->sp <= stack->pc) return 0;
 #endif
+/* CA?
+*/
+  if (stack->sp <= stack->pc) return 0;
   return stack->task;
 }
 
@@ -756,8 +758,10 @@ static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack)
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
-  if (stack->sp == stack->end_sp) return 0;
 #endif
+/* CA?
+*/
+  if (stack->sp == stack->end_sp) return 0;
   return stack->sp;
 }
 
@@ -798,10 +802,9 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
 {
 #if defined(KAAPI_DEBUG)
-  task->flag   = flag & KAAPI_TASK_MASK_FLAGS;
   task->format = 0;
 #else
-  task->flag   = flag;
+  task->flag   = flag & KAAPI_TASK_MASK_FLAGS;
 #endif
   if (flag & KAAPI_TASK_ADAPTIVE)
   {
@@ -822,10 +825,10 @@ static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaa
 static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
 {
 #if defined(KAAPI_DEBUG)
-  task->flag   = (flag | KAAPI_TASK_ADAPTIVE)& KAAPI_TASK_MASK_FLAGS;
+  task->flag   = (flag | KAAPI_TASK_ADAPTIVE) & KAAPI_TASK_MASK_FLAGS;
   task->format = 0;
 #else
-  task->flag   = flag | KAAPI_TASK_ADAPTIVE;
+  task->flag   = (flag | KAAPI_TASK_ADAPTIVE) & KAAPI_TASK_MASK_FLAGS;
 #endif
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
   ta->user_sp    = 0;
@@ -865,7 +868,10 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 static inline int kaapi_stack_save_frame( kaapi_stack_t* stack, kaapi_frame_t* frame)
 {
 #if defined(KAAPI_DEBUG)
-  if ((stack ==0) || (frame ==0)) return EINVAL;
+  if ((stack ==0) || (frame ==0)) {
+    abort();
+    return EINVAL;
+  }
 #endif
   frame->pc      = stack->pc;
   frame->sp      = stack->sp;
@@ -885,7 +891,10 @@ static inline int kaapi_stack_save_frame( kaapi_stack_t* stack, kaapi_frame_t* f
 static inline int kaapi_stack_restore_frame( kaapi_stack_t* stack, const kaapi_frame_t* frame)
 {
 #if defined(KAAPI_DEBUG)
-  if ((stack ==0) || (frame ==0)) return EINVAL;
+  if ((stack ==0) || (frame ==0)) {
+    abort();
+    return EINVAL;
+  }
 #endif
   stack->pc      = frame->pc;
   stack->sp      = frame->sp;

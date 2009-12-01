@@ -132,11 +132,11 @@ int kaapi_setconcurrency( unsigned int concurrency )
         kaapi_all_kprocessors = 0;
         return ENOMEM;
       }
-      kaapi_assert_debug( 0 == kaapi_processor_init( kaapi_all_kprocessors[i] ) );
+      kaapi_assert( 0 == kaapi_processor_init( kaapi_all_kprocessors[i] ) );
       kaapi_all_kprocessors[i]->kid = 0;
 
       /* Initialize the hierarchy information and data structure */
-      kaapi_assert_debug( 0 == kaapi_processor_setuphierarchy( kaapi_all_kprocessors[i] ) );
+      kaapi_assert( 0 == kaapi_processor_setuphierarchy( kaapi_all_kprocessors[i] ) );
 
       /* register the processor */
       kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
@@ -177,9 +177,9 @@ void* kaapi_sched_run_processor( void* arg )
     kaapi_barrier_td_setactive(&barrier_init, 0);
     return 0;
   }
-  kaapi_assert_debug( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
+  kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
 
-  kaapi_assert_debug( 0 == kaapi_processor_init( kproc ) );
+  kaapi_assert( 0 == kaapi_processor_init( kproc ) );
   kproc->kid = kid;
 
   /* kprocessor correctly initialize */

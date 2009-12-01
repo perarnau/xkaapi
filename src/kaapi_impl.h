@@ -284,16 +284,6 @@ extern int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 
-/** Post a request to a given k-processor
-  This method posts a request to victim k-processor. 
-  \param src the sender of the request 
-  \param hlevel the hierarchy level of the steal
-  \param dest the receiver (victim) of the request
-  \param return 0 if the request has been successully posted
-  \param return !=0 if the request been not been successully posted and the status of the request contains the error code
-*/  
-/*extern int kaapi_request_post( kaapi_processor_t* src, kaapi_reply_t* reply, kaapi_victim_t* victim );*/
-
 /** Destroy a request
     A posted request could not be destroyed until a reply has been made
 */
