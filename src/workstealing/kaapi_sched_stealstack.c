@@ -271,7 +271,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 
   if (kaapi_stack_isempty( stack)) return 0;
 
-#if 1
+#if 0
 printf("------ STEAL STACK @:%p\n", (void*)stack );
 #endif
   /* reset dfg constraints evaluation */
@@ -334,7 +334,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     
     ++task_bot;
   }
-#if 1
+#if 0
 printf("------ END STEAL @:%p\n", (void*)stack );
 #endif
   
