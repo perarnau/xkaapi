@@ -15,6 +15,7 @@ extern "C" { const char* get_kaapi_version(); }
 #include "kaapi.h"
 #include "atha_error.h"
 #include <vector>
+#include <typeinfo>
 
 namespace atha{}
 

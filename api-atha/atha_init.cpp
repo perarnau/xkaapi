@@ -17,6 +17,7 @@
 #include <iostream>
 #include <iomanip>
 #include <signal.h>
+#include <limits>
 #include <sys/resource.h> // for core size limit
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -141,7 +142,7 @@ int Init::initialize() throw()
           core_limit.rlim_cur = RLIM_INFINITY;
         else 
           core_limit.rlim_cur = Parser::String2ULong(KaapiComponentManager::prop["util.coresize"]);
-        KAAPI_LOG(setrlimit(RLIMIT_CORE,&core_limit) != 0,"[initialize]: Can't set core file size limit (hard limit too low ?)");
+        KAAPI_CPPLOG(setrlimit(RLIMIT_CORE,&core_limit) != 0,"[initialize]: Can't set core file size limit (hard limit too low ?)");
       }
     }  
     
@@ -221,7 +222,7 @@ int Init::terminate() throw()
 
   if ( util_module != 0 ) delete util_module ;
 
-  KAAPI_LOG( Init::verboseon, "[Init::terminate] SignalThread exit");
+  KAAPI_CPPLOG( Init::verboseon, "[Init::terminate] SignalThread exit");
 
   return 0;
 }

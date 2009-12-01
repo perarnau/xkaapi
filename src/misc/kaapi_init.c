@@ -94,34 +94,45 @@ static unsigned long str_to_kid_map
     (
      unsigned int* kid_map,
      const char* s,
+     unsigned int sys_ncpus,
      unsigned int total_ncpus
     )
 {
   /* s contains a comma separated
    list of cpus indices to use
    */
-  
+
+  unsigned char used_map[KAAPI_MAX_PROCESSOR];
   unsigned long icpu;
   unsigned int used_ncpus;
+  unsigned int is_done = 0;
   char* e;
+
+  for (icpu = 0; icpu < KAAPI_MAX_PROCESSOR; ++icpu)
+    used_map[icpu] = 0;
   
   used_ncpus = 0;
-  
-  while (1)
+
+  while (!is_done)
   {
     icpu = strtoul(s, &e, 10);
-    
+
+    if (*e != ',')
+      is_done = 1;
+
     s = e + 1;
-    
-    if (icpu >= total_ncpus)
+
+    if (icpu >= sys_ncpus)
       continue ;
+
+    if (used_map[icpu])
+      continue ;
+
+    used_map[icpu] = 1;
     
     kid_map[used_ncpus++] = icpu;
     
     if (used_ncpus >= total_ncpus)
-      break;
-    
-    if (!*e || (*e != ','))
       break;
   }
   
@@ -174,7 +185,8 @@ extern int kaapi_setup_param( int argc, char** argv )
     default_param.cpucount =
       str_to_kid_map(default_param.kid_to_cpu,
 		     getenv("KAAPI_CPUSET"),
-		     default_param.syscpucount);
+		     default_param.syscpucount,
+		     default_param.cpucount);
   }
   else
   {
