@@ -1,11 +1,48 @@
 /* KAAPI public interface */
-// =========================================================================
-// (c) INRIA, projet MOAIS, 2009
-// Author: T. Gautier, X-Kaapi port
-//
-//
-//
-// =========================================================================
+/*
+** athapascan-1.h
+** xkaapi
+** 
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
+**
+** Contributors :
+**
+** thierry.gautier@inrialpes.fr
+** 
+** This software is a computer program whose purpose is to execute
+** multithreaded computation with data flow synchronization between
+** threads.
+** 
+** This software is governed by the CeCILL-C license under French law
+** and abiding by the rules of distribution of free software.  You can
+** use, modify and/ or redistribute the software under the terms of
+** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+** following URL "http://www.cecill.info".
+** 
+** As a counterpart to the access to the source code and rights to
+** copy, modify and redistribute granted by the license, users are
+** provided only with a limited warranty and the software's author,
+** the holder of the economic rights, and the successive licensors
+** have only limited liability.
+** 
+** In this respect, the user's attention is drawn to the risks
+** associated with loading, using, modifying and/or developing or
+** reproducing the software by the user in light of its specific
+** status of free software, that may mean that it is complicated to
+** manipulate, and that also therefore means that it is reserved for
+** developers and experienced professionals having in-depth computer
+** knowledge. Users are therefore encouraged to load and test the
+** software's suitability as regards their requirements in conditions
+** enabling the security of their systems and/or data to be ensured
+** and, more generally, to use and operate it in the same conditions
+** as regards security.
+** 
+** The fact that you are presently reading this means that you have
+** had knowledge of the CeCILL-C license and that you accept its
+** terms.
+** 
+*/
 #ifndef _ATHAPASCAN_1_H_H
 #define _ATHAPASCAN_1_H_H
 
@@ -47,9 +84,23 @@ namespace a1 {
     KAAPI_DECL_EXT_FORMAT(double, Double)
     KAAPI_DECL_EXT_FORMAT(long double, LDouble)
   }
-  typedef kaapi_format_t Format;
-  class UpdateFunctionFormat;
+  
+  /** link C++ format -> kaapi format */
+  class Format : public kaapi_format_t {
+  public:
+    Format( const std::string& name );
+  };
 
+  /** format for update function */
+  class FormatUpdateFnc : public Format {
+  public:
+    FormatUpdateFnc( 
+      const std::string& name,
+      int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
+                       const void* value, const struct kaapi_format_t* fmtvalue )
+    );
+  };
+  
   class IStream;
   class OStream;
   class ODotStream;
@@ -428,7 +479,10 @@ namespace a1 {
   class SetLocalAttribut {
   public:
     kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
-    {  return clo; }
+    { 
+      kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
+      return clo; 
+    }
   };
   extern SetLocalAttribut SetLocal;
 
@@ -480,32 +534,64 @@ namespace a1 {
   template <class T>
   class WrapperFormat {
   public:
-    static const kaapi_format_t* format;
+    static const Format* format;
+    static const Format theformat;
+  };
+  
+  template <class UpdateFnc>
+  class WrapperFormatUpdateFnc : public FormatUpdateFnc {
+  protected:
+    template<class UF, class T, class Y>
+    static bool Caller( bool (UF::*)( T&, const Y& ), void* d, const void* v )
+    {
+      static UpdateFnc ufc;
+      T* data = static_cast<T*>(d);
+      const Y* value = static_cast<const Y*>(v);
+      return ufc( *data, *value );
+    }
+    
+  public:
+    static int update_kaapi( void* data, const kaapi_format_t* fmtdata, const void* value, const kaapi_format_t* fmtvalue )
+    {
+      return Caller( &UpdateFnc::operator(), data, value ) ? 1 : 0;
+    }
+    static const FormatUpdateFnc* format;
+    static const FormatUpdateFnc theformat;
   };
 
   template <class T>
-  const kaapi_format_t* WrapperFormat<T>::format = 0;
+  const Format WrapperFormat<T>::theformat( typeid(T).name() );
+  template <class T>
+  const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
 
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_int8_t>::format;
+  const Format* WrapperFormat<kaapi_int8_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_int16_t>::format;
+  const Format* WrapperFormat<kaapi_int16_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_int32_t>::format;
+  const Format* WrapperFormat<kaapi_int32_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_int64_t>::format;
+  const Format* WrapperFormat<kaapi_int64_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_uint8_t>::format;
+  const Format* WrapperFormat<kaapi_uint8_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_uint16_t>::format;
+  const Format* WrapperFormat<kaapi_uint16_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_uint32_t>::format;
+  const Format* WrapperFormat<kaapi_uint32_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<kaapi_uint64_t>::format;
+  const Format* WrapperFormat<kaapi_uint64_t>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<float>::format;
+  const Format* WrapperFormat<float>::format;
   template <>
-  const kaapi_format_t* WrapperFormat<double>::format;
+  const Format* WrapperFormat<double>::format;
+
+  template <class UpdateFnc>
+  const FormatUpdateFnc WrapperFormatUpdateFnc<UpdateFnc>::theformat (
+    typeid(UpdateFnc).name(),
+    &WrapperFormatUpdateFnc<UpdateFnc>::update_kaapi
+  );
+  template <class UpdateFnc>
+  const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::format = &WrapperFormatUpdateFnc<UpdateFnc>::theformat;
 
   // --------------------------------------------------------------------
   /* typenames for access mode */
@@ -849,6 +935,147 @@ namespace a1 {
     return ForkerMain<TASK>();
   }
     
+
+
+  // --------------------------------------------------------------------
+  /** MonotonicBound
+      FncUpdate should have signature int operator()(T& result, const X& value)
+  */
+  class KaapiMonotonicBoundRep;
+  class KaapiMonotonicBound {
+  private:
+    void*                   _data;
+    const kaapi_format_t*   _fmtdata;
+    const kaapi_format_t*   _fmtupdate;
+    KaapiMonotonicBoundRep* _reserved;
+  protected:
+    void initialize( const std::string& name, void* value, const kaapi_format_t* format, const kaapi_format_t* fupdate);
+    void terminate();
+    void acquire();
+    void release();
+    const void* read() const;
+    void update(const void* value, const kaapi_format_t* fmtvaue);
+  };
+  
+  template<class T, class FncUpdate>
+  class MonotonicBound : protected KaapiMonotonicBound {
+    /* should not be used */
+    MonotonicBound<T,FncUpdate>& operator=(const MonotonicBound<T,FncUpdate>& gv) 
+    { return *this; }
+    MonotonicBound(const MonotonicBound<T,FncUpdate>& a)
+    { }
+
+  public:
+    typedef T type_val;
+
+    ~MonotonicBound( ) 
+    {
+    }
+    
+    MonotonicBound() 
+     : KaapiMonotonicBound()
+    {
+    }
+
+    void initialize( const std::string& name, T* value = 0) 
+    {
+      if (value ==0) value = new T;
+      KaapiMonotonicBound::initialize( name, value, WrapperFormat<T>::format, WrapperFormatUpdateFnc<FncUpdate>::format );
+    }
+
+    void terminate()
+    {
+      KaapiMonotonicBound::terminate();
+    }
+
+    void acquire()
+    { KaapiMonotonicBound::acquire(); }    
+
+    void release()
+    { KaapiMonotonicBound::release(); }
+    
+    const T& read() const
+    {
+      const void* data = KaapiMonotonicBound::read();
+      return *(const T*)data;
+    }
+    
+    template<class Y>
+    void update( const Y& value )
+    {
+       KaapiMonotonicBound::update( &value, &WrapperFormat<Y>::theformat );
+    }
+  };
+
+
+#if 0
+  // --------------------------------------------------------------------
+  template<class T>
+  class SingleAssignment {
+  public:
+    inline static const Util::Format* get_data_format()
+    { return &Util::WrapperFormat<T>::theformat; }
+
+  public:
+    typedef T type_val;
+
+    ~SingleAssignment( ) 
+    {
+    }
+    
+    SingleAssignment() 
+    {
+    }
+
+    SingleAssignment(const SingleAssignment<T>& a)
+      : _gv(a._gv)
+    {
+    }
+
+    void initialize( const std::string& name ) 
+    {
+      _gv.initialize( name );
+    }
+
+    void initialize( const std::string& name, T* value) 
+    {
+      _gv.initialize( name );
+      if (value == 0) value = new T;
+      _gv.bind( value, get_data_format() );
+    }
+    
+    void terminate()
+    {
+      _gv.terminate();
+    }
+
+    SingleAssignment<T>& operator=(const SingleAssignment<T>& gv) 
+    {
+      _gv = gv._gv;
+      return *this;
+    }
+
+    const T& read() const
+    {
+      const void* data = _gv.read();
+      return *(const T*)data;
+    }
+    
+    template<class Y>
+    void write( const Y& value )
+    {
+       _gv.write( new Y(value), &Util::WrapperFormat<Y>::theformat );
+    }
+
+    template<class Y>
+    void write( Y* value )
+    {
+       _gv.write( value, &Util::WrapperFormat<Y>::theformat );
+    }
+  public:
+    NetData::SingleAssignment _gv;
+  };
+#endif
 
 } // namespace a1
 

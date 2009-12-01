@@ -55,6 +55,7 @@ add_library (xkaapi SHARED
   task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_fmt_register.c
   task/kaapi_fmt_taskregister.c
   task/kaapi_fmt_structregister.c
   task/kaapi_fmt_resolvebybody.c
@@ -104,6 +105,7 @@ add_library (xkaapi-static STATIC
   task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_fmt_register.c
   task/kaapi_fmt_taskregister.c
   task/kaapi_fmt_structregister.c
   task/kaapi_fmt_resolvebybody.c

@@ -59,13 +59,8 @@ kaapi_format_id_t kaapi_format_structregister(
         void                       (*print)( FILE* file, const void* src)
 )
 {
-  kaapi_uint8_t   entry;
-  kaapi_format_t* head;
-
   kaapi_format_t* fmt = (*fmt_fnc)();
-  fmt->fmtid     = kaapi_hash_value( name );
-  fmt->isinit    = 0;
-  fmt->name      = name;
+  kaapi_format_register( fmt, name );
   fmt->size      = size;
   fmt->cstor     = cstor;
   fmt->dstor     = dstor;
@@ -74,13 +69,6 @@ kaapi_format_id_t kaapi_format_structregister(
   fmt->assign    = assign;
   fmt->print     = print;
   
-  fmt->isinit = 1;
-
-  /* register it into hashmap: fmtid -> fmt */
-  entry = ((unsigned long)fmt->fmtid) & 0xFF;
-  head =  kaapi_all_format_byfmtid[entry];
-  fmt->next_byfmtid = head;
-  kaapi_all_format_byfmtid[entry] = fmt;
-  
+  /* already registered into hashmap: fmtid -> fmt */  
   return fmt->fmtid;
 }

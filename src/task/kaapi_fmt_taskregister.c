@@ -66,27 +66,6 @@ kaapi_format_t* kaapi_all_format_bybody[256] =
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
-
-kaapi_format_t* kaapi_all_format_byfmtid[256] = 
-{
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-};
-
 /**
 */
 kaapi_format_id_t kaapi_format_taskregister( 
@@ -104,9 +83,8 @@ kaapi_format_id_t kaapi_format_taskregister(
   kaapi_format_t* head;
 
   kaapi_format_t* fmt = (*fmt_fnc)();
-  fmt->fmtid = kaapi_hash_value( name );
-  fmt->isinit = 0;
-  fmt->name = name;
+  kaapi_format_register( fmt, name );
+
   fmt->entrypoint[KAAPI_PROC_TYPE_CPU] = body;
   fmt->count_params   = count;
   
@@ -123,7 +101,6 @@ kaapi_format_id_t kaapi_format_taskregister(
   memcpy(fmt->fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
   fmt->size = size;
-  fmt->isinit = 1;
 
   /* register it into hashmap: body -> fmt */
   entry = ((unsigned long)body) & 0xFF;
@@ -131,11 +108,6 @@ kaapi_format_id_t kaapi_format_taskregister(
   fmt->next_bybody = head;
   kaapi_all_format_bybody[entry] = fmt;
   
-  /* register it into hashmap: fmtid -> fmt */
-  entry = ((unsigned long)fmt->fmtid) & 0xFF;
-  head =  kaapi_all_format_byfmtid[entry];
-  fmt->next_byfmtid = head;
-  kaapi_all_format_byfmtid[entry] = fmt;
-  
+  /* already registered into hashmap: fmtid -> fmt */  
   return fmt->fmtid;
 }

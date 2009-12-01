@@ -40,10 +40,10 @@ unsigned long long fiboseq_On(unsigned long long n){
 */
 template<class T>
 struct Print {
-  void operator() ( a1::Shared_r<T> a, const T& ref_value, a1::Shared_r<double> t )
+  void operator() ( a1::Shared_r<T> a, const T& ref_value, double t )
   { 
     /*  Util::WallTimer::gettime is a wrapper around gettimeofday(2) */
-    double delay = Util::WallTimer::gettime() - t.read();
+    double delay = Util::WallTimer::gettime() - t;
 
     /*  a1::System::getRank() prints out the id of the node executing the task */
     Util::logfile() << a1::System::getRank() << ": -----------------------------------------" << std::endl;
@@ -71,17 +71,6 @@ struct Sum {
   }
 };
 
-/* Get current time
- */
-struct GetTime {
-  void operator() ( a1::Shared_rw<double> t) 
-  {
-    kaapi_access_t copy = (kaapi_access_t&)t;
-    double& d = t.access();
-    d = Util::WallTimer::gettime();
-  }
-};
-
 /* Athapascan Fibo task
  * - res is the return value, return value are usually put in a Shared_w
  * - n is the order of fibonnaci. It could be a Shared_r, but there are no dependencies to compute on it, so it would be useless
@@ -89,7 +78,7 @@ struct GetTime {
  *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
  */
 struct Fibo {
-  void operator() ( a1::Shared_w<unsigned long long> res, int n, a1::Shared_r<double> t )
+  void operator() ( a1::Shared_w<unsigned long long> res, int n )
   {  
     if (n < 2) {
       res.write( fiboseq(n) );
@@ -97,13 +86,12 @@ struct Fibo {
     else {
       a1::Shared<unsigned long long> res1;
       a1::Shared<unsigned long long> res2;
-      a1::Shared<double> t;
 
       /* the Fork keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
        */
-      a1::Fork<Fibo>() ( res1, n-1, t );
-      a1::Fork<Fibo>() ( res2, n-2, t );
+      a1::Fork<Fibo>() ( res1, n-1);
+      a1::Fork<Fibo>() ( res2, n-2 );
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished
@@ -125,15 +113,13 @@ struct doit {
     double delay = Util::WallTimer::gettime() - t;
     Util::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
-    a1::Shared<double> time(0.0);
     for (unsigned int i = 0 ; i < iter ; ++i)
-    {
-      /* notice how useless the init value is */
-      a1::Shared<unsigned long long> res(31415);
-    
-      a1::Fork<GetTime>(a1::SetLocal)(time);
+    {   
+      double time= Util::WallTimer::gettime();
+
+      a1::Shared<unsigned long long> res(0);
       
-      a1::Fork<Fibo>()( res, n, time );
+      a1::Fork<Fibo>(a1::SetLocal)( res, n );
 
       /* a1::SetLocal ensures that the task is executed locally (cannot be stolen) */
       a1::Fork<Print<unsigned long long> >(a1::SetLocal)(res, ref_value, time);

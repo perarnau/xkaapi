@@ -75,7 +75,7 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
     }    
     else 
 #endif
-    if (KAAPI_ACCESS_IS_WRITE(m))
+    if (KAAPI_ACCESS_IS_ONLYWRITE(m))
     {
       void* param = (void*)(fmt->off_params[i] + (char*)arg);
       kaapi_format_t* fmt_param = fmt->fmt_params[i];

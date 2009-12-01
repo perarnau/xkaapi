@@ -74,6 +74,7 @@ redo_post:
   {
     /* here request should be cancelled... */
     kaapi_sched_advance( kproc );
+    if (kaapi_isterminated()) return 0;
   }
 
   kaapi_assert_debug( kaapi_request_status(&reply) != KAAPI_REQUEST_S_POSTED );
