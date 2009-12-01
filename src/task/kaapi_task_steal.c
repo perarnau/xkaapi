@@ -100,7 +100,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_format_t*     fmt_param;
   
   arg = kaapi_task_getargst( task, kaapi_tasksteal_arg_t );
-#if 0
+#if 1
   printf("Recv: thiefstack:%p spdata:%p, arg:%p, task:%p, fmt:%p\n", stack, stack->sp_data, arg, arg->origin_task, arg->origin_fmt );
 #endif
 
@@ -171,6 +171,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   /* ... and execute the  mutation */
   (*task->body)( task, stack );
 
+#if 0
   /* ... and push continuation if w, cw or rw mode */
   if (push_write)
   {
@@ -180,6 +181,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
     kaapi_task_setbody( task, &kaapi_taskwrite_body );
     kaapi_stack_pushtask( stack );
   }
+#endif
 
 //  printf("IN %s: end exec/// task copy:@0x%p -> task stolen:@0x%p\n", __PRETTY_FUNCTION__, task, arg->origin_task );
   

@@ -57,7 +57,7 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   /* */
   if (!KAAPI_STACK_EMPTY(&kproc->lsuspend))
   {
-    /* try top wakeup a waiting stack */  
+    /* TODO try top wakeup a waiting stack ? */  
   }
     
 redo_post:
@@ -66,7 +66,7 @@ redo_post:
   if (err !=0) goto redo_post;
 
   /* Fill & Post the request to the victim processor */
-  kaapi_stack_clear(kproc->ctxt);
+  kaapi_stack_clear( kproc->ctxt );
   kproc->issteal = 1;
   kaapi_request_post( kproc, &kproc->reply, &victim );
 
