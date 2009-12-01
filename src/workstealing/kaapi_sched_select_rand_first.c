@@ -50,9 +50,6 @@ int kaapi_sched_select_victim_rand_first( kaapi_processor_t* kproc, kaapi_victim
 {
   int err;
   do {
-    /* Is terminated ? -> abort & return 0 */
-    if (kaapi_isterminated()) return EINTR;
-
     err = kaapi_select_victim_rand_atlevel( kproc, 0, victim );
     if (err ==0) return 0;
   } while(1);

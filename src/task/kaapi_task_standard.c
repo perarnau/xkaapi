@@ -56,8 +56,9 @@ void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
 */
 void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-   kaapi_frame_t* frame = kaapi_task_getargst( task, kaapi_frame_t);
-   kaapi_stack_restore_frame( stack, frame ); 
+  kaapi_frame_t* frame = kaapi_task_getargst( task, kaapi_frame_t);
+  kaapi_task_setstate( frame->pc, KAAPI_TASK_S_TERM );
+  kaapi_stack_restore_frame( stack, frame );
 }
 
 /*

@@ -1,7 +1,8 @@
 /*
+** kaapi_fmt_predef.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:21:00 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -42,18 +43,56 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <string.h>
 
-/** Do rand selection 
-*/
-int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim )
+kaapi_format_t* kaapi_all_format_byfmtid[256] = 
 {
-  int err, i;
-  do {
-    for (i=0; i<kproc->hlevel; ++i)
-    {
-      err = kaapi_select_victim_rand_atlevel( kproc, i, victim );
-      if (err ==0) return 0;
-    }
-  } while(1);
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
 
+/**
+*/
+kaapi_format_id_t kaapi_format_register( 
+        kaapi_format_t*           fmt,
+        const char*               name
+)
+{
+  kaapi_uint8_t        entry;
+  kaapi_format_t* head;
+
+  fmt->fmtid = kaapi_hash_value( name );
+  fmt->isinit       = 0;
+  fmt->name         = name; /* TODO: strdup ? */
+  fmt->count_params = 0;
+  fmt->mode_params  = 0;
+  fmt->off_params   = 0;  
+  fmt->fmt_params   = 0;
+  fmt->size         = 0;
+  fmt->isinit       = 1;
+
+  /* no register it into hashmap: body -> fmt */
+  fmt->next_bybody = 0;
+  
+  /* register it into hashmap: fmtid -> fmt */
+  entry = ((unsigned long)fmt->fmtid) & 0xFF;
+  head =  kaapi_all_format_byfmtid[entry];
+  fmt->next_byfmtid = head;
+  kaapi_all_format_byfmtid[entry] = fmt;
+  
+  return fmt->fmtid;
 }

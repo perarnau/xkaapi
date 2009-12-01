@@ -15,7 +15,6 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_D
 #add_definitions ( "-Wall -O3")
 add_definitions ( "-Wall -g -DKAAPI_DEBUG")
 #add_definitions ( "-Wall -g")
-# -std=c99 -g" )
 
 #################
 ## LIBRARY BEG ##
@@ -32,6 +31,7 @@ add_library (xkaapi-cpp SHARED
   atha_stream.cpp
   atha_format.cpp
   atha_kaapi.cpp
+  atha_monotonic.cpp
 )
 
 # Version number :
@@ -50,6 +50,7 @@ add_library (xkaapi-cpp-static STATIC
   atha_stream.cpp
   atha_format.cpp
   atha_kaapi.cpp
+  atha_monotonic.cpp
 )
 
 set_target_properties(xkaapi-cpp-static PROPERTIES OUTPUT_NAME "xkaapi++")

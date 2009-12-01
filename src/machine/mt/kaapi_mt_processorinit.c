@@ -55,6 +55,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
 
   kproc->ctxt         = 0;  
   kproc->kid          = -1U;
+  kproc->issteal      = 0;
   kproc->hlevel       = 0;
   kproc->hindex       = 0;
   kproc->hlcount      = 0;

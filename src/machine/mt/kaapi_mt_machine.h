@@ -57,6 +57,8 @@
 #  include <ucontext.h>
 #endif
 
+
+
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
    The purpose of the machine.h file is to give all machine dependent functions.
@@ -67,6 +69,13 @@
           en 1/ migrant the thread courant sur le processeur cible 2/ creation du thread sur ce processeur
           3/ revenir à la fin sur le processeur main.
 */
+
+
+/** \ingroup THREAD
+   Define the minimum stack size. 
+*/
+#define KAAPI_STACK_MIN 8192
+
 
 struct kaapi_processor_t;
 typedef kaapi_uint32_t kaapi_processor_id_t;
@@ -160,6 +169,8 @@ typedef struct kaapi_listrequest_t {
 typedef struct kaapi_processor_t {
   kaapi_thread_context_t*  ctxt;                          /* current stack (next version = current active thread) */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
+  kaapi_uint32_t           issteal;                       /* */
+  kaapi_reply_t            reply;                         /* use when a request has been emited */
   kaapi_uint32_t           hlevel;                        /* number of level for this Kprocessor >0 */
   kaapi_uint16_t*          hindex;                        /* id local identifier of request at each level of the hierarchy, size hlevel */
   kaapi_uint16_t*          hlcount;                       /* count of proc. at each level of the hierarchy, size hlevel */
@@ -435,6 +446,15 @@ static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr )
 
 
 /* ============================= Private functions, machine dependent ============================ */
+
+/** Post a request to a given k-processor
+  This method posts a request to victim k-processor. 
+  \param src the sender of the request 
+  \param hlevel the hierarchy level of the steal
+  \param dest the receiver (victim) of the request
+  \param return 0 if the request has been successully posted
+  \param return !=0 if the request been not been successully posted and the status of the request contains the error code
+*/  
 static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* reply, kaapi_victim_t* victim )
 {
   kaapi_request_t* req;

@@ -44,6 +44,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -205,12 +206,13 @@ extern int kaapi_setup_param( int argc, char** argv )
 
 /**
 */
-#define KAAPI_REGISTER_BASICTYPEFORMAT( formatobject, type ) \
+#define KAAPI_REGISTER_BASICTYPEFORMAT( formatobject, type, fmt ) \
   static void formatobject##_cstor(void* dest)  { *(type*)dest = 0; }\
   static void formatobject##_dstor(void* dest) { *(type*)dest = 0; }\
   static void formatobject##_cstorcopy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
   static void formatobject##_copy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
   static void formatobject##_assign( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
+  static void formatobject##_print( FILE* file, const void* src) { fprintf(file, fmt, *(type*)src); } \
   static inline kaapi_format_t* fnc_##formatobject(void) \
   {\
     return &formatobject;\
@@ -223,24 +225,24 @@ extern int kaapi_setup_param( int argc, char** argv )
     kaapi_format_structregister( &fnc_##formatobject, \
                                  #type, sizeof(type), \
                                  &formatobject##_cstor, &formatobject##_dstor, &formatobject##_cstorcopy, \
-                                 &formatobject##_copy, &formatobject##_assign ); \
+                                 &formatobject##_copy, &formatobject##_assign, &formatobject##_print ); \
   }
 
 
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_char_format, char)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_short_format, short)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int_format, int)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_long_format, long)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longlong_format, long long)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_char_format, char, "%hhi")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_short_format, short, "%hi")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int_format, int, "%i")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_long_format, long, "%li")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longlong_format, long long, "%lli")
 
 
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uchar_format, unsigned char)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ushort_format, unsigned short)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint_format, unsigned int)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uchar_format, unsigned char, "%hhu")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ushort_format, unsigned short, "%hu")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint_format, unsigned int, "%u")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long, "%lu")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
 
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_float_format, float)
-KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_double_format, double)
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
+KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_double_format, double, "%e")
 
 

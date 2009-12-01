@@ -95,7 +95,9 @@
 #cmakedefine HAVE_CPU_SET_T 1
 
 #ifdef HAVE_CPU_SET_T
+#if !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE
+#endif
 #endif
 
 /* ================================== Archi ================================= */
