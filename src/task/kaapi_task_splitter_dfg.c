@@ -99,6 +99,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   arg->origin_fmt            = task->format;
   arg->origin_task_args = (void**)(arg+1);
   arg->copy_arg = kaapi_stack_pushdata(thief_stack, task->format->size);
+  printf("Steal task:%p stealtask:%p\n", (void*)task, (void*)steal_task );
   for (i=0; i<countparam; ++i)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task->format->mode_params[i]);
