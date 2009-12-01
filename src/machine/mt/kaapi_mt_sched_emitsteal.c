@@ -49,7 +49,6 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_stack_t*       stack;
   kaapi_victim_t       victim;
-  kaapi_reply_t        reply;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
@@ -69,9 +68,9 @@ redo_post:
   /* Fill & Post the request to the victim processor */
   kaapi_stack_clear(kproc->ctxt);
   kproc->issteal = 1;
-  kaapi_request_post( kproc, &reply, &victim );
+  kaapi_request_post( kproc, &kproc->reply, &victim );
 
-  while (!kaapi_reply_test( &reply ))
+  while (!kaapi_reply_test( &kproc->reply ))
   {
     /* here request should be cancelled... */
     kaapi_sched_advance( kproc );
@@ -79,15 +78,15 @@ redo_post:
   }
   kproc->issteal = 0;
 
-  kaapi_assert_debug( kaapi_request_status(&reply) != KAAPI_REQUEST_S_POSTED );
+  kaapi_assert_debug( kaapi_request_status(&kproc->reply) != KAAPI_REQUEST_S_POSTED );
 
   /* test if my request is ok
   */
-  if (!kaapi_reply_ok(&reply)) 
+  if (!kaapi_reply_ok(&kproc->reply)) 
     return 0;
   
   /* Reset original ctxt and do the local computation
   */
-  stack = kaapi_request_data(&reply);
+  stack = kaapi_request_data(&kproc->reply);
   return stack;
 }

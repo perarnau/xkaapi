@@ -170,6 +170,7 @@ typedef struct kaapi_processor_t {
   kaapi_thread_context_t*  ctxt;                          /* current stack (next version = current active thread) */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
   kaapi_uint32_t           issteal;                       /* */
+  kaapi_reply_t            reply;                         /* use when a request has been emited */
   kaapi_uint32_t           hlevel;                        /* number of level for this Kprocessor >0 */
   kaapi_uint16_t*          hindex;                        /* id local identifier of request at each level of the hierarchy, size hlevel */
   kaapi_uint16_t*          hlcount;                       /* count of proc. at each level of the hierarchy, size hlevel */
