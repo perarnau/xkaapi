@@ -142,7 +142,7 @@ int Init::initialize() throw()
           core_limit.rlim_cur = RLIM_INFINITY;
         else 
           core_limit.rlim_cur = Parser::String2ULong(KaapiComponentManager::prop["util.coresize"]);
-        KAAPI_CPPLOG(setrlimit(RLIMIT_CORE,&core_limit) != 0,"[initialize]: Can't set core file size limit (hard limit too low ?)");
+        KAAPI_CPPLOG((setrlimit(RLIMIT_CORE,&core_limit) != 0),"[initialize]: Can't set core file size limit (hard limit too low ?)");
       }
     }  
     
