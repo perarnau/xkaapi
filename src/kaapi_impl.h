@@ -360,13 +360,11 @@ extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
 /** Args for tasksteal
 */
 typedef struct kaapi_tasksteal_arg_t {
-  kaapi_stack_t*    origin_stack;
-  kaapi_task_t*     origin_task;
-  kaapi_task_body_t origin_body;
-  kaapi_format_t*   origin_fmt;
-  void**            origin_task_args;
-  void*             copy_arg;
-} __attribute__((aligned(KAAPI_MAX_DATA_ALIGNMENT))) kaapi_tasksteal_arg_t;
+  kaapi_stack_t*    origin_stack;      /* stack where task was stolen */
+  kaapi_task_t*     origin_task;       /* the stolen task into origin_stack */
+  kaapi_format_t*   origin_fmt;        /* its format */
+  void*             copy_arg;          /* set by tasksteal */
+} kaapi_tasksteal_arg_t;
 
 
 /** Here: kaapi_atomic_t + functions ; termination detecting barrier, see mt_machine.h

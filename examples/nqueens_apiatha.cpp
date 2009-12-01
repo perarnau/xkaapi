@@ -1,7 +1,7 @@
 /**************************************************************************
  *
  * N-Queens Solutions ver3.1 takaken July/2003 
- * C++ification and optimization by Serge Guelton
+ * C++ification and optimization by S. Guelton, T. Gautier
  * 
  **************************************************************************/
 

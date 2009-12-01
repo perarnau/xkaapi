@@ -76,6 +76,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
     
   /* should CAS in concurrent steal */
   kaapi_task_setstate(task, KAAPI_TASK_S_STEAL );
+  task->body = &kaapi_suspend_body;
   
   countparam = task->format->count_params;
     
@@ -91,40 +92,11 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   
   steal_task = kaapi_stack_toptask( thief_stack );
   kaapi_task_init(thief_stack, steal_task, KAAPI_TASK_STICKY );
-  kaapi_task_setargs( steal_task, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksteal_arg_t)+sizeof(void*)*countparam) );
+  kaapi_task_setargs( steal_task, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksteal_arg_t)) );
   kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( steal_task, kaapi_tasksteal_arg_t );
   arg->origin_stack          = stack;
   arg->origin_task           = task;
-  arg->origin_body           = task->body;
   arg->origin_fmt            = task->format;
-  arg->origin_task_args = (void**)(arg+1);
-  arg->copy_arg = kaapi_stack_pushdata(thief_stack, task->format->size);
-  printf("Steal task:%p stealtask:%p\n", (void*)task, (void*)steal_task );
-  for (i=0; i<countparam; ++i)
-  {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task->format->mode_params[i]);
-    void* param = (void*)(task->format->off_params[i] + (char*)task->sp);
-    if (m == KAAPI_ACCESS_MODE_V) 
-    {
-      arg->origin_task_args[i] = param;
-//      printf("Steal task:%p, name: %s, value: %i\n", (void*)task, task->format->name, *(int*)param );
-    } 
-    else 
-    {
-      kaapi_access_t* access = (kaapi_access_t*)(param);
-      arg->origin_task_args[i] = 0;
-      if (KAAPI_ACCESS_IS_ONLYWRITE(m)) {
-//        printf("Steal task:%p, name: %s, W object: @:%p, data: %i\n", (void*)task, task->format->name, access->data, *(int*)access->data );
-      }
-      else if (KAAPI_ACCESS_IS_READ(m))
-      {
-        arg->origin_task_args[i] = access->version;
-//        printf("Steal task:%p, name: %s, R object: @:%p, data: %i, version: %i, @v:%p\n", (void*)task, task->format->name, access->data, *(int*)access->data, *(int*)access->version, access->version );
-      }
-    } 
-  }
-    
-  task->body   = &kaapi_suspend_body;
 
   kaapi_task_setbody( steal_task, &kaapi_tasksteal_body );
   kaapi_stack_pushtask( thief_stack );
