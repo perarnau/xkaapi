@@ -46,6 +46,9 @@
 #ifndef _KAAPI_CONFIG_H
 #define _KAAPI_CONFIG_H 1
 
+#cmakedefine XKAAPI_VERSION "${XKAAPI_VERSION}"
+
+#cmakedefine XKAAPI_NAME "${XKAAPI_NAME}"
 
 /* ================================= Headers ================================ */
 
@@ -92,7 +95,9 @@
 #cmakedefine HAVE_CPU_SET_T 1
 
 #ifdef HAVE_CPU_SET_T
+#if !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE
+#endif
 #endif
 
 /* ================================== Archi ================================= */

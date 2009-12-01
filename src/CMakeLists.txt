@@ -10,8 +10,10 @@
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -O3 -std=c99 -g")
+add_definitions ( "-Wall -pedantic -O3 -std=c99")
 #add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG")
+#add_definitions ( "-Wall -pedantic -std=c99 -g")
+# -std=c99 -g" )
 
 #################
 ## LIBRARY BEG ##
@@ -45,6 +47,7 @@ add_library (xkaapi SHARED
   workstealing/kaapi_sched_suspend.c
   task/kaapi_stack_init.c
   task/kaapi_stack_clear.c
+  task/kaapi_stack_print.c
   task/kaapi_stack_execall.c
   task/kaapi_stack_execchild.c
   task/kaapi_task_standard.c
@@ -93,6 +96,7 @@ add_library (xkaapi-static STATIC
   workstealing/kaapi_sched_suspend.c
   task/kaapi_stack_init.c
   task/kaapi_stack_clear.c
+  task/kaapi_stack_print.c
   task/kaapi_stack_execall.c
   task/kaapi_stack_execchild.c
   task/kaapi_task_standard.c

@@ -47,17 +47,17 @@
 
 /**
 */
-static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
   int i, countparam;
   kaapi_format_t* fmt;           /* format of the task */
   void* arg;
   
-  /* the task has been stolen: format contains the original body */
-  fmt = kaapi_format_resolvebybody( task->format );
+  /* the task has been stolen: format contains the format of the task */
+  fmt = task->format;
   kaapi_assert_debug( fmt !=0 );
 
-  KAAPI_LOG(100, "aftersteal task: 0x%x\n", task );
+  KAAPI_LOG(100, "aftersteal task: 0x%p\n", (void*)task );
 
   /* report data to version to global data */
   arg = kaapi_task_getargs(task);
@@ -66,21 +66,36 @@ static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
 
-    if (KAAPI_ACCESS_IS_ONLYWRITE(m))
+#if defined(KAAPI_DEBUG)
+    if (m == KAAPI_ACCESS_MODE_V)
+    {
+      /* TODO: improve management of shared data, if it is a big data or not... */
+      void* param_data __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)task->sp);
+//      printf("After steal task:%p, name: %s, value: %i\n", (void*)task, fmt->name, *(int*)param_data );
+    }    
+    else 
+#endif
+    if (KAAPI_ACCESS_IS_WRITE(m))
     {
       void* param = (void*)(fmt->off_params[i] + (char*)arg);
       kaapi_format_t* fmt_param = fmt->fmt_params[i];
       kaapi_access_t* access = (kaapi_access_t*)(param);
       /* TODO: improve management of shared data, if it is a big data or not... */
+//      printf("After steal task:%p, name: %s, W object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
       (*fmt_param->assign)( access->data, access->version );
-      (*fmt_param->dstor)( access->version );
+      (*fmt_param->dstor) ( access->version );
       free(((kaapi_gd_t*)access->version)-1);
       access->version = 0;
     }
-    else
+#if defined(KAAPI_DEBUG)
+    else if (KAAPI_ACCESS_IS_READ(m)) /* rw : if above, not here */
     { /* nothing to do ?
       */    
+      void* param __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)arg);
+      kaapi_access_t* access __attribute__((unused)) = (kaapi_access_t*)(param);
+//      printf("After steal task:%p, name: %s, R object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
     }
+#endif
   }
 }
 
@@ -90,13 +105,13 @@ static void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
 void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
 /*
-  printf("Thief end, @stack: 0x%x\n", stack);
+  printf("Thief end, @stack: 0x%p\n", stack);
   fflush( stdout );
 */
   kaapi_task_t* task2sig;
 
   task2sig = kaapi_task_getargst( task, kaapi_task_t);
-  KAAPI_LOG(100, "signaltask: 0x%x -> task2signal: 0x%x\n", task, task2sig );
+  KAAPI_LOG(100, "signaltask: 0x%p -> task2signal: 0x%p\n", (void*)task, (void*)task2sig );
 
   if (kaapi_task_isadaptive(task2sig))
   {
@@ -117,7 +132,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     kaapi_writemem_barrier();
 
     task2sig->body   = &kaapi_aftersteal_body;
-    KAAPI_LOG(100, "signaltask DFG task stolen: 0x%x\n", task2sig );
+    KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
   }
 }
 

@@ -58,6 +58,9 @@ extern "C" {
 #include "kaapi_error.h"
 #include <string.h>
 
+/** Highest level, more trace generated */
+#define KAAPI_LOG_LEVEL 10
+
 #if defined(KAAPI_DEBUG)
 #  define kaapi_assert_debug_m(val, x, msg) \
       { int __kaapi_err = x; \
@@ -67,7 +70,7 @@ extern "C" {
         }\
       }
 #  define KAAPI_LOG(l, fmt, ...) \
-      do { if (l<= 50) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
+      do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
 
 #else
 #  define kaapi_assert_debug_m(val, x, msg)
@@ -160,12 +163,14 @@ typedef struct kaapi_rtparam_t {
 extern kaapi_rtparam_t default_param;
 
 
-/** COmpute a hash value from a string
-*/
-extern kaapi_uint32_t kaapi_hash_value(const char * data);
-
-
 /* ============================= Commun function for server side (no public) ============================ */
+/** Useful
+*/
+extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
+
+/** Useful
+*/
+extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
 
 /** Useful
 */
@@ -273,7 +278,7 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
     Splitter for DFG task
     \param proc should be the current running thread
 */
-extern int kaapi_task_splitter_dfg(struct kaapi_stack_t* stack, struct kaapi_task_t* task, int count, struct kaapi_request_t* array);
+extern int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count, struct kaapi_request_t* array);
 
 
 
@@ -342,7 +347,15 @@ static inline kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply )
 
 /** Body of task steal created on thief stack to execute a task
 */
-void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+
+/** Write result after a steal 
+*/
+extern void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
+
+/** Merge result after a steal
+*/
+extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
 
 /** Args for tasksteal
 */
@@ -350,6 +363,7 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_stack_t*    origin_stack;
   kaapi_task_t*     origin_task;
   kaapi_task_body_t origin_body;
+  kaapi_format_t*   origin_fmt;
   void**            origin_task_args;
   void*             copy_arg;
 } __attribute__((aligned(KAAPI_MAX_DATA_ALIGNMENT))) kaapi_tasksteal_arg_t;
@@ -362,5 +376,8 @@ typedef struct kaapi_tasksteal_arg_t {
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
 
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* _KAAPI_IMPL_H */

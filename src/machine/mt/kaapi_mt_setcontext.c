@@ -52,6 +52,7 @@ int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt )
   ctxt->requests   = kproc->hlrequests.requests;
   ctxt->hasrequest = (volatile int*)&kproc->hlrequests.count;
   kproc->ctxt = ctxt;
+  ctxt->_proc = kproc;
   return 0;
 
 #if 0  /* TODO: next version when also saving the stack context */

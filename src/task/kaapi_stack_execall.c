@@ -51,12 +51,11 @@
 */
 int kaapi_stack_execall(kaapi_stack_t* stack) 
 {
-  register kaapi_task_t* task;
+  register kaapi_task_t* pc;
   kaapi_task_t*          saved_sp;
   char*                  saved_sp_data;
   kaapi_task_t*          retn;
   void** arg_retn;
-  kaapi_task_body_t      body;
 
 #if defined(KAAPI_TRACE_DEBUG)  
   int level =0;
@@ -64,85 +63,120 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
 
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
-  task = stack->pc;
+  pc = stack->pc;
 
 redo_work: 
+  if (pc->body == &kaapi_suspend_body)
   {
-    if (task->body ==0) return 0;
-    if (task->body == &kaapi_suspend_body)
+    /* rewrite pc into memory */
+    stack->pc = pc;
+    return EWOULDBLOCK;
+#if 0
+    if (kaapi_task_issync(pc))
     {
-      if (kaapi_task_issync(task))
-      {
-        KAAPI_LOG(50,"Would block task: 0x%x\n", task );
-        return EWOULDBLOCK;
-      }
-
-      /* ignore the task */
-      ++stack->pc;
-      task = stack->pc;
-      goto redo_work;
+      KAAPI_LOG(50,"Would block task: 0x%p\n", (void*)pc );
+      /* rewrite pc into memory */
+      stack->pc = pc;
+      return EWOULDBLOCK;
     }
-    else if (task->body == &kaapi_retn_body) 
-    {
-      /* do not save stack frame before execution */
-      kaapi_retn_body(task, stack);
-      KAAPI_LOG(100, "stackexec: exec retn 0x%x, pc: 0x%x\n",task, stack->pc );
-      ++stack->pc;
-      task = stack->pc;
+
+    /* ignore the task */
+    ++pc;
+    goto redo_work;
+#endif
+  }
+  else if (pc->body == &kaapi_retn_body) 
+  {
+    /* do not save stack frame before execution */
+//    kaapi_retn_body(pc, stack);
+    kaapi_frame_t* frame = kaapi_task_getargst( pc, kaapi_frame_t);
+    kaapi_task_setstate( frame->pc, KAAPI_TASK_S_TERM );
+    kaapi_stack_restore_frame( stack, frame );
+    /* read from memory */
+    pc = stack->pc;
 #if defined(KAAPI_TRACE_DEBUG)  
-      --level;
+    KAAPI_LOG(100, "stackexec: exec retn 0x%p, pc: 0x%p\n",(void*)pc, (void*)pc );
+    --level;
+#endif
+    ++pc;
+    if (pc >= stack->sp) return 0;
+    goto redo_work;
+  }
+  else
+  {
+    saved_sp      = stack->sp;
+    saved_sp_data = stack->sp_data;
+#if defined(KAAPI_TRACE_DEBUG)  
+    { int k; for (k=0; k<level; ++k) printf("--------"); }
+    printf("level:%i  ", level);
+    KAAPI_LOG(100, "stackexec: task 0x%p, pc: 0x%p\n", (void*)pc, (void*)pc );
 #endif  
-      goto redo_work;
+    kaapi_task_setstate( pc, KAAPI_TASK_S_EXEC );
+#if 0
+    extern void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack );
+    extern void sum_body( kaapi_task_t* task, kaapi_stack_t* stack );
+    
+    if (pc->body == &fibo_body)
+    {
+      fibo_body(pc, stack);
+    }
+    else if (pc->body == &sum_body)
+    {
+      sum_body(pc, stack);
     }
     else
+#endif
     {
-      saved_sp      = stack->sp;
-      saved_sp_data = stack->sp_data;
+      (*pc->body)(pc, stack);
+    }
+
+    /* push restore_frame task if pushed tasks */
+    if (saved_sp < stack->sp)
+    {
+      retn = kaapi_stack_toptask(stack);
+      kaapi_task_init(stack, retn, KAAPI_TASK_STICKY);
+      retn->body  = &kaapi_retn_body;
+      arg_retn = kaapi_stack_pushdata(stack, 3*sizeof(void*));
+      retn->sp = (void*)arg_retn;
+      arg_retn[0] = pc; /* <=> save pc, will mark this task as term after pop !! */
+      arg_retn[1] = saved_sp;
+      arg_retn[2] = saved_sp_data;
+      kaapi_stack_pushtask(stack);
+
 #if defined(KAAPI_TRACE_DEBUG)  
-      { int k; for (k=0; k<level; ++k) printf("--------"); }
-      printf("level:%i  ", level);
-#endif  
-      body = task->body;
-//      task->format = body;
-      KAAPI_LOG(100, "stackexec: task 0x%x, pc: 0x%x\n", task, stack->pc );
-      (*body)(task, stack);
-      task->body = 0;
+      KAAPI_LOG(100, "stackexec: push retn: 0x%p, pc: 0x%p\n", 
+        (void*)retn, 
+        (void*)pc );
+#endif
 
-      /* process steal request */
-      kaapi_stealpoint_isactive( stack, task );
-        
-      /* push restore_frame task if pushed tasks */
-      if (saved_sp < stack->sp)
-      {
-        retn = kaapi_stack_toptask(stack);
-        kaapi_task_init(stack, retn, KAAPI_TASK_STICKY);
-        retn->body  = &kaapi_retn_body;
-        arg_retn = kaapi_stack_pushdata(stack, 3*sizeof(void*));
-        retn->sp = (void*)arg_retn;
-        arg_retn[0] = task; /* <=> save pc */
-        arg_retn[1] = saved_sp;
-        arg_retn[2] = saved_sp_data;
-        kaapi_stack_pushtask(stack);
-
-  KAAPI_LOG(100, "stackexec: push retn: 0x%x, pc: 0x%x\n", 
-      retn, 
-      stack->pc );
-
-        /* update pc to the first forked task */
-        task = stack->pc = saved_sp;
+      /* update pc to the first forked task */
+      pc = saved_sp;
 #if defined(KAAPI_TRACE_DEBUG)  
-        ++level;
+      ++level;
 #endif  
-        goto redo_work;
+      /* process steal request 
+         - here we always see the retn to split stack into frame.
+      */
+      if (*stack->hasrequest !=0) {
+        stack->pc = pc;
+        kaapi_sched_advance( stack->_proc );
       }
-
-      ++stack->pc;
-      task = stack->pc;
+        
       goto redo_work;
     }
+    kaapi_task_setstate( pc, KAAPI_TASK_S_TERM );
+    
+    /* process steal request 
+       - here we always see the retn to split stack into frame.
+    */
+    if (*stack->hasrequest !=0) {
+      stack->pc = pc;
+      kaapi_sched_advance( stack->_proc );
+    }
   }
-/*next_task: */
-  task = ++stack->pc;
-  if (stack->pc >= stack->sp) return 0;
+
+  /*next_task: */
+  ++pc;
+  if (pc >= stack->sp) return 0;
   goto redo_work;
 }

@@ -47,7 +47,7 @@
 
 /**
 */
-extern kaapi_format_id_t kaapi_format_structregister( 
+kaapi_format_id_t kaapi_format_structregister( 
         kaapi_format_t*           (*fmt_fnc)(void),
         const char*                 name,
         size_t                      size,
@@ -55,7 +55,8 @@ extern kaapi_format_id_t kaapi_format_structregister(
         void                       (*dstor)( void* dest),
         void                       (*cstorcopy)( void* dest, const void* src),
         void                       (*copy)( void* dest, const void* src),
-        void                       (*assign)( void* dest, const void* src)
+        void                       (*assign)( void* dest, const void* src),
+        void                       (*print)( FILE* file, const void* src)
 )
 {
   kaapi_uint8_t   entry;
@@ -71,6 +72,7 @@ extern kaapi_format_id_t kaapi_format_structregister(
   fmt->cstorcopy = cstorcopy;
   fmt->copy      = copy;
   fmt->assign    = assign;
+  fmt->print     = print;
   
   fmt->isinit = 1;
 

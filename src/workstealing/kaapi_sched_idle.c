@@ -45,9 +45,8 @@
 */
 #include "kaapi_impl.h"
 
-/* \TODO: utiliser ici les fonctions (a adapter si besoin): makecontext, getcontext, setcontext 
-   stack: objet de retour du vol
-   context: associe au flot d'execution, ie instancier a partir d'une stack ???
+/* \TODO: voir ici si les fonctions (a adapter si besoin): makecontext, getcontext, setcontext 
+   seront suffisante dans le cas d'un suspend durant l'execution d'une tâche.
 */
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
@@ -72,7 +71,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     if (ctxt !=0) 
     {
       /* push kproc context into free list */
-      KAAPI_LOG(50, "[IDLE] free ctxt 0x%x\n", ctxt);
+      KAAPI_LOG(50, "[IDLE] free ctxt 0x%p\n", (void*)ctxt);
       KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
 
       /* set new context to the kprocessor */
@@ -90,7 +89,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       ctxt = kproc->ctxt;
       kproc->ctxt = 0;
 
-      KAAPI_LOG(50, "[IDLE] free ctxt 0x%x\n", ctxt);
+      KAAPI_LOG(50, "[IDLE] free ctxt 0x%p\n", (void*)ctxt);
       /* push it into the free list */
       KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
 
@@ -100,8 +99,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 
 redo_execute:
     t0 = kaapi_get_elapsedtime();
-    /* printf("Thief, 0x%x, pc:0x%x,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
-    KAAPI_LOG(50, "[IDLE] execute ctxt 0x%x\n", kproc->ctxt);
+    /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
+    KAAPI_LOG(50, "[IDLE] execute ctxt 0x%p\n", (void*)kproc->ctxt);
     err = kaapi_stack_execall( kproc->ctxt );
     t1 = kaapi_get_elapsedtime();
     KAAPI_LOG(50, "[IDLE] Work for %fs\n", t1-t0);
@@ -111,7 +110,7 @@ redo_execute:
       kaapi_thread_context_t* ctxt = kproc->ctxt;
       kproc->ctxt = 0;
 
-      KAAPI_LOG(50, "[IDLE] suspend ctxt 0x%x\n", ctxt);
+      KAAPI_LOG(50, "[IDLE] suspend ctxt 0x%p\n", (void*)ctxt);
       /* push it: suspended because top task is not ready */
       KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
 

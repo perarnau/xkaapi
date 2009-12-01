@@ -1,0 +1,15 @@
+/* KAAPI public interface */
+//=========================================================================
+// (c) INRIA, projet MOAIS, 2009
+// Author: T. Gautier, X-Kaapi port
+//
+//
+//
+//=========================================================================
+#ifndef _ATHAPASCAN_NOT_GLOBAL_NAME_H_
+#define _ATHAPASCAN_NOT_GLOBAL_NAME_H_
+
+#define ATHAPASCAN_NOT_IN_NAMESPACE 1
+#include "athapascan-1.h"
+
+#endif

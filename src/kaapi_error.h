@@ -65,6 +65,8 @@ extern "C" {
 }
 #endif
 
+/* \TODO report here all errocode that kaapi use (I do not think that OS21 will have the same error code ...
+*/
 #define KAAPI_EINVAL EINVAL
 #define KAAPI_EBUSY EBUSY
 #define KAAPI_EAGAIN EAGAIN
