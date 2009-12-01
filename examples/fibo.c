@@ -153,6 +153,7 @@ int main(int argc, char** argv)
   kaapi_stack_save_frame(stack, &frame);
   
   t0 = kaapi_get_elapsedtime();
+  
   result1 = kaapi_stack_pushshareddata(stack, sizeof(int));
   task = kaapi_stack_toptask(stack);
   kaapi_task_init( stack, task, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
