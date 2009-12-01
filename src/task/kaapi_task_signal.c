@@ -82,6 +82,8 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
       kaapi_access_t* access = (kaapi_access_t*)(param);
       /* TODO: improve management of shared data, if it is a big data or not... */
 //      printf("After steal task:%p, name: %s, W object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
+kaapi_assert_debug( access->data != access->version );
+
       (*fmt_param->assign)( access->data, access->version );
       (*fmt_param->dstor) ( access->version );
       free(((kaapi_gd_t*)access->version)-1);
