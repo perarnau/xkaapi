@@ -102,7 +102,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, stack);
     }
 
-    /* printf("Thief, 0x%x, pc:0x%x,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
+/*
+stack = kproc->ctxt;
+printf("Thief stack:%p, pc:%p, sp_data:%p  #task:%p\n", stack, stack->pc, stack->sp_data, stack->sp - stack->pc );
+*/
     t0 = kaapi_get_elapsedtime();
     err = kaapi_stack_execall( kproc->ctxt );
     t1 = kaapi_get_elapsedtime();
