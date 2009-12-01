@@ -68,6 +68,7 @@ redo_post:
 
   /* Fill & Post the request to the victim processor */
   kaapi_stack_clear(kproc->ctxt);
+  kproc->issteal = 1;
   kaapi_request_post( kproc, &reply, &victim );
 
   while (!kaapi_reply_test( &reply ))
@@ -76,6 +77,7 @@ redo_post:
     kaapi_sched_advance( kproc );
     if (kaapi_isterminated()) return 0;
   }
+  kproc->issteal = 0;
 
   kaapi_assert_debug( kaapi_request_status(&reply) != KAAPI_REQUEST_S_POSTED );
 
@@ -84,7 +86,7 @@ redo_post:
   if (!kaapi_reply_ok(&reply)) 
     return 0;
   
-  /* Do the local computation
+  /* Reset original ctxt and do the local computation
   */
   stack = kaapi_request_data(&reply);
   return stack;

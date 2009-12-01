@@ -101,8 +101,8 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_task_setbody( steal_task, &kaapi_tasksteal_body );
   kaapi_stack_pushtask( thief_stack );
 
-  /*printf("Steal task:%p, stack:%p, fmt:%p ||| thiefstack:%p arg:%p, task:%p, fmt:%p\n", task, stack, task->format, thief_stack, arg, arg->origin_task, arg->origin_fmt );*/
 #if 0
+  printf("Steal task:%p, stack:%p, fmt:%p ||| thiefstack:%p arg:%p, task:%p, fmt:%p\n", task, stack, task->format, thief_stack, arg, arg->origin_task, arg->origin_fmt );
   printf("Victim stack:\n");
   kaapi_stack_print( 0, stack );
   printf("Thief stack:\n");

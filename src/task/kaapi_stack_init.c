@@ -56,17 +56,13 @@ int kaapi_stack_init( kaapi_stack_t* stack,
   if (size_task_buffer ==0) 
   { 
     stack->pc = stack->sp = stack->task = 0; 
-#if defined(KAAPI_DEBUG)
     stack->end_sp = 0;
-#endif
   }
   else {
     if (size_task_buffer / sizeof(kaapi_task_t) ==0) return EINVAL;    
-    stack->task = (kaapi_task_t*)task_buffer;
-    stack->pc = stack->sp = stack->task;
-#if defined(KAAPI_DEBUG)
-    stack->end_sp      = stack->task + size_task_buffer/sizeof(kaapi_task_t);
-#endif
+    stack->task   = (kaapi_task_t*)task_buffer;
+    stack->pc     = stack->sp = stack->task;
+    stack->end_sp = stack->task + size_task_buffer/sizeof(kaapi_task_t);
   }
   if (size_data_buffer ==0) 
   {
@@ -74,10 +70,8 @@ int kaapi_stack_init( kaapi_stack_t* stack,
   }
   else 
   {
-    stack->sp_data = stack->data = data_buffer;
-#if defined(KAAPI_DEBUG)
+    stack->sp_data     = stack->data = data_buffer;
     stack->end_sp_data = stack->data + size_data_buffer;
-#endif
   }
   return 0;
 }

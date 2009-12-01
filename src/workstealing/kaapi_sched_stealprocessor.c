@@ -65,7 +65,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
     count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
     ctxt_top = KAAPI_STACK_NEXT_FIELD( ctxt_top );
   }
-  if ((count >0) && (kproc->ctxt !=0)) 
+  if ((count >0) && (kproc->ctxt !=0) && (kproc->issteal ==0))
   {
     replycount += kaapi_sched_stealstack  ( kproc->ctxt );
   }
