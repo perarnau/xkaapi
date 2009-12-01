@@ -74,7 +74,11 @@ redo_post:
   {
     /* here request should be cancelled... */
     kaapi_sched_advance( kproc );
-    if (kaapi_isterminated()) return 0;
+    if (kaapi_isterminated()) 
+    {
+      kproc->issteal = 0;
+      return 0;
+    }
   }
   kproc->issteal = 0;
 

@@ -101,6 +101,16 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_task_setbody( steal_task, &kaapi_tasksteal_body );
   kaapi_stack_pushtask( thief_stack );
 
+  /* ... and push continuation if w, cw or rw mode */
+  if (1)
+  {
+    kaapi_task_t* task = kaapi_stack_toptask( thief_stack );
+    kaapi_task_init(thief_stack, task, KAAPI_TASK_STICKY );
+    kaapi_task_setargs( task, arg ); /* keep the pointer as kaapi_tasksteal_body */
+    kaapi_task_setbody( task, &kaapi_taskwrite_body );
+    kaapi_stack_pushtask( thief_stack );
+  }
+
 #if 0
   printf("Steal task:%p, stack:%p, fmt:%p ||| thiefstack:%p arg:%p, task:%p, fmt:%p\n", task, stack, task->format, thief_stack, arg, arg->origin_task, arg->origin_fmt );
   printf("Victim stack:\n");
