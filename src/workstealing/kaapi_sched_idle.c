@@ -81,6 +81,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     
     /* steal request */
     stack = kaapi_sched_emitsteal( kproc );
+    if (stack ==0) break;
     if (kaapi_stack_isempty(stack)) continue;
     kaapi_assert_debug( stack != 0);
     
