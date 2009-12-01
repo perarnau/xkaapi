@@ -45,9 +45,7 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
-/**
-*/
-kaapi_format_t* kaapi_all_format_bybody[256] = 
+kaapi_format_t* kaapi_all_format_byfmtid[256] = 
 {
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -66,48 +64,35 @@ kaapi_format_t* kaapi_all_format_bybody[256] =
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
+
 /**
 */
-kaapi_format_id_t kaapi_format_taskregister( 
-        kaapi_format_t*           (*fmt_fnc)(void),
-        kaapi_task_body_t           body,
-        const char*                 name,
-        size_t                      size,
-        int                         count,
-        const kaapi_access_mode_t   mode_param[],
-        const kaapi_offset_t        offset_param[],
-        const kaapi_format_t*       fmt_param[]
+kaapi_format_id_t kaapi_format_register( 
+        kaapi_format_t*           fmt,
+        const char*               name
 )
 {
   kaapi_uint8_t        entry;
   kaapi_format_t* head;
 
-  kaapi_format_t* fmt = (*fmt_fnc)();
-  kaapi_format_register( fmt, name );
+  fmt->fmtid = kaapi_hash_value( name );
+  fmt->isinit       = 0;
+  fmt->name         = name; /* TODO: strdup ? */
+  fmt->count_params = 0;
+  fmt->mode_params  = 0;
+  fmt->off_params   = 0;  
+  fmt->fmt_params   = 0;
+  fmt->size         = 0;
+  fmt->isinit       = 1;
 
-  fmt->entrypoint[KAAPI_PROC_TYPE_CPU] = body;
-  fmt->count_params   = count;
+  /* no register it into hashmap: body -> fmt */
+  fmt->next_bybody = 0;
   
-  fmt->mode_params = malloc( sizeof(kaapi_access_mode_t)*count );
-  kaapi_assert(  fmt->mode_params !=0);
-  memcpy(fmt->mode_params, mode_param, sizeof(kaapi_access_mode_t)*count );
-
-  fmt->off_params = malloc( sizeof(kaapi_offset_t)*count );
-  kaapi_assert(  fmt->off_params !=0);
-  memcpy(fmt->off_params, offset_param, sizeof(kaapi_offset_t)*count );
+  /* register it into hashmap: fmtid -> fmt */
+  entry = ((unsigned long)fmt->fmtid) & 0xFF;
+  head =  kaapi_all_format_byfmtid[entry];
+  fmt->next_byfmtid = head;
+  kaapi_all_format_byfmtid[entry] = fmt;
   
-  fmt->fmt_params = malloc( sizeof(kaapi_format_t*)*count );
-  kaapi_assert(  fmt->fmt_params !=0);
-  memcpy(fmt->fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
-
-  fmt->size = size;
-
-  /* register it into hashmap: body -> fmt */
-  entry = ((unsigned long)body) & 0xFF;
-  head =  kaapi_all_format_bybody[entry];
-  fmt->next_bybody = head;
-  kaapi_all_format_bybody[entry] = fmt;
-  
-  /* already registered into hashmap: fmtid -> fmt */  
   return fmt->fmtid;
 }

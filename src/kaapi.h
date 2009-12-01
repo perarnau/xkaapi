@@ -326,6 +326,10 @@ typedef struct kaapi_format_t {
 
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
   struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
+  
+  /* only for Monotonic bound format */
+  int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
+                      const void* value, const struct kaapi_format_t* fmtvalue );
 } kaapi_format_t;
 
 /** predefined format 
@@ -1137,6 +1141,11 @@ extern int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task );
 /** \ingroup TASK
     Register the task's format data structure
 */
+extern kaapi_format_id_t kaapi_format_register( 
+        kaapi_format_t*             fmt,
+        const char*                 name
+);
+
 extern kaapi_format_id_t kaapi_format_taskregister( 
         kaapi_format_t*           (*fmt_fnc)(void),
         kaapi_task_body_t           body,
