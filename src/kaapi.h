@@ -233,7 +233,7 @@ typedef enum kaapi_access_mode_t {
 #define KAAPI_ACCESS_MEMORY_HEAP       0x20   /* data is in the heap */
 
 
-/** Flags for task
+/** Bits for task flag field.
    \ingroup TASK 
    DEFAULT flags is for normal task that can be stolen and executed every where.
     - KAAPI_TASK_STICKY: if set, the task could not be theft else the task can (default).
@@ -244,33 +244,39 @@ typedef enum kaapi_access_mode_t {
 */
 /*@{*/
 #define KAAPI_TASK_MASK_FLAGS 0xf  /* 4 bits 0xf ie bit 0, 1, 2, 3 to type of the task */
-#define KAAPI_TASK_SYNC       0x0   /* 000 0000 */
-#define KAAPI_TASK_STICKY     0x1   /* 000 0001 */
-#define KAAPI_TASK_ADAPTIVE   0x2   /* 000 0010 !KAAPI_TASK_ADAPTIVE == KAAPI_TASK_SYNC*/ 
-#define KAAPI_TASK_LOCALITY   0x4   /* 000 0100 */
+#define KAAPI_TASK_SYNC       0x1   /* 000 0001 */
+#define KAAPI_TASK_STICKY     0x2   /* 000 0010 */
+#define KAAPI_TASK_ADAPTIVE   0x4   /* 000 0100 */ 
+#define KAAPI_TASK_LOCALITY   0x8   /* 000 1000 */
 #define KAAPI_TASK_DFG        KAAPI_TASK_SYNC
 
-/** Task state
+/** Bits for the task state
    \ingroup TASK 
 */
 #define KAAPI_TASK_MASK_STATE 0x30  /* 2 bits 0x70 ie bit 5, 6 to encode the state of the task the task */
-/*@{*/
 typedef enum { 
   KAAPI_TASK_S_INIT  =        0x00, /* 000 0000 */
   KAAPI_TASK_S_EXEC  =        0x10, /* 001 0000 */
   KAAPI_TASK_S_STEAL =        0x20, /* 010 0000 */
   KAAPI_TASK_S_TERM  =        0x30  /* 011 0000 */
 } kaapi_task_state_t;
-
 #define KAAPI_TASK_MASK_READY 0x40  /* 100 0000 */ /* 1 bits 0x10 ie bit 7 to encode if the task is marked as ready */
 
+/** Bits for the proc type
+   \ingroup TASK 
+*/
 #define KAAPI_TASK_MASK_PROC  0x700 /* 3 bits 0x70 ie bit 8, 9, 10 to encode the processor type of the task */
-#define KAAPI_TASK_PROC_CPU   0x100
-#define KAAPI_TASK_PROC_GPU   0x200
-#define KAAPI_TASK_PROC_MPSOC 0x400
+#define KAAPI_TASK_PROC_CPU   0x100 /* 001 0000 0000 */
+#define KAAPI_TASK_PROC_GPU   0x200 /* 010 0000 0000 */
+#define KAAPI_TASK_PROC_MPSOC 0x400 /* 100 0000 0000 */
 
-/*@}*/
-
+/** Bits for attribut of adaptive task
+    \ingroup ADAPT
+*/
+#define KAAPI_TASK_ADAPT_MASK_ATTR 0x7000 /* 3 bits: bit 12, 13, 14 */
+#define KAAPI_TASK_ADAPT_DEFAUL    0x0000 /* 000 0000 0000 0000: default: preemption & sync of child adaptive tasks */
+#define KAAPI_TASK_ADAPT_NOPREEMPT 0x1000 /* 001 0000 0000 0000: no preemption of child adaptive tasks */
+#define KAAPI_TASK_ADAPT_NOSYNC    0x2000 /* 010 0000 0000 0000: no synchronisation of child adaptive tasks */
 /*@}*/
 
 
@@ -453,12 +459,32 @@ typedef struct kaapi_task_t {
 } __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_task_t ;
 
 
-/** Extent data structure for adaptive task
+struct kaapi_taskadaptive_result_t;
+
+/** \ingroup ADAPT
+    Extent data structure for adaptive task.
+    This data structure is attached to any adaptative tasks.
 */
 typedef struct kaapi_taskadaptive_t {
-  void*                  user_sp;           
-  kaapi_atomic_t         thievescount;
+  void*                               user_sp;      /* user argument */
+  kaapi_atomic_t                      thievescount; /* required for the finalization */
+  struct kaapi_taskadaptive_result_t* head;         /* head of the LIFO order of result */
+
+  struct kaapi_taskadaptive_t*        mastertask;   /* who to signal at the end of computation, 0 iff master task */
+  struct kaapi_taskadaptive_result_t* result;       /* where to store result at the end of computation */
+  volatile kaapi_uint32_t*            signal;       /* where to test signal for preemption */
 } kaapi_taskadaptive_t;
+
+
+/** \ingroup ADAPT
+    Data structure that allows to store results of child tasks of an adaptive task.
+    This data structure is store in the victim stack (data part).
+*/
+typedef struct kaapi_taskadaptive_result_t {
+  volatile kaapi_uint32_t             signal;   /* signal of preemption */
+  void*                               data;     /* user result, pointer in the victim stack */
+  struct kaapi_taskadaptive_result_t* next;     /* next result of the next thief */
+} kaapi_taskadaptive_result_t;
 
 
 /* ========================================================================= */
@@ -798,54 +824,35 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 
 
 /** \ingroup TASK
-    Initialize a task with given flag
-*/
-static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
-{
-#if defined(KAAPI_DEBUG)
-  task->format = 0;
-#else
-  task->flag   = flag & KAAPI_TASK_MASK_FLAGS;
-#endif
-  if (flag & KAAPI_TASK_ADAPTIVE)
-  {
-    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
-    ta->user_sp = 0;
-    ta->thievescount._counter = 0;
-    kaapi_assert_debug( ta !=0 );
-    task->sp = ta;
-    task->body     = 0;
-    task->splitter = 0;
-  }
-  return 0;
-}
-
-/** \ingroup TASK
-    Initialize a task with given flag
+    Initialize a task with given flag for adaptive attribut
 */
 static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
 {
 #if defined(KAAPI_DEBUG)
-  task->flag   = (flag | KAAPI_TASK_ADAPTIVE) & KAAPI_TASK_MASK_FLAGS;
   task->format = 0;
-#else
-  task->flag   = (flag | KAAPI_TASK_ADAPTIVE) & KAAPI_TASK_MASK_FLAGS;
 #endif
+  task->flag   = (flag & KAAPI_TASK_ADAPT_MASK_ATTR) | KAAPI_TASK_ADAPTIVE;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
-  ta->user_sp    = 0;
-  ta->thievescount._counter = 0;
   kaapi_assert_debug( ta !=0 );
-  task->sp       = ta;
-  task->body     = 0;
-  task->splitter = 0;
+  ta->user_sp      = 0;
+  ta->thievescount._counter = 0;
+  ta->head         = 0;
+  ta->mastertask   = 0;
+#if defined(KAAPI_DEBUG)  
+  ta->result       = 0;
+  ta->signal       = 0;
+#endif
+  task->sp         = ta;
+  task->body       = 0;
+  task->splitter   = 0;
   return 0;
 }
 
 #if defined(KAAPI_DEBUG)
-#  define kaapi_task_initdfg_debug(task) \
+#  define kaapi_task_format_debug(task) \
     (task)->format   = 0
 #else
-#  define kaapi_task_initdfg_debug(task)
+#  define kaapi_task_format_debug(task)
 #endif
 
 #define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
@@ -853,8 +860,26 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
     (task)->body     = (taskbody);\
     (task)->sp       = (buffer);\
     (task)->flag     = KAAPI_TASK_DFG;\
-    kaapi_task_initdfg_debug(task);\
+    kaapi_task_format_debug(task);\
   } while (0)
+
+
+/** \ingroup TASK
+    Initialize a task with given flag for adaptive attribut
+*/
+static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
+{
+  if (flag & KAAPI_TASK_ADAPTIVE)
+    kaapi_task_initadaptive(stack, task, flag); /* here only flag & KAAPI_TASK_ADAPT_MASK_ATTR */
+  else {
+    kaapi_assert_debug(flag & KAAPI_TASK_DFG);  /* if no ADAPT, must be DFG. Could be both     */
+    kaapi_task_initdfg(stack, task, 0, 0 );
+  }
+  if (flag & KAAPI_TASK_DFG)
+    task->flag |= flag & (KAAPI_TASK_MASK_FLAGS|KAAPI_TASK_MASK_PROC);
+    
+  return 0;
+}
 
 
 /** \ingroup STACK
@@ -916,8 +941,9 @@ static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_
   kaapi_task_t* retn;
   kaapi_frame_t* arg_retn;
   retn = kaapi_stack_toptask(stack);
-  kaapi_task_init(stack, retn, KAAPI_TASK_STICKY);
+  retn->flag  = KAAPI_TASK_STICKY;
   retn->body  = &kaapi_retn_body;
+  kaapi_task_format_debug( retn );
   arg_retn = (kaapi_frame_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
   retn->sp = (void*)arg_retn;
   *arg_retn = *frame;
@@ -1029,6 +1055,7 @@ extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
 /** \ingroup ADAPTIVE
     Adaptor to invoke the splitter in the user code without putting atomic function in the
     public interface.
+    TODO: SUPP
 */
 #define kaapi_invoke_splitter( stack, splittercall ) \
     { \
@@ -1043,11 +1070,12 @@ extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
     \retval 0 else
     
     TODO: should put ATOMIC OP into public interface. Cut & Paste kaapi_sched_stealtask.c
+    TODO: SUPP
 */
 #define kaapi_stealpoint_macro( stack, task, splitter, ...)  ((stack)->hasrequest !=0)
 
 /** Return true iff the request correctly posted
-  \param pksr kaapi_request_t
+    \param pksr kaapi_request_t
 */
 static inline int kaapi_request_ok( kaapi_request_t* kpsr )
 { return (kpsr->status == 1 /*KAAPI_REQUEST_S_POSTED*/); }
