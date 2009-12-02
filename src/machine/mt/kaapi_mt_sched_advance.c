@@ -68,7 +68,8 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   {
     if ( kaapi_request_ok( &kproc->hlrequests.requests[i] ) )
     {
-      kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0 );
+      /* do not decrement the counter */
+      _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0 );
       ++replied;
       if (replied == count) break;
     }
@@ -79,10 +80,4 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   return 0;
 }
 
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
 

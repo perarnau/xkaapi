@@ -1,12 +1,13 @@
 /*
+** kaapi_task_preempt.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:21:00 2009
+** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,37 +44,38 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim )
 {
-  kaapi_assert_debug( stack != 0 );
-  if (retval)
-  {
-    kaapi_task_t* sig;
-    
-    if (kaapi_task_isadaptive(task))
-    {
-      kaapi_taskadaptive_t* ta = task->sp;
-      kaapi_assert_debug( ta !=0 );
-      KAAPI_ATOMIC_INCR( &ta->thievescount );
-    }
-    else {
-      kaapi_assert_debug( task->body == &kaapi_suspend_body);
-    }
-    sig = kaapi_stack_toptask( thief_stack );
-    kaapi_task_init(thief_stack, sig, KAAPI_TASK_STICKY | (kaapi_task_isadaptive(task) ? KAAPI_TASK_ADAPTIVE : 0U) );
-    kaapi_task_setbody( sig, &kaapi_tasksig_body );
-    kaapi_task_setargs( sig, task );
-    kaapi_stack_pushtask( thief_stack );
+  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
 
-    request->status = KAAPI_REQUEST_S_EMPTY;
-    request->reply->data = thief_stack;
-    kaapi_writemem_barrier();
-    request->reply->status = KAAPI_REQUEST_S_SUCCESS;
-  }
-  else {
-    request->status = KAAPI_REQUEST_S_EMPTY;
-    kaapi_writemem_barrier();
-    request->reply->status = KAAPI_REQUEST_S_FAIL;
-  }
+  /* push data to the victim and signal it */
+  ta->affiliation_link->arg_from_thief = arg_for_victim;
+  kaapi_writemem_barrier();
+  ta->affiliation_link->signal = 0;
+
+  /* read data from the vicitm and call reducer */
+  kaapi_readmem_barrier();
   return 0;
+}
+
+
+int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief )
+{
+  kaapi_assert_debug( task->flag & KAAPI_TASK_ADAPTIVE );
+  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
+
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
+  kaapi_taskadaptive_result_t* athief = ta->head;
+  if (athief ==0) return 0;
+  
+  /* pass arg to the thief */
+  athief->arg_from_victim = arg_to_thief;
+  kaapi_writemem_barrier();
+
+  /* signal and wait processing the signal */
+  *athief->signal = 1;
+  while (*athief->signal == 1);
+ 
+  kaapi_readmem_barrier();
+  return 1;
 }

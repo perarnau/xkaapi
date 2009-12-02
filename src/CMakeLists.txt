@@ -41,7 +41,6 @@ add_library (xkaapi SHARED
   workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
   workstealing/kaapi_sched_idle.c
-  workstealing/kaapi_request_reply.c
   workstealing/kaapi_sched_wakeup.c
   workstealing/kaapi_sched_suspend.c
   task/kaapi_stack_init.c
@@ -54,6 +53,7 @@ add_library (xkaapi SHARED
   task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_task_preempt.c
   task/kaapi_fmt_register.c
   task/kaapi_fmt_taskregister.c
   task/kaapi_fmt_structregister.c
@@ -70,6 +70,7 @@ add_library (xkaapi SHARED
   machine/mt/kaapi_mt_selfprocessor.c
   machine/mt/kaapi_mt_selfstack.c
   machine/mt/kaapi_mt_sched_emitsteal.c
+  machine/mt/kaapi_mt_request_reply.c
   machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_context_alloc.c
   machine/mt/kaapi_mt_context_free.c
@@ -90,7 +91,6 @@ add_library (xkaapi-static STATIC
   workstealing/kaapi_sched_stealprocessor.c
   workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
-  workstealing/kaapi_request_reply.c
   workstealing/kaapi_sched_idle.c
   workstealing/kaapi_sched_wakeup.c
   workstealing/kaapi_sched_suspend.c
@@ -104,6 +104,7 @@ add_library (xkaapi-static STATIC
   task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_task_preempt.c
   task/kaapi_fmt_register.c
   task/kaapi_fmt_taskregister.c
   task/kaapi_fmt_structregister.c
@@ -120,6 +121,7 @@ add_library (xkaapi-static STATIC
   machine/mt/kaapi_mt_selfprocessor.c
   machine/mt/kaapi_mt_selfstack.c
   machine/mt/kaapi_mt_sched_emitsteal.c
+  machine/mt/kaapi_mt_request_reply.c
   machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_context_alloc.c
   machine/mt/kaapi_mt_context_free.c

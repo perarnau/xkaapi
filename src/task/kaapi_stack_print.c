@@ -138,13 +138,13 @@ int kaapi_task_print( FILE* file, kaapi_task_t* task )
     fputc(kaapi_getmodename(m), file );
     if (m == KAAPI_ACCESS_MODE_V)
     {
-      void* data = (void*)(fmt->off_params[i] + (char*)task->sp);
+      void* data = (void*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
       fprintf(file, "<%s>, @:%p=", fmt_param->name, data );
       (*fmt_param->print)(file, data );
     }
     else 
     {
-      kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)task->sp);
+      kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
       kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
       fprintf(file, "<%s>, @:%p, a:%p", fmt_param->name, (void*)gd, access->data );
       if (KAAPI_ACCESS_IS_READ(m) && (access->version !=0))
