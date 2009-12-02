@@ -177,6 +177,7 @@ extern int kaapi_getconcurrency (void);
     If successful, the kaapi_setconcurrency() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.
     This function is machine dependent.
+    \retval ENOSYS if the function is not available on a given architecture (e.g. MPSoC)
     \retval EINVAL if no memory ressource is available
     \retval ENOMEM if no memory ressource is available
     \retval EAGAIN if the system laked the necessary ressources to create another thread
@@ -884,7 +885,7 @@ static inline int kaapi_stack_save_frame( kaapi_stack_t* stack, kaapi_frame_t* f
     the stack data structure.
     If successful, the kaapi_stack_restore_frame() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
-    \param stack OUT a pointer to the kaapi_stack_t data structure.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \param frame IN a pointer to the kaapi_frame_t data structure.
     \retval EINVAL invalid argument: bad pointer.
 */
@@ -902,7 +903,13 @@ static inline int kaapi_stack_restore_frame( kaapi_stack_t* stack, const kaapi_f
   return 0;  
 }
 
-/** TODO
+/** \ingroup STACK
+    The function kaapi_stack_pushretn() push a task in charge of restoring the stack with the frame given in parameter.
+    If successful, the kaapi_stack_pushretn() function will return zero.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \param frame IN a pointer to the kaapi_frame_t data structure.
+    \retval EINVAL invalid argument: bad pointer.
 */
 static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_t* frame)
 {
@@ -990,8 +997,8 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
   int count = *stack->hasrequest;
   if (count) 
   {
-    /* \TODO: ici appel systematique a kaapi_sched_stealprocessor, qui retourne vite, (mais cout)
-       a voir comment bi-passer cet appel (rentre visible kproc->lsuspend ?)...
+    /* \TODO: ici appel systematique a kaapi_sched_stealprocessor dans le cas ou la seule tache
+       est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
     */
     kaapi_sched_stealprocessor(stack->_proc);
     count = *stack->hasrequest;
