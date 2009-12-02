@@ -106,35 +106,37 @@ kaapi_assert_debug( access->data != access->version );
 */
 void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
-/*
-  printf("Thief end, @stack: 0x%p\n", stack);
-  fflush( stdout );
-*/
+  /*
+    printf("Thief end, @stack: 0x%p\n", stack);
+    fflush( stdout );
+  */
+  kaapi_tasksig_arg_t* argsig;
   kaapi_task_t* task2sig;
 
-  task2sig = kaapi_task_getargst( task, kaapi_task_t);
+  argsig = kaapi_task_getargst( task, kaapi_tasksig_arg_t);
+  task2sig = argsig->task2sig;
   KAAPI_LOG(100, "signaltask: 0x%p -> task2signal: 0x%p\n", (void*)task, (void*)task2sig );
 
-  if (kaapi_task_isadaptive(task2sig))
+  /* flush in memory all pending write ops */  
+  kaapi_writemem_barrier();
+
+  if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL))
   {
-    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task2sig->sp;/* do not use kaapi_task_getargs !!! */
-    kaapi_assert_debug( ta !=0 );
-
-    /* flush in memory all pending write ops */  
-    kaapi_writemem_barrier();
-
-    KAAPI_ATOMIC_DECR( &ta->thievescount );
-  } 
-  else if (kaapi_task_issync(task2sig))
-  {
-    /* */
-    kaapi_task_setflags( task2sig, KAAPI_TASK_STICKY );
-
-    /* flush in memory all pending write ops */  
-    kaapi_writemem_barrier();
-
-    task2sig->body   = &kaapi_aftersteal_body;
+    kaapi_task_setbody(task2sig, &kaapi_aftersteal_body );
     KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
+  }
+  else 
+  {
+    if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOSYNC) )
+    {
+      kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task2sig->sp;/* do not use kaapi_task_getargs !!! */
+      kaapi_assert_debug( ta !=0 );
+      KAAPI_ATOMIC_DECR( &ta->thievescount );
+    } 
+    if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) )
+    { /* mark result as term */
+      argsig->result->flag = argsig->result->flag & ~KAAPI_RESULT_MASK_EXEC;
+    }
   }
 }
 

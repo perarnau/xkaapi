@@ -183,10 +183,11 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
   
   /* will receive & process steal request */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
-  kaapi_task_init(stack, task, KAAPI_TASK_ADAPTIVE);
+  kaapi_task_initadaptive(stack, task, KAAPI_TASK_ADAPT_MASK_ATTR);
   kaapi_task_setargs(task, &work);
   kaapi_stack_pushtask(stack);
 
+  /* directly execute the task with forking it: correct because no data dependencies */
   work.doit(task, stack);
   
   kaapi_stack_poptask(stack);

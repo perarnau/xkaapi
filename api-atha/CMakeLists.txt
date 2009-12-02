@@ -13,8 +13,8 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_D
 
 # Global definitions for compile comand :
 #add_definitions ( "-Wall -O3")
-#add_definitions ( "-Wall -g -DKAAPI_DEBUG")
-add_definitions ( "-Wall -g")
+add_definitions ( "-Wall -g -DKAAPI_DEBUG")
+#add_definitions ( "-Wall -g")
 
 #################
 ## LIBRARY BEG ##

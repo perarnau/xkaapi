@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_stealtask.c
+** kaapi_task_preempt.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -7,7 +7,6 @@
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -45,22 +44,38 @@
 */
 #include "kaapi_impl.h"
 
-/** 
-*/
-int kaapi_sched_stealtask( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_splitter_t splitter )
+int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim )
 {
-  int count;
-  int retval;
-  
+  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
+
+  /* push data to the victim and signal it */
+  ta->affiliation_link->arg_from_thief = arg_for_victim;
+  kaapi_writemem_barrier();
+  ta->affiliation_link->signal = 0;
+
+  /* read data from the vicitm and call reducer */
   kaapi_readmem_barrier();
+  return 0;
+}
 
-  count = *stack->hasrequest;
-  if (count ==0) return 0;
 
-  retval = (*splitter)(stack, task, count, stack->requests);
-  kaapi_assert_debug( retval <= count );
-  KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, retval );
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
+int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief )
+{
+  kaapi_assert_debug( task->flag & KAAPI_TASK_ADAPTIVE );
+  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
 
-  return retval;
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
+  kaapi_taskadaptive_result_t* athief = ta->head;
+  if (athief ==0) return 0;
+  
+  /* pass arg to the thief */
+  athief->arg_from_victim = arg_to_thief;
+  kaapi_writemem_barrier();
+
+  /* signal and wait processing the signal */
+  *athief->signal = 1;
+  while (*athief->signal == 1);
+ 
+  kaapi_readmem_barrier();
+  return 1;
 }

@@ -154,7 +154,7 @@ redo_work:
        The splitter cannot give more than WINDOW_SIZE size work to all other threads.
        Thus each thief thread cannot have more than WINDOW_SIZE size work.
     */
-    kaapi_stealpoint_macro( stack, task, splitter, _ibeg, &local_iend );
+    kaapi_stealpoint( stack, task, &splitter, _ibeg, &local_iend );
 
     tmp_size = local_iend-_ibeg;
     if (tmp_size < unit_size ) {
@@ -174,10 +174,10 @@ redo_work:
        here no function is called on the preemption point and the data 'this' is passed 
        to the thread that initiates the preemption.
     */
-    if (kaapi_preemptpoint_macro( stack, task,   /* context */
-                                  0,             /* function to call in case of preemption */
-                                  this           /* arg to pass to the thread that do preemption */
-                                                 /* here possible extra arguments to pass to the function call */
+    if (kaapi_preemptpoint( stack, task,   /* context */
+                            0,             /* function to call in case of preemption */
+                            this           /* arg to pass to the thread that do preemption */
+                                           /* here possible extra arguments to pass to the function call */
                         )) return;      
   }
   
@@ -188,7 +188,7 @@ redo_work:
      If work has been preempted, then ibeg != local_iend and should be done locally. See reducer function.
      If no more work has been preempted, it means that all the computation is finished.
   */
-  if (kaapi_preempt_nextthief_macro( stack, task, 
+  if (kaapi_preempt_nextthief( stack, task, 
                                      0,                         /* arg to pass to the thief */
                                      &reducer,                  /* function to call if a preempt exist */
                                      this, &_ibeg, &local_iend  /* arg to pass to the function call reducer */
@@ -217,8 +217,8 @@ void marc_problem ( double* begin, double* end )
   SlidingWindowWork work( begin, end);
 
   /* create the task on the top of the stack */
-  kaapi_task_t*  task  = kaapi_stack_toptask(stack);
-  kaapi_task_init( stack, task, KAAPI_TASK_ADAPTIVE);
+  kaapi_task_t* task = kaapi_stack_toptask(stack);
+  kaapi_task_initadaptive( stack, task, KAAPI_TASK_ADAPT_MASK_ATTR);
   kaapi_task_setargs(task, &work );
   
   /* push_it task on the top of the stack */

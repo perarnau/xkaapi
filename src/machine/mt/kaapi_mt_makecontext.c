@@ -116,13 +116,15 @@
 #endif /* KAAPI_USE_SETJMP */
 
 
+#if 0 /* SHOULD BE REINSERT IN THE COMPILATION PROCESS IF WE WANT TO SUSPEND THREADS */
 static void kaapi_trampoline_context( kaapi_thread_context_t * ctxt );
+#endif
 
 /*
 */
 int kaapi_makecontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, void (*entrypoint)(void* arg), void* arg )
 {
-#if 0
+#if 0 /* SHOULD BE REINSERT IN THE COMPILATION PROCESS IF WE WANT TO SUSPEND THREADS */
   ctxt->arg = arg;
   ctxt->entrypoint = entrypoint;
   
@@ -147,6 +149,7 @@ int kaapi_makecontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, vo
   return 0;
 }
 
+#if 0 /* SHOULD BE REINSERT IN THE COMPILATION PROCESS IF WE WANT TO SUSPEND THREADS */
 
 /** This method is only call during the first call to the entrypoint on the context
 */
@@ -185,3 +188,5 @@ static void __attribute__((unused)) kaapi_trampoline_context ( kaapi_thread_cont
   (*ctxt->entrypoint)(ctxt->arg);
 #endif
 }
+
+#endif /* SHOULD BE REINSERT IN THE COMPILATION PROCESS IF WE WANT TO SUSPEND THREADS */

@@ -376,11 +376,21 @@ typedef struct kaapi_reply_t {
 
 
 /** \ingroup WS
+    This value should not collapse with KAAPI_TASK_ADAPT_NOPREEMPT and KAAPI_TASK_ADAPT_NOSYNC values
+    because the are also store in the same bit field.
+*/
+/*@{*/
+#define KAAPI_REQUEST_FLAG_PARTIALSTEAL  0x1    /* Set iff steal of adaptive task */
+#define KAAPI_REQUEST_FLAG_APPLILEVEL    0x2    /* Set if the scope of result in case of adaptive steal is the running addaptive task */
+/*@}*/
+
+/** \ingroup WS
     Server side of a request send by a processor.
     This data structure is pass in parameter of the splitter function.
 */
 typedef struct kaapi_request_t {
   kaapi_uint16_t           status;         /* server status */
+  kaapi_uint16_t           flag;           /* partial steal of task | processed during the execution of the runing task */
   struct kaapi_reply_t*    reply;          /* caller status */
   struct kaapi_stack_t*    stack;          /* stack of the thief where to store result of the steal operation */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
@@ -396,7 +406,8 @@ typedef int (*kaapi_task_splitter_t)(struct kaapi_stack_t* /*stack */, struct ka
 /** Task reducer
     \ingroup TASK
 */
-typedef int (*kaapi_task_reducer_t)(struct kaapi_task_t* /* task */, void* thief, ...);
+typedef int (*kaapi_task_reducer_t)(struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
+                                    void* arg_thief, ...);
 
 /** Kaapi stack of tasks definition
    \ingroup STACK
@@ -415,6 +426,7 @@ typedef int (*kaapi_task_reducer_t)(struct kaapi_task_t* /* task */, void* thief
 */
 typedef struct kaapi_stack_t {
   volatile int             *hasrequest;     /** points to the k-processor structure */
+  volatile int              haspreempt;     /** !=0 if preemption is requested */
   struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
   struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
   struct kaapi_task_t*      end_sp;         /** past the last stack counter: next entry after the last task in stack array */
@@ -423,6 +435,7 @@ typedef struct kaapi_stack_t {
   char*                     sp_data;        /** stack counter for the data: next free data entry */
   char*                     end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
   char*                     data;           /** stack of data with the same scope than task */
+
 
   kaapi_request_t          *requests;       /** points to the processor structure */
   kaapi_uint32_t            size;           /** size of the data structure */
@@ -466,31 +479,38 @@ struct kaapi_taskadaptive_result_t;
     This data structure is attached to any adaptative tasks.
 */
 typedef struct kaapi_taskadaptive_t {
-  void*                               user_sp;      /* user argument */
-  kaapi_atomic_t                      thievescount; /* required for the finalization */
-  struct kaapi_taskadaptive_result_t* head;         /* head of the LIFO order of result */
+  void*                               user_sp;         /* user argument */
+  kaapi_atomic_t                      thievescount;    /* required for the finalization */
+  struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
 
-  struct kaapi_taskadaptive_t*        mastertask;   /* who to signal at the end of computation, 0 iff master task */
-  struct kaapi_taskadaptive_result_t* result;       /* where to store result at the end of computation */
-  volatile kaapi_uint32_t*            signal;       /* where to test signal for preemption */
+  struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
+  struct kaapi_taskadaptive_result_t* affiliation_link;/* link with my father/mother */
+  void*                               result;          /* where to store my result at the end of computation, pointer in vicitm stack */
 } kaapi_taskadaptive_t;
 
 
 /** \ingroup ADAPT
     Data structure that allows to store results of child tasks of an adaptive task.
-    This data structure is store in the victim stack (data part).
+    This data structure is store in the victim stack (data part) and serve as communication 
+    media between victim and thief.
 */
 typedef struct kaapi_taskadaptive_result_t {
-  volatile kaapi_uint32_t             signal;   /* signal of preemption */
-  void*                               data;     /* user result, pointer in the victim stack */
-  struct kaapi_taskadaptive_result_t* next;     /* next result of the next thief */
+  volatile int*                       signal;          /* signal of preemption pointer on the thief stack */
+  int                                 flag;
+  struct kaapi_taskadaptive_result_t* next;            /* next result of the next thief */
+  void*                               arg_from_thief;  /* user thief result, pointer in the victim stack */
+  void*                               arg_from_victim; /* arg pass by the victim that preempt the current task */
 } kaapi_taskadaptive_result_t;
+
+#define KAAPI_RESULT_MASK_EXEC 0x1
+#define KAAPI_RESULT_INSTACK   0x10
+#define KAAPI_RESULT_INHEAP    0x20
+
 
 
 /* ========================================================================= */
 /* Shared object and access mode                                             */
 /* ========================================================================= */
-
 /** \ingroup DFG
 */
 /*@{*/
@@ -824,14 +844,14 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 
 
 /** \ingroup TASK
-    Initialize a task with given flag for adaptive attribut
+    Initialize a task with given flag for adaptive attribut or task constraints.
 */
 static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
 {
 #if defined(KAAPI_DEBUG)
   task->format = 0;
 #endif
-  task->flag   = (flag & KAAPI_TASK_ADAPT_MASK_ATTR) | KAAPI_TASK_ADAPTIVE;
+  task->flag   = flag | KAAPI_TASK_ADAPTIVE;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
   kaapi_assert_debug( ta !=0 );
   ta->user_sp      = 0;
@@ -840,7 +860,8 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   ta->mastertask   = 0;
 #if defined(KAAPI_DEBUG)  
   ta->result       = 0;
-  ta->signal       = 0;
+  ta->affiliation_link = 0;
+  ta->result       = 0;
 #endif
   task->sp         = ta;
   task->body       = 0;
@@ -1033,86 +1054,104 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
   return 0;
 }
 
+
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then call the splitter function with given arguments.
     \retval !=0 if they are a steal request(s) to process onto the given task.
     \retval 0 else
 */
-static inline int kaapi_stealpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_splitter_t splitter)
-{
-  if (kaapi_stealpoint_isactive(stack, task)) 
-  {
-    /* with function call has interest to be inline */
-    kaapi_sched_stealtask( stack, task, splitter );
-  }
-  return *stack->hasrequest !=0;
-}
-
-
-extern void _kaapi_post_invoke_splitter( kaapi_stack_t* stack, int count );
-
-/** \ingroup ADAPTIVE
-    Adaptor to invoke the splitter in the user code without putting atomic function in the
-    public interface.
-    TODO: SUPP
-*/
-#define kaapi_invoke_splitter( stack, splittercall ) \
-    { \
-      int __reval_count = splittercall; \
-      _kaapi_post_invoke_splitter( stack, __reval_count );\
-    }
+#define kaapi_stealpoint( stack, task, splitter, ...) \
+   (kaapi_stealpoint_isactive(stack, task) ? \
+     (splitter)( stack, task, *(stack)->hasrequest, (stack)->requests, ##__VA_ARGS__) :\
+     0\
+   )
+    
     
 /** \ingroup ADAPTIVE
-    Test if the current execution should process preemt request into the task
-    and then call the splitter function with given arguments.
-    \retval !=0 if they are a steal request(s) to process onto the given task.
-    \retval 0 else
-    
-    TODO: should put ATOMIC OP into public interface. Cut & Paste kaapi_sched_stealtask.c
-    TODO: SUPP
-*/
-#define kaapi_stealpoint_macro( stack, task, splitter, ...)  ((stack)->hasrequest !=0)
-
-/** Return true iff the request correctly posted
+    Return true iff the request correctly posted
     \param pksr kaapi_request_t
 */
-static inline int kaapi_request_ok( kaapi_request_t* kpsr )
-{ return (kpsr->status == 1 /*KAAPI_REQUEST_S_POSTED*/); }
+#define kaapi_request_ok( kpsr )\
+  ((kpsr)->status == 1 /*KAAPI_REQUEST_S_POSTED*/)
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then pass arg_victim argument to the victim and return !=0 value
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
-   TODO 
 */
-extern int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_victim );
-
+static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task )
+{
+  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );  
+  return stack->haspreempt;
+}
 
 /** \ingroup ADAPTIVE
-    Test if the current execution should process preemt request into the task
-    and then pass arg_victim argument to the victim and call the reducer function with extra arguments.
-    \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
-    \retval 0 else
-
-   TODO 
+    Helper function to pass argument between the victim and the thief.
+    On return the victim argument may be read.
 */
-extern int kaapi_preemptpoint( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_reducer_t reducer, void* arg_victim, ...);
+extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim );
 
 /** \ingroup ADAPTIVE
-    Test if the current execution should process preemt request into the task
-    and then pass arg_victim argument to the victim and call the reducer function with extra arguments.
-    \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
+    Test if the current execution should process preemt request to the current task
+    and if it is true then pass arg_victim argument to the victim and call the reducer function with incomming victim argument
+    for the thief. Extra arguments are added at the end of the parameter when calling reducer function.
+    The reducer function is assumed to be of the form:
+      (*reducer)(kaapi_stack_t*, kaapi_task_t*, void* arg_from_victim, ...)
+    Where ... must match the list of extra parameter.
+    \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
-
-   TODO 
 */
-#define kaapi_preemptpoint_macro( stack, task, reducer, arg_victim, ...) (0)
+#define kaapi_preemptpoint( stack, task, reducer, arg_for_victim, ...)\
+  ( kaapi_preemptpoint_isactive(stack, task) ? \
+        kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim),\
+        ( (reducer) == 0 ? 0 : ((int (*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->affiliation_link->arg_from_victim, ##__VA_ARGS__))\
+      : \
+        0\
+  )
+
+
+/* Helper for kaapi_preempt_nextthief
+   Return 1 iff a thief as been preempted.
+*/
+extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief );
+
+static inline int kaapi_preempt_nextthief_helper_pop( kaapi_task_t* task, int retval )
+{
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
+  ta->head = ta->head->next;
+  return (ta->head == 0 ? retval : 1);
+}
+
+/** \ingroup ADAPTIVE
+   Try to preempt next thief in the reverse order defined by steal reponse.
+   Return true iff some work have been preempted and should be processed locally.
+   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
+   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
+   value the call to reducer function.
+   
+   reducer function should has the following signature:
+      int (*)( kaapi_stack_t* stack, kaapi_task_t* task, void* thief_work, ... )
+   where ... is the same arguments as passed to kaapi_preempt_nextthief.
+*/
+#define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
+ ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
+      kaapi_preempt_nextthief_helper_pop( task, \
+            (reducer) == 0 ? \
+                1 \
+              : \
+                ((int (*)(...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->head->arg_from_thief, ##__VA_ARGS__) \
+      )\
+    :\
+      0\
+ )
+
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
     has successfully adapt to steal work. Else 0.
+    While it reply to a request, the function decrement the request count on the stack.
     This function is machine dependent.
 */
 extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval );
@@ -1139,37 +1178,6 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
   task->splitter = 0;
   return 0;
 }
-
-/** \ingroup ADAPTIVE
-   Try to preempt next thief in the reverse order defined by steal reponse.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, it means then the function return false (0).
-   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
-      int (*)( kaapi_task_t* task, void* thief_work, ... )
-   where ... is the same arguments as passed to kaapi_preempt_nextthief.
-
-   TODO 
-*/
-extern int kaapi_preempt_nextthief( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_thief, kaapi_task_reducer_t reducer, ... );  
-
-
-/** \ingroup ADAPTIVE
-   Try to preempt next thief in the reverse order defined by steal reponse.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, it means then the function return false (0).
-   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
-      int (*)( kaapi_task_t* task, void* thief_work, ... )
-   where ... is the same arguments as passed to kaapi_preempt_nextthief.
-
-   TODO
-*/
-#define kaapi_preempt_nextthief_macro( stack, task, arg_thief, reducer, ... ) 0
 
 /** \ingroup ADAPTIVE
     Wait the end of all the stealer of the adaptive task 
