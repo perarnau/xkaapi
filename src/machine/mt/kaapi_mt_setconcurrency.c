@@ -100,6 +100,7 @@ int kaapi_setconcurrency( unsigned int concurrency )
 #ifdef KAAPI_USE_SCHED_AFFINITY
       {
         cpu_set_t cpuset;
+	CPU_ZERO(&cpuset);
         CPU_SET(default_param.kid_to_cpu[i], &cpuset);
         pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
       }
@@ -118,6 +119,7 @@ int kaapi_setconcurrency( unsigned int concurrency )
 #ifdef KAAPI_USE_SCHED_AFFINITY
       {
         cpu_set_t cpuset;
+	CPU_ZERO(&cpuset);
         CPU_SET(default_param.kid_to_cpu[i], &cpuset);
         pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
       }
