@@ -67,6 +67,7 @@ extern "C" {
         if (__kaapi_err != val) \
         { \
           printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+          abort();\
         }\
       }
 #  define KAAPI_LOG(l, fmt, ...) \
@@ -84,6 +85,7 @@ extern "C" {
         if (__kaapi_err != val) \
         { \
           printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+          abort();\
         }\
       }
 
