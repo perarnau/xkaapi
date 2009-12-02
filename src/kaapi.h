@@ -1050,7 +1050,6 @@ static inline int kaapi_request_ok( kaapi_request_t* kpsr )
     and then pass arg_victim argument to the victim and return !=0 value
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
-
    TODO 
 */
 extern int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_victim );
