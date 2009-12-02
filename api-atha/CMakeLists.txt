@@ -12,8 +12,9 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_D
 #include (${CMAKE_CURRENT_SOURCE_DIR}/../CheckCCompilerFlag.cmake )
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -O3")
+#add_definitions ( "-Wall -O3")
 #add_definitions ( "-Wall -g -DKAAPI_DEBUG")
+add_definitions ( "-Wall -g")
 
 #################
 ## LIBRARY BEG ##
@@ -27,11 +28,11 @@ add_library (xkaapi-cpp SHARED
   atha_logfile.cpp
   atha_component.cpp
   atha_parser.cpp
-  atha_stream.cpp
-  atha_format.cpp
-  atha_kaapi.cpp
   atha_monotonic.cpp
+  atha_kaapi.cpp
 )
+# NOT YET USED:  atha_stream.cpp
+#  atha_format.cpp
 
 # Version number :
 set_target_properties(xkaapi-cpp PROPERTIES VERSION 1.0.1 SOVERSION 1 OUTPUT_NAME "xkaapi++")
@@ -46,11 +47,11 @@ add_library (xkaapi-cpp-static STATIC
   atha_logfile.cpp
   atha_component.cpp
   atha_parser.cpp
-  atha_stream.cpp
-  atha_format.cpp
-  atha_kaapi.cpp
   atha_monotonic.cpp
+  atha_kaapi.cpp
 )
+# NOT YET USED:  atha_stream.cpp
+#  atha_format.cpp
 
 set_target_properties(xkaapi-cpp-static PROPERTIES OUTPUT_NAME "xkaapi++")
 target_link_libraries (xkaapi-cpp-static           xkaapi-static)
