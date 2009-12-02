@@ -133,9 +133,11 @@ redo_work:
     /* push restore_frame task if pushed tasks */
     if (saved_sp < stack->sp)
     {
+      /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
       retn = kaapi_stack_toptask(stack);
-      kaapi_task_init(stack, retn, KAAPI_TASK_STICKY);
+      retn->flag  = KAAPI_TASK_STICKY;
       retn->body  = &kaapi_retn_body;
+      kaapi_task_format_debug( retn );
       arg_retn = kaapi_stack_pushdata(stack, 3*sizeof(void*));
       retn->sp = (void*)arg_retn;
       arg_retn[0] = stack->pc; /* <=> save pc, will mark this task as term after pop !! */
