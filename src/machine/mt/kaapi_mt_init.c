@@ -91,7 +91,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_isterm = 0;
   
   /* set up runtime parameters */
-  kaapi_setup_param(0,0);
+  kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
   
   /* initialize the kprocessor key */
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
