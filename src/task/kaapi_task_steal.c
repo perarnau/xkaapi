@@ -61,8 +61,8 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
 
   /* report data to the original task */
   fmt = arg->origin_fmt;
-  orig_task_args   = arg->origin_task->sp;
-  copy_task_args = arg->copy_arg;
+  orig_task_args   = kaapi_task_getargs(arg->origin_task);
+  copy_task_args   = arg->copy_arg;
 
 if (fmt->fmtid == 96)
 {
@@ -117,7 +117,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_assert_debug( fmt !=0 );
   
   /* push a copy of the task argument in the stack */
-  orig_task_args = arg->origin_task->sp;
+  orig_task_args = kaapi_task_getargs(arg->origin_task);
   copy_task_args = kaapi_stack_pushdata(stack, fmt->size);
   arg->copy_arg  = copy_task_args;
 #if 0

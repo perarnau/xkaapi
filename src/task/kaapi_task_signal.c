@@ -70,7 +70,7 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
     if (m == KAAPI_ACCESS_MODE_V)
     {
       /* TODO: improve management of shared data, if it is a big data or not... */
-      void* param_data __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)task->sp);
+      void* param_data __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
 //      printf("After steal task:%p, name: %s, value: %i\n", (void*)task, fmt->name, *(int*)param_data );
     }    
     else 
@@ -117,10 +117,10 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 
   if (kaapi_task_isadaptive(task2sig))
   {
-    kaapi_taskadaptive_t* ta = task2sig->sp;
+    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task2sig->sp;/* do not use kaapi_task_getargs !!! */
     kaapi_assert_debug( ta !=0 );
 
-    /* flush in memory all pending write */  
+    /* flush in memory all pending write ops */  
     kaapi_writemem_barrier();
 
     KAAPI_ATOMIC_DECR( &ta->thievescount );
@@ -130,7 +130,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     /* */
     kaapi_task_setflags( task2sig, KAAPI_TASK_STICKY );
 
-    /* flush in memory all pending write */  
+    /* flush in memory all pending write ops */  
     kaapi_writemem_barrier();
 
     task2sig->body   = &kaapi_aftersteal_body;

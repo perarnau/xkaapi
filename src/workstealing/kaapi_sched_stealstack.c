@@ -80,7 +80,7 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
       --waitparam;
       continue;
     }
-    kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)task->sp);
+    kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
     kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
     
     switch (state) {
