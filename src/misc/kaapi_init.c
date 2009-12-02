@@ -117,13 +117,16 @@ static unsigned long str_to_kid_map
   {
     icpu = strtoul(s, &e, 10);
 
+    if (icpu >= sys_ncpus)
+      {
+	printf("KAAPI_CPUSET, cpu index too high\n");
+	abort();
+      }
+
     if (*e != ',')
       is_done = 1;
 
     s = e + 1;
-
-    if (icpu >= sys_ncpus)
-      continue ;
 
     if (used_map[icpu])
       continue ;
@@ -131,9 +134,9 @@ static unsigned long str_to_kid_map
     used_map[icpu] = 1;
     
     kid_map[used_ncpus++] = icpu;
-    
+
     if (used_ncpus >= total_ncpus)
-      break;
+      is_done = 1;
   }
   
   /* return the acutal used cpu count */
@@ -165,6 +168,8 @@ extern int kaapi_setup_param( int argc, char** argv )
   /* adjust system limit, if library is compiled with greather number of processors that available */
   if (default_param.syscpucount < KAAPI_MAX_PROCESSOR)
     default_param.syscpucount = KAAPI_MAX_PROCESSOR;
+
+  default_param.use_affinity = 0;
     
   /* Set default values */
   default_param.cpucount  = default_param.syscpucount;
@@ -178,6 +183,8 @@ extern int kaapi_setup_param( int argc, char** argv )
   if (getenv("KAAPI_CPUCOUNT") !=0)
   {
     default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
+    if (default_param.cpucount > default_param.syscpucount)
+      default_param.cpucount = default_param.syscpucount;
   }
 
   if (getenv("KAAPI_CPUSET") != 0)
@@ -187,6 +194,8 @@ extern int kaapi_setup_param( int argc, char** argv )
 		     getenv("KAAPI_CPUSET"),
 		     default_param.syscpucount,
 		     default_param.cpucount);
+
+    default_param.use_affinity = 1;
   }
   else
   {
