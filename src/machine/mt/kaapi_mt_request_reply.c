@@ -43,6 +43,22 @@
 */
 #include "kaapi_impl.h"
 
+
+/** Implementation note:
+    - only the thief_stack + signal to the thief has to be port on the machine.
+    - the creation of the task to signal back the end of computation must be keept.
+    I do not want to split this function in two parts (machine dependent and machine independent)
+    in order to avoid 2 function calls.
+    
+    For instance if no memory is shared between both -> communication of the memory stack.
+    with translation of :
+      - function body
+      - function splitter
+      - arguments in case of an adaptive task
+      - all stack pointer of parameter that should be considered as offset.
+    The format of the task should give all necessary information about types used in the
+    data stack.
+*/
 int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
 {
   kaapi_assert_debug( stack != 0 );
@@ -52,7 +68,7 @@ int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request
     
     if (kaapi_task_isadaptive(task))
     {
-      kaapi_taskadaptive_t* ta = task->sp;
+      kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
       kaapi_assert_debug( ta !=0 );
       KAAPI_ATOMIC_INCR( &ta->thievescount );
     }
@@ -60,8 +76,9 @@ int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request
       kaapi_assert_debug( task->body == &kaapi_suspend_body);
     }
     sig = kaapi_stack_toptask( thief_stack );
-    kaapi_task_init(thief_stack, sig, KAAPI_TASK_STICKY | (kaapi_task_isadaptive(task) ? KAAPI_TASK_ADAPTIVE : 0U) );
+    sig->flag = KAAPI_TASK_STICKY;
     kaapi_task_setbody( sig, &kaapi_tasksig_body );
+    kaapi_task_format_debug( sig );
     kaapi_task_setargs( sig, task );
     kaapi_stack_pushtask( thief_stack );
 
