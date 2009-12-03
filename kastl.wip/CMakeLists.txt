@@ -28,6 +28,12 @@ set (XKAAPI_TEST_CPP_LINK_LIBS xkaapi-cpp-static)
 add_executable (transform     	      transform.h transform.cpp random.cpp kaapi_utils.cpp )
 add_executable (accumulate     	      accumulate.h accumulate.cpp random.cpp kaapi_utils.cpp )
 add_executable (copy     	      copy.h copy.cpp random.cpp kaapi_utils.cpp )
+add_executable (count     	      count.h count.cpp random.cpp kaapi_utils.cpp )
+add_executable (count_if     	      count_if.h count_if.cpp random.cpp kaapi_utils.cpp )
+add_executable (fill     	      fill.h fill.cpp random.cpp kaapi_utils.cpp )
+add_executable (find_if     	      find_if.h find_if.cpp random.cpp kaapi_utils.cpp )
+add_executable (for_each     	      for_each.h for_each.cpp random.cpp kaapi_utils.cpp )
+add_executable (generate     	      generate.h generate.cpp random.cpp kaapi_utils.cpp )
 
 
 # PROPERTIES for C++ code
@@ -35,6 +41,12 @@ set_target_properties(
               transform
               accumulate
               copy
+              count
+              count_if
+              fill
+              find_if
+              for_each
+              generate
               PROPERTIES COMPILE_FLAGS "" 
 )
 
@@ -43,3 +55,9 @@ set_target_properties(
 target_link_libraries (transform            ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (accumulate           ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (copy                 ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (count                ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (count_if             ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (fill                 ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (find_if              ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (for_each             ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (generate             ${XKAAPI_TEST_LINK_LIBS} m)

@@ -3,3 +3,4 @@
 . factorize splitter
  . parametrize threshold, bloc size
 . reducer,  TODO_REDUCER
+. rename kaapi_utils:: into kastl_utils::

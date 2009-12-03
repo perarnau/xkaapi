@@ -58,8 +58,7 @@ public:
     BinOp op;
 
     request_handler(RandomAccessIterator& _local_end, size_t _bloc, BinOp _op)
-      : local_end(_local_end), bloc(_bloc), op(_op)
-    {}
+    : local_end(_local_end), bloc(_bloc), op(_op) {}
 
     bool operator() (Self_t* self_work, Self_t* output_work)
     {
