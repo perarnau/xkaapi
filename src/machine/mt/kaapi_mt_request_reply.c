@@ -63,8 +63,12 @@
 int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
 {
   kaapi_taskadaptive_result_t* result =0;
+  int flag;
   kaapi_assert_debug( stack != 0 );
-  int flag = request->flag;
+  kaapi_assert_debug( request != 0 );
+  
+  flag = request->flag;
+  request->flag = 0;
   
   if (retval)
   {
@@ -76,13 +80,15 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
        - if complete steal of the task -> signal sould pass the body to aftersteal body
        If steal an
     */
-    if (kaapi_task_isadaptive(task) && (flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL))
+    if (flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)
     {
       kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
       kaapi_assert_debug( ta !=0 );
-      if ( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) )
+      kaapi_assert_debug( kaapi_task_isadaptive(task) );
+
+      if ( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required preemption */
       {
-        if (stack->pc == task) {
+        if (stack->pc == task) { /* current running task */
           result = (kaapi_taskadaptive_result_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_taskadaptive_result_t));
           result->flag = KAAPI_RESULT_MASK_EXEC|KAAPI_RESULT_INSTACK;
         }
@@ -94,6 +100,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         result->signal          = &thief_stack->haspreempt;
         result->arg_from_thief  = 0;
         result->arg_from_victim = 0;
+        /* link rsesult */
         result->next            = ta->head;
         ta->head                = result->next;
       }
@@ -103,17 +110,6 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         KAAPI_ATOMIC_INCR( &ta->thievescount );
       else flag |= KAAPI_TASK_ADAPT_NOSYNC;
     }
-#if defined(KAAPI_DEBUG)
-    if (kaapi_task_issync(task))
-    {
-      /* only in the current implementation:
-         - optimization: only put kaapi_suspend_body on task that depend of parameters produced by stolen task
-         - add handler (bit field ?) to update shared object as for kaapi_after_steal.
-         - if not such task exist: and the shared by declared in the frame of the stolen task...
-      */
-      kaapi_assert_debug( task->body == &kaapi_suspend_body);
-    }
-#endif
 
     sig = kaapi_stack_toptask( thief_stack );
     sig->flag = KAAPI_TASK_STICKY;
