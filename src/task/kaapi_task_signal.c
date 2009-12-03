@@ -117,12 +117,18 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
   task2sig = argsig->task2sig;
   KAAPI_LOG(100, "signaltask: 0x%p -> task2signal: 0x%p\n", (void*)task, (void*)task2sig );
 
+  if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL))
+  {
+    kaapi_task_setbody(task2sig, &kaapi_aftersteal_body );
+    KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
+  }
+
   /* flush in memory all pending write ops */  
   kaapi_writemem_barrier();
 
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL))
   {
-    kaapi_task_setbody(task2sig, &kaapi_aftersteal_body );
+    kaapi_task_setstate(task2sig, KAAPI_TASK_S_TERM );
     KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
   }
   else 

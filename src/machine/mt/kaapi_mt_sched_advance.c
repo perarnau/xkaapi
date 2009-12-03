@@ -56,10 +56,11 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
 {
   int i, replied = 0;
 
-  kaapi_readmem_barrier();
   int count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   if (count ==0) return 0;
   
+  kaapi_readmem_barrier();
+
   /* process request on the kprocessor */
   kaapi_sched_stealprocessor( kproc );
   

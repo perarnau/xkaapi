@@ -243,7 +243,7 @@ typedef enum kaapi_access_mode_t {
     before continuing the fast execution using RFO schedule.
 */
 /*@{*/
-#define KAAPI_TASK_MASK_FLAGS 0xf  /* 4 bits 0xf ie bit 0, 1, 2, 3 to type of the task */
+#define KAAPI_TASK_MASK_FLAGS 0xf  /* 4 bits 0xf ie bits 0, 1, 2, 3 to type of the task */
 #define KAAPI_TASK_SYNC       0x1   /* 000 0001 */
 #define KAAPI_TASK_STICKY     0x2   /* 000 0010 */
 #define KAAPI_TASK_ADAPTIVE   0x4   /* 000 0100 */ 
@@ -253,22 +253,22 @@ typedef enum kaapi_access_mode_t {
 /** Bits for the task state
    \ingroup TASK 
 */
-#define KAAPI_TASK_MASK_STATE 0x30  /* 2 bits 0x70 ie bit 5, 6 to encode the state of the task the task */
+#define KAAPI_TASK_MASK_STATE 0x70  /* 3 bits 0x70 ie bits 4, 5, 6 to encode the state of the task the task */
 typedef enum { 
-  KAAPI_TASK_S_INIT  =        0x00, /* 000 0000 */
-  KAAPI_TASK_S_EXEC  =        0x10, /* 001 0000 */
-  KAAPI_TASK_S_STEAL =        0x20, /* 010 0000 */
-  KAAPI_TASK_S_TERM  =        0x30  /* 011 0000 */
+  KAAPI_TASK_S_INIT  =        0x00, /* 0000 0000 */
+  KAAPI_TASK_S_EXEC  =        0x10, /* 0001 0000 */
+  KAAPI_TASK_S_STEAL =        0x20, /* 0010 0000 */
+  KAAPI_TASK_S_TERM  =        0x40  /* 0100 0000 */
 } kaapi_task_state_t;
-#define KAAPI_TASK_MASK_READY 0x40  /* 100 0000 */ /* 1 bits 0x10 ie bit 7 to encode if the task is marked as ready */
+#define KAAPI_TASK_MASK_READY 0x80  /* 1000 0000 */ /* 1 bit 0x80 ie bit 7 to encode if the task is marked as ready */
 
 /** Bits for the proc type
    \ingroup TASK 
 */
-#define KAAPI_TASK_MASK_PROC  0x700 /* 3 bits 0x70 ie bit 8, 9, 10 to encode the processor type of the task */
-#define KAAPI_TASK_PROC_CPU   0x100 /* 001 0000 0000 */
-#define KAAPI_TASK_PROC_GPU   0x200 /* 010 0000 0000 */
-#define KAAPI_TASK_PROC_MPSOC 0x400 /* 100 0000 0000 */
+#define KAAPI_TASK_MASK_PROC  0x700 /* 3 bits 0x70 ie bits 8, 9, 10 to encode the processor type of the task */
+#define KAAPI_TASK_PROC_CPU   0x100 /* 0001 0000 0000 */
+#define KAAPI_TASK_PROC_GPU   0x200 /* 0010 0000 0000 */
+#define KAAPI_TASK_PROC_MPSOC 0x400 /* 0100 0000 0000 */
 
 /** Bits for attribut of adaptive task
     \ingroup ADAPT
@@ -572,7 +572,7 @@ typedef struct kaapi_access_t {
 /** \ingroup TASK
     Set the state of the task
 */
-#define kaapi_task_setstate(task, s) ((task)->flag |= s)
+#define kaapi_task_setstate(task, s) ((task)->flag = ((task)->flag & ~KAAPI_TASK_MASK_STATE) | (s))
 
 /** \ingroup TASK
     Return the flags of the task
@@ -828,6 +828,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
   ++stack->sp;
   return 0;
 }
+
 
 /** \ingroup STACK
     The function kaapi_stack_poptask() 
