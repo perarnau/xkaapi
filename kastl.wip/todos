@@ -1,0 +1,5 @@
+. factorize sequence worker iteration
+ . parametrize nano size
+. factorize splitter
+ . parametrize threshold, bloc size
+. reducer,  TODO_REDUCER
