@@ -99,6 +99,22 @@ namespace kaapi_utils
     return replied_count;
   }
 
+
+  template<typename SelfType>
+  static void start_adaptive_task(SelfType* work)
+  {
+    kaapi_stack_t* const stack = kaapi_self_stack();
+    kaapi_task_t* const task = kaapi_stack_toptask(stack);
+
+    kaapi_task_init(stack, task, KAAPI_TASK_ADAPTIVE);
+    kaapi_task_setargs(task, work);
+    kaapi_stack_pushtask(stack);
+
+    work->doit(task, stack);
+
+    kaapi_stack_poptask(stack);
+  }
+
 } // kaapi_utils namespace
 
 

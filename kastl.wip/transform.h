@@ -185,16 +185,7 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
   TransformStruct<InputIterator, OutputIterator, UnaryOperator>::obeg0 = to_fill;
   
   TransformStruct<InputIterator, OutputIterator, UnaryOperator> work( begin, end, to_fill, op);
-  kaapi_stack_t* const stack = kaapi_self_stack();
-  
-  /* will receive & process steal request */
-  kaapi_task_t* const task = kaapi_stack_toptask(stack);
-  kaapi_task_init(stack, task, KAAPI_TASK_ADAPTIVE);
-  kaapi_task_setargs(task, &work);
-  kaapi_stack_pushtask(stack);
 
-  work.doit(task, stack);
-  
-  kaapi_stack_poptask(stack);
+  kaapi_utils::start_adaptive_task(&work);
 }
 #endif

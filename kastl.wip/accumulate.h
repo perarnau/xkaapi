@@ -233,18 +233,7 @@ template<class RandomAccessIterator, class T >
 T accumulate(RandomAccessIterator begin, RandomAccessIterator end, T init)
 {
   AccumulateStruct<RandomAccessIterator, T, std::plus<T> > work( begin, end, init, std::plus<T>() );
-  kaapi_stack_t* const stack = kaapi_self_stack();
-
-  /* will receive & process steal request */
-  kaapi_task_t* const task = kaapi_stack_toptask(stack);
-  kaapi_task_init(stack, task, KAAPI_TASK_ADAPTIVE);
-  kaapi_task_setargs(task, &work);
-  kaapi_stack_pushtask(stack);
-
-  work.doit(task, stack);
-
-  kaapi_stack_poptask(stack);
-
+  kaapi_utils::start_adaptive_task(&work);
   return work.get_accumulate();
 }
 
