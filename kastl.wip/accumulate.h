@@ -7,8 +7,8 @@
  *  Copyright 2009 INRIA. All rights reserved.
  *
  */
-#ifndef _CKAAPI_ACCUMULATE_H
-#define _CKAAPI_ACCUMULATE_H
+#ifndef _XKAAPI_ACCUMULATE_H
+#define _XKAAPI_ACCUMULATE_H
 #include "kaapi.h"
 #include "kaapi_utils.h"
 #include <algorithm>

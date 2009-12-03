@@ -27,12 +27,14 @@ set (XKAAPI_TEST_CPP_LINK_LIBS xkaapi-cpp-static)
 # NEW TARGET Executable Section :
 add_executable (transform     	      transform.h transform.cpp random.cpp kaapi_utils.cpp )
 add_executable (accumulate     	      accumulate.h accumulate.cpp random.cpp kaapi_utils.cpp )
+add_executable (copy     	      copy.h copy.cpp random.cpp kaapi_utils.cpp )
 
 
 # PROPERTIES for C++ code
 set_target_properties( 
               transform
               accumulate
+              copy
               PROPERTIES COMPILE_FLAGS "" 
 )
 
@@ -40,3 +42,4 @@ set_target_properties(
 # Target Section :
 target_link_libraries (transform            ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (accumulate           ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (copy                 ${XKAAPI_TEST_LINK_LIBS} m)

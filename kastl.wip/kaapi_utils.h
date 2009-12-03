@@ -115,6 +115,72 @@ namespace kaapi_utils
     kaapi_stack_poptask(stack);
   }
 
+#if 0 // TODO
+
+  template<typename SelfType, typename IteratorType>
+  static void split_requests
+  (
+   kaapi_stack_t* victim_stack, kaapi_task_t* task,
+   int count, kaapi_request_t* request,
+   IteratorType& begin, IteratorType& end,
+   SelfType* self_instance
+  )
+  {
+    const size_t size = end - begin;
+    const int total_count = count;
+    int replied_count = 0;
+    size_t bloc;
+
+    /* threshold should be defined (...) */
+    if (size < 512)
+      goto finish_splitter;
+
+    bloc = size / (1 + count);
+
+    if (bloc < 128) { count = size / 128 - 1; bloc = 128; }
+
+    // iterate over requests
+    {
+      SelfType::request_handler_t handler(_iend, bloc_size);
+
+      replied_count =
+	kaapi_utils::foreach_request
+	(
+	 victim_stack, task,
+	 count, request,
+	 handler, self_instance
+	 );
+
+      // mute victim state after processing
+      _iend = handler.local_end;
+
+      kaapi_assert_debug(iend - _ibeg > 0);
+    }
+
+  finish_splitter:
+    {
+      // fail the remaining requests
+
+      const int remaining_count = total_count - replied_count;
+
+      if (remaining_count)
+	{
+	  kaapi_utils::fail_requests
+	    (
+	     victim_stack,
+	     task,
+	     remaining_count,
+	     request + replied_count
+	     );
+	}
+    }
+
+    // all requests have been replied to
+    return total_count;
+  }
+
+#endif // TODO
+
 } // kaapi_utils namespace
 
 
