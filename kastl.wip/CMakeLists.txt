@@ -38,6 +38,7 @@ add_executable (inner_product 	      inner_product.h inner_product.cpp random.cp
 add_executable (merge		      merge.h merge.cpp random.cpp kaapi_utils.cpp )
 add_executable (max_element 	      max_element.h max_element.cpp random.cpp kaapi_utils.cpp )
 add_executable (min_element 	      min_element.h min_element.cpp random.cpp kaapi_utils.cpp )
+add_executable (replace_copy 	      replace_copy.h replace_copy.cpp random.cpp kaapi_utils.cpp )
 
 
 # PROPERTIES for C++ code
@@ -55,6 +56,7 @@ set_target_properties(
 	      merge
 	      max_element
 	      min_element
+	      replace_copy
               PROPERTIES COMPILE_FLAGS "" 
 )
 
@@ -73,3 +75,4 @@ target_link_libraries (inner_product        ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (merge                ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (max_element          ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (min_element          ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (replace_copy         ${XKAAPI_TEST_LINK_LIBS} m)
