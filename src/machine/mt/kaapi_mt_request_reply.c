@@ -64,6 +64,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
 {
   kaapi_taskadaptive_result_t* result =0;
   kaapi_taskadaptive_t* ta =0;
+  kaapi_taskadaptive_t* thief_ta = 0;
   int flag;
   kaapi_assert_debug( stack != 0 );
   kaapi_assert_debug( request != 0 );
@@ -104,17 +105,19 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         result->thief_term      = 0;
         result->arg_from_thief  = 0;
         result->parg_from_victim= 0;
-        result->head            = 0;
-        result->tail            = 0;
+        result->rhead           = 0;
+        result->rtail           = 0;
         /* link ressult */
         result->next            = ta->head;
-        ta->head                = result->next;
+        ta->head                = result;
+        if (ta->tail == 0) 
+          ta->tail = result;
         
         /* update ta of the first replied task in the stack */
         kaapi_task_t* thief_task = thief_stack->pc;
         if (kaapi_task_isadaptive(thief_task))
         {
-          kaapi_taskadaptive_t* thief_ta = (kaapi_taskadaptive_t*)thief_task->sp;
+          thief_ta                       = (kaapi_taskadaptive_t*)thief_task->sp;
           thief_ta->mastertask           = ( ta->mastertask == 0 ? ta : ta->mastertask );
           thief_ta->result               = result;
           result->parg_from_victim       = &thief_ta->arg_from_victim;
@@ -136,7 +139,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
     argsig->task2sig = task;
     argsig->flag     = flag;
 
-    argsig->taskadapt= ta;
+    argsig->taskadapt= thief_ta;
     argsig->result   = result;
     kaapi_stack_pushtask( thief_stack );
 

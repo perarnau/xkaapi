@@ -371,7 +371,8 @@ typedef struct kaapi_tasksteal_arg_t {
 typedef struct kaapi_tasksig_arg_t {
   kaapi_task_t*                task2sig;          /* remote task to signal */
   int                          flag;              /* type of signal */
-  kaapi_taskadaptive_result_t* result;            /* if... must be used */
+  kaapi_taskadaptive_t*        taskadapt;         /* pointer to the local adaptive task */
+  kaapi_taskadaptive_result_t* result;            /* pointer to the remote result from stealing adaptive task */
 } kaapi_tasksig_arg_t;
 
 

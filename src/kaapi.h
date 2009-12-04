@@ -502,8 +502,8 @@ typedef struct kaapi_taskadaptive_result_t {
   volatile int                        req_preempt;      /* */
   volatile int                        thief_term;       /* */
   int                                 flag;             /* state of the result */
-  struct kaapi_taskadaptive_result_t* head;             /* next result of the next thief */
-  struct kaapi_taskadaptive_result_t* tail;             /* next result of the next thief */
+  struct kaapi_taskadaptive_result_t* rhead;             /* next result of the next thief */
+  struct kaapi_taskadaptive_result_t* rtail;             /* next result of the next thief */
   void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
   void*                               arg_from_thief;   /* result from a thief */
   struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
@@ -1087,8 +1087,9 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
 */
 static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task )
 {
-  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );  
-  return stack->haspreempt;
+  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
+  int retval = stack->haspreempt;
+  return retval;
 }
 
 /** \ingroup ADAPTIVE

@@ -70,8 +70,8 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     /* mark result as produced */
     if (argsig->taskadapt->head !=0)
     { /* avoid remote write */
-      argsig->result->head = argsig->taskadapt->head;
-      argsig->result->tail = argsig->taskadapt->tail;
+      argsig->result->rhead = argsig->taskadapt->head;
+      argsig->result->rtail = argsig->taskadapt->tail;
     }
     argsig->result->thief_term = 1;
   }

@@ -8,17 +8,25 @@
  */
 #include "kaapi.h"
 #include <algorithm>
+#include <iostream>
+#include <math.h>
 
 #define WINDOW_SIZE 128
 
 typedef double* InputIterator;
 
+InputIterator  ibeg0;
 /**
 */
 struct BasicOperation 
 {
-  void operator()( double value )
+  void operator()( double& value )
   {
+    double d = value;
+    int max = (int)d;
+    for (int i=0; i<max; ++i) d = sin(d);
+//    std::cout << ">" << max; 
+    value = d;
   }
 };
 
@@ -45,7 +53,9 @@ protected:
   static void static_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
   {
     SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
+    std::cout << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
     w->doit(task, data);
+    std::cout << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
   }
 
   /** splitter_work is called within the context of the steal point
@@ -60,6 +70,7 @@ protected:
     size_t blocsize, size = (*local_iend - ibeg);
     InputIterator thief_end = *local_iend;
 
+    std::cout << "In Split work [" << ibeg - ibeg0 << "," << *local_iend - ibeg0 << ')' << std::endl;
     SlidingWindowWork* output_work =0; 
 
     /* threshold should be defined (...) */
@@ -88,7 +99,7 @@ protected:
       {
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_initadaptive( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
+        kaapi_task_initadaptive( thief_stack, thief_task, KAAPI_TASK_ADAPT_DEFAULT);
         kaapi_task_setbody( thief_task, &static_entrypoint );
         kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)) );
         output_work = kaapi_task_getargst(thief_task, SlidingWindowWork);
@@ -97,6 +108,10 @@ protected:
         output_work->_ibeg = thief_end-blocsize;
         thief_end -= blocsize;
         kaapi_assert( output_work->_iend - output_work->_ibeg >0);
+        
+        kaapi_stack_pushtask(thief_stack);
+        
+        std::cout << "I'm split work to a the thief" << std::endl;
 
         /* reply ok (1) to the request */
         kaapi_request_reply( stack, self_task, &request[i], thief_stack, 1);
@@ -113,20 +128,35 @@ protected:
 
   /* Called by the main thread to collect work from one other thief thread
   */
-  static bool reducer( kaapi_task_t* self_task,
+  static bool reducer( kaapi_stack_t* stack, kaapi_task_t* self_task,
+                       SlidingWindowWork* thief_work,
                        SlidingWindowWork* victim_work,
-                       double** ibeg, double** local_iend,
-                       SlidingWindowWork* thief_work )
+                       double** ibeg, double** local_iend
+                      )
   {
-    if (thief_work->_ibeg == thief_work->_iend)
+    std::cout << "I'm reduce work from thief, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << "),"
+              << " thief work=[" << thief_work->_ibeg - ibeg0<< "," << thief_work->_iend - ibeg0<< ")"
+              << std::endl;
+    if ((thief_work ==0) || (thief_work->_ibeg == thief_work->_iend))
       /* no more work on the thief */
       return false;
 
     /* master get unfinished work of the thief */
     *ibeg = thief_work->_ibeg;
     *local_iend = thief_work->_iend;
-    
+    std::cout << "Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
+          << std::endl;
+
     return true;
+  }
+  
+  static void display_reducer(kaapi_stack_t* stack, kaapi_task_t* self_task, void* arg_from_victim, SlidingWindowWork* mywork )
+  {
+    SlidingWindowWork* victim_work = (SlidingWindowWork*)arg_from_victim;
+    std::cout << "I'm preempted by the victim [" << victim_work->_ibeg-ibeg0 << "," << victim_work->_iend -ibeg0 << "),"
+              << " my work [" << mywork->_ibeg-ibeg0 << "," << mywork->_iend-ibeg0 << ")"
+              << std::endl;
+    
   }
 };
 
@@ -174,10 +204,10 @@ redo_work:
        here no function is called on the preemption point and the data 'this' is passed 
        to the thread that initiates the preemption.
     */
-    if (kaapi_preemptpoint( stack, task,   /* context */
-                            0,             /* function to call in case of preemption */
-                            this           /* arg to pass to the thread that do preemption */
-                                           /* here possible extra arguments to pass to the function call */
+    if (kaapi_preemptpoint( stack, task,     /* context */
+                            display_reducer, /* function to call in case of preemption */
+                            this,            /* arg to pass to the thread that do preemption */
+                            this             /* here possible extra arguments to pass to the function call */
                         )) return;      
   }
   
@@ -189,7 +219,7 @@ redo_work:
      If no more work has been preempted, it means that all the computation is finished.
   */
   if (kaapi_preempt_nextthief( stack, task, 
-                                     0,                         /* arg to pass to the thief */
+                                     this,                      /* arg to pass to the thief */
                                      &reducer,                  /* function to call if a preempt exist */
                                      this, &_ibeg, &local_iend  /* arg to pass to the function call reducer */
                             )) 
@@ -218,7 +248,7 @@ void marc_problem ( double* begin, double* end )
 
   /* create the task on the top of the stack */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
-  kaapi_task_initadaptive( stack, task, KAAPI_TASK_ADAPT_MASK_ATTR);
+  kaapi_task_initadaptive( stack, task, KAAPI_TASK_ADAPT_DEFAULT);
   kaapi_task_setargs(task, &work );
   
   /* push_it task on the top of the stack */
@@ -235,6 +265,8 @@ int main( int argc, char** argv )
 {
   /* */
   double* buffer = new double[8192];
+  ibeg0 = buffer;
+  for (int i=0; i<8192; ++i) buffer[i] = i;
   marc_problem( buffer, buffer + 8192 );
   return 0;
 }

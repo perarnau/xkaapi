@@ -50,10 +50,13 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* 
 
   /* push data to the victim and signal it */
   ta->result->arg_from_thief = arg_for_victim;
-  ta->result->head = ta->head;
-  ta->head = 0;
-  ta->result->tail = ta->tail;
-  ta->tail = 0;
+  if (ta->head !=0)
+  {
+    ta->result->rhead = ta->head;
+    ta->head = 0;
+    ta->result->rtail = ta->tail;
+    ta->tail = 0;
+  }
   kaapi_writemem_barrier();
 
   /* read data from the vicitm and call reducer */
@@ -104,8 +107,11 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
   
   /* pop current thief and push thiefs of the thief into the local preemption list */
   ta->head = ta->head->next;
+  if (ta->head ==0) ta->tail = 0;
 
-  athief->tail->next = athief->head;
-  ta->head = athief->head;
+  if (athief->rhead !=0)
+    athief->rtail->next = ta->head;
+  ta->head = athief->rhead;
+  if (ta->tail ==0) ta->tail = athief->rtail;
   return 1;
 }
