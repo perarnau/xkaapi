@@ -98,11 +98,12 @@ int kaapi_setconcurrency( unsigned int concurrency )
       kaapi_barrier_td_setactive(&barrier_init, 1);
 
 #ifdef KAAPI_USE_SCHED_AFFINITY
+      if (default_param.use_affinity)
       {
         cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
         CPU_SET(default_param.kid_to_cpu[i], &cpuset);
-        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+        kaapi_assert_m(0, pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset), "foobar");
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
@@ -117,6 +118,7 @@ int kaapi_setconcurrency( unsigned int concurrency )
     else 
     {
 #ifdef KAAPI_USE_SCHED_AFFINITY
+      if (default_param.use_affinity)
       {
         cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);

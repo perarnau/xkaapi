@@ -159,6 +159,7 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;            /* number of physical cpus of the system */
   unsigned int             cpucount;               /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;               /* default method to select a victim */
+  unsigned int		   use_affinity;	   /* use cpu affinity */
   unsigned int		   kid_to_cpu[KAAPI_MAX_PROCESSOR];
 } kaapi_rtparam_t;
 
