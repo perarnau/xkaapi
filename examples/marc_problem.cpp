@@ -88,7 +88,7 @@ protected:
       {
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
+        kaapi_task_initadaptive( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
         kaapi_task_setbody( thief_task, &static_entrypoint );
         kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)) );
         output_work = kaapi_task_getargst(thief_task, SlidingWindowWork);
