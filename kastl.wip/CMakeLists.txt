@@ -35,6 +35,7 @@ add_executable (find_if     	      find_if.h find_if.cpp random.cpp kaapi_utils.
 add_executable (for_each     	      for_each.h for_each.cpp random.cpp kaapi_utils.cpp )
 add_executable (generate     	      generate.h generate.cpp random.cpp kaapi_utils.cpp )
 add_executable (inner_product 	      inner_product.h inner_product.cpp random.cpp kaapi_utils.cpp )
+add_executable (max_element 	      max_element.h max_element.cpp random.cpp kaapi_utils.cpp )
 
 
 # PROPERTIES for C++ code
@@ -49,6 +50,7 @@ set_target_properties(
               for_each
               generate
 	      inner_product
+	      max_element
               PROPERTIES COMPILE_FLAGS "" 
 )
 
@@ -64,3 +66,4 @@ target_link_libraries (find_if              ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (for_each             ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (generate             ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (inner_product        ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (max_element          ${XKAAPI_TEST_LINK_LIBS} m)

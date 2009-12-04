@@ -8,3 +8,4 @@
  so that reduce the size of the handler and when
  possible, put it in kaapi_utils as well as the
  splitter implementation that wont differ anymore
+. many algorithms fail, check when reducer available
