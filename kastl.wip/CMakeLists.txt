@@ -3,6 +3,7 @@
 ##  xkaapi
 ##
 ##  Created by CL and TG on 04/02/09.
+##  Updated by FLM 02/12/09.
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
@@ -43,6 +44,7 @@ add_executable (replace_copy_if	      replace_copy_if.h replace_copy_if.cpp rand
 add_executable (replace		      replace.h replace.cpp random.cpp kaapi_utils.cpp )
 add_executable (replace_if	      replace_if.h replace_if.cpp random.cpp kaapi_utils.cpp )
 add_executable (sort		      sort.h sort.cpp random.cpp kaapi_utils.cpp )
+add_executable (stable_sort	      stable_sort.h stable_sort.cpp random.cpp kaapi_utils.cpp )
 
 
 # PROPERTIES for C++ code
@@ -65,6 +67,7 @@ set_target_properties(
 	      replace
 	      replace_if
 	      sort
+	      stable_sort
               PROPERTIES COMPILE_FLAGS "" 
 )
 
@@ -88,3 +91,4 @@ target_link_libraries (replace_copy_if      ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (replace		    ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (replace_if	    ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (sort		    ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (stable_sort	    ${XKAAPI_TEST_LINK_LIBS} m)
