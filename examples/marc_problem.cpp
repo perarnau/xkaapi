@@ -138,8 +138,12 @@ protected:
               << " thief work=[" << thief_work->_ibeg - ibeg0<< "," << thief_work->_iend - ibeg0<< ")"
               << std::endl;
     if ((thief_work ==0) || (thief_work->_ibeg == thief_work->_iend))
-      /* no more work on the thief */
-      return false;
+    {
+      if (victim_work->_ibeg == victim_work->_iend)
+        return false;
+      *local_iend = _iend;
+      return true;
+    }
 
     /* master get unfinished work of the thief */
     *ibeg = thief_work->_ibeg;
