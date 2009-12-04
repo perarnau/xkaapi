@@ -42,6 +42,7 @@ add_executable (replace_copy 	      replace_copy.h replace_copy.cpp random.cpp k
 add_executable (replace_copy_if	      replace_copy_if.h replace_copy_if.cpp random.cpp kaapi_utils.cpp )
 add_executable (replace		      replace.h replace.cpp random.cpp kaapi_utils.cpp )
 add_executable (replace_if	      replace_if.h replace_if.cpp random.cpp kaapi_utils.cpp )
+add_executable (sort		      sort.h sort.cpp random.cpp kaapi_utils.cpp )
 
 
 # PROPERTIES for C++ code
@@ -63,6 +64,7 @@ set_target_properties(
 	      replace_copy_if
 	      replace
 	      replace_if
+	      sort
               PROPERTIES COMPILE_FLAGS "" 
 )
 
@@ -85,3 +87,4 @@ target_link_libraries (replace_copy         ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (replace_copy_if      ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (replace		    ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (replace_if	    ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (sort		    ${XKAAPI_TEST_LINK_LIBS} m)
