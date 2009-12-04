@@ -49,13 +49,23 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* 
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
 
   /* push data to the victim and signal it */
-  ta->affiliation_link->arg_from_thief = arg_for_victim;
+  ta->result->arg_from_thief = arg_for_victim;
+  ta->result->head = ta->head;
+  ta->head = 0;
+  ta->result->tail = ta->tail;
+  ta->tail = 0;
   kaapi_writemem_barrier();
-  ta->affiliation_link->signal = 0;
 
   /* read data from the vicitm and call reducer */
   kaapi_readmem_barrier();
   return 0;
+}
+
+int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval )
+{
+  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
+  ta->result->thief_term = 1;
+  return 1;
 }
 
 
@@ -66,16 +76,36 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
 
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
   kaapi_taskadaptive_result_t* athief = ta->head;
+  
+  ta->current_thief= 0;
+  /* no more thief to preempt */
   if (athief ==0) return 0;
   
   /* pass arg to the thief */
-  athief->arg_from_victim = arg_to_thief;
-  kaapi_writemem_barrier();
+  *athief->parg_from_victim = arg_to_thief;  
+  athief->req_preempt = 1;
+  kaapi_mem_barrier();
+  
+  if (athief->thief_term)
+  {
+    /* thief has finished */
+  }
+  else 
+  {
+    /* send signal on the thief stack */  
+    *athief->signal = 1;
+    
+    /* wait thief receive preemption */
+    while (!athief->thief_term) ; 
+  }
 
-  /* signal and wait processing the signal */
-  *athief->signal = 1;
-  while (*athief->signal == 1);
- 
-  kaapi_readmem_barrier();
+  /* push current preempt thief in current_thief */
+  ta->current_thief = ta->head;
+  
+  /* pop current thief and push thiefs of the thief into the local preemption list */
+  ta->head = ta->head->next;
+
+  athief->tail->next = athief->head;
+  ta->head = athief->head;
   return 1;
 }

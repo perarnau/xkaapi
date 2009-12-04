@@ -63,6 +63,7 @@
 int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
 {
   kaapi_taskadaptive_result_t* result =0;
+  kaapi_taskadaptive_t* ta =0;
   int flag;
   kaapi_assert_debug( stack != 0 );
   kaapi_assert_debug( request != 0 );
@@ -75,6 +76,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
     kaapi_task_t* sig;
     kaapi_tasksig_arg_t* argsig;
     
+
     /* reply: several cases
        - if partial steal -> signal should decr the thieves counter (if task is not KAAPI_TASK_ADAPT_NOSYNC)
        - if complete steal of the task -> signal sould pass the body to aftersteal body
@@ -82,7 +84,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
     */
     if (flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)
     {
-      kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
+      ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
       kaapi_assert_debug( ta !=0 );
       kaapi_assert_debug( kaapi_task_isadaptive(task) );
 
@@ -90,19 +92,33 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
       {
         if (stack->pc == task) { /* current running task */
           result = (kaapi_taskadaptive_result_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_taskadaptive_result_t));
-          result->flag = KAAPI_RESULT_MASK_EXEC|KAAPI_RESULT_INSTACK;
+          result->flag = KAAPI_RESULT_INSTACK;
         }
         else
         {
           result = (kaapi_taskadaptive_result_t*)malloc(sizeof(kaapi_taskadaptive_result_t));
-          result->flag = KAAPI_RESULT_MASK_EXEC|KAAPI_RESULT_INHEAP;
+          result->flag = KAAPI_RESULT_INHEAP;
         }
         result->signal          = &thief_stack->haspreempt;
+        result->req_preempt     = 0;
+        result->thief_term      = 0;
         result->arg_from_thief  = 0;
-        result->arg_from_victim = 0;
-        /* link rsesult */
+        result->parg_from_victim= 0;
+        result->head            = 0;
+        result->tail            = 0;
+        /* link ressult */
         result->next            = ta->head;
         ta->head                = result->next;
+        
+        /* update ta of the first replied task in the stack */
+        kaapi_task_t* thief_task = thief_stack->pc;
+        if (kaapi_task_isadaptive(thief_task))
+        {
+          kaapi_taskadaptive_t* thief_ta = (kaapi_taskadaptive_t*)thief_task->sp;
+          thief_ta->mastertask           = ( ta->mastertask == 0 ? ta : ta->mastertask );
+          thief_ta->result               = result;
+          result->parg_from_victim       = &thief_ta->arg_from_victim;
+        }
       }
       else flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
 
@@ -116,13 +132,15 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
     kaapi_task_setbody( sig, &kaapi_tasksig_body );
     kaapi_task_format_debug( sig );
     kaapi_task_setargs( sig, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksig_arg_t)));
-    argsig = kaapi_task_getargst( sig, kaapi_tasksig_arg_t);
+    argsig           = kaapi_task_getargst( sig, kaapi_tasksig_arg_t);
     argsig->task2sig = task;
     argsig->flag     = flag;
+
+    argsig->taskadapt= ta;
     argsig->result   = result;
     kaapi_stack_pushtask( thief_stack );
 
-    request->status = KAAPI_REQUEST_S_EMPTY;
+    request->status  = KAAPI_REQUEST_S_EMPTY;
     request->reply->data = thief_stack;
     kaapi_writemem_barrier();
     request->reply->status = KAAPI_REQUEST_S_SUCCESS;
@@ -142,6 +160,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
 */
 int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
 {
+  request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
   _kaapi_request_reply( stack, task, request, thief_stack, retval);
   KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest ); 
   kaapi_assert_debug( *stack->hasrequest >= 0 );

@@ -60,14 +60,24 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
   task2sig = argsig->task2sig;
   KAAPI_LOG(100, "signaltask: 0x%p -> task2signal: 0x%p\n", (void*)task, (void*)task2sig );
 
-  if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL))
+  if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
     kaapi_task_setbody(task2sig, &kaapi_aftersteal_body );
     KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
   }
+  if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required preemption */
+  {
+    /* mark result as produced */
+    if (argsig->taskadapt->head !=0)
+    { /* avoid remote write */
+      argsig->result->head = argsig->taskadapt->head;
+      argsig->result->tail = argsig->taskadapt->tail;
+    }
+    argsig->result->thief_term = 1;
+  }
 
-  /* flush in memory all pending write ops */  
-  kaapi_writemem_barrier();
+  /* flush in memory all pending write and read ops */  
+  kaapi_mem_barrier();
 
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
@@ -84,7 +94,11 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     } 
     if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required also preemption */
     { /* mark result as term */
-      argsig->result->flag = argsig->result->flag & ~KAAPI_RESULT_MASK_EXEC;
+
+      if (argsig->result->req_preempt) /* remote read */
+      {
+         while (stack->haspreempt ==0) ;
+      }
     }
   }
 }

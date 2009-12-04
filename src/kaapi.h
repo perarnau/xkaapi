@@ -274,7 +274,7 @@ typedef enum {
     \ingroup ADAPT
 */
 #define KAAPI_TASK_ADAPT_MASK_ATTR 0x7000 /* 3 bits: bit 12, 13, 14 */
-#define KAAPI_TASK_ADAPT_DEFAUL    0x0000 /* 000 0000 0000 0000: default: preemption & sync of child adaptive tasks */
+#define KAAPI_TASK_ADAPT_DEFAULT   0x0000 /* 000 0000 0000 0000: default: preemption & sync of child adaptive tasks */
 #define KAAPI_TASK_ADAPT_NOPREEMPT 0x1000 /* 001 0000 0000 0000: no preemption of child adaptive tasks */
 #define KAAPI_TASK_ADAPT_NOSYNC    0x2000 /* 010 0000 0000 0000: no synchronisation of child adaptive tasks */
 /*@}*/
@@ -482,10 +482,13 @@ typedef struct kaapi_taskadaptive_t {
   void*                               user_sp;         /* user argument */
   kaapi_atomic_t                      thievescount;    /* required for the finalization */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
+  struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
+
+  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t during preemption */
 
   struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
-  struct kaapi_taskadaptive_result_t* affiliation_link;/* link with my father/mother */
-  void*                               result;          /* where to store my result at the end of computation, pointer in vicitm stack */
+  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t*/
+  void*                               arg_from_victim; /* arg received by the victim in case of preemption */
 } kaapi_taskadaptive_t;
 
 
@@ -495,16 +498,19 @@ typedef struct kaapi_taskadaptive_t {
     media between victim and thief.
 */
 typedef struct kaapi_taskadaptive_result_t {
-  volatile int*                       signal;          /* signal of preemption pointer on the thief stack */
-  int                                 flag;
-  struct kaapi_taskadaptive_result_t* next;            /* next result of the next thief */
-  void*                               arg_from_thief;  /* user thief result, pointer in the victim stack */
-  void*                               arg_from_victim; /* arg pass by the victim that preempt the current task */
+  volatile int*                       signal;           /* signal of preemption pointer on the thief stack haspreempt */
+  volatile int                        req_preempt;      /* */
+  volatile int                        thief_term;       /* */
+  int                                 flag;             /* state of the result */
+  struct kaapi_taskadaptive_result_t* head;             /* next result of the next thief */
+  struct kaapi_taskadaptive_result_t* tail;             /* next result of the next thief */
+  void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
+  void*                               arg_from_thief;   /* result from a thief */
+  struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
 } kaapi_taskadaptive_result_t;
 
-#define KAAPI_RESULT_MASK_EXEC 0x1
-#define KAAPI_RESULT_INSTACK   0x10
-#define KAAPI_RESULT_INHEAP    0x20
+#define KAAPI_RESULT_INSTACK   0x01
+#define KAAPI_RESULT_INHEAP    0x02
 
 
 
@@ -855,18 +861,16 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   task->flag   = flag | KAAPI_TASK_ADAPTIVE;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
   kaapi_assert_debug( ta !=0 );
-  ta->user_sp      = 0;
+  ta->user_sp               = 0;
   ta->thievescount._counter = 0;
-  ta->head         = 0;
-  ta->mastertask   = 0;
-#if defined(KAAPI_DEBUG)  
-  ta->result       = 0;
-  ta->affiliation_link = 0;
-  ta->result       = 0;
-#endif
-  task->sp         = ta;
-  task->body       = 0;
-  task->splitter   = 0;
+  ta->head                  = 0;
+  ta->tail                  = 0;
+  ta->result                = 0;
+  ta->mastertask            = 0;
+  ta->arg_from_victim       = 0;
+  task->sp                  = ta;
+  task->body                = 0;
+  task->splitter            = 0;
   return 0;
 }
 
@@ -1049,7 +1053,6 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
        est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
     */
     kaapi_sched_stealprocessor(stack->_proc);
-    count = *stack->hasrequest;
     return count;
   }
   return 0;
@@ -1093,7 +1096,7 @@ static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_
     On return the victim argument may be read.
 */
 extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim );
-
+extern int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval );
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request to the current task
     and if it is true then pass arg_victim argument to the victim and call the reducer function with incomming victim argument
@@ -1107,8 +1110,9 @@ extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_t
 #define kaapi_preemptpoint( stack, task, reducer, arg_for_victim, ...)\
   ( kaapi_preemptpoint_isactive(stack, task) ? \
         kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim),\
-        ( (reducer) == 0 ? 0 : ((int (*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->affiliation_link->arg_from_victim, ##__VA_ARGS__))\
-      : \
+        kaapi_preemptpoint_after_reducer_call( stack, task, \
+          ( (reducer) ==0? 0: ((int(*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__)))\
+    : \
         0\
   )
 
@@ -1117,13 +1121,6 @@ extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_t
    Return 1 iff a thief as been preempted.
 */
 extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief );
-
-static inline int kaapi_preempt_nextthief_helper_pop( kaapi_task_t* task, int retval )
-{
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
-  ta->head = ta->head->next;
-  return (ta->head == 0 ? retval : 1);
-}
 
 /** \ingroup ADAPTIVE
    Try to preempt next thief in the reverse order defined by steal reponse.
@@ -1138,12 +1135,11 @@ static inline int kaapi_preempt_nextthief_helper_pop( kaapi_task_t* task, int re
 */
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
  ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
-      kaapi_preempt_nextthief_helper_pop( task, \
-            (reducer) == 0 ? \
+          (  (reducer) == 0 ? \
                 1 \
               : \
-                ((int (*)(...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->head->arg_from_thief, ##__VA_ARGS__) \
-      )\
+                ((int (*)(...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->arg_from_thief, ##__VA_ARGS__) \
+          )\
     :\
       0\
  )
