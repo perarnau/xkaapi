@@ -32,6 +32,11 @@
 #endif
 
 
+/** Should be with the same file as kaapi_init
+ */
+void _kaapi_dummy(void* foo)
+{
+}
 
 namespace atha {
 
@@ -92,7 +97,7 @@ void Init::add_options( Parser* parser, Properties* global_prop )
   util_module->add_option("coresize", "0", "max size of the coredump when abort (\"0\" for no coredump, \"unlimited\" for unlimited, \"default\" for system value)");
   util_module->add_option("requirednofile", "<no value>", "minimum value required for NOFILE limit");
   util_module->add_option("rootdir", ".", "Directory where to store output file of the application.");
-  util_module->add_option("log.type", "term", "Output log on terminal ('term') or in a file ('file') or in file per thread (thread)");
+  util_module->add_option("log.type", "thread", "Output log on terminal ('term') or in a file ('file') or in file per thread (thread)");
 
   util_module->add_option("globalid", "", "Global identifier of the node. A gid is an integer value.");
 

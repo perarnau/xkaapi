@@ -8,6 +8,7 @@
  */
 #include "kaapi.h"
 #include <algorithm>
+#include <athapascan-1>
 #include <iostream>
 #include <math.h>
 
@@ -53,9 +54,9 @@ protected:
   static void static_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
   {
     SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
-    std::cout << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
+    atha::logfile() << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
     w->doit(task, data);
-    std::cout << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
+    atha::logfile() << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
   }
 
   /** splitter_work is called within the context of the steal point
@@ -70,11 +71,12 @@ protected:
     size_t blocsize, size = (*local_iend - ibeg);
     InputIterator thief_end = *local_iend;
 
-    std::cout << "In Split work [" << ibeg - ibeg0 << "," << *local_iend - ibeg0 << ')' << std::endl;
     SlidingWindowWork* output_work =0; 
 
     /* threshold should be defined (...) */
-    if (size < 2) return 0;
+    if (size < 32) return 0;
+
+    atha::logfile() << "In Split work [" << ibeg - ibeg0 << "," << *local_iend - ibeg0 << "), #=" << count+1 << std::endl << std::flush;
 
     /* Sliding window: do not give to thiefs more than WINDOW_SIZE size of work 
        Cannot occurs on the thefts because they have a initial work less thant WINDOW_SIZE.
@@ -111,7 +113,7 @@ protected:
         
         kaapi_stack_pushtask(thief_stack);
         
-        std::cout << "I'm split work to a the thief" << std::endl;
+//        atha::logfile() << "I'm split work to a the thief" << std::endl;
 
         /* reply ok (1) to the request */
         kaapi_request_reply( stack, self_task, &request[i], thief_stack, 1);
@@ -134,21 +136,26 @@ protected:
                        double** ibeg, double** local_iend
                       )
   {
-    std::cout << "I'm reduce work from thief, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << "),"
-              << " thief work=[" << thief_work->_ibeg - ibeg0<< "," << thief_work->_iend - ibeg0<< ")"
-              << std::endl;
     if ((thief_work ==0) || (thief_work->_ibeg == thief_work->_iend))
     {
       if (victim_work->_ibeg == victim_work->_iend)
+      {
+        atha::logfile() << "(0) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
+                  << std::endl;
         return false;
-      *local_iend = _iend;
+      }
+      *local_iend = victim_work->_iend;
+      atha::logfile() << "(1) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
+                << std::endl;
       return true;
     }
 
     /* master get unfinished work of the thief */
     *ibeg = thief_work->_ibeg;
-    *local_iend = thief_work->_iend;
-    std::cout << "Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
+    *local_iend = thief_work->_iend + (WINDOW_SIZE - (thief_work->_iend-thief_work->_ibeg));
+    if (*local_iend > victim_work->_iend) 
+      *local_iend = victim_work->_iend;
+    atha::logfile() << "(2) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
           << std::endl;
 
     return true;
@@ -157,7 +164,7 @@ protected:
   static void display_reducer(kaapi_stack_t* stack, kaapi_task_t* self_task, void* arg_from_victim, SlidingWindowWork* mywork )
   {
     SlidingWindowWork* victim_work = (SlidingWindowWork*)arg_from_victim;
-    std::cout << "I'm preempted by the victim [" << victim_work->_ibeg-ibeg0 << "," << victim_work->_iend -ibeg0 << "),"
+    atha::logfile() << "I'm preempted by the victim [" << victim_work->_ibeg-ibeg0 << "," << victim_work->_iend -ibeg0 << "),"
               << " my work [" << mywork->_ibeg-ibeg0 << "," << mywork->_iend-ibeg0 << ")"
               << std::endl;
     
@@ -174,7 +181,7 @@ void SlidingWindowWork::doit( kaapi_task_t* task, kaapi_stack_t* stack )
   double* nano_iend;
   
   /* amount of work per iteration of the nano loop */
-  const size_t unit_size = 8;  /* should be automatically computed */
+  const size_t unit_size = 32;  /* should be automatically computed */
   size_t tmp_size = 0;
 
   /* maximum iend to be done in sequential */
@@ -198,6 +205,8 @@ redo_work:
     }
 
     /* sequential computation of the marc computation*/
+    atha::logfile() << "Do work, mywork=[" << _ibeg - ibeg0 << "," << nano_iend - ibeg0 << ")"
+          << std::endl;
     std::for_each( _ibeg, nano_iend, BasicOperation() );
 
     _ibeg = nano_iend;
@@ -226,8 +235,10 @@ redo_work:
                                      this,                      /* arg to pass to the thief */
                                      &reducer,                  /* function to call if a preempt exist */
                                      this, &_ibeg, &local_iend  /* arg to pass to the function call reducer */
-                            )) 
+                            ))
+  {
     goto redo_work;
+  }
 
   /* Definition of the finalization point where main thread waits all the works.
      After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
@@ -268,9 +279,9 @@ void marc_problem ( double* begin, double* end )
 int main( int argc, char** argv )
 {
   /* */
-  double* buffer = new double[8192];
+  double* buffer = new double[1024];
   ibeg0 = buffer;
-  for (int i=0; i<8192; ++i) buffer[i] = i;
-  marc_problem( buffer, buffer + 8192 );
+  for (int i=0; i<1024; ++i) buffer[i] = i;
+  marc_problem( buffer, buffer + 1024 );
   return 0;
 }

@@ -252,4 +252,27 @@ void Sync()
   abort();
 }
 
+
+// --------------------------------------------------------------------
+void _athakaapi_dummy(void*)
+{
+}
+
+Community* zcom =0;
+
+// --------------------------------------------------------------------
+void __attribute__ ((constructor)) atha_init()
+{
+  int argc = 1;
+  char**argv = 0;
+  zcom = new a1::Community(a1::System::join_community( argc, argv ));
+}
+
+// --------------------------------------------------------------------
+void __attribute__ ((destructor)) atha_fini()
+{
+  zcom->leave();
+}
+
+
 } // namespace a1
