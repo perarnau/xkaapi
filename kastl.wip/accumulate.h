@@ -193,10 +193,12 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
 
   while (_iend != _ibeg)
   {
-    /* definition of the steal point where steal_work may be called in case of steal request 
-       -here size is pass as parameter and updated in case of steal.
+    /* definition of the steal point where steal_work
+       may be called in case of steal request 
+       -here size is pass as parameter and updated in
+       case of steal.
     */
-    kaapi_stealpoint( stack, task, &kaapi_utils::static_splitter<Self_t> );
+    kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
 
     tmp_size = _iend-_ibeg;
     if(tmp_size < unit_size ) {
@@ -231,8 +233,9 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
 template<class RandomAccessIterator, class T >
 T accumulate(RandomAccessIterator begin, RandomAccessIterator end, T init)
 {
-  AccumulateStruct<RandomAccessIterator, T, std::plus<T> > work( begin, end, init, std::plus<T>() );
-  kaapi_utils::start_adaptive_task(&work);
+  typedef AccumulateStruct<RandomAccessIterator, T, std::plus<T> > Self_t;
+  Self_t work( begin, end, init, std::plus<T>() );
+  kaapi_utils::start_adaptive_task<Self_t>(&work);
   return work.get_accumulate();
 }
 

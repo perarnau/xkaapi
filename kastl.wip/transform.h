@@ -148,14 +148,14 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
     /* definition of the steal point where steal_work may be called in case of steal request 
        -here size is pass as parameter and updated in case of steal
     */
-    kaapi_stealpoint( stack, task, &kaapi_utils::static_splitter<Self_t> );
+    kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
 
     tmp_size =  _iend-_ibeg;
     if (unit_size > tmp_size) { unit_size = tmp_size; nano_iend = _iend; }
     else nano_iend = _ibeg + unit_size;
     
     /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
-    kaapi_task_setaction( task, &kaapi_utils::static_splitter<Self_t> );
+    kaapi_task_setaction( task, kaapi_utils::static_splitter<Self_t> );
     _obeg = std::transform( _ibeg, nano_iend, _obeg, _op );
 
     /* return from sequential computation: remove concurrent task action 

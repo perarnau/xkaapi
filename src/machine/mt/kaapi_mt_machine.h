@@ -398,6 +398,9 @@ static inline void kaapi_mem_barrier()
 #  define kaapi_readmem_barrier() \
     __sync_synchronize()
 
+#  define kaapi_mem_barrier() \
+   __sync_synchronize()
+
 #else
 #  error "Undefined barrier"
 #endif /* KAAPI_USE_APPLE */

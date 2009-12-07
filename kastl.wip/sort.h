@@ -250,7 +250,7 @@ void SortStruct<RandomAccessIterator, Compare>::doit
          _work_list->push_front(std::make_pair(_ibeg, split));
         _ibeg = split;
       }
-      kaapi_stealpoint( stack, task, &kaapi_utils::static_splitter<Self_t> );
+      kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
    }
 
   //Local computation

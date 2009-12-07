@@ -237,7 +237,7 @@ void MergeStruct<RandomAccessIterator, RandomAccessIterator2, RandomAccessIterat
     /* definition of the steal point where steal_work may be called in case of steal request 
        -here size is pass as parameter and updated in case of steal.
     */
-    kaapi_stealpoint( stack, task, &kaapi_utils::static_splitter<Self_t> );
+    kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
 
     /* nano computation of range1 is finished*/
     if((_iend != _ibeg) && ((_ibeg == nano_iend) || (_iend < nano_iend))) {

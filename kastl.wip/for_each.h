@@ -172,7 +172,7 @@ void ForEachStruct<RandomAccessIterator,Function>::doit(kaapi_task_t* task, kaap
     /* definition of the steal point where steal_work may be called in case of steal request 
        -here size is pass as parameter and updated in case of steal.
     */
-    kaapi_stealpoint( stack, task, &kaapi_utils::static_splitter<Self_t> );
+    kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
 
     if (unit_size > _iend-_ibeg) unit_size = _iend-_ibeg;
     nano_iend = _ibeg + unit_size;
