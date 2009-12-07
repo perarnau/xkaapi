@@ -50,6 +50,7 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* 
 
   /* push data to the victim and signal it */
   ta->result->arg_from_thief = arg_for_victim;
+/*  printf("Kaapi_preempt: send:%p to victim, result: @=%p\n", arg_for_victim, (void*)ta->result);*/
   if (ta->head !=0)
   {
     ta->result->rhead = ta->head;
@@ -57,16 +58,16 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* 
     ta->result->rtail = ta->tail;
     ta->tail = 0;
   }
-  kaapi_writemem_barrier();
+  kaapi_mem_barrier();
 
-  /* read data from the vicitm and call reducer */
-  kaapi_readmem_barrier();
   return 0;
 }
 
 int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval )
 {
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
+  stack->haspreempt = 0;
+  kaapi_writemem_barrier();
   ta->result->thief_term = 1;
   return 1;
 }
@@ -85,7 +86,10 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
   if (athief ==0) return 0;
   
   /* pass arg to the thief */
+/*  printf("Kaapi_preempt_nextthief: send:%p to thief, result @=%p\n", arg_to_thief, (void*)athief);*/
   *athief->parg_from_victim = arg_to_thief;  
+  kaapi_mem_barrier();
+
   athief->req_preempt = 1;
   kaapi_mem_barrier();
   

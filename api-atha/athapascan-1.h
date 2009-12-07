@@ -1201,6 +1201,25 @@ namespace a1 {
 }
 #endif
 
+
+/* ========================================================================= */
+/* Initialization / destruction functions
+ */
+namespace a1 {
+extern void _athakaapi_dummy(void*);
+extern void __attribute__ ((constructor)) atha_init(void);
+extern void __attribute__ ((destructor)) atha_fini(void);
+#if !defined(KAAPI_COMPILE_SOURCE)
+
+/** To force reference to kaapi_init.c in order to link against kaapi_init and kaapi_fini
+ */
+static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
+{
+  _athakaapi_dummy(NULL);
+}
+#endif
+}
+
 #ifndef ATHAPASCAN_NOT_IN_NAMESPACE
 using namespace a1;
 #endif

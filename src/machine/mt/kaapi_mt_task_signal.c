@@ -95,7 +95,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required also preemption */
     { /* mark result as term */
 
-      if (argsig->result->req_preempt) /* remote read */
+      if (!argsig->result->thief_term && argsig->result->req_preempt) /* remote read */
       {
          while (stack->haspreempt ==0) ;
       }
