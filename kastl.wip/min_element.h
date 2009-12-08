@@ -50,6 +50,7 @@ public:
   RandomAccessIterator  _iend;
   Compare _comp;
   RandomAccessIterator _min_element_pos;  
+  bool _is_master;
 
   // request handler
   struct request_handler
@@ -63,6 +64,7 @@ public:
 
     bool operator() (Self_t* self_work, Self_t* output_work)
     {
+      output_work->_is_master = false;
       output_work->_iend = local_end;
       output_work->_ibeg = local_end-bloc;
       local_end -= bloc;
@@ -133,47 +135,68 @@ public:
     return total_count;
   }
 
-
-#if 0 // TODO_REDUCER
   /* Called by the victim thread to collect work from one other thread
   */
-  static void reducer( kaapi_steal_context_t* sc, void* thief_data, 
-                       Min_Element_Struct<RandomAccessIterator, Compare>* victim_data )
+  static bool reducer
+    (
+     kaapi_stack_t* stack, kaapi_task_t* self_task,
+     Self_t* thief_work, Self_t* victim_work,
+     RandomAccessIterator* ibeg,
+     RandomAccessIterator* iend
+    )
   {
-    Min_Element_Struct<RandomAccessIterator, Compare>* thief_work = 
-      (Min_Element_Struct<RandomAccessIterator, Compare>* )thief_data;
+    printf("-- reducer(%p, %p)\n", thief_work, victim_work);
 
-    Min_Element_Struct<RandomAccessIterator, Compare>* victim_work =
-      (Min_Element_Struct<RandomAccessIterator, Compare>* )victim_data;
+    if (thief_work == NULL)
+      return false;
 
-    //std::cout << "Master index = " << victim_work->_sc->_stack->_index << std::endl;
+    const bool is_less =
+      victim_work->_comp
+      (
+       *thief_work->_min_element_pos,
+       *victim_work->_min_element_pos
+      );
 
-    //merge of the two results
-    if(victim_work->_comp(*thief_work->_min_element_pos, *victim_work->_min_element_pos))
-      victim_work->_min_element_pos = thief_work->_min_element_pos;
+    // merge of the two results
+    if (is_less)
+      victim_work->_min_element_pos =
+	thief_work->_min_element_pos;
 
-    //std::cout << "thief_work->_iend-thief_work->_ibeg=" << thief_work->_iend-thief_work->_ibeg << std::endl;
+    if (thief_work->_ibeg == thief_work->_iend)
+      return false;
 
-    if (thief_work->_ibeg != thief_work->_iend)
-    {
-#if defined(SEQ_SUBCOUNT)
-      RandomAccessIterator  tmp=std::min_element(thief_work->_ibeg, thief_work->_iend, thief_work->_comp);
-      if(_comp(*tmp, *_min_element_pos)) _min_element_pos = tmp;
-#else
-      Min_Element_Struct<RandomAccessIterator, Compare> 
-        work( sc, 
-              thief_work->_ibeg, 
-              thief_work->_iend, 
-              thief_work->_comp,
-              victim_work->_min_element_pos 
-            );
-      work.doit();
+    *ibeg = thief_work->_ibeg;
+    *iend = thief_work->_iend;
 
-      victim_work->_min_element_pos = work._min_element_pos;
-#endif
-    }
+    return true;
   }
-#endif // TODO_REDUCER
+
+  static void oda_reducer(kaapi_stack_t* , kaapi_task_t*, Self_t* victim_work , Self_t* thief_work)
+  {
+//     ::printf("oda_reducer(%p, %p)\n", victim_work, thief_work);
+
+    if (victim_work == NULL)
+      return ;
+
+    if (thief_work == NULL)
+      return ;
+
+    ::printf("t(%lf), v(%lf)\n", *thief_work->_min_element_pos, *victim_work->_min_element_pos);
+
+    const bool is_less =
+      victim_work->_comp
+      (
+       *thief_work->_min_element_pos,
+       *victim_work->_min_element_pos
+      );
+
+    if (is_less == false)
+      return ;
+
+    victim_work->_min_element_pos =
+      thief_work->_min_element_pos;
+  }
+
 };
 
 
@@ -190,6 +213,11 @@ void Min_Element_Struct<RandomAccessIterator, Compare>::doit(kaapi_task_t* task,
   ptrdiff_t unit_size = 512;
   // int count_loop = 1;
 
+  if (_is_master == true)
+    usleep(100000);
+
+ redo_work:
+
   while (_iend != _ibeg)
   {
     /* definition of the steal point where steal_work may be called in case of steal request 
@@ -205,19 +233,28 @@ void Min_Element_Struct<RandomAccessIterator, Compare>::doit(kaapi_task_t* task,
     }
     
     /* sequential computation */
-    RandomAccessIterator  tmp=std::min_element(_ibeg, nano_iend, _comp);
-    if(_comp(*tmp, *_min_element_pos)) _min_element_pos = tmp;
-     _ibeg +=unit_size;
+    RandomAccessIterator  tmp = std::min_element(_ibeg, nano_iend, _comp);
+    if(_comp(*tmp, *_min_element_pos))
+      _min_element_pos = tmp;
 
-    //if ((count_loop % 64 ==0) && kaapi_preemptpoint( _sc, 0 )) return ;
-    //++count_loop;
+    _ibeg +=unit_size;
+
+    if (kaapi_preemptpoint(stack, task, oda_reducer, this, this))
+      return ;
   }
 
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  // TODO_REDUCER
+  if (kaapi_preempt_nextthief(stack, task, this, reducer, this, &_ibeg, &_iend))
+    goto redo_work;
+
+  /* definition of the finalization point where
+     all stolen work a interrupt and collected */
   kaapi_finalize_steal( stack, task );
 
-  /* Here the thiefs have finish the computation and returns their comps which have been reduced using reducer function. */  
+  /* Here the thiefs have finish the computation
+     and returns their comps which have been
+     reduced using reducer function. */  
+
+  ::printf("[%s] min_element: %lf\n", _is_master ? "master":"slave", *_min_element_pos);
 }
 
 /**
@@ -230,8 +267,16 @@ RandomAccessIterator
 
   Min_Element_Struct<RandomAccessIterator, std::less<value_type> >
     work( begin, end, std::less<value_type>(), begin);
+
+  work._is_master = true;
+
   kaapi_utils::start_adaptive_task(&work);
-  return work.get_min_element();
+
+  RandomAccessIterator i = work.get_min_element();
+
+  ::printf("[master] min_element == %lf\n", *i);
+
+  return i;
 }
 
 
