@@ -88,7 +88,16 @@ namespace a1 {
   /** link C++ format -> kaapi format */
   class Format : public kaapi_format_t {
   public:
-    Format( const std::string& name );
+    Format( 
+        const std::string& name,
+        size_t             size,
+        void             (*cstor)( void* dest),
+        void             (*dstor)( void* dest),
+        void             (*cstorcopy)( void* dest, const void* src),
+        void             (*copy)( void* dest, const void* src),
+        void             (*assign)( void* dest, const void* src),
+        void             (*print)( FILE* file, const void* src)
+    );
   };
 
   /** format for update function */
@@ -536,6 +545,12 @@ namespace a1 {
   public:
     static const Format* format;
     static const Format theformat;
+    static void cstor( void* dest) { new (dest) T; }
+    static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
+    static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
+    static void copy( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
+    static void assign( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
+    static void print( FILE* file, const void* src) { } 
   };
   
   template <class UpdateFnc>
@@ -560,7 +575,15 @@ namespace a1 {
   };
 
   template <class T>
-  const Format WrapperFormat<T>::theformat( typeid(T).name() );
+  const Format WrapperFormat<T>::theformat( typeid(T).name(),
+    sizeof(T),
+    WrapperFormat<T>::cstor, 
+    WrapperFormat<T>::dstor, 
+    WrapperFormat<T>::cstorcopy, 
+    WrapperFormat<T>::copy, 
+    WrapperFormat<T>::assign, 
+    WrapperFormat<T>::print 
+  );
   template <class T>
   const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
 

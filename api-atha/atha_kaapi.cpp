@@ -65,17 +65,34 @@ SetLocalAttribut SetLocal;
 DefaultAttribut SetDefault;
 
 // --------------------------------------------------------------------------
-Format::Format( const std::string& name )
+Format::Format( 
+        const std::string& name,
+        size_t             size,
+        void             (*cstor)( void* dest),
+        void             (*dstor)( void* dest),
+        void             (*cstorcopy)( void* dest, const void* src),
+        void             (*copy)( void* dest, const void* src),
+        void             (*assign)( void* dest, const void* src),
+        void             (*print)( FILE* file, const void* src)
+)
 {
-  kaapi_format_register( this, name.c_str() );
+  kaapi_format_register( this, strdup(name.c_str()));
+  this->size      = size;
+  this->cstor     = cstor;
+  this->dstor     = dstor;
+  this->cstorcopy = cstorcopy;
+  this->copy      = copy;
+  this->assign    = assign;
+  this->print     = print;
 }
+
 
 // --------------------------------------------------------------------------
 FormatUpdateFnc::FormatUpdateFnc( 
   const std::string& name,
   int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                    const void* value, const struct kaapi_format_t* fmtvalue )
-) : Format::Format(name)
+) : Format::Format(name, 0, 0, 0, 0, 0, 0, 0)
 {
   this->update_mb = update_mb;
 }
@@ -140,15 +157,7 @@ bool Community::is_leader() const
 // --------------------------------------------------------------------
 void Community::leave() 
 { 
-  int err;
-  kaapi_stack_t* stack = kaapi_self_stack();
-redo:
-  err = kaapi_stack_execall(stack);
-  if (err == EWOULDBLOCK)
-  {
-    kaapi_sched_suspend( kaapi_get_current_processor() );
-    goto redo;
-  }
+  Sync();
 }
 
 
@@ -248,8 +257,15 @@ int System::getRank()
 // --------------------------------------------------------------------
 void Sync()
 {
-  //TODO
-  abort();
+  int err;
+  kaapi_stack_t* stack = kaapi_self_stack();
+redo:
+  err = kaapi_stack_execall(stack);
+  if (err == EWOULDBLOCK)
+  {
+    kaapi_sched_suspend( kaapi_get_current_processor() );
+    goto redo;
+  }
 }
 
 
@@ -271,7 +287,7 @@ void __attribute__ ((constructor)) atha_init()
 // --------------------------------------------------------------------
 void __attribute__ ((destructor)) atha_fini()
 {
-  zcom->leave();
+// TG: TODO: order between this call and kaapi_fini !!!  zcom->leave();
 }
 
 
