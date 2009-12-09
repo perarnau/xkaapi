@@ -32,12 +32,6 @@
 #endif
 
 
-/** Should be with the same file as kaapi_init
- */
-void _kaapi_dummy(void* foo)
-{
-}
-
 namespace atha {
 
 // --------------------------------------------------------------------
