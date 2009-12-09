@@ -22,7 +22,6 @@ struct BasicOperation
     double d = value;
     int max = (int)d;
     for (int i=0; i<max; ++i) d = sin(d);
-//    std::cout << ">" << max; 
     value = d;
   }
 };
