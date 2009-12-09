@@ -258,8 +258,8 @@ int System::getRank()
 void Sync()
 {
   int err;
-  kaapi_stack_t* stack = kaapi_self_stack();
 redo:
+  kaapi_stack_t* stack = kaapi_self_stack();
   err = kaapi_stack_execall(stack);
   if (err == EWOULDBLOCK)
   {
