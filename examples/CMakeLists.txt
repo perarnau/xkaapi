@@ -16,9 +16,9 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/../CheckCCompilerFlag.cmake )
 CHECK_C_COMPILER_FLAG("-fnested-functions" HAS_NESTED_FUNCTIONS_FLAG)
 
 # GLOBAL, LANGUAGE INDEPEND OPTIONS
-add_definitions ( "-Wall -g" )
+#add_definitions ( "-Wall -g" )
 #add_definitions ( "-Wall -g -DKAAPI_DEBUG" )
-#add_definitions ( "-Wall -O3" )
+add_definitions ( "-Wall -O3" )
 
 set (XKAAPI_TEST_LINK_LIBS xkaapi-static)
 set (XKAAPI_TEST_CPP_LINK_LIBS xkaapi-cpp-static)
