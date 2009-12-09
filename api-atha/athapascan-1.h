@@ -945,6 +945,7 @@ namespace a1 {
       kaapi_stack_t* stack = kaapi_self_stack();
       kaapi_task_t* clo = kaapi_stack_toptask( stack);
       kaapi_task_initdfg( stack, clo, &MainTask<TASK>::body, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
+      kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       MainTask<TASK>* arg = kaapi_task_getargst( clo, MainTask<TASK>);
       arg->argc = argc;
       arg->argv = argv;
