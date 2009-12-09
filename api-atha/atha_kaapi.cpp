@@ -281,7 +281,7 @@ void __attribute__ ((constructor)) atha_init()
 {
   int argc = 1;
   char**argv = 0;
-  zcom = new a1::Community(a1::System::join_community( argc, argv ));
+//  zcom = new a1::Community(a1::System::join_community( argc, argv ));
 }
 
 // --------------------------------------------------------------------
