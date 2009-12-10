@@ -837,8 +837,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 #endif
 #if defined(KAAPI_CONCURRENT_WS)
 #ifdef __APPLE__
-/* WARNING: writemem barrier here !!!! */
-    OSMemoryBarrier();
+  OSMemoryBarrier();
 #else 
   __sync_synchronize();
 #endif
