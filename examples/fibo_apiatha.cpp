@@ -157,8 +157,12 @@ int main(int argc, char** argv)
     */
     a1::Community com = a1::System::join_community( argc, argv );
     
+for (int i=0; i<100; ++i)
+{
     /* Start computation by forking the main task */
     a1::ForkMain<doit>()(argc, argv); 
+    a1::Sync();
+}
     
     /* Leave the community: at return to this call no more athapascan
        tasks or shared could be created.

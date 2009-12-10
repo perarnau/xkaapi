@@ -57,7 +57,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
   {
     kaapi_stack_t* stack = ctxt;
     kaapi_task_t*  task = stack->pc;
-    if (kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL)
+    if ((kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || (task->body == &kaapi_aftersteal_body))
     {
       /* remove it from list */
       KAAPI_STACK_REMOVE( &kproc->lsuspend, prev, ctxt );
