@@ -61,10 +61,15 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
   /* push it into the free list */
-  
+  t0 = kaapi_get_elapsedtime();  
   do {
     /* terminaison ? */
-    if (kaapi_isterminated()) break;
+    if (kaapi_isterminated())
+    {
+      t1 = kaapi_get_elapsedtime();
+      kproc->t_idle += t1-t0;
+      break;
+    }
     
 #if defined(KAAPI_CONCURRENT_WS)
     /* lock  */
@@ -108,12 +113,11 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
 
 redo_execute:
-    t0 = kaapi_get_elapsedtime();
     /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
-    KAAPI_LOG(50, "[IDLE] execute ctxt 0x%p\n", (void*)kproc->ctxt);
-    err = kaapi_stack_execall( kproc->ctxt );
     t1 = kaapi_get_elapsedtime();
-    KAAPI_LOG(50, "[IDLE] Work for %fs\n", t1-t0);
+    kproc->t_idle += t1-t0;
+    err = kaapi_stack_execall( kproc->ctxt );
+    t0 = kaapi_get_elapsedtime();
 
     if (err == EWOULDBLOCK) 
     {

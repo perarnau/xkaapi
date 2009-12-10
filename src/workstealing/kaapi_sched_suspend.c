@@ -71,6 +71,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kproc->ctxt = 0;
   KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
 
+  t0 = kaapi_get_elapsedtime();  
   do {
 #if defined(KAAPI_CONCURRENT_WS)
     /* lock  */
@@ -88,6 +89,8 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (kproc->ctxt == ctxt_condition) 
     {
       kaapi_assert(kproc->ctxt->pc == task_condition);
+      t1 = kaapi_get_elapsedtime();
+      kproc->t_idle += t1-t0;
       return 0;
     }
 
@@ -113,13 +116,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, stack);
     }
 
-/*
-stack = kproc->ctxt;
-printf("Thief stack:%p, pc:%p, sp_data:%p  #task:%p\n", stack, stack->pc, stack->sp_data, stack->sp - stack->pc );
-*/
-    t0 = kaapi_get_elapsedtime();
+    t1 = kaapi_get_elapsedtime(); 
+    kproc->t_idle = t1-t0;
     err = kaapi_stack_execall( kproc->ctxt );
-    t1 = kaapi_get_elapsedtime();
+    t0 = kaapi_get_elapsedtime();
     kaapi_assert( err != EINVAL);
     KAAPI_LOG(50, "[SUSPEND] Work for %fs\n", t1-t0);
     

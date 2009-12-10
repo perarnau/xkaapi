@@ -74,6 +74,13 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->fnc_selecarg = 0;
   kproc->fnc_select   = default_param.wsselect;
   
+  /* performance counter */
+  kproc->cnt_tasks      = 0;
+  kproc->cnt_stealreqok = 0;
+  kproc->cnt_stealreq   = 0;
+  kproc->cnt_stealop    = 0;
+  kproc->t_idle         = 0;
+  
   /* allocate a stack */
   k_stacksize = default_param.stacksize;
   k_sizetask = k_stacksize / 2;
@@ -82,6 +89,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
+  
   return 0;
 }
 

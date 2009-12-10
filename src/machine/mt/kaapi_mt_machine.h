@@ -138,7 +138,7 @@ extern int kaapi_setcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
     This function is machine dependent.
 */
 extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t * ctxt );
-/*@{*/
+/*@}*/
 
 
 
@@ -183,10 +183,16 @@ typedef struct kaapi_processor_t {
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
-  kaapi_listthreadctxt_t   lsuspend;              /* list of suspended context */
-  kaapi_listthreadctxt_t   lfree;                 /* list of free context */
-  void*                    fnc_selecarg;          /* arguments for select victim function, 0 at initialization */
-  kaapi_selectvictim_fnc_t fnc_select;            /* function to select a victim */
+  kaapi_listthreadctxt_t   lsuspend;                      /* list of suspended context */
+  kaapi_listthreadctxt_t   lfree;                         /* list of free context */
+  void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
+  kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
+  
+  kaapi_uint32_t           cnt_tasks;                     /* number of executed tasks */
+  kaapi_uint32_t           cnt_stealreqok;                /* number of steal requests replied with success */
+  kaapi_uint32_t           cnt_stealreq;                  /* total number of steal requests replied */
+  kaapi_uint32_t           cnt_stealop;                   /* number of steal operation : ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
+  double                   t_idle;                        /* total idle time in second */           
 } kaapi_processor_t;
 
 /*

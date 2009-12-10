@@ -52,6 +52,9 @@
 int kaapi_stack_execall(kaapi_stack_t* stack) 
 {
   register kaapi_task_t* pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_uint32_t         cnt_tasks;
+#endif  
   kaapi_task_t*          saved_sp;
   char*                  saved_sp_data;
   kaapi_task_t*          retn;
@@ -61,6 +64,10 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   if (kaapi_stack_isempty( stack ) ) return 0;
   pc = stack->pc;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  cnt_tasks = stack->_proc->cnt_tasks;
+#endif
+
 redo_work: 
   /* process steal request 
      - here we always see the retn to split stack into frame.
@@ -68,6 +75,9 @@ redo_work:
   if (*stack->hasrequest !=0) 
   {
     stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    stack->_proc->cnt_tasks = cnt_tasks;
+#endif
     kaapi_sched_advance( stack->_proc );
   }
 
@@ -80,9 +90,15 @@ redo_work:
     /* read from memory */
     pc = stack->pc;
     ++pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
     if (pc >= stack->sp) 
     {
       stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+      stack->_proc->cnt_tasks = cnt_tasks;
+#endif
       return 0;
     }
     goto redo_work;
@@ -92,9 +108,15 @@ redo_work:
     /* do not save stack frame before execution */
     kaapi_aftersteal_body(pc, stack);
     ++pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
     if (pc >= stack->sp) 
     {
       stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+      stack->_proc->cnt_tasks = cnt_tasks;
+#endif
       return 0;
     }
     goto redo_work;
@@ -103,6 +125,9 @@ redo_work:
   {
     /* rewrite pc into memory */
     stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    stack->_proc->cnt_tasks = cnt_tasks;
+#endif
     return EWOULDBLOCK;
   }
   else
@@ -123,6 +148,9 @@ redo_work:
     saved_sp      = stack->sp;
     saved_sp_data = stack->sp_data;
     (*pc->body)(pc, stack);
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
 
     /* push restore_frame task if pushed tasks */
     if (saved_sp != stack->sp)
@@ -152,6 +180,9 @@ redo_work:
   if (pc >= stack->sp) 
   {
     stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    stack->_proc->cnt_tasks = cnt_tasks;
+#endif
     return 0;
   }
   goto redo_work;

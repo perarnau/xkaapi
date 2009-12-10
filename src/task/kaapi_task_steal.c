@@ -106,7 +106,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_format_t*     fmt_param;
   
   arg = kaapi_task_getargst( task, kaapi_tasksteal_arg_t );
-#if 1
+#if 0
   printf("Recv: thiefstack:%p spdata:%p, arg:%p, task:%p, fmt:%p\n", stack, stack->sp_data, arg, arg->origin_task, arg->origin_fmt );
 #endif
 

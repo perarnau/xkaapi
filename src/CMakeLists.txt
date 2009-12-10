@@ -13,7 +13,7 @@ include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 #add_definitions ( "-Wall -pedantic -g -std=c99")
 #add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG -DKAAPI_CONCURRENT_WS=1")
 #add_definitions ( "-Wall -pedantic -std=c99 -O3  -DKAAPI_CONCURRENT_WS=1")
-add_definitions ( "-Wall -pedantic -std=c99 -O3")
+add_definitions ( "-Wall -pedantic -std=c99 -O3 -DKAAPI_USE_PERFCOUNTER=1")
 
 #################
 ## LIBRARY BEG ##
