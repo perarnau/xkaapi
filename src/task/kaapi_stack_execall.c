@@ -71,13 +71,7 @@ redo_work:
     kaapi_sched_advance( stack->_proc );
   }
 
-  if (pc->flag & KAAPI_TASK_S_STEAL)
-  {
-    /* rewrite pc into memory */
-    stack->pc = pc;
-    return EWOULDBLOCK;
-  }
-  else if (pc->body == &kaapi_retn_body) 
+  if (pc->body == &kaapi_retn_body) 
   {
     /* do not save stack frame before execution */
     kaapi_frame_t* frame = kaapi_task_getargst( pc, kaapi_frame_t);
@@ -92,6 +86,24 @@ redo_work:
       return 0;
     }
     goto redo_work;
+  }
+  else if (pc->body == &kaapi_aftersteal_body) 
+  {
+    /* do not save stack frame before execution */
+    kaapi_aftersteal_body(pc, stack);
+    ++pc;
+    if (pc >= stack->sp) 
+    {
+      stack->pc = pc;
+      return 0;
+    }
+    goto redo_work;
+  }
+  else if (pc->flag & KAAPI_TASK_S_STEAL)
+  {
+    /* rewrite pc into memory */
+    stack->pc = pc;
+    return EWOULDBLOCK;
   }
   else
   {
