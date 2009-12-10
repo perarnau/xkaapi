@@ -125,6 +125,6 @@ include (CPack)
 
 add_subdirectory (src)
 add_subdirectory (api-atha)
-#add_subdirectory (examples)
+add_subdirectory (examples)
 add_subdirectory (kastl.wip)
 #TODO TG add_subdirectory (doc)
