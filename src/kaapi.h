@@ -836,8 +836,12 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
   if (stack->sp == stack->end_sp) return EINVAL;
 #endif
 #if defined(KAAPI_CONCURRENT_WS)
+#ifdef __APPLE__
 /* WARNING: writemem barrier here !!!! */
     OSMemoryBarrier();
+#else 
+  __sync_synchronize();
+#endif
 #endif
   ++stack->sp;
   return 0;
