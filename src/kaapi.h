@@ -68,6 +68,10 @@ extern "C" {
 #  endif
 #endif
 
+#ifdef __APPLE__
+#  include <libkern/OSAtomic.h>
+#endif
+
 #if !defined(KAAPI_USE_APPLE)
 #  ifdef __APPLE__
 #    define KAAPI_USE_APPLE 1
@@ -830,6 +834,10 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->end_sp) return EINVAL;
+#endif
+#if defined(KAAPI_CONCURRENT_WS)
+/* WARNING: writemem barrier here !!!! */
+    OSMemoryBarrier();
 #endif
   ++stack->sp;
   return 0;
