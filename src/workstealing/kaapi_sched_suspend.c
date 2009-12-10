@@ -72,8 +72,19 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
 
   do {
+#if defined(KAAPI_CONCURRENT_WS)
+    /* lock  */
+    pthread_mutex_lock(&kproc->lock);
+#endif
+
     /* wakeup a context */
     kproc->ctxt = kaapi_sched_wakeup(kproc);
+
+#if defined(KAAPI_CONCURRENT_WS)
+    /* unlock  */
+    pthread_mutex_unlock(&kproc->lock);
+#endif
+
     if (kproc->ctxt == ctxt_condition) 
     {
       kaapi_assert(kproc->ctxt->pc == task_condition);

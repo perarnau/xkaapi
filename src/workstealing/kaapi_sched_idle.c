@@ -65,9 +65,19 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   do {
     /* terminaison ? */
     if (kaapi_isterminated()) break;
+    
+#if defined(KAAPI_CONCURRENT_WS)
+    /* lock  */
+    pthread_mutex_lock(&kproc->lock);
+#endif
 
     /* local wake up first */
     ctxt = kaapi_sched_wakeup(kproc); 
+
+#if defined(KAAPI_CONCURRENT_WS)
+    /* unlock  */
+    pthread_mutex_unlock(&kproc->lock);
+#endif
     if (ctxt !=0) 
     {
       /* push kproc context into free list */

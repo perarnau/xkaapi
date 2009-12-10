@@ -279,8 +279,9 @@ Community* zcom =0;
 // --------------------------------------------------------------------
 void __attribute__ ((constructor)) atha_init()
 {
-  int argc = 1;
-  char**argv = 0;
+//TG: only one constructor else how to manage the order ????
+//  int argc = 1;
+//  char**argv = 0;
 //  zcom = new a1::Community(a1::System::join_community( argc, argv ));
 }
 

@@ -167,6 +167,10 @@ typedef struct kaapi_listrequest_t {
     TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
 typedef struct kaapi_processor_t {
+#if defined(KAAPI_CONCURRENT_WS)
+  pthread_mutex_t          lock;           
+  pthread_cond_t           cond;           
+#endif
   kaapi_thread_context_t*  ctxt;                          /* current stack (next version = current active thread) */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
   kaapi_uint32_t           issteal;                       /* */
@@ -456,6 +460,25 @@ static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr )
   return 0;
 }
 
+
+/** 
+*/
+#if defined(KAAPI_CONCURRENT_WS)
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
+{
+  kaapi_uint32_t flag = task->flag;
+  kaapi_uint32_t oldflag = (flag & ~KAAPI_TASK_MASK_STATE)|oldstate;
+  kaapi_uint32_t newflag = (flag & ~KAAPI_TASK_MASK_STATE)|newstate;
+  return KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)&task->flag, oldflag, newflag );
+}
+#else
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
+{
+  kaapi_assert_debug( kaapi_task_getstate(task) == oldstate );
+  kaapi_task_setstate( task, newstate );
+  return 1;
+}
+#endif
 
 /* ============================= Private functions, machine dependent ============================ */
 

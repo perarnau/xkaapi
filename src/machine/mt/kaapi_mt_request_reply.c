@@ -66,7 +66,6 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
   kaapi_taskadaptive_t* ta =0;
   kaapi_taskadaptive_t* thief_ta = 0;
   int flag;
-  kaapi_assert_debug( stack != 0 );
   kaapi_assert_debug( request != 0 );
   
   flag = request->flag;
@@ -74,6 +73,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
   
   if (retval)
   {
+    kaapi_assert_debug( stack != 0 );
     kaapi_task_t* sig;
     kaapi_tasksig_arg_t* argsig;
     

@@ -230,6 +230,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 #if 0
 printf("------ STEAL STACK @:%p\n", (void*)stack );
 #endif
+
   /* reset dfg constraints evaluation */
   
   /* iterate through all the tasks from task_bot until task_top */
