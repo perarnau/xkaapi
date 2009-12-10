@@ -65,14 +65,10 @@ redo_post:
   err = (*kproc->fnc_select)( kproc, &victim );
   if (err !=0) goto redo_post;
 
-<<<<<<< HEAD:src/machine/mt/kaapi_mt_sched_emitsteal.c
-  kaapi_stack_clear(kproc->ctxt);
+  /* clear stack */
+  kaapi_stack_clear( kproc->ctxt );
 
   /* mark current processor as stealing */
-=======
-  /* Fill & Post the request to the victim processor */
-  kaapi_stack_clear( kproc->ctxt );
->>>>>>> C++-API:src/machine/mt/kaapi_mt_sched_emitsteal.c
   kproc->issteal = 1;
 
   /* Fill & Post the request to the victim processor */
