@@ -13,7 +13,7 @@ Installation from GIT
 
 GIT users needs to run cmake before any other things ("cmake sourcedir") . This
 will build required Makefiles. Then, standard instructions apply.
-  CMake version must be at least 2.6 and you don't need CMake if you compile
+CMake version must be at least 2.6 and you don't need CMake if you compile
 form a distribution.
 
 Basic Installation
@@ -21,13 +21,22 @@ Basic Installation
 
 The simplest way to compile this package is:
 
-  1. `cd' to the directory containing the package's source code and type
-     `make' to compile the package.
+  1. `cmake $SOURCE_DIR -DKAAPI_TARGET_MT=1' replacing $SOURCE_DIR by the right
+     source directory.
 
-  3. Optionally, type `make check' to run any self-tests that come with
-     the package.
+  2. `make' to compile the package.
 
-  4. Type `make install' to install the library (default location : /usr/local).
+  3. Type `make install' to install the library (default location : /usr/local).
 
-  5. You can remove the program binaries and object files from the
+  4. You can remove the program binaries and object files from the
      source code directory by typing `make clean'.
+
+Runing Examples
+===============
+
+When the library is compiled, some examples are too. Here is how you can run
+theses examples :
+
+  1. `cd examples' to go into the example directory.
+
+  2. `./example' where example is the binary name of one of the compiled examples.
