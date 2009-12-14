@@ -49,20 +49,15 @@ static void start_dfg_task(const dfg_arg_t* arg)
   kaapi_task_t* dfg_task;
   dfg_arg_t* dfg_arg;
 
-  kaapi_frame_t frame;
-
   kaapi_trace(" > start_dfg_task(%u - %u)", arg->low, arg->hig);
 
-  kaapi_stack_save_frame(self_stack, &frame);
-
   dfg_task = kaapi_stack_toptask(self_stack);
-  kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG | KAAPI_TASK_STICKY );
+  kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG);
   kaapi_task_setbody(dfg_task, dfg_entry);
   dfg_arg = kaapi_stack_pushdata(self_stack, sizeof(dfg_arg_t));
   memcpy(dfg_arg, arg, sizeof(dfg_arg_t));
   kaapi_task_setargs(dfg_task, dfg_arg);
   kaapi_stack_pushtask(self_stack);
-  kaapi_stack_pushretn(self_stack, &frame);
 
 #if 0
   while (kaapi_stack_execall(self_stack) == EWOULDBLOCK)
@@ -179,10 +174,6 @@ static void adaptive_entry(kaapi_task_t* task, kaapi_stack_t* stack)
       /* create a dfg per interval value */
       {
 	dfg_arg_t dfg_arg = { saved_arg.low, saved_arg.hig };
-
-/* 	unsigned int i; */
-
-/* 	for (i = 0; i < 3; ++i) */
 	start_dfg_task(&dfg_arg);
       }
 
@@ -219,7 +210,7 @@ static void strap(void)
 {
 #if 1
   {
-    const adaptive_arg_t arg = { 0, 20 };
+    const adaptive_arg_t arg = { 0, 40 };
     start_adaptive_task(&arg);
   }
 #else
