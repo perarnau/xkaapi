@@ -12,10 +12,10 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_D
 #include (${CMAKE_CURRENT_SOURCE_DIR}/../CheckCCompilerFlag.cmake )
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -O3")
+#add_definitions ( "-Wall -O3")
 #add_definitions ( "-Wall -O3 -DKAAPI_CONCURRENT_WS=1")
 #add_definitions ( "-Wall -O3 -DKAAPI_USE_PERFCOUNTER=1")
-#add_definitions ( "-Wall -g -DKAAPI_DEBUG")
+add_definitions ( "-Wall -g -DKAAPI_DEBUG")
 #add_definitions ( "-Wall -g")
 
 #################
