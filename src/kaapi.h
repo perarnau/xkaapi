@@ -68,6 +68,10 @@ extern "C" {
 #  endif
 #endif
 
+#ifdef __APPLE__
+#  include <libkern/OSAtomic.h>
+#endif
+
 #if !defined(KAAPI_USE_APPLE)
 #  ifdef __APPLE__
 #    define KAAPI_USE_APPLE 1
@@ -831,6 +835,13 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->end_sp) return EINVAL;
 #endif
+#if defined(KAAPI_CONCURRENT_WS)
+#ifdef __APPLE__
+  OSMemoryBarrier();
+#else 
+  __sync_synchronize();
+#endif
+#endif
   ++stack->sp;
   return 0;
 }
@@ -878,7 +889,9 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 #  define kaapi_task_format_debug(task) \
     (task)->format   = 0
 #else
-#  define kaapi_task_format_debug(task)
+/* bug: should be set to 0 in case of badly initialize task.... */
+#  define kaapi_task_format_debug(task) \
+    (task)->format   = 0
 #endif
 
 #define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
@@ -886,7 +899,7 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
     (task)->body     = (taskbody);\
     (task)->sp       = (buffer);\
     (task)->flag     = KAAPI_TASK_DFG;\
-    kaapi_task_format_debug(task);\
+    (task)->format   = 0;\
   } while (0)
 
 

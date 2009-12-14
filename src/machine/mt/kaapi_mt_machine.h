@@ -138,7 +138,7 @@ extern int kaapi_setcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
     This function is machine dependent.
 */
 extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t * ctxt );
-/*@{*/
+/*@}*/
 
 
 
@@ -167,6 +167,10 @@ typedef struct kaapi_listrequest_t {
     TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
 typedef struct kaapi_processor_t {
+#if defined(KAAPI_CONCURRENT_WS)
+  pthread_mutex_t          lock;           
+  pthread_cond_t           cond;           
+#endif
   kaapi_thread_context_t*  ctxt;                          /* current stack (next version = current active thread) */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
   kaapi_uint32_t           issteal;                       /* */
@@ -179,10 +183,16 @@ typedef struct kaapi_processor_t {
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
-  kaapi_listthreadctxt_t   lsuspend;              /* list of suspended context */
-  kaapi_listthreadctxt_t   lfree;                 /* list of free context */
-  void*                    fnc_selecarg;          /* arguments for select victim function, 0 at initialization */
-  kaapi_selectvictim_fnc_t fnc_select;            /* function to select a victim */
+  kaapi_listthreadctxt_t   lsuspend;                      /* list of suspended context */
+  kaapi_listthreadctxt_t   lfree;                         /* list of free context */
+  void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
+  kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
+  
+  kaapi_uint32_t           cnt_tasks;                     /* number of executed tasks */
+  kaapi_uint32_t           cnt_stealreqok;                /* number of steal requests replied with success */
+  kaapi_uint32_t           cnt_stealreq;                  /* total number of steal requests replied */
+  kaapi_uint32_t           cnt_stealop;                   /* number of steal operation : ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
+  double                   t_idle;                        /* total idle time in second */           
 } kaapi_processor_t;
 
 /*
@@ -456,6 +466,25 @@ static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr )
   return 0;
 }
 
+
+/** 
+*/
+#if defined(KAAPI_CONCURRENT_WS)
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
+{
+  kaapi_uint32_t flag = task->flag;
+  kaapi_uint32_t oldflag = (flag & ~KAAPI_TASK_MASK_STATE)|oldstate;
+  kaapi_uint32_t newflag = (flag & ~KAAPI_TASK_MASK_STATE)|newstate;
+  return KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)&task->flag, oldflag, newflag );
+}
+#else
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
+{
+  kaapi_assert_debug( kaapi_task_getstate(task) == oldstate );
+  kaapi_task_setstate( task, newstate );
+  return 1;
+}
+#endif
 
 /* ============================= Private functions, machine dependent ============================ */
 

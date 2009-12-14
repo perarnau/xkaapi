@@ -57,7 +57,7 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   /* */
   if (!KAAPI_STACK_EMPTY(&kproc->lsuspend))
   {
-    /* try top wakeup a waiting stack */  
+    /* TODO try top wakeup a waiting stack ? */  
   }
     
 redo_post:
@@ -65,11 +65,30 @@ redo_post:
   err = (*kproc->fnc_select)( kproc, &victim );
   if (err !=0) goto redo_post;
 
-  /* Fill & Post the request to the victim processor */
-  kaapi_stack_clear(kproc->ctxt);
+  /* clear stack */
+  kaapi_stack_clear( kproc->ctxt );
+
+  /* mark current processor as stealing */
   kproc->issteal = 1;
+
+  /* Fill & Post the request to the victim processor */
   kaapi_request_post( kproc, &kproc->reply, &victim );
 
+#if defined(KAAPI_CONCURRENT_WS)
+  /* lock the victim */
+//  pthread_mutex_lock(&victim.kproc->lock);
+//  if (KAAPI_ATOMIC_READ(&victim.kproc->hlrequests.count) !=0)
+//  {
+    do {
+      kaapi_sched_advance( victim.kproc );
+    } while (kaapi_request_status(&kproc->reply) == KAAPI_REQUEST_S_POSTED);
+//  }
+//  else {
+//    kaapi_readmem_barrier();
+//  }
+//  pthread_mutex_unlock(&victim.kproc->lock);
+
+#else /* COOPERATIVE */
   while (!kaapi_reply_test( &kproc->reply ))
   {
     /* here request should be cancelled... */
@@ -80,6 +99,8 @@ redo_post:
       return 0;
     }
   }
+#endif
+  /* mark current processor as no stealing */
   kproc->issteal = 0;
 
   kaapi_assert_debug( kaapi_request_status(&kproc->reply) != KAAPI_REQUEST_S_POSTED );
@@ -92,5 +113,6 @@ redo_post:
   /* Reset original ctxt and do the local computation
   */
   stack = kaapi_request_data(&kproc->reply);
+
   return stack;
 }

@@ -66,7 +66,6 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
   kaapi_taskadaptive_t* ta =0;
   kaapi_taskadaptive_t* thief_ta = 0;
   int flag;
-  kaapi_assert_debug( stack != 0 );
   kaapi_assert_debug( request != 0 );
   
   flag = request->flag;
@@ -74,9 +73,13 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
   
   if (retval)
   {
+    kaapi_assert_debug( stack != 0 );
     kaapi_task_t* sig;
     kaapi_tasksig_arg_t* argsig;
     
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++stack->_proc->cnt_stealreqok;
+#endif    
 
     /* reply: several cases
        - if partial steal -> signal should decr the thieves counter (if task is not KAAPI_TASK_ADAPT_NOSYNC)
@@ -128,6 +131,8 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
       if ( !(task->flag & KAAPI_TASK_ADAPT_NOSYNC) )
         KAAPI_ATOMIC_INCR( &ta->thievescount );
       else flag |= KAAPI_TASK_ADAPT_NOSYNC;
+    } else {
+      flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
     }
 
     sig = kaapi_stack_toptask( thief_stack );

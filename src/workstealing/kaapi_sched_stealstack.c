@@ -172,6 +172,7 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
       fmt = beg->format = kaapi_format_resolvebybody( beg->body );
     else
       fmt = beg->format;
+
     if (fmt ==0) 
     {
       ++beg;
@@ -229,6 +230,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 #if 0
 printf("------ STEAL STACK @:%p\n", (void*)stack );
 #endif
+
   /* reset dfg constraints evaluation */
   
   /* iterate through all the tasks from task_bot until task_top */

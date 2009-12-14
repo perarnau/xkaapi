@@ -63,7 +63,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
     kaapi_task_setbody(task2sig, &kaapi_aftersteal_body );
-    KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
+    KAAPI_LOG(100, "SET AFTER TERM DFG task stolen: 0x%p\n", (void*)task2sig );
   }
   if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required preemption */
   {
@@ -82,7 +82,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
     kaapi_task_setstate(task2sig, KAAPI_TASK_S_TERM );
-    KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
+    KAAPI_LOG(100, "SET TERM DFG task stolen: %p, flag:%i\n", (void*)task2sig, task2sig->flag );
   }
   else /* partial steal -> adaptive task */
   {
@@ -95,7 +95,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required also preemption */
     { /* mark result as term */
 
-      if (argsig->result->req_preempt) /* remote read */
+      if (!argsig->result->thief_term && argsig->result->req_preempt) /* remote read */
       {
          while (stack->haspreempt ==0) ;
       }
