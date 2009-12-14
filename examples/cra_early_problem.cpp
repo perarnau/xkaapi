@@ -1,8 +1,8 @@
 /*
- *  marc_problem.cpp
+ *  cra_early_problem.cpp
  *  xkaapi
  *  Exemple on how to iterate through a vector with a sliding window of constant size.
- *  Created by TG on 18/02/09.
+ *  Created by TG on 9/12/09.
  *  Copyright 2009 INRIA. All rights reserved.
  *
  */
@@ -12,11 +12,7 @@
 #include <iostream>
 #include <math.h>
 
-#define WINDOW_SIZE 128
 
-typedef double* InputIterator;
-
-InputIterator  ibeg0;
 /**
 */
 struct BasicOperation 
@@ -26,37 +22,43 @@ struct BasicOperation
     double d = value;
     int max = (int)d;
     for (int i=0; i<max; ++i) d = sin(d);
-//    std::cout << ">" << max; 
     value = d;
   }
 };
 
-/** Stucture of a work for Marc's problem
+
+/** Stucture of a work for CRA problem with early termination
 */
-class SlidingWindowWork {
+template<class InputIterator, class Function, class Predicate>
+class CRAWork {
 public:
   /* cstor */
-  SlidingWindowWork(
+  CRAWork(
     InputIterator ibeg,
-    InputIterator iend
-  ) : _ibeg(ibeg), _iend(iend)
+    InputIterator iend,
+    Function&  func
+    Predicate& op
+  ) : _ibeg(ibeg), _iend(iend), _func(func), _op(op)
   {
   }
   
   /* do computation */
   void doit(kaapi_task_t* task, kaapi_stack_t* data);
 
+  /* */
+  typedef CRAWork<InputIterator,Function,Predicate> Self_t;
+  
 protected:  
-  InputIterator  _ibeg;
-  InputIterator  _iend;
+  InputIterator  _ibeg; /*                          */
+  InputIterator  _iend; /*                          */
+  Function&      _func; /* one copy per thread */
+  Predicate&     _op;   /* one copy per thread */
   
   /* Entry in case of main execution */
   static void static_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
   {
-    SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
-    atha::logfile() << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
+    Self_t* w = kaapi_task_getargst(task, Self_t);
     w->doit(task, data);
-    atha::logfile() << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
   }
 
   /** splitter_work is called within the context of the steal point
@@ -71,12 +73,10 @@ protected:
     size_t blocsize, size = (*local_iend - ibeg);
     InputIterator thief_end = *local_iend;
 
-    SlidingWindowWork* output_work =0; 
+    Self_t* output_work =0; 
 
-    /* threshold should be defined (...) */
+    /* threshold should be defined ? (...) */
     if (size < 32) return 0;
-
-    atha::logfile() << "In Split work [" << ibeg - ibeg0 << "," << *local_iend - ibeg0 << "), #=" << count+1 << std::endl << std::flush;
 
     /* Sliding window: do not give to thiefs more than WINDOW_SIZE size of work 
        Cannot occurs on the thefts because they have a initial work less thant WINDOW_SIZE.
@@ -103,8 +103,8 @@ protected:
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
         kaapi_task_initadaptive( thief_stack, thief_task, KAAPI_TASK_ADAPT_DEFAULT);
         kaapi_task_setbody( thief_task, &static_entrypoint );
-        kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)) );
-        output_work = kaapi_task_getargst(thief_task, SlidingWindowWork);
+        kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(CRAWork)) );
+        output_work = kaapi_task_getargst(thief_task, CRAWork);
 
         output_work->_iend = thief_end;
         output_work->_ibeg = thief_end-blocsize;
@@ -131,8 +131,8 @@ protected:
   /* Called by the main thread to collect work from one other thief thread
   */
   static bool reducer( kaapi_stack_t* stack, kaapi_task_t* self_task,
-                       SlidingWindowWork* thief_work,
-                       SlidingWindowWork* victim_work,
+                       CRAWork* thief_work,
+                       CRAWork* victim_work,
                        double** ibeg, double** local_iend
                       )
   {
@@ -140,13 +140,9 @@ protected:
     {
       if (victim_work->_ibeg == victim_work->_iend)
       {
-        atha::logfile() << "(0) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
-                  << std::endl;
         return false;
       }
       *local_iend = victim_work->_iend;
-      atha::logfile() << "(1) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
-                << std::endl;
       return true;
     }
 
@@ -155,45 +151,37 @@ protected:
     *local_iend = thief_work->_iend + (WINDOW_SIZE - (thief_work->_iend-thief_work->_ibeg));
     if (*local_iend > victim_work->_iend) 
       *local_iend = victim_work->_iend;
-    atha::logfile() << "(2) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
-          << std::endl;
 
     return true;
   }
   
-  static void display_reducer(kaapi_stack_t* stack, kaapi_task_t* self_task, void* arg_from_victim, SlidingWindowWork* mywork )
+  static void display_reducer(kaapi_stack_t* stack, kaapi_task_t* self_task, void* arg_from_victim, CRAWork* mywork )
   {
-    SlidingWindowWork* victim_work = (SlidingWindowWork*)arg_from_victim;
-    atha::logfile() << "I'm preempted by the victim [" << victim_work->_ibeg-ibeg0 << "," << victim_work->_iend -ibeg0 << "),"
-              << " my work [" << mywork->_ibeg-ibeg0 << "," << mywork->_iend-ibeg0 << ")"
-              << std::endl;
-    
+    CRAWork* victim_work = (CRAWork*)arg_from_victim;
   }
 };
 
 
 /** Main entry point
 */
-void SlidingWindowWork::doit( kaapi_task_t* task, kaapi_stack_t* stack )
+template<class InputIterator, class Function, class Predicate>
+void CRAWork::doit( kaapi_task_t* task, kaapi_stack_t* stack )
 {
 
   /* local iterator for the nano loop */
-  double* nano_iend;
+  InputIterator nano_iend;
   
   /* amount of work per iteration of the nano loop */
   const size_t unit_size = 32;  /* should be automatically computed */
   size_t tmp_size = 0;
 
   /* maximum iend to be done in sequential */
-  double* local_iend = _iend;
+  InputIterator local_iend = _iend;
 
 redo_work:  
   while (local_iend != _ibeg)
   {
-    /* definition of the steal point where steal_work may be called in case of steal request 
-       note that here local_iend is passed as parameter and updated in case of steal.
-       The splitter cannot give more than WINDOW_SIZE size work to all other threads.
-       Thus each thief thread cannot have more than WINDOW_SIZE size work.
+    /* 
     */
     kaapi_stealpoint( stack, task, &splitter, _ibeg, &local_iend );
 
@@ -204,18 +192,12 @@ redo_work:
        nano_iend = _ibeg + unit_size;
     }
 
-    /* sequential computation of the marc computation*/
-    atha::logfile() << "Do work, mywork=[" << _ibeg - ibeg0 << "," << nano_iend - ibeg0 << ")"
-          << std::endl;
+    /* sequential computation */
     std::for_each( _ibeg, nano_iend, BasicOperation() );
 
     _ibeg = nano_iend;
 
-    /* Return true iff the thread has been preempted.
-       In order to avoid this comparaison for the sequential thread, a different entrypoint could be passed
-       when a thread has been theft.
-       here no function is called on the preemption point and the data 'this' is passed 
-       to the thread that initiates the preemption.
+    /*
     */
     if (kaapi_preemptpoint( stack, task,     /* context */
                             display_reducer, /* function to call in case of preemption */
@@ -250,7 +232,8 @@ redo_work:
 
 /**
 */
-void marc_problem ( double* begin, double* end )
+template<class InputIterator, class Function, class Predicate>
+void cra_problem ( InputIterator begin, InputIterator end, Function& func, Predicate& op )
 {
   /* push new adaptative task with following flags:
     - master finalization: the main thread will waits the end of the computation.
@@ -258,8 +241,7 @@ void marc_problem ( double* begin, double* end )
   */
   kaapi_stack_t* stack = kaapi_self_stack();
 
-
-  SlidingWindowWork work( begin, end);
+  CRAWork<InputIterator,Function,Predicate> work( begin, end, func, op);
 
   /* create the task on the top of the stack */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
@@ -274,14 +256,122 @@ void marc_problem ( double* begin, double* end )
 
 
 
+/** My Fast & Stupid function. 
+*/
+struct MyFunction {
+  double operator()( double data ) const
+  { return data / 2; }
+};
+
+
+/** My Fast & Stupid predicate. 
+*/
+struct MyPredicate {
+  MyPredicate( double value ) : _value(value) {}
+  bool operator()( double& data ) const
+  { return data > _value; }
+};
+
+
+/** Container for iterator over interger interval [b,e) 
+*/
+class AbstractContainer {
+public:
+  AbstractContainer(int b, int e)
+   : _beg(b), _end(e)
+  {}
+  AbstractContainer()
+   : _beg(0), _end(0)
+  {}
+  
+  class const_iterator {
+    int _curr;
+    const_iterator( int val ) : _curr(val) {}
+    friend class AbstractContainer;
+  public:
+    double operator*() const 
+    { return double(_curr); }
+    const_iterator& operator++() 
+    { ++_curr; return *this; }
+    const_iterator operator++(int)
+    { const_iterator retval(*this); ++_curr; return retval; }
+    bool operator== (const const_iterator& it)
+    { return _curr == it._curr; }
+    bool operator!= (const const_iterator& it)
+    { return _curr != it._curr; }
+  };
+
+  const_iterator begin() 
+  { return const_iterator(_beg); }
+  
+  const_iterator end()
+  { return const_iterator(_end); }
+
+private:
+  int _beg;
+  int _end;
+};
+
+
+/** Abstract container for iterator over infinite uniform random number in [0,..,maxvalue)
+*/
+class AbstractRandomContainer {
+public:
+  AbstractRandomContainer(int seed, int maxval)
+   : _seed(s), _maxval(e)
+  {}
+  AbstractRandomContainer()
+   : _seed(rand()), _maxval(100)
+  {}
+  
+  class const_iterator {
+    int _curr;
+    int _seed;
+    int _maxval;
+    const_iterator( int seed, int maxval ) : _seed(seed), _maxval(maxval) {}
+    friend class AbstractRandomContainer;
+  public:
+    double operator*() const 
+    { return double(_curr); }
+    const_iterator& operator++() 
+    { 
+      _curr = rand_r(_seed) % _maxval;
+      return *this; 
+    }
+    const_iterator operator++(int)
+    { 
+      const_iterator retval(*this); 
+      _curr = rand_r(_seed) % _maxval;
+      return retval; 
+    }
+    bool operator== (const const_iterator& it)
+    { return false; }
+    bool operator!= (const const_iterator& it)
+    { return true; }
+  };
+
+  const_iterator begin() 
+  { return const_iterator(_seed,_maxval); }
+  
+  const_iterator end()
+  { return const_iterator(0,0); }
+
+private:
+  int _seed;
+  int _maxval;
+};
+
+
 /**
 */
 int main( int argc, char** argv )
 {
   /* */
-  double* buffer = new double[1024];
-  ibeg0 = buffer;
-  for (int i=0; i<1024; ++i) buffer[i] = i;
-  marc_problem( buffer, buffer + 1024 );
+  AbstractRandomContainer randomsequence;
+  
+  
+  MyFunction  func;
+  MyPredicate op(1024);
+  cra_problem( randomsequence.begin(), randomsequence.end(), func, op );
   return 0;
 }

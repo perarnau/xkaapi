@@ -172,6 +172,7 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
       fmt = beg->format = kaapi_format_resolvebybody( beg->body );
     else
       fmt = beg->format;
+
     if (fmt ==0) 
     {
       ++beg;

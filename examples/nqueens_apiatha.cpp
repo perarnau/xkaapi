@@ -11,7 +11,7 @@
 /*
  * globals
  */
-#define THRESHOLD 5
+#define THRESHOLD 4
 
 #define MAXSIZE 24
 
@@ -348,7 +348,6 @@ struct bt2
 };
 
 struct bt1 {
-
   void operator()(Util::ka_int32_t y, Util::ka_int32_t left, Util::ka_int32_t down, Util::ka_int32_t right, Util::ka_int32_t BOUND1, board BOARD, a1::Shared_w<res_t> a1TOTAL)
   {
     if (y == THRESHOLD) 
