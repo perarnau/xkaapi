@@ -1,5 +1,5 @@
 /*
-** kaapi_stack_sync.c
+** kaapi_sched_sync.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -45,9 +45,9 @@
 #include "kaapi_impl.h"
 
 
-/**kaapi_stack_sync
+/**kaapi_sched_sync
 */
-int kaapi_stack_sync(kaapi_stack_t* stack)
+int kaapi_sched_sync(kaapi_stack_t* stack)
 {
   int err;
 redo:

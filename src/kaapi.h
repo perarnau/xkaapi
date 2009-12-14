@@ -1042,14 +1042,14 @@ extern int kaapi_stack_execall(kaapi_stack_t* stack);
 
 
 /** \ingroup STACK
-    The function kaapi_stack_sync() execute all tasks from pc stack pointer and all their child tasks.
-    If successful, the kaapi_stack_sync() function will return zero.
+    The function kaapi_sched_sync() execute all tasks from pc stack pointer and all their child tasks.
+    If successful, the kaapi_sched_sync() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer
     \retval EINTR the control flow has received a KAAPI interrupt.
 */
-extern int kaapi_stack_sync(kaapi_stack_t* stack);
+extern int kaapi_sched_sync(kaapi_stack_t* stack);
 
 /** \ingroup WS
     Try to steal work from tasks in the stack, else call splitter of the task. 
