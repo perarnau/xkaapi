@@ -23,9 +23,9 @@ static void dfg_entry(kaapi_task_t* task, kaapi_stack_t* stack)
 {
   dfg_arg_t* const arg = kaapi_task_getargst(task, dfg_arg_t);
 
-  kaapi_trace("> dfg_entry(%u - %u)", arg->low, arg->hig);
+  kaapi_trace("  > dfg_entry(%u - %u)", arg->low, arg->hig);
 
-  kaapi_trace("< dfg_entry()");
+  kaapi_trace("  < dfg_entry(%u - %u)", arg->low, arg->hig);
 }
 
 
@@ -51,12 +51,12 @@ static void start_dfg_task(const dfg_arg_t* arg)
 
   kaapi_frame_t frame;
 
-  kaapi_trace("> start_dfg_task(%u - %u)", arg->low, arg->hig);
+  kaapi_trace(" > start_dfg_task(%u - %u)", arg->low, arg->hig);
 
   kaapi_stack_save_frame(self_stack, &frame);
 
   dfg_task = kaapi_stack_toptask(self_stack);
-  kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG/* |KAAPI_TASK_STICKY */ );
+  kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG | KAAPI_TASK_STICKY );
   kaapi_task_setbody(dfg_task, dfg_entry);
 
   dfg_arg = kaapi_stack_pushdata(self_stack, sizeof(dfg_arg_t));
@@ -67,10 +67,14 @@ static void start_dfg_task(const dfg_arg_t* arg)
 
   kaapi_stack_pushretn(self_stack, &frame);
 
+#if 0
   while (kaapi_stack_execchild(self_stack, dfg_task) == EWOULDBLOCK)
+#else
+  while (kaapi_stack_execall(self_stack) == EWOULDBLOCK)
+#endif
     kaapi_sched_suspend(kaapi_get_current_processor());
 
-  kaapi_trace("< start_dfg_task\n");
+  kaapi_trace(" < start_dfg_task(%u - %u)", dfg_arg->low, dfg_arg->hig);
 }
 
 
@@ -161,6 +165,8 @@ static void adaptive_entry(kaapi_task_t* task, kaapi_stack_t* stack)
 {
   adaptive_arg_t* const arg = kaapi_task_getargst(task, adaptive_arg_t);
 
+  const adaptive_arg_t saved_arg = *arg;
+
 /*   kaapi_task_t* dfg_task; */
 /*   void* dfg_stack; */
 
@@ -175,7 +181,7 @@ static void adaptive_entry(kaapi_task_t* task, kaapi_stack_t* stack)
 
       /* create a dfg per interval value */
       {
-	dfg_arg_t dfg_arg = { 0, 5 };
+	dfg_arg_t dfg_arg = { saved_arg.low, saved_arg.hig };
 
 /* 	unsigned int i; */
 
@@ -188,7 +194,7 @@ static void adaptive_entry(kaapi_task_t* task, kaapi_stack_t* stack)
 
   kaapi_finalize_steal(stack, task);
 
-  kaapi_trace("< adaptive_entry()");
+  kaapi_trace("< adaptive_entry(%u - %u)", saved_arg.low, saved_arg.hig);
 }
 
 
@@ -216,12 +222,12 @@ static void strap(void)
 {
 #if 1
   {
-    const adaptive_arg_t arg = { 0, 10 };
+    const adaptive_arg_t arg = { 0, 3 };
     start_adaptive_task(&arg);
   }
 #else
   {
-    const dfg_arg_t dfg_arg = { 0, 5 };
+    const dfg_arg_t dfg_arg = { 0, 3 };
     start_dfg_task(&dfg_arg);
   }
 #endif
