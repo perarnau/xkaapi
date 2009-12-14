@@ -260,7 +260,7 @@ void Sync()
   int err;
 redo:
   kaapi_stack_t* stack = kaapi_self_stack();
-  err = kaapi_stack_execall(stack);
+  err = kaapi_stack_exechild(stack, stack->pc);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
