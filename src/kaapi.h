@@ -657,6 +657,11 @@ extern void kaapi_suspend_body( kaapi_task_t*, kaapi_stack_t*);
 */
 extern void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack);
 
+/** Body of the task in charge of finalize of adaptive task
+    \ingroup TASK
+*/
+extern void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack );
+
 
 /** \ingroup TASK
     The function kaapi_task_isstealable() will return non-zero value iff the task may be stolen.
@@ -864,7 +869,7 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 /** \ingroup TASK
     Initialize a task with given flag for adaptive attribut or task constraints.
 */
-static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
+static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
 #if defined(KAAPI_DEBUG)
   task->format = 0;
@@ -872,7 +877,7 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   task->flag   = flag | KAAPI_TASK_ADAPTIVE;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
   kaapi_assert_debug( ta !=0 );
-  ta->user_sp               = 0;
+  ta->user_sp               = arg;
   ta->thievescount._counter = 0;
   ta->head                  = 0;
   ta->tail                  = 0;
@@ -880,7 +885,7 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   ta->mastertask            = 0;
   ta->arg_from_victim       = 0;
   task->sp                  = ta;
-  task->body                = 0;
+  task->body                = taskbody;
   task->splitter            = 0;
   return 0;
 }
@@ -894,10 +899,10 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
     (task)->format   = 0
 #endif
 
-#define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
+#define kaapi_task_initdfg( stack, task, taskbody, arg ) \
   do { \
     (task)->body     = (taskbody);\
-    (task)->sp       = (buffer);\
+    (task)->sp       = (arg);\
     (task)->flag     = KAAPI_TASK_DFG;\
     (task)->format   = 0;\
   } while (0)
@@ -906,13 +911,13 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 /** \ingroup TASK
     Initialize a task with given flag for adaptive attribut
 */
-static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
+static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
   if (flag & KAAPI_TASK_ADAPTIVE)
-    kaapi_task_initadaptive(stack, task, flag); /* here only flag & KAAPI_TASK_ADAPT_MASK_ATTR */
+    kaapi_task_initadaptive(stack, task, taskbody, arg, flag); /* here only flag & KAAPI_TASK_ADAPT_MASK_ATTR */
   else {
     kaapi_assert_debug(flag & KAAPI_TASK_DFG);  /* if no ADAPT, must be DFG. Could be both     */
-    kaapi_task_initdfg(stack, task, 0, 0 );
+    kaapi_task_initdfg(stack, task, taskbody, arg );
   }
   if (flag & KAAPI_TASK_DFG)
     task->flag |= flag & (KAAPI_TASK_MASK_FLAGS|KAAPI_TASK_MASK_PROC);
@@ -1034,6 +1039,17 @@ extern int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* task);
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
 */
 extern int kaapi_stack_execall(kaapi_stack_t* stack);
+
+
+/** \ingroup STACK
+    The function kaapi_stack_sync() execute all tasks from pc stack pointer and all their child tasks.
+    If successful, the kaapi_stack_sync() function will return zero.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer
+    \retval EINTR the control flow has received a KAAPI interrupt.
+*/
+extern int kaapi_stack_sync(kaapi_stack_t* stack);
 
 /** \ingroup WS
     Try to steal work from tasks in the stack, else call splitter of the task. 
@@ -1206,10 +1222,19 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
 }
 
 /** \ingroup ADAPTIVE
-    Wait the end of all the stealer of the adaptive task 
-    TODO with preemption
+    Push the task that, on execution will wait the terminaison of the previous 
+    adaptive task 'task' and all the thieves.
 */
-extern int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task );
+static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
+{
+  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
+  {
+    kaapi_task_t* task = kaapi_stack_toptask(stack);
+    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, task->sp, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+
+  }
+  return 0;
+}
 
 
 

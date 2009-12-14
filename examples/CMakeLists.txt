@@ -29,7 +29,7 @@ set (XKAAPI_TEST_LINK_LIBS xkaapi-static)
 add_executable (fiboseq               fiboseq.c )
 add_executable (fibo                  fibo.c )
 add_executable (fibo_adapt            fibo_adapt.c )
-add_executable (adaptive_with_dfg     adaptive_with_dfg.c )
+#add_executable (adaptive_with_dfg     adaptive_with_dfg.c )
 
 
 # PROPERTIES for C code

@@ -52,19 +52,12 @@ static void start_dfg_task(const dfg_arg_t* arg)
   kaapi_trace(" > start_dfg_task(%u - %u)", arg->low, arg->hig);
 
   dfg_task = kaapi_stack_toptask(self_stack);
-  kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG);
-  kaapi_task_setbody(dfg_task, dfg_entry);
-  dfg_arg = kaapi_stack_pushdata(self_stack, sizeof(dfg_arg_t));
+  kaapi_task_initdfg( self_stack, dfg_task, dfg_entry, dfg_arg = kaapi_stack_pushdata(self_stack, sizeof(dfg_arg_t)) );
   memcpy(dfg_arg, arg, sizeof(dfg_arg_t));
   kaapi_task_setargs(dfg_task, dfg_arg);
   kaapi_stack_pushtask(self_stack);
 
-#if 0
-  while (kaapi_stack_execall(self_stack) == EWOULDBLOCK)
-#else
-  while (kaapi_stack_execchild(self_stack, dfg_task) == EWOULDBLOCK)
-#endif
-    kaapi_sched_suspend(kaapi_get_current_processor());
+  kaapi_stack_sync(self_stack);
 
   kaapi_trace(" < start_dfg_task(%u - %u)", dfg_arg->low, dfg_arg->hig);
 }
@@ -130,9 +123,7 @@ static int adaptive_splitter
 	kaapi_task_t*  const thief_task  = kaapi_stack_toptask(thief_stack);
 	void* const stack_data = kaapi_stack_pushdata(thief_stack, sizeof(adaptive_arg_t));
 
-	kaapi_task_initadaptive(thief_stack, thief_task, KAAPI_TASK_ADAPT_DEFAULT);
-	kaapi_task_setbody(thief_task, adaptive_entry);
-	kaapi_task_setargs(thief_task, stack_data);
+	kaapi_task_initadaptive(thief_stack, thief_task, adaptive_entry, stack_data, KAAPI_TASK_ADAPT_DEFAULT);
 
 	thief_work = kaapi_task_getargst(thief_task, adaptive_arg_t);
 	thief_work->low = victim_work->low;
@@ -194,13 +185,9 @@ static void start_adaptive_task(const adaptive_arg_t* arg)
 
   memcpy(data, arg, sizeof(adaptive_arg_t));
 
-  kaapi_task_initadaptive(stack, task, KAAPI_TASK_ADAPT_DEFAULT);
-  kaapi_task_setargs(task, data);
+  kaapi_task_initadaptive(stack, task, adaptive_entry, data, KAAPI_TASK_ADAPT_DEFAULT);
   kaapi_stack_pushtask(stack);
-
-  adaptive_entry(task, stack);
-
-  kaapi_stack_poptask(stack);
+  kaapi_stack_sync(stack);
 }
 
 
