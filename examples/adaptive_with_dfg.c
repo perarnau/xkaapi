@@ -58,19 +58,16 @@ static void start_dfg_task(const dfg_arg_t* arg)
   dfg_task = kaapi_stack_toptask(self_stack);
   kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG | KAAPI_TASK_STICKY );
   kaapi_task_setbody(dfg_task, dfg_entry);
-
   dfg_arg = kaapi_stack_pushdata(self_stack, sizeof(dfg_arg_t));
-  kaapi_task_setargs(dfg_task, dfg_arg);
-
   memcpy(dfg_arg, arg, sizeof(dfg_arg_t));
+  kaapi_task_setargs(dfg_task, dfg_arg);
   kaapi_stack_pushtask(self_stack);
-
   kaapi_stack_pushretn(self_stack, &frame);
 
 #if 0
-  while (kaapi_stack_execchild(self_stack, dfg_task) == EWOULDBLOCK)
-#else
   while (kaapi_stack_execall(self_stack) == EWOULDBLOCK)
+#else
+  while (kaapi_stack_execchild(self_stack, dfg_task) == EWOULDBLOCK)
 #endif
     kaapi_sched_suspend(kaapi_get_current_processor());
 
@@ -222,7 +219,7 @@ static void strap(void)
 {
 #if 1
   {
-    const adaptive_arg_t arg = { 0, 3 };
+    const adaptive_arg_t arg = { 0, 20 };
     start_adaptive_task(&arg);
   }
 #else
