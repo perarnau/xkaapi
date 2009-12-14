@@ -15,6 +15,7 @@
 #define WINDOW_SIZE 128
 
 typedef double* InputIterator;
+extern void marc_problem ( double* begin, double* end );
 
 InputIterator  ibeg0;
 /**
@@ -50,12 +51,22 @@ protected:
   InputIterator  _ibeg;
   InputIterator  _iend;
   
-  /* Entry in case of main execution */
-  static void static_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
+  /* Entry in case of main execution (steal of the task) */
+  static void static_mainentrypoint(kaapi_task_t* task, kaapi_stack_t* stack)
+  {
+    SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
+    atha::logfile() << "I'm a master: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
+    w->doit(task, stack);
+    atha::logfile() << "I'm a master: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
+  }
+
+  /* Entry in case of thief execution */
+  static void static_thiefentrypoint(kaapi_task_t* task, kaapi_stack_t* stack)
   {
     SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
     atha::logfile() << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
-    w->doit(task, data);
+    w->doit(task, stack);
+    kaapi_finalize_steal( stack, task );
     atha::logfile() << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
   }
 
@@ -101,9 +112,11 @@ protected:
       {
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_initadaptive( thief_stack, thief_task, KAAPI_TASK_ADAPT_DEFAULT);
-        kaapi_task_setbody( thief_task, &static_entrypoint );
-        kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)) );
+        kaapi_task_initadaptive( thief_stack, thief_task, 
+                  &static_thiefentrypoint, 
+                  kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)), 
+                  KAAPI_TASK_ADAPT_DEFAULT
+        );
         output_work = kaapi_task_getargst(thief_task, SlidingWindowWork);
 
         output_work->_iend = thief_end;
@@ -169,6 +182,8 @@ protected:
               << std::endl;
     
   }
+
+  friend void marc_problem ( double* begin, double* end );
 };
 
 
@@ -240,11 +255,6 @@ redo_work:
     goto redo_work;
   }
 
-  /* Definition of the finalization point where main thread waits all the works.
-     After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
-     could be read (...)
-  */
-  kaapi_finalize_steal( stack, task );
 }
 
 
@@ -263,13 +273,20 @@ void marc_problem ( double* begin, double* end )
 
   /* create the task on the top of the stack */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
-  kaapi_task_initadaptive( stack, task, KAAPI_TASK_ADAPT_DEFAULT);
-  kaapi_task_setargs(task, &work );
+  kaapi_task_initadaptive( stack, task, &SlidingWindowWork::static_mainentrypoint, &work, KAAPI_TASK_ADAPT_DEFAULT);
   
   /* push_it task on the top of the stack */
   kaapi_stack_pushtask(stack);
 
-  work.doit( task, stack );
+  /* Definition of the finalization point where main thread waits all the works.
+     After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
+     could be read (...)
+  */
+  kaapi_finalize_steal( stack, task );
+  
+  /* Sync
+  */
+  kaapi_sched_sync(stack);
 }
 
 

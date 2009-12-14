@@ -257,7 +257,7 @@ int System::getRank()
 // --------------------------------------------------------------------
 void Sync()
 {
-  kaapi_stack_sync( kaapi_self_stack() );
+  kaapi_sched_sync( kaapi_self_stack() );
 }
 
 

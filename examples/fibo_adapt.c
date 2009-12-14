@@ -29,9 +29,7 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
         fibo_arg_t* arg;
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
-        kaapi_task_setbody( thief_task, &entrypoint );
-        kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(fibo_arg_t)));
+        kaapi_task_init( thief_stack, thief_task, &entrypoint, kaapi_stack_pushdata(thief_stack, sizeof(fibo_arg_t)), KAAPI_TASK_ADAPTIVE);
         arg = kaapi_task_getargst(thief_task, fibo_arg_t);                
         arg->n   = n-1;
         arg->res = &result2;
@@ -48,11 +46,15 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
     *result = n;
   }
   else {
+    void entrypoint( kaapi_task_t* task, kaapi_stack_t* stack ) 
+    {
+      fibo_arg_t* arg = kaapi_task_getargst( task, fibo_arg_t);
+      fibo( stack, arg->n, arg->res );
+    }
     /* set an action to reply to a steal request*/
     fibo_arg_t* arg;
     kaapi_task_t* task = kaapi_stack_toptask(stack);
-    kaapi_task_init( stack, task, KAAPI_TASK_ADAPTIVE);
-    kaapi_task_setargs( task, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)));
+    kaapi_task_init( stack, task, &entrypoint, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)), KAAPI_TASK_ADAPTIVE);
     arg = kaapi_task_getargst(task, fibo_arg_t);                
     arg->n   = n-1;
     arg->res = &result1;

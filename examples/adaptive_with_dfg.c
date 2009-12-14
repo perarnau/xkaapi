@@ -57,7 +57,7 @@ static void start_dfg_task(const dfg_arg_t* arg)
   kaapi_task_setargs(dfg_task, dfg_arg);
   kaapi_stack_pushtask(self_stack);
 
-  kaapi_stack_sync(self_stack);
+  kaapi_sched_sync(self_stack);
 
   kaapi_trace(" < start_dfg_task(%u - %u)", dfg_arg->low, dfg_arg->hig);
 }
@@ -187,7 +187,7 @@ static void start_adaptive_task(const adaptive_arg_t* arg)
 
   kaapi_task_initadaptive(stack, task, adaptive_entry, data, KAAPI_TASK_ADAPT_DEFAULT);
   kaapi_stack_pushtask(stack);
-  kaapi_stack_sync(stack);
+  kaapi_sched_sync(stack);
 }
 
 
