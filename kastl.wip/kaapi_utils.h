@@ -13,6 +13,7 @@
 
 
 
+#include <pthread.h>
 #include "kaapi.h"
 
 
@@ -73,7 +74,7 @@ namespace kaapi_utils
 	kaapi_task_t*  const thief_task  = kaapi_stack_toptask(thief_stack);
 	void* const stack_data = kaapi_stack_pushdata(thief_stack, sizeof(SelfType));
 
-	kaapi_task_init(thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
+	kaapi_task_initadaptive(thief_stack, thief_task, KAAPI_TASK_ADAPT_DEFAULT);
 	kaapi_task_setbody(thief_task, &static_thiefentrypoint<SelfType>);
 	kaapi_task_setargs(thief_task, stack_data);
 
@@ -106,7 +107,7 @@ namespace kaapi_utils
     kaapi_stack_t* const stack = kaapi_self_stack();
     kaapi_task_t* const task = kaapi_stack_toptask(stack);
 
-    kaapi_task_init(stack, task, KAAPI_TASK_ADAPTIVE);
+    kaapi_task_initadaptive( stack, task, KAAPI_TASK_ADAPT_DEFAULT);
     kaapi_task_setargs(task, work);
     kaapi_stack_pushtask(stack);
 
@@ -114,6 +115,11 @@ namespace kaapi_utils
 
     kaapi_stack_poptask(stack);
   }
+
+  static unsigned int __attribute__((unused)) self_id()
+  {
+    return (unsigned int)pthread_self();
+  } 
 
 #if 0 // TODO
 

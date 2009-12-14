@@ -194,7 +194,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   KAAPI_LOG(100, "tasksteal: 0x%p end exec, next task: 0x%p bodysignal: 0x%p, pc: 0x%p\n", 
       (void*)task, 
       (void*)(task+1), 
-      (void*)(task+1)->body, 
+      (void*)(uintptr_t)(task+1)->body, 
       (void*)stack->pc );
 }
 

@@ -52,6 +52,7 @@ int kaapi_stack_init( kaapi_stack_t* stack,
 )
 {
   if (stack == 0) return EINVAL;
+  stack->haspreempt =0;
   stack->hasrequest =0;
   if (size_task_buffer ==0) 
   { 

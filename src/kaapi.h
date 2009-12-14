@@ -1111,6 +1111,20 @@ static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_
 */
 extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim );
 extern int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval );
+
+
+static inline int kaapi_is_null(void* p)
+{
+  /* checking for null on a macro param
+     where param is an address makes g++
+     complain about the never nullness
+     of the arg. so we use this function
+     to check for null pointers.
+   */
+
+  return p == NULL;
+}
+
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request to the current task
     and if it is true then pass arg_victim argument to the victim and call the reducer function with incomming victim argument
@@ -1125,7 +1139,7 @@ extern int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_ta
   ( kaapi_preemptpoint_isactive(stack, task) ? \
         kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim),\
         kaapi_preemptpoint_after_reducer_call( stack, task, \
-          ( (reducer) ==0? 0: ((int(*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__)))\
+        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )
@@ -1147,9 +1161,10 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
       int (*)( kaapi_stack_t* stack, kaapi_task_t* task, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
+
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
  ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
-          (  (reducer) == 0 ? \
+	      (  kaapi_is_null((void*)reducer) ? \
                 1 \
               : \
                 ((int (*)(...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->arg_from_thief, ##__VA_ARGS__) \
