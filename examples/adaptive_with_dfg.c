@@ -56,9 +56,8 @@ static void start_dfg_task(const dfg_arg_t* arg)
   kaapi_stack_save_frame(self_stack, &frame);
 
   dfg_task = kaapi_stack_toptask(self_stack);
-  kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+  kaapi_task_init( self_stack, dfg_task, KAAPI_TASK_DFG/* |KAAPI_TASK_STICKY */ );
   kaapi_task_setbody(dfg_task, dfg_entry);
-  kaapi_task_setflags(dfg_task, KAAPI_TASK_STICKY);
 
   dfg_arg = kaapi_stack_pushdata(self_stack, sizeof(dfg_arg_t));
   kaapi_task_setargs(dfg_task, dfg_arg);
@@ -68,8 +67,10 @@ static void start_dfg_task(const dfg_arg_t* arg)
 
   kaapi_stack_pushretn(self_stack, &frame);
 
-  while (kaapi_stack_execall(self_stack) == EWOULDBLOCK)
+  while (kaapi_stack_execchild(self_stack, dfg_task) == EWOULDBLOCK)
     kaapi_sched_suspend(kaapi_get_current_processor());
+
+  kaapi_trace("< start_dfg_task\n");
 }
 
 
