@@ -11,14 +11,22 @@
 /*
  * globals
  */
-#define THRESHOLD 5
+#define THRESHOLD 4
 
 #define MAXSIZE 24
 
-int SIZEE; /* SIZE -1 */
-Util::ka_int32_t TOPBIT;
-Util::ka_int32_t MASK;
-Util::ka_int32_t SIDEMASK;
+int SOL;   /* SOL for debug */
+#if !defined(SIZE)
+int SIZEE;                /* SIZE -1 */
+Util::ka_int32_t TOPBIT;  /* 1 << SIZEE */
+Util::ka_int32_t MASK;    /*  MASK = ((1 << (SIZEE+1)) - 1); */
+Util::ka_int32_t SIDEMASK;/* SIDEMASK = ( ( 1 << SIZEE) | 1); */
+#else
+#define SIZEE     (SIZE-1)
+#define TOPBIT    (1 << SIZEE)
+#define MASK      ((1 << (SIZEE+1)) - 1)
+#define SIDEMASK  ((1 << SIZEE) | 1)
+#endif
 
 /*
  * store various counter
@@ -89,7 +97,7 @@ struct display
     Util::logfile() << "total     : " << (TOTAL.COUNT2*2+TOTAL.COUNT4*4+TOTAL.COUNT8*8) << std::endl;
     Util::logfile() << "time      : " << stop-start << " sec" << std::endl;
     Util::logfile() << "**************************************" << std::endl;
-  
+    if ((SOL != -1) && ((unsigned)SOL != (TOTAL.COUNT2*2+TOTAL.COUNT4*4+TOTAL.COUNT8*8))) abort(); 
   }
 };
 
@@ -348,7 +356,6 @@ struct bt2
 };
 
 struct bt1 {
-
   void operator()(Util::ka_int32_t y, Util::ka_int32_t left, Util::ka_int32_t down, Util::ka_int32_t right, Util::ka_int32_t BOUND1, board BOARD, a1::Shared_w<res_t> a1TOTAL)
   {
     if (y == THRESHOLD) 
@@ -459,16 +466,23 @@ int main(int argc, char** argv)
   // Parse application args
   int niter = 1;
   int n= 12;
+  int sol = -1;
   if (argc >=2) {
     n = atoi(argv[1]);
   }
   if (argc >=3) {
     niter = atoi(argv[2]);
   }
+  if (argc >=4) {
+    sol = atoi(argv[3]);
+  }
+  SOL=sol;
+#if !defined(SIZE)
   SIZEE = n-1;
   TOPBIT = (1 << SIZEE);
   MASK = ((1 << (SIZEE+1)) - 1);
   SIDEMASK = ( ( 1 << SIZEE) | 1);
+#endif
 
   // Commit community, ie start kaapi runtime
   com.commit();

@@ -10,8 +10,10 @@
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -g -std=c99")
-#add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG")
+add_definitions ( "-Wall -pedantic -g -DKAAPI_DEBUG -std=c99")
+#add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG -DKAAPI_CONCURRENT_WS=1")
+#add_definitions ( "-Wall -pedantic -std=c99 -O3 -DKAAPI_CONCURRENT_WS=1")
+#add_definitions ( "-Wall -pedantic -std=c99 -O3 -DKAAPI_USE_PERFCOUNTER=1")
 #add_definitions ( "-Wall -pedantic -std=c99 -O3")
 
 #################
@@ -41,7 +43,6 @@ add_library (xkaapi SHARED
   workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
   workstealing/kaapi_sched_idle.c
-  workstealing/kaapi_request_reply.c
   workstealing/kaapi_sched_wakeup.c
   workstealing/kaapi_sched_suspend.c
   task/kaapi_stack_init.c
@@ -50,10 +51,11 @@ add_library (xkaapi SHARED
   task/kaapi_stack_execall.c
   task/kaapi_stack_execchild.c
   task/kaapi_task_standard.c
-  task/kaapi_task_signal.c
+  task/kaapi_task_aftersteal.c
   task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_task_preempt.c
   task/kaapi_fmt_register.c
   task/kaapi_fmt_taskregister.c
   task/kaapi_fmt_structregister.c
@@ -70,6 +72,8 @@ add_library (xkaapi SHARED
   machine/mt/kaapi_mt_selfprocessor.c
   machine/mt/kaapi_mt_selfstack.c
   machine/mt/kaapi_mt_sched_emitsteal.c
+  machine/mt/kaapi_mt_request_reply.c
+  machine/mt/kaapi_mt_task_signal.c
   machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_context_alloc.c
   machine/mt/kaapi_mt_context_free.c
@@ -90,7 +94,6 @@ add_library (xkaapi-static STATIC
   workstealing/kaapi_sched_stealprocessor.c
   workstealing/kaapi_sched_stealstack.c
   workstealing/kaapi_sched_stealtask.c
-  workstealing/kaapi_request_reply.c
   workstealing/kaapi_sched_idle.c
   workstealing/kaapi_sched_wakeup.c
   workstealing/kaapi_sched_suspend.c
@@ -100,10 +103,11 @@ add_library (xkaapi-static STATIC
   task/kaapi_stack_execall.c
   task/kaapi_stack_execchild.c
   task/kaapi_task_standard.c
-  task/kaapi_task_signal.c
+  task/kaapi_task_aftersteal.c
   task/kaapi_task_steal.c
   task/kaapi_task_splitter_dfg.c
   task/kaapi_task_finalize.c
+  task/kaapi_task_preempt.c
   task/kaapi_fmt_register.c
   task/kaapi_fmt_taskregister.c
   task/kaapi_fmt_structregister.c
@@ -120,6 +124,8 @@ add_library (xkaapi-static STATIC
   machine/mt/kaapi_mt_selfprocessor.c
   machine/mt/kaapi_mt_selfstack.c
   machine/mt/kaapi_mt_sched_emitsteal.c
+  machine/mt/kaapi_mt_request_reply.c
+  machine/mt/kaapi_mt_task_signal.c
   machine/mt/kaapi_mt_sched_advance.c
   machine/mt/kaapi_mt_context_alloc.c
   machine/mt/kaapi_mt_context_free.c

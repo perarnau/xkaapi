@@ -49,6 +49,7 @@ protected:
   static void static_thiefentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
   {
     Self_t* self_work = kaapi_task_getargst(task, Self_t);
+// std::cout << "Thief [" << self_work->_ibeg << "," << self_work->_iend << ")= " << self_work->_iend-self_work->_ibeg << std::endl;
     self_work->doit(task, stack);
   }
 
@@ -65,8 +66,8 @@ protected:
 
     /* threshold should be defined (...) */
     if (size < 512) goto reply_failed;
-    
     bloc = size / (1+count);
+//    std::cout << "Split [" << _ibeg << "," << _iend << ") in " << 1+count << ", bloc=" << bloc << std::endl;
     if (bloc < 128) { count = size/128 -1; bloc = 128; }
     while (count >0)
     {
@@ -148,12 +149,12 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
     else nano_iend = _ibeg + unit_size;
     
     /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
-    kaapi_task_setaction( task, &static_splitter );
+//    kaapi_task_setaction( task, &static_splitter );
     _obeg = std::transform( _ibeg, nano_iend, _obeg, _op );
 
     /* return from sequential computation: remove concurrent task action 
        in order to disable any steal at this point while I'm doing seq computation */
-    kaapi_task_getaction( task );
+//    kaapi_task_getaction( task );
 
     _ibeg += unit_size;
   }
@@ -180,15 +181,18 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
   
   TransformStruct<InputIterator, OutputIterator, UnaryOperator> work( begin, end, to_fill, op);
   kaapi_stack_t* stack = kaapi_self_stack();
-  
+  kaapi_frame_t frame;
+  kaapi_stack_save_frame(stack, &frame);
+
   /* will receive & process steal request */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
-  kaapi_task_init(stack, task, KAAPI_TASK_ADAPTIVE);
+  kaapi_task_initadaptive(stack, task, KAAPI_TASK_ADAPT_DEFAULT);
   kaapi_task_setargs(task, &work);
   kaapi_stack_pushtask(stack);
 
+  /* directly execute the task with forking it: correct because no data dependencies */
   work.doit(task, stack);
   
-  kaapi_stack_poptask(stack);
+  kaapi_stack_restore_frame(stack, &frame);
 }
 #endif

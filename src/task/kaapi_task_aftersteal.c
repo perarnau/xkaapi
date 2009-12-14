@@ -70,7 +70,7 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
     if (m == KAAPI_ACCESS_MODE_V)
     {
       /* TODO: improve management of shared data, if it is a big data or not... */
-      void* param_data __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)task->sp);
+      void* param_data __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
 //      printf("After steal task:%p, name: %s, value: %i\n", (void*)task, fmt->name, *(int*)param_data );
     }    
     else 
@@ -98,43 +98,6 @@ kaapi_assert_debug( access->data != access->version );
 //      printf("After steal task:%p, name: %s, R object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
     }
 #endif
-  }
-}
-
-
-/**
-*/
-void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
-{
-/*
-  printf("Thief end, @stack: 0x%p\n", stack);
-  fflush( stdout );
-*/
-  kaapi_task_t* task2sig;
-
-  task2sig = kaapi_task_getargst( task, kaapi_task_t);
-  KAAPI_LOG(100, "signaltask: 0x%p -> task2signal: 0x%p\n", (void*)task, (void*)task2sig );
-
-  if (kaapi_task_isadaptive(task2sig))
-  {
-    kaapi_taskadaptive_t* ta = task2sig->sp;
-    kaapi_assert_debug( ta !=0 );
-
-    /* flush in memory all pending write */  
-    kaapi_writemem_barrier();
-
-    KAAPI_ATOMIC_DECR( &ta->thievescount );
-  } 
-  else if (kaapi_task_issync(task2sig))
-  {
-    /* */
-    kaapi_task_setflags( task2sig, KAAPI_TASK_STICKY );
-
-    /* flush in memory all pending write */  
-    kaapi_writemem_barrier();
-
-    task2sig->body   = &kaapi_aftersteal_body;
-    KAAPI_LOG(100, "signaltask DFG task stolen: 0x%p\n", (void*)task2sig );
   }
 }
 

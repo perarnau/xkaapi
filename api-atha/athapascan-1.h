@@ -88,7 +88,16 @@ namespace a1 {
   /** link C++ format -> kaapi format */
   class Format : public kaapi_format_t {
   public:
-    Format( const std::string& name );
+    Format( 
+        const std::string& name,
+        size_t             size,
+        void             (*cstor)( void* dest),
+        void             (*dstor)( void* dest),
+        void             (*cstorcopy)( void* dest, const void* src),
+        void             (*copy)( void* dest, const void* src),
+        void             (*assign)( void* dest, const void* src),
+        void             (*print)( FILE* file, const void* src)
+    );
   };
 
   /** format for update function */
@@ -536,6 +545,12 @@ namespace a1 {
   public:
     static const Format* format;
     static const Format theformat;
+    static void cstor( void* dest) { new (dest) T; }
+    static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
+    static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
+    static void copy( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
+    static void assign( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
+    static void print( FILE* file, const void* src) { } 
   };
   
   template <class UpdateFnc>
@@ -560,7 +575,15 @@ namespace a1 {
   };
 
   template <class T>
-  const Format WrapperFormat<T>::theformat( typeid(T).name() );
+  const Format WrapperFormat<T>::theformat( typeid(T).name(),
+    sizeof(T),
+    WrapperFormat<T>::cstor, 
+    WrapperFormat<T>::dstor, 
+    WrapperFormat<T>::cstorcopy, 
+    WrapperFormat<T>::copy, 
+    WrapperFormat<T>::assign, 
+    WrapperFormat<T>::print 
+  );
   template <class T>
   const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
 
@@ -922,6 +945,7 @@ namespace a1 {
       kaapi_stack_t* stack = kaapi_self_stack();
       kaapi_task_t* clo = kaapi_stack_toptask( stack);
       kaapi_task_initdfg( stack, clo, &MainTask<TASK>::body, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
+      kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       MainTask<TASK>* arg = kaapi_task_getargst( clo, MainTask<TASK>);
       arg->argc = argc;
       arg->argv = argv;
@@ -1200,6 +1224,25 @@ namespace a1 {
   };
 }
 #endif
+
+
+/* ========================================================================= */
+/* Initialization / destruction functions
+ */
+namespace a1 {
+extern void _athakaapi_dummy(void*);
+extern void __attribute__ ((constructor)) atha_init(void);
+extern void __attribute__ ((destructor)) atha_fini(void);
+#if !defined(KAAPI_COMPILE_SOURCE)
+
+/** To force reference to kaapi_init.c in order to link against kaapi_init and kaapi_fini
+ */
+static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
+{
+  _athakaapi_dummy(NULL);
+}
+#endif
+}
 
 #ifndef ATHAPASCAN_NOT_IN_NAMESPACE
 using namespace a1;

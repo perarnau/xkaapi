@@ -39,15 +39,13 @@ struct Op2 {
 */
 int main(int argc, char** argv)
 {
-  int cpu, l, n, iter;
+  int l, n, iter;
   double t0, t1;
   double avrg = 0;
 
   if (argc >1) n = atoi(argv[1]);
   else n = 10000;
-  if (argc >2) cpu = atoi(argv[2]);
-  else cpu = 1;
-  if (argc >3) iter = atoi(argv[3]);
+  if (argc >2) iter = atoi(argv[2]);
   else iter = 1;
 
   t0 = kaapi_get_elapsedtime();
@@ -98,7 +96,7 @@ int main(int argc, char** argv)
   }
   if (isok) std::cout << "Verification ok" << std::endl;
 
-  std::cout << "Result-> cpu:" << cpu << "  size: " << n << "  time: " << avrg << std::endl;
+  std::cout << "Result-> size: " << n << "  time: " << avrg << std::endl;
 
   delete [] input;
   delete [] output;

@@ -1,0 +1,12 @@
+. factorize sequence worker iteration
+ . parametrize nano size
+. factorize splitter
+ . parametrize threshold, bloc size
+. reducer,  TODO_REDUCER
+. rename kaapi_utils:: into kastl_utils::
+. use self_work instead of putting in the handler,
+ so that reduce the size of the handler and when
+ possible, put it in kaapi_utils as well as the
+ splitter implementation that wont differ anymore
+. many algorithms fail, check when reducer available
+. TODO_LEAK

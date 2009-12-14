@@ -139,7 +139,7 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
     \param kpsr a pointer to a kaapi_steal_request_t
 */
 #define kaapi_request_init( pkr ) \
-  (pkr)->status = KAAPI_REQUEST_S_EMPTY; (pkr)->reply = 0; (pkr)->stack = 0
+  (pkr)->status = KAAPI_REQUEST_S_EMPTY; (pkr)->flag = 0; (pkr)->reply = 0; (pkr)->stack = 0
 
 
 #include "kaapi_machine.h"
@@ -159,8 +159,9 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;            /* number of physical cpus of the system */
   unsigned int             cpucount;               /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;               /* default method to select a victim */
-  unsigned int		   use_affinity;	   /* use cpu affinity */
-  unsigned int		   kid_to_cpu[KAAPI_MAX_PROCESSOR];
+  unsigned int		         use_affinity;           /* use cpu affinity */
+  unsigned int		         kid_to_cpu[KAAPI_MAX_PROCESSOR];
+  int                      display_perfcounter;    /* set to 1 iff KAAPI_DISPLAY_PERF */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t default_param;
@@ -286,6 +287,13 @@ extern int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
+/** \ingroup ADAPTIVE
+    Reply a value to a steal request. If retval is !=0 it means that the request
+    has successfully adapt to steal work. Else 0.
+    While it reply to a request, the function DO NOT decrement the request count on the stack.
+    This function is machine dependent.
+*/
+extern int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval );
 
 /** Destroy a request
     A posted request could not be destroyed until a reply has been made
@@ -360,8 +368,14 @@ typedef struct kaapi_tasksteal_arg_t {
 } kaapi_tasksteal_arg_t;
 
 
-/** Here: kaapi_atomic_t + functions ; termination detecting barrier, see mt_machine.h
+/** Args for tasksignal
 */
+typedef struct kaapi_tasksig_arg_t {
+  kaapi_task_t*                task2sig;          /* remote task to signal */
+  int                          flag;              /* type of signal */
+  kaapi_taskadaptive_t*        taskadapt;         /* pointer to the local adaptive task */
+  kaapi_taskadaptive_result_t* result;            /* pointer to the remote result from stealing adaptive task */
+} kaapi_tasksig_arg_t;
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/

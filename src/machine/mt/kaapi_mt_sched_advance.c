@@ -47,42 +47,66 @@
 
 int kaapi_advance ( void )
 {
+#if defined(KAAPI_CONCURRENT_WS)
+  /* high level function -> empty macro */
+  return 0;
+#else
   return kaapi_sched_advance( _kaapi_get_current_processor() );
+#endif
 }
+
 
 /*
 */
 int kaapi_sched_advance ( kaapi_processor_t* kproc )
 {
-  int i, replied = 0;
+  int i, replycount = 0;
 
-  kaapi_readmem_barrier();
+#if defined(KAAPI_CONCURRENT_WS)
+  /* lock until reply */
+  pthread_mutex_lock(&kproc->lock);
+#endif
+
   int count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  if (count ==0) return 0;
+  if (count ==0) 
+  {
+#if defined(KAAPI_CONCURRENT_WS)
+    /* unlock  */
+    pthread_mutex_unlock(&kproc->lock);
+#endif
+    return 0;
+  }
   
+  kaapi_readmem_barrier();
+
   /* process request on the kprocessor */
   kaapi_sched_stealprocessor( kproc );
-  
+
   /* reply to all other request: no work ... */
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
-    if ( kaapi_request_ok( &kproc->hlrequests.requests[i] ) )
+    if (kaapi_request_ok(&kproc->hlrequests.requests[i]))
     {
-      kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0 );
-      ++replied;
-      if (replied == count) break;
+      /* do not decrement the counter */
+      _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0 );
+      ++replycount;
+      if (replycount == count) break;
     }
   }
-  KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replied ); 
+
+#if defined(KAAPI_CONCURRENT_WS)
+  /* unlock  */
+  pthread_mutex_unlock(&kproc->lock);
+#endif
+  
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kproc->cnt_stealreq += replycount;
+#endif
+
+  KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replycount ); 
   kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
 
   return 0;
 }
 
-
-/* force link with kaapi_mt_init */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
 

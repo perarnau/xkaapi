@@ -51,24 +51,27 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 {
   kaapi_thread_context_t*  ctxt_top;
   int count =0;
-  int replycount = 0;  
+  int replycount = 0;
 
-  kaapi_readmem_barrier();
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   if (count ==0) return 0;
   
-  ctxt_top = KAAPI_STACK_TOP(&kproc->lsuspend);
+  ctxt_top = KAAPI_STACK_TOP( &kproc->lsuspend );
   while ((ctxt_top !=0) && (count >0))
   {
-    replycount += kaapi_sched_stealstack  ( ctxt_top );
-    kaapi_readmem_barrier();
+    replycount += kaapi_sched_stealstack( ctxt_top );
     count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
     ctxt_top = KAAPI_STACK_NEXT_FIELD( ctxt_top );
   }
   if ((count >0) && (kproc->ctxt !=0) && (kproc->issteal ==0))
   {
-    replycount += kaapi_sched_stealstack  ( kproc->ctxt );
+    replycount += kaapi_sched_stealstack( kproc->ctxt );
   }
   
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kproc->cnt_stealreq += replycount;
+  ++kproc->cnt_stealop;
+#endif
+
   return replycount;
 }
