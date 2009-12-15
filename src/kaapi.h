@@ -493,6 +493,8 @@ typedef struct kaapi_taskadaptive_t {
   struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
   struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t*/
   void*                               arg_from_victim; /* arg received by the victim in case of preemption */
+  void*				      result_data;     /* pointer on the result area */
+  size_t			      result_size;     /* result area size */
 } kaapi_taskadaptive_t;
 
 
@@ -511,6 +513,7 @@ typedef struct kaapi_taskadaptive_result_t {
   void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
   void*                               arg_from_thief;   /* result from a thief */
   struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
+  void*				      result_data;	/* contains result area */
 } kaapi_taskadaptive_result_t;
 
 #define KAAPI_RESULT_INSTACK   0x01
@@ -1180,7 +1183,8 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
     While it reply to a request, the function decrement the request count on the stack.
     This function is machine dependent.
 */
-extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval );
+extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval);
+extern int kaapi_request_reply2(kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval, size_t result_size);
 
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction
@@ -1209,7 +1213,11 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
     Wait the end of all the stealer of the adaptive task 
     TODO with preemption
 */
+
+typedef void (*kaapi_reducer_t)(void*, void*);
+
 extern int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task );
+extern int kaapi_finalize_steal2( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reducer_t reducer_fn, void* reducer_arg, const void* result_data); 
 
 
 

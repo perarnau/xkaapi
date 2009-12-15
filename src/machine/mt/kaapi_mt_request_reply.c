@@ -60,7 +60,8 @@
     The format of the task should give all necessary information about types used in the
     data stack.
 */
-int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+
+static int _common_kaapi_request_reply(kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval, size_t result_size)
 {
   kaapi_taskadaptive_result_t* result =0;
   kaapi_taskadaptive_t* ta =0;
@@ -70,7 +71,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
   
   flag = request->flag;
   request->flag = 0;
-  
+
   if (retval)
   {
     kaapi_assert_debug( stack != 0 );
@@ -115,7 +116,15 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         ta->head                = result;
         if (ta->tail == 0) 
           ta->tail = result;
-        
+
+	/* allocate a result area */
+	result->result_data = NULL;
+	if (result_size)
+	  {
+	    result->result_data = malloc(result_size);
+	    kaapi_assert(result->result_data != NULL);
+	  }
+
         /* update ta of the first replied task in the stack */
         kaapi_task_t* thief_task = thief_stack->pc;
         if (kaapi_task_isadaptive(thief_task))
@@ -124,6 +133,10 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
           thief_ta->mastertask           = ( ta->mastertask == 0 ? ta : ta->mastertask );
           thief_ta->result               = result;
           result->parg_from_victim       = &thief_ta->arg_from_victim;
+
+	  /* inform the thief where to put the result data */
+	  thief_ta->result_data = result->result_data;
+	  thief_ta->result_size = result_size;
         }
       }
       else flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
@@ -162,15 +175,44 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
   return 0;
 }
 
+int _kaapi_request_reply(kaapi_stack_t* stack, kaapi_task_t* task,
+			 kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval)
+{
+  return _common_kaapi_request_reply(stack, task, request, thief_stack, retval, 0);
+}
+
 /* This is the public function to be used with adaptive algorithm.
    Be carreful: to not use this function inside the library where reply count is accumulate
    before decremented to the counter.
 */
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+
+static inline
+int common_request_reply(kaapi_stack_t* stack, kaapi_task_t* task,
+			 kaapi_request_t* request, kaapi_stack_t* thief_stack,
+			 int retval, size_t result_size)
 {
   request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
-  _kaapi_request_reply( stack, task, request, thief_stack, retval);
+  _common_kaapi_request_reply(stack, task, request,
+			      thief_stack, retval,
+			      result_size);
   KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest ); 
   kaapi_assert_debug( *stack->hasrequest >= 0 );
   return 0;
+}
+
+
+int kaapi_request_reply(kaapi_stack_t* stack, kaapi_task_t* task,
+			kaapi_request_t* request, kaapi_stack_t* thief_stack,
+			int retval)
+{
+  return common_request_reply(stack, task, request, thief_stack, retval, 0);
+}
+
+
+int kaapi_request_reply2(kaapi_stack_t* stack, kaapi_task_t* task,
+			 kaapi_request_t* request, kaapi_stack_t* thief_stack,
+			 int retval, size_t result_size)
+{
+  return common_request_reply(stack, task, request, thief_stack,
+			      retval, result_size);
 }

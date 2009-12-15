@@ -44,10 +44,37 @@
 */
 #include "kaapi_impl.h"
 
-/** Return the number of splitted parts (here 1: only steal the whole task)
-    Currently assume independent task only.
-*/
-int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
+
+static void reduce_adaptive_results
+(
+ kaapi_taskadaptive_t* ta,
+ kaapi_reducer_t reducer,
+ void* arg
+)
+{
+  kaapi_taskadaptive_result_t* athief;
+
+  for (athief = ta->head; athief != NULL; athief = athief->next)
+  {
+#if 0
+    /* no need, thieves already terminated */
+    while (!athief->thief_term) ;
+#endif
+
+    if (athief->result_data != NULL)
+    {
+      /* invoke the reducer */
+      reducer(athief->result_data, arg);
+
+      /* result data was allocated with malloc */
+      free(athief->result_data);
+      athief->result_data = NULL;
+    }
+  }
+}
+
+
+static int finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reducer_t reducer_fn, void* reducer_arg, const void* result_data)
 {
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
@@ -64,7 +91,40 @@ int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
 #if defined(KAAPI_DEBUG)
       kaapi_assert_debug( ta->thievescount._counter == 0);
 #endif
+
+      if (reducer_fn != NULL)
+      {
+	/* reduce the thief results */
+	reduce_adaptive_results(ta, reducer_fn, reducer_arg);
+      }
     }
+
+    if (result_data != NULL)
+    {
+      /* copy thief result into the dedicated victim area.
+	 the area was allocated in kaapi_mt_request_reply.
+      */
+      kaapi_assert_debug(ta->result_data != NULL);
+      memcpy(ta->result_data, result_data, ta->result_size);
+    }
+
   }
+
   return 0;
+}
+
+
+/** Return the number of splitted parts (here 1: only steal the whole task)
+    Currently assume independent task only.
+*/
+
+int kaapi_finalize_steal(kaapi_stack_t* stack, kaapi_task_t* task)
+{
+  return finalize_steal(stack, task, NULL, NULL, NULL);
+}
+
+
+int kaapi_finalize_steal2(kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reducer_t reducer_fn, void* reducer_arg, const void* result_data)
+{
+  return finalize_steal(stack, task, reducer_fn, reducer_arg, result_data);
 }
