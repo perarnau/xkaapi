@@ -77,6 +77,12 @@ kaapi_format_t kaapi_float_format;
 kaapi_format_t kaapi_double_format;
 
 
+
+// autotools can prompt for this ...
+const char* get_kaapi_version()
+{ return XKAAPI_NAME"-"XKAAPI_VERSION; }
+
+
 /** cpuset related routines
  -- grammar
     cpu_set   : cpu_expr ( ',' cpu_expr ) *

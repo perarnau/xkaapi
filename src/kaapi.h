@@ -262,6 +262,7 @@ typedef enum {
   KAAPI_TASK_S_INIT  =        0x00, /* 0000 0000 */
   KAAPI_TASK_S_EXEC  =        0x10, /* 0001 0000 */
   KAAPI_TASK_S_STEAL =        0x20, /* 0010 0000 */
+  KAAPI_TASK_S_WAIT  =        0x30, /* 0011 0000 */
   KAAPI_TASK_S_TERM  =        0x40  /* 0100 0000 */
 } kaapi_task_state_t;
 #define KAAPI_TASK_MASK_READY 0x80  /* 1000 0000 */ /* 1 bit 0x80 ie bit 7 to encode if the task is marked as ready */

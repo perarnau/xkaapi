@@ -89,6 +89,10 @@ extern "C" {
         }\
       }
 
+
+// This is the new version on top of X-Kaapi
+extern const char* get_kaapi_version();
+
 /** Global hash table of all formats: body -> fmt
 */
 extern kaapi_format_t* kaapi_all_format_bybody[256];

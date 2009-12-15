@@ -143,8 +143,6 @@ int main(int argc, char** argv)
   kaapi_task_t* task;
   kaapi_stack_t* stack;
   
-  int err = 0;
-
   if (argc <2) {
     printf("Usage: %s <n>\n", argv[0]);
     exit(1);
