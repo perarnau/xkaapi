@@ -49,7 +49,7 @@
 
 // autotools can prompt for this ...
 const char* get_kaapi_version()
-{ return "X-KAAPI-0.1"; }
+{ return "@PACKAGE_NAME@-@PACKAGE_VERSION@"; }
 
 namespace a1 {
 

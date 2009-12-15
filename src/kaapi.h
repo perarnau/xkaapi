@@ -46,6 +46,21 @@
 #ifndef _KAAPI_H
 #define _KAAPI_H 1
 
+#ifndef _KAAPI_DISABLE_WARNINGS
+# if defined(__cplusplus)
+#  if !defined(__GXX_EXPERIMENTAL_CXX0X__)
+#   warning kaapi.h use variadic macros
+#   warning you should try a compiler supporting the upcomming C++ standard
+#   warning (with g++, try -std=c++0x or -std=gnu++0x for example)
+#  endif
+# else
+#  if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
+#   warning kaapi.h use C99 constructions (such as variadic macros)
+#   warning you should use a -std=c99 with gcc for example
+#  endif
+# endif
+#endif
+
 #include <stdint.h>
 #include <errno.h>
 #include "kaapi_error.h"
@@ -54,64 +69,11 @@
 extern "C" {
 #endif
 
-#if !defined(KAAPI_MAX_DATA_ALIGNMENT)
+#ifdef __GNUC__
+#  define KAAPI_MAX_DATA_ALIGNMENT (__alignof__(void*))
+#else
 #  define KAAPI_MAX_DATA_ALIGNMENT 8
 #endif
-
-#ifdef __linux__
-#  define KAAPI_USE_LINUX 1
-#  ifdef HAVE_UCONTEXT_H
-#    define KAAPI_USE_UCONTEXT
-#  elif HAVE_SETJMP_H
-#    error "Not implemented yet"
-#    define KAAPI_USE_SETJMP
-#  endif
-#endif
-
-#ifdef __APPLE__
-#  include <libkern/OSAtomic.h>
-#endif
-
-#if !defined(KAAPI_USE_APPLE)
-#  ifdef __APPLE__
-#    define KAAPI_USE_APPLE 1
-#    ifdef HAVE_SETJMP_H
-#      define KAAPI_USE_SETJMP
-#    elif HAVE_UCONTEXT_H
-#      define KAAPI_USE_UCONTEXT
-#    endif
-#  endif
-#endif
-
-#ifdef __i386__
-#  define KAAPI_USE_ARCH_X86 1
-#endif
-
-#ifdef __x86_64
-#  define KAAPI_USE_ARCH_X86_64 1
-#  define KAAPI_USE_ARCH_X86 1
-#endif
-
-#ifdef __ia64__
-#  define KAAPI_USE_ARCH_IA64 1
-#endif
-
-#ifdef __PPC
-#  define KAAPI_USE_ARCH_PPC 1
-#endif
-
-#ifdef __arm
-#  define KAAPI_USE_ARCH_ARM 1
-#endif
- 
-#ifdef __sparc__
-#  error "Unsupported Architecture"
-#endif
-
-#ifdef __mips
-#  error "Unsupported Architecture"
-#endif
-
 
 /* Kaapi name for stdint typedefs.
  */
@@ -130,7 +92,7 @@ typedef int64_t   kaapi_int64_t;
 /** Atomic type
 */
 typedef struct kaapi_atomic_t {
-#if defined(KAAPI_USE_APPLE)
+#if defined(__APPLE__)
   volatile kaapi_int32_t  _counter;
 #else
   volatile kaapi_uint32_t _counter;
@@ -140,7 +102,7 @@ typedef kaapi_atomic_t kaapi_atomic32_t;
 
 
 typedef struct kaapi_atomic64_t {
-#if defined(KAAPI_USE_APPLE)
+#if defined(__APPLE__)
   volatile kaapi_int64_t  _counter;
 #else
   volatile kaapi_uint64_t _counter;
@@ -866,11 +828,11 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 */
 static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
 {
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
 #if defined(KAAPI_DEBUG)
   task->format = 0;
 #endif
   task->flag   = flag | KAAPI_TASK_ADAPTIVE;
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
   kaapi_assert_debug( ta !=0 );
   ta->user_sp               = 0;
   ta->thievescount._counter = 0;
@@ -1100,8 +1062,8 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
 */
 static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task )
 {
-  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
   int retval = stack->haspreempt;
+  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
   return retval;
 }
 

@@ -46,7 +46,9 @@
 #ifndef _KAAPI_MT_MACHINE_H_
 #define _KAAPI_MT_MACHINE_H_ 1
 
-#include "kaapi_config.h"
+#ifndef _KAAPI_IMPL_H
+#  error This file must not be directly included. Use kaapi_impl.h instead
+#endif
 #include "kaapi_datastructure.h"
 #include <stdint.h>
 #include <pthread.h>
@@ -361,7 +363,7 @@ extern int kaapi_setup_topology(void);
 #  error "Please add support for atomic operations on this system/architecture"
 #endif /* GCC > 4.1 */
 
-#if (KAAPI_SIZEOF_VOIDP == 4)
+#if (SIZEOF_VOIDP == 4)
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
     KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, o, n )
 #else

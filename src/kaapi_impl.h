@@ -53,10 +53,64 @@ extern "C" {
 /* mark that we compile source of the library */
 #define KAAPI_COMPILE_SOURCE 1
 
-#include "kaapi_config.h"
+#include "config.h"
 #include "kaapi.h"
 #include "kaapi_error.h"
 #include <string.h>
+
+#ifdef __linux__
+#  define KAAPI_USE_LINUX 1
+#  ifdef HAVE_UCONTEXT_H
+#    define KAAPI_USE_UCONTEXT
+#  elif HAVE_SETJMP_H
+#    error "Not implemented yet"
+#    define KAAPI_USE_SETJMP
+#  endif
+#endif
+
+#ifdef __APPLE__
+#  include <libkern/OSAtomic.h>
+#endif
+
+#if !defined(KAAPI_USE_APPLE)
+#  ifdef __APPLE__
+#    define KAAPI_USE_APPLE 1
+#    ifdef HAVE_SETJMP_H
+#      define KAAPI_USE_SETJMP
+#    elif HAVE_UCONTEXT_H
+#      define KAAPI_USE_UCONTEXT
+#    endif
+#  endif
+#endif
+
+#ifdef __i386__
+#  define KAAPI_USE_ARCH_X86 1
+#endif
+
+#ifdef __x86_64
+#  define KAAPI_USE_ARCH_X86_64 1
+#  define KAAPI_USE_ARCH_X86 1
+#endif
+
+#ifdef __ia64__
+#  define KAAPI_USE_ARCH_IA64 1
+#endif
+
+#ifdef __PPC
+#  define KAAPI_USE_ARCH_PPC 1
+#endif
+
+#ifdef __arm
+#  define KAAPI_USE_ARCH_ARM 1
+#endif
+ 
+#ifdef __sparc__
+#  error "Unsupported Architecture"
+#endif
+
+#ifdef __mips
+#  error "Unsupported Architecture"
+#endif
 
 /** Highest level, more trace generated */
 #define KAAPI_LOG_LEVEL 10
