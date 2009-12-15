@@ -18,6 +18,15 @@
 #include "random.h"
 
 
+
+static inline double compute_abs_diff(double a, double b)
+{
+  if (a > b)
+    return a - b;
+  return b - a;
+}
+
+
 /** Return the number of seconds + micro seconds since the epoch
 */
 inline double gettime()
@@ -93,10 +102,11 @@ int main(int argc, char** argv)
    std::cout << "res = ln(2) = " << res << std::endl;
    double res_stl = std::accumulate(input, input+n, val_t(0));
    std::cout << "res_stl = ln(2) = " << res_stl << std::endl;
-   if(res-res_stl < 1e-6 || res_stl-res < 1e-6) std::cout << "Verification OK!!!!" << std::endl; 
-   else std::cout << "Verification failed, KO!!!!!!!!!!!!" << std::endl;
-   //std::cout.setf(0, std::ios_base::floatfield);
 
+   if (compute_abs_diff(res, res_stl) < 1e-6)
+     std::cout << "Verification OK!!!!" << std::endl;
+   else
+     std::cout << "Verification failed, KO!!!!!!!!!!!!" << std::endl;
 
   std::cout << "Result-> cpu:" << cpu << "  size: " << n << "  time: " << avrg << std::endl;
 
