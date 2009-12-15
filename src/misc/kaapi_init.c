@@ -410,7 +410,7 @@ extern int kaapi_setup_param( int argc, char** argv )
   if (getenv("KAAPI_CPUCOUNT") !=0)
   {
     default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
-    if (default_param.cpucount > default_param.syscpucount)
+    if (default_param.cpucount > KAAPI_MAX_PROCESSOR/* default_param.syscpucount*/)
       default_param.cpucount = default_param.syscpucount;
   }
 

@@ -64,10 +64,11 @@ set_target_properties(
 
 # Target Section :
 target_link_libraries (transform            ${XKAAPI_TEST_LINK_LIBS} m)
-target_link_libraries (marc_problem         ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (fiboseq              ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (fibo                 ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (fibo_adapt           ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (fibo_apiatha         ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (nqueens_apiatha      ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (branchbound_apiatha  ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (marc_problem         ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+

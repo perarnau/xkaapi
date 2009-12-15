@@ -255,7 +255,8 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
 int KaapiComponentManager::initialize(int& argc, char**& argv) throw()
 {
   static bool is_called = false; if (is_called) return 0; is_called = true;
-
+  if (argv ==0) return 0;
+  
   KaapiComponentManager::parseoption( argc, argv );
 
   int err;

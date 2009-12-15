@@ -49,13 +49,22 @@
 */
 int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
 {
-  if (kaapi_task_isadaptive(task))
+  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
     kaapi_taskadaptive_t* ta = task->sp;
     kaapi_assert_debug( ta !=0 );
-    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
-    kaapi_readmem_barrier();
-    kaapi_assert( ta->thievescount._counter == 0);
+
+    if (ta->mastertask ==0) /* I'm a master task, wait  */
+    {
+/*      double t0 = kaapi_get_elapsedtime();  */
+      while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
+/*      double t1 = kaapi_get_elapsedtime(); */
+/*      printf("[finalize] wait for:%es\n", t1 -t0); */
+      kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
+#if defined(KAAPI_DEBUG)
+      kaapi_assert_debug( ta->thievescount._counter == 0);
+#endif
+    }
   }
   return 0;
 }

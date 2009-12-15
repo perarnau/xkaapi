@@ -80,7 +80,7 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
       --waitparam;
       continue;
     }
-    kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)task->sp);
+    kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
     kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
     
     switch (state) {
@@ -172,6 +172,7 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
       fmt = beg->format = kaapi_format_resolvebybody( beg->body );
     else
       fmt = beg->format;
+
     if (fmt ==0) 
     {
       ++beg;
@@ -210,51 +211,6 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
 
 
 /** 
-L'algorithme actuel est un peu trop simple et ne marche que pour
-des tâches qui serait dans une même frame.
-Dans le cas de programme récursif, l'algorithme devrait être celui-ci:
-
-- 1/ identification de la frame courante:
-  - identification de la prochaine tâche retn
-  - les tâches après frame->save_sp et une autre tâche retn constitue
-  la frame de la tâche frame->save_pc.
-  Soit (ibeg,iend) les tâches: 1ère tâche forkée de la frame (et peut-être exécuté)
-  et iend la tâche retn qui marquent la frame.
-  
-- 2/ calcul des versions à lire:
-Input: (ibeg, iend), pc la tâche qui s'exécute ou va s'exécuter
-Output: version des gd de chacune des tâches qui pointe sur la version à lire (R ou RW) ou 0
-si l'accès n'est pas prêt.
-
-  - forall t in (ibeg,iend) trois cas:
-      (a) si t < pc: t est déjà exécutée ainsi que toute sa descendence. 
-      (b) si t == pc: 
-        (b.1) si sp > iend alors d'autres tâches ont été forkées
-        (b.2) sinon -> t est "en cours d'exécution".
-      (c) si t > pc et t < iend : les tâches ne sont pas encores exécutées.
-  - cas (a): forall gd in t => last_version : gd->data
-  - cas (b.1): 
-      - calcul des version de la frame (iend+1, ... next retn).
-  - cas (b.2):
-      - forall gd in t, mode(gd) = RW ou W ou CW alors last version =0
-  - cas (c): idem algo actuel
-
-- 3/ calcul d'une tâche à voler:
-  - parcours de la liste des tâches / ordre de la pile, prendre la première prête
-
-Remarque: il faudra bien identifier une tâche en cours d'exéc ou une tâche terminée.
-les cas (b.1) et (b.2) devront être unifié : en cours d'exécution == toute la descendance non encore
-exécutée.
-  - structure tâche:
-      - flags: 4 bits atributs, 3 bits processor types, -> 25 bits free !
-        - state: 2 bits: Init (0) -> Exec(1) -> Steal (2) -> Term (3).
-      
-        - attributs: 4 bits, codage DFG task ou Adaptative. Mais be both: yes
-        - format: local number : < 256 -> 8bits + table
-        - processor type: 4 bits
-      - body (void*) -> 32 ou 64 bits
-      - sp (void*) -> 32 / 64 bits ou alors offset 32 bits ou moins ???? si offset / sp_data debut de frame ou data de la pile
-      
 */
 int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 {
@@ -325,11 +281,23 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
       replycount += retval;
       kaapi_assert_debug( count >=0 );
     }
-    else if (kaapi_task_isadaptive(task_bot)) {
-      int retval = (*task_bot->splitter)(stack, task_bot, count, stack->requests);
-      count -= retval;
-      replycount += retval;
-      kaapi_assert_debug( count >=0 );
+    else if (kaapi_task_isadaptive(task_bot)) 
+    {
+      if (state == KAAPI_TASK_S_INIT) /* steal the entire task (always better !) */
+      {
+        kaapi_assert( task_bot->format !=0 ); /* else we cannot steal it */
+        int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
+        count -= retval;
+        replycount += retval;
+        kaapi_assert_debug( count >=0 );
+      }
+      else if ((state == KAAPI_TASK_S_EXEC) && (task_bot->splitter !=0)) /* partial steal */
+      {
+        int retval = (*task_bot->splitter)(stack, task_bot, count, stack->requests);
+        count -= retval;
+        replycount += retval;
+        kaapi_assert_debug( count >=0 );
+      }
     }
     
     ++task_bot;
