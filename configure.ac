@@ -78,6 +78,18 @@ ACX_LIB_NEW_PRG([ATHA1PROGS])
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 
+AC_ARG_ENABLE([target],[AS_HELP_STRING([--enable-target=<target>], [mt[default],...])],[],
+  [enable_target=default]
+)
+AS_CASE([$enable_target],
+  [mt|default], [dnl
+    AC_MSG_NOTICE([Using target MT])
+    KAAPI_MACHINE=mt
+  ],[dnl
+    AC_MSG_ERROR([Unknown target '$enable_target'. Aborting.])
+  ])
+AC_SUBST([KAAPI_MACHINE])
+AM_CONDITIONAL([KAAPI_MACHINE_MT],[test x"$KAAPI_MACHINE" = x"mt"])
 
 dnl ----------------------------------------------------------------
 dnl Checks for header files.
