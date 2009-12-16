@@ -25,9 +25,9 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
   {
     if (Self_t::fmid != 0) return &Self_t::format;
     
-    static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];
-    static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];
-    static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
     static Self_t a;
     M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F$1>::xkaapi_mode;
     ',`', `')
