@@ -21,7 +21,7 @@ add_definitions ( "-Wall -pedantic -g -DKAAPI_DEBUG -std=c99")
 
 # Set up compilation of the hardware depend part
 if (KAAPI_TARGET_MT)
-  execute_process( 
+  execute_process(
     COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/machine/mt/kaapi_mt_machine.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_machine.h
   )
 #elif (KAAPI_TARGET_GPU)

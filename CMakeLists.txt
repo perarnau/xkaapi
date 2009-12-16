@@ -93,7 +93,6 @@ if(NOT CPACK_GENERATOR)
   cpack_optional_append(CPACK_GENERATOR  CPACK_BINARY_TBZ2         TBZ2)
   cpack_optional_append(CPACK_GENERATOR  CPACK_BINARY_TZ           TZ)
   cpack_optional_append(CPACK_GENERATOR  CPACK_BINARY_ZIP          ZIP)
-  
 endif(NOT CPACK_GENERATOR)
 
 set (CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.txt")
@@ -126,4 +125,4 @@ include (CPack)
 add_subdirectory (src)
 add_subdirectory (api-atha)
 add_subdirectory (examples)
-add_subdirectory (kastl.wip)
+#add_subdirectory (kastl.wip)

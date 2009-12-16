@@ -66,7 +66,7 @@ protected:
     SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
     atha::logfile() << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
     w->doit(task, stack);
-    kaapi_finalize_steal( stack, task );
+    kaapi_finalize_steal( stack, task, 0, 0 );
     atha::logfile() << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
   }
 
@@ -129,7 +129,7 @@ protected:
 //        atha::logfile() << "I'm split work to a the thief" << std::endl;
 
         /* reply ok (1) to the request */
-        kaapi_request_reply( stack, self_task, &request[i], thief_stack, 1);
+        kaapi_request_reply( stack, self_task, &request[i], thief_stack, 0, 1);
         --count; ++reply_count;
       }
       ++i;
@@ -282,7 +282,7 @@ void marc_problem ( double* begin, double* end )
      After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
      could be read (...)
   */
-  kaapi_finalize_steal( stack, task );
+  kaapi_finalize_steal( stack, task, 0, 0 );
   
   /* Sync
   */
