@@ -494,6 +494,8 @@ typedef struct kaapi_taskadaptive_t {
   struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
   struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t*/
   void*                               arg_from_victim; /* arg received by the victim in case of preemption */
+  void*                               local_result_data;     /* points on kaapi_taskadaptive_result_t*/
+  int                                 local_result_size;     /* */
 } kaapi_taskadaptive_t;
 
 
@@ -512,7 +514,9 @@ typedef struct kaapi_taskadaptive_result_t {
   void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
   void*                               arg_from_thief;   /* result from a thief */
   struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
-} kaapi_taskadaptive_result_t;
+  int                                 size_data;        /* size of data */
+  double                              data[1];
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 
 #define KAAPI_RESULT_INSTACK   0x01
 #define KAAPI_RESULT_INHEAP    0x02
@@ -1196,8 +1200,34 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
     has successfully adapt to steal work. Else 0.
     While it reply to a request, the function decrement the request count on the stack.
     This function is machine dependent.
+    \param stack INOUT the stack of the victim that has been used to replies to the request
+    \param task IN the stolen task
+    \param request INOUT data structure used to replied by the thief
+    \param thief_stack INOUT the output stack that will be used to the thief
+    \param size IN the size in bytes to store the result
+    \param retval IN the result of the steal request 0 iff failed else success
 */
-extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval );
+extern int kaapi_request_reply( 
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request, 
+    kaapi_stack_t* thief_stack, 
+    int size, int retval 
+);
+    
+/** \ingroup ADAPTIVE
+    Specialization to reply failed to a processor
+    \param stack INOUT the stack of the victim that has been used to replies to the request
+    \param task IN the stolen task
+    \param request INOUT data structure used to replied by the thief
+*/
+static inline int kaapi_request_reply_failed(     
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request
+)
+{ return kaapi_request_reply( stack, task, request, 0, 0, 0 ); }
+
 
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction
@@ -1225,14 +1255,17 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
 /** \ingroup ADAPTIVE
     Push the task that, on execution will wait the terminaison of the previous 
     adaptive task 'task' and all the thieves.
+    The local result, if not null will be pushed after the end of execution of all local tasks.
 */
-static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
+static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task, void* retval, int size )
 {
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
+    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
+    ta->local_result_data = retval;
+    ta->local_result_size = size;
     kaapi_task_t* task = kaapi_stack_toptask(stack);
-    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, task->sp, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
-
+    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
   }
   return 0;
 }

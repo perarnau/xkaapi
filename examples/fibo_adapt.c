@@ -34,7 +34,7 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
         arg->n   = n-1;
         arg->res = &result2;
         kaapi_stack_pushtask( thief_stack );
-        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 1 );
+        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 0, 1 );
         return 1;
       }
     }
@@ -65,7 +65,8 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
     fibo( stack, n-2, &result2 );
     task->splitter = 0;
     
-    if (kaapi_finalize_steal(stack, task) == 0) 
+    /** FAUX: à recoder avec prempt_next_thief PREMPTION */
+    if (kaapi_finalize_steal(stack, task, 0, 0) == 0) 
     {
       /* no theft task, do it in sequential on n-1 */
       fibo(stack, n-1, &result1 );
