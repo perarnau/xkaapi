@@ -13,7 +13,7 @@
 #include <math.h>
 #include <assert.h>
 #include <algorithm>
-#include "transform.h"
+#include "transform_adapt.h"
 #include "random.h"
 
 /* basic op

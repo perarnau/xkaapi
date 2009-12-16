@@ -198,7 +198,7 @@ AC_CONFIG_FILES([
 
 	xkaapi.pc
 	atha1.pc
-	api-atha/atha_kaapi.cpp
+	src/misc/kaapi_init.c
 ])
 AC_OUTPUT
 

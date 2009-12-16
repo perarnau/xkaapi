@@ -64,11 +64,13 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
   orig_task_args   = kaapi_task_getargs(arg->origin_task);
   copy_task_args   = arg->copy_arg;
 
+#if 0
 if (fmt->fmtid == 96)
 {
   kaapi_stack_print( 0, stack );
   abort();
 }
+#endif
 
   countparam = fmt->count_params;
   for (i=0; i<countparam; ++i)
@@ -86,27 +88,6 @@ if (fmt->fmtid == 96)
     /* read write has shared the origin access (and data) */
   }
 }
-
-/* function pointer cannot (portably) be casted into void*
-   See http://coding.derkeiler.com/Archive/C_CPP/comp.lang.c/2006-06/msg03064.html
-   As it is only for debug int KAAPI_LOG, we use a union to take at least a part of the
-   function pointer
-   If "sizeof(func_ptr) == sizeof(obj_ptr)", then this code is equivalent to a cast
-   If "sizeof(func_ptr) < sizeof(obj_ptr)", then undefined part in return value are fields with 0
-   If "sizeof(func_ptr) > sizeof(obj_ptr)", then the return value is missing some info
- */
-
-union pfunc2void {
-  void (*pf)(void);
-  void *ptr;
-};
- 
-#define pfunc2void(pfun) __extension__ ({ \
-	union pfunc2void u; \
-	u.ptr=0; \
-	u.pf=(void(*)(void))(pfun); \
-	u.ptr; \
-})
 
 /**
 */
@@ -214,7 +195,13 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   KAAPI_LOG(100, "tasksteal: 0x%p end exec, next task: 0x%p bodysignal: 0x%p, pc: 0x%p\n", 
       (void*)task, 
       (void*)(task+1), 
-      pfunc2void((task+1)->body), 
+/*
+function pointer cannot (portably) be casted into void*
+See http://coding.derkeiler.com/Archive/C_CPP/comp.lang.c/2006-06/msg03064.html
+As it is only for debug int KAAPI_LOG, we do not care if the function pointer
+is not fully printed (ie interger overflow in the first cast)
+*/
+      (void*)(uintptr_t)(task+1)->body, 
       (void*)stack->pc );
 }
 

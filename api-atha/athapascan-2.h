@@ -1,6 +1,6 @@
 /* KAAPI public interface */
 /*
-** athapascan-1.h
+** athapascan-2.h
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -43,17 +43,18 @@
 ** terms.
 ** 
 */
-#ifndef _ATHAPASCAN_1_H_H
-#define _ATHAPASCAN_1_H_H
+#ifndef _ATHAPASCAN_2_H_H
+#define _ATHAPASCAN_2_H_H
 
 #include "kaapi.h"
 #include "atha_error.h"
+#include "atha_timer.h"
 #include <vector>
 #include <typeinfo>
 
 namespace atha{}
 
-namespace a1 {
+namespace atha {
 
  /* take a constant... should be adjusted */
  enum { STACK_ALLOC_THRESHOLD = KAAPI_MAX_DATA_ALIGNMENT };  
@@ -107,9 +108,11 @@ namespace a1 {
     );
   };
   
+  /* for next networking part */
   class IStream;
   class OStream;
   class ODotStream;
+  class SyncGuard;
   
   using atha::Exception;
   using atha::RuntimeError;
@@ -182,137 +185,11 @@ namespace a1 {
 
   // --------------------------------------------------------------------
   template<class T>
-  class Shared {
-  public:
-    typedef T value_type;
-    operator kaapi_access_t&() { return _gd; }
-    ~Shared ( ) 
-    {
-#if 0 /* optimize destructor: do nothing for basic type */
-      destroy( stack );
-#endif
-    }
-    
-#if 0
-    Shared ( value_type* data ) 
-    {
-      Thread* thread = System::get_current_thread(); 
-      if (!data) 
-      {
-        data = 0;
-        if (sizeof(value_type) <= STACK_ALLOC_THRESHOLD) 
-        {
-            attr.set_instack();
-            data = new (thread->allocate(sizeof(value_type))) value_type;
-        } else {
-            attr.set_inheap();
-#if defined(KAAPI_USE_NUMA)
-              //WARN LAURENT : hack to sched
-              data = new value_type;
-#endif
-          }
-      }
-      else
-      {
-          attr.set_inheap();
-      }
-      initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
-    }
-#endif
-
-#if 0
-    Shared ( const SetStack& toto, value_type* data = 0) 
-    {
-      Thread* thread = System::get_current_thread(); 
-      DFG::GlobalData::Attribut attr;
-      attr.clear();
-      attr.set_instack();
-      if(!data) data = new (thread->allocate(sizeof(value_type))) value_type;
-      initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
-    }
-#endif
-
-#if 0
-    Shared ( const SetHeap& toto, value_type* data = 0) 
-    {
-      Thread* thread = System::get_current_thread(); 
-      DFG::GlobalData::Attribut attr;
-      attr.clear();
-      attr.set_inheap();
-      if(!data) data =
-#if defined(KAAPI_USE_NUMA)
-      //WARN LAURENT
-        new value_type;
-#else
-        0;
-#endif
-      initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
-    }
-#endif
-
-    Shared()
-    {
-      kaapi_stack_t* stack = kaapi_self_stack();
-      _gd = kaapi_stack_pushshareddata(stack,sizeof(T));
-      new (_gd.data) T;
-    }
-
-    Shared(const value_type& value )
-    {
-      kaapi_stack_t* stack = kaapi_self_stack();
-      _gd = kaapi_stack_pushshareddata(stack,sizeof(T));
-      new (_gd.data) T(value);
-    }
-
-#if 0
-    Shared(const SetStack& toto, const T& value )
-    {
-      Thread* thread = System::get_current_thread(); 
-      _gd  = new (SharedAllocator, thread) T(value)
-      _gd._attr = 0;
-    }
-#endif
-
-#if 0
-    Shared(const SetHeap& toto, const T& value )
-    {
-      _gd.data  = new (SharedAllocator) T(value)
-      _gd._attr = 1;
-    }
-#endif
-
-    Shared(const Shared<value_type>& t) 
-     : _gd(t._gd)
-    {
-      t._gd.data    = 0;
-      t._gd.version = 0;
-    }
-
-    Shared<T>& operator=(const Shared<value_type>& t) 
-    {
-      _gd = t._gd;
-      t._gd.data    = 0;
-      t._gd.version = 0;
-      return *this;
-    }
-
-  private:
-    kaapi_access_t _gd;
-  };
-  
-
-  // --------------------------------------------------------------------
-  template<class T>
   class Shared_rp {
   public:
     typedef T value_type;
-
-    operator kaapi_access_t&() { return _gd; }
-    Shared_rp( const kaapi_access_t& a )
-     : _gd( a )
-    { }
-  protected:
-    kaapi_access_t _gd;
+    Shared_rp( const value_type* p ) : ptr(p) {}
+    const value_type* ptr;
   };
 
 
@@ -321,16 +198,8 @@ namespace a1 {
   class Shared_r  {
   public:
     typedef T value_type;
-
-    operator kaapi_access_t&() { return _gd; }
-    Shared_r( const kaapi_access_t& a )
-     : _gd( a )
-    { }
-
-    const value_type& read() const 
-    { return *(T*)_gd.data; }
-  protected:
-    kaapi_access_t _gd;
+    Shared_r( const value_type* p ) : ptr(p) {}
+    const value_type* ptr;
   };
 
 
@@ -339,13 +208,8 @@ namespace a1 {
   class Shared_wp  {
   public:
     typedef T value_type;
-
-    operator kaapi_access_t&() { return _gd; }
-    Shared_wp( const kaapi_access_t& a )
-     : _gd( a )
-    { }
-  protected:
-    kaapi_access_t _gd;
+    Shared_wp( value_type* p ) : ptr(p) {}
+    value_type* ptr;
   };
 
 
@@ -354,25 +218,8 @@ namespace a1 {
   class Shared_w {
   public:
     typedef T value_type;
-
-    operator kaapi_access_t&() { return _gd; }
-    Shared_w( const kaapi_access_t& a )
-     : _gd( a )
-    { }
-
-    void write( const value_type& new_value )
-    { 
-      T* data = (T*)_gd.data;
-      *data = new_value;
-    }
-
-    void write(value_type* new_value) 
-    { 
-      T* data = (T*)_gd.data;
-      *data = *new_value;
-    }
-  protected:
-    kaapi_access_t _gd;
+    Shared_w( value_type* p ) : ptr(p) {}
+    value_type* ptr;
   };
 
 
@@ -381,13 +228,8 @@ namespace a1 {
   class Shared_rpwp {
   public:
     typedef T value_type;
-
-    operator kaapi_access_t&() { return _gd; }
-    Shared_rpwp( const kaapi_access_t& a )
-     : _gd( a )
-    { }
-  protected:
-    kaapi_access_t _gd;
+    Shared_rpwp( value_type* p ) : ptr(p) {}
+    value_type* ptr;
   };
 
 
@@ -396,16 +238,8 @@ namespace a1 {
   class Shared_rw {
   public:
     typedef T value_type;
-
-    operator kaapi_access_t&() { return _gd; }
-    Shared_rw( const kaapi_access_t& a )
-     : _gd( a )
-    { }
-
-    value_type& access() const
-    { return *(T*)_gd.data; }
-  protected:
-    kaapi_access_t _gd;
+    Shared_rw( value_type* p ) : ptr(p) {}
+    value_type* ptr;
   };
 
 
@@ -422,12 +256,8 @@ namespace a1 {
   class Shared_cwp {
   public:    
     typedef T value_type;
-
-    Shared_cwp(const kaapi_access_t& a )
-     : _gd( a )
-    { }
-  protected:
-    kaapi_access_t _gd;
+    Shared_cwp( value_type* p ) : ptr(p) {}
+    value_type* ptr;
   };
 
 
@@ -435,33 +265,9 @@ namespace a1 {
   class Shared_cw {
   public:
     typedef T value_type;
-
-    Shared_cw( const kaapi_access_t& a )
-     : _gd( a )
-    { }
-
-    void cumul( const value_type& value )
-    {
-      static OpCumul op;
-      op( *(T*)_gd.data, value );
-    }
-
-    void cumul( value_type* value )
-    { 
-      op( *(T*)_gd.data, *value );
-      delete value;
-    }
-  protected:
-    kaapi_access_t _gd;
+    Shared_cw( value_type* p ) : ptr(p) {}
+    value_type* ptr;
   };
-
-
-
-  // -------------------------------------------------------------------- VECTOR of Shared
-//\TODO
-
-
-  // -------------------------------------------------------------------- VECTOR of Shared
 
 
   // --------------------------------------------------------------------  
@@ -656,52 +462,38 @@ namespace a1 {
   const kaapi_format_t* Trait_ParamClosure<const T&>::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared<T> > {
-    typedef kaapi_access_t type_inclosure;
-    enum { isshared = true };
-    static const kaapi_format_t* format;
-    typedef ACCESS_MODE_RPWP mode;
-    enum { modepostponed = false };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
-  };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared<T> >::format = WrapperFormat<T>::format;
-
-  template<class T>
   struct Trait_ParamClosure<Shared_rw<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef Shared_rw<T>   value_type;
+    typedef T* type_inclosure;
+    typedef Shared_rw<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
     typedef ACCESS_MODE_RW mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_rw<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_r<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef Shared_r<T>    value_type;
+    typedef const T*    type_inclosure;
+    typedef Shared_r<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
     typedef ACCESS_MODE_R mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_r<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_w<T> > {
-    typedef kaapi_access_t type_inclosure;
+    typedef T* type_inclosure;
     typedef Shared_w<T>    value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -709,14 +501,14 @@ namespace a1 {
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_w<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cw<T, F> > {
-    typedef kaapi_access_t type_inclosure;
+    typedef T* type_inclosure;
     typedef Shared_cw<T,F> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -724,14 +516,14 @@ namespace a1 {
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T, class F>
   const kaapi_format_t* Trait_ParamClosure<Shared_cw<T,F> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rpwp<T> > {
-    typedef kaapi_access_t type_inclosure;
+    typedef T* type_inclosure;
     typedef Shared_rpwp<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -739,14 +531,14 @@ namespace a1 {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_rpwp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rp<T> > {
-    typedef kaapi_access_t type_inclosure;
+    typedef T* type_inclosure;
     typedef Shared_rp<T>   value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -754,14 +546,14 @@ namespace a1 {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_rp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_wp<T> > {
-    typedef kaapi_access_t type_inclosure;
+    typedef T* type_inclosure;
     typedef Shared_wp<T>   value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -769,14 +561,14 @@ namespace a1 {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_wp<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cwp<T, F> > {
-    typedef kaapi_access_t  type_inclosure;
+    typedef T* type_inclosure;
     typedef Shared_cwp<T,F> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -784,70 +576,28 @@ namespace a1 {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
   };
   template<class T, class F>
   const kaapi_format_t* Trait_ParamClosure<Shared_cwp<T,F> >::format = WrapperFormat<T>::format;
 
 
   // --------------------------------------------------------------------
-  /* for better understand error message */
   template<int i>
-  struct ARG {};
+  struct Task {};
 
-  /* for better understand error message */
+}
+
+  // --------------------------------------------------------------------
   template<class TASK>
-  struct FOR_TASKNAME {};
-  
-  template<class ME, class MF, class PARAM, class TASK>
-  struct PassingRule {
-//    static void IS_COMPATIBLE();
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_V, ACCESS_MODE_V, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_CW, ACCESS_MODE_CW, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_R, ACCESS_MODE_R, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_RW, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_W, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_CW, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_RPWP, ACCESS_MODE_R, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_RP, ACCESS_MODE_R, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_WP, ACCESS_MODE_W, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK> /* this rule is only valid for terminal fork... */
-  struct PassingRule<ACCESS_MODE_W, ACCESS_MODE_W, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
-  struct PassingRule<ACCESS_MODE_CWP, ACCESS_MODE_CW, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
+  struct TaskBodyCPU : public TASK {};
 
+  // --------------------------------------------------------------------
+  template<class TASK>
+  struct TaskBodyGPU : public TASK {};
+
+
+namespace atha {
 
   // --------------------------------------------------------------------
   template<class TASK>
@@ -859,7 +609,7 @@ namespace a1 {
     }
   };
 
-#include "athapascan_closure.h"
+#include "atha_api2_clo.h"
 
   // --------------------------------------------------------------------
   /* New API: thread.Fork<TASK>([ATTR])( args )
@@ -883,7 +633,7 @@ namespace a1 {
         kaapi_stack_pushtask( _stack);    
       }
 
-#include "athapascan_fork.h"
+#include "atha_api2_fork.h"
 
     protected:
       kaapi_stack_t* _stack;
@@ -898,6 +648,7 @@ namespace a1 {
 
   protected:
     kaapi_stack_t _stack;
+    friend class SyncGuard;
   };
 
   
@@ -959,165 +710,10 @@ namespace a1 {
 
 
   // --------------------------------------------------------------------
-  /** MonotonicBound
-      FncUpdate should have signature int operator()(T& result, const X& value)
-  */
-  class KaapiMonotonicBoundRep;
-  class KaapiMonotonicBound {
-  private:
-    void*                   _data;
-    const kaapi_format_t*   _fmtdata;
-    const kaapi_format_t*   _fmtupdate;
-    KaapiMonotonicBoundRep* _reserved;
-  protected:
-    void initialize( const std::string& name, void* value, const kaapi_format_t* format, const kaapi_format_t* fupdate);
-    void terminate();
-    void acquire();
-    void release();
-    const void* read() const;
-    void update(const void* value, const kaapi_format_t* fmtvaue);
-  };
-  
-  template<class T, class FncUpdate>
-  class MonotonicBound : protected KaapiMonotonicBound {
-    /* should not be used */
-    MonotonicBound<T,FncUpdate>& operator=(const MonotonicBound<T,FncUpdate>& gv) 
-    { return *this; }
-    MonotonicBound(const MonotonicBound<T,FncUpdate>& a)
-    { }
-
-  public:
-    typedef T type_val;
-
-    ~MonotonicBound( ) 
-    {
-    }
-    
-    MonotonicBound() 
-     : KaapiMonotonicBound()
-    {
-    }
-
-    void initialize( const std::string& name, T* value = 0) 
-    {
-      if (value ==0) value = new T;
-      KaapiMonotonicBound::initialize( name, value, WrapperFormat<T>::format, WrapperFormatUpdateFnc<FncUpdate>::format );
-    }
-
-    void terminate()
-    {
-      KaapiMonotonicBound::terminate();
-    }
-
-    void acquire()
-    { KaapiMonotonicBound::acquire(); }    
-
-    void release()
-    { KaapiMonotonicBound::release(); }
-    
-    const T& read() const
-    {
-      const void* data = KaapiMonotonicBound::read();
-      return *(const T*)data;
-    }
-    
-    template<class Y>
-    void update( const Y& value )
-    {
-       KaapiMonotonicBound::update( &value, &WrapperFormat<Y>::theformat );
-    }
-  };
-
-
-#if 0
-  // --------------------------------------------------------------------
-  template<class T>
-  class SingleAssignment {
-  public:
-    inline static const Util::Format* get_data_format()
-    { return &Util::WrapperFormat<T>::theformat; }
-
-  public:
-    typedef T type_val;
-
-    ~SingleAssignment( ) 
-    {
-    }
-    
-    SingleAssignment() 
-    {
-    }
-
-    SingleAssignment(const SingleAssignment<T>& a)
-      : _gv(a._gv)
-    {
-    }
-
-    void initialize( const std::string& name ) 
-    {
-      _gv.initialize( name );
-    }
-
-    void initialize( const std::string& name, T* value) 
-    {
-      _gv.initialize( name );
-      if (value == 0) value = new T;
-      _gv.bind( value, get_data_format() );
-    }
-    
-    void terminate()
-    {
-      _gv.terminate();
-    }
-
-    SingleAssignment<T>& operator=(const SingleAssignment<T>& gv) 
-    {
-      _gv = gv._gv;
-      return *this;
-    }
-
-    const T& read() const
-    {
-      const void* data = _gv.read();
-      return *(const T*)data;
-    }
-    
-    template<class Y>
-    void write( const Y& value )
-    {
-       _gv.write( new Y(value), &Util::WrapperFormat<Y>::theformat );
-    }
-
-    template<class Y>
-    void write( Y* value )
-    {
-       _gv.write( value, &Util::WrapperFormat<Y>::theformat );
-    }
-  public:
-    NetData::SingleAssignment _gv;
-  };
-#endif
-
-} // namespace a1
-
-
-// ---------------------------------------------------------------------------------
-/** Compatibility with old C++ Kaapi
-*/
-#include "atha_timer.h"
-
-namespace  atha {
   extern std::ostream& logfile();
-}
 
-namespace Util {
-  using atha::WallTimer;
-  using atha::CpuTimer;
-  using atha::SysTimer;
-  using atha::HighResTimer;
-  using atha::logfile;
-  
-  /* old names */
+
+  // --------------------------------------------------------------------
   typedef kaapi_uint8_t  ka_uint8_t;
   typedef kaapi_uint16_t ka_uint16_t;
   typedef kaapi_uint32_t ka_uint32_t;
@@ -1127,84 +723,9 @@ namespace Util {
   typedef kaapi_int16_t  ka_int16_t;
   typedef kaapi_int32_t  ka_int32_t;
   typedef kaapi_int64_t  ka_int64_t;
+
   
-  using a1::WrapperFormat;
-}
-
-// ---------------------------------------------------------------------------------
-/* empty stream function: not in this version */
-namespace a1 {
-  struct IOStream_base {
-    enum Mode { 
-      IA,   /* immediate access of value */ 
-      DA,   /* differed access of value */
-      DAC   /* differed access of possibly cyclic pointer value */
-    };
-  };
-  struct OStream: public IOStream_base {
-    /** */
-    void write( const Format* const f, Mode m, const void* data, size_t count ) {}
-  };
-  struct IStream: public IOStream_base {
-    /** */
-    void read( const Format* const f, Mode m, void* const data, size_t count ) {}
-  };
-  
-  inline OStream& operator<< (OStream& m, const bool v )  { return m; }
-  inline OStream& operator<< (OStream& m, const char v )  { return m; }
-  inline OStream& operator<< (OStream& m, const signed char v )  { return m; }
-  inline OStream& operator<< (OStream& m, const unsigned char v )  { return m; }
-  inline OStream& operator<< (OStream& m, const short v )  { return m; }
-  inline OStream& operator<< (OStream& m, const unsigned short v )  { return m; }
-  inline OStream& operator<< (OStream& m, const int v )  { return m; }
-  inline OStream& operator<< (OStream& m, const unsigned int v )  { return m; }
-  inline OStream& operator<< (OStream& m, const long v )  { return m; }
-  inline OStream& operator<< (OStream& m, const unsigned long v )  { return m; }
-  inline OStream& operator<< (OStream& m, const long long v )  { return m; }
-  inline OStream& operator<< (OStream& m, const unsigned long long v )  { return m; }
-  inline OStream& operator<< (OStream& m, const float v )  { return m; }
-  inline OStream& operator<< (OStream& m, const double v )  { return m; }
-  inline OStream& operator<< (OStream& m, const long double v )  { return m; }
-  inline OStream& operator<< (OStream& m, const std::string& v )  { return m; }
-//TODO  inline OStream& operator<< (OStream& o, const Pointer& s)  { return m; }
-  template<class T>
-  inline OStream& operator<< (OStream& m, const std::vector<T>& v )  { return m; }
-  template<class Fst, class Snd>
-  inline  OStream& operator<< (OStream& m, const std::pair<Fst,Snd>& p )  { return m; }
-
-
-  /* -----------------------------------
-  */
-  #ifdef MACOSX_EDITOR
-  #pragma mark ----- Input
-  #endif
-  inline IStream& operator>> (IStream& m, bool& v )  { return m; }
-  inline IStream& operator>> (IStream& m, char& v )  { return m; }
-  inline IStream& operator>> (IStream& m, signed char& v )  { return m; }
-  inline IStream& operator>> (IStream& m, unsigned char& v )  { return m; }
-  inline IStream& operator>> (IStream& m, short& v )  { return m; }
-  inline IStream& operator>> (IStream& m, unsigned short& v )  { return m; }
-  inline IStream& operator>> (IStream& m, int& v )  { return m; }
-  inline IStream& operator>> (IStream& m, unsigned int& v )  { return m; }
-  inline IStream& operator>> (IStream& m, long& v )  { return m; }
-  inline IStream& operator>> (IStream& m, unsigned long& v )  { return m; }
-  inline IStream& operator>> (IStream& m, long long& v )  { return m; }
-  inline IStream& operator>> (IStream& m, unsigned long long& v )  { return m; }
-  inline IStream& operator>> (IStream& m, float& v )  { return m; }
-  inline IStream& operator>> (IStream& m, double& v )  { return m; }
-  inline IStream& operator>> (IStream& m, long double& v )  { return m; }
-  inline IStream& operator>> (IStream& m, std::string& v )  { return m; }
-//TODO  inline IStream& operator>> (IStream& i, Pointer& s)  { return m; }
-  template<class T> inline IStream& operator>> (IStream& m, std::vector<T>& v )  { return m; }
-  template<class Fst, class Snd> inline  IStream& operator>> (IStream& m, std::pair<Fst,Snd>& p )  { return m; }
-
-//  template<class T> inline void WrapperFormat<T>::write( OStream& s, const void* val, size_t count ) const{ }
-//  template<class T> inline void WrapperFormat<T>::read ( IStream& s, void* val, size_t count ) const {}
-}
-
-// ---------------------------------------------------------------------------------
-#if 0 // \TODO
-namespace a1 {
+  // --------------------------------------------------------------------
   class SyncGuard {
       Thread       *_thread;
       kaapi_frame_t _frame;
@@ -1215,23 +736,23 @@ namespace a1 {
       }
       ~SyncGuard()
       {
-        // \TODO: only execution in one frame and sub frame but not on top frame
+        kaapi_sched_sync( &_thread->_stack );
         kaapi_stack_restore_frame( &_thread->_stack, &_frame );
       }
   };
-}
-#endif
+} // namespace atha
+
 
 
 /* ========================================================================= */
 /* Initialization / destruction functions
  */
-namespace a1 {
+namespace atha {
 extern void _athakaapi_dummy(void*);
 extern void __attribute__ ((constructor)) atha_init(void);
 extern void __attribute__ ((destructor)) atha_fini(void);
-#if !defined(KAAPI_COMPILE_SOURCE)
 
+#if !defined(KAAPI_COMPILE_SOURCE)
 /** To force reference to kaapi_init.c in order to link against kaapi_init and kaapi_fini
  */
 static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
@@ -1241,8 +762,8 @@ static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
 #endif
 }
 
-#ifndef ATHAPASCAN_NOT_IN_NAMESPACE
-using namespace a1;
+#ifndef ATHAPASCAN2_NOT_IN_NAMESPACE
+using namespace atha;
 #endif
 
 #endif

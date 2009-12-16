@@ -105,6 +105,7 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
           --waitparam;
       break;
 
+      case KAAPI_TASK_S_WAIT:
       case KAAPI_TASK_S_EXEC:
       case KAAPI_TASK_S_STEAL:
       {

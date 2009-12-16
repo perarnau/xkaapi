@@ -29,6 +29,7 @@ libatha1_la_SOURCES=\
 	atha_parser.cpp \
 	atha_monotonic.cpp \
 	atha_kaapi.cpp \
+	atha_kaapi2.cpp \
 	atha_array.h \
 	atha_component.h \
 	atha_debug.h \
@@ -39,6 +40,8 @@ libatha1_la_SOURCES=\
 	athapascan-1.h \
 	athapascan_closure.h \
 	athapascan_fork.h \
+	atha_api2_clo.h \
+	atha_api2_fork.h \
 	atha_properties.h \
 	atha_stream.h \
 	atha_timer.h \
@@ -49,7 +52,9 @@ libatha1_la_SOURCES=\
 
 include_HEADERS=\
 	athapascan-1 \
-	athapascan-1.h
+	athapascan-1.h \
+	athapascan-2 \
+	athapascan-2.h
 
 check_PROGRAMS=atha1_check_header atha1_check_header_strict
 check_headers_SRC=\

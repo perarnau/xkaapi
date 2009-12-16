@@ -47,10 +47,6 @@
 #include "atha_component.h"
 
 
-// autotools can prompt for this ...
-const char* get_kaapi_version()
-{ return "X-KAAPI-0.1"; }
-
 namespace a1 {
 
 #if 0 /*TODO*/
@@ -257,15 +253,7 @@ int System::getRank()
 // --------------------------------------------------------------------
 void Sync()
 {
-  int err;
-redo:
-  kaapi_stack_t* stack = kaapi_self_stack();
-  err = kaapi_stack_execall(stack);
-  if (err == EWOULDBLOCK)
-  {
-    kaapi_sched_suspend( kaapi_get_current_processor() );
-    goto redo;
-  }
+  kaapi_sched_sync( kaapi_self_stack() );
 }
 
 

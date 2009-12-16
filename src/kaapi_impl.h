@@ -91,6 +91,10 @@ extern "C" {
         }\
       }
 
+
+// This is the new version on top of X-Kaapi
+extern const char* get_kaapi_version();
+
 /** Global hash table of all formats: body -> fmt
 */
 extern kaapi_format_t* kaapi_all_format_bybody[256];
@@ -295,7 +299,13 @@ extern int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int
     While it reply to a request, the function DO NOT decrement the request count on the stack.
     This function is machine dependent.
 */
-extern int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval );
+extern int _kaapi_request_reply( 
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request, 
+    kaapi_stack_t* thief_stack, 
+    int size, int retval 
+);
 
 /** Destroy a request
     A posted request could not be destroyed until a reply has been made

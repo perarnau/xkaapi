@@ -41,22 +41,12 @@
 ** terms.
 ** 
 */
-#include "athapascan-1"
+#include "athapascan-2"
 #include "kaapi_impl.h"
 #include "atha_parser.h"
 #include "atha_component.h"
 
-
-// autotools can prompt for this ...
-const char* get_kaapi_version()
-{ return "@PACKAGE_NAME@-@PACKAGE_VERSION@"; }
-
-namespace a1 {
-
-#if 0 /*TODO*/
-const SpaceCollectionFormat SpaceCollectionFormat::theformat;
-const SpaceCollectionFormat* const SpaceCollectionFormat::format  = &SpaceCollectionFormat::theformat;
-#endif
+namespace atha {
 
 SetStickyC SetSticky;
 SetStack SetInStack;
@@ -257,15 +247,7 @@ int System::getRank()
 // --------------------------------------------------------------------
 void Sync()
 {
-  int err;
-redo:
-  kaapi_stack_t* stack = kaapi_self_stack();
-  err = kaapi_stack_execall(stack);
-  if (err == EWOULDBLOCK)
-  {
-    kaapi_sched_suspend( kaapi_get_current_processor() );
-    goto redo;
-  }
+  kaapi_sched_sync( kaapi_self_stack() );
 }
 
 

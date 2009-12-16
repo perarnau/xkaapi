@@ -15,9 +15,10 @@ check_PROGRAMS= \
 	fibo                  \
 	fibo_adapt            \
 	fibo_apiatha          \
+	fibo_apiatha2         \
 	nqueens_apiatha       \
 	branchbound_apiatha   \
-	transform     	      \
+	transform_adapt	      \
 	marc_problem          
 
 TESTS=
@@ -26,9 +27,10 @@ fiboseq_SOURCES=fiboseq.c
 fibo_SOURCES=fibo.c
 fibo_adapt_SOURCES=fibo_adapt.c
 fibo_apiatha_SOURCES=fibo_apiatha.cpp
+fibo_apiatha2_SOURCES=fibo_apiatha2.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
-transform_SOURCES=transform.h transform.cpp random.cpp random.h
+transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
 marc_problem_SOURCES=marc_problem.cpp
 
 fiboseq_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS) -DFIBOCODE -DMAINCODE
@@ -51,6 +53,11 @@ fibo_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
 fibo_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 fibo_apiatha_LDADD   =$(AM_LDADD)    $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
 
+fibo_apiatha2_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
+fibo_apiatha2_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+fibo_apiatha2_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+fibo_apiatha2_LDADD   =$(AM_LDADD)    $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
 nqueens_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
 nqueens_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
 nqueens_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
@@ -61,10 +68,10 @@ branchbound_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c+
 branchbound_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 branchbound_apiatha_LDADD   =$(AM_LDADD)    $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
 
-transform_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
-transform_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
-transform_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
-transform_LDADD   =$(AM_LDADD)    $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+transform_adapt_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
+transform_adapt_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+transform_adapt_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+transform_adapt_LDADD   =$(AM_LDADD)    $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
 
 marc_problem_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
 marc_problem_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
