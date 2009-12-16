@@ -60,7 +60,7 @@
     The format of the task should give all necessary information about types used in the
     data stack.
 */
-int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int size, int retval )
 {
   kaapi_taskadaptive_result_t* result =0;
   kaapi_taskadaptive_t* ta =0;
@@ -94,14 +94,18 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
 
       if ( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required preemption */
       {
+#if 0
         if (stack->pc == task) { /* current running task */
           result = (kaapi_taskadaptive_result_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_taskadaptive_result_t));
           result->flag = KAAPI_RESULT_INSTACK;
         }
         else
+#endif
         {
-          result = (kaapi_taskadaptive_result_t*)malloc(sizeof(kaapi_taskadaptive_result_t));
+          size_t sizestruct = (sizeof(kaapi_taskadaptive_result_t)+size+KAAPI_CACHE_LINE-1)/KAAPI_CACHE_LINE;
+          result = (kaapi_taskadaptive_result_t*)malloc(sizestruct);
           result->flag = KAAPI_RESULT_INHEAP;
+          result->size_data = sizestruct - offsetof(kaapi_taskadaptive_result_t, data);
         }
         result->signal          = &thief_stack->haspreempt;
         result->req_preempt     = 0;
@@ -166,10 +170,10 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
    Be carreful: to not use this function inside the library where reply count is accumulate
    before decremented to the counter.
 */
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int size, int retval )
 {
   request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
-  _kaapi_request_reply( stack, task, request, thief_stack, retval);
+  _kaapi_request_reply( stack, task, request, thief_stack, size, retval);
   KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest ); 
   kaapi_assert_debug( *stack->hasrequest >= 0 );
   return 0;
