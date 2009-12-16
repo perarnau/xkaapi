@@ -182,66 +182,171 @@ namespace atha {
   class SetStickyC{};
   extern SetStickyC SetSticky;
 
+  template<typename M, class T>
+  class pointer;
 
-  // --------------------------------------------------------------------
   template<class T>
-  class Shared_rp {
-  public:
-    typedef T value_type;
-    Shared_rp( const value_type* p ) : ptr(p) {}
-    const value_type* ptr;
+  struct base_pointer {
+    base_pointer() : ptr(0) {}
+    base_pointer( T* p ) : ptr(p) {}
+    T* ptr;
   };
 
+  template<class T>
+  class value_ref {
+  public:
+    value_ref(T* p) : ptr(p){}
+    void operator=( const T& value ) { *ptr = value; }
+  protected:
+    T* ptr;
+  };
+  
+  
+  /* typenames for access mode */
+  struct ACCESS_MODE_V {};
+  struct ACCESS_MODE_R {};
+  struct ACCESS_MODE_W {};
+  struct ACCESS_MODE_RW {};
+  struct ACCESS_MODE_CW {};
+  struct ACCESS_MODE_RP {};
+  struct ACCESS_MODE_WP {};
+  struct ACCESS_MODE_RPWP {};
+  struct ACCESS_MODE_CWP {};
 
+  // --------------------------------------------------------------------
+  /* Information notes.
+     - Shared types are defined to be used in signature definition of
+     tasks. They should not be used to declare variables or used as effective
+     parameters during a fork.
+     - Effective parameters may be pointer (T* or const T*) but no verification
+     of the parameter passing rules between effective parameters and formal parameters 
+     could be done.
+     - In order to profit of the capability to detect at compilation type correctness
+     with respect to the parameter passing rules, one must used type pointer types.
+     They are closed to the Shared types of the previous API but may be used like
+     normal pointer and deferencing of pointers.
+  */
   // --------------------------------------------------------------------
   template<class T>
-  class Shared_r  {
+  class pointer<ACCESS_MODE_RPWP,T> : public base_pointer<T> {
   public:
-    typedef T value_type;
-    Shared_r( const value_type* p ) : ptr(p) {}
-    const value_type* ptr;
+    pointer() : base_pointer<T>() {}
+    pointer( T* ptr ) : base_pointer<T>(ptr) {}
   };
 
-
-  // --------------------------------------------------------------------
-  template<class T>
-  class Shared_wp  {
-  public:
-    typedef T value_type;
-    Shared_wp( value_type* p ) : ptr(p) {}
-    value_type* ptr;
-  };
-
-
-  // --------------------------------------------------------------------
-  template<class T>
-  class Shared_w {
-  public:
-    typedef T value_type;
-    Shared_w( value_type* p ) : ptr(p) {}
-    value_type* ptr;
-  };
-
-
-  // --------------------------------------------------------------------
   template<class T>
   class Shared_rpwp {
   public:
     typedef T value_type;
     Shared_rpwp( value_type* p ) : ptr(p) {}
+    Shared_rpwp( const pointer<ACCESS_MODE_RPWP,T>& p ) : ptr(p.ptr) {}
     value_type* ptr;
   };
 
+  // --------------------------------------------------------------------
+  template<class T>
+  class pointer<ACCESS_MODE_RP,T> : public base_pointer<T> {
+  public:
+    pointer() : base_pointer<T>() {}
+    pointer( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+  };
+
+  template<class T>
+  class Shared_rp {
+    Shared_rp() {}
+  public:
+    typedef T value_type;
+    Shared_rp( const value_type* p ) : ptr(p) {}
+    Shared_rp( const pointer<ACCESS_MODE_RP,T>& p ) : ptr(p.ptr) {}
+    const value_type* ptr;
+  };
+  
 
   // --------------------------------------------------------------------
+  template<class T>
+  class pointer<ACCESS_MODE_R,T> : public base_pointer<T> {
+  public:
+    pointer() : base_pointer<T>() {}
+    pointer( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer( const pointer<ACCESS_MODE_RP,T>& ptr ) : base_pointer<T>(ptr) {}
+    operator const T* () const { return base_pointer<T>::ptr; }
+    const T& operator*() const { return *base_pointer<T>::ptr; }
+    const T& operator[](int i) const { return base_pointer<T>::ptr[i]; }
+    const T& operator[](unsigned int i) const { return base_pointer<T>::ptr[i]; }
+  };
+
+  template<class T>
+  class Shared_r  {
+  public:
+    typedef T value_type;
+    Shared_r( const value_type* p ) : ptr(p) {}
+    Shared_r( const pointer<ACCESS_MODE_R,T>& p ) : ptr(p.ptr) {}
+    const value_type* ptr;
+  };
+
+  // --------------------------------------------------------------------
+  template<class T>
+  class pointer<ACCESS_MODE_WP,T> : public base_pointer<T> {
+  public:
+    pointer() : base_pointer<T>() {}
+    pointer( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+  };
+
+  template<class T>
+  class Shared_wp  {
+  public:
+    typedef T value_type;
+    Shared_wp( value_type* p ) : ptr(p) {}
+    Shared_wp( const pointer<ACCESS_MODE_WP,T>& p ) : ptr(p.ptr) {}
+    value_type* ptr;
+  };
+
+  // --------------------------------------------------------------------
+  template<class T>
+  class pointer<ACCESS_MODE_W,T> : public base_pointer<T> {
+  public:
+    pointer() : base_pointer<T>() {}
+    pointer( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer( const pointer<ACCESS_MODE_WP,T>& ptr ) : base_pointer<T>(ptr) {}
+    operator T* () { return base_pointer<T>::ptr; }
+    value_ref<T> operator*() { return value_ref<T>(base_pointer<T>::ptr); }
+    value_ref<T> operator[](int i) { return value_ref<T>(base_pointer<T>::ptr+i); }
+    value_ref<T> operator[](unsigned int i) { return value_ref<T>(base_pointer<T>::ptr+i); }
+  };
+
+  template<class T>
+  class Shared_w {
+  public:
+    typedef T value_type;
+    Shared_w( value_type* p ) : ptr(p) {}
+    Shared_w( const pointer<ACCESS_MODE_W,T>& p ) : ptr(p.ptr) {}
+    value_type* ptr;
+  };
+
+  // --------------------------------------------------------------------
+  template<class T>
+  class pointer<ACCESS_MODE_RW,T> : public base_pointer<T> {
+  public:
+    pointer() : base_pointer<T>() {}
+    pointer( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+    T& operator*() { return *base_pointer<T>::ptr; }
+    T& operator[](int i) { return base_pointer<T>::ptr[i]; }
+    T& operator[](unsigned int i) { return base_pointer<T>::ptr[i]; }
+  };
+  
   template<class T>
   class Shared_rw {
   public:
     typedef T value_type;
     Shared_rw( value_type* p ) : ptr(p) {}
+    Shared_rw( const pointer<ACCESS_MODE_RW,T>& p ) : ptr(p.ptr) {}
     value_type* ptr;
   };
-
 
   // --------------------------------------------------------------------
   template<class T>
@@ -420,17 +525,6 @@ namespace atha {
   const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::format = &WrapperFormatUpdateFnc<UpdateFnc>::theformat;
 
   // --------------------------------------------------------------------
-  /* typenames for access mode */
-  struct ACCESS_MODE_V {};
-  struct ACCESS_MODE_R {};
-  struct ACCESS_MODE_W {};
-  struct ACCESS_MODE_RW {};
-  struct ACCESS_MODE_CW {};
-  struct ACCESS_MODE_RP {};
-  struct ACCESS_MODE_WP {};
-  struct ACCESS_MODE_RPWP {};
-  struct ACCESS_MODE_CWP {};
-
   template<class T>
   struct Trait_ParamClosure {
     typedef T type_inclosure;
@@ -463,7 +557,7 @@ namespace atha {
 
   template<class T>
   struct Trait_ParamClosure<Shared_rw<T> > {
-    typedef T* type_inclosure;
+    typedef pointer<ACCESS_MODE_RW,T> type_inclosure;
     typedef Shared_rw<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -471,14 +565,14 @@ namespace atha {
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_rw<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_r<T> > {
-    typedef const T*    type_inclosure;
+    typedef pointer<ACCESS_MODE_R,T> type_inclosure;
     typedef Shared_r<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -486,14 +580,14 @@ namespace atha {
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_r<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_w<T> > {
-    typedef T* type_inclosure;
+    typedef pointer<ACCESS_MODE_W,T> type_inclosure;
     typedef Shared_w<T>    value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -501,14 +595,14 @@ namespace atha {
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_w<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cw<T, F> > {
-    typedef T* type_inclosure;
+    typedef pointer<ACCESS_MODE_RW,T> type_inclosure;
     typedef Shared_cw<T,F> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -516,14 +610,14 @@ namespace atha {
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T, class F>
   const kaapi_format_t* Trait_ParamClosure<Shared_cw<T,F> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rpwp<T> > {
-    typedef T* type_inclosure;
+    typedef pointer<ACCESS_MODE_RPWP,T> type_inclosure;
     typedef Shared_rpwp<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -531,14 +625,14 @@ namespace atha {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_rpwp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rp<T> > {
-    typedef T* type_inclosure;
+    typedef pointer<ACCESS_MODE_RP,T> type_inclosure;
     typedef Shared_rp<T>   value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -546,14 +640,14 @@ namespace atha {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_rp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_wp<T> > {
-    typedef T* type_inclosure;
+    typedef pointer<ACCESS_MODE_WP,T> type_inclosure;
     typedef Shared_wp<T>   value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -561,14 +655,14 @@ namespace atha {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T>
   const kaapi_format_t* Trait_ParamClosure<Shared_wp<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cwp<T, F> > {
-    typedef T* type_inclosure;
+    typedef pointer<ACCESS_MODE_RPWP,T> type_inclosure;
     typedef Shared_cwp<T,F> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -576,7 +670,7 @@ namespace atha {
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
     template<class S>
-    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)&e; }
+    static void link( type_inclosure& f, const S& e) { f = (type_inclosure)e; }
   };
   template<class T, class F>
   const kaapi_format_t* Trait_ParamClosure<Shared_cwp<T,F> >::format = WrapperFormat<T>::format;
@@ -586,9 +680,11 @@ namespace atha {
   template<int i>
   struct Task {};
 
-}
+} // end of namespace atha: following definition sould be in global namespace in 
+  // order to be specialized easily
 
   // --------------------------------------------------------------------
+  
   template<class TASK>
   struct TaskBodyCPU : public TASK {};
 
