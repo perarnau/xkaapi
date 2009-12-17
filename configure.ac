@@ -194,6 +194,7 @@ AC_CONFIG_FILES([
 	Makefile
 	api-atha/Makefile
 	examples/Makefile
+	kastl.wip/Makefile
 	src/Makefile
 
 	xkaapi.pc

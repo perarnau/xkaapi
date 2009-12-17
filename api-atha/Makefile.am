@@ -9,7 +9,7 @@
 # Add the binary directory for generated headers :
 #include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_DIR}/../src) 
 
-AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(srcdir)/../src -I$(srcdir)/../src/machine/$(KAAPI_MACHINE)
+AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(top_srcdir)/src/machine/$(KAAPI_MACHINE)
 
 lib_LTLIBRARIES=libatha1.la
 
