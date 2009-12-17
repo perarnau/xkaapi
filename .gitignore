@@ -19,6 +19,7 @@ Makefile.in
 /libtool
 
 # Files from compilation
+TAGS
 *.o
 *.lo
 *.a
