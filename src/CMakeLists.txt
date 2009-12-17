@@ -253,6 +253,12 @@ check_type_size ("cpu_set_t" CPU_SET_T)
 ## CPU_SET_T END ##
 ###################
 
+if (KAAPI_CAS_WS)
+  set (KAAPI_CONCURRENT_WS "1")
+  message("++ Configure with concurrent workstealing algorithm")
+else (KAAPI_CAS_WS)
+  message("++ Configure with cooperative workstealing algorithm")
+endif (KAAPI_CAS_WS)
 
 ##################################
 ## CONFIGURE KAAPI_CONFIG.H BEG ##
