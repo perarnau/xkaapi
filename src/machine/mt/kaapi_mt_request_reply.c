@@ -87,7 +87,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
   
   flag = request->flag;
   request->flag = 0;
-  
+
   if (retval)
   {
     kaapi_assert_debug( stack != 0 );
@@ -131,12 +131,12 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         result->parg_from_victim= 0;
         result->rhead           = 0;
         result->rtail           = 0;
-        /* link ressult for preemption / finalization */
+        /* link result for preemption / finalization */
         result->next            = ta->head;
         ta->head                = result;
         if (ta->tail == 0) 
           ta->tail = result;
-        
+
         /* update ta of the first replied task in the stack */
         kaapi_task_t* thief_task = thief_stack->pc;
         if (kaapi_task_isadaptive(thief_task))

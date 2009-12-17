@@ -477,7 +477,6 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* rhead;             /* next result of the next thief */
   struct kaapi_taskadaptive_result_t* rtail;             /* next result of the next thief */
   void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
-//  void*                               arg_from_thief;   /* result from a thief */
   struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
   int                                 size_data;        /* size of data */
   double                              data[1];

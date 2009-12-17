@@ -45,6 +45,7 @@
 */
 #include "kaapi_impl.h"
 #include <stdlib.h>
+#include <inttypes.h> 
 
 /*
 */
@@ -155,11 +156,20 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   /* */
   if (default_param.display_perfcounter)
   {
+
+#ifndef PRIu64
+# if (sizeof(long) == sizeof(uint64_t))
+#  define PRIu64 "lu"
+# else
+#  define PRIu64 "llu"
+# endif
+#endif
+
     printf("----- Performances counter\n");
-    printf("Total number of tasks executed    : %llu\n", cnt_tasks);
-    printf("Total number of steal OK requests : %llu\n", cnt_stealreqok);
-    printf("Total number of steal BAD requests: %llu\n", cnt_stealreq-cnt_stealreqok);
-    printf("Total number of steal operations  : %llu\n", cnt_stealop);
+    printf("Total number of tasks executed    : %" PRIu64 "\n", cnt_tasks);
+    printf("Total number of steal OK requests : %" PRIu64 "\n", cnt_stealreqok);
+    printf("Total number of steal BAD requests: %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
+    printf("Total number of steal operations  : %" PRIu64 "\n", cnt_stealop);
     printf("Total idle time                   : %e\n", t_idle);
     printf("Average steal request aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
