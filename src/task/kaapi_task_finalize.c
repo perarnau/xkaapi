@@ -70,15 +70,5 @@ void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
     {
       memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
     }
-
-    if (result_data != NULL)
-    {
-      /* copy thief result into the dedicated victim area.
-	 the area was allocated in kaapi_mt_request_reply.
-      */
-      kaapi_assert_debug(ta->result_data != NULL);
-      memcpy(ta->result_data, result_data, ta->result_size);
-    }
-
   }
 }

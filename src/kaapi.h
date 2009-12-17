@@ -499,8 +499,6 @@ typedef struct kaapi_taskadaptive_t {
   int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
   void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
   void*                               arg_from_victim; /* arg received by the victim in case of preemption */
-  void*				                        result_data;     /* pointer on the result area */
-  size_t			                        result_size;     /* result area size */
 } kaapi_taskadaptive_t;
 
 
