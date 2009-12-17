@@ -97,7 +97,7 @@ protected:
         kaapi_stack_pushtask( thief_stack );
 
         /* reply ok (1) to the request */
-        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 1 );
+        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 0, 1 );
         --count; 
         ++reply_count;
       }
@@ -114,7 +114,7 @@ reply_failed:
       if (kaapi_request_ok(&request[i]))
       {
         /* reply failed (=last 0 in parameter) to the request */
-        kaapi_request_reply( victim_stack, task, &request[i], 0, 0 );
+        kaapi_request_reply_failed( victim_stack, task, &request[i] );
         --count; 
         ++reply_count;
       }
@@ -168,7 +168,7 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
   }
 
   /* definition of the finalization point where all stolen work a interrupt and collected */
-  kaapi_finalize_steal( stack, task );
+  kaapi_finalize_steal( stack, task, 0, 0 );
 
   /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function */  
 }

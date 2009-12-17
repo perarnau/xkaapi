@@ -3,11 +3,19 @@
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<KAAPI_NUMBER_PARAMS> {
-  ifelse(KAAPI_NUMBER_PARAMS,0,`',`template<M4_PARAM(`class E$1', `', `, ')>')
+  ifelse(KAAPI_NUMBER_PARAMS,0,`',`template<M4_PARAM(`class F$1', `', `, ')>')
   struct Signature { 
-    M4_PARAM(`typedef E$1 effective$1_t;
+    M4_PARAM(`typedef F$1 formal$1_t;
     ', `', `')
-    void operator() ( M4_PARAM(`E$1', `', `, ') ) {}
+    M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inclosure type_inclosure_F$1;
+    ', ` ', `')
+    void operator() ( M4_PARAM(`formal$1_t', `', `, ') ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack ifelse(KAAPI_NUMBER_PARAMS,0,`',`,') M4_PARAM(`formal$1_t f$1', `', `, ') )
+    {
+      operator()( M4_PARAM(`f$1', `', `, ') );
+    }
+#endif
   };
 };
 

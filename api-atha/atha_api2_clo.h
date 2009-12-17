@@ -25,7 +25,14 @@ struct Task<0> {
   
   struct Signature { 
     
+    
     void operator() (  ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack   )
+    {
+      operator()(  );
+    }
+#endif
   };
 };
 
@@ -119,11 +126,19 @@ kaapi_format_id_t KaapiTaskArg0<TASK >::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<1> {
-  template<class E1>
+  template<class F1>
   struct Signature { 
-    typedef E1 effective1_t;
+    typedef F1 formal1_t;
     
-    void operator() ( E1 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    
+    void operator() ( formal1_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1 )
+    {
+      operator()( f1 );
+    }
+#endif
   };
 };
 
@@ -222,12 +237,21 @@ kaapi_format_id_t KaapiTaskArg1<TASK ,F1>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<2> {
-  template<class E1, class E2>
+  template<class F1, class F2>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
     
-    void operator() ( E1, E2 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    
+    void operator() ( formal1_t, formal2_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2 )
+    {
+      operator()( f1, f2 );
+    }
+#endif
   };
 };
 
@@ -331,13 +355,23 @@ kaapi_format_id_t KaapiTaskArg2<TASK ,F1 ,F2>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<3> {
-  template<class E1, class E2, class E3>
+  template<class F1, class F2, class F3>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
     
-    void operator() ( E1, E2, E3 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3 )
+    {
+      operator()( f1, f2, f3 );
+    }
+#endif
   };
 };
 
@@ -446,14 +480,25 @@ kaapi_format_id_t KaapiTaskArg3<TASK ,F1 ,F2 ,F3>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<4> {
-  template<class E1, class E2, class E3, class E4>
+  template<class F1, class F2, class F3, class F4>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
-    typedef E4 effective4_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
     
-    void operator() ( E1, E2, E3, E4 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4 )
+    {
+      operator()( f1, f2, f3, f4 );
+    }
+#endif
   };
 };
 
@@ -567,15 +612,27 @@ kaapi_format_id_t KaapiTaskArg4<TASK ,F1 ,F2 ,F3 ,F4>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<5> {
-  template<class E1, class E2, class E3, class E4, class E5>
+  template<class F1, class F2, class F3, class F4, class F5>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
-    typedef E4 effective4_t;
-    typedef E5 effective5_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
     
-    void operator() ( E1, E2, E3, E4, E5 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5 )
+    {
+      operator()( f1, f2, f3, f4, f5 );
+    }
+#endif
   };
 };
 
@@ -694,16 +751,29 @@ kaapi_format_id_t KaapiTaskArg5<TASK ,F1 ,F2 ,F3 ,F4 ,F5>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<6> {
-  template<class E1, class E2, class E3, class E4, class E5, class E6>
+  template<class F1, class F2, class F3, class F4, class F5, class F6>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
-    typedef E4 effective4_t;
-    typedef E5 effective5_t;
-    typedef E6 effective6_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
     
-    void operator() ( E1, E2, E3, E4, E5, E6 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6 );
+    }
+#endif
   };
 };
 
@@ -827,17 +897,31 @@ kaapi_format_id_t KaapiTaskArg6<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<7> {
-  template<class E1, class E2, class E3, class E4, class E5, class E6, class E7>
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
-    typedef E4 effective4_t;
-    typedef E5 effective5_t;
-    typedef E6 effective6_t;
-    typedef E7 effective7_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
     
-    void operator() ( E1, E2, E3, E4, E5, E6, E7 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7 );
+    }
+#endif
   };
 };
 
@@ -966,18 +1050,33 @@ kaapi_format_id_t KaapiTaskArg7<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<8> {
-  template<class E1, class E2, class E3, class E4, class E5, class E6, class E7, class E8>
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7, class F8>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
-    typedef E4 effective4_t;
-    typedef E5 effective5_t;
-    typedef E6 effective6_t;
-    typedef E7 effective7_t;
-    typedef E8 effective8_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
+    typedef F8 formal8_t;
     
-    void operator() ( E1, E2, E3, E4, E5, E6, E7, E8 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t, formal8_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7, formal8_t f8 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7, f8 );
+    }
+#endif
   };
 };
 
@@ -1111,19 +1210,35 @@ kaapi_format_id_t KaapiTaskArg8<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8>::fmid = 0;
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<9> {
-  template<class E1, class E2, class E3, class E4, class E5, class E6, class E7, class E8, class E9>
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7, class F8, class F9>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
-    typedef E4 effective4_t;
-    typedef E5 effective5_t;
-    typedef E6 effective6_t;
-    typedef E7 effective7_t;
-    typedef E8 effective8_t;
-    typedef E9 effective9_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
+    typedef F8 formal8_t;
+    typedef F9 formal9_t;
     
-    void operator() ( E1, E2, E3, E4, E5, E6, E7, E8, E9 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
+    typedef typename Trait_ParamClosure<F9>::type_inclosure type_inclosure_F9;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t, formal8_t, formal9_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7, formal8_t f8, formal9_t f9 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7, f8, f9 );
+    }
+#endif
   };
 };
 
@@ -1262,20 +1377,37 @@ kaapi_format_id_t KaapiTaskArg9<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8 ,F9>::fmid 
 /* Fi: format parameters Shared_XX, XX -> XX */
 template<>
 struct Task<10> {
-  template<class E1, class E2, class E3, class E4, class E5, class E6, class E7, class E8, class E9, class E10>
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7, class F8, class F9, class F10>
   struct Signature { 
-    typedef E1 effective1_t;
-    typedef E2 effective2_t;
-    typedef E3 effective3_t;
-    typedef E4 effective4_t;
-    typedef E5 effective5_t;
-    typedef E6 effective6_t;
-    typedef E7 effective7_t;
-    typedef E8 effective8_t;
-    typedef E9 effective9_t;
-    typedef E10 effective10_t;
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
+    typedef F8 formal8_t;
+    typedef F9 formal9_t;
+    typedef F10 formal10_t;
     
-    void operator() ( E1, E2, E3, E4, E5, E6, E7, E8, E9, E10 ) {}
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
+    typedef typename Trait_ParamClosure<F9>::type_inclosure type_inclosure_F9;
+    typedef typename Trait_ParamClosure<F10>::type_inclosure type_inclosure_F10;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t, formal8_t, formal9_t, formal10_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7, formal8_t f8, formal9_t f9, formal10_t f10 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7, f8, f9, f10 );
+    }
+#endif
   };
 };
 
