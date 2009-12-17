@@ -78,18 +78,80 @@ ACX_LIB_NEW_PRG([ATHA1PROGS])
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 
-AC_ARG_ENABLE([target],[AS_HELP_STRING([--enable-target=<target>], [mt[default],...])],[],
+
+dnl ----------------------------------------------------------------
+dnl Compilation options
+dnl ----------------------------------------------------------------
+# Select which target is built.
+# Default to mt
+AC_ARG_ENABLE([target],[AS_HELP_STRING([--enable-target=<target>],
+	[choose target hardware (mt*,gpu,mpsoc-st)])],[],
   [enable_target=default]
 )
 AS_CASE([$enable_target],
-  [mt|default], [dnl
+  [mt|MT|default], [dnl
     AC_MSG_NOTICE([Using target MT])
     KAAPI_TARGET=mt
+  ],[gpu|GPU|mpsoc-st|MPSOC-ST], [dnl
+    AC_MSG_ERROR([Using target '$enable_target' not yet available])
   ],[dnl
     AC_MSG_ERROR([Unknown target '$enable_target'. Aborting.])
   ])
 AC_SUBST([KAAPI_TARGET])
 AM_CONDITIONAL([KAAPI_TARGET_MT],[test x"$KAAPI_TARGET" = x"mt"])
+
+
+dnl ----------------------------------------------------------------
+# Debug mode, CAS and perfcounter
+AC_ARG_ENABLE([mode],[AS_HELP_STRING([--enable-mode],
+		 [choose special compilation mode (debug, release)])],[],
+  [enable_mode=default]
+)
+AS_CASE([$enable_mode],
+  [default], [dnl
+  ], [debug], [dnl
+    AC_MSG_NOTICE([Using debug compile mode])
+    # not using AC*DEFINE as we want this available for examples too
+    AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_DEBUG"
+  ], [release], [dnl
+    AC_MSG_NOTICE([Using release compile mode])
+    # using CFLAGS and not AM_CFLAGS as the user must be able to overwrite
+    # them on the make command line
+    CFLAGS="$CFLAGS -O3"
+    CXXFLAGS="$CXXFLAGS -O3"
+  ], [dnl
+    AC_MSG_ERROR([Unknown compilation mode '$enable_mode'. Aborting.])
+  ])
+
+AC_ARG_WITH([cas],[AS_HELP_STRING([--with-cas],
+		 [add concurrent work stealing support])],[],
+  [with_cas=default]
+)
+AS_CASE([$with_cas],
+  [default|no], [dnl
+  ], [yes], [dnl
+    AC_MSG_NOTICE([Adding concurrent work stealing support])
+    # must not change the ABI. Enabling through AC*DEFINE
+    AC_DEFINE([KAAPI_CONCURRENT_WS],1,[Support concurrent work stealing])
+  ], [dnl
+    AC_MSG_ERROR([Unknown value '$with_cas' for --with-cas option. Aborting.])
+  ])
+
+AC_ARG_WITH([perfcounter],[AS_HELP_STRING([--with-perfcounter],
+		 [add perfcounter support])],[],
+  [with_perfcounter=default]
+)
+AS_CASE([$with_perfcounter],
+  [default|no], [dnl
+  ], [yes], [dnl
+    AC_MSG_NOTICE([Adding perfcounter support])
+    # not using AC*DEFINE as we want this available for examples too
+    AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_PERFCOUNTER=1"
+  ], [dnl
+    AC_MSG_ERROR([Unknown value '$with_perfcounter' for --with-perfcounter option. Aborting.])
+  ])
+
+
 
 dnl ----------------------------------------------------------------
 dnl Checks for header files.
