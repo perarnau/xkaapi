@@ -494,8 +494,8 @@ typedef struct kaapi_taskadaptive_t {
   struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
   struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t*/
   int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
-  int                                 local_result_size; /* size of result pass in kaapi_finalize */
-  void*                               local_result_data; /* data of result pass in kaapi_finalize */
+  int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
+  void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
   void*                               arg_from_victim; /* arg received by the victim in case of preemption */
 } kaapi_taskadaptive_t;
 
@@ -513,7 +513,7 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* rhead;             /* next result of the next thief */
   struct kaapi_taskadaptive_result_t* rtail;             /* next result of the next thief */
   void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
-  void*                               arg_from_thief;   /* result from a thief */
+//  void*                               arg_from_thief;   /* result from a thief */
   struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
   int                                 size_data;        /* size of data */
   double                              data[1];
@@ -1131,7 +1131,7 @@ static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_
     Helper function to pass argument between the victim and the thief.
     On return the victim argument may be read.
 */
-extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim );
+extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim, int size );
 extern int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval );
 
 
@@ -1143,7 +1143,6 @@ static inline int kaapi_is_null(void* p)
      of the arg. so we use this function
      to check for null pointers.
    */
-
   return p == NULL;
 }
 
@@ -1157,9 +1156,9 @@ static inline int kaapi_is_null(void* p)
     \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
 */
-#define kaapi_preemptpoint( stack, task, reducer, arg_for_victim, ...)\
+#define kaapi_preemptpoint( stack, task, reducer, arg_for_victim, size_arg_victim, ...)\
   ( kaapi_preemptpoint_isactive(stack, task) ? \
-        kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim),\
+        kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim, size_arg_victim),\
         kaapi_preemptpoint_after_reducer_call( stack, task, \
         ( kaapi_is_null((void*)reducer) ? 0: ((int(*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__))) \
     : \
@@ -1187,9 +1186,9 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
  ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
 	      (  kaapi_is_null((void*)reducer) ? \
-                1 \
+                0 \
               : \
-                ((int (*)(...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->arg_from_thief, ##__VA_ARGS__) \
+	      ((int (*)(kaapi_stack_t*,...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
           )\
     :\
       0\

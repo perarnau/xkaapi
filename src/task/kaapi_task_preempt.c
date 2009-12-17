@@ -44,12 +44,15 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim )
+int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim, int size )
 {
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
 
   /* push data to the victim and signal it */
-  ta->result->arg_from_thief = arg_for_victim;
+  if ((arg_for_victim !=0) && (size >0))
+  {
+    memcpy(ta->result->data, arg_for_victim, size );
+  }
 /*  printf("Kaapi_preempt: send:%p to victim, result: @=%p\n", arg_for_victim, (void*)ta->result);*/
   if (ta->head !=0)
   {
@@ -106,7 +109,7 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
     while (!athief->thief_term) ; 
   }
 
-  /* push current preempt thief in current_thief */
+  /* push current preempt thief in current_thief: used by caller to make call */
   ta->current_thief = ta->head;
   
   /* pop current thief and push thiefs of the thief into the local preemption list */
