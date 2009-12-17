@@ -14,6 +14,27 @@ typedef struct fibo_arg_t {
 static void fibo_entrypoint(kaapi_task_t*, kaapi_stack_t*);
 
 
+static void thief_entrypoint
+(
+ kaapi_task_t* task,
+ kaapi_stack_t* stack
+)
+{
+  fibo_arg_t* const victim_arg =
+    kaapi_task_getargst(task, fibo_arg_t);
+
+  fibo_entrypoint(task, stack);
+
+  kaapi_finalize_steal
+    (
+     stack,
+     task,
+     victim_arg,
+     sizeof(fibo_arg_t)
+    );
+}
+
+
 static int fibo_splitter
 (
  kaapi_stack_t* victim_stack,
@@ -38,7 +59,7 @@ static int fibo_splitter
 	(
 	 thief_stack,
 	 thief_task,
-	 fibo_entrypoint,
+	 thief_entrypoint,
 	 NULL,
 	 KAAPI_TASK_ADAPT_DEFAULT
 	);
@@ -111,21 +132,15 @@ static void fibo_entrypoint
     if (!kaapi_preempt_nextthief(stack, task, NULL, fibo_reducer, victim_arg))
     {
       /* no thief stole the n-1, compute it */
+      victim_arg->n -= 1;
       fibo_entrypoint(task, stack);
+      victim_arg->n += 1;
 
       /* sum fibo(n-1), fibo(n-2) */
       victim_arg->result += result;
     }
     /* else reducer did the sum */
   }
-
-  kaapi_finalize_steal
-    (
-     stack,
-     task,
-     victim_arg,
-     sizeof(fibo_arg_t)
-    );
 }
 
 
