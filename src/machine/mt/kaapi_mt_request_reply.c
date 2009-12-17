@@ -42,7 +42,23 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stddef.h> 
 
+
+/* compute the cache aligned size for kaapi_taskadaptive_result_t
+ */
+static inline size_t compute_struct_size(size_t data_size)
+{
+  size_t total_size = offsetof(kaapi_taskadaptive_result_t, data) + data_size;
+
+  if (total_size & (KAAPI_CACHE_LINE - 1))
+    {
+      total_size += KAAPI_CACHE_LINE;
+      total_size &= ~(KAAPI_CACHE_LINE - 1);
+    }
+
+  return total_size;
+}
 
 /** Implementation note:
     - only the thief_stack + signal to the thief has to be port on the machine.
@@ -102,7 +118,8 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         else
 #endif
         {
-          size_t sizestruct = ((sizeof(kaapi_taskadaptive_result_t)+size+KAAPI_CACHE_LINE-1)/KAAPI_CACHE_LINE)*KAAPI_CACHE_LINE;
+//          size_t sizestruct = ((sizeof(kaapi_taskadaptive_result_t)+size+KAAPI_CACHE_LINE-1)/KAAPI_CACHE_LINE)*KAAPI_CACHE_LINE;
+          const size_t sizestruct = compute_struct_size(size);
           result = (kaapi_taskadaptive_result_t*)malloc(sizestruct);
           result->flag = KAAPI_RESULT_INHEAP;
           result->size_data = sizestruct - offsetof(kaapi_taskadaptive_result_t, data);
@@ -110,7 +127,6 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         result->signal          = &thief_stack->haspreempt;
         result->req_preempt     = 0;
         result->thief_term      = 0;
-        result->arg_from_thief  = 0;
         result->parg_from_victim= 0;
         result->rhead           = 0;
         result->rtail           = 0;
