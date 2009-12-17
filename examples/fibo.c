@@ -143,8 +143,6 @@ int main(int argc, char** argv)
   kaapi_task_t* task;
   kaapi_stack_t* stack;
   
-  int err = 0;
-
   if (argc <2) {
     printf("Usage: %s <n>\n", argv[0]);
     exit(1);
@@ -156,9 +154,7 @@ int main(int argc, char** argv)
   
   result1 = kaapi_stack_pushshareddata(stack, sizeof(int));
   task = kaapi_stack_toptask(stack);
-  kaapi_task_init( stack, task, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
-  kaapi_task_setbody( task, &fibo_body );
-  kaapi_task_setargs( task, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
+  kaapi_task_init( stack, task, &fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)), KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
   argf = kaapi_task_getargst( task, fibo_arg_t );
   argf->n      = atoi(argv[1]);
   argf->result = result1;
@@ -166,9 +162,7 @@ int main(int argc, char** argv)
   
   /* push print task */
   task = kaapi_stack_toptask(stack);
-  kaapi_task_init( stack, task, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
-  kaapi_task_setbody( task, &print_body );
-  kaapi_task_setargs( task, kaapi_stack_pushdata(stack, sizeof(print_arg_t)) );
+  kaapi_task_init( stack, task, &print_body, kaapi_stack_pushdata(stack, sizeof(print_arg_t)), KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
   argp = kaapi_task_getargst( task, print_arg_t );
   argp->t0     = t0;
   argp->n      = argf->n;
@@ -176,13 +170,7 @@ int main(int argc, char** argv)
   kaapi_stack_pushtask(stack);
   kaapi_stack_pushretn( stack, &frame );
   
-redo:
-  err = kaapi_stack_execall(stack);
-  if (err == EWOULDBLOCK)
-  {
-    kaapi_sched_suspend( kaapi_get_current_processor() );
-    goto redo;
-  }
+  kaapi_sched_sync( stack );
   
   return 0;
 }

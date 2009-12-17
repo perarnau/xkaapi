@@ -11,12 +11,6 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_D
 #link_directories (${CMAKE_CURRENT_BINARY_DIR}/../src/ /usr/lib ) 
 #include (${CMAKE_CURRENT_SOURCE_DIR}/../CheckCCompilerFlag.cmake )
 
-# Global definitions for compile comand :
-#add_definitions ( "-Wall -O3 -DKAAPI_CONCURRENT_WS=1")
-add_definitions ( "-Wall -O3 -DKAAPI_USE_PERFCOUNTER=1")
-#add_definitions ( "-Wall -g -DKAAPI_DEBUG")
-#add_definitions ( "-Wall -g")
-
 #################
 ## LIBRARY BEG ##
 
@@ -31,6 +25,7 @@ add_library (xkaapi-cpp SHARED
   atha_parser.cpp
   atha_monotonic.cpp
   atha_kaapi.cpp
+  atha_kaapi2.cpp
 )
 # NOT YET USED:  atha_stream.cpp
 #  atha_format.cpp
@@ -50,6 +45,7 @@ add_library (xkaapi-cpp-static STATIC
   atha_parser.cpp
   atha_monotonic.cpp
   atha_kaapi.cpp
+  atha_kaapi2.cpp
 )
 # NOT YET USED:  atha_stream.cpp
 #  atha_format.cpp
@@ -71,6 +67,8 @@ set_target_properties(xkaapi-cpp-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-1 
               ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-1.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-2
+              ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-2.h
         DESTINATION include/)
 
 ## INSTALL RULES END ##

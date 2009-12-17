@@ -88,7 +88,7 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
     if (kaapi_request_ok(&kproc->hlrequests.requests[i]))
     {
       /* do not decrement the counter */
-      _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0 );
+      _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0, 0 );
       ++replycount;
       if (replycount == count) break;
     }

@@ -20,6 +20,23 @@
 // --------------------------------------------------------------------
 /* 0 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<0> {
+  
+  struct Signature { 
+    
+    
+    void operator() (  ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack   )
+    {
+      operator()(  );
+    }
+#endif
+  };
+};
+
+
 template<class TASK >
 struct KaapiTaskArg0{ 
  
@@ -27,9 +44,17 @@ struct KaapiTaskArg0{
   typedef KaapiTaskArg0<TASK > Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    
+    dummy();
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     
     dummy();
   }
@@ -52,7 +77,7 @@ struct KaapiTaskArg0{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           0,
@@ -60,7 +85,23 @@ struct KaapiTaskArg0{
           0,
           0
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -80,10 +121,28 @@ kaapi_format_id_t KaapiTaskArg0<TASK >::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 1 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<1> {
+  template<class F1>
+  struct Signature { 
+    typedef F1 formal1_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    
+    void operator() ( formal1_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1 )
+    {
+      operator()( f1 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1>
 struct KaapiTaskArg1{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -93,9 +152,17 @@ struct KaapiTaskArg1{
   typedef KaapiTaskArg1<TASK ,F1> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1);
   }
@@ -121,7 +188,7 @@ struct KaapiTaskArg1{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           1,
@@ -129,7 +196,23 @@ struct KaapiTaskArg1{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -149,10 +232,30 @@ kaapi_format_id_t KaapiTaskArg1<TASK ,F1>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 2 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<2> {
+  template<class F1, class F2>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    
+    void operator() ( formal1_t, formal2_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2 )
+    {
+      operator()( f1, f2 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2>
 struct KaapiTaskArg2{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -164,9 +267,17 @@ struct KaapiTaskArg2{
   typedef KaapiTaskArg2<TASK ,F1,F2> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2);
   }
@@ -195,7 +306,7 @@ struct KaapiTaskArg2{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           2,
@@ -203,7 +314,23 @@ struct KaapiTaskArg2{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -223,10 +350,32 @@ kaapi_format_id_t KaapiTaskArg2<TASK ,F1 ,F2>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 3 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<3> {
+  template<class F1, class F2, class F3>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3 )
+    {
+      operator()( f1, f2, f3 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3>
 struct KaapiTaskArg3{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -240,9 +389,17 @@ struct KaapiTaskArg3{
   typedef KaapiTaskArg3<TASK ,F1,F2,F3> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3);
   }
@@ -274,7 +431,7 @@ struct KaapiTaskArg3{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           3,
@@ -282,7 +439,23 @@ struct KaapiTaskArg3{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -302,10 +475,34 @@ kaapi_format_id_t KaapiTaskArg3<TASK ,F1 ,F2 ,F3>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 4 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<4> {
+  template<class F1, class F2, class F3, class F4>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4 )
+    {
+      operator()( f1, f2, f3, f4 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4>
 struct KaapiTaskArg4{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -321,9 +518,17 @@ struct KaapiTaskArg4{
   typedef KaapiTaskArg4<TASK ,F1,F2,F3,F4> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3, args->f4);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3, args->f4);
   }
@@ -358,7 +563,7 @@ struct KaapiTaskArg4{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           4,
@@ -366,7 +571,23 @@ struct KaapiTaskArg4{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -386,10 +607,36 @@ kaapi_format_id_t KaapiTaskArg4<TASK ,F1 ,F2 ,F3 ,F4>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 5 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<5> {
+  template<class F1, class F2, class F3, class F4, class F5>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5 )
+    {
+      operator()( f1, f2, f3, f4, f5 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5>
 struct KaapiTaskArg5{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -407,9 +654,17 @@ struct KaapiTaskArg5{
   typedef KaapiTaskArg5<TASK ,F1,F2,F3,F4,F5> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3, args->f4, args->f5);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3, args->f4, args->f5);
   }
@@ -447,7 +702,7 @@ struct KaapiTaskArg5{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           5,
@@ -455,7 +710,23 @@ struct KaapiTaskArg5{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -475,10 +746,38 @@ kaapi_format_id_t KaapiTaskArg5<TASK ,F1 ,F2 ,F3 ,F4 ,F5>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 6 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<6> {
+  template<class F1, class F2, class F3, class F4, class F5, class F6>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6>
 struct KaapiTaskArg6{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -498,9 +797,17 @@ struct KaapiTaskArg6{
   typedef KaapiTaskArg6<TASK ,F1,F2,F3,F4,F5,F6> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6);
   }
@@ -541,7 +848,7 @@ struct KaapiTaskArg6{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           6,
@@ -549,7 +856,23 @@ struct KaapiTaskArg6{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -569,10 +892,40 @@ kaapi_format_id_t KaapiTaskArg6<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 7 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<7> {
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7>
 struct KaapiTaskArg7{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -594,9 +947,17 @@ struct KaapiTaskArg7{
   typedef KaapiTaskArg7<TASK ,F1,F2,F3,F4,F5,F6,F7> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7);
   }
@@ -640,7 +1001,7 @@ struct KaapiTaskArg7{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           7,
@@ -648,7 +1009,23 @@ struct KaapiTaskArg7{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -668,10 +1045,42 @@ kaapi_format_id_t KaapiTaskArg7<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 8 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<8> {
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7, class F8>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
+    typedef F8 formal8_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t, formal8_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7, formal8_t f8 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7, f8 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8>
 struct KaapiTaskArg8{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -695,9 +1104,17 @@ struct KaapiTaskArg8{
   typedef KaapiTaskArg8<TASK ,F1,F2,F3,F4,F5,F6,F7,F8> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7, args->f8);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7, args->f8);
   }
@@ -744,7 +1161,7 @@ struct KaapiTaskArg8{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           8,
@@ -752,7 +1169,23 @@ struct KaapiTaskArg8{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -772,10 +1205,44 @@ kaapi_format_id_t KaapiTaskArg8<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8>::fmid = 0;
 
 
 
-
 // --------------------------------------------------------------------
 /* 9 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<9> {
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7, class F8, class F9>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
+    typedef F8 formal8_t;
+    typedef F9 formal9_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
+    typedef typename Trait_ParamClosure<F9>::type_inclosure type_inclosure_F9;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t, formal8_t, formal9_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7, formal8_t f8, formal9_t f9 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7, f8, f9 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9>
 struct KaapiTaskArg9{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -801,9 +1268,17 @@ struct KaapiTaskArg9{
   typedef KaapiTaskArg9<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7, args->f8, args->f9);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7, args->f8, args->f9);
   }
@@ -853,7 +1328,7 @@ struct KaapiTaskArg9{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           9,
@@ -861,7 +1336,23 @@ struct KaapiTaskArg9{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -881,10 +1372,46 @@ kaapi_format_id_t KaapiTaskArg9<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8 ,F9>::fmid 
 
 
 
-
 // --------------------------------------------------------------------
 /* 10 is the number of possible parameters */
 /* Fi: format parameters Shared_XX, XX -> XX */
+template<>
+struct Task<10> {
+  template<class F1, class F2, class F3, class F4, class F5, class F6, class F7, class F8, class F9, class F10>
+  struct Signature { 
+    typedef F1 formal1_t;
+    typedef F2 formal2_t;
+    typedef F3 formal3_t;
+    typedef F4 formal4_t;
+    typedef F5 formal5_t;
+    typedef F6 formal6_t;
+    typedef F7 formal7_t;
+    typedef F8 formal8_t;
+    typedef F9 formal9_t;
+    typedef F10 formal10_t;
+    
+     typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+    typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+    typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+    typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+    typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+    typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+    typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+    typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
+    typedef typename Trait_ParamClosure<F9>::type_inclosure type_inclosure_F9;
+    typedef typename Trait_ParamClosure<F10>::type_inclosure type_inclosure_F10;
+    
+    void operator() ( formal1_t, formal2_t, formal3_t, formal4_t, formal5_t, formal6_t, formal7_t, formal8_t, formal9_t, formal10_t ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack , formal1_t f1, formal2_t f2, formal3_t f3, formal4_t f4, formal5_t f5, formal6_t f6, formal7_t f7, formal8_t f8, formal9_t f9, formal10_t f10 )
+    {
+      operator()( f1, f2, f3, f4, f5, f6, f7, f8, f9, f10 );
+    }
+#endif
+  };
+};
+
+
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 struct KaapiTaskArg10{ 
   typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
@@ -912,9 +1439,17 @@ struct KaapiTaskArg10{
   typedef KaapiTaskArg10<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9,F10> Self_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body_cpu(kaapi_task_t* t, kaapi_stack_t* stack)
   {
-    static TASK dummy;
+    static TaskBodyCPU<TASK> dummy;
+    Self_t* args = kaapi_task_getargst(t, Self_t);
+    dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7, args->f8, args->f9, args->f10);
+  }
+
+  /* */
+  static void body_gpu(kaapi_task_t* t, kaapi_stack_t* stack)
+  {
+    static TaskBodyGPU<TASK> dummy;
     Self_t* args = kaapi_task_getargst(t, Self_t);
     dummy(args->f1, args->f2, args->f3, args->f4, args->f5, args->f6, args->f7, args->f8, args->f9, args->f10);
   }
@@ -967,7 +1502,7 @@ struct KaapiTaskArg10{
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          &Self_t::body, 
+          &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),
           10,
@@ -975,7 +1510,23 @@ struct KaapiTaskArg10{
           array_offset,
           array_format
       );
-    /* extend the set of predefined function */
+   int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+   if (f_cpu == f_defaultcpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &Self_t::body_cpu;
+   }
+   int (TASK::*f_defaultgpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+   int (TASK::*f_gpu)(...) = (int (TASK::*)(...))&TaskBodyGPU<TASK>::operator();
+   if (f_gpu == f_defaultgpu) {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+   }
+   else {
+     Self_t::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &Self_t::body_gpu;
+   }
+
     return &Self_t::format;
   }  
 };
@@ -985,5 +1536,4 @@ kaapi_format_t KaapiTaskArg10<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8 ,F9 ,F10>::fo
 
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 kaapi_format_id_t KaapiTaskArg10<TASK ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8 ,F9 ,F10>::fmid = 0;
-
 

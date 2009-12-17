@@ -41,18 +41,12 @@
 ** terms.
 ** 
 */
-#include "athapascan-1"
+#include "athapascan-2"
 #include "kaapi_impl.h"
 #include "atha_parser.h"
 #include "atha_component.h"
 
-
-namespace a1 {
-
-#if 0 /*TODO*/
-const SpaceCollectionFormat SpaceCollectionFormat::theformat;
-const SpaceCollectionFormat* const SpaceCollectionFormat::format  = &SpaceCollectionFormat::theformat;
-#endif
+namespace atha {
 
 SetStickyC SetSticky;
 SetStack SetInStack;

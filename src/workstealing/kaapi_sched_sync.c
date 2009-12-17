@@ -1,8 +1,8 @@
 /*
-** kaapi_task_finalize.c
+** kaapi_sched_sync.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -45,40 +45,17 @@
 #include "kaapi_impl.h"
 
 
-/**
+/**kaapi_sched_sync
 */
-void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+int kaapi_sched_sync(kaapi_stack_t* stack)
 {
-  kaapi_taskadaptive_t* ta = task->sp;
-  kaapi_assert_debug( ta !=0 );
-
-  if (ta->mastertask ==0) /* I'm a master task, wait  */
+  int err;
+redo:
+  err = kaapi_stack_execchild(stack, stack->pc);
+  if (err == EWOULDBLOCK)
   {
-/*      double t0 = kaapi_get_elapsedtime();  */
-    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
-/*      double t1 = kaapi_get_elapsedtime(); */
-/*      printf("[finalize] wait for:%es\n", t1 -t0); */
-    kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
-#if defined(KAAPI_DEBUG)
-    kaapi_assert_debug( ta->thievescount._counter == 0);
-#endif
+    kaapi_sched_suspend( kaapi_get_current_processor() );
+    goto redo;
   }
-  else if (ta->result !=0) /* thief has been preempted or flagged as NOPREEMPT */
-  {
-    /* If I have something to write, write it */
-    if ((ta->local_result_data !=0) && (ta->local_result_size !=0))
-    {
-      memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
-    }
-
-    if (result_data != NULL)
-    {
-      /* copy thief result into the dedicated victim area.
-	 the area was allocated in kaapi_mt_request_reply.
-      */
-      kaapi_assert_debug(ta->result_data != NULL);
-      memcpy(ta->result_data, result_data, ta->result_size);
-    }
-
-  }
+  return err;
 }

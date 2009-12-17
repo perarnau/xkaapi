@@ -262,6 +262,7 @@ typedef enum {
   KAAPI_TASK_S_INIT  =        0x00, /* 0000 0000 */
   KAAPI_TASK_S_EXEC  =        0x10, /* 0001 0000 */
   KAAPI_TASK_S_STEAL =        0x20, /* 0010 0000 */
+  KAAPI_TASK_S_WAIT  =        0x30, /* 0011 0000 */
   KAAPI_TASK_S_TERM  =        0x40  /* 0100 0000 */
 } kaapi_task_state_t;
 #define KAAPI_TASK_MASK_READY 0x80  /* 1000 0000 */ /* 1 bit 0x80 ie bit 7 to encode if the task is marked as ready */
@@ -484,17 +485,22 @@ struct kaapi_taskadaptive_result_t;
 */
 typedef struct kaapi_taskadaptive_t {
   void*                               user_sp;         /* user argument */
-  kaapi_atomic_t                      thievescount;    /* required for the finalization */
+  kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
 
-  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t during preemption */
+  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t to preemption */
 
   struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
-  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t*/
+  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t to copy args in preemption or finalization
+                                                          null iff thief has been already preempted
+                                                       */
+  int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
+  int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
+  void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
   void*                               arg_from_victim; /* arg received by the victim in case of preemption */
-  void*				      result_data;     /* pointer on the result area */
-  size_t			      result_size;     /* result area size */
+  void*				                        result_data;     /* pointer on the result area */
+  size_t			                        result_size;     /* result area size */
 } kaapi_taskadaptive_t;
 
 
@@ -511,10 +517,10 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* rhead;             /* next result of the next thief */
   struct kaapi_taskadaptive_result_t* rtail;             /* next result of the next thief */
   void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
-  void*                               arg_from_thief;   /* result from a thief */
   struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
-  void*				      result_data;	/* contains result area */
-} kaapi_taskadaptive_result_t;
+  int                                 size_data;        /* size of data */
+  double                              data[1];
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 
 #define KAAPI_RESULT_INSTACK   0x01
 #define KAAPI_RESULT_INHEAP    0x02
@@ -659,6 +665,11 @@ extern void kaapi_suspend_body( kaapi_task_t*, kaapi_stack_t*);
     \ingroup TASK
 */
 extern void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack);
+
+/** Body of the task in charge of finalize of adaptive task
+    \ingroup TASK
+*/
+extern void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 
 /** \ingroup TASK
@@ -867,7 +878,7 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 /** \ingroup TASK
     Initialize a task with given flag for adaptive attribut or task constraints.
 */
-static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
+static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
 #if defined(KAAPI_DEBUG)
   task->format = 0;
@@ -875,7 +886,7 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   task->flag   = flag | KAAPI_TASK_ADAPTIVE;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
   kaapi_assert_debug( ta !=0 );
-  ta->user_sp               = 0;
+  ta->user_sp               = arg;
   ta->thievescount._counter = 0;
   ta->head                  = 0;
   ta->tail                  = 0;
@@ -883,7 +894,7 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   ta->mastertask            = 0;
   ta->arg_from_victim       = 0;
   task->sp                  = ta;
-  task->body                = 0;
+  task->body                = taskbody;
   task->splitter            = 0;
   return 0;
 }
@@ -897,10 +908,10 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
     (task)->format   = 0
 #endif
 
-#define kaapi_task_initdfg( stack, task, taskbody, buffer ) \
+#define kaapi_task_initdfg( stack, task, taskbody, arg ) \
   do { \
     (task)->body     = (taskbody);\
-    (task)->sp       = (buffer);\
+    (task)->sp       = (arg);\
     (task)->flag     = KAAPI_TASK_DFG;\
     (task)->format   = 0;\
   } while (0)
@@ -909,13 +920,13 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 /** \ingroup TASK
     Initialize a task with given flag for adaptive attribut
 */
-static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_uint32_t flag ) 
+static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
   if (flag & KAAPI_TASK_ADAPTIVE)
-    kaapi_task_initadaptive(stack, task, flag); /* here only flag & KAAPI_TASK_ADAPT_MASK_ATTR */
+    kaapi_task_initadaptive(stack, task, taskbody, arg, flag); /* here only flag & KAAPI_TASK_ADAPT_MASK_ATTR */
   else {
     kaapi_assert_debug(flag & KAAPI_TASK_DFG);  /* if no ADAPT, must be DFG. Could be both     */
-    kaapi_task_initdfg(stack, task, 0, 0 );
+    kaapi_task_initdfg(stack, task, taskbody, arg );
   }
   if (flag & KAAPI_TASK_DFG)
     task->flag |= flag & (KAAPI_TASK_MASK_FLAGS|KAAPI_TASK_MASK_PROC);
@@ -1038,6 +1049,17 @@ extern int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* task);
 */
 extern int kaapi_stack_execall(kaapi_stack_t* stack);
 
+
+/** \ingroup STACK
+    The function kaapi_sched_sync() execute all tasks from pc stack pointer and all their child tasks.
+    If successful, the kaapi_sched_sync() function will return zero.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer
+    \retval EINTR the control flow has received a KAAPI interrupt.
+*/
+extern int kaapi_sched_sync(kaapi_stack_t* stack);
+
 /** \ingroup WS
     Try to steal work from tasks in the stack, else call splitter of the task. 
 */
@@ -1112,7 +1134,7 @@ static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_
     Helper function to pass argument between the victim and the thief.
     On return the victim argument may be read.
 */
-extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim );
+extern int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim, int size );
 extern int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval );
 
 
@@ -1124,7 +1146,6 @@ static inline int kaapi_is_null(void* p)
      of the arg. so we use this function
      to check for null pointers.
    */
-
   return p == NULL;
 }
 
@@ -1138,9 +1159,9 @@ static inline int kaapi_is_null(void* p)
     \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
 */
-#define kaapi_preemptpoint( stack, task, reducer, arg_for_victim, ...)\
+#define kaapi_preemptpoint( stack, task, reducer, arg_for_victim, size_arg_victim, ...)\
   ( kaapi_preemptpoint_isactive(stack, task) ? \
-        kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim),\
+        kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim, size_arg_victim),\
         kaapi_preemptpoint_after_reducer_call( stack, task, \
         ( kaapi_is_null((void*)reducer) ? 0: ((int(*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__))) \
     : \
@@ -1168,9 +1189,9 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
  ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
 	      (  kaapi_is_null((void*)reducer) ? \
-                1 \
+                0 \
               : \
-                ((int (*)(...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->arg_from_thief, ##__VA_ARGS__) \
+	      ((int (*)(kaapi_stack_t*,...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
           )\
     :\
       0\
@@ -1182,9 +1203,34 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
     has successfully adapt to steal work. Else 0.
     While it reply to a request, the function decrement the request count on the stack.
     This function is machine dependent.
+    \param stack INOUT the stack of the victim that has been used to replies to the request
+    \param task IN the stolen task
+    \param request INOUT data structure used to replied by the thief
+    \param thief_stack INOUT the output stack that will be used to the thief
+    \param size IN the size in bytes to store the result
+    \param retval IN the result of the steal request 0 iff failed else success
 */
-extern int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval);
-extern int kaapi_request_reply2(kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval, size_t result_size);
+extern int kaapi_request_reply( 
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request, 
+    kaapi_stack_t* thief_stack, 
+    int size, int retval 
+);
+    
+/** \ingroup ADAPTIVE
+    Specialization to reply failed to a processor
+    \param stack INOUT the stack of the victim that has been used to replies to the request
+    \param task IN the stolen task
+    \param request INOUT data structure used to replied by the thief
+*/
+static inline int kaapi_request_reply_failed(     
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request
+)
+{ return kaapi_request_reply( stack, task, request, 0, 0, 0 ); }
+
 
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction
@@ -1210,14 +1256,23 @@ static inline int kaapi_task_getaction(kaapi_task_t* task)
 }
 
 /** \ingroup ADAPTIVE
-    Wait the end of all the stealer of the adaptive task 
-    TODO with preemption
+    Push the task that, on execution will wait the terminaison of the previous 
+    adaptive task 'task' and all the thieves.
+    The local result, if not null will be pushed after the end of execution of all local tasks.
 */
-
-typedef void (*kaapi_reducer_t)(void*, void*);
-
-extern int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task );
-extern int kaapi_finalize_steal2( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reducer_t reducer_fn, void* reducer_arg, const void* result_data); 
+static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task, void* retval, int size )
+{
+  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
+  {
+    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
+    kaapi_assert( (size ==0) || size < ta->result_size );
+    ta->local_result_data = retval;
+    ta->local_result_size = size;
+    kaapi_task_t* task = kaapi_stack_toptask(stack);
+    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+  }
+  return 0;
+}
 
 
 

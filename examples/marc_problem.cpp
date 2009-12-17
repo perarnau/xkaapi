@@ -15,6 +15,7 @@
 #define WINDOW_SIZE 128
 
 typedef double* InputIterator;
+extern void marc_problem ( double* begin, double* end );
 
 InputIterator  ibeg0;
 /**
@@ -50,12 +51,22 @@ protected:
   InputIterator  _ibeg;
   InputIterator  _iend;
   
-  /* Entry in case of main execution */
-  static void static_entrypoint(kaapi_task_t* task, kaapi_stack_t* data)
+  /* Entry in case of main execution (steal of the task) */
+  static void static_mainentrypoint(kaapi_task_t* task, kaapi_stack_t* stack)
+  {
+    SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
+    atha::logfile() << "I'm a master: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
+    w->doit(task, stack);
+    atha::logfile() << "I'm a master: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
+  }
+
+  /* Entry in case of thief execution */
+  static void static_thiefentrypoint(kaapi_task_t* task, kaapi_stack_t* stack)
   {
     SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
     atha::logfile() << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
-    w->doit(task, data);
+    w->doit(task, stack);
+    kaapi_finalize_steal( stack, task, &w->_ibeg, 2*sizeof(InputIterator) );
     atha::logfile() << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
   }
 
@@ -101,9 +112,11 @@ protected:
       {
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_initadaptive( thief_stack, thief_task, KAAPI_TASK_ADAPT_DEFAULT);
-        kaapi_task_setbody( thief_task, &static_entrypoint );
-        kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)) );
+        kaapi_task_initadaptive( thief_stack, thief_task, 
+                  &static_thiefentrypoint, 
+                  kaapi_stack_pushdata(thief_stack, sizeof(SlidingWindowWork)), 
+                  KAAPI_TASK_ADAPT_DEFAULT
+        );
         output_work = kaapi_task_getargst(thief_task, SlidingWindowWork);
 
         output_work->_iend = thief_end;
@@ -115,8 +128,8 @@ protected:
         
 //        atha::logfile() << "I'm split work to a the thief" << std::endl;
 
-        /* reply ok (1) to the request */
-        kaapi_request_reply( stack, self_task, &request[i], thief_stack, 1);
+        /* reply ok (1) to the request with size of result for 2 InputIterator */
+        kaapi_request_reply( stack, self_task, &request[i], thief_stack, 2*sizeof(InputIterator), 1);
         --count; ++reply_count;
       }
       ++i;
@@ -132,20 +145,20 @@ protected:
   */
   static bool reducer( kaapi_stack_t* stack, kaapi_task_t* self_task,
                        SlidingWindowWork* thief_work,
-                       SlidingWindowWork* victim_work,
+                       InputIterator      victim_iterator[2], /* [0]=ibeg, [1]=iend */
                        double** ibeg, double** local_iend
                       )
   {
     if ((thief_work ==0) || (thief_work->_ibeg == thief_work->_iend))
     {
-      if (victim_work->_ibeg == victim_work->_iend)
+      if (victim_iterator[0] == victim_iterator[1])
       {
-        atha::logfile() << "(0) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
+        atha::logfile() << "(0) Reduced work, mywork=[" << victim_iterator[0] - ibeg0 << "," << victim_iterator[1] -ibeg0 << ")"
                   << std::endl;
         return false;
       }
-      *local_iend = victim_work->_iend;
-      atha::logfile() << "(1) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
+      *local_iend = victim_iterator[1];
+      atha::logfile() << "(1) Reduced work, mywork=[" << victim_iterator[0] - ibeg0 << "," << victim_iterator[1] -ibeg0 << ")"
                 << std::endl;
       return true;
     }
@@ -153,9 +166,9 @@ protected:
     /* master get unfinished work of the thief */
     *ibeg = thief_work->_ibeg;
     *local_iend = thief_work->_iend + (WINDOW_SIZE - (thief_work->_iend-thief_work->_ibeg));
-    if (*local_iend > victim_work->_iend) 
-      *local_iend = victim_work->_iend;
-    atha::logfile() << "(2) Reduced work, mywork=[" << victim_work->_ibeg - ibeg0 << "," << victim_work->_iend -ibeg0 << ")"
+    if (*local_iend > victim_iterator[1]) 
+      *local_iend = victim_iterator[1];
+    atha::logfile() << "(2) Reduced work, mywork=[" << victim_iterator[0] - ibeg0 << "," << victim_iterator[1] -ibeg0 << ")"
           << std::endl;
 
     return true;
@@ -169,6 +182,8 @@ protected:
               << std::endl;
     
   }
+
+  friend void marc_problem ( double* begin, double* end );
 };
 
 
@@ -217,10 +232,10 @@ redo_work:
        here no function is called on the preemption point and the data 'this' is passed 
        to the thread that initiates the preemption.
     */
-    if (kaapi_preemptpoint( stack, task,     /* context */
-                            display_reducer, /* function to call in case of preemption */
-                            this,            /* arg to pass to the thread that do preemption */
-                            this             /* here possible extra arguments to pass to the function call */
+    if (kaapi_preemptpoint( stack, task,         /* context */
+                            display_reducer,     /* function to call in case of preemption */
+                            &_ibeg, 2*sizeof(InputIterator), /* arg to pass to the victim thread that do preemption */
+                            this                 /* here possible extra arguments to pass to the function call */
                         )) return;      
   }
   
@@ -232,19 +247,14 @@ redo_work:
      If no more work has been preempted, it means that all the computation is finished.
   */
   if (kaapi_preempt_nextthief( stack, task, 
-                                     this,                      /* arg to pass to the thief */
-                                     &reducer,                  /* function to call if a preempt exist */
-                                     this, &_ibeg, &local_iend  /* arg to pass to the function call reducer */
+                                      this,                      /* arg to pass to the thief */
+                                      &reducer,                  /* function to call if a preempt exist */
+                                      this, &_ibeg, &local_iend  /* arg to pass to the function call reducer */
                             ))
   {
     goto redo_work;
   }
 
-  /* Definition of the finalization point where main thread waits all the works.
-     After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
-     could be read (...)
-  */
-  kaapi_finalize_steal( stack, task );
 }
 
 
@@ -263,13 +273,20 @@ void marc_problem ( double* begin, double* end )
 
   /* create the task on the top of the stack */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
-  kaapi_task_initadaptive( stack, task, KAAPI_TASK_ADAPT_DEFAULT);
-  kaapi_task_setargs(task, &work );
+  kaapi_task_initadaptive( stack, task, &SlidingWindowWork::static_mainentrypoint, &work, KAAPI_TASK_ADAPT_DEFAULT);
   
   /* push_it task on the top of the stack */
   kaapi_stack_pushtask(stack);
 
-  work.doit( task, stack );
+  /* Definition of the finalization point where main thread waits all the works.
+     After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
+     could be read (...)
+  */
+  kaapi_finalize_steal( stack, task, 0, 0 );
+  
+  /* Sync
+  */
+  kaapi_sched_sync(stack);
 }
 
 
