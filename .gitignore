@@ -28,16 +28,11 @@ Makefile.in
 .deps/
 .libs/
 Makefile
+/api-atha/atha1_check_header
+/api-atha/atha1_check_header_strict
 /config.h
 /config.log
 /config.status
-/stamp-h1
-/xkaapi.pc
-/src/kaapi_check_header
-/src/kaapi_check_header_strict
-/api-atha/atha1_check_header
-/api-atha/atha1_check_header_strict
-/xkaapi-*.tar.gz
 /examples/branchbound_apiatha
 /examples/fibo
 /examples/fibo_adapt
@@ -45,5 +40,11 @@ Makefile
 /examples/fiboseq
 /examples/marc_problem
 /examples/nqueens_apiatha
-/examples/transform
+/examples/transform_adapt
+/src/kaapi_check_header
+/src/kaapi_check_header_strict
+/src/misc/kaapi_init.c
+/stamp-h1
+/xkaapi.pc
+/xkaapi-*.tar.gz
 
