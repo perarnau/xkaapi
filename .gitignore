@@ -38,6 +38,8 @@ Makefile
 /examples/fibo
 /examples/fibo_adapt
 /examples/fibo_apiatha
+/examples/fibo_apiatha2
+/examples/fibo_apiatha3
 /examples/fiboseq
 /examples/marc_problem
 /examples/nqueens_apiatha
