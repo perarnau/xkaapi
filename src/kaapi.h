@@ -411,8 +411,12 @@ typedef int (*kaapi_task_splitter_t)(struct kaapi_stack_t* /*stack */, struct ka
 /** Task reducer
     \ingroup TASK
 */
-typedef int (*kaapi_task_reducer_t)(struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
-                                    void* arg_thief, ...);
+typedef int (*kaapi_task_reducer_t)(
+#ifdef __cplusplus
+ struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
+ void* arg_thief, ...
+#endif
+);
 
 /** Kaapi stack of tasks definition
    \ingroup STACK
@@ -1184,16 +1188,13 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
 */
 
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
- ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
-	      (  kaapi_is_null((void*)reducer) ? \
-                0 \
-              : \
-	      ((int (*)(kaapi_stack_t*,...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
-          )\
-    :\
-      0\
- )
-
+(									\
+ kaapi_preempt_nextthief_helper(stack, task, arg_to_thief) ?		\
+ (									\
+  kaapi_is_null((void*)reducer) ? 0 :					\
+  ((kaapi_task_reducer_t)reducer)(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
+ ) : 0									\
+)
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
