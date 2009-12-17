@@ -493,9 +493,10 @@ typedef struct kaapi_taskadaptive_t {
 
   struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
   struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t*/
+  int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
+  int                                 local_result_size; /* size of result pass in kaapi_finalize */
+  void*                               local_result_data; /* data of result pass in kaapi_finalize */
   void*                               arg_from_victim; /* arg received by the victim in case of preemption */
-  void*                               local_result_data;     /* points on kaapi_taskadaptive_result_t*/
-  int                                 local_result_size;     /* */
 } kaapi_taskadaptive_t;
 
 
@@ -1262,6 +1263,10 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
+    if (ta->result ==0) {
+      kaapi_assert_debug( size ==0 );
+    }
+    kaapi_assert( (size ==0) || size < ta->result_size );
     ta->local_result_data = retval;
     ta->local_result_size = size;
     kaapi_task_t* task = kaapi_stack_toptask(stack);

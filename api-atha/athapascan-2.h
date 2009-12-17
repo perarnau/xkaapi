@@ -182,8 +182,22 @@ namespace atha {
   class SetStickyC{};
   extern SetStickyC SetSticky;
 
-  template<typename M, class T>
-  class pointer;
+  template<class T>
+  class pointer_rpwp;
+  template<class T>
+  class pointer_rw;
+  template<class T>
+  class pointer_rp;
+  template<class T>
+  class pointer_r;
+  template<class T>
+  class pointer_wp;
+  template<class T>
+  class pointer_w;
+  template<class T>
+  class pointer_cwp;
+  template<class T>
+  class pointer_cw;
 
   template<class T>
   struct base_pointer {
@@ -228,7 +242,14 @@ namespace atha {
   */
   // --------------------------------------------------------------------
   template<class T>
-  class pointer<ACCESS_MODE_RPWP,T> : public base_pointer<T> {
+  class pointer_rpwp : public base_pointer<T> {
+  public:
+    pointer_rpwp() : base_pointer<T>() {}
+    pointer_rpwp( T* ptr ) : base_pointer<T>(ptr) {}
+  };
+
+  template<class T>
+  class pointer : public base_pointer<T> {
   public:
     pointer() : base_pointer<T>() {}
     pointer( T* ptr ) : base_pointer<T>(ptr) {}
@@ -239,17 +260,19 @@ namespace atha {
   public:
     typedef T value_type;
     Shared_rpwp( value_type* p ) : ptr(p) {}
-    Shared_rpwp( const pointer<ACCESS_MODE_RPWP,T>& p ) : ptr(p.ptr) {}
+    Shared_rpwp( const pointer_rpwp<T>& p ) : ptr(p.ptr) {}
     value_type* ptr;
   };
 
   // --------------------------------------------------------------------
   template<class T>
-  class pointer<ACCESS_MODE_RP,T> : public base_pointer<T> {
+  class pointer_rp : public base_pointer<T> {
   public:
-    pointer() : base_pointer<T>() {}
-    pointer( T* ptr ) : base_pointer<T>(ptr) {}
-    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_rp() : base_pointer<T>() {}
+    pointer_rp( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer_rp( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_rp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_rp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
   };
 
   template<class T>
@@ -258,19 +281,20 @@ namespace atha {
   public:
     typedef T value_type;
     Shared_rp( const value_type* p ) : ptr(p) {}
-    Shared_rp( const pointer<ACCESS_MODE_RP,T>& p ) : ptr(p.ptr) {}
+    Shared_rp( const pointer_rp<T>& p ) : ptr(p.ptr) {}
     const value_type* ptr;
   };
   
 
   // --------------------------------------------------------------------
   template<class T>
-  class pointer<ACCESS_MODE_R,T> : public base_pointer<T> {
+  class pointer_r : public base_pointer<T> {
   public:
-    pointer() : base_pointer<T>() {}
-    pointer( T* ptr ) : base_pointer<T>(ptr) {}
-    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
-    pointer( const pointer<ACCESS_MODE_RP,T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_r() : base_pointer<T>() {}
+    pointer_r( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer_r( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_r( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_r( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
     operator const T* () const { return base_pointer<T>::ptr; }
     const T& operator*() const { return *base_pointer<T>::ptr; }
     const T& operator[](int i) const { return base_pointer<T>::ptr[i]; }
@@ -282,17 +306,18 @@ namespace atha {
   public:
     typedef T value_type;
     Shared_r( const value_type* p ) : ptr(p) {}
-    Shared_r( const pointer<ACCESS_MODE_R,T>& p ) : ptr(p.ptr) {}
+    Shared_r( const pointer_r<T>& p ) : ptr(p.ptr) {}
     const value_type* ptr;
   };
 
   // --------------------------------------------------------------------
   template<class T>
-  class pointer<ACCESS_MODE_WP,T> : public base_pointer<T> {
+  class pointer_wp : public base_pointer<T> {
   public:
-    pointer() : base_pointer<T>() {}
-    pointer( T* ptr ) : base_pointer<T>(ptr) {}
-    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_wp() : base_pointer<T>() {}
+    pointer_wp( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer_wp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_wp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
   };
 
   template<class T>
@@ -300,18 +325,19 @@ namespace atha {
   public:
     typedef T value_type;
     Shared_wp( value_type* p ) : ptr(p) {}
-    Shared_wp( const pointer<ACCESS_MODE_WP,T>& p ) : ptr(p.ptr) {}
+    Shared_wp( const pointer_wp<T>& p ) : ptr(p.ptr) {}
     value_type* ptr;
   };
 
   // --------------------------------------------------------------------
   template<class T>
-  class pointer<ACCESS_MODE_W,T> : public base_pointer<T> {
+  class pointer_w : public base_pointer<T> {
   public:
-    pointer() : base_pointer<T>() {}
-    pointer( T* ptr ) : base_pointer<T>(ptr) {}
-    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
-    pointer( const pointer<ACCESS_MODE_WP,T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_w() : base_pointer<T>() {}
+    pointer_w( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer_w( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_w( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_w( const pointer_wp<T>& ptr ) : base_pointer<T>(ptr) {}
     operator T* () { return base_pointer<T>::ptr; }
     value_ref<T> operator*() { return value_ref<T>(base_pointer<T>::ptr); }
     value_ref<T> operator[](int i) { return value_ref<T>(base_pointer<T>::ptr+i); }
@@ -323,17 +349,17 @@ namespace atha {
   public:
     typedef T value_type;
     Shared_w( value_type* p ) : ptr(p) {}
-    Shared_w( const pointer<ACCESS_MODE_W,T>& p ) : ptr(p.ptr) {}
+    Shared_w( const pointer_w<T>& p ) : ptr(p.ptr) {}
     value_type* ptr;
   };
 
   // --------------------------------------------------------------------
   template<class T>
-  class pointer<ACCESS_MODE_RW,T> : public base_pointer<T> {
+  class pointer_rw: public base_pointer<T> {
   public:
-    pointer() : base_pointer<T>() {}
-    pointer( T* ptr ) : base_pointer<T>(ptr) {}
-    pointer( const pointer<ACCESS_MODE_RPWP,T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_rw() : base_pointer<T>() {}
+    pointer_rw( T* ptr ) : base_pointer<T>(ptr) {}
+    pointer_rw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     T& operator*() { return *base_pointer<T>::ptr; }
     T& operator[](int i) { return base_pointer<T>::ptr[i]; }
     T& operator[](unsigned int i) { return base_pointer<T>::ptr[i]; }
@@ -344,7 +370,7 @@ namespace atha {
   public:
     typedef T value_type;
     Shared_rw( value_type* p ) : ptr(p) {}
-    Shared_rw( const pointer<ACCESS_MODE_RW,T>& p ) : ptr(p.ptr) {}
+    Shared_rw( const pointer_rw<T>& p ) : ptr(p.ptr) {}
     value_type* ptr;
   };
 
@@ -557,7 +583,7 @@ namespace atha {
 
   template<class T>
   struct Trait_ParamClosure<Shared_rw<T> > {
-    typedef pointer<ACCESS_MODE_RW,T> type_inclosure;
+    typedef pointer_rw<T> type_inclosure;
     typedef Shared_rw<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -572,7 +598,7 @@ namespace atha {
 
   template<class T>
   struct Trait_ParamClosure<Shared_r<T> > {
-    typedef pointer<ACCESS_MODE_R,T> type_inclosure;
+    typedef pointer_r<T> type_inclosure;
     typedef Shared_r<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -587,7 +613,7 @@ namespace atha {
 
   template<class T>
   struct Trait_ParamClosure<Shared_w<T> > {
-    typedef pointer<ACCESS_MODE_W,T> type_inclosure;
+    typedef pointer_w<T> type_inclosure;
     typedef Shared_w<T>    value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -602,7 +628,7 @@ namespace atha {
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cw<T, F> > {
-    typedef pointer<ACCESS_MODE_RW,T> type_inclosure;
+    typedef pointer_rw<T> type_inclosure;
     typedef Shared_cw<T,F> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -617,7 +643,7 @@ namespace atha {
 
   template<class T>
   struct Trait_ParamClosure<Shared_rpwp<T> > {
-    typedef pointer<ACCESS_MODE_RPWP,T> type_inclosure;
+    typedef pointer_rpwp<T> type_inclosure;
     typedef Shared_rpwp<T> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -632,7 +658,7 @@ namespace atha {
 
   template<class T>
   struct Trait_ParamClosure<Shared_rp<T> > {
-    typedef pointer<ACCESS_MODE_RP,T> type_inclosure;
+    typedef pointer_rp<T> type_inclosure;
     typedef Shared_rp<T>   value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -647,7 +673,7 @@ namespace atha {
 
   template<class T>
   struct Trait_ParamClosure<Shared_wp<T> > {
-    typedef pointer<ACCESS_MODE_WP,T> type_inclosure;
+    typedef pointer_wp<T> type_inclosure;
     typedef Shared_wp<T>   value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -662,7 +688,7 @@ namespace atha {
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cwp<T, F> > {
-    typedef pointer<ACCESS_MODE_RPWP,T> type_inclosure;
+    typedef pointer_rpwp<T> type_inclosure;
     typedef Shared_cwp<T,F> value_type;
     enum { isshared = true };
     static const kaapi_format_t* format;

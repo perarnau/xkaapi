@@ -63,4 +63,12 @@ void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
     kaapi_assert_debug( ta->thievescount._counter == 0);
 #endif
   }
+  else
+  {
+    /* If I have something to write, write it */
+    if ((ta->local_result_data !=0) && (ta->local_result_size !=0))
+    {
+      memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
+    }
+  }
 }

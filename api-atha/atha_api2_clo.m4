@@ -10,6 +10,12 @@ struct Task<KAAPI_NUMBER_PARAMS> {
     M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inclosure type_inclosure_F$1;
     ', ` ', `')
     void operator() ( M4_PARAM(`formal$1_t', `', `, ') ) {}
+#if 0
+    void operator() ( kaapi_stack_t* stack ifelse(KAAPI_NUMBER_PARAMS,0,`',`,') M4_PARAM(`formal$1_t f$1', `', `, ') )
+    {
+      operator()( M4_PARAM(`f$1', `', `, ') );
+    }
+#endif
   };
 };
 

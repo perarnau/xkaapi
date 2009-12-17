@@ -10,11 +10,6 @@
 #include <iostream>
 #include "athapascan-2" // this is the header required by athapascan 2
 
-using atha::ACCESS_MODE_R;
-using atha::ACCESS_MODE_RP;
-using atha::ACCESS_MODE_W;
-using atha::ACCESS_MODE_RPWP;
-
 // --------------------------------------------------------------------
 /* Sequential fibo function
  */
@@ -44,7 +39,7 @@ int fiboseq_On(int n){
 */
 template<class T>
 struct PrintBody {
-  void operator() ( atha::pointer<ACCESS_MODE_R,T> a, const T& ref_value, double t )
+  void operator() ( atha::pointer_r<T> a, const T& ref_value, double t )
   { 
     /*  atha::WallTimer::gettime is a wrapper around gettimeofday(2) */
     double delay = atha::WallTimer::gettime() - t;
@@ -72,9 +67,9 @@ struct TaskBodyCPU<TaskPrint<T> > : public PrintBody<T> { };
  * once finished, further read of res will be possible
  */
 struct SumBody {
-  void operator() ( atha::pointer<ACCESS_MODE_W,int> res, 
-                    atha::pointer<ACCESS_MODE_R,int> a, 
-                    atha::pointer<ACCESS_MODE_R,int> b) 
+  void operator() ( atha::pointer_w<int> res, 
+                    atha::pointer_r<int> a, 
+                    atha::pointer_r<int> b) 
   {
     /* write is used to write data to a Shared_w
      * read is used to read data from a Shared_r
@@ -95,21 +90,21 @@ struct TaskBodyCPU<TaskSum> : public SumBody { };
  *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
  */
 struct FiboBody {
-  void operator() ( atha::pointer<ACCESS_MODE_W,int> res, int n );
+  void operator() ( atha::pointer_w<int> res, int n );
 };
 struct TaskFibo : public atha::Task<2>::Signature<atha::Shared_w<int>, int > {};
 template<>
 struct TaskBodyCPU<TaskFibo> : public FiboBody {};
 
 
-  void FiboBody::operator() ( atha::pointer<ACCESS_MODE_W,int> res, int n )
+  void FiboBody::operator() ( atha::pointer_w<int> res, int n )
   {  
     if (n < 2) {
       *res = fiboseq(n);
     }
     else {
-      atha::pointer<ACCESS_MODE_RP,int> res1;
-      atha::pointer<ACCESS_MODE_RP,int> res2;
+      atha::pointer_rpwp<int> res1;
+      atha::pointer_rpwp<int> res2;
 
       /* the Fork keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected

@@ -102,7 +102,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         else
 #endif
         {
-          size_t sizestruct = (sizeof(kaapi_taskadaptive_result_t)+size+KAAPI_CACHE_LINE-1)/KAAPI_CACHE_LINE;
+          size_t sizestruct = ((sizeof(kaapi_taskadaptive_result_t)+size+KAAPI_CACHE_LINE-1)/KAAPI_CACHE_LINE)*KAAPI_CACHE_LINE;
           result = (kaapi_taskadaptive_result_t*)malloc(sizestruct);
           result->flag = KAAPI_RESULT_INHEAP;
           result->size_data = sizestruct - offsetof(kaapi_taskadaptive_result_t, data);
@@ -114,7 +114,7 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         result->parg_from_victim= 0;
         result->rhead           = 0;
         result->rtail           = 0;
-        /* link ressult */
+        /* link ressult for preemption / finalization */
         result->next            = ta->head;
         ta->head                = result;
         if (ta->tail == 0) 
@@ -126,8 +126,15 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         {
           thief_ta                       = (kaapi_taskadaptive_t*)thief_task->sp;
           thief_ta->mastertask           = ( ta->mastertask == 0 ? ta : ta->mastertask );
+          /* link from thief adaptive task to result */
           thief_ta->result               = result;
           result->parg_from_victim       = &thief_ta->arg_from_victim;
+          thief_ta->result_size          = result->size_data;
+          thief_ta->local_result_data    = 0;
+          thief_ta->local_result_size    = 0;
+        }
+        else {
+          kaapi_assert_debug_m( 0, 1, "Replied a non adaptive task from an adaptative task... What do you want to do");
         }
       }
       else flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
@@ -135,7 +142,9 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
       if ( !(task->flag & KAAPI_TASK_ADAPT_NOSYNC) )
         KAAPI_ATOMIC_INCR( &ta->thievescount );
       else flag |= KAAPI_TASK_ADAPT_NOSYNC;
-    } else {
+    } 
+    else 
+    {
       flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
     }
 
