@@ -43,6 +43,7 @@
 */
 #include "kaapi_impl.h"
 
+#include <stddef.h>
 
 /** Implementation note:
     - only the thief_stack + signal to the thief has to be port on the machine.
