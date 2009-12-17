@@ -66,7 +66,7 @@ protected:
     SlidingWindowWork* w = kaapi_task_getargst(task, SlidingWindowWork);
     atha::logfile() << "I'm a thief: BEGIN WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
     w->doit(task, stack);
-    kaapi_finalize_steal( stack, task, 0, 0 );
+    kaapi_finalize_steal( stack, task, &w->_ibeg, 2*sizeof(InputIterator) );
     atha::logfile() << "I'm a thief: END WORK [" << w->_ibeg - ibeg0 << "," << w->_iend - ibeg0 << ')' << std::endl;
   }
 
@@ -128,8 +128,8 @@ protected:
         
 //        atha::logfile() << "I'm split work to a the thief" << std::endl;
 
-        /* reply ok (1) to the request */
-        kaapi_request_reply( stack, self_task, &request[i], thief_stack, 0, 1);
+        /* reply ok (1) to the request with size of result for 2 InputIterator */
+        kaapi_request_reply( stack, self_task, &request[i], thief_stack, 2*sizeof(InputIterator), 1);
         --count; ++reply_count;
       }
       ++i;

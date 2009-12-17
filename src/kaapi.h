@@ -1264,9 +1264,6 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
-    if (ta->result ==0) {
-      kaapi_assert_debug( size ==0 );
-    }
     kaapi_assert( (size ==0) || size < ta->result_size );
     ta->local_result_data = retval;
     ta->local_result_size = size;
