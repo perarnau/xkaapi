@@ -53,7 +53,6 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* 
   {
     memcpy(ta->result->data, arg_for_victim, size );
   }
-/*  printf("Kaapi_preempt: send:%p to victim, result: @=%p\n", arg_for_victim, (void*)ta->result);*/
   if (ta->head !=0)
   {
     ta->result->rhead = ta->head;
@@ -61,17 +60,22 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* 
     ta->result->rtail = ta->tail;
     ta->tail = 0;
   }
-  kaapi_mem_barrier();
 
+  /* mark the stack as preemption processed */
+  stack->haspreempt = 0;
+  
   return 0;
 }
 
 int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval )
 {
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
-  stack->haspreempt = 0;
-  kaapi_writemem_barrier();
+
+  kaapi_writemem_barrier();   /* serialize previous line with next line */
   ta->result->thief_term = 1;
+  kaapi_mem_barrier();
+  ta->result = 0;
+
   return 1;
 }
 

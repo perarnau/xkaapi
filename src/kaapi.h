@@ -485,14 +485,16 @@ struct kaapi_taskadaptive_result_t;
 */
 typedef struct kaapi_taskadaptive_t {
   void*                               user_sp;         /* user argument */
-  kaapi_atomic_t                      thievescount;    /* required for the finalization */
+  kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
 
-  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t during preemption */
+  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t to preemption */
 
   struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
-  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t*/
+  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t to copy args in preemption or finalization
+                                                          null iff thief has been already preempted
+                                                       */
   int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
   int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
   void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */

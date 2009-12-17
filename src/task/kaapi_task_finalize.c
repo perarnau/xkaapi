@@ -63,7 +63,7 @@ void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
     kaapi_assert_debug( ta->thievescount._counter == 0);
 #endif
   }
-  else
+  else if (ta->result !=0) /* thief has been preempted or flagged as NOPREEMPT */
   {
     /* If I have something to write, write it */
     if ((ta->local_result_data !=0) && (ta->local_result_size !=0))
