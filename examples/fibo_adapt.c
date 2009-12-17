@@ -79,28 +79,30 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
     /* preempt thief, if any */
     int reducer(kaapi_stack_t* stack, kaapi_task_t* task, const int* result1, int* result, const int* result2)
     {
-      printf("[%u] reducing(%p, %p, %p)\n", (unsigned int)pthread_self(), result, result1, result2);
-
       if (result1 == NULL)
 	return 0;
 
       *result = *result1 + *result2;
+
+      printf("[%u] reducing, %d == %d + %d\n", (unsigned int)pthread_self(), *result, *result1, *result2);
 
       return 1;
     }
 
     if (!kaapi_preempt_nextthief(stack, task, 0, &reducer, &result, &result2))
     {
-      printf("[%u] !kaapi_preempt\n", (unsigned int)pthread_self());
-
       /* no thief stole the n-1, compute it */
       fibo(stack, n - 1, &result1);
 
       /* sum fibo(n-1), fibo(n-2) */
       *result = result1 + result2;
+
+      printf("[%u] !kaapi_preempt(%d): %d = %d + %d\n", (unsigned int)pthread_self(), n, *result, result1, result2);
     }
     /* else reducer did the sum */
   }
+
+  printf("[%u] out == %d\n", (unsigned int)pthread_self(), *result);
 
   kaapi_finalize_steal(stack, kaapi_stack_toptask(stack), result, sizeof(*result));
 }
