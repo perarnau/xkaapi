@@ -194,13 +194,13 @@ AC_CONFIG_FILES([
 	Makefile
 	api-atha/Makefile
 	examples/Makefile
-	kastl.wip/Makefile
 	src/Makefile
 
 	xkaapi.pc
 	atha1.pc
 	src/misc/kaapi_init.c
 ])
+#	kastl.wip/Makefile
 AC_OUTPUT
 
 AC_MSG_NOTICE([*************************************])
