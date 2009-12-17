@@ -62,6 +62,9 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_assert_debug( task->body !=0);
   kaapi_assert_debug( task->body !=kaapi_suspend_body);
 
+  /* cas the state */
+  if (!kaapi_task_casstate(task, KAAPI_TASK_S_INIT, KAAPI_TASK_S_STEAL )) return 0;
+  
   /* find the first request in the list */
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
@@ -72,10 +75,12 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
     }
   }
 
-  if (request ==0) return 0;
+  if (request ==0) 
+  {
+    kaapi_task_setstate(task, KAAPI_TASK_S_INIT);
+    return 0;
+  }
     
-  /* should CAS in concurrent steal */
-  kaapi_task_setstate(task, KAAPI_TASK_S_STEAL );
   task->body = &kaapi_suspend_body;
   
   countparam = task->format->count_params;
@@ -122,6 +127,6 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
 #endif
  
   /* do not decrement the counter */
-  _kaapi_request_reply( stack, task, request, thief_stack, 1 ); /* success of steal */
+  _kaapi_request_reply( stack, task, request, thief_stack, 0, 1 ); /* success of steal */
   return 1;
 }

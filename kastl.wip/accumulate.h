@@ -10,7 +10,7 @@
 #ifndef _XKAAPI_ACCUMULATE_H
 #define _XKAAPI_ACCUMULATE_H
 #include "kaapi.h"
-#include "kaapi_utils.h"
+#include "kaapi_utils2.h"
 #include <algorithm>
 #include <numeric>
 #include <functional>
@@ -100,7 +100,7 @@ public:
       request_handler_t handler(_iend, bloc, _op);
 
       replied_count =
-	kaapi_utils::foreach_request
+	kaapi_utils2::foreach_request
 	(
 	 victim_stack, task,
 	 count, request,
@@ -121,7 +121,7 @@ public:
 
       if (remaining_count)
 	{
-	  kaapi_utils::fail_requests
+	  kaapi_utils2::fail_requests
 	    (
 	     victim_stack,
 	     task,
@@ -174,6 +174,16 @@ public:
 #endif
     }
   }
+
+#else
+  static void reducer(void* thief_results, void* victim_arg)
+  {
+    Self_t* const v_work = static_cast<Self_t*>(victim_arg);
+    Self_t* const t_work = static_cast<Self_t*>(thief_results);
+
+    v_work->_local_accumulate =
+      v_work->_op(v_work->_local_accumulate, t_work->_local_accumulate);
+  }
 #endif // TODO_REDUCER
 };
 
@@ -198,7 +208,7 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
        -here size is pass as parameter and updated in
        case of steal.
     */
-    kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
+    kaapi_stealpoint( stack, task, kaapi_utils2::static_splitter<Self_t> );
 
     tmp_size = _iend-_ibeg;
     if(tmp_size < unit_size ) {
@@ -219,11 +229,6 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
     _ibeg +=unit_size;
   }
 
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  kaapi_finalize_steal( stack, task );
-
-#warning "TODO_REDUCER"
-
   /* Here the thiefs have finish the computation and returns their inits which have been reduced using reducer function. */  
 }
 
@@ -235,7 +240,7 @@ T accumulate(RandomAccessIterator begin, RandomAccessIterator end, T init)
 {
   typedef AccumulateStruct<RandomAccessIterator, T, std::plus<T> > Self_t;
   Self_t work( begin, end, init, std::plus<T>() );
-  kaapi_utils::start_adaptive_task<Self_t>(&work);
+  kaapi_utils2::start_adaptive_task<Self_t>(&work);
   return work.get_accumulate();
 }
 

@@ -89,6 +89,10 @@ extern "C" {
         }\
       }
 
+
+// This is the new version on top of X-Kaapi
+extern const char* get_kaapi_version();
+
 /** Global hash table of all formats: body -> fmt
 */
 extern kaapi_format_t* kaapi_all_format_bybody[256];
@@ -159,8 +163,9 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;            /* number of physical cpus of the system */
   unsigned int             cpucount;               /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;               /* default method to select a victim */
-  unsigned int		   use_affinity;	   /* use cpu affinity */
-  unsigned int		   kid_to_cpu[KAAPI_MAX_PROCESSOR];
+  unsigned int		         use_affinity;           /* use cpu affinity */
+  unsigned int		         kid_to_cpu[KAAPI_MAX_PROCESSOR];
+  int                      display_perfcounter;    /* set to 1 iff KAAPI_DISPLAY_PERF */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t default_param;
@@ -292,7 +297,13 @@ extern int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int
     While it reply to a request, the function DO NOT decrement the request count on the stack.
     This function is machine dependent.
 */
-extern int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval );
+extern int _kaapi_request_reply( 
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request, 
+    kaapi_stack_t* thief_stack, 
+    int size, int retval 
+);
 
 /** Destroy a request
     A posted request could not be destroyed until a reply has been made

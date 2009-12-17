@@ -64,11 +64,13 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
   orig_task_args   = kaapi_task_getargs(arg->origin_task);
   copy_task_args   = arg->copy_arg;
 
+#if 0
 if (fmt->fmtid == 96)
 {
   kaapi_stack_print( 0, stack );
   abort();
 }
+#endif
 
   countparam = fmt->count_params;
   for (i=0; i<countparam; ++i)
@@ -194,7 +196,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   KAAPI_LOG(100, "tasksteal: 0x%p end exec, next task: 0x%p bodysignal: 0x%p, pc: 0x%p\n", 
       (void*)task, 
       (void*)(task+1), 
-      (void*)(task+1)->body, 
+      (void*)(uintptr_t)(task+1)->body, 
       (void*)stack->pc );
 }
 

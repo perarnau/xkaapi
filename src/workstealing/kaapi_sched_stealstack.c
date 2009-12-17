@@ -105,6 +105,7 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
           --waitparam;
       break;
 
+      case KAAPI_TASK_S_WAIT:
       case KAAPI_TASK_S_EXEC:
       case KAAPI_TASK_S_STEAL:
       {
@@ -230,6 +231,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 #if 0
 printf("------ STEAL STACK @:%p\n", (void*)stack );
 #endif
+
   /* reset dfg constraints evaluation */
   
   /* iterate through all the tasks from task_bot until task_top */

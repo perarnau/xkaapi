@@ -77,6 +77,12 @@ kaapi_format_t kaapi_float_format;
 kaapi_format_t kaapi_double_format;
 
 
+
+// autotools can prompt for this ...
+const char* get_kaapi_version()
+{ return XKAAPI_NAME"-"XKAAPI_VERSION; }
+
+
 /** cpuset related routines
  -- grammar
     cpu_set   : cpu_expr ( ',' cpu_expr ) *
@@ -374,7 +380,7 @@ static int str_to_kid_map
     \retval E2BIG because of a cpu index too high in KAAPI_CPUSET
     
 */
-extern int kaapi_setup_param( int argc, char** argv )
+int kaapi_setup_param( int argc, char** argv )
 {
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
@@ -402,6 +408,16 @@ extern int kaapi_setup_param( int argc, char** argv )
   default_param.cpucount  = default_param.syscpucount;
   default_param.stacksize = 8*4096;
   
+  /* Get values from environment variable */
+  if (getenv("KAAPI_DISPLAY_PERF") !=0)
+  {
+    default_param.display_perfcounter = 1;
+  }
+  else
+  {
+    default_param.display_perfcounter = 0;
+  }
+
   /* Get values from environment variable */
   if (getenv("KAAPI_STACKSIZE") !=0)
   {

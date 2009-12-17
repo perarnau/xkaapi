@@ -45,6 +45,7 @@
 */
 #include "kaapi_impl.h"
 #include <stdlib.h>
+#include <inttypes.h> 
 
 /*
 */
@@ -114,6 +115,11 @@ void __attribute__ ((constructor)) kaapi_init(void)
 void __attribute__ ((destructor)) kaapi_fini(void)
 {
   int i;
+  kaapi_uint64_t cnt_tasks;
+  kaapi_uint64_t cnt_stealreqok;
+  kaapi_uint64_t cnt_stealreq;
+  kaapi_uint64_t cnt_stealop;
+  double t_idle;
   
   printf("[KAAPI::TERM]\n");
   fflush( stdout );
@@ -127,14 +133,47 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     kaapi_sched_advance( kaapi_all_kprocessors[0] );
   }
   
+  cnt_tasks       = 0;
+  cnt_stealreqok  = 0;
+  cnt_stealreq    = 0;
+  cnt_stealop     = 0;
+  t_idle          = 0;
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
+    cnt_tasks       += kaapi_all_kprocessors[i]->cnt_tasks;
+    cnt_stealreqok  += kaapi_all_kprocessors[i]->cnt_stealreqok;
+    cnt_stealreq    += kaapi_all_kprocessors[i]->cnt_stealreq;
+    cnt_stealop     += kaapi_all_kprocessors[i]->cnt_stealop;
+    t_idle          += kaapi_all_kprocessors[i]->t_idle;
+
     free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
   free( kaapi_all_kprocessors );
-
   kaapi_all_kprocessors =0;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /* */
+  if (default_param.display_perfcounter)
+  {
+
+#ifndef PRIu64
+# if (sizeof(long) == sizeof(uint64_t))
+#  define PRIu64 "lu"
+# else
+#  define PRIu64 "llu"
+# endif
+#endif
+
+    printf("----- Performances counter\n");
+    printf("Total number of tasks executed    : %" PRIu64 "\n", cnt_tasks);
+    printf("Total number of steal OK requests : %" PRIu64 "\n", cnt_stealreqok);
+    printf("Total number of steal BAD requests: %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
+    printf("Total number of steal operations  : %" PRIu64 "\n", cnt_stealop);
+    printf("Total idle time                   : %e\n", t_idle);
+    printf("Average steal request aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
+  }
+#endif  
   
   /* TODO: destroy topology data structure */
 }

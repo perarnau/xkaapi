@@ -42,7 +42,23 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stddef.h> 
 
+
+/* compute the cache aligned size for kaapi_taskadaptive_result_t
+ */
+static inline size_t compute_struct_size(size_t data_size)
+{
+  size_t total_size = offsetof(kaapi_taskadaptive_result_t, data) + data_size;
+
+  if (total_size & (KAAPI_CACHE_LINE - 1))
+    {
+      total_size += KAAPI_CACHE_LINE;
+      total_size &= ~(KAAPI_CACHE_LINE - 1);
+    }
+
+  return total_size;
+}
 
 /** Implementation note:
     - only the thief_stack + signal to the thief has to be port on the machine.
@@ -60,23 +76,26 @@
     The format of the task should give all necessary information about types used in the
     data stack.
 */
-int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int size, int retval )
 {
   kaapi_taskadaptive_result_t* result =0;
   kaapi_taskadaptive_t* ta =0;
   kaapi_taskadaptive_t* thief_ta = 0;
   int flag;
-  kaapi_assert_debug( stack != 0 );
   kaapi_assert_debug( request != 0 );
   
   flag = request->flag;
   request->flag = 0;
-  
+
   if (retval)
   {
+    kaapi_assert_debug( stack != 0 );
     kaapi_task_t* sig;
     kaapi_tasksig_arg_t* argsig;
     
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++stack->_proc->cnt_stealreqok;
+#endif    
 
     /* reply: several cases
        - if partial steal -> signal should decr the thieves counter (if task is not KAAPI_TASK_ADAPT_NOSYNC)
@@ -91,36 +110,47 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
 
       if ( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required preemption */
       {
+#if 0
         if (stack->pc == task) { /* current running task */
           result = (kaapi_taskadaptive_result_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_taskadaptive_result_t));
           result->flag = KAAPI_RESULT_INSTACK;
         }
         else
+#endif
         {
-          result = (kaapi_taskadaptive_result_t*)malloc(sizeof(kaapi_taskadaptive_result_t));
+//          size_t sizestruct = ((sizeof(kaapi_taskadaptive_result_t)+size+KAAPI_CACHE_LINE-1)/KAAPI_CACHE_LINE)*KAAPI_CACHE_LINE;
+          const size_t sizestruct = compute_struct_size(size);
+          result = (kaapi_taskadaptive_result_t*)malloc(sizestruct);
           result->flag = KAAPI_RESULT_INHEAP;
+          result->size_data = sizestruct - offsetof(kaapi_taskadaptive_result_t, data);
         }
         result->signal          = &thief_stack->haspreempt;
         result->req_preempt     = 0;
         result->thief_term      = 0;
-        result->arg_from_thief  = 0;
         result->parg_from_victim= 0;
         result->rhead           = 0;
         result->rtail           = 0;
-        /* link ressult */
+        /* link result for preemption / finalization */
         result->next            = ta->head;
         ta->head                = result;
         if (ta->tail == 0) 
           ta->tail = result;
-        
+
         /* update ta of the first replied task in the stack */
         kaapi_task_t* thief_task = thief_stack->pc;
         if (kaapi_task_isadaptive(thief_task))
         {
           thief_ta                       = (kaapi_taskadaptive_t*)thief_task->sp;
           thief_ta->mastertask           = ( ta->mastertask == 0 ? ta : ta->mastertask );
+          /* link from thief adaptive task to result */
           thief_ta->result               = result;
           result->parg_from_victim       = &thief_ta->arg_from_victim;
+          thief_ta->result_size          = result->size_data;
+          thief_ta->local_result_data    = 0;
+          thief_ta->local_result_size    = 0;
+        }
+        else {
+          kaapi_assert_debug_m( 0, 1, "Replied a non adaptive task from an adaptative task... What do you want to do");
         }
       }
       else flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
@@ -128,7 +158,9 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
       if ( !(task->flag & KAAPI_TASK_ADAPT_NOSYNC) )
         KAAPI_ATOMIC_INCR( &ta->thievescount );
       else flag |= KAAPI_TASK_ADAPT_NOSYNC;
-    } else {
+    } 
+    else 
+    {
       flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
     }
 
@@ -163,10 +195,10 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
    Be carreful: to not use this function inside the library where reply count is accumulate
    before decremented to the counter.
 */
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int retval )
+int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int size, int retval )
 {
   request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
-  _kaapi_request_reply( stack, task, request, thief_stack, retval);
+  _kaapi_request_reply( stack, task, request, thief_stack, size, retval);
   KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest ); 
   kaapi_assert_debug( *stack->hasrequest >= 0 );
   return 0;

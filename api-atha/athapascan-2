@@ -1,8 +1,9 @@
+/* KAAPI public interface */
 /*
-** kaapi_sched_stealprocessor.c
+** athapascan-2
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,35 +44,10 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#ifndef _ATHAPASCAN_NOT_GLOBAL_NAME_H__TWO
+#define _ATHAPASCAN_NOT_GLOBAL_NAME_H__TWO
 
-/** 
-*/
-int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
-{
-  kaapi_thread_context_t*  ctxt_top;
-  int count =0;
-  int replycount = 0;
+#define ATHAPASCAN2_NOT_IN_NAMESPACE 1
+#include "athapascan-2.h"
 
-  count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  if (count ==0) return 0;
-  
-  ctxt_top = KAAPI_STACK_TOP( &kproc->lsuspend );
-  while ((ctxt_top !=0) && (count >0))
-  {
-    replycount += kaapi_sched_stealstack( ctxt_top );
-    count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    ctxt_top = KAAPI_STACK_NEXT_FIELD( ctxt_top );
-  }
-  if ((count >0) && (kproc->ctxt !=0) && (kproc->issteal ==0))
-  {
-    replycount += kaapi_sched_stealstack( kproc->ctxt );
-  }
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
-  ++kproc->cnt_stealop;
 #endif
-
-  return replycount;
-}
