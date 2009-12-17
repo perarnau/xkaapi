@@ -129,8 +129,9 @@ AC_ARG_WITH([cas],[AS_HELP_STRING([--with-cas],
 )
 AS_CASE([$with_cas],
   [default|no], [dnl
+    AC_MSG_NOTICE([configure with cooperative workstealing algorithm])
   ], [yes], [dnl
-    AC_MSG_NOTICE([Adding concurrent work stealing support])
+    AC_MSG_NOTICE([configure with concurrent workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
     AC_DEFINE([KAAPI_CONCURRENT_WS],1,[Support concurrent work stealing])
   ], [dnl

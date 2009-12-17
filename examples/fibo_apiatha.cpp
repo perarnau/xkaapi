@@ -38,18 +38,21 @@ int fiboseq_On(int n){
 /* Print any typed shared
  * this task has read acces on a, it will wait until previous write acces on it are done
 */
+static double start_time;
 template<class T>
 struct Print {
-  void operator() ( a1::Shared_r<T> a, const T& ref_value, double t )
+  void operator() ( a1::Shared_r<T> a, const T& ref_value )
   { 
     /*  Util::WallTimer::gettime is a wrapper around gettimeofday(2) */
-    double delay = Util::WallTimer::gettime() - t;
+    double t1 = Util::WallTimer::gettime();
+    double delay = t1 - start_time;
+    start_time= t1;
 
     /*  a1::System::getRank() prints out the id of the node executing the task */
-    Util::logfile() << a1::System::getRank() << ": -----------------------------------------" << std::endl;
-    Util::logfile() << a1::System::getRank() << ": res  = " << a.read() << std::endl;
-    Util::logfile() << a1::System::getRank() << ": time = " << delay << " s" << std::endl;
-    Util::logfile() << a1::System::getRank() << ": -----------------------------------------" << std::endl;
+    std::cout << "-----------------------------------------" << std::endl;
+    std::cout << "Res  = " << a.read() << std::endl;
+    std::cout << "Time(s): " << delay << std::endl;
+    std::cout << "-----------------------------------------" << std::endl;
   }
 };
 
@@ -113,16 +116,15 @@ struct doit {
     double delay = Util::WallTimer::gettime() - t;
     Util::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
+    start_time= Util::WallTimer::gettime();
     for (unsigned int i = 0 ; i < iter ; ++i)
     {   
-      double time= Util::WallTimer::gettime();
-
       a1::Shared<int> res(0);
       
       a1::Fork<Fibo>(a1::SetLocal)( res, n );
 
       /* a1::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      a1::Fork<Print<int> >(a1::SetLocal)(res, ref_value, time);
+      a1::Fork<Print<int> >(a1::SetLocal)(res, ref_value);
     }
   }
 
@@ -157,12 +159,9 @@ int main(int argc, char** argv)
     */
     a1::Community com = a1::System::join_community( argc, argv );
     
-for (int i=0; i<100; ++i)
-{
     /* Start computation by forking the main task */
     a1::ForkMain<doit>()(argc, argv); 
     a1::Sync();
-}
     
     /* Leave the community: at return to this call no more athapascan
        tasks or shared could be created.
