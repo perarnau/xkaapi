@@ -1186,9 +1186,9 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
  ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
 	      (  kaapi_is_null((void*)reducer) ? \
-                1 \
+                0 \
               : \
-                ((int (*)(...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->arg_from_thief, ##__VA_ARGS__) \
+	      ((int (*)())(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->arg_from_thief, ##__VA_ARGS__) \
           )\
     :\
       0\

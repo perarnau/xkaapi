@@ -1,5 +1,7 @@
 #include "kaapi.h"
 #include <string.h>
+#include <stdlib.h>
+#include <pthread.h>
 
 /** C Adaptive version of fibo
 */
@@ -13,6 +15,8 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
 {
   int result1;
   int result2;
+
+  printf("[%u] fibo(%d)\n", (unsigned int)pthread_self(), n);
 
   int splitter( kaapi_stack_t* victim_stack, kaapi_task_t* task, int count, kaapi_request_t* request )
   { 
@@ -35,6 +39,10 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
         arg->res = &result2;
         kaapi_stack_pushtask( thief_stack );
         kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 0, 1 );
+
+	/* remove the splitter so that wont be stolen twice */
+	task->splitter = NULL;
+
         return 1;
       }
     }
@@ -60,21 +68,41 @@ void fibo( kaapi_stack_t* stack, int n, int* result )
     arg->res = &result1;
     kaapi_stack_pushtask( stack );
 
+    /* let a chance to be stolen */
+    kaapi_stealpoint(stack, task, splitter);
+
     /* recursive sequential call */
     task->splitter = &splitter;
     fibo( stack, n-2, &result2 );
     task->splitter = 0;
-    
-    /** FAUX: à recoder avec prempt_next_thief PREMPTION */
-    if (kaapi_finalize_steal(stack, task, 0, 0) == 0) 
-    {
-      /* no theft task, do it in sequential on n-1 */
-      fibo(stack, n-1, &result1 );
-    } /* else wait */
 
-    /* return with sum */
-    *result = result1 + result2;
- }
+    /* preempt thief, if any */
+    int reducer(kaapi_stack_t* stack, kaapi_task_t* task, const int* result1, int* result, const int* result2)
+    {
+      printf("[%u] reducing(%p, %p, %p)\n", (unsigned int)pthread_self(), result, result1, result2);
+
+      if (result1 == NULL)
+	return 0;
+
+      *result = *result1 + *result2;
+
+      return 1;
+    }
+
+    if (!kaapi_preempt_nextthief(stack, task, NULL, reducer, &result, &result2))
+    {
+      printf("[%u] !kaapi_preempt\n", (unsigned int)pthread_self());
+
+      /* no thief stole the n-1, compute it */
+      fibo(stack, n - 1, &result1);
+
+      /* sum fibo(n-1), fibo(n-2) */
+      *result = result1 + result2;
+    }
+    /* else reducer did the sum */
+  }
+
+  kaapi_finalize_steal(stack, kaapi_stack_toptask(stack), result, sizeof(*result));
 }
 
 
