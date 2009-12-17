@@ -19,6 +19,27 @@ libatha1_la_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1_BUILD_CXXFLAGS) -std=gnu++0x
 libatha1_la_LDFLAGS = -version-info 1:0:1 $(ATHA1_BUILD_LDFLAGS)
 libatha1_la_LIBADD=../src/libxkaapi.la $(ATHA1_BUILD_LIBS)
 
+M4_BUILT_FILES=\
+	athapascan_closure.h \
+	athapascan_fork.h \
+	atha_api2_clo.h \
+	atha_api2_fork.h
+
+M4_SRCS=\
+	m4_generator \
+	m4_macros \
+	athapascan_closure_gen.m4 \
+	athapascan_fork_gen.m4 \
+	atha_api2_clo.m4 \
+	atha_api2_fork.m4
+
+BUILT_SOURCES = $(M4_BUILT_FILES)
+
+EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
+
+$(M4_BUILT_FILES): $(M4_SRCS)
+	$(srcdir)/m4_generator 10
+
 libatha1_la_SOURCES=\
 	atha_init.cpp \
 	atha_error.cpp \
@@ -38,10 +59,6 @@ libatha1_la_SOURCES=\
 	atha_init.h \
 	atha_parser.h \
 	athapascan-1.h \
-	athapascan_closure.h \
-	athapascan_fork.h \
-	atha_api2_clo.h \
-	atha_api2_fork.h \
 	atha_properties.h \
 	atha_stream.h \
 	atha_timer.h \
