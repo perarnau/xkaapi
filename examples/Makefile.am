@@ -7,7 +7,6 @@
 
 include ./Makefile.examples.am
 
-#AM_CPPFLAGS=@AM_CPPFLAGS@ -DKAAPI_CONCURRENT_WS=1
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src
 
 check_PROGRAMS= \

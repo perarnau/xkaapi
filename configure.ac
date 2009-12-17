@@ -84,12 +84,12 @@ AC_ARG_ENABLE([target],[AS_HELP_STRING([--enable-target=<target>], [mt[default],
 AS_CASE([$enable_target],
   [mt|default], [dnl
     AC_MSG_NOTICE([Using target MT])
-    KAAPI_MACHINE=mt
+    KAAPI_TARGET=mt
   ],[dnl
     AC_MSG_ERROR([Unknown target '$enable_target'. Aborting.])
   ])
-AC_SUBST([KAAPI_MACHINE])
-AM_CONDITIONAL([KAAPI_MACHINE_MT],[test x"$KAAPI_MACHINE" = x"mt"])
+AC_SUBST([KAAPI_TARGET])
+AM_CONDITIONAL([KAAPI_TARGET_MT],[test x"$KAAPI_TARGET" = x"mt"])
 
 dnl ----------------------------------------------------------------
 dnl Checks for header files.
