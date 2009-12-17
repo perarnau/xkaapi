@@ -27,6 +27,13 @@ add_executable (fibo_apiatha2         fibo_apiatha2.cpp )
 add_executable (fibo_apiatha3         fibo_apiatha3.cpp )
 #add_executable (adaptive_with_dfg     adaptive_with_dfg.c )
 add_executable (nqueens_apiatha       nqueens_apiatha.cpp )
+add_executable (nqueens_apiatha_grain2       nqueens_apiatha.cpp )
+add_executable (nqueens_apiatha_grain3       nqueens_apiatha.cpp )
+add_executable (nqueens_apiatha_grain4       nqueens_apiatha.cpp )
+add_executable (nqueens_apiatha_grain5       nqueens_apiatha.cpp )
+add_executable (nqueens_apiatha_grain6       nqueens_apiatha.cpp )
+add_executable (nqueens_apiatha_grain7       nqueens_apiatha.cpp )
+add_executable (nqueens_apiatha_grain8       nqueens_apiatha.cpp )
 add_executable (branchbound_apiatha   branchbound_apiatha.cpp )
 add_executable (transform_adapt     	transform_adapt.h transform_adapt.cpp random.cpp )
 add_executable (marc_problem          marc_problem.cpp )
@@ -58,6 +65,36 @@ set_target_properties(
               PROPERTIES COMPILE_FLAGS "" 
 )
 
+# PROPERTIES for C++ code nqueens_apiatha
+set_target_properties( 
+              nqueens_apiatha_grain2
+              PROPERTIES COMPILE_FLAGS "-DTHRESHOLD=2" 
+)
+set_target_properties( 
+              nqueens_apiatha_grain3
+              PROPERTIES COMPILE_FLAGS "-DTHRESHOLD=3" 
+)
+set_target_properties( 
+              nqueens_apiatha_grain4
+              PROPERTIES COMPILE_FLAGS "-DTHRESHOLD=4" 
+)
+set_target_properties( 
+              nqueens_apiatha_grain5
+              PROPERTIES COMPILE_FLAGS "-DTHRESHOLD=4" 
+)
+set_target_properties( 
+              nqueens_apiatha_grain6
+              PROPERTIES COMPILE_FLAGS "-DTHRESHOLD=6" 
+)
+set_target_properties( 
+              nqueens_apiatha_grain7
+              PROPERTIES COMPILE_FLAGS "-DTHRESHOLD=7" 
+)
+set_target_properties( 
+              nqueens_apiatha_grain8
+              PROPERTIES COMPILE_FLAGS "-DTHRESHOLD=8" 
+)
+
 
 # Target Section :
 target_link_libraries (transform_adapt      ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
@@ -69,6 +106,13 @@ target_link_libraries (fibo_apiatha2        ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAP
 target_link_libraries (fibo_apiatha3        ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 #target_link_libraries (adaptive_with_dfg    ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (nqueens_apiatha      ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (nqueens_apiatha_grain2 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (nqueens_apiatha_grain3 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (nqueens_apiatha_grain4 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (nqueens_apiatha_grain5 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (nqueens_apiatha_grain6 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (nqueens_apiatha_grain7 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (nqueens_apiatha_grain8 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (branchbound_apiatha  ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (marc_problem         ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 

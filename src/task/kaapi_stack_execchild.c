@@ -49,6 +49,9 @@
 */
 int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
 {
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_uint32_t         cnt_tasks;
+#endif  
   kaapi_task_t*          saved_sp;
   char*                  saved_sp_data;
   kaapi_task_t*          retn;
@@ -56,6 +59,10 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
 
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  cnt_tasks = stack->_proc->cnt_tasks;
+#endif
 
 redo_work: 
 
@@ -65,6 +72,9 @@ redo_work:
   if (*stack->hasrequest !=0) 
   {
     stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    stack->_proc->cnt_tasks = cnt_tasks;
+#endif
     kaapi_sched_advance( stack->_proc );
   }
 
@@ -83,9 +93,15 @@ redo_work:
     /* read from memory */
     pc = stack->pc;
     ++pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
     if (pc >= stack->sp) 
     {
       stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+      stack->_proc->cnt_tasks = cnt_tasks;
+#endif
       return 0;
     }
     goto redo_work;
@@ -100,6 +116,9 @@ redo_work:
     saved_sp_data = stack->sp_data;
     stack->pc     = pc;
     (*pc->body)(pc, stack);
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
 
     /* push restore_frame task if pushed tasks */
     if (saved_sp != stack->sp)

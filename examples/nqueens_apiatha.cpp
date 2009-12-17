@@ -11,7 +11,9 @@
 /*
  * globals
  */
-#define THRESHOLD 4
+#if !defined(THRESHOLD)
+#define THRESHOLD 6
+#endif
 
 #define MAXSIZE 24
 
@@ -91,12 +93,12 @@ struct display
   {
     const res_t& TOTAL = a1TOTAL.read();
     double stop = Util::WallTimer::gettime(); 
-    Util::logfile() << "**************************************" << std::endl;
-    Util::logfile() << "n         : " << SIZEE+1 << std::endl;
-    Util::logfile() << "unique    : " << (TOTAL.COUNT2+TOTAL.COUNT4+TOTAL.COUNT8) << std::endl;
-    Util::logfile() << "total     : " << (TOTAL.COUNT2*2+TOTAL.COUNT4*4+TOTAL.COUNT8*8) << std::endl;
-    Util::logfile() << "time      : " << stop-start << " sec" << std::endl;
-    Util::logfile() << "**************************************" << std::endl;
+    std::cout << "**************************************" << std::endl;
+    std::cout << "n         : " << SIZEE+1 << std::endl;
+    std::cout << "unique    : " << (TOTAL.COUNT2+TOTAL.COUNT4+TOTAL.COUNT8) << std::endl;
+    std::cout << "total     : " << (TOTAL.COUNT2*2+TOTAL.COUNT4*4+TOTAL.COUNT8*8) << std::endl;
+    std::cout << "time      : " << stop-start << " sec" << std::endl;
+    std::cout << "**************************************" << std::endl;
     if ((SOL != -1) && ((unsigned)SOL != (TOTAL.COUNT2*2+TOTAL.COUNT4*4+TOTAL.COUNT8*8))) abort(); 
   }
 };
