@@ -9,13 +9,6 @@
 # Add the binary directory for generated headers :
 include_directories (${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Global definitions for compile comand :
-add_definitions ( "-Wall -pedantic -g -DKAAPI_DEBUG -std=c99")
-#add_definitions ( "-Wall -pedantic -std=c99 -g -DKAAPI_DEBUG -DKAAPI_CONCURRENT_WS=1")
-#add_definitions ( "-Wall -pedantic -std=c99 -O3 -DKAAPI_CONCURRENT_WS=1")
-#add_definitions ( "-Wall -pedantic -std=c99 -O3 -DKAAPI_USE_PERFCOUNTER=1")
-#add_definitions ( "-Wall -pedantic -std=c99 -O3")
-
 #################
 ## LIBRARY BEG ##
 
@@ -28,7 +21,7 @@ if (KAAPI_TARGET_MT)
 #  execute_process( 
 #      ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/machine/gpu/kaapi_gpu_machine.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_machine.h
 #  )
-#elif (MPSOC_ST)
+#elif (KAAPI_MPSOC_ST)
 #  execute_process( 
 #      ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/machine/mpsoc/kaapi_gpu_machine.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_machine.h
 #  )
@@ -260,6 +253,12 @@ check_type_size ("cpu_set_t" CPU_SET_T)
 ## CPU_SET_T END ##
 ###################
 
+if (KAAPI_CAS_WS)
+  set (KAAPI_CONCURRENT_WS "1")
+  message("++ Configure with concurrent workstealing algorithm")
+else (KAAPI_CAS_WS)
+  message("++ Configure with cooperative workstealing algorithm")
+endif (KAAPI_CAS_WS)
 
 ##################################
 ## CONFIGURE KAAPI_CONFIG.H BEG ##

@@ -221,12 +221,6 @@ redo_work:
   {
     goto redo_work;
   }
-
-  /* Definition of the finalization point where main thread waits all the works.
-     After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
-     could be read (...)
-  */
-  kaapi_finalize_steal( stack, task );
 }
 
 
@@ -252,6 +246,17 @@ void cra_problem ( InputIterator begin, InputIterator end, Function& func, Predi
   kaapi_stack_pushtask(stack);
 
   work.doit( task, stack );
+
+  /* Definition of the finalization point where main thread waits all the works.
+     After this point, we enforce memory synchronisation: all data that has been writen before terminaison of the thiefs,
+     could be read (...)
+  */
+  kaapi_finalize_steal( stack, task );
+  
+  /* Here wait all child tasks have finished thier works: 
+     It must be synchronisation on memory access 
+  */
+  kaapi_sched_sync(stack);
 }
 
 

@@ -101,6 +101,7 @@
 #endif
 
 /* ================================== Archi ================================= */
+#cmakedefine KAAPI_CONCURRENT_WS ${KAAPI_CONCURRENT_WS}
 
 /* Define the number of online processors. */
 #cmakedefine KAAPI_MAX_PROCESSOR ${KAAPI_MAX_PROCESSOR}
