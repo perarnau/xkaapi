@@ -100,7 +100,13 @@ int main(int argc, char** argv)
    std::cout.setf(std::ios::fixed, std::ios_base::floatfield);
    // Verification of the result
    std::cout << "res = ln(2) = " << res << std::endl;
-   double res_stl = std::accumulate(input, input+n, val_t(0));
+   double res_stl;
+   t0 = gettime();
+   for (l=0; l<iter; ++l)
+     res_stl = std::accumulate(input, input+n, val_t(0));
+   t0 = gettime() - t0;
+   const double avrg_stl = t0 / (double)iter;
+
    std::cout << "res_stl = ln(2) = " << res_stl << std::endl;
 
    if (compute_abs_diff(res, res_stl) < 1e-6)
@@ -108,7 +114,7 @@ int main(int argc, char** argv)
    else
      std::cout << "Verification failed, KO!!!!!!!!!!!!" << std::endl;
 
-  std::cout << "Result-> cpu:" << cpu << "  size: " << n << "  time: " << avrg << std::endl;
+   std::cout << "Result-> cpu:" << cpu << "  size: " << n << "  time: " << avrg << ", " << avrg_stl << std::endl;
 
   delete [] input;
 
