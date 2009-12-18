@@ -32,7 +32,7 @@ int main(int argc, char** argv)
   int i;
   int n;
   int niter;
-  int result;
+  int result = 0;
   double t0, t1;
 
   if (argc >1)

@@ -98,7 +98,9 @@ static int fibo_reducer
  fibo_arg_t* victim_arg
 )
 {
+#if 0
   const int saved_result = victim_arg->result;
+#endif
 
   victim_arg->result +=  thief_arg->result;
 
