@@ -222,7 +222,7 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
 
   if (!kaapi_preempt_nextthief(stack, task, NULL, reducer, this))
   {
-    kaapi_trace("!nextthief");
+    kaapi_trace("!nextthief(%lf)", _local_accumulate);
 
     // nothing preempted, we are done
     return ;

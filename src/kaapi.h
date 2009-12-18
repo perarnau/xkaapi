@@ -1269,6 +1269,7 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
     ta->local_result_size = size;
     kaapi_task_t* task = kaapi_stack_toptask(stack);
     kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    kaapi_stack_pushtask(stack);
   }
   return 0;
 }

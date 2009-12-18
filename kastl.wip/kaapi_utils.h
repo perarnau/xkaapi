@@ -76,7 +76,7 @@ namespace kaapi_utils
    kaapi_request_t* request,
    typename SelfType::request_handler_t& handler,
    SelfType* this_work
-   )
+  )
   {
     // process the requests and fail
     // the one we did not reply to
