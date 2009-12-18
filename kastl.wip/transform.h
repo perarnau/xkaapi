@@ -24,9 +24,6 @@ class TransformStruct {
 public:
   typedef TransformStruct<InputIterator, OutputIterator, UnaryOperator> Self_t;
   
-  static InputIterator  beg0;
-  static OutputIterator obeg0;
-
   /* cstor */
   TransformStruct(
     InputIterator ibeg,
@@ -128,6 +125,30 @@ public:
     // all requests have been replied to
     return total_count;
   }
+
+  static int reducer
+  (
+   kaapi_stack_t* stack,
+   kaapi_task_t* task,
+   void* thief_data,
+   void* victim_data
+  )
+  {
+    const Self_t* const thief_work = static_cast<const Self_t*>(thief_data);
+    Self_t* const victim_work = static_cast<Self_t*>(victim_data);
+
+    // there is no need to reduce
+    // anything since the output
+    // iterator is already filled
+
+    victim_work->_ibeg = thief_work->_ibeg;
+    victim_work->_iend = thief_work->_iend;
+
+    // always return 1 so that the
+    // victim knows about preemption
+    return 1;
+  }
+
 };
 
 
@@ -143,45 +164,63 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
   int unit_size = 512;
   int tmp_size  = 0;
 
+ complete_work:
   while (_iend != _ibeg)
   {
-    /* definition of the steal point where steal_work may be called in case of steal request 
-       -here size is pass as parameter and updated in case of steal
-    */
     kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
 
-    tmp_size =  _iend-_ibeg;
-    if (unit_size > tmp_size) { unit_size = tmp_size; nano_iend = _iend; }
-    else nano_iend = _ibeg + unit_size;
-    
-    /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
-    kaapi_task_setaction( task, kaapi_utils::static_splitter<Self_t> );
-    _obeg = std::transform( _ibeg, nano_iend, _obeg, _op );
+    tmp_size = _iend - _ibeg;
 
-    /* return from sequential computation: remove concurrent task action 
-       in order to disable any steal at this point while I'm doing seq computation */
+    if (unit_size > tmp_size)
+    {
+      unit_size = tmp_size;
+      nano_iend = _iend;
+    }
+    else
+    {
+      nano_iend = _ibeg + unit_size;
+    }
+    
+#if 0
+    kaapi_task_setaction( task, kaapi_utils::static_splitter<Self_t> );
+#endif
+
+    _obeg = std::transform(_ibeg, nano_iend, _obeg, _op);
+
+#if 0
     kaapi_task_getaction( task );
+#endif
 
     _ibeg += unit_size;
+
+    if (kaapi_preemptpoint(stack, task, NULL, this, sizeof(Self_t)))
+    {
+      // has been preempted
+      return ;
+    }
   }
+
+  // reduce thief results
+
+ next_thief:
+  if (!kaapi_preempt_nextthief(stack, task, NULL, reducer, this))
+    return ;
+
+  if (_ibeg == _iend)
+    goto next_thief;
+
+  goto complete_work;
 }
-
-
-template<class InputIterator, class OutputIterator, class UnaryOperator>
-InputIterator TransformStruct<InputIterator, OutputIterator, UnaryOperator>::beg0;
-template<class InputIterator, class OutputIterator, class UnaryOperator>
-OutputIterator TransformStruct<InputIterator, OutputIterator, UnaryOperator>::obeg0;
 
 /**
 */
 template<class InputIterator, class OutputIterator, class UnaryOperator>
 void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op )
 {
-  TransformStruct<InputIterator, OutputIterator, UnaryOperator>::beg0 = begin;
-  TransformStruct<InputIterator, OutputIterator, UnaryOperator>::obeg0 = to_fill;
-  
-  TransformStruct<InputIterator, OutputIterator, UnaryOperator> work( begin, end, to_fill, op);
+  typedef TransformStruct<InputIterator, OutputIterator, UnaryOperator> Self_t;
 
-  kaapi_utils::start_adaptive_task(&work);
+  Self_t work(begin, end, to_fill, op);
+
+  kaapi_utils::start_adaptive_task<Self_t>(&work);
 }
 #endif

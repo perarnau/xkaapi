@@ -148,10 +148,6 @@ public:
     const Self_t* const thief_work = static_cast<const Self_t*>(thief_data);
     Self_t* const victim_work = static_cast<Self_t*>(victim_data);
 
-    kaapi_trace("reducer %lf, %lf",
-		victim_work->_local_accumulate,
-		thief_work->_local_accumulate);
-
     // merge of the two results
     victim_work->_local_accumulate =
       victim_work->_op
@@ -179,11 +175,7 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
   ptrdiff_t unit_size = 512;
   ptrdiff_t tmp_size;
 
-  kaapi_trace("accumulate");
-
  complete_work:
-  kaapi_trace("complete_work");
-
   while (_iend != _ibeg)
   {
     kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
@@ -208,9 +200,6 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
     if (kaapi_preemptpoint(stack, task, NULL, this, sizeof(Self_t)))
       {
 	// has been preempted
-
-	kaapi_trace("preempted (%lf)", _local_accumulate);
-
 	return ;
       }
   }
@@ -218,12 +207,8 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
   // reduce thief results
 
  next_thief:
-  kaapi_trace("nextthief");
-
   if (!kaapi_preempt_nextthief(stack, task, NULL, reducer, this))
   {
-    kaapi_trace("!nextthief(%lf)", _local_accumulate);
-
     // nothing preempted, we are done
     return ;
   }
