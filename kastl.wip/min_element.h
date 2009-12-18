@@ -103,7 +103,7 @@ public:
 	 victim_stack, task,
 	 count, request,
 	 handler, this
-	 );
+	);
 
       // mute victim state after processing
       _iend = handler.local_end;
