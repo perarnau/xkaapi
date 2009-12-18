@@ -20,16 +20,23 @@ static void thief_entrypoint
  kaapi_stack_t* stack
 )
 {
-  fibo_arg_t* const victim_arg =
+  fibo_arg_t* const thief_arg =
     kaapi_task_getargst(task, fibo_arg_t);
 
   fibo_entrypoint(task, stack);
+
+#if 0
+  printf("[%u] thief_entrypoint(%d) == %d\n",
+	 (unsigned int)pthread_self(),
+	 thief_arg->n,
+	 thief_arg->result);
+#endif
 
   kaapi_finalize_steal
     (
      stack,
      task,
-     victim_arg,
+     thief_arg,
      sizeof(fibo_arg_t)
     );
 }
@@ -69,7 +76,8 @@ static int fibo_splitter
       kaapi_task_setargs(thief_task, thief_arg);
 
       kaapi_stack_pushtask(thief_stack);
-      kaapi_request_reply(victim_stack, task, &request[i], thief_stack, sizeof(fibo_arg_t), 1);
+      kaapi_request_reply(victim_stack, task, &request[i],
+			  thief_stack, sizeof(fibo_arg_t), 1);
 
       /* remove the splitter so that wont be stolen twice */
       task->splitter = NULL;
@@ -90,13 +98,22 @@ static int fibo_reducer
  fibo_arg_t* victim_arg
 )
 {
+  const int saved_result = victim_arg->result;
+
   victim_arg->result +=  thief_arg->result;
 
-/*   printf("[%u] reducing, %d == %d + %d\n", */
-/* 	 (unsigned int)pthread_self(), */
-/* 	 *result, *result1, *result2); */
+#if 0
+  printf("[%u] reducing(%d): %d = %d[%d] + %d[%d]\n",
+	 (unsigned int)pthread_self(),
+	 victim_arg->n,
+	 victim_arg->result,
+	 saved_result,
+	 victim_arg->n,
+	 thief_arg->result,
+	 thief_arg->n);
+#endif
 
-  return 1;
+  return 0;
 }
 
 
@@ -113,28 +130,36 @@ static void fibo_entrypoint
     victim_arg->result = victim_arg->n;
   }
   else {
-    int result;
-
     /* steal me hardly */
     kaapi_stealpoint
       (
        stack,
        task,
        fibo_splitter
-       );
+      );
 
     /* mute args */
     victim_arg->n -= 2;
     fibo_entrypoint(task, stack);
-    result = victim_arg->result;
     victim_arg->n += 2;
+
+#if 0
+    printf("-- fibo_entrypoint(%d) %d\n", victim_arg->n - 2, victim_arg->result);
+#endif
 
     if (!kaapi_preempt_nextthief(stack, task, NULL, fibo_reducer, victim_arg))
     {
+      const int result = victim_arg->result;
+
       /* no thief stole the n-1, compute it */
       victim_arg->n -= 1;
       fibo_entrypoint(task, stack);
       victim_arg->n += 1;
+
+#if 0
+      printf("!kaapi_preempt_nextthief(%d), result: %d\n",
+	     victim_arg->n - 1, victim_arg->result);
+#endif
 
       /* sum fibo(n-1), fibo(n-2) */
       victim_arg->result += result;
@@ -160,11 +185,16 @@ int main(int argc, char** argv)
     arg.result = 0;
     arg.n = atoi(argv[1]);
 
-    kaapi_task_initadaptive(stack, task, fibo_entrypoint, &arg, KAAPI_TASK_ADAPT_DEFAULT);
+    kaapi_task_initadaptive
+      (
+       stack,
+       task,
+       fibo_entrypoint,
+       &arg,
+       KAAPI_TASK_ADAPT_DEFAULT
+      );
+
     kaapi_stack_pushtask(stack);
-
-    fibo_entrypoint(task, stack);
-
     kaapi_finalize_steal(stack, task, 0, 0);
     kaapi_sched_sync(stack);
 
@@ -172,7 +202,8 @@ int main(int argc, char** argv)
   }
   t1 = kaapi_get_elapsedtime();
 
-  if ((err != 0) && (err != ENOEXEC)) printf("error in executing task: %i, '%s'\n", err, strerror(err) );
+  if ((err != 0) && (err != ENOEXEC))
+    printf("error in executing task: %i, '%s'\n", err, strerror(err) );
   printf("Fibo(%i) = %i *** Time: %e(s)\n", atoi(argv[1]), result, t1-t0 );
   
   return 0;
