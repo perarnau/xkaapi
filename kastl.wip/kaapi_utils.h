@@ -75,45 +75,45 @@ namespace kaapi_utils
   {
     // process the requests and fail
     // the one we did not reply to
-
+    
     const int replied_count = count;
     SelfType* output_work = 0;
-
+    
     for (; count > 0; ++request)
+    {
+      if (!kaapi_request_ok(request))
+        continue ;
+      
+      kaapi_stack_t* const thief_stack = request->stack;
+      kaapi_task_t*  const thief_task  = kaapi_stack_toptask(thief_stack);
+      
+      kaapi_task_initadaptive(thief_stack, thief_task, NULL, NULL, KAAPI_TASK_ADAPT_DEFAULT);
+      kaapi_task_setbody(thief_task, &static_thiefentrypoint<SelfType>);
+      
+      void* const stack_data = kaapi_stack_pushdata(thief_stack, sizeof(SelfType));
+      kaapi_task_setargs(thief_task, stack_data);
+      output_work = kaapi_task_getargst(thief_task, SelfType);
+      
+      // stop request processing
+      if (handler(this_work, output_work) == false)
       {
-	if (!kaapi_request_ok(request))
-	  continue ;
-
-	kaapi_stack_t* const thief_stack = request->stack;
-	kaapi_task_t*  const thief_task  = kaapi_stack_toptask(thief_stack);
-
-	kaapi_task_initadaptive(thief_stack, thief_task, NULL, NULL, KAAPI_TASK_ADAPT_DEFAULT);
-	kaapi_task_setbody(thief_task, &static_thiefentrypoint<SelfType>);
-
-	void* const stack_data = kaapi_stack_pushdata(thief_stack, sizeof(SelfType));
-	kaapi_task_setargs(thief_task, stack_data);
-	output_work = kaapi_task_getargst(thief_task, SelfType);
-
-	// stop request processing
-	if (handler(this_work, output_work) == false)
-	  {
-	    kaapi_stack_popdata(thief_stack, sizeof(SelfType));
-	    break;
-	  }
-
-	kaapi_stack_pushtask(thief_stack);
-
-	// reply ok (1) to the request
-	kaapi_request_reply(victim_stack, task, request, thief_stack, sizeof(SelfType), 1);
-
-	--count; 
+        kaapi_stack_popdata(thief_stack, sizeof(SelfType));
+        break;
       }
-
+      
+      kaapi_stack_pushtask(thief_stack);
+      
+      // reply ok (1) to the request
+      kaapi_request_reply(victim_stack, task, request, thief_stack, sizeof(SelfType), 1);
+      
+      --count; 
+    }
+    
     fail_requests(victim_stack, task, count, request);
-
+    
     return replied_count;
   }
-
+  
   template<typename SelfType>
   static void static_mainentrypoint(kaapi_task_t* task, kaapi_stack_t* stack)
   {
