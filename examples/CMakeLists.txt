@@ -60,10 +60,10 @@ endif(HAS_NESTED_FUNCTIONS_FLAG)
 
 
 # PROPERTIES for C++ code
-#set_target_properties( 
-#              transform_adapt marc_problem fibo_apiatha fibo_apiatha2 fibo_apiatha3 nqueens_apiatha branchbound_apiatha
-#              PROPERTIES COMPILE_FLAGS "" 
-#)
+set_target_properties( 
+              transform_adapt marc_problem fibo_apiatha fibo_apiatha2 fibo_apiatha3 nqueens_apiatha branchbound_apiatha
+              PROPERTIES COMPILE_FLAGS "" 
+)
 
 # PROPERTIES for C++ code nqueens_apiatha
 set_target_properties( 
@@ -97,15 +97,14 @@ set_target_properties(
 
 
 # Target Section :
-#target_link_libraries (transform_adapt      ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (transform_adapt      ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (fiboseq              ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (fibo                 ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (fibo_adapt           ${XKAAPI_TEST_LINK_LIBS} m)
-#target_link_libraries (fibo_apiatha         ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
-#target_link_libraries (fibo_apiatha2        ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
-#target_link_libraries (fibo_apiatha3        ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (fibo_apiatha         ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (fibo_apiatha2        ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
+target_link_libraries (fibo_apiatha3        ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 #target_link_libraries (adaptive_with_dfg    ${XKAAPI_TEST_LINK_LIBS} m)
-<<<<<<< HEAD:examples/CMakeLists.txt
 target_link_libraries (nqueens_apiatha      ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (nqueens_apiatha_grain2 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (nqueens_apiatha_grain3 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
@@ -116,9 +115,4 @@ target_link_libraries (nqueens_apiatha_grain7 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKA
 target_link_libraries (nqueens_apiatha_grain8 ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (branchbound_apiatha  ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
 target_link_libraries (marc_problem         ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
-=======
-#target_link_libraries (nqueens_apiatha      ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
-#target_link_libraries (branchbound_apiatha  ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
-#target_link_libraries (marc_problem         ${XKAAPI_TEST_CPP_LINK_LIBS} ${XKAAPI_TEST_LINK_LIBS} m)
->>>>>>> dd40e09d04b2005879faaba348e1ea082e46b837:examples/CMakeLists.txt
 
