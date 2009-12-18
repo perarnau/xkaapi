@@ -148,6 +148,10 @@ public:
     const Self_t* const thief_work = static_cast<const Self_t*>(thief_data);
     Self_t* const victim_work = static_cast<Self_t*>(victim_data);
 
+    kaapi_trace("reducer %lf, %lf",
+		victim_work->_local_accumulate,
+		thief_work->_local_accumulate);
+
     // merge of the two results
     victim_work->_local_accumulate =
       victim_work->_op
@@ -175,56 +179,67 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
   ptrdiff_t unit_size = 512;
   ptrdiff_t tmp_size;
 
+  kaapi_trace("accumulate");
+
  complete_work:
-    while (_iend != _ibeg)
-    {
-      kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
+  kaapi_trace("complete_work");
 
-      tmp_size = _iend - _ibeg;
+  while (_iend != _ibeg)
+  {
+    kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
 
-      if (tmp_size < unit_size)
+    tmp_size = _iend - _ibeg;
+
+    if (tmp_size < unit_size)
       {
 	unit_size = tmp_size;
 	nano_iend = _iend;
       }
-      else
+    else
       {
 	nano_iend = _ibeg + unit_size;
       }
 
-      // sequential computation
-      _local_accumulate = std::accumulate(_ibeg, nano_iend, _local_accumulate, _op);
+    // sequential computation
+    _local_accumulate = std::accumulate(_ibeg, nano_iend, _local_accumulate, _op);
 
-      _ibeg +=unit_size;
+    _ibeg += unit_size;
 
-      if (kaapi_preemptpoint(stack, task, NULL, this, sizeof(Self_t)))
-	{
-	  // has been preempted
-	  return ;
-	}
-    }
-
-    // reduce thief results
-
- next_thief:
-    if (!kaapi_preempt_nextthief(stack, task, NULL, reducer, this))
+    if (kaapi_preemptpoint(stack, task, NULL, this, sizeof(Self_t)))
       {
-	// nothing preempted, we are done
+	// has been preempted
+
+	kaapi_trace("preempted (%lf)", _local_accumulate);
+
 	return ;
       }
+  }
 
-    // a thief has been preempted. if it
-    // finished the work, iterators are
-    // the same and we must test for a
-    // new thief prior to complete_work.
+  // reduce thief results
 
-    if (_ibeg == _iend)
-      goto next_thief;
+ next_thief:
+  kaapi_trace("nextthief");
 
-    // a thief has been preempted and
-    // it didnot finish its work. complete.
+  if (!kaapi_preempt_nextthief(stack, task, NULL, reducer, this))
+  {
+    kaapi_trace("!nextthief");
 
-    goto complete_work;
+    // nothing preempted, we are done
+    return ;
+  }
+
+  // a thief has been preempted. if it
+  // finished the work, iterators are
+  // the same and we must test for a
+  // new thief prior to complete_work.
+
+  if (_ibeg == _iend)
+    goto next_thief;
+
+  // a thief has been preempted and it
+  // didnot finish its work. complete.
+
+  goto complete_work;
 }
 
 

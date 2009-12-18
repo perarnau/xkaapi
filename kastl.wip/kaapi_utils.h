@@ -24,6 +24,27 @@ static inline void kaapi_stack_popdata(kaapi_stack_t* stack, kaapi_uint32_t coun
   stack->sp_data -= count;
 }
 
+static inline unsigned long get_clock(void)
+{
+  static volatile unsigned long __clock = 0;
+  return __sync_add_and_fetch(&__clock, 1);
+}
+
+
+#define kaapi_trace(fmt, ...)			\
+do {						\
+  unsigned long _clock = get_clock();		\
+  fprintf					\
+    (						\
+     stderr,					\
+     "[KAAPI_TRACE] %u %u " fmt "\n",		\
+     (unsigned int)_clock,			\
+     (unsigned int)pthread_self(),		\
+     ##__VA_ARGS__				\
+     );						\
+} while (0)
+
+
 
 namespace kaapi_utils
 {
