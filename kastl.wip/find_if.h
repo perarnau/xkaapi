@@ -202,6 +202,8 @@ public:
 template<class InputIterator, class Predicate>
 void FindIfStruct<InputIterator, Predicate>::main_doit(kaapi_task_t* task, kaapi_stack_t* stack)
 {
+# warning "TODO_REDUCER"
+
   /* local iterator for the macro loop */
   InputIterator macro_iend;
 
@@ -223,12 +225,9 @@ void FindIfStruct<InputIterator, Predicate>::main_doit(kaapi_task_t* task, kaapi
 
     while (_ibeg != macro_iend)
     {
-
 #if 0 // TODO_REDUCER
     if (kaapi_preemptpoint( _sc, &preempt, this, _iend )) return;
-#else
-# warning "TODO_REDUCER"
-#endif // TODO_REDUCER
+#endif
 
       /* definition of the steal point where steal_work may be called in case of steal request 
          -here size is pass as parameter and updated in case of steal.
@@ -244,24 +243,18 @@ void FindIfStruct<InputIterator, Predicate>::main_doit(kaapi_task_t* task, kaapi
       {
         /* finalize my thiefs */
         _iend_local = nano_iend; // add by D. Traore
-#warning "TODO_REDUCER"
-        kaapi_finalize_steal(stack, task);
        return;
       }
       _ibeg = nano_iend;
 
     }
     _iend_local = macro_iend; // add by D. Traore
-#warning "TODO_REDUCER"
-    kaapi_finalize_steal(stack, task);
     if (_ifound != macro_iend) return; 
     unit_macro_step = 3*unit_macro_step / 2;
   }
  
   _iend_local = _iend; // add by D. Traore
   /* finalize all steal request */
-#warning "TODO_REDUCER"
-  kaapi_finalize_steal(stack, task);
 }
 
 /** Adaptive find_if with macro-loop 
@@ -269,6 +262,8 @@ void FindIfStruct<InputIterator, Predicate>::main_doit(kaapi_task_t* task, kaapi
 template<class InputIterator, class Predicate>
 void FindIfStruct<InputIterator, Predicate>::local_doit(kaapi_task_t* task, kaapi_stack_t* stack)
 {
+#warning "TODO_REDUCER" // !!returns!!
+
   /* local iterator for the nano loop */
   InputIterator nano_iend;
 
@@ -281,8 +276,6 @@ void FindIfStruct<InputIterator, Predicate>::local_doit(kaapi_task_t* task, kaap
 
 #if 0 // TODO_REDUCER
     if (kaapi_preemptpoint( _sc, &preempt, this, _iend )) return;
-#else
-# warning "TODO_REDUCER"
 #endif // TODO_REDUCER
 
       /* definition of the steal point where steal_work may be called in case of steal request
@@ -299,22 +292,16 @@ void FindIfStruct<InputIterator, Predicate>::local_doit(kaapi_task_t* task, kaap
       {
         /* finalize my thiefs */
         _iend_local = nano_iend; // add by D. Traore
-#warning "TODO_REDUCER"
-        kaapi_finalize_steal(stack, task);
         return;
       }
       _ibeg = nano_iend;
 
     _iend_local = _iend; // add by D. Traore
-#warning "TODO_REDUCER"
-    kaapi_finalize_steal(stack, task);
     if (_ifound != _iend) return;
   }
 
   _iend_local = _iend; // add by D. Traore
   /* finalize all steal request */
-#warning "TODO_REDUCER"
-  kaapi_finalize_steal(stack, task);
 }
 
 /** Adaptive find_if

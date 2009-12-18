@@ -10,7 +10,7 @@
 #ifndef _XKAAPI_ACCUMULATE_H
 #define _XKAAPI_ACCUMULATE_H
 #include "kaapi.h"
-#include "kaapi_utils2.h"
+#include "kaapi_utils.h"
 #include <algorithm>
 #include <numeric>
 #include <functional>
@@ -100,7 +100,7 @@ public:
       request_handler_t handler(_iend, bloc, _op);
 
       replied_count =
-	kaapi_utils2::foreach_request
+	kaapi_utils::foreach_request
 	(
 	 victim_stack, task,
 	 count, request,
@@ -121,7 +121,7 @@ public:
 
       if (remaining_count)
 	{
-	  kaapi_utils2::fail_requests
+	  kaapi_utils::fail_requests
 	    (
 	     victim_stack,
 	     task,
@@ -208,7 +208,7 @@ void AccumulateStruct<RandomAccessIterator, T, BinOp>::doit(kaapi_task_t* task, 
        -here size is pass as parameter and updated in
        case of steal.
     */
-    kaapi_stealpoint( stack, task, kaapi_utils2::static_splitter<Self_t> );
+    kaapi_stealpoint( stack, task, kaapi_utils::static_splitter<Self_t> );
 
     tmp_size = _iend-_ibeg;
     if(tmp_size < unit_size ) {
@@ -240,7 +240,7 @@ T accumulate(RandomAccessIterator begin, RandomAccessIterator end, T init)
 {
   typedef AccumulateStruct<RandomAccessIterator, T, std::plus<T> > Self_t;
   Self_t work( begin, end, init, std::plus<T>() );
-  kaapi_utils2::start_adaptive_task<Self_t>(&work);
+  kaapi_utils::start_adaptive_task<Self_t>(&work);
   return work.get_accumulate();
 }
 

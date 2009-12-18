@@ -239,12 +239,6 @@ void InnerProductStruct<RandomAccessIterator, RandomAccessIterator2, T, BinOp, B
     if (kaapi_preemptpoint( _sc, 0 )) return ;
 #endif
   }
-
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  // TODO_REDUCER
-  kaapi_finalize_steal( stack, task );
-
-  /* Here the thiefs have finish the computation and returns their inits which have been reduced using reducer function. */  
 }
 
 

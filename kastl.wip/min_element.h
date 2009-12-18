@@ -216,7 +216,9 @@ void Min_Element_Struct<RandomAccessIterator, Compare>::doit(kaapi_task_t* task,
   if (_is_master == true)
     usleep(100000);
 
+#if 0 // TODO_REDUCER
  redo_work:
+#endif
 
   while (_iend != _ibeg)
   {
@@ -239,22 +241,16 @@ void Min_Element_Struct<RandomAccessIterator, Compare>::doit(kaapi_task_t* task,
 
     _ibeg +=unit_size;
 
+#if 0 // TODO_REDUCER
     if (kaapi_preemptpoint(stack, task, oda_reducer, this, this))
       return ;
+#endif
   }
 
+#if 0 // TODO_REDUCER
   if (kaapi_preempt_nextthief(stack, task, this, reducer, this, &_ibeg, &_iend))
     goto redo_work;
-
-  /* definition of the finalization point where
-     all stolen work a interrupt and collected */
-  kaapi_finalize_steal( stack, task );
-
-  /* Here the thiefs have finish the computation
-     and returns their comps which have been
-     reduced using reducer function. */  
-
-  ::printf("[%s] min_element: %lf\n", _is_master ? "master":"slave", *_min_element_pos);
+#endif
 }
 
 /**

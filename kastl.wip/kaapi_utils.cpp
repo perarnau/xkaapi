@@ -1,6 +1,7 @@
 #include "kaapi.h"
 #include "kaapi_utils.h"
 
+
 void kaapi_utils::fail_requests
 (
  kaapi_stack_t* victim_stack,
@@ -14,7 +15,7 @@ void kaapi_utils::fail_requests
     if (!kaapi_request_ok(requests))
       continue ;
     
-    kaapi_request_reply(victim_stack, task, requests, 0, 0);
+    kaapi_request_reply(victim_stack, task, requests, 0, 0, 0);
     
     --count;
   }
