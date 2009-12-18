@@ -85,11 +85,20 @@ kaapi_stack_t* kaapi_self_stack(void)
   return _kaapi_self_stack();
 }
 
+/** Dumy task pushed at startup into the main thread
+*/
+void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
+{
+}
+
+
 /**
 */
 void __attribute__ ((constructor)) kaapi_init(void)
 {
   kaapi_isterm = 0;
+  kaapi_stack_t* stack;
+  kaapi_task_t* task;
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
@@ -104,6 +113,15 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_assert_m( 0, kaapi_setconcurrency( default_param.cpucount ), "kaapi_setconcurrency" );
   
   pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
+  
+  /* push dummy task in exec mode */
+  stack = _kaapi_self_stack();
+  task = kaapi_stack_toptask(stack);
+  task->flag  = KAAPI_TASK_STICKY;
+  task->body  = &kaapi_taskstartup_body;
+  kaapi_task_format_debug( task );
+  kaapi_task_setstate( task, KAAPI_TASK_S_EXEC );
+  kaapi_stack_pushtask(stack);
 
   /* dump output information */
   printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);

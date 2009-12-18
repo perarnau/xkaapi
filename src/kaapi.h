@@ -648,6 +648,11 @@ static inline kaapi_task_body_t kaapi_task_setbody(kaapi_task_t* task, kaapi_tas
 }
 
 
+/** Body of the startup task 
+    \ingroup TASK
+*/
+extern void kaapi_taskstartup_body( kaapi_task_t*, kaapi_stack_t*);
+
 /** Body of the nop task 
     \ingroup TASK
 */
