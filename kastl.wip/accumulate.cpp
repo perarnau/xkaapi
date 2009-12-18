@@ -57,7 +57,7 @@ int main(int argc, char** argv)
   double* input  = new double[n];
   t0 = gettime() - t0;
 
-  double res; // result of the computation 
+  double res = 0; // result of the computation 
 
   std::cout << "Time allocate:" << t0 << std::endl;
   Random random(42 + iter);
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
    std::cout.setf(std::ios::fixed, std::ios_base::floatfield);
    // Verification of the result
    std::cout << "res = ln(2) = " << res << std::endl;
-   double res_stl;
+   double res_stl = 0;
    t0 = gettime();
    for (l=0; l<iter; ++l)
      res_stl = std::accumulate(input, input+n, val_t(0));
