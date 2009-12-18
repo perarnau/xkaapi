@@ -1,4 +1,4 @@
-#include "kaapi.h"
+#include "kaapi_impl.h"
 #include "kaapi_utils.h"
 
 
@@ -19,4 +19,11 @@ void kaapi_utils::fail_requests
     
     --count;
   }
+}
+
+unsigned long get_clock(void)
+{
+  static kaapi_atomic_t __clock = {0};
+  KAAPI_ATOMIC_INCR(&__clock);
+  return KAAPI_ATOMIC_READ(&__clock);
 }
