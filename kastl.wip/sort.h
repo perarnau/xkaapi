@@ -309,10 +309,6 @@ void SortStruct<RandomAccessIterator, Compare>::doit
 #endif
      }
    } while ( not_finished  );
-
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  kaapi_finalize_steal( stack, task );
-
 }
 
 /**

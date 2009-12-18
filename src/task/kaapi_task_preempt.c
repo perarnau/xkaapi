@@ -115,14 +115,19 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
 
   /* push current preempt thief in current_thief: used by caller to make call */
   ta->current_thief = ta->head;
-  
+
   /* pop current thief and push thiefs of the thief into the local preemption list */
   ta->head = ta->head->next;
   if (ta->head ==0) ta->tail = 0;
 
   if (athief->rhead !=0)
-    athief->rtail->next = ta->head;
-  ta->head = athief->rhead;
-  if (ta->tail ==0) ta->tail = athief->rtail;
+    {
+      athief->rtail->next = ta->head;
+      ta->head = athief->rhead;
+
+      if (ta->tail == 0)
+	ta->tail = athief->rtail;
+    }
+
   return 1;
 }
