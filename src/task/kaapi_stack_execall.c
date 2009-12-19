@@ -147,6 +147,7 @@ redo_work:
 #endif
     saved_sp      = stack->sp;
     saved_sp_data = stack->sp_data;
+    stack->pc     = pc;
     (*pc->body)(pc, stack);
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;

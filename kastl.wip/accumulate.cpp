@@ -18,6 +18,15 @@
 #include "random.h"
 
 
+
+static inline double compute_abs_diff(double a, double b)
+{
+  if (a > b)
+    return a - b;
+  return b - a;
+}
+
+
 /** Return the number of seconds + micro seconds since the epoch
 */
 inline double gettime()
@@ -48,7 +57,7 @@ int main(int argc, char** argv)
   double* input  = new double[n];
   t0 = gettime() - t0;
 
-  double res; // result of the computation 
+  double res = 0; // result of the computation 
 
   std::cout << "Time allocate:" << t0 << std::endl;
   Random random(42 + iter);
@@ -91,14 +100,21 @@ int main(int argc, char** argv)
    std::cout.setf(std::ios::fixed, std::ios_base::floatfield);
    // Verification of the result
    std::cout << "res = ln(2) = " << res << std::endl;
-   double res_stl = std::accumulate(input, input+n, val_t(0));
+   double res_stl = 0;
+   t0 = gettime();
+   for (l=0; l<iter; ++l)
+     res_stl = std::accumulate(input, input+n, val_t(0));
+   t0 = gettime() - t0;
+   const double avrg_stl = t0 / (double)iter;
+
    std::cout << "res_stl = ln(2) = " << res_stl << std::endl;
-   if(res-res_stl < 1e-6 || res_stl-res < 1e-6) std::cout << "Verification OK!!!!" << std::endl; 
-   else std::cout << "Verification failed, KO!!!!!!!!!!!!" << std::endl;
-   //std::cout.setf(0, std::ios_base::floatfield);
 
+   if (compute_abs_diff(res, res_stl) < 1e-6)
+     std::cout << "Verification OK!!!!" << std::endl;
+   else
+     std::cout << "Verification failed, KO!!!!!!!!!!!!" << std::endl;
 
-  std::cout << "Result-> cpu:" << cpu << "  size: " << n << "  time: " << avrg << std::endl;
+   std::cout << "Result-> cpu:" << cpu << "  size: " << n << "  time: " << avrg << ", " << avrg_stl << std::endl;
 
   delete [] input;
 

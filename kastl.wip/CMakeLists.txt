@@ -10,7 +10,7 @@
 # For installed software: include_directories (${CMAKE_INSTALL_PREFIX}/include) 
 # For installed software:  link_directories (${CMAKE_INSTALL_PREFIX}/lib/ /usr/lib ) 
 
-include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../api-atha ${CMAKE_CURRENT_BINARY_DIR}../src) 
+include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../api-atha ${CMAKE_CURRENT_BINARY_DIR}/../src) 
 link_directories (${CMAKE_CURRENT_BINARY_DIR}/../src/ /usr/lib ) 
 include (${CMAKE_CURRENT_SOURCE_DIR}/../CheckCCompilerFlag.cmake )
 

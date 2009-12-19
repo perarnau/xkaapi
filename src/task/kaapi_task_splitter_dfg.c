@@ -127,6 +127,6 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
 #endif
  
   /* do not decrement the counter */
-  _kaapi_request_reply( stack, task, request, thief_stack, 1 ); /* success of steal */
+  _kaapi_request_reply( stack, task, request, thief_stack, 0, 1 ); /* success of steal */
   return 1;
 }

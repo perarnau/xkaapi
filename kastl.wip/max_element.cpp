@@ -50,7 +50,7 @@ int main(int argc, char** argv)
   double* input  = new double[n];
   t0 = gettime() - t0;
 
-  double res; // result of the computation 
+  double res =0; // result of the computation 
 
   std::cout << "Time allocate:" << t0 << std::endl;
   Random random(42 + iter);

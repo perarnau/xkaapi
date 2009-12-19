@@ -1,8 +1,8 @@
 /*
-** kaapi_sched_steal.c
+** kaapi_sched_sync.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -44,37 +44,18 @@
 */
 #include "kaapi_impl.h"
 
-/** Return the number of splitted parts (here 1: only steal the whole task)
-    Currently assume independent task only.
+
+/**kaapi_sched_sync
 */
-int kaapi_task_splitter_rfo(struct kaapi_task_t* task, int count, struct kaapi_request_t* array)
+int kaapi_sched_sync(kaapi_stack_t* stack)
 {
-  int i;
-  kaapi_assert_debug (task !=0);
-  
-  kaapi_task_body_t body = task->body;
-  
-  /** CAS not required in this implementation (cooperative) 
-  if (KAAPI_ATOMIC_CASPTR( &task->body, body, &kaapi_suspend_body))
-  */
-  task->body = &kaapi_suspend_body;
+  int err;
+redo:
+  err = kaapi_stack_execchild(stack, stack->pc);
+  if (err == EWOULDBLOCK)
   {
-    /* update steal operation: */
-    for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-    {
-      if (kaapi_request_ok( &array[i] )) 
-      {
-        kaapi_stack_t* thief_stack = array[i].stack;
-        kaapi_task_t* copy = kaapi_stack_toptask( thief_stack );
-        *copy = *task;
-        copy->body = body;
-        kaapi_stack_pushtask( thief_stack );
-        
-        kaapi_request_reply( task, thief_stack, &array[i], 1 ); // sucess of steal
-        return 1;
-      }
-    }
+    kaapi_sched_suspend( kaapi_get_current_processor() );
+    goto redo;
   }
-  
-  return 0;
+  return err;
 }

@@ -44,27 +44,31 @@
 */
 #include "kaapi_impl.h"
 
-/** Return the number of splitted parts (here 1: only steal the whole task)
-    Currently assume independent task only.
-*/
-int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
-{
-  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
-  {
-    kaapi_taskadaptive_t* ta = task->sp;
-    kaapi_assert_debug( ta !=0 );
 
-    if (ta->mastertask ==0) /* I'm a master task, wait  */
-    {
+/**
+*/
+void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+{
+  kaapi_taskadaptive_t* ta = task->sp;
+  kaapi_assert_debug( ta !=0 );
+
+  if (ta->mastertask ==0) /* I'm a master task, wait  */
+  {
 /*      double t0 = kaapi_get_elapsedtime();  */
-      while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
+    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
 /*      double t1 = kaapi_get_elapsedtime(); */
 /*      printf("[finalize] wait for:%es\n", t1 -t0); */
-      kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
+    kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 #if defined(KAAPI_DEBUG)
-      kaapi_assert_debug( ta->thievescount._counter == 0);
+    kaapi_assert_debug( ta->thievescount._counter == 0);
 #endif
+  }
+  else if (ta->result !=0) /* thief has been preempted or flagged as NOPREEMPT */
+  {
+    /* If I have something to write, write it */
+    if ((ta->local_result_data !=0) && (ta->local_result_size !=0))
+    {
+      memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
     }
   }
-  return 0;
 }

@@ -1,12 +1,15 @@
+/* KAAPI public interface */
 /*
+** athapascan-2
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:21:00 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@imag.fr
+** christophe.laferriere@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,49 +44,10 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#ifndef _ATHAPASCAN_NOT_GLOBAL_NAME_H__TWO
+#define _ATHAPASCAN_NOT_GLOBAL_NAME_H__TWO
 
+#define ATHAPASCAN2_NOT_IN_NAMESPACE 1
+#include "athapascan-2.h"
 
-/** This is random at the first hierarchy level
-*/
-kaapi_request_t* kaapi_sched_select_victim_rand_first( kaapi_processor_t* kproc, kaapi_listrequest_t** plistreq )
-{
-  kaapi_request_t* request;
-  do {
-    /* Is terminated ? -> abort & return 0 */
-    if (kaapi_isterminated()) return (kaapi_request_t*)-1;
-
-    request = kaapi_select_victim_rand_atlevel( kproc, 0, plistreq );
-    if (request !=0) return request;
-  } while(1);
-}
-
-
-/** Do rand selection level by level:
-*/
-kaapi_request_t* kaapi_sched_select_victim_rand_incr( kaapi_processor_t* kproc, kaapi_listrequest_t** plistreq )
-{
-  kaapi_request_t* request;
-  int levelmax  = 0;
-  int levelcurr = 0;
-  do {
-    /* Is terminated ? -> abort & return 0 */
-    if (kaapi_isterminated()) return (kaapi_request_t*)-1;
-
-    request = kaapi_select_victim_rand_atlevel( kproc, levelcurr, plistreq );
-    if (request !=0) return request;
-
-    ++levelcurr;
-    if (levelcurr >levelmax) 
-    {
-      ++levelmax;
-      levelcurr = 0;
-      if (levelmax > kproc->hlevel) 
-      {
-        levelmax  = 0;
-        levelcurr = 0;
-      }
-    }
-  } while(1);
-
-}
+#endif

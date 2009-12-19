@@ -32,7 +32,7 @@ int main(int argc, char** argv)
   int i;
   int n;
   int niter;
-  int result;
+  int result = 0;
   double t0, t1;
 
   if (argc >1)
@@ -52,8 +52,8 @@ int main(int argc, char** argv)
     }
   }
   t1 = kaapi_get_elapsedtime();
-  printf("Fibo(%i) = %i *** Time: t1=%e(s), t0=%e(s)\n", n, result, t1,t0 );
-  printf("Fibo(%i) = %i *** Time: %e(s)\n", n, result, (t1-t0)/(double)niter );
+/*  printf("Fibo(%i) = %i *** Time: t1=%e(s), t0=%e(s)\n", n, result, t1,t0 );*/
+  printf("Fibo(%i) = %i *** Time(s): %e\n", n, result, (t1-t0)/(double)niter );
   return 0;
 }
 #endif

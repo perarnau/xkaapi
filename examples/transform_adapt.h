@@ -39,12 +39,21 @@ public:
 
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
 
+  /* Entry in case of thief execution */
+  static void static_mainentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
+  {
+    Self_t* self_work = kaapi_task_getargst(task, Self_t);
+// std::cout << "Thief [" << self_work->_ibeg << "," << self_work->_iend << ")= " << self_work->_iend-self_work->_ibeg << std::endl;
+    self_work->doit(task, stack);
+  }
+
 protected:  
   InputIterator  _ibeg;
   InputIterator  _iend;
   OutputIterator _obeg;
   UnaryOperator  _op;
   
+
   /* Entry in case of thief execution */
   static void static_thiefentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
   {
@@ -75,9 +84,7 @@ protected:
       {
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_init( thief_stack, thief_task, KAAPI_TASK_ADAPTIVE);
-        kaapi_task_setbody( thief_task, &static_thiefentrypoint );
-        kaapi_task_setargs(thief_task, kaapi_stack_pushdata(thief_stack, sizeof(Self_t)));
+        kaapi_task_init( thief_stack, thief_task, &static_thiefentrypoint, kaapi_stack_pushdata(thief_stack, sizeof(Self_t)), KAAPI_TASK_ADAPTIVE);
         output_work = kaapi_task_getargst(thief_task, Self_t);
 
         output_work->_iend = local_end;
@@ -90,7 +97,7 @@ protected:
         kaapi_stack_pushtask( thief_stack );
 
         /* reply ok (1) to the request */
-        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 1 );
+        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 0, 1 );
         --count; 
         ++reply_count;
       }
@@ -107,7 +114,7 @@ reply_failed:
       if (kaapi_request_ok(&request[i]))
       {
         /* reply failed (=last 0 in parameter) to the request */
-        kaapi_request_reply( victim_stack, task, &request[i], 0, 0 );
+        kaapi_request_reply_failed( victim_stack, task, &request[i] );
         --count; 
         ++reply_count;
       }
@@ -123,6 +130,7 @@ reply_failed:
     return self_work->splitter( victim_stack, task, count, request );
   }
 };
+
 
 
 /** Adaptive transform
@@ -160,7 +168,7 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
   }
 
   /* definition of the finalization point where all stolen work a interrupt and collected */
-  kaapi_finalize_steal( stack, task );
+  kaapi_finalize_steal( stack, task, 0, 0 );
 
   /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function */  
 }
@@ -186,13 +194,12 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
 
   /* will receive & process steal request */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
-  kaapi_task_initadaptive(stack, task, KAAPI_TASK_ADAPT_DEFAULT);
-  kaapi_task_setargs(task, &work);
+  kaapi_task_initadaptive(stack, task, 
+      &TransformStruct<InputIterator, OutputIterator, UnaryOperator>::static_mainentrypoint,
+      &work, KAAPI_TASK_ADAPT_DEFAULT);
   kaapi_stack_pushtask(stack);
-
-  /* directly execute the task with forking it: correct because no data dependencies */
-  work.doit(task, stack);
   
+  kaapi_sched_sync(stack);
   kaapi_stack_restore_frame(stack, &frame);
 }
 #endif

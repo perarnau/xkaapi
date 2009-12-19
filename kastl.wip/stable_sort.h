@@ -239,10 +239,6 @@ void StableSortStruct<RandomAccessIterator, Compare>::doit
      std::__merge_sort_loop(_buf, buf_last, _init_beg, step_size, _comp);
      step_size *= 2;
   }
-
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  // TODO_REDUCER
-  kaapi_finalize_steal( stack, task );
 }
 
 /**

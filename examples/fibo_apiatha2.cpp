@@ -8,8 +8,7 @@
 
 
 #include <iostream>
-#include "athapascan-1" // this is the header required by athapascan
-
+#include "athapascan-2" // this is the header required by athapascan 2
 
 // --------------------------------------------------------------------
 /* Sequential fibo function
@@ -38,23 +37,28 @@ int fiboseq_On(int n){
 /* Print any typed shared
  * this task has read acces on a, it will wait until previous write acces on it are done
 */
-static double start_time;
 template<class T>
-struct Print {
-  void operator() ( a1::Shared_r<T> a, const T& ref_value )
+struct PrintBody {
+  void operator() ( const T* a, const T& ref_value, double t )
   { 
-    /*  Util::WallTimer::gettime is a wrapper around gettimeofday(2) */
-    double t1 = Util::WallTimer::gettime();
-    double delay = t1 - start_time;
-    start_time= t1;
+    /*  atha::WallTimer::gettime is a wrapper around gettimeofday(2) */
+    double delay = atha::WallTimer::gettime() - t;
 
-    /*  a1::System::getRank() prints out the id of the node executing the task */
-    std::cout << "-----------------------------------------" << std::endl;
-    std::cout << "Res  = " << a.read() << std::endl;
-    std::cout << "Time(s): " << delay << std::endl;
-    std::cout << "-----------------------------------------" << std::endl;
+    /*  atha::System::getRank() prints out the id of the node executing the task */
+    atha::logfile() << atha::System::getRank() << ": -----------------------------------------" << std::endl;
+    atha::logfile() << atha::System::getRank() << ": res  = " << *a << std::endl;
+    atha::logfile() << atha::System::getRank() << ": time = " << delay << " s" << std::endl;
+    atha::logfile() << atha::System::getRank() << ": -----------------------------------------" << std::endl;
   }
 };
+
+/* Description of Update task */
+template<class T>
+struct TaskPrint : public atha::Task<3>::Signature<atha::Shared_r<T>, T, double> {};
+
+/* Specialize default / CPU */
+template<class T>
+struct TaskBodyCPU<TaskPrint<T> > : public PrintBody<T> { };
 
 
 /* Sum two integers
@@ -62,17 +66,20 @@ struct Print {
  * it will wait until previous write to a and b are done
  * once finished, further read of res will be possible
  */
-struct Sum {
-  void operator() ( a1::Shared_w<int> res, 
-                    a1::Shared_r<int> a, 
-                    a1::Shared_r<int> b) 
+struct SumBody {
+  void operator() ( int* res, 
+                    const int* a, 
+                    const int* b) 
   {
     /* write is used to write data to a Shared_w
      * read is used to read data from a Shared_r
      */
-    res.write(a.read()+b.read());
+    *res = *a + *b;
   }
 };
+struct TaskSum : public atha::Task<3>::Signature<atha::Shared_w<int>, atha::Shared_r<int>, atha::Shared_r<int> > {};
+template<>
+struct TaskBodyCPU<TaskSum> : public SumBody { };
 
 /* Athapascan Fibo task
  * - res is the return value, return value are usually put in a Shared_w
@@ -80,29 +87,35 @@ struct Sum {
  * - threshold is used to control the grain of the application. The greater it is, the more task will be created, the more parallelism there will be.
  *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
  */
-struct Fibo {
-  void operator() ( a1::Shared_w<int> res, int n )
+struct FiboBody {
+  void operator() ( int* res, int n );
+};
+struct TaskFibo : public atha::Task<2>::Signature<atha::Shared_w<int>, int > {};
+template<>
+struct TaskBodyCPU<TaskFibo> : public FiboBody {};
+
+
+  void FiboBody::operator() ( int* res, int n )
   {  
     if (n < 2) {
-      res.write( fiboseq(n) );
+      *res = fiboseq(n);
     }
     else {
-      a1::Shared<int> res1;
-      a1::Shared<int> res2;
+      int* res1;
+      int* res2;
 
       /* the Fork keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
        */
-      a1::Fork<Fibo>() ( res1, n-1);
-      a1::Fork<Fibo>() ( res2, n-2 );
+      atha::Fork<TaskFibo>() ( res1, n-1);
+      atha::Fork<TaskFibo>() ( res2, n-2 );
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished
        */
-      a1::Fork<Sum>()  ( res, res1, res2 );
+      atha::Fork<TaskSum>()  ( res, res1, res2 );
     }
   }
-};
 
 
 /* Main of the program
@@ -111,20 +124,22 @@ struct doit {
 
   void do_experiment(unsigned int n, unsigned int iter )
   {
-    double t = Util::WallTimer::gettime();
+    double t = atha::WallTimer::gettime();
     int ref_value = fiboseq_On(n);
-    double delay = Util::WallTimer::gettime() - t;
-    Util::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
+    double delay = atha::WallTimer::gettime() - t;
+    atha::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
-    start_time= Util::WallTimer::gettime();
     for (unsigned int i = 0 ; i < iter ; ++i)
     {   
-      a1::Shared<int> res(0);
-      
-      a1::Fork<Fibo>(a1::SetLocal)( res, n );
+      double time= atha::WallTimer::gettime();
 
-      /* a1::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      a1::Fork<Print<int> >(a1::SetLocal)(res, ref_value);
+      int* res;
+      
+      atha::Fork<TaskFibo>(atha::SetLocal)( res, n );
+
+      /* atha::SetLocal ensures that the task is executed locally (cannot be stolen) */
+      atha::Fork<TaskPrint<int> >(atha::SetLocal)(res, ref_value, time);
+      atha::Sync();
     }
   }
 
@@ -135,7 +150,7 @@ struct doit {
     unsigned int iter = 1;
     if (argc > 2) iter = atoi(argv[2]);
     
-    Util::logfile() << "In main: n = " << n << ", iter = " << iter << std::endl;
+    atha::logfile() << "In main: n = " << n << ", iter = " << iter << std::endl;
     do_experiment( n, iter );
   }
 };
@@ -157,11 +172,10 @@ int main(int argc, char** argv)
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */
-    a1::Community com = a1::System::join_community( argc, argv );
+    atha::Community com = atha::System::join_community( argc, argv );
     
     /* Start computation by forking the main task */
-    a1::ForkMain<doit>()(argc, argv); 
-    a1::Sync();
+    atha::ForkMain<doit>()(argc, argv); 
     
     /* Leave the community: at return to this call no more athapascan
        tasks or shared could be created.
@@ -169,19 +183,19 @@ int main(int argc, char** argv)
     com.leave();
 
     /* */
-    a1::System::terminate();
+    atha::System::terminate();
   }
-  catch (const a1::InvalidArgumentError& E) {
-    Util::logfile() << "Catch invalid arg" << std::endl;
+  catch (const atha::InvalidArgumentError& E) {
+    atha::logfile() << "Catch invalid arg" << std::endl;
   }
-  catch (const a1::BadAlloc& E) {
-    Util::logfile() << "Catch bad alloc" << std::endl;
+  catch (const atha::BadAlloc& E) {
+    atha::logfile() << "Catch bad alloc" << std::endl;
   }
-  catch (const a1::Exception& E) {
-    Util::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const atha::Exception& E) {
+    atha::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
   }
   catch (...) {
-    Util::logfile() << "Catch unknown exception: " << std::endl;
+    atha::logfile() << "Catch unknown exception: " << std::endl;
   }
   
   return 0;

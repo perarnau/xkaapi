@@ -45,6 +45,7 @@
 */
 #include "kaapi_impl.h"
 #include <stdlib.h>
+#include <inttypes.h> 
 
 /*
 */
@@ -84,11 +85,21 @@ kaapi_stack_t* kaapi_self_stack(void)
   return _kaapi_self_stack();
 }
 
+/** Dumy task pushed at startup into the main thread
+*/
+void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
+{
+}
+
+
 /**
 */
 void __attribute__ ((constructor)) kaapi_init(void)
 {
   kaapi_isterm = 0;
+  kaapi_stack_t* stack;
+  kaapi_task_t* task;
+  kaapi_frame_t frame;
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
@@ -103,7 +114,20 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_assert_m( 0, kaapi_setconcurrency( default_param.cpucount ), "kaapi_setconcurrency" );
   
   pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
+  
+  /* push dummy task in exec mode */
+  stack = _kaapi_self_stack();
+  kaapi_stack_save_frame(stack, &frame);
+  task = kaapi_stack_toptask(stack);
+  task->flag  = KAAPI_TASK_STICKY;
+  task->body  = &kaapi_taskstartup_body;
+  kaapi_task_format_debug( task );
+  kaapi_task_setstate( task, KAAPI_TASK_S_EXEC );
+  kaapi_stack_pushtask(stack);
 
+  /* push marker of the frame: retn */
+  kaapi_stack_pushretn(stack, &frame);
+  
   /* dump output information */
   printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
 }
@@ -155,11 +179,20 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   /* */
   if (default_param.display_perfcounter)
   {
+
+#ifndef PRIu64
+# if (sizeof(long) == sizeof(uint64_t))
+#  define PRIu64 "lu"
+# else
+#  define PRIu64 "llu"
+# endif
+#endif
+
     printf("----- Performances counter\n");
-    printf("Total number of tasks executed    : %llu\n", cnt_tasks);
-    printf("Total number of steal OK requests : %llu\n", cnt_stealreqok);
-    printf("Total number of steal BAD requests: %llu\n", cnt_stealreq-cnt_stealreqok);
-    printf("Total number of steal operations  : %llu\n", cnt_stealop);
+    printf("Total number of tasks executed    : %" PRIu64 "\n", cnt_tasks);
+    printf("Total number of steal OK requests : %" PRIu64 "\n", cnt_stealreqok);
+    printf("Total number of steal BAD requests: %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
+    printf("Total number of steal operations  : %" PRIu64 "\n", cnt_stealop);
     printf("Total idle time                   : %e\n", t_idle);
     printf("Average steal request aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
