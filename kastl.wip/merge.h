@@ -127,8 +127,8 @@ public:
   {
     const int total_count = count;
     int replied_count = 0;
-    size_t bloc;
-
+#warning "bloc used uninitialized"
+    size_t bloc;  
     ptrdiff_t size1 = _iend - _ibeg;
     ptrdiff_t size2 = _iend2 - _ibeg2;
     ptrdiff_t pargrain = 32;
