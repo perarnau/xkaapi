@@ -99,6 +99,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_isterm = 0;
   kaapi_stack_t* stack;
   kaapi_task_t* task;
+  kaapi_frame_t frame;
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
@@ -116,6 +117,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   
   /* push dummy task in exec mode */
   stack = _kaapi_self_stack();
+  kaapi_stack_save_frame(stack, &frame);
   task = kaapi_stack_toptask(stack);
   task->flag  = KAAPI_TASK_STICKY;
   task->body  = &kaapi_taskstartup_body;
@@ -123,6 +125,9 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_task_setstate( task, KAAPI_TASK_S_EXEC );
   kaapi_stack_pushtask(stack);
 
+  /* push marker of the frame: retn */
+  kaapi_stack_pushretn(stack, &frame);
+  
   /* dump output information */
   printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
 }
