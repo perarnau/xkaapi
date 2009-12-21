@@ -521,4 +521,4 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   return 0;
 }
 
-#endif /* _KAAPI_ATOMIC_H */
+#endif /* _KAAPI_MT_MACHINE_H */

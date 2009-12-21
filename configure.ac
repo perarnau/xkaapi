@@ -92,6 +92,7 @@ AS_CASE([$enable_target],
   [mt|MT|default], [dnl
     AC_MSG_NOTICE([Using target MT])
     KAAPI_TARGET=mt
+    AC_DEFINE([KAAPI_TARGET_MT],1,[defined to 1 when compiling for multiprocessor target])
   ],[gpu|GPU|mpsoc-st|MPSOC-ST], [dnl
     AC_MSG_ERROR([Using target '$enable_target' not yet available])
   ],[dnl

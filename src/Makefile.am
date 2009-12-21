@@ -10,7 +10,7 @@ AM_CPPFLAGS=@AM_CPPFLAGS@ -pedantic
 
 lib_LTLIBRARIES= libxkaapi.la
 
-libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) -D_GNU_SOURCE -DKAAPI_DEBUG -I$(srcdir)/machine/$(KAAPI_TARGET)
+libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) -D_GNU_SOURCE -DKAAPI_DEBUG
 libxkaapi_la_CFLAGS=@AM_CFLAGS@ -std=c99
 libxkaapi_la_LDFLAGS = -version-info 0:0:0 $(XKAAPILIB_BUILD_LDFLAGS)
 libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
@@ -55,6 +55,7 @@ libxkaapi_la_SOURCES=\
   kaapi_datastructure.h \
   kaapi_defs.h \
   kaapi_error.h \
+  kaapi_machine.h \
   kaapi.h \
   kaapi_impl.h \
   task/kaapi_stack.h \
@@ -80,7 +81,7 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_alloc.c \
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
-  machine/mt/kaapi_machine.h
+  machine/mt/kaapi_mt_machine.h
 
 endif
 
