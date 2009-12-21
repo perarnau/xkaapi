@@ -244,7 +244,7 @@ typedef enum kaapi_access_mode_t {
     - KAAPI_TASK_ADAPTIVE: if set, the task is an adaptative task that could be stolen or preempted.
     - KAAPI_TASK_LOCALITY: if set, the task as locality constraint defined in locality data field.
     - KAAPI_TASK_SYNC: if set, the task does engender synchronisation, victim should stop on a stolen task
-    before continuing the fast execution using RFO schedule.
+    before continuing the fast execution using DFG schedule.
 */
 /*@{*/
 #define KAAPI_TASK_MASK_FLAGS 0xf  /* 4 bits 0xf ie bits 0, 1, 2, 3 to type of the task */
@@ -253,6 +253,7 @@ typedef enum kaapi_access_mode_t {
 #define KAAPI_TASK_ADAPTIVE   0x4   /* 000 0100 */ 
 #define KAAPI_TASK_LOCALITY   0x8   /* 000 1000 */
 #define KAAPI_TASK_DFG        KAAPI_TASK_SYNC
+#define KAAPI_TASK_RFO        0     /* such a task should have KAAPI_TASK_MASK_READY set */
 
 /** Bits for the task state
    \ingroup TASK 
@@ -701,13 +702,20 @@ inline static int kaapi_task_haslocality(const kaapi_task_t* task)
 inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
 { return (task->flag & KAAPI_TASK_ADAPTIVE); }
 
-
 /** \ingroup TASK
     The function kaapi_task_issync() will return non-zero value iff the such stolen task will introduce data dependency
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_issync(const kaapi_task_t* task)
-{ return !(task->flag & KAAPI_TASK_ADAPTIVE); }
+{ return !(task->flag & KAAPI_TASK_ADAPTIVE/*KAAPI_TASK_SYNC*/); }
+
+
+/** \ingroup TASK
+    The function kaapi_task_isready() will return non-zero value iff the task is maked as ready
+    \param task IN a pointer to the kaapi_task_t to test.
+*/
+inline static int kaapi_task_isready(const kaapi_task_t* task)
+{ return (task->flag & KAAPI_TASK_MASK_READY); }
 
 
 /** \ingroup STACK
