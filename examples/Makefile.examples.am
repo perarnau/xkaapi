@@ -52,5 +52,5 @@ KARUN_OPTS=\
 CLEANFILES=${noinst_PROGRAMS} *.o *.test
 
 # subdir=examples/basic for example
-examplesdir=$(docdir)/$(subdir)
-examples_DATA=$(SOURCES)
+# examplesdir=$(docdir)/$(subdir)
+# examples_DATA=$(SOURCES)
