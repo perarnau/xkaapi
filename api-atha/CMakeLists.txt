@@ -67,8 +67,15 @@ set_target_properties(xkaapi-cpp-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-1 
               ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-1.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/atha_error.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/atha_debug.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/atha_timer.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/athapascan_closure.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/athapascan_fork.h
               ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-2
               ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-2.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/atha_api2_clo.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/atha_api2_fork.h
         DESTINATION include/)
 
 ## INSTALL RULES END ##

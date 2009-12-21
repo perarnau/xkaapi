@@ -48,6 +48,7 @@
 
 #include "kaapi.h"
 #include "atha_error.h"
+#include "atha_debug.h"
 #include <vector>
 #include <typeinfo>
 
