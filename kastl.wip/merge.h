@@ -127,8 +127,8 @@ public:
   {
     const int total_count = count;
     int replied_count = 0;
-    size_t bloc;
-
+#warning "bloc used uninitialized"
+    size_t bloc;  
     ptrdiff_t size1 = _iend - _ibeg;
     ptrdiff_t size2 = _iend2 - _ibeg2;
     ptrdiff_t pargrain = 32;
@@ -277,12 +277,6 @@ void MergeStruct<RandomAccessIterator, RandomAccessIterator2, RandomAccessIterat
  
     //TG a voir apres if (kaapi_preemptpoint( _sc, 0 )) return ;
   }
-
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  // TODO_REDUCER
-  kaapi_finalize_steal( stack, task );
-
-  /* Here the thiefs have finish the computation and returns their inits which have been reduced using reducer function. */  
 }
 
 

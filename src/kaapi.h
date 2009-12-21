@@ -206,7 +206,7 @@ typedef enum kaapi_access_mode_t {
     - KAAPI_TASK_ADAPTIVE: if set, the task is an adaptative task that could be stolen or preempted.
     - KAAPI_TASK_LOCALITY: if set, the task as locality constraint defined in locality data field.
     - KAAPI_TASK_SYNC: if set, the task does engender synchronisation, victim should stop on a stolen task
-    before continuing the fast execution using RFO schedule.
+    before continuing the fast execution using DFG schedule.
 */
 /*@{*/
 #define KAAPI_TASK_MASK_FLAGS 0xf  /* 4 bits 0xf ie bits 0, 1, 2, 3 to type of the task */
@@ -215,6 +215,7 @@ typedef enum kaapi_access_mode_t {
 #define KAAPI_TASK_ADAPTIVE   0x4   /* 000 0100 */ 
 #define KAAPI_TASK_LOCALITY   0x8   /* 000 1000 */
 #define KAAPI_TASK_DFG        KAAPI_TASK_SYNC
+#define KAAPI_TASK_RFO        0     /* such a task should have KAAPI_TASK_MASK_READY set */
 
 /** Bits for the task state
    \ingroup TASK 
@@ -373,8 +374,12 @@ typedef int (*kaapi_task_splitter_t)(struct kaapi_stack_t* /*stack */, struct ka
 /** Task reducer
     \ingroup TASK
 */
-typedef int (*kaapi_task_reducer_t)(struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
-                                    void* arg_thief, ...);
+typedef int (*kaapi_task_reducer_t)(
+#ifdef __cplusplus
+ struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
+ void* arg_thief, ...
+#endif
+);
 
 /** Kaapi stack of tasks definition
    \ingroup STACK
@@ -606,6 +611,11 @@ static inline kaapi_task_body_t kaapi_task_setbody(kaapi_task_t* task, kaapi_tas
 }
 
 
+/** Body of the startup task 
+    \ingroup TASK
+*/
+extern void kaapi_taskstartup_body( kaapi_task_t*, kaapi_stack_t*);
+
 /** Body of the nop task 
     \ingroup TASK
 */
@@ -654,13 +664,19 @@ inline static int kaapi_task_haslocality(const kaapi_task_t* task)
 inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
 { return (task->flag & KAAPI_TASK_ADAPTIVE); }
 
-
 /** \ingroup TASK
     The function kaapi_task_issync() will return non-zero value iff the such stolen task will introduce data dependency
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_issync(const kaapi_task_t* task)
-{ return !(task->flag & KAAPI_TASK_ADAPTIVE); }
+{ return (task->flag & KAAPI_TASK_SYNC); }
+
+/** \ingroup TASK
+    The function kaapi_task_isready() will return non-zero value iff the task is maked as ready
+    \param task IN a pointer to the kaapi_task_t to test.
+*/
+inline static int kaapi_task_isready(const kaapi_task_t* task)
+{ return (task->flag & KAAPI_TASK_MASK_READY); }
 
 
 /** \ingroup STACK
@@ -1147,16 +1163,13 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
 */
 
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
- ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
-	      (  kaapi_is_null((void*)reducer) ? \
-                0 \
-              : \
-	      ((int (*)(kaapi_stack_t*,...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
-          )\
-    :\
-      0\
- )
-
+(									\
+ kaapi_preempt_nextthief_helper(stack, task, arg_to_thief) ?		\
+ (									\
+  kaapi_is_null((void*)reducer) ? 0 :					\
+  ((kaapi_task_reducer_t)reducer)(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
+ ) : 0									\
+)
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
@@ -1225,11 +1238,12 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
-    kaapi_assert( (size ==0) || size < ta->result_size );
+    kaapi_assert( (size ==0) || size <= ta->result_size );
     ta->local_result_data = retval;
     ta->local_result_size = size;
     kaapi_task_t* task = kaapi_stack_toptask(stack);
     kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    kaapi_stack_pushtask(stack);
   }
   return 0;
 }

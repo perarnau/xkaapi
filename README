@@ -11,7 +11,7 @@ read the INSTALL file
 
 == About XKAAPI ==
 
-XKAAPI means C implementation of Kernel for Adaptative, Asynchronous Parallel
+XKAAPI is a C implementation of Kernel for Adaptative, Asynchronous Parallel
 and Interactive programming. It is a C library that allows to execute
 multithreaded computation with data flow synchronization between threads. The
 library is able to schedule fine/medium size grain program on distributed
@@ -23,5 +23,4 @@ Target architectures are **clusters of SMP machines** and MPSOC.
  - It can run on various processors ;
  - It can run on various architectures (clusters or grids) ;
  - It contains non-blocking and scalable algorithms ;
- - It is based on a two-level thread (user and system threads);
 

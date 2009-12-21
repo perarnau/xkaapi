@@ -10,15 +10,22 @@ include ./Makefile.examples.am
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src
 
 check_PROGRAMS= \
-	fiboseq               \
-	fibo                  \
-	fibo_adapt            \
-	fibo_apiatha          \
-	fibo_apiatha2         \
-	fibo_apiatha3         \
-	nqueens_apiatha       \
-	branchbound_apiatha   \
-	transform_adapt	      \
+	fiboseq                \
+	fibo                   \
+	fibo_adapt             \
+	fibo_apiatha           \
+	fibo_apiatha2          \
+	fibo_apiatha3          \
+	nqueens_apiatha        \
+	nqueens_apiatha_grain2 \
+	nqueens_apiatha_grain3 \
+	nqueens_apiatha_grain4 \
+	nqueens_apiatha_grain5 \
+	nqueens_apiatha_grain6 \
+	nqueens_apiatha_grain7 \
+	nqueens_apiatha_grain8 \
+	branchbound_apiatha    \
+	transform_adapt	       \
 	marc_problem          
 
 TESTS=
@@ -30,6 +37,13 @@ fibo_apiatha_SOURCES=fibo_apiatha.cpp
 fibo_apiatha2_SOURCES=fibo_apiatha2.cpp
 fibo_apiatha3_SOURCES=fibo_apiatha3.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
+nqueens_apiatha_grain2_SOURCES=nqueens_apiatha.cpp
+nqueens_apiatha_grain3_SOURCES=nqueens_apiatha.cpp
+nqueens_apiatha_grain4_SOURCES=nqueens_apiatha.cpp
+nqueens_apiatha_grain5_SOURCES=nqueens_apiatha.cpp
+nqueens_apiatha_grain6_SOURCES=nqueens_apiatha.cpp
+nqueens_apiatha_grain7_SOURCES=nqueens_apiatha.cpp
+nqueens_apiatha_grain8_SOURCES=nqueens_apiatha.cpp
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
 marc_problem_SOURCES=marc_problem.cpp
@@ -68,6 +82,41 @@ nqueens_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_src
 nqueens_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
 nqueens_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 nqueens_apiatha_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+nqueens_apiatha_grain2_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha -DTHRESHOLD=2
+nqueens_apiatha_grain2_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+nqueens_apiatha_grain2_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apiatha_grain2_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+nqueens_apiatha_grain3_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha -DTHRESHOLD=3
+nqueens_apiatha_grain3_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+nqueens_apiatha_grain3_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apiatha_grain3_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+nqueens_apiatha_grain4_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha -DTHRESHOLD=4
+nqueens_apiatha_grain4_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+nqueens_apiatha_grain4_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apiatha_grain4_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+nqueens_apiatha_grain5_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha -DTHRESHOLD=5
+nqueens_apiatha_grain5_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+nqueens_apiatha_grain5_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apiatha_grain5_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+nqueens_apiatha_grain6_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha -DTHRESHOLD=6
+nqueens_apiatha_grain6_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+nqueens_apiatha_grain6_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apiatha_grain6_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+nqueens_apiatha_grain7_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha -DTHRESHOLD=7
+nqueens_apiatha_grain7_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+nqueens_apiatha_grain7_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apiatha_grain7_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+nqueens_apiatha_grain8_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha -DTHRESHOLD=8
+nqueens_apiatha_grain8_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+nqueens_apiatha_grain8_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apiatha_grain8_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
 
 branchbound_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
 branchbound_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x

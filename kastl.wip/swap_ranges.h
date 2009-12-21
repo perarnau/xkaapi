@@ -184,11 +184,6 @@ void Swap_Ranges_Struct<RandomAccessIterator1, RandomAccessIterator2>::doit
     if (kaapi_preemptpoint( _sc, 0 )) return ;
 #endif
   }
-
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  kaapi_finalize_steal( stack, task );
-
-  /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function. */  
 }
 
 

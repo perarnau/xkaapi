@@ -187,12 +187,6 @@ void FillStruct<RandomAccessIterator,T>::doit(kaapi_task_t* task, kaapi_stack_t*
     if (kaapi_preemptpoint( _sc, 0 )) return ;
 #endif
   }
-
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-#warning "TODO_REDUCER"
-  kaapi_finalize_steal( stack, task );
-
-  /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function. */  
 }
 
 
