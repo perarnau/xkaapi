@@ -114,7 +114,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_assert_m( 0, kaapi_setconcurrency( default_param.cpucount ), "kaapi_setconcurrency" );
   
   pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
-  
+
   /* push dummy task in exec mode */
   stack = _kaapi_self_stack();
   kaapi_stack_save_frame(stack, &frame);
@@ -123,6 +123,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   task->body  = &kaapi_taskstartup_body;
   kaapi_task_format_debug( task );
   kaapi_task_setstate( task, KAAPI_TASK_S_EXEC );
+
   kaapi_stack_pushtask(stack);
 
   /* push marker of the frame: retn */
