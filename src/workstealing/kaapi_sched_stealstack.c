@@ -255,8 +255,9 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
       continue;
     }
 
-    /* do not recomputer dfg dependencies if task is already marked as ready */
-    if ( /*!kaapi_task_isready(task_bot) && */ kaapi_task_issync(task_bot) && (isupdateversion ==0))
+    /* do not recomputer dfg dependencies if task is already terminated: all its access will be ready !*/
+    kaapi_task_state_t state = kaapi_task_getstate( task_bot );
+    if ( (isupdateversion ==0) && kaapi_task_issync(task_bot) )
     {
       kaapi_update_version( count, task_bot, task_top );
 #if 0
@@ -268,9 +269,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     }
     
     /* */
-    kaapi_task_state_t state = kaapi_task_getstate( task_bot );
-    //isready = kaapi_task_isready( task_bot );
-    isready = task_bot->flag & KAAPI_TASK_MASK_READY;
+    isready = kaapi_task_isready(task_bot);
     if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL) || !isready)
     {
       /* next task */
