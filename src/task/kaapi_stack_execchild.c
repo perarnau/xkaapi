@@ -76,16 +76,7 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
 
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
-  
-  /* look for retn */
-  while ((pc->body != &kaapi_retn_body) && (pc != stack->sp)) 
-    ++pc;
-
-  if (kaapi_stack_isempty( stack ) ) return 0;
-
-  /* stop on retn -> executed next task */
-  ++pc;
-
+ 
 #if defined(KAAPI_USE_PERFCOUNTER)
   cnt_tasks = stack->_proc->cnt_tasks;
 #endif
