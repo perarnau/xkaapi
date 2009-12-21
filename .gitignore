@@ -43,6 +43,13 @@ Makefile
 /examples/fiboseq
 /examples/marc_problem
 /examples/nqueens_apiatha
+/examples/nqueens_apiatha_grain2
+/examples/nqueens_apiatha_grain3
+/examples/nqueens_apiatha_grain4
+/examples/nqueens_apiatha_grain5
+/examples/nqueens_apiatha_grain6
+/examples/nqueens_apiatha_grain7
+/examples/nqueens_apiatha_grain8
 /examples/transform_adapt
 /src/kaapi_check_header
 /src/kaapi_check_header_strict
