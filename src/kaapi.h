@@ -707,9 +707,7 @@ inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_issync(const kaapi_task_t* task)
-{ return !(task->flag & KAAPI_TASK_ADAPTIVE); }
-//{ return !(task->flag & KAAPI_TASK_ADAPTIVE/*KAAPI_TASK_SYNC*/); }
-
+{ return (task->flag & KAAPI_TASK_SYNC); }
 
 /** \ingroup TASK
     The function kaapi_task_isready() will return non-zero value iff the task is maked as ready
