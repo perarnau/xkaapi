@@ -269,8 +269,8 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     
     /* */
     kaapi_task_state_t state = kaapi_task_getstate( task_bot );
-//    isready = kaapi_task_isready( task_bot );
-isready = task_bot->flag & KAAPI_TASK_MASK_READY;
+    //isready = kaapi_task_isready( task_bot );
+    isready = task_bot->flag & KAAPI_TASK_MASK_READY;
     if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL) || !isready)
     {
       /* next task */
