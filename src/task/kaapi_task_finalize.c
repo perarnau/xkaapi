@@ -52,12 +52,20 @@ void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_taskadaptive_t* ta = task->sp;
   kaapi_assert_debug( ta !=0 );
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+    double t0, t1;
+#endif
+
   if (ta->mastertask ==0) /* I'm a master task, wait  */
   {
-/*      double t0 = kaapi_get_elapsedtime();  */
+#if defined(KAAPI_USE_PERFCOUNTER)
+    t0 = kaapi_get_elapsedtime();
+#endif
     while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
-/*      double t1 = kaapi_get_elapsedtime(); */
-/*      printf("[finalize] wait for:%es\n", t1 -t0); */
+#if defined(KAAPI_USE_PERFCOUNTER)
+    t1 = kaapi_get_elapsedtime();
+    stack->_proc->t_idle += t1-t0;
+#endif
     kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 #if defined(KAAPI_DEBUG)
     kaapi_assert_debug( ta->thievescount._counter == 0);
