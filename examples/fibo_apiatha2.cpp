@@ -91,31 +91,35 @@ struct FiboBody {
   void operator() ( int* res, int n );
 };
 struct TaskFibo : public atha::Task<2>::Signature<atha::Shared_w<int>, int > {};
-template<>
+
+template<> /* declare task body for CPU, NO GPU version */
 struct TaskBodyCPU<TaskFibo> : public FiboBody {};
 
 
-  void FiboBody::operator() ( int* res, int n )
-  {  
-    if (n < 2) {
-      *res = fiboseq(n);
-    }
-    else {
-      int* res1;
-      int* res2;
-
-      /* the Fork keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
-       */
-      atha::Fork<TaskFibo>() ( res1, n-1);
-      atha::Fork<TaskFibo>() ( res2, n-2 );
-
-      /* the Sum task depends on res1 and res2 which are written by previous tasks
-       * it must wait until thoses tasks are finished
-       */
-      atha::Fork<TaskSum>()  ( res, res1, res2 );
-    }
+void FiboBody::operator() ( int* res, int n )
+{  
+  if (n < 2) {
+    *res = fiboseq(n);
   }
+  else {
+    /* the scope of res1 and res2 is at most the end of execution of TaskSum, thus they can
+       be allocate on the Kaapi stack
+    */
+    int* res1 = atha::Alloca<int>(1);
+    int* res2 = atha::Alloca<int>(1);
+
+    /* the Fork keyword is used to spawn new task
+     * new tasks are executed in parallel as long as dependencies are respected
+     */
+    atha::Fork<TaskFibo>() ( res1, n-1);
+    atha::Fork<TaskFibo>() ( res2, n-2 );
+
+    /* the Sum task depends on res1 and res2 which are written by previous tasks
+     * it must wait until thoses tasks are finished
+     */
+    atha::Fork<TaskSum>()  ( res, res1, res2 );
+  }
+}
 
 
 /* Main of the program

@@ -78,5 +78,9 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/athapascan-1
               ${CMAKE_CURRENT_SOURCE_DIR}/atha_api2_fork.h
         DESTINATION include/)
 
+install(TARGETS xkaapi-cpp xkaapi-cpp-static
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
+
 ## INSTALL RULES END ##
 #######################

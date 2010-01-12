@@ -171,6 +171,14 @@ namespace atha {
   }
 
   // --------------------------------------------------------------------
+  template<class T>
+  T* Alloca(size_t size)
+  {
+     void* data = kaapi_stack_pushdata( kaapi_self_stack(), sizeof(T)*size );
+     return new (data) T[size];
+  }
+
+  // --------------------------------------------------------------------
   struct SetStack {};
   extern SetStack SetInStack;
 
