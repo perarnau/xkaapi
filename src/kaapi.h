@@ -412,7 +412,7 @@ typedef int (*kaapi_task_splitter_t)(struct kaapi_stack_t* /*stack */, struct ka
 /** Task reducer
     \ingroup TASK
 */
-typedef int (*kaapi_task_reducer_t)(
+typedef int (*kaapi_task_reducer_t) (
 #ifdef __cplusplus
  struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
  void* arg_thief, ...
@@ -429,8 +429,9 @@ typedef int (*kaapi_task_reducer_t)(
    to postpone the restore operation after a set of tasks (see kaapi_stack_taskexecall).
 
    Before and after the execution of a task, the state of the computation is only
-   defined by the stack state (pc, sp, sp_data and the content of the stack). 
-   The C-stack doesnot need to be saved.
+   defined by the stack state (pc, sp, sp_data and the content of the stack). Not that
+   kaapi_stack_execall and other funcitons to execute tasks may cached internal state (pc). 
+   The C-stack doesnot need to be saved in that case.
    
    \TODO save also the C-stack if we try to suspend execution during a task execution
 */
@@ -439,15 +440,13 @@ typedef struct kaapi_stack_t {
   volatile int              haspreempt;     /** !=0 if preemption is requested */
   struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
   struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
-  struct kaapi_task_t*      end_sp;         /** past the last stack counter: next entry after the last task in stack array */
-  struct kaapi_task_t*      task;           /** stack of tasks */
+  struct kaapi_task_t*      task;           /** pointer to the first pushed task */
 
   char*                     sp_data;        /** stack counter for the data: next free data entry */
-  char*                     end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
   char*                     data;           /** stack of data with the same scope than task */
 
 
-  kaapi_request_t          *requests;       /** points to the processor structure */
+  kaapi_request_t          *requests;       /** points to the requests set in the processor structure */
   kaapi_uint32_t            size;           /** size of the data structure */
   struct kaapi_stack_t*     _next;          /** to be stackable */
   struct kaapi_processor_t* _proc;          /** (internal) access to the attached processor */
@@ -730,16 +729,11 @@ extern kaapi_stack_t* kaapi_self_stack (void);
     never be used again.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t to initialize.
-    \param size_task_buffer IN the size in bytes of the buffer for the tasks.
-    \param task_buffer INOUT the buffer to used to store the stack of tasks.
-    \param size_data_buffer IN the size in bytes of the buffer for the data.
-    \param data_buffer INOUT the buffer to used to store the stack of data.
+    \param size  IN the size in bytes of the buffer for the tasks.
+    \param buffer INOUT the buffer to used to store the stack of tasks.
     \retval EINVAL invalid argument: bad stack pointer or count is not enough to store at least one task or buffer is 0.
 */
-extern int kaapi_stack_init( kaapi_stack_t* stack,  
-                             kaapi_uint32_t size_task_buffer, void* task_buffer,
-                             kaapi_uint32_t size_data_buffer, void* data_buffer 
-);
+extern int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer );
 
 /** \ingroup STACK
     The function kaapi_stack_clear() clears the stack.
@@ -759,7 +753,7 @@ extern int kaapi_stack_clear( kaapi_stack_t* stack );
 */
 static inline int kaapi_stack_isempty(const kaapi_stack_t* stack)
 {
-  return (stack ==0) || (stack->pc >= stack->sp);
+  return (stack ==0) || (stack->pc <= stack->sp);
 }
 
 /** \ingroup STACK
@@ -775,7 +769,7 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
   void* retval;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
-  if (stack->sp_data+count >= stack->end_sp_data) return 0;
+  if ((char*)stack->sp_data+count >= (char*)stack->sp) return 0;
 #endif
   retval = stack->sp_data;
   stack->sp_data += count;
@@ -796,7 +790,7 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
   kaapi_gd_t* gd;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return retval;
-  if (stack->sp_data+count+sizeof(kaapi_gd_t) >= stack->end_sp_data)
+  if ((char*)stack->sp_data+count+sizeof(kaapi_gd_t) >= (char*)stack->sp)
     return retval;
 #endif
 
@@ -814,7 +808,7 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
 
 /** \ingroup STACK
     The function kaapi_stack_bottom() will return the top task.
-    The top task is not part of the stack.
+    The bottom task is the first pushed task into the stack.
     If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
     Otherwise, an 0 is returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
@@ -825,15 +819,13 @@ static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack)
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
 #endif
-/* CA?
-*/
-  if (stack->sp <= stack->pc) return 0;
+  if (stack->pc <= stack->sp) return 0;
   return stack->task;
 }
 
 /** \ingroup STACK
     The function kaapi_stack_top() will return the top task.
-    The top task is not part of the stack.
+    The top task is not part of the stack, it will be the next pushed task.
     If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
     Otherwise, an 0 is returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
@@ -844,9 +836,7 @@ static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack)
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
 #endif
-/* CA?
-*/
-  if (stack->sp == stack->end_sp) return 0;
+  kaapi_assert_debug((char*)stack->sp >= (char*)stack->sp_data);
   return stack->sp;
 }
 
@@ -861,7 +851,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
-  if (stack->sp == stack->end_sp) return EINVAL;
+  if ((char*)stack->sp == (char*)stack->sp_data) return EINVAL;
 #endif
 #if defined(KAAPI_CONCURRENT_WS)
 #ifdef __APPLE__
@@ -870,7 +860,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
   __sync_synchronize();
 #endif
 #endif
-  ++stack->sp;
+  --stack->sp;
   return 0;
 }
 
@@ -884,7 +874,7 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->pc) return EINVAL;
 #endif
-  --stack->sp;
+  ++stack->sp;
   return 0;
 }
 

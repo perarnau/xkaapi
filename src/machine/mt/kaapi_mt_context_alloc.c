@@ -52,7 +52,6 @@
 kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
-  kaapi_uint32_t size_task;
   kaapi_uint32_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
@@ -67,14 +66,11 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   }
 
   /* round to the nearest closest value */
-  size_task = default_param.stacksize / 2;
-  size_data = default_param.stacksize - size_task;
-  size_task = ((size_task + sizeof(kaapi_task_t) -1) / sizeof(kaapi_task_t)) * sizeof(kaapi_task_t);
-  size_data = ((size_data + KAAPI_MAX_DATA_ALIGNMENT -1) / KAAPI_MAX_DATA_ALIGNMENT) * KAAPI_MAX_DATA_ALIGNMENT;
+  size_data = ((default_param.stacksize + KAAPI_MAX_DATA_ALIGNMENT -1) / KAAPI_MAX_DATA_ALIGNMENT) * KAAPI_MAX_DATA_ALIGNMENT;
   
   /* allocate a stack */
   pagesize = getpagesize();
-  count_pages = (size_task+size_data + sizeof(kaapi_thread_context_t)+ pagesize -1 ) / pagesize;
+  count_pages = (size_data + sizeof(kaapi_thread_context_t)+ pagesize -1 ) / pagesize;
   k_stacksize = count_pages*pagesize;
   ctxt = (kaapi_stack_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
   if (ctxt == (kaapi_stack_t*)-1) {
@@ -82,7 +78,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     return 0;
   }
   ctxt->size = k_stacksize;
-  kaapi_stack_init( ctxt, size_task, ctxt+1, size_data, ((char*)(ctxt+1))+size_task );
+  kaapi_stack_init( ctxt, size_data, ctxt+1 );
 
   return ctxt;
 }
