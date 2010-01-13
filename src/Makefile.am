@@ -83,7 +83,6 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h
-
 endif
 
 include_HEADERS=\
