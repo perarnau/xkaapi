@@ -45,6 +45,11 @@ public:
     Self_t* self_work = kaapi_task_getargst(task, Self_t);
 // std::cout << "Thief [" << self_work->_ibeg << "," << self_work->_iend << ")= " << self_work->_iend-self_work->_ibeg << std::endl;
     self_work->doit(task, stack);
+
+    /* definition of the finalization point where all stolen work a interrupt and collected */
+    kaapi_finalize_steal( stack, task, 0, 0 );
+
+    /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function */  
   }
 
 protected:  
@@ -166,11 +171,6 @@ void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_tas
 
     _ibeg += unit_size;
   }
-
-  /* definition of the finalization point where all stolen work a interrupt and collected */
-  kaapi_finalize_steal( stack, task, 0, 0 );
-
-  /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function */  
 }
 
 

@@ -16,12 +16,14 @@ dnl automake 1.9 is supposed to work
 dnl automake 1.10 is known to work
 dnl other versions have not been tested (please, report if you want
 dnl we downgrade/ajust the requirement)
-AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects silent-rules])
+AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects])
+dnl silent-rules option is not required as it has been introduced in automake 1.11
+dnl The AMX_SILENT_RULES macro enables it if it exists
+
 
 AC_CONFIG_HEADERS([config.h])
 
-AM_SILENT_RULES
-AM_DEFAULT_VERBOSITY=0
+AMX_SILENT_RULES([AM_DEFAULT_VERBOSITY=0])
 
 dnl Sanity checks on prefix : do not install kaapi in the source tree
 dnl or in the build tree
@@ -64,6 +66,19 @@ NESTED_FUNCTIONS_CFLAGS=""
 AX_CHECK_COMPILER_FLAGS([-fnested-functions],
   [NESTED_FUNCTIONS_CFLAGS="-fnested-functions"])
 AC_SUBST([NESTED_FUNCTIONS_CFLAGS])
+
+
+AX_CHECK_COMPILER_STD([STD_C99], [C], [-std=c99], [], [
+   STD_C99_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
+   AC_MSG_WARN([Unable to select C99 standard with the current C compiler.])
+   AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
+])
+AX_CHECK_COMPILER_STD([STD_CXX0X], [C++], [-std=c++0x], [], [
+   STD_CXX0X_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
+   AC_MSG_WARN([Unable to select C++0X standard with the current C++ compiler.])
+   AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
+])
+
 
 ACX_LIB_NEW_LIB([XKAAPILIB], [-L\${libdir} -lxkaapi], [xkaapi])
 ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-I\${includedir}])
@@ -262,7 +277,7 @@ AC_CONFIG_FILES([
 
 	xkaapi.pc
 	atha1.pc
-	src/misc/kaapi_init.c
+	src/misc/kaapi_version.c
 ])
 #	kastl.wip/Makefile
 AC_OUTPUT
@@ -277,7 +292,7 @@ AC_MSG_NOTICE([*************************************])
 ACX_LIB_SHOW_NEW_PRGS
 AC_MSG_NOTICE([*************************************])
 list=""
-for flag in CFLAGS CPPFLAGS CXXFLAGS; do
+for flag in CC CXX CFLAGS CPPFLAGS CXXFLAGS; do
   for f in AM@&t@_$flag $flag ; do
     val=`eval echo '"$'$f'"'`
     val=`echo "$val" | sed 's/^ *//'`
@@ -287,6 +302,6 @@ for flag in CFLAGS CPPFLAGS CXXFLAGS; do
     fi
   done
 done
-AC_MSG_NOTICE([Default flags used:$list])
+AC_MSG_NOTICE([Compilers and default flags used:$list])
 AC_MSG_NOTICE([*************************************])
 
