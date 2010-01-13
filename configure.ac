@@ -79,6 +79,12 @@ ACX_LIB_NEW_PRG([ATHA1PROGS])
 # TG AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 # TG AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 
+dnl ----------------------------------------------------------------
+dnl Force flag to be empty...
+dnl ----------------------------------------------------------------
+CFLAGS=""
+CXXFLAGS=""
+
 
 dnl ----------------------------------------------------------------
 dnl Compilation options
@@ -115,6 +121,8 @@ AS_CASE([$enable_mode],
     AC_MSG_NOTICE([Using debug compile mode])
     # not using AC*DEFINE as we want this available for examples too
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_DEBUG"
+    CFLAGS="$CFLAGS -g -DKAAPI_DEBUG"
+    CXXFLAGS="$CXXFLAGS -g -DKAAPI_DEBUG"
   ], [release], [dnl
     AC_MSG_NOTICE([Using release compile mode])
     # using CFLAGS and not AM_CFLAGS as the user must be able to overwrite
