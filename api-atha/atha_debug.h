@@ -49,7 +49,7 @@
 #ifdef KAAPI_COMPILE_SOURCE
    // Only include kaapi_config.h when building kaapi itself
    // (to know if KAAPI_DEBUG is defined or not)
-#  include "kaapi_config.h"
+#  include "config.h"
 #endif
 #include <string>
 

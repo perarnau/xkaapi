@@ -100,6 +100,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_stack_t* stack;
   kaapi_task_t* task;
   kaapi_frame_t frame;
+  const char* version __attribute__((unused)) = get_kaapi_version();
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );

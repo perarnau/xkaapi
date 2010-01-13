@@ -44,6 +44,7 @@
 #include "kaapi_impl.h"
 #include <stddef.h> 
 
+#include <stddef.h>
 
 /* compute the cache aligned size for kaapi_taskadaptive_result_t
  */
