@@ -67,6 +67,19 @@ AX_CHECK_COMPILER_FLAGS([-fnested-functions],
   [NESTED_FUNCTIONS_CFLAGS="-fnested-functions"])
 AC_SUBST([NESTED_FUNCTIONS_CFLAGS])
 
+
+AX_CHECK_COMPILER_STD([STD_C99], [C], [-std=c99], [], [
+   STD_C99_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
+   AC_MSG_WARN([Unable to select C99 standard with the current C compiler.])
+   AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
+])
+AX_CHECK_COMPILER_STD([STD_CXX0X], [C++], [-std=c++0x], [], [
+   STD_CXX0X_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
+   AC_MSG_WARN([Unable to select C++0X standard with the current C++ compiler.])
+   AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
+])
+
+
 ACX_LIB_NEW_LIB([XKAAPILIB], [-L\${libdir} -lxkaapi], [xkaapi])
 ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-I\${includedir}])
 
