@@ -16,13 +16,14 @@ dnl automake 1.9 is supposed to work
 dnl automake 1.10 is known to work
 dnl other versions have not been tested (please, report if you want
 dnl we downgrade/ajust the requirement)
-dnl TG AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects silent-rules])
 AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects])
+dnl silent-rules option is not required as it has been introduced in automake 1.11
+dnl The AMX_SILENT_RULES macro enables it if it exists
+
 
 AC_CONFIG_HEADERS([config.h])
 
-dnl TG AM_SILENT_RULES
-dnl TG AM_DEFAULT_VERBOSITY=0
+AMX_SILENT_RULES([AM_DEFAULT_VERBOSITY=0])
 
 dnl Sanity checks on prefix : do not install kaapi in the source tree
 dnl or in the build tree
