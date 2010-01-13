@@ -1,12 +1,13 @@
 /*
-** kaapi_task_finalize.c
+** kaapi_init.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:03 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
+** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -43,40 +44,15 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
+#include <errno.h>
 
 
-/**
-*/
-void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
-{
-  kaapi_taskadaptive_t* ta = task->sp;
-  kaapi_assert_debug( ta !=0 );
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-    double t0, t1;
-#endif
-
-  if (ta->mastertask ==0) /* I'm a master task, wait  */
-  {
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
-#endif
-    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime();
-    stack->_proc->t_idle += t1-t0;
-#endif
-    kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
-#if defined(KAAPI_DEBUG)
-    kaapi_assert_debug( ta->thievescount._counter == 0);
-#endif
-  }
-  else if (ta->result !=0) /* thief has been preempted or flagged as NOPREEMPT */
-  {
-    /* If I have something to write, write it */
-    if ((ta->local_result_data !=0) && (ta->local_result_size !=0))
-    {
-      memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
-    }
-  }
-}
+// autotools can prompt for this ...
+const char* get_kaapi_version()
+{ return "@PACKAGE_NAME@-@PACKAGE_VERSION@"; }

@@ -16,12 +16,13 @@ dnl automake 1.9 is supposed to work
 dnl automake 1.10 is known to work
 dnl other versions have not been tested (please, report if you want
 dnl we downgrade/ajust the requirement)
-AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects silent-rules])
+dnl TG AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects silent-rules])
+AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects])
 
 AC_CONFIG_HEADERS([config.h])
 
-AM_SILENT_RULES
-AM_DEFAULT_VERBOSITY=0
+dnl TG AM_SILENT_RULES
+dnl TG AM_DEFAULT_VERBOSITY=0
 
 dnl Sanity checks on prefix : do not install kaapi in the source tree
 dnl or in the build tree
@@ -75,8 +76,8 @@ ACX_LIB_NEW_PRG([XKAAPIPROGS])
 ACX_LIB_NEW_PRG([ATHA1PROGS])
 
 # add warning flags to the C and C++ compilers
-AX_CFLAGS_WARN_ALL([AM_CFLAGS])
-AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
+# TG AX_CFLAGS_WARN_ALL([AM_CFLAGS])
+# TG AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 
 
 dnl ----------------------------------------------------------------
@@ -262,7 +263,7 @@ AC_CONFIG_FILES([
 
 	xkaapi.pc
 	atha1.pc
-	src/misc/kaapi_init.c
+	src/misc/kaapi_version.c
 ])
 #	kastl.wip/Makefile
 AC_OUTPUT

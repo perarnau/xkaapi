@@ -89,11 +89,11 @@ redo_work:
     kaapi_stack_restore_frame( stack, frame );
     /* read from memory */
     pc = stack->pc;
-    ++pc;
+    --pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
-    if (pc >= stack->sp) 
+    if (pc <= stack->sp) 
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -107,11 +107,11 @@ redo_work:
   {
     /* do not save stack frame before execution */
     kaapi_aftersteal_body(pc, stack);
-    ++pc;
+    --pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
-    if (pc >= stack->sp) 
+    if (pc <= stack->sp) 
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -177,8 +177,8 @@ redo_work:
   }
 
   /*next_task: */
-  ++pc;
-  if (pc >= stack->sp) 
+  --pc;
+  if (pc <= stack->sp) 
   {
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)

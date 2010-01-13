@@ -56,8 +56,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_task_t*           task_condition;
   kaapi_stack_t*          stack;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
   double t0;
   double t1;
+#endif
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
@@ -71,7 +73,9 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kproc->ctxt = 0;
   KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
 
+#if defined(KAAPI_USE_PERFCOUNTER)
   t0 = kaapi_get_elapsedtime();  
+#endif
   do {
 #if defined(KAAPI_CONCURRENT_WS)
     /* lock  */
@@ -89,8 +93,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (kproc->ctxt == ctxt_condition) 
     {
       kaapi_assert(kproc->ctxt->pc == task_condition);
+#if defined(KAAPI_USE_PERFCOUNTER)
       t1 = kaapi_get_elapsedtime();
       kproc->t_idle += t1-t0;
+#endif
       return 0;
     }
 
@@ -116,13 +122,18 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, stack);
     }
 
+#if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime(); 
     kproc->t_idle = t1-t0;
+#endif
     err = kaapi_stack_execall( kproc->ctxt );
+#if defined(KAAPI_USE_PERFCOUNTER)
     t0 = kaapi_get_elapsedtime();
+#endif
     kaapi_assert( err != EINVAL);
+#if defined(KAAPI_USE_PERFCOUNTER)
     KAAPI_LOG(50, "[SUSPEND] Work for %fs\n", t1-t0);
-    
+#endif    
     ctxt = kproc->ctxt;
     kproc->ctxt = 0;
     if (err == EWOULDBLOCK) 
@@ -130,7 +141,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       /* push it: suspended because top task is not ready */
       KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
     } else {
-      /* push it: suspended because top task is not ready */
+      /* push it: free */
       KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
     }
   } while (1);

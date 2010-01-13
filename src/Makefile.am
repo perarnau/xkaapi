@@ -49,6 +49,7 @@ libxkaapi_la_SOURCES=\
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \
+  misc/kaapi_version.c \
   misc/kaapi_init.c \
   misc/kaapi_time.c \
   misc/kaapi_hashvalue.c \
@@ -82,7 +83,6 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h
-
 endif
 
 include_HEADERS=\

@@ -5,9 +5,8 @@
 ** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
-** Contributors :
+** Contributor :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -129,7 +128,7 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
 }
 
 
-/*
+/* Warning: frame are [beg, end] with beg >= end because stack of task growth down.
 */
 static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi_task_t** curr, kaapi_task_t* endmax)
 {
@@ -142,7 +141,7 @@ static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi
       *curr = frame->sp;
       return 1;
     }
-    ++beg;
+    --beg;
   }
   *curr = 0;
   *end = endmax;
@@ -177,7 +176,7 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
 
     if (fmt ==0) 
     {
-      ++beg;
+      --beg;
       continue;
     }
 
@@ -203,10 +202,13 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
     if (beg == curr) 
     {
       kaapi_assert_debug( (end !=0) && (end->body == &kaapi_retn_body) );
-      kaapi_update_version( count, end+1, endmax );
+      if (end-1 > endmax) 
+      { /* recursive call on sub frame */
+        kaapi_update_version( count, end-1, endmax );
+      }
     }
     
-    ++beg;
+    --beg;
   }
   return count;
 }
@@ -231,6 +233,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 
 #if 0
 printf("------ STEAL STACK @:%p\n", (void*)stack );
+kaapi_stack_print(0, stack);
 #endif
 
   /* reset dfg constraints evaluation */
@@ -251,7 +254,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
       task_fmt = task_bot->format;
     if (task_fmt ==0) 
     {
-      ++task_bot;
+      --task_bot;
       continue;
     }
 
@@ -273,7 +276,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL) || !isready)
     {
       /* next task */
-      ++task_bot;
+      --task_bot;
       continue;
     }
 
@@ -304,7 +307,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
       }
     }
     
-    ++task_bot;
+    --task_bot;
   }
 #if 0
 printf("------ END STEAL @:%p\n", (void*)stack );
