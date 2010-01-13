@@ -25,9 +25,6 @@ TAGS
 *.a
 *.la
 *.dylib
-<<<<<<< HEAD:.gitignore
-Trash
-=======
 .dirstamp
 .deps/
 .libs/
@@ -61,4 +58,3 @@ Makefile
 /xkaapi.pc
 /xkaapi-*.tar.gz
 
->>>>>>> master:.gitignore
