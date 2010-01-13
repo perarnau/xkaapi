@@ -3,7 +3,7 @@
 #------------------------------------------------------------------
 
 CXX=g++
-
+CFLAGS=-O3
 
 TARGET1 = ckastl_transform
 TARGET2 = ckastl_min_element
