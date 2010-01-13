@@ -3,7 +3,6 @@ TAGS
 .gitignore
 CMakeCache.txt
 CMakeFiles/
-Makefile
 doc/html
 *.a
 *.dylib
