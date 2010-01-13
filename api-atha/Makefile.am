@@ -13,9 +13,9 @@ AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src
 
 lib_LTLIBRARIES=libatha1.la
 
-libatha1_la_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1_BUILD_CPPFLAGS)
+libatha1_la_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1_BUILD_CPPFLAGS) -pedantic
 libatha1_la_CFLAGS=$(AM_CFLAGS) $(ATHA1_BUILD_CFLAGS)
-libatha1_la_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1_BUILD_CXXFLAGS)
+libatha1_la_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1_BUILD_CXXFLAGS) -std=gnu++0x
 libatha1_la_LDFLAGS = -version-info 1:0:1 $(ATHA1_BUILD_LDFLAGS)
 libatha1_la_LIBADD=../src/libxkaapi.la $(ATHA1_BUILD_LIBS)
 
@@ -79,8 +79,8 @@ check_headers_SRC=\
         check/atha1_h_header.cpp \
         check/empty_main.c
 
-atha1_check_header_strict_CPPFLAGS=$(AM_CPPFLAGS) -Werror
-atha1_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) 
+atha1_check_header_strict_CPPFLAGS=$(AM_CPPFLAGS) -Werror -pedantic
+atha1_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) -std=c++0x
 atha1_check_header_strict_SOURCES=\
         $(check_headers_SRC)
 
