@@ -279,7 +279,7 @@ AC_MSG_NOTICE([*************************************])
 ACX_LIB_SHOW_NEW_PRGS
 AC_MSG_NOTICE([*************************************])
 list=""
-for flag in CFLAGS CPPFLAGS CXXFLAGS; do
+for flag in CC CXX CFLAGS CPPFLAGS CXXFLAGS; do
   for f in AM@&t@_$flag $flag ; do
     val=`eval echo '"$'$f'"'`
     val=`echo "$val" | sed 's/^ *//'`
@@ -289,6 +289,6 @@ for flag in CFLAGS CPPFLAGS CXXFLAGS; do
     fi
   done
 done
-AC_MSG_NOTICE([Default flags used:$list])
+AC_MSG_NOTICE([Compilers and default flags used:$list])
 AC_MSG_NOTICE([*************************************])
 
