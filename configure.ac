@@ -76,8 +76,8 @@ ACX_LIB_NEW_PRG([XKAAPIPROGS])
 ACX_LIB_NEW_PRG([ATHA1PROGS])
 
 # add warning flags to the C and C++ compilers
-# TG AX_CFLAGS_WARN_ALL([AM_CFLAGS])
-# TG AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
+AX_CFLAGS_WARN_ALL([AM_CFLAGS])
+AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 
 
 dnl ----------------------------------------------------------------
