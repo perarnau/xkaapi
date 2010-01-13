@@ -1130,7 +1130,7 @@ namespace Util {
   typedef kaapi_int64_t  ka_int64_t;
   
   using a1::WrapperFormat;
-};
+}
 
 // ---------------------------------------------------------------------------------
 /* empty stream function: not in this version */
@@ -1201,7 +1201,7 @@ namespace a1 {
 
 //  template<class T> inline void WrapperFormat<T>::write( OStream& s, const void* val, size_t count ) const{ }
 //  template<class T> inline void WrapperFormat<T>::read ( IStream& s, void* val, size_t count ) const {}
-};
+}
 
 // ---------------------------------------------------------------------------------
 #if 0 // \TODO
