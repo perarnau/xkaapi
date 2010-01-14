@@ -62,23 +62,21 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
 {
   int i, replycount = 0;
 
-#if defined(KAAPI_CONCURRENT_WS)
-  /* lock until reply */
-  pthread_mutex_lock(&kproc->lock);
-#endif
-
   int count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   if (count ==0) 
-  {
-#if defined(KAAPI_CONCURRENT_WS)
-    /* unlock  */
-    pthread_mutex_unlock(&kproc->lock);
-#endif
     return 0;
-  }
-  
+
 #if !defined(KAAPI_CONCURRENT_WS)
   kaapi_readmem_barrier();
+#else
+  /* lock and retest */
+  pthread_mutex_lock(&kproc->lock);
+  count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+  if (count ==0) 
+  {
+    pthread_mutex_unlock(&kproc->lock);
+    return 0;
+  }
 #endif
 
   /* process request on the kprocessor */
@@ -89,7 +87,7 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   {
     if (kaapi_request_ok(&kproc->hlrequests.requests[i]))
     {
-      /* do not decrement the counter */
+      /* user version that do not decrement the counter */
       _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0, 0 );
       ++replycount;
       if (replycount == count) break;

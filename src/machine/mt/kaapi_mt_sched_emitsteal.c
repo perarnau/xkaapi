@@ -50,7 +50,6 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_stack_t*       stack;
   kaapi_victim_t       victim;
   int err;
-  int flag;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->ctxt !=0 );
@@ -62,44 +61,29 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
     /* TODO try top wakeup a waiting stack ? */  
   }
   
-  /* select my self first */
-  victim.level = 0;
-  victim.kproc = kproc;
-  flag = 1;
-  goto do_post;
-    
+  /* clear stack */
+  kaapi_stack_clear( kproc->ctxt );
+
 redo_select:
   /* try to steal a victim processor */
   err = (*kproc->fnc_select)( kproc, &victim );
   if (err !=0) goto redo_select;
-  flag = 0;
-
-do_post:
-  /* clear stack */
-  kaapi_stack_clear( kproc->ctxt );
 
   /* mark current processor as stealing */
   kproc->issteal = 1;
 
   /* Fill & Post the request to the victim processor */
-  printf("%i:: Post to kproc=%i\n", kproc->kid, victim->kid );
   kaapi_request_post( kproc, &kproc->reply, &victim );
+  /*printf("%i:: Post to kproc=%i\n", kproc->kid, victim.kproc->kid );*/
 
 #if defined(KAAPI_CONCURRENT_WS)
-  /* lock the victim */
-//  pthread_mutex_lock(&victim.kproc->lock);
-//  if (KAAPI_ATOMIC_READ(&victim.kproc->hlrequests.count) !=0)
-//  {
-    do {
-      kaapi_sched_advance( victim.kproc );
-    } while (kaapi_request_status(&kproc->reply) == KAAPI_REQUEST_S_POSTED);
-//  }
-//  else {
-//    kaapi_readmem_barrier();
-//  }
-//  pthread_mutex_unlock(&victim.kproc->lock);
+  while (!kaapi_reply_test( &kproc->reply ))
+  {
+    kaapi_sched_advance( victim.kproc );
+  }
 
 #else /* COOPERATIVE */
+
   while (!kaapi_reply_test( &kproc->reply ))
   {
     /* here request should be cancelled... */
@@ -109,6 +93,8 @@ do_post:
       kproc->issteal = 0;
       return 0;
     }
+    if (!kaapi_reply_test( &kproc->reply ))
+      pthread_yield_np();
   }
 #endif
   /* mark current processor as no stealing */
@@ -120,8 +106,6 @@ do_post:
   */
   if (!kaapi_reply_ok(&kproc->reply))
   {
-    if (flag !=0)
-      goto redo_select;
     return 0;
   }
   
