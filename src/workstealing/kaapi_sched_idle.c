@@ -61,12 +61,16 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
+  kaapi_assert_debug( kproc->ctxt !=0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* push it into the free list */
   t0 = kaapi_get_elapsedtime();  
 #endif
   do {
+/*    usleep( 10000 );*/
+/*pthread_yield_np();*/
+
     /* terminaison ? */
     if (kaapi_isterminated())
     {
@@ -74,23 +78,17 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       t1 = kaapi_get_elapsedtime();
       kproc->t_idle += t1-t0;
 #endif
-      break;
+      return;
     }
     
-#if defined(KAAPI_CONCURRENT_WS)
-    /* lock  */
-    pthread_mutex_lock(&kproc->lock);
-#endif
-
     /* local wake up first */
-    ctxt = kaapi_sched_wakeup(kproc); 
+    for (int i=0; i<5; ++i)
+    {
+      ctxt = kaapi_sched_wakeup(kproc); 
+      if (ctxt !=0) break;
+    }
 
-#if defined(KAAPI_CONCURRENT_WS)
-    /* unlock  */
-    pthread_mutex_unlock(&kproc->lock);
-#endif
-
-    if (ctxt !=0) 
+    if (ctxt !=0) /* push kproc->ctxt to free and set ctxt as new ctxt */
     {
       /* push kproc context into free list */
       KAAPI_LOG(50, "[IDLE] free ctxt 0x%p\n", (void*)ctxt);
@@ -133,6 +131,9 @@ redo_execute:
 
     if (err == EWOULDBLOCK) 
     {
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++kproc->cnt_suspend;
+#endif
       kaapi_thread_context_t* ctxt = kproc->ctxt;
       kproc->ctxt = 0;
 

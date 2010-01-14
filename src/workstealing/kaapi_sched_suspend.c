@@ -74,21 +74,15 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+  ++kproc->cnt_suspend;
   t0 = kaapi_get_elapsedtime();  
 #endif
   do {
-#if defined(KAAPI_CONCURRENT_WS)
-    /* lock  */
-    pthread_mutex_lock(&kproc->lock);
-#endif
+/*    usleep( 10000 );*/
+/*pthread_yield_np();*/
 
     /* wakeup a context */
     kproc->ctxt = kaapi_sched_wakeup(kproc);
-
-#if defined(KAAPI_CONCURRENT_WS)
-    /* unlock  */
-    pthread_mutex_unlock(&kproc->lock);
-#endif
 
     if (kproc->ctxt == ctxt_condition) 
     {
@@ -138,6 +132,9 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     kproc->ctxt = 0;
     if (err == EWOULDBLOCK) 
     {
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++kproc->cnt_suspend;
+#endif
       /* push it: suspended because top task is not ready */
       KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
     } else {
