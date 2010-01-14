@@ -86,6 +86,7 @@ redo_work:
   /* process steal request 
      - here we always see the retn to split stack into frame.
   */
+#if !defined(KAAPI_CONCURRENT_WS)
   if (*stack->hasrequest !=0) 
   {
     stack->pc = pc;
@@ -94,11 +95,15 @@ redo_work:
 #endif
     kaapi_sched_advance( stack->_proc );
   }
+#endif
 
   if (pc->flag & KAAPI_TASK_S_STEAL)
   {
     /* rewrite pc into memory */
     stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    stack->_proc->cnt_tasks = cnt_tasks;
+#endif
     return EWOULDBLOCK;
   }
   else if (pc->body == &kaapi_retn_body) 

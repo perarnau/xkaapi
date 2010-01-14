@@ -50,8 +50,10 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_stack_t*       stack;
   kaapi_victim_t       victim;
   int err;
+  int flag;
   
   kaapi_assert_debug( kproc !=0 );
+  kaapi_assert_debug( kproc->ctxt !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
   /* */
@@ -59,12 +61,20 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   {
     /* TODO try top wakeup a waiting stack ? */  
   }
+  
+  /* select my self first */
+  victim.level = 0;
+  victim.kproc = kproc;
+  flag = 1;
+  goto do_post;
     
-redo_post:
+redo_select:
   /* try to steal a victim processor */
   err = (*kproc->fnc_select)( kproc, &victim );
-  if (err !=0) goto redo_post;
+  if (err !=0) goto redo_select;
+  flag = 0;
 
+do_post:
   /* clear stack */
   kaapi_stack_clear( kproc->ctxt );
 
@@ -107,8 +117,12 @@ redo_post:
 
   /* test if my request is ok
   */
-  if (!kaapi_reply_ok(&kproc->reply)) 
+  if (!kaapi_reply_ok(&kproc->reply))
+  {
+    if (flag !=0)
+      goto redo_select;
     return 0;
+  }
   
   /* Reset original ctxt and do the local computation
   */

@@ -59,6 +59,8 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
   
   /* if access INIT & flag == READY, do not recompute readiness, else update version */
   if ((task->flag & KAAPI_TASK_MASK_READY) && (state ==KAAPI_TASK_S_INIT)) return 0;
+  
+  /* task without synchronisation */
   if (!kaapi_task_issync( task )) 
   {
     if (kaapi_task_isadaptive(task) && ((state ==KAAPI_TASK_S_EXEC) || (state == KAAPI_TASK_S_INIT)))
@@ -149,7 +151,7 @@ static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi
 }
 
 
-/* update all version & readiness flag for tasks in the frame [beg, end(, curr is the current task of the frame 
+/* update all versions & readiness flag for tasks in the frame [beg, end(, curr is the current task of the frame 
 */
 static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* endmax )
 {
@@ -186,30 +188,38 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
     /* TODO: Optimization: can i steal it ? to decr count and return quickly */
     if (waitparam ==0) 
     {
-      if (kaapi_task_isadaptive(beg) && (state == KAAPI_TASK_S_EXEC)) return count = 0;      
-      if ((kaapi_task_isstealable(beg)||kaapi_task_isadaptive(beg))&& (state == KAAPI_TASK_S_INIT)) 
+      if (kaapi_task_isadaptive(beg) && (state == KAAPI_TASK_S_EXEC)) return count = 0; 
+      if ((kaapi_task_isstealable(beg)||kaapi_task_isadaptive(beg))&& (state == KAAPI_TASK_S_INIT))
+      {
+printf("Task: %p isready, count:%i\n", (void*)beg,count);
         --count;
+return 0;
+      }
+#if 1
       /* found ready task*/
       if (count ==0) 
       {
-#if 0
+#if 1
         printf("Abort update version on Task: %p \n", (void*)beg);
 #endif
         return 0;
       }
+#endif
     }
 
-    if (beg == curr) 
-    {
-      kaapi_assert_debug( (end !=0) && (end->body == &kaapi_retn_body) );
-      if (end-1 > endmax) 
-      { /* recursive call on sub frame */
-        kaapi_update_version( count, end-1, endmax );
-      }
-    }
-    
     --beg;
   }
+
+  /* find in sub frame */
+  if (curr !=0) 
+  {
+    kaapi_assert_debug( (end !=0) && (end->body == &kaapi_retn_body) );
+    if (end-1 > endmax) 
+    { /* recursive call on sub frame */
+      kaapi_update_version( count, end-1, endmax );
+    }
+  }
+  
   return count;
 }
 
@@ -222,9 +232,11 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
   kaapi_task_t*         task_bot;
   const kaapi_format_t* task_fmt;
   int count;
+  int step;
   int replycount;
   int isready;
   int isupdateversion = 0;
+  kaapi_task_state_t state;
 
   count = KAAPI_ATOMIC_READ( (kaapi_atomic_t*)stack->hasrequest );
   if (count ==0) return 0;
@@ -233,11 +245,16 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
 
 #if 0
 printf("------ STEAL STACK @:%p\n", (void*)stack );
-kaapi_stack_print(0, stack);
+//kaapi_stack_print(0, stack);
 #endif
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  double t1, t0 = kaapi_get_elapsedtime();
+#endif
   /* reset dfg constraints evaluation */
+  step = 0;
   
+ redo_compute: 
   /* iterate through all the tasks from task_bot until task_top */
   task_bot = kaapi_stack_bottomtask(stack);
   task_top = kaapi_stack_toptask(stack);
@@ -258,22 +275,34 @@ kaapi_stack_print(0, stack);
       continue;
     }
 
-    /* do not recomputer dfg dependencies if task is already terminated: all its access will be ready !*/
-    kaapi_task_state_t state = kaapi_task_getstate( task_bot );
-    if ( (isupdateversion ==0) && kaapi_task_issync(task_bot) )
+    /* compute dependency in the second step: */
+    if (step == 0)
     {
-      kaapi_update_version( count, task_bot, task_top );
-#if 0
-      printf("================ AFTER UPDATE VERSION \n");
-      kaapi_stack_print( 0, stack);
-      printf("================  \n");
-#endif
-      isupdateversion = 1;
+      if ( (isupdateversion ==0) && kaapi_task_issync(task_bot) )
+      {
+        kaapi_update_version( count, task_bot, task_top );
+  #if 0
+        printf("================ AFTER UPDATE VERSION \n");
+        fflush(stdout);
+        kaapi_stack_print( 1, stack);
+        printf("================  \n");
+        fflush(stdout);
+  #endif
+        isupdateversion = 1;
+      }
     }
     
     /* */
     isready = kaapi_task_isready(task_bot);
-    if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL) || !isready)
+    if (!isready)
+    {
+      /* next task */
+      --task_bot;
+      continue;
+    }
+
+    state = kaapi_task_getstate( task_bot );
+    if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL))
     {
       /* next task */
       --task_bot;
@@ -284,6 +313,10 @@ kaapi_stack_print(0, stack);
     if (kaapi_task_issync(task_bot) && kaapi_task_isstealable(task_bot) && (state == KAAPI_TASK_S_INIT))
     {
       int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
+#if defined(KAAPI_USE_PERFCOUNTER)
+      t1 = kaapi_get_elapsedtime();
+      printf("[STEAL] date:%15f, delay: %f\n", t0, t1-t0);
+#endif
       count -= retval;
       replycount += retval;
       kaapi_assert_debug( count >=0 );
@@ -294,6 +327,10 @@ kaapi_stack_print(0, stack);
       {
         kaapi_assert( task_bot->format !=0 ); /* else we cannot steal it */
         int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
+#if defined(KAAPI_USE_PERFCOUNTER)
+        t1 = kaapi_get_elapsedtime();
+        printf("[STEAL] date:%15f, delay: %f\n", t0, t1-t0);
+#endif
         count -= retval;
         replycount += retval;
         kaapi_assert_debug( count >=0 );
@@ -309,6 +346,18 @@ kaapi_stack_print(0, stack);
     
     --task_bot;
   }
+
+#if 0
+  if (step ==0) 
+  {
+    step = 1;  
+#if 1
+printf("------ Redo steal count:%i,  @stack:%p\n", count, (void*)stack );
+#endif
+    goto redo_compute;
+  }
+#endif  
+  
 #if 0
 printf("------ END STEAL @:%p\n", (void*)stack );
 #endif

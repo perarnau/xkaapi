@@ -67,7 +67,7 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
 #if 0
 if (fmt->fmtid == 96)
 {
-  kaapi_stack_print( 0, stack );
+  kaapi_stack_print( 1, stack );
   abort();
 }
 #endif

@@ -81,13 +81,21 @@ static char kaapi_getstatename( kaapi_task_t* task )
   kaapi_task_state_t state = kaapi_task_getstate(task);
   switch (state) {
     case KAAPI_TASK_S_INIT:  return 'I';
-    case KAAPI_TASK_S_EXEC:  return 'E';
+    case KAAPI_TASK_S_EXEC:  
+      if (task->body == &kaapi_aftersteal_body) 
+        return 'e';
+      else 
+        return 'E';
     case KAAPI_TASK_S_STEAL: 
       if (task->body == &kaapi_aftersteal_body) 
-        return 'M';
+        return 's';
       else 
         return 'S';
-    case KAAPI_TASK_S_TERM:  return 'T';
+    case KAAPI_TASK_S_TERM:
+      if (task->body == &kaapi_aftersteal_body) 
+        return 't';
+      else 
+        return 'T';
     default: return '!';
   }
 }

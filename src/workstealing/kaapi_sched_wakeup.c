@@ -59,9 +59,24 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
     kaapi_task_t*  task = stack->pc;
     if ((kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || (task->body == &kaapi_aftersteal_body))
     {
-      /* remove it from list */
-      KAAPI_STACK_REMOVE( &kproc->lsuspend, prev, ctxt );
-      return ctxt;
+#if defined(KAAPI_CONCURRENT_WS)
+      /* lock  */
+      pthread_mutex_lock(&kproc->lock);
+#endif
+      if ((kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || (task->body == &kaapi_aftersteal_body))
+      {
+        /* remove it from list */
+        KAAPI_STACK_REMOVE( &kproc->lsuspend, prev, ctxt );
+#if defined(KAAPI_CONCURRENT_WS)
+        /* unlock  */
+        pthread_mutex_unlock(&kproc->lock);
+#endif
+        return ctxt;
+      }
+#if defined(KAAPI_CONCURRENT_WS)
+      /* unlock  */
+      pthread_mutex_unlock(&kproc->lock);
+#endif
     }
     prev = ctxt;
     ctxt = KAAPI_STACK_NEXT_FIELD(ctxt);
