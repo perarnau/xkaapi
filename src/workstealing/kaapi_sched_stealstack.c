@@ -191,15 +191,15 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
       if (kaapi_task_isadaptive(beg) && (state == KAAPI_TASK_S_EXEC)) return count = 0; 
       if ((kaapi_task_isstealable(beg)||kaapi_task_isadaptive(beg))&& (state == KAAPI_TASK_S_INIT))
       {
-printf("Task: %p isready, count:%i\n", (void*)beg,count);
+//printf("Task: %p isready, count:%i\n", (void*)beg,count);
         --count;
 return 0;
       }
-#if 1
+#if 0
       /* found ready task*/
       if (count ==0) 
       {
-#if 1
+#if 0
         printf("Abort update version on Task: %p \n", (void*)beg);
 #endif
         return 0;
@@ -248,7 +248,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
 //kaapi_stack_print(0, stack);
 #endif
 
-#if defined(KAAPI_USE_PERFCOUNTER)
+#if 0 /*defined(KAAPI_USE_PERFCOUNTER)*/
   double t1, t0 = kaapi_get_elapsedtime();
 #endif
   /* reset dfg constraints evaluation */
@@ -281,13 +281,13 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
       if ( (isupdateversion ==0) && kaapi_task_issync(task_bot) )
       {
         kaapi_update_version( count, task_bot, task_top );
-  #if 0
+#if 0
         printf("================ AFTER UPDATE VERSION \n");
         fflush(stdout);
         kaapi_stack_print( 1, stack);
         printf("================  \n");
         fflush(stdout);
-  #endif
+#endif
         isupdateversion = 1;
       }
     }
@@ -313,7 +313,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     if (kaapi_task_issync(task_bot) && kaapi_task_isstealable(task_bot) && (state == KAAPI_TASK_S_INIT))
     {
       int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
-#if defined(KAAPI_USE_PERFCOUNTER)
+#if 0/*defined(KAAPI_USE_PERFCOUNTER)*/
       t1 = kaapi_get_elapsedtime();
       printf("[STEAL] date:%15f, delay: %f\n", t0, t1-t0);
 #endif
@@ -327,7 +327,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
       {
         kaapi_assert( task_bot->format !=0 ); /* else we cannot steal it */
         int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
-#if defined(KAAPI_USE_PERFCOUNTER)
+#if 0/*defined(KAAPI_USE_PERFCOUNTER)*/
         t1 = kaapi_get_elapsedtime();
         printf("[STEAL] date:%15f, delay: %f\n", t0, t1-t0);
 #endif
