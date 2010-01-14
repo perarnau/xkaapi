@@ -62,11 +62,13 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
     /* TODO try top wakeup a waiting stack ? */  
   }
   
+#if 1
   /* select my self first */
   victim.level = 0;
   victim.kproc = kproc;
   flag = 1;
   goto do_post;
+#endif
     
 redo_select:
   /* try to steal a victim processor */
@@ -82,8 +84,8 @@ do_post:
   kproc->issteal = 1;
 
   /* Fill & Post the request to the victim processor */
-  printf("%i:: Post to kproc=%i\n", kproc->kid, victim->kid );
   kaapi_request_post( kproc, &kproc->reply, &victim );
+  /*printf("%i:: Post to kproc=%i\n", kproc->kid, victim.kproc->kid );*/
 
 #if defined(KAAPI_CONCURRENT_WS)
   /* lock the victim */

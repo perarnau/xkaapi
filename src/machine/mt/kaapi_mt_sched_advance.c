@@ -76,7 +76,10 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
 #endif
     return 0;
   }
-  
+
+#if 0
+printf("%f:: %i: #steal count: %i\n", kaapi_get_elapsedtime(), kproc->kid, count );  
+#endif
 #if !defined(KAAPI_CONCURRENT_WS)
   kaapi_readmem_barrier();
 #endif
