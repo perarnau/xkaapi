@@ -58,7 +58,7 @@ int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi
   victim->level = level;
 
   if (kproc->fnc_selecarg ==0) {
-    victim->kproc = kaapi_all_kprocessors[ kproc->hkids[level][0] ];
+    victim->kproc = kaapi_all_kprocessors[ 0 ];
     kproc->fnc_selecarg = (void*)(long)rand();
     return 0;
   }
