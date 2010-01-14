@@ -82,8 +82,6 @@ ACX_LIB_NEW_PRG([ATHA1PROGS])
 dnl ----------------------------------------------------------------
 dnl Force flag to be empty...
 dnl ----------------------------------------------------------------
-CFLAGS=""
-CXXFLAGS=""
 
 
 dnl ----------------------------------------------------------------
@@ -121,14 +119,19 @@ AS_CASE([$enable_mode],
     AC_MSG_NOTICE([Using debug compile mode])
     # not using AC*DEFINE as we want this available for examples too
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_DEBUG"
-    CFLAGS="$CFLAGS -g -DKAAPI_DEBUG"
-    CXXFLAGS="$CXXFLAGS -g -DKAAPI_DEBUG"
+    CFLAGS=""
+    CXXFLAGS=""
+    AM_CFLAGS="$AM_CFLAGS -g"
+    AM_CXXFLAGS="$AM_CXXFLAGS -g"
   ], [release], [dnl
     AC_MSG_NOTICE([Using release compile mode])
     # using CFLAGS and not AM_CFLAGS as the user must be able to overwrite
     # them on the make command line
-    CFLAGS="$CFLAGS -O3"
-    CXXFLAGS="$CXXFLAGS -O3"
+    AM_CPPFLAGS="$AM_CPPFLAGS"
+    CFLAGS=""
+    CXXFLAGS=""
+    AM_CFLAGS="$AM_CFLAGS -O3"
+    AM_CXXFLAGS="$AM_CXXFLAGS -O3"
   ], [dnl
     AC_MSG_ERROR([Unknown compilation mode '$enable_mode'. Aborting.])
   ])
