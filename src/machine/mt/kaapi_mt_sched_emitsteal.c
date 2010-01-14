@@ -82,6 +82,7 @@ do_post:
   kproc->issteal = 1;
 
   /* Fill & Post the request to the victim processor */
+  printf("%i:: Post to kproc=%i\n", kproc->kid, victim->kid );
   kaapi_request_post( kproc, &kproc->reply, &victim );
 
 #if defined(KAAPI_CONCURRENT_WS)
