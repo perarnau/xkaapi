@@ -148,9 +148,9 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 /** \ingroup WS
 */
 typedef struct kaapi_listrequest_t {
-  kaapi_atomic_t  __attribute__((aligned (KAAPI_CACHE_LINE))) count;
+  kaapi_atomic_t  count;
   kaapi_request_t requests[KAAPI_MAX_PROCESSOR];
-} kaapi_listrequest_t;
+} kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
 
 
 /** \ingroup WS
@@ -169,20 +169,20 @@ typedef struct kaapi_listrequest_t {
     TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
 typedef struct kaapi_processor_t {
-#if defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_t          lock;           
-  pthread_cond_t           cond;           
-#endif
   kaapi_thread_context_t*  ctxt;                          /* current stack (next version = current active thread) */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
   kaapi_uint32_t           issteal;                       /* */
-  kaapi_reply_t            reply;                         /* use when a request has been emited */
   kaapi_uint32_t           hlevel;                        /* number of level for this Kprocessor >0 */
   kaapi_uint16_t*          hindex;                        /* id local identifier of request at each level of the hierarchy, size hlevel */
   kaapi_uint16_t*          hlcount;                       /* count of proc. at each level of the hierarchy, size hlevel */
   kaapi_processor_id_t**   hkids;                         /* ids of all processors at each level of the hierarchy, size hlevel */
+  kaapi_reply_t            reply;                         /* use when a request has been emited */
   kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
 
+#if defined(KAAPI_CONCURRENT_WS)
+  pthread_mutex_t          lock;           
+  pthread_cond_t           cond;           
+#endif
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
   kaapi_listthreadctxt_t   lsuspend;                      /* list of suspended context */
@@ -190,11 +190,12 @@ typedef struct kaapi_processor_t {
   void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
   
+  /* performance counters */
   kaapi_uint32_t           cnt_tasks;                     /* number of executed tasks */
   kaapi_uint32_t           cnt_stealreqok;                /* number of steal requests replied with success */
   kaapi_uint32_t           cnt_stealreq;                  /* total number of steal requests replied */
-  kaapi_uint32_t           cnt_stealop;                   /* number of steal operation : ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
-  kaapi_uint32_t           cnt_suspend;                   /* number of steal operation : ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
+  kaapi_uint32_t           cnt_stealop;                   /* number of steal operation: ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
+  kaapi_uint32_t           cnt_suspend;                   /* number of suspend operations*/
   double                   t_idle;                        /* total idle time in second */           
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
