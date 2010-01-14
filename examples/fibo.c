@@ -5,6 +5,9 @@
 
 /*#define KAAPI_TRACE_DEBUG */
 
+int fiboseq(int n)
+{ return (n<2 ? n : fiboseq(n-1)+fiboseq(n-2) ); }
+
 void sum_body( kaapi_task_t* task, kaapi_stack_t* stack );
 void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack );
 void print_body( kaapi_task_t* task, kaapi_stack_t* stack );
@@ -53,9 +56,9 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 #if defined(KAAPI_TRACE_DEBUG)  
   printf("Fibo(%i)", arg0->n);
 #endif
-  if (arg0->n < 2)
+  if (arg0->n < 5)
   {
-    *kaapi_data(int, arg0->result) = arg0->n;
+    *kaapi_data(int, arg0->result) = fiboseq(arg0->n);
 #if defined(KAAPI_TRACE_DEBUG)  
     printf("=@0x%x:%i\n", kaapi_data(int, arg0->result), *kaapi_data(int, arg0->result));
 #endif
