@@ -64,6 +64,13 @@
 # endif
 #endif
 
+#if defined(KAAPI_CONCURRENT_WS)
+#  ifdef __APPLE__
+#    include <libkern/OSAtomic.h>
+#  endif
+#endif
+
+
 #include <stdint.h>
 #include <errno.h>
 #include "kaapi_error.h"
