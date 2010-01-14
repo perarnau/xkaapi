@@ -46,6 +46,7 @@
 #include "kaapi_impl.h"
 #include <unistd.h>
 #include <sys/mman.h>
+#include <string.h>
 
 /** 
 */
@@ -77,6 +78,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     int err __attribute__((unused)) = errno;
     return 0;
   }
+  memset(ctxt, 0, k_stacksize );
   ctxt->size = k_stacksize;
   kaapi_stack_init( ctxt, size_data, ctxt+1 );
 
