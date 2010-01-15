@@ -6,12 +6,10 @@
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
-AM_CPPFLAGS=@AM_CPPFLAGS@ -pedantic
-
 lib_LTLIBRARIES= libxkaapi.la
 
-libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) -D_GNU_SOURCE -DKAAPI_DEBUG
-libxkaapi_la_CFLAGS=@AM_CFLAGS@ -std=c99
+libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE -DKAAPI_DEBUG
+libxkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS)
 libxkaapi_la_LDFLAGS = -version-info 0:0:0 $(XKAAPILIB_BUILD_LDFLAGS)
 libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
 
@@ -90,21 +88,31 @@ include_HEADERS=\
 	kaapi_error.h
 
 check_PROGRAMS=kaapi_check_header kaapi_check_header_strict
-check_headers_SRC=\
-	check/c_kaapi_error_header.c \
-	check/c++_kaapi_error_header.cpp \
+check_headers_SRC_C=\
 	check/c_kaapi_header.c \
+	check/c_kaapi_error_header.c
+check_headers_SRC_CXX=\
 	check/c++_kaapi_header.cpp \
+	check/c++_kaapi_error_header.cpp
+check_headers_SRC_base=\
 	check/empty_main.c
 
 kaapi_check_header_strict_CPPFLAGS=$(AM_CPPFLAGS) -Werror
-kaapi_check_header_strict_CFLAGS=$(AM_CFLAGS) -std=c99
-kaapi_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) -std=c++0x
+kaapi_check_header_strict_CFLAGS=$(AM_CFLAGS) $(STD_C99_FLAGS)
+kaapi_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) $(STD_CXX0X_FLAGS)
 kaapi_check_header_strict_SOURCES=\
-	$(check_headers_SRC)
+	$(check_headers_SRC_base)
+if STD_C99
+kaapi_check_header_strict_SOURCES+=\
+	$(check_headers_SRC_C)
+endif
+if STD_CXX0X
+kaapi_check_header_strict_SOURCES+=\
+	$(check_headers_SRC_CXX)
+endif
 
 # No -pedantic here...
 kaapi_check_header_CPPFLAGS=@AM_CPPFLAGS@ -Werror -D_KAAPI_DISABLE_WARNINGS
 kaapi_check_header_SOURCES=\
-	$(check_headers_SRC)
+	$(check_headers_SRC_C) $(check_headers_SRC_CXX) $(check_headers_SRC_base)
 

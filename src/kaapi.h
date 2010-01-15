@@ -46,9 +46,6 @@
 #ifndef _KAAPI_H
 #define _KAAPI_H 1
 
-/* TG */
-#define _KAAPI_DISABLE_WARNINGS 1
-
 #ifndef _KAAPI_DISABLE_WARNINGS
 # if defined(__cplusplus)
 #  if !defined(__GXX_EXPERIMENTAL_CXX0X__)

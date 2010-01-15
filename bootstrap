@@ -48,7 +48,7 @@ CLEAN_BASE_FILES="$CLEAN_BASE_FILES acinclude/ltversion.m4 acinclude/lt~obsolete
 CLEAN_AUX_FILES="config.guess depcomp mkinstalldirs libtool ltmain.sh missing config.sub install-sh mdate-sh texinfo.tex"
 
 RM="rm -v"
-SUBDIRS="$(sed -e '/Makefile/s, \([^ ]*\)/\?Makefile,./\1,p;d' configure.ac)"
+SUBDIRS="$(sed -e '/Makefile/s,[[:space:]]*\([^[:space:]]*\)/\?Makefile,./\1,p;d' configure.ac)"
 
 if libtoolize --version 2>&1 >/dev/null; then
 	export LIBTOOLIZE="libtoolize --force"
