@@ -11,7 +11,7 @@
 # For installed software:  link_directories (${CMAKE_INSTALL_PREFIX}/lib/ /usr/lib ) 
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(top_srcdir)/api-atha
-AM_CXXFLAGS=@AM_CXXFLAGS@ $(ATHA1PROGS_BUILD_CXXFLAGS) -std=c++0x
+AM_CXXFLAGS=@AM_CXXFLAGS@ $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 AM_LDFLAGS =@AM_LDFLAGS@  $(ATHA1PROGS_BUILD_LDFLAGS)
 LIBS       =@LIBS@        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
 
