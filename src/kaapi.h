@@ -405,7 +405,7 @@ typedef int (*kaapi_task_reducer_t) (
    \TODO save also the C-stack if we try to suspend execution during a task execution
 */
 typedef struct kaapi_stack_t {
-  volatile int             *hasrequest;     /** points to the k-processor structure */
+  volatile int              hasrequest;     /** points to the k-processor structure */
   volatile int              haspreempt;     /** !=0 if preemption is requested */
   struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
   struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
@@ -1022,7 +1022,6 @@ extern int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* task);
 */
 extern int kaapi_stack_execall(kaapi_stack_t* stack);
 
-
 /** \ingroup STACK
     The function kaapi_sched_sync() execute all tasks from pc stack pointer and all their child tasks.
     If successful, the kaapi_sched_sync() function will return zero.
@@ -1035,18 +1034,28 @@ extern int kaapi_sched_sync(kaapi_stack_t* stack);
 
 /** \ingroup WS
     Try to steal work from tasks in the stack, else call splitter of the task. 
+    Deprecated
 */
+#if 0
 extern int kaapi_sched_stealtask( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_splitter_t splitter );
-
+#endif
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
 /* ========================================================================= */
 
 
-/* only exported for kaapi_stealpoint. kprocessor is a opaque structure here
+/** \ingroup WS
+    This method tries to steal work from the tasks of a stack passed in argument.
+    The method iterates through all the tasks in the stack until it found a ready task
+    or until the request count reaches 0.
+    The current implementation is cooperative or concurrent depending of configuration flag.
+    only exported for kaapi_stealpoint.
+    \param stack the victim stack
+    \param task the current running task (cooperative) or 0 (concurrent)
+    \retval the number of positive replies to the thieves
 */
-extern int kaapi_sched_stealprocessor(struct kaapi_processor_t* kproc);
+extern int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* task );
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process steal request into the task.
@@ -1057,14 +1066,17 @@ extern int kaapi_sched_stealprocessor(struct kaapi_processor_t* kproc);
 */
 static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task )
 {
-  int count = *stack->hasrequest;
+  int count = stack->hasrequest;
   if (count) 
   {
     /* \TODO: ici appel systematique a kaapi_sched_stealprocessor dans le cas ou la seule tache
        est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
+       
+       Dans le cas concurrent, on ne passe jamais par la (appel direct de kaapi_stealprocessor).
+       Dans le cas cooperatif, le thread courant se vol lui meme puis repond
     */
-    kaapi_sched_stealprocessor(stack->_proc);
-    return count;
+    count = stack->hasrequest -= kaapi_sched_stealstack(stack, task);
+    return (count ==0 ? 0 : 1);
   }
   return 0;
 }
@@ -1073,14 +1085,13 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then call the splitter function with given arguments.
-    \retval !=0 if they are a steal request(s) to process onto the given task.
-    \retval 0 else
+    \retval 0 \TODO code de retour
 */
 #define kaapi_stealpoint( stack, task, splitter, ...) \
    (kaapi_stealpoint_isactive(stack, task) ? \
-     (splitter)( stack, task, *(stack)->hasrequest, (stack)->requests, ##__VA_ARGS__) :\
+     (splitter)( stack, task, (stack)->hasrequest, (stack)->requests, ##__VA_ARGS__) :\
      0\
-   )
+   ), (stack)->hasrequest =0 
     
     
 /** \ingroup ADAPTIVE

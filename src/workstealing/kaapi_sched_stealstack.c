@@ -224,9 +224,10 @@ return 0;
 }
 
 
-/** 
+/** Steal task in the stack from the bottom to the top.
+    Do not steal curr if !=0 (current running adaptive task in case of cooperative WS).
 */
-int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
+int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr )
 {
   kaapi_task_t*         task_top;
   kaapi_task_t*         task_bot;
@@ -238,7 +239,11 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack )
   int isupdateversion = 0;
   kaapi_task_state_t state;
 
-  count = KAAPI_ATOMIC_READ( (kaapi_atomic_t*)stack->hasrequest );
+#if defined(KAAPI_CONCURRENT_WS)
+  kaapi_assert_debug( curr ==0 );
+#endif
+
+  count = stack->hasrequest;
   if (count ==0) return 0;
 
   if (kaapi_stack_isempty( stack)) return 0;
@@ -275,7 +280,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
       continue;
     }
 
-    /* compute dependency in the second step: */
+    /* compute dependency */
     if (step == 0)
     {
       if ( (isupdateversion ==0) && kaapi_task_issync(task_bot) )
@@ -294,7 +299,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     
     /* */
     isready = kaapi_task_isready(task_bot);
-    if (!isready)
+    if (!isready || ((curr !=0) && (task_bot == curr)) )
     {
       /* next task */
       --task_bot;
@@ -364,8 +369,7 @@ printf("------ END STEAL @:%p\n", (void*)stack );
   
   if (replycount >0)
   {
-    KAAPI_ATOMIC_SUB( (kaapi_atomic_t*)stack->hasrequest, replycount );
-    kaapi_assert_debug( *stack->hasrequest >= 0 );
+    KAAPI_ATOMIC_SUB( &stack->_proc->hlrequests.count, replycount );
   }
 
   return replycount;

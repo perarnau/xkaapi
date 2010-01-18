@@ -52,6 +52,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 {
   int err;
   kaapi_thread_context_t* ctxt;
+  kaapi_thread_context_t* tmp;
   kaapi_thread_context_t* ctxt_condition;
   kaapi_task_t*           task_condition;
   kaapi_stack_t*          stack;
@@ -69,7 +70,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   task_condition = ctxt_condition->pc;
   if (task_condition->body != kaapi_suspend_body) return 0;
   
-  /* put context is list of suspended contexts */
+  /* put context is list of suspended contexts: critical section with respect of thieves */
   kproc->ctxt = 0;
   KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
 
@@ -78,9 +79,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   t0 = kaapi_get_elapsedtime();  
 #endif
   do {
-/*    usleep( 10000 );*/
-/*pthread_yield_np();*/
-
     /* wakeup a context */
     kproc->ctxt = kaapi_sched_wakeup(kproc);
 
@@ -98,22 +96,30 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (kproc->ctxt ==0)
     {
       ctxt = kaapi_context_alloc(kproc);
+      ctxt->hasrequest = 0;
       kaapi_setcontext(kproc, ctxt);
 
       stack = kaapi_sched_emitsteal( kproc );
 
       if (kaapi_stack_isempty(stack))
       {
+        kaapi_sched_advance(kproc);
+
         /* push it into the free list */
-        KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
+        tmp = kproc->ctxt;
+        kproc->ctxt = 0;
+        KAAPI_STACK_PUSH( &kproc->lfree, tmp );
         continue;
       }
       if (stack != kproc->ctxt)
       {
         /* push it into the free list */
-        KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
+        tmp = kproc->ctxt;
+        kproc->ctxt = 0;
+
+        KAAPI_STACK_PUSH( &kproc->lfree, tmp );
+        kaapi_setcontext(kproc, stack);
       }
-      kaapi_setcontext(kproc, stack);
     }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -127,9 +133,12 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     kaapi_assert( err != EINVAL);
 #if defined(KAAPI_USE_PERFCOUNTER)
     KAAPI_LOG(50, "[SUSPEND] Work for %fs\n", t1-t0);
-#endif    
+#endif 
+
     ctxt = kproc->ctxt;
+    /* update   */
     kproc->ctxt = 0;
+
     if (err == EWOULDBLOCK) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)

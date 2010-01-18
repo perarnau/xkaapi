@@ -53,11 +53,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   size_t k_sizetask;
   size_t k_sizedata;
 
-#if defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_init(&kproc->lock, 0);
-  pthread_cond_init(&kproc->cond, 0);           
-#endif
-
   kproc->ctxt         = 0;  
   kproc->kid          = -1U;
   kproc->issteal      = 0;
@@ -69,6 +64,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kaapi_listrequest_init( &kproc->hlrequests );
 
   KAAPI_STACK_CLEAR( &kproc->lsuspend );
+  pthread_mutex_init(&kproc->lsuspend.lock, 0);
+  pthread_cond_init(&kproc->lsuspend.cond, 0);           
+
   KAAPI_STACK_CLEAR( &kproc->lfree );
 
   kproc->fnc_selecarg = 0;

@@ -54,7 +54,7 @@ int kaapi_sched_stealtask( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_
   
   kaapi_readmem_barrier();
 
-  count = *stack->hasrequest;
+  count = stack->hasrequest;
   if (count ==0) return 0;
 
   retval = (*splitter)(stack, task, count, stack->requests);

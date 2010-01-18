@@ -87,13 +87,13 @@ redo_work:
      - here we always see the retn to split stack into frame.
   */
 #if !defined(KAAPI_CONCURRENT_WS)
-  if (*stack->hasrequest !=0) 
+  if (stack->hasrequest !=0) 
   {
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
     stack->_proc->cnt_tasks = cnt_tasks;
 #endif
-    kaapi_sched_advance( stack->_proc );
+    kaapi_sched_advance(stack->_proc);
   }
 #endif
 

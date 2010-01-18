@@ -59,13 +59,29 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   ctxt_top = KAAPI_STACK_TOP( &kproc->lsuspend );
   while ((ctxt_top !=0) && (count >0))
   {
-    replycount += kaapi_sched_stealstack( ctxt_top );
+    replycount += kaapi_sched_stealstack( ctxt_top, 0 );
     count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
     ctxt_top = KAAPI_STACK_NEXT_FIELD( ctxt_top );
   }
-  if ((count >0) && (kproc->ctxt !=0) && (kproc->issteal ==0))
+  
+  ctxt_top = kproc->ctxt;
+  if ((count >0) && (ctxt_top !=0) && (kproc->issteal ==0))
   {
-    replycount += kaapi_sched_stealstack( kproc->ctxt );
+    /* if concurrent WS, then steal directly the current stack of the victim processor
+       else set flag to 0 on the stack and wait reply
+    */
+#if defined(KAAPI_CONCURRENT_WS)
+    replycount += kaapi_sched_stealstack( ctxt_top, 0 );
+#else
+    /* signal that count thefts are waiting */
+    ctxt_top->hasrequest = count;
+
+    /* busy wait: on return the negative value of correct reply or the ctxt_top is no more the active contexte */
+    while ((ctxt_top->hasrequest !=0) && (ctxt_top == kproc->ctxt))
+    {
+      if (kaapi_isterminated()) break;
+    }
+#endif
   }
   
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -73,5 +89,5 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   ++kproc->cnt_stealop;
 #endif
 
-  return replycount;
+  return 0;
 }
