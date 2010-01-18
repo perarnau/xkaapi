@@ -20,13 +20,14 @@ libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
 #  )
 #endif (KAAPI_TARGET_MT)
 
+#deprecated   workstealing/kaapi_sched_stealtask.c 
+
 libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
-  workstealing/kaapi_sched_stealtask.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \
