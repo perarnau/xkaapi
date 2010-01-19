@@ -200,7 +200,7 @@ int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request
 {
   request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
   _kaapi_request_reply( stack, task, request, thief_stack, size, retval);
-  KAAPI_ATOMIC_DECR( (kaapi_atomic_t*)stack->hasrequest ); 
-  kaapi_assert_debug( *stack->hasrequest >= 0 );
+  KAAPI_ATOMIC_DECR( &stack->_proc->hlrequests.count ); 
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count) >= 0 );
   return 0;
 }

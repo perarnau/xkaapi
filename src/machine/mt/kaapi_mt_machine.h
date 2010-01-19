@@ -116,6 +116,9 @@ typedef kaapi_stack_t kaapi_thread_context_t;
 
 /* list of suspended threadcontext */
 typedef struct kaapi_listthreadctxt_t {
+  pthread_mutex_t          lock;                     /* lock & cond are used to lock the processor structure, not only */
+  pthread_cond_t           cond;                     /* the kaapi_listthreadctxt_t. They are put here in order to group them*/
+                                                     /* into a cache ligne within the list of suspend context */
   KAAPI_STACK_DECLARE_FIELD(kaapi_thread_context_t);
 } kaapi_listthreadctxt_t;
 
@@ -177,19 +180,21 @@ typedef struct kaapi_processor_t {
   kaapi_uint16_t*          hlcount;                       /* count of proc. at each level of the hierarchy, size hlevel */
   kaapi_processor_id_t**   hkids;                         /* ids of all processors at each level of the hierarchy, size hlevel */
   kaapi_reply_t            reply;                         /* use when a request has been emited */
+  
+  /* cache align */
   kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
 
-#if defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_t          lock;           
-  pthread_cond_t           cond;           
-#endif
-  void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
-
+  /* cache align */
   kaapi_listthreadctxt_t   lsuspend;                      /* list of suspended context */
+
+  /* cache align */
   kaapi_listthreadctxt_t   lfree;                         /* list of free context */
+
   void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
-  
+
+  void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
+
   /* performance counters */
   kaapi_uint32_t           cnt_tasks;                     /* number of executed tasks */
   kaapi_uint32_t           cnt_stealreqok;                /* number of steal requests replied with success */

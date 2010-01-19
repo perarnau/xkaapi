@@ -15,7 +15,7 @@ lib_LTLIBRARIES=libatha1.la
 
 libatha1_la_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1_BUILD_CPPFLAGS)
 libatha1_la_CFLAGS=$(AM_CFLAGS) $(ATHA1_BUILD_CFLAGS)
-libatha1_la_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1_BUILD_CXXFLAGS)
+libatha1_la_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 libatha1_la_LDFLAGS = -version-info 1:0:1 $(ATHA1_BUILD_LDFLAGS)
 libatha1_la_LIBADD=../src/libxkaapi.la $(ATHA1_BUILD_LIBS)
 
@@ -73,14 +73,17 @@ include_HEADERS=\
 	athapascan-2 \
 	athapascan-2.h
 
-check_PROGRAMS=atha1_check_header atha1_check_header_strict
+check_PROGRAMS=atha1_check_header
+if STD_CXX0X
+check_PROGRAMS+=atha1_check_header_strict
+endif
 check_headers_SRC=\
         check/atha1_header.cpp \
         check/atha1_h_header.cpp \
         check/empty_main.c
 
 atha1_check_header_strict_CPPFLAGS=$(AM_CPPFLAGS) -Werror
-atha1_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) 
+atha1_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) $(STD_CXX0X_FLAGS)
 atha1_check_header_strict_SOURCES=\
         $(check_headers_SRC)
 

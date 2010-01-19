@@ -60,29 +60,15 @@ int kaapi_advance ( void )
 */
 int kaapi_sched_advance ( kaapi_processor_t* kproc )
 {
-  int i, replycount = 0;
-
-  int count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  if (count ==0) 
-    return 0;
-
-#if !defined(KAAPI_CONCURRENT_WS)
-  kaapi_readmem_barrier();
-#else
-  /* lock and retest */
-  pthread_mutex_lock(&kproc->lock);
-  count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  if (count ==0) 
-  {
-    pthread_mutex_unlock(&kproc->lock);
-    return 0;
-  }
-#endif
-
-  /* process request on the kprocessor */
-  kaapi_sched_stealprocessor( kproc );
-
-  /* reply to all other request: no work ... */
+  int i, replycount;
+  int count;
+  
+  count = kproc->ctxt->hasrequest;
+  if (count ==0) return 0;
+  kaapi_stealpoint_isactive(kproc->ctxt,0);
+  
+  /* reply to all other requests: no work ... */
+  replycount = 0;
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
     if (kaapi_request_ok(&kproc->hlrequests.requests[i]))
@@ -94,18 +80,13 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
     }
   }
 
-#if defined(KAAPI_CONCURRENT_WS)
-  /* unlock  */
-  pthread_mutex_unlock(&kproc->lock);
-#endif
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
-#endif
-
-  KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replycount ); 
-  kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
-
+  /* assert on the counter of victim processor request count */
+  if (replycount >0)
+  {
+    KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replycount );
+    kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
+  }
+  kproc->ctxt->hasrequest = 0;
   return 0;
 }
 

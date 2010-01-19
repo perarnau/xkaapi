@@ -50,7 +50,7 @@
 int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt )
 {
   ctxt->requests   = kproc->hlrequests.requests;
-  ctxt->hasrequest = (volatile int*)&kproc->hlrequests.count;
+  ctxt->hasrequest = 0;
   kproc->ctxt = ctxt;
   ctxt->_proc = kproc;
   return 0;

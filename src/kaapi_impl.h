@@ -255,15 +255,6 @@ extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc );
 
 
 /** \ingroup WS
-    This method tries to steal work from the tasks of a stack passed in argument.
-    The method iterates through all the tasks in the stack until it found a ready task
-    or until the request count reaches 0.
-    The current implementation is cooperative.
-    \retval the number of successfull stolen work
-*/
-extern int kaapi_sched_stealstack  ( kaapi_stack_t* stack );
-
-/** \ingroup WS
     The method starts a work stealing operation and return the result of one steal request
     The kprocessor kproc should have its stack ready to receive a work after a steal request.
     If the stack returned is not 0, either it is equal to the stack of the processor or it may

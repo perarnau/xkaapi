@@ -128,7 +128,6 @@ reply_failed:
     return reply_count;
   }
 
-
   static int static_splitter( kaapi_stack_t* victim_stack, kaapi_task_t* task, int count, kaapi_request_t* request )
   {
     Self_t* self_work = kaapi_task_getargst(task, Self_t);

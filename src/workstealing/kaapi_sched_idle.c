@@ -51,6 +51,7 @@
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
+  kaapi_thread_context_t* tmp;
   kaapi_stack_t* stack;
   int err;
   
@@ -91,8 +92,12 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     if (ctxt !=0) /* push kproc->ctxt to free and set ctxt as new ctxt */
     {
       /* push kproc context into free list */
-      KAAPI_LOG(50, "[IDLE] free ctxt 0x%p\n", (void*)ctxt);
-      KAAPI_STACK_PUSH( &kproc->lfree, kproc->ctxt );
+      tmp = kproc->ctxt;
+
+      /* update */
+      kproc->ctxt = 0;
+
+      KAAPI_STACK_PUSH( &kproc->lfree, tmp );
 
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
@@ -101,15 +106,19 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     
     /* steal request */
     stack = kaapi_sched_emitsteal( kproc );
-    if (kaapi_stack_isempty(stack)) continue;
+    if (kaapi_stack_isempty(stack)) 
+    {
+      kaapi_sched_advance(kproc);
+      continue;
+    }
     kaapi_assert_debug( stack != 0);
     
     if (stack != kproc->ctxt)
     {
       ctxt = kproc->ctxt;
+      /* update */
       kproc->ctxt = 0;
 
-      KAAPI_LOG(50, "[IDLE] free ctxt 0x%p\n", (void*)ctxt);
       /* push it into the free list */
       KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
 
@@ -118,6 +127,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
 
 redo_execute:
+
     /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
 #if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime();
@@ -135,9 +145,9 @@ redo_execute:
       ++kproc->cnt_suspend;
 #endif
       kaapi_thread_context_t* ctxt = kproc->ctxt;
+      /* update */
       kproc->ctxt = 0;
 
-      KAAPI_LOG(50, "[IDLE] suspend ctxt 0x%p\n", (void*)ctxt);
       /* push it: suspended because top task is not ready */
       KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
 
@@ -146,6 +156,7 @@ redo_execute:
 
       /* else reallocate a context */
       ctxt = kaapi_context_alloc(kproc);
+      ctxt->hasrequest = 0;
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
     }
