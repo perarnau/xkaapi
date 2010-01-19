@@ -94,7 +94,11 @@ redo_select:
       return 0;
     }
     if (!kaapi_reply_test( &kproc->reply ))
+#if defined(__linux__)
+      pthread_yield();
+#elif defined(__APPLE__)
       pthread_yield_np();
+#endif
   }
 #endif
   /* mark current processor as no stealing */
