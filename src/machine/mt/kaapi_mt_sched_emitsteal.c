@@ -131,7 +131,10 @@ redo_select:
 
   /* unlock  */
   pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
+{
+  kaapi_reply_t saved = kproc->reply;
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
+}
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   kproc->cnt_stealreq += replycount;
