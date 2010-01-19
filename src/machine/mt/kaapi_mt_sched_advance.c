@@ -66,27 +66,38 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   count = kproc->ctxt->hasrequest;
   if (count ==0) return 0;
   kaapi_stealpoint_isactive(kproc->ctxt,0);
+  count = kproc->ctxt->hasrequest;
   
   /* reply to all other requests: no work ... */
-  replycount = 0;
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  while (1)
   {
-    if (kaapi_request_ok(&kproc->hlrequests.requests[i]))
+    err = pthread_mutex_trylock(&kproc->lsuspend.lock);
+    if (err ==0) break;
+    kaapi_assert_debug(err == EBUSY);
+  }
+  if (count !=0) 
+  {
+    replycount = 0;
+    for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     {
-      /* user version that do not decrement the counter */
-      _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0, 0 );
-      ++replycount;
-      if (replycount == count) break;
+      if (kaapi_request_ok(&kproc->hlrequests.requests[i]))
+      {
+        /* user version that do not decrement the counter */
+        _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0, 0 );
+        ++replycount;
+        if (replycount == count) break;
+      }
     }
-  }
 
-  /* assert on the counter of victim processor request count */
-  if (replycount >0)
-  {
-    KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replycount );
-    kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
+    /* assert on the counter of victim processor request count */
+    if (replycount >0)
+    {
+      KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replycount );
+      kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
+    }
+    kproc->ctxt->hasrequest = 0;
   }
-  kproc->ctxt->hasrequest = 0;
+  pthread_mutex_unlock(&kproc->lsuspend.lock);
   return 0;
 }
 
