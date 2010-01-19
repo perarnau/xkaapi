@@ -78,7 +78,10 @@ redo_select:
      Fill & Post the request to the victim processor 
   */
   kaapi_request_post( kproc, &kproc->reply, &victim );
-  /*printf("%i:: Post to kproc=%i\n", kproc->kid, victim.kproc->kid );*/
+#if 0
+printf("%i post steal to %i\n", kproc->kid, victim.kproc->kid );
+fflush(stdout);
+#endif
 
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
   if (count ==0) 
@@ -96,11 +99,15 @@ redo_select:
     err = pthread_mutex_trylock(&victim.kproc->lsuspend.lock);
     if (err ==0) break;
     kaapi_assert_debug(err == EBUSY);
-  //  if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
+    if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
   }
 
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
+#if 0
+printf("%i acquire lock to steal to %i, count:%i\n", kproc->kid, victim.kproc->kid, count );
+fflush(stdout);
+#endif
   if (count ==0) 
   { 
     pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
@@ -114,14 +121,24 @@ redo_select:
 
   /* reply to all other requests: no work ... */
   replycount = 0;
+  count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
+#if 0
+printf("%i begin reply failed to steal to %i, count:%i\n", kproc->kid, victim.kproc->kid, count );
+fflush(stdout);
+#endif
+
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
       /* user version that do not decrement the counter */
       _kaapi_request_reply( 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0 );
+#if 0
+printf("%i reply failed to %i while stealing %i\n", kproc->kid, i, victim.kproc->kid );      
+fflush(stdout);
+#endif
       ++replycount;
-      if (replycount == count) break;
+/*      if (replycount == count) break;*/
     }
   }
 
@@ -129,7 +146,11 @@ redo_select:
   KAAPI_ATOMIC_SUB( &victim.kproc->hlrequests.count, replycount );
   kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) >= 0 );
 
-  /* unlock  */
+  /* unlock  */ 
+#if 0
+printf("%i release lock to steal to %i\n", kproc->kid, victim.kproc->kid);
+fflush(stdout);
+#endif
   pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
 {
   kaapi_reply_t saved = kproc->reply;
