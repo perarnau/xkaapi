@@ -120,6 +120,7 @@ redo_select:
     {
       /* user version that do not decrement the counter */
       _kaapi_request_reply( 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0 );
+printf("%i reply failed to %i while stealing %i\n", kproc->kid, i, victim.kproc->kid );      
       ++replycount;
       if (replycount == count) break;
     }
