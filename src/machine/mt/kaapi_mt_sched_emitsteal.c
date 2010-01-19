@@ -96,7 +96,7 @@ redo_select:
     err = pthread_mutex_trylock(&victim.kproc->lsuspend.lock);
     if (err ==0) break;
     kaapi_assert_debug(err == EBUSY);
-    if (kaapi_reply_test( &victim.kproc->reply ) ) goto return_value;
+    if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;
   }
 
