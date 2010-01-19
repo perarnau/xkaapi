@@ -83,7 +83,7 @@ redo_select:
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
   if (count ==0) 
   {
-    kaapi_assert_debug(kaapi_reply_test( &victim.kproc->reply ));
+    kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
     goto return_value;
   }
 
