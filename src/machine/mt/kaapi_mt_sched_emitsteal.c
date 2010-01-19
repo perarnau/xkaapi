@@ -97,7 +97,7 @@ redo_select:
     if (err ==0) break;
     kaapi_assert_debug(err == EBUSY);
   //  if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
-    if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;
+    if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
   }
 
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );

@@ -516,9 +516,9 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   req->reply       = reply;
   req->stack       = kproc->ctxt;
   reply->data      = 0;
-  req->status      = KAAPI_REQUEST_S_POSTED;
 
   kaapi_writemem_barrier();
+  req->status      = KAAPI_REQUEST_S_POSTED;
   
   /* incr without mem. barrier here if the victim see the request status as ok is enough,
      even if the new counter is not yet view
