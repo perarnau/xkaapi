@@ -96,7 +96,7 @@ redo_select:
     err = pthread_mutex_trylock(&victim.kproc->lsuspend.lock);
     if (err ==0) break;
     kaapi_assert_debug(err == EBUSY);
-    if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
+  //  if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;
   }
 
@@ -119,7 +119,7 @@ redo_select:
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
       /* user version that do not decrement the counter */
-      _kaapi_request_reply( victim.kproc->ctxt, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0 );
+      _kaapi_request_reply( 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0 );
       ++replycount;
       if (replycount == count) break;
     }

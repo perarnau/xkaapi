@@ -69,15 +69,9 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   kaapi_stealpoint_isactive(kproc->ctxt,0);
   count = kproc->ctxt->hasrequest;
   
-  /* reply to all other requests: no work ... */
-  while (1)
-  {
-    err = pthread_mutex_trylock(&kproc->lsuspend.lock);
-    if (err ==0) break;
-    if (err == EBUSY) return 0; /* other threads are taking lock to steal my self */
-  }
   if (count !=0) 
   {
+#if 0
     replycount = 0;
     for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     {
@@ -96,9 +90,9 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
       KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replycount );
       kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
     }
+#endif
     kproc->ctxt->hasrequest = 0;
   }
-  pthread_mutex_unlock(&kproc->lsuspend.lock);
   return 0;
 }
 
