@@ -62,6 +62,7 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
 {
   int i, replycount;
   int count;
+  int err;
   
   count = kproc->ctxt->hasrequest;
   if (count ==0) return 0;
@@ -73,7 +74,7 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   {
     err = pthread_mutex_trylock(&kproc->lsuspend.lock);
     if (err ==0) break;
-    kaapi_assert_debug(err == EBUSY);
+    if (err == EBUSY) return 0; /* other threads are taking lock to steal my self */
   }
   if (count !=0) 
   {
