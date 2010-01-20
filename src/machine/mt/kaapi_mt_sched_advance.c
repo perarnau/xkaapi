@@ -60,9 +60,7 @@ int kaapi_advance ( void )
 */
 int kaapi_sched_advance ( kaapi_processor_t* kproc )
 {
-  int i, replycount;
   int count;
-  int err;
   
   count = kproc->ctxt->hasrequest;
   if (count ==0) return 0;
