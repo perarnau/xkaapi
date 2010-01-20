@@ -26,6 +26,7 @@ check_PROGRAMS= \
 	nqueens_apiatha_grain8 \
 	branchbound_apiatha    \
 	transform_adapt	       \
+	transform_concurrent   \
 	marc_problem          
 
 TESTS=
@@ -46,6 +47,7 @@ nqueens_apiatha_grain7_SOURCES=nqueens_apiatha.cpp
 nqueens_apiatha_grain8_SOURCES=nqueens_apiatha.cpp
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
+transform_concurrent_SOURCES=transform_concurrent.h transform_concurrent.cpp random.cpp random.h
 marc_problem_SOURCES=marc_problem.cpp
 
 fiboseq_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS) -DFIBOCODE -DMAINCODE
@@ -127,6 +129,11 @@ transform_adapt_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_src
 transform_adapt_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 transform_adapt_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 transform_adapt_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
+
+transform_concurrent_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
+transform_concurrent_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+transform_concurrent_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+transform_concurrent_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libatha1.la ../src/libxkaapi.la
 
 marc_problem_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
 marc_problem_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
