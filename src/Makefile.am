@@ -28,6 +28,7 @@ libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
+  workstealing/kaapi_sched_stealend.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \

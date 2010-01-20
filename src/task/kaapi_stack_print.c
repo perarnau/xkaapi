@@ -124,18 +124,24 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
 int kaapi_task_print( FILE* file, kaapi_task_t* task )
 {
   const kaapi_format_t* fmt;
+  void* splitter = 0;
   int i;
 
   if (task->format ==0) fmt = kaapi_format_resolvebybody( task->body );
   else fmt = task->format;
 
+  if (kaapi_task_isadaptive(task))
+  {
+    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
+    splitter = (void*)(uintptr_t)ta->splitter;
+  }
   fprintf( file, "@%p |%c%c%s|, name:%s, splitter:%p, #p:%i, mode: ", 
         (void*)task, 
         kaapi_getreadyname(task),
         kaapi_getstatename(task), 
         kaapi_getflagsname(task->flag), 
         fmt->name, 
-	(void*)(uintptr_t)task->splitter,
+        splitter,
         fmt->count_params );
         
   /* access mode */
@@ -216,14 +222,14 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
       else if (task_bot->body == &kaapi_tasksteal_body) 
         fname = "steal";
         
-      fprintf( file, "  [%04i]: @%p |%c%c%s|, name:%s, splitter:%p", 
+      fprintf( file, "  [%04i]: @%p |%c%c%s|, name:%s", 
             count, 
             (void*)task_bot,
             kaapi_getreadyname(task_bot),
             kaapi_getstatename(task_bot), 
             kaapi_getflagsname(task_bot->flag), 
-            fname, 
-	    (void*)(uintptr_t)task_bot->splitter );
+            fname
+	    );
       
       if (task_bot->body == &kaapi_retn_body)
       {

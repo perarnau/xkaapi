@@ -375,7 +375,7 @@ typedef struct kaapi_request_t {
     \ingroup TASK
     A splitter should always return the number of work returns to the list of requests.
 */
-typedef int (*kaapi_task_splitter_t)(struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, int /*count*/, struct kaapi_request_t* /*array*/);
+typedef int (*kaapi_task_splitter_t)(struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, int /*count*/, struct kaapi_request_t* /*array*/, void* /*userarg*/);
 
 
 /** Task reducer
@@ -445,7 +445,6 @@ typedef struct kaapi_task_t {
   kaapi_uint32_t        flag;      /** flags: after a padding on 64 bit architecture !!!  */
   kaapi_task_body_t     body;      /** C function that represent the body to execute */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
-  kaapi_task_splitter_t splitter;  /** C function that represent the body to split a task, interest only if isadaptive*/
   kaapi_format_t*       format;    /** format, 0 if not def !!!  */
 } __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_task_t ;
 
@@ -458,6 +457,8 @@ struct kaapi_taskadaptive_result_t;
 */
 typedef struct kaapi_taskadaptive_t {
   void*                               user_sp;         /* user argument */
+  kaapi_task_splitter_t               splitter;        /* C function that represent the body to split a task, interest only if isadaptive*/
+  void*                               argsplitter;     /* arg for splitter */
   kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
@@ -860,6 +861,8 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   task->flag   = flag | KAAPI_TASK_ADAPTIVE;
   kaapi_assert_debug( ta !=0 );
   ta->user_sp               = arg;
+  ta->splitter              = 0;
+  ta->argsplitter           = 0;
   ta->thievescount._counter = 0;
   ta->head                  = 0;
   ta->tail                  = 0;
@@ -868,7 +871,6 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   ta->arg_from_victim       = 0;
   task->sp                  = ta;
   task->body                = taskbody;
-  task->splitter            = 0;
   return 0;
 }
 
@@ -1216,12 +1218,15 @@ static inline int kaapi_request_reply_failed(
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction
     if a steal request is sent to the task.
-    \retval !=0 if they are a steal request(s) to process onto the given task.
+    \retval EINVAL in case of error (task not adaptive kind)
     \retval 0 else
 */
-static inline int kaapi_task_setaction(kaapi_task_t* task, kaapi_task_splitter_t splitter)
+static inline int kaapi_stealbegin(kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_splitter_t splitter, void* arg_tasksplitter)
 {
-  task->splitter = splitter;
+  if (!kaapi_task_isadaptive(task)) return EINVAL;
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
+  ta->splitter    = splitter;
+  ta->argsplitter = arg_tasksplitter;
   return 0;
 }
 
@@ -1230,11 +1235,7 @@ static inline int kaapi_task_setaction(kaapi_task_t* task, kaapi_task_splitter_t
     \retval 0 in case of success
     \retval !=0 in case of error code
 */
-static inline int kaapi_task_getaction(kaapi_task_t* task)
-{
-  task->splitter = 0;
-  return 0;
-}
+extern int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task);
 
 /** \ingroup ADAPTIVE
     Push the task that, on execution will wait the terminaison of the previous 

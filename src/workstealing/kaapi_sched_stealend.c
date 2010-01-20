@@ -1,13 +1,12 @@
 /*
-** kaapi_sched_stealprocessor.c
+** kaapi_sched_stealstack.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
-** Contributors :
+** Contributor :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -45,50 +44,19 @@
 */
 #include "kaapi_impl.h"
 
-/** 
+
+/** \ingroup ADAPTIVE
 */
-int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
+int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task)
 {
-  kaapi_thread_context_t*  ctxt_top;
-  int count =0;
-  int replycount = 0;
-
-  count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  if (count ==0) return 0;
-  
-  ctxt_top = KAAPI_STACK_TOP( &kproc->lsuspend );
-  while ((ctxt_top !=0) && (count >0))
-  {
-    replycount += kaapi_sched_stealstack( ctxt_top, 0 );
-    count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    ctxt_top = KAAPI_STACK_NEXT_FIELD( ctxt_top );
-  }
-  
-  ctxt_top = kproc->ctxt;
-  if ((count >0) && (ctxt_top !=0) && (kproc->issteal ==0))
-  {
-    /* if concurrent WS, then steal directly the current stack of the victim processor
-       else set flag to 0 on the stack and wait reply
-    */
+  if (!kaapi_task_isadaptive(task)) return EINVAL;
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
 #if defined(KAAPI_CONCURRENT_WS)
-    /* signal that count thefts are waiting */
-    replycount += kaapi_sched_stealstack( ctxt_top, 0 );
-#else
-    /* signal that count thefts are waiting */
-    ctxt_top->hasrequest = count;
-
-    /* busy wait: on return the negative value of correct reply or the ctxt_top is no more the active contexte */
-    while ((ctxt_top->hasrequest !=0) && (ctxt_top == kproc->ctxt))
-    {
-      if (kaapi_isterminated()) break;
-    }
+  pthread_mutex_lock(&stack->_proc->lsuspend.lock);
 #endif
-  }
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
-  ++kproc->cnt_stealop;
+  ta->splitter = 0;
+#if defined(KAAPI_CONCURRENT_WS)
+  pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
 #endif
-
   return 0;
 }

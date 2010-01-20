@@ -225,14 +225,14 @@ return 0;
 
 
 /** Steal task in the stack from the bottom to the top.
-    Do not steal curr if !=0 (current running adaptive task in case of cooperative WS).
+    Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
 */
 int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr )
 {
   kaapi_task_t*         task_top;
   kaapi_task_t*         task_bot;
   const kaapi_format_t* task_fmt;
-  int count;
+  int count, savecount;
   int step;
   int replycount;
   int isready;
@@ -240,13 +240,14 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr )
   kaapi_task_state_t state;
 
 #if defined(KAAPI_CONCURRENT_WS)
-  kaapi_assert_debug( curr ==0 );
-#endif
-
+  count = KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count);
+#else
   count = stack->hasrequest;
+#endif
   if (count ==0) return 0;
-
   if (kaapi_stack_isempty( stack)) return 0;
+
+  savecount = count;
 
 #if 0
 printf("------ STEAL STACK @:%p\n", (void*)stack );
@@ -270,11 +271,11 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
   {
     if (task_bot == 0) break;
 
-    if (task_bot->format ==0)
+    if ((task_bot->format ==0) && (!kaapi_task_isadaptive(task_bot)))
       task_fmt = task_bot->format = kaapi_format_resolvebybody( task_bot->body );
     else
       task_fmt = task_bot->format;
-    if (task_fmt ==0) 
+    if ((task_fmt ==0) && (!kaapi_task_isadaptive(task_bot)))
     {
       --task_bot;
       continue;
@@ -299,7 +300,11 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     
     /* */
     isready = kaapi_task_isready(task_bot);
-    if (!isready || ((curr !=0) && (task_bot == curr)) )
+#if defined(KAAPI_CONCURRENT_WS)
+    if ((!isready) && kaapi_task_issync(task_bot))
+#else
+    if ((!isready || ((curr !=0) && (task_bot == curr))) && kaapi_task_issync(task_bot))
+#endif
     {
       /* next task */
       --task_bot;
@@ -328,9 +333,9 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     }
     else if (kaapi_task_isadaptive(task_bot)) 
     {
-      if (state == KAAPI_TASK_S_INIT) /* steal the entire task (always better !) */
+      kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task_bot->sp;
+      if ((state == KAAPI_TASK_S_INIT) && (task_fmt !=0)) /* steal the entire task (always better !) */
       {
-        kaapi_assert( task_bot->format !=0 ); /* else we cannot steal it */
         int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
 #if 0/*defined(KAAPI_USE_PERFCOUNTER)*/
         t1 = kaapi_get_elapsedtime();
@@ -340,11 +345,14 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
         replycount += retval;
         kaapi_assert_debug( count >=0 );
       }
-      else if ((state == KAAPI_TASK_S_EXEC) && (task_bot->splitter !=0)) /* partial steal */
+      else if ( (ta->splitter !=0) && ((state == KAAPI_TASK_S_EXEC) || (state == KAAPI_TASK_S_INIT)) ) /* partial steal */
       {
-        int retval = (*task_bot->splitter)(stack, task_bot, count, stack->requests);
+        int retval = (*ta->splitter)(stack, task_bot, count, stack->requests, ta->argsplitter );
         count -= retval;
-        replycount += retval;
+        /* never increment replycount here, because user splitter function was call and has already
+           decrement the request counter
+           replycount += retval;
+        */
         kaapi_assert_debug( count >=0 );
       }
     }
@@ -372,5 +380,5 @@ printf("------ END STEAL @:%p\n", (void*)stack );
     KAAPI_ATOMIC_SUB( &stack->_proc->hlrequests.count, replycount );
   }
 
-  return replycount;
+  return savecount-count;
 }
