@@ -29,7 +29,7 @@ struct Sin {
 struct Op2 {
     Op2(){ };
     double operator()(double a){
-      usleep(1000); /* 1ms */
+      usleep(100000); /* 100ms */
       return a+1;
     }
 };

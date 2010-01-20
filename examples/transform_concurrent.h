@@ -16,7 +16,7 @@ template<class InputIterator, class OutputIterator, class UnaryOperator>
 void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op );
 
 
-int unit_size = 32;
+int unit_size = 1;
 
 /** Stucture of a work for transform
 */
@@ -83,10 +83,11 @@ protected:
 
     /* if distance is less than unit_size, the victim will bloc... */
     if (size < (unsigned)unit_size) goto reply_failed;
-    bloc = (size-unit_size) / (1+count);
+    size -= unit_size;
+    bloc = size / (1+count);
 
 //    std::cout << "Split [" << _ibeg << "," << _iend << ") in " << 1+count << ", bloc=" << bloc << std::endl;
-    if (bloc < 16) { count = size/16 -1; bloc = 16; }
+    if (bloc < (unsigned)unit_size) { count = size/unit_size -1; bloc = unit_size; }
     while (count >0)
     {
       if (kaapi_request_ok(&request[i]))
