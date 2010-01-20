@@ -44,10 +44,10 @@
 ** terms.
 ** 
 */
-#ifndef _ATHAPASCAN_NOT_GLOBAL_NAME_H__TWO
-#define _ATHAPASCAN_NOT_GLOBAL_NAME_H__TWO
+#ifndef _KAAPIPLUSPLUS_NOT_GLOBAL_NAME_H__TWO
+#define _KAAPIPLUSPLUS_NOT_GLOBAL_NAME_H__TWO
 
-#define ATHAPASCAN2_NOT_IN_NAMESPACE 1
-#include "athapascan-2.h"
+#define _KAAPIPLUSPLUS_NOT_IN_NAMESPACE 1
+#include "kaapi++.h"
 
 #endif

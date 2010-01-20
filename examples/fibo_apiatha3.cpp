@@ -8,7 +8,7 @@
 
 
 #include <iostream>
-#include "athapascan-2" // this is the header required by athapascan 2
+#include "kaapi++" // this is the new C++ interface for Kaapi
 
 // --------------------------------------------------------------------
 /* Sequential fibo function

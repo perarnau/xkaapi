@@ -70,8 +70,8 @@ libatha1_la_SOURCES=\
 include_HEADERS=\
 	athapascan-1 \
 	athapascan-1.h \
-	athapascan-2 \
-	athapascan-2.h
+	kaapi++ \
+	kaapi++.h
 
 check_PROGRAMS=atha1_check_header
 if STD_CXX0X

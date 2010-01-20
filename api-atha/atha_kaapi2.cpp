@@ -41,7 +41,7 @@
 ** terms.
 ** 
 */
-#include "athapascan-2"
+#include "kaapi++"
 #include "kaapi_impl.h"
 #include "atha_parser.h"
 #include "atha_component.h"

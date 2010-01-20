@@ -43,8 +43,8 @@
 ** terms.
 ** 
 */
-#ifndef _ATHAPASCAN_2_H_H
-#define _ATHAPASCAN_2_H_H
+#ifndef _KAAPI_CPP_H_
+#define _KAAPI_CPP_H_
 
 #include "kaapi.h"
 #include "atha_error.h"
@@ -892,7 +892,7 @@ static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
 #endif
 }
 
-#ifndef ATHAPASCAN2_NOT_IN_NAMESPACE
+#ifndef _KAAPIPLUSPLUS_NOT_IN_NAMESPACE
 using namespace atha;
 #endif
 
