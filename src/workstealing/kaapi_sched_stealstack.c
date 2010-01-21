@@ -312,7 +312,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     }
 
     state = kaapi_task_getstate( task_bot );
-    if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL))
+    if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL) || !kaapi_task_isstealable(task_bot))
     {
       /* next task */
       --task_bot;
@@ -320,7 +320,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     }
 
     /* Is it a DFG or task that will require or introduce synchronisations ? */
-    if (kaapi_task_issync(task_bot) && kaapi_task_isstealable(task_bot) && (state == KAAPI_TASK_S_INIT))
+    if (kaapi_task_issync(task_bot) && (state == KAAPI_TASK_S_INIT))
     {
       int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
 #if 0/*defined(KAAPI_USE_PERFCOUNTER)*/
