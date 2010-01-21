@@ -478,7 +478,7 @@ typedef struct kaapi_taskadaptive_t {
 
 /** \ingroup ADAPT
     Data structure that allows to store results of child tasks of an adaptive task.
-    This data structure is store in the victim stack (data part) and serve as communication 
+    This data structure is stored... in the victim heap and serve as communication 
     media between victim and thief.
 */
 typedef struct kaapi_taskadaptive_result_t {
@@ -486,10 +486,11 @@ typedef struct kaapi_taskadaptive_result_t {
   volatile int                        req_preempt;      /* */
   volatile int                        thief_term;       /* */
   int                                 flag;             /* state of the result */
-  struct kaapi_taskadaptive_result_t* rhead;             /* next result of the next thief */
-  struct kaapi_taskadaptive_result_t* rtail;             /* next result of the next thief */
+  struct kaapi_taskadaptive_result_t* rhead;            /* next result of the next thief */
+  struct kaapi_taskadaptive_result_t* rtail;            /* next result of the next thief */
   void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
-  struct kaapi_taskadaptive_result_t* next;             /* link field the next thief */
+  struct kaapi_taskadaptive_result_t* next;             /* link field to the previous spawned thief */
+  struct kaapi_taskadaptive_result_t* prev;             /* link field to the next spawned thief */
   int                                 size_data;        /* size of data */
   double                              data[1];
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
@@ -571,9 +572,9 @@ typedef struct kaapi_access_t {
 #define kaapi_task_getflags(task) ((task)->flag & KAAPI_TASK_MASK_FLAGS)
 
 /** \ingroup TASK
-    Return the flags of the task
+    Set the flags of the task
 */
-#define kaapi_task_setflags(task, f) ((task)->flag |= f &KAAPI_TASK_MASK_FLAGS)
+#define kaapi_task_setflags(task, f) ((task)->flag |= f & KAAPI_TASK_MASK_FLAGS)
 
 
 /** \ingroup TASK
@@ -655,6 +656,20 @@ extern void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack );
 */
 inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 { return !(task->flag & KAAPI_TASK_STICKY); }
+
+/** \ingroup TASK
+    The function kaapi_task_setstealable() will return non-zero value iff the task' flag has been set.
+    \param task IN a pointer to the kaapi_task_t to test.
+*/
+inline static int kaapi_task_setstealable(kaapi_task_t* task)
+{ return task->flag |= KAAPI_TASK_STICKY; }
+
+/** \ingroup TASK
+    The function kaapi_task_unsetstealable() will return non-zero value iff the task' flag has been unset.
+    \param task IN a pointer to the kaapi_task_t to test.
+*/
+inline static int kaapi_task_unsetstealable(kaapi_task_t* task)
+{ return task->flag &= ~KAAPI_TASK_STICKY; }
 
 /** \ingroup TASK
     The function kaapi_task_haslocality() will return non-zero value iff the task has locality constraints.
@@ -1161,7 +1176,7 @@ static inline int kaapi_is_null(void* p)
 extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief );
 
 /** \ingroup ADAPTIVE
-   Try to preempt next thief in the reverse order defined by steal reponse.
+   Try to preempt next thief in the reverse order defined by the order of the steal request reply.
    Return true iff some work have been preempted and should be processed locally.
    If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
    If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
@@ -1171,7 +1186,6 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
       int (*)( kaapi_stack_t* stack, kaapi_task_t* task, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
-
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
 (									\
  kaapi_preempt_nextthief_helper(stack, task, arg_to_thief) ?		\
@@ -1180,6 +1194,35 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
   ((kaapi_task_reducer_t)reducer)(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
  ) : 0									\
 )
+
+
+/* Helper for kaapi_preempt_nextthief_reverse
+   Return 1 iff a thief as been preempted.
+*/
+extern int kaapi_preempt_nextthief_reverse_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief );
+
+/** \ingroup ADAPTIVE
+   Try to preempt next thief in the order defined by the order of the steal request reply.
+   Note that this function is called kaapi_preempt_nextthief_reverse for historical reason
+   because the order defined by kaapi_preempt_nextthief was the natural order.
+   Return true iff some work have been preempted and should be processed locally.
+   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
+   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
+   value the call to reducer function.
+   
+   reducer function should has the following signature:
+      int (*)( kaapi_stack_t* stack, kaapi_task_t* task, void* thief_work, ... )
+   where ... is the same arguments as passed to kaapi_preempt_nextthief.
+*/
+#define kaapi_preempt_nextthief_reverse( stack, task, arg_to_thief, reducer, ... ) \
+(									\
+ kaapi_preempt_nextthief_reverse_helper(stack, task, arg_to_thief) ?		\
+ (									\
+  kaapi_is_null((void*)reducer) ? 0 :					\
+  ((kaapi_task_reducer_t)reducer)(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
+ ) : 0									\
+)
+
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request

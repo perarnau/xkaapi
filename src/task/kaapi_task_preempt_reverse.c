@@ -1,5 +1,5 @@
 /*
-** kaapi_task_preempt.c
+** kaapi_task_preempt_reverse.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -44,53 +44,29 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim, int size )
-{
-  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
-
-  /* push data to the victim and signal it */
-  if ((arg_for_victim !=0) && (size >0))
-  {
-    memcpy(ta->result->data, arg_for_victim, size );
-  }
-  if (ta->head !=0)
-  {
-    ta->result->rhead = ta->head;
-    ta->head = 0;
-    ta->result->rtail = ta->tail;
-    ta->tail = 0;
-  }
-
-  /* mark the stack as preemption processed */
-  stack->haspreempt = 0;
-  
-  return 0;
-}
-
-int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval )
-{
-  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
-
-  kaapi_writemem_barrier();   /* serialize previous line with next line */
-  ta->result->thief_term = 1;
-  kaapi_mem_barrier();
-  ta->result = 0;
-
-  return 1;
-}
-
-
-int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief )
+int kaapi_preempt_nextthief_reverse_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief )
 {
   kaapi_assert_debug( task->flag & KAAPI_TASK_ADAPTIVE );
   kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
-
+  int retval = 1;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
-  kaapi_taskadaptive_result_t* athief = ta->head;
   
+#if defined(KAAPI_CONCURRENT_WS)
+  int flagsticky = kaapi_task_isstealable(task);
+  pthread_mutex_lock(&stack->_proc->lsuspend.lock);
+  kaapi_task_unsetstealable(task);
+  pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
+#endif
+
+  kaapi_taskadaptive_result_t* athief = ta->tail;
+
   ta->current_thief= 0;
   /* no more thief to preempt */
-  if (athief ==0) return 0;
+  if (athief ==0)
+  {
+    retval =0;
+    goto reset_return;
+  }
   
   /* pass arg to the thief */
 /*  printf("Kaapi_preempt_nextthief: send:%p to thief, result @=%p\n", arg_to_thief, (void*)athief);*/
@@ -123,21 +99,44 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
 #endif
   }
 
-  /* push current preempt thief in current_thief: used by caller to make call */
-  ta->current_thief = ta->head;
+  /* push current preempted thief in current_thief: used kaapi_preempt_nextthief 
+     to call the reducer with the thief args
+  */
+  ta->current_thief = ta->tail;
+  kaapi_assert_debug( ta->current_thief == athief );
 
-  /* pop current thief and push thiefs of the thief into the local preemption list */
-  ta->head = ta->head->next;
-  if (ta->head ==0) ta->tail = 0;
+  /* pop current thief and push list of thiefs of the preempted thief in the from 
+     of the local preemption list 
+  */
+  ta->tail = ta->tail->prev;
+  if (ta->tail ==0)
+    ta->head = 0;
+  else
+    ta->tail->next = 0;
+
+#if defined(KAAPI_DEBUG)
+  ta->current_thief->next = 0;
+  ta->current_thief->prev = 0;
+#endif  
 
   if (athief->rhead !=0)
-    {
-      athief->rtail->next = ta->head;
+  {
+    kaapi_assert_debug( athief->rhead->prev ==0 );
+    kaapi_assert_debug( athief->rtail->next ==0 );
+    athief->rhead->prev = ta->tail;
+    if (ta->tail ==0)
       ta->head = athief->rhead;
+    else
+      ta->tail->next = athief->rhead;
+    
+    ta->tail = athief->rtail;
+  }
 
-      if (ta->tail == 0)
-        ta->tail = athief->rtail;
-    }
+reset_return:
+#if defined(KAAPI_CONCURRENT_WS)
+  if (flagsticky)
+      kaapi_task_setstealable(task);
+#endif
 
-  return 1;
+  return retval;
 }
