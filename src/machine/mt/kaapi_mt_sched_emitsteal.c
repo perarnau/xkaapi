@@ -102,21 +102,20 @@ redo_select:
   }
 
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
+  kaapi_assert_debug( count <= KAAPI_MAX_PROCESSOR );
 
+#if 0
   if (count ==0) 
   { 
     pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
     kaapi_readmem_barrier();
   }
+#endif
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
   */
   if (count >0) kaapi_sched_stealprocessor( victim.kproc );
-
-  /* reply to all other requests: no work ... */
-  count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
-  kaapi_assert_debug( count <= KAAPI_MAX_PROCESSOR );
 
   /* reply to all requests. May also reply to count request INCLUDING self request,
      else a bug will occurs--WARNING--
