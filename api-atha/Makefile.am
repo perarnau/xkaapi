@@ -71,7 +71,14 @@ include_HEADERS=\
 	athapascan-1 \
 	athapascan-1.h \
 	kaapi++ \
-	kaapi++.h
+	kaapi++.h\
+	atha_error.h\
+  atha_timer.h\
+  atha_api2_clo.h\
+  atha_api2_fork.h\
+  athapascan_closure.h\
+  athapascan_fork.h
+  
 
 check_PROGRAMS=atha1_check_header
 if STD_CXX0X

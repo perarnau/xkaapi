@@ -44,7 +44,6 @@
 */
 #include "kaapi_impl.h"
 
-
 /** \ingroup ADAPTIVE
 */
 int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task)
