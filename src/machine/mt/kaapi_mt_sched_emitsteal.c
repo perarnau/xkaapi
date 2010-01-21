@@ -77,6 +77,7 @@ redo_select:
   /* (1) 
      Fill & Post the request to the victim processor 
   */
+  replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
 #if 0
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
@@ -114,7 +115,6 @@ redo_select:
   if (count >0) kaapi_sched_stealprocessor( victim.kproc );
 
   /* reply to all other requests: no work ... */
-  replycount = 0;
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
 
   /* reply to all requests. May also reply to count request INCLUDING self request,
