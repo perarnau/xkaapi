@@ -116,6 +116,7 @@ redo_select:
 
   /* reply to all other requests: no work ... */
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
+  kaapi_assert_debug( count <= KAAPI_MAX_PROCESSOR );
 
   /* reply to all requests. May also reply to count request INCLUDING self request,
      else a bug will occurs--WARNING--
