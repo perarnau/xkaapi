@@ -78,12 +78,14 @@ redo_select:
      Fill & Post the request to the victim processor 
   */
   kaapi_request_post( kproc, &kproc->reply, &victim );
+#if 0
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
   if (count ==0) 
   {
     kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
     goto return_value;
   }
+#endif
 
   /* (2)
      lock and retest if they are yet posted requests on victim or not 
@@ -103,13 +105,13 @@ redo_select:
   if (count ==0) 
   { 
     pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
-    goto return_value;
+    kaapi_readmem_barrier();
   }
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
   */
-  kaapi_sched_stealprocessor( victim.kproc );
+  if (count >0) kaapi_sched_stealprocessor( victim.kproc );
 
   /* reply to all other requests: no work ... */
   replycount = 0;
@@ -129,8 +131,12 @@ redo_select:
   }
 
   /* assert on the counter of victim processor request count */
-  KAAPI_ATOMIC_SUB( &victim.kproc->hlrequests.count, replycount );
-  kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) >= 0 );
+  if (replycount >0)
+  {
+    kaapi_writemem_barrier();
+    KAAPI_ATOMIC_SUB( &victim.kproc->hlrequests.count, replycount );
+    kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) >= 0 );
+  }
 
   /* unlock  */ 
   pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
