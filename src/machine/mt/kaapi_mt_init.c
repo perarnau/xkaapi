@@ -150,7 +150,8 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   kaapi_uint64_t cnt_stealreq;
   kaapi_uint64_t cnt_stealop;
   kaapi_uint64_t cnt_suspend;
-  double t_idle;
+  double t_sched;
+  double t_preempt;
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::TERM] end time:%15f\n", kaapi_get_elapsedtime());
@@ -173,7 +174,8 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   cnt_stealreq    = 0;
   cnt_stealop     = 0;
   cnt_suspend     = 0;
-  t_idle          = 0;
+  t_sched         = 0;
+  t_preempt       = 0;
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
     cnt_tasks       += kaapi_all_kprocessors[i]->cnt_tasks;
@@ -181,7 +183,8 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     cnt_stealreq    += kaapi_all_kprocessors[i]->cnt_stealreq;
     cnt_stealop     += kaapi_all_kprocessors[i]->cnt_stealop;
     cnt_suspend     += kaapi_all_kprocessors[i]->cnt_suspend;
-    t_idle          += kaapi_all_kprocessors[i]->t_idle;
+    t_sched         += kaapi_all_kprocessors[i]->t_sched;
+    t_preempt       += kaapi_all_kprocessors[i]->t_preempt;
 
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -194,7 +197,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     printf("%i: Total number of steal BAD requests : %u\n", i, kaapi_all_kprocessors[i]->cnt_stealreq - kaapi_all_kprocessors[i]->cnt_stealreqok);
     printf("%i: Total number of steal operations   : %u\n", i, kaapi_all_kprocessors[i]->cnt_stealop);
     printf("%i: Total number of suspend operations : %u\n", i, kaapi_all_kprocessors[i]->cnt_suspend);
-    printf("%i: Total idle time                    : %e\n", i, kaapi_all_kprocessors[i]->t_idle);
+    printf("%i: Total idle time                    : %e\n", i, kaapi_all_kprocessors[i]->t_sched+kaapi_all_kprocessors[i]->t_preempt);
   }
 #endif  
 
@@ -222,7 +225,9 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     printf("Total number of steal BAD requests : %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
     printf("Total number of steal operations   : %" PRIu64 "\n", cnt_stealop);
     printf("Total number of suspend operations : %u\n", cnt_suspend);
-    printf("Total idle time                    : %e\n", t_idle);
+    printf("Total idle time                    : %e\n", t_sched+t_preempt);
+    printf("   sched idle time                 : %e\n", t_sched);
+    printf("   preemption idle time            : %e\n", t_preempt);
     printf("Average steal requests aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
 #endif  

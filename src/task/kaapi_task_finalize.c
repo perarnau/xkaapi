@@ -61,10 +61,10 @@ void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
 #if defined(KAAPI_USE_PERFCOUNTER)
     t0 = kaapi_get_elapsedtime();
 #endif
-    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
+    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) pthread_yield_np();
 #if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime();
-    stack->_proc->t_idle += t1-t0;
+    stack->_proc->t_sched += t1-t0;
 #endif
     kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 #if defined(KAAPI_DEBUG)

@@ -87,7 +87,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_assert(kproc->ctxt->pc == task_condition);
 #if defined(KAAPI_USE_PERFCOUNTER)
       t1 = kaapi_get_elapsedtime();
-      kproc->t_idle += t1-t0;
+      kproc->t_sched += t1-t0;
 #endif
       return 0;
     }
@@ -124,7 +124,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime(); 
-    kproc->t_idle = t1-t0;
+    kproc->t_sched = t1-t0;
 #endif
     err = kaapi_stack_execall( kproc->ctxt );
 #if defined(KAAPI_USE_PERFCOUNTER)

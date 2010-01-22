@@ -77,7 +77,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
       t1 = kaapi_get_elapsedtime();
-      kproc->t_idle += t1-t0;
+      kproc->t_sched += t1-t0;
 #endif
       return;
     }
@@ -131,7 +131,7 @@ redo_execute:
     /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
 #if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime();
-    kproc->t_idle += t1-t0;
+    kproc->t_sched += t1-t0;
 #endif
     err = kaapi_stack_execall( kproc->ctxt );
 

@@ -78,7 +78,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->cnt_stealreq   = 0;
   kproc->cnt_stealop    = 0;
   kproc->cnt_suspend    = 0;
-  kproc->t_idle         = 0;
+  kproc->t_sched        = 0;
+  kproc->t_preempt      = 0;
   
   /* allocate a stack */
   k_stacksize = default_param.stacksize;

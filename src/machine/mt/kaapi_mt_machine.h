@@ -201,7 +201,8 @@ typedef struct kaapi_processor_t {
   kaapi_uint32_t           cnt_stealreq;                  /* total number of steal requests replied */
   kaapi_uint32_t           cnt_stealop;                   /* number of steal operation: ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
   kaapi_uint32_t           cnt_suspend;                   /* number of suspend operations*/
-  double                   t_idle;                        /* total idle time in second */           
+  double                   t_sched;                       /* total idle time in second pass in the scheduler */           
+  double                   t_preempt;                     /* total idle time in second pass in the preemption */           
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
 /*

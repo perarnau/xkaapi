@@ -50,12 +50,23 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
   kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
   int retval = 1;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  double t0, t1;
+#endif
 
 #if defined(KAAPI_CONCURRENT_WS)
   int flagsticky = kaapi_task_isstealable(task);
+#  if defined(KAAPI_USE_PERFCOUNTER)
+  t0 = kaapi_get_elapsedtime();
+#  endif
   pthread_mutex_lock(&stack->_proc->lsuspend.lock);
   kaapi_task_unsetstealable(task);
   pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
+#  if defined(KAAPI_USE_PERFCOUNTER)
+  t1 = kaapi_get_elapsedtime();
+  stack->_proc->t_preempt += t1-t0;
+/*    printf("[kaapi_preempt_nextthief_next_helper]: wait/lock:%f\n", t1-t0); */
+#  endif
 #endif
 
   kaapi_taskadaptive_result_t* athief = ta->head;
@@ -82,9 +93,6 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
   }
   else 
   {
-#if defined(KAAPI_USE_PERFCOUNTER)
-    double t0, t1;
-#endif
     /* send signal on the thief stack */  
     *athief->signal = 1;
     
@@ -92,10 +100,11 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
     t0 = kaapi_get_elapsedtime();
 #endif
     /* wait thief receive preemption */
-    while (!athief->thief_term) ; 
+    while (!athief->thief_term) pthread_yield_np(); 
 #if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime();
-    stack->_proc->t_idle += t1-t0;
+    stack->_proc->t_preempt += t1-t0;
+/*    printf("[kaapi_preempt_nextthief_next_helper]: wait thief:%f\n", t1-t0); */
 #endif
   }
 
