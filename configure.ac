@@ -229,9 +229,6 @@ AC_FUNC_MMAP
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([clock_gettime getcwd gethostname getpagesize gettimeofday memset mkdir munmap strdup strerror strtoul])
 
-AC_CHECK_FUNCS([pthread_attr_setaffinity_np],
-  [AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])])
-
 dnl ----------------------------------------------------------------
 dnl Checks for libraries.
 dnl ----------------------------------------------------------------
@@ -247,6 +244,16 @@ ACX_LIB_CHECK_PLAIN([PTHREAD],[],[
   ])
 ])
 ACX_LIB_LINK([XKAAPILIB],[PTHREAD])
+
+# search pthread_attr_setaffinity_np within libpthread
+saveCFLAGS="$CFLAGS"
+saveLIBS="$LIBS"
+CFLAGS="$CFLAGS $PTHREAD_CPPFLAGS $PTHREAD_CFLAGS"
+LIBS="$LIBS $PTHREAD_LDFLAGS $PTHREAD_LIBS"
+AC_CHECK_FUNCS([pthread_attr_setaffinity_np],
+  [AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])])
+CFLAGS="$saveCFLAGS"
+LIBS="$saveLIBS"
 
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
