@@ -53,10 +53,12 @@ extern "C" {
 /* mark that we compile source of the library */
 #define KAAPI_COMPILE_SOURCE 1
 
-#include "kaapi_config.h"
+#include "config.h"
 #include "kaapi.h"
 #include "kaapi_error.h"
 #include <string.h>
+
+#include "kaapi_defs.h"
 
 /** Highest level, more trace generated */
 #define KAAPI_LOG_LEVEL 10

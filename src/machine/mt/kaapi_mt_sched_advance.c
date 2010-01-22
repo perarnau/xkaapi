@@ -77,7 +77,9 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
     return 0;
   }
   
+#if !defined(KAAPI_CONCURRENT_WS)
   kaapi_readmem_barrier();
+#endif
 
   /* process request on the kprocessor */
   kaapi_sched_stealprocessor( kproc );

@@ -46,6 +46,21 @@
 #ifndef _KAAPI_H
 #define _KAAPI_H 1
 
+#ifndef _KAAPI_DISABLE_WARNINGS
+# if defined(__cplusplus)
+#  if !defined(__GXX_EXPERIMENTAL_CXX0X__)
+#   warning kaapi.h use variadic macros
+#   warning you should try a compiler supporting the upcomming C++ standard
+#   warning (with g++, try -std=c++0x or -std=gnu++0x for example)
+#  endif
+# else
+#  if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
+#   warning kaapi.h use C99 constructions (such as variadic macros)
+#   warning you should use a -std=c99 with gcc for example
+#  endif
+# endif
+#endif
+
 #include <stdint.h>
 #include <errno.h>
 #include "kaapi_error.h"
@@ -54,64 +69,11 @@
 extern "C" {
 #endif
 
-#if !defined(KAAPI_MAX_DATA_ALIGNMENT)
+#ifdef __GNUC__
+#  define KAAPI_MAX_DATA_ALIGNMENT (__alignof__(void*))
+#else
 #  define KAAPI_MAX_DATA_ALIGNMENT 8
 #endif
-
-#ifdef __linux__
-#  define KAAPI_USE_LINUX 1
-#  ifdef HAVE_UCONTEXT_H
-#    define KAAPI_USE_UCONTEXT
-#  elif HAVE_SETJMP_H
-#    error "Not implemented yet"
-#    define KAAPI_USE_SETJMP
-#  endif
-#endif
-
-#ifdef __APPLE__
-#  include <libkern/OSAtomic.h>
-#endif
-
-#if !defined(KAAPI_USE_APPLE)
-#  ifdef __APPLE__
-#    define KAAPI_USE_APPLE 1
-#    ifdef HAVE_SETJMP_H
-#      define KAAPI_USE_SETJMP
-#    elif HAVE_UCONTEXT_H
-#      define KAAPI_USE_UCONTEXT
-#    endif
-#  endif
-#endif
-
-#ifdef __i386__
-#  define KAAPI_USE_ARCH_X86 1
-#endif
-
-#ifdef __x86_64
-#  define KAAPI_USE_ARCH_X86_64 1
-#  define KAAPI_USE_ARCH_X86 1
-#endif
-
-#ifdef __ia64__
-#  define KAAPI_USE_ARCH_IA64 1
-#endif
-
-#ifdef __PPC
-#  define KAAPI_USE_ARCH_PPC 1
-#endif
-
-#ifdef __arm
-#  define KAAPI_USE_ARCH_ARM 1
-#endif
- 
-#ifdef __sparc__
-#  error "Unsupported Architecture"
-#endif
-
-#ifdef __mips
-#  error "Unsupported Architecture"
-#endif
-
 
 /* Kaapi name for stdint typedefs.
  */
@@ -130,7 +92,7 @@ typedef int64_t   kaapi_int64_t;
 /** Atomic type
 */
 typedef struct kaapi_atomic_t {
-#if defined(KAAPI_USE_APPLE)
+#if defined(__APPLE__)
   volatile kaapi_int32_t  _counter;
 #else
   volatile kaapi_uint32_t _counter;
@@ -140,7 +102,7 @@ typedef kaapi_atomic_t kaapi_atomic32_t;
 
 
 typedef struct kaapi_atomic64_t {
-#if defined(KAAPI_USE_APPLE)
+#if defined(__APPLE__)
   volatile kaapi_int64_t  _counter;
 #else
   volatile kaapi_uint64_t _counter;
@@ -244,7 +206,7 @@ typedef enum kaapi_access_mode_t {
     - KAAPI_TASK_ADAPTIVE: if set, the task is an adaptative task that could be stolen or preempted.
     - KAAPI_TASK_LOCALITY: if set, the task as locality constraint defined in locality data field.
     - KAAPI_TASK_SYNC: if set, the task does engender synchronisation, victim should stop on a stolen task
-    before continuing the fast execution using RFO schedule.
+    before continuing the fast execution using DFG schedule.
 */
 /*@{*/
 #define KAAPI_TASK_MASK_FLAGS 0xf  /* 4 bits 0xf ie bits 0, 1, 2, 3 to type of the task */
@@ -253,6 +215,7 @@ typedef enum kaapi_access_mode_t {
 #define KAAPI_TASK_ADAPTIVE   0x4   /* 000 0100 */ 
 #define KAAPI_TASK_LOCALITY   0x8   /* 000 1000 */
 #define KAAPI_TASK_DFG        KAAPI_TASK_SYNC
+#define KAAPI_TASK_RFO        0     /* such a task should have KAAPI_TASK_MASK_READY set */
 
 /** Bits for the task state
    \ingroup TASK 
@@ -411,8 +374,12 @@ typedef int (*kaapi_task_splitter_t)(struct kaapi_stack_t* /*stack */, struct ka
 /** Task reducer
     \ingroup TASK
 */
-typedef int (*kaapi_task_reducer_t)(struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
-                                    void* arg_thief, ...);
+typedef int (*kaapi_task_reducer_t) (
+#ifdef __cplusplus
+ struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
+ void* arg_thief, ...
+#endif
+);
 
 /** Kaapi stack of tasks definition
    \ingroup STACK
@@ -424,8 +391,9 @@ typedef int (*kaapi_task_reducer_t)(struct kaapi_stack_t* /*stack */, struct kaa
    to postpone the restore operation after a set of tasks (see kaapi_stack_taskexecall).
 
    Before and after the execution of a task, the state of the computation is only
-   defined by the stack state (pc, sp, sp_data and the content of the stack). 
-   The C-stack doesnot need to be saved.
+   defined by the stack state (pc, sp, sp_data and the content of the stack). Not that
+   kaapi_stack_execall and other funcitons to execute tasks may cached internal state (pc). 
+   The C-stack doesnot need to be saved in that case.
    
    \TODO save also the C-stack if we try to suspend execution during a task execution
 */
@@ -434,15 +402,13 @@ typedef struct kaapi_stack_t {
   volatile int              haspreempt;     /** !=0 if preemption is requested */
   struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
   struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
-  struct kaapi_task_t*      end_sp;         /** past the last stack counter: next entry after the last task in stack array */
-  struct kaapi_task_t*      task;           /** stack of tasks */
+  struct kaapi_task_t*      task;           /** pointer to the first pushed task */
 
   char*                     sp_data;        /** stack counter for the data: next free data entry */
-  char*                     end_sp_data;    /** past the last stack counter: next entry after the last task in stack array */
   char*                     data;           /** stack of data with the same scope than task */
 
 
-  kaapi_request_t          *requests;       /** points to the processor structure */
+  kaapi_request_t          *requests;       /** points to the requests set in the processor structure */
   kaapi_uint32_t            size;           /** size of the data structure */
   struct kaapi_stack_t*     _next;          /** to be stackable */
   struct kaapi_processor_t* _proc;          /** (internal) access to the attached processor */
@@ -644,6 +610,11 @@ static inline kaapi_task_body_t kaapi_task_setbody(kaapi_task_t* task, kaapi_tas
 }
 
 
+/** Body of the startup task 
+    \ingroup TASK
+*/
+extern void kaapi_taskstartup_body( kaapi_task_t*, kaapi_stack_t*);
+
 /** Body of the nop task 
     \ingroup TASK
 */
@@ -692,13 +663,19 @@ inline static int kaapi_task_haslocality(const kaapi_task_t* task)
 inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
 { return (task->flag & KAAPI_TASK_ADAPTIVE); }
 
-
 /** \ingroup TASK
     The function kaapi_task_issync() will return non-zero value iff the such stolen task will introduce data dependency
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_issync(const kaapi_task_t* task)
-{ return !(task->flag & KAAPI_TASK_ADAPTIVE); }
+{ return (task->flag & KAAPI_TASK_SYNC); }
+
+/** \ingroup TASK
+    The function kaapi_task_isready() will return non-zero value iff the task is maked as ready
+    \param task IN a pointer to the kaapi_task_t to test.
+*/
+inline static int kaapi_task_isready(const kaapi_task_t* task)
+{ return (task->flag & KAAPI_TASK_MASK_READY); }
 
 
 /** \ingroup STACK
@@ -714,16 +691,11 @@ extern kaapi_stack_t* kaapi_self_stack (void);
     never be used again.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t to initialize.
-    \param size_task_buffer IN the size in bytes of the buffer for the tasks.
-    \param task_buffer INOUT the buffer to used to store the stack of tasks.
-    \param size_data_buffer IN the size in bytes of the buffer for the data.
-    \param data_buffer INOUT the buffer to used to store the stack of data.
+    \param size  IN the size in bytes of the buffer for the tasks.
+    \param buffer INOUT the buffer to used to store the stack of tasks.
     \retval EINVAL invalid argument: bad stack pointer or count is not enough to store at least one task or buffer is 0.
 */
-extern int kaapi_stack_init( kaapi_stack_t* stack,  
-                             kaapi_uint32_t size_task_buffer, void* task_buffer,
-                             kaapi_uint32_t size_data_buffer, void* data_buffer 
-);
+extern int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer );
 
 /** \ingroup STACK
     The function kaapi_stack_clear() clears the stack.
@@ -743,7 +715,7 @@ extern int kaapi_stack_clear( kaapi_stack_t* stack );
 */
 static inline int kaapi_stack_isempty(const kaapi_stack_t* stack)
 {
-  return (stack ==0) || (stack->pc >= stack->sp);
+  return (stack ==0) || (stack->pc <= stack->sp);
 }
 
 /** \ingroup STACK
@@ -759,7 +731,7 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
   void* retval;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
-  if (stack->sp_data+count >= stack->end_sp_data) return 0;
+  if ((char*)stack->sp_data+count >= (char*)stack->sp) return 0;
 #endif
   retval = stack->sp_data;
   stack->sp_data += count;
@@ -780,7 +752,7 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
   kaapi_gd_t* gd;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return retval;
-  if (stack->sp_data+count+sizeof(kaapi_gd_t) >= stack->end_sp_data)
+  if ((char*)stack->sp_data+count+sizeof(kaapi_gd_t) >= (char*)stack->sp)
     return retval;
 #endif
 
@@ -798,7 +770,7 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
 
 /** \ingroup STACK
     The function kaapi_stack_bottom() will return the top task.
-    The top task is not part of the stack.
+    The bottom task is the first pushed task into the stack.
     If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
     Otherwise, an 0 is returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
@@ -809,15 +781,13 @@ static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack)
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
 #endif
-/* CA?
-*/
-  if (stack->sp <= stack->pc) return 0;
+  if (stack->pc <= stack->sp) return 0;
   return stack->task;
 }
 
 /** \ingroup STACK
     The function kaapi_stack_top() will return the top task.
-    The top task is not part of the stack.
+    The top task is not part of the stack, it will be the next pushed task.
     If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
     Otherwise, an 0 is returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
@@ -828,9 +798,7 @@ static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack)
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
 #endif
-/* CA?
-*/
-  if (stack->sp == stack->end_sp) return 0;
+  kaapi_assert_debug((char*)stack->sp >= (char*)stack->sp_data);
   return stack->sp;
 }
 
@@ -845,7 +813,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
-  if (stack->sp == stack->end_sp) return EINVAL;
+  if ((char*)stack->sp == (char*)stack->sp_data) return EINVAL;
 #endif
 #if defined(KAAPI_CONCURRENT_WS)
 #ifdef __APPLE__
@@ -854,7 +822,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
   __sync_synchronize();
 #endif
 #endif
-  ++stack->sp;
+  --stack->sp;
   return 0;
 }
 
@@ -868,7 +836,7 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
   if (stack ==0) return EINVAL;
   if (stack->sp == stack->pc) return EINVAL;
 #endif
-  --stack->sp;
+  ++stack->sp;
   return 0;
 }
 
@@ -878,11 +846,11 @@ static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
 */
 static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
 #if defined(KAAPI_DEBUG)
   task->format = 0;
 #endif
   task->flag   = flag | KAAPI_TASK_ADAPTIVE;
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
   kaapi_assert_debug( ta !=0 );
   ta->user_sp               = arg;
   ta->thievescount._counter = 0;
@@ -1123,8 +1091,8 @@ static inline int kaapi_stealpoint_isactive( kaapi_stack_t* stack, kaapi_task_t*
 */
 static inline int kaapi_preemptpoint_isactive( kaapi_stack_t* stack, kaapi_task_t* task )
 {
-  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
   int retval = stack->haspreempt;
+  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
   return retval;
 }
 
@@ -1185,16 +1153,13 @@ extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* t
 */
 
 #define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
- ( kaapi_preempt_nextthief_helper(stack, task, arg_to_thief ) ? \
-	      (  kaapi_is_null((void*)reducer) ? \
-                0 \
-              : \
-	      ((int (*)(kaapi_stack_t*,...))(reducer))(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
-          )\
-    :\
-      0\
- )
-
+(									\
+ kaapi_preempt_nextthief_helper(stack, task, arg_to_thief) ?		\
+ (									\
+  kaapi_is_null((void*)reducer) ? 0 :					\
+  ((kaapi_task_reducer_t)reducer)(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
+ ) : 0									\
+)
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
@@ -1263,11 +1228,12 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
-    kaapi_assert( (size ==0) || size < ta->result_size );
+    kaapi_assert( (size ==0) || size <= ta->result_size );
     ta->local_result_data = retval;
     ta->local_result_size = size;
     kaapi_task_t* task = kaapi_stack_toptask(stack);
     kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    kaapi_stack_pushtask(stack);
   }
   return 0;
 }

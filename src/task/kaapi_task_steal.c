@@ -89,7 +89,6 @@ if (fmt->fmtid == 96)
   }
 }
 
-
 /**
 */
 void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
@@ -196,6 +195,12 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   KAAPI_LOG(100, "tasksteal: 0x%p end exec, next task: 0x%p bodysignal: 0x%p, pc: 0x%p\n", 
       (void*)task, 
       (void*)(task+1), 
+/*
+function pointer cannot (portably) be casted into void*
+See http://coding.derkeiler.com/Archive/C_CPP/comp.lang.c/2006-06/msg03064.html
+As it is only for debug int KAAPI_LOG, we do not care if the function pointer
+is not fully printed (ie interger overflow in the first cast)
+*/
       (void*)(uintptr_t)(task+1)->body, 
       (void*)stack->pc );
 }

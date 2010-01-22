@@ -50,12 +50,26 @@
 int kaapi_sched_sync(kaapi_stack_t* stack)
 {
   int err;
+  kaapi_task_t* pc     = stack->pc;
+  kaapi_task_t* savepc = pc;
+
+  /* look for retn */
+  while ((pc->body != &kaapi_retn_body) && (pc != stack->sp)) 
+    --pc;
+
+  if (kaapi_stack_isempty( stack ) ) return 0;
+
+  /* stop on retn -> executed next task */
+  stack->pc = --pc;
+
 redo:
-  err = kaapi_stack_execchild(stack, stack->pc);
+  err = kaapi_stack_execchild(stack, pc);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
+    pc = stack->pc;
     goto redo;
   }
+  stack->pc = savepc;
   return err;
 }

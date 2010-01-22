@@ -50,7 +50,7 @@ int main(int argc, char** argv)
   val_t* input2  = new val_t[n];
   t0 = gettime() - t0;
 
-  val_t res; // result of the computation 
+  val_t res = val_t(0); // result of the computation 
 
   std::cout << "Time allocate:" << t0 << std::endl;
   Random random(42 + iter);

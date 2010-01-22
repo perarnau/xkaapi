@@ -106,23 +106,38 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
   }
   else 
   {
+#if defined(KAAPI_USE_PERFCOUNTER)
+    double t0, t1;
+#endif
     /* send signal on the thief stack */  
     *athief->signal = 1;
     
+#if defined(KAAPI_USE_PERFCOUNTER)
+    t0 = kaapi_get_elapsedtime();
+#endif
     /* wait thief receive preemption */
     while (!athief->thief_term) ; 
+#if defined(KAAPI_USE_PERFCOUNTER)
+    t1 = kaapi_get_elapsedtime();
+    stack->_proc->t_idle += t1-t0;
+#endif
   }
 
   /* push current preempt thief in current_thief: used by caller to make call */
   ta->current_thief = ta->head;
-  
+
   /* pop current thief and push thiefs of the thief into the local preemption list */
   ta->head = ta->head->next;
   if (ta->head ==0) ta->tail = 0;
 
   if (athief->rhead !=0)
-    athief->rtail->next = ta->head;
-  ta->head = athief->rhead;
-  if (ta->tail ==0) ta->tail = athief->rtail;
+    {
+      athief->rtail->next = ta->head;
+      ta->head = athief->rhead;
+
+      if (ta->tail == 0)
+        ta->tail = athief->rtail;
+    }
+
   return 1;
 }

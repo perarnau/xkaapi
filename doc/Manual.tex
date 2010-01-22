@@ -1,0 +1,167 @@
+\documentclass{article}
+\usepackage[utf8x]{inputenc}
+
+\usepackage{url} \urlstyle{sf}
+\usepackage[a4paper,margin=1.9cm]{geometry}
+\usepackage{xspace}
+\usepackage[francais,american]{babel}
+\usepackage{palatino}
+\usepackage{bibtopic}
+%\usepackage{graphicx}
+%\usepackage{enumitem}
+%\usepackage{dot2texi}
+
+\newcommand{\kaapi}{\textsc{X}-Kaapi\xspace}
+%%%\newcommand{\new}{\hspace*{10ex}\textbf{\textsc{New in \kaapi.}~\\}\xspace}
+%\newcommand{\new}{}
+%\newcommand{\inote}[1]{\textit{\textbf{  \center \hrule Implementation note\hrule}}\vspace*{1ex}\textit{#1}\vspace{1ex} \hrule
+%\vspace*{2ex}}
+
+%%\newcounter{subsubsection}[subsection]
+%\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{
+%%\textbf{\thesubsection.
+%\thesubsubsection. #1\\}}
+
+%
+%\newcounter{subsubsubsection}[subsubsection]
+%\newcommand{\subsubsubsection}[1]{~\\ \addtocounter{subsubsubsection}{1} \noindent\textit{\textbf{\thesubsubsection.
+%\thesubsubsubsection. #1\\}}}
+%\newtheorem{proposition}{Proposition}
+
+%%\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{\textbf{\thesubsubsection\hspec #1\\}}}
+
+\begin{document}
+
+\title{X-Kaapi's User Manual}
+\author{C. Laferrière}
+\date{\today}
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+\section{Introduction}
+
+
+Here is a short manual of the \kaapi library. This Manual will guide you through the installation of the library and its usage.
+You may find contact information about people involved in this project in the \verb+AUTHORS+ file in the source directory.
+
+\section{Installation}
+
+In order to compile and use \kaapi's library, simply follow the next steps.
+
+\subsection{Prerequisite}
+
+\kaapi 's build system uses CMake \footnote{http://www.cmake.org/}. The minimum version of CMake you need is 2.6.
+
+\subsection{Compilation}
+
+You may as well compile the library inside or outside the source directory. In order to create Makefiles, you need to run the \verb+cmake+ command.
+\\
+
+For a compilation inside source directory :
+\begin{verbatim}
+$> cmake . -DKAAPI_TARGET_MT=1
+\end{verbatim}
+
+
+For a compilation outside source directory, for example you may have a "build" directory at the same level as the "libxkaapi-1.0.0-Source" directory :
+\begin{verbatim}
+$> cd build/
+$> cmake ../libxkaapi-1.0.0-Source/ -DKAAPI_TARGET_MT=1
+\end{verbatim}
+
+The \verb+-DKAAPI_TARGET_MT=1+ flag is used to link some architecture dependant files during the build system configuration (Makefiles creation).
+
+Once your build system is ready, you simply have to run the \verb+make+ command inside the "build" directory (or inside the source directory if you did create the build system inside it) :
+
+\begin{verbatim}
+$> make
+\end{verbatim}
+
+This will compile both static and dynamic library. This will also compile some examples in the "examples" directory.
+Optionally you can install the library on your system using :
+
+\begin{verbatim}
+$> sudo make install
+[ 38%] Built target xkaapi
+[ 76%] Built target xkaapi-static
+[ 84%] Built target xkaapi-cpp
+[ 92%] Built target xkaapi-cpp-static
+[ 93%] Built target branchbound_apiatha
+[ 93%] Built target fibo
+[ 94%] Built target fibo_adapt
+[ 95%] Built target fibo_apiatha
+[ 96%] Built target fiboseq
+[ 97%] Built target marc_problem
+[ 98%] Built target nqueens_apiatha
+[100%] Built target transform
+Install the project...
+-- Install configuration: ""
+-- Installing: /usr/local/lib/libxkaapi.so.0.0.1
+-- Installing: /usr/local/lib/libxkaapi.so.0
+-- Installing: /usr/local/lib/libxkaapi.so
+-- Installing: /usr/local/lib/libxkaapi.a
+-- Installing: /usr/local/include/kaapi.h
+-- Installing: /usr/local/include/kaapi_error.h
+-- Installing: /usr/local/include/athapascan-1
+-- Installing: /usr/local/include/athapascan-1.h
+\end{verbatim}
+
+\subsection{Supported Architectures}
+
+\kaapi currently supports SMP and NUMA architectures. It also compile well on Mac machines (32bits works fine, 64bits is in progress).
+
+\section{Utilization}
+
+In the "examples" directory, there is some examples that are compiled with the library. One may run those examples to see how things works.
+Note that not every example in the "examples" directory does work currently.
+
+\subsection{Simple Example}
+
+Let's have a look at the \verb+transform+ example. This code is simply the parallel version (using \kaapi  of course) of the stl::transform
+algorithm. Inputs are a table and a unary operation, the unary operation is applied to each single element of the table and the result is stored into an output table.
+\\
+
+The library header has to be include (\verb+kaapi.h+). The work is done in the \verb+doit()+ function, in the while loop. In this loop, there's a call to \verb+kaapi_stealpoint()+. If some steal requests have been recieved since the last call to this function, then the \verb+splitter()+ function is called in order to reply to these requests.
+\\
+
+XKaapi aims at providing a finer grain than the previous Kaapi implementation. To do so, the workstealing engine relies upon the application programmer to place its own stealing points, using the \verb+kaapi_stealpoint()+ routine. The stealpoints provide a way to distribute the remaining computation among the thief processors. The splitting occurs dynamically by iterating over the pending stealing requests array (the \verb+request[]+ array argument containing \verb+count+ elements). It is left to the programmer to implement a splitter function, since it is assumed he knows how to partition the computation as it is in a coherent state. Inside the splitting function, the victim uses the \verb+kaapi_request_reply()+ routine to complete the stealing requests.
+
+\subsection{Environnement Variables}
+
+In order to control thread placement and global machine usage, there are two environnement variables that you may use to tune an execution :
+
+\begin{itemize}
+\item \verb+KAAPI_CPUCOUNT+ is simply the number of CPU to be used :
+
+\begin{verbatim}
+ KAAPI_CPUCOUNT=3 ./transform 100000
+\end{verbatim}
+
+\item \verb+KAAPI_CPUSET+ is the set of CPU to be used explicitly if you only want to use a subset of a machine's cores. The value is a comma separated list. You can also specifie a range using "x:y".
+
+\begin{verbatim}
+ #this will uses cores 3, 4, 5, 6 and 9 only :
+ KAAPI_CPUSET=3,4,5,6,9 ./transform 100000
+ 
+ #this will do the same using range :
+ KAAPI_CPUSET=3:6,9 ./transform 100000
+\end{verbatim}
+
+\end{itemize}
+
+\subsection{Timing tool}
+One can mesure time elapsed for some operations using \verb+kaapi_get_elapsedtime()+ :
+
+\begin{verbatim}
+  double t0, t1;
+  
+  t0 = kaapi_get_elapsedtime();
+  //some work to do ...
+  t1 = kaapi_get_elapsedtime();
+
+  std::cout << "Time elapsed:" << t1-t0 << std::endl;
+\end{verbatim}
+
+
+\end{document}

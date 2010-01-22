@@ -230,7 +230,8 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
       }
       fputc('\n', file);
       ++count;
-      ++task_bot;
+
+      --task_bot;
       continue;
     }
 
@@ -239,7 +240,7 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
     kaapi_task_print(file, task_bot );
 
     ++count;
-    ++task_bot;
+    --task_bot;
   }
 
   fflush(file);

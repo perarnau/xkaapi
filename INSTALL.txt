@@ -13,21 +13,63 @@ Installation from GIT
 
 GIT users needs to run cmake before any other things ("cmake sourcedir") . This
 will build required Makefiles. Then, standard instructions apply.
-  CMake version must be at least 2.6 and you don't need CMake if you compile
-form a distribution.
+CMake version must be at least 2.6 and you don't need CMake if you compile
+from a distribution.
 
 Basic Installation
 ==================
 
 The simplest way to compile this package is:
 
-  1. `cd' to the directory containing the package's source code and type
-     `make' to compile the package.
+  1. `cmake $SOURCE_DIR -DKAAPI_TARGET_MT=1' replacing $SOURCE_DIR by the right
+     source directory.
 
-  3. Optionally, type `make check' to run any self-tests that come with
-     the package.
+  2. `make' to compile the package.
 
-  4. Type `make install' to install the library (default location : /usr/local).
+  3. Type `make install' to install the library (default location : /usr/local).
 
-  5. You can remove the program binaries and object files from the
+  4. You can remove the program binaries and object files from the
      source code directory by typing `make clean'.
+
+Advanced Installation
+=====================
+
+If you want to specify the installation directory then enter:
+  1. `cmake $SOURCE_DIR -DKAAPI_TARGET_MT=1' -DCMAKE_INSTALL_PREFIX=$PREFIX_INSTALL_DIR 
+replacing $SOURCE_DIR by the right source directory and  $PREFIX_INSTALL_DIR  
+by the installation directory. Then follows previous points 2. 3. 4.
+
+
+If you want to build a specific XKaapi library then following macros are available 
+on the cmake command line :
+-DCMAKE_BUILD_TYPE=DEBUG|RELEASE : compile debug (-g) or release (-O3) [default]library.
+-DKAAPI_CAS_WS= 0|1: 0[default] compile only the cooperative workstealing algorithm. 
+	If set to 1, then compile the experimental hybrid cooperative / concurrent workstealing.
+-DKAAPI_PERFMON=0|1: 0 [default] compile library with performance counters. 
+	They can be displayed with setting to non zero KAAPI_DISPLAY_PERF environment variable.
+
+
+Runing Examples
+===============
+
+When the library is compiled, some examples are too. Here is how you can run
+theses examples :
+
+  1. `cd examples' to go into the example directory.
+
+  2. `./example' where example is the binary name of one of the compiled examples.
+
+
+Runing Examples on multicore computer
+=====================================
+
+Two environment variables impact the usage of resources used by XKaapi programs.
+By default all physical resources are used:
+KAAPI_CPUCOUNT=< #cores >: the value of KAAPI_CPUCOUNT specify the number of cores the program will used during all its execution.
+KAAPI_CPUSET=<list of physical cores>: specify the set of cores to use. 
+	This variable is only take into account on machine where 
+	pthread_attr_setaffinity_np is defined.
+	For instance: "KAAPI_CPUSET=0,1,2,5-11 ./example" 
+	will use 10 physical cores: 0, 1, 2 and 5 to 11.
+
+

@@ -208,7 +208,6 @@ void CountIFStruct<RandomAccessIterator, Predicate>::doit(kaapi_task_t* task, ka
 
   /* definition of the finalization point where all stolen work a interrupt and collected */
 #warning "TODO_REDUCER"
-  kaapi_finalize_steal( stack, task );
 
   /* Here the thiefs have finish the computation and returns their preds which have been reduced using reducer function. */  
 }

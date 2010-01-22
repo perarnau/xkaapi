@@ -230,7 +230,7 @@ void Parser::parse( Properties& initialprop, int& argc, char**& argv )
 #define ADD_VALUE(v)
 #endif
 
-#define WRITE_VALUE(val) ({ \
+#define WRITE_VALUE(val) __extension__ ({ \
       std::string value=val;			   \
       ADD_VALUE(value) \
       if (value == "<no value>") value = "true";   \

@@ -45,34 +45,48 @@
 #include "kaapi_impl.h"
 
 /** kaapi_stack_init
+    Initialize the Kaapi stack data structure.
+    The stack is organized in two parts : the first, from address 0 to sp_data,
+    contains the stack of data; the second contains the stack of tasks from address task down to sp.
+    Pc points on the next task to execute.
+    
+   |   --------------  <- stack->data
+   |   |            |
+   |   |            |
+   |   |            |
+   |   |            |
+  \|/  --------------  <- stack->sp_data
+       |            |
+       |  free zone |
+       |            |
+       --------------  <- stack->sp
+  /|\  |            |  
+   |   |            |  
+   |   |            |  <- stack->pc
+   |   |            |
+   |   --------------  <- stack->task
+  
+  The stack is full when stack->sp_data == stack->sp.
 */
-int kaapi_stack_init( kaapi_stack_t* stack, 
-                      kaapi_uint32_t size_task_buffer, void* task_buffer,
-                      kaapi_uint32_t size_data_buffer, void* data_buffer 
-)
+int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
 {
+  kaapi_task_t* pasttheend_task;
+  
   if (stack == 0) return EINVAL;
   stack->haspreempt =0;
   stack->hasrequest =0;
-  if (size_task_buffer ==0) 
+  if (size ==0) 
   { 
-    stack->pc = stack->sp = stack->task = 0; 
-    stack->end_sp = 0;
-  }
-  else {
-    if (size_task_buffer / sizeof(kaapi_task_t) ==0) return EINVAL;    
-    stack->task   = (kaapi_task_t*)task_buffer;
-    stack->pc     = stack->sp = stack->task;
-    stack->end_sp = stack->task + size_task_buffer/sizeof(kaapi_task_t);
-  }
-  if (size_data_buffer ==0) 
-  {
+    stack->pc      = stack->sp = stack->task = 0; 
     stack->sp_data = stack->data = 0;
+    return 0;
   }
-  else 
-  {
-    stack->sp_data     = stack->data = data_buffer;
-    stack->end_sp_data = stack->data + size_data_buffer;
-  }
+
+  if (size / sizeof(kaapi_task_t) ==0) return EINVAL;
+  
+  stack->sp_data  = stack->data = (char*)buffer;
+  pasttheend_task = (kaapi_task_t*)((char*)buffer + size);
+  stack->task     = pasttheend_task -1;
+  stack->pc       = stack->sp = stack->task;
   return 0;
 }

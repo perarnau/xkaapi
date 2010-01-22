@@ -1,9 +1,60 @@
+# only ignore files created by bootstrap
+# other files (editor backups, ...) should not be added here
+# but rather in .git/info/exclude (see gitignore(5) and/or gitconfig(5))
+#
+# build files (*.o, ...) can or not be here. I consider that it is
+# better if xkaapi is not built in the source repository
+# but I added most of them.
+
+# Files from bootstrap
+Makefile.in
+/acinclude/libtool.m4
+/acinclude/lt*.m4
+/aclocal.m4
+/autom4te.cache/
+/build-aux/
+/config.h.in
+/config.h.in~
+/configure
+/libtool
+
+# Files from compilation
 TAGS
-.DS_Store
-.gitignore
-CMakeCache.txt
-CMakeFiles/
-Makefile
-doc/html
+*.o
+*.lo
 *.a
+*.la
 *.dylib
+.dirstamp
+.deps/
+.libs/
+Makefile
+/api-atha/atha1_check_header
+/api-atha/atha1_check_header_strict
+/config.h
+/config.log
+/config.status
+/examples/branchbound_apiatha
+/examples/fibo
+/examples/fibo_adapt
+/examples/fibo_apiatha
+/examples/fibo_apiatha2
+/examples/fibo_apiatha3
+/examples/fiboseq
+/examples/marc_problem
+/examples/nqueens_apiatha
+/examples/nqueens_apiatha_grain2
+/examples/nqueens_apiatha_grain3
+/examples/nqueens_apiatha_grain4
+/examples/nqueens_apiatha_grain5
+/examples/nqueens_apiatha_grain6
+/examples/nqueens_apiatha_grain7
+/examples/nqueens_apiatha_grain8
+/examples/transform_adapt
+/src/kaapi_check_header
+/src/kaapi_check_header_strict
+/src/misc/kaapi_init.c
+/stamp-h1
+/xkaapi.pc
+/xkaapi-*.tar.gz
+
