@@ -1176,7 +1176,8 @@ static inline int kaapi_is_null(void* p)
 extern int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief );
 
 /** \ingroup ADAPTIVE
-   Try to preempt next thief in the reverse order defined by the order of the steal request reply.
+   Try to preempt next thief in the reverse order defined by the order of the steal request reply, i.e.
+   preempt first the last thief.
    Return true iff some work have been preempted and should be processed locally.
    If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
    If it exists a thief, then the call to kaapi_preempt_nextthief() will return the

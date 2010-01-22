@@ -148,6 +148,8 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
   (pkr)->status = KAAPI_REQUEST_S_EMPTY; (pkr)->flag = 0; (pkr)->reply = 0; (pkr)->stack = 0
 
 
+/**
+*/
 #include "kaapi_machine.h"
 
 
