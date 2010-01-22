@@ -79,6 +79,10 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
+
+  /* experimental */
+  pthread_yield_np();
+
 #if 0
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
   if (count ==0) 
@@ -92,6 +96,7 @@ redo_select:
      lock and retest if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return
   */
+  int counter;
   while (1)
   {
     err = pthread_mutex_trylock(&victim.kproc->lsuspend.lock);
@@ -99,6 +104,10 @@ redo_select:
     kaapi_assert_debug(err == EBUSY);
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
+    if (counter & 0xFF ==0) {
+      counter =0;
+      pthread_yield_np();
+    }
   }
 
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
