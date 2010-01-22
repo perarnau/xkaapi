@@ -359,7 +359,8 @@ static int str_to_kid_map
   if (parse_cpu_set(&parser))
     return parser.err_no;
 
-  *total_ncpus = parser.used_ncpus;
+  if (parser.used_ncpus < *total_ncpus)
+    *total_ncpus = parser.used_ncpus;
 
   return 0;
 }
