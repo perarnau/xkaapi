@@ -12,7 +12,6 @@ AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src
 check_PROGRAMS= \
 	fiboseq                \
 	fibo                   \
-	fibo_adapt             \
 	fibo_apiatha           \
 	fibo_apiatha2          \
 	fibo_apiatha3          \
@@ -28,6 +27,9 @@ check_PROGRAMS= \
 	transform_adapt	       \
 	transform_concurrent   \
 	marc_problem          
+
+# To correct:
+#	fibo_adapt             
 
 TESTS=
 
