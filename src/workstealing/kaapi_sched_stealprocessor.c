@@ -86,7 +86,6 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   }
   
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
   ++kproc->cnt_stealop;
 #endif
 

@@ -59,6 +59,7 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   char*                  saved_sp_data;
   kaapi_task_t*          retn;
   void** arg_retn;
+  int goto_redo_work;
 
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
@@ -69,20 +70,6 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
 #endif
 
 redo_work: 
-  /* process steal request 
-     - here we always see the retn to split stack into frame.
-  */
-#if !defined(KAAPI_CONCURRENT_WS)
-  if (stack->hasrequest !=0) 
-  {
-    stack->pc = pc;
-#if defined(KAAPI_USE_PERFCOUNTER)
-    stack->_proc->cnt_tasks = cnt_tasks;
-#endif
-    kaapi_sched_advance(stack->_proc);
-  }
-#endif
-
   if (pc->body == &kaapi_retn_body) 
   {
     /* do not save stack frame before execution */
@@ -155,8 +142,10 @@ redo_work:
     ++cnt_tasks;
 #endif
 
+    goto_redo_work = (saved_sp != stack->sp);
+
     /* push restore_frame task if pushed tasks */
-    if (saved_sp != stack->sp)
+    if (goto_redo_work)
     {
       /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
       retn = kaapi_stack_toptask(stack);
@@ -175,6 +164,21 @@ redo_work:
 
       goto redo_work;
     }
+  /* process steal request 
+     - here we always see the retn to split stack into frame.
+  */
+#if !defined(KAAPI_CONCURRENT_WS)
+  if (stack->hasrequest !=0) 
+  {
+    stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    stack->_proc->cnt_tasks = cnt_tasks;
+#endif
+    kaapi_sched_advance(stack->_proc);
+  }
+#endif
+    if (goto_redo_work) goto redo_work;
+
     kaapi_task_setstate( pc, KAAPI_TASK_S_TERM );    
   }
 
