@@ -162,7 +162,6 @@ extern int kaapi_setconcurrency (unsigned int concurrency);
 /**
  */
 extern void kaapi_set_workload( kaapi_uint32_t workload );
-extern kaapi_uint32_t kaapi_perf_reduce(void);
 
 
 /* ========================================================================== */
