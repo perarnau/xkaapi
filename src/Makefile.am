@@ -26,6 +26,7 @@ libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \
+  workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
   workstealing/kaapi_sched_stealend.c \
@@ -74,6 +75,7 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_getconcurrency.c \
   machine/mt/kaapi_mt_getcontext.c \
   machine/mt/kaapi_mt_setcontext.c \
+  machine/mt/kaapi_mt_set_workload.c \
   machine/mt/kaapi_mt_makecontext.c \
   machine/mt/kaapi_mt_selfprocessor.c \
   machine/mt/kaapi_mt_selfstack.c \
@@ -84,6 +86,7 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_alloc.c \
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
+  machine/mt/kaapi_mt_perf.c \
   machine/mt/kaapi_mt_machine.h
 endif
 

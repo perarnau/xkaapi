@@ -194,6 +194,12 @@ extern kaapi_processor_t* kaapi_get_current_processor(void);
 extern int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim);
 
 /** \ingroup WS
+    Select a victim for next steal request using workload then uniform random selection over all cores.
+*/
+extern int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim);
+
+
+/** \ingroup WS
     Select a victim for next steal request using random selection level by level. Each time the method
     try to steal at level i, it first try to steal at level 0 until i.
     The idea of the algorithm is the following. Initial values are: level=0, toplevel=0

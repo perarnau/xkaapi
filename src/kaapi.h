@@ -158,6 +158,13 @@ extern int kaapi_getconcurrency (void);
  */
 extern int kaapi_setconcurrency (unsigned int concurrency);
 
+
+/**
+ */
+extern void kaapi_set_workload( kaapi_uint32_t workload );
+extern kaapi_uint32_t kaapi_perf_reduce(void);
+
+
 /* ========================================================================== */
 /** kaapi_advance.
     The function kaapi_advance() makes progress of steal requests

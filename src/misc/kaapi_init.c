@@ -443,9 +443,14 @@ int kaapi_setup_param( int argc, char** argv )
     fill_identity_kid_map(default_param.kid_to_cpu,
 			  default_param.cpucount);
   }
-  
-  /* default workstealing selection function */
-  default_param.wsselect = &kaapi_sched_select_victim_rand;
+
+  /* workstealing selection function */
+  {
+    default_param.wsselect = &kaapi_sched_select_victim_rand;
+    const char* const wsselect = getenv("KAAPI_WSSELECT");
+    if ((wsselect != NULL) && !strcmp(wsselect, "workload"))
+      default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+  }
 
   /* TODO: here parse command line option */
   

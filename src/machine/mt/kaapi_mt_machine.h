@@ -203,6 +203,9 @@ typedef struct kaapi_processor_t {
   kaapi_uint32_t           cnt_suspend;                   /* number of suspend operations*/
   double                   t_sched;                       /* total idle time in second pass in the scheduler */           
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
+
+  /* workload */
+  kaapi_atomic_t	   workload;
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
 /*
@@ -253,6 +256,10 @@ extern kaapi_processor_t** kaapi_all_kprocessors;
     A Kprocessor is a posix thread -> the current kprocessor
 */
 extern pthread_key_t kaapi_current_processor_key;
+
+
+extern kaapi_processor_t* kaapi_get_current_processor(void);
+extern kaapi_processor_id_t kaapi_get_current_kid(void);
 
 /** \ingroup WS
 */
@@ -475,7 +482,6 @@ static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr )
   }
   return 0;
 }
-
 
 /** 
 */
