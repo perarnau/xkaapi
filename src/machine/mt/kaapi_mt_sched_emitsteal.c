@@ -83,43 +83,29 @@ redo_select:
   /* experimental */
   pthread_yield_np();
 
-#if 0
-  count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
-  if (count ==0) 
-  {
-    kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
-    goto return_value;
-  }
-#endif
-
   /* (2)
      lock and retest if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return
   */
-  int counter;
+  int counteriter =0;
   while (1)
   {
+    ++counteriter;
     err = pthread_mutex_trylock(&victim.kproc->lsuspend.lock);
     if (err ==0) break;
     kaapi_assert_debug(err == EBUSY);
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
-    if (counter & 0xFF ==0) {
-      counter =0;
+#if 0
+    if ((counteriter & 0xFF) ==0) {
+      counteriter =0;
       pthread_yield_np();
     }
+#endif
   }
 
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
   kaapi_assert_debug( count <= KAAPI_MAX_PROCESSOR );
-
-#if 0
-  if (count ==0) 
-  { 
-    pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
-    kaapi_readmem_barrier();
-  }
-#endif
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
@@ -152,7 +138,7 @@ redo_select:
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
+  ++kproc->cnt_stealreq;
 #endif
 
 return_value:
@@ -168,7 +154,11 @@ return_value:
     return 0;
   }
   
-  /* Reset original ctxt and do the local computation
+#if defined(KAAPI_USE_PERFCOUNTER)
+  ++kproc->cnt_stealreqok;
+#endif    
+
+  /* get the data and return them on the caller
   */
   stack = kaapi_request_data(&kproc->reply);
 

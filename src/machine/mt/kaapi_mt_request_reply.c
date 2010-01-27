@@ -94,10 +94,6 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
     kaapi_task_t* sig;
     kaapi_tasksig_arg_t* argsig;
     
-#if defined(KAAPI_USE_PERFCOUNTER)
-    ++stack->_proc->cnt_stealreqok;
-#endif    
-
     /* reply: several cases
        - if partial steal -> signal should decr the thieves counter (if task is not KAAPI_TASK_ADAPT_NOSYNC)
        - if complete steal of the task -> signal sould pass the body to aftersteal body
