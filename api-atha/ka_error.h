@@ -58,7 +58,10 @@ extern "C" {
 #include <string.h>   // - strerror
 }
 
-namespace atha {
+/** \namespace ka
+    \brief The atha namespace contains definitions to port the library onto an operating system
+*/
+namespace ka {
 
 class Exception;
 
@@ -67,7 +70,6 @@ class Exception;
     \brief Definition of exceptions in KAAPI
 */
 //@{
-
   /** Function call by KAAPI_ASSERT before throwing a Kaapi exception
       The main goal of this function is to be able to capture and exception
       during debuging the program. All exception throwed by Kaapi make a call
@@ -381,7 +383,5 @@ public:
 void backtrace_sighandler(int sig, siginfo_t *info, void *secret);
 
 } // - namespace atha...
-
-
 
 #endif

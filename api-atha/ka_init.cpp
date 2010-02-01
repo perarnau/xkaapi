@@ -6,10 +6,10 @@
 //
 // =========================================================================
 #include "kaapi_impl.h"
-#include "atha_init.h"
-#include "atha_error.h"
-#include "atha_debug.h"
-#include "atha_timer.h"
+#include "ka_init.h"
+#include "ka_error.h"
+#include "ka_debug.h"
+#include "ka_timer.h"
 //TODO with network: #include "atha_format.h"
 //TODO #include "utils_signal.h"
 //TODO #include "utils_trace_buffer.h"
@@ -32,7 +32,7 @@
 #endif
 
 
-namespace atha {
+namespace ka {
 
 // --------------------------------------------------------------------
 Init Init::component;
@@ -73,40 +73,40 @@ void kaapi_at_exit()
 
 // --------------------------------------------------------------------
 Init::Init()
- : KaapiComponent("util", KaapiComponentManager::UTIL_COMPONENT_PRIORITY)
+ : KaapiComponent("kaapi", KaapiComponentManager::KERNEL_COMPONENT_PRIORITY)
 {}
 
 
 // --------------------------------------------------------------------
-static Parser::Module* util_module = 0;
+static Parser::Module* kaapi_module = 0;
 void Init::add_options( Parser* parser, Properties* global_prop )
 {
-  if (util_module !=0) return;
-  util_module = new Parser::Module;
-  util_module->set_name("util");
-  util_module->add_option("verboseon", "false", "true iff verbose mode is activated");
-  util_module->add_option("thread.cachesize", "0", "number of POSIX cached threads");
-  util_module->add_option("thread.stacksize", "65536", "Size of POSIX thread stack");
-  util_module->add_option("thread.cpuset", "", "CPU set to use for kernel thread");
-  util_module->add_option("coresize", "0", "max size of the coredump when abort (\"0\" for no coredump, \"unlimited\" for unlimited, \"default\" for system value)");
-  util_module->add_option("requirednofile", "<no value>", "minimum value required for NOFILE limit");
-  util_module->add_option("rootdir", ".", "Directory where to store output file of the application.");
-  util_module->add_option("log.type", "thread", "Output log on terminal ('term') or in a file ('file') or in file per thread (thread)");
+  if (kaapi_module !=0) return;
+  kaapi_module = new Parser::Module;
+  kaapi_module->set_name("kaapi");
+  kaapi_module->add_option("verboseon", "false", "true iff verbose mode is activated");
+  kaapi_module->add_option("thread.cachesize", "0", "number of POSIX cached threads");
+  kaapi_module->add_option("thread.stacksize", "65536", "Size of POSIX thread stack");
+  kaapi_module->add_option("thread.cpuset", "", "CPU set to use for kernel thread");
+  kaapi_module->add_option("coresize", "0", "max size of the coredump when abort (\"0\" for no coredump, \"unlimited\" for unlimited, \"default\" for system value)");
+  kaapi_module->add_option("requirednofile", "<no value>", "minimum value required for NOFILE limit");
+  kaapi_module->add_option("rootdir", ".", "Directory where to store output file of the application.");
+  kaapi_module->add_option("log.type", "thread", "Output log on terminal ('term') or in a file ('file') or in file per thread (thread)");
 
-  util_module->add_option("globalid", "", "Global identifier of the node. A gid is an integer value.");
-
-  //\TODO: no trace in this version
-  util_module->add_option("trace.decode", "", "Decode the trace file with name given as parameter");
-  util_module->add_option("trace.enable", "false", "Enable or disable trace. Default is no.");
-  util_module->add_option("trace.mask", "", "Mask some events, e.g '2,* 3,1 3,0 0,*' mask all events of levels 2 and 0 and mask events 0 and 1 of level 3.", 'a', " ");
-  util_module->add_option("trace.umask", "", "Unmask some events, e.g '2,* 3,1 3,0 0,*' unmask all events of levels 2 and 0 and unmask events 0 and 1 of level 3.", 'a', " ");
-  util_module->add_option("trace.buffer", "1024", "Maximum buffer size in KBytes. Default is 1MBytes.");
+  kaapi_module->add_option("globalid", "", "Global identifier of the node. A gid is an integer value.");
 
   //\TODO: no trace in this version
-  util_module->add_option("ps.enable", "false", "Enable/disable trace, disable for Kaapi application (KaapiServer, KaapiAdmin,...)");
-  util_module->add_option("ps.period", "0", "frequency of updatating status of the process (ms)");
-  util_module->add_option("ps.format", "all", "format to display statistics. 'all': all statistics, 'total': not average, 'cpu': about cpu, 'ws': about work stealing");
-  parser->add_module( util_module, global_prop );
+  kaapi_module->add_option("trace.decode", "", "Decode the trace file with name given as parameter");
+  kaapi_module->add_option("trace.enable", "false", "Enable or disable trace. Default is no.");
+  kaapi_module->add_option("trace.mask", "", "Mask some events, e.g '2,* 3,1 3,0 0,*' mask all events of levels 2 and 0 and mask events 0 and 1 of level 3.", 'a', " ");
+  kaapi_module->add_option("trace.umask", "", "Unmask some events, e.g '2,* 3,1 3,0 0,*' unmask all events of levels 2 and 0 and unmask events 0 and 1 of level 3.", 'a', " ");
+  kaapi_module->add_option("trace.buffer", "1024", "Maximum buffer size in KBytes. Default is 1MBytes.");
+
+  //\TODO: no trace in this version
+  kaapi_module->add_option("ps.enable", "false", "Enable/disable trace, disable for Kaapi application (KaapiServer, KaapiAdmin,...)");
+  kaapi_module->add_option("ps.period", "0", "frequency of updatating status of the process (ms)");
+  kaapi_module->add_option("ps.format", "all", "format to display statistics. 'all': all statistics, 'total': not average, 'cpu': about cpu, 'ws': about work stealing");
+  parser->add_module( kaapi_module, global_prop );
 }
 
 
@@ -219,7 +219,7 @@ int Init::terminate() throw()
   //logfile() << "In Init::terminate()" << std::endl;
   static bool is_called = false; if (is_called) return 0; is_called = true;
 
-  if ( util_module != 0 ) delete util_module ;
+  if ( kaapi_module != 0 ) delete kaapi_module ;
 
   KAAPI_CPPLOG( Init::verboseon, "[Init::terminate] SignalThread exit");
 

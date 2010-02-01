@@ -49,9 +49,9 @@
 #include <fstream>
 #include <string>
 #include <map>
-#include "atha_error.h"
+#include "ka_error.h"
 
-namespace atha {
+namespace ka {
 
 // ---------------------------------------------------------------------------
 /** \class Properties

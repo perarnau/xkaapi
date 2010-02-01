@@ -46,9 +46,9 @@
 #define _ATHA_COMPONENT_H_
 
 #include "kaapi.h"
-#include "atha_parser.h"
+#include "ka_parser.h"
 
-namespace atha {
+namespace ka {
 
 // -------------------------------------------------------------------------
 /** KaapiComponent
@@ -150,7 +150,8 @@ public:
   /** List of priority for initialize module of KAAPI middleware
   */
   enum {
-    UTIL_COMPONENT_PRIORITY     = 0,
+    KERNEL_COMPONENT_PRIORITY   = 0,
+#if 0 // TG: will be redefined with integration of the network.
     NETWORK_COMPONENT_PRIORITY  = 100,
     NS_COMPONENT_PRIORITY       = 110,
     SOCKNET_COMPONENT_PRIORITY  = 150,
@@ -168,6 +169,7 @@ public:
     WS_COMPONENT_PRIORITY       = 600,
     ST_COMPONENT_PRIORITY       = 700,
     FT_COMPONENT_PRIORITY       = 800,
+#endif    
     DL_COMPONENT_PRIORITY       = 900
   };
   

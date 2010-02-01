@@ -46,141 +46,53 @@
 #ifndef _ATHAPASCAN_1_H_H
 #define _ATHAPASCAN_1_H_H
 
-#include "kaapi.h"
-#include "atha_error.h"
-#include "atha_debug.h"
-#include <vector>
-#include <typeinfo>
-
-namespace atha{}
+#include "kaapi++.h"
 
 namespace a1 {
 
- /* take a constant... should be adjusted */
- enum { STACK_ALLOC_THRESHOLD = KAAPI_MAX_DATA_ALIGNMENT };  
+  /* take a constant... should be adjusted */
+  enum { STACK_ALLOC_THRESHOLD = ka::STACK_ALLOC_THRESHOLD };  
+
+  using namespace ka::FormatDef;
+
+  using ka::Format;
+
+  using ka::FormatUpdateFnc;
+
+  class IStream; /* fwd decl */
+  class OStream; /* fwd decl */
+  using ka::ODotStream;
+
+  using ka::Exception;
+  using ka::RuntimeError;
+  using ka::InvalidArgumentError;
+  using ka::RestartException;
+  using ka::ServerException;
+  using ka::NoFound;
+  using ka::BadAlloc;
+  using ka::IOError;
+  using ka::ComFailure;
+  using ka::BadURL;
+
+
+  using ka::System;
+  using ka::Community;
+
+  using ka::SetStack;
+  using ka::SetHeap;
+  using ka::SetStickyC;
 
   // --------------------------------------------------------------------
-  namespace FormatDef {
-#  define KAAPI_DECL_EXT_FORMAT(TYPE,OBJ)\
-    extern const kaapi_format_t OBJ;
-    
-    extern const kaapi_format_t Null;
-    KAAPI_DECL_EXT_FORMAT(bool, Bool)
-    KAAPI_DECL_EXT_FORMAT(char, Char)
-    extern const kaapi_format_t Byte;
-    KAAPI_DECL_EXT_FORMAT(signed char, SChar)
-    KAAPI_DECL_EXT_FORMAT(unsigned char, UChar)
-    KAAPI_DECL_EXT_FORMAT(int, Int)
-    KAAPI_DECL_EXT_FORMAT(unsigned int, UInt)
-    KAAPI_DECL_EXT_FORMAT(short, Short)
-    KAAPI_DECL_EXT_FORMAT(unsigned short, UShort)
-    KAAPI_DECL_EXT_FORMAT(long, Long)
-    KAAPI_DECL_EXT_FORMAT(unsigned long, ULong)
-    KAAPI_DECL_EXT_FORMAT(long long, LLong)
-    KAAPI_DECL_EXT_FORMAT(unsigned long long, ULLong)
-    KAAPI_DECL_EXT_FORMAT(float, Float)
-    KAAPI_DECL_EXT_FORMAT(double, Double)
-    KAAPI_DECL_EXT_FORMAT(long double, LDouble)
-  }
-  
-  /** link C++ format -> kaapi format */
-  class Format : public kaapi_format_t {
-  public:
-    Format( 
-        const std::string& name,
-        size_t             size,
-        void             (*cstor)( void* dest),
-        void             (*dstor)( void* dest),
-        void             (*cstorcopy)( void* dest, const void* src),
-        void             (*copy)( void* dest, const void* src),
-        void             (*assign)( void* dest, const void* src),
-        void             (*print)( FILE* file, const void* src)
-    );
-  };
-
-  /** format for update function */
-  class FormatUpdateFnc : public Format {
-  public:
-    FormatUpdateFnc( 
-      const std::string& name,
-      int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
-                       const void* value, const struct kaapi_format_t* fmtvalue )
-    );
-  };
-  
-  class IStream;
-  class OStream;
-  class ODotStream;
-  
-  using atha::Exception;
-  using atha::RuntimeError;
-  using atha::InvalidArgumentError;
-  using atha::RestartException;
-  using atha::ServerException;
-  using atha::NoFound;
-  using atha::BadAlloc;
-  using atha::IOError;
-  using atha::ComFailure;
-  using atha::BadURL;
-
-  // --------------------------------------------------------------------
-  class Community {
-  protected:
-    friend class System;
-    Community( void* com )
-    { }
-
-  public:
-    Community( const Community& com );
-
-    /* */
-    void commit();
-
-    /* */
-    void leave();
-
-    /* */
-    bool is_leader() const;
-  };
-
-  // --------------------------------------------------------------------
-  class Thread;
-  
-  // --------------------------------------------------------------------
-  class System {
-  public:
-    static Community join_community( int& argc, char**& argv )
-      throw (RuntimeError,RestartException,ServerException);
-
-    static Community initialize_community( int& argc, char**& argv )
-      throw (RuntimeError,RestartException,ServerException);
-
-    static Thread* get_current_thread();
-    static int getRank();
-    static void terminate();
-
-  public:
-  };
-
-  // --------------------------------------------------------------------
-  inline Thread* System::get_current_thread()
-  {
-    return (Thread*)kaapi_self_stack();
-  }
-
-  // --------------------------------------------------------------------
-  struct SetStack {};
   extern SetStack SetInStack;
 
   // --------------------------------------------------------------------
-  struct SetHeap {};
   extern SetHeap SetInHeap;
 
   // --------------------------------------------------------------------
-  class SetStickyC{};
   extern SetStickyC SetSticky;
 
-
+  class Thread;
+  
   // --------------------------------------------------------------------
   template<class T>
   class Shared {
@@ -197,7 +109,7 @@ namespace a1 {
 #if 0
     Shared ( value_type* data ) 
     {
-      Thread* thread = System::get_current_thread(); 
+      Thread* thread = (Thread*)System::get_current_thread(); 
       if (!data) 
       {
         data = 0;
@@ -538,6 +450,9 @@ namespace a1 {
 #include "atha_spacecollection.h"
 #endif
 
+  using ka::WrapperFormat;
+  using ka::WrapperFormatUpdateFnc;
+#if 0
   template <class T>
   class WrapperFormat {
   public:
@@ -613,6 +528,7 @@ namespace a1 {
   );
   template <class UpdateFnc>
   const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::format = &WrapperFormatUpdateFnc<UpdateFnc>::theformat;
+#endif
 
   // --------------------------------------------------------------------
   /* typenames for access mode */
@@ -915,7 +831,7 @@ namespace a1 {
 
   // --------------------------------------------------------------------
   /** Wait execution of all forked tasks of the running task */
-  extern void Sync();
+  inline void Sync() { ka::Sync(); }
 
 
 
@@ -1105,19 +1021,18 @@ namespace a1 {
 // ---------------------------------------------------------------------------------
 /** Compatibility with old C++ Kaapi
 */
-#include "atha_timer.h"
 
 namespace  atha {
-  extern std::ostream& logfile();
+  using ka::logfile;
 }
 
 namespace Util {
-  using atha::WallTimer;
-  using atha::CpuTimer;
-  using atha::SysTimer;
-  using atha::HighResTimer;
-  using atha::logfile;
-  
+  using ka::WallTimer;
+  using ka::CpuTimer;
+  using ka::SysTimer;
+  using ka::HighResTimer;
+  using ka::logfile;
+
   /* old names */
   typedef kaapi_uint8_t  ka_uint8_t;
   typedef kaapi_uint16_t ka_uint16_t;
@@ -1228,17 +1143,18 @@ namespace a1 {
 /* Initialization / destruction functions
  */
 namespace a1 {
-extern void _athakaapi_dummy(void*);
-extern void __attribute__ ((constructor)) atha_init(void);
-extern void __attribute__ ((destructor)) atha_fini(void);
-#if !defined(KAAPI_COMPILE_SOURCE)
 
-/** To force reference to kaapi_init.c in order to link against kaapi_init and kaapi_fini
- */
-static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
-{
-  _athakaapi_dummy(NULL);
-}
+  extern void _athakaapi_dummy(void*);
+  extern void __attribute__ ((constructor)) atha_init(void);
+  extern void __attribute__ ((destructor)) atha_fini(void);
+
+#if !defined(KAAPI_COMPILE_SOURCE)
+  /** To force reference to atha_kaapi.cpp in order to link against kaapi_init and kaapi_fini
+   */
+  static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
+  {
+    _athakaapi_dummy(NULL);
+  }
 #endif
 }
 

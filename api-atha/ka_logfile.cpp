@@ -42,11 +42,11 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "atha_error.h"
-#include "atha_debug.h"
+#include "ka_error.h"
+#include "ka_debug.h"
 //#include "atha_format.h"
-#include "atha_init.h"
-#include "atha_timer.h"
+#include "ka_init.h"
+#include "ka_timer.h"
 #include <map>
 #include <iostream>
 #include <iomanip>
@@ -64,7 +64,7 @@
 #endif
 
 
-namespace atha {
+namespace ka {
 
 // --------------------------------------------------------------------
 void initialize_logfile()
@@ -158,16 +158,16 @@ std::ostream& logfile()
     if (curr == fout_per_kprocessor.end())
     {
       /* create the directory & file for output */
-      std::string pwdlog = atha::KaapiComponentManager::prop["util.rootdir"] + "/log";
+      std::string pwdlog = ka::KaapiComponentManager::prop["util.rootdir"] + "/log";
       int err = mkdir(pwdlog.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
       if ((err != 0) && (errno !=EEXIST))
       {
         std::ostringstream msg;
-        msg << "[atha::Statistics::initialize] cannot create directory: " << pwdlog << std::endl;
-        Exception_throw( atha::PosixError(msg.str(),errno) );
+        msg << "[ka::Statistics::initialize] cannot create directory: " << pwdlog << std::endl;
+        Exception_throw( ka::PosixError(msg.str(),errno) );
       }
       std::ostringstream sname;
-      sname << pwdlog << "/cout." << atha::Init::local_gid << "." << self << "." << getpid();
+      sname << pwdlog << "/cout." << ka::Init::local_gid << "." << self << "." << getpid();
       std::ofstream* fout = new std::ofstream(sname.str().c_str());
       KAAPI_ASSERT_M( fout->good(), "cannot create per process cout file");
       fout_per_kprocessor.insert( std::make_pair(self, fout) );
@@ -181,28 +181,28 @@ std::ostream& logfile()
     std::cout << self << "::[" << std::setw(9) << std::setprecision(7) << std::showpoint; 
     std::cout.fill( '0' );
     std::cout.setf( std::ios_base::left, std::ios_base::adjustfield);
-    std::cout << atha::WallTimer::gettime() - Init::component.startup_time() << "]: ";
+    std::cout << ka::WallTimer::gettime() - Init::component.startup_time() << "]: ";
     return std::cout;
   }
   if (fout_per_process ==0) 
   { 
-    std::string pwdlog = atha::KaapiComponentManager::prop["util.rootdir"] + "/log";
+    std::string pwdlog = ka::KaapiComponentManager::prop["util.rootdir"] + "/log";
     int err = mkdir(pwdlog.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
     if ((err != 0) && (errno !=EEXIST))
     {
       std::ostringstream msg;
-      msg << "[atha::Statistics::initialize] cannot create directory: " << pwdlog << std::endl;
-      Exception_throw( atha::PosixError(msg.str(),errno) );
+      msg << "[ka::Statistics::initialize] cannot create directory: " << pwdlog << std::endl;
+      Exception_throw( ka::PosixError(msg.str(),errno) );
     }
     std::ostringstream sname; 
-    sname << pwdlog << "/cout." << atha::Init::local_gid << "." << getpid();
+    sname << pwdlog << "/cout." << ka::Init::local_gid << "." << getpid();
     fout_per_process = new std::ofstream(sname.str().c_str());
     KAAPI_ASSERT_M( fout_per_process->good(), "cannot create per process cout file");
   }
-  *fout_per_process << std::flush << atha::Init::local_gid << "::[" << std::setw(9) << std::setprecision(7); 
+  *fout_per_process << std::flush << ka::Init::local_gid << "::[" << std::setw(9) << std::setprecision(7); 
   fout_per_process->fill( '0' );
   fout_per_process->setf( std::ios_base::left, std::ios_base::adjustfield);
-  *fout_per_process << atha::WallTimer::gettime() - Init::component.startup_time() << "]: ";
+  *fout_per_process << ka::WallTimer::gettime() - Init::component.startup_time() << "]: ";
   return *fout_per_process;
 #endif
 }

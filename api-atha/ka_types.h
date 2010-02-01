@@ -45,8 +45,8 @@
 #define _ATHA_TYPES_H_
 
 #include "kaapi.h"
-#include "atha_error.h"
-#include "atha_debug.h"
+#include "ka_error.h"
+#include "ka_debug.h"
 #include <typeinfo>
 #include <iosfwd>
 #include <sys/uio.h>
@@ -56,7 +56,10 @@
 #include <netinet/in.h>
 #endif
 
-namespace atha {
+/** \namespace ka
+    \brief The atha namespace contains definitions to port the library onto an operating system
+*/
+namespace ka {
 
 //@{
 

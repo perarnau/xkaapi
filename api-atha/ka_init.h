@@ -44,12 +44,12 @@
 #ifndef _ATHA_INIT_H
 #define _ATHA_INIT_H
 
-#include "atha_types.h"
-#include "atha_properties.h"
-#include "atha_parser.h"
-#include "atha_component.h"
+#include "ka_types.h"
+#include "ka_properties.h"
+#include "ka_parser.h"
+#include "ka_component.h"
 
-namespace atha {
+namespace ka {
 
 class Init : public KaapiComponent {
 public:

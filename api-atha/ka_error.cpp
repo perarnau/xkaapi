@@ -43,8 +43,8 @@
 ** terms.
 ** 
 */
-#include "atha_error.h"
-#include "atha_debug.h"
+#include "ka_error.h"
+#include "ka_debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -55,7 +55,7 @@
 #include <cxxabi.h>
 #include <cstring>
 
-namespace atha {
+namespace ka {
 
 // --------------------------------------------------------------------
 void print_backtrace_c()
@@ -70,7 +70,7 @@ void print_backtrace_c()
   trace_strings = backtrace_symbols(trace, trace_size);
   for (unsigned int i=0; i<trace_size; ++i)
   {  
-    atha::logfile() << std::setfill(' ') << std::right << std::setw(3) << i << ": "
+    logfile() << std::setfill(' ') << std::right << std::setw(3) << i << ": "
         << trace_strings[i] << std::endl;
   }
   free(trace_strings); // malloc()ed by backtrace_symbols
@@ -89,7 +89,7 @@ void print_backtrace_cpp()
   trace_size = backtrace(trace, MAX_DEPTH);
   trace_strings = backtrace_symbols(trace, trace_size);
 
-  atha::logfile() << "Call stack: \n" << std::endl;
+  logfile() << "Call stack: \n" << std::endl;
 
   for (unsigned int i=0; i<trace_size; ++i)
   { 
@@ -129,13 +129,13 @@ void print_backtrace_cpp()
         std::strncat(function, "()", function_size);
         function[function_size-1] = ' ';
       }
-      atha::logfile() << std::setfill(' ') << std::right << std::setw(3) << i << ": "
+      logfile() << std::setfill(' ') << std::right << std::setw(3) << i << ": "
           << function << " in " << trace_strings[i] << std::endl;
     }
     else
     {
       // didn't find the mangled name, just print the whole line
-      atha::logfile() << std::setfill(' ') << std::right << std::setw(3) << i << ": "
+      logfile() << std::setfill(' ') << std::right << std::setw(3) << i << ": "
           << trace_strings[i] << std::endl;
     }
     free(function);     
@@ -149,22 +149,22 @@ void backtrace_sighandler(int sig, siginfo_t *info, void *secret)
   switch( sig )
   {
     case SIGILL: 
-      atha::logfile() << "Got signal SIGILL: Illegal Instruction" << std::endl;
+      logfile() << "Got signal SIGILL: Illegal Instruction" << std::endl;
       break;
     case SIGABRT: 
-      atha::logfile() << "Got signal SIGABRT: Abort" << std::endl;
+      logfile() << "Got signal SIGABRT: Abort" << std::endl;
       break;
     case SIGFPE: 
-      atha::logfile() << "Got signal SIGFPE: Floating point exception" << std::endl;
+      logfile() << "Got signal SIGFPE: Floating point exception" << std::endl;
       break;
     case SIGSEGV: 
-      atha::logfile() << "Got signal SIGSEGV: Invalid memory reference" << std::endl;
+      logfile() << "Got signal SIGSEGV: Invalid memory reference" << std::endl;
       break;
     case SIGBUS: 
-      atha::logfile() << "Got signal SIGBUS: Bus error (bad memory access)" << std::endl;
+      logfile() << "Got signal SIGBUS: Bus error (bad memory access)" << std::endl;
       break;
     default: 
-      atha::logfile() << "Got signal " << sig << std::endl;
+      logfile() << "Got signal " << sig << std::endl;
       break;    
   }
   print_backtrace_cpp();
@@ -174,8 +174,8 @@ void backtrace_sighandler(int sig, siginfo_t *info, void *secret)
 // --------------------------------------------------------------------
 void System_abort( const std::string& msg )
 {
-  atha::logfile() << msg << std::endl;
-  atha::logfile() << "Abort" << std::endl;
+  logfile() << msg << std::endl;
+  logfile() << "Abort" << std::endl;
   std::cerr << "Abort" << std::endl;
   abort(); // signal SIGABRT, exit and create a core (if allowed)
 }

@@ -61,7 +61,7 @@
 #include <time.h> // clock
 #endif
 
-namespace atha {
+namespace ka {
 
 /** \class WallTimer
     \brief Wall clock timer class
@@ -537,7 +537,7 @@ inline double Timer::callcount () const
 
 } // - namespace
 
-inline std::ostream& operator<<( std::ostream& o, const atha::Timer& T)
+inline std::ostream& operator<<( std::ostream& o, const ka::Timer& T)
 { return T.print(o);}
 
 

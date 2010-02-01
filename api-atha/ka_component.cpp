@@ -42,10 +42,10 @@
 ** 
 */
 #include <iostream>
-#include "atha_init.h"
-#include "atha_component.h"
-#include "atha_timer.h"
-#include "atha_debug.h"
+#include "ka_init.h"
+#include "ka_component.h"
+#include "ka_timer.h"
+#include "ka_debug.h"
 #include <queue>
 #include <list>
 #include <sys/stat.h>
@@ -58,7 +58,7 @@
 
 //#define KAAPI_VERBOSE
 
-namespace atha {
+namespace ka {
 
 // --------------------------------------------------------------------
 Properties KaapiComponentManager::prop;

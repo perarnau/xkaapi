@@ -41,20 +41,20 @@ template<class T>
 struct PrintBody {
   void operator() ( const T* a, const T& ref_value, double t )
   { 
-    /*  atha::WallTimer::gettime is a wrapper around gettimeofday(2) */
-    double delay = atha::WallTimer::gettime() - t;
+    /*  ka::WallTimer::gettime is a wrapper around gettimeofday(2) */
+    double delay = ka::WallTimer::gettime() - t;
 
-    /*  atha::System::getRank() prints out the id of the node executing the task */
-    atha::logfile() << atha::System::getRank() << ": -----------------------------------------" << std::endl;
-    atha::logfile() << atha::System::getRank() << ": res  = " << *a << std::endl;
-    atha::logfile() << atha::System::getRank() << ": time = " << delay << " s" << std::endl;
-    atha::logfile() << atha::System::getRank() << ": -----------------------------------------" << std::endl;
+    /*  ka::System::getRank() prints out the id of the node executing the task */
+    ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
+    ka::logfile() << ka::System::getRank() << ": res  = " << *a << std::endl;
+    ka::logfile() << ka::System::getRank() << ": time = " << delay << " s" << std::endl;
+    ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
   }
 };
 
 /* Description of Update task */
 template<class T>
-struct TaskPrint : public atha::Task<3>::Signature<atha::Shared_r<T>, T, double> {};
+struct TaskPrint : public ka::Task<3>::Signature<ka::Shared_r<T>, T, double> {};
 
 /* Specialize default / CPU */
 template<class T>
@@ -77,7 +77,7 @@ struct SumBody {
     *res = *a + *b;
   }
 };
-struct TaskSum : public atha::Task<3>::Signature<atha::Shared_w<int>, atha::Shared_r<int>, atha::Shared_r<int> > {};
+struct TaskSum : public ka::Task<3>::Signature<ka::Shared_w<int>, ka::Shared_r<int>, ka::Shared_r<int> > {};
 template<>
 struct TaskBodyCPU<TaskSum> : public SumBody { };
 
@@ -90,7 +90,7 @@ struct TaskBodyCPU<TaskSum> : public SumBody { };
 struct FiboBody {
   void operator() ( int* res, int n );
 };
-struct TaskFibo : public atha::Task<2>::Signature<atha::Shared_w<int>, int > {};
+struct TaskFibo : public ka::Task<2>::Signature<ka::Shared_w<int>, int > {};
 
 template<> /* declare task body for CPU, NO GPU version */
 struct TaskBodyCPU<TaskFibo> : public FiboBody {};
@@ -105,19 +105,19 @@ void FiboBody::operator() ( int* res, int n )
     /* the scope of res1 and res2 is at most the end of execution of TaskSum, thus they can
        be allocate on the Kaapi stack
     */
-    int* res1 = atha::Alloca<int>(1);
-    int* res2 = atha::Alloca<int>(1);
+    int* res1 = ka::Alloca<int>(1);
+    int* res2 = ka::Alloca<int>(1);
 
     /* the Fork keyword is used to spawn new task
      * new tasks are executed in parallel as long as dependencies are respected
      */
-    atha::Fork<TaskFibo>() ( res1, n-1);
-    atha::Fork<TaskFibo>() ( res2, n-2 );
+    ka::Fork<TaskFibo>() ( res1, n-1);
+    ka::Fork<TaskFibo>() ( res2, n-2 );
 
     /* the Sum task depends on res1 and res2 which are written by previous tasks
      * it must wait until thoses tasks are finished
      */
-    atha::Fork<TaskSum>()  ( res, res1, res2 );
+    ka::Fork<TaskSum>()  ( res, res1, res2 );
   }
 }
 
@@ -128,22 +128,22 @@ struct doit {
 
   void do_experiment(unsigned int n, unsigned int iter )
   {
-    double t = atha::WallTimer::gettime();
+    double t = ka::WallTimer::gettime();
     int ref_value = fiboseq_On(n);
-    double delay = atha::WallTimer::gettime() - t;
-    atha::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
+    double delay = ka::WallTimer::gettime() - t;
+    ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
     for (unsigned int i = 0 ; i < iter ; ++i)
     {   
-      double time= atha::WallTimer::gettime();
+      double time= ka::WallTimer::gettime();
 
       int* res;
       
-      atha::Fork<TaskFibo>(atha::SetLocal)( res, n );
+      ka::Fork<TaskFibo>(ka::SetLocal)( res, n );
 
-      /* atha::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      atha::Fork<TaskPrint<int> >(atha::SetLocal)(res, ref_value, time);
-      atha::Sync();
+      /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
+      ka::Fork<TaskPrint<int> >(ka::SetLocal)(res, ref_value, time);
+      ka::Sync();
     }
   }
 
@@ -154,7 +154,7 @@ struct doit {
     unsigned int iter = 1;
     if (argc > 2) iter = atoi(argv[2]);
     
-    atha::logfile() << "In main: n = " << n << ", iter = " << iter << std::endl;
+    ka::logfile() << "In main: n = " << n << ", iter = " << iter << std::endl;
     do_experiment( n, iter );
   }
 };
@@ -176,10 +176,10 @@ int main(int argc, char** argv)
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */
-    atha::Community com = atha::System::join_community( argc, argv );
+    ka::Community com = ka::System::join_community( argc, argv );
     
     /* Start computation by forking the main task */
-    atha::ForkMain<doit>()(argc, argv); 
+    ka::ForkMain<doit>()(argc, argv); 
     
     /* Leave the community: at return to this call no more athapascan
        tasks or shared could be created.
@@ -187,19 +187,19 @@ int main(int argc, char** argv)
     com.leave();
 
     /* */
-    atha::System::terminate();
+    ka::System::terminate();
   }
-  catch (const atha::InvalidArgumentError& E) {
-    atha::logfile() << "Catch invalid arg" << std::endl;
+  catch (const ka::InvalidArgumentError& E) {
+    ka::logfile() << "Catch invalid arg" << std::endl;
   }
-  catch (const atha::BadAlloc& E) {
-    atha::logfile() << "Catch bad alloc" << std::endl;
+  catch (const ka::BadAlloc& E) {
+    ka::logfile() << "Catch bad alloc" << std::endl;
   }
-  catch (const atha::Exception& E) {
-    atha::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const ka::Exception& E) {
+    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
   }
   catch (...) {
-    atha::logfile() << "Catch unknown exception: " << std::endl;
+    ka::logfile() << "Catch unknown exception: " << std::endl;
   }
   
   return 0;

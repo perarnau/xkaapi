@@ -100,7 +100,7 @@ int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, vo
     t0 = kaapi_get_elapsedtime();
 #endif
     /* wait thief receive preemption */
-    while (!athief->thief_term) pthread_yield(); 
+    while (!athief->thief_term) pthread_yield_np(); 
 #if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime();
     stack->_proc->t_preempt += t1-t0;

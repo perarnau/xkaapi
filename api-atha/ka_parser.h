@@ -45,11 +45,11 @@
 #define _ATHA_PARSER_H_
 
 #include "kaapi.h"
-#include "atha_properties.h"
+#include "ka_properties.h"
 #include <map>
 #include <list>
 
-namespace atha {
+namespace ka {
 
 /** Paser class
     Paser class is used to parse command line arguments in order to

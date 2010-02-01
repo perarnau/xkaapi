@@ -42,10 +42,10 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "atha_init.h"
-#include "atha_timer.h"
-#include "atha_error.h"
-#include "atha_debug.h"
+#include "ka_init.h"
+#include "ka_timer.h"
+#include "ka_error.h"
+#include "ka_debug.h"
 #include <iomanip>
 
 extern "C" {
@@ -60,7 +60,7 @@ extern "C" {
 }
 
 
-namespace atha {
+namespace ka {
 
 // --------------------------------------------------------------------
 const std::string& HighResTimer::unit()

@@ -53,10 +53,10 @@
 #endif
 #include <string>
 
-/** \namespace atha
+/** \namespace ka
     \brief The atha namespace contains definitions to port the library onto an operating system
 */
-namespace atha {
+namespace ka {
 
 #ifndef KAAPI_DEBUG_MEM
 #  define _kaapi_malloc( s) ::malloc(s)
@@ -139,7 +139,7 @@ namespace atha {
     if (!(cond)) {       \
        ::std::ostringstream str;\
        str << msg << "\tFile:" << __FILE__ << ", Line:" << KAAPI_VALTOSTR(__LINE__);\
-       atha::System_abort( str.str() );\
+       ka::System_abort( str.str() );\
     }
 
 /*! \def KAAPI_ASSERT(cond, msg)
@@ -150,7 +150,7 @@ namespace atha {
     if (!(cond)) {       \
        ::std::ostringstream str;\
        str << ex.what() << "\tFile:" << __FILE__ << ", Line:" << KAAPI_VALTOSTR(__LINE__);\
-       atha::System_abort( str.str() );\
+       ka::System_abort( str.str() );\
     }
 
 
@@ -161,7 +161,7 @@ namespace atha {
 #if defined(KAAPI_DEBUG)
 #define KAAPI_CPPLOG(cond, msg) \
   if ((cond)) {\
-    atha::logfile() << msg << ::std::endl;\
+    ka::logfile() << msg << ::std::endl;\
   }
 
 /*! \def KAAPI_LOG_INST(cond, inst)

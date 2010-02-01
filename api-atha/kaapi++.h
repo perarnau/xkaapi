@@ -47,17 +47,29 @@
 #define _KAAPI_CPP_H_
 
 #include "kaapi.h"
-#include "atha_error.h"
-#include "atha_timer.h"
+#include "ka_error.h"
+#include "ka_timer.h"
 #include <vector>
 #include <typeinfo>
 
-namespace atha{}
+namespace ka{}
 
-namespace atha {
+namespace ka {
 
- /* take a constant... should be adjusted */
- enum { STACK_ALLOC_THRESHOLD = KAAPI_MAX_DATA_ALIGNMENT };  
+  /* take a constant... should be adjusted */
+  enum { STACK_ALLOC_THRESHOLD = KAAPI_MAX_DATA_ALIGNMENT };  
+
+  // --------------------------------------------------------------------
+  typedef kaapi_uint8_t  ka_uint8_t;
+  typedef kaapi_uint16_t ka_uint16_t;
+  typedef kaapi_uint32_t ka_uint32_t;
+  typedef kaapi_uint64_t ka_uint64_t;
+
+  typedef kaapi_int8_t   ka_int8_t;
+  typedef kaapi_int16_t  ka_int16_t;
+  typedef kaapi_int32_t  ka_int32_t;
+  typedef kaapi_int64_t  ka_int64_t;
+
 
   // --------------------------------------------------------------------
   namespace FormatDef {
@@ -114,17 +126,6 @@ namespace atha {
   class ODotStream;
   class SyncGuard;
   
-  using atha::Exception;
-  using atha::RuntimeError;
-  using atha::InvalidArgumentError;
-  using atha::RestartException;
-  using atha::ServerException;
-  using atha::NoFound;
-  using atha::BadAlloc;
-  using atha::IOError;
-  using atha::ComFailure;
-  using atha::BadURL;
-
   // --------------------------------------------------------------------
   class Community {
   protected:
@@ -399,7 +400,6 @@ namespace atha {
     value_type* ptr;
   };
 
-
   template<class T, class OpCumul = DefaultAdd<T> >
   class Shared_cw {
   public:
@@ -407,7 +407,6 @@ namespace atha {
     Shared_cw( value_type* p ) : ptr(p) {}
     value_type* ptr;
   };
-
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
@@ -727,7 +726,7 @@ namespace atha {
   struct TaskBodyGPU : public TASK {};
 
 
-namespace atha {
+namespace ka {
 
   // --------------------------------------------------------------------
   template<class TASK>
@@ -739,7 +738,7 @@ namespace atha {
     }
   };
 
-#include "atha_api2_clo.h"
+#include "ka_api_clo.h"
 
   // --------------------------------------------------------------------
   /* New API: thread.Fork<TASK>([ATTR])( args )
@@ -763,7 +762,7 @@ namespace atha {
         kaapi_stack_pushtask( _stack);    
       }
 
-#include "atha_api2_fork.h"
+#include "ka_api_fork.h"
 
     protected:
       kaapi_stack_t* _stack;
@@ -842,19 +841,6 @@ namespace atha {
   // --------------------------------------------------------------------
   extern std::ostream& logfile();
 
-
-  // --------------------------------------------------------------------
-  typedef kaapi_uint8_t  ka_uint8_t;
-  typedef kaapi_uint16_t ka_uint16_t;
-  typedef kaapi_uint32_t ka_uint32_t;
-  typedef kaapi_uint64_t ka_uint64_t;
-
-  typedef kaapi_int8_t   ka_int8_t;
-  typedef kaapi_int16_t  ka_int16_t;
-  typedef kaapi_int32_t  ka_int32_t;
-  typedef kaapi_int64_t  ka_int64_t;
-
-  
   // --------------------------------------------------------------------
   class SyncGuard {
       Thread       *_thread;
@@ -870,30 +856,10 @@ namespace atha {
         kaapi_stack_restore_frame( &_thread->_stack, &_frame );
       }
   };
-} // namespace atha
-
-
-
-/* ========================================================================= */
-/* Initialization / destruction functions
- */
-namespace atha {
-extern void _athakaapi_dummy(void*);
-extern void __attribute__ ((constructor)) atha_init(void);
-extern void __attribute__ ((destructor)) atha_fini(void);
-
-#if !defined(KAAPI_COMPILE_SOURCE)
-/** To force reference to kaapi_init.c in order to link against kaapi_init and kaapi_fini
- */
-static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
-{
-  _athakaapi_dummy(NULL);
-}
-#endif
-}
+} // namespace ka
 
 #ifndef _KAAPIPLUSPLUS_NOT_IN_NAMESPACE
-using namespace atha;
+using namespace ka;
 #endif
 
 #endif

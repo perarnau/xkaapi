@@ -11,27 +11,29 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src
 
-lib_LTLIBRARIES=libatha1.la
+lib_LTLIBRARIES=libxkaapixx.la
 
-libatha1_la_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1_BUILD_CPPFLAGS)
-libatha1_la_CFLAGS=$(AM_CFLAGS) $(ATHA1_BUILD_CFLAGS)
-libatha1_la_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-libatha1_la_LDFLAGS = -version-info 1:0:1 $(ATHA1_BUILD_LDFLAGS)
-libatha1_la_LIBADD=../src/libxkaapi.la $(ATHA1_BUILD_LIBS)
+libxkaapixx_la_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPILIB_BUILD_CPPFLAGS)
+libxkaapixx_la_CFLAGS=$(AM_CFLAGS) $(XKAAPILIB_BUILD_CFLAGS)
+libxkaapixx_la_CXXFLAGS=$(AM_CXXFLAGS) $(XKAAPILIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+libxkaapixx_la_LDFLAGS = -version-info 1:0:1 $(XKAAPILIB_BUILD_LDFLAGS)
+libxkaapixx_la_LIBADD=../src/libxkaapi.la $(XKAAPILIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
-	athapascan_closure.h \
-	athapascan_fork.h \
-	atha_api2_clo.h \
-	atha_api2_fork.h
+	ka_api_clo.h \
+	ka_api_fork.h
+
+#	athapascan_closure.h \
+#	athapascan_fork.h
 
 M4_SRCS=\
 	m4_generator \
 	m4_macros \
-	athapascan_closure_gen.m4 \
-	athapascan_fork_gen.m4 \
-	atha_api2_clo.m4 \
-	atha_api2_fork.m4
+	ka_api_clo.m4 \
+	ka_api_fork.m4
+
+#	athapascan_closure_gen.m4 \
+#	athapascan_fork_gen.m4 
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
 
@@ -40,61 +42,65 @@ EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
 $(M4_BUILT_FILES): $(M4_SRCS)
 	$(srcdir)/m4_generator 10
 
-libatha1_la_SOURCES=\
-	atha_init.cpp \
-	atha_error.cpp \
-	atha_timer.cpp \
-	atha_properties.cpp \
-	atha_logfile.cpp \
-	atha_component.cpp \
-	atha_parser.cpp \
-	atha_monotonic.cpp \
-	atha_kaapi.cpp \
-	atha_kaapi2.cpp \
-	atha_array.h \
-	atha_component.h \
-	atha_debug.h \
-	atha_error.h \
-	atha_format.h \
-	atha_init.h \
-	atha_parser.h \
-	athapascan-1.h \
-	atha_properties.h \
-	atha_stream.h \
-	atha_timer.h \
-	atha_types.h
+libxkaapixx_la_SOURCES=\
+	ka_init.cpp \
+	ka_error.cpp \
+	ka_timer.cpp \
+	ka_properties.cpp \
+	ka_logfile.cpp \
+	ka_component.cpp \
+	ka_parser.cpp \
+	ka_api_format.cpp \
+	ka_api_kaapi.cpp \
+	ka_component.h \
+	ka_debug.h \
+	ka_error.h \
+	ka_init.h \
+	ka_parser.h \
+	ka_properties.h \
+	ka_timer.h \
+	ka_types.h\
+	atha_kaapi.cpp
+
+# NOT YET USED:  	atha_monotonic.cpp \
+#	atha_array.h \
+#	ka_format.h \
+#	ka_stream.h 
 
 # NOT YET USED:  atha_stream.cpp
 #  atha_format.cpp
 
 include_HEADERS=\
-	athapascan-1 \
-	athapascan-1.h \
 	kaapi++ \
 	kaapi++.h\
-	atha_error.h\
-  atha_timer.h\
-  atha_api2_clo.h\
-  atha_api2_fork.h\
-  athapascan_closure.h\
-  athapascan_fork.h
+	ka_error.h\
+  ka_timer.h\
+  ka_api_clo.h\
+  ka_api_fork.h
   
+# NOT YET USED:  	athapascan-1 \
+#	athapascan-1.h 
+#  athapascan_closure.h\
+#  athapascan_fork.h
 
-check_PROGRAMS=atha1_check_header
+check_PROGRAMS=ka_api_check_header
 if STD_CXX0X
 check_PROGRAMS+=atha1_check_header_strict
 endif
 check_headers_SRC=\
-        check/atha1_header.cpp \
-        check/atha1_h_header.cpp \
+        check/ka_api_header.cpp \
+        check/ka_api_h_header.cpp \
         check/empty_main.c
 
-atha1_check_header_strict_CPPFLAGS=$(AM_CPPFLAGS) -Werror
-atha1_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) $(STD_CXX0X_FLAGS)
-atha1_check_header_strict_SOURCES=\
+# NOT YET USED:       check/atha1_header.cpp \
+        check/atha1_h_header.cpp 
+
+ka_api_check_header_strict_CPPFLAGS=$(AM_CPPFLAGS) -Werror
+ka_api_check_header_strict_CXXFLAGS=$(AM_CXXFLAGS) $(STD_CXX0X_FLAGS)
+ka_api_check_header_strict_SOURCES=\
         $(check_headers_SRC)
 
 # No -pedantic here...
-atha1_check_header_CPPFLAGS=$(AM_CPPFLAGS) -Werror -D_KAAPI_DISABLE_WARNINGS
-atha1_check_header_SOURCES=\
+ka_api_check_header_CPPFLAGS=$(AM_CPPFLAGS) -Werror -D_KAAPI_DISABLE_WARNINGS
+ka_api_check_header_SOURCES=\
         $(check_headers_SRC)

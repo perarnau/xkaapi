@@ -41,12 +41,12 @@
 ** terms.
 ** 
 */
-#include "atha_properties.h"
+#include "ka_properties.h"
 #include <iostream>
 #include <sstream>
 #include <ctype.h>
 
-namespace atha {
+namespace ka {
 
 // ---------------------------------------------------------------------------
 //

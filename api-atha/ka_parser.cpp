@@ -44,9 +44,9 @@
 ** 
 */
 #include <iostream>
-#include "atha_parser.h"
+#include "ka_parser.h"
 
-namespace atha {
+namespace ka {
 
 // --------------------------------------------------------------------
 Parser::Module::Module()
