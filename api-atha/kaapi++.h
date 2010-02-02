@@ -712,6 +712,10 @@ namespace ka {
   // --------------------------------------------------------------------
   template<int i>
   struct Task {};
+  
+  /* ICI: signature avec kaapi_stack & kaapi_task as first parameter ?
+     Quel interface C++ pour les tâches adaptatives ?
+  */
 
 } // end of namespace atha: following definition sould be in global namespace in 
   // order to be specialized easily
@@ -747,6 +751,7 @@ namespace ka {
   */
   class Thread {
   public:
+
     template<class TASK, class Attr>
     class Forker {
     public:
