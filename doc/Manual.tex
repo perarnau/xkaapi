@@ -45,8 +45,6 @@
 Here is a short manual of the \kaapi library. This Manual will guide you through the installation of the library and its usage.
 You may find contact information about people involved in this project in the \verb+AUTHORS+ file in the source directory.
 
-Blabla sur le délivrable ...
-
 \section{Installation}
 
 In order to compile and use \kaapi's library, simply follow the next steps.
@@ -122,11 +120,12 @@ Note that not every example in the "examples" directory does work currently.
 
 Let's have a look at the \verb+transform+ example. This code is simply the parallel version (using \kaapi  of course) of the stl::transform
 algorithm. Inputs are a table and a unary operation, the unary operation is applied to each single element of the table and the result is stored into an output table.
+\\
 
-The library header has to be include (\verb+kaapi.h+). The work is done in the \verb+doit()+ function, in the while loop. In this loop, there's a call to \verb+kaapi_stealpoint()+. If some steal requests have been recieved since the last call to this function, then the \verb+splitter()+ function is called in order to reply to these requests. (...)
+The library header has to be include (\verb+kaapi.h+). The work is done in the \verb+doit()+ function, in the while loop. In this loop, there's a call to \verb+kaapi_stealpoint()+. If some steal requests have been recieved since the last call to this function, then the \verb+splitter()+ function is called in order to reply to these requests.
+\\
 
-The \verb+splitter()+ function will then reply to every requests recieved by browsing the \verb+requests[]+ array.
-
+XKaapi aims at providing a finer grain than the previous Kaapi implementation. To do so, the workstealing engine relies upon the application programmer to place its own stealing points, using the \verb+kaapi_stealpoint()+ routine. The stealpoints provide a way to distribute the remaining computation among the thief processors. The splitting occurs dynamically by iterating over the pending stealing requests array (the \verb+request[]+ array argument containing \verb+count+ elements). It is left to the programmer to implement a splitter function, since it is assumed he knows how to partition the computation as it is in a coherent state. Inside the splitting function, the victim uses the \verb+kaapi_request_reply()+ routine to complete the stealing requests.
 
 \subsection{Environnement Variables}
 
@@ -151,7 +150,7 @@ In order to control thread placement and global machine usage, there are two env
 
 \end{itemize}
 
-\subsection{Now}
+\subsection{Timing tool}
 One can mesure time elapsed for some operations using \verb+kaapi_get_elapsedtime()+ :
 
 \begin{verbatim}
