@@ -16,9 +16,31 @@ void kaapi_perf_global_fini(void)
 {
 }
 
+typedef kaapi_uint64_t kaapi_perf_counter_t;
+
+
+static void init_event_mapping(void)
+{
+  /* this is called in global_init
+     to build a backend context ie.
+     a papi event set for instance.
+     the list contains per backend
+     symbolics.
+   */
+
+  const char* const var = getenv("KAAPI_PERF_NAMES");
+  if (var == NULL)
+    return ;
+}
+
 
 void kaapi_perf_thread_init(void)
 {
+  /* retrieve the event mapping
+     of the following form
+     KAAPI_PERF_EVENTS=insn,l3
+   */
+
   int papi_events[PAPI_NUM_EVENTS] = {PAPI_CODE_EVENTS};
   kaapi_assert(PAPI_start_counters(papi_events, PAPI_NUM_EVENTS) == PAPI_OK);
 }

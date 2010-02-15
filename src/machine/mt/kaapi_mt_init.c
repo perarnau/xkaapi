@@ -111,6 +111,12 @@ void __attribute__ ((constructor)) kaapi_init(void)
   /* setup topology information */
   kaapi_setup_topology();
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /* call prior setconcurrency */
+  kaapi_perf_global_init();
+  kaapi_perf_thread_init();
+#endif
+
   /* set the kprocessor AFTER topology !!! */
   kaapi_assert_m( 0, kaapi_setconcurrency( default_param.cpucount ), "kaapi_setconcurrency" );
   
@@ -137,6 +143,12 @@ void __attribute__ ((constructor)) kaapi_init(void)
   printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
 #endif
   fflush( stdout );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_fini();
+  kaapi_perf_global_fini();
+#endif
+
 }
 
 

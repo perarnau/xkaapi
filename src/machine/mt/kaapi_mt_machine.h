@@ -206,6 +206,12 @@ typedef struct kaapi_processor_t {
 
   /* workload */
   kaapi_atomic_t	   workload;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+# define KAAPI_MAX_PERF_COUNTERS 5
+  long_long papi_event_value[KAAPI_MAX_PERF_COUNTERS];
+#endif
+
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
 /*
