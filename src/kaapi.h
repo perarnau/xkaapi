@@ -816,14 +816,18 @@ static inline void kaapi_stack_allocateshareddata(kaapi_access_t* access, kaapi_
 
 
 /** \ingroup STACK
-    The function kaapi_access_init() will return the pointer to an access initialied from a user pointer
-    \param data INOUT a user pointer to assign
+    The function kaapi_access_init() initialize an access from a user defined pointer
+    \param access INOUT a pointer to the kaapi_access_t data structure to initialize
+    \param value INOUT a pointer to the user data
     \retval a pointer to the next task to push or 0.
 */
-static inline kaapi_access_t kaapi_access_init( void* data )
+static inline void kaapi_access_init(kaapi_access_t* access, void* value )
 {
-  kaapi_access_t retval = {data, 0};
-  return retval;
+  access->data = value;
+#if defined(KAAPI_DEBUG)
+  access->version = 0;
+#endif  
+  return;
 }
 
 
