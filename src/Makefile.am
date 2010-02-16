@@ -23,6 +23,11 @@ libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
 #deprecated   workstealing/kaapi_sched_stealtask.c 
 
 libxkaapi_la_SOURCES=\
+  misc/kaapi_version.c \
+  misc/kaapi_init.c \
+  misc/kaapi_time.c \
+  misc/kaapi_hashvalue.c \
+  misc/kaapi_hashmap.c \
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \
@@ -52,10 +57,6 @@ libxkaapi_la_SOURCES=\
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \
-  misc/kaapi_version.c \
-  misc/kaapi_init.c \
-  misc/kaapi_time.c \
-  misc/kaapi_hashvalue.c \
   kaapi_datastructure.h \
   kaapi_defs.h \
   kaapi_error.h \
