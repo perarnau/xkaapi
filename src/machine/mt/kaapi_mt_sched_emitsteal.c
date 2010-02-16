@@ -134,7 +134,7 @@ redo_select:
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
       /* user version that do not decrement the counter */
-      _kaapi_request_reply( 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0 );
+      _kaapi_request_reply( 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0, 0 );
       ++replycount;
     }
   }

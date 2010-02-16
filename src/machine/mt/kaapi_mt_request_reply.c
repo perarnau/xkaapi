@@ -77,7 +77,15 @@ static inline size_t compute_struct_size(size_t data_size)
     The format of the task should give all necessary information about types used in the
     data stack.
 */
-int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int size, int retval )
+int _kaapi_request_reply
+( 
+  kaapi_stack_t* stack, 
+  kaapi_task_t* task, 
+  kaapi_request_t* request, 
+  kaapi_stack_t* thief_stack, 
+  int size, int retval,
+  int insert_head
+)
 {
   kaapi_taskadaptive_result_t* result =0;
   kaapi_taskadaptive_t* ta =0;
@@ -129,12 +137,19 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
         result->rtail           = 0;
         /* link result for preemption / finalization at the head of the list */
         result->prev            = 0;
-        result->next            = ta->head;
+        result->next            = 0;
+
         if (ta->head ==0)
-          ta->tail = result;
-        else
+          ta->tail = ta->head = result;
+        else  if (insert_head) {
+          result->next   = ta->head;
           ta->head->prev = result;
-        ta->head                = result;
+          ta->head       = result;
+        } else {
+          result->prev   = ta->tail;
+          ta->tail->next = result;
+          ta->tail       = result;
+        }
 
         /* update ta of the first replied task in the stack */
         kaapi_task_t* thief_task = thief_stack->pc;
@@ -195,12 +210,57 @@ int _kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_reques
    Be carreful: to not use this function inside the library where reply count is accumulate
    before decremented to the counter.
 */
-int kaapi_request_reply( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_request_t* request, kaapi_stack_t* thief_stack, int size, int retval )
+int kaapi_request_reply( 
+  kaapi_stack_t* stack, 
+  kaapi_task_t* task, 
+  kaapi_request_t* request, 
+  kaapi_stack_t* thief_stack, 
+  int size, 
+  int retval )
 {
   int err;
   request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
-  err=_kaapi_request_reply( stack, task, request, thief_stack, size, retval);
+  err=_kaapi_request_reply( stack, task, request, thief_stack, size, retval, 0);
   KAAPI_ATOMIC_DECR( &stack->_proc->hlrequests.count ); 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count) >= 0 );
   return err;
 }
+
+/*
+*/
+int kaapi_request_reply_head
+(
+ kaapi_stack_t* stack, 
+ kaapi_task_t* task, 
+ kaapi_request_t* request, 
+ kaapi_stack_t* thief_stack, 
+ int size, int retval
+)
+{
+  int err;
+  request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
+  err=_kaapi_request_reply( stack, task, request, thief_stack, size, retval, 1);
+  KAAPI_ATOMIC_DECR( &stack->_proc->hlrequests.count ); 
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count) >= 0 );
+  return err;
+}
+
+/*
+*/
+int kaapi_request_reply_tail
+(
+ kaapi_stack_t* stack, 
+ kaapi_task_t* task, 
+ kaapi_request_t* request, 
+ kaapi_stack_t* thief_stack, 
+ int size, int retval 
+)
+{
+  int err;
+  request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
+  err=_kaapi_request_reply( stack, task, request, thief_stack, size, retval, 0);
+  KAAPI_ATOMIC_DECR( &stack->_proc->hlrequests.count ); 
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count) >= 0 );
+  return err;
+}
+

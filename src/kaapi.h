@@ -1170,7 +1170,7 @@ static inline int kaapi_is_null(void* p)
   ( kaapi_preemptpoint_isactive(stack, task) ? \
         kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim, size_arg_victim),\
         kaapi_preemptpoint_after_reducer_call( stack, task, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)(...))(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__))) \
+        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )
@@ -1250,7 +1250,25 @@ extern int kaapi_request_reply(
     kaapi_stack_t* thief_stack, 
     int size, int retval 
 );
-    
+
+extern int kaapi_request_reply_head
+(
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request, 
+    kaapi_stack_t* thief_stack, 
+    int size, int retval 
+);
+
+extern int kaapi_request_reply_tail
+(
+    kaapi_stack_t* stack, 
+    kaapi_task_t* task, 
+    kaapi_request_t* request, 
+    kaapi_stack_t* thief_stack, 
+    int size, int retval 
+);
+
 /** \ingroup ADAPTIVE
     Specialization to reply failed to a processor
     \param stack INOUT the stack of the victim that has been used to replies to the request

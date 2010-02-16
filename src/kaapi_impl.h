@@ -303,7 +303,7 @@ extern int _kaapi_request_reply(
     kaapi_task_t* task, 
     kaapi_request_t* request, 
     kaapi_stack_t* thief_stack, 
-    int size, int retval 
+    int size, int retval, int insert_head
 );
 
 /** Destroy a request
