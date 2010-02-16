@@ -147,6 +147,30 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 
 
 
+/* ============================= Perfcounters ============================ */
+/** \ingroup WS
+*/
+#define KAAPI_PERF_ID_USER_POS (31)
+#define KAAPI_PERF_ID_USER_MASK (1 << KAAPI_PERF_ID_USER_POS)
+
+#define KAAPI_PERF_ID(U, I) (KAAPI_PERF_ID_ ## I | (U) << KAAPI_PERF_ID_USER_POS)
+#define KAAPI_PERF_ID_USER(I) KAAPI_PERF_ID(1, I)
+#define KAAPI_PERF_ID_PRIV(I) KAAPI_PERF_ID(0, I)
+
+#define KAAPI_PERF_ID_TASKS 0
+#define KAAPI_PERF_ID_STEALREQOK 1
+#define KAAPI_PERF_ID_STEALREQ 2
+#define KAAPI_PERF_ID_STEALOP 3
+#define KAAPI_PERF_ID_SUSPEND 4
+#define KAAPI_PERF_ID_PAPI_BASE (KAAPI_PERF_ID_SUSPEND + 1)
+#define KAAPI_PERF_ID_PAPI_0 (KAAPI_PERF_ID_PAPI_BASE + 0)
+#define KAAPI_PERF_ID_PAPI_1 (KAAPI_PERF_ID_PAPI_BASE + 1)
+#define KAAPI_PERF_ID_PAPI_2 (KAAPI_PERF_ID_PAPI_BASE + 2)
+#define KAAPI_PERF_ID_PAPI_MAX (KAAPI_PERF_ID_PAPI_2 - KAAPI_PERF_ID_PAPI_BASE + 1)
+#define KAAPI_PERF_ID_MAX (KAAPI_PERF_ID_PAPI_2 + 1)
+#define KAAPI_PERF_ID_ALL KAAPI_PERF_ID_MAX
+
+
 /* ============================= Kprocessor ============================ */
 /** \ingroup WS
 */
@@ -154,7 +178,6 @@ typedef struct kaapi_listrequest_t {
   kaapi_atomic_t  count;
   kaapi_request_t requests[KAAPI_MAX_PROCESSOR];
 } kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
-
 
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
@@ -196,6 +219,8 @@ typedef struct kaapi_processor_t {
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
   /* performance counters */
+  kaapi_perf_counter_t	   counters[2][KAAPI_PERF_ID_MAX];
+
   kaapi_uint32_t           cnt_tasks;                     /* number of executed tasks */
   kaapi_uint32_t           cnt_stealreqok;                /* number of steal requests replied with success */
   kaapi_uint32_t           cnt_stealreq;                  /* total number of steal requests replied */
@@ -206,23 +231,6 @@ typedef struct kaapi_processor_t {
 
   /* workload */
   kaapi_atomic_t	   workload;
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-
-#define KAAPI_PERF_TASKS 0
-#define KAAPI_PERF_STEALREQOK 1
-#define KAAPI_PERF_STEALREQ 2
-#define KAAPI_PERF_STEALOP 3
-#define KAAPI_PERF_SUSPEND 4
-#define KAAPI_PERF_PAPI_BASE KAAPI_PERF_SUSPEND
-#define KAAPI_PERF_PAPI_0 (KAAPI_PERF_PAPI_BASE + 0)
-#define KAAPI_PERF_PAPI_1 (KAAPI_PERF_PAPI_BASE + 1)
-#define KAAPI_PERF_PAPI_2 (KAAPI_PERF_PAPI_BASE + 2)
-#define KAAPI_PERF_MAX (KAAPI_PERF_PAPI_2 + 1)
-#define KAAPI_PERF_PAPI_MAX (KAAPI_PERF_MAX - KAAPI_PERF_PAPI_BASE)
-
-  long_long papi_event_value[KAAPI_MAX_PERF_COUNTERS];
-#endif
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 

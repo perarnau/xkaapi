@@ -1308,6 +1308,30 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
 }
 
 
+/* performace counters */
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+# include <papi.h>
+#else
+typedef long long long_long;
+#endif
+
+typedef long_long kaapi_perf_counter_t;
+typedef unsigned int kaapi_perf_id_t;
+
+/* internal */
+void kaapi_perf_global_init(void);
+void kaapi_perf_global_fini(void);
+void kaapi_perf_thread_init(void);
+void kaapi_perf_thread_fini(void);
+
+/* exported */
+void kaapi_perf_zero_counter(kaapi_perf_id_t);
+void kaapi_perf_reset_counter(kaapi_perf_id_t);
+void kaapi_perf_snap_counter(kaapi_perf_id_t);
+void kaapi_perf_accum_counter(kaapi_perf_id_t);
+void kaapi_perf_reduce_counter(kaapi_perf_id_t, kaapi_perf_counter_t*);
+
 
 /* ========================================================================= */
 /* Format declaration                                                        */
