@@ -153,6 +153,7 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
 #include "kaapi_machine.h"
 
 
+/* ============================= Default parameters ============================ */
 /** Setup KAAPI parameter from
     1/ the command line option
     2/ form the environment variable
@@ -173,6 +174,49 @@ typedef struct kaapi_rtparam_t {
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t default_param;
+
+
+
+/* ============================= Hash table for WS ============================ */
+/*
+*/
+typedef struct kaapi_hashentries_t {
+  kaapi_gd_t                  value;
+  void*                       key;
+  struct kaapi_hashentries_t* next; 
+} kaapi_hashentries_t;
+
+
+#define KAAPI_BLOCENTRIES_SIZE 32
+/*
+*/
+typedef struct kaapi_hashentries_bloc_t {
+  kaapi_hashentries_t              data[KAAPI_BLOCENTRIES_SIZE]; 
+  int                              pos;  /* next free in data */
+  struct kaapi_hashentries_bloc_t* next; /* link list of bloc */
+} kaapi_hashentries_bloc_t;
+
+#define KAAPI_HASHMAP_SIZE 64
+/*
+*/
+typedef struct kaapi_hashmap_t {
+  kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
+  kaapi_hashentries_bloc_t* currentbloc;
+  kaapi_hashentries_bloc_t* allallocatedbloc;
+} kaapi_hashmap_t;
+
+/*
+*/
+extern int kaapi_hashmap_init( kaapi_hashmap_t* khm );
+
+/*
+*/
+extern int kaapi_hashmap_destroy( kaapi_hashmap_t* khm );
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr );
+
 
 
 /* ============================= Commun function for server side (no public) ============================ */

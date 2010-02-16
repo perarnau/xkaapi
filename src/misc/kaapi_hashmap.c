@@ -1,13 +1,12 @@
 /*
-** kaapi_hashvalue.c
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -44,70 +43,59 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <string.h>
 
-// --------------------------------------------------------------------
-/* source of this function from Paul Hsieh at url
-  http://www.azillionmonkeys.com/qed/hash.html
+
+/*
 */
-#if !defined (get16bits)
-/* [TG] indep from big/little endian. */
-#define get16bits(d) ( (((const kaapi_uint8_t *)(d))[1] << (kaapi_uint32_t)8)\
-                       +((const kaapi_uint8_t *)(d))[0] \
-                     )
-#endif
-
-kaapi_uint32_t kaapi_hash_value_len(const char * data, int len) 
+int kaapi_hashmap_init( kaapi_hashmap_t* khm )
 {
-  if (data == 0) return 0;
-
-  kaapi_uint32_t hash = 0, tmp;
-  int rem;
-
-  if (len <= 0) return 0;
-
-  rem = len & 3;
-  len >>= 2;
-
-  /* Main loop */
-  for (;len > 0; len--) {
-      hash  += get16bits (data);
-      tmp    = (get16bits (data+2) << 11) ^ hash;
-      hash   = (hash << 16) ^ tmp;
-      data  += 2*sizeof (kaapi_uint16_t);
-      hash  += hash >> 11;
-  }
-
-  /* Handle end cases */
-  switch (rem) {
-      case 3: hash += get16bits (data);
-              hash ^= hash << 16;
-              hash ^= data[sizeof (kaapi_uint16_t)] << 18;
-              hash += hash >> 11;
-              break;
-      case 2: hash += get16bits (data);
-              hash ^= hash << 11;
-              hash += hash >> 17;
-              break;
-      case 1: hash += *data;
-              hash ^= hash << 10;
-              hash += hash >> 1;
-  }
-
-  /* Force "avalanching" of final 127 bits */
-  hash ^= hash << 3;
-  hash += hash >> 5;
-  hash ^= hash << 2;
-  hash += hash >> 15;
-  hash ^= hash << 10;
-
-  return hash;
+  memset( khm, 0, sizeof(kaapi_hashmap_t) );
+  return 0;
 }
 
-kaapi_uint32_t kaapi_hash_value(const char * data) 
-{
-  if (data == 0) return 0;
 
-  int len = strlen( data );
-  return kaapi_hash_value_len( data, len );
+/*
+*/
+int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
+{
+  while (khm->allallocatedbloc !=0)
+  {
+    kaapi_hashentries_bloc_t* curr = khm->allallocatedbloc;
+    khm->allallocatedbloc = curr->next;
+    free (curr);
+  }
+  return 0;
 }
+
+
+/*
+*/
+kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
+{
+  kaapi_uint32_t hkey = kaapi_hash_value_len( ptr, sizeof( void* ) );
+  kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
+  kaapi_hashentries_t* entry = list_hash;
+  while (entry != 0)
+  {
+    if (entry->key == ptr) return entry;
+    entry = entry->next;
+  }
+  
+  /* allocate new entry */
+  if (khm->currentbloc == 0) 
+  {
+    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
+    khm->currentbloc->next = khm->allallocatedbloc;
+    khm->allallocatedbloc = khm->currentbloc;
+    khm->currentbloc->pos = 0;
+  }
+  
+  entry = &khm->currentbloc->data[khm->currentbloc->pos];
+  if (++khm->currentbloc == KAAPI_BLOCENTRIES_SIZE)
+  {
+    khm->currentbloc = 0;
+  }
+  entry->next = list_hash;
+  khm->entries[ hkey ] = entry;
+}
+
