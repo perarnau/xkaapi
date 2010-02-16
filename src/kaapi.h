@@ -180,6 +180,7 @@ extern double kaapi_get_elapsedtime(void);
 /* ========================================================================== */
 /** COmpute a hash value from a string
 */
+extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 /* ========================================================================= */
@@ -547,11 +548,11 @@ typedef struct kaapi_gd_t {
 
 
 /** \ingroup DFG
-    Kaapi access
+    Kaapi access, public
 */
 typedef struct kaapi_access_t {
-  void* data;
-  void* version;
+  void* data;                    /* global data */
+  kaapi_gd_t* internal;          /* used for WS, 0 if not yet hashed */
 } kaapi_access_t;
 
 #define kaapi_data(type, a)\
@@ -767,6 +768,7 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
   return retval;
 }
 
+
 /** \ingroup STACK
     The function kaapi_stack_pushdata() will return the pointer to the next top data.
     The top data is not yet into the stack.
@@ -777,22 +779,24 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
 */
 static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
-  kaapi_access_t retval = {0, 0};
-  kaapi_gd_t* gd;
-#if defined(KAAPI_DEBUG)
-  if (stack ==0) return retval;
-  if ((char*)stack->sp_data+count+sizeof(kaapi_gd_t) >= (char*)stack->sp)
-    return retval;
-#endif
-
-  gd              = (kaapi_gd_t*)stack->sp_data;
-  gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
-  stack->sp_data += sizeof(kaapi_gd_t);
-  retval.data     = stack->sp_data;
-  gd->last_version = retval.data;
-  stack->sp_data += count;
+  kaapi_access_t retval;
+  retval.data = kaapi_stack_pushdata(stack, count);
+  retval.internal = 0;
   return retval;
 }
+
+
+/** \ingroup STACK
+    The function kaapi_access_init() will return the pointer to an access initialied from a user pointer
+    \param data INOUT a user pointer to assign
+    \retval a pointer to the next task to push or 0.
+*/
+static inline kaapi_access_t kaapi_access_init( void* data )
+{
+  kaapi_access_t retval = {data, 0};
+  return retval;
+}
+
 
 #define kaapi_stack_topdata(stack) \
     (stack)->sp_data
