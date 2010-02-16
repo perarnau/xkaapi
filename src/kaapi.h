@@ -453,7 +453,7 @@ typedef struct kaapi_task_t {
   kaapi_task_body_t     body;      /** C function that represent the body to execute */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
   kaapi_format_t*       format;    /** format, 0 if not def !!!  */
-} __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_task_t ;
+} kaapi_task_t ;
 
 
 struct kaapi_taskadaptive_result_t;
@@ -552,7 +552,7 @@ typedef struct kaapi_gd_t {
 */
 typedef struct kaapi_access_t {
   void* data;                    /* global data */
-  kaapi_gd_t* internal;          /* used for WS, 0 if not yet hashed */
+  void* version;                 /* used for WS, 0 if not yet hashed */
 } kaapi_access_t;
 
 #define kaapi_data(type, a)\
@@ -780,9 +780,38 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
 static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
   kaapi_access_t retval;
-  retval.data = kaapi_stack_pushdata(stack, count);
-  retval.internal = 0;
+#if defined(KAAPI_DEBUG)
+  if (stack ==0) { retval.data = 0; return retval; }
+  if ((char*)stack->sp_data+count >= (char*)stack->sp) { retval.data = 0; return retval; }
+#endif
+  retval.data = stack->sp_data;
+#if defined(KAAPI_DEBUG)
+  retval.version = 0;
+#endif  
+  stack->sp_data += count;
   return retval;
+}
+
+/** \ingroup STACK
+    The function kaapi_stack_pushdata() will return the pointer to the next top data.
+    The top data is not yet into the stack.
+    If successful, the kaapi_stack_pushdata() function will return a pointer to the next data to push.
+    Otherwise, an 0 is returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval a pointer to the next task to push or 0.
+*/
+static inline void kaapi_stack_allocateshareddata(kaapi_access_t* access, kaapi_stack_t* stack, kaapi_uint32_t count)
+{
+#if defined(KAAPI_DEBUG)
+  if (stack ==0) { access->data = 0; return; }
+  if ((char*)stack->sp_data+count >= (char*)stack->sp) { access->data = 0; return; }
+#endif
+  access->data = stack->sp_data;
+#if defined(KAAPI_DEBUG)
+  access->version = 0;
+#endif  
+  stack->sp_data += count;
+  return;
 }
 
 

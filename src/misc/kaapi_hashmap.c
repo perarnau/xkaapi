@@ -47,9 +47,14 @@
 
 /*
 */
-int kaapi_hashmap_init( kaapi_hashmap_t* khm )
+int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc )
 {
   memset( khm, 0, sizeof(kaapi_hashmap_t) );
+  if (initbloc !=0)
+  {
+    khm->currentbloc = initbloc;
+    khm->currentbloc->pos = 0;
+  }
   return 0;
 }
 
@@ -73,6 +78,7 @@ int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
 kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
 {
   kaapi_uint32_t hkey = kaapi_hash_value_len( ptr, sizeof( void* ) );
+  hkey = hkey % KAAPI_HASHMAP_SIZE;
   kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
   kaapi_hashentries_t* entry = list_hash;
   while (entry != 0)
@@ -91,11 +97,14 @@ kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
   }
   
   entry = &khm->currentbloc->data[khm->currentbloc->pos];
-  if (++khm->currentbloc == KAAPI_BLOCENTRIES_SIZE)
+  entry->value.last_version = 0;
+  entry->value.last_mode = KAAPI_ACCESS_MODE_VOID;
+  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
   {
     khm->currentbloc = 0;
   }
   entry->next = list_hash;
   khm->entries[ hkey ] = entry;
+  return entry;
 }
 

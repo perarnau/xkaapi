@@ -207,7 +207,7 @@ typedef struct kaapi_hashmap_t {
 
 /*
 */
-extern int kaapi_hashmap_init( kaapi_hashmap_t* khm );
+extern int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc );
 
 /*
 */
