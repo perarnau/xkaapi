@@ -37,12 +37,15 @@ int fiboseq_On(int n){
 /* Print any typed shared
  * this task has read acces on a, it will wait until previous write acces on it are done
 */
+static double start_time;
 template<class T>
 struct PrintBody {
-  void operator() ( const T* a, const T& ref_value, double t )
+  void operator() ( ka::pointer_r<T> a, const T& ref_value)
   { 
     /*  ka::WallTimer::gettime is a wrapper around gettimeofday(2) */
-    double delay = ka::WallTimer::gettime() - t;
+    double t1 = ka::WallTimer::gettime();
+    double delay = t1 - start_time;
+    start_time= t1;
 
     /*  ka::System::getRank() prints out the id of the node executing the task */
     ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
@@ -54,7 +57,7 @@ struct PrintBody {
 
 /* Description of Update task */
 template<class T>
-struct TaskPrint : public ka::Task<3>::Signature<ka::Shared_r<T>, T, double> {};
+struct TaskPrint : public ka::Task<2>::Signature<ka::Shared_r<T>, T> {};
 
 /* Specialize default / CPU */
 template<class T>
@@ -67,9 +70,9 @@ struct TaskBodyCPU<TaskPrint<T> > : public PrintBody<T> { };
  * once finished, further read of res will be possible
  */
 struct SumBody {
-  void operator() ( int* res, 
-                    const int* a, 
-                    const int* b) 
+  void operator() ( ka::pointer_w<int> res, 
+                    ka::pointer_r<int> a, 
+                    ka::pointer_r<int> b) 
   {
     /* write is used to write data to a Shared_w
      * read is used to read data from a Shared_r
@@ -88,38 +91,34 @@ struct TaskBodyCPU<TaskSum> : public SumBody { };
  *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
  */
 struct FiboBody {
-  void operator() ( int* res, int n );
+  void operator() ( ka::pointer_w<int> res, int n );
 };
 struct TaskFibo : public ka::Task<2>::Signature<ka::Shared_w<int>, int > {};
-
-template<> /* declare task body for CPU, NO GPU version */
+template<>
 struct TaskBodyCPU<TaskFibo> : public FiboBody {};
 
 
-void FiboBody::operator() ( int* res, int n )
-{  
-  if (n < 2) {
-    *res = fiboseq(n);
-  }
-  else {
-    /* the scope of res1 and res2 is at most the end of execution of TaskSum, thus they can
-       be allocate on the Kaapi stack
-    */
-    int* res1 = ka::Alloca<int>(1);
-    int* res2 = ka::Alloca<int>(1);
+  void FiboBody::operator() ( ka::pointer_w<int> res, int n )
+  {  
+    if (n < 2) {
+      *res = fiboseq(n);
+    }
+    else {
+      ka::pointer_rpwp<int> res1 = ka::Alloca<int>(1);
+      ka::pointer_rpwp<int> res2 = ka::Alloca<int>(1);
 
-    /* the Fork keyword is used to spawn new task
-     * new tasks are executed in parallel as long as dependencies are respected
-     */
-    ka::Fork<TaskFibo>() ( res1, n-1);
-    ka::Fork<TaskFibo>() ( res2, n-2 );
+      /* the Fork keyword is used to spawn new task
+       * new tasks are executed in parallel as long as dependencies are respected
+       */
+      ka::Fork<TaskFibo>() ( res1, n-1);
+      ka::Fork<TaskFibo>() ( res2, n-2 );
 
-    /* the Sum task depends on res1 and res2 which are written by previous tasks
-     * it must wait until thoses tasks are finished
-     */
-    ka::Fork<TaskSum>()  ( res, res1, res2 );
+      /* the Sum task depends on res1 and res2 which are written by previous tasks
+       * it must wait until thoses tasks are finished
+       */
+      ka::Fork<TaskSum>()  ( res, res1, res2 );
+    }
   }
-}
 
 
 /* Main of the program
@@ -133,17 +132,15 @@ struct doit {
     double delay = ka::WallTimer::gettime() - t;
     ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
+    start_time= ka::WallTimer::gettime();
     for (unsigned int i = 0 ; i < iter ; ++i)
     {   
-      double time= ka::WallTimer::gettime();
-
-      int* res;
+      ka::pointer_rpwp<int> res = ka::Alloca<int>(1);
       
       ka::Fork<TaskFibo>(ka::SetLocal)( res, n );
 
       /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      ka::Fork<TaskPrint<int> >(ka::SetLocal)(res, ref_value, time);
-      ka::Sync();
+      ka::Fork<TaskPrint<int> >(ka::SetLocal)(res, ref_value);
     }
   }
 

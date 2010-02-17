@@ -13,8 +13,7 @@ check_PROGRAMS= \
 	fiboseq                \
 	fibo                   \
 	fibo_apiatha           \
-	fibo_apiatha2          \
-	fibo_apiatha3          \
+	fibo_apikaapi          \
 	nqueens_apiatha        \
 	branchbound_apiatha    \
 	transform_adapt	       \
@@ -31,8 +30,7 @@ fiboseq_SOURCES=fiboseq.c
 fibo_SOURCES=fibo.c
 fibo_adapt_SOURCES=fibo_adapt.c
 fibo_apiatha_SOURCES=fibo_apiatha.cpp
-fibo_apiatha2_SOURCES=fibo_apiatha2.cpp
-fibo_apiatha3_SOURCES=fibo_apiatha3.cpp
+fibo_apikaapi_SOURCES=fibo_apikaapi.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
@@ -65,10 +63,10 @@ fibo_apiatha2_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_F
 fibo_apiatha2_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 fibo_apiatha2_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libxkaapixx.la ../src/libxkaapi.la
 
-fibo_apiatha3_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
-fibo_apiatha3_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-fibo_apiatha3_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
-fibo_apiatha3_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libxkaapixx.la ../src/libxkaapi.la
+fibo_apikaapi_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
+fibo_apikaapi_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+fibo_apikaapi_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+fibo_apikaapi_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libxkaapixx.la ../src/libxkaapi.la
 
 nqueens_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
 nqueens_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)

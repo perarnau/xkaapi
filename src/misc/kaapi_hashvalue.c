@@ -57,13 +57,12 @@
                      )
 #endif
 
-kaapi_uint32_t kaapi_hash_value(const char * data) 
+kaapi_uint32_t kaapi_hash_value_len(const char * data, int len) 
 {
   if (data == 0) return 0;
 
   kaapi_uint32_t hash = 0, tmp;
   int rem;
-  int len = strlen( data );
 
   if (len <= 0) return 0;
 
@@ -103,4 +102,12 @@ kaapi_uint32_t kaapi_hash_value(const char * data)
   hash ^= hash << 10;
 
   return hash;
+}
+
+kaapi_uint32_t kaapi_hash_value(const char * data) 
+{
+  if (data == 0) return 0;
+
+  int len = strlen( data );
+  return kaapi_hash_value_len( data, len );
 }

@@ -80,9 +80,8 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
       void* param = (void*)(fmt->off_params[i] + (char*)arg);
       kaapi_format_t* fmt_param = fmt->fmt_params[i];
       kaapi_access_t* access = (kaapi_access_t*)(param);
-      /* TODO: improve management of shared data, if it is a big data or not... */
-//      printf("After steal task:%p, name: %s, W object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
-kaapi_assert_debug( access->data != access->version );
+      /* Always keep copy semantic ? At the charge of the user to deal with lazy copy ? */
+      kaapi_assert_debug( access->data != access->version );
 
       (*fmt_param->assign)( access->data, access->version );
       (*fmt_param->dstor) ( access->version );

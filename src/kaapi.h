@@ -180,6 +180,7 @@ extern double kaapi_get_elapsedtime(void);
 /* ========================================================================== */
 /** COmpute a hash value from a string
 */
+extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 /* ========================================================================= */
@@ -452,7 +453,7 @@ typedef struct kaapi_task_t {
   kaapi_task_body_t     body;      /** C function that represent the body to execute */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
   kaapi_format_t*       format;    /** format, 0 if not def !!!  */
-} __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_task_t ;
+} kaapi_task_t ;
 
 
 struct kaapi_taskadaptive_result_t;
@@ -547,14 +548,17 @@ typedef struct kaapi_gd_t {
 
 
 /** \ingroup DFG
-    Kaapi access
+    Kaapi access, public
 */
 typedef struct kaapi_access_t {
-  void* data;
-  void* version;
+  void* data;                    /* global data */
+  void* version;                 /* used for WS, 0 if not yet hashed */
 } kaapi_access_t;
 
 #define kaapi_data(type, a)\
+  ((type*)(a)->data)
+
+#define KAAPI_DATA(type, a)\
   ((type*)a.data)
 
 
@@ -767,6 +771,7 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
   return retval;
 }
 
+
 /** \ingroup STACK
     The function kaapi_stack_pushdata() will return the pointer to the next top data.
     The top data is not yet into the stack.
@@ -777,22 +782,57 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
 */
 static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, kaapi_uint32_t count)
 {
-  kaapi_access_t retval = {0, 0};
-  kaapi_gd_t* gd;
+  kaapi_access_t retval;
 #if defined(KAAPI_DEBUG)
-  if (stack ==0) return retval;
-  if ((char*)stack->sp_data+count+sizeof(kaapi_gd_t) >= (char*)stack->sp)
-    return retval;
+  if (stack ==0) { retval.data = 0; return retval; }
+  if ((char*)stack->sp_data+count >= (char*)stack->sp) { retval.data = 0; return retval; }
 #endif
-
-  gd              = (kaapi_gd_t*)stack->sp_data;
-  gd->last_mode   = KAAPI_ACCESS_MODE_VOID;
-  stack->sp_data += sizeof(kaapi_gd_t);
-  retval.data     = stack->sp_data;
-  gd->last_version = retval.data;
+  retval.data = stack->sp_data;
+#if defined(KAAPI_DEBUG)
+  retval.version = 0;
+#endif  
   stack->sp_data += count;
   return retval;
 }
+
+/** \ingroup STACK
+    The function kaapi_stack_pushdata() will return the pointer to the next top data.
+    The top data is not yet into the stack.
+    If successful, the kaapi_stack_pushdata() function will return a pointer to the next data to push.
+    Otherwise, an 0 is returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval a pointer to the next task to push or 0.
+*/
+static inline void kaapi_stack_allocateshareddata(kaapi_access_t* access, kaapi_stack_t* stack, kaapi_uint32_t count)
+{
+#if defined(KAAPI_DEBUG)
+  if (stack ==0) { access->data = 0; return; }
+  if ((char*)stack->sp_data+count >= (char*)stack->sp) { access->data = 0; return; }
+#endif
+  access->data = stack->sp_data;
+#if defined(KAAPI_DEBUG)
+  access->version = 0;
+#endif  
+  stack->sp_data += count;
+  return;
+}
+
+
+/** \ingroup STACK
+    The function kaapi_access_init() initialize an access from a user defined pointer
+    \param access INOUT a pointer to the kaapi_access_t data structure to initialize
+    \param value INOUT a pointer to the user data
+    \retval a pointer to the next task to push or 0.
+*/
+static inline void kaapi_access_init(kaapi_access_t* access, void* value )
+{
+  access->data = value;
+#if defined(KAAPI_DEBUG)
+  access->version = 0;
+#endif  
+  return;
+}
+
 
 #define kaapi_stack_topdata(stack) \
     (stack)->sp_data
@@ -1310,7 +1350,24 @@ extern int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task);
     adaptive task 'task' and all the thieves.
     The local result, if not null will be pushed after the end of execution of all local tasks.
 */
-static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task, void* retval, int size )
+static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
+{
+  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
+  {
+    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
+    kaapi_task_t* task = kaapi_stack_toptask(stack);
+    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    kaapi_stack_pushtask(stack);
+  }
+  return 0;
+}
+
+/** \ingroup ADAPTIVE
+    Push the task that, on execution will wait the terminaison of the previous 
+    adaptive task 'task' and all the thieves.
+    The local result, if not null will be pushed after the end of execution of all local tasks.
+*/
+static inline int kaapi_return_steal( kaapi_stack_t* stack, kaapi_task_t* task, void* retval, int size )
 {
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {

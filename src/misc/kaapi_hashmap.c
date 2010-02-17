@@ -1,9 +1,9 @@
 /*
-** kaapi_sched_sync.c
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
@@ -45,34 +45,66 @@
 #include "kaapi_impl.h"
 
 
-/**kaapi_sched_sync
+/*
 */
-int kaapi_sched_sync(kaapi_stack_t* stack)
+int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc )
 {
-  int err;
-  kaapi_task_t* pc     = stack->pc;
-  kaapi_task_t* savepc = pc;
-
-  /* look for retn */
-  while ((pc->body != &kaapi_retn_body) && (pc != stack->sp)) 
-    --pc;
-
-  if (kaapi_stack_isempty( stack ) ) return 0;
-
-  /* stop on retn -> executed next task */
-  if (pc != stack->sp)
-    stack->pc = --pc;
-  else 
-    stack->pc = pc = stack->pc-1;
-
-redo:
-  err = kaapi_stack_execchild(stack, pc);
-  if (err == EWOULDBLOCK)
+  memset( khm, 0, sizeof(kaapi_hashmap_t) );
+  if (initbloc !=0)
   {
-    kaapi_sched_suspend( kaapi_get_current_processor() );
-    pc = stack->pc;
-    goto redo;
+    khm->currentbloc = initbloc;
+    khm->currentbloc->pos = 0;
   }
-  stack->pc = savepc;
-  return err;
+  return 0;
 }
+
+
+/*
+*/
+int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
+{
+  while (khm->allallocatedbloc !=0)
+  {
+    kaapi_hashentries_bloc_t* curr = khm->allallocatedbloc;
+    khm->allallocatedbloc = curr->next;
+    free (curr);
+  }
+  return 0;
+}
+
+
+/*
+*/
+kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
+{
+  kaapi_uint32_t hkey = kaapi_hash_value_len( ptr, sizeof( void* ) );
+  hkey = hkey % KAAPI_HASHMAP_SIZE;
+  kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
+  kaapi_hashentries_t* entry = list_hash;
+  while (entry != 0)
+  {
+    if (entry->key == ptr) return entry;
+    entry = entry->next;
+  }
+  
+  /* allocate new entry */
+  if (khm->currentbloc == 0) 
+  {
+    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
+    khm->currentbloc->next = khm->allallocatedbloc;
+    khm->allallocatedbloc = khm->currentbloc;
+    khm->currentbloc->pos = 0;
+  }
+  
+  entry = &khm->currentbloc->data[khm->currentbloc->pos];
+  entry->value.last_version = 0;
+  entry->value.last_mode = KAAPI_ACCESS_MODE_VOID;
+  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
+  {
+    khm->currentbloc = 0;
+  }
+  entry->next = list_hash;
+  khm->entries[ hkey ] = entry;
+  return entry;
+}
+

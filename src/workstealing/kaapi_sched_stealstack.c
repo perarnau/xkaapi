@@ -45,13 +45,30 @@
 #include "kaapi_impl.h"
 
 /* fwd decl */
-static int kaapi_updateaccess_ready( kaapi_task_t* task_bot, const kaapi_format_t* task_fmt, kaapi_task_state_t state );
+static int kaapi_updateaccess_ready( 
+  kaapi_hashmap_t* access_to_gd,
+  kaapi_task_t* task_bot, 
+  const kaapi_format_t* task_fmt, 
+  kaapi_task_state_t state 
+);
+
 static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi_task_t** curr, kaapi_task_t* endmax );
-static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* endmax );
+
+static int kaapi_update_version( 
+  kaapi_hashmap_t* access_to_gd,
+  int count, 
+  kaapi_task_t* beg, 
+  kaapi_task_t* endmax 
+);
 
 /*
 */
-static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* fmt, kaapi_task_state_t state )
+static int kaapi_updateaccess_ready( 
+  kaapi_hashmap_t* access_to_gd, 
+  kaapi_task_t* task, 
+  const kaapi_format_t* fmt, 
+  kaapi_task_state_t state 
+)
 {
   int i;
   int countparam;
@@ -82,7 +99,9 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
       continue;
     }
     kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
-    kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
+
+    /* key point here to be able to reuse user data */
+    kaapi_gd_t* gd = &kaapi_hashmap_find( access_to_gd, access->data )->value;
     
     switch (state) {
       case KAAPI_TASK_S_INIT:
@@ -113,9 +132,9 @@ static int kaapi_updateaccess_ready( kaapi_task_t* task, const kaapi_format_t* f
         int r1 __attribute__((unused)) = KAAPI_ACCESS_IS_ONLYWRITE(m);
         int r2 __attribute__((unused)) = KAAPI_ACCESS_IS_READWRITE(m);
         if (KAAPI_ACCESS_IS_ONLYWRITE(m) || KAAPI_ACCESS_IS_READWRITE(m))
-          gd->last_version = 0;          /* data not produced */
+          gd->last_version = 0;              /* data not produced */
         else {
-          gd->last_version = access->data;          /* data R -> is ready */
+          gd->last_version = access->data;   /* data R -> is ready */
         }
         gd->last_mode = m;
         --waitparam; /* but parameter is ready ! */
@@ -153,7 +172,7 @@ static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi
 
 /* update all versions & readiness flag for tasks in the frame [beg, end(, curr is the current task of the frame 
 */
-static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* endmax )
+static int kaapi_update_version( kaapi_hashmap_t* access_to_gd, int count, kaapi_task_t* beg, kaapi_task_t* endmax )
 {
   const kaapi_format_t* fmt;
   int waitparam;
@@ -183,7 +202,7 @@ static int kaapi_update_version( int count, kaapi_task_t* beg, kaapi_task_t* end
     }
 
     state = kaapi_task_getstate( beg );
-    waitparam = kaapi_updateaccess_ready( beg, fmt, state );
+    waitparam = kaapi_updateaccess_ready( access_to_gd, beg, fmt, state );
 
     /* TODO: Optimization: can i steal it ? to decr count and return quickly */
     if (waitparam ==0) 
@@ -216,7 +235,7 @@ return 0;
     kaapi_assert_debug( (end !=0) && (end->body == &kaapi_retn_body) );
     if (end-1 > endmax) 
     { /* recursive call on sub frame */
-      kaapi_update_version( count, end-1, endmax );
+      kaapi_update_version( access_to_gd, count, end-1, endmax );
     }
   }
   
@@ -238,6 +257,9 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr )
   int isready;
   int isupdateversion = 0;
   kaapi_task_state_t state;
+  
+  kaapi_hashmap_t access_to_gd;
+  kaapi_hashentries_bloc_t stackbloc;
 
 #if defined(KAAPI_CONCURRENT_WS)
   count = KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count);
@@ -246,6 +268,9 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr )
 #endif
   if (count ==0) return 0;
   if (kaapi_stack_isempty( stack)) return 0;
+
+
+  kaapi_hashmap_init( &access_to_gd, 0 ); //&stackbloc );
 
   savecount = count;
 
@@ -286,7 +311,7 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
     {
       if ( (isupdateversion ==0) && kaapi_task_issync(task_bot) )
       {
-        kaapi_update_version( count, task_bot, task_top );
+        kaapi_update_version( &access_to_gd, count, task_bot, task_top );
 #if 0
         printf("================ AFTER UPDATE VERSION \n");
         fflush(stdout);
@@ -361,20 +386,11 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
   }
 
 #if 0
-  if (step ==0) 
-  {
-    step = 1;  
-#if 1
-printf("------ Redo steal count:%i,  @stack:%p\n", count, (void*)stack );
-#endif
-    goto redo_compute;
-  }
-#endif  
-  
-#if 0
 printf("------ END STEAL @:%p\n", (void*)stack );
 #endif
   
+  kaapi_hashmap_destroy( &access_to_gd );
+
   if (replycount >0)
   {
     KAAPI_ATOMIC_SUB( &stack->_proc->hlrequests.count, replycount );
