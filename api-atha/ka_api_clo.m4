@@ -24,6 +24,8 @@ template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){ 
  M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inclosure type_inclosure_F$1;
   ', ` ', `')
+ M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+  ', ` ', `')
  M4_PARAM(`type_inclosure_F$1 f$1;
   ', ` ', `')
   typedef KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', `')> Self_t;
@@ -33,7 +35,7 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
   {
     static TaskBodyCPU<TASK> dummy;
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`Self_t* args = kaapi_task_getargst(t, Self_t);')
-    dummy(M4_PARAM(`args->f$1', `', `, '));
+    dummy(M4_PARAM(`(type_inuserfunction_F$1)args->f$1', `', `, '));
   }
 
   /* */
@@ -41,7 +43,7 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
   {
     static TaskBodyGPU<TASK> dummy;
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`Self_t* args = kaapi_task_getargst(t, Self_t);')
-    dummy(M4_PARAM(`args->f$1', `', `, '));
+    dummy(M4_PARAM(`(type_inuserfunction_F$1)args->f$1', `', `, '));
   }
 
   static kaapi_format_t    format;
