@@ -146,31 +146,6 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 /*@}*/
 
 
-
-/* ============================= Perfcounters ============================ */
-/** \ingroup WS
-*/
-#define KAAPI_PERF_ID_USER_POS (31)
-#define KAAPI_PERF_ID_USER_MASK (1 << KAAPI_PERF_ID_USER_POS)
-
-#define KAAPI_PERF_ID(U, I) (KAAPI_PERF_ID_ ## I | (U) << KAAPI_PERF_ID_USER_POS)
-#define KAAPI_PERF_ID_USER(I) KAAPI_PERF_ID(1, I)
-#define KAAPI_PERF_ID_PRIV(I) KAAPI_PERF_ID(0, I)
-
-#define KAAPI_PERF_ID_TASKS 0
-#define KAAPI_PERF_ID_STEALREQOK 1
-#define KAAPI_PERF_ID_STEALREQ 2
-#define KAAPI_PERF_ID_STEALOP 3
-#define KAAPI_PERF_ID_SUSPEND 4
-#define KAAPI_PERF_ID_PAPI_BASE (KAAPI_PERF_ID_SUSPEND + 1)
-#define KAAPI_PERF_ID_PAPI_0 (KAAPI_PERF_ID_PAPI_BASE + 0)
-#define KAAPI_PERF_ID_PAPI_1 (KAAPI_PERF_ID_PAPI_BASE + 1)
-#define KAAPI_PERF_ID_PAPI_2 (KAAPI_PERF_ID_PAPI_BASE + 2)
-#define KAAPI_PERF_ID_PAPI_MAX (KAAPI_PERF_ID_PAPI_2 - KAAPI_PERF_ID_PAPI_BASE + 1)
-#define KAAPI_PERF_ID_MAX (KAAPI_PERF_ID_PAPI_2 + 1)
-#define KAAPI_PERF_ID_ALL KAAPI_PERF_ID_MAX
-
-
 /* ============================= Kprocessor ============================ */
 /** \ingroup WS
 */

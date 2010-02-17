@@ -1307,14 +1307,35 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
   return 0;
 }
 
-
-/* performace counters */
+/** \ingroup PERF
+    performace counters
+*/
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 # include <papi.h>
 #else
 typedef long long long_long;
 #endif
+
+#define KAAPI_PERF_ID_USER_POS (31)
+#define KAAPI_PERF_ID_USER_MASK (1 << KAAPI_PERF_ID_USER_POS)
+
+#define KAAPI_PERF_ID(U, I) (KAAPI_PERF_ID_ ## I | (U) << KAAPI_PERF_ID_USER_POS)
+#define KAAPI_PERF_ID_USER(I) KAAPI_PERF_ID(1, I)
+#define KAAPI_PERF_ID_PRIV(I) KAAPI_PERF_ID(0, I)
+
+#define KAAPI_PERF_ID_TASKS 0
+#define KAAPI_PERF_ID_STEALREQOK 1
+#define KAAPI_PERF_ID_STEALREQ 2
+#define KAAPI_PERF_ID_STEALOP 3
+#define KAAPI_PERF_ID_SUSPEND 4
+#define KAAPI_PERF_ID_PAPI_BASE (KAAPI_PERF_ID_SUSPEND + 1)
+#define KAAPI_PERF_ID_PAPI_0 (KAAPI_PERF_ID_PAPI_BASE + 0)
+#define KAAPI_PERF_ID_PAPI_1 (KAAPI_PERF_ID_PAPI_BASE + 1)
+#define KAAPI_PERF_ID_PAPI_2 (KAAPI_PERF_ID_PAPI_BASE + 2)
+#define KAAPI_PERF_ID_PAPI_MAX (KAAPI_PERF_ID_PAPI_2 - KAAPI_PERF_ID_PAPI_BASE + 1)
+#define KAAPI_PERF_ID_MAX (KAAPI_PERF_ID_PAPI_2 + 1)
+#define KAAPI_PERF_ID_ALL KAAPI_PERF_ID_MAX
 
 typedef long_long kaapi_perf_counter_t;
 typedef unsigned int kaapi_perf_id_t;
@@ -1325,12 +1346,14 @@ void kaapi_perf_global_fini(void);
 void kaapi_perf_thread_init(void);
 void kaapi_perf_thread_fini(void);
 
-/* exported */
-void kaapi_perf_zero_counter(kaapi_perf_id_t);
-void kaapi_perf_reset_counter(kaapi_perf_id_t);
-void kaapi_perf_snap_counter(kaapi_perf_id_t);
-void kaapi_perf_accum_counter(kaapi_perf_id_t);
-void kaapi_perf_reduce_counter(kaapi_perf_id_t, kaapi_perf_counter_t*);
+/* exported, perf register */
+void kaapi_perf_reset_register(kaapi_perf_id_t);
+void kaapi_perf_read_register(kaapi_perf_id_t);
+void kaapi_perf_accum_register(kaapi_perf_id_t);
+
+/* exported, perf counters */
+void kaapi_perf_zero_counters(kaapi_perf_id_t);
+void kaapi_perf_accum_counters(kaapi_perf_id_t, kaapi_perf_counter_t*);
 
 
 /* ========================================================================= */

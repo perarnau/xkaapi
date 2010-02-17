@@ -90,21 +90,7 @@ void kaapi_perf_global_init(void)
 
   error = get_papi_events();
   kaapi_assert_m(0, error, "get_papi_events()");
-}
 
-
-void kaapi_perf_global_fini(void)
-{
-  if (papi_event_set != PAPI_NULL)
-  {
-    PAPI_cleanup_eventset(papi_event_set);
-    PAPI_destroy_eventset(&papi_event_set);
-  }
-}
-
-
-void kaapi_perf_thread_init(void)
-{
   if (papi_event_count)
   {
     const int err = PAPI_start(papi_event_set);
@@ -113,13 +99,24 @@ void kaapi_perf_thread_init(void)
 }
 
 
-void kaapi_perf_thread_fini(void)
+void kaapi_perf_global_fini(void)
 {
   if (papi_event_count)
   {
-    const int err = PAPI_stop(papi_event_set, NULL);
-    kaapi_assert_m(err, PAPI_OK, "PAPI_stop()");
+    PAPI_stop(papi_event_set, NULL);
+    PAPI_cleanup_eventset(papi_event_set);
+    PAPI_destroy_eventset(&papi_event_set);
   }
+}
+
+
+void kaapi_perf_thread_init(void)
+{
+}
+
+
+void kaapi_perf_thread_fini(void)
+{
 }
 
 
@@ -214,7 +211,7 @@ static inline void reset_internal_register
 }
 
 
-void kaapi_perf_reset_counter(kaapi_perf_id_t id)
+void kaapi_perf_reset_register(kaapi_perf_id_t id)
 {
   /* reset the hardware counters
    */
@@ -248,12 +245,12 @@ void kaapi_perf_reset_counter(kaapi_perf_id_t id)
   {
     /* todo: should read the single counter */
     const int err = PAPI_reset(papi_event_set);
-    kaapi_assert_m(PAPI_OK, err, "PAPI_read_1");
+    kaapi_assert_m(PAPI_OK, err, "PAPI_reset_0");
   }
 }
 
 
-void kaapi_perf_snap_counter(kaapi_perf_id_t id)
+void kaapi_perf_read_register(kaapi_perf_id_t id)
 {
   /* store the hardware counter
    */
@@ -275,7 +272,7 @@ void kaapi_perf_snap_counter(kaapi_perf_id_t id)
 	 papi_event_set,
 	 &kproc->counters[is_user][KAAPI_PERF_ID_PAPI_BASE]
 	);
-      kaapi_assert_m(PAPI_OK, err, "PAPI_read_2");
+      kaapi_assert_m(PAPI_OK, err, "PAPI_read_1");
     }
 
     return ;
@@ -294,14 +291,14 @@ void kaapi_perf_snap_counter(kaapi_perf_id_t id)
     long_long papi_values[KAAPI_PERF_ID_PAPI_MAX];
 
     const int err = PAPI_read(papi_event_set, papi_values);
-    kaapi_assert_m(PAPI_OK, err, "PAPI_read_3");
+    kaapi_assert_m(PAPI_OK, err, "PAPI_read_2");
 
     kproc->counters[is_user][id] = papi_values[id - KAAPI_PERF_ID_PAPI_BASE];
   }
 }
 
 
-void kaapi_perf_accum_counter(kaapi_perf_id_t id)
+void kaapi_perf_accum_register(kaapi_perf_id_t id)
 {
   /* accumulate the hardware counter
    */
@@ -346,7 +343,44 @@ void kaapi_perf_accum_counter(kaapi_perf_id_t id)
 }
 
 
-void kaapi_perf_reduce_counter(kaapi_perf_id_t id, kaapi_perf_counter_t* counter)
+void kaapi_perf_zero_counters(kaapi_perf_id_t id)
+{
+  /* reduce the software counters
+   */
+
+  const unsigned int is_user = get_perf_id(&id);
+  unsigned int k;
+
+  if (id == KAAPI_PERF_ID_ALL)
+  {
+    kaapi_perf_id_t i;
+    unsigned int j;
+
+    for (k = 0; k < kaapi_count_kprocessors; ++k)
+    {
+      kaapi_processor_t* const kproc = kaapi_all_kprocessors[k];
+
+      for (i = KAAPI_PERF_ID_TASKS; i < KAAPI_PERF_ID_PAPI_BASE; ++i)
+	kproc->counters[is_user][i] = 0;
+
+      for (j = 0; j < papi_event_count; ++j, ++i)
+	kproc->counters[is_user][i] = 0;
+    }
+
+    return ;
+  }
+
+  /* single counter case */
+
+  for (k = 0; k < kaapi_count_kprocessors; ++k)
+  {
+    kaapi_processor_t* const kproc = kaapi_all_kprocessors[k];
+    kproc->counters[is_user][id] = 0;
+  }
+}
+
+
+void kaapi_perf_accum_counters(kaapi_perf_id_t id, kaapi_perf_counter_t* counter)
 {
   /* reduce the software counters
    */

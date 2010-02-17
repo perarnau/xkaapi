@@ -143,12 +143,6 @@ void __attribute__ ((constructor)) kaapi_init(void)
   printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
 #endif
   fflush( stdout );
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_perf_thread_fini();
-  kaapi_perf_global_fini();
-#endif
-
 }
 
 
@@ -180,6 +174,11 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   {
     kaapi_sched_advance( kaapi_all_kprocessors[0] );
   }
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_fini();
+  kaapi_perf_global_fini();
+#endif
   
   cnt_tasks       = 0;
   cnt_stealreqok  = 0;
@@ -222,6 +221,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
 
 #ifndef PRIu64
+
 # if (sizeof(long) == sizeof(uint64_t))
 #  define PRIu64 "lu"
 # else

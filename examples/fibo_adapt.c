@@ -124,6 +124,11 @@ static void fibo_entrypoint
 {
   fibo_arg_t* const victim_arg = kaapi_task_getargst(task, fibo_arg_t);
 
+  /* kaapi_perf */
+  kaapi_perf_reset_register(KAAPI_PERF_ID_USER(PAPI_0));
+  { int i ; for (i =0 ; i < 10; ++i) asm("nop\n\t"); }
+  kaapi_perf_accum_register(KAAPI_PERF_ID_USER(PAPI_0));
+
   if (victim_arg->n < 2)
   {
     victim_arg->result = victim_arg->n;
@@ -181,6 +186,11 @@ int main(int argc, char** argv)
 
     fibo_arg_t arg;
 
+    /* kaapi_perf */
+    {
+      kaapi_perf_zero_counters(KAAPI_PERF_ID_USER(PAPI_0));
+    }
+
     arg.result = 0;
     arg.n = atoi(argv[1]);
 
@@ -198,6 +208,14 @@ int main(int argc, char** argv)
     kaapi_sched_sync(stack);
 
     result = arg.result;
+
+    /* kaapi_perf */
+    {
+      kaapi_perf_counter_t counter;
+      kaapi_perf_accum_counters(KAAPI_PERF_ID_USER(PAPI_0), &counter);
+      printf("counter: %llu\n", counter);
+    }
+
   }
   t1 = kaapi_get_elapsedtime();
 
