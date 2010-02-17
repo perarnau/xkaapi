@@ -79,9 +79,6 @@ static int fibo_splitter
       kaapi_request_reply(victim_stack, task, &request[i],
 			  thief_stack, sizeof(fibo_arg_t), 1);
 
-      /* remove the splitter so that wont be stolen twice */
-      task->splitter = NULL;
-
       return 1;
     }
   }

@@ -358,6 +358,7 @@ void kaapi_perf_reduce_counter(kaapi_perf_id_t id, kaapi_perf_counter_t* counter
    */
 
   const unsigned int is_user = get_perf_id(&id);
+  unsigned int k;
 
   if (id == KAAPI_PERF_ID_ALL)
   {
@@ -366,11 +367,9 @@ void kaapi_perf_reduce_counter(kaapi_perf_id_t id, kaapi_perf_counter_t* counter
 
     memset(counter, 0, sizeof(kaapi_perf_counter_t) * KAAPI_PERF_ID_MAX);
 
-#if 0 /* todo: iterate over all processors */
-    for (kproc = kaapi_all_processors[0]; kproc; ++kproc)
-#endif
+    for (k = 0; k < kaapi_count_kprocessors; ++k)
     {
-      kaapi_processor_t* const kproc = kaapi_get_current_processor();
+      const kaapi_processor_t* const kproc = kaapi_all_kprocessors[k];
 
       for (i = KAAPI_PERF_ID_TASKS; i < KAAPI_PERF_ID_PAPI_BASE; ++i)
 	counter[i] += kproc->counters[is_user][i];
@@ -386,11 +385,10 @@ void kaapi_perf_reduce_counter(kaapi_perf_id_t id, kaapi_perf_counter_t* counter
 
   *counter = 0;
 
-#if 0 /* todo: iterate over all processors */
-    for (kproc = kaapi_all_processors[0]; kproc; ++kproc)
-#endif
-    {
-      kaapi_processor_t* const kproc = kaapi_get_current_processor();
-      *counter += kproc->counters[is_user][id];
-    }
+  for (k = 0; k < kaapi_count_kprocessors; ++k)
+  {
+    const kaapi_processor_t* const kproc = kaapi_all_kprocessors[k];
+
+    *counter += kproc->counters[is_user][id];
+  }
 }

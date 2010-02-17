@@ -81,7 +81,7 @@ redo_select:
   kaapi_request_post( kproc, &kproc->reply, &victim );
 
   /* experimental */
-  pthread_yield_np();
+  pthread_yield();
 
 #if 0
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
@@ -106,7 +106,7 @@ redo_select:
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if (counter & 0xFF ==0) {
       counter =0;
-      pthread_yield_np();
+      pthread_yield();
     }
   }
 
