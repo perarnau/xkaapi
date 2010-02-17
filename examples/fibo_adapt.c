@@ -188,7 +188,7 @@ int main(int argc, char** argv)
 
     /* kaapi_perf */
     {
-      kaapi_perf_zero_counters(KAAPI_PERF_ID_USER(PAPI_0));
+      kaapi_perf_zero_counters(KAAPI_PERF_ID_USER(ALL));
     }
 
     arg.result = 0;
@@ -207,13 +207,18 @@ int main(int argc, char** argv)
     kaapi_finalize_steal(stack, task, 0, 0);
     kaapi_sched_sync(stack);
 
+    /* kaapi_perf */
+    kaapi_perf_read_register(KAAPI_PERF_ID_USER(TASKS));
+
     result = arg.result;
 
-    /* kaapi_perf */
+    /* kaapi_perf, report */
     {
-      kaapi_perf_counter_t counter;
-      kaapi_perf_accum_counters(KAAPI_PERF_ID_USER(PAPI_0), &counter);
-      printf("counter: %llu\n", counter);
+      kaapi_perf_counter_t counters[KAAPI_PERF_ID_MAX];
+      kaapi_perf_accum_counters(KAAPI_PERF_ID_USER(ALL), counters);
+      printf("counter: %llu %llu\n",
+	     counters[KAAPI_PERF_ID_PAPI_0],
+	     counters[KAAPI_PERF_ID_TASKS]);
     }
 
   }

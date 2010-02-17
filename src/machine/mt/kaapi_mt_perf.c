@@ -129,11 +129,13 @@ static inline unsigned int get_perf_id(kaapi_perf_id_t* id)
 
   (*id) &= ~KAAPI_PERF_ID_USER_MASK;
 
-  kaapi_assert_m(1, (*id < KAAPI_PERF_ID_MAX), "");
+  kaapi_assert_m(1, (*id <= KAAPI_PERF_ID_MAX), "");
 
   return is_user;
 }
 
+
+#if 0 /* unused */
 
 void kaapi_perf_zero_counter(kaapi_perf_id_t id)
 {
@@ -148,6 +150,8 @@ void kaapi_perf_zero_counter(kaapi_perf_id_t id)
   else
     kproc->counters[is_user][id] = 0;
 }
+
+#endif
 
 
 static inline kaapi_atomic_t* get_internal_register
@@ -353,17 +357,14 @@ void kaapi_perf_zero_counters(kaapi_perf_id_t id)
 
   if (id == KAAPI_PERF_ID_ALL)
   {
-    kaapi_perf_id_t i;
-    unsigned int j;
+    const unsigned int count = KAAPI_PERF_ID_PAPI_BASE + papi_event_count;
 
     for (k = 0; k < kaapi_count_kprocessors; ++k)
     {
       kaapi_processor_t* const kproc = kaapi_all_kprocessors[k];
+      unsigned int i;
 
-      for (i = KAAPI_PERF_ID_TASKS; i < KAAPI_PERF_ID_PAPI_BASE; ++i)
-	kproc->counters[is_user][i] = 0;
-
-      for (j = 0; j < papi_event_count; ++j, ++i)
+      for (i = 0; i < count; ++i)
 	kproc->counters[is_user][i] = 0;
     }
 
@@ -390,19 +391,16 @@ void kaapi_perf_accum_counters(kaapi_perf_id_t id, kaapi_perf_counter_t* counter
 
   if (id == KAAPI_PERF_ID_ALL)
   {
-    kaapi_perf_id_t i;
-    unsigned int j;
+    const unsigned int count = KAAPI_PERF_ID_PAPI_BASE + papi_event_count;
 
-    memset(counter, 0, sizeof(kaapi_perf_counter_t) * KAAPI_PERF_ID_MAX);
+    memset(counter, 0, sizeof(kaapi_perf_counter_t) * count);
 
     for (k = 0; k < kaapi_count_kprocessors; ++k)
     {
       const kaapi_processor_t* const kproc = kaapi_all_kprocessors[k];
+      unsigned int i;
 
-      for (i = KAAPI_PERF_ID_TASKS; i < KAAPI_PERF_ID_PAPI_BASE; ++i)
-	counter[i] += kproc->counters[is_user][i];
-
-      for (j = 0; j < papi_event_count; ++j, ++i)
+      for (i = 0; i < count; ++i)
 	counter[i] += kproc->counters[is_user][i];
     }
 
