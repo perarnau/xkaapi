@@ -556,7 +556,7 @@ typedef struct kaapi_access_t {
 } kaapi_access_t;
 
 #define kaapi_data(type, a)\
-  ((type*)a.data)
+  ((type*)(a)->data)
 
 
 /* ========================================================================= */

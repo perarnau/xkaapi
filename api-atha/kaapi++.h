@@ -210,9 +210,20 @@ namespace ka {
 
   template<class T>
   struct base_pointer {
-    base_pointer() : ptr(0) {}
-    base_pointer( T* p ) : ptr(p) {}
-    T* ptr;
+    base_pointer() 
+    {
+#if defined(KAAPI_DEBUG)
+      kaapi_access_init(&a, 0);
+#endif
+    }
+    base_pointer( T* p )
+    {
+      kaapi_access_init(&a, p);
+    }
+    T* ptr() const { return kaapi_data(T, &a); }
+//    const T* ptr() const { return kaapi_data(T, &a); }
+  protected:
+    mutable kaapi_access_t a;
   };
 
   template<class T>
@@ -304,10 +315,10 @@ namespace ka {
     pointer_r( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator const T* () const { return base_pointer<T>::ptr; }
-    const T& operator*() const { return *base_pointer<T>::ptr; }
-    const T& operator[](int i) const { return base_pointer<T>::ptr[i]; }
-    const T& operator[](unsigned int i) const { return base_pointer<T>::ptr[i]; }
+    operator const T* () const { return base_pointer<T>::ptr(); }
+    const T& operator*() const { return *base_pointer<T>::ptr(); }
+    const T& operator[](int i) const { return base_pointer<T>::ptr()[i]; }
+    const T& operator[](unsigned int i) const { return base_pointer<T>::ptr()[i]; }
   };
 
   template<class T>
@@ -315,7 +326,7 @@ namespace ka {
   public:
     typedef T value_type;
     Shared_r( const value_type* p ) : ptr(p) {}
-    Shared_r( const pointer_r<T>& p ) : ptr(p.ptr) {}
+    Shared_r( const pointer_r<T>& p ) : ptr(p.ptr()) {}
     const value_type* ptr;
   };
 
@@ -334,7 +345,7 @@ namespace ka {
   public:
     typedef T value_type;
     Shared_wp( value_type* p ) : ptr(p) {}
-    Shared_wp( const pointer_wp<T>& p ) : ptr(p.ptr) {}
+    Shared_wp( const pointer_wp<T>& p ) : ptr(p.ptr()) {}
     value_type* ptr;
   };
 
@@ -347,10 +358,10 @@ namespace ka {
     pointer_w( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_w( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_w( const pointer_wp<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator T* () { return base_pointer<T>::ptr; }
-    value_ref<T> operator*() { return value_ref<T>(base_pointer<T>::ptr); }
-    value_ref<T> operator[](int i) { return value_ref<T>(base_pointer<T>::ptr+i); }
-    value_ref<T> operator[](unsigned int i) { return value_ref<T>(base_pointer<T>::ptr+i); }
+    operator T* () { return base_pointer<T>::ptr(); }
+    value_ref<T> operator*() { return value_ref<T>(base_pointer<T>::ptr()); }
+    value_ref<T> operator[](int i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
+    value_ref<T> operator[](unsigned int i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
   };
 
   template<class T>
@@ -358,7 +369,7 @@ namespace ka {
   public:
     typedef T value_type;
     Shared_w( value_type* p ) : ptr(p) {}
-    Shared_w( const pointer_w<T>& p ) : ptr(p.ptr) {}
+    Shared_w( const pointer_w<T>& p ) : ptr(p.ptr()) {}
     value_type* ptr;
   };
 
@@ -369,9 +380,9 @@ namespace ka {
     pointer_rw() : base_pointer<T>() {}
     pointer_rw( T* ptr ) : base_pointer<T>(ptr) {}
     pointer_rw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
-    T& operator*() { return *base_pointer<T>::ptr; }
-    T& operator[](int i) { return base_pointer<T>::ptr[i]; }
-    T& operator[](unsigned int i) { return base_pointer<T>::ptr[i]; }
+    T& operator*() { return *base_pointer<T>::ptr(); }
+    T& operator[](int i) { return base_pointer<T>::ptr()[i]; }
+    T& operator[](unsigned int i) { return base_pointer<T>::ptr()[i]; }
   };
   
   template<class T>
@@ -379,7 +390,7 @@ namespace ka {
   public:
     typedef T value_type;
     Shared_rw( value_type* p ) : ptr(p) {}
-    Shared_rw( const pointer_rw<T>& p ) : ptr(p.ptr) {}
+    Shared_rw( const pointer_rw<T>& p ) : ptr(p.ptr()) {}
     value_type* ptr;
   };
 
