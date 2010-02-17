@@ -74,9 +74,7 @@ struct SumBody {
     /* write is used to write data to a Shared_w
      * read is used to read data from a Shared_r
      */
-    *res = 
-      *a + 
-      *b;
+    *res = *a + *b;
   }
 };
 struct TaskSum : public ka::Task<3>::Signature<ka::Shared_w<int>, ka::Shared_r<int>, ka::Shared_r<int> > {};
@@ -103,8 +101,8 @@ struct TaskBodyCPU<TaskFibo> : public FiboBody {};
       *res = fiboseq(n);
     }
     else {
-      ka::pointer_rpwp<int> res1;
-      ka::pointer_rpwp<int> res2;
+      ka::pointer_rpwp<int> res1 = ka::Alloca<int>(1);
+      ka::pointer_rpwp<int> res2 = ka::Alloca<int>(1);
 
       /* the Fork keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
@@ -135,7 +133,8 @@ struct doit {
     {   
       double time= ka::WallTimer::gettime();
 
-      int* res;
+      int result;
+      ka::pointer_rpwp<int> res = &result;
       
       ka::Fork<TaskFibo>(ka::SetLocal)( res, n );
 
