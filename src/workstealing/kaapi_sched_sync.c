@@ -60,7 +60,10 @@ int kaapi_sched_sync(kaapi_stack_t* stack)
   if (kaapi_stack_isempty( stack ) ) return 0;
 
   /* stop on retn -> executed next task */
-  stack->pc = --pc;
+  if (pc != stack->sp)
+    stack->pc = --pc;
+  else 
+    stack->pc = pc = stack->pc-1;
 
 redo:
   err = kaapi_stack_execchild(stack, pc);
