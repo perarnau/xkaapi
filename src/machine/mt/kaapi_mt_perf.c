@@ -153,7 +153,7 @@ void kaapi_perf_zero_counter(kaapi_perf_id_t id)
 }
 
 
-static inline kaapi_uint32_t* get_internal_register
+static inline kaapi_atomic_t* get_internal_register
 (
  kaapi_processor_t* kproc,
  kaapi_perf_id_t id
@@ -161,7 +161,7 @@ static inline kaapi_uint32_t* get_internal_register
 {
   /* todo: replace with an array */
 
-  kaapi_uint32_t* p;
+  kaapi_atomic_t* p;
 
   switch (id)
   {
@@ -198,13 +198,8 @@ static inline kaapi_uint32_t read_internal_register
 )
 {
   /* read and reset semantic */
-
-  /* todo: use atomic */
-
-  kaapi_uint32_t* const r = get_internal_register(kproc, id);
-  kaapi_uint32_t v = *r;
-  *r = 0;
-  return v;
+  kaapi_atomic_t* const r = get_internal_register(kproc, id);
+  return KAAPI_ATOMIC_AND(r, 0);
 }
 
 
@@ -214,9 +209,8 @@ static inline void reset_internal_register
  kaapi_perf_id_t id
 )
 {
-  /* todo: use atomic */
-
-  *get_internal_register(kproc, id) = 0;
+  kaapi_atomic_t* const r = get_internal_register(kproc, id);
+  KAAPI_ATOMIC_AND(r, 0);
 }
 
 

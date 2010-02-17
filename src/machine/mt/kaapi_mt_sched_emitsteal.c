@@ -152,7 +152,7 @@ redo_select:
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
+  KAAPI_ATOMIC_ADD(&kproc->cnt_stealreq, replycount);
 #endif
 
 return_value:
