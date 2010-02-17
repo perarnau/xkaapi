@@ -31,7 +31,7 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
 void sum_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   sum_arg_t* arg0 = kaapi_task_getargst( task, sum_arg_t);
-  *kaapi_data(int, &arg0->result) = *kaapi_data(int, &arg0->subresult1) + *kaapi_data(int, &arg0->subresult2);
+  *KAAPI_DATA(int, arg0->result) = *KAAPI_DATA(int, arg0->subresult1) + *KAAPI_DATA(int, arg0->subresult2);
 }
 
 typedef struct fibo_arg_t {
@@ -57,14 +57,14 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 #endif
   if (arg0->n < 2)
   {
-    *kaapi_data(int, &arg0->result) = arg0->n; /*fiboseq(arg0->n);*/
+    *KAAPI_DATA(int, arg0->result) = arg0->n; /*fiboseq(arg0->n);*/
 #if defined(KAAPI_TRACE_DEBUG)  
-    printf("=@0x%x:%i\n", kaapi_data(int, &arg0->result), *kaapi_data(int, &arg0->result));
+    printf("=@0x%x:%i\n", KAAPI_DATA(int, arg0->result), *KAAPI_DATA(int, arg0->result));
 #endif
   }
   else {
 #if defined(KAAPI_TRACE_DEBUG)  
-    printf("=@0x%x\n", kaapi_data(int, &arg0->result));
+    printf("=@0x%x\n", KAAPI_DATA(int, arg0->result));
 #endif
 #if defined(REC_VER)    
     kaapi_frame_t frame;
@@ -133,7 +133,7 @@ void print_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   print_arg_t* arg0 = kaapi_task_getargst( task, print_arg_t);
   double t1 = kaapi_get_elapsedtime();
-  printf("Fibo(%i)=%i\n", arg0->n, *kaapi_data(int, &arg0->result));
+  printf("Fibo(%i)=%i\n", arg0->n, *KAAPI_DATA(int, arg0->result));
   printf("Time: %e\n", t1-arg0->t0);
 }
 

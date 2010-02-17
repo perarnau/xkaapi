@@ -558,6 +558,9 @@ typedef struct kaapi_access_t {
 #define kaapi_data(type, a)\
   ((type*)(a)->data)
 
+#define KAAPI_DATA(type, a)\
+  ((type*)a.data)
+
 
 /* ========================================================================= */
 /* Interface                                                                 */

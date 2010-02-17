@@ -277,12 +277,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_rpwp {
+  class Shared_rpwp {/* instanciante by default body if signature is not redefined */
   public:
-    typedef T value_type;
-    Shared_rpwp( value_type* p ) : ptr(p) {}
-    Shared_rpwp( const pointer_rpwp<T>& p ) : ptr(p.ptr) {}
-    value_type* ptr;
+    Shared_rpwp( const pointer_rpwp<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -299,13 +296,10 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_rp {
+  class Shared_rp {/* instanciante by default body if signature is not redefined */
     Shared_rp() {}
   public:
-    typedef T value_type;
-    Shared_rp( const value_type* p ) : ptr(p) {}
-    Shared_rp( const pointer_rp<T>& p ) : ptr(p.ptr) {}
-    const value_type* ptr;
+    Shared_rp( const pointer_rp<T>& p ) {}
   };
   
 
@@ -327,12 +321,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_r  {
+  class Shared_r  { /* instanciante by default body if signature is not redefined */
   public:
-    typedef T value_type;
-    Shared_r( const value_type* p ) : ptr(p) {}
-    Shared_r( const pointer_r<T>& p ) : ptr(p.ptr()) {}
-    const value_type* ptr;
+    Shared_r( const pointer_r<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -348,12 +339,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_wp  {
+  class Shared_wp  {/* instanciante by default body if signature is not redefined */
   public:
-    typedef T value_type;
-    Shared_wp( value_type* p ) : ptr(p) {}
-    Shared_wp( const pointer_wp<T>& p ) : ptr(p.ptr()) {}
-    value_type* ptr;
+    Shared_wp( const pointer_wp<T>& p ){}
   };
 
   // --------------------------------------------------------------------
@@ -374,12 +362,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_w {
+  class Shared_w {/* instanciante by default body if signature is not redefined */
   public:
-    typedef T value_type;
-    Shared_w( value_type* p ) : ptr(p) {}
-    Shared_w( const pointer_w<T>& p ) : ptr(p.ptr()) {}
-    value_type* ptr;
+    Shared_w( const pointer_w<T>& p ){}
   };
 
   // --------------------------------------------------------------------
@@ -397,12 +382,9 @@ namespace ka {
   };
   
   template<class T>
-  class Shared_rw {
+  class Shared_rw {/* instanciante by default body if signature is not redefined */
   public:
-    typedef T value_type;
-    Shared_rw( value_type* p ) : ptr(p) {}
-    Shared_rw( const pointer_rw<T>& p ) : ptr(p.ptr()) {}
-    value_type* ptr;
+    Shared_rw( const pointer_rw<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -417,17 +399,17 @@ namespace ka {
   template<class T, class OpCumul = DefaultAdd<T> >
   class Shared_cwp {
   public:    
-    typedef T value_type;
-    Shared_cwp( value_type* p ) : ptr(p) {}
-    value_type* ptr;
+//    typedef T value_type;
+//    Shared_cwp( value_type* p ) : ptr(p) {}
+//    value_type* ptr;
   };
 
   template<class T, class OpCumul = DefaultAdd<T> >
   class Shared_cw {
   public:
-    typedef T value_type;
-    Shared_cw( value_type* p ) : ptr(p) {}
-    value_type* ptr;
+//    typedef T value_type;
+//    Shared_cw( value_type* p ) : ptr(p) {}
+//    value_type* ptr;
   };
 
   // --------------------------------------------------------------------  

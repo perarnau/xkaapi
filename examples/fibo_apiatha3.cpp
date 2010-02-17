@@ -37,12 +37,15 @@ int fiboseq_On(int n){
 /* Print any typed shared
  * this task has read acces on a, it will wait until previous write acces on it are done
 */
+static double start_time;
 template<class T>
 struct PrintBody {
-  void operator() ( ka::pointer_r<T> a, const T& ref_value, double t )
+  void operator() ( ka::pointer_r<T> a, const T& ref_value)
   { 
     /*  ka::WallTimer::gettime is a wrapper around gettimeofday(2) */
-    double delay = ka::WallTimer::gettime() - t;
+    double t1 = ka::WallTimer::gettime();
+    double delay = t1 - start_time;
+    start_time= t1;
 
     /*  ka::System::getRank() prints out the id of the node executing the task */
     ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
@@ -54,7 +57,7 @@ struct PrintBody {
 
 /* Description of Update task */
 template<class T>
-struct TaskPrint : public ka::Task<3>::Signature<ka::Shared_r<T>, T, double> {};
+struct TaskPrint : public ka::Task<2>::Signature<ka::Shared_r<T>, T> {};
 
 /* Specialize default / CPU */
 template<class T>
@@ -129,18 +132,15 @@ struct doit {
     double delay = ka::WallTimer::gettime() - t;
     ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
+    start_time= ka::WallTimer::gettime();
     for (unsigned int i = 0 ; i < iter ; ++i)
     {   
-      double time= ka::WallTimer::gettime();
-
-      int result;
-      ka::pointer_rpwp<int> res = &result;
+      ka::pointer_rpwp<int> res = ka::Alloca<int>(1);
       
       ka::Fork<TaskFibo>(ka::SetLocal)( res, n );
 
       /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      ka::Fork<TaskPrint<int> >(ka::SetLocal)(res, ref_value, time);
-      ka::Sync();
+      ka::Fork<TaskPrint<int> >(ka::SetLocal)(res, ref_value);
     }
   }
 
