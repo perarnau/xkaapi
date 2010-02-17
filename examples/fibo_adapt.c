@@ -79,9 +79,6 @@ static int fibo_splitter
       kaapi_request_reply(victim_stack, task, &request[i],
 			  thief_stack, sizeof(fibo_arg_t), 1);
 
-      /* remove the splitter so that wont be stolen twice */
-      task->splitter = NULL;
-
       return 1;
     }
   }
@@ -126,6 +123,11 @@ static void fibo_entrypoint
 )
 {
   fibo_arg_t* const victim_arg = kaapi_task_getargst(task, fibo_arg_t);
+
+  /* kaapi_perf */
+  kaapi_perf_reset_register(KAAPI_PERF_ID_USER(PAPI_0));
+  { int i ; for (i =0 ; i < 10; ++i) asm("nop\n\t"); }
+  kaapi_perf_accum_register(KAAPI_PERF_ID_USER(PAPI_0));
 
   if (victim_arg->n < 2)
   {
@@ -184,6 +186,11 @@ int main(int argc, char** argv)
 
     fibo_arg_t arg;
 
+    /* kaapi_perf */
+    {
+      kaapi_perf_zero_counters(KAAPI_PERF_ID_USER(ALL));
+    }
+
     arg.result = 0;
     arg.n = atoi(argv[1]);
 
@@ -200,7 +207,22 @@ int main(int argc, char** argv)
     kaapi_finalize_steal(stack, task, 0, 0);
     kaapi_sched_sync(stack);
 
+    /* kaapi_perf */
+    kaapi_perf_read_register(KAAPI_PERF_ID_USER(TASKS));
+    kaapi_perf_read_register(KAAPI_PERF_ID_USER(STEALOP));
+
     result = arg.result;
+
+    /* kaapi_perf, report */
+    {
+      kaapi_perf_counter_t counters[KAAPI_PERF_ID_MAX];
+      kaapi_perf_accum_counters(KAAPI_PERF_ID_USER(ALL), counters);
+      printf("counter: %llu %llu %llu\n",
+	     counters[KAAPI_PERF_ID_PAPI_0],
+	     counters[KAAPI_PERF_ID_TASKS],
+	     counters[KAAPI_PERF_ID_STEALOP]);
+    }
+
   }
   t1 = kaapi_get_elapsedtime();
 

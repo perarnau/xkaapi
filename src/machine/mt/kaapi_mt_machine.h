@@ -146,7 +146,6 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 /*@}*/
 
 
-
 /* ============================= Kprocessor ============================ */
 /** \ingroup WS
 */
@@ -154,7 +153,6 @@ typedef struct kaapi_listrequest_t {
   kaapi_atomic_t  count;
   kaapi_request_t requests[KAAPI_MAX_PROCESSOR];
 } kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
-
 
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
@@ -196,16 +194,20 @@ typedef struct kaapi_processor_t {
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
   /* performance counters */
-  kaapi_uint32_t           cnt_tasks;                     /* number of executed tasks */
-  kaapi_uint32_t           cnt_stealreqok;                /* number of steal requests replied with success */
-  kaapi_uint32_t           cnt_stealreq;                  /* total number of steal requests replied */
-  kaapi_uint32_t           cnt_stealop;                   /* number of steal operation: ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
-  kaapi_uint32_t           cnt_suspend;                   /* number of suspend operations*/
+  kaapi_perf_counter_t	   counters[2][KAAPI_PERF_ID_MAX];
+
+  /* performance registers */
+  kaapi_atomic_t           cnt_tasks;                     /* number of executed tasks */
+  kaapi_atomic_t           cnt_stealreqok;                /* number of steal requests replied with success */
+  kaapi_atomic_t           cnt_stealreq;                  /* total number of steal requests replied */
+  kaapi_atomic_t           cnt_stealop;                   /* number of steal operation: ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
+  kaapi_atomic_t           cnt_suspend;                   /* number of suspend operations*/
   double                   t_sched;                       /* total idle time in second pass in the scheduler */           
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
 
   /* workload */
   kaapi_atomic_t	   workload;
+
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
 /*
@@ -334,6 +336,9 @@ extern int kaapi_setup_topology(void);
 #  define KAAPI_ATOMIC_CAS64(a, o, n) \
     __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
 
+#  define KAAPI_ATOMIC_AND(a, o) \
+    __sync_fetch_and_and( &((a)->_counter), o )
+
 #  define KAAPI_ATOMIC_INCR(a) \
     __sync_add_and_fetch( &((a)->_counter), 1 ) 
 
@@ -342,6 +347,9 @@ extern int kaapi_setup_topology(void);
 
 #  define KAAPI_ATOMIC_SUB(a, value) \
     __sync_sub_and_fetch( &((a)->_counter), value ) 
+
+#  define KAAPI_ATOMIC_ADD(a, value) \
+    __sync_add_and_fetch( &((a)->_counter), value ) 
 
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)
@@ -359,6 +367,9 @@ extern int kaapi_setup_topology(void);
 #  define KAAPI_ATOMIC_CAS64(a, o, n) \
     OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
 
+#  define KAAPI_ATOMIC_AND(a, o)			\
+    OSAtomicAnd32( &((a)->_counter), o )
+
 #  define KAAPI_ATOMIC_INCR(a) \
     OSAtomicIncrement32( &((a)->_counter) ) 
 
@@ -367,6 +378,9 @@ extern int kaapi_setup_topology(void);
 
 #  define KAAPI_ATOMIC_SUB(a, value) \
     OSAtomicAdd32( -value, &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_ADD(a, value) \
+    OSAtomicAdd32( value, &((a)->_counter) ) 
 
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)

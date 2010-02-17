@@ -7,11 +7,11 @@ Name: Athapascan1
 Description: Parallel programming interface based on XKAAPI
 Version: 0.1
 #URL: http://kaapi.gforge.inria.fr
-Requires: xkaapi
-Requires.private: 
+Requires: @ATHA1_PKGCONFIG_REQUIRES@
+Requires.private: @ATHA1_PKGCONFIG_REQUIRES_PRIVATE@
 #Conflicts: foobar <= 4.5
 # Libs: bibliothèques nécessaire pour linker dynamiquement une appli externe
 # Libs.private: bibliothèques à rajouter en cas de link statique
-Libs: -L${libdir} -latha1
-Libs.private: -L${libdir} -latha1
-Cflags: -I${includedir}
+Libs: @ATHA1_PKGCONFIG_LIBS@
+Libs.private: @ATHA1_PKGCONFIG_LIBS_PRIVATE@
+Cflags: @ATHA1_PKGCONFIG_CFLAGS@

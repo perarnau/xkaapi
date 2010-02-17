@@ -81,7 +81,7 @@ redo_select:
   kaapi_request_post( kproc, &kproc->reply, &victim );
 
   /* experimental */
-  pthread_yield_np();
+  pthread_yield();
 
 #if 0
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
@@ -106,7 +106,7 @@ redo_select:
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if (counter & 0xFF ==0) {
       counter =0;
-      pthread_yield_np();
+      pthread_yield();
     }
   }
 
@@ -152,7 +152,7 @@ redo_select:
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
+  KAAPI_ATOMIC_ADD(&kproc->cnt_stealreq, replycount);
 #endif
 
 return_value:
