@@ -66,7 +66,7 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   pc = stack->pc;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  cnt_tasks = KAAPI_ATOMIC_READ(&stack->_proc->cnt_tasks);
+  cnt_tasks = KAAPI_ATOMIC_READ(KAAPI_PERF_REG(stack->_proc, TASKS));
 #endif
 
 redo_work: 
@@ -86,7 +86,7 @@ redo_work:
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_WRITE(&stack->_proc->cnt_tasks, cnt_tasks);
+      KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
 #endif
       return 0;
     }
@@ -104,7 +104,7 @@ redo_work:
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_WRITE(&stack->_proc->cnt_tasks, cnt_tasks);
+      KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
 #endif
       return 0;
     }
@@ -115,7 +115,7 @@ redo_work:
     /* rewrite pc into memory */
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_ATOMIC_WRITE(&stack->_proc->cnt_tasks, cnt_tasks);
+    KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
 #endif
     return EWOULDBLOCK;
   }
@@ -172,7 +172,7 @@ redo_work:
   {
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_ATOMIC_WRITE(&stack->_proc->cnt_tasks, cnt_tasks);
+    KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
 #endif
     kaapi_sched_advance(stack->_proc);
   }
@@ -188,7 +188,7 @@ redo_work:
   {
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_ATOMIC_WRITE(&stack->_proc->cnt_tasks, cnt_tasks);
+    KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
 #endif
     return 0;
   }

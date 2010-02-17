@@ -160,35 +160,7 @@ static inline kaapi_atomic_t* get_internal_register
  kaapi_perf_id_t id
 )
 {
-  /* todo: replace with an array */
-
-  kaapi_atomic_t* p;
-
-  switch (id)
-  {
-  case KAAPI_PERF_ID_TASKS:
-    p = &kproc->cnt_tasks;
-    break;
-
-  case KAAPI_PERF_ID_STEALREQOK:
-    p = &kproc->cnt_stealreqok;
-    break;
-
-  case KAAPI_PERF_ID_STEALREQ:
-    p = &kproc->cnt_stealreq;
-    break;
-
-  case KAAPI_PERF_ID_STEALOP:
-    p = &kproc->cnt_stealop;
-    break;
-
-  default:
-    /* never reached */
-    p = NULL;
-    break; 
-  }
-
-  return p;
+  return &kproc->perf_regs[(size_t)id];
 }
 
 

@@ -75,7 +75,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_ATOMIC_INCR(&kproc->cnt_suspend);
+  KAAPI_ATOMIC_INCR(KAAPI_PERF_REG(kproc, SUSPEND));
   t0 = kaapi_get_elapsedtime();  
 #endif
   do {
@@ -142,7 +142,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (err == EWOULDBLOCK) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_INCR(&kproc->cnt_suspend);
+      KAAPI_ATOMIC_INCR(KAAPI_PERF_REG(kproc, SUSPEND));
 #endif
       /* push it: suspended because top task is not ready */
       KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
