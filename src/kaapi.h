@@ -1350,7 +1350,24 @@ extern int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task);
     adaptive task 'task' and all the thieves.
     The local result, if not null will be pushed after the end of execution of all local tasks.
 */
-static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task, void* retval, int size )
+static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task )
+{
+  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
+  {
+    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
+    kaapi_task_t* task = kaapi_stack_toptask(stack);
+    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    kaapi_stack_pushtask(stack);
+  }
+  return 0;
+}
+
+/** \ingroup ADAPTIVE
+    Push the task that, on execution will wait the terminaison of the previous 
+    adaptive task 'task' and all the thieves.
+    The local result, if not null will be pushed after the end of execution of all local tasks.
+*/
+static inline int kaapi_return_steal( kaapi_stack_t* stack, kaapi_task_t* task, void* retval, int size )
 {
   if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))
   {
