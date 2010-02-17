@@ -209,6 +209,7 @@ int main(int argc, char** argv)
 
     /* kaapi_perf */
     kaapi_perf_read_register(KAAPI_PERF_ID_USER(TASKS));
+    kaapi_perf_read_register(KAAPI_PERF_ID_USER(STEALOP));
 
     result = arg.result;
 
@@ -216,9 +217,10 @@ int main(int argc, char** argv)
     {
       kaapi_perf_counter_t counters[KAAPI_PERF_ID_MAX];
       kaapi_perf_accum_counters(KAAPI_PERF_ID_USER(ALL), counters);
-      printf("counter: %llu %llu\n",
+      printf("counter: %llu %llu %llu\n",
 	     counters[KAAPI_PERF_ID_PAPI_0],
-	     counters[KAAPI_PERF_ID_TASKS]);
+	     counters[KAAPI_PERF_ID_TASKS],
+	     counters[KAAPI_PERF_ID_STEALOP]);
     }
 
   }
