@@ -110,6 +110,8 @@ void kaapi_perf_global_fini(void)
 }
 
 
+#if 0 /* unused */
+
 void kaapi_perf_thread_init(void)
 {
 }
@@ -118,6 +120,8 @@ void kaapi_perf_thread_init(void)
 void kaapi_perf_thread_fini(void)
 {
 }
+
+#endif
 
 
 static inline unsigned int get_perf_id(kaapi_perf_id_t* id)
@@ -258,7 +262,6 @@ void kaapi_perf_read_register(kaapi_perf_id_t id)
 
   if (id < KAAPI_PERF_ID_PAPI_BASE)
   {
-    /* todo: atomic */
     kproc->counters[is_user][id] = read_internal_register(kproc, id);
   }
   else if (papi_event_count)

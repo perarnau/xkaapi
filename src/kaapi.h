@@ -1343,8 +1343,6 @@ typedef unsigned int kaapi_perf_id_t;
 /* internal */
 void kaapi_perf_global_init(void);
 void kaapi_perf_global_fini(void);
-void kaapi_perf_thread_init(void);
-void kaapi_perf_thread_fini(void);
 
 /* exported, perf register */
 void kaapi_perf_reset_register(kaapi_perf_id_t);

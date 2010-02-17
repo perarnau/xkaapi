@@ -188,9 +188,9 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_assert( 0 == kaapi_processor_init( kproc ) );
   kproc->kid = kid;
 
+  /* unused */
 #if defined(KAAPI_USE_PERFCOUNTER)
-  /* per thread perf initialization */
-  kaapi_perf_thread_init();
+  /* kaapi_perf_thread_init(); */
 #endif
 
   /* kprocessor correctly initialize */
@@ -210,8 +210,9 @@ void* kaapi_sched_run_processor( void* arg )
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
 
-#if defined(KAAPI_USE_PERFCOUNTER) /* per thread perf fini */
-  kaapi_perf_thread_fini();
+  /* unused */
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /* kaapi_perf_thread_fini(); */
 #endif
 
   return 0;

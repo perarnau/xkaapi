@@ -114,7 +114,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
   kaapi_perf_global_init();
-  kaapi_perf_thread_init();
+  /* kaapi_perf_thread_init(); */
 #endif
 
   /* set the kprocessor AFTER topology !!! */
@@ -176,7 +176,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_perf_thread_fini();
+  /* kaapi_perf_thread_fini(); */
   kaapi_perf_global_fini();
 #endif
   
