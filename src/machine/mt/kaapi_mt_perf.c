@@ -9,8 +9,8 @@
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
 static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
 static int papi_event_set = PAPI_NULL;
-#endif
 static unsigned int papi_event_count = 0;
+#endif
 
 static int get_event_code(char* name, int* code)
 {
@@ -40,6 +40,7 @@ static int get_papi_events(void)
   const char* p;
   const char* s;
   int err;
+  PAPI_option_t opt;
   char name[PAPI_MIN_STR_LEN];
 
   s = getenv("KAAPI_PERF_PAPIES");
@@ -73,6 +74,20 @@ static int get_papi_events(void)
   /* create event set */
   err = PAPI_create_eventset(&papi_event_set);
   kaapi_assert_m(PAPI_OK, err, "PAPI_create_eventset()\n");
+
+  /* thread granularity */
+  memset(&opt, 0, sizeof(opt));
+  opt.granularity.eventset = papi_event_set;
+  opt.granularity.granularity = PAPI_GRN_THR;
+  err = PAPI_set_opt(PAPI_GRANUL, &opt);
+  kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_grn()");
+
+  /* user domain */
+  memset(&opt, 0, sizeof(opt));
+  opt.domain.eventset = papi_event_set;
+  opt.domain.domain = PAPI_DOM_USER;
+  err = PAPI_set_opt(PAPI_DOMAIN, &opt);
+  kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_dom()");
 
   err = PAPI_add_events
     (papi_event_set, papi_event_codes, papi_event_count);
@@ -159,7 +174,7 @@ void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
   if (papi_event_count)
   {
     /* in fact here we stop the counter */
-    kaapi_assert_m( PAPI_OK, PAPI_stop(kproc->papi_event_set), "PAPI_stop" );
+    kaapi_assert_m( PAPI_OK, PAPI_stop(kproc->papi_event_set, NULL), "PAPI_stop" );
   }
 #endif
 }
@@ -282,5 +297,9 @@ const char* kaapi_perf_id_to_name(kaapi_perf_id_t id)
 
 size_t kaapi_perf_counter_num(void)
 {
-  return KAAPI_PERF_ID_PAPI_BASE + papi_event_count;
+  return KAAPI_PERF_ID_PAPI_BASE
+#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+    + papi_event_count
+#endif
+    ;
 }
