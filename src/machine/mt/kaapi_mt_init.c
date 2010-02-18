@@ -262,8 +262,6 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   kaapi_all_kprocessors =0;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-
-
   /* */
   if (default_param.display_perfcounter)
   {
