@@ -58,11 +58,6 @@ fibo_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FL
 fibo_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 fibo_apiatha_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libxkaapixx.la ../src/libxkaapi.la
 
-fibo_apiatha2_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
-fibo_apiatha2_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-fibo_apiatha2_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
-fibo_apiatha2_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api-atha/libxkaapixx.la ../src/libxkaapi.la
-
 fibo_apikaapi_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api-atha
 fibo_apikaapi_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 fibo_apikaapi_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
