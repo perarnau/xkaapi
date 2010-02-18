@@ -1415,8 +1415,8 @@ static inline int kaapi_return_steal( kaapi_stack_t* stack, kaapi_task_t* task, 
 #define KAAPI_PERF_ID_MAX          (KAAPI_PERF_ID_PAPI_2 + 1)
 #define KAAPI_PERF_ID_ALL           KAAPI_PERF_ID_MAX
 
-#define KAAPI_PERF_USER_STATE       0
-#define KAAPI_PERF_SCHEDULE_STATE   1
+#define KAAPI_PERF_USR_COUNTER      0x1  /* for kaapi_perf_accum_counters or kaapi_perf_read_counters*/
+#define KAAPI_PERF_SYS_COUNTER      0x2  /* could be ored */
 
 /* Counter type
 */
@@ -1437,8 +1437,8 @@ extern void kaapi_perf_idset_zero(kaapi_perf_idset_t*);
 extern void kaapi_perf_idset_add(kaapi_perf_idset_t*, kaapi_perf_id_t);
 
 /* global access */
-extern void kaapi_perf_accum_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
-extern void kaapi_perf_read_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
+extern void kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
+extern void kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
 
 /* local access, internal functions */
 extern void _kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);

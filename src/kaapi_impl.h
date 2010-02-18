@@ -435,6 +435,7 @@ typedef struct kaapi_tasksig_arg_t {
 
 
 /* ======================== Perf counter interface: machine dependent ========================*/
+
 /* internal */
 void kaapi_perf_global_init(void);
 
