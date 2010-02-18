@@ -296,7 +296,7 @@ AC_SUBST(AM_LDFLAGS)
 
 AC_CONFIG_FILES([
 	Makefile
-	api-atha/Makefile
+	api/Makefile
 	examples/Makefile
 	src/Makefile
 
