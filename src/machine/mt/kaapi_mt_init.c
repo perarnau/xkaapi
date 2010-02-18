@@ -114,7 +114,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
   kaapi_perf_global_init();
-  kaapi_perf_thread_init();
+  /* kaapi_perf_thread_init(); */
 #endif
 
   /* set the kprocessor AFTER topology !!! */
@@ -176,7 +176,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_perf_thread_fini();
+  /* kaapi_perf_thread_fini(); */
   kaapi_perf_global_fini();
 #endif
   
@@ -185,30 +185,47 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   cnt_stealreq    = 0;
   cnt_stealop     = 0;
   cnt_suspend     = 0;
+
   t_sched         = 0;
   t_preempt       = 0;
+
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
-    cnt_tasks       += KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_tasks);
-    cnt_stealreqok  += KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_stealreqok);
-    cnt_stealreq    += KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_stealreq);
-    cnt_stealop     += KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_stealop);
-    cnt_suspend     += KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_suspend);
+    cnt_tasks +=
+      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], TASKS));
+    cnt_stealreqok +=
+      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], STEALREQOK));
+    cnt_stealreq +=
+      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], STEALREQ));
+    cnt_stealop +=
+      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], STEALOP));
+    cnt_suspend +=
+      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], SUSPEND));
+
     t_sched         += kaapi_all_kprocessors[i]->t_sched;
     t_preempt       += kaapi_all_kprocessors[i]->t_preempt;
-
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* */
   if (default_param.display_perfcounter)
   {
+#define READ_PERF_REG(K, I) \
+    KAAPI_ATOMIC_READ(&(K)->perf_regs[KAAPI_PERF_REG_ ## I])
+
     printf("----- Performance counters, core   : %i\n", i);
-    printf("%i: Total number of tasks executed     : %u\n", i, KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_tasks));
-    printf("%i: Total number of steal OK requests  : %u\n", i, KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_stealreqok));
-    printf("%i: Total number of steal BAD requests : %u\n", i, KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_stealreq) - KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_stealreqok));
-    printf("%i: Total number of steal operations   : %u\n", i, KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_stealop));
-    printf("%i: Total number of suspend operations : %u\n", i, KAAPI_ATOMIC_READ(&kaapi_all_kprocessors[i]->cnt_suspend));
-    printf("%i: Total idle time                    : %e\n", i, kaapi_all_kprocessors[i]->t_sched+kaapi_all_kprocessors[i]->t_preempt);
+    printf("Total number of tasks executed     : %u\n",
+	   READ_PERF_REG(kaapi_all_kprocessors[i], TASKS));
+    printf("Total number of steal OK requests  : %u\n",
+	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALREQOK));
+    printf("Total number of steal BAD requests : %u\n",
+	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALREQ) -
+	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALREQOK));
+    printf("Total number of steal operations   : %u\n",
+	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALOP));
+    printf("Total number of suspend operations : %u\n",
+	   READ_PERF_REG(kaapi_all_kprocessors[i], SUSPEND));
+    printf("Total idle time                    : %e\n",
+	 kaapi_all_kprocessors[i]->t_sched+kaapi_all_kprocessors[i]->t_preempt);
   }
 #endif  
 

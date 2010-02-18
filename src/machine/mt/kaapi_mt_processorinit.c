@@ -73,11 +73,11 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->fnc_select   = default_param.wsselect;
   
   /* performance registers */
-  kproc->cnt_tasks._counter = 0;
-  kproc->cnt_stealreqok._counter = 0;
-  kproc->cnt_stealreq._counter = 0;
-  kproc->cnt_stealop._counter = 0;
-  kproc->cnt_suspend._counter = 0;
+  KAAPI_PERF_REG(kproc, TASKS)->_counter = 0;
+  KAAPI_PERF_REG(kproc, STEALREQOK)->_counter = 0;
+  KAAPI_PERF_REG(kproc, STEALREQ)->_counter = 0;
+  KAAPI_PERF_REG(kproc, STEALOP)->_counter = 0;
+  KAAPI_PERF_REG(kproc, SUSPEND)->_counter = 0;
   kproc->t_sched        = 0;
   kproc->t_preempt      = 0;
 

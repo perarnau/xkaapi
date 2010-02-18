@@ -142,7 +142,7 @@ redo_execute:
     if (err == EWOULDBLOCK) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_INCR(&kproc->cnt_suspend);
+      KAAPI_ATOMIC_INCR(KAAPI_PERF_REG(kproc, SUSPEND));
 #endif
       kaapi_thread_context_t* ctxt = kproc->ctxt;
       /* update */
