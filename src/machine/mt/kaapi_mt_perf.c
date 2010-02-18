@@ -277,6 +277,34 @@ void kaapi_perf_read_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter
 }
 
 
+/*
+ */
+void kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
+{
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  unsigned int j;
+  unsigned int i;
+
+  for (j = 0, i = 0; j < idset->count; ++i)
+    if (idset->idmap[i])
+      counter[j++] = kproc->perf_regs[isuser][i];
+}
+
+
+/*
+ */
+void kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* accum)
+{
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  unsigned int j;
+  unsigned int i;
+
+  for (j = 0, i = 0; j < idset->count; ++i)
+    if (idset->idmap[i])
+      accum[j++] += kproc->perf_regs[isuser][i];
+}
+
+
 const char* kaapi_perf_id_to_name(kaapi_perf_id_t id)
 {
   static const char* names[] =
@@ -302,4 +330,21 @@ size_t kaapi_perf_counter_num(void)
     + papi_event_count
 #endif
     ;
+}
+
+
+void kaapi_perf_idset_zero(kaapi_perf_idset_t* set)
+{
+  set->count = 0;
+  memset(set->idmap, 0, sizeof(set->idmap));
+}
+
+
+void kaapi_perf_idset_add(kaapi_perf_idset_t* set, kaapi_perf_id_t id)
+{
+  if (set->idmap[(size_t)id])
+    return ;
+
+  set->idmap[(size_t)id] = 1;
+  ++set->count;
 }

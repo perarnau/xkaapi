@@ -1424,10 +1424,25 @@ typedef long long kaapi_perf_counter_t;
 /* Value
 */
 typedef unsigned int kaapi_perf_id_t;
+typedef struct kaapi_perf_idset_t
+{
+  unsigned int count;
+  unsigned char idmap[KAAPI_PERF_ID_MAX];
+} kaapi_perf_idset_t;
 
-/* exported, perf counters */
+#define KAAPI_PERF_IDSET_SINGLETON(I) {1, I}
+
+/* idset */
+extern void kaapi_perf_idset_zero(kaapi_perf_idset_t*);
+extern void kaapi_perf_idset_add(kaapi_perf_idset_t*, kaapi_perf_id_t);
+
+/* global access */
 extern void kaapi_perf_accum_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
 extern void kaapi_perf_read_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
+
+/* local access */
+extern void kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
+extern void kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* accum);
 
 /* utility */
 extern const char* kaapi_perf_id_to_name(kaapi_perf_id_t);

@@ -183,17 +183,6 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-#  ifndef PRIu64
-#    if (sizeof(long) == sizeof(uint64_t))
-#      define PRIu64 "lu"
-#    else
-#      define PRIu64 "llu"
-#    endif
-#  endif 
-#  ifndef PRIu32
-#    define PRIu32 "u"
-#  endif
-
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
   
@@ -210,6 +199,27 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
 #if defined(KAAPI_USE_PERFCOUNTER)
+
+# ifndef PRIu64
+#   if (sizeof(unsigned long) == sizeof(uint64_t))
+#     define PRIu64 "lu"
+#   else
+#     define PRIu64 "llu"
+#   endif
+# endif
+
+# ifndef PRI64
+/* #   if (sizeof(unsigned long) == sizeof(uint64_t)) */
+/* #     define PRI64 "ld" */
+/* #   else */
+#     define PRI64 "lld"
+/* #   endif */
+# endif 
+
+# ifndef PRIu32
+#   define PRIu32 "u"
+# endif
+
     cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
     cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
     cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
@@ -223,21 +233,21 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   {
 
     printf("----- Performance counters, core   : %i\n", i);
-    printf("Total number of tasks executed     : %"PRIu64", %"PRIu64"\n",
+    printf("Total number of tasks executed     : %" PRI64", %"PRI64"\n",
 	   KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS),
 	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS)
     );
-    printf("Total number of steal OK requests  : %"PRIu64"\n",
+    printf("Total number of steal OK requests  : %"PRI64"\n",
 	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
     );
-    printf("Total number of steal BAD requests : %"PRIu64"\n",
+    printf("Total number of steal BAD requests : %"PRI64"\n",
 	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ)-
 	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
     );
-    printf("Total number of steal operations   : %"PRIu64"\n",
+    printf("Total number of steal operations   : %"PRI64"\n",
 	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP)
     );
-    printf("Total number of suspend operations : %"PRIu64"\n",
+    printf("Total number of suspend operations : %"PRI64"\n",
 	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND)
     );
     printf("Total idle time                    : %e\n",

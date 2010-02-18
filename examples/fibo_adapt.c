@@ -20,10 +20,7 @@ static void common_entrypoint
  kaapi_stack_t* stack
 )
 {
-  kaapi_perf_zero_counter(KAAPI_PERF_ID_USER(STEALOP));
-  kaapi_perf_reset_register(KAAPI_PERF_ID_USER(STEALOP));
   fibo_entrypoint(task, stack);
-  kaapi_perf_read_register(KAAPI_PERF_ID_USER(STEALOP));
 }
 
 static void thief_entrypoint
@@ -37,13 +34,7 @@ static void thief_entrypoint
 
   common_entrypoint(task, stack);
 
-  kaapi_finalize_steal
-    (
-     stack,
-     task,
-     thief_arg,
-     sizeof(fibo_arg_t)
-    );
+  kaapi_return_steal(stack, task, thief_arg, sizeof(*thief_arg));
 }
 
 
@@ -200,13 +191,12 @@ int main(int argc, char** argv)
       );
 
     kaapi_stack_pushtask(stack);
-    kaapi_finalize_steal(stack, task, 0, 0);
+    kaapi_finalize_steal(stack, task);
     kaapi_sched_sync(stack);
 
     /* kaapi_perf */
     {
       kaapi_perf_counter_t counter;
-      kaapi_perf_read_counters(KAAPI_PERF_ID_USER(STEALOP), &counter);
       printf("#op: %llu\n", counter);
     }
 
