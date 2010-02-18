@@ -183,6 +183,17 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+#  ifndef PRIu64
+#    if (sizeof(long) == sizeof(uint64_t))
+#      define PRIu64 "lu"
+#    else
+#      define PRIu64 "llu"
+#    endif
+#  endif 
+#  ifndef PRIu32
+#    define PRIu32 "u"
+#  endif
+
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
   
@@ -199,39 +210,39 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
 #if defined(KAAPI_USE_PERFCOUNTER)
-    cnt_tasks +=      KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
-    cnt_stealreqok += KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
-    cnt_stealreq +=   KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
-    cnt_stealop +=    KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
-    cnt_suspend +=    KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
-    t_sched +=        KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TIDLE);
-    t_preempt +=      KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
+    cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
+    cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
+    cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
+    cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
+    cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
+    t_sched +=        KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TIDLE);
+    t_preempt +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
       
-#if 0
   /* */
   if (default_param.display_perfcounter)
   {
 
-#define READ_PERF_REG(K, I) \
-    KAAPI_ATOMIC_READ(&(K)->perf_regs[KAAPI_PERF_REG_ ## I])
-
     printf("----- Performance counters, core   : %i\n", i);
-    printf("Total number of tasks executed     : %u\n",
-	   READ_PERF_REG(kaapi_all_kprocessors[i], TASKS));
-    printf("Total number of steal OK requests  : %u\n",
-	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALREQOK));
-    printf("Total number of steal BAD requests : %u\n",
-	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALREQ) -
-	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALREQOK));
-    printf("Total number of steal operations   : %u\n",
-	   READ_PERF_REG(kaapi_all_kprocessors[i], STEALOP));
-    printf("Total number of suspend operations : %u\n",
-	   READ_PERF_REG(kaapi_all_kprocessors[i], SUSPEND));
+    printf("Total number of tasks executed     : %"PRIu64", %"PRIu64"\n",
+	   KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS),
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS)
+    );
+    printf("Total number of steal OK requests  : %"PRIu64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
+    );
+    printf("Total number of steal BAD requests : %"PRIu64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ)-
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
+    );
+    printf("Total number of steal operations   : %"PRIu64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP)
+    );
+    printf("Total number of suspend operations : %"PRIu64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND)
+    );
     printf("Total idle time                    : %e\n",
 	 kaapi_all_kprocessors[i]->t_sched+kaapi_all_kprocessors[i]->t_preempt);
   }
-#endif  
-
 #endif
 
     free(kaapi_all_kprocessors[i]);
@@ -242,16 +253,6 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 
-#  ifndef PRIu64
-#    if (sizeof(long) == sizeof(uint64_t))
-#      define PRIu64 "lu"
-#    else
-#      define PRIu64 "llu"
-#    endif
-#  endif 
-#  ifndef PRIu32
-#    define PRIu32 "u"
-#  endif
 
   /* */
   if (default_param.display_perfcounter)

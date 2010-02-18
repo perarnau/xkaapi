@@ -209,6 +209,9 @@ typedef struct kaapi_processor_t {
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
 #define KAAPI_PERF_REG(kproc, op) ((kproc)->curr_perf_regs[(op)])
+#define KAAPI_PERF_REG_USR(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_USER_STATE][(op)])
+#define KAAPI_PERF_REG_SYS(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_SCHEDULE_STATE][(op)])
+#define KAAPI_PERF_REG_READALL(kproc, op) (KAAPI_PERF_REG_SYS(kproc, op)+KAAPI_PERF_REG_USR(kproc, op))
 
 /*
 */

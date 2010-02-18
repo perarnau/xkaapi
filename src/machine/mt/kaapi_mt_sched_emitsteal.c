@@ -127,7 +127,13 @@ redo_select:
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
   */
-  if (count >0) kaapi_sched_stealprocessor( victim.kproc );
+  if (count >0) {
+    kaapi_sched_stealprocessor( victim.kproc );
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
+#endif
+  }
+
 
   /* reply to all requests. May also reply to count request INCLUDING self request,
      else a bug will occurs--WARNING--

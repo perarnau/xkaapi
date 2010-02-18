@@ -125,6 +125,9 @@ redo_work:
     {
       /* rewrite pc into memory */
       stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
       return EWOULDBLOCK;
     }
 #else
@@ -169,6 +172,7 @@ redo_work:
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
     KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+    cnt_tasks = 0;
 #endif
     kaapi_sched_advance(stack->_proc);
   }
