@@ -1440,9 +1440,16 @@ extern void kaapi_perf_idset_add(kaapi_perf_idset_t*, kaapi_perf_id_t);
 extern void kaapi_perf_accum_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
 extern void kaapi_perf_read_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
 
-/* local access */
-extern void kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
-extern void kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* accum);
+/* local access, internal functions */
+extern void _kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
+extern void _kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* accum);
+
+/* local access, user functions */
+static inline void kaapi_perf_read_register(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
+{ _kaapi_perf_read_register(idset, 1, counter); }
+
+static inline void kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* accum)
+{ _kaapi_perf_accum_register(idset, 1, accum); }
 
 /* utility */
 extern const char* kaapi_perf_id_to_name(kaapi_perf_id_t);

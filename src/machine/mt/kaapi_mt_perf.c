@@ -266,7 +266,7 @@ void kaapi_perf_read_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter
 
 /*
  */
-void kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
+void _kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
 {
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
   unsigned int j;
@@ -280,7 +280,7 @@ void kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi
 
 /*
  */
-void kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* accum)
+void _kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* accum)
 {
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
   unsigned int j;
