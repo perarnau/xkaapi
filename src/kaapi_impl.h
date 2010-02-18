@@ -433,6 +433,27 @@ typedef struct kaapi_tasksig_arg_t {
 } kaapi_tasksig_arg_t;
 
 
+
+/* ======================== Perf counter interface: machine dependent ========================*/
+/* internal */
+void kaapi_perf_global_init(void);
+
+void kaapi_perf_global_fini(void);
+
+/* */
+void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
+/* */
+void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
+/* */
+void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
+/* */
+void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
+/* */
+void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
+/* */
+int kaapi_perf_thread_state(kaapi_processor_t* kproc);
+
+
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
 

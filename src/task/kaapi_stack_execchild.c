@@ -67,7 +67,7 @@
 int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint32_t         cnt_tasks;
+  kaapi_uint32_t         cnt_tasks = 0;
 #endif  
   kaapi_task_t*          saved_sp;
   char*                  saved_sp_data;
@@ -78,10 +78,6 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  cnt_tasks = KAAPI_ATOMIC_READ(KAAPI_PERF_REG(stack->_proc, TASKS));
-#endif
-
 redo_work: 
 
   if (pc->flag & KAAPI_TASK_S_STEAL)
@@ -89,7 +85,7 @@ redo_work:
     /* rewrite pc into memory */
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
     return EWOULDBLOCK;
   }
@@ -109,7 +105,7 @@ redo_work:
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
       return 0;
     }
@@ -157,7 +153,7 @@ redo_work:
     {
       stack->pc = pc;
   #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   #endif
       kaapi_sched_advance(stack->_proc);
     }
@@ -172,6 +168,9 @@ redo_work:
   if (pc <= stack->sp) 
   {
     stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
     return 0;
   }
   goto redo_work;

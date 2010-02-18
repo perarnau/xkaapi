@@ -53,7 +53,7 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
 {
   register kaapi_task_t* pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint32_t         cnt_tasks;
+  kaapi_uint32_t         cnt_tasks =0;
 #endif  
   kaapi_task_t*          saved_sp;
   char*                  saved_sp_data;
@@ -64,10 +64,6 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
   pc = stack->pc;
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  cnt_tasks = KAAPI_ATOMIC_READ(KAAPI_PERF_REG(stack->_proc, TASKS));
-#endif
 
 redo_work: 
   if (pc->body == &kaapi_retn_body) 
@@ -86,7 +82,7 @@ redo_work:
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
       return 0;
     }
@@ -104,7 +100,7 @@ redo_work:
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
       return 0;
     }
@@ -115,7 +111,7 @@ redo_work:
     /* rewrite pc into memory */
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
     return EWOULDBLOCK;
   }
@@ -172,7 +168,7 @@ redo_work:
   {
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
     kaapi_sched_advance(stack->_proc);
   }
@@ -188,7 +184,7 @@ redo_work:
   {
     stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_ATOMIC_WRITE(KAAPI_PERF_REG(stack->_proc, TASKS), cnt_tasks);
+    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
     return 0;
   }

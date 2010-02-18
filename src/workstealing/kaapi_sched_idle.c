@@ -56,8 +56,10 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   int err;
   
 #if defined(KAAPI_USE_PERFCOUNTER)
+/*
   double t0;
   double t1;
+*/
 #endif
   
   kaapi_assert_debug( kproc !=0 );
@@ -65,8 +67,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->ctxt !=0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  /* push it into the free list */
-  t0 = kaapi_get_elapsedtime();  
+  kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
+/*  t0 = kaapi_get_elapsedtime();  */
 #endif
   do {
 /*    usleep( 10000 );*/
@@ -76,8 +78,10 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     if (kaapi_isterminated())
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
-      t1 = kaapi_get_elapsedtime();
-      kproc->t_sched += t1-t0;
+      /* leave the state to be 'schedule' 
+        t1 = kaapi_get_elapsedtime();
+        kproc->t_sched += t1-t0;
+      */
 #endif
       return;
     }
@@ -130,19 +134,23 @@ redo_execute:
 
     /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime();
-    kproc->t_sched += t1-t0;
+    kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
+    /*
+      t1 = kaapi_get_elapsedtime();
+      kproc->t_sched += t1-t0;
+    */
 #endif
     err = kaapi_stack_execall( kproc->ctxt );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
+    kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
+    /*t0 = kaapi_get_elapsedtime();*/
 #endif
 
     if (err == EWOULDBLOCK) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_INCR(KAAPI_PERF_REG(kproc, SUSPEND));
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
       kaapi_thread_context_t* ctxt = kproc->ctxt;
       /* update */

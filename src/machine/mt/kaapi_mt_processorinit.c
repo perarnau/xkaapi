@@ -72,22 +72,13 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->fnc_selecarg = 0;
   kproc->fnc_select   = default_param.wsselect;
   
-  /* performance registers */
-  KAAPI_PERF_REG(kproc, TASKS)->_counter = 0;
-  KAAPI_PERF_REG(kproc, STEALREQOK)->_counter = 0;
-  KAAPI_PERF_REG(kproc, STEALREQ)->_counter = 0;
-  KAAPI_PERF_REG(kproc, STEALOP)->_counter = 0;
-  KAAPI_PERF_REG(kproc, SUSPEND)->_counter = 0;
-  kproc->t_sched        = 0;
-  kproc->t_preempt      = 0;
-
   /* workload */
   kproc->workload._counter= 0;
   
   /* allocate a stack */
   k_stacksize = default_param.stacksize;
-  k_sizetask = k_stacksize / 2;
-  k_sizedata = k_stacksize - k_sizetask;
+  k_sizetask  = k_stacksize / 2;
+  k_sizedata  = k_stacksize - k_sizetask;
 
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
   /* set new context to the kprocessor */

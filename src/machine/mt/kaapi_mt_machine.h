@@ -193,34 +193,22 @@ typedef struct kaapi_processor_t {
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
-  /* performance counters */
-  kaapi_perf_counter_t	   counters[2][KAAPI_PERF_ID_MAX];
-
-  /* performance registers */
-#if 0
-  kaapi_atomic_t           cnt_tasks;                     /* number of executed tasks */
-  kaapi_atomic_t           cnt_stealreqok;                /* number of steal requests replied with success */
-  kaapi_atomic_t           cnt_stealreq;                  /* total number of steal requests replied */
-  kaapi_atomic_t           cnt_stealop;                   /* number of steal operation: ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
-  kaapi_atomic_t           cnt_suspend;                   /* number of suspend operations*/
-#else
-#define KAAPI_PERF_REG_TASKS 0
-#define KAAPI_PERF_REG_STEALREQOK 1
-#define KAAPI_PERF_REG_STEALREQ 2
-#define KAAPI_PERF_REG_STEALOP 3
-#define KAAPI_PERF_REG_SUSPEND 4
-#define KAAPI_PERF_REG_MAX (KAAPI_PERF_REG_SUSPEND + 1)
-#define KAAPI_PERF_REG(K, I) (&(K)->perf_regs[KAAPI_PERF_REG_##I])
-  kaapi_atomic_t	   perf_regs[KAAPI_PERF_REG_MAX];
+  /* performance register */
+  kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
+  kaapi_perf_counter_t*	   curr_perf_regs;                /* either perf_regs[0], either perf_regs[1] */
+#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+  int papi_event_set;
 #endif
+   
   double                   t_sched;                       /* total idle time in second pass in the scheduler */           
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
 
   /* workload */
-  kaapi_atomic_t	   workload;
+  kaapi_atomic_t	         workload;
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
+#define KAAPI_PERF_REG(kproc, op) ((kproc)->curr_perf_regs[(op)])
 
 /*
 */

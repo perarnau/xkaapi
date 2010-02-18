@@ -43,9 +43,9 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 #include <stdlib.h>
 #include <inttypes.h> 
+#include "kaapi_impl.h"
 
 /*
 */
@@ -151,13 +151,20 @@ void __attribute__ ((constructor)) kaapi_init(void)
 void __attribute__ ((destructor)) kaapi_fini(void)
 {
   int i;
-  kaapi_uint32_t cnt_tasks;
-  kaapi_uint32_t cnt_stealreqok;
-  kaapi_uint32_t cnt_stealreq;
-  kaapi_uint32_t cnt_stealop;
-  kaapi_uint32_t cnt_suspend;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_uint64_t cnt_tasks;
+  kaapi_uint64_t cnt_stealreqok;
+  kaapi_uint64_t cnt_stealreq;
+  kaapi_uint64_t cnt_stealop;
+  kaapi_uint64_t cnt_suspend;
   double t_sched;
   double t_preempt;
+#endif
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_stop(kaapi_all_kprocessors[0]);
+#endif
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::TERM] end time:%15f\n", kaapi_get_elapsedtime());
@@ -176,9 +183,8 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  /* kaapi_perf_thread_fini(); */
+  kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
-#endif
   
   cnt_tasks       = 0;
   cnt_stealreqok  = 0;
@@ -188,27 +194,24 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 
   t_sched         = 0;
   t_preempt       = 0;
+#endif
 
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
-    cnt_tasks +=
-      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], TASKS));
-    cnt_stealreqok +=
-      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], STEALREQOK));
-    cnt_stealreq +=
-      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], STEALREQ));
-    cnt_stealop +=
-      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], STEALOP));
-    cnt_suspend +=
-      KAAPI_ATOMIC_READ(KAAPI_PERF_REG(kaapi_all_kprocessors[i], SUSPEND));
-
-    t_sched         += kaapi_all_kprocessors[i]->t_sched;
-    t_preempt       += kaapi_all_kprocessors[i]->t_preempt;
-
 #if defined(KAAPI_USE_PERFCOUNTER)
+    cnt_tasks +=      KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
+    cnt_stealreqok += KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
+    cnt_stealreq +=   KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
+    cnt_stealop +=    KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
+    cnt_suspend +=    KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
+    t_sched +=        KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TIDLE);
+    t_preempt +=      KAAPI_PERF_REG(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
+      
+#if 0
   /* */
   if (default_param.display_perfcounter)
   {
+
 #define READ_PERF_REG(K, I) \
     KAAPI_ATOMIC_READ(&(K)->perf_regs[KAAPI_PERF_REG_ ## I])
 
@@ -229,6 +232,8 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 #endif  
 
+#endif
+
     free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
@@ -237,29 +242,26 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 
-#ifndef PRIu64
-
-# if (sizeof(long) == sizeof(uint64_t))
-#  define PRIu64 "lu"
-# else
-#  define PRIu64 "llu"
-# endif
-
-#ifndef PRIu32
-# define PRIu32 "u"
-# endif
-
-#endif
+#  ifndef PRIu64
+#    if (sizeof(long) == sizeof(uint64_t))
+#      define PRIu64 "lu"
+#    else
+#      define PRIu64 "llu"
+#    endif
+#  endif 
+#  ifndef PRIu32
+#    define PRIu32 "u"
+#  endif
 
   /* */
   if (default_param.display_perfcounter)
   {
     printf("----- Cumulated Performance counters\n");
-    printf("Total number of tasks executed     : %" PRIu32 "\n", cnt_tasks);
-    printf("Total number of steal OK requests  : %" PRIu32 "\n", cnt_stealreqok);
-    printf("Total number of steal BAD requests : %" PRIu32 "\n", cnt_stealreq-cnt_stealreqok);
-    printf("Total number of steal operations   : %" PRIu32 "\n", cnt_stealop);
-    printf("Total number of suspend operations : %u\n", cnt_suspend);
+    printf("Total number of tasks executed     : %" PRIu64 "\n", cnt_tasks);
+    printf("Total number of steal OK requests  : %" PRIu64 "\n", cnt_stealreqok);
+    printf("Total number of steal BAD requests : %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
+    printf("Total number of steal operations   : %" PRIu64 "\n", cnt_stealop);
+    printf("Total number of suspend operations : %" PRIu64 "\n", cnt_suspend);
     printf("Total idle time                    : %e\n", t_sched+t_preempt);
     printf("   sched idle time                 : %e\n", t_sched);
     printf("   preemption idle time            : %e\n", t_preempt);

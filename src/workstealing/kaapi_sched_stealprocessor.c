@@ -86,7 +86,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   }
   
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_ATOMIC_INCR(KAAPI_PERF_REG(kproc, STEALOP));
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
 
   return 0;

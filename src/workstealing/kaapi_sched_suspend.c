@@ -57,13 +57,13 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_task_t*           task_condition;
   kaapi_stack_t*          stack;
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  double t0;
-  double t1;
-#endif
-  
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
+#endif
 
   /* here is the reason of suspension */
   ctxt_condition = kproc->ctxt;
@@ -74,10 +74,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kproc->ctxt = 0;
   KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_ATOMIC_INCR(KAAPI_PERF_REG(kproc, SUSPEND));
-  t0 = kaapi_get_elapsedtime();  
-#endif
   do {
     /* wakeup a context */
     kproc->ctxt = kaapi_sched_wakeup(kproc);
@@ -86,8 +82,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     {
       kaapi_assert(kproc->ctxt->pc == task_condition);
 #if defined(KAAPI_USE_PERFCOUNTER)
-      t1 = kaapi_get_elapsedtime();
-      kproc->t_sched += t1-t0;
+      kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
       return 0;
     }
@@ -123,26 +118,23 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime(); 
-    kproc->t_sched = t1-t0;
+    kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
     err = kaapi_stack_execall( kproc->ctxt );
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
+    kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
     kaapi_assert( err != EINVAL);
-#if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_LOG(50, "[SUSPEND] Work for %fs\n", t1-t0);
-#endif 
 
     ctxt = kproc->ctxt;
+
     /* update   */
     kproc->ctxt = 0;
 
     if (err == EWOULDBLOCK) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
-      KAAPI_ATOMIC_INCR(KAAPI_PERF_REG(kproc, SUSPEND));
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
       /* push it: suspended because top task is not ready */
       KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
