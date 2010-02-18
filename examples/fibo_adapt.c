@@ -13,6 +13,9 @@ typedef struct fibo_arg_t {
 
 static void fibo_entrypoint(kaapi_task_t*, kaapi_stack_t*);
 
+static const kaapi_perf_idset_t idset =
+  KAAPI_PERF_IDSET_SINGLETON(KAAPI_PERF_ID_PAPI_0);
+
 
 static void common_entrypoint
 (

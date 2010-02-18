@@ -8,7 +8,6 @@
 /* internal */
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
 static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
-static int papi_event_set = PAPI_NULL;
 static unsigned int papi_event_count = 0;
 #endif
 
@@ -39,8 +38,6 @@ static int get_papi_events(void)
   unsigned int j;
   const char* p;
   const char* s;
-  int err;
-  PAPI_option_t opt;
   char name[PAPI_MIN_STR_LEN];
 
   s = getenv("KAAPI_PERF_PAPIES");
@@ -71,28 +68,6 @@ static int get_papi_events(void)
 
   papi_event_count = i;
 
-  /* create event set */
-  err = PAPI_create_eventset(&papi_event_set);
-  kaapi_assert_m(PAPI_OK, err, "PAPI_create_eventset()\n");
-
-  /* thread granularity */
-  memset(&opt, 0, sizeof(opt));
-  opt.granularity.eventset = papi_event_set;
-  opt.granularity.granularity = PAPI_GRN_THR;
-  err = PAPI_set_opt(PAPI_GRANUL, &opt);
-  kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_grn()");
-
-  /* user domain */
-  memset(&opt, 0, sizeof(opt));
-  opt.domain.eventset = papi_event_set;
-  opt.domain.domain = PAPI_DOM_USER;
-  err = PAPI_set_opt(PAPI_DOMAIN, &opt);
-  kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_dom()");
-
-  err = PAPI_add_events
-    (papi_event_set, papi_event_codes, papi_event_count);
-  kaapi_assert_m(PAPI_OK, err, "PAPI_add_events()\n");
-
   return 0;
 }
 #endif
@@ -114,12 +89,6 @@ void kaapi_perf_global_init(void)
 
   error = get_papi_events();
   kaapi_assert_m(0, error, "get_papi_events()");
-
-  if (papi_event_count)
-  {
-    const int err = PAPI_start(papi_event_set);
-    kaapi_assert_m(PAPI_OK, err, "PAPI_start()");
-  }
 #endif
 }
 
@@ -128,14 +97,6 @@ void kaapi_perf_global_init(void)
 */
 void kaapi_perf_global_fini(void)
 {
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
-  if (papi_event_count)
-  {
-    PAPI_stop(papi_event_set, NULL);
-    PAPI_cleanup_eventset(papi_event_set);
-    PAPI_destroy_eventset(&papi_event_set);
-  }
-#endif
 }
 
 
@@ -152,18 +113,43 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
   kproc->curr_perf_regs = kproc->perf_regs[isuser]; 
 
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
+
+  kproc->papi_event_count = 0;
+
   if (papi_event_count)
   {
-    /* recopy global event set even if current hardware can not be used to
-       have several different set per CPU: We hope that next hardware can do that per core basis.
-    */
-    kproc->papi_event_set = papi_event_set;
-    kaapi_assert_m( PAPI_OK, PAPI_start(kproc->papi_event_set), "PAPI_start" );
+    int err;
+    PAPI_option_t opt;
+
+    /* create event set */
+    kproc->papi_event_set = PAPI_NULL;
+    err = PAPI_create_eventset(&kproc->papi_event_set);
+    kaapi_assert_m(PAPI_OK, err, "PAPI_create_eventset()\n");
+
+    /* thread granularity */
+    memset(&opt, 0, sizeof(opt));
+    opt.granularity.eventset = kproc->papi_event_set;
+    opt.granularity.granularity = PAPI_GRN_THR;
+    err = PAPI_set_opt(PAPI_GRANUL, &opt);
+    kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_grn()");
+
+    /* user domain */
+    memset(&opt, 0, sizeof(opt));
+    opt.domain.eventset = kproc->papi_event_set;
+    opt.domain.domain = PAPI_DOM_USER;
+    err = PAPI_set_opt(PAPI_DOMAIN, &opt);
+    kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_dom()");
+
+    err = PAPI_add_events
+      (kproc->papi_event_set, papi_event_codes, papi_event_count);
+    kaapi_assert_m(PAPI_OK, err, "PAPI_add_events()\n");
+
+    kproc->papi_event_count = papi_event_count;
   }
+
 #endif
 
 }
-
 
 
 /*
@@ -171,10 +157,11 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
 void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
 {
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
-  if (papi_event_count)
+  if (kproc->papi_event_count)
   {
-    /* in fact here we stop the counter */
-    kaapi_assert_m( PAPI_OK, PAPI_stop(kproc->papi_event_set, NULL), "PAPI_stop" );
+    PAPI_stop(kproc->papi_event_set, NULL);
+    PAPI_cleanup_eventset(kproc->papi_event_set);
+    PAPI_destroy_eventset(&kproc->papi_event_set);
   }
 #endif
 }

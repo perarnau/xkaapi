@@ -196,8 +196,10 @@ typedef struct kaapi_processor_t {
   /* performance register */
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
   kaapi_perf_counter_t*	   curr_perf_regs;                /* either perf_regs[0], either perf_regs[1] */
+
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
-  int papi_event_set;
+  int			   papi_event_set;
+  unsigned int		   papi_event_count;
 #endif
    
   double                   t_sched;                       /* total idle time in second pass in the scheduler */           

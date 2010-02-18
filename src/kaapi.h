@@ -1430,7 +1430,7 @@ typedef struct kaapi_perf_idset_t
   unsigned char idmap[KAAPI_PERF_ID_MAX];
 } kaapi_perf_idset_t;
 
-#define KAAPI_PERF_IDSET_SINGLETON(I) {1, I}
+#define KAAPI_PERF_IDSET_SINGLETON(I) {1, {I}}
 
 /* idset */
 extern void kaapi_perf_idset_zero(kaapi_perf_idset_t*);
