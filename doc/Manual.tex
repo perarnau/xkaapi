@@ -227,15 +227,16 @@ In the "examples" directory, there is some examples that are compiled with the l
 Note that not every example in the "examples" directory does work currently.
 
 \subsection{Simple Example}
-
+\textbf{A revoir}
+\begin{it}
 Let's have a look at the \verb+transform+ example. This code is simply the parallel version (using \kaapi  of course) of the stl::transform
 algorithm. Inputs are a table and a unary operation, the unary operation is applied to each single element of the table and the result is stored into an output table.
-\\
 
 The library header has to be include (\verb+kaapi.h+). The work is done in the \verb+doit()+ function, in the while loop. In this loop, there's a call to \verb+kaapi_stealpoint()+. If some steal requests have been recieved since the last call to this function, then the \verb+splitter()+ function is called in order to reply to these requests.
-\\
 
 XKaapi aims at providing a finer grain than the previous Kaapi implementation. To do so, the workstealing engine relies upon the application programmer to place its own stealing points, using the \verb+kaapi_stealpoint()+ routine. The stealpoints provide a way to distribute the remaining computation among the thief processors. The splitting occurs dynamically by iterating over the pending stealing requests array (the \verb+request[]+ array argument containing \verb+count+ elements). It is left to the programmer to implement a splitter function, since it is assumed he knows how to partition the computation as it is in a coherent state. Inside the splitting function, the victim uses the \verb+kaapi_request_reply()+ routine to complete the stealing requests.
+\end{it}
+
 
 \subsection{Running Code and Environnement Variables}
 
@@ -274,7 +275,7 @@ If configured by \url{--with-perfcounter}, the \kaapi library allows to output p
 \begin{verbatim}
  KAAPI_DISPLAY_PERF =1 ./fibo 30
 \end{verbatim}
-
+\item \verb+KAAPI_PERF_PAPI+: if defined and if PAPI library has been used to compile \kaapi, then it allows to select the list of hardware counters that the library will monitor.
 \end{itemize}
 
 
