@@ -1429,6 +1429,10 @@ typedef unsigned int kaapi_perf_id_t;
 extern void kaapi_perf_accum_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
 extern void kaapi_perf_read_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter_t* counter);
 
+/* utility */
+extern const char* kaapi_perf_id_to_name(kaapi_perf_id_t);
+extern size_t kaapi_perf_counter_num(void);
+
 
 /* ========================================================================= */
 /* Format declaration                                                        */

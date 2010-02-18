@@ -260,3 +260,27 @@ void kaapi_perf_read_counters(kaapi_perf_id_t id, int isuser, kaapi_perf_counter
       counter[i] += kproc->perf_regs[isuser][i];
   }  
 }
+
+
+const char* kaapi_perf_id_to_name(kaapi_perf_id_t id)
+{
+  static const char* names[] =
+  {
+    "TASKS",
+    "STEALREQOK",
+    "STEALREQ",
+    "STEALOP",
+    "SUSPEND",
+    "PAPI_0",
+    "PAPI_1",
+    "PAPI_2"
+  };
+
+  return names[(size_t)id];
+}
+
+
+size_t kaapi_perf_counter_num(void)
+{
+  return KAAPI_PERF_ID_PAPI_BASE + papi_event_count;
+}

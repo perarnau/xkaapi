@@ -14,6 +14,18 @@ typedef struct fibo_arg_t {
 static void fibo_entrypoint(kaapi_task_t*, kaapi_stack_t*);
 
 
+static void common_entrypoint
+(
+ kaapi_task_t* task,
+ kaapi_stack_t* stack
+)
+{
+  kaapi_perf_zero_counter(KAAPI_PERF_ID_USER(STEALOP));
+  kaapi_perf_reset_register(KAAPI_PERF_ID_USER(STEALOP));
+  fibo_entrypoint(task, stack);
+  kaapi_perf_read_register(KAAPI_PERF_ID_USER(STEALOP));
+}
+
 static void thief_entrypoint
 (
  kaapi_task_t* task,
@@ -23,14 +35,7 @@ static void thief_entrypoint
   fibo_arg_t* const thief_arg =
     kaapi_task_getargst(task, fibo_arg_t);
 
-  fibo_entrypoint(task, stack);
-
-#if 0
-  printf("[%u] thief_entrypoint(%d) == %d\n",
-	 (unsigned int)pthread_self(),
-	 thief_arg->n,
-	 thief_arg->result);
-#endif
+  common_entrypoint(task, stack);
 
   kaapi_finalize_steal
     (
@@ -116,6 +121,17 @@ static int fibo_reducer
 }
 
 
+static const kaapi_perf_id_t perf_ids[] =
+{
+  KAAPI_PERF_ID_STEALOP,
+  KAAPI_PERF_ID_PAPI_0,
+  KAAPI_PERF_ID_PAPI_1
+};
+
+static const size_t perf_count =
+  sizeof(perf_ids) / sizeof(perf_ids[0]);
+
+
 static void fibo_entrypoint
 (
  kaapi_task_t* task,
@@ -124,17 +140,11 @@ static void fibo_entrypoint
 {
   fibo_arg_t* const victim_arg = kaapi_task_getargst(task, fibo_arg_t);
 
-  /* kaapi_perf */
-  kaapi_perf_reset_register(KAAPI_PERF_ID_USER(PAPI_0));
-  { int i ; for (i =0 ; i < 10; ++i) asm("nop\n\t"); }
-  kaapi_perf_accum_register(KAAPI_PERF_ID_USER(PAPI_0));
-
   if (victim_arg->n < 2)
   {
     victim_arg->result = victim_arg->n;
   }
   else {
-    /* steal me hardly */
     kaapi_stealpoint
       (
        stack,
@@ -147,10 +157,6 @@ static void fibo_entrypoint
     fibo_entrypoint(task, stack);
     victim_arg->n += 2;
 
-#if 0
-    printf("-- fibo_entrypoint(%d) %d\n", victim_arg->n - 2, victim_arg->result);
-#endif
-
     if (!kaapi_preempt_nextthief(stack, task, NULL, fibo_reducer, victim_arg))
     {
       const int result = victim_arg->result;
@@ -159,11 +165,6 @@ static void fibo_entrypoint
       victim_arg->n -= 1;
       fibo_entrypoint(task, stack);
       victim_arg->n += 1;
-
-#if 0
-      printf("!kaapi_preempt_nextthief(%d), result: %d\n",
-	     victim_arg->n - 1, victim_arg->result);
-#endif
 
       /* sum fibo(n-1), fibo(n-2) */
       victim_arg->result += result;
@@ -186,11 +187,6 @@ int main(int argc, char** argv)
 
     fibo_arg_t arg;
 
-    /* kaapi_perf */
-    {
-      kaapi_perf_zero_counters(KAAPI_PERF_ID_USER(ALL));
-    }
-
     arg.result = 0;
     arg.n = atoi(argv[1]);
 
@@ -198,7 +194,7 @@ int main(int argc, char** argv)
       (
        stack,
        task,
-       fibo_entrypoint,
+       common_entrypoint,
        &arg,
        KAAPI_TASK_ADAPT_DEFAULT
       );
@@ -208,20 +204,28 @@ int main(int argc, char** argv)
     kaapi_sched_sync(stack);
 
     /* kaapi_perf */
-    kaapi_perf_read_register(KAAPI_PERF_ID_USER(TASKS));
-    kaapi_perf_read_register(KAAPI_PERF_ID_USER(STEALOP));
+    {
+      kaapi_perf_counter_t counter;
+      kaapi_perf_read_counters(KAAPI_PERF_ID_USER(STEALOP), &counter);
+      printf("#op: %llu\n", counter);
+    }
 
     result = arg.result;
 
-    /* kaapi_perf, report */
-    {
-      kaapi_perf_counter_t counters[KAAPI_PERF_ID_MAX];
-      kaapi_perf_accum_counters(KAAPI_PERF_ID_USER(ALL), counters);
-      printf("counter: %llu %llu %llu\n",
-	     counters[KAAPI_PERF_ID_PAPI_0],
-	     counters[KAAPI_PERF_ID_TASKS],
-	     counters[KAAPI_PERF_ID_STEALOP]);
-    }
+/*     /\* kaapi_perf, report *\/ */
+/*     { */
+/*       size_t i; */
+
+/*       kaapi_perf_counter_t counters[KAAPI_PERF_ID_MAX]; */
+
+/*       kaapi_perf_read_counters(KAAPI_PERF_ID_USER(ALL), counters); */
+
+/*       printf("counters: \n"); */
+/*       for (i = 0; i < perf_count; ++i) */
+/* 	printf(" + %s: %llu\n", */
+/* 	       kaapi_perf_id_to_name(perf_ids[i]), */
+/* 	       counters[perf_ids[i]]); */
+/*     } */
 
   }
   t1 = kaapi_get_elapsedtime();
