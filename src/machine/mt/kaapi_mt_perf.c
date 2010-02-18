@@ -8,9 +8,9 @@
 /* internal */
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
 static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
-static unsigned int papi_event_count = 0;
 static int papi_event_set = PAPI_NULL;
 #endif
+static unsigned int papi_event_count = 0;
 
 static int get_event_code(char* name, int* code)
 {
@@ -201,7 +201,7 @@ void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
 void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 {
   kaapi_assert( (isuser ==0)||(isuser==1) );
-  if (kproc->curr_perf_regs != &kproc->perf_regs[isuser])
+  if (kproc->curr_perf_regs != kproc->perf_regs[isuser])
   {
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
     if (papi_event_count)
@@ -219,7 +219,7 @@ void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 */
 int kaapi_perf_thread_state(kaapi_processor_t* kproc)
 {
-  return (kproc->curr_perf_regs == &kproc->perf_regs[KAAPI_PERF_USER_STATE] ? KAAPI_PERF_USER_STATE : KAAPI_PERF_SCHEDULE_STATE);
+  return (kproc->curr_perf_regs == kproc->perf_regs[KAAPI_PERF_USER_STATE] ? KAAPI_PERF_USER_STATE : KAAPI_PERF_SCHEDULE_STATE);
 }
 
 
