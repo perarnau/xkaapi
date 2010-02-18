@@ -139,8 +139,6 @@ static inline unsigned int get_perf_id(kaapi_perf_id_t* id)
 }
 
 
-#if 0 /* unused */
-
 void kaapi_perf_zero_counter(kaapi_perf_id_t id)
 {
   /* zero the software counter
@@ -154,8 +152,6 @@ void kaapi_perf_zero_counter(kaapi_perf_id_t id)
   else
     kproc->counters[is_user][id] = 0;
 }
-
-#endif
 
 
 static inline kaapi_atomic_t* get_internal_register
@@ -193,7 +189,7 @@ static inline void reset_internal_register
 
 void kaapi_perf_reset_register(kaapi_perf_id_t id)
 {
-  /* reset the hardware counters
+  /* reset the hardware register
    */
 
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
@@ -356,7 +352,7 @@ void kaapi_perf_zero_counters(kaapi_perf_id_t id)
 }
 
 
-void kaapi_perf_accum_counters(kaapi_perf_id_t id, kaapi_perf_counter_t* counter)
+void kaapi_perf_read_counters(kaapi_perf_id_t id, kaapi_perf_counter_t* counter)
 {
   /* reduce the software counters
    */
@@ -392,4 +388,28 @@ void kaapi_perf_accum_counters(kaapi_perf_id_t id, kaapi_perf_counter_t* counter
 
     *counter += kproc->counters[is_user][id];
   }
+}
+
+
+const char* kaapi_perf_id_to_name(kaapi_perf_id_t id)
+{
+  static const char* names[] =
+  {
+    "TASKS",
+    "STEALREQOK",
+    "STEALREQ",
+    "STEALOP",
+    "SUSPEND",
+    "PAPI_0",
+    "PAPI_1",
+    "PAPI_2"
+  };
+
+  return names[(size_t)id];
+}
+
+
+size_t kaapi_perf_counter_num(void)
+{
+  return KAAPI_PERF_ID_PAPI_BASE + papi_event_count;
 }

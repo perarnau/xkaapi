@@ -197,13 +197,6 @@ typedef struct kaapi_processor_t {
   kaapi_perf_counter_t	   counters[2][KAAPI_PERF_ID_MAX];
 
   /* performance registers */
-#if 0
-  kaapi_atomic_t           cnt_tasks;                     /* number of executed tasks */
-  kaapi_atomic_t           cnt_stealreqok;                /* number of steal requests replied with success */
-  kaapi_atomic_t           cnt_stealreq;                  /* total number of steal requests replied */
-  kaapi_atomic_t           cnt_stealop;                   /* number of steal operation: ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
-  kaapi_atomic_t           cnt_suspend;                   /* number of suspend operations*/
-#else
 #define KAAPI_PERF_REG_TASKS 0
 #define KAAPI_PERF_REG_STEALREQOK 1
 #define KAAPI_PERF_REG_STEALREQ 2
@@ -212,7 +205,7 @@ typedef struct kaapi_processor_t {
 #define KAAPI_PERF_REG_MAX (KAAPI_PERF_REG_SUSPEND + 1)
 #define KAAPI_PERF_REG(K, I) (&(K)->perf_regs[KAAPI_PERF_REG_##I])
   kaapi_atomic_t	   perf_regs[KAAPI_PERF_REG_MAX];
-#endif
+
   double                   t_sched;                       /* total idle time in second pass in the scheduler */           
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
 

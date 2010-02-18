@@ -1350,8 +1350,13 @@ void kaapi_perf_read_register(kaapi_perf_id_t);
 void kaapi_perf_accum_register(kaapi_perf_id_t);
 
 /* exported, perf counters */
+void kaapi_perf_zero_counter(kaapi_perf_id_t);
 void kaapi_perf_zero_counters(kaapi_perf_id_t);
-void kaapi_perf_accum_counters(kaapi_perf_id_t, kaapi_perf_counter_t*);
+void kaapi_perf_read_counters(kaapi_perf_id_t, kaapi_perf_counter_t*);
+
+/* utility */
+const char* kaapi_perf_id_to_name(kaapi_perf_id_t);
+size_t kaapi_perf_counter_num(void);
 
 
 /* ========================================================================= */
