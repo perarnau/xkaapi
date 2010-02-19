@@ -286,6 +286,48 @@ If configured by \url{--with-perfcounter}, the \kaapi library allows to output p
 \begin{verbatim}
  KAAPI_PERF_PAPIES=PAPI_TOT_INS,0x80002230,PAPI_L1_DCM ./fibo 30
 \end{verbatim}
+
+As an example, the following is an output produced by the library as the program terminates. It includes both the per core and the cummulated performance counters:
+
+\begin{verbatim}
+KAAPI_DISPLAY_PERF=1 KAAPI_CPUCOUNT=3 KAAPI_PERF_PAPIES=PAPI_TOT_INS ./fibo 10
+[KAAPI::INIT] use #physical cpu:3, start time:1266571053.688506
+#op: 4196640
+Fibo(10) = 55 *** Time: 1.328945e-03(s)
+[KAAPI::TERM] end time:1266571053.690019
+----- Performance counters, core   : 0
+Total number of tasks executed     : 2, 0
+Total number of steal OK requests  : 0
+Total number of steal BAD requests : 0
+Total number of steal operations   : 0
+Total number of suspend operations : 0
+Total idle time                    : 1.088381e-03
+----- Performance counters, core   : 1
+Total number of tasks executed     : 0, 0
+Total number of steal OK requests  : 0
+Total number of steal BAD requests : 1567
+Total number of steal operations   : 1385
+Total number of suspend operations : 0
+Total idle time                    : 0.000000e+00
+----- Performance counters, core   : 2
+Total number of tasks executed     : 0, 0
+Total number of steal OK requests  : 0
+Total number of steal BAD requests : 1515
+Total number of steal operations   : 1302
+Total number of suspend operations : 0
+Total idle time                    : 0.000000e+00
+----- Cumulated Performance counters
+Total number of tasks executed     : 2
+Total number of steal OK requests  : 0
+Total number of steal BAD requests : 3082
+Total number of steal operations   : 2687
+Total number of suspend operations : 0
+Total idle time                    : 0.000000e+00
+   sched idle time                 : 0.000000e+00
+   preemption idle time            : 0.000000e+00
+Average steal requests aggregation : 1.147004e+00
+\end{verbatim}
+
 \end{itemize}
 
 
