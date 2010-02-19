@@ -177,6 +177,7 @@ In case of error, please read carefully the displayed message.
 \item \verb+--enable-target=mt+: select the target for multi-threaded implementation on top of Pthreads. Other implementations (gpu, mpsoc) are under development. 
 \item \verb+--enable-mode=debug+ or \verb+release+: choose the compilation mode of the library. The default mode is the release mode.
 \item \verb+--with-perfcounter+: add support for monitoring you \kaapi programs.	
+\item \verb+--with-papi+: enable the PAPI library for low level performance counting. More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
 \end{itemize}
 
 All configuration options are self-documented. You display the options, enter:
@@ -259,6 +260,12 @@ In order to control thread placement and global machine usage, there are two env
  KAAPI_CPUSET=3:6,9 ./transform 100000
 \end{verbatim}
 
+You may exclude a cpu from the set by appending the '!' token:
+\begin{verbatim}
+ #this will uses cores from 3 to 9, but not 4:
+ KAAPI_CPUSET=3:9,!4 ./transform 100000
+\end{verbatim}
+
 \end{itemize}
 
 \subsection{Monitoring performances}
@@ -270,12 +277,15 @@ If configured by \url{--with-perfcounter}, the \kaapi library allows to output p
  KAAPI_DISPLAY_PERF =1 ./fibo 30
 \end{verbatim}
 
-
 \item \verb+KAAPI_DISPLAY_PERF+: if defined, then performance counters are displayed at the end of the execution.
 \begin{verbatim}
  KAAPI_DISPLAY_PERF =1 ./fibo 30
 \end{verbatim}
-\item \verb+KAAPI_PERF_PAPI+: if defined and if PAPI library has been used to compile \kaapi, then it allows to select the list of hardware counters that the library will monitor.
+
+\item \verb+KAAPI_PERF_PAPIES+: asuming \kaapi was configured using --with-papi, this variable contains a comma separated list of the PAPI performance counters to use. Both counter symbolic names and numeric hexadecimal constants can be used. More information can be found on the PAPI website (http://icl.cs.utk.edu/papi/). Note that counter list cannot exceed 3 elements.
+\begin{verbatim}
+ KAAPI_PERF_PAPIES=PAPI_TOT_INS,0x80002230,PAPI_L1_DCM ./fibo 30
+\end{verbatim}
 \end{itemize}
 
 
