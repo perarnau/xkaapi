@@ -204,22 +204,6 @@ int main(int argc, char** argv)
     }
 
     result = arg.result;
-
-/*     /\* kaapi_perf, report *\/ */
-/*     { */
-/*       size_t i; */
-
-/*       kaapi_perf_counter_t counters[KAAPI_PERF_ID_MAX]; */
-
-/*       kaapi_perf_read_counters(KAAPI_PERF_ID_USER(ALL), counters); */
-
-/*       printf("counters: \n"); */
-/*       for (i = 0; i < perf_count; ++i) */
-/* 	printf(" + %s: %llu\n", */
-/* 	       kaapi_perf_id_to_name(perf_ids[i]), */
-/* 	       counters[perf_ids[i]]); */
-/*     } */
-
   }
   t1 = kaapi_get_elapsedtime();
 
