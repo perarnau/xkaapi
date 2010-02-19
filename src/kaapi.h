@@ -1442,10 +1442,10 @@ extern void _kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuse
 
 /* global access, user functions */
 static inline void kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
-{ _kaapi_perf_accum_counters(idset, 1, counter); }
+{ _kaapi_perf_accum_counters(idset, KAAPI_PERF_USR_COUNTER, counter); }
 
 static inline void kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
-{ _kaapi_perf_read_counters(idset, 1, counter); }
+{ _kaapi_perf_read_counters(idset, KAAPI_PERF_USR_COUNTER, counter); }
 
 /* local access, internal functions */
 extern void _kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
@@ -1453,10 +1453,10 @@ extern void _kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isus
 
 /* local access, user functions */
 static inline void kaapi_perf_read_register(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
-{ _kaapi_perf_read_register(idset, 1, counter); }
+{ _kaapi_perf_read_register(idset, KAAPI_PERF_USR_COUNTER, counter); }
 
 static inline void kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* accum)
-{ _kaapi_perf_accum_register(idset, 1, accum); }
+{ _kaapi_perf_accum_register(idset, KAAPI_PERF_USR_COUNTER, accum); }
 
 /* utility */
 extern const char* kaapi_perf_id_to_name(kaapi_perf_id_t);
