@@ -225,7 +225,7 @@ int kaapi_perf_thread_state(kaapi_processor_t* kproc)
 
 /*
 */
-void kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
+void _kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
 {
   kaapi_assert( (isuser ==KAAPI_PERF_USR_COUNTER)||
                 (isuser==KAAPI_PERF_SYS_COUNTER)||
@@ -267,13 +267,12 @@ void kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaap
 
 /*
 */
-void kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
+void _kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
 {
   kaapi_assert( (isuser ==0)||(isuser==1) );
-  unsigned int k;
-  
+
   memset(counter, 0, idset->count * sizeof(kaapi_perf_counter_t) );
-  kaapi_perf_accum_counters( idset, isuser, counter );
+  _kaapi_perf_accum_counters( idset, isuser, counter );
 }
 
 

@@ -1437,8 +1437,15 @@ extern void kaapi_perf_idset_zero(kaapi_perf_idset_t*);
 extern void kaapi_perf_idset_add(kaapi_perf_idset_t*, kaapi_perf_id_t);
 
 /* global access */
-extern void kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
-extern void kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
+extern void _kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
+extern void _kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
+
+/* global access, user functions */
+static inline void kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
+{ _kaapi_perf_accum_counters(idset, 1, counter); }
+
+static inline void kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
+{ _kaapi_perf_read_counters(idset, 1, counter); }
 
 /* local access, internal functions */
 extern void _kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter);
