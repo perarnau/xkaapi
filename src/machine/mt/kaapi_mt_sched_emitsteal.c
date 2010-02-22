@@ -172,7 +172,9 @@ return_value:
   {
     return 0;
   }
+#if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
   
   /* get the work (stack) and return it
   */
