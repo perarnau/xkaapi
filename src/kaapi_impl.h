@@ -64,11 +64,11 @@ extern "C" {
 #define KAAPI_LOG_LEVEL 10
 
 #if defined(KAAPI_DEBUG)
-#  define kaapi_assert_debug_m(val, x, msg) \
-      { int __kaapi_err = x; \
-        if (__kaapi_err != val) \
+#  define kaapi_assert_debug_m(cond, msg) \
+      { int __kaapi_cond = cond; \
+        if (!__kaapi_cond) \
         { \
-          printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+          printf("[%s]: LINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
           abort();\
         }\
       }
@@ -76,7 +76,7 @@ extern "C" {
       do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
 
 #else
-#  define kaapi_assert_debug_m(val, x, msg)
+#  define kaapi_assert_debug_m(cond, msg)
 #  define KAAPI_LOG(l, fmt, ...) 
 #endif
 

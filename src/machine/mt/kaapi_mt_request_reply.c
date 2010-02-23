@@ -165,7 +165,7 @@ int _kaapi_request_reply
           thief_ta->local_result_size    = 0;
         }
         else {
-          kaapi_assert_debug_m( 0, 1, "Replied a non adaptive task from an adaptative task... What do you want to do");
+          kaapi_assert_debug_m( 0, "Replied a non adaptive task from an adaptative task... What do you want to do");
         }
       }
       else flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
