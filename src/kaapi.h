@@ -764,7 +764,7 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
   void* retval;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
-  kaapi_assert_debug( (char*)stack->sp_data+count >= (char*)stack->sp );
+  kaapi_assert_debug( (char*)stack->sp_data+count <= (char*)stack->sp );
 #endif
   retval = stack->sp_data;
   stack->sp_data += count;
