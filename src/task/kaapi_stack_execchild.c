@@ -109,6 +109,14 @@ redo_work:
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
+    if (pc <= stack->sp) 
+    {
+      stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
+      return 0;
+    }
     goto redo_work;
   }
   else if (pc->flag & KAAPI_TASK_S_STEAL)

@@ -61,6 +61,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
 
   kaapi_assert_debug( task->body !=0);
   kaapi_assert_debug( task->body !=kaapi_suspend_body);
+  kaapi_assert_debug( task->body !=kaapi_aftersteal_body);
 
   /* cas the state */
   if (!kaapi_task_casstate(task, KAAPI_TASK_S_INIT, KAAPI_TASK_S_STEAL )) return 0;
