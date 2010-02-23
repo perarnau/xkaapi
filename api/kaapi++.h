@@ -290,7 +290,7 @@ namespace ka {
     pointer_rp() : base_pointer<T>() {}
     pointer_rp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-    pointer_rp( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
+//    pointer_rp( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
   };

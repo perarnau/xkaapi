@@ -90,12 +90,12 @@ struct TaskBodyCPU<TaskSum> : public SumBody { };
  * - threshold is used to control the grain of the application. The greater it is, the more task will be created, the more parallelism there will be.
  *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
  */
-struct FiboBody {
+struct TaskFibo : public ka::Task<2>::Signature<ka::Shared_w<int>, int > {};
+
+template<>
+struct TaskBodyCPU<TaskFibo> {
   void operator() ( ka::pointer_w<int> res, int n );
 };
-struct TaskFibo : public ka::Task<2>::Signature<ka::Shared_w<int>, int > {};
-template<>
-struct TaskBodyCPU<TaskFibo> : public FiboBody {};
 
 
   void FiboBody::operator() ( ka::pointer_w<int> res, int n )
@@ -157,7 +157,7 @@ struct doit {
 };
 
 
-/* main entry point : Athapascan initialization
+/* main entry point : Kaapi initialization
 */
 #if defined(KAAPI_USE_IPHONEOS)
 void* KaapiMainThread::run_main(int argc, char** argv)
