@@ -68,7 +68,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   /* here is the reason of suspension */
   ctxt_condition = kproc->ctxt;
   task_condition = ctxt_condition->pc;
-  if (task_condition->body != kaapi_suspend_body) return 0;
+  if (kaapi_task_getbody(task_condition) != kaapi_suspend_body) return 0;
   
   /* put context is list of suspended contexts: critical section with respect of thieves */
   kproc->ctxt = 0;

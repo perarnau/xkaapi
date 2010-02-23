@@ -117,6 +117,15 @@ typedef struct kaapi_atomic64_t {
 } kaapi_atomic64_t;
 
 
+/* ========================================================================== */
+struct kaapi_task_t;
+struct kaapi_stack_t;
+/** Task body
+    \ingroup TASK
+*/
+typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* stack */);
+typedef int kaapi_task_bodyid_t;
+
 /** Define the cache line size. 
 */
 #define KAAPI_CACHE_LINE 64
@@ -259,18 +268,20 @@ typedef enum {
 #define KAAPI_TASK_ADAPT_DEFAULT   0x0000 /* 000 0000 0000 0000: default: preemption & sync of child adaptive tasks */
 #define KAAPI_TASK_ADAPT_NOPREEMPT 0x1000 /* 001 0000 0000 0000: no preemption of child adaptive tasks */
 #define KAAPI_TASK_ADAPT_NOSYNC    0x2000 /* 010 0000 0000 0000: no synchronisation of child adaptive tasks */
+
+
+
+/** Bits for attribut of task body
+    \ingroup ADAPT
+*/
+#define KAAPI_TASK_BODY_MASK_ATTR 0xFFFF0000 /* 16 bits: bit 16, .., 31 */
+#define KAAPI_TASK_BODY_USER_BASE 0xF        /* 16 body reserved for internal purpose */
+extern kaapi_task_body_t kaapi_bodies[0xFF];         /* at most 255 bodies */
 /*@}*/
 
 
 
 
-/* ========================================================================== */
-struct kaapi_task_t;
-struct kaapi_stack_t;
-/** Task body
-    \ingroup TASK
-*/
-typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* stack */);
 
 /* ========================================================================= */
 /* Format of a task                                                          */
@@ -306,6 +317,7 @@ typedef struct kaapi_format_t {
   void                       (*print)( FILE* file, const void* src);
 
   /* only if it is a format of a task  */
+  kaapi_task_bodyid_t        bodyid;                                  /* iff a task */
   kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
   int                        count_params;                            /* number of parameters */
   kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
@@ -450,9 +462,7 @@ typedef struct kaapi_frame_t {
 */
 typedef struct kaapi_task_t {
   kaapi_uint32_t        flag;      /** flags: after a padding on 64 bit architecture !!!  */
-  kaapi_task_body_t     body;      /** C function that represent the body to execute */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
-  kaapi_format_t*       format;    /** format, 0 if not def !!!  */
 } kaapi_task_t ;
 
 
@@ -623,41 +633,69 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
 /** \ingroup TASK
     Set the pointer to parameter of the task (void*) pointer
 */
-static inline kaapi_task_body_t kaapi_task_setbody(kaapi_task_t* task, kaapi_task_body_t body )
+static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
 {
-  return task->body = body;
+  task->flag = (task->flag & ~KAAPI_TASK_BODY_MASK_ATTR) | (body << 16);
+}
+
+/** \ingroup TASK
+    Set the pointer to parameter of the task (void*) pointer
+*/
+static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
+{
+  return (task->flag >> 16);
+}
+
+/** \ingroup TASK
+    Set the pointer to parameter of the task (void*) pointer
+*/
+static inline void kaapi_task_run(kaapi_task_t* task, kaapi_stack_t* stack )
+{
+  kaapi_bodies[task->flag >> 16](task, stack);
 }
 
 
-/** Body of the startup task 
-    \ingroup TASK
-*/
-extern void kaapi_taskstartup_body( kaapi_task_t*, kaapi_stack_t*);
-
 /** Body of the nop task 
     \ingroup TASK
+    id: 0
 */
-extern void kaapi_nop_body( kaapi_task_t*, kaapi_stack_t*);
+extern void _kaapi_nop_body( kaapi_task_t*, kaapi_stack_t*);
+enum { kaapi_nop_body = 0 };
+
+/** Body of the startup task 
+    \ingroup TASK
+    id: 1
+*/
+extern void _kaapi_taskstartup_body( kaapi_task_t*, kaapi_stack_t*);
+enum { kaapi_taskstartup_body = 1 };
 
 /** Body of the task that restore the frame pointer 
     \ingroup TASK
+    id: 2
 */
-extern void kaapi_retn_body( kaapi_task_t*, kaapi_stack_t*);
+extern void _kaapi_retn_body( kaapi_task_t*, kaapi_stack_t*);
+enum { kaapi_retn_body = 2 };
 
 /** Body of the task that mark a task to suspend execution
     \ingroup TASK
+    id: 3
 */
-extern void kaapi_suspend_body( kaapi_task_t*, kaapi_stack_t*);
+extern void _kaapi_suspend_body( kaapi_task_t*, kaapi_stack_t*);
+enum { kaapi_suspend_body = 3 };
 
 /** Body of the task that do signal to a task after steal op
     \ingroup TASK
+    id: 4
 */
-extern void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack);
+extern void _kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack);
+enum { kaapi_tasksig_body = 4 };
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
+    id: 5
 */
-extern void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void _kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack );
+enum { kaapi_taskfinalize_body = 5 };
 
 
 /** \ingroup TASK
@@ -899,13 +937,9 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 /** \ingroup TASK
     Initialize a task with given flag for adaptive attribut or task constraints.
 */
-static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg, kaapi_uint32_t flag ) 
+static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
-#if defined(KAAPI_DEBUG)
-  task->format = 0;
-#endif
-  task->flag   = flag | KAAPI_TASK_ADAPTIVE;
   kaapi_assert_debug( ta !=0 );
   ta->user_sp               = arg;
   ta->splitter              = 0;
@@ -917,32 +951,21 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   ta->mastertask            = 0;
   ta->arg_from_victim       = 0;
   task->sp                  = ta;
-  task->body                = taskbody;
+  task->flag                = flag | KAAPI_TASK_ADAPTIVE | (taskbody << 16);
   return 0;
 }
 
-#if defined(KAAPI_DEBUG)
-#  define kaapi_task_format_debug(task) \
-    (task)->format   = 0
-#else
-/* bug: should be set to 0 in case of badly initialize task.... */
-#  define kaapi_task_format_debug(task) \
-    (task)->format   = 0
-#endif
-
 #define kaapi_task_initdfg( stack, task, taskbody, arg ) \
   do { \
-    (task)->body     = (taskbody);\
     (task)->sp       = (arg);\
-    (task)->flag     = KAAPI_TASK_DFG;\
-    (task)->format   = 0;\
+    (task)->flag     = KAAPI_TASK_DFG | (taskbody << 16);\
   } while (0)
 
 
 /** \ingroup TASK
     Initialize a task with given flag for adaptive attribut
 */
-static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg, kaapi_uint32_t flag ) 
+static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
   if (flag & KAAPI_TASK_ADAPTIVE)
     kaapi_task_initadaptive(stack, task, taskbody, arg, flag); /* here only flag & KAAPI_TASK_ADAPT_MASK_ATTR */
@@ -1016,9 +1039,8 @@ static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_
   kaapi_task_t* retn;
   kaapi_frame_t* arg_retn;
   retn = kaapi_stack_toptask(stack);
-  retn->flag  = KAAPI_TASK_STICKY;
-  retn->body  = &kaapi_retn_body;
-  kaapi_task_format_debug( retn );
+  retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body<<16);
+/*  kaapi_task_setbody( retn, kaapi_retn_body ); */
   arg_retn = (kaapi_frame_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
   retn->sp = (void*)arg_retn;
   *arg_retn = *frame;
@@ -1319,7 +1341,7 @@ static inline int kaapi_finalize_steal( kaapi_stack_t* stack, kaapi_task_t* task
   {
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
     kaapi_task_t* task = kaapi_stack_toptask(stack);
-    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    kaapi_task_init( stack, task, kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
     kaapi_stack_pushtask(stack);
   }
   return 0;
@@ -1339,7 +1361,7 @@ static inline int kaapi_return_steal( kaapi_stack_t* stack, kaapi_task_t* task, 
     ta->local_result_data = retval;
     ta->local_result_size = size;
     kaapi_task_t* task = kaapi_stack_toptask(stack);
-    kaapi_task_init( stack, task, &kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    kaapi_task_init( stack, task, kaapi_taskfinalize_body, ta, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
     kaapi_stack_pushtask(stack);
   }
   return 0;
@@ -1450,6 +1472,7 @@ extern kaapi_format_id_t kaapi_format_register(
 
 extern kaapi_format_id_t kaapi_format_taskregister( 
         kaapi_format_t*           (*fmt_fnc)(void),
+        kaapi_task_bodyid_t         bodyid,
         kaapi_task_body_t           body,
         const char*                 name,
         size_t                      size,
@@ -1474,14 +1497,14 @@ extern kaapi_format_id_t kaapi_format_structregister(
 /** \ingroup TASK
     Resolve a format data structure from the body of a task
 */
-extern kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_body_t key);
+extern kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key);
 
 /** \ingroup TASK
     Resolve a format data structure from the format identifier
 */
 extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
-#define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body, ... ) \
+#define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body_id, fnc_body, ... ) \
   static inline kaapi_format_t* formatobject(void) \
   {\
     static kaapi_format_t formatobject##_object;\
@@ -1492,7 +1515,7 @@ extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister( &formatobject, (fnc_body), name, ##__VA_ARGS__);\
+    kaapi_format_taskregister( &formatobject, fnc_body_id, fnc_body, name, ##__VA_ARGS__);\
   }
 
 

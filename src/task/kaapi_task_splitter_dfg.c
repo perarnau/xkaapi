@@ -50,24 +50,23 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
 {
   int i;
   int countparam;
-  kaapi_request_t* request   = 0;
-  kaapi_stack_t* thief_stack = 0;
+  kaapi_request_t* request    = 0;
+  kaapi_stack_t* thief_stack  = 0;
   kaapi_task_t*  steal_task   = 0;
-
+  kaapi_format_t* task_format = 0;
   kaapi_assert_debug (task !=0);
-  kaapi_assert_debug (task->format !=0);
   
   KAAPI_LOG(50, "dfgsplitter task: 0x%p\n", (void*)task);
 
-  kaapi_assert_debug( task->body !=0);
-  kaapi_assert_debug( task->body !=kaapi_suspend_body);
-  kaapi_assert_debug( task->body !=kaapi_aftersteal_body);
-  kaapi_assert_debug( task->body !=kaapi_taskwrite_body);
-  kaapi_assert_debug( task->body !=kaapi_tasksteal_body);
-  kaapi_assert_debug( task->body !=kaapi_taskstartup_body);
-  kaapi_assert_debug( task->body !=kaapi_retn_body);
-  kaapi_assert_debug( task->body !=kaapi_tasksig_body);
-  kaapi_assert_debug( task->body !=kaapi_taskfinalize_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=0);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_suspend_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_aftersteal_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_taskwrite_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_tasksteal_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_taskstartup_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_retn_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_tasksig_body);
+  kaapi_assert_debug( kaapi_task_getbody(task) !=kaapi_taskfinalize_body);
 
   /* cas the state */
   if (!kaapi_task_casstate(task, KAAPI_TASK_S_INIT, KAAPI_TASK_S_STEAL )) return 0;
@@ -88,9 +87,10 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
     return 0;
   }
     
-  task->body = &kaapi_suspend_body;
+  task_format = kaapi_format_resolvebybody( kaapi_task_getbody(task) );
+  kaapi_task_setbody(task, kaapi_suspend_body);
   
-  countparam = task->format->count_params;
+  countparam = task_format->count_params;
     
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
@@ -104,36 +104,22 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   
   steal_task = kaapi_stack_toptask( thief_stack );
   steal_task->flag = KAAPI_TASK_STICKY;
-  kaapi_task_setbody( steal_task, &kaapi_tasksteal_body );
-  kaapi_task_format_debug( steal_task );
+  kaapi_task_setbody( steal_task, kaapi_tasksteal_body );
   kaapi_task_setargs( steal_task, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksteal_arg_t)) );
   kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( steal_task, kaapi_tasksteal_arg_t );
   arg->origin_stack          = stack;
   arg->origin_task           = task;
-  arg->origin_fmt            = task->format;
+  arg->origin_fmt            = task_format;
 
   kaapi_stack_pushtask( thief_stack );
 
   /* ... and push continuation if w, cw or rw mode */
-  if (1)
-  {
-    kaapi_task_t* task = kaapi_stack_toptask( thief_stack );
-    task->flag = KAAPI_TASK_STICKY;
-    kaapi_task_setbody( task, &kaapi_taskwrite_body );
-    kaapi_task_format_debug( task );
-    kaapi_task_setargs( task, arg ); /* keep the pointer as kaapi_tasksteal_body */
-    kaapi_stack_pushtask( thief_stack );
-  }
+  task = kaapi_stack_toptask( thief_stack );
+  task->flag = KAAPI_TASK_STICKY;
+  kaapi_task_setbody( task, kaapi_taskwrite_body );
+  kaapi_task_setargs( task, arg ); /* keep the pointer as kaapi_tasksteal_body */
 
-#if 0
-  printf("Steal task:%p, stack:%p, fmt:%p ||| thiefstack:%p arg:%p, task:%p, fmt:%p\n", task, stack, task->format, thief_stack, arg, arg->origin_task, arg->origin_fmt );
-/*
-  printf("Victim stack:\n");
-  kaapi_stack_print( 1, stack );
-*/
-  printf("Thief stack:\n");
-  kaapi_stack_print( 1, thief_stack );
-#endif
+  kaapi_stack_pushtask( thief_stack );
  
   /* do not decrement the counter */
   _kaapi_request_reply( stack, task, request, thief_stack, 0, 1, 0 ); /* success of steal */

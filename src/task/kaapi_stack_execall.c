@@ -66,9 +66,9 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   pc = stack->pc;
 
 redo_work: 
-  if (pc->body == &kaapi_retn_body) 
+  if (kaapi_task_getbody(pc) == kaapi_retn_body) 
   {
-    /* do not save stack frame before execution */
+    /* inline retn body do not save stack frame before execution */
     kaapi_frame_t* frame = kaapi_task_getargst( pc, kaapi_frame_t);
     kaapi_task_setstate( frame->pc, KAAPI_TASK_S_TERM );
     kaapi_stack_restore_frame( stack, frame );
@@ -88,10 +88,10 @@ redo_work:
     }
     goto redo_work;
   }
-  else if (pc->body == &kaapi_aftersteal_body) 
+  else if (kaapi_task_getbody(pc) == kaapi_aftersteal_body) 
   {
     /* do not save stack frame before execution */
-    kaapi_aftersteal_body(pc, stack);
+    _kaapi_aftersteal_body(pc, stack);
     --pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
@@ -117,9 +117,6 @@ redo_work:
   }
   else
   {
-/*    kaapi_assert_debug( (kaapi_task_getstate(pc) == KAAPI_TASK_S_INIT) || 
-        ((kaapi_task_getstate(pc) == KAAPI_TASK_S_TERM) && (pc->body == &kaapi_aftersteal_body)) );
-*/
 #if defined(KAAPI_CONCURRENT_WS)
     if (!kaapi_task_casstate(pc, KAAPI_TASK_S_INIT, KAAPI_TASK_S_EXEC )) 
     {
@@ -137,7 +134,7 @@ redo_work:
     saved_sp      = stack->sp;
     saved_sp_data = stack->sp_data;
     stack->pc     = pc;
-    (*pc->body)(pc, stack);
+    kaapi_task_run( pc, stack );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
@@ -150,8 +147,7 @@ redo_work:
       /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
       retn = kaapi_stack_toptask(stack);
       retn->flag  = KAAPI_TASK_STICKY;
-      retn->body  = &kaapi_retn_body;
-      kaapi_task_format_debug( retn );
+      kaapi_task_setbody( retn, kaapi_retn_body );
       arg_retn = kaapi_stack_pushdata(stack, 3*sizeof(void*));
       retn->sp = (void*)arg_retn;
       arg_retn[0] = pc; /* <=> save pc, will mark this task as term after pop !! */

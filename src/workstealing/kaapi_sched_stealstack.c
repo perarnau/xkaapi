@@ -155,7 +155,7 @@ static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi
 {
   while (beg != endmax)
   {
-    if (beg->body == &kaapi_retn_body)
+    if (kaapi_task_getbody(beg) == kaapi_retn_body)
     {
       kaapi_frame_t* frame = kaapi_task_getargst( beg, kaapi_frame_t );
       *end = beg;
@@ -183,17 +183,14 @@ static int kaapi_update_version( kaapi_hashmap_t* access_to_gd, int count, kaapi
   /* search frame bound */
   kaapi_search_framebound( beg, &end, &curr, endmax );
 
-  kaapi_assert_debug( (end ==0) || (end == endmax) || (end->body == &kaapi_retn_body) );
+  kaapi_assert_debug( (end ==0) || (end == endmax) || (kaapi_task_getbody(end) == kaapi_retn_body) );
 #if 0
   printf("Update frame: beg:%p  - end:%p, pc: %p\n", (void*)beg, (void*)end, (void*)curr );
 #endif
 
   while ((beg != endmax) && (beg != end) && (count >0))
   {
-    if (beg->format ==0)
-      fmt = beg->format = kaapi_format_resolvebybody( beg->body );
-    else
-      fmt = beg->format;
+    fmt = kaapi_format_resolvebybody( kaapi_task_getbody(beg) );
 
     if (fmt ==0) 
     {
@@ -232,7 +229,7 @@ return 0;
   /* find in sub frame */
   if (curr !=0) 
   {
-    kaapi_assert_debug( (end !=0) && (end->body == &kaapi_retn_body) );
+    kaapi_assert_debug( (end !=0) && (kaapi_task_getbody(end) == kaapi_retn_body) );
     if (end-1 > endmax) 
     { /* recursive call on sub frame */
       kaapi_update_version( access_to_gd, count, end-1, endmax );
@@ -259,7 +256,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr )
   kaapi_task_state_t state;
   
   kaapi_hashmap_t access_to_gd;
-  kaapi_hashentries_bloc_t stackbloc;
+/*  kaapi_hashentries_bloc_t stackbloc; */
 
 #if defined(KAAPI_CONCURRENT_WS)
   count = KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count);
@@ -296,10 +293,9 @@ printf("------ STEAL STACK @:%p\n", (void*)stack );
   {
     if (task_bot == 0) break;
 
-    if ((task_bot->format ==0) && (!kaapi_task_isadaptive(task_bot)))
-      task_fmt = task_bot->format = kaapi_format_resolvebybody( task_bot->body );
-    else
-      task_fmt = task_bot->format;
+    task_fmt = 0;
+    if (!kaapi_task_isadaptive(task_bot))
+      task_fmt = kaapi_format_resolvebybody( kaapi_task_getbody(task_bot) );
     if ((task_fmt ==0) && (!kaapi_task_isadaptive(task_bot)))
     {
       --task_bot;

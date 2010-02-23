@@ -85,12 +85,6 @@ kaapi_stack_t* kaapi_self_stack(void)
   return _kaapi_self_stack();
 }
 
-/** Dumy task pushed at startup into the main thread
-*/
-void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
-{
-}
-
 
 /**
 */
@@ -127,8 +121,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_stack_save_frame(stack, &frame);
   task = kaapi_stack_toptask(stack);
   task->flag  = KAAPI_TASK_STICKY;
-  task->body  = &kaapi_taskstartup_body;
-  kaapi_task_format_debug( task );
+  kaapi_task_setbody( task, kaapi_taskstartup_body);
   kaapi_task_setstate( task, KAAPI_TASK_S_EXEC );
 
   kaapi_stack_pushtask(stack);

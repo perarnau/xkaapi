@@ -403,15 +403,18 @@ static inline kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply )
 
 /** Body of task steal created on thief stack to execute a task
 */
-extern void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void _kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+enum { kaapi_tasksteal_body = 6 };
 
 /** Write result after a steal 
 */
-extern void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void _kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
+enum { kaapi_taskwrite_body = 7 };
 
 /** Merge result after a steal
 */
-extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
+extern void _kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
+enum { kaapi_aftersteal_body = 8 };
 
 /** Args for tasksteal
 */

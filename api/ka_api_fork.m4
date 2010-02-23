@@ -12,11 +12,10 @@
 */
 
       kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-      kaapi_task_initdfg( _stack, clo, &KaapiClosure::body_cpu, kaapi_stack_pushdata(_stack, sizeof(KaapiClosure)) );
+      kaapi_task_initdfg( _stack, clo, KaapiClosure::bodyid_cpu, kaapi_stack_pushdata(_stack, sizeof(KaapiClosure)) );
       /* this function call is the only way I currently found to register the format of the task, 
          idealy it should not be call and the clo->format should not be set at all.
       */
-      clo->format = KaapiClosure::registerformat();
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
       M4_PARAM(`Trait_ParamClosure<F$1>::link(arg->f$1, e$1);

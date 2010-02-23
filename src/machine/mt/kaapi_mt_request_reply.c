@@ -181,8 +181,7 @@ int _kaapi_request_reply
 
     sig = kaapi_stack_toptask( thief_stack );
     sig->flag = KAAPI_TASK_STICKY;
-    kaapi_task_setbody( sig, &kaapi_tasksig_body );
-    kaapi_task_format_debug( sig );
+    kaapi_task_setbody( sig, kaapi_tasksig_body );
     kaapi_task_setargs( sig, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksig_arg_t)));
     argsig           = kaapi_task_getargst( sig, kaapi_tasksig_arg_t);
     argsig->task2sig = task;

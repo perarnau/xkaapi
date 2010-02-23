@@ -54,7 +54,7 @@ int kaapi_sched_sync(kaapi_stack_t* stack)
   kaapi_task_t* savepc = pc;
 
   /* look for retn */
-  while ((pc->body != &kaapi_retn_body) && (pc != stack->sp)) 
+  while ((kaapi_task_getbody(pc) != kaapi_retn_body) && (pc != stack->sp)) 
     --pc;
 
   if (kaapi_stack_isempty( stack ) ) return 0;

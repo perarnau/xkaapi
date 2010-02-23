@@ -47,7 +47,7 @@
 
 /**
 */
-void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void _kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   kaapi_taskadaptive_t* ta = task->sp;
   kaapi_assert_debug( ta !=0 );
@@ -61,7 +61,7 @@ void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
 #if defined(KAAPI_USE_PERFCOUNTER)
     t0 = kaapi_get_elapsedtime();
 #endif
-    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) pthread_yield();
+    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;/* pthread_yield_np(); */
 #if defined(KAAPI_USE_PERFCOUNTER)
     t1 = kaapi_get_elapsedtime();
     stack->_proc->t_sched += t1-t0;

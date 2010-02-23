@@ -94,6 +94,9 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
 
     return &Self_t::format;
   }  
+
+  /* */
+  static const kaapi_task_bodyid_t bodyid_cpu;
 };
 
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
@@ -101,4 +104,7 @@ kaapi_format_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')
 
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 kaapi_format_id_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::fmid = 0;
+
+template<class TASK M4_PARAM(`,class F$1', `', ` ')>
+const kaapi_task_bodyid_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::bodyid_cpu = registerformat()->bodyid;
 

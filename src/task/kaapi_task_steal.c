@@ -49,7 +49,7 @@
 
 /**
 */
-void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void _kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   int i;
   int countparam;
@@ -83,7 +83,7 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
 
 /**
 */
-void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void _kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   int i;
   int countparam;
@@ -162,38 +162,18 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
      - normally -> no splitter, no possibility to call splitter...
   */
   /* \TODO: use the current architecture or move this file in machine repository */
-  kaapi_task_setbody  ( task, fmt->entrypoint[KAAPI_PROC_TYPE_CPU] );
+  kaapi_task_setbody  ( task, fmt->bodyid );
   kaapi_task_setargs  ( task, copy_task_args );
   /* update flag with original flag */
   kaapi_task_setflags ( task, arg->origin_task->flag );
   
   /* ... and execute the  mutation */
-  (*task->body)( task, stack );
+  kaapi_task_run(task, stack);
 
-#if 0
-  /* ... and push continuation if w, cw or rw mode */
-  if (push_write)
-  {
-    task = kaapi_stack_toptask( stack );
-    kaapi_task_init(stack, task, KAAPI_TASK_STICKY );
-    kaapi_task_setargs( task, arg ); /* can keep pointer to kaapi_tasksteal_body arguments */
-    kaapi_task_setbody( task, &kaapi_taskwrite_body );
-    kaapi_stack_pushtask( stack );
-  }
-#endif
-
-//  printf("IN %s: end exec/// task copy:@0x%p -> task stolen:@0x%p\n", __PRETTY_FUNCTION__, task, arg->origin_task );
-  
-  KAAPI_LOG(100, "tasksteal: 0x%p end exec, next task: 0x%p bodysignal: 0x%p, pc: 0x%p\n", 
+  KAAPI_LOG(100, "tasksteal: 0x%p end exec, next task: 0x%p bodysignal: 0x%i, pc: 0x%p\n", 
       (void*)task, 
       (void*)(task+1), 
-/*
-function pointer cannot (portably) be casted into void*
-See http://coding.derkeiler.com/Archive/C_CPP/comp.lang.c/2006-06/msg03064.html
-As it is only for debug int KAAPI_LOG, we do not care if the function pointer
-is not fully printed (ie interger overflow in the first cast)
-*/
-      (void*)(uintptr_t)(task+1)->body, 
+      kaapi_task_getbody(task+1), 
       (void*)stack->pc );
 }
 

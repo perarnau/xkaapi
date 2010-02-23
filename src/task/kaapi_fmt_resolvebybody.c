@@ -46,7 +46,7 @@
 
 /*
 */
-kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_body_t key)
+kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key)
 {
   int i;
   kaapi_uint8_t        entry = ((unsigned long)key) & 0xFF;
@@ -57,7 +57,7 @@ kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_body_t key)
   while (head !=0)
   {
     for (i =0; i<KAAPI_MAX_ARCHITECTURE; ++i)
-      if (head->entrypoint[i] == key)
+      if (head->bodyid == key)
       {
         return head;
       }
