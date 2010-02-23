@@ -131,6 +131,7 @@ redo_work:
       return EWOULDBLOCK;
     }
 #else
+    kaapi_assert_debug( kaapi_task_getstate(pc) == KAAPI_TASK_S_INIT );
     kaapi_task_setstate( pc, KAAPI_TASK_S_EXEC );
 #endif
     saved_sp      = stack->sp;

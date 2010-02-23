@@ -133,7 +133,20 @@ redo_work:
 /*    kaapi_assert_debug( (kaapi_task_getstate(pc) == KAAPI_TASK_S_INIT) || 
         ((kaapi_task_getstate(pc) == KAAPI_TASK_S_TERM) && (pc->body == &kaapi_aftersteal_body)) );
 */
+#if defined(KAAPI_CONCURRENT_WS)
+    if (!kaapi_task_casstate(pc, KAAPI_TASK_S_INIT, KAAPI_TASK_S_EXEC )) 
+    {
+      /* rewrite pc into memory */
+      stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
+      return EWOULDBLOCK;
+    }
+#else
+    kaapi_assert_debug( kaapi_task_getstate(pc) == KAAPI_TASK_S_INIT );
     kaapi_task_setstate( pc, KAAPI_TASK_S_EXEC );
+#endif
     saved_sp      = stack->sp;
     saved_sp_data = stack->sp_data;
     stack->pc     = pc;
