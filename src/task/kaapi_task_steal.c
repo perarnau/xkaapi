@@ -64,14 +64,6 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
   orig_task_args   = kaapi_task_getargs(arg->origin_task);
   copy_task_args   = arg->copy_arg;
 
-#if 0
-if (fmt->fmtid == 96)
-{
-  kaapi_stack_print( 1, stack );
-  abort();
-}
-#endif
-
   countparam = fmt->count_params;
   for (i=0; i<countparam; ++i)
   {

@@ -764,7 +764,7 @@ static inline void* kaapi_stack_pushdata(kaapi_stack_t* stack, kaapi_uint32_t co
   void* retval;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
-  if ((char*)stack->sp_data+count >= (char*)stack->sp) return 0;
+  kaapi_assert_debug( (char*)stack->sp_data+count >= (char*)stack->sp );
 #endif
   retval = stack->sp_data;
   stack->sp_data += count;
@@ -785,7 +785,7 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
   kaapi_access_t retval;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) { retval.data = 0; return retval; }
-  if ((char*)stack->sp_data+count >= (char*)stack->sp) { retval.data = 0; return retval; }
+  kaapi_assert_debug( (char*)stack->sp_data+count >= (char*)stack->sp );
 #endif
   retval.data = stack->sp_data;
 #if defined(KAAPI_DEBUG)
@@ -807,7 +807,7 @@ static inline void kaapi_stack_allocateshareddata(kaapi_access_t* access, kaapi_
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) { access->data = 0; return; }
-  if ((char*)stack->sp_data+count >= (char*)stack->sp) { access->data = 0; return; }
+  kaapi_assert_debug( (char*)stack->sp_data+count >= (char*)stack->sp );
 #endif
   access->data = stack->sp_data;
 #if defined(KAAPI_DEBUG)
@@ -866,8 +866,8 @@ static inline kaapi_task_t* kaapi_stack_toptask(kaapi_stack_t* stack)
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
-#endif
   kaapi_assert_debug((char*)stack->sp >= (char*)stack->sp_data);
+#endif
   return stack->sp;
 }
 
@@ -882,7 +882,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
-  if ((char*)stack->sp == (char*)stack->sp_data) return EINVAL;
+  kaapi_assert_debug((char*)stack->sp <= (char*)stack->sp_data);
 #endif
 #if defined(KAAPI_CONCURRENT_WS)
 #ifdef __APPLE__
@@ -892,20 +892,6 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 #endif
 #endif
   --stack->sp;
-  return 0;
-}
-
-
-/** \ingroup STACK
-    The function kaapi_stack_poptask() 
-*/
-static inline int kaapi_stack_poptask(kaapi_stack_t* stack)
-{
-#if defined(KAAPI_DEBUG)
-  if (stack ==0) return EINVAL;
-  if (stack->sp == stack->pc) return EINVAL;
-#endif
-  ++stack->sp;
   return 0;
 }
 
@@ -1037,29 +1023,6 @@ static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_
   retn->sp = (void*)arg_retn;
   *arg_retn = *frame;
   kaapi_stack_pushtask(stack);
-  return 0;
-}
-
-/** \ingroup STACK
-    The function kaapi_stack_execone() execute the given task only.
-    If successful, the kaapi_stack_execone() function will return zero.
-    Otherwise, an error number will be returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t data structure.
-    \retval EINVAL invalid argument: bad stack pointer
-    \retval EWOULDBLOCK the execution of the task will block the control flow.
-    \retval EINTR the control flow has received a KAAPI interrupt.
-*/
-static inline int kaapi_stack_execone(kaapi_stack_t* stack, kaapi_task_t* task)
-{
-#if defined(KAAPI_DEBUG)
-  if (stack ==0) return EINVAL;
-  if (task ==0) return EINVAL;
-#endif
-  if (task->body == &kaapi_suspend_body) 
-    return EWOULDBLOCK;
-  else if (task->body !=0) 
-    (*task->body)(task, stack);
-  task->body = 0;    
   return 0;
 }
 
