@@ -785,7 +785,7 @@ static inline kaapi_access_t kaapi_stack_pushshareddata(kaapi_stack_t* stack, ka
   kaapi_access_t retval;
 #if defined(KAAPI_DEBUG)
   if (stack ==0) { retval.data = 0; return retval; }
-  kaapi_assert_debug( (char*)stack->sp_data+count >= (char*)stack->sp );
+  kaapi_assert_debug( (char*)stack->sp_data+count <= (char*)stack->sp );
 #endif
   retval.data = stack->sp_data;
 #if defined(KAAPI_DEBUG)
@@ -807,7 +807,7 @@ static inline void kaapi_stack_allocateshareddata(kaapi_access_t* access, kaapi_
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) { access->data = 0; return; }
-  kaapi_assert_debug( (char*)stack->sp_data+count >= (char*)stack->sp );
+  kaapi_assert_debug( (char*)stack->sp_data+count <= (char*)stack->sp );
 #endif
   access->data = stack->sp_data;
 #if defined(KAAPI_DEBUG)
@@ -882,7 +882,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 {
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return EINVAL;
-  kaapi_assert_debug((char*)stack->sp <= (char*)stack->sp_data);
+  kaapi_assert_debug((char*)stack->sp >= (char*)stack->sp_data);
 #endif
 #if defined(KAAPI_CONCURRENT_WS)
 #ifdef __APPLE__
