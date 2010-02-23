@@ -77,7 +77,7 @@ kaapi_format_t kaapi_float_format;
 kaapi_format_t kaapi_double_format;
 
 
-kaapi_task_body_t kaapi_bodies[0xFF];
+kaapi_task_body_t kaapi_bodies[1+KAAPI_TASK_BODY_MAX];
 
 
 /** cpuset related routines
@@ -455,16 +455,16 @@ int kaapi_setup_param( int argc, char** argv )
       default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   }
 
-  /* init default task */
+  /* init default task body */
   kaapi_bodies[kaapi_nop_body]          = _kaapi_nop_body;
   kaapi_bodies[kaapi_taskstartup_body]  = _kaapi_taskstartup_body;
   kaapi_bodies[kaapi_retn_body]         = _kaapi_retn_body;
   kaapi_bodies[kaapi_suspend_body]      = _kaapi_suspend_body;
   kaapi_bodies[kaapi_tasksig_body]      = _kaapi_tasksig_body;
   kaapi_bodies[kaapi_taskfinalize_body] = _kaapi_taskfinalize_body;
-
+  kaapi_bodies[kaapi_tasksteal_body]    = _kaapi_tasksteal_body;
+  kaapi_bodies[kaapi_taskwrite_body]    = _kaapi_taskwrite_body;
   kaapi_bodies[kaapi_aftersteal_body]   = _kaapi_aftersteal_body;
-  kaapi_bodies[kaapi_taskfinalize_body] = _kaapi_taskfinalize_body;
   
   return 0;
 }

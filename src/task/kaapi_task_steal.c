@@ -138,12 +138,8 @@ void _kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
       /* copy_param points to the pointer on the shared data.
          It is a W shared, allocate a new one in the heap 
       */
-      kaapi_gd_t* shared_object   = (kaapi_gd_t*)malloc(sizeof(kaapi_gd_t)+fmt_param->size);
       kaapi_access_t* copy_access = (kaapi_access_t*)(copy_param);
-      void* data_pointer          = (void*)(shared_object + 1);
-      shared_object->last_mode    = KAAPI_ACCESS_MODE_VOID;
-      shared_object->last_version = 0;
-      copy_access->data           = data_pointer;
+      copy_access->data           = malloc(fmt_param->size);
       copy_access->version        = 0;
     }
     else

@@ -53,6 +53,7 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_request_t* request    = 0;
   kaapi_stack_t* thief_stack  = 0;
   kaapi_task_t*  steal_task   = 0;
+  kaapi_task_t*  write_task   = 0;
   kaapi_format_t* task_format = 0;
   kaapi_assert_debug (task !=0);
   
@@ -88,6 +89,12 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   }
     
   task_format = kaapi_format_resolvebybody( kaapi_task_getbody(task) );
+
+  /* change body of the task */
+{
+  kaapi_task_bodyid_t tbody = kaapi_task_getbody(task );
+  kaapi_task_setextrabody( task, tbody );
+}
   kaapi_task_setbody(task, kaapi_suspend_body);
   
   countparam = task_format->count_params;
@@ -114,10 +121,10 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_stack_pushtask( thief_stack );
 
   /* ... and push continuation if w, cw or rw mode */
-  task = kaapi_stack_toptask( thief_stack );
-  task->flag = KAAPI_TASK_STICKY;
-  kaapi_task_setbody( task, kaapi_taskwrite_body );
-  kaapi_task_setargs( task, arg ); /* keep the pointer as kaapi_tasksteal_body */
+  write_task = kaapi_stack_toptask( thief_stack );
+  write_task->flag = KAAPI_TASK_STICKY;
+  kaapi_task_setbody( write_task, kaapi_taskwrite_body );
+  kaapi_task_setargs( write_task, arg ); /* keep the pointer as kaapi_tasksteal_body */
 
   kaapi_stack_pushtask( thief_stack );
  

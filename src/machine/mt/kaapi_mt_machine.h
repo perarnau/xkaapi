@@ -517,7 +517,7 @@ static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldsta
 #else
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
 {
-  kaapi_assert_debug( kaapi_task_getstate(task) == oldstate );
+  if (kaapi_task_getstate(task) != oldstate ) return 0;
   kaapi_task_setstate( task, newstate );
   return 1;
 }

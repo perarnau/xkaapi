@@ -253,30 +253,24 @@ typedef enum {
 } kaapi_task_state_t;
 #define KAAPI_TASK_MASK_READY 0x80  /* 1000 0000 */ /* 1 bit 0x80 ie bit 7 to encode if the task is marked as ready */
 
-/** Bits for the proc type
-   \ingroup TASK 
-*/
-#define KAAPI_TASK_MASK_PROC  0x700 /* 3 bits 0x70 ie bits 8, 9, 10 to encode the processor type of the task */
-#define KAAPI_TASK_PROC_CPU   0x100 /* 0001 0000 0000 */
-#define KAAPI_TASK_PROC_GPU   0x200 /* 0010 0000 0000 */
-#define KAAPI_TASK_PROC_MPSOC 0x400 /* 0100 0000 0000 */
-
 /** Bits for attribut of adaptive task
     \ingroup ADAPT
 */
-#define KAAPI_TASK_ADAPT_MASK_ATTR 0x7000 /* 3 bits: bit 12, 13, 14 */
-#define KAAPI_TASK_ADAPT_DEFAULT   0x0000 /* 000 0000 0000 0000: default: preemption & sync of child adaptive tasks */
-#define KAAPI_TASK_ADAPT_NOPREEMPT 0x1000 /* 001 0000 0000 0000: no preemption of child adaptive tasks */
-#define KAAPI_TASK_ADAPT_NOSYNC    0x2000 /* 010 0000 0000 0000: no synchronisation of child adaptive tasks */
-
+#define KAAPI_TASK_ADAPT_MASK_ATTR 0x300 /* 2 bits: bit 8, 9 */
+#define KAAPI_TASK_ADAPT_DEFAULT   0x000 /* 000 0000 0000 0000: default: preemption & sync of child adaptive tasks */
+#define KAAPI_TASK_ADAPT_NOPREEMPT 0x100 /* 001 0000 0000 0000: no preemption of child adaptive tasks */
+#define KAAPI_TASK_ADAPT_NOSYNC    0x200 /* 010 0000 0000 0000: no synchronisation of child adaptive tasks */
 
 
 /** Bits for attribut of task body
     \ingroup ADAPT
 */
-#define KAAPI_TASK_BODY_MASK_ATTR 0xFFFF0000 /* 16 bits: bit 16, .., 31 */
+#define KAAPI_TASK_BODY_MASK_ATTR      0xFF000000 /* 16 bits: bit 16, .., 23, bit 24..31 extra body */
+#define KAAPI_TASK_BODYEXTRA_MASK_ATTR 0x00FF0000 /* 16 bits: bit 16, .., 23, bit 24..31 extra body */
+#define KAAPI_TASK_BODY_SHIFT     24
+#define KAAPI_TASK_BODY_MAX       0xFF       /* 16 bits, .., 31 */
 #define KAAPI_TASK_BODY_USER_BASE 0xF        /* 16 body reserved for internal purpose */
-extern kaapi_task_body_t kaapi_bodies[0xFF];         /* at most 255 bodies */
+extern kaapi_task_body_t kaapi_bodies[1+KAAPI_TASK_BODY_MAX];         /* at most 255 bodies */
 /*@}*/
 
 
@@ -596,13 +590,6 @@ typedef struct kaapi_access_t {
 */
 #define kaapi_task_setflags(task, f) ((task)->flag |= f & KAAPI_TASK_MASK_FLAGS)
 
-
-/** \ingroup TASK
-    Return the proc type of the task
-*/
-#define kaapi_task_proctype(task) ((task)->flag & KAAPI_TASK_MASK_PROC)
-
-
 /** \ingroup TASK
     Return a pointer to parameter of the task (void*) pointer
 */
@@ -635,7 +622,11 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
 */
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
 {
-  task->flag = (task->flag & ~KAAPI_TASK_BODY_MASK_ATTR) | (body << 16);
+#if defined(KAAPI_DEBUG)
+  task->flag = (task->flag & ~KAAPI_TASK_BODY_MASK_ATTR) | ( (body & KAAPI_TASK_BODY_MAX) << 24);
+#else
+  task->flag = (task->flag & ~KAAPI_TASK_BODY_MASK_ATTR) | (body << 24);
+#endif
 }
 
 /** \ingroup TASK
@@ -643,15 +634,34 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 {
-  return (task->flag >> 16);
+  return (task->flag >> 24);
 }
+
+
+static inline void kaapi_task_setextrabody(kaapi_task_t* task, kaapi_task_bodyid_t body )
+{
+#if defined(KAAPI_DEBUG)
+  task->flag = (task->flag & ~KAAPI_TASK_BODYEXTRA_MASK_ATTR) | ( (body & KAAPI_TASK_BODY_MAX) << 16);
+#else
+  task->flag = (task->flag & ~KAAPI_TASK_BODYEXTRA_MASK_ATTR) | (body << 16);
+#endif
+}
+
+/** \ingroup TASK
+    Set the pointer to parameter of the task (void*) pointer
+*/
+static inline kaapi_task_bodyid_t kaapi_task_getextrabody(kaapi_task_t* task)
+{
+  return (task->flag >> 16)& 0xFF;
+}
+
 
 /** \ingroup TASK
     Set the pointer to parameter of the task (void*) pointer
 */
 static inline void kaapi_task_run(kaapi_task_t* task, kaapi_stack_t* stack )
 {
-  kaapi_bodies[task->flag >> 16](task, stack);
+  kaapi_bodies[(task->flag >> 24)](task, stack);
 }
 
 
@@ -951,14 +961,14 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
   ta->mastertask            = 0;
   ta->arg_from_victim       = 0;
   task->sp                  = ta;
-  task->flag                = flag | KAAPI_TASK_ADAPTIVE | (taskbody << 16);
+  task->flag                = flag | KAAPI_TASK_ADAPTIVE | (taskbody << KAAPI_TASK_BODY_SHIFT);
   return 0;
 }
 
 #define kaapi_task_initdfg( stack, task, taskbody, arg ) \
   do { \
     (task)->sp       = (arg);\
-    (task)->flag     = KAAPI_TASK_DFG | (taskbody << 16);\
+    (task)->flag     = KAAPI_TASK_DFG | (taskbody << KAAPI_TASK_BODY_SHIFT);\
   } while (0)
 
 
@@ -974,7 +984,7 @@ static inline int kaapi_task_init( kaapi_stack_t* stack, kaapi_task_t* task, kaa
     kaapi_task_initdfg(stack, task, taskbody, arg );
   }
   if (flag & KAAPI_TASK_DFG)
-    task->flag |= flag & (KAAPI_TASK_MASK_FLAGS|KAAPI_TASK_MASK_PROC);
+    task->flag |= flag & (KAAPI_TASK_MASK_FLAGS);
     
   return 0;
 }
@@ -1039,7 +1049,7 @@ static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_
   kaapi_task_t* retn;
   kaapi_frame_t* arg_retn;
   retn = kaapi_stack_toptask(stack);
-  retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body<<16);
+  retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body<<KAAPI_TASK_BODY_SHIFT);
 /*  kaapi_task_setbody( retn, kaapi_retn_body ); */
   arg_retn = (kaapi_frame_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
   retn->sp = (void*)arg_retn;

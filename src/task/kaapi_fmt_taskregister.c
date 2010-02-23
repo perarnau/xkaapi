@@ -86,7 +86,7 @@ kaapi_format_id_t kaapi_format_taskregister(
   kaapi_format_t* fmt = (*fmt_fnc)();
   kaapi_format_register( fmt, name );
 
-  kaapi_assert( (KAAPI_TASK_BODY_USER_BASE<= bodyid) && (bodyid<= 0xFFFF));
+  kaapi_assert( (KAAPI_TASK_BODY_USER_BASE<= bodyid) && (bodyid <= 0xFF));
   kaapi_bodies[bodyid] = body;
   fmt->bodyid = bodyid;
   fmt->entrypoint[KAAPI_PROC_TYPE_CPU] = body;
@@ -107,10 +107,7 @@ kaapi_format_id_t kaapi_format_taskregister(
   fmt->size = size;
 
   /* register it into hashmap: body -> fmt */
-  entry = ((unsigned long)body) & 0xFF;
-  head =  kaapi_all_format_bybody[entry];
-  fmt->next_bybody = head;
-  kaapi_all_format_bybody[entry] = fmt;
+  kaapi_all_format_bybody[bodyid] = fmt;
   
   /* already registered into hashmap: fmtid -> fmt */  
   return fmt->fmtid;

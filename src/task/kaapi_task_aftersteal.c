@@ -54,7 +54,7 @@ void _kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
   void* arg;
   
   /* the task has been stolen: format contains the format of the task */
-  fmt = kaapi_format_resolvebybody( kaapi_task_getbody(task) );
+  fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(task) );
 
   kaapi_assert_debug( fmt !=0 );
 
@@ -87,7 +87,7 @@ void _kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
 
       (*fmt_param->assign)( access->data, access->version );
       (*fmt_param->dstor) ( access->version );
-      free(((kaapi_gd_t*)access->version)-1);
+      free(access->version);
       access->version = 0;
     }
 #if defined(KAAPI_DEBUG)
