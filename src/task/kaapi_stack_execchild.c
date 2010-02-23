@@ -80,16 +80,7 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
  
 redo_work: 
 
-  if (pc->flag & KAAPI_TASK_S_STEAL)
-  {
-    /* rewrite pc into memory */
-    stack->pc = pc;
-#if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
-#endif
-    return EWOULDBLOCK;
-  }
-  else if (pc->body == &kaapi_retn_body) 
+  if (pc->body == &kaapi_retn_body) 
   {
     /* do not save stack frame before execution */
     kaapi_frame_t* frame = kaapi_task_getargst( pc, kaapi_frame_t);
@@ -110,6 +101,24 @@ redo_work:
       return 0;
     }
     goto redo_work;
+  }
+  else if (pc->body == &kaapi_aftersteal_body) 
+  {
+    kaapi_aftersteal_body( pc, stack );
+    --pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
+    goto redo_work;
+  }
+  else if (pc->flag & KAAPI_TASK_S_STEAL)
+  {
+    /* rewrite pc into memory */
+    stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
+    return EWOULDBLOCK;
   }
   else
   {
