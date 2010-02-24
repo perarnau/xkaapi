@@ -226,7 +226,7 @@ extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
 
 /** Useful
 */
-extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
+extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid );
 
 /** Useful
 */

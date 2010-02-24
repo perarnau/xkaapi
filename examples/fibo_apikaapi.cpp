@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
+#include "kaapi_impl.h" // this is the new C++ interface for Kaapi
 
 // --------------------------------------------------------------------
 /* Sequential fibo function
@@ -89,7 +90,7 @@ struct TaskBodyCPU<TaskSum> : public TaskSum
     /* write is used to write data to a Shared_w
      * read is used to read data from a Shared_r
      */
-    if (res.ptr() == (void*)0x70040) dobreak();
+//    if (res.ptr() == (void*)0x70040) dobreak();
     *res = *a + *b;
   }
 };
@@ -143,6 +144,8 @@ struct TaskBodyCPU<TaskFiboOpt> : public TaskFibo {
   {  
     if (n < 2) {
       *res = fiboseq(n);
+      kaapi_stack_print(1, kaapi_self_stack() );
+      exit(1);
     }
     else {
       ka::pointer_rpwp<int> res1 = thread->Alloca<int>(1);

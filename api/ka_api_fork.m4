@@ -27,7 +27,7 @@
     template<M4_PARAM(`class E$1', `', `,')>
     void operator()( M4_PARAM(`E$1 e$1', `', `, ') )
     {
-      kaapi_task_t* clo = KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)( &TASK::operator(), M4_PARAM(`e$1', `', `, ') );
+      kaapi_task_t* clo = KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)( &TASK::get_formal_param, M4_PARAM(`e$1', `', `, ') );
       _attr(_stack, clo );
       kaapi_stack_pushtask( _stack);    
     }

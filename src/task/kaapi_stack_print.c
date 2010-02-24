@@ -121,20 +121,21 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
 
 /**
 */
-int kaapi_task_print( FILE* file, kaapi_task_t* task )
+int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid )
 {
   const kaapi_format_t* fmt;
   void* splitter = 0;
   int i;
 
-  fmt = kaapi_format_resolvebybody( kaapi_task_getbody(task) );
+  fmt = kaapi_format_resolvebybody( taskid );
+  if (fmt ==0) return 0;
 
   if (kaapi_task_isadaptive(task))
   {
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
     splitter = (void*)(uintptr_t)ta->splitter;
   }
-  fprintf( file, "@%p |%c%c%s|, name:%s, splitter:%p, #p:%i, mode: ", 
+  fprintf( file, "@%p |%c%c%s|, name:%s, splitter:%p, #p:%i ", 
         (void*)task, 
         kaapi_getreadyname(task),
         kaapi_getstatename(task), 
@@ -144,35 +145,33 @@ int kaapi_task_print( FILE* file, kaapi_task_t* task )
         fmt->count_params );
         
   /* access mode */
-  for (i=0; i<fmt->count_params; ++i)
+  if (fmt->count_params >0)
   {
-    const kaapi_format_t* fmt_param = fmt->fmt_params[i];
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
-    fputc(kaapi_getmodename(m), file );
-    if (m == KAAPI_ACCESS_MODE_V)
+    fputs( ", mode:", file );
+    for (i=0; i<fmt->count_params; ++i)
     {
-      void* data = (void*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
-      fprintf(file, "<%s>, @:%p=", fmt_param->name, data );
-      (*fmt_param->print)(file, data );
-    }
-    else 
-    {
-      kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
-      kaapi_gd_t* gd = ((kaapi_gd_t*)access->data)-1;
-      fprintf(file, "<%s>, @:%p, a:%p", fmt_param->name, (void*)gd, access->data );
-      if (KAAPI_ACCESS_IS_READ(m) && (access->version !=0))
+      const kaapi_format_t* fmt_param = fmt->fmt_params[i];
+      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
+      fputc(kaapi_getmodename(m), file );
+      fputs("->", file );
+      if (m == KAAPI_ACCESS_MODE_V)
       {
-        fputc('=', file);
-        (*fmt_param->print)(file, access->version);
+        void* data = (void*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
+        fprintf(file, "<%s>, @:%p=", fmt_param->name, data );
+        (*fmt_param->print)(file, data );
+      }
+      else 
+      {
+        kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
+        fprintf(file, "<%s>, @:%p, v:%p", fmt_param->name, access->data, access->version );
+      }
+      if (i <fmt->count_params-1)
+      {
+        fputs("|| ", file );
       }
     }
-    if (i <fmt->count_params-1)
-    {
-      fputs("|| ", file );
-    }
-    else
-      fputc('\n', file );
   }
+  fputc('\n', file );
 
   fflush(file);
   return 0;
@@ -209,16 +208,22 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
     if (fmt ==0) 
     {
       const char* fname = "<empty format>";
-      if ( kaapi_task_getbody(task_bot) == kaapi_retn_body) 
+      if ( kaapi_task_getbody(task_bot) == kaapi_nop_body) 
+        fname = "nop";
+      else if ( kaapi_task_getbody(task_bot) == kaapi_taskstartup_body) 
+        fname = "startup";
+      else if ( kaapi_task_getbody(task_bot) == kaapi_retn_body) 
         fname = "retn";
-      if ( kaapi_task_getbody(task_bot) == kaapi_suspend_body) 
+      else if ( kaapi_task_getbody(task_bot) == kaapi_suspend_body) 
         fname = "suspend";
-      if ( kaapi_task_getbody(task_bot) == kaapi_taskwrite_body) 
+      else if ( kaapi_task_getbody(task_bot) == kaapi_taskwrite_body) 
         fname = "write";
       else if ( kaapi_task_getbody(task_bot) == kaapi_tasksig_body) 
         fname = "signal";
       else if ( kaapi_task_getbody(task_bot) == kaapi_tasksteal_body) 
         fname = "steal";
+      else if ( kaapi_task_getbody(task_bot) == kaapi_aftersteal_body) 
+        fname = "aftersteal";
         
       fprintf( file, "  [%04i]: @%p |%c%c%s|, name:%s", 
             count, 
@@ -238,7 +243,12 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
       {
         kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( task_bot, kaapi_tasksteal_arg_t );
         fprintf(file, ", stolen task:" );
-        kaapi_task_print(file, arg->origin_task);
+        kaapi_task_print(file, arg->origin_task, kaapi_task_getbody(arg->origin_task));
+      }
+      else if (kaapi_task_getbody(task_bot) == kaapi_aftersteal_body)
+      {
+        fprintf(file, ", terminated task:" );
+        kaapi_task_print(file, task_bot, kaapi_task_getextrabody(task_bot));
       }
       fputc('\n', file);
       ++count;
@@ -249,7 +259,7 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
 
     /* print the task */
     fprintf( file, "  [%04i]: ", count );
-    kaapi_task_print(file, task_bot );
+    kaapi_task_print(file, task_bot, kaapi_task_getbody(task_bot) );
 
     ++count;
     --task_bot;
