@@ -277,9 +277,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_rpwp {/* instanciante by default body if signature is not redefined */
+  class RPWP {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_rpwp( const pointer_rpwp<T>& p ) {}
+    RPWP( const pointer_rpwp<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -296,10 +296,10 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_rp {/* instanciante by default body if signature is not redefined */
-    Shared_rp() {}
+  class RP {/* instanciante by default body if signature is not redefined */
+    RP() {}
   public:
-    Shared_rp( const pointer_rp<T>& p ) {}
+    RP( const pointer_rp<T>& p ) {}
   };
   
 
@@ -321,9 +321,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_r  { /* instanciante by default body if signature is not redefined */
+  class R  { /* instanciante by default body if signature is not redefined */
   public:
-    Shared_r( const pointer_r<T>& p ) {}
+    R( const pointer_r<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -339,9 +339,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_wp  {/* instanciante by default body if signature is not redefined */
+  class WP  {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_wp( const pointer_wp<T>& p ){}
+    WP( const pointer_wp<T>& p ){}
   };
 
   // --------------------------------------------------------------------
@@ -362,9 +362,9 @@ namespace ka {
   };
 
   template<class T>
-  class Shared_w {/* instanciante by default body if signature is not redefined */
+  class W {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_w( const pointer_w<T>& p ){}
+    W( const pointer_w<T>& p ){}
   };
 
   // --------------------------------------------------------------------
@@ -382,9 +382,9 @@ namespace ka {
   };
   
   template<class T>
-  class Shared_rw {/* instanciante by default body if signature is not redefined */
+  class RW {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_rw( const pointer_rw<T>& p ) {}
+    RW( const pointer_rw<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -397,7 +397,7 @@ namespace ka {
   };
   
   template<class T, class OpCumul = DefaultAdd<T> >
-  class Shared_cwp {
+  class CWP {
   public:    
 //    typedef T value_type;
 //    Shared_cwp( value_type* p ) : ptr(p) {}
@@ -405,7 +405,7 @@ namespace ka {
   };
 
   template<class T, class OpCumul = DefaultAdd<T> >
-  class Shared_cw {
+  class CW {
   public:
 //    typedef T value_type;
 //    Shared_cw( value_type* p ) : ptr(p) {}
@@ -593,7 +593,7 @@ namespace ka {
   const kaapi_format_t* Trait_ParamClosure<const T&>::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_rw<T> > {
+  struct Trait_ParamClosure<RW<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_rw<T> type_inuserfunction;
     enum { isshared = true };
@@ -605,10 +605,10 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rw<T> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<RW<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_r<T> > {
+  struct Trait_ParamClosure<R<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_r<T> type_inuserfunction;
     enum { isshared = true };
@@ -620,10 +620,10 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_r<T> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<R<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_w<T> > {
+  struct Trait_ParamClosure<W<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_w<T> type_inuserfunction;
     enum { isshared = true };
@@ -635,10 +635,10 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_w<T> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<W<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
-  struct Trait_ParamClosure<Shared_cw<T, F> > {
+  struct Trait_ParamClosure<CW<T, F> > {
     typedef kaapi_access_t type_inclosure;
 //    typedef Shared_cw<T,F> value_type;
 //    typedef pointer_rw<T> type_inuserfunction;
@@ -651,12 +651,12 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T, class F>
-  const kaapi_format_t* Trait_ParamClosure<Shared_cw<T,F> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<CW<T,F> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_rpwp<T> > {
+  struct Trait_ParamClosure<RPWP<T> > {
     typedef kaapi_access_t type_inclosure;
-    typedef Shared_rpwp<T> value_type;
+    typedef RPWP<T> value_type;
     typedef pointer_rpwp<T> type_inuserfunction;
     enum { isshared = true };
     static const kaapi_format_t* format;
@@ -667,10 +667,10 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rpwp<T> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<RPWP<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_rp<T> > {
+  struct Trait_ParamClosure<RP<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_rp<T> type_inuserfunction;
     enum { isshared = true };
@@ -682,10 +682,10 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rp<T> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<RP<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_wp<T> > {
+  struct Trait_ParamClosure<WP<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_wp<T> type_inuserfunction;
     enum { isshared = true };
@@ -697,10 +697,10 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_wp<T> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<WP<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
-  struct Trait_ParamClosure<Shared_cwp<T, F> > {
+  struct Trait_ParamClosure<CWP<T, F> > {
     typedef kaapi_access_t type_inclosure;
 //    typedef Shared_cwp<T,F> value_type;
 //    typedef pointer_rpwp<T> type_inuserfunction;
@@ -713,7 +713,7 @@ namespace ka {
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
   template<class T, class F>
-  const kaapi_format_t* Trait_ParamClosure<Shared_cwp<T,F> >::format = WrapperFormat<T>::format;
+  const kaapi_format_t* Trait_ParamClosure<CWP<T,F> >::format = WrapperFormat<T>::format;
 
 
   // --------------------------------------------------------------------
@@ -752,17 +752,17 @@ namespace ka {
 #include "ka_api_clo.h"
 
   // --------------------------------------------------------------------
-  /* New API: thread.Fork<TASK>([ATTR])( args )
-     Fork<TASK>([ATTR])(args) with be implemented on top of 
-     System::get_current_thread()->Fork<TASK>([ATTR])( args ).
+  /* New API: thread.Spawn<TASK>([ATTR])( args )
+     Spawn<TASK>([ATTR])(args) with be implemented on top of 
+     System::get_current_thread()->Spawn<TASK>([ATTR])( args ).
   */
   class Thread {
   public:
 
     template<class TASK, class Attr>
-    class Forker {
+    class Spawner {
     public:
-      Forker( kaapi_stack_t* s, const Attr& a ) : _stack(s), _attr(a) {}
+      Spawner( kaapi_stack_t* s, const Attr& a ) : _stack(s), _attr(a) {}
 
       /**
       **/      
@@ -782,10 +782,10 @@ namespace ka {
     };
         
     template<class TASK>
-    Forker<TASK, DefaultAttribut> Fork() { return Forker<TASK, DefaultAttribut>(&_stack, DefaultAttribut()); }
+    Spawner<TASK, DefaultAttribut> Spawn() { return Spawner<TASK, DefaultAttribut>(&_stack, DefaultAttribut()); }
 
     template<class TASK, class Attr>
-    Forker<TASK, Attr> Fork(const Attr& a) { return Forker<TASK, Attr>(&_stack, a); }
+    Spawner<TASK, Attr> Spawn(const Attr& a) { return Spawner<TASK, Attr>(&_stack, a); }
 
   protected:
     kaapi_stack_t _stack;
@@ -795,12 +795,12 @@ namespace ka {
   
   
   // --------------------------------------------------------------------
-  /** Top level Fork */
+  /** Top level Spawn */
   template<class TASK>
-  Thread::Forker<TASK, DefaultAttribut> Fork() { return Thread::Forker<TASK, DefaultAttribut>(kaapi_self_stack(), DefaultAttribut()); }
+  Thread::Spawner<TASK, DefaultAttribut> Spawn() { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_stack(), DefaultAttribut()); }
 
   template<class TASK, class Attr>
-  Thread::Forker<TASK, Attr> Fork(const Attr& a) { return Thread::Forker<TASK, Attr>(kaapi_self_stack(), a); }
+  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) { return Thread::Spawner<TASK, Attr>(kaapi_self_stack(), a); }
 
 
 
@@ -816,24 +816,80 @@ namespace ka {
   struct MainTask {
     int    argc;
     char** argv;
-    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
+    static void body_cpu( kaapi_task_t* task, kaapi_stack_t* stack )
     {
       MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
       TASK()( args->argc, args->argv );
     }
+    static void body_gpu( kaapi_task_t* task, kaapi_stack_t* stack )
+    {
+      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
+      TASK()( args->argc, args->argv );
+    }
+    void operator()( kaapi_task_t* task, kaapi_stack_t* stack )
+    {
+      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
+      TASK()( args->argc, args->argv );
+    }
+    static kaapi_format_t* registerformat()
+    {
+      if (MainTask::fmid != 0) return &MainTask::format;
+      static MainTask a;
+      MainTask::fmid = kaapi_format_taskregister( 
+            &MainTask::getformat, 
+            -1, 
+            &MainTask::body_cpu, 
+            typeid(MainTask).name(),
+            sizeof(MainTask),
+            0,
+            0,
+            0,
+            0
+        );
+     int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+     int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+     if (f_cpu == f_defaultcpu) {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+     }
+     else {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &MainTask::body_cpu;
+     }
+     int (MainTask::*f_defaultgpu)(...) = (int (MainTask::*)(...))&MainTask::operator();  /* inherited from Signature */
+     int (MainTask::*f_gpu)(...) = (int (MainTask::*)(...))&TaskBodyGPU<MainTask>::operator();
+     if (f_gpu == f_defaultgpu) {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+     }
+     else {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &MainTask::body_gpu;
+     }
+      return &MainTask::format;
+    }  
+    static const kaapi_task_bodyid_t bodyid;
+    static kaapi_format_t    format;
+    static kaapi_format_id_t fmid;
+    static kaapi_format_t* getformat()
+    { return &format; }
   };
   
   template<class TASK>
-  struct ForkerMain
+  kaapi_format_t    MainTask<TASK>::format;
+  template<class TASK>
+  kaapi_format_id_t MainTask<TASK>::fmid =0;
+
+  template<class TASK>
+  const kaapi_task_bodyid_t MainTask<TASK>::bodyid = registerformat()->bodyid;
+  
+  template<class TASK>
+  struct SpawnerMain
   {
-    ForkerMain() 
+    SpawnerMain() 
     { }
 
     void operator()( int argc, char** argv)
     {
       kaapi_stack_t* stack = kaapi_self_stack();
       kaapi_task_t* clo = kaapi_stack_toptask( stack);
-      kaapi_task_initdfg( stack, clo, &MainTask<TASK>::body, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
+      kaapi_task_initdfg( stack, clo, MainTask<TASK>::bodyid, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
       kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       MainTask<TASK>* arg = kaapi_task_getargst( clo, MainTask<TASK>);
       arg->argc = argc;
@@ -843,9 +899,9 @@ namespace ka {
   };
 
   template<class TASK>
-  ForkerMain<TASK> ForkMain()
+  SpawnerMain<TASK> SpawnMain()
   { 
-    return ForkerMain<TASK>();
+    return SpawnerMain<TASK>();
   }
     
 

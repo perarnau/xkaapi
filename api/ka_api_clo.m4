@@ -67,6 +67,7 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
+          -1, 
           &Self_t::body_cpu, 
           typeid(Self_t).name(),
           sizeof(Self_t),

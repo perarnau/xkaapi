@@ -57,7 +57,7 @@ struct PrintBody {
 
 /* Description of Update task */
 template<class T>
-struct TaskPrint : public ka::Task<2>::Signature<ka::Shared_r<T>, T> {};
+struct TaskPrint : public ka::Task<2>::Signature<ka::R<T>, T> {};
 
 /* Specialize default / CPU */
 template<class T>
@@ -80,17 +80,17 @@ struct SumBody {
     *res = *a + *b;
   }
 };
-struct TaskSum : public ka::Task<3>::Signature<ka::Shared_w<int>, ka::Shared_r<int>, ka::Shared_r<int> > {};
+struct TaskSum : public ka::Task<3>::Signature<ka::W<int>, ka::R<int>, ka::R<int> > {};
 template<>
 struct TaskBodyCPU<TaskSum> : public SumBody { };
 
-/* Athapascan Fibo task
+/* Kaapi Fibo task
  * - res is the return value, return value are usually put in a Shared_w
  * - n is the order of fibonnaci. It could be a Shared_r, but there are no dependencies to compute on it, so it would be useless
  * - threshold is used to control the grain of the application. The greater it is, the more task will be created, the more parallelism there will be.
  *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
  */
-struct TaskFibo : public ka::Task<2>::Signature<ka::Shared_w<int>, int > {};
+struct TaskFibo : public ka::Task<2>::Signature<ka::W<int>, int > {};
 
 template<>
 struct TaskBodyCPU<TaskFibo> {
@@ -98,27 +98,27 @@ struct TaskBodyCPU<TaskFibo> {
 };
 
 
-  void FiboBody::operator() ( ka::pointer_w<int> res, int n )
-  {  
-    if (n < 2) {
-      *res = fiboseq(n);
-    }
-    else {
-      ka::pointer_rpwp<int> res1 = ka::Alloca<int>(1);
-      ka::pointer_rpwp<int> res2 = ka::Alloca<int>(1);
-
-      /* the Fork keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
-       */
-      ka::Fork<TaskFibo>() ( res1, n-1);
-      ka::Fork<TaskFibo>() ( res2, n-2 );
-
-      /* the Sum task depends on res1 and res2 which are written by previous tasks
-       * it must wait until thoses tasks are finished
-       */
-      ka::Fork<TaskSum>()  ( res, res1, res2 );
-    }
+void TaskBodyCPU<TaskFibo>::operator() ( ka::pointer_w<int> res, int n )
+{  
+  if (n < 2) {
+    *res = fiboseq(n);
   }
+  else {
+    ka::pointer_rpwp<int> res1 = ka::Alloca<int>(1);
+    ka::pointer_rpwp<int> res2 = ka::Alloca<int>(1);
+
+    /* the Spawn keyword is used to spawn new task
+     * new tasks are executed in parallel as long as dependencies are respected
+     */
+    ka::Spawn<TaskFibo>() ( res1, n-1);
+    ka::Spawn<TaskFibo>() ( res2, n-2 );
+
+    /* the Sum task depends on res1 and res2 which are written by previous tasks
+     * it must wait until thoses tasks are finished
+     */
+    ka::Spawn<TaskSum>()  ( res, res1, res2 );
+  }
+}
 
 
 /* Main of the program
@@ -137,10 +137,10 @@ struct doit {
     {   
       ka::pointer_rpwp<int> res = ka::Alloca<int>(1);
       
-      ka::Fork<TaskFibo>(ka::SetLocal)( res, n );
+      ka::Spawn<TaskFibo>(ka::SetLocal)( res, n );
 
       /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      ka::Fork<TaskPrint<int> >(ka::SetLocal)(res, ref_value);
+      ka::Spawn<TaskPrint<int> >(ka::SetLocal)(res, ref_value);
     }
   }
 
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
     ka::Community com = ka::System::join_community( argc, argv );
     
     /* Start computation by forking the main task */
-    ka::ForkMain<doit>()(argc, argv); 
+    ka::SpawnMain<doit>()(argc, argv); 
     
     /* Leave the community: at return to this call no more athapascan
        tasks or shared could be created.
