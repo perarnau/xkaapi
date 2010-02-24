@@ -834,7 +834,6 @@ namespace ka {
     static kaapi_format_t* registerformat()
     {
       if (MainTask::fmid != 0) return &MainTask::format;
-      static MainTask a;
       MainTask::fmid = kaapi_format_taskregister( 
             &MainTask::getformat, 
             -1, 

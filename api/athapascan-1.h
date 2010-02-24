@@ -838,33 +838,11 @@ namespace a1 {
   // --------------------------------------------------------------------
   /* Main task */
   template<class TASK>
-  struct MainTask {
-    int    argc;
-    char** argv;
-    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
-    {
-      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
-      TASK()( args->argc, args->argv );
-    }
+  struct MainTask : ka::MainTask<TASK> {
   };
   
   template<class TASK>
-  struct ForkerMain
-  {
-    ForkerMain() 
-    { }
-
-    void operator()( int argc, char** argv)
-    {
-      kaapi_stack_t* stack = kaapi_self_stack();
-      kaapi_task_t* clo = kaapi_stack_toptask( stack);
-      kaapi_task_initdfg( stack, clo, &MainTask<TASK>::body, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
-      kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
-      MainTask<TASK>* arg = kaapi_task_getargst( clo, MainTask<TASK>);
-      arg->argc = argc;
-      arg->argv = argv;
-      kaapi_stack_pushtask( stack);    
-    }
+  struct ForkerMain : ka::SpawnerMain<TASK> {
   };
 
   template<class TASK>
