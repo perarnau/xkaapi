@@ -452,83 +452,6 @@ namespace a1 {
 
   using ka::WrapperFormat;
   using ka::WrapperFormatUpdateFnc;
-#if 0
-  template <class T>
-  class WrapperFormat {
-  public:
-    static const Format* format;
-    static const Format theformat;
-    static void cstor( void* dest) { new (dest) T; }
-    static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
-    static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
-    static void copy( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
-    static void assign( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
-    static void print( FILE* file, const void* src) { } 
-  };
-  
-  template <class UpdateFnc>
-  class WrapperFormatUpdateFnc : public FormatUpdateFnc {
-  protected:
-    template<class UF, class T, class Y>
-    static bool Caller( bool (UF::*)( T&, const Y& ), void* d, const void* v )
-    {
-      static UpdateFnc ufc;
-      T* data = static_cast<T*>(d);
-      const Y* value = static_cast<const Y*>(v);
-      return ufc( *data, *value );
-    }
-    
-  public:
-    static int update_kaapi( void* data, const kaapi_format_t* fmtdata, const void* value, const kaapi_format_t* fmtvalue )
-    {
-      return Caller( &UpdateFnc::operator(), data, value ) ? 1 : 0;
-    }
-    static const FormatUpdateFnc* format;
-    static const FormatUpdateFnc theformat;
-  };
-
-  template <class T>
-  const Format WrapperFormat<T>::theformat( typeid(T).name(),
-    sizeof(T),
-    WrapperFormat<T>::cstor, 
-    WrapperFormat<T>::dstor, 
-    WrapperFormat<T>::cstorcopy, 
-    WrapperFormat<T>::copy, 
-    WrapperFormat<T>::assign, 
-    WrapperFormat<T>::print 
-  );
-  template <class T>
-  const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
-
-  template <>
-  const Format* WrapperFormat<kaapi_int8_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_int16_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_int32_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_int64_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint8_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint16_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint32_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint64_t>::format;
-  template <>
-  const Format* WrapperFormat<float>::format;
-  template <>
-  const Format* WrapperFormat<double>::format;
-
-  template <class UpdateFnc>
-  const FormatUpdateFnc WrapperFormatUpdateFnc<UpdateFnc>::theformat (
-    typeid(UpdateFnc).name(),
-    &WrapperFormatUpdateFnc<UpdateFnc>::update_kaapi
-  );
-  template <class UpdateFnc>
-  const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::format = &WrapperFormatUpdateFnc<UpdateFnc>::theformat;
-#endif
 
   // --------------------------------------------------------------------
   /* typenames for access mode */
@@ -547,164 +470,142 @@ namespace a1 {
     typedef T type_inclosure;
     typedef T value_type;
     enum { isshared = false };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<T>::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<const T&> {
     typedef T type_inclosure;
     typedef T value_type;
     enum { isshared = false };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<const T&>::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rw<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_rw<T>   value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_RW mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rw<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_r<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_r<T>    value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_R mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_r<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_w<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_w<T>    value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_W mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_w<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cw<T, F> > {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_cw<T,F> value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_CW mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T, class F>
-  const kaapi_format_t* Trait_ParamClosure<Shared_cw<T,F> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rpwp<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_rpwp<T> value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rpwp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_rp<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_rp<T>   value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_RP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
   struct Trait_ParamClosure<Shared_wp<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_wp<T>   value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_WP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_wp<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
   struct Trait_ParamClosure<Shared_cwp<T, F> > {
     typedef kaapi_access_t  type_inclosure;
     typedef Shared_cwp<T,F> value_type;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_CWP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
   };
-  template<class T, class F>
-  const kaapi_format_t* Trait_ParamClosure<Shared_cwp<T,F> >::format = WrapperFormat<T>::format;
 
 
   // --------------------------------------------------------------------

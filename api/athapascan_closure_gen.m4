@@ -33,7 +33,7 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     ',`', `')
     M4_PARAM(`array_offset[$1-1] = (char*)&a.f$1 - (char*)&a;
     ',`', `')
-    M4_PARAM(`array_format[$1-1] = Trait_ParamClosure<F$1>::format;
+    M4_PARAM(`array_format[$1-1] = Trait_ParamClosure<F$1>::get_format();
     ',`', `')
     
     Self_t::fmid = kaapi_format_taskregister( 
