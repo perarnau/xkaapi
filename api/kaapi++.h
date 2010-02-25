@@ -657,14 +657,6 @@ namespace ka {
     typedef ACCESS_MODE_V   mode_t;
   };
 
-#if 0
-  template<typename UserType>
-  struct TraitUAMParam<const UserType&> {
-    typedef TraitUAMType<UserType> uamttype_t;
-    typedef ACCESS_MODE_V   mode_t;
-  };
-#endif
-
   template<typename UserType>
   struct TraitUAMParam<Value<UserType> > {
     typedef TraitUAMType<UserType> uamttype_t;
@@ -862,12 +854,28 @@ namespace ka {
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_R, ACCESS_MODE_R, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
+  template<class PARAM, class TASK> /* this rule is only valid for terminal fork... */
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_W, ACCESS_MODE_W, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RPWP, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
   template<class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RW, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_WP, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_W, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_CWP, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
@@ -879,15 +887,23 @@ namespace ka {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RP, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RP, ACCESS_MODE_RP, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RP, ACCESS_MODE_R, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_W, PARAM, TASK> {
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_WP, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK> /* this rule is only valid for terminal fork... */
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_W, ACCESS_MODE_W, PARAM, TASK> {
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_W, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>

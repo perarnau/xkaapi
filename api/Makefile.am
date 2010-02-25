@@ -21,26 +21,24 @@ libxkaapixx_la_LIBADD=../src/libxkaapi.la $(XKAAPILIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
 	ka_api_clo.h \
-	ka_api_fork.h
-
-#	athapascan_closure.h \
-#	athapascan_fork.h
+	ka_api_fork.h \
+	athapascan_closure.h \
+	athapascan_fork.h
 
 M4_SRCS=\
 	m4_generator \
 	m4_macros \
 	ka_api_clo.m4 \
-	ka_api_fork.m4
-
-#	athapascan_closure_gen.m4 \
-#	athapascan_fork_gen.m4 
+	ka_api_fork.m4 \
+	athapascan_closure_gen.m4 \
+	athapascan_fork_gen.m4 
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
 
 EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
 
 $(M4_BUILT_FILES): $(M4_SRCS)
-	$(srcdir)/m4_generator 10
+	(cd $(srcdir); $(srcdir)/m4_generator 10)
 
 libxkaapixx_la_SOURCES=\
 	ka_init.cpp \
@@ -76,12 +74,11 @@ include_HEADERS=\
 	ka_error.h\
   ka_timer.h\
   ka_api_clo.h\
-  ka_api_fork.h
-  
-# NOT YET USED:  	athapascan-1 \
-#	athapascan-1.h 
-#  athapascan_closure.h\
-#  athapascan_fork.h
+  ka_api_fork.h \
+  athapascan-1 \
+  athapascan-1.h \
+  athapascan_closure.h\
+  athapascan_fork.h
 
 check_PROGRAMS=ka_api_check_header
 if STD_CXX0X
