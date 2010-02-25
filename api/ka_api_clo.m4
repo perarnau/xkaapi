@@ -5,9 +5,9 @@ template<>
 struct Task<KAAPI_NUMBER_PARAMS> {
   ifelse(KAAPI_NUMBER_PARAMS,0,`',`template<M4_PARAM(`class F$1', `', `, ')>')
   struct Signature { 
-    M4_PARAM(`typedef F$1 formal$1_t;
+    M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction Type_$1;
     ', `', `')
-    M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+    M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction type_inuserfunction_F$1;
     ', `', `')
     void operator() ( Thread* thread M4_PARAM(`, type_inuserfunction_F$1', `', `') ) {}
     void get_formal_param ( Thread* thread M4_PARAM(`, F$1 f$1', `', `') ){}
@@ -17,9 +17,9 @@ struct Task<KAAPI_NUMBER_PARAMS> {
 /* Kaapi closure representation */
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){ 
- M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inclosure type_inclosure_F$1;
+ M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inclosure type_inclosure_F$1;
   ', ` ', `')
- M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+ M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction type_inuserfunction_F$1;
   ', ` ', `')
  M4_PARAM(`type_inclosure_F$1 f$1;
   ', ` ', `')
@@ -36,7 +36,7 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS) {};
 /* Kaapi binder to call task with stack args */
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, F$1', `', ` ')> {
- M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+ M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction type_inuserfunction_F$1;
   ', ` ', `')
   typedef KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', `')> Self_t;
 
@@ -52,7 +52,7 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, F$1', `',
 /* Kaapi binder to call task without stack args */
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, F$1', `', ` ')> {
- M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+ M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction type_inuserfunction_F$1;
   ', ` ', `')
   typedef KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', `')> Self_t;
 
@@ -72,7 +72,7 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS) {};
 /* Kaapi binder to call task with stack args */
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, F$1', `', ` ')> {
- M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+ M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction type_inuserfunction_F$1;
   ', ` ', `')
   typedef KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', `')> Self_t;
 
@@ -88,7 +88,7 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, F$1', `',
 /* Kaapi binder to call task without stack args */
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, F$1', `', ` ')> {
- M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+ M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction type_inuserfunction_F$1;
   ', ` ', `')
   typedef KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', `')> Self_t;
 
@@ -121,11 +121,11 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
     static Closure_t a;
-    M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F$1>::xkaapi_mode;
+    M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F$1>::xkaapi_mode;
     ',`', `')
     M4_PARAM(`array_offset[$1-1] = (char*)&a.f$1 - (char*)&a;
     ',`', `')
-    M4_PARAM(`array_format[$1-1] = Trait_ParamClosure<F$1>::get_format();
+    M4_PARAM(`array_format[$1-1] = Trait_TaskParameter<F$1>::get_format();
     ',`', `')
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -147,7 +147,7 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
-  M4_PARAM(`typedef typename Trait_ParamClosure<F$1>::type_inuserfunction type_inuserfunction_F$1;
+  M4_PARAM(`typedef typename Trait_TaskParameter<F$1>::type_inuserfunction type_inuserfunction_F$1;
   ', `', `')
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`type_inuserfunction_F$1', `', `,') ) )

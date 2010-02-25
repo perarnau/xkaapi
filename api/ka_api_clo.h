@@ -229,7 +229,7 @@ struct Task<1> {
   struct Signature { 
     typedef F1 formal1_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
     
     void operator() ( Thread* thread , type_inuserfunction_F1 ) {}
     void get_formal_param ( Thread* thread , F1 f1 ){}
@@ -239,9 +239,9 @@ struct Task<1> {
 /* Kaapi closure representation */
 template<class TASK ,class F1>
 struct KaapiTaskArg1{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
   
   type_inclosure_F1 f1;
   
@@ -258,7 +258,7 @@ struct KaapiCPUBody1 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1>
 struct KaapiCPUBody1<true, TASK , F1> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
   
   typedef KaapiTaskArg1<TASK ,F1> Self_t;
 
@@ -274,7 +274,7 @@ struct KaapiCPUBody1<true, TASK , F1> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1>
 struct KaapiCPUBody1<false, TASK , F1> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
   
   typedef KaapiTaskArg1<TASK ,F1> Self_t;
 
@@ -294,7 +294,7 @@ struct KaapiGPUBody1 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1>
 struct KaapiGPUBody1<true, TASK , F1> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
   
   typedef KaapiTaskArg1<TASK ,F1> Self_t;
 
@@ -310,7 +310,7 @@ struct KaapiGPUBody1<true, TASK , F1> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1>
 struct KaapiGPUBody1<false, TASK , F1> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
   
   typedef KaapiTaskArg1<TASK ,F1> Self_t;
 
@@ -343,11 +343,11 @@ struct FormatClosure1 {
     static kaapi_offset_t        array_offset[1];
     static const kaapi_format_t* array_format[1];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -369,7 +369,7 @@ struct FormatClosure1 {
 template<class TASK ,class F1>
 struct InitFormatClosure1 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1 ) )
@@ -444,8 +444,8 @@ struct Task<2> {
     typedef F1 formal1_t;
     typedef F2 formal2_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2 ){}
@@ -455,11 +455,11 @@ struct Task<2> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2>
 struct KaapiTaskArg2{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -477,8 +477,8 @@ struct KaapiCPUBody2 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2>
 struct KaapiCPUBody2<true, TASK , F1 , F2> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
   
   typedef KaapiTaskArg2<TASK ,F1,F2> Self_t;
 
@@ -494,8 +494,8 @@ struct KaapiCPUBody2<true, TASK , F1 , F2> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2>
 struct KaapiCPUBody2<false, TASK , F1 , F2> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
   
   typedef KaapiTaskArg2<TASK ,F1,F2> Self_t;
 
@@ -515,8 +515,8 @@ struct KaapiGPUBody2 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2>
 struct KaapiGPUBody2<true, TASK , F1 , F2> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
   
   typedef KaapiTaskArg2<TASK ,F1,F2> Self_t;
 
@@ -532,8 +532,8 @@ struct KaapiGPUBody2<true, TASK , F1 , F2> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2>
 struct KaapiGPUBody2<false, TASK , F1 , F2> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
   
   typedef KaapiTaskArg2<TASK ,F1,F2> Self_t;
 
@@ -566,14 +566,14 @@ struct FormatClosure2 {
     static kaapi_offset_t        array_offset[2];
     static const kaapi_format_t* array_format[2];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -595,8 +595,8 @@ struct FormatClosure2 {
 template<class TASK ,class F1 ,class F2>
 struct InitFormatClosure2 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2 ) )
@@ -672,9 +672,9 @@ struct Task<3> {
     typedef F2 formal2_t;
     typedef F3 formal3_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3 ){}
@@ -684,13 +684,13 @@ struct Task<3> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3>
 struct KaapiTaskArg3{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -709,9 +709,9 @@ struct KaapiCPUBody3 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3>
 struct KaapiCPUBody3<true, TASK , F1 , F2 , F3> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
   
   typedef KaapiTaskArg3<TASK ,F1,F2,F3> Self_t;
 
@@ -727,9 +727,9 @@ struct KaapiCPUBody3<true, TASK , F1 , F2 , F3> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3>
 struct KaapiCPUBody3<false, TASK , F1 , F2 , F3> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
   
   typedef KaapiTaskArg3<TASK ,F1,F2,F3> Self_t;
 
@@ -749,9 +749,9 @@ struct KaapiGPUBody3 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3>
 struct KaapiGPUBody3<true, TASK , F1 , F2 , F3> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
   
   typedef KaapiTaskArg3<TASK ,F1,F2,F3> Self_t;
 
@@ -767,9 +767,9 @@ struct KaapiGPUBody3<true, TASK , F1 , F2 , F3> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3>
 struct KaapiGPUBody3<false, TASK , F1 , F2 , F3> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
   
   typedef KaapiTaskArg3<TASK ,F1,F2,F3> Self_t;
 
@@ -802,17 +802,17 @@ struct FormatClosure3 {
     static kaapi_offset_t        array_offset[3];
     static const kaapi_format_t* array_format[3];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
     array_offset[3-1] = (char*)&a.f3 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -834,9 +834,9 @@ struct FormatClosure3 {
 template<class TASK ,class F1 ,class F2 ,class F3>
 struct InitFormatClosure3 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3 ) )
@@ -913,10 +913,10 @@ struct Task<4> {
     typedef F3 formal3_t;
     typedef F4 formal4_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-    typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3, type_inuserfunction_F4 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3, F4 f4 ){}
@@ -926,15 +926,15 @@ struct Task<4> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4>
 struct KaapiTaskArg4{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inclosure type_inclosure_F4;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -954,10 +954,10 @@ struct KaapiCPUBody4 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4>
 struct KaapiCPUBody4<true, TASK , F1 , F2 , F3 , F4> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
   
   typedef KaapiTaskArg4<TASK ,F1,F2,F3,F4> Self_t;
 
@@ -973,10 +973,10 @@ struct KaapiCPUBody4<true, TASK , F1 , F2 , F3 , F4> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4>
 struct KaapiCPUBody4<false, TASK , F1 , F2 , F3 , F4> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
   
   typedef KaapiTaskArg4<TASK ,F1,F2,F3,F4> Self_t;
 
@@ -996,10 +996,10 @@ struct KaapiGPUBody4 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4>
 struct KaapiGPUBody4<true, TASK , F1 , F2 , F3 , F4> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
   
   typedef KaapiTaskArg4<TASK ,F1,F2,F3,F4> Self_t;
 
@@ -1015,10 +1015,10 @@ struct KaapiGPUBody4<true, TASK , F1 , F2 , F3 , F4> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4>
 struct KaapiGPUBody4<false, TASK , F1 , F2 , F3 , F4> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
   
   typedef KaapiTaskArg4<TASK ,F1,F2,F3,F4> Self_t;
 
@@ -1051,20 +1051,20 @@ struct FormatClosure4 {
     static kaapi_offset_t        array_offset[4];
     static const kaapi_format_t* array_format[4];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
-    array_mode[4-1] = (kaapi_access_mode_t)Trait_ParamClosure<F4>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
+    array_mode[4-1] = (kaapi_access_mode_t)Trait_TaskParameter<F4>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
     array_offset[3-1] = (char*)&a.f3 - (char*)&a;
     array_offset[4-1] = (char*)&a.f4 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
-    array_format[4-1] = Trait_ParamClosure<F4>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
+    array_format[4-1] = Trait_TaskParameter<F4>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -1086,10 +1086,10 @@ struct FormatClosure4 {
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4>
 struct InitFormatClosure4 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3,type_inuserfunction_F4 ) )
@@ -1167,11 +1167,11 @@ struct Task<5> {
     typedef F4 formal4_t;
     typedef F5 formal5_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-    typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-    typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+    typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3, type_inuserfunction_F4, type_inuserfunction_F5 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3, F4 f4, F5 f5 ){}
@@ -1181,17 +1181,17 @@ struct Task<5> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5>
 struct KaapiTaskArg5{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inclosure type_inclosure_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inclosure type_inclosure_F5;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -1212,11 +1212,11 @@ struct KaapiCPUBody5 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5>
 struct KaapiCPUBody5<true, TASK , F1 , F2 , F3 , F4 , F5> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
   
   typedef KaapiTaskArg5<TASK ,F1,F2,F3,F4,F5> Self_t;
 
@@ -1232,11 +1232,11 @@ struct KaapiCPUBody5<true, TASK , F1 , F2 , F3 , F4 , F5> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5>
 struct KaapiCPUBody5<false, TASK , F1 , F2 , F3 , F4 , F5> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
   
   typedef KaapiTaskArg5<TASK ,F1,F2,F3,F4,F5> Self_t;
 
@@ -1256,11 +1256,11 @@ struct KaapiGPUBody5 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5>
 struct KaapiGPUBody5<true, TASK , F1 , F2 , F3 , F4 , F5> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
   
   typedef KaapiTaskArg5<TASK ,F1,F2,F3,F4,F5> Self_t;
 
@@ -1276,11 +1276,11 @@ struct KaapiGPUBody5<true, TASK , F1 , F2 , F3 , F4 , F5> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5>
 struct KaapiGPUBody5<false, TASK , F1 , F2 , F3 , F4 , F5> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
   
   typedef KaapiTaskArg5<TASK ,F1,F2,F3,F4,F5> Self_t;
 
@@ -1313,11 +1313,11 @@ struct FormatClosure5 {
     static kaapi_offset_t        array_offset[5];
     static const kaapi_format_t* array_format[5];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
-    array_mode[4-1] = (kaapi_access_mode_t)Trait_ParamClosure<F4>::xkaapi_mode;
-    array_mode[5-1] = (kaapi_access_mode_t)Trait_ParamClosure<F5>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
+    array_mode[4-1] = (kaapi_access_mode_t)Trait_TaskParameter<F4>::xkaapi_mode;
+    array_mode[5-1] = (kaapi_access_mode_t)Trait_TaskParameter<F5>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
@@ -1325,11 +1325,11 @@ struct FormatClosure5 {
     array_offset[4-1] = (char*)&a.f4 - (char*)&a;
     array_offset[5-1] = (char*)&a.f5 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
-    array_format[4-1] = Trait_ParamClosure<F4>::get_format();
-    array_format[5-1] = Trait_ParamClosure<F5>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
+    array_format[4-1] = Trait_TaskParameter<F4>::get_format();
+    array_format[5-1] = Trait_TaskParameter<F5>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -1351,11 +1351,11 @@ struct FormatClosure5 {
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5>
 struct InitFormatClosure5 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3,type_inuserfunction_F4,type_inuserfunction_F5 ) )
@@ -1434,12 +1434,12 @@ struct Task<6> {
     typedef F5 formal5_t;
     typedef F6 formal6_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-    typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-    typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-    typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+    typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+    typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3, type_inuserfunction_F4, type_inuserfunction_F5, type_inuserfunction_F6 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6 ){}
@@ -1449,19 +1449,19 @@ struct Task<6> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6>
 struct KaapiTaskArg6{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inclosure type_inclosure_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inclosure type_inclosure_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inclosure type_inclosure_F6;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -1483,12 +1483,12 @@ struct KaapiCPUBody6 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6>
 struct KaapiCPUBody6<true, TASK , F1 , F2 , F3 , F4 , F5 , F6> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
   
   typedef KaapiTaskArg6<TASK ,F1,F2,F3,F4,F5,F6> Self_t;
 
@@ -1504,12 +1504,12 @@ struct KaapiCPUBody6<true, TASK , F1 , F2 , F3 , F4 , F5 , F6> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6>
 struct KaapiCPUBody6<false, TASK , F1 , F2 , F3 , F4 , F5 , F6> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
   
   typedef KaapiTaskArg6<TASK ,F1,F2,F3,F4,F5,F6> Self_t;
 
@@ -1529,12 +1529,12 @@ struct KaapiGPUBody6 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6>
 struct KaapiGPUBody6<true, TASK , F1 , F2 , F3 , F4 , F5 , F6> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
   
   typedef KaapiTaskArg6<TASK ,F1,F2,F3,F4,F5,F6> Self_t;
 
@@ -1550,12 +1550,12 @@ struct KaapiGPUBody6<true, TASK , F1 , F2 , F3 , F4 , F5 , F6> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6>
 struct KaapiGPUBody6<false, TASK , F1 , F2 , F3 , F4 , F5 , F6> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
   
   typedef KaapiTaskArg6<TASK ,F1,F2,F3,F4,F5,F6> Self_t;
 
@@ -1588,12 +1588,12 @@ struct FormatClosure6 {
     static kaapi_offset_t        array_offset[6];
     static const kaapi_format_t* array_format[6];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
-    array_mode[4-1] = (kaapi_access_mode_t)Trait_ParamClosure<F4>::xkaapi_mode;
-    array_mode[5-1] = (kaapi_access_mode_t)Trait_ParamClosure<F5>::xkaapi_mode;
-    array_mode[6-1] = (kaapi_access_mode_t)Trait_ParamClosure<F6>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
+    array_mode[4-1] = (kaapi_access_mode_t)Trait_TaskParameter<F4>::xkaapi_mode;
+    array_mode[5-1] = (kaapi_access_mode_t)Trait_TaskParameter<F5>::xkaapi_mode;
+    array_mode[6-1] = (kaapi_access_mode_t)Trait_TaskParameter<F6>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
@@ -1602,12 +1602,12 @@ struct FormatClosure6 {
     array_offset[5-1] = (char*)&a.f5 - (char*)&a;
     array_offset[6-1] = (char*)&a.f6 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
-    array_format[4-1] = Trait_ParamClosure<F4>::get_format();
-    array_format[5-1] = Trait_ParamClosure<F5>::get_format();
-    array_format[6-1] = Trait_ParamClosure<F6>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
+    array_format[4-1] = Trait_TaskParameter<F4>::get_format();
+    array_format[5-1] = Trait_TaskParameter<F5>::get_format();
+    array_format[6-1] = Trait_TaskParameter<F6>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -1629,12 +1629,12 @@ struct FormatClosure6 {
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6>
 struct InitFormatClosure6 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3,type_inuserfunction_F4,type_inuserfunction_F5,type_inuserfunction_F6 ) )
@@ -1714,13 +1714,13 @@ struct Task<7> {
     typedef F6 formal6_t;
     typedef F7 formal7_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-    typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-    typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-    typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-    typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+    typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+    typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+    typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3, type_inuserfunction_F4, type_inuserfunction_F5, type_inuserfunction_F6, type_inuserfunction_F7 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7 ){}
@@ -1730,21 +1730,21 @@ struct Task<7> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7>
 struct KaapiTaskArg7{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inclosure type_inclosure_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inclosure type_inclosure_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inclosure type_inclosure_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inclosure type_inclosure_F7;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -1767,13 +1767,13 @@ struct KaapiCPUBody7 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7>
 struct KaapiCPUBody7<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
   
   typedef KaapiTaskArg7<TASK ,F1,F2,F3,F4,F5,F6,F7> Self_t;
 
@@ -1789,13 +1789,13 @@ struct KaapiCPUBody7<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7>
 struct KaapiCPUBody7<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
   
   typedef KaapiTaskArg7<TASK ,F1,F2,F3,F4,F5,F6,F7> Self_t;
 
@@ -1815,13 +1815,13 @@ struct KaapiGPUBody7 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7>
 struct KaapiGPUBody7<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
   
   typedef KaapiTaskArg7<TASK ,F1,F2,F3,F4,F5,F6,F7> Self_t;
 
@@ -1837,13 +1837,13 @@ struct KaapiGPUBody7<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7>
 struct KaapiGPUBody7<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
   
   typedef KaapiTaskArg7<TASK ,F1,F2,F3,F4,F5,F6,F7> Self_t;
 
@@ -1876,13 +1876,13 @@ struct FormatClosure7 {
     static kaapi_offset_t        array_offset[7];
     static const kaapi_format_t* array_format[7];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
-    array_mode[4-1] = (kaapi_access_mode_t)Trait_ParamClosure<F4>::xkaapi_mode;
-    array_mode[5-1] = (kaapi_access_mode_t)Trait_ParamClosure<F5>::xkaapi_mode;
-    array_mode[6-1] = (kaapi_access_mode_t)Trait_ParamClosure<F6>::xkaapi_mode;
-    array_mode[7-1] = (kaapi_access_mode_t)Trait_ParamClosure<F7>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
+    array_mode[4-1] = (kaapi_access_mode_t)Trait_TaskParameter<F4>::xkaapi_mode;
+    array_mode[5-1] = (kaapi_access_mode_t)Trait_TaskParameter<F5>::xkaapi_mode;
+    array_mode[6-1] = (kaapi_access_mode_t)Trait_TaskParameter<F6>::xkaapi_mode;
+    array_mode[7-1] = (kaapi_access_mode_t)Trait_TaskParameter<F7>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
@@ -1892,13 +1892,13 @@ struct FormatClosure7 {
     array_offset[6-1] = (char*)&a.f6 - (char*)&a;
     array_offset[7-1] = (char*)&a.f7 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
-    array_format[4-1] = Trait_ParamClosure<F4>::get_format();
-    array_format[5-1] = Trait_ParamClosure<F5>::get_format();
-    array_format[6-1] = Trait_ParamClosure<F6>::get_format();
-    array_format[7-1] = Trait_ParamClosure<F7>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
+    array_format[4-1] = Trait_TaskParameter<F4>::get_format();
+    array_format[5-1] = Trait_TaskParameter<F5>::get_format();
+    array_format[6-1] = Trait_TaskParameter<F6>::get_format();
+    array_format[7-1] = Trait_TaskParameter<F7>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -1920,13 +1920,13 @@ struct FormatClosure7 {
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7>
 struct InitFormatClosure7 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3,type_inuserfunction_F4,type_inuserfunction_F5,type_inuserfunction_F6,type_inuserfunction_F7 ) )
@@ -2007,14 +2007,14 @@ struct Task<8> {
     typedef F7 formal7_t;
     typedef F8 formal8_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-    typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-    typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-    typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-    typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-    typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+    typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+    typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+    typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+    typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3, type_inuserfunction_F4, type_inuserfunction_F5, type_inuserfunction_F6, type_inuserfunction_F7, type_inuserfunction_F8 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, F8 f8 ){}
@@ -2024,23 +2024,23 @@ struct Task<8> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8>
 struct KaapiTaskArg8{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inclosure type_inclosure_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inclosure type_inclosure_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inclosure type_inclosure_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inclosure type_inclosure_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inclosure type_inclosure_F8;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -2064,14 +2064,14 @@ struct KaapiCPUBody8 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8>
 struct KaapiCPUBody8<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
   
   typedef KaapiTaskArg8<TASK ,F1,F2,F3,F4,F5,F6,F7,F8> Self_t;
 
@@ -2087,14 +2087,14 @@ struct KaapiCPUBody8<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8>
 struct KaapiCPUBody8<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
   
   typedef KaapiTaskArg8<TASK ,F1,F2,F3,F4,F5,F6,F7,F8> Self_t;
 
@@ -2114,14 +2114,14 @@ struct KaapiGPUBody8 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8>
 struct KaapiGPUBody8<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
   
   typedef KaapiTaskArg8<TASK ,F1,F2,F3,F4,F5,F6,F7,F8> Self_t;
 
@@ -2137,14 +2137,14 @@ struct KaapiGPUBody8<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8>
 struct KaapiGPUBody8<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
   
   typedef KaapiTaskArg8<TASK ,F1,F2,F3,F4,F5,F6,F7,F8> Self_t;
 
@@ -2177,14 +2177,14 @@ struct FormatClosure8 {
     static kaapi_offset_t        array_offset[8];
     static const kaapi_format_t* array_format[8];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
-    array_mode[4-1] = (kaapi_access_mode_t)Trait_ParamClosure<F4>::xkaapi_mode;
-    array_mode[5-1] = (kaapi_access_mode_t)Trait_ParamClosure<F5>::xkaapi_mode;
-    array_mode[6-1] = (kaapi_access_mode_t)Trait_ParamClosure<F6>::xkaapi_mode;
-    array_mode[7-1] = (kaapi_access_mode_t)Trait_ParamClosure<F7>::xkaapi_mode;
-    array_mode[8-1] = (kaapi_access_mode_t)Trait_ParamClosure<F8>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
+    array_mode[4-1] = (kaapi_access_mode_t)Trait_TaskParameter<F4>::xkaapi_mode;
+    array_mode[5-1] = (kaapi_access_mode_t)Trait_TaskParameter<F5>::xkaapi_mode;
+    array_mode[6-1] = (kaapi_access_mode_t)Trait_TaskParameter<F6>::xkaapi_mode;
+    array_mode[7-1] = (kaapi_access_mode_t)Trait_TaskParameter<F7>::xkaapi_mode;
+    array_mode[8-1] = (kaapi_access_mode_t)Trait_TaskParameter<F8>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
@@ -2195,14 +2195,14 @@ struct FormatClosure8 {
     array_offset[7-1] = (char*)&a.f7 - (char*)&a;
     array_offset[8-1] = (char*)&a.f8 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
-    array_format[4-1] = Trait_ParamClosure<F4>::get_format();
-    array_format[5-1] = Trait_ParamClosure<F5>::get_format();
-    array_format[6-1] = Trait_ParamClosure<F6>::get_format();
-    array_format[7-1] = Trait_ParamClosure<F7>::get_format();
-    array_format[8-1] = Trait_ParamClosure<F8>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
+    array_format[4-1] = Trait_TaskParameter<F4>::get_format();
+    array_format[5-1] = Trait_TaskParameter<F5>::get_format();
+    array_format[6-1] = Trait_TaskParameter<F6>::get_format();
+    array_format[7-1] = Trait_TaskParameter<F7>::get_format();
+    array_format[8-1] = Trait_TaskParameter<F8>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -2224,14 +2224,14 @@ struct FormatClosure8 {
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8>
 struct InitFormatClosure8 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3,type_inuserfunction_F4,type_inuserfunction_F5,type_inuserfunction_F6,type_inuserfunction_F7,type_inuserfunction_F8 ) )
@@ -2313,15 +2313,15 @@ struct Task<9> {
     typedef F8 formal8_t;
     typedef F9 formal9_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-    typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-    typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-    typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-    typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-    typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-    typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+    typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+    typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+    typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+    typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+    typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3, type_inuserfunction_F4, type_inuserfunction_F5, type_inuserfunction_F6, type_inuserfunction_F7, type_inuserfunction_F8, type_inuserfunction_F9 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, F8 f8, F9 f9 ){}
@@ -2331,25 +2331,25 @@ struct Task<9> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9>
 struct KaapiTaskArg9{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inclosure type_inclosure_F9;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inclosure type_inclosure_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inclosure type_inclosure_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inclosure type_inclosure_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inclosure type_inclosure_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inclosure type_inclosure_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inclosure type_inclosure_F9;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -2374,15 +2374,15 @@ struct KaapiCPUBody9 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9>
 struct KaapiCPUBody9<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
   
   typedef KaapiTaskArg9<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9> Self_t;
 
@@ -2398,15 +2398,15 @@ struct KaapiCPUBody9<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9>
 struct KaapiCPUBody9<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
   
   typedef KaapiTaskArg9<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9> Self_t;
 
@@ -2426,15 +2426,15 @@ struct KaapiGPUBody9 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9>
 struct KaapiGPUBody9<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
   
   typedef KaapiTaskArg9<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9> Self_t;
 
@@ -2450,15 +2450,15 @@ struct KaapiGPUBody9<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9> {
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9>
 struct KaapiGPUBody9<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
   
   typedef KaapiTaskArg9<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9> Self_t;
 
@@ -2491,15 +2491,15 @@ struct FormatClosure9 {
     static kaapi_offset_t        array_offset[9];
     static const kaapi_format_t* array_format[9];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
-    array_mode[4-1] = (kaapi_access_mode_t)Trait_ParamClosure<F4>::xkaapi_mode;
-    array_mode[5-1] = (kaapi_access_mode_t)Trait_ParamClosure<F5>::xkaapi_mode;
-    array_mode[6-1] = (kaapi_access_mode_t)Trait_ParamClosure<F6>::xkaapi_mode;
-    array_mode[7-1] = (kaapi_access_mode_t)Trait_ParamClosure<F7>::xkaapi_mode;
-    array_mode[8-1] = (kaapi_access_mode_t)Trait_ParamClosure<F8>::xkaapi_mode;
-    array_mode[9-1] = (kaapi_access_mode_t)Trait_ParamClosure<F9>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
+    array_mode[4-1] = (kaapi_access_mode_t)Trait_TaskParameter<F4>::xkaapi_mode;
+    array_mode[5-1] = (kaapi_access_mode_t)Trait_TaskParameter<F5>::xkaapi_mode;
+    array_mode[6-1] = (kaapi_access_mode_t)Trait_TaskParameter<F6>::xkaapi_mode;
+    array_mode[7-1] = (kaapi_access_mode_t)Trait_TaskParameter<F7>::xkaapi_mode;
+    array_mode[8-1] = (kaapi_access_mode_t)Trait_TaskParameter<F8>::xkaapi_mode;
+    array_mode[9-1] = (kaapi_access_mode_t)Trait_TaskParameter<F9>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
@@ -2511,15 +2511,15 @@ struct FormatClosure9 {
     array_offset[8-1] = (char*)&a.f8 - (char*)&a;
     array_offset[9-1] = (char*)&a.f9 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
-    array_format[4-1] = Trait_ParamClosure<F4>::get_format();
-    array_format[5-1] = Trait_ParamClosure<F5>::get_format();
-    array_format[6-1] = Trait_ParamClosure<F6>::get_format();
-    array_format[7-1] = Trait_ParamClosure<F7>::get_format();
-    array_format[8-1] = Trait_ParamClosure<F8>::get_format();
-    array_format[9-1] = Trait_ParamClosure<F9>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
+    array_format[4-1] = Trait_TaskParameter<F4>::get_format();
+    array_format[5-1] = Trait_TaskParameter<F5>::get_format();
+    array_format[6-1] = Trait_TaskParameter<F6>::get_format();
+    array_format[7-1] = Trait_TaskParameter<F7>::get_format();
+    array_format[8-1] = Trait_TaskParameter<F8>::get_format();
+    array_format[9-1] = Trait_TaskParameter<F9>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -2541,15 +2541,15 @@ struct FormatClosure9 {
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9>
 struct InitFormatClosure9 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3,type_inuserfunction_F4,type_inuserfunction_F5,type_inuserfunction_F6,type_inuserfunction_F7,type_inuserfunction_F8,type_inuserfunction_F9 ) )
@@ -2632,16 +2632,16 @@ struct Task<10> {
     typedef F9 formal9_t;
     typedef F10 formal10_t;
     
-    typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-    typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-    typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-    typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-    typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-    typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-    typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-    typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-    typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
-    typedef typename Trait_ParamClosure<F10>::type_inuserfunction type_inuserfunction_F10;
+    typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+    typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+    typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+    typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+    typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+    typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+    typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+    typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+    typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
+    typedef typename Trait_TaskParameter<F10>::type_inuserfunction type_inuserfunction_F10;
     
     void operator() ( Thread* thread , type_inuserfunction_F1, type_inuserfunction_F2, type_inuserfunction_F3, type_inuserfunction_F4, type_inuserfunction_F5, type_inuserfunction_F6, type_inuserfunction_F7, type_inuserfunction_F8, type_inuserfunction_F9, type_inuserfunction_F10 ) {}
     void get_formal_param ( Thread* thread , F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, F8 f8, F9 f9, F10 f10 ){}
@@ -2651,27 +2651,27 @@ struct Task<10> {
 /* Kaapi closure representation */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 struct KaapiTaskArg10{ 
-  typedef typename Trait_ParamClosure<F1>::type_inclosure type_inclosure_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inclosure type_inclosure_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inclosure type_inclosure_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inclosure type_inclosure_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inclosure type_inclosure_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inclosure type_inclosure_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inclosure type_inclosure_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inclosure type_inclosure_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inclosure type_inclosure_F9;
-  typedef typename Trait_ParamClosure<F10>::type_inclosure type_inclosure_F10;
+  typedef typename Trait_TaskParameter<F1>::type_inclosure type_inclosure_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inclosure type_inclosure_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inclosure type_inclosure_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inclosure type_inclosure_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inclosure type_inclosure_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inclosure type_inclosure_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inclosure type_inclosure_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inclosure type_inclosure_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inclosure type_inclosure_F9;
+  typedef typename Trait_TaskParameter<F10>::type_inclosure type_inclosure_F10;
   
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
-  typedef typename Trait_ParamClosure<F10>::type_inuserfunction type_inuserfunction_F10;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F10>::type_inuserfunction type_inuserfunction_F10;
   
   type_inclosure_F1 f1;
   type_inclosure_F2 f2;
@@ -2697,16 +2697,16 @@ struct KaapiCPUBody10 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 struct KaapiCPUBody10<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9 , F10> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
-  typedef typename Trait_ParamClosure<F10>::type_inuserfunction type_inuserfunction_F10;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F10>::type_inuserfunction type_inuserfunction_F10;
   
   typedef KaapiTaskArg10<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9,F10> Self_t;
 
@@ -2722,16 +2722,16 @@ struct KaapiCPUBody10<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9 , 
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 struct KaapiCPUBody10<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9 , F10> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
-  typedef typename Trait_ParamClosure<F10>::type_inuserfunction type_inuserfunction_F10;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F10>::type_inuserfunction type_inuserfunction_F10;
   
   typedef KaapiTaskArg10<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9,F10> Self_t;
 
@@ -2751,16 +2751,16 @@ struct KaapiGPUBody10 {};
 /* Kaapi binder to call task with stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 struct KaapiGPUBody10<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9 , F10> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
-  typedef typename Trait_ParamClosure<F10>::type_inuserfunction type_inuserfunction_F10;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F10>::type_inuserfunction type_inuserfunction_F10;
   
   typedef KaapiTaskArg10<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9,F10> Self_t;
 
@@ -2776,16 +2776,16 @@ struct KaapiGPUBody10<true, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9 , 
 /* Kaapi binder to call task without stack args */
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 struct KaapiGPUBody10<false, TASK , F1 , F2 , F3 , F4 , F5 , F6 , F7 , F8 , F9 , F10> {
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
-  typedef typename Trait_ParamClosure<F10>::type_inuserfunction type_inuserfunction_F10;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F10>::type_inuserfunction type_inuserfunction_F10;
   
   typedef KaapiTaskArg10<TASK ,F1,F2,F3,F4,F5,F6,F7,F8,F9,F10> Self_t;
 
@@ -2818,16 +2818,16 @@ struct FormatClosure10 {
     static kaapi_offset_t        array_offset[10];
     static const kaapi_format_t* array_format[10];
     static Closure_t a;
-    array_mode[1-1] = (kaapi_access_mode_t)Trait_ParamClosure<F1>::xkaapi_mode;
-    array_mode[2-1] = (kaapi_access_mode_t)Trait_ParamClosure<F2>::xkaapi_mode;
-    array_mode[3-1] = (kaapi_access_mode_t)Trait_ParamClosure<F3>::xkaapi_mode;
-    array_mode[4-1] = (kaapi_access_mode_t)Trait_ParamClosure<F4>::xkaapi_mode;
-    array_mode[5-1] = (kaapi_access_mode_t)Trait_ParamClosure<F5>::xkaapi_mode;
-    array_mode[6-1] = (kaapi_access_mode_t)Trait_ParamClosure<F6>::xkaapi_mode;
-    array_mode[7-1] = (kaapi_access_mode_t)Trait_ParamClosure<F7>::xkaapi_mode;
-    array_mode[8-1] = (kaapi_access_mode_t)Trait_ParamClosure<F8>::xkaapi_mode;
-    array_mode[9-1] = (kaapi_access_mode_t)Trait_ParamClosure<F9>::xkaapi_mode;
-    array_mode[10-1] = (kaapi_access_mode_t)Trait_ParamClosure<F10>::xkaapi_mode;
+    array_mode[1-1] = (kaapi_access_mode_t)Trait_TaskParameter<F1>::xkaapi_mode;
+    array_mode[2-1] = (kaapi_access_mode_t)Trait_TaskParameter<F2>::xkaapi_mode;
+    array_mode[3-1] = (kaapi_access_mode_t)Trait_TaskParameter<F3>::xkaapi_mode;
+    array_mode[4-1] = (kaapi_access_mode_t)Trait_TaskParameter<F4>::xkaapi_mode;
+    array_mode[5-1] = (kaapi_access_mode_t)Trait_TaskParameter<F5>::xkaapi_mode;
+    array_mode[6-1] = (kaapi_access_mode_t)Trait_TaskParameter<F6>::xkaapi_mode;
+    array_mode[7-1] = (kaapi_access_mode_t)Trait_TaskParameter<F7>::xkaapi_mode;
+    array_mode[8-1] = (kaapi_access_mode_t)Trait_TaskParameter<F8>::xkaapi_mode;
+    array_mode[9-1] = (kaapi_access_mode_t)Trait_TaskParameter<F9>::xkaapi_mode;
+    array_mode[10-1] = (kaapi_access_mode_t)Trait_TaskParameter<F10>::xkaapi_mode;
     
     array_offset[1-1] = (char*)&a.f1 - (char*)&a;
     array_offset[2-1] = (char*)&a.f2 - (char*)&a;
@@ -2840,16 +2840,16 @@ struct FormatClosure10 {
     array_offset[9-1] = (char*)&a.f9 - (char*)&a;
     array_offset[10-1] = (char*)&a.f10 - (char*)&a;
     
-    array_format[1-1] = Trait_ParamClosure<F1>::get_format();
-    array_format[2-1] = Trait_ParamClosure<F2>::get_format();
-    array_format[3-1] = Trait_ParamClosure<F3>::get_format();
-    array_format[4-1] = Trait_ParamClosure<F4>::get_format();
-    array_format[5-1] = Trait_ParamClosure<F5>::get_format();
-    array_format[6-1] = Trait_ParamClosure<F6>::get_format();
-    array_format[7-1] = Trait_ParamClosure<F7>::get_format();
-    array_format[8-1] = Trait_ParamClosure<F8>::get_format();
-    array_format[9-1] = Trait_ParamClosure<F9>::get_format();
-    array_format[10-1] = Trait_ParamClosure<F10>::get_format();
+    array_format[1-1] = Trait_TaskParameter<F1>::get_format();
+    array_format[2-1] = Trait_TaskParameter<F2>::get_format();
+    array_format[3-1] = Trait_TaskParameter<F3>::get_format();
+    array_format[4-1] = Trait_TaskParameter<F4>::get_format();
+    array_format[5-1] = Trait_TaskParameter<F5>::get_format();
+    array_format[6-1] = Trait_TaskParameter<F6>::get_format();
+    array_format[7-1] = Trait_TaskParameter<F7>::get_format();
+    array_format[8-1] = Trait_TaskParameter<F8>::get_format();
+    array_format[9-1] = Trait_TaskParameter<F9>::get_format();
+    array_format[10-1] = Trait_TaskParameter<F10>::get_format();
     
     static std::string task_name = std::string("__Z")+std::string(typeid(Closure_t).name());
     fmid = kaapi_format_taskregister( 
@@ -2871,16 +2871,16 @@ struct FormatClosure10 {
 template<class TASK ,class F1 ,class F2 ,class F3 ,class F4 ,class F5 ,class F6 ,class F7 ,class F8 ,class F9 ,class F10>
 struct InitFormatClosure10 {
 
-  typedef typename Trait_ParamClosure<F1>::type_inuserfunction type_inuserfunction_F1;
-  typedef typename Trait_ParamClosure<F2>::type_inuserfunction type_inuserfunction_F2;
-  typedef typename Trait_ParamClosure<F3>::type_inuserfunction type_inuserfunction_F3;
-  typedef typename Trait_ParamClosure<F4>::type_inuserfunction type_inuserfunction_F4;
-  typedef typename Trait_ParamClosure<F5>::type_inuserfunction type_inuserfunction_F5;
-  typedef typename Trait_ParamClosure<F6>::type_inuserfunction type_inuserfunction_F6;
-  typedef typename Trait_ParamClosure<F7>::type_inuserfunction type_inuserfunction_F7;
-  typedef typename Trait_ParamClosure<F8>::type_inuserfunction type_inuserfunction_F8;
-  typedef typename Trait_ParamClosure<F9>::type_inuserfunction type_inuserfunction_F9;
-  typedef typename Trait_ParamClosure<F10>::type_inuserfunction type_inuserfunction_F10;
+  typedef typename Trait_TaskParameter<F1>::type_inuserfunction type_inuserfunction_F1;
+  typedef typename Trait_TaskParameter<F2>::type_inuserfunction type_inuserfunction_F2;
+  typedef typename Trait_TaskParameter<F3>::type_inuserfunction type_inuserfunction_F3;
+  typedef typename Trait_TaskParameter<F4>::type_inuserfunction type_inuserfunction_F4;
+  typedef typename Trait_TaskParameter<F5>::type_inuserfunction type_inuserfunction_F5;
+  typedef typename Trait_TaskParameter<F6>::type_inuserfunction type_inuserfunction_F6;
+  typedef typename Trait_TaskParameter<F7>::type_inuserfunction type_inuserfunction_F7;
+  typedef typename Trait_TaskParameter<F8>::type_inuserfunction type_inuserfunction_F8;
+  typedef typename Trait_TaskParameter<F9>::type_inuserfunction type_inuserfunction_F9;
+  typedef typename Trait_TaskParameter<F10>::type_inuserfunction type_inuserfunction_F10;
   
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( type_inuserfunction_F1,type_inuserfunction_F2,type_inuserfunction_F3,type_inuserfunction_F4,type_inuserfunction_F5,type_inuserfunction_F6,type_inuserfunction_F7,type_inuserfunction_F8,type_inuserfunction_F9,type_inuserfunction_F10 ) )

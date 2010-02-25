@@ -6,7 +6,7 @@
       typedef KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK, M4_PARAM(`F$1', `', `,')> KaapiClosure;
 
 /*
-      M4_PARAM(`PassingRule<typename Trait_ParamClosure<E$1>::mode, typename Trait_ParamClosure<F$1>::mode, 
+      M4_PARAM(`PassingRule<typename Trait_TaskParameter<E$1>::mode, typename Trait_TaskParameter<F$1>::mode, 
                 ARG<$1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       ', `', `')
 */
@@ -19,7 +19,7 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      M4_PARAM(`Trait_ParamClosure<F$1>::link(arg->f$1, e$1);
+      M4_PARAM(`Trait_TaskParameter<F$1>::link(arg->f$1, e$1);
       ', `', `')
       return clo;
     }

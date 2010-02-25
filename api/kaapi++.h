@@ -191,6 +191,7 @@ namespace ka {
   class SetStickyC{};
   extern SetStickyC SetSticky;
 
+  // --------------------------------------------------------------------
   template<class T>
   class pointer_rpwp;
   template<class T>
@@ -243,6 +244,9 @@ namespace ka {
   struct ACCESS_MODE_WP {};
   struct ACCESS_MODE_RPWP {};
   struct ACCESS_MODE_CWP {};
+
+  struct TYPE_INTASK {}; /* internal purpose to define representation of a type in a task */
+  struct TYPE_INPROG {}; /* internal purpose to define representation of a type in the user program */
 
   // --------------------------------------------------------------------
   /* Information notes.
@@ -678,7 +682,7 @@ namespace ka {
 
   // --------------------------------------------------------------------
   template<class T>
-  struct Trait_ParamClosure {
+  struct Trait_TaskParameter {
     typedef T type_inclosure;
     typedef T type_inuserfunction;
     enum { isshared = false };
@@ -691,7 +695,7 @@ namespace ka {
   };
 
   template<class T>
-  struct Trait_ParamClosure<const T&> {
+  struct Trait_TaskParameter<const T&> {
     typedef T type_inclosure;
     typedef const T& type_inuserfunction;
     enum { isshared = false };
@@ -704,7 +708,7 @@ namespace ka {
   };
 
   template<class T>
-  struct Trait_ParamClosure<RW<T> > {
+  struct Trait_TaskParameter<RW<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_rw<T> type_inuserfunction;
     enum { isshared = true };
@@ -717,7 +721,7 @@ namespace ka {
   };
 
   template<class T>
-  struct Trait_ParamClosure<R<T> > {
+  struct Trait_TaskParameter<R<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_r<T> type_inuserfunction;
     enum { isshared = true };
@@ -730,7 +734,7 @@ namespace ka {
   };
 
   template<class T>
-  struct Trait_ParamClosure<W<T> > {
+  struct Trait_TaskParameter<W<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_w<T> type_inuserfunction;
     enum { isshared = true };
@@ -743,7 +747,7 @@ namespace ka {
   };
 
   template<class T, class F>
-  struct Trait_ParamClosure<CW<T, F> > {
+  struct Trait_TaskParameter<CW<T, F> > {
     typedef kaapi_access_t type_inclosure;
 //    typedef Shared_cw<T,F> value_type;
 //    typedef pointer_rw<T> type_inuserfunction;
@@ -757,7 +761,7 @@ namespace ka {
   };
 
   template<class T>
-  struct Trait_ParamClosure<RPWP<T> > {
+  struct Trait_TaskParameter<RPWP<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef RPWP<T> value_type;
     typedef pointer_rpwp<T> type_inuserfunction;
@@ -771,7 +775,7 @@ namespace ka {
   };
 
   template<class T>
-  struct Trait_ParamClosure<RP<T> > {
+  struct Trait_TaskParameter<RP<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_rp<T> type_inuserfunction;
     enum { isshared = true };
@@ -784,7 +788,7 @@ namespace ka {
   };
 
   template<class T>
-  struct Trait_ParamClosure<WP<T> > {
+  struct Trait_TaskParameter<WP<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_wp<T> type_inuserfunction;
     enum { isshared = true };
@@ -797,7 +801,7 @@ namespace ka {
   };
 
   template<class T, class F>
-  struct Trait_ParamClosure<CWP<T, F> > {
+  struct Trait_TaskParameter<CWP<T, F> > {
     typedef kaapi_access_t type_inclosure;
 //    typedef Shared_cwp<T,F> value_type;
 //    typedef pointer_rpwp<T> type_inuserfunction;

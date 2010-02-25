@@ -27,7 +27,7 @@
       typedef KaapiTaskArg1<TASK, F1> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -40,7 +40,7 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
       
       return clo;
     }
@@ -71,9 +71,9 @@
       typedef KaapiTaskArg2<TASK, F1,F2> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -86,8 +86,8 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
       
       return clo;
     }
@@ -118,11 +118,11 @@
       typedef KaapiTaskArg3<TASK, F1,F2,F3> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -135,9 +135,9 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
       
       return clo;
     }
@@ -168,13 +168,13 @@
       typedef KaapiTaskArg4<TASK, F1,F2,F3,F4> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E4>::mode, typename Trait_ParamClosure<F4>::mode, 
+      PassingRule<typename Trait_TaskParameter<E4>::mode, typename Trait_TaskParameter<F4>::mode, 
                 ARG<4>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -187,10 +187,10 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
-      Trait_ParamClosure<F4>::link(arg->f4, e4);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F4>::link(arg->f4, e4);
       
       return clo;
     }
@@ -221,15 +221,15 @@
       typedef KaapiTaskArg5<TASK, F1,F2,F3,F4,F5> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E4>::mode, typename Trait_ParamClosure<F4>::mode, 
+      PassingRule<typename Trait_TaskParameter<E4>::mode, typename Trait_TaskParameter<F4>::mode, 
                 ARG<4>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E5>::mode, typename Trait_ParamClosure<F5>::mode, 
+      PassingRule<typename Trait_TaskParameter<E5>::mode, typename Trait_TaskParameter<F5>::mode, 
                 ARG<5>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -242,11 +242,11 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
-      Trait_ParamClosure<F4>::link(arg->f4, e4);
-      Trait_ParamClosure<F5>::link(arg->f5, e5);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F4>::link(arg->f4, e4);
+      Trait_TaskParameter<F5>::link(arg->f5, e5);
       
       return clo;
     }
@@ -277,17 +277,17 @@
       typedef KaapiTaskArg6<TASK, F1,F2,F3,F4,F5,F6> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E4>::mode, typename Trait_ParamClosure<F4>::mode, 
+      PassingRule<typename Trait_TaskParameter<E4>::mode, typename Trait_TaskParameter<F4>::mode, 
                 ARG<4>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E5>::mode, typename Trait_ParamClosure<F5>::mode, 
+      PassingRule<typename Trait_TaskParameter<E5>::mode, typename Trait_TaskParameter<F5>::mode, 
                 ARG<5>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E6>::mode, typename Trait_ParamClosure<F6>::mode, 
+      PassingRule<typename Trait_TaskParameter<E6>::mode, typename Trait_TaskParameter<F6>::mode, 
                 ARG<6>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -300,12 +300,12 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
-      Trait_ParamClosure<F4>::link(arg->f4, e4);
-      Trait_ParamClosure<F5>::link(arg->f5, e5);
-      Trait_ParamClosure<F6>::link(arg->f6, e6);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F4>::link(arg->f4, e4);
+      Trait_TaskParameter<F5>::link(arg->f5, e5);
+      Trait_TaskParameter<F6>::link(arg->f6, e6);
       
       return clo;
     }
@@ -336,19 +336,19 @@
       typedef KaapiTaskArg7<TASK, F1,F2,F3,F4,F5,F6,F7> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E4>::mode, typename Trait_ParamClosure<F4>::mode, 
+      PassingRule<typename Trait_TaskParameter<E4>::mode, typename Trait_TaskParameter<F4>::mode, 
                 ARG<4>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E5>::mode, typename Trait_ParamClosure<F5>::mode, 
+      PassingRule<typename Trait_TaskParameter<E5>::mode, typename Trait_TaskParameter<F5>::mode, 
                 ARG<5>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E6>::mode, typename Trait_ParamClosure<F6>::mode, 
+      PassingRule<typename Trait_TaskParameter<E6>::mode, typename Trait_TaskParameter<F6>::mode, 
                 ARG<6>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E7>::mode, typename Trait_ParamClosure<F7>::mode, 
+      PassingRule<typename Trait_TaskParameter<E7>::mode, typename Trait_TaskParameter<F7>::mode, 
                 ARG<7>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -361,13 +361,13 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
-      Trait_ParamClosure<F4>::link(arg->f4, e4);
-      Trait_ParamClosure<F5>::link(arg->f5, e5);
-      Trait_ParamClosure<F6>::link(arg->f6, e6);
-      Trait_ParamClosure<F7>::link(arg->f7, e7);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F4>::link(arg->f4, e4);
+      Trait_TaskParameter<F5>::link(arg->f5, e5);
+      Trait_TaskParameter<F6>::link(arg->f6, e6);
+      Trait_TaskParameter<F7>::link(arg->f7, e7);
       
       return clo;
     }
@@ -398,21 +398,21 @@
       typedef KaapiTaskArg8<TASK, F1,F2,F3,F4,F5,F6,F7,F8> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E4>::mode, typename Trait_ParamClosure<F4>::mode, 
+      PassingRule<typename Trait_TaskParameter<E4>::mode, typename Trait_TaskParameter<F4>::mode, 
                 ARG<4>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E5>::mode, typename Trait_ParamClosure<F5>::mode, 
+      PassingRule<typename Trait_TaskParameter<E5>::mode, typename Trait_TaskParameter<F5>::mode, 
                 ARG<5>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E6>::mode, typename Trait_ParamClosure<F6>::mode, 
+      PassingRule<typename Trait_TaskParameter<E6>::mode, typename Trait_TaskParameter<F6>::mode, 
                 ARG<6>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E7>::mode, typename Trait_ParamClosure<F7>::mode, 
+      PassingRule<typename Trait_TaskParameter<E7>::mode, typename Trait_TaskParameter<F7>::mode, 
                 ARG<7>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E8>::mode, typename Trait_ParamClosure<F8>::mode, 
+      PassingRule<typename Trait_TaskParameter<E8>::mode, typename Trait_TaskParameter<F8>::mode, 
                 ARG<8>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -425,14 +425,14 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
-      Trait_ParamClosure<F4>::link(arg->f4, e4);
-      Trait_ParamClosure<F5>::link(arg->f5, e5);
-      Trait_ParamClosure<F6>::link(arg->f6, e6);
-      Trait_ParamClosure<F7>::link(arg->f7, e7);
-      Trait_ParamClosure<F8>::link(arg->f8, e8);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F4>::link(arg->f4, e4);
+      Trait_TaskParameter<F5>::link(arg->f5, e5);
+      Trait_TaskParameter<F6>::link(arg->f6, e6);
+      Trait_TaskParameter<F7>::link(arg->f7, e7);
+      Trait_TaskParameter<F8>::link(arg->f8, e8);
       
       return clo;
     }
@@ -463,23 +463,23 @@
       typedef KaapiTaskArg9<TASK, F1,F2,F3,F4,F5,F6,F7,F8,F9> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E4>::mode, typename Trait_ParamClosure<F4>::mode, 
+      PassingRule<typename Trait_TaskParameter<E4>::mode, typename Trait_TaskParameter<F4>::mode, 
                 ARG<4>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E5>::mode, typename Trait_ParamClosure<F5>::mode, 
+      PassingRule<typename Trait_TaskParameter<E5>::mode, typename Trait_TaskParameter<F5>::mode, 
                 ARG<5>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E6>::mode, typename Trait_ParamClosure<F6>::mode, 
+      PassingRule<typename Trait_TaskParameter<E6>::mode, typename Trait_TaskParameter<F6>::mode, 
                 ARG<6>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E7>::mode, typename Trait_ParamClosure<F7>::mode, 
+      PassingRule<typename Trait_TaskParameter<E7>::mode, typename Trait_TaskParameter<F7>::mode, 
                 ARG<7>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E8>::mode, typename Trait_ParamClosure<F8>::mode, 
+      PassingRule<typename Trait_TaskParameter<E8>::mode, typename Trait_TaskParameter<F8>::mode, 
                 ARG<8>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E9>::mode, typename Trait_ParamClosure<F9>::mode, 
+      PassingRule<typename Trait_TaskParameter<E9>::mode, typename Trait_TaskParameter<F9>::mode, 
                 ARG<9>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -492,15 +492,15 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
-      Trait_ParamClosure<F4>::link(arg->f4, e4);
-      Trait_ParamClosure<F5>::link(arg->f5, e5);
-      Trait_ParamClosure<F6>::link(arg->f6, e6);
-      Trait_ParamClosure<F7>::link(arg->f7, e7);
-      Trait_ParamClosure<F8>::link(arg->f8, e8);
-      Trait_ParamClosure<F9>::link(arg->f9, e9);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F4>::link(arg->f4, e4);
+      Trait_TaskParameter<F5>::link(arg->f5, e5);
+      Trait_TaskParameter<F6>::link(arg->f6, e6);
+      Trait_TaskParameter<F7>::link(arg->f7, e7);
+      Trait_TaskParameter<F8>::link(arg->f8, e8);
+      Trait_TaskParameter<F9>::link(arg->f9, e9);
       
       return clo;
     }
@@ -531,25 +531,25 @@
       typedef KaapiTaskArg10<TASK, F1,F2,F3,F4,F5,F6,F7,F8,F9,F10> KaapiClosure;
 
 /*
-      PassingRule<typename Trait_ParamClosure<E1>::mode, typename Trait_ParamClosure<F1>::mode, 
+      PassingRule<typename Trait_TaskParameter<E1>::mode, typename Trait_TaskParameter<F1>::mode, 
                 ARG<1>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E2>::mode, typename Trait_ParamClosure<F2>::mode, 
+      PassingRule<typename Trait_TaskParameter<E2>::mode, typename Trait_TaskParameter<F2>::mode, 
                 ARG<2>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E3>::mode, typename Trait_ParamClosure<F3>::mode, 
+      PassingRule<typename Trait_TaskParameter<E3>::mode, typename Trait_TaskParameter<F3>::mode, 
                 ARG<3>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E4>::mode, typename Trait_ParamClosure<F4>::mode, 
+      PassingRule<typename Trait_TaskParameter<E4>::mode, typename Trait_TaskParameter<F4>::mode, 
                 ARG<4>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E5>::mode, typename Trait_ParamClosure<F5>::mode, 
+      PassingRule<typename Trait_TaskParameter<E5>::mode, typename Trait_TaskParameter<F5>::mode, 
                 ARG<5>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E6>::mode, typename Trait_ParamClosure<F6>::mode, 
+      PassingRule<typename Trait_TaskParameter<E6>::mode, typename Trait_TaskParameter<F6>::mode, 
                 ARG<6>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E7>::mode, typename Trait_ParamClosure<F7>::mode, 
+      PassingRule<typename Trait_TaskParameter<E7>::mode, typename Trait_TaskParameter<F7>::mode, 
                 ARG<7>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E8>::mode, typename Trait_ParamClosure<F8>::mode, 
+      PassingRule<typename Trait_TaskParameter<E8>::mode, typename Trait_TaskParameter<F8>::mode, 
                 ARG<8>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E9>::mode, typename Trait_ParamClosure<F9>::mode, 
+      PassingRule<typename Trait_TaskParameter<E9>::mode, typename Trait_TaskParameter<F9>::mode, 
                 ARG<9>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
-      PassingRule<typename Trait_ParamClosure<E10>::mode, typename Trait_ParamClosure<F10>::mode, 
+      PassingRule<typename Trait_TaskParameter<E10>::mode, typename Trait_TaskParameter<F10>::mode, 
                 ARG<10>, FOR_TASKNAME<TASKORSIG> >::IS_COMPATIBLE();
       
 */
@@ -562,16 +562,16 @@
       */
       KaapiClosure* arg = kaapi_task_getargst( clo, KaapiClosure);
 
-      Trait_ParamClosure<F1>::link(arg->f1, e1);
-      Trait_ParamClosure<F2>::link(arg->f2, e2);
-      Trait_ParamClosure<F3>::link(arg->f3, e3);
-      Trait_ParamClosure<F4>::link(arg->f4, e4);
-      Trait_ParamClosure<F5>::link(arg->f5, e5);
-      Trait_ParamClosure<F6>::link(arg->f6, e6);
-      Trait_ParamClosure<F7>::link(arg->f7, e7);
-      Trait_ParamClosure<F8>::link(arg->f8, e8);
-      Trait_ParamClosure<F9>::link(arg->f9, e9);
-      Trait_ParamClosure<F10>::link(arg->f10, e10);
+      Trait_TaskParameter<F1>::link(arg->f1, e1);
+      Trait_TaskParameter<F2>::link(arg->f2, e2);
+      Trait_TaskParameter<F3>::link(arg->f3, e3);
+      Trait_TaskParameter<F4>::link(arg->f4, e4);
+      Trait_TaskParameter<F5>::link(arg->f5, e5);
+      Trait_TaskParameter<F6>::link(arg->f6, e6);
+      Trait_TaskParameter<F7>::link(arg->f7, e7);
+      Trait_TaskParameter<F8>::link(arg->f8, e8);
+      Trait_TaskParameter<F9>::link(arg->f9, e9);
+      Trait_TaskParameter<F10>::link(arg->f10, e10);
       
       return clo;
     }
