@@ -6,10 +6,8 @@
  *
  ***************************************************************************/
 
-
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
-#include "kaapi_impl.h" // this is the new C++ interface for Kaapi
 
 // --------------------------------------------------------------------
 /* Sequential fibo function
@@ -69,9 +67,6 @@ struct TaskBodyCPU<TaskPrint<T> > : public TaskPrint<T> {
   }
 };
 
-void dobreak()
-{
-}
 
 /* Sum two integers
  * this task reads a and b (read acces mode) and write their sum to res (write access mode)
@@ -90,7 +85,6 @@ struct TaskBodyCPU<TaskSum> : public TaskSum
     /* write is used to write data to a Shared_w
      * read is used to read data from a Shared_r
      */
-//    if (res.ptr() == (void*)0x70040) dobreak();
     *res = *a + *b;
   }
 };
@@ -134,39 +128,6 @@ void TaskBodyCPU<TaskFibo>::operator() ( ka::pointer_w<int> res, int n )
 }
 
 
-/* Same as TaskFibo, but because a task may only have one implementation for each machine,
-   we create a new task (new type).
-*/
-struct TaskFiboOpt : public ka::Task<2>::Signature<ka::W<int>, int > {};
-template<>
-struct TaskBodyCPU<TaskFiboOpt> : public TaskFibo {
-  void operator() ( ka::Thread* thread, ka::pointer_w<int> res, int n )
-  {  
-    if (n < 2) {
-      *res = fiboseq(n);
-//      kaapi_stack_print(1, kaapi_self_stack() );
-//      exit(1);
-    }
-    else {
-      ka::pointer_rpwp<int> res1 = thread->Alloca<int>(1);
-      ka::pointer_rpwp<int> res2 = thread->Alloca<int>(1);
-
-      /* the Spawn keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
-       */
-      thread->Spawn<TaskFiboOpt>() ( res1, n-1);
-      thread->Spawn<TaskFiboOpt>() ( res2, n-2 );
-
-      /* the Sum task depends on res1 and res2 which are written by previous tasks
-       * it must wait until thoses tasks are finished
-       */
-      thread->Spawn<TaskSum>(ka::SetLocal)  ( res, res1, res2 );
-    }
-  }
-};
-
-
-
 /* Main of the program
 */
 struct doit {
@@ -183,7 +144,7 @@ struct doit {
     {   
       ka::pointer<int> res = ka::Alloca<int>(1);
       
-      ka::Spawn<TaskFiboOpt>(ka::SetLocal)( res, n );
+      ka::Spawn<TaskFibo>(ka::SetLocal)( res, n );
 
       /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
       ka::Spawn<TaskPrint<int> >(ka::SetLocal)(res, "Nop", ref_value);
@@ -208,17 +169,9 @@ struct doit {
 
 /* main entry point : Kaapi initialization
 */
-#if defined(KAAPI_USE_IPHONEOS)
-void* KaapiMainThread::run_main(int argc, char** argv)
-#else
 int main(int argc, char** argv)
-#endif
 {
   try {
-#if defined(KAAPI_USR_FT)
-    FT::set_savehandler( &fibo_userglobal );
-#endif
-
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */

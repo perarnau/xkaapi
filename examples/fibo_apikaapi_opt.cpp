@@ -6,7 +6,6 @@
  *
  ***************************************************************************/
 
-
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
@@ -19,7 +18,8 @@ int fiboseq(int n)
 int fiboseq_On(int n){
   if(n<2){
     return n;
-  } else{
+  }else{
+
     int fibo=1;
     int fibo_p=1;
     int tmp=0;
@@ -39,7 +39,7 @@ int fiboseq_On(int n){
 static double start_time;
 template<class T>
 struct PrintBody {
-  void operator() ( ka::pointer_r<T> a, const T& ref_value)
+  void operator() ( ka::pointer_r<T> a, const char* msg, const T& ref_value)
   { 
     /*  ka::WallTimer::gettime is a wrapper around gettimeofday(2) */
     double t1 = ka::WallTimer::gettime();
@@ -49,79 +49,81 @@ struct PrintBody {
     /*  ka::System::getRank() prints out the id of the node executing the task */
     ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
     ka::logfile() << ka::System::getRank() << ": res  = " << *a << std::endl;
-    ka::logfile() << ka::System::getRank() << ": time = " << delay << " s" << std::endl;
+    ka::logfile() << ka::System::getRank() << ": " << msg << ", time = " << delay << " s" << std::endl;
     ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
   }
 };
 
 /* Description of Update task */
 template<class T>
-struct TaskPrint : public ka::Task<2>::Signature<ka::R<T>, T> {};
+struct TaskPrint : public ka::Task<3>::Signature<ka::R<T>, const char*, const T&> {};
 
 /* Specialize default / CPU */
 template<class T>
-struct TaskBodyCPU<TaskPrint<T> > : public PrintBody<T> { };
+struct TaskBodyCPU<TaskPrint<T> > : public TaskPrint<T> { 
+  void operator() ( ka::pointer_r<T> a, const char* msg, const T& ref_value )
+  { 
+    PrintBody<T>()(a, msg, ref_value); 
+  }
+};
 
-void dobreak()
-{
-}
 
 /* Sum two integers
  * this task reads a and b (read acces mode) and write their sum to res (write access mode)
  * it will wait until previous write to a and b are done
  * once finished, further read of res will be possible
  */
-struct SumBody {
+struct TaskSum : public ka::Task<3>::Signature<ka::W<int>, ka::R<int>, ka::R<int> > {};
+
+template<>
+struct TaskBodyCPU<TaskSum> : public TaskSum
+{
   void operator() ( ka::pointer_w<int> res, 
                     ka::pointer_r<int> a, 
-                    ka::pointer_r<int> b) 
+                    ka::pointer_r<int> b ) 
   {
     /* write is used to write data to a Shared_w
      * read is used to read data from a Shared_r
      */
-    if (res.ptr() == (void*)0x70040) dobreak();
     *res = *a + *b;
   }
 };
-struct TaskSum : public ka::Task<3>::Signature<ka::W<int>, ka::R<int>, ka::R<int> > {};
-template<>
-struct TaskBodyCPU<TaskSum> : public SumBody { };
 
-/* Kaapi Fibo task
- * - res is the return value, return value are usually put in a Shared_w
- * - n is the order of fibonnaci. It could be a Shared_r, but there are no dependencies to compute on it, so it would be useless
- * - threshold is used to control the grain of the application. The greater it is, the more task will be created, the more parallelism there will be.
- *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
+
+/* Kaapi Fibo task.
+   A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
+   and the type and access mode for each parameters.
+   Here the first parameter is declared with a write mode. The second is passed by value.
  */
 struct TaskFibo : public ka::Task<2>::Signature<ka::W<int>, int > {};
 
+
+/* Implementation for CPU machine 
+*/
 template<>
-struct TaskBodyCPU<TaskFibo> {
-  void operator() ( ka::pointer_w<int> res, int n );
+struct TaskBodyCPU<TaskFibo> : public TaskFibo {
+  void operator() ( ka::Thread* thread, ka::pointer_w<int> res, int n )
+  {  
+    if (n < 2) {
+      *res = fiboseq(n);
+    }
+    else {
+      ka::pointer_rpwp<int> res1 = thread->Alloca<int>(1);
+      ka::pointer_rpwp<int> res2 = thread->Alloca<int>(1);
+
+      /* the Spawn keyword is used to spawn new task
+       * new tasks are executed in parallel as long as dependencies are respected
+       */
+      thread->Spawn<TaskFibo>() ( res1, n-1);
+      thread->Spawn<TaskFibo>() ( res2, n-2 );
+
+      /* the Sum task depends on res1 and res2 which are written by previous tasks
+       * it must wait until thoses tasks are finished
+       */
+      thread->Spawn<TaskSum>(ka::SetLocal)  ( res, res1, res2 );
+    }
+  }
 };
-
-
-void TaskBodyCPU<TaskFibo>::operator() ( ka::pointer_w<int> res, int n )
-{  
-  if (n < 2) {
-    *res = fiboseq(n);
-  }
-  else {
-    ka::pointer_rpwp<int> res1 = ka::Alloca<int>(1);
-    ka::pointer_rpwp<int> res2 = ka::Alloca<int>(1);
-
-    /* the Spawn keyword is used to spawn new task
-     * new tasks are executed in parallel as long as dependencies are respected
-     */
-    ka::Spawn<TaskFibo>() ( res1, n-1);
-    ka::Spawn<TaskFibo>() ( res2, n-2 );
-
-    /* the Sum task depends on res1 and res2 which are written by previous tasks
-     * it must wait until thoses tasks are finished
-     */
-    ka::Spawn<TaskSum>(ka::SetLocal)  ( res, res1, res2 );
-  }
-}
 
 
 /* Main of the program
@@ -143,7 +145,10 @@ struct doit {
       ka::Spawn<TaskFibo>(ka::SetLocal)( res, n );
 
       /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      ka::Spawn<TaskPrint<int> >(ka::SetLocal)(res, ref_value);
+      ka::Spawn<TaskPrint<int> >(ka::SetLocal)(res, "Nop", ref_value);
+      
+      /* */
+      ka::Sync();
     }
   }
 
@@ -162,17 +167,9 @@ struct doit {
 
 /* main entry point : Kaapi initialization
 */
-#if defined(KAAPI_USE_IPHONEOS)
-void* KaapiMainThread::run_main(int argc, char** argv)
-#else
 int main(int argc, char** argv)
-#endif
 {
   try {
-#if defined(KAAPI_USR_FT)
-    FT::set_savehandler( &fibo_userglobal );
-#endif
-
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */
