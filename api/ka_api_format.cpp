@@ -106,4 +106,15 @@ const Format* WrapperFormat<float>::format = (const Format*)&kaapi_float_format;
 template <>
 const Format* WrapperFormat<double>::format = (const Format*)&kaapi_double_format;
 
+const Format WrapperFormat<Access>::theformat(
+  "Access",
+  sizeof(Access),
+  0,
+  0,
+  0,
+  0,
+  0,
+  0
+);
+  
 } // namespace ka

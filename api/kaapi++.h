@@ -70,31 +70,33 @@ namespace ka {
   typedef kaapi_int32_t  ka_int32_t;
   typedef kaapi_int64_t  ka_int64_t;
 
+  /* Kaapi C++ thread <-> Kaapi C stack */
+  class Thread;
+  
+  /* for next networking part */
+  class IStream;
+  class OStream;
+  class ODotStream;
+  class SyncGuard;
+  
+
+  /** Defined in order to used automatically generated recopy in Universal Access Mode Type constructor :
+      - to convert TypeEff -> TypeInTask.
+      - and to convert TypeInTask -> TypeFormal.
+  */
+  struct Access {
+    Access( const Access& a ) : a(a.a)
+    { }
+    template<typename pointer>
+    explicit Access( pointer& p )
+    { kaapi_access_init(&a, p.ptr()); }
+    operator kaapi_access_t&() 
+    { return a; }
+    kaapi_access_t a;    
+  };
+  
 
   // --------------------------------------------------------------------
-  namespace FormatDef {
-#  define KAAPI_DECL_EXT_FORMAT(TYPE,OBJ)\
-    extern const kaapi_format_t OBJ;
-    
-    extern const kaapi_format_t Null;
-    KAAPI_DECL_EXT_FORMAT(bool, Bool)
-    KAAPI_DECL_EXT_FORMAT(char, Char)
-    extern const kaapi_format_t Byte;
-    KAAPI_DECL_EXT_FORMAT(signed char, SChar)
-    KAAPI_DECL_EXT_FORMAT(unsigned char, UChar)
-    KAAPI_DECL_EXT_FORMAT(int, Int)
-    KAAPI_DECL_EXT_FORMAT(unsigned int, UInt)
-    KAAPI_DECL_EXT_FORMAT(short, Short)
-    KAAPI_DECL_EXT_FORMAT(unsigned short, UShort)
-    KAAPI_DECL_EXT_FORMAT(long, Long)
-    KAAPI_DECL_EXT_FORMAT(unsigned long, ULong)
-    KAAPI_DECL_EXT_FORMAT(long long, LLong)
-    KAAPI_DECL_EXT_FORMAT(unsigned long long, ULLong)
-    KAAPI_DECL_EXT_FORMAT(float, Float)
-    KAAPI_DECL_EXT_FORMAT(double, Double)
-    KAAPI_DECL_EXT_FORMAT(long double, LDouble)
-  }
-  
   /** link C++ format -> kaapi format */
   class Format : public kaapi_format_t {
   public:
@@ -120,12 +122,86 @@ namespace ka {
     );
   };
   
-  /* for next networking part */
-  class IStream;
-  class OStream;
-  class ODotStream;
-  class SyncGuard;
+  // --------------------------------------------------------------------  
+  template <class T>
+  class WrapperFormat {
+  public:
+    static const Format* format;
+    static const Format* get_format() { return &theformat; }
+    static const Format theformat;
+    static void cstor( void* dest) { new (dest) T; }
+    static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
+    static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
+    static void copy( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
+    static void assign( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
+    static void print( FILE* file, const void* src) { } 
+  };
   
+  template <class UpdateFnc>
+  class WrapperFormatUpdateFnc : public FormatUpdateFnc {
+  protected:
+    template<class UF, class T, class Y>
+    static bool Caller( bool (UF::*)( T&, const Y& ), void* d, const void* v )
+    {
+      static UpdateFnc ufc;
+      T* data = static_cast<T*>(d);
+      const Y* value = static_cast<const Y*>(v);
+      return ufc( *data, *value );
+    }
+    
+  public:
+    static int update_kaapi( void* data, const kaapi_format_t* fmtdata, const void* value, const kaapi_format_t* fmtvalue )
+    {
+      return Caller( &UpdateFnc::operator(), data, value ) ? 1 : 0;
+    }
+    static const FormatUpdateFnc* format;
+    static const FormatUpdateFnc theformat;
+  };
+
+  template <class T>
+  const Format WrapperFormat<T>::theformat( typeid(T).name(),
+    sizeof(T),
+    WrapperFormat<T>::cstor, 
+    WrapperFormat<T>::dstor, 
+    WrapperFormat<T>::cstorcopy, 
+    WrapperFormat<T>::copy, 
+    WrapperFormat<T>::assign, 
+    WrapperFormat<T>::print 
+  );
+  template <class T> const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
+  template <> const Format* WrapperFormat<kaapi_int8_t>::format;
+  template <> const Format* WrapperFormat<kaapi_int16_t>::format;
+  template <> const Format* WrapperFormat<kaapi_int32_t>::format;
+  template <> const Format* WrapperFormat<kaapi_int64_t>::format;
+  template <> const Format* WrapperFormat<kaapi_uint8_t>::format;
+  template <> const Format* WrapperFormat<kaapi_uint16_t>::format;
+  template <> const Format* WrapperFormat<kaapi_uint32_t>::format;
+  template <> const Format* WrapperFormat<kaapi_uint64_t>::format;
+  template <> const Format* WrapperFormat<float>::format;
+  template <> const Format* WrapperFormat<double>::format;
+  template <>
+  class WrapperFormat<Access> {
+  public:
+    static const Format* get_format() { return &theformat; }
+    static const Format theformat;
+    static void cstor( void* dest) {}
+    static void dstor( void* dest) {} 
+    static void cstorcopy( void* dest, const void* src) { const Access* s = (const Access*)src; new (dest) Access(*s); } 
+    static void copy( void* dest, const void* src) {} 
+    static void assign( void* dest, const void* src) {} 
+    static void print( FILE* file, const void* src) {} 
+  };
+  
+
+  template <class UpdateFnc>
+  const FormatUpdateFnc WrapperFormatUpdateFnc<UpdateFnc>::theformat (
+    typeid(UpdateFnc).name(),
+    &WrapperFormatUpdateFnc<UpdateFnc>::update_kaapi
+  );
+  template <class UpdateFnc>
+  const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::format = &WrapperFormatUpdateFnc<UpdateFnc>::theformat;
+
+
   // --------------------------------------------------------------------
   class Community {
   protected:
@@ -146,9 +222,6 @@ namespace ka {
     bool is_leader() const;
   };
 
-  // --------------------------------------------------------------------
-  class Thread;
-  
   // --------------------------------------------------------------------
   class System {
   public:
@@ -172,6 +245,7 @@ namespace ka {
   }
 
   // --------------------------------------------------------------------
+  /* same method exists in thread interface */
   template<class T>
   T* Alloca(size_t size)
   {
@@ -192,6 +266,34 @@ namespace ka {
   extern SetStickyC SetSticky;
 
   // --------------------------------------------------------------------
+  /* typenames for access mode */
+  struct VALUE_MODE  { enum {value = KAAPI_ACCESS_MODE_V}; };
+  struct READ        { enum {value = KAAPI_ACCESS_MODE_R}; };
+  struct WRITE       { enum {value = KAAPI_ACCESS_MODE_W}; };
+  struct READWRITE   { enum {value = KAAPI_ACCESS_MODE_RW}; };
+  struct C_WRITE     { enum {value = KAAPI_ACCESS_MODE_CW}; };
+  struct READ_P      { enum {value = KAAPI_ACCESS_MODE_R  |KAAPI_ACCESS_MASK_MODE_P}; };
+  struct WRITE_P     { enum {value = KAAPI_ACCESS_MODE_W  |KAAPI_ACCESS_MASK_MODE_P}; };
+  struct READWRITE_P { enum {value = KAAPI_ACCESS_MODE_RW |KAAPI_ACCESS_MASK_MODE_P}; };
+  struct C_WRITE_P   { enum {value = KAAPI_ACCESS_MODE_CW |KAAPI_ACCESS_MASK_MODE_P}; };
+
+  /* internal name */
+  typedef VALUE_MODE  ACCESS_MODE_V;
+  typedef READ        ACCESS_MODE_R;
+  typedef WRITE       ACCESS_MODE_W;
+  typedef READWRITE   ACCESS_MODE_RW;
+  typedef C_WRITE     ACCESS_MODE_CW;
+  typedef READ_P      ACCESS_MODE_RP;
+  typedef WRITE_P     ACCESS_MODE_WP;
+  typedef READWRITE_P ACCESS_MODE_RPWP;
+  typedef C_WRITE_P   ACCESS_MODE_CWP;
+
+  struct TYPE_INTASK {}; /* internal purpose to define representation of a type in a task */
+  struct TYPE_INPROG {}; /* internal purpose to define representation of a type in the user program */
+
+  /* fwd declarations */
+  template<class T>
+  class pointer;
   template<class T>
   class pointer_rpwp;
   template<class T>
@@ -209,6 +311,8 @@ namespace ka {
   template<class T>
   class pointer_cw;
 
+
+  // --------------------------------------------------------------------
   template<class T>
   struct base_pointer {
     base_pointer() 
@@ -234,20 +338,6 @@ namespace ka {
   };
   
   
-  /* typenames for access mode */
-  struct ACCESS_MODE_V {};
-  struct ACCESS_MODE_R {};
-  struct ACCESS_MODE_W {};
-  struct ACCESS_MODE_RW {};
-  struct ACCESS_MODE_CW {};
-  struct ACCESS_MODE_RP {};
-  struct ACCESS_MODE_WP {};
-  struct ACCESS_MODE_RPWP {};
-  struct ACCESS_MODE_CWP {};
-
-  struct TYPE_INTASK {}; /* internal purpose to define representation of a type in a task */
-  struct TYPE_INPROG {}; /* internal purpose to define representation of a type in the user program */
-
   // --------------------------------------------------------------------
   /* Information notes.
      - Access mode types (ka::W, ka::WP, ka::RW..) are defined to be used 
@@ -310,12 +400,6 @@ namespace ka {
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
-  template<class T>
-  class RPWP {/* instanciante by default body if signature is not redefined */
-  public:
-    RPWP( const pointer_rpwp<T>& p ) {}
-  };
-
   // --------------------------------------------------------------------
   template<class T>
   class pointer_rp : public base_pointer<T> {
@@ -345,13 +429,6 @@ namespace ka {
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
-  template<class T>
-  class RP {/* instanciante by default body if signature is not redefined */
-    RP() {}
-  public:
-    RP( const pointer_rp<T>& p ) {}
-  };
-  
 
   // --------------------------------------------------------------------
   template<class T>
@@ -387,11 +464,6 @@ namespace ka {
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
-  template<class T>
-  class R  { /* instanciante by default body if signature is not redefined */
-  public:
-    R( const pointer_r<T>& p ) {}
-  };
 
   // --------------------------------------------------------------------
   template<class T>
@@ -422,11 +494,6 @@ namespace ka {
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
-  template<class T>
-  class WP  {/* instanciante by default body if signature is not redefined */
-  public:
-    WP( const pointer_wp<T>& p ){}
-  };
 
   // --------------------------------------------------------------------
   template<class T>
@@ -462,11 +529,6 @@ namespace ka {
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
-  template<class T>
-  class W {/* instanciante by default body if signature is not redefined */
-  public:
-    W( const pointer_w<T>& p ){}
-  };
 
   // --------------------------------------------------------------------
   template<class T>
@@ -499,36 +561,225 @@ namespace ka {
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
   
-  template<class T>
-  class RW {/* instanciante by default body if signature is not redefined */
-  public:
-    RW( const pointer_rw<T>& p ) {}
+
+  /** Trait for universal access mode type.
+      The universal access mode type allows to 1/ compact code by providing generic information; 2/ define
+      for any user level type, the way the type may be accessed in task, its task internal representation as
+      well as its program level representation.
+      Moreover, the UAMParam is used during conversion of type when effective parameter is binded to the internal
+      parameter and when the internal parameter is binded to formal parameter during the call of the task body.
+       *  TraitUAMType<T>::UAMParam<MODE>::type_t gives the representation of the type for all kinds of access mode.
+       *  TraitUAMType<T>::UAMParam<TYPE_INTASK>::type_t gives the representation of the type in a task.
+       *  TraitUAMType<T>::UAMParam<TYPE_INPROG>::type_t gives the representation of the type in the user program.
+       
+      During the creation of tasks with a parameter fi of type F, the recopy constructor is called like this:
+        new (&task->fi) TraitUAMType<F>::UAMParam<TYPE_INTASK>::type_t( ei )
+      where the effective parameter ei is of type TraitUAMType<F>::UAMParam<EffectiveAccessMode>::type_t
+        
+      Once the task is created and scheduled, the runtime will invokes the user defined function and required
+      to convert TraitUAMType<F>::UAMParam<TYPE_INTASK>::type_t to TraitUAMType<F>::UAMParam<FORMAL_MODE>::type_t.
+      This is called using the explicit constructor of recopy of TraitUAMType<F>::UAMParam<FORMAL_MODE>::type_t
+      from TraitUAMType<F>::UAMParam<TYPE_INTASK>::type_t.
+  */
+  template<typename T>
+  struct TraitUAMTypeFormat { typedef T type_t; };
+  template<typename T, typename Mode>
+  struct TraitUAMTypeParam { typedef T type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<const T&, TYPE_INTASK> { typedef T type_t; };
+
+  template<typename T>
+  struct TraitUAMType {
+    typedef typename TraitUAMTypeFormat<T>::type_t typeformat_t;
+
+    template<typename Mode>
+    struct UAMParam {
+      typedef TraitUAMType<T>                            uamparam_t;
+      typedef typename TraitUAMTypeParam<T,Mode>::type_t type_t;
+      typedef Mode                                       mode_t;
+    };
+
+    /* tells where are the pointer in the structure */
+    static const int count_pointer = 0;
+    static const int offset_pointer[];
   };
+
+  /* This specialization describes how to represent Kaapi pointer
+  */
+  template<typename T>
+  struct TraitUAMTypeFormat<pointer<T> > { typedef T type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, TYPE_INTASK> { typedef Access type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, TYPE_INPROG> { typedef pointer<T> type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_R> { typedef pointer_r<T> type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_W> { typedef pointer_w<T> type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RW> { typedef pointer_rw<T> type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RP> { typedef pointer_rp<T> type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_WP> { typedef pointer_wp<T> type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RPWP> { typedef pointer_rpwp<T> type_t; };
+  /* CW not yet */
+
 
   // --------------------------------------------------------------------
-  template<class T>
+  /* Helpers to declare type in signature of task */
+  template<typename UserType> struct Value {};
+  template<typename UserType, typename AccessMode> struct Composite {};
+  template<typename UserType> struct RPWP {};
+  template<typename UserType> struct RP {};
+  template<typename UserType> struct R  {};
+  template<typename UserType> struct WP {};
+  template<typename UserType> struct W {};
+  template<typename UserType> struct RW {};
+  
+  template<typename UserType>
   struct DefaultAdd {
-    void operator()( T& result, const T& value ) const
-    {
-      result += value;
-    }
+    void operator()( UserType& result, const UserType& value ) const
+    { result += value; }
   };
   
-  template<class T, class OpCumul = DefaultAdd<T> >
-  class CWP {
-  public:    
-//    typedef T value_type;
-//    Shared_cwp( value_type* p ) : ptr(p) {}
-//    value_type* ptr;
+  template<typename UserType, class OpCumul = DefaultAdd<UserType> > struct CWP {};
+  template<typename UserType, class OpCumul = DefaultAdd<UserType> > struct CW {};
+
+  // --------------------------------------------------------------------  
+  /* Trait used in each type of parameter in the signature to retreive the
+     UAMType and its access mode.
+  */
+  template<typename UserType>
+  struct TraitUAMParam {
+    typedef TraitUAMType<UserType> uamttype_t;
+    typedef ACCESS_MODE_V   mode_t;
   };
 
-  template<class T, class OpCumul = DefaultAdd<T> >
-  class CW {
-  public:
-//    typedef T value_type;
-//    Shared_cw( value_type* p ) : ptr(p) {}
-//    value_type* ptr;
+#if 0
+  template<typename UserType>
+  struct TraitUAMParam<const UserType&> {
+    typedef TraitUAMType<UserType> uamttype_t;
+    typedef ACCESS_MODE_V   mode_t;
   };
+#endif
+
+  template<typename UserType>
+  struct TraitUAMParam<Value<UserType> > {
+    typedef TraitUAMType<UserType> uamttype_t;
+    typedef ACCESS_MODE_V   mode_t;
+  };
+
+  template<typename UserType, typename AccessMode>
+  struct TraitUAMParam<Composite<UserType, AccessMode> > {
+    typedef TraitUAMType<UserType> uamttype_t;
+    typedef AccessMode             mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<RPWP<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP       mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<RW<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RW         mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<RP<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RP         mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<R<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_R          mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<WP<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_WP         mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<W<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_W          mode_t;
+  };
+
+  template<typename UserType, typename OpCumul>
+  struct TraitUAMParam<CWP<UserType, OpCumul> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_CWP        mode_t;
+  };
+
+  template<typename UserType, typename OpCumul>
+  struct TraitUAMParam<CW<UserType, OpCumul> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_CW         mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<pointer<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP       mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<pointer_rpwp<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP       mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<pointer_rw<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RW         mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<pointer_rp<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RP         mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<pointer_r<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_R          mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<pointer_wp<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_WP         mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<pointer_w<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_W          mode_t;
+  };
+
+#if 0
+  template<typename UserType, typename OpCumul>
+  struct TraitUAMParam<CWP<UserType, OpCumul> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_CWP        mode_t;
+  };
+
+  template<typename UserType, typename OpCumul>
+  struct TraitUAMParam<CW<UserType, OpCumul> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_CW         mode_t;
+  };
+#endif
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
@@ -558,20 +809,7 @@ namespace ka {
   };
   extern SetLocalAttribut SetLocal;
 
-#if 0
-  /* DEPRECATED??? to nothing... not yet distributed implementation */
-  class AttributSetCost {
-    float _cost;
-  public:
-    AttributSetCost( float c ) : _cost(c) {}
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
-    { return clo; }
-  };
-  inline AttributSetCost SetCost( float c )
-  { return AttributSetCost(c); }
-#endif
-
-  /* to nothing... not yet distributed implementation */
+  /* do nothing... not yet distributed implementation */
   class AttributSetSite {
     int _site;
   public:
@@ -583,7 +821,7 @@ namespace ka {
   inline AttributSetSite SetSite( int s )
   { return AttributSetSite(s); }
   
-
+  /* do nothing */
   class SetStaticSchedAttribut {
     int _npart;
     int _niter;
@@ -592,236 +830,78 @@ namespace ka {
      : _npart(n), _niter(m) {}
     template<class A1_CLO>
     kaapi_task_t* operator()( kaapi_stack_t*, A1_CLO*& clo) const
-    { 
-      return clo; 
-    }
+    { return clo; }
   };
   inline SetStaticSchedAttribut SetStaticSched(int npart, int iter = 1 )
   { return SetStaticSchedAttribut(npart, iter); }
 
-#if 0 //\TODO dans un monde ideal, il faudrait ca
-#include "atha_spacecollection.h"
+
+  // --------------------------------------------------------------------
+#if defined(KAAPI_DEBUG)
+  /* for better understand error message */
+  template<int i>
+  struct FOR_ARG {};
+
+  /* for better understand error message */
+  template<class TASK>
+  struct FOR_TASKNAME {};
+  
+  template<class ME, class MF, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE {
+//    static void IS_COMPATIBLE();
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_V, ACCESS_MODE_V, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CW, ACCESS_MODE_CW, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_R, ACCESS_MODE_R, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RW, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_W, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_CW, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_R, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RP, ACCESS_MODE_R, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_W, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK> /* this rule is only valid for terminal fork... */
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_W, ACCESS_MODE_W, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CW, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
 #endif
 
-  template <class T>
-  class WrapperFormat {
-  public:
-    static const Format* format;
-    static const Format* get_format() { return &theformat; }
-    static const Format theformat;
-    static void cstor( void* dest) { new (dest) T; }
-    static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
-    static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
-    static void copy( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
-    static void assign( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
-    static void print( FILE* file, const void* src) { } 
-  };
-  
-  template <class UpdateFnc>
-  class WrapperFormatUpdateFnc : public FormatUpdateFnc {
-  protected:
-    template<class UF, class T, class Y>
-    static bool Caller( bool (UF::*)( T&, const Y& ), void* d, const void* v )
-    {
-      static UpdateFnc ufc;
-      T* data = static_cast<T*>(d);
-      const Y* value = static_cast<const Y*>(v);
-      return ufc( *data, *value );
-    }
-    
-  public:
-    static int update_kaapi( void* data, const kaapi_format_t* fmtdata, const void* value, const kaapi_format_t* fmtvalue )
-    {
-      return Caller( &UpdateFnc::operator(), data, value ) ? 1 : 0;
-    }
-    static const FormatUpdateFnc* format;
-    static const FormatUpdateFnc theformat;
-  };
-
-  template <class T>
-  const Format WrapperFormat<T>::theformat( typeid(T).name(),
-    sizeof(T),
-    WrapperFormat<T>::cstor, 
-    WrapperFormat<T>::dstor, 
-    WrapperFormat<T>::cstorcopy, 
-    WrapperFormat<T>::copy, 
-    WrapperFormat<T>::assign, 
-    WrapperFormat<T>::print 
-  );
-  template <class T>
-  const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
-
-  template <>
-  const Format* WrapperFormat<kaapi_int8_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_int16_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_int32_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_int64_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint8_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint16_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint32_t>::format;
-  template <>
-  const Format* WrapperFormat<kaapi_uint64_t>::format;
-  template <>
-  const Format* WrapperFormat<float>::format;
-  template <>
-  const Format* WrapperFormat<double>::format;
-
-  template <class UpdateFnc>
-  const FormatUpdateFnc WrapperFormatUpdateFnc<UpdateFnc>::theformat (
-    typeid(UpdateFnc).name(),
-    &WrapperFormatUpdateFnc<UpdateFnc>::update_kaapi
-  );
-  template <class UpdateFnc>
-  const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::format = &WrapperFormatUpdateFnc<UpdateFnc>::theformat;
-
-  // --------------------------------------------------------------------
-  template<class T>
-  struct Trait_TaskParameter {
-    typedef T type_inclosure;
-    typedef T type_inuserfunction;
-    enum { isshared = false };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_V mode;
-    enum { modepostponed = false };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
-    template<class E>
-    static void link( type_inclosure& f, const E& e) { f = e; }
-  };
-
-  template<class T>
-  struct Trait_TaskParameter<const T&> {
-    typedef T type_inclosure;
-    typedef const T& type_inuserfunction;
-    enum { isshared = false };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_V mode;
-    enum { modepostponed = false };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
-    template<class E>
-    static void link( type_inclosure& f, const E& e) { f = e; }
-  };
-
-  template<class T>
-  struct Trait_TaskParameter<RW<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef pointer_rw<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_RW mode;
-    enum { modepostponed = false };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-  template<class T>
-  struct Trait_TaskParameter<R<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef pointer_r<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_R mode;
-    enum { modepostponed = false };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-  template<class T>
-  struct Trait_TaskParameter<W<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef pointer_w<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_W mode;
-    enum { modepostponed = false };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-  template<class T, class F>
-  struct Trait_TaskParameter<CW<T, F> > {
-    typedef kaapi_access_t type_inclosure;
-//    typedef Shared_cw<T,F> value_type;
-//    typedef pointer_rw<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_CW mode;
-    enum { modepostponed = false };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-  template<class T>
-  struct Trait_TaskParameter<RPWP<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef RPWP<T> value_type;
-    typedef pointer_rpwp<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_RPWP mode;
-    enum { modepostponed = true };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-  template<class T>
-  struct Trait_TaskParameter<RP<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef pointer_rp<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_RP mode;
-    enum { modepostponed = true };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-  template<class T>
-  struct Trait_TaskParameter<WP<T> > {
-    typedef kaapi_access_t type_inclosure;
-    typedef pointer_wp<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_WP mode;
-    enum { modepostponed = true };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-  template<class T, class F>
-  struct Trait_TaskParameter<CWP<T, F> > {
-    typedef kaapi_access_t type_inclosure;
-//    typedef Shared_cwp<T,F> value_type;
-//    typedef pointer_rpwp<T> type_inuserfunction;
-    enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
-    typedef ACCESS_MODE_CWP mode;
-    enum { modepostponed = true };
-    enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
-    template<class S>
-    static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
-  };
-
-
-  // --------------------------------------------------------------------
-  template<int i>
-  struct Task {};
-  
   /* ICI: signature avec kaapi_stack & kaapi_task as first parameter ?
      Quel interface C++ pour les tâches adaptatives ?
   */
+  
+  template<int i>
+  struct Task {};
 
 } // end of namespace atha: following definition sould be in global namespace in 
   // order to be specialized easily
