@@ -79,9 +79,12 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
+#if defined(KAAPI_USE_PERFCOUNTER)
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
+#endif
 
   /* experimental */
-  pthread_yield_np();
+//  pthread_yield();
 
 #if 0
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
@@ -104,9 +107,9 @@ redo_select:
     kaapi_assert_debug(err == EBUSY);
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
-    if (counter & 0xFF ==0) {
+    if ((counter & 0xFF) ==0) {
       counter =0;
-      pthread_yield_np();
+/*      pthread_yield();*/
     }
   }
 
@@ -124,7 +127,13 @@ redo_select:
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
   */
-  if (count >0) kaapi_sched_stealprocessor( victim.kproc );
+  if (count >0) {
+    kaapi_sched_stealprocessor( victim.kproc );
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
+#endif
+  }
+
 
   /* reply to all requests. May also reply to count request INCLUDING self request,
      else a bug will occurs--WARNING--
@@ -151,10 +160,6 @@ redo_select:
   pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  kproc->cnt_stealreq += replycount;
-#endif
-
 return_value:
   /* mark current processor as no stealing */
   kproc->issteal = 0;
@@ -167,8 +172,11 @@ return_value:
   {
     return 0;
   }
+#if defined(KAAPI_USE_PERFCOUNTER)
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
   
-  /* Reset original ctxt and do the local computation
+  /* get the work (stack) and return it
   */
   stack = kaapi_request_data(&kproc->reply);
 

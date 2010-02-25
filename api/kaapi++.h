@@ -191,6 +191,7 @@ namespace ka {
   class SetStickyC{};
   extern SetStickyC SetSticky;
 
+  // --------------------------------------------------------------------
   template<class T>
   class pointer_rpwp;
   template<class T>
@@ -214,23 +215,22 @@ namespace ka {
 #if defined(KAAPI_DEBUG)
      : _ptr(0)
 #endif
-    {
-    }
+    {}
     base_pointer( T* p ) : _ptr(p)
-    {
-    }
+    {}
     T* ptr() const { return _ptr; }
   protected:
     mutable T* _ptr;
   };
 
+  /* capture write */
   template<class T>
   class value_ref {
   public:
-    value_ref(T* p) : ptr(p){}
-    void operator=( const T& value ) { *ptr = value; }
+    value_ref(T* p) : _ptr(p){}
+    void operator=( const T& value ) { *_ptr = value; }
   protected:
-    T* ptr;
+    T* _ptr;
   };
   
   
@@ -245,41 +245,75 @@ namespace ka {
   struct ACCESS_MODE_RPWP {};
   struct ACCESS_MODE_CWP {};
 
+  struct TYPE_INTASK {}; /* internal purpose to define representation of a type in a task */
+  struct TYPE_INPROG {}; /* internal purpose to define representation of a type in the user program */
+
   // --------------------------------------------------------------------
   /* Information notes.
-     - Shared types are defined to be used in signature definition of
-     tasks. They should not be used to declare variables or used as effective
-     parameters during a fork.
-     - Effective parameters may be pointer (T* or const T*) but no verification
-     of the parameter passing rules between effective parameters and formal parameters 
-     could be done.
-     - In order to profit of the capability to detect at compilation type correctness
-     with respect to the parameter passing rules, one must used type pointer types.
-     They are closed to the Shared types of the previous API but may be used like
-     normal pointer and deferencing of pointers.
+     - Access mode types (ka::W, ka::WP, ka::RW..) are defined to be used 
+     in signature definition of tasks. They cannot be used to declare 
+     variables or used as effective parameters during a spawn.
+     - Effective parameters should be pointer in order to force verification
+     of the parameter passing rules between effective parameters and formal parameters.
+     They are closed to the Shared types of the previous Athapascan API but 
+     may be used like normal pointer (arithmetic + deferencing of pointers).
   */
+
   // --------------------------------------------------------------------
   template<class T>
   class pointer_rpwp : public base_pointer<T> {
   public:
     typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_rpwp<T> Self_t;
+
     pointer_rpwp() : base_pointer<T>() {}
     pointer_rpwp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rpwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
+
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
   template<class T>
   class pointer : public base_pointer<T> {
   public:
     typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer<T> Self_t;
     pointer() : base_pointer<T>() {}
     pointer( value_type* ptr ) : base_pointer<T>(ptr) {}
+
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
   template<class T>
-  class Shared_rpwp {/* instanciante by default body if signature is not redefined */
+  class RPWP {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_rpwp( const pointer_rpwp<T>& p ) {}
+    RPWP( const pointer_rpwp<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -287,19 +321,35 @@ namespace ka {
   class pointer_rp : public base_pointer<T> {
   public:
     typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_rp<T> Self_t;
+
     pointer_rp() : base_pointer<T>() {}
     pointer_rp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-    pointer_rp( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
   template<class T>
-  class Shared_rp {/* instanciante by default body if signature is not redefined */
-    Shared_rp() {}
+  class RP {/* instanciante by default body if signature is not redefined */
+    RP() {}
   public:
-    Shared_rp( const pointer_rp<T>& p ) {}
+    RP( const pointer_rp<T>& p ) {}
   };
   
 
@@ -308,6 +358,9 @@ namespace ka {
   class pointer_r : public base_pointer<T> {
   public:
     typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_r<T> Self_t;
+
     pointer_r() : base_pointer<T>() {}
     pointer_r( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_r( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
@@ -317,13 +370,27 @@ namespace ka {
     operator const T* () const { return base_pointer<T>::ptr(); }
     const T& operator*() const { return *base_pointer<T>::ptr(); }
     const T& operator[](int i) const { return base_pointer<T>::ptr()[i]; }
-    const T& operator[](unsigned int i) const { return base_pointer<T>::ptr()[i]; }
+    const T& operator[](difference_type i) const { return base_pointer<T>::ptr()[i]; }
+
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
   template<class T>
-  class Shared_r  { /* instanciante by default body if signature is not redefined */
+  class R  { /* instanciante by default body if signature is not redefined */
   public:
-    Shared_r( const pointer_r<T>& p ) {}
+    R( const pointer_r<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -331,17 +398,34 @@ namespace ka {
   class pointer_wp : public base_pointer<T> {
   public:
     typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_wp<T> Self_t;
+    
     pointer_wp() : base_pointer<T>() {}
     pointer_wp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_wp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_wp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_wp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
   template<class T>
-  class Shared_wp  {/* instanciante by default body if signature is not redefined */
+  class WP  {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_wp( const pointer_wp<T>& p ){}
+    WP( const pointer_wp<T>& p ){}
   };
 
   // --------------------------------------------------------------------
@@ -349,6 +433,9 @@ namespace ka {
   class pointer_w : public base_pointer<T> {
   public:
     typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_w<T> Self_t;
+
     pointer_w() : base_pointer<T>() {}
     pointer_w( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_w( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
@@ -358,13 +445,27 @@ namespace ka {
     operator value_type* () { return base_pointer<T>::ptr(); }
     value_ref<T> operator*() { return value_ref<T>(base_pointer<T>::ptr()); }
     value_ref<T> operator[](int i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
-    value_ref<T> operator[](unsigned int i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
+    value_ref<T> operator[](difference_type i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
+
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
 
   template<class T>
-  class Shared_w {/* instanciante by default body if signature is not redefined */
+  class W {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_w( const pointer_w<T>& p ){}
+    W( const pointer_w<T>& p ){}
   };
 
   // --------------------------------------------------------------------
@@ -372,19 +473,36 @@ namespace ka {
   class pointer_rw: public base_pointer<T> {
   public:
     typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_w<T> Self_t;
+
     pointer_rw() : base_pointer<T>() {}
     pointer_rw( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rw( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_rw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     value_type& operator*() { return *base_pointer<T>::ptr(); }
     value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
-    value_type& operator[](unsigned int i) { return base_pointer<T>::ptr()[i]; }
+    value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
+
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   };
   
   template<class T>
-  class Shared_rw {/* instanciante by default body if signature is not redefined */
+  class RW {/* instanciante by default body if signature is not redefined */
   public:
-    Shared_rw( const pointer_rw<T>& p ) {}
+    RW( const pointer_rw<T>& p ) {}
   };
 
   // --------------------------------------------------------------------
@@ -397,7 +515,7 @@ namespace ka {
   };
   
   template<class T, class OpCumul = DefaultAdd<T> >
-  class Shared_cwp {
+  class CWP {
   public:    
 //    typedef T value_type;
 //    Shared_cwp( value_type* p ) : ptr(p) {}
@@ -405,7 +523,7 @@ namespace ka {
   };
 
   template<class T, class OpCumul = DefaultAdd<T> >
-  class Shared_cw {
+  class CW {
   public:
 //    typedef T value_type;
 //    Shared_cw( value_type* p ) : ptr(p) {}
@@ -489,6 +607,7 @@ namespace ka {
   class WrapperFormat {
   public:
     static const Format* format;
+    static const Format* get_format() { return &theformat; }
     static const Format theformat;
     static void cstor( void* dest) { new (dest) T; }
     static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
@@ -563,157 +682,137 @@ namespace ka {
 
   // --------------------------------------------------------------------
   template<class T>
-  struct Trait_ParamClosure {
+  struct Trait_TaskParameter {
     typedef T type_inclosure;
     typedef T type_inuserfunction;
     enum { isshared = false };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<T>::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<const T&> {
+  struct Trait_TaskParameter<const T&> {
     typedef T type_inclosure;
     typedef const T& type_inuserfunction;
     enum { isshared = false };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<const T&>::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_rw<T> > {
+  struct Trait_TaskParameter<RW<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_rw<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_RW mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rw<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_r<T> > {
+  struct Trait_TaskParameter<R<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_r<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_R mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_r<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_w<T> > {
+  struct Trait_TaskParameter<W<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_w<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_W mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_w<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
-  struct Trait_ParamClosure<Shared_cw<T, F> > {
+  struct Trait_TaskParameter<CW<T, F> > {
     typedef kaapi_access_t type_inclosure;
 //    typedef Shared_cw<T,F> value_type;
 //    typedef pointer_rw<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_CW mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T, class F>
-  const kaapi_format_t* Trait_ParamClosure<Shared_cw<T,F> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_rpwp<T> > {
+  struct Trait_TaskParameter<RPWP<T> > {
     typedef kaapi_access_t type_inclosure;
-    typedef Shared_rpwp<T> value_type;
+    typedef RPWP<T> value_type;
     typedef pointer_rpwp<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rpwp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_rp<T> > {
+  struct Trait_TaskParameter<RP<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_rp<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_RP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_rp<T> >::format = WrapperFormat<T>::format;
 
   template<class T>
-  struct Trait_ParamClosure<Shared_wp<T> > {
+  struct Trait_TaskParameter<WP<T> > {
     typedef kaapi_access_t type_inclosure;
     typedef pointer_wp<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_WP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T>
-  const kaapi_format_t* Trait_ParamClosure<Shared_wp<T> >::format = WrapperFormat<T>::format;
 
   template<class T, class F>
-  struct Trait_ParamClosure<Shared_cwp<T, F> > {
+  struct Trait_TaskParameter<CWP<T, F> > {
     typedef kaapi_access_t type_inclosure;
 //    typedef Shared_cwp<T,F> value_type;
 //    typedef pointer_rpwp<T> type_inuserfunction;
     enum { isshared = true };
-    static const kaapi_format_t* format;
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
     typedef ACCESS_MODE_CWP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { kaapi_access_init(&f, e.ptr()); }
   };
-  template<class T, class F>
-  const kaapi_format_t* Trait_ParamClosure<Shared_cwp<T,F> >::format = WrapperFormat<T>::format;
 
 
   // --------------------------------------------------------------------
@@ -752,17 +851,24 @@ namespace ka {
 #include "ka_api_clo.h"
 
   // --------------------------------------------------------------------
-  /* New API: thread.Fork<TASK>([ATTR])( args )
-     Fork<TASK>([ATTR])(args) with be implemented on top of 
-     System::get_current_thread()->Fork<TASK>([ATTR])( args ).
+  /* New API: thread.Spawn<TASK>([ATTR])( args )
+     Spawn<TASK>([ATTR])(args) with be implemented on top of 
+     System::get_current_thread()->Spawn<TASK>([ATTR])( args ).
   */
   class Thread {
   public:
 
+    template<class T>
+    T* Alloca(size_t size)
+    {
+       void* data = kaapi_stack_pushdata( &_stack, sizeof(T)*size );
+       return new (data) T[size];
+    }
+
     template<class TASK, class Attr>
-    class Forker {
+    class Spawner {
     public:
-      Forker( kaapi_stack_t* s, const Attr& a ) : _stack(s), _attr(a) {}
+      Spawner( kaapi_stack_t* s, const Attr& a ) : _stack(s), _attr(a) {}
 
       /**
       **/      
@@ -782,10 +888,10 @@ namespace ka {
     };
         
     template<class TASK>
-    Forker<TASK, DefaultAttribut> Fork() { return Forker<TASK, DefaultAttribut>(&_stack, DefaultAttribut()); }
+    Spawner<TASK, DefaultAttribut> Spawn() { return Spawner<TASK, DefaultAttribut>(&_stack, DefaultAttribut()); }
 
     template<class TASK, class Attr>
-    Forker<TASK, Attr> Fork(const Attr& a) { return Forker<TASK, Attr>(&_stack, a); }
+    Spawner<TASK, Attr> Spawn(const Attr& a) { return Spawner<TASK, Attr>(&_stack, a); }
 
   protected:
     kaapi_stack_t _stack;
@@ -795,12 +901,12 @@ namespace ka {
   
   
   // --------------------------------------------------------------------
-  /** Top level Fork */
+  /** Top level Spawn */
   template<class TASK>
-  Thread::Forker<TASK, DefaultAttribut> Fork() { return Thread::Forker<TASK, DefaultAttribut>(kaapi_self_stack(), DefaultAttribut()); }
+  Thread::Spawner<TASK, DefaultAttribut> Spawn() { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_stack(), DefaultAttribut()); }
 
   template<class TASK, class Attr>
-  Thread::Forker<TASK, Attr> Fork(const Attr& a) { return Thread::Forker<TASK, Attr>(kaapi_self_stack(), a); }
+  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) { return Thread::Spawner<TASK, Attr>(kaapi_self_stack(), a); }
 
 
 
@@ -816,24 +922,79 @@ namespace ka {
   struct MainTask {
     int    argc;
     char** argv;
-    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
+    static void body_cpu( kaapi_task_t* task, kaapi_stack_t* stack )
     {
       MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
       TASK()( args->argc, args->argv );
     }
+    static void body_gpu( kaapi_task_t* task, kaapi_stack_t* stack )
+    {
+      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
+      TASK()( args->argc, args->argv );
+    }
+    void operator()( kaapi_task_t* task, kaapi_stack_t* stack )
+    {
+      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
+      TASK()( args->argc, args->argv );
+    }
+    static kaapi_format_t* registerformat()
+    {
+      if (MainTask::fmid != 0) return &MainTask::format;
+      MainTask::fmid = kaapi_format_taskregister( 
+            &MainTask::getformat, 
+            -1, 
+            &MainTask::body_cpu, 
+            typeid(MainTask).name(),
+            sizeof(MainTask),
+            0,
+            0,
+            0,
+            0
+        );
+     int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
+     int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
+     if (f_cpu == f_defaultcpu) {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
+     }
+     else {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &MainTask::body_cpu;
+     }
+     int (MainTask::*f_defaultgpu)(...) = (int (MainTask::*)(...))&MainTask::operator();  /* inherited from Signature */
+     int (MainTask::*f_gpu)(...) = (int (MainTask::*)(...))&TaskBodyGPU<MainTask>::operator();
+     if (f_gpu == f_defaultgpu) {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
+     }
+     else {
+       MainTask::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &MainTask::body_gpu;
+     }
+      return &MainTask::format;
+    }  
+    static const kaapi_task_bodyid_t bodyid;
+    static kaapi_format_t    format;
+    static kaapi_format_id_t fmid;
+    static kaapi_format_t* getformat()
+    { return &format; }
   };
   
   template<class TASK>
-  struct ForkerMain
+  kaapi_format_t    MainTask<TASK>::format;
+  template<class TASK>
+  kaapi_format_id_t MainTask<TASK>::fmid =0;
+
+  template<class TASK>
+  const kaapi_task_bodyid_t MainTask<TASK>::bodyid = registerformat()->bodyid;
+  
+  template<class TASK>
+  struct SpawnerMain
   {
-    ForkerMain() 
+    SpawnerMain() 
     { }
 
     void operator()( int argc, char** argv)
     {
       kaapi_stack_t* stack = kaapi_self_stack();
       kaapi_task_t* clo = kaapi_stack_toptask( stack);
-      kaapi_task_initdfg( stack, clo, &MainTask<TASK>::body, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
+      kaapi_task_initdfg( stack, clo, MainTask<TASK>::bodyid, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
       kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       MainTask<TASK>* arg = kaapi_task_getargst( clo, MainTask<TASK>);
       arg->argc = argc;
@@ -843,9 +1004,9 @@ namespace ka {
   };
 
   template<class TASK>
-  ForkerMain<TASK> ForkMain()
+  SpawnerMain<TASK> SpawnMain()
   { 
-    return ForkerMain<TASK>();
+    return SpawnerMain<TASK>();
   }
     
 

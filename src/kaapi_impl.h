@@ -64,11 +64,11 @@ extern "C" {
 #define KAAPI_LOG_LEVEL 10
 
 #if defined(KAAPI_DEBUG)
-#  define kaapi_assert_debug_m(val, x, msg) \
-      { int __kaapi_err = x; \
-        if (__kaapi_err != val) \
+#  define kaapi_assert_debug_m(cond, msg) \
+      { int __kaapi_cond = cond; \
+        if (!__kaapi_cond) \
         { \
-          printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+          printf("[%s]: LINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
           abort();\
         }\
       }
@@ -76,7 +76,7 @@ extern "C" {
       do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
 
 #else
-#  define kaapi_assert_debug_m(val, x, msg)
+#  define kaapi_assert_debug_m(cond, msg)
 #  define KAAPI_LOG(l, fmt, ...) 
 #endif
 
@@ -226,7 +226,7 @@ extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
 
 /** Useful
 */
-extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
+extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid );
 
 /** Useful
 */
@@ -403,15 +403,18 @@ static inline kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply )
 
 /** Body of task steal created on thief stack to execute a task
 */
-extern void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void _kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+enum { kaapi_tasksteal_body = 6 };
 
 /** Write result after a steal 
 */
-extern void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void _kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
+enum { kaapi_taskwrite_body = 7 };
 
 /** Merge result after a steal
 */
-extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
+extern void _kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
+enum { kaapi_aftersteal_body = 8 };
 
 /** Args for tasksteal
 */
@@ -431,6 +434,28 @@ typedef struct kaapi_tasksig_arg_t {
   kaapi_taskadaptive_t*        taskadapt;         /* pointer to the local adaptive task */
   kaapi_taskadaptive_result_t* result;            /* pointer to the remote result from stealing adaptive task */
 } kaapi_tasksig_arg_t;
+
+
+
+/* ======================== Perf counter interface: machine dependent ========================*/
+
+/* internal */
+void kaapi_perf_global_init(void);
+
+void kaapi_perf_global_fini(void);
+
+/* */
+void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
+/* */
+void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
+/* */
+void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
+/* */
+void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
+/* */
+void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
+/* */
+int kaapi_perf_thread_state(kaapi_processor_t* kproc);
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/

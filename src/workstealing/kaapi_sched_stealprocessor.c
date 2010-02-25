@@ -83,11 +83,6 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
       if (kaapi_isterminated()) break;
     }
 #endif
-  }
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++kproc->cnt_stealop;
-#endif
-
+  }  
   return 0;
 }

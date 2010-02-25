@@ -146,7 +146,6 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 /*@}*/
 
 
-
 /* ============================= Kprocessor ============================ */
 /** \ingroup WS
 */
@@ -154,7 +153,6 @@ typedef struct kaapi_listrequest_t {
   kaapi_atomic_t  count;
   kaapi_request_t requests[KAAPI_MAX_PROCESSOR];
 } kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
-
 
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
@@ -195,18 +193,29 @@ typedef struct kaapi_processor_t {
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
 
-  /* performance counters */
-  kaapi_uint32_t           cnt_tasks;                     /* number of executed tasks */
-  kaapi_uint32_t           cnt_stealreqok;                /* number of steal requests replied with success */
-  kaapi_uint32_t           cnt_stealreq;                  /* total number of steal requests replied */
-  kaapi_uint32_t           cnt_stealop;                   /* number of steal operation: ratio cnt_stealreqok/cnt_stealok avrg number of aggr. */
-  kaapi_uint32_t           cnt_suspend;                   /* number of suspend operations*/
+  /* performance register */
+  kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
+  kaapi_perf_counter_t*	   curr_perf_regs;                /* either perf_regs[0], either perf_regs[1] */
+
+  int			                 papi_event_set;
+  unsigned int		         papi_event_count;
+   
   double                   t_sched;                       /* total idle time in second pass in the scheduler */           
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
 
   /* workload */
-  kaapi_atomic_t	   workload;
+  kaapi_atomic_t	         workload;
+
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
+
+/* for perf_regs access */
+#define KAAPI_PERF_USER_STATE       0
+#define KAAPI_PERF_SCHEDULE_STATE   1
+
+#define KAAPI_PERF_REG(kproc, op) ((kproc)->curr_perf_regs[(op)])
+#define KAAPI_PERF_REG_USR(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_USER_STATE][(op)])
+#define KAAPI_PERF_REG_SYS(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_SCHEDULE_STATE][(op)])
+#define KAAPI_PERF_REG_READALL(kproc, op) (KAAPI_PERF_REG_SYS(kproc, op)+KAAPI_PERF_REG_USR(kproc, op))
 
 /*
 */
@@ -334,6 +343,9 @@ extern int kaapi_setup_topology(void);
 #  define KAAPI_ATOMIC_CAS64(a, o, n) \
     __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
 
+#  define KAAPI_ATOMIC_AND(a, o) \
+    __sync_fetch_and_and( &((a)->_counter), o )
+
 #  define KAAPI_ATOMIC_INCR(a) \
     __sync_add_and_fetch( &((a)->_counter), 1 ) 
 
@@ -342,6 +354,9 @@ extern int kaapi_setup_topology(void);
 
 #  define KAAPI_ATOMIC_SUB(a, value) \
     __sync_sub_and_fetch( &((a)->_counter), value ) 
+
+#  define KAAPI_ATOMIC_ADD(a, value) \
+    __sync_add_and_fetch( &((a)->_counter), value ) 
 
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)
@@ -359,6 +374,9 @@ extern int kaapi_setup_topology(void);
 #  define KAAPI_ATOMIC_CAS64(a, o, n) \
     OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
 
+#  define KAAPI_ATOMIC_AND(a, o)			\
+    OSAtomicAnd32( &((a)->_counter), o )
+
 #  define KAAPI_ATOMIC_INCR(a) \
     OSAtomicIncrement32( &((a)->_counter) ) 
 
@@ -367,6 +385,9 @@ extern int kaapi_setup_topology(void);
 
 #  define KAAPI_ATOMIC_SUB(a, value) \
     OSAtomicAdd32( -value, &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_ADD(a, value) \
+    OSAtomicAdd32( value, &((a)->_counter) ) 
 
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)
@@ -496,7 +517,7 @@ static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldsta
 #else
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
 {
-  kaapi_assert_debug( kaapi_task_getstate(task) == oldstate );
+  if (kaapi_task_getstate(task) != oldstate ) return 0;
   kaapi_task_setstate( task, newstate );
   return 1;
 }

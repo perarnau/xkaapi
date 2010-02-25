@@ -47,7 +47,7 @@
 
 /**
 */
-void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void _kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
   /*
     printf("Thief end, @stack: 0x%p\n", stack);
@@ -62,8 +62,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
-    kaapi_task_setbody(task2sig, &kaapi_aftersteal_body );
-    KAAPI_LOG(100, "SET AFTER TERM DFG task stolen: 0x%p\n", (void*)task2sig );
+    kaapi_task_setbody(task2sig, kaapi_aftersteal_body );
   }
   if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required preemption */
   {

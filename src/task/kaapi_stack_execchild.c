@@ -66,36 +66,22 @@
 */
 int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
 {
+  kaapi_uint32_t flag;
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint32_t         cnt_tasks;
+  kaapi_uint32_t         cnt_tasks = 0;
 #endif  
   kaapi_task_t*          saved_sp;
   char*                  saved_sp_data;
-  kaapi_task_t*          retn;
-  void** arg_retn;
   int goto_redo_work;
 
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
- 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  cnt_tasks = stack->_proc->cnt_tasks;
-#endif
 
 redo_work: 
-
-  if (pc->flag & KAAPI_TASK_S_STEAL)
+  flag = pc->flag;
+  if ( (flag >>KAAPI_TASK_BODY_SHIFT) == kaapi_retn_body ) 
   {
-    /* rewrite pc into memory */
-    stack->pc = pc;
-#if defined(KAAPI_USE_PERFCOUNTER)
-    stack->_proc->cnt_tasks = cnt_tasks;
-#endif
-    return EWOULDBLOCK;
-  }
-  else if (pc->body == &kaapi_retn_body) 
-  {
-    /* do not save stack frame before execution */
+    /* inline retn body do not save stack frame before execution */
     kaapi_frame_t* frame = kaapi_task_getargst( pc, kaapi_frame_t);
     kaapi_task_setstate( frame->pc, KAAPI_TASK_S_TERM );
     kaapi_stack_restore_frame( stack, frame );
@@ -109,22 +95,36 @@ redo_work:
     {
       stack->pc = pc;
 #if defined(KAAPI_USE_PERFCOUNTER)
-      stack->_proc->cnt_tasks = cnt_tasks;
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
 #endif
       return 0;
     }
     goto redo_work;
   }
-  else
   {
-/*    kaapi_assert_debug( (kaapi_task_getstate(pc) == KAAPI_TASK_S_INIT) || 
-        ((kaapi_task_getstate(pc) == KAAPI_TASK_S_TERM) && (pc->body == &kaapi_aftersteal_body)) );
-*/
+#if defined(KAAPI_CONCURRENT_WS)
+    if (!kaapi_task_casstate(pc, KAAPI_TASK_S_INIT, KAAPI_TASK_S_EXEC )) 
+#else
+    if (pc->flag & KAAPI_TASK_S_STEAL)
+#endif
+    {
+      /* rewrite pc into memory */
+      stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
+      return EWOULDBLOCK;
+    }
+#if !defined(KAAPI_CONCURRENT_WS)
     kaapi_task_setstate( pc, KAAPI_TASK_S_EXEC );
+#endif
+
+    /* save the state of the stack */
     saved_sp      = stack->sp;
     saved_sp_data = stack->sp_data;
     stack->pc     = pc;
-    (*pc->body)(pc, stack);
+
+    kaapi_task_run( pc, stack );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
@@ -133,16 +133,16 @@ redo_work:
     /* push restore_frame task if pushed tasks */
     if (goto_redo_work)
     {
+      kaapi_frame_t* frame;
       /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
-      retn = kaapi_stack_toptask(stack);
-      retn->flag  = KAAPI_TASK_STICKY;
-      retn->body  = &kaapi_retn_body;
-      kaapi_task_format_debug( retn );
-      arg_retn = kaapi_stack_pushdata(stack, 3*sizeof(void*));
-      retn->sp = (void*)arg_retn;
-      arg_retn[0] = pc; /* <=> save pc, will mark this task as term after pop !! */
-      arg_retn[1] = saved_sp;
-      arg_retn[2] = saved_sp_data;
+      kaapi_task_t* retn = kaapi_stack_toptask(stack);
+      retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body << KAAPI_TASK_BODY_SHIFT);
+
+      frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
+      retn->sp = (void*)frame;
+      frame->pc = pc; /* <=> save pc, will mark this task as term after pop !! */
+      frame->sp = saved_sp;
+      frame->sp_data = saved_sp_data;
       kaapi_stack_pushtask(stack);
 
       /* update pc to the first forked task */
@@ -152,16 +152,17 @@ redo_work:
     /* process steal request 
        - here we always see the retn to split stack into frame.
     */
-  #if !defined(KAAPI_CONCURRENT_WS)
+#if !defined(KAAPI_CONCURRENT_WS)
     if (stack->hasrequest !=0) 
     {
       stack->pc = pc;
-  #if defined(KAAPI_USE_PERFCOUNTER)
-      stack->_proc->cnt_tasks = cnt_tasks;
-  #endif
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+      cnt_tasks = 0;
+#endif
       kaapi_sched_advance(stack->_proc);
     }
-  #endif
+#endif
     if (goto_redo_work) goto redo_work;
 
     kaapi_task_setstate( pc, KAAPI_TASK_S_TERM );    
@@ -172,6 +173,9 @@ redo_work:
   if (pc <= stack->sp) 
   {
     stack->pc = pc;
+#if defined(KAAPI_USE_PERFCOUNTER)
+    KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
     return 0;
   }
   goto redo_work;

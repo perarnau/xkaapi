@@ -270,6 +270,18 @@ dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 
 dnl -----------------------------------------------------------------------
+dnl The "--with-papi"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([PAPI], [papi], [PAPI], [no], [],
+  [build PAPI perfcounters [EXPERIMENTAL]],
+  [papi], [], [papi.h], [PAPI_library_init], [
+    dnl PAPI is there
+    AC_DEFINE(KAAPI_USE_PAPI, 1, [Define to use PAPI perfcounters])
+    AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_PAPIPERFCOUNTER=1"
+  ])
+ACX_LIB_LINK([XKAAPILIB],[PAPI])
+
+dnl -----------------------------------------------------------------------
 dnl The "--with-numa"
 dnl -----------------------------------------------------------------------
 KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],

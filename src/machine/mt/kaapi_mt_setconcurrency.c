@@ -144,6 +144,11 @@ int kaapi_setconcurrency( unsigned int concurrency )
       /* Initialize the hierarchy information and data structure */
       kaapi_assert( 0 == kaapi_processor_setuphierarchy( kaapi_all_kprocessors[i] ) );
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+      /*  */
+      kaapi_perf_thread_init(kaapi_all_kprocessors[i], KAAPI_PERF_USER_STATE);
+#endif
+
       /* register the processor */
       kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
     }
@@ -164,6 +169,11 @@ int kaapi_setconcurrency( unsigned int concurrency )
   kaapi_barrier_td_setactive(&barrier_init2, 0);
   
   kaapi_barrier_td_destroy( &barrier_init );    
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_start(kaapi_all_kprocessors[0]);
+#endif
   return 0;
 }
 
@@ -188,6 +198,11 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_assert( 0 == kaapi_processor_init( kproc ) );
   kproc->kid = kid;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_init(kproc, KAAPI_PERF_SCHEDULE_STATE);
+#endif
+
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
 
@@ -200,9 +215,26 @@ void* kaapi_sched_run_processor( void* arg )
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init2 );
   
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_start(kproc);
+#endif
+
+  /* main work stealing loop */
   kaapi_sched_idle( kproc );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_stop(kproc);
+#endif
 
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_fini(kproc); 
+#endif
+
   return 0;
 }

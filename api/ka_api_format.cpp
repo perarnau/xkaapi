@@ -60,7 +60,8 @@ Format::Format(
         void             (*print)( FILE* file, const void* src)
 )
 {
-  kaapi_format_register( this, strdup(name.c_str()));
+  static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
+  kaapi_format_register( this, strdup(fmt_name.c_str()));
   this->size      = size;
   this->cstor     = cstor;
   this->dstor     = dstor;
