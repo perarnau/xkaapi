@@ -53,7 +53,28 @@ namespace a1 {
   /* take a constant... should be adjusted */
   enum { STACK_ALLOC_THRESHOLD = ka::STACK_ALLOC_THRESHOLD };  
 
-  using namespace ka::FormatDef;
+  namespace FormatDef {
+#  define KAAPI_DECL_EXT_FORMAT(TYPE,OBJ)\
+    extern const kaapi_format_t OBJ;
+    
+    extern const kaapi_format_t Null;
+    KAAPI_DECL_EXT_FORMAT(bool, Bool)
+    KAAPI_DECL_EXT_FORMAT(char, Char)
+    extern const kaapi_format_t Byte;
+    KAAPI_DECL_EXT_FORMAT(signed char, SChar)
+    KAAPI_DECL_EXT_FORMAT(unsigned char, UChar)
+    KAAPI_DECL_EXT_FORMAT(int, Int)
+    KAAPI_DECL_EXT_FORMAT(unsigned int, UInt)
+    KAAPI_DECL_EXT_FORMAT(short, Short)
+    KAAPI_DECL_EXT_FORMAT(unsigned short, UShort)
+    KAAPI_DECL_EXT_FORMAT(long, Long)
+    KAAPI_DECL_EXT_FORMAT(unsigned long, ULong)
+    KAAPI_DECL_EXT_FORMAT(long long, LLong)
+    KAAPI_DECL_EXT_FORMAT(unsigned long long, ULLong)
+    KAAPI_DECL_EXT_FORMAT(float, Float)
+    KAAPI_DECL_EXT_FORMAT(double, Double)
+    KAAPI_DECL_EXT_FORMAT(long double, LDouble)
+  }
 
   using ka::Format;
 
