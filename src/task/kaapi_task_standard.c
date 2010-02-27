@@ -64,12 +64,13 @@ void _kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
   kaapi_frame_t* frame = kaapi_task_getargst( task, kaapi_frame_t);
   kaapi_task_setstate( frame->pc, KAAPI_TASK_S_TERM );
-#if 0//defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_lock(&stack->_proc->lsuspend.lock);
+#if defined(KAAPI_CONCURRENT_WS)
+  /* finer lock: lock for the frame only : put a lock on the task that create the frame */
+  while (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1));
 #endif
   kaapi_stack_restore_frame( stack, frame );
-#if 0// defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
+#if defined(KAAPI_CONCURRENT_WS)
+  KAAPI_ATOMIC_WRITE(&stack->lock, 0);
 #endif
 }
 
