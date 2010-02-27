@@ -420,6 +420,7 @@ typedef int (*kaapi_task_reducer_t) (
 typedef struct kaapi_stack_t {
   volatile int              hasrequest;     /** points to the k-processor structure */
   volatile int              haspreempt;     /** !=0 if preemption is requested */
+  kaapi_atomic32_t          lock;           /** of the stack */
   struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
   struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */

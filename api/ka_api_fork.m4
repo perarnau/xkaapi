@@ -22,17 +22,21 @@
       kaapi_task_t* clo = kaapi_stack_toptask( _stack);
       kaapi_task_initdfg( _stack, clo, KaapiFormatTask_t::bodyid, kaapi_stack_pushdata(_stack, sizeof(TaskArg_t)) );
       TaskArg_t* arg = kaapi_task_getargst( clo, TaskArg_t);
+      /* here we do not detect a compile time the error without compilation with -DKAAPI_DEBUG 
+         todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure
+      */
       M4_PARAM(`new (&arg->f$1) inclosure$1_t(e$1);
       ', `', `')
       return clo;
     }
 
     template<M4_PARAM(`class E$1', `', `,')>
-    void operator()( M4_PARAM(`E$1 e$1', `', `, ') )
+    kaapi_task_t* operator()( M4_PARAM(`E$1 e$1', `', `, ') )
     {
       kaapi_task_t* clo = KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
       _attr(_stack, clo );
-      kaapi_stack_pushtask( _stack);    
+      kaapi_stack_pushtask( _stack);
+      return clo; 
     }

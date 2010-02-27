@@ -337,6 +337,25 @@ namespace ka {
     T* _ptr;
   };
   
+
+#define KAAPI_POINTER_ARITHMETIC_METHODS\
+    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }\
+    Self_t operator++(int) { return base_pointer<T>::_ptr++; }\
+    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }\
+    Self_t operator--(int) { return base_pointer<T>::_ptr--; }\
+    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }\
+    Self_t operator+(long i) const { return base_pointer<T>::_ptr+i; }\
+    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }\
+    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }\
+    Self_t& operator+=(long i) { base_pointer<T>::_ptr+=i; return *this; }\
+    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }\
+    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }\
+    Self_t operator-(long i) const { return base_pointer<T>::_ptr-i; }\
+    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }\
+    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }\
+    Self_t& operator-=(long i) { return base_pointer<T>::_ptr-=i; }\
+    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }\
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
   
   // --------------------------------------------------------------------
   /* Information notes.
@@ -351,6 +370,21 @@ namespace ka {
 
   // --------------------------------------------------------------------
   template<class T>
+  class pointer : public base_pointer<T> {
+  public:
+    typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer<T> Self_t;
+    pointer() : base_pointer<T>() {}
+    pointer( value_type* ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
+
+    KAAPI_POINTER_ARITHMETIC_METHODS
+  };
+
+
+  // --------------------------------------------------------------------
+  template<class T>
   class pointer_rpwp : public base_pointer<T> {
   public:
     typedef T value_type;
@@ -360,45 +394,33 @@ namespace ka {
     pointer_rpwp() : base_pointer<T>() {}
     pointer_rpwp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rpwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
 
-    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
-    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
-    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
-    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
-    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
-    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    KAAPI_POINTER_ARITHMETIC_METHODS
   };
 
+
+  // --------------------------------------------------------------------
   template<class T>
-  class pointer : public base_pointer<T> {
+  class pointer_rw: public base_pointer<T> {
   public:
     typedef T value_type;
     typedef size_t difference_type;
-    typedef pointer<T> Self_t;
-    pointer() : base_pointer<T>() {}
-    pointer( value_type* ptr ) : base_pointer<T>(ptr) {}
+    typedef pointer_w<T> Self_t;
 
-    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
-    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
-    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
-    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
-    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
-    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    pointer_rw() : base_pointer<T>() {}
+    pointer_rw( value_type* ptr ) : base_pointer<T>(ptr) {}
+    explicit pointer_rw( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
+    pointer_rw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_rw( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
+    value_type& operator*() { return *base_pointer<T>::ptr(); }
+    value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
+    value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
+
+    KAAPI_POINTER_ARITHMETIC_METHODS
   };
+  
 
   // --------------------------------------------------------------------
   template<class T>
@@ -413,20 +435,9 @@ namespace ka {
     explicit pointer_rp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_rp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
 
-    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
-    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
-    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
-    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
-    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
-    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    KAAPI_POINTER_ARITHMETIC_METHODS
   };
 
 
@@ -444,24 +455,13 @@ namespace ka {
     pointer_r( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator const T* () const { return base_pointer<T>::ptr(); }
+    operator value_type*() { return base_pointer<T>::ptr(); }
     const T& operator*() const { return *base_pointer<T>::ptr(); }
     const T& operator[](int i) const { return base_pointer<T>::ptr()[i]; }
+    const T& operator[](long i) const { return base_pointer<T>::ptr()[i]; }
     const T& operator[](difference_type i) const { return base_pointer<T>::ptr()[i]; }
 
-    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
-    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
-    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
-    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
-    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
-    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    KAAPI_POINTER_ARITHMETIC_METHODS
   };
 
 
@@ -478,20 +478,9 @@ namespace ka {
     explicit pointer_wp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_wp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_wp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
 
-    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
-    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
-    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
-    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
-    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
-    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    KAAPI_POINTER_ARITHMETIC_METHODS
   };
 
 
@@ -509,59 +498,63 @@ namespace ka {
     pointer_w( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_w( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_w( const pointer_wp<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator value_type* () { return base_pointer<T>::ptr(); }
+    operator value_type*() { return base_pointer<T>::ptr(); }
     value_ref<T> operator*() { return value_ref<T>(base_pointer<T>::ptr()); }
     value_ref<T> operator[](int i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
+    value_ref<T> operator[](long i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
     value_ref<T> operator[](difference_type i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
 
-    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
-    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
-    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
-    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
-    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
-    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    KAAPI_POINTER_ARITHMETIC_METHODS
+  };
+
+
+ // --------------------------------------------------------------------
+  template<class T>
+  class pointer_cwp : public base_pointer<T> {
+  public:
+    typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_cwp<T> Self_t;
+    
+    pointer_cwp() : base_pointer<T>() {}
+    pointer_cwp( value_type* ptr ) : base_pointer<T>(ptr) {}
+    explicit pointer_cwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
+    pointer_cwp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_cwp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_cwp( const pointer_cwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
+
+    KAAPI_POINTER_ARITHMETIC_METHODS
   };
 
 
   // --------------------------------------------------------------------
   template<class T>
-  class pointer_rw: public base_pointer<T> {
+  class pointer_cw: public base_pointer<T> {
   public:
     typedef T value_type;
     typedef size_t difference_type;
-    typedef pointer_w<T> Self_t;
+    typedef pointer_cw<T> Self_t;
 
-    pointer_rw() : base_pointer<T>() {}
-    pointer_rw( value_type* ptr ) : base_pointer<T>(ptr) {}
-    explicit pointer_rw( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-    pointer_rw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_cw() : base_pointer<T>() {}
+    pointer_cw( value_type* ptr ) : base_pointer<T>(ptr) {}
+    explicit pointer_cw( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
+    pointer_cw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_cw( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_cw( const pointer_cwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_cw( const pointer_cw<T>& ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
+
     value_type& operator*() { return *base_pointer<T>::ptr(); }
     value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
+    value_type& operator[](long i) { return base_pointer<T>::ptr()[i]; }
     value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
-
-    Self_t& operator++() { ++base_pointer<T>::_ptr; return *this; }
-    Self_t operator++(int) { return base_pointer<T>::_ptr++; }
-    Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }
-    Self_t operator--(int) { return base_pointer<T>::_ptr--; }
-    Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }
-    Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }
-    Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    
+    KAAPI_POINTER_ARITHMETIC_METHODS
   };
   
 
+  // --------------------------------------------------------------------
   /** Trait for universal access mode type.
       The universal access mode type allows to 1/ compact code by providing generic information; 2/ define
       for any user level type, the way the type may be accessed in task, its task internal representation as
@@ -619,12 +612,15 @@ namespace ka {
   template<typename T>
   struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RW> { typedef pointer_rw<T> type_t; };
   template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_CW> { typedef pointer_cw<T> type_t; };
+  template<typename T>
   struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RP> { typedef pointer_rp<T> type_t; };
   template<typename T>
   struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_WP> { typedef pointer_wp<T> type_t; };
   template<typename T>
   struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RPWP> { typedef pointer_rpwp<T> type_t; };
-  /* CW not yet */
+  template<typename T>
+  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_CWP> { typedef pointer_cwp<T> type_t; };
 
 
   // --------------------------------------------------------------------
@@ -644,8 +640,8 @@ namespace ka {
     { result += value; }
   };
   
-  template<typename UserType, class OpCumul = DefaultAdd<UserType> > struct CWP {};
-  template<typename UserType, class OpCumul = DefaultAdd<UserType> > struct CW {};
+  template<typename UserType/*, class OpCumul = DefaultAdd<UserType>*/ > struct CWP {};
+  template<typename UserType/*, class OpCumul = DefaultAdd<UserType>*/ > struct CW {};
 
   // --------------------------------------------------------------------  
   /* Trait used in each type of parameter in the signature to retreive the
@@ -705,14 +701,14 @@ namespace ka {
     typedef ACCESS_MODE_W          mode_t;
   };
 
-  template<typename UserType, typename OpCumul>
-  struct TraitUAMParam<CWP<UserType, OpCumul> > {
+  template<typename UserType>
+  struct TraitUAMParam<CWP<UserType> > {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_CWP        mode_t;
   };
 
-  template<typename UserType, typename OpCumul>
-  struct TraitUAMParam<CW<UserType, OpCumul> > {
+  template<typename UserType>
+  struct TraitUAMParam<CW<UserType> > {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_CW         mode_t;
   };
@@ -759,19 +755,17 @@ namespace ka {
     typedef ACCESS_MODE_W          mode_t;
   };
 
-#if 0
-  template<typename UserType, typename OpCumul>
-  struct TraitUAMParam<CWP<UserType, OpCumul> > {
+  template<typename UserType>
+  struct TraitUAMParam<pointer_cwp<UserType> > {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_CWP        mode_t;
   };
 
-  template<typename UserType, typename OpCumul>
-  struct TraitUAMParam<CW<UserType, OpCumul> > {
+  template<typename UserType>
+  struct TraitUAMParam<pointer_cw<UserType> > {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_CW         mode_t;
   };
-#endif
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
@@ -838,6 +832,7 @@ namespace ka {
   template<class TASK>
   struct FOR_TASKNAME {};
   
+  /* ME: effectif -> MF: formal */
   template<class ME, class MF, class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE {
 //    static void IS_COMPATIBLE();
@@ -847,15 +842,15 @@ namespace ka {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CW, ACCESS_MODE_CW, PARAM, TASK> {
-    static void IS_COMPATIBLE(){}
-  };
-  template<class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_R, ACCESS_MODE_R, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK> /* this rule is only valid for terminal fork... */
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_W, ACCESS_MODE_W, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CW, ACCESS_MODE_CW, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   template<class PARAM, class TASK>
@@ -908,6 +903,10 @@ namespace ka {
   };
   template<class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CW, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CWP, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
 #endif
