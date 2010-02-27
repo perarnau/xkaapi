@@ -59,9 +59,9 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
 #if defined(KAAPI_TRACE_DEBUG)  
   printf("Fibo(%i)", arg0->n);
 #endif
-  if (arg0->n < 2)
+  if (arg0->n < 9)
   {
-    *KAAPI_DATA(int, arg0->result) = arg0->n; /*fiboseq(arg0->n);*/
+    *KAAPI_DATA(int, arg0->result) = fiboseq(arg0->n);
 #if defined(KAAPI_TRACE_DEBUG)  
     printf("=@0x%x:%i\n", KAAPI_DATA(int, arg0->result), *KAAPI_DATA(int, arg0->result));
 #endif
@@ -86,7 +86,7 @@ void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
     task1 = kaapi_stack_toptask(stack);
     kaapi_task_initdfg( stack, task1, fibo_body_id, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
     argf1 = kaapi_task_getargst( task1, fibo_arg_t );
-    argf1->n      = arg0->n - 1;
+    argf1->n = arg0->n - 1;
 //    argf1->result = kaapi_stack_pushshareddata(stack, sizeof(int));
 kaapi_stack_allocateshareddata( &argf1->result, stack, sizeof(int) );
     kaapi_stack_pushtask(stack);
@@ -118,8 +118,9 @@ kaapi_stack_allocateshareddata( &argf2->result, stack, sizeof(int) );
 }
 
 typedef struct print_arg_t {
-  double t0;
+  double delay;
   int n;
+  int niter;
   kaapi_access_t result;
 } print_arg_t;
 
@@ -129,60 +130,72 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
     print_body_id,
     print_body,
     sizeof(print_arg_t),
-    3,
-    (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_RW },
-    (kaapi_offset_t[])        { offsetof(print_arg_t, t0), offsetof(print_arg_t, n), offsetof(print_arg_t, result) },
-    (const kaapi_format_t*[]) { &kaapi_double_format, &kaapi_int_format, &kaapi_int_format }
+    4,
+    (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_RW },
+    (kaapi_offset_t[])        { offsetof(print_arg_t, delay), offsetof(print_arg_t, n), offsetof(print_arg_t, niter), offsetof(print_arg_t, result) },
+    (const kaapi_format_t*[]) { &kaapi_double_format, &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
 )
 
 void print_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   print_arg_t* arg0 = kaapi_task_getargst( task, print_arg_t);
-  double t1 = kaapi_get_elapsedtime();
   printf("Fibo(%i)=%i\n", arg0->n, *KAAPI_DATA(int, arg0->result));
-  printf("Time: %e\n", t1-arg0->t0);
+  printf("Time: %g\n", arg0->delay/arg0->niter);
 }
 
 int main(int argc, char** argv)
 {
   kaapi_frame_t frame;
-  double t0;
+  double t0, t1;
   kaapi_access_t result1;
   long value_result;
   int n;
+  int niter;
+  int i;
   fibo_arg_t* argf;
   print_arg_t* argp;
   kaapi_task_t* task;
   kaapi_stack_t* stack;
   
-  if (argc <2) {
-    printf("Usage: %s <n>\n", argv[0]);
-    exit(1);
-  }
+  if (argc >1)
+    n = atoi(argv[1]);
+  else 
+    n = 20;
+  if (argc >2)
+    niter =  atoi(argv[2]);
+  else 
+    niter = 1;
+
   stack = kaapi_self_stack();
   kaapi_stack_save_frame(stack, &frame);
   
-  t0 = kaapi_get_elapsedtime();
+  for ( i=-1; i<niter; ++i)
+  {
+    if (i ==0) t0 = kaapi_get_elapsedtime();
   
-  kaapi_access_init( &result1, &value_result );
+    kaapi_access_init( &result1, &value_result );
 
-  task = kaapi_stack_toptask(stack);
-  kaapi_task_init( stack, task, fibo_body_id, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)), KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
-  argf = kaapi_task_getargst( task, fibo_arg_t );
-  argf->n      = n = atoi(argv[1]);
-  argf->result = result1;
-  kaapi_stack_pushtask(stack);
-  
+    task = kaapi_stack_toptask(stack);
+    kaapi_task_init( stack, task, fibo_body_id, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)), KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
+    argf = kaapi_task_getargst( task, fibo_arg_t );
+    argf->n      = n;
+    argf->result = result1;
+    kaapi_stack_pushtask(stack);
+  }
+  kaapi_sched_sync( stack );
+  t1 = kaapi_get_elapsedtime();
+
   /* push print task */
   task = kaapi_stack_toptask(stack);
   kaapi_task_init( stack, task, print_body_id, kaapi_stack_pushdata(stack, sizeof(print_arg_t)), KAAPI_TASK_DFG|KAAPI_TASK_STICKY );
   argp = kaapi_task_getargst( task, print_arg_t );
-  argp->t0     = t0;
-  argp->n      = argf->n;
+  argp->delay  = t1-t0;
+  argp->n      = n;
+  argp->niter  = niter;
   argp->result = result1;
   kaapi_stack_pushtask(stack);
   kaapi_stack_pushretn( stack, &frame );
-  
+
   kaapi_sched_sync( stack );
   
   printf("After sync: Fibo(%i)=%li\n", n, value_result);
