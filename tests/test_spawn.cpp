@@ -46,6 +46,7 @@ struct doit {
      ka::pointer_w<int> p6;
      ka::Spawn<TaskW<int> >()(p6);
 
+#if 0
      /* failed Rp,R -> W*/
      ka::Spawn<TaskW<int> >()(p2);
      ka::Spawn<TaskW<int> >()(p5);
@@ -61,6 +62,7 @@ struct doit {
      /* failed Wp,W -> R*/
      ka::Spawn<TaskRp<int> >()(p4);
      ka::Spawn<TaskRp<int> >()(p6);
+#endif
   }
 };
 
