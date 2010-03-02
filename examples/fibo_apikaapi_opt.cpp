@@ -77,8 +77,8 @@ template<>
 struct TaskBodyCPU<TaskFibo> : public TaskFibo {
   void operator() ( ka::Thread* thread, ka::pointer_w<long> res, const long n )
   {  
-    if (n < cutoff) {
-      *res = fiboseq(n);
+    if (n < 2){ //cutoff) {
+      *res = n; //fiboseq(n);
     }
     else {
       ka::pointer_rpwp<long> res1 = thread->Alloca<long>(1);
@@ -97,3 +97,7 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
     }
   }
 };
+
+__attribute__((constructor)) void InitLib()
+{
+}

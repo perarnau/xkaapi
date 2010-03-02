@@ -164,8 +164,8 @@ static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi
     }
     --beg;
   }
-  *curr = 0;
-  *end = endmax;
+  *end  = endmax;
+  *curr  = 0;
   return 0;
 }
 
@@ -232,7 +232,7 @@ return 0;
     kaapi_assert_debug( (end !=0) && (kaapi_task_getbody(end) == kaapi_retn_body) );
     if (end-1 > endmax) 
     { /* recursive call on sub frame */
-      kaapi_update_version( access_to_gd, count, end-1, endmax );
+      return kaapi_update_version( access_to_gd, count, end-1, endmax );
     }
   }
   

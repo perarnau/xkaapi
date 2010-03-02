@@ -73,12 +73,15 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc)
   kaapi_task_t*          saved_sp;
   char*                  saved_sp_data;
   int goto_redo_work;
+  kaapi_frame_t* frame;
+  kaapi_task_t* retn;
 
   if (stack ==0) return EINVAL;
   if (kaapi_stack_isempty( stack ) ) return 0;
 
 redo_work: 
   flag = pc->flag;
+#if 0 /* do not inline retn */
   if ( (flag >>KAAPI_TASK_BODY_SHIFT) == kaapi_retn_body ) 
   {
     /* inline retn body do not save stack frame before execution */
@@ -101,11 +104,12 @@ redo_work:
     }
     goto redo_work;
   }
+#endif /* do not inline retn */
   {
 #if defined(KAAPI_CONCURRENT_WS)
     if (!kaapi_task_casstate(pc, KAAPI_TASK_S_INIT, KAAPI_TASK_S_EXEC )) 
 #else
-    if (pc->flag & KAAPI_TASK_S_STEAL)
+    if (flag & KAAPI_TASK_S_STEAL)
 #endif
     {
       /* rewrite pc into memory */
@@ -128,14 +132,14 @@ redo_work:
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
-    goto_redo_work = (saved_sp != stack->sp);
+    goto_redo_work = (saved_sp > stack->sp);
+    pc = stack->pc;
 
     /* push restore_frame task if pushed tasks */
     if (goto_redo_work)
     {
-      kaapi_frame_t* frame;
       /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
-      kaapi_task_t* retn = kaapi_stack_toptask(stack);
+      retn = kaapi_stack_toptask(stack);
       retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body << KAAPI_TASK_BODY_SHIFT);
 
       frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));

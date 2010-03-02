@@ -15,6 +15,7 @@ extern long fiboseq( const long n );
 extern long fiboseq_On(const long n);
 
 long cutoff;
+int ct;
 
 /* Print any typed shared
  * this task has read acces on a, it will wait until previous write acces on it are done
@@ -58,7 +59,6 @@ struct TaskBodyCPU<TaskPrint<T> > : public TaskPrint<T> {
  */
 struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 
-
 /* Main of the program
 */
 struct doit {
@@ -74,7 +74,7 @@ struct doit {
     kaapi_stack_t* stack = kaapi_self_stack();
     kaapi_frame_t frame;
     ka::pointer<long> res = ka::Alloca<long>(1);
-    for (cutoff=2; cutoff<15; ++cutoff)
+    for (cutoff=2; cutoff<3; ++cutoff)
     {
       kaapi_stack_save_frame(stack, &frame);
       ka::Spawn<TaskFibo>()( res, n );
@@ -103,6 +103,8 @@ struct doit {
     if (argc > 2) iter = atoi(argv[2]);
     cutoff = 2;
     if (argc > 3) cutoff = atoi(argv[3]);
+    ct = 0;
+    if (argc > 4) ct = atoi(argv[4]);
     
     ka::logfile() << "In main: n = " << n << ", iter = " << iter << ", cutoff = " << cutoff << std::endl;
     do_experiment( n, iter );

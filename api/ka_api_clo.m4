@@ -164,6 +164,9 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   }
   /* */
   static const kaapi_task_bodyid_t bodyid;
+  
+  /* */
+  static void __attribute__((constructor)) Merdouille();
 };
 
 
@@ -233,3 +236,38 @@ const kaapi_task_bodyid_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM
           &TASK::operator()
       )->bodyid;
 
+
+template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
+void KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::Merdouille()
+{
+  KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::bodyid 
+      = KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::registerbodies(
+            KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::registerformat(), 
+            &TASK::operator()
+        )->bodyid;
+}
+
+template<class TASK>
+struct KAAPI_NEWTASK(KAAPI_NUMBER_PARAMS){
+  template<class SIGNATURE M4_PARAM(`,typename F$1', `', ` ')>
+  static int RegisterTruc(void (SIGNATURE::*method)(M4_PARAM(`F$1 ', `', `, '))) /*__attribute__((constructor))*/
+  {
+    return KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', `')>::registerbodies(
+        &KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', `')>::format, 
+        &TASK::operator()
+    )->bodyid;
+  }
+
+  template<class SIGNATURE M4_PARAM(`,typename F$1', `', ` ')>
+  static int RegisterTruc(void (SIGNATURE::*method)(Thread* M4_PARAM(`,F$1 ', `', `'))) /*__attribute__((constructor))*/
+  {
+    return KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', `')>::registerbodies(
+        &KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', `')>::format,
+        &TASK::operator()
+    )->bodyid;
+  }
+  static int __attribute__((constructor)) Register()
+  {
+    return RegisterTruc( &TASK::dummy_method_to_have_formal_param_type );
+  }
+};

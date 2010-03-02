@@ -12,6 +12,8 @@
 
 extern long cutoff;
 
+extern int ct;
+
 // --------------------------------------------------------------------
 /* Sequential fibo function
  */
@@ -62,7 +64,6 @@ struct TaskBodyCPU<TaskSum> : public TaskSum
   }
 };
 
-
 /* Kaapi Fibo task.
    A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
    and the type and access mode for each parameters.
@@ -77,8 +78,9 @@ template<>
 struct TaskBodyCPU<TaskFibo> : public TaskFibo {
   void operator() ( ka::pointer_w<long> res, const long n )
   {  
-    if (n < cutoff) {
-      *res = fiboseq(n);
+    if (n < 2){ //cutoff) {
+      *res = n; //fiboseq(n);
+      return;
     }
     else {
       ka::pointer_rpwp<long> res1 = ka::Alloca<long>(1);

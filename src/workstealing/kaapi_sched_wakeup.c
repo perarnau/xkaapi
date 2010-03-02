@@ -48,38 +48,60 @@
 kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
-  kaapi_thread_context_t* prev = 0;
+  kaapi_wsqueuectxt_cell_t* cell;
   
-  if (KAAPI_STACK_EMPTY(&kproc->lsuspend)) return 0;
+#if 0
+  if (0 ==kaapi_wsqueuectxt_pop( &kproc->lready, &ctxt ))
+    return ctxt;
+#else
+  /* only steal the ready context if any */
+  if (kproc->ready !=0) {
+    ctxt = kproc->ready;
+    kproc->ready = 0;
+    return ctxt;
+  }    
+#endif
 
-  ctxt = KAAPI_STACK_TOP(&kproc->lsuspend);
-  while (ctxt !=0)
+  cell = kproc->lsuspend.head;
+  while (cell !=0)
   {
-    kaapi_stack_t* stack = ctxt;
-    kaapi_task_t*  task = stack->pc;
-    if ((kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || (kaapi_task_getbody(task) == kaapi_aftersteal_body))
+    ctxt = cell->stack;
+    kaapi_task_t*  task = ctxt->pc;
+    if ( (KAAPI_ATOMIC_READ(&cell->state) == 0) && 
+         (kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || 
+         (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
     {
-#if defined(KAAPI_CONCURRENT_WS)
-      /* lock  */
-      pthread_mutex_lock(&kproc->lsuspend.lock);
-#endif
-      if ((kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || (kaapi_task_getbody(task) == kaapi_aftersteal_body))
+      int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
+      if (opok)
       {
-        /* remove it from list */
-        KAAPI_STACK_REMOVE( &kproc->lsuspend, prev, ctxt );
-#if defined(KAAPI_CONCURRENT_WS)
-        /* unlock  */
-        pthread_mutex_unlock(&kproc->lsuspend.lock);
-#endif
+        kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
+        cell->stack = 0;
+
+        /* whatever is the result of the cas, the cell is recyled (push in tail):
+           - cas is true: the pop sucess, we will return the stack
+           - cas is false: the stack has been stolen, we recylce the cell
+           Then if the cas is ok we return true 
+        */
+        if (nextcell !=0)
+          nextcell->prev = cell->prev;
+        if (cell->prev !=0)
+          cell->prev->next = nextcell;
+        cell->next =0;
+        cell->prev = 0;
+        kaapi_wsqueuectxt_cell_t* tailfreecell = kproc->lsuspend.tailfreecell;
+        if (tailfreecell ==0)
+          kproc->lsuspend.headfreecell = cell;
+        else 
+          tailfreecell->prev = cell;
+        kproc->lsuspend.tailfreecell = cell;
+
+        cell->stack = 0;
         return ctxt;
       }
-#if defined(KAAPI_CONCURRENT_WS)
-      /* unlock  */
-      pthread_mutex_unlock(&kproc->lsuspend.lock);
-#endif
     }
-    prev = ctxt;
-    ctxt = KAAPI_STACK_NEXT_FIELD(ctxt);
+
+    cell = cell->next;
   }
+
   return 0; 
 }

@@ -50,18 +50,19 @@
 int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 {
   kaapi_thread_context_t*  ctxt_top;
+  kaapi_wsqueuectxt_cell_t* cell;
   int count =0;
   int replycount = 0;
 
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   if (count ==0) return 0;
   
-  ctxt_top = KAAPI_STACK_TOP( &kproc->lsuspend );
-  while ((ctxt_top !=0) && (count >0))
+  cell = kproc->lsuspend.tail;
+  while ((cell !=0) && (count >0))
   {
-    replycount += kaapi_sched_stealstack( ctxt_top, 0 );
+    replycount += kaapi_sched_stealstack( cell->stack, 0 );
     count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    ctxt_top = KAAPI_STACK_NEXT_FIELD( ctxt_top );
+    cell = cell->prev;
   }
   
   ctxt_top = kproc->ctxt;

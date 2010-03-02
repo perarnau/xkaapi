@@ -157,7 +157,7 @@ redo_execute:
       kproc->ctxt = 0;
 
       /* push it: suspended because top task is not ready */
-      KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
+      kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
 
       kproc->ctxt = kaapi_sched_wakeup(kproc); 
       if (kproc->ctxt !=0) goto redo_execute;

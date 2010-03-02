@@ -8,7 +8,7 @@
 
 lib_LTLIBRARIES= libxkaapi.la
 
-libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE -DKAAPI_DEBUG
+libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE
 libxkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS)
 libxkaapi_la_LDFLAGS = -version-info 0:0:0 $(XKAAPILIB_BUILD_LDFLAGS)
 libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
@@ -28,6 +28,7 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_time.c \
   misc/kaapi_hashvalue.c \
   misc/kaapi_hashmap.c \
+  misc/kaapi_liststack.c \
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \

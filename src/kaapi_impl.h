@@ -148,7 +148,22 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
   (pkr)->status = KAAPI_REQUEST_S_EMPTY; (pkr)->flag = 0; (pkr)->reply = 0; (pkr)->stack = 0
 
 
-/**
+/* ============================= Helper for bloc allocation of individual entries ============================ */
+/*
+*/
+#define KAAPI_BLOCENTRIES_SIZE 32
+/*
+*/
+#define KAAPI_DECLARE_BLOCENTRIES(NAME, TYPE) \
+typedef struct NAME {\
+  TYPE         data[KAAPI_BLOCENTRIES_SIZE]; \
+  int          pos;  /* next free in data */\
+  struct NAME* next; /* link list of bloc */\
+} NAME
+
+
+
+/** Here include all machine dependent functions and types
 */
 #include "kaapi_machine.h"
 
@@ -177,6 +192,8 @@ extern kaapi_rtparam_t default_param;
 
 
 
+
+
 /* ============================= Hash table for WS ============================ */
 /*
 */
@@ -187,14 +204,8 @@ typedef struct kaapi_hashentries_t {
 } kaapi_hashentries_t;
 
 
-#define KAAPI_BLOCENTRIES_SIZE 32
-/*
-*/
-typedef struct kaapi_hashentries_bloc_t {
-  kaapi_hashentries_t              data[KAAPI_BLOCENTRIES_SIZE]; 
-  int                              pos;  /* next free in data */
-  struct kaapi_hashentries_bloc_t* next; /* link list of bloc */
-} kaapi_hashentries_bloc_t;
+KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
+
 
 #define KAAPI_HASHMAP_SIZE 64
 /*

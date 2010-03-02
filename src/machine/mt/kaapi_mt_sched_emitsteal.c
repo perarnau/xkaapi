@@ -49,18 +49,13 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_stack_t*       stack;
   kaapi_victim_t       victim;
-  int i, replycount, err;
+  int i, replycount, err, ok;
   int count;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->ctxt !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
-  /* */
-  if (!KAAPI_STACK_EMPTY(&kproc->lsuspend))
-  {
-    /* TODO try top wakeup a waiting stack ? */  
-  }
   
   /* clear stack */
   kaapi_stack_clear( kproc->ctxt );
@@ -86,15 +81,6 @@ redo_select:
   /* experimental */
 //  pthread_yield();
 
-#if 0
-  count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
-  if (count ==0) 
-  {
-    kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
-    goto return_value;
-  }
-#endif
-
   /* (2)
      lock and retest if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return
@@ -102,9 +88,8 @@ redo_select:
   int counter;
   while (1)
   {
-    err = pthread_mutex_trylock(&victim.kproc->lsuspend.lock);
-    if (err ==0) break;
-    kaapi_assert_debug(err == EBUSY);
+    ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1);
+    if (ok ==0) break;
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if ((counter & 0xFF) ==0) {
@@ -157,7 +142,7 @@ redo_select:
   }
 
   /* unlock  */ 
-  pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
+  KAAPI_ATOMIC_WRITE(&victim.kproc->lock, 0);
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
 
 return_value:

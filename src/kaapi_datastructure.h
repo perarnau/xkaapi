@@ -294,7 +294,7 @@ if ((q)->_front ==0) (q)->_back = 0; \
 #define KAAPI_STACK_DECLARE( name, type )\
 typedef struct name {\
     KAAPI_STACK_DECLARE_FIELD(type);\
-} name;
+} name
 
 /** q: stack*
  */

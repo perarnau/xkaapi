@@ -72,7 +72,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   
   /* put context is list of suspended contexts: critical section with respect of thieves */
   kproc->ctxt = 0;
-  KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt_condition );
+  kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt_condition );
 
   do {
     /* wakeup a context */
@@ -137,7 +137,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
       /* push it: suspended because top task is not ready */
-      KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
+      kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
     } else {
       /* push it: free */
       KAAPI_STACK_PUSH( &kproc->lfree, ctxt );

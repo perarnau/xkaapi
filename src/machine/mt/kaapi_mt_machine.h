@@ -114,13 +114,84 @@ extern volatile int kaapi_isterm;
 */
 typedef kaapi_stack_t kaapi_thread_context_t;
 
-/* list of suspended threadcontext */
-typedef struct kaapi_listthreadctxt_t {
-  pthread_mutex_t          lock;                     /* lock & cond are used to lock the processor structure, not only */
-  pthread_cond_t           cond;                     /* the kaapi_listthreadctxt_t. They are put here in order to group them*/
-                                                     /* into a cache ligne within the list of suspend context */
-  KAAPI_STACK_DECLARE_FIELD(kaapi_thread_context_t);
-} kaapi_listthreadctxt_t;
+
+/** WS queue of thread context: used
+    This data structure should be extend in case where the C-stack is required to be suspended and resumed.
+    The data structure inherits from kaapi_stack_t the stackable field in order to be linked in stack.
+*/
+struct kaapi_wsqueuectxt_cell_t;
+typedef struct kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_cell_ptr_t;
+
+/** Cell of the list
+*/
+typedef struct kaapi_wsqueuectxt_cell_t {
+  kaapi_atomic_t            state;  /* 0: in the list, 1: out the list */
+  kaapi_thread_context_t*   stack;
+  kaapi_wsqueuectxt_cell_ptr_t next;  
+  kaapi_wsqueuectxt_cell_ptr_t prev;   /* shared with thief, used to link in free list */
+} kaapi_wsqueuectxt_cell_t;
+
+
+/** Type of bloc of kaapi_liststack_node_t
+*/
+KAAPI_DECLARE_BLOCENTRIES(kaapi_wsqueuectxt_cellbloc_t, kaapi_wsqueuectxt_cell_t);
+
+
+/** List of thread context */
+typedef struct kaapi_wsqueuectxt_t {
+  kaapi_wsqueuectxt_cell_ptr_t  head;
+  kaapi_wsqueuectxt_cell_ptr_t  tail;
+  kaapi_wsqueuectxt_cell_ptr_t  headfreecell;
+  kaapi_wsqueuectxt_cell_ptr_t  tailfreecell;
+  kaapi_wsqueuectxt_cellbloc_t* allocatedbloc;
+} kaapi_wsqueuectxt_t;
+
+/** lfree data structure 
+*/
+KAAPI_STACK_DECLARE(kaapi_stackctxt_t, kaapi_thread_context_t);
+
+/** push: LIFO order with respect to pop. Only owner may push
+*/
+static inline int kaapi_wsqueuectxt_isempty( kaapi_wsqueuectxt_t* ls )
+{ return (ls->head ==0); }
+
+/**
+*/
+extern int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls );
+
+/**
+*/
+extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
+
+/* Push a ctxt
+   Return 0 in case of success
+   Return ENOMEM if allocation failed
+*/
+extern int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* stack );
+
+/* Pop a ctxt
+   Return 0 in case of success
+   Return EWOULDBLOCK if list is empty
+*/
+extern int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack );
+
+/* Steal a ctxt
+   Return 0 in case of success
+   Return EWOULDBLOCK if list is empty
+*/
+extern int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack );
+
+/* Push a ctxt
+   Return 0 in case of success
+   Return ENOMEM if allocation failed
+*/
+extern int kaapi_wsqueuectxt_push_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* stack );
+
+/* Pop a ctxt
+   Return 0 in case of success
+   Return EWOULDBLOCK if list is empty
+*/
+extern int kaapi_wsqueuectxt_pop_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack );
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -183,10 +254,19 @@ typedef struct kaapi_processor_t {
   kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
 
   /* cache align */
-  kaapi_listthreadctxt_t   lsuspend;                      /* list of suspended context */
+  kaapi_atomic_t           lock                           /* all requests attached to each kprocessor ordered by increasing level */
+    __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-  /* cache align */
-  kaapi_listthreadctxt_t   lfree;                         /* list of free context */
+  /* suspended list */
+  kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
+#if 0
+  /* ready list */
+  kaapi_wsqueuectxt_t      lready;                        /* list of ready context */
+#endif
+  /* ready list */
+  kaapi_thread_context_t*  ready;                         /* ready context after steal */
+  /* free list */
+  kaapi_stackctxt_t        lfree;                         /* stack of free context */
 
   void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
