@@ -66,7 +66,8 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
 
 redo_work: 
   flag = pc->flag;
-  if ( (flag >>KAAPI_TASK_BODY_SHIFT) == kaapi_retn_body ) 
+//(flag >>KAAPI_TASK_BODY_SHIFT)
+  if ( kaapi_task_getbody(pc) == kaapi_retn_body ) 
   {
     /* inline retn body do not save stack frame before execution */
     kaapi_frame_t* frame = kaapi_task_getargst( pc, kaapi_frame_t);
@@ -122,8 +123,12 @@ redo_work:
       kaapi_frame_t* frame;
       /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
       kaapi_task_t* retn = kaapi_stack_toptask(stack);
+#if defined(KAAPI_VERY_COMPACT_TASK)
       retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body << KAAPI_TASK_BODY_SHIFT);
-
+#else
+      retn->flag  = KAAPI_TASK_STICKY;
+      retn->body  = kaapi_retn_body;
+#endif
       frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
       retn->sp = (void*)frame;
       frame->pc = pc; /* <=> save pc, will mark this task as term after pop !! */

@@ -47,7 +47,11 @@
 
 /**
 */
+#if defined(KAAPI_VERY_COMPACT_TASK)
 void _kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
+#else
+void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
+#endif
 {
   int i, countparam;
   kaapi_format_t* fmt;           /* format of the task */

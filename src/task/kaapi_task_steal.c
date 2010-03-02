@@ -49,7 +49,11 @@
 
 /**
 */
+#if defined(KAAPI_VERY_COMPACT_TASK)
 void _kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
+#else
+void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
+#endif
 {
   int i;
   int countparam;
@@ -83,7 +87,11 @@ void _kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
 
 /**
 */
+#if defined(KAAPI_VERY_COMPACT_TASK)
 void _kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
+#else
+void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
+#endif
 {
   int i;
   int countparam;
@@ -172,5 +180,3 @@ void _kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
       kaapi_task_getbody(task+1), 
       (void*)stack->pc );
 }
-
-

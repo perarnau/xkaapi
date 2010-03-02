@@ -47,7 +47,11 @@
 
 /**
 */
+#if defined(KAAPI_VERY_COMPACT_TASK)
 void _kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+#else
+void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+#endif
 {
   kaapi_taskadaptive_t* ta = task->sp;
   kaapi_assert_debug( ta !=0 );

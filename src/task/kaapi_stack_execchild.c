@@ -140,7 +140,12 @@ redo_work:
     {
       /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
       retn = kaapi_stack_toptask(stack);
+#if defined(KAAPI_VERY_COMPACT_TASK)
       retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body << KAAPI_TASK_BODY_SHIFT);
+#else
+      retn->flag  = KAAPI_TASK_STICKY;
+      retn->body  = kaapi_retn_body;
+#endif
 
       frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
       retn->sp = (void*)frame;

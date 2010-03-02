@@ -1037,7 +1037,11 @@ namespace ka {
       if (MainTask::fmid != 0) return &MainTask::format;
       MainTask::fmid = kaapi_format_taskregister( 
             &MainTask::getformat, 
-            -1, 
+#if defined(KAAPI_VERY_COMPACT_TASK)
+            -1,
+#else
+            0,
+#endif
             &MainTask::body_cpu, 
             typeid(MainTask).name(),
             sizeof(MainTask),

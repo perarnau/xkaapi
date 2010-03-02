@@ -97,7 +97,3 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
     }
   }
 };
-
-__attribute__((constructor)) void InitLib()
-{
-}

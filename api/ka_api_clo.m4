@@ -151,7 +151,11 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
     fmid = kaapi_format_taskregister( 
           &getformat, 
-          -1, 
+#if defined(KAAPI_VERY_COMPACT_TASK)
+          -1,
+#else
+          0,
+#endif
           0, 
           task_name.c_str(),
           sizeof(TaskArg_t),
@@ -218,7 +222,11 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   {
     fmt->entrypoint[KAAPI_PROC_TYPE_CPU] = registercpubody( fmt, &TaskBodyCPU<TASK>::operator() );
     fmt->entrypoint[KAAPI_PROC_TYPE_GPU] = registergpubody( fmt, &TaskBodyGPU<TASK>::operator() );
+#if defined(KAAPI_VERY_COMPACT_TASK)
     kaapi_bodies[fmt->bodyid] = fmt->entrypoint[KAAPI_PROC_TYPE_CPU];
+#else
+    fmt->bodyid = fmt->default_body = fmt->entrypoint[KAAPI_PROC_TYPE_CPU];
+#endif
     return fmt;
   }
 };

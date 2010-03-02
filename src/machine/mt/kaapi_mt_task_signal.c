@@ -47,7 +47,11 @@
 
 /**
 */
+#if defined(KAAPI_VERY_COMPACT_TASK)
 void _kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
+#else
+void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
+#endif
 {
   /*
     printf("Thief end, @stack: 0x%p\n", stack);
