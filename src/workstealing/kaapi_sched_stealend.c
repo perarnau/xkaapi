@@ -1,5 +1,5 @@
 /*
-** kaapi_sched_stealstack.c
+** kaapi_sched_stealend.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009

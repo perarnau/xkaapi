@@ -54,6 +54,10 @@ SetHeap SetInHeap;
 SetLocalAttribut SetLocal;
 DefaultAttribut SetDefault;
 
+/* save in init, used to push retn in leave or terminate */
+static int main_retn_pushed = 0;
+static kaapi_frame_t main_frame;
+
 // --------------------------------------------------------------------------
 std::string get_localhost()
 {
@@ -90,6 +94,13 @@ bool Community::is_leader() const
 // --------------------------------------------------------------------
 void Community::leave() 
 { 
+  if (!main_retn_pushed)
+  {
+    /* push marker of the frame: retn */
+    kaapi_stack_pushretn(kaapi_self_stack(), &main_frame);
+    main_retn_pushed = 1;
+  }
+
   Sync();
 }
 
@@ -129,6 +140,8 @@ Community System::initialize_community( int& argc, char**& argv )
   if (KaapiComponentManager::initialize( argc, argv ) != 0)
     Exception_throw( RuntimeError("[ka::System::initialize], Kaapi not initialized") );
 
+  /* push marker of the frame: retn */
+  kaapi_stack_save_frame( kaapi_self_stack(), &main_frame);
   return Community(0);
 }
 
@@ -146,6 +159,12 @@ Community System::join_community( int& argc, char**& argv )
 // --------------------------------------------------------------------
 void System::terminate()
 {
+  if (!main_retn_pushed)
+  {
+    /* push marker of the frame: retn */
+    kaapi_stack_pushretn(kaapi_self_stack(), &main_frame);
+    main_retn_pushed = 1;
+  }
   KaapiComponentManager::terminate();
 }
 

@@ -45,55 +45,60 @@
 #include "kaapi_impl.h"
 #include <stdio.h>
 
-
 /**
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
-void _kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#else
 void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#endif
 {
 }
 
 /** Dumy task pushed at startup into the main thread
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
-void _kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#else
 void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#endif
 {
 }
 
 /**
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
-void _kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#else
 void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#endif
 {
   kaapi_frame_t* frame = kaapi_task_getargst( task, kaapi_frame_t);
-  kaapi_task_setstate( frame->pc, KAAPI_TASK_S_TERM );
-#if defined(KAAPI_CONCURRENT_WS)
-  /* finer lock: lock for the frame only : put a lock on the task that create the frame */
-  while (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1));
+  kaapi_task_t* taskexec = frame->pc;
+
+#if !defined(KAAPI_CONCURRENT_WS)
+  /* mark original task as executed, block until no more thief */
+  while (!kaapi_task_casstate(taskexec, kaapi_exec_body, kaapi_nop_body));
+#else
+  kaapi_task_setbody(taskexec, kaapi_nop_body);
 #endif
+
   kaapi_stack_restore_frame( stack, frame );
-#if defined(KAAPI_CONCURRENT_WS)
-  KAAPI_ATOMIC_WRITE(&stack->lock, 0);
-#endif
+  stack->errcode = -EAGAIN;
 }
 
 /*
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
-void _kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#else
 void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#endif
+{
+  stack->errcode = EWOULDBLOCK;
+}
+
+/*
+*/
+void kaapi_exec_body( kaapi_task_t* task, kaapi_stack_t* stack)
+{
+}
+
+/*
+*/
+void kaapi_adapt_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
 }
 
 
+/*
+*/
+void kaapi_taskmain_body( kaapi_task_t* task, kaapi_stack_t* stack )
+{
+  kaapi_taskmain_arg_t* arg = kaapi_task_getargst( task, kaapi_taskmain_arg_t);
+  arg->mainentry( arg->argc, arg->argv );
+}

@@ -87,6 +87,8 @@ int _kaapi_request_reply
   int insert_head
 )
 {
+#if defined(KAAPI_VERY_COMPACT_TASK)
+#warning TODO
   kaapi_taskadaptive_result_t* result =0;
   kaapi_taskadaptive_t* ta =0;
   kaapi_taskadaptive_t* thief_ta = 0;
@@ -202,6 +204,7 @@ int _kaapi_request_reply
     kaapi_writemem_barrier();
     request->reply->status = KAAPI_REQUEST_S_FAIL;
   }
+#endif
   return 0;
 }
 

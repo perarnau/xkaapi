@@ -84,21 +84,11 @@ kaapi_format_id_t kaapi_format_taskregister(
         const kaapi_format_t*       fmt_param[]
 )
 {
-  kaapi_uint8_t        entry;
-  kaapi_format_t* head;
-
   kaapi_format_t* fmt = (*fmt_fnc)();
   kaapi_format_register( fmt, name );
 
-#if defined(KAAPI_VERY_COMPACT_TASK)
-  if (bodyid == -1) 
-    bodyid = bodyidcounter++;
-  kaapi_assert( (KAAPI_TASK_BODY_USER_BASE<= bodyid) && (bodyid <= 0xFF));
-  kaapi_bodies[bodyid] = body;
-  fmt->bodyid = bodyid;
-#else
+  /* TG: warning no used but keep it */
   fmt->bodyid = body;
-#endif
 
   fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = body;
   fmt->entrypoint[KAAPI_PROC_TYPE_CPU] = body;
@@ -117,17 +107,30 @@ kaapi_format_id_t kaapi_format_taskregister(
   memcpy(fmt->fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
   fmt->size = size;
+  return fmt->fmtid;
+}
 
-#if defined(KAAPI_VERY_COMPACT_TASK)
-  /* register it into hashmap: body -> fmt */
-  kaapi_all_format_bybody[bodyid] = fmt;
-#else
+
+/**
+*/
+kaapi_format_id_t kaapi_format_taskregister_body( 
+        kaapi_format_t*             fmt,
+        kaapi_task_body_t           body,
+        int                         archi
+)
+{
+  kaapi_uint8_t   entry;
+  kaapi_format_t* head;
+
+  if (body ==0) return fmt->fmtid;
+  
+  fmt->entrypoint[archi] = body;
+  
   /* register it into hashmap: body -> fmt */
   entry = ((unsigned long)body) & 0xFF;
   head =  kaapi_all_format_bybody[entry];
   fmt->next_bybody = head;
   kaapi_all_format_bybody[entry] = fmt;
-#endif
 
   /* already registered into hashmap: fmtid -> fmt */  
   return fmt->fmtid;

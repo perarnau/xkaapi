@@ -587,18 +587,15 @@ static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr )
 /** 
 */
 #if defined(KAAPI_CONCURRENT_WS)
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
-  kaapi_uint32_t flag = task->flag;
-  kaapi_uint32_t oldflag = (flag & ~KAAPI_TASK_MASK_STATE)|oldstate;
-  kaapi_uint32_t newflag = (flag & ~KAAPI_TASK_MASK_STATE)|newstate;
-  return KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)&task->flag, oldflag, newflag );
+  return KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&task->body, oldbody, newbody );
 }
 #else
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_uint32_t oldstate, kaapi_uint32_t newstate )
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
-  if (kaapi_task_getstate(task) != oldstate ) return 0;
-  kaapi_task_setstate( task, newstate );
+  if (task->body != oldbody ) return 0;
+  kaapi_task_setbody(task, newbody );
   return 1;
 }
 #endif

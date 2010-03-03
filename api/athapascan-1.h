@@ -410,7 +410,10 @@ namespace a1 {
   class UnStealableAttribut {
   public:
     kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
-    { clo->flag |= KAAPI_TASK_STICKY; return clo; }
+    { 
+      //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
+      return clo; 
+    }
   };
   inline UnStealableAttribut SetUnStealable()
   { return UnStealableAttribut(); }
@@ -420,7 +423,7 @@ namespace a1 {
   public:
     kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
     { 
-      kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
+      //kapi_task_setflags( clo, KAAPI_TASK_STICKY );
       return clo; 
     }
   };
@@ -717,7 +720,7 @@ namespace a1 {
       void operator()()
       { 
         kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-        kaapi_task_initdfg( _stack, clo, KaapiTask0<TASK>::body, 0 );
+        kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
         _attr(_stack, clo);
         kaapi_stack_pushtask( _stack);    
       }
@@ -758,11 +761,6 @@ namespace a1 {
 
 
   // --------------------------------------------------------------------
-  /* Main task */
-  template<class TASK>
-  struct MainTask : ka::MainTask<TASK> {
-  };
-  
   template<class TASK>
   struct ForkerMain : ka::SpawnerMain<TASK> {
   };

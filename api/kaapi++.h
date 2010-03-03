@@ -779,7 +779,10 @@ namespace ka {
   class UnStealableAttribut {
   public:
     kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
-    { clo->flag |= KAAPI_TASK_STICKY; return clo; }
+    { 
+      //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
+      return clo;
+    }
   };
   inline UnStealableAttribut SetUnStealable()
   { return UnStealableAttribut(); }
@@ -789,7 +792,7 @@ namespace ka {
   public:
     kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
     { 
-      kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
+      //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       return clo; 
     }
   };
@@ -970,7 +973,7 @@ namespace ka {
       void operator()()
       { 
         kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-        kaapi_task_initdfg( _stack, clo, KaapiTask0<TASK>::body, 0 );
+        kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
         _attr(_stack, clo);
         kaapi_stack_pushtask( _stack);    
       }
@@ -1014,74 +1017,19 @@ namespace ka {
   // --------------------------------------------------------------------
   /* Main task */
   template<class TASK>
-  struct MainTask {
-    int    argc;
-    char** argv;
-    static void body_cpu( kaapi_task_t* task, kaapi_stack_t* stack )
+  struct MainTaskBodyArgcv {
+    static void body( int argc, char** argv )
     {
-      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
-      TASK()( args->argc, args->argv );
+      TASK()( argc, argv );
     }
-    static void body_gpu( kaapi_task_t* task, kaapi_stack_t* stack )
-    {
-      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
-      TASK()( args->argc, args->argv );
-    }
-    void operator()( kaapi_task_t* task, kaapi_stack_t* stack )
-    {
-      MainTask<TASK>* args = kaapi_task_getargst( task, MainTask<TASK>);
-      TASK()( args->argc, args->argv );
-    }
-    static kaapi_format_t* registerformat()
-    {
-      if (MainTask::fmid != 0) return &MainTask::format;
-      MainTask::fmid = kaapi_format_taskregister( 
-            &MainTask::getformat, 
-#if defined(KAAPI_VERY_COMPACT_TASK)
-            -1,
-#else
-            0,
-#endif
-            &MainTask::body_cpu, 
-            typeid(MainTask).name(),
-            sizeof(MainTask),
-            0,
-            0,
-            0,
-            0
-        );
-     int (TASK::*f_defaultcpu)(...) = (int (TASK::*)(...))&TASK::operator();  /* inherited from Signature */
-     int (TASK::*f_cpu)(...) = (int (TASK::*)(...))&TaskBodyCPU<TASK>::operator();
-     if (f_cpu == f_defaultcpu) {
-       MainTask::format.entrypoint[KAAPI_PROC_TYPE_CPU] = 0;
-     }
-     else {
-       MainTask::format.entrypoint[KAAPI_PROC_TYPE_CPU] = &MainTask::body_cpu;
-     }
-     int (MainTask::*f_defaultgpu)(...) = (int (MainTask::*)(...))&MainTask::operator();  /* inherited from Signature */
-     int (MainTask::*f_gpu)(...) = (int (MainTask::*)(...))&TaskBodyGPU<MainTask>::operator();
-     if (f_gpu == f_defaultgpu) {
-       MainTask::format.entrypoint[KAAPI_PROC_TYPE_GPU] = 0;
-     }
-     else {
-       MainTask::format.entrypoint[KAAPI_PROC_TYPE_GPU] = &MainTask::body_gpu;
-     }
-      return &MainTask::format;
-    }  
-    static const kaapi_task_bodyid_t bodyid;
-    static kaapi_format_t    format;
-    static kaapi_format_id_t fmid;
-    static kaapi_format_t* getformat()
-    { return &format; }
   };
-  
   template<class TASK>
-  kaapi_format_t    MainTask<TASK>::format;
-  template<class TASK>
-  kaapi_format_id_t MainTask<TASK>::fmid =0;
-
-  template<class TASK>
-  const kaapi_task_bodyid_t MainTask<TASK>::bodyid = registerformat()->bodyid;
+  struct MainTaskBodyNoArgcv {
+    static void body( int argc, char** argv )
+    {
+      TASK()( );
+    }
+  };
   
   template<class TASK>
   struct SpawnerMain
@@ -1093,11 +1041,23 @@ namespace ka {
     {
       kaapi_stack_t* stack = kaapi_self_stack();
       kaapi_task_t* clo = kaapi_stack_toptask( stack);
-      kaapi_task_initdfg( stack, clo, MainTask<TASK>::bodyid, kaapi_stack_pushdata(stack, sizeof(MainTask<TASK>)) );
-      kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
-      MainTask<TASK>* arg = kaapi_task_getargst( clo, MainTask<TASK>);
+      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_stack_pushdata(stack, sizeof(kaapi_taskmain_arg_t)) );
+      kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
       arg->argc = argc;
       arg->argv = argv;
+      arg->mainentry = &MainTaskBodyArgcv<TASK>::body;
+      kaapi_stack_pushtask( stack);    
+    }
+
+    void operator()( )
+    {
+      kaapi_stack_t* stack = kaapi_self_stack();
+      kaapi_task_t* clo = kaapi_stack_toptask( stack);
+      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_stack_pushdata(stack, sizeof(kaapi_taskmain_arg_t)) );
+      kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
+      arg->argc = 0;
+      arg->argv = 0;
+      arg->mainentry = &MainTaskBodyNoArgcv<TASK>::body;
       kaapi_stack_pushtask( stack);    
     }
   };

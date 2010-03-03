@@ -45,34 +45,42 @@
 #include "kaapi_impl.h"
 
 
-/**kaapi_sched_sync
+/** kaapi_sched_sync
+    * pc is the current running task, exec all tasks from [pc-1,...,sp[
+    * do not restore sp_data because data may have scope of the caller
+    of kaapi_sched_sync.
 */
 int kaapi_sched_sync(kaapi_stack_t* stack)
 {
   int err;
-  kaapi_task_t* pc     = stack->pc;
-  kaapi_task_t* savepc = pc;
-
-  /* look for retn */
-  while ((kaapi_task_getbody(pc) != kaapi_retn_body) && (pc != stack->sp)) 
-    --pc;
+  kaapi_task_t* savepc;
+  kaapi_task_t* savesp;
+  kaapi_task_t* savesavedsp;
 
   if (kaapi_stack_isempty( stack ) ) return 0;
 
-  /* stop on retn -> executed next task */
-  if (pc != stack->sp)
-    stack->pc = --pc;
-  else 
-    stack->pc = pc = stack->pc-1;
+#if 0
+  /* look for retn */
+  while ((kaapi_task_getbody(pc) != kaapi_retn_body) && (pc != stack->sp)) 
+    --pc;
+#endif
+
+  savepc      = stack->pc;
+  savesp      = stack->sp;
+  savesavedsp = stack->saved_sp;
+  stack->pc   = savesavedsp;
 
 redo:
-  err = kaapi_stack_execchild(stack, pc);
+  err = kaapi_stack_execchild(stack, stack->pc);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
-    pc = stack->pc;
     goto redo;
   }
+  if (err) /* but do not restore stack */
+    return err;
   stack->pc = savepc;
+  stack->sp = savesavedsp;       /* have executed all tasks from saved_sp to now */
+  stack->saved_sp = savesavedsp;
   return err;
 }

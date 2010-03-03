@@ -20,7 +20,7 @@
       ', `', `')
 #endif
       kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-      kaapi_task_initdfg( _stack, clo, KaapiFormatTask_t::bodyid, kaapi_stack_pushdata(_stack, sizeof(TaskArg_t)) );
+      kaapi_task_initdfg( clo, KaapiFormatTask_t::bodyid, kaapi_stack_pushdata(_stack, sizeof(TaskArg_t)) );
       TaskArg_t* arg = kaapi_task_getargst( clo, TaskArg_t);
       /* here we do not detect a compile time the error without compilation with -DKAAPI_DEBUG 
          todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure

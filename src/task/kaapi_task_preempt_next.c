@@ -46,6 +46,8 @@
 
 int kaapi_preempt_nextthief_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief )
 {
+#if defined(KAAPI_VERY_COMPACT_TASK)
+#warning TODO
   kaapi_assert_debug( task->flag & KAAPI_TASK_ADAPTIVE );
   kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
   int retval = 1;
@@ -148,4 +150,7 @@ reset_return:
 #endif
 
   return retval;
+#else
+  return 0;
+#endif
 }

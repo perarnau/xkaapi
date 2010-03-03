@@ -88,12 +88,15 @@ kaapi_stack_t* kaapi_self_stack(void)
 
 /**
 */
+static kaapi_frame_t main_frame;
+
+/**
+*/
 void __attribute__ ((constructor)) kaapi_init(void)
 {
   kaapi_isterm = 0;
   kaapi_stack_t* stack;
   kaapi_task_t* task;
-  kaapi_frame_t frame;
   const char* version __attribute__((unused)) = get_kaapi_version();
   
   /* set up runtime parameters */
@@ -118,17 +121,14 @@ void __attribute__ ((constructor)) kaapi_init(void)
 
   /* push dummy task in exec mode */
   stack = _kaapi_self_stack();
-  kaapi_stack_save_frame(stack, &frame);
+  kaapi_stack_save_frame(stack, &main_frame);
   task = kaapi_stack_toptask(stack);
-  task->flag  = KAAPI_TASK_STICKY;
-  kaapi_task_setbody( task, kaapi_taskstartup_body);
-  kaapi_task_setstate( task, KAAPI_TASK_S_EXEC );
+  kaapi_task_setbody( task, kaapi_exec_body);
+  kaapi_task_setextrabody( task, kaapi_taskstartup_body);
 
   kaapi_stack_pushtask(stack);
+  stack->saved_sp = stack->sp;
 
-  /* push marker of the frame: retn */
-  kaapi_stack_pushretn(stack, &frame);
-  
   /* dump output information */
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", default_param.cpucount,kaapi_get_elapsedtime());
@@ -153,6 +153,10 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   double t_sched;
   double t_preempt;
 #endif
+
+  /* push marker of the frame: retn */
+  kaapi_stack_pushretn(_kaapi_self_stack(), &main_frame);
+  
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */

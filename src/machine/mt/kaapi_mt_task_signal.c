@@ -84,8 +84,6 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
-    kaapi_task_setstate(task2sig, KAAPI_TASK_S_TERM );
-    KAAPI_LOG(100, "SET TERM DFG task stolen: %p, flag:%i\n", (void*)task2sig, task2sig->flag );
   }
   else /* partial steal -> adaptive task */
   {

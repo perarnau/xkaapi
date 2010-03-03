@@ -49,7 +49,7 @@
 
 /* return the string that decode the flags */
 static const char* FLAG_NAME[KAAPI_TASK_MASK_FLAGS+1];
-static const char* kaapi_getflagsname( unsigned int flag )
+static const char* __attribute__((unused)) kaapi_getflagsname( unsigned int flag ) 
 {
   int i;
   char* buffer;
@@ -76,8 +76,10 @@ static const char* kaapi_getflagsname( unsigned int flag )
 }
 
 
-static char kaapi_getstatename( kaapi_task_t* task )
+static char kaapi_getstatename( kaapi_task_t* task __attribute__((unused)))
 {
+#if defined(KAAPI_VERY_COMPACT_TASK)
+#warning TODO
   kaapi_task_state_t state = kaapi_task_getstate(task);
   switch (state) {
     case KAAPI_TASK_S_INIT:  return 'I';
@@ -98,11 +100,15 @@ static char kaapi_getstatename( kaapi_task_t* task )
         return 'T';
     default: return '!';
   }
+#endif
+  return ' ';
 }
 
-static char kaapi_getreadyname(kaapi_task_t* task)
+static char kaapi_getreadyname(kaapi_task_t* task __attribute__((unused)))
 {
+#if defined(KAAPI_VERY_COMPACT_TASK)
   if (task->flag & KAAPI_TASK_MASK_READY) return 'R';
+#endif
   return '?';
 }
 
@@ -121,8 +127,14 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
 
 /**
 */
-int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid )
+int kaapi_task_print( 
+  FILE* file,
+  kaapi_task_t* task, 
+  kaapi_task_bodyid_t taskid 
+)
 {
+#if defined(KAAPI_VERY_COMPACT_TASK)
+#warning "TODO"
   const kaapi_format_t* fmt;
   void* splitter = 0;
   int i;
@@ -174,6 +186,7 @@ int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid
   fputc('\n', file );
 
   fflush(file);
+#endif
   return 0;
 }
 
@@ -182,6 +195,8 @@ int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid
 */
 int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
 {
+#if defined(KAAPI_VERY_COMPACT_TASK)
+#warning "TODO"
   FILE* file;
   kaapi_task_t*  task_top;
   kaapi_task_t*  task_bot;
@@ -266,5 +281,6 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
   }
 
   fflush(file);
+#endif
   return 0;
 }

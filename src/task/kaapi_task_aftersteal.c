@@ -47,62 +47,51 @@
 
 /**
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
-void _kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#else
 void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#endif
 {
   int i, countparam;
-  kaapi_format_t* fmt;           /* format of the task */
-  void* arg;
+  kaapi_format_t* fmt;   /* format of the task */
+  void*           arg;
+  void*           data_param;
+  kaapi_format_t* fmt_param;
+  kaapi_access_t* access_param;
   
-  /* the task has been stolen: format contains the format of the task */
+  /* the task has been stolen: the extra body contains the original task body */
   fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(task) );
-
   kaapi_assert_debug( fmt !=0 );
 
-  KAAPI_LOG(100, "aftersteal task: 0x%p\n", (void*)task );
-
-  /* report data to version to global data */
   arg = kaapi_task_getargs(task);
   countparam = fmt->count_params;
+
+  /* for each access parameter, we have:
+     - data that points to the original effective parameter
+     - version that points to the data that should have been used during the execution of the stolen task
+     If the access is a W (or CW) access then, version contains the newly produced data.
+     The purpose here is to merge the version into the original data
+        - if W mode -> copy + free of the data
+        - if CW mode -> accumulation (data is the left side of the accumulation, version the righ side)
+  */
   for (i=0; i<countparam; ++i)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
+    if (m == KAAPI_ACCESS_MODE_V) continue;
 
-#if defined(KAAPI_DEBUG)
-    if (m == KAAPI_ACCESS_MODE_V)
-    {
-      /* TODO: improve management of shared data, if it is a big data or not... */
-      void* param_data __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
-//      printf("After steal task:%p, name: %s, value: %i\n", (void*)task, fmt->name, *(int*)param_data );
-    }    
-    else 
-#endif
     if (KAAPI_ACCESS_IS_ONLYWRITE(m))
     {
-      void* param = (void*)(fmt->off_params[i] + (char*)arg);
-      kaapi_format_t* fmt_param = fmt->fmt_params[i];
-      kaapi_access_t* access = (kaapi_access_t*)(param);
+      data_param = (void*)(fmt->off_params[i] + (char*)arg);
+      fmt_param = fmt->fmt_params[i];
+      access_param = (kaapi_access_t*)(data_param);
 
       /* Always keep copy semantic ? At the charge of the user to deal with lazy copy ? */
-      kaapi_assert_debug( access->data != access->version );
+      kaapi_assert_debug( access_param->data != access_param->version );
 
-      (*fmt_param->assign)( access->data, access->version );
-      (*fmt_param->dstor) ( access->version );
-      free(access->version);
-      access->version = 0;
+      /* a assign dstor function will avoid 2 calls to function, especially for basic types which do not
+         required to be dstor.
+      */
+      (*fmt_param->assign)( access_param->data, access_param->version );
+      (*fmt_param->dstor) ( access_param->version );
+      free(access_param->version);
+      access_param->version = 0;
     }
-#if defined(KAAPI_DEBUG)
-    else if (KAAPI_ACCESS_IS_READ(m)) /* rw : if above, not here */
-    { /* nothing to do ?
-      */    
-      void* param __attribute__((unused)) = (void*)(fmt->off_params[i] + (char*)arg);
-      kaapi_access_t* access __attribute__((unused)) = (kaapi_access_t*)(param);
-//      printf("After steal task:%p, name: %s, R object: version: %i, data: %i\n", (void*)task, fmt->name, *(int*)access->version, *(int*)access->data );
-    }
-#endif
   }
 }
-

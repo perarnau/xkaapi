@@ -220,13 +220,9 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
   static kaapi_format_t* registerbodies( kaapi_format_t* fmt, void (TASK::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
   {
-    fmt->entrypoint[KAAPI_PROC_TYPE_CPU] = registercpubody( fmt, &TaskBodyCPU<TASK>::operator() );
-    fmt->entrypoint[KAAPI_PROC_TYPE_GPU] = registergpubody( fmt, &TaskBodyGPU<TASK>::operator() );
-#if defined(KAAPI_VERY_COMPACT_TASK)
-    kaapi_bodies[fmt->bodyid] = fmt->entrypoint[KAAPI_PROC_TYPE_CPU];
-#else
+    kaapi_format_taskregister_body( fmt, registercpubody( fmt, &TaskBodyCPU<TASK>::operator() ), KAAPI_PROC_TYPE_CPU );
+    kaapi_format_taskregister_body( fmt, registergpubody( fmt, &TaskBodyGPU<TASK>::operator() ), KAAPI_PROC_TYPE_GPU );
     fmt->bodyid = fmt->default_body = fmt->entrypoint[KAAPI_PROC_TYPE_CPU];
-#endif
     return fmt;
   }
 };

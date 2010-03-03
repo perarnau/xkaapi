@@ -60,7 +60,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   cell = kproc->lsuspend.tail;
   while ((cell !=0) && (count >0))
   {
-    replycount += kaapi_sched_stealstack( cell->stack, 0 );
+    replycount += kaapi_sched_stealstack( cell->stack, 0, count, kproc->hlrequests.requests );
     count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
     cell = cell->prev;
   }

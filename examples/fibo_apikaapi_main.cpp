@@ -84,9 +84,9 @@ struct doit {
       for (unsigned int i = 0 ; i < iter ; ++i)
       {   
         ka::Spawn<TaskFibo>()( res, n );
+        /* */
+        ka::Sync();
       }
-      /* */
-      ka::Sync();
       stop_time= ka::WallTimer::gettime();
       /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
       ka::Spawn<TaskPrint<long> >()(res, iter, ref_value);      

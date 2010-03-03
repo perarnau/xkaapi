@@ -47,6 +47,8 @@
 
 kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 {
+#if defined(KAAPI_VERY_COMPACT_TASK)
+#warning TODO
   kaapi_thread_context_t* ctxt;
   kaapi_wsqueuectxt_cell_t* cell;
   
@@ -102,6 +104,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 
     cell = cell->next;
   }
+#endif
 
   return 0; 
 }

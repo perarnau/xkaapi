@@ -48,11 +48,21 @@
 */
 kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key)
 {
+  int i;
   kaapi_uint8_t        entry = ((unsigned long)key) & 0xFF;
   kaapi_format_t* head =  kaapi_all_format_bybody[entry];
 
   if (head ==0) return 0;
-
-  return head;  
+  
+  while (head !=0)
+  {
+    /* here we may be only need to look at the current architecture */
+    for (i =0; i<KAAPI_MAX_ARCHITECTURE; ++i)
+      if (head->entrypoint[i] == key)
+      {
+        return head;
+      }
+    head = head->next_bybody;
+  }
   return 0;
 }

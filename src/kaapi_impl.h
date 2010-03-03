@@ -93,7 +93,7 @@ extern "C" {
 
 
 // This is the new version on top of X-Kaapi
-extern const char* get_kaapi_version();
+extern const char* get_kaapi_version(void);
 
 /** Global hash table of all formats: body -> fmt
 */
@@ -219,6 +219,10 @@ typedef struct kaapi_hashmap_t {
 /*
 */
 extern int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc );
+
+/*
+*/
+extern int kaapi_hashmap_clear( kaapi_hashmap_t* khm );
 
 /*
 */
@@ -412,40 +416,13 @@ static inline kaapi_stack_t* kaapi_request_data( kaapi_reply_t* reply )
   return reply->data; 
 }
 
-/** Body of task steal created on thief stack to execute a task
-*/
-#if defined(KAAPI_VERY_COMPACT_TASK)
-extern void _kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
-enum { kaapi_tasksteal_body = 6 };
-
-/** Write result after a steal 
-*/
-extern void _kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
-enum { kaapi_taskwrite_body = 7 };
-
-/** Merge result after a steal
-*/
-extern void _kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
-enum { kaapi_aftersteal_body = 8 };
-#else
-extern void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
-
-/** Write result after a steal 
-*/
-extern void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
-
-/** Merge result after a steal
-*/
-extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
-#endif
 
 /** Args for tasksteal
 */
 typedef struct kaapi_tasksteal_arg_t {
   kaapi_stack_t*    origin_stack;      /* stack where task was stolen */
   kaapi_task_t*     origin_task;       /* the stolen task into origin_stack */
-  kaapi_format_t*   origin_fmt;        /* its format */
-  void*             copy_arg;          /* set by tasksteal */
+  kaapi_format_t*   origin_fmt;        /* set by tasksteal the stolen task into origin_stack */
 } kaapi_tasksteal_arg_t;
 
 
