@@ -49,11 +49,10 @@
 */
 int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc )
 {
+  khm->allallocatedbloc = 0;
+  khm->currentbloc = initbloc;
   if (initbloc !=0)
-  {
-    khm->currentbloc = initbloc;
     khm->currentbloc->pos = 0;
-  }
   return 0;
 }
 
@@ -61,7 +60,7 @@ int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc
 */
 int kaapi_hashmap_clear( kaapi_hashmap_t* khm )
 {
-  memset( khm, 0, sizeof(kaapi_hashmap_t) );
+  memset( &khm->entries, 0, sizeof(khm->entries) );
   if (khm->currentbloc !=0)
     khm->currentbloc->pos = 0;
   return 0;

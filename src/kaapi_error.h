@@ -45,6 +45,7 @@
 */
 #ifndef _KAAPI_ERROR_H
 #define _KAAPI_ERROR_H 1
+#include <stdlib.h>
 
 #if defined(__cplusplus)
 extern "C" {

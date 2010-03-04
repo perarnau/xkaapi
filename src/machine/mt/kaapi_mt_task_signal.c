@@ -47,11 +47,7 @@
 
 /**
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
-void _kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#else
-void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
-#endif
+void kaapi_tasksig_body( void* taskarg, kaapi_stack_t* stack)
 {
   /*
     printf("Thief end, @stack: 0x%p\n", stack);
@@ -60,14 +56,14 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
   kaapi_tasksig_arg_t* argsig;
   kaapi_task_t* task2sig;
 
-  argsig = kaapi_task_getargst( task, kaapi_tasksig_arg_t);
+  argsig = (kaapi_tasksig_arg_t*)taskarg;
   task2sig = argsig->task2sig;
-  KAAPI_LOG(100, "signaltask: 0x%p -> task2signal: 0x%p\n", (void*)task, (void*)task2sig );
 
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
     kaapi_task_setbody(task2sig, kaapi_aftersteal_body );
   }
+#if 0
   if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOPREEMPT) ) /* required preemption */
   {
     /* mark result as produced */
@@ -78,14 +74,16 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
     }
     argsig->result->thief_term = 1;
   }
+#endif
 
   /* flush in memory all pending write and read ops */  
   kaapi_mem_barrier();
 
+#if 0  
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
   }
-  else /* partial steal -> adaptive task */
+else /* partial steal -> adaptive task */
   {
     if ( !(argsig->flag & KAAPI_TASK_ADAPT_NOSYNC) ) /* required synchronisation */
     {
@@ -102,5 +100,6 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
       }
     }
   }
-}
+#endif
+  }
 

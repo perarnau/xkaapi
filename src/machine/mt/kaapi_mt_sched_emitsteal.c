@@ -128,7 +128,7 @@ redo_select:
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
       /* user version that do not decrement the counter */
-      _kaapi_request_reply( 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0, 0 );
+      _kaapi_request_reply( victim.kproc, 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0, 0 );
       ++replycount;
     }
   }
@@ -137,7 +137,7 @@ redo_select:
   if (replycount >0)
   {
     kaapi_writemem_barrier();
-    KAAPI_ATOMIC_SUB( &victim.kproc->hlrequests.count, replycount );
+/*    KAAPI_ATOMIC_SUB( &victim.kproc->hlrequests.count, replycount );: reply to the decr */
     kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) >= 0 );
   }
 

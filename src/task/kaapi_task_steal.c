@@ -48,7 +48,7 @@
 
 /**
 */
-void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_taskwrite_body( void* taskarg, kaapi_stack_t* stack )
 {
   int i;
   int countparam;
@@ -58,7 +58,7 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
   kaapi_access_t*     access_param;
   void*               tmp;
 
-  kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( task, kaapi_tasksteal_arg_t );
+  kaapi_tasksteal_arg_t* arg = (kaapi_tasksteal_arg_t*)taskarg;
   orig_task_args   = kaapi_task_getargs(arg->origin_task);
 
   countparam = arg->origin_fmt->count_params;
@@ -71,22 +71,24 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
   for (i=0; i<countparam; ++i)
   {
     mode_param = KAAPI_ACCESS_GET_MODE(arg->origin_fmt->mode_params[i]);
-    if (mode_param == KAAPI_ACCESS_MODE_V) continue;
 
-    data_param = (void*)(arg->origin_fmt->off_params[i] + (char*)orig_task_args);
-    access_param = (kaapi_access_t*)(data_param);
+    if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
+    {
+      data_param = (void*)(arg->origin_fmt->off_params[i] + (char*)orig_task_args);
+      access_param = (kaapi_access_t*)(data_param);
 
-    /* swap */
-    tmp = access_param->data;
-    access_param->data = access_param->version;
-    access_param->version = tmp;
+      /* swap */
+      tmp = access_param->data;
+      access_param->data = access_param->version;
+      access_param->version = tmp;
+    }
   }
 }
 
 
 /**
 */
-void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_tasksteal_body( void* taskarg, kaapi_stack_t* stack )
 {
   int i;
   int                    countparam;
@@ -98,11 +100,10 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   void*               data_param;
   kaapi_format_t*     fmt_param;
   kaapi_access_t*     access_param;
-  void*               tmp;
 
   
   /* get information of the task to execute */
-  arg = kaapi_task_getargst( task, kaapi_tasksteal_arg_t );
+  arg = (kaapi_tasksteal_arg_t*)taskarg;
 
   /* format of the original stolen task */  
   body = kaapi_task_getextrabody(arg->origin_task);
@@ -120,21 +121,16 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   for (i=0; i<countparam; ++i)
   {
     mode_param = KAAPI_ACCESS_GET_MODE(arg->origin_fmt->mode_params[i]);
-    if (mode_param == KAAPI_ACCESS_MODE_V) continue;
-    
-    data_param = (void*)(arg->origin_fmt->off_params[i] + (char*)orig_task_args);
-    access_param = (kaapi_access_t*)(data_param);
-    fmt_param = arg->origin_fmt->fmt_params[i];
-
-    /* swap */
-    tmp = access_param->data;
-    access_param->data = access_param->version;
-    access_param->version = tmp;
     
     if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
     {
-      kaapi_assert( access_param->data == 0);
-      access_param->data           = malloc(fmt_param->size);
+      data_param = (void*)(arg->origin_fmt->off_params[i] + (char*)orig_task_args);
+      access_param = (kaapi_access_t*)(data_param);
+      fmt_param = arg->origin_fmt->fmt_params[i];
+
+      /* store old value in version and allocate new data */
+      access_param->version = access_param->data;
+      access_param->data    = malloc(fmt_param->size);
     }
   }
 
@@ -142,6 +138,5 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
      - replace tasksteal_body by nopbody to allows thief to steal down the stack
      - normally -> no splitter, no possibility to call splitter...
   */
-  kaapi_task_setbody(task, kaapi_nop_body);
   body(orig_task_args, stack);
 }

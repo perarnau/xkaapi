@@ -8,9 +8,9 @@
 int fiboseq(int n)
 { return (n<2 ? n : fiboseq(n-1)+fiboseq(n-2) ); }
 
-void sum_body( kaapi_task_t* task, kaapi_stack_t* stack );
-void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack );
-void print_body( kaapi_task_t* task, kaapi_stack_t* stack );
+void sum_body( void* taskarg, kaapi_stack_t* stack );
+void fibo_body( void* taskarg, kaapi_stack_t* stack );
+void print_body( void* taskarg, kaapi_stack_t* stack );
 
 typedef struct sum_arg_t {
   kaapi_access_t result;
@@ -29,9 +29,9 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     (const kaapi_format_t*[]) { &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
 )
 
-void sum_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void sum_body( void* taskarg, kaapi_stack_t* stack )
 {
-  sum_arg_t* arg0 = kaapi_task_getargst( task, sum_arg_t);
+  sum_arg_t* arg0 = (sum_arg_t*)taskarg;
   *KAAPI_DATA(int, arg0->result) = *KAAPI_DATA(int, arg0->subresult1) + *KAAPI_DATA(int, arg0->subresult2);
 }
 
@@ -51,9 +51,9 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
     (const kaapi_format_t*[]) { &kaapi_int_format, &kaapi_int_format }
 )
 
-void fibo_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void fibo_body( void* taskarg, kaapi_stack_t* stack )
 {
-  fibo_arg_t* arg0 = kaapi_task_getargst( task, fibo_arg_t);
+  fibo_arg_t* arg0 = (fibo_arg_t*)taskarg;
 #if defined(KAAPI_TRACE_DEBUG)  
   printf("Fibo(%i)", arg0->n);
 #endif
@@ -132,9 +132,9 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
     (const kaapi_format_t*[]) { &kaapi_double_format, &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
 )
 
-void print_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void print_body( void* taskarg, kaapi_stack_t* stack )
 {
-  print_arg_t* arg0 = kaapi_task_getargst( task, print_arg_t);
+  print_arg_t* arg0 = (print_arg_t*)taskarg;
   printf("Fibo(%i)=%i\n", arg0->n, *KAAPI_DATA(int, arg0->result));
   printf("Time: %g\n", arg0->delay/arg0->niter);
 }

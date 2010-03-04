@@ -139,7 +139,7 @@ static int kaapi_sched_stealframe(
   task_top   = kaapi_stack_toptask(stack);
   task_exec  = 0;
   replycount = 0;
-  while ( (count >0) && (task_bot != task_top) && ( (task_body = kaapi_task_getbody(task_bot)) != kaapi_retn_body) )
+  while ( (count > replycount) && (task_bot != task_top) && ( (task_body = kaapi_task_getbody(task_bot)) != kaapi_retn_body) )
   {
     /* skip nop: nop correspond to already executed task, do not find in hash map
        their data because the next lookup will return data as "not known" and thus ready whatever is
@@ -160,7 +160,6 @@ static int kaapi_sched_stealframe(
         if (kaapi_task_casstate(task_bot, task_body, kaapi_suspend_body)) 
         {
           replycount += kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );
-          /* WARN SHOULD += */
         }
       }
     }
@@ -177,7 +176,8 @@ label_continue:
     if (kaapi_task_casstate(task_exec, kaapi_exec_body, kaapi_nop_body)) 
     {
       replycount += kaapi_sched_stealframe( stack, task_bot-1, map, count, request );
-      kaapi_task_setbody(task_bot, task_body);
+      /* reset normal body on task_exec */
+      kaapi_task_setbody(task_exec, kaapi_exec_body);
     }
   }
   return replycount;
@@ -211,9 +211,13 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr, int coun
   /* steal frame by frame in recursive fashion */
   task_bot  = kaapi_stack_bottomtask(stack);
   task_body = kaapi_task_getbody(task_bot);
-  if (!kaapi_task_casstate(task_bot, task_body, kaapi_nop_body)) return 0;
+
+  /* assume task_body == kaapi_exec_body, lock it in order to avoid the retn */
+  if (!kaapi_task_casstate(task_bot, kaapi_exec_body, kaapi_nop_body)) return 0;
   replycount = kaapi_sched_stealframe( stack, task_bot, &access_to_gd, count, request );
   kaapi_task_setbody(task_bot, task_body);
+
+  kaapi_hashmap_destroy( &access_to_gd );
 
   return replycount;
 }

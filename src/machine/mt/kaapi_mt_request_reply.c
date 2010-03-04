@@ -79,20 +79,21 @@ static inline size_t compute_struct_size(size_t data_size)
 */
 int _kaapi_request_reply
 ( 
-  kaapi_stack_t* stack, 
-  kaapi_task_t* task, 
-  kaapi_request_t* request, 
-  kaapi_stack_t* thief_stack, 
-  int size, int retval,
-  int insert_head
+  kaapi_processor_t* kproc, 
+  kaapi_stack_t*     stack, 
+  kaapi_task_t*      task, 
+  kaapi_request_t*   request, 
+  kaapi_stack_t*     thief_stack, 
+  int                size, 
+  int                retval,
+  int                insert_head
 )
 {
-#if defined(KAAPI_VERY_COMPACT_TASK)
-#warning TODO
   kaapi_taskadaptive_result_t* result =0;
-  kaapi_taskadaptive_t* ta =0;
+  kaapi_taskadaptive_t* ta __attribute__((unused))=0;
   kaapi_taskadaptive_t* thief_ta = 0;
   int flag;
+  kaapi_assert_debug( kproc != 0 );
   kaapi_assert_debug( request != 0 );
   
   flag = request->flag;
@@ -109,6 +110,7 @@ int _kaapi_request_reply
        - if complete steal of the task -> signal sould pass the body to aftersteal body
        If steal an
     */
+#if 0
     if (flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)
     {
       ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
@@ -180,11 +182,9 @@ int _kaapi_request_reply
     {
       flag |= KAAPI_TASK_ADAPT_NOPREEMPT;
     }
-
+#endif
     sig = kaapi_stack_toptask( thief_stack );
-    sig->flag = KAAPI_TASK_STICKY;
-    kaapi_task_setbody( sig, kaapi_tasksig_body );
-    kaapi_task_setargs( sig, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksig_arg_t)));
+    kaapi_task_init( sig, kaapi_tasksig_body, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksig_arg_t)) );
     argsig           = kaapi_task_getargst( sig, kaapi_tasksig_arg_t);
     argsig->task2sig = task;
     argsig->flag     = flag;
@@ -195,74 +195,75 @@ int _kaapi_request_reply
 
     request->status  = KAAPI_REQUEST_S_EMPTY;
     request->reply->data = thief_stack;
+    KAAPI_ATOMIC_DECR( &kproc->hlrequests.count ); 
+    kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) >= 0 );
     kaapi_writemem_barrier();
     request->reply->status = KAAPI_REQUEST_S_SUCCESS;
   }
   else 
   {
     request->status = KAAPI_REQUEST_S_EMPTY;
+    KAAPI_ATOMIC_DECR( &kproc->hlrequests.count ); 
+    kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) >= 0 );
     kaapi_writemem_barrier();
     request->reply->status = KAAPI_REQUEST_S_FAIL;
   }
-#endif
   return 0;
 }
+
 
 /* This is the public function to be used with adaptive algorithm.
    Be carreful: to not use this function inside the library where reply count is accumulate
    before decremented to the counter.
 */
-int kaapi_request_reply( 
-  kaapi_stack_t* stack, 
-  kaapi_task_t* task, 
-  kaapi_request_t* request, 
-  kaapi_stack_t* thief_stack, 
-  int size, 
-  int retval )
-{
-  int err;
-  request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
-  err=_kaapi_request_reply( stack, task, request, thief_stack, size, retval, 0);
-  KAAPI_ATOMIC_DECR( &stack->_proc->hlrequests.count ); 
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count) >= 0 );
-  return err;
-}
-
-/*
-*/
-int kaapi_request_reply_head
-(
- kaapi_stack_t* stack, 
- kaapi_task_t* task, 
- kaapi_request_t* request, 
- kaapi_stack_t* thief_stack, 
- int size, int retval
+int kaapi_request_reply ( 
+  kaapi_stack_t*     stack, 
+  kaapi_task_t*      task, 
+  kaapi_request_t*   request, 
+  kaapi_stack_t*     thief_stack, 
+  int                size, 
+  int                retval
 )
 {
   int err;
   request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
-  err=_kaapi_request_reply( stack, task, request, thief_stack, size, retval, 1);
-  KAAPI_ATOMIC_DECR( &stack->_proc->hlrequests.count ); 
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count) >= 0 );
+  err=_kaapi_request_reply( stack->_proc, stack, task, request, thief_stack, size, retval, 0);
   return err;
 }
 
+
 /*
 */
-int kaapi_request_reply_tail
-(
- kaapi_stack_t* stack, 
- kaapi_task_t* task, 
- kaapi_request_t* request, 
- kaapi_stack_t* thief_stack, 
- int size, int retval 
+int kaapi_request_reply_head (
+  kaapi_stack_t*     stack, 
+  kaapi_task_t*      task, 
+  kaapi_request_t*   request, 
+  kaapi_stack_t*     thief_stack, 
+  int                size, 
+  int                retval
 )
 {
   int err;
   request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
-  err=_kaapi_request_reply( stack, task, request, thief_stack, size, retval, 0);
-  KAAPI_ATOMIC_DECR( &stack->_proc->hlrequests.count ); 
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count) >= 0 );
+  err=_kaapi_request_reply( stack->_proc, stack, task, request, thief_stack, size, retval, 1);
+  return err;
+}
+
+
+/*
+*/
+int kaapi_request_reply_tail (
+  kaapi_stack_t*     stack, 
+  kaapi_task_t*      task, 
+  kaapi_request_t*   request, 
+  kaapi_stack_t*     thief_stack, 
+  int                size, 
+  int                retval
+)
+{
+  int err;
+  request->flag |= KAAPI_REQUEST_FLAG_PARTIALSTEAL;
+  err=_kaapi_request_reply( stack->_proc, stack, task, request, thief_stack, size, retval, 0);
   return err;
 }
 

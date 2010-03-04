@@ -46,10 +46,10 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMP
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body(void* taskarg, kaapi_stack_t* stack)
   {
     static TaskBodyCPU<TASK> dummy;
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = kaapi_task_getargst(t, TaskArg_t);')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (Thread*)stack M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
@@ -66,10 +66,10 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAM
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body(void* taskarg, kaapi_stack_t* stack)
   {
     static TaskBodyCPU<TASK> dummy;
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = kaapi_task_getargst(t, TaskArg_t);')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };
@@ -91,10 +91,10 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMP
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
   /* with stack parameters */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body(void* taskarg, kaapi_stack_t* stack)
   {
     static TaskBodyGPU<TASK> dummy;
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = kaapi_task_getargst(t, TaskArg_t);')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (Thread*)stack M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
@@ -112,10 +112,10 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAM
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body(void* taskarg, kaapi_stack_t* stack)
   {
     static TaskBodyGPU<TASK> dummy;
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = kaapi_task_getargst(t, TaskArg_t);')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };

@@ -63,6 +63,8 @@
    Exec child will execute all tasks previously forked by pc task.
    Thus it first look for retn taks that mark begin of the next frame
    that contains the task.
+   
+   PC should be cached
 */
 int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
 {
@@ -97,7 +99,7 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
     saved_sp_data = stack->sp_data;
 
     /* exec la tache */
-    body( pc, stack );
+    body( pc->sp, stack );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
@@ -106,9 +108,8 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
     {
       if (err != -EAGAIN) /* set by retn */
         goto label_return;
-      pc = stack->pc; 
-      if (pc == pc_stop) goto label_return;
-      pc--;
+      if (stack->pc == pc_stop) goto label_return;
+      pc = --stack->pc;
       err = stack->errcode = 0;
       continue;
     }
@@ -128,11 +129,11 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
       kaapi_stack_pushtask(stack);
 
       /* update pc to the first forked task */
-      pc = stack->saved_sp;
+      pc = stack->pc = stack->saved_sp;
     }
     else {
-      if (pc == pc_stop) goto label_return;
-      --pc;
+      if (stack->pc == pc_stop) goto label_return;
+      pc = --stack->pc;
     }
 
     /* process steal request 
@@ -158,11 +159,10 @@ label_return:
   if (err == EINTR)
   {
     /* mark current task executed */
-    kaapi_task_setbody(pc, kaapi_nop_body);
-    --pc;
+    kaapi_task_setbody(stack->pc, kaapi_nop_body);
+    --stack->pc;
   }
   else if (err == -EAGAIN) err = 0;
-  stack->pc = pc;
   stack->errcode = 0;
   return err;
 }

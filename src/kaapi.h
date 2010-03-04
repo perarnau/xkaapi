@@ -69,6 +69,7 @@
 
 
 #include <stdint.h>
+#include <stdio.h>
 #include <errno.h>
 #include "kaapi_error.h"
 
@@ -123,7 +124,7 @@ struct kaapi_stack_t;
 /** Task body
     \ingroup TASK
 */
-typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task*/, struct kaapi_stack_t* /* stack */);
+typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_stack_t* /* stack */);
 /* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
@@ -657,57 +658,57 @@ static inline kaapi_task_bodyid_t kaapi_task_getextrabody(kaapi_task_t* task)
 /** Body of the nop task 
     \ingroup TASK
 */
-extern void kaapi_nop_body( kaapi_task_t*, kaapi_stack_t*);
+extern void kaapi_nop_body( void*, kaapi_stack_t*);
 
 /** Body of the startup task 
     \ingroup TASK
 */
-extern void kaapi_taskstartup_body( kaapi_task_t*, kaapi_stack_t*);
+extern void kaapi_taskstartup_body( void*, kaapi_stack_t*);
 
 /** Body of the task that restore the frame pointer 
     \ingroup TASK
 */
-extern void kaapi_retn_body( kaapi_task_t*, kaapi_stack_t*);
+extern void kaapi_retn_body( void*, kaapi_stack_t*);
 
 /** Body of the task that mark a task to suspend execution
     \ingroup TASK
 */
-extern void kaapi_suspend_body( kaapi_task_t*, kaapi_stack_t*);
+extern void kaapi_suspend_body( void*, kaapi_stack_t*);
 
 /** Body of the task that mark a task as under execution
     \ingroup TASK
 */
-extern void kaapi_exec_body( kaapi_task_t*, kaapi_stack_t*);
+extern void kaapi_exec_body( void*, kaapi_stack_t*);
 
 /** Body of task steal created on thief stack to execute a task
     \ingroup TASK
 */
-extern void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void kaapi_tasksteal_body( void* task, kaapi_stack_t* stack );
 
 /** Write result after a steal 
     \ingroup TASK
 */
-extern void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void kaapi_taskwrite_body( void* task, kaapi_stack_t* stack );
 
 /** Body of the task that do signal to a task after steal op
     \ingroup TASK
 */
-extern void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack);
+extern void kaapi_tasksig_body( void* task, kaapi_stack_t* stack);
 
 /** Merge result after a steal
     \ingroup TASK
 */
-extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
+extern void kaapi_aftersteal_body( void* task, kaapi_stack_t* stack);
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
 */
-extern void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void kaapi_taskfinalize_body( void* task, kaapi_stack_t* stack );
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
 */
-extern void kaapi_adapt_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void kaapi_adapt_body( void* task, kaapi_stack_t* stack );
 
 /** The main task 
     \ingroup TASK
@@ -717,7 +718,7 @@ typedef struct kaapi_taskmain_arg_t {
   char** argv;
   void (*mainentry)(int, char**);
 } kaapi_taskmain_arg_t;
-extern void kaapi_taskmain_body( kaapi_task_t* task, kaapi_stack_t* stack );
+extern void kaapi_taskmain_body( void* task, kaapi_stack_t* stack );
 
 
 

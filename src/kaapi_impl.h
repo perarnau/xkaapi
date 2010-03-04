@@ -358,10 +358,11 @@ extern int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int
     This function is machine dependent.
 */
 extern int _kaapi_request_reply( 
-    kaapi_stack_t* stack, 
-    kaapi_task_t* task, 
-    kaapi_request_t* request, 
-    kaapi_stack_t* thief_stack, 
+    kaapi_processor_t* kproc,
+    kaapi_stack_t*     stack, 
+    kaapi_task_t*      task, 
+    kaapi_request_t*   request, 
+    kaapi_stack_t*     thief_stack, 
     int size, int retval, int insert_head
 );
 

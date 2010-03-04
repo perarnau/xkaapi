@@ -47,12 +47,10 @@
 
 /*#define KAAPI_TRACE_DEBUG*/
 
-/**kaapi_stack_taskexecall
+/** PC should be cached
 */
 int kaapi_stack_execall(kaapi_stack_t* stack) 
 {
-  register kaapi_task_t* pc;
-
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t         cnt_tasks = 0;
 #endif  
@@ -66,12 +64,11 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   if (kaapi_stack_isempty( stack ) ) return 0;
 
   /* main loop */
-  pc = stack->pc;
-  while (pc != stack->sp)
+  while (stack->pc != stack->sp)
   {
-    body = pc->body;
+    body = stack->pc->body;
 
-    if (!kaapi_task_casstate(pc, body, kaapi_exec_body)) 
+    if (!kaapi_task_casstate(stack->pc, body, kaapi_exec_body)) 
     {
       err= EWOULDBLOCK;
       goto label_return;
@@ -82,7 +79,7 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
     saved_sp_data = stack->sp_data;
     
     /* exec la tache */
-    body( pc, stack );
+    body( stack->pc->sp, stack );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
@@ -90,8 +87,7 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
     {
       if (err != -EAGAIN) /* set by retn */
         goto label_return;
-      pc = stack->pc; 
-      --pc;
+      --stack->pc;
       err = stack->errcode = 0;
       continue;
     }
@@ -105,17 +101,17 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
 
       frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
       retn->sp = (void*)frame;
-      frame->pc = pc; /* <=> save pc, will mark this task as term after pop !! */
+      frame->pc = stack->pc; /* <=> save pc, will mark this task as term after pop !! */
       frame->sp = stack->saved_sp;
       frame->sp_data = saved_sp_data;
       kaapi_stack_pushtask(stack);
 
       /* update pc to the first forked task */
-      pc = stack->saved_sp;
+      stack->pc = stack->saved_sp;
     }
     else {
-      kaapi_task_setbody(pc, kaapi_nop_body);
-      --pc;
+      kaapi_task_setbody(stack->pc, kaapi_nop_body);
+      --stack->pc;
     }
 
     /* process steal request 
@@ -141,10 +137,9 @@ label_return:
   if (err == EINTR)
   {
     /* mark current task executed */
-    kaapi_task_setbody(pc, kaapi_nop_body);
-    --pc;
+    kaapi_task_setbody(stack->pc, kaapi_nop_body);
+    --stack->pc;
   }
-  stack->pc = pc;
   stack->errcode = 0;
   return err;
 }

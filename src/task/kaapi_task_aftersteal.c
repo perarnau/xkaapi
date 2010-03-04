@@ -47,20 +47,18 @@
 
 /**
 */
-void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_aftersteal_body( void* taskarg, kaapi_stack_t* stack)
 {
   int i, countparam;
   kaapi_format_t* fmt;   /* format of the task */
-  void*           arg;
   void*           data_param;
   kaapi_format_t* fmt_param;
   kaapi_access_t* access_param;
   
   /* the task has been stolen: the extra body contains the original task body */
-  fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(task) );
+  fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(stack->pc) );
   kaapi_assert_debug( fmt !=0 );
 
-  arg = kaapi_task_getargs(task);
   countparam = fmt->count_params;
 
   /* for each access parameter, we have:
@@ -78,7 +76,7 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
 
     if (KAAPI_ACCESS_IS_ONLYWRITE(m))
     {
-      data_param = (void*)(fmt->off_params[i] + (char*)arg);
+      data_param = (void*)(fmt->off_params[i] + (char*)taskarg);
       fmt_param = fmt->fmt_params[i];
       access_param = (kaapi_access_t*)(data_param);
 

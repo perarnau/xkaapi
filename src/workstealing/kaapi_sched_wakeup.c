@@ -47,8 +47,6 @@
 
 kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 {
-#if defined(KAAPI_VERY_COMPACT_TASK)
-#warning TODO
   kaapi_thread_context_t* ctxt;
   kaapi_wsqueuectxt_cell_t* cell;
   
@@ -57,7 +55,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
     return ctxt;
 #else
   /* only steal the ready context if any */
-  if (kproc->ready !=0) {
+  if (kproc->ready !=0) 
+  {
     ctxt = kproc->ready;
     kproc->ready = 0;
     return ctxt;
@@ -68,10 +67,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
   while (cell !=0)
   {
     ctxt = cell->stack;
-    kaapi_task_t*  task = ctxt->pc;
-    if ( (KAAPI_ATOMIC_READ(&cell->state) == 0) && 
-         (kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || 
-         (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
+    kaapi_task_t* task = ctxt->pc;
+    if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
     {
       int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
       if (opok)
@@ -104,7 +101,6 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 
     cell = cell->next;
   }
-#endif
 
   return 0; 
 }

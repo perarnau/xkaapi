@@ -46,70 +46,20 @@
 #include "kaapi_impl.h"
 #include <stdio.h>
 
-
-/* return the string that decode the flags */
-static const char* FLAG_NAME[KAAPI_TASK_MASK_FLAGS+1];
-static const char* __attribute__((unused)) kaapi_getflagsname( unsigned int flag ) 
+/*
+ * E -> execution
+ * S -> steal
+ * T -> terminee ou nop
+ * X -> terminee apres vol
+ */
+static char kaapi_getstatename( kaapi_task_t* task )
 {
-  int i;
-  char* buffer;
-  static int isinit= 0;
-  if (isinit) return FLAG_NAME[flag & KAAPI_TASK_MASK_FLAGS];
-  
-  buffer = malloc( 5 * (KAAPI_TASK_MASK_FLAGS+1) );
-  for (i=0; i<KAAPI_TASK_MASK_FLAGS+1; ++i) 
-  {
-    char* name = buffer + 5*i; 
-    if (i & KAAPI_TASK_STICKY) name[0] = 's';
-    else name[0]='_';
-    if (i & KAAPI_TASK_ADAPTIVE) name[1] = 'a';
-    else name[1]='_';
-    if (i & KAAPI_TASK_DFG) name[2] = 'd';
-    else name[2]='_';
-    if (i & KAAPI_TASK_LOCALITY) name[3] = 'l';
-    else name[3]='_';
-    name[4] = 0; /* end of name */
-    FLAG_NAME[i] = name;
-  }
-  isinit = 1;
-  return FLAG_NAME[flag & KAAPI_TASK_MASK_FLAGS];
-}
-
-
-static char kaapi_getstatename( kaapi_task_t* task __attribute__((unused)))
-{
-#if defined(KAAPI_VERY_COMPACT_TASK)
-#warning TODO
-  kaapi_task_state_t state = kaapi_task_getstate(task);
-  switch (state) {
-    case KAAPI_TASK_S_INIT:  return 'I';
-    case KAAPI_TASK_S_EXEC:  
-      if (kaapi_task_getbody(task) == kaapi_aftersteal_body) 
-        return 'e';
-      else 
-        return 'E';
-    case KAAPI_TASK_S_STEAL: 
-      if (kaapi_task_getbody(task) == kaapi_aftersteal_body) 
-        return 's';
-      else 
-        return 'S';
-    case KAAPI_TASK_S_TERM:
-      if (kaapi_task_getbody(task) == kaapi_aftersteal_body) 
-        return 't';
-      else 
-        return 'T';
-    default: return '!';
-  }
-#endif
-  return ' ';
-}
-
-static char kaapi_getreadyname(kaapi_task_t* task __attribute__((unused)))
-{
-#if defined(KAAPI_VERY_COMPACT_TASK)
-  if (task->flag & KAAPI_TASK_MASK_READY) return 'R';
-#endif
-  return '?';
+  kaapi_task_body_t body = kaapi_task_getbody(task);
+  if (body == kaapi_exec_body) return 'E';
+  else if (body == kaapi_suspend_body) return 'S';
+  else if (body ==kaapi_nop_body) return 'T';
+  else if (body ==kaapi_aftersteal_body) return 'X';
+  return 'I';
 }
 
 static char kaapi_getmodename( kaapi_access_mode_t m )
@@ -130,16 +80,14 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
 int kaapi_task_print( 
   FILE* file,
   kaapi_task_t* task, 
-  kaapi_task_bodyid_t taskid 
+  kaapi_task_body_t body 
 )
 {
-#if defined(KAAPI_VERY_COMPACT_TASK)
-#warning "TODO"
   const kaapi_format_t* fmt;
   void* splitter = 0;
   int i;
 
-  fmt = kaapi_format_resolvebybody( taskid );
+  fmt = kaapi_format_resolvebybody( body );
   if (fmt ==0) return 0;
 
   if (kaapi_task_isadaptive(task))
@@ -147,11 +95,9 @@ int kaapi_task_print(
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
     splitter = (void*)(uintptr_t)ta->splitter;
   }
-  fprintf( file, "@%p |%c%c%s|, name:%s, splitter:%p, #p:%i ", 
+  fprintf( file, "@%p |%c|, name:%s, splitter:%p, #p:%i ", 
         (void*)task, 
-        kaapi_getreadyname(task),
         kaapi_getstatename(task), 
-        kaapi_getflagsname(task->flag), 
         fmt->name, 
         splitter,
         fmt->count_params );
@@ -186,7 +132,6 @@ int kaapi_task_print(
   fputc('\n', file );
 
   fflush(file);
-#endif
   return 0;
 }
 
@@ -195,8 +140,6 @@ int kaapi_task_print(
 */
 int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
 {
-#if defined(KAAPI_VERY_COMPACT_TASK)
-#warning "TODO"
   FILE* file;
   kaapi_task_t*  task_top;
   kaapi_task_t*  task_bot;
@@ -240,12 +183,10 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
       else if ( kaapi_task_getbody(task_bot) == kaapi_aftersteal_body) 
         fname = "aftersteal";
         
-      fprintf( file, "  [%04i]: @%p |%c%c%s|, name:%s", 
+      fprintf( file, "  [%04i]: @%p |%c|, name:%s", 
             count, 
             (void*)task_bot,
-            kaapi_getreadyname(task_bot),
             kaapi_getstatename(task_bot), 
-            kaapi_getflagsname(task_bot->flag), 
             fname
 	    );
       
@@ -257,12 +198,17 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
       else if (kaapi_task_getbody(task_bot) == kaapi_tasksteal_body)
       {
         kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( task_bot, kaapi_tasksteal_arg_t );
-        fprintf(file, ", stolen task:" );
+        fprintf(file, ", steal task:" );
         kaapi_task_print(file, arg->origin_task, kaapi_task_getbody(arg->origin_task));
       }
       else if (kaapi_task_getbody(task_bot) == kaapi_aftersteal_body)
       {
         fprintf(file, ", terminated task:" );
+        kaapi_task_print(file, task_bot, kaapi_task_getextrabody(task_bot));
+      }
+      else if (kaapi_task_getbody(task_bot) == kaapi_suspend_body)
+      {
+        fprintf(file, ", teft task:" );
         kaapi_task_print(file, task_bot, kaapi_task_getextrabody(task_bot));
       }
       fputc('\n', file);
@@ -281,6 +227,5 @@ int kaapi_stack_print  ( int fd, kaapi_stack_t* stack )
   }
 
   fflush(file);
-#endif
   return 0;
 }
