@@ -83,7 +83,7 @@ KaapiComponent::~KaapiComponent()
 int KaapiComponent::initialize() throw()
 {
   if (_is_init) return 0; _is_init = true;
-  _startup_time = WallTimer::gettime();
+  _startup_time = kaapi_default_param.startuptime;
   return 0;
 }
 

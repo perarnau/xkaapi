@@ -181,7 +181,7 @@ std::ostream& logfile()
     std::cout << self << "::[" << std::setw(9) << std::setprecision(7) << std::showpoint; 
     std::cout.fill( '0' );
     std::cout.setf( std::ios_base::left, std::ios_base::adjustfield);
-    std::cout << ka::WallTimer::gettime() - Init::component.startup_time() << "]: ";
+    std::cout << double(kaapi_get_elapsedns() - kaapi_default_param.startuptime)*1e-6 << "]: ";
     return std::cout;
   }
   if (fout_per_process ==0) 
