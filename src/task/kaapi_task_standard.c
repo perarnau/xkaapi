@@ -95,6 +95,8 @@ void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
 */
 void kaapi_exec_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
+  /* do not allow rexecuting already executed task */
+  kaapi_assert_debug( 0 );
 }
 
 /*

@@ -72,23 +72,24 @@
 */
 
 /* iterative version */
-#define KAAPI_MAX_RECCALL 1024
 int kaapi_stack_execframe( kaapi_stack_t* stack )
 {
   register kaapi_task_t*     pc;
-  kaapi_frame_t     frame[KAAPI_MAX_RECCALL];
-  kaapi_frame_t*    pframe = frame;
+  kaapi_frame_t*    eframe = stack->pfsp;
   kaapi_task_body_t body;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_uint32_t         cnt_tasks = 0;
+#endif  
 
 enter_loop:
-  kaapi_stack_save_frame(stack, pframe);
-  stack->frame_sp = pframe->sp;
+  kaapi_stack_save_frame(stack, stack->pfsp);
+  stack->frame_sp = stack->pfsp->sp;
 
 begin_loop:
   /* stack growth down ! */
-  for (; pframe->pc != pframe->sp; --pframe->pc)
+  for (; stack->pfsp->pc != stack->pfsp->sp; --stack->pfsp->pc)
   {
-    pc = pframe->pc;
+    pc = stack->pfsp->pc;
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
     kaapi_assert_debug( body == pc->ebody);
@@ -98,30 +99,37 @@ begin_loop:
     pc->body = kaapi_exec_body;
 #endif
     body( pc, stack );
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
     if (__builtin_expect(stack->errcode,0)) goto backtrack_stack;
     
-    if (__builtin_expect(pframe->sp != stack->sp,0))
+    if (__builtin_expect(stack->pfsp->sp != stack->sp,0))
     {
-      stack->frame_sp = pframe->sp;
-      ++pframe;
-      kaapi_assert_debug( pframe-frame <KAAPI_MAX_RECCALL);
+      stack->frame_sp = stack->pfsp->sp;
+      /* here it's a push of frame */
+      ++stack->pfsp;
+      kaapi_assert_debug( stack->pfsp - eframe <KAAPI_MAX_RECCALL);
       goto enter_loop;
     }
   }
-  if (pframe != frame)
+  if (stack->pfsp != eframe)
   {
-    --pframe;
-    kaapi_assert_debug( pframe >= frame);
-    --pframe->pc;
-    stack->sp = pframe->sp;
-    stack->sp_data = pframe->sp_data;
-    stack->frame_sp = pframe->sp;
+    /* here it's a pop of frame */
+    --stack->pfsp;
+    kaapi_assert_debug( stack->pfsp >= eframe);
+    --stack->pfsp->pc;
+    stack->sp = stack->pfsp->sp;
+    stack->sp_data = stack->pfsp->sp_data;
+    stack->frame_sp = stack->pfsp->sp;
     goto begin_loop;
   }
-  stack->frame_sp = pframe->sp;
-  return 0;
+  stack->frame_sp = stack->pfsp->sp;
 
 backtrack_stack:
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+#endif
   /* here back track the kaapi_stack_execframe until go out */
   return stack->errcode;
 }

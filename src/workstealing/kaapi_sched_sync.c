@@ -129,8 +129,11 @@ int kaapi_sched_sync(kaapi_stack_t* stack)
   /* save here, do not restore pushed retn */
   kaapi_stack_save_frame(stack, &frame);
 
-  frame_sp = stack->frame_sp; /* next task to execute after pc, pc is under execution */
-
+  frame_sp = stack->frame_sp; /* should correspond to the pc counter */
+  
+  /* increment new frame ~ push */
+  ++stack->pfsp;
+  
 redo:
   err = kaapi_stack_execframe(stack);
   if (err == EWOULDBLOCK)
@@ -142,5 +145,12 @@ redo:
     return err;
   kaapi_stack_restore_frame(stack, &frame);
   stack->sp = stack->frame_sp = frame_sp;
+
+  /* decrement frame pointer ~ pop */
+  --stack->pfsp;
+
+  /* mark the next task of current running task as nop to avod rexec */
+  kaapi_task_setbody(frame_sp, kaapi_nop_body);
+
   return err;
 }

@@ -92,5 +92,10 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   stack->task     = pasttheend_task -1;
   stack->frame_sp = stack->sp = stack->task;
   stack->thiefsp  = stack->sp;
+  
+  stack->stackframe = malloc(sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL);
+  if (stack->stackframe ==0) return ENOMEM;
+  stack->pfsp = stack->stackframe;
+  
   return 0;
 }

@@ -177,9 +177,16 @@ extern int kaapi_advance(void);
 
 /* ========================================================================== */
 /** kaapi_get_elapsedtime
-    The function kaapi_get_elapsedtime() will return the elapsed time since an epoch.
+    The function kaapi_get_elapsedtime() will return the elapsed time in second
+    since an epoch.
 */
 extern double kaapi_get_elapsedtime(void);
+
+/** kaapi_get_elapsedns
+    The function kaapi_get_elapsedtime() will return the elapsed time since an epoch
+    in nano second unit.
+*/
+extern kaapi_uint64_t kaapi_get_elapsedns(void);
 
 
 /* ========================================================================== */
@@ -427,6 +434,17 @@ typedef int (*kaapi_task_reducer_t) (
 #endif
 );
 
+
+/** Kaapi frame definition
+   \ingroup STACK
+*/
+typedef struct kaapi_frame_t {
+    struct kaapi_task_t* pc;
+    struct kaapi_task_t* sp;
+    char*                sp_data;
+} kaapi_frame_t;
+
+
 /** Kaapi stack of tasks definition
    \ingroup STACK
    The stack store list of tasks as well as a stack of data.
@@ -442,12 +460,16 @@ typedef int (*kaapi_task_reducer_t) (
    The C-stack doesnot need to be saved in that case.
    
    \TODO save also the C-stack if we try to suspend execution during a task execution
+   \TODO a better separation between the thread context and the stack it self
 */
 typedef struct kaapi_stack_t {
+  /* this fields, until task/data are part of the execution engine... context of a thread ? */
   struct kaapi_task_t*      sp;             /** stack counter: next free task entry */
   struct kaapi_task_t*      frame_sp;       /** sp of the end of the current frame */
   char*                     sp_data;        /** stack counter for the data: next free data entry */
   int                       errcode;        /** set by task execution to signal incorrect execution */
+  kaapi_frame_t*            stackframe;     /** for execution, see kaapi_stack_execframe */
+  kaapi_frame_t*            pfsp; 
 
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   char*                     data;           /** stack of data with the same scope than task */
@@ -463,15 +485,6 @@ typedef struct kaapi_stack_t {
   struct kaapi_processor_t* _proc;          /** (internal) access to the attached processor */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
-
-/** Kaapi frame definition
-   \ingroup STACK
-*/
-typedef struct kaapi_frame_t {
-    struct kaapi_task_t* pc;
-    struct kaapi_task_t* sp;
-    char*                sp_data;
-} kaapi_frame_t;
 
 
 /* ========================================================================= */
@@ -1037,28 +1050,6 @@ static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_
   kaapi_stack_pushtask(stack);
   return 0;
 }
-
-/** \ingroup STACK
-    The function kaapi_stack_execchild() execute the given and all childs task.
-    If successful, the kaapi_stack_execchild() function will return zero.
-    Otherwise, an error number will be returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t data structure.
-    \retval EINVAL invalid argument: bad stack pointer
-    \retval EWOULDBLOCK the execution of the task will block the control flow.
-    \retval EINTR the control flow has received a KAAPI interrupt.
-*/
-extern int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* task);
-
-/** \ingroup STACK
-    The function kaapi_stack_execall() execute all the tasks in the stack following
-    the RFO order.
-    If successful, the kaapi_stack_execall() function will return zero and the stack is empty.
-    Otherwise, an error number will be returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t data structure.
-    \retval EINVAL invalid argument: bad stack pointer.
-    \retval EWOULDBLOCK the execution of the stack will block the control flow.
-*/
-extern int kaapi_stack_execall(kaapi_stack_t* stack);
 
 /** \ingroup STACK
     The function kaapi_sched_sync() execute all tasks from pc stack pointer and all their child tasks.
