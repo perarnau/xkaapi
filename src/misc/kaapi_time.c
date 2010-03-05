@@ -66,6 +66,8 @@ kaapi_uint64_t kaapi_get_elapsedns(void)
   kaapi_uint64_t retval = 0;
   int err = gettimeofday( &tv, 0);
   if (err  !=0) return 0;
-  retval = (tv.tv_usec * 1000000 + tv.tv_sec)*1000;
-  return retval;
+  retval = (kaapi_uint64_t)tv.tv_sec;
+  retval *= 1000000UL;
+  retval += (kaapi_uint64_t)tv.tv_usec;
+  return retval*1000UL;
 }
