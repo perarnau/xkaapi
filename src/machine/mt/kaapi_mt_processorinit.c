@@ -74,13 +74,13 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   KAAPI_STACK_CLEAR( &kproc->lfree );
 
   kproc->fnc_selecarg = 0;
-  kproc->fnc_select   = default_param.wsselect;
+  kproc->fnc_select   = kaapi_default_param.wsselect;
   
   /* workload */
   kproc->workload._counter= 0;
   
   /* allocate a stack */
-  k_stacksize = default_param.stacksize;
+  k_stacksize = kaapi_default_param.stacksize;
   k_sizetask  = k_stacksize / 2;
   k_sizedata  = k_stacksize - k_sizetask;
 

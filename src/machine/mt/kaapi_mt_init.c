@@ -115,10 +115,11 @@ void __attribute__ ((constructor)) kaapi_init(void)
 #endif
 
   /* set the kprocessor AFTER topology !!! */
-  kaapi_assert_m( 0, kaapi_setconcurrency( default_param.cpucount ), "kaapi_setconcurrency" );
+  kaapi_assert_m( 0, kaapi_setconcurrency( kaapi_default_param.cpucount ), "kaapi_setconcurrency" );
   
   pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
 
+/*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
   stack = _kaapi_self_stack();
   kaapi_stack_save_frame(stack, &main_frame);
@@ -127,16 +128,19 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_task_setextrabody( task, kaapi_taskstartup_body);
 
   kaapi_stack_pushtask(stack);
-  /* warning strong impact on execution, see kaapi_sched_sync */
+  /* WARNING strong impact on execution, see kaapi_sched_sync */
   stack->frame_sp = stack->sp;
+/*** END */
 
   /* dump output information */
 #if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", default_param.cpucount,kaapi_get_elapsedtime());
+  printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
 #else
-  printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
+  printf("[KAAPI::INIT] use #physical cpu:%u\n", kaapi_default_param.cpucount);
 #endif
   fflush( stdout );
+  
+  kaapi_default_param.startuptime = kaapi_get_elapsedns();
 }
 
 
@@ -229,7 +233,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     t_preempt +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
       
   /* */
-  if (default_param.display_perfcounter)
+  if (kaapi_default_param.display_perfcounter)
   {
 
     printf("----- Performance counters, core   : %i\n", i);
@@ -263,7 +267,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* */
-  if (default_param.display_perfcounter)
+  if (kaapi_default_param.display_perfcounter)
   {
     printf("----- Cumulated Performance counters\n");
     printf("Total number of tasks executed     : %" PRIu64 "\n", cnt_tasks);

@@ -60,6 +60,9 @@ extern "C" {
 
 #include "kaapi_defs.h"
 
+/* maximal number of recursive call */
+#define KAAPI_MAX_RECCALL 1024
+
 /** Highest level, more trace generated */
 #define KAAPI_LOG_LEVEL 10
 
@@ -186,9 +189,10 @@ typedef struct kaapi_rtparam_t {
   unsigned int		         use_affinity;           /* use cpu affinity */
   unsigned int		         kid_to_cpu[KAAPI_MAX_PROCESSOR];
   int                      display_perfcounter;    /* set to 1 iff KAAPI_DISPLAY_PERF */
+  kaapi_uint64_t           startuptime;            /* time at the end of kaapi_init */
 } kaapi_rtparam_t;
 
-extern kaapi_rtparam_t default_param;
+extern kaapi_rtparam_t kaapi_default_param;
 
 
 
@@ -242,6 +246,17 @@ extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
 /** Useful
 */
 extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid );
+
+/** \ingroup STACK
+    The function kaapi_stack_execall() execute all the tasks in the stack following
+    the RFO order.
+    If successful, the kaapi_stack_execall() function will return zero and the stack is empty.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer.
+    \retval EWOULDBLOCK the execution of the stack will block the control flow.
+*/
+extern int kaapi_stack_execall(kaapi_stack_t* stack);
 
 /** Exec all frames including the current one defined by [frame_sp, sp[
 */

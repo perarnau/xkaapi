@@ -55,7 +55,9 @@
 
 /*
 */
-kaapi_rtparam_t default_param;
+kaapi_rtparam_t kaapi_default_param = {
+   .startuptime = 0
+};
 
 /** Predefined format
 */
@@ -382,77 +384,77 @@ int kaapi_setup_param( int argc, char** argv )
 {
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
-  default_param.syscpucount = sysconf(_SC_NPROCESSORS_CONF);
+  kaapi_default_param.syscpucount = sysconf(_SC_NPROCESSORS_CONF);
 #elif defined(KAAPI_USE_APPLE)
   {
     int mib[2];
     size_t len;
     mib[0] = CTL_HW;
     mib[1] = HW_NCPU;
-    len = sizeof(default_param.syscpucount);
-    sysctl(mib, 2, &default_param.syscpucount, &len, 0, 0);
+    len = sizeof(kaapi_default_param.syscpucount);
+    sysctl(mib, 2, &kaapi_default_param.syscpucount, &len, 0, 0);
   }
 #else
   #warning "Could not compute number of physical cpu of the system. Default value==1"
-  default_param.syscpucount = 1;
+  kaapi_default_param.syscpucount = 1;
 #endif
   /* adjust system limit, if library is compiled with greather number of processors that available */
-  if (default_param.syscpucount > KAAPI_MAX_PROCESSOR)
-    default_param.syscpucount = KAAPI_MAX_PROCESSOR;
+  if (kaapi_default_param.syscpucount > KAAPI_MAX_PROCESSOR)
+    kaapi_default_param.syscpucount = KAAPI_MAX_PROCESSOR;
 
-  default_param.use_affinity = 0;
+  kaapi_default_param.use_affinity = 0;
     
   /* Set default values */
-  default_param.cpucount  = default_param.syscpucount;
-  default_param.stacksize = 8*4096;
+  kaapi_default_param.cpucount  = kaapi_default_param.syscpucount;
+  kaapi_default_param.stacksize = 8*4096;
   
   /* Get values from environment variable */
   if (getenv("KAAPI_DISPLAY_PERF") !=0)
   {
-    default_param.display_perfcounter = 1;
+    kaapi_default_param.display_perfcounter = 1;
   }
   else
   {
-    default_param.display_perfcounter = 0;
+    kaapi_default_param.display_perfcounter = 0;
   }
 
   /* Get values from environment variable */
   if (getenv("KAAPI_STACKSIZE") !=0)
   {
-    default_param.stacksize = atoi(getenv("KAAPI_STACKSIZE"));
+    kaapi_default_param.stacksize = atoi(getenv("KAAPI_STACKSIZE"));
   }
   if (getenv("KAAPI_CPUCOUNT") !=0)
   {
-    default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
-    if (default_param.cpucount > KAAPI_MAX_PROCESSOR/* default_param.syscpucount*/)
-      default_param.cpucount = default_param.syscpucount;
+    kaapi_default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
+    if (kaapi_default_param.cpucount > KAAPI_MAX_PROCESSOR/* kaapi_default_param.syscpucount*/)
+      kaapi_default_param.cpucount = kaapi_default_param.syscpucount;
   }
 
   if (getenv("KAAPI_CPUSET") != 0)
   {
     int err_no =
-      str_to_kid_map(default_param.kid_to_cpu,
+      str_to_kid_map(kaapi_default_param.kid_to_cpu,
 		     getenv("KAAPI_CPUSET"),
-		     default_param.syscpucount,
-		     &default_param.cpucount);
+		     kaapi_default_param.syscpucount,
+		     &kaapi_default_param.cpucount);
 
     if (err_no)
       return err_no;
 
-    default_param.use_affinity = 1;
+    kaapi_default_param.use_affinity = 1;
   }
   else
   {
-    fill_identity_kid_map(default_param.kid_to_cpu,
-			  default_param.cpucount);
+    fill_identity_kid_map(kaapi_default_param.kid_to_cpu,
+			  kaapi_default_param.cpucount);
   }
 
   /* workstealing selection function */
   {
-    default_param.wsselect = &kaapi_sched_select_victim_rand;
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
     const char* const wsselect = getenv("KAAPI_WSSELECT");
     if ((wsselect != NULL) && !strcmp(wsselect, "workload"))
-      default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+      kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   }
   
   return 0;
