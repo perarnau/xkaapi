@@ -70,47 +70,7 @@
                | x x x  |
           sp ->| ....   |
 */
-#if 0/* */
-int kaapi_stack_execframe( kaapi_stack_t* stack )
-{
-  kaapi_frame_t     frame;
 
-  kaapi_stack_save_frame(stack, &frame);
-  stack->frame_sp = frame.sp;
-
-  /* stack growth down ! */
-  for (; frame.pc != frame.sp; --frame.pc)
-  {
-    kaapi_task_body_t body = frame.pc->body;
-#if defined(KAAPI_CONCURRENT_WS)
-    OSAtomicCompareAndSwap32( (int32_t)body, (int32_t)kaapi_exec_body, (volatile int32_t*)&frame.pc->body);
-#else
-    frame.pc->body = kaapi_exec_body;
-#endif
-    body( frame.pc, stack );
-    if (__builtin_expect(stack->errcode,0)) goto backtrack_stack;
-    
-    if (frame.sp != stack->sp)
-    {
-      stack->frame_sp = frame.sp;
-      kaapi_stack_execframe(stack);
-      if (__builtin_expect(stack->errcode,0)) goto backtrack_stack_return;
-
-      stack->sp = frame.sp;
-      stack->sp_data = frame.sp_data;
-    }
-  }
-  stack->frame_sp = frame.sp;
-  return 0;
-
-backtrack_stack:
-  /* here back track the kaapi_stack_execframe until go out */
-  return stack->errcode;
-
-backtrack_stack_return:
-  return 1+stack->errcode;
-}
-#else
 /* iterative version */
 #define KAAPI_MAX_RECCALL 1024
 int kaapi_stack_execframe( kaapi_stack_t* stack )
@@ -144,12 +104,14 @@ begin_loop:
     {
       stack->frame_sp = pframe->sp;
       ++pframe;
+      kaapi_assert_debug( pframe-frame <KAAPI_MAX_RECCALL);
       goto enter_loop;
     }
   }
   if (pframe != frame)
   {
     --pframe;
+    kaapi_assert_debug( pframe >= frame);
     --pframe->pc;
     stack->sp = pframe->sp;
     stack->sp_data = pframe->sp_data;
@@ -163,5 +125,3 @@ backtrack_stack:
   /* here back track the kaapi_stack_execframe until go out */
   return stack->errcode;
 }
-
-#endif
