@@ -73,7 +73,7 @@ int kaapi_setconcurrency( unsigned int concurrency )
   int i;
     
   if (concurrency <1) return EINVAL;
-  if (concurrency > default_param.syscpucount) return EINVAL;
+  if (concurrency > KAAPI_MAX_PROCESSOR) return EINVAL;
 
   if (isinit) return EINVAL;
   isinit = 1;

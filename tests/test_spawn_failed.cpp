@@ -1,8 +1,7 @@
 /*
-** kaapi_task_preemptpoint.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -42,46 +41,26 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#include "test_main.h"
+#include "test_task.h"
 
-int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim, int size )
+/* Main of the program
+*/
+void doit::operator()(int argc, char** argv )
 {
-  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
+   /* failed Rp,R -> W*/
+   ka::Spawn<TaskW<int> >()(p2);
+   ka::Spawn<TaskW<int> >()(p5);
 
-  /* lock stack in case of CONCURRENT WS in order to avoid stealing on this task */
-#if 0//defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_lock(&stack->_proc->lsuspend.lock);
-  kaapi_task_unsetstealable(task);
-  pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
-#endif
-  
-  /* push data to the victim and list of thief */
-  if ((arg_for_victim !=0) && (size >0))
-  {
-    memcpy(ta->result->data, arg_for_victim, size );
-  }
-  if (ta->head !=0)
-  { /* recall the list if double linked list */
-    ta->result->rhead = ta->head;
-    ta->head = 0;
-    ta->result->rtail = ta->tail;
-    ta->tail = 0;
-  }
+   /* failed Rp,R -> Wp*/
+   ka::Spawn<TaskWp<int> >()(p2);
+   ka::Spawn<TaskWp<int> >()(p5);
 
-  /* mark the stack as preemption processed -> signal victim */
-  stack->haspreempt = 0;
-  
-  return 0;
-}
+   /* failed Wp,W -> R*/
+   ka::Spawn<TaskR<int> >()(p4);
+   ka::Spawn<TaskR<int> >()(p6);
 
-int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval )
-{
-  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
-
-  kaapi_writemem_barrier();   /* serialize previous line with next line */
-  ta->result->thief_term = 1;
-  kaapi_mem_barrier();
-  ta->result = 0;
-
-  return 1;
+   /* failed Wp,W -> R*/
+   ka::Spawn<TaskRp<int> >()(p4);
+   ka::Spawn<TaskRp<int> >()(p6);
 }

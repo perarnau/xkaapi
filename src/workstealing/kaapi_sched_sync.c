@@ -45,33 +45,85 @@
 #include "kaapi_impl.h"
 
 
+
+static int kaapi_stack_execframe( kaapi_stack_t* stack )
+{
+  kaapi_frame_t     frame;
+  kaapi_task_body_t body;
+
+  kaapi_stack_save_frame(stack, &frame);
+  stack->frame_sp = frame.sp;
+
+  /* stack growth down ! */
+  for (; frame.pc != frame.sp; --frame.pc)
+  {
+    body = frame.pc->body;
+#if defined(KAAPI_CONCURRENT_WS)
+    OSAtomicCompareAndSwap32( (int32_t)body, (int32_t)kaapi_exec_body, (volatile int32_t*)&frame.pc->body);
+#else
+    frame.pc->body = kaapi_exec_body;
+#endif
+    body( frame.pc->sp, stack );
+    
+    if (frame.sp != stack->sp)
+    {
+      stack->pc = frame.sp;
+      kaapi_stack_execframe(stack);
+//      stack->pc = frame.pc;
+      stack->sp = frame.sp;
+      stack->sp_data = frame.sp_data;
+      stack->frame_sp = frame.sp;
+//      kaapi_stack_restore_frame(stack, &frame);
+//      stack->frame_sp = frame.sp;
+    }
+  }
+  stack->frame_sp = frame.sp;
+  return 0;
+}
+
+
 /** kaapi_sched_sync
-    * pc is the current running task, exec all tasks from [pc-1,...,sp[
-    * do not restore sp_data because data may have scope of the caller
-    of kaapi_sched_sync.
+    Assumption: pc is the running task.
+    Here the stack frame is organised like this:
+
+          | task1  |
+          ----------
+     pc ->| task2  |
+          | task3  |
+          | task4  |
+          | task5  |
+     sp ->| ....   |
+     
+  
+   We first push a retn task and execute all the task in the frame in [pc+1, ...,  sp). 
+   The task retn serves to mark the stack structure in case of stealing (...) ? Sure ?
+   
+   On return, we leave the stack such that:
+
+     pc ->| task1  |
+          ----------
+     sp ->| x x x  |
+          | x x x  |
+          | x x x  |
+          | x x x  |
+          | ....   |
 */
+
 int kaapi_sched_sync(kaapi_stack_t* stack)
 {
-  int err;
-  kaapi_task_t* savepc;
-  kaapi_task_t* savesp;
-  kaapi_task_t* savesavedsp;
+  int           err;
+  kaapi_frame_t frame;
+  kaapi_task_t* frame_sp;
 
   if (kaapi_stack_isempty( stack ) ) return 0;
 
-#if 0
-  /* look for retn */
-  while ((kaapi_task_getbody(pc) != kaapi_retn_body) && (pc != stack->sp)) 
-    --pc;
-#endif
+  /* save here, do not restore pushed retn */
+  kaapi_stack_save_frame(stack, &frame);
 
-  savepc      = stack->pc;
-  savesp      = stack->sp;
-  savesavedsp = stack->saved_sp;
-  stack->pc   = savesavedsp;
+  stack->pc       = frame_sp = stack->frame_sp; /* next task to execute after pc, pc is under execution */
 
 redo:
-  err = kaapi_stack_execchild(stack, stack->pc);
+  err = kaapi_stack_execframe(stack);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
@@ -79,8 +131,7 @@ redo:
   }
   if (err) /* but do not restore stack */
     return err;
-  stack->pc = savepc;
-  stack->sp = savesavedsp;       /* have executed all tasks from saved_sp to now */
-  stack->saved_sp = savesavedsp;
+  kaapi_stack_restore_frame(stack, &frame);
+  stack->frame_sp = frame_sp;
   return err;
 }

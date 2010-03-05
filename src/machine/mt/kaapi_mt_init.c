@@ -127,7 +127,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_task_setextrabody( task, kaapi_taskstartup_body);
 
   kaapi_stack_pushtask(stack);
-  stack->saved_sp = stack->sp;
+  stack->frame_sp = stack->sp;
 
   /* dump output information */
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -154,8 +154,10 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   double t_preempt;
 #endif
 
+#if 0
   /* push marker of the frame: retn */
   kaapi_stack_pushretn(_kaapi_self_stack(), &main_frame);
+#endif
   
 
 #if defined(KAAPI_USE_PERFCOUNTER)

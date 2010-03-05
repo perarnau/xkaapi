@@ -73,7 +73,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
     */
 #if defined(KAAPI_CONCURRENT_WS)
     /* signal that count thefts are waiting */
-    replycount += kaapi_sched_stealstack( ctxt_top, 0 );
+    replycount += kaapi_sched_stealstack( ctxt_top, 0, count, kproc->hlrequests.requests );
 #else
     /* signal that count thefts are waiting */
     ctxt_top->hasrequest = count;

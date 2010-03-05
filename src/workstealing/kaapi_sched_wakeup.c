@@ -49,6 +49,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
   kaapi_wsqueuectxt_cell_t* cell;
+  int wakeupok = 0;
+  int garbage;
   
 #if 0
   if (0 ==kaapi_wsqueuectxt_pop( &kproc->lready, &ctxt ))
@@ -66,40 +68,59 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
   cell = kproc->lsuspend.head;
   while (cell !=0)
   {
-    ctxt = cell->stack;
-    kaapi_task_t* task = ctxt->pc;
-    if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
+    garbage = 1;
+    if (KAAPI_ATOMIC_READ(&cell->state) == 0)
     {
-      int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
-      if (opok)
+      wakeupok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
+      if (wakeupok) 
       {
-        kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
-        cell->stack = 0;
-
-        /* whatever is the result of the cas, the cell is recyled (push in tail):
-           - cas is true: the pop sucess, we will return the stack
-           - cas is false: the stack has been stolen, we recylce the cell
-           Then if the cas is ok we return true 
-        */
-        if (nextcell !=0)
-          nextcell->prev = cell->prev;
-        if (cell->prev !=0)
-          cell->prev->next = nextcell;
-        cell->next =0;
-        cell->prev = 0;
-        kaapi_wsqueuectxt_cell_t* tailfreecell = kproc->lsuspend.tailfreecell;
-        if (tailfreecell ==0)
-          kproc->lsuspend.headfreecell = cell;
-        else 
-          tailfreecell->prev = cell;
-        kproc->lsuspend.tailfreecell = cell;
-
-        cell->stack = 0;
-        return ctxt;
+        ctxt = cell->stack;
+        kaapi_task_t* task = ctxt->pc;
+        if ( (kaapi_task_getbody(task) != kaapi_aftersteal_body) )
+        { 
+          garbage  = 0;
+          wakeupok = 0;
+          KAAPI_ATOMIC_WRITE( &cell->state, 0 );
+        }
+        else {
+          /* ok wakeup */
+          cell->stack = 0;
+          garbage = 1;
+        }
       }
     }
 
-    cell = cell->next;
+    /* If the wakeup is ok or if the cell state is 1, the cell is recyled (push in tail):
+    */
+    kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
+    if (garbage)
+    {
+      /* delete from the queue */
+      if (nextcell !=0)
+        nextcell->prev = cell->prev;
+      else
+        kproc->lsuspend.tail = cell->prev;
+        
+      if (cell->prev !=0)
+        cell->prev->next = nextcell;
+      else
+        kproc->lsuspend.head = nextcell;
+      cell->next =0;
+      cell->prev = 0;
+
+      /* insert it in the recycled queue */
+      kaapi_wsqueuectxt_cell_t* tailfreecell = kproc->lsuspend.tailfreecell;
+      if (tailfreecell ==0)
+        kproc->lsuspend.headfreecell = cell;
+      else 
+        tailfreecell->prev = cell;
+      kproc->lsuspend.tailfreecell = cell;
+
+      if (wakeupok) 
+        return ctxt;
+    }
+
+    cell = nextcell;
   }
 
   return 0; 

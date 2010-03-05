@@ -481,10 +481,10 @@ extern int kaapi_setup_topology(void);
 
 #if (SIZEOF_VOIDP == 4)
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, o, n )
+    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (kaapi_uint32_t)o, (kaapi_uint32_t)n )
 #else
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)a, o, n )
+    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)a, (kaapi_uint64_t)o, (kaapi_uint64_t)n )
 #endif
 
 
@@ -497,14 +497,18 @@ extern int kaapi_setup_topology(void);
 
 static inline void kaapi_writemem_barrier()  
 {
+#ifdef KAAPI_USE_ARCH_PPC
   OSMemoryBarrier();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
 
 static inline void kaapi_readmem_barrier()  
 {
+#ifdef KAAPI_USE_ARCH_PPC
   OSMemoryBarrier();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
@@ -512,14 +516,15 @@ static inline void kaapi_readmem_barrier()
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
+#ifdef KAAPI_USE_ARCH_PPC
   OSMemoryBarrier();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
 
 
 #elif defined(KAAPI_USE_LINUX)
-
 #  define kaapi_writemem_barrier() \
     __sync_synchronize()
 
@@ -531,7 +536,7 @@ static inline void kaapi_mem_barrier()
 
 #else
 #  error "Undefined barrier"
-#endif /* KAAPI_USE_APPLE */
+#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
 
 
 /* ========================================================================== */

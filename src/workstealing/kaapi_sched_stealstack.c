@@ -159,7 +159,7 @@ static int kaapi_sched_stealframe(
         task_body = kaapi_task_getextrabody(task_bot);
         if (kaapi_task_casstate(task_bot, task_body, kaapi_suspend_body)) 
         {
-          replycount += kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );
+          replycount += kaapi_task_splitter_dfg(stack, task_bot, count-replycount, stack->requests );
         }
       }
     }
@@ -175,7 +175,7 @@ label_continue:
     /* lock the subframe first by locking the task_exec (its kaapi_exec_body) so that retn cannot pop task */
     if (kaapi_task_casstate(task_exec, kaapi_exec_body, kaapi_nop_body)) 
     {
-      replycount += kaapi_sched_stealframe( stack, task_bot-1, map, count, request );
+      replycount += kaapi_sched_stealframe( stack, task_bot-1, map, count-replycount, request );
       /* reset normal body on task_exec */
       kaapi_task_setbody(task_exec, kaapi_exec_body);
     }

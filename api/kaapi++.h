@@ -127,7 +127,7 @@ namespace ka {
   class WrapperFormat {
   public:
     static const Format* format;
-    static const Format* get_format() { return &theformat; }
+    static const Format* get_format() { return format; }
     static const Format theformat;
     static void cstor( void* dest) { new (dest) T; }
     static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
@@ -169,16 +169,17 @@ namespace ka {
     WrapperFormat<T>::print 
   );
   template <class T> const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
-  template <> const Format* WrapperFormat<kaapi_int8_t>::format;
-  template <> const Format* WrapperFormat<kaapi_int16_t>::format;
-  template <> const Format* WrapperFormat<kaapi_int32_t>::format;
-  template <> const Format* WrapperFormat<kaapi_int64_t>::format;
-  template <> const Format* WrapperFormat<kaapi_uint8_t>::format;
-  template <> const Format* WrapperFormat<kaapi_uint16_t>::format;
-  template <> const Format* WrapperFormat<kaapi_uint32_t>::format;
-  template <> const Format* WrapperFormat<kaapi_uint64_t>::format;
-  template <> const Format* WrapperFormat<float>::format;
-  template <> const Format* WrapperFormat<double>::format;
+  template <> const Format* WrapperFormat<char>::get_format();
+  template <> const Format* WrapperFormat<short>::get_format();
+  template <> const Format* WrapperFormat<int>::get_format();
+  template <> const Format* WrapperFormat<long>::get_format();
+  template <> const Format* WrapperFormat<unsigned char>::get_format();
+  template <> const Format* WrapperFormat<unsigned short>::get_format();
+  template <> const Format* WrapperFormat<unsigned int>::get_format();
+  template <> const Format* WrapperFormat<unsigned long>::get_format();
+  template <> const Format* WrapperFormat<float>::get_format();
+  template <> const Format* WrapperFormat<double>::get_format();
+
   template <>
   class WrapperFormat<Access> {
   public:
@@ -576,6 +577,11 @@ namespace ka {
   */
   template<typename T>
   struct TraitUAMTypeFormat { typedef T type_t; };
+  template<typename T>
+  struct TraitUAMTypeFormat<const T&> { typedef T type_t; };
+  template<typename T>
+  struct TraitUAMTypeFormat<pointer<T> > { typedef T type_t; };
+
   template<typename T, typename Mode>
   struct TraitUAMTypeParam { typedef T type_t; };
   template<typename T>
@@ -599,8 +605,6 @@ namespace ka {
 
   /* This specialization describes how to represent Kaapi pointer
   */
-  template<typename T>
-  struct TraitUAMTypeFormat<pointer<T> > { typedef T type_t; };
   template<typename T>
   struct TraitUAMTypeParam<pointer<T>, TYPE_INTASK> { typedef Access type_t; };
   template<typename T>
@@ -826,7 +830,6 @@ namespace ka {
 
 
   // --------------------------------------------------------------------
-#if defined(KAAPI_DEBUG)
   /* for better understand error message */
   template<int i>
   struct FOR_ARG {};
@@ -912,7 +915,7 @@ namespace ka {
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CWP, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-#endif
+
 
   /* ICI: signature avec kaapi_stack & kaapi_task as first parameter ?
      Quel interface C++ pour les tâches adaptatives ?

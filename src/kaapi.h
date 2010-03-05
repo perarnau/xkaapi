@@ -61,12 +61,6 @@
 # endif
 #endif
 
-#if defined(KAAPI_CONCURRENT_WS)
-#  ifdef __APPLE__
-#    include <libkern/OSAtomic.h>
-#  endif
-#endif
-
 
 #include <stdint.h>
 #include <stdio.h>
@@ -450,25 +444,24 @@ typedef int (*kaapi_task_reducer_t) (
    \TODO save also the C-stack if we try to suspend execution during a task execution
 */
 typedef struct kaapi_stack_t {
-  volatile int              hasrequest;     /** points to the k-processor structure */
-  volatile int              haspreempt;     /** !=0 if preemption is requested */
-  kaapi_atomic32_t          lock;           /** of the stack */
-
-  struct kaapi_task_t      *pc;             /** task counter: next task to execute, 0 if empty stack */
-  struct kaapi_task_t      *sp;             /** stack counter: next free task entry */
-  struct kaapi_task_t      *saved_sp;       /** sp before call to task: next free task entry */
+  struct kaapi_task_t*      task;           /** pointer to the first pushed task */
+  struct kaapi_task_t*      sp;             /** stack counter: next free task entry */
+  struct kaapi_task_t*      pc;             /** task counter: next task to execute, 0 if empty stack */
+  struct kaapi_task_t*      frame_sp;       /** sp of the end of the frame */
+  char*                     data;           /** stack of data with the same scope than task */
   char*                     sp_data;        /** stack counter for the data: next free data entry */
+  kaapi_atomic_t            lock;           /** */ 
   int                       errcode;        /** set by task execution to signal incorrect execution */
 
-  struct kaapi_task_t*      task;           /** pointer to the first pushed task */
-  char*                     data;           /** stack of data with the same scope than task */
+  volatile int              hasrequest;     /** points to the k-processor structure */
+  volatile int              haspreempt;     /** !=0 if preemption is requested */
+  kaapi_request_t*          requests;       /** points to the requests set in the processor structure */
 
-
-  kaapi_request_t          *requests;       /** points to the requests set in the processor structure */
+  struct kaapi_task_t*      thiefsp;        /** pointer to the first pushed task */
   kaapi_uint32_t            size;           /** size of the data structure */
   struct kaapi_stack_t*     _next;          /** to be stackable */
   struct kaapi_processor_t* _proc;          /** (internal) access to the attached processor */
-} kaapi_stack_t;
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
 
 /** Kaapi frame definition
@@ -494,6 +487,7 @@ typedef struct kaapi_task_t {
   kaapi_task_bodyid_t   body;      /** task body  */
   kaapi_task_bodyid_t   ebody;     /** extra task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
+  void*                 pad;       /** padding  */
 } kaapi_task_t ;
 
 
@@ -738,12 +732,12 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 }
  
 
+#if 0
 /** \ingroup TASK
     The function kaapi_task_haslocality() will return non-zero value iff the task has locality constraints.
     In this case, the field locality my be read to resolved locality constraints.
     \param task IN a pointer to the kaapi_task_t to test.
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
 inline static int kaapi_task_haslocality(const kaapi_task_t* task)
 { return (task->flag & KAAPI_TASK_LOCALITY); }
 #endif
@@ -754,30 +748,9 @@ inline static int kaapi_task_haslocality(const kaapi_task_t* task)
 */
 inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
 {
-#if defined(KAAPI_VERY_COMPACT_TASK)
-  return (task->flag & KAAPI_TASK_ADAPTIVE); 
-#else
   return (task->body == kaapi_adapt_body); 
-#endif
 }
 
-/** \ingroup TASK
-    The function kaapi_task_issync() will return non-zero value iff the such stolen task will introduce data dependency
-    \param task IN a pointer to the kaapi_task_t to test.
-*/
-#if defined(KAAPI_VERY_COMPACT_TASK)
-inline static int kaapi_task_issync(const kaapi_task_t* task)
-{ return (task->flag & KAAPI_TASK_SYNC); }
-#endif
-
-/** \ingroup TASK
-    The function kaapi_task_isready() will return non-zero value iff the task is maked as ready
-    \param task IN a pointer to the kaapi_task_t to test.
-*/
-#if defined(KAAPI_VERY_COMPACT_TASK)
-inline static int kaapi_task_isready(const kaapi_task_t* task)
-{ return (task->flag & KAAPI_TASK_MASK_READY); }
-#endif
 
 /** \ingroup STACK
     Return pointer to the self stack
@@ -952,13 +925,8 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
   if (stack ==0) return EINVAL;
   kaapi_assert_debug((char*)stack->sp >= (char*)stack->sp_data);
 #endif
-#if defined(KAAPI_CONCURRENT_WS)
-#ifdef __APPLE__
-  OSMemoryBarrier();
-#else 
-  __sync_synchronize();
-#endif
-#endif
+  /* Compiler fence to keep operations. Note that on X86 no reorder of write ops*/
+  __asm__ __volatile__("" : : : "memory" );
   --stack->sp;
   return 0;
 }
@@ -967,7 +935,7 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
 /** \ingroup TASK
     Initialize a task with given flag for adaptive attribut or task constraints.
 */
-#if defined(KAAPI_VERY_COMPACT_TASK)
+#if 0
 static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg, kaapi_uint32_t flag ) 
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_stack_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
@@ -1064,12 +1032,7 @@ static inline int kaapi_stack_pushretn( kaapi_stack_t* stack, const kaapi_frame_
   kaapi_task_t* retn;
   kaapi_frame_t* arg_retn;
   retn = kaapi_stack_toptask(stack);
-#if defined(KAAPI_VERY_COMPACT_TASK)
-  retn->flag  = KAAPI_TASK_STICKY | (kaapi_retn_body<<KAAPI_TASK_BODY_SHIFT);
-#else
-  kaapi_task_setbody( retn, kaapi_retn_body );
-#endif
-  arg_retn = (kaapi_frame_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
+  kaapi_task_init( retn, kaapi_retn_body, arg_retn = (kaapi_frame_t*)kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t)) );
   retn->sp = (void*)arg_retn;
   *arg_retn = *frame;
   kaapi_stack_pushtask(stack);

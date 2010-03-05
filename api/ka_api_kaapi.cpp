@@ -94,13 +94,6 @@ bool Community::is_leader() const
 // --------------------------------------------------------------------
 void Community::leave() 
 { 
-  if (!main_retn_pushed)
-  {
-    /* push marker of the frame: retn */
-    kaapi_stack_pushretn(kaapi_self_stack(), &main_frame);
-    main_retn_pushed = 1;
-  }
-
   Sync();
 }
 

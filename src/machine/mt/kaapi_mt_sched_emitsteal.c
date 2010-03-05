@@ -88,37 +88,32 @@ redo_select:
   int counter;
   while (1)
   {
-    ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1);
-    if (ok ==0) break;
+    ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
+    if (ok) break;
     if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if ((counter & 0xFF) ==0) {
       counter =0;
-/*      pthread_yield();*/
+      /*pthread_yield();*/
     }
   }
-
+  kaapi_assert_debug( ok );
+  
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
   kaapi_assert_debug( count <= KAAPI_MAX_PROCESSOR );
-
-#if 0
-  if (count ==0) 
-  { 
-    pthread_mutex_unlock(&victim.kproc->lsuspend.lock);
-    kaapi_readmem_barrier();
-  }
-#endif
+  kaapi_assert_debug( count >= 0 );
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
   */
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
   if (count >0) {
     kaapi_sched_stealprocessor( victim.kproc );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
   }
-
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
 
   /* reply to all requests. May also reply to count request INCLUDING self request,
      else a bug will occurs--WARNING--
@@ -132,17 +127,18 @@ redo_select:
       ++replycount;
     }
   }
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
 
   /* assert on the counter of victim processor request count */
   if (replycount >0)
   {
     kaapi_writemem_barrier();
-/*    KAAPI_ATOMIC_SUB( &victim.kproc->hlrequests.count, replycount );: reply to the decr */
-    kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) >= 0 );
   }
 
   /* unlock  */ 
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );  
   KAAPI_ATOMIC_WRITE(&victim.kproc->lock, 0);
+
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
 
 return_value:

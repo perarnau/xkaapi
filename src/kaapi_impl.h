@@ -424,6 +424,7 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_stack_t*    origin_stack;      /* stack where task was stolen */
   kaapi_task_t*     origin_task;       /* the stolen task into origin_stack */
   kaapi_format_t*   origin_fmt;        /* set by tasksteal the stolen task into origin_stack */
+  void*             copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
 
 

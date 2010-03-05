@@ -454,19 +454,6 @@ int kaapi_setup_param( int argc, char** argv )
     if ((wsselect != NULL) && !strcmp(wsselect, "workload"))
       default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   }
-
-#if defined(KAAPI_VERY_COMPACT_TASK)
-  /* init default task body */
-  kaapi_bodies[kaapi_nop_body]          = _kaapi_nop_body;
-  kaapi_bodies[kaapi_taskstartup_body]  = _kaapi_taskstartup_body;
-  kaapi_bodies[kaapi_retn_body]         = _kaapi_retn_body;
-  kaapi_bodies[kaapi_suspend_body]      = _kaapi_suspend_body;
-  kaapi_bodies[kaapi_tasksig_body]      = _kaapi_tasksig_body;
-  kaapi_bodies[kaapi_taskfinalize_body] = _kaapi_taskfinalize_body;
-  kaapi_bodies[kaapi_tasksteal_body]    = _kaapi_tasksteal_body;
-  kaapi_bodies[kaapi_taskwrite_body]    = _kaapi_taskwrite_body;
-  kaapi_bodies[kaapi_aftersteal_body]   = _kaapi_aftersteal_body;
-#endif
   
   return 0;
 }

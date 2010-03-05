@@ -61,6 +61,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->hlcount      = 0;
   kproc->hkids        = 0;
   
+  KAAPI_ATOMIC_WRITE( &kproc->lock, 0);
+  
   kaapi_listrequest_init( &kproc->hlrequests );
 
   kaapi_wsqueuectxt_init( &kproc->lsuspend );

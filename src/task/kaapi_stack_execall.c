@@ -51,6 +51,9 @@
 */
 int kaapi_stack_execall(kaapi_stack_t* stack) 
 {
+#if 0
+  register kaapi_task_t* pc;
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t         cnt_tasks = 0;
 #endif  
@@ -64,22 +67,28 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
   if (kaapi_stack_isempty( stack ) ) return 0;
 
   /* main loop */
-  while (stack->pc != stack->sp)
+  pc = stack->pc;
+  while (pc != stack->sp)
   {
-    body = stack->pc->body;
+    body = pc->body;
 
-    if (!kaapi_task_casstate(stack->pc, body, kaapi_exec_body)) 
+#if defined(KAAPI_CONCURRENT_WS)
+    if (!kaapi_task_casstate(pc, body, kaapi_exec_body)) 
     {
       err= EWOULDBLOCK;
       goto label_return;
     }
+#else
+    kaapi_task_setbody(pc, kaapi_exec_body);
+#endif
 
     /* save the state of the stack */
-    stack->saved_sp      = stack->sp;
+    stack->saved_sp = stack->sp;
     saved_sp_data = stack->sp_data;
-    
+
     /* exec la tache */
-    body( stack->pc->sp, stack );
+    body( pc->sp, stack );
+
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
@@ -87,7 +96,7 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
     {
       if (err != -EAGAIN) /* set by retn */
         goto label_return;
-      --stack->pc;
+      pc = --stack->pc;
       err = stack->errcode = 0;
       continue;
     }
@@ -101,17 +110,17 @@ int kaapi_stack_execall(kaapi_stack_t* stack)
 
       frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
       retn->sp = (void*)frame;
-      frame->pc = stack->pc; /* <=> save pc, will mark this task as term after pop !! */
+      frame->pc = pc; /* <=> save pc, will mark this task as term after pop !! */
       frame->sp = stack->saved_sp;
       frame->sp_data = saved_sp_data;
       kaapi_stack_pushtask(stack);
 
       /* update pc to the first forked task */
-      stack->pc = stack->saved_sp;
+      pc = stack->pc = stack->saved_sp;
     }
     else {
-      kaapi_task_setbody(stack->pc, kaapi_nop_body);
-      --stack->pc;
+      stack->pc = pc -1;
+      pc = stack->pc;
     }
 
     /* process steal request 
@@ -140,6 +149,9 @@ label_return:
     kaapi_task_setbody(stack->pc, kaapi_nop_body);
     --stack->pc;
   }
+  else if (err == -EAGAIN) err = 0;
   stack->errcode = 0;
   return err;
+#endif
+  return 0;
 }

@@ -1,9 +1,49 @@
+/*
+** xkaapi
+** 
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
+**
+** Contributors :
+**
+** thierry.gautier@inrialpes.fr
+** 
+** This software is a computer program whose purpose is to execute
+** multithreaded computation with data flow synchronization between
+** threads.
+** 
+** This software is governed by the CeCILL-C license under French law
+** and abiding by the rules of distribution of free software.  You can
+** use, modify and/ or redistribute the software under the terms of
+** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+** following URL "http://www.cecill.info".
+** 
+** As a counterpart to the access to the source code and rights to
+** copy, modify and redistribute granted by the license, users are
+** provided only with a limited warranty and the software's author,
+** the holder of the economic rights, and the successive licensors
+** have only limited liability.
+** 
+** In this respect, the user's attention is drawn to the risks
+** associated with loading, using, modifying and/or developing or
+** reproducing the software by the user in light of its specific
+** status of free software, that may mean that it is complicated to
+** manipulate, and that also therefore means that it is reserved for
+** developers and experienced professionals having in-depth computer
+** knowledge. Users are therefore encouraged to load and test the
+** software's suitability as regards their requirements in conditions
+** enabling the security of their systems and/or data to be ensured
+** and, more generally, to use and operate it in the same conditions
+** as regards security.
+** 
+** The fact that you are presently reading this means that you have
+** had knowledge of the CeCILL-C license and that you accept its
+** terms.
+** 
+*/
 #include "kaapi.h"
 #include <stdio.h>
 #include <stddef.h>
-
-
-/*#define KAAPI_TRACE_DEBUG */
 
 int fiboseq(int n)
 { return (n<2 ? n : fiboseq(n-1)+fiboseq(n-2) ); }
@@ -54,23 +94,11 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
 void fibo_body( void* taskarg, kaapi_stack_t* stack )
 {
   fibo_arg_t* arg0 = (fibo_arg_t*)taskarg;
-#if defined(KAAPI_TRACE_DEBUG)  
-  printf("Fibo(%i)", arg0->n);
-#endif
   if (arg0->n < 2)
   {
     *KAAPI_DATA(int, arg0->result) = arg0->n; //fiboseq(arg0->n);
-#if defined(KAAPI_TRACE_DEBUG)  
-    printf("=@0x%x:%i\n", KAAPI_DATA(int, arg0->result), *KAAPI_DATA(int, arg0->result));
-#endif
   }
   else {
-#if defined(KAAPI_TRACE_DEBUG)  
-    printf("=@0x%x\n", KAAPI_DATA(int, arg0->result));
-#endif
-#if defined(REC_VER)    
-    kaapi_frame_t frame;
-#endif
     fibo_arg_t* argf1;
     fibo_arg_t* argf2;
     sum_arg_t*  args;
@@ -78,23 +106,18 @@ void fibo_body( void* taskarg, kaapi_stack_t* stack )
     kaapi_task_t* task1;
     kaapi_task_t* task2;
 
-#if defined(REC_VER)    
-    kaapi_stack_save_frame(stack, &frame);
-#endif
     task1 = kaapi_stack_toptask(stack);
     kaapi_task_initdfg( task1, fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
     argf1 = kaapi_task_getargst( task1, fibo_arg_t );
     argf1->n = arg0->n - 1;
-//    argf1->result = kaapi_stack_pushshareddata(stack, sizeof(int));
-kaapi_stack_allocateshareddata( &argf1->result, stack, sizeof(int) );
+    kaapi_stack_allocateshareddata( &argf1->result, stack, sizeof(int) );
     kaapi_stack_pushtask(stack);
 
     task2 = kaapi_stack_toptask(stack);
     kaapi_task_initdfg( task2, fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
     argf2 = kaapi_task_getargst( task2, fibo_arg_t);
     argf2->n      = arg0->n - 2;
-//    argf2->result = kaapi_stack_pushshareddata(stack, sizeof(int));
-kaapi_stack_allocateshareddata( &argf2->result, stack, sizeof(int) );
+    kaapi_stack_allocateshareddata( &argf2->result, stack, sizeof(int) );
     kaapi_stack_pushtask(stack);
 
     task_sum = kaapi_stack_toptask(stack);
@@ -104,13 +127,6 @@ kaapi_stack_allocateshareddata( &argf2->result, stack, sizeof(int) );
     args->subresult1.data = argf1->result.data;
     args->subresult2.data = argf2->result.data;
     kaapi_stack_pushtask(stack);
-
-#if defined(REC_VER)    
-    fibo_body(task1, stack);
-    fibo_body(task2, stack);
-    sum_body(task_sum, stack);
-    kaapi_stack_restore_frame(stack, &frame);
-#endif
  }
 }
 
@@ -196,7 +212,6 @@ int main(int argc, char** argv)
   
   printf("After sync: Fibo(%i)=%li\n", n, value_result);
   printf("Time Fibo(%i): %f\n", n, t1-t0);
-  
   
   return 0;
 }

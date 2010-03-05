@@ -46,13 +46,15 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMP
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
+  static TaskBodyCPU<TASK> dummy;
   static void body(void* taskarg, kaapi_stack_t* stack)
   {
-    static TaskBodyCPU<TASK> dummy;
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (Thread*)stack M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
+template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
+TaskBodyCPU<TASK> KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMParam_F$1', `', ` ')>::dummy;
 
 
 /* Kaapi binder to call task without stack args */
@@ -66,13 +68,15 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAM
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
+  static TaskBodyCPU<TASK> dummy;
   static void body(void* taskarg, kaapi_stack_t* stack)
   {
-    static TaskBodyCPU<TASK> dummy;
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };
+template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
+TaskBodyCPU<TASK> KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAMParam_F$1', `', ` ')>::dummy;
 
 
 template<bool hasstackparam, class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
@@ -91,13 +95,15 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMP
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
   /* with stack parameters */
+  static TaskBodyGPU<TASK> dummy;
   static void body(void* taskarg, kaapi_stack_t* stack)
   {
-    static TaskBodyGPU<TASK> dummy;
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (Thread*)stack M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
+template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
+TaskBodyGPU<TASK>  KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMParam_F$1', `', ` ')>::dummy;
 
 
 /* Kaapi binder to call task without stack args */
@@ -112,13 +118,15 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAM
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
   /* */
+  static TaskBodyGPU<TASK> dummy;
   static void body(void* taskarg, kaapi_stack_t* stack)
   {
-    static TaskBodyGPU<TASK> dummy;
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };
+template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
+TaskBodyGPU<TASK>  KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAMParam_F$1', `', ` ')>::dummy;
 
 
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
@@ -127,6 +135,8 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   M4_PARAM(`typedef typename TraitUAMParam_F$1::uamttype_t uamttype$1_t;
   ', `', `')
   M4_PARAM(`typedef typename uamttype$1_t::template UAMParam<TYPE_INTASK>::type_t inclosure$1_t;
+  ', `', `')
+  M4_PARAM(`typedef typename uamttype$1_t::typeformat_t typeformat$1_t;
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
@@ -146,16 +156,12 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     ',`', `')
     M4_PARAM(`array_offset[$1-1] = (char*)&dummy->f$1 - (char*)dummy; /* BUG ? offsetof(TaskArg_t, f$1); */
     ',`', `')
-    M4_PARAM(`array_format[$1-1] = WrapperFormat<inclosure$1_t>::get_format();
+    M4_PARAM(`array_format[$1-1] = WrapperFormat<typeformat$1_t>::get_format();
     ',`', `')
     static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
     fmid = kaapi_format_taskregister( 
           &getformat, 
-#if defined(KAAPI_VERY_COMPACT_TASK)
-          -1,
-#else
           0,
-#endif
           0, 
           task_name.c_str(),
           sizeof(TaskArg_t),

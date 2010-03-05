@@ -75,8 +75,8 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   if (stack == 0) return EINVAL;
   stack->haspreempt =0;
   stack->hasrequest =0; /* 0 means no thiefs */
+  stack->errcode    =  0;
   KAAPI_ATOMIC_WRITE(&stack->lock, 0);
-  stack->errcode =  0;
   
   if (size ==0) 
   { 
@@ -91,5 +91,6 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   pasttheend_task = (kaapi_task_t*)((char*)buffer + size);
   stack->task     = pasttheend_task -1;
   stack->pc       = stack->sp = stack->task;
+  stack->thiefsp  = stack->sp;
   return 0;
 }

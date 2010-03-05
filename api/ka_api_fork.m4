@@ -11,7 +11,7 @@
 
       typedef KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK, M4_PARAM(`TraitUAMParam<F$1> ', `', `,')> KaapiFormatTask_t;
       
-#if defined(KAAPI_DEBUG)
+#if !defined(KAAPI_NDEBUG)
       M4_PARAM(`typedef typename TraitUAMParam<F$1>::mode_t mode_formal$1_t;
       ', `', `')
       M4_PARAM(`typedef typename TraitUAMParam<E$1>::mode_t mode_effective$1_t;

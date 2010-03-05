@@ -83,6 +83,7 @@ FormatUpdateFnc::FormatUpdateFnc(
 }
 
 // --------------------------------------------------------------------------
+#if 0
 template <>
 const Format* WrapperFormat<kaapi_int8_t>::format = (const Format*)&kaapi_char_format;
 template <>
@@ -105,6 +106,29 @@ template <>
 const Format* WrapperFormat<float>::format = (const Format*)&kaapi_float_format;
 template <>
 const Format* WrapperFormat<double>::format = (const Format*)&kaapi_double_format;
+#endif
+
+  template <> const Format* WrapperFormat<char>::get_format() { return (const Format*)&kaapi_char_format; }
+  template <> const Format* WrapperFormat<short>::get_format() { return (const Format*)&kaapi_short_format; }
+  template <> const Format* WrapperFormat<int>::get_format() { return (const Format*)&kaapi_int_format; }
+  template <> const Format* WrapperFormat<long>::get_format() { return (const Format*)&kaapi_long_format; }
+  template <> const Format* WrapperFormat<unsigned char>::get_format() { return (const Format*)&kaapi_uchar_format; }
+  template <> const Format* WrapperFormat<unsigned short>::get_format() { return (const Format*)&kaapi_ushort_format; }
+  template <> const Format* WrapperFormat<unsigned int>::get_format() { return (const Format*)&kaapi_uint_format; }
+  template <> const Format* WrapperFormat<unsigned long>::get_format() { return (const Format*)&kaapi_ulong_format; }
+  template <> const Format* WrapperFormat<float>::get_format() { return (const Format*)&kaapi_float_format; }
+  template <> const Format* WrapperFormat<double>::get_format() { return (const Format*)&kaapi_double_format; }
+
+#if 0
+  template <> const Format* WrapperFormat<kaapi_int8_t>::get_format() { return (const Format*)&kaapi_char_format; }
+  template <> const Format* WrapperFormat<kaapi_int16_t>::get_format() { return (const Format*)&kaapi_short_format; }
+  template <> const Format* WrapperFormat<kaapi_int32_t>::get_format() { return (const Format*)&kaapi_int_format; }
+  template <> const Format* WrapperFormat<kaapi_int64_t>::get_format() { return (const Format*)&kaapi_long_format; }
+  template <> const Format* WrapperFormat<kaapi_uint8_t>::get_format() { return (const Format*)&kaapi_uchar_format; }
+  template <> const Format* WrapperFormat<kaapi_uint16_t>::get_format() { return (const Format*)&kaapi_ushort_format; }
+  template <> const Format* WrapperFormat<kaapi_uint32_t>::get_format() { return (const Format*)&kaapi_uint_format; }
+  template <> const Format* WrapperFormat<kaapi_uint64_t>::get_format() { return (const Format*)&kaapi_ulong_format; }
+#endif
 
 const Format WrapperFormat<Access>::theformat(
   "Access",

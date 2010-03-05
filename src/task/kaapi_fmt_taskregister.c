@@ -66,7 +66,7 @@ kaapi_format_t* kaapi_all_format_bybody[256] =
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
-#if defined(KAAPI_VERY_COMPACT_TASK)
+#if 0
 static kaapi_task_bodyid_t bodyidcounter = KAAPI_TASK_BODY_USER_BASE;
 #endif
 

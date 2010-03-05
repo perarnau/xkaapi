@@ -44,7 +44,6 @@
 */
 #include "kaapi_impl.h"
 
-
 /** kaapi_stack_execchild
     Assumption: pc is the running task.
     Here the stack frame is organised like this:
@@ -62,12 +61,14 @@
   
    Exec child will execute all tasks previously forked by pc task.
    Thus it first look for retn taks that mark begin of the next frame
-   that contains the task.
-   
-   PC should be cached
+   that contains the task.   
 */
+#if 0
+#else
+
 int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
 {
+#if 0
   register kaapi_task_t* pc;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -88,11 +89,15 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
   {
     body = pc->body;
 
+#if defined(KAAPI_CONCURRENT_WS)
     if (!kaapi_task_casstate(pc, body, kaapi_exec_body)) 
     {
       err= EWOULDBLOCK;
       goto label_return;
     }
+#else
+    kaapi_task_setbody(pc, kaapi_exec_body);
+#endif
 
     /* save the state of the stack */
     stack->saved_sp = stack->sp;
@@ -119,9 +124,7 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
     {
       /* inline version of kaapi_stack_pushretn in order to avoid to save all frame structure */
       retn = kaapi_stack_toptask(stack);
-      retn->body  = kaapi_retn_body;
-
-      frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t));
+      kaapi_task_init(retn, kaapi_retn_body, frame = kaapi_stack_pushdata(stack, sizeof(kaapi_frame_t)) );
       retn->sp = (void*)frame;
       frame->pc = pc; /* <=> save pc, will mark this task as term after pop !! */
       frame->sp = stack->saved_sp;
@@ -133,7 +136,8 @@ int kaapi_stack_execchild(kaapi_stack_t* stack, kaapi_task_t* pc_stop)
     }
     else {
       if (stack->pc == pc_stop) goto label_return;
-      pc = --stack->pc;
+      stack->pc = pc -1;
+      pc = stack->pc;
     }
 
     /* process steal request 
@@ -165,4 +169,7 @@ label_return:
   else if (err == -EAGAIN) err = 0;
   stack->errcode = 0;
   return err;
+#endif
+  return 0;
 }
+#endif

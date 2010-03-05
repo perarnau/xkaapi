@@ -52,12 +52,9 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_request_t* request    = 0;
   kaapi_stack_t* thief_stack  = 0;
   kaapi_task_t*  steal_task   = 0;
-  kaapi_task_t*  write_task   = 0;
-/*  kaapi_task_body_t body; */
+
   kaapi_assert_debug (task !=0);
   
-  KAAPI_LOG(50, "dfgsplitter task: 0x%p\n", (void*)task);
-
   kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body);
 
   /* find the first request in the list */
@@ -87,16 +84,9 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
   kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( steal_task, kaapi_tasksteal_arg_t );
   arg->origin_stack          = stack;
   arg->origin_task           = task;
-
+  
   kaapi_stack_pushtask( thief_stack );
 
-  /* ... and we push the write task if w, cw or rw mode */
-  write_task = kaapi_stack_toptask( thief_stack );
-  kaapi_task_setbody( write_task, kaapi_taskwrite_body );
-  kaapi_task_setargs( write_task, arg ); /* keep the pointer as kaapi_tasksteal_body */
-
-  kaapi_stack_pushtask( thief_stack );
- 
   /* do not decrement the counter */
   _kaapi_request_reply( stack->_proc, stack, task, request, thief_stack, 0, 1, 0 ); /* success of steal */
   return 1;
