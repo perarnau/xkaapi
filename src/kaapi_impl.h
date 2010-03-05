@@ -243,6 +243,10 @@ extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
 */
 extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid );
 
+/** Exec all frames including the current one defined by [frame_sp, sp[
+*/
+extern int kaapi_stack_execframe( kaapi_stack_t* stack );
+
 /** Useful
 */
 extern kaapi_processor_t* kaapi_get_current_processor(void);

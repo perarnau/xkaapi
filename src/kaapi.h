@@ -118,7 +118,7 @@ struct kaapi_stack_t;
 /** Task body
     \ingroup TASK
 */
-typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_stack_t* /* stack */);
+typedef void (*kaapi_task_body_t)(struct kaapi_task_t* /*task arg*/, struct kaapi_stack_t* /* stack */);
 /* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
@@ -444,14 +444,14 @@ typedef int (*kaapi_task_reducer_t) (
    \TODO save also the C-stack if we try to suspend execution during a task execution
 */
 typedef struct kaapi_stack_t {
-  struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   struct kaapi_task_t*      sp;             /** stack counter: next free task entry */
-  struct kaapi_task_t*      pc;             /** task counter: next task to execute, 0 if empty stack */
-  struct kaapi_task_t*      frame_sp;       /** sp of the end of the frame */
-  char*                     data;           /** stack of data with the same scope than task */
+  struct kaapi_task_t*      frame_sp;       /** sp of the end of the current frame */
   char*                     sp_data;        /** stack counter for the data: next free data entry */
-  kaapi_atomic_t            lock;           /** */ 
   int                       errcode;        /** set by task execution to signal incorrect execution */
+
+  struct kaapi_task_t*      task;           /** pointer to the first pushed task */
+  char*                     data;           /** stack of data with the same scope than task */
+  kaapi_atomic_t            lock;           /** */ 
 
   volatile int              hasrequest;     /** points to the k-processor structure */
   volatile int              haspreempt;     /** !=0 if preemption is requested */
@@ -652,57 +652,57 @@ static inline kaapi_task_bodyid_t kaapi_task_getextrabody(kaapi_task_t* task)
 /** Body of the nop task 
     \ingroup TASK
 */
-extern void kaapi_nop_body( void*, kaapi_stack_t*);
+extern void kaapi_nop_body( kaapi_task_t*, kaapi_stack_t*);
 
 /** Body of the startup task 
     \ingroup TASK
 */
-extern void kaapi_taskstartup_body( void*, kaapi_stack_t*);
+extern void kaapi_taskstartup_body( kaapi_task_t*, kaapi_stack_t*);
 
 /** Body of the task that restore the frame pointer 
     \ingroup TASK
 */
-extern void kaapi_retn_body( void*, kaapi_stack_t*);
+extern void kaapi_retn_body( kaapi_task_t*, kaapi_stack_t*);
 
 /** Body of the task that mark a task to suspend execution
     \ingroup TASK
 */
-extern void kaapi_suspend_body( void*, kaapi_stack_t*);
+extern void kaapi_suspend_body( kaapi_task_t*, kaapi_stack_t*);
 
 /** Body of the task that mark a task as under execution
     \ingroup TASK
 */
-extern void kaapi_exec_body( void*, kaapi_stack_t*);
+extern void kaapi_exec_body( kaapi_task_t*, kaapi_stack_t*);
 
 /** Body of task steal created on thief stack to execute a task
     \ingroup TASK
 */
-extern void kaapi_tasksteal_body( void* task, kaapi_stack_t* stack );
+extern void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 /** Write result after a steal 
     \ingroup TASK
 */
-extern void kaapi_taskwrite_body( void* task, kaapi_stack_t* stack );
+extern void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 /** Body of the task that do signal to a task after steal op
     \ingroup TASK
 */
-extern void kaapi_tasksig_body( void* task, kaapi_stack_t* stack);
+extern void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack);
 
 /** Merge result after a steal
     \ingroup TASK
 */
-extern void kaapi_aftersteal_body( void* task, kaapi_stack_t* stack);
+extern void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack);
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
 */
-extern void kaapi_taskfinalize_body( void* task, kaapi_stack_t* stack );
+extern void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
 */
-extern void kaapi_adapt_body( void* task, kaapi_stack_t* stack );
+extern void kaapi_adapt_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 /** The main task 
     \ingroup TASK
@@ -712,7 +712,7 @@ typedef struct kaapi_taskmain_arg_t {
   char** argv;
   void (*mainentry)(int, char**);
 } kaapi_taskmain_arg_t;
-extern void kaapi_taskmain_body( void* task, kaapi_stack_t* stack );
+extern void kaapi_taskmain_body( kaapi_task_t* task, kaapi_stack_t* stack );
 
 
 
@@ -789,7 +789,7 @@ extern int kaapi_stack_clear( kaapi_stack_t* stack );
 */
 static inline int kaapi_stack_isempty(const kaapi_stack_t* stack)
 {
-  return (stack ==0) || (stack->pc <= stack->sp);
+  return (stack ==0) || (stack->frame_sp <= stack->sp);
 }
 
 /** \ingroup STACK
@@ -891,7 +891,6 @@ static inline kaapi_task_t* kaapi_stack_bottomtask(kaapi_stack_t* stack)
 #if defined(KAAPI_DEBUG)
   if (stack ==0) return 0;
 #endif
-  if (stack->pc <= stack->sp) return 0;
   return stack->task;
 }
 
@@ -990,9 +989,9 @@ static inline int kaapi_stack_save_frame( kaapi_stack_t* stack, kaapi_frame_t* f
     return EINVAL;
   }
 #endif
-  frame->pc      = stack->pc;
-  frame->sp      = stack->sp;
-  frame->sp_data = stack->sp_data;
+  frame->sp       = stack->sp;
+  frame->pc       = stack->frame_sp;
+  frame->sp_data  = stack->sp_data;
   return 0;  
 }
 
@@ -1013,9 +1012,9 @@ static inline int kaapi_stack_restore_frame( kaapi_stack_t* stack, const kaapi_f
     return EINVAL;
   }
 #endif
-  stack->pc      = frame->pc;
-  stack->sp      = frame->sp;
-  stack->sp_data = frame->sp_data;
+  stack->sp       = frame->sp;
+  stack->frame_sp = frame->pc;
+  stack->sp_data  = frame->sp_data;
   return 0;  
 }
 

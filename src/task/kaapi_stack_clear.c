@@ -49,7 +49,7 @@
 int kaapi_stack_clear( kaapi_stack_t* stack )
 {
   if (stack == 0) return EINVAL;
-  stack->pc = stack->sp = stack->task;
+  stack->frame_sp = stack->sp = stack->task;
   stack->sp_data = stack->data;
   return 0;
 }

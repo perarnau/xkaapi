@@ -48,7 +48,7 @@
 
 /**
 */
-void kaapi_taskwrite_body( void* taskarg, kaapi_stack_t* stack )
+void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   int i;
   int countparam;
@@ -65,7 +65,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_stack_t* stack )
   void*                 copy_data_param;
   kaapi_access_t*       copy_access_param;
 
-  kaapi_tasksteal_arg_t* arg = (kaapi_tasksteal_arg_t*)taskarg;
+  kaapi_tasksteal_arg_t* arg = kaapi_task_getargst(task, kaapi_tasksteal_arg_t);
   orig_task_args             = kaapi_task_getargs(arg->origin_task);
   copy_task_args             = arg->copy_task_args;
   fmt                        = arg->origin_fmt;
@@ -103,7 +103,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_stack_t* stack )
 
 /**
 */
-void kaapi_tasksteal_body( void* taskarg, kaapi_stack_t* stack )
+void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
   int i;
   int                    countparam;
@@ -126,7 +126,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_stack_t* stack )
 
   
   /* get information of the task to execute */
-  arg = (kaapi_tasksteal_arg_t*)taskarg;
+  arg = kaapi_task_getargst(task, kaapi_tasksteal_arg_t);
 
   /* format of the original stolen task */  
   body            = kaapi_task_getextrabody(arg->origin_task);

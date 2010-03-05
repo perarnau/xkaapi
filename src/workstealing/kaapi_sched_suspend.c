@@ -67,7 +67,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
   /* here is the reason of suspension */
   ctxt_condition = kproc->ctxt;
-  task_condition = ctxt_condition->pc;
+  task_condition = ctxt_condition->frame_sp;
   if (kaapi_task_getbody(task_condition) != kaapi_suspend_body) return 0;
   
   /* put context is list of suspended contexts: critical section with respect of thieves */
@@ -80,7 +80,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
     if (kproc->ctxt == ctxt_condition) 
     {
-      kaapi_assert(kproc->ctxt->pc == task_condition);
+      kaapi_assert(kproc->ctxt->frame_sp == task_condition);
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif

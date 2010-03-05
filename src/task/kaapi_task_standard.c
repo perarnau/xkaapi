@@ -47,19 +47,19 @@
 
 /**
 */
-void kaapi_nop_body( void* taskarg, kaapi_stack_t* stack)
+void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
 }
 
 /** Dumy task pushed at startup into the main thread
 */
-void kaapi_taskstartup_body( void* taskarg, kaapi_stack_t* stack)
+void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
 }
 
 /**
 */
-void kaapi_retn_body( void* taskarg, kaapi_stack_t* stack)
+void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
 #if 0
   kaapi_frame_t* frame = (kaapi_frame_t*)taskarg;
@@ -86,30 +86,28 @@ void kaapi_retn_body( void* taskarg, kaapi_stack_t* stack)
 
 /*
 */
-void kaapi_suspend_body( void* taskarg, kaapi_stack_t* stack)
+void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
   stack->errcode = EWOULDBLOCK;
-  /* reset the suspend_body: may fail if thief write after steal */
-  kaapi_task_casstate(stack->pc, kaapi_exec_body, kaapi_suspend_body);
 }
 
 /*
 */
-void kaapi_exec_body( void* taskarg, kaapi_stack_t* stack)
+void kaapi_exec_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
 }
 
 /*
 */
-void kaapi_adapt_body( void* taskarg, kaapi_stack_t* stack )
+void kaapi_adapt_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
 }
 
 
 /*
 */
-void kaapi_taskmain_body( void* taskarg, kaapi_stack_t* stack )
+void kaapi_taskmain_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
-  kaapi_taskmain_arg_t* arg = (kaapi_taskmain_arg_t*)taskarg;
+  kaapi_taskmain_arg_t* arg = kaapi_task_getargst(task, kaapi_taskmain_arg_t);
   arg->mainentry( arg->argc, arg->argv );
 }

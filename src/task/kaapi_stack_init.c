@@ -80,8 +80,8 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   
   if (size ==0) 
   { 
-    stack->pc      = stack->sp = stack->task = 0; 
-    stack->sp_data = stack->data = 0;
+    stack->frame_sp = stack->sp = stack->task = 0; 
+    stack->sp_data  = stack->data = 0;
     return 0;
   }
 
@@ -90,7 +90,7 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   stack->sp_data  = stack->data = (char*)buffer;
   pasttheend_task = (kaapi_task_t*)((char*)buffer + size);
   stack->task     = pasttheend_task -1;
-  stack->pc       = stack->sp = stack->task;
+  stack->frame_sp = stack->sp = stack->task;
   stack->thiefsp  = stack->sp;
   return 0;
 }

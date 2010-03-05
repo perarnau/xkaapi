@@ -47,9 +47,9 @@
 
 /**
 */
-void kaapi_taskfinalize_body( void* taskarg, kaapi_stack_t* stack )
+void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
+  kaapi_taskadaptive_t* ta = kaapi_task_getargst(task, kaapi_taskadaptive_t);
   kaapi_assert_debug( ta !=0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)

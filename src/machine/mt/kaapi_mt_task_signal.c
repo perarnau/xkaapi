@@ -47,7 +47,7 @@
 
 /**
 */
-void kaapi_tasksig_body( void* taskarg, kaapi_stack_t* stack)
+void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
   /*
     printf("Thief end, @stack: 0x%p\n", stack);
@@ -56,7 +56,7 @@ void kaapi_tasksig_body( void* taskarg, kaapi_stack_t* stack)
   kaapi_tasksig_arg_t* argsig;
   kaapi_task_t* task2sig;
 
-  argsig = (kaapi_tasksig_arg_t*)taskarg;
+  argsig = kaapi_task_getargst(task, kaapi_tasksig_arg_t);
   task2sig = argsig->task2sig;
 
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */

@@ -127,6 +127,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_task_setextrabody( task, kaapi_taskstartup_body);
 
   kaapi_stack_pushtask(stack);
+  /* warning strong impact on execution, see kaapi_sched_sync */
   stack->frame_sp = stack->sp;
 
   /* dump output information */

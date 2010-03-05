@@ -75,7 +75,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
       if (wakeupok) 
       {
         ctxt = cell->stack;
-        kaapi_task_t* task = ctxt->pc;
+        kaapi_task_t* task = ctxt->frame_sp;
         if ( (kaapi_task_getbody(task) != kaapi_aftersteal_body) )
         { 
           garbage  = 0;

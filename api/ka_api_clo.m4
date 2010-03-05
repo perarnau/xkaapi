@@ -47,9 +47,9 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMP
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
   static TaskBodyCPU<TASK> dummy;
-  static void body(void* taskarg, kaapi_stack_t* stack)
+  static void body(kaapi_task_t* task, kaapi_stack_t* stack)
   {
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)task->sp;')
     dummy( (Thread*)stack M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
@@ -69,9 +69,9 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAM
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
   static TaskBodyCPU<TASK> dummy;
-  static void body(void* taskarg, kaapi_stack_t* stack)
+  static void body(kaapi_task_t* task, kaapi_stack_t* stack)
   {
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)task->sp;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };
@@ -96,9 +96,9 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMP
 
   /* with stack parameters */
   static TaskBodyGPU<TASK> dummy;
-  static void body(void* taskarg, kaapi_stack_t* stack)
+  static void body(kaapi_task_t* task, kaapi_stack_t* stack)
   {
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)task->sp;')
     dummy( (Thread*)stack M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
@@ -119,9 +119,9 @@ struct KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<false, TASK M4_PARAM(`, TraitUAM
 
   /* */
   static TaskBodyGPU<TASK> dummy;
-  static void body(void* taskarg, kaapi_stack_t* stack)
+  static void body(kaapi_task_t* task, kaapi_stack_t* stack)
   {
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)task->sp;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };
