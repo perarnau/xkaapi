@@ -80,7 +80,7 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
 #endif
 
   /* flush in memory all pending write and read ops */  
-  kaapi_mem_barrier();
+  kaapi_writemem_barrier();
 
 #if 0  
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
