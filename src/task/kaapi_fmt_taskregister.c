@@ -87,9 +87,6 @@ kaapi_format_id_t kaapi_format_taskregister(
   kaapi_format_t* fmt = (*fmt_fnc)();
   kaapi_format_register( fmt, name );
 
-  /* TG: warning no used but keep it */
-  fmt->bodyid = body;
-
   fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = body;
   fmt->entrypoint[KAAPI_PROC_TYPE_CPU] = body;
   fmt->count_params    = count;

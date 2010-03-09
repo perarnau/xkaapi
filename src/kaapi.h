@@ -343,8 +343,7 @@ typedef struct kaapi_format_t {
   void                       (*print)( FILE* file, const void* src);
 
   /* only if it is a format of a task  */
-  kaapi_task_bodyid_t        bodyid;                                  /* iff a task */
-  kaapi_task_body_t          default_body;                            /* iff a task */
+  kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
   int                        count_params;                            /* number of parameters */
   kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
