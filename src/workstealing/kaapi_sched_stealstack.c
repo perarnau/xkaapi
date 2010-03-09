@@ -139,7 +139,7 @@ static int kaapi_sched_stealframe(
   task_top   = kaapi_stack_toptask(stack);
   task_exec  = 0;
   replycount = 0;
-  while ( (count > replycount) && (task_bot != task_top) && ( (task_body = kaapi_task_getbody(task_bot)) != kaapi_retn_body) )
+  while ( ( (task_body = kaapi_task_getbody(task_bot)) != kaapi_retn_body) && (count > replycount) && (task_bot != task_top) )
   {
     /* skip nop: nop correspond to already executed task, do not find in hash map
        their data because the next lookup will return data as "not known" and thus ready whatever is
