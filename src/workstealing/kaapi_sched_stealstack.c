@@ -136,11 +136,13 @@ static int kaapi_sched_stealframe(
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
   
+  task_body  = kaapi_nop_body;
   task_top   = kaapi_stack_toptask(stack);
   task_exec  = 0;
   replycount = 0;
-  while ( ( (task_body = kaapi_task_getbody(task_bot)) != kaapi_retn_body) && (count > replycount) && (task_bot != task_top) )
+  while ( (count > replycount) && (task_bot != task_top) )
   {
+    task_body = kaapi_task_getbody(task_bot);
     /* skip nop: nop correspond to already executed task, do not find in hash map
        their data because the next lookup will return data as "not known" and thus ready whatever is
        the access mode.
