@@ -59,6 +59,12 @@ kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0
 };
 
+/**
+*/ 
+void kaapi_force_instance(kaapi_task_bodyid_t f)
+{
+}
+
 /** Predefined format
 */
 kaapi_format_t kaapi_shared_format;
