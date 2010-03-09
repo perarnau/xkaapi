@@ -235,7 +235,9 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
               &TASK::operator()
           )->bodyid
         )
-    {}
+    {
+      std::cout << "Register bodyid:" << value << std::endl;
+    }
     const kaapi_task_bodyid_t value;
   };
   static const ForceInit bodyid;
