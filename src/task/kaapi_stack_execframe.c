@@ -124,7 +124,11 @@ restart_after_steal:
   if (stack->pfsp != eframe)
   {
     /* here it's a pop of frame */
+    while (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1));
     --stack->pfsp;
+    kaapi_writemem_barrier();
+    KAAPI_ATOMIC_WRITE(&stack->lock, 0, 1);
+    
     kaapi_assert_debug( stack->pfsp >= eframe);
     --stack->pfsp->pc;
     stack->sp = stack->pfsp->sp;
