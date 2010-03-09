@@ -133,6 +133,9 @@ static int kaapi_sched_stealframe(
   kaapi_task_t*         task_exec;
   int                   replycount;
 
+  /* lock the stack */
+  if (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1)) return 0;
+  
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
   
@@ -168,7 +171,7 @@ static int kaapi_sched_stealframe(
 label_continue:
     --task_bot;
   }
-  if (replycount == count) return replycount;
+  if (replycount == count) goto label_return;
   kaapi_assert_debug( replycount <= count );
 
   /* recursive call */
@@ -182,6 +185,9 @@ label_continue:
       kaapi_task_setbody(task_exec, kaapi_exec_body);
     }
   }
+
+label_return:
+  KAAPI_ATOMIC_WRITE(&stack->lock, 0);  
   return replycount;
 }
 
