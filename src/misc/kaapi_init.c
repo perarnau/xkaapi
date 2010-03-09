@@ -61,7 +61,7 @@ kaapi_rtparam_t kaapi_default_param = {
 
 /**
 */ 
-void kaapi_force_instance(kaapi_task_bodyid_t f)
+void kaapi_force_instance(const char* name, kaapi_task_bodyid_t f)
 {
 }
 
