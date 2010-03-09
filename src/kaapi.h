@@ -500,7 +500,7 @@ typedef struct kaapi_stack_t {
 */
 typedef struct kaapi_task_t {
   kaapi_task_bodyid_t   body;      /** task body  */
-  kaapi_task_bodyid_t   ebody;     /** extra task body  */
+  kaapi_task_bodyid_t   volatile ebody;     /** extra task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
   void*                 pad;       /** padding  */
 } kaapi_task_t ;
