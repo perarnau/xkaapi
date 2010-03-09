@@ -134,4 +134,8 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
 };
 
 /* required for separate compilation */
-static ka::RegisterBodyCPU<TaskFibo> dummy_object;
+void __attribute__ ((constructor)) kaapi_thisfile()
+{
+  static volatile ka::RegisterBodyCPU<TaskFibo> dummy_object;
+}
+

@@ -80,7 +80,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
         { 
           /* ok wakeup */
           cell->stack = 0;
-//          printf( "[wakeup] task: @=%p, stack: @=%p\n", task, ctxt);
+          printf( "[wakeup] task: @=%p, stack: @=%p\n", task, ctxt);
         }
         else {
           garbage  = 0;

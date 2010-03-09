@@ -71,8 +71,8 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
   fmt                        = arg->origin_fmt;
   countparam = fmt->count_params;
   
-//  printf( "[taskwrite] task: @=%p, stack: @=%p\n", arg->origin_task, stack);
-//  fflush(stdout);
+  printf( "[taskwrite] task: @=%p, stack: @=%p\n", arg->origin_task, stack);
+  fflush(stdout);
 
   if (copy_task_args !=0)
   {
@@ -146,8 +146,8 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
   countparam      = fmt->count_params;
   
-//  printf( "[tasksteal] exec task: @=%p, body:%p, stack: @=%p\n", arg->origin_task, body, stack);
-//  fflush(stdout);
+  printf( "[tasksteal] exec task: @=%p, body:%p, stack: @=%p\n", arg->origin_task, body, stack);
+  fflush(stdout);
 
   /* If it exist a W or CW access then recreate a new structure 
      of input arguments to execute the stolen task.

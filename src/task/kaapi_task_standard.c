@@ -89,7 +89,7 @@ void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
 void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
 {
   stack->errcode |= EWOULDBLOCK << 8;
-//  printf( "[suspend] task: @=%p, stack: @=%p\n", task, stack);
+  printf( "[suspend] task: @=%p, stack: @=%p\n", task, stack);
 }
 
 /*
