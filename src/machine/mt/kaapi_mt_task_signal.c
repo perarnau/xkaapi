@@ -59,6 +59,9 @@ void kaapi_tasksig_body( kaapi_task_t* task, kaapi_stack_t* stack)
   argsig = kaapi_task_getargst(task, kaapi_tasksig_arg_t);
   task2sig = argsig->task2sig;
 
+//  printf( "[tasksignal] task: @=%p, stack: @=%p\n", task2sig, stack);
+//  fflush(stdout);
+
   if (!(argsig->flag & KAAPI_REQUEST_FLAG_PARTIALSTEAL)) /* steal a whole task */
   {
     kaapi_task_setbody(task2sig, kaapi_aftersteal_body );

@@ -470,6 +470,7 @@ typedef struct kaapi_stack_t {
   int                       errcode;        /** set by task execution to signal incorrect execution */
   kaapi_frame_t*            stackframe;     /** for execution, see kaapi_stack_execframe */
   kaapi_frame_t*            pfsp; 
+  kaapi_frame_t*            epfsp; 
 
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   char*                     data;           /** stack of data with the same scope than task */

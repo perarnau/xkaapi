@@ -112,7 +112,7 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
   void operator() ( ka::Thread* thread, ka::pointer_w<long> res, const long n )
   {  
     if (n < 2){ //cutoff) {
-      *res = fiboseq(n);
+      *res = n; //fiboseq(n);
     }
     else {
       ka::pointer_rpwp<long> res1 = thread->Alloca<long>(1);
@@ -123,6 +123,7 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
        */
       thread->Spawn<TaskFibo>() ( res1, n-1);
       thread->Spawn<TaskFibo>() ( res2, n-2);
+//      (*this) ( thread, res2, n-2);
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished

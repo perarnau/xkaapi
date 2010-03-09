@@ -76,6 +76,7 @@ int kaapi_sched_sync(kaapi_stack_t* stack)
   int           err;
   int           save_sticky;
   kaapi_frame_t frame;
+  kaapi_frame_t* save_epfsp;
   kaapi_task_t* frame_sp;
 
   if (kaapi_stack_isempty( stack ) ) return 0;
@@ -83,10 +84,12 @@ int kaapi_sched_sync(kaapi_stack_t* stack)
   /* save here, do not restore pushed retn */
   kaapi_stack_save_frame(stack, &frame);
 
+  save_epfsp = stack->epfsp;
   frame_sp = stack->frame_sp; /* should correspond to the pc counter */
-  
+
   /* increment new frame ~ push */
   ++stack->pfsp;
+  stack->epfsp = stack->pfsp;
 
   /* same the current frame in the stackframe */
   kaapi_stack_save_frame(stack, stack->pfsp);
@@ -113,7 +116,7 @@ redo:
 
   /* decrement frame pointer ~ pop */
   --stack->pfsp;
-
+  stack->epfsp = save_epfsp;
   /* mark the next task of current running task as nop to avod rexec */
   kaapi_task_setbody(frame_sp, kaapi_nop_body);
 

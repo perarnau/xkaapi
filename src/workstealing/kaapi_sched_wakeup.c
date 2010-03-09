@@ -76,16 +76,16 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
       {
         ctxt = cell->stack;
         kaapi_task_t* task = ctxt->pfsp->pc;
-        if ( (kaapi_task_getbody(task) != kaapi_aftersteal_body) )
+        if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
         { 
+          /* ok wakeup */
+          cell->stack = 0;
+//          printf( "[wakeup] task: @=%p, stack: @=%p\n", task, ctxt);
+        }
+        else {
           garbage  = 0;
           wakeupok = 0;
           KAAPI_ATOMIC_WRITE( &cell->state, 0 );
-        }
-        else {
-          /* ok wakeup */
-          cell->stack = 0;
-          garbage = 1;
         }
       }
     }
@@ -95,6 +95,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
     kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
     if (garbage)
     {
+      kaapi_assert_debug(cell->stack ==0); 
       /* delete from the queue */
       if (nextcell !=0)
         nextcell->prev = cell->prev;

@@ -75,7 +75,7 @@
 int kaapi_stack_execframe( kaapi_stack_t* stack )
 {
   register kaapi_task_t*     pc;
-  kaapi_frame_t*             eframe = stack->pfsp;
+  kaapi_frame_t*             eframe = stack->epfsp;
   kaapi_task_body_t          body;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;

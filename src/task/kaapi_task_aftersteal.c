@@ -58,6 +58,9 @@ void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
   
   taskarg = kaapi_task_getargs(task );
 
+//  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, stack);
+//  fflush(stdout);
+
   /* the task has been stolen: the extra body contains the original task body */
   fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(task) );
   kaapi_assert_debug( fmt !=0 );

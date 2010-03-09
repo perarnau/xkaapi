@@ -78,6 +78,8 @@ int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls )
 */
 int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* stack )
 {
+//  printf( "[sleep stack]: stack: @=%p\n", stack);
+
   kaapi_wsqueuectxt_cell_t* cell = ls->headfreecell;
   if (cell !=0)
   {

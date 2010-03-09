@@ -77,6 +77,9 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
      The original body is saved as the extra body of the original task data structure.
   */
   thief_stack = request->stack;
+
+//  printf( "[splitter] task: @=%p, stack: @=%p, thief_stack: @=%p\n", task, stack, thief_stack);
+
   
   steal_task = kaapi_stack_toptask( thief_stack );
   kaapi_task_init( steal_task, kaapi_tasksteal_body, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksteal_arg_t)) );
