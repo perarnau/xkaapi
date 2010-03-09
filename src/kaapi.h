@@ -1535,6 +1535,10 @@ extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
  */
 extern void _kaapi_dummy(void*);
 
+/**
+*/
+extern void kaapi_force_instance(kaapi_task_bodyid_t f);
+
 /* ========================================================================= */
 /* Initialization / destruction functions
  */
