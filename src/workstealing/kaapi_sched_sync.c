@@ -45,53 +45,6 @@
 #include "kaapi_impl.h"
 
 
-#if 0
-static int kaapi_stack_execframe( kaapi_stack_t* stack )
-{
-  kaapi_frame_t     frame;
-  kaapi_task_body_t body;
-
-  kaapi_stack_save_frame(stack, &frame);
-  stack->frame_sp = frame.sp;
-
-  /* stack growth down ! */
-  for (; frame.pc != frame.sp; --frame.pc)
-  {
-    body = frame.pc->body;
-#if defined(KAAPI_CONCURRENT_WS)
-    OSAtomicCompareAndSwap32( (int32_t)body, (int32_t)kaapi_exec_body, (volatile int32_t*)&frame.pc->body);
-#else
-    frame.pc->body = kaapi_exec_body;
-#endif
-    body( frame.pc, stack );
-    if (__builtin_expect(stack->errcode,0)) goto backtrack_stack;
-    
-    if (frame.sp != stack->sp)
-    {
-      stack->frame_sp = frame.sp;
-      kaapi_stack_execframe(stack);
-      if (__builtin_expect(stack->errcode,0)) goto backtrack_stack_return;
-//      stack->pc = frame.pc;
-      stack->sp = frame.sp;
-      stack->sp_data = frame.sp_data;
-      stack->frame_sp = frame.sp;
-//      kaapi_stack_restore_frame(stack, &frame);
-//      stack->frame_sp = frame.sp;
-    }
-  }
-  stack->frame_sp = frame.sp;
-  return 0;
-
-backtrack_stack:
-  /* here back track the kaapi_stack_execframe until go out */
-  return stack->errcode;
-
-backtrack_stack_return:
-  return 1+stack->errcode;
-}
-#endif
-
-
 /** kaapi_sched_sync
     Here the stack frame is organised like this, task1 is the running task.
 
@@ -121,6 +74,7 @@ frame_sp, sp ->| x x x  |
 int kaapi_sched_sync(kaapi_stack_t* stack)
 {
   int           err;
+  int           save_sticky;
   kaapi_frame_t frame;
   kaapi_task_t* frame_sp;
 
@@ -133,6 +87,13 @@ int kaapi_sched_sync(kaapi_stack_t* stack)
   
   /* increment new frame ~ push */
   ++stack->pfsp;
+
+  /* same the current frame in the stackframe */
+  kaapi_stack_save_frame(stack, stack->pfsp);
+  
+  /* the stack could not be steal (required a context switch not yet implemented) else wakeup */
+  save_sticky = stack->sticky;
+  stack->sticky = 1;
   
 redo:
   err = kaapi_stack_execframe(stack);
@@ -141,6 +102,10 @@ redo:
     kaapi_sched_suspend( kaapi_get_current_processor() );
     goto redo;
   }
+  
+  /* reset sticky flag if save_stick != 1 */
+  if (!save_sticky) stack->sticky = 0;
+  
   if (err) /* but do not restore stack */
     return err;
   kaapi_stack_restore_frame(stack, &frame);

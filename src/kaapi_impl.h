@@ -248,17 +248,13 @@ extern int kaapi_stack_print  ( int fd, kaapi_stack_t* stack );
 extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid );
 
 /** \ingroup STACK
-    The function kaapi_stack_execall() execute all the tasks in the stack following
-    the RFO order.
-    If successful, the kaapi_stack_execall() function will return zero and the stack is empty.
+    The function kaapi_stack_execframe() execute all the tasks in the stack following
+    the RFO order in the closures of the frame [frame_sp,..,sp[
+    If successful, the kaapi_stack_execframe() function will return zero and the stack is empty.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
-*/
-extern int kaapi_stack_execall(kaapi_stack_t* stack);
-
-/** Exec all frames including the current one defined by [frame_sp, sp[
 */
 extern int kaapi_stack_execframe( kaapi_stack_t* stack );
 

@@ -456,7 +456,7 @@ typedef struct kaapi_frame_t {
 
    Before and after the execution of a task, the state of the computation is only
    defined by the stack state (pc, sp, sp_data and the content of the stack). Not that
-   kaapi_stack_execall and other funcitons to execute tasks may cached internal state (pc). 
+   kaapi_stack_execframe and other funcitons to execute tasks may cached internal state (pc). 
    The C-stack doesnot need to be saved in that case.
    
    \TODO save also the C-stack if we try to suspend execution during a task execution
@@ -474,6 +474,7 @@ typedef struct kaapi_stack_t {
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   char*                     data;           /** stack of data with the same scope than task */
   kaapi_atomic_t            lock;           /** */ 
+  int                       sticky;         /** 1 iff the stack could not be steal else by a context swap */ 
 
   volatile int              hasrequest;     /** points to the k-processor structure */
   volatile int              haspreempt;     /** !=0 if preemption is requested */

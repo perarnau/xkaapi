@@ -140,7 +140,7 @@ redo_execute:
       kproc->t_sched += t1-t0;
     */
 #endif
-    err = kaapi_stack_execall( kproc->ctxt );
+    err = kaapi_stack_execframe( kproc->ctxt );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );

@@ -42,6 +42,7 @@
 ** 
 */
 #include <iostream>
+#include "kaapi_impl.h"
 #include "ka_init.h"
 #include "ka_component.h"
 #include "ka_timer.h"
@@ -52,9 +53,6 @@
 #include <time.h>
 #include <unistd.h>
 #include "kaapi_defs.h"
-#if defined(KAAPI_USE_IPHONEOS)
-#include "KaapiIPhoneInit.h"
-#endif
 
 //#define KAAPI_VERBOSE
 

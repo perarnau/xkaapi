@@ -108,7 +108,6 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   int i;
   int                    countparam;
   int                    push_write;
-  kaapi_task_t*          write_task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */
   kaapi_format_t*        fmt;
@@ -156,7 +155,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   {
     /* Execute the orinal body function with the original args
     */
-    body(orig_task_args, stack);
+    body(arg->origin_task, stack);
   }
   else 
   {
@@ -190,11 +189,11 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
     }
     /* Execute the orinal body function with the copy of args
     */
-    body(copy_task_args, stack);
+    kaapi_task_init( kaapi_stack_toptask(stack), body, copy_task_args);
+    body( kaapi_stack_toptask(stack), stack);
 
     /* ... and we push the write task if w, cw or rw mode */
-    write_task = kaapi_stack_toptask( stack );
-    kaapi_task_init( write_task, kaapi_taskwrite_body, arg );
+    kaapi_task_init( kaapi_stack_toptask( stack ), kaapi_taskwrite_body, arg );
     kaapi_stack_pushtask( stack );
   }
 }

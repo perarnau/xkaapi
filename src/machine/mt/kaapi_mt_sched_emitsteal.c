@@ -56,8 +56,7 @@ kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->ctxt !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
-  
-  /* clear stack */
+    /* clear stack */
   kaapi_stack_clear( kproc->ctxt );
 
 redo_select:

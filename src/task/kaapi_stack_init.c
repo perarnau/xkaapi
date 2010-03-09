@@ -73,11 +73,12 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   kaapi_task_t* pasttheend_task;
   
   if (stack == 0) return EINVAL;
-  stack->haspreempt =0;
-  stack->hasrequest =0; /* 0 means no thiefs */
-  stack->errcode    =  0;
+  stack->haspreempt = 0;
+  stack->hasrequest = 0; /* 0 means no thiefs */
+  stack->errcode    = 0;
+  stack->sticky     = 0;
   KAAPI_ATOMIC_WRITE(&stack->lock, 0);
-  
+
   if (size ==0) 
   { 
     stack->frame_sp = stack->sp = stack->task = 0; 
@@ -96,6 +97,6 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   stack->stackframe = malloc(sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL);
   if (stack->stackframe ==0) return ENOMEM;
   stack->pfsp = stack->stackframe;
-  
+
   return 0;
 }

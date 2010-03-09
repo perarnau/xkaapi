@@ -75,14 +75,19 @@
 int kaapi_stack_execframe( kaapi_stack_t* stack )
 {
   register kaapi_task_t*     pc;
-  kaapi_frame_t*    eframe = stack->pfsp;
-  kaapi_task_body_t body;
+  kaapi_frame_t*             eframe = stack->pfsp;
+  kaapi_task_body_t          body;
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint32_t         cnt_tasks = 0;
+  kaapi_uint32_t             cnt_tasks = 0;
 #endif  
 
+  if (stack->pfsp ==0)
+  {
+    eframe = stack->pfsp = stack->stackframe;
+    kaapi_stack_save_frame(stack, stack->pfsp);
+  }
+
 enter_loop:
-  kaapi_stack_save_frame(stack, stack->pfsp);
   stack->frame_sp = stack->pfsp->sp;
 
 begin_loop:
@@ -92,9 +97,10 @@ begin_loop:
     pc = stack->pfsp->pc;
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
-    kaapi_assert_debug( body == pc->ebody);
+    kaapi_assert_debug( (body == pc->ebody) || (body == kaapi_suspend_body) || (body == kaapi_aftersteal_body) );
+
 #if defined(KAAPI_CONCURRENT_WS)
-    OSAtomicCompareAndSwap32( (int32_t)body, (int32_t)kaapi_exec_body, (volatile int32_t*)&pc->body);
+    KAAPI_ATOMIC_CASPTR( &pc->body, body, kaapi_exec_body );
 #else
     pc->body = kaapi_exec_body;
 #endif
@@ -103,12 +109,14 @@ begin_loop:
     ++cnt_tasks;
 #endif
     if (__builtin_expect(stack->errcode,0)) goto backtrack_stack;
-    
+
+restart_after_steal:    
     if (__builtin_expect(stack->pfsp->sp != stack->sp,0))
     {
       stack->frame_sp = stack->pfsp->sp;
       /* here it's a push of frame */
       ++stack->pfsp;
+      kaapi_stack_save_frame(stack, stack->pfsp);
       kaapi_assert_debug( stack->pfsp - eframe <KAAPI_MAX_RECCALL);
       goto enter_loop;
     }
@@ -126,10 +134,36 @@ begin_loop:
   }
   stack->frame_sp = stack->pfsp->sp;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  cnt_tasks = 0;
+#endif
+  return 0;
+
 backtrack_stack:
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  cnt_tasks = 0;
 #endif
+#if !defined(KAAPI_CONCURRENT_WS)
+  if ((stack->errcode & 0x1) !=0) 
+  {
+    kaapi_sched_advance(stack->_proc);
+    stack->errcode = stack->errcode & ~0x1;
+    if (stack->errcode ==0) goto restart_after_steal;
+  }
+#endif
+  if ((stack->errcode >> 8) == EWOULDBLOCK) 
+  {
+    stack->errcode = stack->errcode & ~( 0xFF << 8);
+    if (!KAAPI_ATOMIC_CASPTR( &pc->body, kaapi_exec_body, kaapi_suspend_body ))
+    { /* the only way the cas fails is during the thief that update to body to aftersteal body */
+      kaapi_assert_debug( pc->body == kaapi_aftersteal_body);
+      goto begin_loop;
+    }
+    return EWOULDBLOCK;
+  }
+
   /* here back track the kaapi_stack_execframe until go out */
   return stack->errcode;
 }

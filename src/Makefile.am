@@ -43,7 +43,6 @@ libxkaapi_la_SOURCES=\
   task/kaapi_stack_init.c \
   task/kaapi_stack_clear.c \
   task/kaapi_stack_print.c \
-  task/kaapi_stack_execall.c \
   task/kaapi_stack_execframe.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \

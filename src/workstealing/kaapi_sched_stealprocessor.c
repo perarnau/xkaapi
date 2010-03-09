@@ -77,6 +77,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 #else
     /* signal that count thefts are waiting */
     ctxt_top->hasrequest = count;
+    ctxt_top->errcode |= 0x1;
 
     /* busy wait: on return the negative value of correct reply or the ctxt_top is no more the active contexte */
     while ((ctxt_top->hasrequest !=0) && (ctxt_top == kproc->ctxt))
