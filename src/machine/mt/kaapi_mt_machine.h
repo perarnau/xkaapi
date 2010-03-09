@@ -525,14 +525,28 @@ static inline void kaapi_mem_barrier()
 
 
 #elif defined(KAAPI_USE_LINUX)
-#  define kaapi_writemem_barrier() \
-    __sync_synchronize()
 
-#  define kaapi_readmem_barrier() \
-    __sync_synchronize()
+static inline void kaapi_writemem_barrier()  
+{
+  __sync_synchronize();
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
 
-#  define kaapi_mem_barrier() \
-   __sync_synchronize()
+static inline void kaapi_readmem_barrier()  
+{
+  __sync_synchronize();
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+  __sync_synchronize();
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
 
 #else
 #  error "Undefined barrier"
