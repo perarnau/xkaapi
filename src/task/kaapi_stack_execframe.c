@@ -127,7 +127,7 @@ restart_after_steal:
     while (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1));
     --stack->pfsp;
     kaapi_writemem_barrier();
-    KAAPI_ATOMIC_WRITE(&stack->lock, 0, 1);
+    KAAPI_ATOMIC_WRITE(&stack->lock, 0);
     
     kaapi_assert_debug( stack->pfsp >= eframe);
     --stack->pfsp->pc;
