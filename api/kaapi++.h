@@ -1010,6 +1010,30 @@ namespace ka {
   Thread::Spawner<TASK, Attr> Spawn(const Attr& a) { return Thread::Spawner<TASK, Attr>(kaapi_self_stack(), a); }
 
 
+  template<class TASK>
+  struct RegisterBodyCPU {
+    RegisterBodyCPU()
+    { 
+      DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+    }
+  };
+
+  template<class TASK>
+  struct RegisterBodyGPU {
+    RegisterBodyGPU()
+    { 
+      DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+    }
+  };
+
+  template<class TASK>
+  struct RegisterBodies {
+    RegisterBodies()
+    { 
+      DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+    }
+  };
 
   // --------------------------------------------------------------------
   /** Wait execution of all forked tasks of the running task */
