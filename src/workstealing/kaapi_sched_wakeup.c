@@ -47,7 +47,7 @@
 
 kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 {
-  kaapi_thread_context_t* ctxt;
+  kaapi_thread_context_t* ctxt = 0;
   kaapi_wsqueuectxt_cell_t* cell;
   int wakeupok = 0;
   int garbage;
