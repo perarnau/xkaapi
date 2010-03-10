@@ -468,8 +468,8 @@ typedef struct kaapi_stack_t {
   char*                     sp_data;        /** stack counter for the data: next free data entry */
   int                       errcode;        /** set by task execution to signal incorrect execution */
   kaapi_frame_t*            stackframe;     /** for execution, see kaapi_stack_execframe */
-  kaapi_frame_t*            pfsp; 
-  kaapi_frame_t*            epfsp; 
+  kaapi_frame_t*            pfsp;           /** current pointer in stackframe */
+  kaapi_frame_t*            epfsp;          /** last pfsp where to stop execution of frame */
 
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   char*                     data;           /** stack of data with the same scope than task */
@@ -938,8 +938,14 @@ static inline int kaapi_stack_pushtask(kaapi_stack_t* stack)
   if (stack ==0) return EINVAL;
   kaapi_assert_debug((char*)stack->sp >= (char*)stack->sp_data);
 #endif
-  /* Compiler fence to keep operations. Note that on X86 no reorder of write ops*/
+#if defined(__i386__)||defined(__x86_64)
+  /* WARNING here Compiler fence to keep operations. Note that on X86 no reorder of write ops
+     so, we do not need extra hardware fence operation.
+  */
   __asm__ __volatile__("" : : : "memory" );
+#else
+#error "Fence operation should must put here. See the memory consistency of the hardware you use"
+#endif
   --stack->sp;
   return 0;
 }
