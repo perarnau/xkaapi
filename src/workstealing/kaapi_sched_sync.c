@@ -74,9 +74,14 @@
 int kaapi_sched_sync(void)
 {
   kaapi_thread_context_t* thread;
+  kaapi_task_t*           savepc;
   kaapi_stack_t*          stack;
   int                     err;
   int                     save_sticky;
+  kaapi_frame_t*          save_esfp;
+#if defined(KAAPI_DEBUG)
+  kaapi_frame_t*          save_fp;
+#endif
 
   thread = _kaapi_self_thread();
   stack = kaapi_threadcontext2stack(thread);
@@ -84,6 +89,12 @@ int kaapi_sched_sync(void)
 
   save_sticky = stack->sticky;
   stack->sticky = 1;
+  savepc = thread->sfp->pc;
+#if defined(KAAPI_DEBUG)
+  save_fp = thread->sfp;
+#endif
+  save_esfp = thread->esfp;
+  thread->esfp = thread->sfp;
 
   /* write barrier in order to commit update */
   kaapi_writemem_barrier();
@@ -93,17 +104,23 @@ redo:
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
+    kaapi_assert_debug( kaapi_get_current_processor()->thread == thread );
+    kaapi_assert_debug( thread->proc == kaapi_get_current_processor() );
     goto redo;
   }
-  
+
   /* reset sticky flag if save_stick != 1 */
   if (!save_sticky) stack->sticky = 0;
   
   if (err) /* but do not restore anyting */
     return err;
 
+#if defined(KAAPI_DEBUG)
+  kaapi_assert_debug(save_fp == thread->sfp);
+#endif
   /* flush the stack of task */
-  thread->sfp->pc = thread->sfp->sp = thread->sfp[-1].sp;
+  thread->sfp->pc = thread->sfp->sp = savepc;
+  thread->esfp = save_esfp;
 
   return err;
 }

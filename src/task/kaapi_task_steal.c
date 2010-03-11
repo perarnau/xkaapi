@@ -168,7 +168,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   {
     /* Execute the orinal body function with the original args
     */
-    body(arg->origin_task, thread);
+    body(orig_task_args, thread);
   }
   else 
   {
@@ -205,7 +205,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     task = kaapi_thread_toptask( thread );
     kaapi_task_init( task, kaapi_nop_body, copy_task_args);
     kaapi_thread_pushtask( thread );
-    body( task, thread);
+    body( copy_task_args, thread);
 
     /* ... and we push the write task if w, cw or rw mode */
     task = kaapi_thread_toptask( thread );

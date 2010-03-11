@@ -66,8 +66,8 @@ extern "C" {
 
 /* method to steal task 
 */
-//#define KAAPI_USE_CASSTEAL 1
-#define KAAPI_USE_INTERRUPSTEAL 1
+#define KAAPI_USE_CASSTEAL 1
+//#define KAAPI_USE_INTERRUPSTEAL 1
 //#define KAAPI_USE_THESTEAL 1
 
 
@@ -232,6 +232,7 @@ typedef struct kaapi_stack_t {
 */
 typedef struct kaapi_thread_context_t {
   kaapi_frame_t*                 sfp;            /** pointer to the current frame (in stackframe) */
+  kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
@@ -363,7 +364,7 @@ extern int kaapi_stack_clear( kaapi_stack_t* stack );
 */
 static inline int kaapi_frame_isempty(const kaapi_frame_t* frame)
 {
-  return (frame[0].pc <= frame[1].pc);
+  return (frame->pc <= frame->sp);
 }
 
 
@@ -478,7 +479,7 @@ extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
 
 /** Useful
 */
-extern int kaapi_stack_print  ( int fd, kaapi_thread_context_t* thread );
+extern int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread );
 
 /** Useful
 */
@@ -611,7 +612,8 @@ extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t*
 */
 extern int _kaapi_request_reply( 
   kaapi_request_t*        request, 
-  int                     retval
+  kaapi_thread_context_t* retval, 
+  int                     isok
 );
 
 /** Destroy a request
@@ -679,6 +681,7 @@ typedef struct kaapi_tasksteal_arg_t {
 /** Args for tasksignal
 */
 typedef struct kaapi_tasksig_arg_t {
+  kaapi_thread_context_t*      victim;            /* victim thread */
   kaapi_task_t*                task2sig;          /* remote task to signal */
   int                          flag;              /* type of signal */
   kaapi_taskadaptive_t*        taskadapt;         /* pointer to the local adaptive task */

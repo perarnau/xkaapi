@@ -59,9 +59,24 @@ void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
   argsig = (kaapi_tasksig_arg_t*)taskarg;
   task2sig = argsig->task2sig;
 
-  kaapi_task_setbody(task2sig, kaapi_aftersteal_body );
+#if defined(LOG_STACK)
+#  if defined(KAAPI_USE_CASSTEAL)
+      while (!KAAPI_ATOMIC_CAS(&argsig->victim->lock, 0, 1));
+#  endif
+      fprintf(stdout,"\n\n-------------- Signal task !!!! Victim stack @%p Thief stack:@%p, Thief task: @%p\n", 
+          argsig->victim, thread, task2sig );
+      kaapi_stack_print(stdout, argsig->victim );
+      fprintf(stdout,"\n\n-------------- Signal task !!!! Victim stack:@=%p\n", argsig->victim );
+#endif
 
   /* flush in memory all pending write and read ops */  
   kaapi_writemem_barrier();
 
+  kaapi_task_setbody(task2sig, kaapi_aftersteal_body );
+
+#if defined(LOG_STACK)
+#  if defined(KAAPI_USE_CASSTEAL)
+      KAAPI_ATOMIC_WRITE(&argsig->victim->lock, 0);
+#  endif
+#endif
 }

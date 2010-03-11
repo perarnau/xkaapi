@@ -96,9 +96,10 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   thief_task       = _kaapi_thread_toptask( thief_thread );
   kaapi_task_init( thief_task, kaapi_tasksig_body, _kaapi_thread_pushdata(thief_thread, sizeof(kaapi_tasksig_arg_t)) );
   argsig           = kaapi_task_getargst( thief_task, kaapi_tasksig_arg_t);
+  argsig->victim   = thread;
   argsig->task2sig = task;
   _kaapi_thread_pushtask( thief_thread );
 
-  _kaapi_request_reply( request, 1 ); /* success of steal */
+  _kaapi_request_reply( request, thief_thread, 1 ); /* success of steal */
   return 1;
 }

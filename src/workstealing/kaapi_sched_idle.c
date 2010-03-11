@@ -121,6 +121,12 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
     kaapi_assert_debug( thread != 0);
     
+#if defined(LOG_STACK)
+    fprintf(stdout,"\n\n-------------- Thief stack: thief:@=%p\n", kproc );
+    kaapi_stack_print(stdout, kproc->thread );
+    fprintf(stdout,"\n\n-------------- End thief stack: thief:@=%p\n", kproc );
+#endif
+
 redo_execute:
 
     /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */

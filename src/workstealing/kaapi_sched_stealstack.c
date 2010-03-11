@@ -142,31 +142,33 @@ static int kaapi_sched_stealframe(
   task_bot   = frame->sp;
   task_exec  = 0;
   replycount = 0;
-  while ( (count > replycount) && (task_top != task_bot) )
+  
+  /* */
+  while ((count > replycount) && (task_top != task_bot))
   {
-    if (!kaapi_task_isstealable(task_top)) 
-      goto label_continue;
-
     task_body = kaapi_task_getextrabody(task_top);
 
     task_fmt = kaapi_format_resolvebybody( task_body );
     if (task_fmt !=0)
     {
-      int wc = kaapi_task_computeready( kaapi_task_getargs( task_top), task_fmt, map );
-      if (wc ==0)
+      int wc = kaapi_task_computeready( kaapi_task_getargs(task_top), task_fmt, map );
+      if ((wc ==0) && kaapi_task_isstealable(task_top))
       {
-#if defined(KAAPI_USE_CASSTEAL)
+#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_INTERRUPSTEAL)
         if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
 #else
 //#  warning "Should be implemented"
 #endif
         {
+#if defined(LOG_STACK)
+  fprintf(stdout,"\n\n>>>>>>>> %p:: Task=%p, wc=%i\n", thread, (void*)task_top, wc );
+  kaapi_stack_print(stdout, thread );
+#endif
           replycount += kaapi_task_splitter_dfg(thread, task_top, count-replycount, requests );
         }
         /* else victim may have executed it */
       }
     }
-label_continue:
     --task_top;
   }
 
