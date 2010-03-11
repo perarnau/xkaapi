@@ -102,6 +102,7 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 */
 int kaapi_stack_execframe( kaapi_thread_context_t* thread )
 {
+  kaapi_task_t*              pc;
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
   kaapi_frame_t*             eframe = thread->sfp;
@@ -130,29 +131,29 @@ push_frame:
 begin_loop:
 #endif
   /* stack growth down ! */
-  while (fp->pc != fp->sp)
+  while ((pc = fp->pc) != fp->sp)
   {
-    kaapi_assert_debug( fp->pc > fp->sp );
+    kaapi_assert_debug( pc > fp->sp );
 
-    body = fp->pc->body;
+    body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
 
 #if defined(KAAPI_USE_CASSTEAL)
-    if (!KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&fp->pc->body, body, kaapi_exec_body)) 
+    if (!KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&pc->body, body, kaapi_exec_body)) 
     { 
-      kaapi_assert_debug((fp->pc->body == kaapi_suspend_body) || (fp->pc->body == kaapi_aftersteal_body) );
-      body = fp->pc->body;
+      kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
+      body = pc->body;
       if (body == kaapi_suspend_body)
         goto error_swap_body;
       /* else ok its aftersteal */
       body = kaapi_aftersteal_body;
     }
 #else
-    fp->pc->body = kaapi_exec_body;
+    pc->body = kaapi_exec_body;
 #endif
 
     /* task execution */
-    body( fp->pc->sp, (kaapi_thread_t*)thread->sfp );
+    body( pc->sp, (kaapi_thread_t*)thread->sfp );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
@@ -163,7 +164,7 @@ restart_after_steal:
     {
       goto push_frame;
     }
-    --fp->pc;
+    pc = fp->pc = pc -1;
   } /* end of the loop */
 
   kaapi_assert_debug( fp >= eframe);
