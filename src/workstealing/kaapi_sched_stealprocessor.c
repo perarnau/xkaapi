@@ -49,38 +49,41 @@
 */
 int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 {
-  kaapi_thread_context_t*  ctxt_top;
-  kaapi_wsqueuectxt_cell_t* cell;
+  kaapi_thread_context_t*  thread;
   int count =0;
   int replycount = 0;
 
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   if (count ==0) return 0;
   
-  cell = kproc->lsuspend.tail;
-  while ((cell !=0) && (count >0))
-  {
-    replycount += kaapi_sched_stealstack( cell->stack, 0, count, kproc->hlrequests.requests );
-    count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    cell = cell->prev;
+  if (0)
+  { /* WARNING do not try to steal inside suspended stack */
+    kaapi_wsqueuectxt_cell_t* cell;
+    cell = kproc->lsuspend.tail;
+    while ((cell !=0) && (count >0))
+    {
+      replycount += kaapi_sched_stealstack( cell->thread, 0, count, kproc->hlrequests.requests );
+      count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+      cell = cell->prev;
+    }
   }
   
-  ctxt_top = kproc->ctxt;
-  if ((count >0) && (ctxt_top !=0) && (kproc->issteal ==0))
+  thread = kproc->thread;
+  if ((count >0) && (thread !=0) && (kproc->issteal ==0))
   {
     /* if concurrent WS, then steal directly the current stack of the victim processor
        else set flag to 0 on the stack and wait reply
     */
 #if defined(KAAPI_CONCURRENT_WS)
     /* signal that count thefts are waiting */
-    replycount += kaapi_sched_stealstack( ctxt_top, 0, count, kproc->hlrequests.requests );
+    replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
 #else
     /* signal that count thefts are waiting */
-    ctxt_top->hasrequest = count;
-    ctxt_top->errcode |= 0x1;
+    kaapi_threadcontext2stack(thread)->hasrequest = count;
+    thread->errcode |= 0x1; /* interrupt the executor flag to request steal... */
 
     /* busy wait: on return the negative value of correct reply or the ctxt_top is no more the active contexte */
-    while ((ctxt_top->hasrequest !=0) && (ctxt_top == kproc->ctxt))
+    while ((kaapi_threadcontext2stack(thread)->hasrequest !=0) && (thread == kproc->thread))
     {
       if (kaapi_isterminated()) break;
     }

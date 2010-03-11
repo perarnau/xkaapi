@@ -9,8 +9,8 @@
                 ARG<$1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
       ', `', `')
 
-      kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-      kaapi_task_initdfg( clo, KaapiClosure::bodyid, kaapi_stack_pushdata(_stack, sizeof(KaapiClosure)) );
+      kaapi_task_t* clo = kaapi_thread_toptask( _thread );
+      kaapi_task_initdfg( clo, KaapiClosure::bodyid, kaapi_thread_pushdata(_thread, sizeof(KaapiClosure)) );
       /* this function call is the only way I currently found to register the format of the task, 
          idealy it should not be call and the clo->format should not be set at all.
       */
@@ -25,6 +25,6 @@
     void operator()( M4_PARAM(`const E$1& e$1', `', `, ') )
     {
       kaapi_task_t* clo = PushArg( &TASK::operator(), M4_PARAM(`e$1', `', `, ') );
-      _attr(_stack, clo );
-      kaapi_stack_pushtask( _stack);    
+      _attr(_thread, clo );
+      kaapi_thread_pushtask( _thread );    
     }

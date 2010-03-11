@@ -105,12 +105,12 @@ struct doit {
     ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
       
-    kaapi_stack_t* stack = kaapi_self_stack();
-    kaapi_frame_t frame;
+    kaapi_thread_t* thread = kaapi_self_thread();
+    kaapi_frame_t   frame;
     ka::pointer<long> res = ka::Alloca<long>(1);
     for (cutoff=2; cutoff<3; ++cutoff)
     {
-      kaapi_stack_save_frame(stack, &frame);
+      kaapi_thread_save_frame(thread, &frame);
       ka::Spawn<TaskFibo>()( res, n );
       /* */
       ka::Sync();
@@ -125,7 +125,7 @@ struct doit {
       /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
       ka::Spawn<TaskPrint<long> >()(res, iter, ref_value);      
       ka::Sync();
-      kaapi_stack_restore_frame(stack, &frame);
+      kaapi_thread_restore_frame(thread, &frame);
     }
   }
 

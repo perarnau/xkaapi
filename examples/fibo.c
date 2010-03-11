@@ -107,21 +107,21 @@ void fibo_body( void* taskarg, kaapi_stack_t* stack )
     kaapi_task_t* task2;
 
     task1 = kaapi_stack_toptask(stack);
-    kaapi_task_initdfg( task1, fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
+    kaapi_task_initdfg( task1, fibo_body, kaapi_thread_pushdata(stack, sizeof(fibo_arg_t)) );
     argf1 = kaapi_task_getargst( task1, fibo_arg_t );
     argf1->n = arg0->n - 1;
-    kaapi_stack_allocateshareddata( &argf1->result, stack, sizeof(int) );
+    kaapi_thread_allocateshareddata( &argf1->result, stack, sizeof(int) );
     kaapi_stack_pushtask(stack);
 
     task2 = kaapi_stack_toptask(stack);
-    kaapi_task_initdfg( task2, fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
+    kaapi_task_initdfg( task2, fibo_body, kaapi_thread_pushdata(stack, sizeof(fibo_arg_t)) );
     argf2 = kaapi_task_getargst( task2, fibo_arg_t);
     argf2->n      = arg0->n - 2;
-    kaapi_stack_allocateshareddata( &argf2->result, stack, sizeof(int) );
+    kaapi_thread_allocateshareddata( &argf2->result, stack, sizeof(int) );
     kaapi_stack_pushtask(stack);
 
     task_sum = kaapi_stack_toptask(stack);
-    kaapi_task_initdfg( task_sum, sum_body, kaapi_stack_pushdata(stack, sizeof(sum_arg_t)) );
+    kaapi_task_initdfg( task_sum, sum_body, kaapi_thread_pushdata(stack, sizeof(sum_arg_t)) );
     args = kaapi_task_getargst( task_sum, sum_arg_t);
     args->result.data     = arg0->result.data;
     args->subresult1.data = argf1->result.data;
@@ -178,8 +178,8 @@ int main(int argc, char** argv)
   else 
     niter = 1;
 
-  stack = kaapi_self_stack();
-  kaapi_stack_save_frame(stack, &frame);
+  stack = kaapi_self_frame();
+  kaapi_thread_save_frame(stack, &frame);
   
   for ( i=-1; i<niter; ++i)
   {
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     kaapi_access_init( &result1, &value_result );
 
     task = kaapi_stack_toptask(stack);
-    kaapi_task_init( task, fibo_body, kaapi_stack_pushdata(stack, sizeof(fibo_arg_t)) );
+    kaapi_task_init( task, fibo_body, kaapi_thread_pushdata(stack, sizeof(fibo_arg_t)) );
     argf = kaapi_task_getargst( task, fibo_arg_t );
     argf->n      = n;
     argf->result = result1;
@@ -199,7 +199,7 @@ int main(int argc, char** argv)
 
   /* push print task */
   task = kaapi_stack_toptask(stack);
-  kaapi_task_init( task, print_body, kaapi_stack_pushdata(stack, sizeof(print_arg_t)) );
+  kaapi_task_init( task, print_body, kaapi_thread_pushdata(stack, sizeof(print_arg_t)) );
   argp = kaapi_task_getargst( task, print_arg_t );
   argp->delay  = t1-t0;
   argp->n      = n;

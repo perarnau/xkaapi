@@ -1,13 +1,12 @@
 /*
-** kaapi_mt_threadcontext.c
+** kaapi_thread_clear.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:16:47 2009
+** Created on Tue Mar 31 15:19:03 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -47,28 +46,20 @@
 
 /**
 */
-int kaapi_getcontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt )
+int kaapi_thread_clear( kaapi_thread_context_t* thread )
 {
-  kaapi_assert_debug( proc == _kaapi_get_current_processor() );
-  *ctxt = *proc->thread;
-  return 0;
-#if 0  /* TODO: next version when also saving the stack context */
-  ctxt->flags        = proc->flags;
-  ctxt->dataspecific = proc->dataspecific;
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
-  {
-    ctxt->kstack     = proc->kstack;
-  }
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
-  {
-#if defined(KAAPI_USE_UCONTEXT)
-    getcontext( &ctxt->mcontext );
-#elif defined(KAAPI_USE_SETJMP)
-    _setjmp( ctxt->mcontext );
-#endif
-  }
-#endif  /* TODO: next version when also saving the stack context */
+  kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
+  kaapi_assert_debug( thread != 0);
+  thread->sfp      = thread->stackframe;
+//  thread->pc        = stack->task;
+  thread->sfp->sp  = thread->sfp->pc  = stack->task; /* empty frame */
+  thread->sfp->sp_data = stack->data; /* empty frame */
+  thread->errcode  = 0;
+  thread->proc     = 0;
+  thread->_next    = 0;
+  thread->thiefpc  = stack->task-1;
+  KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+  kaapi_stack_clear(stack);
   return 0;
 }
+

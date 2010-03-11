@@ -19,8 +19,8 @@
       M4_PARAM(`WARNING_UNDEFINED_PASSING_RULE<mode_effective$1_t, mode_formal$1_t, FOR_ARG<$1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
       ', `', `')
 #endif
-      kaapi_task_t* clo = kaapi_stack_toptask( _stack);
-      kaapi_task_initdfg( clo, KaapiFormatTask_t::default_body, kaapi_stack_pushdata(_stack, sizeof(TaskArg_t)) );
+      kaapi_task_t* clo = kaapi_thread_toptask( _thread );
+      kaapi_task_initdfg( clo, KaapiFormatTask_t::default_body, kaapi_thread_pushdata(_thread, sizeof(TaskArg_t)) );
       TaskArg_t* arg = kaapi_task_getargst( clo, TaskArg_t);
       /* here we do not detect a compile time the error without compilation with -DKAAPI_DEBUG 
          todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure
@@ -37,7 +37,7 @@
       KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
-      _attr(_stack, clo );
-      kaapi_stack_pushtask( _stack);
+      _attr(_thread, clo );
+      kaapi_thread_pushtask( _thread );
       return clo; 
     }

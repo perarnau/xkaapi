@@ -46,12 +46,15 @@
 
 /** Return the number of splitted parts (at most 1 if the task may be steal)
 */
-int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count, struct kaapi_request_t* array)
+int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task, int count, struct kaapi_request_t* array)
 {
   int i;
-  kaapi_request_t* request    = 0;
-  kaapi_stack_t* thief_stack  = 0;
-  kaapi_task_t*  steal_task   = 0;
+  kaapi_request_t*        request    = 0;
+  kaapi_task_t*           thief_task   = 0;
+  kaapi_thread_context_t* thief_thread = 0;
+  kaapi_tasksteal_arg_t*  argsteal;
+  kaapi_tasksig_arg_t*    argsig;
+  
 
   kaapi_assert_debug (task !=0);
   
@@ -76,20 +79,26 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
        - and at the end it reserve enough space to store original task arguments
      The original body is saved as the extra body of the original task data structure.
   */
-  thief_stack = request->stack;
+  thief_thread = request->thread;
 
-//  printf( "[splitter] task: @=%p, stack: @=%p, thief_stack: @=%p\n", task, stack, thief_stack);
-
+  thief_task = _kaapi_thread_toptask( thief_thread );
+  kaapi_task_init( thief_task, kaapi_tasksteal_body, _kaapi_thread_pushdata(thief_thread, sizeof(kaapi_tasksteal_arg_t)) );
+  argsteal = kaapi_task_getargst( thief_task, kaapi_tasksteal_arg_t );
+  argsteal->origin_thread         = thread;
+  argsteal->origin_task           = task;
   
-  steal_task = kaapi_stack_toptask( thief_stack );
-  kaapi_task_init( steal_task, kaapi_tasksteal_body, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksteal_arg_t)) );
-  kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( steal_task, kaapi_tasksteal_arg_t );
-  arg->origin_stack          = stack;
-  arg->origin_task           = task;
-  
-  kaapi_stack_pushtask( thief_stack );
+  _kaapi_thread_pushtask( thief_thread );
 
-  /* do not decrement the counter */
-  _kaapi_request_reply( stack->_proc, stack, task, request, thief_stack, 0, 1, 0 ); /* success of steal */
+  /* reply: several cases
+     - if complete steal of the task -> signal sould pass the body to aftersteal body
+     If steal an
+  */
+  thief_task       = _kaapi_thread_toptask( thief_thread );
+  kaapi_task_init( thief_task, kaapi_tasksig_body, _kaapi_thread_pushdata(thief_thread, sizeof(kaapi_tasksig_arg_t)) );
+  argsig           = kaapi_task_getargst( thief_task, kaapi_tasksig_arg_t);
+  argsig->task2sig = task;
+  _kaapi_thread_pushtask( thief_thread );
+
+  _kaapi_request_reply( request, 1 ); /* success of steal */
   return 1;
 }

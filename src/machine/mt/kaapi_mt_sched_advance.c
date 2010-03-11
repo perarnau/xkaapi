@@ -61,16 +61,16 @@ int kaapi_advance ( void )
 int kaapi_sched_advance ( kaapi_processor_t* kproc )
 {
   int count;
-  
-  count = kproc->ctxt->hasrequest;
+  kaapi_stack_t* stack = kaapi_threadcontext2stack(kproc->thread);
+  count = stack->hasrequest;
   if (count ==0) return 0;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   int saved_state = kaapi_perf_thread_state(kproc);
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
-  kaapi_stealpoint_isactive(kproc->ctxt,0);
-  count = kproc->ctxt->hasrequest;
+  kaapi_stealpoint_isactive(kproc->thread,0);
+  count = stack->hasrequest;
   
   if (count !=0) 
   {
@@ -94,7 +94,7 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
       kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
     }
 #endif
-    kproc->ctxt->hasrequest = 0;
+    stack->hasrequest = 0;
   }
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, saved_state );

@@ -104,13 +104,13 @@ namespace a1 {
   using ka::SetStickyC;
 
   // --------------------------------------------------------------------
-  extern SetStack SetInStack;
+  using ka::SetInStack;
 
   // --------------------------------------------------------------------
-  extern SetHeap SetInHeap;
+  using ka::SetInHeap;
 
   // --------------------------------------------------------------------
-  extern SetStickyC SetSticky;
+  using ka::SetSticky;
 
   class Thread;
   
@@ -186,15 +186,15 @@ namespace a1 {
 
     Shared()
     {
-      kaapi_stack_t* stack = kaapi_self_stack();
-      _gd = kaapi_stack_pushshareddata(stack,sizeof(T));
+      kaapi_thread_t* thread = kaapi_self_thread();
+      _gd = kaapi_thread_pushshareddata(thread,sizeof(T));
       new (_gd.data) T;
     }
 
     Shared(const value_type& value )
     {
-      kaapi_stack_t* stack = kaapi_self_stack();
-      _gd = kaapi_stack_pushshareddata(stack,sizeof(T));
+      kaapi_thread_t* thread = kaapi_self_thread();
+      _gd = kaapi_thread_pushshareddata(thread,sizeof(T));
       new (_gd.data) T(value);
     }
 
@@ -399,9 +399,19 @@ namespace a1 {
 
 
   // --------------------------------------------------------------------  
+  using ka::DefaultAttribut;
+  using ka::SetDefault;
+  using ka::UnStealableAttribut;
+  using ka::SetUnStealable;
+  using ka::SetLocalAttribut;
+  using ka::SetLocal;
+  using ka::AttributSetSite;
+  using ka::SetSite;
+  
+#if 0
   class DefaultAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { return clo; }
   };
   extern DefaultAttribut SetDefault;
@@ -409,7 +419,7 @@ namespace a1 {
   /* */
   class UnStealableAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { 
       //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       return clo; 
@@ -421,7 +431,7 @@ namespace a1 {
   /* like default attribut: not yet distributed computation */
   class SetLocalAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { 
       //kapi_task_setflags( clo, KAAPI_TASK_STICKY );
       return clo; 
@@ -435,7 +445,7 @@ namespace a1 {
     float _cost;
   public:
     AttributSetCost( float c ) : _cost(c) {}
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { return clo; }
   };
   inline AttributSetCost SetCost( float c )
@@ -447,7 +457,7 @@ namespace a1 {
     int _site;
   public:
     AttributSetSite( int s ) : _site(s) {}
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { return clo; }
   };
 
@@ -462,13 +472,14 @@ namespace a1 {
     SetStaticSchedAttribut( int n, int m  ) 
      : _npart(n), _niter(m) {}
     template<class A1_CLO>
-    kaapi_task_t* operator()( kaapi_stack_t*, A1_CLO*& clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, A1_CLO*& clo) const
     { 
       return clo; 
     }
   };
   inline SetStaticSchedAttribut SetStaticSched(int npart, int iter = 1 )
   { return SetStaticSchedAttribut(npart, iter); }
+#endif
 
 #if 0 //\TODO dans un monde ideal, il faudrait ca
 #include "atha_spacecollection.h"
@@ -694,12 +705,14 @@ namespace a1 {
   // --------------------------------------------------------------------
   template<class TASK>
   struct KaapiTask0 {
+    static TASK dummy;
     static void body( kaapi_task_t* task, kaapi_stack_t* stack )
     { 
-      static TASK dummy;
       dummy();
     }
   };
+  template<class TASK>
+  TASK KaapiTask0<TASK>::dummy;
 
 #include "athapascan_closure.h"
 
@@ -713,33 +726,33 @@ namespace a1 {
     template<class TASK, class Attr>
     class Forker {
     public:
-      Forker( kaapi_stack_t* s, const Attr& a ) : _stack(s), _attr(a) {}
+      Forker( kaapi_thread_t* f, const Attr& a ) : _thread(f), _attr(a) {}
 
       /**
       **/      
       void operator()()
       { 
-        kaapi_task_t* clo = kaapi_stack_toptask( _stack);
+        kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
-        _attr(_stack, clo);
-        kaapi_stack_pushtask( _stack);    
+        _attr(_thread, clo);
+        kaapi_thread_pushtask( _thread );    
       }
 
 #include "athapascan_fork.h"
 
     protected:
-      kaapi_stack_t* _stack;
+      kaapi_thread_t* _thread;
       const Attr&    _attr;
     };
         
     template<class TASK>
-    Forker<TASK, DefaultAttribut> Fork() { return Forker<TASK, DefaultAttribut>(&_stack, DefaultAttribut()); }
+    Forker<TASK, DefaultAttribut> Fork() { return Forker<TASK, DefaultAttribut>(_thread, DefaultAttribut()); }
 
     template<class TASK, class Attr>
-    Forker<TASK, Attr> Fork(const Attr& a) { return Forker<TASK, Attr>(&_stack, a); }
+    Forker<TASK, Attr> Fork(const Attr& a) { return Forker<TASK, Attr>(_thread, a); }
 
   protected:
-    kaapi_stack_t _stack;
+    kaapi_thread_t* _thread ;
   };
 
   
@@ -747,10 +760,10 @@ namespace a1 {
   // --------------------------------------------------------------------
   /** Top level Fork */
   template<class TASK>
-  Thread::Forker<TASK, DefaultAttribut> Fork() { return Thread::Forker<TASK, DefaultAttribut>(kaapi_self_stack(), DefaultAttribut()); }
+  Thread::Forker<TASK, DefaultAttribut> Fork() { return Thread::Forker<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut()); }
 
   template<class TASK, class Attr>
-  Thread::Forker<TASK, Attr> Fork(const Attr& a) { return Thread::Forker<TASK, Attr>(kaapi_self_stack(), a); }
+  Thread::Forker<TASK, Attr> Fork(const Attr& a) { return Thread::Forker<TASK, Attr>(kaapi_self_thread(), a); }
 
 
 
@@ -1017,43 +1030,8 @@ namespace a1 {
 }
 
 // ---------------------------------------------------------------------------------
-#if 0 // \TODO
 namespace a1 {
-  class SyncGuard {
-      Thread       *_thread;
-      kaapi_frame_t _frame;
-  public:
-      SyncGuard() : _thread( System::get_current_thread() )
-      {
-        kaapi_stack_save_frame( &_thread->_stack, &_frame );
-      }
-      ~SyncGuard()
-      {
-        // \TODO: only execution in one frame and sub frame but not on top frame
-        kaapi_stack_restore_frame( &_thread->_stack, &_frame );
-      }
-  };
-}
-#endif
-
-
-/* ========================================================================= */
-/* Initialization / destruction functions
- */
-namespace a1 {
-
-  extern void _athakaapi_dummy(void*);
-  extern void __attribute__ ((constructor)) atha_init(void);
-  extern void __attribute__ ((destructor)) atha_fini(void);
-
-#if !defined(KAAPI_COMPILE_SOURCE)
-  /** To force reference to atha_kaapi.cpp in order to link against kaapi_init and kaapi_fini
-   */
-  static void __attribute__((unused)) __athakaapi_dumy_dummy(void)
-  {
-    _athakaapi_dummy(NULL);
-  }
-#endif
+  using ka::SyncGuard;
 }
 
 #ifndef ATHAPASCAN_NOT_IN_NAMESPACE

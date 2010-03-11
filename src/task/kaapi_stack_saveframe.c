@@ -1,13 +1,12 @@
 /*
-** kaapi_mt_threadcontext.c
+** kaapi_stack_saveframe.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:16:47 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -47,28 +46,20 @@
 
 /**
 */
-int kaapi_getcontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt )
+int kaapi_thread_save_frame( kaapi_thread_t* thread, kaapi_frame_t* frame)
 {
-  kaapi_assert_debug( proc == _kaapi_get_current_processor() );
-  *ctxt = *proc->thread;
-  return 0;
-#if 0  /* TODO: next version when also saving the stack context */
-  ctxt->flags        = proc->flags;
-  ctxt->dataspecific = proc->dataspecific;
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
-  {
-    ctxt->kstack     = proc->kstack;
-  }
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
-  {
-#if defined(KAAPI_USE_UCONTEXT)
-    getcontext( &ctxt->mcontext );
-#elif defined(KAAPI_USE_SETJMP)
-    _setjmp( ctxt->mcontext );
-#endif
-  }
-#endif  /* TODO: next version when also saving the stack context */
+  kaapi_assert_debug( (thread !=0) && (frame !=0) );
+  *frame = *(kaapi_frame_t*)thread;
   return 0;
 }
+
+
+/**
+*/
+int kaapi_thread_restore_frame( kaapi_thread_t* thread, const kaapi_frame_t* frame)
+{
+  kaapi_assert_debug( (thread !=0) && (frame !=0) );
+  *thread = *(kaapi_thread_t*)frame;
+  return 0;  
+}
+

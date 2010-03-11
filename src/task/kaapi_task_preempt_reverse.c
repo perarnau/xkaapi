@@ -44,9 +44,9 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preempt_nextthief_reverse_helper( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_to_thief )
+int kaapi_preempt_nextthief_reverse_helper( kaapi_thread_t* thread, kaapi_task_t* task, void* arg_to_thief )
 {
-#if defined(KAAPI_VERY_COMPACT_TASK)
+#if 0
 #warning TODO
   kaapi_assert_debug( task->flag & KAAPI_TASK_ADAPTIVE );
   kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );

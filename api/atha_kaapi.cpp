@@ -45,27 +45,12 @@
 
 
 namespace a1 {
+/*
 SetStickyC SetSticky;
 SetStack SetInStack;
 SetHeap SetInHeap;
 SetLocalAttribut SetLocal;
 DefaultAttribut SetDefault;
-
-
-// --------------------------------------------------------------------
-void _athakaapi_dummy(void*)
-{
-}
-
-// --------------------------------------------------------------------
-void __attribute__ ((constructor)) atha_init()
-{
-}
-
-// --------------------------------------------------------------------
-void __attribute__ ((destructor)) atha_fini()
-{
-}
-
+*/
 
 } // namespace a1

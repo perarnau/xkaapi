@@ -46,9 +46,11 @@
 
 /** \ingroup ADAPTIVE
 */
-int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task)
+int kaapi_stealend(kaapi_thread_t* thread, kaapi_task_t* task)
 {
+#if 0
   if (!kaapi_task_isadaptive(task)) return EINVAL;
+#endif
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
 #if 0//defined(KAAPI_CONCURRENT_WS)
   pthread_mutex_lock(&stack->_proc->lsuspend.lock);

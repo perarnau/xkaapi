@@ -48,7 +48,7 @@
 
 /**
 */
-void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
 {
   int i;
   int countparam;
@@ -65,7 +65,7 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
   void*                 copy_data_param;
   kaapi_access_t*       copy_access_param;
 
-  kaapi_tasksteal_arg_t* arg = kaapi_task_getargst(task, kaapi_tasksteal_arg_t);
+  kaapi_tasksteal_arg_t* arg = (kaapi_tasksteal_arg_t*)taskarg;
   orig_task_args             = kaapi_task_getargs(arg->origin_task);
   copy_task_args             = arg->copy_task_args;
   fmt                        = arg->origin_fmt;
@@ -112,11 +112,12 @@ void kaapi_taskwrite_body( kaapi_task_t* task, kaapi_stack_t* stack )
 
 /**
 */
-void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
   int i;
   int                    countparam;
   int                    push_write;
+  kaapi_task_t*          task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */
   kaapi_format_t*        fmt;
@@ -134,7 +135,7 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
 
   
   /* get information of the task to execute */
-  arg = kaapi_task_getargst(task, kaapi_tasksteal_arg_t);
+  arg = (kaapi_tasksteal_arg_t*)taskarg;
   arg->copy_task_args = 0;
 
   /* format of the original stolen task */  
@@ -167,11 +168,11 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
   {
     /* Execute the orinal body function with the original args
     */
-    body(arg->origin_task, stack);
+    body(arg->origin_task, thread);
   }
   else 
   {
-    copy_task_args       = kaapi_stack_pushdata(stack, fmt->size);
+    copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
@@ -199,13 +200,16 @@ void kaapi_tasksteal_body( kaapi_task_t* task, kaapi_stack_t* stack )
         copy_access_param->data    = malloc(fmt_param->size);
       }
     }
-    /* Execute the orinal body function with the copy of args
+    /* Execute the orinal body function with the copy of args: do not push it... ?
     */
-    kaapi_task_init( kaapi_stack_toptask(stack), body, copy_task_args);
-    body( kaapi_stack_toptask(stack), stack);
+    task = kaapi_thread_toptask( thread );
+    kaapi_task_init( task, kaapi_nop_body, copy_task_args);
+    kaapi_thread_pushtask( thread );
+    body( task, thread);
 
     /* ... and we push the write task if w, cw or rw mode */
-    kaapi_task_init( kaapi_stack_toptask( stack ), kaapi_taskwrite_body, arg );
-    kaapi_stack_pushtask( stack );
+    task = kaapi_thread_toptask( thread );
+    kaapi_task_init( task, kaapi_taskwrite_body, arg );
+    kaapi_thread_pushtask( thread );
   }
 }

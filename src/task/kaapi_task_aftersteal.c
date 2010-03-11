@@ -47,22 +47,19 @@
 
 /**
 */
-void kaapi_aftersteal_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
 {
   int i, countparam;
   kaapi_format_t* fmt;   /* format of the task */
   void*           data_param;
   kaapi_format_t* fmt_param;
   kaapi_access_t* access_param;
-  void*           taskarg;
   
-  taskarg = kaapi_task_getargs(task );
-
 //  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, stack);
 //  fflush(stdout);
 
   /* the task has been stolen: the extra body contains the original task body */
-  fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(task) );
+  fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(thread->pc) );
   kaapi_assert_debug( fmt !=0 );
 
   countparam = fmt->count_params;

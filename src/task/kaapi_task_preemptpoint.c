@@ -44,8 +44,9 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim, int size )
+int kaapi_preemptpoint_before_reducer_call( kaapi_thread_t* thread, kaapi_task_t* task, void* arg_for_victim, int size )
 {
+#if 0
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
 
   /* lock stack in case of CONCURRENT WS in order to avoid stealing on this task */
@@ -70,18 +71,21 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* 
 
   /* mark the stack as preemption processed -> signal victim */
   stack->haspreempt = 0;
-  
+#endif
+
   return 0;
 }
 
-int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval )
+int kaapi_preemptpoint_after_reducer_call( kaapi_thread_t* thread, kaapi_task_t* task, int reducer_retval )
 {
+#if 0
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
 
   kaapi_writemem_barrier();   /* serialize previous line with next line */
   ta->result->thief_term = 1;
   kaapi_mem_barrier();
   ta->result = 0;
+#endif
 
   return 1;
 }

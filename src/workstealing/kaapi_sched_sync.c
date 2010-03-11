@@ -48,9 +48,9 @@
 /** kaapi_sched_sync
     Here the stack frame is organised like this, task1 is the running task.
 
-               | task1  |
+    thread->pc | task1  |
               ----------
-    frame_sp ->| task2  |
+               | task2  |
                | task3  |
                | task4  |
                | task5  |
@@ -63,43 +63,33 @@
    On return, we leave the stack such that (the pushed tasks between frame_sp and sp)
    are poped :
 
-               | task1  |
+    thread->pc | task1  |
                ----------
-frame_sp, sp ->| x x x  |
+          sp ->| x x x  |
                | x x x  |
                | x x x  |
                | x x x  |
                | ....   |
 */
-int kaapi_sched_sync(kaapi_stack_t* stack)
+int kaapi_sched_sync(void)
 {
-  int           err;
-  int           save_sticky;
-  kaapi_frame_t frame;
-  kaapi_frame_t* save_epfsp;
-  kaapi_task_t* frame_sp;
+  kaapi_thread_context_t* thread;
+  kaapi_stack_t*          stack;
+  int                     err;
+  int                     save_sticky;
 
-  if (kaapi_stack_isempty( stack ) ) return 0;
+  thread = _kaapi_self_thread();
+  stack = kaapi_threadcontext2stack(thread);
+  if (kaapi_frame_isempty( thread->sfp ) ) return 0;
 
-  /* save here, do not restore pushed retn */
-  kaapi_stack_save_frame(stack, &frame);
-
-  save_epfsp = stack->epfsp;
-  frame_sp = stack->frame_sp; /* should correspond to the pc counter */
-
-  /* increment new frame ~ push */
-  ++stack->pfsp;
-  stack->epfsp = stack->pfsp;
-
-  /* same the current frame in the stackframe */
-  kaapi_stack_save_frame(stack, stack->pfsp);
-  
-  /* the stack could not be steal (required a context switch not yet implemented) else wakeup */
   save_sticky = stack->sticky;
   stack->sticky = 1;
+
+  /* write barrier in order to commit update */
+  kaapi_writemem_barrier();
   
 redo:
-  err = kaapi_stack_execframe(stack);
+  err = kaapi_stack_execframe(thread);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
@@ -109,16 +99,11 @@ redo:
   /* reset sticky flag if save_stick != 1 */
   if (!save_sticky) stack->sticky = 0;
   
-  if (err) /* but do not restore stack */
+  if (err) /* but do not restore anyting */
     return err;
-  kaapi_stack_restore_frame(stack, &frame);
-  stack->sp = stack->frame_sp = frame_sp;
 
-  /* decrement frame pointer ~ pop */
-  --stack->pfsp;
-  stack->epfsp = save_epfsp;
-  /* mark the next task of current running task as nop to avod rexec */
-  kaapi_task_setbody(frame_sp, kaapi_nop_body);
+  /* flush the stack of task */
+  thread->sfp->pc = thread->sfp->sp = thread->sfp[-1].sp;
 
   return err;
 }

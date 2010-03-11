@@ -242,7 +242,7 @@ namespace ka {
   // --------------------------------------------------------------------
   inline Thread* System::get_current_thread()
   {
-    return (Thread*)kaapi_self_stack();
+    return (Thread*)kaapi_self_thread();
   }
 
   // --------------------------------------------------------------------
@@ -250,7 +250,7 @@ namespace ka {
   template<class T>
   T* Alloca(size_t size)
   {
-     void* data = kaapi_stack_pushdata( kaapi_self_stack(), sizeof(T)*size );
+     void* data = kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T)*size );
      return new (data) T[size];
   }
 
@@ -774,7 +774,7 @@ namespace ka {
   // --------------------------------------------------------------------  
   class DefaultAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { return clo; }
   };
   extern DefaultAttribut SetDefault;
@@ -782,7 +782,7 @@ namespace ka {
   /* */
   class UnStealableAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { 
       //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       return clo;
@@ -794,7 +794,7 @@ namespace ka {
   /* like default attribut: not yet distributed computation */
   class SetLocalAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { 
       //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
       return clo; 
@@ -807,7 +807,7 @@ namespace ka {
     int _site;
   public:
     AttributSetSite( int s ) : _site(s) {}
-    kaapi_task_t* operator()( kaapi_stack_t*, kaapi_task_t* clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { return clo; }
   };
 
@@ -822,7 +822,7 @@ namespace ka {
     SetStaticSchedAttribut( int n, int m  ) 
      : _npart(n), _niter(m) {}
     template<class A1_CLO>
-    kaapi_task_t* operator()( kaapi_stack_t*, A1_CLO*& clo) const
+    kaapi_task_t* operator()( kaapi_thread_t*, A1_CLO*& clo) const
     { return clo; }
   };
   inline SetStaticSchedAttribut SetStaticSched(int npart, int iter = 1 )
@@ -942,12 +942,14 @@ namespace ka {
   // --------------------------------------------------------------------
   template<class TASK>
   struct KaapiTask0 {
+    static TASK dummy;
     static void body( kaapi_task_t* task, kaapi_stack_t* stack )
     { 
-      static TASK dummy;
       dummy();
     }
   };
+  template<class TASK>
+  TASK KaapiTask0<TASK>::dummy;
 
 #include "ka_api_clo.h"
 
@@ -957,45 +959,47 @@ namespace ka {
      System::get_current_thread()->Spawn<TASK>([ATTR])( args ).
   */
   class Thread {
+  private:
+    Thread() {}
   public:
 
     template<class T>
     T* Alloca(size_t size)
     {
-       void* data = kaapi_stack_pushdata( &_stack, sizeof(T)*size );
+       void* data = kaapi_thread_pushdata( &_thread, sizeof(T)*size );
        return new (data) T[size];
     }
 
     template<class TASK, class Attr>
     class Spawner {
     public:
-      Spawner( kaapi_stack_t* s, const Attr& a ) : _stack(s), _attr(a) {}
+      Spawner( kaapi_thread_t* t, const Attr& a ) : _thread(t), _attr(a) {}
 
       /**
       **/      
       void operator()()
       { 
-        kaapi_task_t* clo = kaapi_stack_toptask( _stack);
+        kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
-        _attr(_stack, clo);
-        kaapi_stack_pushtask( _stack);    
+        _attr(_thread, clo);
+        kaapi_thread_pushtask( _thread);    
       }
 
 #include "ka_api_fork.h"
 
     protected:
-      kaapi_stack_t* _stack;
-      const Attr&    _attr;
+      kaapi_thread_t* _thread;
+      const Attr&     _attr;
     };
         
     template<class TASK>
-    Spawner<TASK, DefaultAttribut> Spawn() { return Spawner<TASK, DefaultAttribut>(&_stack, DefaultAttribut()); }
+    Spawner<TASK, DefaultAttribut> Spawn() { return Spawner<TASK, DefaultAttribut>(&_thread, DefaultAttribut()); }
 
     template<class TASK, class Attr>
-    Spawner<TASK, Attr> Spawn(const Attr& a) { return Spawner<TASK, Attr>(&_stack, a); }
+    Spawner<TASK, Attr> Spawn(const Attr& a) { return Spawner<TASK, Attr>(&_thread, a); }
 
   protected:
-    kaapi_stack_t _stack;
+    kaapi_thread_t _thread;
     friend class SyncGuard;
   };
 
@@ -1004,10 +1008,10 @@ namespace ka {
   // --------------------------------------------------------------------
   /** Top level Spawn */
   template<class TASK>
-  Thread::Spawner<TASK, DefaultAttribut> Spawn() { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_stack(), DefaultAttribut()); }
+  Thread::Spawner<TASK, DefaultAttribut> Spawn() { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut()); }
 
   template<class TASK, class Attr>
-  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) { return Thread::Spawner<TASK, Attr>(kaapi_self_stack(), a); }
+  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) { return Thread::Spawner<TASK, Attr>(kaapi_self_thread(), a); }
 
 
   template<class TASK>
@@ -1066,26 +1070,26 @@ namespace ka {
 
     void operator()( int argc, char** argv)
     {
-      kaapi_stack_t* stack = kaapi_self_stack();
-      kaapi_task_t* clo = kaapi_stack_toptask( stack);
-      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_stack_pushdata(stack, sizeof(kaapi_taskmain_arg_t)) );
+      kaapi_thread_t* thread = kaapi_self_thread();
+      kaapi_task_t* clo = kaapi_thread_toptask( thread );
+      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
       kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
       arg->argc = argc;
       arg->argv = argv;
       arg->mainentry = &MainTaskBodyArgcv<TASK>::body;
-      kaapi_stack_pushtask( stack);    
+      kaapi_thread_pushtask( thread);    
     }
 
     void operator()( )
     {
-      kaapi_stack_t* stack = kaapi_self_stack();
-      kaapi_task_t* clo = kaapi_stack_toptask( stack);
-      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_stack_pushdata(stack, sizeof(kaapi_taskmain_arg_t)) );
+      kaapi_thread_t* thread = kaapi_self_thread();
+      kaapi_task_t* clo = kaapi_thread_toptask( thread );
+      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
       kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
       arg->argc = 0;
       arg->argv = 0;
       arg->mainentry = &MainTaskBodyNoArgcv<TASK>::body;
-      kaapi_stack_pushtask( stack);    
+      kaapi_thread_pushtask( thread );    
     }
   };
 
@@ -1102,18 +1106,12 @@ namespace ka {
 
   // --------------------------------------------------------------------
   class SyncGuard {
-      Thread       *_thread;
-      kaapi_frame_t _frame;
+    kaapi_thread_t*         _thread;
+    kaapi_frame_t           _frame;
   public:
-      SyncGuard() : _thread( System::get_current_thread() )
-      {
-        kaapi_stack_save_frame( &_thread->_stack, &_frame );
-      }
-      ~SyncGuard()
-      {
-        kaapi_sched_sync( &_thread->_stack );
-        kaapi_stack_restore_frame( &_thread->_stack, &_frame );
-      }
+    SyncGuard();
+
+    ~SyncGuard();
   };
 } // namespace ka
 

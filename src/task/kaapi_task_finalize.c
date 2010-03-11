@@ -47,8 +47,9 @@
 
 /**
 */
-void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
 {
+#if 0
   kaapi_taskadaptive_t* ta = kaapi_task_getargst(task, kaapi_taskadaptive_t);
   kaapi_assert_debug( ta !=0 );
 
@@ -79,4 +80,5 @@ void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
       memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
     }
   }
+#endif
 }

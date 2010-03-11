@@ -41,8 +41,8 @@
 ** terms.
 ** 
 */
-#include <iostream>
 #include "kaapi_impl.h"
+#include <iostream>
 #include "ka_init.h"
 #include "ka_component.h"
 #include "ka_timer.h"

@@ -97,7 +97,7 @@ int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* sta
     ls->allocatedbloc = bloc;
     for (i=1; i<KAAPI_BLOCENTRIES_SIZE; ++i)
     {
-      bloc->data[i].stack = 0;
+      bloc->data[i].thread = 0;
       bloc->data[i].next  = 0;
       bloc->data[i].prev  = &bloc->data[i-1];
     }
@@ -108,7 +108,7 @@ int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* sta
   }
 
   /* set the state: write stack+set state/barrier/link the cell */
-  cell->stack = stack;
+  cell->thread = stack;
 
   /* in order thief view correct stack pointer if steal the struct */
   kaapi_writemem_barrier();
@@ -138,11 +138,11 @@ int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** sta
     if (opok)
     {
       /* R barrier ? */
-      *stack = cell->stack;
+      *stack = cell->thread;
     }
 
     kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
-    cell->stack = 0;
+    cell->thread = 0;
 
     /* whatever is the result of the cas, the cell is recyled (push in tail):
        - cas is true: the pop sucess, we will return the stack
@@ -178,8 +178,8 @@ int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** s
     int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
     if (opok)
     {
-      *stack = cell->stack;
-      cell->stack = 0;
+      *stack = cell->thread;
+      cell->thread = 0;
       return 0;
     }
     cell = cell->prev;

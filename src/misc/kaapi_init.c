@@ -59,11 +59,6 @@ kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0
 };
 
-/**
-*/ 
-void kaapi_force_instance(const char* name, kaapi_task_bodyid_t f)
-{
-}
 
 /** Predefined format
 */
@@ -83,9 +78,6 @@ kaapi_format_t kaapi_ulonglong_format;
 
 kaapi_format_t kaapi_float_format;
 kaapi_format_t kaapi_double_format;
-
-
-kaapi_task_body_t kaapi_bodies[1+KAAPI_TASK_BODY_MAX];
 
 
 /** cpuset related routines

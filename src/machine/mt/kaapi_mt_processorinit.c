@@ -53,7 +53,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   size_t k_sizetask;
   size_t k_sizedata;
 
-  kproc->ctxt         = 0;  
+  kproc->thread       = 0;  
   kproc->kid          = -1U;
   kproc->issteal      = 0;
   kproc->hlevel       = 0;
@@ -63,7 +63,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   
   KAAPI_ATOMIC_WRITE( &kproc->lock, 0);
   
-  kaapi_listrequest_init( &kproc->hlrequests );
+  kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
 #if 0

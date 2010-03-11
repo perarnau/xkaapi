@@ -70,7 +70,7 @@ static int fibo_splitter
 	 KAAPI_TASK_ADAPT_DEFAULT
 	);
 
-      thief_arg = kaapi_stack_pushdata(thief_stack, sizeof(fibo_arg_t));
+      thief_arg = kaapi_thread_pushdata(thief_stack, sizeof(fibo_arg_t));
       thief_arg->n = victim_arg->n - 1;
       kaapi_task_setargs(thief_task, thief_arg);
 
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
 
   t0 = kaapi_get_elapsedtime();
   {
-    kaapi_stack_t* const stack = kaapi_self_stack();
+    kaapi_stack_t* const stack = kaapi_self_frame();
     kaapi_task_t* const task = kaapi_stack_toptask(stack);
 
     fibo_arg_t arg;

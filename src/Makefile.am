@@ -29,6 +29,7 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_hashvalue.c \
   misc/kaapi_hashmap.c \
   misc/kaapi_liststack.c \
+  misc/kaapi_thread_clear.c \
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \
@@ -44,6 +45,7 @@ libxkaapi_la_SOURCES=\
   task/kaapi_stack_clear.c \
   task/kaapi_stack_print.c \
   task/kaapi_stack_execframe.c \
+  task/kaapi_stack_saveframe.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
