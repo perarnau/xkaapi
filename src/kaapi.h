@@ -467,6 +467,22 @@ typedef struct kaapi_access_t {
 /* ========================================================================= */
 
 /** \ingroup TASK
+    The function kaapi_access_init() initialize an access from a user defined pointer
+    \param access INOUT a pointer to the kaapi_access_t data structure to initialize
+    \param value INOUT a pointer to the user data
+    \retval a pointer to the next task to push or 0.
+*/
+static inline void kaapi_access_init(kaapi_access_t* access, void* value )
+{
+  access->data = value;
+#if defined(KAAPI_DEBUG)
+  access->version = 0;
+#endif  
+  return;
+}
+
+
+/** \ingroup TASK
     Return a pointer to parameter of the task (void*) pointer
 */
 static inline void* kaapi_task_getargs(kaapi_task_t* task) 
