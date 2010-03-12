@@ -77,24 +77,36 @@ redo_select:
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
 
-  /* experimental */
+#if 0 /* experimental, release CPU */
 //  pthread_yield();
+#endif
 
   /* (2)
      lock and retest if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return
   */
+#if 0 /* experimental, release CPU */
   int counter;
+#endif
+
   while (1)
   {
     ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
     if (ok) break;
 //TODO    if (kproc->hasrequest) kproc->thread->hasrequest = 0;   /* current stack never accept steal request */
-    if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
+
+    if (kaapi_reply_test( &kproc->reply ) ) 
+      /* return with out trying to lock / unlock the victim: 
+         an other processor or myself has replied 
+      */
+      goto return_value;
+
+#if 0 /* experimental, release CPU */
     if ((counter & 0xFF) ==0) {
       counter =0;
       /*pthread_yield();*/
     }
+#endif
   }
   kaapi_assert_debug( ok );
   kaapi_readmem_barrier();
