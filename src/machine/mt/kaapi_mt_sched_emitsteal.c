@@ -73,6 +73,8 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
+fprintf(stdout,"%i kproc post steal to:%p\n", kproc->kid, (void*)victim.kproc );
+fflush(stdout);
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
