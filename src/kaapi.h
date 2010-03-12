@@ -670,64 +670,6 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
 }
 
 /** \ingroup STACK
-    The function kaapi_thread_pushdata() will return the pointer to the next top data.
-    The top data is not yet into the stack.
-    If successful, the kaapi_thread_pushdata() function will return a pointer to the next data to push.
-    Otherwise, an 0 is returned to indicate the error.
-    \param thread INOUT a pointer to the kaapi_thread_t data structure where to push data
-    \retval a pointer to the next task to push or 0.
-*/
-static inline kaapi_access_t kaapi_thread_pushshareddata(kaapi_thread_t* thread, kaapi_uint32_t count)
-{
-  kaapi_access_t retval;
-  kaapi_assert_debug( thread !=0 );
-  kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-  retval.data =  thread->sp_data;
-#if defined(KAAPI_DEBUG)
-  retval.version = 0;
-#endif  
-  thread->sp_data += count;
-  return retval;
-}
-
-/** \ingroup STACK
-    The function kaapi_thread_pushdata() will return the pointer to the next top data.
-    The top data is not yet into the stack.
-    If successful, the kaapi_thread_pushdata() function will return a pointer to the next data to push.
-    Otherwise, an 0 is returned to indicate the error.
-    \param frame INOUT a pointer to the kaapi_frame_t data structure where to push data
-    \retval a pointer to the next task to push or 0.
-*/
-static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi_thread_t* thread, kaapi_uint32_t count)
-{
-  kaapi_assert_debug( thread !=0 );
-  kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-  access->data = thread->sp_data;
-#if defined(KAAPI_DEBUG)
-  access->version = 0;
-#endif  
-  thread->sp_data += count;
-  return;
-}
-
-
-/** \ingroup STACK
-    The function kaapi_access_init() initialize an access from a user defined pointer
-    \param access INOUT a pointer to the kaapi_access_t data structure to initialize
-    \param value INOUT a pointer to the user data
-    \retval a pointer to the next task to push or 0.
-*/
-static inline void kaapi_access_init(kaapi_access_t* access, void* value )
-{
-  access->data = value;
-#if defined(KAAPI_DEBUG)
-  access->version = 0;
-#endif  
-  return;
-}
-
-
-/** \ingroup STACK
     The function kaapi_stack_top() will return the top task.
     The top task is not part of the stack, it will be the next pushed task.
     If successful, the kaapi_stack_top() function will return a pointer to the next task to push.

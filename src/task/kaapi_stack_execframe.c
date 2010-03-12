@@ -89,7 +89,10 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
   execframe with the state that has been set on return with EWOULDBLOCK.
 */
 
-#define KAAPI_USE_CASSTEAL 1
+
+//#ifdef KAAPI_USE_CASSTEAL
+//#undef KAAPI_USE_CASSTEAL
+//#endif
 
 /*
 */

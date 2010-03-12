@@ -113,233 +113,145 @@ namespace a1 {
   using ka::SetSticky;
 
   class Thread;
-  
+
   // --------------------------------------------------------------------
   template<class T>
-  class Shared {
+  class Shared : private ka::pointer<T> {
+      void destroy( );
   public:
-    typedef T value_type;
-    operator kaapi_access_t&() { return _gd; }
+    typedef typename ka::pointer<T>::value_type value_type;
+
+    /* for destructor */
     ~Shared ( ) 
     {
-#if 0 /* optimize destructor: do nothing for basic type */
-      destroy( stack );
-#endif
+      destroy( );
     }
     
-#if 0
+#if 0 /* old API: to do ...*/
     Shared ( value_type* data ) 
     {
-      Thread* thread = (Thread*)System::get_current_thread(); 
-      if (!data) 
-      {
-        data = 0;
-        if (sizeof(value_type) <= STACK_ALLOC_THRESHOLD) 
-        {
-            attr.set_instack();
-            data = new (thread->allocate(sizeof(value_type))) value_type;
-        } else {
-            attr.set_inheap();
-#if defined(KAAPI_USE_NUMA)
-              //WARN LAURENT : hack to sched
-              data = new value_type;
-#endif
-          }
-      }
-      else
-      {
-          attr.set_inheap();
-      }
-      initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
     }
-#endif
-
-#if 0
     Shared ( const SetStack& toto, value_type* data = 0) 
     {
-      Thread* thread = System::get_current_thread(); 
-      DFG::GlobalData::Attribut attr;
-      attr.clear();
-      attr.set_instack();
-      if(!data) data = new (thread->allocate(sizeof(value_type))) value_type;
-      initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
     }
-#endif
-
-#if 0
     Shared ( const SetHeap& toto, value_type* data = 0) 
     {
-      Thread* thread = System::get_current_thread(); 
-      DFG::GlobalData::Attribut attr;
-      attr.clear();
-      attr.set_inheap();
-      if(!data) data =
-#if defined(KAAPI_USE_NUMA)
-      //WARN LAURENT
-        new value_type;
-#else
-        0;
-#endif
-      initialize( thread, data, &Util::WrapperFormat<value_type>::theformat, attr);
     }
-#endif
-
-    Shared()
-    {
-      kaapi_thread_t* thread = kaapi_self_thread();
-      _gd = kaapi_thread_pushshareddata(thread,sizeof(T));
-      new (_gd.data) T;
-    }
-
-    Shared(const value_type& value )
-    {
-      kaapi_thread_t* thread = kaapi_self_thread();
-      _gd = kaapi_thread_pushshareddata(thread,sizeof(T));
-      new (_gd.data) T(value);
-    }
-
-#if 0
     Shared(const SetStack& toto, const T& value )
     {
-      Thread* thread = System::get_current_thread(); 
-      _gd  = new (SharedAllocator, thread) T(value)
-      _gd._attr = 0;
     }
-#endif
-
-#if 0
     Shared(const SetHeap& toto, const T& value )
     {
-      _gd.data  = new (SharedAllocator) T(value)
-      _gd._attr = 1;
     }
 #endif
 
-    Shared(const Shared<value_type>& t) 
-     : _gd(t._gd)
+    Shared() : ka::pointer<T>()
     {
-      t._gd.data    = 0;
-      t._gd.version = 0;
+      *this = ka::Alloca<T>();
     }
+
+    Shared(const value_type& value ) : ka::pointer<T>()
+    {
+      *this = new (kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T))) T(value);
+    }
+
+    Shared(const Shared<value_type>& t) : ka::pointer<T>(t)
+    {}
 
     Shared<T>& operator=(const Shared<value_type>& t) 
     {
-      _gd = t._gd;
-      t._gd.data    = 0;
-      t._gd.version = 0;
+      ka::pointer<T>::operator=(t);
+      t._ptr = 0;
       return *this;
     }
-
-  private:
-    kaapi_access_t _gd;
   };
   
 
   // --------------------------------------------------------------------
   template<class T>
-  class Shared_rp {
+  class Shared_rp : private ka::pointer_rp<T> {
   public:
-    typedef T value_type;
+    typedef typename ka::pointer_rp<T>::value_type value_type;
 
-    operator kaapi_access_t&() { return _gd; }
-    Shared_rp( const kaapi_access_t& a )
-     : _gd( a )
+    Shared_rp( value_type* a )
+     : ka::pointer_rp<T>( a )
     { }
-  protected:
-    kaapi_access_t _gd;
   };
 
 
   // --------------------------------------------------------------------
   template<class T>
-  class Shared_r  {
+  class Shared_r : private ka::pointer_r<T> {
   public:
-    typedef T value_type;
+    typedef typename ka::pointer_r<T>::value_type value_type;
 
-    operator kaapi_access_t&() { return _gd; }
-    Shared_r( const kaapi_access_t& a )
-     : _gd( a )
+    Shared_r( value_type* a )
+     : ka::pointer_r<T>( a )
     { }
 
     const value_type& read() const 
-    { return *(T*)_gd.data; }
-  protected:
-    kaapi_access_t _gd;
+    { return *this; }
   };
 
 
   // --------------------------------------------------------------------
   template<class T>
-  class Shared_wp  {
+  class Shared_wp : public ka::pointer_wp<T> {
   public:
-    typedef T value_type;
+    typedef typename ka::pointer_wp<T>::value_type value_type;
 
-    operator kaapi_access_t&() { return _gd; }
-    Shared_wp( const kaapi_access_t& a )
-     : _gd( a )
+    Shared_wp( value_type* a )
+     : ka::pointer_wp<T>( a )
     { }
-  protected:
-    kaapi_access_t _gd;
   };
 
 
   // --------------------------------------------------------------------
   template<class T>
-  class Shared_w {
+  class Shared_w : private ka::pointer_w<T> {
   public:
-    typedef T value_type;
+    typedef typename ka::pointer_w<T>::value_type value_type;
 
-    operator kaapi_access_t&() { return _gd; }
-    Shared_w( const kaapi_access_t& a )
-     : _gd( a )
+    Shared_w( value_type* a )
+     : ka::pointer_w<T>( a )
     { }
 
     void write( const value_type& new_value )
     { 
-      T* data = (T*)_gd.data;
-      *data = new_value;
+      *this = new_value;
     }
 
+#if 0 /* old API */
     void write(value_type* new_value) 
-    { 
-      T* data = (T*)_gd.data;
-      *data = *new_value;
-    }
-  protected:
-    kaapi_access_t _gd;
-  };
-
-
-  // --------------------------------------------------------------------
-  template<class T>
-  class Shared_rpwp {
-  public:
-    typedef T value_type;
-
-    operator kaapi_access_t&() { return _gd; }
-    Shared_rpwp( const kaapi_access_t& a )
-     : _gd( a )
     { }
-  protected:
-    kaapi_access_t _gd;
+#endif
   };
 
 
   // --------------------------------------------------------------------
   template<class T>
-  class Shared_rw {
+  class Shared_rpwp : private ka::pointer_rpwp<T> {
   public:
-    typedef T value_type;
+    typedef typename ka::pointer_rpwp<T>::value_type value_type;
 
-    operator kaapi_access_t&() { return _gd; }
-    Shared_rw( const kaapi_access_t& a )
-     : _gd( a )
+    Shared_rpwp( value_type* a )
+     : ka::pointer_rpwp<T>( a )
+    { }
+  };
+
+
+  // --------------------------------------------------------------------
+  template<class T>
+  class Shared_rw : private ka::pointer_rw<T> {
+  public:
+    typedef typename ka::pointer_rw<T>::value_type value_type;
+
+    Shared_rw( value_type* a )
+     : ka::pointer_rw<T>( a )
     { }
 
     value_type& access() const
-    { return *(T*)_gd.data; }
-  protected:
-    kaapi_access_t _gd;
+    { return *this; }
   };
 
 
@@ -353,42 +265,46 @@ namespace a1 {
   };
   
   template<class T, class OpCumul = DefaultAdd<T> >
-  class Shared_cwp {
+  class Shared_cwp : private ka::pointer_cwp<T> {
   public:    
-    typedef T value_type;
+    typedef typename ka::pointer_cwp<T>::value_type value_type;
 
-    Shared_cwp(const kaapi_access_t& a )
-     : _gd( a )
+    Shared_cwp( value_type* a )
+     : ka::pointer_cwp<T>( a )
     { }
-  protected:
-    kaapi_access_t _gd;
   };
 
 
   template<class T, class OpCumul = DefaultAdd<T> >
-  class Shared_cw {
+  class Shared_cw : private ka::pointer_cw<T> {
   public:
-    typedef T value_type;
+    typedef typename ka::pointer_cw<T>::value_type value_type;
 
-    Shared_cw( const kaapi_access_t& a )
-     : _gd( a )
+    Shared_cw( value_type* a )
+     : ka::pointer_cw<T>( a )
     { }
 
     void cumul( const value_type& value )
     {
-      static OpCumul op;
-      op( *(T*)_gd.data, value );
+      op( *this, value );
     }
 
     void cumul( value_type* value )
     { 
-      op( *(T*)_gd.data, *value );
+      op( *this, *value );
       delete value;
     }
-  protected:
-    kaapi_access_t _gd;
   };
 
+
+  // --------------------------------------------------------------------
+  template<class T>
+  struct TaskDelete {
+    void operator() ( a1::Shared_rw<T> res )
+    {
+      res->_data->T::~T();
+    }
+  };
 
 
   // -------------------------------------------------------------------- VECTOR of Shared
@@ -1032,6 +948,14 @@ namespace a1 {
 // ---------------------------------------------------------------------------------
 namespace a1 {
   using ka::SyncGuard;
+
+  /* for destructor */
+  template<class T>
+  void Shared<T>::destroy()
+  {
+    Fork<TaskDelete<T> >()( *this );
+  }
+
 }
 
 #ifndef ATHAPASCAN_NOT_IN_NAMESPACE

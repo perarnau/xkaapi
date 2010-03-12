@@ -254,6 +254,13 @@ namespace ka {
      return new (data) T[size];
   }
 
+  template<class T>
+  T* Alloca()
+  {
+     void* data = kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T) );
+     return new (data) T[1];
+  }
+
   // --------------------------------------------------------------------
   struct SetStack {};
   extern SetStack SetInStack;
@@ -968,6 +975,13 @@ namespace ka {
     {
        void* data = kaapi_thread_pushdata( &_thread, sizeof(T)*size );
        return new (data) T[size];
+    }
+
+    template<class T>
+    T* Alloca()
+    {
+       void* data = kaapi_thread_pushdata( &_thread, sizeof(T) );
+       return new (data) T[1];
     }
 
     template<class TASK, class Attr>
