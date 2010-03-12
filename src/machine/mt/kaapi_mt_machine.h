@@ -628,10 +628,10 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   kaapi_request_t* req;
   if (kproc ==0) return EINVAL;
   if (victim ==0) return EINVAL;
-
-  kaapi_assert_debug( req->status != KAAPI_REQUEST_S_POSTED);
   
   req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
+  kaapi_assert_debug( req->status != KAAPI_REQUEST_S_POSTED);
+
   reply->status    = KAAPI_REQUEST_S_POSTED;
   req->reply       = reply;
   req->thread      = kproc->thread;
