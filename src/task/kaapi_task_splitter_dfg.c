@@ -56,8 +56,10 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   kaapi_tasksig_arg_t*    argsig;
   
 
-  kaapi_assert_debug (task !=0);
-  
+#if defined(KAAPI_CONCURRENT_WS)
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) == 1+_kaapi_get_current_processor()->kid );
+#endif
+  kaapi_assert_debug (task !=0);  
   kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body);
 
   /* find the first request in the list */

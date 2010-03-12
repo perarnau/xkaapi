@@ -189,7 +189,9 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
 
-  if (count ==0) return 0;
+  kaapi_assert_debug( count >= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
+
+  kaapi_assert_debug(count >0);
   if ((thread ==0) || kaapi_frame_isempty( thread->sfp)) return 0;
   savecount  = count;
   replycount = 0;

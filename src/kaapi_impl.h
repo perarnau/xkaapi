@@ -819,11 +819,13 @@ extern int _kaapi_request_reply(
 */
 extern int kaapi_reply_wait( kaapi_reply_t* ksr );
 
+
 /** Return true iff the request has been posted
   \param pksr kaapi_request_t
 */
 static inline int kaapi_request_test( kaapi_request_t* kpsr )
 { return (kpsr->status == KAAPI_REQUEST_S_POSTED); }
+
 
 /** Return true iff the request has been processed
   \param pksr kaapi_reply_t
@@ -831,11 +833,13 @@ static inline int kaapi_request_test( kaapi_request_t* kpsr )
 static inline int kaapi_reply_test( kaapi_reply_t* kpsr )
 { return (kpsr->status != KAAPI_REQUEST_S_POSTED); }
 
+
 /** Return true iff the request is a success steal
   \param pksr kaapi_reply_t
 */
 static inline int kaapi_reply_ok( kaapi_reply_t* kpsr )
 { return (kpsr->status == KAAPI_REQUEST_S_SUCCESS); }
+
 
 /** Return the request status
   \param pksr kaapi_reply_t
@@ -845,6 +849,7 @@ static inline int kaapi_reply_ok( kaapi_reply_t* kpsr )
 */
 static inline int kaapi_request_status( kaapi_reply_t* reply ) 
 { return reply->status; }
+
 
 /** Return the data associated with the reply
   \param pksr kaapi_reply_t
