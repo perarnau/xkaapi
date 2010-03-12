@@ -53,6 +53,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   int count =0;
   int replycount = 0;
 
+  kaapi_readmem_barrier();
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   kaapi_assert_debug( count >= 0 );
   if (count ==0) return 0;
