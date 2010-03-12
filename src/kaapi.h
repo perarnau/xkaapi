@@ -698,7 +698,7 @@ static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
     \param pksr kaapi_request_t
 */
 #define kaapi_request_ok( kpsr )\
-  ((kpsr)->status == 1 /* == KAAPI_REQUEST_S_POSTED*/)
+  ((kpsr)->status == 1 /*== KAAPI_REQUEST_S_POSTED*/)
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task

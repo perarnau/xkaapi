@@ -62,6 +62,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) == 1+_kaapi_get_current_processor()->kid );
 #endif
   
+#if 0
   if (0)
   { /* WARNING do not try to steal inside suspended stack */
     kaapi_wsqueuectxt_cell_t* cell;
@@ -73,6 +74,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
       cell = cell->prev;
     }
   }
+#endif
   
   thread = kproc->thread;
   if ((count >0) && (thread !=0) && (kproc->issteal ==0))
