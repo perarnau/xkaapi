@@ -73,6 +73,8 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
+  kaapi_assert_debug( count < KAAPI_MAX_PROCESSOR );
+
 fprintf(stdout,"%i kproc post steal to:%p\n", kproc->kid, (void*)victim.kproc );
 fflush(stdout);
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -141,6 +143,7 @@ fflush(stdout);
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
       /* user version that do not decrement the counter */
+      kaapi_assert_debug( victim.kproc->hlrequests.requests[i].proc == victim.kproc);
       _kaapi_request_reply( &victim.kproc->hlrequests.requests[i], 0, 0 );
       ++replycount;
     }
