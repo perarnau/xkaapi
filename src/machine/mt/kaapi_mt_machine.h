@@ -631,6 +631,7 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   
   req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
   kaapi_assert_debug( req->status != KAAPI_REQUEST_S_POSTED);
+  kaapi_assert_debug( req->proc == victim->kproc);
 
   reply->status    = KAAPI_REQUEST_S_POSTED;
   req->reply       = reply;
