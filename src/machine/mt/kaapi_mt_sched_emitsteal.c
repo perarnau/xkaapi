@@ -73,7 +73,7 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
-  kaapi_assert_debug( count < KAAPI_MAX_PROCESSOR );
+  kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) < KAAPI_MAX_PROCESSOR );
 
 fprintf(stdout,"%i kproc post steal to:%p\n", kproc->kid, (void*)victim.kproc );
 fflush(stdout);
