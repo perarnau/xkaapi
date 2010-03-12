@@ -97,9 +97,10 @@ redo_select:
     }
   }
   kaapi_assert_debug( ok );
+  kaapi_readmem_barrier();
   
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
-  kaapi_assert_debug( count <= KAAPI_MAX_PROCESSOR );
+  kaapi_assert_debug( count < KAAPI_MAX_PROCESSOR );
   kaapi_assert_debug( count >= 0 );
 
   /* (3)
