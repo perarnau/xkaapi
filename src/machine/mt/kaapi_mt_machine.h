@@ -639,6 +639,8 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   reply->data      = 0;
 
   kaapi_writemem_barrier();
+fprintf(stdout,"%i kproc post request to:%p, @req=%p\n", kproc->kid, (void*)victim->kproc, (void*)req );
+fflush(stdout);
   req->status      = KAAPI_REQUEST_S_POSTED;
   
   /* incr without mem. barrier here if the victim see the request status as ok is enough,

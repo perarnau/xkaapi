@@ -143,6 +143,8 @@ fflush(stdout);
   {
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
+fprintf(stdout,"%i kproc reply to:%p, @req=%p\n", kproc->kid, (void*)victim.kproc, (void*)&victim.kproc->hlrequests.requests[i] );
+fflush(stdout);
       /* user version that do not decrement the counter */
       kaapi_assert_debug( victim.kproc->hlrequests.requests[i].proc == victim.kproc);
       _kaapi_request_reply( &victim.kproc->hlrequests.requests[i], 0, 0 );
