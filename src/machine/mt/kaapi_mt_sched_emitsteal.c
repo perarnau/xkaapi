@@ -130,14 +130,17 @@ redo_select:
   }
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
 
+#if 0
   /* assert on the counter of victim processor request count */
   if (replycount >0)
   {
     kaapi_writemem_barrier();
   }
+#endif
 
   /* unlock  */ 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );  
+  kaapi_writemem_barrier();
   KAAPI_ATOMIC_WRITE(&victim.kproc->lock, 0);
 
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
