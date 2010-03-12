@@ -83,11 +83,13 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
        else set flag to 0 on the stack and wait reply
     */
 #if defined(KAAPI_CONCURRENT_WS)
-    int verifcount = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+    int verifcount1 = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+    kaapi_assert_debug( count-replycount >= verifcount1 );
+    int verifcount2 = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+    kaapi_assert_debug( count-replycount >= verifcount2 );
     kaapi_assert_debug( count-replycount >= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
     /* signal that count thefts are waiting */
     replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
-    count -= replycount;
 #else
 #warning  "TO REDO"
     /* signal that count thefts are waiting */
