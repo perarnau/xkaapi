@@ -108,6 +108,8 @@ redo_select:
     }
 #endif
   }
+fprintf(stdout,"%i kproc enter critical section to:%p\n", kproc->kid, (void*)victim.kproc );
+fflush(stdout);
   kaapi_assert_debug( ok );
   kaapi_readmem_barrier();
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
@@ -154,6 +156,8 @@ redo_select:
   /* unlock  */ 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );  
   kaapi_writemem_barrier();
+fprintf(stdout,"%i kproc leave critical section to:%p\n", kproc->kid, (void*)victim.kproc );
+fflush(stdout);
   KAAPI_ATOMIC_WRITE(&victim.kproc->lock, 0);
 
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
