@@ -218,7 +218,7 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
 
 /*
 */
-int kaapi_sched_stealstack_helper( kaapi_thread_context_t* thread, kaapi_task_t* curr )
+int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
 {
-  return kaapi_sched_stealstack( thread, curr, KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ), thread->proc->hlrequests.requests );
+  return kaapi_sched_stealstack( stc->ctxtthread, stc->ownertask, stc->hasrequest, stc->requests );
 }

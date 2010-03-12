@@ -69,7 +69,9 @@ int kaapi_sched_advance ( kaapi_processor_t* kproc )
   int saved_state = kaapi_perf_thread_state(kproc);
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
+#if 0 //TODO
   kaapi_stealpoint_isactive(kproc->thread,0);
+#endif
   count = stack->hasrequest;
   
   if (count !=0) 

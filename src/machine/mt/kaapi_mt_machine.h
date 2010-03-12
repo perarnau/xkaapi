@@ -299,7 +299,7 @@ extern int kaapi_processor_init( kaapi_processor_t* kproc );
 extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_context_alloc() allocates in the heap a context with a stack containing 
     at bytes for tasks and bytes for data.
     If successful, the kaapi_context_alloc() function will return a pointer to a kaapi_thread_context_t.  
@@ -313,7 +313,7 @@ extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc );
 
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_context_free() free the context successfuly allocated with kaapi_context_alloc.
     If successful, the kaapi_context_free() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.

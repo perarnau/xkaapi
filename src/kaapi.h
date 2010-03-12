@@ -112,12 +112,24 @@ typedef struct kaapi_atomic64_t {
 } kaapi_atomic64_t;
 
 
+#if defined(__i386__)||defined(__x86_64)
+     /* WARNING here Compiler fence to keep operations. Note that on X86 no reorder of write ops
+        so, we do not need extra hardware fence operation.
+     */
+#    define kaapi_writemem_barrier_api()  __asm__ __volatile__("" : : : "memory" )
+#else
+#    error "Fence operation should must put here. See the memory consistency of the hardware you use"
+#endif
+
 /* ========================================================================== */
 struct kaapi_task_t;
 struct kaapi_stack_t;
 struct kaapi_thread_t;
 struct kaapi_thread_context_t;
+struct kaapi_stealcontext_t;
 
+
+/* ========================================================================== */
 /** Task body
     \ingroup TASK
     See internal doc in order to have better documentation of invariant between the task and the thread.
@@ -166,11 +178,6 @@ extern int kaapi_getconcurrency (void);
     on return, the concurrency number may has been set to a different number than requested.
  */
 extern int kaapi_setconcurrency (unsigned int concurrency);
-
-
-/**
- */
-extern void kaapi_set_workload( kaapi_uint32_t workload );
 
 
 /* ========================================================================== */
@@ -353,28 +360,6 @@ typedef struct kaapi_request_t {
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
 
-/** Task splitter
-    \ingroup TASK
-    A splitter should always return the number of work returns to the list of requests.
-*/
-typedef int (*kaapi_task_splitter_t)(
-  struct kaapi_stack_t* /*stack */, 
-  struct kaapi_task_t* /* task */, 
-  int /*count*/, 
-  struct kaapi_request_t* /*array*/, void* /*userarg*/);
-
-
-/** Task reducer
-    \ingroup TASK
-*/
-typedef int (*kaapi_task_reducer_t) (
-#ifdef __cplusplus
- struct kaapi_stack_t* /*stack */, struct kaapi_task_t* /* task */, 
- void* arg_thief, ...
-#endif
-);
-
-
 /** Kaapi Thread context
     This is the public view of the stack of frame contains in kaapi_thread_context_t
     We only expose the field to push task or data.
@@ -387,7 +372,7 @@ typedef struct kaapi_thread_t {
 
 
 /** Kaapi frame definition
-   \ingroup STACK
+   \ingroup TASK
    Same structure as kaapi_thread_t but we keep different type names to avoid automatic conversion.
 */
 typedef struct kaapi_frame_t {
@@ -420,54 +405,43 @@ typedef struct kaapi_task_t {
 } kaapi_task_t ;
 
 
-struct kaapi_taskadaptive_result_t;
-
-/** \ingroup ADAPT
-    Extent data structure for adaptive task.
-    This data structure is attached to any adaptative tasks.
+/* ========================================================================= */
+/** Task splitter
+    \ingroup TASK
+    A splitter should always return the number of work returns to the list of requests.
 */
-typedef struct kaapi_taskadaptive_t {
-  void*                               user_sp;         /* user argument */
-  kaapi_task_splitter_t               splitter;        /* C function that represent the body to split a task, interest only if isadaptive*/
-  void*                               argsplitter;     /* arg for splitter */
-  kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
-  struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
-  struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
+typedef int (*kaapi_task_splitter_t)(
+  struct kaapi_stealcontext_t* /*stc */, 
+  int /*count*/, 
+  struct kaapi_request_t* /*array*/, void* /*userarg*/);
 
-  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t to preemption */
-
-  struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
-  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t to copy args in preemption or finalization
-                                                          null iff thief has been already preempted
-                                                       */
-  int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
-  int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
-  void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
-  void*                               arg_from_victim; /* arg received by the victim in case of preemption */
-} kaapi_taskadaptive_t;
-
-
-/** \ingroup ADAPT
-    Data structure that allows to store results of child tasks of an adaptive task.
-    This data structure is stored... in the victim heap and serve as communication 
-    media between victim and thief.
+/** Task reducer
+    \ingroup TASK
 */
-typedef struct kaapi_taskadaptive_result_t {
-  volatile int*                       signal;           /* signal of preemption pointer on the thief stack haspreempt */
-  volatile int                        req_preempt;      /* */
-  volatile int                        thief_term;       /* */
-  int                                 flag;             /* state of the result */
-  struct kaapi_taskadaptive_result_t* rhead;            /* next result of the next thief */
-  struct kaapi_taskadaptive_result_t* rtail;            /* next result of the next thief */
-  void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
-  struct kaapi_taskadaptive_result_t* next;             /* link field to the previous spawned thief */
-  struct kaapi_taskadaptive_result_t* prev;             /* link field to the next spawned thief */
-  int                                 size_data;        /* size of data */
-  double                              data[1];
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+typedef int (*kaapi_task_reducer_t) (
+#ifdef __cplusplus
+ kaapi_stealcontext_t* /* stc */,
+ void* arg_thief, ...
+#endif
+);
 
-#define KAAPI_RESULT_INSTACK   0x01
-#define KAAPI_RESULT_INHEAP    0x02
+/** Steal context for adaptive algorithm
+    \ingroup ADAPT
+*/
+typedef struct kaapi_stealcontext_t {
+  kaapi_task_t*                  ownertask;
+  struct kaapi_thread_context_t* ctxtthread;
+  kaapi_thread_t*                thread;
+  kaapi_task_splitter_t          splitter;
+  void*                          argsplitter;
+
+  volatile int                   hasrequest;
+  kaapi_request_t*               requests;
+
+  volatile int                   haspreempt;
+  void* volatile                 arg_from_victim;    /* arg from the victim after preemption of one victim */
+  void* volatile                 current_thief_work; /* work of the thief after preemption */
+} kaapi_stealcontext_t;
 
 
 
@@ -493,26 +467,6 @@ typedef struct kaapi_access_t {
 /* ========================================================================= */
 
 /** \ingroup TASK
-    Return the state of a task
-*/
-#define kaapi_task_getstate(task) ((task)->flag & KAAPI_TASK_MASK_STATE)
-
-/** \ingroup TASK
-    Set the state of the task
-*/
-#define kaapi_task_setstate(task, s) ((task)->flag = ((task)->flag & ~KAAPI_TASK_MASK_STATE) | (s))
-
-/** \ingroup TASK
-    Return the flags of the task
-*/
-#define kaapi_task_getflags(task) ((task)->flag & KAAPI_TASK_MASK_FLAGS)
-
-/** \ingroup TASK
-    Set the flags of the task
-*/
-#define kaapi_task_setflags(task, f) ((task)->flag |= f & KAAPI_TASK_MASK_FLAGS)
-
-/** \ingroup TASK
     Return a pointer to parameter of the task (void*) pointer
 */
 static inline void* kaapi_task_getargs(kaapi_task_t* task) 
@@ -534,7 +488,7 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
 }
 
 /** \ingroup TASK
-    Set the pointer to parameter of the task (void*) pointer
+    Set the body of the task
 */
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
 {
@@ -542,78 +496,12 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 }
 
 /** \ingroup TASK
-    Set the pointer to parameter of the task (void*) pointer
+    Get the body of the task
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 {
   return task->body;
 }
-
-
-static inline void kaapi_task_setextrabody(kaapi_task_t* task, kaapi_task_bodyid_t body )
-{
-  task->ebody = body;
-}
-
-/** \ingroup TASK
-    Set the pointer to parameter of the task (void*) pointer
-*/
-static inline kaapi_task_bodyid_t kaapi_task_getextrabody(kaapi_task_t* task)
-{
-  return task->ebody;
-}
-
-
-/* ===================== Default internal task body ==================================== */
-/** Body of the nop task 
-    \ingroup TASK
-*/
-extern void kaapi_nop_body( void*, kaapi_thread_t*);
-
-/** Body of the startup task 
-    \ingroup TASK
-*/
-extern void kaapi_taskstartup_body( void*, kaapi_thread_t*);
-
-/** Body of the task that mark a task to suspend execution
-    \ingroup TASK
-*/
-extern void kaapi_suspend_body( void*, kaapi_thread_t*);
-
-/** Body of the task that mark a task as under execution
-    \ingroup TASK
-*/
-extern void kaapi_exec_body( void*, kaapi_thread_t*);
-
-/** Body of task steal created on thief stack to execute a task
-    \ingroup TASK
-*/
-extern void kaapi_tasksteal_body( void*, kaapi_thread_t* );
-
-/** Write result after a steal 
-    \ingroup TASK
-*/
-extern void kaapi_taskwrite_body( void*, kaapi_thread_t* );
-
-/** Body of the task that do signal to a task after steal op
-    \ingroup TASK
-*/
-extern void kaapi_tasksig_body( void*, kaapi_thread_t*);
-
-/** Merge result after a steal
-    \ingroup TASK
-*/
-extern void kaapi_aftersteal_body( void*, kaapi_thread_t* );
-
-/** Body of the task in charge of finalize of adaptive task
-    \ingroup TASK
-*/
-extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
-
-/** Body of the task in charge of finalize of adaptive task
-    \ingroup TASK
-*/
-extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 
 /** The main task arguments
     \ingroup TASK
@@ -631,27 +519,12 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 
 
 /** \ingroup TASK
-    The function kaapi_task_isstealable() will return non-zero value iff the task may be stolen.
-    All previous internal task body are not stealable. All user task are stealable.
-    \param task IN a pointer to the kaapi_task_t to test.
-*/
-inline static int kaapi_task_isstealable(const kaapi_task_t* task)
-{ 
-  return (task->body != kaapi_taskstartup_body) && (task->body != kaapi_nop_body)
-      && (task->body != kaapi_suspend_body) && (task->body != kaapi_exec_body) && (task->body != kaapi_aftersteal_body) 
-      && (task->body != kaapi_tasksteal_body) && (task->body != kaapi_taskwrite_body) && (task->body != kaapi_tasksig_body)
-      && (task->body != kaapi_taskfinalize_body) && (task->body != kaapi_adapt_body)
-      ;
-}
-
-
-/** \ingroup STACK
     Return pointer to the self stack
 */
 extern kaapi_thread_t* kaapi_self_thread (void);
 
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_thread_pushdata() will return the pointer to the next top data.
     The top data is not yet into the stack.
     If successful, the kaapi_thread_pushdata() function will return a pointer to the next data to push.
@@ -669,7 +542,7 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
   return retval;
 }
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_stack_top() will return the top task.
     The top task is not part of the stack, it will be the next pushed task.
     If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
@@ -685,7 +558,7 @@ static inline kaapi_task_t* kaapi_thread_toptask( kaapi_thread_t* thread)
 }
 
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_stack_push() pushes the top task into the stack.
     If successful, the kaapi_stack_push() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
@@ -696,42 +569,13 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug((char*)thread->sp >= (char*)thread->sp_data);
-#if defined(__i386__)||defined(__x86_64)
-  /* WARNING here Compiler fence to keep operations. Note that on X86 no reorder of write ops
-     so, we do not need extra hardware fence operation.
-  */
-  __asm__ __volatile__("" : : : "memory" );
-#else
-#error "Fence operation should must put here. See the memory consistency of the hardware you use"
-#endif
+
+  kaapi_writemem_barrier_api();
+
   --thread->sp;
   return 0;
 }
 
-
-/** \ingroup TASK
-    Initialize a task with given flag for adaptive attribut or task constraints.
-*/
-#if 0
-static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg, kaapi_uint32_t flag ) 
-{
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
-  kaapi_assert_debug( ta !=0 );
-  ta->user_sp               = arg;
-  ta->splitter              = 0;
-  ta->argsplitter           = 0;
-  ta->thievescount._counter = 0;
-  ta->head                  = 0;
-  ta->tail                  = 0;
-  ta->result                = 0;
-  ta->mastertask            = 0;
-  ta->arg_from_victim       = 0;
-  task->sp                  = ta;
-  task->flag                = flag | KAAPI_TASK_ADAPTIVE;
-  task->body                = taskbody;
-  return 0;
-}
-#endif
 
 #define kaapi_task_initdfg( task, taskbody, arg ) \
   do { \
@@ -750,7 +594,7 @@ static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskb
 }
 
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_thread_save_frame() saves the current frame of a stack into
     the frame data structure.
     If successful, the kaapi_thread_save_frame() function will return zero.
@@ -762,7 +606,7 @@ static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskb
 extern int kaapi_thread_save_frame( kaapi_thread_t*, kaapi_frame_t*);
 
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_thread_restore_frame() restores the frame context of a stack into
     the stack data structure.
     If successful, the kaapi_thread_restore_frame() function will return zero.
@@ -774,7 +618,7 @@ extern int kaapi_thread_save_frame( kaapi_thread_t*, kaapi_frame_t*);
 extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_sched_sync() execute all childs tasks of the current running task.
     If successful, the kaapi_sched_sync() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
@@ -787,21 +631,19 @@ extern int kaapi_sched_sync( void );
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
 /* ========================================================================= */
-/** \ingroup WS
-    This method tries to steal work from the tasks of a stack passed in argument.
-    The method iterates through all the tasks in the stack until it found a ready task
-    or until the request count reaches 0.
-    The current implementation is cooperative or concurrent depending of configuration flag.
-    only exported for kaapi_stealpoint.
-    \param stack the victim stack
-    \param task the current running task (cooperative) or 0 (concurrent)
-    \retval the number of positive replies to the thieves
-*/
-extern int kaapi_sched_stealstack  ( struct kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request );
 
-/*
+/** \ingroup WS
+    Return a new stealcontext to be used with other function of the adaptive API.
 */
-extern int kaapi_sched_stealstack_helper( struct kaapi_thread_context_t* thread, kaapi_task_t* curr );
+kaapi_stealcontext_t* kaapi_thread_pushstealcontext( kaapi_thread_t* thread );
+
+
+/** \ingroup WS
+    Helper to expose to many part of the internal API.
+    Return 1 iff its remains works...
+*/
+extern int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc );
+
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process steal request into the task.
@@ -810,11 +652,9 @@ extern int kaapi_sched_stealstack_helper( struct kaapi_thread_context_t* thread,
     \retval !=0 if they are a steal request(s) to process onto the given task.
     \retval 0 else
 */
-static inline int kaapi_stealpoint_isactive( struct kaapi_thread_context_t* thread, kaapi_task_t* task )
+static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 {
-#if 0
-  int count = stack->hasrequest;
-  if (count) 
+  if (stc->hasrequest) 
   {
     /* \TODO: ici appel systematique a kaapi_sched_stealprocessor dans le cas ou la seule tache
        est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
@@ -822,10 +662,8 @@ static inline int kaapi_stealpoint_isactive( struct kaapi_thread_context_t* thre
        Dans le cas concurrent, on ne passe jamais par la (appel direct de kaapi_stealprocessor).
        Dans le cas cooperatif, le thread courant se vol lui meme puis repond
     */
-    count = stack->hasrequest -= kaapi_sched_stealstack_helper(stack, task );
-    return (count ==0 ? 0 : 1);
+    return kaapi_sched_stealstack_helper( stc );
   }
-#endif
   return 0;
 }
 
@@ -835,11 +673,8 @@ static inline int kaapi_stealpoint_isactive( struct kaapi_thread_context_t* thre
     and then call the splitter function with given arguments.
     \retval 0 \TODO code de retour
 */
-#define kaapi_stealpoint( stack, task, splitter, ...) \
-   (kaapi_stealpoint_isactive(stack, task) ? \
-     (splitter)( stack, task, (stack)->hasrequest, (stack)->requests, ##__VA_ARGS__) :\
-     0\
-   ), (stack)->hasrequest =0 
+#define kaapi_stealpoint( stc, splitter, ...) \
+   (kaapi_stealpoint_isactive(stc) ? (splitter)( stc, (stc)->hasrequest, (stc)->requests, ##__VA_ARGS__), 1 : 0 )
     
     
 /** \ingroup ADAPTIVE
@@ -847,7 +682,7 @@ static inline int kaapi_stealpoint_isactive( struct kaapi_thread_context_t* thre
     \param pksr kaapi_request_t
 */
 #define kaapi_request_ok( kpsr )\
-  ((kpsr)->status == 1 /*KAAPI_REQUEST_S_POSTED*/)
+  ((kpsr)->status == 1 /* == KAAPI_REQUEST_S_POSTED*/)
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
@@ -855,24 +690,17 @@ static inline int kaapi_stealpoint_isactive( struct kaapi_thread_context_t* thre
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
 */
-static inline int kaapi_preemptpoint_isactive( kaapi_thread_t* thread, kaapi_task_t* task __attribute__((unused)) )
+static inline int kaapi_preemptpoint_isactive( kaapi_stealcontext_t* stc )
 {
-#if 0
-  int retval = stack->haspreempt;
-#if defined(TODO)
-  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPTIVE) || !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
-#endif
-  return retval;
-#endif
-  return 0;
+  return stc->haspreempt;
 }
 
 /** \ingroup ADAPTIVE
     Helper function to pass argument between the victim and the thief.
     On return the victim argument may be read.
 */
-extern int kaapi_preemptpoint_before_reducer_call( kaapi_thread_t* thread, kaapi_task_t* task, void* arg_for_victim, int size );
-extern int kaapi_preemptpoint_after_reducer_call ( kaapi_thread_t* thread, kaapi_task_t* task, int reducer_retval );
+extern int kaapi_preemptpoint_before_reducer_call( kaapi_stealcontext_t* stc, void* arg_for_victim, int size );
+extern int kaapi_preemptpoint_after_reducer_call ( kaapi_stealcontext_t* stc, int reducer_retval );
 
 
 static inline int kaapi_is_null(void* p)
@@ -896,11 +724,11 @@ static inline int kaapi_is_null(void* p)
     \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
 */
-#define kaapi_preemptpoint( stack, task, reducer, arg_for_victim, size_arg_victim, ...)\
-  ( kaapi_preemptpoint_isactive(stack, task) ? \
-        kaapi_preemptpoint_before_reducer_call(stack, task, arg_for_victim, size_arg_victim),\
-        kaapi_preemptpoint_after_reducer_call( stack, task, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( stack, task, ((kaapi_taskadaptive_t*)(task)->sp)->arg_from_victim, ##__VA_ARGS__))) \
+#define kaapi_preemptpoint( stc, reducer, arg_for_victim, size_arg_victim, ...)\
+  ( kaapi_preemptpoint_isactive(stc) ? \
+        kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, size_arg_victim),\
+        kaapi_preemptpoint_after_reducer_call( stc, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( stc, stc->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )
@@ -909,7 +737,13 @@ static inline int kaapi_is_null(void* p)
 /* Helper for kaapi_preempt_nextthief
    Return 1 iff a thief as been preempted.
 */
-extern int kaapi_preempt_nextthief_helper( kaapi_thread_t* thread, kaapi_task_t* task, void* arg_to_thief );
+extern int kaapi_preempt_nextthief_helper_head( kaapi_stealcontext_t* stc, void* arg_to_thief );
+
+/* Helper for kaapi_preempt_nextthief_reverse
+   Return 1 iff a thief as been preempted.
+*/
+extern int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void* arg_to_thief );
+
 
 /** \ingroup ADAPTIVE
    Try to preempt next thief in the reverse order defined by the order of the steal request reply, i.e.
@@ -920,23 +754,18 @@ extern int kaapi_preempt_nextthief_helper( kaapi_thread_t* thread, kaapi_task_t*
    value the call to reducer function.
    
    reducer function should has the following signature:
-      int (*)( kaapi_stack_t* stack, kaapi_task_t* task, void* thief_work, ... )
+      int (*)( stc, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
-#define kaapi_preempt_nextthief( stack, task, arg_to_thief, reducer, ... ) \
+#define kaapi_preempt_thief_head( stc, arg_to_thief, reducer, ... ) \
 (									\
- kaapi_preempt_nextthief_helper(stack, task, arg_to_thief) ?		\
+ kaapi_preempt_nextthief_helper_head(stc, arg_to_thief) ?		\
  (									\
   kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
+  ((kaapi_task_reducer_t)reducer)(stc, stc->current_thief_work, ##__VA_ARGS__) \
  ) : 0									\
 )
 
-
-/* Helper for kaapi_preempt_nextthief_reverse
-   Return 1 iff a thief as been preempted.
-*/
-extern int kaapi_preempt_nextthief_reverse_helper( kaapi_thread_t* thread, kaapi_task_t* task, void* arg_to_thief );
 
 /** \ingroup ADAPTIVE
    Try to preempt next thief in the order defined by the order of the steal request reply.
@@ -951,12 +780,12 @@ extern int kaapi_preempt_nextthief_reverse_helper( kaapi_thread_t* thread, kaapi
       int (*)( kaapi_stack_t* stack, kaapi_task_t* task, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
-#define kaapi_preempt_nextthief_reverse( stack, task, arg_to_thief, reducer, ... ) \
+#define kaapi_preempt_nextthief_tail( stc, arg_to_thief, reducer, ... ) \
 (									\
- kaapi_preempt_nextthief_reverse_helper(stack, task, arg_to_thief) ?		\
+ kaapi_preempt_nextthief_helper_tail(stc, arg_to_thief) ?		\
  (									\
   kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stack, task, ((kaapi_taskadaptive_t*)task->sp)->current_thief->data, ##__VA_ARGS__) \
+  ((kaapi_task_reducer_t)reducer)(stc, stc->current_thief_work, ##__VA_ARGS__) \
  ) : 0									\
 )
 
@@ -973,37 +802,29 @@ extern int kaapi_preempt_nextthief_reverse_helper( kaapi_thread_t* thread, kaapi
     \param size IN the size in bytes to store the result
     \param retval IN the result of the steal request 0 iff failed else success
 */
-extern int kaapi_request_reply( 
-    kaapi_request_t*               request, 
-    kaapi_task_t*                  task, 
-    struct kaapi_thread_context_t* thief_thread, 
-    int size, int retval 
-);
-
 extern int kaapi_request_reply_head(
+    kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request, 
-    kaapi_task_t*                  task, 
-    struct kaapi_thread_context_t* thief_thread, 
-    int size, int retval 
-);
-
-extern int kaapi_request_reply_tail(
-    kaapi_request_t*               request, 
-    kaapi_task_t*                  task, 
     struct kaapi_thread_context_t* thief_thread, 
     int size, int retval 
 );
 
 /** \ingroup ADAPTIVE
-    Specialization to reply failed to a processor
-    \param stack INOUT the stack of the victim that has been used to replies to the request
-    \param task IN the stolen task
-    \param request INOUT data structure used to replied by the thief
+*/
+extern int kaapi_request_reply_tail(
+    kaapi_stealcontext_t*          stc,
+    kaapi_request_t*               request, 
+    struct kaapi_thread_context_t* thief_thread, 
+    int size, int retval 
+);
+
+/** \ingroup ADAPTIVE
 */
 static inline int kaapi_request_reply_failed(     
-    kaapi_request_t* request
+    kaapi_stealcontext_t*          stc,
+    kaapi_request_t*               request
 )
-{ return kaapi_request_reply( request, 0, 0, 0, 0 ); }
+{ return kaapi_request_reply_head( stc, request, 0, 0, 0 ); }
 
 
 /** \ingroup ADAPTIVE
@@ -1013,13 +834,13 @@ static inline int kaapi_request_reply_failed(
     \retval 0 else
 */
 static inline int kaapi_stealbegin(
-    kaapi_thread_t* thread __attribute__((unused)), 
-    kaapi_task_t* task, kaapi_task_splitter_t splitter, void* arg_tasksplitter)
+    kaapi_stealcontext_t* stc,
+    kaapi_task_splitter_t splitter, void* arg_tasksplitter)
 {
-/*  if (!kaapi_task_isadaptive(task)) return EINVAL; */
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
-  ta->splitter    = splitter;
-  ta->argsplitter = arg_tasksplitter;
+  stc->splitter    = splitter;
+  stc->argsplitter = arg_tasksplitter;
+  kaapi_writemem_barrier_api();
+//#warning "Here commit something in the stack ? or in the owner task of stc "
   return 0;
 }
 
@@ -1028,14 +849,14 @@ static inline int kaapi_stealbegin(
     \retval 0 in case of success
     \retval !=0 in case of error code
 */
-extern int kaapi_stealend(kaapi_thread_t* thread, kaapi_task_t* task);
+extern int kaapi_stealend(kaapi_stealcontext_t* stc);
 
 /** \ingroup ADAPTIVE
     Push the task that, on execution will wait the terminaison of the previous 
     adaptive task 'task' and all the thieves.
     The local result, if not null will be pushed after the end of execution of all local tasks.
 */
-static inline int kaapi_finalize_steal( kaapi_thread_t* thread, kaapi_task_t* task )
+static inline int kaapi_finalize_steal( kaapi_stealcontext_t* stc )
 {
 #if 0
 /*  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))*/
@@ -1054,7 +875,7 @@ static inline int kaapi_finalize_steal( kaapi_thread_t* thread, kaapi_task_t* ta
     adaptive task 'task' and all the thieves.
     The local result, if not null will be pushed after the end of execution of all local tasks.
 */
-static inline int kaapi_return_steal( kaapi_thread_t* thread, kaapi_task_t* task, void* retval, int size )
+static inline int kaapi_return_steal( kaapi_stealcontext_t* stc, void* retval, int size )
 {
 #if 0
 /*  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))*/

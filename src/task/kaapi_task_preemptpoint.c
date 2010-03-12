@@ -44,7 +44,7 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preemptpoint_before_reducer_call( kaapi_thread_t* thread, kaapi_task_t* task, void* arg_for_victim, int size )
+int kaapi_preemptpoint_before_reducer_call( kaapi_stealcontext_t* stc, void* arg_for_victim, int size )
 {
 #if 0
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
@@ -76,7 +76,7 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_thread_t* thread, kaapi_task_t
   return 0;
 }
 
-int kaapi_preemptpoint_after_reducer_call( kaapi_thread_t* thread, kaapi_task_t* task, int reducer_retval )
+int kaapi_preemptpoint_after_reducer_call( kaapi_stealcontext_t* stc, int reducer_retval )
 {
 #if 0
   kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
