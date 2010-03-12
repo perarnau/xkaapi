@@ -103,7 +103,7 @@ protected:
       {
         kaapi_stack_t* thief_stack = request[i].stack;
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_init( thief_stack, thief_task, &static_thiefentrypoint, kaapi_stack_pushdata(thief_stack, sizeof(Self_t)), KAAPI_TASK_ADAPTIVE);
+        kaapi_task_init( thief_stack, thief_task, &static_thiefentrypoint, kaapi_thread_pushdata(thief_stack, sizeof(Self_t)), KAAPI_TASK_ADAPTIVE);
         athief_work = new (kaapi_task_getargs(thief_task)) Self_t( local_end-bloc, local_end, _pred );
         local_end         -= bloc;
         kaapi_assert_debug( athief_work->_iend - athief_work->_ibeg >0);
@@ -196,9 +196,9 @@ typename std::iterator_traits<InputIterator>::difference_type count_if ( InputIt
 
   typename std::iterator_traits<InputIterator>::difference_type result(0);
   CountStruct<InputIterator, Predicate> work( begin, end, pred, &result);
-  kaapi_stack_t* stack = kaapi_self_stack();
+  kaapi_stack_t* stack = kaapi_self_frame();
   kaapi_frame_t frame;
-  kaapi_stack_save_frame(stack, &frame);
+  kaapi_thread_save_frame(stack, &frame);
 
   /* will receive & process steal request */
   kaapi_task_t* task = kaapi_stack_toptask(stack);
@@ -208,7 +208,7 @@ typename std::iterator_traits<InputIterator>::difference_type count_if ( InputIt
   kaapi_stack_pushtask(stack);
   
   kaapi_sched_sync(stack);
-  kaapi_stack_restore_frame(stack, &frame);
+  kaapi_thread_restore_frame(stack, &frame);
   return result;
 }
 

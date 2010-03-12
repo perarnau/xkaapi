@@ -41,8 +41,8 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
 #include "kaapi_impl.h"
+#include "kaapi++"
 #include "ka_parser.h"
 #include "ka_component.h"
 

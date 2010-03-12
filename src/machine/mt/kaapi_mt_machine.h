@@ -108,13 +108,6 @@ extern volatile int kaapi_isterm;
  */
 /*@{*/
 
-/** The thread context data structure
-    This data structure should be extend in case where the C-stack is required to be suspended and resumed.
-    The data structure inherits from kaapi_stack_t the stackable field in order to be linked in stack.
-*/
-typedef kaapi_stack_t kaapi_thread_context_t;
-
-
 /** WS queue of thread context: used
     This data structure should be extend in case where the C-stack is required to be suspended and resumed.
     The data structure inherits from kaapi_stack_t the stackable field in order to be linked in stack.
@@ -125,9 +118,9 @@ typedef struct kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_cell_ptr_t;
 /** Cell of the list
 */
 typedef struct kaapi_wsqueuectxt_cell_t {
-  kaapi_atomic_t            state;  /* 0: in the list, 1: out the list */
-  kaapi_thread_context_t*   stack;
-  kaapi_wsqueuectxt_cell_ptr_t next;  
+  kaapi_atomic_t               state;  /* 0: in the list, 1: out the list */
+  kaapi_thread_context_t*      thread; /* */
+  kaapi_wsqueuectxt_cell_ptr_t next;   /* double link list */
   kaapi_wsqueuectxt_cell_ptr_t prev;   /* shared with thief, used to link in free list */
 } kaapi_wsqueuectxt_cell_t;
 
@@ -167,37 +160,37 @@ extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
    Return 0 in case of success
    Return ENOMEM if allocation failed
 */
-extern int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* stack );
+extern int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
 
 /* Pop a ctxt
    Return 0 in case of success
    Return EWOULDBLOCK if list is empty
 */
-extern int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack );
+extern int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
 
 /* Steal a ctxt
    Return 0 in case of success
    Return EWOULDBLOCK if list is empty
 */
-extern int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack );
+extern int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
 
 /* Push a ctxt
    Return 0 in case of success
    Return ENOMEM if allocation failed
 */
-extern int kaapi_wsqueuectxt_push_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* stack );
+extern int kaapi_wsqueuectxt_push_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
 
 /* Pop a ctxt
    Return 0 in case of success
    Return EWOULDBLOCK if list is empty
 */
-extern int kaapi_wsqueuectxt_pop_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack );
+extern int kaapi_wsqueuectxt_pop_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
 
 /** \ingroup WS
     Higher level context manipulation.
     This function is machine dependent.
 */
-extern int kaapi_makecontext( struct kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, 
+extern int kaapi_makecontext( struct kaapi_processor_t* proc, kaapi_thread_context_t* thread, 
                               void (*entrypoint)(void* arg), void* arg 
                             );
 
@@ -206,14 +199,14 @@ extern int kaapi_makecontext( struct kaapi_processor_t* proc, kaapi_thread_conte
     Assign context onto the running processor proc.
     This function is machine dependent.
 */
-extern int kaapi_setcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t * ctxt );
+extern int kaapi_setcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t* thread );
 
 /** \ingroup WS
     Higher level context manipulation.
     Get the context of the running processor proc.
     This function is machine dependent.
 */
-extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t * ctxt );
+extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t* thread );
 /*@}*/
 
 
@@ -241,7 +234,7 @@ typedef struct kaapi_listrequest_t {
     TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
 typedef struct kaapi_processor_t {
-  kaapi_thread_context_t*  ctxt;                          /* current stack (next version = current active thread) */
+  kaapi_thread_context_t*  thread;                        /* current thread under execution */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
   kaapi_uint32_t           issteal;                       /* */
   kaapi_uint32_t           hlevel;                        /* number of level for this Kprocessor >0 */
@@ -306,7 +299,7 @@ extern int kaapi_processor_init( kaapi_processor_t* kproc );
 extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_context_alloc() allocates in the heap a context with a stack containing 
     at bytes for tasks and bytes for data.
     If successful, the kaapi_context_alloc() function will return a pointer to a kaapi_thread_context_t.  
@@ -320,7 +313,7 @@ extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc );
 
 
-/** \ingroup STACK
+/** \ingroup TASK
     The function kaapi_context_free() free the context successfuly allocated with kaapi_context_alloc.
     If successful, the kaapi_context_free() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.
@@ -355,12 +348,11 @@ extern kaapi_processor_id_t kaapi_get_current_kid(void);
 #define _kaapi_get_current_processor() \
   ((kaapi_processor_t*)pthread_getspecific( kaapi_current_processor_key ))
 
-
 /** \ingroup WS
-    Returns the current stack of tasks
+    Returns the current thread of tasks
 */
-#define _kaapi_self_stack() \
-  (_kaapi_get_current_processor()->ctxt)
+#define _kaapi_self_thread() \
+  _kaapi_get_current_processor()->thread
 
 
 /* ============================= Hierarchy ============================ */
@@ -592,31 +584,33 @@ static inline int kaapi_isterminated(void)
 
 /** \ingroup WS
 */
-static inline int kaapi_listrequest_init( kaapi_listrequest_t* pklr ) 
+static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listrequest_t* pklr ) 
 {
   int i; 
   KAAPI_ATOMIC_WRITE(&pklr->count, 0);
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {  
-    kaapi_request_init(&pklr->requests[i]);
+    kaapi_request_init(kproc, &pklr->requests[i]);
   }
   return 0;
 }
 
 /** 
 */
-#if defined(KAAPI_CONCURRENT_WS)
+#if defined(KAAPI_USE_CASSTEAL)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
   return KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&task->body, oldbody, newbody );
 }
-#else
+#elif defined(KAAPI_USE_INTERRUPSTEAL)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
   if (task->body != oldbody ) return 0;
   kaapi_task_setbody(task, newbody );
   return 1;
 }
+#else
+#  warning "NOT IMPLEMENTED"
 #endif
 
 /* ============================= Private functions, machine dependent ============================ */
@@ -638,7 +632,7 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
   reply->status    = KAAPI_REQUEST_S_POSTED;
   req->reply       = reply;
-  req->stack       = kproc->ctxt;
+  req->thread      = kproc->thread;
   reply->data      = 0;
 
   kaapi_writemem_barrier();

@@ -103,7 +103,7 @@ protected:
         kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
         kaapi_task_initadaptive( thief_stack, thief_task, KAAPI_TASK_ADAPT_DEFAULT);
         kaapi_task_setbody( thief_task, &static_entrypoint );
-        kaapi_task_setargs( thief_task, kaapi_stack_pushdata(thief_stack, sizeof(CRAWork)) );
+        kaapi_task_setargs( thief_task, kaapi_thread_pushdata(thief_stack, sizeof(CRAWork)) );
         output_work = kaapi_task_getargst(thief_task, CRAWork);
 
         output_work->_iend = thief_end;
@@ -233,7 +233,7 @@ void cra_problem ( InputIterator begin, InputIterator end, Function& func, Predi
     - master finalization: the main thread will waits the end of the computation.
     - master preemption: the main thread will be able to preempt all thiefs.
   */
-  kaapi_stack_t* stack = kaapi_self_stack();
+  kaapi_stack_t* stack = kaapi_self_frame();
 
   CRAWork<InputIterator,Function,Predicate> work( begin, end, func, op);
 

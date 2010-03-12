@@ -74,13 +74,13 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
       wakeupok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
       if (wakeupok) 
       {
-        ctxt = cell->stack;
-        kaapi_task_t* task = ctxt->pfsp->pc;
+        ctxt = cell->thread;
+        kaapi_task_t* task = ctxt->sfp->pc;
         if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
         { 
           /* ok wakeup */
-          cell->stack = 0;
-          printf( "[wakeup] task: @=%p, stack: @=%p\n", task, ctxt);
+          cell->thread = 0;
+//          printf( "[wakeup] task: @=%p, stack: @=%p\n", task, ctxt);
         }
         else {
           garbage  = 0;
@@ -95,7 +95,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
     kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
     if (garbage)
     {
-      kaapi_assert_debug(cell->stack ==0); 
+      kaapi_assert_debug(cell->thread ==0); 
       /* delete from the queue */
       if (nextcell !=0)
         nextcell->prev = cell->prev;

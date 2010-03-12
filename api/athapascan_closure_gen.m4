@@ -9,10 +9,10 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
   ', ` ', `')
   typedef KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', `')> Self_t;
 
+  static TASK dummy;
   /* */
-  static void body(kaapi_task_t* t, kaapi_stack_t* stack)
+  static void body(kaapi_task_t* t, kaapi_thread_context_t* thread)
   {
-    static TASK dummy;
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`Self_t* args = kaapi_task_getargst(t, Self_t);')
     dummy(M4_PARAM(`args->f$1', `', `, '));
   }
@@ -52,6 +52,9 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
   }
   static const kaapi_task_bodyid_t bodyid;
 };
+
+template<class TASK M4_PARAM(`,class F$1', `', ` ')>
+TASK KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::dummy;
 
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 kaapi_format_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::format;

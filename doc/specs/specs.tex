@@ -685,7 +685,7 @@ kaapi_register_taskformat(
 int main(int argc, char** argv)
 {
   int err = 0;
-  kaapi_stack_t* stack = kaapi_self_stack();
+  kaapi_stack_t* stack = kaapi_self_frame();
 
   int result = 0;
   

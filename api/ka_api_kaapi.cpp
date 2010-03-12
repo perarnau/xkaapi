@@ -41,8 +41,8 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
 #include "kaapi_impl.h"
+#include "kaapi++"
 #include "ka_parser.h"
 #include "ka_component.h"
 
@@ -53,10 +53,6 @@ SetStack SetInStack;
 SetHeap SetInHeap;
 SetLocalAttribut SetLocal;
 DefaultAttribut SetDefault;
-
-/* save in init, used to push retn in leave or terminate */
-static int main_retn_pushed = 0;
-static kaapi_frame_t main_frame;
 
 // --------------------------------------------------------------------------
 std::string get_localhost()
@@ -133,8 +129,6 @@ Community System::initialize_community( int& argc, char**& argv )
   if (KaapiComponentManager::initialize( argc, argv ) != 0)
     Exception_throw( RuntimeError("[ka::System::initialize], Kaapi not initialized") );
 
-  /* push marker of the frame: retn */
-  kaapi_stack_save_frame( kaapi_self_stack(), &main_frame);
   return Community(0);
 }
 
@@ -152,12 +146,6 @@ Community System::join_community( int& argc, char**& argv )
 // --------------------------------------------------------------------
 void System::terminate()
 {
-  if (!main_retn_pushed)
-  {
-    /* push marker of the frame: retn */
-    kaapi_stack_pushretn(kaapi_self_stack(), &main_frame);
-    main_retn_pushed = 1;
-  }
   KaapiComponentManager::terminate();
 }
 
@@ -172,7 +160,19 @@ int System::getRank()
 // --------------------------------------------------------------------
 void Sync()
 {
-  kaapi_sched_sync( kaapi_self_stack() );
+  kaapi_sched_sync( );
+}
+
+
+SyncGuard::SyncGuard() : _thread( kaapi_self_thread() )
+{
+  kaapi_thread_save_frame( _thread, &_frame );
+}
+
+SyncGuard::~SyncGuard()
+{
+  kaapi_sched_sync( );
+  kaapi_thread_restore_frame( _thread, &_frame );
 }
 
 } // namespace ka

@@ -78,26 +78,23 @@ void _kaapi_dummy(void* foo)
 {
 }
 
-/** Dependencies with kaapi_stack_t* kaapi_self_stack(void)
+
+/** 
 */
-kaapi_stack_t* kaapi_self_stack(void)
+kaapi_thread_t* kaapi_self_thread(void)
 {
-  return _kaapi_self_stack();
+  return (kaapi_thread_t*)_kaapi_self_thread()->sfp;
 }
 
-
-/**
-*/
-static kaapi_frame_t main_frame;
 
 /**
 */
 void __attribute__ ((constructor)) kaapi_init(void)
 {
   kaapi_isterm = 0;
-  kaapi_stack_t* stack;
-  kaapi_task_t* task;
-  const char* version __attribute__((unused)) = get_kaapi_version();
+  kaapi_thread_context_t* thread;
+  kaapi_task_t*   task;
+  const char*     version __attribute__((unused)) = get_kaapi_version();
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
@@ -121,15 +118,20 @@ void __attribute__ ((constructor)) kaapi_init(void)
 
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
-  stack = _kaapi_self_stack();
-  kaapi_stack_save_frame(stack, &main_frame);
-  task = kaapi_stack_toptask(stack);
+  thread = _kaapi_self_thread();
+  task = _kaapi_thread_toptask(thread);
+  kaapi_task_init( task, kaapi_taskstartup_body, 0 );
   kaapi_task_setbody( task, kaapi_exec_body);
-  kaapi_task_setextrabody( task, kaapi_taskstartup_body);
+  _kaapi_thread_pushtask(thread);
 
-  kaapi_stack_pushtask(stack);
+  /* push the current frame that correspond to the execution of the startup task */
+  thread->sfp[1].pc      = thread->sfp->sp;
+  thread->sfp[1].sp      = thread->sfp->sp;
+  thread->sfp[1].sp_data = thread->sfp->sp_data;
+  ++thread->sfp;
+
   /* WARNING strong impact on execution, see kaapi_sched_sync */
-  stack->frame_sp = stack->sp;
+/*  kaapi_stack2threadcontext(stack)->frame_sp = stack->sp; */
 /*** END */
 
   /* dump output information */
@@ -158,12 +160,6 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   double t_sched;
   double t_preempt;
 #endif
-
-#if 0
-  /* push marker of the frame: retn */
-  kaapi_stack_pushretn(_kaapi_self_stack(), &main_frame);
-#endif
-  
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */

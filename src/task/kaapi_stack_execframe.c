@@ -45,129 +45,211 @@
 #include "kaapi_impl.h"
 
 /** kaapi_stack_execframe
-    Here the stack frame is organised like this, task1 is the running task.
+    Here the stack of task is organised like this, task1 is pointed by pc and
+    it will be the first running task.
 
-               | task1  |
-              ----------
-    frame_sp ->| task2  |
+               | task0  | 
+    thread->pc | task1  |< thread->sfp->pc
+               | task2  |
                | task3  |
-               | task4  |
+              -----------
+               | task4  |< thread->sfp->sp
                | task5  |
-          sp ->| ....   |
+               | task6  |
+              -----------
+               | task7  |
+      stack->sp| ....   |
      
-  
-   We first push a retn task and execute all the task in the frame in [pc+1, ...,  sp). 
-   The task retn serves to mark the stack structure in case of stealing (...) ? Sure ?
+   Where task0 is only here to say that a possible task may exists before the frame.
+   In case of whole stack execution, the caller should only call execframe with the
+   first frame correctly set.
+   Initialy thread->sfp store information about the frame the first frame [pc:sfp->sp). 
    
-   On return, we leave the stack in this state after execution of all tasks into the
-   frame including the child tasks.
+   On return, we leave the stack in the following state after execution of all tasks into the
+   frame pointed by sfp, including all the child tasks.
+   All task body are set to executed.
+   
+                     | task0  |
+thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
+                     | xxxxx  |
+                     | xxxxx  |
+                    -----------
+                     | xxxxx  | 
+                     | xxxxx  |
+                     | xxxxx  |
+                    -----------
+                     | xxxxx  |
+                     | ....   |
 
-               | task1  |
-               ----------
-    frame_sp ->| x x x  |
-               | x x x  |
-               | x x x  |
-               | x x x  |
-          sp ->| ....   |
+  The method could returns EWOULDBLOCK in order to indicate that a task cannot be executed.
+  In that case, thread->pc points to the tasks (body== kaapi_suspend_body) and thread->sfp
+  points to the current frame where the suspend task has been tried to be executed.
+
+  Where the task becomes ready, one may continue the execution simply by calling
+  execframe with the state that has been set on return with EWOULDBLOCK.
 */
 
-/* iterative version */
-int kaapi_stack_execframe( kaapi_stack_t* stack )
+
+//#ifdef KAAPI_USE_CASSTEAL
+//#undef KAAPI_USE_CASSTEAL
+//#endif
+
+/*
+*/
+int kaapi_stack_execframe( kaapi_thread_context_t* thread )
 {
-  register kaapi_task_t*     pc;
-  kaapi_frame_t*             eframe = stack->epfsp;
+  kaapi_task_t*              pc;
+  kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
+  kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;
-#endif  
+#endif 
 
-  if (stack->pfsp ==0)
-  {
-    eframe = stack->pfsp = stack->stackframe;
-    kaapi_stack_save_frame(stack, stack->pfsp);
-  }
+  kaapi_assert_debug(thread->sfp >= thread->stackframe);
+  kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
+  
+push_frame:
+  fp = thread->sfp;
+  /* push the frame for the next task to execute */
+  thread->sfp[1].sp_data = fp->sp_data;
+  thread->sfp[1].pc = fp->sp;
+  thread->sfp[1].sp = fp->sp;
+  
+  /* force previous write before next write */
+  kaapi_writemem_barrier();
 
-enter_loop:
-  stack->frame_sp = stack->pfsp->sp;
+  /* update the current frame */
+  ++thread->sfp;
+  kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
+//printf("\n\n------------\n");
+//kaapi_stack_print(0, thread );
+  
+#if defined(KAAPI_USE_CASSTEAL)
 begin_loop:
+#endif
   /* stack growth down ! */
-  for (; stack->pfsp->pc != stack->pfsp->sp; --stack->pfsp->pc)
+  while ((pc = fp->pc) != fp->sp)
   {
-    pc = stack->pfsp->pc;
+    kaapi_assert_debug( pc > fp->sp );
+
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
-    kaapi_assert_debug( (body == pc->ebody) || (body == kaapi_suspend_body) || (body == kaapi_aftersteal_body) );
 
-#if defined(KAAPI_CONCURRENT_WS)
-    KAAPI_ATOMIC_CASPTR( &pc->body, body, kaapi_exec_body );
+#if defined(KAAPI_USE_CASSTEAL)
+    if (!KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&pc->body, pc->ebody, kaapi_exec_body)) 
+    { 
+      kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
+      body = pc->body;
+      if (body == kaapi_suspend_body)
+        goto error_swap_body;
+      /* else ok its aftersteal */
+      body = kaapi_aftersteal_body;
+    }
 #else
     pc->body = kaapi_exec_body;
 #endif
-    body( pc, stack );
+
+//printf("\n>>> before exec:%p\n", pc);
+//kaapi_stack_print(0, thread );
+//printf("\n------------------------\n");
+    /* task execution */
+    body( pc->sp, (kaapi_thread_t*)thread->sfp );
+
+//kaapi_stack_print(0, thread );
+//printf("\n<<< after  exec:%p\n", pc);
+
+    if (unlikely(thread->errcode)) goto backtrack_stack;
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
-    if (__builtin_expect(stack->errcode,0)) goto backtrack_stack;
 
 restart_after_steal:    
-    if (__builtin_expect(stack->pfsp->sp != stack->sp,0))
+    if (unlikely(fp->sp != thread->sfp->sp))
     {
-      stack->frame_sp = stack->pfsp->sp;
-      /* here it's a push of frame */
-      ++stack->pfsp;
-      kaapi_stack_save_frame(stack, stack->pfsp);
-      kaapi_assert_debug( stack->pfsp - eframe <KAAPI_MAX_RECCALL);
-      goto enter_loop;
+      goto push_frame;
     }
-  }
-  if (stack->pfsp != eframe)
+#if defined(KAAPI_DEBUG)
+//    kaapi_task_setbody(pc, kaapi_nop_body);
+#endif    
+    pc = fp->pc = pc -1;
+  } /* end of the loop */
+
+  kaapi_assert_debug( fp >= eframe);
+  kaapi_assert_debug( fp->pc == fp->sp );
+
+  if (fp >= eframe)
   {
-    /* here it's a pop of frame */
-    while (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1));
-    --stack->pfsp;
+#if defined(KAAPI_USE_CASSTEAL)
+    /* here it's a pop of frame: we lock the thread */
+    while (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
+#endif
+    while (fp > eframe) 
+    {
+      --fp;
+#if defined(KAAPI_DEBUG)
+//      kaapi_task_setbody(fp->pc, kaapi_nop_body);
+#endif    
+      /* pop dummy frame */
+      --fp->pc;
+      if (fp->pc > fp->sp)
+      {
+#if defined(KAAPI_USE_CASSTEAL)
+        KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+#endif
+        thread->sfp = fp;
+//printf("%p::Pop frame, fp=%p\n", thread, fp);
+        goto push_frame; /* remains work do do */
+      }
+    } 
+    fp = eframe;
+    fp->sp = fp->pc;
+//    --fp->pc;
+#if defined(KAAPI_USE_CASSTEAL)
     kaapi_writemem_barrier();
-    KAAPI_ATOMIC_WRITE(&stack->lock, 0);
-    
-    kaapi_assert_debug( stack->pfsp >= eframe);
-    --stack->pfsp->pc;
-    stack->sp = stack->pfsp->sp;
-    stack->sp_data = stack->pfsp->sp_data;
-    stack->frame_sp = stack->pfsp->sp;
-    goto begin_loop;
+    KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+#endif
   }
-  stack->frame_sp = stack->pfsp->sp;
+  thread->sfp = fp;
+  
+  /* end of the pop: we have finish to execute all the task */
+  kaapi_assert_debug( fp->pc == fp->sp );
+  kaapi_assert_debug( thread->sfp == eframe );
+
+  /* note: the stack data pointer is the same as saved on enter */
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
   return 0;
 
+#if defined(KAAPI_USE_CASSTEAL)
+error_swap_body:
+  if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
+  kaapi_assert_debug(pc->body == kaapi_suspend_body);
+  kaapi_assert_debug(thread->sfp- fp == 1);
+  /* implicityly pop the dummy frame */
+  thread->sfp = fp;
+  kaapi_assert_debug( thread->sfp->pc->body == kaapi_suspend_body );
+  return EWOULDBLOCK;
+#endif
+
 backtrack_stack:
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(stack->_proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
 #if !defined(KAAPI_CONCURRENT_WS)
-  if ((stack->errcode & 0x1) !=0) 
+  if ((thread->errcode & 0x1) !=0) 
   {
-    kaapi_sched_advance(stack->_proc);
-    stack->errcode = stack->errcode & ~0x1;
-    if (stack->errcode ==0) goto restart_after_steal;
+    kaapi_sched_advance(thread->proc);
+    thread->errcode = thread->errcode & ~0x1;
+    if (thread->errcode ==0) goto restart_after_steal;
   }
 #endif
-  if ((stack->errcode >> 8) == EWOULDBLOCK) 
-  {
-    stack->errcode = stack->errcode & ~( 0xFF << 8);
-    if (!KAAPI_ATOMIC_CASPTR( &pc->body, kaapi_exec_body, kaapi_suspend_body ))
-    { /* the only way the cas fails is during the thief that update to body to aftersteal body */
-      kaapi_assert_debug( pc->body == kaapi_aftersteal_body);
-      goto begin_loop;
-    }
-    return EWOULDBLOCK;
-  }
 
   /* here back track the kaapi_stack_execframe until go out */
-  return stack->errcode;
+  return thread->errcode;
 }

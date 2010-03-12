@@ -1,13 +1,12 @@
 /*
-** kaapi_mt_threadcontext.c
+** kaapi_mt_task_signal.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:16:47 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -44,31 +43,40 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdio.h>
 
 /**
 */
-int kaapi_getcontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt )
+void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
 {
-  kaapi_assert_debug( proc == _kaapi_get_current_processor() );
-  *ctxt = *proc->thread;
-  return 0;
-#if 0  /* TODO: next version when also saving the stack context */
-  ctxt->flags        = proc->flags;
-  ctxt->dataspecific = proc->dataspecific;
+  /*
+    printf("Thief end, @stack: 0x%p\n", stack);
+    fflush( stdout );
+  */
+  kaapi_tasksig_arg_t* argsig;
+  kaapi_task_t* task2sig;
 
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
-  {
-    ctxt->kstack     = proc->kstack;
-  }
+  argsig = (kaapi_tasksig_arg_t*)taskarg;
+  task2sig = argsig->task2sig;
 
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
-  {
-#if defined(KAAPI_USE_UCONTEXT)
-    getcontext( &ctxt->mcontext );
-#elif defined(KAAPI_USE_SETJMP)
-    _setjmp( ctxt->mcontext );
+#if defined(LOG_STACK)
+#  if defined(KAAPI_USE_CASSTEAL)
+      while (!KAAPI_ATOMIC_CAS(&argsig->victim->lock, 0, 1));
+#  endif
+      fprintf(stdout,"\n\n-------------- Signal task !!!! Victim stack @%p Thief stack:@%p, Thief task: @%p\n", 
+          argsig->victim, thread, task2sig );
+      kaapi_stack_print(stdout, argsig->victim );
+      fprintf(stdout,"\n\n-------------- Signal task !!!! Victim stack:@=%p\n", argsig->victim );
 #endif
-  }
-#endif  /* TODO: next version when also saving the stack context */
-  return 0;
+
+  /* flush in memory all pending write and read ops */  
+  kaapi_writemem_barrier();
+
+  kaapi_task_setbody(task2sig, kaapi_aftersteal_body );
+
+#if defined(LOG_STACK)
+#  if defined(KAAPI_USE_CASSTEAL)
+      KAAPI_ATOMIC_WRITE(&argsig->victim->lock, 0);
+#  endif
+#endif
 }

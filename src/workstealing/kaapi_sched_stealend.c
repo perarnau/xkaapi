@@ -46,8 +46,9 @@
 
 /** \ingroup ADAPTIVE
 */
-int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task)
+int kaapi_stealend(kaapi_stealcontext_t* stc)
 {
+#if 0
   if (!kaapi_task_isadaptive(task)) return EINVAL;
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
 #if 0//defined(KAAPI_CONCURRENT_WS)
@@ -56,6 +57,7 @@ int kaapi_stealend(kaapi_stack_t* stack, kaapi_task_t* task)
   ta->splitter = 0;
 #if 0//defined(KAAPI_CONCURRENT_WS)
   pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
+#endif
 #endif
   return 0;
 }

@@ -47,54 +47,26 @@
 
 /**
 */
-void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_nop_body( void* taskarg, kaapi_thread_t* thread )
 {
 }
 
 /** Dumy task pushed at startup into the main thread
 */
-void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_taskstartup_body( void* taskarg, kaapi_thread_t* thread )
 {
-}
-
-/**
-*/
-void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
-{
-#if 0
-  kaapi_frame_t* frame = (kaapi_frame_t*)taskarg;
-  kaapi_task_t* taskexec = frame->pc;
-
-#if defined(KAAPI_CONCURRENT_WS)
-  /* mark original task as executed, block until no more thief */
-//  while (!kaapi_task_casstate(taskexec, kaapi_exec_body, kaapi_nop_body));
-  while (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1));
-#else
-  /* in non concurrent version ...: stacks are not theft, the owner of a stack
-     should execute it XOR it execute the steal op. 
-  */
-  kaapi_task_setbody(taskexec, kaapi_nop_body);
-#endif
-
-  kaapi_stack_restore_frame( stack, frame );
-#if defined(KAAPI_CONCURRENT_WS)
-  KAAPI_ATOMIC_WRITE(&stack->lock, 0);
-#endif
-  stack->errcode = -EAGAIN;
-#endif
 }
 
 /*
 */
-void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_suspend_body( void* taskarg, kaapi_thread_t* thread )
 {
-  stack->errcode |= EWOULDBLOCK << 8;
-  printf( "[suspend] task: @=%p, stack: @=%p\n", task, stack);
+  _kaapi_self_thread()->errcode |= EWOULDBLOCK << 8;
 }
 
 /*
 */
-void kaapi_exec_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_exec_body( void* taskarg, kaapi_thread_t* thread )
 {
   /* do not allow rexecuting already executed task */
   kaapi_assert_debug( 0 );
@@ -102,15 +74,15 @@ void kaapi_exec_body( kaapi_task_t* task, kaapi_stack_t* stack)
 
 /*
 */
-void kaapi_adapt_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_adapt_body( void* taskarg, kaapi_thread_t* thread  )
 {
 }
 
 
 /*
 */
-void kaapi_taskmain_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_taskmain_body( void* taskarg, kaapi_thread_t* thread  )
 {
-  kaapi_taskmain_arg_t* arg = kaapi_task_getargst(task, kaapi_taskmain_arg_t);
+  kaapi_taskmain_arg_t* arg = (kaapi_taskmain_arg_t*)taskarg;
   arg->mainentry( arg->argc, arg->argv );
 }

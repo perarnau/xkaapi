@@ -117,90 +117,72 @@ static int kaapi_task_computeready( void* sp, const kaapi_format_t* task_fmt, ka
 }
 
 
-/** Steal task in the frame that begin at bot until retn
-    - precond: the frame must be locked by setting to nop the task that has created the frame
-    - poscond: the frame is locked
+/** Steal task in the frame [frame->pc:frame->sp)
 */
 static int kaapi_sched_stealframe(
-    kaapi_stack_t* stack, kaapi_task_t* task_bot, 
-    kaapi_hashmap_t* map, 
-    int count, kaapi_request_t* request 
+    kaapi_thread_context_t* thread, 
+    kaapi_frame_t*          frame, 
+    kaapi_hashmap_t*        map, 
+    int count, kaapi_request_t* requests 
 )
 {
   const kaapi_format_t* task_fmt;
+  kaapi_stack_t*        stack;
   kaapi_task_body_t     task_body;
   kaapi_task_t*         task_top;
+  kaapi_task_t*         task_bot;
   kaapi_task_t*         task_exec;
   int                   replycount;
 
-  /* lock the stack */
-  if (!KAAPI_ATOMIC_CAS(&stack->lock, 0, 1)) return 0;
-  
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
-  
+  stack      = kaapi_threadcontext2stack(thread);
   task_body  = kaapi_nop_body;
-  task_top   = kaapi_stack_toptask(stack);
+  task_top   = frame->pc;
+  task_bot   = frame->sp;
   task_exec  = 0;
   replycount = 0;
-  while ( (count > replycount) && (task_bot != task_top) )
+  
+  /* */
+  while ((count > replycount) && (task_top != task_bot))
   {
-    task_body = kaapi_task_getbody(task_bot);
-    /* skip nop: nop correspond to already executed task, do not find in hash map
-       their data because the next lookup will return data as "not known" and thus ready whatever is
-       the access mode.
-    */
-    if (task_body == kaapi_nop_body) 
-      goto label_continue;
+    task_body = kaapi_task_getextrabody(task_top);
 
-    if (task_body == kaapi_exec_body)
-      task_exec = task_bot;
-    task_fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(task_bot) );
+    task_fmt = kaapi_format_resolvebybody( task_body );
     if (task_fmt !=0)
     {
-      int wc = kaapi_task_computeready( kaapi_task_getargs( task_bot), task_fmt, map );
-      if ((wc ==0) && kaapi_task_isstealable(task_bot))
+      int wc = kaapi_task_computeready( kaapi_task_getargs(task_top), task_fmt, map );
+      if ((wc ==0) && kaapi_task_isstealable(task_top))
       {
-        task_body = kaapi_task_getextrabody(task_bot);
-        if (kaapi_task_casstate(task_bot, task_body, kaapi_suspend_body)) 
+#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_INTERRUPSTEAL)
+        if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
+#else
+//#  warning "Should be implemented"
+#endif
         {
-          replycount += kaapi_task_splitter_dfg(stack, task_bot, count-replycount, stack->requests );
+#if defined(LOG_STACK)
+  fprintf(stdout,"\n\n>>>>>>>> %p:: Task=%p, wc=%i\n", thread, (void*)task_top, wc );
+  kaapi_stack_print(stdout, thread );
+#endif
+          replycount += kaapi_task_splitter_dfg(thread, task_top, count-replycount, requests );
         }
+        /* else victim may have executed it */
       }
     }
-label_continue:
-    --task_bot;
-  }
-  if (replycount == count) goto label_return;
-  kaapi_assert_debug( replycount <= count );
-
-  /* recursive call */
-  if ((task_body == kaapi_retn_body) && (task_exec !=0))
-  {
-    /* lock the subframe first by locking the task_exec (its kaapi_exec_body) so that retn cannot pop task */
-    if (kaapi_task_casstate(task_exec, kaapi_exec_body, kaapi_nop_body)) 
-    {
-      replycount += kaapi_sched_stealframe( stack, task_bot-1, map, count-replycount, request );
-      /* reset normal body on task_exec */
-      kaapi_task_setbody(task_exec, kaapi_exec_body);
-    }
+    --task_top;
   }
 
-label_return:
-  KAAPI_ATOMIC_WRITE(&stack->lock, 0);  
   return replycount;
 }
 
 
 /** Steal task in the stack from the bottom to the top.
-
     Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
     This signature is the same as a splitter function.
 */
-int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr, int count, kaapi_request_t* request )
+int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
 {
-  kaapi_task_t*            task_bot;
-  kaapi_task_body_t        task_body;
+  kaapi_frame_t*           top_frame;
   int savecount;
   int replycount;
   
@@ -208,22 +190,25 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr, int coun
   kaapi_hashentries_bloc_t stackbloc;
 
   if (count ==0) return 0;
-  if (kaapi_stack_isempty( stack)) return 0;
-
-  savecount = count;
+  if ((thread ==0) || kaapi_frame_isempty( thread->sfp)) return 0;
+  savecount  = count;
+  replycount = 0;
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
 
-  
-  /* steal frame by frame in recursive fashion */
-  task_bot  = kaapi_stack_bottomtask(stack);
-  task_body = kaapi_task_getbody(task_bot);
+  /* lock the stack */
+  if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
 
-  /* assume task_body == kaapi_exec_body, lock it in order to avoid the retn */
-  if (!kaapi_task_casstate(task_bot, kaapi_exec_body, kaapi_nop_body)) return 0;
-  replycount = kaapi_sched_stealframe( stack, task_bot, &access_to_gd, count, request );
-  kaapi_task_setbody(task_bot, task_body);
+  /* try to steal in each frame */
+  top_frame = thread->stackframe;
+  for (top_frame =thread->stackframe; (top_frame != thread->sfp) && (count > replycount); ++top_frame)
+  {
+    if (top_frame->pc == top_frame->sp) continue;
+    replycount = kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count, request );
+  }
+
+  KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
 
   kaapi_hashmap_destroy( &access_to_gd );
 
@@ -233,7 +218,7 @@ int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr, int coun
 
 /*
 */
-int kaapi_sched_stealstack_helper( kaapi_stack_t* stack, kaapi_task_t* curr )
+int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
 {
-  return kaapi_sched_stealstack( stack, curr, stack->hasrequest, stack->requests); 
+  return kaapi_sched_stealstack( stc->ctxtthread, stc->ownertask, stc->hasrequest, stc->requests );
 }

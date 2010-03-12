@@ -45,19 +45,19 @@
 */
 #include "kaapi_impl.h"
 
-kaapi_stack_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
+kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
-  kaapi_stack_t*       stack;
-  kaapi_victim_t       victim;
+  kaapi_thread_context_t* retval;
+  kaapi_victim_t          victim;
   int i, replycount, err, ok;
   int count;
   
   kaapi_assert_debug( kproc !=0 );
-  kaapi_assert_debug( kproc->ctxt !=0 );
+  kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
     /* clear stack */
-  kaapi_stack_clear( kproc->ctxt );
+  kaapi_thread_clear( kproc->thread );
 
 redo_select:
   /* try to steal a victim processor */
@@ -89,7 +89,7 @@ redo_select:
   {
     ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
     if (ok) break;
-    if (kproc->ctxt->hasrequest) kproc->ctxt->hasrequest = 0;   /* current stack never accept steal request */
+//TODO    if (kproc->hasrequest) kproc->thread->hasrequest = 0;   /* current stack never accept steal request */
     if (kaapi_reply_test( &kproc->reply ) ) goto return_value;
     if ((counter & 0xFF) ==0) {
       counter =0;
@@ -106,7 +106,8 @@ redo_select:
      process all requests on the victim kprocessor and reply failed to remaining requests
   */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
-  if (count >0) {
+  if (count >0) 
+  {
     kaapi_sched_stealprocessor( victim.kproc );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
@@ -122,7 +123,7 @@ redo_select:
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
       /* user version that do not decrement the counter */
-      _kaapi_request_reply( victim.kproc, 0, 0, &victim.kproc->hlrequests.requests[i], 0, 0, 0, 0 );
+      _kaapi_request_reply( &victim.kproc->hlrequests.requests[i], 0, 0 );
       ++replycount;
     }
   }
@@ -158,7 +159,7 @@ return_value:
   
   /* get the work (stack) and return it
   */
-  stack = kaapi_request_data(&kproc->reply);
+  retval = kaapi_request_data(&kproc->reply);
 
-  return stack;
+  return retval;
 }
