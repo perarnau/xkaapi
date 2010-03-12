@@ -115,10 +115,11 @@ fflush(stdout);
 fprintf(stdout,"%i kproc enter critical section to:%p\n", kproc->kid, (void*)victim.kproc );
 fflush(stdout);
   kaapi_assert_debug( ok );
-  kaapi_readmem_barrier();
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
   
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
+  kaapi_readmem_barrier();
+
   kaapi_assert_debug( count < KAAPI_MAX_PROCESSOR );
   kaapi_assert_debug( count >= 0 );
 

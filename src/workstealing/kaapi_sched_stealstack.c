@@ -192,6 +192,7 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
 
   kaapi_processor_t* kproc = thread->proc;
   int verifcount = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+  kaapi_readmem_barrier();
   kaapi_assert_debug( count >= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
   kaapi_assert_debug(count >0);
 
