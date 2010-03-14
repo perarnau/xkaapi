@@ -55,9 +55,13 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 
   kaapi_readmem_barrier();
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  kaapi_assert_debug( count >= 0 );
+  kaapi_assert_debug( count > 0 );
   if (count ==0) return 0;
-  kaapi_assert_debug( count >= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
+  
+  /* a second read my only view a count greather or equal to the previous because here
+     the caller is in critical section to reply to posted requests.
+  */
+  kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
 
 #if defined(KAAPI_CONCURRENT_WS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) == 1+_kaapi_get_current_processor()->kid );
@@ -77,18 +81,18 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   }
 #endif
   
+  /* steal current thread */
   thread = kproc->thread;
   if ((count >0) && (thread !=0) && (kproc->issteal ==0))
   {
-    /* if concurrent WS, then steal directly the current stack of the victim processor
-       else set flag to 0 on the stack and wait reply
-    */
 #if defined(KAAPI_CONCURRENT_WS)
+    /* if concurrent WS, then steal directly the current stack of the victim processor
+    */
     int verifcount1 = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    kaapi_assert_debug( count-replycount >= verifcount1 );
+    kaapi_assert_debug( count <= verifcount1 );
     int verifcount2 = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    kaapi_assert_debug( count-replycount >= verifcount2 );
-    kaapi_assert_debug( count-replycount >= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
+    kaapi_assert_debug( count <= verifcount2 );
+    kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
     /* signal that count thefts are waiting */
     replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
 #else
