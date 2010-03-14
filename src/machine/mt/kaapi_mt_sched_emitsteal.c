@@ -56,13 +56,14 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
 
-    /* clear stack */
+    /* clear thief stack/thread that will receive tasks */
   kaapi_thread_clear( kproc->thread );
 
 redo_select:
-  /* try to steal a victim processor */
+  /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim );
   if (err !=0) goto redo_select;
+  /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) return 0;
 
   /* mark current processor as stealing */
@@ -73,13 +74,13 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
+#if defined(KAAPI_USE_PERFCOUNTER)
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
+#endif
   kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) < KAAPI_MAX_PROCESSOR );
 
 fprintf(stdout,"%i kproc post steal to:%p\n", kproc->kid, (void*)victim.kproc );
 fflush(stdout);
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
-#endif
 
 #if 0 /* experimental, release CPU */
 //  pthread_yield();
@@ -87,7 +88,7 @@ fflush(stdout);
 
   /* (2)
      lock and retest if they are yet posted requests on victim or not 
-     if during tentaive of locking, a reply occurs, then return
+     if during tentaive of locking, a reply occurs, then return with reply
   */
 #if 0 /* experimental, release CPU */
   int counter;
@@ -95,40 +96,53 @@ fflush(stdout);
 
   while (1)
   {
+    /* if lock sucess then steal of all processors in the request array */
     ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
     if (ok) break;
 //TODO    if (kproc->hasrequest) kproc->thread->hasrequest = 0;   /* current stack never accept steal request */
 
-    if (kaapi_reply_test( &kproc->reply ) ) 
-      /* return with out trying to lock / unlock the victim: 
-         an other processor or myself has replied 
-      */
-      goto return_value;
+    /* here is not yet an exponential backoff, but the cas should not
+       to busy to avoid memory transaction: do multiple tests on the reply field
+    */
+    for (i=0; i<100; ++i)
+    {
+      if (kaapi_reply_test( &kproc->reply ) ) 
+        /* return with out trying to lock / unlock the victim: 
+           an other processor or myself has replied 
+        */
+        goto return_value;
 
-#if 0 /* experimental, release CPU */
-    if ((counter & 0xFF) ==0) {
-      counter =0;
-      /*pthread_yield();*/
+  #if 0 /* experimental but should release CPU */
+      if ((counter & 0xFF) ==0) {
+        counter =0;
+        /*pthread_yield();*/
+      }
+  #endif
     }
-#endif
   }
 fprintf(stdout,"%i kproc enter critical section to:%p\n", kproc->kid, (void*)victim.kproc );
 fflush(stdout);
+
   kaapi_assert_debug( ok );
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
   
   count = KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count );
-  kaapi_readmem_barrier();
-
-  kaapi_assert_debug( count < KAAPI_MAX_PROCESSOR );
-  kaapi_assert_debug( count >= 0 );
+  /* here the current processor may see different value of the memory (no sequential consistency) :
+     - count >0 but array of requests empty: there is no memory barrier between write 
+     of the status of the request and the increment (see request_post)
+     - count ==0 but the array of requests is not empty: if the write of the request status and 
+     atomic increment is reorder in request_post.
+     The only valid assumption is that:
+       (status == POSTED) => data fields of the request are correctly set
+  */
+  kaapi_assert_debug( (0 <= count) && (count < KAAPI_MAX_PROCESSOR) );
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
   */
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
   if (count >0) 
   {
+    kaapi_readmem_barrier();
     kaapi_sched_stealprocessor( victim.kproc );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
@@ -136,15 +150,24 @@ fflush(stdout);
   }
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
 
-  /* reply to all requests. May also reply to count request INCLUDING self request,
-     else a bug will occurs--WARNING--
-  ¨*/
+  /* reply at least to my request if not replied
+  */
+  if (!kaapi_reply_test( &kproc->reply ))
+  {
+    kaapi_assert_debug( kaapi_request_ok( &victim.kproc->hlrequests.requests[ kproc->kid ] ) )
+    kaapi_assert_debug( victim.kproc->hlrequests.requests[kproc->kid].proc == victim.kproc);
+    _kaapi_request_reply( &victim.kproc->hlrequests.requests[kproc->kid], 0, 0 );
+  }
+
+#if 0
+  /* reply to all requests ??? 
+  */
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
-fprintf(stdout,"%i kproc reply to:%p, @req=%p\n", kproc->kid, (void*)victim.kproc, (void*)&victim.kproc->hlrequests.requests[i] );
-fflush(stdout);
+      fprintf(stdout,"%i kproc reply to:%p, @req=%p\n", kproc->kid, (void*)victim.kproc, (void*)&victim.kproc->hlrequests.requests[i] );
+      fflush(stdout);
       /* user version that do not decrement the counter */
       kaapi_assert_debug( victim.kproc->hlrequests.requests[i].proc == victim.kproc);
       _kaapi_request_reply( &victim.kproc->hlrequests.requests[i], 0, 0 );
@@ -152,22 +175,15 @@ fflush(stdout);
     }
   }
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
-
-#if 0
-  /* assert on the counter of victim processor request count */
-  if (replycount >0)
-  {
-    kaapi_writemem_barrier();
-  }
 #endif
 
   /* unlock  */ 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );  
-  kaapi_writemem_barrier();
-fprintf(stdout,"%i kproc leave critical section to:%p\n", kproc->kid, (void*)victim.kproc );
-fflush(stdout);
+  fprintf(stdout,"%i kproc leave critical section to:%p\n", kproc->kid, (void*)victim.kproc );
+  fflush(stdout);
   KAAPI_ATOMIC_WRITE(&victim.kproc->lock, 0);
 
+  /* */
   kaapi_assert_debug(kaapi_reply_test( &kproc->reply ));
 
 return_value:
