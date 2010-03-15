@@ -51,6 +51,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 {
   kaapi_thread_context_t*  thread;
   int count =0;
+  int stealok = 0;
 #if defined(KAAPI_CONCURRENT_WS)
   int replycount = 0;
 #endif
@@ -74,11 +75,17 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
     cell = kproc->lsuspend.tail;
     while ((cell !=0) && (count >0))
     {
-      kaapi_thread_context_t* thread = cell->thread;
-      if (thread !=0)
+      stealok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
+      if (stealok)
       {
-        replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
-        count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+        kaapi_readmem_barrier(); /* to force view of cell->thread */
+        kaapi_thread_context_t* thread = cell->thread;
+        if (thread !=0)
+        {
+          replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
+          count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+        }
+        KAAPI_ATOMIC_WRITE( &cell->state, 0 );
       }
       cell = cell->prev;
     }

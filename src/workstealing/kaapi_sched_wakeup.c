@@ -80,6 +80,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
         { 
           /* ok wakeup */
           cell->thread = 0;
+          kaapi_writemem_barrier(); /* to force view of cell->thread */
+          KAAPI_ATOMIC_WRITE( &cell->state, 0 );
 //          printf( "[wakeup] task: @=%p, stack: @=%p\n", task, ctxt);
         }
         else {
