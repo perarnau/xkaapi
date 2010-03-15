@@ -64,8 +64,8 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   /* the task has been stolen: the extra body contains the original task body */
   fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(thread->pc) );
   kaapi_assert_debug( fmt !=0 );
-  kaapi_assert_debug( thread->pc->body ==  kaapi_aftersteal_body );
-  kaapi_assert_debug( thread->pc->sp == taskarg );
+  kaapi_assert_debug( thread[-1].pc->body ==  kaapi_exec_body);
+  kaapi_assert_debug( thread[-1].pc->sp == taskarg );
 
   countparam = fmt->count_params;
 
@@ -79,7 +79,7 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   */
   char buffer[1024];
   size_t sz_write = 0;
-  sz_write += snprintf( buffer, 1024, "[taskaftersteal] task: @=%p, stack: @=%p", thread->pc, _kaapi_self_thread());
+  sz_write += snprintf( buffer, 1024, "[taskaftersteal] task: @=%p, stack: @=%p", thread[-1].pc, _kaapi_self_thread());
 
   for (i=0; i<countparam; ++i)
   {
