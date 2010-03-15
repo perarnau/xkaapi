@@ -75,10 +75,19 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
         - if W mode -> copy + free of the data
         - if CW mode -> accumulation (data is the left side of the accumulation, version the righ side)
   */
+  char buffer[1024];
+  size_t sz_write = 0;
+  sz_write += snprintf( buffer, 1024, "[taskaftersteal] task: @=%p, stack: @=%p", thread->pc, _kaapi_self_thread());
+
   for (i=0; i<countparam; ++i)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
-    if (m == KAAPI_ACCESS_MODE_V) continue;
+    if (m == KAAPI_ACCESS_MODE_V) 
+    {
+      data_param = (void*)(fmt->off_params[i] + (char*)taskarg);
+      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", value=%li", *(long*)data_param );
+      continue;
+    }
 
     if (KAAPI_ACCESS_IS_ONLYWRITE(m))
     {
@@ -89,6 +98,8 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
       /* Always keep copy semantic ? At the charge of the user to deal with lazy copy ? */
       kaapi_assert_debug( access_param->data != access_param->version );
 
+      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li", *(long*)access_param->data, *(long*)access_param->version );
+
       /* a assign dstor function will avoid 2 calls to function, especially for basic types which do not
          required to be dstor.
       */
@@ -98,4 +109,6 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
       access_param->version = 0;
     }
   }
+  fprintf(stdout, "%s\n", buffer );
+  fflush(stdout);
 }

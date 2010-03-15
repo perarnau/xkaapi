@@ -109,6 +109,16 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
         access_param->version = copy_access_param->data;
         sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", pointer version value=%li ", *(long*)copy_access_param->data );
       }
+      else /* debug only */
+      {
+        data_param        = (void*)(fmt->off_params[i] + (char*)orig_task_args);
+        copy_data_param   = (void*)(fmt->off_params[i] + (char*)copy_task_args);
+        access_param      = (kaapi_access_t*)(data_param);
+        copy_access_param = (kaapi_access_t*)(copy_data_param);
+
+        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", pointer version value=%li ", *(long*)copy_access_param->data );
+      }
+
     }
   }
   else {
