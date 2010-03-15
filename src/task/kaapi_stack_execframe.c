@@ -138,7 +138,7 @@ begin_loop:
     kaapi_assert_debug( body != kaapi_exec_body);
 
 #if defined(KAAPI_USE_CASSTEAL)
-    if (!KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&pc->body, pc->ebody, kaapi_exec_body)) 
+    if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
     { 
       kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
       body = pc->body;
