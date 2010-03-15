@@ -53,7 +53,9 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   kaapi_task_t*           thief_task   = 0;
   kaapi_thread_context_t* thief_thread = 0;
   kaapi_tasksteal_arg_t*  argsteal;
+#if 0
   kaapi_tasksig_arg_t*    argsig;
+#endif
   
 
 #if defined(KAAPI_CONCURRENT_WS)
@@ -95,6 +97,7 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   
   _kaapi_thread_pushtask( thief_thread );
 
+#if 0
   /* reply: several cases
      - if complete steal of the task -> signal sould pass the body to aftersteal body
      If steal an
@@ -105,6 +108,7 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   argsig->victim   = thread;
   argsig->task2sig = task;
   _kaapi_thread_pushtask( thief_thread );
+#endif
 
   _kaapi_request_reply( request, thief_thread, 1 ); /* success of steal */
   return 1;
