@@ -160,7 +160,9 @@ begin_loop:
 //kaapi_stack_print(0, thread );
 //printf("\n<<< after  exec:%p\n", pc);
 
+#if 1//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
+#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
@@ -174,6 +176,7 @@ restart_after_steal:
 //    kaapi_task_setbody(pc, kaapi_nop_body);
 #endif    
     pc = fp->pc = pc -1;
+    kaapi_writemem_barrier();
   } /* end of the loop */
 
   kaapi_assert_debug( fp >= eframe);

@@ -161,10 +161,10 @@ static int kaapi_sched_stealframe(
 #endif
         {
 #if defined(LOG_STACK)
-  fprintf(stdout,"\n\n>>>>>>>> %p:: Task=%p, wc=%i\n", thread, (void*)task_top, wc );
-  kaapi_stack_print(stdout, thread );
+          fprintf(stdout,"\n\n>>>>>>>> %p:: Task=%p, wc=%i\n", thread, (void*)task_top, wc );
+          kaapi_stack_print(stdout, thread );
 #endif
-          kaapi_assert_debug( count >= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
+          kaapi_assert_debug( count-replycount <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
           replycount += kaapi_task_splitter_dfg(thread, task_top, count-replycount, requests );
         }
         /* else victim may have executed it */
@@ -190,12 +190,6 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
 
-  kaapi_processor_t* kproc = thread->proc;
-  int verifcount __attribute__((unused)) = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  kaapi_readmem_barrier();
-  kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
-  kaapi_assert_debug(count >0);
-
   if ((thread ==0) || kaapi_frame_isempty( thread->sfp)) return 0;
   savecount  = count;
   replycount = 0;
@@ -203,15 +197,16 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
 
-  /* lock the stack */
+  /* lock the stack, if cannot return failed */
   if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
+  kaapi_readmem_barrier();
 
   /* try to steal in each frame */
   top_frame = thread->stackframe;
   for (top_frame =thread->stackframe; (top_frame != thread->sfp) && (count > replycount); ++top_frame)
   {
     if (top_frame->pc == top_frame->sp) continue;
-    replycount = kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count, request );
+    replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
   }
 
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);  

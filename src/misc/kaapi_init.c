@@ -318,18 +318,6 @@ static int parse_cpu_set(cpuset_parser_t* parser)
 }
 
 
-#if 0
-static void __attribute__((unused))
-print_parser(const cpuset_parser_t* parser)
-{
-  unsigned int i;
-
-  for (i = 0; i < parser->used_ncpus; ++i)
-    printf("%u ~ %u\n", i, parser->kid_map[i]);
-}
-#endif
-
-
 static void fill_identity_kid_map
     (
      unsigned int* kid_map,

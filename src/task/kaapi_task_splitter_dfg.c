@@ -68,6 +68,10 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
     if (kaapi_request_ok( &array[i] )) 
     {
       request = &array[i];
+#if 0
+      fprintf(stdout,"%i kproc reply ok to:%p, @req=%p\n", kaapi_get_current_kid(), (void*)kaapi_all_kprocessors[i], (void*)&array[i] );
+      fflush(stdout);
+#endif
       break;
     }
   }

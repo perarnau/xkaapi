@@ -51,9 +51,10 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 {
   kaapi_thread_context_t*  thread;
   int count =0;
+#if defined(KAAPI_CONCURRENT_WS)
   int replycount = 0;
+#endif
 
-  kaapi_readmem_barrier();
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   kaapi_assert_debug( count > 0 );
   if (count ==0) return 0;
@@ -67,19 +68,21 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) == 1+_kaapi_get_current_processor()->kid );
 #endif
   
-#if 0
-  if (0)
+  if (1)
   { /* WARNING do not try to steal inside suspended stack */
     kaapi_wsqueuectxt_cell_t* cell;
     cell = kproc->lsuspend.tail;
     while ((cell !=0) && (count >0))
     {
-      replycount += kaapi_sched_stealstack( cell->thread, 0, count, kproc->hlrequests.requests );
-      count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+      kaapi_thread_context_t* thread = cell->thread;
+      if (thread !=0)
+      {
+        replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
+        count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+      }
       cell = cell->prev;
     }
   }
-#endif
   
   /* steal current thread */
   thread = kproc->thread;
@@ -88,10 +91,6 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 #if defined(KAAPI_CONCURRENT_WS)
     /* if concurrent WS, then steal directly the current stack of the victim processor
     */
-    int verifcount1 = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    kaapi_assert_debug( count <= verifcount1 );
-    int verifcount2 = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-    kaapi_assert_debug( count <= verifcount2 );
     kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
     /* signal that count thefts are waiting */
     replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );

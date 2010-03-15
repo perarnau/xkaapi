@@ -158,7 +158,7 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
 
   do 
   {
-    fprintf(file, "%i: --------frame:: pc:%p, sp:%p, spd:%p\n", iframe, frame->pc, frame->sp, frame->sp_data );
+    fprintf(file, "%i: --------frame:: pc:%p, sp:%p, spd:%p\n", iframe, (void*)frame->pc, (void*)frame->sp, (void*)frame->sp_data );
     task_top = frame->sp;
     while (task_bot != task_top)
     {
