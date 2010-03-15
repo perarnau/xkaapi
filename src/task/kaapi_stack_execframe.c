@@ -167,7 +167,9 @@ begin_loop:
     ++cnt_tasks;
 #endif
 
-restart_after_steal:    
+#if !defined(KAAPI_CONCURRENT_WS)
+restart_after_steal:
+#endif
     if (unlikely(fp->sp != thread->sfp->sp))
     {
       goto push_frame;
