@@ -146,6 +146,7 @@ begin_loop:
         goto error_swap_body;
       /* else ok its aftersteal */
       body = kaapi_aftersteal_body;
+      pc->body = kaapi_exec_body;
     }
 #else
     pc->body = kaapi_exec_body;
