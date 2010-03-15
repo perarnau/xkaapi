@@ -82,7 +82,7 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
 #if defined(KAAPI_DEBUG_LOURD)
   char buffer[1024];
   size_t sz_write = 0;
-  sz_write += snprintf( buffer, 1024, "[steal] task: @=%p, stack: @=%p", task, thread);
+  sz_write += snprintf( buffer, 1024, "[steal] task: @=%p, body: @=%p, stack: @=%p", (void*)task, (void*)task->ebody, (void*)thread);
   fprintf(stdout, "%s\n", buffer);
   fflush(stdout);
 #endif

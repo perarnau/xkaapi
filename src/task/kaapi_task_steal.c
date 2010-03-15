@@ -76,7 +76,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
 #if defined(KAAPI_DEBUG_LOURD)
   char buffer[1024];
   size_t sz_write = 0;
-  sz_write += snprintf( buffer, 1024, "[taskwrite] task: @=%p, stack: @=%p", arg->origin_task, _kaapi_self_thread());
+  sz_write += snprintf( buffer, 1024, "[taskwritesignal] task: @=%p, stack: @=%p", (void*)arg->origin_task, (void*)_kaapi_self_thread());
 #endif
 
   if (copy_task_args !=0)
@@ -111,7 +111,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
         /* write the new version */
         access_param->version = copy_access_param->data;
 #if defined(KAAPI_DEBUG_LOURD)
-        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li ", *(long*)access_param->data, *(long*)access_param->version );
+        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", @=%p, data=%li / version=%li ", (void*)access_param->data,  *(long*)access_param->data, *(long*)access_param->version );
 #endif
       }
 #if defined(KAAPI_DEBUG_LOURD)
@@ -122,7 +122,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
         access_param      = (kaapi_access_t*)(data_param);
         copy_access_param = (kaapi_access_t*)(copy_data_param);
 
-        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li", *(long*)copy_access_param->data);
+        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", @=%p, data=%li", (void*)access_param->data, *(long*)access_param->data);
       }
 #endif
     }
@@ -251,7 +251,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 #endif        
       }
 #if defined(KAAPI_DEBUG_LOURD)
-      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li", *(long*)copy_access_param->data );
+      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", @=%p, data=%li", copy_access_param->data, *(long*)copy_access_param->data );
 #endif
     }
 #if defined(KAAPI_DEBUG_LOURD)
