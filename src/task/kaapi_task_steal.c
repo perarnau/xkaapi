@@ -235,7 +235,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
         copy_access_param->data    = malloc(fmt_param->size);
 #endif        
       }
-      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li", *(long*)copy_access_param->data, *(long*)copy_access_param->version );
+      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li", *(long*)copy_access_param->data );
     }
     fprintf(stdout, "%s\n", buffer );
     fflush(stdout);
