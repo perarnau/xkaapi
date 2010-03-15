@@ -51,7 +51,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
   kaapi_assert_debug( thread != 0);
   thread->sfp      = thread->stackframe;
-  thread->esfp     = thread->sfp;
+  thread->esfp     = (kaapi_frame_t*)thread->sfp;
   thread->sfp->sp  = thread->sfp->pc  = stack->task; /* empty frame */
   thread->sfp->sp_data = stack->data; /* empty frame */
   thread->errcode  = 0;

@@ -73,9 +73,11 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   
   kaapi_assert_debug( arg->origin_task->body == kaapi_suspend_body );
 
+#if defined(KAAPI_DEBUG_LOURD)
   char buffer[1024];
   size_t sz_write = 0;
   sz_write += snprintf( buffer, 1024, "[taskwrite] task: @=%p, stack: @=%p", arg->origin_task, _kaapi_self_thread());
+#endif
 
   if (copy_task_args !=0)
   {
@@ -91,8 +93,9 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
       fmt_param       = fmt->fmt_params[i];
       if (mode_param == KAAPI_ACCESS_MODE_V) 
       {
+#if defined(KAAPI_DEBUG_LOURD)
         sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", value=%li", *(long*)copy_data_param );
-        
+#endif        
         (*fmt_param->dstor)(copy_data_param);
         continue;
       }
@@ -107,8 +110,11 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
 
         /* write the new version */
         access_param->version = copy_access_param->data;
+#if defined(KAAPI_DEBUG_LOURD)
         sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li ", *(long*)access_param->data, *(long*)access_param->version );
+#endif
       }
+#if defined(KAAPI_DEBUG_LOURD)
       else /* debug only */
       {
         data_param        = (void*)(fmt->off_params[i] + (char*)orig_task_args);
@@ -118,20 +124,23 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
 
         sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li", *(long*)copy_access_param->data);
       }
-
+#endif
     }
   }
   else {
-    /* copy args == 0: do nothing */
+    /* copy args == 0: do nothing see task_steal: do not fork this task */
     kaapi_assert_debug_m(0, "cannot be here !!! ");
     abort();
   }
+#if defined(KAAPI_DEBUG_LOURD)
   fprintf(stdout, "%s\n", buffer );
   fflush(stdout);
+#endif
 
   /* flush in memory all pending write and read ops */  
   kaapi_writemem_barrier();
 
+  /* signal the task */
   kaapi_task_setbody(arg->origin_task, kaapi_aftersteal_body );
 }
 
@@ -190,16 +199,20 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     }
   }
 
+#if defined(KAAPI_DEBUG_LOURD)
   char buffer[1024];
   size_t sz_write = 0;
-  sz_write += snprintf( buffer, 1024, "[tasksteal] task: @=%p, stack: @=%p", arg->origin_task, _kaapi_self_thread());
+  sz_write += snprintf( buffer, 1024, "[tasksteal] task: @=%p, body:%p, stack: @=%p", (void*)arg->origin_task, (void*)body, (void*)_kaapi_self_thread());
+#endif
 
   if (!push_write)
   {
-    kaapi_assert_debug_m(0, "Fibo example->never here ! ");
     /* Execute the orinal body function with the original args
     */
     body(orig_task_args, thread);
+
+    /* no barrier here: only read data signal the task */
+    kaapi_task_setbody(arg->origin_task, kaapi_aftersteal_body );
   }
   else 
   {
@@ -217,7 +230,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       if (mode_param == KAAPI_ACCESS_MODE_V) 
       {
         (*fmt_param->cstorcopy)(copy_data_param, data_param);
+#if defined(KAAPI_DEBUG_LOURD)
         sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", value=%li", *(long*)copy_data_param );
+#endif
         continue;
       }
 
@@ -235,10 +250,14 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
         copy_access_param->data    = malloc(fmt_param->size);
 #endif        
       }
+#if defined(KAAPI_DEBUG_LOURD)
       sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li", *(long*)copy_access_param->data );
+#endif
     }
+#if defined(KAAPI_DEBUG_LOURD)
     fprintf(stdout, "%s\n", buffer );
     fflush(stdout);
+#endif
     /* Execute the orinal body function with the copy of args: do not push it... ?
     */
     task = kaapi_thread_toptask( thread );

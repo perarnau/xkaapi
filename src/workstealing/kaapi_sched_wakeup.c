@@ -68,17 +68,26 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
   cell = kproc->lsuspend.head;
   while (cell !=0)
   {
-    if (KAAPI_ATOMIC_READ( &cell->state ) != 2 ) /* else already wakeuped */
+    int status = KAAPI_ATOMIC_READ( &cell->state );
+    if (status != 2 ) /* else already wakeuped */
     {
       ctxt = cell->thread;
       kaapi_task_t* task = ctxt->sfp->pc;
       if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
       { 
-        /* ok wakeup the thread */
-        cell->thread = 0;
-        KAAPI_ATOMIC_WRITE( &cell->state, 2 ); /* if already ==1 -> under stealing */
-        wakeupok = 1;
         garbage  = 1;
+        /* ok wakeup the thread and try to steal it */
+        while (status !=2)
+        {
+          if (KAAPI_ATOMIC_CAS( &cell->state, status, 2 )) /* if already ==1 -> under stealing */
+          {
+            cell->thread = 0;
+            wakeupok = 1;
+            status = 2;
+          }
+          else status = KAAPI_ATOMIC_READ( &cell->state );
+        }
+        /* if wakeupok the caller has wakeup the thread */
       }
       else {
         wakeupok = 0;
