@@ -79,8 +79,10 @@ redo_select:
 #endif
   kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) < KAAPI_MAX_PROCESSOR );
 
-fprintf(stdout,"%i kproc post steal to:%p\n", kproc->kid, (void*)victim.kproc );
-fflush(stdout);
+#if 0
+  fprintf(stdout,"%i kproc post steal to:%p\n", kproc->kid, (void*)victim.kproc );
+  fflush(stdout);
+#endif
 
 #if 0 /* experimental, release CPU */
 //  pthread_yield();
@@ -104,7 +106,7 @@ fflush(stdout);
     /* here is not yet an exponential backoff, but the cas should not
        to busy to avoid memory transaction: do multiple tests on the reply field
     */
-    for (i=0; i<100; ++i)
+    for (i=0; i<10; ++i)
     {
       if (kaapi_reply_test( &kproc->reply ) ) 
         /* return with out trying to lock / unlock the victim: 
@@ -120,8 +122,10 @@ fflush(stdout);
   #endif
     }
   }
-fprintf(stdout,"%i kproc enter critical section to:%p\n", kproc->kid, (void*)victim.kproc );
-fflush(stdout);
+#if 0
+  fprintf(stdout,"%i kproc enter critical section to:%p\n", kproc->kid, (void*)victim.kproc );
+  fflush(stdout);
+#endif
 
   kaapi_assert_debug( ok );
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );
@@ -156,6 +160,10 @@ fflush(stdout);
   {
     kaapi_assert_debug( kaapi_request_ok( &victim.kproc->hlrequests.requests[ kproc->kid ] ) )
     kaapi_assert_debug( victim.kproc->hlrequests.requests[kproc->kid].proc == victim.kproc);
+#if 0
+    fprintf(stdout,"%i kproc reply failed to:%p, @req=%p\n", kproc->kid, (void*)victim.kproc, (void*)&victim.kproc->hlrequests.requests[i] );
+    fflush(stdout);
+#endif
     _kaapi_request_reply( &victim.kproc->hlrequests.requests[kproc->kid], 0, 0 );
   }
 
@@ -166,8 +174,10 @@ fflush(stdout);
   {
     if (kaapi_request_ok(&victim.kproc->hlrequests.requests[i]))
     {
+#if 0
       fprintf(stdout,"%i kproc reply to:%p, @req=%p\n", kproc->kid, (void*)victim.kproc, (void*)&victim.kproc->hlrequests.requests[i] );
       fflush(stdout);
+#endif
       /* user version that do not decrement the counter */
       kaapi_assert_debug( victim.kproc->hlrequests.requests[i].proc == victim.kproc);
       _kaapi_request_reply( &victim.kproc->hlrequests.requests[i], 0, 0 );
@@ -179,8 +189,10 @@ fflush(stdout);
 
   /* unlock  */ 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) == 1+kproc->kid );  
+#if 0
   fprintf(stdout,"%i kproc leave critical section to:%p\n", kproc->kid, (void*)victim.kproc );
   fflush(stdout);
+#endif
   KAAPI_ATOMIC_WRITE(&victim.kproc->lock, 0);
 
   /* */

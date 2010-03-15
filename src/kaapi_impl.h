@@ -516,6 +516,7 @@ extern int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* bu
 */
 extern int kaapi_stack_clear( kaapi_stack_t* stack );
 
+
 /** \ingroup TASK
     The function kaapi_frame_isempty() will return non-zero value iff the frame is empty. Otherwise return 0.
     \param stack IN the pointer to the kaapi_stack_t data structure. 
@@ -580,6 +581,10 @@ static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* t
 
 
 
+extern struct kaapi_processor_t* kaapi_get_current_processor(void);
+typedef kaapi_uint32_t kaapi_processor_id_t;
+extern kaapi_processor_id_t kaapi_get_current_kid(void);
+
 /** Initialize a request
     \param kpsr a pointer to a kaapi_steal_request_t
 */
@@ -590,6 +595,10 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, kaapi_re
   pkr->reply  = 0;
   pkr->thread = 0; 
   pkr->proc   = kproc;
+#if 0
+  fprintf(stdout,"%i kproc clear request @req=%p\n", kaapi_get_current_kid(), (void*)pkr );
+  fflush(stdout);
+#endif
 }
 
 /* ========== Here include machine specific function: only next definitions should depend on machine =========== */

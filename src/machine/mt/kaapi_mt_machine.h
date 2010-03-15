@@ -79,8 +79,8 @@
 #define KAAPI_STACK_MIN 8192
 
 
-struct kaapi_processor_t;
-typedef kaapi_uint32_t kaapi_processor_id_t;
+//struct kaapi_processor_t;
+//typedef kaapi_uint32_t kaapi_processor_id_t;
 
 
 /* ========================================================================= */
@@ -609,6 +609,13 @@ static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t old
   kaapi_task_setbody(task, newbody );
   return 1;
 }
+#elif defined(KAAPI_USE_THESTEAL)
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
+{
+  kaapi_assert_debug( task->body == oldbody );
+  kaapi_task_setbody(task, newbody );
+  return 1;
+}
 #else
 #  warning "NOT IMPLEMENTED"
 #endif
@@ -639,8 +646,10 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   reply->data      = 0;
 
   kaapi_writemem_barrier();
-fprintf(stdout,"%i kproc post request to:%p, @req=%p\n", kproc->kid, (void*)victim->kproc, (void*)req );
-fflush(stdout);
+#if 0
+  fprintf(stdout,"%i kproc post request to:%p, @req=%p\n", kproc->kid, (void*)victim->kproc, (void*)req );
+  fflush(stdout);
+#endif
   req->status      = KAAPI_REQUEST_S_POSTED;
   
   /* incr without mem. barrier here if the victim see the request status as ok is enough,

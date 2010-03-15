@@ -130,6 +130,7 @@ int kaapi_setconcurrency( unsigned int concurrency )
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
       kaapi_all_kprocessors[i] = calloc( 1, sizeof(kaapi_processor_t) );
+      kaapi_assert(0 == pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] ) );
 
       if (kaapi_all_kprocessors[i] ==0) 
       {
