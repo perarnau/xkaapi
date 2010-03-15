@@ -270,8 +270,8 @@ namespace a1 {
      : ka::pointer_rw<T>( a )
     { }
 
-    value_type& access() const
-    { return *this; }
+    value_type& access()
+    { return *this->ptr(); }
     
     void swap(T*& p) 
     { std::swap(p, this->_ptr); }

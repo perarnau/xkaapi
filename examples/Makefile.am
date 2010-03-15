@@ -17,6 +17,7 @@ check_PROGRAMS= \
 	fibo_apikaapi_opt      \
 	dgemm_kaapi            \
 	nqueens_apiatha        \
+	nqueens_apikaapi        \
 	branchbound_apiatha    \
 	transform_adapt	       \
 	transform_concurrent   \
@@ -36,6 +37,7 @@ fibo_apikaapi_SOURCES=fibo_apikaapi.cpp fibo_apikaapi_main.cpp
 fibo_apikaapi_opt_SOURCES=fibo_apikaapi_opt.cpp fibo_apikaapi_main.cpp
 dgemm_kaapi_SOURCES=dgemm_kaapi.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
+nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
 transform_concurrent_SOURCES=transform_concurrent.h transform_concurrent.cpp random.cpp random.h
@@ -81,6 +83,11 @@ nqueens_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_src
 nqueens_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 nqueens_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 nqueens_apiatha_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
+
+nqueens_apikaapi_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
+nqueens_apikaapi_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+nqueens_apikaapi_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+nqueens_apikaapi_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
 
 branchbound_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
 branchbound_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)

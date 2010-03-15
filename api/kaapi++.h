@@ -423,6 +423,7 @@ namespace ka {
     pointer_rw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rw( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     operator value_type*() { return base_pointer<T>::ptr(); }
+    T* operator->() { return base_pointer<T>::ptr(); }
     value_type& operator*() { return *base_pointer<T>::ptr(); }
     value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
     value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
@@ -466,6 +467,7 @@ namespace ka {
     pointer_r( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
     operator value_type*() { return base_pointer<T>::ptr(); }
     const T& operator*() const { return *base_pointer<T>::ptr(); }
+    const T* operator->() const { return base_pointer<T>::ptr(); }
     const T& operator[](int i) const { return base_pointer<T>::ptr()[i]; }
     const T& operator[](long i) const { return base_pointer<T>::ptr()[i]; }
     const T& operator[](difference_type i) const { return base_pointer<T>::ptr()[i]; }
@@ -565,23 +567,23 @@ namespace ka {
 
   // --------------------------------------------------------------------
   template<class T>
-  struct TraitPOD {
+  struct TraitNoDeleteTask {
     enum { value = false };
   };
 
   /* user may specialize this trait to avoid spawn of delete for some object */
-  template<> struct TraitPOD<char> { enum { value = true}; };
-  template<> struct TraitPOD<short> { enum { value = true}; };
-  template<> struct TraitPOD<int> { enum { value = true}; };
-  template<> struct TraitPOD<long> { enum { value = true}; };
-  template<> struct TraitPOD<long long> { enum { value = true}; };
-  template<> struct TraitPOD<unsigned char> { enum { value = true}; };
-  template<> struct TraitPOD<unsigned short> { enum { value = true}; };
-  template<> struct TraitPOD<unsigned int> { enum { value = true}; };
-  template<> struct TraitPOD<unsigned long> { enum { value = true}; };
-  template<> struct TraitPOD<unsigned long long> { enum { value = true}; };
-  template<> struct TraitPOD<float> { enum { value = true}; };
-  template<> struct TraitPOD<double> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<char> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<short> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<long long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned char> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned short> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned int> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned long long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<float> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
 
   template<class T>
   class auto_pointer : public base_pointer<T> {
@@ -1171,7 +1173,7 @@ namespace ka {
   
 namespace ka {
   
-  template<bool isapod>
+  template<bool noneedtaskdelete>
   struct SpawnDelete {
     template<class T> static void doit( auto_pointer<T>& ap ) { Spawn<TaskDelete<T> >(ap); ap.ptr(0); }
   };
@@ -1187,7 +1189,7 @@ namespace ka {
 
   template<class T>
   auto_pointer<T>::~auto_pointer()
-  { SpawnDelete<TraitPOD<T>::value>::doit(*this); }
+  { SpawnDelete<TraitNoDeleteTask<T>::value>::doit(*this); }
 
 
   // --------------------------------------------------------------------
