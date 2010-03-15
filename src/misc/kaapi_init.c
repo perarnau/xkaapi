@@ -56,7 +56,8 @@
 /*
 */
 kaapi_rtparam_t kaapi_default_param = {
-   .startuptime = 0
+   .startuptime = 0,
+   .stacksize = 64*4096
 };
 
 
@@ -392,7 +393,6 @@ int kaapi_setup_param( int argc, char** argv )
     
   /* Set default values */
   kaapi_default_param.cpucount  = kaapi_default_param.syscpucount;
-  kaapi_default_param.stacksize = 8*4096;
   
   /* Get values from environment variable */
   if (getenv("KAAPI_DISPLAY_PERF") !=0)

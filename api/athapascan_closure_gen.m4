@@ -11,10 +11,10 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
 
   static TASK dummy;
   /* */
-  static void body(kaapi_task_t* t, kaapi_thread_context_t* thread)
+  static void body(void* taskargs, kaapi_thread_t* thread)
   {
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`Self_t* args = kaapi_task_getargst(t, Self_t);')
-    dummy(M4_PARAM(`args->f$1', `', `, '));
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`Self_t* args = (Self_t*)taskargs;')
+    dummy(M4_PARAM(`(F$1)args->f$1', `', `, '));
   }
 
   static kaapi_format_t    format;
@@ -38,7 +38,6 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     
     Self_t::fmid = kaapi_format_taskregister( 
           &Self_t::getformat, 
-          0,
           &Self_t::body, 
           typeid(Self_t).name(),
           sizeof(Self_t),
@@ -50,7 +49,13 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     /* extend the set of predefined function */
     return &Self_t::format;
   }
-  static const kaapi_task_bodyid_t bodyid;
+  static kaapi_task_body_t registerbody()
+  {
+    registerformat();
+    return KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::body;
+  }
+  
+  static const kaapi_task_body_t default_body;
 };
 
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
@@ -63,6 +68,6 @@ template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 kaapi_format_id_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::fmid = 0;
 
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
-const kaapi_task_bodyid_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::bodyid = registerformat()->bodyid;
+const kaapi_task_body_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::default_body = KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::registerbody();
 
 

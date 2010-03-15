@@ -10,7 +10,7 @@
       ', `', `')
 
       kaapi_task_t* clo = kaapi_thread_toptask( _thread );
-      kaapi_task_initdfg( clo, KaapiClosure::bodyid, kaapi_thread_pushdata(_thread, sizeof(KaapiClosure)) );
+      kaapi_task_initdfg( clo, KaapiClosure::default_body, kaapi_thread_pushdata(_thread, sizeof(KaapiClosure)) );
       /* this function call is the only way I currently found to register the format of the task, 
          idealy it should not be call and the clo->format should not be set at all.
       */

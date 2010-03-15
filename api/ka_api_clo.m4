@@ -165,7 +165,6 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
     fmid = kaapi_format_taskregister( 
           &getformat, 
-          0,
           0, 
           task_name.c_str(),
           sizeof(TaskArg_t),

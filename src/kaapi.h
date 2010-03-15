@@ -475,7 +475,7 @@ typedef struct kaapi_access_t {
 static inline void kaapi_access_init(kaapi_access_t* access, void* value )
 {
   access->data = value;
-#if defined(KAAPI_DEBUG)
+#if !defined(KAAPI_NDEBUG)
   access->version = 0;
 #endif  
   return;
@@ -556,6 +556,25 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
   retval = thread->sp_data;
   thread->sp_data += count;
   return retval;
+}
+
+
+/** \ingroup TASK
+    The function kaapi_thread_pushdata() will return the pointer to the next top data.
+    The top data is not yet into the stack.
+    If successful, the kaapi_thread_pushdata() function will return a pointer to the next data to push.
+    Otherwise, an 0 is returned to indicate the error.
+    \param frame INOUT a pointer to the kaapi_frame_t data structure where to push data
+    \retval a pointer to the next task to push or 0.
+*/
+static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi_thread_t* thread, kaapi_uint32_t count)
+{
+  kaapi_assert_debug( thread !=0 );
+  kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
+  access->data = thread->sp_data;
+  access->version = 0;
+  thread->sp_data += count;
+  return;
 }
 
 /** \ingroup TASK
@@ -1016,7 +1035,6 @@ extern kaapi_format_id_t kaapi_format_register(
 */
 extern kaapi_format_id_t kaapi_format_taskregister( 
         kaapi_format_t*           (*fmt_fnc)(void),
-        kaapi_task_bodyid_t         bodyid,
         kaapi_task_body_t           body,
         const char*                 name,
         size_t                      size,
@@ -1060,7 +1078,7 @@ extern kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key);
 */
 extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
-#define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body_id, fnc_body, ... ) \
+#define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body, ... ) \
   static inline kaapi_format_t* formatobject(void) \
   {\
     static kaapi_format_t formatobject##_object;\
@@ -1071,7 +1089,7 @@ extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister( &formatobject, (kaapi_task_bodyid_t)fnc_body_id, fnc_body, name, ##__VA_ARGS__);\
+    kaapi_format_taskregister( &formatobject, fnc_body, name, ##__VA_ARGS__);\
   }
 
 
