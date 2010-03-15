@@ -203,7 +203,7 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
 
   /* try to steal in each frame */
   top_frame = thread->stackframe;
-  for (top_frame =thread->stackframe; (top_frame != thread->sfp) && (count > replycount); ++top_frame)
+  for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
   {
     if (top_frame->pc == top_frame->sp) continue;
     replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );

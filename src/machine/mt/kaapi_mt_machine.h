@@ -637,8 +637,10 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   if (kproc ==0) return EINVAL;
   if (victim ==0) return EINVAL;
   
+//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim->kproc->hlrequests.count) >= 0 );
+
   req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
-  kaapi_assert_debug( req->status != KAAPI_REQUEST_S_POSTED);
+  kaapi_assert_debug( req->status == KAAPI_REQUEST_S_EMPTY);
   kaapi_assert_debug( req->proc == victim->kproc);
 
   reply->status    = KAAPI_REQUEST_S_POSTED;
@@ -657,6 +659,7 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
      even if the new counter is not yet view
   */
   KAAPI_ATOMIC_INCR( &victim->kproc->hlrequests.count );
+//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim->kproc->hlrequests.count) > 0 );
   
   return 0;
 }

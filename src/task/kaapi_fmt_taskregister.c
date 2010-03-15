@@ -126,7 +126,12 @@ kaapi_format_id_t kaapi_format_taskregister_body(
   
   if (fmt->entrypoint[archi] ==body) return fmt->fmtid;
   fmt->entrypoint[archi] = body;
-  
+
+#if defined(KAAPI_DEBUG)
+  fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)body, (void*)fmt->name );
+  fflush(stdout);
+#endif
+
   /* register it into hashmap: body -> fmt */
   entry = ((unsigned long)body) & 0xFF;
   head =  kaapi_all_format_bybody[entry];

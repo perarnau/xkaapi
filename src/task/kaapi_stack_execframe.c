@@ -110,7 +110,7 @@ int kaapi_stack_execframe( kaapi_thread_context_t* thread )
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
   
 push_frame:
-  fp = thread->sfp;
+  fp = (kaapi_frame_t*)thread->sfp;
   /* push the frame for the next task to execute */
   thread->sfp[1].sp_data = fp->sp_data;
   thread->sfp[1].pc = fp->sp;
@@ -235,11 +235,9 @@ restart_after_steal:
 #if defined(KAAPI_USE_CASSTEAL)
 error_swap_body:
   if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
-  kaapi_assert_debug(pc->body == kaapi_suspend_body);
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */
   thread->sfp = fp;
-  kaapi_assert_debug( thread->sfp->pc->body == kaapi_suspend_body );
   return EWOULDBLOCK;
 #endif
 

@@ -68,29 +68,38 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
   cell = kproc->lsuspend.head;
   while (cell !=0)
   {
-    garbage = 1;
-    if (KAAPI_ATOMIC_READ(&cell->state) == 0)
+    int status = KAAPI_ATOMIC_READ( &cell->state );
+    if (status != 2 ) /* else already wakeuped */
     {
-      wakeupok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
-      if (wakeupok) 
-      {
-        ctxt = cell->thread;
-        kaapi_task_t* task = ctxt->sfp->pc;
-        if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
-        { 
-          /* ok wakeup */
-          cell->thread = 0;
-          kaapi_writemem_barrier(); /* to force view of cell->thread */
-          KAAPI_ATOMIC_WRITE( &cell->state, 0 );
-//          printf( "[wakeup] task: @=%p, stack: @=%p\n", task, ctxt);
+      ctxt = cell->thread;
+      kaapi_task_t* task = ctxt->sfp->pc;
+      if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
+      { 
+        garbage  = 1;
+        /* ok wakeup the thread and try to steal it */
+        while (status !=2)
+        {
+          if (KAAPI_ATOMIC_CAS( &cell->state, status, 2 )) /* if already ==1 -> under stealing */
+          {
+            cell->thread = 0;
+            wakeupok = 1;
+            status = 2;
+          }
+          else status = KAAPI_ATOMIC_READ( &cell->state );
         }
-        else {
-          garbage  = 0;
-          wakeupok = 0;
-          KAAPI_ATOMIC_WRITE( &cell->state, 0 );
-        }
+        /* if wakeupok the caller has wakeup the thread */
       }
+      else {
+        wakeupok = 0;
+        garbage  = 0;
+      }
+    } 
+    else 
+    { /* else state = 2: already wakeuped by the owner*/
+      wakeupok = 0;
+      garbage  = 1;
     }
+    
 
     /* If the wakeup is ok or if the cell state is 1, the cell is recyled (push in tail):
     */

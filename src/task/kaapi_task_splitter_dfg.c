@@ -79,11 +79,13 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   }
   kaapi_assert(request !=0);
 
+#if defined(KAAPI_DEBUG_LOURD)
   char buffer[1024];
   size_t sz_write = 0;
   sz_write += snprintf( buffer, 1024, "[steal] task: @=%p, stack: @=%p", task, thread);
   fprintf(stdout, "%s\n", buffer);
   fflush(stdout);
+#endif
 
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:

@@ -77,7 +77,6 @@ redo_select:
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
-  kaapi_assert_debug( KAAPI_ATOMIC_READ( &victim.kproc->hlrequests.count ) < KAAPI_MAX_PROCESSOR );
 
 #if 0
   fprintf(stdout,"%i kproc post steal to:%p\n", kproc->kid, (void*)victim.kproc );
@@ -114,12 +113,6 @@ redo_select:
         */
         goto return_value;
 
-  #if 0 /* experimental but should release CPU */
-      if ((counter & 0xFF) ==0) {
-        counter =0;
-        /*pthread_yield();*/
-      }
-  #endif
     }
   }
 #if 0
@@ -139,7 +132,6 @@ redo_select:
      The only valid assumption is that:
        (status == POSTED) => data fields of the request are correctly set
   */
-  kaapi_assert_debug( (0 <= count) && (count < KAAPI_MAX_PROCESSOR) );
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
@@ -202,7 +194,9 @@ return_value:
   /* mark current processor as no stealing */
   kproc->issteal = 0;
 
-  kaapi_assert_debug( kaapi_request_status(&kproc->reply) != KAAPI_REQUEST_S_POSTED );
+  kaapi_assert_debug( (kaapi_request_status(&kproc->reply) == KAAPI_REQUEST_S_SUCCESS) 
+                  ||  (kaapi_request_status(&kproc->reply) == KAAPI_REQUEST_S_FAIL) 
+  );
 
   /* test if my request is ok
   */

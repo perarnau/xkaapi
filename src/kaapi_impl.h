@@ -251,7 +251,7 @@ typedef struct kaapi_stack_t {
     user code.
 */
 typedef struct kaapi_thread_context_t {
-  kaapi_frame_t*                 sfp;            /** pointer to the current frame (in stackframe) */
+  volatile kaapi_frame_t*        sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
@@ -523,7 +523,7 @@ extern int kaapi_stack_clear( kaapi_stack_t* stack );
     \retval !=0 if the stack is empty
     \retval 0 if the stack is not empty or argument is an invalid stack pointer
 */
-static inline int kaapi_frame_isempty(const kaapi_frame_t* frame)
+static inline int kaapi_frame_isempty(volatile kaapi_frame_t* frame)
 {
   return (frame->pc <= frame->sp);
 }
