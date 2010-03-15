@@ -51,33 +51,51 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 {
   kaapi_thread_context_t*  thread;
   int count =0;
+#if defined(KAAPI_CONCURRENT_WS)
   int replycount = 0;
+#endif
 
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+  kaapi_assert_debug( count > 0 );
   if (count ==0) return 0;
   
-  if (0)
+  /* a second read my only view a count greather or equal to the previous because here
+     the caller is in critical section to reply to posted requests.
+  */
+  kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
+
+#if defined(KAAPI_CONCURRENT_WS)
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) == 1+_kaapi_get_current_processor()->kid );
+#endif
+  
+  if (1)
   { /* WARNING do not try to steal inside suspended stack */
     kaapi_wsqueuectxt_cell_t* cell;
     cell = kproc->lsuspend.tail;
     while ((cell !=0) && (count >0))
     {
-      replycount += kaapi_sched_stealstack( cell->thread, 0, count, kproc->hlrequests.requests );
-      count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+      kaapi_thread_context_t* thread = cell->thread;
+      if (thread !=0)
+      {
+        replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
+        count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+      }
       cell = cell->prev;
     }
   }
   
+  /* steal current thread */
   thread = kproc->thread;
   if ((count >0) && (thread !=0) && (kproc->issteal ==0))
   {
-    /* if concurrent WS, then steal directly the current stack of the victim processor
-       else set flag to 0 on the stack and wait reply
-    */
 #if defined(KAAPI_CONCURRENT_WS)
+    /* if concurrent WS, then steal directly the current stack of the victim processor
+    */
+    kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
     /* signal that count thefts are waiting */
     replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
 #else
+#warning  "TO REDO"
     /* signal that count thefts are waiting */
     kaapi_threadcontext2stack(thread)->hasrequest = count;
     thread->errcode |= 0x1; /* interrupt the executor flag to request steal... */

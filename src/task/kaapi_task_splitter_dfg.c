@@ -53,12 +53,16 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   kaapi_task_t*           thief_task   = 0;
   kaapi_thread_context_t* thief_thread = 0;
   kaapi_tasksteal_arg_t*  argsteal;
+#if 0
   kaapi_tasksig_arg_t*    argsig;
+#endif
   
 
-  kaapi_assert_debug (task !=0);
-  
-  kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body);
+#if defined(KAAPI_CONCURRENT_WS)
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) == 1+_kaapi_get_current_processor()->kid );
+#endif
+  kaapi_assert_debug( task !=0 );
+  kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
 
   /* find the first request in the list */
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
@@ -66,6 +70,10 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
     if (kaapi_request_ok( &array[i] )) 
     {
       request = &array[i];
+#if 0
+      fprintf(stdout,"%i kproc reply ok to:%p, @req=%p\n", kaapi_get_current_kid(), (void*)kaapi_all_kprocessors[i], (void*)&array[i] );
+      fflush(stdout);
+#endif
       break;
     }
   }
@@ -89,6 +97,7 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   
   _kaapi_thread_pushtask( thief_thread );
 
+#if 0
   /* reply: several cases
      - if complete steal of the task -> signal sould pass the body to aftersteal body
      If steal an
@@ -99,6 +108,7 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   argsig->victim   = thread;
   argsig->task2sig = task;
   _kaapi_thread_pushtask( thief_thread );
+#endif
 
   _kaapi_request_reply( request, thief_thread, 1 ); /* success of steal */
   return 1;

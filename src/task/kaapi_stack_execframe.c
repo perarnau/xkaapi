@@ -138,7 +138,7 @@ begin_loop:
     kaapi_assert_debug( body != kaapi_exec_body);
 
 #if defined(KAAPI_USE_CASSTEAL)
-    if (!KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&pc->body, pc->ebody, kaapi_exec_body)) 
+    if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
     { 
       kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
       body = pc->body;
@@ -160,12 +160,16 @@ begin_loop:
 //kaapi_stack_print(0, thread );
 //printf("\n<<< after  exec:%p\n", pc);
 
+#if 1//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
+#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
 
-restart_after_steal:    
+#if !defined(KAAPI_CONCURRENT_WS)
+restart_after_steal:
+#endif
     if (unlikely(fp->sp != thread->sfp->sp))
     {
       goto push_frame;
@@ -174,6 +178,7 @@ restart_after_steal:
 //    kaapi_task_setbody(pc, kaapi_nop_body);
 #endif    
     pc = fp->pc = pc -1;
+    kaapi_writemem_barrier();
   } /* end of the loop */
 
   kaapi_assert_debug( fp >= eframe);

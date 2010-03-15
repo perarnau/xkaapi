@@ -79,8 +79,8 @@
 #define KAAPI_STACK_MIN 8192
 
 
-struct kaapi_processor_t;
-typedef kaapi_uint32_t kaapi_processor_id_t;
+//struct kaapi_processor_t;
+//typedef kaapi_uint32_t kaapi_processor_id_t;
 
 
 /* ========================================================================= */
@@ -600,12 +600,20 @@ static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listre
 #if defined(KAAPI_USE_CASSTEAL)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
-  return KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&task->body, oldbody, newbody );
+  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
+  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
 }
 #elif defined(KAAPI_USE_INTERRUPSTEAL)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
   if (task->body != oldbody ) return 0;
+  kaapi_task_setbody(task, newbody );
+  return 1;
+}
+#elif defined(KAAPI_USE_THESTEAL)
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
+{
+  kaapi_assert_debug( task->body == oldbody );
   kaapi_task_setbody(task, newbody );
   return 1;
 }
@@ -628,14 +636,21 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   kaapi_request_t* req;
   if (kproc ==0) return EINVAL;
   if (victim ==0) return EINVAL;
-
+  
   req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
+  kaapi_assert_debug( req->status != KAAPI_REQUEST_S_POSTED);
+  kaapi_assert_debug( req->proc == victim->kproc);
+
   reply->status    = KAAPI_REQUEST_S_POSTED;
   req->reply       = reply;
   req->thread      = kproc->thread;
   reply->data      = 0;
 
   kaapi_writemem_barrier();
+#if 0
+  fprintf(stdout,"%i kproc post request to:%p, @req=%p\n", kproc->kid, (void*)victim->kproc, (void*)req );
+  fflush(stdout);
+#endif
   req->status      = KAAPI_REQUEST_S_POSTED;
   
   /* incr without mem. barrier here if the victim see the request status as ok is enough,

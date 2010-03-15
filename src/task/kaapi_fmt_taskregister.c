@@ -108,7 +108,10 @@ kaapi_format_id_t kaapi_format_taskregister(
 }
 
 
-/**
+/** TODO:
+    - utilisation d'une autre structure de chainage que le format: 3 archi possible
+    mais qu'un champ de link => seulement une archi dans la table de hash...
+    - 
 */
 kaapi_format_id_t kaapi_format_taskregister_body( 
         kaapi_format_t*             fmt,
@@ -121,6 +124,7 @@ kaapi_format_id_t kaapi_format_taskregister_body(
 
   if (body ==0) return fmt->fmtid;
   
+  if (fmt->entrypoint[archi] ==body) return fmt->fmtid;
   fmt->entrypoint[archi] = body;
   
   /* register it into hashmap: body -> fmt */

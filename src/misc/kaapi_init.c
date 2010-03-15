@@ -169,19 +169,19 @@ static inline int parse_cpu_index
 }
 
 
-static inline int is_digit(char c)
+static inline int is_digit(const int c)
 {
   return (c >= '0') && (c <= '9');
 }
 
 
-static inline int is_list_delim(char c)
+static inline int is_list_delim(const int c)
 {
   return c == ':';
 }
 
 
-static inline int is_eol(char c)
+static inline int is_eol(const int c)
 {
   /* end of list */
   return (c == ',') || (c == 0);
@@ -196,7 +196,7 @@ static int parse_cpu_list
 )
 {
   /* 1 token look ahead */
-  if (is_digit(*parser->str_pos))
+  if (is_digit(*(parser->str_pos)))
     {
       if (parse_cpu_index(parser, index_low))
 	return -1;
@@ -213,7 +213,7 @@ static int parse_cpu_list
       ++parser->str_pos;
 
       /* 1 token look ahead */
-      if (is_eol(*parser->str_pos))
+      if (is_eol(*(parser->str_pos)))
 	{
 	  *index_high = parser->total_ncpus - 1;
 	}
@@ -316,18 +316,6 @@ static int parse_cpu_set(cpuset_parser_t* parser)
 
   return 0;
 }
-
-
-#if 0
-static void __attribute__((unused))
-print_parser(const cpuset_parser_t* parser)
-{
-  unsigned int i;
-
-  for (i = 0; i < parser->used_ncpus; ++i)
-    printf("%u ~ %u\n", i, parser->kid_map[i]);
-}
-#endif
 
 
 static void fill_identity_kid_map

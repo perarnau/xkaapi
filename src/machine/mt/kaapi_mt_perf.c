@@ -11,6 +11,7 @@ static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
 static unsigned int papi_event_count = 0;
 #endif
 
+#if 0 // unused
 static int get_event_code(char* name, int* code)
 {
   char* end;
@@ -28,6 +29,7 @@ static int get_event_code(char* name, int* code)
 
   return 0;
 }
+#endif
 
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
 static int get_papi_events(void)

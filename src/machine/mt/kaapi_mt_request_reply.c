@@ -87,13 +87,17 @@ int _kaapi_request_reply
   kaapi_processor_t*      kproc = request->proc;
   kaapi_assert_debug( kproc != 0 );
   kaapi_assert_debug( request != 0 );
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) > 0 );
+//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) > 0 );
   
   request->flag   = 0;
   request->status = KAAPI_REQUEST_S_EMPTY;
   KAAPI_ATOMIC_DECR( &kproc->hlrequests.count );
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) >= 0 );
 
+#if 0
+  fprintf(stdout,"%i kproc reply request to:proc=%p, @req=%p\n", kaapi_get_current_kid(), (void*)kproc, (void*)request );
+  fflush(stdout);
+#endif
   if (isok)
   {
     request->reply->data = retval;

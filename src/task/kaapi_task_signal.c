@@ -69,11 +69,6 @@ void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
       fprintf(stdout,"\n\n-------------- Signal task !!!! Victim stack:@=%p\n", argsig->victim );
 #endif
 
-  /* flush in memory all pending write and read ops */  
-  kaapi_writemem_barrier();
-
-  kaapi_task_setbody(task2sig, kaapi_aftersteal_body );
-
 #if defined(LOG_STACK)
 #  if defined(KAAPI_USE_CASSTEAL)
       KAAPI_ATOMIC_WRITE(&argsig->victim->lock, 0);
