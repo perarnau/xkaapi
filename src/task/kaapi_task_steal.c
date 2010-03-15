@@ -116,7 +116,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
         access_param      = (kaapi_access_t*)(data_param);
         copy_access_param = (kaapi_access_t*)(copy_data_param);
 
-        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li ", *(long*)copy_access_param->data, *(long*)copy_access_param->version );
+        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li", *(long*)copy_access_param->data);
       }
 
     }
