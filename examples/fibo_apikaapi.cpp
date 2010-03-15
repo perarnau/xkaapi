@@ -115,13 +115,13 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
       return;
     }
     else {
-      ka::pointer<long> res1 = ka::Alloca<long>(1);
-      ka::pointer<long> res2 = ka::Alloca<long>(1);
+      ka::auto_pointer<long> res1 = ka::Alloca<long>();
+      ka::auto_pointer<long> res2 = ka::Alloca<long>();
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
        */
-      ka::Spawn<TaskFibo>() ( res1, n-1);
+      ka::Spawn<TaskFibo>() ( res1, n-1 );
       ka::Spawn<TaskFibo>() ( res2, n-2 );
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
