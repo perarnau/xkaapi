@@ -71,9 +71,6 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   fmt                        = arg->origin_fmt;
   countparam = fmt->count_params;
   
-//  printf( "[taskwrite] task: @=%p, stack: @=%p\n", arg->origin_task, stack);
-//  fflush(stdout);
-
   if (copy_task_args !=0)
   {
     /* for each parameter of the copy of the theft' task on mode:
