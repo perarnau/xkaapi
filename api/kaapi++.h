@@ -331,6 +331,7 @@ namespace ka {
     base_pointer( T* p ) : _ptr(p)
     {}
     T* ptr() const { return _ptr; }
+    void ptr(T* p) { _ptr = p; }
   protected:
     mutable T* _ptr;
   };
