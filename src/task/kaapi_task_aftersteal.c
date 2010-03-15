@@ -110,6 +110,12 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
       free(access_param->version);
       access_param->version = 0;
     }
+    else { /* debug only */
+      data_param = (void*)(fmt->off_params[i] + (char*)taskarg);
+      fmt_param = fmt->fmt_params[i];
+      access_param = (kaapi_access_t*)(data_param);
+      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li", *(long*)access_param->data, *(long*)access_param->version );
+    }
   }
   fprintf(stdout, "%s\n", buffer );
   fflush(stdout);
