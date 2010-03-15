@@ -55,6 +55,7 @@ extern "C" {
 #if defined(NDEBUG)
 #  define kaapi_assert( cond ) if (!(cond)) abort();
 #  define kaapi_assert_debug( cond )
+#  define KAAPI_NDEBUG 1
 #else
 #  include <errno.h>
 #  include <stdio.h>

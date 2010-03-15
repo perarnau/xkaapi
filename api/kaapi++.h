@@ -564,6 +564,41 @@ namespace ka {
   
 
   // --------------------------------------------------------------------
+  template<class T>
+  struct TraitPOD {
+    enum { value = false };
+  };
+
+  /* user may specialize this trait to avoid spawn of delete for some object */
+  template<> struct TraitPOD<char> { enum { value = true}; };
+  template<> struct TraitPOD<short> { enum { value = true}; };
+  template<> struct TraitPOD<int> { enum { value = true}; };
+  template<> struct TraitPOD<long> { enum { value = true}; };
+  template<> struct TraitPOD<long long> { enum { value = true}; };
+  template<> struct TraitPOD<unsigned char> { enum { value = true}; };
+  template<> struct TraitPOD<unsigned short> { enum { value = true}; };
+  template<> struct TraitPOD<unsigned int> { enum { value = true}; };
+  template<> struct TraitPOD<unsigned long> { enum { value = true}; };
+  template<> struct TraitPOD<unsigned long long> { enum { value = true}; };
+  template<> struct TraitPOD<float> { enum { value = true}; };
+  template<> struct TraitPOD<double> { enum { value = true}; };
+
+  template<class T>
+  class auto_pointer : public base_pointer<T> {
+  public:
+    typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer<T> Self_t;
+    auto_pointer() : base_pointer<T>() {}
+    ~auto_pointer();
+    auto_pointer( value_type* ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
+
+    KAAPI_POINTER_ARITHMETIC_METHODS
+  };
+
+
+  // --------------------------------------------------------------------
   /** Trait for universal access mode type.
       The universal access mode type allows to 1/ compact code by providing generic information; 2/ define
       for any user level type, the way the type may be accessed in task, its task internal representation as
@@ -727,6 +762,12 @@ namespace ka {
 
   template<typename UserType>
   struct TraitUAMParam<pointer<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP       mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<auto_pointer<UserType> > {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_RPWP       mode_t;
   };
@@ -1114,6 +1155,39 @@ namespace ka {
     return SpawnerMain<TASK>();
   }
     
+
+  // --------------------------------------------------------------------
+  template<class T>
+  struct TaskDelete : public Task<1>::Signature<RW<T> > { };
+} // namespace a1
+
+  template<class T>
+  struct TaskBodyCPU<ka::TaskDelete<T> > : public ka::TaskDelete<T> {
+    void operator() ( ka::Thread* thread, ka::pointer_rw<T> res )
+    {
+      delete *res;
+    }
+  };
+  
+namespace ka {
+  
+  template<bool isapod>
+  struct SpawnDelete {
+    template<class T> static void doit( auto_pointer<T>& ap ) { Spawn<TaskDelete<T> >(ap); ap.ptr(0); }
+  };
+  template<>
+  struct SpawnDelete<true> {
+    template<class T> static void doit( auto_pointer<T>& ap ) 
+    { 
+#if !defined(KAAPI_NDEBUG)
+      ap.ptr(0);
+#endif
+    }
+  };
+
+  template<class T>
+  auto_pointer<T>::~auto_pointer()
+  { SpawnDelete<TraitPOD<T>::value>::doit(*this); }
 
 
   // --------------------------------------------------------------------

@@ -115,8 +115,8 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
       return;
     }
     else {
-      ka::pointer_rpwp<long> res1 = ka::Alloca<long>(1);
-      ka::pointer_rpwp<long> res2 = ka::Alloca<long>(1);
+      ka::pointer<long> res1 = ka::Alloca<long>(1);
+      ka::pointer<long> res2 = ka::Alloca<long>(1);
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
