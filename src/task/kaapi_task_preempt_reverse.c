@@ -44,7 +44,7 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preempt_nextthief_reverse_helper( kaapi_thread_t* thread, kaapi_task_t* task, void* arg_to_thief )
+int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void* arg_to_thief )
 {
 #if 0
 #warning TODO

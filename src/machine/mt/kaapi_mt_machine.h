@@ -600,7 +600,8 @@ static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listre
 #if defined(KAAPI_USE_CASSTEAL)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
-  return KAAPI_ATOMIC_CASPTR( (kaapi_atomic_t*)&task->body, oldbody, newbody );
+  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
+  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
 }
 #elif defined(KAAPI_USE_INTERRUPSTEAL)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
