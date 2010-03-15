@@ -156,6 +156,7 @@ begin_loop:
 //kaapi_stack_print(0, thread );
 //printf("\n------------------------\n");
     /* task execution */
+    kaapi_assert_debug(pc == thread->sfp[-1].pc);
     body( pc->sp, (kaapi_thread_t*)thread->sfp );
 
 //kaapi_stack_print(0, thread );
