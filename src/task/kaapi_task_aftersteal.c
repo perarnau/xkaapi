@@ -58,6 +58,9 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
 //  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, stack);
 //  fflush(stdout);
 
+  /* wait write appear in memory... */
+  kaapi_readmem_barrier();
+
   /* the task has been stolen: the extra body contains the original task body */
   fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(thread->pc) );
   kaapi_assert_debug( fmt !=0 );
