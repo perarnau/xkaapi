@@ -43,13 +43,22 @@
 ** 
 */
 #include "kaapi_impl.h"
+#if defined(KAAPI_DEBUG_LOURD)
+#include <unistd.h>
+#endif
 
 /* Compute if the task with arguments pointed by sp and with format task_fmt is ready
    Return the number of non ready data
 */
-static int kaapi_task_computeready( void* sp, const kaapi_format_t* task_fmt, kaapi_hashmap_t* map )
+static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, kaapi_hashmap_t* map )
 {
   int i, wc, countparam;
+#if defined(KAAPI_DEBUG_LOURD)
+  char buffer[1024];
+  size_t sz_write = 0;
+  sz_write += snprintf( buffer, 1024, "[ready?] task: @=%p ", 
+        (void*)task);
+#endif
   countparam = wc = task_fmt->count_params;
   for (i=0; i<countparam; ++i)
   {
@@ -72,11 +81,16 @@ static int kaapi_task_computeready( void* sp, const kaapi_format_t* task_fmt, ka
     {
       --wc;
     }
+    /* optimization: break from enclosest loop here */
     
     /* update map information for next access if no set */
     if (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
       gd->last_mode = m;
     
+#if defined(KAAPI_DEBUG_LOURD)
+    sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data@=%p, gd:@=%p last_mode=%i ", (void*)access->data, (void*)gd, gd->last_mode );
+#endif
+
     /* currently, datas produced by aftersteal_task are visible to thief in order to augment
        the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R could
        be used (the middle R->W is splitted -renaming is also used in other context-).
@@ -113,9 +127,33 @@ static int kaapi_task_computeready( void* sp, const kaapi_format_t* task_fmt, ka
             - seems good... with more details
     */
   }
+#if defined(KAAPI_DEBUG_LOURD)
+  sz_write += snprintf( buffer+sz_write, 1024-sz_write, "==> wc:=%i\n", wc);
+  fprintf(stdout, buffer);
+  fflush(stdout);
+#endif
+
   return wc;
 }
 
+#if defined(KAAPI_DEBUG_LOURD)
+static void waitloop(
+    kaapi_thread_context_t* thread
+)
+{
+  int value = 1;
+  fprintf(stderr, "Attach debugger to pid:%i\n", getpid());
+  fflush(stderr);
+  while (value)
+    sleep(1);
+  
+  kaapi_stack_print(stdout, thread);
+
+  while (!value)
+    sleep(1);
+    
+}
+#endif
 
 /** Steal task in the frame [frame->pc:frame->sp)
 */
@@ -130,7 +168,6 @@ static int kaapi_sched_stealframe(
   kaapi_stack_t*        stack;
   kaapi_task_body_t     task_body;
   kaapi_task_t*         task_top;
-  kaapi_task_t*         task_bot;
   kaapi_task_t*         task_exec;
   int                   replycount;
 
@@ -139,19 +176,17 @@ static int kaapi_sched_stealframe(
   stack      = kaapi_threadcontext2stack(thread);
   task_body  = kaapi_nop_body;
   task_top   = frame->pc;
-  task_bot   = frame->sp;
   task_exec  = 0;
   replycount = 0;
   
   /* */
-  while ((count > replycount) && (task_top != task_bot))
+  while ((count > replycount) && (task_top > frame->sp))
   {
     task_body = kaapi_task_getextrabody(task_top);
-
     task_fmt = kaapi_format_resolvebybody( task_body );
     if (task_fmt !=0)
     {
-      int wc = kaapi_task_computeready( kaapi_task_getargs(task_top), task_fmt, map );
+      int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, map );
       if ((wc ==0) && kaapi_task_isstealable(task_top))
       {
 #if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_INTERRUPSTEAL)
@@ -160,6 +195,9 @@ static int kaapi_sched_stealframe(
 //#  warning "Should be implemented"
 #endif
         {
+#if defined(KAAPI_DEBUG_LOURD)
+          if (strcmp(task_fmt->name, "__Z7TaskSum") ==0) waitloop(thread);
+#endif
 #if defined(LOG_STACK)
           fprintf(stdout,"\n\n>>>>>>>> %p:: Task=%p, wc=%i\n", thread, (void*)task_top, wc );
           kaapi_stack_print(stdout, thread );
@@ -206,7 +244,13 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
   {
     if (top_frame->pc == top_frame->sp) continue;
+#if defined(KAAPI_DEBUG_LOURD)
+  fprintf(stdout, "------------------- BEGIN FRAME\n");
+#endif
     replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
+#if defined(KAAPI_DEBUG_LOURD)
+  fprintf(stdout, "------------------- END FRAME\n");
+#endif
   }
 
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
