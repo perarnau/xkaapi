@@ -107,7 +107,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
 
         /* write the new version */
         access_param->version = copy_access_param->data;
-        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li ", *(long*)copy_access_param->data, *(long*)copy_access_param->version );
+        sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li ", *(long*)access_param->data, *(long*)access_param->version );
       }
       else /* debug only */
       {
