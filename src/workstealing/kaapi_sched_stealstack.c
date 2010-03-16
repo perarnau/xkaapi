@@ -199,7 +199,7 @@ static int kaapi_sched_stealframe(
           if (strcmp(task_fmt->name, "__Z7TaskSum") ==0) waitloop(thread);
 #endif
 #if defined(LOG_STACK)
-          fprintf(stdout,"\n\n>>>>>>>> %p:: Task=%p, wc=%i\n", thread, (void*)task_top, wc );
+          fprintf(stdout,"\n\n>>>>>>>> %p:: STEAL Task=%p, wc=%i\n", thread, (void*)task_top, wc );
           kaapi_stack_print(stdout, thread );
 #endif
           kaapi_assert_debug( count-replycount <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
