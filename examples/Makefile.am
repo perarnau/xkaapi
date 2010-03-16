@@ -16,6 +16,7 @@ check_PROGRAMS= \
 	fibo_apikaapi          \
 	fibo_apikaapi_opt      \
 	dgemm_kaapi            \
+	dgemm_cblas            \
 	nqueens_apiatha        \
 	nqueens_apikaapi        \
 	branchbound_apiatha    \
@@ -36,6 +37,7 @@ fibo_apiatha_SOURCES=fibo_apiatha.cpp
 fibo_apikaapi_SOURCES=fibo_apikaapi.cpp fibo_apikaapi_main.cpp
 fibo_apikaapi_opt_SOURCES=fibo_apikaapi_opt.cpp fibo_apikaapi_main.cpp
 dgemm_kaapi_SOURCES=dgemm_kaapi.cpp
+dgemm_cblas_SOURCES=dgemm_cblas.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
@@ -78,6 +80,11 @@ dgemm_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)
 dgemm_kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 dgemm_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 dgemm_kaapi_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la -lblas
+
+dgemm_cblas_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
+dgemm_cblas_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+dgemm_cblas_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+dgemm_cblas_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la -lblas
 
 nqueens_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
 nqueens_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)

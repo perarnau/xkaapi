@@ -425,7 +425,7 @@ namespace ka {
     operator value_type*() { return base_pointer<T>::ptr(); }
     T* operator->() { return base_pointer<T>::ptr(); }
     value_type& operator*() { return *base_pointer<T>::ptr(); }
-    value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
+//    value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
     value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
 
     KAAPI_POINTER_ARITHMETIC_METHODS

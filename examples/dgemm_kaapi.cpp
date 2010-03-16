@@ -1,6 +1,7 @@
 /****************************************************************************
  * 
  *  Dgem HPCC benchmark in Kaapi...
+ *  On mac: export VECLIB_MAXIMUM_THREADS=1 to not use multithreaded blas
  *  T. Gautier, based on DGEMM Cilk version
  ***************************************************************************/
 #include <cblas.h> 
@@ -8,17 +9,47 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
-#define BASE 512 
+#define BASE 1024
 
-struct TaskAxpy: public ka::Task<8>::Signature< ka::R<double>, 
-                                                ka::R<double>,
-                                                ka::CW<double>,
-                                                int,
-                                                int, 
-                                                int, 
-                                                double,
-                                                long
-                                              >  {};
+struct TaskAxpyBlas: public ka::Task<8>::Signature< 
+        ka::R<double>, 
+        ka::R<double>,
+        ka::RW<double>,
+        int,
+        int, 
+        int, 
+        double,
+        long
+>  {};
+
+template<>
+struct TaskBodyCPU<TaskAxpyBlas> {
+  void operator()(
+      ka::Thread* thread,
+      ka::pointer_r<double> A, 
+      ka::pointer_r<double> B, 
+      ka::pointer_rw<double> C, 
+      int m, int n, int k, 
+      double alpha, long columnsep )
+  { 
+    double beta=1; 
+    cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, m, n, k, alpha, 
+                 A, columnsep, 
+                 B, columnsep, beta, 
+                 C, columnsep); 
+  }
+};
+
+struct TaskAxpy: public ka::Task<8>::Signature< 
+      ka::R<double>, 
+      ka::R<double>,
+      ka::RPWP<double>,
+      int,
+      int, 
+      int, 
+      double,
+      long
+>  {};
 
 /* Specialized by default only on CPU 
    C += alpha * (A*B)
@@ -29,46 +60,43 @@ struct TaskAxpy: public ka::Task<8>::Signature< ka::R<double>,
 template<>
 struct TaskBodyCPU<TaskAxpy> {
   void operator()(
+      ka::Thread* thread,
       ka::pointer_r<double> A, 
       ka::pointer_r<double> B, 
-      ka::pointer_cw<double> C, 
+      ka::pointer_rpwp<double> C, 
       int m, int n, int k, 
       double alpha, long columnsep )
   { 
     if (m+n+k<BASE) 
     { 
-      double beta=1; 
-      cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, m, n, k, alpha, 
-                   A, columnsep, 
-                   B, columnsep, beta, 
-                   C, columnsep); 
+      thread->Spawn<TaskAxpyBlas>()(A, B, C, m, n, k, alpha, columnsep); 
     } 
     else if (m>=n && m>=k) 
     {
       /* The biggest dimension is m. */ 
-      ka::Spawn<TaskAxpy>()(A, B, C, m/2, n, k, alpha, columnsep); 
-      ka::Spawn<TaskAxpy>()(A+m/2, B, C+m/2, m-m/2, n, k, alpha, columnsep); 
+      thread->Spawn<TaskAxpy>()(A, B, C, m/2, n, k, alpha, columnsep); 
+      thread->Spawn<TaskAxpy>()(A+m/2, B, C+m/2, m-m/2, n, k, alpha, columnsep); 
     } else if (n>=m && n>=k) 
     { 
       /* The biggest dimension is n */ 
-      ka::Spawn<TaskAxpy>()(A, B, C, m, n/2, k, alpha, columnsep); 
-      ka::Spawn<TaskAxpy>()(A, B+(n/2)*columnsep, C+(n/2)*columnsep, m, n-n/2, k, alpha, columnsep); 
+      thread->Spawn<TaskAxpy>()(A, B, C, m, n/2, k, alpha, columnsep); 
+      thread->Spawn<TaskAxpy>()(A, B+(n/2)*columnsep, C+(n/2)*columnsep, m, n-n/2, k, alpha, columnsep); 
     } else { 
       /* The biggest dimension is k. */ 
-      ka::Spawn<TaskAxpy>()(A, B, C, m, n, k/2, alpha, columnsep); 
+      thread->Spawn<TaskAxpy>()(A, B, C, m, n, k/2, alpha, columnsep); 
       // Cilk comment: Need to store into another variable then add them. Or a sync. 
       //sync; 
 //      // Kaapi comment: not necessary, here, C has RW access mode -> exclusive access
-      ka::Spawn<TaskAxpy>()(A, B, C, m, n, k/2, alpha, columnsep); 
+      thread->Spawn<TaskAxpy>()(A, B, C, m, n, k/2, alpha, columnsep); 
     } 
   }
 };
 
-struct TaskInit1: public ka::Task<5>::Signature<ka::W<double>, ka::W<double>, ka::W<double>, long, long> {};
+struct TaskInit1: public ka::Task<5>::Signature<ka::RW<double>, ka::RW<double>, ka::RW<double>, long, long> {};
 
 template<>
 struct TaskBodyCPU<TaskInit1> {
-  void operator() (ka::pointer_w<double> A, ka::pointer_w<double> B, ka::pointer_w<double> C, long i, long n) 
+  void operator() (ka::pointer_rw<double> A, ka::pointer_rw<double> B, ka::pointer_rw<double> C, long i, long n) 
   { 
     long j; 
     for (j=0; j<n; j++) { 
@@ -79,14 +107,18 @@ struct TaskBodyCPU<TaskInit1> {
   } 
 };
 
-struct TaskInit: public ka::Task<4>::Signature<ka::W<double>, ka::W<double>, ka::W<double>, long> {};
+struct TaskInit: public ka::Task<4>::Signature<ka::RPWP<double>, ka::RPWP<double>, ka::RPWP<double>, long> {};
 template<>
 struct TaskBodyCPU<TaskInit> {
-  void operator() (ka::pointer_w<double> A, ka::pointer_w<double> B, ka::pointer_w<double> C, long n) 
+  void operator() (ka::Thread* thread, 
+                   ka::pointer_rpwp<double> A, 
+                   ka::pointer_rpwp<double> B, 
+                   ka::pointer_rpwp<double> C, 
+                   long n) 
   { 
     long i; 
-    for (i=0; i<n*n; i+=n)
-      ka::Spawn<TaskInit1>()(A+i, B+i, C+i, i, n); 
+    for (i=0; i<n; ++i)
+      thread->Spawn<TaskInit1>()(A+i*n, B+i*n, C+i*n, i*n, n); 
   }
 };
 
@@ -101,26 +133,45 @@ struct doit {
     ka::pointer<double> A;
     ka::pointer<double> B;
     ka::pointer<double> C; 
-    double alpha = -1; 
+    double alpha = 1; 
 
-    struct timeval tv0,tv1,tv2; 
-    double tdiff_rec, tdiff_mkl; 
+    double t0,t1;
     long long n3 = ((long long)n)*((long long)n)*((long long)n); 
 
     A   = new double [n*n]; 
     B   = new double [n*n]; 
     C   = new double [n*n]; 
 
+    t0 = ka::WallTimer::gettime();
     ka::Spawn<TaskInit>()(A, B, C, n); 
     ka::Sync();
+    t1 = ka::WallTimer::gettime();
+    std::cout << "Init time: " << t1 -t0 << std::endl;
 
-    gettimeofday(&tv0,0); 
+
+    t0 = ka::WallTimer::gettime();
     ka::Spawn<TaskAxpy>()(A, B, C, n, n, n, alpha, n); 
     ka::Sync();
-    gettimeofday(&tv1,0); 
-    tdiff_rec = tv1.tv_sec-tv0.tv_sec + 1e-6*(tv1.tv_usec-tv0.tv_usec); 
+    t1 = ka::WallTimer::gettime();
     printf("%lix%li matrix multiply %lld flops in %fs = %fMFLOPS\n", 
-           n,n, n3, tdiff_rec, 2*n3*1e-6/tdiff_rec); 
+           n,n, n3, (t1-t0), 2*n3*1e-6/(t1-t0)); 
+
+    /* verif */
+    t0 = ka::WallTimer::gettime();
+    alpha = -1.0;
+    double beta = 1.0;
+    t0 = ka::WallTimer::gettime();
+    cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n, n, n, alpha, 
+                 A, n, 
+                 B, n, beta, 
+                 C, n);
+    
+    for (int i=0;i<n*n; ++i)
+    {
+      kaapi_assert(C[i] <= 1e-15);
+    }
+    t1 = ka::WallTimer::gettime();
+    std::cout << "Verif ok: " << t1 -t0 << std::endl;
   }
 };
 
