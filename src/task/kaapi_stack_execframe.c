@@ -90,10 +90,6 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 */
 
 
-//#ifdef KAAPI_USE_CASSTEAL
-//#undef KAAPI_USE_CASSTEAL
-//#endif
-
 /*
 */
 int kaapi_stack_execframe( kaapi_thread_context_t* thread )
@@ -123,9 +119,6 @@ push_frame:
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-//printf("\n\n------------\n");
-//kaapi_stack_print(0, thread );
-  
 #if defined(KAAPI_USE_CASSTEAL)
 begin_loop:
 #endif
@@ -152,15 +145,9 @@ begin_loop:
     pc->body = kaapi_exec_body;
 #endif
 
-//printf("\n>>> before exec:%p\n", pc);
-//kaapi_stack_print(0, thread );
-//printf("\n------------------------\n");
     /* task execution */
     kaapi_assert_debug(pc == thread->sfp[-1].pc);
     body( pc->sp, (kaapi_thread_t*)thread->sfp );
-
-//kaapi_stack_print(0, thread );
-//printf("\n<<< after  exec:%p\n", pc);
 
 #if 1//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
@@ -176,9 +163,7 @@ restart_after_steal:
     {
       goto push_frame;
     }
-#if defined(KAAPI_DEBUG)
-//    kaapi_task_setbody(pc, kaapi_nop_body);
-#endif    
+
     pc = fp->pc = pc -1;
     kaapi_writemem_barrier();
   } /* end of the loop */
@@ -195,9 +180,7 @@ restart_after_steal:
     while (fp > eframe) 
     {
       --fp;
-#if defined(KAAPI_DEBUG)
-//      kaapi_task_setbody(fp->pc, kaapi_nop_body);
-#endif    
+
       /* pop dummy frame */
       --fp->pc;
       if (fp->pc > fp->sp)
@@ -206,13 +189,12 @@ restart_after_steal:
         KAAPI_ATOMIC_WRITE(&thread->lock, 0);
 #endif
         thread->sfp = fp;
-//printf("%p::Pop frame, fp=%p\n", thread, fp);
         goto push_frame; /* remains work do do */
       }
     } 
     fp = eframe;
     fp->sp = fp->pc;
-//    --fp->pc;
+
 #if defined(KAAPI_USE_CASSTEAL)
     kaapi_writemem_barrier();
     KAAPI_ATOMIC_WRITE(&thread->lock, 0);
@@ -238,6 +220,10 @@ error_swap_body:
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */
   thread->sfp = fp;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  cnt_tasks = 0;
+#endif
   return EWOULDBLOCK;
 #endif
 
