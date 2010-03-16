@@ -1076,7 +1076,7 @@ namespace ka {
   struct RegisterBodyCPU {
     RegisterBodyCPU()
     { 
-      DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit = DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
@@ -1084,7 +1084,7 @@ namespace ka {
   struct RegisterBodyGPU {
     RegisterBodyGPU()
     { 
-      DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit = DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
@@ -1092,8 +1092,8 @@ namespace ka {
   struct RegisterBodies {
     RegisterBodies()
     { 
-      DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
-      DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit1 = DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit2 = DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
