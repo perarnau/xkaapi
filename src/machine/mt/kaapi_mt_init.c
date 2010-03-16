@@ -117,10 +117,10 @@ void __attribute__ ((constructor)) kaapi_init(void)
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
   thread = _kaapi_self_thread();
-  task = _kaapi_thread_toptask(thread);
+  task = kaapi_thread_toptask(kaapi_threadcontext2thread(thread));
   kaapi_task_init( task, kaapi_taskstartup_body, 0 );
   kaapi_task_setbody( task, kaapi_exec_body);
-  _kaapi_thread_pushtask(thread);
+  kaapi_thread_pushtask(kaapi_threadcontext2thread(thread));
 
   /* push the current frame that correspond to the execution of the startup task */
   thread->sfp[1].pc      = thread->sfp->sp;

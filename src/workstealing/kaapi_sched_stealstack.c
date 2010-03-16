@@ -183,6 +183,22 @@ static int kaapi_sched_stealframe(
   while ((count > replycount) && (task_top > frame->sp))
   {
     task_body = kaapi_task_getextrabody(task_top);
+
+    /* its an adaptive task !!! */
+    if (task_body == kaapi_adapt_body)
+    {
+      kaapi_stealcontext_t* sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
+      kaapi_task_splitter_t  splitter = sc->splitter;
+      void*                  argsplitter = sc->argsplitter;
+      if ( (splitter !=0) && (argsplitter !=0) && kaapi_task_casstate(task_top, kaapi_adapt_body, kaapi_suspend_body))
+      {
+        /* steal sucess */
+        replycount += kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, count-replycount, requests );
+      }
+      --task_top;
+      continue;
+    }
+
     task_fmt = kaapi_format_resolvebybody( task_body );
     if (task_fmt !=0)
     {

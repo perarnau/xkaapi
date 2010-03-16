@@ -355,7 +355,8 @@ typedef struct kaapi_request_t {
   kaapi_uint16_t                 status;         /* server status */
   kaapi_uint16_t                 flag;           /* partial steal of task | processed during the execution of the runing task */
   struct kaapi_reply_t*          reply;          /* caller status */
-  struct kaapi_thread_context_t* thread;         /* thread of the thief where to store result of the steal operation */
+  struct kaapi_thread_t*         thread;         /* internal thread pointer where to store result of the steal operation */
+  struct kaapi_thread_context_t* mthread;        /* internal thread pointer where to store result of the steal operation */
   struct kaapi_processor_t*      proc;           /* owner of the request */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
@@ -840,7 +841,6 @@ extern int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void*
 extern int kaapi_request_reply_head(
     kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request, 
-    struct kaapi_thread_context_t* thief_thread, 
     int size, int retval 
 );
 
@@ -849,7 +849,6 @@ extern int kaapi_request_reply_head(
 extern int kaapi_request_reply_tail(
     kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request, 
-    struct kaapi_thread_context_t* thief_thread, 
     int size, int retval 
 );
 
@@ -859,7 +858,7 @@ static inline int kaapi_request_reply_failed(
     kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request
 )
-{ return kaapi_request_reply_head( stc, request, 0, 0, 0 ); }
+{ return kaapi_request_reply_head( stc, request, 0, 0 ); }
 
 
 /** \ingroup ADAPTIVE
@@ -872,10 +871,9 @@ static inline int kaapi_stealbegin(
     kaapi_stealcontext_t* stc,
     kaapi_task_splitter_t splitter, void* arg_tasksplitter)
 {
-  stc->splitter    = splitter;
   stc->argsplitter = arg_tasksplitter;
   kaapi_writemem_barrier_api();
-//#warning "Here commit something in the stack ? or in the owner task of stc "
+  stc->splitter    = splitter;
   return 0;
 }
 

@@ -46,21 +46,6 @@
 
 #include <stddef.h>
 
-/* compute the cache aligned size for kaapi_taskadaptive_result_t
- */
-static inline size_t compute_struct_size(size_t data_size)
-{
-  size_t total_size = offsetof(kaapi_taskadaptive_result_t, data) + data_size;
-
-  if (total_size & (KAAPI_CACHE_LINE - 1))
-    {
-      total_size += KAAPI_CACHE_LINE;
-      total_size &= ~(KAAPI_CACHE_LINE - 1);
-    }
-
-  return total_size;
-}
-
 /** Implementation note:
     - only the thief_stack + signal to the thief has to be port on the machine.
     - the creation of the task to signal back the end of computation must be keept.

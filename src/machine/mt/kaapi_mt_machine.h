@@ -645,7 +645,8 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
 
   reply->status    = KAAPI_REQUEST_S_POSTED;
   req->reply       = reply;
-  req->thread      = kproc->thread;
+  req->mthread     = kproc->thread;
+  req->thread      = kaapi_threadcontext2thread(kproc->thread);
   reply->data      = 0;
 
   kaapi_writemem_barrier();

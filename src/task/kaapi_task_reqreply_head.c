@@ -1,11 +1,11 @@
 /*
-** kaapi_sched_stealend.c
+** kaapi_task_reqreply_head.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
-** Contributor :
+** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
 ** 
@@ -44,20 +44,18 @@
 */
 #include "kaapi_impl.h"
 
-/** \ingroup ADAPTIVE
-    May be inlined if we expose kaapi_task_cas + ATOMIC operation
+/*
 */
-int kaapi_stealend(kaapi_stealcontext_t* stc)
+int kaapi_request_reply_head(
+    kaapi_stealcontext_t*          stc,
+    kaapi_request_t*               request, 
+    int size, int retval 
+)
 {
-  kaapi_assert_debug(stc !=0);
-  stc->splitter    = 0;
-  stc->argsplitter = 0;
-  /* we do not ensure consistency: thief may view one of the previous fields =0 => abort steal operation */
-
-  kaapi_writemem_barrier();
-
-  /* pop the task until no thief are inside */
-  while (!kaapi_task_casstate( stc->ownertask, kaapi_adapt_body, kaapi_adapt_body)) ; 
-
+  kaapi_task_t* tasksig = kaapi_thread_toptask( request->thread );
+  
+  
+  /* add task to tell to the master that this disappear */
+  
   return 0;
 }

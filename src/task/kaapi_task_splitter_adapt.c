@@ -1,11 +1,11 @@
 /*
-** kaapi_sched_stealend.c
+** kaapi_task_splitter_adapt.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
-** Contributor :
+** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
 ** 
@@ -44,20 +44,33 @@
 */
 #include "kaapi_impl.h"
 
-/** \ingroup ADAPTIVE
-    May be inlined if we expose kaapi_task_cas + ATOMIC operation
+/**
 */
-int kaapi_stealend(kaapi_stealcontext_t* stc)
+int kaapi_task_splitter_adapt( 
+    kaapi_thread_context_t* thread, 
+    kaapi_task_t* task,
+    kaapi_task_splitter_t splitter,
+    void* argsplitter,
+    int count, 
+    struct kaapi_request_t* array
+)
 {
-  kaapi_assert_debug(stc !=0);
-  stc->splitter    = 0;
-  stc->argsplitter = 0;
-  /* we do not ensure consistency: thief may view one of the previous fields =0 => abort steal operation */
+  kaapi_stealcontext_t*   sc;
+  
 
+#if defined(KAAPI_CONCURRENT_WS)
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) == 1+_kaapi_get_current_processor()->kid );
+#endif
+  kaapi_assert_debug( task !=0 );
+  kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
+
+  /* call the user splitter */
+  sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
+  count = splitter( sc, count, array, argsplitter);
+
+  /* reset the body to adapt body */
   kaapi_writemem_barrier();
+  kaapi_task_setbody(task, kaapi_adapt_body);
 
-  /* pop the task until no thief are inside */
-  while (!kaapi_task_casstate( stc->ownertask, kaapi_adapt_body, kaapi_adapt_body)) ; 
-
-  return 0;
+  return count;
 }

@@ -51,6 +51,7 @@ libxkaapi_la_SOURCES=\
   task/kaapi_task_steal.c \
   task/kaapi_task_signal.c \
   task/kaapi_task_splitter_dfg.c \
+  task/kaapi_task_pushstealcontext.c\
   task/kaapi_task_finalize.c \
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_preempt_next.c \

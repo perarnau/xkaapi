@@ -1,11 +1,11 @@
 /*
-** kaapi_sched_stealend.c
+** kaapi_task_pushstealcontext.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
-** Contributor :
+** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
 ** 
@@ -44,20 +44,39 @@
 */
 #include "kaapi_impl.h"
 
-/** \ingroup ADAPTIVE
-    May be inlined if we expose kaapi_task_cas + ATOMIC operation
+/**
 */
-int kaapi_stealend(kaapi_stealcontext_t* stc)
+kaapi_stealcontext_t* kaapi_thread_pushstealcontext( kaapi_thread_t* thread )
 {
-  kaapi_assert_debug(stc !=0);
-  stc->splitter    = 0;
-  stc->argsplitter = 0;
-  /* we do not ensure consistency: thief may view one of the previous fields =0 => abort steal operation */
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_t));
+  kaapi_assert_debug( ta !=0 );
+  ta->sc.ctxtthread         = _kaapi_self_thread();
+  ta->sc.thread             = thread;
+  ta->sc.splitter           = 0;
+  ta->sc.argsplitter        = 0;
+  ta->sc.hasrequest         = 0;
+  ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
+  ta->sc.haspreempt         = 0;
+#if defined(KAAPI_DEBUG)
+  ta->sc.arg_from_victim    = 0;
+  ta->sc.current_thief_work = 0;
+#endif
 
-  kaapi_writemem_barrier();
-
-  /* pop the task until no thief are inside */
-  while (!kaapi_task_casstate( stc->ownertask, kaapi_adapt_body, kaapi_adapt_body)) ; 
-
-  return 0;
+  KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);
+  ta->head                  = 0;
+  ta->tail                  = 0;
+#if defined(KAAPI_DEBUG)
+  ta->current_thief         = 0;
+#endif
+  ta->mastertask            = 0;
+#if defined(KAAPI_DEBUG)
+  ta->result                = 0;
+  ta->result_size           = 0;
+  ta->local_result_size     = 0;
+  ta->local_result_data     = 0;
+#endif
+  ta->sc.ownertask          = kaapi_thread_toptask(thread);
+  kaapi_task_init(ta->sc.ownertask, kaapi_adapt_body, ta);
+  kaapi_thread_pushtask(thread);
+  return &ta->sc;
 }

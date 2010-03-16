@@ -281,9 +281,8 @@ struct kaapi_taskadaptive_result_t;
     This data structure is attached to any adaptative tasks.
 */
 typedef struct kaapi_taskadaptive_t {
-  void*                               user_sp;         /* user argument */
-  kaapi_task_splitter_t               splitter;        /* C function that represent the body to split a task, interest only if isadaptive*/
-  void*                               argsplitter;     /* arg for splitter */
+  kaapi_stealcontext_t                sc;              /* user visible part of the data structure */
+
   kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
@@ -297,7 +296,6 @@ typedef struct kaapi_taskadaptive_t {
   int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
   int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
   void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
-  void*                               arg_from_victim; /* arg received by the victim in case of preemption */
 } kaapi_taskadaptive_t;
 
 
@@ -555,32 +553,6 @@ typedef struct kaapi_gd_t {
 
 
 
-/** \ingroup TASK
-    Initialize a task with given flag for adaptive attribut or task constraints.
-*/
-#if 0
-static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg, kaapi_uint32_t flag ) 
-{
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
-  kaapi_assert_debug( ta !=0 );
-  ta->user_sp               = arg;
-  ta->splitter              = 0;
-  ta->argsplitter           = 0;
-  ta->thievescount._counter = 0;
-  ta->head                  = 0;
-  ta->tail                  = 0;
-  ta->result                = 0;
-  ta->mastertask            = 0;
-  ta->arg_from_victim       = 0;
-  task->sp                  = ta;
-  task->flag                = flag | KAAPI_TASK_ADAPTIVE;
-  task->body                = taskbody;
-  return 0;
-}
-#endif
-
-
-
 extern struct kaapi_processor_t* kaapi_get_current_processor(void);
 typedef kaapi_uint32_t kaapi_processor_id_t;
 extern kaapi_processor_id_t kaapi_get_current_kid(void);
@@ -594,6 +566,7 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, kaapi_re
   pkr->flag   = 0; 
   pkr->reply  = 0;
   pkr->thread = 0; 
+  pkr->mthread= 0; 
   pkr->proc   = kproc;
 #if 0
   fprintf(stdout,"%i kproc clear request @req=%p\n", kaapi_get_current_kid(), (void*)pkr );
@@ -804,10 +777,20 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
 
 /** \ingroup WS
     Splitter for DFG task
-    \param proc should be the current running thread
 */
 extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t* task, int count, struct kaapi_request_t* array);
 
+/** \ingroup WS
+    Wrapper arround the user level Splitter for Adaptive task
+*/
+extern int kaapi_task_splitter_adapt( 
+    kaapi_thread_context_t* thread, 
+    kaapi_task_t* task,
+    kaapi_task_splitter_t splitter,
+    void* argsplitter,
+    int count, 
+    struct kaapi_request_t* array
+);
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
