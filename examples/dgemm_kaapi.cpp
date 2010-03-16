@@ -164,7 +164,7 @@ void print_mat( std::ostream& cout, const char* msg, double* A, int n )
 struct doit {
   void operator()(int argc, char** argv )
   {
-    assert(argc>=2); 
+    kaapi_assert(argc>=2); 
     long n = atoi(argv[1]);
     double* mA;
     double* mB;
