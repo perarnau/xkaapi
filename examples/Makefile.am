@@ -19,11 +19,11 @@ check_PROGRAMS= \
 	dgemm_cblas            \
 	nqueens_apiatha        \
 	nqueens_apikaapi        \
-	branchbound_apiatha    \
 	transform_adapt	       \
 	transform_concurrent   \
 	count_concurrent       \
-	marc_problem          
+	marc_problem           \
+	branchbound_apiatha
 
 # To correct:
 #	fibo_adapt             
@@ -40,11 +40,11 @@ dgemm_kaapi_SOURCES=dgemm_kaapi.cpp
 dgemm_cblas_SOURCES=dgemm_cblas.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
-branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
 transform_concurrent_SOURCES=transform_concurrent.h transform_concurrent.cpp random.cpp random.h
 count_concurrent_SOURCES=count_concurrent.h count_concurrent.cpp random.cpp random.h
 marc_problem_SOURCES=marc_problem.cpp
+branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 
 fiboseq_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS) -DFIBOCODE -DMAINCODE
 fiboseq_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)  $(STD_C99_FLAGS) 
