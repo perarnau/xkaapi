@@ -25,7 +25,6 @@ struct TaskAxpyBlas: public ka::Task<8>::Signature<
 template<>
 struct TaskBodyCPU<TaskAxpyBlas> {
   void operator()(
-      ka::Thread* thread,
       ka::pointer_r<double> A, 
       ka::pointer_r<double> B, 
       ka::pointer_rw<double> C, 
@@ -71,25 +70,25 @@ struct TaskBodyCPU<TaskAxpy> {
   { 
     if (m+n+k<BASE) 
     { 
-      thread->Spawn<TaskAxpyBlas>()(A, B, C, m, n, k, alpha, columnsep); 
+      TaskBodyCPU<TaskAxpyBlas>()(A, B, C, m, n, k, alpha, columnsep); 
     } 
     else if (m>=n && m>=k) 
     {
       /* The biggest dimension is m. */ 
       thread->Spawn<TaskAxpy>()(A, B, C, m/2, n, k, alpha, columnsep); 
-      thread->Spawn<TaskAxpy>()(A+m/2, B, C+m/2, m-m/2, n, k, alpha, columnsep); 
+      (*this)(thread, A+m/2, B, C+m/2, m-m/2, n, k, alpha, columnsep); 
     } else if (n>=m && n>=k) 
     { 
       /* The biggest dimension is n */ 
       thread->Spawn<TaskAxpy>()(A, B, C, m, n/2, k, alpha, columnsep); 
-      thread->Spawn<TaskAxpy>()(A, B+(n/2)*columnsep, C+(n/2)*columnsep, m, n-n/2, k, alpha, columnsep); 
+      (*this)(thread, A, B+(n/2)*columnsep, C+(n/2)*columnsep, m, n-n/2, k, alpha, columnsep); 
     } else { 
       /* The biggest dimension is k. */ 
       thread->Spawn<TaskAxpy>()(A, B, C, m, n, k/2, alpha, columnsep); 
       // Cilk comment: Need to store into another variable then add them. Or a sync. 
       ka::Sync();
 //      // Kaapi comment: not necessary, here, C has RW access mode -> exclusive access
-      thread->Spawn<TaskAxpy>()(A+(k/2)*columnsep, B+k/2, C, m, n, k-k/2, alpha, columnsep);
+      (*this)(thread, A+(k/2)*columnsep, B+k/2, C, m, n, k-k/2, alpha, columnsep);
     } 
   }
 };
