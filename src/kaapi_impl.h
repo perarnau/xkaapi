@@ -656,7 +656,17 @@ extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr 
 
 
 
+
+
 /* ============================= Commun function for server side (no public) ============================ */
+/**
+*/
+static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
+{
+  if (kproc->lsuspend.head ==0) return 1;
+  return 0;
+}
+
 /**
 */
 extern int kaapi_thread_clear( kaapi_thread_context_t* thread );

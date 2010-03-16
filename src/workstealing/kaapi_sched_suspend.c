@@ -76,7 +76,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
   do {
     /* wakeup a context */
-    kproc->thread = kaapi_sched_wakeup(kproc);
+    if (kaapi_sched_suspendlist_empty(kproc))
+      kproc->thread = 0;
+    else
+      kproc->thread = kaapi_sched_wakeup(kproc);
 
     if (kproc->thread == ctxt_condition) 
     {
