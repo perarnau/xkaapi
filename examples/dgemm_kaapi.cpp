@@ -30,9 +30,10 @@ struct TaskBodyCPU<TaskAxpyBlas> {
       ka::pointer_r<double> B, 
       ka::pointer_rw<double> C, 
       int m, int n, int k, 
-      double alpha, long columnsep )
+      double alpha, 
+      long columnsep )
   { 
-    double beta=1; 
+    double beta = 1.0;
     cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, m, n, k, alpha, 
                  A, columnsep, 
                  B, columnsep, beta, 
@@ -65,7 +66,8 @@ struct TaskBodyCPU<TaskAxpy> {
       ka::pointer_r<double> B, 
       ka::pointer_rpwp<double> C, 
       int m, int n, int k, 
-      double alpha, long columnsep )
+      double alpha, 
+      long columnsep )
   { 
     if (m+n+k<BASE) 
     { 
@@ -85,9 +87,9 @@ struct TaskBodyCPU<TaskAxpy> {
       /* The biggest dimension is k. */ 
       thread->Spawn<TaskAxpy>()(A, B, C, m, n, k/2, alpha, columnsep); 
       // Cilk comment: Need to store into another variable then add them. Or a sync. 
-      //sync; 
+      ka::Sync();
 //      // Kaapi comment: not necessary, here, C has RW access mode -> exclusive access
-      thread->Spawn<TaskAxpy>()(A, B, C, m, n, k/2, alpha, columnsep); 
+      thread->Spawn<TaskAxpy>()(A+(k/2)*columnsep, B+k/2, C, m, n, k-k/2, alpha, columnsep);
     } 
   }
 };
@@ -102,7 +104,7 @@ struct TaskBodyCPU<TaskInit1> {
     for (j=0; j<n; j++) { 
       A[j] = 3*(i+j);//(double)(random())/RAND_MAX; 
       B[j] = 3*(i+j)+1;//(double)(random())/RAND_MAX; 
-      C[j] = 3*(i+j)+2;//(double)(random())/RAND_MAX; 
+      C[j] = 0; //3*(i+j)+2;//(double)(random())/RAND_MAX; 
     } 
   } 
 };
@@ -116,11 +118,46 @@ struct TaskBodyCPU<TaskInit> {
                    ka::pointer_rpwp<double> C, 
                    long n) 
   { 
+#if INITPAR
     long i; 
     for (i=0; i<n; ++i)
       thread->Spawn<TaskInit1>()(A+i*n, B+i*n, C+i*n, i*n, n); 
+#else
+    long i; 
+    for (i=0; i<n*n; i+=n)
+    {
+      long j; 
+      double* Ai = A+i;
+      double* Bi = B+i;
+      double* Ci = C+i;
+      for (j=0; j<n; j++) { 
+        Ai[j] = 3*(i+j);//(double)(random())/RAND_MAX; 
+        Bi[j] = 3*(i+j)+1;//(double)(random())/RAND_MAX; 
+        Ci[j] = 0; //3*(i+j)+2;//(double)(random())/RAND_MAX; 
+      } 
+    }
+#endif
   }
 };
+
+
+void print_mat( std::ostream& cout, const char* msg, double* A, int n )
+{
+  cout << msg << ":=" << std::endl;
+  cout << "Matrix([" << std::endl;
+  for (int i=0; i<n; ++i)
+  { 
+    cout << "[";
+    for (int j=0; j<n; ++j)
+    {
+      std::cout << A[i+j*n] << " ";
+      if (j != n-1) cout << ",";
+    }
+    if (i != n-1) cout << "]," << std::endl;
+    else cout << "]" << std::endl;
+  }
+  cout << "]);" << std::endl;
+}
 
 
 /* Main of the program
@@ -128,19 +165,23 @@ struct TaskBodyCPU<TaskInit> {
 struct doit {
   void operator()(int argc, char** argv )
   {
-    assert(argc==2); 
+    assert(argc>=2); 
     long n = atoi(argv[1]);
+    double* mA;
+    double* mB;
+    double* mC; 
     ka::pointer<double> A;
     ka::pointer<double> B;
     ka::pointer<double> C; 
-    double alpha = 1; 
+    double alpha = 1.0; 
+    double beta = 0.0; 
 
     double t0,t1;
     long long n3 = ((long long)n)*((long long)n)*((long long)n); 
 
-    A   = new double [n*n]; 
-    B   = new double [n*n]; 
-    C   = new double [n*n]; 
+    A   = mA = new double [n*n]; 
+    B   = mB = new double [n*n]; 
+    C   = mC = new double [n*n]; 
 
     t0 = ka::WallTimer::gettime();
     ka::Spawn<TaskInit>()(A, B, C, n); 
@@ -148,6 +189,12 @@ struct doit {
     t1 = ka::WallTimer::gettime();
     std::cout << "Init time: " << t1 -t0 << std::endl;
 
+if (n <16)
+{
+  print_mat(std::cout, "A", mA, n);
+  print_mat(std::cout, "B", mB, n);
+  print_mat(std::cout, "C", mC, n);
+}
 
     t0 = ka::WallTimer::gettime();
     ka::Spawn<TaskAxpy>()(A, B, C, n, n, n, alpha, n); 
@@ -156,19 +203,31 @@ struct doit {
     printf("%lix%li matrix multiply %lld flops in %fs = %fMFLOPS\n", 
            n,n, n3, (t1-t0), 2*n3*1e-6/(t1-t0)); 
 
+if (n <16)
+{
+  print_mat(std::cout, "C1", mC, n);
+}
+
     /* verif */
     t0 = ka::WallTimer::gettime();
-    alpha = -1.0;
-    double beta = 1.0;
+    alpha = 1.0;
+    beta = -1.0;
     t0 = ka::WallTimer::gettime();
     cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n, n, n, alpha, 
                  A, n, 
                  B, n, beta, 
                  C, n);
+
+if (n <16)
+  print_mat(std::cout, "C2", mC, n);
     
     for (int i=0;i<n*n; ++i)
     {
-      kaapi_assert(C[i] <= 1e-15);
+      if (! (C[i] <= 1e-15) ) 
+      {
+        std::cout << "Verif failed" << std::endl;
+        exit(1);
+      }
     }
     t1 = ka::WallTimer::gettime();
     std::cout << "Verif ok: " << t1 -t0 << std::endl;
