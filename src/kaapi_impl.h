@@ -629,7 +629,7 @@ typedef struct kaapi_hashentries_t {
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
 
-#define KAAPI_HASHMAP_SIZE 64
+#define KAAPI_HASHMAP_SIZE 128
 /*
 */
 typedef struct kaapi_hashmap_t {
