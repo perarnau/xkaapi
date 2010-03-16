@@ -68,7 +68,7 @@ struct doit {
 */
 int main(int argc, char** argv)
 {
-  setenv("VECLIB_MAXIMUM_THREADS", "2", 1);
+//  setenv("VECLIB_MAXIMUM_THREADS", "2", 1);
   /* Start computation by forking the main task */
   doit()(argc, argv); 
     
