@@ -205,7 +205,7 @@ static int kaapi_sched_stealframe(
       int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, map );
       if ((wc ==0) && kaapi_task_isstealable(task_top))
       {
-#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_INTERRUPSTEAL)
+#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_THESTEAL) || defined(KAAPI_USE_INTERRUPSTEAL) 
         if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
 #else
 //#  warning "Should be implemented"
@@ -237,7 +237,9 @@ static int kaapi_sched_stealframe(
 */
 int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
 {
+#if defined(KAAPI_USE_CASSTEAL)
   kaapi_frame_t*           top_frame;
+#endif
   int savecount;
   int replycount;
   
@@ -252,24 +254,34 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
 
   /* lock the stack, if cannot return failed */
+#if defined(KAAPI_USE_CASSTEAL)
   if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
   kaapi_readmem_barrier();
 
   /* try to steal in each frame */
-  top_frame = thread->stackframe;
   for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
   {
     if (top_frame->pc == top_frame->sp) continue;
-#if defined(KAAPI_DEBUG_LOURD)
-  fprintf(stdout, "------------------- BEGIN FRAME\n");
-#endif
     replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
-#if defined(KAAPI_DEBUG_LOURD)
-  fprintf(stdout, "------------------- END FRAME\n");
-#endif
   }
 
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
+#elif defined(KAAPI_USE_THESTEAL)
+  /* try to steal in each frame */
+  thread->thieffp = thread->stackframe;
+  kaapi_writemem_barrier();
+  while (count > replycount)
+  {
+    if (thread->thieffp > thread->sfp) break;
+    if (thread->thieffp->pc > thread->thieffp->sp) 
+      replycount += kaapi_sched_stealframe( thread, thread->thieffp, &access_to_gd, count-replycount, request );
+    ++thread->thieffp;
+    kaapi_writemem_barrier();
+  }
+  thread->thieffp = 0;
+#else
+#warning "TO BE IMPLEMENTED"
+#endif
 
   kaapi_hashmap_destroy( &access_to_gd );
 

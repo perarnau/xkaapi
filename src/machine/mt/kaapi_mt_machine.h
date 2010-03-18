@@ -610,13 +610,20 @@ static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t old
   kaapi_task_setbody(task, newbody );
   return 1;
 }
-#elif defined(KAAPI_USE_THESTEAL)
+#elif defined(KAAPI_USE_THESTEAL) /* current impl: THE on the frame only */
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
+{
+  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
+  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
+}
+#if 0
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
   kaapi_assert_debug( task->body == oldbody );
   kaapi_task_setbody(task, newbody );
   return 1;
 }
+#endif
 #else
 #  warning "NOT IMPLEMENTED"
 #endif

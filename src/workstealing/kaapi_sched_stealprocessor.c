@@ -52,9 +52,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   kaapi_thread_context_t*  thread;
   int count =0;
   int stealok = 0;
-#if defined(KAAPI_CONCURRENT_WS)
   int replycount = 0;
-#endif
 
   count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
   kaapi_assert_debug( count > 0 );

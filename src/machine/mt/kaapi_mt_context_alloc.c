@@ -95,5 +95,6 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   }
 
   kaapi_thread_clear(ctxt);
+  ctxt->thieffp = 0;
   return ctxt;
 }

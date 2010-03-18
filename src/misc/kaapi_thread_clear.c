@@ -56,7 +56,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->sfp->sp_data = stack->data; /* empty frame */
   thread->errcode  = 0;
   thread->_next    = 0;
-  thread->thiefpc  = stack->task-1;
+  /*thread->thieffp  = 0; do not put here this instruction : always set by thief */
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);
   kaapi_stack_clear(stack);
   return 0;

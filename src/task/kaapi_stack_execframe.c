@@ -119,7 +119,7 @@ push_frame:
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-#if defined(KAAPI_USE_CASSTEAL)
+#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_THESTEAL)
 begin_loop:
 #endif
   /* stack growth down ! */
@@ -130,7 +130,7 @@ begin_loop:
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
 
-#if defined(KAAPI_USE_CASSTEAL)
+#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_THESTEAL)
     if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
     { 
       kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
@@ -176,7 +176,6 @@ restart_after_steal:
 #if defined(KAAPI_USE_CASSTEAL)
     /* here it's a pop of frame: we lock the thread */
     while (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
-#endif
     while (fp > eframe) 
     {
       --fp;
@@ -185,9 +184,7 @@ restart_after_steal:
       --fp->pc;
       if (fp->pc > fp->sp)
       {
-#if defined(KAAPI_USE_CASSTEAL)
         KAAPI_ATOMIC_WRITE(&thread->lock, 0);
-#endif
         thread->sfp = fp;
         goto push_frame; /* remains work do do */
       }
@@ -195,9 +192,29 @@ restart_after_steal:
     fp = eframe;
     fp->sp = fp->pc;
 
-#if defined(KAAPI_USE_CASSTEAL)
     kaapi_writemem_barrier();
     KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+#elif defined(KAAPI_USE_THESTEAL)
+    /* here it's a pop of frame: we use THE like protocol */
+    while (fp > eframe) 
+    {
+      thread->sfp = --fp;
+      kaapi_writemem_barrier();
+      /* wait thief get out the frame */
+      while (thread->thieffp > fp)
+        ;
+
+      /* pop dummy frame and the closure inside this frame */
+      --fp->pc;
+      if (fp->pc > fp->sp)
+      {
+        goto push_frame; /* remains work do do */
+      }
+    } 
+    fp = eframe;
+    fp->sp = fp->pc;
+
+    kaapi_writemem_barrier();
 #endif
   }
   thread->sfp = fp;
@@ -214,7 +231,7 @@ restart_after_steal:
 #endif
   return 0;
 
-#if defined(KAAPI_USE_CASSTEAL)
+#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_THESTEAL)
 error_swap_body:
   if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
   kaapi_assert_debug(thread->sfp- fp == 1);

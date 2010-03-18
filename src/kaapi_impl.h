@@ -66,9 +66,9 @@ extern "C" {
 
 /* method to steal task 
 */
-#define KAAPI_USE_CASSTEAL 1
+//#define KAAPI_USE_CASSTEAL 1
 //#define KAAPI_USE_INTERRUPSTEAL 1
-//#define KAAPI_USE_THESTEAL 1
+#define KAAPI_USE_THESTEAL 1
 
 
 /** Highest level, more trace generated */
@@ -251,14 +251,14 @@ typedef struct kaapi_stack_t {
     user code.
 */
 typedef struct kaapi_thread_context_t {
-  volatile kaapi_frame_t*        sfp;            /** pointer to the current frame (in stackframe) */
+  kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
   struct kaapi_thread_context_t* _next;          /** to be stackable */
 
-  struct kaapi_task_t*           thiefpc __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the first pushed task */
+  kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
   kaapi_atomic_t                 lock;           /** */ 
 
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
@@ -267,7 +267,7 @@ typedef struct kaapi_thread_context_t {
 /* helper function */
 #define kaapi_stack2threadcontext(stack)         ( ((kaapi_thread_context_t*)stack)-1 )
 #define kaapi_threadcontext2stack(thread)        ( (kaapi_stack_t*)((thread)+1) )
-#define kaapi_threadcontext2thread(thread)        ( (kaapi_thread_t*)((thread)->sfp))
+#define kaapi_threadcontext2thread(thread)       ( (kaapi_thread_t*)((thread)->sfp))
 
 
 
