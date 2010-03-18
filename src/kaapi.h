@@ -829,8 +829,9 @@ extern int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void*
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
     has successfully adapt to steal work. Else 0.
-    While it reply to a request, the function decrement the request count on the stack.
-    This function is machine dependent.
+    This function could not be called in concurrence with other calls:
+    - if the adaptive algorithm matches correctly the standard structure (beginsteal/endsteal) etc..
+    the scheduler ensure that only one thief is able to call the method.
     \param stack INOUT the stack of the victim that has been used to replies to the request
     \param task IN the stolen task
     \param request INOUT data structure used to replied by the thief
@@ -838,19 +839,29 @@ extern int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void*
     \param size IN the size in bytes to store the result
     \param retval IN the result of the steal request 0 iff failed else success
 */
-extern int kaapi_request_reply_head(
+extern int kaapi_request_reply(
+    kaapi_stealcontext_t*          stc,
+    kaapi_request_t*               request, 
+    int size, int retval,
+    int inser_head
+);
+
+static inline int kaapi_request_reply_head(
     kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request, 
     int size, int retval 
-);
+)
+{ return kaapi_request_reply(stc, request, size, retval, 1 ); }
 
 /** \ingroup ADAPTIVE
 */
-extern int kaapi_request_reply_tail(
+static inline int kaapi_request_reply_tail(
     kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request, 
     int size, int retval 
-);
+)
+{ return kaapi_request_reply(stc, request, size, retval, 0 ); }
+
 
 /** \ingroup ADAPTIVE
 */
@@ -858,7 +869,7 @@ static inline int kaapi_request_reply_failed(
     kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request
 )
-{ return kaapi_request_reply_head( stc, request, 0, 0 ); }
+{ return kaapi_request_reply( stc, request, 0, 0, 1 ); }
 
 
 /** \ingroup ADAPTIVE
@@ -884,24 +895,30 @@ static inline int kaapi_stealbegin(
 */
 extern int kaapi_stealend(kaapi_stealcontext_t* stc);
 
+/** Body of the task in charge of finalize of adaptive task
+    \ingroup TASK
+*/
+extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
+
 /** \ingroup ADAPTIVE
     Push the task that, on execution will wait the terminaison of the previous 
     adaptive task 'task' and all the thieves.
     The local result, if not null will be pushed after the end of execution of all local tasks.
+    This method should be called in a frame with scope included by the frame where was done the call 
+    to kaapi_thread_pushstealcontext that creates the context.
 */
 static inline int kaapi_finalize_steal( kaapi_stealcontext_t* stc )
 {
-#if 0
-/*  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))*/
-  {
-    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
-    kaapi_task_t* task = kaapi_stack_toptask(stack);
-    kaapi_task_init( task, kaapi_taskfinalize_body, ta ); /*, KAAPI_TASK_DFG|KAAPI_TASK_STICKY ); */
-    kaapi_stack_pushtask(stack);
-  }
-#endif
+  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
+  kaapi_task_init( task, kaapi_taskfinalize_body, stc );
+  kaapi_thread_pushtask(stc->thread);
   return 0;
 }
+
+/** Body of the task in charge of finalize of thief of adaptive task
+    \ingroup TASK
+*/
+extern void kaapi_taskreturn_body( void*, kaapi_thread_t* );
 
 /** \ingroup ADAPTIVE
     Push the task that, on execution will wait the terminaison of the previous 
@@ -910,18 +927,17 @@ static inline int kaapi_finalize_steal( kaapi_stealcontext_t* stc )
 */
 static inline int kaapi_return_steal( kaapi_stealcontext_t* stc, void* retval, int size )
 {
-#if 0
-/*  if (kaapi_task_isadaptive(task) && !(task->flag & KAAPI_TASK_ADAPT_NOSYNC))*/
-  {
-    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp; /* do not use kaapi_task_getargs !!! */
-    kaapi_assert( (size ==0) || size <= ta->result_size );
-    ta->local_result_data = retval;
-    ta->local_result_size = size;
-    kaapi_task_t* task = kaapi_stack_toptask(stack);
-    kaapi_task_init( task, kaapi_taskfinalize_body, ta ); /*, KAAPI_TASK_DFG|KAAPI_TASK_STICKY );*/
-    kaapi_stack_pushtask(stack);
-  }
-#endif
+/*
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
+  kaapi_assert( (size ==0) || size <= ta->result_size );
+
+
+  ta->local_result_data = retval;
+  ta->local_result_size = size;  
+*/
+  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
+  kaapi_task_init( task, kaapi_taskreturn_body, stc );
+  kaapi_thread_pushtask(stc->thread);
   return 0;
 }
 

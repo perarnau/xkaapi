@@ -316,7 +316,7 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* prev;             /* link field to the next spawned thief */
   int                                 size_data;        /* size of data */
   double                              data[1];
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+} /*__attribute__((aligned (KAAPI_CACHE_LINE)))*/ kaapi_taskadaptive_result_t;
 
 #define KAAPI_RESULT_INSTACK   0x01
 #define KAAPI_RESULT_INHEAP    0x02
@@ -363,11 +363,6 @@ extern void kaapi_tasksig_body( void*, kaapi_thread_t*);
     \ingroup TASK
 */
 extern void kaapi_aftersteal_body( void*, kaapi_thread_t* );
-
-/** Body of the task in charge of finalize of adaptive task
-    \ingroup TASK
-*/
-extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK

@@ -57,7 +57,7 @@ libxkaapi_la_SOURCES=\
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_preempt_head.c \
   task/kaapi_task_preempt_tail.c \
-  task/kaapi_task_reqreply_head.c \
+  task/kaapi_task_reqreply.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \
