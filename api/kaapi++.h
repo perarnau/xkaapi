@@ -587,15 +587,15 @@ namespace ka {
   template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
 
   template<class T>
-  class auto_pointer : public base_pointer<T> {
+  class auto_pointer : public pointer<T> {
   public:
     typedef T value_type;
     typedef size_t difference_type;
-    typedef pointer<T> Self_t;
-    auto_pointer() : base_pointer<T>() {}
+    typedef auto_pointer<T> Self_t;
+    auto_pointer() : pointer<T>() {}
     ~auto_pointer();
-    auto_pointer( value_type* ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+    auto_pointer( value_type* ptr ) : pointer<T>(ptr) {}
+    operator value_type*() { return pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -1077,7 +1077,7 @@ namespace ka {
   struct RegisterBodyCPU {
     RegisterBodyCPU()
     { 
-      static volatile int isinit = DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
@@ -1085,7 +1085,7 @@ namespace ka {
   struct RegisterBodyGPU {
     RegisterBodyGPU()
     { 
-      static volatile int isinit = DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
@@ -1093,8 +1093,8 @@ namespace ka {
   struct RegisterBodies {
     RegisterBodies()
     { 
-      static volatile int isinit1 = DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
-      static volatile int isinit2 = DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit1 __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit2 __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
