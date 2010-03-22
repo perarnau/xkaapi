@@ -63,8 +63,6 @@ kaapi_rtparam_t kaapi_default_param = {
 
 /** Predefined format
 */
-kaapi_format_t kaapi_shared_format;
-
 kaapi_format_t kaapi_char_format;
 kaapi_format_t kaapi_short_format;
 kaapi_format_t kaapi_int_format;

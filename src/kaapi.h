@@ -314,7 +314,6 @@ typedef struct kaapi_format_t {
 /** predefined format 
 */
 /*@{*/
-extern kaapi_format_t kaapi_shared_format;
 extern kaapi_format_t kaapi_char_format;
 extern kaapi_format_t kaapi_short_format;
 extern kaapi_format_t kaapi_int_format;
