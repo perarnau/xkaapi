@@ -126,6 +126,12 @@ namespace ka {
     );
   };
   
+  struct kaapi_bodies_t {
+    kaapi_task_body_t cpu_body;
+    kaapi_task_body_t gpu_body;
+    kaapi_task_body_t default_body;
+  };
+  
   // --------------------------------------------------------------------  
   template <class T>
   class WrapperFormat {

@@ -1025,7 +1025,7 @@ extern kaapi_format_id_t kaapi_format_taskregister(
 /** \ingroup TASK
     Register a task body into its format
 */
-extern kaapi_task_bodyid_t kaapi_format_taskregister_body( 
+extern kaapi_task_body_t kaapi_format_taskregister_body( 
         struct kaapi_format_t*      fmt,
         kaapi_task_body_t           body,
         int                         archi

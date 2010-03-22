@@ -113,7 +113,7 @@ kaapi_format_id_t kaapi_format_taskregister(
     mais qu'un champ de link => seulement une archi dans la table de hash...
     - 
 */
-kaapi_task_bodyid_t kaapi_format_taskregister_body( 
+kaapi_task_body_t kaapi_format_taskregister_body( 
         kaapi_format_t*             fmt,
         kaapi_task_body_t           body,
         int                         archi
@@ -122,9 +122,9 @@ kaapi_task_bodyid_t kaapi_format_taskregister_body(
   kaapi_uint8_t   entry;
   kaapi_format_t* head;
 
-  if (body ==0) return fmt->fmtid;
+  if (body ==0) return fmt->entrypoint[archi];
   
-  if (fmt->entrypoint[archi] ==body) return fmt->fmtid;
+  if (fmt->entrypoint[archi] ==body) return fmt->entrypoint[archi];
   fmt->entrypoint[archi] = body;
   if (archi == KAAPI_PROC_TYPE_DEFAULT)
     fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = fmt->default_body = body;
