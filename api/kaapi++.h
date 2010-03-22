@@ -98,18 +98,22 @@ namespace ka {
 
   // --------------------------------------------------------------------
   /** link C++ format -> kaapi format */
-  class Format : public kaapi_format_t {
+  class Format {
   public:
     Format( 
-        const std::string& name,
-        size_t             size,
-        void             (*cstor)( void* dest),
-        void             (*dstor)( void* dest),
-        void             (*cstorcopy)( void* dest, const void* src),
-        void             (*copy)( void* dest, const void* src),
-        void             (*assign)( void* dest, const void* src),
-        void             (*print)( FILE* file, const void* src)
+        const std::string& name = "empty",
+        size_t             size = 0,
+        void             (*cstor)( void* dest) = 0,
+        void             (*dstor)( void* dest) = 0,
+        void             (*cstorcopy)( void* dest, const void* src) = 0,
+        void             (*copy)( void* dest, const void* src) = 0,
+        void             (*assign)( void* dest, const void* src) = 0,
+        void             (*print)( FILE* file, const void* src) = 0
     );
+  struct kaapi_format_t* get_c_format() { return fmt; }
+  const struct kaapi_format_t* get_c_format() const { return fmt; }
+  protected:
+    struct kaapi_format_t* fmt;
   };
 
   /** format for update function */

@@ -142,11 +142,11 @@ extern const char* get_kaapi_version(void);
 
 /** Global hash table of all formats: body -> fmt
 */
-extern kaapi_format_t* kaapi_all_format_bybody[256];
+extern struct kaapi_format_t* kaapi_all_format_bybody[256];
 
 /** Global hash table of all formats: fmtid -> fmt
 */
-extern kaapi_format_t* kaapi_all_format_byfmtid[256];
+extern struct kaapi_format_t* kaapi_all_format_byfmtid[256];
 
 
 /* Fwd declaration 
@@ -217,6 +217,46 @@ enum kaapi_request_status_t {
   KAAPI_REQUEST_S_QUIT    = 5
 };
 
+
+
+/* ============================= Format for task ============================ */
+/*
+*/
+/** \ingroup TASK
+    Kaapi task format
+    The format should be 1/ declared 2/ register before any use in task.
+    The format object is only used in order to interpret stack of task.    
+*/
+typedef struct kaapi_format_t {
+  kaapi_format_id_t          fmtid;                                   /* identifier of the format */
+  short                      isinit;                                  /* ==1 iff initialize */
+  const char*                name;                                    /* debug information */
+  
+  /* case of format for a structure or for a task */
+  kaapi_uint32_t             size;                                    /* sizeof the object */  
+  void                       (*cstor)( void* dest);
+  void                       (*dstor)( void* dest);
+  void                       (*cstorcopy)( void* dest, const void* src);
+  void                       (*copy)( void* dest, const void* src);
+  void                       (*assign)( void* dest, const void* src);
+  void                       (*print)( FILE* file, const void* src);
+
+  /* only if it is a format of a task  */
+  kaapi_task_body_t          default_body;                            /* iff a task used on current node */
+  kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
+  int                        count_params;                            /* number of parameters */
+  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
+  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
+  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
+  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
+
+  struct kaapi_format_t      *next_bybody;                            /* link in hash table */
+  struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
+  
+  /* only for Monotonic bound format */
+  int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
+                      const void* value, const struct kaapi_format_t* fmtvalue );
+} kaapi_format_t;
 
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */

@@ -63,20 +63,36 @@ kaapi_rtparam_t kaapi_default_param = {
 
 /** Predefined format
 */
-kaapi_format_t kaapi_char_format;
-kaapi_format_t kaapi_short_format;
-kaapi_format_t kaapi_int_format;
-kaapi_format_t kaapi_long_format;
-kaapi_format_t kaapi_longlong_format;
+kaapi_format_t kaapi_char_format_object;
+kaapi_format_t kaapi_short_format_object;
+kaapi_format_t kaapi_int_format_object;
+kaapi_format_t kaapi_long_format_object;
+kaapi_format_t kaapi_longlong_format_object;
 
-kaapi_format_t kaapi_uchar_format;
-kaapi_format_t kaapi_ushort_format;
-kaapi_format_t kaapi_uint_format;
-kaapi_format_t kaapi_ulong_format;
-kaapi_format_t kaapi_ulonglong_format;
+kaapi_format_t kaapi_uchar_format_object;
+kaapi_format_t kaapi_ushort_format_object;
+kaapi_format_t kaapi_uint_format_object;
+kaapi_format_t kaapi_ulong_format_object;
+kaapi_format_t kaapi_ulonglong_format_object;
 
-kaapi_format_t kaapi_float_format;
-kaapi_format_t kaapi_double_format;
+kaapi_format_t kaapi_float_format_object;
+kaapi_format_t kaapi_double_format_object;
+
+
+kaapi_format_t* kaapi_char_format      = &kaapi_char_format_object;
+kaapi_format_t* kaapi_short_format     = &kaapi_short_format_object;
+kaapi_format_t* kaapi_int_format       = &kaapi_int_format_object;
+kaapi_format_t* kaapi_long_format      = &kaapi_long_format_object;
+kaapi_format_t* kaapi_longlong_format  = &kaapi_longlong_format_object;
+
+kaapi_format_t* kaapi_uchar_format     = &kaapi_uchar_format_object;
+kaapi_format_t* kaapi_ushort_format    = &kaapi_ushort_format_object;
+kaapi_format_t* kaapi_uint_format      = &kaapi_uint_format_object;
+kaapi_format_t* kaapi_ulong_format     = &kaapi_ulong_format_object;
+kaapi_format_t* kaapi_ulonglong_format = &kaapi_ulonglong_format_object;
+
+kaapi_format_t* kaapi_float_format     = &kaapi_float_format_object;
+kaapi_format_t* kaapi_double_format    = &kaapi_double_format_object;
 
 
 /** cpuset related routines
@@ -457,7 +473,7 @@ int kaapi_setup_param( int argc, char** argv )
   static void formatobject##_print( FILE* file, const void* src) { fprintf(file, fmt, *(type*)src); } \
   static inline kaapi_format_t* fnc_##formatobject(void) \
   {\
-    return &formatobject;\
+    return &formatobject##_object;\
   }\
   static inline void __attribute__ ((constructor)) __kaapi_register_format_##formatobject (void)\
   { \

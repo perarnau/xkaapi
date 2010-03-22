@@ -269,63 +269,23 @@ typedef enum kaapi_access_mode_t {
 */
 typedef kaapi_uint32_t kaapi_format_id_t;
 
-/** \ingroup DFG
-     Offset to access to parameter of a task
-*/
-typedef kaapi_uint32_t kaapi_offset_t;
-
-
-/** \ingroup TASK
-    Kaapi task format
-    The format should be 1/ declared 2/ register before any use in task.
-    The format object is only used in order to interpret stack of task.    
-*/
-typedef struct kaapi_format_t {
-  kaapi_format_id_t          fmtid;                                   /* identifier of the format */
-  short                      isinit;                                  /* ==1 iff initialize */
-  const char*                name;                                    /* debug information */
-  
-  /* case of format for a structure or for a task */
-  kaapi_uint32_t             size;                                    /* sizeof the object */  
-  void                       (*cstor)( void* dest);
-  void                       (*dstor)( void* dest);
-  void                       (*cstorcopy)( void* dest, const void* src);
-  void                       (*copy)( void* dest, const void* src);
-  void                       (*assign)( void* dest, const void* src);
-  void                       (*print)( FILE* file, const void* src);
-
-  /* only if it is a format of a task  */
-  kaapi_task_body_t          default_body;                            /* iff a task used on current node */
-  kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
-  int                        count_params;                            /* number of parameters */
-  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
-  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
-  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
-  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
-
-  struct kaapi_format_t      *next_bybody;                            /* link in hash table */
-  struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
-  
-  /* only for Monotonic bound format */
-  int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
-                      const void* value, const struct kaapi_format_t* fmtvalue );
-} kaapi_format_t;
+struct kaapi_format_t;
 
 /** predefined format 
 */
 /*@{*/
-extern kaapi_format_t kaapi_char_format;
-extern kaapi_format_t kaapi_short_format;
-extern kaapi_format_t kaapi_int_format;
-extern kaapi_format_t kaapi_long_format;
-extern kaapi_format_t kaapi_longlong_format;
-extern kaapi_format_t kaapi_uchar_format;
-extern kaapi_format_t kaapi_ushort_format;
-extern kaapi_format_t kaapi_uint_format;
-extern kaapi_format_t kaapi_ulong_format;
-extern kaapi_format_t kaapi_ulonglong_format;
-extern kaapi_format_t kaapi_float_format;
-extern kaapi_format_t kaapi_double_format;
+extern struct kaapi_format_t* kaapi_char_format;
+extern struct kaapi_format_t* kaapi_short_format;
+extern struct kaapi_format_t* kaapi_int_format;
+extern struct kaapi_format_t* kaapi_long_format;
+extern struct kaapi_format_t* kaapi_longlong_format;
+extern struct kaapi_format_t* kaapi_uchar_format;
+extern struct kaapi_format_t* kaapi_ushort_format;
+extern struct kaapi_format_t* kaapi_uint_format;
+extern struct kaapi_format_t* kaapi_ulong_format;
+extern struct kaapi_format_t* kaapi_ulonglong_format;
+extern struct kaapi_format_t* kaapi_float_format;
+extern struct kaapi_format_t* kaapi_double_format;
 /*@}*/
 
 
@@ -1036,10 +996,15 @@ extern size_t kaapi_perf_counter_num(void);
 /* Format declaration & registration                                         */
 /* ========================================================================= */
 /** \ingroup TASK
+     Offset to access to parameter of a task
+*/
+typedef kaapi_uint32_t kaapi_offset_t;
+
+/** \ingroup TASK
     Register a format
 */
 extern kaapi_format_id_t kaapi_format_register( 
-        kaapi_format_t*             fmt,
+        struct kaapi_format_t*      fmt,
         const char*                 name
 );
 
@@ -1047,21 +1012,21 @@ extern kaapi_format_id_t kaapi_format_register(
     Register a task format 
 */
 extern kaapi_format_id_t kaapi_format_taskregister( 
-        kaapi_format_t*           (*fmt_fnc)(void),
-        kaapi_task_body_t           body,
-        const char*                 name,
-        size_t                      size,
-        int                         count,
-        const kaapi_access_mode_t   mode_param[],
-        const kaapi_offset_t        offset_param[],
-        const kaapi_format_t*       fmt_params[]
+        struct kaapi_format_t*     (*fmt_fnc)(void),
+        kaapi_task_body_t            body,
+        const char*                  name,
+        size_t                       size,
+        int                          count,
+        const kaapi_access_mode_t    mode_param[],
+        const kaapi_offset_t         offset_param[],
+        const struct kaapi_format_t* fmt_params[]
 );
 
 /** \ingroup TASK
     Register a task body into its format
 */
-extern kaapi_format_id_t kaapi_format_taskregister_body( 
-        kaapi_format_t*             fmt,
+extern kaapi_task_bodyid_t kaapi_format_taskregister_body( 
+        struct kaapi_format_t*      fmt,
         kaapi_task_body_t           body,
         int                         archi
 );
@@ -1070,7 +1035,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_body(
     Register a data structure format
 */
 extern kaapi_format_id_t kaapi_format_structregister( 
-        kaapi_format_t*           (*fmt_fnc)(void),
+        struct kaapi_format_t*    (*fmt_fnc)(void),
         const char*                 name,
         size_t                      size,
         void                       (*cstor)( void* ),
@@ -1084,12 +1049,12 @@ extern kaapi_format_id_t kaapi_format_structregister(
 /** \ingroup TASK
     Resolve a format data structure from the body of a task
 */
-extern kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key);
+extern struct kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key);
 
 /** \ingroup TASK
     Resolve a format data structure from the format identifier
 */
-extern kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
+extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
 #define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body, ... ) \
   static inline kaapi_format_t* formatobject(void) \

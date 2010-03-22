@@ -113,7 +113,7 @@ kaapi_format_id_t kaapi_format_taskregister(
     mais qu'un champ de link => seulement une archi dans la table de hash...
     - 
 */
-kaapi_format_id_t kaapi_format_taskregister_body( 
+kaapi_task_bodyid_t kaapi_format_taskregister_body( 
         kaapi_format_t*             fmt,
         kaapi_task_body_t           body,
         int                         archi
@@ -127,7 +127,7 @@ kaapi_format_id_t kaapi_format_taskregister_body(
   if (fmt->entrypoint[archi] ==body) return fmt->fmtid;
   fmt->entrypoint[archi] = body;
   if (archi == KAAPI_PROC_TYPE_DEFAULT)
-    fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = body;
+    fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = fmt->default_body = body;
 
 #if defined(KAAPI_DEBUG)
   fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)body, (void*)fmt->name );
@@ -141,5 +141,5 @@ kaapi_format_id_t kaapi_format_taskregister_body(
   kaapi_all_format_bybody[entry] = fmt;
 
   /* already registered into hashmap: fmtid -> fmt */  
-  return fmt->fmtid;
+  return body;
 }

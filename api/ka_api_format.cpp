@@ -61,14 +61,15 @@ Format::Format(
 )
 {
   static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
-  kaapi_format_register( this, strdup(fmt_name.c_str()));
-  this->size      = size;
-  this->cstor     = cstor;
-  this->dstor     = dstor;
-  this->cstorcopy = cstorcopy;
-  this->copy      = copy;
-  this->assign    = assign;
-  this->print     = print;
+  fmt = new kaapi_format_t;
+  kaapi_format_register( fmt, strdup(fmt_name.c_str()));
+  fmt->size      = size;
+  fmt->cstor     = cstor;
+  fmt->dstor     = dstor;
+  fmt->cstorcopy = cstorcopy;
+  fmt->copy      = copy;
+  fmt->assign    = assign;
+  fmt->print     = print;
 }
 
 
@@ -79,7 +80,7 @@ FormatUpdateFnc::FormatUpdateFnc(
                    const void* value, const struct kaapi_format_t* fmtvalue )
 ) : Format::Format(name, 0, 0, 0, 0, 0, 0, 0)
 {
-  this->update_mb = update_mb;
+  fmt->update_mb = update_mb;
 }
 
 // --------------------------------------------------------------------------
