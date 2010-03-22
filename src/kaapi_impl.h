@@ -64,11 +64,36 @@ extern "C" {
 */
 #define KAAPI_MAX_RECCALL 1024
 
-/* method to steal task 
+/* Flags to define method to manage concurrency between victim and thieves
+   - STEALCAS: based on compare & swap method
+   - STEALTHE: based on Dijkstra like protocol to ensure mutual exclusion
 */
-//#define KAAPI_USE_CASSTEAL 1
-//#define KAAPI_USE_INTERRUPSTEAL 1
-#define KAAPI_USE_THESTEAL 1
+#define KAAPI_STEALCAS_METHOD 0
+#define KAAPI_STEALTHE_METHOD 1
+
+/* Selection of the method to manage concurrency between victim/thief 
+   to steal task:
+*/
+#ifndef KAAPI_USE_STEALTASK_METHOD
+#define KAAPI_USE_STEALTASK_METHOD KAAPI_STEALCAS_METHOD
+#endif
+
+
+/* Selection of the method to steal into frame:
+*/
+#ifndef KAAPI_USE_STEALFRAME_METHOD
+#define KAAPI_USE_STEALFRAME_METHOD KAAPI_STEALTHE_METHOD
+#endif
+
+/* Verification of correct choice of values */
+#if (KAAPI_USE_STEALFRAME_METHOD !=KAAPI_STEALCAS_METHOD) && (KAAPI_USE_STEALFRAME_METHOD !=KAAPI_STEALTHE_METHOD)
+#error "Bad definition of value for steal frame method"
+#endif
+
+#if (KAAPI_USE_STEALTASK_METHOD !=KAAPI_STEALCAS_METHOD) && (KAAPI_USE_STEALTASK_METHOD !=KAAPI_STEALTHE_METHOD)
+#error "Bad definition of value for steal frame method"
+#endif
+
 
 
 /** Highest level, more trace generated */

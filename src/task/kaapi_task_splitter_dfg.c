@@ -53,14 +53,9 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   kaapi_task_t*           thief_task   = 0;
   kaapi_thread_t*         thief_thread = 0;
   kaapi_tasksteal_arg_t*  argsteal;
-#if 0
-  kaapi_tasksig_arg_t*    argsig;
-#endif
   
 
-#if defined(KAAPI_CONCURRENT_WS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) == 1+_kaapi_get_current_processor()->kid );
-#endif
   kaapi_assert_debug( task !=0 );
   kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
 
@@ -70,22 +65,10 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
     if (kaapi_request_ok( &array[i] )) 
     {
       request = &array[i];
-#if 0
-      fprintf(stdout,"%i kproc reply ok to:%p, @req=%p\n", kaapi_get_current_kid(), (void*)kaapi_all_kprocessors[i], (void*)&array[i] );
-      fflush(stdout);
-#endif
       break;
     }
   }
   kaapi_assert(request !=0);
-
-#if defined(KAAPI_DEBUG_LOURD)
-  char buffer[1024];
-  size_t sz_write = 0;
-  sz_write += snprintf( buffer, 1024, "[steal] task: @=%p, body: @=%p, stack: @=%p", (void*)task, (void*)task->ebody, (void*)thread);
-  fprintf(stdout, "%s\n", buffer);
-  fflush(stdout);
-#endif
 
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:

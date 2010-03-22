@@ -165,7 +165,9 @@ AS_CASE([$with_cas],
   ], [yes], [dnl
     AC_MSG_NOTICE([configure with concurrent workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
-    AC_DEFINE([KAAPI_CONCURRENT_WS],1,[Support concurrent work stealing])
+    # 0 -> KAAPI_STEALCAS_METHOD
+    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],0,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
   ], [dnl
     AC_MSG_ERROR([Unknown value '$with_cas' for --with-cas option. Aborting.])
   ])

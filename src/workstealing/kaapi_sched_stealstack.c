@@ -205,10 +205,10 @@ static int kaapi_sched_stealframe(
       int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, map );
       if ((wc ==0) && kaapi_task_isstealable(task_top))
       {
-#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_THESTEAL) || defined(KAAPI_USE_INTERRUPSTEAL) 
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
         if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
 #else
-//#  warning "Should be implemented"
+#  warning "Should be implemented"
 #endif
         {
 #if defined(KAAPI_DEBUG_LOURD)
@@ -237,7 +237,7 @@ static int kaapi_sched_stealframe(
 */
 int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
 {
-#if defined(KAAPI_USE_CASSTEAL)
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
   kaapi_frame_t*           top_frame;
 #endif
   int savecount;
@@ -253,8 +253,8 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
 
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
   /* lock the stack, if cannot return failed */
-#if defined(KAAPI_USE_CASSTEAL)
   if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
   kaapi_readmem_barrier();
 
@@ -266,7 +266,9 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   }
 
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
-#elif defined(KAAPI_USE_THESTEAL)
+
+#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+
   /* try to steal in each frame */
   thread->thieffp = thread->stackframe;
   kaapi_writemem_barrier();
@@ -280,7 +282,7 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   }
   thread->thieffp = 0;
 #else
-#warning "TO BE IMPLEMENTED"
+#  error "Bad steal frame method"    
 #endif
 
   kaapi_hashmap_destroy( &access_to_gd );
