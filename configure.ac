@@ -156,7 +156,7 @@ AS_CASE([$enable_mode],
   ])
 
 AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
-		 [choose the work stealing algorithm (cas,hybrid,the)])],[],
+		 [choose the work stealing algorithm (cas,hybrid,disjkstra)])],[],
   [with_steal=hybrid]
 )
 AS_CASE([$with_steal],
@@ -172,7 +172,7 @@ AS_CASE([$with_steal],
     # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
     AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],0,[Support concurrent work stealing/task])
     AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
-  ], [the], [dnl
+  ], [disjkstra], [dnl
     AC_MSG_NOTICE([configure with full Disjkstra based workstealing protocol])
     # must not change the ABI. Enabling through AC*DEFINE
     # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
