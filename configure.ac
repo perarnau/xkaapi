@@ -155,21 +155,25 @@ AS_CASE([$enable_mode],
     AC_MSG_ERROR([Unknown compilation mode '$enable_mode'. Aborting.])
   ])
 
-AC_ARG_WITH([cas],[AS_HELP_STRING([--with-cas],
-		 [add concurrent work stealing support])],[],
-  [with_cas=default]
+AC_ARG_WITH([cas],[AS_HELP_STRING([--with-steal],
+		 [Choose work stealing algorithm (hybrid, cas)])],[],
+  [with_steal=hybrid]
 )
-AS_CASE([$with_cas],
-  [default|no], [dnl
-    AC_MSG_NOTICE([configure with cooperative workstealing algorithm])
-  ], [yes], [dnl
+AS_CASE([$with_steal],
+  [hybrid], [dnl
+    AC_MSG_NOTICE([configure with cooperative/concurrent workstealing algorithm])
+    # must not change the ABI. Enabling through AC*DEFINE
+    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
+    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
+  ], [cas], [dnl
     AC_MSG_NOTICE([configure with concurrent workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_STEALCAS_METHOD
+    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
     AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],0,[Support concurrent work stealing/task])
     AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
   ], [dnl
-    AC_MSG_ERROR([Unknown value '$with_cas' for --with-cas option. Aborting.])
+    AC_MSG_ERROR([Unknown value '$with_steal' for --with-steal option. Aborting.])
   ])
 
 AC_ARG_WITH([perfcounter],[AS_HELP_STRING([--with-perfcounter],
