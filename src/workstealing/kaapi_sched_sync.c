@@ -45,31 +45,82 @@
 #include "kaapi_impl.h"
 
 
-/**kaapi_sched_sync
+/** kaapi_sched_sync
+    Here the stack frame is organised like this, task1 is the running task.
+
+    thread->pc | task1  |
+              ----------
+               | task2  |
+               | task3  |
+               | task4  |
+               | task5  |
+          sp ->| ....   |
+     
+  
+   We first push a retn task and execute all the task in the frame in [pc+1, ...,  sp). 
+   The task retn serves to mark the stack structure in case of stealing (...) ? Sure ?
+   
+   On return, we leave the stack such that (the pushed tasks between frame_sp and sp)
+   are poped :
+
+    thread->pc | task1  |
+               ----------
+          sp ->| x x x  |
+               | x x x  |
+               | x x x  |
+               | x x x  |
+               | ....   |
 */
-int kaapi_sched_sync(kaapi_stack_t* stack)
+int kaapi_sched_sync(void)
 {
-  int err;
-  kaapi_task_t* pc     = stack->pc;
-  kaapi_task_t* savepc = pc;
+  kaapi_thread_context_t* thread;
+  kaapi_task_t*           savepc;
+  kaapi_stack_t*          stack;
+  int                     err;
+  int                     save_sticky;
+  kaapi_frame_t*          save_esfp;
+#if defined(KAAPI_DEBUG)
+  kaapi_frame_t*          save_fp;
+#endif
 
-  /* look for retn */
-  while ((pc->body != &kaapi_retn_body) && (pc != stack->sp)) 
-    --pc;
+  thread = _kaapi_self_thread();
+  stack = kaapi_threadcontext2stack(thread);
+  if (kaapi_frame_isempty( thread->sfp ) ) return 0;
 
-  if (kaapi_stack_isempty( stack ) ) return 0;
+  save_sticky = stack->sticky;
+  stack->sticky = 1;
+  savepc = thread->sfp->pc;
+#if defined(KAAPI_DEBUG)
+  save_fp = (kaapi_frame_t*)thread->sfp;
+#endif
+  save_esfp = thread->esfp;
+  thread->esfp = (kaapi_frame_t*)thread->sfp;
 
-  /* stop on retn -> executed next task */
-  stack->pc = --pc;
-
+  /* write barrier in order to commit update */
+  kaapi_writemem_barrier();
+  
 redo:
-  err = kaapi_stack_execchild(stack, pc);
+  err = kaapi_stack_execframe(thread);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
-    pc = stack->pc;
+    kaapi_assert_debug( kaapi_get_current_processor()->thread == thread );
+    kaapi_assert_debug( thread->proc == kaapi_get_current_processor() );
     goto redo;
   }
-  stack->pc = savepc;
+
+  /* reset sticky flag if save_stick != 1 */
+  if (!save_sticky) stack->sticky = 0;
+  
+  if (err) /* but do not restore anyting */
+    return err;
+
+#if defined(KAAPI_DEBUG)
+  kaapi_assert_debug(save_fp == thread->sfp);
+#endif
+  /* flush the stack of task */
+  thread->sfp->pc = thread->sfp->sp = savepc;
+  thread->esfp = save_esfp;
+
   return err;
 }

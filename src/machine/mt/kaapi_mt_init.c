@@ -43,9 +43,9 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 #include <stdlib.h>
 #include <inttypes.h> 
+#include "kaapi_impl.h"
 
 /*
 */
@@ -78,17 +78,12 @@ void _kaapi_dummy(void* foo)
 {
 }
 
-/** Dependencies with kaapi_stack_t* kaapi_self_stack(void)
-*/
-kaapi_stack_t* kaapi_self_stack(void)
-{
-  return _kaapi_self_stack();
-}
 
-/** Dumy task pushed at startup into the main thread
+/** 
 */
-void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
+kaapi_thread_t* kaapi_self_thread(void)
 {
+  return (kaapi_thread_t*)_kaapi_self_thread()->sfp;
 }
 
 
@@ -97,10 +92,9 @@ void kaapi_taskstartup_body( kaapi_task_t* task, kaapi_stack_t* stack)
 void __attribute__ ((constructor)) kaapi_init(void)
 {
   kaapi_isterm = 0;
-  kaapi_stack_t* stack;
-  kaapi_task_t* task;
-  kaapi_frame_t frame;
-  const char* version __attribute__((unused)) = get_kaapi_version();
+  kaapi_thread_context_t* thread;
+  kaapi_task_t*   task;
+  const char*     version __attribute__((unused)) = get_kaapi_version();
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
@@ -111,27 +105,42 @@ void __attribute__ ((constructor)) kaapi_init(void)
   /* setup topology information */
   kaapi_setup_topology();
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /* call prior setconcurrency */
+  kaapi_perf_global_init();
+  /* kaapi_perf_thread_init(); */
+#endif
+
   /* set the kprocessor AFTER topology !!! */
-  kaapi_assert_m( 0, kaapi_setconcurrency( default_param.cpucount ), "kaapi_setconcurrency" );
+  kaapi_assert_m( 0, kaapi_setconcurrency( kaapi_default_param.cpucount ), "kaapi_setconcurrency" );
   
-  pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] );
-
+/*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
-  stack = _kaapi_self_stack();
-  kaapi_stack_save_frame(stack, &frame);
-  task = kaapi_stack_toptask(stack);
-  task->flag  = KAAPI_TASK_STICKY;
-  task->body  = &kaapi_taskstartup_body;
-  kaapi_task_format_debug( task );
-  kaapi_task_setstate( task, KAAPI_TASK_S_EXEC );
+  thread = _kaapi_self_thread();
+  task = kaapi_thread_toptask(kaapi_threadcontext2thread(thread));
+  kaapi_task_init( task, kaapi_taskstartup_body, 0 );
+  kaapi_task_setbody( task, kaapi_exec_body);
+  kaapi_thread_pushtask(kaapi_threadcontext2thread(thread));
 
-  kaapi_stack_pushtask(stack);
+  /* push the current frame that correspond to the execution of the startup task */
+  thread->sfp[1].pc      = thread->sfp->sp;
+  thread->sfp[1].sp      = thread->sfp->sp;
+  thread->sfp[1].sp_data = thread->sfp->sp_data;
+  ++thread->sfp;
 
-  /* push marker of the frame: retn */
-  kaapi_stack_pushretn(stack, &frame);
-  
+  /* WARNING strong impact on execution, see kaapi_sched_sync */
+/*  kaapi_stack2threadcontext(stack)->frame_sp = stack->sp; */
+/*** END */
+
   /* dump output information */
-  printf("[KAAPI::INIT] use #physical cpu:%u\n", default_param.cpucount);
+#if defined(KAAPI_USE_PERFCOUNTER)
+  printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
+#else
+  printf("[KAAPI::INIT] use #physical cpu:%u\n", kaapi_default_param.cpucount);
+#endif
+  fflush( stdout );
+  
+  kaapi_default_param.startuptime = kaapi_get_elapsedns();
 }
 
 
@@ -140,13 +149,26 @@ void __attribute__ ((constructor)) kaapi_init(void)
 void __attribute__ ((destructor)) kaapi_fini(void)
 {
   int i;
+#if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint64_t cnt_tasks;
   kaapi_uint64_t cnt_stealreqok;
   kaapi_uint64_t cnt_stealreq;
   kaapi_uint64_t cnt_stealop;
-  double t_idle;
+  kaapi_uint64_t cnt_suspend;
+  double t_sched;
+  double t_preempt;
+#endif
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_stop(kaapi_all_kprocessors[0]);
+#endif
   
+#if defined(KAAPI_USE_PERFCOUNTER)
+  printf("[KAAPI::TERM] end time:%15f\n", kaapi_get_elapsedtime());
+#else
   printf("[KAAPI::TERM]\n");
+#endif
   fflush( stdout );
 
   /* wait end of the initialization */
@@ -157,19 +179,79 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   {
     kaapi_sched_advance( kaapi_all_kprocessors[0] );
   }
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
+  kaapi_perf_global_fini();
   
   cnt_tasks       = 0;
   cnt_stealreqok  = 0;
   cnt_stealreq    = 0;
   cnt_stealop     = 0;
-  t_idle          = 0;
+  cnt_suspend     = 0;
+
+  t_sched         = 0;
+  t_preempt       = 0;
+#endif
+
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
-    cnt_tasks       += kaapi_all_kprocessors[i]->cnt_tasks;
-    cnt_stealreqok  += kaapi_all_kprocessors[i]->cnt_stealreqok;
-    cnt_stealreq    += kaapi_all_kprocessors[i]->cnt_stealreq;
-    cnt_stealop     += kaapi_all_kprocessors[i]->cnt_stealop;
-    t_idle          += kaapi_all_kprocessors[i]->t_idle;
+#if defined(KAAPI_USE_PERFCOUNTER)
+
+# ifndef PRIu64
+#   if (sizeof(unsigned long) == sizeof(uint64_t))
+#     define PRIu64 "lu"
+#   else
+#     define PRIu64 "llu"
+#   endif
+# endif
+
+# ifndef PRI64
+/* #   if (sizeof(unsigned long) == sizeof(uint64_t)) */
+/* #     define PRI64 "ld" */
+/* #   else */
+#     define PRI64 "lld"
+/* #   endif */
+# endif 
+
+# ifndef PRIu32
+#   define PRIu32 "u"
+# endif
+
+    cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
+    cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
+    cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
+    cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
+    cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
+    t_sched +=        KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TIDLE);
+    t_preempt +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
+      
+  /* */
+  if (kaapi_default_param.display_perfcounter)
+  {
+
+    printf("----- Performance counters, core   : %i\n", i);
+    printf("Total number of tasks executed     : %" PRI64", %"PRI64"\n",
+	   KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS),
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS)
+    );
+    printf("Total number of steal OK requests  : %"PRI64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
+    );
+    printf("Total number of steal BAD requests : %"PRI64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ)-
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
+    );
+    printf("Total number of steal operations   : %"PRI64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP)
+    );
+    printf("Total number of suspend operations : %"PRI64"\n",
+	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND)
+    );
+    printf("Total idle time                    : %e\n",
+	 kaapi_all_kprocessors[i]->t_sched+kaapi_all_kprocessors[i]->t_preempt);
+  }
+#endif
 
     free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
@@ -179,24 +261,18 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* */
-  if (default_param.display_perfcounter)
+  if (kaapi_default_param.display_perfcounter)
   {
-
-#ifndef PRIu64
-# if (sizeof(long) == sizeof(uint64_t))
-#  define PRIu64 "lu"
-# else
-#  define PRIu64 "llu"
-# endif
-#endif
-
-    printf("----- Performances counter\n");
-    printf("Total number of tasks executed    : %" PRIu64 "\n", cnt_tasks);
-    printf("Total number of steal OK requests : %" PRIu64 "\n", cnt_stealreqok);
-    printf("Total number of steal BAD requests: %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
-    printf("Total number of steal operations  : %" PRIu64 "\n", cnt_stealop);
-    printf("Total idle time                   : %e\n", t_idle);
-    printf("Average steal request aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
+    printf("----- Cumulated Performance counters\n");
+    printf("Total number of tasks executed     : %" PRIu64 "\n", cnt_tasks);
+    printf("Total number of steal OK requests  : %" PRIu64 "\n", cnt_stealreqok);
+    printf("Total number of steal BAD requests : %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
+    printf("Total number of steal operations   : %" PRIu64 "\n", cnt_stealop);
+    printf("Total number of suspend operations : %" PRIu64 "\n", cnt_suspend);
+    printf("Total idle time                    : %e\n", t_sched+t_preempt);
+    printf("   sched idle time                 : %e\n", t_sched);
+    printf("   preemption idle time            : %e\n", t_preempt);
+    printf("Average steal requests aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
 #endif  
   

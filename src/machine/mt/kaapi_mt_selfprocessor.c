@@ -45,7 +45,12 @@
 */
 #include "kaapi_impl.h"
 
-extern kaapi_processor_t* kaapi_get_current_processor(void)
+kaapi_processor_t* kaapi_get_current_processor(void)
 { 
   return _kaapi_get_current_processor();
+}
+
+kaapi_processor_id_t kaapi_get_current_kid(void)
+{
+  return kaapi_get_current_processor()->kid;
 }

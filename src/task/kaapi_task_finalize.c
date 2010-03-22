@@ -47,36 +47,42 @@
 
 /**
 */
-void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
 {
-  kaapi_taskadaptive_t* ta = task->sp;
+  kaapi_taskadaptive_t* ta = kaapi_task_getargst(taskarg, kaapi_taskadaptive_t);
   kaapi_assert_debug( ta !=0 );
+  kaapi_assert(ta->mastertask ==0); /* only master could call this function  */
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-    double t0, t1;
+  double t0, t1;
 #endif
 
-  if (ta->mastertask ==0) /* I'm a master task, wait  */
-  {
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
+  t0 = kaapi_get_elapsedtime();
 #endif
-    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;
+  while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;/* pthread_yield_np(); */
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime();
-    stack->_proc->t_idle += t1-t0;
+  t1 = kaapi_get_elapsedtime();
+  stack->_proc->t_sched += t1-t0;
 #endif
-    kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
+
+  kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
+
 #if defined(KAAPI_DEBUG)
-    kaapi_assert_debug( ta->thievescount._counter == 0);
+  kaapi_assert_debug( ta->thievescount._counter == 0);
 #endif
-  }
-  else if (ta->result !=0) /* thief has been preempted or flagged as NOPREEMPT */
-  {
-    /* If I have something to write, write it */
-    if ((ta->local_result_data !=0) && (ta->local_result_size !=0))
-    {
-      memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
-    }
-  }
+ 
+  /* here free all taskresult data structure */
 }
+
+
+/*
+*/
+void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
+{
+  kaapi_taskadaptive_t* ta = kaapi_task_getargst(taskarg, kaapi_taskadaptive_t);
+  kaapi_assert_debug( ta !=0 );
+  kaapi_assert(ta->mastertask !=0); /* only master could call this function  */
+}
+
+

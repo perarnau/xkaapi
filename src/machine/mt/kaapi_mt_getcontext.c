@@ -50,7 +50,7 @@
 int kaapi_getcontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt )
 {
   kaapi_assert_debug( proc == _kaapi_get_current_processor() );
-  *ctxt = *proc->ctxt;
+  *ctxt = *proc->thread;
   return 0;
 #if 0  /* TODO: next version when also saving the stack context */
   ctxt->flags        = proc->flags;

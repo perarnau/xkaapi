@@ -54,9 +54,16 @@ int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi
   kaapi_assert_debug( victim !=0 );
 
   if (kproc->hlevel < level) return EINVAL;
-  if (kproc->fnc_selecarg ==0) kproc->fnc_selecarg = (void*)(long)rand();
 
   victim->level = level;
+
+  if (kproc->fnc_selecarg ==0) {
+    kproc->fnc_selecarg = (void*)(long)rand();
+/*TG: After very few experiments, it seems to better take random choice first
+    victim->kproc = kaapi_all_kprocessors[ 0 ];
+    return 0;
+*/
+  }
 
 redo_select:
   nbproc = kproc->hlcount[level];

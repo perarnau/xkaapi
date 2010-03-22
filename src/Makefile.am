@@ -8,7 +8,7 @@
 
 lib_LTLIBRARIES= libxkaapi.la
 
-libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE -DKAAPI_DEBUG
+libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE
 libxkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS)
 libxkaapi_la_LDFLAGS = -version-info 0:0:0 $(XKAAPILIB_BUILD_LDFLAGS)
 libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
@@ -20,13 +20,23 @@ libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
 #  )
 #endif (KAAPI_TARGET_MT)
 
+#deprecated   workstealing/kaapi_sched_stealtask.c 
+
 libxkaapi_la_SOURCES=\
+  misc/kaapi_version.c \
+  misc/kaapi_init.c \
+  misc/kaapi_time.c \
+  misc/kaapi_hashvalue.c \
+  misc/kaapi_hashmap.c \
+  misc/kaapi_liststack.c \
+  misc/kaapi_thread_clear.c \
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \
+  workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
-  workstealing/kaapi_sched_stealtask.c \
+  workstealing/kaapi_sched_stealend.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \
@@ -34,23 +44,25 @@ libxkaapi_la_SOURCES=\
   task/kaapi_stack_init.c \
   task/kaapi_stack_clear.c \
   task/kaapi_stack_print.c \
-  task/kaapi_stack_execall.c \
-  task/kaapi_stack_execchild.c \
+  task/kaapi_stack_execframe.c \
+  task/kaapi_stack_saveframe.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
+  task/kaapi_task_signal.c \
   task/kaapi_task_splitter_dfg.c \
+  task/kaapi_task_splitter_adapt.c \
+  task/kaapi_task_pushstealcontext.c\
   task/kaapi_task_finalize.c \
-  task/kaapi_task_preempt.c \
+  task/kaapi_task_preemptpoint.c \
+  task/kaapi_task_preempt_head.c \
+  task/kaapi_task_preempt_tail.c \
+  task/kaapi_task_reqreply.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \
-  misc/kaapi_version.c \
-  misc/kaapi_init.c \
-  misc/kaapi_time.c \
-  misc/kaapi_hashvalue.c \
   kaapi_datastructure.h \
   kaapi_defs.h \
   kaapi_error.h \
@@ -70,18 +82,20 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_getconcurrency.c \
   machine/mt/kaapi_mt_getcontext.c \
   machine/mt/kaapi_mt_setcontext.c \
+  machine/mt/kaapi_mt_set_workload.c \
   machine/mt/kaapi_mt_makecontext.c \
   machine/mt/kaapi_mt_selfprocessor.c \
   machine/mt/kaapi_mt_selfstack.c \
   machine/mt/kaapi_mt_sched_emitsteal.c \
   machine/mt/kaapi_mt_request_reply.c \
-  machine/mt/kaapi_mt_task_signal.c \
   machine/mt/kaapi_mt_sched_advance.c \
   machine/mt/kaapi_mt_context_alloc.c \
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
-  machine/mt/kaapi_mt_machine.h
+  machine/mt/kaapi_mt_machine.h \
+  machine/mt/kaapi_mt_perf.c 
 endif
+
 
 include_HEADERS=\
 	kaapi.h \

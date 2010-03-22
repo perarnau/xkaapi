@@ -73,7 +73,7 @@ int kaapi_setconcurrency( unsigned int concurrency )
   int i;
     
   if (concurrency <1) return EINVAL;
-  if (concurrency > default_param.syscpucount) return EINVAL;
+  if (concurrency > KAAPI_MAX_PROCESSOR) return EINVAL;
 
   if (isinit) return EINVAL;
   isinit = 1;
@@ -98,12 +98,13 @@ int kaapi_setconcurrency( unsigned int concurrency )
       kaapi_barrier_td_setactive(&barrier_init, 1);
 
 #ifdef KAAPI_USE_SCHED_AFFINITY
-      if (default_param.use_affinity)
+      if (kaapi_default_param.use_affinity)
       {
         cpu_set_t cpuset;
-	CPU_ZERO(&cpuset);
-        CPU_SET(default_param.kid_to_cpu[i], &cpuset);
+        CPU_ZERO(&cpuset);
+        CPU_SET(kaapi_default_param.kid_to_cpu[i], &cpuset);
         kaapi_assert_m(0, pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset), "foobar");
+        kaapi_assert_m(0, sched_yield(), "foobar");
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
@@ -118,16 +119,18 @@ int kaapi_setconcurrency( unsigned int concurrency )
     else 
     {
 #ifdef KAAPI_USE_SCHED_AFFINITY
-      if (default_param.use_affinity)
+      if (kaapi_default_param.use_affinity)
       {
         cpu_set_t cpuset;
-	CPU_ZERO(&cpuset);
-        CPU_SET(default_param.kid_to_cpu[i], &cpuset);
+        CPU_ZERO(&cpuset);
+        CPU_SET(kaapi_default_param.kid_to_cpu[i], &cpuset);
         pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+        kaapi_assert_m(0, sched_yield(), "foobar");
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
       kaapi_all_kprocessors[i] = calloc( 1, sizeof(kaapi_processor_t) );
+      kaapi_assert(0 == pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] ) );
 
       if (kaapi_all_kprocessors[i] ==0) 
       {
@@ -141,6 +144,11 @@ int kaapi_setconcurrency( unsigned int concurrency )
 
       /* Initialize the hierarchy information and data structure */
       kaapi_assert( 0 == kaapi_processor_setuphierarchy( kaapi_all_kprocessors[i] ) );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+      /*  */
+      kaapi_perf_thread_init(kaapi_all_kprocessors[i], KAAPI_PERF_USER_STATE);
+#endif
 
       /* register the processor */
       kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
@@ -162,6 +170,11 @@ int kaapi_setconcurrency( unsigned int concurrency )
   kaapi_barrier_td_setactive(&barrier_init2, 0);
   
   kaapi_barrier_td_destroy( &barrier_init );    
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_start(kaapi_all_kprocessors[0]);
+#endif
   return 0;
 }
 
@@ -186,6 +199,11 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_assert( 0 == kaapi_processor_init( kproc ) );
   kproc->kid = kid;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_init(kproc, KAAPI_PERF_SCHEDULE_STATE);
+#endif
+
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
 
@@ -198,9 +216,26 @@ void* kaapi_sched_run_processor( void* arg )
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init2 );
   
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_start(kproc);
+#endif
+
+  /* main work stealing loop */
   kaapi_sched_idle( kproc );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_stop(kproc);
+#endif
 
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /*  */
+  kaapi_perf_thread_fini(kproc); 
+#endif
+
   return 0;
 }

@@ -47,24 +47,93 @@
 
 kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
 {
-  kaapi_thread_context_t* ctxt;
-  kaapi_thread_context_t* prev = 0;
+  kaapi_thread_context_t* ctxt = 0;
+  kaapi_wsqueuectxt_cell_t* cell;
+  int wakeupok = 0;
+  int garbage;
   
-  if (KAAPI_STACK_EMPTY(&kproc->lsuspend)) return 0;
-
-  ctxt = KAAPI_STACK_TOP(&kproc->lsuspend);
-  while (ctxt !=0)
+#if 0
+  if (0 ==kaapi_wsqueuectxt_pop( &kproc->lready, &ctxt ))
+    return ctxt;
+#else
+  /* only steal the ready context if any */
+  if (kproc->ready !=0) 
   {
-    kaapi_stack_t* stack = ctxt;
-    kaapi_task_t*  task = stack->pc;
-    if ((kaapi_task_getstate(task) != KAAPI_TASK_S_STEAL) || (task->body == &kaapi_aftersteal_body))
+    ctxt = kproc->ready;
+    kproc->ready = 0;
+    return ctxt;
+  }    
+#endif
+
+  cell = kproc->lsuspend.head;
+  while (cell !=0)
+  {
+    int status = KAAPI_ATOMIC_READ( &cell->state );
+    if (status != 2 ) /* else already wakeuped */
     {
-      /* remove it from list */
-      KAAPI_STACK_REMOVE( &kproc->lsuspend, prev, ctxt );
-      return ctxt;
+      ctxt = cell->thread;
+      kaapi_task_t* task = ctxt->sfp->pc;
+      if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
+      { 
+        garbage  = 1;
+        /* ok wakeup the thread and try to steal it */
+        while (status !=2)
+        {
+          if (KAAPI_ATOMIC_CAS( &cell->state, status, 2 )) /* if already ==1 -> under stealing */
+          {
+            cell->thread = 0;
+            wakeupok = 1;
+            status = 2;
+          }
+          else status = KAAPI_ATOMIC_READ( &cell->state );
+        }
+        /* if wakeupok the caller has wakeup the thread */
+      }
+      else {
+        wakeupok = 0;
+        garbage  = 0;
+      }
+    } 
+    else 
+    { /* else state = 2: already wakeuped by the owner*/
+      wakeupok = 0;
+      garbage  = 1;
     }
-    prev = ctxt;
-    ctxt = KAAPI_STACK_NEXT_FIELD(ctxt);
+    
+
+    /* If the wakeup is ok or if the cell state is 1, the cell is recyled (push in tail):
+    */
+    kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
+    if (garbage)
+    {
+      kaapi_assert_debug(cell->thread ==0); 
+      /* delete from the queue */
+      if (nextcell !=0)
+        nextcell->prev = cell->prev;
+      else
+        kproc->lsuspend.tail = cell->prev;
+        
+      if (cell->prev !=0)
+        cell->prev->next = nextcell;
+      else
+        kproc->lsuspend.head = nextcell;
+      cell->next =0;
+      cell->prev = 0;
+
+      /* insert it in the recycled queue */
+      kaapi_wsqueuectxt_cell_t* tailfreecell = kproc->lsuspend.tailfreecell;
+      if (tailfreecell ==0)
+        kproc->lsuspend.headfreecell = cell;
+      else 
+        tailfreecell->prev = cell;
+      kproc->lsuspend.tailfreecell = cell;
+
+      if (wakeupok) 
+        return ctxt;
+    }
+
+    cell = nextcell;
   }
+
   return 0; 
 }

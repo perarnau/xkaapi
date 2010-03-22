@@ -45,26 +45,45 @@
 #include "kaapi_impl.h"
 #include <stdio.h>
 
-
 /**
 */
-void kaapi_nop_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_nop_body( void* taskarg, kaapi_thread_t* thread )
 {
 }
 
-/**
+/** Dumy task pushed at startup into the main thread
 */
-void kaapi_retn_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_taskstartup_body( void* taskarg, kaapi_thread_t* thread )
 {
-  kaapi_frame_t* frame = kaapi_task_getargst( task, kaapi_frame_t);
-  kaapi_task_setstate( frame->pc, KAAPI_TASK_S_TERM );
-  kaapi_stack_restore_frame( stack, frame );
 }
 
 /*
 */
-void kaapi_suspend_body( kaapi_task_t* task, kaapi_stack_t* stack)
+void kaapi_suspend_body( void* taskarg, kaapi_thread_t* thread )
+{
+printf("In kaapi_suspend_body\n"); fflush(stdout);
+  _kaapi_self_thread()->errcode |= EWOULDBLOCK << 8;
+}
+
+/*
+*/
+void kaapi_exec_body( void* taskarg, kaapi_thread_t* thread )
+{
+  /* do not allow rexecuting already executed task */
+  kaapi_assert_debug( 0 );
+}
+
+/*
+*/
+void kaapi_adapt_body( void* taskarg, kaapi_thread_t* thread  )
 {
 }
 
 
+/*
+*/
+void kaapi_taskmain_body( void* taskarg, kaapi_thread_t* thread  )
+{
+  kaapi_taskmain_arg_t* arg = (kaapi_taskmain_arg_t*)taskarg;
+  arg->mainentry( arg->argc, arg->argv );
+}

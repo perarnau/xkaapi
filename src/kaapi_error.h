@@ -46,6 +46,8 @@
 #ifndef _KAAPI_ERROR_H
 #define _KAAPI_ERROR_H 1
 
+#include <stdlib.h> /* at least abort */
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -53,10 +55,10 @@ extern "C" {
 #if defined(NDEBUG)
 #  define kaapi_assert( cond ) if (!(cond)) abort();
 #  define kaapi_assert_debug( cond )
+#  define KAAPI_NDEBUG 1
 #else
 #  include <errno.h>
 #  include <stdio.h>
-#  include <stdlib.h>
 #  define kaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
 #  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
 #endif

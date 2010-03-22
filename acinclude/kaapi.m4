@@ -62,7 +62,7 @@ AC_DEFUN([KAAPI_PKGLIB_CHECK], [dnl
 	])dnl
       ])
     ])
-    AS_IF([test "x$with_$2" != "x"], [
+    AS_IF([test "x$with_$2" != "x" && test "x$with_$2" != "xcheck"], [
       AS_IF([test $acx_lib_have_$3 = no], [
         AC_MSG_ERROR([--with-$2 was given, but $1 library cannot be found])
       ])
