@@ -196,7 +196,7 @@ restart_after_steal:
 
     kaapi_writemem_barrier();
     KAAPI_ATOMIC_WRITE(&thread->lock, 0);
-#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+#elif (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
     /* here it's a pop of frame: we use THE like protocol */
     while (fp > eframe) 
     {
@@ -248,7 +248,9 @@ error_swap_body:
   return EWOULDBLOCK;
 #endif
 
+#if 0
 backtrack_stack:
+#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;

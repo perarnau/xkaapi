@@ -63,7 +63,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   */
   kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
 
-#if defined(KAAPI_CONCURRENT_WS)
+#if 1 /* always true until pure cooperative method is re-implemented */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) == 1+_kaapi_get_current_processor()->kid );
 #endif
   
@@ -92,14 +92,14 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
   thread = kproc->thread;
   if ((count >0) && (thread !=0) && (kproc->issteal ==0))
   {
-#if defined(KAAPI_CONCURRENT_WS)
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)||(KAAPI_USE_STEALFRAME_METHOD==KAAPI_STEALTHE_METHOD)
     /* if concurrent WS, then steal directly the current stack of the victim processor
     */
     kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
     /* signal that count thefts are waiting */
     replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
 #else
-#warning  "TO REDO"
+#error  "TO REDO"
     /* signal that count thefts are waiting */
     kaapi_threadcontext2stack(thread)->hasrequest = count;
     thread->errcode |= 0x1; /* interrupt the executor flag to request steal... */
