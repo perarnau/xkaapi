@@ -119,7 +119,7 @@ push_frame:
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+#if 1/*(KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)*/
 begin_loop:
 #endif
   /* stack of task growth down ! */
@@ -127,10 +127,10 @@ begin_loop:
   {
     kaapi_assert_debug( pc > fp->sp );
 
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
 
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
     if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
     { 
       kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
@@ -141,10 +141,17 @@ begin_loop:
       body = kaapi_aftersteal_body;
       pc->body = kaapi_exec_body;
     }
-#elif 0
+#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+    /* wait thief get out pc */
+    while (thread->thiefpc == pc)
+      ;
+    body = pc->body;
+    kaapi_assert_debug( body != kaapi_exec_body);
+    if (body == kaapi_suspend_body) 
+      goto error_swap_body;
     pc->body = kaapi_exec_body;
 #else
-# error "Undefined steal task method"    
+#  error "Undefined steal task method"    
 #endif
 
     /* task execution */
@@ -166,6 +173,7 @@ restart_after_steal:
       goto push_frame;
     }
 
+    /* next task to execute */
     pc = fp->pc = pc -1;
     kaapi_writemem_barrier();
   } /* end of the loop */
@@ -235,7 +243,7 @@ restart_after_steal:
 #endif
   return 0;
 
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
 error_swap_body:
   if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
   kaapi_assert_debug(thread->sfp- fp == 1);

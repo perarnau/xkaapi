@@ -97,6 +97,11 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   }
 
   kaapi_thread_clear(ctxt);
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   ctxt->thieffp = 0;
+#endif
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+  ctxt->thiefpc = 0;
+#endif
   return ctxt;
 }

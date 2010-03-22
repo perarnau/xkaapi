@@ -190,7 +190,7 @@ static int kaapi_sched_stealframe(
       kaapi_stealcontext_t* sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
       kaapi_task_splitter_t  splitter = sc->splitter;
       void*                  argsplitter = sc->argsplitter;
-      if ( (splitter !=0) && (argsplitter !=0) && kaapi_task_casstate(task_top, kaapi_adapt_body, kaapi_suspend_body))
+      if ( (splitter !=0) && (argsplitter !=0) /*&& kaapi_task_casstate(task_top, kaapi_adapt_body, kaapi_suspend_body)*/ )
       {
         /* steal sucess */
         replycount += kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, count-replycount, requests );
@@ -207,10 +207,17 @@ static int kaapi_sched_stealframe(
       {
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
         if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
-#else
-#  warning "Should be implemented"
-#endif
         {
+#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = task_top;
+        kaapi_writemem_barrier();
+        if ((thread->sfp[-1].pc != task_top) && kaapi_task_isstealable(task_top))
+        {
+          /* else victim get owner of task_top */
+          task_top->body = kaapi_suspend_body;
+#else          
+#  error "Should be implemented"
+#endif
 #if defined(KAAPI_DEBUG_LOURD)
           if (strcmp(task_fmt->name, "__Z7TaskSum") ==0) waitloop(thread);
 #endif
@@ -221,6 +228,9 @@ static int kaapi_sched_stealframe(
           kaapi_assert_debug( count-replycount <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
           replycount += kaapi_task_splitter_dfg(thread, task_top, count-replycount, requests );
         }
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = 0;
+#endif
         /* else victim may have executed it */
       }
     }

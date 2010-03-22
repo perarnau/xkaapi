@@ -283,7 +283,12 @@ typedef struct kaapi_thread_context_t {
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
   struct kaapi_thread_context_t* _next;          /** to be stackable */
 
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
+#endif
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+  kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
+#endif
   kaapi_atomic_t                 lock;           /** */ 
 
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
