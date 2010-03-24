@@ -510,6 +510,8 @@ static inline void kaapi_mem_barrier()
 {
 #ifdef KAAPI_USE_ARCH_PPC
   OSMemoryBarrier();
+#elif defined(KAAPI_USE_ARCH_X86_64) || defined(KAAPI_USE_ARCH_X86)
+  OSMemoryBarrier();
 #endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
@@ -520,14 +522,20 @@ static inline void kaapi_mem_barrier()
 
 static inline void kaapi_writemem_barrier()  
 {
+#if defined(KAAPI_USE_ARCH_X86_64) || defined(KAAPI_USE_ARCH_X86)
+#else
   __sync_synchronize();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
 
 static inline void kaapi_readmem_barrier()  
 {
+#if defined(KAAPI_USE_ARCH_X86_64) || defined(KAAPI_USE_ARCH_X86)
+#else
   __sync_synchronize();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
