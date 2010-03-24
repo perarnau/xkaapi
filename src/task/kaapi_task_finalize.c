@@ -53,18 +53,7 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_assert_debug( ta !=0 );
   kaapi_assert(ta->mastertask ==0); /* only master could call this function  */
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  double t0, t1;
-#endif
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  t0 = kaapi_get_elapsedtime();
-#endif
   while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;/* pthread_yield_np(); */
-#if defined(KAAPI_USE_PERFCOUNTER)
-  t1 = kaapi_get_elapsedtime();
-  stack->_proc->t_sched += t1-t0;
-#endif
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
@@ -73,16 +62,6 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
 #endif
  
   /* here free all taskresult data structure */
-}
-
-
-/*
-*/
-void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
-{
-  kaapi_taskadaptive_t* ta = kaapi_task_getargst(taskarg, kaapi_taskadaptive_t);
-  kaapi_assert_debug( ta !=0 );
-  kaapi_assert(ta->mastertask !=0); /* only master could call this function  */
 }
 
 

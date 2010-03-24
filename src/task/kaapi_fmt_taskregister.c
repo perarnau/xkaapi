@@ -73,7 +73,7 @@ static kaapi_task_bodyid_t bodyidcounter = KAAPI_TASK_BODY_USER_BASE;
 /**
 */
 kaapi_format_id_t kaapi_format_taskregister( 
-        kaapi_format_t*           (*fmt_fnc)(void),
+        kaapi_format_t*             fmt,
         kaapi_task_body_t           body,
         const char*                 name,
         size_t                      size,
@@ -83,7 +83,7 @@ kaapi_format_id_t kaapi_format_taskregister(
         const kaapi_format_t*       fmt_param[]
 )
 {
-  kaapi_format_t* fmt = (*fmt_fnc)();
+//  kaapi_format_t* fmt = (*fmt_fnc)();
   kaapi_format_register( fmt, name );
 
   fmt->count_params    = count;
@@ -130,7 +130,7 @@ kaapi_task_body_t kaapi_format_taskregister_body(
     fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = fmt->default_body = body;
 
 #if defined(KAAPI_DEBUG)
-  fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)body, (void*)fmt->name );
+  fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)body, fmt->name );
   fflush(stdout);
 #endif
 

@@ -16,7 +16,9 @@ check_PROGRAMS= \
 	fibo_apikaapi          \
 	fibo_apikaapi_opt      \
 	dgemm_kaapi            \
+	dgemm_kaapi_flat       \
 	dgemm_cblas            \
+	poisson3d-kaapi       \
 	nqueens_apiatha        \
 	nqueens_apikaapi        \
 	transform_adapt	       \
@@ -37,7 +39,9 @@ fibo_apiatha_SOURCES=fibo_apiatha.cpp
 fibo_apikaapi_SOURCES=fibo_apikaapi.cpp fibo_apikaapi_main.cpp
 fibo_apikaapi_opt_SOURCES=fibo_apikaapi_opt.cpp fibo_apikaapi_main.cpp
 dgemm_kaapi_SOURCES=dgemm_kaapi.cpp
+dgemm_kaapi_flat_SOURCES=dgemm_kaapi_flat.cpp
 dgemm_cblas_SOURCES=dgemm_cblas.cpp
+poisson3d_kaapi_SOURCES=poisson3d-kaapi.cpp poisson3d.cpp poisson3diter.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
@@ -81,10 +85,20 @@ dgemm_kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLA
 dgemm_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 dgemm_kaapi_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la -lblas
 
+dgemm_kaapi_flat_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
+dgemm_kaapi_flat_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+dgemm_kaapi_flat_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+dgemm_kaapi_flat_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la -lblas
+
 dgemm_cblas_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
 dgemm_cblas_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 dgemm_cblas_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 dgemm_cblas_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la -lblas
+
+poisson3d_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
+poisson3d_kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+poisson3d_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+poisson3d_kaapi_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la -lblas
 
 nqueens_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
 nqueens_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)

@@ -141,7 +141,7 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
-  static Format*            format;
+  static Format*           format;
   static kaapi_format_id_t fmid;
   static kaapi_format_t*   getformat() { if (format==0) format = new Format; return format->get_c_format(); }
   static kaapi_task_bodyid_t default_body;
@@ -160,20 +160,19 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     ',`', `')
     M4_PARAM(`array_offset[$1-1] = (char*)&dummy->f$1 - (char*)dummy; /* BUG ? offsetof(TaskArg_t, f$1); */
     ',`', `')
-    M4_PARAM(`array_format[$1-1] = WrapperFormat<typeformat$1_t>::get_format()->get_c_format();
+    M4_PARAM(`array_format[$1-1] = WrapperFormat<typeformat$1_t>::format.get_c_format();
     ',`', `')
     static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
-    fmid = kaapi_format_taskregister( 
-          &getformat, 
-          0, 
-          task_name.c_str(),
+    static FormatTask task_fmt( 
+          task_name,
           sizeof(TaskArg_t),
           KAAPI_NUMBER_PARAMS,
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format')
       );
-    return getformat();
+      
+    return task_fmt.get_c_format();
   }
 
 };

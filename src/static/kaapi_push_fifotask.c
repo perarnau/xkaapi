@@ -1,5 +1,4 @@
 /*
-** kaapi_task_pushstealcontext.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -42,47 +41,54 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#include "kaapi_staticsched.h"
 
-/**
+
+/*
 */
-kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
-  kaapi_thread_t*       thread,
-  int                   flag,
-  kaapi_task_splitter_t spliter,
-  void*                 argsplitter
-)
+int kaapi_task_bindfifo(kaapi_task_t* task, int ith, kaapi_access_mode_t m, kaapi_fifo_t* fifo_param)
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_t));
-  kaapi_assert_debug( ta !=0 );
-  ta->sc.ctxtthread         = _kaapi_self_thread();
-  ta->sc.thread             = thread;
-  ta->sc.splitter           = spliter;
-  ta->sc.argsplitter        = argsplitter;
-  ta->sc.flag               = flag;
-  ta->sc.hasrequest         = 0;
-  ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
-  ta->sc.haspreempt         = 0;
-#if defined(KAAPI_DEBUG)
-  ta->sc.arg_from_victim    = 0;
-  ta->sc.current_thief_work = 0;
-#endif
+  if ( !KAAPI_ACCESS_IS_FIFO(m)) return 0;
 
-  KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);
-  ta->head                  = 0;
-  ta->tail                  = 0;
-#if defined(KAAPI_DEBUG)
-  ta->current_thief         = 0;
-#endif
-  ta->mastertask            = 0;
-#if defined(KAAPI_DEBUG)
-  ta->result                = 0;
-  ta->result_size           = 0;
-  ta->local_result_size     = 0;
-  ta->local_result_data     = 0;
-#endif
-  ta->sc.ownertask          = kaapi_thread_toptask(thread);
-  kaapi_task_init(ta->sc.ownertask, kaapi_adapt_body, ta);
-  kaapi_thread_pushtask(thread);
-  return &ta->sc;
+  kaapi_assert_debug( KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(m)) || KAAPI_ACCESS_IS_READ(KAAPI_ACCESS_GET_MODE(m)));
+  if (KAAPI_ACCESS_IS_READ(KAAPI_ACCESS_GET_MODE(m)))
+  {
+    kaapi_assert( fifo_param->task_reader ==0);
+    fifo_param->task_reader  = task;
+    fifo_param->param_reader = ith;
+  }
+  else if (KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(m)))
+  {
+    kaapi_assert( fifo_param->task_writer ==0);
+    fifo_param->task_writer  = task;
+    fifo_param->param_writer = ith;
+  }
+  return 0;
 }
+
+
+/*
+*/
+int kaapi_thread_pushfifotask(kaapi_thread_t* thread)
+{
+  int i, countparam;
+  const kaapi_format_t* task_fmt;
+  kaapi_task_t* task = kaapi_thread_toptask(thread);
+  task_fmt = kaapi_format_resolvebybody( task->body );
+
+  if (task_fmt ==0) return 0;
+
+  countparam = task_fmt->count_params;
+  for (i=0; i<countparam; ++i)
+  {
+    kaapi_access_mode_t m = task_fmt->mode_params[i];
+    if ( KAAPI_ACCESS_IS_FIFO(m)) 
+    {
+      kaapi_fifo_t* fifo_param = (kaapi_fifo_t*)(task_fmt->off_params[i] + (char*)task->sp);
+      kaapi_task_bindfifo(task, i, m, fifo_param);
+    }
+  }
+  
+  return 0;
+}
+

@@ -180,6 +180,10 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
 
 
 /* ============================= Default parameters ============================ */
+/** Initialise default format
+*/
+extern void kaapi_init_basicformat(void);
+
 /** Setup KAAPI parameter from
     1/ the command line option
     2/ form the environment variable

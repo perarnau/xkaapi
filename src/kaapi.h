@@ -211,6 +211,7 @@ extern kaapi_uint64_t kaapi_get_elapsedns(void);
 #define KAAPI_ACCESS_MASK_RIGHT_MODE   0x1f   /* 5 bits, ie bit 0, 1, 2, 3, 4, including P mode */
 #define KAAPI_ACCESS_MASK_MODE         0xf    /* without P mode */
 #define KAAPI_ACCESS_MASK_MODE_P       0x10   /* only P mode */
+#define KAAPI_ACCESS_MASK_MODE_F       0x20   /* only Fifo mode */
 
 #define KAAPI_ACCESS_MASK_MEMORY       0x20   /* memory location for the data:  */
 #define KAAPI_ACCESS_MEMORY_STACK      0x00   /* data is in the Kaapi stack */
@@ -223,7 +224,8 @@ typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
   KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
   KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1100 : */
-  KAAPI_ACCESS_MODE_P   = 8,        /* 0001 0000 : */
+  KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
+  KAAPI_ACCESS_MODE_F   = 32,       /* 0010 0000 : only valid with _W or _R */
   KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W
 } kaapi_access_mode_t;
 /*@}*/
@@ -244,6 +246,9 @@ typedef enum kaapi_access_mode_t {
 
 #define KAAPI_ACCESS_IS_POSTPONED( m ) \
   ((m) & KAAPI_ACCESS_MASK_MODE_P)
+
+#define KAAPI_ACCESS_IS_FIFO( m ) \
+  ((m) & KAAPI_ACCESS_MASK_MODE_F)
 
 /* W and CW */
 #define KAAPI_ACCESS_IS_ONLYWRITE( m ) \
@@ -362,7 +367,7 @@ typedef struct kaapi_task_t {
   kaapi_task_bodyid_t   volatile ebody;     /** extra task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
   void*                 pad;       /** padding  */
-} kaapi_task_t ;
+} kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 
 /* ========================================================================= */
@@ -394,6 +399,7 @@ typedef struct kaapi_stealcontext_t {
   kaapi_thread_t*                thread;
   kaapi_task_splitter_t          splitter;
   void*                          argsplitter;
+  int                            flag; 
 
   volatile int                   hasrequest;
   kaapi_request_t*               requests;
@@ -403,7 +409,10 @@ typedef struct kaapi_stealcontext_t {
   void* volatile                 current_thief_work; /* work of the thief after preemption */
 } kaapi_stealcontext_t;
 
-
+/* flags (or ed) for kaapi_stealcontext_t */
+#define KAAPI_STEALCONTEXT_DEFAULT    0x0   /* no flag */
+#define KAAPI_STEALCONTEXT_NOPREEMPT  0x1   /* no preemption */
+#define KAAPI_STEALCONTEXT_NOSYNC     0x2   /* do not wait end of thieves */
 
 /* ========================================================================= */
 /** \ingroup DFG
@@ -630,7 +639,12 @@ extern int kaapi_sched_sync( void );
 /** \ingroup WS
     Return a new stealcontext to be used with other function of the adaptive API.
 */
-kaapi_stealcontext_t* kaapi_thread_pushstealcontext( kaapi_thread_t* thread );
+kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
+  kaapi_thread_t*       thread,
+  int                   flag,
+  kaapi_task_splitter_t spliter,
+  void*                 argsplitter
+);
 
 
 /** \ingroup WS
@@ -834,25 +848,21 @@ static inline int kaapi_request_reply_failed(
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction
     if a steal request is sent to the task.
+    The old splitter may be saved using getsplitter calls.
     \retval EINVAL in case of error (task not adaptive kind)
     \retval 0 else
 */
-static inline int kaapi_stealbegin(
+static inline int kaapi_steal_setsplitter(
     kaapi_stealcontext_t* stc,
     kaapi_task_splitter_t splitter, void* arg_tasksplitter)
 {
-  stc->argsplitter = arg_tasksplitter;
+  stc->argsplitter = 0;
+  stc->splitter    = 0;
   kaapi_writemem_barrier_api();
+  stc->argsplitter = arg_tasksplitter;
   stc->splitter    = splitter;
   return 0;
 }
-
-/** \ingroup ADAPTIVE
-    Erase the previously splitter action and avoid concurrent steal on return.
-    \retval 0 in case of success
-    \retval !=0 in case of error code
-*/
-extern int kaapi_stealend(kaapi_stealcontext_t* stc);
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
@@ -866,7 +876,7 @@ extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
     This method should be called in a frame with scope included by the frame where was done the call 
     to kaapi_thread_pushstealcontext that creates the context.
 */
-static inline int kaapi_finalize_steal( kaapi_stealcontext_t* stc )
+static inline int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
 {
   kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
   kaapi_task_init( task, kaapi_taskfinalize_body, stc );
@@ -877,28 +887,20 @@ static inline int kaapi_finalize_steal( kaapi_stealcontext_t* stc )
 /** Body of the task in charge of finalize of thief of adaptive task
     \ingroup TASK
 */
+typedef struct kaapi_taskreturn_args_t {
+  kaapi_stealcontext_t* remotestc;
+  void*                 userarg;
+  size_t                usersize;
+} kaapi_taskreturn_args_t;
 extern void kaapi_taskreturn_body( void*, kaapi_thread_t* );
 
+
 /** \ingroup ADAPTIVE
-    Push the task that, on execution will wait the terminaison of the previous 
-    adaptive task 'task' and all the thieves.
-    The local result, if not null will be pushed after the end of execution of all local tasks.
+    Push a task that, on execution will wait the signal end of the thief computations
 */
-static inline int kaapi_return_steal( kaapi_stealcontext_t* stc, void* retval, int size )
-{
-/*
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
-  kaapi_assert( (size ==0) || size <= ta->result_size );
+extern int kaapi_steal_pushthiefreturn( kaapi_thread_t* thiefstack, kaapi_stealcontext_t* stc, void* retval, int size );
 
 
-  ta->local_result_data = retval;
-  ta->local_result_size = size;  
-*/
-  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
-  kaapi_task_init( task, kaapi_taskreturn_body, stc );
-  kaapi_thread_pushtask(stc->thread);
-  return 0;
-}
 
 /** \ingroup PERF
     performace counters
@@ -1012,7 +1014,7 @@ extern kaapi_format_id_t kaapi_format_register(
     Register a task format 
 */
 extern kaapi_format_id_t kaapi_format_taskregister( 
-        struct kaapi_format_t*     (*fmt_fnc)(void),
+        struct kaapi_format_t*       fmt, //(*fmt_fnc)(void),
         kaapi_task_body_t            body,
         const char*                  name,
         size_t                       size,

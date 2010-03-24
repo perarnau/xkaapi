@@ -53,12 +53,7 @@
 static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, kaapi_hashmap_t* map )
 {
   int i, wc, countparam;
-#if defined(KAAPI_DEBUG_LOURD)
-  char buffer[1024];
-  size_t sz_write = 0;
-  sz_write += snprintf( buffer, 1024, "[ready?] task: @=%p ", 
-        (void*)task);
-#endif
+
   countparam = wc = task_fmt->count_params;
   for (i=0; i<countparam; ++i)
   {
@@ -87,10 +82,6 @@ static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_fo
     if (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
       gd->last_mode = m;
     
-#if defined(KAAPI_DEBUG_LOURD)
-    sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data@=%p, gd:@=%p last_mode=%i ", (void*)access->data, (void*)gd, gd->last_mode );
-#endif
-
     /* currently, datas produced by aftersteal_task are visible to thief in order to augment
        the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R could
        be used (the middle R->W is splitted -renaming is also used in other context-).
@@ -127,33 +118,9 @@ static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_fo
             - seems good... with more details
     */
   }
-#if defined(KAAPI_DEBUG_LOURD)
-  sz_write += snprintf( buffer+sz_write, 1024-sz_write, "==> wc:=%i\n", wc);
-  fprintf(stdout, buffer);
-  fflush(stdout);
-#endif
-
   return wc;
 }
 
-#if defined(KAAPI_DEBUG_LOURD)
-static void waitloop(
-    kaapi_thread_context_t* thread
-)
-{
-  int value = 1;
-  fprintf(stderr, "Attach debugger to pid:%i\n", getpid());
-  fflush(stderr);
-  while (value)
-    sleep(1);
-  
-  kaapi_stack_print(stdout, thread);
-
-  while (!value)
-    sleep(1);
-    
-}
-#endif
 
 /** Steal task in the frame [frame->pc:frame->sp)
 */
@@ -190,7 +157,7 @@ static int kaapi_sched_stealframe(
       kaapi_stealcontext_t* sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
       kaapi_task_splitter_t  splitter = sc->splitter;
       void*                  argsplitter = sc->argsplitter;
-      if ( (splitter !=0) && (argsplitter !=0) /*&& kaapi_task_casstate(task_top, kaapi_adapt_body, kaapi_suspend_body)*/ )
+      if ( (splitter !=0) && (argsplitter !=0) )
       {
         /* steal sucess */
         replycount += kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, count-replycount, requests );
@@ -217,9 +184,6 @@ static int kaapi_sched_stealframe(
           task_top->body = kaapi_suspend_body;
 #else          
 #  error "Should be implemented"
-#endif
-#if defined(KAAPI_DEBUG_LOURD)
-          if (strcmp(task_fmt->name, "__Z7TaskSum") ==0) waitloop(thread);
 #endif
 #if defined(LOG_STACK)
           fprintf(stdout,"\n\n>>>>>>>> %p:: STEAL Task=%p, wc=%i\n", thread, (void*)task_top, wc );

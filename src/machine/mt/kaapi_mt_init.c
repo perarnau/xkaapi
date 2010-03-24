@@ -91,10 +91,16 @@ kaapi_thread_t* kaapi_self_thread(void)
 */
 void __attribute__ ((constructor)) kaapi_init(void)
 {
+  static int iscalled = 0;
+  if (iscalled !=0) return;
+  iscalled = 1;
+  
   kaapi_isterm = 0;
   kaapi_thread_context_t* thread;
   kaapi_task_t*   task;
   const char*     version __attribute__((unused)) = get_kaapi_version();
+  
+  kaapi_init_basicformat();
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );

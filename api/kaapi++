@@ -1,6 +1,6 @@
 /* KAAPI public interface */
 /*
-** athapascan-2
+** kaapi++ API
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -8,7 +8,6 @@
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute

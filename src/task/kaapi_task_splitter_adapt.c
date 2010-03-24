@@ -58,7 +58,6 @@ int kaapi_task_splitter_adapt(
   kaapi_stealcontext_t*   sc;
   
   kaapi_assert_debug( task !=0 );
-  kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
 
   /* call the user splitter */
   sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
@@ -66,7 +65,6 @@ int kaapi_task_splitter_adapt(
 
   /* reset the body to adapt body */
   kaapi_writemem_barrier();
-  kaapi_task_setbody(task, kaapi_adapt_body);
 
   return count;
 }

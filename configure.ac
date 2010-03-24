@@ -157,7 +157,7 @@ AS_CASE([$enable_mode],
 
 AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
 		 [choose the work stealing algorithm (cas,hybrid,disjkstra)])],[],
-  [with_steal=hybrid]
+  [with_steal=disjkstra]
 )
 AS_CASE([$with_steal],
   [hybrid], [dnl
