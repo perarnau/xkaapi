@@ -142,6 +142,7 @@ FormatTask::FormatTask(
 
 
 // --------------------------------------------------------------------------
+#if 1
 template <> const WrapperFormat<char> WrapperFormat<char>::format(kaapi_char_format);
 template <> const WrapperFormat<short> WrapperFormat<short>::format(kaapi_short_format);
 template <> const WrapperFormat<int> WrapperFormat<int>::format(kaapi_int_format);
@@ -152,5 +153,6 @@ template <> const WrapperFormat<unsigned int> WrapperFormat<unsigned int>::forma
 template <> const WrapperFormat<unsigned long> WrapperFormat<unsigned long>::format(kaapi_ulong_format);
 template <> const WrapperFormat<float> WrapperFormat<float>::format(kaapi_float_format);
 template <> const WrapperFormat<double> WrapperFormat<double>::format(kaapi_double_format);
+#endif
   
 } // namespace ka

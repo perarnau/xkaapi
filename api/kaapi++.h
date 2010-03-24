@@ -213,18 +213,17 @@ namespace ka {
     return &format; 
   }
 
-  template <> extern const WrapperFormat<char> WrapperFormat<char>::format;
-  template <> extern const WrapperFormat<short> WrapperFormat<short>::format;
-  template <> extern const WrapperFormat<int> WrapperFormat<int>::format;
-  template <> extern const WrapperFormat<long> WrapperFormat<long>::format;
-  template <> extern const WrapperFormat<unsigned char> WrapperFormat<unsigned char>::format;
-  template <> extern const WrapperFormat<unsigned short> WrapperFormat<unsigned short>::format;
-  template <> extern const WrapperFormat<unsigned int> WrapperFormat<unsigned int>::format;
-  template <> extern const WrapperFormat<unsigned long> WrapperFormat<unsigned long>::format;
-  template <> extern const WrapperFormat<float> WrapperFormat<float>::format;
-  template <> extern const WrapperFormat<double> WrapperFormat<double>::format;
+  template <> const WrapperFormat<char> WrapperFormat<char>::format;
+  template <> const WrapperFormat<short> WrapperFormat<short>::format;
+  template <> const WrapperFormat<int> WrapperFormat<int>::format;
+  template <> const WrapperFormat<long> WrapperFormat<long>::format;
+  template <> const WrapperFormat<unsigned char> WrapperFormat<unsigned char>::format;
+  template <> const WrapperFormat<unsigned short> WrapperFormat<unsigned short>::format;
+  template <> const WrapperFormat<unsigned int> WrapperFormat<unsigned int>::format;
+  template <> const WrapperFormat<unsigned long> WrapperFormat<unsigned long>::format;
+  template <> const WrapperFormat<float> WrapperFormat<float>::format;
+  template <> const WrapperFormat<double> WrapperFormat<double>::format;
   
-
   template <class UpdateFnc>
   const FormatUpdateFnc WrapperFormatUpdateFnc<UpdateFnc>::format (
     typeid(UpdateFnc).name(),

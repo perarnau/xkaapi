@@ -284,7 +284,7 @@ struct ResidueSum {
 
 
 // --------------------------------------------------------------------
-#define USE_Z_CURVE 1
+//#define USE_Z_CURVE 1
 struct Kernel {
   void operator() ( MeshIndex3D& mesh3d,
                     std::vector<KaSubDomain>& old_domain,
