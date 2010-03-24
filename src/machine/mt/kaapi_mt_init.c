@@ -91,10 +91,16 @@ kaapi_thread_t* kaapi_self_thread(void)
 */
 void __attribute__ ((constructor)) kaapi_init(void)
 {
+  static int iscalled = 0;
+  if (iscalled !=0) return;
+  iscalled = 1;
+  
   kaapi_isterm = 0;
   kaapi_thread_context_t* thread;
   kaapi_task_t*   task;
   const char*     version __attribute__((unused)) = get_kaapi_version();
+  
+  kaapi_init_basicformat();
   
   /* set up runtime parameters */
   kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
@@ -117,10 +123,10 @@ void __attribute__ ((constructor)) kaapi_init(void)
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
   thread = _kaapi_self_thread();
-  task = _kaapi_thread_toptask(thread);
+  task = kaapi_thread_toptask(kaapi_threadcontext2thread(thread));
   kaapi_task_init( task, kaapi_taskstartup_body, 0 );
   kaapi_task_setbody( task, kaapi_exec_body);
-  _kaapi_thread_pushtask(thread);
+  kaapi_thread_pushtask(kaapi_threadcontext2thread(thread));
 
   /* push the current frame that correspond to the execution of the startup task */
   thread->sfp[1].pc      = thread->sfp->sp;

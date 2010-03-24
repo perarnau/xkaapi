@@ -1,9 +1,8 @@
 /*
-** kaapi_hashmap.c
 ** xkaapi
 ** 
-** 
-** Copyright 2010 INRIA.
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
@@ -42,40 +41,27 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#include "kaapi_staticsched.h"
 
 
 /*
 */
-int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc )
+int kaapi_task_bindfifo(kaapi_task_t* task, int ith, kaapi_access_mode_t m, kaapi_fifo_t* fifo_param)
 {
-  khm->allallocatedbloc = 0;
-  khm->currentbloc = initbloc;
-  if (initbloc !=0)
-    khm->currentbloc->pos = 0;
-  return 0;
-}
+  if ( !KAAPI_ACCESS_IS_FIFO(m)) return 0;
 
-/*
-*/
-int kaapi_hashmap_clear( kaapi_hashmap_t* khm )
-{
-  memset( &khm->entries, 0, sizeof(khm->entries) );
-  if (khm->currentbloc !=0)
-    khm->currentbloc->pos = 0;
-  return 0;
-}
-
-
-/*
-*/
-int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
-{
-  while (khm->allallocatedbloc !=0)
+  kaapi_assert_debug( KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(m)) || KAAPI_ACCESS_IS_READ(KAAPI_ACCESS_GET_MODE(m)));
+  if (KAAPI_ACCESS_IS_READ(KAAPI_ACCESS_GET_MODE(m)))
   {
-    kaapi_hashentries_bloc_t* curr = khm->allallocatedbloc;
-    khm->allallocatedbloc = curr->next;
-    free (curr);
+    kaapi_assert( fifo_param->task_reader ==0);
+    fifo_param->task_reader  = task;
+    fifo_param->param_reader = ith;
+  }
+  else if (KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(m)))
+  {
+    kaapi_assert( fifo_param->task_writer ==0);
+    fifo_param->task_writer  = task;
+    fifo_param->param_writer = ith;
   }
   return 0;
 }
@@ -83,40 +69,26 @@ int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
 
 /*
 */
-kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
+int kaapi_thread_pushfifotask(kaapi_thread_t* thread)
 {
-  kaapi_uint32_t hkey = kaapi_hash_value_len( (const char*)&ptr, sizeof( void* ) );
-#if defined(KAAPI_DEBUG_LOURD)
-fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
-#endif
-  hkey = hkey % KAAPI_HASHMAP_SIZE;
-  kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
-  kaapi_hashentries_t* entry = list_hash;
-  while (entry != 0)
+  int i, countparam;
+  const kaapi_format_t* task_fmt;
+  kaapi_task_t* task = kaapi_thread_toptask(thread);
+  task_fmt = kaapi_format_resolvebybody( task->body );
+
+  if (task_fmt ==0) return 0;
+
+  countparam = task_fmt->count_params;
+  for (i=0; i<countparam; ++i)
   {
-    if (entry->key == ptr) return entry;
-    entry = entry->next;
+    kaapi_access_mode_t m = task_fmt->mode_params[i];
+    if ( KAAPI_ACCESS_IS_FIFO(m)) 
+    {
+      kaapi_fifo_t* fifo_param = (kaapi_fifo_t*)(task_fmt->off_params[i] + (char*)task->sp);
+      kaapi_task_bindfifo(task, i, m, fifo_param);
+    }
   }
   
-  /* allocate new entry */
-  if (khm->currentbloc == 0) 
-  {
-    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
-    khm->currentbloc->next = khm->allallocatedbloc;
-    khm->allallocatedbloc = khm->currentbloc;
-    khm->currentbloc->pos = 0;
-  }
-  
-  entry = &khm->currentbloc->data[khm->currentbloc->pos];
-  entry->key = ptr;
-  entry->value.last_version = 0;
-  entry->value.last_mode = KAAPI_ACCESS_MODE_VOID;
-  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
-  {
-    khm->currentbloc = 0;
-  }
-  entry->next = list_hash;
-  khm->entries[ hkey ] = entry;
-  return entry;
+  return 0;
 }
 

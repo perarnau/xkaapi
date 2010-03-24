@@ -510,6 +510,8 @@ static inline void kaapi_mem_barrier()
 {
 #ifdef KAAPI_USE_ARCH_PPC
   OSMemoryBarrier();
+#elif defined(KAAPI_USE_ARCH_X86_64) || defined(KAAPI_USE_ARCH_X86)
+  OSMemoryBarrier();
 #endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
@@ -520,14 +522,20 @@ static inline void kaapi_mem_barrier()
 
 static inline void kaapi_writemem_barrier()  
 {
+#if defined(KAAPI_USE_ARCH_X86_64) || defined(KAAPI_USE_ARCH_X86)
+#else
   __sync_synchronize();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
 
 static inline void kaapi_readmem_barrier()  
 {
+#if defined(KAAPI_USE_ARCH_X86_64) || defined(KAAPI_USE_ARCH_X86)
+#else
   __sync_synchronize();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
@@ -597,26 +605,26 @@ static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listre
 
 /** 
 */
-#if defined(KAAPI_USE_CASSTEAL)
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
   kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
   return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
 }
-#elif defined(KAAPI_USE_INTERRUPSTEAL)
+#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+/*
+static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
+{
+  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
+  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
+}
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
   if (task->body != oldbody ) return 0;
   kaapi_task_setbody(task, newbody );
   return 1;
 }
-#elif defined(KAAPI_USE_THESTEAL)
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  kaapi_assert_debug( task->body == oldbody );
-  kaapi_task_setbody(task, newbody );
-  return 1;
-}
+*/
 #else
 #  warning "NOT IMPLEMENTED"
 #endif
@@ -637,13 +645,16 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   if (kproc ==0) return EINVAL;
   if (victim ==0) return EINVAL;
   
+//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim->kproc->hlrequests.count) >= 0 );
+
   req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
-  kaapi_assert_debug( req->status != KAAPI_REQUEST_S_POSTED);
+  kaapi_assert_debug( req->status == KAAPI_REQUEST_S_EMPTY);
   kaapi_assert_debug( req->proc == victim->kproc);
 
   reply->status    = KAAPI_REQUEST_S_POSTED;
   req->reply       = reply;
-  req->thread      = kproc->thread;
+  req->mthread     = kproc->thread;
+  req->thread      = kaapi_threadcontext2thread(kproc->thread);
   reply->data      = 0;
 
   kaapi_writemem_barrier();
@@ -657,6 +668,7 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
      even if the new counter is not yet view
   */
   KAAPI_ATOMIC_INCR( &victim->kproc->hlrequests.count );
+//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim->kproc->hlrequests.count) > 0 );
   
   return 0;
 }

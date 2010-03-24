@@ -71,6 +71,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 /*  t0 = kaapi_get_elapsedtime();  */
 #endif
   do {
+
 /*    usleep( 10000 );*/
 /*pthread_yield_np();*/
 
@@ -86,11 +87,15 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       return;
     }
     
+    ctxt = 0;
     /* local wake up first */
     for (int i=0; i<5; ++i)
     {
-      ctxt = kaapi_sched_wakeup(kproc); 
-      if (ctxt !=0) break;
+      if (!kaapi_sched_suspendlist_empty(kproc))
+      {
+        ctxt = kaapi_sched_wakeup(kproc); 
+        if (ctxt !=0) break;
+      }
     }
 
     if (ctxt !=0) /* push kproc->ctxt to free and set ctxt as new ctxt */
@@ -156,7 +161,10 @@ redo_execute:
       /* push it: suspended because top task is not ready */
       kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
 
-      kproc->thread = kaapi_sched_wakeup(kproc); 
+      if (kaapi_sched_suspendlist_empty(kproc))
+       kproc->thread = 0;
+      else
+        kproc->thread = kaapi_sched_wakeup(kproc); 
       if (kproc->thread !=0) goto redo_execute;
 
       /* else reallocate a context */

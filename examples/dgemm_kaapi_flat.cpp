@@ -9,7 +9,7 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
-#define BASE 1024
+#define BLOC 32
 
 struct TaskAxpyBlas: public ka::Task<8>::Signature< 
         ka::R<double>, 

@@ -36,7 +36,6 @@ libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
-  workstealing/kaapi_sched_stealend.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \
@@ -51,10 +50,13 @@ libxkaapi_la_SOURCES=\
   task/kaapi_task_steal.c \
   task/kaapi_task_signal.c \
   task/kaapi_task_splitter_dfg.c \
+  task/kaapi_task_splitter_adapt.c \
+  task/kaapi_task_pushstealcontext.c\
   task/kaapi_task_finalize.c \
   task/kaapi_task_preemptpoint.c \
-  task/kaapi_task_preempt_next.c \
-  task/kaapi_task_preempt_reverse.c \
+  task/kaapi_task_preempt_head.c \
+  task/kaapi_task_preempt_tail.c \
+  task/kaapi_task_reqreply.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \

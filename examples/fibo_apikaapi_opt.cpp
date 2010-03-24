@@ -115,15 +115,15 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
       *res = n; //fiboseq(n);
     }
     else {
-      ka::pointer_rpwp<long> res1 = thread->Alloca<long>(1);
-      ka::pointer_rpwp<long> res2 = thread->Alloca<long>(1);
+      ka::auto_pointer<long> res1 = thread->Alloca<long>();
+      ka::auto_pointer<long> res2 = thread->Alloca<long>();
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
        */
       thread->Spawn<TaskFibo>() ( res1, n-1);
-//      thread->Spawn<TaskFibo>() ( res2, n-2);
-      (*this) ( thread, res2, n-2);
+      thread->Spawn<TaskFibo>() ( res2, n-2);
+//      (*this) ( thread, res2, n-2);
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished
@@ -133,5 +133,12 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
   }
 };
 
-/* required for separate compilation */
 static ka::RegisterBodyCPU<TaskFibo> dummy_object;
+
+#if 0
+/* required for separate compilation */
+void __attribute__ ((constructor)) kaapi_thisfile()
+{
+  static volatile ka::RegisterBodyCPU<TaskFibo> dummy_object;
+}
+#endif

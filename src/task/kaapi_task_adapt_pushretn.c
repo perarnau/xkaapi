@@ -1,9 +1,9 @@
 /*
-** kaapi_hashmap.c
+** kaapi_task_adapt_pushretn.c
 ** xkaapi
 ** 
-** 
-** Copyright 2010 INRIA.
+** Created on Tue Mar 31 15:18:04 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
@@ -45,78 +45,26 @@
 #include "kaapi_impl.h"
 
 
-/*
+/**
 */
-int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc )
+void kaapi_taskreturn_body( void* a, kaapi_thread_t* thread )
 {
-  khm->allallocatedbloc = 0;
-  khm->currentbloc = initbloc;
-  if (initbloc !=0)
-    khm->currentbloc->pos = 0;
+/*  kaapi_taskreturn_args_t* arg = (kaapi_taskreturn_args_t*)a; */
+}
+
+
+/**
+*/
+int kaapi_steal_pushthiefreturn( kaapi_thread_t* thiefstack, kaapi_stealcontext_t* stc, void* retval, int size )
+{
+  if ( (stc->flag & KAAPI_STEALCONTEXT_NOSYNC) ==0) return 0;
+  kaapi_taskreturn_args_t* arg;
+  kaapi_task_t* task = kaapi_thread_toptask(thiefstack);
+  kaapi_task_init( task, kaapi_taskreturn_body, kaapi_thread_pushdata(thiefstack, sizeof(kaapi_taskreturn_args_t)) );
+  arg = kaapi_task_getargst(task, kaapi_taskreturn_args_t);
+  arg->remotestc = stc;
+  arg->userarg   = retval;
+  arg->usersize  = size;
+  kaapi_thread_pushtask(thiefstack);
   return 0;
 }
-
-/*
-*/
-int kaapi_hashmap_clear( kaapi_hashmap_t* khm )
-{
-  memset( &khm->entries, 0, sizeof(khm->entries) );
-  if (khm->currentbloc !=0)
-    khm->currentbloc->pos = 0;
-  return 0;
-}
-
-
-/*
-*/
-int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
-{
-  while (khm->allallocatedbloc !=0)
-  {
-    kaapi_hashentries_bloc_t* curr = khm->allallocatedbloc;
-    khm->allallocatedbloc = curr->next;
-    free (curr);
-  }
-  return 0;
-}
-
-
-/*
-*/
-kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
-{
-  kaapi_uint32_t hkey = kaapi_hash_value_len( (const char*)&ptr, sizeof( void* ) );
-#if defined(KAAPI_DEBUG_LOURD)
-fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
-#endif
-  hkey = hkey % KAAPI_HASHMAP_SIZE;
-  kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
-  kaapi_hashentries_t* entry = list_hash;
-  while (entry != 0)
-  {
-    if (entry->key == ptr) return entry;
-    entry = entry->next;
-  }
-  
-  /* allocate new entry */
-  if (khm->currentbloc == 0) 
-  {
-    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
-    khm->currentbloc->next = khm->allallocatedbloc;
-    khm->allallocatedbloc = khm->currentbloc;
-    khm->currentbloc->pos = 0;
-  }
-  
-  entry = &khm->currentbloc->data[khm->currentbloc->pos];
-  entry->key = ptr;
-  entry->value.last_version = 0;
-  entry->value.last_mode = KAAPI_ACCESS_MODE_VOID;
-  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
-  {
-    khm->currentbloc = 0;
-  }
-  entry->next = list_hash;
-  khm->entries[ hkey ] = entry;
-  return entry;
-}
-

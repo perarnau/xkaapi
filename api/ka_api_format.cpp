@@ -61,16 +61,43 @@ Format::Format(
 )
 {
   static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
-  kaapi_format_register( this, strdup(fmt_name.c_str()));
-  this->size      = size;
-  this->cstor     = cstor;
-  this->dstor     = dstor;
-  this->cstorcopy = cstorcopy;
-  this->copy      = copy;
-  this->assign    = assign;
-  this->print     = print;
+  if (fmt ==0)
+    fmt = new kaapi_format_t;
+  kaapi_format_register( fmt, strdup(fmt_name.c_str()));
+  fmt->size      = size;
+  fmt->cstor     = cstor;
+  fmt->dstor     = dstor;
+  fmt->cstorcopy = cstorcopy;
+  fmt->copy      = copy;
+  fmt->assign    = assign;
+  fmt->print     = print;
 }
 
+
+// --------------------------------------------------------------------------
+Format::Format( kaapi_format_t* f ) 
+ : fmt(f) 
+{
+}
+
+
+// --------------------------------------------------------------------------
+void Format::reinit( kaapi_format_t* f ) const
+{
+  fmt = f;
+}
+
+// --------------------------------------------------------------------------
+struct kaapi_format_t* Format::get_c_format() 
+{ 
+  if (fmt ==0) fmt = new kaapi_format_t;
+  return fmt; 
+}
+const struct kaapi_format_t* Format::get_c_format() const 
+{ 
+  if (fmt ==0) fmt = new kaapi_format_t;
+  return fmt; 
+}
 
 // --------------------------------------------------------------------------
 FormatUpdateFnc::FormatUpdateFnc( 
@@ -79,66 +106,51 @@ FormatUpdateFnc::FormatUpdateFnc(
                    const void* value, const struct kaapi_format_t* fmtvalue )
 ) : Format::Format(name, 0, 0, 0, 0, 0, 0, 0)
 {
-  this->update_mb = update_mb;
+  fmt->update_mb = update_mb;
 }
 
+
 // --------------------------------------------------------------------------
-#if 0
-template <>
-const Format* WrapperFormat<kaapi_int8_t>::format = (const Format*)&kaapi_char_format;
-template <>
-const Format* WrapperFormat<kaapi_int16_t>::format = (const Format*)&kaapi_short_format;
-template <>
-const Format* WrapperFormat<kaapi_int32_t>::format = (const Format*)&kaapi_int_format;
-/* TODO: switch vers format_longlong si int64_t == long long */
-template <>
-const Format* WrapperFormat<kaapi_int64_t>::format = (const Format*)&kaapi_long_format;
-template <>
-const Format* WrapperFormat<kaapi_uint8_t>::format = (const Format*)&kaapi_uchar_format;
-template <>
-const Format* WrapperFormat<kaapi_uint16_t>::format = (const Format*)&kaapi_ushort_format;
-template <>
-const Format* WrapperFormat<kaapi_uint32_t>::format = (const Format*)&kaapi_uint_format;
-/* TODO: switch vers format_longlong si int64_t == long long */
-template <>
-const Format* WrapperFormat<kaapi_uint64_t>::format = (const Format*)&kaapi_ulong_format;
-template <>
-const Format* WrapperFormat<float>::format = (const Format*)&kaapi_float_format;
-template <>
-const Format* WrapperFormat<double>::format = (const Format*)&kaapi_double_format;
-#endif
+FormatTask::FormatTask( 
+  const std::string&          name,
+  size_t                      size,
+  int                         count,
+  const kaapi_access_mode_t   mode_param[],
+  const kaapi_offset_t        offset_param[],
+  const kaapi_format_t*       fmt_param[]
+) : Format(0)
+{
+  if (fmt ==0)
+    fmt = new kaapi_format_t;
+/*
+  const kaapi_format_t* cfmt_param[count];
+  for (int i=0; i<count; ++i)
+    cfmt_param[i] = fmt_param[i]->get_c_format();
+*/
 
-  template <> const Format* WrapperFormat<char>::get_format() { return (const Format*)&kaapi_char_format; }
-  template <> const Format* WrapperFormat<short>::get_format() { return (const Format*)&kaapi_short_format; }
-  template <> const Format* WrapperFormat<int>::get_format() { return (const Format*)&kaapi_int_format; }
-  template <> const Format* WrapperFormat<long>::get_format() { return (const Format*)&kaapi_long_format; }
-  template <> const Format* WrapperFormat<unsigned char>::get_format() { return (const Format*)&kaapi_uchar_format; }
-  template <> const Format* WrapperFormat<unsigned short>::get_format() { return (const Format*)&kaapi_ushort_format; }
-  template <> const Format* WrapperFormat<unsigned int>::get_format() { return (const Format*)&kaapi_uint_format; }
-  template <> const Format* WrapperFormat<unsigned long>::get_format() { return (const Format*)&kaapi_ulong_format; }
-  template <> const Format* WrapperFormat<float>::get_format() { return (const Format*)&kaapi_float_format; }
-  template <> const Format* WrapperFormat<double>::get_format() { return (const Format*)&kaapi_double_format; }
+  kaapi_format_taskregister( 
+        fmt,
+        0, 
+        name.c_str(),
+        size,
+        count,
+        mode_param,
+        offset_param,
+        fmt_param
+  );
+}
 
-#if 0
-  template <> const Format* WrapperFormat<kaapi_int8_t>::get_format() { return (const Format*)&kaapi_char_format; }
-  template <> const Format* WrapperFormat<kaapi_int16_t>::get_format() { return (const Format*)&kaapi_short_format; }
-  template <> const Format* WrapperFormat<kaapi_int32_t>::get_format() { return (const Format*)&kaapi_int_format; }
-  template <> const Format* WrapperFormat<kaapi_int64_t>::get_format() { return (const Format*)&kaapi_long_format; }
-  template <> const Format* WrapperFormat<kaapi_uint8_t>::get_format() { return (const Format*)&kaapi_uchar_format; }
-  template <> const Format* WrapperFormat<kaapi_uint16_t>::get_format() { return (const Format*)&kaapi_ushort_format; }
-  template <> const Format* WrapperFormat<kaapi_uint32_t>::get_format() { return (const Format*)&kaapi_uint_format; }
-  template <> const Format* WrapperFormat<kaapi_uint64_t>::get_format() { return (const Format*)&kaapi_ulong_format; }
-#endif
 
-const Format WrapperFormat<Access>::theformat(
-  "Access",
-  sizeof(Access),
-  0,
-  0,
-  0,
-  0,
-  0,
-  0
-);
+// --------------------------------------------------------------------------
+template <> const WrapperFormat<char> WrapperFormat<char>::format(kaapi_char_format);
+template <> const WrapperFormat<short> WrapperFormat<short>::format(kaapi_short_format);
+template <> const WrapperFormat<int> WrapperFormat<int>::format(kaapi_int_format);
+template <> const WrapperFormat<long> WrapperFormat<long>::format(kaapi_long_format);
+template <> const WrapperFormat<unsigned char> WrapperFormat<unsigned char>::format(kaapi_uchar_format);
+template <> const WrapperFormat<unsigned short> WrapperFormat<unsigned short>::format(kaapi_ushort_format);
+template <> const WrapperFormat<unsigned int> WrapperFormat<unsigned int>::format(kaapi_uint_format);
+template <> const WrapperFormat<unsigned long> WrapperFormat<unsigned long>::format(kaapi_ulong_format);
+template <> const WrapperFormat<float> WrapperFormat<float>::format(kaapi_float_format);
+template <> const WrapperFormat<double> WrapperFormat<double>::format(kaapi_double_format);
   
 } // namespace ka

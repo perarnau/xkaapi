@@ -1,5 +1,5 @@
 /*
-** kaapi_mt_task_signal.c
+** kaapi_task_pushstealcontext.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -43,19 +43,46 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <stdio.h>
 
 /**
 */
-void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
+  kaapi_thread_t*       thread,
+  int                   flag,
+  kaapi_task_splitter_t spliter,
+  void*                 argsplitter
+)
 {
-  /*
-    printf("Thief end, @stack: 0x%p\n", stack);
-    fflush( stdout );
-  */
-  kaapi_tasksig_arg_t* argsig;
-  kaapi_task_t* task2sig;
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_t));
+  kaapi_assert_debug( ta !=0 );
+  ta->sc.ctxtthread         = _kaapi_self_thread();
+  ta->sc.thread             = thread;
+  ta->sc.splitter           = spliter;
+  ta->sc.argsplitter        = argsplitter;
+  ta->sc.flag               = flag;
+  ta->sc.hasrequest         = 0;
+  ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
+  ta->sc.haspreempt         = 0;
+#if defined(KAAPI_DEBUG)
+  ta->sc.arg_from_victim    = 0;
+  ta->sc.current_thief_work = 0;
+#endif
 
-  argsig = (kaapi_tasksig_arg_t*)taskarg;
-  task2sig = argsig->task2sig;
+  KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);
+  ta->head                  = 0;
+  ta->tail                  = 0;
+#if defined(KAAPI_DEBUG)
+  ta->current_thief         = 0;
+#endif
+  ta->mastertask            = 0;
+#if defined(KAAPI_DEBUG)
+  ta->result                = 0;
+  ta->result_size           = 0;
+  ta->local_result_size     = 0;
+  ta->local_result_data     = 0;
+#endif
+  ta->sc.ownertask          = kaapi_thread_toptask(thread);
+  kaapi_task_init(ta->sc.ownertask, kaapi_adapt_body, ta);
+  kaapi_thread_pushtask(thread);
+  return &ta->sc;
 }

@@ -47,7 +47,7 @@
 
 int kaapi_advance ( void )
 {
-#if defined(KAAPI_CONCURRENT_WS)
+#if 1/*defined(KAAPI_CONCURRENT_WS)*/
   /* high level function -> empty macro */
   return 0;
 #else

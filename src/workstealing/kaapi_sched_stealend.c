@@ -45,19 +45,19 @@
 #include "kaapi_impl.h"
 
 /** \ingroup ADAPTIVE
+    May be inlined if we expose kaapi_task_cas + ATOMIC operation
 */
 int kaapi_stealend(kaapi_stealcontext_t* stc)
 {
-#if 0
-  if (!kaapi_task_isadaptive(task)) return EINVAL;
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
-#if 0//defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_lock(&stack->_proc->lsuspend.lock);
-#endif
-  ta->splitter = 0;
-#if 0//defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
-#endif
-#endif
+  kaapi_assert_debug(stc !=0);
+  stc->splitter    = 0;
+  stc->argsplitter = 0;
+  /* we do not ensure consistency: thief may view one of the previous fields =0 => abort steal operation */
+
+  kaapi_writemem_barrier();
+
+  /* pop the task until no thief are inside */
+  while (!kaapi_task_casstate( stc->ownertask, kaapi_adapt_body, kaapi_adapt_body)) ; 
+
   return 0;
 }

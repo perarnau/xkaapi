@@ -91,10 +91,10 @@ int kaapi_sched_sync(void)
   stack->sticky = 1;
   savepc = thread->sfp->pc;
 #if defined(KAAPI_DEBUG)
-  save_fp = thread->sfp;
+  save_fp = (kaapi_frame_t*)thread->sfp;
 #endif
   save_esfp = thread->esfp;
-  thread->esfp = thread->sfp;
+  thread->esfp = (kaapi_frame_t*)thread->sfp;
 
   /* write barrier in order to commit update */
   kaapi_writemem_barrier();

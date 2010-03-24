@@ -64,11 +64,36 @@ extern "C" {
 */
 #define KAAPI_MAX_RECCALL 1024
 
-/* method to steal task 
+/* Flags to define method to manage concurrency between victim and thieves
+   - STEALCAS: based on compare & swap method
+   - STEALTHE: based on Dijkstra like protocol to ensure mutual exclusion
 */
-#define KAAPI_USE_CASSTEAL 1
-//#define KAAPI_USE_INTERRUPSTEAL 1
-//#define KAAPI_USE_THESTEAL 1
+#define KAAPI_STEALCAS_METHOD 0
+#define KAAPI_STEALTHE_METHOD 1
+
+/* Selection of the method to manage concurrency between victim/thief 
+   to steal task:
+*/
+#ifndef KAAPI_USE_STEALTASK_METHOD
+#define KAAPI_USE_STEALTASK_METHOD KAAPI_STEALCAS_METHOD
+#endif
+
+
+/* Selection of the method to steal into frame:
+*/
+#ifndef KAAPI_USE_STEALFRAME_METHOD
+#define KAAPI_USE_STEALFRAME_METHOD KAAPI_STEALTHE_METHOD
+#endif
+
+/* Verification of correct choice of values */
+#if (KAAPI_USE_STEALFRAME_METHOD !=KAAPI_STEALCAS_METHOD) && (KAAPI_USE_STEALFRAME_METHOD !=KAAPI_STEALTHE_METHOD)
+#error "Bad definition of value for steal frame method"
+#endif
+
+#if (KAAPI_USE_STEALTASK_METHOD !=KAAPI_STEALCAS_METHOD) && (KAAPI_USE_STEALTASK_METHOD !=KAAPI_STEALTHE_METHOD)
+#error "Bad definition of value for steal frame method"
+#endif
+
 
 
 /** Highest level, more trace generated */
@@ -117,11 +142,11 @@ extern const char* get_kaapi_version(void);
 
 /** Global hash table of all formats: body -> fmt
 */
-extern kaapi_format_t* kaapi_all_format_bybody[256];
+extern struct kaapi_format_t* kaapi_all_format_bybody[256];
 
 /** Global hash table of all formats: fmtid -> fmt
 */
-extern kaapi_format_t* kaapi_all_format_byfmtid[256];
+extern struct kaapi_format_t* kaapi_all_format_byfmtid[256];
 
 
 /* Fwd declaration 
@@ -155,6 +180,10 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
 
 
 /* ============================= Default parameters ============================ */
+/** Initialise default format
+*/
+extern void kaapi_init_basicformat(void);
+
 /** Setup KAAPI parameter from
     1/ the command line option
     2/ form the environment variable
@@ -192,6 +221,46 @@ enum kaapi_request_status_t {
   KAAPI_REQUEST_S_QUIT    = 5
 };
 
+
+
+/* ============================= Format for task ============================ */
+/*
+*/
+/** \ingroup TASK
+    Kaapi task format
+    The format should be 1/ declared 2/ register before any use in task.
+    The format object is only used in order to interpret stack of task.    
+*/
+typedef struct kaapi_format_t {
+  kaapi_format_id_t          fmtid;                                   /* identifier of the format */
+  short                      isinit;                                  /* ==1 iff initialize */
+  const char*                name;                                    /* debug information */
+  
+  /* case of format for a structure or for a task */
+  kaapi_uint32_t             size;                                    /* sizeof the object */  
+  void                       (*cstor)( void* dest);
+  void                       (*dstor)( void* dest);
+  void                       (*cstorcopy)( void* dest, const void* src);
+  void                       (*copy)( void* dest, const void* src);
+  void                       (*assign)( void* dest, const void* src);
+  void                       (*print)( FILE* file, const void* src);
+
+  /* only if it is a format of a task  */
+  kaapi_task_body_t          default_body;                            /* iff a task used on current node */
+  kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
+  int                        count_params;                            /* number of parameters */
+  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
+  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
+  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
+  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
+
+  struct kaapi_format_t      *next_bybody;                            /* link in hash table */
+  struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
+  
+  /* only for Monotonic bound format */
+  int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
+                      const void* value, const struct kaapi_format_t* fmtvalue );
+} kaapi_format_t;
 
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */
@@ -251,14 +320,19 @@ typedef struct kaapi_stack_t {
     user code.
 */
 typedef struct kaapi_thread_context_t {
-  kaapi_frame_t*                 sfp;            /** pointer to the current frame (in stackframe) */
+  kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
   struct kaapi_thread_context_t* _next;          /** to be stackable */
 
-  struct kaapi_task_t*           thiefpc __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the first pushed task */
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
+  kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
+#endif
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+  kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
+#endif
   kaapi_atomic_t                 lock;           /** */ 
 
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
@@ -267,7 +341,7 @@ typedef struct kaapi_thread_context_t {
 /* helper function */
 #define kaapi_stack2threadcontext(stack)         ( ((kaapi_thread_context_t*)stack)-1 )
 #define kaapi_threadcontext2stack(thread)        ( (kaapi_stack_t*)((thread)+1) )
-#define kaapi_threadcontext2thread(thread)        ( (kaapi_thread_t*)((thread)->sfp))
+#define kaapi_threadcontext2thread(thread)       ( (kaapi_thread_t*)((thread)->sfp))
 
 
 
@@ -281,9 +355,8 @@ struct kaapi_taskadaptive_result_t;
     This data structure is attached to any adaptative tasks.
 */
 typedef struct kaapi_taskadaptive_t {
-  void*                               user_sp;         /* user argument */
-  kaapi_task_splitter_t               splitter;        /* C function that represent the body to split a task, interest only if isadaptive*/
-  void*                               argsplitter;     /* arg for splitter */
+  kaapi_stealcontext_t                sc;              /* user visible part of the data structure */
+
   kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
@@ -297,7 +370,6 @@ typedef struct kaapi_taskadaptive_t {
   int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
   int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
   void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
-  void*                               arg_from_victim; /* arg received by the victim in case of preemption */
 } kaapi_taskadaptive_t;
 
 
@@ -318,7 +390,7 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* prev;             /* link field to the next spawned thief */
   int                                 size_data;        /* size of data */
   double                              data[1];
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+} /*__attribute__((aligned (KAAPI_CACHE_LINE)))*/ kaapi_taskadaptive_result_t;
 
 #define KAAPI_RESULT_INSTACK   0x01
 #define KAAPI_RESULT_INHEAP    0x02
@@ -365,11 +437,6 @@ extern void kaapi_tasksig_body( void*, kaapi_thread_t*);
     \ingroup TASK
 */
 extern void kaapi_aftersteal_body( void*, kaapi_thread_t* );
-
-/** Body of the task in charge of finalize of adaptive task
-    \ingroup TASK
-*/
-extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
@@ -523,7 +590,7 @@ extern int kaapi_stack_clear( kaapi_stack_t* stack );
     \retval !=0 if the stack is empty
     \retval 0 if the stack is not empty or argument is an invalid stack pointer
 */
-static inline int kaapi_frame_isempty(const kaapi_frame_t* frame)
+static inline int kaapi_frame_isempty(volatile kaapi_frame_t* frame)
 {
   return (frame->pc <= frame->sp);
 }
@@ -555,32 +622,6 @@ typedef struct kaapi_gd_t {
 
 
 
-/** \ingroup TASK
-    Initialize a task with given flag for adaptive attribut or task constraints.
-*/
-#if 0
-static inline int kaapi_task_initadaptive( kaapi_stack_t* stack, kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg, kaapi_uint32_t flag ) 
-{
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata( stack, sizeof(kaapi_taskadaptive_t) );
-  kaapi_assert_debug( ta !=0 );
-  ta->user_sp               = arg;
-  ta->splitter              = 0;
-  ta->argsplitter           = 0;
-  ta->thievescount._counter = 0;
-  ta->head                  = 0;
-  ta->tail                  = 0;
-  ta->result                = 0;
-  ta->mastertask            = 0;
-  ta->arg_from_victim       = 0;
-  task->sp                  = ta;
-  task->flag                = flag | KAAPI_TASK_ADAPTIVE;
-  task->body                = taskbody;
-  return 0;
-}
-#endif
-
-
-
 extern struct kaapi_processor_t* kaapi_get_current_processor(void);
 typedef kaapi_uint32_t kaapi_processor_id_t;
 extern kaapi_processor_id_t kaapi_get_current_kid(void);
@@ -594,6 +635,7 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, kaapi_re
   pkr->flag   = 0; 
   pkr->reply  = 0;
   pkr->thread = 0; 
+  pkr->mthread= 0; 
   pkr->proc   = kproc;
 #if 0
   fprintf(stdout,"%i kproc clear request @req=%p\n", kaapi_get_current_kid(), (void*)pkr );
@@ -629,7 +671,7 @@ typedef struct kaapi_hashentries_t {
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
 
-#define KAAPI_HASHMAP_SIZE 64
+#define KAAPI_HASHMAP_SIZE 128
 /*
 */
 typedef struct kaapi_hashmap_t {
@@ -656,7 +698,17 @@ extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr 
 
 
 
+
+
 /* ============================= Commun function for server side (no public) ============================ */
+/**
+*/
+static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
+{
+  if (kproc->lsuspend.head ==0) return 1;
+  return 0;
+}
+
 /**
 */
 extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
@@ -794,10 +846,20 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
 
 /** \ingroup WS
     Splitter for DFG task
-    \param proc should be the current running thread
 */
 extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t* task, int count, struct kaapi_request_t* array);
 
+/** \ingroup WS
+    Wrapper arround the user level Splitter for Adaptive task
+*/
+extern int kaapi_task_splitter_adapt( 
+    kaapi_thread_context_t* thread, 
+    kaapi_task_t* task,
+    kaapi_task_splitter_t splitter,
+    void* argsplitter,
+    int count, 
+    struct kaapi_request_t* array
+);
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/

@@ -1,5 +1,4 @@
 /*
-** kaapi_mt_task_signal.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -42,20 +41,50 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include <stdio.h>
+#include "kaapi_staticsched.h"
 
 /**
 */
-void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+int kaapi_thread_group_create(kaapi_thread_group_t* thgrp, int size )
 {
-  /*
-    printf("Thief end, @stack: 0x%p\n", stack);
-    fflush( stdout );
-  */
-  kaapi_tasksig_arg_t* argsig;
-  kaapi_task_t* task2sig;
+  int i, j;
+  int error = 0;
+  kaapi_processor_t* proc = _kaapi_get_current_processor();
 
-  argsig = (kaapi_tasksig_arg_t*)taskarg;
-  task2sig = argsig->task2sig;
+  thgrp->group_size = size;
+  thgrp->startflag  = 0;
+  KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
+  thgrp->threads    = malloc( size* sizeof(kaapi_thread_context_t*) );
+  if (thgrp->threads ==0)
+  {
+    thgrp->group_size = 0;
+    return ENOMEM;
+  }
+  
+  for (i=0; i<size; ++i)
+  {
+    thgrp->threads[i] = kaapi_context_alloc( proc );
+    if (thgrp->threads[i] ==0) 
+    {
+      error = ENOMEM;
+      goto return_error;
+    }
+  }
+  
+  error =pthread_mutex_init(&thgrp->mutex, 0);
+  if (error !=0) goto return_error;
+
+  error =pthread_cond_init(&thgrp->cond, 0);
+  if (error !=0) goto return_error;
+
+  return 0;
+
+return_error:
+  for (j=0; j<i; ++j)
+    kaapi_context_free(thgrp->threads[j]);
+
+  free( thgrp->threads );
+  thgrp->group_size = 0;
+  thgrp->threads = 0;
+  return error;  
 }

@@ -1,5 +1,4 @@
 /*
-** kaapi_mt_task_signal.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -42,20 +41,26 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include <stdio.h>
+#include "kaapi_staticsched.h"
+
 
 /**
 */
-void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+int kaapi_thread_group_destroy(kaapi_thread_group_t* thgrp )
 {
-  /*
-    printf("Thief end, @stack: 0x%p\n", stack);
-    fflush( stdout );
-  */
-  kaapi_tasksig_arg_t* argsig;
-  kaapi_task_t* task2sig;
+  int i;
+  if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
+    return EBUSY;
+    
+  for (i=0; i<thgrp->group_size; ++i)
+    kaapi_context_free(thgrp->threads[i]);
 
-  argsig = (kaapi_tasksig_arg_t*)taskarg;
-  task2sig = argsig->task2sig;
+  free( thgrp->threads );
+  thgrp->group_size = 0;
+  thgrp->threads = 0;
+
+  pthread_mutex_destroy(&thgrp->mutex);
+  pthread_cond_destroy(&thgrp->cond);
+  
+  return 0;
 }

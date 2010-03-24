@@ -46,21 +46,6 @@
 
 #include <stddef.h>
 
-/* compute the cache aligned size for kaapi_taskadaptive_result_t
- */
-static inline size_t compute_struct_size(size_t data_size)
-{
-  size_t total_size = offsetof(kaapi_taskadaptive_result_t, data) + data_size;
-
-  if (total_size & (KAAPI_CACHE_LINE - 1))
-    {
-      total_size += KAAPI_CACHE_LINE;
-      total_size &= ~(KAAPI_CACHE_LINE - 1);
-    }
-
-  return total_size;
-}
-
 /** Implementation note:
     - only the thief_stack + signal to the thief has to be port on the machine.
     - the creation of the task to signal back the end of computation must be keept.
@@ -87,13 +72,13 @@ int _kaapi_request_reply
   kaapi_processor_t*      kproc = request->proc;
   kaapi_assert_debug( kproc != 0 );
   kaapi_assert_debug( request != 0 );
-  //int count = KAAPI_ATOMIC_READ(&kproc->hlrequests.count);
-  //kaapi_assert_debug( count > 0);
+  kaapi_assert_debug( request->status == KAAPI_REQUEST_S_POSTED);
   
+//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) > 0 );
   request->flag   = 0;
   request->status = KAAPI_REQUEST_S_EMPTY;
   KAAPI_ATOMIC_DECR( &kproc->hlrequests.count );
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) >= 0 );
+//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->hlrequests.count) >= 0 );
 
 #if 0
   fprintf(stdout,"%i kproc reply request to:proc=%p, @req=%p\n", kaapi_get_current_kid(), (void*)kproc, (void*)request );

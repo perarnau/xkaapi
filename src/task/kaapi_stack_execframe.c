@@ -90,10 +90,6 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 */
 
 
-//#ifdef KAAPI_USE_CASSTEAL
-//#undef KAAPI_USE_CASSTEAL
-//#endif
-
 /*
 */
 int kaapi_stack_execframe( kaapi_thread_context_t* thread )
@@ -110,7 +106,7 @@ int kaapi_stack_execframe( kaapi_thread_context_t* thread )
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
   
 push_frame:
-  fp = thread->sfp;
+  fp = (kaapi_frame_t*)thread->sfp;
   /* push the frame for the next task to execute */
   thread->sfp[1].sp_data = fp->sp_data;
   thread->sfp[1].pc = fp->sp;
@@ -123,21 +119,18 @@ push_frame:
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-//printf("\n\n------------\n");
-//kaapi_stack_print(0, thread );
-  
-#if defined(KAAPI_USE_CASSTEAL)
+#if 1/*(KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)*/
 begin_loop:
 #endif
-  /* stack growth down ! */
+  /* stack of task growth down ! */
   while ((pc = fp->pc) != fp->sp)
   {
     kaapi_assert_debug( pc > fp->sp );
 
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
 
-#if defined(KAAPI_USE_CASSTEAL)
     if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
     { 
       kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
@@ -146,37 +139,41 @@ begin_loop:
         goto error_swap_body;
       /* else ok its aftersteal */
       body = kaapi_aftersteal_body;
+      pc->body = kaapi_exec_body;
     }
-#else
+#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+    /* wait thief get out pc */
+    while (thread->thiefpc == pc)
+      ;
+    body = pc->body;
+    kaapi_assert_debug( body != kaapi_exec_body);
+    if (body == kaapi_suspend_body) 
+      goto error_swap_body;
     pc->body = kaapi_exec_body;
+#else
+#  error "Undefined steal task method"    
 #endif
 
-//printf("\n>>> before exec:%p\n", pc);
-//kaapi_stack_print(0, thread );
-//printf("\n------------------------\n");
     /* task execution */
+    kaapi_assert_debug(pc == thread->sfp[-1].pc);
     body( pc->sp, (kaapi_thread_t*)thread->sfp );
 
-//kaapi_stack_print(0, thread );
-//printf("\n<<< after  exec:%p\n", pc);
-
-#if 1//!defined(KAAPI_CONCURRENT_WS)
+#if 0//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
 #endif
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
 
-#if !defined(KAAPI_CONCURRENT_WS)
+#if  0/*!defined(KAAPI_CONCURRENT_WS)*/
 restart_after_steal:
 #endif
     if (unlikely(fp->sp != thread->sfp->sp))
     {
       goto push_frame;
     }
-#if defined(KAAPI_DEBUG)
-//    kaapi_task_setbody(pc, kaapi_nop_body);
-#endif    
+
+    /* next task to execute */
     pc = fp->pc = pc -1;
     kaapi_writemem_barrier();
   } /* end of the loop */
@@ -186,34 +183,50 @@ restart_after_steal:
 
   if (fp >= eframe)
   {
-#if defined(KAAPI_USE_CASSTEAL)
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
     while (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
-#endif
     while (fp > eframe) 
     {
       --fp;
-#if defined(KAAPI_DEBUG)
-//      kaapi_task_setbody(fp->pc, kaapi_nop_body);
-#endif    
+
       /* pop dummy frame */
       --fp->pc;
       if (fp->pc > fp->sp)
       {
-#if defined(KAAPI_USE_CASSTEAL)
         KAAPI_ATOMIC_WRITE(&thread->lock, 0);
-#endif
         thread->sfp = fp;
-//printf("%p::Pop frame, fp=%p\n", thread, fp);
         goto push_frame; /* remains work do do */
       }
     } 
     fp = eframe;
     fp->sp = fp->pc;
-//    --fp->pc;
-#if defined(KAAPI_USE_CASSTEAL)
+
     kaapi_writemem_barrier();
     KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+#elif (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
+    /* here it's a pop of frame: we use THE like protocol */
+    while (fp > eframe) 
+    {
+      thread->sfp = --fp;
+      kaapi_writemem_barrier();
+      /* wait thief get out the frame */
+      while (thread->thieffp > fp)
+        ;
+
+      /* pop dummy frame and the closure inside this frame */
+      --fp->pc;
+      if (fp->pc > fp->sp)
+      {
+        goto push_frame; /* remains work do do */
+      }
+    } 
+    fp = eframe;
+    fp->sp = fp->pc;
+
+    kaapi_writemem_barrier();
+#else
+#  error "Bad steal frame method"    
 #endif
   }
   thread->sfp = fp;
@@ -230,23 +243,27 @@ restart_after_steal:
 #endif
   return 0;
 
-#if defined(KAAPI_USE_CASSTEAL)
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
 error_swap_body:
   if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
-  kaapi_assert_debug(pc->body == kaapi_suspend_body);
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */
   thread->sfp = fp;
-  kaapi_assert_debug( thread->sfp->pc->body == kaapi_suspend_body );
-  return EWOULDBLOCK;
-#endif
-
-backtrack_stack:
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
-#if !defined(KAAPI_CONCURRENT_WS)
+  return EWOULDBLOCK;
+#endif
+
+#if 0
+backtrack_stack:
+#endif
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  cnt_tasks = 0;
+#endif
+#if 0 /*!defined(KAAPI_CONCURRENT_WS)*/
   if ((thread->errcode & 0x1) !=0) 
   {
     kaapi_sched_advance(thread->proc);

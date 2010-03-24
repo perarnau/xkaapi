@@ -1,8 +1,8 @@
 /*
-** kaapi_mt_task_signal.c
+** kaapi_task_splitter_adapt.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,19 +43,28 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <stdio.h>
 
 /**
 */
-void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+int kaapi_task_splitter_adapt( 
+    kaapi_thread_context_t* thread, 
+    kaapi_task_t* task,
+    kaapi_task_splitter_t splitter,
+    void* argsplitter,
+    int count, 
+    struct kaapi_request_t* array
+)
 {
-  /*
-    printf("Thief end, @stack: 0x%p\n", stack);
-    fflush( stdout );
-  */
-  kaapi_tasksig_arg_t* argsig;
-  kaapi_task_t* task2sig;
+  kaapi_stealcontext_t*   sc;
+  
+  kaapi_assert_debug( task !=0 );
 
-  argsig = (kaapi_tasksig_arg_t*)taskarg;
-  task2sig = argsig->task2sig;
+  /* call the user splitter */
+  sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
+  count = splitter( sc, count, array, argsplitter);
+
+  /* reset the body to adapt body */
+  kaapi_writemem_barrier();
+
+  return count;
 }

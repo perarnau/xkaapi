@@ -147,12 +147,12 @@ namespace a1 {
 
     Shared() : ka::pointer<T>()
     {
-      *this = ka::Alloca<T>();
+      ptr( ka::Alloca<T>() );
     }
 
     Shared(const value_type& value ) : ka::pointer<T>()
     {
-      *this = new (kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T))) T(value);
+      ptr( new (kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T))) T(value) );
     }
 
     Shared(const Shared<value_type>& t) : ka::pointer<T>(t)
@@ -176,6 +176,9 @@ namespace a1 {
     Shared_rp( value_type* a )
      : ka::pointer_rp<T>( a )
     { }
+    explicit Shared_rp( kaapi_access_t& a )
+     : ka::pointer_rp<T>( a )
+    { }
   };
 
 
@@ -189,8 +192,12 @@ namespace a1 {
      : ka::pointer_r<T>( a )
     { }
 
+    explicit Shared_r( kaapi_access_t& a )
+     : ka::pointer_r<T>( a )
+    { }
+
     const value_type& read() const 
-    { return *this; }
+    { return *this->ptr(); }
   };
 
 
@@ -201,6 +208,9 @@ namespace a1 {
     typedef typename ka::pointer_wp<T>::value_type value_type;
 
     Shared_wp( value_type* a )
+     : ka::pointer_wp<T>( a )
+    { }
+    explicit Shared_wp( kaapi_access_t& a )
      : ka::pointer_wp<T>( a )
     { }
   };
@@ -215,10 +225,13 @@ namespace a1 {
     Shared_w( value_type* a )
      : ka::pointer_w<T>( a )
     { }
+    explicit Shared_w( kaapi_access_t& a )
+     : ka::pointer_w<T>( a )
+    { }
 
     void write( const value_type& new_value )
     { 
-      *this = new_value;
+      this->operator*() = new_value;
     }
 
 #if 0 /* old API */
@@ -237,6 +250,9 @@ namespace a1 {
     Shared_rpwp( value_type* a )
      : ka::pointer_rpwp<T>( a )
     { }
+    explicit Shared_rpwp( kaapi_access_t& a )
+     : ka::pointer_rpwp<T>( a )
+    { }
   };
 
 
@@ -250,8 +266,15 @@ namespace a1 {
      : ka::pointer_rw<T>( a )
     { }
 
-    value_type& access() const
-    { return *this; }
+    explicit Shared_rw( kaapi_access_t& a )
+     : ka::pointer_rw<T>( a )
+    { }
+
+    value_type& access()
+    { return *this->ptr(); }
+    
+    void swap(T*& p) 
+    { std::swap(p, this->_ptr); }
   };
 
 
@@ -272,6 +295,10 @@ namespace a1 {
     Shared_cwp( value_type* a )
      : ka::pointer_cwp<T>( a )
     { }
+
+    explicit Shared_cwp( kaapi_access_t& a )
+     : ka::pointer_cwp<T>( a )
+    { }
   };
 
 
@@ -281,6 +308,10 @@ namespace a1 {
     typedef typename ka::pointer_cw<T>::value_type value_type;
 
     Shared_cw( value_type* a )
+     : ka::pointer_cw<T>( a )
+    { }
+
+    explicit Shared_cw( kaapi_access_t& a )
      : ka::pointer_cw<T>( a )
     { }
 
@@ -302,7 +333,9 @@ namespace a1 {
   struct TaskDelete {
     void operator() ( a1::Shared_rw<T> res )
     {
-      res->_data->T::~T();
+      T* ptr = 0;
+      res.swap(ptr);
+      ptr->T::~T();
     }
   };
 

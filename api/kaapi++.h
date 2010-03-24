@@ -70,6 +70,12 @@ namespace ka {
   typedef kaapi_int32_t  ka_int32_t;
   typedef kaapi_int64_t  ka_int64_t;
 
+  struct kaapi_bodies_t {
+    kaapi_task_body_t cpu_body;
+    kaapi_task_body_t gpu_body;
+    kaapi_task_body_t default_body;
+  };
+  
   /* Kaapi C++ thread <-> Kaapi C stack */
   class Thread;
   
@@ -98,18 +104,28 @@ namespace ka {
 
   // --------------------------------------------------------------------
   /** link C++ format -> kaapi format */
-  class Format : public kaapi_format_t {
+  class Format {
   public:
     Format( 
-        const std::string& name,
-        size_t             size,
-        void             (*cstor)( void* dest),
-        void             (*dstor)( void* dest),
-        void             (*cstorcopy)( void* dest, const void* src),
-        void             (*copy)( void* dest, const void* src),
-        void             (*assign)( void* dest, const void* src),
-        void             (*print)( FILE* file, const void* src)
+        const std::string& name = "empty",
+        size_t             size = 0,
+        void             (*cstor)( void* dest) = 0,
+        void             (*dstor)( void* dest) = 0,
+        void             (*cstorcopy)( void* dest, const void* src) = 0,
+        void             (*copy)( void* dest, const void* src) = 0,
+        void             (*assign)( void* dest, const void* src) = 0,
+        void             (*print)( FILE* file, const void* src) = 0
     );
+  struct kaapi_format_t* get_c_format();
+  const struct kaapi_format_t* get_c_format() const;
+
+  public:
+    /* should be protected and friend with wrapperformat */
+    Format( kaapi_format_t* f );
+    void reinit( kaapi_format_t* f ) const;
+
+  protected:
+    mutable struct kaapi_format_t* fmt;
   };
 
   /** format for update function */
@@ -121,14 +137,28 @@ namespace ka {
                        const void* value, const struct kaapi_format_t* fmtvalue )
     );
   };
+
+  /** format for update function */
+  class FormatTask : public Format {
+  public:
+    FormatTask( 
+      const std::string&          name,
+      size_t                      size,
+      int                         count,
+      const kaapi_access_mode_t   mode_param[],
+      const kaapi_offset_t        offset_param[],
+      const kaapi_format_t*       fmt_param[]
+    );
+  };
   
   // --------------------------------------------------------------------  
   template <class T>
-  class WrapperFormat {
+  class WrapperFormat : public Format {
+    WrapperFormat(kaapi_format_t* f);
   public:
-    static const Format* format;
-    static const Format* get_format() { return format; }
-    static const Format theformat;
+    WrapperFormat();
+    static const WrapperFormat<T> format;
+    static const Format* get_format();
     static void cstor( void* dest) { new (dest) T; }
     static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
     static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
@@ -154,53 +184,52 @@ namespace ka {
     {
       return Caller( &UpdateFnc::operator(), data, value ) ? 1 : 0;
     }
-    static const FormatUpdateFnc* format;
-    static const FormatUpdateFnc theformat;
+    static const FormatUpdateFnc format;
   };
 
   template <class T>
-  const Format WrapperFormat<T>::theformat( typeid(T).name(),
-    sizeof(T),
-    WrapperFormat<T>::cstor, 
-    WrapperFormat<T>::dstor, 
-    WrapperFormat<T>::cstorcopy, 
-    WrapperFormat<T>::copy, 
-    WrapperFormat<T>::assign, 
-    WrapperFormat<T>::print 
-  );
-  template <class T> const Format* WrapperFormat<T>::format = &WrapperFormat<T>::theformat;
-  template <> const Format* WrapperFormat<char>::get_format();
-  template <> const Format* WrapperFormat<short>::get_format();
-  template <> const Format* WrapperFormat<int>::get_format();
-  template <> const Format* WrapperFormat<long>::get_format();
-  template <> const Format* WrapperFormat<unsigned char>::get_format();
-  template <> const Format* WrapperFormat<unsigned short>::get_format();
-  template <> const Format* WrapperFormat<unsigned int>::get_format();
-  template <> const Format* WrapperFormat<unsigned long>::get_format();
-  template <> const Format* WrapperFormat<float>::get_format();
-  template <> const Format* WrapperFormat<double>::get_format();
+  WrapperFormat<T>::WrapperFormat()
+   : Format(  typeid(T).name(),
+              sizeof(T),
+              WrapperFormat<T>::cstor, 
+              WrapperFormat<T>::dstor, 
+              WrapperFormat<T>::cstorcopy, 
+              WrapperFormat<T>::copy, 
+              WrapperFormat<T>::assign, 
+              WrapperFormat<T>::print 
+    )
+  {}
 
-  template <>
-  class WrapperFormat<Access> {
-  public:
-    static const Format* get_format() { return &theformat; }
-    static const Format theformat;
-    static void cstor( void* dest) {}
-    static void dstor( void* dest) {} 
-    static void cstorcopy( void* dest, const void* src) { const Access* s = (const Access*)src; new (dest) Access(*s); } 
-    static void copy( void* dest, const void* src) {} 
-    static void assign( void* dest, const void* src) {} 
-    static void print( FILE* file, const void* src) {} 
-  };
+  template <class T>
+  WrapperFormat<T>::WrapperFormat(kaapi_format_t* f)
+   : Format( f )
+  {}
+
+  template <class T>
+  const WrapperFormat<T> WrapperFormat<T>::format;
+  template <class T>
+  const Format* WrapperFormat<T>::get_format() 
+  { 
+    return &format; 
+  }
+
+  template <> extern const WrapperFormat<char> WrapperFormat<char>::format;
+  template <> extern const WrapperFormat<short> WrapperFormat<short>::format;
+  template <> extern const WrapperFormat<int> WrapperFormat<int>::format;
+  template <> extern const WrapperFormat<long> WrapperFormat<long>::format;
+  template <> extern const WrapperFormat<unsigned char> WrapperFormat<unsigned char>::format;
+  template <> extern const WrapperFormat<unsigned short> WrapperFormat<unsigned short>::format;
+  template <> extern const WrapperFormat<unsigned int> WrapperFormat<unsigned int>::format;
+  template <> extern const WrapperFormat<unsigned long> WrapperFormat<unsigned long>::format;
+  template <> extern const WrapperFormat<float> WrapperFormat<float>::format;
+  template <> extern const WrapperFormat<double> WrapperFormat<double>::format;
   
 
   template <class UpdateFnc>
-  const FormatUpdateFnc WrapperFormatUpdateFnc<UpdateFnc>::theformat (
+  const FormatUpdateFnc WrapperFormatUpdateFnc<UpdateFnc>::format (
     typeid(UpdateFnc).name(),
     &WrapperFormatUpdateFnc<UpdateFnc>::update_kaapi
   );
-  template <class UpdateFnc>
-  const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::format = &WrapperFormatUpdateFnc<UpdateFnc>::theformat;
 
 
   // --------------------------------------------------------------------
@@ -331,6 +360,7 @@ namespace ka {
     base_pointer( T* p ) : _ptr(p)
     {}
     T* ptr() const { return _ptr; }
+    void ptr(T* p) { _ptr = p; }
   protected:
     mutable T* _ptr;
   };
@@ -340,6 +370,7 @@ namespace ka {
   class value_ref {
   public:
     value_ref(T* p) : _ptr(p){}
+    operator T&() { return *_ptr; }
     void operator=( const T& value ) { *_ptr = value; }
   protected:
     T* _ptr;
@@ -422,8 +453,10 @@ namespace ka {
     pointer_rw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rw( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     operator value_type*() { return base_pointer<T>::ptr(); }
+    T* operator->() { return base_pointer<T>::ptr(); }
     value_type& operator*() { return *base_pointer<T>::ptr(); }
     value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
+    value_type& operator[](long i) { return base_pointer<T>::ptr()[i]; }
     value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
@@ -459,12 +492,15 @@ namespace ka {
 
     pointer_r() : base_pointer<T>() {}
     pointer_r( value_type* ptr ) : base_pointer<T>(ptr) {}
+    pointer_r( const value_type* ptr ) : base_pointer<T>((T*)ptr) {}
     explicit pointer_r( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_r( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
+    const T* operator->() { return base_pointer<T>::ptr(); }
     operator value_type*() { return base_pointer<T>::ptr(); }
     const T& operator*() const { return *base_pointer<T>::ptr(); }
+    const T* operator->() const { return base_pointer<T>::ptr(); }
     const T& operator[](int i) const { return base_pointer<T>::ptr()[i]; }
     const T& operator[](long i) const { return base_pointer<T>::ptr()[i]; }
     const T& operator[](difference_type i) const { return base_pointer<T>::ptr()[i]; }
@@ -507,6 +543,7 @@ namespace ka {
     pointer_w( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_w( const pointer_wp<T>& ptr ) : base_pointer<T>(ptr) {}
     operator value_type*() { return base_pointer<T>::ptr(); }
+    T* operator->() { return base_pointer<T>::ptr(); }
     value_ref<T> operator*() { return value_ref<T>(base_pointer<T>::ptr()); }
     value_ref<T> operator[](int i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
     value_ref<T> operator[](long i) { return value_ref<T>(base_pointer<T>::ptr()+i); }
@@ -561,6 +598,41 @@ namespace ka {
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
   
+
+  // --------------------------------------------------------------------
+  template<class T>
+  struct TraitNoDeleteTask {
+    enum { value = false };
+  };
+
+  /* user may specialize this trait to avoid spawn of delete for some object */
+  template<> struct TraitNoDeleteTask<char> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<short> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<long long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned char> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned short> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned int> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned long long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<float> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
+
+  template<class T>
+  class auto_pointer : public pointer<T> {
+  public:
+    typedef T value_type;
+    typedef size_t difference_type;
+    typedef auto_pointer<T> Self_t;
+    auto_pointer() : pointer<T>() {}
+    ~auto_pointer();
+    auto_pointer( value_type* ptr ) : pointer<T>(ptr) {}
+    operator value_type*() { return pointer<T>::ptr(); }
+
+    KAAPI_POINTER_ARITHMETIC_METHODS
+  };
+
 
   // --------------------------------------------------------------------
   /** Trait for universal access mode type.
@@ -726,6 +798,12 @@ namespace ka {
 
   template<typename UserType>
   struct TraitUAMParam<pointer<UserType> > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP       mode_t;
+  };
+
+  template<typename UserType>
+  struct TraitUAMParam<auto_pointer<UserType> > {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_RPWP       mode_t;
   };
@@ -1032,7 +1110,7 @@ namespace ka {
   struct RegisterBodyCPU {
     RegisterBodyCPU()
     { 
-      DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
@@ -1040,7 +1118,7 @@ namespace ka {
   struct RegisterBodyGPU {
     RegisterBodyGPU()
     { 
-      DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
@@ -1048,8 +1126,8 @@ namespace ka {
   struct RegisterBodies {
     RegisterBodies()
     { 
-      DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
-      DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit1 __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+      static volatile int isinit2 __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
   };
 
@@ -1114,6 +1192,39 @@ namespace ka {
   }
     
 
+  // --------------------------------------------------------------------
+  template<class T>
+  struct TaskDelete : public Task<1>::Signature<RW<T> > { };
+} // namespace a1
+
+  template<class T>
+  struct TaskBodyCPU<ka::TaskDelete<T> > : public ka::TaskDelete<T> {
+    void operator() ( ka::Thread* thread, ka::pointer_rw<T> res )
+    {
+      delete *res;
+    }
+  };
+  
+namespace ka {
+  
+  template<bool noneedtaskdelete>
+  struct SpawnDelete {
+    template<class T> static void doit( auto_pointer<T>& ap ) { Spawn<TaskDelete<T> >(ap); ap.ptr(0); }
+  };
+  template<>
+  struct SpawnDelete<true> {
+    template<class T> static void doit( auto_pointer<T>& ap ) 
+    { 
+#if !defined(KAAPI_NDEBUG)
+      ap.ptr(0);
+#endif
+    }
+  };
+
+  template<class T>
+  auto_pointer<T>::~auto_pointer()
+  { SpawnDelete<TraitNoDeleteTask<T>::value>::doit(*this); }
+
 
   // --------------------------------------------------------------------
   extern std::ostream& logfile();
@@ -1127,7 +1238,87 @@ namespace ka {
 
     ~SyncGuard();
   };
+  
+  // --------------------------------------------------------------------
+  // Should be defined for real distributed computation
+  class OStream {
+  public:
+    enum Mode {
+      IA = 1,
+      DA = 2
+    };
+    size_t write( const Format*, int, const void*, size_t ) { return 0; }
+  };
+
+  class IStream {
+  public:
+    enum Mode {
+      IA = 1,
+      DA = 2
+    };
+    size_t read( const Format*, int, void*, size_t ) { return 0; }
+  };
+  
+  // --------------------------------------------------------------------
+  struct InitKaapiCXX {
+    InitKaapiCXX();
+  };
+  static InitKaapiCXX stroumph;
+  
 } // namespace ka
+
+
+/* compatibility toolkit */
+inline ka::OStream& operator<< (ka::OStream& s_out, char c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, short c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, int c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, long c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, long long c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, unsigned char c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, unsigned short c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, unsigned int c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, unsigned long c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, unsigned long long c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, float c )
+{ return s_out; }
+inline ka::OStream& operator<< (ka::OStream& s_out, double c )
+{ return s_out; }
+
+inline ka::IStream& operator>> (ka::IStream& s_in, char& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, short& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, int& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, long& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, long long& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, unsigned char& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, unsigned short& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, unsigned int& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, unsigned long& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, unsigned long long& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, float& c )
+{ return s_in; }
+inline ka::IStream& operator>> (ka::IStream& s_in, double& c )
+{ return s_in; }
+
 
 #ifndef _KAAPIPLUSPLUS_NOT_IN_NAMESPACE
 using namespace ka;

@@ -43,13 +43,17 @@
 ** 
 */
 #include "kaapi_impl.h"
+#if defined(KAAPI_DEBUG_LOURD)
+#include <unistd.h>
+#endif
 
 /* Compute if the task with arguments pointed by sp and with format task_fmt is ready
    Return the number of non ready data
 */
-static int kaapi_task_computeready( void* sp, const kaapi_format_t* task_fmt, kaapi_hashmap_t* map )
+static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, kaapi_hashmap_t* map )
 {
   int i, wc, countparam;
+
   countparam = wc = task_fmt->count_params;
   for (i=0; i<countparam; ++i)
   {
@@ -72,6 +76,7 @@ static int kaapi_task_computeready( void* sp, const kaapi_format_t* task_fmt, ka
     {
       --wc;
     }
+    /* optimization: break from enclosest loop here */
     
     /* update map information for next access if no set */
     if (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
@@ -130,7 +135,6 @@ static int kaapi_sched_stealframe(
   kaapi_stack_t*        stack;
   kaapi_task_body_t     task_body;
   kaapi_task_t*         task_top;
-  kaapi_task_t*         task_bot;
   kaapi_task_t*         task_exec;
   int                   replycount;
 
@@ -139,34 +143,58 @@ static int kaapi_sched_stealframe(
   stack      = kaapi_threadcontext2stack(thread);
   task_body  = kaapi_nop_body;
   task_top   = frame->pc;
-  task_bot   = frame->sp;
   task_exec  = 0;
   replycount = 0;
   
   /* */
-  while ((count > replycount) && (task_top != task_bot))
+  while ((count > replycount) && (task_top > frame->sp))
   {
     task_body = kaapi_task_getextrabody(task_top);
+
+    /* its an adaptive task !!! */
+    if (task_body == kaapi_adapt_body)
+    {
+      kaapi_stealcontext_t* sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
+      kaapi_task_splitter_t  splitter = sc->splitter;
+      void*                  argsplitter = sc->argsplitter;
+      if ( (splitter !=0) && (argsplitter !=0) )
+      {
+        /* steal sucess */
+        replycount += kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, count-replycount, requests );
+      }
+      --task_top;
+      continue;
+    }
 
     task_fmt = kaapi_format_resolvebybody( task_body );
     if (task_fmt !=0)
     {
-      int wc = kaapi_task_computeready( kaapi_task_getargs(task_top), task_fmt, map );
+      int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, map );
       if ((wc ==0) && kaapi_task_isstealable(task_top))
       {
-#if defined(KAAPI_USE_CASSTEAL) || defined(KAAPI_USE_INTERRUPSTEAL)
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
         if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
-#else
-//#  warning "Should be implemented"
-#endif
         {
+#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = task_top;
+        kaapi_writemem_barrier();
+        if ((thread->sfp[-1].pc != task_top) && kaapi_task_isstealable(task_top))
+        {
+          /* else victim get owner of task_top */
+          task_top->body = kaapi_suspend_body;
+#else          
+#  error "Should be implemented"
+#endif
 #if defined(LOG_STACK)
-          fprintf(stdout,"\n\n>>>>>>>> %p:: Task=%p, wc=%i\n", thread, (void*)task_top, wc );
+          fprintf(stdout,"\n\n>>>>>>>> %p:: STEAL Task=%p, wc=%i\n", thread, (void*)task_top, wc );
           kaapi_stack_print(stdout, thread );
 #endif
           kaapi_assert_debug( count-replycount <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
           replycount += kaapi_task_splitter_dfg(thread, task_top, count-replycount, requests );
         }
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = 0;
+#endif
         /* else victim may have executed it */
       }
     }
@@ -183,33 +211,53 @@ static int kaapi_sched_stealframe(
 */
 int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
 {
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
   kaapi_frame_t*           top_frame;
+#endif
   int savecount;
   int replycount;
   
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
 
-  if ((thread ==0) || kaapi_frame_isempty( thread->sfp)) return 0;
+  if ((thread ==0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
   savecount  = count;
   replycount = 0;
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
 
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
   /* lock the stack, if cannot return failed */
   if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
   kaapi_readmem_barrier();
 
   /* try to steal in each frame */
-  top_frame = thread->stackframe;
-  for (top_frame =thread->stackframe; (top_frame != thread->sfp) && (count > replycount); ++top_frame)
+  for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
   {
     if (top_frame->pc == top_frame->sp) continue;
     replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
   }
 
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
+
+#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+
+  /* try to steal in each frame */
+  thread->thieffp = thread->stackframe;
+  kaapi_writemem_barrier();
+  while (count > replycount)
+  {
+    if (thread->thieffp > thread->sfp) break;
+    if (thread->thieffp->pc > thread->thieffp->sp) 
+      replycount += kaapi_sched_stealframe( thread, thread->thieffp, &access_to_gd, count-replycount, request );
+    ++thread->thieffp;
+    kaapi_writemem_barrier();
+  }
+  thread->thieffp = 0;
+#else
+#  error "Bad steal frame method"    
+#endif
 
   kaapi_hashmap_destroy( &access_to_gd );
 
