@@ -62,25 +62,12 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   ta->sc.flag               = flag;
   ta->sc.hasrequest         = 0;
   ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
-  ta->sc.haspreempt         = 0;
-#if defined(KAAPI_DEBUG)
-  ta->sc.arg_from_victim    = 0;
-  ta->sc.current_thief_work = 0;
-#endif
 
+  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
   KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);
   ta->head                  = 0;
   ta->tail                  = 0;
-#if defined(KAAPI_DEBUG)
-  ta->current_thief         = 0;
-#endif
-  ta->mastertask            = 0;
-#if defined(KAAPI_DEBUG)
-  ta->result                = 0;
-  ta->result_size           = 0;
-  ta->local_result_size     = 0;
-  ta->local_result_data     = 0;
-#endif
+
   ta->sc.ownertask          = kaapi_thread_toptask(thread);
   kaapi_task_init(ta->sc.ownertask, kaapi_adapt_body, ta);
   kaapi_thread_pushtask(thread);

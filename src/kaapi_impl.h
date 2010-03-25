@@ -137,6 +137,18 @@ extern "C" {
 #endif
 
 
+/** utility */
+static inline void* kaapi_malloc_align( int align, size_t size )
+{
+  if (align <2) return malloc(size);
+  --align;
+  void* retval = malloc(align + size);
+  if ( (((kaapi_uintptr_t)retval) & align) !=0)
+    retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
+  kaapi_assert_m( (((kaapi_uintptr_t)retval) & align), 0, "[bad alignment boundary pointer]");
+  return retval;
+}
+
 // This is the new version on top of X-Kaapi
 extern const char* get_kaapi_version(void);
 
@@ -357,19 +369,10 @@ struct kaapi_taskadaptive_result_t;
 typedef struct kaapi_taskadaptive_t {
   kaapi_stealcontext_t                sc;              /* user visible part of the data structure */
 
+  kaapi_atomic_t                      lock;            /* required for access to list */
   kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
-
-  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t to preemption */
-
-  struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
-  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t to copy args in preemption or finalization
-                                                          null iff thief has been already preempted
-                                                       */
-  int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
-  int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
-  void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
 } kaapi_taskadaptive_t;
 
 
@@ -379,21 +382,27 @@ typedef struct kaapi_taskadaptive_t {
     media between victim and thief.
 */
 typedef struct kaapi_taskadaptive_result_t {
-  volatile int*                       signal;           /* signal of preemption pointer on the thief stack haspreempt */
-  volatile int                        req_preempt;      /* */
-  volatile int                        thief_term;       /* */
-  int                                 flag;             /* state of the result */
-  struct kaapi_taskadaptive_result_t* rhead;            /* next result of the next thief */
-  struct kaapi_taskadaptive_result_t* rtail;            /* next result of the next thief */
-  void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
-  struct kaapi_taskadaptive_result_t* next;             /* link field to the previous spawned thief */
-  struct kaapi_taskadaptive_result_t* prev;             /* link field to the next spawned thief */
-  int                                 size_data;        /* size of data */
-  double                              data[1];
-} /*__attribute__((aligned (KAAPI_CACHE_LINE)))*/ kaapi_taskadaptive_result_t;
+  /* same as public part of the structure in kaapi.h */
+  double*                             data;             /* the data produced by the thief */
+  size_t                              size_data;        /* size of data */
+  void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
+  int volatile                        req_preempt;
 
-#define KAAPI_RESULT_INSTACK   0x01
-#define KAAPI_RESULT_INHEAP    0x02
+  /* Private part of the structure */
+  volatile int                        thief_term;       /* */
+  void*                               arg_from_thief;   /* arg of the thief passed at the preemption point */
+  struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
+  int                                 flag;             /* where is allocated data */
+
+  struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
+  struct kaapi_taskadaptive_result_t* rtail;            /* */
+
+  struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
+  struct kaapi_taskadaptive_result_t* prev;             /* */
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+
+#define KAAPI_RESULT_DATAUSR    0x01
+#define KAAPI_RESULT_DATARTS    0x02
 
 
 

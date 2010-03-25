@@ -44,42 +44,37 @@
 */
 #include "kaapi_impl.h"
 
+
+/**
+*/
+void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+{
+  kaapi_taskadaptive_result_t* result = (kaapi_taskadaptive_result_t*)taskarg;
+  kaapi_writemem_barrier();
+  result->thief_term = 1;
+  KAAPI_ATOMIC_DECR( &result->master->thievescount );
+}
+
+
 /*
 */
 int kaapi_request_reply(
-    kaapi_stealcontext_t*          stc,
-    kaapi_request_t*               request, 
-    int size, int retval,
-    int insert_head
+    kaapi_stealcontext_t*               stc,
+    kaapi_request_t*                    request, 
+    kaapi_taskadaptive_result_t*        result,
+    int                                 insert_head
 )
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_taskadaptive_result_t* result;
   kaapi_task_t* tasksig;
-  size_t size_result;
   
-  if (retval ==0)
+  if (result ==0)
   {
     _kaapi_request_reply(request, 0, 0);
     return 0;
   }
   
-  /* allocate space for futur result of size size */
-  size_result = sizeof(kaapi_taskadaptive_result_t)+size;
-  result = (kaapi_taskadaptive_result_t*)malloc( size_result );
-  result->flag = KAAPI_RESULT_INHEAP;
-  result->size_data = size;
-
-  result->req_preempt     = 0;
-  result->thief_term      = 0;
-  result->parg_from_victim= 0;
-  result->rhead           = 0;
-  result->rtail           = 0;
-  /* link result for preemption / finalization at the head of the list */
-  result->prev            = 0;
-  result->next            = 0;
-  
-  /* insert in head */
+  /* insert in head or tail */
   if (ta->head ==0)
     ta->tail = ta->head = result;
   else  if (insert_head) {
@@ -91,11 +86,13 @@ int kaapi_request_reply(
     ta->tail->next = result;
     ta->tail       = result;
   }
-  
+  /* link result to the stc */
+  result->master = ta;
+  KAAPI_ATOMIC_INCR( &ta->thievescount );
   
   /* add task to tell to the master that this disappear */
   tasksig = kaapi_thread_toptask( request->thread );
-  kaapi_task_init(tasksig, kaapi_tasksig_body, stc );
+  kaapi_task_init(tasksig, kaapi_tasksig_body, result );
   kaapi_thread_pushtask(request->thread);
   return 0;
 }

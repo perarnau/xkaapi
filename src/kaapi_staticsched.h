@@ -51,7 +51,7 @@
 extern "C" {
 #endif
 
-/** Single assignment variable.
+/** Single assignment variable / communication between threads
 */
 typedef struct kaapi_fifo_t {
   void*                   data;

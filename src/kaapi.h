@@ -127,6 +127,7 @@ struct kaapi_stack_t;
 struct kaapi_thread_t;
 struct kaapi_thread_context_t;
 struct kaapi_stealcontext_t;
+struct kaapi_taskadaptive_result_t;
 
 
 /* ========================================================================== */
@@ -403,16 +404,26 @@ typedef struct kaapi_stealcontext_t {
 
   volatile int                   hasrequest;
   kaapi_request_t*               requests;
-
-  volatile int                   haspreempt;
-  void* volatile                 arg_from_victim;    /* arg from the victim after preemption of one victim */
-  void* volatile                 current_thief_work; /* work of the thief after preemption */
 } kaapi_stealcontext_t;
 
 /* flags (or ed) for kaapi_stealcontext_t */
 #define KAAPI_STEALCONTEXT_DEFAULT    0x0   /* no flag */
 #define KAAPI_STEALCONTEXT_NOPREEMPT  0x1   /* no preemption */
 #define KAAPI_STEALCONTEXT_NOSYNC     0x2   /* do not wait end of thieves */
+
+
+/** Thief result
+    Only public part of the data structure.
+    Warning: update of this structure should also be an update of the structure in kaapi_impl.h
+*/
+#if !defined(KAAPI_COMPILE_SOURCE)
+typedef struct kaapi_taskadaptive_result_t {
+  double*                             data;             /* the data produced by the thief */
+  size_t                              size_data;        /* size of data */
+  void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
+  int volatile                        req_preempt;
+} kaapi_taskadaptive_result_t;
+#endif
 
 /* ========================================================================= */
 /** \ingroup DFG
@@ -646,6 +657,99 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   void*                 argsplitter
 );
 
+/** \ingroup ADAPTIVE
+    Allocate the return data structure for the thief. This structure should be passed
+    by the user to the replied tasks. The user may pass an application buffer (data) that
+    contains at least 'size' bytes. Else if the size is >0 then the runtime allocates
+    a memory region that contains at least size byte.
+    The return value is an opaque pointer that should be pass to kaapi_request_reply.
+    If the user reply 'success' to the thief then both this structure and the associated data 
+    will be hold by the runtime system and deallocate automatically. 
+    Else if the user finally decide to reply 'failed' then it should explicitly deallocate it 
+    by a call to kaapi_deallocate_thief_result.
+    \param sc INOUT the steal context
+    \param size IN the size in bytes to store the result
+    \param retval IN the result of the steal request 0 iff failed else success
+*/
+extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
+    kaapi_stealcontext_t* stc, int size, void* data
+);
+
+
+/** \ingroup ADAPTIVE
+    Dellocate the return data structure already allocated to the thief. 
+    The call never deallocate a application level buffer passed to kaapi_allocate_thief_result.
+    The user should only call this function in case of aborting the return to the thief
+    by replying 'failed'. In case of reply 'success' this function is automatically called
+    by the runtime.
+    \param result INOUT the pointer to the opaque data structure returned by kaapi_allocate_thief_result.
+*/
+extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* result );
+
+
+/** \ingroup ADAPTIVE
+    Reply a value to a steal request. If retval is !=0 it means that the request
+    has successfully adapt to steal work. Else 0.
+    This function could not be called in concurrence with other calls:
+    - if the adaptive algorithm matches correctly the standard structure (beginsteal/endsteal) etc..
+    the scheduler ensure that only one thief is able to call the method.
+    \param sc INOUT the steal context
+    \param request INOUT data structure used to replied by the thief
+    \param result IN the result data structure for the thief or 0 if reply failed.
+    \param insert_head =1 if insert the thief in the head of the thieves list
+*/
+extern int kaapi_request_reply(
+    kaapi_stealcontext_t*               stc,
+    kaapi_request_t*                    request, 
+    struct kaapi_taskadaptive_result_t* result,
+    int                                 insert_head
+);
+
+static inline int kaapi_request_reply_head(
+    kaapi_stealcontext_t*               stc,
+    kaapi_request_t*                    request, 
+    struct kaapi_taskadaptive_result_t* result
+)
+{ return kaapi_request_reply(stc, request, result, 1); }
+
+/** \ingroup ADAPTIVE
+*/
+static inline int kaapi_request_reply_tail(
+    kaapi_stealcontext_t*               stc,
+    kaapi_request_t*                    request, 
+    struct kaapi_taskadaptive_result_t* result
+)
+{ return kaapi_request_reply(stc, request, result, 0); }
+
+
+/** \ingroup ADAPTIVE
+*/
+static inline int kaapi_request_reply_failed(     
+    kaapi_stealcontext_t*          stc,
+    kaapi_request_t*               request
+)
+{ return kaapi_request_reply( stc, request, 0, 1 ); }
+
+
+/** \ingroup ADAPTIVE
+    Set an splitter to be called in concurrence with the execution of the next instruction
+    if a steal request is sent to the task.
+    The old splitter may be saved using getsplitter calls.
+    \retval EINVAL in case of error (task not adaptive kind)
+    \retval 0 else
+*/
+static inline int kaapi_steal_setsplitter(
+    kaapi_stealcontext_t* stc,
+    kaapi_task_splitter_t splitter, void* arg_tasksplitter)
+{
+  stc->argsplitter = 0;
+  stc->splitter    = 0;
+  kaapi_writemem_barrier_api();
+  stc->argsplitter = arg_tasksplitter;
+  stc->splitter    = splitter;
+  return 0;
+}
+
 
 /** \ingroup WS
     Helper to expose to many part of the internal API.
@@ -693,66 +797,25 @@ static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 #define kaapi_request_ok( kpsr )\
   ((kpsr)->status == 1 /*== KAAPI_REQUEST_S_POSTED*/)
 
-/** \ingroup ADAPTIVE
-    Test if the current execution should process preemt request into the task
-    and then pass arg_victim argument to the victim and return !=0 value
-    \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
-    \retval 0 else
+
+/* Return the thief result of the next thief from the head of the list to preempt or 0 if no thief may be preempted
 */
-static inline int kaapi_preemptpoint_isactive( kaapi_stealcontext_t* stc )
-{
-  return stc->haspreempt;
-}
+extern struct kaapi_taskadaptive_result_t* kaapi_preempt_getnextthief_head( kaapi_stealcontext_t* stc );
 
-/** \ingroup ADAPTIVE
-    Helper function to pass argument between the victim and the thief.
-    On return the victim argument may be read.
+/* Return the thief result of the next thief from the tail of the list to preempt or 0 if no thief may be preempted
 */
-extern int kaapi_preemptpoint_before_reducer_call( kaapi_stealcontext_t* stc, void* arg_for_victim, int size );
-extern int kaapi_preemptpoint_after_reducer_call ( kaapi_stealcontext_t* stc, int reducer_retval );
+extern struct kaapi_taskadaptive_result_t* kaapi_preempt_getnextthief_tail( kaapi_stealcontext_t* stc );
 
 
-static inline int kaapi_is_null(void* p)
-{
-  /* checking for null on a macro param
-     where param is an address makes g++
-     complain about the never nullness
-     of the arg. so we use this function
-     to check for null pointers.
-   */
-  return p == NULL;
-}
-
-/** \ingroup ADAPTIVE
-    Test if the current execution should process preemt request to the current task
-    and if it is true then pass arg_victim argument to the victim and call the reducer function with incomming victim argument
-    for the thief. Extra arguments are added at the end of the parameter when calling reducer function.
-    The reducer function is assumed to be of the form:
-      (*reducer)(kaapi_stack_t*, kaapi_task_t*, void* arg_from_victim, ...)
-    Where ... must match the list of extra parameter.
-    \retval !=0 if a prending preempt request(s) has been processed onto the given task.
-    \retval 0 else
+/** Preempt ktr and return 1 when:
+    - ktr has been preempted or finished
+TODO->    - ktr has been replaced by the thieves of ktr into the list of stc
 */
-#define kaapi_preemptpoint( stc, reducer, arg_for_victim, size_arg_victim, ...)\
-  ( kaapi_preemptpoint_isactive(stc) ? \
-        kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, size_arg_victim),\
-        kaapi_preemptpoint_after_reducer_call( stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( stc, stc->arg_from_victim, ##__VA_ARGS__))) \
-    : \
-        0\
-  )
-
-
-/* Helper for kaapi_preempt_nextthief
-   Return 1 iff a thief as been preempted.
-*/
-extern int kaapi_preempt_nextthief_helper_head( kaapi_stealcontext_t* stc, void* arg_to_thief );
-
-/* Helper for kaapi_preempt_nextthief_reverse
-   Return 1 iff a thief as been preempted.
-*/
-extern int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void* arg_to_thief );
-
+extern int kaapi_preempt_nextthief_helper( 
+  kaapi_stealcontext_t*               stc, 
+  struct kaapi_taskadaptive_result_t* ktr, 
+  void*                               arg_to_thief 
+);
 
 /** \ingroup ADAPTIVE
    Try to preempt next thief in the reverse order defined by the order of the steal request reply, i.e.
@@ -766,103 +829,69 @@ extern int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void*
       int (*)( stc, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
-#define kaapi_preempt_thief_head( stc, arg_to_thief, reducer, ... ) \
+#define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... ) \
 (									\
- kaapi_preempt_nextthief_helper_head(stc, arg_to_thief) ?		\
+ ((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief) ?		\
  (									\
   kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stc, stc->current_thief_work, ##__VA_ARGS__) \
+  ((kaapi_task_reducer_t)reducer)(stc, stc->arg_from_thief, ##__VA_ARGS__) \
  ) : 0									\
 )
 
 
 /** \ingroup ADAPTIVE
-   Try to preempt next thief in the order defined by the order of the steal request reply.
-   Note that this function is called kaapi_preempt_nextthief_reverse for historical reason
-   because the order defined by kaapi_preempt_nextthief was the natural order.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
-   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
-      int (*)( kaapi_stack_t* stack, kaapi_task_t* task, void* thief_work, ... )
-   where ... is the same arguments as passed to kaapi_preempt_nextthief.
-*/
-#define kaapi_preempt_nextthief_tail( stc, arg_to_thief, reducer, ... ) \
-(									\
- kaapi_preempt_nextthief_helper_tail(stc, arg_to_thief) ?		\
- (									\
-  kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stc, stc->current_thief_work, ##__VA_ARGS__) \
- ) : 0									\
-)
-
-
-/** \ingroup ADAPTIVE
-    Reply a value to a steal request. If retval is !=0 it means that the request
-    has successfully adapt to steal work. Else 0.
-    This function could not be called in concurrence with other calls:
-    - if the adaptive algorithm matches correctly the standard structure (beginsteal/endsteal) etc..
-    the scheduler ensure that only one thief is able to call the method.
-    \param stack INOUT the stack of the victim that has been used to replies to the request
-    \param task IN the stolen task
-    \param request INOUT data structure used to replied by the thief
-    \param thief_stack INOUT the output stack that will be used to the thief
-    \param size IN the size in bytes to store the result
-    \param retval IN the result of the steal request 0 iff failed else success
-*/
-extern int kaapi_request_reply(
-    kaapi_stealcontext_t*          stc,
-    kaapi_request_t*               request, 
-    int size, int retval,
-    int inser_head
-);
-
-static inline int kaapi_request_reply_head(
-    kaapi_stealcontext_t*          stc,
-    kaapi_request_t*               request, 
-    int size, int retval 
-)
-{ return kaapi_request_reply(stc, request, size, retval, 1 ); }
-
-/** \ingroup ADAPTIVE
-*/
-static inline int kaapi_request_reply_tail(
-    kaapi_stealcontext_t*          stc,
-    kaapi_request_t*               request, 
-    int size, int retval 
-)
-{ return kaapi_request_reply(stc, request, size, retval, 0 ); }
-
-
-/** \ingroup ADAPTIVE
-*/
-static inline int kaapi_request_reply_failed(     
-    kaapi_stealcontext_t*          stc,
-    kaapi_request_t*               request
-)
-{ return kaapi_request_reply( stc, request, 0, 0, 1 ); }
-
-
-/** \ingroup ADAPTIVE
-    Set an splitter to be called in concurrence with the execution of the next instruction
-    if a steal request is sent to the task.
-    The old splitter may be saved using getsplitter calls.
-    \retval EINVAL in case of error (task not adaptive kind)
+    Test if the current execution should process preemt request into the task
+    and then pass arg_victim argument to the victim and return !=0 value
+    \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
 */
-static inline int kaapi_steal_setsplitter(
-    kaapi_stealcontext_t* stc,
-    kaapi_task_splitter_t splitter, void* arg_tasksplitter)
+#if !defined(KAAPI_COMPILE_SOURCE)
+static inline int kaapi_preemptpoint_isactive( kaapi_taskadaptive_result_t* ktr )
 {
-  stc->argsplitter = 0;
-  stc->splitter    = 0;
-  kaapi_writemem_barrier_api();
-  stc->argsplitter = arg_tasksplitter;
-  stc->splitter    = splitter;
-  return 0;
+  return ktr->req_preempt;
 }
+#endif
+
+
+/** \ingroup ADAPTIVE
+    Helper function to pass argument between the victim and the thief.
+    On return the victim argument may be read.
+*/
+extern int kaapi_preemptpoint_before_reducer_call( struct kaapi_taskadaptive_result_t* stc, void* arg_for_victim, int size );
+extern int kaapi_preemptpoint_after_reducer_call ( struct kaapi_taskadaptive_result_t* stc, int reducer_retval );
+
+
+/* checking for null on a macro param
+   where param is an address makes g++
+   complain about the never nullness
+   of the arg. so we use this function
+   to check for null pointers.
+ */
+static inline int kaapi_is_null(void* p)
+{
+  return p == 0;
+}
+
+
+/** \ingroup ADAPTIVE
+    Test if the current execution should process preemt request to the current task
+    and if it is true then pass arg_victim argument to the victim and call the reducer function with incomming victim argument
+    for the thief. Extra arguments are added at the end of the parameter when calling reducer function.
+    The reducer function is assumed to be of the form:
+      (*reducer)(kaapi_stack_t*, kaapi_task_t*, void* arg_from_victim, ...)
+    Where ... must match the list of extra parameter.
+    \retval !=0 if a prending preempt request(s) has been processed onto the given task.
+    \retval 0 else
+*/
+#define kaapi_preemptpoint( ktr, reducer, arg_for_victim, size_arg_victim, ...)\
+  ( kaapi_preemptpoint_isactive(ktr) ? \
+        kaapi_preemptpoint_before_reducer_call(ktr, arg_for_victim, size_arg_victim),\
+        kaapi_preemptpoint_after_reducer_call( ktr, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
+    : \
+        0\
+  )
+
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
@@ -883,22 +912,6 @@ static inline int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
   kaapi_thread_pushtask(stc->thread);
   return 0;
 }
-
-/** Body of the task in charge of finalize of thief of adaptive task
-    \ingroup TASK
-*/
-typedef struct kaapi_taskreturn_args_t {
-  kaapi_stealcontext_t* remotestc;
-  void*                 userarg;
-  size_t                usersize;
-} kaapi_taskreturn_args_t;
-extern void kaapi_taskreturn_body( void*, kaapi_thread_t* );
-
-
-/** \ingroup ADAPTIVE
-    Push a task that, on execution will wait the signal end of the thief computations
-*/
-extern int kaapi_steal_pushthiefreturn( kaapi_thread_t* thiefstack, kaapi_stealcontext_t* stc, void* retval, int size );
 
 
 

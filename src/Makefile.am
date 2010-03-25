@@ -48,15 +48,17 @@ libxkaapi_la_SOURCES=\
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
-  task/kaapi_task_signal.c \
   task/kaapi_task_splitter_dfg.c \
   task/kaapi_task_splitter_adapt.c \
   task/kaapi_task_pushstealcontext.c\
-  task/kaapi_task_finalize.c \
-  task/kaapi_task_preemptpoint.c \
+  task/kaapi_task_adapt_allocateresult.c\
+  task/kaapi_task_adapt_deallocateresult.c\
+  task/kaapi_task_reqreply.c \
   task/kaapi_task_preempt_head.c \
   task/kaapi_task_preempt_tail.c \
-  task/kaapi_task_reqreply.c \
+  task/kaapi_task_preempt_thief.c \
+  task/kaapi_task_preemptpoint.c \
+  task/kaapi_task_finalize.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \

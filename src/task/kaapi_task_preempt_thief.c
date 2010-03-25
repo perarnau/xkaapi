@@ -1,5 +1,5 @@
 /*
-** kaapi_task_preemptpoint.c
+** kaapi_task_preempt_next.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -44,30 +44,50 @@
 */
 #include "kaapi_impl.h"
 
-/**
-*/
-int kaapi_preemptpoint_before_reducer_call( kaapi_taskadaptive_result_t* ktr, void* arg_for_victim, int size )
+int kaapi_preempt_nextthief_helper( 
+  kaapi_stealcontext_t*        stc, 
+  kaapi_taskadaptive_result_t* ktr, 
+  void*                        arg_to_thief 
+)
 {
-  /* push data to the victim and list of thief */
-  if (arg_for_victim !=0)
-  {
-    if (size > ktr->size_data) size = ktr->size_data;
-    memcpy(ktr->data, arg_for_victim, size );
-  }
+  kaapi_taskadaptive_t* ta;
+  if (ktr ==0) return 0;
+
+  ta = (kaapi_taskadaptive_t*)stc;
   
-  /* delete the preemption flag */
-  ktr->req_preempt = 0;
+  /* pass arg to the thief */
+  ktr->arg_from_victim = arg_to_thief;  
+  kaapi_writemem_barrier();
 
-  return 0;
-}
+  ktr->req_preempt = 1;
+  kaapi_mem_barrier();
+    
+  /* busy wait thief receive preemption */
+  while (!ktr->thief_term) 
+   ;/* pthread_yield(); */
 
-/**
-*/
-int kaapi_preemptpoint_after_reducer_call( kaapi_taskadaptive_result_t* ktr, int reducer_retval )
-{
+  /*ok: here thief has been preempted */
+  kaapi_readmem_barrier();
+  
+  /* TODO: Here it should be:
+     - replace ktr in the list of ta by the thives of ktr 
+     but it required to link ktr to the stealcontext used by the thief....
+  */
+  while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
+    ;
+    if (ktr->next ==0) /* it's on tail */
+      ta->tail = ktr->prev;
+    else  
+      ktr->next->prev = ktr->prev;
+    if (ktr->prev ==0) /* it's on head */
+      ta->head = ktr->next;
+    else 
+      ktr->prev->next = ktr->next;
+    /* mostly for debug: */
+    ktr->next = 0;
+    ktr->prev = 0;
 
-  kaapi_writemem_barrier();   /* serialize previous line with next line */
-  ktr->thief_term = 1;
-
+  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+  
   return 1;
 }

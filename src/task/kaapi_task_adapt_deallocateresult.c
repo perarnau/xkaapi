@@ -1,8 +1,7 @@
 /*
-** kaapi_mt_task_signal.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+** Created on Tue Mar 31 15:18:04 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,19 +42,11 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <stdio.h>
 
 /**
 */
-void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+int kaapi_deallocate_thief_result( kaapi_taskadaptive_result_t* result )
 {
-  /*
-    printf("Thief end, @stack: 0x%p\n", stack);
-    fflush( stdout );
-  */
-  kaapi_tasksig_arg_t* argsig;
-  kaapi_task_t* task2sig;
-
-  argsig = (kaapi_tasksig_arg_t*)taskarg;
-  task2sig = argsig->task2sig;
+  free(result);
+  return 0;
 }

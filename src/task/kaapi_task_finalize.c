@@ -49,19 +49,11 @@
 */
 void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
 {
-  kaapi_taskadaptive_t* ta = kaapi_task_getargst(taskarg, kaapi_taskadaptive_t);
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
-  kaapi_assert(ta->mastertask ==0); /* only master could call this function  */
 
-  while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) ;/* pthread_yield_np(); */
+  while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0)
+    ;/* pthread_yield_np(); */
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
-
-#if defined(KAAPI_DEBUG)
-  kaapi_assert_debug( ta->thievescount._counter == 0);
-#endif
- 
-  /* here free all taskresult data structure */
 }
-
-

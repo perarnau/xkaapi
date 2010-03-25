@@ -1,5 +1,4 @@
 /*
-** kaapi_task_adapt_pushretn.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -44,27 +43,41 @@
 */
 #include "kaapi_impl.h"
 
-
-/**
+/*
 */
-void kaapi_taskreturn_body( void* a, kaapi_thread_t* thread )
+kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
+    kaapi_stealcontext_t* stc, int size, void* data
+)
 {
-/*  kaapi_taskreturn_args_t* arg = (kaapi_taskreturn_args_t*)a; */
-}
+  kaapi_taskadaptive_result_t* result;
+  int size_alloc;
+  
+  /* allocate space for futur result of size size
+     kaapi_taskadaptive_result_t has correct alignment
+  */
+  size_alloc = sizeof(kaapi_taskadaptive_result_t);
+  if ((size >0) && (data ==0)) size_alloc += size;
+  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align( KAAPI_CACHE_LINE, size_alloc );
+  if (result==0) return 0;
+  
+  result->size_data = size;
+  if ((size >0) && (data ==0)) {
+    result->flag = KAAPI_RESULT_DATARTS;
+    result->data = (void*)(result+1);
+  }
+  else {
+    result->flag = KAAPI_RESULT_DATAUSR;
+    result->data = data;
+  }
 
-
-/**
-*/
-int kaapi_steal_pushthiefreturn( kaapi_thread_t* thiefstack, kaapi_stealcontext_t* stc, void* retval, int size )
-{
-  if ( (stc->flag & KAAPI_STEALCONTEXT_NOSYNC) ==0) return 0;
-  kaapi_taskreturn_args_t* arg;
-  kaapi_task_t* task = kaapi_thread_toptask(thiefstack);
-  kaapi_task_init( task, kaapi_taskreturn_body, kaapi_thread_pushdata(thiefstack, sizeof(kaapi_taskreturn_args_t)) );
-  arg = kaapi_task_getargst(task, kaapi_taskreturn_args_t);
-  arg->remotestc = stc;
-  arg->userarg   = retval;
-  arg->usersize  = size;
-  kaapi_thread_pushtask(thiefstack);
-  return 0;
+  result->arg_from_victim = 0;
+  result->req_preempt     = 0;
+  result->master          = 0;
+  result->thief_term      = 0;
+  result->rhead           = 0;
+  result->rtail           = 0;
+  result->prev            = 0;
+  result->next            = 0;
+  
+  return result;
 }
