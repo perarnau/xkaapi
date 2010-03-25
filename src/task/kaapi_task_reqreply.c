@@ -44,15 +44,24 @@
 */
 #include "kaapi_impl.h"
 
+/** Args for tasksignal
+*/
+typedef struct kaapi_tasksig_arg_t {
+    kaapi_taskadaptive_t*               ta;
+    kaapi_taskadaptive_result_t*        result;
+} kaapi_tasksig_arg_t;
+
+
 
 /**
 */
 void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
 {
-  kaapi_taskadaptive_result_t* result = (kaapi_taskadaptive_result_t*)taskarg;
+  kaapi_tasksig_arg_t* arg = (kaapi_tasksig_arg_t*)taskarg;
   kaapi_writemem_barrier();
-  result->thief_term = 1;
-  KAAPI_ATOMIC_DECR( &result->master->thievescount );
+  if (arg->result !=0)
+    arg->result->thief_term = 1;
+  KAAPI_ATOMIC_DECR( &arg->ta->thievescount );
 }
 
 
@@ -68,31 +77,38 @@ int kaapi_request_reply(
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
   kaapi_task_t* tasksig;
   
-  if (result ==0)
+  if ((result ==0) && (stc ==0))
   {
     _kaapi_request_reply(request, 0, 0);
     return 0;
   }
   
-  /* insert in head or tail */
-  if (ta->head ==0)
-    ta->tail = ta->head = result;
-  else  if (insert_head) {
-    result->next   = ta->head;
-    ta->head->prev = result;
-    ta->head       = result;
-  } else {
-    result->prev   = ta->tail;
-    ta->tail->next = result;
-    ta->tail       = result;
+  if (result !=0)
+  {
+    /* insert in head or tail */
+    if (ta->head ==0)
+      ta->tail = ta->head = result;
+    else  if (insert_head) {
+      result->next   = ta->head;
+      ta->head->prev = result;
+      ta->head       = result;
+    } else {
+      result->prev   = ta->tail;
+      ta->tail->next = result;
+      ta->tail       = result;
+    }
+    /* link result to the stc */
+    result->master = ta;
   }
-  /* link result to the stc */
-  result->master = ta;
   KAAPI_ATOMIC_INCR( &ta->thievescount );
   
   /* add task to tell to the master that this disappear */
   tasksig = kaapi_thread_toptask( request->thread );
-  kaapi_task_init(tasksig, kaapi_tasksig_body, result );
+  kaapi_task_init(tasksig, kaapi_tasksig_body, kaapi_thread_pushdata( request->thread, sizeof(kaapi_tasksig_arg_t) ) );
+  kaapi_tasksig_arg_t* arg = kaapi_task_getargst( tasksig, kaapi_tasksig_arg_t );
+  arg->ta     = ta;
+  arg->result = result;
   kaapi_thread_pushtask(request->thread);
+  _kaapi_request_reply( request, request->mthread, 1 );
   return 0;
 }

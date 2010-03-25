@@ -138,7 +138,7 @@ extern "C" {
 
 
 /** utility */
-static inline void* kaapi_malloc_align( int align, size_t size )
+static inline void* kaapi_malloc_align( unsigned int align, size_t size )
 {
   if (align <2) return malloc(size);
   --align;
@@ -949,18 +949,6 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_format_t*         origin_fmt;        /* set by tasksteal the stolen task into origin_stack */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
-
-
-/** Args for tasksignal
-*/
-typedef struct kaapi_tasksig_arg_t {
-  kaapi_thread_context_t*      victim;            /* victim thread */
-  kaapi_task_t*                task2sig;          /* remote task to signal */
-  int                          flag;              /* type of signal */
-  kaapi_taskadaptive_t*        taskadapt;         /* pointer to the local adaptive task */
-  kaapi_taskadaptive_result_t* result;            /* pointer to the remote result from stealing adaptive task */
-} kaapi_tasksig_arg_t;
-
 
 
 /* ======================== Perf counter interface: machine dependent ========================*/

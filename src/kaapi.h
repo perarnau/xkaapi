@@ -379,7 +379,8 @@ typedef struct kaapi_task_t {
 typedef int (*kaapi_task_splitter_t)(
   struct kaapi_stealcontext_t* /*stc */, 
   int /*count*/, 
-  struct kaapi_request_t* /*array*/, void* /*userarg*/);
+  struct kaapi_request_t* /*array*/, 
+  void* /*userarg*/);
 
 /** Task reducer
     \ingroup TASK
@@ -725,10 +726,9 @@ static inline int kaapi_request_reply_tail(
 /** \ingroup ADAPTIVE
 */
 static inline int kaapi_request_reply_failed(     
-    kaapi_stealcontext_t*          stc,
     kaapi_request_t*               request
 )
-{ return kaapi_request_reply( stc, request, 0, 1 ); }
+{ return kaapi_request_reply( 0 /* means failed */, request, 0, 1 ); }
 
 
 /** \ingroup ADAPTIVE
@@ -893,6 +893,16 @@ static inline int kaapi_is_null(void* p)
   )
 
 
+/** Begin critical section with respect to steal operation
+    \ingroup TASK
+*/
+extern int kaapi_thread_stealcritical_begin( kaapi_thread_t* );
+
+/** End critical section with respect to steal operation
+    \ingroup TASK
+*/
+extern int kaapi_thread_stealcritical_end( kaapi_thread_t* );
+
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
 */
@@ -905,13 +915,7 @@ extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
     This method should be called in a frame with scope included by the frame where was done the call 
     to kaapi_thread_pushstealcontext that creates the context.
 */
-static inline int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
-{
-  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
-  kaapi_task_init( task, kaapi_taskfinalize_body, stc );
-  kaapi_thread_pushtask(stc->thread);
-  return 0;
-}
+extern int kaapi_steal_finalize( kaapi_stealcontext_t* stc );
 
 
 

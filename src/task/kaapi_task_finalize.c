@@ -57,3 +57,18 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 }
+
+/**
+*/
+int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
+{
+  /* end with the adapt dummy task -> change body with nop */
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
+  
+  /* push task to wait childs */
+  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
+  kaapi_task_init( task, kaapi_taskfinalize_body, stc );
+  kaapi_thread_pushtask(stc->thread);
+  return 0;
+}

@@ -8,7 +8,7 @@
  */
 #ifndef _XKAAPI_TRANSFORM_H
 #define _XKAAPI_TRANSFORM_H
-#include "kaapi.h"
+#include "kaapi++"
 #include <algorithm>
 
 
@@ -20,10 +20,8 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
 template<class InputIterator, class OutputIterator, class UnaryOperator>
 class TransformStruct {
 public:
+  /* MySelf */
   typedef TransformStruct<InputIterator, OutputIterator, UnaryOperator> Self_t;
-  
-  static InputIterator  beg0;
-  static OutputIterator obeg0;
 
   /* cstor */
   TransformStruct(
@@ -34,42 +32,53 @@ public:
   ) : _ibeg(ibeg), _iend(iend), _obeg(obeg), _op(op) 
   {}
   
-  /* do transform */
-  void doit(kaapi_task_t* task, kaapi_stack_t* stack);
-
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
 
-  /* Entry in case of thief execution */
-  static void static_mainentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
+  void doit( kaapi_thread_t* thread )
   {
-    Self_t* self_work = kaapi_task_getargst(task, Self_t);
-// std::cout << "Thief [" << self_work->_ibeg << "," << self_work->_iend << ")= " << self_work->_iend-self_work->_ibeg << std::endl;
-    self_work->doit(task, stack);
+    /* local iterator for the nano loop */
+    InputIterator nano_ibeg;
+    InputIterator nano_iend;
 
-    /* definition of the finalization point where all stolen work a interrupt and collected */
-    kaapi_finalize_steal( stack, task, 0, 0 );
+    /* amount of work per iteration of the nano loop */
+    int unit_size = 512;
+    int tmp_size  = 0;
 
-    /* Here the thiefs have finish the computation and returns their values which have been reduced using reducer function */  
+    /* Using THE: critical section could be avoided */
+    while (1)
+    {
+      kaapi_thread_stealcritical_begin( thread );
+      nano_ibeg = _ibeg;
+      tmp_size =  _iend -nano_ibeg;
+      if (unit_size > tmp_size) { unit_size = tmp_size; nano_iend = _iend; }
+      else nano_iend = _ibeg + unit_size;
+      _ibeg = nano_iend;
+      kaapi_thread_stealcritical_end( thread );
+      if (nano_iend == nano_ibeg) break;
+      
+      /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
+      _obeg = std::transform( nano_ibeg, nano_iend, _obeg, _op );
+    }
   }
 
-protected:  
-  InputIterator  _ibeg;
-  InputIterator  _iend;
-  OutputIterator _obeg;
-  UnaryOperator  _op;
-  
-
-  /* Entry in case of thief execution */
-  static void static_thiefentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
+  static int static_splitter( kaapi_stealcontext_t* sc_transform, int count, kaapi_request_t* request, void* argsplitter )
   {
-    Self_t* self_work = kaapi_task_getargst(task, Self_t);
-// std::cout << "Thief [" << self_work->_ibeg << "," << self_work->_iend << ")= " << self_work->_iend-self_work->_ibeg << std::endl;
-    self_work->doit(task, stack);
+    Self_t* self_work = (Self_t*)argsplitter;
+    return self_work->splitter( sc_transform, count, request );
   }
+
+protected:
+  /* Entry in case of thief execution */
+  static void static_thiefentrypoint( void* arg, kaapi_thread_t* thread )
+  {
+    Self_t* self_work = (Self_t*)arg;
+    self_work->doit( thread );
+  }
+
 
   /** splitter_work is called within the context of the steal point
   */
-  int splitter( kaapi_stack_t* victim_stack, kaapi_task_t* task, int count, kaapi_request_t* request )
+  int splitter( kaapi_stealcontext_t* sc_transform, int count, kaapi_request_t* request )
   {
     int i = 0;
     int reply_count = 0;
@@ -79,17 +88,17 @@ protected:
     Self_t* output_work =0;
 
     /* threshold should be defined (...) */
-    if (size < 512) goto reply_failed;
+    if (size < 512) return 0;
     bloc = size / (1+count);
-//    std::cout << "Split [" << _ibeg << "," << _iend << ") in " << 1+count << ", bloc=" << bloc << std::endl;
+
     if (bloc < 128) { count = size/128 -1; bloc = 128; }
     while (count >0)
     {
       if (kaapi_request_ok(&request[i]))
       {
-        kaapi_stack_t* thief_stack = request[i].stack;
-        kaapi_task_t*  thief_task  = kaapi_stack_toptask(thief_stack);
-        kaapi_task_init( thief_stack, thief_task, &static_thiefentrypoint, kaapi_thread_pushdata(thief_stack, sizeof(Self_t)), KAAPI_TASK_ADAPTIVE);
+        kaapi_thread_t* thief_thread = request[i].thread;
+        kaapi_task_t*  thief_task  = kaapi_thread_toptask(thief_thread);
+        kaapi_task_init( thief_task, &static_thiefentrypoint, kaapi_thread_pushdata(thief_thread, sizeof(Self_t)) );
         output_work = kaapi_task_getargst(thief_task, Self_t);
 
         output_work->_iend = local_end;
@@ -99,106 +108,48 @@ protected:
         kaapi_assert_debug( output_work->_iend - output_work->_ibeg >0);
         output_work->_op   = _op;
 
-        kaapi_stack_pushtask( thief_stack );
+        kaapi_thread_pushtask( thief_thread );
 
         /* reply ok (1) to the request */
-        kaapi_request_reply( victim_stack, task, &request[i], thief_stack, 0, 1 );
+        kaapi_request_reply_head( sc_transform, &request[i], 0 );
         --count; 
         ++reply_count;
       }
       ++i;
     }
-  /* mute the end of input work of the victim */
-  _iend  = local_end;
-  kaapi_assert_debug( _iend - _ibeg >0);
-  return reply_count;
-      
-reply_failed:
-    while (count >0)
-    {
-      if (kaapi_request_ok(&request[i]))
-      {
-        /* reply failed (=last 0 in parameter) to the request */
-        kaapi_request_reply_failed( victim_stack, task, &request[i] );
-        --count; 
-        ++reply_count;
-      }
-      ++i;
-    }
-    return reply_count;
+    /* mute the end of input work of the victim */
+    _iend  = local_end;
+    kaapi_assert_debug( _iend - _ibeg >0);
+    return reply_count;      
   }
 
-  static int static_splitter( kaapi_stack_t* victim_stack, kaapi_task_t* task, int count, kaapi_request_t* request )
-  {
-    Self_t* self_work = kaapi_task_getargst(task, Self_t);
-    return self_work->splitter( victim_stack, task, count, request );
-  }
+protected:  
+  InputIterator  _ibeg;
+  InputIterator  _iend;
+  OutputIterator _obeg;
+  UnaryOperator  _op;
 };
 
-
-
-/** Adaptive transform
-*/
-template<class InputIterator, class OutputIterator, class UnaryOperator>
-void TransformStruct<InputIterator,OutputIterator,UnaryOperator>::doit(kaapi_task_t* task, kaapi_stack_t* stack)
-{
-  /* local iterator for the nano loop */
-  InputIterator nano_iend;
-  
-  /* amount of work per iteration of the nano loop */
-  int unit_size = 512;
-  int tmp_size  = 0;
-
-  while (_iend != _ibeg)
-  {
-    /* definition of the steal point where steal_work may be called in case of steal request 
-       -here size is pass as parameter and updated in case of steal
-    */
-    kaapi_stealpoint( stack, task, &static_splitter );
-
-    tmp_size =  _iend-_ibeg;
-    if (unit_size > tmp_size) { unit_size = tmp_size; nano_iend = _iend; }
-    else nano_iend = _ibeg + unit_size;
-    
-    /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
-//    kaapi_task_setaction( task, &static_splitter );
-    _obeg = std::transform( _ibeg, nano_iend, _obeg, _op );
-
-    /* return from sequential computation: remove concurrent task action 
-       in order to disable any steal at this point while I'm doing seq computation */
-//    kaapi_task_getaction( task );
-
-    _ibeg += unit_size;
-  }
-}
-
-
-template<class InputIterator, class OutputIterator, class UnaryOperator>
-InputIterator TransformStruct<InputIterator, OutputIterator, UnaryOperator>::beg0;
-template<class InputIterator, class OutputIterator, class UnaryOperator>
-OutputIterator TransformStruct<InputIterator, OutputIterator, UnaryOperator>::obeg0;
 
 /**
 */
 template<class InputIterator, class OutputIterator, class UnaryOperator>
 void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op )
 {
-  TransformStruct<InputIterator, OutputIterator, UnaryOperator>::beg0 = begin;
-  TransformStruct<InputIterator, OutputIterator, UnaryOperator>::obeg0 = to_fill;
+  typedef TransformStruct<InputIterator, OutputIterator, UnaryOperator> Self_t;
   
-  TransformStruct<InputIterator, OutputIterator, UnaryOperator> work( begin, end, to_fill, op);
-  kaapi_stack_t* stack = kaapi_self_frame();
-  kaapi_frame_t frame;
-  kaapi_thread_save_frame(stack, &frame);
+  Self_t work( begin, end, to_fill, op);
 
-  /* will receive & process steal request */
-  kaapi_task_t* task = kaapi_stack_toptask(stack);
-  kaapi_task_initadaptive(stack, task, 
-      &TransformStruct<InputIterator, OutputIterator, UnaryOperator>::static_mainentrypoint,
-      &work, KAAPI_TASK_ADAPT_DEFAULT);
-  kaapi_stack_pushtask(stack);
+  kaapi_thread_t* thread =  kaapi_self_thread();
+  kaapi_stealcontext_t* sc_transform = kaapi_thread_pushstealcontext( 
+    thread,
+    KAAPI_STEALCONTEXT_DEFAULT,
+    Self_t::static_splitter,
+    &work
+  );
   
-  kaapi_sched_sync(stack);
-  kaapi_thread_restore_frame(stack, &frame);
+  work.doit( thread );
+  
+  kaapi_steal_finalize( sc_transform );
 }
 #endif

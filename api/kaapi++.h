@@ -52,7 +52,6 @@
 #include <vector>
 #include <typeinfo>
 
-namespace ka{}
 
 namespace ka {
 
@@ -1319,7 +1318,7 @@ inline ka::IStream& operator>> (ka::IStream& s_in, double& c )
 { return s_in; }
 
 
-#ifndef _KAAPIPLUSPLUS_NOT_IN_NAMESPACE
+#if defined(_KAAPIPLUSPLUS_IN_GLOBAL_NAMESPACE)
 using namespace ka;
 #endif
 

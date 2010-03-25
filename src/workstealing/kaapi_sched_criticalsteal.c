@@ -1,11 +1,10 @@
 /*
-** kaapi_sched_stealend.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
-** Contributor :
+** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
 ** 
@@ -44,20 +43,33 @@
 */
 #include "kaapi_impl.h"
 
-/** \ingroup ADAPTIVE
-    May be inlined if we expose kaapi_task_cas + ATOMIC operation
+/**
 */
-int kaapi_stealend(kaapi_stealcontext_t* stc)
+int kaapi_thread_stealcritical_begin( kaapi_thread_t* thread )
 {
-  kaapi_assert_debug(stc !=0);
-  stc->splitter    = 0;
-  stc->argsplitter = 0;
-  /* we do not ensure consistency: thief may view one of the previous fields =0 => abort steal operation */
+  kaapi_processor_t* kproc = _kaapi_get_current_processor();
+  kaapi_assert_debug( (void*)thread == (void*)kproc->thread->sfp );
+  
+  while (1)
+  {
+    if ( (KAAPI_ATOMIC_READ( &kproc->lock ) == 0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid) ) break;
+    /* nop here ? */
+  }
+  kaapi_mem_barrier();
+  return 0;
+}
 
-  kaapi_writemem_barrier();
 
-  /* pop the task until no thief are inside */
-  while (!kaapi_task_casstate( stc->ownertask, kaapi_adapt_body, kaapi_adapt_body)) ; 
+/**
+*/
+int kaapi_thread_stealcritical_end( kaapi_thread_t* thread )
+{
+  kaapi_processor_t* kproc = _kaapi_get_current_processor();
+  kaapi_assert_debug( (void*)thread == (void*)kproc->thread->sfp );
+  kaapi_assert_debug(KAAPI_ATOMIC_READ( &kproc->lock ) == 1+kproc->kid);
 
+  kaapi_mem_barrier();
+  KAAPI_ATOMIC_WRITE( &kproc->lock, 0 );
+  
   return 0;
 }
