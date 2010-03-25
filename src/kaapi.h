@@ -896,12 +896,12 @@ static inline int kaapi_is_null(void* p)
 /** Begin critical section with respect to steal operation
     \ingroup TASK
 */
-extern int kaapi_thread_stealcritical_begin( kaapi_thread_t* );
+extern int kaapi_steal_begincritical( kaapi_stealcontext_t* sc );
 
 /** End critical section with respect to steal operation
     \ingroup TASK
 */
-extern int kaapi_thread_stealcritical_end( kaapi_thread_t* );
+extern int kaapi_steal_endcritical( kaapi_stealcontext_t* sc );
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK

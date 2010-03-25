@@ -45,10 +45,9 @@
 
 /**
 */
-int kaapi_thread_stealcritical_begin( kaapi_thread_t* thread )
+int kaapi_steal_begincritical( kaapi_stealcontext_t* sc )
 {
   kaapi_processor_t* kproc = _kaapi_get_current_processor();
-  kaapi_assert_debug( (void*)thread == (void*)kproc->thread->sfp );
   
   while (1)
   {
@@ -62,10 +61,9 @@ int kaapi_thread_stealcritical_begin( kaapi_thread_t* thread )
 
 /**
 */
-int kaapi_thread_stealcritical_end( kaapi_thread_t* thread )
+int kaapi_steal_endcritical( kaapi_stealcontext_t* sc )
 {
   kaapi_processor_t* kproc = _kaapi_get_current_processor();
-  kaapi_assert_debug( (void*)thread == (void*)kproc->thread->sfp );
   kaapi_assert_debug(KAAPI_ATOMIC_READ( &kproc->lock ) == 1+kproc->kid);
 
   kaapi_mem_barrier();

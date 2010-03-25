@@ -34,7 +34,7 @@ public:
   
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
 
-  void doit( kaapi_thread_t* thread )
+  void doit( kaapi_stealcontext_t* sc_transform, kaapi_thread_t* thread )
   {
     /* local iterator for the nano loop */
     InputIterator nano_ibeg;
@@ -47,13 +47,13 @@ public:
     /* Using THE: critical section could be avoided */
     while (1)
     {
-      kaapi_thread_stealcritical_begin( thread );
+      kaapi_steal_begincritical( sc_transform );
       nano_ibeg = _ibeg;
       tmp_size =  _iend -nano_ibeg;
       if (unit_size > tmp_size) { unit_size = tmp_size; nano_iend = _iend; }
       else nano_iend = _ibeg + unit_size;
       _ibeg = nano_iend;
-      kaapi_thread_stealcritical_end( thread );
+      kaapi_steal_endcritical( sc_transform );
       if (nano_iend == nano_ibeg) break;
       
       /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
@@ -72,7 +72,14 @@ protected:
   static void static_thiefentrypoint( void* arg, kaapi_thread_t* thread )
   {
     Self_t* self_work = (Self_t*)arg;
-    self_work->doit( thread );
+    kaapi_stealcontext_t* sc_transform = kaapi_thread_pushstealcontext( 
+      thread,
+      KAAPI_STEALCONTEXT_DEFAULT,
+      Self_t::static_splitter,
+      &self_work
+    );
+    self_work->doit( sc_transform, thread );
+    kaapi_steal_finalize( sc_transform );
   }
 
 
@@ -148,7 +155,7 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
     &work
   );
   
-  work.doit( thread );
+  work.doit( sc_transform, thread );
   
   kaapi_steal_finalize( sc_transform );
 }
