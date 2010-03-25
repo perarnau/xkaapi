@@ -103,7 +103,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_init_basicformat();
   
   /* set up runtime parameters */
-  kaapi_assert_m( 0, kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
+  kaapi_assert_m( 0 ==kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
   
   /* initialize the kprocessor key */
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
@@ -118,7 +118,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
 #endif
 
   /* set the kprocessor AFTER topology !!! */
-  kaapi_assert_m( 0, kaapi_setconcurrency( kaapi_default_param.cpucount ), "kaapi_setconcurrency" );
+  kaapi_assert_m( 0 == kaapi_setconcurrency( kaapi_default_param.cpucount ), "kaapi_setconcurrency" );
   
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */

@@ -118,11 +118,11 @@ extern "C" {
 
 /**
 */
-#  define kaapi_assert_m(val, x, msg) \
-      { int __kaapi_err = x; \
-        if (__kaapi_err != val) \
+#  define kaapi_assert_m(cond, msg) \
+      { \
+        if (!(cond)) \
         { \
-          printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+          printf("[%s]: \n\tLINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
           abort();\
         }\
       }
@@ -142,10 +142,10 @@ static inline void* kaapi_malloc_align( unsigned int align, size_t size )
 {
   if (align <2) return malloc(size);
   --align;
-  void* retval = malloc(align + size);
-  if ( (((kaapi_uintptr_t)retval) & align) !=0)
+  void* retval = (void*)malloc(align + size);
+  if ( (((kaapi_uintptr_t)retval) & align) !=0U)
     retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
-  kaapi_assert_m( (((kaapi_uintptr_t)retval) & align), 0, "[bad alignment boundary pointer]");
+  kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
   return retval;
 }
 
