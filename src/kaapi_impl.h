@@ -138,10 +138,10 @@ extern "C" {
 
 
 /** utility */
-static inline void* kaapi_malloc_align( unsigned int align, size_t size )
+static inline void* kaapi_malloc_align( unsigned int a, size_t size )
 {
-  if (align <2) return malloc(size);
-  --align;
+  if (a <8) return malloc(size);
+  kaapi_uintptr_t align = a-1;
   void* retval = (void*)malloc(align + size);
   if ( (((kaapi_uintptr_t)retval) & align) !=0U)
     retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
