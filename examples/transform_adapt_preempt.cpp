@@ -13,7 +13,7 @@
 #include <math.h>
 #include <assert.h>
 #include <algorithm>
-#include "transform_adapt.h"
+#include "transform_adapt_preempt.h"
 #include "random.h"
 
 /* basic op
@@ -80,6 +80,7 @@ int main(int argc, char** argv)
   for (l=0; l<iter; ++l)
   {
     transform(input, input+n, output, op );
+    ka::Sync();
   }
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;

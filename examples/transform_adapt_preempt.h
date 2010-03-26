@@ -29,7 +29,7 @@ public:
     InputIterator iend,
     OutputIterator obeg,
     UnaryOperator  op
-  ) : _ibeg(ibeg), _iend(iend), _obeg(obeg), _op(op) 
+  ) : _ibeg(ibeg), _iend(iend), _obeg(obeg), _op(op), _thief_result(0)
   {}
   
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
@@ -56,20 +56,46 @@ public:
       else nano_iend = _ibeg + unit_size;
       _ibeg = nano_iend;
       _obeg += nano_iend-nano_ibeg;
-      kaapi_assert_debug( _iend-_ibeg <= 1000 );
-      kaapi_assert_debug( nano_iend-nano_iend <= 1000 );
       kaapi_steal_endcritical( sc_transform );
       if (nano_iend == nano_ibeg) break;
       
       /* sequential computation: push task action in order to allows steal at this point while I'm doing seq computation */
       std::transform( nano_ibeg, nano_iend, nano_obeg, _op );
+      
+      /* here pass sc_transform to link thieves of sc_transform to its master */
+      if (_thief_result) 
+      {
+        sleep(1); 
+        int (*reducer)( kaapi_taskadaptive_result_t*, 
+                         void* victim_arg
+                  )
+            = static_reducer;
+        int retval = kaapi_preemptpoint( _thief_result, sc_transform, reducer, 0, 0 );
+        if (retval) {
+          std::cout << "Thief returns" << std::endl;
+          return;
+        }
+      }
     }
+  }
+  
+  
+  static int static_reducer( kaapi_taskadaptive_result_t* sc_transform, void* victim_arg )
+  {
+    std::cout << "I'm preempted !!!" << std::endl;
+    return 1;
   }
 
   static int static_splitter( kaapi_stealcontext_t* sc_transform, int count, kaapi_request_t* request, void* argsplitter )
   {
     Self_t* self_work = (Self_t*)argsplitter;
     return self_work->splitter( sc_transform, count, request );
+  }
+
+  static int static_mainreducer( kaapi_stealcontext_t* sc_transform, void* thief_arg )
+  {
+    std::cout << "Master: Thief has been preempted" << std::endl;
+    return 1;
   }
 
 protected:
@@ -84,6 +110,7 @@ protected:
       self_work
     );
     self_work->doit( sc_transform, thread );
+    
     kaapi_steal_finalize( sc_transform );
   }
 
@@ -94,9 +121,8 @@ protected:
   {
     int i = 0;
     int reply_count = 0;
-    
+
     kaapi_assert_debug( _ibeg <= _iend );
-    kaapi_assert_debug( _iend-_ibeg <= 1000 );
     InputIterator local_end = _iend;
     size_t bloc, size = (_iend - _ibeg);
 
@@ -120,14 +146,14 @@ protected:
         output_work->_ibeg = local_end-bloc;
         local_end         -= bloc;
         output_work->_obeg = _obeg + (output_work->_ibeg - _ibeg);
-        kaapi_assert_debug( output_work->_iend > output_work->_ibeg);
-        kaapi_assert_debug( output_work->_iend - output_work->_ibeg <= 1000 );
+        kaapi_assert_debug( output_work->_iend - output_work->_ibeg >0);
         output_work->_op   = _op;
+        output_work->_thief_result = kaapi_allocate_thief_result( sc_transform, 0, 0 );
 
         kaapi_thread_pushtask( thief_thread );
 
         /* reply ok (1) to the request */
-        kaapi_request_reply_head( sc_transform, &request[i], 0 );
+        kaapi_request_reply_head( sc_transform, &request[i], output_work->_thief_result );
         --count; 
         ++reply_count;
       }
@@ -140,11 +166,12 @@ protected:
   }
 
 protected:  
-  InputIterator  volatile _ibeg __attribute__((aligned(8)));
-  InputIterator  volatile _iend __attribute__((aligned(8)));
-  OutputIterator volatile _obeg;
-  UnaryOperator  _op;
-} __attribute__((aligned(64)));
+  InputIterator                _ibeg;
+  InputIterator                _iend;
+  OutputIterator               _obeg;
+  UnaryOperator                _op;
+  kaapi_taskadaptive_result_t* _thief_result;
+};
 
 
 /**
@@ -165,8 +192,15 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
   );
   
   work.doit( sc_transform, thread );
+
+  kaapi_taskadaptive_result_t* thief = kaapi_preempt_getnextthief_head( sc_transform );
+  while (thief !=0)
+  {
+    kaapi_preempt_thief ( sc_transform, thief, &work, Self_t::static_mainreducer );
+    thief = kaapi_preempt_getnextthief_head( sc_transform );
+  }
+  
   
   kaapi_steal_finalize( sc_transform );
-  ka::Sync();
 }
 #endif
