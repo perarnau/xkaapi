@@ -52,11 +52,17 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
 
-  while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0)
-    ;/* pthread_yield_np(); */
+  kaapi_mem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
-  kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
+  kaapi_assert(ta->head ==0)
+  kaapi_assert(ta->head ==0)
+
+  /* hack ? restore the upper frame (the one that should have execute pushstealcontext 
+  */
+  kaapi_thread_restore_frame(thread-1, &ta->frame);
+  
 }
+
 
 /**
 */
@@ -64,7 +70,18 @@ int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
 {
   /* end with the adapt dummy task -> change body with nop */
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  /* avoid to steal old instance of this task */
+  ta->sc.splitter = 0;
+  ta->sc.argsplitter = 0;
+  
+  /* begin -> end: a way to ensure linearization point between 
+     victim and thives 
+  */
+  kaapi_steal_begincritical(stc);
+  kaapi_steal_endcritical(stc);
+
   kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
+  kaapi_task_setextrabody( ta->sc.ownertask, kaapi_nop_body );
   
   /* push task to wait childs */
   kaapi_task_t* task = kaapi_thread_toptask(stc->thread);

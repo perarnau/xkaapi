@@ -46,13 +46,33 @@
 
 /**
 */
-int kaapi_preemptpoint_before_reducer_call( kaapi_taskadaptive_result_t* ktr, void* arg_for_victim, int size )
+int kaapi_preemptpoint_before_reducer_call( 
+    struct kaapi_taskadaptive_result_t* ktr, 
+    kaapi_stealcontext_t* stc,
+    void* arg_for_victim, int size 
+)
 {
   /* push data to the victim and list of thief */
   if (arg_for_victim !=0)
   {
     if (size > ktr->size_data) size = ktr->size_data;
     memcpy(ktr->data, arg_for_victim, size );
+  }
+
+  if (stc !=0)
+  {
+    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+
+    kaapi_steal_begincritical( &ta->sc );
+    /* avoid to steal to this context */
+    ta->sc.splitter = 0;
+    ta->sc.argsplitter = 0;    
+    kaapi_steal_endcritical( &ta->sc );
+    
+    /* here no more steal thief can call the splitter on stc */
+    ktr->rhead = ta->head; ta->head = 0;
+    ktr->rtail = ta->tail; ta->tail = 0;
+    
   }
   
   /* delete the preemption flag */
@@ -63,7 +83,11 @@ int kaapi_preemptpoint_before_reducer_call( kaapi_taskadaptive_result_t* ktr, vo
 
 /**
 */
-int kaapi_preemptpoint_after_reducer_call( kaapi_taskadaptive_result_t* ktr, int reducer_retval )
+int kaapi_preemptpoint_after_reducer_call( 
+    kaapi_taskadaptive_result_t* ktr, 
+    kaapi_stealcontext_t* stc,
+    int reducer_retval 
+)
 {
 
   kaapi_writemem_barrier();   /* serialize previous line with next line */

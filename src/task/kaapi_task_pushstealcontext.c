@@ -53,7 +53,13 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   void*                 argsplitter
 )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_t));
+  kaapi_frame_t frame;
+  kaapi_taskadaptive_t* ta;
+  kaapi_thread_save_frame(thread, &frame);
+  
+  kaapi_mem_barrier();
+  
+  ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_t));
   kaapi_assert_debug( ta !=0 );
   ta->sc.ctxtthread         = _kaapi_self_thread();
   ta->sc.thread             = thread;
@@ -67,8 +73,10 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);
   ta->head                  = 0;
   ta->tail                  = 0;
-
+  ta->frame                 = frame;
   ta->sc.ownertask          = kaapi_thread_toptask(thread);
+  ta->save_splitter         = 0;
+  ta->save_argsplitter      = 0;
   kaapi_task_init(ta->sc.ownertask, kaapi_adapt_body, ta);
   kaapi_thread_pushtask(thread);
   return &ta->sc;

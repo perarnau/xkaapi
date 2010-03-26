@@ -422,6 +422,7 @@ typedef struct kaapi_taskadaptive_result_t {
   double*                             data;             /* the data produced by the thief */
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
+  void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
   int volatile                        req_preempt;
 } kaapi_taskadaptive_result_t;
 #endif
@@ -834,7 +835,7 @@ extern int kaapi_preempt_nextthief_helper(
  ((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief) ?		\
  (									\
   kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stc, stc->arg_from_thief, ##__VA_ARGS__) \
+  ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, ##__VA_ARGS__) \
  ) : 0									\
 )
 
@@ -857,8 +858,16 @@ static inline int kaapi_preemptpoint_isactive( kaapi_taskadaptive_result_t* ktr 
     Helper function to pass argument between the victim and the thief.
     On return the victim argument may be read.
 */
-extern int kaapi_preemptpoint_before_reducer_call( struct kaapi_taskadaptive_result_t* stc, void* arg_for_victim, int size );
-extern int kaapi_preemptpoint_after_reducer_call ( struct kaapi_taskadaptive_result_t* stc, int reducer_retval );
+extern int kaapi_preemptpoint_before_reducer_call( 
+    struct kaapi_taskadaptive_result_t* ktr, 
+    kaapi_stealcontext_t* stc,
+    void* arg_for_victim, int size 
+);
+extern int kaapi_preemptpoint_after_reducer_call ( 
+    struct kaapi_taskadaptive_result_t* ktr, 
+    kaapi_stealcontext_t* stc,
+    int reducer_retval 
+);
 
 
 /* checking for null on a macro param
@@ -878,19 +887,31 @@ static inline int kaapi_is_null(void* p)
     and if it is true then pass arg_victim argument to the victim and call the reducer function with incomming victim argument
     for the thief. Extra arguments are added at the end of the parameter when calling reducer function.
     The reducer function is assumed to be of the form:
-      (*reducer)(kaapi_stack_t*, kaapi_task_t*, void* arg_from_victim, ...)
+      (*reducer)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...)
     Where ... must match the list of extra parameter.
     \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
 */
-#define kaapi_preemptpoint( ktr, reducer, arg_for_victim, size_arg_victim, ...)\
+#ifdef __cplusplus
+typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
+#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, size_arg_victim, ...)\
   ( kaapi_preemptpoint_isactive(ktr) ? \
-        kaapi_preemptpoint_before_reducer_call(ktr, arg_for_victim, size_arg_victim),\
-        kaapi_preemptpoint_after_reducer_call( ktr, \
+        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, size_arg_victim),\
+        kaapi_preemptpoint_after_reducer_call( ktr, stc, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
+    : \
+        0\
+  )
+#else
+#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, size_arg_victim, ...)\
+  ( kaapi_preemptpoint_isactive(ktr) ? \
+        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, size_arg_victim),\
+        kaapi_preemptpoint_after_reducer_call( ktr, stc, \
         ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )
+#endif  
 
 
 /** Begin critical section with respect to steal operation

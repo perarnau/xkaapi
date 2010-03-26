@@ -45,29 +45,58 @@
 
 /**
 */
-int kaapi_steal_begincritical( kaapi_stealcontext_t* sc )
+int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
 {
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
   kaapi_processor_t* kproc = _kaapi_get_current_processor();
-  
+
+  ta->save_splitter    = stc->splitter;
+  ta->save_argsplitter = stc->argsplitter;
+  stc->splitter    = 0;
+  stc->argsplitter = 0;
+  kaapi_mem_barrier();
+
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
   while (1)
   {
     if ( (KAAPI_ATOMIC_READ( &kproc->lock ) == 0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid) ) break;
     /* nop here ? */
   }
+  KAAPI_ATOMIC_WRITE( &kproc->lock, 0 );
+
+#elif (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD) 
+#  if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+  /* solution to lock (lite) the frame 
+    while (kproc->thread->thieffp == stc->thread)
+      ;
+    but we prefer to lock only the task..
+  */
+  while (!kaapi_task_cas_extrastate( stc->ownertask, kaapi_adapt_body, kaapi_suspend_body ))
+    ;
+  /* cas success, so the thief will view here splitter ==0 */
+  kaapi_task_setextrabody(stc->ownertask, kaapi_adapt_body);
+  
+#  elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_mem_barrier();
+  while (kproc->thread->thiefpc == stc->ownertask)
+    ;
+  /* here the thiefpc will view splitter ==0 */
+#  endif
+#endif
   return 0;
 }
 
 
 /**
 */
-int kaapi_steal_endcritical( kaapi_stealcontext_t* sc )
+int kaapi_steal_endcritical( kaapi_stealcontext_t* stc )
 {
-  kaapi_processor_t* kproc = _kaapi_get_current_processor();
-  kaapi_assert_debug(KAAPI_ATOMIC_READ( &kproc->lock ) == 1+kproc->kid);
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 
   kaapi_mem_barrier();
-  KAAPI_ATOMIC_WRITE( &kproc->lock, 0 );
+
+  stc->splitter    = ta->save_splitter;
+  stc->argsplitter = ta->save_argsplitter;
   
   return 0;
 }

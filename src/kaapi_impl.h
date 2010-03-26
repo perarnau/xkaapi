@@ -367,12 +367,15 @@ struct kaapi_taskadaptive_result_t;
     This data structure is attached to any adaptative tasks.
 */
 typedef struct kaapi_taskadaptive_t {
-  kaapi_stealcontext_t                sc;              /* user visible part of the data structure */
+  kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
 
   kaapi_atomic_t                      lock;            /* required for access to list */
   kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
   struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
+  kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
+  void*                               save_argsplitter;/* idem */
+  kaapi_frame_t                       frame;
 } kaapi_taskadaptive_t;
 
 
@@ -386,11 +389,11 @@ typedef struct kaapi_taskadaptive_result_t {
   double*                             data;             /* the data produced by the thief */
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
+  void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
   int volatile                        req_preempt;
 
   /* Private part of the structure */
   volatile int                        thief_term;       /* */
-  void*                               arg_from_thief;   /* arg of the thief passed at the preemption point */
   struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
   int                                 flag;             /* where is allocated data */
 
@@ -399,6 +402,7 @@ typedef struct kaapi_taskadaptive_result_t {
 
   struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
   struct kaapi_taskadaptive_result_t* prev;             /* */
+  
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 
 #define KAAPI_RESULT_DATAUSR    0x01
