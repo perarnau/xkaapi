@@ -49,15 +49,18 @@
 int kaapi_preemptpoint_before_reducer_call( 
     struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
-    void* arg_for_victim, int size 
+    void* arg_for_victim, 
+    void* result_data, 
+    int result_size
 )
 {
   /* push data to the victim and list of thief */
-  if (arg_for_victim !=0)
+  if (result_data !=0)
   {
-    if (size > ktr->size_data) size = ktr->size_data;
-    memcpy(ktr->data, arg_for_victim, size );
+    if (result_size < ktr->size_data) ktr->size_data = result_size;
+    memcpy(ktr->data, result_data, ktr->size_data );
   }
+  ktr->arg_from_thief = arg_for_victim;
 
   if (stc !=0)
   {
@@ -70,6 +73,7 @@ int kaapi_preemptpoint_before_reducer_call(
     kaapi_steal_endcritical( &ta->sc );
     
     /* here no more steal thief can call the splitter on stc */
+    printf("[PreemptPoint] Add head:%p tail:%p to result:%p\n", ta->head, ta->tail, ktr);
     ktr->rhead = ta->head; ta->head = 0;
     ktr->rtail = ta->tail; ta->tail = 0;
     

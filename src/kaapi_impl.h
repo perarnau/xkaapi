@@ -386,7 +386,7 @@ typedef struct kaapi_taskadaptive_t {
 */
 typedef struct kaapi_taskadaptive_result_t {
   /* same as public part of the structure in kaapi.h */
-  double*                             data;             /* the data produced by the thief */
+  void*                               data;             /* the data produced by the thief */
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */

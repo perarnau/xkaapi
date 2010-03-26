@@ -20,6 +20,10 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
 template<class InputIterator, class OutputIterator, class UnaryOperator>
 class TransformStruct {
 public:
+  static InputIterator beg0;
+  static InputIterator end0;
+  static OutputIterator obeg;
+  
   /* MySelf */
   typedef TransformStruct<InputIterator, OutputIterator, UnaryOperator> Self_t;
 
@@ -42,7 +46,7 @@ public:
     InputIterator nano_obeg;
 
     /* amount of work per iteration of the nano loop */
-    int unit_size = 512;
+    int unit_size = 128;
     int tmp_size  = 0;
 
     /* Using THE: critical section could be avoided */
@@ -65,24 +69,35 @@ public:
       /* here pass sc_transform to link thieves of sc_transform to its master */
       if (_thief_result) 
       {
-        sleep(1); 
         int (*reducer)( kaapi_taskadaptive_result_t*, 
-                         void* victim_arg
+                         void* victim_arg, 
+                         Self_t* me
                   )
             = static_reducer;
-        int retval = kaapi_preemptpoint( _thief_result, sc_transform, reducer, 0, 0 );
+        int retval = kaapi_preemptpoint( 
+            _thief_result,         /* to test preemption */
+            sc_transform,          /* to merge my thieves into list of the victim */
+            reducer,               /* function to call if preemption signal */
+            _thief_result,         /* extra data to pass to victim -> it will get it into its reducer */ 
+            this, sizeof(Self_t),  /* data to pass to victim = at most the size given in kaapi_allocate_thief_result */
+            this                   /* extra argument(s) for my reducer */
+        );
         if (retval) {
-          std::cout << "Thief returns" << std::endl;
+          std::cout << "Thief: " << _thief_result << " returns with remaining ["
+                    << _ibeg - beg0 << "," << _iend -beg0 << "), out=" << _obeg - obeg
+                    << ", #items=" << _iend-_ibeg << std::endl;
           return;
         }
+        usleep(5000);
       }
+      usleep(1000);
     }
   }
   
   
-  static int static_reducer( kaapi_taskadaptive_result_t* sc_transform, void* victim_arg )
+  static int static_reducer( kaapi_taskadaptive_result_t* sc_transform, void* victim_arg, Self_t* me )
   {
-    std::cout << "I'm preempted !!!" << std::endl;
+    std::cout << "Thief:" << me->_thief_result << " I'm preempted !!!" << std::endl;
     return 1;
   }
 
@@ -92,10 +107,25 @@ public:
     return self_work->splitter( sc_transform, count, request );
   }
 
-  static int static_mainreducer( kaapi_stealcontext_t* sc_transform, void* thief_arg )
+  static int static_mainreducer( 
+      kaapi_stealcontext_t* sc_transform, 
+      void*                 thief_arg, 
+      void*                 thiefdata, 
+      size_t                thiefsize,
+      Self_t*               myself
+  )
   {
-    std::cout << "Master: Thief has been preempted" << std::endl;
-    return 1;
+    Self_t *thief = (Self_t*)thiefdata;
+    std::cout << "Master: Thief :" << thief_arg << " ?= " << thief_arg << " has been preempted [" 
+              << thief->_ibeg - beg0 << "," << thief->_iend - beg0 << ") out=" << thief->_obeg - obeg
+              << ", #items=" << thief->_iend - thief->_ibeg
+              << std::endl;
+    /* make a jump to the remaining part of the thief remainding work */
+    myself->_ibeg = thief->_ibeg;
+    myself->_iend = thief->_iend;
+    myself->_obeg = thief->_obeg;
+    kaapi_assert_debug( myself->_ibeg <= myself->_iend );
+    return (myself->_iend != myself->_ibeg);
   }
 
 protected:
@@ -106,11 +136,12 @@ protected:
     kaapi_stealcontext_t* sc_transform = kaapi_thread_pushstealcontext( 
       thread,
       KAAPI_STEALCONTEXT_DEFAULT,
-      Self_t::static_splitter,
-      self_work
+      0, // to avoid steal of thief Self_t::static_splitter,
+      0  // to avoid steal of thief self_work
     );
     self_work->doit( sc_transform, thread );
     
+    std::cout << "End of Thief: " << self_work->_thief_result << std::endl;
     kaapi_steal_finalize( sc_transform );
   }
 
@@ -121,6 +152,7 @@ protected:
   {
     int i = 0;
     int reply_count = 0;
+    int savecount = count;
 
     kaapi_assert_debug( _ibeg <= _iend );
     InputIterator local_end = _iend;
@@ -148,7 +180,15 @@ protected:
         output_work->_obeg = _obeg + (output_work->_ibeg - _ibeg);
         kaapi_assert_debug( output_work->_iend - output_work->_ibeg >0);
         output_work->_op   = _op;
-        output_work->_thief_result = kaapi_allocate_thief_result( sc_transform, 0, 0 );
+        
+        /* I reclaim to allocate Self_t data, in fact only 2 InputIterator + 1 OutputIterator is enough */
+        output_work->_thief_result = kaapi_allocate_thief_result( sc_transform, sizeof(Self_t), 0 );
+        output_work->_thief_result->data = output_work;
+        std::cout << "New thief" << reply_count << "/" << savecount 
+                  << ": " << output_work->_thief_result 
+                  << ", with [" << output_work->_ibeg-beg0 << "," <<output_work->_iend-beg0
+                  << ") out=" << output_work->_obeg - obeg 
+                  << ", #= " << output_work->_iend-output_work->_ibeg << std::endl;
 
         kaapi_thread_pushtask( thief_thread );
 
@@ -174,12 +214,22 @@ protected:
 };
 
 
+template<class InputIterator, class OutputIterator, class UnaryOperator>
+InputIterator TransformStruct<InputIterator, OutputIterator, UnaryOperator>::beg0;
+template<class InputIterator, class OutputIterator, class UnaryOperator>
+InputIterator TransformStruct<InputIterator, OutputIterator, UnaryOperator>::end0;
+template<class InputIterator, class OutputIterator, class UnaryOperator>
+OutputIterator TransformStruct<InputIterator, OutputIterator, UnaryOperator>::obeg;
+
 /**
 */
 template<class InputIterator, class OutputIterator, class UnaryOperator>
 void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op )
 {
   typedef TransformStruct<InputIterator, OutputIterator, UnaryOperator> Self_t;
+  Self_t::beg0 = begin;
+  Self_t::end0 = end;
+  Self_t::obeg = to_fill;
   
   Self_t work( begin, end, to_fill, op);
 
@@ -191,14 +241,28 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
     &work
   );
   
-  work.doit( sc_transform, thread );
+  do {
+    work.doit( sc_transform, thread );
 
-  kaapi_taskadaptive_result_t* thief = kaapi_preempt_getnextthief_head( sc_transform );
-  while (thief !=0)
-  {
-    kaapi_preempt_thief ( sc_transform, thief, &work, Self_t::static_mainreducer );
-    thief = kaapi_preempt_getnextthief_head( sc_transform );
-  }
+    kaapi_taskadaptive_result_t* thief = kaapi_preempt_getnextthief_head( sc_transform );
+    if (thief !=0)
+    {
+      std::cout << "Master preempt Thief:" << thief << std::endl;
+      if (kaapi_preempt_thief ( 
+          sc_transform, 
+          thief,                       /* thief to preempt */
+          0,                           /* arg for the thief */
+          Self_t::static_mainreducer,  /* my reducer */
+          &work                        /* extra arg for the reducer */
+      )) 
+      {
+        std::cout << "Continue with the remainding work of the thief:" << thief << std::endl;
+        continue;
+      }
+      std::cout << "No work from thief:" << thief << std::endl;
+    }
+    else break;
+  } while (1);
   
   
   kaapi_steal_finalize( sc_transform );

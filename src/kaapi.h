@@ -419,7 +419,7 @@ typedef struct kaapi_stealcontext_t {
 */
 #if !defined(KAAPI_COMPILE_SOURCE)
 typedef struct kaapi_taskadaptive_result_t {
-  double*                             data;             /* the data produced by the thief */
+  void*                               data;             /* the data produced by the thief */
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
@@ -670,8 +670,8 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
     Else if the user finally decide to reply 'failed' then it should explicitly deallocate it 
     by a call to kaapi_deallocate_thief_result.
     \param sc INOUT the steal context
-    \param size IN the size in bytes to store the result
-    \param retval IN the result of the steal request 0 iff failed else success
+    \param size IN the size in bytes of the memory to store the result of a thief
+    \param data IN a user defined data or 0 to means to be allocated by the runtime
 */
 extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
     kaapi_stealcontext_t* stc, int size, void* data
@@ -835,7 +835,7 @@ extern int kaapi_preempt_nextthief_helper(
  ((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief) ?		\
  (									\
   kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, ##__VA_ARGS__) \
+  ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__) \
  ) : 0									\
 )
 
@@ -861,7 +861,9 @@ static inline int kaapi_preemptpoint_isactive( kaapi_taskadaptive_result_t* ktr 
 extern int kaapi_preemptpoint_before_reducer_call( 
     struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
-    void* arg_for_victim, int size 
+    void* arg_for_victim, 
+    void* result_data, 
+    int result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
     struct kaapi_taskadaptive_result_t* ktr, 
@@ -894,18 +896,18 @@ static inline int kaapi_is_null(void* p)
 */
 #ifdef __cplusplus
 typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
-#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, size_arg_victim, ...)\
+#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(ktr) ? \
-        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, size_arg_victim),\
+        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, result_data, result_size),\
         kaapi_preemptpoint_after_reducer_call( ktr, stc, \
         ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )
 #else
-#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, size_arg_victim, ...)\
+#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(ktr) ? \
-        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, size_arg_victim),\
+        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, result_data, result_size),\
         kaapi_preemptpoint_after_reducer_call( ktr, stc, \
         ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
