@@ -74,6 +74,7 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
+/*  usleep(100); */
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
@@ -98,7 +99,7 @@ redo_select:
   while (1)
   {
     /* if lock sucess then steal of all processors in the request array */
-    ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
+    ok = (KAAPI_ATOMIC_READ(&victim.kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
     if (ok) break;
 //TODO    if (kproc->hasrequest) kproc->thread->hasrequest = 0;   /* current stack never accept steal request */
 
