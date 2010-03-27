@@ -1318,7 +1318,7 @@ inline ka::IStream& operator>> (ka::IStream& s_in, double& c )
 { return s_in; }
 
 
-#if defined(_KAAPIPLUSPLUS_IN_GLOBAL_NAMESPACE)
+#if !defined(_KAAPIPLUSPLUS_NOT_IN_GLOBAL_NAMESPACE)
 using namespace ka;
 #endif
 

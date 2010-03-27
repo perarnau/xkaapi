@@ -58,7 +58,8 @@ libxkaapixx_la_SOURCES=\
 	ka_properties.h \
 	ka_timer.h \
 	ka_types.h\
-  atha_kaapi.cpp
+  atha_kaapi.cpp\
+  kastl/kastl_workqueue.cpp
 
 # NOT YET USED:  	atha_monotonic.cpp \
 #	atha_array.h \
@@ -78,7 +79,11 @@ include_HEADERS=\
   athapascan-1 \
   athapascan-1.h \
   athapascan_closure.h\
-  athapascan_fork.h
+  athapascan_fork.h\
+  kastl/kastl_workqueue.h\
+  kastl/kastl_foreach.h\
+  kastl/algorithm.h\
+  kastl/algorithm
 
 check_PROGRAMS=ka_api_check_header
 if STD_CXX0X

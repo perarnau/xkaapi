@@ -47,7 +47,7 @@
 #define _KAAPIPLUSPLUS_NOT_GLOBAL_NAME_H__TWO
 
 /* include definition in global namespace */
-#define _KAAPIPLUSPLUS_IN_GLOBAL_NAMESPACE 1
+#define _KAAPIPLUSPLUS_NOT_IN_GLOBAL_NAMESPACE 1
 #include "kaapi++.h"
 
 #endif

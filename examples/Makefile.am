@@ -21,7 +21,10 @@ check_PROGRAMS= \
 	poisson3d-kaapi        \
 	nqueens_apiatha        \
 	nqueens_apikaapi       \
+  foreach_std            \
+  foreach_kastl          \
   transform_std          \
+  transform_kastl        \
 	transform_adapt	       \
 	transform_adapt_preempt\
 	transform_concurrent   \
@@ -46,7 +49,10 @@ dgemm_cblas_SOURCES=dgemm_cblas.cpp
 poisson3d_kaapi_SOURCES=poisson3d-kaapi.cpp poisson3d.cpp poisson3diter.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
+foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
+foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 transform_std_SOURCES=transform_std.cpp random.cpp random.h
+transform_kastl_SOURCES=transform_kastl.cpp random.cpp random.h
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
 transform_adapt_preempt_SOURCES=transform_adapt_preempt.h transform_adapt_preempt.cpp random.cpp random.h
 transform_concurrent_SOURCES=transform_concurrent.h transform_concurrent.cpp random.cpp random.h
@@ -119,10 +125,25 @@ branchbound_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_C
 branchbound_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 branchbound_apiatha_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
 
+foreach_std_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
+foreach_std_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+foreach_std_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+foreach_std_LDADD   =$(LIBS)
+
+foreach_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
+foreach_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+foreach_kastl_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+foreach_kastl_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
+
 transform_std_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
 transform_std_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 transform_std_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 transform_std_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
+
+transform_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
+transform_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+transform_kastl_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+transform_kastl_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
 
 transform_adapt_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
 transform_adapt_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
