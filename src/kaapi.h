@@ -1128,6 +1128,78 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
   }
 
 
+
+
+/* ========================= Low level memory barrier, inline for perf... so ============================= */
+
+#if defined(__APPLE__)
+#  include <libkern/OSAtomic.h>
+static inline void kaapi_writemem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  OSMemoryBarrier();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+#elif defined(__linux__)
+
+static inline void kaapi_writemem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+#else
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+#else
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+  __sync_synchronize();
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+#else
+#  error "Undefined barrier"
+#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
+
+
+
 /**
  */
 extern void _kaapi_dummy(void*);
