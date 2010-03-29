@@ -50,6 +50,42 @@ namespace kastl {
   
 namespace impl {
 
+  /* atomics, low level memory routines */
+
+  typedef struct atomic_t
+  {
+    volatile long _counter;
+
+    inline atomic_t(long value)
+      : _counter(value) {}
+
+  } atomic_t;
+
+  static inline long atomic_sub(atomic_t* a, long value)
+  {
+    return __sync_sub_and_fetch(&a->_counter, value);
+  }
+
+  static inline long atomic_add(atomic_t* a, long value)
+  {
+    return __sync_add_and_fetch(&a->_counter, value);
+  }
+
+  static inline int atomic_cas(atomic_t* a, long o, long n)
+  {
+    return __sync_bool_compare_and_swap(&a->_counter, o, n);
+  }
+
+  static inline long atomic_read(atomic_t* a)
+  {
+    return a->_counter;
+  }
+
+  static inline void atomic_write(atomic_t* a, long value)
+  {
+    a->_counter = value;
+  }
+
   static inline void mem_synchronize()
   {
     /* this is needed */
@@ -151,7 +187,7 @@ namespace impl {
     work_queue_index_t _beg __attribute__((aligned(64)));
     work_queue_index_t _end __attribute__((aligned(64)));
 
-    int volatile _lock;
+    atomic_t _lock;
   };
   
   /** */

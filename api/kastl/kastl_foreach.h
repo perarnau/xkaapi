@@ -84,7 +84,14 @@ public:
 
     while (_queue.pop(r, _seqgrain) == true)
     {
+#if 0
       std::for_each( _ibeg + r.first, _ibeg + r.last, _op );
+#else
+      InputIterator pos = _ibeg + r.first;
+      InputIterator end = _ibeg + r.last;
+      for ( ; pos != end; ++pos)
+	_op(*pos);
+#endif
     }
   }
 

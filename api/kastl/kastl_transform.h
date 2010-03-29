@@ -85,7 +85,15 @@ public:
 
     while (_queue.pop(r, _seqgrain) == true)
     {
+#if 0
       std::transform( _ibeg + r.first, _ibeg + r.last, _obeg + r.first, _op );
+#else
+      InputIterator ipos = _ibeg + r.first;
+      InputIterator iend = _ibeg + r.last;
+      OutputIterator opos = _obeg + r.first;
+      for ( ; ipos != iend; ++ipos, ++opos)
+	*opos = _op(*ipos);
+#endif
     }
   }
 

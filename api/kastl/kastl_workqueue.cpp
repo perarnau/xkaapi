@@ -42,7 +42,6 @@
  ** terms.
  ** 
  */
-#include "kaapi_impl.h"
 #include "kastl_workqueue.h"
 #include <unistd.h>
 
@@ -54,7 +53,7 @@ namespace impl {
 */
 void work_queue::lock_pop()
 {
-  while (!KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)&_lock, 0, 1 ) )
+  while (!atomic_cas(&_lock, 0, 1))
     ;
 }
 
@@ -62,7 +61,7 @@ void work_queue::lock_pop()
 */
 void work_queue::lock_steal()
 {
-  while ( (_lock ==1) && !KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)&_lock, 0, 1 ) )
+  while ((atomic_read(&_lock) == 1) && !atomic_cas(&_lock, 0, 1))
     usleep(1);
 }
 
@@ -70,7 +69,7 @@ void work_queue::lock_steal()
 */
 void work_queue::unlock()
 {
-  _lock = 0;
+  atomic_write(&_lock, 0);
 }
   
 /** */
