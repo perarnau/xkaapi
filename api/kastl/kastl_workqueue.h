@@ -50,6 +50,12 @@ namespace kastl {
   
 namespace impl {
 
+  static inline void mem_synchronize()
+  {
+    /* this is needed */
+    __sync_synchronize();
+  }
+
   /** work range
    */
   struct range
@@ -156,17 +162,14 @@ namespace impl {
   /** */
   inline void work_queue::set( const range& r)
   {
-    // range._end is always guaranteed to be 0
-    // writing range._beg will leave the work_queue empty
-    // then writing _end will actually push the contents
-    
-    _end = 0;
-    kaapi_writemem_barrier();
-    
+    /* optim: only lock for setting _end
+       after having set _beg to _end
+     */
+
+    lock_pop();
     _beg = r.first;
-    kaapi_writemem_barrier();
-    
     _end = r.last;
+    unlock();
   }
   
   /** */
@@ -192,7 +195,7 @@ namespace impl {
   inline bool work_queue::pop(range& r, work_queue::size_type size)
   {
     _beg += size;
-    kaapi_mem_barrier();
+    mem_synchronize();
     if (_beg > _end) return slow_pop( r, size );
     
     r.first = _beg - size;

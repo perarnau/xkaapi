@@ -73,7 +73,7 @@ int kaapi_preemptpoint_before_reducer_call(
     kaapi_steal_endcritical( &ta->sc );
     
     /* here no more steal thief can call the splitter on stc */
-    printf("[PreemptPoint] Add head:%p tail:%p to result:%p\n", ta->head, ta->tail, ktr);
+    printf("[PreemptPoint] Add head:%p tail:%p to result:%p\n", ta->head, ta->tail, (void*)ktr);
     ktr->rhead = ta->head; ta->head = 0;
     ktr->rtail = ta->tail; ta->tail = 0;
     

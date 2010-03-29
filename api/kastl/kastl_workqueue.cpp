@@ -78,7 +78,7 @@ bool work_queue::slow_pop(range& r, work_queue::size_type size)
 {
   /* already done in inlined pop :
       _beg += size;
-      kaapi_mem_barrier();
+      mem_synchronize();
     test (_beg > _end) was true.
     The real interval is [_beg-size, _end)
   */
@@ -113,7 +113,7 @@ bool work_queue::steal(range& r, work_queue::size_type size)
 {
   lock_steal();
   _end -= size;
-  kaapi_mem_barrier();
+  mem_synchronize();
   if (_end < _beg)
   {
     _end += size;
@@ -137,11 +137,11 @@ bool work_queue::steal(range& r, work_queue::size_type size_max, work_queue::siz
   kaapi_assert_debug( size_min <= size_max );
   lock_steal();
   _end -= size_max;
-  kaapi_mem_barrier();
+  mem_synchronize();
   if (_end < _beg)
   {
     _end += size_max - size_min;
-    kaapi_mem_barrier();
+    mem_synchronize();
     if (_beg < _end)
     {
       r.first = _end;
