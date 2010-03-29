@@ -43,6 +43,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stddef.h> /* offsetof */
 
 int kaapi_preempt_nextthief_helper( 
   kaapi_stealcontext_t*        stc, 
@@ -53,8 +54,9 @@ int kaapi_preempt_nextthief_helper(
   kaapi_taskadaptive_t* ta;
   if (ktr ==0) return 0;
 
-  ta = (kaapi_taskadaptive_t*)stc;
-  
+  /* container_of */
+  ta = (kaapi_taskadaptive_t*)((char *)stc - offsetof(kaapi_taskadaptive_t, sc));
+
   /* pass arg to the thief */
   ktr->arg_from_victim = arg_to_thief;  
   kaapi_writemem_barrier();
