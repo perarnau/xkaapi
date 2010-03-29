@@ -143,7 +143,7 @@ protected:
     {
       if (kaapi_request_ok(&request[i]))
       {
-        kaapi_thread_t* thief_thread = request[i].thread;
+        kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
         kaapi_task_t* thief_task  = kaapi_thread_toptask(thief_thread);
         kaapi_task_init( thief_task, &static_thiefentrypoint, kaapi_thread_pushdata(thief_thread, sizeof(Self_t)) );
         output_work = kaapi_task_getargst(thief_task, Self_t);
