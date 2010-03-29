@@ -81,6 +81,22 @@ int main(int argc, char** argv)
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;
 
+  // Verification of the output
+  int i = 0;
+  bool isok = true;
+  for (i=0; i<n; ++i)
+  {
+    double tmp = i;
+    op(tmp);
+    if (input[i] != tmp)
+    {
+      isok = false;
+      break;
+    }
+  }
+  if (isok) std::cout << "Verification ok" << std::endl;
+  else std::cout << "Verification ko @" << i << std::endl;
+
   std::cout << "Result-> size: " << n << "  time: " << avrg << std::endl;
 
   delete [] input;

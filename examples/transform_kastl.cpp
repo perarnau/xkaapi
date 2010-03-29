@@ -29,7 +29,6 @@ struct Op2 {
     Op2(){ };
     double operator()(double a)
     {
-    usleep(10000);
          return  2*a;
     }
 };
