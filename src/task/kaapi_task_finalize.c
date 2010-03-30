@@ -55,7 +55,7 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_mem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
   kaapi_assert(ta->head ==0)
-  kaapi_assert(ta->head ==0)
+  kaapi_assert(ta->tail ==0)
 
   /* hack ? restore the upper frame (the one that should have execute pushstealcontext 
   */

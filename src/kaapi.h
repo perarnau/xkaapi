@@ -696,6 +696,13 @@ extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 
 
 /** \ingroup ADAPTIVE
+    free a result previously allocate with kaapi_allocate_thief_result
+    \param ktr IN the result to free
+ */
+extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t* ktr);
+
+
+/** \ingroup ADAPTIVE
     Dellocate the return data structure already allocated to the thief. 
     The call never deallocate a application level buffer passed to kaapi_allocate_thief_result.
     The user should only call this function in case of aborting the return to the thief
@@ -852,15 +859,17 @@ extern int kaapi_preempt_nextthief_helper(
       int (*)( stc, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
-#define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... ) \
-(									\
- ((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief) ?		\
- (									\
-  kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__) \
- ) : 0									\
-)
-
+#define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
+({									\
+  int __res = 0;							\
+  if (((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief)) \
+    if (!kaapi_is_null((void*)reducer))					\
+    {									\
+      __res = ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__);	\
+      kaapi_free_thief_result(tr);					\
+    }									\
+  __res;								\
+})
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task

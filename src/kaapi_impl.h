@@ -138,11 +138,17 @@ extern "C" {
 
 
 /** utility */
-static inline void* kaapi_malloc_align( unsigned int a, size_t size )
+static inline void* kaapi_malloc_align( unsigned int a, size_t size, void** addr_tofree)
 {
-  if (a <8) return malloc(size);
+  if (a < 8)
+  {
+    *addr_tofree = malloc(size);
+    return *addr_tofree;
+  }
+
   kaapi_uintptr_t align = a-1;
   void* retval = (void*)malloc(align + size);
+  *addr_tofree = retval;
   if ( (((kaapi_uintptr_t)retval) & align) !=0U)
     retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
   kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
@@ -402,6 +408,8 @@ typedef struct kaapi_taskadaptive_result_t {
 
   struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
   struct kaapi_taskadaptive_result_t* prev;             /* */
+
+  void*				      addr_tofree;	/* the non aligned malloc()ed addr */
   
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 
