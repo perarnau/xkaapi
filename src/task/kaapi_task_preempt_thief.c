@@ -43,7 +43,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <stddef.h> /* offsetof */
 
 int kaapi_preempt_nextthief_helper( 
   kaapi_stealcontext_t*        stc, 
@@ -54,8 +53,7 @@ int kaapi_preempt_nextthief_helper(
   kaapi_taskadaptive_t* ta;
   if (ktr ==0) return 0;
 
-  /* container_of */
-  ta = (kaapi_taskadaptive_t*)((char *)stc - offsetof(kaapi_taskadaptive_t, sc));
+  ta = (kaapi_taskadaptive_t*)stc;
 
   /* pass arg to the thief */
   ktr->arg_from_victim = arg_to_thief;  
@@ -77,17 +75,39 @@ int kaapi_preempt_nextthief_helper(
   */
   while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
     ;
-    if (ktr->next ==0) /* it's on tail */
-      ta->tail = ktr->prev;
-    else  
-      ktr->next->prev = ktr->prev;
-    if (ktr->prev ==0) /* it's on head */
-      ta->head = ktr->next;
-    else 
+
+  if (ktr->rhead != NULL)
+  {
+    /* rtail non null too */
+    ktr->rhead->prev = ktr->prev;
+    ktr->rtail->next = ktr->next;
+
+    if (ktr->prev != NULL)
       ktr->prev->next = ktr->next;
-    /* mostly for debug: */
-    ktr->next = 0;
-    ktr->prev = 0;
+    else
+      ta->head = ktr->rhead;
+
+    if (ktr->next != NULL)
+      ktr->next->prev = ktr->prev;
+    else
+      ta->tail = ktr->rtail;
+  }
+  else /* no thieves, unlink */
+  {
+    if (ktr->prev != NULL)
+      ktr->prev->next = ktr->next;
+    else
+      ta->head = ktr->next;
+
+    if (ktr->next != NULL)
+      ktr->next->prev = ktr->prev;
+    else
+      ta->tail = ktr->prev;
+  }
+
+  /* mostly for debug: */
+  ktr->next = 0;
+  ktr->prev = 0;
 
   KAAPI_ATOMIC_WRITE(&ta->lock, 0);
   
