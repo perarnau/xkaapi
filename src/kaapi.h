@@ -540,6 +540,23 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
   return retval;
 }
 
+/** \ingroup TASK
+    same as kaapi_thread_pushdata, but with alignment constraints.
+    note the alignment must be a power of 2 and not 0
+    \param align the alignment size
+*/
+static inline void* kaapi_thread_pushdata_align
+(kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
+{
+  const uint32_t mask = align - 1;
+
+  if ((uintptr_t)thread->sp_data & mask)
+    thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
+
+  return kaapi_thread_pushdata(thread, count);
+}
+
+
 
 /** \ingroup TASK
     The function kaapi_thread_pushdata() will return the pointer to the next top data.
