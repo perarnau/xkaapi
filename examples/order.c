@@ -331,18 +331,13 @@ static void root_entry(unsigned int q)
 {
   kaapi_thread_t* thread;
   kaapi_task_t* task;
-  kaapi_frame_t frame;
 
   thread = kaapi_self_thread();
-
-  kaapi_thread_save_frame(thread, &frame);
 
   task = kaapi_thread_toptask(thread);
   kaapi_task_init(task, common_entry, create_work(q));
   kaapi_thread_pushtask(thread);
   kaapi_sched_sync();
-
-  kaapi_thread_restore_frame(thread, &frame);
 }
 
 

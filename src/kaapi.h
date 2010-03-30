@@ -863,11 +863,11 @@ extern int kaapi_preempt_nextthief_helper(
 ({									\
   int __res = 0;							\
   if (((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief)) \
+  {									\
     if (!kaapi_is_null((void*)reducer))					\
-    {									\
       __res = ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__);	\
-      kaapi_free_thief_result(tr);					\
-    }									\
+    kaapi_free_thief_result(tr);					\
+  }									\
   __res;								\
 })
 
