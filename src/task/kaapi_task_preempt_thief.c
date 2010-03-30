@@ -69,10 +69,6 @@ int kaapi_preempt_nextthief_helper(
   /*ok: here thief has been preempted */
   kaapi_readmem_barrier();
   
-  /* TODO: Here it should be:
-     - replace ktr in the list of ta by the thives of ktr 
-     but it required to link ktr to the stealcontext used by the thief....
-  */
   while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
     ;
 
