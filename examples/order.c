@@ -211,14 +211,18 @@ static int splitter
     if (steal_work(victim_work, thief_work))
       is_done = 1;
 
+    printf("red alloc %lx [%u - %u[\n",
+	   (uintptr_t)thief_work->r->data,
+	   thief_work->i, thief_work->j);
+
     /* result has to be initialized since from the
        push task the thief may be preempted
      */
 
     memcpy(thief_work->r->data, thief_work, sizeof(work_t));
 
-    printf("[%02x, %02x] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
-	   victim_work->kid, thief_work->kid,
+    printf("[%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
+	   victim_work->kid,
 	   victim_work->k, victim_work->j,
 	   thief_work->i, thief_work->j,
 	   (uintptr_t)thief_work->r->data);
@@ -248,6 +252,8 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
   work_t* const w = args;
 
   w->kid = kaapi_get_current_kid();
+  if (w->r != NULL)
+    ((work_t*)w->r->data)->kid = w->kid;
 
   printf("[%02x,   ] ent [%04u, %04u[ (%lx)\n",
 	 w->kid, w->i, w->j,
