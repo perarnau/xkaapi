@@ -99,7 +99,6 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
         (*fmt_param->dstor)(copy_data_param);
         continue;
       }
-      fflush(stdout);
 
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
       {
