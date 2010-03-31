@@ -121,6 +121,14 @@ typedef struct kaapi_atomic64_t {
 #    error "Fence operation should must put here. See the memory consistency of the hardware you use"
 #endif
 
+
+#if defined(__i386__)||defined(__x86_64)
+# define kaapi_slowdown_cpu() \
+  do { __asm__ __volatile__("rep; nop;"); } while (0)
+#else
+# define kaapi_slowdown_cpu()
+#endif
+
 /* ========================================================================== */
 struct kaapi_task_t;
 struct kaapi_stack_t;

@@ -60,7 +60,7 @@ int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
   while (1)
   {
     if ( (KAAPI_ATOMIC_READ( &kproc->lock ) == 0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid) ) break;
-    /* nop here ? */
+    /* nop here: -> refer to kaapi_slowdown_cpu if necessary */
   }
   KAAPI_ATOMIC_WRITE( &kproc->lock, 0 );
 
