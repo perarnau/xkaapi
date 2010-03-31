@@ -184,7 +184,7 @@ static int splitter
   int replied_count = 0;
   int is_done = 0;
 
-  for (; (count > 0) && (!is_done); --count, ++requests)
+  for (; (count > 0) && (!is_done); ++requests)
   {
     kaapi_thread_t* thief_thread;
     kaapi_task_t* thief_task;
@@ -239,6 +239,7 @@ static int splitter
     kaapi_request_reply_head(sc, requests, thief_work->r);
 
     ++replied_count;
+    --count;
   }
 
   return replied_count;
@@ -291,6 +292,7 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
 #if 0
     printf("[%02x,   ] pre (%lx)\n", w->kid, (uintptr_t)ktr->data);
 #endif
+
     kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
     goto continue_seq;
   }
