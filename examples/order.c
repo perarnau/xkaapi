@@ -14,7 +14,7 @@
 
 #define CONFIG_INPUT_SIZE 500
 #define CONFIG_ALLOC_RESULT 1
-#define CONFIG_STEALABLE_THIEVES 1
+#define CONFIG_STEALABLE_THIEVES 0
 #define CONFIG_STATIC_STEAL 0
 #define CONFIG_STEAL_SIZE 10
 #define CONFIG_POP_SIZE 10
@@ -158,6 +158,9 @@ static int reducer
 {
   /* has been reduced */
 
+  if (thief_work->i == thief_work->j)
+    return 1;
+
   printf("[%02x, %02x] red [%04u, %04u[ [%04u, %04u, %04u[ (%lx)\n",
 	 victim_work->kid, thief_work->kid,
 	 victim_work->i, victim_work->j,
@@ -190,7 +193,7 @@ static int splitter
     if (!kaapi_request_ok(requests))
       continue ;
 
-    if (work_remaining_size(victim_work) == 0)
+    if (work_remaining_size(victim_work) < 10)
       break;
 
     thief_thread = kaapi_request_getthread(requests);
@@ -207,6 +210,12 @@ static int splitter
 
     if (steal_work(victim_work, thief_work))
       is_done = 1;
+
+    /* result has to be initialized since from the
+       push task the thief may be preempted
+     */
+
+    memcpy(thief_work->r->data, thief_work, sizeof(work_t));
 
     printf("[%02x, %02x] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
 	   victim_work->kid, thief_work->kid,
