@@ -12,12 +12,12 @@
  */
 
 
-#define CONFIG_INPUT_SIZE 500
+#define CONFIG_INPUT_SIZE 500000
 #define CONFIG_ALLOC_RESULT 1
-#define CONFIG_STEALABLE_THIEVES 0
+#define CONFIG_STEALABLE_THIEVES 1
 #define CONFIG_STATIC_STEAL 0
 #define CONFIG_STEAL_SIZE 10
-#define CONFIG_POP_SIZE 10
+#define CONFIG_POP_SIZE 100
 
 
 extern void usleep(unsigned long);
@@ -144,7 +144,7 @@ static void seq_work(work_t* w)
 #endif
 
   for (; q; --q)
-    usleep(1000);
+    usleep(10);
 }
 
 
@@ -161,7 +161,7 @@ static int reducer
   if (thief_work->i == thief_work->j)
     return 1;
 
-  printf("[%02x, %02x] red [%04u, %04u[ [%04u, %04u, %04u[ (%lx)\n",
+  printf("[%02x, %02x] mark_red [%05u, %05u[ [%05u, %05u, %05u[ (%lx)\n",
 	 victim_work->kid, thief_work->kid,
 	 victim_work->i, victim_work->j,
 	 thief_work->i, thief_work->k, thief_work->j,
@@ -211,9 +211,11 @@ static int splitter
     if (steal_work(victim_work, thief_work))
       is_done = 1;
 
+#if 0
     printf("red alloc %lx [%u - %u[\n",
 	   (uintptr_t)thief_work->r->data,
 	   thief_work->i, thief_work->j);
+#endif
 
     /* result has to be initialized since from the
        push task the thief may be preempted
@@ -221,7 +223,7 @@ static int splitter
 
     memcpy(thief_work->r->data, thief_work, sizeof(work_t));
 
-    printf("[%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
+    printf("[%02x,   ] mark_spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
 	   victim_work->kid,
 	   victim_work->k, victim_work->j,
 	   thief_work->i, thief_work->j,
@@ -279,7 +281,10 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
     seq_work(&local_work);
 
     if (w->r != NULL)
-      kaapi_preemptpoint(w->r, sc, NULL, NULL, w, sizeof(work_t), NULL);
+    {
+      if (kaapi_preemptpoint(w->r, sc, NULL, NULL, w, sizeof(work_t), NULL))
+	return ;
+    }
   }
 
   /* retrive thieves results */
