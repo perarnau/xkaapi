@@ -67,12 +67,14 @@ int kaapi_preemptpoint_before_reducer_call(
     kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 
     kaapi_steal_begincritical( &ta->sc );
-    /* avoid to steal to this context */
-    ta->sc.splitter = 0;
-    ta->sc.argsplitter = 0;    
+
+    /* disable steal endcritical will pop NULL splitter */
+    ta->save_splitter    = NULL;
+    ta->save_argsplitter = NULL;
+
     kaapi_steal_endcritical( &ta->sc );
     
-    /* no lock needed */
+    /* no lock needed since no more steal possible */
     ktr->rhead = ta->head; ta->head = 0;
     ktr->rtail = ta->tail; ta->tail = 0;
   }
