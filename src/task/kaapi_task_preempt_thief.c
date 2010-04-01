@@ -72,9 +72,6 @@ int kaapi_preempt_nextthief_helper(
   while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
     ;
 
-  if (ktr->prev != NULL)
-    printf("invalidKTR\n");
-
   if (ktr->rhead != NULL)
   {
     /* rtail non null too */

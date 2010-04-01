@@ -11,7 +11,7 @@
 #define CONFIG_STATIC_STEAL 0
 #define CONFIG_STEAL_SIZE 10
 #define CONFIG_POP_SIZE 100
-#define CONFIG_HAS_DATA 1
+#define CONFIG_CHECK_DATA 1
 
 
 extern void usleep(unsigned long);
@@ -57,7 +57,7 @@ static void init_work(work_t* w)
   w->j = 0;
   w->k = 0;
 
-#if CONFIG_HAS_DATA
+#if CONFIG_CHECK_DATA
   w->data = NULL;
 #endif
 
@@ -153,8 +153,8 @@ static void seq_work(work_t* w)
 
   for (i = w->i; i < w->j; ++i)
   {
-#if CONFIG_HAS_DATA
-/*     w->data[i] = i; */
+#if CONFIG_CHECK_DATA
+    w->data[i] |= 1;
 #else
     usleep(10);
 #endif
@@ -182,6 +182,15 @@ static int reducer
 	 (uintptr_t)thief_work);
 
   merge_work(victim_work, thief_work);
+
+#if CONFIG_CHECK_DATA
+  {
+    /* mark as reduced what has been done by the thief */
+    unsigned int i;
+    for (i = victim_work->i; i < thief_work->k; ++i)
+      victim_work->data[i] |= 1 << 1;
+  }
+#endif
 
   return 1;
 }
@@ -222,7 +231,7 @@ static int splitter
     thief_work->r = kaapi_allocate_thief_result(sc, sizeof(work_t), thief_work);
 #endif
 
-#if CONFIG_HAS_DATA
+#if CONFIG_CHECK_DATA
     thief_work->data = victim_work->data;
 #endif
 
@@ -347,6 +356,15 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
     /* update results before leaving */
     memcpy(w->r->data, w, sizeof(work_t));
   }
+#if CONFIG_CHECK_DATA
+  else
+  {
+    /* master, mark the results as reduced */
+    unsigned int i;
+    for (i = w->i; i < w->k; ++i)
+      w->data[i] |= 1 << 1;
+  }
+#endif
 }
 
 
@@ -380,7 +398,7 @@ static void common_entry(void* args, kaapi_thread_t* thread)
 
 static work_t* create_work(unsigned int q)
 {
-#if CONFIG_HAS_DATA
+#if CONFIG_CHECK_DATA
   static unsigned int data[CONFIG_INPUT_SIZE];
 #endif
 
@@ -392,7 +410,7 @@ static work_t* create_work(unsigned int q)
   work.j = q;
   work.k = 0;
 
-#if CONFIG_HAS_DATA
+#if CONFIG_CHECK_DATA
   memset(data, 0, sizeof(data));
   work.data = data;
 #endif
@@ -400,15 +418,20 @@ static work_t* create_work(unsigned int q)
   return &work;
 }
 
-#if CONFIG_HAS_DATA
+#if CONFIG_CHECK_DATA
 
 static int check_work(const work_t* w)
 {
   unsigned int i;
 
   for (i = 0; i < CONFIG_INPUT_SIZE; ++i)
-    if (w->data[i] != i)
+  {
+    if (w->data[i] != 3)
+    {
+      printf("%u@%u\n", w->data[i], i);
       return -1;
+    }
+  }
 
   return 0;
 }
@@ -428,7 +451,7 @@ static int root_entry(unsigned int q)
   kaapi_thread_pushtask(thread);
   kaapi_sched_sync();
 
-#if CONFIG_HAS_DATA
+#if CONFIG_CHECK_DATA
   if (check_work(work) == -1)
   {
     printf("invalidWork\n");
