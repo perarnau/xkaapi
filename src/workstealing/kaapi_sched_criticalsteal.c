@@ -100,3 +100,19 @@ int kaapi_steal_endcritical( kaapi_stealcontext_t* stc )
   
   return 0;
 }
+
+
+int kaapi_steal_endcritical_disabled(kaapi_stealcontext_t* stc)
+{
+  /* set save_splitter to NULL so that
+     concurrent stealing is disabled
+     as the critical section is done
+   */
+
+  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)stc;
+
+  ta->save_splitter = NULL;
+  ta->save_argsplitter = NULL;
+
+  return kaapi_steal_endcritical(stc);
+}

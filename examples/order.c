@@ -336,6 +336,8 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
     goto continue_seq;
   }
 
+  kaapi_steal_endcritical_disabled(sc);
+
   /* here no thieves, steal disabled, can leave */
 
   printf("[%02x,   ] don [%04u, %04u[\n", w->kid, w->i, w->j);

@@ -965,6 +965,11 @@ extern int kaapi_steal_begincritical( kaapi_stealcontext_t* sc );
 */
 extern int kaapi_steal_endcritical( kaapi_stealcontext_t* sc );
 
+/** Same as kaapi_steal_endcritical but stealing left disabled
+    \ingroup TASK
+*/
+extern int kaapi_steal_endcritical_disabled( kaapi_stealcontext_t* sc );
+
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
 */
