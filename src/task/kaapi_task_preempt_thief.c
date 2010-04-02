@@ -47,7 +47,7 @@
 int kaapi_preempt_nextthief_helper( 
   kaapi_stealcontext_t*        stc, 
   kaapi_taskadaptive_result_t* ktr, 
-  void*                        arg_to_thief 
+  void*                        arg_to_thief
 )
 {
   kaapi_taskadaptive_t* ta;
@@ -79,12 +79,12 @@ int kaapi_preempt_nextthief_helper(
     ktr->rtail->next = ktr->next;
 
     if (ktr->prev != NULL)
-      ktr->prev->next = ktr->next;
+      ktr->prev->next = ktr->rhead;
     else
       ta->head = ktr->rhead;
 
     if (ktr->next != NULL)
-      ktr->next->prev = ktr->prev;
+      ktr->next->prev = ktr->rtail;
     else
       ta->tail = ktr->rtail;
   }

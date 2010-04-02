@@ -5,7 +5,7 @@
 #include "kaapi.h"
 
 
-#define CONFIG_INPUT_SIZE 500000
+#define CONFIG_INPUT_SIZE 5000
 #define CONFIG_ALLOC_RESULT 1
 #define CONFIG_STEALABLE_THIEVES 1
 #define CONFIG_STATIC_STEAL 0
@@ -45,6 +45,15 @@ struct work
 };
 
 typedef struct work work_t;
+
+
+#if 0
+static void print_work(const void* data)
+{
+  const work_t* const w = data;
+  printf(" :: [%u - %u[\n", w->i, w->j);
+}
+#endif
 
 
 static void init_work(work_t* w)
@@ -154,7 +163,7 @@ static void seq_work(work_t* w)
   for (i = w->i; i < w->j; ++i)
   {
 #if CONFIG_CHECK_DATA
-    w->data[i] |= 1;
+    w->data[i] = (1 << 8) | w->kid;
 #else
     usleep(10);
 #endif
@@ -187,10 +196,14 @@ static int reducer
   {
     /* mark as reduced what has been done by the thief */
     unsigned int i;
-    for (i = victim_work->i; i < thief_work->k; ++i)
-      victim_work->data[i] |= 1 << 1;
+    for (i = thief_work->i; i < thief_work->k; ++i)
+      victim_work->data[i] |= 1 << 9;
   }
 #endif
+
+  thief_work->i = 0;
+  thief_work->j = 0;
+  thief_work->k = 0;
 
   return 1;
 }
@@ -286,13 +299,19 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
   if (w->r != NULL)
     ((work_t*)w->r->data)->kid = w->kid;
 
+#if 0
   printf("[%02x,   ] ent [%04u, %04u[ (%lx)\n",
 	 w->kid, w->i, w->j,
 	 w->r != NULL ? (uintptr_t)w->r->data : (uintptr_t)NULL);
+#endif
 
   /* sequential work */
 
  continue_seq:
+
+  printf("[%02x,   ] seq [%04u, %04u[ (%lx)\n",
+	 w->kid, w->k, w->j,
+	 w->r != NULL ? (uintptr_t)w->r->data : (uintptr_t)NULL);
 
   while (1)
   {
@@ -317,16 +336,21 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
 
   /* retrive thieves results */
 
-  kaapi_taskadaptive_result_t* ktr =
-    kaapi_preempt_getnextthief_head(sc);
+  kaapi_taskadaptive_result_t* ktr;
 
-  /* first try avoids kaapi_begincritical costs */
+#if 0
+
+  kaapi_preempt_getnextthief_head(sc);
+
+  /* first try avoids kaapi_begincritical costs, but race */
 
   if (ktr != NULL)
   {
     kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
     goto continue_seq;
   }
+
+#endif
 
   /* not thief. we are done but have to
      disable the conccurent steal otherwise
@@ -339,9 +363,11 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
   ktr = kaapi_preempt_getnextthief_head(sc);
   if (ktr != NULL)
   {
+    kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
+
     /* reenable steal before continuing */
     kaapi_steal_endcritical(sc);
-    kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
+
     goto continue_seq;
   }
 
@@ -356,15 +382,6 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
     /* update results before leaving */
     memcpy(w->r->data, w, sizeof(work_t));
   }
-#if CONFIG_CHECK_DATA
-  else
-  {
-    /* master, mark the results as reduced */
-    unsigned int i;
-    for (i = w->i; i < w->k; ++i)
-      w->data[i] |= 1 << 1;
-  }
-#endif
 }
 
 
@@ -426,9 +443,18 @@ static int check_work(const work_t* w)
 
   for (i = 0; i < CONFIG_INPUT_SIZE; ++i)
   {
-    if (w->data[i] != 3)
+    const unsigned char kid = w->data[i] & 0xff;
+
+    if (!(w->data[i] & (1 << 8)))
     {
-      printf("%u@%u\n", w->data[i], i);
+      printf("!!! notProcessed@%u\n", i);
+      return -1;
+    }
+
+    /* not master, not reduced */
+    if (kid && !(w->data[i] & (1 << 9)))
+    {
+      printf("!!! notReduced@%u, processedBy %u\n", i, kid);
       return -1;
     }
   }
