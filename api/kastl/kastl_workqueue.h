@@ -50,6 +50,48 @@ namespace kastl {
   
 namespace impl {
 
+  /* atomics, low level memory routines */
+
+  typedef struct atomic_t
+  {
+    volatile long _counter;
+
+    inline atomic_t(long value)
+      : _counter(value) {}
+
+  } atomic_t;
+
+  static inline long atomic_sub(atomic_t* a, long value)
+  {
+    return __sync_sub_and_fetch(&a->_counter, value);
+  }
+
+  static inline long atomic_add(atomic_t* a, long value)
+  {
+    return __sync_add_and_fetch(&a->_counter, value);
+  }
+
+  static inline int atomic_cas(atomic_t* a, long o, long n)
+  {
+    return __sync_bool_compare_and_swap(&a->_counter, o, n);
+  }
+
+  static inline long atomic_read(atomic_t* a)
+  {
+    return a->_counter;
+  }
+
+  static inline void atomic_write(atomic_t* a, long value)
+  {
+    a->_counter = value;
+  }
+
+  static inline void mem_synchronize()
+  {
+    /* this is needed */
+    __sync_synchronize();
+  }
+
   /** work range
    */
   struct range
@@ -145,7 +187,7 @@ namespace impl {
     work_queue_index_t _beg __attribute__((aligned(64)));
     work_queue_index_t _end __attribute__((aligned(64)));
 
-    int volatile _lock;
+    atomic_t _lock;
   };
   
   /** */
@@ -156,17 +198,14 @@ namespace impl {
   /** */
   inline void work_queue::set( const range& r)
   {
-    // range._end is always guaranteed to be 0
-    // writing range._beg will leave the work_queue empty
-    // then writing _end will actually push the contents
-    
-    _end = 0;
-    kaapi_writemem_barrier();
-    
+    /* optim: only lock for setting _end
+       after having set _beg to _end
+     */
+
+    lock_pop();
     _beg = r.first;
-    kaapi_writemem_barrier();
-    
     _end = r.last;
+    unlock();
   }
   
   /** */
@@ -192,7 +231,7 @@ namespace impl {
   inline bool work_queue::pop(range& r, work_queue::size_type size)
   {
     _beg += size;
-    kaapi_mem_barrier();
+    mem_synchronize();
     if (_beg > _end) return slow_pop( r, size );
     
     r.first = _beg - size;

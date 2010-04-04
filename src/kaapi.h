@@ -731,6 +731,11 @@ static inline int kaapi_request_reply_failed(
 )
 { return kaapi_request_reply( 0 /* means failed */, request, 0, 1 ); }
 
+/** \ingroup ADAPTIVE
+    retrieve the request associated thread
+*/
+static inline kaapi_thread_t* kaapi_request_getthread(kaapi_request_t* r)
+{ return r->thread; }
 
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction

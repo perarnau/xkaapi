@@ -42,7 +42,6 @@
  ** terms.
  ** 
  */
-#include "kaapi_impl.h"
 #include "kastl_workqueue.h"
 #include <unistd.h>
 
@@ -54,7 +53,7 @@ namespace impl {
 */
 void work_queue::lock_pop()
 {
-  while (!KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)&_lock, 0, 1 ) )
+  while (!atomic_cas(&_lock, 0, 1))
     ;
 }
 
@@ -62,7 +61,7 @@ void work_queue::lock_pop()
 */
 void work_queue::lock_steal()
 {
-  while ( (_lock ==1) && !KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)&_lock, 0, 1 ) )
+  while ((atomic_read(&_lock) == 1) && !atomic_cas(&_lock, 0, 1))
     usleep(1);
 }
 
@@ -70,7 +69,7 @@ void work_queue::lock_steal()
 */
 void work_queue::unlock()
 {
-  _lock = 0;
+  atomic_write(&_lock, 0);
 }
   
 /** */
@@ -78,7 +77,7 @@ bool work_queue::slow_pop(range& r, work_queue::size_type size)
 {
   /* already done in inlined pop :
       _beg += size;
-      kaapi_mem_barrier();
+      mem_synchronize();
     test (_beg > _end) was true.
     The real interval is [_beg-size, _end)
   */
@@ -113,7 +112,7 @@ bool work_queue::steal(range& r, work_queue::size_type size)
 {
   lock_steal();
   _end -= size;
-  kaapi_mem_barrier();
+  mem_synchronize();
   if (_end < _beg)
   {
     _end += size;
@@ -137,11 +136,11 @@ bool work_queue::steal(range& r, work_queue::size_type size_max, work_queue::siz
   kaapi_assert_debug( size_min <= size_max );
   lock_steal();
   _end -= size_max;
-  kaapi_mem_barrier();
+  mem_synchronize();
   if (_end < _beg)
   {
     _end += size_max - size_min;
-    kaapi_mem_barrier();
+    mem_synchronize();
     if (_beg < _end)
     {
       r.first = _end;
