@@ -8,7 +8,7 @@
  */
 #ifndef _XKAAPI_TRANSFORM_H
 #define _XKAAPI_TRANSFORM_H
-#include "kaapi++.h"
+#include "kaapi++"
 #include <algorithm>
 
 
