@@ -60,7 +60,7 @@ int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
   while (1)
   {
     if ( (KAAPI_ATOMIC_READ( &kproc->lock ) == 0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid) ) break;
-    /* nop here ? */
+    /* nop here: -> refer to kaapi_slowdown_cpu if necessary */
   }
   KAAPI_ATOMIC_WRITE( &kproc->lock, 0 );
 
@@ -99,4 +99,20 @@ int kaapi_steal_endcritical( kaapi_stealcontext_t* stc )
   stc->argsplitter = ta->save_argsplitter;
   
   return 0;
+}
+
+
+int kaapi_steal_endcritical_disabled(kaapi_stealcontext_t* stc)
+{
+  /* set save_splitter to NULL so that
+     concurrent stealing is disabled
+     as the critical section is done
+   */
+
+  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)stc;
+
+  ta->save_splitter = NULL;
+  ta->save_argsplitter = NULL;
+
+  return kaapi_steal_endcritical(stc);
 }

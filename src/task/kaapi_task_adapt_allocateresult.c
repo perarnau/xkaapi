@@ -50,6 +50,7 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 )
 {
   kaapi_taskadaptive_result_t* result;
+  void* addr_tofree;
   int size_alloc;
   
   /* allocate space for futur result of size size
@@ -57,7 +58,7 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   */
   size_alloc = sizeof(kaapi_taskadaptive_result_t);
   if ((size >0) && (data ==0)) size_alloc += size;
-  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align( KAAPI_CACHE_LINE, size_alloc );
+  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
   if (result==0) return 0;
   
   result->size_data = size;
@@ -78,6 +79,13 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   result->rtail           = 0;
   result->prev            = 0;
   result->next            = 0;
-  
+  result->addr_tofree	  = addr_tofree;
+
   return result;
+}
+
+
+void kaapi_free_thief_result(kaapi_taskadaptive_result_t* ktr)
+{
+  free(ktr->addr_tofree);
 }

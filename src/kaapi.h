@@ -121,6 +121,14 @@ typedef struct kaapi_atomic64_t {
 #    error "Fence operation should must put here. See the memory consistency of the hardware you use"
 #endif
 
+
+#if defined(__i386__)||defined(__x86_64)
+# define kaapi_slowdown_cpu() \
+  do { __asm__ __volatile__("rep; nop;"); } while (0)
+#else
+# define kaapi_slowdown_cpu()
+#endif
+
 /* ========================================================================== */
 struct kaapi_task_t;
 struct kaapi_stack_t;
@@ -540,6 +548,24 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
   return retval;
 }
 
+/** \ingroup TASK
+    same as kaapi_thread_pushdata, but with alignment constraints.
+    note the alignment must be a power of 2 and not 0
+    \param align the alignment size
+*/
+static inline void* kaapi_thread_pushdata_align
+(kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
+{
+  kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) || (align == 8)) );
+  const uint32_t mask = align - 1;
+
+  if ((uintptr_t)thread->sp_data & mask)
+    thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
+
+  return kaapi_thread_pushdata(thread, count);
+}
+
+
 
 /** \ingroup TASK
     The function kaapi_thread_pushdata() will return the pointer to the next top data.
@@ -835,15 +861,17 @@ extern int kaapi_preempt_nextthief_helper(
       int (*)( stc, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
-#define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... ) \
-(									\
- ((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief) ?		\
- (									\
-  kaapi_is_null((void*)reducer) ? 0 :					\
-  ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__) \
- ) : 0									\
-)
-
+#define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
+({									\
+  int __res = 0;							\
+  if (((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief)) \
+  {									\
+    if (!kaapi_is_null((void*)reducer))					\
+      __res = ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__);	\
+    kaapi_free_thief_result(tr);					\
+  }									\
+  __res;								\
+})
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
@@ -930,6 +958,12 @@ extern int kaapi_steal_begincritical( kaapi_stealcontext_t* sc );
     \ingroup TASK
 */
 extern int kaapi_steal_endcritical( kaapi_stealcontext_t* sc );
+
+/** Same as kaapi_steal_endcritical but stealing left disabled
+    \ingroup TASK
+\THIERRY    
+*/
+extern int kaapi_steal_endcritical_disabled( kaapi_stealcontext_t* sc );
 
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK

@@ -85,6 +85,10 @@ int kaapi_request_reply(
   
   if (result !=0)
   {
+    /* lock the ta result list */
+    while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
+      ;
+
     /* insert in head or tail */
     if (ta->head ==0)
       ta->tail = ta->head = result;
@@ -97,6 +101,9 @@ int kaapi_request_reply(
       ta->tail->next = result;
       ta->tail       = result;
     }
+
+    KAAPI_ATOMIC_WRITE( &ta->lock, 0 );
+
     /* link result to the stc */
     result->master = ta;
   }
