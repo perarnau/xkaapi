@@ -90,7 +90,7 @@ public:
       InputIterator pos = _ibeg + r.first;
       InputIterator end = _ibeg + r.last;
       for ( ; pos != end; ++pos)
-	_op(*pos);
+        _op(*pos);
 #endif
     }
   }
