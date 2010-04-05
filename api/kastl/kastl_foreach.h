@@ -71,7 +71,7 @@ public:
     UnaryOperator  op,
     int sg = 128,
     int pg = 512
-  ) : _ibeg(ibeg), _iend(iend), _op(op), _queue(), _seqgrain(sg), _pargrain(pg)
+  ) : _queue(), _ibeg(ibeg), _iend(iend), _op(op), _seqgrain(sg), _pargrain(pg)
   { _queue.set( range(0, iend-ibeg) ); }
   
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
