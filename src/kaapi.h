@@ -45,6 +45,7 @@
 */
 #ifndef _KAAPI_H
 #define _KAAPI_H 1
+#define KAAPI_H _KAAPI_H
 
 #ifndef _KAAPI_DISABLE_WARNINGS
 # if defined(__cplusplus)
