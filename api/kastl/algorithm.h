@@ -45,8 +45,8 @@
 #ifndef _KASTL_ALGORITHM_H_
 #define _KASTL_ALGORITHM_H_
 
-#include "kastl_foreach.h"
-#include "kastl_transform.h"
+#include "kastl/kastl_foreach.h"
+#include "kastl/kastl_transform.h"
 
 #if !defined(_KASTL_ALGORITHM_NOT_IN_GLOBAL_NAMESPACE)
 using namespace kastl;

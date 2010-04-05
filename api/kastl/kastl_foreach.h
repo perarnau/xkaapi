@@ -45,7 +45,7 @@
 #ifndef _KASTL_FOREACH_H
 #define _KASTL_FOREACH_H
 #include "kaapi.h"
-#include "kastl_workqueue.h"
+#include "kastl/kastl_workqueue.h"
 #include <algorithm>
 
 
@@ -125,8 +125,11 @@ protected:
     size_t size = _queue.size();   /* upper bound */
     if (size < _pargrain) return 0;
 
-    size_t size_max = (size * count) / (1+count); /* max bound */
+/* bug here: cannot steal work if 2 processors !!!! */
+//    size_t size_max = (size * count) / (1+count); /* max bound */
+    size_t size_max = size;
     size_t size_min = (size_max * 2) / 3;         /* min bound */
+    if (size_min ==0) size_min = 1;
     range r;
 
     /* */
@@ -176,10 +179,10 @@ protected:
   }
 
 protected:  
+  work_queue     _queue;    /* first to ensure alignment constraint */
   InputIterator  _ibeg;
   InputIterator  _iend;
   UnaryOperator  _op;
-  work_queue     _queue;
   size_t         _seqgrain;
   size_t         _pargrain;
 };
@@ -194,17 +197,18 @@ void for_each ( InputIterator begin, InputIterator end, UnaryOperator op )
 {
   typedef impl::ForeachWork<InputIterator, UnaryOperator> Self_t;
   
-  Self_t work( begin, end, op);
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, op);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
 
   kaapi_thread_t* thread =  kaapi_self_thread();
   kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    work
   );
   
-  work.doit( sc, thread );
+  work->doit( sc, thread );
   
   kaapi_steal_finalize( sc );
   kaapi_sched_sync();
@@ -217,17 +221,18 @@ void for_each ( InputIterator begin, InputIterator end, UnaryOperator op, int se
 {
   typedef impl::ForeachWork<InputIterator, UnaryOperator> Self_t;
   
-  Self_t work( begin, end, op, seqgrain, pargrain);
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, op, seqgrain, pargrain);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
 
   kaapi_thread_t* thread =  kaapi_self_thread();
   kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    work
   );
   
-  work.doit( sc, thread );
+  work->doit( sc, thread );
   
   kaapi_steal_finalize( sc );
   kaapi_sched_sync();

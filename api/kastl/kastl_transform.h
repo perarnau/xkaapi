@@ -45,7 +45,7 @@
 #ifndef _KASTL_TRANSFORM_H_
 #define _KASTL_TRANSFORM_H_
 #include "kaapi.h"
-#include "kastl_workqueue.h"
+#include "kastl/kastl_workqueue.h"
 #include <algorithm>
 
 
@@ -199,19 +199,18 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
 {
   typedef impl::TransformWork<InputIterator, OutputIterator, UnaryOperator> Self_t;
   
-  int toto __attribute__((unused));
-  Self_t work (begin, end, to_fill, op);
-  kaapi_assert( (((kaapi_uintptr_t)&work) & 0x3F)== 0 );
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, to_fill, op);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
 
   kaapi_thread_t* thread =  kaapi_self_thread();
   kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    work
   );
   
-  work.doit( sc, thread );
+  work->doit( sc, thread );
   
   kaapi_steal_finalize( sc );
   kaapi_sched_sync();
@@ -224,17 +223,18 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
 {
   typedef impl::TransformWork<InputIterator, OutputIterator, UnaryOperator> Self_t;
   
-  Self_t work __attribute__((aligned(64))) ( begin, end, to_fill, op, seqgrain, pargrain) ;
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, to_fill, op, seqgrain, pargrain);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
 
   kaapi_thread_t* thread =  kaapi_self_thread();
   kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    work
   );
   
-  work.doit( sc, thread );
+  work->doit( sc, thread );
   
   kaapi_steal_finalize( sc );
   kaapi_sched_sync();
