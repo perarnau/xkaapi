@@ -556,6 +556,7 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
 static inline void* kaapi_thread_pushdata_align
 (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
 {
+  kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) || (align == 8)) );
   const uint32_t mask = align - 1;
 
   if ((uintptr_t)thread->sp_data & mask)
