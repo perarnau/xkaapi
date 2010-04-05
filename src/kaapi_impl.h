@@ -353,6 +353,7 @@ typedef struct kaapi_thread_context_t {
 #endif
   kaapi_atomic_t                 lock;           /** */ 
 
+  void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
