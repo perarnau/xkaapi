@@ -705,13 +705,6 @@ extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 
 
 /** \ingroup ADAPTIVE
-    free a result previously allocate with kaapi_allocate_thief_result
-    \param ktr IN the result to free
- */
-extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t* ktr);
-
-
-/** \ingroup ADAPTIVE
     Dellocate the return data structure already allocated to the thief. 
     The call never deallocate a application level buffer passed to kaapi_allocate_thief_result.
     The user should only call this function in case of aborting the return to the thief
