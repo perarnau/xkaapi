@@ -883,6 +883,14 @@ extern int kaapi_task_splitter_adapt(
 );
 
 
+
+/** \ingroup ADAPTIVE
+    free a result previously allocate with kaapi_allocate_thief_result
+    \param ktr IN the result to free
+ */
+extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t* ktr);
+
+
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
