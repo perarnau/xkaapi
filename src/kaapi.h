@@ -63,8 +63,10 @@
 
 
 #include <stdint.h>
-#include <stdio.h>
+#include <stdio.h> /* why ? */
+#include <stdlib.h>
 #include <errno.h>
+#include <alloca.h>
 #include "kaapi_error.h"
 
 #if defined(__cplusplus)
@@ -136,6 +138,40 @@ struct kaapi_thread_t;
 struct kaapi_thread_context_t;
 struct kaapi_stealcontext_t;
 struct kaapi_taskadaptive_result_t;
+
+/* ========================== utilities ====================================== */
+static inline void* kaapi_malloc_align( unsigned int _align, size_t size, void** addr_tofree)
+{
+  kaapi_assert_debug( (_align !=0) && ((_align ==64) || (_align ==32) || (_align ==16) 
+                                    || (_align == 8) || (_align == 4) || (_align == 2) || (_align == 1)) );
+  if (_align < 8)
+  {
+    *addr_tofree = malloc(size);
+    return *addr_tofree;
+  }
+
+  kaapi_uintptr_t align = _align-1;
+  void* retval = (void*)malloc(align + size);
+  if (addr_tofree !=0) *addr_tofree = retval;
+  if ( (((kaapi_uintptr_t)retval) & align) !=0U)
+    retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
+  kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
+  return retval;
+}
+
+static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align)
+{
+  kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) \
+                                   || (align == 8) || (align == 4) || (align == 2) || (align == 1)) );\
+  if (align <8) return ptr;
+  --align;
+  if ( (((kaapi_uintptr_t)ptr) & align) !=0U)
+    ptr = (void*)(((kaapi_uintptr_t)ptr + align) & ~align);
+  kaapi_assert_debug( (((kaapi_uintptr_t)ptr) & align) == 0U);
+  return ptr;
+}
+
+#define kaapi_alloca_align( align, size) _kaapi_align_ptr_for_alloca( alloca(size + (align <8 ? 0 : align -1) ), align )
 
 
 /* ========================================================================== */
