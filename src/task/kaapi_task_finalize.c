@@ -52,6 +52,9 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
 
+  while (  KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
+    ;
+
   kaapi_mem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
   kaapi_assert(ta->head ==0)
