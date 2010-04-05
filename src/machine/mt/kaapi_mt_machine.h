@@ -409,11 +409,15 @@ extern int kaapi_setup_topology(void);
 
 /** TODO: try to use same function without barrier
 */
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
 
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
 
 #  define KAAPI_ATOMIC_AND(a, o) \
     __sync_fetch_and_and( &((a)->_counter), o )
@@ -430,21 +434,20 @@ extern int kaapi_setup_topology(void);
 #  define KAAPI_ATOMIC_ADD(a, value) \
     __sync_add_and_fetch( &((a)->_counter), value ) 
 
-#  define KAAPI_ATOMIC_READ(a) \
-    ((a)->_counter)
-
-#  define KAAPI_ATOMIC_WRITE(a, value) \
-    (a)->_counter = value
 
 #elif defined(KAAPI_USE_APPLE) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
 
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
+#  endif
 
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  endif
 
 #  define KAAPI_ATOMIC_AND(a, o)			\
     OSAtomicAnd32( &((a)->_counter), o )
@@ -460,12 +463,6 @@ extern int kaapi_setup_topology(void);
 
 #  define KAAPI_ATOMIC_ADD(a, value) \
     OSAtomicAdd32( value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_READ(a) \
-    ((a)->_counter)
-
-#  define KAAPI_ATOMIC_WRITE(a, value) \
-    (a)->_counter = value
 
 #else
 #  error "Please add support for atomic operations on this system/architecture"

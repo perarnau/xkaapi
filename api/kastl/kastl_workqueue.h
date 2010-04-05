@@ -52,44 +52,45 @@ namespace impl {
 
   /* atomics, low level memory routines */
 
-  typedef struct atomic_t
+  typedef struct atomic_t 
   {
-    volatile long _counter;
+    inline atomic_t(kaapi_int64_t value)
+    { KAAPI_ATOMIC_WRITE(&_atom, value); }
 
-    inline atomic_t(long value)
-      : _counter(value) {}
-
+    kaapi_atomic64_t _atom;
   } atomic_t;
 
-  static inline long atomic_sub(atomic_t* a, long value)
+#if 0 /* really need ? */
+  static inline long atomic_sub(atomic_t* a, kaapi_int64_t value)
   {
     return __sync_sub_and_fetch(&a->_counter, value);
   }
 
-  static inline long atomic_add(atomic_t* a, long value)
+  static inline long atomic_add(atomic_t* a, kaapi_int64_t value)
   {
-    return __sync_add_and_fetch(&a->_counter, value);
+    return __sync_add_and_fetch(&a->_atom, value);
+  }
+#endif
+
+  static inline int atomic_cas(atomic_t* a, kaapi_int64_t o, kaapi_int64_t n)
+  {
+    return KAAPI_ATOMIC_CAS64(&a->_atom, o, n );
   }
 
-  static inline int atomic_cas(atomic_t* a, long o, long n)
+  static inline kaapi_int64_t atomic_read(atomic_t* a)
   {
-    return __sync_bool_compare_and_swap(&a->_counter, o, n);
+    return KAAPI_ATOMIC_READ(&a->_atom);
   }
 
-  static inline long atomic_read(atomic_t* a)
+  static inline void atomic_write(atomic_t* a, kaapi_int64_t value)
   {
-    return a->_counter;
-  }
-
-  static inline void atomic_write(atomic_t* a, long value)
-  {
-    a->_counter = value;
+    KAAPI_ATOMIC_WRITE(&a->_atom, value);
   }
 
   static inline void mem_synchronize()
   {
     /* this is needed */
-    __sync_synchronize();
+    kaapi_mem_barrier();
   }
 
   /** work range
@@ -125,7 +126,7 @@ namespace impl {
   
   /** work_queue index
    */
-  typedef long volatile work_queue_index_t;
+  typedef long work_queue_index_t;
   
   /** work work_queue
    */
@@ -181,11 +182,11 @@ namespace impl {
     void unlock();
     
     /* data structure that required to be correctly aligned in order to
-     ensure atomicity of read/write.
+     ensure atomicity of read/write. Put them on two separate lines of cache.
      Currently only IA32 & x86-64
      */
-    work_queue_index_t _beg __attribute__((aligned(64)));
-    work_queue_index_t _end __attribute__((aligned(64)));
+    work_queue_index_t volatile _beg __attribute__((aligned(64)));
+    work_queue_index_t volatile _end __attribute__((aligned(64)));
 
     atomic_t _lock;
   };
@@ -218,7 +219,9 @@ namespace impl {
   /** */
   inline work_queue::size_type work_queue::size() const
   {
-    return _end - _beg;
+    work_queue_index_t b = _beg;
+    work_queue_index_t e = _end;
+    return b < e ? e-b : 0;
   }
   
   /** */
@@ -234,8 +237,8 @@ namespace impl {
     mem_synchronize();
     if (_beg > _end) return slow_pop( r, size );
     
-    r.first = _beg - size;
-    r.last = _beg;
+    r.last  = _beg;
+    r.first = r.last - size;
     
     // check for boundaries
     kaapi_assert_debug( (_beg >=0) && (_beg <= _end) );

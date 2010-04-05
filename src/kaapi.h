@@ -1275,6 +1275,49 @@ static inline void kaapi_mem_barrier()
 #endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
 
 
+#  define KAAPI_ATOMIC_READ(a) \
+    ((a)->_counter)
+
+#  define KAAPI_ATOMIC_WRITE(a, value) \
+    (a)->_counter = value
+
+#if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
+|| defined(__INTEL_COMPILER))
+/* Note: ICC seems to also support these builtins functions */
+#  if defined(__INTEL_COMPILER)
+#    warning Using ICC. Please, check if icc really support atomic operations
+/* ia64 impl using compare and exchange */
+/*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
+#  endif
+
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
+
+#elif defined(KAAPI_USE_APPLE) /* if gcc version on Apple is less than 4.1 */
+
+#  include <libkern/OSAtomic.h>
+
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  endif
+
+#else
+#  error "Please add support for atomic operations on this system/architecture"
+#endif /* GCC > 4.1 */
+
 
 /**
  */
