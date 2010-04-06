@@ -111,11 +111,9 @@ static void merge_work(work_t* a, work_t* b)
 
 static void empty_work(work_t* w)
 {
-  lock_work(w);
   w->i = 0;
   w->j = 0;
   w->k = 0;
-  unlock_work(w);
 }
 
 
@@ -216,6 +214,9 @@ static int reducer
   }
 #endif
 
+  /* do not lock, thief_work is a copy at a given
+     time and we dont know about the lock status
+  */
   empty_work(thief_work);
 
   return 1;
@@ -249,11 +250,6 @@ static int splitter
       unlock_work(victim_work);
       break;
     }
-
-#if 0
-    /* we are stealing, ref splitter */
-    kaapi_steal_refsplitter(sc);
-#endif
 
     thief_thread = kaapi_request_getthread(requests);
     thief_task = kaapi_thread_toptask(thief_thread);
@@ -303,11 +299,6 @@ static int splitter
 
 /*     kaapi_request_reply_tail(sc, requests, sizeof(work_t)); */
     kaapi_request_reply_head(sc, requests, thief_work->r);
-
-#if 0
-    /* we have stolen, unref splitter */
-    kaapi_steal_unrefsplitter(sc);
-#endif
 
     ++replied_count;
     --count;
