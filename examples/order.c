@@ -93,13 +93,8 @@ static void unlock_work(work_t* w)
 
 static unsigned int work_remaining_size(work_t* w)
 {
-  unsigned int size;
-
-  lock_work(w);
-  size = w->j - w->k;
-  unlock_work(w);
-
-  return size;
+  /* assume work locked */
+  return w->j - w->k;
 }
 
 
@@ -111,6 +106,16 @@ static void merge_work(work_t* a, work_t* b)
   a->k = b->k;
 
   unlock_work(a);
+}
+
+
+static void empty_work(work_t* w)
+{
+  lock_work(w);
+  w->i = 0;
+  w->j = 0;
+  w->k = 0;
+  unlock_work(w);
 }
 
 
@@ -130,22 +135,32 @@ static unsigned int pop_work(work_t* a, work_t* b)
 }
 
 
-static unsigned int steal_work(work_t* a, work_t* b)
+static unsigned int steal_work_safe(work_t* a, work_t* b)
 {
-  lock_work(a);
-  {
+  /* assume a locked */
+
 #if CONFIG_STATIC_STEAL
-    const unsigned int size = CONFIG_STEAL_SIZE;
+  const unsigned int size = CONFIG_STEAL_SIZE;
 #else
-    const unsigned int size = (a->j - a->k) / 2;
+  const unsigned int size = (a->j - a->k) / 2;
 #endif
 
-    b->j = a->j;
-    b->i = a->j - ((a->j - a->k) < size ? a->j - a->k : size);
-    b->k = b->i;
+  b->j = a->j;
+  b->i = a->j - ((a->j - a->k) < size ? a->j - a->k : size);
+  b->k = b->i;
 
-    a->j = b->i;
-  }
+  a->j = b->i;
+
+  return b->j - b->i;
+}
+
+
+static unsigned int __attribute__((unused)) steal_work(work_t* a, work_t* b)
+{
+  unsigned int res;
+
+  lock_work(a);
+  res = steal_work_safe(a, b);
   unlock_work(a);
 
   return b->j - b->i;
@@ -201,9 +216,7 @@ static int reducer
   }
 #endif
 
-  thief_work->i = 0;
-  thief_work->j = 0;
-  thief_work->k = 0;
+  empty_work(thief_work);
 
   return 1;
 }
@@ -229,8 +242,13 @@ static int splitter
     if (!kaapi_request_ok(requests))
       continue ;
 
+    lock_work(victim_work);
+
     if (work_remaining_size(victim_work) < 10)
+    {
+      unlock_work(victim_work);
       break;
+    }
 
     thief_thread = kaapi_request_getthread(requests);
     thief_task = kaapi_thread_toptask(thief_thread);
@@ -248,8 +266,9 @@ static int splitter
     thief_work->data = victim_work->data;
 #endif
 
-    if (steal_work(victim_work, thief_work))
-      is_done = 1;
+    steal_work_safe(victim_work, thief_work);
+
+    unlock_work(victim_work);
 
 #if 0
     printf("red alloc %lx [%u - %u[\n",
