@@ -450,6 +450,9 @@ typedef struct kaapi_stealcontext_t {
 
   volatile int                   hasrequest;
   kaapi_request_t*               requests;
+
+  kaapi_atomic_t		 is_there_thief;
+
 } kaapi_stealcontext_t;
 
 /* flags (or ed) for kaapi_stealcontext_t */

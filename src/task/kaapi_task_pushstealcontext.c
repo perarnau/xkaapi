@@ -69,6 +69,7 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   ta->sc.flag               = flag;
   ta->sc.hasrequest         = 0;
   ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
+  KAAPI_ATOMIC_WRITE(&ta->sc.is_there_thief, 0);
 
   KAAPI_ATOMIC_WRITE(&ta->lock, 0);
   KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);

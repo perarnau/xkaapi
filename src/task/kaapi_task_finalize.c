@@ -96,7 +96,6 @@ int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
 
 void kaapi_steal_sync(kaapi_stealcontext_t* stc)
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  while (KAAPI_ATOMIC_READ(&ta->thievescount))
+  while (KAAPI_ATOMIC_READ(&stc->is_there_thief))
     kaapi_slowdown_cpu();
 }
