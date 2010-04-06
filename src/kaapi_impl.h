@@ -137,24 +137,6 @@ extern "C" {
 #endif
 
 
-/** utility */
-static inline void* kaapi_malloc_align( unsigned int a, size_t size, void** addr_tofree)
-{
-  if (a < 8)
-  {
-    *addr_tofree = malloc(size);
-    return *addr_tofree;
-  }
-
-  kaapi_uintptr_t align = a-1;
-  void* retval = (void*)malloc(align + size);
-  *addr_tofree = retval;
-  if ( (((kaapi_uintptr_t)retval) & align) !=0U)
-    retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
-  kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
-  return retval;
-}
-
 // This is the new version on top of X-Kaapi
 extern const char* get_kaapi_version(void);
 
@@ -353,6 +335,7 @@ typedef struct kaapi_thread_context_t {
 #endif
   kaapi_atomic_t                 lock;           /** */ 
 
+  void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
@@ -881,6 +864,14 @@ extern int kaapi_task_splitter_adapt(
     int count, 
     struct kaapi_request_t* array
 );
+
+
+
+/** \ingroup ADAPTIVE
+    free a result previously allocate with kaapi_allocate_thief_result
+    \param ktr IN the result to free
+ */
+extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t* ktr);
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/

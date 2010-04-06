@@ -82,6 +82,7 @@ include_HEADERS=\
   athapascan_fork.h\
   kastl/kastl_workqueue.h\
   kastl/kastl_foreach.h\
+  kastl/kastl_transform.h\
   kastl/algorithm.h\
   kastl/algorithm
 

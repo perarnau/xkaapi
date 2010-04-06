@@ -8,7 +8,7 @@
  */
 #ifndef _XKAAPI_TRANSFORM_H
 #define _XKAAPI_TRANSFORM_H
-#include "kaapi++.h"
+#include "kaapi++"
 #include <algorithm>
 
 
@@ -60,13 +60,13 @@ protected:
   InputIterator  _iend;
   OutputIterator _obeg;
   UnaryOperator  _op;
-  
+
 
   /* Entry in case of thief execution */
   static void static_thiefentrypoint( kaapi_task_t* task, kaapi_stack_t* stack )
   {
     Self_t* self_work = kaapi_task_getargst(task, Self_t);
- std::cout << "Thief [" << self_work->_ibeg-beg0 << "," << self_work->_iend-beg0 << ")= " << self_work->_iend-self_work->_ibeg << std::endl;
+    std::cout << "Thief [" << self_work->_ibeg-beg0 << "," << self_work->_iend-beg0 << ")= " << self_work->_iend-self_work->_ibeg << std::endl;
     self_work->doit(task, stack);
   }
 
@@ -104,6 +104,7 @@ protected:
         kaapi_assert_debug( output_work->_iend - output_work->_ibeg >0);
         kaapi_assert_debug( output_work->_ibeg - _ibeg > unit_size);
         output_work->_op   = _op;
+
 
         kaapi_stack_pushtask( thief_stack );
 

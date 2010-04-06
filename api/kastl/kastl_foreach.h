@@ -45,7 +45,7 @@
 #ifndef _KASTL_FOREACH_H
 #define _KASTL_FOREACH_H
 #include "kaapi.h"
-#include "kastl_workqueue.h"
+#include "kastl/kastl_workqueue.h"
 #include <algorithm>
 
 
@@ -71,7 +71,7 @@ public:
     UnaryOperator  op,
     int sg = 128,
     int pg = 512
-  ) : _ibeg(ibeg), _iend(iend), _op(op), _queue(), _seqgrain(sg), _pargrain(pg)
+  ) : _queue(), _ibeg(ibeg), _iend(iend), _op(op), _seqgrain(sg), _pargrain(pg)
   { _queue.set( range(0, iend-ibeg) ); }
   
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
@@ -90,7 +90,7 @@ public:
       InputIterator pos = _ibeg + r.first;
       InputIterator end = _ibeg + r.last;
       for ( ; pos != end; ++pos)
-	_op(*pos);
+        _op(*pos);
 #endif
     }
   }
@@ -122,15 +122,28 @@ protected:
   */
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
+#if 1
+int incount = count;
+#endif
     size_t size = _queue.size();   /* upper bound */
     if (size < _pargrain) return 0;
 
+/* bug here: cannot steal work if 2 processors !!!! */
     size_t size_max = (size * count) / (1+count); /* max bound */
+//    size_t size_max = size;
+//    size_t size_max = count*_seqgrain;
+    if (size_max ==0) size_max = 1;
     size_t size_min = (size_max * 2) / 3;         /* min bound */
+    if (size_min ==0) size_min = 1;
     range r;
 
     /* */
     if ( (size_min < _seqgrain) || !_queue.steal(r, size_max, size_min )) return 0;
+#if 1
+std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last << ")"
+          << ", size=" << size  << ", size_max=" << size_max << ", size_min=" << size_min 
+          << std::endl;
+#endif
     kaapi_assert_debug (!r.is_empty());
     size = r.size();
     
@@ -142,27 +155,41 @@ protected:
 
     if (bloc < _seqgrain) 
     { /* reply to less thief... */
-      count = size/_seqgrain -1; bloc = _seqgrain; 
+      count = size/_seqgrain; 
+      bloc = _seqgrain; 
     }
-
+#if 1
+std::cout << "Splitter: count=" << incount << ", outputcount=" << count << ", r=[" << r.first << "," << r.last << ")"
+          << ", bloc=" << bloc << ", size=" << size   
+          << std::endl;
+#endif
     while (count >0)
     {
       if (kaapi_request_ok(&request[i]))
       {
         kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
         kaapi_task_t* thief_task  = kaapi_thread_toptask(thief_thread);
-        kaapi_task_init( thief_task, &static_thiefentrypoint, kaapi_thread_pushdata(thief_thread, sizeof(Self_t)) );
+        kaapi_task_init( thief_task, &static_thiefentrypoint, kaapi_thread_pushdata_align(thief_thread, sizeof(Self_t), 8) );
         output_work = kaapi_task_getargst(thief_task, Self_t);
 
         output_work->_iend  = _iend;
         output_work->_ibeg  = _ibeg;
         output_work->_op    = _op;
         kaapi_assert_debug( !r.is_empty() );
-        output_work->_queue.set( range( r.last-bloc, r.last ) );
+        range rq(r.first, r.last);
+        if (count ==1)
+          output_work->_queue.set( rq );
+        else 
+        {
+          rq.first = rq.last - bloc;
+          r.last = rq.first;
+          output_work->_queue.set( rq );
+        }
         output_work->_seqgrain = _seqgrain;
         output_work->_pargrain = _pargrain;
-        r.last -= bloc;
-
+#if 1
+std::cout << "Splitter: reply to=" << i << "[" << rq.first << "," << rq.last << ")" << std::endl;
+#endif
         kaapi_thread_pushtask( thief_thread );
 
         /* reply ok (1) to the request */
@@ -172,14 +199,17 @@ protected:
       }
       ++i;
     }
-    return reply_count;      
+#if 1
+std::cout << std::flush;
+#endif
+    return reply_count; 
   }
 
 protected:  
+  work_queue     _queue;    /* first to ensure alignment constraint */
   InputIterator  _ibeg;
   InputIterator  _iend;
   UnaryOperator  _op;
-  work_queue     _queue;
   size_t         _seqgrain;
   size_t         _pargrain;
 };
@@ -194,17 +224,18 @@ void for_each ( InputIterator begin, InputIterator end, UnaryOperator op )
 {
   typedef impl::ForeachWork<InputIterator, UnaryOperator> Self_t;
   
-  Self_t work( begin, end, op);
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, op);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
 
   kaapi_thread_t* thread =  kaapi_self_thread();
   kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    work
   );
   
-  work.doit( sc, thread );
+  work->doit( sc, thread );
   
   kaapi_steal_finalize( sc );
   kaapi_sched_sync();
@@ -217,17 +248,18 @@ void for_each ( InputIterator begin, InputIterator end, UnaryOperator op, int se
 {
   typedef impl::ForeachWork<InputIterator, UnaryOperator> Self_t;
   
-  Self_t work( begin, end, op, seqgrain, pargrain);
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, op, seqgrain, pargrain);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
 
   kaapi_thread_t* thread =  kaapi_self_thread();
   kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    work
   );
   
-  work.doit( sc, thread );
+  work->doit( sc, thread );
   
   kaapi_steal_finalize( sc );
   kaapi_sched_sync();

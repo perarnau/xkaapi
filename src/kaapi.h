@@ -45,6 +45,7 @@
 */
 #ifndef _KAAPI_H
 #define _KAAPI_H 1
+#define KAAPI_H _KAAPI_H
 
 #ifndef _KAAPI_DISABLE_WARNINGS
 # if defined(__cplusplus)
@@ -63,8 +64,10 @@
 
 
 #include <stdint.h>
-#include <stdio.h>
+#include <stdio.h> /* why ? */
+#include <stdlib.h>
 #include <errno.h>
+#include <alloca.h>
 #include "kaapi_error.h"
 
 #if defined(__cplusplus)
@@ -136,6 +139,40 @@ struct kaapi_thread_t;
 struct kaapi_thread_context_t;
 struct kaapi_stealcontext_t;
 struct kaapi_taskadaptive_result_t;
+
+/* ========================== utilities ====================================== */
+static inline void* kaapi_malloc_align( unsigned int _align, size_t size, void** addr_tofree)
+{
+  kaapi_assert_debug( (_align !=0) && ((_align ==64) || (_align ==32) || (_align ==16) 
+                                    || (_align == 8) || (_align == 4) || (_align == 2) || (_align == 1)) );
+  if (_align < 8)
+  {
+    *addr_tofree = malloc(size);
+    return *addr_tofree;
+  }
+
+  kaapi_uintptr_t align = _align-1;
+  void* retval = (void*)malloc(align + size);
+  if (addr_tofree !=0) *addr_tofree = retval;
+  if ( (((kaapi_uintptr_t)retval) & align) !=0U)
+    retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
+  kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
+  return retval;
+}
+
+static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align)
+{
+  kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) \
+                                   || (align == 8) || (align == 4) || (align == 2) || (align == 1)) );\
+  if (align <8) return ptr;
+  --align;
+  if ( (((kaapi_uintptr_t)ptr) & align) !=0U)
+    ptr = (void*)(((kaapi_uintptr_t)ptr + align) & ~align);
+  kaapi_assert_debug( (((kaapi_uintptr_t)ptr) & align) == 0U);
+  return ptr;
+}
+
+#define kaapi_alloca_align( align, size) _kaapi_align_ptr_for_alloca( alloca(size + (align <8 ? 0 : align -1) ), align )
 
 
 /* ========================================================================== */
@@ -557,6 +594,7 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
 static inline void* kaapi_thread_pushdata_align
 (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
 {
+  kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) || (align == 8)) );
   const uint32_t mask = align - 1;
 
   if ((uintptr_t)thread->sp_data & mask)
@@ -702,13 +740,6 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
 extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
     kaapi_stealcontext_t* stc, int size, void* data
 );
-
-
-/** \ingroup ADAPTIVE
-    free a result previously allocate with kaapi_allocate_thief_result
-    \param ktr IN the result to free
- */
-extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t* ktr);
 
 
 /** \ingroup ADAPTIVE
@@ -991,6 +1022,7 @@ extern int kaapi_steal_endcritical( kaapi_stealcontext_t* sc );
 
 /** Same as kaapi_steal_endcritical but stealing left disabled
     \ingroup TASK
+\THIERRY    
 */
 extern int kaapi_steal_endcritical_disabled( kaapi_stealcontext_t* sc );
 
@@ -1266,6 +1298,49 @@ static inline void kaapi_mem_barrier()
 #  error "Undefined barrier"
 #endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
 
+
+#  define KAAPI_ATOMIC_READ(a) \
+    ((a)->_counter)
+
+#  define KAAPI_ATOMIC_WRITE(a, value) \
+    (a)->_counter = value
+
+#if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
+|| defined(__INTEL_COMPILER))
+/* Note: ICC seems to also support these builtins functions */
+#  if defined(__INTEL_COMPILER)
+#    warning Using ICC. Please, check if icc really support atomic operations
+/* ia64 impl using compare and exchange */
+/*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
+#  endif
+
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
+
+#elif defined(KAAPI_USE_APPLE) /* if gcc version on Apple is less than 4.1 */
+
+#  include <libkern/OSAtomic.h>
+
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  endif
+
+#else
+#  error "Please add support for atomic operations on this system/architecture"
+#endif /* GCC > 4.1 */
 
 
 /**

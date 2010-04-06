@@ -55,15 +55,22 @@ int kaapi_task_splitter_adapt(
     struct kaapi_request_t* array
 )
 {
-  kaapi_stealcontext_t*   sc;
+  kaapi_stealcontext_t* stc;
   
   kaapi_assert_debug( task !=0 );
 
   /* call the user splitter */
-  sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
-  count = splitter( sc, count, array, argsplitter);
+  stc = kaapi_task_getargst(task, kaapi_stealcontext_t);
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+
+  /* pre-increment the thiefcount in order to ensure correct finalization */
+  KAAPI_ATOMIC_INCR( &ta->thievescount );
+
+  /* call the splitter */
+  count = splitter( stc, count, array, argsplitter);
 
   /* reset the body to adapt body */
+  KAAPI_ATOMIC_DECR( &ta->thievescount );
   kaapi_writemem_barrier();
 
   return count;

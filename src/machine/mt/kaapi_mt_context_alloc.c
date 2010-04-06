@@ -96,7 +96,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     munmap( ctxt, ctxt->size );
     return 0;
   }
-
+  ctxt->alloc_ptr = addr_tofree;
   kaapi_thread_clear(ctxt);
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   ctxt->thieffp = 0;

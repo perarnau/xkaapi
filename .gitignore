@@ -7,6 +7,7 @@
 # but I added most of them.
 
 # Files from bootstrap
+.gitignore
 Makefile.in
 /acinclude/libtool.m4
 /acinclude/lt*.m4
@@ -58,3 +59,4 @@ Makefile
 /xkaapi.pc
 /xkaapi-*.tar.gz
 
+/test-perfdesign
