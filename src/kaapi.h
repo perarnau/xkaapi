@@ -413,6 +413,7 @@ typedef struct kaapi_stealcontext_t {
 
   volatile int                   hasrequest;
   kaapi_request_t*               requests;
+  kaapi_atomic_t		 splitter_refn;
 } kaapi_stealcontext_t;
 
 /* flags (or ed) for kaapi_stealcontext_t */
@@ -786,6 +787,29 @@ static inline int kaapi_steal_setsplitter(
   stc->argsplitter = arg_tasksplitter;
   stc->splitter    = splitter;
   return 0;
+}
+
+
+/** \ingroup WS
+ */
+
+static inline void kaapi_steal_refsplitter(kaapi_stealcontext_t* sc)
+{
+  /* todo: atomic */
+  ++sc->splitter_refn._counter;
+}
+
+static inline void kaapi_steal_unrefsplitter(kaapi_stealcontext_t* sc)
+{
+  /* todo: atomic */
+  --sc->splitter_refn._counter;
+}
+
+static inline void kaapi_steal_syncsplitter(kaapi_stealcontext_t* sc)
+{
+  /* todo: atomic */
+  while (sc->splitter_refn._counter)
+    ;
 }
 
 

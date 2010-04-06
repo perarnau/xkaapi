@@ -61,6 +61,7 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   
   ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_t));
   kaapi_assert_debug( ta !=0 );
+
   ta->sc.ctxtthread         = _kaapi_self_thread();
   ta->sc.thread             = thread;
   ta->sc.splitter           = spliter;
@@ -68,6 +69,7 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   ta->sc.flag               = flag;
   ta->sc.hasrequest         = 0;
   ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
+  KAAPI_ATOMIC_WRITE(&ta->sc.splitter_refn, 0);
 
   KAAPI_ATOMIC_WRITE(&ta->lock, 0);
   KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);

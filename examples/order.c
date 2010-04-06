@@ -5,7 +5,7 @@
 #include "kaapi.h"
 
 
-#define CONFIG_INPUT_SIZE 5000
+#define CONFIG_INPUT_SIZE 50000
 #define CONFIG_ALLOC_RESULT 1
 #define CONFIG_STEALABLE_THIEVES 1
 #define CONFIG_STATIC_STEAL 0
@@ -250,6 +250,9 @@ static int splitter
       break;
     }
 
+    /* we are stealing, ref splitter */
+    kaapi_steal_refsplitter(sc);
+
     thief_thread = kaapi_request_getthread(requests);
     thief_task = kaapi_thread_toptask(thief_thread);
 
@@ -299,6 +302,9 @@ static int splitter
 /*     kaapi_request_reply_tail(sc, requests, sizeof(work_t)); */
     kaapi_request_reply_head(sc, requests, thief_work->r);
 
+    /* we have stolen, unref splitter */
+    kaapi_steal_unrefsplitter(sc);
+
     ++replied_count;
     --count;
   }
@@ -347,7 +353,7 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
     {
       if (kaapi_preemptpoint(w->r, sc, NULL, NULL, w, sizeof(work_t), NULL))
       {
-	printf("[%02x,   ] pre\n", w->kid);
+	printf("[%02x,   ] pre\n", w->kid); fflush(stdout);
 	return ;
       }
     }
@@ -357,19 +363,24 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
 
   kaapi_taskadaptive_result_t* ktr;
 
-#if 0
+#if 1 /* no critical section version */
 
-  kaapi_preempt_getnextthief_head(sc);
-
-  /* first try avoids kaapi_begincritical costs, but race */
-
+ continue_preempt:
+  ktr = kaapi_preempt_getnextthief_head(sc);
   if (ktr != NULL)
   {
     kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
     goto continue_seq;
   }
 
-#endif
+  /* sync with the splitter */
+  kaapi_steal_syncsplitter(sc);
+
+  if (kaapi_preempt_getnextthief_head(sc) != NULL)
+    goto continue_preempt;
+
+#else /* critical section version */
+
 
   /* not thief. we are done but have to
      disable the conccurent steal otherwise
@@ -391,6 +402,7 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
   }
 
   kaapi_steal_endcritical_disabled(sc);
+#endif /* critical section version */
 
   /* here no thieves, steal disabled, can leave */
 
