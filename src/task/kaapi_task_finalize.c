@@ -92,3 +92,11 @@ int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
   kaapi_thread_pushtask(stc->thread);
   return 0;
 }
+
+
+void kaapi_steal_sync(kaapi_stealcontext_t* stc)
+{
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  while (KAAPI_ATOMIC_READ(&ta->thievescount))
+    kaapi_slowdown_cpu();
+}

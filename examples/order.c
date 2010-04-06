@@ -250,8 +250,10 @@ static int splitter
       break;
     }
 
+#if 0
     /* we are stealing, ref splitter */
     kaapi_steal_refsplitter(sc);
+#endif
 
     thief_thread = kaapi_request_getthread(requests);
     thief_task = kaapi_thread_toptask(thief_thread);
@@ -302,8 +304,10 @@ static int splitter
 /*     kaapi_request_reply_tail(sc, requests, sizeof(work_t)); */
     kaapi_request_reply_head(sc, requests, thief_work->r);
 
+#if 0
     /* we have stolen, unref splitter */
     kaapi_steal_unrefsplitter(sc);
+#endif
 
     ++replied_count;
     --count;
@@ -373,8 +377,8 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
     goto continue_seq;
   }
 
-  /* sync with the splitter */
-  kaapi_steal_syncsplitter(sc);
+  /* sync with the entered thieves */
+  kaapi_steal_sync(sc);
 
   if (kaapi_preempt_getnextthief_head(sc) != NULL)
     goto continue_preempt;
