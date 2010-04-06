@@ -115,7 +115,8 @@ namespace impl {
     
     index_type size() const
     {
-      return last - first;
+      if (first < last) return last - first;
+      return 0;
     }
 
     bool is_empty() const
