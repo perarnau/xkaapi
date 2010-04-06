@@ -369,19 +369,12 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
 
 #if 1 /* no critical section version */
 
- continue_preempt:
   ktr = kaapi_preempt_getnextthief_head(sc);
   if (ktr != NULL)
   {
     kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
     goto continue_seq;
   }
-
-  /* sync with the entered thieves */
-  kaapi_steal_sync(sc);
-
-  if (kaapi_preempt_getnextthief_head(sc) != NULL)
-    goto continue_preempt;
 
 #else /* critical section version */
 

@@ -360,8 +360,8 @@ typedef struct kaapi_taskadaptive_t {
 
   kaapi_atomic_t                      lock;            /* required for access to list */
   kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
-  struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
-  struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
+  struct kaapi_taskadaptive_result_t* head __attribute__((aligned));            /* head of the LIFO order of result */
+  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned));            /* tail of the LIFO order of result */
   kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
   void*                               save_argsplitter;/* idem */
   kaapi_frame_t                       frame;
