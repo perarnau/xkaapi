@@ -53,7 +53,7 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_assert_debug( ta !=0 );
 
 
-  while (KAAPI_ATOMIC_READ(&stc->is_there_thief) !=0)
+  while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
     ;
 
   kaapi_readmem_barrier();
