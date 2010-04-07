@@ -54,6 +54,9 @@ int kaapi_preemptpoint_before_reducer_call(
     int result_size
 )
 {
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_assert_debug( stc !=0 );
+  
   /* push data to the victim and list of thief */
   if (result_data !=0)
   {
@@ -62,28 +65,19 @@ int kaapi_preemptpoint_before_reducer_call(
   }
   ktr->arg_from_thief = arg_for_victim;
 
-  if (stc !=0)
-  {
-    kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-
-    kaapi_steal_begincritical( &ta->sc );
-
-    /* disable steal endcritical will pop NULL splitter */
-    ta->save_splitter    = NULL;
-    ta->save_argsplitter = NULL;
-
-    kaapi_steal_endcritical( &ta->sc );
-    
-    /* no lock needed since no more steal possible */
-    ktr->rhead = ta->head; ta->head = 0;
-    ktr->rtail = ta->tail; ta->tail = 0;
-  }
+  /* disable and wait no more thief on stc */
+  kaapi_steal_disable_sync( &stc );
+  
+  /* no lock needed since no more steal possible */
+  ktr->rhead = ta->head; ta->head = 0;
+  ktr->rtail = ta->tail; ta->tail = 0;
   
   /* delete the preemption flag */
   ktr->req_preempt = 0;
 
   return 0;
 }
+
 
 /**
 */
