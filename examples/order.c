@@ -6,7 +6,7 @@
 
 
 #define CONFIG_INPUT_SIZE 10000
-#define CONFIG_ALLOC_RESULT 0
+#define CONFIG_ALLOC_RESULT 1
 #define CONFIG_STEALABLE_THIEVES 1
 #define CONFIG_STATIC_STEAL 0
 #define CONFIG_STEAL_SIZE 10
@@ -35,10 +35,13 @@ static int is_kid_marked(unsigned int kid)
 
 #endif
 
-static void print_spaces(unsigned int n)
+static inline void print_spaces(unsigned int n)
 {
+#if 0
   for (int i = n; i > 0; --i)
     printf("  ");
+#else
+#endif
 }
 
 
