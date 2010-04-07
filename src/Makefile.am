@@ -60,6 +60,7 @@ libxkaapi_la_SOURCES=\
   task/kaapi_task_preempt_thief.c \
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
+  task/kaapi_task_return.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \

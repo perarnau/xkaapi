@@ -109,12 +109,13 @@ protected:
     Self_t* self_work = (Self_t*)arg;
     kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
       thread,
-      KAAPI_STEALCONTEXT_DEFAULT,
+      KAAPI_STEALCONTEXT_LINKED,
       Self_t::static_splitter,   /* or 0 to avoid steal on thief */
-      self_work
+      self_work,
+      self_work->_master
     );
     self_work->doit( sc, thread );
-    kaapi_steal_finalize( sc );
+    kaapi_steal_thiefreturn( sc );
   }
 
 
@@ -185,6 +186,7 @@ std::cout << "Splitter: count=" << incount << ", outputcount=" << count << ", r=
           r.last = rq.first;
           output_work->_queue.set( rq );
         }
+        output_work->_master   = sc; /* fonction ici ? */
         output_work->_seqgrain = _seqgrain;
         output_work->_pargrain = _pargrain;
 #if 0
@@ -206,12 +208,13 @@ std::cout << std::flush;
   }
 
 protected:  
-  work_queue     _queue;    /* first to ensure alignment constraint */
-  InputIterator  _ibeg;
-  InputIterator  _iend;
-  UnaryOperator  _op;
-  size_t         _seqgrain;
-  size_t         _pargrain;
+  work_queue                   _queue;    /* first to ensure alignment constraint */
+  InputIterator                _ibeg;
+  InputIterator                _iend;
+  UnaryOperator                _op;
+  kaapi_stealcontext_t*        _master;
+  size_t                       _seqgrain;
+  size_t                       _pargrain;
 };
 
 } /* namespace impl */
@@ -232,7 +235,8 @@ void for_each ( InputIterator begin, InputIterator end, UnaryOperator op )
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    work
+    work, 
+    0
   );
   
   work->doit( sc, thread );
@@ -256,7 +260,8 @@ void for_each ( InputIterator begin, InputIterator end, UnaryOperator op, int se
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    work
+    work,
+    0
   );
   
   work->doit( sc, thread );

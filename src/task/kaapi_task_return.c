@@ -46,18 +46,41 @@
 
 /**
 */
-int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc, kaapi_taskadaptive_result_t* tr )
+void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
-  kaapi_assert_debug( tr !=0 );
+
+  /* wait end of pending thief, if any */
+  while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
+    kaapi_slowdown_cpu();
+
+  kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
   kaapi_assert(ta->head ==0)
   kaapi_assert(ta->tail ==0)
+  kaapi_assert( KAAPI_ATOMIC_READ(&ta->thievescount) ==0 ); /* else pb -> call kaapi_steal_finalize ! */
+}
 
-  long thievescount = KAAP_ATOMIC_READ(&ta->thievescount);
-  kaapi_assert(thievescount >=0);
-  tr->thievescount = thievescount;
 
-  /* tasksig will report thievescount on the master... */
+/**
+*/
+int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
+{
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_assert_debug( ta !=0 );
+
+  ta->sc.splitter = 0;
+  ta->sc.argsplitter = 0;
+  kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
+  kaapi_task_setextrabody( ta->sc.ownertask, kaapi_nop_body );
+
+#if defined(KAAPI_DEBUG)
+  /* push task to wait childs */
+  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
+  kaapi_task_init( task, kaapi_taskreturn_body, ta );
+  kaapi_thread_pushtask(stc->thread);
+#endif
+
+  return 0;
 }
