@@ -63,21 +63,16 @@ int kaapi_task_splitter_adapt(
   stc = kaapi_task_getargst(task, kaapi_stealcontext_t);
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 
-  /* pre-increment the thiefcount in order to ensure correct finalization */
-  KAAPI_ATOMIC_INCR( &ta->thievescount );
-
   /* for kaapi_steal_sync */
   KAAPI_ATOMIC_WRITE(&stc->is_there_thief, 1);
 
   /* call the splitter */
   count = splitter( stc, count, array, argsplitter);
 
+  kaapi_writemem_barrier();
+
   /* for kaapi_steal_sync */
   KAAPI_ATOMIC_WRITE(&stc->is_there_thief, 0);
-
-  /* reset the body to adapt body */
-  KAAPI_ATOMIC_DECR( &ta->thievescount );
-  kaapi_writemem_barrier();
 
   return count;
 }

@@ -63,7 +63,6 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   /* hack ? restore the upper frame (the one that should have execute pushstealcontext 
   */
   kaapi_thread_restore_frame(thread-1, &ta->frame);
-  
 }
 
 
