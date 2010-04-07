@@ -45,6 +45,8 @@
 #include "kaapi_impl.h"
 
 
+double t_finalize = 0;
+
 /**
 */
 void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
@@ -52,16 +54,21 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
 
+#if 1
+  double t0 = kaapi_get_elapsedtime();
+#endif
 
   while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
-    ;
+    kaapi_slowdown_cpu();
 
-  kaapi_readmem_barrier();
+  while (KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
+    kaapi_slowdown_cpu();
 
-  while (  KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
-    ;
+#if 1
+  t_finalize += kaapi_get_elapsedtime()-t0;
+#endif
 
-  kaapi_mem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
+  kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
   kaapi_assert(ta->head ==0)
   kaapi_assert(ta->tail ==0)
@@ -82,15 +89,9 @@ int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
   ta->sc.splitter = 0;
   ta->sc.argsplitter = 0;
   
-  /* begin -> end: a way to ensure linearization point between 
-     victim and thives 
-  */
-  kaapi_steal_begincritical(stc);
-  kaapi_steal_endcritical(stc);
-
   kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
   kaapi_task_setextrabody( ta->sc.ownertask, kaapi_nop_body );
-  
+
   /* push task to wait childs */
   kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
   kaapi_task_init( task, kaapi_taskfinalize_body, stc );

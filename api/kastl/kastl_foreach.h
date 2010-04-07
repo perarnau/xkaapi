@@ -129,7 +129,7 @@ int incount = count;
     if (size < _pargrain) return 0;
 
 /* bug here: cannot steal work if 2 processors !!!! */
-    size_t size_max = (size * count) / (1+count); /* max bound */
+    size_t size_max = (size * count) / (2+count); /* max bound */
 //    size_t size_max = size;
 //    size_t size_max = count*_seqgrain;
     if (size_max ==0) size_max = 1;

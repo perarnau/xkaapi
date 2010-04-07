@@ -50,6 +50,9 @@
 extern "C" {
 #endif
 
+/**/
+extern double t_finalize;
+
 /* mark that we compile source of the library */
 #define KAAPI_COMPILE_SOURCE 1
 
@@ -385,6 +388,7 @@ typedef struct kaapi_taskadaptive_result_t {
   volatile int                        thief_term;       /* */
   struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
   int                                 flag;             /* where is allocated data */
+  long                                thievescount;     /* #thieves of the owner of this structure.... */
 
   struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
   struct kaapi_taskadaptive_result_t* rtail;            /* */

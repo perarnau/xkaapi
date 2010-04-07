@@ -1027,6 +1027,14 @@ extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 */
 extern int kaapi_steal_finalize( kaapi_stealcontext_t* stc );
 
+/** \ingroup ADAPTIVE
+    Signal end of a thief, required to be call if kaapi_steal_finalize is not call in order
+    to ensure end of the computation.
+    data may be null. Size should be less or equal than size of buffer allocated in
+    kaapi_allocate_thief_result
+*/
+extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc, kaapi_taskadaptive_result_t* tr, void* data, size_t size );
+
 
 
 /** \ingroup PERF

@@ -106,7 +106,7 @@ redo_select:
     /* here is not yet an exponential backoff, but the cas should not
        to busy to avoid memory transaction: do multiple tests on the reply field
     */
-    for (i=0; i<10; ++i)
+    for (i=0; i<3; ++i)
     {
       if (kaapi_reply_test( &kproc->reply ) ) 
         /* return with out trying to lock / unlock the victim: 
@@ -114,7 +114,9 @@ redo_select:
         */
         goto return_value;
 
+      kaapi_slowdown_cpu();
     }
+    //usleep(10);
   }
 #if 0
   fprintf(stdout,"%i kproc enter critical section to:%p\n", kproc->kid, (void*)victim.kproc );
