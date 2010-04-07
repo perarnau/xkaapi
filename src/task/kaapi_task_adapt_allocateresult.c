@@ -79,7 +79,7 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   result->rtail           = 0;
   result->prev            = 0;
   result->next            = 0;
-  result->addr_tofree	  = addr_tofree;
+  result->addr_tofree	    = addr_tofree;
 
   return result;
 }

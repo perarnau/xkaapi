@@ -69,7 +69,7 @@ int kaapi_task_splitter_adapt(
   /* call the splitter */
   count = splitter( stc, count, array, argsplitter);
 
-  /* reset the body to adapt body */
+  /* decrement the refcount thievescount */
   KAAPI_ATOMIC_DECR( &ta->thievescount );
   kaapi_writemem_barrier();
 
