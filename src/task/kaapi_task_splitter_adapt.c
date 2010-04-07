@@ -61,7 +61,6 @@ int kaapi_task_splitter_adapt(
 
   /* call the user splitter */
   stc = kaapi_task_getargst(task, kaapi_stealcontext_t);
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 
   /* for kaapi_steal_sync */
   KAAPI_ATOMIC_WRITE(&stc->is_there_thief, 1);

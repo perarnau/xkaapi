@@ -58,7 +58,7 @@ int kaapi_preemptpoint_before_reducer_call(
   kaapi_assert_debug( stc !=0 );
   
   /* disable and wait no more thief on stc */
-  kaapi_steal_disable_sync( &stc );
+  kaapi_steal_disable_sync( stc );
   
   /* push data to the victim and list of thief */
   if (result_data !=0)
