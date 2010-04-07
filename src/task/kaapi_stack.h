@@ -511,8 +511,11 @@ typedef struct kaapi_task_format_t {
 #else
   #define kaapi_stack_push(stack) \
     ++(stack)->sp
-  #define kaapi_stack_push2(stack, count) \
-    (stack)->sp++; (stack)->sp_data += count
+  #define kaapi_stack_push2(stack, count)	\
+  do {						\
+    (stack)->sp++;				\
+    (stack)->sp_data += count;			\
+  } while (0)
 #endif
 
   /** \ingroup TASK
