@@ -615,7 +615,7 @@ typedef struct kaapi_task_format_t {
       \retval EWOULDBLOCK the execution of the task will block the control flow.
       \retval EINTR the control flow has received a KAAPI interrupt.
   */
-  extern inline int kaapi_stack_execone(kaapi_stack_t* stack, kaapi_task_t* task)
+  static inline int kaapi_stack_execone(kaapi_stack_t* stack, kaapi_task_t* task)
   {
 #if defined(KAAPI_DEBUG)
     if (stack ==0) return EINVAL;
