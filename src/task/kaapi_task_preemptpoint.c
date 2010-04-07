@@ -57,6 +57,9 @@ int kaapi_preemptpoint_before_reducer_call(
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
   kaapi_assert_debug( stc !=0 );
   
+  /* disable and wait no more thief on stc */
+  kaapi_steal_disable_sync( &stc );
+  
   /* push data to the victim and list of thief */
   if (result_data !=0)
   {
@@ -65,9 +68,6 @@ int kaapi_preemptpoint_before_reducer_call(
   }
   ktr->arg_from_thief = arg_for_victim;
 
-  /* disable and wait no more thief on stc */
-  kaapi_steal_disable_sync( &stc );
-  
   /* no lock needed since no more steal possible */
   ktr->rhead = ta->head; ta->head = 0;
   ktr->rtail = ta->tail; ta->tail = 0;
