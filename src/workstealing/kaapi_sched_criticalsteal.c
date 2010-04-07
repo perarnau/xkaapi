@@ -43,6 +43,7 @@
 */
 #include "kaapi_impl.h"
 
+
 /**
 */
 int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
