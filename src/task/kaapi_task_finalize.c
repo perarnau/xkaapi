@@ -52,6 +52,12 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
 
+
+  while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
+    ;
+
+  kaapi_readmem_barrier();
+
   while (  KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
     ;
 
@@ -63,7 +69,6 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   /* hack ? restore the upper frame (the one that should have execute pushstealcontext 
   */
   kaapi_thread_restore_frame(thread-1, &ta->frame);
-  
 }
 
 

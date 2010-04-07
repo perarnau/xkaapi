@@ -866,6 +866,21 @@ extern int kaapi_task_splitter_adapt(
 );
 
 
+/** \ingroup ADAPTIVE
+     Disable steal on stealcontext and wait not more thief is stealing.
+     Return 0 in case of success else return an error code.
+ */
+static inline int kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
+{
+  stc->splitter    = 0;
+  stc->argsplitter = 0;
+  kaapi_mem_barrier();
+
+  while (KAAPI_ATOMIC_READ(&stc->is_there_thief) !=0)
+    ;
+  return 0;
+}
+
 
 /** \ingroup ADAPTIVE
     free a result previously allocate with kaapi_allocate_thief_result
