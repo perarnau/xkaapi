@@ -122,7 +122,7 @@ protected:
   */
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
-#if 1
+#if 0
 int incount = count;
 #endif
     size_t size = _queue.size();   /* upper bound */
@@ -139,7 +139,7 @@ int incount = count;
 
     /* */
     if ( (size_min < _seqgrain) || !_queue.steal(r, size_max, size_min )) return 0;
-#if 1
+#if 0
 std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last << ")"
           << ", size=" << size  << ", size_max=" << size_max << ", size_min=" << size_min 
           << std::endl;
@@ -158,7 +158,7 @@ std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last 
       count = size/_seqgrain; 
       bloc = _seqgrain; 
     }
-#if 1
+#if 0
 std::cout << "Splitter: count=" << incount << ", outputcount=" << count << ", r=[" << r.first << "," << r.last << ")"
           << ", bloc=" << bloc << ", size=" << size   
           << std::endl;
@@ -187,7 +187,7 @@ std::cout << "Splitter: count=" << incount << ", outputcount=" << count << ", r=
         }
         output_work->_seqgrain = _seqgrain;
         output_work->_pargrain = _pargrain;
-#if 1
+#if 0
 std::cout << "Splitter: reply to=" << i << "[" << rq.first << "," << rq.last << ")" << std::endl;
 #endif
         kaapi_thread_pushtask( thief_thread );
@@ -199,7 +199,7 @@ std::cout << "Splitter: reply to=" << i << "[" << rq.first << "," << rq.last << 
       }
       ++i;
     }
-#if 1
+#if 0
 std::cout << std::flush;
 #endif
     return reply_count; 
