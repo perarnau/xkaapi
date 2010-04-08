@@ -111,9 +111,10 @@ protected:
     Self_t* self_work = (Self_t*)arg;
     kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
       thread,
-      KAAPI_STEALCONTEXT_DEFAULT,
+      KAAPI_STEALCONTEXT_LINKED,
       Self_t::static_splitter,   /* or 0 to avoid steal on thief */
-      self_work
+      self_work,
+      self_work->_master
     );
     self_work->doit( sc, thread );
     kaapi_steal_finalize( sc );
@@ -157,12 +158,13 @@ protected:
         output_work = kaapi_task_getargst(thief_task, Self_t);
         kaapi_assert( (((kaapi_uintptr_t)output_work) & 0x3F)== 0 );
 
+        output_work->_queue.set( range( r.last-bloc, r.last ) );
         output_work->_iend  = _iend;
         output_work->_ibeg  = _ibeg;
         output_work->_obeg  = _obeg;
         output_work->_op    = _op;
         kaapi_assert_debug( !r.is_empty() );
-        output_work->_queue.set( range( r.last-bloc, r.last ) );
+        output_work->_master   = sc; 
         output_work->_seqgrain = _seqgrain;
         output_work->_pargrain = _pargrain;
         r.last -= bloc;
@@ -180,13 +182,14 @@ protected:
   }
 
 protected:  
-  work_queue     _queue;
-  InputIterator  _ibeg;
-  InputIterator  _iend;
-  OutputIterator _obeg;
-  UnaryOperator  _op;
-  size_t         _seqgrain;
-  size_t         _pargrain;
+  work_queue            _queue;
+  InputIterator         _ibeg;
+  InputIterator         _iend;
+  OutputIterator        _obeg;
+  UnaryOperator         _op;
+  kaapi_stealcontext_t* _master;
+  size_t                _seqgrain;
+  size_t                _pargrain;
 } __attribute__((aligned(64)));
 
 } /* namespace impl */
@@ -207,7 +210,8 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    work
+    work,
+    0
   );
   
   work->doit( sc, thread );
@@ -231,7 +235,8 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    work
+    work,
+    0
   );
   
   work->doit( sc, thread );
