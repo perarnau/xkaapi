@@ -9,7 +9,7 @@
 # Add the binary directory for generated headers :
 #include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_DIR}/../src) 
 
-AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src
+AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(top_srcdir)/api/kaapixx 
 
 lib_LTLIBRARIES=libxkaapixx.la
 
@@ -20,45 +20,47 @@ libxkaapixx_la_LDFLAGS = -version-info 1:0:1 $(XKAAPILIB_BUILD_LDFLAGS)
 libxkaapixx_la_LIBADD=../src/libxkaapi.la $(XKAAPILIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
-	ka_api_clo.h \
-	ka_api_fork.h \
-	athapascan_closure.h \
-	athapascan_fork.h
+	kaapixx/ka_api_clo.h \
+	kaapixx/ka_api_fork.h \
+	atha/athapascan_closure.h \
+	atha/athapascan_fork.h
 
 M4_SRCS=\
-	m4_generator \
-	m4_macros \
-	ka_api_clo.m4 \
-	ka_api_fork.m4 \
-	athapascan_closure_gen.m4 \
-	athapascan_fork_gen.m4 
+	kaapixx/m4_generator \
+	kaapixx/m4_macros \
+	kaapixx/ka_api_clo.m4 \
+	kaapixx/ka_api_fork.m4 \
+	atha/m4_generator \
+	atha/m4_macros \
+	atha/athapascan_closure_gen.m4 \
+	atha/athapascan_fork_gen.m4 
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
 
 EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
 
 $(M4_BUILT_FILES): $(M4_SRCS)
-	(cd $(srcdir); $(srcdir)/m4_generator 10)
+	(cd $(srcdir)/kaapixx; ./m4_generator 10); 	(cd $(srcdir)/atha; ./m4_generator 10)
 
 libxkaapixx_la_SOURCES=\
-	ka_init.cpp \
-	ka_error.cpp \
-	ka_timer.cpp \
-	ka_properties.cpp \
-	ka_logfile.cpp \
-	ka_component.cpp \
-	ka_parser.cpp \
-	ka_api_format.cpp \
-	ka_api_kaapi.cpp \
-	ka_component.h \
-	ka_debug.h \
-	ka_error.h \
-	ka_init.h \
-	ka_parser.h \
-	ka_properties.h \
-	ka_timer.h \
-	ka_types.h\
-  atha_kaapi.cpp\
+	kaapixx/ka_init.cpp \
+	kaapixx/ka_error.cpp \
+	kaapixx/ka_timer.cpp \
+	kaapixx/ka_properties.cpp \
+	kaapixx/ka_logfile.cpp \
+	kaapixx/ka_component.cpp \
+	kaapixx/ka_parser.cpp \
+	kaapixx/ka_api_format.cpp \
+	kaapixx/ka_api_kaapi.cpp \
+	kaapixx/ka_component.h \
+	kaapixx/ka_debug.h \
+	kaapixx/ka_error.h \
+	kaapixx/ka_init.h \
+	kaapixx/ka_parser.h \
+	kaapixx/ka_properties.h \
+	kaapixx/ka_timer.h \
+	kaapixx/ka_types.h\
+  atha/atha_kaapi.cpp\
   kastl/kastl_workqueue.cpp
 
 # NOT YET USED:  	atha_monotonic.cpp \
@@ -70,21 +72,24 @@ libxkaapixx_la_SOURCES=\
 #  atha_format.cpp
 
 include_HEADERS=\
-	kaapi++ \
-	kaapi++.h\
-	ka_error.h\
-  ka_timer.h\
-  ka_api_clo.h\
-  ka_api_fork.h \
-  athapascan-1 \
-  athapascan-1.h \
-  athapascan_closure.h\
-  athapascan_fork.h\
+	kaapixx/kaapi++ \
+	kaapixx/kaapi++.h\
+	kaapixx/ka_error.h\
+  kaapixx/ka_timer.h\
+  kaapixx/ka_api_clo.h\
+  kaapixx/ka_api_fork.h \
+  atha/athapascan-1 \
+  atha/athapascan-1.h \
+  atha/athapascan_closure.h\
+  atha/athapascan_fork.h
+  
+kastlinclude_HEADERS=\  
   kastl/kastl_workqueue.h\
   kastl/kastl_foreach.h\
   kastl/kastl_transform.h\
   kastl/algorithm.h\
   kastl/algorithm
+kastlincludedir=$(includedir)/kastl
 
 check_PROGRAMS=ka_api_check_header
 if STD_CXX0X
