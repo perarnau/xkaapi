@@ -68,7 +68,13 @@ int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi
 redo_select:
   nbproc = kproc->hlcount[level];
   if (nbproc <=1) return EINVAL;
-  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
+#if 0
+  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % (2*nbproc);
+#else
+/* \WARNING: test to bias the random generator */
+  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % (3*nbproc);
+  if (victimid >= nbproc) victimid = 0;
+#endif
 
   /* Get the k-processor */    
   victim->kproc = kaapi_all_kprocessors[ kproc->hkids[level][victimid] ];

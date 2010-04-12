@@ -50,6 +50,9 @@
 extern "C" {
 #endif
 
+/**/
+extern double t_finalize;
+
 /* mark that we compile source of the library */
 #define KAAPI_COMPILE_SOURCE 1
 
@@ -359,9 +362,10 @@ typedef struct kaapi_taskadaptive_t {
   kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
 
   kaapi_atomic_t                      lock;            /* required for access to list */
-  kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
-  struct kaapi_taskadaptive_result_t* head __attribute__((aligned));            /* head of the LIFO order of result */
-  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned));            /* tail of the LIFO order of result */
+  struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
+  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
+  kaapi_atomic_t                      thievescount __attribute__((aligned(KAAPI_CACHE_LINE)));     /* #thieves of the owner of this structure.... */
+  struct kaapi_taskadaptive_t*        origin_master;    /* who to report global end at the end of computation, 0 iff first master task */
   kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
   void*                               save_argsplitter;/* idem */
   kaapi_frame_t                       frame;
@@ -460,7 +464,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
   return (task->body != kaapi_taskstartup_body) && (task->body != kaapi_nop_body)
       && (task->body != kaapi_suspend_body) && (task->body != kaapi_exec_body) && (task->body != kaapi_aftersteal_body) 
       && (task->body != kaapi_tasksteal_body) && (task->body != kaapi_taskwrite_body) && (task->body != kaapi_tasksig_body)
-      && (task->body != kaapi_taskfinalize_body) && (task->body != kaapi_adapt_body)
+      && (task->body != kaapi_taskfinalize_body) && (task->body != kaapi_taskreturn_body) && (task->body != kaapi_adapt_body)
       ;
 }
 

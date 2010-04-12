@@ -452,15 +452,18 @@ typedef struct kaapi_stealcontext_t {
   volatile int                   hasrequest;
   kaapi_request_t*               requests;
 
-  kaapi_atomic_t		 is_there_thief;
+  kaapi_atomic_t                 is_there_thief;
 
 } kaapi_stealcontext_t;
 
 /* flags (or ed) for kaapi_stealcontext_t */
 #define KAAPI_STEALCONTEXT_DEFAULT    0x0   /* no flag */
-#define KAAPI_STEALCONTEXT_NOPREEMPT  0x1   /* no preemption */
-#define KAAPI_STEALCONTEXT_NOSYNC     0x2   /* do not wait end of thieves */
+#define KAAPI_STEALCONTEXT_LINKED     0x1   /* link thief context to a master context */
 
+/* no used macro:
+#define KAAPI_STEALCONTEXT_NOPREEMPT  0x1   // no preemption 
+#define KAAPI_STEALCONTEXT_NOSYNC     0x2   // do not wait end of thieves 
+*/
 
 /** Thief result
     Only public part of the data structure.
@@ -718,12 +721,14 @@ extern int kaapi_sched_sync( void );
 
 /** \ingroup WS
     Return a new stealcontext to be used with other function of the adaptive API.
+    master if only used if flag == KAAPI_STEALCONTEXT_LINKED.
 */
 kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
   kaapi_thread_t*       thread,
   int                   flag,
   kaapi_task_splitter_t spliter,
-  void*                 argsplitter
+  void*                 argsplitter,
+  kaapi_stealcontext_t* master 
 );
 
 /** \ingroup ADAPTIVE
@@ -771,15 +776,18 @@ extern int kaapi_request_reply(
     kaapi_stealcontext_t*               stc,
     kaapi_request_t*                    request, 
     struct kaapi_taskadaptive_result_t* result,
-    int                                 insert_head
+    int                                 flag
 );
+
+#define KAAPI_REQUEST_REPLY_HEAD   0x0
+#define KAAPI_REQUEST_REPLY_TAIL   0x1
 
 static inline int kaapi_request_reply_head(
     kaapi_stealcontext_t*               stc,
     kaapi_request_t*                    request, 
     struct kaapi_taskadaptive_result_t* result
 )
-{ return kaapi_request_reply(stc, request, result, 1); }
+{ return kaapi_request_reply(stc, request, result, KAAPI_REQUEST_REPLY_HEAD); }
 
 /** \ingroup ADAPTIVE
 */
@@ -788,7 +796,7 @@ static inline int kaapi_request_reply_tail(
     kaapi_request_t*                    request, 
     struct kaapi_taskadaptive_result_t* result
 )
-{ return kaapi_request_reply(stc, request, result, 0); }
+{ return kaapi_request_reply(stc, request, result, KAAPI_REQUEST_REPLY_TAIL); }
 
 
 /** \ingroup ADAPTIVE
@@ -796,7 +804,7 @@ static inline int kaapi_request_reply_tail(
 static inline int kaapi_request_reply_failed(     
     kaapi_request_t*               request
 )
-{ return kaapi_request_reply( 0 /* means failed */, request, 0, 1 ); }
+{ return kaapi_request_reply( 0 /* means failed */, request, 0, KAAPI_REQUEST_REPLY_HEAD ); }
 
 /** \ingroup ADAPTIVE
     retrieve the request associated thread
@@ -1022,6 +1030,11 @@ extern int kaapi_steal_endcritical_disabled( kaapi_stealcontext_t* sc );
 */
 extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 
+/** Body of the task in charge of returning from a thief adaptive task
+    \ingroup TASK
+*/
+extern void kaapi_taskreturn_body( void* , kaapi_thread_t* );
+
 /** \ingroup ADAPTIVE
     Push the task that, on execution will wait the terminaison of the previous 
     adaptive task 'task' and all the thieves.
@@ -1030,6 +1043,12 @@ extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
     to kaapi_thread_pushstealcontext that creates the context.
 */
 extern int kaapi_steal_finalize( kaapi_stealcontext_t* stc );
+
+/** \ingroup ADAPTIVE
+    Signal end of a thief, required to be call if kaapi_steal_finalize is not call in order
+    to ensure end of the computation.
+*/
+extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 
 
 
