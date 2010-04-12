@@ -15,7 +15,9 @@
 #define CONFIG_CHECK_MULT_SEQ 1 /* assume CONFIG_CHECK_DATA */
 
 
+/* for debugging */
 static volatile long is_master_done __attribute__((aligned)) = 0;
+static volatile unsigned long printid __attribute__((aligned)) = 0;
 
 
 #if 0 /* kid mark */
@@ -237,23 +239,19 @@ static int reducer
  work_t* victim_work
 )
 {
-  static volatile unsigned long __attribute__((aligned)) pass = 0;
-
 #if 0 /* kid mark */
   mark_kid(thief_work->kid);
 #endif
 
-  ++pass;
-
   /* is being reduced */
 
   print_spaces(victim_work->kid);
-  printf("[%02x, %02x] red [%05u, %05u[ [%05u, %05u, %05u[ (%lx, %lu)\n",
+  printf("[%lu] [%02x, %02x] red [%05u, %05u[ [%05u, %05u, %05u[ (%lx)\n",
+	 ++printid,
 	 victim_work->kid, thief_work->kid,
 	 victim_work->i, victim_work->j,
 	 thief_work->i, thief_work->k, thief_work->j,
-	 (uintptr_t)thief_work,
-	 pass);
+	 (uintptr_t)thief_work);
   fflush(stdout);
 
   lock_work(victim_work);
@@ -330,7 +328,8 @@ static int splitter
     steal_work_safe(victim_work, thief_work);
 
     print_spaces(victim_work->kid);
-    printf("[%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
+    printf("[%lu] [%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
+	   ++printid,
 	   victim_work->kid,
 	   victim_work->k, victim_work->j,
 	   thief_work->i, thief_work->j,
@@ -422,7 +421,7 @@ static void adaptive_entry
 
     if (is_master_done == 1)
     {
-      printf("   MASTER_DONE(%u, 0x%lx)\n", w->kid, (uintptr_t)w->r->data);
+      printf("[%lu]   MASTER_DONE(%u, 0x%lx)\n", ++printid, w->kid, (uintptr_t)w->r->data);
       exit(-1);
     }
 
@@ -444,7 +443,8 @@ static void adaptive_entry
   {
     kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
 
-    printf("[%02x,   ] preempt_thief (0x%lx)\n", w->kid, (uintptr_t)ktr->data);
+    printf("[%lu] [%02x,   ] preempt_thief (0x%lx)\n",
+	   ++printid, w->kid, (uintptr_t)ktr->data);
 
     kaapi_steal_endcritical(sc);
 
@@ -459,7 +459,7 @@ static void adaptive_entry
   /* here no thieves, steal disabled, can leave */
 
   print_spaces(w->kid);
-  printf("[%02x,   ] don [%04u, %04u[ %u\n", w->kid, w->i, w->j, w->wid);
+  printf("[%lu] [%02x,   ] don [%04u, %04u[ %u\n", ++printid, w->kid, w->i, w->j, w->wid);
 
 #if CONFIG_ALLOC_RESULT
   if (w->r != NULL)
@@ -478,7 +478,7 @@ static void thief_entry(void* args, kaapi_thread_t* thread)
   /* cannot be stolen */
 
   kaapi_stealcontext_t* const sc =
-    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, NULL, NULL);
+    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, NULL, NULL, NULL);
 
   adaptive_entry(sc, args, thread);
 
@@ -491,7 +491,7 @@ static void common_entry(void* args, kaapi_thread_t* thread)
 {
   work_t* const w = args;
   kaapi_stealcontext_t* const sc =
-    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, w);
+    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, w, NULL);
 
   adaptive_entry(sc, args, thread);
 

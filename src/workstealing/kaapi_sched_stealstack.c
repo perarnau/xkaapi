@@ -154,9 +154,16 @@ static int kaapi_sched_stealframe(
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body)
     {
-      kaapi_stealcontext_t* sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
+      kaapi_stealcontext_t* const sc =
+	kaapi_task_getargst(task_top, kaapi_stealcontext_t);
+
+      /* for kaapi_steal_sync */
+      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 1);
+      kaapi_writemem_barrier();
+
       kaapi_task_splitter_t  splitter = sc->splitter;
       void*                  argsplitter = sc->argsplitter;
+
       if ( (splitter !=0) && (argsplitter !=0) )
       {
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
@@ -178,6 +185,10 @@ static int kaapi_sched_stealframe(
         thread->thiefpc = 0;
 #endif
       }
+
+      /* for kaapi_steal_sync */
+      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
+
       --task_top;
       continue;
     }
