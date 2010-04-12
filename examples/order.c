@@ -12,6 +12,10 @@
 #define CONFIG_STEAL_SIZE 10
 #define CONFIG_POP_SIZE 100
 #define CONFIG_CHECK_DATA 1
+#define CONFIG_CHECK_MULT_SEQ 1 /* assume CONFIG_CHECK_DATA */
+
+
+static volatile long is_master_done __attribute__((aligned)) = 0;
 
 
 #if 0 /* kid mark */
@@ -213,7 +217,11 @@ static void seq_work(work_t* w)
   for (i = w->i; i < w->j; ++i)
   {
 #if CONFIG_CHECK_DATA
+# if CONFIG_CHECK_MULT_SEQ
+    ++w->data[i];
+# else
     w->data[i] = (1 << 8) | w->kid;
+# endif /* CONFIG_CHECK_DATA */
 #else
     usleep(10);
 #endif
@@ -229,29 +237,38 @@ static int reducer
  work_t* victim_work
 )
 {
+  static volatile unsigned long __attribute__((aligned)) pass = 0;
+
 #if 0 /* kid mark */
   mark_kid(thief_work->kid);
 #endif
 
+  ++pass;
+
   /* is being reduced */
 
   print_spaces(victim_work->kid);
-  printf("[%02x::%02x, %02x] red [%05u, %05u[ [%05u, %05u, %05u[ (%u)\n",
-	 victim_work->kid, victim_work->wid, thief_work->kid,
+  printf("[%02x, %02x] red [%05u, %05u[ [%05u, %05u, %05u[ (%lx, %lu)\n",
+	 victim_work->kid, thief_work->kid,
 	 victim_work->i, victim_work->j,
 	 thief_work->i, thief_work->k, thief_work->j,
-	 thief_work->wid);
+	 (uintptr_t)thief_work,
+	 pass);
+  fflush(stdout);
 
   lock_work(victim_work);
   merge_work_safe(victim_work, thief_work);
 
 #if CONFIG_CHECK_DATA
+#if CONFIG_CHECK_MULT_SEQ
+#else
   {
     /* mark as reduced what has been done by the thief */
     unsigned int i;
     for (i = thief_work->i; i < thief_work->k; ++i)
       victim_work->data[i] |= 1 << 9;
   }
+#endif
 #endif
 
   unlock_work(victim_work);
@@ -312,6 +329,14 @@ static int splitter
 
     steal_work_safe(victim_work, thief_work);
 
+    print_spaces(victim_work->kid);
+    printf("[%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
+	   victim_work->kid,
+	   victim_work->k, victim_work->j,
+	   thief_work->i, thief_work->j,
+	   (uintptr_t)thief_work->r->data);
+    fflush(stdout);
+
     unlock_work(victim_work);
 
 #if 0
@@ -329,14 +354,6 @@ static int splitter
 #else
     thief_work->r->data = thief_work;
 #endif
-
-    print_spaces(victim_work->kid);
-    printf("[%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx::%lx)\n",
-	   victim_work->kid,
-	   victim_work->k, victim_work->j,
-	   thief_work->i, thief_work->j,
-	   (uintptr_t)thief_task,
-	   (uintptr_t)thief_work);
 
 #if CONFIG_STEALABLE_THIEVES
     kaapi_task_init(thief_task, common_entry, thief_work);
@@ -385,9 +402,6 @@ static void adaptive_entry
   unmark_kid(w->kid);
 #endif
 
-  print_spaces(w->kid);
-  printf("[%02x,   ] seq [%04u, %04u[ (%lx)\n", w->kid, w->k, w->j, (uintptr_t)w);
-
   while (1)
   {
     work_t local_work;
@@ -397,31 +411,50 @@ static void adaptive_entry
 
     local_work.data = w->data;
     local_work.kid = w->kid;
+
+#if 0
+    print_spaces(w->kid);
+    printf("[%02x,   ] seq [%04u, %04u[\n",
+	   local_work.kid, local_work.k, local_work.j);
+#endif
+
     seq_work(&local_work);
+
+    if (is_master_done == 1)
+    {
+      printf("   MASTER_DONE(%u, 0x%lx)\n", w->kid, (uintptr_t)w->r->data);
+      exit(-1);
+    }
 
     if (w->r != NULL)
     {
       if (kaapi_preemptpoint(w->r, sc, NULL, NULL, w, sizeof(work_t), NULL))
-      {
-	print_spaces(w->kid);
-	printf("[%02x,   ] pre\n", w->kid); fflush(stdout);
 	return ;
-      }
     }
   }
 
   /* retrive thieves results */
+
+  kaapi_steal_begincritical(sc);
 
   kaapi_taskadaptive_result_t* ktr;
 
   ktr = kaapi_preempt_getnextthief_head(sc);
   if (ktr != NULL)
   {
-    print_spaces(w->kid);
-    printf("[%02x,   ] preempt_thief\n", w->kid);
     kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
+
+    printf("[%02x,   ] preempt_thief (0x%lx)\n", w->kid, (uintptr_t)ktr->data);
+
+    kaapi_steal_endcritical(sc);
+
     goto continue_seq;
   }
+
+  if (w->kid == 0)
+    is_master_done = 1;
+
+  kaapi_steal_endcritical_disabled(sc);
 
   /* here no thieves, steal disabled, can leave */
 
@@ -496,6 +529,13 @@ static int check_work(const work_t* w)
 
   for (i = 0; i < CONFIG_INPUT_SIZE; ++i)
   {
+#if CONFIG_CHECK_MULT_SEQ
+    if (w->data[i] != 1)
+    {
+      printf("!!! invalidResult@%u, %u\n", i, w->data[i]);
+      return -1;
+    }
+#else
     const unsigned char kid = w->data[i] & 0xff;
 
     if (!(w->data[i] & (1 << 8)))
@@ -510,6 +550,7 @@ static int check_work(const work_t* w)
       printf("!!! notReduced@%u, processedBy %u: 0x%08x\n", i, kid, w->data[i]);
       return -1;
     }
+#endif
   }
 
   return 0;
@@ -534,7 +575,7 @@ static int root_entry(unsigned int q)
   if (check_work(work) == -1)
   {
     printf("invalidWork\n");
-    return -1;
+/*     return -1; */
   }
 #endif
 

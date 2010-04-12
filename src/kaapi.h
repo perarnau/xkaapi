@@ -157,6 +157,7 @@ static inline void* kaapi_malloc_align( unsigned int _align, size_t size, void**
   if ( (((kaapi_uintptr_t)retval) & align) !=0U)
     retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
   kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
+
   return retval;
 }
 
@@ -909,6 +910,9 @@ extern int kaapi_preempt_nextthief_helper(
       int (*)( stc, void* thief_work, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
+
+extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t*);
+
 #define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
 ({									\
   int __res = 0;							\
