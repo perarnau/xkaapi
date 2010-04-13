@@ -73,13 +73,15 @@ int main(int argc, char** argv)
   std::cout << "Time init:" << t1-t0 << std::endl;
 
 
-//  Sin op;
-  Op2 op;
+  Sin op;
+//  Op2 op;
   
   t0 = kaapi_get_elapsedtime();
   for (l=0; l<iter; ++l)
   {
-    kastl::transform(input, input+n, output, op );
+    kastl::transform(input, input+n, output, [&](double val)->double {
+      return sin(val);
+    } );
   }
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;

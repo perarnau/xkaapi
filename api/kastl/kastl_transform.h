@@ -69,8 +69,8 @@ public:
     InputIterator ibeg,
     InputIterator iend,
     InputIterator obeg,
-    UnaryOperator  op,
-    int sg = 128,
+    UnaryOperator&  op,
+    int sg = 512,
     int pg = 512
   ) : _queue(), _ibeg(ibeg), _iend(iend), _obeg(obeg), _op(op), _seqgrain(sg), _pargrain(pg)
   { _queue.set( range(0, iend-ibeg) ); }
@@ -157,16 +157,11 @@ protected:
         kaapi_task_init( thief_task, &static_thiefentrypoint, kaapi_thread_pushdata(thief_thread, sizeof(Self_t)) );
         output_work = kaapi_task_getargst(thief_task, Self_t);
         kaapi_assert( (((kaapi_uintptr_t)output_work) & 0x3F)== 0 );
+        new (output_work) Self_t(_ibeg, _iend, _obeg, _op, _seqgrain, _pargrain );
 
         output_work->_queue.set( range( r.last-bloc, r.last ) );
-        output_work->_iend  = _iend;
-        output_work->_ibeg  = _ibeg;
-        output_work->_obeg  = _obeg;
-        output_work->_op    = _op;
         kaapi_assert_debug( !r.is_empty() );
         output_work->_master   = sc; 
-        output_work->_seqgrain = _seqgrain;
-        output_work->_pargrain = _pargrain;
         r.last -= bloc;
 
         kaapi_thread_pushtask( thief_thread );

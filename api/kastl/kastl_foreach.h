@@ -68,11 +68,13 @@ public:
   ForeachWork(
     InputIterator ibeg,
     InputIterator iend,
-    UnaryOperator  op,
-    int sg = 128,
+    UnaryOperator& op,
+    int sg = 4096,
     int pg = 512
   ) : _queue(), _ibeg(ibeg), _iend(iend), _op(op), _seqgrain(sg), _pargrain(pg)
-  { _queue.set( range(0, iend-ibeg) ); }
+  { 
+    _queue.set( range(0, iend-ibeg) ); 
+  }
   
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
 
@@ -82,15 +84,19 @@ public:
     /* local iterator for the nano loop */
     impl::range r;
 
-    while (_queue.pop(r, _seqgrain) == true)
+    while (_queue.pop(r, _seqgrain))
     {
-#if 0
+#if 1
       std::for_each( _ibeg + r.first, _ibeg + r.last, _op );
-#else
+#elif 0
       InputIterator pos = _ibeg + r.first;
       InputIterator end = _ibeg + r.last;
       for ( ; pos != end; ++pos)
         _op(*pos);
+#else
+      impl::range::index_type i;
+      for ( i=r.first; i<r.last; ++i)
+        _op(_ibeg[i]);
 #endif
     }
   }
@@ -171,11 +177,9 @@ std::cout << "Splitter: count=" << incount << ", outputcount=" << count << ", r=
         kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
         kaapi_task_t* thief_task  = kaapi_thread_toptask(thief_thread);
         kaapi_task_init( thief_task, &static_thiefentrypoint, kaapi_thread_pushdata_align(thief_thread, sizeof(Self_t), 8) );
-        output_work = kaapi_task_getargst(thief_task, Self_t);
+        output_work = new (kaapi_task_getargst(thief_task, Self_t)) 
+               Self_t( _ibeg, _iend, _op, _seqgrain, _pargrain );
 
-        output_work->_iend  = _iend;
-        output_work->_ibeg  = _ibeg;
-        output_work->_op    = _op;
         kaapi_assert_debug( !r.is_empty() );
         range rq(r.first, r.last);
         if (count ==1)
@@ -187,8 +191,6 @@ std::cout << "Splitter: count=" << incount << ", outputcount=" << count << ", r=
           output_work->_queue.set( rq );
         }
         output_work->_master   = sc; /* fonction ici ? */
-        output_work->_seqgrain = _seqgrain;
-        output_work->_pargrain = _pargrain;
 #if 0
 std::cout << "Splitter: reply to=" << i << "[" << rq.first << "," << rq.last << ")" << std::endl;
 #endif

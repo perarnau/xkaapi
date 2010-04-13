@@ -13,8 +13,18 @@
 #include <math.h>
 #include <assert.h>
 #include <algorithm>
-#include "kaapi++"
 #include "random.h"
+
+/**
+*/
+double kaapi_get_elapsedtime(void)
+{
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+}
+
 
 /* basic op
 */
@@ -73,13 +83,20 @@ int main(int argc, char** argv)
   std::cout << "Time init:" << t1-t0 << std::endl;
 
 
-//  Sin op;
-  Op2 op;
+  Sin op;
+//  Op2 op;
   
   t0 = kaapi_get_elapsedtime();
   for (l=0; l<iter; ++l)
   {
+#if USE_CXX98
     std::transform(input, input+n, output, op );
+#else
+    std::transform(input, input+n, output, [&](double val)->double {
+      return sin(val);
+    } );
+#endif
+
   }
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;
@@ -97,6 +114,11 @@ int main(int argc, char** argv)
   }
   if (isok) std::cout << "Verification ok" << std::endl;
 
+#if USE_CXX98
+  std::cout << "std::c++ 98\n";
+#else
+  std::cout << "std::c++ lambda\n";
+#endif
   std::cout << "Result-> size: " << n << "  time: " << avrg << std::endl;
 
   delete [] input;
