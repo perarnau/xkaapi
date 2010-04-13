@@ -112,7 +112,8 @@ bool work_queue::steal(range& r, work_queue::size_type size)
 {
   lock_steal();
   _end -= size;
-  mem_synchronize();
+  kaapi_mem_barrier();
+//  mem_synchronize();
   if (_end < _beg)
   {
     _end += size;
@@ -136,11 +137,11 @@ bool work_queue::steal(range& r, work_queue::size_type size_max, work_queue::siz
   kaapi_assert_debug( size_min <= size_max );
   lock_steal();
   _end -= size_max;
-  mem_synchronize();
+  kaapi_mem_barrier();
   if (_end < _beg)
   {
     _end += size_max - size_min;
-    mem_synchronize();
+    kaapi_mem_barrier();
     if (_beg < _end)
     {
       r.first = _end;
@@ -148,6 +149,7 @@ bool work_queue::steal(range& r, work_queue::size_type size_max, work_queue::siz
       unlock();
       return true;
     }
+    _end += size_min; 
     unlock();
     return false;
   }

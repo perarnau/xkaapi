@@ -79,7 +79,7 @@ int main(int argc, char** argv)
   t0 = kaapi_get_elapsedtime();
   for (l=0; l<iter; ++l)
   {
-    kastl::transform(input, input+n, output, op );
+    kastl::transform(input, input+n, output, op, 1, 1 );
   }
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;
