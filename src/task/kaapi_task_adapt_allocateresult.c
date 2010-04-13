@@ -83,9 +83,3 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 
   return result;
 }
-
-
-void kaapi_free_thief_result(kaapi_taskadaptive_result_t* ktr)
-{
-  free(ktr->addr_tofree);
-}

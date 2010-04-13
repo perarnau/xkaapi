@@ -247,6 +247,7 @@ void for_each ( InputIterator begin, InputIterator end, UnaryOperator op )
   kaapi_sched_sync();
 }
 
+
 /**
 */
 template<class InputIterator, class UnaryOperator>

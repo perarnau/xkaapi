@@ -79,9 +79,13 @@ int main(int argc, char** argv)
   t0 = kaapi_get_elapsedtime();
   for (l=0; l<iter; ++l)
   {
+#if 0 // C++0X
     kastl::transform(input, input+n, output, [&](double val)->double {
       return sin(val);
     } );
+#else
+    kastl::transform(input, input+n, output, op, 1, 1 );
+#endif
   }
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;

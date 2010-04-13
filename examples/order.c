@@ -5,13 +5,50 @@
 #include "kaapi.h"
 
 
-#define CONFIG_INPUT_SIZE 50000
+#define CONFIG_INPUT_SIZE 10000
 #define CONFIG_ALLOC_RESULT 1
 #define CONFIG_STEALABLE_THIEVES 1
 #define CONFIG_STATIC_STEAL 0
 #define CONFIG_STEAL_SIZE 10
 #define CONFIG_POP_SIZE 100
 #define CONFIG_CHECK_DATA 1
+#define CONFIG_CHECK_MULT_SEQ 0 /* assume CONFIG_CHECK_DATA */
+
+
+/* for debugging */
+static volatile long is_master_done __attribute__((aligned)) = 0;
+static volatile unsigned long printid __attribute__((aligned)) = 0;
+
+
+#if 0 /* kid mark */
+
+static unsigned char marks[16] = {0, };
+
+static void mark_kid(unsigned int kid)
+{
+  marks[kid] = 1;
+}
+
+static void unmark_kid(unsigned int kid)
+{
+  marks[kid] = 0;
+}
+
+static int is_kid_marked(unsigned int kid)
+{
+  return marks[kid] == 1;
+}
+
+#endif
+
+static inline void print_spaces(unsigned int n)
+{
+#if 0
+  for (int i = n; i > 0; --i)
+    printf("  ");
+#else
+#endif
+}
 
 
 extern void usleep(unsigned long);
@@ -38,6 +75,7 @@ struct work
 
   /* thief result */
   kaapi_taskadaptive_result_t* r;
+  kaapi_stealcontext_t* m;
 
   /* debugging */
   unsigned int kid;
@@ -71,6 +109,7 @@ static void init_work(work_t* w)
 #endif
 
   w->r = NULL;
+  w->m = NULL;
 
   w->kid = (unsigned int)-1;
 
@@ -98,18 +137,24 @@ static unsigned int work_remaining_size(work_t* w)
 }
 
 
-static void merge_work(work_t* a, work_t* b)
+static void merge_work_safe(work_t* a, work_t* b)
 {
-  lock_work(a);
-
   a->j = b->j;
   a->k = b->k;
-
-  unlock_work(a);
 }
 
 
-static void empty_work(work_t* w)
+static void __attribute__((unused)) merge_work(work_t* a, work_t* b)
+{
+  /* assume b safe to access */
+
+  lock_work(a);
+  merge_work_safe(a, b);
+  lock_work(b);
+}
+
+
+static void __attribute__((unused)) empty_work (work_t* w)
 {
   w->i = 0;
   w->j = 0;
@@ -176,7 +221,11 @@ static void seq_work(work_t* w)
   for (i = w->i; i < w->j; ++i)
   {
 #if CONFIG_CHECK_DATA
+# if CONFIG_CHECK_MULT_SEQ
+    ++w->data[i];
+# else
     w->data[i] = (1 << 8) | w->kid;
+# endif /* CONFIG_CHECK_DATA */
 #else
     usleep(10);
 #endif
@@ -192,20 +241,27 @@ static int reducer
  work_t* victim_work
 )
 {
-  /* has been reduced */
+#if 0 /* kid mark */
+  mark_kid(thief_work->kid);
+#endif
 
-  if (thief_work->i == thief_work->j)
-    return 1;
+  /* is being reduced */
 
-  printf("[%02x::%02x, %02x] red [%05u, %05u[ [%05u, %05u, %05u[ (%lx)\n",
-	 victim_work->kid, victim_work->wid, thief_work->kid,
+  print_spaces(victim_work->kid);
+  printf("[%lu] [%02x, %02x] red [%05u, %05u[ [%05u, %05u, %05u[ (%lx)\n",
+	 ++printid,
+	 victim_work->kid, thief_work->kid,
 	 victim_work->i, victim_work->j,
 	 thief_work->i, thief_work->k, thief_work->j,
 	 (uintptr_t)thief_work);
+  fflush(stdout);
 
-  merge_work(victim_work, thief_work);
+  lock_work(victim_work);
+  merge_work_safe(victim_work, thief_work);
 
 #if CONFIG_CHECK_DATA
+#if CONFIG_CHECK_MULT_SEQ
+#else
   {
     /* mark as reduced what has been done by the thief */
     unsigned int i;
@@ -213,11 +269,9 @@ static int reducer
       victim_work->data[i] |= 1 << 9;
   }
 #endif
+#endif
 
-  /* do not lock, thief_work is a copy at a given
-     time and we dont know about the lock status
-  */
-  empty_work(thief_work);
+  unlock_work(victim_work);
 
   return 1;
 }
@@ -234,6 +288,11 @@ static int splitter
   int replied_count = 0;
   int is_done = 0;
 
+#if 0
+  if (is_kid_marked(victim_work->kid))
+    return 0;
+#endif
+
   for (; (count > 0) && (!is_done); ++requests)
   {
     kaapi_thread_t* thief_thread;
@@ -245,7 +304,7 @@ static int splitter
 
     lock_work(victim_work);
 
-    if (work_remaining_size(victim_work) < 10)
+    if (work_remaining_size(victim_work) < CONFIG_STEAL_SIZE)
     {
       unlock_work(victim_work);
       break;
@@ -255,6 +314,7 @@ static int splitter
     thief_task = kaapi_thread_toptask(thief_thread);
 
     thief_work = kaapi_thread_pushdata(thief_thread, sizeof(work_t));
+
     init_work(thief_work);
 
 #if CONFIG_ALLOC_RESULT
@@ -263,11 +323,22 @@ static int splitter
     thief_work->r = kaapi_allocate_thief_result(sc, sizeof(work_t), thief_work);
 #endif
 
+    thief_work->m = sc;
+
 #if CONFIG_CHECK_DATA
     thief_work->data = victim_work->data;
 #endif
 
     steal_work_safe(victim_work, thief_work);
+
+    print_spaces(victim_work->kid);
+    printf("[%lu] [%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
+	   ++printid,
+	   victim_work->kid,
+	   victim_work->k, victim_work->j,
+	   thief_work->i, thief_work->j,
+	   (uintptr_t)thief_work->r->data);
+    fflush(stdout);
 
     unlock_work(victim_work);
 
@@ -281,13 +352,11 @@ static int splitter
        push task the thief may be preempted
      */
 
+#if CONFIG_ALLOC_RESULT
     memcpy(thief_work->r->data, thief_work, sizeof(work_t));
-
-    printf("[%02x,   ] spl [%04u, %04u[ [%04u, %04u[ (%lx)\n",
-	   victim_work->kid,
-	   victim_work->k, victim_work->j,
-	   thief_work->i, thief_work->j,
-	   (uintptr_t)thief_work->r->data);
+#else
+    thief_work->r->data = thief_work;
+#endif
 
 #if CONFIG_STEALABLE_THIEVES
     kaapi_task_init(thief_task, common_entry, thief_work);
@@ -310,14 +379,17 @@ static int splitter
 
 extern unsigned int kaapi_get_current_kid(void);
 
-static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t* thread)
+static void adaptive_entry
+(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t* thread)
 {
   work_t* const w = args;
 
   w->kid = kaapi_get_current_kid();
 
+#if CONFIG_ALLOC_RESULT
   if (w->r != NULL)
     ((work_t*)w->r->data)->kid = w->kid;
+#endif
 
 #if 0
   printf("[%02x,   ] ent [%04u, %04u[ (%lx)\n",
@@ -329,9 +401,9 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
 
  continue_seq:
 
-  printf("[%02x,   ] seq [%04u, %04u[ (%lx)\n",
-	 w->kid, w->k, w->j,
-	 w->r != NULL ? (uintptr_t)w->r->data : (uintptr_t)NULL);
+#if 0 /* kid mark */
+  unmark_kid(w->kid);
+#endif
 
   while (1)
   {
@@ -342,65 +414,70 @@ static void adaptive_entry(kaapi_stealcontext_t* sc, void* args, kaapi_thread_t*
 
     local_work.data = w->data;
     local_work.kid = w->kid;
+
+#if 0
+    print_spaces(w->kid);
+    printf("[%02x,   ] seq [%04u, %04u[\n",
+	   local_work.kid, local_work.k, local_work.j);
+#endif
+
     seq_work(&local_work);
+
+    if (is_master_done == 1)
+    {
+      printf("[%lu]   MASTER_DONE(%u, 0x%lx)\n", ++printid, w->kid, (uintptr_t)w->r->data);
+      exit(-1);
+    }
 
     if (w->r != NULL)
     {
       if (kaapi_preemptpoint(w->r, sc, NULL, NULL, w, sizeof(work_t), NULL))
-      {
-	printf("[%02x,   ] pre\n", w->kid); fflush(stdout);
 	return ;
-      }
     }
   }
 
   /* retrive thieves results */
 
+#if 0
+  kaapi_steal_begincritical(sc);
+#endif
+
   kaapi_taskadaptive_result_t* ktr;
 
-#if 1 /* no critical section version */
-
-  ktr = kaapi_preempt_getnextthief_head(sc);
-  if (ktr != NULL)
-  {
-    kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
-    goto continue_seq;
-  }
-
-#else /* critical section version */
-
-
-  /* not thief. we are done but have to
-     disable the conccurent steal otherwise
-     a race would result between here and
-     kaapi_steal_finalize
-   */
-
-  kaapi_steal_begincritical(sc);
-
   ktr = kaapi_preempt_getnextthief_head(sc);
   if (ktr != NULL)
   {
     kaapi_preempt_thief(sc, ktr, NULL, reducer, w);
 
-    /* reenable steal before continuing */
+    printf("[%lu] [%02x,   ] preempt_thief (0x%lx)\n",
+	   ++printid, w->kid, (uintptr_t)ktr->data);
+
+#if 0
     kaapi_steal_endcritical(sc);
+#endif
 
     goto continue_seq;
   }
 
+  if (w->kid == 0)
+    is_master_done = 1;
+
+#if 0
   kaapi_steal_endcritical_disabled(sc);
-#endif /* critical section version */
+#endif
 
   /* here no thieves, steal disabled, can leave */
 
-  printf("[%02x,   ] don [%04u, %04u[\n", w->kid, w->i, w->j);
+  print_spaces(w->kid);
+  printf("[%lu] [%02x,   ] don [%04u, %04u[ %u\n", ++printid, w->kid, w->i, w->j, w->wid);
 
+#if CONFIG_ALLOC_RESULT
   if (w->r != NULL)
   {
     /* update results before leaving */
     memcpy(w->r->data, w, sizeof(work_t));
   }
+#endif
 }
 
 
@@ -410,8 +487,10 @@ static void thief_entry(void* args, kaapi_thread_t* thread)
 {
   /* cannot be stolen */
 
+  work_t* const w = (work_t*)args;
+
   kaapi_stealcontext_t* const sc =
-    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, NULL, NULL);
+    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, NULL, NULL, w->m);
 
   adaptive_entry(sc, args, thread);
 
@@ -424,34 +503,11 @@ static void common_entry(void* args, kaapi_thread_t* thread)
 {
   work_t* const w = args;
   kaapi_stealcontext_t* const sc =
-    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, w);
+    kaapi_thread_pushstealcontext(thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, w, w->m);
 
   adaptive_entry(sc, args, thread);
 
   kaapi_steal_finalize(sc);
-}
-
-
-static work_t* create_work(unsigned int q)
-{
-#if CONFIG_CHECK_DATA
-  static unsigned int data[CONFIG_INPUT_SIZE];
-#endif
-
-  static work_t work;
-
-  init_work(&work);
-
-  work.i = 0;
-  work.j = q;
-  work.k = 0;
-
-#if CONFIG_CHECK_DATA
-  memset(data, 0, sizeof(data));
-  work.data = data;
-#endif
-
-  return &work;
 }
 
 #if CONFIG_CHECK_DATA
@@ -462,6 +518,13 @@ static int check_work(const work_t* w)
 
   for (i = 0; i < CONFIG_INPUT_SIZE; ++i)
   {
+#if CONFIG_CHECK_MULT_SEQ
+    if (w->data[i] != 1)
+    {
+      printf("!!! invalidResult@%u, %u\n", i, w->data[i]);
+      return -1;
+    }
+#else
     const unsigned char kid = w->data[i] & 0xff;
 
     if (!(w->data[i] & (1 << 8)))
@@ -473,9 +536,10 @@ static int check_work(const work_t* w)
     /* not master, not reduced */
     if (kid && !(w->data[i] & (1 << 9)))
     {
-      printf("!!! notReduced@%u, processedBy %u\n", i, kid);
+      printf("!!! notReduced@%u, processedBy %u: 0x%08x\n", i, kid, w->data[i]);
       return -1;
     }
+#endif
   }
 
   return 0;
@@ -485,9 +549,23 @@ static int check_work(const work_t* w)
 
 static int root_entry(unsigned int q)
 {
+#if CONFIG_CHECK_DATA
+  static unsigned int data[CONFIG_INPUT_SIZE];
+#endif
+
   kaapi_thread_t* thread;
   kaapi_task_t* task;
-  work_t* const work = create_work(q);
+  work_t* const work = kaapi_alloca_align(64, sizeof(work_t));
+
+  /* create the work */
+  init_work(work);
+  work->i = 0;
+  work->j = q;
+  work->k = 0;
+#if CONFIG_CHECK_DATA
+  memset(data, 0, sizeof(data));
+  work->data = data;
+#endif
 
   thread = kaapi_self_thread();
 

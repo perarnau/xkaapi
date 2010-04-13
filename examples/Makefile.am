@@ -28,6 +28,7 @@ check_PROGRAMS= \
 	transform_adapt	       \
 	transform_adapt_preempt\
 	transform_concurrent   \
+	accumulate_while_kastl \
 	count_concurrent       \
 	marc_problem           \
 	branchbound_apiatha
@@ -56,6 +57,7 @@ transform_kastl_SOURCES=transform_kastl.cpp random.cpp random.h
 transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h
 transform_adapt_preempt_SOURCES=transform_adapt_preempt.h transform_adapt_preempt.cpp random.cpp random.h
 transform_concurrent_SOURCES=transform_concurrent.h transform_concurrent.cpp random.cpp random.h
+accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
 count_concurrent_SOURCES=count_concurrent.h count_concurrent.cpp random.cpp random.h
 marc_problem_SOURCES=marc_problem.cpp
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
@@ -159,6 +161,11 @@ transform_concurrent_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(to
 transform_concurrent_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 transform_concurrent_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 transform_concurrent_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
+
+accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
+accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+accumulate_while_kastl_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
+accumulate_while_kastl_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
 
 count_concurrent_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api
 count_concurrent_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)

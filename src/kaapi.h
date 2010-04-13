@@ -153,10 +153,12 @@ static inline void* kaapi_malloc_align( unsigned int _align, size_t size, void**
 
   kaapi_uintptr_t align = _align-1;
   void* retval = (void*)malloc(align + size);
-  if (addr_tofree !=0) *addr_tofree = retval;
-  if ( (((kaapi_uintptr_t)retval) & align) !=0U)
-    retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
-  kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
+  if (retval) {
+    if (addr_tofree !=0) *addr_tofree = retval;
+    if ( (((kaapi_uintptr_t)retval) & align) !=0U)
+      retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
+    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
+  }
   return retval;
 }
 
@@ -167,7 +169,7 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align
   if (align <8) return ptr;
   --align;
   if ( (((kaapi_uintptr_t)ptr) & align) !=0U)
-    ptr = (void*)(((kaapi_uintptr_t)ptr + align) & ~align);
+    ptr = (void*)((((kaapi_uintptr_t)ptr) + align ) & ~align);
   kaapi_assert_debug( (((kaapi_uintptr_t)ptr) & align) == 0U);
   return ptr;
 }
@@ -444,8 +446,8 @@ typedef struct kaapi_stealcontext_t {
   kaapi_task_t*                  ownertask;
   struct kaapi_thread_context_t* ctxtthread;
   kaapi_thread_t*                thread;
-  kaapi_task_splitter_t          splitter;
-  void*                          argsplitter;
+  kaapi_task_splitter_t volatile splitter;
+  void* volatile                 argsplitter;
   int                            flag; 
 
   volatile int                   hasrequest;
@@ -924,7 +926,7 @@ extern int kaapi_preempt_nextthief_helper(
   {									\
     if (!kaapi_is_null((void*)reducer))					\
       __res = ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__);	\
-    kaapi_free_thief_result(tr);					\
+    kaapi_deallocate_thief_result(tr);					\
   }									\
   __res;								\
 })
@@ -1330,7 +1332,7 @@ static inline void kaapi_mem_barrier()
       __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
 #  endif
 
-#elif defined(KAAPI_USE_APPLE) /* if gcc version on Apple is less than 4.1 */
+#elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
 

@@ -87,12 +87,6 @@ namespace impl {
     KAAPI_ATOMIC_WRITE(&a->_atom, value);
   }
 
-  static inline void mem_synchronize()
-  {
-    /* this is needed */
-    kaapi_mem_barrier();
-  }
-
   /** work range
    */
   struct range
@@ -200,14 +194,11 @@ namespace impl {
   /** */
   inline void work_queue::set( const range& r)
   {
-    /* optim: only lock for setting _end
-       after having set _beg to _end
-     */
-
-    lock_pop();
+    _end = 0;
+    kaapi_writemem_barrier();
     _beg = r.first;
+    kaapi_writemem_barrier();
     _end = r.last;
-    unlock();
   }
   
   /** */
@@ -221,6 +212,7 @@ namespace impl {
   inline work_queue::size_type work_queue::size() const
   {
     work_queue_index_t b = _beg;
+    kaapi_readmem_barrier();
     work_queue_index_t e = _end;
     return b < e ? e-b : 0;
   }
@@ -228,21 +220,24 @@ namespace impl {
   /** */
   inline bool work_queue::is_empty() const
   {
-    return _end <= _beg;
+    work_queue_index_t b = _beg;
+    kaapi_readmem_barrier();
+    work_queue_index_t e = _end;
+    return e <= b;
   }
   
   /** */
   inline bool work_queue::pop(range& r, work_queue::size_type size)
   {
     _beg += size;
-    mem_synchronize();
+    kaapi_mem_barrier();
     if (_beg > _end) return slow_pop( r, size );
     
     r.last  = _beg;
     r.first = r.last - size;
     
     // check for boundaries
-    kaapi_assert_debug( (_beg >=0) && (_beg <= _end) );
+//Cannot make assert here due to changing _end    kaapi_assert_debug( (_beg >=0) && (_beg <= _end) );
     kaapi_assert_debug( (r.first >=0) && (r.first <= r.last) );
     
     return true;

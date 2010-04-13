@@ -87,8 +87,9 @@ kastlinclude_HEADERS=\
   kastl/kastl_workqueue.h\
   kastl/kastl_foreach.h\
   kastl/kastl_transform.h\
-  kastl/algorithm.h\
-  kastl/algorithm
+  kastl/kastl_accumulate_while.h\
+  kastl/algorithm \
+  kastl/numeric
 kastlincludedir=$(includedir)/kastl
 
 check_PROGRAMS=ka_api_check_header
