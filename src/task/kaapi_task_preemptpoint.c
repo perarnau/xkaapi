@@ -60,12 +60,15 @@ int kaapi_preemptpoint_before_reducer_call(
   /* disable and wait no more thief on stc */
   kaapi_steal_disable_sync( stc );
   
-  /* push data to the victim and list of thief */
+  /* recopy data iff its non null */
   if (result_data !=0)
   {
-    if (result_size < ktr->size_data) ktr->size_data = result_size;
-    memcpy(ktr->data, result_data, ktr->size_data );
+    if (result_size < ktr->size_data) 
+      ktr->size_data = result_size;
+    if (ktr->size_data >0)
+      memcpy(ktr->data, result_data, ktr->size_data );
   }
+  /* push data to the victim and list of thief */
   ktr->arg_from_thief = arg_for_victim;
 
   /* no lock needed since no more steal possible */

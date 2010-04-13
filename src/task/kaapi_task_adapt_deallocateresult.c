@@ -45,8 +45,8 @@
 
 /**
 */
-int kaapi_deallocate_thief_result( kaapi_taskadaptive_result_t* result )
+int kaapi_deallocate_thief_result( kaapi_taskadaptive_result_t* ktr )
 {
-  free(result);
+  free(ktr->addr_tofree);
   return 0;
 }
