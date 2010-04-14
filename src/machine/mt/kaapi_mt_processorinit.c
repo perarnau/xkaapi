@@ -76,6 +76,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->fnc_selecarg = 0;
   kproc->fnc_select   = kaapi_default_param.wsselect;
   
+
   /* workload */
   kproc->workload._counter= 0;
   

@@ -272,23 +272,14 @@ typedef struct kaapi_processor_t {
 
   int			                 papi_event_set;
   unsigned int		         papi_event_count;
+  kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
-  double                   t_sched;                       /* total idle time in second pass in the scheduler */           
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
 
   /* workload */
   kaapi_atomic_t	         workload;
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
-
-/* for perf_regs access */
-#define KAAPI_PERF_USER_STATE       0
-#define KAAPI_PERF_SCHEDULE_STATE   1
-
-#define KAAPI_PERF_REG(kproc, op) ((kproc)->curr_perf_regs[(op)])
-#define KAAPI_PERF_REG_USR(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_USER_STATE][(op)])
-#define KAAPI_PERF_REG_SYS(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_SCHEDULE_STATE][(op)])
-#define KAAPI_PERF_REG_READALL(kproc, op) (KAAPI_PERF_REG_SYS(kproc, op)+KAAPI_PERF_REG_USR(kproc, op))
 
 /*
 */
