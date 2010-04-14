@@ -81,7 +81,8 @@ protected:
       thread,
       KAAPI_STEALCONTEXT_DEFAULT,
       Self_t::static_splitter,
-      self_work
+      self_work,
+      0
     );
     self_work->doit( sc_transform, thread );
     kaapi_steal_finalize( sc_transform );
@@ -161,7 +162,8 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    &work,
+    0
   );
   
   work.doit( sc_transform, thread );

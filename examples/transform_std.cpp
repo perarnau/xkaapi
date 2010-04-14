@@ -15,6 +15,8 @@
 #include <algorithm>
 #include "random.h"
 
+#define USE_CXX98 1
+
 /**
 */
 double kaapi_get_elapsedtime(void)

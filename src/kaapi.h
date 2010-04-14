@@ -1151,6 +1151,11 @@ extern size_t kaapi_perf_counter_num(void);
 typedef kaapi_uint32_t kaapi_offset_t;
 
 /** \ingroup TASK
+    Allocate a new format data
+*/
+extern struct kaapi_format_t* kaapi_format_allocate(void);
+
+/** \ingroup TASK
     Register a format
 */
 extern kaapi_format_id_t kaapi_format_register( 
@@ -1207,22 +1212,23 @@ extern struct kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key
 extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
 #define KAAPI_REGISTER_TASKFORMAT( formatobject, name, fnc_body, ... ) \
-  static inline kaapi_format_t* formatobject(void) \
+  static inline struct kaapi_format_t* formatobject(void) \
   {\
-    static kaapi_format_t formatobject##_object;\
-    return &formatobject##_object;\
+    static struct kaapi_format_t* formatobject##_object =0;\
+    if (formatobject##_object==0) formatobject##_object = kaapi_format_allocate();\
+    return formatobject##_object;\
   }\
   static inline void __attribute__ ((constructor)) __kaapi_register_format_##formatobject (void)\
   { \
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister( &formatobject, fnc_body, name, ##__VA_ARGS__);\
+    kaapi_format_taskregister( formatobject(), fnc_body, name, ##__VA_ARGS__);\
   }
 
 
 #define KAAPI_REGISTER_STRUCTFORMAT( formatobject, name, size, cstor, dstor, cstorcopy, copy, assign ) \
-  static inline kaapi_format_t* fnc_formatobject(void) \
+  static inline struct kaapi_format_t* fnc_formatobject(void) \
   {\
     static kaapi_format_t formatobject##_object;\
     return &formatobject##_object;\

@@ -68,7 +68,7 @@ struct TaskBodyCPU<TaskAxpy> {
       double alpha, 
       long columnsep )
   { 
-    if (m+n+k<BASE) 
+    if (m+n+k<BLOC) 
     { 
       TaskBodyCPU<TaskAxpyBlas>()(A, B, C, m, n, k, alpha, columnsep); 
     } 

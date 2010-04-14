@@ -66,20 +66,20 @@ public:
 void KaapiMonotonicBound::initialize( 
   const std::string& name, 
   void* value, 
-  const kaapi_format_t* format, 
-  const kaapi_format_t* fupdate
+  const Format* format, 
+  const Format* fupdate
 )
 {
   KaapiMonotonicBoundRep* mbrep = new KaapiMonotonicBoundRep;
   KAAPI_ATOMIC_WRITE(&mbrep->lock, 0);
   mbrep->data    = value;
-  mbrep->fmtdata = format;
-  mbrep->fupdate = fupdate;
+  mbrep->fmtdata = format->get_c_format();
+  mbrep->fupdate = fupdate->get_c_format();
   mbrep->version = 0;
 
   _data      = value;
-  _fmtdata   = format;
-  _fmtupdate = fupdate;
+  _fmtdata   = format->get_c_format();
+  _fmtupdate = fupdate->get_c_format();
   _reserved  = mbrep;
 
   allmb.insert( std::make_pair(name, mbrep) );
@@ -148,9 +148,12 @@ const void* KaapiMonotonicBound::read() const
 
 /**
 */
-void KaapiMonotonicBound::update(const void* value, const kaapi_format_t* fmtvalue)
+void KaapiMonotonicBound::update(const void* value, const Format* fmtvalue)
 {
-  (*fmtvalue->update_mb)( _data, _fmtdata, value, fmtvalue );
+  throw;
+#if 0 //TODO
+  (*fmtvalue->update_mb)( _data, _fmtdata->get_c_format(), value, fmtvalue->get_c_format() );
+#endif
 }
 
 

@@ -17,13 +17,12 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     dummy(M4_PARAM(`(F$1)args->f$1', `', `, '));
   }
 
-  static kaapi_format_t    format;
+  static Format*           format;
   static kaapi_format_id_t fmid;
-  static kaapi_format_t* getformat()
-  { return &format; }
+  static kaapi_format_t*   getformat() { if (format==0) format = new Format; return format->get_c_format(); }
   static kaapi_format_t* registerformat()
   {
-    if (Self_t::fmid != 0) return &Self_t::format;
+    if (Self_t::fmid != 0) return getformat();
     
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];')
@@ -37,7 +36,7 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     ',`', `')
     
     Self_t::fmid = kaapi_format_taskregister( 
-          &Self_t::getformat, 
+          Self_t::getformat(), 
           &Self_t::body, 
           typeid(Self_t).name(),
           sizeof(Self_t),
@@ -47,7 +46,7 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format')
       );
     /* extend the set of predefined function */
-    return &Self_t::format;
+    return getformat();
   }
   static kaapi_task_body_t registerbody()
   {
@@ -61,10 +60,10 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 TASK KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::dummy;
 
-template<class TASK M4_PARAM(`,class F$1', `', ` ')>
-kaapi_format_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::format;
+template<class TASK M4_PARAM(`,typename F$1', `', ` ')>
+Format* KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::format = 0;
 
-template<class TASK M4_PARAM(`,class F$1', `', ` ')>
+template<class TASK M4_PARAM(`,typename F$1', `', ` ')>
 kaapi_format_id_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::fmid = 0;
 
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>

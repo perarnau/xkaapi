@@ -61,6 +61,7 @@ libxkaapixx_la_SOURCES=\
 	kaapixx/ka_timer.h \
 	kaapixx/ka_types.h\
   atha/atha_kaapi.cpp\
+  atha/atha_monotonic.cpp\
   kastl/kastl_workqueue.cpp
 
 # NOT YET USED:  	atha_monotonic.cpp \

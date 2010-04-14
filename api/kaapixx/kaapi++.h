@@ -158,6 +158,7 @@ namespace ka {
     WrapperFormat();
     static const WrapperFormat<T> format;
     static const Format* get_format();
+    static const kaapi_format_t* get_c_format();
     static void cstor( void* dest) { new (dest) T; }
     static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
     static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
@@ -184,6 +185,7 @@ namespace ka {
       return Caller( &UpdateFnc::operator(), data, value ) ? 1 : 0;
     }
     static const FormatUpdateFnc format;
+    static const FormatUpdateFnc* get_format();
   };
 
   template <class T>
@@ -211,6 +213,12 @@ namespace ka {
   { 
     return &format; 
   }
+  template <class T>
+  const kaapi_format_t* WrapperFormat<T>::get_c_format() 
+  { 
+    return format.get_c_format(); 
+  }  
+
 
   template <> const WrapperFormat<char> WrapperFormat<char>::format;
   template <> const WrapperFormat<short> WrapperFormat<short>::format;
@@ -228,6 +236,12 @@ namespace ka {
     typeid(UpdateFnc).name(),
     &WrapperFormatUpdateFnc<UpdateFnc>::update_kaapi
   );
+
+  template <class UpdateFnc>
+  const FormatUpdateFnc* WrapperFormatUpdateFnc<UpdateFnc>::get_format()
+  {
+    return &format;
+  }
 
 
   // --------------------------------------------------------------------

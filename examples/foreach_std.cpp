@@ -88,11 +88,13 @@ int main(int argc, char** argv)
   t0 = kaapi_get_elapsedtime();
   for (l=0; l<iter; ++l)
   {
-//    std::for_each(input, input+n, op );
+    std::for_each(input, input+n, op );
+#if 0
     std::for_each( input, input+n, [&](double val) {
       op(val);
       ++cnt;
     } );
+#endif
   }
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;

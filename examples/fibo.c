@@ -65,7 +65,7 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     3,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_W, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R },
     (kaapi_offset_t[])        { offsetof(sum_arg_t, result), offsetof(sum_arg_t, subresult1), offsetof(sum_arg_t, subresult2) },
-    (const kaapi_format_t*[]) { &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
+    (const struct kaapi_format_t*[]) { kaapi_int_format, kaapi_int_format, kaapi_int_format }
 )
 
 void sum_body( void* taskarg, kaapi_thread_t* thread )
@@ -86,7 +86,7 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
     2,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_W },
     (kaapi_offset_t[])        { offsetof(fibo_arg_t, n), offsetof(fibo_arg_t, result) },
-    (const kaapi_format_t*[]) { &kaapi_int_format, &kaapi_int_format }
+    (const struct kaapi_format_t*[]) { kaapi_int_format, kaapi_int_format }
 )
 
 void fibo_body( void* taskarg, kaapi_thread_t* thread )
@@ -142,7 +142,7 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
     4,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_RW },
     (kaapi_offset_t[])        { offsetof(print_arg_t, delay), offsetof(print_arg_t, n), offsetof(print_arg_t, niter), offsetof(print_arg_t, result) },
-    (const kaapi_format_t*[]) { &kaapi_double_format, &kaapi_int_format, &kaapi_int_format, &kaapi_int_format }
+    (const struct kaapi_format_t*[]) { kaapi_double_format, kaapi_int_format, kaapi_int_format, kaapi_int_format }
 )
 
 void print_body( void* taskarg, kaapi_thread_t* thread )

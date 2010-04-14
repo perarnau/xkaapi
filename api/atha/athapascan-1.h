@@ -454,7 +454,7 @@ namespace a1 {
     typedef T type_inclosure;
     typedef T value_type;
     enum { isshared = false };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
@@ -467,7 +467,7 @@ namespace a1 {
     typedef T type_inclosure;
     typedef T value_type;
     enum { isshared = false };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_V mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
@@ -479,7 +479,7 @@ namespace a1 {
   struct Trait_ParamClosure<Shared<T> > {
     typedef kaapi_access_t type_inclosure;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
@@ -492,7 +492,7 @@ namespace a1 {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_rw<T>   value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_RW mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
@@ -505,7 +505,7 @@ namespace a1 {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_r<T>    value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_R mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
@@ -518,7 +518,7 @@ namespace a1 {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_w<T>    value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_W mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
@@ -531,7 +531,7 @@ namespace a1 {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_cw<T,F> value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_CW mode;
     enum { modepostponed = false };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
@@ -544,7 +544,7 @@ namespace a1 {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_rpwp<T> value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_RPWP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
@@ -557,7 +557,7 @@ namespace a1 {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_rp<T>   value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_RP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
@@ -570,7 +570,7 @@ namespace a1 {
     typedef kaapi_access_t type_inclosure;
     typedef Shared_wp<T>   value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_WP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
@@ -583,7 +583,7 @@ namespace a1 {
     typedef kaapi_access_t  type_inclosure;
     typedef Shared_cwp<T,F> value_type;
     enum { isshared = true };
-    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_format(); }
+    static const kaapi_format_t* get_format() { return WrapperFormat<T>::get_c_format(); }
     typedef ACCESS_MODE_CWP mode;
     enum { modepostponed = true };
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
@@ -747,12 +747,12 @@ namespace a1 {
     const kaapi_format_t*   _fmtupdate;
     KaapiMonotonicBoundRep* _reserved;
   protected:
-    void initialize( const std::string& name, void* value, const kaapi_format_t* format, const kaapi_format_t* fupdate);
+    void initialize( const std::string& name, void* value, const Format* format, const Format* fupdate);
     void terminate();
     void acquire();
     void release();
     const void* read() const;
-    void update(const void* value, const kaapi_format_t* fmtvaue);
+    void update(const void* value, const Format* fmtvaue);
   };
   
   template<class T, class FncUpdate>
@@ -778,7 +778,7 @@ namespace a1 {
     void initialize( const std::string& name, T* value = 0) 
     {
       if (value ==0) value = new T;
-      KaapiMonotonicBound::initialize( name, value, WrapperFormat<T>::format, WrapperFormatUpdateFnc<FncUpdate>::format );
+      KaapiMonotonicBound::initialize( name, value, WrapperFormat<T>::get_format(), WrapperFormatUpdateFnc<FncUpdate>::get_format() );
     }
 
     void terminate()
@@ -801,7 +801,7 @@ namespace a1 {
     template<class Y>
     void update( const Y& value )
     {
-       KaapiMonotonicBound::update( &value, &WrapperFormat<Y>::theformat );
+       KaapiMonotonicBound::update( &value, WrapperFormat<Y>::get_format() );
     }
   };
 

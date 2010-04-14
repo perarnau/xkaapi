@@ -136,8 +136,9 @@ protected:
     kaapi_stealcontext_t* sc_transform = kaapi_thread_pushstealcontext( 
       thread,
       KAAPI_STEALCONTEXT_DEFAULT,
-      0, // to avoid steal of thief Self_t::static_splitter,
-      0  // to avoid steal of thief self_work
+      0,  // to avoid steal of thief Self_t::static_splitter,
+      0,  // to avoid steal of thief self_work
+      0
     );
     self_work->doit( sc_transform, thread );
     
@@ -238,7 +239,8 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
     thread,
     KAAPI_STEALCONTEXT_DEFAULT,
     Self_t::static_splitter,
-    &work
+    &work,
+    0
   );
   
   do {
