@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGO=Transform
+ALGO=ForEach
 DIR=/tmp/out
 #SIZE=1000000
 #SIZE=1000000
@@ -11,9 +11,9 @@ ITER=10
 #CPUSET=8,9,10,11,12,13,14,15
 #CPUSET=0,1,2,3,4,5,6,7
 #CPUSET=5,7,9,11
-#CPUSET=7,9,11
+CPUSET=7,9,11
 #CPUSET=9,11
-CPUSET=9
+#CPUSET=9
 
 
 rm -rf $DIR

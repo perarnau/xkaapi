@@ -10,8 +10,6 @@
 
 
 
-// #define KASTL_DEBUG 1
-
 #if KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
 #endif
@@ -393,6 +391,7 @@ namespace impl
     {
       _iseq0.affect_seq(seq._iseq0);
       _iseq1.affect_seq(seq._iseq1);
+      seq._obeg = _obeg;
     }
 
     inline void empty_seq(SequenceType& seq) const
@@ -553,6 +552,7 @@ namespace impl
     inline void affect_seq(SequenceType& seq) const
     {
       _iseq.affect_seq(seq._iseq);
+      seq._opos = _opos;
     }
 
     inline void empty_seq(SequenceType& seq) const
@@ -881,7 +881,6 @@ namespace impl
 	thief_work->_master_sc = sc;
 
 	extractor.extract(thief_work->_seq, *victim_seq);
-
 	thief_work->_seq.empty_seq(thief_work->_macro_seq);
 
 #if KASTL_DEBUG
@@ -900,7 +899,9 @@ namespace impl
 
 	thief_work->_const = victim_work->_const;
 	thief_work->prepare();
-	static_cast<WorkType*>(thief_work->_tresult->data)->prepare();
+
+	// no need to prepare since at least one iteration is done
+	// static_cast<WorkType*>(thief_work->_tresult->data)->prepare();
 
 #if KASTL_DEBUG
 	thief_work->_is_master = false;
@@ -1203,7 +1204,10 @@ namespace impl
 
   advance_work:
 
+    // TODO: replace with a no lock version
+    work->_macro_seq.lock();
     work->_macro_seq.empty_seq(nano_seq);
+    work->_macro_seq.unlock();
 
     while (true)
     {
@@ -1252,7 +1256,7 @@ namespace impl
 
     if (work->_tresult != NULL)
     {
-      /* update results before leaving */
+      // update results before leaving
       memcpy(work->_tresult->data, work, sizeof(WorkType));
     }
   }

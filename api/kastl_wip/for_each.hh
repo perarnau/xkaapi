@@ -37,9 +37,10 @@ struct ForEachWork : public BaseWork
   ForEachWork(const SequenceType& s, const ConstantType* c)
     : BaseType(s, c, kastl::impl::InvalidResultType()) {}
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
     std::for_each(seq.begin(), seq.end(), *this->_const);
+    seq._beg = seq._end;
   }
 };
 

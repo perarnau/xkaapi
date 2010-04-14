@@ -37,9 +37,12 @@ struct TransformWork : public BaseWork
   TransformWork(const SequenceType& s, const ConstantType* c)
     : BaseType(s, c, kastl::impl::InvalidResultType()) {}
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
     std::transform(seq._iseq._beg, seq._iseq._end, seq._opos, *this->_const);
+
+    seq._opos += seq._iseq.size();
+    seq._iseq._beg = seq._iseq._end;
   }
 };
 
