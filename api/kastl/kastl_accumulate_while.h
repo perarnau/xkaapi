@@ -357,7 +357,7 @@ if (r.is_empty())
           r.last = rq.first;
         }
 
-#if 0
+#if 1
 std::cout << "Replyi[" << count << "] r=" << rq.first << ", " << rq.last << ")" << std::endl << std::flush;
 if (r.is_empty())
 {
@@ -369,7 +369,7 @@ if (r.is_empty())
               rq, 
               _func,
               sc,
-              kaapi_allocate_thief_result( sc, 2*sizeof(long) + bloc*(sizeof(value_type)+sizeof(result_type)), 0 ),
+              kaapi_allocate_thief_result( sc, 2*sizeof(long) + rq.size()*(sizeof(value_type)+sizeof(result_type)), 0 ),
               _windowsize,
               _seqgrain,
               _pargrain
