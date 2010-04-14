@@ -357,7 +357,7 @@ if (r.is_empty())
           r.last = rq.first;
         }
 
-#if 1
+#if 0
 std::cout << "Replyi[" << count << "] r=" << rq.first << ", " << rq.last << ")" << std::endl << std::flush;
 if (r.is_empty())
 {
