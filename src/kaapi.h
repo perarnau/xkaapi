@@ -1071,8 +1071,9 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 #define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspend */
 #define KAAPI_PERF_ID_TIDLE         5  /* nano second of idle time */
 #define KAAPI_PERF_ID_TPREEMPT      6  /* nano second of preempt time */
+#define KAAPI_PERF_ID_T1            7  /* nano second of compute time */
 
-#define KAAPI_PERF_ID_ENDSOFTWARE   7  /* mark end of software counters */
+#define KAAPI_PERF_ID_ENDSOFTWARE   8  /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
 #define KAAPI_PERF_ID_PAPI_0       (KAAPI_PERF_ID_PAPI_BASE + 0)
@@ -1089,6 +1090,7 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /* Counter type
 */
 typedef long long kaapi_perf_counter_t;
+
 /* Value
 */
 typedef unsigned int kaapi_perf_id_t;

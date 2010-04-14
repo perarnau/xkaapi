@@ -163,6 +163,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   kaapi_uint64_t cnt_suspend;
   double t_sched;
   double t_preempt;
+  double t_1;
 #endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -199,6 +200,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 
   t_sched         = 0;
   t_preempt       = 0;
+  t_1             = 0;
 #endif
 
   for (i=0; i<kaapi_count_kprocessors; ++i)
@@ -232,6 +234,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
     t_sched +=        KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TIDLE);
     t_preempt +=      kaapi_all_kprocessors[i]->t_preempt; //KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
+    t_1 +=            KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
       
   /* */
   if (kaapi_default_param.display_perfcounter)
@@ -255,8 +258,10 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     printf("Total number of suspend operations : %"PRI64"\n",
 	   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND)
     );
+    printf("Total compute time                 : %e\n",
+       1e-9*(double)KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1));
     printf("Total idle time                    : %e\n",
-	 kaapi_all_kprocessors[i]->t_sched+kaapi_all_kprocessors[i]->t_preempt);
+       kaapi_all_kprocessors[i]->t_sched+kaapi_all_kprocessors[i]->t_preempt);
   }
 #endif
 
@@ -276,6 +281,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     printf("Total number of steal BAD requests : %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
     printf("Total number of steal operations   : %" PRIu64 "\n", cnt_stealop);
     printf("Total number of suspend operations : %" PRIu64 "\n", cnt_suspend);
+    printf("Total compute time                 : %e\n", t_1*1e-9);
     printf("Total idle time                    : %e\n", t_sched+t_preempt);
     printf("   sched idle time                 : %e\n", t_sched);
     printf("   preemption idle time            : %e\n", t_preempt);

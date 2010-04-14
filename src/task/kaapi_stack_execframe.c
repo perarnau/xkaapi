@@ -100,6 +100,12 @@ int kaapi_stack_execframe( kaapi_thread_context_t* thread )
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;
+  kaapi_uint64_t t1;
+  kaapi_uint64_t t0;
+#endif
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t0 = kaapi_get_elapsedns();
 #endif 
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
@@ -244,7 +250,9 @@ restart_after_steal:
   /* note: the stack data pointer is the same as saved on enter */
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+  t1 = kaapi_get_elapsedns();
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_T1) += (t1-t0);
   cnt_tasks = 0;
 #endif
   return 0;
@@ -256,7 +264,9 @@ error_swap_body:
   /* implicityly pop the dummy frame */
   thread->sfp = fp;
 #if defined(KAAPI_USE_PERFCOUNTER)
+  t1 = kaapi_get_elapsedns();
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_T1) += (t1-t0);
   cnt_tasks = 0;
 #endif
   return EWOULDBLOCK;
@@ -266,7 +276,9 @@ error_swap_body:
 backtrack_stack:
 #endif
 #if defined(KAAPI_USE_PERFCOUNTER)
+  t1 = kaapi_get_elapsedns();
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_T1) += (t1-t0);
   cnt_tasks = 0;
 #endif
 #if 0 /*!defined(KAAPI_CONCURRENT_WS)*/

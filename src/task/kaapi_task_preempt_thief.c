@@ -71,13 +71,13 @@ int kaapi_preempt_nextthief_helper(
     
   /* busy wait thief receive preemption */
   while (!ktr->thief_term) 
-   ;/* pthread_yield(); */
+    kaapi_slowdown_cpu();
 
   /*ok: here thief has been preempted */
   kaapi_readmem_barrier();
   
   while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
-    ;
+    kaapi_slowdown_cpu();
 
   if (ktr->rhead != NULL)
   {
