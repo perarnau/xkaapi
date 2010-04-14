@@ -174,10 +174,11 @@ In case of error, please read carefully the displayed message.
 \bigskip
 \kaapi is a highly configurable library and you can select different flavors of the library using command line options on the previous execution of the configure. For instance:
 \begin{itemize}
-\item \verb+--enable-target=mt+: select the target for multi-threaded implementation on top of Pthreads. Other implementations (gpu, mpsoc) are under development. 
+\item \verb+--enable-target=mt+: select the target for multi-threaded implementation on top of Pthreads (default). Other implementations (gpu, mpsoc) are under development. 
 \item \verb+--enable-mode=debug+ or \verb+release+: choose the compilation mode of the library. The default mode is the release mode.
 \item \verb+--with-perfcounter+: add support for monitoring you \kaapi programs.	
 \item \verb+--with-papi+: enable the PAPI library for low level performance counting. More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
+\item \verb+-with-steal=cas+ or \verb+hybrid+ or \verb+disjkstra+: (default is \verb+disjkstra+). Select the work stealing strategy to execute program. The \verb+cas+ is based on compare and swap atomic instruction. \verb+ disjkstra+ is based on Disjkstra protocol to garante coherency without lock in most of the case (like the Cilk T.H.E. protocol). \verb+hybrid+ is a  mix of \verb+cas+ and \verb+disjkstra+.
 \end{itemize}
 
 All configuration options are self-documented. You display the options, enter:
