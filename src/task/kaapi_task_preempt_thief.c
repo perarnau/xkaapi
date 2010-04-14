@@ -116,7 +116,7 @@ int kaapi_preempt_nextthief_helper(
 #if defined(KAAPI_USE_PERFCOUNTER)
   t1 = kaapi_get_elapsedns();
   stc->ctxtthread->proc->t_preempt += (double)(t1-t0)*1e-9;
-  printf("Delay preempt:%15f, Total=%15f\n", (double)(t1-t0)*1e-9, stc->ctxtthread->proc->t_preempt );
+//  printf("Delay preempt:%15f, Total=%15f\n", (double)(t1-t0)*1e-9, stc->ctxtthread->proc->t_preempt );
 #endif
   
   return 1;
