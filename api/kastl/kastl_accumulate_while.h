@@ -97,7 +97,7 @@ public:
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
-    if (_windowsize == (size_t)-1) blocsize = 8*kaapi_getconcurrency();
+    if (_windowsize == (size_t)-1) blocsize = 4*kaapi_getconcurrency();
     else blocsize = _windowsize;
     kaapi_taskadaptive_result_t* thief;
     typename Function::result_type return_funccall;
