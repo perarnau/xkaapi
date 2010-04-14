@@ -216,7 +216,7 @@ namespace ka {
   template <class T>
   const kaapi_format_t* WrapperFormat<T>::get_c_format() 
   { 
-    return format.get_c_format(); 
+    return format.Format::get_c_format(); 
   }  
 
 
