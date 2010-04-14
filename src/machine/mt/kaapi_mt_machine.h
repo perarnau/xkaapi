@@ -553,15 +553,17 @@ static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t old
 #endif
 
 /* ============================= Private functions, machine dependent ============================ */
+/* */
+extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 /** Post a request to a given k-processor
   This method posts a request to victim k-processor. 
-  \param src the sender of the request 
-  \param hlevel the hierarchy level of the steal
+  \param kproc the sender of the request 
+  \param reply where to receive result
   \param dest the receiver (victim) of the request
   \param return 0 if the request has been successully posted
   \param return !=0 if the request been not been successully posted and the status of the request contains the error code
-*/  
+*/
 static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* reply, kaapi_victim_t* victim )
 {
   kaapi_request_t* req;
@@ -578,6 +580,11 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   req->reply       = reply;
   req->mthread     = kproc->thread;
   req->thread      = kaapi_threadcontext2thread(kproc->thread);
+#if defined(KAAPI_USE_PERFCOUNTER)
+  req->delay       = kaapi_perf_thread_delayinstate(kproc);
+#else  
+  req->delay       = 0;
+#endif
   reply->data      = 0;
 
   kaapi_writemem_barrier();
