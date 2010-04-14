@@ -48,7 +48,21 @@
 #include "kastl/kastl_workqueue.h"
 #include <algorithm>
 
-#define TRACE_ 1
+#define TRACE_ 0
+#ifndef KAAPI_MAX_PROCESSOR
+#define KAAPI_MAX_PROCESSOR 16
+#endif
+
+static pthread_mutex_t lock_cout = PTHREAD_MUTEX_INITIALIZER;
+void lockout() 
+{
+  pthread_mutex_lock( &lock_cout );
+}
+void unlockout()
+{
+  pthread_mutex_unlock( &lock_cout );
+}
+
 
 namespace kastl {
   
@@ -79,7 +93,10 @@ public:
       _ibeg(ibeg), _iend(iend), _func(func), _accf(insert), _pred(pred), 
       _inputiterator_value(0), _master(0), //_thief_result(0),
       _windowsize(ws), _seqgrain(sg), _pargrain(pg)
-  { }
+  { 
+    for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+      _delay[i] =0;
+  }
   
   ~AccumulateWhileWork()
   {
@@ -94,6 +111,7 @@ public:
   {
     /* local iterator for the nano loop */
     bool isnotfinish = true;
+    long thief_nowork = 0;
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
@@ -106,20 +124,32 @@ public:
     while ((_ibeg != _iend) && (isnotfinish=_pred(_value)))
     {
       /* generate input values into a container with randomiterator */
-      for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
+      for (i = 0; (i<blocsize+thief_nowork) && (_ibeg != _iend); ++i, ++_ibeg)
         _inputiterator_value[i] = *_ibeg;
       sz_used = i;
 
       /* initialize the queue: concurrent operation */
+      _cntthief = 0;
+{ 
+  lockout();      
+  std::cout << "New local #work:" << sz_used << " = [" << _inputiterator_value[0] << "," << _inputiterator_value[sz_used-1] << "]" << std::endl << std::flush;      
+  unlockout();
+}
+      kaapi_uint64_t t0 = kaapi_get_elapsedns();
       _queue.set( range(0, sz_used) ); 
       
 redo_with_remainding_work:
-       iter = 0;
-      while (_queue.pop(r, 1))
+      iter = 0;
+      //while (_queue.pop(r, 1))
+      if (_queue.pop(r, 1))
       {
-#if TRACE_
-        std::cout << "Master eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last] << ")"
-                  << std::endl << std::flush;
+#if 1//TRACE_
+{ 
+  lockout();      
+  std::cout << "Master eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
+            << std::endl << std::flush;
+  unlockout();
+}
 #endif
         for (; r.first != r.last; ++r.first)
         {
@@ -132,14 +162,47 @@ redo_with_remainding_work:
       }
 continue_because_predicate_is_false:
       *_returnval += iter;
-      
+      kaapi_uint64_t t1 = kaapi_get_elapsedns();
+
+//      kaapi_assert_debug( !isnotfinish || _queue.is_empty() );
+      long cntthief = _cntthief;
+      double delay_thieves = 0;
+      for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+      {
+        delay_thieves += (double)_delay[i];
+        _delay[i] = 0;
+      }
+{ 
+  lockout();
+      std::cout << "End local work, #thief=" << cntthief 
+                << ", S_delay (s): " << 1e-9 * delay_thieves
+                << ", Master delay (s): " << 1e-9 * double(t1-t0)
+                << ", Ratio: " << delay_thieves / double(t1-t0)
+                << std::endl;
+  unlockout();
+}
+#if 0
+      if ((isnotfinish) && (thief !=0) && _queue.is_empty())
+      {
+        /* generate extra work for thief...I'm preempted... */
+        _inputiterator_value[0] = *_ibeg;
+        sz_used = 1;
+        /* initialize the queue: concurrent operation, a push will be better */
+        _queue.set( range(0, sz_used) ); 
+      }
+#endif
       
       /* preempt thieves */
+      thief_nowork = 0;
       thief = kaapi_preempt_getnextthief_head( sc );
       while (thief !=0)
       {
 #if TRACE_
+{ 
+  lockout();      
         std::cout << "Master preempt Thief:" << thief << std::endl << std::flush;
+  unlockout();
+}
 #endif
         if (kaapi_preempt_thief ( 
             sc, 
@@ -149,33 +212,38 @@ continue_because_predicate_is_false:
             this                         /* extra arg for the reducer */
         ))
         {
-#if TRACE_
+#if 1//TRACE_
+{ 
+  lockout();      
           std::cout << "Remains work the thief:" << thief << std::endl << std::flush;
+  unlockout();
+}
 #endif
         }
         else 
         {
-#if TRACE_
+          ++thief_nowork;
+#if 1//TRACE_
+{ 
+  lockout();      
           std::cout << "No work from thief:" << thief << std::endl << std::flush;
+  unlockout();
+}
 #endif
         }
         isnotfinish = _pred(_value);
         
         /* next thief ? */
         thief = kaapi_preempt_getnextthief_head( sc );
-#if 1
-        if ((isnotfinish) && (thief !=0) && _queue.is_empty())
-        {
-          /* generate extra work for thief...I'm preempted... */
-          _inputiterator_value[0] = *_ibeg;
-          sz_used = 1;
-          /* initialize the queue: concurrent operation, a push will be better */
-          _queue.set( range(0, sz_used) ); 
-        }
-#endif
       }
       
-      if (!_queue.is_empty()) goto redo_with_remainding_work;
+      if (!_queue.is_empty()) {
+        _cntthief = 0;
+        lockout();
+        std::cout << "Master redo with remainding work" << std::endl << std::flush;
+        unlockout();
+        goto redo_with_remainding_work;
+      }
     }
   }
 
@@ -225,16 +293,21 @@ protected:
       /* do work */
       while (_queue.pop(r, _seqgrain))
       {
-#if TRACE_
+#if 1//TRACE_
+{ 
+  lockout();      
         std::cout << "Thief " << _thief_result << " eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
                   << std::endl << std::flush;
+  unlockout();
+}
 #endif
-        for ( ; r.first != r.last; ++r.first)
+        while ( r.first != r.last )
         {
 //        std::cout << "Thief eval=" << _inputiterator_value[r.first] << std::endl;
           _func( _return_funccall[r.first], _inputiterator_value[r.first] ); 
-          ++iter;
+          ++iter; ++r.first;
           *_cnteval = iter;
+          if (r.first == r.last) break;
           int retval = kaapi_preemptpoint( 
               _thief_result,         /* to test preemption */
               sc,                    /* to merge my thieves into list of the victim */
@@ -244,9 +317,13 @@ protected:
               0
           );
           if (retval) {
-#if TRACE_
-        std::cout << "Thief " << _thief_result << "preempted at " << r.first 
+#if 1//TRACE_
+{ 
+  lockout();      
+        std::cout << "Thief " << _thief_result << " preempted at " << r.first 
                   << std::endl << std::flush;
+  unlockout();
+}
 #endif
             return;
           }
@@ -310,12 +387,22 @@ protected:
   */
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
+    int cntthieves =count;
+    /* get some state about the thieves. no concurrency on += */
+    _cntthief += cntthieves;
+    for (int i=0; cntthieves>0; ++i)
+      if (kaapi_request_ok(&request[i]))
+      {
+        --cntthieves;
+        if (_delay[i] < request[i].delay) _delay[i] = request[i].delay;
+      }
+    
     size_t size = _queue.size();     /* upper bound */
     if (size < _pargrain) return 0;
 
     /* take at most _seqgrain items per thief */
 //    size_t size_max = (_seqgrain * count);
-    size_t size_max = (size * count) / (1+count); /* max bound */
+    size_t size_max = (size * count) / (count); /* max bound */
     if (size_max ==0) size_max = 1;
     size_t size_min = (size_max * 2) / 3;         /* min bound */
     if (size_min ==0) size_min = 1;
@@ -323,10 +410,14 @@ protected:
 
     /* */
     if ( !_queue.steal(r, size_max, size_min )) return 0;
-#if TRACE_
+#if 1//TRACE_
+{ 
+  lockout();      
     std::cout << "Splitter: count=" << count << ", r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
               << ", size=" << size  << ", size_max=" << size_max << ", size_min=" << size_min 
               << std::endl << std::flush;
+  unlockout();      
+} 
 #elif 0
     std::cout << "Splitter: count=" << count 
               << ", input size=" << size << ", get : [" << r.first << "=" << _inputiterator_value[r.first] 
@@ -467,6 +558,7 @@ std::cout << "Splitter: end reply" << std::endl;
 
 protected:
   work_queue                   _queue;     /* first to ensure alignment constraint */
+  kaapi_uint64_t               _delay[KAAPI_MAX_PROCESSOR];
   size_t*                      _returnval; /* number of iteration, output of seq call */
   T&                           _value;
   Iterator                     _ibeg;
@@ -476,6 +568,7 @@ protected:
   Predicate&                   _pred;
   value_type*                  _inputiterator_value;
   kaapi_stealcontext_t*        _master;
+  long                         _cntthief;
   size_t                       _windowsize;
   size_t                       _seqgrain;
   size_t                       _pargrain;
