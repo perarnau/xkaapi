@@ -251,6 +251,156 @@ public:
 };
 
 
+class CountRun : public RunInterface
+{
+  ptrdiff_t _kastl_res;
+  ptrdiff_t _stl_res;
+
+public:
+
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_RAND;
+    are_equal = true;
+  }
+
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _kastl_res = kastl::count
+      (i.first.begin(), i.first.end(), 42);
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res = std::count
+      (i.first.begin(), i.first.end(), 42);
+  }
+
+  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
+  {
+    if (_kastl_res == _stl_res)
+      return true;
+
+    error_string = value_error_string(_stl_res, _kastl_res);
+
+    return false;
+  }
+
+};
+
+
+class ForEachRun : public RunInterface
+{
+  // todo hack hack hack
+  SequenceType::iterator _spos;
+  SequenceType::iterator _kpos;
+  SequenceType::iterator _send;
+
+  static void inc(unsigned int& n) { ++n; }
+
+public:
+
+  virtual void run_kastl(InputType& i, OutputType&)
+  {
+    _kpos = i.first.begin();
+
+    kastl::for_each(i.first.begin(), i.first.end(), inc);
+  }
+
+  virtual void run_stl(InputType& i, OutputType&)
+  {
+    _spos = i.second.begin();
+    _send = i.second.end();
+
+    std::for_each(i.second.begin(), i.second.end(), inc);
+  }
+
+  virtual bool check(OutputType&, OutputType&, std::string&) const
+  {
+    SequenceType::iterator spos = _spos;
+    SequenceType::iterator kpos = _kpos;
+    SequenceType::iterator send = _send;
+
+    return cmp_sequence(kpos, spos, send);
+  }
+
+};
+
+
+class TransformRun : public RunInterface
+{
+  struct inc
+  {
+    inc() {}
+
+    ValueType operator()(const ValueType& v)
+    { return v + 1; }
+  };
+
+public:
+
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_ASC;
+    are_equal = true;
+  }
+
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::transform
+      (
+       i.first.begin(), i.first.end(),
+       o.begin(), inc()
+      );
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::transform
+      (
+       i.first.begin(), i.first.end(),
+       o.begin(), inc()
+      );
+  }
+
+  virtual bool check
+  (
+   OutputType& kastl_output,
+   OutputType& stl_output,
+   std::string& error_string
+  ) const
+  {
+    SequenceType::iterator kpos = kastl_output.begin();
+    SequenceType::iterator spos = stl_output.begin();
+    SequenceType::iterator send = stl_output.end();
+
+    if (cmp_sequence(kpos, spos, send) == false)
+      {
+	error_string = index_error_string
+	  (
+	   spos - stl_output.begin(),
+	   kpos - kastl_output.begin()
+	  );
+
+	return false;
+      }
+
+    return true;
+  }
+
+};
+
+
+#if 0 // speed compile time up
+
 class AccumulateRun : public RunInterface
 {
   ValueType _kastl_res;
@@ -304,48 +454,6 @@ public:
   virtual bool check(OutputType&, OutputType&, std::string&) const
   {
     return _kastl_res == _stl_res;
-  }
-
-};
-
-
-class CountRun : public RunInterface
-{
-  ptrdiff_t _kastl_res;
-  ptrdiff_t _stl_res;
-
-public:
-
-  virtual void get_seq_constraints
-  (
-   enum seq_order& seq_order,
-   bool& are_equal
-  ) const
-  {
-    seq_order = SEQ_ORDER_RAND;
-    are_equal = true;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::count
-      (i.first.begin(), i.first.end(), 42);
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::count
-      (i.first.begin(), i.first.end(), 42);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
-
-    error_string = value_error_string(_stl_res, _kastl_res);
-
-    return false;
   }
 
 };
@@ -1150,44 +1258,6 @@ public:
 
 #endif
 
-class ForEachRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-  static void inc(unsigned int& n) { ++n; }
-
-public:
-
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::for_each(i.first.begin(), i.first.end(), inc);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::for_each(i.second.begin(), i.second.end(), inc);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
-
-
 class InnerProductRun : public RunInterface
 {
   ValueType _kastl_res;
@@ -1650,75 +1720,6 @@ public:
 
 };
 
-
-class TransformRun : public RunInterface
-{
-  struct inc
-  {
-    inc() {}
-
-    ValueType operator()(const ValueType& v)
-    { return v + 1; }
-  };
-
-public:
-
-  virtual void get_seq_constraints
-  (
-   enum seq_order& seq_order,
-   bool& are_equal
-  ) const
-  {
-    seq_order = SEQ_ORDER_ASC;
-    are_equal = true;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    kastl::transform
-      (
-       i.first.begin(), i.first.end(),
-       o.begin(), inc()
-      );
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    std::transform
-      (
-       i.first.begin(), i.first.end(),
-       o.begin(), inc()
-      );
-  }
-
-  virtual bool check
-  (
-   OutputType& kastl_output,
-   OutputType& stl_output,
-   std::string& error_string
-  ) const
-  {
-    SequenceType::iterator kpos = kastl_output.begin();
-    SequenceType::iterator spos = stl_output.begin();
-    SequenceType::iterator send = stl_output.end();
-
-    if (cmp_sequence(kpos, spos, send) == false)
-      {
-	error_string = index_error_string
-	  (
-	   spos - stl_output.begin(),
-	   kpos - kastl_output.begin()
-	  );
-
-	return false;
-      }
-
-    return true;
-  }
-
-};
-
-
 #if 0
 
 class AdjacentDifferenceRun : public RunInterface
@@ -2005,6 +2006,8 @@ public:
 
 };
 
+#endif // speed compile time up
+
 
 RunInterface* RunInterface::create(const std::string& name)
 {
@@ -2014,12 +2017,14 @@ RunInterface* RunInterface::create(const std::string& name)
 
   MATCH_AND_CREATE( Count );
   MATCH_AND_CREATE( ForEach );
+  MATCH_AND_CREATE( Transform );
+
+#if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
   MATCH_AND_CREATE( Search );
   MATCH_AND_CREATE( PartialSum );
   MATCH_AND_CREATE( Accumulate );
-  MATCH_AND_CREATE( Transform );
   MATCH_AND_CREATE( MinElement );
   MATCH_AND_CREATE( MaxElement );
   MATCH_AND_CREATE( Find );
@@ -2038,6 +2043,7 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( SetUnion );
   MATCH_AND_CREATE( SetIntersection );
   MATCH_AND_CREATE( SetDifference );
+#endif // speed compile time up
 
 #if 0
   MATCH_AND_CREATE( CountIf );

@@ -3,15 +3,18 @@
 
 
 
+#include "count.hh"
+#include "for_each.hh"
+#include "transform.hh"
+
+
+#if 0 // speed compile time up
 #include "search.hh"
 #include "partial_sum.hh"
 #include "merge.hh"
 #include "sort.hh"
-#include "count.hh"
-#include "for_each.hh"
 #include "min_element.hh"
 #include "max_element.hh"
-#include "transform.hh"
 #include "accumulate.hh"
 #include "find.hh"
 #include "inner_product.hh"
@@ -29,6 +32,7 @@
 #include "set_difference.hh"
 #include "find_first_of.hh"
 #include "find_if.hh"
+#endif // speed compile time up
 
 #if 0
 #include "generate_n.hh"

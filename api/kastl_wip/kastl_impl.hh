@@ -9,6 +9,9 @@
 #include "kaapi.h"
 
 
+
+// #define KASTL_DEBUG 1
+
 #if KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
 #endif
@@ -108,6 +111,12 @@ namespace impl
       _end -= size;
     }
 
+    inline void affect_seq(SequenceType& seq) const
+    {
+      seq._beg = _beg;
+      seq._end = _end;
+    }
+
     inline void empty_seq(SequenceType& seq) const
     {
       seq._beg = _beg;
@@ -170,6 +179,12 @@ namespace impl
     {
       _seq0.rsplit(seq._seq0, size);
       seq._beg1 = _beg1 + std::distance(_seq0._beg, seq._seq0._beg);
+    }
+
+    inline void affect_seq(SequenceType& seq) const
+    {
+      _seq0.affect_seq(seq._seq0);
+      seq._beg1 = _beg1;
     }
 
     inline void empty_seq(SequenceType& seq) const
@@ -278,6 +293,14 @@ namespace impl
       seq._obeg = _obeg + (iseq0_off + iseq1_off);
     }
 
+    inline void affect_seq(SequenceType& seq) const
+    {
+      _iseq0.affect_seq(seq._iseq0);
+      _iseq1.affect_seq(seq._iseq1);
+
+      seq._obeg = _obeg;
+    }
+
     inline void empty_seq(SequenceType& seq) const
     {
       _iseq0.empty_seq(seq._iseq0);
@@ -364,6 +387,12 @@ namespace impl
       if (_iseq0.size() > _iseq1.size())
 	return (SizeType)_iseq0.size();
       return (SizeType)_iseq1.size();
+    }
+
+    inline void affect_seq(SequenceType& seq) const
+    {
+      _iseq0.affect_seq(seq._iseq0);
+      _iseq1.affect_seq(seq._iseq1);
     }
 
     inline void empty_seq(SequenceType& seq) const
@@ -519,6 +548,11 @@ namespace impl
       _iseq.rsplit(seq._iseq, size);
       seq._opos = _opos;
       _sync_opos(seq._opos, _iseq._beg, seq._iseq._beg);
+    }
+
+    inline void affect_seq(SequenceType& seq) const
+    {
+      _iseq.affect_seq(seq._iseq);
     }
 
     inline void empty_seq(SequenceType& seq) const
@@ -744,19 +778,11 @@ namespace impl
     WorkType* const victim_work =
       static_cast<WorkType*>(victim_voidptr);
 
-#if 0 // TODO
-    SequenceType* const victim_seq =
-      static_cast<SequenceType*>(seq_voidptr);
-#else
-# warning TODO
-    SequenceType* const victim_seq = NULL;
-#endif // TODO
-
 #if KASTL_DEBUG
       const typename SequenceType::RangeType vr =
-	SequenceType::get_range(victim_work->_ori_seq, victim_work->_seq);
+	SequenceType::get_range(victim_work->_ori_seq, victim_work->_macro_seq);
       const typename SequenceType::RangeType tr =
-	SequenceType::get_range(thief_work->_ori_seq, thief_work->_seq);
+	SequenceType::get_range(thief_work->_ori_seq, thief_work->_macro_seq);
       printf("r: %c#%u [%lu - %lu] <- %c#%u [%lu - %lu]\n",
 	     victim_work->_is_master ? 'm' : 's',
 	     (unsigned int)victim_work->_kid,
@@ -768,7 +794,9 @@ namespace impl
 
     victim_work->reduce(*thief_work);
 
-    *victim_seq = thief_work->_seq;
+    victim_work->_macro_seq.lock();
+    thief_work->_macro_seq.affect_seq(victim_work->_macro_seq);
+    victim_work->_macro_seq.unlock();
 
     // always return 1 so that the
     // victim knows about preemption
@@ -812,13 +840,10 @@ namespace impl
       WorkType* const victim_work =
 	static_cast<WorkType*>(args);
 
-#if 0 // TODO
-      SequenceType* const victim_seq =
-	victim_work->_seq;
-#else
-# warning TODO
-      SequenceType* const victim_seq = NULL;      
-#endif
+      SequenceType* const victim_seq = &victim_work->_macro_seq;
+
+      // TODO: remove this lock
+      victim_seq->lock();
 
       const int saved_count = request_count;
       int replied_count = 0;
@@ -855,9 +880,9 @@ namespace impl
 	  (sc, sizeof(WorkType), NULL);
 	thief_work->_master_sc = sc;
 
-	thief_work->_seq.lock();
 	extractor.extract(thief_work->_seq, *victim_seq);
-	thief_work->_seq.unlock();
+
+	thief_work->_seq.empty_seq(thief_work->_macro_seq);
 
 #if KASTL_DEBUG
 	const typename SequenceType::RangeType vr =
@@ -875,6 +900,7 @@ namespace impl
 
 	thief_work->_const = victim_work->_const;
 	thief_work->prepare();
+	static_cast<WorkType*>(thief_work->_tresult->data)->prepare();
 
 #if KASTL_DEBUG
 	thief_work->_is_master = false;
@@ -889,6 +915,9 @@ namespace impl
 	--request_count;
 	++replied_count;
       }
+
+      // TODO: remove this lock
+      victim_seq->unlock();
 
       return saved_count - replied_count;
     }
@@ -917,6 +946,9 @@ namespace impl
 
     typedef BaseWork
     <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> BaseType;
+
+    // current processing sequence
+    SequenceType _macro_seq;
 
     SequenceType _seq;
     const ConstantType* _const;
@@ -948,7 +980,9 @@ namespace impl
 	_is_done(false),
 	_tresult(NULL),
 	_master_sc(NULL)
-    {}
+    {
+      _seq.empty_seq(_macro_seq);
+    }
 
     inline void prepare() {}
 
@@ -1148,12 +1182,11 @@ namespace impl
 #if KASTL_MASTER_SLAVE
 
   template<typename WorkType>
-  void process_sequence
+  void process_macro_sequence
   (
    kaapi_thread_t* thread,
    kaapi_stealcontext_t* sc,
-   WorkType* work,
-   typename WorkType::SequenceType* macro_seq
+   WorkType* work
   )
   {
     typedef typename WorkType::NanoType NanoType;
@@ -1168,15 +1201,16 @@ namespace impl
     work->_kid = kaapi_get_current_kid();
 #endif
 
-    macro_seq->empty_seq(nano_seq);
-
   advance_work:
+
+    work->_macro_seq.empty_seq(nano_seq);
 
     while (true)
     {
-      macro_seq->lock();
-      const bool has_extracted = nano_extractor.extract(nano_seq, *macro_seq);
-      macro_seq->unlock();
+      work->_macro_seq.lock();
+      const bool has_extracted = nano_extractor.extract
+	(nano_seq, work->_macro_seq);
+      work->_macro_seq.unlock();
 
       if (has_extracted == false)
 	break;
@@ -1213,10 +1247,7 @@ namespace impl
     {
       kaapi_preempt_thief(sc, ktr, NULL, reducer, work);
       if (!work->_is_done)
-      {
-	macro_seq->empty_seq(nano_seq);
 	goto advance_work;
-      }
     }
 
     if (work->_tresult != NULL)
@@ -1234,7 +1265,12 @@ namespace impl
       (thread, KAAPI_STEALCONTEXT_DEFAULT, NULL, NULL, NULL);
 
     WorkType* const work = static_cast<WorkType*>(args);
-    process_sequence<WorkType>(thread, sc, work, &work->_seq);
+
+    work->_macro_seq.lock();
+    work->_seq.affect_seq(work->_macro_seq);
+    work->_macro_seq.unlock();
+
+    process_macro_sequence<WorkType>(thread, sc, work);
 
     kaapi_steal_finalize(sc);
   }
@@ -1255,20 +1291,18 @@ namespace impl
     WorkType* const work = static_cast<WorkType*>(args);
 
     MacroType macro_extractor;
-    SequenceType macro_seq;
-
-    work->_seq.empty_seq(macro_seq);
 
     while (true)
     {
-      work->_seq.lock();
-      const bool has_extracted = macro_extractor.extract(macro_seq, work->_seq);
-      work->_seq.unlock();
+      work->_macro_seq.lock();
+      const bool has_extracted = macro_extractor.extract
+	(work->_macro_seq, work->_seq);
+      work->_macro_seq.unlock();
 
       if (has_extracted == false)
 	break;
 
-      process_sequence(thread, sc, work, &macro_seq);
+      process_macro_sequence(thread, sc, work);
 
       if (work->_is_done == true)
 	break;
