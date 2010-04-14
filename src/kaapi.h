@@ -370,6 +370,7 @@ typedef struct kaapi_request_t {
   struct kaapi_thread_t*         thread;         /* internal thread pointer where to store result of the steal operation */
   struct kaapi_thread_context_t* mthread;        /* internal thread pointer where to store result of the steal operation */
   struct kaapi_processor_t*      proc;           /* owner of the request */
+  kaapi_uint64_t                 delay;          /* if !=0, delay in ns since the thief is waiting for work */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
 
@@ -922,10 +923,10 @@ extern int kaapi_preempt_nextthief_helper(
 #define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
 ({									\
   int __res = 0;							\
-  if (((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief)) \
+  if (((tr) !=0) && kaapi_preempt_nextthief_helper(stc, (tr), arg_to_thief)) \
   {									\
     if (!kaapi_is_null((void*)reducer))					\
-      __res = ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__);	\
+      __res = ((kaapi_task_reducer_t)reducer)(stc, (tr)->arg_from_thief, (tr)->data, (tr)->size_data, ##__VA_ARGS__);	\
     kaapi_deallocate_thief_result(tr);					\
   }									\
   __res;								\

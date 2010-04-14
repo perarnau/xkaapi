@@ -105,8 +105,7 @@ int main(int argc, char** argv)
         op,
         acc,
         pred,
-        1, 1,
-        10
+        1, 1
       );
     std::cerr << "Used: " << size_eval << " evaluation(s)" << std::endl;
   }
