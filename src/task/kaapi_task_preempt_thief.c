@@ -51,8 +51,15 @@ int kaapi_preempt_nextthief_helper(
 )
 {
   kaapi_taskadaptive_t* ta;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_uint64_t t1;
+  kaapi_uint64_t t0;
+#endif
   if (ktr ==0) return 0;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t0 = kaapi_get_elapsedns();
+#endif
   ta = (kaapi_taskadaptive_t*)stc;
 
   /* pass arg to the thief */
@@ -106,6 +113,11 @@ int kaapi_preempt_nextthief_helper(
   ktr->prev = 0;
 
   KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t1 = kaapi_get_elapsedns();
+  stc->ctxtthread->proc->t_preempt += (double)(t1-t0)*1e-9;
+  printf("Delay preempt:%15f, Total=%15f\n", (double)(t1-t0)*1e-9, stc->ctxtthread->proc->t_preempt );
+#endif
   
   return 1;
 }

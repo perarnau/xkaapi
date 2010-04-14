@@ -369,6 +369,7 @@ typedef struct kaapi_taskadaptive_t {
   kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
   void*                               save_argsplitter;/* idem */
   kaapi_frame_t                       frame;
+
 } kaapi_taskadaptive_t;
 
 

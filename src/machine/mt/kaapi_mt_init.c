@@ -171,7 +171,8 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #endif
   
 #if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[KAAPI::TERM] end time:%15f\n", kaapi_get_elapsedtime());
+  printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
+        (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
 #else
   printf("[KAAPI::TERM]\n");
 #endif
@@ -230,7 +231,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
     cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
     t_sched +=        KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TIDLE);
-    t_preempt +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
+    t_preempt +=      kaapi_all_kprocessors[i]->t_preempt; //KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
       
   /* */
   if (kaapi_default_param.display_perfcounter)

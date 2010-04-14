@@ -83,7 +83,7 @@ public:
   
   ~AccumulateWhileWork()
   {
-    delete [] _inputiterator_value;
+   // delete [] _inputiterator_value;
   }
   
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
@@ -101,7 +101,7 @@ public:
     else blocsize = _windowsize;
     kaapi_taskadaptive_result_t* thief;
     typename Function::result_type return_funccall;
-    _inputiterator_value = new /*(alloca(blocsize * sizeof(value_type)))*/ value_type[blocsize];
+    _inputiterator_value = new (alloca(blocsize * sizeof(value_type))) value_type[blocsize];
 
     while ((_ibeg != _iend) && (isnotfinish=_pred(_value)))
     {
@@ -133,14 +133,6 @@ redo_with_remainding_work:
 continue_because_predicate_is_false:
       *_returnval += iter;
       
-      if (isnotfinish) {
-        /* generate extra work for thiefs...will I preempt them... */
-        for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
-          _inputiterator_value[i] = *_ibeg;
-        sz_used = i;
-        /* initialize the queue: concurrent operation */
-        _queue.set( range(0, sz_used) ); 
-      }
       
       /* preempt thieves */
       thief = kaapi_preempt_getnextthief_head( sc );
@@ -148,6 +140,16 @@ continue_because_predicate_is_false:
       {
 #if TRACE_
         std::cout << "Master preempt Thief:" << thief << std::endl << std::flush;
+#endif
+#if 0
+        if (isnotfinish) {
+          /* generate extra work for thiefs...will I preempt them... */
+          for (i = 0; (i<8) && (_ibeg != _iend); ++i, ++_ibeg)
+            _inputiterator_value[i] = *_ibeg;
+          sz_used = i;
+          /* initialize the queue: concurrent operation */
+          _queue.push( range(0, sz_used) ); 
+        }
 #endif
         if (kaapi_preempt_thief ( 
             sc, 
@@ -167,7 +169,8 @@ continue_because_predicate_is_false:
           std::cout << "No work from thief:" << thief << std::endl << std::flush;
 #endif
         }
-          
+        isnotfinish = _pred(_value);
+        
         /* next thief ? */
         thief = kaapi_preempt_getnextthief_head( sc );
       }
