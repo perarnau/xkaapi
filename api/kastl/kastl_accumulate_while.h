@@ -164,7 +164,7 @@ continue_because_predicate_is_false:
         /* next thief ? */
         thief = kaapi_preempt_getnextthief_head( sc );
 #if 1
-        if ((isnotfinish) && (thief !=0))
+        if ((isnotfinish) && (thief !=0) && _queue.is_empty())
         {
           /* generate extra work for thief...I'm preempted... */
           _inputiterator_value[0] = *_ibeg;
