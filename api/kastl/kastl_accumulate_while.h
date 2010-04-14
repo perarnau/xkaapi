@@ -96,7 +96,7 @@ public:
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
-    if (_windowsize == (size_t)-1) blocsize = kaapi_getconcurrency();
+    if (_windowsize == (size_t)-1) blocsize = 8*kaapi_getconcurrency();
     else blocsize = _windowsize;
     kaapi_taskadaptive_result_t* thief;
     typename Function::result_type return_funccall;
@@ -325,7 +325,7 @@ protected:
     int i = 0;
     int reply_count = 0;
     /* size of each items per thief */    
-    size_t bloc = (size+count-1) / count;
+    size_t bloc = size / count;
 
     if (bloc == 0) 
     { /* reply to less thief... */
@@ -333,7 +333,7 @@ protected:
       bloc = 1; 
     }
 #if TRACE_
-    std::cout << "Splitter: count=" << count << ", r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last] << ")"
+    std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last << ")"
               << ", bloc=" << bloc << ", size=" << size   
               << std::endl << std::flush;
 #endif
@@ -345,6 +345,10 @@ protected:
         kaapi_task_t* thief_task  = kaapi_thread_toptask(thief_thread);
         kaapi_task_init( thief_task, &ThiefWork_t::static_entrypoint, kaapi_thread_pushdata_align(thief_thread, sizeof(ThiefWork_t), 8) );
 
+#if 0
+if (r.is_empty())
+  std::cout << "**** EMPTY" << r.first << ", " << r.last << ")" << std::endl << std::flush;
+#endif
         kaapi_assert_debug( !r.is_empty() );
         range rq(r.first, r.last);
         if (count >1) /* adjust for last bloc */
@@ -352,6 +356,14 @@ protected:
           rq.first = rq.last - bloc;
           r.last = rq.first;
         }
+
+#if 0
+std::cout << "Replyi[" << count << "] r=" << rq.first << ", " << rq.last << ")" << std::endl << std::flush;
+if (r.is_empty())
+{
+  std::cout << "**** EMPTY" << rq.first << ", " << rq.last << ")" << std::endl << std::flush;
+}
+#endif
         output_work = new (kaapi_task_getargst(thief_task, ThiefWork_t))
             ThiefWork_t( 
               rq, 
@@ -363,8 +375,8 @@ protected:
               _pargrain
             );
 #if TRACE_
-        std::cout << "Splitter: reply to=" << i << "[" << _inputiterator_value[rq.first] << "," 
-                  << _inputiterator_value[rq.last] << ")" 
+        std::cout << "Splitter: reply to=" << i << "[" << rq.first << "," 
+                  << rq.last << ")" 
                   << std::endl << std::flush;
 #endif
         /* copy the input value for the task */
@@ -388,6 +400,7 @@ protected:
       ++i;
     }
 #if TRACE_
+std::cout << "Splitter: end reply" << std::endl;
     std::cout << std::flush;
 #endif
     return reply_count; 

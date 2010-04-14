@@ -90,6 +90,7 @@ kastlinclude_HEADERS=\
   kastl/kastl_accumulate_while.h\
   kastl/algorithm \
   kastl/numeric
+
 kastlincludedir=$(includedir)/kastl
 
 check_PROGRAMS=ka_api_check_header
