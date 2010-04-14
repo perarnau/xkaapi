@@ -211,6 +211,14 @@ void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
 
 /*
 */
+kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc)
+{
+  kaapi_perf_counter_t delay = kaapi_get_elapsedns() - kproc->start_t[KAAPI_GET_THREAD_STATE(kproc)];
+  return delay;
+}
+
+/*
+*/
 void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 {
   kaapi_assert( (isuser ==KAAPI_PERF_SCHEDULE_STATE)||(isuser==KAAPI_PERF_USER_STATE) );
@@ -320,7 +328,6 @@ void _kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaa
   }
   
   /* filter */
-
   for (j = 0, i = 0; j < idset->count; ++i)
     if (idset->idmap[i])
       counter[j++] += accum[i];
