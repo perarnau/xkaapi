@@ -93,6 +93,7 @@ public:
   void doit( kaapi_stealcontext_t* sc, kaapi_thread_t* thread )
   {
     /* local iterator for the nano loop */
+    bool isnotfinish = true;
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
@@ -102,7 +103,7 @@ public:
     typename Function::result_type return_funccall;
     _inputiterator_value = new /*(alloca(blocsize * sizeof(value_type)))*/ value_type[blocsize];
 
-    while ((_ibeg != _iend) && _pred(_value))
+    while ((_ibeg != _iend) && (isnotfinish=_pred(_value)))
     {
       /* generate input values into a container with randomiterator */
       for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
@@ -112,9 +113,9 @@ public:
       /* initialize the queue: concurrent operation */
       _queue.set( range(0, sz_used) ); 
       
-/*redo_with_remainding_work:*/
+redo_with_remainding_work:
        iter = 0;
-      while (_queue.pop(r, _seqgrain))
+      while (_queue.pop(r, 1))
       {
 #if TRACE_
         std::cout << "Master eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last] << ")"
@@ -126,11 +127,20 @@ public:
           _func( return_funccall, _inputiterator_value[r.first] );
           ++iter;
           _accf( _value, return_funccall );
-          if (!_pred(_value)) goto continue_because_predicate_is_false;
+          if (!(isnotfinish=_pred(_value))) goto continue_because_predicate_is_false;
         }
       }
 continue_because_predicate_is_false:
       *_returnval += iter;
+      
+      if (isnotfinish) {
+        /* generate extra work for thiefs...will I preempt them... */
+        for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
+          _inputiterator_value[i] = *_ibeg;
+        sz_used = i;
+        /* initialize the queue: concurrent operation */
+        _queue.set( range(0, sz_used) ); 
+      }
       
       /* preempt thieves */
       thief = kaapi_preempt_getnextthief_head( sc );
@@ -161,6 +171,8 @@ continue_because_predicate_is_false:
         /* next thief ? */
         thief = kaapi_preempt_getnextthief_head( sc );
       }
+      
+      if (!_queue.is_empty()) goto redo_with_remainding_work;
     }
   }
 
