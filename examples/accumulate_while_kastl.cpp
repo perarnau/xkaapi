@@ -22,7 +22,7 @@ struct Sin {
   void operator()(double& result, double a) 
   {
     result=1; //sin(a);
-    usleep(1000);
+    sleep(1);
   }
 };
 

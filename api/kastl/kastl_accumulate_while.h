@@ -48,7 +48,7 @@
 #include "kastl/kastl_workqueue.h"
 #include <algorithm>
 
-#define TRACE_ 0
+#define TRACE_ 1
 
 namespace kastl {
   
@@ -97,7 +97,7 @@ public:
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
-    if (_windowsize == (size_t)-1) blocsize = 8*kaapi_getconcurrency();
+    if (_windowsize == (size_t)-1) blocsize = kaapi_getconcurrency();
     else blocsize = _windowsize;
     kaapi_taskadaptive_result_t* thief;
     typename Function::result_type return_funccall;
@@ -141,16 +141,6 @@ continue_because_predicate_is_false:
 #if TRACE_
         std::cout << "Master preempt Thief:" << thief << std::endl << std::flush;
 #endif
-#if 0
-        if (isnotfinish) {
-          /* generate extra work for thiefs...will I preempt them... */
-          for (i = 0; (i<8) && (_ibeg != _iend); ++i, ++_ibeg)
-            _inputiterator_value[i] = *_ibeg;
-          sz_used = i;
-          /* initialize the queue: concurrent operation */
-          _queue.push( range(0, sz_used) ); 
-        }
-#endif
         if (kaapi_preempt_thief ( 
             sc, 
             thief,                       /* thief to preempt */
@@ -173,6 +163,16 @@ continue_because_predicate_is_false:
         
         /* next thief ? */
         thief = kaapi_preempt_getnextthief_head( sc );
+#if 1
+        if ((isnotfinish) && (thief !=0))
+        {
+          /* generate extra work for thief...I'm preempted... */
+          _inputiterator_value[0] = *_ibeg;
+          sz_used = 1;
+          /* initialize the queue: concurrent operation, a push will be better */
+          _queue.set( range(0, sz_used) ); 
+        }
+#endif
       }
       
       if (!_queue.is_empty()) goto redo_with_remainding_work;
@@ -226,7 +226,7 @@ protected:
       while (_queue.pop(r, _seqgrain))
       {
 #if TRACE_
-        std::cout << "Thief eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last] << ")"
+        std::cout << "Thief " << _thief_result << " eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
                   << std::endl << std::flush;
 #endif
         for ( ; r.first != r.last; ++r.first)
@@ -245,7 +245,7 @@ protected:
           );
           if (retval) {
 #if TRACE_
-        std::cout << "Thief preempted at " << r.first 
+        std::cout << "Thief " << _thief_result << "preempted at " << r.first 
                   << std::endl << std::flush;
 #endif
             return;
@@ -273,7 +273,7 @@ protected:
       kaapi_steal_thiefreturn( sc );
       self_work->~ThiefWork_t();
 #if TRACE_
-    std::cout << "Thief return: " << *cnt << " evaluation(s)" 
+    std::cout << "Thief " << self_work->_thief_result << " return: " << *cnt << " evaluation(s)" 
               << std::endl << std::flush;
 #endif
     }
@@ -324,13 +324,13 @@ protected:
     /* */
     if ( !_queue.steal(r, size_max, size_min )) return 0;
 #if TRACE_
-    std::cout << "Splitter: count=" << count << ", r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last] << ")"
+    std::cout << "Splitter: count=" << count << ", r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
               << ", size=" << size  << ", size_max=" << size_max << ", size_min=" << size_min 
               << std::endl << std::flush;
 #elif 0
     std::cout << "Splitter: count=" << count 
               << ", input size=" << size << ", get : [" << r.first << "=" << _inputiterator_value[r.first] 
-              << "," << r.last << "-1=" << _inputiterator_value[r.last-1] << "], size_max=" << size_max << ", size_min=" << size_min 
+              << "," << r.last-1 << "=" << _inputiterator_value[r.last-1] << "], size_max=" << size_max << ", size_min=" << size_min 
               << std::endl << std::flush;
 #endif
     kaapi_assert_debug (!r.is_empty());
@@ -348,7 +348,7 @@ protected:
       bloc = 1; 
     }
 #if TRACE_
-    std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last << ")"
+    std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last-1 << "]"
               << ", bloc=" << bloc << ", size=" << size   
               << std::endl << std::flush;
 #endif
@@ -362,7 +362,7 @@ protected:
 
 #if 0
 if (r.is_empty())
-  std::cout << "**** EMPTY" << r.first << ", " << r.last << ")" << std::endl << std::flush;
+  std::cout << "**** EMPTY" << r.first << ", " << r.last-1 << "]" << std::endl << std::flush;
 #endif
         kaapi_assert_debug( !r.is_empty() );
         range rq(r.first, r.last);
@@ -373,10 +373,10 @@ if (r.is_empty())
         }
 
 #if 0
-std::cout << "Replyi[" << count << "] r=" << rq.first << ", " << rq.last << ")" << std::endl << std::flush;
+std::cout << "Replyi[" << count << "] r=" << rq.first << ", " << rq.last-1 << "]" << std::endl << std::flush;
 if (r.is_empty())
 {
-  std::cout << "**** EMPTY" << rq.first << ", " << rq.last << ")" << std::endl << std::flush;
+  std::cout << "**** EMPTY" << rq.first << ", " << rq.last -1<< "]" << std::endl << std::flush;
 }
 #endif
         output_work = new (kaapi_task_getargst(thief_task, ThiefWork_t))
@@ -391,7 +391,7 @@ if (r.is_empty())
             );
 #if TRACE_
         std::cout << "Splitter: reply to=" << i << "[" << rq.first << "," 
-                  << rq.last << ")" 
+                  << rq.last-1 << "]" 
                   << std::endl << std::flush;
 #endif
         /* copy the input value for the task */
