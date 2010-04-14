@@ -10,6 +10,8 @@
 
 
 
+#define KASTL_DEBUG 1
+
 #if KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
 #endif
@@ -845,7 +847,6 @@ namespace impl
       // TODO: remove this lock
       victim_seq->lock();
 
-      const int saved_count = request_count;
       int replied_count = 0;
 
       const size_t work_size = victim_seq->size();
@@ -920,7 +921,7 @@ namespace impl
       // TODO: remove this lock
       victim_seq->unlock();
 
-      return saved_count - replied_count;
+      return replied_count;
     }
   };
 

@@ -2186,6 +2186,9 @@ int main(int ac, char** av)
 	   l.stl_usec(),
 	   is_success ? 'x' : '!',
 	   error_string.c_str());
+
+    if (is_success == false)
+      return -1;
   }
 
   delete run;
