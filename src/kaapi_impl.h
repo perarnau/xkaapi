@@ -651,6 +651,10 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, kaapi_re
 #endif
 }
 
+
+/* */
+extern kaapi_uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
+
 /* ========== Here include machine specific function: only next definitions should depend on machine =========== */
 /** Here include all machine dependent functions and types
 */
@@ -998,22 +1002,24 @@ typedef struct kaapi_tasksteal_arg_t {
 
 
 /* internal */
-void kaapi_perf_global_init(void);
+extern void kaapi_perf_global_init(void);
 
-void kaapi_perf_global_fini(void);
+extern void kaapi_perf_global_fini(void);
 
 /* */
-void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
+extern void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
 /* */
-void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
+extern void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
 /* */
-void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
+extern void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
 /* */
-void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
+extern void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
 /* */
-void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
+extern void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
 /* */
-int kaapi_perf_thread_state(kaapi_processor_t* kproc);
+extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
+/* */
+extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 
 /**
