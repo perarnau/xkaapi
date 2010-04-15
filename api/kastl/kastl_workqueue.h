@@ -300,7 +300,7 @@ namespace impl {
     
     // check for boundaries
 //Cannot make assert here due to changing _end    kaapi_assert_debug( (_beg >=0) && (_beg <= _end) );
-    kaapi_assert_debug( (r.first >=0) && (r.first <= r.last) );
+    kaapi_assert_debug( (r.first >=0) && (r.first <= r.last) && Z);
     
     return true;
   }

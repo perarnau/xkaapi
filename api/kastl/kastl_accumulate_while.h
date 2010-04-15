@@ -53,7 +53,7 @@
 #define KAAPI_MAX_PROCESSOR 16
 #endif
 
-#if 1//TRACE_
+#if TRACE_
 static pthread_mutex_t lock_cout = PTHREAD_MUTEX_INITIALIZER;
 void lockout() 
 {
@@ -127,8 +127,8 @@ public:
     /*  ---- */
     if (_windowsize == (size_t)-1) 
     {
-      blocsize  = 4*kaapi_getconcurrency();
-      _pargrain = 8;
+      blocsize  = 3*kaapi_getconcurrency();
+      _pargrain = 3;
     }
     else 
     {
@@ -197,9 +197,9 @@ public:
         isfinish = !_pred(_value);
       }
 
-      t1 = kaapi_get_elapsedns();
 
-#if 1 /* display delay max of thief and infos */
+#if 0 /* display delay max of thief and infos */
+      t1 = kaapi_get_elapsedns();
       {
       //      kaapi_assert_debug( !isnotfinish || _queue.is_empty() );
             long cntthief = _cntthief;
@@ -225,8 +225,10 @@ public:
 #endif
             }
       }
-#endif
+
       t0 = kaapi_get_elapsedns();
+#endif
+
 
       /* accumulate data from all thieves */
       _queue.clear();
@@ -492,6 +494,7 @@ protected:
   */
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
+#if 0
     int cntthieves =count;
     /* get some state about the thieves. no concurrency on += */
     _cntthief += cntthieves;
@@ -499,15 +502,14 @@ protected:
       if (kaapi_request_ok(&request[i]))
       {
         --cntthieves;
-#if 0
   lockout();      
         std::cout << "Delay thief[" << i << "]= " << request[i].delay << std::endl<< std::flush;
   unlockout();      
-#endif
         if (_delay[i] < request[i].delay) _delay[i] = request[i].delay;
       }
       else
         _delay[i] = 0;
+#endif
     
     size_t size = _queue.size();     /* upper bound */
     if (size < _pargrain) return 0;
