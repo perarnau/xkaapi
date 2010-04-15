@@ -110,6 +110,7 @@ public:
     /* local iterator for the nano loop */
     bool isnotfinish = true;
     long thief_nowork = 0;
+    long thief_work = 0;
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
@@ -125,21 +126,30 @@ public:
       if (_pargrain ==0) _pargrain = 1;
     }
     kaapi_taskadaptive_result_t* thief;
-    int last_size = blocsize;
+    size_t last_size = blocsize;
     typename Function::result_type return_funccall;
     _inputiterator_value = new value_type[blocsize];
 
     while ((_ibeg != _iend) && (isnotfinish=_pred(_value)))
     {
-      if (blocsize+thief_nowork > last_size) {
+      blocsize += _pargrain*(thief_nowork-thief_work);
+
+      if (blocsize> last_size) 
+      {
         value_type* tmp = _inputiterator_value;
         _inputiterator_value=0;
-        delete [] _inputiterator_value;
-        last_size = (2*last_size < (blocsize+thief_nowork) ? blocsize+thief_nowork : 2*last_size);
+        delete [] tmp;
+        last_size = (2*last_size < (blocsize) ? blocsize: 2*last_size);
         _inputiterator_value = new value_type[last_size];
       }
       /* generate input values into a container with randomiterator */
-      for (i = 0; (i<blocsize+thief_nowork) && (_ibeg != _iend); ++i, ++_ibeg)
+      size_t pargrain= (blocsize-1)/(kaapi_getconcurrency()-1);
+      if (pargrain ==0) _pargrain = 1;
+      else {
+        if (_pargrain != pargrain) std::cout << "****** NEW PARGRAIN=" << pargrain << std::endl;
+        _pargrain = pargrain;
+      }
+      for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
         _inputiterator_value[i] = *_ibeg;
       sz_used = i;
 
@@ -158,7 +168,7 @@ redo_with_remainding_work:
       //while (_queue.pop(r, 1))
       if (_queue.pop(r, 1))
       {
-#if 1//TRACE_
+#if TRACE_
 { 
   lockout();      
   std::cout << "Master eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
@@ -181,16 +191,17 @@ continue_because_predicate_is_false:
 
 //      kaapi_assert_debug( !isnotfinish || _queue.is_empty() );
       long cntthief = _cntthief;
-      double delay_thieves = 0;
+      kaapi_uint64_t delay_thieves = 0;
       for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
       {
-        delay_thieves += (double)_delay[i];
+        if (delay_thieves<_delay[i])
+          delay_thieves = _delay[i];
         _delay[i] = 0;
       }
 { 
   lockout();
       std::cout << "End local work, #thief=" << cntthief 
-                << ", S_delay (s): " << 1e-9 * delay_thieves
+                << ", Max delay (s): " << 1e-9 * delay_thieves
                 << ", Master delay (s): " << 1e-9 * double(t1-t0)
                 << ", Ratio: " << delay_thieves / double(t1-t0)
                 << ", size queue: " << _queue.size()
@@ -208,16 +219,18 @@ continue_because_predicate_is_false:
       }
 #endif
       /* preempt thieves */
+      t0 = kaapi_get_elapsedns();
       _queue.clear();
       /* here thief may no steal anymore things */
       thief_nowork = 0;
+      thief_work = 0;
       thief = kaapi_preempt_getnextthief_head( sc );
       while (thief !=0)
       {
-#if TRACE_
+#if 1//TRACE_
 { 
   lockout();      
-        std::cout << "Master preempt Thief:" << thief << std::endl << std::flush;
+  std::cout << kaapi_get_elapsedns() << "::Master preempt Thief:" << thief << std::endl << std::flush;
   unlockout();
 }
 #endif
@@ -229,7 +242,8 @@ continue_because_predicate_is_false:
             this                         /* extra arg for the reducer */
         ))
         {
-#if 1//TRACE_
+          ++thief_work;
+#if TRACE_
 { 
   lockout();      
           std::cout << "Remains work the thief:" << thief << std::endl << std::flush;
@@ -240,7 +254,7 @@ continue_because_predicate_is_false:
         else 
         {
           ++thief_nowork;
-#if 1//TRACE_
+#if TRACE_
 { 
   lockout();      
           std::cout << "No work from thief:" << thief << std::endl << std::flush;
@@ -253,6 +267,17 @@ continue_because_predicate_is_false:
         /* next thief ? */
         thief = kaapi_preempt_getnextthief_head( sc );
       }
+      t1 = kaapi_get_elapsedns();
+
+#if 1//TRACE_
+{ 
+  lockout();      
+  std::cout << "Tmaster preempt:" << double(t1-t0)*1e-9 
+            << ", #thiefs end work:" << thief_nowork 
+            << ", #thiefs preempt:" << thief_work << std::endl << std::flush;
+  unlockout();
+}
+#endif
       
       if (!_queue.is_empty()) {
         _cntthief = 0;
@@ -307,17 +332,17 @@ protected:
       long iter = 0;
       new (_return_funccall) result_type[*_size];
       
-      /* do work */
-      while (_queue.pop(r, _seqgrain))
-      {
 #if 1//TRACE_
 { 
   lockout();      
-        std::cout << "Thief " << _thief_result << " eval r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
-                  << std::endl << std::flush;
+  std::cout << kaapi_get_elapsedns() << "::Thief " << _thief_result << " eval #size=" << _queue.size()
+            << std::endl << std::flush;
   unlockout();
 }
 #endif
+      /* do work */
+      while (_queue.pop(r, _seqgrain))
+      {
         while ( r.first != r.last )
         {
 //        std::cout << "Thief eval=" << _inputiterator_value[r.first] << std::endl;
@@ -337,8 +362,8 @@ protected:
 #if 1//TRACE_
 { 
   lockout();      
-        std::cout << "Thief " << _thief_result << " preempted at " << r.first 
-                  << std::endl << std::flush;
+  std::cout << "Thief " << _thief_result << " preempted at " << r.first 
+            << std::endl << std::flush;
   unlockout();
 }
 #endif
@@ -346,6 +371,14 @@ protected:
           }
         }
       }
+#if 1 // TRACE_
+{ 
+  lockout();      
+  std::cout << kaapi_get_elapsedns() << "::Thief " << _thief_result << " end eval work" 
+            << std::endl << std::flush;
+  unlockout();
+}
+#endif
     }
 
     /* thief task body */
@@ -425,7 +458,7 @@ protected:
     /* take at most count*_pargrain items per thief */
     size_t blocsize = _pargrain;
     size_t size_max = (blocsize * count);
-    if (size_max > size) size_max = size;
+    if (size_max > size) size_max = size-1;
     size_t size_min = (size_max * 2) / 3;         /* min bound */
     if (size_min ==0) size_min = 1;
     range r;
@@ -435,8 +468,8 @@ protected:
 #if 1//TRACE_
 { 
   lockout();      
-    std::cout << "Splitter: count=" << count << ", r=[" << _inputiterator_value[r.first] << "," << _inputiterator_value[r.last-1] << "]"
-              << ", size=" << size  << ", size_max=" << size_max << ", size_min=" << size_min 
+    std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last-1 << "], size=" << size
+              << ", steal size=" << r.size()  << ", size_max=" << size_max << ", size_min=" << size_min 
               << std::endl << std::flush;
   unlockout();      
 } 
