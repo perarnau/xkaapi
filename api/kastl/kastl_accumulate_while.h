@@ -110,14 +110,14 @@ public:
     /* local iterator for the nano loop */
     bool isnotfinish = true;
     long thief_nowork = 0;
-    long thief_work = 0;
+    long thief_remainwork = 0;
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
     if (_windowsize == (size_t)-1) 
     {
-      blocsize  = kaapi_getconcurrency();
-      _pargrain = 1;
+      blocsize  = 256; //4*kaapi_getconcurrency();
+      _pargrain = 4;
     }
     else 
     {
@@ -132,7 +132,8 @@ public:
 
     while ((_ibeg != _iend) && (isnotfinish=_pred(_value)))
     {
-      blocsize += _pargrain*(thief_nowork-thief_work);
+#if 0 /* DO NOT CHANGE BLOC SIZE */
+      blocsize += _pargrain*thief_nowork-thief_remainwork;
 
       if (blocsize> last_size) 
       {
@@ -149,6 +150,7 @@ public:
         if (_pargrain != pargrain) std::cout << "****** NEW PARGRAIN=" << pargrain << std::endl;
         _pargrain = pargrain;
       }
+#endif
       for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
         _inputiterator_value[i] = *_ibeg;
       sz_used = i;
@@ -223,11 +225,11 @@ continue_because_predicate_is_false:
       _queue.clear();
       /* here thief may no steal anymore things */
       thief_nowork = 0;
-      thief_work = 0;
+      thief_remainwork = 0;
       thief = kaapi_preempt_getnextthief_head( sc );
       while (thief !=0)
       {
-#if 1//TRACE_
+#if TRACE_
 { 
   lockout();      
   std::cout << kaapi_get_elapsedns() << "::Master preempt Thief:" << thief << std::endl << std::flush;
@@ -242,7 +244,7 @@ continue_because_predicate_is_false:
             this                         /* extra arg for the reducer */
         ))
         {
-          ++thief_work;
+          ++thief_remainwork;
 #if TRACE_
 { 
   lockout();      
@@ -272,9 +274,9 @@ continue_because_predicate_is_false:
 #if 1//TRACE_
 { 
   lockout();      
-  std::cout << "Tmaster preempt:" << double(t1-t0)*1e-9 
+  std::cout << "Tmaster preempt   :" << double(t1-t0)*1e-9 
             << ", #thiefs end work:" << thief_nowork 
-            << ", #thiefs preempt:" << thief_work << std::endl << std::flush;
+            << ", #work remaining :" << thief_remainwork << std::endl << std::flush;
   unlockout();
 }
 #endif
@@ -332,7 +334,7 @@ protected:
       long iter = 0;
       new (_return_funccall) result_type[*_size];
       
-#if 1//TRACE_
+#if TRACE_
 { 
   lockout();      
   std::cout << kaapi_get_elapsedns() << "::Thief " << _thief_result << " eval #size=" << _queue.size()
@@ -341,11 +343,15 @@ protected:
 }
 #endif
       /* do work */
-      while (_queue.pop(r, _seqgrain))
+      while (_queue.pop(r, 2))
       {
         while ( r.first != r.last )
         {
-//        std::cout << "Thief eval=" << _inputiterator_value[r.first] << std::endl;
+#if TRACE_
+          lockout();
+          std::cout << kaapi_get_elapsedns() << "::Thief " << _thief_result << " eval:" << r.first << std::endl;
+          unlockout();
+#endif
           _func( _return_funccall[r.first], _inputiterator_value[r.first] ); 
           ++iter; ++r.first;
           *_cnteval = iter;
@@ -358,8 +364,17 @@ protected:
               0, 0,
               0
           );
+#if TRACE_
+{ 
+  lockout();  
+  std::cout << kaapi_get_elapsedns() << "::Thief " << _thief_result << " flag preempt:" << _thief_result->req_preempt
+            << ", retval preemptpoint: " << retval
+            << std::endl << std::flush;
+  unlockout();
+}
+#endif
           if (retval) {
-#if 1//TRACE_
+#if TRACE_
 { 
   lockout();      
   std::cout << "Thief " << _thief_result << " preempted at " << r.first 
@@ -371,7 +386,7 @@ protected:
           }
         }
       }
-#if 1 // TRACE_
+#if TRACE_
 { 
   lockout();      
   std::cout << kaapi_get_elapsedns() << "::Thief " << _thief_result << " end eval work" 
@@ -573,7 +588,8 @@ std::cout << "Splitter: end reply" << std::endl;
   /**/
   int main_reduce(
       kaapi_stealcontext_t* sc, 
-      void*                 thief_data
+      void*                 thief_data,
+      long*                 thief_remainwork
   )
   {
     long i, cnteval;
@@ -589,8 +605,11 @@ std::cout << "Splitter: end reply" << std::endl;
     for (i=0; (i<cnteval) && _pred(_value); ++i)
       _accf( _value, return_funccall[i] );
 
+    if ((i==cnteval) && (cnteval < *size))
+    {
+      std::cout << "Remain work to do #=" << *size - cnteval << std::endl << std::flush;
+    } 
 #if TRACE_
-    if (i!=cnteval) 
     {
       std::cout << "Thief has computed no usefull evaluation:" << cnteval-i << std::endl << std::flush;
     }
@@ -599,6 +618,7 @@ std::cout << "Splitter: end reply" << std::endl;
 #if TRACE_
     std::cout << "Victim after reduce thief, #eval=" << *_returnval << ", value:" << _value << std::endl;
 #endif
+    *thief_remainwork += *size-cnteval;
     return (*size != cnteval);
   }
   
@@ -608,10 +628,11 @@ std::cout << "Splitter: end reply" << std::endl;
       void*                 thief_arg, 
       void*                 thiefdata, 
       size_t                thiefsize,
-      Self_t*               myself
+      Self_t*               myself,
+      long*                 thief_remainwork 
   )
   {
-    return myself->main_reduce( sc, thiefdata );
+    return myself->main_reduce( sc, thiefdata, thief_remainwork );
   }
 
 protected:
