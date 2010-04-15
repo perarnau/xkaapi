@@ -85,14 +85,12 @@ public:
     Function&      func,
     Inserter&      insert,
     Predicate&     pred,
-    int ws,
-    int sg,
-    int pg
+    int ws
   ) : _queue(), 
       _returnval(retval), _value(value), 
       _ibeg(ibeg), _iend(iend), _func(func), _accf(insert), _pred(pred), 
       _inputiterator_value(0), _master(0), //_thief_result(0),
-      _windowsize(ws), _seqgrain(sg), _pargrain(pg)
+      _windowsize(ws), _seqgrain(1), _pargrain(1)
   { 
     for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
       _delay[i] =0;
@@ -115,8 +113,17 @@ public:
     impl::range r;
     size_t iter;
     size_t i, sz_used, blocsize;
-    if (_windowsize == (size_t)-1) blocsize = kaapi_getconcurrency();
-    else blocsize = _windowsize;
+    if (_windowsize == (size_t)-1) 
+    {
+      blocsize  = kaapi_getconcurrency();
+      _pargrain = 1;
+    }
+    else 
+    {
+      blocsize = _windowsize;
+      _pargrain= blocsize/kaapi_getconcurrency();
+      if (_pargrain ==0) _pargrain = 1;
+    }
     kaapi_taskadaptive_result_t* thief;
     typename Function::result_type return_funccall;
     _inputiterator_value = new (alloca(blocsize * sizeof(value_type))) value_type[blocsize];
@@ -400,10 +407,10 @@ protected:
     size_t size = _queue.size();     /* upper bound */
     if (size < _pargrain) return 0;
 
-    /* take at most _seqgrain items per thief */
-//    size_t size_max = (_seqgrain * count);
-    size_t size_max = (size * count) / (count); /* max bound */
-    if (size_max ==0) size_max = 1;
+    /* take at most count*_pargrain items per thief */
+    size_t blocsize = _pargrain;
+    size_t size_max = (blocsize * count);
+    if (size_max > size) size_max = size;
     size_t size_min = (size_max * 2) / 3;         /* min bound */
     if (size_min ==0) size_min = 1;
     range r;
@@ -425,22 +432,25 @@ protected:
               << std::endl << std::flush;
 #endif
     kaapi_assert_debug (!r.is_empty());
+    
+    /* size of what the thieves have stolen */
     size = r.size();
 
     ThiefWork_t* output_work;
     int i = 0;
     int reply_count = 0;
-    /* size of each items per thief */    
-    size_t bloc = size / count;
 
-    if (bloc == 0) 
+    /* size of thief will get at most blocsize items per thief */    
+    blocsize = size / count;
+
+    if (blocsize == 0) 
     { /* reply to less thief... */
       count = size; 
-      bloc = 1; 
+      blocsize = 1; 
     }
 #if TRACE_
     std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last-1 << "]"
-              << ", bloc=" << bloc << ", size=" << size   
+              << ", bloc=" << blocsize << ", size=" << size   
               << std::endl << std::flush;
 #endif
     while (count >0)
@@ -459,7 +469,7 @@ if (r.is_empty())
         range rq(r.first, r.last);
         if (count >1) /* adjust for last bloc */
         {
-          rq.first = rq.last - bloc;
+          rq.first = rq.last - blocsize;
           r.last = rq.first;
         }
 
@@ -583,7 +593,7 @@ size_t accumulate_while( T& value,
                          Function& func, 
                          Inserter& acc, 
                          Predicate& pred,
-                         int seqgrain =1, int pargrain = 1, int windowsize = -1   /*  == default value */
+                         int windowsize = -1   /*  == default value */
                         )
 {
   typedef impl::AccumulateWhileWork<T,InputIterator,Function,Inserter,Predicate> Self_t;
@@ -599,9 +609,7 @@ size_t accumulate_while( T& value,
           func, 
           acc, 
           pred, 
-          windowsize,
-          seqgrain, 
-          pargrain
+          windowsize
         );
   kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
 
