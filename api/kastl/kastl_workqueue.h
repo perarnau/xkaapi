@@ -205,6 +205,7 @@ namespace impl {
   inline void work_queue::clear()
   {
     _end = 0;
+    kaapi_writemem_barrier();
     _beg = 0; 
   }
   

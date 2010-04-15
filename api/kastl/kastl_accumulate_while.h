@@ -98,7 +98,7 @@ public:
   
   ~AccumulateWhileWork()
   {
-   // delete [] _inputiterator_value;
+    delete [] _inputiterator_value;
   }
   
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
@@ -125,11 +125,19 @@ public:
       if (_pargrain ==0) _pargrain = 1;
     }
     kaapi_taskadaptive_result_t* thief;
+    int last_size = blocsize;
     typename Function::result_type return_funccall;
-    _inputiterator_value = new (alloca(blocsize * sizeof(value_type))) value_type[blocsize];
+    _inputiterator_value = new value_type[blocsize];
 
     while ((_ibeg != _iend) && (isnotfinish=_pred(_value)))
     {
+      if (blocsize+thief_nowork > last_size) {
+        value_type* tmp = _inputiterator_value;
+        _inputiterator_value=0;
+        delete [] _inputiterator_value;
+        last_size = (2*last_size < (blocsize+thief_nowork) ? blocsize+thief_nowork : 2*last_size);
+        _inputiterator_value = new value_type[last_size];
+      }
       /* generate input values into a container with randomiterator */
       for (i = 0; (i<blocsize+thief_nowork) && (_ibeg != _iend); ++i, ++_ibeg)
         _inputiterator_value[i] = *_ibeg;
@@ -200,6 +208,8 @@ continue_because_predicate_is_false:
       }
 #endif
       /* preempt thieves */
+      _queue.clear();
+      /* here thief may no steal anymore things */
       thief_nowork = 0;
       thief = kaapi_preempt_getnextthief_head( sc );
       while (thief !=0)
