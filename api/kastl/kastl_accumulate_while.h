@@ -48,7 +48,7 @@
 #include "kastl/kastl_workqueue.h"
 #include <algorithm>
 
-#define TRACE_ 0
+#define TRACE_ 1
 #ifndef KAAPI_MAX_PROCESSOR
 #define KAAPI_MAX_PROCESSOR 16
 #endif
@@ -137,12 +137,17 @@ public:
       for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
       {
         _inputiterator_value[i] = *_ibeg;
-        _queue.push_front( blocsize - i);
+        _queue.push_front( blocsize -1 - i);
       }      
 
       /* do one computation */
       if (_queue.pop(r, 1))
       {
+lockout();
+        std::cout << "Tmaster eval:" << _inputiterator_value[r.first]
+                  << " -> " << _return_funccall[r.first].data
+                  << std::endl << std::flush;
+unlockout();
         _func( _return_funccall[r.first].data, _inputiterator_value[r.first] );
         ++cntevalfunc;
         _accf( _value, _return_funccall[r.first].data );
@@ -167,13 +172,20 @@ public:
         { /* accumulate data */
           cntevalfunc += r_result.size();
           for (range::index_type i=r_result.first; (i<r_result.last) && !(isfinish = !_pred(_value)); ++i)
+          {
+lockout(); 
+            std::cout << "Tmaster get result from thief:" << thief_result << "   "
+                      << thief_result->return_funccall[i].data
+                      << std::endl << std::flush;
+unlockout();
             _accf( _value, thief_result->return_funccall[i].data );
+          }
         } 
         else 
         {
           /* if thief is finish: remove it from list */
           int err __attribute__((unused)) = kaapi_remove_finishedthief( sc, thief);
-#if TRACE_
+#if 0//TRACE_
           {
             if (err == EBUSY)
             {
@@ -203,6 +215,7 @@ public:
 
         /* next thief ? */
         thief = kaapi_get_nextthief_head( sc, thief );
+
       } // thief != 0
     } // while pas fini
 
@@ -296,6 +309,12 @@ protected:
       {
         _func( return_funccall[_range.first].data, _inputiterator_value[_range.first] ); 
         _thief_result->return_queue.push_back( range(_range.first-first, 1+_range.first-first) );
+
+lockout();
+        std::cout << "Thief " << _thief_result << " eval:" << _inputiterator_value[_range.first]
+                  << " -> " << return_funccall[_range.first].data
+                  << std::endl << std::flush;
+unlockout();
 
         ++_range.first;
         if (_range.is_empty()) break;

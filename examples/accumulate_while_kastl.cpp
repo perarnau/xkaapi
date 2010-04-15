@@ -21,7 +21,7 @@ struct Sin {
   typedef double result_type;
   void operator()(double& result, double a) 
   {
-    result=1; //sin(a);
+    result=a; //sin(a);
     sleep(1);
   }
 };
