@@ -107,6 +107,11 @@ namespace impl {
      : first(f), last(l)
     { }
     
+    void clear()
+    {
+      first = last = 0;
+    }
+
     index_type size() const
     {
       if (first < last) return last - first;
@@ -116,6 +121,13 @@ namespace impl {
     bool is_empty() const
     {
       return !(first < last);
+    }
+    
+    /* shift the range to put the first at orig */
+    void shift( range::index_type orig )
+    {
+      last  -= first-orig;
+      first = orig;
     }
   };
   
@@ -135,7 +147,7 @@ namespace impl {
     
     /* set the work_queue */
     void set( const range& );
-    
+
     /* clear the work_queue 
      */
     inline void clear();
@@ -148,11 +160,41 @@ namespace impl {
      */
     inline size_type size() const;
     
+    /* push a new valid subrange at the begin of the queue.
+       Only valid of the pushed range just before the remainding part of the queue,
+       i.e. iff queue.beg == range.last.
+       If the range is valid then returns true else return false.
+       The method is concurrent with the steal's methods.
+     */
+    bool push_front( const range& r );
+    
+    /* extend the queue from [_beg,_end) to [first, _end)
+       Only valid of the first < _beg.
+       If its valid then returns true else return false.
+       The method is concurrent with the steal's methods.
+     */
+    bool push_front( const range::index_type& first );
+
     /* pop a subrange of size at most sz 
-     return true in case of success
+       return true in case of success
      */
     bool pop(range&, size_type sz);
     
+    /* push_back a new valid subrange at the end of the queue.
+       Only valid of the pushed range just after the queue,
+       i.e. iff queue.end == range.first.
+       If the range is valid then returns true else return false.
+       The method is concurrent with the pop's method.
+     */
+    bool push_back( const range& r );
+    
+    /* extend the queue from [_beg,_end) to [_beg, last)
+       Only valid of the last > _end.
+       If its valid then returns true else return false.
+       The method is concurrent with the pop's method.
+     */
+    bool push_back( const range::index_type& last );
+
     /* steal a subrange of size at most sz
        return true in case of success
      */
@@ -200,7 +242,7 @@ namespace impl {
     kaapi_writemem_barrier();
     _end = r.last;
   }
-  
+
   /** */
   inline void work_queue::clear()
   {
@@ -226,7 +268,26 @@ namespace impl {
     work_queue_index_t e = _end;
     return e <= b;
   }
+
+  /** */
+  inline bool work_queue::push_front( const range& r )
+  {
+    kaapi_assert_debug( !r.is_empty() ) ;
+    kaapi_writemem_barrier();
+    if (r.last != _beg ) return false;
+    _beg = r.first;
+    return true;
+  }
   
+  /** */
+  inline bool work_queue::push_front( const range::index_type& first )
+  {
+    if (first > _beg ) return false;
+    kaapi_writemem_barrier();
+    _beg = first;
+    return true;
+  }
+
   /** */
   inline bool work_queue::pop(range& r, work_queue::size_type size)
   {
@@ -241,6 +302,25 @@ namespace impl {
 //Cannot make assert here due to changing _end    kaapi_assert_debug( (_beg >=0) && (_beg <= _end) );
     kaapi_assert_debug( (r.first >=0) && (r.first <= r.last) );
     
+    return true;
+  }
+
+  /** */
+  inline bool work_queue::push_back( const range& r )
+  {
+    kaapi_assert_debug( !r.is_empty() ) ;
+    if (r.first != _end ) return false;
+    kaapi_writemem_barrier();
+    _end = r.last;
+    return true;
+  }
+
+  /** */
+  inline bool work_queue::push_back( const range::index_type& last )
+  {
+    if (last < _end ) return false;
+    kaapi_writemem_barrier();
+    _end = last;
     return true;
   }
 

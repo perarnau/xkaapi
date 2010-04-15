@@ -50,7 +50,7 @@ static inline void steal_sync(kaapi_stealcontext_t* stc)
     kaapi_slowdown_cpu();
 }
 
-struct kaapi_taskadaptive_result_t* kaapi_preempt_getnextthief_tail( kaapi_stealcontext_t* stc )
+struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc )
 {
   volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 

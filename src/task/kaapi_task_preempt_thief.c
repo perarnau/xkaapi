@@ -44,34 +44,19 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preempt_nextthief_helper( 
+
+
+/*
+*/
+int kaapi_remove_finishedthief( 
   kaapi_stealcontext_t*        stc, 
-  kaapi_taskadaptive_result_t* ktr, 
-  void*                        arg_to_thief
+  kaapi_taskadaptive_result_t* ktr
 )
 {
   kaapi_taskadaptive_t* ta;
-#if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint64_t t1;
-  kaapi_uint64_t t0;
-#endif
-  if (ktr ==0) return 0;
+  if (!ktr->thief_term) return EBUSY;
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  t0 = kaapi_get_elapsedns();
-#endif
   ta = (kaapi_taskadaptive_t*)stc;
-
-  /* pass arg to the thief */
-  ktr->arg_from_victim = arg_to_thief;  
-  kaapi_writemem_barrier();
-
-  ktr->req_preempt = 1;
-  kaapi_mem_barrier();
-    
-  /* busy wait thief receive preemption */
-  while (!ktr->thief_term) 
-    kaapi_slowdown_cpu();
 
   /*ok: here thief has been preempted */
   kaapi_readmem_barrier();
@@ -113,6 +98,45 @@ int kaapi_preempt_nextthief_helper(
   ktr->prev = 0;
 
   KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+  return 0;
+}
+
+
+
+
+/*
+*/
+int kaapi_preempt_thief_helper( 
+  kaapi_stealcontext_t*        stc, 
+  kaapi_taskadaptive_result_t* ktr, 
+  void*                        arg_to_thief
+)
+{
+  kaapi_taskadaptive_t* ta;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_uint64_t t1;
+  kaapi_uint64_t t0;
+#endif
+  if (ktr ==0) return 0;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t0 = kaapi_get_elapsedns();
+#endif
+  ta = (kaapi_taskadaptive_t*)stc;
+
+  /* pass arg to the thief */
+  ktr->arg_from_victim = arg_to_thief;  
+  kaapi_writemem_barrier();
+
+  ktr->req_preempt = 1;
+  kaapi_mem_barrier();
+    
+  /* busy wait thief receive preemption */
+  while (!ktr->thief_term) 
+    kaapi_slowdown_cpu();
+
+  kaapi_remove_finishedthief(stc, ktr);    
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   t1 = kaapi_get_elapsedns();
   stc->ctxtthread->proc->t_preempt += (double)(t1-t0)*1e-9;
@@ -121,3 +145,27 @@ int kaapi_preempt_nextthief_helper(
   
   return 1;
 }
+
+
+int kaapi_preemptasync_thief_helper( 
+  kaapi_stealcontext_t*               stc, 
+  struct kaapi_taskadaptive_result_t* ktr, 
+  void*                               arg_to_thief 
+)
+{
+  kaapi_taskadaptive_t* ta;
+  if (ktr ==0) return 0;
+
+  ta = (kaapi_taskadaptive_t*)stc;
+
+  /* pass arg to the thief */
+  ktr->arg_from_victim = arg_to_thief;  
+  kaapi_writemem_barrier();
+
+  ktr->req_preempt = 1;
+  kaapi_mem_barrier();
+  
+  if (!ktr->thief_term) return EBUSY;
+  return 0;
+}
+

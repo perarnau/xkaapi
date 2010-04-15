@@ -51,13 +51,28 @@ static inline void steal_sync(kaapi_stealcontext_t* stc)
     kaapi_slowdown_cpu();
 }
 
-struct kaapi_taskadaptive_result_t* kaapi_preempt_getnextthief_head( kaapi_stealcontext_t* stc )
+kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* stc )
 {
-  volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 
   if (ta->head == NULL)
     steal_sync(stc);
 
   /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
   return ta->head;  
+}
+
+kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* stc, kaapi_taskadaptive_result_t* curr )
+{
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_taskadaptive_result_t* ncurr;
+  
+  while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
+    kaapi_slowdown_cpu();
+  ncurr = curr->next;
+  if (ncurr ==0) ncurr = ta->head; /* try restarting from head */
+  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+  
+  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
+  return ncurr;
 }
