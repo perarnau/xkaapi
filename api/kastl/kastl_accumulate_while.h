@@ -185,6 +185,7 @@ continue_because_predicate_is_false:
                 << ", S_delay (s): " << 1e-9 * delay_thieves
                 << ", Master delay (s): " << 1e-9 * double(t1-t0)
                 << ", Ratio: " << delay_thieves / double(t1-t0)
+                << ", size queue: " << _queue.size()
                 << std::endl;
   unlockout();
 }
@@ -198,7 +199,6 @@ continue_because_predicate_is_false:
         _queue.set( range(0, sz_used) ); 
       }
 #endif
-      
       /* preempt thieves */
       thief_nowork = 0;
       thief = kaapi_preempt_getnextthief_head( sc );
@@ -401,6 +401,11 @@ protected:
       if (kaapi_request_ok(&request[i]))
       {
         --cntthieves;
+#if 0
+  lockout();      
+        std::cout << "Delay thief[" << i << "]= " << request[i].delay << std::endl<< std::flush;
+  unlockout();      
+#endif
         if (_delay[i] < request[i].delay) _delay[i] = request[i].delay;
       }
     
