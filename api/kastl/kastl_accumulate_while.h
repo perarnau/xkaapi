@@ -53,7 +53,7 @@
 #define KAAPI_MAX_PROCESSOR 16
 #endif
 
-#if TRACE_
+#if 1//TRACE_
 static pthread_mutex_t lock_cout = PTHREAD_MUTEX_INITIALIZER;
 void lockout() 
 {
@@ -127,8 +127,8 @@ public:
     /*  ---- */
     if (_windowsize == (size_t)-1) 
     {
-      blocsize  = 256; //4*kaapi_getconcurrency();
-      _pargrain = 4;
+      blocsize  = 4*kaapi_getconcurrency();
+      _pargrain = 8;
     }
     else 
     {
