@@ -121,14 +121,12 @@ public:
     size_t last_blocsize;
     typename Function::result_type return_funccall;
     kaapi_uint64_t  t0, t1;
-
-
     
     /*  ---- */
     if (_windowsize == (size_t)-1) 
     {
       blocsize  = 4*kaapi_getconcurrency();
-      _pargrain = 8;
+      _pargrain = 4;
     }
     else 
     {
