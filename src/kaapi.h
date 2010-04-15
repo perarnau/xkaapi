@@ -476,6 +476,7 @@ typedef struct kaapi_taskadaptive_result_t {
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
   int volatile                        req_preempt;
+  int volatile                        is_signaled;
 } kaapi_taskadaptive_result_t;
 #endif
 
@@ -928,6 +929,7 @@ extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t*);
   {									\
     if (!kaapi_is_null((void*)reducer))					\
       __res = ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__);	\
+    while (!tr->is_signaled) kaapi_slowdown_cpu();			\
     kaapi_free_thief_result(tr);					\
   }									\
   __res;								\

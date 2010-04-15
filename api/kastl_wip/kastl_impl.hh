@@ -10,10 +10,13 @@
 
 
 
-#define KASTL_DEBUG 1
+#define KASTL_DEBUG 0
 
 #if KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
+
+static volatile unsigned long __attribute__((aligned)) printid = 0;
+
 #endif
 
 
@@ -46,30 +49,8 @@ namespace impl
 
   // sequence types
 
-  struct LockableSequence
-  {
-    kaapi_atomic_t _lock;
-
-    LockableSequence()
-    {
-      KAAPI_ATOMIC_WRITE(&_lock, 0);
-    }
-
-    inline void lock()
-    {
-      while (!KAAPI_ATOMIC_CAS(&_lock, 0, 1))
-	;
-    }
-
-    inline void unlock()
-    {
-      KAAPI_ATOMIC_WRITE(&_lock, 0);
-    }
-  };
-
-
   template<typename IteratorType>
-  struct BasicSequence : public LockableSequence
+  struct BasicSequence
   {
     typedef BasicSequence<IteratorType> SequenceType;
     typedef typename std::iterator_traits<IteratorType>::difference_type SizeType;
@@ -141,7 +122,7 @@ namespace impl
 
 
   template<typename Iterator0Type, typename Iterator1Type>
-  struct In2EqSizedSequence : public LockableSequence
+  struct In2EqSizedSequence
   {
     typedef In2EqSizedSequence<Iterator0Type, Iterator1Type>
     SequenceType;
@@ -215,7 +196,7 @@ namespace impl
     typename InputIterator1Type,
     typename OutputIteratorType
   >
-  struct In2OutSequence : public LockableSequence
+  struct In2OutSequence
   {
     // 2 input sequences, sizes not eq
 
@@ -332,7 +313,7 @@ namespace impl
     typename OutputIteratorType,
     typename ComparatorType
   >
-  class OrderedSequence : public LockableSequence
+  class OrderedSequence
   {
   public:
 
@@ -484,7 +465,7 @@ namespace impl
     typename InputIteratorType,
     typename OutputIteratorType
   >
-  struct InOutSequence : public LockableSequence
+  struct InOutSequence
   {
     // _opos is synchronized with _iseq._beg
 
@@ -780,12 +761,15 @@ namespace impl
     WorkType* const victim_work =
       static_cast<WorkType*>(victim_voidptr);
 
+    victim_work->lock();
+
 #if KASTL_DEBUG
       const typename SequenceType::RangeType vr =
 	SequenceType::get_range(victim_work->_ori_seq, victim_work->_macro_seq);
       const typename SequenceType::RangeType tr =
 	SequenceType::get_range(thief_work->_ori_seq, thief_work->_macro_seq);
-      printf("r: %c#%u [%lu - %lu] <- %c#%u [%lu - %lu]\n",
+      printf("[%lu] r: %c#%u [%lu - %lu] <- %c#%u [%lu - %lu]\n",
+	     ++printid,
 	     victim_work->_is_master ? 'm' : 's',
 	     (unsigned int)victim_work->_kid,
 	     vr.first, vr.second,
@@ -795,10 +779,9 @@ namespace impl
 #endif
 
     victim_work->reduce(*thief_work);
-
-    victim_work->_macro_seq.lock();
     thief_work->_macro_seq.affect_seq(victim_work->_macro_seq);
-    victim_work->_macro_seq.unlock();
+
+    victim_work->unlock();
 
     // always return 1 so that the
     // victim knows about preemption
@@ -839,23 +822,28 @@ namespace impl
     {
       typedef typename WorkType::SequenceType SequenceType;
 
+      int replied_count = 0;
+
       WorkType* const victim_work =
 	static_cast<WorkType*>(args);
 
       SequenceType* const victim_seq = &victim_work->_macro_seq;
 
       // TODO: remove this lock
-      victim_seq->lock();
-
-      int replied_count = 0;
+      victim_work->lock();
 
       const size_t work_size = victim_seq->size();
       size_t par_size = work_size / (1 + (size_t)request_count);
+
       if (par_size < ParSize)
       {
 	request_count = work_size / ParSize - 1;
 	par_size = ParSize;
       }
+
+#if KASTL_DEBUG
+      printf("[%u] par_size(%u, %d)\n", ++printid, par_size, request_count);
+#endif
 
       StaticReverseExtractor<SequenceType> extractor(par_size);
 
@@ -876,6 +864,9 @@ namespace impl
 	thief_work = static_cast<WorkType*>
 	  (kaapi_thread_pushdata(thief_thread, sizeof(WorkType)));
 
+	// TODO: remove
+	KAAPI_ATOMIC_WRITE(&thief_work->_lock, 0);
+
 	thief_work->_is_done = false;
 	thief_work->_tresult = kaapi_allocate_thief_result
 	  (sc, sizeof(WorkType), NULL);
@@ -889,26 +880,36 @@ namespace impl
 	  SequenceType::get_range(victim_work->_ori_seq, *victim_seq);
 	const typename SequenceType::RangeType tr =
 	  SequenceType::get_range(victim_work->_ori_seq, thief_work->_seq);
-	printf("s: %c#%x [%lu - %lu] -> %c#%x [%lu - %lu]\n",
+	printf("[%lu] s: %c#%x [%lu - %lu] -> %c#%x [%lu - %lu] (%lx)\n",
+	       ++printid,
 	       victim_work->_is_master ? 'm' : 's',
 	       (unsigned int)victim_work->_kid,
 	       vr.first, vr.second,
 	       thief_work->_is_master ? 'm' : 's',
 	       (unsigned int)thief_work->_kid,
-	       tr.first, tr.second);
+	       tr.first, tr.second,
+	       (uintptr_t)thief_work->_tresult);
 #endif
 
 	thief_work->_const = victim_work->_const;
 	thief_work->prepare();
 
-	// no need to prepare since at least one iteration is done
-	// static_cast<WorkType*>(thief_work->_tresult->data)->prepare();
-
 #if KASTL_DEBUG
 	thief_work->_is_master = false;
 	thief_work->_ori_seq = victim_work->_ori_seq;
 #endif
-        
+
+	// this should be unneeded BUT
+	// there are yet cases (bugs)
+	// were a reduction occurs prior
+	// the task has updated its own
+	// result.
+#if 0
+	static_cast<WorkType*>(thief_work->_tresult->data)->prepare();
+#else
+	memcpy(thief_work->_tresult->data, thief_work, sizeof(WorkType));
+#endif
+ 
 	kaapi_task_init(thief_task, child_entry<WorkType>, thief_work);
 	kaapi_thread_pushtask(thief_thread);
         
@@ -919,7 +920,7 @@ namespace impl
       }
 
       // TODO: remove this lock
-      victim_seq->unlock();
+      victim_work->unlock();
 
       return replied_count;
     }
@@ -960,6 +961,8 @@ namespace impl
     kaapi_taskadaptive_result_t* _tresult;
     kaapi_stealcontext_t* _master_sc;
 
+    kaapi_atomic_t _lock;
+
 #if KASTL_DEBUG
     SequenceType _ori_seq;
     bool _is_master;
@@ -971,7 +974,9 @@ namespace impl
       _is_done(false),
       _tresult(NULL),
       _master_sc(NULL)
-    {}
+    {
+      KAAPI_ATOMIC_WRITE(&_lock, 0);
+    }
 
     BaseWork
     (
@@ -983,6 +988,7 @@ namespace impl
 	_tresult(NULL),
 	_master_sc(NULL)
     {
+      KAAPI_ATOMIC_WRITE(&_lock, 0);
       _seq.empty_seq(_macro_seq);
     }
 
@@ -993,6 +999,18 @@ namespace impl
     inline bool is_empty() const
     {
       return _seq.is_empty();
+    }
+
+    inline void lock()
+    {
+      while (!KAAPI_ATOMIC_CAS(&_lock, 0, 1))
+	;
+      kaapi_mem_barrier();
+    }
+
+    inline void unlock()
+    {
+      KAAPI_ATOMIC_WRITE(&_lock, 0);
     }
 
   };
@@ -1206,16 +1224,16 @@ namespace impl
   advance_work:
 
     // TODO: replace with a no lock version
-    work->_macro_seq.lock();
+    work->lock();
     work->_macro_seq.empty_seq(nano_seq);
-    work->_macro_seq.unlock();
+    work->unlock();
 
     while (true)
     {
-      work->_macro_seq.lock();
+      work->lock();
       const bool has_extracted = nano_extractor.extract
 	(nano_seq, work->_macro_seq);
-      work->_macro_seq.unlock();
+      work->unlock();
 
       if (has_extracted == false)
 	break;
@@ -1223,7 +1241,8 @@ namespace impl
 #if KASTL_DEBUG
       const typename SequenceType::RangeType r =
 	SequenceType::get_range(work->_ori_seq, nano_seq);
-      printf("c: %c#%x [%lu - %lu] \n",
+      printf("[%lu] c: %c#%x [%lu - %lu] \n",
+	     ++printid,
 	     work->_is_master ? 'm' : 's',
 	     (unsigned int)work->_kid,
 	     r.first, r.second);
@@ -1232,7 +1251,7 @@ namespace impl
       work->compute(nano_seq);
 
       if (work->_is_done)
-	return ;
+	goto on_done;
 
       // TODO: find a way to remove this test
       if (work->_tresult != NULL)
@@ -1241,13 +1260,21 @@ namespace impl
 	const int is_reduced = kaapi_preemptpoint
 	  (work->_tresult, sc, NULL, NULL, work, sizeof(WorkType), NULL);
 	if (is_reduced)
+	{
+#if KASTL_DEBUG
+	  printf("[%lu] p: %c%u\n",
+		 ++printid,
+		 work->_is_master ? 'm' : 's',
+		 (unsigned int)work->_kid);
+#endif
+
 	  return ;
+	}
       }
     }
 
-    kaapi_taskadaptive_result_t* const ktr =
-      kaapi_preempt_getnextthief_head(sc);
-
+    kaapi_taskadaptive_result_t* ktr;
+    ktr = kaapi_preempt_getnextthief_head(sc);
     if (ktr != NULL)
     {
       kaapi_preempt_thief(sc, ktr, NULL, reducer, work);
@@ -1255,11 +1282,21 @@ namespace impl
 	goto advance_work;
     }
 
+    // no more thieves, we are done
+
+  on_done:
     if (work->_tresult != NULL)
     {
       // update results before leaving
       memcpy(work->_tresult->data, work, sizeof(WorkType));
     }
+
+#if KASTL_DEBUG
+    printf("[%lu] d: %c%u\n",
+	   ++printid,
+	   work->_is_master ? 'm' : 's',
+	   (unsigned int)work->_kid);
+#endif
   }
 
   template<typename WorkType>
@@ -1271,9 +1308,9 @@ namespace impl
 
     WorkType* const work = static_cast<WorkType*>(args);
 
-    work->_macro_seq.lock();
+    work->lock();
     work->_seq.affect_seq(work->_macro_seq);
-    work->_macro_seq.unlock();
+    work->unlock();
 
     process_macro_sequence<WorkType>(thread, sc, work);
 
@@ -1299,10 +1336,10 @@ namespace impl
 
     while (true)
     {
-      work->_macro_seq.lock();
+      work->lock();
       const bool has_extracted = macro_extractor.extract
 	(work->_macro_seq, work->_seq);
-      work->_macro_seq.unlock();
+      work->unlock();
 
       if (has_extracted == false)
 	break;
@@ -1387,7 +1424,8 @@ namespace impl
 #if KASTL_DEBUG
       const typename SequenceType::RangeType r =
 	SequenceType::get_range(work->_ori_seq, nano_seq);
-      printf("c: %c#%x [%lu - %lu] \n",
+      printf("[%lu] c: %c#%x [%lu - %lu] \n",
+	     ++printid,
 	     work->_is_master ? 'm' : 's',
 	     (unsigned int)work->_kid,
 	     r.first, r.second);
