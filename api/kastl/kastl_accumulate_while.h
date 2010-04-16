@@ -327,6 +327,7 @@ unlockout();
 
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
+    return 0;
   }
 
   /* */
@@ -436,14 +437,14 @@ unlockout();
 protected:
   work_queue                   _queue;     /* first to ensure alignment constraint */
   size_t*                      _returnval; /* number of iteration, output of seq call */
-  T&                           _value __attribute__((alligned(64)));
+  T&                           _value __attribute__((aligned(64)));
   Iterator                     _ibeg;
   Iterator                     _iend;
   Function&                    _func;
   Inserter&                    _accf;
   Predicate&                   _pred;
-  value_type*                  _inputiterator_value __attribute__((alligned(64)));
-  ResultElem_t*                _return_funccall     __attribute__((alligned(64)));
+  value_type*                  _inputiterator_value __attribute__((aligned(64)));
+  ResultElem_t*                _return_funccall     __attribute__((aligned(64)));
   kaapi_stealcontext_t*        _master;
   size_t                       _pargrain;
 };
