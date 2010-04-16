@@ -113,6 +113,8 @@ public:
     size_t cntevalfunc =0;
     size_t i, blocsize;
     kaapi_taskadaptive_result_t* thief;
+    int seqgrain = 1;
+    int nonconvergence_iter = 0;
 
 #if TRACE_
     kaapi_uint64_t  t0, t1;
@@ -159,7 +161,7 @@ public:
 #endif
 
       /* do one computation */
-      if (_queue.pop(r, 1))
+      if (_queue.pop(r, seqgrain))
       {
 #if TRACE_
 lockout();
@@ -168,10 +170,13 @@ lockout();
                   << std::endl << std::flush;
 unlockout();
 #endif
-        _func( _return_funccall[r.first].data, _inputiterator_value[r.first] );
-        ++cntevalfunc;
-        _accf( _value, _return_funccall[r.first].data );
-        isfinish = !_pred(_value);
+        for ( ; (r.first != r.last) && !isfinish; ++r.first )
+        {
+          _func( _return_funccall[r.first].data, _inputiterator_value[r.first] );
+          ++cntevalfunc;
+          _accf( _value, _return_funccall[r.first].data );
+          isfinish = !_pred(_value);
+        }
       }
 
       /* accumulate data from all thieves */
@@ -202,8 +207,9 @@ unlockout();
 
         /* next thief ? */
         thief = kaapi_get_nextthief_head( sc, thief );
-
       } // thief != 0
+      ++nonconvergence_iter;
+      if ((!isfinish) && (nonconvergence_iter == 2)) _pargrain = 2;
     } // while pas fini
 
 
@@ -360,7 +366,6 @@ unlockout();
   */
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
-#if 0  
     size_t size = _queue.size();     /* upper bound */
     if (size < _pargrain) return 0;
 
@@ -440,47 +445,6 @@ unlockout();
               << std::endl << std::flush;
 #endif
     return reply_count; 
-
-#else // #if 0 steal 1 and return--------
-    range r;
-
-    /* */
-    if ( !_queue.steal(r, 1, 1 )) return 0;
-    kaapi_assert_debug (!r.is_empty());
-    
-    ThiefWork_t* output_work;
-    int i = 0;
-
-    while (count >0)
-    {
-      if (kaapi_request_ok(&request[i]))
-      {
-        kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
-        kaapi_task_t* thief_task  = kaapi_thread_toptask(thief_thread);
-        kaapi_task_init( thief_task, &ThiefWork_t::static_entrypoint, kaapi_thread_pushdata_align(thief_thread, sizeof(ThiefWork_t), 8) );
-
-        kaapi_assert_debug( !r.is_empty() );
-        range rq(r.first, r.last);
-
-        output_work = new (kaapi_task_getargst(thief_task, ThiefWork_t))
-            ThiefWork_t( 
-              rq, 
-              _func,
-              sc,
-              kaapi_allocate_thief_result( sc, sizeof(ThiefResult_t) + rq.size()*sizeof(result_type), 0 ),
-              _inputiterator_value,
-              _return_funccall
-            );
-        kaapi_thread_pushtask( thief_thread );
-
-        /* reply ok (1) to the request, push it into the tail of the list */
-        kaapi_request_reply_tail( sc, &request[i], output_work->_tr );
-        return 1;
-      }
-      ++i;
-    }
-    return 0; 
-#endif //#if 0
   }
 
 
