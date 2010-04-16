@@ -119,8 +119,8 @@ public:
 #endif
     
     /*  ---- */
-    blocsize = 1*kaapi_getconcurrency();
-    _pargrain = 1;
+    blocsize = 2*kaapi_getconcurrency();
+    _pargrain = 2;
 
     
     /* input */
