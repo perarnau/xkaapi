@@ -6,10 +6,11 @@
 #include "count.hh"
 #include "for_each.hh"
 #include "transform.hh"
+#include "search.hh"
 
 
 #if 0 // speed compile time up
-#include "search.hh"
+#include "inner_product.hh"
 #include "partial_sum.hh"
 #include "merge.hh"
 #include "sort.hh"
@@ -17,7 +18,6 @@
 #include "max_element.hh"
 #include "accumulate.hh"
 #include "find.hh"
-#include "inner_product.hh"
 #include "copy.hh"
 #include "fill.hh"
 #include "replace.hh"

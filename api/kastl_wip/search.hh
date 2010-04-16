@@ -78,7 +78,7 @@ public:
   inline void prepare()
   { this->_res = this->_const->_bad_res; }
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
     const typename SequenceType::_IteratorType seq_end =
       seq._end + this->_const->win_size();
@@ -90,6 +90,8 @@ public:
      this->_const->_end,
      this->_const->_pred
     );
+
+    seq._beg = seq._end;
 
     if (result == seq_end)
       return ;
@@ -122,7 +124,7 @@ public:
 
 struct SearchTuningParams : Daouda1TuningParams
 {
-#if 1
+#if 0
   static const enum TuningTag macro_tag = TAG_LINEAR;
   static const size_t macro_min_size = 1024;
   static const size_t macro_max_size = 32768;

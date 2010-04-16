@@ -398,6 +398,78 @@ public:
 
 };
 
+class SearchRun : public RunInterface
+{
+  SequenceType::iterator _kastl_res;
+  SequenceType::iterator _stl_res;
+
+  ptrdiff_t _kastl_index;
+  ptrdiff_t _stl_index;
+
+  SequenceType _ref_seq;
+
+  static void gen_ref_seq(SequenceType& seq, unsigned int n)
+  {
+    static const size_t size = 10;
+
+    // generate reference sequence
+    seq.resize(size);
+    for (size_t count = 0; count < size;  ++count, ++n)
+      seq[count] = n;
+  }
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    // only i.frist.begin
+
+    gen_ref_seq(_ref_seq, 10);
+
+    std::copy
+    (
+       _ref_seq.begin(), _ref_seq.end(),
+       i.first.begin() + (i.first.size() / 2)
+    );
+  }
+
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _kastl_res = kastl::search
+      (
+       i.first.begin(),
+       i.first.end(),
+       _ref_seq.begin(),
+       _ref_seq.end()
+      );
+
+    _kastl_index = std::distance(i.first.begin(), _kastl_res);
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res = std::search
+      (
+       i.first.begin(),
+       i.first.end(),
+       _ref_seq.begin(),
+       _ref_seq.end()
+      );
+
+    _stl_index = std::distance(i.first.begin(), _stl_res);
+  }
+
+  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
+  {
+    if (_kastl_res == _stl_res)
+      return true;
+
+    error_string = index_error_string(_stl_index, _kastl_index);
+
+    return false;
+  }
+
+};
 
 #if 0 // speed compile time up
 
@@ -672,80 +744,6 @@ public:
        i.second.begin(), i.second.end());
 
     _stl_index = _stl_res - i.first.begin();
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
-
-    error_string = index_error_string(_stl_index, _kastl_index);
-
-    return false;
-  }
-
-};
-
-
-class SearchRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-  ptrdiff_t _kastl_index;
-  ptrdiff_t _stl_index;
-
-  SequenceType _ref_seq;
-
-  static void gen_ref_seq(SequenceType& seq, unsigned int n)
-  {
-    static const size_t size = 10;
-
-    // generate reference sequence
-    seq.resize(size);
-    for (size_t count = 0; count < size;  ++count, ++n)
-      seq[count] = n;
-  }
-
-public:
-
-  virtual void prepare(InputType& i)
-  {
-    // only i.frist.begin
-
-    gen_ref_seq(_ref_seq, 10);
-
-    std::copy
-    (
-       _ref_seq.begin(), _ref_seq.end(),
-       i.first.begin() + (i.first.size() / 2)
-    );
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::search
-      (
-       i.first.begin(),
-       i.first.end(),
-       _ref_seq.begin(),
-       _ref_seq.end()
-      );
-
-    _kastl_index = std::distance(i.first.begin(), _kastl_res);
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::search
-      (
-       i.first.begin(),
-       i.first.end(),
-       _ref_seq.begin(),
-       _ref_seq.end()
-      );
-
-    _stl_index = std::distance(i.first.begin(), _stl_res);
   }
 
   virtual bool check(OutputType&, OutputType&, std::string& error_string) const
@@ -2018,11 +2016,11 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Count );
   MATCH_AND_CREATE( ForEach );
   MATCH_AND_CREATE( Transform );
+  MATCH_AND_CREATE( Search );
 
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
-  MATCH_AND_CREATE( Search );
   MATCH_AND_CREATE( PartialSum );
   MATCH_AND_CREATE( Accumulate );
   MATCH_AND_CREATE( MinElement );
