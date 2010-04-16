@@ -48,7 +48,7 @@
 #include "kastl/kastl_workqueue.h"
 #include <algorithm>
 
-#define TRACE_ 1
+#define TRACE_ 0
 #ifndef KAAPI_MAX_PROCESSOR
 #define KAAPI_MAX_PROCESSOR 16
 #endif
@@ -119,8 +119,8 @@ public:
 #endif
     
     /*  ---- */
-    blocsize = 3*kaapi_getconcurrency();
-    _pargrain = 3;
+    blocsize = 2*kaapi_getconcurrency();
+    _pargrain = 2;
 
     
     /* input */
@@ -143,11 +143,13 @@ public:
       /* do one computation */
       if (_queue.pop(r, 1))
       {
+#if TRACE_
 lockout();
         std::cout << "Tmaster eval:" << _inputiterator_value[r.first]
-                  << " -> " << _return_funccall[r.first].data
+                  << " -> " << _return_funccall+r.first
                   << std::endl << std::flush;
 unlockout();
+#endif
         _func( _return_funccall[r.first].data, _inputiterator_value[r.first] );
         ++cntevalfunc;
         _accf( _value, _return_funccall[r.first].data );
@@ -173,11 +175,14 @@ unlockout();
           cntevalfunc += r_result.size();
           for (range::index_type i=r_result.first; (i<r_result.last) && !(isfinish = !_pred(_value)); ++i)
           {
+
+#if TRACE_
 lockout(); 
             std::cout << "Tmaster get result from thief:" << thief_result << "   "
-                      << thief_result->return_funccall[i].data
+                      << thief_result->return_funccall+i
                       << std::endl << std::flush;
 unlockout();
+#endif
             _accf( _value, thief_result->return_funccall[i].data );
           }
         } 
@@ -310,11 +315,13 @@ protected:
         _func( return_funccall[_range.first].data, _inputiterator_value[_range.first] ); 
         _thief_result->return_queue.push_back( range(_range.first-first, 1+_range.first-first) );
 
+#if TRACE_
 lockout();
         std::cout << "Thief " << _thief_result << " eval:" << _inputiterator_value[_range.first]
-                  << " -> " << return_funccall[_range.first].data
+                  << " -> " << return_funccall + _range.first //].data
                   << std::endl << std::flush;
 unlockout();
+#endif
 
         ++_range.first;
         if (_range.is_empty()) break;
