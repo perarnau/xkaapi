@@ -57,8 +57,6 @@ Makefile
 /examples/nqueens_apikaapi
 /examples/poisson3d-kaapi
 /examples/transform_adapt
-/src/kaapi_check_header
-/src/kaapi_check_header_strict
 /examples/transform_adapt_preempt
 /examples/transform_kastl
 /examples/transform_std
