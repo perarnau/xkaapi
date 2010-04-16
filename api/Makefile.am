@@ -94,10 +94,10 @@ kastlinclude_HEADERS=\
 
 kastlincludedir=$(includedir)/kastl
 
-check_PROGRAMS=ka_api_check_header
-if STD_CXX0X
-check_PROGRAMS+=atha1_check_header_strict
-endif
+#check_PROGRAMS=ka_api_check_header
+#if STD_CXX0X
+#check_PROGRAMS+=atha1_check_header_strict
+#endif
 check_headers_SRC=\
         check/ka_api_header.cpp \
         check/ka_api_h_header.cpp \
