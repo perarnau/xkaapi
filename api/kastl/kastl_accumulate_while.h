@@ -215,6 +215,7 @@ unlockout();
         seqgrain = 2;
         blocsize *= 2;
       }
+      if (_isfinish) std::cout << "Its finished !" << std::endl;
     } // while pas fini
 
 
@@ -228,12 +229,14 @@ unlockout();
     t0 = kaapi_get_elapsedns();
 #endif
     /* only do signal */
+#if 0
     thief = kaapi_get_thief_head( sc );
     while (thief !=0)
     {
       kaapi_preemptasync_thief(sc, thief, 0);
       thief = kaapi_get_nextthief_head( sc, thief );
     }
+#endif
 
     /* remove or preempt thief */
     thief = kaapi_get_thief_head( sc );
@@ -298,7 +301,8 @@ protected:
       ResultElem_t* return_funccall = _thief_result->return_funccall - first;
       while ( _range.first != _range.last )
       {
-        if (_isfinish) return;
+        if (*_isfinish) return;
+#if 0
         /* test preemption ... */
         if (kaapi_preemptpoint( 
             _tr,                   /* to test preemption */
@@ -311,7 +315,7 @@ protected:
         {
           return;
         }
-
+#endif
         _func( return_funccall[_range.first].data, _inputiterator_value[_range.first] ); 
         _thief_result->return_queue.push_back( range(_range.first-first, 1+_range.first-first) );
 
