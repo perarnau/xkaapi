@@ -39,8 +39,8 @@ struct ForEachWork : public BaseWork
 
   inline void compute(SequenceType& seq)
   {
-    std::for_each(seq.begin(), seq.end(), *this->_const);
-    seq._beg = seq._end;
+    std::for_each(seq._seq._beg, seq._seq._end, *this->_const);
+    seq._seq._beg = seq._seq._end;
   }
 };
 
@@ -63,7 +63,7 @@ void for_each
  Function func
 )
 {
-  typedef kastl::impl::BasicSequence<InputIterator>
+  typedef kastl::impl::InSequence<InputIterator>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type

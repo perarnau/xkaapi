@@ -81,17 +81,17 @@ public:
   inline void compute(SequenceType& seq)
   {
     const typename SequenceType::_IteratorType seq_end =
-      seq._end + this->_const->win_size();
+      seq._seq._end + this->_const->win_size();
 
     ResultType result = std::search
     (
-     seq._beg, seq_end,
+     seq._seq._beg, seq_end,
      this->_const->_beg,
      this->_const->_end,
      this->_const->_pred
     );
 
-    seq._beg = seq._end;
+    seq._seq._beg = seq._seq._end;
 
     if (result == seq_end)
       return ;
@@ -124,7 +124,7 @@ public:
 
 struct SearchTuningParams : Daouda1TuningParams
 {
-#if 0
+#if 1
   static const enum TuningTag macro_tag = TAG_LINEAR;
   static const size_t macro_min_size = 1024;
   static const size_t macro_max_size = 32768;
@@ -155,7 +155,7 @@ Iterator0Type search
  PredicateType pred
 )
 {
-  typedef kastl::impl::BasicSequence<Iterator0Type>
+  typedef kastl::impl::InSequence<Iterator0Type>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type

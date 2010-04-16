@@ -44,8 +44,8 @@ struct CountWork : public BaseWork
 
   inline void compute(SequenceType& seq)
   {
-    this->_res += std::count(seq._beg, seq._end, *this->_const);
-    seq._beg = seq._end;
+    this->_res += std::count(seq._seq._beg, seq._seq._end, *this->_const);
+    seq._seq._beg = seq._seq._end;
   }
 
   inline void reduce(const SelfType& thief_work)
@@ -75,7 +75,7 @@ count
  const ValueType& val
 )
 {
-  typedef kastl::impl::BasicSequence<ForwardIterator>
+  typedef kastl::impl::InSequence<ForwardIterator>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type
