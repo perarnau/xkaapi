@@ -133,8 +133,8 @@ public:
 
     
     /* input */
-    _inputiterator_value = new value_type[2*blocsize];
-    _return_funccall = new ResultElem_t[2*blocsize];
+    _inputiterator_value = new value_type[4*blocsize];
+    _return_funccall = new ResultElem_t[4*blocsize];
     
     /*  ---- */
     while ((_ibeg != _iend) && !_isfinish)
@@ -209,11 +209,21 @@ unlockout();
         thief = kaapi_get_nextthief_head( sc, thief );
       } // thief != 0
       ++nonconvergence_iter;
-      if ((!_isfinish) && (nonconvergence_iter == 2))
+      if ((!_isfinish) && (nonconvergence_iter == 4))
       { 
-        _pargrain = 2;
-        seqgrain = 2;
-        blocsize *= 2;
+        if (seqgrain ==1)
+        {
+          nonconvergence_iter = 0;
+          _pargrain = 2;
+          seqgrain = 2;
+          blocsize *= 2;
+        }
+        else {
+          nonconvergence_iter = 0;
+          _pargrain = 4;
+          seqgrain = 2;
+          blocsize *= 4;
+        }
       }
       if (_isfinish) std::cout << "Its finished !" << std::endl;
     } // while pas fini
