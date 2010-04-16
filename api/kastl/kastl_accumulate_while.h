@@ -119,8 +119,8 @@ public:
 #endif
     
     /*  ---- */
-    blocsize = 2*kaapi_getconcurrency();
-    _pargrain = 2;
+    blocsize = 1*kaapi_getconcurrency();
+    _pargrain = 1;
 
     
     /* input */
@@ -130,6 +130,7 @@ public:
     /*  ---- */
     while ((_ibeg != _iend) && !isfinish)
     {
+#if 0
       /* initialize the queue: concurrent operation with respect to steal */
       _queue.set( range(blocsize, blocsize) );      
 
@@ -139,6 +140,16 @@ public:
         _inputiterator_value[blocsize -1 - i] = *_ibeg;
         _queue.push_front( blocsize -1 - i);
       }      
+#else
+      /* fill the input iterator and commit it into the queue */
+      for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
+      {
+        _inputiterator_value[i] = *_ibeg;
+      }      
+
+      /* initialize the queue: concurrent operation with respect to steal */
+      _queue.set( range(0, i) );      
+#endif
 
       /* do one computation */
       if (_queue.pop(r, 1))
