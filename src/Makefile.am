@@ -130,6 +130,7 @@ endif
 
 # No -pedantic here...
 kaapi_check_header_CPPFLAGS=@AM_CPPFLAGS@ -Werror -D_KAAPI_DISABLE_WARNINGS
+kaapi_check_header_LDFLAGS=@AM_CPPFLAGS@ 
 kaapi_check_header_SOURCES=\
 	$(check_headers_SRC_C) $(check_headers_SRC_CXX) $(check_headers_SRC_base)
 
