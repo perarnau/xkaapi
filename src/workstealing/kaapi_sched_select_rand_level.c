@@ -72,7 +72,7 @@ redo_select:
   victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
 #else
 /* \WARNING: test to bias the random generator */
-  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % (4*nbproc);
+  victimid = 0; //rand_r( (unsigned int*)&kproc->fnc_selecarg ) % (10*nbproc);
   if (victimid >= nbproc) victimid = 0;
 #endif
 
