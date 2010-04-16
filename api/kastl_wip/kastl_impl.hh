@@ -847,9 +847,8 @@ namespace impl
     victim_work->unlock();
 #endif
 
-    victim_work->reduce(*thief_work);
-
     victim_work->lock();
+    victim_work->reduce(*thief_work);
     thief_work->_macro_seq.affect_seq(victim_work->_macro_seq);
     victim_work->unlock();
 
@@ -1027,7 +1026,8 @@ namespace impl
     const ConstantType* _const;
     ResultType _res;
 
-    bool _is_done;
+    volatile bool _is_done __attribute__((aligned));
+
     kaapi_taskadaptive_result_t* _tresult;
     kaapi_stealcontext_t* _master_sc;
 
@@ -1325,21 +1325,19 @@ namespace impl
 #endif
 
       work->compute(nano_seq);
-
       if (work->_is_done)
-	goto on_done;
+	goto preempt_thieves;
 
-      // TODO: find a way to remove this test
       if (work->_tresult != NULL)
       {
 	// TODO: use thief_preempter
 	const int is_reduced = kaapi_preemptpoint
 	  (work->_tresult, sc, NULL, NULL, work, sizeof(WorkType), NULL);
+
 	if (is_reduced)
 	{
 #if CONFIG_KASTL_DEBUG
-	  printf("[%lu] p: %c%u\n",
-		 ++printid,
+	  printf("[%lu] p: %c%u\n", ++printid,
 		 work->_is_master ? 'm' : 's',
 		 (unsigned int)work->_kid);
 #endif
@@ -1349,18 +1347,23 @@ namespace impl
       }
     }
 
-    kaapi_taskadaptive_result_t* ktr;
-    ktr = kaapi_preempt_getnextthief_head(sc);
+  preempt_thieves:
+
+    // preempt all the thieves
+
+    kaapi_taskadaptive_result_t* const ktr =
+      kaapi_preempt_getnextthief_head(sc);
+
     if (ktr != NULL)
     {
       kaapi_preempt_thief(sc, ktr, NULL, reducer, work);
       if (!work->_is_done)
 	goto advance_work;
+
+      goto preempt_thieves;
     }
 
     // no more thieves, we are done
-
-  on_done:
     if (work->_tresult != NULL)
     {
       // update results before leaving
@@ -1368,8 +1371,7 @@ namespace impl
     }
 
 #if CONFIG_KASTL_DEBUG
-    printf("[%lu] d: %c%u\n",
-	   ++printid,
+    printf("[%lu] d: %c%u\n", ++printid,
 	   work->_is_master ? 'm' : 's',
 	   (unsigned int)work->_kid);
 #endif
