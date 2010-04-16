@@ -91,7 +91,7 @@ public:
       _returnval(retval), _value(value), 
       _ibeg(ibeg), _iend(iend), _func(func), _accf(insert), _pred(pred), 
       _inputiterator_value(0), _master(0), 
-      _pargrain(1)
+      _pargrain(1), _windowsize(ws)
   { 
   }
   
@@ -119,8 +119,15 @@ public:
 #endif
     
     /*  ---- */
-    blocsize = 1*kaapi_getconcurrency();
-    _pargrain = 1;
+    if (_windowsize == (size_t)-1)
+    {
+      blocsize = 1*kaapi_getconcurrency();
+      _pargrain = 1;
+    }
+    else {
+      blocsize = _windowsize;
+      _pargrain = 1;
+    }
 
     
     /* input */
@@ -279,6 +286,19 @@ protected:
       ResultElem_t* return_funccall = _thief_result->return_funccall - first;
       while ( _range.first != _range.last )
       {
+        /* test preemption ... */
+        if (kaapi_preemptpoint( 
+            _tr,                   /* to test preemption */
+            sc,                    /* to merge my thieves into list of the victim */
+            0,                     /* function to call if preemption signal */
+            0,                     /* extra data to pass to victim -> it will get the size of computed value into its reducer */ 
+            0, 0,
+            0
+        )) 
+        {
+          return;
+        }
+
         _func( return_funccall[_range.first].data, _inputiterator_value[_range.first] ); 
         _thief_result->return_queue.push_back( range(_range.first-first, 1+_range.first-first) );
 
@@ -293,18 +313,6 @@ unlockout();
         ++_range.first;
         if (_range.is_empty()) break;
 
-        /* test preemption after increment ... */
-        if (kaapi_preemptpoint( 
-            _tr,                   /* to test preemption */
-            sc,                    /* to merge my thieves into list of the victim */
-            0,                     /* function to call if preemption signal */
-            0,                     /* extra data to pass to victim -> it will get the size of computed value into its reducer */ 
-            0, 0,
-            0
-        )) 
-        {
-          return;
-        }
       } // end while
     }
 
@@ -327,6 +335,7 @@ unlockout();
 
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
+    return 0;
   }
 
   /* */
@@ -436,16 +445,17 @@ unlockout();
 protected:
   work_queue                   _queue;     /* first to ensure alignment constraint */
   size_t*                      _returnval; /* number of iteration, output of seq call */
-  T&                           _value __attribute__((alligned(64)));
+  T&                           _value __attribute__((aligned(64)));
   Iterator                     _ibeg;
   Iterator                     _iend;
   Function&                    _func;
   Inserter&                    _accf;
   Predicate&                   _pred;
-  value_type*                  _inputiterator_value __attribute__((alligned(64)));
-  ResultElem_t*                _return_funccall     __attribute__((alligned(64)));
+  value_type*                  _inputiterator_value __attribute__((aligned(64)));
+  ResultElem_t*                _return_funccall     __attribute__((aligned(64)));
   kaapi_stealcontext_t*        _master;
   size_t                       _pargrain;
+  size_t                       _windowsize;
 };
 
 } /* namespace impl */
