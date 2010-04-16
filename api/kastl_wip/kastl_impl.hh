@@ -10,9 +10,12 @@
 
 
 
-#define KASTL_DEBUG 0
+#define CONFIG_KASTL_DEBUG 0
+#define CONFIG_KASTL_MASTER_SLAVE 0
 
-#if KASTL_DEBUG
+
+
+#if CONFIG_KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
 
 static volatile unsigned long __attribute__((aligned)) printid = 0;
@@ -109,7 +112,7 @@ namespace impl
       return _beg == _end;
     }
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     typedef std::pair<SizeType, SizeType> RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
@@ -179,7 +182,7 @@ namespace impl
       return _seq0.is_empty();
     }
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     typedef typename BasicSequence<Iterator0Type>::RangeType RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
@@ -295,7 +298,7 @@ namespace impl
       return _iseq0.is_empty();
     }
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     typedef typename BasicSequence<InputIterator0Type>::RangeType RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
@@ -450,7 +453,7 @@ namespace impl
       _iseq1 = BasicSequence<InputIterator1Type>(mid1, _iseq1._end);
     }
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     typedef typename BasicSequence<InputIterator0Type>::RangeType RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
@@ -548,7 +551,7 @@ namespace impl
       return _iseq._beg == _iseq._end;
     }
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     typedef std::pair<SizeType, SizeType> RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
@@ -763,7 +766,7 @@ namespace impl
 
     victim_work->lock();
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
       const typename SequenceType::RangeType vr =
 	SequenceType::get_range(victim_work->_ori_seq, victim_work->_macro_seq);
       const typename SequenceType::RangeType tr =
@@ -841,8 +844,10 @@ namespace impl
 	par_size = ParSize;
       }
 
-#if KASTL_DEBUG
-      printf("[%u] par_size(%u, %d)\n", ++printid, par_size, request_count);
+#if CONFIG_KASTL_DEBUG
+#if 0
+      printf("[%lu] par_size(%lu, %d)\n", ++printid, par_size, request_count);
+#endif
 #endif
 
       StaticReverseExtractor<SequenceType> extractor(par_size);
@@ -875,7 +880,7 @@ namespace impl
 	extractor.extract(thief_work->_seq, *victim_seq);
 	thief_work->_seq.empty_seq(thief_work->_macro_seq);
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
 	const typename SequenceType::RangeType vr =
 	  SequenceType::get_range(victim_work->_ori_seq, *victim_seq);
 	const typename SequenceType::RangeType tr =
@@ -894,7 +899,7 @@ namespace impl
 	thief_work->_const = victim_work->_const;
 	thief_work->prepare();
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
 	thief_work->_is_master = false;
 	thief_work->_ori_seq = victim_work->_ori_seq;
 #endif
@@ -963,7 +968,7 @@ namespace impl
 
     kaapi_atomic_t _lock;
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     SequenceType _ori_seq;
     bool _is_master;
     typedef unsigned int kaapi_processor_id_t;
@@ -1198,9 +1203,6 @@ namespace impl
   typedef int (*kastl_reducer_t)
   (kaapi_stealcontext_t*, void*, void*, size_t, void*);
 
-#define KASTL_MASTER_SLAVE 1
-#if KASTL_MASTER_SLAVE
-
   template<typename WorkType>
   void process_macro_sequence
   (
@@ -1217,7 +1219,7 @@ namespace impl
     NanoType nano_extractor;
     SequenceType nano_seq;
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     work->_kid = kaapi_get_current_kid();
 #endif
 
@@ -1238,7 +1240,7 @@ namespace impl
       if (has_extracted == false)
 	break;
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
       const typename SequenceType::RangeType r =
 	SequenceType::get_range(work->_ori_seq, nano_seq);
       printf("[%lu] c: %c#%x [%lu - %lu] \n",
@@ -1261,7 +1263,7 @@ namespace impl
 	  (work->_tresult, sc, NULL, NULL, work, sizeof(WorkType), NULL);
 	if (is_reduced)
 	{
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
 	  printf("[%lu] p: %c%u\n",
 		 ++printid,
 		 work->_is_master ? 'm' : 's',
@@ -1291,13 +1293,15 @@ namespace impl
       memcpy(work->_tresult->data, work, sizeof(WorkType));
     }
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     printf("[%lu] d: %c%u\n",
 	   ++printid,
 	   work->_is_master ? 'm' : 's',
 	   (unsigned int)work->_kid);
 #endif
   }
+
+#if CONFIG_KASTL_MASTER_SLAVE
 
   template<typename WorkType>
   void child_entry(void* args, kaapi_thread_t* thread)
@@ -1353,105 +1357,7 @@ namespace impl
     kaapi_steal_finalize(sc);
   }
 
-#else // ! KASTL_MASTER_SLAVE
-
-  template<typename WorkType>
-  void execute_work
-  (
-   kaapi_thread_t* thread,
-   kaapi_stealcontext_t* sc,
-   WorkType* work
-  )
-  {
-    typedef typename WorkType::SequenceType SequenceType;
-    typedef typename WorkType::MacroType MacroType;
-    typedef typename WorkType::NanoType NanoType;
-    typedef typename WorkType::SplitterType SplitterType;
-
-    kastl_splitter_t const splitter =
-      SplitterType::template handle_requests<WorkType>;
-
-    kastl_reducer_t const reducer = reduce_thief<WorkType>;
-
-#if 0 // TODO
-
-#if KASTL_DEBUG
-    work->_kid = kaapi_get_current_kid();
-#endif
-
-    MacroType macro_extractor;
-    NanoType nano_extractor;
-
-    SequenceType macro_seq;
-    SequenceType nano_seq;
-
-    // .
-    // preempt thieves to complete the current
-    // macro loop. if there is no theif, the
-    // macro is done and we extract another one
-  advance_work:
-
-    // .
-    // here the local macro is empty, and thieves
-    // may own parts of it they stole. we preempt
-    // them to really finish the macro.
-    if (!kaapi_preempt_nextthief(stack, task, NULL, reducer, work, &macro_seq))
-    {
-      // .
-      // macro sequence really empty (ie. no
-      // thieves). extract new macro from seq
-      // or return if no more work to be done
-      if (!macro_extractor.extract(macro_seq, work->_seq))
-	return ;
-    }
-
-    // .
-    // work is done, terminate
-    if (work->_is_done)
-      return ;
-
-    // .
-    // process macro work by extracting
-    // unstealable nano steps
-    while (nano_extractor.extract(nano_seq, macro_seq))
-    {
-      // cooperative stealing
-      kaapi_stealpoint(stack, task, splitter, &macro_seq);
-
-      // conccurent workstealing
-      kaapi_stealbegin(stack, task, splitter, &macro_seq);
-
-#if KASTL_DEBUG
-      const typename SequenceType::RangeType r =
-	SequenceType::get_range(work->_ori_seq, nano_seq);
-      printf("[%lu] c: %c#%x [%lu - %lu] \n",
-	     ++printid,
-	     work->_is_master ? 'm' : 's',
-	     (unsigned int)work->_kid,
-	     r.first, r.second);
-#endif
-
-      work->compute(nano_seq);
-      kaapi_stealend(stack, task);
-
-      // .
-      // work is done, return.
-      if (work->_is_done)
-	return ;
-    }
-
-    // .
-    // current macro done. check for preemption
-    if (kaapi_preemptpoint(stack, task, NULL, work, sizeof(WorkType)))
-      return ;
-
-    // .
-    // continue processing, goto 1.
-    goto advance_work;
-
-#endif // TODO
-
-  }
+#else // ! CONFIG_KASTL_MASTER_SLAVE
 
   template<typename WorkType>
   void child_entry(void* args, kaapi_thread_t* thread)
@@ -1464,7 +1370,13 @@ namespace impl
     kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
       (thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, args, NULL);
 
-    execute_work<WorkType>(thread, sc, static_cast<WorkType*>(args));
+    WorkType* const work = static_cast<WorkType*>(args);
+
+    work->lock();
+    work->_seq.affect_seq(work->_macro_seq);
+    work->unlock();
+
+    process_macro_sequence<WorkType>(thread, sc, static_cast<WorkType*>(args));
 
     kaapi_steal_finalize(sc);
   }
@@ -1480,12 +1392,18 @@ namespace impl
     kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
       (thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, args, NULL);
 
-    execute_work<WorkType>(thread, sc, static_cast<WorkType*>(args));
+    WorkType* const work = static_cast<WorkType*>(args);
+
+    work->lock();
+    work->_seq.affect_seq(work->_macro_seq);
+    work->unlock();
+
+    process_macro_sequence<WorkType>(thread, sc, static_cast<WorkType*>(args));
 
     kaapi_steal_finalize(sc);
   }
 
-#endif // KASTL_MASTER_SLAVE
+#endif // CONFIG_KASTL_MASTER_SLAVE
 
   // bootstrap the computation
 
@@ -1499,7 +1417,7 @@ namespace impl
     kaapi_task_t* task;
     kaapi_frame_t frame;
 
-#if KASTL_DEBUG
+#if CONFIG_KASTL_DEBUG
     work._is_master = true;
     work._ori_seq = work._seq;
 #endif
