@@ -51,18 +51,44 @@
 
 namespace kastl {
   
-template<class InputIterator, class OutputIterator, class UnaryOperator>
-void transform( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op );
-
 namespace impl {
+
+
+template<class InputIterator, class OutputIterator, class UnaryOperator>
+struct STL_Apply {
+  typedef InputIterator  inputIterator;
+  typedef OutputIterator outputIterator;
+  typedef UnaryOperator  unaryOperator;
+  static void doit( InputIterator ipos, InputIterator iend, OutputIterator opos, UnaryOperator op)
+  {
+    for ( ; ipos != iend; ++ipos, ++opos)
+      *opos = op(*ipos);
+  }
+};
+
+template<class InputIterator, class OutputIterator, class UnaryOperator>
+struct Ext_Apply {
+  typedef InputIterator  inputIterator;
+  typedef OutputIterator outputIterator;
+  typedef UnaryOperator  unaryOperator;
+  static void doit( InputIterator ipos, InputIterator iend, OutputIterator opos, UnaryOperator op)
+  {
+    for ( ; ipos != iend; ++ipos, ++opos)
+      op(*opos, *ipos);
+  }
+};
 
 /** Stucture of a work for transform
 */
-template<class InputIterator, class OutputIterator, class UnaryOperator>
+template<typename APPLY>
 class TransformWork {
 public:
+  typedef typename APPLY::inputIterator  InputIterator;
+  typedef typename APPLY::outputIterator OutputIterator;
+  typedef typename APPLY::unaryOperator  UnaryOperator;
+
   /* MySelf */
-  typedef TransformWork<InputIterator, OutputIterator, UnaryOperator> Self_t;
+  typedef TransformWork<APPLY> Self_t;
 
   /* cstor */
   TransformWork(
@@ -70,8 +96,8 @@ public:
     InputIterator iend,
     InputIterator obeg,
     UnaryOperator&  op,
-    int sg = 512,
-    int pg = 512
+    int sg = 1,
+    int pg = 1
   ) : _queue(), _ibeg(ibeg), _iend(iend), _obeg(obeg), _op(op), _seqgrain(sg), _pargrain(pg)
   { _queue.set( range(0, iend-ibeg) ); }
   
@@ -88,8 +114,12 @@ public:
       InputIterator ipos = _ibeg + r.first;
       InputIterator iend = _ibeg + r.last;
       OutputIterator opos = _obeg + r.first;
+#if 1
+      APPLY::doit( ipos, iend, opos, _op );
+#else
       for ( ; ipos != iend; ++ipos, ++opos)
         *opos = _op(*ipos);
+#endif
     }
   }
 
@@ -121,12 +151,15 @@ protected:
   */
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
+    range r;
     size_t size = _queue.size();   /* upper bound */
     if (size < _pargrain) return 0;
 
     size_t size_max = (size * count) / (1+count); /* max bound */
     size_t size_min = (size_max * 2) / 3;         /* min bound */
-    range r;
+    if (size_max ==0) size_max=1;
+    if (size_min ==0) size_min=1;
+
 
     /* */
     if ( (size_min < _seqgrain) || !_queue.steal(r, size_max, size_min )) return 0;
@@ -155,10 +188,15 @@ protected:
         kaapi_assert_debug( (((kaapi_uintptr_t)output_work) & 0x3F)== 0 );
         new (output_work) Self_t(_ibeg, _iend, _obeg, _op, _seqgrain, _pargrain );
 
-        output_work->_queue.set( range( r.last-bloc, r.last ) );
         kaapi_assert_debug( !r.is_empty() );
         output_work->_master   = sc; 
-        r.last -= bloc;
+        range rq(r.first, r.last);
+        if (count >1)
+        {
+          rq.first = rq.last - bloc;
+          r.last = rq.first;
+        }
+        output_work->_queue.set( rq );
 
         kaapi_thread_pushtask( thief_thread );
 
@@ -183,6 +221,7 @@ protected:
   size_t                _pargrain;
 } __attribute__((aligned(64)));
 
+
 } /* namespace impl */
 
 
@@ -191,7 +230,7 @@ protected:
 template<class InputIterator, class OutputIterator, class UnaryOperator>
 void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op )
 {
-  typedef impl::TransformWork<InputIterator, OutputIterator, UnaryOperator> Self_t;
+  typedef impl::TransformWork<impl::STL_Apply<InputIterator, OutputIterator, UnaryOperator> > Self_t;
   
   Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, to_fill, op);
   kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
@@ -216,7 +255,58 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
 template<class InputIterator, class OutputIterator, class UnaryOperator>
 void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op, int seqgrain, int pargrain = 0 )
 {
-  typedef impl::TransformWork<InputIterator, OutputIterator, UnaryOperator> Self_t;
+  typedef impl::TransformWork<impl::STL_Apply<InputIterator, OutputIterator, UnaryOperator> > Self_t;
+  
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, to_fill, op, seqgrain, pargrain);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
+
+  kaapi_thread_t* thread =  kaapi_self_thread();
+  kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
+    thread,
+    KAAPI_STEALCONTEXT_DEFAULT,
+    Self_t::static_splitter,
+    work,
+    0
+  );
+  
+  work->doit( sc, thread );
+  
+  kaapi_steal_finalize( sc );
+  kaapi_sched_sync();
+}
+
+/** Op take 1rst args for the result
+*/
+template<class InputIterator, class OutputIterator, class UnaryOperator>
+void transform2( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op )
+{
+  typedef impl::TransformWork<impl::Ext_Apply<InputIterator, OutputIterator, UnaryOperator> > Self_t;
+  
+  Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, to_fill, op);
+  kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
+
+  kaapi_thread_t* thread =  kaapi_self_thread();
+  kaapi_stealcontext_t* sc = kaapi_thread_pushstealcontext( 
+    thread,
+    KAAPI_STEALCONTEXT_DEFAULT,
+    Self_t::static_splitter,
+    work,
+    0
+  );
+  
+  work->doit( sc, thread );
+  
+  kaapi_steal_finalize( sc );
+  kaapi_sched_sync();
+}
+
+
+/** Op take 1rst args for the result
+*/
+template<class InputIterator, class OutputIterator, class UnaryOperator>
+void transform2( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op, int seqgrain, int pargrain = 0 )
+{
+  typedef impl::TransformWork<impl::Ext_Apply<InputIterator, OutputIterator, UnaryOperator> > Self_t;
   
   Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, to_fill, op, seqgrain, pargrain);
   kaapi_assert( (((kaapi_uintptr_t)work) & 0x3F)== 0 );
