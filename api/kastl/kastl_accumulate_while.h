@@ -174,48 +174,12 @@ unlockout();
         { /* accumulate data */
           cntevalfunc += r_result.size();
           for (range::index_type i=r_result.first; (i<r_result.last) && !(isfinish = !_pred(_value)); ++i)
-          {
-
-#if TRACE_
-lockout(); 
-            std::cout << "Tmaster get result from thief:" << thief_result << "   "
-                      << thief_result->return_funccall+i
-                      << std::endl << std::flush;
-unlockout();
-#endif
             _accf( _value, thief_result->return_funccall[i].data );
-          }
         } 
         else 
         {
           /* if thief is finish: remove it from list */
           int err __attribute__((unused)) = kaapi_remove_finishedthief( sc, thief);
-#if 0//TRACE_
-          {
-            if (err == EBUSY)
-            {
-              lockout();      
-              std::cout << "Tmaster cannot remove thief, it is busy"
-                        << std::endl << std::flush;
-              unlockout();
-            }
-            else if (err ==0)
-            {
-              lockout();      
-              std::cout << "Tmaster remove finished thief"
-                        << std::endl << std::flush;
-              unlockout();
-            }
-            else
-            {
-              lockout();      
-              std::cout << "ABORT"
-                        << std::endl << std::flush;
-              unlockout();
-              exit(0);
-            }
-          }
-#endif
         }
 
         /* next thief ? */
@@ -250,14 +214,6 @@ unlockout();
       int err = kaapi_remove_finishedthief( sc, thief);
       if (err == EBUSY)
         kaapi_preempt_thief(sc, thief, 0, 0, 0);
-#if TRACE_
-      { 
-        lockout();      
-        std::cout << "Tmaster have been unlinked:" << thief
-                  << std::endl << std::flush;
-        unlockout();
-      }
-#endif      
       thief = kaapi_get_nextthief_head( sc, thief );
     }
   }
@@ -357,6 +313,17 @@ unlockout();
       kaapi_steal_thiefreturn( sc );
       self_work->~ThiefWork_t();
     }
+
+  int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
+  {
+  }
+
+  /* */
+  static int static_splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request, void* argsplitter )
+  {
+    ThiefWork_t* self_work = (ThiefWork_t*)argsplitter;
+    return self_work->splitter( sc, count, request );
+  }
 
   protected:
     friend class AccumulateWhileWork<T,Iterator,Function,Inserter,Predicate>;
@@ -458,14 +425,14 @@ unlockout();
 protected:
   work_queue                   _queue;     /* first to ensure alignment constraint */
   size_t*                      _returnval; /* number of iteration, output of seq call */
-  T&                           _value;
+  T&                           _value __attribute__((alligned(64)));
   Iterator                     _ibeg;
   Iterator                     _iend;
   Function&                    _func;
   Inserter&                    _accf;
   Predicate&                   _pred;
-  value_type*                  _inputiterator_value;
-  ResultElem_t*                _return_funccall;
+  value_type*                  _inputiterator_value __attribute__((alligned(64)));
+  ResultElem_t*                _return_funccall     __attribute__((alligned(64)));
   kaapi_stealcontext_t*        _master;
   size_t                       _pargrain;
 };
