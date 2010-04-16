@@ -85,15 +85,11 @@ public:
 
     while (_queue.pop(r, _seqgrain) == true)
     {
-#if 0
-      std::transform( _ibeg + r.first, _ibeg + r.last, _obeg + r.first, _op );
-#else
       InputIterator ipos = _ibeg + r.first;
       InputIterator iend = _ibeg + r.last;
       OutputIterator opos = _obeg + r.first;
       for ( ; ipos != iend; ++ipos, ++opos)
-	*opos = _op(*ipos);
-#endif
+        *opos = _op(*ipos);
     }
   }
 
@@ -156,7 +152,7 @@ protected:
         kaapi_task_t* thief_task  = kaapi_thread_toptask(thief_thread);
         kaapi_task_init( thief_task, &static_thiefentrypoint, kaapi_thread_pushdata(thief_thread, sizeof(Self_t)) );
         output_work = kaapi_task_getargst(thief_task, Self_t);
-        kaapi_assert( (((kaapi_uintptr_t)output_work) & 0x3F)== 0 );
+        kaapi_assert_debug( (((kaapi_uintptr_t)output_work) & 0x3F)== 0 );
         new (output_work) Self_t(_ibeg, _iend, _obeg, _op, _seqgrain, _pargrain );
 
         output_work->_queue.set( range( r.last-bloc, r.last ) );
