@@ -94,7 +94,7 @@ public:
   TransformWork(
     InputIterator ibeg,
     InputIterator iend,
-    InputIterator obeg,
+    OutputIterator obeg,
     UnaryOperator&  op,
     int sg = 1,
     int pg = 1
