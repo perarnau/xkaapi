@@ -44,7 +44,7 @@ fibo_apikaapi_opt_SOURCES=fibo_apikaapi_opt.cpp fibo_apikaapi_main.cpp
 dgemm_kaapi_SOURCES=dgemm_kaapi.cpp
 dgemm_kaapi_flat_SOURCES=dgemm_kaapi_flat.cpp
 dgemm_cblas_SOURCES=dgemm_cblas.cpp
-poisson3d_kaapi_SOURCES=poisson3d-kaapi.cpp poisson3d.cpp poisson3diter.cpp
+poisson3d_kaapi_SOURCES=poisson3d.h poisson3diter.h poisson3d-kaapi.cpp poisson3d.cpp poisson3diter.cpp
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
@@ -104,7 +104,7 @@ dgemm_cblas_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLA
 dgemm_cblas_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 dgemm_cblas_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la -lblas
 
-poisson3d_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/api/kaapixx -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
+poisson3d_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(ATHA1PROGS_BUILD_CPPFLAGS) -I$(top_srcdir)/examples/ -I$(top_srcdir)/api/kaapixx -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
 poisson3d_kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(ATHA1PROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 poisson3d_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(ATHA1PROGS_BUILD_LDFLAGS)
 poisson3d_kaapi_LDADD   =$(LIBS)        $(ATHA1PROGS_BUILD_LIBS)     ../api/libxkaapixx.la ../src/libxkaapi.la
