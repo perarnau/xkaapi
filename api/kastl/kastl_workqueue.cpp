@@ -42,7 +42,7 @@
  ** terms.
  ** 
  */
-#include "kastl_workqueue.h"
+#include "kastl/kastl_workqueue.h"
 #include <unistd.h>
 
 namespace kastl {
