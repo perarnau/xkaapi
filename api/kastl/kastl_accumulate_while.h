@@ -136,7 +136,7 @@ public:
       /* fill the input iterator and commit it into the queue */
       for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
       {
-        _inputiterator_value[i] = *_ibeg;
+        _inputiterator_value[blocsize -1 - i] = *_ibeg;
         _queue.push_front( blocsize -1 - i);
       }      
 
