@@ -87,7 +87,8 @@ public:
     Inserter&      insert,
     Predicate&     pred,
     int ws
-  ) : _queue(), 
+  ) : _queue(),
+      _isfinish(false),
       _returnval(retval), _value(value), 
       _ibeg(ibeg), _iend(iend), _func(func), _accf(insert), _pred(pred), 
       _inputiterator_value(0), _master(0), 
@@ -108,7 +109,6 @@ public:
   void doit( kaapi_stealcontext_t* sc, kaapi_thread_t* thread )
   {
     /* local iterator for the nano loop */
-    bool isfinish = false;
     impl::range r;
     size_t cntevalfunc =0;
     size_t i, blocsize;
@@ -137,7 +137,7 @@ public:
     _return_funccall = new ResultElem_t[2*blocsize];
     
     /*  ---- */
-    while ((_ibeg != _iend) && !isfinish)
+    while ((_ibeg != _iend) && !_isfinish)
     {
 #if 0
       /* initialize the queue: concurrent operation with respect to steal */
@@ -170,12 +170,12 @@ lockout();
                   << std::endl << std::flush;
 unlockout();
 #endif
-        for ( ; (r.first != r.last) && !isfinish; ++r.first )
+        for ( ; (r.first != r.last) && !_isfinish; ++r.first )
         {
           _func( _return_funccall[r.first].data, _inputiterator_value[r.first] );
           ++cntevalfunc;
           _accf( _value, _return_funccall[r.first].data );
-          isfinish = !_pred(_value);
+          _isfinish = !_pred(_value);
         }
       }
 
@@ -196,7 +196,7 @@ unlockout();
         if (!r_result.is_empty())
         { /* accumulate data */
           cntevalfunc += r_result.size();
-          for (range::index_type i=r_result.first; (i<r_result.last) && !(isfinish = !_pred(_value)); ++i)
+          for (range::index_type i=r_result.first; (i<r_result.last) && !(_isfinish = !_pred(_value)); ++i)
             _accf( _value, thief_result->return_funccall[i].data );
         } 
         else 
@@ -209,7 +209,7 @@ unlockout();
         thief = kaapi_get_nextthief_head( sc, thief );
       } // thief != 0
       ++nonconvergence_iter;
-      if ((!isfinish) && (nonconvergence_iter == 2))
+      if ((!_isfinish) && (nonconvergence_iter == 2))
       { 
         _pargrain = 2;
         seqgrain = 2;
@@ -270,6 +270,7 @@ protected:
   class ThiefWork_t {
   public:
     ThiefWork_t(  const range& r, 
+                  bool volatile* const isfinish,
                   Function& func,
                   kaapi_stealcontext_t* master, 
                   kaapi_taskadaptive_result_t* tr,
@@ -277,6 +278,7 @@ protected:
                   ResultElem_t* return_funccall    /* original base pointer */
     )
      : _range(r), 
+       _isfinish(isfinish),
        _func(func), 
        _inputiterator_value(inputiterator_value),
        _master(master),
@@ -296,6 +298,7 @@ protected:
       ResultElem_t* return_funccall = _thief_result->return_funccall - first;
       while ( _range.first != _range.last )
       {
+        if (_isfinish) return;
         /* test preemption ... */
         if (kaapi_preemptpoint( 
             _tr,                   /* to test preemption */
@@ -359,6 +362,7 @@ unlockout();
     friend class AccumulateWhileWork<T,Iterator,Function,Inserter,Predicate>;
 
     range                        _range;               /* first to ensure alignment constraint if change to queue */
+    bool volatile* const         _isfinish __attribute__((aligned(64)));
     Function&                    _func;
     value_type*                  _inputiterator_value;
     kaapi_stealcontext_t*        _master;              /* for terminaison */
@@ -423,6 +427,7 @@ unlockout();
         output_work = new (kaapi_task_getargst(thief_task, ThiefWork_t))
             ThiefWork_t( 
               rq, 
+              &_isfinish,
               _func,
               sc,
               kaapi_allocate_thief_result( sc, sizeof(ThiefResult_t) + rq.size()*sizeof(result_type), 0 ),
@@ -454,6 +459,7 @@ unlockout();
 
 protected:
   work_queue                   _queue;     /* first to ensure alignment constraint */
+  bool volatile                _isfinish __attribute__((aligned(64)));
   size_t*                      _returnval; /* number of iteration, output of seq call */
   T&                           _value __attribute__((aligned(64)));
   Iterator                     _ibeg;
