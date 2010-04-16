@@ -133,8 +133,8 @@ public:
 
     
     /* input */
-    _inputiterator_value = new value_type[blocsize];
-    _return_funccall = new ResultElem_t[blocsize];
+    _inputiterator_value = new value_type[2*blocsize];
+    _return_funccall = new ResultElem_t[2*blocsize];
     
     /*  ---- */
     while ((_ibeg != _iend) && !isfinish)
@@ -209,7 +209,12 @@ unlockout();
         thief = kaapi_get_nextthief_head( sc, thief );
       } // thief != 0
       ++nonconvergence_iter;
-      if ((!isfinish) && (nonconvergence_iter == 2)) _pargrain = 2;
+      if ((!isfinish) && (nonconvergence_iter == 2))
+      { 
+        _pargrain = 2;
+        seqgrain = 2;
+        blocsize *= 2;
+      }
     } // while pas fini
 
 
@@ -229,7 +234,6 @@ unlockout();
       kaapi_preemptasync_thief(sc, thief, 0);
       thief = kaapi_get_nextthief_head( sc, thief );
     }
-
 
     /* remove or preempt thief */
     thief = kaapi_get_thief_head( sc );
