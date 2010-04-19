@@ -44,7 +44,6 @@
  */
 #include "kastl_workqueue.h"
 #include <unistd.h>
-#include "kastl_fifo.h"
 
 namespace kastl {
 

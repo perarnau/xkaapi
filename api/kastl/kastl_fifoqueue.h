@@ -105,28 +105,11 @@ namespace impl {
      */
     size_type size() const;
     
-    /* main method */
-    bool enqueue(T* data) 
-    {
-      if (0 != _buffer[_head])
-          return false;
-
-      _buffer[_head] = data;
-      kaapi_writemem_barrier();
-      _head = (_head+1 < capacity ? _head+1 : 0);
-      return true;
-    }
+    /* enqueue entry method */
+    bool enqueue(T* data);
     
-    bool dequeue(T*& data) 
-    {
-      data = _buffer[_tail];
-      if (0 == data)
-          return false;
-      _buffer[_tail] = 0;
-      kaapi_writemem_barrier();
-      _tail = (_tail+1 < capacity ? _tail+1 : 0);
-      return 0;
-    }
+    /* dequeue */
+    bool dequeue(T*& data);
 
   private:
     /* data field required to be correctly aligned in order to ensure atomicity of read/write. 
