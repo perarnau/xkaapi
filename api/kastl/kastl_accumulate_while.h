@@ -113,8 +113,8 @@ public:
     size_t cntevalfunc =0;
     size_t i, blocsize;
     kaapi_taskadaptive_result_t* thief;
-    int seqgrain = 1;
     int nonconvergence_iter = 0;
+    int seqgrain = 1;
 
 #if TRACE_
     kaapi_uint64_t  t0, t1;
@@ -122,19 +122,14 @@ public:
     
     /*  ---- */
     if (_windowsize == (size_t)-1)
-    {
-      blocsize = 1*kaapi_getconcurrency();
-      _pargrain = 1;
-    }
-    else {
-      blocsize = _windowsize;
-      _pargrain = 1;
-    }
+      _windowsize = 1*kaapi_getconcurrency();
 
+    blocsize = _windowsize;
+    _pargrain = 2;
     
     /* input */
-    _inputiterator_value = new value_type[4*blocsize];
-    _return_funccall = new ResultElem_t[4*blocsize];
+    _inputiterator_value = new value_type[4*_windowsize];
+    _return_funccall = new ResultElem_t[4*_windowsize];
     
     /*  ---- */
     while ((_ibeg != _iend) && !_isfinish)
@@ -208,25 +203,28 @@ unlockout();
         /* next thief ? */
         thief = kaapi_get_nextthief_head( sc, thief );
       } // thief != 0
-      ++nonconvergence_iter;
-      if ((!_isfinish) && (nonconvergence_iter == 4))
-      { 
-        if (seqgrain ==1)
-        {
-          nonconvergence_iter = 0;
-          _pargrain = 2;
-          seqgrain = 2;
-          blocsize *= 2;
-        }
-        else {
-          nonconvergence_iter = 0;
-          _pargrain = 4;
-          seqgrain = 2;
-          blocsize *= 4;
+      {
+         ++nonconvergence_iter;
+         if ((!_isfinish) && (nonconvergence_iter == 2))
+         { 
+           if (blocsize ==_windowsize)
+           {
+            /*nonconvergence_iter =0;*/
+             _pargrain = 4;
+             seqgrain = 2;
+             blocsize = 4*_windowsize;
+           }
+/*
+           else {
+             blocsize  = (2*_windowsize)/3;
+             _pargrain = 3;
+           }
+*/
         }
       }
-      if (_isfinish) std::cout << "Its finished !" << std::endl;
+      //if (_isfinish) std::cout << "Its finished !" << std::endl;
     } // while pas fini
+    kaapi_mem_barrier();
 
 
     /* write the total number of parallel evaluation executed */
