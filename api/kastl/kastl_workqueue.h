@@ -310,7 +310,7 @@ namespace rts {
     _end = std::numeric_limits<typename work_queue<bits>::index_type>::min();
     kaapi_writemem_barrier();
     _beg = r.first;
-    kaapi_writemem_barrier();
+    kaapi_mem_barrier();
     _end = r.last;
   }
 
