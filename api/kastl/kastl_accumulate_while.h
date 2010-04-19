@@ -283,6 +283,8 @@ protected:
         /* re-steal victim, but serialize access to the workqueue */
         while (!_victim_queue->steal( _range, *_pargrain, 1))
           if (*_isfinish) return;
+std::cout << "Thief steal:[" << _range.first << "," << _range.last << ")" << std::endl;
+        kaapi_assert( !_range.is_empty() );
       }
     }
 
