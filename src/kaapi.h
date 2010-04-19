@@ -1291,6 +1291,8 @@ static inline void kaapi_writemem_barrier()
 {
 #ifdef __PPC
   OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
 #endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
@@ -1300,6 +1302,8 @@ static inline void kaapi_readmem_barrier()
 {
 #ifdef __PPC
   OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
 #endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
@@ -1322,6 +1326,7 @@ static inline void kaapi_mem_barrier()
 static inline void kaapi_writemem_barrier()  
 {
 #if defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
 #else
   __sync_synchronize();
 #endif
@@ -1332,6 +1337,7 @@ static inline void kaapi_writemem_barrier()
 static inline void kaapi_readmem_barrier()  
 {
 #if defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
 #else
   __sync_synchronize();
 #endif
@@ -1342,7 +1348,9 @@ static inline void kaapi_readmem_barrier()
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
+#if defined(__x86_64) || defined(__i386__)
   __sync_synchronize();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }

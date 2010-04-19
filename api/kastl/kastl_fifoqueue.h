@@ -121,7 +121,7 @@ namespace impl {
     index_type volatile _head __attribute__((aligned(64)));
     T* volatile         _buffer[capacity];
     index_type volatile _tail __attribute__((aligned(64)));
-  };
+  } __attribute__((aligned(64)));
   
   /** */
   template<typename T,int capacity>
@@ -129,8 +129,8 @@ namespace impl {
   : _head(0), _tail(0)
   {
 #if defined(__i386__)||defined(__x86_64)
-    kaapi_assert_debug( (unsigned long)&_head & (rts::bits_for_type<index_type>::bits-1) == 0 ); 
-    kaapi_assert_debug( (unsigned long)&_tail & (rts::bits_for_type<index_type>::bits-1) == 0 );
+    kaapi_assert_debug( (((unsigned long)&_head) & (rts::bits_for_type<index_type>::bits-1)) == 0 ); 
+    kaapi_assert_debug( (((unsigned long)&_tail) & (rts::bits_for_type<index_type>::bits-1)) == 0 );
 #else
 #  warning "May be alignment constraints exit to garantee atomic read write"
 #endif
@@ -163,9 +163,8 @@ namespace impl {
   {
     if (0 != _buffer[_head])
         return false;
-
     _buffer[_head] = data;
-    kaapi_writemem_barrier();
+    kaapi_mem_barrier();
     _head = (_head+1 < capacity ? _head+1 : 0);
     return true;
   }
@@ -177,8 +176,9 @@ namespace impl {
     data = _buffer[_tail];
     if (0 == data)
         return false;
+      
     _buffer[_tail] = 0;
-    kaapi_writemem_barrier();
+    kaapi_mem_barrier();
     _tail = (_tail+1 < capacity ? _tail+1 : 0);
     return 0;
   }
