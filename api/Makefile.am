@@ -86,6 +86,7 @@ include_HEADERS=\
   
 kastlinclude_HEADERS=\  
   kastl/kastl_workqueue.h\
+  kastl/kastl_fifo.h\
   kastl/kastl_foreach.h\
   kastl/kastl_transform.h\
   kastl/kastl_accumulate_while.h\
