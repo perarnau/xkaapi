@@ -46,6 +46,7 @@
 #define _KASTL_ACCUMULATE_H_
 #include "kaapi.h"
 #include "kastl/kastl_workqueue.h"
+#include "kastl/kastl_fifoqueue.h"
 #include <algorithm>
 
 #define TRACE_ 0
@@ -94,6 +95,8 @@ public:
       _inputiterator_value(0), _master(0), 
       _pargrain(1), _windowsize(ws)
   { 
+    for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+      _thief_atposition[i] = false;
   }
   
   ~AccumulateWhileWork()
@@ -116,7 +119,7 @@ public:
     int nonconvergence_iter = 0;
     int seqgrain = 1;
     /* accumulate data from the thief */
-    range r_result;
+    ResultElem_t* presult;
 
 #if TRACE_
     kaapi_uint64_t  t0, t1;
@@ -161,7 +164,7 @@ public:
       }
 
       /* do local computation */
-      while (_queue.pop(r, seqgrain))
+      if (_queue.pop(r, seqgrain))
       {
 #if TRACE_
         lockout();
@@ -177,56 +180,27 @@ public:
           _accf( _value, _return_funccall[r.first].data );
         }
       }
-      _isfinish = !_pred(_value);
-      if (_isfinish) break;
+      bool isfinish = !_pred(_value);
+      if (isfinish) _isfinish = true;
+      if (isfinish) break;
 
-      /* here thief may no steal anymore things: if pop return false it means that they are no more things to do */
-      thief = kaapi_get_thief_head( sc );
-      while (thief !=0)
+      /* accumulate result from thief */
+      for (int i=0; (i<KAAPI_MAX_PROCESSOR) && !_isfinish ; ++i)
       {
-        ThiefResult_t* thief_result = (ThiefResult_t*)thief->data;
-        thief_result->return_queue.pop(r_result, thief_result->return_queue.size());
-
-        if (!r_result.is_empty())
-        { /* accumulate data */
-          cntevalfunc += r_result.size();
-          for (range::index_type i=r_result.first; (i<r_result.last) && !(_isfinish = !_pred(_value)); ++i)
-            _accf( _value, thief_result->return_funccall[i].data );
-        } 
-        else 
+        if (_thief_atposition[i])
         {
-          /* if thief is finish: remove it from list */
-          int err __attribute__((unused)) = kaapi_remove_finishedthief( sc, thief);
-        }
-
-        /* next thief ? */
-        thief = kaapi_get_nextthief_head( sc, thief );
-      } // thief != 0
-
-      {
-         ++nonconvergence_iter;
-         if ((!_isfinish) && (nonconvergence_iter == 2))
-         { 
-           if (blocsize ==_windowsize)
-           {
-            /*nonconvergence_iter =0;*/
-             _pargrain = 2;
-             seqgrain = 1;
-             blocsize = 2*_windowsize;
-           }
-/*
-           else {
-             blocsize  = (2*_windowsize)/3;
-             _pargrain = 3;
-           }
-*/
+          if (_fiforesult[i].dequeue( presult ))
+          {
+            _accf( _value, presult->data );
+            ++cntevalfunc;
+            bool isfinish = !_pred(_value);
+            if (isfinish) _isfinish = true;
+          }
         }
       }
-      //if (_isfinish) std::cout << "Its finished !" << std::endl;
 
     } // while pas fini
     kaapi_mem_barrier();
-
 
     /* write the total number of parallel evaluation executed */
     *_returnval = cntevalfunc;
@@ -237,16 +211,6 @@ public:
 #if TRACE_
     t0 = kaapi_get_elapsedns();
 #endif
-    /* only do signal */
-#if 0
-    thief = kaapi_get_thief_head( sc );
-    while (thief !=0)
-    {
-      kaapi_preemptasync_thief(sc, thief, 0);
-      thief = kaapi_get_nextthief_head( sc, thief );
-    }
-#endif
-
     /* remove or preempt thief */
     thief = kaapi_get_thief_head( sc );
     while (thief !=0)
@@ -272,74 +236,55 @@ protected:
     result_type  data;
   } __attribute__((aligned(64)));
 
-  struct ThiefResult_t {
-    work_queue    return_queue;       /* should be correctly aligned ! */
-    ResultElem_t* return_funccall;    /* first entry of the array of size cnteval */
-  };
-  
   /* Thief work
   */
   class ThiefWork_t {
   public:
     ThiefWork_t(  const range& r, 
                   bool volatile* const isfinish,
+                  fifo_queue<ResultElem_t,16>* fifoqueue,
+                  work_queue* victim_queue,
                   Function& func,
                   kaapi_stealcontext_t* master, 
-                  kaapi_taskadaptive_result_t* tr,
                   value_type* inputiterator_value, /* original base pointer */
-                  ResultElem_t* return_funccall    /* original base pointer */
+                  ResultElem_t* return_funccall,    /* original base pointer */
+                  const size_t volatile* const pargrain
     )
      : _range(r), 
+       _fiforesult(fifoqueue),
+       _victim_queue(victim_queue),
        _isfinish(isfinish),
        _func(func), 
        _inputiterator_value(inputiterator_value),
+       _return_funccall(return_funccall),
        _master(master),
-       _tr(tr),
-       _thief_result( (ThiefResult_t*)tr->data)
+       _pargrain(pargrain)
     {
-      _thief_result->return_queue.clear();
-      /* shift array to begin at 0 when victim pop values */
-      _thief_result->return_funccall = return_funccall+r.first;     
     }
 
     /* main entry point of a thief */
     void doit( kaapi_stealcontext_t* sc, kaapi_thread_t* thread )
-    {
-      range::index_type first = _range.first;
-      /* shift to avoid arithmetic in the main loop */
-      ResultElem_t* return_funccall = _thief_result->return_funccall - first;
-      while ( _range.first != _range.last )
+    { 
+      /* _range init during the first steal */
+      while (!*_isfinish)
       {
-        if (*_isfinish) return;
-#if 0
-        /* test preemption ... */
-        if (kaapi_preemptpoint( 
-            _tr,                   /* to test preemption */
-            sc,                    /* to merge my thieves into list of the victim */
-            0,                     /* function to call if preemption signal */
-            0,                     /* extra data to pass to victim -> it will get the size of computed value into its reducer */ 
-            0, 0,
-            0
-        )) 
+        /* shift to avoid arithmetic in the main loop */
+        ResultElem_t* return_funccall = _return_funccall - _range.first;
+        for ( ; _range.first != _range.last; ++_range.first )
         {
-          return;
-        }
-#endif
-        _func( return_funccall[_range.first].data, _inputiterator_value[_range.first] ); 
-        _thief_result->return_queue.push_back( range(_range.first-first, 1+_range.first-first) );
+          if (*_isfinish) return;
+          _func( return_funccall[_range.first].data, _inputiterator_value[_range.first] );
+          
+          /* enqueue result */
+          while (!_fiforesult->enqueue( &return_funccall[_range.first] ))
+            if (*_isfinish) return;
 
-#if TRACE_
-lockout();
-        std::cout << "Thief " << _thief_result << " eval:" << _inputiterator_value[_range.first]
-                  << " -> " << return_funccall + _range.first //].data
-                  << std::endl << std::flush;
-unlockout();
-#endif
-
-        ++_range.first;
-        if (_range.is_empty()) break;
-
-      } // end while
+        } // end for
+        
+        /* re-steal victim, but serialize access to the workqueue */
+        while (!_victim_queue->steal( _range, *_pargrain, 1))
+          if (*_isfinish) return;
+      }
     }
 
     /* thief task body */
@@ -373,15 +318,18 @@ unlockout();
 
   protected:
     friend class AccumulateWhileWork<T,Iterator,Function,Inserter,Predicate>;
-
     range                        _range;               /* first to ensure alignment constraint if change to queue */
-    bool volatile* const         _isfinish __attribute__((aligned(64)));
+    fifo_queue<ResultElem_t,16>* _fiforesult;          /* where to put my result */
+    work_queue*                  _victim_queue;        /* where to steal input */
+    bool volatile* const         _isfinish;
     Function&                    _func;
-    value_type*                  _inputiterator_value;
+    value_type*                  _inputiterator_value; /* same as victim input pointer */
+    ResultElem_t*                _return_funccall;     /* same as victim output pointer */
     kaapi_stealcontext_t*        _master;              /* for terminaison */
-    kaapi_taskadaptive_result_t* _tr;                  /* for preemption */
-    ThiefResult_t*               _thief_result;        /* view of tr->data */
+    const size_t volatile* const _pargrain;
   };
+
+
 
   /* splitter: split in bloc of size at most pargraim
   */
@@ -426,7 +374,7 @@ unlockout();
       if (kaapi_request_ok(&request[i]))
       {
         kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
-        kaapi_task_t* thief_task  = kaapi_thread_toptask(thief_thread);
+        kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
         kaapi_task_init( thief_task, &ThiefWork_t::static_entrypoint, kaapi_thread_pushdata_align(thief_thread, sizeof(ThiefWork_t), 8) );
 
         kaapi_assert_debug( !r.is_empty() );
@@ -437,15 +385,22 @@ unlockout();
           r.last = rq.first;
         }
 
+        if (_thief_atposition[i] == false)
+        {
+          _thief_atposition[i] = true;
+          _fiforesult[i].clear();
+        }
         output_work = new (kaapi_task_getargst(thief_task, ThiefWork_t))
             ThiefWork_t( 
-              rq, 
+              rq,  /* initial work */
               &_isfinish,
+              &_fiforesult[i],
+              &_queue,
               _func,
               sc,
-              kaapi_allocate_thief_result( sc, sizeof(ThiefResult_t) + rq.size()*sizeof(result_type), 0 ),
               _inputiterator_value,
-              _return_funccall
+              _return_funccall,
+              &_pargrain
             );
 #if TRACE_
         std::cout << "Splitter: reply to=" << i << "[" << rq.first << "," 
@@ -456,7 +411,7 @@ unlockout();
         kaapi_thread_pushtask( thief_thread );
 
         /* reply ok (1) to the request, push it into the tail of the list */
-        kaapi_request_reply_tail( sc, &request[i], output_work->_tr );
+        kaapi_request_reply_tail( sc, &request[i], 0 );
         --count; 
         ++reply_count;
       }
@@ -471,8 +426,11 @@ unlockout();
 
 
 protected:
-  work_queue                   _queue;     /* first to ensure alignment constraint */
+  work_queue                   _queue __attribute__((aligned(64)));     /* first to ensure alignment constraint */
   bool volatile                _isfinish __attribute__((aligned(64)));
+  fifo_queue<ResultElem_t,16>  _fiforesult[KAAPI_MAX_PROCESSOR];
+  int                          _cntthief;
+  bool                         _thief_atposition[KAAPI_MAX_PROCESSOR];
   size_t*                      _returnval; /* number of iteration, output of seq call */
   T&                           _value __attribute__((aligned(64)));
   Iterator                     _ibeg;
@@ -480,12 +438,12 @@ protected:
   Function&                    _func;
   Inserter&                    _accf;
   Predicate&                   _pred;
-  value_type*                  _inputiterator_value __attribute__((aligned(64)));
-  ResultElem_t*                _return_funccall     __attribute__((aligned(64)));
+  value_type*                  _inputiterator_value;
+  ResultElem_t*                _return_funccall;
   kaapi_stealcontext_t*        _master;
   size_t                       _pargrain;
   size_t                       _windowsize;
-};
+} __attribute__((aligned(64)));
 
 } /* namespace impl */
 
