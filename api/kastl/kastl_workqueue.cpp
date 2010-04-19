@@ -66,6 +66,7 @@ void work_queue<64>::lock_steal()
 {
   while ((_lock.read() == 1) && !_lock.cas(0, 1))
     usleep(1);
+  kaapi_mem_barrier();
 }
 
 /**

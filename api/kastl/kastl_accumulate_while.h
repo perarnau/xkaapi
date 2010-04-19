@@ -282,7 +282,7 @@ protected:
         } // end for
         
         /* re-steal victim, but serialize access to the workqueue */
-        while (!_victim_queue->steal( _range, *_pargrain, 1))
+        while (!_victim_queue->steal( _range, *_pargrain ))
           if (*_isfinish) return;
 printf("Thief %p steal:[%li,%li)\n", (void*)this, _range.first, _range.last ); 
 fflush(stdout);
