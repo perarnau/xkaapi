@@ -67,10 +67,10 @@ namespace rts {
   public:
     atomic_t<32>(kaapi_int32_t value)
     { 
-      KAAPI_ATOMIC_WRITE(&_atom, value);
 #if defined(__i386__)||defined(__x86_64)
-      kaapi_assert_debug( (unsigned long)this & (32-1) == 0 ); 
+      kaapi_assert_debug( ((unsigned long)&_atom & (32-1)) == 0 ); 
 #endif
+      KAAPI_ATOMIC_WRITE(&_atom, value);
     }
 
     kaapi_int32_t read() const 
@@ -281,7 +281,7 @@ namespace rts {
     index_type volatile _beg __attribute__((aligned(64)));
     index_type volatile _end __attribute__((aligned(64)));
 
-    atomic_t<32> _lock; /* one bit is enough .. */
+    atomic_t<32> _lock __attribute__((aligned(64))); /* one bit is enough .. */
   };
   
   /** */
@@ -290,8 +290,8 @@ namespace rts {
   : _beg(0), _end(0), _lock(0)
   {
 #if defined(__i386__)||defined(__x86_64)
-    kaapi_assert_debug( (unsigned long)&_beg & (bits-1) == 0 ); 
-    kaapi_assert_debug( (unsigned long)&_end & (bits-1) == 0 );
+    kaapi_assert_debug( (((unsigned long)&_beg) & (bits-1)) == 0 ); 
+    kaapi_assert_debug( (((unsigned long)&_end) & (bits-1)) == 0 );
 #else
 #  warning "May be alignment constraints exit to garantee atomic read write"
 #endif
