@@ -94,7 +94,7 @@ namespace rts {
     { 
       KAAPI_ATOMIC_WRITE(&_atom, value);
 #if defined(__i386__)||defined(__x86_64)
-      kaapi_assert_debug( (unsigned long)this & (64-1) == 0 ); 
+      kaapi_assert_debug( ((unsigned long)this & (64-1)) == 0 ); 
 #endif
     }
 
@@ -380,7 +380,8 @@ namespace rts {
     ++_beg;
     /* read of _end after write of _beg */
     kaapi_mem_barrier(); 
-    if (_beg > _end) {
+    if (_beg > _end) 
+    {
       range<bits> r;
       bool retval = slow_pop( r, 1 );
       item = r.first;
@@ -395,13 +396,15 @@ namespace rts {
   template<int bits>
   inline bool work_queue<bits>::pop(range<bits>& r, typename range<bits>::size_type size)
   {
-    r.first = _beg;
     _beg += size;
     /* read of _end after write of _beg */
     kaapi_mem_barrier();
-    if (_beg > _end) return slow_pop( r, size );
+    if (_beg > _end) {
+      return slow_pop( r, size );
+    }
     
-    r.last = r.first + size;
+    r.last = _beg;
+    r.first = r.last - size;
     
     return true;
   }

@@ -85,10 +85,12 @@ bool work_queue<64>::slow_pop(range<64>& r, range<64>::size_type size)
     test (_beg > _end) was true.
     The real interval is [_beg-size, _end)
   */
-  r.first = _end; /* upper bound of what could be _end (always decreasing) */
+  _beg -= size; /* abort transaction */
   lock_pop();
+  _beg += size;
   if (_beg > _end)
   {
+    /* test if it is possible to steal sub part */
     if (_beg - size >= _end)
     {
       _beg -= size;
@@ -116,22 +118,17 @@ template<>
 bool work_queue<64>::steal(range<64>& r, range<64>::size_type size)
 {
   lock_steal();
-  
   _end -= size;
   kaapi_mem_barrier();
-//  mem_synchronize();
   if (_end < _beg)
   {
     _end += size;
     unlock();
     return false;
   }
-  
-  r.first = _end;
-  r.last  = r.first + size;
-  
+  r.first = _end;  
   unlock();
-  
+  r.last  = r.first + size;
   return true;
 }  
 
@@ -162,9 +159,9 @@ bool work_queue<64>::steal(range<64>& r, work_queue<64>::size_type size_max, wor
   }
   
   r.first = _end;
+  unlock();
   r.last  = r.first + size_max;
   
-  unlock();
   return true;
 }  
 
