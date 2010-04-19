@@ -120,6 +120,10 @@ namespace rts {
   template<> struct signed_type_that_have_bits<16>{ typedef  kaapi_int16_t type; };
   template<> struct signed_type_that_have_bits<32>{ typedef  kaapi_int32_t type; };
   template<> struct signed_type_that_have_bits<64>{ typedef  kaapi_int64_t type; };
+
+  template<typename type> struct bits_for_type{ 
+    enum { bits = sizeof(type)*8 };
+  };
   
   /** work range: two public available integer of 'bits' bits
    */
@@ -190,15 +194,15 @@ namespace rts {
 
     /* clear the work_queue 
      */
-    inline void clear();
+    void clear();
     
     /* return true iff the work_queue is empty 
      */
-    inline bool is_empty() const;
+    bool is_empty() const;
     
     /* return the size of the work_queue 
      */
-    inline size_type size() const;
+    size_type size() const;
     
     /* push a new valid subrange at the begin of the queue.
        Only valid of the pushed range just before the remainding part of the queue,
@@ -389,13 +393,13 @@ namespace rts {
   template<int bits>
   inline bool work_queue<bits>::pop(range<bits>& r, typename range<bits>::size_type size)
   {
-    r.last = _beg;
+    r.first = _beg;
     _beg += size;
     /* read of _end after write of _beg */
     kaapi_mem_barrier();
     if (_beg > _end) return slow_pop( r, size );
     
-    r.first = r.last - size;
+    r.last = r.first + size;
     
     return true;
   }
