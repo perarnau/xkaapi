@@ -127,7 +127,7 @@ public:
       _windowsize = 1*kaapi_getconcurrency();
 
     blocsize = _windowsize;
-    _pargrain = 2;
+    _pargrain = 1;
     
     /* input */
     _inputiterator_value = new value_type[4*_windowsize];
@@ -210,9 +210,9 @@ public:
            if (blocsize ==_windowsize)
            {
             /*nonconvergence_iter =0;*/
-             _pargrain = 4;
-             seqgrain = 2;
-             blocsize = 4*_windowsize;
+             _pargrain = 2;
+             seqgrain = 1;
+             blocsize = 2*_windowsize;
            }
 /*
            else {
