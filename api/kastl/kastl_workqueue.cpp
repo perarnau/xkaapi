@@ -56,6 +56,7 @@ void work_queue<64>::lock_pop()
 {
   while (!_lock.cas( 0, 1))
     ;
+  kaapi_mem_barrier();
 }
 
 /**
@@ -72,6 +73,7 @@ void work_queue<64>::lock_steal()
 template<>
 void work_queue<64>::unlock()
 {
+  kaapi_mem_barrier();
   _lock.write(0);
 }
   

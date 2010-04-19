@@ -159,6 +159,7 @@ public:
         }      
 
         /* initialize the queue: concurrent operation with respect to steal */
+std::cout << "--------- new range [0," << i << ")" << std::endl;
         _queue.set( range(0, i) );      
 #endif
       }
@@ -283,7 +284,8 @@ protected:
         /* re-steal victim, but serialize access to the workqueue */
         while (!_victim_queue->steal( _range, *_pargrain, 1))
           if (*_isfinish) return;
-std::cout << "Thief steal:[" << _range.first << "," << _range.last << ")" << std::endl;
+printf("Thief %p steal:[%li,%li)\n", (void*)this, _range.first, _range.last ); 
+fflush(stdout);
         kaapi_assert( !_range.is_empty() );
       }
     }
@@ -350,6 +352,9 @@ std::cout << "Thief steal:[" << _range.first << "," << _range.last << ")" << std
     if ( !_queue.steal(r, size_max, size_min )) return 0;
     kaapi_assert_debug (!r.is_empty());
     
+printf("%i Thieves steal [%li,%li)\n", count, r.first, r.last );
+fflush(stdout);
+
     /* size of what the thieves have stolen */
     size = r.size();
 
