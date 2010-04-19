@@ -269,14 +269,13 @@ protected:
       while (!*_isfinish)
       {
         /* shift to avoid arithmetic in the main loop */
-        ResultElem_t* return_funccall = _return_funccall - _range.first;
         for ( ; _range.first != _range.last; ++_range.first )
         {
           if (*_isfinish) return;
-          _func( return_funccall[_range.first].data, _inputiterator_value[_range.first] );
+          _func( _return_funccall[_range.first].data, _inputiterator_value[_range.first] );
           
           /* enqueue result */
-          while (!_fiforesult->enqueue( &return_funccall[_range.first] ))
+          while (!_fiforesult->enqueue( &_return_funccall[_range.first] ))
             if (*_isfinish) return;
 
         } // end for
