@@ -284,7 +284,7 @@ protected:
         /* re-steal victim, but serialize access to the workqueue */
         while (!_victim_queue->steal( _range, *_pargrain ))
           if (*_isfinish) return;
-printf("Thief %p steal:[%li,%li)\n", (void*)this, _range.first, _range.last ); 
+printf("Thief %p steal:[%li,%li), queue:[%li,%li)\n", (void*)this, _range.first, _range.last, victim_queue->_beg, victim_queue->_end ); 
 fflush(stdout);
         kaapi_assert( !_range.is_empty() );
       }

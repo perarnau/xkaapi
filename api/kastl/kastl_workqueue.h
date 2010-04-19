@@ -259,7 +259,7 @@ namespace rts {
      */
     bool steal(range<bits>&, typename range<bits>::size_type sz_max, typename range<bits>::size_type sz_min);
     
-  private:
+  public:
     /* */
     bool slow_pop( range<bits>&, typename range<bits>::size_type sz );
     
