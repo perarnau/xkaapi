@@ -47,33 +47,37 @@
 
 namespace kastl {
 
-namespace impl {
+namespace rts {
 
 /**
 */
-void work_queue::lock_pop()
+template<>
+void work_queue<64>::lock_pop()
 {
-  while (!atomic_cas(&_lock, 0, 1))
+  while (!_lock.cas( 0, 1))
     ;
 }
 
 /**
 */
-void work_queue::lock_steal()
+template<>
+void work_queue<64>::lock_steal()
 {
-  while ((atomic_read(&_lock) == 1) && !atomic_cas(&_lock, 0, 1))
+  while ((_lock.read() == 1) && !_lock.cas(0, 1))
     usleep(1);
 }
 
 /**
 */
-void work_queue::unlock()
+template<>
+void work_queue<64>::unlock()
 {
-  atomic_write(&_lock, 0);
+  _lock.write(0);
 }
   
 /** */
-bool work_queue::slow_pop(range& r, work_queue::size_type size)
+template<>
+bool work_queue<64>::slow_pop(range<64>& r, range<64>::size_type size)
 {
   /* already done in inlined pop :
       _beg += size;
@@ -108,9 +112,11 @@ bool work_queue::slow_pop(range& r, work_queue::size_type size)
   
 /**
 */
-bool work_queue::steal(range& r, work_queue::size_type size)
+template<>
+bool work_queue<64>::steal(range<64>& r, range<64>::size_type size)
 {
   lock_steal();
+  
   _end -= size;
   kaapi_mem_barrier();
 //  mem_synchronize();
@@ -132,7 +138,8 @@ bool work_queue::steal(range& r, work_queue::size_type size)
 
 /**
 */
-bool work_queue::steal(range& r, work_queue::size_type size_max, work_queue::size_type size_min)
+template<>
+bool work_queue<64>::steal(range<64>& r, work_queue<64>::size_type size_max, work_queue<64>::size_type size_min)
 {
   kaapi_assert_debug( size_min <= size_max );
   lock_steal();

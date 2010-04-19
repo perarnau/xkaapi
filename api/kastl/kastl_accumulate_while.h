@@ -115,6 +115,8 @@ public:
     kaapi_taskadaptive_result_t* thief;
     int nonconvergence_iter = 0;
     int seqgrain = 1;
+    /* accumulate data from the thief */
+    range r_result;
 
 #if TRACE_
     kaapi_uint64_t  t0, t1;
@@ -134,58 +136,55 @@ public:
     /*  ---- */
     while ((_ibeg != _iend) && !_isfinish)
     {
+      if (_queue.is_empty())
+      {
 #if 0
-      /* initialize the queue: concurrent operation with respect to steal */
-      _queue.set( range(blocsize, blocsize) );      
+        /* initialize the queue: concurrent operation with respect to steal */
+        _queue.set( range(blocsize, blocsize) );      
 
-      /* fill the input iterator and commit it into the queue */
-      for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
-      {
-        _inputiterator_value[blocsize -1 - i] = *_ibeg;
-        _queue.push_front( blocsize -1 - i);
-      }      
+        /* fill the input iterator and commit it into the queue */
+        for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
+        {
+          _inputiterator_value[blocsize -1 - i] = *_ibeg;
+          _queue.push_front( blocsize -1 - i);
+        }      
 #else
-      /* fill the input iterator and commit it into the queue */
-      for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
-      {
-        _inputiterator_value[i] = *_ibeg;
-      }      
+        /* fill the input iterator and commit it into the queue */
+        for (i = 0; (i<blocsize) && (_ibeg != _iend); ++i, ++_ibeg)
+        {
+          _inputiterator_value[i] = *_ibeg;
+        }      
 
-      /* initialize the queue: concurrent operation with respect to steal */
-      _queue.set( range(0, i) );      
+        /* initialize the queue: concurrent operation with respect to steal */
+        _queue.set( range(0, i) );      
 #endif
+      }
 
-      /* do one computation */
-      if (_queue.pop(r, seqgrain))
+      /* do local computation */
+      while (_queue.pop(r, seqgrain))
       {
 #if TRACE_
-lockout();
+        lockout();
         std::cout << "Tmaster eval:" << _inputiterator_value[r.first]
                   << " -> " << _return_funccall+r.first
                   << std::endl << std::flush;
-unlockout();
+        unlockout();
 #endif
-        for ( ; (r.first != r.last) && !_isfinish; ++r.first )
+        for ( ; (r.first != r.last); ++r.first )
         {
           _func( _return_funccall[r.first].data, _inputiterator_value[r.first] );
           ++cntevalfunc;
           _accf( _value, _return_funccall[r.first].data );
-          _isfinish = !_pred(_value);
         }
       }
+      _isfinish = !_pred(_value);
+      if (_isfinish) break;
 
-      /* accumulate data from all thieves */
-      _queue.clear();
-
-      /* here thief may no steal anymore things */
+      /* here thief may no steal anymore things: if pop return false it means that they are no more things to do */
       thief = kaapi_get_thief_head( sc );
       while (thief !=0)
       {
-
-        /* accumulate data from the thief */
-        range r_result;
         ThiefResult_t* thief_result = (ThiefResult_t*)thief->data;
-
         thief_result->return_queue.pop(r_result, thief_result->return_queue.size());
 
         if (!r_result.is_empty())
@@ -203,6 +202,7 @@ unlockout();
         /* next thief ? */
         thief = kaapi_get_nextthief_head( sc, thief );
       } // thief != 0
+
       {
          ++nonconvergence_iter;
          if ((!_isfinish) && (nonconvergence_iter == 2))
@@ -223,6 +223,7 @@ unlockout();
         }
       }
       //if (_isfinish) std::cout << "Its finished !" << std::endl;
+
     } // while pas fini
     kaapi_mem_barrier();
 
