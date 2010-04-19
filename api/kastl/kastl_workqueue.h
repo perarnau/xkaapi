@@ -65,7 +65,7 @@ namespace rts {
   template<>
   class atomic_t<32> {
   public:
-    atomic_t<32>(kaapi_int32_t value)
+    atomic_t<32>(kaapi_int32_t value =0)
     { 
 #if defined(__i386__)||defined(__x86_64)
       kaapi_assert_debug( ((unsigned long)&_atom & (32-1)) == 0 ); 
@@ -82,6 +82,9 @@ namespace rts {
     bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
     { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
 
+    void incr( )
+    { KAAPI_ATOMIC_INCR( &_atom ); }
+
   protected:
     kaapi_atomic32_t _atom;
   };
@@ -90,7 +93,7 @@ namespace rts {
   template<>
   class atomic_t<64> {
   public:
-    atomic_t<64>(kaapi_int64_t value)
+    atomic_t<64>(kaapi_int64_t value =0)
     { 
       KAAPI_ATOMIC_WRITE(&_atom, value);
 #if defined(__i386__)||defined(__x86_64)
@@ -106,6 +109,9 @@ namespace rts {
     
     bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
     { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
+
+    void incr( )
+    { KAAPI_ATOMIC_INCR( &_atom ); }
 
   protected:
     kaapi_atomic64_t _atom;

@@ -90,6 +90,8 @@ public:
     int ws
   ) : _queue(),
       _isfinish(false),
+      _cntthief(0),
+      _cntthiefend(0),
       _returnval(retval), _value(value), 
       _ibeg(ibeg), _iend(iend), _func(func), _accf(insert), _pred(pred), 
       _inputiterator_value(0), _master(0), 
@@ -116,7 +118,7 @@ public:
     size_t cntevalfunc =0;
     size_t i, blocsize;
     kaapi_taskadaptive_result_t* thief;
-    int nonconvergence_iter = 0;
+//    int nonconvergence_iter = 0;
     int seqgrain = 1;
     /* accumulate data from the thief */
     ResultElem_t* presult;
@@ -165,7 +167,7 @@ std::cout << "--------- new range [0," << i << ")" << std::endl;
       }
 
       /* do local computation */
-      if (_queue.pop(r, seqgrain))
+      while (_queue.pop(r, seqgrain))
       {
 #if TRACE_
         lockout();
@@ -180,25 +182,44 @@ std::cout << "--------- new range [0," << i << ")" << std::endl;
           ++cntevalfunc;
           _accf( _value, _return_funccall[r.first].data );
         }
-      }
-      bool isfinish = !_pred(_value);
-      if (isfinish) _isfinish = true;
-      if (isfinish) break;
+        bool isfinish = !_pred(_value);
+        if (isfinish) _isfinish = true;
+        if (isfinish) break;
 
-      /* accumulate result from thief */
-      for (int i=0; (i<KAAPI_MAX_PROCESSOR) && !_isfinish ; ++i)
-      {
-        if (_thief_atposition[i])
+        /* accumulate result from thief */
+        for (int i=0; (i<KAAPI_MAX_PROCESSOR) && !_isfinish ; ++i)
         {
-          if (_fiforesult[i].dequeue( presult ))
+          if (_thief_atposition[i])
           {
-            _accf( _value, presult->data );
-            ++cntevalfunc;
-            bool isfinish = !_pred(_value);
-            if (isfinish) _isfinish = true;
+            while (_fiforesult[i].dequeue( presult ))
+            {
+              _accf( _value, presult->data );
+              ++cntevalfunc;
+              bool isfinish = !_pred(_value);
+              if (isfinish) _isfinish = true;
+            }
           }
         }
       }
+      /* wait all slaves */
+      while (_cntthief != _cntthiefend.read() )
+      {
+        /* accumulate result from thief */
+        for (int i=0; (i<KAAPI_MAX_PROCESSOR) && !_isfinish ; ++i)
+        {
+          if (_thief_atposition[i])
+          {
+            while (_fiforesult[i].dequeue( presult ))
+            {
+              _accf( _value, presult->data );
+              ++cntevalfunc;
+              bool isfinish = !_pred(_value);
+              if (isfinish) _isfinish = true;
+            }
+          }
+        }
+      }
+      _cntthiefend.write( 0 );
 
     } // while pas fini
     kaapi_mem_barrier();
@@ -245,6 +266,7 @@ protected:
                   bool volatile* const isfinish,
                   fifo_queue<ResultElem_t,16>* fifoqueue,
                   work_queue* victim_queue,
+                  atomic* cntthiefend,
                   Function& func,
                   kaapi_stealcontext_t* master, 
                   value_type* inputiterator_value, /* original base pointer */
@@ -254,6 +276,7 @@ protected:
      : _range(r), 
        _fiforesult(fifoqueue),
        _victim_queue(victim_queue),
+       _cntthiefend(cntthiefend),
        _isfinish(isfinish),
        _func(func), 
        _inputiterator_value(inputiterator_value),
@@ -266,6 +289,7 @@ protected:
     /* main entry point of a thief */
     void doit( kaapi_stealcontext_t* sc, kaapi_thread_t* thread )
     { 
+      bool stealok;
       /* _range init during the first steal */
       while (!*_isfinish)
       {
@@ -278,13 +302,14 @@ protected:
           /* enqueue result */
           while (!_fiforesult->enqueue( &_return_funccall[_range.first] ))
             if (*_isfinish) return;
-
-        } // end for
-        
+        }
         /* re-steal victim, but serialize access to the workqueue */
-        while (!_victim_queue->steal( _range, *_pargrain ))
+        while (!_victim_queue->is_empty() && !(stealok = _victim_queue->steal( _range, *_pargrain) ))
           if (*_isfinish) return;
-printf("Thief %p steal:[%li,%li), queue:[%li,%li)\n", (void*)this, _range.first, _range.last, victim_queue->_beg, victim_queue->_end ); 
+        if (stealok) continue;
+        _cntthiefend->incr();
+        
+printf("Thief %p steal:[%li,%li), queue:[%li,%li)\n", (void*)this, _range.first, _range.last, _victim_queue->_beg, _victim_queue->_end ); 
 fflush(stdout);
         kaapi_assert( !_range.is_empty() );
       }
@@ -325,6 +350,7 @@ fflush(stdout);
     fifo_queue<ResultElem_t,16>* _fiforesult;          /* where to put my result */
     work_queue*                  _victim_queue;        /* where to steal input */
     bool volatile* const         _isfinish;
+    atomic*                      _cntthiefend;
     Function&                    _func;
     value_type*                  _inputiterator_value; /* same as victim input pointer */
     ResultElem_t*                _return_funccall;     /* same as victim output pointer */
@@ -395,6 +421,7 @@ fflush(stdout);
         {
           _thief_atposition[i] = true;
           _fiforesult[i].clear();
+          ++_cntthief;
         }
         output_work = new (kaapi_task_getargst(thief_task, ThiefWork_t))
             ThiefWork_t( 
@@ -402,6 +429,7 @@ fflush(stdout);
               &_isfinish,
               &_fiforesult[i],
               &_queue,
+              &_cntthiefend,
               _func,
               sc,
               _inputiterator_value,
@@ -436,6 +464,7 @@ protected:
   bool volatile                _isfinish __attribute__((aligned(64)));
   fifo_queue<ResultElem_t,16>  _fiforesult[KAAPI_MAX_PROCESSOR];
   int                          _cntthief;
+  atomic                       _cntthiefend;
   bool                         _thief_atposition[KAAPI_MAX_PROCESSOR];
   size_t*                      _returnval; /* number of iteration, output of seq call */
   T&                           _value __attribute__((aligned(64)));
