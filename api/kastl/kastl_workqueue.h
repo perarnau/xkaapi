@@ -308,9 +308,9 @@ namespace rts {
        - then the queue is not empty on return
     */
     lock_pop();
+    /* no reorder over volatile variable */
     _end = std::numeric_limits<typename work_queue<bits>::index_type>::min();
     _beg = r.first;
-    kaapi_mem_barrier();
     _end = r.last;
     kaapi_mem_barrier();
     unlock();
