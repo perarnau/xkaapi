@@ -289,8 +289,6 @@ public:
 };
 
 
-#if 0 // THE sequence wip
-
 class CountRun : public RunInterface
 {
   ptrdiff_t _kastl_res;
@@ -331,6 +329,9 @@ public:
   }
 
 };
+
+
+#if 0 // THE sequence wip
 
 
 class TransformRun : public RunInterface
@@ -2019,9 +2020,8 @@ RunInterface* RunInterface::create(const std::string& name)
     return new NAME ## Run();
 
   MATCH_AND_CREATE( ForEach );
-
-#if 0
   MATCH_AND_CREATE( Count );
+#if 0
   MATCH_AND_CREATE( Transform );
   MATCH_AND_CREATE( Search );
   MATCH_AND_CREATE( Accumulate );

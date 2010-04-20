@@ -1237,7 +1237,7 @@ namespace impl
     // better values whenever apropriated.
 
     static const enum TuningTag splitter_tag = TAG_STATIC;
-    static const size_t par_size = 128;
+    static const size_t par_size = 2048;
 
     static const enum TuningTag macro_tag = TAG_IDENTITY;
     static const size_t macro_min_size = 1024;
