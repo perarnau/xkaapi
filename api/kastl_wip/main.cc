@@ -405,6 +405,32 @@ public:
 };
 
 
+class AccumulateRun : public RunInterface
+{
+  ValueType _kastl_res;
+  ValueType _stl_res;
+
+public:
+  virtual void run_kastl(InputType& i, OutputType&)
+  {
+    _kastl_res = kastl::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res = std::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+  }
+
+  virtual bool check(OutputType&, OutputType&, std::string&) const
+  {
+    return _kastl_res == _stl_res;
+  }
+
+};
+
+
 #if 0 // THE sequence wip
 
 
@@ -471,32 +497,6 @@ public:
       }
 
     return true;
-  }
-
-};
-
-
-class AccumulateRun : public RunInterface
-{
-  ValueType _kastl_res;
-  ValueType _stl_res;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kastl_res = kastl::accumulate
-      (i.first.begin(), i.first.end(), ValueType(0));
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::accumulate
-      (i.first.begin(), i.first.end(), ValueType(0));
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    return _kastl_res == _stl_res;
   }
 
 };
@@ -2023,9 +2023,10 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( ForEach );
   MATCH_AND_CREATE( Count );
   MATCH_AND_CREATE( Search );
+  MATCH_AND_CREATE( Accumulate );
+
 #if 0
   MATCH_AND_CREATE( Transform );
-  MATCH_AND_CREATE( Accumulate );
 #endif
 
 #if 0 // speed compile time up

@@ -59,14 +59,14 @@ struct AccumulateWork : public BaseWork
     typename SequenceType::SizeType i = 0;
     if (this->_res._is_valid == false)
     {
-      this->_res = ResultType(*seq._beg, true);
+      this->_res = ResultType(*seq.begin(), true);
       i = 1;
     }
 
     this->_res._value = std::accumulate
-      (seq._beg + i, seq._end, this->_res._value, *this->_const);
+      (seq.begin() + i, seq.end(), this->_res._value, *this->_const);
 
-    seq._beg = seq._end;
+    seq.advance(seq.size());
   }
 
   inline void reduce(const SelfType& thief_work)
@@ -114,7 +114,7 @@ AccumulatorType accumulate
  BinaryFunction func
 )
 {
-  typedef kastl::impl::BasicSequence<RandomAccessIterator>
+  typedef kastl::impl::InSequence<RandomAccessIterator>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type
