@@ -39,8 +39,8 @@ struct ForEachWork : public BaseWork
 
   inline void compute(SequenceType& seq)
   {
-    std::for_each(seq._seq._beg, seq._seq._end, *this->_const);
-    seq._seq._beg = seq._seq._end;
+    std::for_each(seq.begin(), seq.end(), *this->_const);
+    seq.advance(seq.size());
   }
 };
 

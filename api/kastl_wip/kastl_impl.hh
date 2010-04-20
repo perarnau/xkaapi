@@ -3,17 +3,22 @@
 
 
 
+#define CONFIG_KASTL_DEBUG 0
+// should be set to 1 if debug, since need lock
+#define CONFIG_KASTL_LOCK_WORK 0
+#define CONFIG_KASTL_MASTER_SLAVE 1
+#define CONFIG_KASTL_THE_SEQUENCE 1
+
+
+
 #include <algorithm>
 #include <string.h>
 #include <sys/types.h>
 #include "kaapi.h"
 
-
-
-#define CONFIG_KASTL_DEBUG 0
-// should be set to 1 if debug, since need lock
-#define CONFIG_KASTL_LOCK_WORK 1
-#define CONFIG_KASTL_MASTER_SLAVE 1
+#if CONFIG_KASTL_THE_SEQUENCE
+# include "kastl_workqueue.h"
+#endif
 
 
 
@@ -78,6 +83,11 @@ namespace impl
       return _end;
     }
 
+    inline void advance(SizeType size)
+    {
+      _beg += size;
+    }
+
     inline SizeType size() const
     {
       return std::distance(_beg, _end);
@@ -133,50 +143,112 @@ namespace impl
 
     BasicSequence<IteratorType> _seq;
 
+#if CONFIG_KASTL_THE_SEQUENCE
+    kastl::rts::work_queue<64> _wq;
+#endif
+
     inline InSequence() {}
 
     inline InSequence
     (const IteratorType& beg, const IteratorType& end)
       : _seq(BasicSequence<IteratorType>(beg, end)) {}
 
+#if CONFIG_KASTL_THE_SEQUENCE
+    inline void subsequence(SequenceType& sub, const kastl::rts::range<64>& range)
+    {
+      // build a sub sequence from *this and range
+      sub._wq.set(range);
+      sub._seq = _seq;
+    }
+#endif
+
+    inline void advance(SizeType size)
+    {
+      // advance is only call on local seqs
+
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq._beg += size;
+#else
+      _seq.advance(size);
+#endif
+    }
+
     inline IteratorType begin() const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _seq._beg + _wq._beg;
+#else
       return _seq.begin();
+#endif
     }
 
     inline IteratorType end() const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _seq._beg + _wq._end;
+#else
       return _seq.end();
+#endif
     }
 
     inline SizeType size() const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _wq.size();
+#else
       return _seq.size();
+#endif
     }
 
     inline void split(SequenceType& seq, SizeType size)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      kastl::rts::range<64> range;
+      if (_wq.pop(range, size) == false)
+	return ;
+      subsequence(seq, range);
+#else
       _seq.split(seq._seq, size);
+#endif
     }
 
     inline void rsplit(SequenceType& seq, SizeType size)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      kastl::rts::range<64> range;
+      if (_wq.steal(range, size) == false)
+	return ;
+      subsequence(seq, range);
+#else
       _seq.rsplit(seq._seq, size);
+#endif
     }
 
     inline void affect_seq(SequenceType& seq) const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      seq._wq = _wq;
+#endif
+
       _seq.affect_seq(seq._seq);
     }
 
     inline void empty_seq(SequenceType& seq) const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      seq._wq.clear();
+#else
       _seq.empty_seq(seq._seq);
+#endif
     }
 
     inline bool is_empty() const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _wq.is_empty();
+#else
       return _seq.is_empty();
+#endif
     }
 
 #if CONFIG_KASTL_DEBUG
@@ -628,7 +700,6 @@ namespace impl
 
   };
 
-
   // extractor types
 
   // . macro extracts an instruction sequence
@@ -830,8 +901,9 @@ namespace impl
     WorkType* const victim_work =
       static_cast<WorkType*>(victim_voidptr);
 
-#if CONFIG_KASTL_DEBUG
     victim_work->lock();
+
+#if CONFIG_KASTL_DEBUG
     const typename SequenceType::RangeType vr =
       SequenceType::get_range(victim_work->_ori_seq, victim_work->_macro_seq);
     const typename SequenceType::RangeType tr =
@@ -844,12 +916,11 @@ namespace impl
 	   thief_work->_is_master ? 'm' : 's',
 	   (unsigned int)thief_work->_kid,
 	   tr.first, tr.second);
-    victim_work->unlock();
 #endif
 
-    victim_work->lock();
     victim_work->reduce(*thief_work);
     thief_work->_macro_seq.affect_seq(victim_work->_macro_seq);
+
     victim_work->unlock();
 
     // always return 1 so that the
@@ -898,7 +969,6 @@ namespace impl
 
       SequenceType* const victim_seq = &victim_work->_macro_seq;
 
-      // TODO: remove this lock
       victim_work->lock();
 
       const size_t work_size = victim_seq->size();
@@ -936,7 +1006,6 @@ namespace impl
 	  (kaapi_thread_pushdata(thief_thread, sizeof(WorkType)));
 
 #if CONFIG_KASTL_LOCK_WORK
-	// TODO: remove
 	KAAPI_ATOMIC_WRITE(&thief_work->_lock, 0);
 #endif
 
@@ -988,7 +1057,6 @@ namespace impl
 	++replied_count;
       }
 
-      // TODO: remove this lock
       victim_work->unlock();
 
       return replied_count;

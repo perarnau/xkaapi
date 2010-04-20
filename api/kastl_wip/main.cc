@@ -251,6 +251,46 @@ public:
 };
 
 
+class ForEachRun : public RunInterface
+{
+  // todo hack hack hack
+  SequenceType::iterator _spos;
+  SequenceType::iterator _kpos;
+  SequenceType::iterator _send;
+
+  static void inc(unsigned int& n) { ++n; }
+
+public:
+
+  virtual void run_kastl(InputType& i, OutputType&)
+  {
+    _kpos = i.first.begin();
+
+    kastl::for_each(i.first.begin(), i.first.end(), inc);
+  }
+
+  virtual void run_stl(InputType& i, OutputType&)
+  {
+    _spos = i.second.begin();
+    _send = i.second.end();
+
+    std::for_each(i.second.begin(), i.second.end(), inc);
+  }
+
+  virtual bool check(OutputType&, OutputType&, std::string&) const
+  {
+    SequenceType::iterator spos = _spos;
+    SequenceType::iterator kpos = _kpos;
+    SequenceType::iterator send = _send;
+
+    return cmp_sequence(kpos, spos, send);
+  }
+
+};
+
+
+#if 0 // THE sequence wip
+
 class CountRun : public RunInterface
 {
   ptrdiff_t _kastl_res;
@@ -288,44 +328,6 @@ public:
     error_string = value_error_string(_stl_res, _kastl_res);
 
     return false;
-  }
-
-};
-
-
-class ForEachRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-  static void inc(unsigned int& n) { ++n; }
-
-public:
-
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::for_each(i.first.begin(), i.first.end(), inc);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::for_each(i.second.begin(), i.second.end(), inc);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
   }
 
 };
@@ -496,6 +498,8 @@ public:
   }
 
 };
+
+#endif // THE sequence wip
 
 
 #if 0 // speed compile time up
@@ -2014,11 +2018,14 @@ RunInterface* RunInterface::create(const std::string& name)
   if (name == #NAME)		\
     return new NAME ## Run();
 
-  MATCH_AND_CREATE( Count );
   MATCH_AND_CREATE( ForEach );
+
+#if 0
+  MATCH_AND_CREATE( Count );
   MATCH_AND_CREATE( Transform );
   MATCH_AND_CREATE( Search );
   MATCH_AND_CREATE( Accumulate );
+#endif
 
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
