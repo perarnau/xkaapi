@@ -7,6 +7,7 @@
 #include "for_each.hh"
 #include "transform.hh"
 #include "search.hh"
+#include "accumulate.hh"
 
 
 #if 0 // speed compile time up
@@ -16,7 +17,6 @@
 #include "sort.hh"
 #include "min_element.hh"
 #include "max_element.hh"
-#include "accumulate.hh"
 #include "find.hh"
 #include "copy.hh"
 #include "fill.hh"

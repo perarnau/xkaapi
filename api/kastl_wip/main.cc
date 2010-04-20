@@ -471,7 +471,6 @@ public:
 
 };
 
-#if 0 // speed compile time up
 
 class AccumulateRun : public RunInterface
 {
@@ -498,6 +497,8 @@ public:
 
 };
 
+
+#if 0 // speed compile time up
 
 class EqualRun : public RunInterface
 {
@@ -2017,12 +2018,12 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( ForEach );
   MATCH_AND_CREATE( Transform );
   MATCH_AND_CREATE( Search );
+  MATCH_AND_CREATE( Accumulate );
 
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
   MATCH_AND_CREATE( PartialSum );
-  MATCH_AND_CREATE( Accumulate );
   MATCH_AND_CREATE( MinElement );
   MATCH_AND_CREATE( MaxElement );
   MATCH_AND_CREATE( Find );
