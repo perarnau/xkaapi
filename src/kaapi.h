@@ -1385,6 +1385,11 @@ static inline void kaapi_mem_barrier()
       __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
 #  endif
 
+#  ifndef KAAPI_ATOMIC_INCR
+#    define KAAPI_ATOMIC_INCR(a) \
+      __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  endif
+
 #elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
@@ -1397,6 +1402,11 @@ static inline void kaapi_mem_barrier()
 #  ifndef KAAPI_ATOMIC_CAS64
 #    define KAAPI_ATOMIC_CAS64(a, o, n) \
       OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_INCR
+#    define KAAPI_ATOMIC_INCR(a) \
+      OSAtomicIncrement32( &((a)->_counter) ) 
 #  endif
 
 #else
