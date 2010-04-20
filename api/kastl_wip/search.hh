@@ -81,17 +81,17 @@ public:
   inline void compute(SequenceType& seq)
   {
     const typename SequenceType::_IteratorType seq_end =
-      seq._seq._end + this->_const->win_size();
+      seq.end() + this->_const->win_size();
 
     ResultType result = std::search
     (
-     seq._seq._beg, seq_end,
+     seq.begin(), seq_end,
      this->_const->_beg,
      this->_const->_end,
      this->_const->_pred
     );
 
-    seq._seq._beg = seq._seq._end;
+    seq.advance(seq.size());
 
     if (result == seq_end)
       return ;

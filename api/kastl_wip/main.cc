@@ -331,76 +331,6 @@ public:
 };
 
 
-#if 0 // THE sequence wip
-
-
-class TransformRun : public RunInterface
-{
-  struct inc
-  {
-    inc() {}
-
-    ValueType operator()(const ValueType& v)
-    { return v + 1; }
-  };
-
-public:
-
-  virtual void get_seq_constraints
-  (
-   enum seq_order& seq_order,
-   bool& are_equal
-  ) const
-  {
-    seq_order = SEQ_ORDER_ASC;
-    are_equal = true;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    kastl::transform
-      (
-       i.first.begin(), i.first.end(),
-       o.begin(), inc()
-      );
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    std::transform
-      (
-       i.first.begin(), i.first.end(),
-       o.begin(), inc()
-      );
-  }
-
-  virtual bool check
-  (
-   OutputType& kastl_output,
-   OutputType& stl_output,
-   std::string& error_string
-  ) const
-  {
-    SequenceType::iterator kpos = kastl_output.begin();
-    SequenceType::iterator spos = stl_output.begin();
-    SequenceType::iterator send = stl_output.end();
-
-    if (cmp_sequence(kpos, spos, send) == false)
-      {
-	error_string = index_error_string
-	  (
-	   spos - stl_output.begin(),
-	   kpos - kastl_output.begin()
-	  );
-
-	return false;
-      }
-
-    return true;
-  }
-
-};
-
 class SearchRun : public RunInterface
 {
   SequenceType::iterator _kastl_res;
@@ -470,6 +400,77 @@ public:
     error_string = index_error_string(_stl_index, _kastl_index);
 
     return false;
+  }
+
+};
+
+
+#if 0 // THE sequence wip
+
+
+class TransformRun : public RunInterface
+{
+  struct inc
+  {
+    inc() {}
+
+    ValueType operator()(const ValueType& v)
+    { return v + 1; }
+  };
+
+public:
+
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_ASC;
+    are_equal = true;
+  }
+
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::transform
+      (
+       i.first.begin(), i.first.end(),
+       o.begin(), inc()
+      );
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::transform
+      (
+       i.first.begin(), i.first.end(),
+       o.begin(), inc()
+      );
+  }
+
+  virtual bool check
+  (
+   OutputType& kastl_output,
+   OutputType& stl_output,
+   std::string& error_string
+  ) const
+  {
+    SequenceType::iterator kpos = kastl_output.begin();
+    SequenceType::iterator spos = stl_output.begin();
+    SequenceType::iterator send = stl_output.end();
+
+    if (cmp_sequence(kpos, spos, send) == false)
+      {
+	error_string = index_error_string
+	  (
+	   spos - stl_output.begin(),
+	   kpos - kastl_output.begin()
+	  );
+
+	return false;
+      }
+
+    return true;
   }
 
 };
@@ -2021,9 +2022,9 @@ RunInterface* RunInterface::create(const std::string& name)
 
   MATCH_AND_CREATE( ForEach );
   MATCH_AND_CREATE( Count );
+  MATCH_AND_CREATE( Search );
 #if 0
   MATCH_AND_CREATE( Transform );
-  MATCH_AND_CREATE( Search );
   MATCH_AND_CREATE( Accumulate );
 #endif
 

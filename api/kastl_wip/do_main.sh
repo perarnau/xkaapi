@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGO=Count
+ALGO=Search
 DIR=/tmp/out
 #SIZE=1000000
 #SIZE=1000000
@@ -12,7 +12,7 @@ ITER=10
 #CPUSET=0,1,2,3,4,5,6,7
 #CPUSET=5,7,9,11
 #CPUSET=7,9,11
-CPUSET=9,11
+#CPUSET=9,11
 #CPUSET=9
 
 
