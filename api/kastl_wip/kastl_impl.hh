@@ -6,7 +6,7 @@
 #define CONFIG_KASTL_DEBUG 0
 // should be set to 1 if debug, since need lock
 #define CONFIG_KASTL_LOCK_WORK 0
-#define CONFIG_KASTL_MASTER_SLAVE 1
+#define CONFIG_KASTL_MASTER_SLAVE 0
 #define CONFIG_KASTL_THE_SEQUENCE 1
 
 
@@ -151,7 +151,12 @@ namespace impl
 
     inline InSequence
     (const IteratorType& beg, const IteratorType& end)
-      : _seq(BasicSequence<IteratorType>(beg, end)) {}
+      : _seq(BasicSequence<IteratorType>(beg, end))
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq.set(kastl::rts::range<64>(0, _seq.size()));
+#endif
+    }
 
 #if CONFIG_KASTL_THE_SEQUENCE
     inline void subsequence(SequenceType& sub, const kastl::rts::range<64>& range)
@@ -203,9 +208,15 @@ namespace impl
     inline void split(SequenceType& seq, SizeType size)
     {
 #if CONFIG_KASTL_THE_SEQUENCE
+      // todo: the split function
+      // must add the subsequence
+      // to seq, not overwrrite it
+
       kastl::rts::range<64> range;
+
       if (_wq.pop(range, size) == false)
 	return ;
+
       subsequence(seq, range);
 #else
       _seq.split(seq._seq, size);
@@ -215,9 +226,12 @@ namespace impl
     inline void rsplit(SequenceType& seq, SizeType size)
     {
 #if CONFIG_KASTL_THE_SEQUENCE
+      empty_seq(seq);
+
       kastl::rts::range<64> range;
       if (_wq.steal(range, size) == false)
 	return ;
+
       subsequence(seq, range);
 #else
       _seq.rsplit(seq._seq, size);
@@ -226,11 +240,12 @@ namespace impl
 
     inline void affect_seq(SequenceType& seq) const
     {
-#if CONFIG_KASTL_THE_SEQUENCE
-      seq._wq = _wq;
-#endif
-
       _seq.affect_seq(seq._seq);
+
+#if CONFIG_KASTL_THE_SEQUENCE
+      // only seq needs protection, ensured by ::set
+      seq._wq.set(kastl::rts::range<64>(_wq._beg, _wq._end));
+#endif
     }
 
     inline void empty_seq(SequenceType& seq) const
@@ -255,7 +270,11 @@ namespace impl
     typedef std::pair<SizeType, SizeType> RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return RangeType(b._wq._beg, b._wq._end);
+#else
       return BasicSequence<IteratorType>::get_range(a._seq, b._seq);
+#endif
     }
 #endif
 
@@ -757,6 +776,11 @@ namespace impl
       const SizeType size = std::min(src_seq.size(), _backoff_size);
       src_seq.split(dst_seq, size);
 
+#if CONFIG_KASTL_THE_SEQUENCE
+      if (dst_seq.size() == 0)
+	return false;
+#endif
+
       if (_backoff_size < (SizeType)MaxSize)
       {
 #if 0
@@ -791,6 +815,11 @@ namespace impl
       const SizeType size = std::min(src_seq.size(), _macro_size);
       src_seq.split(dst_seq, size);
 
+#if CONFIG_KASTL_THE_SEQUENCE
+      if (dst_seq.size() == 0)
+	return false;
+#endif
+
       if (_macro_size == (SizeType)MaxSize)
 	return true;
 
@@ -816,6 +845,11 @@ namespace impl
       const SizeType size = std::min((SizeType)src_seq.size(), (SizeType)UnitSize);
 
       src_seq.split(dst_seq, size);
+
+#if CONFIG_KASTL_THE_SEQUENCE
+      if (dst_seq.size() == 0)
+	return false;
+#endif
 
       return true;
     }
@@ -864,6 +898,11 @@ namespace impl
 	std::min((SizeType)src_seq.size(), (SizeType)_unit_size);
 
       src_seq.rsplit(dst_seq, size);
+
+#if CONFIG_KASTL_THE_SEQUENCE
+      if (dst_seq.size() == 0)
+	return false;
+#endif
 
       return true;
     }
@@ -1014,6 +1053,12 @@ namespace impl
 	  (sc, sizeof(WorkType), NULL);
 	thief_work->_master_sc = sc;
 
+	// todo: the splitter should be changed
+	// for THE and non THE case, since steal
+	// may fail in THE case, not in locked
+	// case. this would allow for more control
+	// if the steal fails ie. redo it...
+	victim_seq->empty_seq(thief_work->_seq);
 	extractor.extract(thief_work->_seq, *victim_seq);
 	thief_work->_seq.empty_seq(thief_work->_macro_seq);
 
