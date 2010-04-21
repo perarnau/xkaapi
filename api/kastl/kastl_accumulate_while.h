@@ -90,8 +90,8 @@ public:
     int ws
   ) : _queue(),
       _isfinish(false),
-      _cntthief(0),
       _cntthiefend(0),
+      _cntthief(0),
       _returnval(retval), _value(value), 
       _ibeg(ibeg), _iend(iend), _func(func), _accf(insert), _pred(pred), 
       _inputiterator_value(0), _master(0), 
@@ -271,6 +271,7 @@ protected:
         kaapi_mem_barrier();
 
         /* re-steal victim, but serialize access to the workqueue */
+        stealok = false;
         while (!_victim_queue->is_empty() && !(stealok = _victim_queue->steal( _range, *_pargrain) ))
           if (*_isfinish) return;
         if (stealok) continue;
@@ -281,10 +282,12 @@ protected:
         while (_cntthiefend->read() !=0)
           ;
         kaapi_readmem_barrier();
-        while ((!_isfinish) && !(stealok = _victim_queue->steal( _range, *_pargrain) ))
+        stealok = false;
+        while ((!*_isfinish) && !(stealok = _victim_queue->steal( _range, *_pargrain) ))
           ;
         
         kaapi_assert_debug( *_isfinish || !_range.is_empty() );
+printf("%li::Thief resteal [%li,%li)\n", kaapi_get_elapsedns(), _range.first, _range.last );
       }
     }
 
@@ -352,7 +355,7 @@ protected:
     if ( !_queue.steal(r, size_max, size_min )) return 0;
     kaapi_assert_debug (!r.is_empty());
     
-printf("%i Thieves steal [%lli,%lli)\n", count, r.first, r.last );
+printf("%li::%i Thieves steal [%li,%li)\n", kaapi_get_elapsedns(), count, r.first, r.last );
 fflush(stdout);
 
     /* size of what the thieves have stolen */
@@ -397,6 +400,8 @@ fflush(stdout);
           _fiforesult[i].clear();
           ++_cntthief;
         }
+printf("%li:: %i Thief has [%li,%li)\n", kaapi_get_elapsedns(), i, rq.first, rq.last );
+fflush(stdout);
         output_work = new (kaapi_task_getargst(thief_task, ThiefWork_t))
             ThiefWork_t( 
               rq,  /* initial work */
@@ -436,9 +441,9 @@ fflush(stdout);
 protected:
   work_queue                   _queue __attribute__((aligned(64)));     /* first to ensure alignment constraint */
   bool volatile                _isfinish __attribute__((aligned(64)));
+  atomic                       _cntthiefend;
   fifo_queue<ResultElem_t,16>  _fiforesult[KAAPI_MAX_PROCESSOR];
   int                          _cntthief;
-  atomic                       _cntthiefend;
   bool                         _thief_atposition[KAAPI_MAX_PROCESSOR];
   size_t*                      _returnval; /* number of iteration, output of seq call */
   T&                           _value __attribute__((aligned(64)));
