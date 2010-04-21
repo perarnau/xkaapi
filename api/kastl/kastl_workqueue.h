@@ -114,7 +114,7 @@ namespace rts {
     { KAAPI_ATOMIC_INCR( &_atom ); }
 
   protected:
-    kaapi_atomic64_t _atom;
+    kaapi_atomic64_t _atom __attribute__((aligned(64)));
   };
 
 
@@ -325,8 +325,10 @@ namespace rts {
   template<int bits>
   inline void work_queue<bits>::clear()
   {
+    lock_pop();
     _end = 0;
     _beg = 0; 
+    unlock();
   }
   
   /** */

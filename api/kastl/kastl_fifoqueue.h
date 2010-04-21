@@ -132,8 +132,10 @@ namespace impl {
     kaapi_assert_debug( (((unsigned long)&_head) & (rts::bits_for_type<index_type>::bits-1)) == 0 ); 
     kaapi_assert_debug( (((unsigned long)&_tail) & (rts::bits_for_type<index_type>::bits-1)) == 0 );
 #else
-#  warning "May be alignment constraints exit to garantee atomic read write"
+#  warning "Alignment constraints cannot garantee atomic read write"
 #endif
+   for (int i=0; i<capacity; ++i) _buffer[i] = 0;
+   _buffer[_head]=0;  
   }
   
   /** */
@@ -161,10 +163,11 @@ namespace impl {
   template<typename T,int capacity>
   inline bool fifo_queue<T,capacity>::enqueue(T* data) 
   {
+    kaapi_assert_debug(data !=0);
     if (0 != _buffer[_head])
         return false;
-    _buffer[_head] = data;
     kaapi_mem_barrier();
+    _buffer[_head] = data;
     _head = (_head+1 < capacity ? _head+1 : 0);
     return true;
   }

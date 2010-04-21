@@ -74,7 +74,7 @@ void work_queue<64>::lock_steal()
 template<>
 void work_queue<64>::unlock()
 {
-  kaapi_mem_barrier();
+  kaapi_writemem_barrier();
   _lock.write(0);
 }
   
@@ -126,10 +126,14 @@ bool work_queue<64>::steal(range<64>& r, range<64>::size_type size)
   if (_end < _beg)
   {
     _end += size;
+//printf("Fail to steal, queue is [%li,%li)\n", _beg, _end);
+//fflush(stdout);
     unlock();
     return false;
   }
   r.first = _end;  
+printf("%li::Ok to steal, queue is [%li,%li)\n", kaapi_get_elapsedns(), _beg, _end);
+fflush(stdout);
   unlock();
   r.last  = r.first + size;
   return true;
