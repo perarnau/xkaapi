@@ -154,7 +154,7 @@ namespace impl {
     index_type e = _head;
     kaapi_readmem_barrier();
     index_type b = _tail;
-    return b < e ? e-b : 0;
+    return b < e ? e-b : b-e;
   }
   
   /** */
@@ -163,8 +163,8 @@ namespace impl {
   {
     if (0 != _buffer[_head])
         return false;
-    _buffer[_head] = data;
     kaapi_mem_barrier();
+    _buffer[_head] = data;
     _head = (_head+1 < capacity ? _head+1 : 0);
     return true;
   }
