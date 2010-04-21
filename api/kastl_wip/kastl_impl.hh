@@ -169,9 +169,9 @@ namespace impl
 
     inline void advance(SizeType size)
     {
-      // advance is only call on local seqs
-
 #if CONFIG_KASTL_THE_SEQUENCE
+      // advance is only call on local seqs
+      // so there is no need for protection
       _wq._beg += size;
 #else
       _seq.advance(size);
@@ -643,6 +643,10 @@ namespace impl
     BasicSequence<InputIteratorType> _iseq;
     OutputIteratorType _opos;
 
+#if CONFIG_KASTL_THE_SEQUENCE
+    kastl::rts::work_queue<64> _wq;
+#endif
+
     inline InOutSequence() {}
 
     inline InOutSequence
@@ -654,21 +658,87 @@ namespace impl
     {
       _iseq = BasicSequence<InputIteratorType>(l, h);
       _opos = opos;
+
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq.set(kastl::rts::range<64>(0, _iseq.size()));
+#endif
     }
 
+#if CONFIG_KASTL_THE_SEQUENCE
+    inline void subsequence(SequenceType& sub, const kastl::rts::range<64>& range)
+    {
+      // build a sub sequence from *this and range
+      sub._wq.set(range);
+      sub._iseq = _iseq;
+      sub._opos = _opos;
+    }
+#endif
+
+    inline InputIteratorType input_begin() const
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _iseq._beg + _wq._beg;
+#else
+      return _iseq.begin();
+#endif
+    }
+
+    inline InputIteratorType input_end() const
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _iseq._beg + _wq._end;
+#else
+      return _iseq.end();
+#endif
+    }
+
+    inline OutputIteratorType opos()
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return this->_opos + _wq._beg;
+#else
+      return this->_opos;
+#endif
+    }
+
+    inline void advance(SizeType size)
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      // refer to above comment
+      _wq._beg += size;
+#else
+      _iseq.advance(size);
+      _opos += size;
+#endif
+    }
+
+#if 0 // unused
     inline SequenceType& operator=(const SequenceType& s)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq = s._wq;
+#endif
       _iseq = s._iseq;
       _opos = s._opos;
+
       return *this;
     }
+#endif // unused
 
     inline SizeType size() const
-    { return _iseq.size(); }
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _wq.size();
+#else
+      return _iseq.size();
+#endif
+    }
 
     static inline void _sync_opos
     (OutputIteratorType& opos, SizeType size)
-    { opos += size; }
+    {
+      opos += size;
+    }
 
     static inline void _sync_opos
     (
@@ -676,44 +746,77 @@ namespace impl
      const InputIteratorType& old_pos,
      const InputIteratorType& new_pos
     )
-    { _sync_opos(opos, std::distance(old_pos, new_pos)); }
+    {
+      _sync_opos(opos, std::distance(old_pos, new_pos));
+    }
 
     inline void split(SequenceType& seq, SizeType size)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      kastl::rts::range<64> range;
+      if (_wq.pop(range, size) == false) 
+	return ;
+      subsequence(seq, range);
+#else
       _iseq.split(seq._iseq, size);
       seq._opos = _opos;
       _opos += size;
+#endif
     }
 
     inline void rsplit(SequenceType& seq, SizeType size)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      empty_seq(seq);
+      kastl::rts::range<64> range;
+      if (_wq.steal(range, size) == false)
+	return ;
+      subsequence(seq, range);
+#else
       _iseq.rsplit(seq._iseq, size);
       seq._opos = _opos;
       _sync_opos(seq._opos, _iseq._beg, seq._iseq._beg);
+#endif
     }
 
     inline void affect_seq(SequenceType& seq) const
     {
       _iseq.affect_seq(seq._iseq);
       seq._opos = _opos;
+
+#if CONFIG_KASTL_THE_SEQUENCE
+      seq._wq.set(kastl::rts::range<64>(_wq._beg, _wq._end));
+#endif
     }
 
     inline void empty_seq(SequenceType& seq) const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      seq._wq.clear();
+#else
       _iseq.empty_seq(seq._iseq);
+#endif
     }
 
     inline bool is_empty() const
     {
-      return _iseq._beg == _iseq._end;
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _wq.is_empty();
+#else
+      return _iseq.is_empty();
+#endif
     }
 
 #if CONFIG_KASTL_DEBUG
     typedef std::pair<SizeType, SizeType> RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return RangeType(b._wq._beg, b._wq._end);
+#else
       typedef BasicSequence<InputIteratorType> BasicSequenceType;
       return BasicSequenceType::get_range(a._iseq, b._iseq);
+#endif
     }
 #endif
 

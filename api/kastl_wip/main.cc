@@ -431,9 +431,6 @@ public:
 };
 
 
-#if 0 // THE sequence wip
-
-
 class TransformRun : public RunInterface
 {
   struct inc
@@ -500,8 +497,6 @@ public:
   }
 
 };
-
-#endif // THE sequence wip
 
 
 #if 0 // speed compile time up
@@ -2024,10 +2019,7 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Count );
   MATCH_AND_CREATE( Search );
   MATCH_AND_CREATE( Accumulate );
-
-#if 0
   MATCH_AND_CREATE( Transform );
-#endif
 
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
@@ -2184,6 +2176,7 @@ int main(int ac, char** av)
     RunLauncher l;
 
     l.launch(run, input, stl_output, kastl_output);
+
     std::string error_string;
     const bool is_success =
       RunChecker().check(run, stl_output, kastl_output, error_string);

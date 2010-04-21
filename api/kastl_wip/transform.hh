@@ -39,10 +39,8 @@ struct TransformWork : public BaseWork
 
   inline void compute(SequenceType& seq)
   {
-    std::transform(seq._iseq._beg, seq._iseq._end, seq._opos, *this->_const);
-
-    seq._opos += seq._iseq.size();
-    seq._iseq._beg = seq._iseq._end;
+    std::transform(seq.input_begin(), seq.input_end(), seq.opos(), *this->_const);
+    seq.advance(seq.size());
   }
 };
 
