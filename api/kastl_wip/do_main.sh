@@ -33,7 +33,7 @@ OUTPUT_FILTER='-v KAAPI'
 #OUTPUT_FILTER=^work:
 OUTPUT_FILE=/tmp/o
 
-export LD_LIBRARY_PATH=/home/lementec/install/lib
+export LD_LIBRARY_PATH=$HOME/install/lib
 
 rm $OUTPUT_FILE
 
