@@ -418,11 +418,23 @@ extern int kaapi_setup_topology(void);
       __sync_add_and_fetch( &((a)->_counter), 1 ) 
 #  endif
 
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR54(a) \
+      __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  endif
+
 #  define KAAPI_ATOMIC_DECR(a) \
     __sync_sub_and_fetch( &((a)->_counter), 1 ) 
 
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
 
 #  define KAAPI_ATOMIC_ADD(a, value) \
     __sync_add_and_fetch( &((a)->_counter), value ) 
@@ -450,11 +462,23 @@ extern int kaapi_setup_topology(void);
       OSAtomicIncrement32( &((a)->_counter) ) 
 #  endif
 
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR64(a) \
+      OSAtomicIncrement64( &((a)->_counter) ) 
+#  endif
+
 #  define KAAPI_ATOMIC_DECR(a) \
     OSAtomicDecrement32(&((a)->_counter) ) 
 
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    OSAtomicAdd32( -value, &((a)->_counter) ) 
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      OSAtomicAdd32( -value, &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      OSAtomicAdd64( -value, &((a)->_counter) ) 
+#  endif
 
 #  define KAAPI_ATOMIC_ADD(a, value) \
     OSAtomicAdd32( value, &((a)->_counter) ) 

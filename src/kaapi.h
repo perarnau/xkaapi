@@ -1390,6 +1390,21 @@ static inline void kaapi_mem_barrier()
       __sync_add_and_fetch( &((a)->_counter), 1 ) 
 #  endif
 
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR54(a) \
+      __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
+
 #elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
@@ -1407,6 +1422,21 @@ static inline void kaapi_mem_barrier()
 #  ifndef KAAPI_ATOMIC_INCR
 #    define KAAPI_ATOMIC_INCR(a) \
       OSAtomicIncrement32( &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR64(a) \
+      OSAtomicIncrement64( &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      OSAtomicAdd32( -value, &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      OSAtomicAdd64( -value, &((a)->_counter) ) 
 #  endif
 
 #else

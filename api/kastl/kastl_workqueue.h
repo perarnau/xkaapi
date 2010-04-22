@@ -45,113 +45,39 @@
 #ifndef _KASTL_WORK_QUEUE_H_
 #define _KASTL_WORK_QUEUE_H_
 #include "kaapi.h"
+#include "kastl/kastl_types.h"
 #include <limits>
 
 
 namespace kastl {
   
 /* --- most of these class / structure should be put into the C API
-   * the work_queue structure is more general that its usage in KaSTL
+   * the work_queue_t structure is more general that its usage in KaSTL
    it could be used inside the C runtime to manage the steal of task/frame.
 */  
 namespace rts {
 
-  /* C++ atomics encapsulation, low level memory routines 
-     * only specialized for signed 32 bits and 64 bits integer
-  */
-  template<int bits>
-  struct atomic_t;
-  
-  template<>
-  class atomic_t<32> {
-  public:
-    atomic_t<32>(kaapi_int32_t value =0)
-    { 
-#if defined(__i386__)||defined(__x86_64)
-      kaapi_assert_debug( ((unsigned long)&_atom & (32-1)) == 0 ); 
-#endif
-      KAAPI_ATOMIC_WRITE(&_atom, value);
-    }
-
-    kaapi_int32_t read() const 
-    { return KAAPI_ATOMIC_READ(&_atom); }
-
-    void write( kaapi_int32_t value ) 
-    { KAAPI_ATOMIC_WRITE(&_atom, value); }
-    
-    bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
-    { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
-
-    void incr( )
-    { KAAPI_ATOMIC_INCR( &_atom ); }
-
-  protected:
-    kaapi_atomic32_t _atom;
-  };
-
-
-  template<>
-  class atomic_t<64> {
-  public:
-    atomic_t<64>(kaapi_int64_t value =0)
-    { 
-      KAAPI_ATOMIC_WRITE(&_atom, value);
-#if defined(__i386__)||defined(__x86_64)
-      kaapi_assert_debug( ((unsigned long)this & (64-1)) == 0 ); 
-#endif
-    }
-
-    kaapi_int64_t read() const 
-    { return KAAPI_ATOMIC_READ(&_atom); }
-
-    void write( kaapi_int64_t value )
-    { KAAPI_ATOMIC_WRITE(&_atom, value); }
-    
-    bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
-    { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
-
-    void incr( )
-    { KAAPI_ATOMIC_INCR( &_atom ); }
-
-  protected:
-    kaapi_atomic64_t _atom __attribute__((aligned(64)));
-  };
-
-
-  /* Mini trait to get the C++ signed integral type for representing integer 
-     on given bits 
-  */
-  template<int bits> struct signed_type_that_have_bits{ };
-  template<> struct signed_type_that_have_bits<8> { typedef  kaapi_int8_t type; };
-  template<> struct signed_type_that_have_bits<16>{ typedef  kaapi_int16_t type; };
-  template<> struct signed_type_that_have_bits<32>{ typedef  kaapi_int32_t type; };
-  template<> struct signed_type_that_have_bits<64>{ typedef  kaapi_int64_t type; };
-
-  template<typename type> struct bits_for_type{ 
-    enum { bits = sizeof(type)*8 };
-  };
-  
-  /** work range: two public available integer of 'bits' bits
+  /** work range_t: two public available integer of 'bits' bits
    */
   template<int bits>
-  struct range
+  struct range_t
   {
     // must be signed int
     typedef typename signed_type_that_have_bits<bits>::type index_type;
-    typedef typename range<bits>::index_type                size_type;
+    typedef typename range_t<bits>::index_type              size_type;
     
     index_type first;
     index_type last;
     
     /* */
-    range()
+    range_t()
 #if defined(KAAPI_DEBUG)    
      : first(0), last(0)
 #endif
     { }
 
     /* */
-    range( index_type f, index_type l )
+    range_t( index_type f, index_type l )
      : first(f), last(l)
     { }
     
@@ -172,8 +98,8 @@ namespace rts {
       return !(first < last);
     }
     
-    /* shift the range to put the first at orig */
-    void shift( range::index_type orig )
+    /* shift the range_t to put the first at orig */
+    void shift( range_t::index_type orig )
     {
       last  -= first-orig;
       first = orig;
@@ -181,93 +107,102 @@ namespace rts {
   };
 
   
-  /** work work_queue: the main important data structure.
+  /** work work_queue_t: the main important data structure.
       It steal/pop are managed by a Disjkstra like protocol.
       The threads that want to steal serialize their access
       through a lock.
    */
   template<int bits>
-  class work_queue {
+  class work_queue_t {
   public:
-    typedef typename range<bits>::size_type  size_type;
-    typedef typename range<bits>::index_type index_type;
+    typedef typename range_t<bits>::size_type  size_type;
+    typedef typename range_t<bits>::index_type index_type;
+    typedef range_t<bits>                      range_type;
     
     /* default cstor */
-    work_queue();
+    work_queue_t();
     
-    /* set the work_queue */
-    void set( const range<bits>& );
+    /* set the work_queue_t */
+    void set( const range_t<bits>& );
 
-    /* clear the work_queue 
+    /* clear the work_queue_t 
      */
     void clear();
     
-    /* return true iff the work_queue is empty 
+    /* return true iff the work_queue_t is empty 
      */
     bool is_empty() const;
     
-    /* return the size of the work_queue 
+    /* return the size of the work_queue_t 
      */
     size_type size() const;
     
-    /* push a new valid subrange at the begin of the queue.
-       Only valid of the pushed range just before the remainding part of the queue,
-       i.e. iff queue.beg == range.last.
-       If the range is valid then returns true else return false.
+    /* push a new valid subrange_t at the begin of the queue.
+       Only valid of the pushed range_t just before the remainding part of the queue,
+       i.e. iff queue.beg == range_t.last.
+       If the range_t is valid then returns true else return false.
        The method is concurrent with the steal's methods.
      */
-    bool push_front( const range<bits>& r );
+    bool push_front( const range_t<bits>& r );
     
     /* extend the queue from [_beg,_end) to [first, _end)
        Only valid of the first < _beg.
        If its valid then returns true else return false.
        The method is concurrent with the steal's methods.
      */
-    bool push_front( const typename range<bits>::index_type& first );
+    bool push_front( const index_type& first );
 
     /* pop one element
        return true in case of success
      */
-    bool pop(typename range<bits>::index_type&);
+    bool pop(index_type&);
     
-    /* pop a subrange of size at most sz 
+    /* pop a subrange_t of size at most sz 
        return true in case of success
      */
-    bool pop(range<bits>&, typename range<bits>::size_type sz);
+    bool pop(range_t<bits>&, size_type sz);
 
-    /* push_back a new valid subrange at the end of the queue.
-       Only valid of the pushed range just after the queue,
-       i.e. iff queue.end == range.first.
-       If the range is valid then returns true else return false.
+    /* push_back a new valid subrange_t at the end of the queue.
+       Only valid of the pushed range_t just after the queue,
+       i.e. iff queue.end == range_t.first.
+       If the range_t is valid then returns true else return false.
        The method is concurrent with the pop's method.
      */
-    bool push_back( const range<bits>& r );
+    bool push_back( const range_t<bits>& r );
     
     /* extend the queue from [_beg,_end) to [_beg, last)
        Only valid of the last > _end.
        If its valid then returns true else return false.
        The method is concurrent with the pop's method.
      */
-    bool push_back( const typename range<bits>::index_type& last );
+    bool push_back( const index_type& last );
+    
+    /* steal a subrange_t of size at most sz
+       Lock on the queue is taken. The method is safe with concurrent execution of pop's methods.
+       return true in case of success
+     */
+    bool steal(range_t<bits>&, size_type sz);
+    
+    /* steal a subrange_t of size at most sz
+       Lock on the queue is not taken. The method is unsafe with concurrent execution of pop's methods.
+       return true in case of success
+     */
+    bool steal_unsafe(range_t<bits>&, size_type sz);
+    
+    /* steal a subrange_t of size at most sz_max
+       Lock on the queue is taken. The method is safe with concurrent execution of pop's methods.
+       return true in case of success
+     */
+    bool steal(range_t<bits>&, size_type sz_max, size_type sz_min);
 
-    /* steal one element
+    /* steal a subrange_t of size at most sz_max
+       Lock on the queue is not taken. The method is unsafe with concurrent execution of pop's methods.
        return true in case of success
      */
-    bool steal(typename range<bits>::index_type&);
+    bool steal_unsafe(range_t<bits>&, size_type sz_max, size_type sz_min);
     
-    /* steal a subrange of size at most sz
-       return true in case of success
-     */
-    bool steal(range<bits>&, typename range<bits>::size_type sz);
-    
-    /* steal a subrange of size at most sz_max
-       return true in case of success
-     */
-    bool steal(range<bits>&, typename range<bits>::size_type sz_max, typename range<bits>::size_type sz_min);
-    
-  public:
     /* */
-    bool slow_pop( range<bits>&, typename range<bits>::size_type sz );
+    bool slow_pop( range_t<bits>&, size_type sz );
     
     /* */
     void lock_pop();
@@ -278,26 +213,33 @@ namespace rts {
     /* */
     void unlock();
     
+    /* */
+    index_type begin() const { return _beg; }
+
+    /* */
+    index_type end() const { return _end; }
+
+  protected:
     /* data field required to be correctly aligned in order to ensure atomicity of read/write. 
        Put them on two separate lines of cache (assume == 64bytes) due to different access by 
        concurrent threads.
        Currently only IA32 & x86-64.
        An assertion is put inside the constructor to verify that this field are correctly aligned.
      */
-    index_type volatile _beg __attribute__((aligned(64)));
-    index_type volatile _end __attribute__((aligned(64)));
+    index_type volatile _beg; /*_beg & _end on two cache lines */
+    index_type volatile _end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
 
-    atomic_t<32> _lock __attribute__((aligned(64))); /* one bit is enough .. */
+    atomic_t<32> _lock __attribute__((aligned(32)));       /* one bit is enough .. */
   };
   
   /** */
   template<int bits>
-  inline work_queue<bits>::work_queue()
+  inline work_queue_t<bits>::work_queue_t()
   : _beg(0), _end(0), _lock(0)
   {
 #if defined(__i386__)||defined(__x86_64)
-    kaapi_assert_debug( (((unsigned long)&_beg) & (bits-1)) == 0 ); 
-    kaapi_assert_debug( (((unsigned long)&_end) & (bits-1)) == 0 );
+    kaapi_assert_debug( (((unsigned long)&_beg) & (bits/8-1)) == 0 ); 
+    kaapi_assert_debug( (((unsigned long)&_end) & (bits/8-1)) == 0 );
 #else
 #  warning "May be alignment constraints exit to garantee atomic read write"
 #endif
@@ -305,17 +247,17 @@ namespace rts {
   
   /** */
   template<int bits>
-  inline void work_queue<bits>::set( const range<bits>& r)
+  inline void work_queue_t<bits>::set( const range_t<bits>& r)
   {
     /* try to order writes to always guarantee that 
        - if the queue not empty before calling the method and 
-       if the range is not empty
+       if the range_t is not empty
        - then the queue is empty during the execution
        - then the queue is not empty on return
     */
     lock_pop();
     /* no reorder over volatile variable */
-    _end = std::numeric_limits<typename work_queue<bits>::index_type>::min();
+    _end = std::numeric_limits<typename work_queue_t<bits>::index_type>::min();
     _beg = r.first;
     _end = r.last;
     unlock();
@@ -323,7 +265,7 @@ namespace rts {
 
   /** */
   template<int bits>
-  inline void work_queue<bits>::clear()
+  inline void work_queue_t<bits>::clear()
   {
     lock_pop();
     _end = 0;
@@ -333,7 +275,7 @@ namespace rts {
   
   /** */
   template<int bits>
-  inline typename work_queue<bits>::size_type work_queue<bits>::size() const
+  inline typename work_queue_t<bits>::size_type work_queue_t<bits>::size() const
   {
     /* on lit d'abord _end avant _beg afin que le voleur puisse qui a besoin
        en general d'avoir la taille puis avoir la valeur la + ajour possible...
@@ -346,7 +288,7 @@ namespace rts {
   
   /** */
   template<int bits>
-  inline bool work_queue<bits>::is_empty() const
+  inline bool work_queue_t<bits>::is_empty() const
   {
     /* inverse ici... critical path optimization ? on veut la valeur la plus
        à jour possible pour la victime (pop)
@@ -359,7 +301,7 @@ namespace rts {
 
   /** */
   template<int bits>
-  inline bool work_queue<bits>::push_front( const range<bits>& r )
+  inline bool work_queue_t<bits>::push_front( const range_t<bits>& r )
   {
     kaapi_assert_debug( !r.is_empty() ) ;
     if (r.last != _beg ) return false;
@@ -370,7 +312,7 @@ namespace rts {
   
   /** */
   template<int bits>
-  inline bool work_queue<bits>::push_front( const work_queue<bits>::index_type& first )
+  inline bool work_queue_t<bits>::push_front( const index_type& first )
   {
     if (first > _beg ) return false;
     kaapi_writemem_barrier();
@@ -381,7 +323,7 @@ namespace rts {
 
   /** */
   template<int bits>
-  inline bool work_queue<bits>::pop( typename range<bits>::index_type& item )
+  inline bool work_queue_t<bits>::pop( index_type& item )
   {
     item = _beg;
     ++_beg;
@@ -389,7 +331,7 @@ namespace rts {
     kaapi_mem_barrier(); 
     if (_beg > _end) 
     {
-      range<bits> r;
+      range_t<bits> r;
       bool retval = slow_pop( r, 1 );
       item = r.first;
       return retval;
@@ -401,7 +343,7 @@ namespace rts {
 
   /** */
   template<int bits>
-  inline bool work_queue<bits>::pop(range<bits>& r, typename range<bits>::size_type size)
+  inline bool work_queue_t<bits>::pop(range_t<bits>& r, size_type size)
   {
     _beg += size;
     /* read of _end after write of _beg */
@@ -419,7 +361,7 @@ namespace rts {
 
   /** */
   template<int bits>
-  inline bool work_queue<bits>::push_back( const range<bits>& r )
+  inline bool work_queue_t<bits>::push_back( const range_t<bits>& r )
   {
     kaapi_assert_debug( !r.is_empty() ) ;
     if (r.first != _end ) return false;
@@ -431,23 +373,12 @@ namespace rts {
 
   /** */
   template<int bits>
-  inline bool work_queue<bits>::push_back( const typename range<bits>::index_type& last )
+  inline bool work_queue_t<bits>::push_back( const index_type& last )
   {
     if (last < _end ) return false;
     kaapi_writemem_barrier();
     _end = last;
     return true;
-  }
-
-
-  /** */
-  template<int bits>
-  inline bool work_queue<bits>::steal(typename range<bits>::index_type& item)
-  {
-    range<bits> r;
-    bool retval = steal(r, 1);
-    if (retval) item = r.first;
-    return retval;
   }
 
 } /* impl namespace */
@@ -457,9 +388,9 @@ namespace rts {
     Projection
 */
 namespace impl {
-  typedef rts::atomic_t<64>   atomic;
-  typedef rts::range<64>      range;
-  typedef rts::work_queue<64> work_queue;
+  typedef rts::atomic_t<64>     atomic;
+  typedef rts::range_t<64>      range;
+  typedef rts::work_queue_t<64> work_queue;
 }
 
 } /* kastl namespace */

@@ -261,19 +261,28 @@ protected:
         /* shift to avoid arithmetic in the main loop */
         for ( ; _range.first != _range.last; ++_range.first )
         {
-          if (*_isfinish) return;
+          if (*_isfinish) {
+            _cntthiefend->incr();
+            return;
+          }
           _func( _return_funccall[_range.first].data, _inputiterator_value[_range.first] );
           
           /* enqueue result */
           while (!_fiforesult->enqueue( &_return_funccall[_range.first] ))
-            if (*_isfinish) return;
+            if (*_isfinish) {
+              _cntthiefend->incr();
+              return;
+            }
         }
         kaapi_mem_barrier();
 
         /* re-steal victim, but serialize access to the workqueue */
         stealok = false;
         while (!_victim_queue->is_empty() && !(stealok = _victim_queue->steal( _range, *_pargrain) ))
-          if (*_isfinish) return;
+          if (*_isfinish) {
+            _cntthiefend->incr();
+            return;
+          }
         if (stealok) continue;
 
         /* queue has been see empty */
