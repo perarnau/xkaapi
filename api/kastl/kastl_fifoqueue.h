@@ -54,32 +54,6 @@ namespace kastl {
 */  
 namespace rts {
 
-  /* mini trait to give the best type to represent 'capacity' items
-  */
-  template<bool inf_256, bool inf_65536, bool inf_4294967296>
-  struct type_that_is_less {};
-
-  template<>
-  struct type_that_is_less<true,true,true> {
-    typedef unsigned char type;
-  };
-  template<>
-  struct type_that_is_less<false,true,true> {
-    typedef unsigned short type;
-  };
-  template<>
-  struct type_that_is_less<false,false,true> {
-    typedef unsigned int type;
-  };
-  template<unsigned int capacity>
-  struct type_that_represents_capacity
-  { 
-    typedef typename type_that_is_less<
-         (capacity<=255U),
-         (capacity<=65535U),
-         (capacity<=4294967295U) 
-    >::type type;
-  };
 
 } // namespace rts
 
