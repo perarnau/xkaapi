@@ -10,7 +10,7 @@
 #include "pinned_array.hh"
 
 
-#define CONFIG_USE_TBB 1
+#define CONFIG_USE_TBB 0
 
 #if CONFIG_USE_TBB
 
@@ -306,7 +306,6 @@ public:
   virtual void run_tbb(InputType& i, OutputType&)
   {
     _tpos = i.second.begin();
-
     tbb::parallel_for_each(i.second.begin(), i.second.end(), inc);
   }
 
@@ -316,6 +315,11 @@ public:
 
   virtual bool check(OutputType&, OutputType&, std::string&) const
   {
+#if CONFIG_USE_TBB
+    // for_each use modifies input sequences...
+    return true;
+#endif
+
     SequenceType::iterator spos = _spos;
     SequenceType::iterator kpos = _kpos;
     SequenceType::iterator send = _send;
@@ -2139,6 +2143,11 @@ public:
       timing::get_now(now_tm);
       timing::sub_timers(now_tm, start_tm, _tbb_tm);
     }
+    else
+    {
+      _tbb_tm.tv_sec = 0;
+      _tbb_tm.tv_usec = 0;
+    }
 #endif
   }
 
@@ -2204,8 +2213,6 @@ int main(int ac, char** av)
     return -1 ;
   }
 
-  printf("ploup\n");
-
 #if CONFIG_USE_TBB
   if (run->has_tbb() == true)
   {
@@ -2213,8 +2220,6 @@ int main(int ac, char** av)
       printf("cannot initialize tbb\n");
   }
 #endif
-
-  printf("ploup\n");
 
   // create sequences
   InputType input;
@@ -2240,13 +2245,9 @@ int main(int ac, char** av)
   ++output_count;
 #endif
 
-  printf("foobarbaz\n");
-
+  outputs.resize(output_count);
   for (size_t i = 0; i < output_count; ++i)
-  {
-    outputs.push_back(OutputType());
-    outputs.back().resize(output_size);
-  }
+    outputs[i].resize(output_size);
 
   // prepare the run
   run->prepare(input);
