@@ -10,6 +10,23 @@
 #include "pinned_array.hh"
 
 
+#define CONFIG_USE_TBB 1
+
+#if CONFIG_USE_TBB
+
+# include <tbb/task_scheduler_init.h>
+# include <tbb/parallel_for_each.h>
+
+static bool initialize_tbb()
+{
+  static tbb::task_scheduler_init tsi;
+  tsi.initialize(kaapi_getconcurrency());
+  return true;
+}
+
+#endif
+
+
 #define DEFAULT_INPUT_SIZE 100000
 #define DEFAULT_ITER_SIZE 10
 
@@ -221,6 +238,9 @@ public:
   virtual void run_stl(InputType&, OutputType&) = 0;
   virtual void run_kastl(InputType&, OutputType&) = 0;
 
+  virtual bool has_tbb() const { return false; } 
+  virtual void run_tbb(InputType&, OutputType&) {}
+
   virtual bool check(OutputType&, OutputType&, std::string&) const = 0;
 
   virtual void prepare(InputType&) {}
@@ -258,6 +278,10 @@ class ForEachRun : public RunInterface
   SequenceType::iterator _kpos;
   SequenceType::iterator _send;
 
+#if CONFIG_USE_TBB
+  SequenceType::iterator _tpos;  
+#endif
+
   static void inc(unsigned int& n) { ++n; }
 
 public:
@@ -276,6 +300,19 @@ public:
 
     std::for_each(i.second.begin(), i.second.end(), inc);
   }
+
+#if CONFIG_USE_TBB
+
+  virtual void run_tbb(InputType& i, OutputType&)
+  {
+    _tpos = i.second.begin();
+
+    tbb::parallel_for_each(i.second.begin(), i.second.end(), inc);
+  }
+
+  virtual bool has_tbb() const { return true; }
+
+#endif
 
   virtual bool check(OutputType&, OutputType&, std::string&) const
   {
@@ -2067,13 +2104,16 @@ class RunLauncher
   timing::TimerType _kastl_tm;
   timing::TimerType _stl_tm;
 
+#if CONFIG_USE_TBB
+  timing::TimerType _tbb_tm;
+#endif
+
 public:
   void launch
   (
    RunInterface* run,
    InputType& input,
-   OutputType& stl_output,
-   OutputType& kastl_output
+   std::vector<OutputType>& outputs
   )
   {
     // count the run count
@@ -2082,14 +2122,24 @@ public:
     timing::TimerType now_tm;
 
     timing::get_now(start_tm);
-    run->run_stl(input, stl_output);
+    run->run_stl(input, outputs[0]);
     timing::get_now(now_tm);
     timing::sub_timers(now_tm, start_tm, _stl_tm);
 
     timing::get_now(start_tm);
-    run->run_kastl(input, kastl_output);
+    run->run_kastl(input, outputs[1]);
     timing::get_now(now_tm);
     timing::sub_timers(now_tm, start_tm, _kastl_tm);
+
+#if CONFIG_USE_TBB
+    if (run->has_tbb() == true)
+    {
+      timing::get_now(start_tm);
+      run->run_tbb(input, outputs[2]);
+      timing::get_now(now_tm);
+      timing::sub_timers(now_tm, start_tm, _tbb_tm);
+    }
+#endif
   }
 
   inline unsigned long kastl_usec() const
@@ -2097,6 +2147,11 @@ public:
 
   inline unsigned long stl_usec() const
   { return timing::timer_to_usec(_stl_tm); }
+
+#if CONFIG_USE_TBB
+  inline unsigned long tbb_usec() const
+  { return timing::timer_to_usec(_tbb_tm); }
+#endif
 
 };
 
@@ -2140,23 +2195,36 @@ int main(int ac, char** av)
 
   timing::initialize();
 
-  // run
+  // instanciate a run
   RunInterface* const run =
     RunInterface::create(std::string(algo_name));
-
   if (run == NULL)
   {
     printf("cannot create run for %s\n", algo_name);
     return -1 ;
   }
 
+  printf("ploup\n");
+
+#if CONFIG_USE_TBB
+  if (run->has_tbb() == true)
+  {
+    if (initialize_tbb() == false)
+      printf("cannot initialize tbb\n");
+  }
+#endif
+
+  printf("ploup\n");
+
   // create sequences
   InputType input;
   input.first.resize(input_size);
-  input.second.resize(input.first.size());
+  input.second.resize(input_size);
+
   enum seq_order seq_order;
   bool are_equal;
   run->get_seq_constraints(seq_order, are_equal);
+
   gen_seq(input.first, input.first.size(), seq_order);
   if (are_equal == true)
     std::copy(input.first.begin(), input.first.end(), input.second.begin());
@@ -2164,29 +2232,52 @@ int main(int ac, char** av)
     gen_seq(input.second, input.second.size(), seq_order);
 
   // output
-  OutputType stl_output;
-  stl_output.resize(input.first.size() + input.second.size());
-  OutputType kastl_output;
-  kastl_output.resize(input.first.size() + input.second.size());
+  std::vector<OutputType> outputs;
+  const size_t output_size = input.first.size() + input.second.size();
+  size_t output_count = 2;
 
+#if CONFIG_USE_TBB
+  ++output_count;
+#endif
+
+  printf("foobarbaz\n");
+
+  for (size_t i = 0; i < output_count; ++i)
+  {
+    outputs.push_back(OutputType());
+    outputs.back().resize(output_size);
+  }
+
+  // prepare the run
   run->prepare(input);
 
+  // iterate iter_count times
   for (size_t i = 0; i < iter_count; ++i)
   {
     RunLauncher l;
 
-    l.launch(run, input, stl_output, kastl_output);
+    l.launch(run, input, outputs);
 
     std::string error_string;
     const bool is_success =
-      RunChecker().check(run, stl_output, kastl_output, error_string);
+      RunChecker().check(run, outputs[0], outputs[1], error_string);
 
+#if CONFIG_USE_TBB
+    printf("%s %lu %lu %lu [%c] (%s)\n",
+	   algo_name,
+	   l.kastl_usec(),
+	   l.stl_usec(),
+	   l.tbb_usec(),
+	   is_success ? 'x' : '!',
+	   error_string.c_str());
+#else
     printf("%s %lu %lu [%c] (%s)\n",
 	   algo_name,
 	   l.kastl_usec(),
 	   l.stl_usec(),
 	   is_success ? 'x' : '!',
 	   error_string.c_str());
+#endif
 
     if (is_success == false)
       return -1;

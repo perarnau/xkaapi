@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGO=Transform
+ALGO=ForEach
 DIR=/tmp/out
 #SIZE=1000000
 #SIZE=1000000
