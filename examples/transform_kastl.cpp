@@ -73,18 +73,26 @@ int main(int argc, char** argv)
   std::cout << "Time init:" << t1-t0 << std::endl;
 
 
-  Sin op;
-//  Op2 op;
+//  Sin op;
+  Op2 op;
   
   t0 = kaapi_get_elapsedtime();
   for (l=0; l<iter; ++l)
   {
+#if 0
+printf("%li:: %i---------->>>>>>>\n", kaapi_get_elapsedns(), l );
+fflush(stdout);
+#endif
 #if 0 // C++0X
     kastl::transform(input, input+n, output, [&](double val)->double {
       return sin(val);
     } );
 #else
-    kastl::transform(input, input+n, output, op, 1, 1 );
+    kastl::transform(input, input+n, output, op, 256, 1 );
+#endif
+#if 0
+printf("%li:: %i----------<<<<<<<\n\n", kaapi_get_elapsedns(), l );
+fflush(stdout);
 #endif
   }
   t1 = kaapi_get_elapsedtime();

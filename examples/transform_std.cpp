@@ -85,8 +85,8 @@ int main(int argc, char** argv)
   std::cout << "Time init:" << t1-t0 << std::endl;
 
 
-  Sin op;
-//  Op2 op;
+//  Sin op;
+  Op2 op;
   
   t0 = kaapi_get_elapsedtime();
   for (l=0; l<iter; ++l)
