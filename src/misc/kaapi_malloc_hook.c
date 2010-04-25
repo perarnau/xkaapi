@@ -7,8 +7,9 @@
  *
  */
 #include <malloc.h>
-#include "kaapi_impl.h"
 #include <fcntl.h>
+
+typedef unsigned long long kaapi_uint64_t;
 
  
 /* Prototypes for our hooks.  */
