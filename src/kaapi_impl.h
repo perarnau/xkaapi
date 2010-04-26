@@ -1027,6 +1027,13 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 extern void kaapi_set_workload( kaapi_uint32_t workload );
 
 
+/** Debugging allocaiton, not available on all machines/system
+ */
+extern void kaapi_init_mallochook (void);
+extern void kaapi_fini_mallochook (void);
+extern void kaapi_display_rawevents(int fd );
+
+
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
 
