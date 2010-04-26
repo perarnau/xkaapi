@@ -149,7 +149,7 @@ public:
         }      
 
         /* initialize the queue: concurrent operation with respect to steal */
-std::cout << "--------- new range [0," << i << ")" << std::endl;
+//std::cout << "--------- new range [0," << i << ")" << std::endl;
         _queue.set( range(0, i) );      
       }
 
