@@ -1113,6 +1113,12 @@ namespace impl
 
       victim_work->lock();
 
+      if (victim_work->_is_done)
+      {
+	victim_work->unlock();
+	return 0;
+      }
+
       const size_t work_size = victim_seq->size();
       size_t par_size = work_size / (1 + (size_t)request_count);
 
