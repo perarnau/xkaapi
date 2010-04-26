@@ -43,13 +43,13 @@
  */
 #ifndef _KASTL_FIFO_QUEUE_H_
 #define _KASTL_FIFO_QUEUE_H_
-#include "kastl_workqueue.h"
+#include "kastl_types.h"
 
 
 namespace kastl {
   
 /* --- most of these class / structure should be put into the C API
-   * the work_queue structure is more general that its usage in KaSTL
+   * the fifo_queue structure is more general that its usage in KaSTL
    it could be used inside the C runtime to manage the steal of task/frame.
 */  
 namespace rts {
@@ -65,8 +65,8 @@ namespace impl {
   template<typename T,int capacity=1>
   class fifo_queue {
   public:
-    typedef typename rts::type_that_represents_capacity<capacity>::type size_type;
-    typedef typename rts::type_that_represents_capacity<capacity>::type index_type;
+    typedef typename rts::signed_type_that_represents_capacity<capacity>::type size_type;
+    typedef typename rts::signed_type_that_represents_capacity<capacity>::type index_type;
 
     /* default cstor */
     fifo_queue();
@@ -75,7 +75,7 @@ namespace impl {
      */
     void clear();
     
-    /* return the size of the work_queue 
+    /* return the size of the queue 
      */
     size_type size() const;
     
