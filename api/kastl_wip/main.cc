@@ -10,18 +10,44 @@
 #include "pinned_array.hh"
 
 
-#define CONFIG_USE_TBB 0
+#define CONFIG_USE_TBB 1
 
 #if CONFIG_USE_TBB
 
 # include <tbb/task_scheduler_init.h>
-# include <tbb/parallel_for_each.h>
+# include <tbb/parallel_for.h>
+# include <tbb/blocked_range.h>
 
-static bool initialize_tbb()
+static bool tbb_initialize()
 {
   static tbb::task_scheduler_init tsi;
   tsi.initialize(kaapi_getconcurrency());
   return true;
+}
+
+template<typename InputIterator, typename Function>
+struct tbb_functor
+{
+  InputIterator _is;
+  Function _f;
+
+  tbb_functor(InputIterator& is, const Function& f)
+    : _is(is), _f(f) {}
+
+  void operator()(const tbb::blocked_range<int>& range) const
+  {
+    InputIterator pos = _is + range.begin();
+    for (int i = range.begin(); i < range.end(); ++i, ++pos)
+      _f(*pos);
+  }
+};
+
+template<typename InputIterator, typename Function>
+static void tbb_for_each(InputIterator first, InputIterator last, const Function& f)
+{
+  tbb_functor<InputIterator, Function> tf(first, f);
+  const int size = (int)std::distance(first, last);
+  tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
 }
 
 #endif
@@ -282,7 +308,12 @@ class ForEachRun : public RunInterface
   SequenceType::iterator _tpos;  
 #endif
 
-  static void inc(unsigned int& n) { ++n; }
+  template<typename T>
+  struct inc_functor
+  {
+    inline void operator()(T& n) const
+    { ++n; }
+  };
 
 public:
 
@@ -290,7 +321,7 @@ public:
   {
     _kpos = i.first.begin();
 
-    kastl::for_each(i.first.begin(), i.first.end(), inc);
+    kastl::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
   }
 
   virtual void run_stl(InputType& i, OutputType&)
@@ -298,7 +329,7 @@ public:
     _spos = i.second.begin();
     _send = i.second.end();
 
-    std::for_each(i.second.begin(), i.second.end(), inc);
+    std::for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
   }
 
 #if CONFIG_USE_TBB
@@ -306,7 +337,7 @@ public:
   virtual void run_tbb(InputType& i, OutputType&)
   {
     _tpos = i.second.begin();
-    tbb::parallel_for_each(i.second.begin(), i.second.end(), inc);
+    tbb_for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
   }
 
   virtual bool has_tbb() const { return true; }
@@ -2145,8 +2176,7 @@ public:
     }
     else
     {
-      _tbb_tm.tv_sec = 0;
-      _tbb_tm.tv_usec = 0;
+      memset(&_tbb_tm, 0, sizeof(_tbb_tm));
     }
 #endif
   }
@@ -2216,7 +2246,7 @@ int main(int ac, char** av)
 #if CONFIG_USE_TBB
   if (run->has_tbb() == true)
   {
-    if (initialize_tbb() == false)
+    if (tbb_initialize() == false)
       printf("cannot initialize tbb\n");
   }
 #endif
