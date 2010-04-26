@@ -3,7 +3,7 @@
 
 
 
-#define CONFIG_KASTL_DEBUG 0
+#define CONFIG_KASTL_DEBUG 1
 // should be set to 1 if debug, since need lock
 #define CONFIG_KASTL_LOCK_WORK 0
 #define CONFIG_KASTL_MASTER_SLAVE 0
@@ -144,7 +144,7 @@ namespace impl
     BasicSequence<IteratorType> _seq;
 
 #if CONFIG_KASTL_THE_SEQUENCE
-    kastl::rts::work_queue<64> _wq;
+    kastl::rts::work_queue_t<64> _wq;
 #endif
 
     inline InSequence() {}
@@ -154,12 +154,12 @@ namespace impl
       : _seq(BasicSequence<IteratorType>(beg, end))
     {
 #if CONFIG_KASTL_THE_SEQUENCE
-      _wq.set(kastl::rts::range<64>(0, _seq.size()));
+      _wq.set(kastl::rts::range_t<64>(0, _seq.size()));
 #endif
     }
 
 #if CONFIG_KASTL_THE_SEQUENCE
-    inline void subsequence(SequenceType& sub, const kastl::rts::range<64>& range)
+    inline void subsequence(SequenceType& sub, const kastl::rts::range_t<64>& range)
     {
       // build a sub sequence from *this and range
       sub._wq.set(range);
@@ -212,7 +212,7 @@ namespace impl
       // must add the subsequence
       // to seq, not overwrrite it
 
-      kastl::rts::range<64> range;
+      kastl::rts::range_t<64> range;
 
       if (_wq.pop(range, size) == false)
 	return ;
@@ -228,8 +228,8 @@ namespace impl
 #if CONFIG_KASTL_THE_SEQUENCE
       empty_seq(seq);
 
-      kastl::rts::range<64> range;
-      if (_wq.steal(range, size) == false)
+      kastl::rts::range_t<64> range;
+      if (_wq.steal(range, size, 0) == false)
 	return ;
 
       subsequence(seq, range);
@@ -244,7 +244,7 @@ namespace impl
 
 #if CONFIG_KASTL_THE_SEQUENCE
       // only seq needs protection, ensured by ::set
-      seq._wq.set(kastl::rts::range<64>(_wq._beg, _wq._end));
+      seq._wq.set(kastl::rts::range_t<64>(_wq._beg, _wq._end));
 #endif
     }
 
@@ -644,7 +644,7 @@ namespace impl
     OutputIteratorType _opos;
 
 #if CONFIG_KASTL_THE_SEQUENCE
-    kastl::rts::work_queue<64> _wq;
+    kastl::rts::work_queue_t<64> _wq;
 #endif
 
     inline InOutSequence() {}
@@ -660,12 +660,12 @@ namespace impl
       _opos = opos;
 
 #if CONFIG_KASTL_THE_SEQUENCE
-      _wq.set(kastl::rts::range<64>(0, _iseq.size()));
+      _wq.set(kastl::rts::range_t<64>(0, _iseq.size()));
 #endif
     }
 
 #if CONFIG_KASTL_THE_SEQUENCE
-    inline void subsequence(SequenceType& sub, const kastl::rts::range<64>& range)
+    inline void subsequence(SequenceType& sub, const kastl::rts::range_t<64>& range)
     {
       // build a sub sequence from *this and range
       sub._wq.set(range);
@@ -753,7 +753,7 @@ namespace impl
     inline void split(SequenceType& seq, SizeType size)
     {
 #if CONFIG_KASTL_THE_SEQUENCE
-      kastl::rts::range<64> range;
+      kastl::rts::range_t<64> range;
       if (_wq.pop(range, size) == false) 
 	return ;
       subsequence(seq, range);
@@ -768,8 +768,8 @@ namespace impl
     {
 #if CONFIG_KASTL_THE_SEQUENCE
       empty_seq(seq);
-      kastl::rts::range<64> range;
-      if (_wq.steal(range, size) == false)
+      kastl::rts::range_t<64> range;
+      if (_wq.steal(range, size, 0) == false)
 	return ;
       subsequence(seq, range);
 #else
@@ -785,7 +785,7 @@ namespace impl
       seq._opos = _opos;
 
 #if CONFIG_KASTL_THE_SEQUENCE
-      seq._wq.set(kastl::rts::range<64>(_wq._beg, _wq._end));
+      seq._wq.set(kastl::rts::range_t<64>(_wq._beg, _wq._end));
 #endif
     }
 
@@ -873,24 +873,24 @@ namespace impl
 
     inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
     {
-      if (src_seq.is_empty())
-	return false;
+      while (true)
+      {
+	const SizeType size = std::min(src_seq.size(), _backoff_size);
 
-      const SizeType size = std::min(src_seq.size(), _backoff_size);
-      src_seq.split(dst_seq, size);
+	if (size == 0)
+	  return false;
+
+	src_seq.split(dst_seq, size);
 
 #if CONFIG_KASTL_THE_SEQUENCE
-      if (dst_seq.size() == 0)
-	return false;
+	if (dst_seq.size())
+	  break;
 #endif
+      }
 
       if (_backoff_size < (SizeType)MaxSize)
       {
-#if 0
-	_backoff_size *= 2;
-#else
 	_backoff_size = (SizeType)((double)_backoff_size * 1.1f);
-#endif
 	if (_backoff_size > (SizeType)MaxSize)
 	  _backoff_size = (SizeType)MaxSize;
       }
@@ -912,23 +912,27 @@ namespace impl
 
     inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
     {
-      if (src_seq.is_empty())
-	return false;
+      while (true)
+      {
+	const SizeType size = std::min(src_seq.size(), _macro_size);
 
-      const SizeType size = std::min(src_seq.size(), _macro_size);
-      src_seq.split(dst_seq, size);
+	if (size == 0)
+	  return false;
+
+	src_seq.split(dst_seq, size);
 
 #if CONFIG_KASTL_THE_SEQUENCE
-      if (dst_seq.size() == 0)
-	return false;
+	if (dst_seq.size())
+	  break;
 #endif
+      }
 
-      if (_macro_size == (SizeType)MaxSize)
-	return true;
-
-      _macro_size += StepSize;
-      if (_macro_size > (SizeType)MaxSize)
-	_macro_size = (SizeType)MaxSize;
+      if (_macro_size != (SizeType)MaxSize)
+      {
+	_macro_size += StepSize;
+	if (_macro_size > (SizeType)MaxSize)
+	  _macro_size = (SizeType)MaxSize;
+      }
 
       return true;
     }
@@ -942,17 +946,27 @@ namespace impl
 
     inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
     {
-      if (src_seq.is_empty())
-	return false;
+      // try to pop the requested size.
+      // a failure may be due to a conflict
+      // with a steal. in this case, try
+      // again until size reaches 0, in which
+      // case we have to abort the extraction
 
-      const SizeType size = std::min((SizeType)src_seq.size(), (SizeType)UnitSize);
+      while (true)
+      {
+	const SizeType size = std::min
+	  ((SizeType)src_seq.size(), (SizeType)UnitSize);
 
-      src_seq.split(dst_seq, size);
+	if (size == 0)
+	  return false;
+
+	src_seq.split(dst_seq, size);
 
 #if CONFIG_KASTL_THE_SEQUENCE
-      if (dst_seq.size() == 0)
-	return false;
+	if (dst_seq.size())
+	  break ;
 #endif
+      }
 
       return true;
     }
@@ -1168,7 +1182,16 @@ namespace impl
 	// case. this would allow for more control
 	// if the steal fails ie. redo it...
 	victim_seq->empty_seq(thief_work->_seq);
-	extractor.extract(thief_work->_seq, *victim_seq);
+
+	const bool has_extracted =
+	  extractor.extract(thief_work->_seq, *victim_seq);
+
+	if (has_extracted == false)
+	{
+	  // todo: data has been pushed, leak, bug?
+	  break;
+	}
+
 	thief_work->_seq.empty_seq(thief_work->_macro_seq);
 
 #if CONFIG_KASTL_DEBUG
@@ -1534,7 +1557,14 @@ namespace impl
       work->unlock();
 
       if (has_extracted == false)
+      {
+	printf("[%lu] x: %c#%x has_extracted == false (%u)\n",
+	       ++printid,
+	       work->_is_master ? 'm' : 's',
+	       (unsigned int)work->_kid,
+	       work->_macro_seq.size());
 	break;
+      }
 
 #if CONFIG_KASTL_DEBUG
       const typename SequenceType::RangeType r =

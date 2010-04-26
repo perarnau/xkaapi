@@ -45,7 +45,7 @@
 #ifndef _KASTL_WORK_QUEUE_H_
 #define _KASTL_WORK_QUEUE_H_
 #include "kaapi.h"
-#include "kastl/kastl_types.h"
+#include "kastl_types.h"
 #include <limits>
 
 
@@ -219,7 +219,6 @@ namespace rts {
     /* */
     index_type end() const { return _end; }
 
-  protected:
     /* data field required to be correctly aligned in order to ensure atomicity of read/write. 
        Put them on two separate lines of cache (assume == 64bytes) due to different access by 
        concurrent threads.

@@ -126,14 +126,10 @@ bool work_queue_t<64>::steal(range_t<64>& r, size_type size)
   if (_end < _beg)
   {
     _end += size;
-//printf("Fail to steal, queue is [%li,%li)\n", _beg, _end);
-//fflush(stdout);
     unlock();
     return false;
   }
   r.first = _end;  
-printf("%li::Ok to steal, queue is [%li,%li)\n", kaapi_get_elapsedns(), _beg, _end);
-fflush(stdout);
   unlock();
   r.last  = r.first + size;
   return true;
@@ -183,14 +179,10 @@ bool work_queue_t<64>::steal_unsafe(range_t<64>& r, size_type size)
   if (_end < _beg)
   {
     _end += size;
-//printf("Fail to steal, queue is [%li,%li)\n", _beg, _end);
-//fflush(stdout);
     return false;
   }
   r.first = _end;  
   r.last  = r.first + size;
-//printf("%li::Ok steal [%li,%li), queue is [%li,%li)\n", kaapi_get_elapsedns(), r.first, r.last, _beg, _end);
-//fflush(stdout);
   return true;
 }  
 
