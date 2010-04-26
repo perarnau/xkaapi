@@ -55,8 +55,7 @@ template<>
 void work_queue_t<64>::lock_pop()
 {
   while (!_lock.cas( 0, 1))
-    ;
-  kaapi_mem_barrier();
+    kaapi_slowdown_cpu();
 }
 
 /**
@@ -64,9 +63,8 @@ void work_queue_t<64>::lock_pop()
 template<>
 void work_queue_t<64>::lock_steal()
 {
-  while ((_lock.read() == 1) && !_lock.cas(0, 1))
-    usleep(1);
-  kaapi_mem_barrier();
+  while (!_lock.cas( 0, 1))
+    kaapi_slowdown_cpu();
 }
 
 /**
@@ -88,28 +86,30 @@ bool work_queue_t<64>::slow_pop(range_t<64>& r, size_type size)
     test (_beg > _end) was true.
     The real interval is [_beg-size, _end)
   */
+
   _beg -= size; /* abort transaction */
+
+  kaapi_mem_barrier();
+
   lock_pop();
-  _beg += size;
-  if (_beg > _end)
+
+  r.first = _beg;
+
+  if ((_beg + size) > _end)
   {
-    /* test if it is possible to steal sub part */
-    if (_beg - size >= _end)
+    size = _end - _beg;
+    if (size == 0)
     {
-      _beg -= size;
       unlock();
       return false;
     }
-    r.last = _end;
-    size -= _beg - r.last;
-    _beg = r.last;
   }
-  else r.last = _beg;
+
+  _beg += size;
+
   unlock();
 
-  /* */
-  r.first = r.last - size;
-  if (r.first <0) r.first = 0;
+  r.last = _beg;
 
   return true;
 }

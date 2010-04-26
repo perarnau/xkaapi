@@ -3,7 +3,7 @@
 
 
 
-#define CONFIG_KASTL_DEBUG 1
+#define CONFIG_KASTL_DEBUG 0
 // should be set to 1 if debug, since need lock
 #define CONFIG_KASTL_LOCK_WORK 0
 #define CONFIG_KASTL_MASTER_SLAVE 0
@@ -229,7 +229,7 @@ namespace impl
       empty_seq(seq);
 
       kastl::rts::range_t<64> range;
-      if (_wq.steal(range, size, 0) == false)
+      if (_wq.steal(range, size, 1) == false)
 	return ;
 
       subsequence(seq, range);
@@ -769,7 +769,7 @@ namespace impl
 #if CONFIG_KASTL_THE_SEQUENCE
       empty_seq(seq);
       kastl::rts::range_t<64> range;
-      if (_wq.steal(range, size, 0) == false)
+      if (_wq.steal(range, size, 1) == false)
 	return ;
       subsequence(seq, range);
 #else
@@ -873,20 +873,12 @@ namespace impl
 
     inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
     {
-      while (true)
-      {
-	const SizeType size = std::min(src_seq.size(), _backoff_size);
-
-	if (size == 0)
-	  return false;
-
-	src_seq.split(dst_seq, size);
+      src_seq.split(dst_seq, _backoff_size);
 
 #if CONFIG_KASTL_THE_SEQUENCE
-	if (dst_seq.size())
-	  break;
+      if (dst_seq.size() == 0)
+	return false;
 #endif
-      }
 
       if (_backoff_size < (SizeType)MaxSize)
       {
@@ -912,20 +904,12 @@ namespace impl
 
     inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
     {
-      while (true)
-      {
-	const SizeType size = std::min(src_seq.size(), _macro_size);
-
-	if (size == 0)
-	  return false;
-
-	src_seq.split(dst_seq, size);
+      src_seq.split(dst_seq, _macro_size);
 
 #if CONFIG_KASTL_THE_SEQUENCE
-	if (dst_seq.size())
-	  break;
+      if (dst_seq.size() == 0)
+	return false;
 #endif
-      }
 
       if (_macro_size != (SizeType)MaxSize)
       {
@@ -952,21 +936,12 @@ namespace impl
       // again until size reaches 0, in which
       // case we have to abort the extraction
 
-      while (true)
-      {
-	const SizeType size = std::min
-	  ((SizeType)src_seq.size(), (SizeType)UnitSize);
-
-	if (size == 0)
-	  return false;
-
-	src_seq.split(dst_seq, size);
+      src_seq.split(dst_seq, (SizeType)UnitSize);
 
 #if CONFIG_KASTL_THE_SEQUENCE
-	if (dst_seq.size())
-	  break ;
+      if (dst_seq.size() == 0)
+	return false;
 #endif
-      }
 
       return true;
     }
@@ -1008,13 +983,7 @@ namespace impl
 
     inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
     {
-      if (src_seq.is_empty())
-	return false;
-
-      const SizeType size =
-	std::min((SizeType)src_seq.size(), (SizeType)_unit_size);
-
-      src_seq.rsplit(dst_seq, size);
+      src_seq.rsplit(dst_seq, _unit_size);
 
 #if CONFIG_KASTL_THE_SEQUENCE
       if (dst_seq.size() == 0)
@@ -1558,11 +1527,15 @@ namespace impl
 
       if (has_extracted == false)
       {
-	printf("[%lu] x: %c#%x has_extracted == false (%u)\n",
+#if CONFIG_KASTL_DEBUG
+	printf("[%lu] x: %c#%x has_extracted == false ([%u - %u] %u)\n",
 	       ++printid,
 	       work->_is_master ? 'm' : 's',
 	       (unsigned int)work->_kid,
+	       work->_macro_seq._wq._beg,
+	       work->_macro_seq._wq._end,
 	       work->_macro_seq.size());
+#endif
 	break;
       }
 
