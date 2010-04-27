@@ -141,11 +141,11 @@ namespace impl
     typedef typename std::iterator_traits<IteratorType>::difference_type SizeType;
     typedef IteratorType _IteratorType;
 
-    BasicSequence<IteratorType> _seq;
-
 #if CONFIG_KASTL_THE_SEQUENCE
     kastl::rts::work_queue_t<64> _wq;
 #endif
+
+    BasicSequence<IteratorType> _seq;
 
     inline InSequence() {}
 
@@ -293,12 +293,12 @@ namespace impl
     typedef typename std::iterator_traits<Iterator0Type>::difference_type
     SizeType;
 
-    BasicSequence<Iterator0Type> _seq0;
-    Iterator1Type _beg1;
-
 #if CONFIG_KASTL_THE_SEQUENCE
     kastl::rts::work_queue_t<64> _wq;
 #endif
+
+    BasicSequence<Iterator0Type> _seq0;
+    Iterator1Type _beg1;
 
     inline In2EqSizedSequence() {}
 
@@ -736,12 +736,12 @@ namespace impl
     typedef typename std::iterator_traits
     <OutputIteratorType>::value_type ValueType;
 
-    BasicSequence<InputIteratorType> _iseq;
-    OutputIteratorType _opos;
-
 #if CONFIG_KASTL_THE_SEQUENCE
     kastl::rts::work_queue_t<64> _wq;
 #endif
+
+    BasicSequence<InputIteratorType> _iseq;
+    OutputIteratorType _opos;
 
     inline InOutSequence() {}
 
@@ -1230,7 +1230,7 @@ namespace impl
 	thief_thread = kaapi_request_getthread(request);
 	thief_task = kaapi_thread_toptask(thief_thread);
 	thief_work = static_cast<WorkType*>
-	  (kaapi_thread_pushdata(thief_thread, sizeof(WorkType)));
+	  (kaapi_thread_pushdata_align(thief_thread, sizeof(WorkType), 8));
 
 #if CONFIG_KASTL_LOCK_WORK
 	KAAPI_ATOMIC_WRITE(&thief_work->_lock, 0);

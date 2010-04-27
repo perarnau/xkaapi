@@ -62,7 +62,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 redo_select:
   /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim );
-  if (err !=0) goto redo_select;
+  if (unlikely(err !=0)) goto redo_select;
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) return 0;
 

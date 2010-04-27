@@ -596,12 +596,12 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
 /** \ingroup TASK
     same as kaapi_thread_pushdata, but with alignment constraints.
     note the alignment must be a power of 2 and not 0
-    \param align the alignment size
+    \param align the alignment size, in BYTES
 */
 static inline void* kaapi_thread_pushdata_align
 (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
 {
-  kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) || (align == 8)) );
+  kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
   const uint32_t mask = align - 1;
 
   if ((uintptr_t)thread->sp_data & mask)
