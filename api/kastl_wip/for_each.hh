@@ -40,7 +40,7 @@ struct ForEachWork : public BaseWork
   inline void compute(SequenceType& seq)
   {
     std::for_each(seq.begin(), seq.end(), *this->_const);
-    seq.advance(seq.size());
+    seq.advance();
   }
 };
 

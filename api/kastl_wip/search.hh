@@ -91,7 +91,7 @@ public:
      this->_const->_pred
     );
 
-    seq.advance(seq.size());
+    seq.advance();
 
     if (result == seq_end)
       return ;

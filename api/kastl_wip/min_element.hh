@@ -54,7 +54,7 @@ struct MinElementWork : public BaseWork
   inline void compute(SequenceType& seq)
   {
     reduce_result(std::min_element(seq.begin(), seq.end(), this->_const->_binary_pred));
-    seq.advance(seq.size());
+    seq.advance();
   }
 
   inline void reduce(const SelfType& thief_work)

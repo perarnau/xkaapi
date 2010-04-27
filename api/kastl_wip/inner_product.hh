@@ -71,7 +71,7 @@ public:
      this->_const->_f1, this->_const->_f2
     );
 
-    seq.advance(seq.size());
+    seq.advance();
   }
 
   inline void reduce(const BaseType& tw)

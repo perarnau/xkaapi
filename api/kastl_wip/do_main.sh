@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGO=MinElement
+ALGO=InnerProduct
 DIR=/tmp/out
 #SIZE=1000000
 #SIZE=1000000

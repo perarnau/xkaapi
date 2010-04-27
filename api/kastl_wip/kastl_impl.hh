@@ -88,6 +88,11 @@ namespace impl
       _beg += size;
     }
 
+    inline void advance()
+    {
+      _beg = _end;
+    }
+
     inline SizeType size() const
     {
       return std::distance(_beg, _end);
@@ -167,11 +172,19 @@ namespace impl
     }
 #endif
 
+    inline void advance()
+    {
+      // call on a local safe sequence
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq._beg = _wq._end;
+#else
+      _seq.advance();
+#endif
+    }
+
     inline void advance(SizeType size)
     {
 #if CONFIG_KASTL_THE_SEQUENCE
-      // advance is only call on local seqs
-      // so there is no need for protection
       _wq._beg += size;
 #else
       _seq.advance(size);
@@ -327,11 +340,18 @@ namespace impl
     inline void advance(SizeType size)
     {
 #if CONFIG_KASTL_THE_SEQUENCE
-      // advance is only call on local seqs
-      // so there is no need for protection
       _wq._beg += size;
 #else
       _seq0.advance(size);
+#endif
+    }
+
+    inline void advance()
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq._beg = _wq._end;
+#else
+      _seq0.advance();
 #endif
     }
 
@@ -800,10 +820,20 @@ namespace impl
     inline void advance(SizeType size)
     {
 #if CONFIG_KASTL_THE_SEQUENCE
-      // refer to above comment
       _wq._beg += size;
 #else
       _iseq.advance(size);
+      _opos += size;
+#endif
+    }
+
+    inline void advance()
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq._beg = _wq._end;
+#else
+      const SizeType size = _iseq.size();
+      _iseq.advance();
       _opos += size;
 #endif
     }
@@ -1207,12 +1237,6 @@ namespace impl
 	par_size = ParSize;
       }
 
-#if CONFIG_KASTL_DEBUG
-#if 0
-      printf("[%lu] par_size(%lu, %d)\n", ++printid, par_size, request_count);
-#endif
-#endif
-
       StaticReverseExtractor<SequenceType> extractor(par_size);
 
       // request_count can be <= 0
@@ -1232,9 +1256,8 @@ namespace impl
 	thief_work = static_cast<WorkType*>
 	  (kaapi_thread_pushdata_align(thief_thread, sizeof(WorkType), 8));
 
-#if CONFIG_KASTL_LOCK_WORK
-	KAAPI_ATOMIC_WRITE(&thief_work->_lock, 0);
-#endif
+	// reset the work lock
+	thief_work->unlock();
 
 	thief_work->_is_done = false;
 	thief_work->_tresult = kaapi_allocate_thief_result

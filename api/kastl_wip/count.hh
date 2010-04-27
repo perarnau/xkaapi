@@ -45,7 +45,7 @@ struct CountWork : public BaseWork
   inline void compute(SequenceType& seq)
   {
     this->_res += std::count(seq.begin(), seq.end(), *this->_const);
-    seq.advance(seq.size());
+    seq.advance();
   }
 
   inline void reduce(const SelfType& thief_work)
