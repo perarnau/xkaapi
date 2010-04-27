@@ -5,7 +5,8 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-lib_LTLIBRARIES=libkastl.la
+# Not different that libkaapixx !!!!
+#lib_LTLIBRARIES=libkastl.la
 
 libkastl_la_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLLIB_BUILD_CPPFLAGS)
 libkastl_la_CFLAGS=$(AM_CFLAGS) $(KASTLLIB_BUILD_CFLAGS)
@@ -16,7 +17,10 @@ libkastl_la_LIBADD=../../src/libxkaapi.la $(KASTLLIB_BUILD_LIBS)
 kastlincludedir=$(includedir)/kastl
 
 kastlinclude_HEADERS=\
+	kastl/kastl_types.h\
+	kastl/kastl_fifoqueue.h\
 	kastl/kastl_workqueue.h\
+	kastl/kastl_team.h\
 	kastl/kastl_foreach.h\
 	kastl/kastl_transform.h\
 	kastl/kastl_accumulate_while.h\
@@ -24,5 +28,6 @@ kastlinclude_HEADERS=\
 	kastl/numeric
 
 libkastl_la_SOURCES=\
-	kastl_workqueue.cpp \
 	$(kastlinclude_HEADERS)
+
+#Put in .h 	kastl_workqueue.cpp 
