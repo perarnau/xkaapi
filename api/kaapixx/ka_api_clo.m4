@@ -141,15 +141,22 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
+#if 0
   static Format*           format;
   static kaapi_format_id_t fmid;
-  static kaapi_format_t*   getformat() { if (format==0) format = new Format; return format->get_c_format(); }
+  static kaapi_format_t*   getformat() { 
+    std::cout << "HERE" << std::endl;
+    if (format==0) format = new Format; return format->get_c_format(); 
+  }
+#endif
   static kaapi_task_bodyid_t default_body;
 
   static kaapi_format_t* registerformat()
   {
     /* here we assume no concurrency during startup calls of the library that initialize format objects */
+#if 0
     if (fmid != 0) return getformat();
+#endif
     default_body = 0;
     
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
@@ -241,12 +248,13 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   }
 };
 
-
+#if 0
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
 Format* KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::format = 0;
 
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
 kaapi_format_id_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::fmid = 0;
+#endif
 
 
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
