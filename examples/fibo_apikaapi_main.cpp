@@ -44,10 +44,6 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 
 // --------------------------------------------------------------------
 extern long fiboseq( const long n );
@@ -141,17 +137,6 @@ struct doit {
 */
 int main(int argc, char** argv)
 {
-  if (argc ==2) {
-    int fd = open(argv[1], O_RDONLY ); 
-    if (fd ==-1) {
-      std::cout << "Cannot open file:' " << argv[1] << "', error=" << errno << std::endl;
-      exit(1);
-    }
-    kaapi_display_rawevents(fd);
-    close(fd);
-    return 0; 
-  } 
-  kaapi_init_mallochook();
   try {
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
@@ -166,7 +151,6 @@ int main(int argc, char** argv)
     */
     com.leave();
 
-    kaapi_fini_mallochook();
     /* */
     ka::System::terminate();
   }
