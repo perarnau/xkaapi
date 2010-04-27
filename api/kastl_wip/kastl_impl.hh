@@ -296,6 +296,10 @@ namespace impl
     BasicSequence<Iterator0Type> _seq0;
     Iterator1Type _beg1;
 
+#if CONFIG_KASTL_THE_SEQUENCE
+    kastl::rts::work_queue_t<64> _wq;
+#endif
+
     inline In2EqSizedSequence() {}
 
     inline In2EqSizedSequence
@@ -303,47 +307,139 @@ namespace impl
      const Iterator0Type& beg0,
      const Iterator0Type& end0,
      const Iterator1Type& beg1
-     ) : _seq0(BasicSequence<Iterator0Type>(beg0, end0)), _beg1(beg1) {}
+     ) : _seq0(BasicSequence<Iterator0Type>(beg0, end0)), _beg1(beg1)
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      _wq.set(kastl::rts::range_t<64>(0, _seq0.size()));
+#endif
+    }
+
+#if CONFIG_KASTL_THE_SEQUENCE
+    inline void subsequence(SequenceType& sub, const kastl::rts::range_t<64>& range)
+    {
+      // build a sub sequence from *this and range
+      sub._wq.set(range);
+      sub._seq0 = _seq0;
+      sub._beg1 = _beg1;
+    }
+#endif
+
+    inline void advance(SizeType size)
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      // advance is only call on local seqs
+      // so there is no need for protection
+      _wq._beg += size;
+#else
+      _seq0.advance(size);
+#endif
+    }
+
+    inline Iterator0Type begin0() const
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _seq0._beg + _wq._beg;
+#else
+      return _seq0.begin();
+#endif
+    }
+
+    inline Iterator1Type begin1() const
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _beg1 + _wq._beg;
+#else
+      return _beg1;
+#endif
+    }
+
+    inline Iterator0Type end0() const
+    {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _seq0._beg + _wq._end;
+#else
+      return _seq0.end();
+#endif
+    }
 
     inline SizeType size() const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _wq.size();
+#else
       return _seq0.size();
+#endif
     }
 
     inline void split(SequenceType& seq, SizeType size)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      kastl::rts::range_t<64> range;
+
+      if (_wq.pop(range, size) == false)
+	return ;
+
+      subsequence(seq, range);
+#else
       _seq0.split(seq._seq0, size);
       _beg1 += size;
+#endif
     }
 
     inline void rsplit(SequenceType& seq, SizeType size)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      empty_seq(seq);
+
+      kastl::rts::range_t<64> range;
+      if (_wq.steal(range, size, 1) == false)
+	return ;
+
+      subsequence(seq, range);
+#else
       _seq0.rsplit(seq._seq0, size);
       seq._beg1 = _beg1 + std::distance(_seq0._beg, seq._seq0._beg);
+#endif
     }
 
     inline void affect_seq(SequenceType& seq) const
     {
       _seq0.affect_seq(seq._seq0);
       seq._beg1 = _beg1;
+
+#if CONFIG_KASTL_THE_SEQUENCE
+      seq._wq.set(kastl::rts::range_t<64>(_wq._beg, _wq._end));
+#endif
     }
 
     inline void empty_seq(SequenceType& seq) const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      seq._wq.clear();
+#else
       _seq0.empty_seq(seq._seq0);
       seq._beg1 = _beg1;
+#endif
     }
 
     inline bool is_empty() const
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return _wq.is_empty();
+#else
       return _seq0.is_empty();
+#endif
     }
 
 #if CONFIG_KASTL_DEBUG
     typedef typename BasicSequence<Iterator0Type>::RangeType RangeType;
     static RangeType get_range(const SequenceType& a, const SequenceType& b)
     {
+#if CONFIG_KASTL_THE_SEQUENCE
+      return RangeType(b._wq._beg, b._wq._end);
+#else
       return BasicSequence<Iterator0Type>::get_range(a._seq0, b._seq0);
+#endif
     }
 #endif
 

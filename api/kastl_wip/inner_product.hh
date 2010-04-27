@@ -55,21 +55,23 @@ public:
       this->_res = res;
   }
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
     typename SequenceType::SizeType i = 0;
     if (this->_res._is_valid == false)
     {
-      this->_res = ResultType(*seq._seq0._beg);
+      this->_res = ResultType(*seq.begin0());
       i = 1;
     }
 
     this->_res._value = std::inner_product
     (
-     seq._seq0._beg + i, seq._seq0._end, seq._beg1 + i,
+     seq.begin0() + i, seq.end0(), seq.begin1(),
      this->_res._value,
      this->_const->_f1, this->_const->_f2
     );
+
+    seq.advance(seq.size());
   }
 
   inline void reduce(const BaseType& tw)

@@ -10,7 +10,7 @@
 #include "pinned_array.hh"
 
 
-#define CONFIG_USE_TBB 1
+#define CONFIG_USE_TBB 0
 
 #if CONFIG_USE_TBB
 
@@ -357,7 +357,8 @@ public:
   {
 #if CONFIG_USE_TBB
     // for_each use modifies input sequences...
-    return true;
+    if (has_tbb() == true)
+      return true;
 #endif
 
     SequenceType::iterator spos = _spos;
@@ -579,7 +580,6 @@ public:
 
 };
 
-
 class MinElementRun : public RunInterface
 {
   SequenceType::iterator _kastl_res;
@@ -610,6 +610,47 @@ public:
 
     error_string = value_error_string<ValueType>
       (*_stl_res, *_kastl_res);
+
+    return false;
+  }
+
+};
+
+class InnerProductRun : public RunInterface
+{
+  ValueType _kastl_res;
+  ValueType _stl_res;
+
+public:
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_ONE;
+    are_equal = true;
+  }
+
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _kastl_res = kastl::inner_product
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res = std::inner_product
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+  }
+
+  virtual bool check
+  (OutputType&, OutputType&, std::string& error_string) const
+  {
+    if (_kastl_res == _stl_res)
+      return true;
+
+    error_string = value_error_string(_stl_res, _kastl_res);
 
     return false;
   }
@@ -1375,48 +1416,6 @@ public:
 
 #endif
 
-class InnerProductRun : public RunInterface
-{
-  ValueType _kastl_res;
-  ValueType _stl_res;
-
-public:
-  virtual void get_seq_constraints
-  (
-   enum seq_order& seq_order,
-   bool& are_equal
-  ) const
-  {
-    seq_order = SEQ_ORDER_ONE;
-    are_equal = true;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::inner_product
-      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::inner_product
-      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
-  }
-
-  virtual bool check
-  (OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
-
-    error_string = value_error_string(_stl_res, _kastl_res);
-
-    return false;
-  }
-
-};
-
-
 #if 0
 
 class AdjacentFindRun : public RunInterface
@@ -2101,6 +2100,7 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Accumulate );
   MATCH_AND_CREATE( Transform );
   MATCH_AND_CREATE( MinElement );
+  MATCH_AND_CREATE( InnerProduct );
 
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
@@ -2108,7 +2108,6 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( PartialSum );
   MATCH_AND_CREATE( MaxElement );
   MATCH_AND_CREATE( Find );
-  MATCH_AND_CREATE( InnerProduct );
   MATCH_AND_CREATE( Copy );
   MATCH_AND_CREATE( Fill );
   MATCH_AND_CREATE( Replace );

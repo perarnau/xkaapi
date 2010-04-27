@@ -9,10 +9,10 @@
 #include "search.hh"
 #include "accumulate.hh"
 #include "min_element.hh"
+#include "inner_product.hh"
 
 
 #if 0 // speed compile time up
-#include "inner_product.hh"
 #include "partial_sum.hh"
 #include "merge.hh"
 #include "sort.hh"
