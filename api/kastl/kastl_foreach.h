@@ -145,7 +145,7 @@ int incount = count;
     range r;
 
     /* */
-    if ( (size_min < _seqgrain) || !_queue.steal(r, size_max, size_min )) return 0;
+    if ( (size_min < _seqgrain) || !_queue.steal(r, size_max )) return 0;
 #if 0
 std::cout << "Splitter: count=" << count << ", r=[" << r.first << "," << r.last << ")"
           << ", size=" << size  << ", size_max=" << size_max << ", size_min=" << size_min 

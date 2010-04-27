@@ -74,7 +74,9 @@ libxkaapi_la_SOURCES=\
   kaapi_impl.h \
   task/kaapi_stack.h \
   task/kaapi_task.h
+
 #  task/kaapi_fmt_basictype.c
+#    misc/kaapi_malloc_hook.c
 
 if KAAPI_TARGET_MT
 

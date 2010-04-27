@@ -361,7 +361,7 @@ printf("%li::Thief resteal [%li,%li)\n", kaapi_get_elapsedns(), _range.first, _r
     range r;
 
     /* */
-    if ( !_queue.steal(r, size_max, size_min )) return 0;
+    if ( !_queue.steal(r, size_max )) return 0;
     kaapi_assert_debug (!r.is_empty());
     
 printf("%li::%i Thieves steal [%li,%li)\n", kaapi_get_elapsedns(), count, r.first, r.last );

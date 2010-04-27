@@ -61,8 +61,9 @@ libxkaapixx_la_SOURCES=\
 	kaapixx/ka_timer.h \
 	kaapixx/ka_types.h\
   atha/atha_kaapi.cpp\
-  atha/atha_monotonic.cpp\
-  kastl/kastl_workqueue.cpp
+  atha/atha_monotonic.cpp
+
+#  kastl/kastl_workqueue.cpp
 
 # NOT YET USED:  	atha_monotonic.cpp \
 #	atha_array.h \
@@ -85,8 +86,10 @@ include_HEADERS=\
   atha/athapascan_fork.h
   
 kastlinclude_HEADERS=\  
+  kastl/kastl_types.h\
   kastl/kastl_workqueue.h\
   kastl/kastl_fifoqueue.h\
+  kastl/kastl_team.h\
   kastl/kastl_foreach.h\
   kastl/kastl_transform.h\
   kastl/kastl_accumulate_while.h\
