@@ -56,7 +56,16 @@ static void tbb_for_each(InputIterator first, InputIterator last, const Function
 #define DEFAULT_INPUT_SIZE 100000
 #define DEFAULT_ITER_SIZE 10
 
+#define CONFIG_VALUE_DOUBLE 1
+
+#if CONFIG_VALUE_DOUBLE
+# define VALUE_FORMAT "lf"
+typedef double ValueType;
+#else
+# define VALUE_FORMAT "u"
 typedef uint32_t ValueType;
+#endif
+
 //typedef std::vector<ValueType> SequenceType;
 typedef pinned_array<ValueType> SequenceType;
 typedef std::pair<SequenceType, SequenceType> InputType;
@@ -100,7 +109,7 @@ inline static T gen_rand(const T& max)
       is_seed = true;
     }
 
-  return static_cast<T>(rand() % (max - 1) + 1);
+  return static_cast<T>(rand() % (uint32_t)(max - 1) + 1);
 }
 
 
@@ -190,7 +199,7 @@ static void __attribute__((unused)) print_sequences
 )
 {
   for (; jpos != jend; ++ipos, ++jpos)
-    ::printf("%u %u\n", *ipos, *jpos);
+    ::printf("%" VALUE_FORMAT " %" VALUE_FORMAT "\n", *ipos, *jpos);
 }
 
 
@@ -201,7 +210,7 @@ static void __attribute__((unused)) print_sequence
 )
 {
   for (; pos != end; ++pos)
-    ::printf("%u\n", *pos);
+    ::printf("%" VALUE_FORMAT "\n", *pos);
 }
 
 
