@@ -357,8 +357,7 @@ public:
   {
 #if CONFIG_USE_TBB
     // for_each use modifies input sequences...
-    if (has_tbb() == true)
-      return true;
+    return true;
 #endif
 
     SequenceType::iterator spos = _spos;
