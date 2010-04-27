@@ -580,6 +580,42 @@ public:
 };
 
 
+class MinElementRun : public RunInterface
+{
+  SequenceType::iterator _kastl_res;
+  SequenceType::iterator _stl_res;
+
+public:
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _kastl_res = kastl::min_element
+      (i.first.begin(), i.first.end());
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res = std::min_element
+      (i.first.begin(), i.first.end());
+  }
+
+  virtual bool check
+  (
+   OutputType& kastl_output,
+   OutputType& stl_output,
+   std::string& error_string
+  ) const
+  {
+    if (*_kastl_res == *_stl_res)
+      return true;
+
+    error_string = value_error_string<ValueType>
+      (*_stl_res, *_kastl_res);
+
+    return false;
+  }
+
+};
+
 #if 0 // speed compile time up
 
 class EqualRun : public RunInterface
@@ -1412,43 +1448,6 @@ public:
 
 #endif
 
-class MinElementRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::min_element
-      (i.first.begin(), i.first.end());
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::min_element
-      (i.first.begin(), i.first.end());
-  }
-
-  virtual bool check
-  (
-   OutputType& kastl_output,
-   OutputType& stl_output,
-   std::string& error_string
-  ) const
-  {
-    if (*_kastl_res == *_stl_res)
-      return true;
-
-    error_string = value_error_string<ValueType>
-      (*_stl_res, *_kastl_res);
-
-    return false;
-  }
-
-};
-
-
 class MaxElementRun : public RunInterface
 {
   SequenceType::iterator _kastl_res;
@@ -2101,12 +2100,12 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Search );
   MATCH_AND_CREATE( Accumulate );
   MATCH_AND_CREATE( Transform );
+  MATCH_AND_CREATE( MinElement );
 
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
   MATCH_AND_CREATE( PartialSum );
-  MATCH_AND_CREATE( MinElement );
   MATCH_AND_CREATE( MaxElement );
   MATCH_AND_CREATE( Find );
   MATCH_AND_CREATE( InnerProduct );

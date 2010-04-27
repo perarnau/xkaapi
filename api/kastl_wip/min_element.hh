@@ -51,12 +51,10 @@ struct MinElementWork : public BaseWork
       this->_res = res;
   }
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
-    reduce_result
-    (
-     std::min_element(seq.begin(), seq.end(), this->_const->_binary_pred)
-    );
+    reduce_result(std::min_element(seq.begin(), seq.end(), this->_const->_binary_pred));
+    seq.advance(seq.size());
   }
 
   inline void reduce(const SelfType& thief_work)
@@ -104,7 +102,7 @@ ForwardIterator min_element
  BinaryPredicate pred
 )
 {
-  typedef kastl::impl::BasicSequence<ForwardIterator>
+  typedef kastl::impl::InSequence<ForwardIterator>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type

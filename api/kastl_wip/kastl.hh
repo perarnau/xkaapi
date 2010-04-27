@@ -8,6 +8,7 @@
 #include "transform.hh"
 #include "search.hh"
 #include "accumulate.hh"
+#include "min_element.hh"
 
 
 #if 0 // speed compile time up
@@ -15,7 +16,6 @@
 #include "partial_sum.hh"
 #include "merge.hh"
 #include "sort.hh"
-#include "min_element.hh"
 #include "max_element.hh"
 #include "find.hh"
 #include "copy.hh"
