@@ -34,7 +34,6 @@ struct KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) {
 template<bool hasstackparam, class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
 struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS) {};
 
-
 /* Kaapi binder to call task with stack args */
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
 struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`, TraitUAMParam_F$1', `', ` ')> {
