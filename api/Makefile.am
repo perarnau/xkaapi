@@ -85,8 +85,10 @@ include_HEADERS=\
   atha/athapascan_fork.h
   
 kastlinclude_HEADERS=\  
+  kastl/kastl_types.h\
   kastl/kastl_workqueue.h\
   kastl/kastl_fifoqueue.h\
+  kastl/kastl_team.h\
   kastl/kastl_foreach.h\
   kastl/kastl_transform.h\
   kastl/kastl_accumulate_while.h\

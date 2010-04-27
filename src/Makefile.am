@@ -30,6 +30,7 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_hashmap.c \
   misc/kaapi_liststack.c \
   misc/kaapi_thread_clear.c \
+  misc/kaapi_malloc_hook.c\
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \
