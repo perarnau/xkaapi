@@ -77,18 +77,6 @@ struct PrintBody {
   }
 };
 
-/* Description of Update task */
-template<class T>
-struct TaskPrint : public ka::Task<3>::Signature<ka::R<T>, int, const T&> {};
-
-/* Specialize default / CPU */
-template<class T>
-struct TaskBodyCPU<TaskPrint<T> > : public TaskPrint<T> { 
-  void operator() ( ka::pointer_r<T> a, int niter, const T& ref_value )
-  { 
-    PrintBody<T>()(a, niter, ref_value); 
-  }
-};
 
 
 /* Kaapi Fibo task.
@@ -110,13 +98,10 @@ struct doit {
     ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
       
-    kaapi_thread_t* thread = kaapi_self_thread();
-    kaapi_frame_t   frame;
     long* res_value = ka::Alloca<long>(1);
     ka::pointer<long> res = res_value;
     for (cutoff=2; cutoff<3; ++cutoff)
     {
-      kaapi_thread_save_frame(thread, &frame);
       ka::Spawn<TaskFibo>()( res, n );
       /* */
       ka::Sync();
@@ -129,17 +114,11 @@ struct doit {
       }
       stop_time= ka::WallTimer::gettime();
 
-#if 0
       /*  ka::System::getRank() prints out the id of the node executing the task */
       ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
-      ka::logfile() << ka::System::getRank() << ": res  = " << *res_value << std::endl;
+      ka::logfile() << ka::System::getRank() << ": Res  = " << *res_value << std::endl;
+      ka::logfile() << ka::System::getRank() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
       ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
-#endif
-
-      /* ka::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      ka::Spawn<TaskPrint<long> >()(res, iter, ref_value);      
-      ka::Sync();
-      kaapi_thread_restore_frame(thread, &frame);
     }
   }
 

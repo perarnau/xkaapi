@@ -229,7 +229,7 @@ namespace rts {
     index_type volatile _beg; /*_beg & _end on two cache lines */
     index_type volatile _end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
 
-    atomic_t<32> _lock __attribute__((aligned(32)));       /* one bit is enough .. */
+    atomic_t<32> _lock __attribute__((aligned(8)));       /* one bit is enough .. */
   };
   
   /** */

@@ -56,7 +56,6 @@ void work_queue_t<64>::lock_pop()
 {
   while (!_lock.cas( 0, 1))
     ;
-  kaapi_mem_barrier();
 }
 
 /**
@@ -64,9 +63,8 @@ void work_queue_t<64>::lock_pop()
 template<>
 void work_queue_t<64>::lock_steal()
 {
-  while ((_lock.read() == 1) && !_lock.cas(0, 1))
-    usleep(1);
-  kaapi_mem_barrier();
+  while ((_lock.read() == 1) || !_lock.cas(0, 1))
+    kaapi_slowdown_cpu();
 }
 
 /**
