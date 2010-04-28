@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGO=FindIf
+ALGO=SwapRanges
 DIR=/tmp/out
 #SIZE=1000000
 #SIZE=1000000
@@ -15,7 +15,7 @@ ITER=10
 #CPUSET=9,11
 #CPUSET=9
 #CPUSET=1
-CPUSET=1
+CPUSET=0,1
 
 
 rm -rf $DIR

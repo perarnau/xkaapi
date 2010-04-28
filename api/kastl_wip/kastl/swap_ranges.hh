@@ -41,10 +41,10 @@ public:
   (const SequenceType& s, const ResultType& r)
   : BaseType(s, NULL, r) {}
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
-    this->_res = std::swap_ranges
-      (seq._seq0._beg, seq._seq0._end, seq._beg1);
+    this->_res = std::swap_ranges(seq.begin0(), seq.end0(), seq.begin1());
+    seq.advance();
   }
 
   inline void reduce(const BaseType& tw)

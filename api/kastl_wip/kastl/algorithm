@@ -10,6 +10,7 @@
 #include "kastl/max_element.hh"
 #include "kastl/find.hh"
 #include "kastl/find_if.hh"
+#include "kastl/swap_ranges.hh"
 
 #if 0
 #include "partial_sum.hh"
@@ -21,7 +22,6 @@
 #include "generate.hh"
 #include "equal.hh"
 #include "mismatch.hh"
-#include "swap_ranges.hh"
 #include "reverse.hh"
 #include "partition.hh"
 #include "set_union.hh"

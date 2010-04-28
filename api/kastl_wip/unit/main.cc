@@ -22,6 +22,7 @@
 #define CONFIG_ALGO_MAX_ELEMENT 0
 #define CONFIG_ALGO_FIND 1
 #define CONFIG_ALGO_FIND_IF 1
+#define CONFIG_ALGO_SWAP_RANGES 1
 #define CONFIG_ALGO_INNER_PRODUCT 0
 // tbb foreach
 #define CONFIG_USE_TBB 0
@@ -783,6 +784,60 @@ public:
       error_string = index_error_string(_stl_index[0], _kastl_index[0]);
 
     return false;
+  }
+
+};
+#endif
+
+#if CONFIG_ALGO_SWAP_RANGES
+class SwapRangesRun : public RunInterface
+{
+public:
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::swap_ranges
+      (
+       i.first.begin(),
+       i.first.end(),
+       i.second.begin()
+      );
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::swap_ranges
+      (
+       i.first.begin(),
+       i.first.end(),
+       i.second.begin()
+      );
+  }
+
+  virtual bool check
+  (
+   OutputType& kastl_output,
+   OutputType& stl_output,
+   std::string& error_string
+  ) const
+  {
+#if 0
+    SequenceType::iterator kpos = kastl_output.begin();
+    SequenceType::iterator spos = stl_output.begin();
+    SequenceType::iterator send = stl_output.end();
+
+    if (cmp_sequence(kpos, spos, send) == false)
+      {
+	error_string = index_error_string
+	  (
+	   spos - stl_output.begin(),
+	   kpos - kastl_output.begin()
+	  );
+
+	return false;
+      }
+#endif
+
+    return true;
   }
 
 };
@@ -2069,59 +2124,6 @@ public:
 
 #endif
 
-
-class SwapRangesRun : public RunInterface
-{
-public:
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    kastl::swap_ranges
-      (
-       i.first.begin(),
-       i.first.end(),
-       i.second.begin()
-      );
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    std::swap_ranges
-      (
-       i.first.begin(),
-       i.first.end(),
-       i.second.begin()
-      );
-  }
-
-  virtual bool check
-  (
-   OutputType& kastl_output,
-   OutputType& stl_output,
-   std::string& error_string
-  ) const
-  {
-#if 0
-    SequenceType::iterator kpos = kastl_output.begin();
-    SequenceType::iterator spos = stl_output.begin();
-    SequenceType::iterator send = stl_output.end();
-
-    if (cmp_sequence(kpos, spos, send) == false)
-      {
-	error_string = index_error_string
-	  (
-	   spos - stl_output.begin(),
-	   kpos - kastl_output.begin()
-	  );
-
-	return false;
-      }
-#endif
-
-    return true;
-  }
-
-};
-
 #endif // speed compile time up
 
 
@@ -2171,6 +2173,10 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( FindIf );
 #endif
 
+#if CONFIG_ALGO_SWAP_RANGES
+  MATCH_AND_CREATE( SwapRanges );
+#endif
+
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
@@ -2182,7 +2188,6 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Equal );
   MATCH_AND_CREATE( Mismatch );
   MATCH_AND_CREATE( FindFirstOf );
-  MATCH_AND_CREATE( SwapRanges );
   MATCH_AND_CREATE( Reverse );
   MATCH_AND_CREATE( Partition );
   MATCH_AND_CREATE( SetUnion );

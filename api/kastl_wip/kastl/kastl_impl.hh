@@ -6,7 +6,7 @@
 #define CONFIG_KASTL_DEBUG 0
 // should be set to 1 if debug, since need lock
 #define CONFIG_KASTL_LOCK_WORK 0
-#define CONFIG_KASTL_MASTER_SLAVE 1
+#define CONFIG_KASTL_MASTER_SLAVE 0
 #define CONFIG_KASTL_THE_SEQUENCE 1
 
 
