@@ -1,3 +1,5 @@
+#include "config.hh"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -6,29 +8,23 @@
 #include <algorithm>
 #include <numeric>
 #include <sstream>
-#include "kastl/algorithm"
-#include "kastl/numeric"
 #include "pinned_array.hh"
 
 
-// compile time config
-// algorithms
-#define CONFIG_ALGO_FOR_EACH 0
-#define CONFIG_ALGO_COUNT 1
-#define CONFIG_ALGO_SEARCH 1
-#define CONFIG_ALGO_ACCUMULATE 0
-#define CONFIG_ALGO_TRANSFORM 0
-#define CONFIG_ALGO_MIN_ELEMENT 0
-#define CONFIG_ALGO_MAX_ELEMENT 0
-#define CONFIG_ALGO_FIND 1
-#define CONFIG_ALGO_FIND_IF 1
-#define CONFIG_ALGO_SWAP_RANGES 1
-#define CONFIG_ALGO_INNER_PRODUCT 0
-// tbb foreach
-#define CONFIG_USE_TBB 0
+
+static size_t get_concurrency()
+{
+  // todo: return KAAPI_CPUSET cardinal
+  return 2;
+}
 
 
-#if CONFIG_USE_TBB
+#if CONFIG_LIB_KASTL
+# include "kastl/algorithm"
+# include "kastl/numeric"
+#endif // CONFIG_LIB_KASTL
+
+#if CONFIG_LIB_TBB
 
 # include <tbb/task_scheduler_init.h>
 # include <tbb/parallel_for.h>
@@ -37,7 +33,7 @@
 static bool tbb_initialize()
 {
   static tbb::task_scheduler_init tsi;
-  tsi.initialize(kaapi_getconcurrency());
+  tsi.initialize(get_concurrency());
   return true;
 }
 
@@ -64,6 +60,20 @@ static void tbb_for_each(InputIterator first, InputIterator last, const Function
   tbb_functor<InputIterator, Function> tf(first, f);
   const int size = (int)std::distance(first, last);
   tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
+}
+
+#endif // CONFIG_LIB_TBB
+
+#if CONFIG_LIB_PASTL
+# include <parallel/algorithm>
+# include <parallel/numeric>
+# include <omp.h>
+
+static bool pastl_initialize()
+{
+  omp_set_dynamic(false);
+  omp_set_num_threads(get_concurrency());
+  return true;
 }
 
 #endif
@@ -231,6 +241,7 @@ static void __attribute__((unused)) print_sequence
 
 
 // timing
+#if CONFIG_DO_BENCH
 
 #if 0 // gettimeofday
 
@@ -274,7 +285,9 @@ namespace timing
 
 };
 
-#endif
+#endif // gettimeofday
+
+#endif // CONFIG_DO_BENCH
 
 
 
@@ -286,13 +299,12 @@ public:
 
   ~RunInterface() {}
 
-  virtual void run_stl(InputType&, OutputType&) = 0;
-  virtual void run_kastl(InputType&, OutputType&) = 0;
-
-  virtual bool has_tbb() const { return false; } 
+  virtual void run_stl(InputType&, OutputType&) {}
+  virtual void run_kastl(InputType&, OutputType&) {}
   virtual void run_tbb(InputType&, OutputType&) {}
+  virtual void run_pastl(InputType&, OutputType&) {}
 
-  virtual bool check(OutputType&, OutputType&, std::string&) const = 0;
+  virtual bool check(std::vector<OutputType>&, std::string&) const = 0;
 
   virtual void prepare(InputType&) {}
 
@@ -315,9 +327,6 @@ class InvalidRun : public RunInterface
 public:
   InvalidRun() {}
 
-  void run_stl(InputType&, OutputType&) {}
-  void run_kastl(InputType&, OutputType&) {}
-
   bool check(OutputType&, OutputType&, std::string&) const { return false; }
 };
 
@@ -326,13 +335,7 @@ public:
 class ForEachRun : public RunInterface
 {
   // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-#if CONFIG_USE_TBB
-  SequenceType::iterator _tpos;  
-#endif
+  SequenceType::iterator _pos[3];
 
   template<typename T>
   struct inc_functor
@@ -343,45 +346,51 @@ class ForEachRun : public RunInterface
 
 public:
 
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
-  }
-
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType&)
   {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
+    _pos[1] = i.second.begin();
+    _pos[2] = i.second.end();
     std::for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
   }
+#endif
 
-#if CONFIG_USE_TBB
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType&)
+  {
+    _pos[0] = i.first.begin();
+    kastl::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
+  }
+#endif
 
+#if CONFIG_LIB_TBB
   virtual void run_tbb(InputType& i, OutputType&)
   {
-    _tpos = i.second.begin();
-    tbb_for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
+    _pos[0] = i.first.begin();
+    tbb_for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
   }
-
-  virtual bool has_tbb() const { return true; }
-
 #endif
 
-  virtual bool check(OutputType&, OutputType&, std::string&) const
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType&)
   {
-#if CONFIG_USE_TBB
-    // for_each use modifies input sequences...
-    return true;
+    _pos[0] = i.first.begin();
+    __gnu_parallel::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>(), __gnu_parallel::parallel_balanced);
+  }
 #endif
 
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
+  virtual bool check(std::vector<OutputType>& os, std::string& es) const
+  {
+    SequenceType::iterator a = _pos[0];
+    SequenceType::iterator b = _pos[1];
+    SequenceType::iterator c = _pos[2];
 
-    return cmp_sequence(kpos, spos, send);
+    if (cmp_sequence(a, b, c) == true)
+      return true;
+
+    es = index_error_string(a - os[0].begin(), b - os[1].begin());
+
+    return false;
   }
 
 };
@@ -2214,11 +2223,8 @@ RunInterface* RunInterface::create(const std::string& name)
 
 class RunLauncher
 {
-  timing::TimerType _kastl_tm;
-  timing::TimerType _stl_tm;
-
-#if CONFIG_USE_TBB
-  timing::TimerType _tbb_tm;
+#if CONFIG_DO_BENCH
+  timing::TimerType _tm;
 #endif
 
 public:
@@ -2231,45 +2237,43 @@ public:
   {
     // count the run count
 
+#if CONFIG_DO_BENCH
     timing::TimerType start_tm;
     timing::TimerType now_tm;
+#endif
 
+#if CONFIG_DO_BENCH
     timing::get_now(start_tm);
-    run->run_stl(input, outputs[0]);
-    timing::get_now(now_tm);
-    timing::sub_timers(now_tm, start_tm, _stl_tm);
+#endif
 
-    timing::get_now(start_tm);
-    run->run_kastl(input, outputs[1]);
-    timing::get_now(now_tm);
-    timing::sub_timers(now_tm, start_tm, _kastl_tm);
+    size_t i = 0;
 
-#if CONFIG_USE_TBB
-    if (run->has_tbb() == true)
-    {
-      timing::get_now(start_tm);
-      run->run_tbb(input, outputs[2]);
+#if CONFIG_LIB_STL
+    run->run_stl(input, outputs[i++]);
+#endif
+
+#if CONFIG_LIB_KASTL
+    run->run_kastl(input, outputs[i++]);
+#endif
+
+#if CONFIG_LIB_TBB
+    run->run_tbb(input, outputs[i++]);
+#endif
+
+#if CONFIG_LIB_PASTL
+    run->run_pastl(input, outputs[i++]);
+#endif
+
+#if CONFIG_DO_BENCH
       timing::get_now(now_tm);
-      timing::sub_timers(now_tm, start_tm, _tbb_tm);
-    }
-    else
-    {
-      memset(&_tbb_tm, 0, sizeof(_tbb_tm));
-    }
+      timing::sub_timers(now_tm, start_tm, _tm);
 #endif
   }
 
-  inline unsigned long kastl_usec() const
-  { return timing::timer_to_usec(_kastl_tm); }
-
-  inline unsigned long stl_usec() const
-  { return timing::timer_to_usec(_stl_tm); }
-
-#if CONFIG_USE_TBB
-  inline unsigned long tbb_usec() const
-  { return timing::timer_to_usec(_tbb_tm); }
+#if CONFIG_DO_BENCH
+  inline unsigned long get_usecs() const
+  { return timing::timer_to_usec(_tm); }
 #endif
-
 };
 
 
@@ -2282,23 +2286,48 @@ public:
   bool check
   (
    RunInterface* run,
-   OutputType& stl_output,
-   OutputType& kastl_output,
-   std::string& error_string
+   std::vector<OutputType>& os,
+   std::string& es
   )
   {
-    return run->check
-      (
-       kastl_output,
-       stl_output,
-       error_string
-      );
+    return run->check(os, es);
   }
 
 };
 
 
 // main
+
+static int do_xxx(RunInterface* run, InputType& input, std::vector<OutputType>& outputs)
+
+#if CONFIG_DO_CHECK
+{
+  RunLauncher().launch(run, input, outputs);
+
+  std::string error_string;
+
+  const bool is_success =
+    RunChecker().check(run, outputs, error_string);
+
+  if (is_success) printf("[x]\n");
+  else printf("[!]: %s\n", error_string.c_str());
+
+  if (is_success == false)
+    return -1;
+
+  return -1;
+}
+#endif // CONFIG_DO_CHECK
+
+#if CONFIG_DO_BENCH
+{
+  RunLauncher l;
+  l.launch(run, input, outputs);
+  printf("%lu\n", l.get_usecs());
+  return 0;
+}
+#endif // CONFIG_DO_BENCH
+
 
 int main(int ac, char** av)
 {
@@ -2310,7 +2339,27 @@ int main(int ac, char** av)
 
   const char* const algo_name = av[1];
 
+  // per config variable specific initialization
+
+#if CONFIG_DO_BENCH
   timing::initialize();
+#endif
+
+#if CONFIG_LIB_TBB
+  if (tbb_initialize() == false)
+  {
+    printf("cannot initialize tbb\n");
+    return -1;
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  if (pastl_initialize() == false)
+  {
+    printf("cannot initialize pastl\n");
+    return -1;
+  }
+#endif
 
   // instanciate a run
   RunInterface* const run =
@@ -2320,14 +2369,6 @@ int main(int ac, char** av)
     printf("cannot create run for %s\n", algo_name);
     return -1 ;
   }
-
-#if CONFIG_USE_TBB
-  if (run->has_tbb() == true)
-  {
-    if (tbb_initialize() == false)
-      printf("cannot initialize tbb\n");
-  }
-#endif
 
   // create sequences
   InputType input;
@@ -2347,10 +2388,11 @@ int main(int ac, char** av)
   // output
   std::vector<OutputType> outputs;
   const size_t output_size = input.first.size() + input.second.size();
-  size_t output_count = 2;
 
-#if CONFIG_USE_TBB
-  ++output_count;
+#if CONFIG_DO_BENCH
+  const size_t output_count = 1;
+#else
+  const size_t output_count = 2;
 #endif
 
   outputs.resize(output_count);
@@ -2362,35 +2404,7 @@ int main(int ac, char** av)
 
   // iterate iter_count times
   for (size_t i = 0; i < iter_count; ++i)
-  {
-    RunLauncher l;
-
-    l.launch(run, input, outputs);
-
-    std::string error_string;
-    const bool is_success =
-      RunChecker().check(run, outputs[0], outputs[1], error_string);
-
-#if CONFIG_USE_TBB
-    printf("%s %lu %lu %lu [%c] (%s)\n",
-	   algo_name,
-	   l.kastl_usec(),
-	   l.stl_usec(),
-	   l.tbb_usec(),
-	   is_success ? 'x' : '!',
-	   error_string.c_str());
-#else
-    printf("%s %lu %lu [%c] (%s)\n",
-	   algo_name,
-	   l.kastl_usec(),
-	   l.stl_usec(),
-	   is_success ? 'x' : '!',
-	   error_string.c_str());
-#endif
-
-    if (is_success == false)
-      return -1;
-  }
+    do_xxx(run, input, outputs);
 
   delete run;
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGO=SwapRanges
+ALGO=ForEach
 DIR=/tmp/out
 #SIZE=1000000
 #SIZE=1000000
@@ -14,8 +14,8 @@ ITER=10
 #CPUSET=7,9,11
 #CPUSET=9,11
 #CPUSET=9
-#CPUSET=1
-CPUSET=0,1
+#CPUSET=0,1
+CPUSET=1
 
 
 rm -rf $DIR

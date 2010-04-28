@@ -1,0 +1,1 @@
+CFLAGS	+= -fopenmp -DCONFIG_LIB_PASTL=1
