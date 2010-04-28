@@ -11,6 +11,17 @@
 #include "pinned_array.hh"
 
 
+// compile time config
+#define CONFIG_ALGO_FOR_EACH 0
+#define CONFIG_ALGO_COUNT 0
+#define CONFIG_ALGO_SEARCH 0
+#define CONFIG_ALGO_ACCUMULATE 0
+#define CONFIG_ALGO_TRANSFORM 0
+#define CONFIG_ALGO_MIN_ELEMENT 0
+#define CONFIG_ALGO_INNER_PRODUCT 1
+
+
+// tbb foreach implementation
 #define CONFIG_USE_TBB 0
 
 #if CONFIG_USE_TBB
@@ -74,14 +85,14 @@ typedef SequenceType OutputType;
 
 
 // error strings
-static std::string index_error_string(ptrdiff_t s, ptrdiff_t k)
+static std::string __attribute__((unused)) index_error_string(ptrdiff_t s, ptrdiff_t k)
 { 
   std::ostringstream oss;
   oss << "index differ at s: " << s << ", k: " << k;
   return oss.str();
 }
 
-static std::string size_error_string(size_t s, size_t k)
+static std::string __attribute__((unused)) size_error_string(size_t s, size_t k)
 {
   std::ostringstream oss;
   oss << "sizes differ s: " << s << ", k: " << k;
@@ -89,7 +100,7 @@ static std::string size_error_string(size_t s, size_t k)
 }
 
 template<typename T>
-static std::string value_error_string(const T& s, const T& k)
+static std::string __attribute__((unused)) value_error_string(const T& s, const T& k)
 {
   std::ostringstream oss;
   oss << "values differ s: " << s << ", k: " << k;
@@ -177,7 +188,7 @@ static void gen_seq(SequenceType& s, size_t n, enum seq_order o)
 }
 
 
-static bool cmp_sequence
+static bool __attribute__((unused)) cmp_sequence
 (
  SequenceType::iterator& ipos,
  SequenceType::iterator& jpos,
@@ -307,6 +318,8 @@ public:
 };
 
 
+#if CONFIG_ALGO_FOR_EACH
+
 class ForEachRun : public RunInterface
 {
   // todo hack hack hack
@@ -370,6 +383,10 @@ public:
 
 };
 
+#endif // CONFIG_ALGO_FOR_EACH
+
+
+#if CONFIG_ALGO_COUNT
 
 class CountRun : public RunInterface
 {
@@ -412,6 +429,10 @@ public:
 
 };
 
+#endif
+
+
+#if CONFIG_ALGO_SEARCH
 
 class SearchRun : public RunInterface
 {
@@ -486,6 +507,10 @@ public:
 
 };
 
+#endif
+
+
+#if CONFIG_ALGO_ACCUMULATE
 
 class AccumulateRun : public RunInterface
 {
@@ -512,6 +537,10 @@ public:
 
 };
 
+#endif
+
+
+#if CONFIG_ALGO_TRANSFORM
 
 class TransformRun : public RunInterface
 {
@@ -580,6 +609,11 @@ public:
 
 };
 
+#endif
+
+
+#if CONFIG_ALGO_MIN_ELEMENT
+
 class MinElementRun : public RunInterface
 {
   SequenceType::iterator _kastl_res;
@@ -616,6 +650,10 @@ public:
 
 };
 
+#endif
+
+
+#if CONFIG_ALGO_INNER_PRODUCT
 class InnerProductRun : public RunInterface
 {
   ValueType _kastl_res;
@@ -656,6 +694,7 @@ public:
   }
 
 };
+#endif
 
 #if 0 // speed compile time up
 
@@ -2094,13 +2133,33 @@ RunInterface* RunInterface::create(const std::string& name)
   if (name == #NAME)		\
     return new NAME ## Run();
 
+#if CONFIG_ALGO_FOR_EACH
   MATCH_AND_CREATE( ForEach );
+#endif
+
+#if CONFIG_ALGO_COUNT
   MATCH_AND_CREATE( Count );
+#endif
+
+#if CONFIG_ALGO_SEARCH
   MATCH_AND_CREATE( Search );
+#endif
+
+#if CONFIG_ALGO_ACCUMULATE
   MATCH_AND_CREATE( Accumulate );
+#endif
+
+#if CONFIG_ALGO_TRANSFORM
   MATCH_AND_CREATE( Transform );
+#endif
+
+#if CONFIG_ALGO_MIN_ELEMENT
   MATCH_AND_CREATE( MinElement );
+#endif
+
+#if CONFIG_ALGO_INNER_PRODUCT
   MATCH_AND_CREATE( InnerProduct );
+#endif
 
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );

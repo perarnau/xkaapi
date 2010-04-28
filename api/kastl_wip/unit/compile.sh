@@ -5,7 +5,6 @@ XKAAPI_INSTALL_DIR=$HOME/install
 TBB_INSTALL_DIR=$HOME/install
 KASTL_INSTALL_DIR=`pwd`/..
 
-echo WARNING, check O2
 rm main
 
 g++ \
