@@ -12,17 +12,18 @@
 
 
 // compile time config
+// algorthms
 #define CONFIG_ALGO_FOR_EACH 0
 #define CONFIG_ALGO_COUNT 0
 #define CONFIG_ALGO_SEARCH 0
 #define CONFIG_ALGO_ACCUMULATE 0
 #define CONFIG_ALGO_TRANSFORM 0
 #define CONFIG_ALGO_MIN_ELEMENT 0
-#define CONFIG_ALGO_INNER_PRODUCT 1
-
-
-// tbb foreach implementation
+#define CONFIG_ALGO_MAX_ELEMENT 1
+#define CONFIG_ALGO_INNER_PRODUCT 0
+// tbb foreach
 #define CONFIG_USE_TBB 0
+
 
 #if CONFIG_USE_TBB
 
@@ -613,7 +614,6 @@ public:
 
 
 #if CONFIG_ALGO_MIN_ELEMENT
-
 class MinElementRun : public RunInterface
 {
   SequenceType::iterator _kastl_res;
@@ -649,9 +649,45 @@ public:
   }
 
 };
-
 #endif
 
+#if CONFIG_ALGO_MAX_ELEMENT
+class MaxElementRun : public RunInterface
+{
+  SequenceType::iterator _kastl_res;
+  SequenceType::iterator _stl_res;
+
+public:
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _kastl_res = kastl::max_element
+      (i.first.begin(), i.first.end());
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res = std::max_element
+      (i.first.begin(), i.first.end());
+  }
+
+  virtual bool check
+  (
+   OutputType& kastl_output,
+   OutputType& stl_output,
+   std::string& error_string
+  ) const
+  {
+    if (*_kastl_res == *_stl_res)
+      return true;
+
+    error_string = value_error_string<ValueType>
+      (*_stl_res, *_kastl_res);
+
+    return false;
+  }
+
+};
+#endif
 
 #if CONFIG_ALGO_INNER_PRODUCT
 class InnerProductRun : public RunInterface
@@ -1486,43 +1522,6 @@ public:
 
 #endif
 
-class MaxElementRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::max_element
-      (i.first.begin(), i.first.end());
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::max_element
-      (i.first.begin(), i.first.end());
-  }
-
-  virtual bool check
-  (
-   OutputType& kastl_output,
-   OutputType& stl_output,
-   std::string& error_string
-  ) const
-  {
-    if (*_kastl_res == *_stl_res)
-      return true;
-
-    error_string = value_error_string<ValueType>
-      (*_stl_res, *_kastl_res);
-
-    return false;
-  }
-
-};
-
-
 class MergeRun : public RunInterface
 {
   SequenceType::iterator _kastl_res;
@@ -2157,6 +2156,10 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( MinElement );
 #endif
 
+#if CONFIG_ALGO_MAX_ELEMENT
+  MATCH_AND_CREATE( MaxElement );
+#endif
+
 #if CONFIG_ALGO_INNER_PRODUCT
   MATCH_AND_CREATE( InnerProduct );
 #endif
@@ -2165,7 +2168,6 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
   MATCH_AND_CREATE( PartialSum );
-  MATCH_AND_CREATE( MaxElement );
   MATCH_AND_CREATE( Find );
   MATCH_AND_CREATE( Copy );
   MATCH_AND_CREATE( Fill );

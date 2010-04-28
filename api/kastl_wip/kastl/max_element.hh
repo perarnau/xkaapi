@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <algorithm>
 #include <iterator>
-#include "kastl_impl.hh"
+#include "kastl/kastl_impl.hh"
 
 
 
@@ -51,12 +51,10 @@ struct MaxElementWork : public BaseWork
       this->_res = res;
   }
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
-    reduce_result
-    (
-     std::max_element(seq.begin(), seq.end(), this->_const->_binary_pred)
-    );
+    reduce_result(std::max_element(seq.begin(), seq.end(), this->_const->_binary_pred));
+    seq.advance();
   }
 
   inline void reduce(const SelfType& thief_work)
@@ -106,7 +104,7 @@ ForwardIterator max_element
  BinaryPredicate pred
 )
 {
-  typedef kastl::impl::BasicSequence<ForwardIterator>
+  typedef kastl::impl::InSequence<ForwardIterator>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type
