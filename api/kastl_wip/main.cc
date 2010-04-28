@@ -6,7 +6,8 @@
 #include <algorithm>
 #include <numeric>
 #include <sstream>
-#include "kastl.hh"
+#include <kastl/algorithm>
+#include <kastl/numeric>
 #include "pinned_array.hh"
 
 
