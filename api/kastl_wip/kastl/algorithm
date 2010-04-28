@@ -2,11 +2,11 @@
 # define KASTL_ALGORITHM_INCLUDED
 
 
-#include "count.hh"
-#include "for_each.hh"
-#include "transform.hh"
-#include "search.hh"
-#include "min_element.hh"
+#include "kastl/count.hh"
+#include "kastl/for_each.hh"
+#include "kastl/transform.hh"
+#include "kastl/search.hh"
+#include "kastl/min_element.hh"
 
 #if 0
 #include "partial_sum.hh"

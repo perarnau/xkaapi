@@ -45,7 +45,7 @@
 #ifndef _KASTL_WORK_QUEUE_H_
 #define _KASTL_WORK_QUEUE_H_
 #include "kaapi.h"
-#include "kastl_types.h"
+#include "kastl/kastl_types.h"
 #include <limits>
 
 

@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
-#include "kastl_impl.hh"
+#include "kastl/kastl_impl.hh"
 
 
 namespace kastl

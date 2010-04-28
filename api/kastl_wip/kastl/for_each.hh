@@ -1,12 +1,12 @@
-#ifndef KASTL_TRANSFORM_HH_INCLUDED
-# define KASTL_TRANSFORM_HH_INCLUDED
+#ifndef KASTL_FOR_EACH_HH_INCLUDED
+# define KASTL_FOR_EACH_HH_INCLUDED
 
 
 
 #include <stddef.h>
 #include <algorithm>
 #include <iterator>
-#include "kastl_impl.hh"
+#include "kastl/kastl_impl.hh"
 
 
 
@@ -23,50 +23,47 @@ template
   typename NanoType,
   typename SplitterType
 >
-struct TransformWork : public BaseWork
+struct ForEachWork : public BaseWork
 <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
 {
-  typedef TransformWork
+  typedef ForEachWork
   <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> SelfType;
 
   typedef BaseWork
   <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> BaseType;
 
-  TransformWork() : BaseType() {}
+  ForEachWork() : BaseType() {}
 
-  TransformWork(const SequenceType& s, const ConstantType* c)
+  ForEachWork(const SequenceType& s, const ConstantType* c)
     : BaseType(s, c, kastl::impl::InvalidResultType()) {}
 
   inline void compute(SequenceType& seq)
   {
-    std::transform(seq.input_begin(), seq.input_end(), seq.opos(), *this->_const);
+    std::for_each(seq.begin(), seq.end(), *this->_const);
     seq.advance();
   }
 };
 
 // tunning params
-typedef Daouda0TuningParams TransformTuningParams;
+typedef Daouda0TuningParams ForEachTuningParams;
 
 } // kastl::impl
 
 
-
 template
 <
-  class InputIterator,
-  class OutputIterator,
-  class UnaryOperator,
-  class ParamType
+  typename InputIterator,
+  typename Function,
+  typename ParamType
 >
-void transform
+void for_each
 (
- InputIterator ipos,
- InputIterator iend,
- OutputIterator opos,
- UnaryOperator op
+ InputIterator begin,
+ InputIterator end,
+ Function func
 )
 {
-  typedef kastl::impl::InOutSequence<InputIterator, OutputIterator>
+  typedef kastl::impl::InSequence<InputIterator>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type
@@ -81,42 +78,43 @@ void transform
     <ParamType::splitter_tag, ParamType>::Type
     SplitterType;
 
-  typedef UnaryOperator ConstantType;
+  typedef Function ConstantType;
 
   typedef kastl::impl::InvalidResultType ResultType;
 
-  typedef kastl::impl::TransformWork
+  typedef kastl::impl::ForEachWork
     <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
     WorkType;
 
-  WorkType work(SequenceType(ipos, iend, opos), &op);
+  WorkType work(SequenceType(begin, end), &func);
   kastl::impl::compute<WorkType>(work);
 }
 
 
 template
 <
- class InputIterator,
- class OutputIterator,
- class UnaryOperator
+ typename InputIterator,
+ typename Function
 >
-void transform
+void for_each
 (
- InputIterator ipos,
- InputIterator iend,
- OutputIterator opos,
- UnaryOperator op
+ InputIterator begin,
+ InputIterator end,
+ Function func
 )
 {
-  typedef kastl::impl::TransformTuningParams ParamType;
+  // real return type is Function but
+  // not possible for us so we voidify
 
-  return kastl::transform
-    <InputIterator, OutputIterator, UnaryOperator, ParamType>
-    (ipos, iend, opos, op);
+  typedef kastl::impl::ForEachTuningParams ParamType;
+
+  kastl::for_each
+  <InputIterator, Function, ParamType>
+  (begin, end, func);
 }
 
 } // kastl
 
 
 
-#endif // ! KASTL_TRANSFORM_HH_INCLUDED
+#endif // ! KASTL_FOR_EACH_HH_INCLUDED

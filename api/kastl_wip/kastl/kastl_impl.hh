@@ -17,7 +17,7 @@
 #include "kaapi.h"
 
 #if CONFIG_KASTL_THE_SEQUENCE
-# include "kastl_workqueue.h"
+# include "kastl/kastl_workqueue.h"
 #endif
 
 
