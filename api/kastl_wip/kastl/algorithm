@@ -8,12 +8,12 @@
 #include "kastl/search.hh"
 #include "kastl/min_element.hh"
 #include "kastl/max_element.hh"
+#include "kastl/find.hh"
 
 #if 0
 #include "partial_sum.hh"
 #include "merge.hh"
 #include "sort.hh"
-#include "find.hh"
 #include "copy.hh"
 #include "fill.hh"
 #include "replace.hh"

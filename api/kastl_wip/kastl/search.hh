@@ -124,16 +124,10 @@ public:
 
 struct SearchTuningParams : Daouda1TuningParams
 {
-#if 1
   static const enum TuningTag macro_tag = TAG_LINEAR;
   static const size_t macro_min_size = 1024;
   static const size_t macro_max_size = 32768;
   static const size_t macro_step_size = 2048;
-#else
-  static const enum TuningTag macro_tag = TAG_STATIC;
-  static const size_t macro_min_size = 32768;
-  static const size_t macro_max_size = 32768;
-#endif
 };
 
 } // kastl::impl

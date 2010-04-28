@@ -15,11 +15,12 @@
 // algorthms
 #define CONFIG_ALGO_FOR_EACH 0
 #define CONFIG_ALGO_COUNT 0
-#define CONFIG_ALGO_SEARCH 0
+#define CONFIG_ALGO_SEARCH 1
 #define CONFIG_ALGO_ACCUMULATE 0
 #define CONFIG_ALGO_TRANSFORM 0
 #define CONFIG_ALGO_MIN_ELEMENT 0
-#define CONFIG_ALGO_MAX_ELEMENT 1
+#define CONFIG_ALGO_MAX_ELEMENT 0
+#define CONFIG_ALGO_FIND 1
 #define CONFIG_ALGO_INNER_PRODUCT 0
 // tbb foreach
 #define CONFIG_USE_TBB 0
@@ -320,7 +321,6 @@ public:
 
 
 #if CONFIG_ALGO_FOR_EACH
-
 class ForEachRun : public RunInterface
 {
   // todo hack hack hack
@@ -383,12 +383,10 @@ public:
   }
 
 };
-
 #endif // CONFIG_ALGO_FOR_EACH
 
 
 #if CONFIG_ALGO_COUNT
-
 class CountRun : public RunInterface
 {
   ptrdiff_t _kastl_res;
@@ -429,12 +427,10 @@ public:
   }
 
 };
-
 #endif
 
 
 #if CONFIG_ALGO_SEARCH
-
 class SearchRun : public RunInterface
 {
   SequenceType::iterator _kastl_res;
@@ -507,12 +503,10 @@ public:
   }
 
 };
-
 #endif
 
 
 #if CONFIG_ALGO_ACCUMULATE
-
 class AccumulateRun : public RunInterface
 {
   ValueType _kastl_res;
@@ -537,12 +531,10 @@ public:
   }
 
 };
-
 #endif
 
 
 #if CONFIG_ALGO_TRANSFORM
-
 class TransformRun : public RunInterface
 {
   struct inc
@@ -609,7 +601,6 @@ public:
   }
 
 };
-
 #endif
 
 
@@ -682,6 +673,53 @@ public:
 
     error_string = value_error_string<ValueType>
       (*_stl_res, *_kastl_res);
+
+    return false;
+  }
+
+};
+#endif
+
+#if CONFIG_ALGO_FIND
+class FindRun : public RunInterface
+{
+  SequenceType::iterator _kastl_res;
+  SequenceType::iterator _stl_res;
+
+  ptrdiff_t _kastl_index;
+  ptrdiff_t _stl_index;
+
+public:
+  virtual void prepare(InputType& i)
+  {
+    // remove FIND_VALUE from the sequence and reput it
+#define FIND_VALUE 42
+    std::replace(i.first.begin(), i.first.end(), FIND_VALUE, ~FIND_VALUE);
+    i.first[i.first.size() / 2] = FIND_VALUE;
+  }
+
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _kastl_res = kastl::find
+      (i.first.begin(), i.first.end(), FIND_VALUE);
+
+    _kastl_index = std::distance(i.first.begin(), _kastl_res);
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res = std::find
+      (i.first.begin(), i.first.end(), FIND_VALUE);
+
+    _stl_index = std::distance(i.first.begin(), _stl_res);
+  }
+
+  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
+  {
+    if (_kastl_res == _stl_res)
+      return true;
+
+    error_string = index_error_string(_stl_index, _kastl_index);
 
     return false;
   }
@@ -902,46 +940,6 @@ public:
   }
 
 };
-
-
-class FindRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-  ptrdiff_t _kastl_index;
-  ptrdiff_t _stl_index;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-#define FIND_VALUE 42
-    _kastl_res = kastl::find
-      (i.first.begin(), i.first.end(), FIND_VALUE);
-
-    _kastl_index = std::distance(i.first.begin(), _kastl_res);
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::find
-      (i.first.begin(), i.first.end(), FIND_VALUE);
-
-    _stl_index = std::distance(i.first.begin(), _stl_res);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
-
-    error_string = index_error_string(_stl_index, _kastl_index);
-
-    return false;
-  }
-
-};
-
 
 class FindFirstOfRun : public RunInterface
 {
@@ -2164,11 +2162,14 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( InnerProduct );
 #endif
 
+#if CONFIG_ALGO_FIND
+  MATCH_AND_CREATE( Find );
+#endif
+
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
   MATCH_AND_CREATE( PartialSum );
-  MATCH_AND_CREATE( Find );
   MATCH_AND_CREATE( Copy );
   MATCH_AND_CREATE( Fill );
   MATCH_AND_CREATE( Replace );

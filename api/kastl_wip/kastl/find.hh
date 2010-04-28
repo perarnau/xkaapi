@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
-#include "kastl_impl.hh"
+#include "kastl/kastl_impl.hh"
 
 
 namespace kastl
@@ -14,6 +14,20 @@ namespace kastl
 
 namespace impl
 {
+
+template
+<
+  typename IteratorType,
+  typename ValueType
+>
+struct FindConstant
+{
+  IteratorType _bad_res;
+  ValueType _value;
+
+  FindConstant(const IteratorType& bad_res, const ValueType& value)
+    : _bad_res(bad_res), _value(value) {}
+};
 
 template
 <
@@ -46,17 +60,18 @@ public:
   FindWork() : BaseType() {}
 
   FindWork(const SequenceType& s, const ConstantType* c, const ResultType& r)
-  : BaseType(s, c, r) {}
+  : BaseType(s, c, r) { prepare(); }
 
   inline void prepare()
-  {
-    this->_res = this->_seq._end;
-  }
+  { this->_res = this->_const->_bad_res; }
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
-    ResultType res = std::find(seq._beg, seq._end, *this->_const);
-    if (res == seq._end)
+    ResultType res = std::find(seq.begin(), seq.end(), this->_const->_value);
+
+    seq.advance();
+
+    if (res == seq.end())
       return ;
 
     reduce_result(res);
@@ -64,10 +79,13 @@ public:
 
   inline void reduce(const BaseType& tw)
   {
-    if (tw._is_done == false)
+    // result already found
+    if (this->_res != this->_const->_bad_res)
       return ;
 
-    reduce_result(tw._res);
+    // thief got a result
+    if (tw._res != tw._const->_bad_res)
+      reduce_result(tw._res);
   }
 
 };
@@ -98,7 +116,7 @@ InputIterator find
  ValueType val
 )
 {
-  typedef kastl::impl::BasicSequence<InputIterator>
+  typedef kastl::impl::InSequence<InputIterator>
     SequenceType;
 
   typedef typename kastl::impl::make_macro_type
@@ -113,7 +131,8 @@ InputIterator find
     <ParamType::splitter_tag, ParamType>::Type
     SplitterType;
 
-  typedef ValueType ConstantType;
+  typedef kastl::impl::FindConstant<InputIterator, ValueType> ConstantType;
+  ConstantType constant(end, val);
 
   typedef InputIterator ResultType;
 
@@ -121,7 +140,7 @@ InputIterator find
     <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
     WorkType;
 
-  WorkType work(SequenceType(beg, end), &val, end);
+  WorkType work(SequenceType(beg, end), &constant, end);
   kastl::impl::compute(work);
   return work._res;
 }
