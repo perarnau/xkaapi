@@ -2,8 +2,8 @@
 # define KASTL_HH_INCLUDED
 
 
-#include <kastl/algorithm>
-#include <kastl/numeric>
+#include "kastl/algorithm"
+#include "kastl/numeric"
 
 
 #endif // ! KASTL_HH_INCLUDED
