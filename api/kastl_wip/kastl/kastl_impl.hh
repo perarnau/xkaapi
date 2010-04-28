@@ -6,7 +6,7 @@
 #define CONFIG_KASTL_DEBUG 0
 // should be set to 1 if debug, since need lock
 #define CONFIG_KASTL_LOCK_WORK 0
-#define CONFIG_KASTL_MASTER_SLAVE 0
+#define CONFIG_KASTL_MASTER_SLAVE 1
 #define CONFIG_KASTL_THE_SEQUENCE 1
 
 
@@ -1281,6 +1281,8 @@ namespace impl
 	}
 
 	thief_work->_seq.empty_seq(thief_work->_macro_seq);
+	thief_work->_const = victim_work->_const;
+	thief_work->prepare();
 
 #if CONFIG_KASTL_DEBUG
 	const typename SequenceType::RangeType vr =
@@ -1296,12 +1298,7 @@ namespace impl
 	       (unsigned int)thief_work->_kid,
 	       tr.first, tr.second,
 	       (uintptr_t)thief_work->_tresult);
-#endif
 
-	thief_work->_const = victim_work->_const;
-	thief_work->prepare();
-
-#if CONFIG_KASTL_DEBUG
 	thief_work->_is_master = false;
 	thief_work->_ori_seq = victim_work->_ori_seq;
 #endif

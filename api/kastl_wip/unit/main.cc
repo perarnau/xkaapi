@@ -12,7 +12,7 @@
 
 
 // compile time config
-// algorthms
+// algorithms
 #define CONFIG_ALGO_FOR_EACH 0
 #define CONFIG_ALGO_COUNT 1
 #define CONFIG_ALGO_SEARCH 1
@@ -21,6 +21,7 @@
 #define CONFIG_ALGO_MIN_ELEMENT 0
 #define CONFIG_ALGO_MAX_ELEMENT 0
 #define CONFIG_ALGO_FIND 1
+#define CONFIG_ALGO_FIND_IF 1
 #define CONFIG_ALGO_INNER_PRODUCT 0
 // tbb foreach
 #define CONFIG_USE_TBB 0
@@ -727,6 +728,66 @@ public:
 };
 #endif
 
+#if CONFIG_ALGO_FIND_IF
+class FindIfRun : public RunInterface
+{
+  SequenceType::iterator _kastl_res[2];
+  SequenceType::iterator _stl_res[2];
+
+  ptrdiff_t _kastl_index[2];
+  ptrdiff_t _stl_index[2];
+
+  static bool is_zero(unsigned int v)
+  {
+    return v == 0;
+  }
+
+  static bool is_magic(unsigned int v)
+  {
+    return v == 42;
+  }
+
+public:
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _kastl_res[0] = kastl::find_if
+      (i.first.begin(), i.first.end(), is_zero);
+    _kastl_index[0] = _kastl_res[0] - i.first.begin();
+
+    _kastl_res[1] = kastl::find_if
+      (i.first.begin(), i.first.end(), is_magic);
+    _kastl_index[1] = _kastl_res[1] - i.first.begin();
+  }
+
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _stl_res[0] = std::find_if
+      (i.first.begin(), i.first.end(), is_zero);
+    _stl_index[0] = _stl_res[0] - i.first.begin();
+
+    _stl_res[1] = std::find_if
+      (i.first.begin(), i.first.end(), is_magic);
+    _stl_index[1] = _stl_res[1] - i.first.begin();
+  }
+
+  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
+  {
+    if (_kastl_res[0] == _stl_res[0])
+      if (_kastl_res[1] == _stl_res[1])
+	return true;
+
+    if (_kastl_res[1] != _stl_res[1])
+      error_string = index_error_string(_stl_index[1], _kastl_index[1]);
+
+    if (_kastl_res[0] != _stl_res[0])
+      error_string = index_error_string(_stl_index[0], _kastl_index[0]);
+
+    return false;
+  }
+
+};
+#endif
+
 #if CONFIG_ALGO_INNER_PRODUCT
 class InnerProductRun : public RunInterface
 {
@@ -842,66 +903,6 @@ public:
 };
 
 #endif
-
-
-class FindIfRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res[2];
-  SequenceType::iterator _stl_res[2];
-
-  ptrdiff_t _kastl_index[2];
-  ptrdiff_t _stl_index[2];
-
-  static bool is_zero(unsigned int v)
-  {
-    return v == 0;
-  }
-
-  static bool is_magic(unsigned int v)
-  {
-    return v == 42;
-  }
-
-public:
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res[0] = kastl::find_if
-      (i.first.begin(), i.first.end(), is_zero);
-    _kastl_index[0] = _kastl_res[0] - i.first.begin();
-
-    _kastl_res[1] = kastl::find_if
-      (i.first.begin(), i.first.end(), is_magic);
-    _kastl_index[1] = _kastl_res[1] - i.first.begin();
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res[0] = std::find_if
-      (i.first.begin(), i.first.end(), is_zero);
-    _stl_index[0] = _stl_res[0] - i.first.begin();
-
-    _stl_res[1] = std::find_if
-      (i.first.begin(), i.first.end(), is_magic);
-    _stl_index[1] = _stl_res[1] - i.first.begin();
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res[0] == _stl_res[0])
-      if (_kastl_res[1] == _stl_res[1])
-	return true;
-
-    if (_kastl_res[1] != _stl_res[1])
-      error_string = index_error_string(_stl_index[1], _kastl_index[1]);
-
-    if (_kastl_res[0] != _stl_res[0])
-      error_string = index_error_string(_stl_index[0], _kastl_index[0]);
-
-    return false;
-  }
-
-};
-
 
 class ReverseRun : public RunInterface
 {
@@ -2166,6 +2167,10 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Find );
 #endif
 
+#if CONFIG_ALGO_FIND_IF
+  MATCH_AND_CREATE( FindIf );
+#endif
+
 #if 0 // speed compile time up
   MATCH_AND_CREATE( Merge );
   MATCH_AND_CREATE( Sort );
@@ -2176,7 +2181,6 @@ RunInterface* RunInterface::create(const std::string& name)
   MATCH_AND_CREATE( Generate );
   MATCH_AND_CREATE( Equal );
   MATCH_AND_CREATE( Mismatch );
-  MATCH_AND_CREATE( FindIf );
   MATCH_AND_CREATE( FindFirstOf );
   MATCH_AND_CREATE( SwapRanges );
   MATCH_AND_CREATE( Reverse );
