@@ -14,7 +14,7 @@
 // compile time config
 // algorthms
 #define CONFIG_ALGO_FOR_EACH 0
-#define CONFIG_ALGO_COUNT 0
+#define CONFIG_ALGO_COUNT 1
 #define CONFIG_ALGO_SEARCH 1
 #define CONFIG_ALGO_ACCUMULATE 0
 #define CONFIG_ALGO_TRANSFORM 0
@@ -230,7 +230,7 @@ static void __attribute__((unused)) print_sequence
 
 // timing
 
-#if 1 // gettimeofday
+#if 0 // gettimeofday
 
 namespace timing
 {

@@ -1457,14 +1457,14 @@ namespace impl
     // better values whenever apropriated.
 
     static const enum TuningTag splitter_tag = TAG_STATIC;
-    static const size_t par_size = 1024;
+    static const size_t par_size = 256;
 
     static const enum TuningTag macro_tag = TAG_IDENTITY;
     static const size_t macro_min_size = 1024;
     static const size_t macro_max_size = 32768;
 
     static const enum TuningTag nano_tag = TAG_STATIC;
-    static const size_t nano_size = 512;
+    static const size_t nano_size = 1024;
   };
 
   // default per algo class tuning
