@@ -111,13 +111,13 @@ namespace rts {
     { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
     bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
-    { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
+    { return KAAPI_ATOMIC_CAS64( &_atom, oldvalue, newvalue ); }
 
     kaapi_int64_t incr( )
-    { return KAAPI_ATOMIC_INCR( &_atom ); }
+    { return KAAPI_ATOMIC_INCR64( &_atom ); }
 
     kaapi_int64_t sub( kaapi_int64_t v )
-    { return KAAPI_ATOMIC_SUB( &_atom, v ); }
+    { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
 
   protected:
     kaapi_atomic64_t _atom __attribute__((aligned(64)));
