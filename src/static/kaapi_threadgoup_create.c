@@ -72,6 +72,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t** pthgrp, int size )
     error = ENOMEM;
     goto return_error_1;
   }
+  thgrp->threads    = malloc( size* sizeof(kaapi_thread_t*) );
+  if (thgrp->threads ==0) 
+  {
+    error = ENOMEM;
+    goto return_error_15;
+  }
   
   /* here may be dispatch allocation of all processors */
   for (i=0; i<size; ++i)
@@ -83,6 +89,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t** pthgrp, int size )
       error = ENOMEM;
       goto return_error_2;
     }
+    thgrp->threads[i] = (kaapi_thread_t*)thgrp->threadctxts[i]->sfp;
   }
   
   error =pthread_mutex_init(&thgrp->mutex, 0);
@@ -103,10 +110,13 @@ return_error_2:
   for (j=0; j<size; ++j)
     kaapi_context_free(thgrp->threadctxts[j]);
 
+  free( thgrp->threads );
+  
+return_error_15:
   free( thgrp->threadctxts );
   thgrp->group_size = 0;
   thgrp->threadctxts = 0;
-
+  
 return_error_1:
   free( thrgp );
 
