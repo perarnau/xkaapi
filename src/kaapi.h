@@ -370,6 +370,7 @@ typedef struct kaapi_request_t {
   struct kaapi_thread_t*         thread;         /* internal thread pointer where to store result of the steal operation */
   struct kaapi_thread_context_t* mthread;        /* internal thread pointer where to store result of the steal operation */
   struct kaapi_processor_t*      proc;           /* owner of the request */
+  kaapi_uint64_t                 delay;          /* if !=0, delay in ns since the thief is waiting for work */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
 
@@ -890,26 +891,48 @@ static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 
 /* Return the thief result of the next thief from the head of the list to preempt or 0 if no thief may be preempted
 */
-extern struct kaapi_taskadaptive_result_t* kaapi_preempt_getnextthief_head( kaapi_stealcontext_t* stc );
+extern struct kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* stc );
+
+/* Return the next field of curr
+*/
+extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* stc, struct  kaapi_taskadaptive_result_t* curr );
 
 /* Return the thief result of the next thief from the tail of the list to preempt or 0 if no thief may be preempted
 */
-extern struct kaapi_taskadaptive_result_t* kaapi_preempt_getnextthief_tail( kaapi_stealcontext_t* stc );
+extern struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc );
 
 
 /** Preempt ktr and return 1 when:
     - ktr has been preempted or finished
 TODO->    - ktr has been replaced by the thieves of ktr into the list of stc
 */
-extern int kaapi_preempt_nextthief_helper( 
+extern int kaapi_preempt_thief_helper( 
   kaapi_stealcontext_t*               stc, 
   struct kaapi_taskadaptive_result_t* ktr, 
   void*                               arg_to_thief 
 );
 
+/** Set flag to preempt the thief and return whatever is the state of the thief (terminate or not).
+    Returns 0 if the thief if finished else returns EBUSY.
+*/
+extern int kaapi_preemptasync_thief_helper( 
+  kaapi_stealcontext_t*               stc, 
+  struct kaapi_taskadaptive_result_t* ktr, 
+  void*                               arg_to_thief 
+);
+
+
 /** \ingroup ADAPTIVE
-   Try to preempt next thief in the reverse order defined by the order of the steal request reply, i.e.
-   preempt first the last thief.
+    Remove the thief ktr form the list of stc iff it is has finished its computation and returns 0.
+    Else returns EBUSY.
+*/
+extern int kaapi_remove_finishedthief( 
+  kaapi_stealcontext_t*               stc, 
+  struct kaapi_taskadaptive_result_t* ktr
+);
+
+/** \ingroup ADAPTIVE
+   Try to preempt the thief referenced by tr. Wait preemption occurs.
    Return true iff some work have been preempted and should be processed locally.
    If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
    If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
@@ -922,14 +945,28 @@ extern int kaapi_preempt_nextthief_helper(
 #define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
 ({									\
   int __res = 0;							\
-  if (((tr) !=0) && kaapi_preempt_nextthief_helper(stc, tr, arg_to_thief)) \
+  if (((tr) !=0) && kaapi_preempt_thief_helper(stc, (tr), arg_to_thief)) \
   {									\
     if (!kaapi_is_null((void*)reducer))					\
-      __res = ((kaapi_task_reducer_t)reducer)(stc, tr->arg_from_thief, tr->data, tr->size_data, ##__VA_ARGS__);	\
+      __res = ((kaapi_task_reducer_t)reducer)(stc, (tr)->arg_from_thief, (tr)->data, (tr)->size_data, ##__VA_ARGS__);	\
     kaapi_deallocate_thief_result(tr);					\
   }									\
   __res;								\
 })
+
+/** \ingroup ADAPTIVE
+   Post a preemption request to thief. Do not wait preemption occurs.
+   Return true iff some work have been preempted and should be processed locally.
+   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
+   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
+   value the call to reducer function.
+   
+   reducer function should has the following signature:
+      int (*)( stc, void* thief_work, ... )
+   where ... is the same arguments as passed to kaapi_preempt_nextthief.
+*/
+#define kaapi_preemptasync_thief( stc, tr, arg_to_thief )	\
+  kaapi_preemptasync_thief_helper(stc, (tr), arg_to_thief)
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
@@ -1069,10 +1106,11 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 #define KAAPI_PERF_ID_STEALREQ      2  /* count number of steal requests */
 #define KAAPI_PERF_ID_STEALOP       3  /* count number of steal operation to reply to requests */
 #define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspend */
-#define KAAPI_PERF_ID_TIDLE         5  /* nano second of idle time */
-#define KAAPI_PERF_ID_TPREEMPT      6  /* nano second of preempt time */
+#define KAAPI_PERF_ID_T1            5  /* nano second of compte time */
+/*#define KAAPI_PERF_ID_TIDLE         6  / * nano second of idle time */ 
+#define KAAPI_PERF_ID_TPREEMPT      7  /* nano second of preempt time */
 
-#define KAAPI_PERF_ID_ENDSOFTWARE   7  /* mark end of software counters */
+#define KAAPI_PERF_ID_ENDSOFTWARE   8  /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
 #define KAAPI_PERF_ID_PAPI_0       (KAAPI_PERF_ID_PAPI_BASE + 0)
@@ -1089,6 +1127,7 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /* Counter type
 */
 typedef long long kaapi_perf_counter_t;
+
 /* Value
 */
 typedef unsigned int kaapi_perf_id_t;
@@ -1252,6 +1291,8 @@ static inline void kaapi_writemem_barrier()
 {
 #ifdef __PPC
   OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
 #endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
@@ -1261,6 +1302,8 @@ static inline void kaapi_readmem_barrier()
 {
 #ifdef __PPC
   OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
 #endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
@@ -1283,6 +1326,7 @@ static inline void kaapi_mem_barrier()
 static inline void kaapi_writemem_barrier()  
 {
 #if defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
 #else
   __sync_synchronize();
 #endif
@@ -1293,6 +1337,7 @@ static inline void kaapi_writemem_barrier()
 static inline void kaapi_readmem_barrier()  
 {
 #if defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
 #else
   __sync_synchronize();
 #endif
@@ -1303,7 +1348,9 @@ static inline void kaapi_readmem_barrier()
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
+#if defined(__x86_64) || defined(__i386__)
   __sync_synchronize();
+#endif
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
@@ -1338,6 +1385,26 @@ static inline void kaapi_mem_barrier()
       __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
 #  endif
 
+#  ifndef KAAPI_ATOMIC_INCR
+#    define KAAPI_ATOMIC_INCR(a) \
+      __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR64(a) \
+      __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
+
 #elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
@@ -1350,6 +1417,26 @@ static inline void kaapi_mem_barrier()
 #  ifndef KAAPI_ATOMIC_CAS64
 #    define KAAPI_ATOMIC_CAS64(a, o, n) \
       OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_INCR
+#    define KAAPI_ATOMIC_INCR(a) \
+      OSAtomicIncrement32( &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR64(a) \
+      OSAtomicIncrement64( &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      OSAtomicAdd32( -value, &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      OSAtomicAdd64( -value, &((a)->_counter) ) 
 #  endif
 
 #else

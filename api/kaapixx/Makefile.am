@@ -28,7 +28,7 @@ BUILT_SOURCES = $(M4_BUILT_FILES)
 EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
 
 $(M4_BUILT_FILES): $(M4_SRCS)
-	./m4_generator 10
+	(cd $(srcdir); ./m4_generator 10)
 
 include_HEADERS=\
 	kaapi++ \

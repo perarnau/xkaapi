@@ -21,8 +21,8 @@ struct Sin {
   typedef double result_type;
   void operator()(double& result, double a) 
   {
-    result=1; //sin(a);
-    usleep(1000);
+    result=a; //sin(a);
+    sleep(1);
   }
 };
 
@@ -104,9 +104,7 @@ int main(int argc, char** argv)
         input+n,
         op,
         acc,
-        pred,
-        1, 1,
-        10
+        pred
       );
     std::cerr << "Used: " << size_eval << " evaluation(s)" << std::endl;
   }

@@ -61,7 +61,7 @@ Format::Format(
 )
 {
   static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
-  if (fmt ==0)
+  if (fmt ==0) 
     fmt = new kaapi_format_t;
   kaapi_format_register( fmt, strdup(fmt_name.c_str()));
   fmt->size      = size;

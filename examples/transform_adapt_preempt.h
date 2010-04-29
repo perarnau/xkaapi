@@ -246,7 +246,7 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
   do {
     work.doit( sc_transform, thread );
 
-    kaapi_taskadaptive_result_t* thief = kaapi_preempt_getnextthief_head( sc_transform );
+    kaapi_taskadaptive_result_t* thief = kaapi_get_thief_head( sc_transform );
     if (thief !=0)
     {
       std::cout << "Master preempt Thief:" << thief << std::endl;

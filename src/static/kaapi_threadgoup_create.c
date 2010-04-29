@@ -10,7 +10,7 @@
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
-** threads.
+** threadctxts.
 ** 
 ** This software is governed by the CeCILL-C license under French law
 ** and abiding by the rules of distribution of free software.  You can
@@ -45,46 +45,81 @@
 
 /**
 */
-int kaapi_thread_group_create(kaapi_thread_group_t* thgrp, int size )
+int kaapi_threadgroup_create(kaapi_threadgroup_t** pthgrp, int size )
 {
   int i, j;
   int error = 0;
-  kaapi_processor_t* proc = _kaapi_get_current_processor();
+  kaapi_threadgroup_t* thrgp = 0;
+  kaapi_processor_t* proc = 0;  
+  
+  if (pthgrp ==0) return EINVAL;
+  thgrp = (kaapi_threadgroup_t*)malloc(sizeof(kaapi_threadgroup_t));
+  if (thrgp ==0)
+  {
+    error = ENOMEM;
+    goto return_error_0;
+  }
+  
+  /* */
+  proc = _kaapi_get_current_processor();
 
   thgrp->group_size = size;
   thgrp->startflag  = 0;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
-  thgrp->threads    = malloc( size* sizeof(kaapi_thread_context_t*) );
-  if (thgrp->threads ==0)
+  thgrp->threadctxts    = malloc( size* sizeof(kaapi_thread_context_t*) );
+  if (thgrp->threadctxts ==0) 
   {
-    thgrp->group_size = 0;
-    return ENOMEM;
+    error = ENOMEM;
+    goto return_error_1;
+  }
+  thgrp->threads    = malloc( size* sizeof(kaapi_thread_t*) );
+  if (thgrp->threads ==0) 
+  {
+    error = ENOMEM;
+    goto return_error_15;
   }
   
+  /* here may be dispatch allocation of all processors */
   for (i=0; i<size; ++i)
   {
-    thgrp->threads[i] = kaapi_context_alloc( proc );
-    if (thgrp->threads[i] ==0) 
+    thgrp->threadctxts[i] = kaapi_context_alloc( proc );
+    if (thgrp->threadctxts[i] ==0) 
     {
+      size = i;
       error = ENOMEM;
-      goto return_error;
+      goto return_error_2;
     }
+    thgrp->threads[i] = (kaapi_thread_t*)thgrp->threadctxts[i]->sfp;
   }
   
   error =pthread_mutex_init(&thgrp->mutex, 0);
-  if (error !=0) goto return_error;
+  if (error !=0) goto return_error_2;
 
   error =pthread_cond_init(&thgrp->cond, 0);
-  if (error !=0) goto return_error;
+  if (error !=0) goto return_error_4;
 
+  /* ok */
+  thrgp->state = KAAPI_THREAD_GROUP_CREATE_S;
+  *pthgrp = thgrp;
   return 0;
 
-return_error:
-  for (j=0; j<i; ++j)
-    kaapi_context_free(thgrp->threads[j]);
+return_error_3:
+  pthread_mutex_destroy(&thrgp->mutex);
+
+return_error_2:
+  for (j=0; j<size; ++j)
+    kaapi_context_free(thgrp->threadctxts[j]);
 
   free( thgrp->threads );
+  
+return_error_15:
+  free( thgrp->threadctxts );
   thgrp->group_size = 0;
-  thgrp->threads = 0;
+  thgrp->threadctxts = 0;
+  
+return_error_1:
+  free( thrgp );
+
+return_error_0:
   return error;  
 }

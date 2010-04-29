@@ -10,7 +10,7 @@
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
-** threads.
+** threadctxts.
 ** 
 ** This software is governed by the CeCILL-C license under French law
 ** and abiding by the rules of distribution of free software.  You can
@@ -46,18 +46,18 @@
 
 /**
 */
-int kaapi_thread_group_destroy(kaapi_thread_group_t* thgrp )
+int kaapi_threadgroup_destroy(kaapi_threadgroup_t* thgrp )
 {
   int i;
   if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
     return EBUSY;
     
   for (i=0; i<thgrp->group_size; ++i)
-    kaapi_context_free(thgrp->threads[i]);
+    kaapi_context_free(thgrp->threadctxts[i]);
 
-  free( thgrp->threads );
+  free( thgrp->threadctxts );
   thgrp->group_size = 0;
-  thgrp->threads = 0;
+  thgrp->threadctxts = 0;
 
   pthread_mutex_destroy(&thgrp->mutex);
   pthread_cond_destroy(&thgrp->cond);

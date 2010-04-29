@@ -10,11 +10,3 @@ SUBDIRS=xkaapi kaapixx atha kastl
 
 DIST=check-headers.am
 
-# NOT YET USED:  	atha_monotonic.cpp \
-#	atha_array.h \
-#	ka_format.h \
-#	ka_stream.h 
-
-# NOT YET USED:  atha_stream.cpp
-#  atha_format.cpp
-

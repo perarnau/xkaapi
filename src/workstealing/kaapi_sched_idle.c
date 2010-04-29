@@ -55,20 +55,12 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_thread_context_t* thread;
   int err;
   
-#if defined(KAAPI_USE_PERFCOUNTER)
-/*
-  double t0;
-  double t1;
-*/
-#endif
-  
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
   kaapi_assert_debug( kproc->thread !=0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-/*  t0 = kaapi_get_elapsedtime();  */
 #endif
   do {
 

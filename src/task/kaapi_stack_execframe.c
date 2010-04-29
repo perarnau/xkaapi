@@ -100,7 +100,7 @@ int kaapi_stack_execframe( kaapi_thread_context_t* thread )
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;
-#endif 
+#endif
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);

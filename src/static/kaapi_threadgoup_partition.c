@@ -44,51 +44,23 @@
 #include "kaapi_staticsched.h"
 
 
-/*
+/**
 */
-int kaapi_task_bindfifo(kaapi_task_t* task, int ith, kaapi_access_mode_t m, kaapi_fifo_t* fifo_param)
+int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t* thgrp )
 {
-  if ( !KAAPI_ACCESS_IS_FIFO(m)) return 0;
-
-  kaapi_assert_debug( KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(m)) || KAAPI_ACCESS_IS_READ(KAAPI_ACCESS_GET_MODE(m)));
-  if (KAAPI_ACCESS_IS_READ(KAAPI_ACCESS_GET_MODE(m)))
-  {
-    kaapi_assert( fifo_param->task_reader ==0);
-    fifo_param->task_reader  = task;
-    fifo_param->param_reader = ith;
-  }
-  else if (KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(m)))
-  {
-    kaapi_assert( fifo_param->task_writer ==0);
-    fifo_param->task_writer  = task;
-    fifo_param->param_writer = ith;
-  }
-  return 0;
-}
-
-
-/*
-*/
-int kaapi_thread_pushfifotask(kaapi_thread_t* thread)
-{
-  int i, countparam;
-  const kaapi_format_t* task_fmt;
-  kaapi_task_t* task = kaapi_thread_toptask(thread);
-  task_fmt = kaapi_format_resolvebybody( task->body );
-
-  if (task_fmt ==0) return 0;
-
-  countparam = task_fmt->count_params;
-  for (i=0; i<countparam; ++i)
-  {
-    kaapi_access_mode_t m = task_fmt->mode_params[i];
-    if ( KAAPI_ACCESS_IS_FIFO(m)) 
-    {
-      kaapi_fifo_t* fifo_param = (kaapi_fifo_t*)(task_fmt->off_params[i] + (char*)task->sp);
-      kaapi_task_bindfifo(task, i, m, fifo_param);
-    }
-  }
+  if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
+  thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   
+  /* init hashmap */
   return 0;
 }
 
+
+/**
+*/
+int kaapi_threadgroup_end_partition(kaapi_threadgroup_t* thgrp )
+{
+  if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
+  thgrp->state = KAAPI_THREAD_GROUP_MP_S;
+  return 0;
+}

@@ -17,12 +17,19 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     dummy(M4_PARAM(`(F$1)args->f$1', `', `, '));
   }
 
+#if 0
   static Format*           format;
   static kaapi_format_id_t fmid;
-  static kaapi_format_t*   getformat() { if (format==0) format = new Format; return format->get_c_format(); }
+  static kaapi_format_t*   getformat() { 
+    std::cout << "HERE/ATHA" << std::endl;
+    if (format==0) format = new Format; return format->get_c_format(); 
+  }
+#endif
   static kaapi_format_t* registerformat()
   {
+#if 0
     if (Self_t::fmid != 0) return getformat();
+#endif
     
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];')
@@ -35,18 +42,18 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     M4_PARAM(`array_format[$1-1] = Trait_ParamClosure<F$1>::get_format();
     ',`', `')
     
-    Self_t::fmid = kaapi_format_taskregister( 
-          Self_t::getformat(), 
-          &Self_t::body, 
-          typeid(Self_t).name(),
+    static std::string task_name = std::string("__ATHA__Z")+std::string(typeid(TASK).name());
+    static FormatTask task_fmt( 
+          task_name,
           sizeof(Self_t),
           KAAPI_NUMBER_PARAMS,
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format')
       );
-    /* extend the set of predefined function */
-    return getformat();
+    kaapi_format_taskregister_body( task_fmt.get_c_format(), Self_t::body, KAAPI_PROC_TYPE_CPU );
+      
+    return task_fmt.get_c_format();
   }
   static kaapi_task_body_t registerbody()
   {
@@ -60,11 +67,13 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 TASK KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::dummy;
 
+#if 0
 template<class TASK M4_PARAM(`,typename F$1', `', ` ')>
 Format* KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::format = 0;
 
 template<class TASK M4_PARAM(`,typename F$1', `', ` ')>
 kaapi_format_id_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::fmid = 0;
+#endif
 
 template<class TASK M4_PARAM(`,class F$1', `', ` ')>
 const kaapi_task_body_t KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::default_body = KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,F$1', `', ` ')>::registerbody();

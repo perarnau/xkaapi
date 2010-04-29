@@ -328,7 +328,8 @@ ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/kastl/libkastl.la \$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/src/libxkaapi.la])
+dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 AC_SUBST(AM_CPPFLAGS)
 AC_SUBST(AM_CFLAGS)

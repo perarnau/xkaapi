@@ -11,6 +11,11 @@ static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
 static unsigned int papi_event_count = 0;
 #endif
 
+/**/
+#define KAAPI_GET_THREAD_STATE(kproc)\
+  ((kproc)->curr_perf_regs == (kproc)->perf_regs[KAAPI_PERF_USER_STATE] ? KAAPI_PERF_USER_STATE : KAAPI_PERF_SCHEDULE_STATE)
+
+
 #if 0 // unused
 static int get_event_code(char* name, int* code)
 {
@@ -109,8 +114,7 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
   kaapi_assert( (isuser ==0)||(isuser==1) );
   
   memset( kproc->perf_regs, 0, sizeof( kproc->perf_regs) );
-  kproc->t_sched        = 0;
-  kproc->t_preempt      = 0;
+  kproc->start_t[0] = kproc->start_t[1] = 0;
 
   kproc->curr_perf_regs = kproc->perf_regs[isuser]; 
 
@@ -180,6 +184,8 @@ void kaapi_perf_thread_start(kaapi_processor_t* kproc)
     kaapi_assert_m( PAPI_OK, PAPI_reset(kproc->papi_event_set), "PAPI_reset" );
   }
 #endif
+  kproc->start_t[KAAPI_GET_THREAD_STATE(kproc)] = kaapi_get_elapsedns();
+//printf("%lu:: %p start in mode '%s'\n", kaapi_get_elapsedns(), (void*)kproc, (KAAPI_GET_THREAD_STATE(kproc) ==0 ? "USER" : "SYS" ) );
 }
 
 
@@ -187,6 +193,8 @@ void kaapi_perf_thread_start(kaapi_processor_t* kproc)
 */
 void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
 {
+  int mode;
+  kaapi_perf_counter_t delay;
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
   if (papi_event_count)
   {
@@ -194,16 +202,37 @@ void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
     kaapi_assert_m( PAPI_OK, PAPI_accum(kproc->papi_event_set, kproc->curr_perf_regs+KAAPI_PERF_ID_PAPI_BASE), "PAPI_accum" );
   }
 #endif
+//printf("%lu:: %p stop in mode '%s'\n", kaapi_get_elapsedns(), (void*)kproc, (KAAPI_GET_THREAD_STATE(kproc) ==0 ? "USER" : "SYS" ) );
+  mode = KAAPI_GET_THREAD_STATE(kproc);
+  kaapi_assert_debug( kproc->start_t[mode] != 0 ); /* else none started */
+  delay = kaapi_get_elapsedns() - kproc->start_t[mode];
+  KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_T1) += delay;
+  kproc->start_t[mode] =0;
 }
 
 
 /*
 */
+kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc)
+{
+  kaapi_perf_counter_t delay = kaapi_get_elapsedns() - kproc->start_t[KAAPI_GET_THREAD_STATE(kproc)];
+  return delay;
+}
+
+/*
+*/
 void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 {
-  kaapi_assert( (isuser ==0)||(isuser==1) );
+  kaapi_assert( (isuser ==KAAPI_PERF_SCHEDULE_STATE)||(isuser==KAAPI_PERF_USER_STATE) );
   if (kproc->curr_perf_regs != kproc->perf_regs[isuser])
-  {
+  { /* doit only iff real swap */
+    kaapi_assert_debug( kproc->start_t[1-isuser] != 0 ); /* else none started */
+    kaapi_assert_debug( kproc->start_t[isuser] == 0 );   /* else already started */
+    kaapi_perf_counter_t date = kaapi_get_elapsedns();
+    KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_T1) += date - kproc->start_t[1-isuser];
+    kproc->start_t[isuser]   = date;
+    kproc->start_t[1-isuser] = 0;
+//printf("%lu:: %p swap to mode '%s'\n", kaapi_get_elapsedns(), (void*)kproc, (isuser ==0 ? "USER" : "SYS" ) );
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
     if (papi_event_count)
     {
@@ -220,7 +249,7 @@ void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 */
 int kaapi_perf_thread_state(kaapi_processor_t* kproc)
 {
-  return (kproc->curr_perf_regs == kproc->perf_regs[KAAPI_PERF_USER_STATE] ? KAAPI_PERF_USER_STATE : KAAPI_PERF_SCHEDULE_STATE);
+  return KAAPI_GET_THREAD_STATE(kproc);
 }
 
 
@@ -243,7 +272,8 @@ static const kaapi_perf_idset_t* get_perf_idset
   case KAAPI_PERF_ID_STEALREQ:
   case KAAPI_PERF_ID_STEALOP:
   case KAAPI_PERF_ID_SUSPEND:
-  case KAAPI_PERF_ID_TIDLE:
+  case KAAPI_PERF_ID_T1:
+/*  case KAAPI_PERF_ID_TIDLE: */
   case KAAPI_PERF_ID_TPREEMPT:
   case KAAPI_PERF_ID_PAPI_0:
   case KAAPI_PERF_ID_PAPI_1:
@@ -301,7 +331,6 @@ void _kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaa
   }
   
   /* filter */
-
   for (j = 0, i = 0; j < idset->count; ++i)
     if (idset->idmap[i])
       counter[j++] += accum[i];
