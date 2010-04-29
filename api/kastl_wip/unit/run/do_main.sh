@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGOS="min_element"
+ALGOS="max_element"
 LIBS="stl kastl pastl"
 DOS="bench check"
 

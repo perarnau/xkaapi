@@ -704,40 +704,49 @@ public:
 #if CONFIG_ALGO_MAX_ELEMENT
 class MaxElementRun : public RunInterface
 {
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
+  SequenceType::iterator _res[2];
 
 public:
-  virtual void run_kastl(InputType& i, OutputType& o)
+  virtual void run_ref(InputType& i, OutputType& o)
   {
-    _kastl_res = kastl::max_element
-      (i.first.begin(), i.first.end());
+    _res[1] = std::max_element(i.first.begin(), i.first.end());
   }
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _stl_res = std::max_element
-      (i.first.begin(), i.first.end());
+    _res[0] = std::max_element(i.first.begin(), i.first.end());
   }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::max_element(i.first.begin(), i.first.end());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::max_element
+      (i.first.begin(), i.first.end(), __gnu_parallel::parallel_balanced);
+  }
+#endif
 
   virtual bool check
-  (
-   OutputType& kastl_output,
-   OutputType& stl_output,
-   std::string& error_string
-  ) const
+  (std::vector<OutputType>&, std::string& es) const
   {
-    if (*_kastl_res == *_stl_res)
+    if (*_res[0] == *_res[1])
       return true;
 
-    error_string = value_error_string<ValueType>
-      (*_stl_res, *_kastl_res);
+    es = value_error_string<ValueType>(*_res[0], *_res[1]);
 
     return false;
   }
 
 };
-#endif
+#endif // CONFIG_ALGO_MAX_ELEMENT
 
 #if CONFIG_ALGO_FIND
 class FindRun : public RunInterface
