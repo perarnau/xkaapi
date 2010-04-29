@@ -57,6 +57,20 @@ extern "C" {
     2/ the tasks are pushed explicitly into one of the partition, depending
        of their access mode, extra tasks required for the synchronisation are added
     3/ the thread group begin its execution.
+    
+    Model (publica interface= kaapi_threadgroup_t == kaapi_threadgroup_t* of the implementation
+    intergace).
+      kaapi_threadgroup_t* group; 
+      kaapi_threadgroup_create( &group, 10 );
+      
+      kaapi_threadgroup_begin_parition( group );
+      
+      ...
+      task = kaapi_threadgroup_toptask( group, 2 );
+      <init of the task>
+      kaapi_threadgroup_pushtask( group, 2 )
+      
+      kaapi_threadgroup_end_parition( group );
 */
 typedef enum {
   KAAPI_THREAD_GROUP_CREATE_S,     /* created */
@@ -146,6 +160,12 @@ extern int kaapi_threadgroup_end_parition(kaapi_threadgroup_t* thgrp );
 extern int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t* thgrp );
 
 
+/** Faut-il une telle fonction ? 
+    - dans le code applicatif -> thread et il faudrait une version avec en param
+    un thread et qui retrouve son threadgroup pour la synchro.
+*/
+extern int kaapi_threadgroup_barrier( kaapi_threadgroup_t* thgrp );
+
 /**
 */
 extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t* thgrp );
@@ -154,63 +174,6 @@ extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t* thgrp );
 /**
 */
 extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t* thgrp );
-
-
-/** 
-*/
-static inline int kaapi_thread_allocatefifodata( kaapi_fifo_t* fdata, kaapi_thread_t* thread, size_t sizedata )
-{
-  fdata->flag = 0;
-  fdata->size = sizedata;
-#if defined(KAAPI_DEBUG)
-  fdata->data = calloc(1, sizedata);
-#else
-  fdata->data = malloc(sizedata);
-#endif
-  fdata->task_writer   = 0;
-  fdata->task_reader   = 0;
-  fdata->thread_reader = 0;
-  return 0;
-}
-
-
-/**
-*/
-static inline int kaapi_fifo_write( kaapi_fifo_t* fifo )
-{
-  kaapi_task_t* rtask = fifo->task_reader;
-  if (rtask !=0) 
-  {
-    /* restore original body */
-    rtask->body = rtask->ebody;
-    /* optimization: put the thread into ready list of thread */
-  }
-  kaapi_writemem_barrier();
-  fifo->flag = 1;
-  return 0;
-}
-
-
-/** return 0 if not ready
-*/
-static inline void* kaapi_fifo_read( kaapi_fifo_t* fifo )
-{
-  if (fifo->flag ==0) return 0;
-  kaapi_readmem_barrier();
-  return fifo->data;
-}
-
-
-/** Push task with at least one fifo access
-    - update body if it is a writer
-    - update body if it is a reader
-*/
-extern int kaapi_thread_pushfifotask(kaapi_thread_t* thread);
-
-
-/** Update information of Fifo parameter of a task during creation
-*/
-extern int kaapi_task_bindfifo(kaapi_task_t* task, int ith, kaapi_access_mode_t m, kaapi_fifo_t* param);
 
 
 #if defined(__cplusplus)

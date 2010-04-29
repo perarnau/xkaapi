@@ -5,7 +5,7 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-# Not different that libkaapixx !!!!
+# Not object in the library !!!
 #lib_LTLIBRARIES=libkastl.la
 
 libkastl_la_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLLIB_BUILD_CPPFLAGS)
