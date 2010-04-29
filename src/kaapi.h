@@ -1391,7 +1391,7 @@ static inline void kaapi_mem_barrier()
 #  endif
 
 #  ifndef KAAPI_ATOMIC_INCR64
-#    define KAAPI_ATOMIC_INCR54(a) \
+#    define KAAPI_ATOMIC_INCR64(a) \
       __sync_add_and_fetch( &((a)->_counter), 1 ) 
 #  endif
 
