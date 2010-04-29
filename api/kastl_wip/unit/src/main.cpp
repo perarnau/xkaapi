@@ -915,8 +915,7 @@ public:
 #if CONFIG_ALGO_INNER_PRODUCT
 class InnerProductRun : public RunInterface
 {
-  ValueType _kastl_res;
-  ValueType _stl_res;
+  ValueType _res[2];
 
 public:
   virtual void get_seq_constraints
@@ -929,31 +928,46 @@ public:
     are_equal = true;
   }
 
-  virtual void run_kastl(InputType& i, OutputType& o)
+  virtual void run_ref(InputType& i, OutputType& o)
   {
-    _kastl_res = kastl::inner_product
-      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+    _res[1] = std::inner_product(i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
   }
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _stl_res = std::inner_product
-      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+    _res[0] = std::inner_product(i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
   }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::inner_product(i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::inner_product
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0), __gnu_parallel::parallel_balanced);
+  }
+#endif
 
   virtual bool check
-  (OutputType&, OutputType&, std::string& error_string) const
+  (std::vector<OutputType>&, std::string& es) const
   {
-    if (_kastl_res == _stl_res)
+    if (_res[0] == _res[1])
       return true;
 
-    error_string = value_error_string(_stl_res, _kastl_res);
+    es = value_error_string(_res[1], _res[0]);
 
     return false;
   }
 
 };
-#endif
+#endif // CONFIG_ALGO_INNER_PRODUCT
 
 #if 0 // speed compile time up
 
