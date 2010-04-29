@@ -66,7 +66,7 @@ struct AccumulateWork : public BaseWork
     this->_res._value = std::accumulate
       (seq.begin() + i, seq.end(), this->_res._value, *this->_const);
 
-    seq.advance(seq.size());
+    seq.advance();
   }
 
   inline void reduce(const SelfType& thief_work)

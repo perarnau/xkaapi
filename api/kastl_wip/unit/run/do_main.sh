@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGOS="transform"
+ALGOS="accumulate"
 LIBS="stl kastl pastl"
 DOS="bench check"
 

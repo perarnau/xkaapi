@@ -547,25 +547,39 @@ public:
 #if CONFIG_ALGO_ACCUMULATE
 class AccumulateRun : public RunInterface
 {
-  ValueType _kastl_res;
-  ValueType _stl_res;
+  ValueType _res[2];
 
 public:
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::accumulate(i.first.begin(), i.first.end(), ValueType(0));
+  }
+
+#if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType&)
   {
-    _kastl_res = kastl::accumulate
-      (i.first.begin(), i.first.end(), ValueType(0));
+    _res[0] = kastl::accumulate(i.first.begin(), i.first.end(), ValueType(0));
   }
+#endif
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _stl_res = std::accumulate
-      (i.first.begin(), i.first.end(), ValueType(0));
+    _res[0] = std::accumulate(i.first.begin(), i.first.end(), ValueType(0));
   }
+#endif
 
-  virtual bool check(OutputType&, OutputType&, std::string&) const
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType&)
   {
-    return _kastl_res == _stl_res;
+    _res[0] = __gnu_parallel::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0), __gnu_parallel::parallel_balanced);
+  }
+#endif
+
+  virtual bool check(std::vector<OutputType>&, std::string&) const
+  {
+    return _res[0] == _res[1];
   }
 
 };
