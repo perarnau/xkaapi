@@ -161,7 +161,7 @@ begin_loop:
     /*dependencies check*/
     if(pc->pad!=0)
     {
-      counters_list* datas=(counters_list*)pc->pad;
+      kaapi_counters_list* datas=(kaapi_counters_list*)pc->pad;
       while (datas!=0)
       {
         KAAPI_ATOMIC_DECR(datas->reader_counter);

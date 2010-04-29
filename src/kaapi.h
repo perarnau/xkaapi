@@ -670,6 +670,7 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   do { \
     (task)->sp       = (arg);\
     (task)->body     = (task)->ebody = taskbody;\
+    (task)->pad      = 0;\
   } while (0)
 
 
