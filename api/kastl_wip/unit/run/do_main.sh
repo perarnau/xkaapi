@@ -1,7 +1,9 @@
 #!/usr/bin/env sh
 
 
-ALGO=count
+ALGOS="search"
+LIBS="stl kastl pastl"
+DOS="bench check"
 
 DIR=/tmp/out
 #SIZE=1000000
@@ -37,10 +39,15 @@ OUTPUT_FILTER='-v KAAPI'
 
 export LD_LIBRARY_PATH=$HOME/install/lib
 
-for DO in check; do
-    for LIB in stl; do
-	OUTPUT_FILE=/tmp/oo/o.$DO.$LIB ;
-	KAAPI_CPUSET=$CPUSET ../bin/$ALGO-$LIB-$DO $SIZE $ITER > $OUTPUT_FILE ;
-	echo == ;
+for ALGO in $ALGOS; do
+    for DO in $DOS; do
+	for LIB in $LIBS; do
+	    NAME=$ALGO-$LIB-$DO
+	    if [ -e ../bin/$NAME ]; then
+		OUTPUT_FILE=/tmp/oo/$NAME.o ;
+		KAAPI_CPUSET=$CPUSET ../bin/$NAME $SIZE $ITER > $OUTPUT_FILE ;
+		echo == ;
+	    fi
+	done
     done
 done
