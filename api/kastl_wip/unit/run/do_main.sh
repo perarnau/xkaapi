@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGOS="max_element"
+ALGOS="transform"
 LIBS="stl kastl pastl"
 DOS="bench check"
 

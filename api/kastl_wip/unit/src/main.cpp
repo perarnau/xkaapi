@@ -626,28 +626,17 @@ public:
 #endif
 
   virtual bool check
-  (
-   OutputType& kastl_output,
-   OutputType& stl_output,
-   std::string& error_string
-  ) const
+  (std::vector<OutputType>& os, std::string& es) const
   {
-    SequenceType::iterator kpos = kastl_output.begin();
-    SequenceType::iterator spos = stl_output.begin();
-    SequenceType::iterator send = stl_output.end();
+    SequenceType::iterator kpos = os[0].begin();
+    SequenceType::iterator spos = os[1].begin();
+    SequenceType::iterator send = os[1].end();
 
-    if (cmp_sequence(kpos, spos, send) == false)
-      {
-	error_string = index_error_string
-	  (
-	   spos - stl_output.begin(),
-	   kpos - kastl_output.begin()
-	  );
+    if (cmp_sequence(kpos, spos, send) == true)
+      return true;
 
-	return false;
-      }
-
-    return true;
+    es = index_error_string(spos - os[1].begin(), kpos - os[0].begin());
+    return false;
   }
 
 };
