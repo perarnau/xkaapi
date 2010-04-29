@@ -1,1 +1,2 @@
-CFLAGS	+= -fopenmp -DCONFIG_LIB_PASTL=1
+CFLAGS	+= -DCONFIG_LIB_PASTL=1
+LFLAGS	+= -fopenmp

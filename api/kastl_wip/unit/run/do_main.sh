@@ -1,7 +1,10 @@
 #!/usr/bin/env sh
 
 
-ALGO=ForEach
+ALGO=for_each
+LIB=pastl
+DO=bench
+
 DIR=/tmp/out
 #SIZE=1000000
 #SIZE=1000000
@@ -43,7 +46,7 @@ while true; do
 #    sudo $KAAPI_GLOBAL_OPTS KAAPI_CPUSET=15 KAAPI_CPUCOUNT=1 ./main $ALGO $SIZE | grep $OUTPUT_FILTER
 #    KAAPI_CPUSET=9,11,13,15 ./main $ALGO $SIZE $ITER
 #    KAAPI_CPUSET=13,15 ./main $ALGO $SIZE $ITER
-    KAAPI_CPUSET=$CPUSET ./main $ALGO $SIZE $ITER >> $OUTPUT_FILE || (echo foo && sleep 1000) ;
+    KAAPI_CPUSET=$CPUSET ../bin/$ALGO-$LIB-$DO $SIZE $ITER >> $OUTPUT_FILE || (echo foo && sleep 1000) ;
 #    sudo $KAAPI_GLOBAL_OPTS KAAPI_WSSELECT=workload KAAPI_CPUSET=15 KAAPI_CPUCOUNT=1 ./main $ALGO $SIZE | grep -v KAAPI
 
 #    sudo $KAAPI_GLOBAL_OPTS KAAPI_CPUSET=13,15 ./main $ALGO $SIZE | grep $OUTPUT_FILTER ;

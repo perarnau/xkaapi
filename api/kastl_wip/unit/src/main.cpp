@@ -12,7 +12,7 @@
 
 
 
-static size_t get_concurrency()
+static size_t __attribute__((unused)) get_concurrency()
 {
   // todo: return KAAPI_CPUSET cardinal
   return 2;
@@ -299,12 +299,17 @@ public:
 
   ~RunInterface() {}
 
-  virtual void run_stl(InputType&, OutputType&) {}
+  virtual void run_ref(InputType& i, OutputType& o) { run_stl(i, o); }
+  virtual void run_stl(InputType&, OutputType&) { }
   virtual void run_kastl(InputType&, OutputType&) {}
   virtual void run_tbb(InputType&, OutputType&) {}
   virtual void run_pastl(InputType&, OutputType&) {}
 
-  virtual bool check(std::vector<OutputType>&, std::string&) const = 0;
+  virtual bool check(InputType&, std::vector<OutputType>& os, std::string& es)
+  { return check(os, es); }
+
+  virtual bool check(std::vector<OutputType>&, std::string& es)
+  { es = std::string("not impelmented"); return false; }
 
   virtual void prepare(InputType&) {}
 
@@ -318,7 +323,7 @@ public:
     are_equal = true;
   }
 
-  static RunInterface* create(const std::string&);
+  static RunInterface* create();
 };
 
 
@@ -334,9 +339,6 @@ public:
 #if CONFIG_ALGO_FOR_EACH
 class ForEachRun : public RunInterface
 {
-  // todo hack hack hack
-  SequenceType::iterator _pos[3];
-
   template<typename T>
   struct inc_functor
   {
@@ -346,19 +348,21 @@ class ForEachRun : public RunInterface
 
 public:
 
+  virtual void run_ref(InputType& i, OutputType&)
+  {
+    std::for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
+  }
+
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType&)
   {
-    _pos[1] = i.second.begin();
-    _pos[2] = i.second.end();
-    std::for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
+    std::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
   }
 #endif
 
 #if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType&)
   {
-    _pos[0] = i.first.begin();
     kastl::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
   }
 #endif
@@ -366,7 +370,6 @@ public:
 #if CONFIG_LIB_TBB
   virtual void run_tbb(InputType& i, OutputType&)
   {
-    _pos[0] = i.first.begin();
     tbb_for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
   }
 #endif
@@ -374,21 +377,20 @@ public:
 #if CONFIG_LIB_PASTL
   virtual void run_pastl(InputType& i, OutputType&)
   {
-    _pos[0] = i.first.begin();
     __gnu_parallel::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>(), __gnu_parallel::parallel_balanced);
   }
 #endif
 
-  virtual bool check(std::vector<OutputType>& os, std::string& es) const
+  virtual bool check(InputType& is, std::vector<OutputType>& os, std::string& es) const
   {
-    SequenceType::iterator a = _pos[0];
-    SequenceType::iterator b = _pos[1];
-    SequenceType::iterator c = _pos[2];
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
 
     if (cmp_sequence(a, b, c) == true)
       return true;
 
-    es = index_error_string(a - os[0].begin(), b - os[1].begin());
+    es = index_error_string(a - is.first.begin(), b - is.second.begin());
 
     return false;
   }
@@ -2136,83 +2138,82 @@ public:
 #endif // speed compile time up
 
 
-RunInterface* RunInterface::create(const std::string& name)
+RunInterface* RunInterface::create()
 {
-#define MATCH_AND_CREATE(NAME)	\
-  if (name == #NAME)		\
+#define CREATE_RUN(NAME)	\
     return new NAME ## Run();
 
 #if CONFIG_ALGO_FOR_EACH
-  MATCH_AND_CREATE( ForEach );
+  CREATE_RUN( ForEach );
 #endif
 
 #if CONFIG_ALGO_COUNT
-  MATCH_AND_CREATE( Count );
+  CREATE_RUN( Count );
 #endif
 
 #if CONFIG_ALGO_SEARCH
-  MATCH_AND_CREATE( Search );
+  CREATE_RUN( Search );
 #endif
 
 #if CONFIG_ALGO_ACCUMULATE
-  MATCH_AND_CREATE( Accumulate );
+  CREATE_RUN( Accumulate );
 #endif
 
 #if CONFIG_ALGO_TRANSFORM
-  MATCH_AND_CREATE( Transform );
+  CREATE_RUN( Transform );
 #endif
 
 #if CONFIG_ALGO_MIN_ELEMENT
-  MATCH_AND_CREATE( MinElement );
+  CREATE_RUN( MinElement );
 #endif
 
 #if CONFIG_ALGO_MAX_ELEMENT
-  MATCH_AND_CREATE( MaxElement );
+  CREATE_RUN( MaxElement );
 #endif
 
 #if CONFIG_ALGO_INNER_PRODUCT
-  MATCH_AND_CREATE( InnerProduct );
+  CREATE_RUN( InnerProduct );
 #endif
 
 #if CONFIG_ALGO_FIND
-  MATCH_AND_CREATE( Find );
+  CREATE_RUN( Find );
 #endif
 
 #if CONFIG_ALGO_FIND_IF
-  MATCH_AND_CREATE( FindIf );
+  CREATE_RUN( FindIf );
 #endif
 
 #if CONFIG_ALGO_SWAP_RANGES
-  MATCH_AND_CREATE( SwapRanges );
+  CREATE_RUN( SwapRanges );
 #endif
 
 #if 0 // speed compile time up
-  MATCH_AND_CREATE( Merge );
-  MATCH_AND_CREATE( Sort );
-  MATCH_AND_CREATE( PartialSum );
-  MATCH_AND_CREATE( Copy );
-  MATCH_AND_CREATE( Fill );
-  MATCH_AND_CREATE( Replace );
-  MATCH_AND_CREATE( Generate );
-  MATCH_AND_CREATE( Equal );
-  MATCH_AND_CREATE( Mismatch );
-  MATCH_AND_CREATE( FindFirstOf );
-  MATCH_AND_CREATE( Reverse );
-  MATCH_AND_CREATE( Partition );
-  MATCH_AND_CREATE( SetUnion );
-  MATCH_AND_CREATE( SetIntersection );
-  MATCH_AND_CREATE( SetDifference );
+  CREATE_RUN( Merge );
+  CREATE_RUN( Sort );
+  CREATE_RUN( PartialSum );
+  CREATE_RUN( Copy );
+  CREATE_RUN( Fill );
+  CREATE_RUN( Replace );
+  CREATE_RUN( Generate );
+  CREATE_RUN( Equal );
+  CREATE_RUN( Mismatch );
+  CREATE_RUN( FindFirstOf );
+  CREATE_RUN( Reverse );
+  CREATE_RUN( Partition );
+  CREATE_RUN( SetUnion );
+  CREATE_RUN( SetIntersection );
+  CREATE_RUN( SetDifference );
 #endif // speed compile time up
 
 #if 0
-  MATCH_AND_CREATE( CountIf );
-  MATCH_AND_CREATE( GenerateN );
-  MATCH_AND_CREATE( ReplaceCopyIf );
-  MATCH_AND_CREATE( ReplaceCopy );
-  MATCH_AND_CREATE( ReplaceIf );
-  MATCH_AND_CREATE( AdjacentDifference );
-  MATCH_AND_CREATE( AdjacentFind );
-  MATCH_AND_CREATE( SearchN );
+  CREATE_RUN( CountIf );
+  CREATE_RUN( GenerateN );
+  CREATE_RUN( ReplaceCopyIf );
+  CREATE_RUN( ReplaceCopy );
+  CREATE_RUN( ReplaceIf );
+  CREATE_RUN( AdjacentDifference );
+  CREATE_RUN( AdjacentFind );
+  CREATE_RUN( SearchN );
 #endif
 
   return NULL;
@@ -2235,7 +2236,8 @@ public:
    std::vector<OutputType>& outputs
   )
   {
-    // count the run count
+    // i the run count
+    size_t i = 0;
 
 #if CONFIG_DO_BENCH
     timing::TimerType start_tm;
@@ -2245,8 +2247,6 @@ public:
 #if CONFIG_DO_BENCH
     timing::get_now(start_tm);
 #endif
-
-    size_t i = 0;
 
 #if CONFIG_LIB_STL
     run->run_stl(input, outputs[i++]);
@@ -2265,8 +2265,13 @@ public:
 #endif
 
 #if CONFIG_DO_BENCH
-      timing::get_now(now_tm);
-      timing::sub_timers(now_tm, start_tm, _tm);
+    timing::get_now(now_tm);
+    timing::sub_timers(now_tm, start_tm, _tm);
+#endif
+
+    // run reference
+#if CONFIG_DO_CHECK
+    run->run_ref(input, outputs[i++]);
 #endif
   }
 
@@ -2286,11 +2291,12 @@ public:
   bool check
   (
    RunInterface* run,
+   InputType& is,
    std::vector<OutputType>& os,
    std::string& es
   )
   {
-    return run->check(os, es);
+    return run->check(is, os, es);
   }
 
 };
@@ -2307,7 +2313,7 @@ static int do_xxx(RunInterface* run, InputType& input, std::vector<OutputType>& 
   std::string error_string;
 
   const bool is_success =
-    RunChecker().check(run, outputs, error_string);
+    RunChecker().check(run, input, outputs, error_string);
 
   if (is_success) printf("[x]\n");
   else printf("[!]: %s\n", error_string.c_str());
@@ -2332,12 +2338,10 @@ static int do_xxx(RunInterface* run, InputType& input, std::vector<OutputType>& 
 int main(int ac, char** av)
 {
   const size_t input_size =
-    (ac > 2) ? atoi(av[2]) : DEFAULT_INPUT_SIZE;
+    (ac > 1) ? atoi(av[1]) : DEFAULT_INPUT_SIZE;
 
   const size_t iter_count =
-    (ac > 3) ? atoi(av[3]) : DEFAULT_ITER_SIZE;
-
-  const char* const algo_name = av[1];
+    (ac > 2) ? atoi(av[2]) : DEFAULT_ITER_SIZE;
 
   // per config variable specific initialization
 
@@ -2362,11 +2366,10 @@ int main(int ac, char** av)
 #endif
 
   // instanciate a run
-  RunInterface* const run =
-    RunInterface::create(std::string(algo_name));
+  RunInterface* const run = RunInterface::create();
   if (run == NULL)
   {
-    printf("cannot create run for %s\n", algo_name);
+    printf("cannot create run\n");
     return -1 ;
   }
 

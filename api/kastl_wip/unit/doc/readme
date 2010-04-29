@@ -1,0 +1,27 @@
+. introduction
+ . for some reasons (esp. related to benchmarking, the way the kaapi runtime
+ creates threads ...), different binaries have to be built for the different
+ configuration we want to test
+ . this is what the build system is for, and why you encounter so much #defines
+ as you walk along this code
+
+. how to build a binary
+
+ . the system allows to build 2 kinds of binaries
+  . xxx-xxx-check: check an implementation against the ref, usually the stl
+  . xxx-xxx-bench: run an implementation an outputs its times
+
+ . the build directory contains a top Makefile that
+ includes sub makefiles according to the binary you
+ want to build
+
+ . the system is driven by 3 variables
+  . LIB={stl,kastl,pastl,tbb}
+  . ALGO={for_each,min_element...}
+  . DO={bench,check}
+ . ex: make LIB=kastl ALGO=for_each DO=bench
+  . builds a binary to benchmark kastl::for_each
+ . the output directory is bin/
+
+. how to run a binary
+ . TODO
