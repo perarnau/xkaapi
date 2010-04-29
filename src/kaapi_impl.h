@@ -672,11 +672,17 @@ extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
 /* ============================= Hash table for WS ============================ */
+typedef struct kaapi_counters_list {
+    kaapi_atomic_t*              reader_counter; 
+    kaapi_task_t*                waiting_task;
+    struct kaapi_counters_list*  next;           //next reader counter
+} kaapi_counters_list;
+
 /*
 */
 typedef struct kaapi_hashentries_t {
   kaapi_gd_t                  value;
-  void*			      datas;
+  kaapi_counters_list*			  datas;  /* list of task to wakeup at the end */
   void*                       key;
   struct kaapi_hashentries_t* next; 
 } kaapi_hashentries_t;
@@ -1040,11 +1046,6 @@ extern void kaapi_set_workload( kaapi_uint32_t workload );
 
 /* ======================== Dependencies resolution function ========================*/
 
-typedef struct counters_list {
-    kaapi_atomic_t *        reader_counter; 
-    kaapi_task_t *          waiting_task;
-    struct counters_list *         next; //next reader counter
-} counters_list;
 /*
 typedef struct kaapi_dependenciessignal_arg_t {
     kaapi_task_body_t       real_body; //Real body to execute

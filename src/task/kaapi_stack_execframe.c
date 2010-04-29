@@ -161,17 +161,18 @@ begin_loop:
     /*dependencies check*/
     if(pc->pad!=0)
     {
-	counters_list* datas=(counters_list*)pc->pad;
-	while (datas!=0)
-	{
-	    KAAPI_ATOMIC_DECR(datas->reader_counter);
-	    if(datas->reader_counter->_counter==0)
-	    {
-		datas->waiting_task->body=datas->waiting_task->ebody;
-	    }
-	datas=datas->next;
-	}
+      counters_list* datas=(counters_list*)pc->pad;
+      while (datas!=0)
+      {
+        KAAPI_ATOMIC_DECR(datas->reader_counter);
+        if ( KAAPI_ATOMIC_READ(datas->reader_counter)==0)
+        {
+          datas->waiting_task->body=datas->waiting_task->ebody;
+        }
+        datas=datas->next;
+      }
     }
+    
 #if 0//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
 #endif
