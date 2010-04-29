@@ -305,10 +305,10 @@ public:
   virtual void run_tbb(InputType&, OutputType&) {}
   virtual void run_pastl(InputType&, OutputType&) {}
 
-  virtual bool check(InputType&, std::vector<OutputType>& os, std::string& es)
+  virtual bool check(InputType&, std::vector<OutputType>& os, std::string& es) const
   { return check(os, es); }
 
-  virtual bool check(std::vector<OutputType>&, std::string& es)
+  virtual bool check(std::vector<OutputType>&, std::string& es) const
   { es = std::string("not impelmented"); return false; }
 
   virtual void prepare(InputType&) {}
@@ -381,7 +381,8 @@ public:
   }
 #endif
 
-  virtual bool check(InputType& is, std::vector<OutputType>& os, std::string& es) const
+  virtual bool check
+  (InputType& is, std::vector<OutputType>& os, std::string& es) const
   {
     SequenceType::iterator a = is.first.begin();
     SequenceType::iterator b = is.second.begin();
@@ -402,8 +403,7 @@ public:
 #if CONFIG_ALGO_COUNT
 class CountRun : public RunInterface
 {
-  ptrdiff_t _kastl_res;
-  ptrdiff_t _stl_res;
+  ptrdiff_t _res[2];
 
 public:
 
@@ -417,30 +417,49 @@ public:
     are_equal = true;
   }
 
-  virtual void run_kastl(InputType& i, OutputType& o)
+  virtual void run_ref(InputType& i, OutputType& o)
   {
-    _kastl_res = kastl::count
+    _res[1] = std::count
       (i.first.begin(), i.first.end(), 42);
   }
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _stl_res = std::count
+    _res[0] = std::count
       (i.first.begin(), i.first.end(), 42);
   }
+#endif
 
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
   {
-    if (_kastl_res == _stl_res)
+    _res[0] = kastl::count
+      (i.first.begin(), i.first.end(), 42);
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::count
+      (i.first.begin(), i.first.end(), 42, __gnu_parallel::parallel_balanced);
+  }
+#endif
+
+  virtual bool check
+  (std::vector<OutputType>&, std::string& error_string) const
+  {
+    if (_res[0] == _res[1])
       return true;
 
-    error_string = value_error_string(_stl_res, _kastl_res);
+    error_string = value_error_string(_res[0], _res[1]);
 
     return false;
   }
 
 };
-#endif
+#endif // CONFIG_ALGO_COUNT
 
 
 #if CONFIG_ALGO_SEARCH
@@ -516,7 +535,7 @@ public:
   }
 
 };
-#endif
+#endif // CONFIG_ALGO_SEARCH
 
 
 #if CONFIG_ALGO_ACCUMULATE
@@ -570,23 +589,35 @@ public:
     are_equal = true;
   }
 
-  virtual void run_kastl(InputType& i, OutputType& o)
+  virtual void run_ref(InputType& i, OutputType& o)
   {
-    kastl::transform
-      (
-       i.first.begin(), i.first.end(),
-       o.begin(), inc()
-      );
+    std::transform
+      (i.first.begin(), i.first.end(), o.begin(), inc());
   }
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
     std::transform
-      (
-       i.first.begin(), i.first.end(),
-       o.begin(), inc()
-      );
+      (i.first.begin(), i.first.end(), o.begin(), inc());
   }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::transform
+      (i.first.begin(), i.first.end(), o.begin(), inc());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::transform
+      (i.first.begin(), i.first.end(), o.begin(), inc(), __gnu_parallel::parallel_balanced);
+  }
+#endif
 
   virtual bool check
   (
@@ -614,7 +645,7 @@ public:
   }
 
 };
-#endif
+#endif // CONFIG_ALGO_TRANSFORM
 
 
 #if CONFIG_ALGO_MIN_ELEMENT
