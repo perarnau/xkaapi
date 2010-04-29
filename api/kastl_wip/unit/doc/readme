@@ -1,7 +1,14 @@
 . introduction
+
+ . the unit/ stuff has 2 goals:
+  . test kastl algorithm against the ref
+  . benchmark different implementation
+   . up to 4 implementations: kastl, tbb, stl, pastl
+
  . for some reasons (esp. related to benchmarking, the way the kaapi runtime
  creates threads ...), different binaries have to be built for the different
  configuration we want to test
+
  . this is what the build system is for, and why you encounter so much #defines
  as you walk along this code
 
@@ -24,4 +31,4 @@
  . the output directory is bin/
 
 . how to run a binary
- . TODO
+ . TODO, refer to run/do_main.sh for now
