@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** theo.trouillon@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -675,9 +676,15 @@ extern kaapi_uint32_t kaapi_hash_value(const char * data);
 */
 typedef struct kaapi_hashentries_t {
   kaapi_gd_t                  value;
+  void*			      datas;
   void*                       key;
   struct kaapi_hashentries_t* next; 
 } kaapi_hashentries_t;
+
+typedef struct kaapi_deps_t {
+  kaapi_task_t*               last_writer;
+  kaapi_thread_t*             last_writer_thread;
+} kaapi_deps_t;
 
 
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
@@ -707,6 +714,11 @@ extern int kaapi_hashmap_destroy( kaapi_hashmap_t* khm );
 /*
 */
 extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr );
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_hashmap_add( kaapi_hashmap_t* khm, void* ptr );
+
 
 
 
@@ -1026,6 +1038,24 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
  */
 extern void kaapi_set_workload( kaapi_uint32_t workload );
 
+/* ======================== Dependencies resolution function ========================*/
+
+typedef struct counters_list {
+    kaapi_atomic_t *        reader_counter; 
+    kaapi_task_t *          waiting_task;
+    struct counters_list *         next; //next reader counter
+} counters_list;
+/*
+typedef struct kaapi_dependenciessignal_arg_t {
+    kaapi_task_body_t       real_body; //Real body to execute
+    void*                   real_datas;
+    kaapi_task_splitter_t   real_splitter;
+    kaapi_format_t*         real_format;
+    counters_list *         readers_list; //counters to decrement
+} kaapi_dependenciessignal_arg_t;
+
+void kaapi_dependenciessignal_body( kaapi_task_t* task, kaapi_stack_t* stack );
+*/
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
