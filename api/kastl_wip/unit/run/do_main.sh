@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGOS="search"
+ALGOS="min_element"
 LIBS="stl kastl pastl"
 DOS="bench check"
 
