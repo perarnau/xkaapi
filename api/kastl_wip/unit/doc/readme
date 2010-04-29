@@ -13,6 +13,7 @@
  as you walk along this code
 
 . how to build a binary
+ . ./do_make.sh will build all the unit binaries
 
  . the system allows to build 2 kinds of binaries
   . xxx-xxx-check: check an implementation against the ref, usually the stl

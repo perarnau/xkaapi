@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <numeric>
+#include <functional>
 #include <sstream>
 #include "pinned_array.hh"
 
@@ -465,11 +466,7 @@ public:
 #if CONFIG_ALGO_SEARCH
 class SearchRun : public RunInterface
 {
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-  ptrdiff_t _kastl_index;
-  ptrdiff_t _stl_index;
+  SequenceType::iterator _res[2];
 
   SequenceType _ref_seq;
 
@@ -492,44 +489,53 @@ public:
     gen_ref_seq(_ref_seq, 10);
 
     std::copy
-    (
-       _ref_seq.begin(), _ref_seq.end(),
-       i.first.begin() + (i.first.size() / 2)
-    );
+    (_ref_seq.begin(), _ref_seq.end(),
+     i.first.begin() + (i.first.size() / 2));
   }
 
-  virtual void run_kastl(InputType& i, OutputType& o)
+  virtual void run_ref(InputType& i, OutputType& o)
   {
-    _kastl_res = kastl::search
-      (
-       i.first.begin(),
-       i.first.end(),
-       _ref_seq.begin(),
-       _ref_seq.end()
-      );
-
-    _kastl_index = std::distance(i.first.begin(), _kastl_res);
+    _res[1] = std::search
+    (i.first.begin(), i.first.end(), _ref_seq.begin(), _ref_seq.end());
   }
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _stl_res = std::search
-      (
-       i.first.begin(),
-       i.first.end(),
-       _ref_seq.begin(),
-       _ref_seq.end()
-      );
-
-    _stl_index = std::distance(i.first.begin(), _stl_res);
+    _res[0] = std::search
+    (i.first.begin(), i.first.end(), _ref_seq.begin(), _ref_seq.end());
   }
+#endif
 
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
   {
-    if (_kastl_res == _stl_res)
+    _res[0] = kastl::search
+    (i.first.begin(), i.first.end(), _ref_seq.begin(), _ref_seq.end());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::search
+    (i.first.begin(), i.first.end(),
+     _ref_seq.begin(), _ref_seq.end());
+  }
+#endif
+
+  virtual bool check
+  (InputType& i, std::vector<OutputType>&, std::string& es) const
+  {
+    ptrdiff_t indices[2];
+
+    if (_res[0] == _res[1])
       return true;
 
-    error_string = index_error_string(_stl_index, _kastl_index);
+    indices[0] = _res[0] - i.first.begin();
+    indices[1] = _res[1] - i.first.begin();
+
+    es = index_error_string(indices[1], indices[0]);
 
     return false;
   }
@@ -563,7 +569,7 @@ public:
   }
 
 };
-#endif
+#endif // CONFIG_ALGO_ACCUMULATE
 
 
 #if CONFIG_ALGO_TRANSFORM
