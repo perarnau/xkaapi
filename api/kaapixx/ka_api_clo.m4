@@ -225,12 +225,7 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
                                             void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
   {
     /* here we assume CPU is the running processor */
-    return kaapi_format_taskregister_body( fmt, registercpubody( fmt, method ), KAAPI_PROC_TYPE_CPU );
-  }
-  static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
-                                            void (TaskBodyGPU<TASK>::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
-  {
-    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
+    return kaapi_format_taskregister_body( fmt, registercpubody( fmt, &TaskBodyCPU<TASK>::operator() ), KAAPI_PROC_TYPE_CPU );
   }
   static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
                                             void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
