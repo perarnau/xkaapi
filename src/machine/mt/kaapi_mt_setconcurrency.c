@@ -103,8 +103,8 @@ int kaapi_setconcurrency( unsigned int concurrency )
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
         CPU_SET(kaapi_default_param.kid_to_cpu[i], &cpuset);
-        kaapi_assert_m(0, pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset), "foobar");
-        kaapi_assert_m(0, sched_yield(), "foobar");
+        kaapi_assert_m((!pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
+        sched_yield();
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
@@ -124,8 +124,8 @@ int kaapi_setconcurrency( unsigned int concurrency )
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
         CPU_SET(kaapi_default_param.kid_to_cpu[i], &cpuset);
-        pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-        kaapi_assert_m(0, sched_yield(), "foobar");
+        kaapi_assert_m((!pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
+        sched_yield();
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 

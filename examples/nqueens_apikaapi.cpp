@@ -12,7 +12,11 @@
  * globals
  */
 #if !defined(THRESHOLD)
+<<<<<<< HEAD
 #define THRESHOLD 7
+=======
+#define THRESHOLD 5
+>>>>>>> origin/thierry/master
 #endif
 
 #define MAXSIZE 24

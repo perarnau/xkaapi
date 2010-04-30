@@ -74,6 +74,7 @@ redo_select:
   */
   replycount = 0;
   kaapi_request_post( kproc, &kproc->reply, &victim );
+/*  usleep(100); */
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
@@ -98,14 +99,14 @@ redo_select:
   while (1)
   {
     /* if lock sucess then steal of all processors in the request array */
-    ok = KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
+    ok = (KAAPI_ATOMIC_READ(&victim.kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&victim.kproc->lock, 0, 1+kproc->kid);
     if (ok) break;
 //TODO    if (kproc->hasrequest) kproc->thread->hasrequest = 0;   /* current stack never accept steal request */
 
     /* here is not yet an exponential backoff, but the cas should not
        to busy to avoid memory transaction: do multiple tests on the reply field
     */
-    for (i=0; i<10; ++i)
+    for (i=0; i<3; ++i)
     {
       if (kaapi_reply_test( &kproc->reply ) ) 
         /* return with out trying to lock / unlock the victim: 
@@ -113,7 +114,9 @@ redo_select:
         */
         goto return_value;
 
+      kaapi_slowdown_cpu();
     }
+    //usleep(10);
   }
 #if 0
   fprintf(stdout,"%i kproc enter critical section to:%p\n", kproc->kid, (void*)victim.kproc );

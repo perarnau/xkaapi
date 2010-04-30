@@ -272,23 +272,14 @@ typedef struct kaapi_processor_t {
 
   int			                 papi_event_set;
   unsigned int		         papi_event_count;
+  kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
-  double                   t_sched;                       /* total idle time in second pass in the scheduler */           
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
 
   /* workload */
   kaapi_atomic_t	         workload;
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
-
-/* for perf_regs access */
-#define KAAPI_PERF_USER_STATE       0
-#define KAAPI_PERF_SCHEDULE_STATE   1
-
-#define KAAPI_PERF_REG(kproc, op) ((kproc)->curr_perf_regs[(op)])
-#define KAAPI_PERF_REG_USR(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_USER_STATE][(op)])
-#define KAAPI_PERF_REG_SYS(kproc, op) ((kproc)->perf_regs[KAAPI_PERF_SCHEDULE_STATE][(op)])
-#define KAAPI_PERF_REG_READALL(kproc, op) (KAAPI_PERF_REG_SYS(kproc, op)+KAAPI_PERF_REG_USR(kproc, op))
 
 /*
 */
@@ -409,63 +400,88 @@ extern int kaapi_setup_topology(void);
 
 /** TODO: try to use same function without barrier
 */
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
 
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+#  endif
 
 #  define KAAPI_ATOMIC_AND(a, o) \
     __sync_fetch_and_and( &((a)->_counter), o )
 
-#  define KAAPI_ATOMIC_INCR(a) \
-    __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  ifndef KAAPI_ATOMIC_INCR
+#    define KAAPI_ATOMIC_INCR(a) \
+      __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR54(a) \
+      __sync_add_and_fetch( &((a)->_counter), 1 ) 
+#  endif
 
 #  define KAAPI_ATOMIC_DECR(a) \
     __sync_sub_and_fetch( &((a)->_counter), 1 ) 
 
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      __sync_sub_and_fetch( &((a)->_counter), value ) 
+#  endif      
 
 #  define KAAPI_ATOMIC_ADD(a, value) \
     __sync_add_and_fetch( &((a)->_counter), value ) 
 
-#  define KAAPI_ATOMIC_READ(a) \
-    ((a)->_counter)
-
-#  define KAAPI_ATOMIC_WRITE(a, value) \
-    (a)->_counter = value
 
 #elif defined(KAAPI_USE_APPLE) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
 
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
+#  ifndef KAAPI_ATOMIC_CAS
+#    define KAAPI_ATOMIC_CAS(a, o, n) \
+      OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
+#  endif
 
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  ifndef KAAPI_ATOMIC_CAS64
+#    define KAAPI_ATOMIC_CAS64(a, o, n) \
+      OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+#  endif
 
 #  define KAAPI_ATOMIC_AND(a, o)			\
     OSAtomicAnd32( &((a)->_counter), o )
 
-#  define KAAPI_ATOMIC_INCR(a) \
-    OSAtomicIncrement32( &((a)->_counter) ) 
+#  ifndef KAAPI_ATOMIC_INCR
+#    define KAAPI_ATOMIC_INCR(a) \
+      OSAtomicIncrement32( &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_INCR64
+#    define KAAPI_ATOMIC_INCR64(a) \
+      OSAtomicIncrement64( &((a)->_counter) ) 
+#  endif
 
 #  define KAAPI_ATOMIC_DECR(a) \
     OSAtomicDecrement32(&((a)->_counter) ) 
 
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    OSAtomicAdd32( -value, &((a)->_counter) ) 
+#  ifndef KAAPI_ATOMIC_SUB
+#    define KAAPI_ATOMIC_SUB(a, value) \
+      OSAtomicAdd32( -value, &((a)->_counter) ) 
+#  endif
+
+#  ifndef KAAPI_ATOMIC_SUB64
+#    define KAAPI_ATOMIC_SUB64(a, value) \
+      OSAtomicAdd64( -value, &((a)->_counter) ) 
+#  endif
 
 #  define KAAPI_ATOMIC_ADD(a, value) \
     OSAtomicAdd32( value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_READ(a) \
-    ((a)->_counter)
-
-#  define KAAPI_ATOMIC_WRITE(a, value) \
-    (a)->_counter = value
 
 #else
 #  error "Please add support for atomic operations on this system/architecture"
@@ -481,68 +497,6 @@ extern int kaapi_setup_topology(void);
 
 
 /* ========================================================================== */
-
-/* ============================= Memory Barrier ============================= */
-
-#if defined(KAAPI_USE_APPLE)
-#  include <libkern/OSAtomic.h>
-
-static inline void kaapi_writemem_barrier()  
-{
-#ifdef KAAPI_USE_ARCH_PPC
-  OSMemoryBarrier();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#ifdef KAAPI_USE_ARCH_PPC
-  OSMemoryBarrier();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#ifdef KAAPI_USE_ARCH_PPC
-  OSMemoryBarrier();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-
-#elif defined(KAAPI_USE_LINUX)
-
-static inline void kaapi_writemem_barrier()  
-{
-  __sync_synchronize();
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-  __sync_synchronize();
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-  __sync_synchronize();
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-#else
-#  error "Undefined barrier"
-#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
 
 
 /* ========================================================================== */
@@ -603,6 +557,11 @@ static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t old
   kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
   return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
 }
+static inline int kaapi_task_cas_extrastate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
+{
+  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->ebody;
+  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
+}
 #elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
 /*
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
@@ -622,15 +581,17 @@ static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t old
 #endif
 
 /* ============================= Private functions, machine dependent ============================ */
+/* */
+extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 /** Post a request to a given k-processor
   This method posts a request to victim k-processor. 
-  \param src the sender of the request 
-  \param hlevel the hierarchy level of the steal
+  \param kproc the sender of the request 
+  \param reply where to receive result
   \param dest the receiver (victim) of the request
   \param return 0 if the request has been successully posted
   \param return !=0 if the request been not been successully posted and the status of the request contains the error code
-*/  
+*/
 static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* reply, kaapi_victim_t* victim )
 {
   kaapi_request_t* req;
@@ -647,6 +608,11 @@ static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* r
   req->reply       = reply;
   req->mthread     = kproc->thread;
   req->thread      = kaapi_threadcontext2thread(kproc->thread);
+#if defined(KAAPI_USE_PERFCOUNTER)
+  req->delay       = kaapi_perf_thread_delayinstate(kproc);
+#else  
+  req->delay       = 0;
+#endif
   reply->data      = 0;
 
   kaapi_writemem_barrier();

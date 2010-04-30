@@ -1,5 +1,4 @@
 /*
-** kaapi_task_preempt_reverse.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -44,112 +43,20 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preempt_nextthief_helper_tail( kaapi_stealcontext_t* stc, void* arg_to_thief )
+
+static inline void steal_sync(kaapi_stealcontext_t* stc)
 {
-#if 0
-#warning TODO
-  kaapi_assert_debug( task->flag & KAAPI_TASK_ADAPTIVE );
-  kaapi_assert_debug( !(task->flag & KAAPI_TASK_ADAPT_NOPREEMPT) );
-  int retval = 1;
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task->sp;
-#if defined(KAAPI_USE_PERFCOUNTER)
-  double t0, t1;
-#endif
-  
-#if defined(KAAPI_CONCURRENT_WS)
-  int flagsticky = kaapi_task_isstealable(task);
-#  if defined(KAAPI_USE_PERFCOUNTER)
-  t0 = kaapi_get_elapsedtime();
-#  endif
-  pthread_mutex_lock(&stack->_proc->lsuspend.lock);
-  kaapi_task_unsetstealable(task);
-  pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
-#  if defined(KAAPI_USE_PERFCOUNTER)
-  t1 = kaapi_get_elapsedtime();
-  stack->_proc->t_preempt += t1-t0;
-/*    printf("[kaapi_preempt_nextthief_reverse_helper]: wait/lock:%f\n", t1-t0); */
-#  endif
-#endif
+  while (KAAPI_ATOMIC_READ(&stc->is_there_thief))
+    kaapi_slowdown_cpu();
+}
 
-  kaapi_taskadaptive_result_t* athief = ta->tail;
+struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc )
+{
+  volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 
-  ta->current_thief= 0;
-  /* no more thief to preempt */
-  if (athief ==0)
-  {
-    retval =0;
-    goto reset_return;
-  }
-  
-  /* pass arg to the thief */
-  *athief->parg_from_victim = arg_to_thief;  
-  kaapi_mem_barrier();
+  if (ta->tail == NULL)
+    steal_sync(stc);
 
-  athief->req_preempt = 1;
-  kaapi_mem_barrier();
-  
-  if (athief->thief_term)
-  {
-    /* thief has finished */
-  }
-  else 
-  {
-    /* send signal on the thief stack */  
-    *athief->signal = 1;
-    
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
-#endif
-    /* wait thief receive preemption */
-    while (!athief->thief_term) ;/*pthread_yield(); */
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime();
-    stack->_proc->t_preempt += t1-t0;
-/*    printf("[kaapi_preempt_nextthief_reverse_helper]: wait thief:%f\n", t1-t0); */
-#endif
-  }
-
-  /* push current preempted thief in current_thief: used kaapi_preempt_nextthief 
-     to call the reducer with the thief args
-  */
-  ta->current_thief = ta->tail;
-  kaapi_assert_debug( ta->current_thief == athief );
-
-  /* pop current thief and push list of thiefs of the preempted thief in the from 
-     of the local preemption list 
-  */
-  ta->tail = ta->tail->prev;
-  if (ta->tail ==0)
-    ta->head = 0;
-  else
-    ta->tail->next = 0;
-
-#if defined(KAAPI_DEBUG)
-  ta->current_thief->next = 0;
-  ta->current_thief->prev = 0;
-#endif  
-
-  if (athief->rhead !=0)
-  {
-    kaapi_assert_debug( athief->rhead->prev ==0 );
-    kaapi_assert_debug( athief->rtail->next ==0 );
-    athief->rhead->prev = ta->tail;
-    if (ta->tail ==0)
-      ta->head = athief->rhead;
-    else
-      ta->tail->next = athief->rhead;
-    
-    ta->tail = athief->rtail;
-  }
-
-reset_return:
-#if defined(KAAPI_CONCURRENT_WS)
-  if (flagsticky)
-      kaapi_task_setstealable(task);
-#endif
-
-  return retval;
-#else
-  return 0;
-#endif
+  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
+  return ta->tail;  
 }

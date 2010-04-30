@@ -135,13 +135,13 @@ struct board
  */
 a1::OStream & operator<< (a1::OStream & s_out, const board & b)
 {
-  s_out.write ( Util::WrapperFormat<Util::ka_uint32_t>::format, a1::OStream::DA, &b, SIZEE+1);
+  s_out.write ( Util::WrapperFormat<Util::ka_uint32_t>::get_format(), a1::OStream::DA, &b, SIZEE+1);
   return s_out;
 }
 
 a1::IStream & operator>> (a1::IStream & s_in, board & b)
 {
-  s_in.read (Util::WrapperFormat<Util::ka_uint32_t>::format, a1::OStream::DA, &b, SIZEE+1);
+  s_in.read ( Util::WrapperFormat<Util::ka_uint32_t>::get_format(), a1::OStream::DA, &b, SIZEE+1);
   return s_in;
 }
 

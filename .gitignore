@@ -6,7 +6,13 @@
 # better if xkaapi is not built in the source repository
 # but I added most of them.
 
-# Files from bootstrap
+########################
+# Files from bootstrap #
+########################
+# Must be there as bootstrap need to be done in the sources directory
+# These files should be removed by './bootstrap --clean'
+
+#.gitignore
 Makefile.in
 /acinclude/libtool.m4
 /acinclude/lt*.m4
@@ -16,45 +22,66 @@ Makefile.in
 /config.h.in
 /config.h.in~
 /configure
+# Should not be needed anymore with recent libtool
 /libtool
 
-# Files from compilation
-TAGS
+##########################
+# Files from compilation #
+##########################
+# Done for convience but building out-of-tree is the prefered way
+# to handle that.
+
+# Files created after configuration (./configure)
+# Removed by 'make distclean'
+Makefile
+.deps/
+/atha1.pc
+/config.h
+/config.log
+/config.status
+/src/misc/kaapi_version.c
+/stamp-h1
+/xkaapi.pc
+
+# Files created after build (make)
+# Removed by 'make clean' (but '.dirstamp' that are removed by 'make distclean')
 *.o
 *.lo
 *.a
 *.la
 *.dylib
 .dirstamp
-.deps/
 .libs/
-Makefile
-/api-atha/atha1_check_header
-/api-atha/atha1_check_header_strict
-/config.h
-/config.log
-/config.status
+
+# Files created after tests (make ckeck)
+# Removed by 'make clean'
+/api/atha/check_header
+/api/atha/check_header_strict
+/api/kaapixx/check_header
+/api/kaapixx/check_header_strict
+/api/xkaapi/check_header
+/api/xkaapi/check_header_strict
+/examples/accumulate_while_kastl
 /examples/branchbound_apiatha
-/examples/fibo
-/examples/fibo_adapt
-/examples/fibo_apiatha
-/examples/fibo_apiatha2
-/examples/fibo_apiatha3
+/examples/dgemm_cblas
+/examples/dgemm_kaapi
+/examples/dgemm_kaapi_flat
+/examples/fibo_atha
+/examples/fibo_xkaapi
+/examples/fibo_kaapixx
+/examples/fibo_kaapixx_opt
 /examples/fiboseq
-/examples/marc_problem
+/examples/foreach_kastl
+/examples/foreach_std
+#/examples/marc_problem
 /examples/nqueens_apiatha
-/examples/nqueens_apiatha_grain2
-/examples/nqueens_apiatha_grain3
-/examples/nqueens_apiatha_grain4
-/examples/nqueens_apiatha_grain5
-/examples/nqueens_apiatha_grain6
-/examples/nqueens_apiatha_grain7
-/examples/nqueens_apiatha_grain8
+/examples/nqueens_apikaapi
+/examples/poisson3d-kaapi
 /examples/transform_adapt
-/src/kaapi_check_header
-/src/kaapi_check_header_strict
-/src/misc/kaapi_init.c
-/stamp-h1
-/xkaapi.pc
+/examples/transform_adapt_preempt
+/examples/transform_kastl
+/examples/transform_std
+
+# Files created after distribution build (make dist*)
 /xkaapi-*.tar.gz
 

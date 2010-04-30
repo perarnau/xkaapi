@@ -44,58 +44,91 @@
 */
 #include "kaapi_impl.h"
 
+/** Args for tasksignal
+*/
+typedef struct kaapi_tasksig_arg_t {
+    kaapi_taskadaptive_t*               ta;         /* the victim or the master */
+    kaapi_taskadaptive_result_t*        result;
+} kaapi_tasksig_arg_t;
+
+
+
+/**
+*/
+void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+{
+  kaapi_tasksig_arg_t* arg = (kaapi_tasksig_arg_t*)taskarg;
+  kaapi_writemem_barrier();
+  if (arg->result !=0)
+    arg->result->thief_term = 1;
+  KAAPI_ATOMIC_DECR( &arg->ta->thievescount );
+}
+
+
 /*
 */
 int kaapi_request_reply(
-    kaapi_stealcontext_t*          stc,
-    kaapi_request_t*               request, 
-    int size, int retval,
-    int insert_head
+    kaapi_stealcontext_t*               stc,
+    kaapi_request_t*                    request, 
+    kaapi_taskadaptive_result_t*        result,
+    int                                 flag
 )
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_taskadaptive_result_t* result;
+  kaapi_taskadaptive_t* ta_master;
   kaapi_task_t* tasksig;
-  size_t size_result;
   
-  if (retval ==0)
+  kaapi_assert_debug( (flag == KAAPI_REQUEST_REPLY_HEAD) || (flag == KAAPI_REQUEST_REPLY_TAIL) );
+  
+  if ((result ==0) && (stc ==0))
   {
-    _kaapi_request_reply(request, 0, 0);
-    return 0;
+    return _kaapi_request_reply(request, 0, 0);
   }
   
-  /* allocate space for futur result of size size */
-  size_result = sizeof(kaapi_taskadaptive_result_t)+size;
-  result = (kaapi_taskadaptive_result_t*)malloc( size_result );
-  result->flag = KAAPI_RESULT_INHEAP;
-  result->size_data = size;
+  if (result !=0)
+  {
+    /* lock the ta result list */
+    while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
+      ;
 
-  result->req_preempt     = 0;
-  result->thief_term      = 0;
-  result->parg_from_victim= 0;
-  result->rhead           = 0;
-  result->rtail           = 0;
-  /* link result for preemption / finalization at the head of the list */
-  result->prev            = 0;
-  result->next            = 0;
-  
-  /* insert in head */
-  if (ta->head ==0)
-    ta->tail = ta->head = result;
-  else  if (insert_head) {
-    result->next   = ta->head;
-    ta->head->prev = result;
-    ta->head       = result;
-  } else {
-    result->prev   = ta->tail;
-    ta->tail->next = result;
-    ta->tail       = result;
+    /* insert in head or tail */
+    if (ta->head ==0)
+      ta->tail = ta->head = result;
+    else if ((flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD) 
+    { 
+      result->next   = ta->head;
+      ta->head->prev = result;
+      ta->head       = result;
+    } 
+    else 
+    {
+      result->prev   = ta->tail;
+      ta->tail->next = result;
+      ta->tail       = result;
+    }
+
+    KAAPI_ATOMIC_WRITE( &ta->lock, 0 );
+
+    /* link result to the stc */
+    result->master = ta;
   }
-  
+
+  if ((stc->flag & 0x1) == KAAPI_STEALCONTEXT_LINKED) 
+  { 
+    ta_master = ta->origin_master;
+    if (ta_master ==0) ta_master = ta;
+  }
+  else {
+    ta_master = ta;
+  }
+  KAAPI_ATOMIC_INCR( &ta_master->thievescount );
   
   /* add task to tell to the master that this disappear */
   tasksig = kaapi_thread_toptask( request->thread );
-  kaapi_task_init(tasksig, kaapi_tasksig_body, stc );
+  kaapi_task_init(tasksig, kaapi_tasksig_body, kaapi_thread_pushdata( request->thread, sizeof(kaapi_tasksig_arg_t) ) );
+  kaapi_tasksig_arg_t* arg = kaapi_task_getargst( tasksig, kaapi_tasksig_arg_t );
+  arg->ta     = ta_master;
+  arg->result = result;
   kaapi_thread_pushtask(request->thread);
-  return 0;
+  return _kaapi_request_reply( request, request->mthread, 1 );
 }

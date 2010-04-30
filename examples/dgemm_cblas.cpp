@@ -5,6 +5,7 @@
  ***************************************************************************/
 #include <cblas.h> 
 #include <iostream>
+#include <assert.h>
 #include "kaapi++.h" /* time function */
 
 struct TaskInit {

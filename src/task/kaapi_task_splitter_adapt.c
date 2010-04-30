@@ -55,18 +55,15 @@ int kaapi_task_splitter_adapt(
     struct kaapi_request_t* array
 )
 {
-  kaapi_stealcontext_t*   sc;
+  kaapi_stealcontext_t* stc;
   
   kaapi_assert_debug( task !=0 );
-  kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
 
   /* call the user splitter */
-  sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
-  count = splitter( sc, count, array, argsplitter);
+  stc = kaapi_task_getargst(task, kaapi_stealcontext_t);
 
-  /* reset the body to adapt body */
-  kaapi_writemem_barrier();
-  kaapi_task_setbody(task, kaapi_adapt_body);
+  /* call the splitter */
+  count = splitter( stc, count, array, argsplitter);
 
   return count;
 }

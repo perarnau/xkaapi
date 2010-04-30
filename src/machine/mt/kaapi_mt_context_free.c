@@ -51,6 +51,7 @@
 int kaapi_context_free( kaapi_thread_context_t* ctxt )
 {
   if (ctxt ==0) return 0;
+  if (ctxt->alloc_ptr !=0) free(ctxt->alloc_ptr);
   munmap( ctxt, ctxt->size );
   return 0;
 }

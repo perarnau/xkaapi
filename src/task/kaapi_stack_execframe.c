@@ -100,7 +100,7 @@ int kaapi_stack_execframe( kaapi_thread_context_t* thread )
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;
-#endif 
+#endif
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
@@ -168,10 +168,16 @@ begin_loop:
 #if  0/*!defined(KAAPI_CONCURRENT_WS)*/
 restart_after_steal:
 #endif
-    if (unlikely(fp->sp != thread->sfp->sp))
+    if (unlikely(fp->sp > thread->sfp->sp))
     {
       goto push_frame;
     }
+#if defined(KAAPI_DEBUG)
+    else if (unlikely(fp->sp < thread->sfp->sp))
+    {
+      kaapi_assert_debug_m( 0, "Should not appear: a task was popping stack ????" );
+    }
+#endif
 
     /* next task to execute */
     pc = fp->pc = pc -1;

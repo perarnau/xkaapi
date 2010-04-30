@@ -50,6 +50,9 @@
 extern "C" {
 #endif
 
+/**/
+extern double t_finalize;
+
 /* mark that we compile source of the library */
 #define KAAPI_COMPILE_SOURCE 1
 
@@ -118,11 +121,11 @@ extern "C" {
 
 /**
 */
-#  define kaapi_assert_m(val, x, msg) \
-      { int __kaapi_err = x; \
-        if (__kaapi_err != val) \
+#  define kaapi_assert_m(cond, msg) \
+      { \
+        if (!(cond)) \
         { \
-          printf("[%s]: error=%u, msg=%s\n\tLINE: %u FILE: %s, ", msg, __kaapi_err, strerror(__kaapi_err), __LINE__, __FILE__);\
+          printf("[%s]: \n\tLINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
           abort();\
         }\
       }
@@ -142,11 +145,11 @@ extern const char* get_kaapi_version(void);
 
 /** Global hash table of all formats: body -> fmt
 */
-extern kaapi_format_t* kaapi_all_format_bybody[256];
+extern struct kaapi_format_t* kaapi_all_format_bybody[256];
 
 /** Global hash table of all formats: fmtid -> fmt
 */
-extern kaapi_format_t* kaapi_all_format_byfmtid[256];
+extern struct kaapi_format_t* kaapi_all_format_byfmtid[256];
 
 
 /* Fwd declaration 
@@ -180,6 +183,10 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
 
 
 /* ============================= Default parameters ============================ */
+/** Initialise default format
+*/
+extern void kaapi_init_basicformat(void);
+
 /** Setup KAAPI parameter from
     1/ the command line option
     2/ form the environment variable
@@ -217,6 +224,46 @@ enum kaapi_request_status_t {
   KAAPI_REQUEST_S_QUIT    = 5
 };
 
+
+
+/* ============================= Format for task ============================ */
+/*
+*/
+/** \ingroup TASK
+    Kaapi task format
+    The format should be 1/ declared 2/ register before any use in task.
+    The format object is only used in order to interpret stack of task.    
+*/
+typedef struct kaapi_format_t {
+  kaapi_format_id_t          fmtid;                                   /* identifier of the format */
+  short                      isinit;                                  /* ==1 iff initialize */
+  const char*                name;                                    /* debug information */
+  
+  /* case of format for a structure or for a task */
+  kaapi_uint32_t             size;                                    /* sizeof the object */  
+  void                       (*cstor)( void* dest);
+  void                       (*dstor)( void* dest);
+  void                       (*cstorcopy)( void* dest, const void* src);
+  void                       (*copy)( void* dest, const void* src);
+  void                       (*assign)( void* dest, const void* src);
+  void                       (*print)( FILE* file, const void* src);
+
+  /* only if it is a format of a task  */
+  kaapi_task_body_t          default_body;                            /* iff a task used on current node */
+  kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
+  int                        count_params;                            /* number of parameters */
+  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
+  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
+  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
+  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
+
+  struct kaapi_format_t      *next_bybody;                            /* link in hash table */
+  struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
+  
+  /* only for Monotonic bound format */
+  int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
+                      const void* value, const struct kaapi_format_t* fmtvalue );
+} kaapi_format_t;
 
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */
@@ -291,6 +338,7 @@ typedef struct kaapi_thread_context_t {
 #endif
   kaapi_atomic_t                 lock;           /** */ 
 
+  void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
@@ -311,21 +359,16 @@ struct kaapi_taskadaptive_result_t;
     This data structure is attached to any adaptative tasks.
 */
 typedef struct kaapi_taskadaptive_t {
-  kaapi_stealcontext_t                sc;              /* user visible part of the data structure */
+  kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
 
-  kaapi_atomic_t                      thievescount;    /* required for the finalization of the victim */
-  struct kaapi_taskadaptive_result_t* head;            /* head of the LIFO order of result */
-  struct kaapi_taskadaptive_result_t* tail;            /* tail of the LIFO order of result */
-
-  struct kaapi_taskadaptive_result_t* current_thief;   /* points to the current kaapi_taskadaptive_result_t to preemption */
-
-  struct kaapi_taskadaptive_t*        mastertask;      /* who to signal at the end of computation, 0 iff master task */
-  struct kaapi_taskadaptive_result_t* result;          /* points on kaapi_taskadaptive_result_t to copy args in preemption or finalization
-                                                          null iff thief has been already preempted
-                                                       */
-  int                                 result_size;     /* for debug copy of result->size_data to avoid remote read in finalize */
-  int                                 local_result_size; /* size of result to be copied in kaapi_taskfinalize */
-  void*                               local_result_data; /* data of result to be copied int kaapi_taskfinalize */
+  kaapi_atomic_t                      lock;            /* required for access to list */
+  struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
+  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
+  kaapi_atomic_t                      thievescount __attribute__((aligned(KAAPI_CACHE_LINE)));     /* #thieves of the owner of this structure.... */
+  struct kaapi_taskadaptive_t*        origin_master;    /* who to report global end at the end of computation, 0 iff first master task */
+  kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
+  void*                               save_argsplitter;/* idem */
+  kaapi_frame_t                       frame;
 } kaapi_taskadaptive_t;
 
 
@@ -335,21 +378,30 @@ typedef struct kaapi_taskadaptive_t {
     media between victim and thief.
 */
 typedef struct kaapi_taskadaptive_result_t {
-  volatile int*                       signal;           /* signal of preemption pointer on the thief stack haspreempt */
-  volatile int                        req_preempt;      /* */
-  volatile int                        thief_term;       /* */
-  int                                 flag;             /* state of the result */
-  struct kaapi_taskadaptive_result_t* rhead;            /* next result of the next thief */
-  struct kaapi_taskadaptive_result_t* rtail;            /* next result of the next thief */
-  void**                              parg_from_victim; /* point to arg_from_victim in thief kaapi_taskadaptive_t */
-  struct kaapi_taskadaptive_result_t* next;             /* link field to the previous spawned thief */
-  struct kaapi_taskadaptive_result_t* prev;             /* link field to the next spawned thief */
-  int                                 size_data;        /* size of data */
-  double                              data[1];
-} /*__attribute__((aligned (KAAPI_CACHE_LINE)))*/ kaapi_taskadaptive_result_t;
+  /* same as public part of the structure in kaapi.h */
+  void*                               data;             /* the data produced by the thief */
+  size_t                              size_data;        /* size of data */
+  void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
+  void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
+  int volatile                        req_preempt;
 
-#define KAAPI_RESULT_INSTACK   0x01
-#define KAAPI_RESULT_INHEAP    0x02
+  /* Private part of the structure */
+  volatile int                        thief_term;       /* */
+  struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
+  int                                 flag;             /* where is allocated data */
+
+  struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
+  struct kaapi_taskadaptive_result_t* rtail;            /* */
+
+  struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
+  struct kaapi_taskadaptive_result_t* prev;             /* */
+
+  void*				      addr_tofree;	/* the non aligned malloc()ed addr */
+  
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+
+#define KAAPI_RESULT_DATAUSR    0x01
+#define KAAPI_RESULT_DATARTS    0x02
 
 
 
@@ -412,7 +464,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
   return (task->body != kaapi_taskstartup_body) && (task->body != kaapi_nop_body)
       && (task->body != kaapi_suspend_body) && (task->body != kaapi_exec_body) && (task->body != kaapi_aftersteal_body) 
       && (task->body != kaapi_tasksteal_body) && (task->body != kaapi_taskwrite_body) && (task->body != kaapi_tasksig_body)
-      && (task->body != kaapi_taskfinalize_body) && (task->body != kaapi_adapt_body)
+      && (task->body != kaapi_taskfinalize_body) && (task->body != kaapi_taskreturn_body) && (task->body != kaapi_adapt_body)
       ;
 }
 
@@ -598,6 +650,10 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, kaapi_re
   fflush(stdout);
 #endif
 }
+
+
+/* */
+extern kaapi_uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 
 /* ========== Here include machine specific function: only next definitions should depend on machine =========== */
 /** Here include all machine dependent functions and types
@@ -818,6 +874,29 @@ extern int kaapi_task_splitter_adapt(
 );
 
 
+/** \ingroup ADAPTIVE
+     Disable steal on stealcontext and wait not more thief is stealing.
+     Return 0 in case of success else return an error code.
+ */
+static inline int kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
+{
+  stc->splitter    = 0;
+  stc->argsplitter = 0;
+  kaapi_mem_barrier();
+
+  while (KAAPI_ATOMIC_READ(&stc->is_there_thief) !=0)
+    ;
+  return 0;
+}
+
+
+/** \ingroup ADAPTIVE
+    free a result previously allocate with kaapi_allocate_thief_result
+    \param ktr IN the result to free
+ */
+extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t* ktr);
+
+
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
@@ -898,39 +977,49 @@ typedef struct kaapi_tasksteal_arg_t {
 } kaapi_tasksteal_arg_t;
 
 
-/** Args for tasksignal
-*/
-typedef struct kaapi_tasksig_arg_t {
-  kaapi_thread_context_t*      victim;            /* victim thread */
-  kaapi_task_t*                task2sig;          /* remote task to signal */
-  int                          flag;              /* type of signal */
-  kaapi_taskadaptive_t*        taskadapt;         /* pointer to the local adaptive task */
-  kaapi_taskadaptive_result_t* result;            /* pointer to the remote result from stealing adaptive task */
-} kaapi_tasksig_arg_t;
-
-
-
 /* ======================== Perf counter interface: machine dependent ========================*/
 
+/* for perf_regs access: SHOULD BE 0 and 1 
+   All counters have both USER and SYS definition (sys == program that execute the scheduler).
+   * KAAPI_PERF_ID_T1 is considered as the T1 (computation time) in the user space
+   and as TSCHED, the scheduling time if SYS space. In workstealing litterature it is also named Tidle.
+   [ In Kaapi, TIDLE is the time where the thread (kprocessor) is not scheduled on hardware... ]
+*/
+#define KAAPI_PERF_USER_STATE       0
+#define KAAPI_PERF_SCHEDULE_STATE   1
+
+/* return a reference to the idp-th performance counter of the k-processor in the current set of counters */
+#define KAAPI_PERF_REG(kproc, idp) ((kproc)->curr_perf_regs[(idp)])
+
+/* return a reference to the idp-th USER performance counter of the k-processor */
+#define KAAPI_PERF_REG_USR(kproc, idp) ((kproc)->perf_regs[KAAPI_PERF_USER_STATE][(idp)])
+
+/* return a reference to the idp-th USER performance counter of the k-processor */
+#define KAAPI_PERF_REG_SYS(kproc, idp) ((kproc)->perf_regs[KAAPI_PERF_SCHEDULE_STATE][(idp)])
+
+/* return the sum of the idp-th USER and SYS performance counters */
+#define KAAPI_PERF_REG_READALL(kproc, idp) (KAAPI_PERF_REG_SYS(kproc, idp)+KAAPI_PERF_REG_USR(kproc, idp))
+
+
 /* internal */
-void kaapi_perf_global_init(void);
+extern void kaapi_perf_global_init(void);
 
-void kaapi_perf_global_fini(void);
+extern void kaapi_perf_global_fini(void);
 
 /* */
-void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
+extern void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
 /* */
-void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
+extern void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
 /* */
-void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
+extern void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
 /* */
-void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
+extern void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
 /* */
-void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
+extern void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
 /* */
-int kaapi_perf_thread_state(kaapi_processor_t* kproc);
-
-
+extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
+/* */
+extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 
 /**
