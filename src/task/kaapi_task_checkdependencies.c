@@ -121,7 +121,7 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
       {
         if (entry==NULL) //argument not referenced
         {
-          entry=kaapi_hashmap_add(&ws_khm,task->sp+format->off_params[i]);
+          entry=kaapi_hashmap_insert(&ws_khm,task->sp+format->off_params[i]);
         }
         //Update argument's last writer informations
         ((kaapi_deps_t*)(entry->datas))->last_writer=task;

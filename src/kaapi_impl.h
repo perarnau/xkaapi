@@ -719,11 +719,15 @@ extern int kaapi_hashmap_destroy( kaapi_hashmap_t* khm );
 
 /*
 */
+extern kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr );
+
+/*
+*/
 extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr );
 
 /*
 */
-extern kaapi_hashentries_t* kaapi_hashmap_add( kaapi_hashmap_t* khm, void* ptr );
+extern kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr );
 
 
 
