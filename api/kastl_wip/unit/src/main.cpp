@@ -337,12 +337,12 @@ template
   typename IteratorType,
   typename FunctionType
 >
-struct tbb_for_functor
+struct tbb_for_in_functor
 {
   IteratorType _base;
   FunctionType _f;
 
-  tbb_for_functor(IteratorType& base, const FunctionType& f)
+  tbb_for_in_functor(IteratorType& base, const FunctionType& f)
     : _base(base), _f(f) {}
 
   void operator()(const tbb::blocked_range<int>& range) const
@@ -350,6 +350,32 @@ struct tbb_for_functor
     IteratorType pos = _base + range.begin();
     for (int i = range.begin(); i < range.end(); ++i, ++pos)
       _f(*pos);
+  }
+};
+
+template
+<
+  typename InIteratorType,
+  typename OutIteratorType,
+  typename FunctionType
+>
+struct tbb_for_inout_functor
+{
+  InIteratorType _ibase;
+  OutIteratorType _obase;
+  FunctionType _f;
+
+  tbb_for_inout_functor
+  (InIteratorType& ibase, OutIteratorType& obase, const FunctionType& f)
+    : _ibase(ibase), _obase(obase), _f(f) {}
+
+  void operator()(const tbb::blocked_range<int>& range) const
+  {
+    InIteratorType ipos = _ibase + range.begin();
+    OutIteratorType opos = _obase + range.begin();
+
+    for (int i = range.begin(); i < range.end(); ++i, ++ipos, ++opos)
+      *opos = _f(*ipos);
   }
 };
 
@@ -393,12 +419,66 @@ struct tbb_red_functor
   }
 };
 
+template<typename Iterator0Type, typename Iterator1Type, typename BodyType>
+struct tbb_red_in2_functor
+{
+  // 2 input sequences
+
+  typedef tbb_red_in2_functor
+  <Iterator0Type, Iterator1Type, BodyType> SelfType;
+
+  typedef typename BodyType::ResultType ResultType;
+  typedef typename BodyType::ConstantType ConstantType;
+
+  Iterator0Type _base0;
+  Iterator1Type _base1;
+
+  const ConstantType* _const;
+  ResultType _res;
+
+  tbb_red_in2_functor
+  (const Iterator0Type& base0,
+   const Iterator1Type& base1,
+   const ConstantType* constant)
+    : _base0(base0), _base1(base1), _const(constant)
+  {
+    BodyType::init_result(_res, *_const);
+  }
+
+  tbb_red_in2_functor(SelfType& body, tbb::split)
+  {
+    _base0 = body._base0;
+    _base1 = body._base1;
+    _const = body._const;
+
+    BodyType::init_result(_res, *_const);
+  }
+
+  void operator()(const tbb::blocked_range<int>& range)
+  {
+    Iterator0Type pos0 = _base0 + range.begin();
+    Iterator1Type pos1 = _base1 + range.begin();
+
+    for (int i = range.begin(); i < range.end(); ++i, ++pos0, ++pos1)
+      BodyType::apply(pos0, pos1, *_const, _res);
+  }
+
+  void join(SelfType& rhs)
+  {
+    BodyType::reduce(*_const, _res, rhs._res);
+  }
+};
+
 #endif // CONFIG_LIB_TBB
 
 #if CONFIG_LIB_PASTL
 # include <parallel/algorithm>
 # include <parallel/numeric>
 # include <omp.h>
+
+
+static const __gnu_parallel::_Parallelism pastl_parallel_tag =
+  __gnu_parallel::parallel_balanced;
 
 static bool pastl_initialize()
 {
@@ -704,7 +784,7 @@ public:
   static void tbb_for_each
   (InputIterator first, InputIterator last, const Function& f)
   {
-    tbb_for_functor<InputIterator, Function> tf(first, f);
+    tbb_for_in_functor<InputIterator, Function> tf(first, f);
     const int size = (int)std::distance(first, last);
     tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
   }
@@ -719,7 +799,7 @@ public:
 #if CONFIG_LIB_PASTL
   virtual void run_pastl(InputType& i, OutputType&)
   {
-    __gnu_parallel::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>(), __gnu_parallel::parallel_balanced);
+    __gnu_parallel::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>(), pastl_parallel_tag);
   }
 #endif
 
@@ -787,8 +867,7 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::count
-      (i.first.begin(), i.first.end(), COUNT_VALUE,
-       __gnu_parallel::parallel_balanced);
+      (i.first.begin(), i.first.end(), COUNT_VALUE, pastl_parallel_tag);
   }
 #endif
 
@@ -967,7 +1046,7 @@ public:
   virtual void run_pastl(InputType& i, OutputType&)
   {
     _res[0] = __gnu_parallel::accumulate
-      (i.first.begin(), i.first.end(), ValueType(0), __gnu_parallel::parallel_balanced);
+      (i.first.begin(), i.first.end(), ValueType(0), pastl_parallel_tag);
   }
 #endif
 
@@ -1080,7 +1159,30 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     __gnu_parallel::transform
-      (i.first.begin(), i.first.end(), o.begin(), inc(), __gnu_parallel::parallel_balanced);
+      (i.first.begin(), i.first.end(), o.begin(), inc(), pastl_parallel_tag);
+  }
+#endif
+
+#if CONFIG_LIB_TRANSFORM
+  template
+  <
+    typename InIteratorType,
+    typename OutIteratorType,
+    typename OperatorType
+  >
+  static void tbb_transform
+  (InIteratorType ipos, InIteratorType iend,
+   OutIteratorType opos, OperatorType op)
+  {
+    tbb_for_inout_functor<InIteratorType, OutIteratorType, OperatorType> tf(first, f);
+    const int size = (int)std::distance(first, last);
+    tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    tbb_transform
+      (i.first.begin(), i.first.end(), o.begin(), inc());
   }
 #endif
 
@@ -1131,7 +1233,7 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::min_element
-      (i.first.begin(), i.first.end(), __gnu_parallel::parallel_balanced);
+      (i.first.begin(), i.first.end(), pastl_parallel_tag);
   }
 #endif
 
@@ -1230,7 +1332,7 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::max_element
-      (i.first.begin(), i.first.end(), __gnu_parallel::parallel_balanced);
+      (i.first.begin(), i.first.end(), pastl_parallel_tag);
   }
 #endif
 
@@ -1478,20 +1580,23 @@ public:
 
   virtual void run_ref(InputType& i, OutputType& o)
   {
-    _res[1] = std::inner_product(i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+    _res[1] = std::inner_product
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
   }
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _res[0] = std::inner_product(i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+    _res[0] = std::inner_product
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
   }
 #endif
 
 #if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType& o)
   {
-    _res[0] = kastl::inner_product(i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+    _res[0] = kastl::inner_product
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
   }
 #endif
 
@@ -1499,8 +1604,68 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::inner_product
-      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0), __gnu_parallel::parallel_balanced);
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0),
+       pastl_parallel_tag);
   }
+#endif
+
+#if CONFIG_LIB_TBB
+
+  template
+  <typename Iterator0Type,
+   typename Iterator1Type,
+   typename ValueType>
+  struct InnerProductBody
+  {
+    typedef typename std::iterator_traits
+    <Iterator0Type>::difference_type SizeType;
+
+    typedef SizeType ResultType;
+    typedef ValueType ConstantType;
+
+    inline static void init_result
+    (ResultType& r, const ConstantType& c)
+    {
+      r = 0;
+    }
+
+    inline static void apply
+    (Iterator0Type& i0, Iterator1Type& i1,
+     const ConstantType& c, ResultType& r)
+    {
+      r += (*i0) * (*i1);
+    }
+
+    inline static void reduce
+    (const ConstantType&, ResultType& lhs, const ResultType& rhs)
+    {
+      lhs += rhs;
+    }
+  };
+
+  template
+  <typename Iterator0Type, typename Iterator1Type, typename ValueType>
+  static ValueType tbb_inner_product
+  (Iterator0Type beg0, Iterator0Type end0,
+   Iterator1Type beg1, const ValueType& val)
+  {
+    typedef InnerProductBody<Iterator0Type, Iterator1Type, ValueType>
+      BodyType;
+
+    tbb_red_in2_functor<Iterator0Type, Iterator1Type, BodyType>
+      tf(beg0, beg1, &val);
+
+    const int size = (int)std::distance(beg0, end0);
+    tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
+    return tf._res + val;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_inner_product
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+  }
+
 #endif
 
   virtual bool check
