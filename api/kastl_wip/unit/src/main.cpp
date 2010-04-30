@@ -357,33 +357,39 @@ template<typename IteratorType, typename BodyType>
 struct tbb_red_functor
 {
   typedef tbb_red_functor<IteratorType, BodyType> SelfType;
+
   typedef typename BodyType::ResultType ResultType;
+  typedef typename BodyType::ConstantType ConstantType;
 
   IteratorType _base;
+  const ConstantType* _const;
   ResultType _res;
-  ResultType _initial_res;
 
   tbb_red_functor
-  (const IteratorType& base, const ResultType& res)
-    : _base(base), _res(res), _initial_res(res) {}
+  (const IteratorType& base, const ConstantType* constant)
+    : _base(base), _const(constant)
+  {
+    BodyType::init_result(_res, *_const);
+  }
 
   tbb_red_functor(SelfType& body, tbb::split)
   {
     _base = body._base;
-    _initial_res = body._initial_res;
-    _res = body._initial_res;
+    _const = body._const;
+
+    BodyType::init_result(_res, *_const);
   }
 
   void operator()(const tbb::blocked_range<int>& range)
   {
     IteratorType pos = _base + range.begin();
     for (int i = range.begin(); i < range.end(); ++i, ++pos)
-      BodyType::apply(pos, _res);
+      BodyType::apply(pos, *_const, _res);
   }
 
   void join(SelfType& rhs)
   {
-    BodyType::reduce(_res, rhs._res);
+    BodyType::reduce(*_const, _res, rhs._res);
   }
 };
 
@@ -739,6 +745,8 @@ public:
 #if CONFIG_ALGO_COUNT
 class CountRun : public RunInterface
 {
+#define COUNT_VALUE 42
+
   ptrdiff_t _res[2];
 
 public:
@@ -756,14 +764,14 @@ public:
   virtual void run_ref(InputType& i, OutputType& o)
   {
     _res[1] = std::count
-      (i.first.begin(), i.first.end(), 42);
+      (i.first.begin(), i.first.end(), COUNT_VALUE);
   }
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
     _res[0] = std::count
-      (i.first.begin(), i.first.end(), 42);
+      (i.first.begin(), i.first.end(), COUNT_VALUE);
   }
 #endif
 
@@ -771,7 +779,7 @@ public:
   virtual void run_kastl(InputType& i, OutputType& o)
   {
     _res[0] = kastl::count
-      (i.first.begin(), i.first.end(), 42);
+      (i.first.begin(), i.first.end(), COUNT_VALUE);
   }
 #endif
 
@@ -779,8 +787,59 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::count
-      (i.first.begin(), i.first.end(), 42, __gnu_parallel::parallel_balanced);
+      (i.first.begin(), i.first.end(), COUNT_VALUE,
+       __gnu_parallel::parallel_balanced);
   }
+#endif
+
+#if CONFIG_LIB_TBB
+
+  template<typename IteratorType, typename ValueType>
+  struct CountBody
+  {
+    typedef typename std::iterator_traits
+    <IteratorType>::difference_type SizeType;
+
+    typedef SizeType ResultType;
+    typedef ValueType ConstantType;
+
+    inline static void init_result
+    (ResultType& r, const ConstantType& c)
+    {
+      r = 0;
+    }
+
+    inline static void apply
+    (IteratorType& i, const ConstantType& c, ResultType& r)
+    {
+      if (*i == c)
+	++r;
+    }
+
+    inline static void reduce
+    (const ConstantType&, ResultType& lhs, const ResultType& rhs)
+    {
+      lhs += rhs;
+    }
+  };
+
+  template<typename IteratorType, typename ValueType>
+  static typename std::iterator_traits<IteratorType>::difference_type tbb_count
+  (IteratorType begin, IteratorType end, const ValueType& val)
+  {
+    typedef CountBody<IteratorType, ValueType> BodyType;
+
+    tbb_red_functor<IteratorType, BodyType> tf(begin, &val);
+    const int size = (int)std::distance(begin, end);
+    tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
+    return tf._res;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_count(i.first.begin(), i.first.end(), COUNT_VALUE);
+  }
+
 #endif
 
   virtual bool check
@@ -1031,20 +1090,28 @@ public:
   struct MinElementBody
   {
     typedef IteratorType ResultType;
+    typedef IteratorType ConstantType;
+
+    inline static void init_result
+    (ResultType& r, const ConstantType& c)
+    {
+      r = c;
+    }
 
     inline static void apply
-    (IteratorType& pos, IteratorType& res)
+    (IteratorType& i, const ConstantType&, ResultType& r)
     {
-      if (*pos < *res)
-	res = pos;
+      if (*i < *r)
+	r = i;
     }
 
     inline static void reduce
-    (IteratorType& res, const IteratorType& rhs)
+    (const ConstantType&, ResultType& lhs, const ResultType& rhs)
     {
-      if (*rhs < *res)
-	res = rhs;
+      if (*rhs < *lhs)
+	lhs = rhs;
     }
+    
   };
 
   template<typename IteratorType>
@@ -1056,7 +1123,7 @@ public:
     if (begin == end)
       return begin;
 
-    tbb_red_functor<IteratorType, BodyType> tf(begin, begin);
+    tbb_red_functor<IteratorType, BodyType> tf(begin, &begin);
     const int size = (int)std::distance(begin, end);
     tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
     return tf._res;
@@ -1114,6 +1181,57 @@ public:
     _res[0] = __gnu_parallel::max_element
       (i.first.begin(), i.first.end(), __gnu_parallel::parallel_balanced);
   }
+#endif
+
+#if CONFIG_LIB_TBB
+
+  template<typename IteratorType>
+  struct MaxElementBody
+  {
+    typedef IteratorType ResultType;
+    typedef IteratorType ConstantType;
+
+    inline static void init_result
+    (ResultType& r, const ConstantType& c)
+    {
+      r = c;
+    }
+
+    inline static void apply
+    (IteratorType& i, const ConstantType&, ResultType& r)
+    {
+      if (*i > *r)
+	r = i;
+    }
+
+    inline static void reduce
+    (const ConstantType&, ResultType& lhs, const ResultType& rhs)
+    {
+      if (*rhs > *lhs)
+	lhs = rhs;
+    }
+  };
+
+  template<typename IteratorType>
+  static IteratorType tbb_max_element
+  (IteratorType begin, IteratorType end)
+  {
+    typedef MaxElementBody<IteratorType> BodyType;
+
+    if (begin == end)
+      return begin;
+
+    tbb_red_functor<IteratorType, BodyType> tf(begin, &begin);
+    const int size = (int)std::distance(begin, end);
+    tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
+    return tf._res;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_max_element(i.first.begin(), i.first.end());
+  }
+
 #endif
 
   virtual bool check

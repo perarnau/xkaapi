@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGOS="min_element"
+ALGOS="count"
 LIBS="stl kastl pastl tbb"
 DOS="bench check"
 

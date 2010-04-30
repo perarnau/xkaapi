@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 #for A in for_each count transform search min_element max_element; do
-for A in min_element; do
+for A in count; do
 #    for L in stl pastl kastl tbb; do
     for L in tbb; do
 	make DO=bench LIB=$L ALGO=$A ;
