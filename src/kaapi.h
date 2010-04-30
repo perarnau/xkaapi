@@ -654,7 +654,7 @@ static inline kaapi_task_t* kaapi_thread_toptask( kaapi_thread_t* thread)
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
+static /*inline */int kaapi_thread_pushtask(kaapi_thread_t* thread)
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug((char*)thread->sp >= (char*)thread->sp_data);
