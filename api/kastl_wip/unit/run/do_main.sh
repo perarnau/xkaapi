@@ -3,7 +3,7 @@
 # globals
 export LD_LIBRARY_PATH=$HOME/install/lib
 DIR=/tmp/out
-SIZE=1000000
+SIZE=100000
 ITER=10
 #CPUSET=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 #CPUSET=8,9,10,11,12,13,14,15
@@ -14,6 +14,9 @@ ITER=10
 #CPUSET=9
 CPUSET=0,1
 #CPUSET=1
+ALGOS=min_element
+LIBS=kastl
+DOS=check
 
 
 is_in_list() {
@@ -31,32 +34,42 @@ is_in_list() {
 
 
 gen_lists() {
-    ALGOS=''
-    LIBS=''
-    DOS=''
+    DO_ALGOS=0 ;
+    DO_LIBS=0 ;
+    DO_DOS=0 ;
+
+    [ $ALGOS'' == '' ] && DO_ALGOS=1 ;
+    [ $LIBS'' == '' ] && DO_LIBS=1 ;
+    [ $DOS'' == '' ] && DO_DOS=1 ;
 
     for f in $1/*; do
 	[ -e $f ] || continue ;
 
 	s=`basename $f`
 	s=(${s//-/ })
-	a=${s[0]}
-	l=${s[1]}
-	d=${s[2]}
 
-	is_in_list "$ALGOS" $a
-	if [ $? -eq 0 ] ; then
-	    ALGOS="$ALGOS $a" ;
+	if [ $DO_ALGOS -eq 1 ]; then
+	    a=${s[0]}
+	    is_in_list "$ALGOS" $a ;
+	    if [ $? -eq 0 ] ; then
+		ALGOS="$ALGOS $a" ;
+	    fi
 	fi
 
-	is_in_list "$LIBS" $l
-	if [ $? -eq 0 ] ; then
-	    LIBS="$LIBS $l" ;
+	if [ $DO_LIBS -eq 1 ]; then
+	    l=${s[1]}
+	    is_in_list "$LIBS" $l ;
+	    if [ $? -eq 0 ] ; then
+		LIBS="$LIBS $l" ;
+	    fi
 	fi
 
-	is_in_list "$DOS" $d
-	if [ $? -eq 0 ] ; then
-	    DOS="$DOS $d" ;
+	if [ $DO_DOS -eq 1 ]; then
+	    d=${s[2]}
+	    is_in_list "$DOS" $d ;
+	    if [ $? -eq 0 ] ; then
+		DOS="$DOS $d" ;
+	    fi
 	fi
     done
 }
@@ -72,6 +85,8 @@ print_lists() {
 run_lists() {
     rm -rf $DIR
     mkdir $DIR
+
+    print_lists ;
 
     for ALGO in $ALGOS; do
 	for DO in $DOS; do
