@@ -322,6 +322,7 @@ static size_t __attribute__((unused)) get_concurrency()
 
 # include <tbb/task_scheduler_init.h>
 # include <tbb/parallel_for.h>
+# include <tbb/parallel_reduce.h>
 # include <tbb/blocked_range.h>
 
 static bool tbb_initialize()
@@ -331,30 +332,60 @@ static bool tbb_initialize()
   return true;
 }
 
-template<typename InputIterator, typename Function>
-struct tbb_functor
+template
+<
+  typename IteratorType,
+  typename FunctionType
+>
+struct tbb_for_functor
 {
-  InputIterator _is;
-  Function _f;
+  IteratorType _base;
+  FunctionType _f;
 
-  tbb_functor(InputIterator& is, const Function& f)
-    : _is(is), _f(f) {}
+  tbb_for_functor(IteratorType& base, const FunctionType& f)
+    : _base(base), _f(f) {}
 
   void operator()(const tbb::blocked_range<int>& range) const
   {
-    InputIterator pos = _is + range.begin();
+    IteratorType pos = _base + range.begin();
     for (int i = range.begin(); i < range.end(); ++i, ++pos)
       _f(*pos);
   }
 };
 
-template<typename InputIterator, typename Function>
-static void tbb_for_each(InputIterator first, InputIterator last, const Function& f)
+template<typename IteratorType, typename BodyType>
+struct tbb_red_functor
 {
-  tbb_functor<InputIterator, Function> tf(first, f);
-  const int size = (int)std::distance(first, last);
-  tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
-}
+  typedef tbb_red_functor<IteratorType, BodyType> SelfType;
+  typedef typename BodyType::ResultType ResultType;
+
+  IteratorType _base;
+  ResultType _res;
+  ResultType _initial_res;
+
+  tbb_red_functor
+  (const IteratorType& base, const ResultType& res)
+    : _base(base), _res(res), _initial_res(res) {}
+
+  tbb_red_functor(SelfType& body, tbb::split)
+  {
+    _base = body._base;
+    _initial_res = body._initial_res;
+    _res = body._initial_res;
+  }
+
+  void operator()(const tbb::blocked_range<int>& range)
+  {
+    IteratorType pos = _base + range.begin();
+    for (int i = range.begin(); i < range.end(); ++i, ++pos)
+      BodyType::apply(pos, _res);
+  }
+
+  void join(SelfType& rhs)
+  {
+    BodyType::reduce(_res, rhs._res);
+  }
+};
 
 #endif // CONFIG_LIB_TBB
 
@@ -662,11 +693,22 @@ public:
 #endif
 
 #if CONFIG_LIB_TBB
+
+  template<typename InputIterator, typename Function>
+  static void tbb_for_each
+  (InputIterator first, InputIterator last, const Function& f)
+  {
+    tbb_for_functor<InputIterator, Function> tf(first, f);
+    const int size = (int)std::distance(first, last);
+    tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
+  }
+
   virtual void run_tbb(InputType& i, OutputType&)
   {
     tbb_for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
   }
-#endif
+
+#endif // CONFIG_LIB_TBB
 
 #if CONFIG_LIB_PASTL
   virtual void run_pastl(InputType& i, OutputType&)
@@ -981,6 +1023,50 @@ public:
     _res[0] = __gnu_parallel::min_element
       (i.first.begin(), i.first.end(), __gnu_parallel::parallel_balanced);
   }
+#endif
+
+#if CONFIG_LIB_TBB
+
+  template<typename IteratorType>
+  struct MinElementBody
+  {
+    typedef IteratorType ResultType;
+
+    inline static void apply
+    (IteratorType& pos, IteratorType& res)
+    {
+      if (*pos < *res)
+	res = pos;
+    }
+
+    inline static void reduce
+    (IteratorType& res, const IteratorType& rhs)
+    {
+      if (*rhs < *res)
+	res = rhs;
+    }
+  };
+
+  template<typename IteratorType>
+  static IteratorType tbb_min_element
+  (IteratorType begin, IteratorType end)
+  {
+    typedef MinElementBody<IteratorType> BodyType;
+
+    if (begin == end)
+      return begin;
+
+    tbb_red_functor<IteratorType, BodyType> tf(begin, begin);
+    const int size = (int)std::distance(begin, end);
+    tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
+    return tf._res;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_min_element(i.first.begin(), i.first.end());
+  }
+
 #endif
 
   virtual bool check

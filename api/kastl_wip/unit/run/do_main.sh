@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGOS="inner_product"
+ALGOS="min_element"
 LIBS="stl kastl pastl tbb"
 DOS="bench check"
 
