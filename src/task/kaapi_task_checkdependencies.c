@@ -70,10 +70,10 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
       //printf("[CHECKDEPS]%d:::%d\n",i,task->sp+format->off_params[i]);
       entry=kaapi_hashmap_find(&ws_khm,task->sp+format->off_params[i]);
       
-      if(entry!=NULL && (KAAPI_ACCESS_IS_READ(format->mode_params[i]) || KAAPI_ACCESS_IS_READWRITE(format->mode_params[i])) && ! ( ( thread <= ( ((kaapi_deps_t*)(entry->datas))->last_writer) ) && (( ((kaapi_deps_t*)(entry->datas))->last_writer)<= (thread + (kaapi_default_param.stacksize) ) ) ) )
+      if(entry!=NULL && (KAAPI_ACCESS_IS_READ(format->mode_params[i]) || KAAPI_ACCESS_IS_READWRITE(format->mode_params[i])) && ! ( ( thread <= ( entry->datas->last_writer) ) && (( entry->datas->last_writer)<= (thread + (kaapi_default_param.stacksize) ) ) ) )
         //Argument is already referenced (previous writer exist), and this task will r/rw current argument, and last writer task is NOT in the same stack
       {
-        if ((((kaapi_deps_t*)(entry->datas))->last_writer)<(((kaapi_deps_t*)(entry->datas))->last_writer_thread->pc))
+        if ((entry->datas->last_writer)>(entry->datas->last_writer_thread->pc))
         {
           goto already_terminated;
         }	        
@@ -91,16 +91,18 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
           KAAPI_ATOMIC_INCR(counter);
         }
         
-        //Signal datas (for the signal body) creation
+        //Signal datas creation
         
-        kaapi_counters_list* new_reader_a= (kaapi_counters_list*)kaapi_thread_pushdata(((kaapi_deps_t*)(entry->datas))->last_writer_thread, sizeof(kaapi_counters_list));
+        kaapi_counters_list* new_reader_a= (kaapi_counters_list*)kaapi_thread_pushdata(entry->datas->last_writer_thread, sizeof(kaapi_counters_list));
         new_reader_a->next=0;
         new_reader_a->reader_counter=counter;
         new_reader_a->waiting_task=task;
-        if (((kaapi_deps_t*)(entry->datas))->last_writer->pad!=0)
+
+	kaapi_read_membarrier();
+        if (entry->datas->last_writer->pad!=0)
           //last_writer has already dependency datas, update its datas
         {
-          kaapi_counters_list* tmp=(kaapi_counters_list*)(((kaapi_deps_t*)(entry->datas))->last_writer->pad);
+          kaapi_counters_list* tmp=(kaapi_counters_list*)(entry->datas->last_writer->pad);
           //printf("task:%u;last:%u;counter:%u,counter_addr:%u",task,(kaapi_deps_t*)(entry->datas)->last_writer,signal_datas->readers_number._counter, &(signal_datas->readers_number)); 
           while(tmp->next != 0) //may be locked?
           {
@@ -111,9 +113,18 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
         }
         else //Set datas
         {
-          ((kaapi_deps_t*)(entry->datas))->last_writer->pad=(void*)new_reader_a; 
+          entry->datas->last_writer->pad=(void*)new_reader_a; 
           //printf("task:%u;last:%u;counter:%u,counter_addr:%u",task,(kaapi_deps_t*)(entry->datas)->last_writer,signal_datas->readers_number._counter, &(signal_datas->readers_number)); 
           //printf("Datas set\n");
+        }
+
+	//if writer terminated while datas passing, test if he saw it, if not, correct the counter
+	// !!! Incorrect issues are possible (no decrementation of the counter, task will keep suspended state). TODO
+	if ((entry->datas->last_writer)>(entry->datas->last_writer_thread->pc))
+        {
+		kaapi_read_membarrier();	
+		if(entry->datas->last_writer->pad!=0)
+			KAAPI_ATOMIC_DECR(counter);
         }
       }
 	  already_terminated:
@@ -124,8 +135,8 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
           entry=kaapi_hashmap_insert(&ws_khm,task->sp+format->off_params[i]);
         }
         //Update argument's last writer informations
-        ((kaapi_deps_t*)(entry->datas))->last_writer=task;
-        ((kaapi_deps_t*)(entry->datas))->last_writer_thread=thread;
+        entry->datas->last_writer=task;
+        entry->datas->last_writer_thread=thread;
 	      //printf("Last writer inserted\n");
       }
     }

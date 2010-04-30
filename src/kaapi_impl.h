@@ -672,6 +672,8 @@ extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
 /* ============================= Hash table for WS ============================ */
+/*
+*/
 typedef struct kaapi_counters_list {
     kaapi_atomic_t*              reader_counter; 
     kaapi_task_t*                waiting_task;
@@ -680,18 +682,19 @@ typedef struct kaapi_counters_list {
 
 /*
 */
-typedef struct kaapi_hashentries_t {
-  kaapi_gd_t                  value;
-  kaapi_counters_list*			  datas;  /* list of task to wakeup at the end */
-  void*                       key;
-  struct kaapi_hashentries_t* next; 
-} kaapi_hashentries_t;
-
 typedef struct kaapi_deps_t {
   kaapi_task_t*               last_writer;
   kaapi_thread_t*             last_writer_thread;
 } kaapi_deps_t;
 
+/*
+*/
+typedef struct kaapi_hashentries_t {
+  kaapi_gd_t                  value;
+  kaapi_deps_t*		      datas;  /* list of task to wakeup at the end */
+  void*                       key;
+  struct kaapi_hashentries_t* next; 
+} kaapi_hashentries_t;
 
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
