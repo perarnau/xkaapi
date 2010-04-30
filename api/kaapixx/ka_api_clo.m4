@@ -244,7 +244,7 @@ std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << (void*)method << " with t
   {
     return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
   }
-  static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, void (TaskBodyGPU<TASK>::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
+  static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, void (TaskBodyGPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
   {
     return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
   }
