@@ -70,6 +70,7 @@ namespace ka {
   typedef kaapi_int64_t  ka_int64_t;
 
   struct kaapi_bodies_t {
+    kaapi_bodies_t( kaapi_task_body_t cpu_body, kaapi_task_body_t gpu_body );
     kaapi_task_body_t cpu_body;
     kaapi_task_body_t gpu_body;
     kaapi_task_body_t default_body;
