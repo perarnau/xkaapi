@@ -2,7 +2,7 @@
 
 
 ALGOS="inner_product"
-LIBS="stl kastl pastl"
+LIBS="stl kastl pastl tbb"
 DOS="bench check"
 
 DIR=/tmp/out
