@@ -971,6 +971,57 @@ public:
   }
 #endif
 
+#if CONFIG_LIB_TBB
+
+  template<typename IteratorType, typename ValueType>
+  struct AccumulateBody
+  {
+    typedef typename std::iterator_traits
+    <IteratorType>::difference_type SizeType;
+
+    typedef SizeType ResultType;
+    typedef ValueType ConstantType;
+
+    inline static void init_result
+    (ResultType& r, const ConstantType& c)
+    {
+      r = 0;
+    }
+
+    inline static void apply
+    (IteratorType& i, const ConstantType&, ResultType& r)
+    {
+      r += *i;
+    }
+
+    inline static void reduce
+    (const ConstantType&, ResultType& lhs, const ResultType& rhs)
+    {
+      lhs += rhs;
+    }
+  };
+
+  template<typename IteratorType, typename ValueType>
+  static ValueType tbb_accumulate
+  (IteratorType begin, IteratorType end, const ValueType& val)
+  {
+    typedef AccumulateBody<IteratorType, ValueType> BodyType;
+
+    tbb_red_functor<IteratorType, BodyType> tf(begin, NULL);
+    tf._res = val;
+
+    const int size = (int)std::distance(begin, end);
+    tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
+    return tf._res;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_accumulate(i.first.begin(), i.first.end(), 0);
+  }
+
+#endif
+
   virtual bool check(std::vector<OutputType>&, std::string&) const
   {
     return _res[0] == _res[1];

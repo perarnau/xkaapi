@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-ALGOS="count"
+ALGOS="accumulate"
 LIBS="stl kastl pastl tbb"
 DOS="bench check"
 
