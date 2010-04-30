@@ -33,3 +33,19 @@
 
 . how to run a binary
  . TODO, refer to run/do_main.sh for now
+ . do_run.sh <dirname>
+ . run each binary in dirname and create a session
+ . 
+ . for each binary
+  . if this a check
+
+ . it has to take into account the following vars:
+  . KAAPI_CPUSET_<N> where <N> a number
+   . or KAAPI_CPUSET (eq. to KAAPI_CPUSET_0)
+  . SEQUENCE_SIZE_<N>
+  . ITER
+
+. sessions
+ . archive containing params bench, check, of a run
+  . sessions/<date>/<id>/<bin>.o
+  . sessions/<date>/<id>/params
