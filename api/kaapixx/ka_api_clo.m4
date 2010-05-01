@@ -196,7 +196,7 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
   {
-std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " without thread as 1rst param" << std::endl;
+//std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " without thread as 1rst param" << std::endl;
     typedef void (TASK::*type_default_t)(Thread* M4_PARAM(`, formal$1_t', `', `'));
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
@@ -205,7 +205,7 @@ std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " without threa
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( Thread* M4_PARAM(`, formal$1_t', `', `') ) )
   {
-std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " with thread as 1rst param" << std::endl;
+//std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " with thread as 1rst param" << std::endl;
     typedef void (TASK::*type_default_t)(Thread* M4_PARAM(`, formal$1_t', `', `'));
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
@@ -255,7 +255,7 @@ std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " with thread a
   {
     kaapi_bodies_t retval = kaapi_bodies_t( registercpubody( fmt, &TaskBodyCPU<TASK>::operator()), 
                                             registergpubody( fmt, &TaskBodyGPU<TASK>::operator() ) );
-std::cout << "Bodies " << __PRETTY_FUNCTION__ << " registered, cpu=" << retval.cpu_body << std::endl;
+//std::cout << "Bodies " << __PRETTY_FUNCTION__ << " registered, cpu=" << retval.cpu_body << std::endl;
     return retval;
   }
 };
