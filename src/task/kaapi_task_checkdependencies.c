@@ -98,7 +98,7 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
         new_reader_a->reader_counter=counter;
         new_reader_a->waiting_task=task;
 
-	kaapi_read_membarrier();
+	kaapi_readmem_barrier();
         if (entry->datas->last_writer->pad!=0)
           //last_writer has already dependency datas, update its datas
         {
@@ -122,7 +122,7 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
 	// !!! Incorrect issues are possible (no decrementation of the counter, task will keep suspended state). TODO
 	if ((entry->datas->last_writer)>(entry->datas->last_writer_thread->pc))
         {
-		kaapi_read_membarrier();	
+		kaapi_readmem_barrier();	
 		if(entry->datas->last_writer->pad!=0)
 			KAAPI_ATOMIC_DECR(counter);
         }
