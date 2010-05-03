@@ -96,6 +96,7 @@ struct TaskBodyCPU<TaskSum> //: public TaskSum
   }
 };
 
+
 /* Kaapi Fibo task.
    A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
    and the type and access mode for each parameters.
@@ -132,3 +133,5 @@ struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */
     }
   }
 };
+
+static ka::RegisterBodyCPU<TaskFibo> dummy_object;
