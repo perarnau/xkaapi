@@ -44,13 +44,24 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#include <unistd.h>
-#include <errno.h>
+
+
+/* Verification of correct choice of values */
+#if (KAAPI_USE_STEALFRAME_METHOD ==KAAPI_STEALCAS_METHOD) 
+#  warning "Use CAS for stealing frame"
+#elif (KAAPI_USE_STEALFRAME_METHOD ==KAAPI_STEALTHE_METHOD)
+#  warning "Use Disjktra like protocol for stealing frame"
+#else
+#  error "Bad definition of value for steal frame method"
+#endif
+
+#if (KAAPI_USE_STEALTASK_METHOD ==KAAPI_STEALCAS_METHOD) 
+#  warning "Use CAS for stealing task"
+#elif (KAAPI_USE_STEALTASK_METHOD ==KAAPI_STEALTHE_METHOD)
+#  warning "Use Disjktra like protocol for stealing task"
+#else
+#  error "Bad definition of value for steal frame method"
+#endif
 
 
 // autotools can prompt for this ...

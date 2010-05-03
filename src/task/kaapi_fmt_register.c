@@ -43,7 +43,7 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <string.h>
+//#include <string.h>
 
 kaapi_format_t* kaapi_all_format_byfmtid[256] = 
 {
@@ -64,6 +64,7 @@ kaapi_format_t* kaapi_all_format_byfmtid[256] =
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
+
 
 /**
 */
@@ -95,4 +96,11 @@ kaapi_format_id_t kaapi_format_register(
   kaapi_all_format_byfmtid[entry] = fmt;
   
   return fmt->fmtid;
+}
+
+/**
+*/
+kaapi_format_t* kaapi_format_allocate( )
+{
+  return malloc( sizeof(kaapi_format_t) );
 }

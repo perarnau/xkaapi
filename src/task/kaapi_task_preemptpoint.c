@@ -44,44 +44,55 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_preemptpoint_before_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, void* arg_for_victim, int size )
+/**
+*/
+int kaapi_preemptpoint_before_reducer_call( 
+    struct kaapi_taskadaptive_result_t* ktr, 
+    kaapi_stealcontext_t* stc,
+    void* arg_for_victim, 
+    void* result_data, 
+    int result_size
+)
 {
-  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
-
-  /* lock stack in case of CONCURRENT WS in order to avoid stealing on this task */
-#if defined(KAAPI_CONCURRENT_WS)
-  pthread_mutex_lock(&stack->_proc->lsuspend.lock);
-  kaapi_task_unsetstealable(task);
-  pthread_mutex_unlock(&stack->_proc->lsuspend.lock);
-#endif
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_assert_debug( stc !=0 );
   
-  /* push data to the victim and list of thief */
-  if ((arg_for_victim !=0) && (size >0))
+  /* disable and wait no more thief on stc */
+  kaapi_steal_disable_sync( stc );
+  
+  /* recopy data iff its non null */
+  if (result_data !=0)
   {
-    memcpy(ta->result->data, arg_for_victim, size );
+    if (result_size < ktr->size_data) 
+      ktr->size_data = result_size;
+    if (ktr->size_data >0)
+      memcpy(ktr->data, result_data, ktr->size_data );
   }
-  if (ta->head !=0)
-  { /* recall the list if double linked list */
-    ta->result->rhead = ta->head;
-    ta->head = 0;
-    ta->result->rtail = ta->tail;
-    ta->tail = 0;
-  }
+  /* push data to the victim and list of thief */
+  ktr->arg_from_thief = arg_for_victim;
 
-  /* mark the stack as preemption processed -> signal victim */
-  stack->haspreempt = 0;
+  /* no lock needed since no more steal possible */
+  ktr->rhead = ta->head; ta->head = 0;
+  ktr->rtail = ta->tail; ta->tail = 0;
   
+  /* delete the preemption flag */
+  ktr->req_preempt = 0;
+
   return 0;
 }
 
-int kaapi_preemptpoint_after_reducer_call( kaapi_stack_t* stack, kaapi_task_t* task, int reducer_retval )
+
+/**
+*/
+int kaapi_preemptpoint_after_reducer_call( 
+    kaapi_taskadaptive_result_t* ktr, 
+    kaapi_stealcontext_t* stc,
+    int reducer_retval 
+)
 {
-  kaapi_taskadaptive_t* ta = task->sp; /* do not use kaapi_task_getarg */
 
   kaapi_writemem_barrier();   /* serialize previous line with next line */
-  ta->result->thief_term = 1;
-  kaapi_mem_barrier();
-  ta->result = 0;
+  ktr->thief_term = 1;
 
   return 1;
 }

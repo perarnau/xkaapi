@@ -83,16 +83,19 @@ AX_CHECK_COMPILER_STD([STD_CXX0X], [C++], [-std=c++0x], [], [
 ACX_LIB_NEW_LIB([XKAAPILIB], [-L\${libdir} -lxkaapi], [xkaapi])
 ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-I\${includedir}])
 
-ACX_LIB_NEW_LIB([XKAAPIPPLIB], [-L\${libdir} -lxkaapi++], [xkaapi++])
-ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPIPPLIB], [-I\${includedir}])
+ACX_LIB_NEW_LIB([KAAPIXXLIB], [-L\${libdir} -lkaapi++], [kaapi++])
+ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
+
+ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir} -lkastl], [kastl])
+ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
+
+ACX_LIB_NEW_LIB([ATHALIB], [-L\${libdir} -latha], [atha])
+ACX_LIB_ADD_PUBLIC_FLAGS([ATHALIB], [-I\${includedir}])
 
 ACX_LIB_NEW_PRG([XKAAPIPROGS])
-ACX_LIB_NEW_PRG([XKAAPIPPPROGS])
-
-#ACX_LIB_NEW_LIB([ATHA1], [-L\${libdir} -latha1], [atha1])
-#ACX_LIB_ADD_PUBLIC_FLAGS([ATHA1], [-I\${includedir}])
-
-#ACX_LIB_NEW_PRG([ATHA1PROGS])
+ACX_LIB_NEW_PRG([KAAPIXXPROGS])
+ACX_LIB_NEW_PRG([KASTLPROGS])
+ACX_LIB_NEW_PRG([ATHAPROGS])
 
 # add warning flags to the C and C++ compilers
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
@@ -149,25 +152,37 @@ AS_CASE([$enable_mode],
     AM_CPPFLAGS="$AM_CPPFLAGS"
     CFLAGS=""
     CXXFLAGS=""
-    AM_CFLAGS="$AM_CFLAGS -O3"
-    AM_CXXFLAGS="$AM_CXXFLAGS -O3"
+    AM_CFLAGS="$AM_CFLAGS -O4 -DNDEBUG"
+    AM_CXXFLAGS="$AM_CXXFLAGS -O4 -DNDEBUG"
   ], [dnl
     AC_MSG_ERROR([Unknown compilation mode '$enable_mode'. Aborting.])
   ])
 
-AC_ARG_WITH([cas],[AS_HELP_STRING([--with-cas],
-		 [add concurrent work stealing support])],[],
-  [with_cas=default]
+AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
+		 [choose the work stealing algorithm (cas,hybrid,disjkstra)])],[],
+  [with_steal=disjkstra]
 )
-AS_CASE([$with_cas],
-  [default|no], [dnl
-    AC_MSG_NOTICE([configure with cooperative workstealing algorithm])
-  ], [yes], [dnl
-    AC_MSG_NOTICE([configure with concurrent workstealing algorithm])
+AS_CASE([$with_steal],
+  [hybrid], [dnl
+    AC_MSG_NOTICE([configure with hybrid workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
-    AC_DEFINE([KAAPI_CONCURRENT_WS],1,[Support concurrent work stealing])
+    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
+    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
+  ], [cas], [dnl
+    AC_MSG_NOTICE([configure with CAS based workstealing algorithm])
+    # must not change the ABI. Enabling through AC*DEFINE
+    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
+    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],0,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
+  ], [disjkstra], [dnl
+    AC_MSG_NOTICE([configure with full Disjkstra based workstealing protocol])
+    # must not change the ABI. Enabling through AC*DEFINE
+    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
+    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],1,[Support concurrent work stealing/frame])
   ], [dnl
-    AC_MSG_ERROR([Unknown value '$with_cas' for --with-cas option. Aborting.])
+   AC_MSG_ERROR([Unknown value '$with_steal' for --with-steal option. Aborting.])
   ])
 
 AC_ARG_WITH([perfcounter],[AS_HELP_STRING([--with-perfcounter],
@@ -292,12 +307,29 @@ KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],
   ])
 ACX_LIB_LINK([XKAAPILIB],[NUMA])
 
-#ACX_LIB_LINK([ATHA1], [PUBLIC], [XKAAPILIB])
-ACX_LIB_LINK([XKAAPIPPLIB], [PUBLIC], [XKAAPILIB])
+
+ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
+
+ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
 
 ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
-#ACX_LIB_LINK([ATHA1PROGS], [ATHA1])
-ACX_LIB_LINK([XKAAPIPPPROGS], [XKAAPIPPLIB])
+ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
+	[-I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/src/libxkaapi.la])
+ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
+	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
+ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
+	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
+	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/src/libxkaapi.la])
+dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 AC_SUBST(AM_CPPFLAGS)
 AC_SUBST(AM_CFLAGS)
@@ -309,6 +341,10 @@ AC_SUBST(AM_LDFLAGS)
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
+	api/atha/Makefile
+	api/kaapixx/Makefile
+	api/kastl/Makefile
+	api/xkaapi/Makefile
 	examples/Makefile
 	src/Makefile
 

@@ -4,26 +4,26 @@
 /** The macro FIBOCODE and MAIN CODE are used to allows separate compilation
     of the fibo code and the main code.
 */
+#if defined(__cplusplus)
+extern "C" {
+#endif
 extern double kaapi_get_elapsedtime();
+#if defined(__cplusplus)
+}
+#endif
 
 #if defined(FIBOCODE)
 /* Sequential fibo function
 */
-void fiboseq(int n, int* r)
-{ 
-  if (n <2) {
-    *r = n;
-  }
-  else {
-    int r1;
-    int r2;
-    fiboseq(n-1, &r1);
-    fiboseq(n-2, &r2);
-    *r = r1+r2;
-  }
+long fiboseq( const long n ) {
+    if( n<2 )
+        return n;
+    else
+        return fiboseq(n-1)+fiboseq(n-2);
 }
+
 #else
-extern void fiboseq(int n, int* r);
+extern long fiboseq(long);
 #endif
 
 #if defined(MAINCODE)
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
   int i;
   int n;
   int niter;
-  int result = 0;
+  long result = 0;
   double t0, t1;
 
   if (argc >1)
@@ -48,12 +48,12 @@ int main(int argc, char** argv)
   {
     for (i=0; i<niter; ++i)
     {
-        fiboseq(n, &result);
+        result += fiboseq(n);
     }
   }
   t1 = kaapi_get_elapsedtime();
 /*  printf("Fibo(%i) = %i *** Time: t1=%e(s), t0=%e(s)\n", n, result, t1,t0 );*/
-  printf("Fibo(%i) = %i *** Time(s): %e\n", n, result, (t1-t0)/(double)niter );
+  printf("Fibo(%i) = %li *** Time(s): %e\n", n, result/niter, (t1-t0)/(double)niter );
   return 0;
 }
 #endif

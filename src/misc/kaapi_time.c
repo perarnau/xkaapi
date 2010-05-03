@@ -47,10 +47,27 @@
 #include <sys/time.h>
 
 
+/**
+*/
 double kaapi_get_elapsedtime(void)
 {
   struct timeval tv;
   int err = gettimeofday( &tv, 0);
   if (err  !=0) return 0;
   return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+}
+
+
+/**
+*/
+kaapi_uint64_t kaapi_get_elapsedns(void)
+{
+  struct timeval tv;
+  kaapi_uint64_t retval = 0;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  retval = (kaapi_uint64_t)tv.tv_sec;
+  retval *= 1000000UL;
+  retval += (kaapi_uint64_t)tv.tv_usec;
+  return retval*1000UL;
 }

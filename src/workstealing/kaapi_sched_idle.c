@@ -52,25 +52,18 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
   kaapi_thread_context_t* tmp;
-  kaapi_stack_t* stack;
+  kaapi_thread_context_t* thread;
   int err;
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-/*
-  double t0;
-  double t1;
-*/
-#endif
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
-  kaapi_assert_debug( kproc->ctxt !=0 );
+  kaapi_assert_debug( kproc->thread !=0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-/*  t0 = kaapi_get_elapsedtime();  */
 #endif
   do {
+
 /*    usleep( 10000 );*/
 /*pthread_yield_np();*/
 
@@ -86,20 +79,24 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       return;
     }
     
+    ctxt = 0;
     /* local wake up first */
     for (int i=0; i<5; ++i)
     {
-      ctxt = kaapi_sched_wakeup(kproc); 
-      if (ctxt !=0) break;
+      if (!kaapi_sched_suspendlist_empty(kproc))
+      {
+        ctxt = kaapi_sched_wakeup(kproc); 
+        if (ctxt !=0) break;
+      }
     }
 
     if (ctxt !=0) /* push kproc->ctxt to free and set ctxt as new ctxt */
     {
       /* push kproc context into free list */
-      tmp = kproc->ctxt;
+      tmp = kproc->thread;
 
       /* update */
-      kproc->ctxt = 0;
+      kproc->thread = 0;
 
       KAAPI_STACK_PUSH( &kproc->lfree, tmp );
 
@@ -109,26 +106,23 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
     
     /* steal request */
-    stack = kaapi_sched_emitsteal( kproc );
-    if (kaapi_stack_isempty(stack)) 
+    thread = kaapi_sched_emitsteal( kproc );
+
+    /* next assert if ok because we do not steal thread... */
+    kaapi_assert_debug( (thread == 0) || (thread == kproc->thread) );
+
+    if ((thread ==0) || (kaapi_frame_isempty(thread->sfp))) 
     {
       kaapi_sched_advance(kproc);
       continue;
     }
-    kaapi_assert_debug( stack != 0);
+    kaapi_assert_debug( thread != 0);
     
-    if (stack != kproc->ctxt)
-    {
-      ctxt = kproc->ctxt;
-      /* update */
-      kproc->ctxt = 0;
-
-      /* push it into the free list */
-      KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
-
-      /* set new context to the kprocessor */
-      kaapi_setcontext(kproc, stack);
-    }
+#if defined(LOG_STACK)
+    fprintf(stdout,"\n\n-------------- Thief stack: thief:@=%p\n", kproc );
+    kaapi_stack_print(stdout, kproc->thread );
+    fprintf(stdout,"\n\n-------------- End thief stack: thief:@=%p\n", kproc );
+#endif
 
 redo_execute:
 
@@ -140,7 +134,7 @@ redo_execute:
       kproc->t_sched += t1-t0;
     */
 #endif
-    err = kaapi_stack_execall( kproc->ctxt );
+    err = kaapi_stack_execframe( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
@@ -152,19 +146,22 @@ redo_execute:
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
-      kaapi_thread_context_t* ctxt = kproc->ctxt;
+      kaapi_thread_context_t* ctxt = kproc->thread;
       /* update */
-      kproc->ctxt = 0;
+      kproc->thread = 0;
 
       /* push it: suspended because top task is not ready */
-      KAAPI_STACK_PUSH( &kproc->lsuspend, ctxt );
+      kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
 
-      kproc->ctxt = kaapi_sched_wakeup(kproc); 
-      if (kproc->ctxt !=0) goto redo_execute;
+      if (kaapi_sched_suspendlist_empty(kproc))
+       kproc->thread = 0;
+      else
+        kproc->thread = kaapi_sched_wakeup(kproc); 
+      if (kproc->thread !=0) goto redo_execute;
 
       /* else reallocate a context */
       ctxt = kaapi_context_alloc(kproc);
-      ctxt->hasrequest = 0;
+
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
     }

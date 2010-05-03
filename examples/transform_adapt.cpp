@@ -66,7 +66,7 @@ int main(int argc, char** argv)
   t0 = kaapi_get_elapsedtime();
   for(int i = 0; i < n; ++i) 
   {
-    input[i] = random.genrand_real3();
+    input[i] = i; //random.genrand_real3();
     output[i] = 0;
   }
   t1 = kaapi_get_elapsedtime();
@@ -90,7 +90,8 @@ int main(int argc, char** argv)
   {
     if (output[i] !=  op( input[i]))
     {
-      std::cout << "Fail, i:" << i << ", @:" << output + i << ", input @:" << input + i << std::endl;
+      std::cout << "Fail, i:" << i << ", @:" << output + i << ", input @:" << input + i 
+                << " -> result:" << output[i] << " correct is:" << op(input[i]) << std::endl;
       isok = false;
     }
   }

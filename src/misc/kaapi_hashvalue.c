@@ -52,9 +52,13 @@
 */
 #if !defined (get16bits)
 /* [TG] indep from big/little endian. */
+#if 1
 #define get16bits(d) ( (((const kaapi_uint8_t *)(d))[1] << (kaapi_uint32_t)8)\
                        +((const kaapi_uint8_t *)(d))[0] \
                      )
+#else
+#  define get16bits(d) ( 0xFFFF & ((const kaapi_uint32_t*)d)[0] )
+#endif
 #endif
 
 kaapi_uint32_t kaapi_hash_value_len(const char * data, int len) 

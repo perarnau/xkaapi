@@ -45,38 +45,56 @@
 #include "kaapi_impl.h"
 
 
+double t_finalize = 0;
+
 /**
 */
-void kaapi_taskfinalize_body( kaapi_task_t* task, kaapi_stack_t* stack )
+void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
 {
-  kaapi_taskadaptive_t* ta = task->sp;
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-    double t0, t1;
+#if 1
+  double t0 = kaapi_get_elapsedtime();
 #endif
 
-  if (ta->mastertask ==0) /* I'm a master task, wait  */
-  {
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
+  while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
+    kaapi_slowdown_cpu();
+
+  while (KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
+    kaapi_slowdown_cpu();
+
+#if 1
+  t_finalize += kaapi_get_elapsedtime()-t0;
 #endif
-    while (KAAPI_ATOMIC_READ( &ta->thievescount ) !=0) pthread_yield();
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime();
-    stack->_proc->t_sched += t1-t0;
-#endif
-    kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
-#if defined(KAAPI_DEBUG)
-    kaapi_assert_debug( ta->thievescount._counter == 0);
-#endif
-  }
-  else if (ta->result !=0) /* thief has been preempted or flagged as NOPREEMPT */
-  {
-    /* If I have something to write, write it */
-    if ((ta->local_result_data !=0) && (ta->local_result_size !=0))
-    {
-      memcpy( ta->result->data, ta->local_result_data, ta->local_result_size );
-    }
-  }
+
+  kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
+
+  kaapi_assert(ta->head ==0)
+  kaapi_assert(ta->tail ==0)
+
+  /* hack ? restore the upper frame (the one that should have execute pushstealcontext 
+  */
+  kaapi_thread_restore_frame(thread-1, &ta->frame);
+}
+
+
+/**
+*/
+int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
+{
+  /* end with the adapt dummy task -> change body with nop */
+  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  /* avoid to steal old instance of this task */
+  ta->sc.splitter = 0;
+  ta->sc.argsplitter = 0;
+  
+  kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
+  kaapi_task_setextrabody( ta->sc.ownertask, kaapi_nop_body );
+
+  /* push task to wait childs */
+  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
+  kaapi_task_init( task, kaapi_taskfinalize_body, stc );
+  kaapi_thread_pushtask(stc->thread);
+  return 0;
 }

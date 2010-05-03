@@ -47,12 +47,13 @@
 
 /**
 */
-int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt )
+int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
 {
-  ctxt->requests   = kproc->hlrequests.requests;
-  ctxt->hasrequest = 0;
-  kproc->ctxt = ctxt;
-  ctxt->_proc = kproc;
+  kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
+  stack->requests   = kproc->hlrequests.requests;
+  stack->hasrequest = 0;
+  kproc->thread     = thread;
+  thread->proc      = kproc;
   return 0;
 
 #if 0  /* TODO: next version when also saving the stack context */

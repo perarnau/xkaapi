@@ -43,358 +43,258 @@
 ** 
 */
 #include "kaapi_impl.h"
+#if defined(KAAPI_DEBUG_LOURD)
+#include <unistd.h>
+#endif
 
-/* fwd decl */
-static int kaapi_updateaccess_ready( 
-  kaapi_hashmap_t* access_to_gd,
-  kaapi_task_t* task_bot, 
-  const kaapi_format_t* task_fmt, 
-  kaapi_task_state_t state 
-);
-
-static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi_task_t** curr, kaapi_task_t* endmax );
-
-static int kaapi_update_version( 
-  kaapi_hashmap_t* access_to_gd,
-  int count, 
-  kaapi_task_t* beg, 
-  kaapi_task_t* endmax 
-);
-
-/*
+/* Compute if the task with arguments pointed by sp and with format task_fmt is ready
+   Return the number of non ready data
 */
-static int kaapi_updateaccess_ready( 
-  kaapi_hashmap_t* access_to_gd, 
-  kaapi_task_t* task, 
-  const kaapi_format_t* fmt, 
-  kaapi_task_state_t state 
-)
+static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, kaapi_hashmap_t* map )
 {
-  int i;
-  int countparam;
-  int waitparam;
-  
-  /* if access INIT & flag == READY, do not recompute readiness, else update version */
-  if ((task->flag & KAAPI_TASK_MASK_READY) && (state ==KAAPI_TASK_S_INIT)) return 0;
-  
-  /* task without synchronisation */
-  if (!kaapi_task_issync( task )) 
-  {
-    if (kaapi_task_isadaptive(task) && ((state ==KAAPI_TASK_S_EXEC) || (state == KAAPI_TASK_S_INIT)))
-    {
-      task->flag |= KAAPI_TASK_MASK_READY;
-      return 0;
-    }
-    task->flag &= ~KAAPI_TASK_MASK_READY;
-    return 0;
-  }
+  int i, wc, countparam;
 
-  countparam = waitparam = fmt->count_params;
+  countparam = wc = task_fmt->count_params;
   for (i=0; i<countparam; ++i)
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task_fmt->mode_params[i]);
     if (m == KAAPI_ACCESS_MODE_V) 
     {
-      --waitparam;
+      --wc;
       continue;
     }
-    kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)kaapi_task_getargs(task));
+    kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)sp);
 
-    /* key point here to be able to reuse user data */
-    kaapi_gd_t* gd = &kaapi_hashmap_find( access_to_gd, access->data )->value;
+    /* */
+    kaapi_gd_t* gd = &kaapi_hashmap_find( map, access->data )->value;
     
-    switch (state) {
-      case KAAPI_TASK_S_INIT:
-        if ((gd->last_mode == KAAPI_ACCESS_MODE_VOID) || KAAPI_ACCESS_IS_CONCURRENT(m, gd->last_mode))
-        {
-          gd->last_version = access->data;
-          access->version = gd->last_version;
-          --waitparam; 
-        }
-        else 
-        {
-          gd->last_version = 0;
-          access->version  = 0;
-        }
-        gd->last_mode = m;
-      break;
-
-      case KAAPI_TASK_S_TERM:
-          gd->last_version = access->data;          /* this is the data */
-          gd->last_mode = KAAPI_ACCESS_MODE_R; /* and it could be read */
-          --waitparam;
-      break;
-
-      case KAAPI_TASK_S_WAIT:
-      case KAAPI_TASK_S_EXEC:
-      case KAAPI_TASK_S_STEAL:
-      {
-        int r1 __attribute__((unused)) = KAAPI_ACCESS_IS_ONLYWRITE(m);
-        int r2 __attribute__((unused)) = KAAPI_ACCESS_IS_READWRITE(m);
-        if (KAAPI_ACCESS_IS_ONLYWRITE(m) || KAAPI_ACCESS_IS_READWRITE(m))
-          gd->last_version = 0;              /* data not produced */
-        else {
-          gd->last_version = access->data;   /* data R -> is ready */
-        }
-        gd->last_mode = m;
-        --waitparam; /* but parameter is ready ! */
-      } break;
-    }
-  }
-  if (waitparam ==0)
-    task->flag |= KAAPI_TASK_MASK_READY;
-  else 
-    task->flag &= ~KAAPI_TASK_MASK_READY;
-  return waitparam;
-}
-
-
-/* Warning: frame are [beg, end] with beg >= end because stack of task growth down.
-*/
-static int kaapi_search_framebound( kaapi_task_t* beg, kaapi_task_t** end, kaapi_task_t** curr, kaapi_task_t* endmax)
-{
-  while (beg != endmax)
-  {
-    if (beg->body == &kaapi_retn_body)
+    /* compute readyness of access */
+    if ( KAAPI_ACCESS_IS_ONLYWRITE(m)
+      || (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
+      || (KAAPI_ACCESS_IS_CONCURRENT(m, gd->last_mode))
+       )
     {
-      kaapi_frame_t* frame = kaapi_task_getargst( beg, kaapi_frame_t );
-      *end = beg;
-      *curr = frame->sp;
-      return 1;
+      --wc;
     }
-    --beg;
+    /* optimization: break from enclosest loop here */
+    
+    /* update map information for next access if no set */
+    if (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
+      gd->last_mode = m;
+    
+    /* currently, datas produced by aftersteal_task are visible to thief in order to augment
+       the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R could
+       be used (the middle R->W is splitted -renaming is also used in other context-).
+       But we do not take into account of this extra parallelism.
+       
+       The problem that remains to solve:
+        - if task_bot is kaapi_aftersteal_body task, then it corresponds to a stolen task already
+        finished (before the victim thread is trying to execute it, else we will see an nop_body. 
+        In this task:
+          - each access->data points to the original data in the victim thread
+          - each access->version points either to 0 (no new data produced) either to an heap allocated
+          data value != access->data that may be used for next reader.
+          This situation is only all the case W, CW access mode accesses.
+        - this task_bot is considered as terminated and W, CW or RW data value 'access->version' may be consumed but
+          - access->version (for W or CW) may be released if the victim thread executes the task 'aftersteal'
+          - in the same time, this pointed data may be read by the stolen closure (if all its access are ready, 
+          here we do not know about this fact: we need to wait after looking for all others parameters of the current task)
+
+        A solution is to store references to accesses to last version in gd table:
+          - if a closure is found to be ready:
+              - we assume than gd map will store a pointer to the version to read (or write).
+              - the victim will made a call to 'cas(access->version, access->version, 0)' to delete version
+                  1/ if ok -> the victim copy the data into the gd an set to 0 its version
+                  2/ if nok -> the victim only copy the version to the gd, 2 versions of the data will 
+                  be alive until the next aftersteal (that cannot be executed because the victim if currently
+                  under executing a first (previous) after steal).
+              - the thief will made a call to 'cas(gd->access->version, gd->version, 0)' to keep the owner ship 
+              on the data gd->access->version.
+                  1/ if ok -> the thief get the owner ship of data which will be deleted during the aftersteal
+                  of the under stealing closure
+                  2/ ifnok -> the victim has executed the aftersteal, then the victim may read gd->data as the correct version
+                  (this guarantee has to be written to ensure than reading gd->data is yet valid)
+                  (no other tasks have modified the shared between the 1rst aftersteal the task detected to be stolen)
+            - seems good... with more details
+    */
   }
-  *curr = 0;
-  *end = endmax;
-  return 0;
+  return wc;
 }
 
 
-/* update all versions & readiness flag for tasks in the frame [beg, end(, curr is the current task of the frame 
+/** Steal task in the frame [frame->pc:frame->sp)
 */
-static int kaapi_update_version( kaapi_hashmap_t* access_to_gd, int count, kaapi_task_t* beg, kaapi_task_t* endmax )
+static int kaapi_sched_stealframe(
+    kaapi_thread_context_t* thread, 
+    kaapi_frame_t*          frame, 
+    kaapi_hashmap_t*        map, 
+    int count, kaapi_request_t* requests 
+)
 {
-  const kaapi_format_t* fmt;
-  int waitparam;
-  kaapi_task_state_t state;
-  kaapi_task_t* end;
-  kaapi_task_t* curr =0;
+  const kaapi_format_t* task_fmt;
+  kaapi_stack_t*        stack;
+  kaapi_task_body_t     task_body;
+  kaapi_task_t*         task_top;
+  kaapi_task_t*         task_exec;
+  int                   replycount;
+
+  /* suppress history of the previous frame ! */
+  kaapi_hashmap_clear( map );
+  stack      = kaapi_threadcontext2stack(thread);
+  task_body  = kaapi_nop_body;
+  task_top   = frame->pc;
+  task_exec  = 0;
+  replycount = 0;
   
-  /* search frame bound */
-  kaapi_search_framebound( beg, &end, &curr, endmax );
-
-  kaapi_assert_debug( (end ==0) || (end == endmax) || (end->body == &kaapi_retn_body) );
-#if 0
-  printf("Update frame: beg:%p  - end:%p, pc: %p\n", (void*)beg, (void*)end, (void*)curr );
-#endif
-
-  while ((beg != endmax) && (beg != end) && (count >0))
+  /* */
+  while ((count > replycount) && (task_top > frame->sp))
   {
-    if (beg->format ==0)
-      fmt = beg->format = kaapi_format_resolvebybody( beg->body );
-    else
-      fmt = beg->format;
+    task_body = kaapi_task_getextrabody(task_top);
 
-    if (fmt ==0) 
+    /* its an adaptive task !!! */
+    if (task_body == kaapi_adapt_body)
     {
-      --beg;
+      kaapi_stealcontext_t* const sc =
+	kaapi_task_getargst(task_top, kaapi_stealcontext_t);
+
+      /* for kaapi_steal_sync */
+      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 1);
+      kaapi_writemem_barrier();
+
+      kaapi_task_splitter_t  splitter = sc->splitter;
+      void*                  argsplitter = sc->argsplitter;
+
+      if ( (splitter !=0) && (argsplitter !=0) )
+      {
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+        if (kaapi_task_cas_extrastate(task_top, kaapi_adapt_body, kaapi_suspend_body))
+#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = task_top;
+        kaapi_writemem_barrier();
+        if (thread->sfp[-1].pc != task_top) 
+#endif        
+        {
+          /* steal sucess */
+          replycount += kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, count-replycount, requests );
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+          /* cas success: reset the ebody */
+          kaapi_task_setextrabody(task_top, kaapi_adapt_body);
+#endif
+        }
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = 0;
+#endif
+      }
+
+      /* for kaapi_steal_sync */
+      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
+
+      --task_top;
       continue;
     }
 
-    state = kaapi_task_getstate( beg );
-    waitparam = kaapi_updateaccess_ready( access_to_gd, beg, fmt, state );
-
-    /* TODO: Optimization: can i steal it ? to decr count and return quickly */
-    if (waitparam ==0) 
+    task_fmt = kaapi_format_resolvebybody( task_body );
+    if (task_fmt !=0)
     {
-      if (kaapi_task_isadaptive(beg) && (state == KAAPI_TASK_S_EXEC)) return count = 0; 
-      if ((kaapi_task_isstealable(beg)||kaapi_task_isadaptive(beg))&& (state == KAAPI_TASK_S_INIT))
+      int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, map );
+      if ((wc ==0) && kaapi_task_isstealable(task_top))
       {
-//printf("Task: %p isready, count:%i\n", (void*)beg,count);
-        --count;
-return 0;
-      }
-#if 0
-      /* found ready task*/
-      if (count ==0) 
-      {
-#if 0
-        printf("Abort update version on Task: %p \n", (void*)beg);
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+        if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
+        {
+#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = task_top;
+        kaapi_writemem_barrier();
+        if ((thread->sfp[-1].pc != task_top) && kaapi_task_isstealable(task_top))
+        {
+          /* else victim get owner of task_top */
+          task_top->body = kaapi_suspend_body;
+#else          
+#  error "Should be implemented"
 #endif
-        return 0;
-      }
+#if defined(LOG_STACK)
+          fprintf(stdout,"\n\n>>>>>>>> %p:: STEAL Task=%p, wc=%i\n", thread, (void*)task_top, wc );
+          kaapi_stack_print(stdout, thread );
 #endif
+          kaapi_assert_debug( count-replycount <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
+          replycount += kaapi_task_splitter_dfg(thread, task_top, count-replycount, requests );
+        }
+#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+        thread->thiefpc = 0;
+#endif
+        /* else victim may have executed it */
+      }
     }
-
-    --beg;
+    --task_top;
   }
 
-  /* find in sub frame */
-  if (curr !=0) 
-  {
-    kaapi_assert_debug( (end !=0) && (end->body == &kaapi_retn_body) );
-    if (end-1 > endmax) 
-    { /* recursive call on sub frame */
-      kaapi_update_version( access_to_gd, count, end-1, endmax );
-    }
-  }
-  
-  return count;
+  return replycount;
 }
 
 
 /** Steal task in the stack from the bottom to the top.
     Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
+    This signature is the same as a splitter function.
 */
-int kaapi_sched_stealstack  ( kaapi_stack_t* stack, kaapi_task_t* curr )
+int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
 {
-  kaapi_task_t*         task_top;
-  kaapi_task_t*         task_bot;
-  const kaapi_format_t* task_fmt;
-  int count, savecount;
-  int step;
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+  kaapi_frame_t*           top_frame;
+#endif
+  int savecount;
   int replycount;
-  int isready;
-  int isupdateversion = 0;
-  kaapi_task_state_t state;
   
-  kaapi_hashmap_t access_to_gd;
+  kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
 
-#if defined(KAAPI_CONCURRENT_WS)
-  count = KAAPI_ATOMIC_READ(&stack->_proc->hlrequests.count);
-#else
-  count = stack->hasrequest;
-#endif
-  if (count ==0) return 0;
-  if (kaapi_stack_isempty( stack)) return 0;
-
-
-  kaapi_hashmap_init( &access_to_gd, 0 ); //&stackbloc );
-
-  savecount = count;
-
-#if 0
-printf("------ STEAL STACK @:%p\n", (void*)stack );
-//kaapi_stack_print(0, stack);
-#endif
-
-#if 0 /*defined(KAAPI_USE_PERFCOUNTER)*/
-  double t1, t0 = kaapi_get_elapsedtime();
-#endif
-  /* reset dfg constraints evaluation */
-  step = 0;
-  
- redo_compute: 
-  /* iterate through all the tasks from task_bot until task_top */
-  task_bot = kaapi_stack_bottomtask(stack);
-  task_top = kaapi_stack_toptask(stack);
-
+  if ((thread ==0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
+  savecount  = count;
   replycount = 0;
 
-  while ((count >0) && (task_bot !=0) && (task_bot != task_top))
+  /* be carrefull, the map should be clear before used */
+  kaapi_hashmap_init( &access_to_gd, &stackbloc );
+
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+  /* lock the stack, if cannot return failed */
+  if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
+  kaapi_readmem_barrier();
+
+  /* try to steal in each frame */
+  for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
   {
-    if (task_bot == 0) break;
-
-    if ((task_bot->format ==0) && (!kaapi_task_isadaptive(task_bot)))
-      task_fmt = task_bot->format = kaapi_format_resolvebybody( task_bot->body );
-    else
-      task_fmt = task_bot->format;
-    if ((task_fmt ==0) && (!kaapi_task_isadaptive(task_bot)))
-    {
-      --task_bot;
-      continue;
-    }
-
-    /* compute dependency */
-    if (step == 0)
-    {
-      if ( (isupdateversion ==0) && kaapi_task_issync(task_bot) )
-      {
-        kaapi_update_version( &access_to_gd, count, task_bot, task_top );
-#if 0
-        printf("================ AFTER UPDATE VERSION \n");
-        fflush(stdout);
-        kaapi_stack_print( 1, stack);
-        printf("================  \n");
-        fflush(stdout);
-#endif
-        isupdateversion = 1;
-      }
-    }
-    
-    /* */
-    isready = kaapi_task_isready(task_bot);
-#if defined(KAAPI_CONCURRENT_WS)
-    if ((!isready) && kaapi_task_issync(task_bot))
-#else
-    if ((!isready || ((curr !=0) && (task_bot == curr))) && kaapi_task_issync(task_bot))
-#endif
-    {
-      /* next task */
-      --task_bot;
-      continue;
-    }
-
-    state = kaapi_task_getstate( task_bot );
-    if ((state == KAAPI_TASK_S_TERM) || (state == KAAPI_TASK_S_STEAL) || !kaapi_task_isstealable(task_bot))
-    {
-      /* next task */
-      --task_bot;
-      continue;
-    }
-
-    /* Is it a DFG or task that will require or introduce synchronisations ? */
-    if (kaapi_task_issync(task_bot) && (state == KAAPI_TASK_S_INIT))
-    {
-      int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
-#if 0/*defined(KAAPI_USE_PERFCOUNTER)*/
-      t1 = kaapi_get_elapsedtime();
-      printf("[STEAL] date:%15f, delay: %f\n", t0, t1-t0);
-#endif
-      count -= retval;
-      replycount += retval;
-      kaapi_assert_debug( count >=0 );
-    }
-    else if (kaapi_task_isadaptive(task_bot)) 
-    {
-      kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)task_bot->sp;
-      if ((state == KAAPI_TASK_S_INIT) && (task_fmt !=0)) /* steal the entire task (always better !) */
-      {
-        int retval = kaapi_task_splitter_dfg(stack, task_bot, count, stack->requests );      
-#if 0/*defined(KAAPI_USE_PERFCOUNTER)*/
-        t1 = kaapi_get_elapsedtime();
-        printf("[STEAL] date:%15f, delay: %f\n", t0, t1-t0);
-#endif
-        count -= retval;
-        replycount += retval;
-        kaapi_assert_debug( count >=0 );
-      }
-      else if ( (ta->splitter !=0) && ((state == KAAPI_TASK_S_EXEC) || (state == KAAPI_TASK_S_INIT)) ) /* partial steal */
-      {
-        int retval = (*ta->splitter)(stack, task_bot, count, stack->requests, ta->argsplitter );
-        count -= retval;
-        /* never increment replycount here, because user splitter function was call and has already
-           decrement the request counter
-           replycount += retval;
-        */
-        kaapi_assert_debug( count >=0 );
-      }
-    }
-    
-    --task_bot;
+    if (top_frame->pc == top_frame->sp) continue;
+    replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
   }
 
-#if 0
-printf("------ END STEAL @:%p\n", (void*)stack );
+  KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
+
+#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+
+  /* try to steal in each frame */
+  thread->thieffp = thread->stackframe;
+  kaapi_writemem_barrier();
+  while (count > replycount)
+  {
+    if (thread->thieffp > thread->sfp) break;
+    if (thread->thieffp->pc > thread->thieffp->sp) 
+      replycount += kaapi_sched_stealframe( thread, thread->thieffp, &access_to_gd, count-replycount, request );
+    ++thread->thieffp;
+    kaapi_writemem_barrier();
+  }
+  thread->thieffp = 0;
+#else
+#  error "Bad steal frame method"    
 #endif
-  
+
   kaapi_hashmap_destroy( &access_to_gd );
 
-  if (replycount >0)
-  {
-    KAAPI_ATOMIC_SUB( &stack->_proc->hlrequests.count, replycount );
-  }
+  return replycount;
+}
 
-  return savecount-count;
+
+/*
+*/
+int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
+{
+  return kaapi_sched_stealstack( stc->ctxtthread, stc->ownertask, stc->hasrequest, stc->requests );
 }

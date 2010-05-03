@@ -90,7 +90,7 @@ namespace kaapi_utils
       kaapi_task_initadaptive(thief_stack, thief_task, NULL, NULL, KAAPI_TASK_ADAPT_DEFAULT);
       kaapi_task_setbody(thief_task, &static_thiefentrypoint<SelfType>);
       
-      void* const stack_data = kaapi_stack_pushdata(thief_stack, sizeof(SelfType));
+      void* const stack_data = kaapi_thread_pushdata(thief_stack, sizeof(SelfType));
       kaapi_task_setargs(thief_task, stack_data);
       output_work = kaapi_task_getargst(thief_task, SelfType);
       
@@ -124,7 +124,7 @@ namespace kaapi_utils
   template<typename SelfType>
   static void start_adaptive_task(SelfType* work)
   {
-    kaapi_stack_t* const stack = kaapi_self_stack();
+    kaapi_stack_t* const stack = kaapi_self_frame();
     kaapi_task_t* const task = kaapi_stack_toptask(stack);
 
     kaapi_task_initadaptive( stack, task, static_mainentrypoint<SelfType>, (void*)work, KAAPI_TASK_ADAPT_DEFAULT);

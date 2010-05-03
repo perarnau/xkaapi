@@ -46,32 +46,19 @@
 
 /** Return the number of splitted parts (at most 1 if the task may be steal)
 */
-int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count, struct kaapi_request_t* array)
+int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task, int count, struct kaapi_request_t* array)
 {
   int i;
-  int countparam;
-  kaapi_request_t* request   = 0;
-  kaapi_stack_t* thief_stack = 0;
-  kaapi_task_t*  steal_task   = 0;
-
-  kaapi_assert_debug (task !=0);
-  kaapi_assert_debug (task->format !=0);
+  kaapi_request_t*        request    = 0;
+  kaapi_task_t*           thief_task   = 0;
+  kaapi_thread_t*         thief_thread = 0;
+  kaapi_tasksteal_arg_t*  argsteal;
   
-  KAAPI_LOG(50, "dfgsplitter task: 0x%p\n", (void*)task);
 
-  kaapi_assert_debug( task->body !=0);
-  kaapi_assert_debug( task->body !=kaapi_suspend_body);
-  kaapi_assert_debug( task->body !=kaapi_aftersteal_body);
-  kaapi_assert_debug( task->body !=kaapi_taskwrite_body);
-  kaapi_assert_debug( task->body !=kaapi_tasksteal_body);
-  kaapi_assert_debug( task->body !=kaapi_taskstartup_body);
-  kaapi_assert_debug( task->body !=kaapi_retn_body);
-  kaapi_assert_debug( task->body !=kaapi_tasksig_body);
-  kaapi_assert_debug( task->body !=kaapi_taskfinalize_body);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) == 1+_kaapi_get_current_processor()->kid );
+  kaapi_assert_debug( task !=0 );
+  kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
 
-  /* cas the state */
-  if (!kaapi_task_casstate(task, KAAPI_TASK_S_INIT, KAAPI_TASK_S_STEAL )) return 0;
-  
   /* find the first request in the list */
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
   {
@@ -81,61 +68,26 @@ int kaapi_task_splitter_dfg(kaapi_stack_t* stack, kaapi_task_t* task, int count,
       break;
     }
   }
+  kaapi_assert(request !=0);
 
-  if (request ==0) 
-  {
-    kaapi_task_setstate(task, KAAPI_TASK_S_INIT);
-    return 0;
-  }
-    
-  task->body = &kaapi_suspend_body;
-  
-  countparam = task->format->count_params;
-    
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
        - the original stack
        - the original task pointer
-       - the original body
        - the pointer to shared data with R / RW access data
        - and at the end it reserve enough space to store original task arguments
+     The original body is saved as the extra body of the original task data structure.
   */
-  thief_stack = request->stack;
+  thief_thread = request->thread;
+
+  thief_task = kaapi_thread_toptask( thief_thread );
+  kaapi_task_init( thief_task, kaapi_tasksteal_body, kaapi_thread_pushdata(thief_thread, sizeof(kaapi_tasksteal_arg_t)) );
+  argsteal = kaapi_task_getargst( thief_task, kaapi_tasksteal_arg_t );
+  argsteal->origin_thread         = thread;
+  argsteal->origin_task           = task;
   
-  steal_task = kaapi_stack_toptask( thief_stack );
-  steal_task->flag = KAAPI_TASK_STICKY;
-  kaapi_task_setbody( steal_task, &kaapi_tasksteal_body );
-  kaapi_task_format_debug( steal_task );
-  kaapi_task_setargs( steal_task, kaapi_stack_pushdata(thief_stack, sizeof(kaapi_tasksteal_arg_t)) );
-  kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( steal_task, kaapi_tasksteal_arg_t );
-  arg->origin_stack          = stack;
-  arg->origin_task           = task;
-  arg->origin_fmt            = task->format;
+  kaapi_thread_pushtask( thief_thread );
 
-  kaapi_stack_pushtask( thief_stack );
-
-  /* ... and push continuation if w, cw or rw mode */
-  if (1)
-  {
-    kaapi_task_t* task = kaapi_stack_toptask( thief_stack );
-    task->flag = KAAPI_TASK_STICKY;
-    kaapi_task_setbody( task, &kaapi_taskwrite_body );
-    kaapi_task_format_debug( task );
-    kaapi_task_setargs( task, arg ); /* keep the pointer as kaapi_tasksteal_body */
-    kaapi_stack_pushtask( thief_stack );
-  }
-
-#if 0
-  printf("Steal task:%p, stack:%p, fmt:%p ||| thiefstack:%p arg:%p, task:%p, fmt:%p\n", task, stack, task->format, thief_stack, arg, arg->origin_task, arg->origin_fmt );
-/*
-  printf("Victim stack:\n");
-  kaapi_stack_print( 1, stack );
-*/
-  printf("Thief stack:\n");
-  kaapi_stack_print( 1, thief_stack );
-#endif
- 
-  /* do not decrement the counter */
-  _kaapi_request_reply( stack, task, request, thief_stack, 0, 1, 0 ); /* success of steal */
+  _kaapi_request_reply( request, request->mthread, 1 ); /* success of steal */
   return 1;
 }

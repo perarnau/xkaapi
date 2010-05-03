@@ -511,8 +511,11 @@ typedef struct kaapi_task_format_t {
 #else
   #define kaapi_stack_push(stack) \
     ++(stack)->sp
-  #define kaapi_stack_push2(stack, count) \
-    (stack)->sp++; (stack)->sp_data += count
+  #define kaapi_stack_push2(stack, count)	\
+  do {						\
+    (stack)->sp++;				\
+    (stack)->sp_data += count;			\
+  } while (0)
 #endif
 
   /** \ingroup TASK
@@ -612,7 +615,7 @@ typedef struct kaapi_task_format_t {
       \retval EWOULDBLOCK the execution of the task will block the control flow.
       \retval EINTR the control flow has received a KAAPI interrupt.
   */
-  extern inline int kaapi_stack_execone(kaapi_stack_t* stack, kaapi_task_t* task)
+  static inline int kaapi_stack_execone(kaapi_stack_t* stack, kaapi_task_t* task)
   {
 #if defined(KAAPI_DEBUG)
     if (stack ==0) return EINVAL;

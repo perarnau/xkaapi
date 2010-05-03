@@ -53,7 +53,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   size_t k_sizetask;
   size_t k_sizedata;
 
-  kproc->ctxt         = 0;  
+  kproc->thread       = 0;  
   kproc->kid          = -1U;
   kproc->issteal      = 0;
   kproc->hlevel       = 0;
@@ -61,22 +61,27 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->hlcount      = 0;
   kproc->hkids        = 0;
   
-  kaapi_listrequest_init( &kproc->hlrequests );
+  KAAPI_ATOMIC_WRITE( &kproc->lock, 0);
+  
+  kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
-  KAAPI_STACK_CLEAR( &kproc->lsuspend );
-  pthread_mutex_init(&kproc->lsuspend.lock, 0);
-  pthread_cond_init(&kproc->lsuspend.cond, 0);           
-
+  kaapi_wsqueuectxt_init( &kproc->lsuspend );
+#if 0
+  kaapi_wsqueuectxt_init( &kproc->lready );
+#else
+  kproc->ready = 0;
+#endif
   KAAPI_STACK_CLEAR( &kproc->lfree );
 
   kproc->fnc_selecarg = 0;
-  kproc->fnc_select   = default_param.wsselect;
+  kproc->fnc_select   = kaapi_default_param.wsselect;
   
+
   /* workload */
   kproc->workload._counter= 0;
   
   /* allocate a stack */
-  k_stacksize = default_param.stacksize;
+  k_stacksize = kaapi_default_param.stacksize;
   k_sizetask  = k_stacksize / 2;
   k_sizedata  = k_stacksize - k_sizetask;
 
