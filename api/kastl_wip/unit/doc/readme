@@ -33,6 +33,7 @@
 
 . how to run a binary
  . run/do_main.sh is the script to use
+ . can take the bin (compiled as above) directory in argument
  . it contains variables the user has to modify to match needs
   . LD_LIBRARY_PATH must points to kaapi, tbb paths
   . SIZE<N>, where N from 0 to 8, the sequence input size

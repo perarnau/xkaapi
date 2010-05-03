@@ -477,7 +477,8 @@ namespace rts {
     {
       _end += size_max - size_min;
       kaapi_mem_barrier();
-      if (_beg < _end) {
+      if (_beg < _end)
+      {
 	r.first = _end;
 	r.last  = r.first+size_min;
 	unlock();
@@ -500,26 +501,15 @@ namespace rts {
   template<int bits>
   bool work_queue_t<bits>::steal_unsafe(range_t<bits>& r, size_type size_max )
   {
-    kaapi_assert_debug( 1 <= size_max );
-    _end -= size_max;
+    _end -= size;
     kaapi_mem_barrier();
     if (_end < _beg)
     {
-      _end += size_max - 1;
-      kaapi_mem_barrier();
-      if (_beg < _end)
-      {
-        r.first = _end;
-        r.last  = r.first+1;
-        return true;
-      }
-      _end += 1; 
+      _end += size;
       return false;
     }
-    
     r.first = _end;
-    r.last  = r.first + size_max;
-    
+    r.last  = r.first + size;
     return true;
   }  
 
