@@ -162,6 +162,8 @@ begin_loop:
     if(pc->pad!=0)
     {
       kaapi_counters_list* datas=(kaapi_counters_list*)pc->pad;
+      pc->pad=0;
+      
       while (datas!=0)
       {
         KAAPI_ATOMIC_DECR(datas->reader_counter);
