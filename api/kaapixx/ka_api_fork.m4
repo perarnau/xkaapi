@@ -1,4 +1,3 @@
-
     /* KAAPI_NUMBER_PARAMS is the number of possible parameters */
     template<class SIGNATURE, M4_PARAM(`class E$1, class F$1', `', `, ')>
     kaapi_task_t* KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)( void (SIGNATURE::*)( Thread* M4_PARAM(`, F$1', `', `') ), M4_PARAM(`const E$1& e$1', `', `,') )
@@ -20,7 +19,7 @@
       ', `', `')
 #endif
       kaapi_task_t* clo = kaapi_thread_toptask( _thread );
-      kaapi_task_initdfg( clo, KaapiFormatTask_t::default_body, kaapi_thread_pushdata(_thread, sizeof(TaskArg_t)) );
+      kaapi_task_initdfg( clo, KaapiFormatTask_t::default_bodies.cpu_body, kaapi_thread_pushdata(_thread, sizeof(TaskArg_t)) );
       TaskArg_t* arg = kaapi_task_getargst( clo, TaskArg_t);
       /* here we do not detect a compile time the error without compilation with -DKAAPI_DEBUG 
          todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure

@@ -44,7 +44,6 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-
 // --------------------------------------------------------------------
 extern long fiboseq( const long n );
 
