@@ -1,0 +1,14 @@
+#ifndef KASTL_NUMERIC_INCLUDED
+# define KASTL_NUMERIC_INCLUDED
+
+
+#include "kastl/accumulate.h"
+#include "kastl/inner_product.h"
+
+#if 0
+#include "adjacent_difference.h"
+#include "adjacent_find.h"
+#endif
+
+
+#endif // ! KASTL_NUMERIC_INCLUDED
