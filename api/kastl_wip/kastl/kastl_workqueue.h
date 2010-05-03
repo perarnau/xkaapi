@@ -157,9 +157,11 @@ namespace rts {
      */
     bool pop(index_type&);
     
-    /* pop a subrange_t of size at most sz 
-       return true in case of success
-     */
+    /* pop a subrange_t of size at most sz.
+       Return true in case of success. 
+       The poped range may be of size less than sz, which means that the queue is empty
+       and the next pop will return false.
+    */
     bool pop(range_t<bits>&, size_type sz);
 
     /* push_back a new valid subrange_t at the end of the queue.
@@ -177,29 +179,24 @@ namespace rts {
      */
     bool push_back( const index_type& last );
     
-    /* steal a subrange_t of size at most sz
-       Lock on the queue is taken. The method is safe with concurrent execution of pop's methods.
-       return true in case of success
-     */
-    bool steal(range_t<bits>&, size_type sz);
-    
-    /* steal a subrange_t of size at most sz
-       Lock on the queue is not taken. The method is unsafe with concurrent execution of pop's methods.
-       return true in case of success
-     */
-    bool steal_unsafe(range_t<bits>&, size_type sz);
-    
     /* steal a subrange_t of size at most sz_max
-       Lock on the queue is taken. The method is safe with concurrent execution of pop's methods.
-       return true in case of success
+       The method locks the mutex on the queue to serialize concurrent steal execution and try to steal work. 
+       The method is safe with concurrent execution of pop's kind of methods.
+       Return true in case of success else false.
      */
-    bool steal(range_t<bits>&, size_type sz_max, size_type sz_min);
+    bool steal(range_t<bits>&, size_type sz_max );
+
+    /*  */
+    bool steal(range_t<bits>&, size_type sz_max, size_type sz_min );
 
     /* steal a subrange_t of size at most sz_max
-       Lock on the queue is not taken. The method is unsafe with concurrent execution of pop's methods.
-       return true in case of success
+       The method DOES NOT lock the mutex on the queue to serialize concurrent steal execution before trying to steal work. 
+       The method is UNSAFE with concurrent execution of pop's kind of methods. The caller is responsible to
+       ensure no concurrency of steal operation on the queue, for instance by locking the queue by a call to the lock_steal() 
+       method.
+       Return true in case of success else false.
      */
-    bool steal_unsafe(range_t<bits>&, size_type sz_max, size_type sz_min);
+    bool steal_unsafe(range_t<bits>&, size_type sz_max );
     
     /* */
     bool slow_pop( range_t<bits>&, size_type sz );
@@ -228,7 +225,7 @@ namespace rts {
     index_type volatile _beg; /*_beg & _end on two cache lines */
     index_type volatile _end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
 
-    atomic_t<32> _lock __attribute__((aligned(32)));       /* one bit is enough .. */
+    atomic_t<32> _lock __attribute__((aligned(8)));       /* one bit is enough .. */
   };
   
   /** */
@@ -380,7 +377,153 @@ namespace rts {
     return true;
   }
 
-} /* impl namespace */
+  /** */
+  template<int bits>
+  inline void work_queue_t<bits>::lock_pop()
+  {
+    while (!_lock.cas( 0, 1))
+      kaapi_slowdown_cpu();
+  }
+
+  /** */
+  template<int bits>
+  inline void work_queue_t<bits>::lock_steal()
+  {
+#if 0
+    /* todo: rely on the cache coherency protocol
+       to lock BUT adds if, function call... */
+    while ((_lock.read() == 1) || !_lock.cas(0, 1))
+#else
+    while (!_lock.cas( 0, 1))
+#endif
+      kaapi_slowdown_cpu();
+  }
+
+  /** */
+  template<int bits>
+  inline void work_queue_t<bits>::unlock()
+  {
+    kaapi_writemem_barrier();
+    _lock.write(0);
+  }
+    
+  /** */
+  template<int bits>
+  bool work_queue_t<bits>::slow_pop(range_t<bits>& r, size_type size)
+  {
+    /* already done in inlined pop :
+       _beg += size;
+       mem_synchronize();
+       test (_beg > _end) was true.
+       The real interval is [_beg-size, _end)
+    */
+
+    _beg -= size; /* abort transaction */
+
+    kaapi_mem_barrier();
+
+    lock_pop();
+
+    r.first = _beg;
+
+    if ((_beg + size) > _end)
+    {
+      size = _end - _beg;
+      if (size == 0)
+	{
+	  unlock();
+	  return false;
+	}
+    }
+
+    _beg += size;
+
+    unlock();
+
+    r.last = _beg;
+
+    return true;
+  }
+    
+  /** */
+  template<int bits>
+  bool work_queue_t<bits>::steal(range_t<bits>& r, size_type size)
+  {
+    lock_steal();
+    _end -= size;
+    kaapi_mem_barrier();
+    if (_end < _beg)
+    {
+      _end += size;
+      unlock();
+      return false;
+    }
+    r.first = _end;  
+    unlock();
+    r.last  = r.first + size;
+    return true;
+  }  
+
+  /**
+   */
+  template<>
+  bool work_queue_t<64>::steal(range_t<64>& r, size_type size_max, size_type size_min)
+  {
+    kaapi_assert_debug( size_min <= size_max );
+    lock_steal();
+    _end -= size_max;
+    kaapi_mem_barrier();
+    if (_end < _beg)
+    {
+      _end += size_max - size_min;
+      kaapi_mem_barrier();
+      if (_beg < _end) {
+	r.first = _end;
+	r.last  = r.first+size_min;
+	unlock();
+	return true;
+      }
+      _end += size_min; 
+      unlock();
+      return false;
+    }
+  
+    r.first = _end;
+    unlock();
+    r.last  = r.first + size_max;
+  
+    return true;
+  }  
+
+  /**
+  */
+  template<int bits>
+  bool work_queue_t<bits>::steal_unsafe(range_t<bits>& r, size_type size_max )
+  {
+    kaapi_assert_debug( 1 <= size_max );
+    _end -= size_max;
+    kaapi_mem_barrier();
+    if (_end < _beg)
+    {
+      _end += size_max - 1;
+      kaapi_mem_barrier();
+      if (_beg < _end)
+      {
+        r.first = _end;
+        r.last  = r.first+1;
+        return true;
+      }
+      _end += 1; 
+      return false;
+    }
+    
+    r.first = _end;
+    r.last  = r.first + size_max;
+    
+    return true;
+  }  
+
+} /* rts namespace */
 
 
 /**

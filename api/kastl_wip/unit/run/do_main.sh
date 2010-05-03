@@ -8,10 +8,10 @@ SESSION_DIR=
 SIZE0=1000
 SIZE1=10000
 SIZE2=20000
-#SIZE3=50000
+SIZE3=50000
 #SIZE4=100000
 #SIZE5=200000
-#SIZE6=1000000
+SIZE6=1000000
 #SIZE7=
 #SIZE8=
 
@@ -32,9 +32,9 @@ CPUSET1=0,1
 #CPUSET8=
 
 # {algo, lib, do}
-ALGOS='min_element'
+ALGOS='min_element max_element for_each count inner_product'
 LIBS='stl kastl tbb'
-DOS='bench'
+DOS='check'
 
 
 gen_session_dir() {
