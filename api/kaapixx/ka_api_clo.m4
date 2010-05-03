@@ -140,22 +140,11 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
-#if 0
-  static Format*           format;
-  static kaapi_format_id_t fmid;
-  static kaapi_format_t*   getformat() { 
-    std::cout << "HERE" << std::endl;
-    if (format==0) format = new Format; return format->get_c_format(); 
-  }
-#endif
   static kaapi_bodies_t default_bodies;
 
   static kaapi_format_t* registerformat()
   {
     /* here we assume no concurrency during startup calls of the library that initialize format objects */
-#if 0
-    if (fmid != 0) return getformat();
-#endif
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
@@ -196,7 +185,6 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
   {
-//std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " without thread as 1rst param" << std::endl;
     typedef void (TASK::*type_default_t)(Thread* M4_PARAM(`, formal$1_t', `', `'));
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
@@ -205,7 +193,6 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( Thread* M4_PARAM(`, formal$1_t', `', `') ) )
   {
-//std::cout << __PRETTY_FUNCTION__ << "::CPU method:" << method << " with thread as 1rst param" << std::endl;
     typedef void (TASK::*type_default_t)(Thread* M4_PARAM(`, formal$1_t', `', `'));
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
@@ -238,12 +225,7 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
                                             void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
   {
     /* here we assume CPU is the running processor */
-    return kaapi_format_taskregister_body( fmt, registercpubody( fmt, method ), KAAPI_PROC_TYPE_CPU );
-  }
-  static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
-                                            void (TaskBodyGPU<TASK>::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
-  {
-    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
+    return kaapi_format_taskregister_body( fmt, registercpubody( fmt, &TaskBodyCPU<TASK>::operator() ), KAAPI_PROC_TYPE_CPU );
   }
   static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
                                             void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
@@ -255,18 +237,9 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   {
     kaapi_bodies_t retval = kaapi_bodies_t( registercpubody( fmt, &TaskBodyCPU<TASK>::operator()), 
                                             registergpubody( fmt, &TaskBodyGPU<TASK>::operator() ) );
-//std::cout << "Bodies " << __PRETTY_FUNCTION__ << " registered, cpu=" << retval.cpu_body << std::endl;
     return retval;
   }
 };
-
-#if 0
-template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
-Format* KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::format = 0;
-
-template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
-kaapi_format_id_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::fmid = 0;
-#endif
 
 
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
