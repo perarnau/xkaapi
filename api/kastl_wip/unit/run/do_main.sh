@@ -5,11 +5,11 @@ export LD_LIBRARY_PATH=$HOME/install/lib
 SESSION_DIR=
 
 # input sizes
-SIZE0=1000
-SIZE1=10000
-SIZE2=20000
-SIZE3=50000
-#SIZE4=100000
+#SIZE0=1000
+#SIZE1=10000
+#SIZE2=20000
+#SIZE3=50000
+SIZE4=100000
 #SIZE5=200000
 SIZE6=1000000
 #SIZE7=
@@ -24,17 +24,17 @@ CPUSET1=0,1
 #CPUSET0=9
 #CPUSET1=9,11
 #CPUSET2=7,9,11
-#CPUSET3=5,7,9,11
+CPUSET3=5,7,9,11
 #CPUSET4=0,1,2,3,4,5,6,7
-#CPUSET5=8,9,10,11,12,13,14,15
-#CPUSET6=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+CPUSET5=8,9,10,11,12,13,14,15
+CPUSET6=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 #CPUSET7=
 #CPUSET8=
 
 # {algo, lib, do}
-ALGOS='min_element max_element for_each count inner_product'
-LIBS='stl kastl tbb'
-DOS='check'
+#ALGOS='min_element max_element for_each count inner_product'
+LIBS='kastl'
+#DOS='check'
 
 
 gen_session_dir() {
@@ -43,7 +43,7 @@ gen_session_dir() {
 	export SESSION_DIR=../session/$h ;
     fi
 
-    [ -d $SESSION_DIR ] || mkdir $SESSION_DIR
+    [ -d $SESSION_DIR ] || mkdir -p $SESSION_DIR
 
     [ -h ../session/this ] && unlink ../session/this
     ln -s $SESSION_DIR ../session/this
@@ -121,9 +121,9 @@ run_lists() {
 	    for LIB in $LIBS; do
 		NAME=$ALGO-$LIB-$DO
 		if [ -e ../bin/$NAME ]; then
+		    echo $SESSION_DIR/$NAME-$SIZE-$CPUSETID ;
 		    OUTPUT_FILE=$SESSION_DIR/$NAME-$SIZE-$CPUSETID ;
 		    KAAPI_CPUSET=$CPUSET ../bin/$NAME $SIZE $ITER | grep -v KAAPI > $OUTPUT_FILE ;
-		    echo == ;
 		fi
 	    done
 	done
@@ -174,10 +174,12 @@ run_sizes() {
 
 
 main() {
+    [ -z "$1" ] && exit -1 ;
     [ -d $1 ] || exit -1 ;
 
     gen_session_dir ;
     gen_lists $1 ;
+
     run_sizes ;
 }
 
