@@ -671,7 +671,7 @@ extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
-/* ============================= Hash table for WS ============================ */
+/* ======================== Dependencies resolution function ========================*/
 /*
 */
 typedef struct kaapi_counters_list {
@@ -686,6 +686,20 @@ typedef struct kaapi_deps_t {
   kaapi_task_t*               last_writer;
   kaapi_thread_t*             last_writer_thread;
 } kaapi_deps_t;
+
+/*
+*/
+typedef struct kaapi_dependenciessignal_arg_t {
+    kaapi_task_bodyid_t       real_body; //Real body to execute
+    kaapi_counters_list *   readers_list; //counters to decrement
+} kaapi_dependenciessignal_arg_t;
+
+/*
+*/
+void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* stack );
+
+
+/* ============================= Hash table for WS ============================ */
 
 /*
 */
@@ -1050,20 +1064,6 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 /**
  */
 extern void kaapi_set_workload( kaapi_uint32_t workload );
-
-/* ======================== Dependencies resolution function ========================*/
-
-/*
-typedef struct kaapi_dependenciessignal_arg_t {
-    kaapi_task_body_t       real_body; //Real body to execute
-    void*                   real_datas;
-    kaapi_task_splitter_t   real_splitter;
-    kaapi_format_t*         real_format;
-    counters_list *         readers_list; //counters to decrement
-} kaapi_dependenciessignal_arg_t;
-
-void kaapi_dependenciessignal_body( kaapi_task_t* task, kaapi_stack_t* stack );
-*/
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
