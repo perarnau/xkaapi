@@ -32,20 +32,19 @@
  . the output directory is bin/
 
 . how to run a binary
- . TODO, refer to run/do_main.sh for now
- . do_run.sh <dirname>
- . run each binary in dirname and create a session
- . 
- . for each binary
-  . if this a check
-
- . it has to take into account the following vars:
-  . KAAPI_CPUSET_<N> where <N> a number
-   . or KAAPI_CPUSET (eq. to KAAPI_CPUSET_0)
-  . SEQUENCE_SIZE_<N>
-  . ITER
-
-. sessions
- . archive containing params bench, check, of a run
-  . sessions/<date>/<id>/<bin>.o
-  . sessions/<date>/<id>/params
+ . run/do_main.sh is the script to use
+ . it contains variables the user has to modify to match needs
+  . LD_LIBRARY_PATH must points to kaapi, tbb paths
+  . SIZE<N>, where N from 0 to 8, the sequence input size
+  . CPUSET<N>, where N from 0 to 8, the cpu set list
+  . ALGOS the algo list. for instance: 'min_element for_each'
+  if empty, all the algorithms are used.
+  . LIBS the algo list. for instance: 'kastl tbb stl'
+  if empty, all the libs are used.
+  . DOS the action list. for instance: 'check bench'
+  if empty, all the actions are used.
+ . ./do_main.sh runs a combination of the above params
+ and output in ../session/this/ where this a symlink on
+ the last run. each file in the directory is named after
+ the combination, and has the following form:
+  . <algo>-<lib>-<do>-<size>-<cpusetid>
