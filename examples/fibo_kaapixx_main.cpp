@@ -44,6 +44,7 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+#include "fibo_kaapixx_opt.cpp"
 
 // --------------------------------------------------------------------
 extern long fiboseq( const long n );
@@ -80,7 +81,7 @@ struct PrintBody {
    and the type and access mode for each parameters.
    Here the first parameter is declared with a write mode. The second is passed by value.
  */
-struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
+//struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 
 /* Main of the program
 */

@@ -45,8 +45,10 @@ fiboseq_SOURCES=fiboseq.c
 fibo_xkaapi_SOURCES=fibo_xkaapi.c
 #fibo_xkaapi_adapt_SOURCES=fibo_xkaapi_adapt.c
 fibo_atha_SOURCES=fibo_atha.cpp
-fibo_kaapixx_SOURCES=    fibo_kaapixx.cpp     fibo_kaapixx_main.cpp
-fibo_kaapixx_opt_SOURCES=fibo_kaapixx_opt.cpp fibo_kaapixx_main.cpp
+#fibo_kaapixx_SOURCES=    fibo_kaapixx.cpp     fibo_kaapixx_main.cpp
+fibo_kaapixx_SOURCES=    fibo_kaapixx_main.cpp
+#fibo_kaapixx_opt_SOURCES=fibo_kaapixx_opt.cpp fibo_kaapixx_main.cpp
+fibo_kaapixx_opt_SOURCES=fibo_kaapixx_main.cpp
 
 dgemm_kaapi_SOURCES=dgemm_kaapi.cpp
 dgemm_kaapi_flat_SOURCES=dgemm_kaapi_flat.cpp

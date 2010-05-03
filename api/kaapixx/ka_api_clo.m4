@@ -148,7 +148,7 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     if (format==0) format = new Format; return format->get_c_format(); 
   }
 #endif
-  static volatile kaapi_bodies_t default_bodies;
+  static kaapi_bodies_t default_bodies;
 
   static kaapi_format_t* registerformat()
   {
@@ -268,7 +268,7 @@ kaapi_format_id_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,Trait
 
 
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
-volatile kaapi_bodies_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::default_bodies =
+kaapi_bodies_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::default_bodies =
     KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::registerbodies(
           KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::registerformat(), 
           &TASK::operator()
