@@ -1121,27 +1121,39 @@ namespace ka {
 
   template<class TASK>
   struct RegisterBodyCPU {
-    RegisterBodyCPU()
-    { 
+    static void doit() __attribute__((constructor)) 
+    {
       static volatile int isinit __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+    }
+    RegisterBodyCPU() 
+    { 
+      doit();
     }
   };
 
   template<class TASK>
   struct RegisterBodyGPU {
-    RegisterBodyGPU()
+    static void doit() __attribute__((constructor))
     { 
       static volatile int isinit __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+    }
+    RegisterBodyGPU()
+    {
+      doit();
     }
   };
 
   template<class TASK>
   struct RegisterBodies {
-    RegisterBodies()
+    static void doit() __attribute__((constructor))
     { 
       static volatile int isinit1 __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
       static volatile int isinit2 __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
+    RegisterBodies()
+    {
+      doit();
+    }  
   };
 
   // --------------------------------------------------------------------
