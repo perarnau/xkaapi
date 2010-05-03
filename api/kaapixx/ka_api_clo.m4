@@ -140,24 +140,11 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   ', `', `')
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
 
-#if 0
-  static Format*           format;
-  static kaapi_format_id_t fmid;
-  static kaapi_format_t*   getformat() { 
-    std::cout << "HERE" << std::endl;
-    if (format==0) format = new Format; return format->get_c_format(); 
-  }
-#endif
-  static kaapi_task_bodyid_t default_body;
+  static kaapi_bodies_t default_bodies;
 
   static kaapi_format_t* registerformat()
   {
     /* here we assume no concurrency during startup calls of the library that initialize format objects */
-#if 0
-    if (fmid != 0) return getformat();
-#endif
-    default_body = 0;
-    
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
@@ -228,57 +215,63 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     return KAAPIWRAPPERGPUBODY(KAAPI_NUMBER_PARAMS)<true, TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::body;
   }
 
-  static kaapi_task_body_t registerbodycpu( kaapi_format_t* fmt, void (TASK::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
+  static kaapi_task_body_t registerbodycpu( kaapi_format_t* fmt, 
+                                            void (TaskBodyCPU<TASK>::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
   {
     /* here we assume CPU is the running processor */
-    return KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`, TraitUAMParam_F$1', `', `')>::default_body = 
-        kaapi_format_taskregister_body( fmt, registercpubody( fmt, &TaskBodyCPU<TASK>::operator() ), KAAPI_PROC_TYPE_CPU );
+    return kaapi_format_taskregister_body( fmt, registercpubody( fmt, method ), KAAPI_PROC_TYPE_CPU );
   }
-  static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, void (TASK::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
+  static kaapi_task_body_t registerbodycpu( kaapi_format_t* fmt, 
+                                            void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
   {
-    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, &TaskBodyGPU<TASK>::operator() ), KAAPI_PROC_TYPE_GPU );
+    /* here we assume CPU is the running processor */
+    return kaapi_format_taskregister_body( fmt, registercpubody( fmt, method ), KAAPI_PROC_TYPE_CPU );
   }
+  static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
+                                            void (TaskBodyGPU<TASK>::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
+  {
+    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
+  }
+  static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
+                                            void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
+  {
+    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
+  }
+
   static kaapi_bodies_t registerbodies( kaapi_format_t* fmt, void (TASK::*method)( Thread* thread M4_PARAM(`, formal$1_t', `', `') ) )
   {
-    kaapi_bodies_t retval;
-    retval.gpu_body = registerbodygpu( fmt, method );
-    retval.cpu_body = retval.default_body = registerbodycpu( fmt, method );
+    kaapi_bodies_t retval = kaapi_bodies_t( registercpubody( fmt, &TaskBodyCPU<TASK>::operator()), 
+                                            registergpubody( fmt, &TaskBodyGPU<TASK>::operator() ) );
     return retval;
   }
 };
 
-#if 0
-template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
-Format* KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::format = 0;
 
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
-kaapi_format_id_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::fmid = 0;
-#endif
-
-
-template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
-kaapi_task_bodyid_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::default_body =
+kaapi_bodies_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::default_bodies =
     KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::registerbodies(
           KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::registerformat(), 
           &TASK::operator()
-    ).default_body;
+    );
 
 
 template<class TASK, class SIGNATURE  M4_PARAM(`, class F$1', `', `')>
 int DoRegisterBodyCPU( void (SIGNATURE::*)( Thread* M4_PARAM(`, F$1', `', `') ) )
 {
-    KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::registerbodycpu(
+    kaapi_task_body_t body = KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::registerbodycpu(
         KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::registerformat(), 
-        &TASK::operator()
+        &TaskBodyCPU<TASK>::operator()
     );
+    if (body !=0) KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::default_bodies.cpu_body = body;
     return 1;
 }
 template<class TASK, class SIGNATURE  M4_PARAM(`, class F$1', `', `')>
 int DoRegisterBodyGPU( void (SIGNATURE::*)( Thread* M4_PARAM(`, F$1', `', `') ) )
 {
-    KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::registerbodygpu(
+    kaapi_task_body_t body =  KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::registerbodygpu(
         KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::registerformat(), 
-        &TASK::operator()
+        &TaskBodyGPU<TASK>::operator()
     );
+    if (body !=0) KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitUAMParam<F$1> ', `', ` ')>::default_bodies.gpu_body = body;
     return 1;
 }

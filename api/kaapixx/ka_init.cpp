@@ -35,6 +35,13 @@
 
 namespace ka {
 
+kaapi_bodies_t::kaapi_bodies_t( kaapi_task_body_t cb, kaapi_task_body_t gb )
+ : cpu_body(cb), gpu_body( gb ), 
+   default_body(cb) /* because we are on a CPU */
+{
+}
+
+
 // --------------------------------------------------------------------
 Init Init::component;
 
