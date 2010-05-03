@@ -8,6 +8,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** theo.trouillon@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -97,7 +98,18 @@ fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
     if (entry->key == ptr) return entry;
     entry = entry->next;
   }
+  return NULL;
+}
+
+kaapi_hashentries_t* kaapi_hashmap_add( kaapi_hashmap_t* khm, void* ptr )
+{
   
+  kaapi_uint32_t hkey = kaapi_hash_value_len( ptr, sizeof( void* ) );
+  hkey = hkey % KAAPI_HASHMAP_SIZE;
+  kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
+  kaapi_hashentries_t* entry = list_hash;
+
+
   /* allocate new entry */
   if (khm->currentbloc == 0) 
   {
