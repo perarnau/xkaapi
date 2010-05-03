@@ -1120,7 +1120,7 @@ namespace ka {
 
   template<class TASK>
   struct RegisterBodyCPU {
-    RegisterBodyCPU()
+    RegisterBodyCPU() __attribute__((constructor))
     { 
       static volatile int isinit __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }

@@ -131,3 +131,6 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
     }
   }
 };
+
+static ka::RegisterBodyCPU<TaskFibo> dummy_object;
+
