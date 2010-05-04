@@ -48,7 +48,6 @@
 #include <limits>
 #include <iterator>
 
-
 namespace kastl {
   
 /* --- most of these class / structure should be put into the C API
@@ -121,7 +120,7 @@ namespace rts {
     { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
 
   protected:
-    kaapi_atomic64_t _atom __attribute__((aligned(64)));
+    kaapi_atomic64_t _atom;
   };
 
 
@@ -172,9 +171,7 @@ namespace rts {
   };
 
 
-  template <
-      typename type
-  >
+  template <typename type >
   class counting_iterator : public std::iterator< std::random_access_iterator_tag,     /* category */
                                            const type  /* element type */                                            
                                         >

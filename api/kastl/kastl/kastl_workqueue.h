@@ -162,7 +162,7 @@ namespace rts {
        The poped range may be of size less than sz, which means that the queue is empty
        and the next pop will return false.
     */
-    bool pop(range_t<bits>&, size_type sz);
+    bool pop(range_t<bits>&, size_type sz_max);
 
     /* push_back a new valid subrange_t at the end of the queue.
        Only valid of the pushed range_t just after the queue,
@@ -213,7 +213,6 @@ namespace rts {
     /* */
     index_type end() const { return _end; }
 
-  protected:
     /* data field required to be correctly aligned in order to ensure atomicity of read/write. 
        Put them on two separate lines of cache (assume == 64bytes) due to different access by 
        concurrent threads.
@@ -223,7 +222,7 @@ namespace rts {
     index_type volatile _beg; /*_beg & _end on two cache lines */
     index_type volatile _end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
 
-    atomic_t<32> _lock __attribute__((aligned(8)));       /* one bit is enough .. */
+    atomic_t<32> _lock __attribute__((aligned));       /* one bit is enough .. */
   };
   
   /** */
@@ -379,15 +378,15 @@ namespace rts {
   template<int bits>
   inline void work_queue_t<bits>::lock_pop()
   {
-    while (!_lock.cas( 0, 1))
-      ;
+    while (!_lock.cas(0, 1))
+      kaapi_slowdown_cpu();
   }
 
   /** */
   template<int bits>
   inline void work_queue_t<bits>::lock_steal()
   {
-    while ((_lock.read() == 1) || !_lock.cas(0, 1))
+    while (!_lock.cas(0, 1))
       kaapi_slowdown_cpu();
   }
 
@@ -401,44 +400,64 @@ namespace rts {
     
   /** */
   template<int bits>
-  bool work_queue_t<bits>::slow_pop(range_t<bits>& r, size_type size)
+  bool work_queue_t<bits>::slow_pop(range_t<bits>& r, size_type size_max)
   {
     /* already done in inlined pop :
-        _beg += size;
-        mem_synchronize();
-      test (_beg > _end) was true.
-      The real interval is [_beg-size, _end)
+       _beg += size_max;
+       mem_synchronize();
+       test (_beg > _end) was true.
+       The real interval is [_beg-size_max, _end)
     */
-    _beg -= size; /* abort transaction */
+    _beg -= size_max; /* abort transaction */
+    kaapi_mem_barrier();
     lock_pop();
-    _beg += size;
-    if (_beg > _end)
+    
+    r.first = _beg;
+    
+    if ((_beg + size_max) > _end)
     {
-      /* test if it is possible to steal sub part */
-      if (_beg - size >= _end)
+      size_max = _end - _beg;
+      if (size_max == 0)
       {
-        _beg -= size;
         unlock();
         return false;
       }
-      r.last = _end;
-      size -= _beg - r.last;
-      _beg = r.last;
     }
-    else r.last = _beg;
+    
+    _beg += size_max;
+    
     unlock();
-
-    /* */
-    r.first = r.last - size;
-    if (r.first <0) r.first = 0;
-
+    
+    r.last = _beg;
+    
     return true;
   }
-    
-    
+  
+#if 0 /* deprecated */
   /** */
   template<int bits>
-  bool work_queue_t<bits>::steal(range_t<bits>& r, size_type size_max )
+  bool work_queue_t<bits>::steal(range_t<bits>& r, size_type size)
+  {
+    lock_steal();
+    _end -= size;
+    kaapi_mem_barrier();
+    if (_end < _beg)
+    {
+      _end += size;
+      unlock();
+      return false;
+    }
+    r.first = _end;  
+    unlock();
+    r.last  = r.first + size;
+    return true;
+  }  
+#endif
+
+  /**
+   */
+  template<>
+  bool work_queue_t<64>::steal(range_t<64>& r, size_type size_max)
   {
     kaapi_assert_debug( 1 <= size_max );
     lock_steal();
@@ -451,8 +470,8 @@ namespace rts {
       if (_beg < _end)
       {
         r.first = _end;
-        unlock();
         r.last  = r.first+1;
+        unlock();
         return true;
       }
       _end += 1; 
@@ -466,33 +485,21 @@ namespace rts {
     
     return true;
   }  
-
-
+  
   /**
   */
   template<int bits>
   bool work_queue_t<bits>::steal_unsafe(range_t<bits>& r, size_type size_max )
   {
-    kaapi_assert_debug( 1 <= size_max );
-    _end -= size_max;
+    _end -= size;
     kaapi_mem_barrier();
     if (_end < _beg)
     {
-      _end += size_max - 1;
-      kaapi_mem_barrier();
-      if (_beg < _end)
-      {
-        r.first = _end;
-        r.last  = r.first+1;
-        return true;
-      }
-      _end += 1; 
+      _end += size;
       return false;
     }
-    
     r.first = _end;
-    r.last  = r.first + size_max;
-    
+    r.last  = r.first + size;
     return true;
   }  
 

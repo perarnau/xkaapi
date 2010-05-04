@@ -387,9 +387,11 @@ typedef struct kaapi_taskadaptive_result_t {
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
   int volatile                        req_preempt;
+  int volatile                        is_signaled;
 
   /* Private part of the structure */
   volatile int                        thief_term;       /* */
+
   struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
   int                                 flag;             /* where is allocated data */
 
@@ -686,13 +688,14 @@ typedef struct kaapi_hashentries_t {
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
 
-#define KAAPI_HASHMAP_SIZE 128
+#define KAAPI_HASHMAP_SIZE 32
 /*
 */
 typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
+  kaapi_uint32_t entry_map; /* type size must match KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
 /*
