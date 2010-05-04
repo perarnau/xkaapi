@@ -44,37 +44,6 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-extern long cutoff;
-
-// --------------------------------------------------------------------
-/* Sequential fibo function
- */
-long fiboseq( const long n ) {
-  if( n<2 )
-    return n;
-  else
-    return fiboseq(n-1)+fiboseq(n-2);
-}
-
-long fiboseq_On(const long n){
-  if(n<2){
-    return n;
-  }else{
-
-    long fibo=1;
-    long fibo_p=1;
-    long tmp=0;
-    int i=0;
-    for( i=0;i<n-2;i++){
-      tmp = fibo+fibo_p;
-      fibo_p=fibo;
-      fibo=tmp;
-    }
-    return fibo;
-  }
-}
-
-
 /* Sum two integers
  * this task reads a and b (read acces mode) and write their sum to res (write access mode)
  * it will wait until previous write to a and b are done
@@ -134,4 +103,86 @@ struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */
   }
 };
 
-static ka::RegisterBodyCPU<TaskFibo> dummy_object;
+
+/* Main of the program
+*/
+struct doit {
+
+  void do_experiment(unsigned int n, unsigned int iter )
+  {
+    long* res_value = ka::Alloca<long>(1);
+    ka::pointer<long> res = res_value;
+    for (cutoff=2; cutoff<3; ++cutoff)
+    {
+      ka::Spawn<TaskFibo>()( res, n );
+      /* */
+      ka::Sync();
+      start_time= ka::WallTimer::gettime();
+      for (unsigned int i = 0 ; i < iter ; ++i)
+      {   
+        ka::Spawn<TaskFibo>()( res, n );
+        /* */
+        ka::Sync();
+      }
+      stop_time= ka::WallTimer::gettime();
+
+      /*  ka::System::getRank() prints out the id of the node executing the task */
+      ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
+      ka::logfile() << ka::System::getRank() << ": Res  = " << *res_value << std::endl;
+      ka::logfile() << ka::System::getRank() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
+      ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
+    }
+  }
+
+  void operator()(int argc, char** argv )
+  {
+    unsigned int n = 30;
+    if (argc > 1) n = atoi(argv[1]);
+    unsigned int iter = 1;
+    if (argc > 2) iter = atoi(argv[2]);
+    cutoff = 2;
+    if (argc > 3) cutoff = atoi(argv[3]);
+    
+    ka::logfile() << "In main: n = " << n << ", iter = " << iter << ", cutoff = " << cutoff << std::endl;
+    do_experiment( n, iter );
+  }
+};
+
+
+/* main entry point : Kaapi initialization
+*/
+int main(int argc, char** argv)
+{
+  try {
+    /* Join the initial group of computation : it is defining
+       when launching the program by a1run.
+    */
+    ka::Community com = ka::System::join_community( argc, argv );
+    
+    /* Start computation by forking the main task */
+    ka::SpawnMain<doit>()(argc, argv); 
+    
+    /* Leave the community: at return to this call no more athapascan
+       tasks or shared could be created.
+    */
+    com.leave();
+
+    /* */
+    ka::System::terminate();
+  }
+  catch (const ka::InvalidArgumentError& E) {
+    ka::logfile() << "Catch invalid arg" << std::endl;
+  }
+  catch (const ka::BadAlloc& E) {
+    ka::logfile() << "Catch bad alloc" << std::endl;
+  }
+  catch (const ka::Exception& E) {
+    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  }
+  catch (...) {
+    ka::logfile() << "Catch unknown exception: " << std::endl;
+  }
+  
+  return 0;
+}
+

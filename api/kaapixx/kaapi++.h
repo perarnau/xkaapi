@@ -70,6 +70,7 @@ namespace ka {
   typedef kaapi_int64_t  ka_int64_t;
 
   struct kaapi_bodies_t {
+    kaapi_bodies_t( kaapi_task_body_t cpu_body, kaapi_task_body_t gpu_body );
     kaapi_task_body_t cpu_body;
     kaapi_task_body_t gpu_body;
     kaapi_task_body_t default_body;
@@ -457,7 +458,7 @@ namespace ka {
   public:
     typedef T value_type;
     typedef size_t difference_type;
-    typedef pointer_w<T> Self_t;
+    typedef pointer_rw<T> Self_t;
 
     pointer_rw() : base_pointer<T>() {}
     pointer_rw( value_type* ptr ) : base_pointer<T>(ptr) {}
@@ -1089,7 +1090,7 @@ namespace ka {
         kaapi_thread_pushtask( _thread);    
       }
 
-#include "ka_api_fork.h"
+#include "ka_api_spawn.h"
 
     protected:
       kaapi_thread_t* _thread;
@@ -1120,27 +1121,39 @@ namespace ka {
 
   template<class TASK>
   struct RegisterBodyCPU {
-    RegisterBodyCPU()
-    { 
+    static void doit() __attribute__((constructor)) 
+    {
       static volatile int isinit __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+    }
+    RegisterBodyCPU() 
+    { 
+      doit();
     }
   };
 
   template<class TASK>
   struct RegisterBodyGPU {
-    RegisterBodyGPU()
+    static void doit() __attribute__((constructor))
     { 
       static volatile int isinit __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
+    }
+    RegisterBodyGPU()
+    {
+      doit();
     }
   };
 
   template<class TASK>
   struct RegisterBodies {
-    RegisterBodies()
+    static void doit() __attribute__((constructor))
     { 
       static volatile int isinit1 __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
       static volatile int isinit2 __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
     }
+    RegisterBodies()
+    {
+      doit();
+    }  
   };
 
   // --------------------------------------------------------------------

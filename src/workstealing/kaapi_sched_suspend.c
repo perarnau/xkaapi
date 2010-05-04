@@ -71,7 +71,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   if (kaapi_task_getbody(task_condition) != kaapi_suspend_body) return 0;
   
   /* put context is list of suspended contexts: critical section with respect of thieves */
-  kproc->thread = 0;
+  kaapi_setcontext(kproc, 0);
   kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt_condition );
 
   do {
@@ -79,7 +79,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (kaapi_sched_suspendlist_empty(kproc))
       kproc->thread = 0;
     else
-      kproc->thread = kaapi_sched_wakeup(kproc);
+      kaapi_setcontext(kproc, kaapi_sched_wakeup(kproc) );
 
     if (kproc->thread == ctxt_condition) 
     {
@@ -125,7 +125,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     ctxt = kproc->thread;
 
     /* update   */
-    kproc->thread = 0;
+    kaapi_setcontext(kproc, 0);
 
     if (err == EWOULDBLOCK) 
     {

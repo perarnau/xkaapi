@@ -321,6 +321,9 @@ typedef struct kaapi_stack_t {
     stackaddr.
     It was made opaque to the user API because we do not want to expose the way we execute stack in the
     user code.
+    
+    WARNING: sfp should be the first field of the data structure in order to be able to recover in the public
+    API sfp from the kaapi_thread_context_t pointer stored in kaapi_current_thread_key.
 */
 typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
