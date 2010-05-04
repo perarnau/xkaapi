@@ -1532,6 +1532,77 @@ public:
 };
 #endif
 
+#if CONFIG_ALGO_FIND_FIRST_OF
+class FindFirstOfRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    i.second.resize(4);
+
+    i.second[0] = 6;
+    i.second[1] = 12;
+    i.second[2] = 24;
+    i.second[3] = 42;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::find_first_of
+      (i.first.begin(), i.first.end(),
+       i.second.begin(), i.second.end());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::find_first_of
+      (i.first.begin(), i.first.end(),
+       i.second.begin(), i.second.end());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::find_first_of
+      (i.first.begin(), i.first.end(),
+       i.second.begin(), i.second.end());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::find_first_of
+      (i.first.begin(), i.first.end(),
+       i.second.begin(), i.second.end());
+  }
+#endif
+
+  virtual bool check
+  (InputType& i, std::vector<OutputType>&, std::string& es) const
+  {
+    ptrdiff_t indices[2];
+
+    if (_res[0] == _res[1])
+      return true;
+
+    indices[0] = _res[0] - i.first.begin();
+    indices[1] = _res[1] - i.first.begin();
+
+    es = index_error_string(indices[1], indices[0]);
+
+    return false;
+  }
+
+};
+#endif
+
+
 #if CONFIG_ALGO_SWAP_RANGES
 class SwapRangesRun : public RunInterface
 {
@@ -1815,57 +1886,6 @@ public:
   }
 
 };
-
-class FindFirstOfRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-  ptrdiff_t _kastl_index;
-  ptrdiff_t _stl_index;
-
-public:
-
-  virtual void prepare(InputType& i)
-  {
-    i.second.resize(4);
-
-    i.second[0] = 6;
-    i.second[1] = 12;
-    i.second[2] = 24;
-    i.second[3] = 42;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::find_first_of
-      (i.first.begin(), i.first.end(),
-       i.second.begin(), i.second.end());
-
-    _kastl_index = _kastl_res - i.first.begin();
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::find_first_of
-      (i.first.begin(), i.first.end(),
-       i.second.begin(), i.second.end());
-
-    _stl_index = _stl_res - i.first.begin();
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
-
-    error_string = index_error_string(_stl_index, _kastl_index);
-
-    return false;
-  }
-
-};
-
 
 class PartialSumRun : public RunInterface
 {
@@ -2991,6 +3011,10 @@ RunInterface* RunInterface::create()
   CREATE_RUN( FindIf );
 #endif
 
+#if CONFIG_ALGO_FIND_FIRST_OF
+  CREATE_RUN( FindFirstOf );
+#endif
+
 #if CONFIG_ALGO_SWAP_RANGES
   CREATE_RUN( SwapRanges );
 #endif
@@ -3005,7 +3029,6 @@ RunInterface* RunInterface::create()
   CREATE_RUN( Generate );
   CREATE_RUN( Equal );
   CREATE_RUN( Mismatch );
-  CREATE_RUN( FindFirstOf );
   CREATE_RUN( Reverse );
   CREATE_RUN( Partition );
   CREATE_RUN( SetUnion );

@@ -35,7 +35,7 @@ CPUSET6=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
 # {algo, lib, do}
 #ALGOS='min_element max_element for_each count inner_product'
-ALGOS='find_if'
+ALGOS='find_first_of'
 LIBS='kastl tbb'
 DOS='check'
 
