@@ -225,7 +225,7 @@ namespace rts {
     index_type volatile _beg; /*_beg & _end on two cache lines */
     index_type volatile _end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
 
-    atomic_t<32> _lock __attribute__((aligned(8)));       /* one bit is enough .. */
+    atomic_t<32> _lock __attribute__((aligned));       /* one bit is enough .. */
   };
   
   /** */
@@ -381,7 +381,7 @@ namespace rts {
   template<int bits>
   inline void work_queue_t<bits>::lock_pop()
   {
-    while (!_lock.cas( 0, 1))
+    while (!_lock.cas(0, 1))
       kaapi_slowdown_cpu();
   }
 
@@ -389,13 +389,7 @@ namespace rts {
   template<int bits>
   inline void work_queue_t<bits>::lock_steal()
   {
-#if 0
-    /* todo: rely on the cache coherency protocol
-       to lock BUT adds if, function call... */
-    while ((_lock.read() == 1) || !_lock.cas(0, 1))
-#else
-    while (!_lock.cas( 0, 1))
-#endif
+    while (!_lock.cas(0, 1))
       kaapi_slowdown_cpu();
   }
 

@@ -26,9 +26,6 @@ OBJS	:= $(SRCS:.cpp=.o)
 BIN	:= $(BINDIR)/$(ALGO)-$(LIB)-$(DO)
 
 all	: $(BIN)
-none-*	:
-*-none-*:
-	echo FOOBAR 
 $(BIN)	: clean $(OBJS)
 	$(LD) $(LFLAGS) -o $(BIN) $(OBJS)
 %.o	: %.cpp

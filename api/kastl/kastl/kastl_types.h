@@ -144,7 +144,7 @@ namespace rts {
   template<>
   class atomic_t<32> {
   public:
-    atomic_t<32>(kaapi_int32_t value =0)
+    inline atomic_t<32>(kaapi_int32_t value =0)
     { 
 #if defined(__i386__)||defined(__x86_64)
       kaapi_assert_debug( ((unsigned long)&_atom & (32/8-1)) == 0 ); 
@@ -152,22 +152,21 @@ namespace rts {
       KAAPI_ATOMIC_WRITE(&_atom, value);
     }
 
-    kaapi_int32_t read() const 
+    inline kaapi_int32_t read() const 
     { return KAAPI_ATOMIC_READ(&_atom); }
 
-    void write( kaapi_int32_t value ) 
+    inline void write( kaapi_int32_t value ) 
     { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
+    inline bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
     { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
 
-    kaapi_int32_t incr( )
+    inline kaapi_int32_t incr( )
     { return KAAPI_ATOMIC_INCR( &_atom ); }
 
-    kaapi_int32_t sub( kaapi_int32_t v )
+    inline kaapi_int32_t sub( kaapi_int32_t v )
     { return KAAPI_ATOMIC_SUB( &_atom, v ); }
 
-  protected:
     kaapi_atomic32_t _atom;
   };
 
@@ -175,7 +174,7 @@ namespace rts {
   template<>
   class atomic_t<64> {
   public:
-    atomic_t<64>(kaapi_int64_t value =0)
+    inline atomic_t<64>(kaapi_int64_t value =0)
     { 
       KAAPI_ATOMIC_WRITE(&_atom, value);
 #if defined(__i386__)||defined(__x86_64)
@@ -183,23 +182,22 @@ namespace rts {
 #endif
     }
 
-    kaapi_int64_t read() const 
+    inline kaapi_int64_t read() const 
     { return KAAPI_ATOMIC_READ(&_atom); }
 
-    void write( kaapi_int64_t value )
+    inline void write( kaapi_int64_t value )
     { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
+    inline bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
     { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
 
-    kaapi_int64_t incr( )
+    inline kaapi_int64_t incr( )
     { return KAAPI_ATOMIC_INCR( &_atom ); }
 
-    kaapi_int64_t sub( kaapi_int64_t v )
+    inline kaapi_int64_t sub( kaapi_int64_t v )
     { return KAAPI_ATOMIC_SUB( &_atom, v ); }
 
-  protected:
-    kaapi_atomic64_t _atom __attribute__((aligned(64)));
+    kaapi_atomic64_t _atom;
   };
 
 
