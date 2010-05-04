@@ -18,6 +18,7 @@ check_PROGRAMS= \
 	fibo_kaapixx           \
 	fibo_kaapixx_opt       \
 	qsort_cilk2kaapi       \
+  matrix_multiply_cilk2kaapi \
 	accumulate_while_kastl \
 	branchbound_apiatha    \
 	dgemm_cblas            \
@@ -48,7 +49,10 @@ fibo_xkaapi_SOURCES=fibo_xkaapi.c
 fibo_atha_SOURCES=fibo_atha.cpp
 fibo_kaapixx_SOURCES=    fibo_kaapixx.cpp     fibo_kaapixx_main.cpp
 fibo_kaapixx_opt_SOURCES=fibo_kaapixx_opt.cpp fibo_kaapixx_main.cpp
+
+# Based on Cilk example
 qsort_cilk2kaapi_SOURCES=qsort_cilk2kaapi.cpp
+matrix_multiply_cilk2kaapi_SOURCES=matrix_multiply_cilk2kaapi.cpp
 
 dgemm_kaapi_SOURCES=dgemm_kaapi.cpp
 dgemm_kaapi_flat_SOURCES=dgemm_kaapi_flat.cpp
@@ -102,6 +106,11 @@ qsort_cilk2kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 qsort_cilk2kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 qsort_cilk2kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 qsort_cilk2kaapi_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+matrix_multiply_cilk2kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
+matrix_multiply_cilk2kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)
+matrix_multiply_cilk2kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KASTLPROGS_BUILD_LDFLAGS)
+matrix_multiply_cilk2kaapi_LDADD   =$(LIBS)        $(KASTLPROGS_BUILD_LIBS)
 
 branchbound_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHAPROGS_BUILD_CPPFLAGS)
 branchbound_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHAPROGS_BUILD_CXXFLAGS)
