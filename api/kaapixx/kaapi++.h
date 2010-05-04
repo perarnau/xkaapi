@@ -1090,7 +1090,7 @@ namespace ka {
         kaapi_thread_pushtask( _thread);    
       }
 
-#include "ka_api_fork.h"
+#include "ka_api_spawn.h"
 
     protected:
       kaapi_thread_t* _thread;

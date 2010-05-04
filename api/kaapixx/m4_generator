@@ -39,13 +39,13 @@ MAX_NUMBER_PARAMS=$1
 ## `expr $1 + 1`
 
 makeheader > ka_api_clo.h
-makeheader > ka_api_fork.h
+makeheader > ka_api_spawn.h
 while [ $COUNTER -ge 0 ]
 do
       m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  ka_api_clo.m4 >> ka_api_clo.h
       if [ $NUMBER -gt 0 ]
       then
-        m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  ka_api_fork.m4 >> ka_api_fork.h
+        m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  ka_api_spawn.m4 >> ka_api_spawn.h
       fi
       echo "Generating file: $file step $NUMBER :-)"
       NUMBER=`expr $NUMBER + 1`
