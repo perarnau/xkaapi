@@ -458,7 +458,7 @@ namespace ka {
   public:
     typedef T value_type;
     typedef size_t difference_type;
-    typedef pointer_w<T> Self_t;
+    typedef pointer_rw<T> Self_t;
 
     pointer_rw() : base_pointer<T>() {}
     pointer_rw( value_type* ptr ) : base_pointer<T>(ptr) {}
