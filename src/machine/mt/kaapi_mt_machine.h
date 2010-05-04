@@ -330,6 +330,9 @@ extern kaapi_processor_t** kaapi_all_kprocessors;
 */
 extern pthread_key_t kaapi_current_processor_key;
 
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  extern __thread kaapi_thread_t** kaapi_current_thread_key;
+#endif
 
 extern kaapi_processor_t* kaapi_get_current_processor(void);
 extern kaapi_processor_id_t kaapi_get_current_kid(void);

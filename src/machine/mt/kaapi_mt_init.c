@@ -62,7 +62,13 @@ pthread_key_t kaapi_current_processor_key;
 
 /*
 */
-pthread_key_t c;
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+__thread kaapi_thread_t** kaapi_current_thread_key;
+#endif
+
+/*
+*/
+//pthread_key_t c;
 
 /* 
 */
@@ -81,11 +87,12 @@ void _kaapi_dummy(void* foo)
 
 /** 
 */
+#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
 kaapi_thread_t* kaapi_self_thread(void)
 {
   return (kaapi_thread_t*)_kaapi_self_thread()->sfp;
 }
-
+#endif
 
 /**
 */
@@ -107,6 +114,10 @@ void __attribute__ ((constructor)) kaapi_init(void)
   
   /* initialize the kprocessor key */
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
+
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  kaapi_current_thread_key = 0;
+#endif
     
   /* setup topology information */
   kaapi_setup_topology();

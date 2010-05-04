@@ -74,6 +74,11 @@
 extern "C" {
 #endif
 
+#if defined(__linux__)
+#  define KAAPI_HAVE_COMPILER_TLS_SUPPORT 1
+#elif defined(__APPLE__)
+#endif
+
 #ifdef __GNUC__
 #  define KAAPI_MAX_DATA_ALIGNMENT (__alignof__(void*))
 #else
@@ -573,7 +578,15 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
     Return pointer to the self stack
 */
+  /* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  extern __thread kaapi_thread_t** kaapi_current_thread_key;
+#  define kaapi_self_thread() \
+     (*kaapi_current_thread_key)
+
+#else
 extern kaapi_thread_t* kaapi_self_thread (void);
+#endif
 
 
 /** \ingroup TASK

@@ -70,12 +70,6 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* terminaison ? */
     if (kaapi_isterminated())
     {
-#if defined(KAAPI_USE_PERFCOUNTER)
-      /* leave the state to be 'schedule' 
-        t1 = kaapi_get_elapsedtime();
-        kproc->t_sched += t1-t0;
-      */
-#endif
       return;
     }
     
@@ -118,27 +112,17 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
     kaapi_assert_debug( thread != 0);
     
-#if defined(LOG_STACK)
-    fprintf(stdout,"\n\n-------------- Thief stack: thief:@=%p\n", kproc );
-    kaapi_stack_print(stdout, kproc->thread );
-    fprintf(stdout,"\n\n-------------- End thief stack: thief:@=%p\n", kproc );
-#endif
 
 redo_execute:
 
     /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-    /*
-      t1 = kaapi_get_elapsedtime();
-      kproc->t_sched += t1-t0;
-    */
 #endif
     err = kaapi_stack_execframe( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-    /*t0 = kaapi_get_elapsedtime();*/
 #endif
 
     if (err == EWOULDBLOCK) 
@@ -148,15 +132,15 @@ redo_execute:
 #endif
       kaapi_thread_context_t* ctxt = kproc->thread;
       /* update */
-      kproc->thread = 0;
+      kaapi_setcontext(kproc, 0);
 
       /* push it: suspended because top task is not ready */
       kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
 
       if (kaapi_sched_suspendlist_empty(kproc))
-       kproc->thread = 0;
+        kproc->thread = 0;
       else
-        kproc->thread = kaapi_sched_wakeup(kproc); 
+        kaapi_setcontext(kproc, kaapi_sched_wakeup(kproc) ); 
       if (kproc->thread !=0) goto redo_execute;
 
       /* else reallocate a context */
