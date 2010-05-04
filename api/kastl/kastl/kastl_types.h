@@ -46,6 +46,7 @@
 #define _KASTL_TYPES_H_
 #include "kaapi.h"
 #include <limits>
+#include <iterator>
 
 
 namespace kastl {
@@ -170,8 +171,90 @@ namespace rts {
     >::type type;
   };
 
+
+  template <
+      typename type
+  >
+  class counting_iterator : public std::iterator< std::random_access_iterator_tag,     /* category */
+                                           const type  /* element type */                                            
+                                        >
+  {
+  public:
+      typedef type value_type;
+      typedef ptrdiff_t difference_type;
+      typedef const type& reference;
+      typedef const type* pointer;
+
+      counting_iterator()
+       : _rep(0)
+      {}
+      explicit counting_iterator(value_type x) 
+       : _rep(x) 
+      {}
+      value_type const& base() const
+      { return _rep; }
+
+      counting_iterator& operator++() 
+      { 
+        ++_rep;
+        return *this;
+      }
+      counting_iterator operator++(int) 
+      { 
+        counting_iterator retval = *this;
+        ++_rep;
+        return retval; 
+      }
+      counting_iterator& operator--() 
+      { 
+        --_rep;
+        return *this;
+      }
+      counting_iterator operator--(int) 
+      { 
+        counting_iterator retval = *this;
+        --_rep;
+        return retval; 
+      }
+      difference_type operator-(const counting_iterator& it) 
+      { 
+        return _rep - it.rep; 
+      }
+      counting_iterator operator+(value_type v) 
+      { 
+        return counting_iterator(_rep +v); 
+      }
+      counting_iterator operator-(value_type v) 
+      { 
+        return counting_iterator(_rep -v); 
+      }
+      counting_iterator operator[](int i) 
+      { 
+        return counting_iterator(_rep +i); 
+      }
+      bool operator==(const counting_iterator& rhs) 
+      { return (_rep==rhs._rep); }
+
+      bool operator!=(const counting_iterator& rhs) 
+      { return (_rep!=rhs._rep); }
+
+      reference operator*() 
+      { 
+        return _rep;
+      }
+
+      pointer* operator->() 
+      { 
+        return &_rep;
+      }
+
+  private:
+      value_type _rep;
+  };
+
 } /* rts namespace */
 
+  using rts::counting_iterator;
 
 } /* kastl namespace */
 
