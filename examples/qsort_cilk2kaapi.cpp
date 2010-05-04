@@ -32,17 +32,17 @@
 // Use the Quick Sort algorithm, using recursive divide and conquer.
 // This function is NOT the same as the Standard C Library qsort() function.
 // This implementation is pure C++ code before Cilk++ conversion.
-struct Task_QSort : public ka::Task<2>::Signature<ka::RW<int>, ka::RW<int> > {};
+struct Task_QSort : public ka::Task<2>::Signature<ka::RPWP<int>, ka::RPWP<int> > {};
 
 template<>
 struct TaskBodyCPU<Task_QSort>
 {
-  void operator()(ka::pointer_rw<int> begin, ka::pointer_rw<int> end)
+  void operator()(ka::pointer_rpwp<int> begin, ka::pointer_rpwp<int> end)
   {
     if (begin != end) 
     {
         --end;  // Exclude last element (pivot) from partition
-        ka::pointer_rw<int> middle = std::partition((int*)begin, (int*)end,
+        ka::pointer_rpwp<int> middle = std::partition((int*)begin, (int*)end,
                           std::bind2nd(std::less<int>(), *end));
         using std::swap;
         swap(*end, *middle);    // move pivot to middle
@@ -56,7 +56,7 @@ struct TaskBodyCPU<Task_QSort>
 // A simple test harness 
 int qmain(int n)
 {
-    ka::pointer_rw<int> a = new int[n];
+    ka::pointer_rpwp<int> a = new int[n];
 
     for (int i = 0; i < n; ++i)
         a[i] = i;
