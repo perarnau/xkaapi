@@ -49,6 +49,7 @@ PKG_PROG_PKG_CONFIG
 AC_PROG_CXX
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_F77
 AC_PROG_INSTALL
 ACX_PROG_CCACHE_CC
 ACX_PROG_CCACHE_CXX
@@ -92,10 +93,14 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([ATHALIB], [-L\${libdir} -latha], [atha])
 ACX_LIB_ADD_PUBLIC_FLAGS([ATHALIB], [-I\${includedir}])
 
+ACX_LIB_NEW_LIB([KFORTRANLIB], [-L\${libdir} -lkaapif], [kaapif])
+ACX_LIB_ADD_PUBLIC_FLAGS([KFORTRANLIB], [-I\${includedir}])
+
 ACX_LIB_NEW_PRG([XKAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KASTLPROGS])
 ACX_LIB_NEW_PRG([ATHAPROGS])
+ACX_LIB_NEW_PRG([KFORTRANPROGS])
 
 # add warning flags to the C and C++ compilers
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
@@ -308,26 +313,74 @@ KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],
 ACX_LIB_LINK([XKAAPILIB],[NUMA])
 
 
+dnl -----------------------------------------------------------------------
+dnl The "--with-fortran"
+dnl -----------------------------------------------------------------------
+AC_ARG_WITH([fortran],[AS_HELP_STRING([--with-fortran],
+		 [add fortran API])],[],
+  [with_fortran=default]
+)
+AS_CASE([$with_fortran],
+  [default], [dnl
+    if test x"$F77" = x; then
+      AC_MSG_NOTICE([fortran API disable, because no Fortran compiler found])
+    else
+      AC_MSG_NOTICE([fortran API enable, Fortran compiler found])
+      AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
+      KAAPI_FORTRAN=f
+    fi
+  ], [yes], [dnl
+    AC_MSG_NOTICE([Adding fortran support using fortran compiler '$with_fortran'])
+    AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
+  ], [no], [dnl
+      AC_MSG_NOTICE([fortran API disable])
+  ], [dnl
+    AC_MSG_ERROR([Unknown value '$with_fortran' for --with-fortran option. Aborting.])
+  ])
+AC_SUBST([KAAPI_FORTRAN])
+AM_CONDITIONAL([KAAPI_TARGET_FORTRAN],[test x"$KAAPI_FORTRAN" = x"f"])
+
+if test x"$KAAPI_FORTRAN" = x"f"; then
+  ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
+    AC_F77_LIBRARY_LDFLAGS
+    ACX_LIB_FOUND([Libs="$F77LIBS"])
+  ])
+  ACX_LIB_LINK([KFORTRANLIB], [FORTRAN])
+fi
+
+
+dnl -----------------------------------------------------------------------
+dnl Dependencies between libs
+dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [XKAAPILIB])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
-
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
 
 ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/src/libxkaapi.la])
+
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+
 ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
 ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
 	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/src/libxkaapi.la])
+dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
+
+ACX_LIB_LINK([KFORTRANPROGS], [KFORTRANLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KFORTRANPROGS],
+	[-I\$(top_srcdir)/api/fortran -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/src/libxkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
@@ -345,6 +398,7 @@ AC_CONFIG_FILES([
 	api/kaapixx/Makefile
 	api/kastl/Makefile
 	api/xkaapi/Makefile
+	api/fortran/Makefile
 	examples/Makefile
 	src/Makefile
 
