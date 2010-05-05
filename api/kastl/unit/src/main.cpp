@@ -323,7 +323,9 @@ static size_t __attribute__((unused)) get_concurrency()
 # include <tbb/task_scheduler_init.h>
 # include <tbb/parallel_for.h>
 # include <tbb/parallel_reduce.h>
+# include <tbb/parallel_while.h>
 # include <tbb/blocked_range.h>
+# include <tbb/spin_rw_mutex.h>
 
 static bool tbb_initialize()
 {
@@ -1163,7 +1165,7 @@ public:
   }
 #endif
 
-#if CONFIG_LIB_TRANSFORM
+#if CONFIG_LIB_TBB
   template
   <
     typename InIteratorType,
@@ -1441,6 +1443,111 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::find
+      (i.first.begin(), i.first.end(), FIND_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_TBB
+
+  template<typename IteratorType>
+  class FindStream
+  {
+  public:
+    volatile bool _is_term;
+    IteratorType _beg;
+    IteratorType _end;
+    IteratorType _res;
+    tbb::spin_rw_mutex _lock;
+
+    struct FindItem
+    {
+      typedef IteratorType _IteratorType;
+
+      FindStream<IteratorType>* _stream;
+      IteratorType _beg;
+      IteratorType _end;
+
+      FindItem() {}
+    };
+
+    FindStream(IteratorType& beg, IteratorType& end)
+      : _is_term(false), _beg(beg), _end(end), _res(end) {}
+
+    bool pop_if_present(FindItem& item)
+    {
+      if (_is_term == true)
+	return false;
+
+      if (_beg == _end)
+	return false;
+
+      const size_t size = std::min
+	(static_cast<size_t>(_end - _beg), (size_t)512);
+
+      item._stream = this;
+      item._beg = _beg;
+      item._end = _beg + size;
+
+      _beg += size;
+
+      return true;
+    }
+  };
+
+  template<typename ItemType>
+  class FindBody
+  {
+  private:
+    ValueType _value;
+
+  public:
+    FindBody(const ValueType& value) : _value(value) {}
+
+    void operator()(ItemType& item) const
+    {
+      typename ItemType::_IteratorType pos = item._beg;
+      typename ItemType::_IteratorType end = item._end;
+
+      for (; pos != end; ++pos)
+      {
+	if (*pos == _value)
+	{
+	  item._stream->_lock.lock();
+	  item._stream->_is_term = true;
+
+	  if (pos < item._stream->_res)
+	    item._stream->_res = pos;
+
+	  item._stream->_lock.unlock();
+
+	  break;
+	}
+      }
+    }
+
+    typedef ItemType argument_type;
+  };
+
+  template<class InputIterator, class ValueType>
+  InputIterator tbb_find
+  (InputIterator beg, InputIterator end, const ValueType& value)
+  {
+    typedef FindStream<InputIterator> StreamType;
+    typedef typename StreamType::FindItem ItemType;
+    typedef FindBody<ItemType> BodyType;
+
+    StreamType stream(beg, end);
+    BodyType body(value);
+    tbb::parallel_while<BodyType> pw;
+
+    pw.run(stream, body);
+
+    return stream._res;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_find
       (i.first.begin(), i.first.end(), FIND_VALUE);
   }
 #endif
@@ -2272,6 +2379,7 @@ public:
 #endif
 
 
+#if CONFIG_ALGO_REPLACE
 class ReplaceRun : public RunInterface
 {
   // todo hack hack hack
@@ -2305,6 +2413,7 @@ public:
   }
 
 };
+#endif
 
 
 class GenerateRun : public RunInterface

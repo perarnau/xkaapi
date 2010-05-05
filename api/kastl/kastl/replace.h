@@ -38,7 +38,7 @@ struct ReplaceWork : public BaseWork
   ReplaceWork(const SequenceType& s, const ConstantType* c)
     : BaseType(s, c, InvalidResultType()) { }
 
-  inline void compute(const SequenceType& seq)
+  inline void compute(SequenceType& seq)
   {
     std::replace
     (
@@ -46,6 +46,8 @@ struct ReplaceWork : public BaseWork
      this->_const->first,
      this->_const->second
     );
+
+    seq.advance();
   }
 
 };
