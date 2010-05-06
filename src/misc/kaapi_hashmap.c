@@ -112,7 +112,7 @@ kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr )
 fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
 #endif
   hkey = hkey % KAAPI_HASHMAP_SIZE;
-  kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
+  kaapi_hashentries_t* list_hash = get_hashmap_entry( khm, hkey );
   kaapi_hashentries_t* entry = list_hash;
   while (entry != 0)
   {
@@ -138,7 +138,7 @@ fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
     khm->currentbloc = 0;
   }
   entry->next = list_hash;
-  khm->entries[ hkey ] = entry;
+  set_hashmap_entry(khm, hkey, entry);
   return entry;
 }
 
@@ -167,7 +167,7 @@ kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr )
   
   kaapi_uint32_t hkey = kaapi_hash_value_len( ptr, sizeof( void* ) );
   hkey = hkey % KAAPI_HASHMAP_SIZE;
-  kaapi_hashentries_t* list_hash = khm->entries[ hkey ];
+  kaapi_hashentries_t* list_hash = get_hashmap_entry( khm, hkey );
   kaapi_hashentries_t* entry = list_hash;
 
 

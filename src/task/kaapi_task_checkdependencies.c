@@ -70,7 +70,10 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
       //printf("[CHECKDEPS]%d:::%d\n",i,task->sp+format->off_params[i]);
       entry=kaapi_hashmap_find(&ws_khm,task->sp+format->off_params[i]);
       
-      if(entry!=NULL && (KAAPI_ACCESS_IS_READ(format->mode_params[i]) || KAAPI_ACCESS_IS_READWRITE(format->mode_params[i])) && ! ( ( thread <= ( entry->datas->last_writer) ) && (( entry->datas->last_writer)<= (thread + (kaapi_default_param.stacksize) ) ) ) )
+      if ( (entry!=NULL) 
+        && (KAAPI_ACCESS_IS_READ(format->mode_params[i]) || KAAPI_ACCESS_IS_READWRITE(format->mode_params[i])) 
+        && ! ( ( thread <= ( entry->datas->last_writer) ) && (( entry->datas->last_writer)<= (thread + (kaapi_default_param.stacksize)))) 
+      )
         //Argument is already referenced (previous writer exist), and this task will r/rw current argument, and last writer task is NOT in the same stack
       {
         if ((entry->datas->last_writer)>(entry->datas->last_writer_thread->pc)) //Task already executed 
@@ -93,15 +96,17 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
         
         //Signal datas creation
         
-        kaapi_counters_list* new_reader_a= (kaapi_counters_list*)kaapi_thread_pushdata(entry->datas->last_writer_thread, sizeof(kaapi_counters_list));
+        kaapi_counters_list* new_reader_a
+          = (kaapi_counters_list*)kaapi_thread_pushdata(entry->datas->last_writer_thread, sizeof(kaapi_counters_list));
         new_reader_a->next=0;
         new_reader_a->reader_counter=counter;
         new_reader_a->waiting_task=task;
-
+        
         if (entry->datas->last_writer->ebody==kaapi_dependenciessignal_body)
           //last_writer has already dependency datas, update its datas
         {
-          kaapi_counters_list* tmp=((kaapi_dependenciessignal_arg_t*)(entry->datas->last_writer->pad))->readers_list;
+          kaapi_counters_list* tmp
+            =((kaapi_dependenciessignal_arg_t*)(entry->datas->last_writer->pad))->readers_list;
           //printf("task:%u;last:%u;counter:%u,counter_addr:%u",task,(kaapi_deps_t*)(entry->datas)->last_writer,signal_datas->readers_number._counter, &(signal_datas->readers_number)); 
           while(tmp->next != 0) //may be locked?
           {
@@ -112,26 +117,27 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
         }
         else //Set datas
         {
-	 kaapi_dependenciessignal_arg_t* real_datas=kaapi_thread_pushdata(entry->datas->last_writer_thread, sizeof(kaapi_dependenciessignal_arg_t));
-	if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
-	  real_datas->real_body=entry->datas->last_writer->ebody;
-	else
-	  real_datas->real_body=entry->datas->last_writer->body;
-
-	  real_datas->readers_list=new_reader_a;
+          kaapi_dependenciessignal_arg_t* real_datas
+              =kaapi_thread_pushdata(entry->datas->last_writer_thread, sizeof(kaapi_dependenciessignal_arg_t));
+          if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
+            real_datas->real_body=entry->datas->last_writer->ebody;
+          else
+            real_datas->real_body=entry->datas->last_writer->body;
+          
+          real_datas->readers_list=new_reader_a;
           entry->datas->last_writer->pad=real_datas; 
-	  kaapi_task_setbody(entry->datas->last_writer,&kaapi_dependenciessignal_body);
+          kaapi_task_setbody(entry->datas->last_writer,&kaapi_dependenciessignal_body);
           //printf("task:%u;last:%u;counter:%u,counter_addr:%u",task,(kaapi_deps_t*)(entry->datas)->last_writer,signal_datas->readers_number._counter, &(signal_datas->readers_number)); 
           //printf("Datas set\n");
         }
-
-	//if writer terminated while datas passing, test if he saw it, if not, correct the counter
-	// !!! Incorrect issues are possible (no decrementation of the counter, task will keep suspended state). TODO
-	if ((entry->datas->last_writer)>=(entry->datas->last_writer_thread->pc))
+        
+        //if writer terminated while datas passing, test if he saw it, if not, correct the counter
+        // !!! Incorrect issues are possible (no decrementation of the counter, task will keep suspended state). TODO
+        if ((entry->datas->last_writer)>=(entry->datas->last_writer_thread->pc))
         {
-		kaapi_readmem_barrier();	
-		if(entry->datas->last_writer->pad==0)
-			KAAPI_ATOMIC_DECR(counter);
+          kaapi_readmem_barrier();	
+          if(entry->datas->last_writer->pad==0)
+            KAAPI_ATOMIC_DECR(counter);
         }
       }
 	  already_terminated:
@@ -154,30 +160,30 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
 /**
  */
 void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* thread )
- {
- kaapi_dependenciessignal_arg_t* signal_data = (kaapi_dependenciessignal_arg_t*)(thread->pc->pad);
- thread->pc->pad=0;
- printf("Signal body:%u;stack:%u\n",thread->pc,thread);
- (*(signal_data->real_body))(sp,thread); //Execution of the real body
- 
- //Reset the task flag to KAAPI_TASK_S_TERM   
- //task->flag&=0xFFFFFF0F;
- //task->flag|=KAAPI_TASK_S_TERM;
- 
- kaapi_atomic_t* counter;
- 
- while(signal_data->readers_list != NULL) //counters decrementation, if 0: wake up
- {
- counter=signal_data->readers_list->reader_counter;
- KAAPI_ATOMIC_DECR(counter);
- if ((counter->_counter)==0)
- {
- //printf("[CHECK-SB:Waking up");
- //kaapi_task_setstate(signal_data->readers_list->waiting_task,signal_data->readers_list->origin_state);
-   signal_data->readers_list->waiting_task->body=signal_data->readers_list->waiting_task->ebody;
- }
- signal_data->readers_list=signal_data->readers_list->next;
- }
- 
- //printf("Signal body terminated\n");
- }
+{
+  kaapi_dependenciessignal_arg_t* signal_data = (kaapi_dependenciessignal_arg_t*)(thread->pc->pad);
+  thread->pc->pad=0;
+  printf("Signal body:%u;stack:%u\n",thread->pc,thread);
+  (*(signal_data->real_body))(sp,thread); //Execution of the real body
+  
+  //Reset the task flag to KAAPI_TASK_S_TERM   
+  //task->flag&=0xFFFFFF0F;
+  //task->flag|=KAAPI_TASK_S_TERM;
+  
+  kaapi_atomic_t* counter;
+  
+  while(signal_data->readers_list != NULL) //counters decrementation, if 0: wake up
+  {
+    counter=signal_data->readers_list->reader_counter;
+    KAAPI_ATOMIC_DECR(counter);
+    if ((counter->_counter)==0)
+    {
+      //printf("[CHECK-SB:Waking up");
+      //kaapi_task_setstate(signal_data->readers_list->waiting_task,signal_data->readers_list->origin_state);
+      signal_data->readers_list->waiting_task->body=signal_data->readers_list->waiting_task->ebody;
+    }
+    signal_data->readers_list=signal_data->readers_list->next;
+  }
+  
+  //printf("Signal body terminated\n");
+}
