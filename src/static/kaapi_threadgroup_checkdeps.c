@@ -43,18 +43,20 @@
  ** 
  */
 #include "kaapi_impl.h"
-
+#include "kaapi_staticsched.h"
 
 /** Global Hashmap for WS
  */
-kaapi_hashmap_t ws_khm;
 
 /**
  */
-void kaapi_task_checkdependencies(kaapi_thread_t* thread)
+void kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task)
+//void kaapi_threadgroup_computedependencies(kaapi_thread_t* thread)
 {
-  kaapi_task_t* task=(kaapi_task_t*)thread->sp;
   kaapi_format_t* format;
+
+  kaapi_thread_t* thread = kaapi_threadgroup_thread(thgrp, i);
+
   if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
     format= kaapi_format_resolvebybody(task->ebody);
   else 
@@ -68,7 +70,7 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
     for (int i=0;i<format->count_params;i++) //Loop on each argument of the task
     {
       //printf("[CHECKDEPS]%d:::%d\n",i,task->sp+format->off_params[i]);
-      entry=kaapi_hashmap_find(&ws_khm,task->sp+format->off_params[i]);
+      entry=kaapi_hashmap_find(&thgrp->ws_khm, (char*)task->sp+format->off_params[i]);
       
       if ( (entry!=NULL) 
         && (KAAPI_ACCESS_IS_READ(format->mode_params[i]) || KAAPI_ACCESS_IS_READWRITE(format->mode_params[i])) 
@@ -145,7 +147,7 @@ void kaapi_task_checkdependencies(kaapi_thread_t* thread)
       {
         if (entry==NULL) //argument not referenced
         {
-          entry=kaapi_hashmap_insert(&ws_khm,task->sp+format->off_params[i]);
+          entry=kaapi_hashmap_insert(&thgrp->ws_khm,task->sp+format->off_params[i]);
         }
         //Update argument's last writer informations
         entry->datas->last_writer=task;

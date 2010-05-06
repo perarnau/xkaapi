@@ -61,7 +61,6 @@ libxkaapi_la_SOURCES=\
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
   task/kaapi_task_return.c \
-  task/kaapi_task_checkdependencies.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \
@@ -73,8 +72,14 @@ libxkaapi_la_SOURCES=\
   kaapi_machine.h \
   kaapi.h \
   kaapi_impl.h \
-  task/kaapi_stack.h \
-  task/kaapi_task.h
+  static/kaapi_threadgroup_checkdeps.c\
+  static/kaapi_threadgroup_create.c\
+  static/kaapi_threadgroup_destroy.c\
+  static/kaapi_threadgroup_partition.c\
+  static/kaapi_threadgroup_exec.c\
+  kaapi_staticsched.h
+
+
 #  task/kaapi_fmt_basictype.c
 
 if KAAPI_TARGET_MT

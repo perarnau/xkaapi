@@ -95,11 +95,13 @@ typedef struct kaapi_threadgroup_t {
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
   
   /* state of the thread group */
-  kaapi_threadgroup_state_t state;        /* state */
+  kaapi_threadgroup_state_t  state;        /* state */
+  
+  pthread_cond_t             cond;
+  pthread_mutex_t            mutex;
 
   /* scheduling part / partitioning */
-  //kaapi_hashmap_for_theo hm + extra data for the partitioning step
-  
+  kaapi_hashmap_t ws_khm;  
 } kaapi_threadgroup_t;
 
 
@@ -112,6 +114,10 @@ extern int kaapi_threadgroup_create(kaapi_threadgroup_t** thgrp, int size );
 /**
 */
 extern int kaapi_threadgroup_begin_parition(kaapi_threadgroup_t* thgrp );
+
+/** Check and compute dependencies if task 'task' is pushed into the i-th partition
+*/
+extern void kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task);
 
 /**
 */
@@ -129,7 +135,7 @@ static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t* thgr
   kaapi_assert_debug( thgrp !=0 );
 
   kaapi_thread_t* thread = thgrp->threads[i];
-  return kaapi_thread_pushtask(thread);
+  return kaapi_thread_toptask(thread);
 }
 
 

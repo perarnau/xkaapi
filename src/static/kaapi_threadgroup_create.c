@@ -49,12 +49,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t** pthgrp, int size )
 {
   int i, j;
   int error = 0;
-  kaapi_threadgroup_t* thrgp = 0;
+  kaapi_threadgroup_t* thgrp = 0;
   kaapi_processor_t* proc = 0;  
   
   if (pthgrp ==0) return EINVAL;
   thgrp = (kaapi_threadgroup_t*)malloc(sizeof(kaapi_threadgroup_t));
-  if (thrgp ==0)
+  if (thgrp ==0)
   {
     error = ENOMEM;
     goto return_error_0;
@@ -96,15 +96,15 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t** pthgrp, int size )
   if (error !=0) goto return_error_2;
 
   error =pthread_cond_init(&thgrp->cond, 0);
-  if (error !=0) goto return_error_4;
+  if (error !=0) goto return_error_3;
 
   /* ok */
-  thrgp->state = KAAPI_THREAD_GROUP_CREATE_S;
+  thgrp->state = KAAPI_THREAD_GROUP_CREATE_S;
   *pthgrp = thgrp;
   return 0;
 
 return_error_3:
-  pthread_mutex_destroy(&thrgp->mutex);
+  pthread_mutex_destroy(&thgrp->mutex);
 
 return_error_2:
   for (j=0; j<size; ++j)
@@ -118,7 +118,7 @@ return_error_15:
   thgrp->threadctxts = 0;
   
 return_error_1:
-  free( thrgp );
+  free( thgrp );
 
 return_error_0:
   return error;  
