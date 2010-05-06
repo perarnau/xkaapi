@@ -66,7 +66,7 @@ static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_fo
     kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)sp);
     
     /* */
-    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->value;
+    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
     
     /* compute readyness of access */
     if ( KAAPI_ACCESS_IS_ONLYWRITE(m)

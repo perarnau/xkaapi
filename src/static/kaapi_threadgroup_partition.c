@@ -51,7 +51,8 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t* thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   
-  /* init hashmap */
+  /* be carrefull, the map should be clear before used */
+  kaapi_hashmap_init( &thgrp->ws_khm, 0 );
   return 0;
 }
 
@@ -61,6 +62,8 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t* thgrp )
 int kaapi_threadgroup_end_partition(kaapi_threadgroup_t* thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
+  kaapi_hashmap_destroy( &thgrp->ws_khm );
+  
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;
 }

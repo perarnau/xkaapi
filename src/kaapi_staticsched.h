@@ -92,6 +92,7 @@ typedef struct kaapi_threadgroup_t {
   /* executive part */
   kaapi_atomic_t             countend;     /* warn: alignement ! */
   int volatile               startflag;    /* set to 1 when threads should starts */
+  int volatile               step;         /* iteration step */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
   
   /* state of the thread group */
@@ -116,8 +117,9 @@ extern int kaapi_threadgroup_create(kaapi_threadgroup_t** thgrp, int size );
 extern int kaapi_threadgroup_begin_parition(kaapi_threadgroup_t* thgrp );
 
 /** Check and compute dependencies if task 'task' is pushed into the i-th partition
+    \return EINVAL if task does not have format
 */
-extern void kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task);
+extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task);
 
 /**
 */
@@ -138,7 +140,6 @@ static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t* thgr
   return kaapi_thread_toptask(thread);
 }
 
-
 /** Equiv to kaapi_thread_pushtask( thread ) 
 */
 static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t* thgrp, int i )
@@ -154,28 +155,25 @@ static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t* thgrp, int i 
   return kaapi_thread_pushtask(thread);
 }
 
-
 /**
 */
 extern int kaapi_threadgroup_end_parition(kaapi_threadgroup_t* thgrp );
-
-
 
 /**
 */
 extern int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t* thgrp );
 
-
-/** Faut-il une telle fonction ? 
-    - dans le code applicatif -> thread et il faudrait une version avec en param
-    un thread et qui retrouve son threadgroup pour la synchro.
+/**
 */
-extern int kaapi_threadgroup_barrier( kaapi_threadgroup_t* thgrp );
+extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t* thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_begin_step(kaapi_threadgroup_t* thgrp );
 
 /**
 */
 extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t* thgrp );
-
 
 /**
 */

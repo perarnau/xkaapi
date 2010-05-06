@@ -627,14 +627,6 @@ static inline kaapi_task_t* kaapi_thread_bottomtask(kaapi_thread_context_t* thre
 
 /* ========================================================================= */
 /* Shared object and access mode                                             */
-/** \ingroup DFG
-*/
-typedef struct kaapi_gd_t {
-  kaapi_access_mode_t last_mode;    /* last access mode to the data */
-  void*               last_version; /* last verion of the data, 0 if not ready */
-} kaapi_gd_t;
-
-
 
 extern struct kaapi_processor_t* kaapi_get_current_processor(void);
 typedef kaapi_uint32_t kaapi_processor_id_t;
@@ -677,15 +669,30 @@ extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
 /* ======================== Dependencies resolution function ========================*/
-/*
+
+/** \ingroup DFG
 */
+typedef struct kaapi_gd_t {
+  kaapi_access_mode_t         last_mode;    /* last access mode to the data */
+  void*                       last_version; /* last verion of the data, 0 if not ready */
+} kaapi_gd_t;
+
+/** \ingroup DFG
+    In case of dependency W -> R with the writer and reader tasks on two different partitions,
+    the task_writer->pad points on the kaapi_counters_list data structure.
+*/
+#define KAAPI_COUNTER_LIST_BLOCSIZE 7
 typedef struct kaapi_counters_list {
-    kaapi_atomic_t*              reader_counter; 
-    kaapi_task_t*                waiting_task;
-    struct kaapi_counters_list*  next;           //next reader counter
+  short                       size;            // max size: KAAPI_COUNTER_LIST_BLOCSIZE */
+  struct kaapi_counters_list* next;            // next counters_list bloc
+  struct {
+    kaapi_atomic_t*           waiting_counter;
+    kaapi_task_t*             waiting_task;
+  } entry[KAAPI_COUNTER_LIST_BLOCSIZE];        // total size < 8*8 = 64 bytes
 } kaapi_counters_list;
 
-/*
+
+/** \ingroup DFG
 */
 typedef struct kaapi_deps_t {
   kaapi_task_t*               last_writer;
@@ -695,8 +702,9 @@ typedef struct kaapi_deps_t {
 /*
 */
 typedef struct kaapi_dependenciessignal_arg_t {
-    kaapi_task_bodyid_t       real_body; //Real body to execute
-    kaapi_counters_list *   readers_list; //counters to decrement
+  kaapi_task_bodyid_t     real_body;          // real body to execute
+  kaapi_counters_list*    readers_list;       // list of counters to decrement
+  kaapi_counters_list*    last_readers_list;  // last entries in the list
 } kaapi_dependenciessignal_arg_t;
 
 /*
@@ -709,8 +717,10 @@ void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* stack );
 /*
 */
 typedef struct kaapi_hashentries_t {
-  kaapi_gd_t                  value;
-  kaapi_deps_t*		      datas;  /* list of task to wakeup at the end */
+  union {
+    kaapi_gd_t                value;
+    kaapi_deps_t              datas;  /* list of task to wakeup at the end */
+  } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 
 } kaapi_hashentries_t;

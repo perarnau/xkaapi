@@ -99,6 +99,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t** pthgrp, int size )
   if (error !=0) goto return_error_3;
 
   /* ok */
+  thgrp->step  = -1;
   thgrp->state = KAAPI_THREAD_GROUP_CREATE_S;
   *pthgrp = thgrp;
   return 0;
