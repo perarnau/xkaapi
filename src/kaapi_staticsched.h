@@ -63,14 +63,14 @@ extern "C" {
       kaapi_threadgroup_t* group; 
       kaapi_threadgroup_create( &group, 10 );
       
-      kaapi_threadgroup_begin_parition( group );
+      kaapi_threadgroup_begin_partition( group );
       
       ...
       task = kaapi_threadgroup_toptask( group, 2 );
       <init of the task>
       kaapi_threadgroup_pushtask( group, 2 )
       
-      kaapi_threadgroup_end_parition( group );
+      kaapi_threadgroup_end_partition( group );
 */
 typedef enum {
   KAAPI_THREAD_GROUP_CREATE_S,     /* created */
@@ -84,7 +84,7 @@ typedef enum {
 /** This is a private view of the data structure, may be the public
     view should only export as well as the functions in kaapi.h 
 */
-typedef struct kaapi_threadgroup_t {
+typedef struct kaapi_threadgrouprep_t {
   /* public part */
   kaapi_thread_t**           threads;      /* array on top frame of each threadctxt */
   int                        group_size;   /* number of threads in the group */
@@ -102,39 +102,27 @@ typedef struct kaapi_threadgroup_t {
   pthread_mutex_t            mutex;
 
   /* scheduling part / partitioning */
-  kaapi_hashmap_t ws_khm;  
-} kaapi_threadgroup_t;
+  kaapi_hashmap_t            ws_khm;  
+} kaapi_threadgrouprep_t;
 
 
-/** Create a thread group with size threads. 
-    Return 0 in case of success or the error code.
+
+/** WARNING: also duplicated in kaapi.h for the API
 */
-extern int kaapi_threadgroup_create(kaapi_threadgroup_t** thgrp, int size );
-
-
-/**
-*/
-extern int kaapi_threadgroup_begin_parition(kaapi_threadgroup_t* thgrp );
-
-/** Check and compute dependencies if task 'task' is pushed into the i-th partition
-    \return EINVAL if task does not have format
-*/
-extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task);
-
-/**
-*/
-static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t* thgrp, int i ) 
+static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int i ) 
 {
   kaapi_assert_debug( thgrp !=0 );
+  kaapi_assert_debug( (i>=0) && (i<thgrp->group_size) );
   kaapi_thread_t* thread = thgrp->threads[i];
   return thread;
 }
 
 /** Equiv to kaapi_thread_toptask( thread ) 
 */
-static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t* thgrp, int i ) 
+static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int i ) 
 {
   kaapi_assert_debug( thgrp !=0 );
+  kaapi_assert_debug( (i>=0) && (i<thgrp->group_size) );
 
   kaapi_thread_t* thread = thgrp->threads[i];
   return kaapi_thread_toptask(thread);
@@ -142,9 +130,11 @@ static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t* thgr
 
 /** Equiv to kaapi_thread_pushtask( thread ) 
 */
-static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t* thgrp, int i )
+static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int i )
 {
   kaapi_assert_debug( thgrp !=0 );
+  kaapi_assert_debug( (i>=0) && (i<thgrp->group_size) );
+
   kaapi_thread_t* thread = thgrp->threads[i];
   
   /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
@@ -154,30 +144,6 @@ static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t* thgrp, int i 
   
   return kaapi_thread_pushtask(thread);
 }
-
-/**
-*/
-extern int kaapi_threadgroup_end_parition(kaapi_threadgroup_t* thgrp );
-
-/**
-*/
-extern int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t* thgrp );
-
-/**
-*/
-extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t* thgrp );
-
-/**
-*/
-extern int kaapi_threadgroup_begin_step(kaapi_threadgroup_t* thgrp );
-
-/**
-*/
-extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t* thgrp );
-
-/**
-*/
-extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t* thgrp );
 
 
 #if defined(__cplusplus)

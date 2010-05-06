@@ -76,8 +76,11 @@ namespace ka {
     kaapi_task_body_t default_body;
   };
   
-  /* Kaapi C++ thread <-> Kaapi C stack */
+  /* Kaapi C++ thread <-> Kaapi C thread */
   class Thread;
+
+  /* Kaapi C++ threadgroup <-> Kaapi C threadgroup */
+  class ThreadGroup;
   
   /* for next networking part */
   class IStream;
@@ -901,16 +904,17 @@ namespace ka {
   extern SetLocalAttribut SetLocal;
 
   /* do nothing... not yet distributed implementation */
-  class AttributSetSite {
-    int _site;
+  class AttributSetPartition {
+    int _partition;
   public:
-    AttributSetSite( int s ) : _site(s) {}
-    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
+    AttributSetPartition( int s ) : _partition(s) {}
+    int get_partition() const { return _partition; }
+    kaapi_task_t* operator()( kaapi_threadgroup_t*, kaapi_task_t* clo) const
     { return clo; }
   };
 
-  inline AttributSetSite SetSite( int s )
-  { return AttributSetSite(s); }
+  inline AttributSetPartition SetPartition( int s )
+  { return AttributSetPartition(s); }
   
   /* do nothing */
   class SetStaticSchedAttribut {
@@ -1106,6 +1110,102 @@ namespace ka {
   protected:
     kaapi_thread_t _thread;
     friend class SyncGuard;
+  };
+
+
+  // --------------------------------------------------------------------
+  /* API: 
+     * threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args )
+     * threadgroup[i]->Spawn<TASK>
+  */
+  class ThreadGroup {
+  private:
+    ThreadGroup() {}
+  public:
+
+    ThreadGroup(size_t size) 
+     : _size(size)
+    {
+    }
+    void resize(size_t size)
+    {
+      _size = size;
+    }
+
+    /* begin to partition task */
+    void begin_partition()
+    {
+      kaapi_threadgroup_create( &_threadgroup, _size );
+      kaapi_threadgroup_begin_partition( _threadgroup );
+    }
+
+    /* Spawner for ThreadGroup */
+    template<class TASK, class Attr>
+    class Spawner {
+    public:
+      Spawner( kaapi_thread_t* t, const Attr& a ) : _thread(t), _attr(a) {}
+
+      /**
+      **/      
+      void operator()()
+      { 
+        kaapi_task_t* clo = kaapi_thread_toptask( _thread );
+        kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
+        _attr(_thread, clo);
+        kaapi_thread_pushtask( _thread);    
+      }
+
+#include "ka_api_spawn.h"
+
+    protected:
+      kaapi_thread_t* _thread;
+      const Attr&     _attr;
+    };
+    
+    /* Interface: threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
+    template<class TASK>
+    Spawner<TASK, DefaultAttribut> Spawn(const AttributSetPartition& a) 
+    { return Spawner<TASK, DefaultAttribut>(kaapi_threadgroup_thread(_threadgroup, a.get_partition()), DefaultAttribut()); }
+
+    template<class TASK, class Attr>
+    Spawner<TASK, Attr> Spawn(const AttributSetPartition& a0, const Attr& a1) 
+    { return Spawner<TASK, Attr>(kaapi_threadgroup_thread(_threadgroup, a0.get_partition()), a1); }
+
+    /* Interface: threadgroup[i]->Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
+    Thread* operator[](int i)    
+    {
+      kaapi_assert_debug( (i>=0) && (i<(int)_size) );
+      return (Thread*)kaapi_threadgroup_thread(_threadgroup, i);
+    }
+
+    /* begin to partition task */
+    void end_partition()
+    {
+      kaapi_threadgroup_end_partition( _threadgroup );
+    }
+
+    /* execute the threads */
+    void execute()
+    {
+      kaapi_threadgroup_begin_step( _threadgroup );
+      kaapi_threadgroup_end_step( _threadgroup );
+    }
+
+    /* asynchronous start */
+    void start_execute()
+    {
+      kaapi_threadgroup_begin_step( _threadgroup );
+    }
+
+    /* synchronous call to wait end of execution */
+    void wait_execute()
+    {
+      kaapi_threadgroup_end_step( _threadgroup );
+    }
+
+  protected:
+    size_t              _size;
+    kaapi_threadgroup_t _threadgroup;
   };
 
   

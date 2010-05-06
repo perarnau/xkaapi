@@ -45,15 +45,15 @@
 
 /**
 */
-int kaapi_threadgroup_create(kaapi_threadgroup_t** pthgrp, int size )
+int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
 {
   int i, j;
   int error = 0;
-  kaapi_threadgroup_t* thgrp = 0;
+  kaapi_threadgroup_t thgrp = 0;
   kaapi_processor_t* proc = 0;  
   
   if (pthgrp ==0) return EINVAL;
-  thgrp = (kaapi_threadgroup_t*)malloc(sizeof(kaapi_threadgroup_t));
+  thgrp = (kaapi_threadgroup_t)malloc(sizeof(kaapi_threadgrouprep_t));
   if (thgrp ==0)
   {
     error = ENOMEM;

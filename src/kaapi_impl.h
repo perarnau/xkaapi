@@ -1067,6 +1067,8 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
  */
 extern void kaapi_set_workload( kaapi_uint32_t workload );
 
+#include "kaapi_staticsched.h"
+
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
 

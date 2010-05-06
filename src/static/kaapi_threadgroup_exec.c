@@ -46,7 +46,7 @@
 
 /**
 */
-int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t* thgrp )
+int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
@@ -62,7 +62,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t* thgrp )
 
 /**
 */
-int kaapi_threadgroup_end_step(kaapi_threadgroup_t* thgrp )
+int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
@@ -76,25 +76,27 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t* thgrp )
   thgrp->startflag = 0;
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
   pthread_mutex_unlock(&thgrp->mutex);
+  return 0;
 }
 
 
 /**
 */
-int kaapi_threadgroup_begin_step(kaapi_threadgroup_t* thgrp )
+int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp )
 {
-  if (thgrp->state != KAAPI_THREAD_GROUP_WAIT_S) return EINVAL;
+  if ((thgrp->state != KAAPI_THREAD_GROUP_WAIT_S) && (thgrp->state != KAAPI_THREAD_GROUP_MP_S)) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
 
   ++thgrp->step;
   kaapi_mem_barrier();
   thgrp->startflag = 1;
+  return 0;
 }
 
 
 /**
 */
-int kaapi_threadgroup_end_execute(kaapi_threadgroup_t* thgrp )
+int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
 {
   return kaapi_threadgroup_end_step(thgrp);  
 }

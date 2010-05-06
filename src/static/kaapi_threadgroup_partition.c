@@ -46,7 +46,7 @@
 
 /**
 */
-int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t* thgrp )
+int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
@@ -59,7 +59,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t* thgrp )
 
 /**
 */
-int kaapi_threadgroup_end_partition(kaapi_threadgroup_t* thgrp )
+int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
   kaapi_hashmap_destroy( &thgrp->ws_khm );

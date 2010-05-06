@@ -53,7 +53,7 @@
 
 /**
  */
-int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task)
+int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int i, kaapi_task_t* task)
 {
   kaapi_task_t*        task_writer;
   kaapi_counters_list* wc_list;
