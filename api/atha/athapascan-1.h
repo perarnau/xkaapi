@@ -354,8 +354,8 @@ namespace a1 {
   using ka::SetUnStealable;
   using ka::SetLocalAttribut;
   using ka::SetLocal;
-  using ka::AttributSetSite;
-  using ka::SetSite;
+  using ka::AttributSetPartition;
+  using ka::SetPartition;
   
 #if 0
   class DefaultAttribut {
@@ -402,10 +402,9 @@ namespace a1 {
 #endif
 
   /* to nothing... not yet distributed implementation */
-  class AttributSetSite {
-    int _site;
+  class AttributSetSite : public ka::AttributSetPartition {
   public:
-    AttributSetSite( int s ) : _site(s) {}
+    AttributSetSite( int s ) : ka::AttributSetPartition(s) {}
     kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
     { return clo; }
   };
