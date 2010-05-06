@@ -53,14 +53,11 @@
 
 /**
  */
-int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int i, kaapi_task_t* task)
+int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, kaapi_thread_t* thread, kaapi_task_t* task)
 {
   kaapi_task_t*        task_writer;
   kaapi_counters_list* wc_list;
   kaapi_format_t* task_fmt;
-
-  /* the thread where to put the task */
-  kaapi_thread_t* thread = kaapi_threadgroup_thread(thgrp, i);
 
   if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
     task_fmt= kaapi_format_resolvebybody(task->ebody);

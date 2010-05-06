@@ -1100,7 +1100,7 @@ namespace ka {
       kaapi_thread_t* _thread;
       const Attr&     _attr;
     };
-        
+
     template<class TASK>
     Spawner<TASK, DefaultAttribut> Spawn() { return Spawner<TASK, DefaultAttribut>(&_thread, DefaultAttribut()); }
 
@@ -1139,11 +1139,22 @@ namespace ka {
       kaapi_threadgroup_begin_partition( _threadgroup );
     }
 
+    /* internal class required for spawn method */
+    class AttributComputeDependencies {
+    public:
+      AttributComputeDependencies( kaapi_threadgroup_t thgrp ) : _threadgroup(thgrp) {}
+      void operator()(kaapi_thread_t* thread, kaapi_task_t* task)
+      { kaapi_threadgroup_computedependencies( _threadgroup, thread, task ); }
+    public:
+      kaapi_threadgroup_t _threadgroup;
+    };
+
     /* Spawner for ThreadGroup */
-    template<class TASK, class Attr>
+    template<class TASK>
     class Spawner {
     public:
-      Spawner( kaapi_thread_t* t, const Attr& a ) : _thread(t), _attr(a) {}
+      Spawner( AttributComputeDependencies attr, kaapi_thread_t* t ) 
+       : _attr(attr), _thread(t) {}
 
       /**
       **/      
@@ -1158,20 +1169,23 @@ namespace ka {
 #include "ka_api_spawn.h"
 
     protected:
-      kaapi_thread_t* _thread;
-      const Attr&     _attr;
-    };
+      AttributComputeDependencies _attr;
+      kaapi_thread_t*             _thread;
+    };  
     
     /* Interface: threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
     template<class TASK>
-    Spawner<TASK, DefaultAttribut> Spawn(const AttributSetPartition& a) 
-    { return Spawner<TASK, DefaultAttribut>(kaapi_threadgroup_thread(_threadgroup, a.get_partition()), DefaultAttribut()); }
+    Spawner<TASK> Spawn(const AttributSetPartition& a) 
+    { return Spawner<TASK>(
+                  AttributComputeDependencies(_threadgroup),
+                  kaapi_threadgroup_thread(_threadgroup, a.get_partition())
+              ); 
+    }
 
-    template<class TASK, class Attr>
-    Spawner<TASK, Attr> Spawn(const AttributSetPartition& a0, const Attr& a1) 
-    { return Spawner<TASK, Attr>(kaapi_threadgroup_thread(_threadgroup, a0.get_partition()), a1); }
-
-    /* Interface: threadgroup[i]->Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
+    /* Interface: threadgroup[i].Spawn<TASK>()( args )
+       Il faudrait ici des methods spawn sur un object, cf testspawn.cpp
+       + threadgroup[i] == pointeur sur _thread + _threadgroup
+    */
     Thread* operator[](int i)    
     {
       kaapi_assert_debug( (i>=0) && (i<(int)_size) );
