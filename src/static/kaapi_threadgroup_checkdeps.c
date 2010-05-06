@@ -45,147 +45,143 @@
 #include "kaapi_impl.h"
 #include "kaapi_staticsched.h"
 
-/** Global Hashmap for WS
- */
+
+/** 2 gros bug dans le code de Theo:
+    hashmap avec access au lieu de access->data
+    ATOMIC_DECR
+*/
 
 /**
  */
-void kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task)
-//void kaapi_threadgroup_computedependencies(kaapi_thread_t* thread)
+int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t* thgrp, int i, kaapi_task_t* task)
 {
-  kaapi_format_t* format;
+  kaapi_task_t*        task_writer;
+  kaapi_counters_list* wc_list;
+  kaapi_format_t* task_fmt;
 
+  /* the thread where to put the task */
   kaapi_thread_t* thread = kaapi_threadgroup_thread(thgrp, i);
 
   if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
-    format= kaapi_format_resolvebybody(task->ebody);
+    task_fmt= kaapi_format_resolvebybody(task->ebody);
   else 
-    format= kaapi_format_resolvebybody(task->body);
+    task_fmt= kaapi_format_resolvebybody(task->body);
   
-  if (format!=0 && format!=NULL)
+  if (task_fmt ==0) return EINVAL;
+  
+  /* initialize the pad for every pushed task */
+  task->pad = 0;
+
+  /* find the last writer for each args and in which partition it is 
+     -> if all writers are in the same partition do nothing, push the task in the i-th partition
+     -> if one of the writer is in a different partition, then change the body of the writer
+     in order to add information to signal the task that are waiting for parameter
+     
+    ASSUMPTIONS:
+    1- all the threads in the group are inactive and not subject to steal operation
+    2- we only consider R,W and RW dependencies, no CW that implies multiple writers
+  */
+  kaapi_hashentries_t* entry; //Current argument's entry in the Hashmap
+  kaapi_atomic_t* counter=0;  //Waiting counter for the task
+  
+  for (int i=0;i<task_fmt->count_params;i++) 
   {
-    kaapi_hashentries_t* entry; //Current argument's entry in the Hashmap
-    kaapi_atomic_t* counter=0; //Writers tasks counter
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task_fmt->mode_params[i]);
+    if (m == KAAPI_ACCESS_MODE_V) 
+      continue;
     
-    for (int i=0;i<format->count_params;i++) //Loop on each argument of the task
+    /* its an access */
+    kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)task->sp);
+    entry = 0;
+
+    /* find the last writer (task & thread) using the hash map */
+    entry = kaapi_hashmap_find(&thgrp->ws_khm, access->data);
+    
+    if (KAAPI_ACCESS_IS_READ(m))
     {
-      //printf("[CHECKDEPS]%d:::%d\n",i,task->sp+format->off_params[i]);
-      entry=kaapi_hashmap_find(&thgrp->ws_khm, (char*)task->sp+format->off_params[i]);
-      
-      if ( (entry!=NULL) 
-        && (KAAPI_ACCESS_IS_READ(format->mode_params[i]) || KAAPI_ACCESS_IS_READWRITE(format->mode_params[i])) 
-        && ! ( ( thread <= ( entry->datas->last_writer) ) && (( entry->datas->last_writer)<= (thread + (kaapi_default_param.stacksize)))) 
-      )
-        //Argument is already referenced (previous writer exist), and this task will r/rw current argument, and last writer task is NOT in the same stack
+      /* if entry ==0, access is the first access */
+      if ((entry !=0) && (entry->u.datas.last_writer_thread != thread))
       {
-        if ((entry->datas->last_writer)>(entry->datas->last_writer_thread->pc)) //Task already executed 
+        /* create the waiting counter for this task and change its state */
+        if (counter ==0) 
         {
-          goto already_terminated;
-        }	        
-        kaapi_task_setextrabody(task,task->body);	
-        kaapi_task_setbody( task, kaapi_suspend_body);
-        
-        
-        if (counter==0)//task counter creation
-        {
-          counter=(kaapi_atomic_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_atomic_t),8);
-          KAAPI_ATOMIC_WRITE(counter,1);
+          counter =(kaapi_atomic_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_atomic_t),8);
+          KAAPI_ATOMIC_WRITE(counter, 1);
         }
-        else //task counter update
-        {
+        else
           KAAPI_ATOMIC_INCR(counter);
-        }
-        
-        //Signal datas creation
-        
-        kaapi_counters_list* new_reader_a
-          = (kaapi_counters_list*)kaapi_thread_pushdata(entry->datas->last_writer_thread, sizeof(kaapi_counters_list));
-        new_reader_a->next=0;
-        new_reader_a->reader_counter=counter;
-        new_reader_a->waiting_task=task;
-        
-        if (entry->datas->last_writer->ebody==kaapi_dependenciessignal_body)
-          //last_writer has already dependency datas, update its datas
+
+        kaapi_task_setbody( task, kaapi_suspend_body);
+
+        /* add task into the reader list */
+        task_writer = entry->u.datas.last_writer;
+        if (kaapi_task_getbody(task_writer) != kaapi_dependenciessignal_body)
         {
-          kaapi_counters_list* tmp
-            =((kaapi_dependenciessignal_arg_t*)(entry->datas->last_writer->pad))->readers_list;
-          //printf("task:%u;last:%u;counter:%u,counter_addr:%u",task,(kaapi_deps_t*)(entry->datas)->last_writer,signal_datas->readers_number._counter, &(signal_datas->readers_number)); 
-          while(tmp->next != 0) //may be locked?
-          {
-            tmp=tmp->next;
-          }
-          tmp->next=new_reader_a;
-          //printf("Datas updated\n");
+          /* create its waiting readers list */
+          wc_list = kaapi_thread_pushdata(
+                entry->u.datas.last_writer_thread, 
+                sizeof(kaapi_counters_list)
+          );
+          memset(wc_list, 0, sizeof(kaapi_counters_list) );
+          task_writer->pad = wc_list;
+          kaapi_task_setbody(task_writer, kaapi_dependenciessignal_body);
         }
-        else //Set datas
-        {
-          kaapi_dependenciessignal_arg_t* real_datas
-              =kaapi_thread_pushdata(entry->datas->last_writer_thread, sizeof(kaapi_dependenciessignal_arg_t));
-          if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
-            real_datas->real_body=entry->datas->last_writer->ebody;
-          else
-            real_datas->real_body=entry->datas->last_writer->body;
-          
-          real_datas->readers_list=new_reader_a;
-          entry->datas->last_writer->pad=real_datas; 
-          kaapi_task_setbody(entry->datas->last_writer,&kaapi_dependenciessignal_body);
-          //printf("task:%u;last:%u;counter:%u,counter_addr:%u",task,(kaapi_deps_t*)(entry->datas)->last_writer,signal_datas->readers_number._counter, &(signal_datas->readers_number)); 
-          //printf("Datas set\n");
-        }
+        else 
+          wc_list = (kaapi_counters_list*)task_writer->pad;
         
-        //if writer terminated while datas passing, test if he saw it, if not, correct the counter
-        // !!! Incorrect issues are possible (no decrementation of the counter, task will keep suspended state). TODO
-        if ((entry->datas->last_writer)>=(entry->datas->last_writer_thread->pc))
-        {
-          kaapi_readmem_barrier();	
-          if(entry->datas->last_writer->pad==0)
-            KAAPI_ATOMIC_DECR(counter);
-        }
-      }
-	  already_terminated:
-      if(KAAPI_ACCESS_IS_WRITE(format->mode_params[i]) || KAAPI_ACCESS_IS_READWRITE(format->mode_params[i]))//This task will w/rw current argument
-      {
-        if (entry==NULL) //argument not referenced
-        {
-          entry=kaapi_hashmap_insert(&thgrp->ws_khm,task->sp+format->off_params[i]);
-        }
-        //Update argument's last writer informations
-        entry->datas->last_writer=task;
-        entry->datas->last_writer_thread=thread;
-	      //printf("Last writer inserted\n");
+        /* allocate a new entry in the list wc_list */
+        kaapi_assert(wc_list->size <= KAAPI_COUNTER_LIST_BLOCSIZE);
+        wc_list->entry[wc_list->size].waiting_counter = counter;
+        wc_list->entry[wc_list->size].waiting_task    = task;
+        ++wc_list->size;
       }
     }
-  }
-  
+    if (KAAPI_ACCESS_IS_WRITE(m))
+    {
+      /* find the last writer (task & thread) using the hash map */
+      if (entry ==0) entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
+
+      entry->u.datas.last_writer=task;
+      entry->u.datas.last_writer_thread=thread;      
+    }
+    
+  } /* end for all arguments of the task */
+
+  return 0;
 }
 
-/**
+
+/** This is the body of a writer task that has been changed to execute
+    1/ the original body
+    2/ signal other readers tasks/threads
  */
 void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* thread )
 {
-  kaapi_dependenciessignal_arg_t* signal_data = (kaapi_dependenciessignal_arg_t*)(thread->pc->pad);
-  thread->pc->pad=0;
-  printf("Signal body:%u;stack:%u\n",thread->pc,thread);
-  (*(signal_data->real_body))(sp,thread); //Execution of the real body
-  
-  //Reset the task flag to KAAPI_TASK_S_TERM   
-  //task->flag&=0xFFFFFF0F;
-  //task->flag|=KAAPI_TASK_S_TERM;
-  
+  /* thread->pc is the executing task */
+  kaapi_task_t*        self    = thread->pc;
+  kaapi_counters_list* wc_list = (kaapi_counters_list*)self->pad;
   kaapi_atomic_t* counter;
+  kaapi_task_t* task;
+  short i;
+
+  thread->pc->pad=0;
+
+  (*self->ebody)(sp,thread); // Execution of the real body
   
-  while(signal_data->readers_list != NULL) //counters decrementation, if 0: wake up
+  /* write memory barrier to ensure that other threads will view the data produced */
+  kaapi_mem_barrier();
+
+  /* signal all readers */  
+  while(wc_list != 0) 
   {
-    counter=signal_data->readers_list->reader_counter;
-    KAAPI_ATOMIC_DECR(counter);
-    if ((counter->_counter)==0)
+    for (i=0; i<wc_list->size; ++i)
     {
-      //printf("[CHECK-SB:Waking up");
-      //kaapi_task_setstate(signal_data->readers_list->waiting_task,signal_data->readers_list->origin_state);
-      signal_data->readers_list->waiting_task->body=signal_data->readers_list->waiting_task->ebody;
+      counter = wc_list->entry[i].waiting_counter;
+      task = wc_list->entry[i].waiting_task;
+      
+      if (KAAPI_ATOMIC_DECR(counter) ==0)
+        kaapi_task_setbody(task, task->ebody);
     }
-    signal_data->readers_list=signal_data->readers_list->next;
+    wc_list = wc_list->next;
   }
-  
-  //printf("Signal body terminated\n");
 }
