@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** theo.trouillon@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -675,15 +676,44 @@ extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
+/* ======================== Dependencies resolution function ========================*/
+/*
+*/
+typedef struct kaapi_counters_list {
+    kaapi_atomic_t*              reader_counter; 
+    kaapi_task_t*                waiting_task;
+    struct kaapi_counters_list*  next;           //next reader counter
+} kaapi_counters_list;
+
+/*
+*/
+typedef struct kaapi_deps_t {
+  kaapi_task_t*               last_writer;
+  kaapi_thread_t*             last_writer_thread;
+} kaapi_deps_t;
+
+/*
+*/
+typedef struct kaapi_dependenciessignal_arg_t {
+    kaapi_task_bodyid_t       real_body; //Real body to execute
+    kaapi_counters_list *   readers_list; //counters to decrement
+} kaapi_dependenciessignal_arg_t;
+
+/*
+*/
+void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* stack );
+
+
 /* ============================= Hash table for WS ============================ */
+
 /*
 */
 typedef struct kaapi_hashentries_t {
   kaapi_gd_t                  value;
+  kaapi_deps_t*		      datas;  /* list of task to wakeup at the end */
   void*                       key;
   struct kaapi_hashentries_t* next; 
 } kaapi_hashentries_t;
-
 
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
@@ -712,7 +742,16 @@ extern int kaapi_hashmap_destroy( kaapi_hashmap_t* khm );
 
 /*
 */
+extern kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr );
+
+/*
+*/
 extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr );
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr );
+
 
 
 
@@ -1024,7 +1063,6 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 /**
  */
 extern void kaapi_set_workload( kaapi_uint32_t workload );
-
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
