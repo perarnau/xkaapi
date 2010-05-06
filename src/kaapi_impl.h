@@ -699,13 +699,6 @@ typedef struct kaapi_deps_t {
   kaapi_thread_t*             last_writer_thread;
 } kaapi_deps_t;
 
-/*
-*/
-typedef struct kaapi_dependenciessignal_arg_t {
-  kaapi_task_bodyid_t     real_body;          // real body to execute
-  kaapi_counters_list*    readers_list;       // list of counters to decrement
-  kaapi_counters_list*    last_readers_list;  // last entries in the list
-} kaapi_dependenciessignal_arg_t;
 
 /*
 */
