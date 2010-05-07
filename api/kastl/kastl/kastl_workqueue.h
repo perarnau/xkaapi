@@ -122,6 +122,9 @@ namespace rts {
     /* default cstor */
     work_queue_t();
     
+    /* cstor */
+    work_queue_t( const range_t<bits>& r );
+    
     /* set the work_queue_t */
     void set( const range_t<bits>& );
 
@@ -238,6 +241,13 @@ namespace rts {
 #endif
   }
   
+  /** */
+  template<int bits>
+  inline work_queue_t<bits>::work_queue_t( const range_t<bits>& r )
+  : _beg(r.first), _end(r.last), _lock(0)
+  {
+  }
+
   /** */
   template<int bits>
   inline void work_queue_t<bits>::set( const range_t<bits>& r)
