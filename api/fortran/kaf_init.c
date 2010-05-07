@@ -40,9 +40,9 @@
 ** terms.
 ** 
 */
+#include "kaf_impl.h"
 #include <stdarg.h>
 #include <stdio.h>
-#include "kaf_impl.h"
 
 /* API for Fortran */
 

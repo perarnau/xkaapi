@@ -43,9 +43,8 @@
 #ifndef _KAAPI_FORTRAN_IMPL_H_
 #define _KAAPI_FORTRAN_IMPL_H_
 
+#include <signal.h>
 #include "kaapi_impl.h"
-
-#define MAX_TYPE_NUMBER 6
 
 #if defined(__cplusplus)
 extern "C" {
