@@ -43,9 +43,8 @@
 #ifndef _KAAPI_FORTRAN_IMPL_H_
 #define _KAAPI_FORTRAN_IMPL_H_
 
+#include <signal.h>
 #include "kaapi_impl.h"
-
-#define MAX_TYPE_NUMBER 6
 
 #if defined(__cplusplus)
 extern "C" {
@@ -57,12 +56,17 @@ typedef long int KAAPI_Fint;
 
 typedef int KAAPI_Graph;
 
-long kaapi_new_signature_( char* name, void (*function)(), char* format );
+extern long kaapi_new_signature_( char* name, void (*function)(), char* format );
 
-void kaapi_push_task_( void (*function)(), char* format, ... );
+extern void kaapi_new_task_( KAAPI_Fint* addrformat, ... );
 
-void kaapi_sync_();
+extern void kaapi_sync_(void);
 
+extern void kaapi_init_( KAAPI_Fint* ierr );
+
+extern void kaapi_finalize_( KAAPI_Fint* ierr );
+
+extern int kaapi_isleader_(void);
 
 /* -------------------------------------------------------------------- */
 typedef struct Complex8 {

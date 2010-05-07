@@ -40,9 +40,9 @@
 ** terms.
 ** 
 */
+#include "kaf_impl.h"
 #include <stdarg.h>
 #include <stdio.h>
-#include "kaf_impl.h"
 
 /* API for Fortran */
 
@@ -111,7 +111,7 @@ void kaapi_finalize_( KAAPI_Fint* ierr )
 /* -------------------------------------------------------------------- */
 /* Initialize the library
 */
-int kaapi_isleader_( )
+int kaapi_isleader_(void)
 {
   return 1;
 }

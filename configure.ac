@@ -317,8 +317,8 @@ dnl -----------------------------------------------------------------------
 dnl The "--with-fortran"
 dnl -----------------------------------------------------------------------
 AC_ARG_WITH([fortran],[AS_HELP_STRING([--with-fortran],
-		 [add fortran API])],[],
-  [with_fortran=default]
+		 [add fortran API, experimental default no])],[],
+  [with_fortran=no]
 )
 AS_CASE([$with_fortran],
   [default], [dnl
