@@ -77,6 +77,7 @@ libxkaapi_la_SOURCES=\
   static/kaapi_threadgroup_destroy.c\
   static/kaapi_threadgroup_partition.c\
   static/kaapi_threadgroup_exec.c\
+  static/kaapi_threadgroup_print.c\
   kaapi_staticsched.h
 
 

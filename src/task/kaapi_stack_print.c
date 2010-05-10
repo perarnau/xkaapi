@@ -59,6 +59,7 @@ static char kaapi_getstatename( kaapi_task_t* task )
   else if (body == kaapi_suspend_body) return 'S';
   else if (body ==kaapi_nop_body) return 'T';
   else if (body ==kaapi_aftersteal_body) return 'X';
+  else if (body ==kaapi_dependenciessignal_body) return 'B';
   return 'I';
 }
 
@@ -127,6 +128,17 @@ int kaapi_task_print(
       {
         fputs("|| ", file );
       }
+    }
+  }
+  if (task->body == kaapi_dependenciessignal_body)
+  {
+    /* dump broadcast information */
+    kaapi_counters_list* wc_list = (kaapi_counters_list*)task->pad;
+    int i;
+    fprintf(file, "\n\t\t\t-> sendto task(s): ");
+    for (i=0; i<wc_list->size; ++i)
+    {
+        fprintf(file, "@:%p ", (void*)wc_list->entry[i].waiting_task);
     }
   }
   fputc('\n', file );

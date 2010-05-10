@@ -1128,9 +1128,10 @@ namespace ka {
     {
     }
     void resize(size_t size)
-    {
-      _size = size;
-    }
+    { _size = size; }
+    
+    size_t size() const
+    { return _size; }
 
     /* begin to partition task */
     void begin_partition()
@@ -1217,6 +1218,8 @@ namespace ka {
       kaapi_threadgroup_end_step( _threadgroup );
     }
 
+    void print()
+    { kaapi_threadgroup_print(stdout, _threadgroup); }
   protected:
     size_t              _size;
     kaapi_threadgroup_t _threadgroup;

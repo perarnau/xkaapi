@@ -1123,7 +1123,6 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 */
 extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size );
 
-
 /**
 */
 extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp );
@@ -1192,6 +1191,10 @@ extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp );
 /**
 */
 extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_print(FILE* file, kaapi_threadgroup_t thgrp );
 
 
 
