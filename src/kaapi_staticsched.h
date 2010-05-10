@@ -108,7 +108,7 @@ typedef struct kaapi_threadgrouprep_t {
 
 
 
-/** WARNING: also duplicated in kaapi.h for the API
+/** WARNING: also duplicated in kaapi.h for the API. Redefined here during compilation of the sources
 */
 static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int i ) 
 {

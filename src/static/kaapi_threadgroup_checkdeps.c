@@ -58,6 +58,9 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, kaapi_threa
   kaapi_task_t*        task_writer;
   kaapi_counters_list* wc_list;
   kaapi_format_t* task_fmt;
+  
+  /* pass in parameter ? cf C++ thread interface */
+  int partid;
 
   if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
     task_fmt= kaapi_format_resolvebybody(task->ebody);
@@ -97,7 +100,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, kaapi_threa
     if (KAAPI_ACCESS_IS_READ(m))
     {
       /* if entry ==0, access is the first access */
-      if ((entry !=0) && (entry->u.datas.last_writer_thread != thread))
+      if ((entry !=0) && (entry->u.dfginfo->thread_writer != thread))
       {
         /* create the waiting counter for this task and change its state */
         if (counter ==0) 
@@ -108,15 +111,16 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, kaapi_threa
         else
           KAAPI_ATOMIC_INCR(counter);
 
+/* here better to put a recv task with task information (especially for distributed compute) */
         kaapi_task_setbody( task, kaapi_suspend_body);
 
         /* add task into the reader list */
-        task_writer = entry->u.datas.last_writer;
+        task_writer = entry->u.dfginfo->last_writer;
         if (kaapi_task_getbody(task_writer) != kaapi_dependenciessignal_body)
         {
           /* create its waiting readers list */
           wc_list = kaapi_thread_pushdata(
-                entry->u.datas.last_writer_thread, 
+                entry->u.dfginfo->thread_writer, 
                 sizeof(kaapi_counters_list)
           );
           memset(wc_list, 0, sizeof(kaapi_counters_list) );
@@ -125,6 +129,11 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, kaapi_threa
         }
         else 
           wc_list = (kaapi_counters_list*)task_writer->pad;
+
+        /* add the current task as a reader */
+        KAAPI_PARTITION_SET(entry->u.dfginfo->set_readers, partid);
+        entry->u.dfginfo->task_readers[partid] = task;
+        entry->u.dfginfo->addr_data[partid]    = access->data;
         
         /* allocate a new entry in the list wc_list */
         kaapi_assert(wc_list->size <= KAAPI_COUNTER_LIST_BLOCSIZE);
@@ -136,10 +145,31 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, kaapi_threa
     if (KAAPI_ACCESS_IS_WRITE(m))
     {
       /* find the last writer (task & thread) using the hash map */
-      if (entry ==0) entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
-
-      entry->u.datas.last_writer=task;
-      entry->u.datas.last_writer_thread=thread;      
+      if (entry ==0) 
+      {
+        entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
+        /* here a stack allocation attached with the thread group */
+        entry->u.dfginfo = calloc( 1, sizeof(kaapi_deps_t) );
+        entry->u.dfginfo->tag = 0;
+        entry->u.dfginfo->origin_writer = thread;
+        entry->u.dfginfo->origin_data = access->data;
+        entry->u.dfginfo->set_readers = 0;
+        entry->u.dfginfo->set_readers = 0;
+      }
+      else {
+        /* an entry alread exist: 
+           - mute the data means to invalidate copies
+           - if other copies exist in the thread group then be carefull in order to not modify other read copies
+           through the write.
+           - so if #task_readers >0 and task_readers[i] are not in the same partition, then make a copy
+           by forking task_copy just before:
+              -> recopy the task to temporary
+              -> mute the current task to be a task_copy
+              -> push the original task after
+        */
+      }
+      entry->u.dfginfo->last_writer = task;
+      entry->u.dfginfo->thread_writer=thread;      
     }
     
   } /* end for all arguments of the task */

@@ -692,13 +692,25 @@ typedef struct kaapi_counters_list {
 } kaapi_counters_list;
 
 
+#define KAAPI_MAX_PARTITION 64
+/** Bit field for at most 64 partitions.
+*/
+typedef kaapi_uint64_t kaapi_readers_t;
+
 /** \ingroup DFG
 */
 typedef struct kaapi_deps_t {
-  kaapi_task_t*               last_writer;
-  kaapi_thread_t*             last_writer_thread;
+  int              tag;                                /* the tag (thread group wid) identifier of the data */
+  kaapi_thread_t*  origin_writer;                      /* index of the thread that own the original pointer */
+  void*            origin_data;                        /* index of the thread that own the original pointer */
+  kaapi_thread_t*  thread_writer;                      /* integer: index of the thread in the group */
+  kaapi_task_t*    last_writer;                        /* last writer task of the version */
+  kaapi_readers_t  set_readers;                        /* bit i=1, partition i has a version of the data */
+  kaapi_task_t*    task_readers[KAAPI_MAX_PARTITION];  /* the last reader tasks that owns a reference to the data */
+  void*            addr_data[KAAPI_MAX_PARTITION];     /* address of data */
 } kaapi_deps_t;
 
+#define KAAPI_PARTITION_SET(p, i) (p |= (1<<i))
 
 /*
 */
@@ -712,7 +724,7 @@ void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* stack );
 typedef struct kaapi_hashentries_t {
   union {
     kaapi_gd_t                value;
-    kaapi_deps_t              datas;  /* list of task to wakeup at the end */
+    kaapi_deps_t*             dfginfo;  /* list of tasks to wakeup at the end */
   } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 
