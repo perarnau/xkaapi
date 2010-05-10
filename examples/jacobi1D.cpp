@@ -38,7 +38,7 @@ struct TaskBodyCPU<InternalComp> {
     work((int)unit);
   }
 };
-
+static ka::RegisterBodyCPU<InternalComp> dummy_object_InternalComp;
 
 struct ExternalComp: public ka::Task<4>::Signature< int, int, ka::R<int>, ka::RW<int> > {};
 template<>
@@ -61,6 +61,7 @@ struct TaskBodyCPU<ExternalComp> {
     work((int)unit);
   }
 };
+static ka::RegisterBodyCPU<ExternalComp> dummy_object_ExternalComp;
 
 struct IntegralComp: public ka::Task<4>::Signature< int, int, ka::R<int>, ka::W<int> > {};
 template<>
@@ -79,6 +80,7 @@ struct TaskBodyCPU<IntegralComp> {
     work((int)unit);
   }
 };
+static ka::RegisterBodyCPU<IntegralComp> dummy_object_IntegralComp;
 
 struct PrintB: public ka::Task<4>::Signature< int, int, ka::R<int>, ka::R<int> > {};
 template<>
@@ -92,6 +94,7 @@ struct TaskBodyCPU<PrintB> {
                     << " domain2[" << i << "] = " << value2 << std::endl;
   }
 };
+static ka::RegisterBodyCPU<PrintB> dummy_object_printB;
 
 struct PrintE: public ka::Task<4>::Signature< int, int, ka::R<int>, ka::R<int> > {};
 template<>
@@ -105,6 +108,7 @@ struct TaskBodyCPU<PrintE> {
                     << " domain2[" << i << "] = " << value2 << std::endl;      
   }
 };
+static ka::RegisterBodyCPU<PrintE> dummy_object_printE;
 
 struct Jacobi1D {
   void operator()( int n, int k )
@@ -158,6 +162,8 @@ struct Jacobi1D {
     }
     threadgroup.end_partition();
 
+    threadgroup.print();    
+
     threadgroup.execute();
   }
 };
@@ -172,8 +178,6 @@ struct doit {
     std::cout << "My pid=" << getpid() << std::endl;
     int n = atoi(argv[1]);
     int k = atoi(argv[2]);
-    int p = atoi(argv[3]);
-    int iter = atoi(argv[4]);
 
     Jacobi1D()(n,k);
   }
