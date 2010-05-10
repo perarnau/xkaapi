@@ -1,0 +1,25 @@
+##
+##  xkaapi
+##
+##  Created by CL and TG on 04/02/09.
+##  Copyright 2009 INRIA. All rights reserved.
+##
+
+include ./Makefile.examples.am
+
+AM_CPPFLAGS=@AM_CPPFLAGS@
+AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
+AM_CXXFLAGS=@AM_CXXFLAGS@ $(STD_CXX0X_FLAGS)
+
+check_PROGRAMS= \
+	test_WR1                
+
+
+TESTS=
+
+test_WR1_SOURCES=test_WR1.cpp
+
+test_WR1_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+test_WR1_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+test_WR1_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+test_WR1_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)

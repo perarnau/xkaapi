@@ -3,5 +3,5 @@
 ACLOCAL_AMFLAGS=-I acinclude
 
 #SUBDIRS=src api kastl.wip examples
-SUBDIRS=src api examples
+SUBDIRS=src api examples tests/static
 
