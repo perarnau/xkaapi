@@ -965,7 +965,7 @@ extern int kaapi_remove_finishedthief(
    value the call to reducer function.
    
    reducer function should has the following signature:
-      int (*)( stc, void* thief_work, ... )
+      int (*)( stc, void* thief_arg, void* thief_result, size_t thief_ressize, ... )
    where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
 #define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
@@ -984,13 +984,12 @@ extern int kaapi_remove_finishedthief(
 /** \ingroup ADAPTIVE
    Post a preemption request to thief. Do not wait preemption occurs.
    Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
-   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
+   If no more thief can been preempted, then the return value of the function kaapi_preemptasync_thief() is 0.
+   If it exists a thief, then the call to kaapi_preemptasync_thief() will return the
    value the call to reducer function.
    
    reducer function should has the following signature:
       int (*)( stc, void* thief_work, ... )
-   where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
 #define kaapi_preemptasync_thief( stc, tr, arg_to_thief )	\
   kaapi_preemptasync_thief_helper(stc, (tr), arg_to_thief)

@@ -167,6 +167,14 @@ namespace rts {
     */
     bool pop(range_t<bits>&, size_type sz_max);
 
+    /* pop a subrange_t of size at most sz.
+       Return true in case of success. 
+       The poped range may be of size less than sz, which means that the queue is empty
+       and the next pop will return false.
+    */
+    bool pop_safe(range_t<bits>&, size_type sz_max);
+
+
     /* push_back a new valid subrange_t at the end of the queue.
        Only valid of the pushed range_t just after the queue,
        i.e. iff queue.end == range_t.first.
@@ -358,6 +366,23 @@ namespace rts {
     r.last = _beg;
     r.first = r.last - size;
     
+    return true;
+  }
+
+
+  /** */
+  template<int bits>
+  inline bool work_queue_t<bits>::pop_safe(range_t<bits>& r, size_type size)
+  {
+    if (_end <=_beg) return false;
+    if (_end-_beg < size)
+      _beg += size;
+    else {
+      size = _end-_beg;
+      _beg = _end;
+    }
+    r.last = _beg;
+    r.first = r.last - size;
     return true;
   }
 
