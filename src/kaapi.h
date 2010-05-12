@@ -860,13 +860,6 @@ static inline int kaapi_steal_setsplitter(
 }
 
 
-/** \ingroup ADAPTIVE
-    Synchronize with thieves to prevent a race where
-    the victim returns while a thief is replied to
-    making it unpreempted.
- */
-extern void kaapi_steal_sync(kaapi_stealcontext_t*);
-
 
 /** \ingroup WS
     Helper to expose to many part of the internal API.
