@@ -42,19 +42,19 @@
  ** terms.
  ** 
  */
-#ifndef KASTL_ACCUMULATE_H_INCLUDED
-# define KASTL_ACCUMULATE_H_INCLUDED
+#ifndef KASTL_ACCUMULATE_WHILE_H_INCLUDED
+# define KASTL_ACCUMULATE_WHILE_H_INCLUDED
 #include "kastl/kastl_impl.h"
 
 namespace kastl {
 
 namespace rts {
 /* -------------------------------------------------------------------- */
-/* accumulate algorithm                                                       */
+/* accumulate_while algorithm                                                       */
 /* -------------------------------------------------------------------- */
 template<typename T, typename input_iterator_type>
-struct BodyAccumulate {
-  BodyAccumulate( const T& init ) : result(init) {}
+struct BodyAccumulateWhile {
+  BodyAccumulateWhile( const T& init ) : result(init) {}
   T result;
   void operator()( input_iterator_type& dummy, input_iterator_type& current )
   {
@@ -64,19 +64,30 @@ struct BodyAccumulate {
 
 }// rts
 
-template <class input_iterator_type, class T, typename Settings>
-T accumulate(input_iterator_type first, input_iterator_type last, T init, const Settings& settings )
+template <typename T, typename input_iterator_type, typename Body, typename Inserter, typename Settings>
+size_t accumulate_while( T& value, 
+                         input_iterator_type first, input_iterator_type last, 
+                         Body& body, 
+                         Inserter& acc, 
+                         const Settings& settings
+                        )
 {
-  if (first == last) return init;
-  rts::BodyAccumulate<T,input_iterator_type> ba(init);
-  rts::ReduceLoop( first, last, ba, settings );
-  return ba.result;
+  size_t cnt = 0;
+  for (; (first != last); ++first, ++cnt)
+  {
+    if (acc(value, body(*first))) return 1+cnt;
+  }
+  return cnt;
 }
 
-template <class input_iterator_type, class T>
-T accumulate(input_iterator_type first, input_iterator_type last, T init )
+template <typename T, typename input_iterator_type, typename Body, typename Inserter>
+size_t accumulate_while( T& value, 
+                         input_iterator_type first, input_iterator_type last, 
+                         Body& body, 
+                         Inserter& acc
+                        )
 {
-  return accumulate(first, last, init, rts::DefaultSetting());
+  return accumulate_while(value, first, last, body, acc, rts::DefaultSetting() );
 }
 
 } // kastl

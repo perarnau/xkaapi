@@ -55,13 +55,14 @@ namespace rts {
 /* -------------------------------------------------------------------- */
 template<typename input_iterator_type, typename output_iterator_type, typename Operation>
 struct BodyTransform {
+  typedef rts::Sequence<input_iterator_type,output_iterator_type> sequence_type;
   BodyTransform( Operation& o ) : op(o) {}
   Operation op;
-  bool operator()( iterator_type& result, typename sequence_type::range_type& r )
+  bool operator()( input_iterator_type& result, typename sequence_type::range_type& r )
   {
-    iterator_type first   = r.begin1();
-    iterator_type last    = r.end1();
-    iterator_type to_fill = r.begin2();
+    input_iterator_type first   = r.begin1();
+    input_iterator_type last    = r.end1();
+    input_iterator_type to_fill = r.begin2();
 
     while (first != last)
        *to_fill++ = op(*first++);
@@ -73,29 +74,44 @@ struct BodyTransform {
 
 template< typename input_iterator_type, 
           typename output_iterator_type, 
-          typename Operation, typename Settings = class rts::DefaultSetting
+          typename Operation, typename Settings
         >
 output_iterator_type transform( 
     input_iterator_type first, input_iterator_type last, 
     output_iterator_type to_fill, 
     Operation op, 
-    Settings settings  = rts::DefaultSetting()
+    const Settings& settings
 )
 {
   typedef rts::Sequence<input_iterator_type,output_iterator_type> sequence_type;
 
   if (first == last) return first;
-  iterator_type result = first;
+  input_iterator_type result = first;
   sequence_type seq(first, to_fill, last-first);
   
-  rts::MacroLoop< rts::Sequential_MacroLoop_tag >( 
+  rts::MacroLoop< rts::NoReduce_MacroLoop_tag >::doit( 
     result,                                                     /* output: the result */
     seq,                                                        /* input: the sequence */
     rts::BodyTransform<input_iterator_type, output_iterator_type, Operation>(op), /* the body == NanoLoop */
-    rts::empty_reducer<iterator_type>                           /* merge with a thief: do nothing */
+    rts::empty_reducer<input_iterator_type>,                    /* merge with a thief: do nothing */
     settings                                                    /* output: the result */
   );
   return result;
+}
+
+
+template< typename input_iterator_type, 
+          typename output_iterator_type, 
+          typename Operation
+        >
+output_iterator_type transform( 
+    input_iterator_type first, input_iterator_type last, 
+    output_iterator_type to_fill, 
+    Operation op
+    
+)
+{
+  return transform(first, last, to_fill, op, rts::DefaultSetting());
 }
 
 } // kastl

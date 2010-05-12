@@ -78,7 +78,7 @@ Operation for_each(
   input_terator_type first, 
   input_terator_type last, 
   Operation op, 
-  Settings settings
+  const Settings& settings
 )
 {
   typedef rts::Sequence<input_terator_type> sequence_type;

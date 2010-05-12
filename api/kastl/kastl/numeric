@@ -47,6 +47,7 @@
 
 
 #include "kastl/accumulate.h"
+#include "kastl/accumulate_while.h"
 
 #if 0
 #include "kastl/inner_product.h"

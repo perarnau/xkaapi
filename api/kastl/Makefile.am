@@ -21,9 +21,12 @@ kastlinclude_HEADERS=\
 	kastl/kastl_fifoqueue.h\
 	kastl/kastl_workqueue.h\
 	kastl/kastl_team.h\
-	kastl/kastl_foreach.h\
-	kastl/kastl_transform.h\
-	kastl/kastl_accumulate_while.h\
+	kastl/kastl_sequences.h\
+	kastl/kastl_impl.h\
+	kastl/for_each.h\
+	kastl/transform.h\
+	kastl/accumulate.h\
+	kastl/accumulate_while.h\
 	kastl/algorithm \
 	kastl/numeric
 

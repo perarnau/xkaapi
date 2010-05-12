@@ -46,9 +46,9 @@
 # define KASTL_ALGORITHM_INCLUDED
 
 #include "kastl/for_each.h"
+#include "kastl/transform.h"
 
 #if 0
-#include "kastl/transform.h"
 #include "kastl/min_element.h"
 #include "kastl/max_element.h"
 #include "kastl/copy.h"

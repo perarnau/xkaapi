@@ -52,6 +52,50 @@ namespace kastl {
 
 namespace rts {
 
+/* dummy code to get a pointer to a template static method */
+template<typename T>
+T get_my_splitter(T t) { return t; }
+
+/* -------------------------------------------------------------------- */
+/* Empty splitter                                                       */
+/* -------------------------------------------------------------------- */
+template<typename sequence_type>
+class EmptySplitter {
+};
+
+template<typename sequence_type>
+class LinearSplitter {
+  int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request, void* argsplitter )
+  {
+    sequence_type* seq = static_cast<sequence_type*>(_seq);
+    DefaultExtractor* extractor = static_cast<DefaultExtractor*> (argsplitter);
+    size_t size = seq.size();     /* upper bound */
+    if (size ==0) return 0;
+
+    /* take at most count*_pargrain items per thief */
+    size_t blocsize = extractor->_unitsize;
+    size_t size_max = (blocsize * count);
+    typename sequence_type::range_type r;
+
+    /* */
+    if ( !seq->steal(r, size_max )) return 0;
+    kaapi_assert_debug (!r.is_empty());
+    
+    /* equally distribute the work load in r or only distribution by bloc of size at most unitsize ? */
+    for (; request_count > 0; ++request)
+    {
+      if (!kaapi_request_ok(request))
+        continue;
+
+      kaapi_thread_t* thief_thread = kaapi_request_getthread(request);
+      kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
+      WorkType* thief_work = static_cast<WorkType*>
+              (kaapi_thread_pushdata_align(thief_thread, sizeof(WorkType), 8));
+    }
+
+    return false;
+  }
+};
 
 /* -------------------------------------------------------------------- */
 /* Sequential Extractor / Preemptor                                     */
@@ -71,7 +115,7 @@ struct SequentialExtractor {
   template<typename sequence_type>
   int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
   {
-    sequence_type* seq = static_cast<sequence_type*>(_seq);
+    sequence_type* seq __attribute__((unused)) = static_cast<sequence_type*>(_seq);
     return 0;
   }
 
@@ -81,6 +125,13 @@ struct SequentialExtractor {
     SequentialExtractor* object = static_cast<SequentialExtractor*>(argsplitter);
     return object->splitter<sequence_type>(sc, count, request);
   }
+
+  template<typename sequence_type>
+  static kaapi_task_splitter_t get_static_splitter( const sequence_type& )
+  {
+    return &static_splitter<sequence_type>;
+  }
+
 
   template<
       typename result_type, 
@@ -112,27 +163,6 @@ struct DefaultExtractor {
     return seq.pop( r, _unitsize );
   }
 
-
-  template<typename sequence_type>
-  int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request, void* argsplitter )
-  {
-    sequence_type* seq = static_cast<sequence_type*>(_seq);
-    DefaultExtractor* extractor = static_cast<DefaultExtractor*> (argsplitter);
-    size_t size = seq.size();     /* upper bound */
-    if (size ==0) return 0;
-
-    /* take at most count*_pargrain items per thief */
-    size_t blocsize = seq->_unitsize;
-    size_t size_max = (blocsize * count);
-    typename sequence_type::range_type r;
-
-    /* */
-    if ( !seq->steal(r, size_max )) return 0;
-    kaapi_assert_debug (!r.is_empty());
-
-    return false;
-  }
-
   template<typename sequence_type>
   static int static_splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request, void* argsplitter )
   {
@@ -141,9 +171,11 @@ struct DefaultExtractor {
   }
 
   template<typename result_type, typename reduce_body_type>
-  int static_reducer( kaapi_stealcontext_t* sc, void* thief_arg, void* thief_result, size_t thief_size,
-                      result_type* result, reduce_body_type* reducer )
+  static int static_reducer( void* thief_arg, void* pthief_result, size_t thief_size,
+                             result_type* result, reduce_body_type& reducer )
   {
+    result_type* thief_result = static_cast<result_type*> (pthief_result);
+    reducer( *result, *thief_result);
     return 0; 
   }
   
@@ -165,7 +197,7 @@ struct DefaultExtractor {
     kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head( stc );
     while (ktr !=0)
     {
-      if (kaapi_preempt_thief(stc, ktr, 0, ptr_reducer, &result, &reducer))
+      if (kaapi_preempt_thief(stc, ktr, &result, ptr_reducer, &result, reducer))
         return true;
       ktr = kaapi_get_nextthief_head( stc, ktr );
     }
@@ -236,13 +268,12 @@ protected:
 
 
 /* -------------------------------------------------------------------- */
-/* Settings                                                             */
+/* empty reducer                                                        */
 /* -------------------------------------------------------------------- */
 template<typename iterator_type>
 void empty_reducer(const iterator_type& result_thief) 
 {
 }
-
 
 /* -------------------------------------------------------------------- */
 /* Settings                                                             */
@@ -257,16 +288,15 @@ struct DefaultSetting {
 /* -------------------------------------------------------------------- */
 struct Sequential_MacroLoop_tag{};
 
-
-/* -------------------------------------------------------------------- */
-/* Parallel MacroLoop                                                   */
-/* -------------------------------------------------------------------- */
-struct Parallel_MacroLoop_tag{};
-
 /* -------------------------------------------------------------------- */
 /* Parallel MacroLoop, without reduction                                */
 /* -------------------------------------------------------------------- */
 struct NoReduce_MacroLoop_tag{};
+
+/* -------------------------------------------------------------------- */
+/* Parallel MacroLoop, general case with reduction                      */
+/* -------------------------------------------------------------------- */
+struct Parallel_MacroLoop_tag{};
 
 
 /* -------------------------------------------------------------------- */
@@ -341,7 +371,7 @@ struct MacroLoop<NoReduce_MacroLoop_tag> {
     typename sequence_type::range_type range;
 
     int (*splitter)(struct kaapi_stealcontext_t*, int, struct kaapi_request_t*, void*) 
-      = &(settings_type::macro_extractor_type::static_splitter<sequence_type>);
+      = settings_type::macro_extractor_type::get_static_splitter(seq);
 
     /* push adaptive task */
     kaapi_thread_t* thread = kaapi_self_thread();
@@ -384,10 +414,9 @@ struct MacroLoop<Parallel_MacroLoop_tag> {
   {
     typename settings_type::macro_extractor_type extractor(seq, settings);
     typename sequence_type::range_type range;
-    typename settings_type::preemptor_type preempt_loop(settings);
 
     int (*splitter)(struct kaapi_stealcontext_t*, int, struct kaapi_request_t*, void*) 
-      = &(settings_type::macro_extractor_type::static_splitter);
+      = settings_type::macro_extractor_type::get_static_splitter(seq);
 
     /* push adaptive task */
     kaapi_thread_t* thread = kaapi_self_thread();
@@ -407,12 +436,73 @@ struct MacroLoop<Parallel_MacroLoop_tag> {
     /* preempt and merge result with all the thiefs 
        if preempt return true, the local sequential computation is restarted.
     */
-    if (preempt_loop.preempt(stc, seq, result, reduce, settings)) goto redo_compute;
+    if (extractor.preempt(stc, seq, result, reduce, settings)) goto redo_compute;
     
     
     kaapi_steal_finalize(stc);
   }
 };
+
+
+
+/* -------------------------------------------------------------------- */
+/* reduce algorithm, used by algorithm with associative operator        */
+/* operator takes args as (Iterator&, Iterator)                         */
+/* -------------------------------------------------------------------- */
+template<typename input_iterator_type, typename Operation>
+struct __reduce_nanoloop {
+  typedef rts::Sequence<input_iterator_type> sequence_type;
+  
+  __reduce_nanoloop( const Operation& o) : op(o) {}
+  bool operator()(input_iterator_type& result, typename sequence_type::range_type& r)
+  { 
+    input_iterator_type first = r.begin();
+    input_iterator_type last  = r.end();
+    
+    while (first != last)
+    {
+      op(result, first);
+      ++first;
+    }
+    return false;
+  }
+
+  Operation op;
+};
+
+
+template<typename input_iterator_type, typename Operation>
+struct __reduce_reducer {
+  __reduce_reducer( const Operation& o) : op(o) {}
+  bool operator()(input_iterator_type& result, const input_iterator_type& result_thief)
+  { 
+    op(result, result_thief);
+    return false; /* do not continue with local sequence */
+  }
+
+  Operation op;
+};
+
+
+template<typename input_iterator_type, typename Operation, typename Settings>
+input_iterator_type ReduceLoop( input_iterator_type first, input_iterator_type last, Operation op, const Settings& settings )
+{
+  typedef rts::Sequence<input_iterator_type> sequence_type;
+
+  input_iterator_type result = first++;
+  if (first == last) return result;
+  
+  sequence_type seq(first, typename sequence_type::size_type(last-first));
+  rts::MacroLoop< rts::Sequential_MacroLoop_tag >( 
+    result,                                                     /* output: the result */
+    seq,                                                        /* input: the sequence */
+    __reduce_nanoloop<input_iterator_type,Operation>(op),       /* the body == NanoLoop */
+    __reduce_reducer<input_iterator_type,Operation>(op),        /* merge with a thief */
+    settings                                                    /* output: the result */
+  );
+  return result;
+}
+
 
 } // namespace rts
 
