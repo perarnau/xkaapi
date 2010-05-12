@@ -750,6 +750,12 @@ extern int kaapi_sched_sync( void );
 /** \ingroup WS
     Return a new stealcontext to be used with other function of the adaptive API.
     master if only used if flag == KAAPI_STEALCONTEXT_LINKED.
+    * If flag ==KAAPI_STEALCONTEXT_LINKED, then all the linked thieves are waiting
+    during the call to execution of task forked by kaapi_steal_finalize. 
+    In that way the thread that returns synchronize its execution after kaapi_steal_finalize
+    is garanteed to view results of all other thieves.
+    * If flag ==KAAPI_STEALCONTEXT_DEFAULT then the application should ensure termination of
+    thieves, either by call preemption or other synchronisation method.
 */
 kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
   kaapi_thread_t*       thread,
@@ -921,9 +927,12 @@ extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_steal
 extern struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc );
 
 
-/** Preempt ktr and return 1 when:
+/** Preempt a thief.
+    Send a preemption request to the thief with result data structure ktr.
+    And pass extra arguments (arg_to_thief).
+    The call to the function returns 1 iff:
     - ktr has been preempted or finished
-TODO->    - ktr has been replaced by the thieves of ktr into the list of stc
+    - ktr has been replaced by the thieves of ktr into the list of stc
 */
 extern int kaapi_preempt_thief_helper( 
   kaapi_stealcontext_t*               stc, 
@@ -950,21 +959,21 @@ extern int kaapi_remove_finishedthief(
   struct kaapi_taskadaptive_result_t* ktr
 );
 
+
 /** \ingroup ADAPTIVE
-   Try to preempt the thief referenced by tr. Wait preemption occurs.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
-   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
+   Try to preempt the thief referenced by tr. Wait either preemption occurs or the end of the thief.
+   Once the thief has received the preempt and send back result to the victim who preempt it, then
+   the function reducer is called.
+   Return value is the return value of the reducer function or 0 if no reducer is given.
+      
+   The reducer function should has the following signature:
       int (*)( stc, void* thief_arg, void* thief_result, size_t thief_ressize, ... )
-   where ... is the same arguments as passed to kaapi_preempt_nextthief.
+   where ... is the same extra arguments passed to kaapi_preempt_nextthief.
 */
 #define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
 ({									\
   int __res = 0;							\
-  if (((tr) !=0) && kaapi_preempt_thief_helper(stc, (tr), arg_to_thief)) \
+  if (kaapi_preempt_thief_helper(stc, (tr), arg_to_thief)) \
   {									\
     if (!kaapi_is_null((void*)reducer))					\
       __res = ((kaapi_task_reducer_t)reducer)(stc, (tr)->arg_from_thief, (tr)->data, (tr)->size_data, ##__VA_ARGS__);	\
@@ -973,6 +982,7 @@ extern int kaapi_remove_finishedthief(
   }									\
   __res;								\
 })
+
 
 /** \ingroup ADAPTIVE
    Post a preemption request to thief. Do not wait preemption occurs.
@@ -986,6 +996,7 @@ extern int kaapi_remove_finishedthief(
 */
 #define kaapi_preemptasync_thief( stc, tr, arg_to_thief )	\
   kaapi_preemptasync_thief_helper(stc, (tr), arg_to_thief)
+
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
