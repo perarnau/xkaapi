@@ -18,36 +18,24 @@
 /* basic op evaluated per iteration
 */
 struct Sin {
-  typedef double result_type;
-  void operator()(double& result, double a) 
+  double operator()(double a) 
   {
-    result=a; //sin(a);
     sleep(1);
+    return a;
   }
 };
 
 /*
 */
 struct Accumulator {
-  void operator()(double& result, double value) 
+  double _threshold;
+  Accumulator( double v) : _threshold(v) {}
+  bool operator()(double& result, double value) 
   {
     result += value;
+    return result < _threshold;
   }
 };
-
-/*
-*/
-struct Predicate {
-  Predicate( double v) : value(v) {}
-  double value;
-  bool operator()(const double& result) 
-  {
-    return result < value;
-  }
-};
-
-
-
 
 /* The main thread
 */
@@ -89,8 +77,7 @@ int main(int argc, char** argv)
 
 
   Sin op;
-  Accumulator acc;
-  Predicate pred(threshhold);
+  Accumulator acc(threshhold);
   double result = 0;
   
   size_t size_eval;
@@ -103,8 +90,7 @@ int main(int argc, char** argv)
         input,
         input+n,
         op,
-        acc,
-        pred
+        acc
       );
     std::cerr << "Used: " << size_eval << " evaluation(s)" << std::endl;
   }
@@ -114,12 +100,11 @@ int main(int argc, char** argv)
   // Verification of the output
   double refvalue = 0;
   size_t imin_seq = -1UL;
-  for (size_t i=0; (i<size_eval) && pred(refvalue); ++i)
+  for (size_t i=0; (i<size_eval) && (refvalue < threshhold); ++i)
   {
-    Sin::result_type value;
-    op( value, input[i] );
+    double value = op(input[i] );
     acc(refvalue, value );
-    if (!pred(refvalue) && (imin_seq!=(size_t)-1)) imin_seq = 1+i;
+    if (!(refvalue<threshhold) && (imin_seq!=(size_t)-1)) imin_seq = 1+i;
   }
   if (imin_seq ==(size_t)-1) imin_seq = size_eval;
   
