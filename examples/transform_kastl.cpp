@@ -88,7 +88,7 @@ fflush(stdout);
       return sin(val);
     } );
 #else
-    kastl::transform(input, input+n, output, op, 256, 1 );
+    kastl::transform(input, input+n, output, op );
 #endif
 #if 0
 printf("%li:: %i----------<<<<<<<\n\n", kaapi_get_elapsedns(), l );
