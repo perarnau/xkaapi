@@ -59,7 +59,7 @@ static char kaapi_getstatename( kaapi_task_t* task )
   else if (body == kaapi_suspend_body) return 'S';
   else if (body ==kaapi_nop_body) return 'T';
   else if (body ==kaapi_aftersteal_body) return 'X';
-  else if (body ==kaapi_dependenciessignal_body) return 'B';
+  else if (body ==kaapi_writesignal_body) return 'B';
   return 'I';
 }
 
@@ -130,7 +130,7 @@ int kaapi_task_print(
       }
     }
   }
-  if (task->body == kaapi_dependenciessignal_body)
+  if (task->body == kaapi_writesignal_body)
   {
     /* dump broadcast information */
     kaapi_counters_list* wc_list = (kaapi_counters_list*)task->pad;

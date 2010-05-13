@@ -1133,39 +1133,41 @@ extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp );
 /** Check and compute dependencies if task 'task' is pushed into the i-th partition
     \return EINVAL if task does not have format
 */
-extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, kaapi_thread_t* thread, kaapi_task_t* task);
+extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int partitionid, kaapi_task_t* task);
 
 #if !defined(KAAPI_COMPILE_SOURCE)
 /**
 */
-static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int i ) 
+static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (i>=0) && (i<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[i];
+  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_thread_t* thread = thgrp->threads[partitionid];
   return thread;
 }
 
 /** Equiv to kaapi_thread_toptask( thread ) 
 */
-static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int i ) 
+static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (i>=0) && (i<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
 
-  kaapi_thread_t* thread = thgrp->threads[i];
+  kaapi_thread_t* thread = thgrp->threads[partitionid];
   return kaapi_thread_toptask(thread);
 }
 
-static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, kaapi_thread_t* thread )
+static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
 {
   kaapi_assert_debug( thgrp !=0 );
+  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_thread_t* thread = thgrp->threads[partitionid];
   kaapi_assert_debug( thread !=0 );
   
   /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
      calculer les dépendances (appel au bon code)
   */
-  kaapi_threadgroup_computedependencies( thgrp, thread, thread->sp ); /* à changer */
+  kaapi_threadgroup_computedependencies( thgrp, partitionid, thread->sp );
   
   return kaapi_thread_pushtask(thread);
 }

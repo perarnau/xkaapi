@@ -677,44 +677,10 @@ typedef struct kaapi_gd_t {
   void*                       last_version; /* last verion of the data, 0 if not ready */
 } kaapi_gd_t;
 
-/** \ingroup DFG
-    In case of dependency W -> R with the writer and reader tasks on two different partitions,
-    the task_writer->pad points on the kaapi_counters_list data structure.
+/* fwd decl
 */
-#define KAAPI_COUNTER_LIST_BLOCSIZE 7
-typedef struct kaapi_counters_list {
-  short                       size;            // max size: KAAPI_COUNTER_LIST_BLOCSIZE */
-  struct kaapi_counters_list* next;            // next counters_list bloc
-  struct {
-    kaapi_atomic_t*           waiting_counter;
-    kaapi_task_t*             waiting_task;
-  } entry[KAAPI_COUNTER_LIST_BLOCSIZE];        // total size < 8*8 = 64 bytes
-} kaapi_counters_list;
+struct kaapi_deps_t;
 
-
-#define KAAPI_MAX_PARTITION 64
-/** Bit field for at most 64 partitions.
-*/
-typedef kaapi_uint64_t kaapi_readers_t;
-
-/** \ingroup DFG
-*/
-typedef struct kaapi_deps_t {
-  int              tag;                                /* the tag (thread group wid) identifier of the data */
-  kaapi_thread_t*  origin_writer;                      /* index of the thread that own the original pointer */
-  void*            origin_data;                        /* index of the thread that own the original pointer */
-  kaapi_thread_t*  thread_writer;                      /* integer: index of the thread in the group */
-  kaapi_task_t*    last_writer;                        /* last writer task of the version */
-  kaapi_readers_t  set_readers;                        /* bit i=1, partition i has a version of the data */
-  kaapi_task_t*    task_readers[KAAPI_MAX_PARTITION];  /* the last reader tasks that owns a reference to the data */
-  void*            addr_data[KAAPI_MAX_PARTITION];     /* address of data */
-} kaapi_deps_t;
-
-#define KAAPI_PARTITION_SET(p, i) (p |= (1<<i))
-
-/*
-*/
-void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* stack );
 
 
 /* ============================= Hash table for WS ============================ */
@@ -724,7 +690,7 @@ void kaapi_dependenciessignal_body( void* sp, kaapi_thread_t* stack );
 typedef struct kaapi_hashentries_t {
   union {
     kaapi_gd_t                value;
-    kaapi_deps_t*             dfginfo;  /* list of tasks to wakeup at the end */
+    struct kaapi_deps_t*      dfginfo;  /* list of tasks to wakeup at the end */
   } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 
