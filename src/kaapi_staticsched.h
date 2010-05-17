@@ -65,14 +65,21 @@ typedef struct kaapi_counters_list {
   } entry[KAAPI_COUNTER_LIST_BLOCSIZE];        // total size < 8*8 = 64 bytes
 } kaapi_counters_list;
 
-
 #define KAAPI_MAX_PARTITION 64
-/** Bit field for at most 64 partitions.
-*/
-typedef kaapi_uint64_t kaapi_readers_t;
+
 
 /** \ingroup DFG
+    Identification of a reader of a data writen in an other partition.
+    This structure is only used during partitionning step, not at runtime.
+*/
+typedef struct kaapi_reader_t {
+  int              thread;                             /* index in the group */
+  kaapi_task_t*    task;                               /* the last reader tasks that owns a reference to the data */
+  void*            addr;                               /* address of data in this thread */
+} kaapi_reader_t;
 
+
+/** \ingroup DFG
     Allow to maintain meta information about version of data.
     A version is M producers and N readers (current M=1 because we do not support cw).
     When a new reader is added into a version, the readers information is updated:
@@ -91,20 +98,15 @@ typedef kaapi_uint64_t kaapi_readers_t;
     the address of invalidated data. If a new reader is added, then the delete_task body
     may be replaced by nop in order to reuse the data.
 */
-typedef struct kaapi_deps_t {
+typedef struct kaapi_version_t {
   long             tag;                                /* the tag (thread group wide) identifier of the data */
   void*            writer_data;                        /* address of the reference data */
-  int              thread_writer;                      /* index of the last thread in the group that write the data */
-  kaapi_task_t*    last_writer;                        /* last writer task of the version */
+  int              thread_writer;                      /* index of the last thread that writes the data, -1 if outside the group*/
+  kaapi_task_t*    last_writer;                        /* last writer task of the version, 0 if no indentify task (input data) */
+  int              cnt_readers;                        /* number of readers ==1 in readers */
+  kaapi_reader_t   readers[KAAPI_MAX_PARTITION];       /* set of readers */
+} kaapi_version_t;
 
-  int              cnt_readers;                        /* number of bits ==1 in set_readers */
-  int              thread_readers[KAAPI_MAX_PARTITION];/* bit i=1, partition i has a version of the data */
-  kaapi_task_t*    task_readers[KAAPI_MAX_PARTITION];  /* the last reader tasks that owns a reference to the data */
-  void*            addr_data[KAAPI_MAX_PARTITION];     /* address of data on each memory bank */
-} kaapi_deps_t;
-
-#define KAAPI_PARTITION_SET(p, i) (p[i] = 1)
-#define KAAPI_PARTITION_GET(p, i) (p[i])
 
 /* usage:
    KAAPI_FOREACH_PARTITION( index, dfginfo->thread_readers)
@@ -112,8 +114,8 @@ typedef struct kaapi_deps_t {
      do some things for all index on non empty partition
    }
 */
-#define KAAPI_FOREACH_PARTITION(var, set) \
-  for(var=0; var<KAAPI_MAX_PARTITION; ++var)\
+#define KAAPI_FOREACH_PARTITION(var, version) \
+  for(int var=0; var<(version)->cnt_readers; ++var)\
     if (set[var] !=0)
 
 
@@ -218,6 +220,24 @@ static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int par
   
   return kaapi_thread_pushtask(thread);
 }
+
+
+/* ============================= internal interface to manage version ============================ */
+/*
+*/
+void kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, void* data );
+
+/*
+*/
+void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t* ver );
+
+/* New reader
+*/
+void kaapi_threadgroup_version_newreader( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, void* data );
+
+/* New writer
+*/
+void kaapi_threadgroup_version_newwriter( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, void* data );
 
 
 #if defined(__cplusplus)
