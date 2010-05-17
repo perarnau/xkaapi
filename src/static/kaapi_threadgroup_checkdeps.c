@@ -61,11 +61,13 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
   /* pass in parameter ? cf C++ thread interface */
   kaapi_assert_debug( (threadindex >=0) && (threadindex < thgrp->group_size) );
 
-  if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
+  if(task->body==kaapi_suspend_body && task->ebody!=0)
     task_fmt= kaapi_format_resolvebybody(task->ebody);
-  else 
+  else if (task->body!=0)
     task_fmt= kaapi_format_resolvebybody(task->body);
-  
+  else
+    task_fmt = 0;
+
   if (task_fmt ==0) return EINVAL;
   
   /* get the thread where to push the task */
