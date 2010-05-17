@@ -109,7 +109,7 @@ typedef struct kaapi_deps_t {
 /* usage:
    KAAPI_FOREACH_PARTITION( index, dfginfo->thread_readers)
    {
-     do some things
+     do some things for all index on non empty partition
    }
 */
 #define KAAPI_FOREACH_PARTITION(var, set) \

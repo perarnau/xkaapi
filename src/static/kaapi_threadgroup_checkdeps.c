@@ -136,10 +136,10 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
           wc_list = (kaapi_counters_list*)task_writer->pad;
 
         /* add the current task as a reader */
-        if (KAAPI_PARTITION_GET(entry->u.dfginfo->set_readers, partid) ==0) 
+        if (KAAPI_PARTITION_GET(entry->u.dfginfo->thread_readers, partid) ==0) 
         {
           ++entry->u.dfginfo->cnt_readers;
-          KAAPI_PARTITION_SET(entry->u.dfginfo->set_readers, partid);
+          KAAPI_PARTITION_SET(entry->u.dfginfo->thread_readers, partid);
         }
         entry->u.dfginfo->task_readers[partid] = task;
         entry->u.dfginfo->addr_data[partid]    = access->data;
@@ -160,9 +160,9 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
         /* here a stack allocation attached with the thread group */
         entry->u.dfginfo = calloc( 1, sizeof(kaapi_deps_t) );
         entry->u.dfginfo->tag = 0;
-        entry->u.dfginfo->origin_writer = threadindex;
-        entry->u.dfginfo->origin_data = access->data;
-        entry->u.dfginfo->set_readers = 0;
+        entry->u.dfginfo->thread_writer = threadindex;
+        entry->u.dfginfo->writer_data = access->data;
+        memset( &entry->u.dfginfo->thread_readers, 0, sizeof(entry->u.dfginfo->thread_readers));
         entry->u.dfginfo->cnt_readers = 0;
       }
       else {
@@ -176,9 +176,9 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
               -> mute the current task to be a task_copy
               -> push the original task after
         */
-        if ( (entry->u.dfginfo->set_readers ==0) 
+        if ( (entry->u.dfginfo->thread_readers ==0) 
            || 
-             ((entry->u.dfginfo->cnt_readers ==1) && (KAAPI_PARTITION_GET(entry->u.dfginfo->set_readers,i) !=0))
+             ((entry->u.dfginfo->cnt_readers ==1) && (KAAPI_PARTITION_GET(entry->u.dfginfo->thread_readers,i) !=0))
         )/* no copy */
         {
           entry->u.dfginfo->last_writer   = task;
