@@ -51,18 +51,15 @@
     ATOMIC_DECR
 */
 
-/**
+/** task is the top task not yet pushed.
  */
 int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadindex, kaapi_task_t* task)
 {
   kaapi_thread_t*      thread;
-  kaapi_task_t*        task_writer;
-  kaapi_counters_list* wc_list;
-  kaapi_format_t* task_fmt;
+  kaapi_format_t*      task_fmt;
   
   /* pass in parameter ? cf C++ thread interface */
   kaapi_assert_debug( (threadindex >=0) && (threadindex < thgrp->group_size) );
-  int partid = threadindex;
 
   if(task->body==kaapi_suspend_body || task->body==kaapi_exec_body)
     task_fmt= kaapi_format_resolvebybody(task->ebody);
@@ -87,7 +84,6 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     2- we only consider R,W and RW dependencies, no CW that implies multiple writers
   */
   kaapi_hashentries_t* entry; //Current argument's entry in the Hashmap
-  kaapi_atomic_t* counter=0;  //Waiting counter for the task
   
   for (int i=0;i<task_fmt->count_params;i++) 
   {
@@ -101,132 +97,20 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
 
     /* find the last writer (task & thread) using the hash map */
     entry = kaapi_hashmap_find(&thgrp->ws_khm, access->data);
-    
+    if (entry ==0)
+      /* no entry -> first reader */
+      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, access );
+
     if (KAAPI_ACCESS_IS_READ(m))
     {
-      /* if entry ==0, access is the first access */
-      if ((entry !=0) && (entry->u.dfginfo->thread_writer != threadindex))
-      {
-        /* create the waiting counter for this task and change its state */
-        if (counter ==0) 
-        {
-          counter =(kaapi_atomic_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_atomic_t),8);
-          KAAPI_ATOMIC_WRITE(counter, 1);
-        }
-        else
-          KAAPI_ATOMIC_INCR(counter);
-
-/* here better to put a recv task with task information (especially for distributed compute) */
-        kaapi_task_setbody( task, kaapi_suspend_body);
-
-        /* add task into the reader list */
-        task_writer = entry->u.dfginfo->last_writer;
-        if (kaapi_task_getbody(task_writer) != kaapi_writesignal_body)
-        {
-          /* create its waiting readers list */
-          wc_list = kaapi_thread_pushdata(
-                kaapi_threadgroup_thread(thgrp, entry->u.dfginfo->thread_writer), 
-                sizeof(kaapi_counters_list)
-          );
-          memset(wc_list, 0, sizeof(kaapi_counters_list) );
-          task_writer->pad = wc_list;
-          kaapi_task_setbody(task_writer, kaapi_writesignal_body);
-        }
-        else 
-          wc_list = (kaapi_counters_list*)task_writer->pad;
-
-        /* add the current task as a reader */
-        if (KAAPI_PARTITION_GET(entry->u.dfginfo->thread_readers, partid) ==0) 
-        {
-          ++entry->u.dfginfo->cnt_readers;
-          KAAPI_PARTITION_SET(entry->u.dfginfo->thread_readers, partid);
-        }
-        entry->u.dfginfo->task_readers[partid] = task;
-        entry->u.dfginfo->addr_data[partid]    = access->data;
-        
-        /* allocate a new entry in the list wc_list */
-        kaapi_assert(wc_list->size <= KAAPI_COUNTER_LIST_BLOCSIZE);
-        wc_list->entry[wc_list->size].waiting_counter = counter;
-        wc_list->entry[wc_list->size].waiting_task    = task;
-        ++wc_list->size;
-      }
+      kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, access );
     }
     if (KAAPI_ACCESS_IS_WRITE(m))
     {
-      /* find the last writer (task & thread) using the hash map */
-      if (entry ==0) 
-      {
-        entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
-        /* here a stack allocation attached with the thread group */
-        entry->u.dfginfo = calloc( 1, sizeof(kaapi_deps_t) );
-        entry->u.dfginfo->tag = 0;
-        entry->u.dfginfo->thread_writer = threadindex;
-        entry->u.dfginfo->writer_data = access->data;
-        memset( &entry->u.dfginfo->thread_readers, 0, sizeof(entry->u.dfginfo->thread_readers));
-        entry->u.dfginfo->cnt_readers = 0;
-      }
-      else {
-        /* an entry alread exist: 
-           - W mode => mute the data => invalidate copies
-           - if other copies exist in the thread group then be carefull in order to not modify other read copies
-           through the write.
-           - so if #task_readers >1 or task_readers[i] are not in the same partition, then make a copy
-           by forking task_copy just before:
-              -> recopy the task to temporary
-              -> mute the current task to be a task_copy
-              -> push the original task after
-        */
-        if ( (entry->u.dfginfo->thread_readers ==0) 
-           || 
-             ((entry->u.dfginfo->cnt_readers ==1) && (KAAPI_PARTITION_GET(entry->u.dfginfo->thread_readers,i) !=0))
-        )/* no copy */
-        {
-          entry->u.dfginfo->last_writer   = task;
-          entry->u.dfginfo->thread_writer = threadindex;
-        }
-        else {
-          /* make a copy */
-        }
-      }
+      kaapi_threadgroup_version_newwriter( thgrp, entry->u.dfginfo, threadindex, task, access );
     }
     
   } /* end for all arguments of the task */
 
   return 0;
-}
-
-
-/** This is the body of a writer task that has been changed to execute
-    1/ the original body
-    2/ signal other readers tasks/threads
- */
-void kaapi_writesignal_body( void* sp, kaapi_thread_t* thread )
-{
-  /* thread->pc is the executing task */
-  kaapi_task_t*        self    = thread->pc;
-  kaapi_counters_list* wc_list = (kaapi_counters_list*)self->pad;
-  kaapi_atomic_t* counter;
-  kaapi_task_t* task;
-  short i;
-
-  thread->pc->pad=0;
-
-  (*self->ebody)(sp,thread); // Execution of the real body
-  
-  /* write memory barrier to ensure that other threads will view the data produced */
-  kaapi_mem_barrier();
-
-  /* signal all readers */  
-  while(wc_list != 0) 
-  {
-    for (i=0; i<wc_list->size; ++i)
-    {
-      counter = wc_list->entry[i].waiting_counter;
-      task = wc_list->entry[i].waiting_task;
-      
-      if (KAAPI_ATOMIC_DECR(counter) ==0)
-        kaapi_task_setbody(task, task->ebody);
-    }
-    wc_list = wc_list->next;
-  }
 }
