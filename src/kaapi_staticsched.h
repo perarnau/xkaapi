@@ -51,9 +51,19 @@
 extern "C" {
 #endif
 
+
+/** \ingroup DFG
+    This data structure is used at runtime.
+*/
+typedef struct kaapi_taskrecv_arg_t {
+  long           tag;                          /* may be deleted, not usefull at runtime */
+  kaapi_access_t a;
+} kaapi_taskrecv_arg_t;
+
 /** \ingroup DFG
     In case of dependency W -> R with the writer and reader tasks on two different partitions,
     the task_writer->pad points on the kaapi_counters_list data structure.
+    This data structure is used at runtime.
 */
 #define KAAPI_COUNTER_LIST_BLOCSIZE 7
 typedef struct kaapi_taskbcast_arg_t {
@@ -68,6 +78,7 @@ typedef struct kaapi_taskbcast_arg_t {
 } kaapi_taskbcast_arg_t;
 
 #define KAAPI_MAX_PARTITION 64
+
 
 
 /** \ingroup DFG
@@ -103,12 +114,12 @@ typedef struct kaapi_reader_t {
 typedef struct kaapi_version_t {
   long             tag;                                /* the tag (thread group wide) identifier of the data */
   void*            original_data;                      /* address of the reference data */
+  int              writer_thread;                      /* index of the last thread that writes the data, -1 if outside the group*/
   void*            writer_data;                        /* address of the reference data */
-  int              thread_writer;                      /* index of the last thread that writes the data, -1 if outside the group*/
-  kaapi_task_t*    last_writer;                        /* last writer task of the version, 0 if no indentify task (input data) */
+  kaapi_task_t*    writer_task;                        /* last writer task of the version, 0 if no indentify task (input data) */
   int              cnt_readers;                        /* number of readers ==1 in readers */
   kaapi_reader_t   readers[KAAPI_MAX_PARTITION];       /* set of readers */
-  void*            last_data[KAAPI_MAX_PARTITION];     /* last data on each thread that remains to destroy, may be reused if required */
+  void*            delete_data[KAAPI_MAX_PARTITION];   /* data deleted on each thread , may be reused if required */
 } kaapi_version_t;
 
 
@@ -238,11 +249,13 @@ void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t
 
 /* New reader
 */
-void kaapi_threadgroup_version_newreader( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a );
+kaapi_task_t* kaapi_threadgroup_version_newreader
+    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a );
 
 /* New writer
 */
-void kaapi_threadgroup_version_newwriter( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, void* data );
+kaapi_task_t* kaapi_threadgroup_version_newwriter
+    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a );
 
 /* task recv body 
 */

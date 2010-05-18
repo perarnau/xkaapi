@@ -56,7 +56,8 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, ka
   /* here a stack allocation attached with the thread group */
   ver = entry->u.dfginfo = calloc( 1, sizeof(kaapi_version_t) );
   ver->tag = ++thgrp->tag_count;
-  ver->thread_writer = -1;
+  ver->writer_task = 0;
+  ver->writer_thread = -1;
   ver->original_data = ver->writer_data = access->data;
   memset( &ver->readers, 0, sizeof(ver->readers));
   ver->cnt_readers = 0;
@@ -73,7 +74,7 @@ void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t
 
 /* add a new reader
 */
-void kaapi_threadgroup_version_newreader( 
+kaapi_task_t* kaapi_threadgroup_version_newreader( 
     kaapi_threadgroup_t thgrp, 
     kaapi_version_t* ver, 
     int tid, 
@@ -83,7 +84,7 @@ void kaapi_threadgroup_version_newreader(
 {
   kaapi_taskbcast_arg_t* argbcast;
   
-  if (ver->last_writer == 0)
+  if (ver->writer_task == 0)
   { /* this is a first read, without defined writer -> the implicit writer is on the mainthread */
     /* push task bcast */
     kaapi_task_t* taskbcast = kaapi_thread_toptask(thgrp->mainthread);
@@ -92,61 +93,94 @@ void kaapi_threadgroup_version_newreader(
     memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
     taskbcast->pad     = argbcast;
     argbcast->tag      = ver->tag;
-    ver->last_writer   = taskbcast;
+    ver->writer_task   = taskbcast;
     ver->writer_data   = access->data;
-    ver->thread_writer = -1;
+    ver->writer_thread = -1;
     /* push the task */
     kaapi_thread_pushtask(thgrp->mainthread);
   }
   else {
-    argbcast = (kaapi_taskbcast_arg_t*)ver->last_writer->pad;
-  }
-
-  /* writer not on the same partition -> add a new reader in the list of the bcast task */
-  if (ver->thread_writer != tid)
-  {
-    /* if already has a reader do nothing */
-    
-    if (!ver->readers[tid].used)
-    { /* add a new reader:
-         - push a recv task with 1 access to the data in suspend mode
-      */
+    argbcast = (kaapi_taskbcast_arg_t*)ver->writer_task->pad;
+    /* if 0 -> mute the task + allocate the bcast arguments */
+    if ((argbcast ==0) && (ver->writer_thread != tid ))
+    {
       kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
+      argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(thread, sizeof(kaapi_taskbcast_arg_t) );
+      memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
+      argbcast->tag      = ver->tag;
+      ver->writer_task->pad = argbcast;
+      kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body );
+    }
+  }
+  kaapi_assert( argbcast !=0 );
+
+  /* writer not on the same partition 
+     - mute the writer task to be a bcast task
+     - add a new reader in the list of the bcast task 
+  */
+
+  /* if already has a reader do nothing */    
+  if (!ver->readers[tid].used)
+  { /* add a new reader:
+       - push a recv task with one access to the data in suspend mode
+    */
+    kaapi_task_t savedtask;
+    kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
+
+    if (ver->writer_thread != tid )
+    {
       /* save the top task */
-      kaapi_task_t savedtask = *task;
+      savedtask = *task;
       /* push task recv */
       kaapi_task_t* taskrecv = kaapi_thread_toptask(thread);
-      kaapi_task_init(taskrecv, kaapi_taskrecv_body, kaapi_thread_pushdata(thread, sizeof(kaapi_access_t) ) );
+      kaapi_taskrecv_arg_t* argrecv;
+      kaapi_task_init(taskrecv, kaapi_taskrecv_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskrecv_arg_t) ) );
+      argrecv = kaapi_task_getargst( taskrecv, kaapi_taskrecv_arg_t );
+      argrecv->tag = ver->tag;
+      argrecv->a   = *access;
       kaapi_task_setbody(taskrecv, kaapi_suspend_body );
       ver->readers[tid].task = taskrecv;
-      
-      /* WARNING here the data should be allocated in the THREAD with we want to avoir WAR */
-      ver->readers[tid].addr = ver->writer_data;
-      ver->readers[tid].used = true;
+
       /* push the task */
       kaapi_thread_pushtask(thread);
-
+      
       /* restore savedtask on the top task position */
-      *kaapi_thread_toptask(thread) = savedtask;
+      task = kaapi_thread_toptask(thread);
+      *task = savedtask;
 
-      /* allocate a new entry in the list wc_list */
+      /* allocate a new entry in the list wc_list if not on the same partition */
       kaapi_assert(argbcast->size <= KAAPI_COUNTER_LIST_BLOCSIZE);
       argbcast->entry[argbcast->size].recv_task = taskrecv;
       argbcast->entry[argbcast->size].addr      = access->data;
-      ++argbcast->size;    
+      ++argbcast->size;
+    }
+    else /* on the same partition, only store the task info about reading the data */
+      ver->readers[tid].task = task;
+    
+    /* WARNING here the data should be allocated in the THREAD if we want to avoid WAR */
+    access->data = ver->readers[tid].addr = ver->writer_data;
+    ver->readers[tid].used = true;
+    
 
-      ++ver->cnt_readers;
-    }
-    else {
-      /* mute the data */
-    }
+    ++ver->cnt_readers;
   }
+  else {
+    /* mute the data */
+  }
+
+  return task;
 }
 
 
 /* New writer
 */
-void kaapi_threadgroup_version_newwriter( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, void* data )
+kaapi_task_t* kaapi_threadgroup_version_newwriter( 
+    kaapi_threadgroup_t thgrp, 
+    kaapi_version_t* ver, 
+    int tid, 
+    kaapi_task_t* task, 
+    kaapi_access_t* access 
+)
 {
   /* an entry alread exist: 
      - W mode => mute the data => invalidate copies
@@ -158,8 +192,12 @@ void kaapi_threadgroup_version_newwriter( kaapi_threadgroup_t thgrp, kaapi_versi
         -> mute the current task to be a task_copy
         -> push the original task after
   */
-  if (ver->thread_writer == -1)
+  if (ver->writer_task == 0)
   { /* this is the first writer */
+    kaapi_assert( ver->cnt_readers == 0);
+    ver->writer_data   = access->data;
+    ver->writer_task   = task;
+    ver->writer_thread = tid;
   }
   else 
   { /* a writer already exist:
@@ -167,6 +205,40 @@ void kaapi_threadgroup_version_newwriter( kaapi_threadgroup_t thgrp, kaapi_versi
          * add task delete on all the threads or marks threads with data to delete at the end
          * update the writer information, reset the list of readers
     */
-  }  
+    /* print a warning about WAR dependencies */
+    if ((ver->cnt_readers>1) || !(ver->readers[tid].used))
+    {
+      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
+    }
+
+    /* mark data on each partition deleted */
+    int i, r;
+    for (i=0, r=0; r < ver->cnt_readers; ++i)
+    {
+      if (ver->readers[i].used)
+      {
+        ver->delete_data[i] = ver->readers[i].addr;
+        ver->readers[i].addr = 0;
+        ++r;
+        ver->readers[i].used = false;
+      }
+      else ver->delete_data[i] = 0;
+    }
+    ver->cnt_readers =0;
+    
+    if (ver->delete_data[tid] !=0)
+    {
+      ver->writer_data = access->data = ver->delete_data[tid];
+    }
+    else {
+      kaapi_assert( ver->original_data == access->data );
+      ver->writer_data = ver->original_data;
+    }
+    ver->writer_thread = tid;
+    ver->writer_task = task;
+    ver->tag = ++thgrp->tag_count;
+  }
+  
+  return task;
 }
 
