@@ -56,14 +56,16 @@ extern "C" {
     the task_writer->pad points on the kaapi_counters_list data structure.
 */
 #define KAAPI_COUNTER_LIST_BLOCSIZE 7
-typedef struct kaapi_counters_list {
-  short                       size;            // max size: KAAPI_COUNTER_LIST_BLOCSIZE */
-  struct kaapi_counters_list* next;            // next counters_list bloc
+typedef struct kaapi_taskbcast_arg_t {
+  short                         size;          /* max size: KAAPI_COUNTER_LIST_BLOCSIZE */
+  long                          tag;
+  struct kaapi_taskbcast_arg_t* next;          /* next bloc */
   struct {
-    kaapi_atomic_t*           waiting_counter;
-    kaapi_task_t*             waiting_task;
-  } entry[KAAPI_COUNTER_LIST_BLOCSIZE];        // total size < 8*8 = 64 bytes
-} kaapi_counters_list;
+    int                         tid;           /* thread id in the group */
+    void*                       addr;          /* remote address */
+    kaapi_task_t*               recv_task;
+  } entry[KAAPI_COUNTER_LIST_BLOCSIZE];        /* total size < 8*8 = 64 bytes */
+} kaapi_taskbcast_arg_t;
 
 #define KAAPI_MAX_PARTITION 64
 
@@ -73,7 +75,7 @@ typedef struct kaapi_counters_list {
     This structure is only used during partitionning step, not at runtime.
 */
 typedef struct kaapi_reader_t {
-  int              thread;                             /* index in the group */
+  bool             used;                               /* true if this readers is set, see readers fields in kaapi_version_t */
   kaapi_task_t*    task;                               /* the last reader tasks that owns a reference to the data */
   void*            addr;                               /* address of data in this thread */
 } kaapi_reader_t;
@@ -100,11 +102,13 @@ typedef struct kaapi_reader_t {
 */
 typedef struct kaapi_version_t {
   long             tag;                                /* the tag (thread group wide) identifier of the data */
+  void*            original_data;                      /* address of the reference data */
   void*            writer_data;                        /* address of the reference data */
   int              thread_writer;                      /* index of the last thread that writes the data, -1 if outside the group*/
   kaapi_task_t*    last_writer;                        /* last writer task of the version, 0 if no indentify task (input data) */
   int              cnt_readers;                        /* number of readers ==1 in readers */
   kaapi_reader_t   readers[KAAPI_MAX_PARTITION];       /* set of readers */
+  void*            last_data[KAAPI_MAX_PARTITION];     /* last data on each thread that remains to destroy, may be reused if required */
 } kaapi_version_t;
 
 
@@ -155,6 +159,7 @@ typedef enum {
 */
 typedef struct kaapi_threadgrouprep_t {
   /* public part */
+  kaapi_thread_t*            mainthread;   /* the main thread that push task */
   kaapi_thread_t**           threads;      /* array on top frame of each threadctxt */
   int                        group_size;   /* number of threads in the group */
    
@@ -225,7 +230,7 @@ static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int par
 /* ============================= internal interface to manage version ============================ */
 /*
 */
-void kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, void* data );
+kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, kaapi_hashmap_t* hmap, int tid, kaapi_access_t* a );
 
 /*
 */
@@ -233,12 +238,19 @@ void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t
 
 /* New reader
 */
-void kaapi_threadgroup_version_newreader( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, void* data );
+void kaapi_threadgroup_version_newreader( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a );
 
 /* New writer
 */
 void kaapi_threadgroup_version_newwriter( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, void* data );
 
+/* task recv body 
+*/
+void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread );
+
+/* task tbcast body 
+*/
+void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread );
 
 #if defined(__cplusplus)
 }

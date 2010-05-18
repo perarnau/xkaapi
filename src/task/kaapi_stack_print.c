@@ -133,12 +133,12 @@ int kaapi_task_print(
   if (task->body == kaapi_writesignal_body)
   {
     /* dump broadcast information */
-    kaapi_counters_list* wc_list = (kaapi_counters_list*)task->pad;
+    kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->pad;
     int i;
     fprintf(file, "\n\t\t\t-> sendto task(s): ");
-    for (i=0; i<wc_list->size; ++i)
+    for (i=0; i<tbcastarg->size; ++i)
     {
-        fprintf(file, "@:%p ", (void*)wc_list->entry[i].waiting_task);
+        fprintf(file, "@:%p ", (void*)tbcastarg->entry[i].recv_task);
     }
   }
   fputc('\n', file );

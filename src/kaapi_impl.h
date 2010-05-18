@@ -679,7 +679,7 @@ typedef struct kaapi_gd_t {
 
 /* fwd decl
 */
-struct kaapi_deps_t;
+struct kaapi_version_t;
 
 
 
@@ -690,7 +690,7 @@ struct kaapi_deps_t;
 typedef struct kaapi_hashentries_t {
   union {
     kaapi_gd_t                value;
-    struct kaapi_deps_t*      dfginfo;  /* list of tasks to wakeup at the end */
+    struct kaapi_version_t*   dfginfo;  /* list of tasks to wakeup at the end */
   } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 

@@ -413,6 +413,7 @@ typedef struct kaapi_thread_context_t {
 #if !defined(KAAPI_COMPILE_SOURCE)
 struct kaapi_threadgrouprep_t {
   /* public part */
+  kaapi_thread_t*            mainthread;   /* the main thread that push task */
   kaapi_thread_t**           threads;      /* array on top frame of each threadctxt */
   int                        group_size;   /* number of threads in the group */
 };
