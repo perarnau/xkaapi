@@ -16,19 +16,19 @@ display-all:
 
 display:
 	@echo '***********************************************************'
-	@echo 'Type "make examples" if you want to build all the examples.'
-	@echo 'You can also type "make `program'"'"'" if you want to build only one example.'
-	@echo 'You can get the list of available examples with "make list_examples"'
+	@echo 'Type "make tests" if you want to build all the tests.'
+	@echo 'You can also type "make `program'"'"'" if you want to build only one test.'
+	@echo 'You can get the list of available examples with "make list_tests"'
 	@echo '***********************************************************'
 
-list_examples:
+list_tests:
 	@echo '***********************************************************'
-	@echo 'Available example programs '
+	@echo 'Available tests programs '
 #in $(notdir $(CURDIR)) are:'
 	@for prog in $(check_PROGRAMS); do echo " * $$prog"; done
 	@echo '***********************************************************'
 
-examples: check
+tests: check
 
 # test generation
 TESTS_ENVIRONMENT=env KARUN_OPTS="$(KARUN_OPTS)" /bin/sh -x
