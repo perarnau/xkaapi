@@ -134,16 +134,60 @@ int kaapi_task_print(
   if (task->body == kaapi_taskbcast_body)
   {
     /* dump broadcast information */
+    kaapi_com_t* com;
     kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->pad;
     int i;
-    fprintf(file, "\n\t\t\t-> sendto tag: %li to task(s): ", tbcastarg->tag);
-    for (i=0; i<tbcastarg->size; ++i)
+    com = &tbcastarg->head;
+    while (com !=0)
     {
-        fprintf(file, "@:%p ", (void*)tbcastarg->entry[i].recv_task);
+      printf("\n\t\t\t->send tag: %li to %i task(s): ", com->tag, com->size);
+      for (i=0; i<com->size; ++i)
+      {
+        fprintf(file, "\n\t\t\t\t@:%p ", (void*)com->entry[i].recv_task);
+      }
+      com = com->next;
     }
   }
   fputc('\n', file );
 
+  fflush(file);
+  return 0;
+}
+
+
+/**
+*/
+static int kaapi_print_bcasttask( 
+  FILE* file,
+  kaapi_task_t* task
+)
+{
+  kaapi_taskbcast_arg_t* tbcastarg;
+  kaapi_access_mode_t m;
+  kaapi_com_t* com;
+  int i;
+  
+  fprintf( file, ", sp:%p, #p:1 ", 
+        task->sp
+  );
+  fputs( ", mode: ", file );
+  m = KAAPI_ACCESS_MODE_W;
+  fputc(kaapi_getmodename(m), file );
+  fputs("", file );
+
+  tbcastarg = kaapi_task_getargst(task, kaapi_taskbcast_arg_t);
+  com = &tbcastarg->head;
+  while (com !=0)
+  {
+    printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
+    for (i=0; i<com->size; ++i)
+    {
+      fprintf(file, "\n\t\t\t\t@:%p ", (void*)com->entry[i].recv_task);
+    }
+    com = com->next;
+  }
+
+  fputc('\n', file );
   fflush(file);
   return 0;
 }
@@ -156,27 +200,26 @@ static int kaapi_print_recvtask(
   kaapi_task_t* task
 )
 {
-  if (task->ebody == kaapi_taskrecv_body)
+  fprintf( file, ", sp:%p, #p:1 ", 
+        task->sp
+  );
+  fputs( ", mode: ", file );
+  kaapi_access_mode_t m = KAAPI_ACCESS_MODE_W;
+  fputc(kaapi_getmodename(m), file );
+  fputs("", file );
+  kaapi_taskrecv_arg_t* arg = kaapi_task_getargst(task, kaapi_taskrecv_arg_t);
+  fprintf(file, "<undef> @:%p value=", arg->a.data);
+  if (arg->a.version !=0)
   {
-    fprintf( file, ", sp:%p, #p:1 ", 
-          task->sp
-    );
-    fputs( ", mode: ", file );
-    kaapi_access_mode_t m = KAAPI_ACCESS_MODE_W;
-    fputc(kaapi_getmodename(m), file );
-    fputs("", file );
-    kaapi_taskrecv_arg_t* arg = kaapi_task_getargst(task, kaapi_taskrecv_arg_t);
-    fprintf(file, "<undef> @:%p value=", arg->a.data);
-    if (arg->a.version !=0)
-    {
-      fprintf(file, ", ver:%p value=", arg->a.version );
-    }
-    fprintf(file, "\n\t\t\t-> recvfrom tag: %li", arg->tag);
+    fprintf(file, ", ver:%p value=", arg->a.version );
   }
+  fprintf(file, "\n\t\t\t-> recvfrom tag: %li", arg->tag);
+
   fputc('\n', file );
   fflush(file);
   return 0;
 }
+
 
 
 /** 
@@ -196,6 +239,7 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
   count = 0;
 
   frame    = thread->stackframe;
+  if (frame ==0) return 0;
   iframe   = 0;
   task_bot = kaapi_thread_bottomtask(thread);
 
@@ -256,6 +300,8 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
           fprintf(file, ", steal/under task:" );
           kaapi_task_print(file, task_bot, kaapi_task_getextrabody(task_bot));
         }
+        else if ( kaapi_task_getextrabody(task_bot) == kaapi_taskbcast_body) 
+          kaapi_print_bcasttask( file, task_bot );
         else if ( kaapi_task_getextrabody(task_bot) == kaapi_taskrecv_body) 
           kaapi_print_recvtask( file, task_bot );
         fputc('\n', file);

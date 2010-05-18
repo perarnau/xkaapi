@@ -65,16 +65,22 @@ typedef struct kaapi_taskrecv_arg_t {
     the task_writer->pad points on the kaapi_counters_list data structure.
     This data structure is used at runtime.
 */
-#define KAAPI_COUNTER_LIST_BLOCSIZE 7
-typedef struct kaapi_taskbcast_arg_t {
+#define KAAPI_BCASTENTRY_SIZE 7
+typedef struct kaapi_com_t {
   short                         size;          /* max size: KAAPI_COUNTER_LIST_BLOCSIZE */
   long                          tag;
-  struct kaapi_taskbcast_arg_t* next;          /* next bloc */
+  struct kaapi_com_t*           next;          /* next in bcast envelop task */
+  kaapi_access_t                a;             /* address of data to send */
   struct {
     int                         tid;           /* thread id in the group */
     void*                       addr;          /* remote address */
-    kaapi_task_t*               recv_task;
-  } entry[KAAPI_COUNTER_LIST_BLOCSIZE];        /* total size < 8*8 = 64 bytes */
+    kaapi_task_t*               recv_task;     /* remote recv task */
+  } entry[KAAPI_BCASTENTRY_SIZE];
+} kaapi_com_t;
+
+typedef struct kaapi_taskbcast_arg_t {
+  kaapi_com_t  head;
+  kaapi_com_t* last;
 } kaapi_taskbcast_arg_t;
 
 #define KAAPI_MAX_PARTITION 64
@@ -117,6 +123,7 @@ typedef struct kaapi_version_t {
   int              writer_thread;                      /* index of the last thread that writes the data, -1 if outside the group*/
   void*            writer_data;                        /* address of the reference data */
   kaapi_task_t*    writer_task;                        /* last writer task of the version, 0 if no indentify task (input data) */
+  kaapi_com_t*     com;                                /* list of com to used in the bcast task */     
   int              cnt_readers;                        /* number of readers ==1 in readers */
   kaapi_reader_t   readers[KAAPI_MAX_PARTITION];       /* set of readers */
   void*            delete_data[KAAPI_MAX_PARTITION];   /* data deleted on each thread , may be reused if required */
@@ -178,6 +185,7 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_atomic_t             countend;     /* warn: alignement ! */
   int volatile               startflag;    /* set to 1 when threads should starts */
   int volatile               step;         /* iteration step */
+  kaapi_thread_context_t*    mainctxt;     /* the main thread context */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
   
   /* state of the thread group */

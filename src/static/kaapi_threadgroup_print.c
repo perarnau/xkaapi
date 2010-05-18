@@ -53,6 +53,29 @@ static const char* tab_state[] = {
   "WAIT"             /* end of execution */
 };
 
+
+/**
+*/
+static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm )
+{
+  kaapi_hashentries_t* entry;
+  
+  for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
+  {
+    entry = get_hashmap_entry( hm, i );
+    while (entry !=0) {
+      kaapi_version_t* ver = entry->u.dfginfo;
+      if (ver->readers[tid].used) {
+        printf("@:%p -> local @:%p\n", ver->original_data, ver->readers[tid].addr );
+      }
+      if (ver->delete_data[tid] !=0)
+        printf("@:%p -> to delete @:%p\n", ver->original_data, ver->delete_data[tid] );
+      entry = entry->next;
+    }
+  }
+}
+
+
 /**
 */
 int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
@@ -61,10 +84,21 @@ int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
   if (thgrp ==0) return EINVAL;
   if (file ==0) return EINVAL;
   fprintf(file, "ThreadGroup size=%i, state=%s\n", thgrp->group_size, tab_state[thgrp->state] );
+  
+  fprintf(file, "Main thread\n");
+  kaapi_stack_print( file, thgrp->mainctxt );
+  
   for (i=0; i<thgrp->group_size; ++i)
   {
     fprintf(file, "Partition %i/%i:\n", i, thgrp->group_size);
-    kaapi_stack_print(file, thgrp->threadctxts[i]);
+    kaapi_stack_print( file, thgrp->threadctxts[i] );
   }
+  
+  for (i=0; i<thgrp->group_size; ++i)
+  {
+    fprintf(file, "Data on thread %i/%i:\n", i, thgrp->group_size);
+    kaapi_threadgroup_printdata(file, i, &thgrp->ws_khm );
+  }  
+  
   return 0;  
 }

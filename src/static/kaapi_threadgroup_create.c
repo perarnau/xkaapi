@@ -66,6 +66,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   thgrp->group_size = size;
   thgrp->startflag  = 0;
   thgrp->mainthread  = 0;
+  thgrp->mainctxt = proc->thread;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
   thgrp->threadctxts    = malloc( size* sizeof(kaapi_thread_context_t*) );
   if (thgrp->threadctxts ==0) 

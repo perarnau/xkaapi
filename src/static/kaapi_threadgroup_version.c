@@ -59,6 +59,7 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, ka
   ver->writer_task = 0;
   ver->writer_thread = -1;
   ver->original_data = ver->writer_data = access->data;
+  ver->com = 0;
   memset( &ver->readers, 0, sizeof(ver->readers));
   ver->cnt_readers = 0;
   return entry;
@@ -79,40 +80,55 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     kaapi_version_t* ver, 
     int tid, 
     kaapi_task_t* task, 
-    kaapi_access_t* access 
+    kaapi_access_t* access
 )
 {
-  kaapi_taskbcast_arg_t* argbcast;
+  kaapi_taskbcast_arg_t* argbcast =0;
+  kaapi_task_t* taskbcast;
   
   if (ver->writer_task == 0)
   { /* this is a first read, without defined writer -> the implicit writer is on the mainthread */
     /* push task bcast */
-    kaapi_task_t* taskbcast = kaapi_thread_toptask(thgrp->mainthread);
+    taskbcast = kaapi_thread_toptask(thgrp->mainthread);
     kaapi_task_init(taskbcast, kaapi_taskbcast_body, kaapi_thread_pushdata(thgrp->mainthread, sizeof(kaapi_taskbcast_arg_t) ) );
     argbcast = kaapi_task_getargst( taskbcast, kaapi_taskbcast_arg_t );
     memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
+    argbcast->last     = &argbcast->head;
     taskbcast->pad     = argbcast;
-    argbcast->tag      = ver->tag;
     ver->writer_task   = taskbcast;
     ver->writer_data   = access->data;
     ver->writer_thread = -1;
+    ver->com           = &argbcast->head;
+    ver->com->tag      = ver->tag;
+    ver->com->a        = *access;
     /* push the task */
     kaapi_thread_pushtask(thgrp->mainthread);
   }
   else {
+    taskbcast= 0;
     argbcast = (kaapi_taskbcast_arg_t*)ver->writer_task->pad;
     /* if 0 -> mute the task + allocate the bcast arguments */
     if ((argbcast ==0) && (ver->writer_thread != tid ))
     {
+      kaapi_assert(kaapi_task_getbody(ver->writer_task) != kaapi_taskbcast_body);
       kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
       argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(thread, sizeof(kaapi_taskbcast_arg_t) );
       memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
-      argbcast->tag      = ver->tag;
+      argbcast->last     = &argbcast->head;
       ver->writer_task->pad = argbcast;
+      ver->com           = &argbcast->head; 
+      ver->com->tag      = ver->tag;
+      ver->com->a        = *access;
       kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body );
+    } else {
+      ver->com = kaapi_thread_pushdata( kaapi_threadgroup_thread( thgrp, ver->writer_thread), sizeof(kaapi_com_t) );
+      memset( ver->com, 0, sizeof(kaapi_com_t) );
+      argbcast->last->next = ver->com;
+      argbcast->last       = ver->com;
+      ver->com->tag        = ver->tag;
+      ver->com->a          = *access;
     }
   }
-  kaapi_assert( argbcast !=0 );
 
   /* writer not on the same partition 
      - mute the writer task to be a bcast task
@@ -149,10 +165,10 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       *task = savedtask;
 
       /* allocate a new entry in the list wc_list if not on the same partition */
-      kaapi_assert(argbcast->size <= KAAPI_COUNTER_LIST_BLOCSIZE);
-      argbcast->entry[argbcast->size].recv_task = taskrecv;
-      argbcast->entry[argbcast->size].addr      = access->data;
-      ++argbcast->size;
+      kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);
+      ver->com->entry[ver->com->size].recv_task = taskrecv;
+      ver->com->entry[ver->com->size].addr      = access->data;
+      ++ver->com->size;
     }
     else /* on the same partition, only store the task info about reading the data */
       ver->readers[tid].task = task;
@@ -217,7 +233,8 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     {
       if (ver->readers[i].used)
       {
-        ver->delete_data[i] = ver->readers[i].addr;
+        if (ver->readers[i].addr != ver->original_data)
+          ver->delete_data[i] = ver->readers[i].addr;
         ver->readers[i].addr = 0;
         ++r;
         ver->readers[i].used = false;
