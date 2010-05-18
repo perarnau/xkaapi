@@ -51,18 +51,34 @@
 extern "C" {
 #endif
 
+/** To define to handle write after read dependency or writer after write
+*/
+#define KAAPI_STATIC_HANDLE_WARWAW
 
 /** \ingroup DFG
+    If a reader is waiting from data produced by writer task into other partition,
+    then the pad field points to such data structure.
+    The bit 31 =1 of the value of counter means that the pad points to a kaapi_taskrecv_arg_t data structure.
+    Else it is kaapi_taskbcast_arg_t data structure. This bit is only test and set during partitioning.
+    The 15 bits of (counter & ~bit31) >> 16 represent the bit field of parameters that are waiting
+    from remote task.
+    The 16 bits of (counter & ~(1<<16)-1) are the waiting counter.
     This data structure is used at runtime.
 */
 typedef struct kaapi_taskrecv_arg_t {
-  long           tag;                          /* may be deleted, not usefull at runtime */
-  kaapi_access_t a;
+  kaapi_atomic_t counter;          /* to signal the task becomes ready */
 } kaapi_taskrecv_arg_t;
+
+#define KAAPI_THREADGROUP_SETRECVPARAM( ra, ith )\
+    { \
+      int b = KAAPI_ATOMIC_READ( &ra->counter );\
+      b |= 1U << (ith + 16);\
+      KAAPI_ATOMIC_WRITE( &ra->counter, b );\
+    }
 
 /** \ingroup DFG
     In case of dependency W -> R with the writer and reader tasks on two different partitions,
-    the task_writer->pad points on the kaapi_counters_list data structure.
+    the task_writer->pad points on the kaapi_taskbcast_arg_t data structure.
     This data structure is used at runtime.
 */
 #define KAAPI_BCASTENTRY_SIZE 7
@@ -74,13 +90,14 @@ typedef struct kaapi_com_t {
   struct {
     int                         tid;           /* thread id in the group */
     void*                       addr;          /* remote address */
-    kaapi_task_t*               recv_task;     /* remote recv task */
+    kaapi_task_t*               task;          /* remote recv task */
   } entry[KAAPI_BCASTENTRY_SIZE];
 } kaapi_com_t;
 
 typedef struct kaapi_taskbcast_arg_t {
-  kaapi_com_t  head;
-  kaapi_com_t* last;
+  kaapi_taskrecv_arg_t common;                  /* common data structure with kaapi_taskrecv_arg_t */
+  kaapi_com_t          head;
+  kaapi_com_t*         last;
 } kaapi_taskbcast_arg_t;
 
 #define KAAPI_MAX_PARTITION 64
@@ -258,12 +275,12 @@ void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t
 /* New reader
 */
 kaapi_task_t* kaapi_threadgroup_version_newreader
-    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a );
+    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, int ith );
 
 /* New writer
 */
 kaapi_task_t* kaapi_threadgroup_version_newwriter
-    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a );
+    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, int ith );
 
 /* task recv body 
 */
@@ -272,6 +289,26 @@ void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread );
 /* task tbcast body 
 */
 void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread );
+
+/* task recv body 
+*/
+void kaapi_taskrecvbcast_body( void* sp, kaapi_thread_t* thread );
+
+
+/**
+*/
+static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
+{
+  if ((task->body != kaapi_taskrecv_body) && (task->body != kaapi_taskrecvbcast_body)) return 0;
+  kaapi_taskrecv_arg_t* tr = (kaapi_taskrecv_arg_t*)task->pad;
+  kaapi_assert_debug( tr != 0 );
+  int bitfield = KAAPI_ATOMIC_READ( &tr->counter );
+  bitfield = (bitfield >> 16) & ~(1<<15);
+  if (bitfield & (1<< ith)) return 1;
+  return 0;
+}
+
+
 
 #if defined(__cplusplus)
 }

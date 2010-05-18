@@ -64,6 +64,19 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
+
+  kaapi_hashentries_t* entry;
+  
+  for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
+  {
+    entry = get_hashmap_entry( &thgrp->ws_khm, i );
+    while (entry !=0) {
+      kaapi_version_t* ver = entry->u.dfginfo;
+      entry = entry->next;
+      free(ver);
+    }
+  }
+
   kaapi_hashmap_destroy( &thgrp->ws_khm );
   
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;

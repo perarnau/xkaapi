@@ -105,11 +105,11 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
 
     if (KAAPI_ACCESS_IS_READ(m))
     {
-      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, access );
+      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, access, i );
     }
     if (KAAPI_ACCESS_IS_WRITE(m))
     {
-      task = kaapi_threadgroup_version_newwriter( thgrp, entry->u.dfginfo, threadindex, task, access );
+      task = kaapi_threadgroup_version_newwriter( thgrp, entry->u.dfginfo, threadindex, task, access, i );
     }
     
   } /* end for all arguments of the task */
