@@ -66,11 +66,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
-#if 0
-  kaapi_wsqueuectxt_init( &kproc->lready );
-#else
-  kproc->ready = 0;
-#endif
+  kproc->readythread = 0;
+  KAAPI_FIFO_CLEAR( &kproc->lready );
   KAAPI_STACK_CLEAR( &kproc->lfree );
 
   kproc->fnc_selecarg = 0;

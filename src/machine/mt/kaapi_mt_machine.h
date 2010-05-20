@@ -143,6 +143,10 @@ typedef struct kaapi_wsqueuectxt_t {
 */
 KAAPI_STACK_DECLARE(kaapi_stackctxt_t, kaapi_thread_context_t);
 
+/** lready data structure
+*/
+KAAPI_FIFO_DECLARE(kaapi_fifoctxt_t, kaapi_thread_context_t);
+
 /** push: LIFO order with respect to pop. Only owner may push
 */
 static inline int kaapi_wsqueuectxt_isempty( kaapi_wsqueuectxt_t* ls )
@@ -156,11 +160,19 @@ extern int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls );
 */
 extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
 
-/* Push a ctxt
+/* Push a ctxt. Must be call by the owner of the queue in case of concurrent execution.
    Return 0 in case of success
    Return ENOMEM if allocation failed
 */
 extern int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
+
+#if 0 // not well defined and not yet implemented 
+/* Push a ctxt. Can be called by thief processors
+   Return 0 in case of success
+   Return ENOMEM if allocation failed
+*/
+extern int kaapi_wsqueuectxt_lockpush( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
+#endif
 
 /* Pop a ctxt
    Return 0 in case of success
@@ -174,17 +186,11 @@ extern int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_
 */
 extern int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
 
-/* Push a ctxt
-   Return 0 in case of success
-   Return ENOMEM if allocation failed
+/* Steal a ctxt on a specific cell
+   Return a pointer to the stolen thread in case of success
+   Return 0 if the thread was already stolen
 */
-extern int kaapi_wsqueuectxt_push_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
-
-/* Pop a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_pop_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
+kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_t* ls, kaapi_wsqueuectxt_cell_t* cell );
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -250,14 +256,10 @@ typedef struct kaapi_processor_t {
   kaapi_atomic_t           lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-  /* suspended list */
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-#if 0
-  /* ready list */
-  kaapi_wsqueuectxt_t      lready;                        /* list of ready context */
-#endif
-  /* ready list */
-  kaapi_thread_context_t*  ready;                         /* ready context after steal */
+  kaapi_fifoctxt_t         lready;                        /* list of ready context, concurrent access locked by 'lock' */
+  kaapi_thread_context_t*  readythread;                   /* continuation passing parameter to speed up recovery of activity... */
+
   /* free list */
   kaapi_stackctxt_t        lfree;                         /* stack of free context */
 

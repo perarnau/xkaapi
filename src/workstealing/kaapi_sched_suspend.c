@@ -52,7 +52,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 {
   int err;
   kaapi_thread_context_t* ctxt;
-  kaapi_thread_context_t* tmp;
   kaapi_thread_context_t* ctxt_condition;
   kaapi_task_t*           task_condition;
   kaapi_thread_context_t* thread;
@@ -79,7 +78,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (kaapi_sched_suspendlist_empty(kproc))
       kproc->thread = 0;
     else
-      kaapi_setcontext(kproc, kaapi_sched_wakeup(kproc) );
+      kaapi_setcontext(kproc, kaapi_sched_wakeup(kproc, kproc->kid) );
 
     if (kproc->thread == ctxt_condition) 
     {
@@ -96,21 +95,21 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       ctxt = kaapi_context_alloc(kproc);
       kaapi_setcontext(kproc, ctxt);
 
+      /* on return, either a new thread has been stolen, either a task as been put into ctxt or thread ==0 */
       thread = kaapi_sched_emitsteal( kproc );
 
-      /* next assert if ok because we do not steal thread... */
-      kaapi_assert_debug( (thread == 0) || (thread == kproc->thread) );
-
-      if ((thread ==0) || (kaapi_frame_isempty(thread->sfp)))
+      if (kaapi_frame_isempty(ctxt->sfp))
       {
-        kaapi_sched_advance(kproc);
-
         /* push it into the free list */
-        tmp = kproc->thread;
-        kproc->thread = 0;
-        KAAPI_STACK_PUSH( &kproc->lfree, tmp );
+        kaapi_setcontext( kproc , 0);
+        KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
+      }
+      if (thread ==0) {
+        //kaapi_sched_advance(kproc);
         continue;
       }
+
+      kaapi_setcontext(kproc, thread);
     }
 
 #if defined(KAAPI_USE_PERFCOUNTER)

@@ -68,6 +68,21 @@ extern double t_finalize;
 */
 #define KAAPI_MAX_RECCALL 1024
 
+/* Define if ready list is used
+   This flag activates :
+   - the use of readythread during work stealing: a thread that signal 
+   a task to becomes ready while the associated thread is suspended move
+   the thread to readythread. The ready thread is never stolen and should
+   only be used in order to reduce latency to retreive work (typically
+   at the end of a steal operation).
+   - if a task activates a suspended thread (e.g. bcast tasks) then activated
+   thread is put into the readylist of the processor that executes the task.
+   [this strategy may change, see code in .... file]
+   The threads in ready list may be stolen by other processors.
+*/
+#define KAAPI_USE_READYLIST 1
+
+
 /* Flags to define method to manage concurrency between victim and thieves
    - STEALCAS: based on compare & swap method
    - STEALTHE: based on Dijkstra like protocol to ensure mutual exclusion
@@ -314,6 +329,26 @@ typedef struct kaapi_stack_t {
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
 
+/* ============================= The structure for handling suspendended thread ============================ */
+/** Forward reference to data structure are defined in kaapi_machine.h
+*/
+struct kaapi_wsqueuectxt_cell_t;
+
+/* This data structure is used to help in signaling ready thread after they becomes suspended:
+   - each time a thread tries to execute kaapi_suspend_body, the thread suspended its execution
+   and push it is pushed into the list of suspended thread of the current processor.
+   - in that case, the _wccell structure is set to the cell list.
+   
+   When a thread signal an suspended thread it can use this information in order to wakeup directly
+   the suspended thread.
+   
+   This structure is pointed by the pad field of the task that contains kaapi_suspend_body.
+*/
+typedef struct kaapi_wc_structure_t {
+  struct kaapi_wsqueuectxt_t*      wclist;      /* suspend list that own the suspended thread _wcthread */
+  struct kaapi_wsqueuectxt_cell_t* wccell;      /* waiting cell of the thread in _wclist, or 0 if not suspended */
+} kaapi_wc_structure_t;
+
 
 /* ============================= The thread context data structure ============================ */
 /** The thread context data structure
@@ -332,7 +367,7 @@ typedef struct kaapi_thread_context_t {
   int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
-  struct kaapi_thread_context_t* _next;          /** to be stackable */
+  struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
 
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
@@ -344,6 +379,7 @@ typedef struct kaapi_thread_context_t {
 
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
+  kaapi_wc_structure_t           wcs;            /** used if the thread is suspended and poined by ->pad of the non ready task */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
@@ -754,6 +790,52 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
   return 0;
 }
 
+/** 
+*/
+static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
+{
+  int ok;
+  do {
+    ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid);
+    kaapi_slowdown_cpu();
+  } while (!ok);
+  return 0;
+}
+
+
+/**
+*/
+static inline int kaapi_sched_unlock( kaapi_processor_t* kproc )
+{
+  kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(&kproc->lock) == (unsigned)(1+kproc->kid) );
+  KAAPI_ATOMIC_WRITE(&kproc->lock, 0);
+  return 0;
+}
+
+
+static inline int kaapi_sched_pushready( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
+{
+  KAAPI_FIFO_PUSH( &kproc->lready, thread );
+  return 0;
+}
+
+
+
+/** If the owner call this method then it should protect itself again thieves by using sched_lock & sched_unlock
+*/
+static inline kaapi_thread_context_t* kaapi_sched_stealready( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
+{
+  kaapi_thread_context_t* thread = 0;
+  
+  /* WARNING should add test of affinity ? and move the function into a .c */
+  if (!KAAPI_FIFO_EMPTY(&kproc->lready))
+  {
+    KAAPI_FIFO_POP( &kproc->lready, thread );
+  }
+   
+  return thread;
+}
+
 /**
 */
 extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
@@ -833,6 +915,7 @@ extern void kaapi_sched_idle ( kaapi_processor_t* proc );
 int kaapi_sched_suspend ( kaapi_processor_t* kproc );
 
 
+
 /** \ingroup WS
     The method starts a work stealing operation and return until a sucessfull steal
     operation or 0 if no work may be found.
@@ -844,7 +927,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc );
     \retval 0 in case of not stolen work 
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
-extern int kaapi_sched_stealprocessor ( kaapi_processor_t* kproc );
+extern int kaapi_sched_stealprocessor ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid );
 
 
 /** \ingroup WS
@@ -865,7 +948,7 @@ extern int kaapi_sched_stealstack  ( struct kaapi_thread_context_t* thread, kaap
     \retval else a context to wakeup
     \TODO faire specs ici
 */
-extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc );
+extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid );
 
 
 /** \ingroup WS
@@ -1053,6 +1136,7 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 extern void kaapi_set_workload( kaapi_uint32_t workload );
 
 #include "kaapi_staticsched.h"
+
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/

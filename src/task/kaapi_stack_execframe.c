@@ -147,7 +147,7 @@ begin_loop:
       ;
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
-    if (body == kaapi_suspend_body) 
+    if (body == kaapi_suspend_body)
       goto error_swap_body;
     pc->body = kaapi_exec_body;
 #else

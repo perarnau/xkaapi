@@ -51,7 +51,6 @@
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
-  kaapi_thread_context_t* tmp;
   kaapi_thread_context_t* thread;
   int err;
   
@@ -79,20 +78,15 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     {
       if (!kaapi_sched_suspendlist_empty(kproc))
       {
-        ctxt = kaapi_sched_wakeup(kproc); 
+        ctxt = kaapi_sched_wakeup(kproc, kproc->kid); 
         if (ctxt !=0) break;
       }
     }
 
-    if (ctxt !=0) /* push kproc->ctxt to free and set ctxt as new ctxt */
+    if (ctxt !=0) /* push kproc->thread to free and set ctxt as new ctxt */
     {
       /* push kproc context into free list */
-      tmp = kproc->thread;
-
-      /* update */
-      kproc->thread = 0;
-
-      KAAPI_STACK_PUSH( &kproc->lfree, tmp );
+      KAAPI_STACK_PUSH( &kproc->lfree, kproc->thread );
 
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
@@ -100,18 +94,22 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
     
     /* steal request */
+    kaapi_assert_debug( kproc->thread !=0 );
+    ctxt = kproc->thread;
     thread = kaapi_sched_emitsteal( kproc );
 
-    /* next assert if ok because we do not steal thread... */
-    kaapi_assert_debug( (thread == 0) || (thread == kproc->thread) );
-
-    if ((thread ==0) || (kaapi_frame_isempty(thread->sfp))) 
-    {
-      kaapi_sched_advance(kproc);
+    if (thread ==0) {
+      //kaapi_sched_advance(kproc);
       continue;
     }
-    kaapi_assert_debug( thread != 0);
-    
+    if (kaapi_frame_isempty(ctxt->sfp))
+    {
+      /* also means thread != ctxt, so push ctxt into the free list */
+      kaapi_setcontext( kproc , 0);
+      KAAPI_STACK_PUSH( &kproc->lfree, ctxt );
+    }
+    kaapi_setcontext(kproc, thread);
+
 
 redo_execute:
 
@@ -140,7 +138,7 @@ redo_execute:
       if (kaapi_sched_suspendlist_empty(kproc))
         kproc->thread = 0;
       else
-        kaapi_setcontext(kproc, kaapi_sched_wakeup(kproc) ); 
+        kaapi_setcontext(kproc, kaapi_sched_wakeup(kproc, kproc->kid) ); 
       if (kproc->thread !=0) goto redo_execute;
 
       /* else reallocate a context */

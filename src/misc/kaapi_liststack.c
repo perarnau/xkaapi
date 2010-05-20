@@ -73,13 +73,10 @@ int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls )
   return 0;
 }
 
-
-/** push: LIFO order with respect to pop. Only owner may push
+/** Allocate a new cell
 */
-int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* stack )
+static kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_alloccell( kaapi_wsqueuectxt_t* ls )
 {
-  /*printf( "[sleep stack]: stack: @=%p\n", stack);*/
-
   kaapi_wsqueuectxt_cell_t* cell = ls->headfreecell;
   if (cell !=0)
   {
@@ -92,7 +89,7 @@ int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* sta
   {
     int i;
     kaapi_wsqueuectxt_cellbloc_t* bloc = malloc( sizeof(kaapi_wsqueuectxt_cellbloc_t) );
-    if (bloc ==0) return ENOMEM;
+    if (bloc ==0) return 0;
     bloc->next = ls->allocatedbloc;
     ls->allocatedbloc = bloc;
     for (i=1; i<KAAPI_BLOCENTRIES_SIZE; ++i)
@@ -106,12 +103,32 @@ int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* sta
     ls->tailfreecell = &bloc->data[1];
     cell = &bloc->data[0];
   }
+  return cell;
+}
 
-  /* set the state: write stack+set state/barrier/link the cell */
-  cell->thread = stack;
 
-  /* in order thief view correct stack pointer if steal the struct */
+/** push: LIFO order with respect to pop. Only owner may push
+*/
+int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread )
+{
+  /*printf( "[sleep thread]: thread: @=%p\n", thread);*/
+  kaapi_wsqueuectxt_cell_t* cell = kaapi_wsqueuectxt_alloccell(ls);
+
+#if defined(KAAPI_USE_READYLIST)
+  kaapi_task_t* task = thread->sfp->pc;
+  thread->wcs.wclist = ls;
+  thread->wcs.wccell = cell;
+#endif
+
+  /* set the state: write thread+set state/barrier/link the cell */
+  cell->thread = thread;
+
+  /* in order thief view correct thread pointer if steal the struct */
   kaapi_writemem_barrier();
+
+#if defined(KAAPI_USE_READYLIST)
+  if (task !=0) task->pad = &thread->wcs;
+#endif
 
   KAAPI_ATOMIC_WRITE(&cell->state, 0);
 
@@ -127,9 +144,20 @@ int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* sta
 }
 
 
+#if 0 /// TO DO
+/*
+*/
+int kaapi_wsqueuectxt_lockpush( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread )
+{
+  printf("In kaapi_wsqueuectxt_lockpush\n");
+  return 0;
+}
+#endif
+
+
 /** pop: LIFO with respect to push op
 */
-int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack )
+int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread )
 {
   kaapi_wsqueuectxt_cell_t* cell = ls->head;
   while (cell !=0)
@@ -138,15 +166,15 @@ int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** sta
     if (opok)
     {
       /* R barrier ? */
-      *stack = cell->thread;
+      *thread = cell->thread;
     }
 
     kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
     cell->thread = 0;
 
     /* whatever is the result of the cas, the cell is recyled (push in tail):
-       - cas is true: the pop sucess, we will return the stack
-       - cas is false: the stack has been stolen, we recylce the cell
+       - cas is true: the pop sucess, we will return the thread
+       - cas is false: the thread has been stolen, we recylce the cell
        Then if the cas is ok we return true 
     */
     if (nextcell !=0)
@@ -164,29 +192,48 @@ int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** sta
     
     cell = nextcell;
   }
-  *stack = 0;
+  *thread = 0;
   return EWOULDBLOCK;
 }
 
+
 /** steal: FIFO with respect to push op
 */
-int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** stack )
+int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread )
 {
   kaapi_wsqueuectxt_cell_t* cell = ls->tail;
   while (cell !=0)
   {
-    int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
+    int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 2);
     if (opok)
     {
-      *stack = cell->thread;
+      *thread = cell->thread;
       cell->thread = 0;
       return 0;
     }
     cell = cell->prev;
     /* note: here, if the owner has put the cell into free list then the steal  
-       may 1/ read incorrect update and iterate through the list of stack or
+       may 1/ read incorrect update and iterate through the list of thread or
        2/ read the correct update and will abort quickly because prev is 0
     */
   }
   return EWOULDBLOCK;
+}
+
+
+/** steal: FIFO with respect to push op
+*/
+kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_t* ls, kaapi_wsqueuectxt_cell_t* cell )
+{
+  kaapi_thread_context_t* thread = 0;
+
+  int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 2);
+  if (opok)
+  {
+    thread = cell->thread;
+    cell->thread = 0;
+    return thread;
+  }
+
+  return 0;
 }

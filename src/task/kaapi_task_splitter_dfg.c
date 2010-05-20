@@ -85,6 +85,9 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   argsteal = kaapi_task_getargst( thief_task, kaapi_tasksteal_arg_t );
   argsteal->origin_thread         = thread;
   argsteal->origin_task           = task;
+#if defined(KAAPI_USE_READYLIST)
+  task->pad = 0;
+#endif
   
   kaapi_thread_pushtask( thief_thread );
 

@@ -520,7 +520,6 @@ typedef struct kaapi_access_t {
 /* ========================================================================= */
 /* Interface                                                                 */
 /* ========================================================================= */
-
 /** \ingroup TASK
     The function kaapi_access_init() initialize an access from a user defined pointer
     \param access INOUT a pointer to the kaapi_access_t data structure to initialize
@@ -695,8 +694,9 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 
 #define kaapi_task_initdfg( task, taskbody, arg ) \
   do { \
-    (task)->sp       = (arg);\
-    (task)->body     = (task)->ebody = taskbody;\
+    (task)->sp     = (arg);\
+    (task)->body   = taskbody;\
+    (task)->ebody  = taskbody;\
   } while (0)
 
 
@@ -1184,11 +1184,11 @@ extern int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp );
 
 /**
 */
-extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
+extern int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp );
 
 /**
 */
-extern int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp );
+extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
 
 /**
 */

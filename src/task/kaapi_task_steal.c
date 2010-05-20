@@ -136,6 +136,28 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   fflush(stdout);
 #endif
 
+#if defined(KAAPI_USE_READYLIST)
+  if (arg->origin_task->pad != 0)
+  {
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    if (kproc->readythread ==0)
+    {
+      kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)arg->origin_task->pad;
+      kaapi_stack_t* stack = kaapi_threadcontext2stack(wcs->wccell->thread);
+      if (!stack->sticky)
+      {
+        kproc->readythread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
+#if 0
+        if (kproc->readythread != 0) 
+          printf("Here fast wakeup....\n");
+        else
+          printf("Here a possible fast wakeup failed....\n");
+#endif
+      }
+    }
+  }
+#endif  
+
   /* flush in memory all pending write and read ops */  
   kaapi_writemem_barrier();
 

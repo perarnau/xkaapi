@@ -232,69 +232,69 @@ static int kaapi_sched_stealframe(
   }
   
   
-  /** Steal task in the stack from the bottom to the top.
-   Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
-   This signature is the same as a splitter function.
-   */
-  int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
-  {
+/** Steal task in the stack from the bottom to the top.
+ Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
+ This signature is the same as a splitter function.
+ */
+int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
+{
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
-    kaapi_frame_t*           top_frame;
+  kaapi_frame_t*           top_frame;
 #endif
-    int savecount;
-    int replycount;
-    
-    kaapi_hashmap_t          access_to_gd;
-    kaapi_hashentries_bloc_t stackbloc;
-    
-    if ((thread ==0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
-    savecount  = count;
-    replycount = 0;
-    
-    /* be carrefull, the map should be clear before used */
-    kaapi_hashmap_init( &access_to_gd, &stackbloc );
-    
+  int savecount;
+  int replycount;
+  
+  kaapi_hashmap_t          access_to_gd;
+  kaapi_hashentries_bloc_t stackbloc;
+  
+  if ((thread ==0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
+  savecount  = count;
+  replycount = 0;
+  
+  /* be carrefull, the map should be clear before used */
+  kaapi_hashmap_init( &access_to_gd, &stackbloc );
+  
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
-    /* lock the stack, if cannot return failed */
-    if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
-    kaapi_readmem_barrier();
-    
-    /* try to steal in each frame */
-    for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
-    {
-      if (top_frame->pc == top_frame->sp) continue;
-      replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
-    }
-    
-    KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
-    
+  /* lock the stack, if cannot return failed */
+  if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
+  kaapi_readmem_barrier();
+  
+  /* try to steal in each frame */
+  for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
+  {
+    if (top_frame->pc == top_frame->sp) continue;
+    replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
+  }
+  
+  KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
+  
 #elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
-    
-    /* try to steal in each frame */
-    thread->thieffp = thread->stackframe;
+  
+  /* try to steal in each frame */
+  thread->thieffp = thread->stackframe;
+  kaapi_writemem_barrier();
+  while (count > replycount)
+  {
+    if (thread->thieffp > thread->sfp) break;
+    if (thread->thieffp->pc > thread->thieffp->sp) 
+      replycount += kaapi_sched_stealframe( thread, thread->thieffp, &access_to_gd, count-replycount, request );
+    ++thread->thieffp;
     kaapi_writemem_barrier();
-    while (count > replycount)
-    {
-      if (thread->thieffp > thread->sfp) break;
-      if (thread->thieffp->pc > thread->thieffp->sp) 
-        replycount += kaapi_sched_stealframe( thread, thread->thieffp, &access_to_gd, count-replycount, request );
-      ++thread->thieffp;
-      kaapi_writemem_barrier();
-    }
-    thread->thieffp = 0;
+  }
+  thread->thieffp = 0;
 #else
 #  error "Bad steal frame method"    
 #endif
-    
-    kaapi_hashmap_destroy( &access_to_gd );
-    
-    return replycount;
-  }
   
+  kaapi_hashmap_destroy( &access_to_gd );
   
-  /*
-   */
-  int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
-  {
-    return kaapi_sched_stealstack( stc->ctxtthread, stc->ownertask, stc->hasrequest, stc->requests );
-  }
+  return replycount;
+}
+
+
+/*
+ */
+int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
+{
+  return kaapi_sched_stealstack( stc->ctxtthread, stc->ownertask, stc->hasrequest, stc->requests );
+}

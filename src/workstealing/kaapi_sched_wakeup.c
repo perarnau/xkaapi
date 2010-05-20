@@ -45,25 +45,34 @@
 */
 #include "kaapi_impl.h"
 
-kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
+kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
 {
   kaapi_thread_context_t* ctxt = 0;
   kaapi_wsqueuectxt_cell_t* cell;
   int wakeupok = 0;
   int garbage;
   
-#if 0
-  if (0 ==kaapi_wsqueuectxt_pop( &kproc->lready, &ctxt ))
-    return ctxt;
-#else
   /* only steal the ready context if any */
-  if (kproc->ready !=0) 
+  if ((kproc->readythread !=0) && (kproc->kid == kproc_thiefid))
   {
-    ctxt = kproc->ready;
-    kproc->ready = 0;
+    ctxt = kproc->readythread;
+    kproc->readythread = 0;
     return ctxt;
-  }    
-#endif
+  }
+  
+  /* */
+  if (!KAAPI_FIFO_EMPTY(&kproc->lready))
+  {
+    kaapi_thread_context_t* thread = 0;
+    /* lock if self wakeup to protect lready against thieves because in that case
+       wakeup is called directly through sched_suspend or sched_idle, not by passing through 
+       the emission of a request
+    */
+    kaapi_sched_lock( kproc );
+    thread = kaapi_sched_stealready( kproc, kproc_thiefid );
+    kaapi_sched_unlock( kproc );
+    if (thread !=0) return thread;
+  }
 
   cell = kproc->lsuspend.head;
   while (cell !=0)
@@ -73,7 +82,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
     {
       ctxt = cell->thread;
       kaapi_task_t* task = ctxt->sfp->pc;
-      if ( (kaapi_task_getbody(task) == kaapi_aftersteal_body) )
+      if ( (kaapi_task_getbody(task) != kaapi_suspend_body) )
       { 
         garbage  = 1;
         /* ok wakeup the thread and try to steal it */
@@ -95,7 +104,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc )
       }
     } 
     else 
-    { /* else state = 2: already wakeuped by the owner*/
+    { /* else state = 2: already wakeuped by someone */
       wakeupok = 0;
       garbage  = 1;
     }
