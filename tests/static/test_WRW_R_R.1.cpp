@@ -3,14 +3,14 @@
 
 
 // --------------------------------------------------------------------
-struct TaskRWW: public ka::Task<2>::Signature<ka::RW<int>, ka::W<int> > {};
+struct TaskWRW: public ka::Task<2>::Signature<ka::W<int>, ka::RW<int> > {};
 template<>
-struct TaskBodyCPU<TaskRWW> {
-  void operator() ( ka::pointer_rw<int> d0, ka::pointer_w<int> d1 )
+struct TaskBodyCPU<TaskWRW> {
+  void operator() ( ka::pointer_w<int> d0, ka::pointer_rw<int> d1 )
   {
   }
 };
-static ka::RegisterBodyCPU<TaskRWW> dummy_object_TaskW;
+static ka::RegisterBodyCPU<TaskWRW> dummy_object_TaskWRW;
 
 // --------------------------------------------------------------------
 struct TaskR: public ka::Task<1>::Signature<ka::R<int> > {};
@@ -36,7 +36,7 @@ struct doit {
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskRWW> (ka::SetPartition(0))  ( a,b );
+    threadgroup.Spawn<TaskWRW> (ka::SetPartition(0)) ( a,b );
     threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( a );
     threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( b );
 

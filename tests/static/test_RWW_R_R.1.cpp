@@ -3,12 +3,21 @@
 
 
 // --------------------------------------------------------------------
+struct TaskRWW: public ka::Task<2>::Signature<ka::RW<int>, ka::W<int> > {};
+template<>
+struct TaskBodyCPU<TaskRWW> {
+  void operator() ( ka::pointer_rw<int> d0, ka::pointer_w<int> d1 )
+  {
+  }
+};
+static ka::RegisterBodyCPU<TaskRWW> dummy_object_TaskRWW;
+
+// --------------------------------------------------------------------
 struct TaskR: public ka::Task<1>::Signature<ka::R<int> > {};
 template<>
 struct TaskBodyCPU<TaskR> {
   void operator() ( ka::pointer_r<int> d )
   {
-    std::cout << "In Task R=" << *d << std::endl;
   }
 };
 static ka::RegisterBodyCPU<TaskR> dummy_object_TaskR;
@@ -23,16 +32,17 @@ struct doit {
 
     ka::ThreadGroup threadgroup( 2 );
     ka::auto_pointer<int> a      = ka::Alloca<int>(1);
-    *a = 123;
+    ka::auto_pointer<int> b      = ka::Alloca<int>(1);
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
-
-    threadgroup.end_partition();
+    threadgroup.Spawn<TaskRWW> (ka::SetPartition(0))  ( a,b );
+    threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( b );
 
     threadgroup.print();    
+
+    threadgroup.end_partition();
 
     threadgroup.execute();
   }
