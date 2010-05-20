@@ -41,7 +41,7 @@
 ** terms.
 ** 
 */
-#include "kaapi_staticsched.h"
+#include "kaapi_impl.h"
 
 
 /**
@@ -64,9 +64,18 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
-
+  kaapi_task_t* task;
   kaapi_hashentries_t* entry;
   
+  /* for all threads add a signalend task */
+  for (int i=0; i<thgrp->group_size; ++i)
+  {
+    task = kaapi_thread_toptask( thgrp->threads[i] );
+    kaapi_task_init(task, kaapi_tasksignalend_body, thgrp );
+    kaapi_thread_pushtask(thgrp->threads[i]);    
+  }
+  
+  /* free hash map entries */
   for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
   {
     entry = get_hashmap_entry( &thgrp->ws_khm, i );

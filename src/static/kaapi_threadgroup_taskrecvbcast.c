@@ -42,7 +42,6 @@
  ** 
  */
 #include "kaapi_impl.h"
-#include "kaapi_staticsched.h"
 
 
 /*

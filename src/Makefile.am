@@ -77,6 +77,7 @@ libxkaapi_la_SOURCES=\
   static/kaapi_threadgroup_taskbcast.c\
   static/kaapi_threadgroup_taskrecv.c\
   static/kaapi_threadgroup_taskrecvbcast.c\
+  static/kaapi_threadgroup_tasksignal.c\
   static/kaapi_threadgroup_create.c\
   static/kaapi_threadgroup_destroy.c\
   static/kaapi_threadgroup_partition.c\

@@ -41,7 +41,7 @@
 ** terms.
 ** 
 */
-#include "kaapi_staticsched.h"
+#include "kaapi_impl.h"
 
 /**
 */
@@ -91,7 +91,8 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
       error = ENOMEM;
       goto return_error_2;
     }
-    thgrp->threads[i] = (kaapi_thread_t*)thgrp->threadctxts[i]->sfp;
+    /* init the thread from the thread context */
+    thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
   }
   
   error =pthread_mutex_init(&thgrp->mutex, 0);

@@ -44,6 +44,9 @@
 #include "kaapi_impl.h"
 
 
-void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread )
+void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
 {
+  kaapi_threadgroup_t thgrp = (kaapi_threadgroup_t)sp;
+  if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
+    pthread_cond_signal( &thgrp->cond );
 }

@@ -41,13 +41,17 @@
 ** terms.
 ** 
 */
-#include "kaapi_staticsched.h"
+#include "kaapi_impl.h"
 
 
 /**
 */
 int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 {
+  int nproc;
+  int blocsize;
+  int i;
+  
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
   thgrp->step = 0;
@@ -56,6 +60,40 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   thgrp->startflag = 1;
   
   /* dispatch thread context to processor ? */
+  nproc = kaapi_count_kprocessors;
+  /* dispatch them using bloc destribution of size floor(kaapi_count_kprocessors/thgrp->group_size) */
+  blocsize = (nproc+thgrp->group_size-1)/ thgrp->group_size;
+  kaapi_processor_t* current_proc = kaapi_get_current_processor();
+  
+  for (i=0; i<thgrp->group_size; ++i)
+  {
+#if 0 // Method should be implemented. Currently push locally and wait stealer    
+    int victim_procid = i/blocsize;
+    kaapi_processor_t* victim_kproc = kaapi_all_kprocessors[victim_procid];
+    kaapi_wsqueuectxt_lockpush( &victim_kproc->lsuspend, thgrp->threadctxts[i] );
+#else
+    thgrp->threadctxts[i]->proc = current_proc;
+    kaapi_wsqueuectxt_push( &current_proc->lsuspend, thgrp->threadctxts[i] );
+#endif    
+  }
+  
+  return 0;
+}
+
+
+/**
+*/
+int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp )
+{
+  if (thgrp->step == -1) return kaapi_threadgroup_begin_execute( thgrp );
+  
+  if ((thgrp->state != KAAPI_THREAD_GROUP_WAIT_S) && (thgrp->state != KAAPI_THREAD_GROUP_MP_S)) return EINVAL;
+  thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
+
+  ++thgrp->step;
+  
+  kaapi_mem_barrier();
+  thgrp->startflag = 1;
   return 0;
 }
 
@@ -67,6 +105,8 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
 
+  kaapi_sched_sync();
+  
   /* wait end of computation ... */
   pthread_mutex_lock(&thgrp->mutex);
   while (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size)
@@ -76,20 +116,6 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   thgrp->startflag = 0;
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
   pthread_mutex_unlock(&thgrp->mutex);
-  return 0;
-}
-
-
-/**
-*/
-int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp )
-{
-  if ((thgrp->state != KAAPI_THREAD_GROUP_WAIT_S) && (thgrp->state != KAAPI_THREAD_GROUP_MP_S)) return EINVAL;
-  thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
-
-  ++thgrp->step;
-  kaapi_mem_barrier();
-  thgrp->startflag = 1;
   return 0;
 }
 

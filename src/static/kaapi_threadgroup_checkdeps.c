@@ -43,7 +43,6 @@
  ** 
  */
 #include "kaapi_impl.h"
-#include "kaapi_staticsched.h"
 
 
 /** 2 gros bug dans le code de Theo:
@@ -86,7 +85,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     2- we only consider R,W and RW dependencies, no CW that implies multiple writers
   */
   kaapi_hashentries_t* entry; //Current argument's entry in the Hashmap
-  
+  void* sp = task->sp;
   for (int i=0;i<task_fmt->count_params;i++) 
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task_fmt->mode_params[i]);
@@ -94,7 +93,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
       continue;
     
     /* its an access */
-    kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)task->sp);
+    kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)sp);
     entry = 0;
 
     /* find the last writer (task & thread) using the hash map */

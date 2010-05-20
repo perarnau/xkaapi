@@ -56,8 +56,8 @@ extern "C" {
 #define KAAPI_STATIC_HANDLE_WARWAW
 
 /** \ingroup DFG
-    If a reader is waiting from data produced by writer task into other partition,
-    then the pad field points to such data structure.
+    If a reader task is waiting from data produced by writer task into other partition,
+    then it is encapuslated by a kaapi_taskrecv_body kind of task.
     The bit 31 =1 of the value of counter means that the pad points to a kaapi_taskrecv_arg_t data structure.
     Else it is kaapi_taskbcast_arg_t data structure. This bit is only test and set during partitioning.
     The 15 bits of (counter & ~bit31) >> 16 represent the bit field of parameters that are waiting
@@ -66,7 +66,9 @@ extern "C" {
     This data structure is used at runtime.
 */
 typedef struct kaapi_taskrecv_arg_t {
-  kaapi_atomic_t counter;          /* to signal the task becomes ready */
+  kaapi_atomic_t       counter;          /* to signal the task becomes ready */
+  kaapi_task_body_t    original_body;    /* the original body to execute */
+  void*                original_sp;      /* sp of the original task to execute */
 } kaapi_taskrecv_arg_t;
 
 #define KAAPI_THREADGROUP_SETRECVPARAM( ra, ith )\
@@ -294,18 +296,29 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread );
 */
 void kaapi_taskrecvbcast_body( void* sp, kaapi_thread_t* thread );
 
+/* task to signal end of a step
+*/
+void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread );
 
 /**
 */
 static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
 {
-  if ((task->body != kaapi_taskrecv_body) && (task->body != kaapi_taskrecvbcast_body)) return 0;
-  kaapi_taskrecv_arg_t* tr = (kaapi_taskrecv_arg_t*)task->pad;
+  if (task->body != kaapi_suspend_body) return 0;
+  kaapi_taskrecv_arg_t* tr = (kaapi_taskrecv_arg_t*)task->sp;
   kaapi_assert_debug( tr != 0 );
   int bitfield = KAAPI_ATOMIC_READ( &tr->counter );
   bitfield = (bitfield >> 16) & ~(1<<15);
   if (bitfield & (1<< ith)) return 1;
   return 0;
+}
+
+
+/**
+*/
+static inline int kaapi_threadgroup_decrcounter( kaapi_taskrecv_arg_t* arg )
+{
+  return KAAPI_ATOMIC_DECR( &arg->counter ) & 0xFFFF;
 }
 
 

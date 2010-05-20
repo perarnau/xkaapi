@@ -42,7 +42,6 @@
  ** 
  */
 #include "kaapi_impl.h"
-#include "kaapi_staticsched.h"
 
 /* ........................................ Implementation notes ........................................*/
 /* Each time a task is forked on a partition, the kaapi_threadgroup_computedependencies method is called
@@ -51,17 +50,17 @@
    are handle in order to:
       1- envelop the writer task to first execute the original task and then forward dependencies by
       moving state of the reader to ready (in fact: decrement a counter + moving kaapi_suspend_body body
-      to the original read task body). The envelopp is build by storing into the free pad field the
-      a pointer to a kaapi_taskbcast_arg_t data structure and replacing the body by the
+      to the original read task body). The envelopp is build by storing original body and sp fields the
+      of the original task into a kaapi_taskbcast_arg_t data structure and replacing the body by the
       new bcast body.
-      2- add a counter in the pad field of each reader that has a dependency from a writer not on the same 
+      2- add a counter in the ... field of each reader that has a dependency from a writer not on the same 
       partition. The counter is managed in 2 part: high level bits are bit fields to indicate wich data
-      are waiting. It is store in the stack of the reader thread and it is referenced by the pad data structure.
+      are waiting. It is store in the stack of the reader thread and it is referenced by the XX data structure.
       The purpose of this bit field is to add attach fifo channel to each input data from a remotely distant 
       node. The lower part (at most 8 bits = 255 values) are used to count the number of non waiting effective 
       parameters.
     
-  In case of RW access (both read and write accesses), the pad points to a structure with is 
+  In case of RW access (both read and write accesses), the XX points to a structure with is 
     - kaapi_taskbcast_arg_t if we consider the W access
     - kaapi_taskrecv_arg_t if we consider the R access
   Both this data structures shared the same fields: we can view this as if kaapi_taskbcast_arg_t inerit 
@@ -111,98 +110,114 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 {
   kaapi_taskbcast_arg_t* argbcast =0;
   kaapi_task_t* taskbcast;
+  kaapi_thread_t* writer_thread;
   
-  if (ver->writer_task == 0)
-  { /* this is a first read, without defined writer -> the implicit writer is on the mainthread */
-    /* push task bcast */
-    taskbcast = kaapi_thread_toptask(thgrp->mainthread);
-    kaapi_task_init(taskbcast, kaapi_taskbcast_body, kaapi_thread_pushdata(thgrp->mainthread, sizeof(kaapi_taskbcast_arg_t) ) );
-    argbcast = kaapi_task_getargst( taskbcast, kaapi_taskbcast_arg_t );
-    memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
-    argbcast->last     = &argbcast->head;
-    taskbcast->pad     = argbcast;
-    ver->writer_task   = taskbcast;
-    ver->writer_data   = access->data;
-    ver->writer_thread = -1;
-    ver->com           = &argbcast->head;
-    ver->com->tag      = ver->tag;
-    ver->com->a        = *access;
-    /* push the task */
-    kaapi_thread_pushtask(thgrp->mainthread);
-  }
-  else 
-  { /* already has a non null pad  */
-    taskbcast= 0;
-    argbcast = (kaapi_taskbcast_arg_t*)ver->writer_task->pad;
-    if (ver->writer_task->body == kaapi_taskrecv_body) /* case of read-write access */
-      argbcast = 0;
-    
-    if ((argbcast ==0) && (ver->writer_thread != tid ))
-    {
-      kaapi_assert(kaapi_task_getbody(ver->writer_task) != kaapi_taskbcast_body);
-      if (ver->writer_task->body == kaapi_taskrecv_body) /* case of read-write access */
-      {
-        kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, ver->writer_thread );
-        argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(thread, sizeof(kaapi_taskbcast_arg_t) );
-        memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
-        argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->pad;
-        argbcast->last = &argbcast->head;
-        kaapi_task_setbody(ver->writer_task, kaapi_taskrecvbcast_body);
-      }
-      else {
-        kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
-        argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(thread, sizeof(kaapi_taskbcast_arg_t) );
-        memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
-        argbcast->last     = &argbcast->head;
-        kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body );
-      }
-      ver->writer_task->pad = argbcast;
-      ver->com           = &argbcast->head; 
-      ver->com->tag      = ver->tag;
-      ver->com->a        = *access;
-    } 
+  
+  /* initialize the writer data structure if it not on the same partition (else only
+     update reader data structure without changing the writer code
+  */
+  if (ver->writer_thread != tid )
+  {
+    if (ver->writer_thread == -1)
+      writer_thread = thgrp->mainthread;
+    else
+      writer_thread = kaapi_threadgroup_thread( thgrp, ver->writer_thread );
+
+    /* if not exist -> first reader, create a pure send task */
+    if (ver->writer_task == 0)
+    { 
+      taskbcast = kaapi_thread_toptask(writer_thread);
+      kaapi_task_init(taskbcast, kaapi_taskbcast_body, kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) ) );
+      argbcast = kaapi_task_getargst( taskbcast, kaapi_taskbcast_arg_t );
+      memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
+      argbcast->last     = &argbcast->head;
+      taskbcast->sp      = argbcast;
+      ver->writer_task   = taskbcast;
+      ver->writer_data   = access->data;
+      /* push the task */
+      kaapi_thread_pushtask(writer_thread);
+    }
     else {
-      /* on the same site, do nothing */
-      if (ver->com == 0) 
+      /* if the writer is in fact a recv (case of task with both w and r access), mute the recv data structure */
+      if (ver->writer_task->ebody == kaapi_taskrecv_body)
       {
-        /* find it into the list of version in bcast*/
-        kaapi_com_t* c = &argbcast->head;
+        kaapi_assert( ver->writer_task->body == kaapi_suspend_body);
+        argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
+        memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
+        argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->sp;
+        ver->writer_task->sp = argbcast;
+        kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
+      }
+      /* writer already exist: if it is not a bcast, encapsulate the task by a bcast task
+      */
+      else if (ver->writer_task->ebody != kaapi_taskbcast_body)
+      {
+        kaapi_assert(kaapi_task_getbody(ver->writer_task) != kaapi_taskbcast_body);
+        argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
+        memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
+        argbcast->common.original_sp   = ver->writer_task->sp;
+        argbcast->common.original_body = ver->writer_task->ebody;
+        ver->writer_task->sp = argbcast;
+        kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body );
+        kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
+      } 
+      else {
+        /* else its already a bcast kind of task */
+        argbcast = (kaapi_taskbcast_arg_t*)ver->writer_task->sp;
+      }
+      argbcast->last          = &argbcast->head;
+    }
+
+    /* on the same site, do nothing */
+    if (ver->com == 0) 
+    {
+      /* find com tag into the list of version in bcast list*/
+      kaapi_com_t* c = &argbcast->head;
+      if (c->size !=0) 
+      {
         while (c !=0)
         {
           if (c->tag == ver->tag) break;
           c = c ->next;
         }
-        ver->com = c;
-        if (ver->com ==0)
-        {
-          if (ver->writer_thread == -1)
-            ver->com = kaapi_thread_pushdata( thgrp->mainthread, sizeof(kaapi_com_t) );
-          else
-            ver->com = kaapi_thread_pushdata( kaapi_threadgroup_thread( thgrp, ver->writer_thread), sizeof(kaapi_com_t) );
-          memset( ver->com, 0, sizeof(kaapi_com_t) );
-          argbcast->last->next = ver->com;
-          argbcast->last       = ver->com;
-          ver->com->tag        = ver->tag;
-          ver->com->a          = *access;
-        }
+      }
+      ver->com = c;
+      if (ver->com ==0)
+      {
+        if (ver->writer_thread == -1)
+          ver->com = kaapi_thread_pushdata( thgrp->mainthread, sizeof(kaapi_com_t) );
+        else
+          ver->com = kaapi_thread_pushdata( kaapi_threadgroup_thread( thgrp, ver->writer_thread), sizeof(kaapi_com_t) );
+        memset( ver->com, 0, sizeof(kaapi_com_t) );
+        argbcast->last->next = ver->com;
+        argbcast->last       = ver->com;
+        ver->com->tag        = ver->tag;
+        ver->com->a          = *access;
       }
     }
   }
 
 
-  /* if already has a reader do nothing */    
+  /* if already has a reader do nothing, else update the reader information */    
   if (!ver->readers[tid].used)
   {
     kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
 
+    /* if it is a recv, mark the task as suspended */
     if (ver->writer_thread != tid )
     {
-      kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->pad;
-      if (argrecv ==0) {
-        task->pad = argrecv = kaapi_thread_pushdata( thread, sizeof(kaapi_taskrecv_arg_t) );
+      kaapi_taskrecv_arg_t* argrecv = 0;
+      if ((task->ebody != kaapi_taskbcast_body) && (task->ebody != kaapi_taskrecv_body))
+      {
+        argrecv = kaapi_thread_pushdata( thread, sizeof(kaapi_taskrecv_arg_t) );
         memset( argrecv, 0, sizeof(kaapi_taskrecv_arg_t) );
+        argrecv->original_body = task->ebody;
+        argrecv->original_sp   = task->sp;
+        task->sp = argrecv;
+      } else {
+        argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       }
-
+      KAAPI_ATOMIC_INCR( &argrecv->counter );
       KAAPI_THREADGROUP_SETRECVPARAM( argrecv, ith );
         
       if (ver->readers[tid].addr ==0)
@@ -211,15 +226,13 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
         ver->readers[tid].addr = ver->writer_data;
       kaapi_assert (ver->readers[tid].addr != 0);
       
-      if (task->body == kaapi_taskbcast_body) 
-        kaapi_task_setbody(task, kaapi_taskrecvbcast_body );
-      else
-        kaapi_task_setbody(task, kaapi_taskrecv_body );
+      /* The task is waiting for a parameter -> suspend state */
+      kaapi_task_setbody(task, kaapi_suspend_body );
+      kaapi_task_setextrabody(task, kaapi_taskrecv_body );
 
-      ver->readers[tid].task = task;
 
-      /* allocate a new entry in the list wc_list if not on the same partition */
       kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);
+      ver->com->entry[ver->com->size].tid  = tid;
       ver->com->entry[ver->com->size].task = task;
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
       ver->com->entry[ver->com->size].addr = ver->readers[tid].addr;
@@ -228,8 +241,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 #endif      
       ++ver->com->size;
     }
-    else { /* on the same partition, only store the task info about reading the data */
-      ver->readers[tid].task = task;
+    else 
+    { /* on the same partition, only store the task info about who is reading the data */
       ver->readers[tid].addr = ver->writer_data;
     }
       
@@ -240,9 +253,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 #else
     access->data = ver->readers[tid].addr = ver->writer_data;
 #endif
+    ver->readers[tid].task = task;
     ver->readers[tid].used = true;
-    
-
     ++ver->cnt_readers;
   }
   else {

@@ -42,42 +42,74 @@
  ** 
  */
 #include "kaapi_impl.h"
-#include "kaapi_staticsched.h"
 
 
 /*
 */
 void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
 {
-  /* thread->pc is the executing task */
-  kaapi_task_t*          self    = thread->pc;
-#if 0
-  kaapi_taskbcast_arg_t* wc_list = (kaapi_taskbcast_arg_t*)self->pad;
-  kaapi_task_t* task;
-  short i;
-#endif
+  /* thread[-1]->pc is the executing task (pc of the upper frame) */
+  /* kaapi_task_t*          self = thread[-1].pc;*/
+  kaapi_taskbcast_arg_t* arg  = sp;
+  kaapi_com_t* comlist;
+  kaapi_processor_t* kproc = 0;
+  int i;
 
-  if (sp != self->pad)
+  printf("In TaskBcast body\n");
+  if (arg->common.original_body != 0)
   { /* encapsulation of the taskbcast on top of an existing task */
-    (*self->ebody)(sp,thread);
+    (*arg->common.original_body)(arg->common.original_sp,thread);
   }
   
   /* write memory barrier to ensure that other threads will view the data produced */
   kaapi_mem_barrier();
-#if 0
 
-  /* signal all readers */  
-  while(wc_list != 0) 
+  /* signal all readers */
+  kproc = kaapi_get_current_processor();
+  comlist = &arg->head;
+  while(comlist != 0) 
   {
-    for (i=0; i<wc_list->size; ++i)
+    for (i=0; i<comlist->size; ++i)
     {
-      counter = wc_list->entry[i].waiting_counter;
-      task = wc_list->entry[i].waiting_task;
+      kaapi_task_t* task = comlist->entry[i].task;
+      kaapi_assert( task->ebody == kaapi_taskrecv_body );
+      kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       
-      if (KAAPI_ATOMIC_DECR(counter) ==0)
-        kaapi_task_setbody(task, task->ebody);
+      if (kaapi_threadgroup_decrcounter(argrecv) ==0)
+      {
+        /* task becomes ready */
+        task->sp = argrecv->original_sp;
+        kaapi_task_setextrabody(task, argrecv->original_body);
+
+        /* see code in kaapi_taskwrite_body */
+        if (task->pad != 0) {
+          kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)task->pad;
+          kaapi_stack_t* stack = kaapi_threadcontext2stack(wcs->wccell->thread);
+          if (!stack->sticky) 
+          {
+            kaapi_sched_lock( kproc );
+            kaapi_task_setbody(task, argrecv->original_body);
+            kaapi_sched_pushready( kproc, wcs->wccell->thread );
+            kaapi_sched_unlock( kproc );
+            /* bcast will activate a suspended thread */
+            printf("Bcast wakeup non stick stack @:%p, can be moved...\n", (void*)stack);
+          }
+          else {
+            /* may activate the task */
+            kaapi_task_setbody(task, argrecv->original_body);
+            /* else stack may not be .. */
+            printf("Bcast wakeup stick stack @:%p, cannot be moved...\n", (void*)stack);
+          }
+        }
+        else {
+          /* thread is not suspended... */        
+          /* may activate the task */
+          kaapi_task_setbody(task, argrecv->original_body);
+        }
+      }
     }
-    wc_list = wc_list->next;
+    comlist = comlist->next;
   }
-#endif
+
+  printf("Out TaskBcast body\n");
 }
