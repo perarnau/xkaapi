@@ -1,3 +1,4 @@
+#include "kaapi_impl.h"
 #include "kaapi++"
 #include <iostream>
 
@@ -8,6 +9,10 @@ template<>
 struct TaskBodyCPU<TaskRW> {
   void operator() ( ka::pointer_rw<int> d )
   {
+    *d += 100;
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    printf("[%p->%p] :: In TaskRW=(+=100)\n", kproc, kproc->thread);
+    usleep(100);
   }
 };
 static ka::RegisterBodyCPU<TaskRW> dummy_object_TaskW;
@@ -18,6 +23,9 @@ template<>
 struct TaskBodyCPU<TaskR> {
   void operator() ( ka::pointer_r<int> d )
   {
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    printf("[%p->%p] :: In TaskR=(%i)\n", kproc, kproc->thread, *d);
+    usleep(100);
   }
 };
 static ka::RegisterBodyCPU<TaskR> dummy_object_TaskR;
@@ -32,6 +40,7 @@ struct doit {
 
     ka::ThreadGroup threadgroup( 2 );
     ka::auto_pointer<int> a      = ka::Alloca<int>(1);
+    *a = 1;
 
     threadgroup.begin_partition();
 
