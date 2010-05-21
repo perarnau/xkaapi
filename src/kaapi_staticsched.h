@@ -202,6 +202,7 @@ typedef struct kaapi_threadgrouprep_t {
    
   /* executive part */
   kaapi_atomic_t             countend;     /* warn: alignement ! */
+  kaapi_task_t*              waittask;     /* task to mark end of parallel computation */
   int volatile               startflag;    /* set to 1 when threads should starts */
   int volatile               step;         /* iteration step */
   kaapi_thread_context_t*    mainctxt;     /* the main thread context */
@@ -299,6 +300,10 @@ void kaapi_taskrecvbcast_body( void* sp, kaapi_thread_t* thread );
 /* task to signal end of a step
 */
 void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread );
+
+/* task to wait end of a step
+*/
+void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread );
 
 /**
 */

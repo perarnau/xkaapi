@@ -106,13 +106,16 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
 
   kaapi_sched_sync();
+  kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == thgrp->group_size );
   
+#if 0
   /* wait end of computation ... */
   pthread_mutex_lock(&thgrp->mutex);
   while (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size)
   {
     pthread_cond_wait( &thgrp->cond, &thgrp->mutex);
   }
+#endif
   thgrp->startflag = 0;
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
   pthread_mutex_unlock(&thgrp->mutex);

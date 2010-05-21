@@ -74,6 +74,12 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
     kaapi_task_init(task, kaapi_tasksignalend_body, thgrp );
     kaapi_thread_pushtask(thgrp->threads[i]);    
   }
+  /* Push the task that will mark synchronisation on the main thread */
+  thgrp->waittask = kaapi_thread_toptask( thgrp->mainthread);
+  kaapi_task_init(thgrp->waittask, kaapi_taskwaitend_body, thgrp );
+  kaapi_task_setbody(thgrp->waittask, kaapi_suspend_body );
+  kaapi_thread_pushtask(thgrp->mainthread);    
+  
   
   /* free hash map entries */
   for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
