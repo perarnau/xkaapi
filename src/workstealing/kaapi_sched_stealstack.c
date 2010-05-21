@@ -146,8 +146,8 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
     {
       if (kaapi_threadgroup_paramiswait( task, i )) 
       {
-/*        m = KAAPI_ACCESS_MODE_W;*/
-        printf("->>> recv task: mute r mode to w\n");
+        m = KAAPI_ACCESS_MODE_W;
+/*        printf("->>> recv task: %p, mute r mode to w\n",task); */
       }
     }
     kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)sp);
