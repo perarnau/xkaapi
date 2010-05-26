@@ -1,0 +1,50 @@
+-- bugs
+. accumulate doesnot return the correct value
+ . with >= 3 thread, but works with for_each
+ . thus reduction bugged ?
+  . missed thieves ?
+  . at least, everything is processed (checked by marking items)
+  . seems there is a problem in preemption, result not reloaded?
+  --> actually thieves are missed, not reduced
+  --> race between the splitter and the reducer
+   -> redux doesnot see some in the splitter
+
+-- todos
+. brancher et recompiler le runtime
+. ajouter les modifs necessaires a previous_branch/kastl_sequences.h
+
+. faire les tests + les benchs
+
+. window extractor
+ . should slide as space becomes avail, not at the end of the loop
+ . sizes must be of the right type (ie. sign errors...)
+
+. faire un preempter, meme que reducer
+ . PreemptionTag = nopreempt_tag
+
+-- impl
+template<typename Iterator>
+struct algorithm_result : base_result
+{
+  Iterator _value;
+
+  void algorithm_result(Iterator& value)
+    : _value(value)
+  {}
+
+  bool is_found()
+  {
+    return false;
+  }
+
+};
+
+template<typename Value>
+struct numeric_result : base_result
+{
+};
+
+
+struct void_result
+{
+};

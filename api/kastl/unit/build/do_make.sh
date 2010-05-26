@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 ALGOS=''
-#ALGOS="$ALGOS acumulate"
+ALGOS="$ALGOS acumulate"
 #ALGOS="$ALGOS inner_product"
 #ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
@@ -9,7 +9,7 @@ ALGOS=''
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS min_element"
 #ALGOS="$ALGOS max_element"
-ALGOS="$ALGOS find_first_of"
+#ALGOS="$ALGOS find_first_of"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do

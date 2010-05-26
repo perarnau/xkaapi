@@ -279,7 +279,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     access->data = ver->readers[tid].addr = ver->writer_data;
 #endif
     ver->readers[tid].task = task;
-    ver->readers[tid].used = true;
+    ver->readers[tid].used = 1;
     ++ver->cnt_readers;
   }
   else {
@@ -346,7 +346,7 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
           ver->delete_data[i] = ver->readers[i].addr;
         ver->readers[i].addr = 0;
         ++r;
-        ver->readers[i].used = false;
+        ver->readers[i].used = 0;
       }
       else ver->delete_data[i] = 0;
     }
