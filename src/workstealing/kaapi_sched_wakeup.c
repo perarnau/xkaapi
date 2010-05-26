@@ -70,7 +70,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_pro
     */
     kaapi_sched_lock( kproc );
     thread = kaapi_sched_stealready( kproc, kproc_thiefid );
-    printf("[%u] local steal thread->%p\n", kproc_thiefid, thread );
+//    printf("[%u] local steal thread->%p\n", kproc_thiefid, thread );
     kaapi_sched_unlock( kproc );
     if (thread !=0) return thread;
   }

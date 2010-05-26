@@ -329,9 +329,9 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     if (war)
     {
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
-      printf("***Not yet implemented WAR dependency on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
+//      printf("***Not yet implemented WAR dependency on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
 #else
-      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
+//      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
 #endif
       fflush( stdout );
     }

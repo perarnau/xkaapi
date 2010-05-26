@@ -50,7 +50,7 @@
 /* Compute if the task with arguments pointed by sp and with format task_fmt is ready
  Return the number of non ready data
  */
-static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, kaapi_hashmap_t* map )
+static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, unsigned int* war_param, kaapi_hashmap_t* map )
 {
   int i, wc, countparam;
   
@@ -75,6 +75,8 @@ static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_fo
         )
     {
       --wc;
+      if (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
+        *war_param |= 1<<i;
     }
     /* optimization: break from enclosest loop here */
     
@@ -130,6 +132,7 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
   int i, wc, countparam;
   const kaapi_taskrecv_arg_t* arg = (kaapi_taskrecv_arg_t*)sp;
   const kaapi_format_t* task_fmt = kaapi_format_resolvebybody( arg->original_body );
+  if (kaapi_task_getextrabody(task) != kaapi_taskrecv_body) return 0;
   sp = arg->original_sp;
 
   countparam = wc = task_fmt->count_params;
@@ -290,7 +293,8 @@ static int kaapi_sched_stealframe(
       task_fmt = kaapi_format_resolvebybody( task_body );
       if (task_fmt !=0)
       {
-        int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, map );
+        unsigned int war_param = 0;
+        int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
@@ -312,7 +316,7 @@ static int kaapi_sched_stealframe(
               kaapi_stack_print(stdout, thread );
 #endif
               kaapi_assert_debug( count-replycount <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
-              replycount += kaapi_task_splitter_dfg(thread, task_top, count-replycount, requests );
+              replycount += kaapi_task_splitter_dfg(thread, task_top, war_param, count-replycount, requests );
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
             }
             thread->thiefpc = 0;

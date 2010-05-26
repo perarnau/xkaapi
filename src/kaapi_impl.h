@@ -977,7 +977,8 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
 /** \ingroup WS
     Splitter for DFG task
 */
-extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t* task, int count, struct kaapi_request_t* array);
+extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t* task, unsigned int war_param, 
+      int count, struct kaapi_request_t* array);
 
 /** \ingroup WS
     Wrapper arround the user level Splitter for Adaptive task
@@ -1084,6 +1085,7 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_thread_context_t* origin_thread;     /* stack where task was stolen */
   kaapi_task_t*           origin_task;       /* the stolen task into origin_stack */
   kaapi_format_t*         origin_fmt;        /* set by tasksteal the stolen task into origin_stack */
+  unsigned int            war_param;         /* bit i=1 iff it is a w mode with war dependency */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
 

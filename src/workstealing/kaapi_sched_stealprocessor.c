@@ -87,7 +87,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
           }
         }
         kaapi_assert(request !=0);
-        printf("[%ui] remote steal thread->%p\n", kproc_thiefid, thread );
+//        printf("[%u] remote steal thread->%p\n", kproc_thiefid, thread );
         _kaapi_request_reply( request, thread, 1 ); /* success of steal of the thread as a whole ... */
         --count;
         if (count ==0) return 0;
@@ -96,6 +96,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
   }
 #endif
   
+#if 1
   if (1)
   { /* WARNING do not try to steal inside suspended stack */
     kaapi_wsqueuectxt_cell_t* cell;
@@ -139,6 +140,8 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
       if (kaapi_isterminated()) break;
     }
 #endif
+
   }  
+#endif // #if 0
   return 0;
 }

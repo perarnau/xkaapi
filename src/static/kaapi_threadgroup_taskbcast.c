@@ -54,7 +54,7 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
   kaapi_com_t* comlist;
   int i;
 
-  printf("In TaskBcast body\n");
+//  printf("In TaskBcast body\n");
   if (arg->common.original_body != 0)
   { /* encapsulation of the taskbcast on top of an existing task */
     (*arg->common.original_body)(arg->common.original_sp,thread);
@@ -108,8 +108,8 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
               kaapi_task_setbody(task, newbody );
               kaapi_sched_pushready( kthread->proc, kthread );
               /* bcast will activate a suspended thread */
-              printf("Bcast wakeup non stick stack @:%p, can be moved...\n", (void*)stack);
-              fflush(stdout );
+//              printf("Bcast wakeup non stick stack @:%p, can be moved...\n", (void*)stack);
+//              fflush(stdout );
               kaapi_sched_unlock( kthread->proc );
             }
             else 
@@ -119,7 +119,7 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
             /* may activate the task */
             kaapi_task_setbody(task, newbody);
             /* else stack may not be .. */
-            printf("Bcast wakeup stick stack @:%p, cannot be moved...\n", (void*)stack);
+//            printf("Bcast wakeup stick stack @:%p, cannot be moved...\n", (void*)stack);
           }
         }
         else {
@@ -132,5 +132,5 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
     comlist = comlist->next;
   }
 
-  printf("Out TaskBcast body\n");
+//  printf("Out TaskBcast body\n");
 }
