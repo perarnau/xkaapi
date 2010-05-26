@@ -325,7 +325,7 @@ struct Kernel {
         {
           Poisson3D::Index neighbor = curr_index.get_neighbor( dir );
           int neighbor_site = sg.get_site( neighbor.get_i(), neighbor.get_j() ,neighbor.get_k() );
-          ka::Spawn<ExtractSubDomainInterface>(ka::SetSite(neighbor_site))( 
+          ka::Spawn<ExtractSubDomainInterface>()( 
               ka::pointer<KaSubDomain>(&old_domain[neighbor()]), 
               dir, 
               ka::pointer<KaSubDomainInterface>(&sdi[ curr_index()*Poisson3D::NB_DIRECTIONS + d ]) 
@@ -348,7 +348,7 @@ struct Kernel {
       int curr_site = sg.get_site(curr_index.get_i(), curr_index.get_j(), curr_index.get_k());
 
       // Internal computation
-      ka::Spawn<UpdateInternal>(ka::SetSite(curr_site))( 
+      ka::Spawn<UpdateInternal>()( 
           ka::pointer<KaSubDomain>(&new_domain[curr_index()]), 
           ka::pointer<KaSubDomain>(&old_domain[curr_index()]) 
       );
@@ -377,7 +377,7 @@ struct Kernel {
         Poisson3D::Direction dir = Poisson3D::ALL_DIRECTIONS[d];
         if ( curr_index.has_neighbor( dir ) )
         {
-          ka::Spawn<UpdateExternal>(ka::SetSite(curr_site))( 
+          ka::Spawn<UpdateExternal>()( 
               ka::pointer<KaSubDomain>(&new_domain[curr_index()]),
               dir, 
               ka::pointer<KaSubDomainInterface>(&sdi[curr_index()*Poisson3D::NB_DIRECTIONS + d])
@@ -385,7 +385,7 @@ struct Kernel {
         }
         else
         {
-          ka::Spawn<UpdateExternalVal>(ka::SetSite(curr_site))( 
+          ka::Spawn<UpdateExternalVal>()( 
               ka::pointer<KaSubDomain>(&new_domain[curr_index()]), 
               dir, 
               Poisson3D::DIR_CONSTRAINTS[d] 
@@ -409,7 +409,7 @@ struct Kernel {
       int curr_site = sg.get_site(curr_index.get_i(), curr_index.get_j(), curr_index.get_k());
 #endif
 
-      ka::Spawn<ComputeResidueAndSwap>(ka::SetSite(curr_site))( 
+      ka::Spawn<ComputeResidueAndSwap>()( 
           ka::pointer<KaSubDomain>(&old_domain[curr_index()]),
           ka::pointer<KaSubDomain>(&new_domain[curr_index()]),
           ka::pointer_r<KaSubDomain>(&frhs[curr_index()]), 
@@ -459,7 +459,7 @@ struct Initialize {
         {
           int site = sg.get_site(i,j,k);
           Poisson3D::Index curr_index(i,j,k);
-          ka::Spawn<InitializeSubDomain> (ka::SetSite(site)) ( 
+          ka::Spawn<InitializeSubDomain> () ( 
               curr_index, 
               ka::pointer<KaSubDomain>(&domain[curr_index()]), 
               ka::pointer<KaSubDomain>(&frhs[curr_index()]),
@@ -513,7 +513,7 @@ struct Verification {
         for( unsigned int k = 0 ; k < Poisson3D::nb_subdomZ ; ++k ){
           int site = sg.get_site(i,j,k);
           Poisson3D::Index curr_index(i,j,k);
-          ka::Spawn<ComputeError>(ka::SetSite(site)) ( 
+          ka::Spawn<ComputeError>() ( 
             ka::pointer<KaSubDomain>(&domain[curr_index()]),
             ka::pointer<KaSubDomain>(&solution[curr_index()]), 
             ka::pointer<double>(&error[curr_index()]) 
