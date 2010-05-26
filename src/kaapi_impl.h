@@ -724,9 +724,9 @@ struct kaapi_version_t;
 /*
 */
 typedef struct kaapi_hashentries_t {
-  union {
+  union { /* depending of the kind of hash table... */
     kaapi_gd_t                value;
-    struct kaapi_version_t*   dfginfo;  /* list of tasks to wakeup at the end */
+    struct kaapi_version_t*   dfginfo;     /* list of tasks to wakeup at the end */
   } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 
@@ -736,6 +736,7 @@ KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
 
 #define KAAPI_HASHMAP_SIZE 32
+
 /*
 */
 typedef struct kaapi_hashmap_t {
@@ -744,6 +745,7 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_bloc_t* allallocatedbloc;
   kaapi_uint32_t entry_map; /* type size must match KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
+
 
 /*
 */

@@ -52,7 +52,6 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
   /* kaapi_task_t*          self = thread[-1].pc;*/
   kaapi_taskbcast_arg_t* arg  = sp;
   kaapi_com_t* comlist;
-  kaapi_processor_t* kproc = 0;
   int i;
 
   printf("In TaskBcast body\n");
@@ -65,7 +64,6 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
   kaapi_mem_barrier();
 
   /* signal all readers */
-  kproc = kaapi_get_current_processor();
   comlist = &arg->head;
   while(comlist != 0) 
   {
@@ -95,7 +93,8 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
         kaapi_task_setextrabody(task, newbody);
 
         /* see code in kaapi_taskwrite_body */
-        if (task->pad != 0) {
+        if (task->pad != 0) 
+        {
           kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)task->pad;
           kaapi_stack_t* stack = kaapi_threadcontext2stack(wcs->wccell->thread);
           if (!stack->sticky) 
@@ -104,13 +103,14 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
             kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
             if (kthread !=0)
             {
-              kaapi_sched_lock( kproc );
+              /* move the thread in the ready list of the victim processor */
+              kaapi_sched_lock( kthread->proc );
               kaapi_task_setbody(task, newbody );
-              kaapi_sched_pushready( kproc, kthread );
+              kaapi_sched_pushready( kthread->proc, kthread );
               /* bcast will activate a suspended thread */
               printf("Bcast wakeup non stick stack @:%p, can be moved...\n", (void*)stack);
               fflush(stdout );
-              kaapi_sched_unlock( kproc );
+              kaapi_sched_unlock( kthread->proc );
             }
             else 
               kaapi_task_setbody(task, newbody);

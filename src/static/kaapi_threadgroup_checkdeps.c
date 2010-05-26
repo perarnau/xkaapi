@@ -99,8 +99,12 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     /* find the last writer (task & thread) using the hash map */
     entry = kaapi_hashmap_find(&thgrp->ws_khm, access->data);
     if (entry ==0)
-      /* no entry -> first reader */
+    {
+      /* no entry -> new version object */
       entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, access );
+      if (KAAPI_ACCESS_IS_READ(m))
+        kaapi_threadgroup_version_addfirstreader( thgrp, &thgrp->ws_vect_input, threadindex, task, access, i );
+    }
 
     if (KAAPI_ACCESS_IS_READ(m))
     {

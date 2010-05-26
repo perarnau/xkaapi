@@ -71,7 +71,12 @@
 
 /*
 */
-kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, kaapi_hashmap_t* hmap, int tid, kaapi_access_t* access )
+kaapi_hashentries_t* kaapi_threadgroup_newversion( 
+    kaapi_threadgroup_t thgrp, 
+    kaapi_hashmap_t* hmap, 
+    int tid, 
+    kaapi_access_t* access 
+)
 {
   kaapi_hashentries_t* entry;
   kaapi_version_t* ver;
@@ -79,7 +84,7 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, ka
    
   /* here a stack allocation attached with the thread group */
   ver = entry->u.dfginfo = calloc( 1, sizeof(kaapi_version_t) );
-  ver->tag = ++thgrp->tag_count;
+  ver->tag = 0; //++thgrp->tag_count;
   ver->writer_task = 0;
   ver->writer_thread = -1;
   ver->original_data = ver->writer_data = access->data;
@@ -89,6 +94,26 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, ka
   return entry;
 }
 
+
+
+/*
+*/
+void kaapi_threadgroup_version_addfirstreader( 
+    kaapi_threadgroup_t thgrp, 
+    kaapi_vector_t* v, 
+    int tid, 
+    kaapi_task_t* task, 
+    kaapi_access_t* access, 
+    int ith 
+)
+{
+  kaapi_pidreader_t* entry;
+  entry = kaapi_vector_pushback(v);
+  entry->addr = access->data;
+  entry->tid  = tid;
+  entry->used = (char)ith;
+  entry->task = task;
+}
 
 /*
 */
@@ -134,6 +159,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       taskbcast->sp      = argbcast;
       ver->writer_task   = taskbcast;
       ver->writer_data   = access->data;
+//      ver->tag           = ++thgrp->tag_count;
       /* push the task */
       kaapi_thread_pushtask(writer_thread);
     }
@@ -146,6 +172,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
         memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
         argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->sp;
         ver->writer_task->sp = argbcast;
+//        ver->tag           = ++thgrp->tag_count;
         kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
       }
       /* writer already exist: if it is not a bcast, encapsulate the task by a bcast task
@@ -158,6 +185,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
         argbcast->common.original_sp   = ver->writer_task->sp;
         argbcast->common.original_body = ver->writer_task->ebody;
         ver->writer_task->sp = argbcast;
+//        ver->tag           = ++thgrp->tag_count;
         kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body );
         kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
       } 
@@ -168,10 +196,9 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       argbcast->last          = &argbcast->head;
     }
 
-    /* on the same site, do nothing */
     if (ver->com == 0) 
     {
-      /* find com tag into the list of version in bcast list*/
+      /* find com tag into the list of version in bcast list */
       kaapi_com_t* c = &argbcast->head;
       if (c->size !=0) 
       {
@@ -184,16 +211,13 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       ver->com = c;
       if (ver->com ==0)
       {
-        if (ver->writer_thread == -1)
-          ver->com = kaapi_thread_pushdata( thgrp->mainthread, sizeof(kaapi_com_t) );
-        else
-          ver->com = kaapi_thread_pushdata( kaapi_threadgroup_thread( thgrp, ver->writer_thread), sizeof(kaapi_com_t) );
+        ver->com = kaapi_thread_pushdata( writer_thread, sizeof(kaapi_com_t) );
         memset( ver->com, 0, sizeof(kaapi_com_t) );
         argbcast->last->next = ver->com;
         argbcast->last       = ver->com;
-        ver->com->tag        = ver->tag;
         ver->com->a          = *access;
       }
+//      ver->com->tag        = ver->tag;
     }
   }
 
@@ -232,6 +256,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 
 
       kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);
+      if (ver->com->tag ==0) ver->com->tag = ++thgrp->tag_count;
       ver->com->entry[ver->com->size].tid  = tid;
       ver->com->entry[ver->com->size].task = task;
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
@@ -340,8 +365,8 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
       */
       if (war)
       {
-        access->data = ver->writer_data = malloc( sizeof(void*) );
-        exit(1);
+        access->data = ver->writer_data = ver->original_data;/* alias ? malloc( sizeof(void*) ); */
+//WARNING        exit(1);
       }
       else 
         access->data = ver->writer_data = ver->original_data;
@@ -352,7 +377,6 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     }
     ver->writer_thread = tid;
     ver->writer_task   = task;
-    ver->tag           = ++thgrp->tag_count;
     ver->com           = 0;
   }
   

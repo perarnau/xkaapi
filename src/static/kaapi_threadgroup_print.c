@@ -76,6 +76,55 @@ static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm
 }
 
 
+
+/**
+*/
+static void kaapi_threadgroup_printinputoutputdata(FILE* file, int tid, kaapi_hashmap_t* hm, kaapi_vector_t* v )
+{
+  kaapi_vectentries_bloc_t* entry;
+  
+  if (v->firstbloc ==0) return;
+  
+  entry = v->firstbloc;
+  while (entry !=0) 
+  {
+    for (int i=0; i<entry->pos; ++i)
+    {
+      kaapi_pidreader_t* reader = &entry->data[i];
+      printf("@:%p -> first reader on tid: %i by task @:%p, param:%i\n", 
+          reader->addr, 
+          reader->tid, 
+          reader->task, 
+          (int)reader->used 
+      );
+    }
+    entry = entry->next;
+  }
+
+  entry = v->firstbloc;
+  while (entry !=0) 
+  {
+    for (int i=0; i<entry->pos; ++i)
+    {
+      kaapi_pidreader_t* reader = &entry->data[i];
+      kaapi_hashentries_t* hentry = kaapi_hashmap_find(hm, reader->addr);
+      if (hentry ==0) {
+        printf("*** error, cannot find data with address:%p\n", reader->addr);
+      }
+      else {
+        kaapi_version_t* ver = hentry->u.dfginfo;
+        printf("@:%p -> last writer on tid:%i by task @:%p\n", 
+            reader->addr, 
+            ver->writer_thread,
+            ver->writer_task 
+        );
+      }
+    }
+    entry = entry->next;
+  }
+}
+
+
 /**
 */
 int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
@@ -93,6 +142,8 @@ int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
     fprintf(file, "Partition %i/%i:\n", i, thgrp->group_size);
     kaapi_stack_print( file, thgrp->threadctxts[i] );
   }
+  fprintf(file, "First input data on thread %i/%i:\n", i, thgrp->group_size);
+  kaapi_threadgroup_printinputoutputdata(file, i, &thgrp->ws_khm, &thgrp->ws_vect_input );
   
   for (i=0; i<thgrp->group_size; ++i)
   {

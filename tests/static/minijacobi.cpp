@@ -17,6 +17,16 @@ struct TaskBodyCPU<TaskUpdate> {
 static ka::RegisterBodyCPU<TaskUpdate> dummy_object_TaskUpdate;
 
 // --------------------------------------------------------------------
+struct TaskSwap: public ka::Task<3>::Signature<int, ka::R<double>, ka::W<double> > {};
+template<>
+struct TaskBodyCPU<TaskSwap> {
+  void operator() ( int bloc, ka::pointer_r<double> oD, ka::pointer_w<double> F )
+  {
+  }
+};
+static ka::RegisterBodyCPU<TaskSwap> dummy_object_TaskSwap;
+
+// --------------------------------------------------------------------
 struct TaskExtractF: public ka::Task<4>::Signature<Direction, int, ka::R<double>, ka::W<double> > {};
 template<>
 struct TaskBodyCPU<TaskExtractF> {
@@ -54,29 +64,40 @@ struct doit {
     ka::ThreadGroup threadgroup( size );
     std::vector<double> oD(n);      /* bloc cyclic mapping */
     std::vector<double> nD(n);      /* bloc cyclic mapping */
-    std::vector<double> Fr(size-1); 
-    std::vector<double> Fl(size-1); 
+    std::vector<double> Fr[2];
+    Fr[0].resize(size-1); 
+    Fr[1].resize(size-1); 
+    std::vector<double> Fl[2];
+    Fl[0].resize(size-1); 
+    Fl[1].resize(size-1); 
 
     threadgroup.begin_partition();
 
-    for (int i=0; i<size; ++i)
+    for (int step = 0; step <1; ++step)
     {
-      if (i != (size-1)) /* right fontier */
-        threadgroup.Spawn<TaskExtractF> (ka::SetPartition(i))  ( RIGHT, bloc, &oD[(i*bloc)], &Fr[i] );
-      if (i != 0) /* left fontier */
-        threadgroup.Spawn<TaskExtractF> (ka::SetPartition(i))  ( LEFT, bloc, &oD[(i*bloc)], &Fl[i-1] );
+      for (int i=0; i<size; ++i)
+      {
+        if (i != (size-1)) /* right fontier */
+          threadgroup.Spawn<TaskExtractF> (ka::SetPartition(i))  ( RIGHT, bloc, &oD[(i*bloc)], &Fr[step%2][i] );
+        if (i != 0) /* left fontier */
+          threadgroup.Spawn<TaskExtractF> (ka::SetPartition(i))  ( LEFT, bloc, &oD[(i*bloc)], &Fl[step%2][i-1] );
+      }
+      for (int i=0; i<size; ++i)
+      {
+        threadgroup.Spawn<TaskUpdate>   (ka::SetPartition(i))  ( bloc, &oD[(i*bloc)], &nD[(i*bloc)] );
+      }
+      for (int i=0; i<size; ++i)
+      {
+        if ( i != size-1)
+          threadgroup.Spawn<TaskUpdateFontier>(ka::SetPartition(i))  ( RIGHT, bloc, &nD[(i*bloc)], &Fl[step%2][i] );
+        if ( i != 0)
+          threadgroup.Spawn<TaskUpdateFontier>(ka::SetPartition(i))  ( LEFT, bloc, &nD[(i*bloc)], &Fr[step%2][i-1] );
+      }
+      for (int i=0; i<size; ++i)
+      {
+        threadgroup.Spawn<TaskSwap>(ka::SetPartition(i))  ( bloc, &nD[(i*bloc)], &oD[(i*bloc)] );
+      }
     }
-    for (int i=0; i<size; ++i)
-    {
-      threadgroup.Spawn<TaskUpdate>   (ka::SetPartition(i))  ( bloc, &oD[(i*bloc)], &nD[(i*bloc)] );
-    }
-    for (int i=0; i<size; ++i)
-    {
-      if ( i != size-1)
-        threadgroup.Spawn<TaskUpdateFontier>(ka::SetPartition(i))  ( RIGHT, bloc, &nD[(i*bloc)], &Fl[i] );
-      if ( i != 0)
-        threadgroup.Spawn<TaskUpdateFontier>(ka::SetPartition(i))  ( LEFT, bloc, &nD[(i*bloc)], &Fr[i-1] );
-    }    
     threadgroup.print();    
     threadgroup.end_partition();
     threadgroup.execute();

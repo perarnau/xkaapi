@@ -162,7 +162,7 @@ int kaapi_task_print(
     com = &tbcastarg->head;
     while (com !=0)
     {
-      printf("\n\t\t\t->send tag: %li to %i task(s): ", com->tag, com->size);
+      printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
       for (i=0; i<com->size; ++i)
       {
         fprintf(file, "\n\t\t\t\t@task:%p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].addr);
@@ -246,7 +246,10 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
     {
       ebody = kaapi_task_getextrabody(task_bot);
       if (ebody == kaapi_taskbcast_body)
+      {
         ebody = ((kaapi_taskbcast_arg_t*)task_bot->sp)->common.original_body;
+        if (ebody == 0) ebody = kaapi_taskbcast_body;
+      }
       else if (ebody == kaapi_taskrecv_body)
         ebody = ((kaapi_taskrecv_arg_t*)task_bot->sp)->original_body;
       fmt = kaapi_format_resolvebybody( ebody );
@@ -260,10 +263,8 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "startup";
         else if (ebody == kaapi_taskstartup_body) 
           fname = "exec";
-  /*
-        else if ( kaapi_task_getbody(task_bot) == kaapi_retn_body) 
-          fname = "retn";
-  */
+        else if ( ebody == kaapi_taskmain_body) 
+          fname = "maintask";
         else if (ebody == kaapi_suspend_body) 
           fname = "suspend";
         else if (ebody == kaapi_taskbcast_body) 

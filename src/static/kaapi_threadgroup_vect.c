@@ -1,8 +1,8 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
@@ -10,7 +10,7 @@
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
-** threadctxts.
+** threads.
 ** 
 ** This software is governed by the CeCILL-C license under French law
 ** and abiding by the rules of distribution of free software.  You can
@@ -44,25 +44,53 @@
 #include "kaapi_impl.h"
 
 
-/**
+/*
 */
-int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
+int kaapi_vector_init( kaapi_vector_t* v, kaapi_vectentries_bloc_t* initbloc )
 {
-  int i;
-  if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
-    return EBUSY;
-    
-  for (i=0; i<thgrp->group_size; ++i)
-    kaapi_context_free(thgrp->threadctxts[i]);
-
-  free( thgrp->threadctxts );
-  thgrp->group_size = 0;
-  thgrp->threadctxts = 0;
-
-  kaapi_vector_destroy( &thgrp->ws_vect_input );
-
-  pthread_mutex_destroy(&thgrp->mutex);
-  pthread_cond_destroy(&thgrp->cond);
-  
+  v->firstbloc = initbloc;
+  v->currentbloc = initbloc;
+  v->allallocatedbloc = 0;
+  if (initbloc !=0)
+    v->currentbloc->pos = 0;
   return 0;
+}
+
+
+/*
+*/
+int kaapi_vector_destroy( kaapi_vector_t* v )
+{
+  while (v->allallocatedbloc !=0)
+  {
+    kaapi_vectentries_bloc_t* curr = v->allallocatedbloc;
+    v->allallocatedbloc = curr->next;
+    free (curr);
+  }
+  return 0;
+}
+
+
+
+/*
+*/
+kaapi_pidreader_t* kaapi_vector_pushback( kaapi_vector_t* v )
+{ 
+  kaapi_pidreader_t* entry; 
+  /* allocate new entry */
+  if (v->currentbloc == 0) 
+  {
+    v->currentbloc = malloc( sizeof(kaapi_vectentries_bloc_t) );
+    v->currentbloc->next = v->allallocatedbloc;
+    v->allallocatedbloc = v->currentbloc;
+    v->currentbloc->pos = 0;
+  }
+  if (v->firstbloc ==0) v->firstbloc = v->currentbloc;
+  
+  entry = &v->currentbloc->data[v->currentbloc->pos];
+  if (++v->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
+  {
+    v->currentbloc = 0;
+  }
+  return entry;
 }

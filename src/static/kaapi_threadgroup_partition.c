@@ -55,6 +55,8 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
+  kaapi_vector_init( &thgrp->ws_vect_input, 0 );
+  
   return 0;
 }
 

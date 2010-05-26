@@ -83,6 +83,7 @@ libxkaapi_la_SOURCES=\
   static/kaapi_threadgroup_partition.c\
   static/kaapi_threadgroup_exec.c\
   static/kaapi_threadgroup_print.c\
+  static/kaapi_threadgroup_vect.c\
   kaapi_staticsched.h
 
 

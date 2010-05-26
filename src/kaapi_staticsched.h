@@ -105,16 +105,16 @@ typedef struct kaapi_taskbcast_arg_t {
 #define KAAPI_MAX_PARTITION 64
 
 
-
 /** \ingroup DFG
     Identification of a reader of a data writen in an other partition.
     This structure is only used during partitionning step, not at runtime.
 */
 typedef struct kaapi_reader_t {
-  bool             used;                               /* true if this readers is set, see readers fields in kaapi_version_t */
+  char             used;                               /* true if this readers is set, see readers fields in kaapi_version_t */
   kaapi_task_t*    task;                               /* the last reader tasks that owns a reference to the data */
   void*            addr;                               /* address of data in this thread */
 } kaapi_reader_t;
+
 
 
 /** \ingroup DFG
@@ -149,15 +149,30 @@ typedef struct kaapi_version_t {
 } kaapi_version_t;
 
 
-/* usage:
-   KAAPI_FOREACH_PARTITION( index, dfginfo->thread_readers)
-   {
-     do some things for all index on non empty partition
-   }
+
+
+/** \ingroup DFG
+    Identification of a reader of a data writen in an other partition.
+    This structure is only used during partitionning step, not at runtime.
 */
-#define KAAPI_FOREACH_PARTITION(var, version) \
-  for(int var=0; var<(version)->cnt_readers; ++var)\
-    if (set[var] !=0)
+typedef struct kaapi_pidreader_t {
+  char             used;                               /* true if this readers is set, see readers fields in kaapi_version_t */
+  int              tid;                                /* the pid of the partition of the first reader */
+  kaapi_task_t*    task;                               /* the last reader tasks that owns a reference to the data */
+  void*            addr;                               /* address of data in this thread */
+} kaapi_pidreader_t;
+
+KAAPI_DECLARE_BLOCENTRIES(kaapi_vectentries_bloc_t, kaapi_pidreader_t);
+
+
+/*
+*/
+typedef struct kaapi_vector_t {
+  kaapi_vectentries_bloc_t* firstbloc;
+  kaapi_vectentries_bloc_t* currentbloc;
+  kaapi_vectentries_bloc_t* allallocatedbloc;
+} kaapi_vector_t;
+
 
 
 /** Basic state for the thread group.
@@ -216,6 +231,7 @@ typedef struct kaapi_threadgrouprep_t {
 
   /* scheduling part / partitioning */
   kaapi_hashmap_t            ws_khm;  
+  kaapi_vector_t             ws_vect_input;  /* first reader that are waiting for input data */  
   long                       tag_count;
 } kaapi_threadgrouprep_t;
 
@@ -273,6 +289,16 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, ka
 
 /*
 */
+void kaapi_threadgroup_version_addfirstreader( 
+    kaapi_threadgroup_t thgrp, 
+    kaapi_vector_t* v, 
+    int tid, 
+    kaapi_task_t*, 
+    kaapi_access_t* a, 
+    int ith );
+
+/*
+*/
 void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t* ver );
 
 /* New reader
@@ -326,6 +352,18 @@ static inline int kaapi_threadgroup_decrcounter( kaapi_taskrecv_arg_t* arg )
   return KAAPI_ATOMIC_DECR( &arg->counter ) & 0xFFFF;
 }
 
+/**
+*/
+extern int kaapi_vector_init( kaapi_vector_t* v, kaapi_vectentries_bloc_t* initbloc );
+
+/**
+*/
+extern int kaapi_vector_destroy( kaapi_vector_t* v );
+
+
+/**
+*/
+kaapi_pidreader_t* kaapi_vector_pushback( kaapi_vector_t* v );
 
 
 #if defined(__cplusplus)
