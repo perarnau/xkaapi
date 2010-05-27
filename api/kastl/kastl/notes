@@ -1,6 +1,16 @@
 -- bugs
 . some part of the sequence are processed several times
  . ie. check_sequence sees 3.0
+ . probleme de conccurence entre le pop et le steal: voir
+ trace o.2, (9932 - 10512) entre [0] et [3]
+  -> lors d un conflit pop/steal
+   -> semble pas possible, puisque bug meme quand global_lock
+  -> ou lors d une reduction, recuperation de la sequence
+  -> ou alors la sequence qu on recupere n est pas non plus valide
+  puisque c est une reference sur la pile de tache, qui peut etre
+  reutilisee entre temps
+
+. last working commit: 4ec5548580d80cc88e5da718804884f8a0134da8
 
 -- todos
 . brancher et recompiler le runtime

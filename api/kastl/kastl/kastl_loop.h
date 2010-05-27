@@ -61,21 +61,21 @@ static volatile unsigned int __attribute__((aligned)) printid = 0;
 /* temporary global lock */
 struct __global_lock
 {
-  static volatile unsigned long __attribute__((aligned)) _lock;
+  static kastl::rts::atomic_t<32> _lock;
 
   static void acquire()
   {
-    while (!__sync_bool_compare_and_swap(&_lock, 0, 1))
+    while (!_lock.cas(0, 1))
       ;
   }
 
   static void release()
   {
-    _lock = 0;
+    _lock.write(0);
   }
 };
 
-volatile unsigned long __attribute__((aligned)) __global_lock::_lock = 0;
+kastl::rts::atomic_t<32> __global_lock::_lock = {{0}};
 
 
 namespace kastl
@@ -196,14 +196,15 @@ namespace impl
     {
       typedef thief_context<Result, Sequence, Body> context_type;
 
-      Sequence& _seq;
+      Sequence _seq;
+      Result _res;
 
-      thief_context(Sequence& seq)
+      thief_context(const Sequence& seq)
 	: _seq(seq)
       {}
 
       static kaapi_taskadaptive_result_t* allocate
-      (kaapi_stealcontext_t* sc, Sequence& seq, Body& body)
+      (kaapi_stealcontext_t* sc, const Sequence& seq, Body& body)
       {
 	kaapi_taskadaptive_result_t* const ktr =
 	  kaapi_allocate_thief_result(sc, sizeof(context_type), NULL);
@@ -290,17 +291,17 @@ namespace impl
     {
       typedef thief_context<Result, Sequence, Body> context_type;
 
+      Sequence _seq;
       Result _res;
-      Sequence& _seq;
 
       thief_context
-      (Sequence& seq, Body& body) : _seq(seq)
+      (const Sequence& seq, Body& body) : _seq(seq)
       {
 	body.init_result(_res);
       }
 
       static kaapi_taskadaptive_result_t* allocate
-      (kaapi_stealcontext_t* sc, Sequence& seq, Body& body)
+      (kaapi_stealcontext_t* sc, const Sequence& seq, Body& body)
       {
 	kaapi_taskadaptive_result_t* const ktr =
 	  kaapi_allocate_thief_result(sc, sizeof(context_type), NULL);
@@ -416,7 +417,7 @@ namespace impl
       // passed upon thief entry
 
       Result& _res;
-      Sequence _seq;
+      Sequence& _seq;
       Body _body;
       const Settings& _settings;
       kaapi_stealcontext_t* _master_sc;
@@ -424,7 +425,7 @@ namespace impl
 
       task_context
       (Result& res,
-       const Sequence& seq,
+       Sequence& seq,
        Body& body,
        const Settings& settings,
        kaapi_stealcontext_t* master_sc = NULL,
@@ -511,15 +512,14 @@ namespace impl
 
 	kaapi_taskadaptive_result_t* const ktr =
 	  reducer_thiefcontext_type::allocate
-	  (sc, tc->_seq, tc->_body);
+	  (sc, Sequence(pos, unit_size), tc->_body);
 
 	reducer_thiefcontext_type* const rtc =
 	  static_cast<reducer_thiefcontext_type*>(ktr->data);
 
 	// initialize task stack
 	new (tc) task_context
-	  (rtc->_res, Sequence(pos, unit_size),
-	   vc->_body, vc->_settings, sc, ktr);
+	  (rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
 
 	kastl_entry_t const thief_entry = outter_loop
 	  <ReduceTag, UnrollTag>::template

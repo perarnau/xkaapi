@@ -5,6 +5,9 @@
 
 
 
+extern "C" unsigned int kaapi_get_current_kid(void);
+
+
 // find
 template<typename Iterator, typename Value>
 struct find_body
@@ -113,16 +116,15 @@ struct for_each_body
     iterator_type end = range.end();
 
 #if CONFIG_KASTL_DEBUG
-    printf(">>(%ld - %ld)\n", range.begin() - _first, range.end() - _first);
+    printf(">> [%d] (%ld - %ld)\n",
+	   kaapi_get_current_kid(),
+	   range.begin() - _first,
+	   range.end() - _first);
     fflush(stdout);
 #endif
 
     for (iterator_type pos = range.begin(); pos != end; ++pos)
       _op(*pos);
-
-#if CONFIG_KASTL_DEBUG
-    printf("<<\n"); fflush(stdout);
-#endif
 
     return false;
   }
@@ -155,7 +157,7 @@ struct op
 
   void operator()(T& value)
   {
-    value = _value;
+    ++value; //  = _value
   }
 };
 
@@ -168,7 +170,7 @@ static void init_seq(Iterator seq, size_t count)
 }
 
 template<typename Iterator>
-static void check_seq(Iterator seq, size_t count)
+static void __attribute__((unused)) check_seq(Iterator seq, size_t count)
 {
   unsigned int i = 0;
 
@@ -202,14 +204,14 @@ int main()
 
   gettimeofday(&tm_start, NULL);
 
-#define ITEM_COUNT 30000
+#define ITEM_COUNT 1000000
   static value_type foo[ITEM_COUNT] = {};
   init_seq(foo, ITEM_COUNT);
 
 #if 0 // foreach
   for_each(foo, foo + ITEM_COUNT, op<value_type>(FOO_VALUE));
   gettimeofday(&tm_end, NULL);
-  check_seq(foo, ITEM_COUNT);
+  check_seq_2(foo, ITEM_COUNT);
 #else // accum
   const double accum = accumulate(foo, foo + ITEM_COUNT, value_type(0));
   gettimeofday(&tm_end, NULL);
