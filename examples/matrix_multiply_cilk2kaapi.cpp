@@ -26,8 +26,15 @@
  *
  */
 
-#include <kastl/algorithm>
 #include <iostream>
+
+#if defined(STD_CXX0X)  
+#include <algorithm>
+#elif defined(USE_KASTL)
+#include <kastl/algorithm>
+#else
+#include "kaapi++" // this is the new C++ interface for Kaapi
+#endif
 
 #define DEFAULT_MATRIX_SIZE 4
 
@@ -50,6 +57,24 @@ struct FuncApply {
   double* B;
   double* C;
   int n;
+};
+
+struct TaskFuncApply: public ka::Task<5>::Signature<ka::RW<double>, ka::R<double>, ka::R<double>, int, int > {};
+template<>
+struct TaskBodyCPU<TaskFuncApply> {
+  void operator()( ka::pointer_rw<double> pA, ka::pointer_r<double> pB, ka::pointer_r<double> pC, int n, int i )
+  {
+    double* A = &*pA;
+    const double* B = &*pB;
+    const double* C = &*pC;
+    for (int k = 0; k < n; ++k) {
+        for (int j = 0; j < n; ++j) {
+          int ktn = k * n;
+            // Compute A[i,j] in the innner loop.
+            A[j] += B[k] * C[ktn + j];
+        }
+    }
+  }
 };
 
 // Multiply double precsion square n x n matrices. A = B * C
@@ -78,7 +103,7 @@ void matrix_multiply(double* A, double* B, double* C, unsigned int n)
           }
       }
     })
-#else
+#elif defined(USE_KASTL)
     // This is the only Cilk++ keyword used in this program
 		// Note the order of the loops and the code motion of the i * n and k * n
 		// computation. This gives a 5-10 performance improvment over exchanging
@@ -87,6 +112,13 @@ void matrix_multiply(double* A, double* B, double* C, unsigned int n)
     kastl::counting_iterator<int> end(n);
     FuncApply unop(A,B,C,n);
     kastl::for_each( beg, end, unop );
+#else
+    for (unsigned int i=0; i<n; ++i)
+    {
+      int itn = i * n;
+      ka::Spawn<TaskFuncApply>() (A+itn, B+itn, C, n, i);
+    }
+    ka::Sync();   
 #endif
     return;
 }

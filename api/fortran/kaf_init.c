@@ -111,7 +111,7 @@ void kaapi_finalize_( KAAPI_Fint* ierr )
 /* -------------------------------------------------------------------- */
 /* Initialize the library
 */
-int kaapi_isleader_( )
+int kaapi_isleader_(void)
 {
   return 1;
 }

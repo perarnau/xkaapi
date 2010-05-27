@@ -41,7 +41,7 @@
 ** terms.
 ** 
 */
-#include "kaapi_staticsched.h"
+#include "kaapi_impl.h"
 
 
 /**
@@ -58,6 +58,8 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   free( thgrp->threadctxts );
   thgrp->group_size = 0;
   thgrp->threadctxts = 0;
+
+  kaapi_vector_destroy( &thgrp->ws_vect_input );
 
   pthread_mutex_destroy(&thgrp->mutex);
   pthread_cond_destroy(&thgrp->cond);

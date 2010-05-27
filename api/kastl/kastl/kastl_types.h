@@ -213,19 +213,19 @@ namespace rts {
         --_rep;
         return retval; 
       }
-      difference_type operator-(const counting_iterator& it) 
+      difference_type operator-(const counting_iterator& it) const
       { 
-        return _rep - it.rep; 
+        return _rep - it._rep; 
       }
-      counting_iterator operator+(value_type v) 
+      counting_iterator operator+(value_type v) const
       { 
         return counting_iterator(_rep +v); 
       }
-      counting_iterator operator-(value_type v) 
+      counting_iterator operator-(value_type v) const
       { 
         return counting_iterator(_rep -v); 
       }
-      counting_iterator operator[](int i) 
+      counting_iterator operator[](int i) const
       { 
         return counting_iterator(_rep +i); 
       }

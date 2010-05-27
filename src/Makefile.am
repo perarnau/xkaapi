@@ -73,10 +73,17 @@ libxkaapi_la_SOURCES=\
   kaapi.h \
   kaapi_impl.h \
   static/kaapi_threadgroup_checkdeps.c\
+  static/kaapi_threadgroup_version.c\
+  static/kaapi_threadgroup_taskbcast.c\
+  static/kaapi_threadgroup_taskrecv.c\
+  static/kaapi_threadgroup_taskrecvbcast.c\
+  static/kaapi_threadgroup_tasksignal.c\
   static/kaapi_threadgroup_create.c\
   static/kaapi_threadgroup_destroy.c\
   static/kaapi_threadgroup_partition.c\
   static/kaapi_threadgroup_exec.c\
+  static/kaapi_threadgroup_print.c\
+  static/kaapi_threadgroup_vect.c\
   kaapi_staticsched.h
 
 

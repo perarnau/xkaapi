@@ -126,6 +126,8 @@ int kaapi_preempt_thief_helper(
 
   /* pass arg to the thief */
   ktr->arg_from_victim = arg_to_thief;  
+  
+  /* next write should ne be reorder with previous */
   kaapi_writemem_barrier();
 
   ktr->req_preempt = 1;
@@ -135,6 +137,7 @@ int kaapi_preempt_thief_helper(
   while (!ktr->thief_term) 
     kaapi_slowdown_cpu();
 
+  /* remove thief and replace the thieves of ktr into the list */
   kaapi_remove_finishedthief(stc, ktr);    
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -147,6 +150,9 @@ int kaapi_preempt_thief_helper(
 }
 
 
+
+/*
+*/
 int kaapi_preemptasync_thief_helper( 
   kaapi_stealcontext_t*               stc, 
   struct kaapi_taskadaptive_result_t* ktr, 

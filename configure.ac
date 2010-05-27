@@ -401,6 +401,7 @@ AC_CONFIG_FILES([
 	api/fortran/Makefile
 	examples/Makefile
 	src/Makefile
+	tests/static/Makefile
 
 	xkaapi.pc
 	atha1.pc

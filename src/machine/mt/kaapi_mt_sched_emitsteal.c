@@ -142,7 +142,7 @@ redo_select:
   if (count >0) 
   {
     kaapi_readmem_barrier();
-    kaapi_sched_stealprocessor( victim.kproc );
+    kaapi_sched_stealprocessor( victim.kproc, kproc->kid );
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif

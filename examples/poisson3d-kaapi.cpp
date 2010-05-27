@@ -3,6 +3,14 @@
 #include <math.h>
 #include <iomanip>
 
+#define USE_THGRP
+
+#if defined(USE_THGRP)
+#define MySetPartition(a) ka::SetPartition(a) 
+#else
+#define MySetPartition(a)
+#endif
+
 #include "poisson3d.h"
 #include "poisson3diter.h"
 
@@ -19,7 +27,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, Poisson3D::Direction& dir )
   s_in >> value;
   dir = (Poisson3D::Direction) value;
   return s_in;
-};
+}
 
 // --------------------------------------------------------------------
 ka::OStream& operator<< (ka::OStream& s_out, const Poisson3D::Index& index )
@@ -34,7 +42,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, Poisson3D::Index& index )
   s_in >> i >> j >> k;
   index = Poisson3D::Index(i,j,k);
   return s_in;
-};
+}
 
 
 // --------------------------------------------------------------------
@@ -74,7 +82,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomain& sd )
     sd._data = 0;
   }
   return s_in;
-};
+}
 
 
 // --------------------------------------------------------------------
@@ -116,7 +124,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomainInterface& sdi )
   }
 //   std::cout << "[KaSubDomainInterface::operator>>] @ = " << &sdi << " - nx = " << sdi._nx <<  " - ny = " << sdi._ny << std::endl;
   return s_in;
-};
+}
 
 
 // --------------------------------------------------------------------
@@ -196,6 +204,7 @@ struct TaskBodyCPU<ExtractSubDomainInterface> {
 //     std::cout << "[ExtractSubDomainInterface] @ = " << sdi << " - nx = " << sdi->get_nx() <<  " - ny = " << sdi->get_ny() << std::endl;
   }
 };
+static ka::RegisterBodyCPU<ExtractSubDomainInterface> dummy_object_TaskExtractSubDomainInterface;
 
 
 // --------------------------------------------------------------------
@@ -212,6 +221,7 @@ struct TaskBodyCPU<UpdateInternal> {
     shared_new_subdomain->update_internal( *shared_old_subdomain );
   }
 };
+static ka::RegisterBodyCPU<UpdateInternal> dummy_object_TaskUpdateInternal;
 
 
 // --------------------------------------------------------------------
@@ -231,6 +241,8 @@ struct TaskBodyCPU<UpdateExternal> {
     shared_subdomain->update_external( dir, *shared_sdi );
   }
 };
+static ka::RegisterBodyCPU<UpdateExternal> dummy_object_TaskUpdateExternal;
+
 
 // --------------------------------------------------------------------
 struct UpdateExternalVal: public ka::Task<3>::Signature< 
@@ -248,6 +260,7 @@ struct TaskBodyCPU<UpdateExternalVal> {
     shared_subdomain->update_external( dir, value );
   }
 };
+static ka::RegisterBodyCPU<UpdateExternalVal> dummy_object_TaskUpdateExternalVal;
 
 
 // --------------------------------------------------------------------
@@ -268,6 +281,8 @@ struct TaskBodyCPU<ComputeResidueAndSwap> {
     *shared_res2 = shared_old_subdomain->compute_residue_and_swap( *shared_new_subdomain, *shared_frhs );
   }
 };
+static ka::RegisterBodyCPU<ComputeResidueAndSwap> dummy_object_TaskComputeResidueAndSwap;
+
 
 // --------------------------------------------------------------------
 struct ResidueSum {
@@ -286,7 +301,8 @@ struct ResidueSum {
 // --------------------------------------------------------------------
 //#define USE_Z_CURVE 1
 struct Kernel {
-  void operator() ( MeshIndex3D& mesh3d,
+  void operator() ( ka::ThreadGroup& threadgroup, 
+                    MeshIndex3D& mesh3d,
                     std::vector<KaSubDomain>& old_domain,
                     std::vector<KaSubDomain>& new_domain,
                     const std::vector<KaSubDomain>& frhs,
@@ -296,8 +312,14 @@ struct Kernel {
                     std::vector< KaSubDomainInterface >& sdi              
                   )
   {
+
+#if defined(USE_THGRP)
+    threadgroup.begin_partition();
+#else
     kaapi_frame_t frame;
     kaapi_thread_save_frame(kaapi_self_thread(), &frame);
+#endif
+
 #if defined(USE_Z_CURVE)
     MeshIndex3D::const_z_iterator ibeg;
     MeshIndex3D::const_z_iterator iend;
@@ -316,6 +338,7 @@ struct Kernel {
     while (ibeg != iend)
     {
       Poisson3D::Index curr_index = *ibeg;
+      int curr_site = sg.get_site(curr_index.get_i(), curr_index.get_j(), curr_index.get_k());
 //std::cout << "Process subdomain:" << curr_index.get_i() << ", " << curr_index.get_j() << ", " << curr_index.get_k() << std::endl;
       // Extract interfaces from neighbors
       for( unsigned int d = 0 ; d < Poisson3D::NB_DIRECTIONS ; d++ )
@@ -325,7 +348,12 @@ struct Kernel {
         {
           Poisson3D::Index neighbor = curr_index.get_neighbor( dir );
           int neighbor_site = sg.get_site( neighbor.get_i(), neighbor.get_j() ,neighbor.get_k() );
-          ka::Spawn<ExtractSubDomainInterface>(ka::SetSite(neighbor_site))( 
+#if defined(USE_THGRP)
+          threadgroup.
+#else
+          ka::
+#endif          
+          Spawn<ExtractSubDomainInterface>(MySetPartition(curr_site))( 
               ka::pointer<KaSubDomain>(&old_domain[neighbor()]), 
               dir, 
               ka::pointer<KaSubDomainInterface>(&sdi[ curr_index()*Poisson3D::NB_DIRECTIONS + d ]) 
@@ -348,7 +376,12 @@ struct Kernel {
       int curr_site = sg.get_site(curr_index.get_i(), curr_index.get_j(), curr_index.get_k());
 
       // Internal computation
-      ka::Spawn<UpdateInternal>(ka::SetSite(curr_site))( 
+#if defined(USE_THGRP)
+      threadgroup.
+#else
+      ka::
+#endif          
+      Spawn<UpdateInternal>( MySetPartition(curr_site) )( 
           ka::pointer<KaSubDomain>(&new_domain[curr_index()]), 
           ka::pointer<KaSubDomain>(&old_domain[curr_index()]) 
       );
@@ -377,7 +410,12 @@ struct Kernel {
         Poisson3D::Direction dir = Poisson3D::ALL_DIRECTIONS[d];
         if ( curr_index.has_neighbor( dir ) )
         {
-          ka::Spawn<UpdateExternal>(ka::SetSite(curr_site))( 
+#if defined(USE_THGRP)
+          threadgroup.
+#else
+          ka::
+#endif          
+          Spawn<UpdateExternal>(MySetPartition(curr_site))( 
               ka::pointer<KaSubDomain>(&new_domain[curr_index()]),
               dir, 
               ka::pointer<KaSubDomainInterface>(&sdi[curr_index()*Poisson3D::NB_DIRECTIONS + d])
@@ -385,7 +423,12 @@ struct Kernel {
         }
         else
         {
-          ka::Spawn<UpdateExternalVal>(ka::SetSite(curr_site))( 
+#if defined(USE_THGRP)
+          threadgroup.
+#else
+          ka::
+#endif          
+          Spawn<UpdateExternalVal>(MySetPartition(curr_site))( 
               ka::pointer<KaSubDomain>(&new_domain[curr_index()]), 
               dir, 
               Poisson3D::DIR_CONSTRAINTS[d] 
@@ -409,7 +452,12 @@ struct Kernel {
       int curr_site = sg.get_site(curr_index.get_i(), curr_index.get_j(), curr_index.get_k());
 #endif
 
-      ka::Spawn<ComputeResidueAndSwap>(ka::SetSite(curr_site))( 
+#if defined(USE_THGRP)
+          threadgroup.
+#else
+          ka::
+#endif          
+            Spawn<ComputeResidueAndSwap>(MySetPartition(curr_site))( 
           ka::pointer<KaSubDomain>(&old_domain[curr_index()]),
           ka::pointer<KaSubDomain>(&new_domain[curr_index()]),
           ka::pointer_r<KaSubDomain>(&frhs[curr_index()]), 
@@ -418,9 +466,16 @@ struct Kernel {
       ++ibeg;
     }
 
+#if defined(USE_THGRP)
+//std::cout << "Kernel:" << std::endl << std::flush;
+//    threadgroup.print();    
+    threadgroup.end_partition();
+    threadgroup.execute();
+#else
     ka::Sync();
     kaapi_thread_restore_frame(kaapi_self_thread(), &frame);
-    
+#endif
+
     // Compute residue sum
     ResidueSum()(res2, residue);
   }
@@ -444,29 +499,46 @@ struct TaskBodyCPU<InitializeSubDomain> {
     Poisson3D::initialize_subdomains( index, *shared_subdom, *shared_frhs, *shared_sol );
   }
 };
+static ka::RegisterBodyCPU<InitializeSubDomain> dummy_object_TaskInitializeSubDomain;
 
 
 // --------------------------------------------------------------------
 struct Initialize {
-  void operator() ( std::vector<KaSubDomain>& domain,
+  void operator() ( ka::ThreadGroup& threadgroup, 
+                    std::vector<KaSubDomain>& domain,
                     std::vector<KaSubDomain>& frhs,
                     std::vector<KaSubDomain>& solution,
                     const SiteGenerator sg )
   {
+#if defined(USE_THGRP)
+    threadgroup.begin_partition();
+#endif
     for( unsigned int i = 0 ; i < Poisson3D::nb_subdomX ; ++i )
       for( unsigned int j = 0 ; j < Poisson3D::nb_subdomY; ++j )
         for( unsigned int k = 0 ; k < Poisson3D::nb_subdomZ ; ++k )
         {
           int site = sg.get_site(i,j,k);
           Poisson3D::Index curr_index(i,j,k);
-          ka::Spawn<InitializeSubDomain> (ka::SetSite(site)) ( 
+#if defined(USE_THGRP)
+          threadgroup.
+#else
+          ka::
+#endif          
+          Spawn<InitializeSubDomain> ( MySetPartition(site) ) ( 
               curr_index, 
               ka::pointer<KaSubDomain>(&domain[curr_index()]), 
               ka::pointer<KaSubDomain>(&frhs[curr_index()]),
               ka::pointer<KaSubDomain>(&solution[curr_index()]) 
           );
         }
+#if defined(USE_THGRP)
+//std::cout << "Initialize:" << std::endl << std::flush;
+//    threadgroup.print();    
+    threadgroup.end_partition();
+    threadgroup.execute();    
+#else
     ka::Sync();
+#endif
   }
 };
 
@@ -486,6 +558,7 @@ struct TaskBodyCPU<ComputeError> {
     *shared_error = shared_subdomain->compute_error( *shared_solution );
   }
 };
+static ka::RegisterBodyCPU<ComputeError> dummy_object_TaskComputeError;
 
 
 // --------------------------------------------------------------------
@@ -501,10 +574,15 @@ struct ErrorMax {
 
 // --------------------------------------------------------------------
 struct Verification {
-  void operator() ( std::vector<KaSubDomain>& domain,
+  void operator() ( ka::ThreadGroup& threadgroup, 
+                    std::vector<KaSubDomain>& domain,
                     std::vector<KaSubDomain>& solution,
                     SiteGenerator sg )
   {
+#if defined(USE_THGRP)
+    threadgroup.begin_partition();
+#endif
+
     std::vector<double> error(Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
 
     // Compute error on all subdomains
@@ -513,13 +591,25 @@ struct Verification {
         for( unsigned int k = 0 ; k < Poisson3D::nb_subdomZ ; ++k ){
           int site = sg.get_site(i,j,k);
           Poisson3D::Index curr_index(i,j,k);
-          ka::Spawn<ComputeError>(ka::SetSite(site)) ( 
+#if defined(USE_THGRP)
+          threadgroup.
+#else
+          ka::
+#endif          
+          Spawn<ComputeError>( MySetPartition(site) ) ( 
             ka::pointer<KaSubDomain>(&domain[curr_index()]),
             ka::pointer<KaSubDomain>(&solution[curr_index()]), 
             ka::pointer<double>(&error[curr_index()]) 
           );
         }
+#if defined(USE_THGRP)
+//std::cout << "Verification:" << std::endl << std::flush;
+//    threadgroup.print();    
+    threadgroup.end_partition();
+    threadgroup.execute();    
+#else
     ka::Sync();
+#endif
     // Compute error max
     ErrorMax() ( error );
   }
@@ -534,6 +624,9 @@ struct doit {
   {   
     ka::logfile() << "Starting Poisson3D/Kaapi" << std::endl;  
     Poisson3D::print_info();
+
+    // number of partitions = X*Y*Z
+    ka::ThreadGroup threadgroup( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
 
     // One subdomain per site
     SiteGenerator sg(0, 1, 1, 1, Poisson3D::nb_subdomX, Poisson3D::nb_subdomY, Poisson3D::nb_subdomZ);
@@ -552,7 +645,7 @@ struct doit {
     double residue;
 
     // Initialize subdomains
-    Initialize()( domain, frhs, solution, sg );
+    Initialize()( threadgroup, domain, frhs, solution, sg );
 
     // Kernel loop
     std::vector<double> res2( domain.size() );
@@ -563,7 +656,7 @@ struct doit {
     for (unsigned int i=0; i<Poisson3D::max_iter; ++i)
     {
       t0 = kaapi_get_elapsedtime();
-      Kernel()( mesh3d, domain, new_domain, frhs, residue, sg, res2, sdi );
+      Kernel()( threadgroup, mesh3d, domain, new_domain, frhs, residue, sg, res2, sdi );
       t1 = kaapi_get_elapsedtime();
       if (i>0) total += t1-t0;
       std::cout << "Time: " << t1 - t0 << std::endl;
@@ -571,7 +664,7 @@ struct doit {
     std::cout << "Avrg Time: " << total/(Poisson3D::max_iter-1) << std::endl;
 
     // Check the result
-    Verification()( domain, solution, sg );
+    Verification()( threadgroup, domain, solution, sg );
   }
 };
 

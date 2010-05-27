@@ -132,6 +132,7 @@ bool Poisson3D::Index::has_neighbor( Direction dir )
       return _k < nb_subdomZ - 1;
     default:
       assert( false );
+      return false;
   }
 }
 
@@ -153,6 +154,7 @@ Poisson3D::Index Poisson3D::Index::get_neighbor( Direction dir )
       return Index(_i,_j,_k+1);
     default:
       assert( false );
+      return Index();
   }
 }
 

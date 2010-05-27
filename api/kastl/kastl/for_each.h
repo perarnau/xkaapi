@@ -1,120 +1,113 @@
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
 #ifndef KASTL_FOR_EACH_H_INCLUDED
-# define KASTL_FOR_EACH_H_INCLUDED
+#define KASTL_FOR_EACH_H_INCLUDED
 
-
-
-#include <stddef.h>
-#include <algorithm>
-#include <iterator>
 #include "kastl/kastl_impl.h"
 
+namespace kastl {
 
+namespace rts {
+/* -------------------------------------------------------------------- */
+/* for_each algorithm                                                   */
+/* -------------------------------------------------------------------- */
+template<typename input_terator_type, typename Operation>
+struct BodyForEach {
+  typedef rts::Sequence<input_terator_type> sequence_type;
 
-namespace kastl
-{
-namespace impl
-{
-template
-<
-  typename SequenceType,
-  typename ConstantType,
-  typename ResultType,
-  typename MacroType,
-  typename NanoType,
-  typename SplitterType
->
-struct ForEachWork : public BaseWork
-<SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-{
-  typedef ForEachWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> SelfType;
-
-  typedef BaseWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> BaseType;
-
-  ForEachWork() : BaseType() {}
-
-  ForEachWork(const SequenceType& s, const ConstantType* c)
-    : BaseType(s, c, kastl::impl::InvalidResultType()) {}
-
-  inline void compute(SequenceType& seq)
+  BodyForEach( Operation& o ) : op(o) {}
+  Operation op;
+  bool operator()( input_terator_type& result, typename sequence_type::range_type& r )
   {
-    std::for_each(seq.begin(), seq.end(), *this->_const);
-    seq.advance();
+    input_terator_type first = r.begin();
+    input_terator_type last  = r.end();
+
+    while (first != last)
+       op(*first++);
+    result = last;
+    return (first != last);
   }
 };
 
-// tunning params
-typedef Daouda0TuningParams ForEachTuningParams;
+}// rts
 
-} // kastl::impl
-
-
-template
-<
-  typename InputIterator,
-  typename Function,
-  typename ParamType
->
-void for_each
-(
- InputIterator begin,
- InputIterator end,
- Function func
+template<typename input_terator_type, typename Operation, typename Settings>
+Operation for_each( 
+  input_terator_type first, 
+  input_terator_type last, 
+  Operation op, 
+  const Settings& settings
 )
 {
-  typedef kastl::impl::InSequence<InputIterator>
-    SequenceType;
+  typedef rts::Sequence<input_terator_type> sequence_type;
 
-  typedef typename kastl::impl::make_macro_type
-    <ParamType::macro_tag, ParamType, SequenceType>::Type
-    MacroType;
-
-  typedef typename kastl::impl::make_nano_type
-    <ParamType::nano_tag, ParamType, SequenceType>::Type
-    NanoType;
-
-  typedef typename kastl::impl::make_splitter_type
-    <ParamType::splitter_tag, ParamType>::Type
-    SplitterType;
-
-  typedef Function ConstantType;
-
-  typedef kastl::impl::InvalidResultType ResultType;
-
-  typedef kastl::impl::ForEachWork
-    <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-    WorkType;
-
-  WorkType work(SequenceType(begin, end), &func);
-  kastl::impl::compute<WorkType>(work);
+  if (first == last) return op;
+  input_terator_type result = first;
+  sequence_type seq(first, last-first);
+  
+  rts::MacroLoop< rts::NoReduce_MacroLoop_tag >::doit( 
+    result,                                                     /* output: the result */
+    seq,                                                        /* input: the sequence */
+    rts::BodyForEach<input_terator_type, Operation>(op),        /* the body == NanoLoop */
+    rts::empty_reducer<input_terator_type>,                     /* merge with a thief: do nothing */
+    settings                                                    /* output: the result */
+  );
+  return op;
 }
 
-
-template
-<
- typename InputIterator,
- typename Function
->
-void for_each
-(
- InputIterator begin,
- InputIterator end,
- Function func
+template<typename input_terator_type, typename Operation>
+Operation for_each( 
+  input_terator_type first, 
+  input_terator_type last, 
+  Operation op
 )
-{
-  // real return type is Function but
-  // not possible for us so we voidify
-
-  typedef kastl::impl::ForEachTuningParams ParamType;
-
-  kastl::for_each
-  <InputIterator, Function, ParamType>
-  (begin, end, func);
+{ 
+  return for_each( first, last, op, rts::DefaultSetting() );
 }
+
 
 } // kastl
-
-
 
 #endif // ! KASTL_FOR_EACH_H_INCLUDED

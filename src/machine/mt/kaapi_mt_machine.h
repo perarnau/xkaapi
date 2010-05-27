@@ -139,9 +139,44 @@ typedef struct kaapi_wsqueuectxt_t {
   kaapi_wsqueuectxt_cellbloc_t* allocatedbloc;
 } kaapi_wsqueuectxt_t;
 
-/** lfree data structure 
+/** lfree data structure,
+    kaapi_thread_context_t has both next and prev fields.
 */
-KAAPI_STACK_DECLARE(kaapi_stackctxt_t, kaapi_thread_context_t);
+KAAPI_QUEUE_DECLARE(kaapi_queuectxt_t, kaapi_thread_context_t);
+#define KAAPI_MAXFREECTXT 2
+
+/* clear / is empty / push / pop */
+#define kaapi_lfree_clear( kproc )\
+  {\
+    (kproc)->sizelfree = 0;\
+    KAAPI_QUEUE_CLEAR( &(kproc)->lfree );\
+  }
+
+#define kaapi_lfree_isempty( kproc )\
+    ((kproc)->sizelfree == 0)
+
+#define kaapi_lfree_push( kproc, v )\
+  {\
+    KAAPI_QUEUE_PUSH_FRONT( &(kproc)->lfree, v );\
+    if ((kproc)->sizelfree >= KAAPI_MAXFREECTXT) \
+    {\
+      kaapi_thread_context_t* ctxt = 0;\
+      KAAPI_QUEUE_POP_BACK( &(kproc)->lfree, ctxt ); \
+      kaapi_context_free( ctxt );\
+    }\
+    else\
+      ++(kproc)->sizelfree;\
+  }
+
+#define kaapi_lfree_pop( kproc, v )\
+  {\
+    --(kproc)->sizelfree;\
+    KAAPI_QUEUE_POP_FRONT( &(kproc)->lfree, v );\
+  }
+
+/** lready data structure
+*/
+KAAPI_FIFO_DECLARE(kaapi_fifoctxt_t, kaapi_thread_context_t);
 
 /** push: LIFO order with respect to pop. Only owner may push
 */
@@ -156,11 +191,19 @@ extern int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls );
 */
 extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
 
-/* Push a ctxt
+/* Push a ctxt. Must be call by the owner of the queue in case of concurrent execution.
    Return 0 in case of success
    Return ENOMEM if allocation failed
 */
 extern int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
+
+#if 0 // not well defined and not yet implemented 
+/* Push a ctxt. Can be called by thief processors
+   Return 0 in case of success
+   Return ENOMEM if allocation failed
+*/
+extern int kaapi_wsqueuectxt_lockpush( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
+#endif
 
 /* Pop a ctxt
    Return 0 in case of success
@@ -174,17 +217,11 @@ extern int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_
 */
 extern int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
 
-/* Push a ctxt
-   Return 0 in case of success
-   Return ENOMEM if allocation failed
+/* Steal a ctxt on a specific cell
+   Return a pointer to the stolen thread in case of success
+   Return 0 if the thread was already stolen
 */
-extern int kaapi_wsqueuectxt_push_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
-
-/* Pop a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_pop_noconcurrency( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
+kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_t* ls, kaapi_wsqueuectxt_cell_t* cell );
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -233,6 +270,7 @@ typedef struct kaapi_listrequest_t {
     
     TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
+
 typedef struct kaapi_processor_t {
   kaapi_thread_context_t*  thread;                        /* current thread under execution */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
@@ -250,16 +288,13 @@ typedef struct kaapi_processor_t {
   kaapi_atomic_t           lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-  /* suspended list */
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-#if 0
-  /* ready list */
-  kaapi_wsqueuectxt_t      lready;                        /* list of ready context */
-#endif
-  /* ready list */
-  kaapi_thread_context_t*  ready;                         /* ready context after steal */
+  kaapi_fifoctxt_t         lready;                        /* list of ready context, concurrent access locked by 'lock' */
+  kaapi_thread_context_t*  readythread;                   /* continuation passing parameter to speed up recovery of activity... */
+
   /* free list */
-  kaapi_stackctxt_t        lfree;                         /* stack of free context */
+  kaapi_queuectxt_t        lfree;                         /* queue of free context */
+  int                      sizelfree;                     /* size of the queue */
 
   void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */

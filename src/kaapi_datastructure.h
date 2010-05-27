@@ -53,9 +53,9 @@
  \param name the name of the typedef
  \param type the type of the queue.
  */
-#define KAAPI_QUEUE_FIELD( type )\
-type* _next;\
-type* _prev
+#define KAAPI_QUEUE_FIELD(type)\
+  type* _next;\
+  type* _prev
 
 /** Generic queue
  Declare a fifo queue necessary data structure for a queue structure
@@ -247,6 +247,7 @@ if ((q)->_back !=0) (q)->_back->_next = (v);\
 else (q)->_front = (v); \
 (q)->_back = (v); \
 }
+
 
 /** q: queue*
  v: the result

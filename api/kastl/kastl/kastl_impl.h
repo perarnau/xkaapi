@@ -1,1912 +1,512 @@
-#ifndef  KASTL_IMPL_H_INCLUDED
-# define  KASTL_IMPL_H_INCLUDED
-
-
-
-#define CONFIG_KASTL_DEBUG 0
-// should be set to 1 if debug, since need lock
-#define CONFIG_KASTL_LOCK_WORK 0
-#define CONFIG_KASTL_MASTER_SLAVE 0
-#define CONFIG_KASTL_THE_SEQUENCE 1
-
-
-
-#include <algorithm>
-#include <string.h>
-#include <sys/types.h>
-#include "kaapi.h"
-
-#if CONFIG_KASTL_THE_SEQUENCE
-# include "kastl/kastl_workqueue.h"
-#endif
-
-
-
-#if CONFIG_KASTL_DEBUG
-extern "C" unsigned int kaapi_get_current_kid(void);
-static volatile unsigned long __attribute__((aligned)) printid = 0;
-#endif
-
-
-
-namespace kastl
-{
-namespace impl
-{
-  // predicates
-
-  template<typename T>
-  struct isEqualPredicate
-  {
-    T _ref_value;
-
-    isEqualPredicate(const T& ref_value)
-      : _ref_value(ref_value) {}
-
-    inline bool operator()(const T& v)
-    {
-      return v == _ref_value;
-    }
-  };
-
-
-  template<typename Ta, typename Tb>
-  static bool isEqualBinaryPredicate(const Ta& a, const Tb& b)
-  { return a == b; }
-
-
-  // sequence types
-
-  template<typename IteratorType>
-  struct BasicSequence
-  {
-    typedef BasicSequence<IteratorType> SequenceType;
-    typedef typename std::iterator_traits<IteratorType>::difference_type SizeType;
-    typedef IteratorType _IteratorType;
-
-    IteratorType _beg;
-    IteratorType _end;
-
-    inline BasicSequence() {}
-
-    inline BasicSequence
-    (const IteratorType& beg, const IteratorType& end)
-      : _beg(beg), _end(end) {}
-
-    inline IteratorType begin() const
-    {
-      return _beg;
-    }
-
-    inline IteratorType end() const
-    {
-      return _end;
-    }
-
-    inline void advance(SizeType size)
-    {
-      _beg += size;
-    }
-
-    inline void advance()
-    {
-      _beg = _end;
-    }
-
-    inline SizeType size() const
-    {
-      return std::distance(_beg, _end);
-    }
-
-    inline void split(SequenceType& seq, SizeType size)
-    {
-      seq._end += size;
-      _beg += size;
-    }
-
-    inline void rsplit(SequenceType& seq, SizeType size)
-    {
-      seq = SequenceType(_end - size, _end);
-      _end -= size;
-    }
-
-    inline void affect_seq(SequenceType& seq) const
-    {
-      seq._beg = _beg;
-      seq._end = _end;
-    }
-
-    inline void empty_seq(SequenceType& seq) const
-    {
-      seq._beg = _beg;
-      seq._end = _beg;
-    }
-
-    inline bool is_empty() const
-    {
-      return _beg == _end;
-    }
-
-#if CONFIG_KASTL_DEBUG
-    typedef std::pair<SizeType, SizeType> RangeType;
-    static RangeType get_range(const SequenceType& a, const SequenceType& b)
-    {
-      RangeType r(std::distance(a._beg, b._beg), std::distance( a._beg, b._end));
-      return r;
-    }
-#endif
-
-  };
-
-
-  template<typename IteratorType>
-  struct InSequence
-  {
-    typedef InSequence<IteratorType> SequenceType;
-    typedef typename std::iterator_traits<IteratorType>::difference_type SizeType;
-    typedef IteratorType _IteratorType;
-
-#if CONFIG_KASTL_THE_SEQUENCE
-    kastl::rts::work_queue_t<64> _wq;
-#endif
-
-    BasicSequence<IteratorType> _seq;
-
-    inline InSequence() {}
-
-    inline InSequence
-    (const IteratorType& beg, const IteratorType& end)
-      : _seq(BasicSequence<IteratorType>(beg, end))
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq.set(kastl::rts::range_t<64>(0, _seq.size()));
-#endif
-    }
-
-#if CONFIG_KASTL_THE_SEQUENCE
-    inline void subsequence(SequenceType& sub, const kastl::rts::range_t<64>& range)
-    {
-      // build a sub sequence from *this and range
-      sub._wq.set(range);
-      sub._seq = _seq;
-    }
-#endif
-
-    inline void advance()
-    {
-      // call on a local safe sequence
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq._beg = _wq._end;
-#else
-      _seq.advance();
-#endif
-    }
-
-    inline void advance(SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq._beg += size;
-#else
-      _seq.advance(size);
-#endif
-    }
-
-    inline IteratorType begin() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _seq._beg + _wq._beg;
-#else
-      return _seq.begin();
-#endif
-    }
-
-    inline IteratorType end() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _seq._beg + _wq._end;
-#else
-      return _seq.end();
-#endif
-    }
-
-    inline SizeType size() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _wq.size();
-#else
-      return _seq.size();
-#endif
-    }
-
-    inline void split(SequenceType& seq, SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      // todo: the split function
-      // must add the subsequence
-      // to seq, not overwrrite it
-
-      kastl::rts::range_t<64> range;
-
-      if (_wq.pop(range, size) == false)
-	return ;
-
-      subsequence(seq, range);
-#else
-      _seq.split(seq._seq, size);
-#endif
-    }
-
-    inline void rsplit(SequenceType& seq, SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      empty_seq(seq);
-
-      kastl::rts::range_t<64> range;
-      if (_wq.steal(range, size, 1) == false)
-	return ;
-
-      subsequence(seq, range);
-#else
-      _seq.rsplit(seq._seq, size);
-#endif
-    }
-
-    inline void affect_seq(SequenceType& seq) const
-    {
-      _seq.affect_seq(seq._seq);
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      // only seq needs protection, ensured by ::set
-      seq._wq.set(kastl::rts::range_t<64>(_wq._beg, _wq._end));
-#endif
-    }
-
-    inline void empty_seq(SequenceType& seq) const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      seq._wq.clear();
-#else
-      _seq.empty_seq(seq._seq);
-#endif
-    }
-
-    inline bool is_empty() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _wq.is_empty();
-#else
-      return _seq.is_empty();
-#endif
-    }
-
-#if CONFIG_KASTL_DEBUG
-    typedef std::pair<SizeType, SizeType> RangeType;
-    static RangeType get_range(const SequenceType& a, const SequenceType& b)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return RangeType(b._wq._beg, b._wq._end);
-#else
-      return BasicSequence<IteratorType>::get_range(a._seq, b._seq);
-#endif
-    }
-#endif
-
-  };
-
-
-  template<typename Iterator0Type, typename Iterator1Type>
-  struct In2EqSizedSequence
-  {
-    typedef In2EqSizedSequence<Iterator0Type, Iterator1Type>
-    SequenceType;
-
-    typedef Iterator0Type _Iterator0Type;
-    typedef Iterator1Type _Iterator1Type;
-
-    typedef typename std::iterator_traits<Iterator0Type>::difference_type
-    SizeType;
-
-#if CONFIG_KASTL_THE_SEQUENCE
-    kastl::rts::work_queue_t<64> _wq;
-#endif
-
-    BasicSequence<Iterator0Type> _seq0;
-    Iterator1Type _beg1;
-
-    inline In2EqSizedSequence() {}
-
-    inline In2EqSizedSequence
-    (
-     const Iterator0Type& beg0,
-     const Iterator0Type& end0,
-     const Iterator1Type& beg1
-     ) : _seq0(BasicSequence<Iterator0Type>(beg0, end0)), _beg1(beg1)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq.set(kastl::rts::range_t<64>(0, _seq0.size()));
-#endif
-    }
-
-#if CONFIG_KASTL_THE_SEQUENCE
-    inline void subsequence(SequenceType& sub, const kastl::rts::range_t<64>& range)
-    {
-      // build a sub sequence from *this and range
-      sub._wq.set(range);
-      sub._seq0 = _seq0;
-      sub._beg1 = _beg1;
-    }
-#endif
-
-    inline void advance(SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq._beg += size;
-#else
-      _seq0.advance(size);
-#endif
-    }
-
-    inline void advance()
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq._beg = _wq._end;
-#else
-      _seq0.advance();
-#endif
-    }
-
-    inline Iterator0Type begin0() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _seq0._beg + _wq._beg;
-#else
-      return _seq0.begin();
-#endif
-    }
-
-    inline Iterator1Type begin1() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _beg1 + _wq._beg;
-#else
-      return _beg1;
-#endif
-    }
-
-    inline Iterator0Type end0() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _seq0._beg + _wq._end;
-#else
-      return _seq0.end();
-#endif
-    }
-
-    inline SizeType size() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _wq.size();
-#else
-      return _seq0.size();
-#endif
-    }
-
-    inline void split(SequenceType& seq, SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      kastl::rts::range_t<64> range;
-
-      if (_wq.pop(range, size) == false)
-	return ;
-
-      subsequence(seq, range);
-#else
-      _seq0.split(seq._seq0, size);
-      _beg1 += size;
-#endif
-    }
-
-    inline void rsplit(SequenceType& seq, SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      empty_seq(seq);
-
-      kastl::rts::range_t<64> range;
-      if (_wq.steal(range, size, 1) == false)
-	return ;
-
-      subsequence(seq, range);
-#else
-      _seq0.rsplit(seq._seq0, size);
-      seq._beg1 = _beg1 + std::distance(_seq0._beg, seq._seq0._beg);
-#endif
-    }
-
-    inline void affect_seq(SequenceType& seq) const
-    {
-      _seq0.affect_seq(seq._seq0);
-      seq._beg1 = _beg1;
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      seq._wq.set(kastl::rts::range_t<64>(_wq._beg, _wq._end));
-#endif
-    }
-
-    inline void empty_seq(SequenceType& seq) const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      seq._wq.clear();
-#else
-      _seq0.empty_seq(seq._seq0);
-      seq._beg1 = _beg1;
-#endif
-    }
-
-    inline bool is_empty() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _wq.is_empty();
-#else
-      return _seq0.is_empty();
-#endif
-    }
-
-#if CONFIG_KASTL_DEBUG
-    typedef typename BasicSequence<Iterator0Type>::RangeType RangeType;
-    static RangeType get_range(const SequenceType& a, const SequenceType& b)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return RangeType(b._wq._beg, b._wq._end);
-#else
-      return BasicSequence<Iterator0Type>::get_range(a._seq0, b._seq0);
-#endif
-    }
-#endif
-
-  };
-
-
-  template
-  <
-    typename InputIterator0Type,
-    typename InputIterator1Type,
-    typename OutputIteratorType
-  >
-  struct In2OutSequence
-  {
-    // 2 input sequences, sizes not eq
-
-    typedef InputIterator0Type _InputIterator0Type;
-    typedef InputIterator1Type _InputIterator1Type;
-    typedef OutputIteratorType _OutputIteratorType;
-
-    typedef In2OutSequence
-    <InputIterator0Type, InputIterator1Type, OutputIteratorType>
-    SequenceType;
-
-    typedef typename std::iterator_traits<InputIterator0Type>::difference_type
-    SizeType;
-
-    BasicSequence<InputIterator0Type> _iseq0;
-    BasicSequence<InputIterator1Type> _iseq1;
-    OutputIteratorType _obeg;
-
-    inline In2OutSequence() {}
-
-    inline In2OutSequence
-    (
-     const InputIterator0Type& beg0,
-     const InputIterator0Type& end0,
-     const InputIterator1Type& beg1,
-     const InputIterator1Type& end1,
-     const OutputIteratorType& obeg
-     )
-      : _iseq0(BasicSequence<InputIterator0Type>(beg0, end0)),
-	_iseq1(BasicSequence<InputIterator1Type>(beg1, end1)),
-	_obeg(obeg) {}
-
-    inline SizeType size() const
-    {
-      return std::max(_iseq0.size(), _iseq1.size());
-    }
-
-    inline void split(SequenceType& seq, SizeType size)
-    {
-      SizeType size0 = size;
-      SizeType size1 = size;
-
-      if ((size == _iseq0.size()) || (size == _iseq1.size()))
-      {
-	size0 = _iseq0.size();
-	size1 = _iseq1.size();
-      }
-
-      _iseq0.split(seq._iseq0, size0);
-      _iseq1.split(seq._iseq1, size1);
-
-      _obeg += size0 + size1;
-    }
-
-    inline void rsplit(SequenceType& seq, SizeType size)
-    {
-      const SizeType iseq0_size = _iseq0.size();
-      const SizeType iseq1_size = _iseq1.size();
-
-      SizeType split0_size = size;
-      SizeType split1_size = size;
-
-      if ((size == iseq0_size) || (size == iseq1_size))
-      {
-	split0_size = iseq0_size;
-	split1_size = iseq1_size;
-      }
-
-      const SizeType iseq0_off = iseq0_size - split0_size;
-      const SizeType iseq1_off = iseq1_size - split1_size;
-
-      _iseq0.rsplit(seq._iseq0, split0_size);
-      _iseq1.rsplit(seq._iseq1, split1_size);
-
-      seq._obeg = _obeg + (iseq0_off + iseq1_off);
-    }
-
-    inline void affect_seq(SequenceType& seq) const
-    {
-      _iseq0.affect_seq(seq._iseq0);
-      _iseq1.affect_seq(seq._iseq1);
-
-      seq._obeg = _obeg;
-    }
-
-    inline void empty_seq(SequenceType& seq) const
-    {
-      _iseq0.empty_seq(seq._iseq0);
-      _iseq1.empty_seq(seq._iseq1);
-
-      seq._obeg = _obeg;
-    }
-
-    inline bool is_empty() const
-    {
-      return _iseq0.is_empty();
-    }
-
-#if CONFIG_KASTL_DEBUG
-    typedef typename BasicSequence<InputIterator0Type>::RangeType RangeType;
-    static RangeType get_range(const SequenceType& a, const SequenceType& b)
-    {
-      return BasicSequence<InputIterator0Type>::get_range(a._iseq0, b._iseq0);
-    }
-#endif
-
-  };
-
-
-  template
-  <
-    typename InputIterator0Type,
-    typename InputIterator1Type,
-    typename OutputIteratorType,
-    typename ComparatorType
-  >
-  class OrderedSequence
-  {
-  public:
-
-    typedef OrderedSequence
-    <
-    InputIterator0Type,
-    InputIterator1Type,
-    OutputIteratorType,
-    ComparatorType
-    >
-    SequenceType;
-
-    typedef typename std::iterator_traits
-    <InputIterator0Type>::value_type InputValue0Type;
-
-    typedef typename std::iterator_traits
-    <InputIterator1Type>::value_type InputValue1Type;
-
-    typedef typename std::iterator_traits
-    <OutputIteratorType>::value_type OutputValueType;
-
-    typedef typename std::iterator_traits
-    <InputIterator0Type>::difference_type SizeType;
-
-    typedef OutputIteratorType OutputIterator;
-
-    BasicSequence<InputIterator0Type> _iseq0;
-    BasicSequence<InputIterator1Type> _iseq1;
-    OutputIteratorType _obeg;
-    ComparatorType _comp;
-
-    OrderedSequence() {}
-
-    OrderedSequence
-    (
-     const InputIterator0Type& ipos0,
-     const InputIterator0Type& iend0,
-     const InputIterator1Type& ipos1,
-     const InputIterator1Type& iend1,
-     const OutputIteratorType& obeg,
-     const ComparatorType& comp
-    )
-    {
-      _iseq0 = BasicSequence<InputIterator0Type>(ipos0, iend0);
-      _iseq1 = BasicSequence<InputIterator1Type>(ipos1, iend1);
-      _obeg = obeg;
-      _comp = comp;
-    }
-
-    inline SizeType size() const
-    {
-      if (_iseq0.size() > _iseq1.size())
-	return (SizeType)_iseq0.size();
-      return (SizeType)_iseq1.size();
-    }
-
-    inline void affect_seq(SequenceType& seq) const
-    {
-      _iseq0.affect_seq(seq._iseq0);
-      _iseq1.affect_seq(seq._iseq1);
-      seq._obeg = _obeg;
-    }
-
-    inline void empty_seq(SequenceType& seq) const
-    {
-      _iseq0.empty_seq(seq._iseq0);
-      _iseq1.empty_seq(seq._iseq1);
-    }
-
-    inline bool is_empty() const
-    {
-      return _iseq0.is_empty() && _iseq1.is_empty();
-    }
-
-    static InputIterator1Type find_with_pred
-    (
-     InputIterator1Type pos,
-     InputIterator1Type end,
-     const InputValue0Type& value,
-     const ComparatorType& comp
-    )
-    {
-      // find greater or eq assuming sorted(pos,end)
-
-      for (; (pos != end) && comp(*pos, value); ++pos)
-	;
-
-      return pos;
-    }
-
-    template<typename SequenceType>
-    inline static void swap_if_greater(SequenceType& a, SequenceType& b)
-    {
-      if (a.size() > b.size())
-	std::swap(a, b);
-    }
-
-    void rsplit(SequenceType& oseq, size_t size)
-    {
-      // size is the size of the largest sequence
-      swap_if_greater(_iseq1, _iseq0);
-
-      InputIterator0Type mid0 = _iseq0._beg + size - 1;
-      InputIterator1Type mid1 =	find_with_pred
-	(_iseq1._beg, _iseq1._end, *mid0, _comp);
-
-      // give [mid, end[
-      oseq._iseq0 = BasicSequence<InputIterator0Type>(mid0, _iseq0._end);
-      oseq._iseq1 = BasicSequence<InputIterator1Type>(mid1, _iseq1._end);
-      oseq._obeg = _obeg + std::distance(_iseq0._beg, mid0) + std::distance(_iseq1._beg, mid1);
-
-      // keep [beg, mid[
-      _iseq0._end = mid0;
-      _iseq1._end = mid1;
-    }
-
-    void split(SequenceType& oseq, size_t size)
-    {
-      // size is the size of the largest sequence
-      swap_if_greater(_iseq1, _iseq0);
-
-      InputIterator0Type mid0 = _iseq0._beg + size;
-      InputIterator1Type mid1 =	find_with_pred
-	(_iseq1._beg, _iseq1._end, *(mid0 - 1), _comp);
-
-      // give [beg, mid]
-      oseq._obeg = _obeg;
-      oseq._iseq0 = BasicSequence<InputIterator0Type>(_iseq0._beg, mid0);
-      oseq._iseq1 = BasicSequence<InputIterator1Type>(_iseq1._beg, mid1);
-
-      // keep ]mid, end[
-      _obeg += std::distance(_iseq0._beg, mid0) + std::distance(_iseq1._beg, mid1);
-      _iseq0 = BasicSequence<InputIterator0Type>(mid0, _iseq0._end);
-      _iseq1 = BasicSequence<InputIterator1Type>(mid1, _iseq1._end);
-    }
-
-#if CONFIG_KASTL_DEBUG
-    typedef typename BasicSequence<InputIterator0Type>::RangeType RangeType;
-    static RangeType get_range(const SequenceType& a, const SequenceType& b)
-    {
-      return BasicSequence<InputIterator0Type>::get_range(a._iseq0, b._iseq0);
-    }
-#endif
-
-  };
-
-  template
-  <
-    typename InputIteratorType,
-    typename OutputIteratorType
-  >
-  struct InOutSequence
-  {
-    // _opos is synchronized with _iseq._beg
-
-    typedef InOutSequence<InputIteratorType, OutputIteratorType> SequenceType;
-
-    typedef InputIteratorType _InputIteratorType;
-    typedef OutputIteratorType _OutputIteratorType;
-
-    typedef typename std::iterator_traits
-    <InputIteratorType>::difference_type SizeType;
-
-    typedef typename std::iterator_traits
-    <OutputIteratorType>::value_type ValueType;
-
-#if CONFIG_KASTL_THE_SEQUENCE
-    kastl::rts::work_queue_t<64> _wq;
-#endif
-
-    BasicSequence<InputIteratorType> _iseq;
-    OutputIteratorType _opos;
-
-    inline InOutSequence() {}
-
-    inline InOutSequence
-    (
-     const InputIteratorType& l,
-     const InputIteratorType& h,
-     const OutputIteratorType& opos
-    )
-    {
-      _iseq = BasicSequence<InputIteratorType>(l, h);
-      _opos = opos;
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq.set(kastl::rts::range_t<64>(0, _iseq.size()));
-#endif
-    }
-
-#if CONFIG_KASTL_THE_SEQUENCE
-    inline void subsequence(SequenceType& sub, const kastl::rts::range_t<64>& range)
-    {
-      // build a sub sequence from *this and range
-      sub._wq.set(range);
-      sub._iseq = _iseq;
-      sub._opos = _opos;
-    }
-#endif
-
-    inline InputIteratorType input_begin() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _iseq._beg + _wq._beg;
-#else
-      return _iseq.begin();
-#endif
-    }
-
-    inline InputIteratorType input_end() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _iseq._beg + _wq._end;
-#else
-      return _iseq.end();
-#endif
-    }
-
-    inline OutputIteratorType opos()
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return this->_opos + _wq._beg;
-#else
-      return this->_opos;
-#endif
-    }
-
-    inline void advance(SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq._beg += size;
-#else
-      _iseq.advance(size);
-      _opos += size;
-#endif
-    }
-
-    inline void advance()
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq._beg = _wq._end;
-#else
-      const SizeType size = _iseq.size();
-      _iseq.advance();
-      _opos += size;
-#endif
-    }
-
-#if 0 // unused
-    inline SequenceType& operator=(const SequenceType& s)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      _wq = s._wq;
-#endif
-      _iseq = s._iseq;
-      _opos = s._opos;
-
-      return *this;
-    }
-#endif // unused
-
-    inline SizeType size() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _wq.size();
-#else
-      return _iseq.size();
-#endif
-    }
-
-    static inline void _sync_opos
-    (OutputIteratorType& opos, SizeType size)
-    {
-      opos += size;
-    }
-
-    static inline void _sync_opos
-    (
-     OutputIteratorType& opos,
-     const InputIteratorType& old_pos,
-     const InputIteratorType& new_pos
-    )
-    {
-      _sync_opos(opos, std::distance(old_pos, new_pos));
-    }
-
-    inline void split(SequenceType& seq, SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      kastl::rts::range_t<64> range;
-      if (_wq.pop(range, size) == false) 
-	return ;
-      subsequence(seq, range);
-#else
-      _iseq.split(seq._iseq, size);
-      seq._opos = _opos;
-      _opos += size;
-#endif
-    }
-
-    inline void rsplit(SequenceType& seq, SizeType size)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      empty_seq(seq);
-      kastl::rts::range_t<64> range;
-      if (_wq.steal(range, size, 1) == false)
-	return ;
-      subsequence(seq, range);
-#else
-      _iseq.rsplit(seq._iseq, size);
-      seq._opos = _opos;
-      _sync_opos(seq._opos, _iseq._beg, seq._iseq._beg);
-#endif
-    }
-
-    inline void affect_seq(SequenceType& seq) const
-    {
-      _iseq.affect_seq(seq._iseq);
-      seq._opos = _opos;
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      seq._wq.set(kastl::rts::range_t<64>(_wq._beg, _wq._end));
-#endif
-    }
-
-    inline void empty_seq(SequenceType& seq) const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      seq._wq.clear();
-#else
-      _iseq.empty_seq(seq._iseq);
-#endif
-    }
-
-    inline bool is_empty() const
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return _wq.is_empty();
-#else
-      return _iseq.is_empty();
-#endif
-    }
-
-#if CONFIG_KASTL_DEBUG
-    typedef std::pair<SizeType, SizeType> RangeType;
-    static RangeType get_range(const SequenceType& a, const SequenceType& b)
-    {
-#if CONFIG_KASTL_THE_SEQUENCE
-      return RangeType(b._wq._beg, b._wq._end);
-#else
-      typedef BasicSequence<InputIteratorType> BasicSequenceType;
-      return BasicSequenceType::get_range(a._iseq, b._iseq);
-#endif
-    }
-#endif
-
-  };
-
-  // extractor types
-
-  // . macro extracts an instruction sequence
-  // that can be processed in parallel
-  // . nano extracts an instruction sequence
-  // that can only be processed sequentially,
-  // ie. there is no possible stealing
-
-  template<typename SequenceType>
-  struct BaseExtractor
-  {
-    // extractors may inherit from this one
-    inline void prepare(SequenceType&, const SequenceType&) {}
-    inline void extract(SequenceType&, SequenceType&) {}
-  };
-
-
-  template<typename SequenceType>
-  struct IdentityExtractor : public BaseExtractor<SequenceType>
-  {
-    // the identity macro extractor returns
-    // the whole sequence when called, ie.
-    // for algorithms that dont need macro
-    // steps (typically the ones processing
-    // the whole sequence [but not prefixes])
-
-    inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
-    {
-      if (src_seq.is_empty())
-	return false;
-
-      dst_seq = src_seq;
-      dst_seq.empty_seq(src_seq);
-
-      return true;
-    }
-  };
-
-
-  template<typename SequenceType, size_t MinSize, size_t MaxSize>
-  struct BackoffExtractor : public BaseExtractor<SequenceType>
-  {
-    typedef typename SequenceType::SizeType SizeType;
-
-    SizeType _backoff_size;
-
-    BackoffExtractor()
-      : _backoff_size((SizeType)MinSize) {}
-
-    inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
-    {
-      src_seq.split(dst_seq, _backoff_size);
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      if (dst_seq.size() == 0)
-	return false;
-#endif
-
-      if (_backoff_size < (SizeType)MaxSize)
-      {
-	_backoff_size = (SizeType)((double)_backoff_size * 1.1f);
-	if (_backoff_size > (SizeType)MaxSize)
-	  _backoff_size = (SizeType)MaxSize;
-      }
-
-      return true;
-    }
-  };
-
-
-  template<typename SequenceType, size_t MinSize, size_t MaxSize, size_t StepSize>
-  struct LinearExtractor : public BaseExtractor<SequenceType>
-  {
-    typedef typename SequenceType::SizeType SizeType;
-
-    SizeType _macro_size;
-
-    LinearExtractor()
-      : _macro_size((SizeType)MinSize) {}
-
-    inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
-    {
-      src_seq.split(dst_seq, _macro_size);
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      if (dst_seq.size() == 0)
-	return false;
-#endif
-
-      if (_macro_size != (SizeType)MaxSize)
-      {
-	_macro_size += StepSize;
-	if (_macro_size > (SizeType)MaxSize)
-	  _macro_size = (SizeType)MaxSize;
-      }
-
-      return true;
-    }
-  };
-
-
-  template<typename SequenceType, unsigned int UnitSize>
-  struct StaticExtractor : public BaseExtractor<SequenceType>
-  {
-    typedef typename SequenceType::SizeType SizeType;
-
-    inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
-    {
-      // try to pop the requested size.
-      // a failure may be due to a conflict
-      // with a steal. in this case, try
-      // again until size reaches 0, in which
-      // case we have to abort the extraction
-
-      src_seq.split(dst_seq, (SizeType)UnitSize);
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      if (dst_seq.size() == 0)
-	return false;
-#endif
-
-      return true;
-    }
-  };
-
-  template<typename SequenceType, unsigned int UnitSize>
-  struct MergeExtractor : public BaseExtractor<SequenceType>
-  {
-    typedef typename SequenceType::SizeType SizeType;
-
-    inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
-    {
-      const SizeType split0_size =
-	std::min((SizeType)UnitSize - dst_seq._iseq0.size(),
-		 src_seq._iseq0.size());
-
-      const SizeType split1_size =
-	std::min((SizeType)UnitSize - dst_seq._iseq1.size(),
-		 src_seq._iseq1.size());
-
-      src_seq._iseq0.split(dst_seq._iseq0, split0_size);
-      src_seq._iseq1.split(dst_seq._iseq1, split1_size);
-
-      src_seq._obeg += split0_size + split1_size;
-
-      return dst_seq._iseq0.size() || dst_seq._iseq1.size();
-    }
-  };
-
-  template<typename SequenceType>
-  struct StaticReverseExtractor : public BaseExtractor<SequenceType>
-  {
-    typedef typename SequenceType::SizeType SizeType;
-
-    SizeType _unit_size;
-
-    StaticReverseExtractor(const SizeType& unit_size)
-      : _unit_size(unit_size) {}
-
-    inline bool extract(SequenceType& dst_seq, SequenceType& src_seq)
-    {
-      src_seq.rsplit(dst_seq, _unit_size);
-
-#if CONFIG_KASTL_THE_SEQUENCE
-      if (dst_seq.size() == 0)
-	return false;
-#endif
-
-      return true;
-    }
-  };
-
-
-  // invalid types
-
-  struct InvalidType
-  {
-    inline InvalidType() {}
-    inline InvalidType(int) {}
-  } InvalidType;
-
-  typedef struct InvalidType InvalidResultType;
-  typedef struct InvalidType InvalidConstantType;
-
-
-  // reduce xkaapi thief result
-
-  template<typename WorkType>
-  int reduce_thief
-  (
-   kaapi_stealcontext_t* sc,
-   void* thief_arg,
-   void* thief_voidptr, size_t thief_size,
-   void* victim_voidptr
-  )
-  {
-    typedef typename WorkType::SequenceType SequenceType;
-
-    WorkType* const thief_work =
-      static_cast<WorkType*>(thief_voidptr);
-
-    WorkType* const victim_work =
-      static_cast<WorkType*>(victim_voidptr);
-
-    victim_work->lock();
-
-#if CONFIG_KASTL_DEBUG
-    const typename SequenceType::RangeType vr =
-      SequenceType::get_range(victim_work->_ori_seq, victim_work->_macro_seq);
-    const typename SequenceType::RangeType tr =
-      SequenceType::get_range(thief_work->_ori_seq, thief_work->_macro_seq);
-    printf("[%lu] r: %c#%u [%lu - %lu] <- %c#%u [%lu - %lu]\n",
-	   ++printid,
-	   victim_work->_is_master ? 'm' : 's',
-	   (unsigned int)victim_work->_kid,
-	   vr.first, vr.second,
-	   thief_work->_is_master ? 'm' : 's',
-	   (unsigned int)thief_work->_kid,
-	   tr.first, tr.second);
-#endif
-
-    victim_work->reduce(*thief_work);
-    thief_work->_macro_seq.affect_seq(victim_work->_macro_seq);
-
-    victim_work->unlock();
-
-    // always return 1 so that the
-    // victim knows about preemption
-
-    return 1;
-  }
-
-
-  // xkaapi splitter types
-
-  template<typename WorkType>
-  void child_entry(void*, kaapi_thread_t*);
-
-  struct IdentitySplitter
-  {
-    template<typename WorkType>
-    static int handle_requests
-    (
-     kaapi_stealcontext_t* sc,
-     int,
-     kaapi_request_t*,
-     void*
-    )
-    { return 0; }
-  };
-
-  template<size_t ParSize>
-  struct StaticSplitter
-  {
-    template<typename WorkType>
-    static int handle_requests
-    (
-     kaapi_stealcontext_t* sc,
-     int request_count,
-     kaapi_request_t* request,
-     void* args
-    )
-    {
-      typedef typename WorkType::SequenceType SequenceType;
-
-      int replied_count = 0;
-
-      WorkType* const victim_work =
-	static_cast<WorkType*>(args);
-
-      SequenceType* const victim_seq = &victim_work->_macro_seq;
-
-      victim_work->lock();
-
-      if (victim_work->_is_done)
-      {
-	victim_work->unlock();
-	return 0;
-      }
-
-      const size_t work_size = victim_seq->size();
-      size_t par_size = work_size / (1 + (size_t)request_count);
-
-      if (par_size < ParSize)
-      {
-	request_count = work_size / ParSize - 1;
-	par_size = ParSize;
-      }
-
-      StaticReverseExtractor<SequenceType> extractor(par_size);
-
-      // request_count can be <= 0
-      for (; request_count > 0; ++request)
-      {
-	if (!kaapi_request_ok(request))
-	  continue ;
-
-	// allocate work on the thief stack
-
-	kaapi_thread_t* thief_thread;
-	kaapi_task_t* thief_task;
-	WorkType* thief_work;
-
-	thief_thread = kaapi_request_getthread(request);
-	thief_task = kaapi_thread_toptask(thief_thread);
-	thief_work = static_cast<WorkType*>
-	  (kaapi_thread_pushdata_align(thief_thread, sizeof(WorkType), 8));
-
-	// reset the work lock
-	thief_work->unlock();
-
-	thief_work->_is_done = false;
-	thief_work->_tresult = kaapi_allocate_thief_result
-	  (sc, sizeof(WorkType), NULL);
-	thief_work->_master_sc = sc;
-
-	// todo: the splitter should be changed
-	// for THE and non THE case, since steal
-	// may fail in THE case, not in locked
-	// case. this would allow for more control
-	// if the steal fails ie. redo it...
-	victim_seq->empty_seq(thief_work->_seq);
-
-	const bool has_extracted =
-	  extractor.extract(thief_work->_seq, *victim_seq);
-
-	if (has_extracted == false)
-	{
-	  // todo: data has been pushed, leak, bug?
-	  break;
-	}
-
-	thief_work->_seq.empty_seq(thief_work->_macro_seq);
-	thief_work->_const = victim_work->_const;
-	thief_work->prepare();
-
-#if CONFIG_KASTL_DEBUG
-	const typename SequenceType::RangeType vr =
-	  SequenceType::get_range(victim_work->_ori_seq, *victim_seq);
-	const typename SequenceType::RangeType tr =
-	  SequenceType::get_range(victim_work->_ori_seq, thief_work->_seq);
-	printf("[%lu] s: %c#%x [%lu - %lu] -> %c#%x [%lu - %lu] (%lx)\n",
-	       ++printid,
-	       victim_work->_is_master ? 'm' : 's',
-	       (unsigned int)victim_work->_kid,
-	       vr.first, vr.second,
-	       thief_work->_is_master ? 'm' : 's',
-	       (unsigned int)thief_work->_kid,
-	       tr.first, tr.second,
-	       (uintptr_t)thief_work->_tresult);
-
-	thief_work->_is_master = false;
-	thief_work->_ori_seq = victim_work->_ori_seq;
-#endif
-
-	// this should be unneeded BUT
-	// there are yet cases (bugs)
-	// were a reduction occurs prior
-	// the task has updated its own
-	// result.
-	memcpy(thief_work->_tresult->data, thief_work, sizeof(WorkType));
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
  
-	kaapi_task_init(thief_task, child_entry<WorkType>, thief_work);
-	kaapi_thread_pushtask(thief_thread);
-        
-	kaapi_request_reply_head(sc, request, thief_work->_tresult);
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
+#ifndef  KASTL_IMPL_H_INCLUDED
+#define  KASTL_IMPL_H_INCLUDED
 
-	--request_count;
-	++replied_count;
-      }
-
-      victim_work->unlock();
-
-      return replied_count;
-    }
-  };
+#include "kastl/kastl_sequences.h"
 
 
-  // base work type
+namespace kastl {
 
-  template
-  <
-    typename _SequenceType,
-    typename _ConstantType,
-    typename _ResultType,
-    typename _MacroType,
-    typename _NanoType,
-    typename _SplitterType
-  >
-  struct BaseWork
+namespace rts {
+
+/* dummy code to get a pointer to a template static method */
+template<typename T>
+T get_my_splitter(T t) { return t; }
+
+/* -------------------------------------------------------------------- */
+/* Empty splitter                                                       */
+/* -------------------------------------------------------------------- */
+template<typename sequence_type>
+class EmptySplitter {
+};
+
+template<typename sequence_type>
+class LinearSplitter {
+  int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request, void* argsplitter )
   {
-    typedef _SequenceType SequenceType;
-    typedef _ConstantType ConstantType;
-    typedef _ResultType ResultType;
-    typedef _MacroType MacroType;
-    typedef _NanoType NanoType;
-    typedef _SplitterType SplitterType;
+    sequence_type* seq = static_cast<sequence_type*>(_seq);
+    DefaultExtractor* extractor = static_cast<DefaultExtractor*> (argsplitter);
+    size_t size = seq.size();     /* upper bound */
+    if (size ==0) return 0;
 
-    typedef BaseWork
-    <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> BaseType;
+    /* take at most count*_pargrain items per thief */
+    size_t blocsize = extractor->_unitsize;
+    size_t size_max = (blocsize * count);
+    typename sequence_type::range_type r;
 
-    // current processing sequence
-    SequenceType _macro_seq;
-
-    SequenceType _seq;
-    const ConstantType* _const;
-    ResultType _res;
-
-    volatile bool _is_done __attribute__((aligned));
-
-    kaapi_taskadaptive_result_t* _tresult;
-    kaapi_stealcontext_t* _master_sc;
-
-#if CONFIG_KASTL_LOCK_WORK
-    kaapi_atomic_t _lock;
-#endif
-
-#if CONFIG_KASTL_DEBUG
-    SequenceType _ori_seq;
-    bool _is_master;
-    typedef unsigned int kaapi_processor_id_t;
-    kaapi_processor_id_t _kid;
-#endif
-
-    BaseWork() :
-      _is_done(false),
-      _tresult(NULL),
-      _master_sc(NULL)
-    {
-#if CONFIG_KASTL_LOCK_WORK
-      KAAPI_ATOMIC_WRITE(&_lock, 0);
-#endif
-    }
-
-    BaseWork
-    (
-     const SequenceType& s,
-     const ConstantType* c,
-     const ResultType& r
-    ) : _seq(s), _const(c), _res(r),
-	_is_done(false),
-	_tresult(NULL),
-	_master_sc(NULL)
-    {
-#if CONFIG_KASTL_LOCK_WORK
-      KAAPI_ATOMIC_WRITE(&_lock, 0);
-#endif
-      _seq.empty_seq(_macro_seq);
-    }
-
-    inline void prepare() {}
-
-    inline void reduce(const BaseWork&) {}
-
-    inline bool is_empty() const
-    {
-      return _seq.is_empty();
-    }
-
-    inline void lock()
-    {
-#if CONFIG_KASTL_LOCK_WORK
-      while (!KAAPI_ATOMIC_CAS(&_lock, 0, 1))
-	;
-      kaapi_mem_barrier();
-#endif
-    }
-
-    inline void unlock()
-    {
-#if CONFIG_KASTL_LOCK_WORK
-      KAAPI_ATOMIC_WRITE(&_lock, 0);
-#endif
-    }
-
-  };
-
-
-  // user tuning params
-
-  enum TuningTag
-  {
-    // tags are exposed to the user to
-    // modifiy parts of the algorithm
-    // behavior, such as macro extractor
-    // and splitter
-
-    TAG_IDENTITY = 0,
-    TAG_STATIC,
-    TAG_BACKOFF,
-    TAG_LINEAR,
-    TAG_MERGE
-  };
-
-  struct BaseTuningParams
-  {
-    // this is the documented structure
-    // the user can use to tune the
-    // algorithm behavior. every field
-    // must be documented.
-    // A default implementation is provided
-    // for every algorithm, with fit-all
-    // values. It can be derived to provide
-    // better values whenever apropriated.
-
-    static const enum TuningTag splitter_tag = TAG_STATIC;
-    static const size_t par_size = 256;
-
-    static const enum TuningTag macro_tag = TAG_IDENTITY;
-    static const size_t macro_min_size = 1024;
-    static const size_t macro_max_size = 32768;
-
-    static const enum TuningTag nano_tag = TAG_STATIC;
-    static const size_t nano_size = 1024;
-  };
-
-  // default per algo class tuning
-
-  struct Daouda0TuningParams : BaseTuningParams
-  {
-    // no macroloop
-  };
-
-
-  struct Daouda1TuningParams : BaseTuningParams
-  {
-    // add a macroloop to prevent extraction
-    // from the very end in case of anticipated
-    // terminating algo such as search, find_if
-
-    static const enum TuningTag macro_tag = TAG_BACKOFF;
-  };
-
-
-  // macro type factory
-
-  template<enum TuningTag Tag, typename Params, typename SequenceType>
-  struct make_macro_type
-  {
-    // dont provide any default implm
-  };
-
-  template<typename Params, typename SequenceType>
-  struct make_macro_type<TAG_IDENTITY, Params, SequenceType>
-  {
-    typedef IdentityExtractor
-    <SequenceType> Type;
-  };
-
-  template<typename Params, typename SequenceType>
-  struct make_macro_type<TAG_STATIC, Params, SequenceType>
-  {
-    typedef StaticExtractor
-    <SequenceType, Params::macro_max_size> Type;
-  };
-
-  template<typename Params, typename SequenceType>
-  struct make_macro_type<TAG_BACKOFF, Params, SequenceType>
-  {
-    typedef BackoffExtractor
-    <SequenceType, Params::macro_min_size, Params::macro_max_size> Type;
-  };
-
-  template<typename Params, typename SequenceType>
-  struct make_macro_type<TAG_LINEAR, Params, SequenceType>
-  {
-    typedef LinearExtractor
-    <
-      SequenceType,
-      Params::macro_min_size,
-      Params::macro_max_size,
-      Params::macro_step_size
-    > Type;
-  };
-
-  // nano type factory
-
-  template<enum TuningTag Tag, typename Params, typename SequenceType>
-  struct make_nano_type
-  {
-    // dont provide any default implm
-  };
-
-  template<typename Params, typename SequenceType>
-  struct make_nano_type<TAG_IDENTITY, Params, SequenceType>
-  {
-    typedef IdentityExtractor
-    <SequenceType> Type;
-  };
-
-  template<typename Params, typename SequenceType>
-  struct make_nano_type<TAG_STATIC, Params, SequenceType>
-  {
-    typedef StaticExtractor
-    <SequenceType, Params::nano_size> Type;
-  };
-
-  template<typename Params, typename SequenceType>
-  struct make_nano_type<TAG_MERGE, Params, SequenceType>
-  {
-    typedef MergeExtractor
-    <SequenceType, Params::nano_size> Type;
-  };
-
-  // splitter type factory
-
-  template<enum TuningTag Tag, typename Params>
-  struct make_splitter_type
-  {
-    // dont provide any default implm
-  };
-
-  template<typename Params>
-  struct make_splitter_type<TAG_IDENTITY, Params>
-  {
-    typedef IdentitySplitter Type;
-  };
-
-  template<typename Params>
-  struct make_splitter_type<TAG_STATIC, Params>
-  {
-    typedef StaticSplitter<Params::par_size> Type;
-  };
-
-  // called as the thief gets preempted
-
-#if 0 // TODO
-
-  template<typename WorkType>
-  static int thief_preempter(kaapi_stack_t* stack, kaapi_task_t* task, void* vargs, void* targs)
-  {
-    typedef typename WorkType::SequenceType SequenceType;
-    typedef typename SequenceType::ValueType ValueType;
-    typedef typename SequenceType::_InputIteratorType InputIteratorType;
-    typedef typename SequenceType::_OutputIteratorType OutputIteratorType;
-
-    const ValueType value = *static_cast<ValueType*>(vargs);
-    const WorkType* const work = static_cast<WorkType*>(targs);
-
-    InputIteratorType ipos = work->_seq._iseq._beg;
-    InputIteratorType iend = work->_seq._iseq._end;
-    OutputIteratorType opos = work->_seq._opos;
+    /* */
+    if ( !seq->steal(r, size_max )) return 0;
+    kaapi_assert_debug (!r.is_empty());
     
-    for (; ipos != iend; ++ipos, ++opos)
-      *opos = (*this->_const)(value, *opos);
+    /* equally distribute the work load in r or only distribution by bloc of size at most unitsize ? */
+    for (; request_count > 0; ++request)
+    {
+      if (!kaapi_request_ok(request))
+        continue;
 
-    // has been preempted
-    return 1;
+      kaapi_thread_t* thief_thread = kaapi_request_getthread(request);
+      kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
+      WorkType* thief_work = static_cast<WorkType*>
+              (kaapi_thread_pushdata_align(thief_thread, sizeof(WorkType), 8));
+    }
+
+    return false;
+  }
+};
+
+/* -------------------------------------------------------------------- */
+/* Sequential Extractor / Preemptor                                     */
+/* -------------------------------------------------------------------- */
+struct SequentialExtractor {
+  template<typename sequence_type, typename Settings>
+  SequentialExtractor( sequence_type& seq, const Settings& settings )
+   : _seq(&seq)
+  {}
+  template<typename sequence_type>
+  bool extract( sequence_type& seq, typename sequence_type::range_type& r)
+  {
+    kaapi_assert_debug(_seq == (void*)&seq);
+    return seq.pop_safe( r, seq.size() );
   }
 
-#endif // TODO
+  template<typename sequence_type>
+  int splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request )
+  {
+    sequence_type* seq __attribute__((unused)) = static_cast<sequence_type*>(_seq);
+    return 0;
+  }
 
-  // xkaapi entrypoint routines
+  template<typename sequence_type>
+  static int static_splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request, void* argsplitter )
+  {
+    SequentialExtractor* object = static_cast<SequentialExtractor*>(argsplitter);
+    return object->splitter<sequence_type>(sc, count, request);
+  }
 
-  typedef int (*kastl_splitter_t)
-  (kaapi_stealcontext_t*, int, kaapi_request_t*, void*);
+  template<typename sequence_type>
+  static kaapi_task_splitter_t get_static_splitter( const sequence_type& )
+  {
+    return &static_splitter<sequence_type>;
+  }
 
-  typedef int (*kastl_reducer_t)
-  (kaapi_stealcontext_t*, void*, void*, size_t, void*);
 
-  template<typename WorkType>
-  void process_macro_sequence
-  (
-   kaapi_thread_t* thread,
-   kaapi_stealcontext_t* sc,
-   WorkType* work
+  template<
+      typename result_type, 
+      typename sequence_type, 
+      typename settings_type, 
+      typename reduce_body_type
+  >
+  bool preempt(result_type&  result, sequence_type& seq, reduce_body_type reduce, settings_type settings)
+  { return false;}
+
+protected:
+  void* _seq;
+};
+
+
+
+/* -------------------------------------------------------------------- */
+/* Default Extractor / Splittor / Preemptor                              */
+/* -------------------------------------------------------------------- */
+struct DefaultExtractor {
+  template<typename sequence_type, typename Settings>
+  DefaultExtractor( sequence_type& seq, const Settings& settings )
+   : _seq(&seq), _unitsize(settings.unitsize)
+  {}
+  template<typename sequence_type>
+  bool extract( sequence_type& seq, typename sequence_type::range_type& r)
+  {
+    kaapi_assert_debug(_seq == (void*)&seq);
+    return seq.pop( r, _unitsize );
+  }
+
+  template<typename sequence_type>
+  static int static_splitter( kaapi_stealcontext_t* sc, int count, kaapi_request_t* request, void* argsplitter )
+  {
+    SequentialExtractor* object = static_cast<SequentialExtractor*>(argsplitter);
+    return object->splitter<sequence_type>(sc, count, request);
+  }
+
+  template<typename result_type, typename reduce_body_type>
+  static int static_reducer( void* thief_arg, void* pthief_result, size_t thief_size,
+                             result_type* result, reduce_body_type& reducer )
+  {
+    result_type* thief_result = static_cast<result_type*> (pthief_result);
+    reducer( *result, *thief_result);
+    return 0; 
+  }
+  
+  template<
+      typename result_type, 
+      typename sequence_type, 
+      typename settings_type, 
+      typename reduce_body_type
+  >
+  bool preempt( kaapi_stealcontext_t* const stc, 
+                result_type&  result, 
+                sequence_type& seq, 
+                reduce_body_type reducer, 
+                settings_type settings )
+  {
+    int (*ptr_reducer)( kaapi_stealcontext_t*, void*, void*, size_t,
+                        result_type*, reduce_body_type* ) 
+        = static_reducer<result_type, reduce_body_type>;
+    kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head( stc );
+    while (ktr !=0)
+    {
+      if (kaapi_preempt_thief(stc, ktr, &result, ptr_reducer, &result, reducer))
+        return true;
+      ktr = kaapi_get_nextthief_head( stc, ktr );
+    }
+    return false;
+  }
+protected:
+  void* _seq;
+  size_t _unitsize;
+};
+
+
+/* -------------------------------------------------------------------- */
+/* Window sized Extractor / Splittor / Preemptor                         */
+/* -------------------------------------------------------------------- */
+struct WindowExtractor {
+  template<typename sequence_type, typename Settings>
+  WindowExtractor( const Settings& settings )
+   : _unitsize(settings.unitsize)
+  {}
+  template<typename sequence_type>
+  bool extract( sequence_type& seq, typename sequence_type::range_type& r)
+  {
+    return seq.pop( r, _unitsize );
+  }
+
+  template<typename sequence_type>
+  bool splitter( sequence_type& seq)
+  {
+    return false;
+  }
+
+  template<typename result_type, typename reduce_body_type>
+  int static_reducer( kaapi_stealcontext_t* sc, void* thief_arg, void* thief_result, size_t thief_size,
+                      result_type* result, reduce_body_type* reducer )
+  {
+    return 0; 
+  }
+
+  template<
+      typename result_type, 
+      typename sequence_type, 
+      typename settings_type, 
+      typename reduce_body_type
+  >
+  bool preempt( kaapi_stealcontext_t* const stc, 
+                result_type&  result, 
+                sequence_type& seq, 
+                reduce_body_type reducer, 
+                settings_type settings )
+  {
+    int (*ptr_reducer)( kaapi_stealcontext_t*, void*, void*, size_t,
+                        result_type*, reduce_body_type* ) 
+        = static_reducer<result_type, reduce_body_type>;
+    kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head( stc );
+    while (ktr !=0)
+    {
+      if (kaapi_preempt_thief(stc, ktr, 0, ptr_reducer, &result, &reducer))
+        return true;
+      ktr = kaapi_get_nextthief_head( stc, ktr );
+    }
+    return false;
+  }
+protected:
+  size_t _unitsize;
+};
+
+
+
+
+/* -------------------------------------------------------------------- */
+/* empty reducer                                                        */
+/* -------------------------------------------------------------------- */
+template<typename iterator_type>
+void empty_reducer(const iterator_type& result_thief) 
+{
+}
+
+/* -------------------------------------------------------------------- */
+/* Settings                                                             */
+/* -------------------------------------------------------------------- */
+struct DefaultSetting {
+  typedef SequentialExtractor macro_extractor_type;
+};
+
+
+/* -------------------------------------------------------------------- */
+/* sequential MacroLoop                                                 */
+/* -------------------------------------------------------------------- */
+struct Sequential_MacroLoop_tag{};
+
+/* -------------------------------------------------------------------- */
+/* Parallel MacroLoop, without reduction                                */
+/* -------------------------------------------------------------------- */
+struct NoReduce_MacroLoop_tag{};
+
+/* -------------------------------------------------------------------- */
+/* Parallel MacroLoop, general case with reduction                      */
+/* -------------------------------------------------------------------- */
+struct Parallel_MacroLoop_tag{};
+
+
+/* -------------------------------------------------------------------- */
+/* MacroLoop                                                            */
+/* -------------------------------------------------------------------- */
+template<
+    typename TAG
+>
+struct MacroLoop {
+  /* should have 'do' method:
+    template<
+        typename result_type, 
+        typename sequence_type, 
+        typename nano_body_type, 
+        typename settings_type, 
+        typename reduce_body_type = dummy_type
+    >
+    void do( result_type& result, sequence_type& seq, nano_body_type nano_loop, reduce_body_type reduce, settings_type settings );
+  */
+};
+
+
+/* -------------------------------------------------------------------- */
+/* MacroLoop: specialisation for sequential tag                         */
+/* -------------------------------------------------------------------- */
+template<>
+struct MacroLoop<Sequential_MacroLoop_tag> {
+  template<
+      typename result_type, 
+      typename sequence_type, 
+      typename nano_body_type, 
+      typename settings_type, 
+      typename reduce_body_type
+  >
+  static void doit(
+    result_type& result, 
+    sequence_type& seq, 
+    nano_body_type nano_loop, 
+    reduce_body_type reduce, 
+    settings_type settings 
   )
   {
-    typedef typename WorkType::NanoType NanoType;
-    typedef typename WorkType::SequenceType SequenceType;
+    typename settings_type::macro_extractor_type extractor(settings);
+    typename sequence_type::range_type range;
 
-    kastl_reducer_t const reducer = reduce_thief<WorkType>;
-
-    NanoType nano_extractor;
-    SequenceType nano_seq;
-
-#if CONFIG_KASTL_DEBUG
-    work->_kid = kaapi_get_current_kid();
-#endif
-
-  advance_work:
-
-    work->lock();
-    work->_macro_seq.empty_seq(nano_seq);
-    work->unlock();
-
-    while (true)
-    {
-      work->lock();
-      const bool has_extracted = nano_extractor.extract
-	(nano_seq, work->_macro_seq);
-      work->unlock();
-
-      if (has_extracted == false)
-      {
-#if CONFIG_KASTL_DEBUG
-	printf("[%lu] x: %c#%x has_extracted == false ([%u - %u] %u)\n",
-	       ++printid,
-	       work->_is_master ? 'm' : 's',
-	       (unsigned int)work->_kid,
-	       work->_macro_seq._wq._beg,
-	       work->_macro_seq._wq._end,
-	       work->_macro_seq.size());
-#endif
-	break;
-      }
-
-#if CONFIG_KASTL_DEBUG
-      const typename SequenceType::RangeType r =
-	SequenceType::get_range(work->_ori_seq, nano_seq);
-      printf("[%lu] c: %c#%x [%lu - %lu] \n",
-	     ++printid,
-	     work->_is_master ? 'm' : 's',
-	     (unsigned int)work->_kid,
-	     r.first, r.second);
-#endif
-
-      work->compute(nano_seq);
-      if (work->_is_done)
-	goto preempt_thieves;
-
-      if (work->_tresult != NULL)
-      {
-	// TODO: use thief_preempter
-	const int is_reduced = kaapi_preemptpoint
-	  (work->_tresult, sc, NULL, NULL, work, sizeof(WorkType), NULL);
-
-	if (is_reduced)
-	{
-#if CONFIG_KASTL_DEBUG
-	  printf("[%lu] p: %c%u\n", ++printid,
-		 work->_is_master ? 'm' : 's',
-		 (unsigned int)work->_kid);
-#endif
-
-	  return ;
-	}
-      }
-    }
-
-  preempt_thieves:
-
-    // preempt all the thieves
-
-    kaapi_taskadaptive_result_t* const ktr =
-      kaapi_preempt_getnextthief_head(sc);
-
-    if (ktr != NULL)
-    {
-      kaapi_preempt_thief(sc, ktr, NULL, reducer, work);
-      if (!work->_is_done)
-	goto advance_work;
-
-      goto preempt_thieves;
-    }
-
-    // no more thieves, we are done
-    if (work->_tresult != NULL)
-    {
-      // update results before leaving
-      memcpy(work->_tresult->data, work, sizeof(WorkType));
-    }
-
-#if CONFIG_KASTL_DEBUG
-    printf("[%lu] d: %c%u\n", ++printid,
-	   work->_is_master ? 'm' : 's',
-	   (unsigned int)work->_kid);
-#endif
+    while ( extractor.extract(seq, range) && nano_loop(result, range) )
+     ;
   }
+};
 
-#if CONFIG_KASTL_MASTER_SLAVE
-
-  template<typename WorkType>
-  void child_entry(void* args, kaapi_thread_t* thread)
-  {
-    // unstealable thieves
-
-    WorkType* const work = static_cast<WorkType*>(args);
-
-    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-      (thread, KAAPI_STEALCONTEXT_DEFAULT, NULL, NULL, work->_master_sc);
-
-    work->lock();
-    work->_seq.affect_seq(work->_macro_seq);
-    work->unlock();
-
-    process_macro_sequence<WorkType>(thread, sc, work);
-
-    kaapi_steal_finalize(sc);
-  }
-
-  template<typename WorkType>
-  void root_entry(void* args, kaapi_thread_t* thread)
-  {
-    typedef typename WorkType::SequenceType SequenceType;
-    typedef typename WorkType::MacroType MacroType;
-    typedef typename WorkType::SplitterType SplitterType;
-
-    kastl_splitter_t const splitter =
-      SplitterType::template handle_requests<WorkType>;
-
-    WorkType* const work = static_cast<WorkType*>(args);
-
-    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-      (thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, args, work->_master_sc);
-
-    MacroType macro_extractor;
-
-    while (true)
-    {
-      work->lock();
-      const bool has_extracted = macro_extractor.extract
-	(work->_macro_seq, work->_seq);
-      work->unlock();
-
-      if (has_extracted == false)
-	break;
-
-      process_macro_sequence(thread, sc, work);
-
-      if (work->_is_done == true)
-	break;
-    }
-
-    kaapi_steal_finalize(sc);
-  }
-
-#else // ! CONFIG_KASTL_MASTER_SLAVE
-
-  template<typename WorkType>
-  void child_entry(void* args, kaapi_thread_t* thread)
-  {
-    typedef typename WorkType::SplitterType SplitterType;
-
-    kastl_splitter_t const splitter =
-      SplitterType::template handle_requests<WorkType>;
-
-    WorkType* const work = static_cast<WorkType*>(args);
-
-    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-      (thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, args, work->_master_sc);
-
-    work->lock();
-    work->_seq.affect_seq(work->_macro_seq);
-    work->unlock();
-
-    process_macro_sequence<WorkType>(thread, sc, static_cast<WorkType*>(args));
-
-    kaapi_steal_finalize(sc);
-  }
-
-  template<typename WorkType>
-  void root_entry(void* args, kaapi_thread_t* thread)
-  {
-    typedef typename WorkType::SplitterType SplitterType;
-
-    kastl_splitter_t const splitter =
-      SplitterType::template handle_requests<WorkType>;
-
-    WorkType* const work = static_cast<WorkType*>(args);
-
-    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-      (thread, KAAPI_STEALCONTEXT_DEFAULT, splitter, args, work->_master_sc);
-
-    work->lock();
-    work->_seq.affect_seq(work->_macro_seq);
-    work->unlock();
-
-    process_macro_sequence<WorkType>(thread, sc, static_cast<WorkType*>(args));
-
-    kaapi_steal_finalize(sc);
-  }
-
-#endif // CONFIG_KASTL_MASTER_SLAVE
-
-  // bootstrap the computation
-
-#if 1 // synchronous only
-
-  template<typename WorkType> void compute(WorkType& work)
-  {
-    // create an adpative task and sync
-
-    kaapi_thread_t* thread;
-    kaapi_task_t* task;
-    kaapi_frame_t frame;
-
-#if CONFIG_KASTL_DEBUG
-    work._is_master = true;
-    work._ori_seq = work._seq;
-#endif
-
-    thread = kaapi_self_thread();
-
-    kaapi_thread_save_frame(thread, &frame);
-
-    task = kaapi_thread_toptask(thread);
-    kaapi_task_init(task, root_entry<WorkType>, static_cast<void*>(&work));
-    kaapi_thread_pushtask(thread);
-
-    kaapi_sched_sync();
-
-    kaapi_thread_restore_frame(thread, &frame);
-  }
-
-#else
-
-  // compute, async version
-  template<typename WorkType>
-  void compute_async
-  (
-   typename const WorkType::SequenceType& s, 
-   typename const WorkType::ConstantType& c, 
-   typename WorkType::ResultType& r
+/* -------------------------------------------------------------------- */
+/* MacroLoop: specialisation for NoReduce tag                           */
+/* -------------------------------------------------------------------- */
+template<>
+struct MacroLoop<NoReduce_MacroLoop_tag> {
+  template<
+      typename result_type, 
+      typename sequence_type, 
+      typename nano_body_type, 
+      typename settings_type, 
+      typename reduce_body_type
+  >
+  static void doit(
+    result_type& result, 
+    sequence_type& seq, 
+    nano_body_type nano_loop, 
+    reduce_body_type reduce, 
+    settings_type settings 
   )
   {
-    kaapi_stack_t* const stack = kaapi_self_stack();
-    kaapi_task_t* const task = kaapi_stack_toptask(stack);
-    WorkType* const work = kaapi_stack_pushdata(stack, sizeof(WorkType)),
+    typename settings_type::macro_extractor_type extractor(seq, settings);
+    typename sequence_type::range_type range;
 
-    kaapi_task_initadaptive
-    (
-     stack, task,
-     root_entry<WorkType>,
-     static_cast<void*>(work),
-     KAAPI_TASK_ADAPT_DEFAULT
+    int (*splitter)(struct kaapi_stealcontext_t*, int, struct kaapi_request_t*, void*) 
+      = settings_type::macro_extractor_type::get_static_splitter(seq);
+
+    /* push adaptive task */
+    kaapi_thread_t* thread = kaapi_self_thread();
+    kaapi_stealcontext_t* const stc = kaapi_thread_pushstealcontext (
+        thread, 
+        KAAPI_STEALCONTEXT_DEFAULT, 
+        splitter,
+        &extractor,
+        0
     );
 
-    // asynchronous, do copy
-    kaapi_stack_pushdata(stack, sizeof(WorkType))
-    WorkType* const work = static_cast<WorkType*>(kaapi_task_getargs(thief_tas));
-    work->_seq   = s;
-    work->_const = c;
-    work->_res   = res;
-
-    kaapi_stack_pushtask(stack);
+    /* execute sequential computation */
+    while ( extractor.extract(seq, range) && nano_loop(result, range) )
+     ;
+    
+    kaapi_steal_finalize(stc);
   }
+};
 
-  // compute, sync version 
-  template<typename WorkType>
-  void compute
-  (
-   typename const WorkType::SequenceType& s,
-   typename const WorkType::ConstantType& c,
-   typename WorkType::ResultType* r
+
+/* -------------------------------------------------------------------- */
+/* MacroLoop: specialisation for Parallel tag                           */
+/* -------------------------------------------------------------------- */
+template<>
+struct MacroLoop<Parallel_MacroLoop_tag> {
+  template<
+      typename result_type, 
+      typename sequence_type, 
+      typename nano_body_type, 
+      typename settings_type, 
+      typename reduce_body_type
+  >
+  static void doit(
+    result_type& result, 
+    sequence_type& seq, 
+    nano_body_type nano_loop, 
+    reduce_body_type reduce, 
+    settings_type settings 
   )
   {
-    kaapi_stack_t* const stack = kaapi_self_stack();
-    kaapi_frame_t frame;
+    typename settings_type::macro_extractor_type extractor(seq, settings);
+    typename sequence_type::range_type range;
 
-    kaapi_stack_save_frame(stack, &frame);
-    compute_async(s, c, r, p);
-    kaapi_sched_sync(stack);
-    kaapi_stack_restore_frame(stack, &frame);
+    int (*splitter)(struct kaapi_stealcontext_t*, int, struct kaapi_request_t*, void*) 
+      = settings_type::macro_extractor_type::get_static_splitter(seq);
+
+    /* push adaptive task */
+    kaapi_thread_t* thread = kaapi_self_thread();
+    kaapi_stealcontext_t* const stc = kaapi_thread_pushstealcontext (
+        thread, 
+        KAAPI_STEALCONTEXT_DEFAULT, 
+        splitter,
+        &extractor,
+        0
+    );
+
+  redo_compute:
+    /* execute sequential computation */
+    while ( extractor.extract(seq, range) && nano_loop(result, range) )
+     ;
+
+    /* preempt and merge result with all the thiefs 
+       if preempt return true, the local sequential computation is restarted.
+    */
+    if (extractor.preempt(stc, seq, result, reduce, settings)) goto redo_compute;
+    
+    
+    kaapi_steal_finalize(stc);
   }
-#endif
+};
 
+
+
+/* -------------------------------------------------------------------- */
+/* reduce algorithm, used by algorithm with associative operator        */
+/* operator takes args as (Iterator&, Iterator)                         */
+/* -------------------------------------------------------------------- */
+template<typename input_iterator_type, typename Operation>
+struct __reduce_nanoloop {
+  typedef rts::Sequence<input_iterator_type> sequence_type;
+  
+  __reduce_nanoloop( const Operation& o) : op(o) {}
+  bool operator()(input_iterator_type& result, typename sequence_type::range_type& r)
+  { 
+    input_iterator_type first = r.begin();
+    input_iterator_type last  = r.end();
+    
+    while (first != last)
+    {
+      op(result, first);
+      ++first;
+    }
+    return false;
+  }
+
+  Operation op;
+};
+
+
+template<typename input_iterator_type, typename Operation>
+struct __reduce_reducer {
+  __reduce_reducer( const Operation& o) : op(o) {}
+  bool operator()(input_iterator_type& result, const input_iterator_type& result_thief)
+  { 
+    op(result, result_thief);
+    return false; /* do not continue with local sequence */
+  }
+
+  Operation op;
+};
+
+
+template<typename input_iterator_type, typename Operation, typename Settings>
+input_iterator_type ReduceLoop( input_iterator_type first, input_iterator_type last, Operation op, const Settings& settings )
+{
+  typedef rts::Sequence<input_iterator_type> sequence_type;
+
+  input_iterator_type result = first++;
+  if (first == last) return result;
+  
+  sequence_type seq(first, typename sequence_type::size_type(last-first));
+  rts::MacroLoop< rts::Sequential_MacroLoop_tag >( 
+    result,                                                     /* output: the result */
+    seq,                                                        /* input: the sequence */
+    __reduce_nanoloop<input_iterator_type,Operation>(op),       /* the body == NanoLoop */
+    __reduce_reducer<input_iterator_type,Operation>(op),        /* merge with a thief */
+    settings                                                    /* output: the result */
+  );
+  return result;
 }
-} // kastl::impl
+
+
+} // namespace rts
+
+} // kastl
 
 
 #endif // ! KASTL_IMPL_H_INCLUDED

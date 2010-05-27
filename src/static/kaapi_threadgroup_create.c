@@ -41,7 +41,7 @@
 ** terms.
 ** 
 */
-#include "kaapi_staticsched.h"
+#include "kaapi_impl.h"
 
 /**
 */
@@ -63,10 +63,13 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   /* */
   proc = _kaapi_get_current_processor();
 
-  thgrp->group_size = size;
-  thgrp->startflag  = 0;
+  thgrp->group_size  = size;
+  thgrp->startflag   = 0;
+  thgrp->mainthread  = 0;
+  thgrp->mainctxt    = proc->thread;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
-  thgrp->threadctxts    = malloc( size* sizeof(kaapi_thread_context_t*) );
+  thgrp->waittask    = 0;
+  thgrp->threadctxts = malloc( size* sizeof(kaapi_thread_context_t*) );
   if (thgrp->threadctxts ==0) 
   {
     error = ENOMEM;
@@ -89,7 +92,8 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
       error = ENOMEM;
       goto return_error_2;
     }
-    thgrp->threads[i] = (kaapi_thread_t*)thgrp->threadctxts[i]->sfp;
+    /* init the thread from the thread context */
+    thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
   }
   
   error =pthread_mutex_init(&thgrp->mutex, 0);
@@ -99,8 +103,9 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   if (error !=0) goto return_error_3;
 
   /* ok */
-  thgrp->step  = -1;
-  thgrp->state = KAAPI_THREAD_GROUP_CREATE_S;
+  thgrp->step     = -1;
+  thgrp->state    = KAAPI_THREAD_GROUP_CREATE_S;
+  thgrp->tag_count= 0;
   *pthgrp = thgrp;
   return 0;
 

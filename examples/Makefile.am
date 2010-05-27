@@ -19,12 +19,10 @@ check_PROGRAMS= \
 	fibo_kaapixx_opt       \
 	qsort_cilk2kaapi       \
   matrix_multiply_cilk2kaapi \
-	accumulate_while_kastl \
 	branchbound_apiatha    \
 	dgemm_cblas            \
 	dgemm_kaapi            \
 	dgemm_kaapi_flat       \
-	foreach_kastl          \
 	foreach_std            \
 	nqueens_apiatha        \
 	nqueens_apikaapi       \
@@ -32,13 +30,13 @@ check_PROGRAMS= \
   jacobi1D               \
 	transform_adapt	       \
 	transform_adapt_preempt\
-	transform_kastl        \
 	transform_std
 
 # To correct:
 #check_PROGRAMS+=\
 #	fibo_xkaapi_adapt
-#	transform_concurrent	count_concurrent 	marc_problem 
+#	transform_concurrent	count_concurrent 	marc_problem	accumulate_while_kastl	foreach_kastl  	transform_kastl  
+
 
 TESTS=
 
@@ -109,10 +107,10 @@ qsort_cilk2kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 qsort_cilk2kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 qsort_cilk2kaapi_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
-matrix_multiply_cilk2kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
-matrix_multiply_cilk2kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)
-matrix_multiply_cilk2kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KASTLPROGS_BUILD_LDFLAGS)
-matrix_multiply_cilk2kaapi_LDADD   =$(LIBS)        $(KASTLPROGS_BUILD_LIBS)
+matrix_multiply_cilk2kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+matrix_multiply_cilk2kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matrix_multiply_cilk2kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+matrix_multiply_cilk2kaapi_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 branchbound_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHAPROGS_BUILD_CPPFLAGS)
 branchbound_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHAPROGS_BUILD_CXXFLAGS)

@@ -1,128 +1,101 @@
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
 #ifndef KASTL_COPY_H_INCLUDED
 # define KASTL_COPY_H_INCLUDED
-
-
-
-#include <stddef.h>
-#include <algorithm>
-#include <iterator>
-#include "kastl_impl.h"
-
-
+#include "kastl/kastl_impl.h"
 
 namespace kastl
-{
-namespace impl
-{
-template
-<
-  typename SequenceType,
-  typename ConstantType,
-  typename ResultType,
-  typename MacroType,
-  typename NanoType,
-  typename SplitterType
->
-struct CopyWork : public BaseWork
-<SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-{
-  typedef CopyWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> SelfType;
 
-  typedef BaseWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> BaseType;
-
-  CopyWork() : BaseType() {}
-
-  CopyWork(const SequenceType& s, const ResultType& r)
-    : BaseType(s, &r, r) {}
-
-  inline void prepare()
+namespace rts {
+/* -------------------------------------------------------------------- */
+/* transform algorithm                                                   */
+/* -------------------------------------------------------------------- */
+template<typename input_iterator_type, typename output_iterator_type
+struct BodyCopy {
+  bool operator()( iterator_type& result, typename sequence_type::range_type& r )
   {
-    this->_res = *this->_const;
-  }
+    iterator_type first   = r.begin1();
+    iterator_type last    = r.end1();
+    iterator_type to_fill = r.begin2();
 
-  inline void compute(SequenceType& seq)
-  {
-    this->_res = std::copy(seq._iseq._beg, seq._iseq._end, seq._opos);
-    seq._iseq._beg = seq._iseq._end;
-    seq._opos = this->_res;
-  }
+    while (first != last)
+       *to_fill++ = *first++;
 
-  inline void reduce(const BaseType& tw)
-  {
-    this->_res = tw._res;
+    result = last;
+    return (first != last);
   }
 };
+} //rts
 
-// tunning params
-typedef Daouda0TuningParams CopyTuningParams;
-
-} // kastl::impl
-
-
-
-template
-<
-  class InputIterator,
-  class OutputIterator,
-  class ParamType
->
-OutputIterator copy
-(
- InputIterator ipos,
- InputIterator iend,
- OutputIterator opos
+template< typename input_iterator_type, 
+          typename output_iterator_type, 
+          typename Operation, typename Settings = class rts::DefaultSetting
+        >
+output_iterator_type copy( 
+    input_iterator_type first, input_iterator_type last, 
+    output_iterator_type to_fill, 
+    Settings settings  = rts::DefaultSetting()
 )
 {
-  typedef kastl::impl::InOutSequence<InputIterator, OutputIterator>
-    SequenceType;
+  typedef rts::Sequence<input_iterator_type,output_iterator_type> sequence_type;
 
-  typedef typename kastl::impl::make_macro_type
-    <ParamType::macro_tag, ParamType, SequenceType>::Type
-    MacroType;
-
-  typedef typename kastl::impl::make_nano_type
-    <ParamType::nano_tag, ParamType, SequenceType>::Type
-    NanoType;
-
-  typedef typename kastl::impl::make_splitter_type
-    <ParamType::splitter_tag, ParamType>::Type
-    SplitterType;
-
-  typedef OutputIterator ConstantType;
-
-  typedef OutputIterator ResultType;
-
-  typedef kastl::impl::CopyWork
-    <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-    WorkType;
-
-  WorkType work(SequenceType(ipos, iend, opos), opos);
-  kastl::impl::compute<WorkType>(work);
-  return work._res;
-}
-
-
-template
-<
- class InputIterator,
- class OutputIterator
->
-OutputIterator copy
-(
- InputIterator ipos,
- InputIterator iend,
- OutputIterator opos
-)
-{
-  typedef kastl::impl::CopyTuningParams ParamType;
-  return kastl::copy<InputIterator, OutputIterator, ParamType>
-    (ipos, iend, opos);
+  if (first == last) return first;
+  iterator_type result = first;
+  sequence_type seq(first, to_fill, last-first);
+  
+  rts::MacroLoop< rts::Sequential_MacroLoop_tag >( 
+    result,                                                     /* output: the result */
+    seq,                                                        /* input: the sequence */
+    rts::BodyCopy<input_iterator_type, output_iterator_type>(), /* the body == NanoLoop */
+    rts::empty_reducer<iterator_type>                           /* merge with a thief: do nothing */
+    settings                                                    /* output: the result */
+  );
+  return result;
 }
 
 } // kastl
-
 
 
 #endif // ! KASTL_COPY_H_INCLUDED

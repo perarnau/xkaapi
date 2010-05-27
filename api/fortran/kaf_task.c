@@ -310,7 +310,7 @@ error_label:
 
 
 /* -------------------------------------------------------------------- */
-void kaapi_sync_()
+void kaapi_sync_(void)
 {
   kaapi_sched_sync();
 }

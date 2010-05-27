@@ -89,22 +89,6 @@ namespace ka {
   class SyncGuard;
   
 
-  /** Defined in order to used automatically generated recopy in Universal Access Mode Type constructor :
-      - to convert TypeEff -> TypeInTask.
-      - and to convert TypeInTask -> TypeFormal.
-  */
-  struct Access {
-    Access( const Access& a ) : a(a.a)
-    { }
-    template<typename pointer>
-    explicit Access( pointer& p )
-    { kaapi_access_init(&a, p.ptr()); }
-    operator kaapi_access_t&() 
-    { return a; }
-    kaapi_access_t a;    
-  };
-  
-
   // --------------------------------------------------------------------
   /** link C++ format -> kaapi format */
   class Format {
@@ -615,6 +599,7 @@ namespace ka {
   };
   
 
+
   // --------------------------------------------------------------------
   template<class T>
   struct TraitNoDeleteTask {
@@ -649,6 +634,26 @@ namespace ka {
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
 
+
+  // --------------------------------------------------------------------
+  /** Defined in order to used automatically generated recopy in Universal Access Mode Type constructor :
+      - to convert TypeEff -> TypeInTask.
+      - and to convert TypeInTask -> TypeFormal.
+  */
+  struct Access {
+    Access( const Access& a ) : a(a.a)
+    { }
+    template<typename pointer>
+    explicit Access( pointer* p )
+    { kaapi_access_init(&a, p); }
+    template<typename T>
+    explicit Access( const base_pointer<T>& p )
+    { kaapi_access_init(&a, p.ptr()); }
+    operator kaapi_access_t&() 
+    { return a; }
+    kaapi_access_t a;    
+  };
+  
 
   // --------------------------------------------------------------------
   /** Trait for universal access mode type.
@@ -871,6 +876,21 @@ namespace ka {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_CW         mode_t;
   };
+
+  /* to be able to use point as arg of spawn */
+  template<typename UserType>
+  struct TraitUAMParam<const UserType*> {
+    typedef TraitUAMType<pointer_rp<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP         mode_t;
+  };
+
+  /* to be able to use point as arg of spawn */
+  template<typename UserType>
+  struct TraitUAMParam<UserType*> {
+    typedef TraitUAMType<pointer_rpwp<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP         mode_t;
+  };
+
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
@@ -1124,29 +1144,31 @@ namespace ka {
   public:
 
     ThreadGroup(size_t size) 
-     : _size(size)
+     : _size(size), _created(false)
     {
     }
     void resize(size_t size)
-    {
-      _size = size;
-    }
+    { _size = size; }
+    
+    size_t size() const
+    { return _size; }
 
     /* begin to partition task */
     void begin_partition()
     {
-      kaapi_threadgroup_create( &_threadgroup, _size );
+      if (!_created) { kaapi_threadgroup_create( &_threadgroup, _size ); _created = true; }
       kaapi_threadgroup_begin_partition( _threadgroup );
     }
 
     /* internal class required for spawn method */
     class AttributComputeDependencies {
     public:
-      AttributComputeDependencies( kaapi_threadgroup_t thgrp ) : _threadgroup(thgrp) {}
+      AttributComputeDependencies( kaapi_threadgroup_t thgrp, int thid ) : _threadgroup(thgrp), _threadindex(thid) {}
       void operator()(kaapi_thread_t* thread, kaapi_task_t* task)
-      { kaapi_threadgroup_computedependencies( _threadgroup, thread, task ); }
+      { kaapi_threadgroup_computedependencies( _threadgroup, _threadindex, task ); }
     public:
       kaapi_threadgroup_t _threadgroup;
+      int                 _threadindex;
     };
 
     /* Spawner for ThreadGroup */
@@ -1177,7 +1199,7 @@ namespace ka {
     template<class TASK>
     Spawner<TASK> Spawn(const AttributSetPartition& a) 
     { return Spawner<TASK>(
-                  AttributComputeDependencies(_threadgroup),
+                  AttributComputeDependencies(_threadgroup, a.get_partition()),
                   kaapi_threadgroup_thread(_threadgroup, a.get_partition())
               ); 
     }
@@ -1201,8 +1223,8 @@ namespace ka {
     /* execute the threads */
     void execute()
     {
-      kaapi_threadgroup_begin_step( _threadgroup );
-      kaapi_threadgroup_end_step( _threadgroup );
+      kaapi_threadgroup_begin_execute( _threadgroup );
+      kaapi_threadgroup_end_execute  ( _threadgroup );
     }
 
     /* asynchronous start */
@@ -1217,8 +1239,11 @@ namespace ka {
       kaapi_threadgroup_end_step( _threadgroup );
     }
 
+    void print()
+    { kaapi_threadgroup_print(stdout, _threadgroup); }
   protected:
     size_t              _size;
+    bool                _created;
     kaapi_threadgroup_t _threadgroup;
   };
 
