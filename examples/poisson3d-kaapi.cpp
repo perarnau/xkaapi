@@ -27,7 +27,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, Poisson3D::Direction& dir )
   s_in >> value;
   dir = (Poisson3D::Direction) value;
   return s_in;
-};
+}
 
 // --------------------------------------------------------------------
 ka::OStream& operator<< (ka::OStream& s_out, const Poisson3D::Index& index )
@@ -42,7 +42,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, Poisson3D::Index& index )
   s_in >> i >> j >> k;
   index = Poisson3D::Index(i,j,k);
   return s_in;
-};
+}
 
 
 // --------------------------------------------------------------------
@@ -82,7 +82,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomain& sd )
     sd._data = 0;
   }
   return s_in;
-};
+}
 
 
 // --------------------------------------------------------------------
@@ -124,7 +124,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomainInterface& sdi )
   }
 //   std::cout << "[KaSubDomainInterface::operator>>] @ = " << &sdi << " - nx = " << sdi._nx <<  " - ny = " << sdi._ny << std::endl;
   return s_in;
-};
+}
 
 
 // --------------------------------------------------------------------
@@ -467,6 +467,7 @@ struct Kernel {
     }
 
 #if defined(USE_THGRP)
+//std::cout << "Kernel:" << std::endl << std::flush;
 //    threadgroup.print();    
     threadgroup.end_partition();
     threadgroup.execute();
@@ -531,6 +532,7 @@ struct Initialize {
           );
         }
 #if defined(USE_THGRP)
+//std::cout << "Initialize:" << std::endl << std::flush;
 //    threadgroup.print();    
     threadgroup.end_partition();
     threadgroup.execute();    
@@ -601,6 +603,7 @@ struct Verification {
           );
         }
 #if defined(USE_THGRP)
+//std::cout << "Verification:" << std::endl << std::flush;
 //    threadgroup.print();    
     threadgroup.end_partition();
     threadgroup.execute();    
