@@ -56,7 +56,17 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
   kaapi_vector_init( &thgrp->ws_vect_input, 0 );
-  
+
+  /* same the main thread frame to restore it at the end of parallel computation */
+  kaapi_thread_save_frame(thgrp->mainthread, &thgrp->mainframe);
+#if 0
+  fprintf(stdout, "Save frame:: pc:%p, sp:%p, spd:%p\n", 
+    (void*)thgrp->mainframe.pc, 
+    (void*)thgrp->mainframe.sp, 
+    (void*)thgrp->mainframe.sp_data 
+  );
+#endif
+    
   return 0;
 }
 
@@ -76,12 +86,6 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
     kaapi_task_init(task, kaapi_tasksignalend_body, thgrp );
     kaapi_thread_pushtask(thgrp->threads[i]);    
   }
-  /* Push the task that will mark synchronisation on the main thread */
-  thgrp->waittask = kaapi_thread_toptask( thgrp->mainthread);
-  kaapi_task_init(thgrp->waittask, kaapi_taskwaitend_body, thgrp );
-  kaapi_task_setbody(thgrp->waittask, kaapi_suspend_body );
-  kaapi_thread_pushtask(thgrp->mainthread);    
-  
   
   /* free hash map entries */
   for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)

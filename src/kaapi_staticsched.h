@@ -220,8 +220,14 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_task_t*              waittask;     /* task to mark end of parallel computation */
   int volatile               startflag;    /* set to 1 when threads should starts */
   int volatile               step;         /* iteration step */
+  kaapi_frame_t              mainframe;    /* save/restore main thread */
   kaapi_thread_context_t*    mainctxt;     /* the main thread context */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
+  
+  kaapi_task_t*              save_mainthread;
+  int                        size_mainthread;
+  kaapi_task_t**             save_workerthreads;
+  int*                       size_workerthreads;
   
   /* state of the thread group */
   kaapi_threadgroup_state_t  state;        /* state */

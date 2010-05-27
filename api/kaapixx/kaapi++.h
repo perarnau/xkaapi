@@ -1144,7 +1144,7 @@ namespace ka {
   public:
 
     ThreadGroup(size_t size) 
-     : _size(size)
+     : _size(size), _created(false)
     {
     }
     void resize(size_t size)
@@ -1156,7 +1156,7 @@ namespace ka {
     /* begin to partition task */
     void begin_partition()
     {
-      kaapi_threadgroup_create( &_threadgroup, _size );
+      if (!_created) { kaapi_threadgroup_create( &_threadgroup, _size ); _created = true; }
       kaapi_threadgroup_begin_partition( _threadgroup );
     }
 
@@ -1223,8 +1223,8 @@ namespace ka {
     /* execute the threads */
     void execute()
     {
-      kaapi_threadgroup_begin_step( _threadgroup );
-      kaapi_threadgroup_end_step( _threadgroup );
+      kaapi_threadgroup_begin_execute( _threadgroup );
+      kaapi_threadgroup_end_execute  ( _threadgroup );
     }
 
     /* asynchronous start */
@@ -1243,6 +1243,7 @@ namespace ka {
     { kaapi_threadgroup_print(stdout, _threadgroup); }
   protected:
     size_t              _size;
+    bool                _created;
     kaapi_threadgroup_t _threadgroup;
   };
 

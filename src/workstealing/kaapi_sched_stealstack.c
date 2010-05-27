@@ -380,7 +380,7 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
     if (thread->thieffp->pc > thread->thieffp->sp) 
       replycount += kaapi_sched_stealframe( thread, thread->thieffp, &access_to_gd, count-replycount, request );
     ++thread->thieffp;
-    kaapi_writemem_barrier();
+    kaapi_mem_barrier();
   }
   thread->thieffp = 0;
 #else

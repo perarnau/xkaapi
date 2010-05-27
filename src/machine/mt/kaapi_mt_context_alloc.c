@@ -57,13 +57,11 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   kaapi_uint32_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
-  void* addr_tofree;
 
   /* already allocated ? */
-  if (!KAAPI_STACK_EMPTY(&kproc->lfree)) 
+  if (!kaapi_lfree_isempty(kproc)) 
   {
-    ctxt = KAAPI_STACK_TOP(&kproc->lfree);
-    KAAPI_STACK_POP(&kproc->lfree);
+    kaapi_lfree_pop(kproc, ctxt);
     kaapi_thread_clear( ctxt );
     return ctxt;
   }
@@ -90,13 +88,12 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   }
 
   /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
-  ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &addr_tofree);
+  ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
   kaapi_assert_m( (((kaapi_uintptr_t)ctxt->stackframe) & 0x3F)== 0, "StackFrame pointer not aligned to 64 bit boundary");
   if (ctxt->stackframe ==0) {
     munmap( ctxt, ctxt->size );
     return 0;
   }
-  ctxt->alloc_ptr = addr_tofree;
   kaapi_thread_clear(ctxt);
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   ctxt->thieffp = 0;

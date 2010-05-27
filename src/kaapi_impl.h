@@ -321,7 +321,6 @@ typedef struct NAME {\
 typedef struct kaapi_stack_t {
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   char*                     data;           /** stack of data with the same scope than task */
-  int                       sticky;         /** 1 iff the stack could not be steal else by a context swap */ 
 
   volatile int              hasrequest __attribute__((aligned (KAAPI_CACHE_LINE)));     /** points to the k-processor structure */
   volatile int              haspreempt;     /** !=0 if preemption is requested */
@@ -347,6 +346,7 @@ struct kaapi_wsqueuectxt_cell_t;
 typedef struct kaapi_wc_structure_t {
   struct kaapi_wsqueuectxt_t*      wclist;      /* suspend list that own the suspended thread _wcthread */
   struct kaapi_wsqueuectxt_cell_t* wccell;      /* waiting cell of the thread in _wclist, or 0 if not suspended */
+  unsigned long                    affinity;    /* affinity of the suspended thread */
 } kaapi_wc_structure_t;
 
 
@@ -367,7 +367,6 @@ typedef struct kaapi_thread_context_t {
   int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
-  struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
 
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
@@ -375,18 +374,20 @@ typedef struct kaapi_thread_context_t {
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
 #endif
+  unsigned long                  affinity;       /* bit i == 1 -> can run on procid i */
+  struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
+  struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
   kaapi_atomic_t                 lock;           /** */ 
 
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
-  kaapi_wc_structure_t           wcs;            /** used if the thread is suspended and poined by ->pad of the non ready task */
+  kaapi_wc_structure_t           wcs;            /** used if the thread is suspended and poined by ->pad of the task that required suspension */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
 #define kaapi_stack2threadcontext(stack)         ( ((kaapi_thread_context_t*)stack)-1 )
 #define kaapi_threadcontext2stack(thread)        ( (kaapi_stack_t*)((thread)+1) )
 #define kaapi_threadcontext2thread(thread)       ( (kaapi_thread_t*)((thread)->sfp))
-
 
 
 /* ============================= The structure for adaptive algorithm ============================ */
@@ -784,6 +785,32 @@ extern void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_h
 
 
 /* ============================= Commun function for server side (no public) ============================ */
+
+/**
+*/
+static inline int kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
+{
+  th->affinity = 0;
+  return 0;
+}
+
+/**
+*/
+static inline int kaapi_thread_setaffinity(kaapi_thread_context_t* th, kaapi_processor_id_t kid )
+{
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(unsigned long)*8) );
+  th->affinity |= (1<<kid);
+  return 0;
+}
+
+/** Return non 0 iff th as affinity with kid
+*/
+static inline int kaapi_thread_hasaffinity(unsigned long affinity, kaapi_processor_id_t kid )
+{
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(unsigned long)*8) );
+  return (affinity & (1<<kid));
+}
+
 /**
 */
 static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
@@ -797,6 +824,7 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
 static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
 {
   int ok;
+  kaapi_mem_barrier();
   do {
     ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid);
     kaapi_slowdown_cpu();
@@ -828,13 +856,29 @@ static inline int kaapi_sched_pushready( kaapi_processor_t* kproc, kaapi_thread_
 static inline kaapi_thread_context_t* kaapi_sched_stealready( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
 {
   kaapi_thread_context_t* thread = 0;
+  kaapi_thread_context_t* prevthread = 0;
   
   /* WARNING should add test of affinity ? and move the function into a .c */
   if (!KAAPI_FIFO_EMPTY(&kproc->lready))
   {
-    KAAPI_FIFO_POP( &kproc->lready, thread );
+    KAAPI_FIFO_TOP( &kproc->lready, prevthread );
+    if (kaapi_thread_hasaffinity(prevthread->affinity, kproc_thiefid))
+    {
+      KAAPI_FIFO_POP( &kproc->lready, thread );
+      return thread;
+    }
+    thread = prevthread->_next;
+    while (thread !=0) 
+    {
+      if (kaapi_thread_hasaffinity(thread->affinity, kproc_thiefid))
+      {
+        KAAPI_FIFO_REMOVE( &kproc->lready, prevthread, thread );
+        return thread;
+      }
+      prevthread = thread;
+      thread = thread->_next;
+    }
   }
-   
   return thread;
 }
 

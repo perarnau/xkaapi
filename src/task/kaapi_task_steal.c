@@ -112,23 +112,15 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   }
 
 #if defined(KAAPI_USE_READYLIST)
-  if (arg->origin_task->pad != 0)
-  {
+  kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)arg->origin_task->pad;
+  if (wcs != 0)
+  { 
     kaapi_processor_t* kproc = kaapi_get_current_processor();
-    if (kproc->readythread ==0)
+    if (kaapi_thread_hasaffinity(wcs->affinity, kproc->kid) && (kproc->readythread ==0))
     {
-      kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)arg->origin_task->pad;
-      kaapi_stack_t* stack = kaapi_threadcontext2stack(wcs->wccell->thread);
-      if (!stack->sticky)
-      {
-        kproc->readythread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
-#if 0
-        if (kproc->readythread != 0) 
-          printf("Here fast wakeup....\n");
-        else
-          printf("Here a possible fast wakeup failed....\n");
-#endif
-      }
+      kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
+      if (kthread != 0)
+        kproc->readythread = kthread;
     }
   }
 #endif  
@@ -202,12 +194,15 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       w_param = 1;
       if ((war_param & (1<<i)) !=0) 
         push_write=1;
+//push_write=1;
       break;
     }
   }
 
-  if (!push_write)
+  if (!w_param) //(!push_write)
   {
+//    printf("Steal without W, without copy, task:%p, sp:%p\n", (void*)body, (void*)orig_task_args);
+//    fflush(stdout);
     /* Execute the orinal body function with the original args
     */
     body(orig_task_args, thread);
@@ -226,9 +221,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
           access_param->version = access_param->data;
         }
       }
-      kaapi_mem_barrier();
+      kaapi_writemem_barrier();
     }
-
+    kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_suspend_body );
     kaapi_task_setbody(arg->origin_task, kaapi_aftersteal_body );
   }
   else /* it exists at least one w parameter with war dependency */
@@ -250,20 +245,31 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
         continue;
       }
 
+      /* initialize all parameters ... */
       access_param               = (kaapi_access_t*)(data_param);
       copy_access_param          = (kaapi_access_t*)(copy_data_param);
       copy_access_param->data    = access_param->data;
       copy_access_param->version = 0; /*access_param->version; / * not required... * / */
       
-      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) && ((war_param & (1<<i)) !=0) )
+      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) )
       {
-        /* allocate new data */
+        if ((war_param & (1<<i)) !=0)
+        { 
+//          printf("Steal with copy, war_param: %li, task:%p, sp:%p\n", war_param, (void*)body, (void*)orig_task_args);
+//          fflush(stdout);
+
+          /* allocate new data */
 #if defined(KAAPI_DEBUG)
-        copy_access_param->data    = calloc(1,fmt_param->size);
+          copy_access_param->data    = calloc(1,fmt_param->size);
 #else
-        copy_access_param->data    = malloc(fmt_param->size);
+          copy_access_param->data    = malloc(fmt_param->size);
 #endif
-        if (fmt_param->cstor !=0) (*fmt_param->cstor)(copy_access_param->data);
+          if (fmt_param->cstor !=0) (*fmt_param->cstor)(copy_access_param->data);
+        }
+        else {
+//          printf("Steal without copy, task:%p, sp:%p\n", (void*)body, (void*)orig_task_args);
+//          fflush(stdout);
+        } 
       }
     }
 
@@ -272,6 +278,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     task = kaapi_thread_toptask( thread );
     kaapi_task_init( task, kaapi_nop_body, copy_task_args);
     kaapi_thread_pushtask( thread );
+
+    /* call directly the stolen body function */
     body( copy_task_args, thread);
 
     /* ... and we push the write task if w, cw or rw mode */

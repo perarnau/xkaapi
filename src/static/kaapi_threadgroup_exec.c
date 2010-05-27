@@ -54,6 +54,13 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
+
+  /* Push the task that will mark synchronisation on the main thread */
+  thgrp->waittask = kaapi_thread_toptask( thgrp->mainthread);
+  kaapi_task_init(thgrp->waittask, kaapi_taskwaitend_body, thgrp );
+  kaapi_task_setbody(thgrp->waittask, kaapi_suspend_body );
+  kaapi_thread_pushtask(thgrp->mainthread);    
+  
   thgrp->step = 0;
   kaapi_mem_barrier();
   
@@ -67,11 +74,13 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   
   for (i=0; i<thgrp->group_size; ++i)
   {
+    kaapi_processor_id_t victim_procid = i/blocsize;
 #if 0 // Method should be implemented. Currently push locally and wait stealer    
-    int victim_procid = i/blocsize;
     kaapi_processor_t* victim_kproc = kaapi_all_kprocessors[victim_procid];
     kaapi_wsqueuectxt_lockpush( &victim_kproc->lsuspend, thgrp->threadctxts[i] );
 #else
+    kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
+    kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
     thgrp->threadctxts[i]->proc = current_proc;
     kaapi_wsqueuectxt_push( &current_proc->lsuspend, thgrp->threadctxts[i] );
 #endif    
@@ -106,7 +115,8 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
 
   kaapi_sched_sync();
-  kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == thgrp->group_size );
+  /* counter reset by THE waittask */
+  kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == 0 );
   
 #if 0
   /* wait end of computation ... */
@@ -127,5 +137,21 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 */
 int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
 {
-  return kaapi_threadgroup_end_step(thgrp);  
+  kaapi_threadgroup_end_step(thgrp);
+  
+  for (int i=0; i<thgrp->group_size; ++i)
+    kaapi_thread_clear(thgrp->threadctxts[i]);
+
+  kaapi_thread_restore_frame(thgrp->mainthread, &thgrp->mainframe);
+#if 1
+  kaapi_thread_save_frame(thgrp->mainthread, &thgrp->mainframe);
+  fprintf(stdout, "Restore frame:: pc:%p, sp:%p, spd:%p\n", 
+    (void*)thgrp->mainframe.pc, 
+    (void*)thgrp->mainframe.sp, 
+    (void*)thgrp->mainframe.sp_data 
+  );
+#endif
+  
+  thgrp->state = KAAPI_THREAD_GROUP_CREATE_S;
+  return 0;
 }

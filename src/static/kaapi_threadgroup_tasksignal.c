@@ -47,6 +47,8 @@
 */
 void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread )
 {
+  kaapi_threadgroup_t thgrp = (kaapi_threadgroup_t)sp;
+  KAAPI_ATOMIC_WRITE( &thgrp->countend, 0 );
 }
 
 
@@ -57,7 +59,21 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
   kaapi_threadgroup_t thgrp = (kaapi_threadgroup_t)sp;
   if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
   {
-    kaapi_task_setbody( thgrp->waittask, kaapi_nop_body );
+    kaapi_task_setbody( thgrp->waittask, kaapi_taskwaitend_body );
 /*    pthread_cond_signal( &thgrp->cond ); */
+  }
+
+  /* detach the thread from the processor (it was managed by the group) */
+  kaapi_processor_t* kproc = _kaapi_get_current_processor();
+  kaapi_thread_context_t* kthread = kproc->thread;
+  
+  if (kthread != thgrp->mainctxt)
+  {
+#if 0
+    printf("Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
+    fflush(stdout);
+#endif
+    /* detach the thread */
+    kproc->thread = 0;
   }
 }

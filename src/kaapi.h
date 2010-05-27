@@ -652,7 +652,9 @@ static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
   access->data = thread->sp_data;
+#if !defined(KAAPI_NDEBUG)
   access->version = 0;
+#endif
   thread->sp_data += count;
   return;
 }

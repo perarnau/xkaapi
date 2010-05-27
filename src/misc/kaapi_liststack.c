@@ -57,6 +57,7 @@ int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls )
   return 0;
 }
 
+
 /**
 */
 int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls )
@@ -72,6 +73,7 @@ int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls )
   }
   return 0;
 }
+
 
 /** Allocate a new cell
 */
@@ -118,6 +120,7 @@ int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thr
   kaapi_task_t* task = thread->sfp->pc;
   thread->wcs.wclist = ls;
   thread->wcs.wccell = cell;
+  thread->wcs.affinity = thread->affinity;
 #endif
 
   /* set the state: write thread+set state/barrier/link the cell */
