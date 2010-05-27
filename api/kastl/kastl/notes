@@ -8,6 +8,16 @@
   --> actually thieves are missed, not reduced
   --> race between the splitter and the reducer
    -> redux doesnot see some in the splitter
+ . probleme de liaison du resultat du thief: dans [o.0], on voit
+ toute une serie d extraction, un return (donc pas de preemption)
+  -> semble que ca soit ecrase
+  -> [o.1] contient une trace, on voit que le resultat de la reduction
+  n a pas le bonne valeur
+   -> le resultat alias un autre resultat, d ou le bug
+   -> c est donc que la stack allouee n est plus valide
+   -> le bug est la, on utilise la stack (issue du pushdata_align)
+   pour stocker le resultat mais elle n est plus valide, reutilisee
+   par une autre task
 
 -- todos
 . brancher et recompiler le runtime

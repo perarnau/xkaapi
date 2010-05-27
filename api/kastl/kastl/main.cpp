@@ -53,7 +53,7 @@ struct accumulate_body
 {
   // typedef Sequence<Iterator> sequence_type;
 
-  bool operator()(Value& result, const Iterator& pos)
+  bool operator()(Value& result, Iterator& pos)
   {
     result += *pos;
     return false;
@@ -61,7 +61,6 @@ struct accumulate_body
 
   bool reduce(Value& lhs, const Value& rhs)
   {
-    printf("+ %lf\n", rhs);
     lhs += rhs;
     return false;
   }
@@ -167,7 +166,6 @@ static void init_seq(Iterator seq, size_t count)
     *seq = 1;
 }
 
-
 template<typename Iterator>
 static void check_seq(Iterator seq, size_t count)
 {
@@ -181,6 +179,19 @@ static void check_seq(Iterator seq, size_t count)
     }
 }
 
+#if 0
+template<typename Iterator>
+static void check_seq_2(Iterator seq, size_t count)
+{
+  unsigned int i = 0;
+  for (; count; --count, ++seq, ++i)
+    if (*seq != 2)
+    {
+      printf("invalid@%u\n", i);
+      break;
+    }
+}
+#endif
 
 int main()
 {
