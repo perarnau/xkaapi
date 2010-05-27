@@ -69,7 +69,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   /* dispatch thread context to processor ? */
   nproc = kaapi_count_kprocessors;
   /* dispatch them using bloc destribution of size floor(kaapi_count_kprocessors/thgrp->group_size) */
-  blocsize = (nproc+thgrp->group_size-1)/ thgrp->group_size;
+  blocsize = (thgrp->group_size+nproc-1)/ nproc;
   kaapi_processor_t* current_proc = kaapi_get_current_processor();
   
   for (i=0; i<thgrp->group_size; ++i)
