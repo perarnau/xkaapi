@@ -71,7 +71,7 @@ static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key,
 
 void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
 {
-  return _set_hashmap_entry( khm, key, entries );
+  _set_hashmap_entry( khm, key, entries );
 }
 
 
