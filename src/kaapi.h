@@ -147,24 +147,28 @@ struct kaapi_taskadaptive_result_t;
 
 
 /* ========================== utilities ====================================== */
-static inline void* kaapi_malloc_align( unsigned int _align, size_t size, void** addr_tofree)
+static inline void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree)
 {
-  kaapi_assert_debug( (_align !=0) && ((_align ==64) || (_align ==32) || (_align ==16) 
-                                    || (_align == 8) || (_align == 4) || (_align == 2) || (_align == 1)) );
-  if (_align < 8)
+  /* align_size in bytes */
+
+  if (align_size == 0)
   {
     *addr_tofree = malloc(size);
     return *addr_tofree;
   }
 
-  kaapi_uintptr_t align = _align-1;
-  void* retval = (void*)malloc(align + size);
-  if (retval) {
-    if (addr_tofree !=0) *addr_tofree = retval;
-    if ( (((kaapi_uintptr_t)retval) & align) !=0U)
-      retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
-    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
+  const kaapi_uintptr_t align_mask = align_size - 1;
+  void* retval = (void*)malloc(align_mask + size);
+  if (retval != NULL)
+  {
+    if (addr_tofree !=0)
+      *addr_tofree = retval;
+
+    if ((((kaapi_uintptr_t)retval) & align_mask) != 0U)
+      retval = (void*)(((kaapi_uintptr_t)retval + align_mask) & ~align_mask);
+    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align_mask) == 0U);
   }
+
   return retval;
 }
 
