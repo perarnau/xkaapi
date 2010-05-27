@@ -1,27 +1,12 @@
 -- bugs
-. accumulate doesnot return the correct value
- . with >= 3 thread, but works with for_each
- . thus reduction bugged ?
-  . missed thieves ?
-  . at least, everything is processed (checked by marking items)
-  . seems there is a problem in preemption, result not reloaded?
-  --> actually thieves are missed, not reduced
-  --> race between the splitter and the reducer
-   -> redux doesnot see some in the splitter
- . probleme de liaison du resultat du thief: dans [o.0], on voit
- toute une serie d extraction, un return (donc pas de preemption)
-  -> semble que ca soit ecrase
-  -> [o.1] contient une trace, on voit que le resultat de la reduction
-  n a pas le bonne valeur
-   -> le resultat alias un autre resultat, d ou le bug
-   -> c est donc que la stack allouee n est plus valide
-   -> le bug est la, on utilise la stack (issue du pushdata_align)
-   pour stocker le resultat mais elle n est plus valide, reutilisee
-   par une autre task
+. some part of the sequence are processed several times
+ . ie. check_sequence sees 3.0
 
 -- todos
 . brancher et recompiler le runtime
 . ajouter les modifs necessaires a previous_branch/kastl_sequences.h
+. remove unneeded template arguments (for instance Body)
+. remove unneeded result
 
 . faire les tests + les benchs
 
@@ -58,3 +43,39 @@ struct numeric_result : base_result
 struct void_result
 {
 };
+
+
+--
+Salut, ca va?
+
+J ai regle le bug que j avais hier, il
+venait de mon code (j utilisais une ref
+sur le resultat alloue sur la pile du
+thread, non valide apres retour pour la
+reduction).
+
+Il me reste 2 problemes:
+. le vol ne se fait pas correctement, et
+je repasse dans certains cas sur des parties
+de la sequence deja traitees. Il faut que
+je vois si ca vient du code applicatif ou
+de la workqueue,
+. je tombe dans le cas ou des thiefs sont
+non reduits (ie. assert du finalize), a cause
+d une conccurrence entre le splitter et la
+reduction (plus precisement kaapi_get_thief_head
+retourne NULL alors qu un split est en cours
+mais n a pas encore repondu). J ai souvenir
+d avoir eu le meme bug dans une ancienne version
+du runtime, c etait pas regle de souvenir?
+Probleme de merge? Je suis reparti directement
+de la branche que tu m as conseille. De tete
+c etait un probleme dans le protocol de synchro
+utilise. Pour le moment j ai un lock global pour
+synchroniser le splitter et la reduction, mais c
+est invalid, ca reduit juste la frequence de raise
+des assert de maniere a pouvoir tester.
+
+Voila, je continue et te tiens au courant,
+
+Fabien.

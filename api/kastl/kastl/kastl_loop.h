@@ -173,8 +173,6 @@ namespace impl
     template<typename Sequence>
     bool extract(Sequence& s, typename Sequence::range_type& r)
     {
-      // todo
-      // s.steal(r, work_queue_t<64>::size_type sz_max );
       return false;
     }
   };
@@ -429,9 +427,10 @@ namespace impl
        const Sequence& seq,
        Body& body,
        const Settings& settings,
-       kaapi_stealcontext_t* master_sc = NULL)
+       kaapi_stealcontext_t* master_sc = NULL,
+       kaapi_taskadaptive_result_t* ktr = NULL)
 	: _res(res), _seq(seq), _body(body), _settings(settings),
-	  _master_sc(master_sc), _ktr(NULL)
+	  _master_sc(master_sc), _ktr(ktr)
       {}
     };
 
@@ -520,7 +519,7 @@ namespace impl
 	// initialize task stack
 	new (tc) task_context
 	  (rtc->_res, Sequence(pos, unit_size),
-	   vc->_body, vc->_settings, sc);
+	   vc->_body, vc->_settings, sc, ktr);
 
 	kastl_entry_t const thief_entry = outter_loop
 	  <ReduceTag, UnrollTag>::template
@@ -699,6 +698,7 @@ namespace impl
     (Result& res, Sequence& seq, Body& body, const Settings& settings)
     {
       // create a context and call master_entry
+      // note that result is inout and returned
 
       typedef splitter<Result, Sequence, Body, Settings> splitter_type;
       typedef typename splitter_type::task_context context_type;

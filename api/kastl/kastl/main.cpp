@@ -56,6 +56,7 @@ struct accumulate_body
   bool operator()(Value& result, Iterator& pos)
   {
     result += *pos;
+    *pos += 1;
     return false;
   }
 
@@ -179,19 +180,17 @@ static void check_seq(Iterator seq, size_t count)
     }
 }
 
-#if 0
 template<typename Iterator>
-static void check_seq_2(Iterator seq, size_t count)
+static void __attribute__((unused)) check_seq_2(Iterator seq, size_t count)
 {
   unsigned int i = 0;
   for (; count; --count, ++seq, ++i)
     if (*seq != 2)
     {
-      printf("invalid@%u\n", i);
+      printf("invalid@%u(%lf)\n", i, *seq);
       break;
     }
 }
-#endif
 
 int main()
 {
@@ -203,17 +202,19 @@ int main()
 
   gettimeofday(&tm_start, NULL);
 
-#define ITEM_COUNT 10000
+#define ITEM_COUNT 30000
   static value_type foo[ITEM_COUNT] = {};
   init_seq(foo, ITEM_COUNT);
-#if 0
+
+#if 0 // foreach
   for_each(foo, foo + ITEM_COUNT, op<value_type>(FOO_VALUE));
   gettimeofday(&tm_end, NULL);
   check_seq(foo, ITEM_COUNT);
-#else
+#else // accum
   const double accum = accumulate(foo, foo + ITEM_COUNT, value_type(0));
   gettimeofday(&tm_end, NULL);
   printf("res: %lf\n", accum);
+  check_seq_2(foo, ITEM_COUNT);
 #endif
 
   timersub(&tm_end, &tm_start, &tm_diff);
