@@ -91,7 +91,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       goto redo_execute;
     }
 /* warning: to avoid steal of processor ! */
-continue;    
+//continue;    
     
     /* steal request */
     kaapi_assert_debug( kproc->thread !=0 );

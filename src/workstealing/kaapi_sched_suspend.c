@@ -97,7 +97,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (kproc->thread !=0)
       goto redo_execution;
 /* warning: to avoid steal of processor ! */
-continue;    
+//continue;    
 
     /* else steal a task */
     if (kproc->thread ==0)
