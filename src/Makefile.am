@@ -74,6 +74,7 @@ libxkaapi_la_SOURCES=\
   kaapi_impl.h \
   static/kaapi_threadgroup_checkdeps.c\
   static/kaapi_threadgroup_version.c\
+  static/kaapi_threadgroup_veralloc.c\
   static/kaapi_threadgroup_taskbcast.c\
   static/kaapi_threadgroup_taskrecv.c\
   static/kaapi_threadgroup_taskrecvbcast.c\
