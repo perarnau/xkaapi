@@ -70,15 +70,34 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   nproc = kaapi_count_kprocessors;
   /* dispatch them using bloc destribution of size floor(kaapi_count_kprocessors/thgrp->group_size) */
   blocsize = (thgrp->group_size+nproc-1)/ nproc;
-  kaapi_processor_t* current_proc = kaapi_get_current_processor();
   
   for (i=0; i<thgrp->group_size; ++i)
   {
     kaapi_processor_id_t victim_procid = i/blocsize;
-#if 0 // Method should be implemented. Currently push locally and wait stealer    
+#if 1 // Method should be implemented. Currently push locally and wait stealer    
     kaapi_processor_t* victim_kproc = kaapi_all_kprocessors[victim_procid];
-    kaapi_wsqueuectxt_lockpush( &victim_kproc->lsuspend, thgrp->threadctxts[i] );
+    kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
+    kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
+    thgrp->threadctxts[i]->proc = victim_kproc;
+
+    if (kaapi_thread_isready(thgrp->threadctxts[i]))
+    {
+      kaapi_sched_lock( victim_kproc ); 
+      kaapi_sched_pushready( victim_kproc, thgrp->threadctxts[i] );
+      kaapi_sched_unlock( victim_kproc ); 
+    }
+    else {
+      /* put pad of the first non ready task as if the thread was suspended (but not into a queue) */
+      kaapi_wc_structure_t* wcs = &thgrp->threadctxts[i]->wcs;
+      wcs->wclist   = 0;
+      wcs->wccell   = 0;
+      wcs->affinity = thgrp->threadctxts[i]->affinity;
+      kaapi_task_t* task = thgrp->threadctxts[i]->sfp->pc;
+      task->pad = wcs;
+//      kaapi_wsqueuectxt_lockpush( &victim_kproc->lsuspend, thgrp->threadctxts[i] );
+    }
 #else
+    kaapi_processor_t* current_proc = kaapi_get_current_processor();
     kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
     kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
     thgrp->threadctxts[i]->proc = current_proc;

@@ -102,7 +102,7 @@ typedef struct kaapi_taskbcast_arg_t {
   kaapi_com_t*         last;
 } kaapi_taskbcast_arg_t;
 
-#define KAAPI_MAX_PARTITION 64
+#define KAAPI_MAX_PARTITION 128
 
 
 /** \ingroup DFG
@@ -148,6 +148,16 @@ typedef struct kaapi_version_t {
   void*            delete_data[KAAPI_MAX_PARTITION];   /* data deleted on each thread , may be reused if required */
 } kaapi_version_t;
 
+
+
+KAAPI_DECLARE_BLOCENTRIES(kaapi_version_bloc_t, kaapi_version_t);
+
+/*
+*/
+typedef struct kaapi_version_allocator_t {
+  kaapi_version_bloc_t* currentbloc;
+  kaapi_version_bloc_t* allallocatedbloc;
+} kaapi_version_allocator_t;
 
 
 
@@ -224,6 +234,7 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_thread_context_t*    mainctxt;     /* the main thread context */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
   
+  /* not yet used: to be used for iterative compt */
   kaapi_task_t*              save_mainthread;
   int                        size_mainthread;
   kaapi_task_t**             save_workerthreads;
@@ -239,6 +250,7 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_hashmap_t            ws_khm;  
   kaapi_vector_t             ws_vect_input;  /* first reader that are waiting for input data */  
   long                       tag_count;
+  kaapi_version_allocator_t  ver_allocator;
 } kaapi_threadgrouprep_t;
 
 
@@ -366,11 +378,22 @@ extern int kaapi_vector_init( kaapi_vector_t* v, kaapi_vectentries_bloc_t* initb
 */
 extern int kaapi_vector_destroy( kaapi_vector_t* v );
 
-
 /**
 */
 kaapi_pidreader_t* kaapi_vector_pushback( kaapi_vector_t* v );
 
+
+/**
+*/
+extern int kaapi_versionallocator_init( kaapi_version_allocator_t* va );
+
+/**
+*/
+extern int kaapi_versionallocator_destroy( kaapi_version_allocator_t* va );
+
+/**
+*/
+extern kaapi_version_t* kaapi_versionallocator_allocate( kaapi_version_allocator_t* va );
 
 #if defined(__cplusplus)
 }

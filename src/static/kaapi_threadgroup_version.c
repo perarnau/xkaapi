@@ -83,7 +83,12 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
    
   /* here a stack allocation attached with the thread group */
+#if 0
   ver = entry->u.dfginfo = calloc( 1, sizeof(kaapi_version_t) );
+#else
+  ver = entry->u.dfginfo = kaapi_versionallocator_allocate( &thgrp->ver_allocator );
+#endif
+  kaapi_assert( ver != 0 );
   ver->tag = 0; //++thgrp->tag_count;
   ver->writer_task = 0;
   ver->writer_thread = -1;
@@ -137,6 +142,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
   kaapi_task_t* taskbcast;
   kaapi_thread_t* writer_thread;
   
+  kaapi_assert( tid < KAAPI_MAX_PARTITION );
+  kaapi_assert( 0 <= tid );
   
   /* initialize the writer data structure if it not on the same partition (else only
      update reader data structure without changing the writer code
@@ -301,6 +308,9 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     int ith
 )
 {
+  kaapi_assert( tid < KAAPI_MAX_PARTITION );
+  kaapi_assert( 0 <= tid );
+
   /* an entry alread exist: 
      - W mode => mute the data => invalidate copies
      - if other copies exist in the thread group then be carefull in order to not modify other read copies

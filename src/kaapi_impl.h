@@ -347,6 +347,7 @@ typedef struct kaapi_wc_structure_t {
   struct kaapi_wsqueuectxt_t*      wclist;      /* suspend list that own the suspended thread _wcthread */
   struct kaapi_wsqueuectxt_cell_t* wccell;      /* waiting cell of the thread in _wclist, or 0 if not suspended */
   unsigned long                    affinity;    /* affinity of the suspended thread */
+  struct kaapi_thread_context_t*   thread;      /* may be omitted -> shift from the address of wc structure */
 } kaapi_wc_structure_t;
 
 
@@ -819,6 +820,13 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
   return 0;
 }
 
+/**
+*/
+static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
+{
+  return (thread->sfp->pc->body != kaapi_suspend_body);
+}
+
 /** 
 */
 static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
@@ -838,6 +846,7 @@ static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
 static inline int kaapi_sched_unlock( kaapi_processor_t* kproc )
 {
   kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(&kproc->lock) == (unsigned)(1+kproc->kid) );
+  kaapi_mem_barrier();
   KAAPI_ATOMIC_WRITE(&kproc->lock, 0);
   return 0;
 }

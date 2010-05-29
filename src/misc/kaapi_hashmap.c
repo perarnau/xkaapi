@@ -108,6 +108,8 @@ int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
     khm->allallocatedbloc = curr->next;
     free (curr);
   }
+  khm->allallocatedbloc = 0;
+  khm->currentbloc = 0;
   return 0;
 }
 

@@ -97,40 +97,54 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
         {
           kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)task->pad;
           /* remove it from suspended queue */
-          kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
-          if (kthread !=0) 
+          if (wcs->wccell !=0)
           {
-
-  #if 0     /* push on the owner of the bcast */
-            kaapi_processor_t* kproc = kaapi_get_current_processor();
-  #else     /* push on the owner of the suspended thread */
-            kaapi_processor_t* kproc = kthread->proc;
-  #endif
-            if (!kaapi_thread_hasaffinity(kthread->affinity, kproc->kid))
+            kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
+            if (kthread !=0) 
             {
-              /* find the first kid with affinity */
-              kaapi_processor_id_t kid;
-              for ( kid=0; kid<kaapi_count_kprocessors; ++kid)
-                if (kaapi_thread_hasaffinity( kthread->affinity, kid)) break;
-              kaapi_assert_debug( kid < kaapi_count_kprocessors );
-              kproc = kaapi_all_kprocessors[ kid ];
-            }
 
-            /* move the thread in the ready list of the victim processor */
+#if 0     /* push on the owner of the bcast */
+              kaapi_processor_t* kproc = kaapi_get_current_processor();
+#else     /* push on the owner of the suspended thread */
+              kaapi_processor_t* kproc = kthread->proc;
+#endif
+              if (!kaapi_thread_hasaffinity(kthread->affinity, kproc->kid))
+              {
+                /* find the first kid with affinity */
+                kaapi_processor_id_t kid;
+                for ( kid=0; kid<kaapi_count_kprocessors; ++kid)
+                  if (kaapi_thread_hasaffinity( kthread->affinity, kid)) break;
+                kaapi_assert_debug( kid < kaapi_count_kprocessors );
+                kproc = kaapi_all_kprocessors[ kid ];
+              }
+
+              /* move the thread in the ready list of the victim processor */
+              kaapi_sched_lock( kproc );
+              kaapi_task_setbody(task, newbody );
+              kaapi_sched_pushready( kproc, kthread );
+
+#if 0
+              printf("BCAST => Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
+              fflush( stdout );
+#endif
+              /* bcast will activate a suspended thread */
+    //              printf("Bcast wakeup non stick stack @:%p, can be moved...\n", (void*)stack);
+    //              fflush(stdout );
+              kaapi_sched_unlock( kproc );
+            } else 
+              kaapi_task_setbody(task, newbody);
+          } else { /* wccell == 0 */
+            kaapi_thread_context_t* kthread = wcs->thread;
+            kaapi_processor_t* kproc = kthread->proc;            
+#if 0
+            printf("BCAST => detached Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
+            fflush( stdout );
+#endif
             kaapi_sched_lock( kproc );
             kaapi_task_setbody(task, newbody );
             kaapi_sched_pushready( kproc, kthread );
-
-#if 0
-            printf("BCAST => Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
-            fflush( stdout );
-#endif
-            /* bcast will activate a suspended thread */
-  //              printf("Bcast wakeup non stick stack @:%p, can be moved...\n", (void*)stack);
-  //              fflush(stdout );
             kaapi_sched_unlock( kproc );
-          } else 
-            kaapi_task_setbody(task, newbody);
+          }
         }
         else {
           /* thread is not suspended... */        

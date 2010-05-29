@@ -94,6 +94,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 #endif
       return 0;
     }
+    if (kproc->thread !=0)
+      goto redo_execution;
+/* warning: to avoid steal of processor ! */
+continue;    
 
     /* else steal a task */
     if (kproc->thread ==0)
@@ -122,6 +126,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 #endif
     }
 
+redo_execution:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif

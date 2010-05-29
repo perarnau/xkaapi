@@ -56,7 +56,8 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
   kaapi_vector_init( &thgrp->ws_vect_input, 0 );
-
+  kaapi_versionallocator_init( &thgrp->ver_allocator );
+  
   /* same the main thread frame to restore it at the end of parallel computation */
   kaapi_thread_save_frame(thgrp->mainthread, &thgrp->mainframe);
 #if 0
@@ -99,6 +100,7 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   }
 
   kaapi_hashmap_destroy( &thgrp->ws_khm );
+  kaapi_versionallocator_destroy( &thgrp->ver_allocator );
   
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;
