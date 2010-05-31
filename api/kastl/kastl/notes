@@ -1,20 +1,33 @@
 -- bugs
-. some part of the sequence are processed several times
- . ie. check_sequence sees 3.0
- . probleme de conccurence entre le pop et le steal: voir
- trace o.2, (9932 - 10512) entre [0] et [3]
-  -> lors d un conflit pop/steal
-   -> semble pas possible, puisque bug meme quand global_lock
-  -> ou lors d une reduction, recuperation de la sequence
-  -> ou alors la sequence qu on recupere n est pas non plus valide
-  puisque c est une reference sur la pile de tache, qui peut etre
-  reutilisee entre temps
-
-. last working commit: 4ec5548580d80cc88e5da718804884f8a0134da8
+. probleme avec algorithme find, abandon
+. arriver de tomber dans une boucle infinie
+. besoin d un lock global
+ . while true ; do ...
+ . a debugger avec gdb, what are the threads blocking on
 
 -- todos
-. brancher et recompiler le runtime
-. ajouter les modifs necessaires a previous_branch/kastl_sequences.h
+. find algo, initialiser, comparer le resultat
+ . l idee est de passer la sequence en parametre
+ dans le cas d un algorithm_result, rien dans le
+ cas d un numeric_result
+  . init_result met le resultat a .end()
+ . comment faire la reduction
+. tester que la terminaison fonctionne
+
+ ==> il faut peut etre arreter de passer par des
+ iterator et seulement par des index et transformer
+ au dernier moment
+
+. une fois find implemente, faire:
+ResultTag qui remplace le ReduceTag
+et peut avoir la value suivante:
+void_tag, algorithm_tag, numeric_tag
+ce tag permet la specialisation de
+l allocation, initialisation, la preemption ect... 
+
+. partir sur des algos plus compliques pour tester
+le modele: inner_product
+
 . remove unneeded template arguments (for instance Body)
 . remove unneeded result
 
@@ -26,6 +39,8 @@
 
 . faire un preempter, meme que reducer
  . PreemptionTag = nopreempt_tag
+
+. faire un tuner maintenant que les settings sont dynamiques
 
 -- impl
 template<typename Iterator>
@@ -53,39 +68,3 @@ struct numeric_result : base_result
 struct void_result
 {
 };
-
-
---
-Salut, ca va?
-
-J ai regle le bug que j avais hier, il
-venait de mon code (j utilisais une ref
-sur le resultat alloue sur la pile du
-thread, non valide apres retour pour la
-reduction).
-
-Il me reste 2 problemes:
-. le vol ne se fait pas correctement, et
-je repasse dans certains cas sur des parties
-de la sequence deja traitees. Il faut que
-je vois si ca vient du code applicatif ou
-de la workqueue,
-. je tombe dans le cas ou des thiefs sont
-non reduits (ie. assert du finalize), a cause
-d une conccurrence entre le splitter et la
-reduction (plus precisement kaapi_get_thief_head
-retourne NULL alors qu un split est en cours
-mais n a pas encore repondu). J ai souvenir
-d avoir eu le meme bug dans une ancienne version
-du runtime, c etait pas regle de souvenir?
-Probleme de merge? Je suis reparti directement
-de la branche que tu m as conseille. De tete
-c etait un probleme dans le protocol de synchro
-utilise. Pour le moment j ai un lock global pour
-synchroniser le splitter et la reduction, mais c
-est invalid, ca reduit juste la frequence de raise
-des assert de maniere a pouvoir tester.
-
-Voila, je continue et te tiens au courant,
-
-Fabien.

@@ -131,6 +131,37 @@ namespace impl
   // sugar
   typedef settings<static_tag> static_settings;
 
+  // results
+  template<typename Iterator>
+  struct algorithm_result
+  {
+    bool _is_touched;
+    Iterator _iter;
+
+    algorithm_result() : _is_touched(false)
+    {}
+
+    algorithm_result(const Iterator& iter)
+      : _is_touched(false), _iter(iter)
+    {}
+
+    void set_iter(const Iterator& iter)
+    {
+      _is_touched = true;
+      _iter = iter;
+    }
+  };
+
+  template<typename Value>
+  struct numeric_result
+  {
+    Value _value;
+
+    numeric_result(const Value& value = static_cast<Value>(0))
+      : _value(value)
+    {}
+  };
+
   // extractors
   template<typename Tag = static_tag>
   struct extractor
@@ -198,9 +229,10 @@ namespace impl
 
       Sequence _seq;
       Result _res;
+      bool _is_done;
 
       thief_context(const Sequence& seq)
-	: _seq(seq)
+	: _seq(seq), _is_done(false)
       {}
 
       static kaapi_taskadaptive_result_t* allocate
@@ -223,10 +255,6 @@ namespace impl
       {}
     };
 
-    template<typename Result, typename Body>
-    static void init_result(Result&, Body&)
-    {}
-
     template<typename Result, typename Sequence, typename Body>
     static int reduce_function
     (kaapi_stealcontext_t* sc, void* targ, void* tptr, size_t tsize, void* vptr)
@@ -239,13 +267,6 @@ namespace impl
       victim_context_type* const vc = static_cast<victim_context_type*>(vptr);
       thief_context_type* const tc = static_cast<thief_context_type*>(tptr);
 
-#if CONFIG_KASTL_DEBUG
-      printf("[%08d] [%u] reduce [%ld %ld]\n",
-	     ++printid, kaapi_get_current_kid(),
-	     tc->_seq._wq._beg,
-	     tc->_seq._wq._end);
-#endif
-
       // join sequences
       kastl::rts::range_t<64> range(tc->_seq._wq._beg, tc->_seq._wq._end);
       vc->_seq._rep = tc->_seq._rep;
@@ -255,24 +276,29 @@ namespace impl
     }
 
     template<typename Result, typename Sequence, typename Body>
-    static bool reduce
-    (kaapi_stealcontext_t* sc, Result&, Sequence& seq, Body&)
+    static void reduce
+    (kaapi_stealcontext_t* sc,
+     bool& has_thief,
+     bool&,
+     Result&, Sequence& seq, Body&)
     {
       kastl_reducer_t const kastl_reducer =
 	reduce_function<Result, Sequence, Body>;
+
+      has_thief = true;
 
       // no more thief, we are done
       __global_lock::acquire();
       kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head(sc);
       __global_lock::release();
       if (ktr == NULL)
-	return true;
+      {
+	has_thief = false;
+	return ;
+      }
 
       victim_context<Result, Sequence, Body> vc(seq);
-      if (kaapi_preempt_thief(sc, ktr, NULL, kastl_reducer, &vc))
-	return true;
-
-      return false;
+      kaapi_preempt_thief(sc, ktr, NULL, kastl_reducer, &vc);
     }
 
     static bool preempt
@@ -293,12 +319,11 @@ namespace impl
 
       Sequence _seq;
       Result _res;
+      bool _is_done;
 
-      thief_context
-      (const Sequence& seq, Body& body) : _seq(seq)
-      {
-	body.init_result(_res);
-      }
+      thief_context(const Sequence& seq, Body& body)
+	: _seq(seq), _is_done(false)
+      {}
 
       static kaapi_taskadaptive_result_t* allocate
       (kaapi_stealcontext_t* sc, const Sequence& seq, Body& body)
@@ -313,20 +338,15 @@ namespace impl
     template<typename Result, typename Sequence, typename Body>
     struct victim_context
     {
+      bool& _is_done;
       Result& _res;
       Sequence& _seq;
       Body& _body;
 
-      victim_context(Result& res, Sequence& seq, Body& body)
-	: _res(res), _seq(seq), _body(body)
+      victim_context(bool& is_done, Result& res, Sequence& seq, Body& body)
+	: _is_done(is_done), _res(res), _seq(seq), _body(body)
       {}
     }; // victim_context
-
-    template<typename Result, typename Body>
-    static void init_result(Result& res, Body& body)
-    {
-      body.init_result(res);
-    }
 
     template<typename Result, typename Sequence, typename Body>
     static int reduce_function
@@ -340,43 +360,54 @@ namespace impl
       victim_context_type* const vc = static_cast<victim_context_type*>(vptr);
       thief_context_type* const tc = static_cast<thief_context_type*>(tptr);
 
-#if CONFIG_KASTL_DEBUG
-      printf
-	("[%08d] [%u] reduce(%lf)\n",
-	 ++printid, kaapi_get_current_kid(), tc->_res);
-#endif
+      // if we are done, dont retrieve
+      // thief result and sequence, so
+      // that there is nothing to steal
+      // from us. otherwise, get result
+      // and update _is_done accordingly.
+      if (vc->_is_done == false)
+      {
+	// reduce results
+	if (vc->_body.reduce(vc->_res, tc->_res) == true)
+	{
+	  // algorithm completed
+	  vc->_is_done = true;
+	  return 1;
+	}
 
-      // reduce results
-      if (vc->_body.reduce(vc->_res, tc->_res) == true)
-	return 1; // true, terminated
+	// join sequences
+	kastl::rts::range_t<64> range(tc->_seq._wq._beg, tc->_seq._wq._end);
+	vc->_seq._rep = tc->_seq._rep;
+	vc->_seq._wq.set(range);
+      }
 
-      // join sequences
-      kastl::rts::range_t<64> range(tc->_seq._wq._beg, tc->_seq._wq._end);
-      vc->_seq._rep = tc->_seq._rep;
-      vc->_seq._wq.set(range);
-
-      return 0; // false, continue
+      return 0;
     }
 
     template<typename Result, typename Sequence, typename Body>
-    static bool reduce
-    (kaapi_stealcontext_t* sc, Result& res, Sequence& seq, Body& body)
+    static void reduce
+    (kaapi_stealcontext_t* sc,
+     bool& has_thief,
+     bool& is_done,
+     Result& res, Sequence& seq, Body& body)
     {
       kastl_reducer_t const kastl_reducer =
 	reduce_function<Result, Sequence, Body>;
+
+      has_thief = true;
 
       // no more thief, we are done
       __global_lock::acquire();
       kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head(sc);
       __global_lock::release();
       if (ktr == NULL)
-	return true;
+      {
+	has_thief = false;
+	return ;
+      }
 
-      victim_context<Result, Sequence, Body> vc(res, seq, body);
-      if (kaapi_preempt_thief(sc, ktr, NULL, kastl_reducer, &vc))
-	return true;
-
-      return false;
+      victim_context<Result, Sequence, Body> vc(is_done, res, seq, body);
+      kaapi_preempt_thief(sc, ktr, NULL, kastl_reducer, &vc);
     }
 
     static bool preempt
@@ -565,6 +596,15 @@ namespace impl
 
       iterator_type end = range.end();
 
+#if 0
+      printf("[%u] process [%lu - %lu]\n",
+	     kaapi_get_current_kid(),
+	     (unsigned long)(range.begin() - __first),
+	     (unsigned long)(range.end() - __first)
+	     );
+      fflush(stdout);
+#endif
+
       for (iterator_type pos = range.begin(); pos != end; ++pos)
 	if (body(res, pos) == true)
 	  return true;
@@ -592,56 +632,43 @@ namespace impl
      Body& body,
      const Settings& settings)
     {
+      typedef typename reducer<ReduceTag>::template
+	thief_context<Result, Sequence, Body>
+	thief_context_type;
+
+      thief_context_type* tc = NULL;
+      if (ktr != NULL)
+	tc = static_cast<thief_context_type*>(ktr->data);
+
+      // is_done is a reference to either ktr or
+      bool is_done_storage = false;
+      bool& is_done = (tc == NULL) ? is_done_storage : tc->_is_done;
+
       typedef typename Sequence::range_type range_type;
       range_type subr;
 
     redo_loop:
 
-      while (xtr.extract(seq, subr))
+      while ((is_done == false) && (xtr.extract(seq, subr)))
       {
-#if CONFIG_KASTL_DEBUG
-	printf
-	  ("[%08d] [%u] outter_loop::xtr.extract(%ld)\n",
-	   ++printid, kaapi_get_current_kid(), subr.size());
-#endif
-
-	const bool is_done = inner_loop<UnrollTag>::template
+	is_done = inner_loop<UnrollTag>::template
 	  run<Result, range_type, Body>(res, subr, body);
-	if (is_done == true)
-	{
-#if CONFIG_KASTL_DEBUG
-	  printf
-	    ("[%08d] [%u] outter_loop::done\n",
-	     ++printid, kaapi_get_current_kid());
-#endif
-	  return ;
-	}
 
 	// check if we have been preempted
 	if (ktr != NULL)
 	{
 	  const bool is_preempted = reducer<ReduceTag>::preempt(sc, ktr);
 	  if (is_preempted == true)
-	  {
-#if CONFIG_KASTL_DEBUG
-	    printf("[%08d] [%u] outter_loop::preempted(%lf)\n",
-		   ++printid, kaapi_get_current_kid(), res);
-#endif
 	    return ;
-	  }
 	}
       }
 
-      // reduce the remaining thieves
-      const bool is_term = reducer<ReduceTag>::template
-	reduce<Result, Sequence, Body>(sc, res, seq, body);
-      if (is_term == false)
+      // reduce the remaining thieves or return
+      bool has_thief;
+      reducer<ReduceTag>::template reduce<Result, Sequence, Body>
+	(sc, has_thief, is_done, res, seq, body);
+      if (has_thief == true)
 	goto redo_loop;
-
-#if CONFIG_KASTL_DEBUG
-      printf("[%08d] [%u] outter_loop::return(%lf)\n",
-	     ++printid, kaapi_get_current_kid(), res);
-#endif
     }
 
     // task entry points

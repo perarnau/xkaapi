@@ -307,6 +307,12 @@ public:
   {
     return _wq.size();
   }
+
+  // end
+  const RandomIterator1 end() const
+  {
+    return _rep.ri1 + size();
+  }
   
 public:
   work_queue_t<64> _wq;

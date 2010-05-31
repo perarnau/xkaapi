@@ -1,40 +1,43 @@
+// debug
+double* __first;
+extern "C" unsigned int kaapi_get_current_kid(void);
+
+
 #include <stdio.h>
 #include <sys/time.h>
+#include <iterator>
 #include "kastl_loop.h"
 #include "kastl_sequences.h"
 
 
-
-extern "C" unsigned int kaapi_get_current_kid(void);
-
-
 // find
-template<typename Iterator, typename Value>
+
+template<typename Iterator>
 struct find_body
 {
-  typedef Value result_type;
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  typedef kastl::impl::algorithm_result<Iterator> result_type;
 
-  const Value& _value;
+  const value_type& _value;
 
-  find_body(const Value& value) : _value(value) {}
+  find_body(const value_type& value) : _value(value) {}
 
-  bool operator()(result_type& result, const Iterator& pos)
+  bool operator()(result_type& res, const Iterator& pos)
   {
     // return true if result is found
     if (*pos != _value)
       return false;
 
-    result = pos;
+    res.set_iter(pos);
     return true;
   }
 
-  bool reduce(Value&, const Value&)
+  bool reduce(result_type& lhs, const result_type& rhs)
   {
-    return false;
-  }
-
-  void init_result(result_type&)
-  {
+    if (rhs._is_touched == false)
+      return false;
+    lhs.set_iter(rhs._iter);
+    return true;
   }
 
 };
@@ -42,11 +45,15 @@ struct find_body
 template<typename Iterator, typename Value>
 static Iterator find(Iterator first, Iterator last, const Value& value)
 {
+  // debug
+  __first = first;
+
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  kastl::impl::static_settings settings(512, 512);
-  find_body<Iterator, Value> body(value);
-  Iterator res = last;
-  return kastl::impl::reduce_loop::run(res, seq, body, settings);
+  kastl::impl::static_settings settings(1024, 1024);
+  find_body<Iterator> body(value);
+  kastl::impl::algorithm_result<Iterator> res(last);
+  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  return res._iter;
 }
 
 
@@ -56,24 +63,19 @@ struct accumulate_body
 {
   // typedef Sequence<Iterator> sequence_type;
 
-  bool operator()(Value& result, Iterator& pos)
+  typedef kastl::impl::numeric_result<Value> result_type;
+
+  bool operator()(result_type& result, const Iterator& pos)
   {
-    result += *pos;
-    *pos += 1;
+    result._value += *pos;
     return false;
   }
 
-  bool reduce(Value& lhs, const Value& rhs)
+  bool reduce(result_type& lhs, const result_type& rhs)
   {
-    lhs += rhs;
+    lhs._value += rhs._value;
     return false;
   }
-
-  void init_result(Value& result)
-  {
-    result = static_cast<Value>(0);
-  }
-
 };
 
 template<typename Iterator, typename Value>
@@ -82,9 +84,10 @@ Value accumulate(Iterator first, Iterator last, const Value& value)
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   kastl::impl::static_settings settings(1024, 1024);
   accumulate_body<Iterator, Value> body;
-  Value result = value;
-  return kastl::impl::reduce_unrolled_loop::run
+  kastl::impl::numeric_result<Value> result(value);
+  kastl::impl::reduce_unrolled_loop::run
     (result, seq, body, settings);
+  return result._value;
 }
 
 
@@ -98,15 +101,8 @@ struct for_each_body
 
   Operation _op;
 
-#if CONFIG_KASTL_DEBUG
-  const Iterator& _first;
-#endif
-
   for_each_body(const Operation& op, const Iterator& first)
     : _op(op)
-#if CONFIG_KASTL_DEBUG
-    , _first(first)
-#endif
   {}
 
   bool operator()(result_type&, range_type& range)
@@ -114,15 +110,6 @@ struct for_each_body
     typedef typename range_type::iterator1_type iterator_type;
 
     iterator_type end = range.end();
-
-#if CONFIG_KASTL_DEBUG
-    printf(">> [%d] (%ld - %ld)\n",
-	   kaapi_get_current_kid(),
-	   range.begin() - _first,
-	   range.end() - _first);
-    fflush(stdout);
-#endif
-
     for (iterator_type pos = range.begin(); pos != end; ++pos)
       _op(*pos);
 
@@ -212,11 +199,21 @@ int main()
   for_each(foo, foo + ITEM_COUNT, op<value_type>(FOO_VALUE));
   gettimeofday(&tm_end, NULL);
   check_seq_2(foo, ITEM_COUNT);
-#else // accum
+#elif 0 // accum
   const double accum = accumulate(foo, foo + ITEM_COUNT, value_type(0));
   gettimeofday(&tm_end, NULL);
   printf("res: %lf\n", accum);
-  check_seq_2(foo, ITEM_COUNT);
+  // check_seq_2(foo, ITEM_COUNT);
+#elif 1 // find
+  const size_t item_index = ITEM_COUNT - (ITEM_COUNT / 4);
+  // const size_t item_index = ITEM_COUNT / 4;
+  foo[item_index] = 42;
+  value_type* const res = find(foo, foo + ITEM_COUNT, value_type(42));
+  gettimeofday(&tm_end, NULL);
+  if (res != (foo + item_index))
+    printf("invalidResult(%lu != %lu)\n", res - foo, item_index);
+#else
+# error select an algorithm
 #endif
 
   timersub(&tm_end, &tm_start, &tm_diff);
