@@ -1,11 +1,54 @@
 -- bugs
-. probleme avec algorithme find, abandon
-. arriver de tomber dans une boucle infinie
+
+. pour corriger le bug, reduire la sequence a 0
+  une fois termine. sinon on peut encore se faire
+  voler a tout moment 
+
+. boucle infinie dans le splitter (?)
+ . ex: KAAPI_CPUCOUNT=2 kastl::find()
+ -> c est en fait un deadlock
+  . 2 locks
+   . l0 pour nombre de thief courant
+   . l1 pour synchro splitter/reducer
+  . t1 dans splitter, incr l0, attend l1
+  . t2 dans reducer, attend l0 == 0, a l1
 . besoin d un lock global
  . while true ; do ...
  . a debugger avec gdb, what are the threads blocking on
 
+. dans le splitter, tailles pas bonne distribuee
+ . exemple avec 2 threads:
+unit_size == 3976
+unit_size == 1476
+unit_size == 226
+unit_size == 113
+unit_size == 56
+unit_size == 28
+unit_size == 14
+unit_size == 7
+unit_size == 4
+unit_size == 2
+unit_size == 1
+ . to solve this, add a test on settings::par_size
+ right after the _seq.steal()
+
+ .
+[KAAPI::INIT] use #physical cpu:2
+[00000001] [1] --- > splitter(4296)
+[00000002] [1] --- < splitter
+[00000003] [1] --- > splitter(2084)
+[00000004] [1] --- < splitter
+[00000005] [0] --- has_thief == false
+[00000006] [1] --- > splitter(146)
+[00000007] [1] --- < splitter
+[00000008] [1] --- has_thief == false
+
+
+
 -- todos
+. tester les perfs de find
+ . reduire le nombre de ifs
+
 . find algo, initialiser, comparer le resultat
  . l idee est de passer la sequence en parametre
  dans le cas d un algorithm_result, rien dans le

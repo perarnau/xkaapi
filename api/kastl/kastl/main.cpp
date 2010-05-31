@@ -49,7 +49,7 @@ static Iterator find(Iterator first, Iterator last, const Value& value)
   __first = first;
 
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  kastl::impl::static_settings settings(1024, 1024);
+  kastl::impl::static_settings settings(128, 128);
   find_body<Iterator> body(value);
   kastl::impl::algorithm_result<Iterator> res(last);
   kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
@@ -82,7 +82,7 @@ template<typename Iterator, typename Value>
 Value accumulate(Iterator first, Iterator last, const Value& value)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  kastl::impl::static_settings settings(1024, 1024);
+  kastl::impl::static_settings settings(128, 128);
   accumulate_body<Iterator, Value> body;
   kastl::impl::numeric_result<Value> result(value);
   kastl::impl::reduce_unrolled_loop::run
@@ -128,7 +128,7 @@ void for_each(Iterator first, Iterator last, Operation op, const Settings& setti
 template<typename Iterator, typename Operation>
 void for_each(Iterator first, Iterator last, Operation op)
 {
-  kastl::impl::static_settings settings(1024, 1024);
+  kastl::impl::static_settings settings(128, 128);
   for_each(first, last, op, settings);
 }
 
@@ -199,12 +199,12 @@ int main()
   for_each(foo, foo + ITEM_COUNT, op<value_type>(FOO_VALUE));
   gettimeofday(&tm_end, NULL);
   check_seq_2(foo, ITEM_COUNT);
-#elif 0 // accum
+#elif 1 // accum
   const double accum = accumulate(foo, foo + ITEM_COUNT, value_type(0));
   gettimeofday(&tm_end, NULL);
   printf("res: %lf\n", accum);
   // check_seq_2(foo, ITEM_COUNT);
-#elif 1 // find
+#elif 0 // find
   const size_t item_index = ITEM_COUNT - (ITEM_COUNT / 4);
   // const size_t item_index = ITEM_COUNT / 4;
   foo[item_index] = 42;

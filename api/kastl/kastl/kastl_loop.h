@@ -57,8 +57,10 @@ extern "C" unsigned int kaapi_get_current_kid(void);
 static volatile unsigned int __attribute__((aligned)) printid = 0;
 #endif
 
+/* global lock */
+#define CONFIG_KASTL_GLOBAL_LOCK 0
+#if CONFIG_KASTL_GLOBAL_LOCK
 
-/* temporary global lock */
 struct __global_lock
 {
   static kastl::rts::atomic_t<32> _lock;
@@ -76,6 +78,8 @@ struct __global_lock
 };
 
 kastl::rts::atomic_t<32> __global_lock::_lock = {{0}};
+
+#endif // CONFIG_KASTL_GLOBAL_LOCK
 
 
 namespace kastl
@@ -288,9 +292,7 @@ namespace impl
       has_thief = true;
 
       // no more thief, we are done
-      __global_lock::acquire();
       kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head(sc);
-      __global_lock::release();
       if (ktr == NULL)
       {
 	has_thief = false;
@@ -397,9 +399,7 @@ namespace impl
       has_thief = true;
 
       // no more thief, we are done
-      __global_lock::acquire();
       kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head(sc);
-      __global_lock::release();
       if (ktr == NULL)
       {
 	has_thief = false;
@@ -482,7 +482,7 @@ namespace impl
 	return 0;
 
       size_t unit_size = seq_size / (request_count + 1);
-      if (unit_size == 0)
+      if (unit_size < vc->_settings._par_size)
       {
 	request_count = (seq_size / vc->_settings._par_size) - 1;
 	if (request_count <= 0)
@@ -497,8 +497,6 @@ namespace impl
       range_type r;
       if (vc->_seq.steal(r, steal_size) == false)
 	return 0;
-
-      __global_lock::acquire();
 
       // recompute the request count
       if ((size_t)r.size() != steal_size)
@@ -565,8 +563,6 @@ namespace impl
 	--request_count;
 	++reply_count;
       }
-
-      __global_lock::release();
 
       return reply_count;
     }
@@ -648,8 +644,7 @@ namespace impl
       range_type subr;
 
     redo_loop:
-
-      while ((is_done == false) && (xtr.extract(seq, subr)))
+      while (xtr.extract(seq, subr))
       {
 	is_done = inner_loop<UnrollTag>::template
 	  run<Result, range_type, Body>(res, subr, body);
@@ -661,14 +656,33 @@ namespace impl
 	  if (is_preempted == true)
 	    return ;
 	}
+
+	// empty sequence to prevent stealing
+	if (is_done == true)
+	{
+	  seq.empty();
+	  break;
+	}
       }
 
+    redo_reduce:
       // reduce the remaining thieves or return
       bool has_thief;
       reducer<ReduceTag>::template reduce<Result, Sequence, Body>
 	(sc, has_thief, is_done, res, seq, body);
       if (has_thief == true)
+      {
+	// reduce until no more thief. if done,
+	// loop on the redo_reduce label. if
+	// not, redo the loop with the sequence
+	// got from the thief.
+
+	if (is_done == true)
+	  goto redo_reduce;
 	goto redo_loop;
+      }
+
+      // no more thief
     }
 
     // task entry points

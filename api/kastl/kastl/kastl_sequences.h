@@ -308,7 +308,15 @@ public:
     return _wq.size();
   }
 
-  // end
+  /* empty 
+  */
+  void empty()
+  {
+    _wq.clear();
+  }
+
+  /* end 
+  */
   const RandomIterator1 end() const
   {
     return _rep.ri1 + size();
