@@ -94,7 +94,7 @@ template<typename Iterator, typename Function>
 Function for_each(Iterator first, Iterator last, Function op)
 {
   kastl::impl::static_settings settings(512, 512);
-  return for_each(first, last, op, settings);
+  return kastl::for_each(first, last, op, settings);
 }
 
 } // kastl::

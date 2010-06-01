@@ -3,6 +3,12 @@
 
 -- todos
 
+. algorithm
+ . count
+ . count_if
+ . inner_product
+ . transform
+
 . make the current things compile and work
 
 . introduce a new kind of algorithm_result

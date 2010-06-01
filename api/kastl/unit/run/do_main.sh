@@ -38,7 +38,8 @@ CPUSET4=0,1,2,3,4,5,6,7
 #ALGOS='accumulate'
 #ALGOS='for_each'
 #ALGOS='max_element'
-ALGOS="ALGOS find_first_of"
+#ALGOS="ALGOS find_first_of"
+ALGOS="ALGOS count"
 LIBS='kastl'
 DOS='check'
 

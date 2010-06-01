@@ -3,11 +3,11 @@
 ALGOS=''
 #ALGOS="$ALGOS find"
 #ALGOS="$ALGOS find_if"
-ALGOS="$ALGOS find_first_of"
+#ALGOS="$ALGOS find_first_of"
 #ALGOS="$ALGOS accumulate"
 #ALGOS="$ALGOS inner_product"
 #ALGOS="$ALGOS for_each"
-#ALGOS="$ALGOS count"
+ALGOS="$ALGOS count"
 #ALGOS="$ALGOS transform"
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS min_element"
