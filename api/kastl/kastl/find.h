@@ -85,7 +85,7 @@ struct find_body
 };
 
 template<typename Iterator, typename Value>
-static Iterator find(Iterator first, Iterator last, const Value& value)
+Iterator find(Iterator first, Iterator last, const Value& value)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   kastl::impl::static_settings settings(512, 512);

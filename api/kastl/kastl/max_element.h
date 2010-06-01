@@ -98,7 +98,7 @@ struct gt
 };
 
 template<typename Iterator, typename Predicate, typename Settings>
-static Iterator max_element
+Iterator max_element
 (Iterator first, Iterator last, Predicate pred, const Settings& settings)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
@@ -109,7 +109,7 @@ static Iterator max_element
 }
 
 template<typename Iterator, typename Predicate>
-static Iterator max_element
+Iterator max_element
 (Iterator first, Iterator last, Predicate pred)
 {
   kastl::impl::static_settings settings(512, 512);
@@ -117,7 +117,7 @@ static Iterator max_element
 }
 
 template<typename Iterator>
-static Iterator max_element(Iterator first, Iterator last)
+Iterator max_element(Iterator first, Iterator last)
 {
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
   return kastl::max_element(first, last, kastl::gt<value_type>());

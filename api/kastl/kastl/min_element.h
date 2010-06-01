@@ -98,7 +98,7 @@ struct lt
 };
 
 template<typename Iterator, typename Predicate, typename Settings>
-static Iterator min_element
+Iterator min_element
 (Iterator first, Iterator last, Predicate pred, const Settings& settings)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
@@ -109,7 +109,7 @@ static Iterator min_element
 }
 
 template<typename Iterator, typename Predicate>
-static Iterator min_element
+Iterator min_element
 (Iterator first, Iterator last, Predicate pred)
 {
   kastl::impl::static_settings settings(512, 512);
@@ -117,7 +117,7 @@ static Iterator min_element
 }
 
 template<typename Iterator>
-static Iterator min_element(Iterator first, Iterator last)
+Iterator min_element(Iterator first, Iterator last)
 {
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
   return kastl::min_element(first, last, kastl::lt<value_type>());
