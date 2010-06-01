@@ -2,14 +2,14 @@
 
 ALGOS=''
 #ALGOS="$ALGOS find"
-#ALGOS="$ALGOS accumulate"
+ALGOS="$ALGOS accumulate"
 #ALGOS="$ALGOS inner_product"
 #ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
 #ALGOS="$ALGOS transform"
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS min_element"
-ALGOS="$ALGOS max_element"
+#ALGOS="$ALGOS max_element"
 #ALGOS="$ALGOS find_first_of"
 
 for A in $ALGOS; do

@@ -52,10 +52,10 @@
 #include "kastl/max_element.h"
 
 #if 0
-#include "kastl/transform.h"
 #include "kastl/copy.h"
 #include "kastl/count.h"
 #include "kastl/equal.h"
+#include "kastl/transform.h"
 #endif
 
 

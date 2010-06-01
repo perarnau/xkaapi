@@ -156,13 +156,17 @@ namespace impl
     }
   };
 
-  template<typename Value>
+  template<typename Iterator, typename Value>
   struct numeric_result
   {
     Value _value;
 
-    numeric_result(const Value& value = static_cast<Value>(0))
+    numeric_result(const Value& value)
       : _value(value)
+    {}
+
+    numeric_result(const Iterator&)
+      : _value(static_cast<Value>(0))
     {}
   };
 
@@ -591,16 +595,6 @@ namespace impl
       typedef typename Range::iterator1_type iterator_type;
 
       iterator_type end = range.end();
-
-#if 0
-      printf("[%u] process [%lu - %lu]\n",
-	     kaapi_get_current_kid(),
-	     (unsigned long)(range.begin() - __first),
-	     (unsigned long)(range.end() - __first)
-	     );
-      fflush(stdout);
-#endif
-
       for (iterator_type pos = range.begin(); pos != end; ++pos)
 	if (body(res, pos) == true)
 	  return true;

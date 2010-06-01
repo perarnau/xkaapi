@@ -3,6 +3,8 @@
 
 -- todos
 
+. make the current things compile and work
+
 . introduce a new kind of algorithm_result
 that should be initialized with the beginning
 of the sequence
@@ -45,3 +47,100 @@ le modele: inner_product
  . PreemptionTag = nopreempt_tag
 
 . faire un tuner maintenant que les settings sont dynamiques
+
+
+--
+. http://www.sgi.com/tech/stl/table_of_contents.html
+ . sequence model
+  . Algorithms
+   1. Non-mutating algorithms [1 iterator ok]
+         1. for_each
+         2. find
+         3. find_if
+         4. adjacent_find
+         5. find_first_of
+         6. count
+         7. count_if
+         8. mismatch
+         9. equal
+        10. search
+        11. search_n
+        12. find_end 
+   2. Mutating algorithms
+         1. copy [needs 2 iterators]
+         2. copy_n
+         3. copy_backward
+         4. Swap
+               1. swap
+               2. iter_swap
+               3. swap_ranges 
+         5. transform [needs 1/1, 2/1 model]
+         6. Replace [ok with 1 iterator]
+               1. replace
+               2. replace_if
+               3. replace_copy
+               4. replace_copy_if 
+         7. fill [needs 1 output]
+         8. fill_n
+         9. generate [needs 1 output]
+        10. generate_n
+        11. Remove
+               1. remove
+               2. remove_if
+               3. remove_copy
+               4. remove_copy_if 
+        12. unique
+        13. unique_copy
+        14. reverse
+        15. reverse_copy
+        16. rotate
+        17. rotate_copy
+        18. random_shuffle
+        19. random_sample
+        20. random_sample_n
+        21. partition
+        22. stable_partition 
+   3. Sorting
+         1. Sort
+               1. sort
+               2. stable_sort
+               3. partial_sort
+               4. partial_sort_copy
+               5. is_sorted 
+         2. nth_element
+         3. Binary search
+               1. lower_bound
+               2. upper_bound
+               3. equal_range
+               4. binary_search 
+         4. merge
+         5. inplace_merge
+         6. Set operations on sorted ranges
+               1. includes
+               2. set_union
+               3. set_intersection
+               4. set_difference
+               5. set_symmetric_difference 
+         7. Heap operations
+               1. push_heap
+               2. pop_heap
+               3. make_heap
+               4. sort_heap
+               5. is_heap 
+         8. Minimum and maximum
+               1. min
+               2. max
+               3. min_element [ok]
+               4. max_element [ok]
+         9. lexicographical_compare
+        10. lexicographical_compare_3way
+        11. next_permutation
+        12. prev_permutation 
+   4. Generalized numeric algorithms
+         1. iota
+         2. accumulate [ok]
+         3. inner_product [needs 2/0]
+         4. partial_sum
+         5. adjacent_difference
+         6. power 
+
