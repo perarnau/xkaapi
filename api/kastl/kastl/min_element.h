@@ -48,6 +48,7 @@
 # define KASTL_MIN_ELEMENT_H_INCLUDED
 
 
+#include <iterator>
 #include "kastl_loop.h"
 #include "kastl_sequences.h"
 
@@ -55,20 +56,23 @@
 namespace kastl
 {
 
-template<typename Iterator>
+template<typename Iterator, typename Predicate>
 struct min_element_body
 {
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
   typedef Iterator result_type;
 
-  min_element_body()
+  Predicate _pred;
+
+  min_element_body(const Predicate& pred)
+    : _pred(pred)
   {}
 
   bool operator()(result_type& res, const Iterator& pos)
   {
     // result is already touched
 
-    if (*res > *pos)
+    if (!_pred(*res, *pos))
       res = pos;
 
     return false;
@@ -76,7 +80,7 @@ struct min_element_body
 
   bool reduce(result_type& lhs, const result_type& rhs)
   {
-    if (*lhs > *rhs)
+    if (!_pred(*lhs, *rhs))
       lhs = rhs;
 
     return false;
@@ -84,15 +88,39 @@ struct min_element_body
 
 };
 
-template<typename Iterator>
-static Iterator min_element(Iterator first, Iterator last)
+template<typename Value>
+struct lt
+{
+  bool operator()(const Value& lhs, const Value& rhs)
+  {
+    return lhs < rhs;
+  }
+};
+
+template<typename Iterator, typename Predicate, typename Settings>
+static Iterator min_element
+(Iterator first, Iterator last, Predicate pred, const Settings& settings)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  kastl::impl::static_settings settings(512, 512);
-  min_element_body<Iterator> body;
+  min_element_body<Iterator, Predicate> body(pred);
   Iterator res(first);
   kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
   return res;
+}
+
+template<typename Iterator, typename Predicate>
+static Iterator min_element
+(Iterator first, Iterator last, Predicate pred)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::min_element(first, last, pred, settings);
+}
+
+template<typename Iterator>
+static Iterator min_element(Iterator first, Iterator last)
+{
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  return kastl::min_element(first, last, kastl::lt<value_type>());
 }
 
 } // kastl::
