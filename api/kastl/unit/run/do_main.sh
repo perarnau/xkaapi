@@ -11,7 +11,7 @@ SIZE1=5000
 SIZE2=20000
 #SIZE3=50000
 SIZE4=100000
-SIZE5=200000
+#SIZE5=200000
 #SIZE6=1000000
 #SIZE7=
 #SIZE8=
@@ -20,24 +20,24 @@ SIZE5=200000
 ITER=10
 
 # cpuset
-#CPUSET0=1
+CPUSET0=1
 #CPUSET1=0,1
 #CPUSET0=9
 CPUSET1=9,11
 #CPUSET2=7,9,11
-#CPUSET3=5,7,9,11
+CPUSET3=5,7,9,11
 #CPUSET4=0,1,2,3,4,5,6,7
 CPUSET5=8,9,10,11,12,13,14,15
 #CPUSET6=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-CPUSET6=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+#CPUSET6=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 #CPUSET7=
 #CPUSET8=
 
 # {algo, lib, do}
 #ALGOS='min_element max_element for_each count inner_product'
-ALGOS='find_first_of'
+ALGOS='accumulate'
 LIBS='kastl tbb'
-DOS='check'
+DOS='bench'
 
 
 gen_session_dir() {

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 ALGOS=''
-ALGOS="$ALGOS acumulate"
+ALGOS="$ALGOS accumulate"
 #ALGOS="$ALGOS inner_product"
 #ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
