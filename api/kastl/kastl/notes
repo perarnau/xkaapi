@@ -4,8 +4,8 @@
 -- todos
 
 . algorithm
- . count
  . count_if
+ . replace, replace_if
  . inner_product
  . transform
 

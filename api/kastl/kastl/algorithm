@@ -53,6 +53,7 @@
 #include "kastl/min_element.h"
 #include "kastl/max_element.h"
 #include "kastl/count.h"
+#include "kastl/count_if.h"
 
 #if 0
 #include "kastl/copy.h"
@@ -85,7 +86,6 @@
 #include "replace_if.h"
 #include "replace_copy_if.h"
 #include "search_n.h"
-#include "count_if.h"
 #endif
 
 
