@@ -59,7 +59,7 @@ template<typename Iterator>
 struct find_body
 {
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
-  typedef kastl::impl::algorithm_result<Iterator> result_type;
+  typedef kastl::impl::touched_algorithm_result<Iterator> result_type;
 
   const value_type& _value;
 
@@ -67,7 +67,6 @@ struct find_body
 
   bool operator()(result_type& res, const Iterator& pos)
   {
-    // return true if result is found
     if (*pos != _value)
       return false;
 
@@ -89,9 +88,9 @@ template<typename Iterator, typename Value>
 static Iterator find(Iterator first, Iterator last, const Value& value)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  kastl::impl::static_settings settings(128, 128);
+  kastl::impl::static_settings settings(512, 512);
   find_body<Iterator> body(value);
-  kastl::impl::algorithm_result<Iterator> res(last);
+  kastl::impl::touched_algorithm_result<Iterator> res(last);
   kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
   return res._iter;
 }

@@ -2,6 +2,13 @@
 
 
 -- todos
+
+. introduce a new kind of algorithm_result
+that should be initialized with the beginning
+of the sequence
+ -> this is the same as the previous one just
+ constructors differs
+
 . tester les perfs de find
  . reduire le nombre de ifs
 

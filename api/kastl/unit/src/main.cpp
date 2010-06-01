@@ -750,6 +750,9 @@ public:
 
 
 #if CONFIG_ALGO_FOR_EACH
+
+#include <math.h>
+
 class ForEachRun : public RunInterface
 {
   template<typename T>
@@ -759,24 +762,31 @@ class ForEachRun : public RunInterface
     { ++n; }
   };
 
+  template<typename T>
+  struct sin_functor
+  {
+    inline void operator()(T& n) const
+    { n = ::sin(n); }
+  };
+
 public:
 
   virtual void run_ref(InputType& i, OutputType&)
   {
-    std::for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
+    std::for_each(i.second.begin(), i.second.end(), sin_functor<ValueType>());
   }
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType&)
   {
-    std::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
+    std::for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>());
   }
 #endif
 
 #if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType&)
   {
-    kastl::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
+    kastl::for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>());
   }
 #endif
 
@@ -793,7 +803,7 @@ public:
 
   virtual void run_tbb(InputType& i, OutputType&)
   {
-    tbb_for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
+    tbb_for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>());
   }
 
 #endif // CONFIG_LIB_TBB
@@ -801,7 +811,7 @@ public:
 #if CONFIG_LIB_PASTL
   virtual void run_pastl(InputType& i, OutputType&)
   {
-    __gnu_parallel::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>(), pastl_parallel_tag);
+    __gnu_parallel::for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>(), pastl_parallel_tag);
   }
 #endif
 
@@ -1481,7 +1491,7 @@ public:
       if (_beg == _end)
 	return false;
 
-      const size_t size = std::min
+      const size_t size = min
 	(static_cast<size_t>(_end - _beg), (size_t)512);
 
       item._stream = this;

@@ -317,6 +317,13 @@ public:
 
   /* end 
   */
+  const RandomIterator1 beg() const
+  {
+    return _rep.ri1;
+  }
+
+  /* end 
+  */
   const RandomIterator1 end() const
   {
     return _rep.ri1 + size();

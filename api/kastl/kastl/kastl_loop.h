@@ -108,6 +108,9 @@ namespace impl
   struct identity_tag {};
   typedef dummy_tag static_tag;
 
+  // result tag
+  struct touchable_tag {};
+
 
   // settings allow for static and dynamic parametrisation
   template<typename MacroExtractorTag>
@@ -137,16 +140,13 @@ namespace impl
 
   // results
   template<typename Iterator>
-  struct algorithm_result
+  struct touched_algorithm_result
   {
     bool _is_touched;
     Iterator _iter;
 
-    algorithm_result() : _is_touched(false)
-    {}
-
-    algorithm_result(const Iterator& iter)
-      : _is_touched(false), _iter(iter)
+    touched_algorithm_result(const Iterator&)
+      : _is_touched(false)
     {}
 
     void set_iter(const Iterator& iter)
@@ -324,7 +324,7 @@ namespace impl
       bool _is_done;
 
       thief_context(const Sequence& seq, Body& body)
-	: _seq(seq), _is_done(false)
+	: _seq(seq), _res(seq.beg()), _is_done(false)
       {}
 
       static kaapi_taskadaptive_result_t* allocate

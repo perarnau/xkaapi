@@ -78,7 +78,7 @@ template<typename Iterator, typename Value>
 Value accumulate(Iterator first, Iterator last, const Value& value)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  kastl::impl::static_settings settings(128, 128);
+  kastl::impl::static_settings settings(512, 512);
   accumulate_body<Iterator, Value> body;
   kastl::impl::numeric_result<Value> result(value);
   kastl::impl::reduce_unrolled_loop::run

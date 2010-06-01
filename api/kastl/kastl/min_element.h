@@ -44,8 +44,8 @@
  */
 
 
-#ifndef KASTL_FOR_EACH_H_INCLUDED
-# define KASTL_FOR_EACH_H_INCLUDED
+#ifndef KASTL_MIN_ELEMENT_H_INCLUDED
+# define KASTL_MIN_ELEMENT_H_INCLUDED
 
 
 #include "kastl_loop.h"
@@ -55,48 +55,48 @@
 namespace kastl
 {
 
-template<typename Iterator, typename Operation>
-struct for_each_body
+template<typename Iterator>
+struct min_element_body
 {
-  typedef kastl::rts::Sequence<Iterator> sequence_type;
-  typedef typename sequence_type::range_type range_type;
-  typedef kastl::impl::dummy_type result_type;
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  typedef Iterator result_type;
 
-  Operation _op;
-
-  for_each_body(const Operation& op, const Iterator& first)
-    : _op(op)
+  min_element_body()
   {}
 
-  bool operator()(result_type&, range_type& range)
+  bool operator()(result_type& res, const Iterator& pos)
   {
-    typedef typename range_type::iterator1_type iterator_type;
+    // result is already touched
 
-    iterator_type end = range.end();
-    for (iterator_type pos = range.begin(); pos != end; ++pos)
-      _op(*pos);
+    if (*res > *pos)
+      res = pos;
 
     return false;
   }
+
+  bool reduce(result_type& lhs, const result_type& rhs)
+  {
+    if (*lhs > *rhs)
+      lhs = rhs;
+
+    return false;
+  }
+
 };
 
-template<typename Iterator, typename Operation, typename Settings>
-void for_each
-(Iterator first, Iterator last, Operation op, const Settings& settings)
+template<typename Iterator>
+static Iterator min_element(Iterator first, Iterator last)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  for_each_body<Iterator, Operation> body(op, first);
-  kastl::impl::parallel_loop::run(seq, body, settings);
-}
-
-template<typename Iterator, typename Operation>
-void for_each(Iterator first, Iterator last, Operation op)
-{
   kastl::impl::static_settings settings(512, 512);
-  for_each(first, last, op, settings);
+  min_element_body<Iterator> body;
+  Iterator res(first);
+  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  return res;
 }
 
 } // kastl::
 
 
-#endif // ! KASTL_FOR_EACH_H_INCLUDED
+
+#endif // KASTL_MIN_ELEMENT_H_INCLUDED
