@@ -8,8 +8,8 @@ ALGOS=''
 #ALGOS="$ALGOS count"
 #ALGOS="$ALGOS transform"
 #ALGOS="$ALGOS search"
-ALGOS="$ALGOS min_element"
-#ALGOS="$ALGOS max_element"
+#ALGOS="$ALGOS min_element"
+ALGOS="$ALGOS max_element"
 #ALGOS="$ALGOS find_first_of"
 
 for A in $ALGOS; do

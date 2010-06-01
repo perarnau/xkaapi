@@ -43,50 +43,88 @@
  ** 
  */
 
-#ifndef KASTL_ALGORITHM_INCLUDED
-# define KASTL_ALGORITHM_INCLUDED
 
-#include "kastl/for_each.h"
-#include "kastl/find.h"
-#include "kastl/min_element.h"
-#include "kastl/max_element.h"
-
-#if 0
-#include "kastl/transform.h"
-#include "kastl/copy.h"
-#include "kastl/count.h"
-#include "kastl/equal.h"
-#endif
+#ifndef KASTL_MAX_ELEMENT_H_INCLUDED
+# define KASTL_MAX_ELEMENT_H_INCLUDED
 
 
-#if 0
-#include "kastl/search.h"
-#include "kastl/find_if.h"
-#include "kastl/find_first_of.h"
-#include "kastl/swap_ranges.h"
-#endif
-
-#if 0
-#include "partial_sum.h"
-#include "merge.h"
-#include "sort.h"
-#include "fill.h"
-#include "replace.h"
-#include "generate.h"
-#include "equal.h"
-#include "mismatch.h"
-#include "reverse.h"
-#include "partition.h"
-#include "set_union.h"
-#include "set_intersection.h"
-#include "set_difference.h"
-#include "generate_n.h"
-#include "replace_copy.h"
-#include "replace_if.h"
-#include "replace_copy_if.h"
-#include "search_n.h"
-#include "count_if.h"
-#endif
+#include <iterator>
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
 
-#endif // ! KASTL_ALGORITHM_INCLUDED
+namespace kastl
+{
+
+template<typename Iterator, typename Predicate>
+struct max_element_body
+{
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  typedef Iterator result_type;
+
+  Predicate _pred;
+
+  max_element_body(const Predicate& pred)
+    : _pred(pred)
+  {}
+
+  bool operator()(result_type& res, const Iterator& pos)
+  {
+    // result is already touched
+
+    if (!_pred(*res, *pos))
+      res = pos;
+
+    return false;
+  }
+
+  bool reduce(result_type& lhs, const result_type& rhs)
+  {
+    if (!_pred(*lhs, *rhs))
+      lhs = rhs;
+
+    return false;
+  }
+
+};
+
+template<typename Value>
+struct gt
+{
+  bool operator()(const Value& lhs, const Value& rhs)
+  {
+    return lhs > rhs;
+  }
+};
+
+template<typename Iterator, typename Predicate, typename Settings>
+static Iterator max_element
+(Iterator first, Iterator last, Predicate pred, const Settings& settings)
+{
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  max_element_body<Iterator, Predicate> body(pred);
+  Iterator res(first);
+  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  return res;
+}
+
+template<typename Iterator, typename Predicate>
+static Iterator max_element
+(Iterator first, Iterator last, Predicate pred)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::max_element(first, last, pred, settings);
+}
+
+template<typename Iterator>
+static Iterator max_element(Iterator first, Iterator last)
+{
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  return kastl::max_element(first, last, kastl::gt<value_type>());
+}
+
+} // kastl::
+
+
+
+#endif // KASTL_MAX_ELEMENT_H_INCLUDED

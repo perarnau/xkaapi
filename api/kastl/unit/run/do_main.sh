@@ -17,7 +17,7 @@ SIZE4=100000
 #SIZE8=
 
 # iteration
-ITER=10
+ITER=100
 
 # cpuset
 CPUSET0=1
@@ -37,9 +37,9 @@ CPUSET4=0,1,2,3,4,5,6,7
 #ALGOS='min_element max_element for_each count inner_product'
 #ALGOS='accumulate'
 #ALGOS='for_each'
-ALGOS='min_element'
+ALGOS='max_element'
 LIBS='kastl'
-DOS='check'
+DOS='bench'
 
 
 gen_session_dir() {
