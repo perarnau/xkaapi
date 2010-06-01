@@ -84,15 +84,22 @@ struct find_body
 
 };
 
-template<typename Iterator, typename Value>
-Iterator find(Iterator first, Iterator last, const Value& value)
+template<typename Iterator, typename Value, typename Settings>
+Iterator find
+(Iterator first, Iterator last, const Value& value, const Settings& settings)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  kastl::impl::static_settings settings(512, 512);
   find_body<Iterator> body(value);
   kastl::impl::touched_algorithm_result<Iterator> res(last);
   kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
   return res._iter;
+}
+
+template<typename Iterator, typename Value>
+Iterator find(Iterator first, Iterator last, const Value& value)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::find(first, last, value, settings);
 }
 
 } // kastl::

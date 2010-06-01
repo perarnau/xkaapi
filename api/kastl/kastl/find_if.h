@@ -43,50 +43,67 @@
  ** 
  */
 
-#ifndef KASTL_ALGORITHM_INCLUDED
-# define KASTL_ALGORITHM_INCLUDED
 
-#include "kastl/for_each.h"
-#include "kastl/find.h"
-#include "kastl/find_if.h"
-#include "kastl/min_element.h"
-#include "kastl/max_element.h"
-
-#if 0
-#include "kastl/copy.h"
-#include "kastl/count.h"
-#include "kastl/equal.h"
-#include "kastl/transform.h"
-#endif
+#ifndef KASTL_FIND_IF_H_INCLUDED
+# define KASTL_FIND_IF_H_INCLUDED
 
 
-#if 0
-#include "kastl/search.h"
-#include "kastl/find_first_of.h"
-#include "kastl/swap_ranges.h"
-#endif
-
-#if 0
-#include "partial_sum.h"
-#include "merge.h"
-#include "sort.h"
-#include "fill.h"
-#include "replace.h"
-#include "generate.h"
-#include "equal.h"
-#include "mismatch.h"
-#include "reverse.h"
-#include "partition.h"
-#include "set_union.h"
-#include "set_intersection.h"
-#include "set_difference.h"
-#include "generate_n.h"
-#include "replace_copy.h"
-#include "replace_if.h"
-#include "replace_copy_if.h"
-#include "search_n.h"
-#include "count_if.h"
-#endif
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
 
-#endif // ! KASTL_ALGORITHM_INCLUDED
+namespace kastl
+{
+
+template<typename Iterator, typename Predicate>
+struct find_if_body
+{
+  typedef kastl::impl::touched_algorithm_result<Iterator> result_type;
+
+  Predicate _pred;
+
+  find_if_body(const Predicate& pred)
+    : _pred(pred) {}
+
+  bool operator()(result_type& res, const Iterator& pos)
+  {
+    if (!_pred(*pos))
+      return false;
+
+    res.set_iter(pos);
+    return true;
+  }
+
+  bool reduce(result_type& lhs, const result_type& rhs)
+  {
+    if (rhs._is_touched == false)
+      return false;
+    lhs.set_iter(rhs._iter);
+    return true;
+  }
+
+};
+
+template<typename Iterator, typename Predicate, typename Settings>
+Iterator find_if
+(Iterator first, Iterator last, Predicate pred, const Settings& settings)
+{
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  find_if_body<Iterator, Predicate> body(pred);
+  kastl::impl::touched_algorithm_result<Iterator> res(last);
+  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  return res._iter;
+}
+
+template<typename Iterator, typename Predicate>
+Iterator find_if(Iterator first, Iterator last, Predicate pred)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::find_if(first, last, pred);
+}
+
+} // kastl::
+
+
+
+#endif // KASTL_FIND_IF_H_INCLUDED
