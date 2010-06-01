@@ -80,20 +80,21 @@ struct for_each_body
   }
 };
 
-template<typename Iterator, typename Operation, typename Settings>
-void for_each
-(Iterator first, Iterator last, Operation op, const Settings& settings)
+template<typename Iterator, typename Function, typename Settings>
+Function for_each
+(Iterator first, Iterator last, Function op, const Settings& settings)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
-  for_each_body<Iterator, Operation> body(op, first);
+  for_each_body<Iterator, Function> body(op, first);
   kastl::impl::parallel_loop::run(seq, body, settings);
+  return op;
 }
 
-template<typename Iterator, typename Operation>
-void for_each(Iterator first, Iterator last, Operation op)
+template<typename Iterator, typename Function>
+Function for_each(Iterator first, Iterator last, Function op)
 {
   kastl::impl::static_settings settings(512, 512);
-  for_each(first, last, op, settings);
+  return for_each(first, last, op, settings);
 }
 
 } // kastl::

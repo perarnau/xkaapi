@@ -2,9 +2,9 @@
 
 ALGOS=''
 #ALGOS="$ALGOS find"
-ALGOS="$ALGOS accumulate"
+#ALGOS="$ALGOS accumulate"
 #ALGOS="$ALGOS inner_product"
-#ALGOS="$ALGOS for_each"
+ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
 #ALGOS="$ALGOS transform"
 #ALGOS="$ALGOS search"
