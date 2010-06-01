@@ -99,7 +99,7 @@ template<typename Iterator, typename Predicate>
 Iterator find_if(Iterator first, Iterator last, Predicate pred)
 {
   kastl::impl::static_settings settings(512, 512);
-  return kastl::find_if(first, last, pred);
+  return kastl::find_if(first, last, pred, settings);
 }
 
 } // kastl::

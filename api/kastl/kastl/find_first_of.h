@@ -43,50 +43,75 @@
  ** 
  */
 
-#ifndef KASTL_ALGORITHM_INCLUDED
-# define KASTL_ALGORITHM_INCLUDED
 
-#include "kastl/for_each.h"
-#include "kastl/find.h"
-#include "kastl/find_if.h"
-#include "kastl/find_first_of.h"
-#include "kastl/min_element.h"
-#include "kastl/max_element.h"
-
-#if 0
-#include "kastl/copy.h"
-#include "kastl/count.h"
-#include "kastl/equal.h"
-#include "kastl/transform.h"
-#endif
+#ifndef KASTL_FIND_FIRST_OF_H_INCLUDED
+# define KASTL_FIND_FIRST_OF_H_INCLUDED
 
 
-#if 0
-#include "kastl/search.h"
-#include "kastl/swap_ranges.h"
-#endif
-
-#if 0
-#include "partial_sum.h"
-#include "merge.h"
-#include "sort.h"
-#include "fill.h"
-#include "replace.h"
-#include "generate.h"
-#include "equal.h"
-#include "mismatch.h"
-#include "reverse.h"
-#include "partition.h"
-#include "set_union.h"
-#include "set_intersection.h"
-#include "set_difference.h"
-#include "generate_n.h"
-#include "replace_copy.h"
-#include "replace_if.h"
-#include "replace_copy_if.h"
-#include "search_n.h"
-#include "count_if.h"
-#endif
+#include <iterator>
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+#include "find_if.h"
 
 
-#endif // ! KASTL_ALGORITHM_INCLUDED
+namespace kastl
+{
+
+template<typename Value>
+struct eq
+{
+  bool operator()(const Value& lhs, const Value& rhs)
+  {
+    return lhs == rhs;
+  }
+};
+
+template<typename Iterator, typename Predicate>
+struct ffo_predicate
+{
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+
+  Iterator _first;
+  Iterator _last;
+
+  Predicate _pred;
+
+  ffo_predicate(const Iterator& first, const Iterator& last, const Predicate& pred)
+    : _first(first), _last(last), _pred(pred)
+  {}
+
+  bool operator()(const value_type& value)
+  {
+    for (Iterator pos = _first; pos != _last; ++pos)
+      if (_pred(*pos, value))
+	return true;
+    return false;
+  }
+};
+
+template<typename Iterator0, typename Iterator1, typename Predicate>
+Iterator0 find_first_of
+(Iterator0 first0, Iterator0 last0,
+ Iterator1 first1, Iterator1 last1,
+ Predicate pred)
+{
+  ffo_predicate<Iterator1, Predicate> ffo_pred(first1, last1, pred);
+  // call kastl::find_if
+  return kastl::find_if(first0, last0, ffo_pred);
+}
+
+template<typename Iterator0, typename Iterator1>
+Iterator0 find_first_of
+(Iterator0 first0, Iterator0 last0,
+ Iterator1 first1, Iterator1 last1)
+{
+  typedef typename std::iterator_traits<Iterator0>::value_type value_type;
+  return kastl::find_first_of
+    (first0, last0, first1, last1, kastl::eq<value_type>());
+}
+
+} // kastl::
+
+
+
+#endif // KASTL_FIND_FIRST_OF_H_INCLUDED
