@@ -152,10 +152,8 @@ void __attribute__ ((constructor)) kaapi_init(void)
   /* dump output information */
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
-#else
-  printf("[KAAPI::INIT] use #physical cpu:%u\n", kaapi_default_param.cpucount);
-#endif
   fflush( stdout );
+#endif
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
 }
@@ -185,8 +183,6 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
         (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
-#else
-  printf("[KAAPI::TERM]\n");
 #endif
   fflush( stdout );
 
