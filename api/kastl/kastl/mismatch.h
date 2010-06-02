@@ -106,10 +106,9 @@ struct mismatch_body
   bool reduce(result_type& lhs, const result_type& rhs)
   {
     // terminate if touched
-    if (lhs._is_touched == false)
-      return false;
-    lhs.set_iters(rhs._iters.first, rhs._iters.second);
-    return true;
+    if ((lhs._is_touched == false) && (rhs._is_touched == true))
+      lhs.set_iters(rhs._iters.first, rhs._iters.second);
+    return lhs._is_touched == true;
   }
 };
 

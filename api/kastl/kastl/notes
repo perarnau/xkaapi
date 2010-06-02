@@ -14,12 +14,7 @@ only return result + last - first
  pour choisir comment initialiser le result
 
 -- todos
-
-. test both version of the transform algorithm
- . unit case should test the second one
-
 . then simple algorithms
- . mismatch
  . search
  . adjacent_find
  => ensuite blinder de tests avant de passer au reste

@@ -2432,14 +2432,6 @@ public:
   virtual bool check
   (InputType& is, std::vector<OutputType>&, std::string&) const
   {
-    printf("%lu != %lu\n",
-	   _res[0].first - is.first.begin(),
-	   _res[1].first - is.first.begin());
-
-    printf("%lu != %lu\n",
-	   _res[0].second - is.second.begin(),
-	   _res[1].second - is.second.begin());
-
     if ((_res[0].first != _res[1].first))
       return false;
     else if ((_res[0].second != _res[1].second))
