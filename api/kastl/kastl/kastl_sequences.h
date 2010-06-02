@@ -66,18 +66,26 @@ template <
     typename RandomIterator4=dummy_type 
 >
 struct SequenceRep {
+  static const size_t iterator_count = 4;
+
   typedef SequenceRep<RandomIterator1,RandomIterator2,RandomIterator3,RandomIterator4> Self_t;
-  SequenceRep() {}
-  SequenceRep( RandomIterator1 r1,
-               RandomIterator2 r2,
-               RandomIterator3 r3,
-               RandomIterator4 r4
-  ) : ri1(r1), ri2(r2), ri3(r3), ri4(r4)
+
+  SequenceRep()
   {}
+
+  SequenceRep
+  (RandomIterator1 r1,
+   RandomIterator2 r2,
+   RandomIterator3 r3,
+   RandomIterator4 r4)
+    : ri1(r1), ri2(r2), ri3(r3), ri4(r4)
+  {}
+
   RandomIterator1 ri1;
   RandomIterator2 ri2;
   RandomIterator3 ri3;
   RandomIterator4 ri4;
+
   void shift( const Self_t& o, int dist )
   { 
     ri1 = o.ri1+dist; 
@@ -85,12 +93,52 @@ struct SequenceRep {
     ri3 = o.ri3+dist; 
     ri4 = o.ri4+dist; 
   }
+
+  Self_t& operator++()
+  {
+    ++ri1;
+    ++ri2;
+    ++ri3;
+    ++ri4;
+    return *this;
+  }
+
+  Self_t& operator+=(size_t size)
+  {
+    ri1 += size;
+    ri2 += size;
+    ri3 += size;
+    ri4 += size;
+    return *this;
+  }
+
+  Self_t operator+(size_t size)
+  {
+    return Self_t(ri1 + size, ri2 + size, ri3 + size, ri4 + size);
+  }
+
+  bool operator==(const Self_t& rhs) const
+  {
+    return
+      (ri1 == rhs.ri1) &&
+      (ri2 == rhs.ri2) &&
+      (ri3 == rhs.ri3) &&
+      (ri4 == rhs.ri4);
+  }
+
+  bool operator!=(const Self_t& rhs) const
+  {
+    return !(*this == rhs);
+  }
 };
 
 /*  specialisation to gain space because sizeof(dummy_type) != 0 */
 template <typename RandomIterator1>
 struct SequenceRep<RandomIterator1,dummy_type,dummy_type,dummy_type> {
+  static const size_t iterator_count = 1;
+
   typedef SequenceRep<RandomIterator1,dummy_type,dummy_type,dummy_type> Self_t;
+
   SequenceRep() {}
   SequenceRep( RandomIterator1 r1
   ) : ri1(r1)
@@ -99,11 +147,41 @@ struct SequenceRep<RandomIterator1,dummy_type,dummy_type,dummy_type> {
   
   void shift( const Self_t& o, int dist )
   { ri1 = o.ri1+dist; }
+
+  Self_t& operator++()
+  {
+    ++ri1;
+    return *this;
+  }
+
+  Self_t& operator+=(size_t size)
+  {
+    ri1 += size;
+    return *this;
+  }
+
+  Self_t operator+(size_t size)
+  {
+    return Self_t(ri1 + size);
+  }
+
+  bool operator==(const Self_t& rhs) const
+  {
+    return ri1 == rhs.ri1;
+  }
+
+  bool operator!=(const Self_t& rhs) const
+  {
+    return !(*this == rhs);
+  }
 };
 
 template <typename RandomIterator1, typename RandomIterator2>
 struct SequenceRep<RandomIterator1,RandomIterator2,dummy_type,dummy_type> {
+  static const size_t iterator_count = 2;
+
   typedef SequenceRep<RandomIterator1,RandomIterator2,dummy_type,dummy_type> Self_t;
+
   SequenceRep() {}
   SequenceRep( RandomIterator1 r1,
                RandomIterator2 r2
@@ -116,11 +194,43 @@ struct SequenceRep<RandomIterator1,RandomIterator2,dummy_type,dummy_type> {
     ri1 = o.ri1+dist; 
     ri2 = o.ri2+dist; 
   }
+
+  Self_t& operator++()
+  {
+    ++ri1;
+    ++ri2;
+    return *this;
+  }
+
+  Self_t& operator+=(size_t size)
+  {
+    ri1 += size;
+    ri2 += size;
+    return *this;
+  }
+
+  Self_t operator+(size_t size)
+  {
+    return Self_t(ri1 + size, ri2 + size);
+  }
+
+  bool operator==(const Self_t& rhs) const
+  {
+    return (ri1 == rhs.ri1) && (ri2 == rhs.ri2);
+  }
+
+  bool operator!=(const Self_t& rhs) const
+  {
+    return !(*this == rhs);
+  }
 };
 
 template <typename RandomIterator1, typename RandomIterator2, typename RandomIterator3>
 struct SequenceRep<RandomIterator1,RandomIterator2,RandomIterator3,dummy_type> {
+  static const size_t iterator_count = 3;
+
   typedef SequenceRep<RandomIterator1,RandomIterator2,RandomIterator3,dummy_type> Self_t;
+
   SequenceRep() {}
   SequenceRep( RandomIterator1 r1,
                RandomIterator2 r2,
@@ -135,6 +245,40 @@ struct SequenceRep<RandomIterator1,RandomIterator2,RandomIterator3,dummy_type> {
     ri1 = o.ri1+dist; 
     ri2 = o.ri2+dist; 
     ri3 = o.ri3+dist; 
+  }
+
+  Self_t& operator++()
+  {
+    ++ri1;
+    ++ri2;
+    ++ri3;
+    return *this;
+  }
+
+  Self_t& operator+=(size_t size)
+  {
+    ri1 += size;
+    ri2 += size;
+    ri3 += size;
+    return *this;
+  }
+
+  Self_t operator+(size_t size)
+  {
+    return Self_t(ri1 + size, ri2 + size, ri3 + size);
+  }
+
+  bool operator==(const Self_t& rhs) const
+  {
+    return
+      (ri1 == rhs.ri1) &&
+      (ri2 == rhs.ri2) &&
+      (ri3 == rhs.ri3);
+  }
+
+  bool operator!=(const Self_t& rhs) const
+  {
+    return !(*this == rhs);
   }
 };
 
@@ -168,18 +312,18 @@ public:
 
   /**/
   bool is_empty() const
-  { return _size ==0; }
+  { return _size == 0; }
 
   /**/
   size_type size() const
   { return _size; }
   
   /**/
-  RandomIterator1 begin()
-  { return _beg.ri1; }
+  iterator_type begin()
+  { return _beg; }
   /**/
-  RandomIterator1 end()
-  { return _beg.ri1+_size; }
+  iterator_type end()
+  { return _beg + _size; }
 
 
   /**/
@@ -255,6 +399,10 @@ public:
    : _wq(work_queue_t<64>::range_type(0,n)), _rep(i1,i2,i3,i4)
   {}
 
+  Sequence(const iterator_type& rep, size_type n)
+    : _wq(work_queue_t<64>::range_type(0,n)), _rep(rep)
+  {}
+
   Sequence(const Sequence& seq, range_type& r)
    : _wq(work_queue_t<64>::range_type(0, r.size())), _rep(seq._rep)
   {}
@@ -315,16 +463,23 @@ public:
     _wq.clear();
   }
 
-  /* end 
+  /* beg
   */
-  const RandomIterator1 beg() const
+  const iterator_type begin() const
   {
     return _rep.ri1;
   }
 
-  /* end 
+  /* beg1
   */
-  const RandomIterator1 end() const
+  const RandomIterator1 begin1() const
+  {
+    return _rep.ri1;
+  }
+
+  /* end1
+  */
+  const RandomIterator1 end1() const
   {
     return _rep.ri1 + size();
   }

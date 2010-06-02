@@ -44,10 +44,11 @@
  */
 
 
-#ifndef KASTL_FOR_EACH_H_INCLUDED
-# define KASTL_FOR_EACH_H_INCLUDED
+#ifndef KASTL_COPY_H_INCLUDED
+# define KASTL_COPY_H_INCLUDED
 
 
+#include <iterator>
 #include "kastl_loop.h"
 #include "kastl_sequences.h"
 
@@ -55,44 +56,37 @@
 namespace kastl
 {
 
-template<typename Iterator, typename Operation>
-struct for_each_body
+template<typename Iterator0, typename Iterator1>
+struct copy_body
 {
-  typedef kastl::rts::Sequence<Iterator> sequence_type;
-  typedef typename sequence_type::range_type range_type;
   typedef kastl::impl::dummy_type result_type;
 
-  Operation _op;
-
-  for_each_body(const Operation& op, const Iterator& first)
-    : _op(op)
-  {}
-
-  bool operator()(result_type&, const Iterator& pos)
+  bool operator()(result_type&, Iterator0& ipos, Iterator1& opos)
   {
-    _op(*pos);
+    *opos = *ipos;
     return false;
   }
 };
 
-template<typename Iterator, typename Function, typename Settings>
-Function for_each
-(Iterator first, Iterator last, Function op, const Settings& settings)
+template<typename Iterator0, typename Iterator1, typename Settings>
+Iterator1 copy
+(Iterator0 ifirst, Iterator0 ilast, Iterator1 ofirst, const Settings& settings)
 {
-  kastl::rts::Sequence<Iterator> seq(first, last - first);
-  for_each_body<Iterator, Function> body(op, first);
+  kastl::rts::Sequence<Iterator0, Iterator1> seq
+    (ifirst, ofirst, ilast - ifirst);
+  copy_body<Iterator0, Iterator1> body;
   kastl::impl::unrolled_loop::run(seq, body, settings);
-  return op;
+  return ofirst + (ilast - ifirst);
 }
 
-template<typename Iterator, typename Function>
-Function for_each(Iterator first, Iterator last, Function op)
+template<typename Iterator0, typename Iterator1>
+Iterator1 copy(Iterator0 ifirst, Iterator1 ilast, Iterator1 ofirst)
 {
   kastl::impl::static_settings settings(512, 512);
-  return kastl::for_each(first, last, op, settings);
+  return kastl::copy(ifirst, ilast, ofirst, settings);
 }
 
 } // kastl::
 
 
-#endif // ! KASTL_FOR_EACH_H_INCLUDED
+#endif // ! KASTL_COPY_H_INCLUDED

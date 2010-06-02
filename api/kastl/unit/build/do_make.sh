@@ -8,11 +8,12 @@ ALGOS=''
 #ALGOS="$ALGOS inner_product"
 #ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
-ALGOS="$ALGOS count_if"
+#ALGOS="$ALGOS count_if"
 #ALGOS="$ALGOS transform"
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS min_element"
 #ALGOS="$ALGOS max_element"
+ALGOS="$ALGOS copy"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do

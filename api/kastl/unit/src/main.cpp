@@ -1840,6 +1840,62 @@ public:
 #endif
 
 
+#if CONFIG_ALGO_COPY
+class CopyRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+
+};
+#endif // CONFIG_ALGO_COPY
+
+
 #if CONFIG_ALGO_SWAP_RANGES
 class SwapRangesRun : public RunInterface
 {
@@ -3223,11 +3279,14 @@ RunInterface* RunInterface::create()
   CREATE_RUN( SwapRanges );
 #endif
 
+#if CONFIG_ALGO_COPY
+  CREATE_RUN( Copy );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
   CREATE_RUN( PartialSum );
-  CREATE_RUN( Copy );
   CREATE_RUN( Fill );
   CREATE_RUN( Replace );
   CREATE_RUN( Generate );

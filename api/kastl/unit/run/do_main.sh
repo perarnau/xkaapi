@@ -34,12 +34,20 @@ CPUSET4=0,1,2,3,4,5,6,7
 #CPUSET8=
 
 # {algo, lib, do}
-#ALGOS='min_element max_element for_each count inner_product'
-#ALGOS='accumulate'
-#ALGOS='for_each'
-#ALGOS='max_element'
-#ALGOS="ALGOS find_first_of"
-ALGOS="ALGOS count_if"
+#ALGOS="$ALGOS find"
+#ALGOS="$ALGOS find_if"
+#ALGOS="$ALGOS find_first_of"
+#ALGOS="$ALGOS accumulate"
+#ALGOS="$ALGOS inner_product"
+#ALGOS="$ALGOS for_each"
+#ALGOS="$ALGOS count"
+#ALGOS="$ALGOS count_if"
+#ALGOS="$ALGOS transform"
+#ALGOS="$ALGOS search"
+#ALGOS="$ALGOS min_element"
+#ALGOS="$ALGOS max_element"
+ALGOS="$ALGOS copy"
+
 LIBS='kastl'
 DOS='check'
 

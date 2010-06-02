@@ -328,7 +328,7 @@ namespace impl
       bool _is_done;
 
       thief_context(const Sequence& seq, Body& body)
-	: _seq(seq), _res(seq.beg()), _is_done(false)
+	: _seq(seq), _res(seq.begin1()), _is_done(false)
       {}
 
       static kaapi_taskadaptive_result_t* allocate
@@ -511,13 +511,7 @@ namespace impl
 	  ++request_count;
       }
 
-#if CONFIG_KASTL_DEBUG
-      printf
-	("[%08d] [%u]: stolen_size=%ld, unit_size=%lu, request_count=%d\n",
-	 ++printid, kaapi_get_current_kid(), r.size(), unit_size, request_count);
-#endif
-
-      typename range_type::iterator1_type pos = r.begin1();
+      typename Sequence::iterator_type pos = r.begin();
       int reply_count = 0;
     
       // balanced workload amongst count thieves
@@ -572,6 +566,51 @@ namespace impl
     }
   }; // splitter
 
+  // expand iterator, apply body
+  template<size_t Count> struct expand_apply_t
+  {
+    template<typename Result, typename Iterator, typename Body>
+    static bool expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      return body(res, pos.ri1);
+    }
+  };
+
+  template<> struct expand_apply_t<2>
+  {
+    template<typename Result, typename Iterator, typename Body>
+    static bool expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      return body(res, pos.ri1, pos.ri2);
+    }
+  };
+
+  template<> struct expand_apply_t<3>
+  {
+    template<typename Result, typename Iterator, typename Body>
+    static bool expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      return body(res, pos.ri1, pos.ri2, pos.ri3);
+    }
+  };
+
+  template<> struct expand_apply_t<4>
+  {
+    template<typename Result, typename Iterator, typename Body>
+    static bool expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      return body(res, pos.ri1, pos.ri2, pos.ri3, pos.ri4);
+    }
+  };
+
+  template<typename Result, typename Iterator, typename Body>
+  static bool expand_apply(Result& res, Iterator& pos, Body& body)
+  {
+    // syntaxic suggar for the above type
+    return expand_apply_t<Iterator::iterator_count>::template
+      expand_apply(res, pos, body);
+  }
+
   // inner (nano) loop
   template<typename UnrollTag = rolled_tag>
   struct inner_loop
@@ -590,13 +629,14 @@ namespace impl
     template<typename Result, typename Range, typename Body>
     static bool run(Result& res, Range& range, Body& body)
     {
-      // unrolled loop
+      // rely upon the first iterator to check for sequence
+      // end but iterate with a full sequence iterator
 
-      typedef typename Range::iterator1_type iterator_type;
+      typename Range::iterator_type pos = range.begin();
+      typename Range::iterator1_type end = range.end1();
 
-      iterator_type end = range.end();
-      for (iterator_type pos = range.begin(); pos != end; ++pos)
-	if (body(res, pos) == true)
+      for (; pos.ri1 != end; ++pos)
+	if (expand_apply(res, pos, body))
 	  return true;
 
       return false;
