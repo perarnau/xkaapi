@@ -18,7 +18,8 @@ ALGOS=''
 #ALGOS="$ALGOS inner_product"
 #ALGOS="$ALGOS replace"
 #ALGOS="$ALGOS replace_if"
-ALGOS="$ALGOS equal"
+#ALGOS="$ALGOS equal"
+ALGOS="$ALGOS mismatch"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do

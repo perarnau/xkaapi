@@ -19,7 +19,6 @@ only return result + last - first
  . unit case should test the second one
 
 . then simple algorithms
- . equal (a tester)
  . mismatch
  . search
  . adjacent_find

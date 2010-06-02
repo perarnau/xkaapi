@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <numeric>
 #include <functional>
+#include <utility>
 #include <sstream>
 #include "pinned_array.hh"
 
@@ -2368,7 +2369,7 @@ public:
 #if CONFIG_LIB_PASTL
   virtual void run_pastl(InputType& i, OutputType& o)
   {
-    _res[0] = __gnu_parallel::fill
+    _res[0] = __gnu_parallel::equal
       (i.first.begin(), i.first.end(), i.second.begin(), pastl_parallel_tag);
   }
 #endif
@@ -2383,6 +2384,71 @@ public:
 
 };
 #endif // CONFIG_ALGO_EQUAL
+
+
+#if CONFIG_ALGO_MISMATCH
+class MismatchRun : public RunInterface
+{
+  typedef SequenceType::iterator iterator_type;
+  std::pair<iterator_type, iterator_type> _res[2];
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    i.first[i.first.size() / 2] = 42;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin(), pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string&) const
+  {
+    printf("%lu != %lu\n",
+	   _res[0].first - is.first.begin(),
+	   _res[1].first - is.first.begin());
+
+    printf("%lu != %lu\n",
+	   _res[0].second - is.second.begin(),
+	   _res[1].second - is.second.begin());
+
+    if ((_res[0].first != _res[1].first))
+      return false;
+    else if ((_res[0].second != _res[1].second))
+      return false;
+    return true;
+  }
+
+};
+#endif // CONFIG_ALGO_MISMATCH
 
 
 #if 0
@@ -2497,51 +2563,6 @@ public:
     error_string.append(value_error_string(*spos, *kpos));
 #endif
 
-    return false;
-  }
-
-};
-
-
-class MismatchRun : public RunInterface
-{
-  std::pair<SequenceType::iterator, SequenceType::iterator> _kastl_res;
-  std::pair<SequenceType::iterator, SequenceType::iterator> _stl_res;
-
-public:
-
-  virtual void prepare(InputType& i)
-  {
-    if (!(::rand() % 10))
-      return ;
-
-    i.first[::rand() % i.first.size()] = 42;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::mismatch
-      (
-       i.first.begin(),
-       i.first.end(),
-       i.second.begin()
-      );
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::mismatch
-      (
-       i.first.begin(),
-       i.first.end(),
-       i.second.begin()
-      );
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
     return false;
   }
 
@@ -3433,12 +3454,14 @@ RunInterface* RunInterface::create()
   CREATE_RUN( Equal );
 #endif
 
+#if CONFIG_ALGO_MISMATCH
+  CREATE_RUN( Mismatch );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
   CREATE_RUN( PartialSum );
-  CREATE_RUN( Fill );
-  CREATE_RUN( Mismatch );
   CREATE_RUN( Reverse );
   CREATE_RUN( Partition );
   CREATE_RUN( SetUnion );
@@ -3447,12 +3470,10 @@ RunInterface* RunInterface::create()
 #endif // speed compile time up
 
 #if 0
-  CREATE_RUN( GenerateN );
   CREATE_RUN( ReplaceCopyIf );
   CREATE_RUN( ReplaceCopy );
   CREATE_RUN( AdjacentDifference );
   CREATE_RUN( AdjacentFind );
-  CREATE_RUN( SearchN );
 #endif
 
   return NULL;

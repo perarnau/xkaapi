@@ -62,6 +62,7 @@
 #include "kastl/replace.h"
 #include "kastl/replace_if.h"
 #include "kastl/equal.h"
+#include "kastl/mismatch.h"
 
 #if 0
 #include "kastl/search.h"
