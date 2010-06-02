@@ -44,67 +44,93 @@
  */
 
 
-#ifndef KASTL_ACCUMULATE_H_INCLUDED
-# define KASTL_ACCUMULATE_H_INCLUDED
+#ifndef KASTL_INNER_PRODUCT_H_INCLUDED
+# define KASTL_INNER_PRODUCT_H_INCLUDED
 
 
-#include <iterator>
 #include "kastl_loop.h"
 #include "kastl_sequences.h"
 
 
 namespace kastl
 {
-template<typename Iterator, typename Value, typename Function>
-struct accumulate_body
+template<typename Iterator0, typename Iterator1,
+	 typename Value,
+	 typename Operator0, typename Operator1>
+struct inner_product_body
 {
-  typedef kastl::impl::numeric_result<Iterator, Value> result_type;
+  typedef kastl::rts::Sequence<Iterator0, Iterator1> sequence_type;
+  typedef typename sequence_type::iterator_type iterator_type;
+  typedef typename sequence_type::range_type range_type;
+  typedef kastl::impl::numeric_result<Iterator0, Value> result_type;
 
-  Function _op;
+  Operator0 _op0;
+  Operator1 _op1;
 
-  accumulate_body(const Function& op)
-    : _op(op)
+  inner_product_body
+  (const Operator0& op0, const Operator1& op1)
+    : _op0(op0), _op1(op1)
   {}
 
-  bool operator()(result_type& res, const Iterator& pos)
+  bool operator()
+  (result_type& res, Iterator0& ipos0, Iterator1& ipos1)
   {
-    res._value = _op(res._value, *pos);
+    res._value = _op0(res._value, _op1(*ipos0, *ipos1));
     return false;
   }
 
   bool reduce(result_type& lhs, const result_type& rhs)
   {
-    lhs._value = _op(lhs._value, rhs._value);
+    lhs._value = _op0(lhs._value, rhs._value);
     return false;
   }
 };
 
-template<typename Iterator, typename Value, typename Function, typename Settings>
-Value accumulate
-(Iterator first, Iterator last, Value init, Function op, const Settings& settings)
+template
+<typename Iterator0, typename Iterator1,
+ typename Operator0, typename Operator1,
+ typename Value, typename Settings>
+Value inner_product
+(Iterator0 ifirst0, Iterator0 ilast, Iterator1 ifirst1,
+ Value init,
+ Operator0 op0, Operator1 op1, const Settings& settings)
 {
-  kastl::rts::Sequence<Iterator> seq(first, last - first);
-  accumulate_body<Iterator, Value, Function> body(op);
-  kastl::impl::numeric_result<Iterator, Value> result(init);
-  kastl::impl::reduce_unrolled_loop::run
-    (result, seq, body, settings);
-  return result._value;
+  kastl::rts::Sequence<Iterator0, Iterator1> seq
+    (ifirst0, ifirst1, ilast - ifirst0);
+
+  inner_product_body
+    <Iterator0, Iterator1, Value, Operator0, Operator1>
+    body(op0, op1);
+
+  kastl::impl::numeric_result<Iterator0, Value> res(init);
+  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  return res._value;
 }
 
-template<typename Iterator, typename Value, typename Function>
-Value accumulate(Iterator first, Iterator last, Value init, Function op)
+template<typename Iterator0, typename Iterator1, typename Value,
+	 typename Operator0, typename Operator1>
+Value inner_product
+(Iterator0 ifirst0, Iterator0 ilast, Iterator1 ifirst1,
+ Value init,
+ Operator0 op0, Operator1 op1)
 {
   kastl::impl::static_settings settings(512, 512);
-  return kastl::accumulate(first, last, init, op, settings);
+
+  return kastl::inner_product
+    (ifirst0, ilast, ifirst1, init, op0, op1, settings);
 }
 
-template<typename Iterator, typename Value>
-Value accumulate(Iterator first, Iterator last, Value init)
+template<typename Iterator0, typename Iterator1, typename Value>
+Value inner_product
+(Iterator0 ifirst0, Iterator0 ilast, Iterator1 ifirst1, Value init)
 {
-  return kastl::accumulate(first, last, init, kastl::impl::add<Value>());
+  return kastl::inner_product
+    (ifirst0, ilast, ifirst1, init,
+     kastl::impl::add<Value>(),
+     kastl::impl::mul<Value>());
 }
 
 } // kastl::
 
 
-#endif // ! KASTL_ACCUMULATE_H_INCLUDED
+#endif // ! KASTL_INNER_PRODUCT_H_INCLUDED

@@ -1,8 +1,3 @@
-// debug
-double* __first;
-extern "C" unsigned int kaapi_get_current_kid(void);
-
-
 #include <stdio.h>
 #include <sys/time.h>
 #include <iterator>

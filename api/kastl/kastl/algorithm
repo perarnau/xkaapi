@@ -58,6 +58,7 @@
 #include "kastl/transform.h"
 #include "kastl/fill.h"
 #include "kastl/generate.h"
+#include "kastl/inner_product.h"
 
 #if 0
 #include "kastl/equal.h"

@@ -111,6 +111,24 @@ namespace impl
   // result tag
   struct touchable_tag {};
 
+  // operators
+  template<typename T>
+  struct add
+  {
+    T operator()(const T& lhs, const T& rhs)
+    {
+      return lhs + rhs;
+    }
+  };
+
+  template<typename T>
+  struct mul
+  {
+    T operator()(const T& lhs, const T& rhs)
+    {
+      return lhs * rhs;
+    }
+  };
 
   // settings allow for static and dynamic parametrisation
   template<typename MacroExtractorTag>
