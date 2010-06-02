@@ -7,19 +7,20 @@ such as in the copy case, maintain the
 result and use reduction... for now we
 only return result + last - first
 
-
--- todos
-
 . initialization du resultat
  . actuellement, dans thief_context, seq.begin1()
  . si c est insuffisant, devrait etre base sur
  un modele expand() ET une fonction utilisateur
  pour choisir comment initialiser le result
 
+-- todos
+
+. test both version of the transform algorithm
+ . unit case should test the second one
+
 . model
- . copy
+ . transform
  . fill, generate
- . transform, 2 versions
  . inner_product
 
 . then simple algorithms

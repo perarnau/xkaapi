@@ -55,10 +55,10 @@
 #include "kastl/count.h"
 #include "kastl/count_if.h"
 #include "kastl/copy.h"
+#include "kastl/transform.h"
 
 #if 0
 #include "kastl/equal.h"
-#include "kastl/transform.h"
 #endif
 
 #if 0

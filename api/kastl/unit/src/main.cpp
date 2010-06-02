@@ -1249,7 +1249,7 @@ class TransformRun : public RunInterface
   {
     inc() {}
 
-    ValueType operator()(const ValueType& v)
+    ValueType operator()(const ValueType& v) const
     { return v + 1; }
   };
 
@@ -1306,8 +1306,11 @@ public:
   (InIteratorType ipos, InIteratorType iend,
    OutIteratorType opos, OperatorType op)
   {
-    tbb_for_inout_functor<InIteratorType, OutIteratorType, OperatorType> tf(first, f);
-    const int size = (int)std::distance(first, last);
+    tbb_for_inout_functor
+      <InIteratorType, OutIteratorType, OperatorType>
+      tf(ipos, opos, op);
+
+    const int size = (int)std::distance(ipos, iend);
     tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
   }
 
