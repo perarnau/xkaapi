@@ -948,6 +948,126 @@ public:
 #endif // CONFIG_ALGO_COUNT
 
 
+
+#if CONFIG_ALGO_COUNT_IF
+class CountIfRun : public RunInterface
+{
+  struct eq42
+  {
+    bool operator()(const ValueType& n) const
+    {
+      return n == 42;
+    }
+  };
+
+  ptrdiff_t _res[2];
+
+public:
+
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_RAND;
+    are_equal = true;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::count_if
+      (i.first.begin(), i.first.end(), eq42());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::count_if
+      (i.first.begin(), i.first.end(), eq42());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::count_if
+      (i.first.begin(), i.first.end(), eq42());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::count_if
+      (i.first.begin(), i.first.end(), eq42(), pastl_parallel_tag);
+  }
+#endif
+
+#if CONFIG_LIB_TBB
+
+  template<typename IteratorType, typename ValueType>
+  struct CountIfBody
+  {
+    typedef typename std::iterator_traits
+    <IteratorType>::difference_type SizeType;
+
+    typedef SizeType ResultType;
+    typedef ValueType ConstantType;
+
+    inline static void init_result
+    (ResultType& r, const ConstantType& c)
+    {
+      r = 0;
+    }
+
+    inline static void apply
+    (IteratorType& i, const ConstantType& c, ResultType& r)
+    {
+      if (c(*i))
+	++r;
+    }
+
+    inline static void reduce
+    (const ConstantType&, ResultType& lhs, const ResultType& rhs)
+    {
+      lhs += rhs;
+    }
+  };
+
+  template<typename IteratorType, typename OperationType>
+  static typename std::iterator_traits<IteratorType>::difference_type tbb_count_if
+  (IteratorType begin, IteratorType end, const OperationType& op)
+  {
+    typedef CountIfBody<IteratorType, OperationType> BodyType;
+
+    tbb_red_functor<IteratorType, BodyType> tf(begin, &op);
+    const int size = (int)std::distance(begin, end);
+    tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
+    return tf._res;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_count_if(i.first.begin(), i.first.end(), eq42());
+  }
+
+#endif
+
+  virtual bool check
+  (std::vector<OutputType>&, std::string& error_string) const
+  {
+    if (_res[0] == _res[1])
+      return true;
+
+    error_string = value_error_string(_res[0], _res[1]);
+
+    return false;
+  }
+
+};
+#endif // CONFIG_ALGO_COUNT_IF
+
 #if CONFIG_ALGO_SEARCH
 class SearchRun : public RunInterface
 {
@@ -1926,45 +2046,6 @@ public:
 
 };
 
-
-#if 0
-
-class CountIfRun : public RunInterface
-{
-  ptrdiff_t _kastl_res;
-  ptrdiff_t _stl_res;
-
-  static bool is_zero(unsigned int v)
-  {
-    return v == 0;
-  }
-
-public:
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::count_if
-      (i.first.begin(), i.first.end(), is_zero);
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::count_if
-      (i.first.begin(), i.first.end(), is_zero);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
-
-    error_string = value_error_string(_stl_res, _kastl_res);
-
-    return false;
-  }
-
-};
-
-#endif
 
 class ReverseRun : public RunInterface
 {
@@ -3098,6 +3179,10 @@ RunInterface* RunInterface::create()
   CREATE_RUN( Count );
 #endif
 
+#if CONFIG_ALGO_COUNT_IF
+  CREATE_RUN( CountIf );
+#endif
+
 #if CONFIG_ALGO_SEARCH
   CREATE_RUN( Search );
 #endif
@@ -3156,7 +3241,6 @@ RunInterface* RunInterface::create()
 #endif // speed compile time up
 
 #if 0
-  CREATE_RUN( CountIf );
   CREATE_RUN( GenerateN );
   CREATE_RUN( ReplaceCopyIf );
   CREATE_RUN( ReplaceCopy );
