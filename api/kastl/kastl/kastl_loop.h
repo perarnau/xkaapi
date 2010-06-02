@@ -130,6 +130,16 @@ namespace impl
     }
   };
 
+  // predicates
+  template<typename T>
+  struct eq
+  {
+    bool operator()(const T& lhs, const T& rhs)
+    {
+      return lhs == rhs;
+    }
+  };
+
   // settings allow for static and dynamic parametrisation
   template<typename MacroExtractorTag>
   struct settings
@@ -185,6 +195,20 @@ namespace impl
 
     numeric_result(const Iterator&)
       : _value(static_cast<Value>(0))
+    {}
+  };
+
+  template<typename Iterator, bool InitValue>
+  struct bool_result
+  {
+    bool _value;
+
+    bool_result(bool value = InitValue)
+      : _value(value)
+    {}
+
+    bool_result(const Iterator&)
+      : _value(InitValue)
     {}
   };
 

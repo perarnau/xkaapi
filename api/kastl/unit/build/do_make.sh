@@ -17,7 +17,8 @@ ALGOS=''
 #ALGOS="$ALGOS generate"
 #ALGOS="$ALGOS inner_product"
 #ALGOS="$ALGOS replace"
-ALGOS="$ALGOS replace_if"
+#ALGOS="$ALGOS replace_if"
+ALGOS="$ALGOS equal"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do

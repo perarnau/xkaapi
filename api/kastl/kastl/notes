@@ -19,12 +19,11 @@ only return result + last - first
  . unit case should test the second one
 
 . then simple algorithms
- . replace
- . replace_if
- . adjacent_find
+ . equal (a tester)
  . mismatch
- . equal
  . search
+ . adjacent_find
+ => ensuite blinder de tests avant de passer au reste
 
 . then partial_sum
 

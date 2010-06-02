@@ -2334,12 +2334,10 @@ public:
 #endif // CONFIG_ALGO_REPLACE_IF
 
 
-#if 0 // speed compile time up
-
+#if CONFIG_ALGO_EQUAL
 class EqualRun : public RunInterface
 {
-  bool _kastl_res;
-  bool _stl_res;
+  bool _res[2];
 
 public:
 
@@ -2348,25 +2346,46 @@ public:
     i.first[i.first.size() / 2] = 42;
   }
 
-  virtual void run_kastl(InputType& i, OutputType& o)
+  virtual void run_ref(InputType& i, OutputType& o)
   {
-    _kastl_res = kastl::equal
-      (i.first.begin(), i.first.end(), i.second.begin());
+    _res[1] = std::equal(i.first.begin(), i.first.end(), i.second.begin());
   }
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _stl_res = std::equal
-      (i.first.begin(), i.first.end(), i.second.begin());
+    _res[0] = std::equal(i.first.begin(), i.first.end(), i.second.begin());
   }
+#endif
 
-  virtual bool check(OutputType&, OutputType&, std::string&) const
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
   {
-    return _kastl_res == _stl_res;
+    _res[0] = kastl::equal(i.first.begin(), i.first.end(), i.second.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::fill
+      (i.first.begin(), i.first.end(), i.second.begin(), pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    if (_res[0] == _res[1])
+      return true;
+    return false;
   }
 
 };
+#endif // CONFIG_ALGO_EQUAL
 
+
+#if 0
 
 class ReverseRun : public RunInterface
 {
@@ -3410,12 +3429,15 @@ RunInterface* RunInterface::create()
   CREATE_RUN( ReplaceIf );
 #endif
 
+#if CONFIG_ALGO_EQUAL
+  CREATE_RUN( Equal );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
   CREATE_RUN( PartialSum );
   CREATE_RUN( Fill );
-  CREATE_RUN( Equal );
   CREATE_RUN( Mismatch );
   CREATE_RUN( Reverse );
   CREATE_RUN( Partition );

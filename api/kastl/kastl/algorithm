@@ -61,10 +61,7 @@
 #include "kastl/inner_product.h"
 #include "kastl/replace.h"
 #include "kastl/replace_if.h"
-
-#if 0
 #include "kastl/equal.h"
-#endif
 
 #if 0
 #include "kastl/search.h"
