@@ -1930,7 +1930,7 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     __gnu_parallel::fill
-      (i.first.begin(), i.first.end(), o.begin(),
+      (i.first.begin(), i.first.end(),
        FILL_VALUE, pastl_parallel_tag);
   }
 #endif
@@ -2188,6 +2188,151 @@ public:
 
 };
 #endif // CONFIG_ALGO_INNER_PRODUCT
+
+
+#if CONFIG_ALGO_REPLACE
+class ReplaceRun : public RunInterface
+{
+#define REPLACE_OLD_VALUE 42
+#define REPLACE_NEW_VALUE 24
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    std::fill(i.first.begin(), i.first.end(), REPLACE_OLD_VALUE);
+    std::fill(i.second.begin(), i.second.end(), REPLACE_OLD_VALUE);
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::replace
+      (i.second.begin(), i.second.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE);
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::replace
+      (i.first.begin(), i.first.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::replace
+      (i.first.begin(), i.first.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::replace
+      (i.first.begin(), i.first.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE,
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_REPLACE
+
+
+#if CONFIG_ALGO_REPLACE_IF
+class ReplaceIfRun : public RunInterface
+{
+#define REPLACE_IF_VALUE 24
+
+  template<typename Value>
+  struct is42
+  {
+    bool operator()(const Value& v)
+    {
+      return v == 42;
+    }
+  };
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    std::fill(i.first.begin(), i.first.end(), 42);
+    std::fill(i.second.begin(), i.second.end(), 42);
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::replace_if
+      (i.second.begin(), i.second.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE);
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::replace_if
+      (i.first.begin(), i.first.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::replace_if
+      (i.first.begin(), i.first.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::replace_if
+      (i.first.begin(), i.first.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE,
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_REPLACE_IF
+
 
 #if 0 // speed compile time up
 
@@ -2565,88 +2710,6 @@ public:
   }
 
 };
-
-
-#if 0
-
-class ReplaceIfRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-  static bool is_magic(unsigned int v)
-  {
-    return v == 42;
-  }
-
-public:
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::replace_if(i.first.begin(), i.first.end(), is_magic, 24);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::replace_if(i.second.begin(), i.second.end(), is_magic, 24);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
-
-#endif
-
-
-#if CONFIG_ALGO_REPLACE
-class ReplaceRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::replace(i.first.begin(), i.first.end(), 42, 24);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::replace(i.second.begin(), i.second.end(), 42, 24);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
-#endif
-
 
 #if 0
 
@@ -3339,12 +3402,19 @@ RunInterface* RunInterface::create()
   CREATE_RUN( Generate );
 #endif
 
+#if CONFIG_ALGO_REPLACE
+  CREATE_RUN( Replace );
+#endif
+
+#if CONFIG_ALGO_REPLACE_IF
+  CREATE_RUN( ReplaceIf );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
   CREATE_RUN( PartialSum );
   CREATE_RUN( Fill );
-  CREATE_RUN( Replace );
   CREATE_RUN( Equal );
   CREATE_RUN( Mismatch );
   CREATE_RUN( Reverse );
@@ -3358,7 +3428,6 @@ RunInterface* RunInterface::create()
   CREATE_RUN( GenerateN );
   CREATE_RUN( ReplaceCopyIf );
   CREATE_RUN( ReplaceCopy );
-  CREATE_RUN( ReplaceIf );
   CREATE_RUN( AdjacentDifference );
   CREATE_RUN( AdjacentFind );
   CREATE_RUN( SearchN );

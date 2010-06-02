@@ -48,7 +48,9 @@ CPUSET4=0,1,2,3,4,5,6,7
 #ALGOS="$ALGOS max_element"
 #ALGOS="$ALGOS fill"
 #ALGOS="$ALGOS generate"
-ALGOS="$ALGOS inner_product"
+#ALGOS="$ALGOS inner_product"
+#ALGOS="$ALGOS replace"
+ALGOS="$ALGOS replace_if"
 
 LIBS='kastl'
 DOS='check'

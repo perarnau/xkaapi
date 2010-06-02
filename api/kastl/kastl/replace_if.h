@@ -43,51 +43,59 @@
  ** 
  */
 
-#ifndef KASTL_ALGORITHM_INCLUDED
-# define KASTL_ALGORITHM_INCLUDED
 
-#include "kastl/for_each.h"
-#include "kastl/find.h"
-#include "kastl/find_if.h"
-#include "kastl/find_first_of.h"
-#include "kastl/min_element.h"
-#include "kastl/max_element.h"
-#include "kastl/count.h"
-#include "kastl/count_if.h"
-#include "kastl/copy.h"
-#include "kastl/transform.h"
-#include "kastl/fill.h"
-#include "kastl/generate.h"
-#include "kastl/inner_product.h"
-#include "kastl/replace.h"
-#include "kastl/replace_if.h"
-
-#if 0
-#include "kastl/equal.h"
-#endif
-
-#if 0
-#include "kastl/search.h"
-#include "kastl/swap_ranges.h"
-#endif
-
-#if 0
-#include "partial_sum.h"
-#include "merge.h"
-#include "sort.h"
-#include "equal.h"
-#include "mismatch.h"
-#include "reverse.h"
-#include "partition.h"
-#include "set_union.h"
-#include "set_intersection.h"
-#include "set_difference.h"
-#include "generate_n.h"
-#include "replace_copy.h"
-#include "replace_if.h"
-#include "replace_copy_if.h"
-#include "search_n.h"
-#endif
+#ifndef KASTL_REPLACE_IF_H_INCLUDED
+# define KASTL_REPLACE_IF_H_INCLUDED
 
 
-#endif // ! KASTL_ALGORITHM_INCLUDED
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
+
+namespace kastl
+{
+
+template<typename Iterator, typename Predicate, typename Value>
+struct replace_if_body
+{
+  typedef kastl::impl::dummy_type result_type;
+
+  Predicate _pred;
+  const Value& _value;
+
+  replace_if_body(Predicate pred, const Value& value)
+    : _pred(pred), _value(value)
+  {}
+
+  bool operator()(result_type&, Iterator& pos)
+  {
+    if (_pred(*pos))
+      *pos = _value;
+    return false;
+  }
+};
+
+template
+<typename Iterator, typename Predicate, typename Value, typename Settings>
+void replace_if
+(Iterator first, Iterator last,
+ Predicate pred, const Value& value,
+ const Settings& settings)
+{
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  replace_if_body<Iterator, Predicate, Value> body(pred, value);
+  kastl::impl::unrolled_loop::run(seq, body, settings);
+}
+
+template<typename Iterator, typename Predicate, typename Value>
+void replace_if
+(Iterator first, Iterator last, Predicate pred, const Value& value)
+{
+  kastl::impl::static_settings settings(512, 512);
+  kastl::replace_if(first, last, pred, value, settings);
+}
+
+} // kastl::
+
+
+#endif // ! KASTL_REPLACE_IF_H_INCLUDED

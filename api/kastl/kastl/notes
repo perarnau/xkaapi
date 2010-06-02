@@ -18,11 +18,13 @@ only return result + last - first
 . test both version of the transform algorithm
  . unit case should test the second one
 
-. model
- . inner_product
-
 . then simple algorithms
- . replace, replace_if
+ . replace
+ . replace_if
+ . adjacent_find
+ . mismatch
+ . equal
+ . search
 
 . then partial_sum
 
