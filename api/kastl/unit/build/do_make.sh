@@ -13,7 +13,8 @@ ALGOS=''
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS min_element"
 #ALGOS="$ALGOS max_element"
-ALGOS="$ALGOS fill"
+#ALGOS="$ALGOS fill"
+ALGOS="$ALGOS generate"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do

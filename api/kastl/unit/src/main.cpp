@@ -1954,6 +1954,68 @@ public:
 #endif // CONFIG_ALGO_FILL
 
 
+#if CONFIG_ALGO_GENERATE
+class GenerateRun : public RunInterface
+{
+  template<typename Value>
+  struct gen42
+  {
+    Value operator()() const
+    {
+      return 42;
+    }
+  };
+
+  typedef gen42<ValueType> gen_type;
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::generate(i.second.begin(), i.second.end(), gen_type());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::generate(i.first.begin(), i.first.end(), gen_type());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::generate(i.first.begin(), i.first.end(), gen_type());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::generate
+      (i.first.begin(), i.first.end(), o.begin(),
+       gen_type(), pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_GENERATE
+
 #if CONFIG_ALGO_SWAP_RANGES
 class SwapRangesRun : public RunInterface
 {
@@ -2584,43 +2646,6 @@ public:
 
 };
 #endif
-
-
-class GenerateRun : public RunInterface
-{
-  struct gen_one
-  {
-    gen_one() {}
-
-    unsigned int operator()() { return 1; }
-  };
-
-public:
-  virtual void run_kastl(InputType&, OutputType& o)
-  {
-    kastl::generate(o.begin(), o.end(), gen_one());
-  }
-
-  virtual void run_stl(InputType&, OutputType& o)
-  {
-    std::generate(o.begin(), o.end(), gen_one());
-  }
-
-  virtual bool check
-  (
-   OutputType& os,
-   OutputType& ok,
-   std::string& error_string
-  ) const
-  {
-    SequenceType::iterator kpos = ok.begin();
-    SequenceType::iterator spos = os.begin();
-    SequenceType::iterator send = os.end();
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
 
 
 #if 0
@@ -3310,13 +3335,16 @@ RunInterface* RunInterface::create()
   CREATE_RUN( Fill );
 #endif
 
+#if CONFIG_ALGO_GENERATE
+  CREATE_RUN( Generate );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
   CREATE_RUN( PartialSum );
   CREATE_RUN( Fill );
   CREATE_RUN( Replace );
-  CREATE_RUN( Generate );
   CREATE_RUN( Equal );
   CREATE_RUN( Mismatch );
   CREATE_RUN( Reverse );
