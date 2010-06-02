@@ -9,11 +9,11 @@ ALGOS=''
 #ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
 #ALGOS="$ALGOS count_if"
-ALGOS="$ALGOS transform"
+#ALGOS="$ALGOS copy"
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS min_element"
 #ALGOS="$ALGOS max_element"
-#ALGOS="$ALGOS copy"
+ALGOS="$ALGOS fill"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do

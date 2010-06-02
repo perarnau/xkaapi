@@ -1881,14 +1881,15 @@ public:
 #endif
 
   virtual bool check
-  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  (InputType&, std::vector<OutputType>& os, std::string& es) const
   {
-    SequenceType::iterator a = is.first.begin();
-    SequenceType::iterator b = is.second.begin();
-    SequenceType::iterator c = is.second.end();
+    SequenceType::iterator a = os[0].begin();
+    SequenceType::iterator b = os[1].begin();
+    SequenceType::iterator c = os[1].end();
+
     if (cmp_sequence(a, b, c) == false)
     {
-      es = index_error_string(a - is.first.begin(), b - is.second.begin());
+      es = index_error_string(a - os[0].begin(), b - os[1].begin());
       return false;
     }
 
@@ -1897,6 +1898,60 @@ public:
 
 };
 #endif // CONFIG_ALGO_COPY
+
+
+#if CONFIG_ALGO_FILL
+class FillRun : public RunInterface
+{
+#define FILL_VALUE 42
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::fill(i.second.begin(), i.second.end(), FILL_VALUE);
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::fill(i.first.begin(), i.first.end(), FILL_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::fill(i.first.begin(), i.first.end(), FILL_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::fill
+      (i.first.begin(), i.first.end(), o.begin(),
+       FILL_VALUE, pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_FILL
 
 
 #if CONFIG_ALGO_SWAP_RANGES
@@ -2445,41 +2500,6 @@ public:
     }
 
     return true;
-  }
-
-};
-
-
-class FillRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::fill(i.first.begin(), i.first.end(), 42);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::fill(i.second.begin(), i.second.end(), 42);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
   }
 
 };
@@ -3284,6 +3304,10 @@ RunInterface* RunInterface::create()
 
 #if CONFIG_ALGO_COPY
   CREATE_RUN( Copy );
+#endif
+
+#if CONFIG_ALGO_FILL
+  CREATE_RUN( Fill );
 #endif
 
 #if 0 // speed compile time up

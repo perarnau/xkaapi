@@ -19,7 +19,6 @@ only return result + last - first
  . unit case should test the second one
 
 . model
- . transform
  . fill, generate
  . inner_product
 

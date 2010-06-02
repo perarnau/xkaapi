@@ -43,49 +43,53 @@
  ** 
  */
 
-#ifndef KASTL_ALGORITHM_INCLUDED
-# define KASTL_ALGORITHM_INCLUDED
 
-#include "kastl/for_each.h"
-#include "kastl/find.h"
-#include "kastl/find_if.h"
-#include "kastl/find_first_of.h"
-#include "kastl/min_element.h"
-#include "kastl/max_element.h"
-#include "kastl/count.h"
-#include "kastl/count_if.h"
-#include "kastl/copy.h"
-#include "kastl/transform.h"
-#include "kastl/fill.h"
-
-#if 0
-#include "kastl/equal.h"
-#endif
-
-#if 0
-#include "kastl/search.h"
-#include "kastl/swap_ranges.h"
-#endif
-
-#if 0
-#include "partial_sum.h"
-#include "merge.h"
-#include "sort.h"
-#include "replace.h"
-#include "generate.h"
-#include "equal.h"
-#include "mismatch.h"
-#include "reverse.h"
-#include "partition.h"
-#include "set_union.h"
-#include "set_intersection.h"
-#include "set_difference.h"
-#include "generate_n.h"
-#include "replace_copy.h"
-#include "replace_if.h"
-#include "replace_copy_if.h"
-#include "search_n.h"
-#endif
+#ifndef KASTL_FILL_H_INCLUDED
+# define KASTL_FILL_H_INCLUDED
 
 
-#endif // ! KASTL_ALGORITHM_INCLUDED
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
+
+namespace kastl
+{
+
+template<typename Iterator, typename Value>
+struct fill_body
+{
+  typedef kastl::impl::dummy_type result_type;
+
+  const Value& _value;
+
+  fill_body(const Value& value)
+    : _value(value)
+  {}
+
+  bool operator()(result_type&, Iterator& pos)
+  {
+    *pos = _value;
+    return false;
+  }
+};
+
+template<typename Iterator, typename Value, typename Settings>
+void fill
+(Iterator first, Iterator last, const Value& value, const Settings& settings)
+{
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  fill_body<Iterator, Value> body(value);
+  kastl::impl::unrolled_loop::run(seq, body, settings);
+}
+
+template<typename Iterator, typename Value>
+void fill(Iterator first, Iterator last, const Value& value)
+{
+  kastl::impl::static_settings settings(512, 512);
+  kastl::fill(first, last, value, settings);
+}
+
+} // kastl::
+
+
+#endif // ! KASTL_FILL_H_INCLUDED

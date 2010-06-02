@@ -42,11 +42,11 @@ CPUSET4=0,1,2,3,4,5,6,7
 #ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
 #ALGOS="$ALGOS count_if"
-ALGOS="$ALGOS transform"
+#ALGOS="$ALGOS copy"
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS min_element"
 #ALGOS="$ALGOS max_element"
-#ALGOS="$ALGOS copy"
+ALGOS="$ALGOS fill"
 
 LIBS='kastl'
 DOS='check'
