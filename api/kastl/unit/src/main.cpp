@@ -532,8 +532,9 @@ static const __gnu_parallel::_Parallelism pastl_parallel_tag =
 
 static bool pastl_initialize()
 {
+  const int thread_count = (int)get_concurrency();
   omp_set_dynamic(false);
-  omp_set_num_threads(get_concurrency());
+  omp_set_num_threads(thread_count);
   return true;
 }
 
