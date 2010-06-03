@@ -16,6 +16,12 @@ only return result + last - first
 -- todos
 . test, bench
  . auto plot
+
+ . test
+  . for_each
+  . find
+  . accumulate
+
 . implement unique
 . implement partial_sum
 . implement merge
@@ -127,3 +133,12 @@ only return result + last - first
          5. adjacent_difference
          6. power 
 
+3- Perfs. Nous pourrons toujours améliorer les perfs, mais il est important
+que cette première release ait de meilleure perfs que (par ordre)
+1/ //èle GNU STL 2/ TBB 3/ OpenMP
+Du point de vu de la création de tâche, cela est /était vrai (faut refaire les benchs).
+Mais il faudrait que ce soit vrai pour kastl aussi.
+
+4- Une doc:
+       a- quick user guide (comment installer / compiler) + une doc
+       l'utilisation de 1/ C++ Kaapi 2/ kastl (répertoire doc à reprendre).

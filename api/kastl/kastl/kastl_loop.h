@@ -492,7 +492,8 @@ namespace impl
   // forward decls
   template<typename ReduceTag> struct outter_loop;
 
-  template<typename Result, typename Sequence, typename Body, typename Settings>
+  template<typename Result, typename Sequence,
+	   typename Body, typename Settings>
   struct splitter
   {
     typedef splitter<Result, Sequence, Body, Settings> splitter_type;
@@ -613,8 +614,7 @@ namespace impl
 	new (tc) task_context
 	  (rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
 
-	kastl_entry_t const thief_entry = outter_loop
-	  <ReduceTag>::template
+	kastl_entry_t const thief_entry = outter_loop<ReduceTag>::template
 	  thief_entry<Result, Sequence, Body, Settings>;
 
 	kaapi_task_init(thief_task, thief_entry, tc);
@@ -681,8 +681,8 @@ namespace impl
     template<typename Result, typename Range, typename Body>
     static bool run(Result& res, Range& range, Body& body)
     {
-      // rely upon the first iterator to check for sequence
-      // end but iterate with a full sequence iterator
+      // rely upon the ri1 to check for sequence end
+      // but iterate with a whole sequence iterator
 
       typename Range::iterator_type pos = range.begin();
       typename Range::iterator1_type end = range.end1();
@@ -820,7 +820,8 @@ namespace impl
 
     // exported entry point
 
-    template<typename Result, typename Sequence, typename Body, typename Settings>
+    template<typename Result, typename Sequence,
+	     typename Body, typename Settings>
     static Result& run
     (Result& res, Sequence& seq, Body& body, const Settings& settings)
     {

@@ -1,12 +1,12 @@
 #!/usr/bin/env sh
 
 ALGOS=''
+ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS find"
 #ALGOS="$ALGOS find_if"
 #ALGOS="$ALGOS find_first_of"
 #ALGOS="$ALGOS accumulate"
 #ALGOS="$ALGOS inner_product"
-#ALGOS="$ALGOS for_each"
 #ALGOS="$ALGOS count"
 #ALGOS="$ALGOS count_if"
 #ALGOS="$ALGOS copy"
@@ -22,7 +22,7 @@ ALGOS=''
 #ALGOS="$ALGOS mismatch"
 #ALGOS="$ALGOS search"
 #ALGOS="$ALGOS adjacent_find"
-ALGOS="$ALGOS adjacent_difference"
+#ALGOS="$ALGOS adjacent_difference"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do

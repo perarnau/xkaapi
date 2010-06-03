@@ -376,8 +376,9 @@ static size_t __attribute__((unused)) get_concurrency()
 
 static bool tbb_initialize()
 {
-  static tbb::task_scheduler_init tsi;
-  tsi.initialize(get_concurrency());
+  static tbb::task_scheduler_init tsi
+    (tbb::task_scheduler_init::deferred);
+  tsi.initialize((int)get_concurrency());
   return true;
 }
 
@@ -858,7 +859,9 @@ public:
 #if CONFIG_LIB_PASTL
   virtual void run_pastl(InputType& i, OutputType&)
   {
-    __gnu_parallel::for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>(), pastl_parallel_tag);
+    __gnu_parallel::for_each
+      (i.first.begin(), i.first.end(), sin_functor<ValueType>(),
+       pastl_parallel_tag);
   }
 #endif
 
