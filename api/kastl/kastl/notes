@@ -17,9 +17,12 @@ only return result + last - first
 . use enum instead of static unsigned int for the
   Sequence iterator_count
 
+. remove the unrolled_tag
+
 . then simple algorithms
- . search
  . adjacent_find
+ . adjacent_difference
+
  => ensuite blinder de tests avant de passer au reste
 
 . then partial_sum

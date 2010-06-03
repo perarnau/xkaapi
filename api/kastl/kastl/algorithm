@@ -64,6 +64,7 @@
 #include "kastl/equal.h"
 #include "kastl/mismatch.h"
 #include "kastl/search.h"
+#include "kastl/adjacent_find.h"
 
 #if 0
 #include "swap_ranges.h"

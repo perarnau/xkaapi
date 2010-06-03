@@ -53,7 +53,8 @@ CPUSET4=0,1,2,3,4,5,6,7
 #ALGOS="$ALGOS replace_if"
 #ALGOS="$ALGOS equal"
 #ALGOS="$ALGOS mismatch"
-ALGOS="$ALGOS search"
+#ALGOS="$ALGOS search"
+ALGOS="$ALGOS adjacent_find"
 
 LIBS='kastl'
 DOS='check'

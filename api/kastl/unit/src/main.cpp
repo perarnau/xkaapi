@@ -1843,6 +1843,63 @@ public:
 };
 #endif
 
+#if CONFIG_ALGO_ADJACENT_FIND
+class AdjacentFindRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+  virtual void prepare(InputType& i)
+  {
+#define ADJACENT_FIND_VALUE 42
+    i.first[i.first.size() / 2] = ADJACENT_FIND_VALUE;
+    i.first[i.first.size() / 2 + 1] = ADJACENT_FIND_VALUE;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::adjacent_find(i.first.begin(), i.first.end());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::adjacent_find(i.first.begin(), i.first.end());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::adjacent_find(i.first.begin(), i.first.end());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::adjacent_find(i.first.begin(), i.first.end());
+  }
+#endif
+
+  virtual bool check
+  (InputType& i, std::vector<OutputType>&, std::string& es) const
+  {
+    ptrdiff_t indices[2];
+
+    if (_res[0] == _res[1])
+      return true;
+
+    indices[0] = _res[0] - i.first.begin();
+    indices[1] = _res[1] - i.first.begin();
+
+    es = index_error_string(indices[1], indices[0]);
+
+    return false;
+  }
+
+};
+#endif // CONFIG_ALGO_ADJACENT_FIND
 
 #if CONFIG_ALGO_COPY
 class CopyRun : public RunInterface
@@ -3450,6 +3507,14 @@ RunInterface* RunInterface::create()
   CREATE_RUN( Mismatch );
 #endif
 
+#if CONFIG_ALGO_ADJACENT_FIND
+  CREATE_RUN( AdjacentFind );
+#endif
+
+#if CONFIG_ALGO_ADJACENT_DIFFERENCE
+  CREATE_RUN( AdjacentDifference );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
@@ -3460,13 +3525,6 @@ RunInterface* RunInterface::create()
   CREATE_RUN( SetIntersection );
   CREATE_RUN( SetDifference );
 #endif // speed compile time up
-
-#if 0
-  CREATE_RUN( ReplaceCopyIf );
-  CREATE_RUN( ReplaceCopy );
-  CREATE_RUN( AdjacentDifference );
-  CREATE_RUN( AdjacentFind );
-#endif
 
   return NULL;
 }
