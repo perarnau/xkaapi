@@ -88,15 +88,6 @@ struct max_element_body
 
 };
 
-template<typename Value>
-struct gt
-{
-  bool operator()(const Value& lhs, const Value& rhs)
-  {
-    return lhs > rhs;
-  }
-};
-
 template<typename Iterator, typename Predicate, typename Settings>
 Iterator max_element
 (Iterator first, Iterator last, Predicate pred, const Settings& settings)
@@ -104,7 +95,7 @@ Iterator max_element
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   max_element_body<Iterator, Predicate> body(pred);
   Iterator res(first);
-  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  kastl::impl::reduce_loop::run(res, seq, body, settings);
   return res;
 }
 
@@ -120,7 +111,7 @@ template<typename Iterator>
 Iterator max_element(Iterator first, Iterator last)
 {
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
-  return kastl::max_element(first, last, kastl::gt<value_type>());
+  return kastl::max_element(first, last, kastl::impl::gt<value_type>());
 }
 
 } // kastl::

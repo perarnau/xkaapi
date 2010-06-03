@@ -81,7 +81,7 @@ Function for_each
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   for_each_body<Iterator, Function> body(op, first);
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
   return op;
 }
 

@@ -90,7 +90,7 @@ void count_if
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   kastl::impl::numeric_result<Iterator, Size> res(size);
   count_if_body<Iterator, Predicate, Size> body(pred);
-  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  kastl::impl::reduce_loop::run(res, seq, body, settings);
   size = res._value;
 }
 

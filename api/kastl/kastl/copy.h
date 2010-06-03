@@ -75,7 +75,7 @@ Iterator1 copy
   kastl::rts::Sequence<Iterator0, Iterator1> seq
     (ifirst, ofirst, ilast - ifirst);
   copy_body<Iterator0, Iterator1> body;
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
   return ofirst + (ilast - ifirst);
 }
 

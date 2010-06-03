@@ -115,7 +115,7 @@ Iterator0 search
   kastl::impl::touched_algorithm_result<Iterator0> res(last0);
 
   search_body<Iterator0, Iterator1, Predicate> body(first1, last1, pred);
-  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  kastl::impl::reduce_loop::run(res, seq, body, settings);
   return res._iter;
 }
 

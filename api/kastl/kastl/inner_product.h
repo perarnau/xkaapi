@@ -103,7 +103,7 @@ Value inner_product
     body(op0, op1);
 
   kastl::impl::numeric_result<Iterator0, Value> res(init);
-  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  kastl::impl::reduce_loop::run(res, seq, body, settings);
   return res._value;
 }
 

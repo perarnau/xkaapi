@@ -79,7 +79,7 @@ void fill
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   fill_body<Iterator, Value> body(value);
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
 }
 
 template<typename Iterator, typename Value>

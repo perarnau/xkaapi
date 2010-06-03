@@ -86,7 +86,7 @@ Value accumulate
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   accumulate_body<Iterator, Value, Function> body(op);
   kastl::impl::numeric_result<Iterator, Value> result(init);
-  kastl::impl::reduce_unrolled_loop::run
+  kastl::impl::reduce_loop::run
     (result, seq, body, settings);
   return result._value;
 }

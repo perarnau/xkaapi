@@ -103,7 +103,7 @@ Iterator adjacent_find
   kastl::impl::touched_algorithm_result<Iterator> res(last);
 
   adjacent_find_body<Iterator, Predicate> body(pred);
-  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  kastl::impl::reduce_loop::run(res, seq, body, settings);
   return res._iter;
 }
 

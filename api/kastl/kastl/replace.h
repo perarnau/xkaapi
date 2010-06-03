@@ -83,7 +83,7 @@ void replace
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   replace_body<Iterator, Value> body(old_value, new_value);
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
 }
 
 template<typename Iterator, typename Value>

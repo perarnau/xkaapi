@@ -84,7 +84,7 @@ void replace_if
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   replace_if_body<Iterator, Predicate, Value> body(pred, value);
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
 }
 
 template<typename Iterator, typename Predicate, typename Value>

@@ -100,7 +100,7 @@ bool equal
   kastl::impl::bool_result<Iterator0, true> res;
 
   equal_body<Iterator0, Iterator1, Predicate> body(pred);
-  kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
+  kastl::impl::reduce_loop::run(res, seq, body, settings);
   return res._value;
 }
 

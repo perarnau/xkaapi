@@ -14,11 +14,9 @@ only return result + last - first
  pour choisir comment initialiser le result
 
 -- todos
-. remove unneeded code
- . remove the unrolled_tag
-
-. test, benchmarks
+. test, bench
  . auto plot
+. implement unique
 . implement partial_sum
 . implement merge
 . implement sorting

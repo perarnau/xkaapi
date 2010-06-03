@@ -79,7 +79,7 @@ void generate
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   generate_body<Iterator, Generator> body(gen);
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
 }
 
 template<typename Iterator, typename Generator>

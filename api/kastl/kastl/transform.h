@@ -112,7 +112,7 @@ Iterator1 transform
     (ifirst, ofirst, ilast - ifirst);
 
   transform_body<Iterator0, Iterator1, Operation> body(op);
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
   return ofirst + (ilast - ifirst);
 }
 
@@ -137,7 +137,7 @@ Iterator2 transform
     (ifirst0, ifirst1, ofirst, ilast - ifirst0);
 
   transform2_body<Iterator0, Iterator1, Iterator2, Operation> body(op);
-  kastl::impl::unrolled_loop::run(seq, body, settings);
+  kastl::impl::parallel_loop::run(seq, body, settings);
   return ofirst + (ilast - ifirst0);
 }
 

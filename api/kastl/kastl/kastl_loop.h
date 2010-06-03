@@ -43,8 +43,8 @@
  ** 
  */
 
-#ifndef _KASTL_LOOP_H_
-# define _KASTL_LOOP_H_
+#ifndef KASTL_LOOP_H_INCLUDED
+# define KASTL_LOOP_H_INCLUDED
 
 
 #include <sys/types.h>
@@ -96,10 +96,6 @@ namespace impl
   struct reduce_tag {};
   typedef dummy_tag noreduce_tag;
 
-  // innermost (nano) tag
-  struct unrolled_tag {};
-  typedef dummy_tag rolled_tag;
-
   // extractor tag
   struct window_tag {};
   struct linear_tag {};
@@ -146,6 +142,24 @@ namespace impl
     bool operator()(const T& lhs, const T& rhs)
     {
       return lhs == rhs;
+    }
+  };
+
+  template<typename Value>
+  struct gt
+  {
+    bool operator()(const Value& lhs, const Value& rhs)
+    {
+      return lhs > rhs;
+    }
+  };
+
+  template<typename Value>
+  struct lt
+  {
+    bool operator()(const Value& lhs, const Value& rhs)
+    {
+      return lhs < rhs;
     }
   };
 
@@ -476,7 +490,7 @@ namespace impl
   };
 
   // forward decls
-  template<typename ReduceTag, typename UnrollTag> struct outter_loop;
+  template<typename ReduceTag> struct outter_loop;
 
   template<typename Result, typename Sequence, typename Body, typename Settings>
   struct splitter
@@ -521,7 +535,7 @@ namespace impl
       {}
     };
 
-    template<typename ReduceTag, typename UnrollTag>
+    template<typename ReduceTag>
     static int split
     (kaapi_stealcontext_t* sc, int request_count,
      kaapi_request_t* request, void* arg)
@@ -600,7 +614,7 @@ namespace impl
 	  (rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
 
 	kastl_entry_t const thief_entry = outter_loop
-	  <ReduceTag, UnrollTag>::template
+	  <ReduceTag>::template
 	  thief_entry<Result, Sequence, Body, Settings>;
 
 	kaapi_task_init(thief_task, thief_entry, tc);
@@ -662,20 +676,7 @@ namespace impl
       expand_apply(res, pos, body);
   }
 
-  // inner (nano) loop
-  template<typename UnrollTag = rolled_tag>
   struct inner_loop
-  {
-    template<typename Result, typename Range, typename Body>
-    static bool run(Result& res, Range& range, Body& body)
-    {
-      // default, rolled loop
-      return body(res, range);
-    }
-  };
-
-  template<>
-  struct inner_loop<unrolled_tag>
   {
     template<typename Result, typename Range, typename Body>
     static bool run(Result& res, Range& range, Body& body)
@@ -695,7 +696,7 @@ namespace impl
   };
 
   // first level, outter (macro) loop
-  template<typename ReduceTag, typename UnrollTag>
+  template<typename ReduceTag>
   struct outter_loop
   {
     // loop entry point
@@ -731,8 +732,8 @@ namespace impl
     redo_loop:
       while (xtr.extract(seq, subr))
       {
-	is_done = inner_loop<UnrollTag>::template
-	  run<Result, range_type, Body>(res, subr, body);
+	is_done = inner_loop::template run<Result, range_type, Body>
+	  (res, subr, body);
 
 	// check if we have been preempted
 	if (ktr != NULL)
@@ -781,13 +782,13 @@ namespace impl
 
       kastl_splitter_t const splitfn =
 	splitter<Result, Sequence, Body, Settings>::template
-	split<ReduceTag, UnrollTag>;
+	split<ReduceTag>;
 
       kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
 	(thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
 
       extractor<static_tag> xtr(tc->_settings);
-      outter_loop<ReduceTag, UnrollTag>::common_entry
+      outter_loop<ReduceTag>::common_entry
 	(sc, tc->_ktr, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
 
       kaapi_steal_finalize(sc);
@@ -805,13 +806,13 @@ namespace impl
       Context* const tc = static_cast<Context*>(arg);
 
       kastl_splitter_t const splitfn = splitter_type::template
-	split<ReduceTag, UnrollTag>;
+	split<ReduceTag>;
 
       kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
 	(thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
 
       extractor< typename Settings::_macro_extractor_tag > xtr(tc->_settings);
-      outter_loop<ReduceTag, UnrollTag>::common_entry
+      outter_loop<ReduceTag>::common_entry
 	(sc, NULL, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
 
       kaapi_steal_finalize(sc);
@@ -860,14 +861,11 @@ namespace impl
   };
 
   // sugar
-  typedef outter_loop<noreduce_tag, rolled_tag> parallel_loop;
-  typedef outter_loop<reduce_tag, rolled_tag> reduce_loop;
-  typedef outter_loop<noreduce_tag, unrolled_tag> unrolled_loop;
-  typedef outter_loop<reduce_tag, unrolled_tag> reduce_unrolled_loop;
-
+  typedef outter_loop<noreduce_tag> parallel_loop;
+  typedef outter_loop<reduce_tag> reduce_loop;
 
 } // impl
 } // kastl
 
 
-#endif // _KASTL_LOOP_H_
+#endif // KASTL_LOOP_H_INCLUDED
