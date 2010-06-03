@@ -1901,6 +1901,76 @@ public:
 };
 #endif // CONFIG_ALGO_ADJACENT_FIND
 
+#if CONFIG_ALGO_ADJACENT_DIFFERENCE
+class AdjacentDifferenceRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin(),
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType&, std::vector<OutputType>& os, std::string& es) const
+  {
+    // check sequences
+    SequenceType::iterator a = os[0].begin();
+    SequenceType::iterator b = os[1].begin();
+    SequenceType::iterator c = os[1].end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - os[0].begin(), b - os[1].begin());
+      return false;
+    }
+
+    // check indices
+    const ptrdiff_t is[2] =
+    {
+      _res[0] - os[0].begin(),
+      _res[1] - os[1].begin()
+    };
+
+    if (is[0] != is[1])
+    {
+      es = index_error_string(is[1], is[0]);
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_ADJACENT_DIFFERENCE
+
 #if CONFIG_ALGO_COPY
 class CopyRun : public RunInterface
 {

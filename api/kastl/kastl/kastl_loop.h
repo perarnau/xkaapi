@@ -122,6 +122,15 @@ namespace impl
   };
 
   template<typename T>
+  struct sub
+  {
+    T operator()(const T& lhs, const T& rhs)
+    {
+      return lhs - rhs;
+    }
+  };
+
+  template<typename T>
   struct mul
   {
     T operator()(const T& lhs, const T& rhs)

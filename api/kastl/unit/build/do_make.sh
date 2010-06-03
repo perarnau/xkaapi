@@ -21,7 +21,8 @@ ALGOS=''
 #ALGOS="$ALGOS equal"
 #ALGOS="$ALGOS mismatch"
 #ALGOS="$ALGOS search"
-ALGOS="$ALGOS adjacent_find"
+#ALGOS="$ALGOS adjacent_find"
+ALGOS="$ALGOS adjacent_difference"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do
