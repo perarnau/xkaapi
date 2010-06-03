@@ -14,9 +14,6 @@ only return result + last - first
  pour choisir comment initialiser le result
 
 -- todos
-. use enum instead of static unsigned int for the
-  Sequence iterator_count
-
 . remove unneeded code
  . remove the unrolled_tag
 

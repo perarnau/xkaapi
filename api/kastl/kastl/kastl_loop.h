@@ -618,7 +618,7 @@ namespace impl
   }; // splitter
 
   // expand iterator, apply body
-  template<size_t Count> struct expand_apply_t
+  template<unsigned int Count> struct expand_apply_t
   {
     template<typename Result, typename Iterator, typename Body>
     static bool expand_apply(Result& res, Iterator& pos, Body& body)

@@ -66,7 +66,7 @@ template <
     typename RandomIterator4=dummy_type 
 >
 struct SequenceRep {
-  static const size_t iterator_count = 4;
+  enum { iterator_count = 4 };
 
   typedef SequenceRep<RandomIterator1,RandomIterator2,RandomIterator3,RandomIterator4> Self_t;
 
@@ -135,7 +135,7 @@ struct SequenceRep {
 /*  specialisation to gain space because sizeof(dummy_type) != 0 */
 template <typename RandomIterator1>
 struct SequenceRep<RandomIterator1,dummy_type,dummy_type,dummy_type> {
-  static const size_t iterator_count = 1;
+  enum { iterator_count = 1 };
 
   typedef SequenceRep<RandomIterator1,dummy_type,dummy_type,dummy_type> Self_t;
 
@@ -178,7 +178,7 @@ struct SequenceRep<RandomIterator1,dummy_type,dummy_type,dummy_type> {
 
 template <typename RandomIterator1, typename RandomIterator2>
 struct SequenceRep<RandomIterator1,RandomIterator2,dummy_type,dummy_type> {
-  static const size_t iterator_count = 2;
+  enum { iterator_count = 2 };
 
   typedef SequenceRep<RandomIterator1,RandomIterator2,dummy_type,dummy_type> Self_t;
 
@@ -227,7 +227,7 @@ struct SequenceRep<RandomIterator1,RandomIterator2,dummy_type,dummy_type> {
 
 template <typename RandomIterator1, typename RandomIterator2, typename RandomIterator3>
 struct SequenceRep<RandomIterator1,RandomIterator2,RandomIterator3,dummy_type> {
-  static const size_t iterator_count = 3;
+  enum { iterator_count = 3 };
 
   typedef SequenceRep<RandomIterator1,RandomIterator2,RandomIterator3,dummy_type> Self_t;
 
