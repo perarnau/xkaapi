@@ -52,7 +52,8 @@ CPUSET4=0,1,2,3,4,5,6,7
 #ALGOS="$ALGOS replace"
 #ALGOS="$ALGOS replace_if"
 #ALGOS="$ALGOS equal"
-ALGOS="$ALGOS mismatch"
+#ALGOS="$ALGOS mismatch"
+ALGOS="$ALGOS search"
 
 LIBS='kastl'
 DOS='check'

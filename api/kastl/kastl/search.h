@@ -44,11 +44,10 @@
  */
 
 
-#ifndef KASTL_MISMATCH_H_INCLUDED
-# define KASTL_MISMATCH_H_INCLUDED
+#ifndef KASTL_SEARCH_H_INCLUDED
+# define KASTL_SEARCH_H_INCLUDED
 
 
-#include <utility>
 #include <iterator>
 #include "kastl_loop.h"
 #include "kastl_sequences.h"
@@ -57,49 +56,35 @@
 namespace kastl
 {
 
-template<typename Iterator0, typename Iterator1>
-struct mismatch_result
-{
-  typedef std::pair<Iterator0, Iterator1> pair_type;
-
-  bool _is_touched;
-  pair_type _iters;
-
-  mismatch_result(const Iterator0&)
-    : _is_touched(false)
-  {}
-
-  mismatch_result(const Iterator0& iter0, const Iterator1& iter1)
-    : _is_touched(false), _iters(pair_type(iter0, iter1))
-  {}
-
-  void set_iters(const Iterator0& iter0, const Iterator1& iter1)
-  {
-    _is_touched = true;
-    _iters = pair_type(iter0, iter1);
-  }
-};
-
 template<typename Iterator0, typename Iterator1, typename Predicate>
-struct mismatch_body
+struct search_body
 {
-  typedef kastl::rts::Sequence<Iterator0, Iterator1> sequence_type;
+  typedef kastl::rts::Sequence<Iterator0> sequence_type;
   typedef typename sequence_type::range_type range_type;
-  typedef mismatch_result<Iterator0, Iterator1> result_type;
+  typedef kastl::impl::touched_algorithm_result<Iterator0> result_type;
 
+  Iterator1 _first;
+  Iterator1 _last;
   Predicate _pred;
 
-  mismatch_body(const Predicate& pred)
-    : _pred(pred)
+  search_body
+  (const Iterator1& first, const Iterator1& last, const Predicate& pred)
+    : _first(first), _last(last), _pred(pred)
   {}
 
   bool operator()
-  (result_type& res, const Iterator0& pos0, const Iterator1& pos1)
+  (result_type& res, const Iterator0& const_pos)
   {
-    // terminate if pred is false
-    if (_pred(*pos0, *pos1) == true)
-      return false;
-    res.set_iters(pos0, pos1);
+    Iterator0 pos = const_pos;
+
+    // terminate if pred holds for all
+    for (Iterator1 first = _first; first != _last; ++first, ++pos)
+    {
+      if (_pred(*pos, *first) == false)
+	return false;
+    }
+
+    res.set_iter(const_pos);
     return true;
   }
 
@@ -107,48 +92,52 @@ struct mismatch_body
   {
     // terminate if touched
     if ((lhs._is_touched == false) && (rhs._is_touched == true))
-      lhs.set_iters(rhs._iters.first, rhs._iters.second);
+      lhs.set_iter(rhs._iter);
     return lhs._is_touched == true;
   }
 };
 
 template<typename Iterator0, typename Iterator1,
 	 typename Predicate, typename Settings>
-std::pair<Iterator0, Iterator1> mismatch
-(Iterator0 first0, Iterator0 last, Iterator1 first1,
+Iterator0 search
+(Iterator0 first0, Iterator0 last0, Iterator1 first1, Iterator1 last1,
  Predicate pred, const Settings& settings)
 {
   typedef typename std::iterator_traits<Iterator0>::difference_type size_type;
 
-  const size_type size = std::distance(first0, last);
+  const size_type size0 = std::distance(first0, last0);
+  const size_type size1 = std::distance(first1, last1);
 
-  kastl::rts::Sequence<Iterator0, Iterator1> seq
-    (first0, first1, size);
+  if (size0 < size1)
+    return last0;
 
-  mismatch_result<Iterator0, Iterator1> res(last, first1 + size);
+  kastl::rts::Sequence<Iterator0> seq(first0, (size0 - size1) + 1);
+  kastl::impl::touched_algorithm_result<Iterator0> res(last0);
 
-  mismatch_body<Iterator0, Iterator1, Predicate> body(pred);
+  search_body<Iterator0, Iterator1, Predicate> body(first1, last1, pred);
   kastl::impl::reduce_unrolled_loop::run(res, seq, body, settings);
-  return res._iters;
+  return res._iter;
 }
 
 template<typename Iterator0, typename Iterator1, typename Predicate>
-std::pair<Iterator0, Iterator1> mismatch
-(Iterator0 first0, Iterator0 last, Iterator1 first1, Predicate pred)
+Iterator0 search
+(Iterator0 first0, Iterator0 last0,
+ Iterator1 first1, Iterator1 last1,
+ Predicate pred)
 {
   kastl::impl::static_settings settings(512, 512);
-  return kastl::mismatch(first0, last, first1, pred, settings);
+  return kastl::search(first0, last0, first1, last1, pred, settings);
 }
 
 template<typename Iterator0, typename Iterator1>
-std::pair<Iterator0, Iterator1> mismatch
-(Iterator0 first0, Iterator0 last, Iterator1 first1)
+Iterator0 search
+(Iterator0 first0, Iterator0 last0, Iterator1 first1, Iterator1 last1)
 {
   typedef typename std::iterator_traits<Iterator0>::value_type value_type;
-  return kastl::mismatch(first0, last, first1, eq<value_type>());
+  return kastl::search(first0, last0, first1, last1, eq<value_type>());
 }
 
 } // kastl::
 
 
-#endif // ! KASTL_MISMATCH_H_INCLUDED
+#endif // ! KASTL_SEARCH_H_INCLUDED

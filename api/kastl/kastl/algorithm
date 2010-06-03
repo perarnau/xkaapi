@@ -63,29 +63,21 @@
 #include "kastl/replace_if.h"
 #include "kastl/equal.h"
 #include "kastl/mismatch.h"
-
-#if 0
 #include "kastl/search.h"
-#include "kastl/swap_ranges.h"
-#endif
 
 #if 0
+#include "swap_ranges.h"
 #include "partial_sum.h"
 #include "merge.h"
 #include "sort.h"
-#include "equal.h"
-#include "mismatch.h"
 #include "reverse.h"
 #include "partition.h"
 #include "set_union.h"
 #include "set_intersection.h"
 #include "set_difference.h"
-#include "generate_n.h"
 #include "replace_copy.h"
-#include "replace_if.h"
 #include "replace_copy_if.h"
 #include "search_n.h"
 #endif
-
 
 #endif // ! KASTL_ALGORITHM_INCLUDED

@@ -19,7 +19,8 @@ ALGOS=''
 #ALGOS="$ALGOS replace"
 #ALGOS="$ALGOS replace_if"
 #ALGOS="$ALGOS equal"
-ALGOS="$ALGOS mismatch"
+#ALGOS="$ALGOS mismatch"
+ALGOS="$ALGOS search"
 
 for A in $ALGOS; do
     # for L in stl pastl kastl tbb; do
