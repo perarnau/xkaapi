@@ -17,53 +17,15 @@ only return result + last - first
 . use enum instead of static unsigned int for the
   Sequence iterator_count
 
-. remove the unrolled_tag
+. remove unneeded code
+ . remove the unrolled_tag
 
-. then simple algorithms
- . adjacent_find
- . adjacent_difference
-
- => ensuite blinder de tests avant de passer au reste
-
-. then partial_sum
-
-. then sorting
-
-. make the current things compile and work
-
-. introduce a new kind of algorithm_result
-that should be initialized with the beginning
-of the sequence
- -> this is the same as the previous one just
- constructors differs
-
-. tester les perfs de find
- . reduire le nombre de ifs
-
-. integrer le unit testing
-. splitter les algorithmes en .h
-. implementer les petits algos: min_max_element...
-
- ==> il faut peut etre arreter de passer par des
- iterator et seulement par des index et transformer
- au dernier moment. de cette maniere, seul l algo
- connait la sequence, il recoit des index et travaille
- la dessus, comme tbb
-
-. une fois find implemente, faire:
-ResultTag qui remplace le ReduceTag
-et peut avoir la value suivante:
-void_tag, algorithm_tag, numeric_tag
-ce tag permet la specialisation de
-l allocation, initialisation, la preemption ect... 
-
-. partir sur des algos plus compliques pour tester
-le modele: inner_product
-
-. remove unneeded template arguments (for instance Body)
-. remove unneeded result
-
-. faire les tests + les benchs
+. test, benchmarks
+ . auto plot
+. implement partial_sum
+. implement merge
+. implement sorting
+. implement set operations
 
 . window extractor
  . should slide as space becomes avail, not at the end of the loop

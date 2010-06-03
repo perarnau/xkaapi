@@ -58,14 +58,12 @@
 #include "kastl/transform.h"
 #include "kastl/fill.h"
 #include "kastl/generate.h"
-#include "kastl/inner_product.h"
 #include "kastl/replace.h"
 #include "kastl/replace_if.h"
 #include "kastl/equal.h"
 #include "kastl/mismatch.h"
 #include "kastl/search.h"
 #include "kastl/adjacent_find.h"
-#include "kastl/adjacent_difference.h"
 
 #if 0
 #include "swap_ranges.h"
