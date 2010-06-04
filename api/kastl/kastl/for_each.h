@@ -68,10 +68,9 @@ struct for_each_body
     : _op(op)
   {}
 
-  bool operator()(result_type&, const Iterator& pos)
+  void operator()(result_type&, const Iterator& pos)
   {
     _op(*pos);
-    return false;
   }
 };
 
@@ -81,7 +80,7 @@ Function for_each
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   for_each_body<Iterator, Function> body(op, first);
-  kastl::impl::parallel_loop::run(seq, body, settings);
+  kastl::impl::foreach_loop(seq, body, settings);
   return op;
 }
 

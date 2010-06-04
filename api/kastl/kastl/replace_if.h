@@ -67,11 +67,10 @@ struct replace_if_body
     : _pred(pred), _value(value)
   {}
 
-  bool operator()(result_type&, Iterator& pos)
+  void operator()(result_type&, Iterator& pos)
   {
     if (_pred(*pos))
       *pos = _value;
-    return false;
   }
 };
 
@@ -84,7 +83,7 @@ void replace_if
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   replace_if_body<Iterator, Predicate, Value> body(pred, value);
-  kastl::impl::parallel_loop::run(seq, body, settings);
+  kastl::impl::foreach_loop(seq, body, settings);
 }
 
 template<typename Iterator, typename Predicate, typename Value>

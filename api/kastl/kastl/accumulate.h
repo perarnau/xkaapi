@@ -66,16 +66,14 @@ struct accumulate_body
     : _op(op)
   {}
 
-  bool operator()(result_type& res, const Iterator& pos)
+  void operator()(result_type& res, const Iterator& pos)
   {
     res._value = _op(res._value, *pos);
-    return false;
   }
 
-  bool reduce(result_type& lhs, const result_type& rhs)
+  void reduce(result_type& lhs, const result_type& rhs)
   {
     lhs._value = _op(lhs._value, rhs._value);
-    return false;
   }
 };
 
@@ -86,8 +84,7 @@ Value accumulate
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   accumulate_body<Iterator, Value, Function> body(op);
   kastl::impl::numeric_result<Iterator, Value> result(init);
-  kastl::impl::reduce_loop::run
-    (result, seq, body, settings);
+  kastl::impl::foreach_reduce_loop(result, seq, body, settings);
   return result._value;
 }
 

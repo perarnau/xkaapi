@@ -61,10 +61,9 @@ struct copy_body
 {
   typedef kastl::impl::dummy_type result_type;
 
-  bool operator()(result_type&, Iterator0& ipos, Iterator1& opos)
+  void operator()(result_type&, Iterator0& ipos, Iterator1& opos)
   {
     *opos = *ipos;
-    return false;
   }
 };
 
@@ -75,7 +74,7 @@ Iterator1 copy
   kastl::rts::Sequence<Iterator0, Iterator1> seq
     (ifirst, ofirst, ilast - ifirst);
   copy_body<Iterator0, Iterator1> body;
-  kastl::impl::parallel_loop::run(seq, body, settings);
+  kastl::impl::foreach_loop(seq, body, settings);
   return ofirst + (ilast - ifirst);
 }
 

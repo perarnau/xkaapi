@@ -7,7 +7,47 @@ such as in the copy case, maintain the
 result and use reduction... for now we
 only return result + last - first
 
+-- todo
+
+. <TerminationTag, ReduceTag>
+  -> resultTag pour la construction du resultat
+  -> terminationtag pour la reduction
+  -> car on peut avoir un resultat mais pas de terminaison
+
+. TerminationTag specialise les loops
+ -> pas de if de fait
+
 . initialization du resultat
+ . perte de perf, le resultat devrait etre direct
+ pas de structure, donc initialzer, genre
+ init_result(sequence) -> ResultTag
+  . void_result_tag
+  . bool_result<false>
+  . iterator_result_tag
+   . constructed with the local sequence
+  . value_result_tag
+
+template<typename Result>
+touched_result< result >
+{
+bool _is_touched;
+};
+
+- result specs
+template result_traits<Result>::result_tag;
+
+template<typename>
+struct base_result
+{
+void init_result() {}
+};
+
+. avoir des fonctions par defaut, ce sont
+elles qui feront le 
+
+. une fois ca fait, tester avec accumulate
+1000000, on passe de 7 a 6ms
+
  . actuellement, dans thief_context, seq.begin1()
  . si c est insuffisant, devrait etre base sur
  un modele expand() ET une fonction utilisateur
@@ -17,10 +57,16 @@ only return result + last - first
 . test, bench
  . auto plot
 
+. remove some code
+ . if in the innerloop
+ . should be templated with the TerminationTag
+
  . test
   . for_each
   . find
   . accumulate
+
+ . reducer could be common for known results
 
 . implement unique
 . implement partial_sum

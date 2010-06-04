@@ -66,10 +66,9 @@ struct fill_body
     : _value(value)
   {}
 
-  bool operator()(result_type&, Iterator& pos)
+  void operator()(result_type&, Iterator& pos)
   {
     *pos = _value;
-    return false;
   }
 };
 
@@ -79,7 +78,7 @@ void fill
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   fill_body<Iterator, Value> body(value);
-  kastl::impl::parallel_loop::run(seq, body, settings);
+  kastl::impl::foreach_loop(seq, body, settings);
 }
 
 template<typename Iterator, typename Value>

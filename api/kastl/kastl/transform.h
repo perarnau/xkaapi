@@ -69,10 +69,9 @@ struct transform_body
     : _op(op)
   {}
 
-  bool operator()(result_type&, Iterator0& ipos, Iterator1& opos)
+  void operator()(result_type&, Iterator0& ipos, Iterator1& opos)
   {
     *opos = _op(*ipos);
-    return false;
   }
 };
 
@@ -92,11 +91,10 @@ struct transform2_body
     : _op(op)
   {}
 
-  bool operator()
-  (result_type&, Iterator0& ipos0, Iterator1& ipos1, Iterator2& opos)
+  void operator()
+    (result_type&, Iterator0& ipos0, Iterator1& ipos1, Iterator2& opos)
   {
     *opos = _op(*ipos0, *ipos1);
-    return false;
   }
 };
 
@@ -112,7 +110,7 @@ Iterator1 transform
     (ifirst, ofirst, ilast - ifirst);
 
   transform_body<Iterator0, Iterator1, Operation> body(op);
-  kastl::impl::parallel_loop::run(seq, body, settings);
+  kastl::impl::foreach_loop(seq, body, settings);
   return ofirst + (ilast - ifirst);
 }
 
@@ -137,7 +135,7 @@ Iterator2 transform
     (ifirst0, ifirst1, ofirst, ilast - ifirst0);
 
   transform2_body<Iterator0, Iterator1, Iterator2, Operation> body(op);
-  kastl::impl::parallel_loop::run(seq, body, settings);
+  kastl::impl::foreach_loop(seq, body, settings);
   return ofirst + (ilast - ifirst0);
 }
 

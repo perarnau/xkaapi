@@ -72,17 +72,14 @@ struct inner_product_body
     : _op0(op0), _op1(op1)
   {}
 
-  bool operator()
-  (result_type& res, Iterator0& ipos0, Iterator1& ipos1)
+  void operator()(result_type& res, Iterator0& ipos0, Iterator1& ipos1)
   {
     res._value = _op0(res._value, _op1(*ipos0, *ipos1));
-    return false;
   }
 
-  bool reduce(result_type& lhs, const result_type& rhs)
+  void reduce(result_type& lhs, const result_type& rhs)
   {
     lhs._value = _op0(lhs._value, rhs._value);
-    return false;
   }
 };
 
@@ -103,7 +100,7 @@ Value inner_product
     body(op0, op1);
 
   kastl::impl::numeric_result<Iterator0, Value> res(init);
-  kastl::impl::reduce_loop::run(res, seq, body, settings);
+  kastl::impl::foreach_reduce_loop(res, seq, body, settings);
   return res._value;
 }
 

@@ -67,17 +67,15 @@ struct count_body
     : _value(value)
   {}
 
-  bool operator()(result_type& res, const Iterator& pos)
+  void operator()(result_type& res, const Iterator& pos)
   {
     if (*pos == _value)
       ++res._value;
-    return false;
   }
 
-  bool reduce(result_type& lhs, const result_type& rhs)
+  void reduce(result_type& lhs, const result_type& rhs)
   {
     lhs._value += rhs._value;
-    return false;
   }
 };
 
@@ -90,7 +88,7 @@ void count
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   kastl::impl::numeric_result<Iterator, Size> res(size);
   count_body<Iterator, Value, Size> body(value);
-  kastl::impl::reduce_loop::run(res, seq, body, settings);
+  kastl::impl::foreach_reduce_loop(res, seq, body, settings);
   size = res._value;
 }
 

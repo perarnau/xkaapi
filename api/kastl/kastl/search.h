@@ -72,8 +72,7 @@ struct search_body
     : _first(first), _last(last), _pred(pred)
   {}
 
-  bool operator()
-  (result_type& res, const Iterator0& const_pos)
+  bool operator()(result_type& res, const Iterator0& const_pos)
   {
     Iterator0 pos = const_pos;
 
@@ -115,7 +114,7 @@ Iterator0 search
   kastl::impl::touched_algorithm_result<Iterator0> res(last0);
 
   search_body<Iterator0, Iterator1, Predicate> body(first1, last1, pred);
-  kastl::impl::reduce_loop::run(res, seq, body, settings);
+  kastl::impl::while_reduce_loop(res, seq, body, settings);
   return res._iter;
 }
 

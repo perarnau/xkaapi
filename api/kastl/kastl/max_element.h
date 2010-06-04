@@ -68,22 +68,18 @@ struct max_element_body
     : _pred(pred)
   {}
 
-  bool operator()(result_type& res, const Iterator& pos)
+  void operator()(result_type& res, const Iterator& pos)
   {
     // result is already touched
 
     if (!_pred(*res, *pos))
       res = pos;
-
-    return false;
   }
 
-  bool reduce(result_type& lhs, const result_type& rhs)
+  void reduce(result_type& lhs, const result_type& rhs)
   {
     if (!_pred(*lhs, *rhs))
       lhs = rhs;
-
-    return false;
   }
 
 };
@@ -95,7 +91,7 @@ Iterator max_element
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   max_element_body<Iterator, Predicate> body(pred);
   Iterator res(first);
-  kastl::impl::reduce_loop::run(res, seq, body, settings);
+  kastl::impl::foreach_reduce_loop(res, seq, body, settings);
   return res;
 }
 

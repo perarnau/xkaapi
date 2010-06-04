@@ -69,8 +69,7 @@ struct adjacent_find_body
     : _pred(pred)
   {}
 
-  bool operator()
-  (result_type& res, const Iterator& pos)
+  bool operator()(result_type& res, const Iterator& pos)
   {
     if (!_pred(*pos, *(pos + 1)))
       return false;
@@ -103,7 +102,7 @@ Iterator adjacent_find
   kastl::impl::touched_algorithm_result<Iterator> res(last);
 
   adjacent_find_body<Iterator, Predicate> body(pred);
-  kastl::impl::reduce_loop::run(res, seq, body, settings);
+  kastl::impl::while_reduce_loop(res, seq, body, settings);
   return res._iter;
 }
 

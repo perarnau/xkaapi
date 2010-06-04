@@ -66,10 +66,9 @@ struct generate_body
     : _gen(gen)
   {}
 
-  bool operator()(result_type&, Iterator& pos)
+  void operator()(result_type&, Iterator& pos)
   {
     *pos = _gen();
-    return false;
   }
 };
 
@@ -79,7 +78,7 @@ void generate
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   generate_body<Iterator, Generator> body(gen);
-  kastl::impl::parallel_loop::run(seq, body, settings);
+  kastl::impl::foreach_loop(seq, body, settings);
 }
 
 template<typename Iterator, typename Generator>

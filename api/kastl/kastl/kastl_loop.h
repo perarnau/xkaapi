@@ -92,10 +92,6 @@ namespace impl
   // dummy tag
   struct dummy_tag {};
 
-  // reduce tag
-  struct reduce_tag {};
-  typedef dummy_tag noreduce_tag;
-
   // extractor tag
   struct window_tag {};
   struct linear_tag {};
@@ -190,6 +186,13 @@ namespace impl
   typedef settings<static_tag> static_settings;
 
   // results
+  template<typename Iterator>
+  struct void_result
+  {
+    void_result(const Iterator&)
+    {}
+  };
+
   template<typename Iterator>
   struct touched_algorithm_result
   {
@@ -290,52 +293,136 @@ namespace impl
 
   typedef void (*kastl_entry_t)(void*, kaapi_thread_t*);
 
-  // reducers
-  template<typename ReduceTag = noreduce_tag>
+  // reduction implmentation.
+
+  // reduce thief context, no termination
+  template<typename Result, typename Sequence, typename Body,
+	   bool TerminateTag = false,
+	   bool ReduceTag = false>
+  struct reduce_thief_context
+  {
+    typedef reduce_thief_context
+    <Result, Sequence, Body, TerminateTag, ReduceTag>
+    context_type;
+
+    Result _res; // to remove
+    Sequence _seq;
+
+    reduce_thief_context(const Sequence& seq)
+      : _seq(seq)
+    {}
+  };
+
+  // reduce thief context, no termination but result
+  template<typename Result, typename Sequence, typename Body>
+  struct reduce_thief_context<Result, Sequence, Body, false, true>
+  {
+    typedef reduce_thief_context
+    <Result, Sequence, Body, false, true>
+    context_type;
+
+    Sequence _seq;
+    Result _res;
+
+    reduce_thief_context(const Sequence& seq)
+      : _seq(seq), _res(seq.begin1())
+    {}
+  };
+
+  // reduce thief context, termination, result
+  template<typename Result, typename Sequence, typename Body>
+  struct reduce_thief_context<Result, Sequence, Body, true, true>
+  {
+    typedef reduce_thief_context
+    <Result, Sequence, Body, true, true>
+    context_type;
+
+    Sequence _seq;
+    Result _res;
+    bool _is_done;
+
+    reduce_thief_context(const Sequence& seq)
+      : _seq(seq), _res(seq.begin1()), _is_done(false)
+    {}
+  };
+
+  // reduce victim context, no termination, no result
+  template<typename Result, typename Sequence, typename Body,
+	   bool TerminateTag = false,
+	   bool ReduceTag = false>
+  struct reduce_victim_context
+  {
+    Sequence& _seq;
+    Body& _body;
+
+    reduce_victim_context(Result& res, Sequence& seq, Body& body)
+      : _seq(seq), _body(body)
+    {}
+  };
+
+  // reduce victim context, no termination, result
+  template<typename Result, typename Sequence, typename Body>
+  struct reduce_victim_context<Result, Sequence, Body, false, true>
+  {
+    Result& _res;
+    Sequence& _seq;
+    Body& _body;
+
+    reduce_victim_context(Result& res, Sequence& seq, Body& body)
+      : _res(res), _seq(seq), _body(body)
+    {}
+  };
+
+  // reduce victim context, termination, result
+  template<typename Result, typename Sequence, typename Body>
+  struct reduce_victim_context
+  <Result, Sequence, Body, true, true>
+  {
+    bool& _is_done;
+    Result& _res;
+    Sequence& _seq;
+    Body& _body;
+
+    reduce_victim_context
+    (bool& is_done, Result& res, Sequence& seq, Body& body)
+      : _is_done(is_done), _res(res), _seq(seq), _body(body)
+    {}
+  };
+
+  // allocate a ktr
+  template<typename Result, typename Sequence, typename Body,
+	   bool TerminateTag,
+	   bool ReduceTag>
+  static kaapi_taskadaptive_result_t* allocate_ktr
+  (kaapi_stealcontext_t* sc, const Sequence& seq, Body& body)
+  {
+    typedef reduce_thief_context<Result, Sequence, Body, TerminateTag, ReduceTag>
+      context_type;
+
+    kaapi_taskadaptive_result_t* const ktr =
+      kaapi_allocate_thief_result(sc, sizeof(context_type), NULL);
+    new (ktr->data) context_type(seq);
+    return ktr;
+  }
+
+  // reducer, no termination, no body defined reduction
+  template<typename Result, typename Sequence, typename Body,
+	   bool TerminateTag = false,
+	   bool ReduceTag = false>
   struct reducer
   {
-    // no result reducer
-    template<typename Result, typename Sequence, typename Body>
-    struct thief_context
-    {
-      typedef thief_context<Result, Sequence, Body> context_type;
-
-      Sequence _seq;
-      Result _res;
-      bool _is_done;
-
-      thief_context(const Sequence& seq)
-	: _seq(seq), _is_done(false)
-      {}
-
-      static kaapi_taskadaptive_result_t* allocate
-      (kaapi_stealcontext_t* sc, const Sequence& seq, Body& body)
-      {
-	kaapi_taskadaptive_result_t* const ktr =
-	  kaapi_allocate_thief_result(sc, sizeof(context_type), NULL);
-	new (ktr->data) context_type(seq);
-	return ktr;
-      }
-    };
-
-    template<typename Result, typename Sequence, typename Body>
-    struct victim_context
-    {
-      Sequence& _seq;
-
-      victim_context(Sequence& seq)
-	: _seq(seq)
-      {}
-    };
-
-    template<typename Result, typename Sequence, typename Body>
     static int reduce_function
     (kaapi_stealcontext_t* sc, void* targ, void* tptr, size_t tsize, void* vptr)
     {
       typedef typename Sequence::range_type range_type;
 
-      typedef thief_context<Result, Sequence, Body> thief_context_type;
-      typedef victim_context<Result, Sequence, Body> victim_context_type;
+      typedef reduce_thief_context
+	<Result, Sequence, Body, TerminateTag, ReduceTag>
+	thief_context_type;
+
+      typedef reduce_victim_context
+	<Result, Sequence, Body, TerminateTag, ReduceTag>
+	victim_context_type;
 
       victim_context_type* const vc = static_cast<victim_context_type*>(vptr);
       thief_context_type* const tc = static_cast<thief_context_type*>(tptr);
@@ -348,15 +435,13 @@ namespace impl
       return 0; // false, continue
     }
 
-    template<typename Result, typename Sequence, typename Body>
     static void reduce
-    (kaapi_stealcontext_t* sc,
-     bool& has_thief,
-     bool&,
-     Result&, Sequence& seq, Body&)
+    (kaapi_stealcontext_t* sc, bool& has_thief,
+     Result& res, Sequence& seq, Body& body)
     {
-      kastl_reducer_t const kastl_reducer =
-	reduce_function<Result, Sequence, Body>;
+      typedef reduce_victim_context
+	<Result, Sequence, Body, TerminateTag, ReduceTag>
+	victim_context_type;
 
       has_thief = true;
 
@@ -368,70 +453,86 @@ namespace impl
 	return ;
       }
 
-      victim_context<Result, Sequence, Body> vc(seq);
-      kaapi_preempt_thief(sc, ktr, NULL, kastl_reducer, &vc);
+      victim_context_type vc(res, seq, body);
+      kaapi_preempt_thief(sc, ktr, NULL, reduce_function, &vc);
     }
+  }; // reducer<false, false>
 
-    static bool preempt
-    (kaapi_stealcontext_t*, kaapi_taskadaptive_result_t*)
-    {
-      return false;
-    }
-
-  }; // dummy reducer
-
-  template<>
-  struct reducer<reduce_tag>
+  // reducer, no termination, body defined reduction
+  template<typename Result, typename Sequence, typename Body>
+  struct reducer<Result, Sequence, Body, false, true>
   {
-    template<typename Result, typename Sequence, typename Body>
-    struct thief_context
-    {
-      typedef thief_context<Result, Sequence, Body> context_type;
-
-      Sequence _seq;
-      Result _res;
-      bool _is_done;
-
-      thief_context(const Sequence& seq, Body& body)
-	: _seq(seq), _res(seq.begin1()), _is_done(false)
-      {}
-
-      static kaapi_taskadaptive_result_t* allocate
-      (kaapi_stealcontext_t* sc, const Sequence& seq, Body& body)
-      {
-	kaapi_taskadaptive_result_t* const ktr =
-	  kaapi_allocate_thief_result(sc, sizeof(context_type), NULL);
-	new (ktr->data) context_type(seq, body);
-	return ktr;
-      }
-    }; // thief_context
-
-    template<typename Result, typename Sequence, typename Body>
-    struct victim_context
-    {
-      bool& _is_done;
-      Result& _res;
-      Sequence& _seq;
-      Body& _body;
-
-      victim_context(bool& is_done, Result& res, Sequence& seq, Body& body)
-	: _is_done(is_done), _res(res), _seq(seq), _body(body)
-      {}
-    }; // victim_context
-
-    template<typename Result, typename Sequence, typename Body>
     static int reduce_function
     (kaapi_stealcontext_t* sc, void* targ, void* tptr, size_t tsize, void* vptr)
     {
       typedef typename Sequence::range_type range_type;
 
-      typedef thief_context<Result, Sequence, Body> thief_context_type;
-      typedef victim_context<Result, Sequence, Body> victim_context_type;
+      typedef reduce_thief_context
+	<Result, Sequence, Body, false, true>
+	thief_context_type;
+
+      typedef reduce_victim_context
+	<Result, Sequence, Body, false, true>
+	victim_context_type;
 
       victim_context_type* const vc = static_cast<victim_context_type*>(vptr);
       thief_context_type* const tc = static_cast<thief_context_type*>(tptr);
 
-      // if we are done, dont retrieve
+      // reduce results
+      vc->_body.reduce(vc->_res, tc->_res);
+
+      // join sequences
+      kastl::rts::range_t<64> range(tc->_seq._wq._beg, tc->_seq._wq._end);
+      vc->_seq._rep = tc->_seq._rep;
+      vc->_seq._wq.set(range);
+
+      return 0;
+    }
+
+    static void reduce
+    (kaapi_stealcontext_t* sc, bool& has_thief,
+     Result& res, Sequence& seq, Body& body)
+    {
+      typedef reduce_victim_context
+	<Result, Sequence, Body, false, true>
+	victim_context_type;
+
+      has_thief = true;
+
+      // no more thief, we are done
+      kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head(sc);
+      if (ktr == NULL)
+      {
+	has_thief = false;
+	return ;
+      }
+
+      victim_context_type vc(res, seq, body);
+      kaapi_preempt_thief(sc, ktr, NULL, reduce_function, &vc);
+    }
+  }; // reducer<false, true>
+
+  // reducer, termination, body defined reduction
+  template<typename Result, typename Sequence, typename Body, bool ReduceTag>
+  struct reducer<Result, Sequence, Body, true, ReduceTag>
+  {
+    static int reduce_function
+    (kaapi_stealcontext_t* sc, void* targ, void* tptr, size_t tsize, void* vptr)
+    {
+      typedef typename Sequence::range_type range_type;
+
+      typedef reduce_thief_context
+	<Result, Sequence, Body, true, ReduceTag>
+	thief_context_type;
+
+      typedef reduce_victim_context
+	<Result, Sequence, Body, true, ReduceTag>
+	victim_context_type;
+
+      victim_context_type* const vc = static_cast<victim_context_type*>(vptr);
+      thief_context_type* const tc = static_cast<thief_context_type*>(tptr);
+
+      // if we are done, do not retrieve
       // thief result and sequence, so
       // that there is nothing to steal
       // from us. otherwise, get result
@@ -455,15 +556,14 @@ namespace impl
       return 0;
     }
 
-    template<typename Result, typename Sequence, typename Body>
     static void reduce
     (kaapi_stealcontext_t* sc,
-     bool& has_thief,
-     bool& is_done,
+     bool& has_thief, bool& is_done,
      Result& res, Sequence& seq, Body& body)
     {
-      kastl_reducer_t const kastl_reducer =
-	reduce_function<Result, Sequence, Body>;
+      typedef reduce_victim_context
+	<Result, Sequence, Body, true, ReduceTag>
+	victim_context_type;
 
       has_thief = true;
 
@@ -475,76 +575,123 @@ namespace impl
 	return ;
       }
 
-      victim_context<Result, Sequence, Body> vc(is_done, res, seq, body);
-      kaapi_preempt_thief(sc, ktr, NULL, kastl_reducer, &vc);
+      victim_context_type vc(is_done, res, seq, body);
+      kaapi_preempt_thief(sc, ktr, NULL, reduce_function, &vc);
     }
+  }; // reducer<true, xxx>
 
-    static bool preempt
-    (kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* ktr)
-    {
-      const int is_preempted = kaapi_preemptpoint
-	(ktr, sc, NULL, NULL, NULL, 0, NULL);
-      return (bool)is_preempted;
-    }
-
-  };
+  // preemption
+  static bool preempt
+  (kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* ktr)
+  {
+    const int is_preempted = kaapi_preemptpoint
+      (ktr, sc, NULL, NULL, NULL, 0, NULL);
+    return (bool)is_preempted;
+  }
 
   // forward decls
-  template<typename ReduceTag> struct outter_loop;
+  template<typename Result, typename Sequence, typename Body, typename Settings,
+	   bool TerminateTag, bool ReduceTag>
+  static void thief_entry(void*, kaapi_thread_t*);
 
-  template<typename Result, typename Sequence,
-	   typename Body, typename Settings>
+  // split victim context, result
+  template
+  <typename Result, typename Sequence, typename Body, typename Settings,
+   bool ReduceTag = true>
+  struct split_victim_context
+  {
+    Result _res;
+    Sequence& _seq;
+    Body& _body;
+    const Settings& _settings;
+  };
+
+  // split victim context, no result
+  template
+  <typename Result, typename Sequence, typename Body, typename Settings>
+  struct split_victim_context<Result, Sequence, Body, Settings, false>
+  {
+    Sequence& _seq;
+    Body& _body;
+    const Settings& _settings;
+  };
+
+  // task context, result
+  template
+  <typename Result, typename Sequence, typename Body, typename Settings,
+   bool ReduceTag = true>
+  struct split_task_context
+  {
+    typedef Result result_type;
+    typedef Sequence sequence_type;
+    typedef Body body_type;
+    typedef Settings settings_type;
+
+    Result& _res;
+    Sequence& _seq;
+    Body _body;
+    const Settings& _settings;
+    kaapi_stealcontext_t* _master_sc;
+    kaapi_taskadaptive_result_t* _ktr;
+
+    split_task_context
+    (Result& res,
+     Sequence& seq,
+     Body& body,
+     const Settings& settings,
+     kaapi_stealcontext_t* master_sc = NULL,
+     kaapi_taskadaptive_result_t* ktr = NULL)
+      : _res(res), _seq(seq), _body(body), _settings(settings),
+	_master_sc(master_sc), _ktr(ktr)
+    {}
+  };
+
+  template
+  <typename Result, typename Sequence, typename Body, typename Settings>
+  struct split_task_context<Result, Sequence, Body, Settings, false>
+  {
+    typedef Sequence sequence_type;
+    typedef Body body_type;
+    typedef Settings settings_type;
+
+    // passed upon thief entry
+
+    Result _res; // to remove
+    Sequence& _seq;
+    Body _body;
+    const Settings& _settings;
+    kaapi_stealcontext_t* _master_sc;
+    kaapi_taskadaptive_result_t* _ktr;
+
+    split_task_context
+    (Result& , // to remove
+     Sequence& seq,
+     Body& body,
+     const Settings& settings,
+     kaapi_stealcontext_t* master_sc = NULL,
+     kaapi_taskadaptive_result_t* ktr = NULL)
+      : _seq(seq), _body(body), _settings(settings),
+	_master_sc(master_sc), _ktr(ktr)
+    {}
+  };
+
+  template
+  <typename Result, typename Sequence, typename Body, typename Settings>
   struct splitter
   {
     typedef splitter<Result, Sequence, Body, Settings> splitter_type;
 
-    struct victim_context
-    {
-      // adaptive conctext
-
-      Result _res;
-      Sequence& _seq;
-      Body& _body;
-      const Settings& _settings;
-    };
-
-    struct task_context
-    {
-      typedef Result result_type;
-      typedef Sequence sequence_type;
-      typedef Body body_type;
-      typedef Settings settings_type;
-
-      // passed upon thief entry
-
-      Result& _res;
-      Sequence& _seq;
-      Body _body;
-      const Settings& _settings;
-      kaapi_stealcontext_t* _master_sc;
-      kaapi_taskadaptive_result_t* _ktr;
-
-      task_context
-      (Result& res,
-       Sequence& seq,
-       Body& body,
-       const Settings& settings,
-       kaapi_stealcontext_t* master_sc = NULL,
-       kaapi_taskadaptive_result_t* ktr = NULL)
-	: _res(res), _seq(seq), _body(body), _settings(settings),
-	  _master_sc(master_sc), _ktr(ktr)
-      {}
-    };
-
-    template<typename ReduceTag>
+    template<bool TerminateTag, bool ReduceTag>
     static int split
     (kaapi_stealcontext_t* sc, int request_count,
      kaapi_request_t* request, void* arg)
     {
       typedef typename Sequence::range_type range_type;
+      typedef split_task_context
+	<Result, Sequence, Body, Settings, ReduceTag> context_type;
 
       // victim task context
-      task_context* const vc = static_cast<task_context*>(arg);
+      context_type* const vc = static_cast<context_type*>(arg);
 
       // compute the balanced unit size.
       const size_t seq_size = vc->_seq.size();
@@ -594,30 +741,30 @@ namespace impl
 	kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
 
 	// allocate task stack
-	task_context* tc = static_cast<task_context*>
+	context_type* tc = static_cast<context_type*>
 	  (kaapi_thread_pushdata_align
-	   (thief_thread, sizeof(task_context), 8));
+	   (thief_thread, sizeof(context_type), 8));
 
 	// allocate task result
-	typedef typename reducer<ReduceTag>::template
-	  thief_context<Result, Sequence, Body>
-	  reducer_thiefcontext_type;
+	typedef reduce_thief_context
+	  <Result, Sequence, Body, TerminateTag, ReduceTag>
+	  thief_context_type;
 
 	kaapi_taskadaptive_result_t* const ktr =
-	  reducer_thiefcontext_type::allocate
+	  allocate_ktr<Result, Sequence, Body, TerminateTag, ReduceTag>
 	  (sc, Sequence(pos, unit_size), tc->_body);
 
-	reducer_thiefcontext_type* const rtc =
-	  static_cast<reducer_thiefcontext_type*>(ktr->data);
+	thief_context_type* const rtc =
+	  static_cast<thief_context_type*>(ktr->data);
 
 	// initialize task stack
-	new (tc) task_context
+	new (tc) context_type
 	  (rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
 
-	kastl_entry_t const thief_entry = outter_loop<ReduceTag>::template
-	  thief_entry<Result, Sequence, Body, Settings>;
+	kastl_entry_t const entryfn = thief_entry
+	  <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
-	kaapi_task_init(thief_task, thief_entry, tc);
+	kaapi_task_init(thief_task, entryfn, tc);
 	kaapi_thread_pushtask(thief_thread);
 	kaapi_request_reply_head(sc, request, ktr);
 
@@ -632,7 +779,8 @@ namespace impl
   }; // splitter
 
   // expand iterator, apply body
-  template<unsigned int Count> struct expand_apply_t
+  template<bool TerminateTag = true, unsigned int Count = 1>
+  struct expand_apply_t
   {
     template<typename Result, typename Iterator, typename Body>
     static bool expand_apply(Result& res, Iterator& pos, Body& body)
@@ -641,7 +789,17 @@ namespace impl
     }
   };
 
-  template<> struct expand_apply_t<2>
+  template<>
+  struct expand_apply_t<false, 1>
+  {
+    template<typename Result, typename Iterator, typename Body>
+    static void expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      body(res, pos.ri1);
+    }
+  };
+
+  template<> struct expand_apply_t<true, 2>
   {
     template<typename Result, typename Iterator, typename Body>
     static bool expand_apply(Result& res, Iterator& pos, Body& body)
@@ -650,7 +808,16 @@ namespace impl
     }
   };
 
-  template<> struct expand_apply_t<3>
+  template<> struct expand_apply_t<false, 2>
+  {
+    template<typename Result, typename Iterator, typename Body>
+    static void expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      body(res, pos.ri1, pos.ri2);
+    }
+  };
+
+  template<> struct expand_apply_t<true, 3>
   {
     template<typename Result, typename Iterator, typename Body>
     static bool expand_apply(Result& res, Iterator& pos, Body& body)
@@ -659,7 +826,16 @@ namespace impl
     }
   };
 
-  template<> struct expand_apply_t<4>
+  template<> struct expand_apply_t<false, 3>
+  {
+    template<typename Result, typename Iterator, typename Body>
+    static void expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      body(res, pos.ri1, pos.ri2, pos.ri3);
+    }
+  };
+
+  template<> struct expand_apply_t<true, 4>
   {
     template<typename Result, typename Iterator, typename Body>
     static bool expand_apply(Result& res, Iterator& pos, Body& body)
@@ -668,17 +844,49 @@ namespace impl
     }
   };
 
-  template<typename Result, typename Iterator, typename Body>
-  static bool expand_apply(Result& res, Iterator& pos, Body& body)
+  template<> struct expand_apply_t<false, 4>
   {
-    // syntaxic suggar for the above type
-    return expand_apply_t<Iterator::iterator_count>::template
+    template<typename Result, typename Iterator, typename Body>
+    static void expand_apply(Result& res, Iterator& pos, Body& body)
+    {
+      body(res, pos.ri1, pos.ri2, pos.ri3, pos.ri4);
+    }
+  };
+
+  // suggar for the above types
+  template<typename Result, typename Iterator, typename Body>
+  static void expand_apply_noterm(Result& res, Iterator& pos, Body& body)
+  {
+    expand_apply_t<false, Iterator::iterator_count>::template
       expand_apply(res, pos, body);
   }
 
+  template<typename Result, typename Iterator, typename Body>
+  static bool expand_apply(Result& res, Iterator& pos, Body& body)
+  {
+    return expand_apply_t<true, Iterator::iterator_count>::template
+      expand_apply(res, pos, body);
+  }
+
+  // inner loop, no termination
+  template<typename Result, typename Range, typename Body,
+	   bool TerminateTag = false>
   struct inner_loop
   {
-    template<typename Result, typename Range, typename Body>
+    static void run(Result& res, Range& range, Body& body)
+    {
+      typename Range::iterator_type pos = range.begin();
+      typename Range::iterator1_type end = range.end1();
+
+      for (; pos.ri1 != end; ++pos)
+	expand_apply_noterm(res, pos, body);
+    }
+  };
+
+  // inner loop, termination
+  template<typename Result, typename Range, typename Body>
+  struct inner_loop<Result, Range, Body, true>
+  {
     static bool run(Result& res, Range& range, Body& body)
     {
       // rely upon the ri1 to check for sequence end
@@ -695,17 +903,14 @@ namespace impl
     }
   };
 
-  // first level, outter (macro) loop
-  template<typename ReduceTag>
+  // outter loop, no termination.
+  template<typename Extractor,
+	   typename Result, typename Sequence, typename Body,
+	   typename Settings,
+	   bool TerminateTag, bool ReduceTag>
   struct outter_loop
   {
-    // loop entry point
-    template<typename Extractor,
-	     typename Result,
-	     typename Sequence,
-	     typename Body,
-	     typename Settings>
-    static void common_entry
+    static void run
     (kaapi_stealcontext_t* sc,
      kaapi_taskadaptive_result_t* ktr,
      Extractor& xtr,
@@ -714,9 +919,77 @@ namespace impl
      Body& body,
      const Settings& settings)
     {
-      typedef typename reducer<ReduceTag>::template
-	thief_context<Result, Sequence, Body>
+      // more comments in the below version
+
+      typedef reducer<Result, Sequence, Body, TerminateTag, ReduceTag>
+	reducer_type;
+
+      typedef reduce_thief_context
+	<Result, Sequence, Body, TerminateTag, ReduceTag>
 	thief_context_type;
+
+      typedef typename Sequence::range_type range_type;
+
+      typedef inner_loop<Result, range_type, Body, TerminateTag>
+	inner_loop_type;
+
+      thief_context_type* tc = NULL;
+      if (ktr != NULL)
+	tc = static_cast<thief_context_type*>(ktr->data);
+
+      range_type subr;
+
+    redo_loop:
+      while (xtr.extract(seq, subr))
+      {
+	inner_loop_type::run(res, subr, body);
+
+	// check if we have been preempted
+	if (ktr != NULL)
+	  {
+	    const bool is_preempted = preempt(sc, ktr);
+	    if (is_preempted == true)
+	      return ;
+	  }
+      }
+
+      bool has_thief;
+      reducer_type::reduce(sc, has_thief, res, seq, body);
+      if (has_thief == true)
+	goto redo_loop;
+
+      // no more thief
+    }
+  }; // outter_loop<false>
+
+  // outter loop, termination specialization.
+  template<typename Extractor,
+	   typename Result, typename Sequence, typename Body,
+	   typename Settings,
+	   bool ReduceTag>
+  struct outter_loop
+  <Extractor, Result, Sequence, Body, Settings, true, ReduceTag>
+  {
+    static void run
+    (kaapi_stealcontext_t* sc,
+     kaapi_taskadaptive_result_t* ktr,
+     Extractor& xtr,
+     Result& res,
+     Sequence& seq,
+     Body& body,
+     const Settings& settings)
+    {
+      typedef reducer<Result, Sequence, Body, true, ReduceTag>
+	reducer_type;
+
+      typedef reduce_thief_context
+	<Result, Sequence, Body, true, ReduceTag>
+	thief_context_type;
+
+      typedef typename Sequence::range_type range_type;
+
+      typedef inner_loop<Result, range_type, Body, true>
+	inner_loop_type;
 
       thief_context_type* tc = NULL;
       if (ktr != NULL)
@@ -726,19 +999,17 @@ namespace impl
       bool is_done_storage = false;
       bool& is_done = (tc == NULL) ? is_done_storage : tc->_is_done;
 
-      typedef typename Sequence::range_type range_type;
       range_type subr;
 
     redo_loop:
       while (xtr.extract(seq, subr))
       {
-	is_done = inner_loop::template run<Result, range_type, Body>
-	  (res, subr, body);
+	is_done = inner_loop_type::run(res, subr, body);
 
 	// check if we have been preempted
 	if (ktr != NULL)
 	{
-	  const bool is_preempted = reducer<ReduceTag>::preempt(sc, ktr);
+	  const bool is_preempted = preempt(sc, ktr);
 	  if (is_preempted == true)
 	    return ;
 	}
@@ -754,8 +1025,7 @@ namespace impl
     redo_reduce:
       // reduce the remaining thieves or return
       bool has_thief;
-      reducer<ReduceTag>::template reduce<Result, Sequence, Body>
-	(sc, has_thief, is_done, res, seq, body);
+      reducer_type::reduce(sc, has_thief, is_done, res, seq, body);
       if (has_thief == true)
       {
 	// reduce until no more thief. if done,
@@ -770,100 +1040,165 @@ namespace impl
 
       // no more thief
     }
+  }; // outter_loop<true>
 
-    // task entry points
+  // task entry points
+  template<typename Result, typename Sequence, typename Body, typename Settings,
+	   bool TerminateTag, bool ReduceTag>
+  static void thief_entry(void* arg, kaapi_thread_t* thread)
+  {
+    typedef split_task_context
+      <Result, Sequence, Body, Settings, ReduceTag> context_type;
 
-    template<typename Result, typename Sequence, typename Body, typename Settings>
-    static void thief_entry(void* arg, kaapi_thread_t* thread)
-    {
-      typedef typename splitter<Result, Sequence, Body, Settings>::
-	task_context task_context;
-      task_context* const tc = static_cast<task_context*>(arg);
+    typedef extractor<static_tag> xtr_type;
 
-      kastl_splitter_t const splitfn =
-	splitter<Result, Sequence, Body, Settings>::template
-	split<ReduceTag>;
+    typedef outter_loop
+      <xtr_type, Result, Sequence, Body, Settings, TerminateTag, ReduceTag>
+      outter_loop_type;
 
-      kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-	(thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
+    context_type* const tc = static_cast<context_type*>(arg);
 
-      extractor<static_tag> xtr(tc->_settings);
-      outter_loop<ReduceTag>::common_entry
-	(sc, tc->_ktr, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
+    kastl_splitter_t const splitfn =
+      splitter<Result, Sequence, Body, Settings>::template
+      split<TerminateTag, ReduceTag>;
 
-      kaapi_steal_finalize(sc);
-    }
+    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
+      (thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
 
-    template<typename Context,
-	     typename Result,
-	     typename Sequence,
-	     typename Body,
-	     typename Settings>
-    static void master_entry(void* arg, kaapi_thread_t* thread)
-    {
-      typedef splitter<Result, Sequence, Body, Settings> splitter_type;
+    xtr_type xtr(tc->_settings);
+    outter_loop_type::run
+      (sc, tc->_ktr, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
 
-      Context* const tc = static_cast<Context*>(arg);
+    kaapi_steal_finalize(sc);
+  }
 
-      kastl_splitter_t const splitfn = splitter_type::template
-	split<ReduceTag>;
+  template
+  <typename Result, typename Sequence, typename Body, typename Settings,
+   bool TerminateTag, bool ReduceTag>
+  static void master_entry(void* arg, kaapi_thread_t* thread)
+  {
+    typedef splitter<Result, Sequence, Body, Settings> splitter_type;
+    typedef split_task_context
+      <Result, Sequence, Body, Settings, ReduceTag> context_type;
+    typedef extractor<typename Settings::_macro_extractor_tag> xtr_type;
 
-      kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-	(thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
+    typedef outter_loop
+      <xtr_type, Result, Sequence, Body, Settings, TerminateTag, ReduceTag>
+      outter_loop_type;
 
-      extractor< typename Settings::_macro_extractor_tag > xtr(tc->_settings);
-      outter_loop<ReduceTag>::common_entry
-	(sc, NULL, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
+    context_type* const tc = static_cast<context_type*>(arg);
 
-      kaapi_steal_finalize(sc);
-    }
+    kastl_splitter_t const splitfn = splitter_type::template
+      split<TerminateTag, ReduceTag>;
 
-    // exported entry point
+    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
+      (thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
 
-    template<typename Result, typename Sequence,
-	     typename Body, typename Settings>
-    static Result& run
-    (Result& res, Sequence& seq, Body& body, const Settings& settings)
-    {
-      // create a context and call master_entry
-      // note that result is inout and returned
+    xtr_type xtr(tc->_settings);
+    outter_loop_type::run
+      (sc, NULL, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
 
-      typedef splitter<Result, Sequence, Body, Settings> splitter_type;
-      typedef typename splitter_type::task_context context_type;
+    kaapi_steal_finalize(sc);
+  }
 
-      kastl_entry_t const entryfn = master_entry
-	<context_type, Result, Sequence, Body, Settings>;
+  // exported entry points
+  template
+  <typename Result, typename Sequence, typename Body, typename Settings,
+   bool TerminateTag, bool ReduceTag>
+  static Result& generic_loop
+  (Result& res, Sequence& seq, Body& body, const Settings& settings)
+  {
+    // create a context and call master_entry
+    // note that result is inout and returned
 
-      kaapi_thread_t* thread;
-      kaapi_task_t* task;
-      kaapi_frame_t frame;
+    typedef splitter<Result, Sequence, Body, Settings> splitter_type;
+    typedef split_task_context
+      <Result, Sequence, Body, Settings, ReduceTag> context_type;
 
-      context_type tc(res, seq, body, settings);
+    kastl_entry_t const entryfn = master_entry
+      <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
-      thread = kaapi_self_thread();
-      kaapi_thread_save_frame(thread, &frame);
-      task = kaapi_thread_toptask(thread);
-      kaapi_task_init(task, entryfn, static_cast<void*>(&tc));
-      kaapi_thread_pushtask(thread);
-      kaapi_sched_sync();
-      kaapi_thread_restore_frame(thread, &frame);
+    kaapi_thread_t* thread;
+    kaapi_task_t* task;
+    kaapi_frame_t frame;
 
-      return res;
-    }
+    context_type tc(res, seq, body, settings);
 
-    template<typename Sequence, typename Body, typename Settings>
-    static void run
-    (Sequence& seq, Body& body, const Settings& settings)
-    {
-      dummy_type res;
-      run(res, seq, body, settings);
-    }
+    thread = kaapi_self_thread();
+    kaapi_thread_save_frame(thread, &frame);
+    task = kaapi_thread_toptask(thread);
+    kaapi_task_init(task, entryfn, static_cast<void*>(&tc));
+    kaapi_thread_pushtask(thread);
+    kaapi_sched_sync();
+    kaapi_thread_restore_frame(thread, &frame);
 
-  };
+    return res;
+  }
 
-  // sugar
-  typedef outter_loop<noreduce_tag> parallel_loop;
-  typedef outter_loop<reduce_tag> reduce_loop;
+  // exported, generic loop selectors
+  template<typename Result, typename Sequence, typename Body, typename Settings>
+  static inline Result& foreach_loop
+  (Result& res, Sequence& seq, Body& body, const Settings& settings)
+  {
+    return generic_loop<Result, Sequence, Body, Settings, false, false>
+      (res, seq, body, settings);
+  }
+
+  template<typename Sequence, typename Body, typename Settings>
+  static inline void foreach_loop
+  (Sequence& seq, Body& body, const Settings& settings)
+  {
+    dummy_type res;
+    foreach_loop(res, seq, body, settings);
+  }
+
+  template<typename Result, typename Sequence, typename Body, typename Settings>
+  static inline Result& foreach_reduce_loop
+  (Result& res, Sequence& seq, Body& body, const Settings& settings)
+  {
+    return generic_loop<Result, Sequence, Body, Settings, false, true>
+      (res, seq, body, settings);
+  }
+
+  template<typename Sequence, typename Body, typename Settings>
+  static inline void foreach_reduce_loop
+  (Sequence& seq, Body& body, const Settings& settings)
+  {
+    dummy_type res;
+    foreach_reduce_loop(res, seq, body, settings);
+  }
+
+  template<typename Result, typename Sequence, typename Body, typename Settings>
+  static inline Result& while_loop
+  (Result& res, Sequence& seq, Body& body, const Settings& settings)
+  {
+    return generic_loop<Result, Sequence, Body, Settings, true, false>
+      (res, seq, body, settings);
+  }
+
+  template<typename Sequence, typename Body, typename Settings>
+  static inline void while_loop
+  (Sequence& seq, Body& body, const Settings& settings)
+  {
+    dummy_type res;
+    while_loop(res, seq, body, settings);
+  }
+
+  template<typename Result, typename Sequence, typename Body, typename Settings>
+  static inline Result& while_reduce_loop
+  (Result& res, Sequence& seq, Body& body, const Settings& settings)
+  {
+    return generic_loop<Result, Sequence, Body, Settings, true, true>
+      (res, seq, body, settings);
+  }
+
+  template<typename Sequence, typename Body, typename Settings>
+  static inline void while_reduce_loop
+  (Sequence& seq, Body& body, const Settings& settings)
+  {
+    dummy_type res;
+    while_reduce_loop(res, seq, body, settings);
+  }
 
 } // impl
 } // kastl

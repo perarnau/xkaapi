@@ -44,6 +44,7 @@
  */
 
 
+#include <math.h>
 #include "config.hh"
 
 #include <stddef.h>
@@ -1205,23 +1206,38 @@ class AccumulateRun : public RunInterface
 {
   ValueType _res[2];
 
+  template<typename T>
+  struct sinop
+  {
+    T operator()(const T& a, const T& b)
+    {
+      return ::sin(a + b);
+    }
+  };
+
 public:
   virtual void run_ref(InputType& i, OutputType& o)
   {
-    _res[1] = std::accumulate(i.first.begin(), i.first.end(), ValueType(0));
+    _res[1] = std::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+      // (i.first.begin(), i.first.end(), ValueType(0), sinop<ValueType>());
   }
 
 #if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType&)
   {
-    _res[0] = kastl::accumulate(i.first.begin(), i.first.end(), ValueType(0));
+    _res[0] = kastl::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+      // (i.first.begin(), i.first.end(), ValueType(0), sinop<ValueType>());
   }
 #endif
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _res[0] = std::accumulate(i.first.begin(), i.first.end(), ValueType(0));
+    _res[0] = std::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+      // (i.first.begin(), i.first.end(), ValueType(0), sinop<ValueType>());
   }
 #endif
 

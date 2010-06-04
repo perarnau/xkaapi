@@ -69,11 +69,9 @@ struct adjacent_difference_body
     : _op(op)
   {}
 
-  bool operator()
-  (result_type&, const Iterator0& ipos, Iterator1& opos)
+  void operator()(result_type&, const Iterator0& ipos, Iterator1& opos)
   {
     *opos = _op(*ipos, *(ipos - 1));
-    return false;
   }
 };
 
@@ -95,7 +93,7 @@ Iterator1 adjacent_difference
   {
     kastl::rts::Sequence<Iterator0, Iterator1> seq(first0, first1, size);
     adjacent_difference_body<Iterator0, Iterator1, Operator> body(op);
-    kastl::impl::parallel_loop::run(seq, body, settings);
+    kastl::impl::foreach_loop(seq, body, settings);
   }
 
   return first1 + size;
