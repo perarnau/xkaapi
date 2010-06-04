@@ -675,108 +675,104 @@ namespace impl
     {}
   };
 
+  // splitter function
   template
-  <typename Result, typename Sequence, typename Body, typename Settings>
-  struct splitter
+  <typename Result, typename Sequence, typename Body,
+   typename Settings, bool TerminateTag, bool ReduceTag>
+  static int split_function
+  (kaapi_stealcontext_t* sc, int request_count,
+   kaapi_request_t* request, void* arg)
   {
-    typedef splitter<Result, Sequence, Body, Settings> splitter_type;
+    typedef typename Sequence::range_type range_type;
+    typedef split_task_context
+      <Result, Sequence, Body, Settings, ReduceTag> context_type;
 
-    template<bool TerminateTag, bool ReduceTag>
-    static int split
-    (kaapi_stealcontext_t* sc, int request_count,
-     kaapi_request_t* request, void* arg)
+    // victim task context
+    context_type* const vc = static_cast<context_type*>(arg);
+
+    // compute the balanced unit size.
+    const size_t seq_size = vc->_seq.size();
+    if (seq_size == 0)
+      return 0;
+
+    size_t unit_size = seq_size / (request_count + 1);
+    if (unit_size < vc->_settings._par_size)
     {
-      typedef typename Sequence::range_type range_type;
-      typedef split_task_context
-	<Result, Sequence, Body, Settings, ReduceTag> context_type;
-
-      // victim task context
-      context_type* const vc = static_cast<context_type*>(arg);
-
-      // compute the balanced unit size.
-      const size_t seq_size = vc->_seq.size();
-      if (seq_size == 0)
+      request_count = (seq_size / vc->_settings._par_size) - 1;
+      if (request_count <= 0)
 	return 0;
 
-      size_t unit_size = seq_size / (request_count + 1);
-      if (unit_size < vc->_settings._par_size)
-      {
-	request_count = (seq_size / vc->_settings._par_size) - 1;
-	if (request_count <= 0)
-	  return 0;
-
-	unit_size = vc->_settings._par_size;
-      }
-
-      // steal a range smaller or eq to steal_size
-      const size_t steal_size = unit_size * (size_t)request_count;
-
-      range_type r;
-      if (vc->_seq.steal(r, steal_size) == false)
-	return 0;
-
-      // recompute the request count
-      if ((size_t)r.size() != steal_size)
-      {
-	request_count = r.size() / unit_size;
-
-	if ((request_count * (int)unit_size) < r.size())
-	  ++request_count;
-      }
-
-      typename Sequence::iterator_type pos = r.begin();
-      int reply_count = 0;
-    
-      // balanced workload amongst count thieves
-      for (; request_count > 0; ++request)
-      {
-	if (!kaapi_request_ok(request))
-	  continue;
-
-	// pop no more than unit_size
-	if (unit_size > (size_t)r.size())
-	  unit_size = (size_t)r.size();
-
-	kaapi_thread_t* thief_thread = kaapi_request_getthread(request);
-	kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
-
-	// allocate task stack
-	context_type* tc = static_cast<context_type*>
-	  (kaapi_thread_pushdata_align
-	   (thief_thread, sizeof(context_type), 8));
-
-	// allocate task result
-	typedef reduce_thief_context
-	  <Result, Sequence, Body, TerminateTag, ReduceTag>
-	  thief_context_type;
-
-	kaapi_taskadaptive_result_t* const ktr =
-	  allocate_ktr<Result, Sequence, Body, TerminateTag, ReduceTag>
-	  (sc, Sequence(pos, unit_size), tc->_body);
-
-	thief_context_type* const rtc =
-	  static_cast<thief_context_type*>(ktr->data);
-
-	// initialize task stack
-	new (tc) context_type
-	  (rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
-
-	kastl_entry_t const entryfn = thief_entry
-	  <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
-
-	kaapi_task_init(thief_task, entryfn, tc);
-	kaapi_thread_pushtask(thief_thread);
-	kaapi_request_reply_head(sc, request, ktr);
-
-	pos += unit_size;
-
-	--request_count;
-	++reply_count;
-      }
-
-      return reply_count;
+      unit_size = vc->_settings._par_size;
     }
-  }; // splitter
+
+    // steal a range smaller or eq to steal_size
+    const size_t steal_size = unit_size * (size_t)request_count;
+
+    range_type r;
+    if (vc->_seq.steal(r, steal_size) == false)
+      return 0;
+
+    // recompute the request count
+    if ((size_t)r.size() != steal_size)
+    {
+      request_count = r.size() / unit_size;
+
+      if ((request_count * (int)unit_size) < r.size())
+	++request_count;
+    }
+
+    typename Sequence::iterator_type pos = r.begin();
+    int reply_count = 0;
+    
+    // balanced workload amongst count thieves
+    for (; request_count > 0; ++request)
+    {
+      if (!kaapi_request_ok(request))
+	continue;
+
+      // pop no more than unit_size
+      if (unit_size > (size_t)r.size())
+	unit_size = (size_t)r.size();
+
+      kaapi_thread_t* thief_thread = kaapi_request_getthread(request);
+      kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
+
+      // allocate task stack
+      context_type* tc = static_cast<context_type*>
+	(kaapi_thread_pushdata_align
+	 (thief_thread, sizeof(context_type), 8));
+
+      // allocate task result
+      typedef reduce_thief_context
+	<Result, Sequence, Body, TerminateTag, ReduceTag>
+	thief_context_type;
+
+      kaapi_taskadaptive_result_t* const ktr =
+	allocate_ktr<Result, Sequence, Body, TerminateTag, ReduceTag>
+	(sc, Sequence(pos, unit_size), tc->_body);
+
+      thief_context_type* const rtc =
+	static_cast<thief_context_type*>(ktr->data);
+
+      // initialize task stack
+      new (tc) context_type
+	(rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
+
+      kastl_entry_t const entryfn = thief_entry
+	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
+
+      kaapi_task_init(thief_task, entryfn, tc);
+      kaapi_thread_pushtask(thief_thread);
+      kaapi_request_reply_head(sc, request, ktr);
+
+      pos += unit_size;
+
+      --request_count;
+      ++reply_count;
+    }
+
+    return reply_count;
+  } // split_function
 
   // expand iterator, apply body
   template<bool TerminateTag = true, unsigned int Count = 1>
@@ -1058,9 +1054,8 @@ namespace impl
 
     context_type* const tc = static_cast<context_type*>(arg);
 
-    kastl_splitter_t const splitfn =
-      splitter<Result, Sequence, Body, Settings>::template
-      split<TerminateTag, ReduceTag>;
+    kastl_splitter_t const splitfn = split_function
+      <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
     kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
       (thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
@@ -1077,7 +1072,6 @@ namespace impl
    bool TerminateTag, bool ReduceTag>
   static void master_entry(void* arg, kaapi_thread_t* thread)
   {
-    typedef splitter<Result, Sequence, Body, Settings> splitter_type;
     typedef split_task_context
       <Result, Sequence, Body, Settings, ReduceTag> context_type;
     typedef extractor<typename Settings::_macro_extractor_tag> xtr_type;
@@ -1088,8 +1082,8 @@ namespace impl
 
     context_type* const tc = static_cast<context_type*>(arg);
 
-    kastl_splitter_t const splitfn = splitter_type::template
-      split<TerminateTag, ReduceTag>;
+    kastl_splitter_t const splitfn = split_function
+      <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
     kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
       (thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
@@ -1111,7 +1105,6 @@ namespace impl
     // create a context and call master_entry
     // note that result is inout and returned
 
-    typedef splitter<Result, Sequence, Body, Settings> splitter_type;
     typedef split_task_context
       <Result, Sequence, Body, Settings, ReduceTag> context_type;
 

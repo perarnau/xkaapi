@@ -48,6 +48,8 @@ elles qui feront le
 . une fois ca fait, tester avec accumulate
 1000000, on passe de 7 a 6ms
 
+. le splitter n a pas a etre une structure
+
  . actuellement, dans thief_context, seq.begin1()
  . si c est insuffisant, devrait etre base sur
  un modele expand() ET une fonction utilisateur

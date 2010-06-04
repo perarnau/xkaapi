@@ -10,57 +10,57 @@ SESSION_DIR=
 #SIZE1=5000
 #SIZE2=20000
 #SIZE3=50000
-SIZE4=100000
+#SIZE4=100000
 #SIZE5=200000
 #SIZE6=500000
-#SIZE7=1000000
+SIZE7=1000000
 #SIZE8=
 
 # iteration
 #ITER=1000
-ITER=500
+ITER=1000
 
 # cpuset
-#CPUSET0=2
+CPUSET0=2
 #CPUSET0=1
 #CPUSET1=0,1
 #CPUSET0=9
 #CPUSET1=8,9
 #CPUSET2=7,9,11
 #CPUSET3=5,7,9,11
-CPUSET4=0,1,2,3,4,5,6,7
+#CPUSET4=0,1,2,3,4,5,6,7
 #CPUSET5=8,9,10,11,12,13,14,15
 #CPUSET6=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 #CPUSET7=
 #CPUSET8=
 
 # {algo, lib, do}
-ALGOS="$ALGOS for_each"
-ALGOS="$ALGOS find"
-ALGOS="$ALGOS find_if"
-ALGOS="$ALGOS find_first_of"
+# ALGOS="$ALGOS for_each"
+# ALGOS="$ALGOS find"
+# ALGOS="$ALGOS find_if"
+# ALGOS="$ALGOS find_first_of"
 ALGOS="$ALGOS accumulate"
-ALGOS="$ALGOS inner_product"
-ALGOS="$ALGOS count"
-ALGOS="$ALGOS count_if"
-ALGOS="$ALGOS copy"
-ALGOS="$ALGOS search"
-ALGOS="$ALGOS min_element"
-ALGOS="$ALGOS max_element"
-ALGOS="$ALGOS fill"
-ALGOS="$ALGOS generate"
-ALGOS="$ALGOS inner_product"
-ALGOS="$ALGOS replace"
-ALGOS="$ALGOS replace_if"
-ALGOS="$ALGOS equal"
-ALGOS="$ALGOS mismatch"
-ALGOS="$ALGOS search"
-ALGOS="$ALGOS adjacent_find"
-ALGOS="$ALGOS adjacent_difference"
+# ALGOS="$ALGOS inner_product"
+# ALGOS="$ALGOS count"
+# ALGOS="$ALGOS count_if"
+# ALGOS="$ALGOS copy"
+# ALGOS="$ALGOS search"
+# ALGOS="$ALGOS min_element"
+# ALGOS="$ALGOS max_element"
+# ALGOS="$ALGOS fill"
+# ALGOS="$ALGOS generate"
+# ALGOS="$ALGOS inner_product"
+# ALGOS="$ALGOS replace"
+# ALGOS="$ALGOS replace_if"
+# ALGOS="$ALGOS equal"
+# ALGOS="$ALGOS mismatch"
+# ALGOS="$ALGOS search"
+# ALGOS="$ALGOS adjacent_find"
+# ALGOS="$ALGOS adjacent_difference"
 
 LIBS=''
 LIBS="$LIBS kastl"
-#LIBS="$LIBS stl"
+LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
 #LIBS="$LIBS pastl"
 

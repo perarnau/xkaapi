@@ -5,7 +5,7 @@ ALGOS=''
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"
-# ALGOS="$ALGOS accumulate"
+ALGOS="$ALGOS accumulate"
 # ALGOS="$ALGOS inner_product"
 # ALGOS="$ALGOS count"
 # ALGOS="$ALGOS count_if"
@@ -21,18 +21,18 @@ ALGOS=''
 # ALGOS="$ALGOS equal"
 # ALGOS="$ALGOS mismatch"
 # ALGOS="$ALGOS search"
-ALGOS="$ALGOS adjacent_find"
-ALGOS="$ALGOS adjacent_difference"
+# ALGOS="$ALGOS adjacent_find"
+# ALGOS="$ALGOS adjacent_difference"
 
 LIBS=''
 LIBS="$LIBS kastl"
-#LIBS="$LIBS stl"
+LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
 #LIBS="$LIBS pastl"
 
 DOS=''
-#DOS="$DOS bench"
-DOS="$DOS check"
+DOS="$DOS bench"
+#DOS="$DOS check"
 
 for D in $DOS; do
     for A in $ALGOS; do
