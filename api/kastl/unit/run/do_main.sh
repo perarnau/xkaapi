@@ -6,22 +6,21 @@ SESSION_DIR=
 
 # input sizes
 #SIZE0=1000
-#SIZE0=2000
 #SIZE1=5000
 #SIZE2=20000
 #SIZE3=50000
-#SIZE4=100000
+SIZE4=100000
 #SIZE5=200000
 #SIZE6=500000
-SIZE7=1000000
+#SIZE7=1000000
 #SIZE8=
 
 # iteration
-#ITER=1000
 ITER=1000
+#ITER=10000
 
 # cpuset
-CPUSET0=2
+#CPUSET0=2
 #CPUSET0=1
 #CPUSET1=0,1
 #CPUSET0=9
@@ -29,7 +28,7 @@ CPUSET0=2
 #CPUSET2=7,9,11
 #CPUSET3=5,7,9,11
 #CPUSET4=0,1,2,3,4,5,6,7
-#CPUSET5=8,9,10,11,12,13,14,15
+CPUSET5=8,9,10,11,12,13,14,15
 #CPUSET6=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 #CPUSET7=
 #CPUSET8=
@@ -39,8 +38,8 @@ CPUSET0=2
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"
-ALGOS="$ALGOS accumulate"
-# ALGOS="$ALGOS inner_product"
+# ALGOS="$ALGOS accumulate"
+ALGOS="$ALGOS inner_product"
 # ALGOS="$ALGOS count"
 # ALGOS="$ALGOS count_if"
 # ALGOS="$ALGOS copy"
@@ -61,12 +60,12 @@ ALGOS="$ALGOS accumulate"
 LIBS=''
 LIBS="$LIBS kastl"
 LIBS="$LIBS stl"
-#LIBS="$LIBS tbb"
-#LIBS="$LIBS pastl"
+LIBS="$LIBS tbb"
+LIBS="$LIBS pastl"
 
 DOS=''
-#DOS="$DOS bench"
-DOS="$DOS check"
+DOS="$DOS bench"
+# DOS="$DOS check"
 
 
 gen_session_dir() {

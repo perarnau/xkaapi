@@ -1,4 +1,6 @@
 -- bugs
+. a bug in kastl/mismatch.h occurs 1 time on 10000+
+ -> probably a bug in the runtime
 
 
 -- limitation
@@ -8,14 +10,13 @@ result and use reduction... for now we
 only return result + last - first
 
 -- todo
+. remove result when unneeded
+ -> inner_loop should not use result according to ReduceTag
 
-. <TerminationTag, ReduceTag>
-  -> resultTag pour la construction du resultat
-  -> terminationtag pour la reduction
-  -> car on peut avoir un resultat mais pas de terminaison
-
-. TerminationTag specialise les loops
- -> pas de if de fait
+. perf: result._value costs! accumulate from 7ms to 6ms
+ -> ce n est pas result._value qui coute, mais la derefence.
+ en maintenant le resultat en local, on gagne en perf
+ -> on peut verifier ca grace a un result local
 
 . initialization du resultat
  . perte de perf, le resultat devrait etre direct

@@ -2306,7 +2306,10 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::inner_product
-      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0),
+       __gnu_parallel::plus<ValueType, ValueType>(),
+       __gnu_parallel::multiplies<ValueType, ValueType>(),
+       pastl_parallel_tag);
   }
 #endif
 

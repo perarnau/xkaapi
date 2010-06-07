@@ -5,8 +5,8 @@ ALGOS=''
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"
-ALGOS="$ALGOS accumulate"
-# ALGOS="$ALGOS inner_product"
+# ALGOS="$ALGOS accumulate"
+ALGOS="$ALGOS inner_product"
 # ALGOS="$ALGOS count"
 # ALGOS="$ALGOS count_if"
 # ALGOS="$ALGOS copy"
@@ -27,12 +27,12 @@ ALGOS="$ALGOS accumulate"
 LIBS=''
 LIBS="$LIBS kastl"
 LIBS="$LIBS stl"
-#LIBS="$LIBS tbb"
-#LIBS="$LIBS pastl"
+LIBS="$LIBS tbb"
+LIBS="$LIBS pastl"
 
 DOS=''
 DOS="$DOS bench"
-#DOS="$DOS check"
+# DOS="$DOS check"
 
 for D in $DOS; do
     for A in $ALGOS; do
