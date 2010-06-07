@@ -49,5 +49,6 @@
 #include "kastl/accumulate.h"
 #include "kastl/adjacent_difference.h"
 #include "kastl/inner_product.h"
+#include "kastl/partial_sum.h"
 
 #endif // ! KASTL_NUMERIC_INCLUDED

@@ -2037,6 +2037,92 @@ public:
 };
 #endif // CONFIG_ALGO_ADJACENT_DIFFERENCE
 
+#if CONFIG_ALGO_PARTIAL_SUM
+class PartialSumRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_ONE;
+    are_equal = true;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::partial_sum
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::partial_sum
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::partial_sum
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::partial_sum
+      (i.first.begin(), i.first.end(), o.begin(),
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType&, std::vector<OutputType>& os, std::string& es) const
+  {
+    // check sequences
+    SequenceType::iterator a = os[0].begin();
+    SequenceType::iterator b = os[1].begin();
+    SequenceType::iterator c = os[1].end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+#if 0
+      a = os[0].begin(); b = os[1].begin();
+      print_sequences(a, b, c);
+#endif
+
+      es = index_error_string
+	(a - os[0].begin(), b - os[1].begin());
+      return false;
+    }
+
+    // check indices
+    const ptrdiff_t is[2] =
+    {
+      _res[0] - os[0].begin(),
+      _res[1] - os[1].begin()
+    };
+
+    if (is[0] != is[1])
+    {
+      es = index_error_string(is[1], is[0]);
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_PARTIAL_SUM
+
+
 #if CONFIG_ALGO_COPY
 class CopyRun : public RunInterface
 {
@@ -2678,84 +2764,6 @@ public:
   }
 
 };
-
-class PartialSumRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-public:
-
-  virtual void get_seq_constraints
-  (
-   enum seq_order& seq_order,
-   bool& are_equal
-  ) const
-  {
-    seq_order = SEQ_ORDER_ONE;
-    are_equal = true;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::partial_sum
-    (
-     i.first.begin(),
-     i.first.end(),
-     o.begin()
-    );
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::partial_sum
-    (
-     i.first.begin(),
-     i.first.end(),
-     o.begin()
-    );
-  }
-
-  virtual bool check
-  (OutputType& ko, OutputType& so, std::string& error_string) const
-  {
-    const ptrdiff_t kastl_index = std::distance(ko.begin(), _kastl_res);
-    const ptrdiff_t stl_index = std::distance(so.begin(), _stl_res);
-
-    if (kastl_index != stl_index)
-    {
-      error_string = index_error_string(stl_index, kastl_index);
-      return false;
-    }
-
-    SequenceType::iterator kpos = ko.begin();
-    SequenceType::iterator spos = so.begin();
-    SequenceType::iterator send = so.end();
-
-    if (cmp_sequence(kpos, spos, send) == true)
-      return true;
-
-#if 0
-    error_string = index_error_string
-    (
-     std::distance(so.begin(), spos),
-     std::distance(ko.begin(), kpos)
-    );
-#else
-    error_string = index_error_string
-    (  
-     std::distance(so.begin(), spos),
-     std::distance(ko.begin(), kpos)
-    );
-    error_string.append(std::string("\n"));
-    error_string.append(value_error_string(*spos, *kpos));
-#endif
-
-    return false;
-  }
-
-};
-
 
 #if 0
 
@@ -3654,10 +3662,13 @@ RunInterface* RunInterface::create()
   CREATE_RUN( AdjacentDifference );
 #endif
 
+#if CONFIG_ALGO_PARTIAL_SUM
+  CREATE_RUN( PartialSum );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
-  CREATE_RUN( PartialSum );
   CREATE_RUN( Reverse );
   CREATE_RUN( Partition );
   CREATE_RUN( SetUnion );

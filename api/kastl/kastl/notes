@@ -10,6 +10,24 @@ result and use reduction... for now we
 only return result + last - first
 
 -- todo
+
+. bench
+
+. initialization du result
+ . min_element, max_element
+ . should be: expand_init()
+
+. utilisation du master_sc, flag linked
+ pour eviter d allouer un ktr quand pas
+ besoin
+
+template<typename Result, typename Sequence>
+static void expand_init(Result& res, Sequence& seq)
+{
+_res = Result(seq.begin1());
+}
+
+
 . remove result when unneeded
  -> inner_loop should not use result according to ReduceTag
 
