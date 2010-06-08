@@ -646,6 +646,9 @@ namespace ka {
     template<typename pointer>
     explicit Access( pointer* p )
     { kaapi_access_init(&a, p); }
+    template<typename pointer>
+    explicit Access( const pointer* p )
+    { kaapi_access_init(&a, (void*)p); }
     template<typename T>
     explicit Access( const base_pointer<T>& p )
     { kaapi_access_init(&a, p.ptr()); }
