@@ -353,11 +353,7 @@ struct Kernel {
 #else
           ka::
 #endif          
-          Spawn<ExtractSubDomainInterface>(MySetPartition(curr_site))( 
-              ka::pointer<KaSubDomain>(&old_domain[neighbor()]), 
-              dir, 
-              ka::pointer<KaSubDomainInterface>(&sdi[ curr_index()*Poisson3D::NB_DIRECTIONS + d ]) 
-          );
+          Spawn<ExtractSubDomainInterface>(MySetPartition(curr_site))( &old_domain[neighbor()], dir,  &sdi[ curr_index()*Poisson3D::NB_DIRECTIONS + d ] );
         }
       }
       ++ibeg;
@@ -381,10 +377,7 @@ struct Kernel {
 #else
       ka::
 #endif          
-      Spawn<UpdateInternal>( MySetPartition(curr_site) )( 
-          ka::pointer<KaSubDomain>(&new_domain[curr_index()]), 
-          ka::pointer<KaSubDomain>(&old_domain[curr_index()]) 
-      );
+      Spawn<UpdateInternal>( MySetPartition(curr_site) )( &new_domain[curr_index()], &old_domain[curr_index()] );
 
 #if 0
       ++ibeg;    
@@ -415,11 +408,7 @@ struct Kernel {
 #else
           ka::
 #endif          
-          Spawn<UpdateExternal>(MySetPartition(curr_site))( 
-              ka::pointer<KaSubDomain>(&new_domain[curr_index()]),
-              dir, 
-              ka::pointer<KaSubDomainInterface>(&sdi[curr_index()*Poisson3D::NB_DIRECTIONS + d])
-          );
+          Spawn<UpdateExternal>(MySetPartition(curr_site))( &new_domain[curr_index()], dir, &sdi[curr_index()*Poisson3D::NB_DIRECTIONS + d] );
         }
         else
         {
@@ -428,41 +417,16 @@ struct Kernel {
 #else
           ka::
 #endif          
-          Spawn<UpdateExternalVal>(MySetPartition(curr_site))( 
-              ka::pointer<KaSubDomain>(&new_domain[curr_index()]), 
-              dir, 
-              Poisson3D::DIR_CONSTRAINTS[d] 
-          );
+          Spawn<UpdateExternalVal>(MySetPartition(curr_site))( &new_domain[curr_index()], dir, Poisson3D::DIR_CONSTRAINTS[d] );
         }
       }
-#if 0
-      ++ibeg;
-    }
-
-#if defined(USE_Z_CURVE)
-    ibeg = mesh3d.begin_z();
-    iend = mesh3d.end_z();
-#else
-    ibeg = mesh3d.begin();
-    iend = mesh3d.end();
-#endif
-    while (ibeg != iend)
-    {
-      Poisson3D::Index curr_index = *ibeg;
-      int curr_site = sg.get_site(curr_index.get_i(), curr_index.get_j(), curr_index.get_k());
-#endif
 
 #if defined(USE_THGRP)
-          threadgroup.
+      threadgroup.
 #else
-          ka::
+        ka::
 #endif          
-            Spawn<ComputeResidueAndSwap>(MySetPartition(curr_site))( 
-          ka::pointer<KaSubDomain>(&old_domain[curr_index()]),
-          ka::pointer<KaSubDomain>(&new_domain[curr_index()]),
-          ka::pointer_r<KaSubDomain>(&frhs[curr_index()]), 
-          ka::pointer<double>(&res2[curr_index()])
-      );
+        Spawn<ComputeResidueAndSwap>(MySetPartition(curr_site))( &old_domain[curr_index()], &new_domain[curr_index()], &frhs[curr_index()], &res2[curr_index()] );
       ++ibeg;
     }
 
