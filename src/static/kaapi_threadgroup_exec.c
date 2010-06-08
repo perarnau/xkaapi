@@ -162,7 +162,7 @@ int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
     kaapi_thread_clear(thgrp->threadctxts[i]);
 
   kaapi_thread_restore_frame(thgrp->mainthread, &thgrp->mainframe);
-#if 1
+#if 0
   kaapi_thread_save_frame(thgrp->mainthread, &thgrp->mainframe);
   fprintf(stdout, "Restore frame:: pc:%p, sp:%p, spd:%p\n", 
     (void*)thgrp->mainframe.pc, 
