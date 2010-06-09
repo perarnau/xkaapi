@@ -367,6 +367,7 @@ extern pthread_key_t kaapi_current_processor_key;
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   extern __thread kaapi_thread_t** kaapi_current_thread_key;
+  extern __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
 #endif
 
 extern kaapi_processor_t* kaapi_get_current_processor(void);

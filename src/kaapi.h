@@ -591,14 +591,21 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
     Return pointer to the self stack
 */
-  /* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
+/* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   extern __thread kaapi_thread_t** kaapi_current_thread_key;
+  extern __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
 #  define kaapi_self_thread() \
      (*kaapi_current_thread_key)
+#  define kaapi_self_threadgroup() \
+     kaapi_current_threadgroup_key
+#  define kaapi_set_threadgroup( thgrp) \
+     kaapi_current_threadgroup_key = thgrp
 
 #else
 extern kaapi_thread_t* kaapi_self_thread (void);
+extern kaapi_threadgroup_t kaapi_self_threadgroup(void);
+extern void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp);
 #endif
 
 

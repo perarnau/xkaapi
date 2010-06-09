@@ -1041,6 +1041,71 @@ namespace ka {
     static void IS_COMPATIBLE(){}
   };
 
+  template <typename type >
+  class counting_iterator : public std::iterator< std::random_access_iterator_tag,     /* category */
+                                           const type  /* element type */                                            
+                                        >
+  {
+  public:
+      typedef type value_type;
+      typedef ptrdiff_t difference_type;
+      typedef const type& reference;
+      typedef const type* pointer;
+
+      counting_iterator()
+       : _rep(0)
+      {}
+      explicit counting_iterator(value_type x) 
+       : _rep(x) 
+      {}
+      value_type const& base() const
+      { return _rep; }
+
+      counting_iterator& operator++() 
+      { 
+        ++_rep;
+        return *this;
+      }
+      counting_iterator operator++(int) 
+      { 
+        counting_iterator retval = *this;
+        ++_rep;
+        return retval; 
+      }
+      counting_iterator& operator--() 
+      { 
+        --_rep;
+        return *this;
+      }
+      counting_iterator operator--(int) 
+      { 
+        counting_iterator retval = *this;
+        --_rep;
+        return retval; 
+      }
+      difference_type operator-(const counting_iterator& it) const
+      { return _rep - it._rep; }
+      counting_iterator operator+(value_type v) const
+      { return counting_iterator(_rep +v); }
+      counting_iterator operator-(value_type v) const
+      { return counting_iterator(_rep -v); }
+      counting_iterator operator[](int i) const
+      { return counting_iterator(_rep +i); }
+      bool operator==(const counting_iterator& rhs) 
+      { return (_rep==rhs._rep); }
+
+      bool operator!=(const counting_iterator& rhs) 
+      { return (_rep!=rhs._rep); }
+
+      reference operator*() 
+      { return _rep; }
+
+      pointer* operator->() 
+      { return &_rep; }
+
+  private:
+      value_type _rep;
+  };
 
   /* ICI: signature avec kaapi_stack & kaapi_task as first parameter ?
      Quel interface C++ pour les tâches adaptatives ?
@@ -1161,6 +1226,7 @@ namespace ka {
     {
       if (!_created) { kaapi_threadgroup_create( &_threadgroup, _size ); _created = true; }
       kaapi_threadgroup_begin_partition( _threadgroup );
+      kaapi_set_threadgroup(_threadgroup);
     }
 
     /* internal class required for spawn method */
@@ -1174,7 +1240,7 @@ namespace ka {
       int                 _threadindex;
     };
 
-    /* Spawner for ThreadGroup */
+    /** Spawner for ThreadGroup */
     template<class TASK>
     class Spawner {
     public:
@@ -1207,6 +1273,91 @@ namespace ka {
               ); 
     }
 
+
+    /** Executor of one task for ThreadGroup */
+    template<class TASKGENERATOR>
+    class Executor {
+    public:
+      Executor(ThreadGroup* thgrp): _threadgroup(thgrp) {}
+      /** 0 args **/
+      void operator()()
+      {
+        _threadgroup->begin_partition();
+        TASKGENERATOR();
+        _threadgroup->end_partition();
+        _threadgroup->execute();
+      }
+#include "ka_api_execgraph.h"
+    protected:
+      ThreadGroup*  _threadgroup;
+    };  
+    
+    /* Interface: threadgroup.ExecGraph<TASKGENERATOR>()( args ) */
+    template<class TASKGENERATOR>
+    Executor<TASKGENERATOR> ExecGraph() 
+    { return Executor<TASKGENERATOR>( this ); }
+
+
+    /** ForEach */
+    template<class TASKGENERATOR, typename Iterator>
+    class ForEachDriver {
+    public:
+      ForEachDriver(ThreadGroup* thgrp, Iterator beg, Iterator end)
+       : _threadgroup(thgrp), _beg(beg), _end(end), step(0), total(0)
+      {}
+      /** 0 args **/
+      void operator()()
+      {
+        if (_beg == _end) return;
+        _threadgroup->begin_partition();
+        tpart = kaapi_get_elapsedtime();
+        TASKGENERATOR();
+        tpart = kaapi_get_elapsedtime()-tpart;
+        _threadgroup->end_partition();
+        _threadgroup->save();
+        while (_beg != _end)
+        {
+          t0 = kaapi_get_elapsedtime();
+          _threadgroup->execute();
+          t1 = kaapi_get_elapsedtime();
+          if (step >0) total += t1-t0;
+          std::cout << step << ":: Time: " << t1 - t0 << std::endl;
+          ++step;
+          if (++_beg != _end) _threadgroup->restore();
+        }
+      }
+#include "ka_api_execforeach.h"
+    protected:
+      ThreadGroup*  _threadgroup;
+      Iterator      _beg;
+      Iterator      _end;
+      int           step;
+      double        tpart;
+      double        t0,t1,total;
+    };  
+
+    /** ForEach */
+    template<class TASKGENERATOR>
+    class ForEachDriverTrampoline {
+    public:
+      ForEachDriverTrampoline(ThreadGroup* thgrp) {}
+      /** First set of args for the iteration space **/
+      template<typename Iterator>
+      ForEachDriver<TASKGENERATOR,Iterator> operator()( Iterator beg, Iterator end)
+      { 
+        return ForEachDriver<TASKGENERATOR, Iterator>( _threadgroup, beg, end );
+      }
+    protected:
+      ThreadGroup*  _threadgroup;
+    };  
+    
+    /* Interface: threadgroup.ExecGraph<TASKGENERATOR>()( args ) */
+    template<class TASKGENERATOR>
+    ForEachDriverTrampoline<TASKGENERATOR> ForEach() 
+    { return ForEachDriverTrampoline<TASKGENERATOR>( this ); }
+
+
+
     /* Interface: threadgroup[i].Spawn<TASK>()( args )
        Il faudrait ici des methods spawn sur un object, cf testspawn.cpp
        + threadgroup[i] == pointeur sur _thread + _threadgroup
@@ -1221,6 +1372,7 @@ namespace ka {
     void end_partition()
     {
       kaapi_threadgroup_end_partition( _threadgroup );
+      kaapi_set_threadgroup(0);      
     }
 
     /* execute the threads */
@@ -1242,6 +1394,16 @@ namespace ka {
       kaapi_threadgroup_end_step( _threadgroup );
     }
 
+    /* save */
+    void save()
+    {
+    }
+
+    /* restore */
+    void restore()
+    {
+    }
+
     void print()
     { kaapi_threadgroup_print(stdout, _threadgroup); }
   protected:
@@ -1255,10 +1417,20 @@ namespace ka {
   // --------------------------------------------------------------------
   /** Top level Spawn */
   template<class TASK>
-  Thread::Spawner<TASK, DefaultAttribut> Spawn() { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut()); }
+  Thread::Spawner<TASK, DefaultAttribut> Spawn() 
+  { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut()); }
+
+  template<class TASK>
+  ThreadGroup::Spawner<TASK> Spawn(const AttributSetPartition& a) 
+  { return ThreadGroup::Spawner<TASK>(
+                ThreadGroup::AttributComputeDependencies(kaapi_self_threadgroup(), a.get_partition()),
+                kaapi_threadgroup_thread(kaapi_self_threadgroup(), a.get_partition())
+            ); 
+  }
 
   template<class TASK, class Attr>
-  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) { return Thread::Spawner<TASK, Attr>(kaapi_self_thread(), a); }
+  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) 
+  { return Thread::Spawner<TASK, Attr>(kaapi_self_thread(), a); }
 
 
   template<class TASK>

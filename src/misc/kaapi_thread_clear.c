@@ -62,7 +62,10 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   /*thread->thieffp  = 0; do not put here this instruction : always set by thief */
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);
   kaapi_stack_clear(stack);
-  
+
+#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  thread->thgrp      = 0;
+#endif
   return 0;
 }
 

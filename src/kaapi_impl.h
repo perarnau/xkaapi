@@ -375,6 +375,9 @@ typedef struct kaapi_thread_context_t {
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
 #endif
+#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
+#endif
   unsigned long                  affinity;       /* bit i == 1 -> can run on procid i */
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
