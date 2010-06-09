@@ -413,8 +413,7 @@ typedef struct kaapi_thread_context_t {
 #if !defined(KAAPI_COMPILE_SOURCE)
 struct kaapi_threadgrouprep_t {
   /* public part */
-  kaapi_thread_t*            mainthread;   /* the main thread that push task */
-  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt */
+  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
   int                        group_size;   /* number of threads in the group */
 };
 #else
@@ -1151,7 +1150,7 @@ extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int 
 static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   return thread;
 }
@@ -1161,7 +1160,7 @@ static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgr
 static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
 
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   return kaapi_thread_toptask(thread);
@@ -1170,7 +1169,7 @@ static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp
 static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   kaapi_assert_debug( thread !=0 );
   

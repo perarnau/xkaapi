@@ -56,10 +56,10 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
 
   /* Push the task that will mark synchronisation on the main thread */
-  thgrp->waittask = kaapi_thread_toptask( thgrp->mainthread);
+  thgrp->waittask = kaapi_thread_toptask( thgrp->threads[-1] );
   kaapi_task_init(thgrp->waittask, kaapi_taskwaitend_body, thgrp );
   kaapi_task_setbody(thgrp->waittask, kaapi_suspend_body );
-  kaapi_thread_pushtask(thgrp->mainthread);    
+  kaapi_thread_pushtask( thgrp->threads[-1] );    
   
   ++thgrp->step;
   kaapi_mem_barrier();
@@ -144,9 +144,9 @@ int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
   for (int i=0; i<thgrp->group_size; ++i)
     kaapi_thread_clear(thgrp->threadctxts[i]);
 
-  kaapi_thread_restore_frame(thgrp->mainthread, &thgrp->mainframe);
+  kaapi_thread_restore_frame( thgrp->threads[-1], &thgrp->mainframe);
 #if 0
-  kaapi_thread_save_frame(thgrp->mainthread, &thgrp->mainframe);
+  kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
   fprintf(stdout, "Restore frame:: pc:%p, sp:%p, spd:%p\n", 
     (void*)thgrp->mainframe.pc, 
     (void*)thgrp->mainframe.sp, 
