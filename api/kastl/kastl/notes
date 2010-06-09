@@ -10,6 +10,21 @@ result and use reduction... for now we
 only return result + last - first
 
 -- todo
+. implementation pthread classique
+
+. optimisation
+ . barriere pour attendre que tout le monde se synchro
+ avant le debut de l algorithme
+ . tester algorithm de vol favorisant le processeur 0
+ . recuperer ancien transform
+ . optimisation contexts de vol...
+
+. examples
+ . choisir les examples a detailler
+
+. documentation
+ . page web
+ . install guide
 
 . bench
 

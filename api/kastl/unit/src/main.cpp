@@ -60,6 +60,9 @@
 #include "pinned_array.hh"
 
 
+#define CONFIG_RENPAR 1
+
+
 #if CONFIG_LIB_KASTL
 
 #include "kaapi.h"
@@ -539,8 +542,68 @@ static bool pastl_initialize()
   return true;
 }
 
-#endif
+#endif // CONFIG_LIB_PASTL
 
+#if CONFIG_LIB_PTHREAD
+# include <pthread.h>
+
+struct thread_base
+{
+#define THREAD_STATUS_IDLE 0
+#define THREAD_STATUS_WORK 1
+#define THREAD_STATUS_DONE 2
+  volatile int _status __attribute__((aligned));
+
+  pthread_t _thread;
+
+  thread_base() : _status(THREAD_STATUS_IDLE)
+  {}
+};
+
+template<typename Work>
+struct pthread_pool
+{
+  // todo: dynamic aligned allocation
+  Work _works[32];
+  size_t _thread_count;
+
+  bool initialize(size_t thread_count)
+  {
+    _thread_count = thread_count;
+    for (size_t i = 0; i < thread_count - 1; ++i)
+    {
+      Work& work = _works[i];
+      work._status = THREAD_STATUS_IDLE;
+      pthread_create(&work._thread, NULL, Work::thread_entry, (void*)&work);
+    }
+
+    return true;
+  }
+
+  void cleanup()
+  {
+    void* foo;
+
+    for (size_t i = 0; i < _thread_count; ++i)
+    {
+      _works[i]._status = THREAD_STATUS_DONE;
+      pthread_join(_works[i]._thread, &foo);
+    }
+  }
+
+  void start_work(size_t i)
+  {
+    _works[i]._status = THREAD_STATUS_WORK;
+  }
+
+  void wait_work(size_t i)
+  {
+    while (_works[i]._status == THREAD_STATUS_WORK)
+      ;
+  }
+};
+
+#endif // CONFIG_LIB_PTHREAD
 
 #define DEFAULT_INPUT_SIZE 100000
 #define DEFAULT_ITER_SIZE 10
@@ -724,6 +787,9 @@ namespace timing
   static unsigned long timer_to_usec(const TimerType& t)
   { return t.tv_sec * 1000000 + t.tv_usec; }
 
+  static unsigned long timer_to_ticks(const TimerType& t)
+  { return t.tv_sec * 1000000 + t.tv_usec; }
+
 };
 
 #else // ia32 realtime clock
@@ -746,6 +812,8 @@ namespace timing
   static unsigned long timer_to_usec(const TimerType& t)
   { return (unsigned long)tick2usec(t.tick); }
 
+  static unsigned long timer_to_ticks(const TimerType& t)
+  { return t.tick; }
 };
 
 #endif // gettimeofday
@@ -767,6 +835,7 @@ public:
   virtual void run_kastl(InputType&, OutputType&) {}
   virtual void run_tbb(InputType&, OutputType&) {}
   virtual void run_pastl(InputType&, OutputType&) {}
+  virtual void run_pthread(InputType&, OutputType&) {}
 
   virtual bool check(InputType&, std::vector<OutputType>& os, std::string& es) const
   { return check(os, es); }
@@ -1316,8 +1385,15 @@ class TransformRun : public RunInterface
   {
     inc() {}
 
+#if CONFIG_RENPAR
+    ValueType operator()(const ValueType& v) const
+    { 
+      return 2 * v;
+    }
+#else
     ValueType operator()(const ValueType& v) const
     { return v + 1; }
+#endif
   };
 
 public:
@@ -1386,7 +1462,108 @@ public:
     tbb_transform
       (i.first.begin(), i.first.end(), o.begin(), inc());
   }
-#endif
+#endif // CONFIG_LIB_TBB
+
+#if CONFIG_LIB_PTHREAD
+  template<typename Iterator0, typename Iterator1, typename Operator>
+  struct thread_work : thread_base
+  {
+    typedef thread_work<Iterator0, Iterator1, Operator> self_type;
+
+    Iterator0 _ipos;
+    Iterator0 _iend;
+    Iterator1 _opos;
+    Operator _op;
+
+    thread_work() {}
+
+    void do_work()
+    {
+      Iterator0 ipos = _ipos;
+      Iterator1 opos = _opos;
+
+      for (; ipos != _iend; ++ipos, ++opos)
+	*opos = _op(*ipos);
+    }
+
+    static void* thread_entry(void* arg)
+    {
+      self_type* const self = static_cast<self_type*>(arg);
+
+      while (self->_status != THREAD_STATUS_DONE)
+      {
+	while (self->_status == THREAD_STATUS_IDLE)
+	  ;
+
+	if (self->_status == THREAD_STATUS_WORK)
+	{
+	  self->do_work();
+	  self->_status = THREAD_STATUS_IDLE;
+	}
+      }
+
+      return NULL;
+    }
+
+  } __attribute__((aligned(64)));
+
+  typedef SequenceType::iterator iterator_type;
+  typedef thread_work<iterator_type, iterator_type, inc> work_type;
+  pthread_pool<work_type> _pool;
+
+  virtual void prepare(InputType&)
+  {
+    _pool.initialize(get_concurrency());
+  }
+
+  template<typename Iterator0, typename Iterator1, typename Operator>
+  void pthread_transform
+  (Iterator0 ipos, Iterator0 iend, Iterator1 opos, Operator op)
+  {
+    typedef thread_work<Iterator0, Iterator1, Operator> work_type;
+
+    typedef typename std::iterator_traits<Iterator0>::difference_type size_type;
+
+    const size_t thread_count = _pool._thread_count;
+
+    const size_type seq_size = std::distance(ipos, iend);
+    const size_type unit_size = seq_size / thread_count;
+
+    for (size_t i = 0; i < (thread_count - 1); ++i)
+    {
+      work_type& work = _pool._works[i];
+
+      work._op = op;
+      work._ipos = ipos;
+      work._iend = ipos + unit_size;
+      work._opos = opos;
+
+      opos += unit_size;
+      ipos += unit_size;
+
+      __sync_synchronize();
+
+      _pool.start_work(i);
+    }
+
+    // take the last work
+    work_type& work = _pool._works[thread_count - 1];
+    work._op = op;
+    work._ipos = ipos;
+    work._iend = iend;
+    work._opos = opos;
+    work.do_work();
+
+    // wait for the work
+    for (size_t i = 0; i < (thread_count - 1); ++i)
+      _pool.wait_work(i);
+  }
+
+  virtual void run_pthread(InputType& i, OutputType& o)
+  {
+    pthread_transform(i.first.begin(), i.first.end(), o.begin(), inc());
+  }
+#endif // CONFIG_LIB_PTHREAD
 
   virtual bool check
   (std::vector<OutputType>& os, std::string& es) const
@@ -3696,7 +3873,6 @@ public:
    std::vector<OutputType>& outputs
   )
   {
-    // i the run count
     size_t i = 0;
 
 #if CONFIG_DO_BENCH
@@ -3706,6 +3882,14 @@ public:
 
 #if CONFIG_DO_BENCH
     timing::get_now(start_tm);
+#endif
+
+#if CONFIG_RENPAR
+#if CONFIG_DO_BENCH
+    for (size_t j = 0; j < 1000; ++j)
+    {
+      i = 0;
+#endif
 #endif
 
 #if CONFIG_LIB_STL
@@ -3724,6 +3908,16 @@ public:
     run->run_pastl(input, outputs[i++]);
 #endif
 
+#if CONFIG_LIB_PTHREAD
+    run->run_pthread(input, outputs[i++]);
+#endif
+
+#if CONFIG_RENPAR
+#if CONFIG_DO_BENCH
+    }
+#endif
+#endif
+
 #if CONFIG_DO_BENCH
     timing::get_now(now_tm);
     timing::sub_timers(now_tm, start_tm, _tm);
@@ -3738,6 +3932,9 @@ public:
 #if CONFIG_DO_BENCH
   inline unsigned long get_usecs() const
   { return timing::timer_to_usec(_tm); }
+
+  inline unsigned long get_ticks() const
+  { return timing::timer_to_ticks(_tm); }
 #endif
 };
 
@@ -3789,7 +3986,7 @@ static int do_xxx(RunInterface* run, InputType& input, std::vector<OutputType>& 
 {
   RunLauncher l;
   l.launch(run, input, outputs);
-  printf("%lu\n", l.get_usecs());
+  printf("%lu\n", l.get_ticks());
   return 0;
 }
 #endif // CONFIG_DO_BENCH

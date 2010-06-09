@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 
 ALGOS=''
+ALGOS="$ALGOS transform"
 # ALGOS="$ALGOS for_each"
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
@@ -23,17 +24,18 @@ ALGOS=''
 # ALGOS="$ALGOS search"
 # ALGOS="$ALGOS adjacent_find"
 # ALGOS="$ALGOS adjacent_difference"
-ALGOS="$ALGOS partial_sum"
+# ALGOS="$ALGOS partial_sum"
 
 LIBS=''
 LIBS="$LIBS kastl"
 #LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
-#LIBS="$LIBS pastl"
+LIBS="$LIBS pastl"
+LIBS="$LIBS pthread"
 
 DOS=''
 DOS="$DOS bench"
- DOS="$DOS check"
+#DOS="$DOS check"
 
 for D in $DOS; do
     for A in $ALGOS; do

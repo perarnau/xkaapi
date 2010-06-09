@@ -154,17 +154,24 @@ def on_sample(sample, filename):
     sample.set_meta('cpu_count', toks[4])
     return
 
+def cpu_count_to_size(n):
+    counts = ('1 ', '2 ', '4 ', '8 ', '12', '16')
+    return counts[int(n)]
 
 def main(dirname):
     ss = SampleSet()
     ss.load_directory(dirname, on_sample)
 
-    for impl in ('kastl', 'stl', 'tbb', 'pastl'):
-        samples = ss.find_samples\
-            ({'algo': 'min_element', 'impl': impl, 'seq_size': '80000'})
-        print('-- impl: ' + impl)
-        for s in samples:
-            print(s.get_meta('cpu_count') + ': ' + str(s.average()))
+    for size in [100000]:
+        print('-- sequence_size: ' + str(size))
+        for impl in ('kastl', 'stl', 'tbb', 'pastl', 'pthread'):
+            samples = ss.find_samples\
+                ({'algo': 'transform', 'impl': impl, 'seq_size': str(size)})
+            print('---- impl: ' + impl)
+            for s in samples:
+                print(cpu_count_to_size(s.get_meta('cpu_count'))\
+                          + ': ' + str(s.average()))
+        print('')
 
 #     seq_avg = None
 #     for filename in filenames:

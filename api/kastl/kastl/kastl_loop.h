@@ -52,6 +52,14 @@
 #include "kastl_workqueue.h"
 #include "kastl_sequences.h"
 
+
+// missing decls
+extern "C" void kaapi_set_workload(kaapi_processor_t*, kaapi_uint32_t);
+extern "C" void kaapi_set_self_workload(kaapi_uint32_t);
+extern "C" kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
+extern "C" kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
+
+
 #if CONFIG_KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
 static volatile unsigned int __attribute__((aligned)) printid = 0;
@@ -184,6 +192,7 @@ namespace impl
 
   // sugar
   typedef settings<static_tag> static_settings;
+  typedef settings<identity_tag> identity_settings;
 
   // results
   template<typename Iterator>
@@ -712,6 +721,8 @@ namespace impl
     if (vc->_seq.steal(r, steal_size) == false)
       return 0;
 
+    kaapi_set_workload(kaapi_stealcontext_kproc(sc), vc->_seq.size());
+
     // recompute the request count
     if ((size_t)r.size() != steal_size)
     {
@@ -764,6 +775,8 @@ namespace impl
       kaapi_task_init(thief_task, entryfn, tc);
       kaapi_thread_pushtask(thief_thread);
       kaapi_request_reply_head(sc, request, ktr);
+
+      kaapi_set_workload(kaapi_request_kproc(request), unit_size);
 
       pos += unit_size;
 
@@ -942,11 +955,11 @@ namespace impl
 
 	// check if we have been preempted
 	if (ktr != NULL)
-	  {
-	    const bool is_preempted = preempt(sc, ktr);
-	    if (is_preempted == true)
-	      return ;
-	  }
+	{
+	  const bool is_preempted = preempt(sc, ktr);
+	  if (is_preempted == true)
+	    return ;
+	}
       }
 
       bool has_thief;
@@ -1064,6 +1077,8 @@ namespace impl
     outter_loop_type::run
       (sc, tc->_ktr, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
 
+    kaapi_set_self_workload(0);
+
     kaapi_steal_finalize(sc);
   }
 
@@ -1115,6 +1130,8 @@ namespace impl
     kaapi_task_t* task;
     kaapi_frame_t frame;
 
+    kaapi_set_self_workload(seq.size());
+
     context_type tc(res, seq, body, settings);
 
     thread = kaapi_self_thread();
@@ -1124,6 +1141,8 @@ namespace impl
     kaapi_thread_pushtask(thread);
     kaapi_sched_sync();
     kaapi_thread_restore_frame(thread, &frame);
+
+    kaapi_set_self_workload(0);
 
     return res;
   }

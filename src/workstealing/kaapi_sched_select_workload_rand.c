@@ -143,7 +143,7 @@ int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_vic
   do {
     
 #if 1
-    for (i=0; i<kproc->hlevel; ++i)
+    for (i=0; i < kproc->hlevel; ++i)
     {
       err = kaapi_select_victim_workload_atlevel( kproc, i, victim );
       if (err ==0) return 0;

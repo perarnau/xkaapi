@@ -73,6 +73,18 @@ struct transform_body
   {
     *opos = _op(*ipos);
   }
+
+#if 0 // unused, inlined version
+  void operator()(result_type&, range_type& range)
+  {
+    typename range_type::iterator1_type ipos = range.begin1();
+    typename range_type::iterator1_type iend = range.end1();
+    typename range_type::iterator2_type opos = range.begin2();
+
+    for (; ipos != iend; ++ipos, ++opos)
+      *opos = _op(*ipos);
+  }
+#endif
 };
 
 // second version body
@@ -118,7 +130,7 @@ template<typename Iterator0, typename Iterator1, typename Operation>
 Iterator1 transform
 (Iterator0 ifirst, Iterator0 ilast, Iterator1 ofirst, Operation op)
 {
-  kastl::impl::static_settings settings(512, 512);
+  kastl::impl::static_settings settings(128, 128);
   return kastl::transform(ifirst, ilast, ofirst, op, settings);
 }
 
