@@ -382,7 +382,7 @@ struct Kernel {
 
       ka::Spawn<ComputeResidueAndSwap>(ka::SetPartition(curr_site))
           ( &old_domain[curr_index()], &new_domain[curr_index()], &frhs[curr_index()], &res2[curr_index()] );
-      ka::Spawn<ResidueSum>(ka::SetPartition(0))( &residue, &res2[curr_index()] );
+      ka::Spawn<ResidueSum>(ka::SetPartition(-1))( &residue, &res2[curr_index()] );
       ++ibeg;
     }
     ka::Spawn<PrintResidueSum>(ka::SetPartition(-1))( &residue );
