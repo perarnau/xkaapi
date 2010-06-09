@@ -379,6 +379,7 @@ typedef struct kaapi_thread_context_t {
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif
   unsigned long                  affinity;       /* bit i == 1 -> can run on procid i */
+  int                            unstealable;    /* !=0 -> cannot be stolen */
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
   kaapi_atomic_t                 lock;           /** */ 

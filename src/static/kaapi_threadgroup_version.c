@@ -227,7 +227,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
   }
 
 
-  /* if already has a reader do nothing, else update the reader information */    
+  /* if already has a reader do nothing also if, else update the reader information */    
   if (!ver->readers[tid].used)
   {
     kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
@@ -321,8 +321,8 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
         -> push the original task after
   */
   if (ver->writer_task == 0)
-  { /* this is the first writer */
-    kaapi_assert( ver->cnt_readers == 0);
+  { /* this is the first writer or a reader exist on -1 */
+    kaapi_assert( (ver->cnt_readers == 0) || ver->readers[-1].used);
     ver->writer_data   = access->data;
     ver->writer_task   = task;
     ver->writer_thread = tid;

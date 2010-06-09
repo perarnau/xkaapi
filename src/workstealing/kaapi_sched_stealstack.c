@@ -69,10 +69,10 @@ static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_fo
     kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
     
     /* compute readyness of access */
-    if ( KAAPI_ACCESS_IS_ONLYWRITE(m)
+    if (   KAAPI_ACCESS_IS_ONLYWRITE(m)
         || (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
         || (KAAPI_ACCESS_IS_CONCURRENT(m, gd->last_mode))
-        )
+       )
     {
       --wc;
       if (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
@@ -145,7 +145,7 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
       continue;
     }
     /* mute r mode to be w, while the body is recv_task, the r or rw are not ready */
-    if (m == KAAPI_ACCESS_MODE_R) 
+    if (KAAPI_ACCESS_IS_READ(m))
     {
       if (kaapi_threadgroup_paramiswait( task, i )) 
       {
@@ -159,10 +159,10 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
     kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
     
     /* compute readyness of access */
-    if ( KAAPI_ACCESS_IS_ONLYWRITE(m)
+    if (   KAAPI_ACCESS_IS_ONLYWRITE(m)
         || (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
         || (KAAPI_ACCESS_IS_CONCURRENT(m, gd->last_mode))
-        )
+       )
     {
       --wc;
     }
@@ -347,7 +347,7 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
   
-  if ((thread ==0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
+  if ((thread ==0) || (thread->unstealable != 0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
   replycount = 0;
   
   /* be carrefull, the map should be clear before used */
@@ -368,10 +368,14 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);  
   
 #elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
-  
   /* try to steal in each frame */
   thread->thieffp = thread->stackframe;
-  kaapi_writemem_barrier();
+  kaapi_mem_barrier();
+  if (thread->unstealable != 0) 
+  {
+    thread->thieffp =0;
+    return 0;
+  }
   while (count > replycount)
   {
     if (thread->thieffp > thread->sfp) break;

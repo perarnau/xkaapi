@@ -315,7 +315,7 @@ typedef enum kaapi_access_mode_t {
     a == b and a or b is R or CW
     or a or b is postponed.
 */
-#define KAAPI_ACCESS_IS_CONCURRENT(a,b) ((((a)==(b)) && (((b) & 2) !=0)) || ((a|b) & KAAPI_ACCESS_MODE_P))
+#define KAAPI_ACCESS_IS_CONCURRENT(a,b) ((((a)==(b)) && (((b) == KAAPI_ACCESS_MODE_R)||((b)==KAAPI_ACCESS_MODE_CW))) || ((a|b) & KAAPI_ACCESS_MODE_P))
 /*@}*/
 
 

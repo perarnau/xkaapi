@@ -60,6 +60,20 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   
   /* same the main thread frame to restore it at the end of parallel computation */
   kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
+  
+  /* avoid thief to steal the main thread will tasks are added */
+  thgrp->mainctxt->unstealable = 1;
+  kaapi_mem_barrier();
+  
+  /* wait thief get out the thread */
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+  while (!KAAPI_ATOMIC_CAS(&thgrp->mainctxt->lock, 0, 1))
+    ;
+#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+  while (thgrp->mainctxt->thieffp != 0)
+    ;
+#endif
+  
 #if 0
   fprintf(stdout, "Save frame:: pc:%p, sp:%p, spd:%p\n", 
     (void*)thgrp->mainframe.pc, 
@@ -90,6 +104,9 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   /* free hash map entries: they are destroy by destruction of the version allocator */
   kaapi_hashmap_destroy( &thgrp->ws_khm );
   kaapi_versionallocator_destroy( &thgrp->ver_allocator );
+
+  kaapi_mem_barrier();
+  thgrp->mainctxt->unstealable = 0;
   
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;
