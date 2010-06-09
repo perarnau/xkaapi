@@ -287,6 +287,8 @@ template<> struct TaskBodyCPU<ResidueSum> {
     *s_residue += *s_respartial;
   }
 };
+static ka::RegisterBodyCPU<ResidueSum> dummy_object_ResidueSum;
+
 // --------------------------------------------------------------------
 struct PrintResidueSum: public ka::Task<1>::Signature< 
         ka::RW<double>
@@ -298,6 +300,7 @@ template<> struct TaskBodyCPU<PrintResidueSum> {
     *s_residue = 0;
   }
 };
+static ka::RegisterBodyCPU<PrintResidueSum> dummy_object_PrintResidueSum;
 #else
 
 // --------------------------------------------------------------------
@@ -530,7 +533,7 @@ struct doit {
     double t0, t1, total = 0;
     threadgroup.ForEach<Kernel>()
       ( ka::counting_iterator<int>(0), ka::counting_iterator<int>(Poisson3D::max_iter) ) /* iteration space */
-      ( mesh3d, domain, new_domain, frhs, residue, sg, res2, sdi );            /* args for the kernel */
+      ( mesh3d, domain, new_domain, frhs, residue, sg, res2, sdi );                      /* args for the kernel */
 
 #if 0
     for (unsigned int i=0; i<Poisson3D::max_iter; ++i)
