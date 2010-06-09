@@ -248,7 +248,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       } else {
         argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       }
-      KAAPI_ATOMIC_INCR( &argrecv->counter );
+//      KAAPI_ATOMIC_INCR( &argrecv->counter );
+      ++argrecv->original_counter;
       KAAPI_THREADGROUP_SETRECVPARAM( argrecv, ith );
         
       if (ver->readers[tid].addr ==0)

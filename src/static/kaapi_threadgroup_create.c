@@ -106,6 +106,10 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   thgrp->step     = -1;
   thgrp->state    = KAAPI_THREAD_GROUP_CREATE_S;
   thgrp->tag_count= 0;
+  thgrp->save_mainthread = 0;
+  thgrp->size_mainthread = 0;
+  thgrp->save_workerthreads = 0;
+  thgrp->size_workerthreads = 0;
   *pthgrp = thgrp;
   return 0;
 

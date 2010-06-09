@@ -1318,13 +1318,15 @@ namespace ka {
         while (_beg != _end)
         {
           t0 = kaapi_get_elapsedtime();
-          _threadgroup->execute();
+          _threadgroup->start_execute();
+          _threadgroup->wait_execute();
           t1 = kaapi_get_elapsedtime();
           if (step >0) total += t1-t0;
           std::cout << step << ":: Time: " << t1 - t0 << std::endl;
           ++step;
           if (++_beg != _end) _threadgroup->restore();
         }
+        _threadgroup->end_execute(); /* free data structure */
       }
 #include "ka_api_execforeach.h"
     protected:
@@ -1340,7 +1342,7 @@ namespace ka {
     template<class TASKGENERATOR>
     class ForEachDriverTrampoline {
     public:
-      ForEachDriverTrampoline(ThreadGroup* thgrp) {}
+      ForEachDriverTrampoline(ThreadGroup* thgrp) : _threadgroup(thgrp) {}
       /** First set of args for the iteration space **/
       template<typename Iterator>
       ForEachDriver<TASKGENERATOR,Iterator> operator()( Iterator beg, Iterator end)
@@ -1394,14 +1396,22 @@ namespace ka {
       kaapi_threadgroup_end_step( _threadgroup );
     }
 
+    /* synchronous call say to kernel that this partion is finished to be executed */
+    void end_execute()
+    {
+      kaapi_threadgroup_end_execute( _threadgroup );
+    }
+
     /* save */
     void save()
     {
+      kaapi_threadgroup_save( _threadgroup );
     }
 
     /* restore */
     void restore()
     {
+      kaapi_threadgroup_restore( _threadgroup );
     }
 
     void print()

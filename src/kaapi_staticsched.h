@@ -67,6 +67,7 @@ extern "C" {
 */
 typedef struct kaapi_taskrecv_arg_t {
   kaapi_atomic_t       counter;          /* to signal the task becomes ready */
+  int                  original_counter; /* the original value of the counter */
   kaapi_task_body_t    original_body;    /* the original body to execute */
   void*                original_sp;      /* sp of the original task to execute */
 } kaapi_taskrecv_arg_t;
@@ -236,8 +237,10 @@ typedef struct kaapi_threadgrouprep_t {
   
   /* not yet used: to be used for iterative compt */
   kaapi_task_t*              save_mainthread;
+  kaapi_frame_t              save_maintopframe;
   int                        size_mainthread;
   kaapi_task_t**             save_workerthreads;
+  kaapi_frame_t*             save_workertopframe;
   int*                       size_workerthreads;
   
   /* state of the thread group */
@@ -367,7 +370,7 @@ static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
 */
 static inline int kaapi_threadgroup_decrcounter( kaapi_taskrecv_arg_t* arg )
 {
-  return KAAPI_ATOMIC_DECR( &arg->counter ) & 0xFFFF;
+  return (KAAPI_ATOMIC_INCR( &arg->counter ) & 0xFFFF) % arg->original_counter;
 }
 
 /**

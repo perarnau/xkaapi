@@ -1211,6 +1211,13 @@ extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp );
 */
 extern int kaapi_threadgroup_print(FILE* file, kaapi_threadgroup_t thgrp );
 
+/**
+*/
+extern int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp );
 
 
 

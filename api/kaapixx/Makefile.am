@@ -16,14 +16,16 @@ libkaapixx_la_LIBADD=../../src/libxkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
 M4_BUILT_FILES=\
 	ka_api_clo.h \
 	ka_api_spawn.h\
-	ka_api_execgraph.h
+	ka_api_execgraph.h\
+	ka_api_execforeach.h
 
 M4_SRCS=\
 	m4_generator \
 	m4_macros \
 	ka_api_clo.m4 \
 	ka_api_spawn.m4\
-	ka_api_execgraph.m4
+	ka_api_execgraph.m4\
+	ka_api_execforeach.m4
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
 

@@ -191,6 +191,7 @@ template<> struct TaskBodyCPU<ExtractSubDomainInterface> {
                     Poisson3D::Direction dir, 
                     ka::pointer_w<KaSubDomainInterface> shared_sdi )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     shared_subdomain->extract_interface( dir, *shared_sdi );
   }
 };
@@ -207,6 +208,7 @@ template<> struct TaskBodyCPU<UpdateInternal> {
   void operator() ( ka::pointer_w<KaSubDomain> shared_new_subdomain, 
                     ka::pointer_r<KaSubDomain> shared_old_subdomain )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     shared_new_subdomain->update_internal( *shared_old_subdomain );
   }
 };
@@ -225,6 +227,7 @@ template<> struct TaskBodyCPU<UpdateExternal> {
                     const Poisson3D::Direction& dir, 
                     ka::pointer_r<KaSubDomainInterface> shared_sdi )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     shared_subdomain->update_external( dir, *shared_sdi );
   }
 };
@@ -243,6 +246,7 @@ template<> struct TaskBodyCPU<UpdateExternalVal> {
                     Poisson3D::Direction dir, 
                     double value )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     shared_subdomain->update_external( dir, value );
   }
 };
@@ -263,6 +267,7 @@ template<> struct TaskBodyCPU<ComputeResidueAndSwap> {
                     ka::pointer_r<KaSubDomain> shared_frhs,
                     ka::pointer_w<double> shared_res2 )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     *shared_res2 = shared_old_subdomain->compute_residue_and_swap( *shared_new_subdomain, *shared_frhs );
   }
 };
@@ -274,6 +279,7 @@ struct ResidueSum {
   void operator()( const std::vector<double>& res2,
                    double& residue )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     double sum_res2 = 0.0;
     for( unsigned int i = 0 ; i < res2.size(); ++i )
       sum_res2 += res2[i];
@@ -296,6 +302,7 @@ struct Kernel {
                     std::vector< KaSubDomainInterface >& sdi              
                   )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     MeshIndex3D::const_iterator ibeg = mesh3d.begin();
     MeshIndex3D::const_iterator iend = mesh3d.end();
     
@@ -368,6 +375,7 @@ struct TaskBodyCPU<InitializeSubDomain> {
                     ka::pointer_w<KaSubDomain> shared_frhs,
                     ka::pointer_w<KaSubDomain> shared_sol )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     Poisson3D::initialize_subdomains( index, *shared_subdom, *shared_frhs, *shared_sol );
   }
 };
@@ -382,6 +390,7 @@ struct Initialize {
                     std::vector<KaSubDomain>& solution,
                     const SiteGenerator sg )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     for( unsigned int i = 0 ; i < Poisson3D::nb_subdomX ; ++i )
       for( unsigned int j = 0 ; j < Poisson3D::nb_subdomY; ++j )
         for( unsigned int k = 0 ; k < Poisson3D::nb_subdomZ ; ++k )
@@ -411,6 +420,7 @@ struct TaskBodyCPU<ComputeError> {
                     ka::pointer_r<KaSubDomain> shared_solution, 
                     ka::pointer_w<double> shared_error )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     *shared_error = shared_subdomain->compute_error( *shared_solution );
   }
 };
@@ -421,6 +431,7 @@ static ka::RegisterBodyCPU<ComputeError> dummy_object_TaskComputeError;
 struct ErrorMax {
   void operator()( const std::vector<double>& shared_error )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     double error = 0.0;
     for( unsigned int i = 0 ; i < shared_error.size() ; ++i )
       error = std::max( error, shared_error[i] );
@@ -435,6 +446,7 @@ struct Verification {
                     std::vector<KaSubDomain>& solution,
                     SiteGenerator sg )
   {
+    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     // Compute error on all subdomains
     for( unsigned int i = 0 ; i < Poisson3D::nb_subdomX ; ++i )
       for( unsigned int j = 0 ; j < Poisson3D::nb_subdomY; ++j )
@@ -486,10 +498,6 @@ struct doit {
     std::vector< KaSubDomainInterface > sdi( domain.size() * Poisson3D::NB_DIRECTIONS );
     MeshIndex3D mesh3d( Poisson3D::nb_subdomX, Poisson3D::nb_subdomY, Poisson3D::nb_subdomZ );
 
-    threadgroup.begin_partition();
-    threadgroup.end_partition();
-    threadgroup.execute();
-
     double t0, t1, total = 0;
     threadgroup.ForEach<Kernel>()
       ( ka::counting_iterator<int>(0), ka::counting_iterator<int>(Poisson3D::max_iter) ) /* iteration space */
@@ -508,8 +516,8 @@ struct doit {
 #endif
 
     // Check the result
-    Verification()( error, domain, solution, sg );
-    ka::Sync();
+    threadgroup.ExecGraph<Verification>()( error, domain, solution, sg );
+
     // Compute error max
     ErrorMax() ( error );    
   }
