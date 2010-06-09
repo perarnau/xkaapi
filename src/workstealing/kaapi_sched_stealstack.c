@@ -342,14 +342,12 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
   kaapi_frame_t*           top_frame;
 #endif
-  int savecount;
   int replycount;
   
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
   
   if ((thread ==0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
-  savecount  = count;
   replycount = 0;
   
   /* be carrefull, the map should be clear before used */

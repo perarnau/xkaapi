@@ -273,6 +273,31 @@ template<> struct TaskBodyCPU<ComputeResidueAndSwap> {
 };
 static ka::RegisterBodyCPU<ComputeResidueAndSwap> dummy_object_TaskComputeResidueAndSwap;
 
+#if 1
+// --------------------------------------------------------------------
+struct ResidueSum: public ka::Task<2>::Signature< 
+        ka::RW<double>,
+        ka::R<double>
+> {};
+template<> struct TaskBodyCPU<ResidueSum> {
+  void operator()( ka::pointer_rw<double> s_residue, 
+                   ka::pointer_r<double> s_respartial )
+  {
+//    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
+    *s_residue += *s_respartial;
+  }
+};
+// --------------------------------------------------------------------
+struct PrintResidueSum: public ka::Task<1>::Signature< 
+        ka::R<double>
+> {};
+template<> struct TaskBodyCPU<PrintResidueSum> {
+  void operator()( ka::pointer_r<double> s_residue )
+  {
+    ka::logfile() << "[Poisson3D-kaapi] Residue = " << *s_residue << std::endl; 
+  }
+};
+#else
 
 // --------------------------------------------------------------------
 struct ResidueSum {
@@ -287,6 +312,7 @@ struct ResidueSum {
     ka::logfile() << "[Poisson3D-kaapi] Residue = " << residue << std::endl; 
   }
 };
+#endif
 
 
 // --------------------------------------------------------------------
@@ -352,11 +378,13 @@ struct Kernel {
 
       ka::Spawn<ComputeResidueAndSwap>(ka::SetPartition(curr_site))
           ( &old_domain[curr_index()], &new_domain[curr_index()], &frhs[curr_index()], &res2[curr_index()] );
+      ka::Spawn<ResidueSum>(ka::SetPartition(0))( &residue, &res2[curr_index()] );
       ++ibeg;
     }
+    ka::Spawn<PrintResidueSum>(ka::SetPartition(0))( &residue );
 
     // Compute residue sum
-    ResidueSum()(res2, residue);
+//    ResidueSum()(res2, residue);
   }
 };
 

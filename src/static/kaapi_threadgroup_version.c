@@ -91,7 +91,7 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   kaapi_assert( ver != 0 );
   ver->tag = 0; //++thgrp->tag_count;
   ver->writer_task = 0;
-  ver->writer_thread = -1;
+  ver->writer_thread = -1; /* main thread */
   ver->original_data = ver->writer_data = access->data;
   ver->com = 0;
   memset( &ver->readers, 0, sizeof(ver->readers));
