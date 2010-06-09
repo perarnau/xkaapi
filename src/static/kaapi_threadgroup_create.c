@@ -65,7 +65,6 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
 
   thgrp->group_size  = size;
   thgrp->startflag   = 0;
-  thgrp->mainthread  = 0;
   thgrp->mainctxt    = proc->thread;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
   thgrp->waittask    = 0;
@@ -75,12 +74,14 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
     error = ENOMEM;
     goto return_error_1;
   }
-  thgrp->threads    = malloc( size* sizeof(kaapi_thread_t*) );
+  thgrp->threads    = malloc( (1+size)* sizeof(kaapi_thread_t*) );
   if (thgrp->threads ==0) 
   {
     error = ENOMEM;
     goto return_error_15;
   }
+  /* shift +1, -1 == main thread */
+  ++thgrp->threads;
   
   /* here may be dispatch allocation of all processors */
   for (i=0; i<size; ++i)

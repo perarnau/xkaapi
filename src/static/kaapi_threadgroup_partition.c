@@ -51,7 +51,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   thgrp->mainctxt   = _kaapi_get_current_processor()->thread;
-  thgrp->mainthread = kaapi_threadcontext2thread(thgrp->mainctxt);
+  thgrp->threads[-1]= kaapi_threadcontext2thread(thgrp->mainctxt);
   
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
@@ -59,7 +59,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   kaapi_versionallocator_init( &thgrp->ver_allocator );
   
   /* same the main thread frame to restore it at the end of parallel computation */
-  kaapi_thread_save_frame(thgrp->mainthread, &thgrp->mainframe);
+  kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
 #if 0
   fprintf(stdout, "Save frame:: pc:%p, sp:%p, spd:%p\n", 
     (void*)thgrp->mainframe.pc, 

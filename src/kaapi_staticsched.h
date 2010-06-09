@@ -145,7 +145,9 @@ typedef struct kaapi_version_t {
   kaapi_task_t*    writer_task;                        /* last writer task of the version, 0 if no indentify task (input data) */
   kaapi_com_t*     com;                                /* list of com to used in the bcast task */     
   int              cnt_readers;                        /* number of readers ==1 in readers */
+  kaapi_reader_t   mainreaders;                        /* is readers[-1] for the main thread */
   kaapi_reader_t   readers[KAAPI_MAX_PARTITION];       /* set of readers */
+  void*            main_delete_data;                   /* for delete_data[-1] */
   void*            delete_data[KAAPI_MAX_PARTITION];   /* data deleted on each thread , may be reused if required */
 } kaapi_version_t;
 
@@ -222,8 +224,7 @@ typedef enum {
 */
 typedef struct kaapi_threadgrouprep_t {
   /* public part */
-  kaapi_thread_t*            mainthread;   /* the main thread that push task */
-  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt */
+  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
   int                        group_size;   /* number of threads in the group */
    
   /* executive part */
@@ -271,7 +272,7 @@ void kaapi_delete_body( void* sp, kaapi_thread_t* stack );
 static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   return thread;
 }
@@ -280,18 +281,14 @@ static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgr
 */
 static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
-  kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
-
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, partitionid );
   return kaapi_thread_toptask(thread);
 }
 
 static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, partitionid );
   kaapi_assert_debug( thread !=0 );
   
   /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut

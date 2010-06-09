@@ -50,9 +50,8 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
 
-  
   /* same the main thread frame to restore it at the end of parallel computation */
-  kaapi_thread_save_frame(thgrp->mainthread, &thgrp->save_maintopframe);
+  kaapi_thread_save_frame( thgrp->threads[-1], &thgrp->save_maintopframe);
   
   /* recopy the task data structure: WARNING Stack growth down */
   thgrp->size_mainthread = thgrp->save_maintopframe.pc - thgrp->save_maintopframe.sp;
@@ -93,7 +92,7 @@ int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp )
   memcpy( thgrp->save_maintopframe.sp+1, thgrp->save_mainthread, thgrp->size_mainthread*sizeof(kaapi_task_t) );
 
   /* restore the main frame */
-  kaapi_thread_restore_frame(thgrp->mainthread, &thgrp->save_maintopframe);
+  kaapi_thread_restore_frame( thgrp->threads[-1], &thgrp->save_maintopframe);
   
   /* do the same for each worker */
   for (int i=0; i<thgrp->group_size; ++i)
