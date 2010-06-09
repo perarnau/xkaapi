@@ -289,12 +289,13 @@ template<> struct TaskBodyCPU<ResidueSum> {
 };
 // --------------------------------------------------------------------
 struct PrintResidueSum: public ka::Task<1>::Signature< 
-        ka::R<double>
+        ka::RW<double>
 > {};
 template<> struct TaskBodyCPU<PrintResidueSum> {
-  void operator()( ka::pointer_r<double> s_residue )
+  void operator()( ka::pointer_rw<double> s_residue )
   {
-    ka::logfile() << "[Poisson3D-kaapi] Residue = " << *s_residue << std::endl; 
+    ka::logfile() << "[Poisson3D-kaapi] Residue = " << sqrt(*s_residue) << std::endl; 
+    *s_residue = 0;
   }
 };
 #else
@@ -517,7 +518,7 @@ struct doit {
     std::vector<double> error(Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
 
     // Residue
-    double residue;
+    double residue = 0.0;
 
     threadgroup.ExecGraph<Initialize>()( domain, frhs, solution, sg );
 
