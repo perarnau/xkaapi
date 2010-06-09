@@ -381,7 +381,7 @@ struct Kernel {
       ka::Spawn<ResidueSum>(ka::SetPartition(0))( &residue, &res2[curr_index()] );
       ++ibeg;
     }
-    ka::Spawn<PrintResidueSum>(ka::SetPartition(0))( &residue );
+    ka::Spawn<PrintResidueSum>(ka::SetPartition(-1))( &residue );
 
     // Compute residue sum
 //    ResidueSum()(res2, residue);
