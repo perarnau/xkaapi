@@ -1,0 +1,137 @@
+@node install guide
+@chapter Quick installation guide of KAAPI
+
+
+In order to use the @code{Athapascan}'s API, you need to install @code{KAAPI} library.
+The following steps will help you to do it.
+
+@menu
+* get the source:: download the library
+* compile the package:: @command{./configure; make; make install}
+@end menu
+
+@node get the source
+@section Get the source
+
+There are several ways to get @code{KAAPI} source files:
+
+@itemize
+@item You can download the latest stable version available at: @url{https://gforge.inria.fr/frs/?group_id=94}
+
+@item You can also get a tarball of the latest git sources (rebuilt every night): @url{http://kaapi.gforge.inria.fr/snapshots/kaapi-svn.tar.gz}. Please note that if current git version fails to pass the @command{make distchek} test, the tarball won't be built (i.e. you will download the latest tarball that pass @command{make distchek}).
+
+@item At least, you can use the anonymous git server if you want to keep updating sources (but sometimes, sources are totally broken here):
+@end itemize
+
+@example
+$ @command{git} clone git://git.ligforge.imag.fr/git/kaapi/kaapi.git kaapi-git
+@end example
+
+
+
+
+@node compile the package
+@section Compile the package
+
+The following details the weel known @command{./configure; make; make install} steps.
+@menu
+* configure::@command{./configure}
+* make::@command{make}
+* make install::@command{make} install
+@end menu
+
+@node configure
+@subsection Configuring
+
+Depending on how you got @code{KAAPI} you may need to perform some additionnal actions.
+@menu
+* git users:: For git users only
+* all users:: git and non git users
+@end menu
+
+@node git users
+@subsubsection For git users only
+
+@code{KAAPI} uses GNU @command{autoconf} and @command{automake} tools to simplify its configuration.
+For @command{git} users, they must run the following script in the source directory to generate autoconf/automake/libtool files (make sure that you have these development tools available on your system).
+This has already been done When you use the first two other ways to get @code{KAAPI} sources.
+
+
+@strong{NOTE}: In the following, replace <@var{kaapi_src_dir}> by the directory where you have gotten kaapi
+
+
+@example
+$ cd <@var{kaapi_src_dir}> && ./bootstrap
+@end example
+
+@node all users
+@subsubsection For all users
+
+You can check whether a configure file has been created in the source directory.
+
+If you want to use more configure options, please read its documentation:
+@example
+$ @command{./configure} @option{--help}
+@end example
+
+
+It is better that KAAPI source files are compiled in a different directory from the source code directory. We suggest you create a directory named build:
+
+@example
+$ cd ..
+$ mkdir build ; cd build
+@end example
+
+
+In the build directory, you now can launch the configure script, using
+@option{--prefix}=<@var{install dir}> option to choose an installation path which will be
+the root of the installation directory (header files, archive, script,etc. will
+be put here).  This installation directory must be different from the source
+directory (and the build directory).
+
+
+@strong{NOTE}: Source (and build) directory can be removed after the
+KAAPI library is compiled and installed. The installation directory must be
+kept to be able to compile and run KAAPI applications
+
+@example
+$ ../<kaapi_src_dir>/configure --prefix=$HOME/KAAPI
+@end example
+
+
+@node make
+@subsection Compiling
+
+
+Concerning Compilers : we ensure that KAAPI can be well compiled with the following compilers:
+
+@itemize
+@item @command{g++-3.4} (deprecated)
+@item @command{g++-4.1} to @command{g++-4.3}
+@end itemize
+
+@strong{WARNING}: On Itanium, version 4 or greater is required, older version (especially 3.4) are not supported
+
+To compile the library, just run @command{make} in the build directory:
+
+@example
+$ @command{make}
+@end example
+
+
+It may take some time. You can also read make documentation to have more compiling options.
+
+@node make install
+@subsection Installing 
+
+
+If the previous steps succeed, then the installation of the library is simple.
+(Note: depending on your installation path specified by the prefix option during the previous configuration, you may need root privileges).
+
+@example
+$ @command{make} install
+@end example
+
+
+Congratulation, you can now use @code{Athapascan} and @code{KAAPI} !
+

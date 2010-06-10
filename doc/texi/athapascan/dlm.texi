@@ -1,0 +1,69 @@
+@node dynamically loaded modules
+@section Dynamically Loaded Modules - enhance kaapi
+
+This tutorial will show you how to develop an external module and dynamically load it in any already compiled kaapi program.
+@menu
+* dlm api:: the application programming interface for dynamically loaded module
+* load dlm:: command line syntax to load extra dlm
+@end menu
+
+@node dlm api
+@subsection API - interface required for a Dynamically loaded module
+
+Basically, a Dynamically loaded module is a standard @code{Kaapi} module.
+In order to make it dynamically loadable, you must also provide a @code{factory} function.
+
+@defun create_module
+@code{extern "C" Util::KaapiComponent* create_module();}
+factory function that return a new instance of the @code{Util::KaapiComponent} derived class.
+The kaapi module loader will call the @code{delete_module} to free allocated memory.
+@end defun
+
+@defun delete_module kaapi_component
+@code{extern "C" void delete_module(Util::KaapiComponent* @var{kaapi_component}}
+The counterpart of the @code{create_module} function.
+Instead of allocating memory for a new module, it frees the memory of given pointer.
+@end defun
+
+A detailed description of the @code{Util::KaapiComponent} is given in the doxygen documentation.
+As a simple reminder, it's interface is given here:
+@example
+#include <utils_component.h>
+class Util::KaapiComponent
+@{     
+
+    public:
+    int initialize() throw();
+    int terminate() throw();
+    void add_options( Util::Parser* , Util::Properties* );
+    void declare_dependencies();
+@};
+@end example
+
+Note that the @code{declare_dependencies} is of no use for dynamically loaded modules.
+These modules are loaded after all the static ones, in the order given at the command line.
+
+@node load dlm
+@subsection Command Line Interface - interface to load extra modules from the kaapi command line
+
+This sections describes the usage of the @emph{dl} module in charge of the dynamic loading of extra modules.
+It uses the kaapi way of passing arguments to modules:
+@option{--module-name} @option{-option-name} @var{value}
+A description of a module option can be found by running any kaapi program with
+@example
+$ kaapi_prog --help @var{module-name}
+@end example
+
+The @emph{dl} module provides two options:
+@table @option
+
+@item -verboseon
+set it to @var{true} or @var{false} to get status report from the @emph{dl} module.
+
+@item -load
+description of the module to load, in the form
+@example
+(path_to_the_module.so(:arguments of the module)?,)*path_to_the_module.so(:arguments of the module)
+@end example
+
+@end table
