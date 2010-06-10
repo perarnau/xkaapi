@@ -82,23 +82,40 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
 }
 
 
+
+
+/**
+*/
+int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid )
+{
+  kaapi_assert( (tid >=-1) && (tid < thgrp->group_size) );
+
+  if (tid == -1) {
+    /* recopy the main thread */
+    memcpy( thgrp->save_maintopframe.sp+1, thgrp->save_mainthread, thgrp->size_mainthread*sizeof(kaapi_task_t) );
+
+    /* restore the main frame */
+    kaapi_thread_restore_frame( thgrp->threads[-1], &thgrp->save_maintopframe);
+  }
+  else {
+    memcpy(thgrp->save_workertopframe[tid].sp+1, thgrp->save_workerthreads[tid], thgrp->size_workerthreads[tid]*sizeof(kaapi_task_t) );
+    kaapi_thread_restore_frame(thgrp->threads[tid], &(thgrp->save_workertopframe[tid]) );
+  }
+  return 0;
+}
+
+
+
 /**
 */
 int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_WAIT_S) return EINVAL;
-  
-  /* recopy the main thread */
-  memcpy( thgrp->save_maintopframe.sp+1, thgrp->save_mainthread, thgrp->size_mainthread*sizeof(kaapi_task_t) );
 
-  /* restore the main frame */
-  kaapi_thread_restore_frame( thgrp->threads[-1], &thgrp->save_maintopframe);
-  
   /* do the same for each worker */
-  for (int i=0; i<thgrp->group_size; ++i)
+  for (int i=-1; i<thgrp->group_size; ++i)
   {
-    memcpy(thgrp->save_workertopframe[i].sp+1, thgrp->save_workerthreads[i], thgrp->size_workerthreads[i]*sizeof(kaapi_task_t) );
-    kaapi_thread_restore_frame(thgrp->threads[i], &(thgrp->save_workertopframe[i]) );
+    kaapi_threadgroup_restore_thread(thgrp, i);
   }
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;

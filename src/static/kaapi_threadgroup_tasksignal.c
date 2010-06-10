@@ -57,6 +57,13 @@ void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread )
 void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
 {
   kaapi_threadgroup_t thgrp = (kaapi_threadgroup_t)sp;
+  /* reload the thread if it was saved */
+  if (thgrp->save_mainthread !=0)
+  {
+    int partid = _kaapi_self_thread()->partid;
+    if (partid != -1)
+      kaapi_assert( 0 == kaapi_threadgroup_restore_thread( thgrp, partid ) );
+  }
   if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
   {
     kaapi_task_setbody( thgrp->waittask, kaapi_taskwaitend_body );

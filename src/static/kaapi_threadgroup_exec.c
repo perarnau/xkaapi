@@ -61,6 +61,8 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   kaapi_task_setbody(thgrp->waittask, kaapi_suspend_body );
   kaapi_thread_pushtask( thgrp->threads[-1] );    
   
+  thgrp->mainctxt->partid = -1;
+
   ++thgrp->step;
   kaapi_mem_barrier();
   
@@ -79,6 +81,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
     kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
     thgrp->threadctxts[i]->proc = victim_kproc;
+    thgrp->threadctxts[i]->partid = i;
 
     if (kaapi_thread_isready(thgrp->threadctxts[i]))
     {
@@ -126,6 +129,12 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
   kaapi_sched_sync();
+
+  if (thgrp->save_mainthread !=0)
+  {
+    /* restore the main thread */
+    kaapi_assert( 0 == kaapi_threadgroup_restore_thread( thgrp, -1 ) );    
+  }
   /* counter reset by THE waittask */
   kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == 0 );
   
@@ -142,7 +151,9 @@ int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
   kaapi_threadgroup_end_step(thgrp);
   
   for (int i=0; i<thgrp->group_size; ++i)
+  {
     kaapi_thread_clear(thgrp->threadctxts[i]);
+  }
 
   kaapi_thread_restore_frame( thgrp->threads[-1], &thgrp->mainframe);
 #if 0

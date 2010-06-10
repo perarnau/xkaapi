@@ -380,6 +380,7 @@ typedef struct kaapi_thread_context_t {
 #endif
   unsigned long                  affinity;       /* bit i == 1 -> can run on procid i */
   int                            unstealable;    /* !=0 -> cannot be stolen */
+  int                            partid;         /* used by static scheduling to identify the thread in the group */
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
   kaapi_atomic_t                 lock;           /** */ 

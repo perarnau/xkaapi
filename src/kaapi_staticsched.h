@@ -395,6 +395,10 @@ extern int kaapi_versionallocator_destroy( kaapi_version_allocator_t* va );
 */
 extern kaapi_version_t* kaapi_versionallocator_allocate( kaapi_version_allocator_t* va );
 
+/**
+*/
+extern int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid );
+
 #if defined(__cplusplus)
 }
 #endif

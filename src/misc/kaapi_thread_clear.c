@@ -59,6 +59,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->_prev    = 0;
   thread->affinity = ~0UL;
   thread->unstealable= 0;
+  thread->partid     = -10; /* out of bound value */
   thread->wcs.thread = thread;
   /*thread->thieffp  = 0; do not put here this instruction : always set by thief */
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);

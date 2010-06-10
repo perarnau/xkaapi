@@ -6,8 +6,7 @@
         tpart = kaapi_get_elapsedtime();
         TASKGENERATOR()( M4_PARAM(`e$1', `', `, ') );
         tpart = kaapi_get_elapsedtime()-tpart;
-std::cout << "Kernel:" << std::endl << std::flush;
-    _threadgroup->print();    
+        //_threadgroup->print();    
         _threadgroup->end_partition();
         _threadgroup->save();
         while (_beg != _end)

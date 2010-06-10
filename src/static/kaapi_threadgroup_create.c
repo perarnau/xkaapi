@@ -66,6 +66,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   thgrp->group_size  = size;
   thgrp->startflag   = 0;
   thgrp->mainctxt    = proc->thread;
+  thgrp->mainctxt->partid = -1;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
   thgrp->waittask    = 0;
   thgrp->threadctxts = malloc( size* sizeof(kaapi_thread_context_t*) );
@@ -94,6 +95,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
       goto return_error_2;
     }
     /* init the thread from the thread context */
+    thgrp->threadctxts[i]->partid = i;
     thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
   }
   
