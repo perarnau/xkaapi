@@ -34,7 +34,6 @@ struct Op2 {
 };
 
 
-
 /* The main thread
 */
 int main(int argc, char** argv)
