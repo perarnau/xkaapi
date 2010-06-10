@@ -63,9 +63,10 @@ void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
   kaapi_writemem_barrier();
 
   if (arg->result !=0)
+  {
     arg->result->thief_term = 1;
-
-  arg->result->is_signaled = 1;
+    arg->result->is_signaled = 1;
+  }
 
   KAAPI_ATOMIC_DECR( &arg->ta->thievescount );
 }

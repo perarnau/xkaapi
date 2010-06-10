@@ -47,6 +47,21 @@
 #include <inttypes.h> 
 #include "kaapi_impl.h"
 
+
+
+#if HAVE_NUMA_H
+#include <numa.h>
+static inline void free_kproc(kaapi_processor_t* kproc)
+{
+  numa_free(kproc, sizeof(kaapi_processor_t));
+}
+#else /* ! HAVE_NUMA_H */
+static inline void free_kproc(kaapi_processor_t* kproc)
+{
+  free(kproc);
+}
+#endif /* HAVE_NUMA_H */
+
 /*
 */
 kaapi_uint32_t kaapi_count_kprocessors = 0;
@@ -274,7 +289,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 #endif
 
-    free(kaapi_all_kprocessors[i]);
+    free_kproc(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
   free( kaapi_all_kprocessors );
