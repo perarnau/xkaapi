@@ -166,9 +166,11 @@ namespace kastl2
   )
   {
     typedef TransformStruct<InputIterator, OutputIterator, UnaryOperator> Self_t;
+    kaapi_thread_t* thread = kaapi_self_thread();
+    kaapi_frame_t frame;
+    kaapi_thread_save_frame(thread, &frame);
     Self_t* work = new (kaapi_alloca_align(64, sizeof(Self_t))) Self_t(begin, end, to_fill, op);
     
-    kaapi_thread_t* thread = kaapi_self_thread();
     kaapi_stealcontext_t* sc_transform = kaapi_thread_pushstealcontext( 
                        thread,
                        KAAPI_STEALCONTEXT_LINKED,
@@ -179,6 +181,7 @@ namespace kastl2
     work->_msc = sc_transform;
     work->doit( sc_transform, thread );
     kaapi_steal_finalize( sc_transform );
+    kaapi_thread_restore_frame(thread, &frame);
   }
   
 } // kastl2::
