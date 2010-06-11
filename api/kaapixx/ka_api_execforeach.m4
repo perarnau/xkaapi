@@ -19,7 +19,6 @@
           std::cout << step << ":: Time: " << t1 - t0 << std::endl;
           ++step;
           if (++_beg != _end) _threadgroup->restore();
-++_beg;
         }
         std::cout << ":: ForEach #loops: " << step << ", total time (except first iteration):" << total
                   << ", average:" << total / (step-1) << ", partition step:" << tpart << std::endl;
