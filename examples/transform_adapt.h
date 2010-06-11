@@ -51,7 +51,7 @@ namespace kastl2
       /* If using THE: critical section could be avoided */
       while (1)
       {
-        kaapi_steal_begincritical( sc_transform ); 
+        //kaapi_steal_begincritical( sc_transform ); 
         nano_ibeg = _ibeg;
         nano_obeg = _obeg;
         tmp_size  = _iend - nano_ibeg;
@@ -60,12 +60,14 @@ namespace kastl2
         nano_iend = nano_ibeg  + unit_size;
         _ibeg = nano_iend;
         _obeg += unit_size;
-        kaapi_steal_endcritical( sc_transform );
+        //kaapi_steal_endcritical( sc_transform );
         
         if (unit_size == 0)
           break;
         
-        std::transform(nano_ibeg, nano_iend, nano_obeg, _op);
+        while (nano_ibeg != nano_iend)
+           *nano_obeg++ = _op(*nano_ibeg++);
+        //std::transform(nano_ibeg, nano_iend, nano_obeg, _op);
       }
     }
     
