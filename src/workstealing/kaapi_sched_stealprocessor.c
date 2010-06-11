@@ -49,7 +49,6 @@
 */
 int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
 {
-  kaapi_thread_context_t*  thread;
   int count =0;
   int stealok = 0;
   int replycount = 0;
@@ -125,7 +124,7 @@ for (int i=0; i<1; ++i)
 for (int i=0; i<1; ++i)
 {
   /* steal current thread */
-  thread = kproc->thread;
+  kaapi_thread_context_t*  thread = kproc->thread;
   if ((count >0) && (thread !=0) && (kproc->issteal ==0))
   {
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)||(KAAPI_USE_STEALFRAME_METHOD==KAAPI_STEALTHE_METHOD)

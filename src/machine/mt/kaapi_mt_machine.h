@@ -59,6 +59,14 @@
 #  include <ucontext.h>
 #endif
 
+#if HAVE_NUMA_H
+#  include <numa.h>
+#  include <numaif.h>
+#  define KAAPI_KPROCESSOR_ALIGNMENT_SIZE 4096  /* page size */
+#else
+#  define KAAPI_KPROCESSOR_ALIGNMENT_SIZE KAAPI_CACHE_LINE
+#endif
+
 
 
 /* ============================= Documentation ============================ */
@@ -314,7 +322,7 @@ typedef struct kaapi_processor_t {
   /* workload */
   kaapi_atomic_t	         workload;
 
-} kaapi_processor_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
+} kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
 
 /*
 */
@@ -323,6 +331,38 @@ extern int kaapi_processor_init( kaapi_processor_t* kproc );
 /*
 */
 extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
+
+#if HAVE_NUMA_H
+static inline kaapi_processor_t* kaapi_processor_allocate(void)
+{
+  kaapi_processor_t* const kproc = (kaapi_processor_t*)numa_alloc_local(sizeof(kaapi_processor_t));
+  if (kproc == 0) return 0;
+
+  memset(kproc, 0, sizeof(kaapi_processor_t));
+
+  return kproc;
+}
+
+static inline void kaapi_processor_free(kaapi_processor_t* kproc)
+{
+  numa_free(kproc, sizeof(kaapi_processor_t));
+}
+
+#else /* ! HAVE_NUMA_H */
+
+static inline kaapi_processor_t* kaapi_processor_allocate(void)
+{
+  return (kaapi_processor_t*)calloc(sizeof(kaapi_processor_t), 1);
+}
+
+static inline void kaapi_processor_free(kaapi_processor_t* kproc)
+{
+  free(kproc);
+}
+
+#endif /* HAVE_NUMA_H */
+
+
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
 /** \ingroup TASK

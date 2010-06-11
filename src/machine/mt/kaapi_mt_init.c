@@ -288,7 +288,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 #endif
 
-    free(kaapi_all_kprocessors[i]);
+    kaapi_processor_free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
   free( kaapi_all_kprocessors );
