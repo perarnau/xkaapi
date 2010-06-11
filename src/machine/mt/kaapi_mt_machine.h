@@ -59,7 +59,7 @@
 #  include <ucontext.h>
 #endif
 
-#if HAVE_NUMA_H
+#if defined(KAAPI_USE_NUMA)
 #  include <numa.h>
 #  include <numaif.h>
 #  define KAAPI_KPROCESSOR_ALIGNMENT_SIZE 4096  /* page size */
@@ -332,13 +332,14 @@ extern int kaapi_processor_init( kaapi_processor_t* kproc );
 */
 extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 
-#if HAVE_NUMA_H
+#if defined(KAAPI_USE_NUMA)
 static inline kaapi_processor_t* kaapi_processor_allocate(void)
 {
   kaapi_processor_t* const kproc = (kaapi_processor_t*)numa_alloc_local(sizeof(kaapi_processor_t));
   if (kproc == 0) return 0;
 
   memset(kproc, 0, sizeof(kaapi_processor_t));
+  printf("NUMA kprocessor allocated\n");
 
   return kproc;
 }
@@ -348,7 +349,7 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
   numa_free(kproc, sizeof(kaapi_processor_t));
 }
 
-#else /* ! HAVE_NUMA_H */
+#else /* ! KAAPI_USE_NUMA */
 
 static inline kaapi_processor_t* kaapi_processor_allocate(void)
 {
@@ -360,7 +361,7 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
   free(kproc);
 }
 
-#endif /* HAVE_NUMA_H */
+#endif /* KAAPI_USE_NUMA */
 
 
 

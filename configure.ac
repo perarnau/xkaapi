@@ -309,6 +309,7 @@ KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],
   [numa], [], [numa.h], [numa_bind], [
     dnl NUMA is there
     AC_DEFINE(KAAPI_USE_NUMA, 1, [Define to use memory affinity on numa nodes])
+    dnl ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-lnuma])
   ])
 ACX_LIB_LINK([XKAAPILIB],[NUMA])
 
