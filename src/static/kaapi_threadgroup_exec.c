@@ -130,11 +130,14 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 
   kaapi_sched_sync();
 
+#if 0
   if (thgrp->save_mainthread !=0)
   {
     /* restore the main thread */
     kaapi_assert( 0 == kaapi_threadgroup_restore_thread( thgrp, -1 ) );    
   }
+#endif
+
   /* counter reset by THE waittask */
   kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == 0 );
   
