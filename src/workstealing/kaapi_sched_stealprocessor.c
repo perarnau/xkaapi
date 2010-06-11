@@ -120,12 +120,14 @@ for (int i=0; i<1; ++i)
   }
 #endif
 
-#if 0
+#if 1
 for (int i=0; i<1; ++i)
 {
   /* steal current thread */
   kaapi_thread_context_t*  thread = kproc->thread;
-  if ((count >0) && (thread !=0) && (kproc->issteal ==0))
+  if ( (count >0) && (thread !=0) 
+    && (kproc->issteal ==0) /* last: if a thread is stealing, its current thread will be used to receive work... */ 
+  )
   {
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)||(KAAPI_USE_STEALFRAME_METHOD==KAAPI_STEALTHE_METHOD)
     /* if concurrent WS, then steal directly the current stack of the victim processor

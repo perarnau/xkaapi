@@ -106,7 +106,6 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   kaapi_versionallocator_destroy( &thgrp->ver_allocator );
 
   kaapi_mem_barrier();
-  thgrp->mainctxt->unstealable = 0;
   
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;

@@ -82,6 +82,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
     thgrp->threadctxts[i]->proc = victim_kproc;
     thgrp->threadctxts[i]->partid = i;
+    thgrp->threadctxts[i]->unstealable = 1; /* do not allow threads to steal tasks inside ??? */
 
     if (kaapi_thread_isready(thgrp->threadctxts[i]))
     {

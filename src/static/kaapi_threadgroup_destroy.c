@@ -51,6 +51,9 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   int i;
   if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
     return EBUSY;
+
+  /* reset stealing attribute on the main thread */
+  thgrp->mainctxt->unstealable = 0;
     
   for (i=0; i<thgrp->group_size; ++i)
     kaapi_context_free(thgrp->threadctxts[i]);
