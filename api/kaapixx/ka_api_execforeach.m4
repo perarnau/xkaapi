@@ -35,7 +35,8 @@
 #if 0
         std::cout << ":: ForEach #loops: " << step << ", total time (except first iteration):" << total
                   << ", average:" << total / (step-1) << ", partition step:" << tpart << std::endl;
-#else
+#endif
+#if 0
         std::cout << ":: ForEach #loops: " << step << ", total time (except first iteration):" << total
                   << ", average:" << (t1-t0) / (step) << ", partition step:" << tpart << std::endl;
 #endif
