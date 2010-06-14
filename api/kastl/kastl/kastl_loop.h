@@ -50,6 +50,7 @@
 #include "kaapi.h"
 #include "kastl_workqueue.h"
 #include "kastl_sequences.h"
+#include "../unit/src/timing.h"
 
 
 // missing decls
@@ -57,6 +58,7 @@ extern "C" void kaapi_set_workload(kaapi_processor_t*, kaapi_uint32_t);
 extern "C" void kaapi_set_self_workload(kaapi_uint32_t);
 extern "C" kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
 extern "C" kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
+extern "C" unsigned int kaapi_request_kid(kaapi_request_t*);
 
 
 #if CONFIG_KASTL_DEBUG
@@ -950,24 +952,12 @@ namespace impl
 
       range_type subr;
 
-    redo_loop:
       while (xtr.extract(seq, subr))
-      {
 	inner_loop_type::run(res, subr, body);
 
-	// check if we have been preempted
-	if (ktr != NULL)
-	{
-	  const bool is_preempted = preempt(sc, ktr);
-	  if (is_preempted == true)
-	    return ;
-	}
-      }
-
-      bool has_thief;
-      reducer_type::reduce(sc, has_thief, res, seq, body);
-      if (has_thief == true)
-	goto redo_loop;
+      bool has_thief = true;
+      while (has_thief == true)
+	reducer_type::reduce(sc, has_thief, res, seq, body);
 
       // no more thief
     }
@@ -1084,6 +1074,12 @@ namespace impl
     kaapi_steal_finalize(sc);
   }
 
+  static void wait_a_bit(void)
+  {
+    for (unsigned int i = 0; i < 10000; ++i)
+      __asm__ __volatile__ ("nop\n\t");
+  }
+
   template
   <typename Result, typename Sequence, typename Body, typename Settings,
    bool TerminateTag, bool ReduceTag>
@@ -1104,6 +1100,8 @@ namespace impl
 
     kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
       (thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
+
+    wait_a_bit();
 
     xtr_type xtr(tc->_settings);
     outter_loop_type::run

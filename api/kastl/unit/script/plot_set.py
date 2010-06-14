@@ -155,7 +155,8 @@ def on_sample(sample, filename):
     return
 
 def cpu_count_to_size(n):
-    counts = ('1 ', '2 ', '4 ', '8 ', '12', '16')
+#    counts = ('1 ', '2 ', '4 ', '8 ', '12', '16')
+    counts = ('8 ', '9 ', '10', '11', '12', '13', '14', '15', '16')
     return counts[int(n)]
 
 def main(dirname):

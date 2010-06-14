@@ -20,3 +20,8 @@ kaapi_processor_t* kaapi_request_kproc(kaapi_request_t* kr)
 {
   return kr->proc;
 }
+
+unsigned int kaapi_request_kid(kaapi_request_t* kr)
+{
+  return kr->proc->kid;
+}

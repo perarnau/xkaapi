@@ -31,7 +31,7 @@ LIBS="$LIBS kastl"
 #LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
 #LIBS="$LIBS pastl"
-LIBS="$LIBS pthread"
+#LIBS="$LIBS pthread"
 
 DOS=''
 DOS="$DOS bench"
