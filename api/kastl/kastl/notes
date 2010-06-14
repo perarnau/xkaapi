@@ -10,14 +10,22 @@ result and use reduction... for now we
 only return result + last - first
 
 -- todo
-. implementation pthread classique
 
-. optimisation
- . barriere pour attendre que tout le monde se synchro
- avant le debut de l algorithme
- . tester algorithm de vol favorisant le processeur 0
- . recuperer ancien transform
- . optimisation contexts de vol...
+*****
+virer cradosseries du code -> faire un merge propre,
+se ramener a un etat propre.
+
+virer ktrs, faire l optim de la innerloop avaec cehck
+preemption en moins
+
+mesurer la innerloop: ne doit pas vairer
+*****
+
+. retirer le ktr quand pas besoin
+ -> surtout check si preemption dans
+ le cas de la innerloop. on gagne
+ beaucoup dans le cas d un transform
+ a operation fine
 
 . examples
  . choisir les examples a detailler

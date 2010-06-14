@@ -67,11 +67,10 @@ struct TransformStruct {
     int tmp_size  = 0;
 
     /* Using THE: critical section could be avoided */
-#if 0
     while (1)
     {
       __global_lock::acquire();
-      // kaapi_steal_begincritical( sc_transform );
+//       kaapi_steal_begincritical( sc_transform );
       nano_ibeg = _ibeg;
       nano_obeg = _obeg;
       tmp_size  = _iend - nano_ibeg;
@@ -80,7 +79,7 @@ struct TransformStruct {
       nano_iend = nano_ibeg  + unit_size;
       _ibeg = nano_iend;
       _obeg += unit_size;
-      // kaapi_steal_endcritical( sc_transform );
+//       kaapi_steal_endcritical( sc_transform );
       __global_lock::release();
 
       if (unit_size == 0)
@@ -88,7 +87,6 @@ struct TransformStruct {
 
       std::transform(nano_ibeg, nano_iend, nano_obeg, _op);
     }
-#endif
   }
 
   static int static_splitter
@@ -110,18 +108,12 @@ struct TransformStruct {
 
     kaapi_stealcontext_t* sc_transform = kaapi_thread_pushstealcontext( 
       thread,
-      KAAPI_STEALCONTEXT_DEFAULT,
+      KAAPI_STEALCONTEXT_LINKED,
       Self_t::static_splitter,
       self_work,
-      NULL
+      self_work->_msc
     );
     self_work->doit( sc_transform, thread );
-
-    {
-      kaapi_taskadaptive_result_t* ktr;
-      while ((ktr = kaapi_get_thief_head(sc_transform)))
-	kaapi_preempt_thief(sc_transform, ktr, NULL, NULL, NULL);
-    }
 
     kaapi_steal_finalize( sc_transform );
   }
@@ -155,21 +147,17 @@ struct TransformStruct {
       {
         kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
         kaapi_task_t*  thief_task  = kaapi_thread_toptask(thief_thread);
-	output_work = (Self_t*)kaapi_thread_pushdata(thief_thread, sizeof(Self_t));
+	output_work = (Self_t*)kaapi_thread_pushdata_align(thief_thread, sizeof(Self_t), 8);
 
         output_work->_iend = local_end;
         output_work->_ibeg = local_end - bloc;
         local_end         -= bloc;
         output_work->_obeg = _obeg + (output_work->_ibeg - _ibeg);
         output_work->_op   = _op;
-	output_work->_msc = NULL;
+	output_work->_msc = _msc;
 
         kaapi_task_init(thief_task, &static_task_entrypoint, output_work);
         kaapi_thread_pushtask(thief_thread);
-
-	kaapi_taskadaptive_result_t* const ktr =
-	  kaapi_allocate_thief_result(sc_transform, 0, NULL);
-
         kaapi_request_reply_head(sc_transform, &request[i], NULL);
 
         --count; 

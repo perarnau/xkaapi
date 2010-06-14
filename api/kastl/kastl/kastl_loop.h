@@ -46,7 +46,6 @@
 #ifndef KASTL_LOOP_H_INCLUDED
 # define KASTL_LOOP_H_INCLUDED
 
-
 #include <sys/types.h>
 #include "kaapi.h"
 #include "kastl_workqueue.h"
@@ -721,7 +720,10 @@ namespace impl
     if (vc->_seq.steal(r, steal_size) == false)
       return 0;
 
-    kaapi_set_workload(kaapi_stealcontext_kproc(sc), vc->_seq.size());
+    size_t vseq_size = vc->_seq.size();
+    if (vseq_size < vc->_settings._par_size)
+      vseq_size = 0;
+    kaapi_set_workload(kaapi_stealcontext_kproc(sc), vseq_size);
 
     // recompute the request count
     if ((size_t)r.size() != steal_size)
@@ -731,10 +733,10 @@ namespace impl
       if ((request_count * (int)unit_size) < r.size())
 	++request_count;
     }
-
     typename Sequence::iterator_type pos = r.begin();
+
     int reply_count = 0;
-    
+
     // balanced workload amongst count thieves
     for (; request_count > 0; ++request)
     {

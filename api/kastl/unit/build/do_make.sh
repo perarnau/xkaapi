@@ -30,7 +30,7 @@ LIBS=''
 LIBS="$LIBS kastl"
 #LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
-LIBS="$LIBS pastl"
+#LIBS="$LIBS pastl"
 LIBS="$LIBS pthread"
 
 DOS=''

@@ -801,13 +801,15 @@ namespace timing
   typedef tick_t TimerType;
 
   static void initialize()
-  { timing_init(); }
+  {
+    timing_init();
+  }
 
   static void get_now(TimerType& now)
   { GET_TICK(now); }
 
   static void sub_timers(const TimerType& a, const TimerType& b, TimerType& d)
-  { d.tick = TICK_DIFF(b, a); }
+  { d.tick = TICK_RAW_DIFF(b, a); }
 
   static unsigned long timer_to_usec(const TimerType& t)
   { return (unsigned long)tick2usec(t.tick); }
@@ -1379,6 +1381,7 @@ public:
 
 
 #if CONFIG_ALGO_TRANSFORM
+
 class TransformRun : public RunInterface
 {
   struct inc
@@ -1389,10 +1392,14 @@ class TransformRun : public RunInterface
     ValueType operator()(const ValueType& v) const
     { 
       return 2 * v;
+      // return v / 3.14;
+      // return ::sin(::sqrt(v));
     }
 #else
     ValueType operator()(const ValueType& v) const
-    { return v + 1; }
+    {
+      return v + 1;
+    }
 #endif
   };
 

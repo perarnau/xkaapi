@@ -45,8 +45,6 @@
 #include "kaapi_impl.h"
 
 
-double t_finalize = 0;
-
 /**
 */
 void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
@@ -54,19 +52,11 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
   kaapi_assert_debug( ta !=0 );
 
-#if 1
-  double t0 = kaapi_get_elapsedtime();
-#endif
-
   while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
     kaapi_slowdown_cpu();
 
   while (KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
     kaapi_slowdown_cpu();
-
-#if 1
-  t_finalize += kaapi_get_elapsedtime()-t0;
-#endif
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
