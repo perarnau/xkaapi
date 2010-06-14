@@ -1963,10 +1963,13 @@ class FindIfRun : public RunInterface
 {
   SequenceType::iterator _res[2];
 
-  static bool is_magic(unsigned int v)
+  struct is_magic
   {
-    return v == 42;
-  }
+    bool operator()(const ValueType& v)
+    {
+      return v == 42;
+    }
+  };
 
 public:
   virtual void prepare(InputType& i)
@@ -1980,14 +1983,14 @@ public:
   virtual void run_ref(InputType& i, OutputType& o)
   {
     _res[1] = std::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
     _res[0] = std::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 #endif
 
@@ -1995,7 +1998,7 @@ public:
   virtual void run_kastl(InputType& i, OutputType& o)
   {
     _res[0] = kastl::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 #endif
 
@@ -2003,7 +2006,7 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 #endif
 
