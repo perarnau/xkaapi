@@ -148,6 +148,23 @@ $> make examples
 
 \section{Using \kaapi}
 
+\subsection{\kaapi integration}
+Integrating \kaapi in your project requires 2 steps:
+\begin{itemize}
+\item include the header files. Example:
+\begin{verbatim} 
+#include <kaapi.h> /* C version */
+#include <kaapi++> // C++ version
+\end{verbatim}
+\item link with the library. Example:
+\begin{verbatim} 
+gcc -o main main.c -lxkaapi /* C version */
+g++ -o main main.cpp -lxkaapixx // C++ version
+\end{verbatim}
+\end{itemize}
+Refer to the API documentation for information relative
+to the \kaapi programming interfaces.
+
 \subsection{Examples}
 The directory \textit{examples/} contains sample applications using \kaapi.
 Both C and C++ are used. Some direclty lies on top of the core runtime,
