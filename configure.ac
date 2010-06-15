@@ -349,6 +349,7 @@ AC_CONFIG_FILES([
 	src/Makefile
 
 	xkaapi.pc
+	kaapixx.pc
 	atha1.pc
 	src/misc/kaapi_version.c
 ])
