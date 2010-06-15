@@ -149,7 +149,7 @@ $> cd examples; make examples
 \section{Using \kaapi}
 
 \subsection{\kaapi integration}
-Integrating \kaapi in your project requires 2 steps:
+Integrating \kaapi in your project requires the following steps:
 \begin{itemize}
 \item include the header files. Example:
 \begin{verbatim} 
@@ -160,6 +160,11 @@ Integrating \kaapi in your project requires 2 steps:
 \begin{verbatim} 
 gcc -o main main.c -lxkaapi /* C version */
 g++ -o main main.cpp -lxkaapixx // C++ version
+\end{verbatim}
+\item the following preprocessor macro must be defined to fully disable
+the debugging code. It can improve the generated code:
+\begin{verbatim}
+-DNDEBUG
 \end{verbatim}
 \end{itemize}
 Refer to the API documentation for information relative
