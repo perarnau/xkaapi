@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 
 ALGOS=''
-ALGOS="$ALGOS transform"
+# ALGOS="$ALGOS transform"
 # ALGOS="$ALGOS for_each"
-# ALGOS="$ALGOS find"
-# ALGOS="$ALGOS find_if"
+ALGOS="$ALGOS find"
+ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"
 # ALGOS="$ALGOS accumulate"
 # ALGOS="$ALGOS inner_product"
@@ -28,7 +28,7 @@ ALGOS="$ALGOS transform"
 
 LIBS=''
 LIBS="$LIBS kastl"
-#LIBS="$LIBS stl"
+LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
 #LIBS="$LIBS pastl"
 #LIBS="$LIBS pthread"

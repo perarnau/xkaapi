@@ -155,8 +155,8 @@ def on_sample(sample, filename):
     return
 
 def cpu_count_to_size(n):
-#    counts = ('1 ', '2 ', '4 ', '8 ', '12', '16')
-    counts = ('8 ', '9 ', '10', '11', '12', '13', '14', '15', '16')
+    counts = ('1 ', '2 ', '4 ', '8 ', '12', '16')
+    #counts = ('8 ', '9 ', '10', '11', '12', '13', '14', '15', '16')
     return counts[int(n)]
 
 def main(dirname):
@@ -165,14 +165,16 @@ def main(dirname):
 
     for size in [100000]:
         print('-- sequence_size: ' + str(size))
-        for impl in ('kastl', 'stl', 'tbb', 'pastl', 'pthread'):
-            samples = ss.find_samples\
-                ({'algo': 'transform', 'impl': impl, 'seq_size': str(size)})
+        for impl in ['kastl', 'stl']:
             print('---- impl: ' + impl)
-            for s in samples:
-                print(cpu_count_to_size(s.get_meta('cpu_count'))\
-                          + ': ' + str(s.average()))
-        print('')
+            for algo in ['find', 'find_if']:
+                samples = ss.find_samples\
+                    ({'algo': algo, 'impl': impl, 'seq_size': str(size)})
+                print('---- algo: ' + algo)
+                for s in samples:
+                    print(cpu_count_to_size(s.get_meta('cpu_count'))\
+                              + ': ' + str(s.average()))
+                print('')
 
 #     seq_avg = None
 #     for filename in filenames:
