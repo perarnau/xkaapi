@@ -4,7 +4,7 @@
 \usepackage{url} \urlstyle{sf}
 \usepackage[a4paper,margin=1.9cm]{geometry}
 \usepackage{xspace}
-\usepackage[francais,american]{babel}
+\usepackage[american]{babel}
 \usepackage{palatino}
 \usepackage{bibtopic}
 %\usepackage{graphicx}
@@ -32,7 +32,7 @@
 
 \begin{document}
 
-\title{X-Kaapi's Installation and User's Guide}
+\title{\kaapi installation and user guide}
 \author{Vincent Danjean, Thierry Gautier, Christophe Laferrière, Fabien Le Mentec}
 \date{\today}
 \maketitle
@@ -42,8 +42,8 @@
 %% intro
 \section{Introduction}
 
-\subsection{XKaapi runtime}
-XKaapi is a runtime for fine grain parallelism on multicore architectures.
+\subsection{\kaapi runtime}
+\kaapi is a runtime for fine grain parallelism on multicore architectures.
 It relies on workstealing paradigms.
 The core library comes with a full set of complementary progamming interfaces.
 This document is a user manual containing installation instructions and runtime
@@ -66,7 +66,7 @@ There is no version for Windows yet.
 %% installation
 \section{Installation}
 
-There are 2 ways to install XKaapi:
+There are 2 ways to install \kaapi:
 \begin{itemize}
 \item using the debian packages,
 \item installing from source.
@@ -82,7 +82,7 @@ TODO
 \subsection{Installing from sources}
 
 \subsubsection{Retrieving the sources}
-There are 2 ways to retrieve the sourcecode:
+There are 2 ways to retrieve the sources:
 \begin{itemize}
 \item download a release snapshot at the following url:\newline
 \url{https://gforge.inria.fr/frs/?group_id=94}.
@@ -128,7 +128,7 @@ system, in which case the log gives you the name of the software to install.
 
 \subsubsection{Compilation and installation}
 On success, the configuration process generates a Makefile. the 2 following
-commands build and install the XKaapi runtime:
+commands build and install the \kaapi runtime:
 \begin{verbatim}
 $> make
 $> make install
@@ -146,7 +146,7 @@ The following compiles the examples applications:
 $> make examples
 \end{verbatim}
 
-\section{Using XKaapi}
+\section{Using \kaapi}
 
 \subsection{Examples}
 The directory \textit{examples/} contains sample applications using \kaapi.
@@ -167,7 +167,7 @@ Same as above, using the \textit{Athapascan} interface.
 Nqueens problem implementation using \textit{ka} C++ interface.
 \item nqueens\_apiatha\newline
 Same as above, using the \textit{Athapascan} interface.
-\item poisson3d-xkaapinew\newline
+\item poisson3d-kaapi.cpp\newline
 3 dimension Poisson solver implemented using the \textit{ka}
 C++ interface.
 \item matrix\_multiply\_cilk2kaapi.cpp\newline
