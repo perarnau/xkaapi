@@ -1,0 +1,12 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$class_f_t_1_1_c_c_k_event_start.html" title="FT::CCKEventStart" alt="" coords="253,5,405,35"/>
+<area shape="rect" id="node5" href="$class_f_t_1_1_checkpoint_server.html" title="FT::CheckpointServer" alt="" coords="243,59,416,88"/>
+<area shape="rect" id="node7" href="$class_f_t_1_1_failure_detector_coordinator.html" title="FailureDetectorCooridnator objectThis object represents the failure detector coordinator..." alt="" coords="209,112,449,141"/>
+<area shape="rect" id="node9" href="$class_f_t_1_1_heart_beat_detector.html" title="Heartbeat fault tolerance detectorThe algorithm is to send to randomly selected known..." alt="" coords="239,165,420,195"/>
+<area shape="rect" id="node11" href="$class_f_t_1_1_t_i_c_checkpoint.html" title="FT::TICCheckpoint" alt="" coords="255,219,404,248"/>
+<area shape="rect" id="node13" href="$class_net_data_1_1_global_variable.html" title="GlobalVariable reference a global variable visible from all process. The semantic..." alt="" coords="233,272,425,301"/>
+<area shape="rect" id="node15" href="$class_n_s_1_1_server.html" title="NS::Server" alt="" coords="281,325,377,355"/>
+<area shape="rect" id="node17" href="$class_stat_1_1_send_statistics_callback.html" title="SendStatisticsCallback is an event callback that send statistics to the coordinator..." alt="" coords="221,379,437,408"/>
+<area shape="rect" id="node19" href="$class_stat_1_1_statistics_service.html" title="Distributed collection of counters to collect in order to produce statisticsServer..." alt="" coords="243,432,416,461"/>
+<area shape="rect" id="node21" href="$class_util_1_1_counter_manager.html" title="Management of counters to collect in order to produce statisticsEach process generates..." alt="" coords="243,485,416,515"/>
+</map>

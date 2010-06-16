@@ -1,0 +1,7 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_sched_1_1_redistribution.html" title="Redistribution between two collections." alt="" coords="108,312,279,341"/>
+<area shape="rect" id="node4" href="$class_sched_1_1_collection.html" title="Collection of distributed global data." alt="" coords="109,197,253,227"/>
+<area shape="rect" id="node6" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="35,101,136,131"/>
+<area shape="rect" id="node8" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="5,5,165,35"/>
+<area shape="rect" id="node12" href="$class_sched_1_1_local_collection.html" title="Local view of Collection of distributed global dataThe local view of collection contains..." alt="" coords="273,253,455,283"/>
+</map>

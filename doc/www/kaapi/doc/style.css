@@ -1,0 +1,82 @@
+* {
+margin: 0;
+padding: 0;
+}
+
+
+body {
+font: 14px Verdana, Arial, sans-serif; 
+background: #fff url(backi.jpg) repeat-x top; 
+color: #111;
+margin: 0;
+padding: 0;
+line-height: 1.5em;
+}
+
+img { border: none }
+ul {  padding: 0; margin: 0;}
+li { list-style-type: none;}
+
+a {
+color: #024294;
+background-color: transparent;
+text-decoration: none;
+}
+a:hover { color: #000; }
+
+#wrap {
+margin: 0 auto;
+width: 85%;
+}
+
+#header {
+background: transparent;
+height: 60px;
+background-repeat: no-repeat;
+background-position: top left;
+}
+#header h1 {
+color: #fff;
+font-size: 150%;
+padding-top: 10px;
+margin: 0;
+font-weight: 100;
+}
+#header h1 a { font-weight: 100; text-decoration: none; color : #fff; }
+#header h2 {
+color: #eee;
+font-size: 120%;
+margin: 0;
+font-weight: 100;
+}
+
+#breadcrumbs {
+background : #eee;
+padding: 2px 5px 2px 5px;
+font-size: 11px;
+}
+
+#right {
+float: right;
+width: 70%;
+background: #fff;
+border-top: 1px solid #CFCFCF;
+padding: 10px;
+margin-top: 10px;
+}
+#right h2 { font-size: 12px; margin: 5px 0 5px 0; }
+#right h2 a{ text-decoration: none; }
+
+#left { 
+width: 22%; 
+background: #fff;
+border-top: 1px solid #CFCFCF;
+margin-top: 10px;
+padding: 10px;
+}
+#left h2 { font-size: 100%; margin: 10px 0 5px 5px; }
+#left ul { padding-left: 10px; }
+
+#footer { font-size: 11px; padding: 5px; border-top: 1px solid #a0a0a0; margin-top: 5px; text-align: center;}
+
+#clear { clear: both;height:55px;  }

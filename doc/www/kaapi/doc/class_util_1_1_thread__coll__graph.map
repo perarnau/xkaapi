@@ -1,0 +1,20 @@
+<map id="G" name="G">
+<area shape="rect" id="node27" href="$class_util_1_1_event_buffer_manager.html" title="A Generic Buffer Manager : EventBufferManager EventBufferManager is an implementation..." alt="" coords="1131,372,1333,401"/>
+<area shape="rect" id="node2" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="391,503,505,532"/>
+<area shape="rect" id="node5" href="$class_util_1_1_key.html" title="Util::Key\&lt; ByteAllocator \&gt;" alt="" coords="347,609,549,639"/>
+<area shape="rect" id="node7" href="$class_util_1_1_key.html" title="Thread private attributeThis class provides an interface to posix pthread specific..." alt="" coords="23,583,143,612"/>
+<area shape="rect" id="node9" href="$class_util_1_1_key.html" title="Util::Key\&lt; Thread \&gt;" alt="" coords="367,556,529,585"/>
+<area shape="rect" id="node12" href="$class_util_1_1_o_event_stream.html" title="Output events stream: Util::OEventStream." alt="" coords="1456,183,1613,212"/>
+<area shape="rect" id="node14" href="$class_util_1_1_context_id.html" title="Util::ContextId" alt="" coords="783,5,905,35"/>
+<area shape="rect" id="node16" href="$class_util_1_1_event_buffer.html" title="A Generic Trace Buffer class: Util::EventBuffer." alt="" coords="1163,99,1301,128"/>
+<area shape="rect" id="node18" href="$class_util_1_1_queable.html" title="Util::Queable\&lt; EventBuffer \&gt;" alt="" coords="335,157,561,187"/>
+<area shape="rect" id="node37" href="$class_util_1_1_queue.html" title="Util::Queue\&lt; EventBuffer \&gt;" alt="" coords="736,455,952,484"/>
+<area shape="rect" id="node21" href="$class_util_1_1_queable.html" title="Base class of object queueable into double linked list.To be en(de)queueable in a..." alt="" coords="7,157,159,187"/>
+<area shape="rect" id="node24" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="788,183,900,212"/>
+<area shape="rect" id="node30" href="$class_util_1_1_reify_notify_signal.html" title="ReifyNotifySignalThis class allows to reify the invocations to InterfaceSignal::signal..." alt="" coords="756,295,932,324"/>
+<area shape="rect" id="node32" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="367,295,529,324"/>
+<area shape="rect" id="node35" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="784,348,904,377"/>
+<area shape="rect" id="node40" href="$class_util_1_1_queue.html" title="Double linked list (thread unsafe)The queue descriptor is linked to the first and..." alt="" coords="377,449,519,479"/>
+<area shape="rect" id="node42" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="795,401,893,431"/>
+<area shape="rect" id="node45" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="368,663,528,692"/>
+</map>

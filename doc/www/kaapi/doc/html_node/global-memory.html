@@ -1,0 +1,198 @@
+<html lang="en">
+<head>
+<title>global memory - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="additionnal-features.html#additionnal-features" title="additionnal features">
+<link rel="next" href="sharing-arrays.html#sharing-arrays" title="sharing arrays">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="global-memory"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="sharing-arrays.html#sharing-arrays">sharing arrays</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="additionnal-features.html#additionnal-features">additionnal features</a>
+<hr>
+</div>
+
+<h4 class="subsection">4.4.1 Global memory</h4>
+
+<p>The current release of <code>Athapascan</code> provides the <code>a1::MonotonicBound</code> template that allows several processes to read or update a bound that increases or decreases monotonically. 
+Such a variable has a system wide identifier that should be defined during the declaration. 
+It is communicable and could be a parameter of tasks.
+
+   <p>To declare a <code>a1::MonotonicBound</code>, you must provide the string identifier and two tempalte parameters:
+     <ol type=1 start=1>
+<li>the type of the variable updated, <var>T</var>
+<li>the type of the function obect used to update the variable, <var>F</var>
+        </ol>
+
+<pre class="example">     /* raw initialization */
+     a1::MonotonicBound&lt;T,F&gt; a ("B&amp;B bound");
+     /* initialization by value */
+     a1::MonotonicBound&lt;T,F&gt; b ( "another B&amp;B bound", new T(/*...*/) );
+</pre>
+   <p>The update function <var>F</var> is a function class that should has an <code>operator()</code> with the following signature.
+<pre class="example">     template &lt; class T&gt; struct F
+     {
+       bool operator()( T&amp; res, const T&amp; val);
+     };
+</pre>
+   <p>The return value of the operator is true if and only if the local value has been updated. 
+In this, case during the invocation of the release, the protocol will broadcast the new local bound to all other processors which update their bound in the same way.
+
+   <p>For instance, the definition of the operator that compute the maximal value could be:
+
+<pre class="example">     struct Max
+     {
+       bool operator()( long&amp; result, const long&amp; value)
+       {
+         if (result &lt; value)
+         {
+           result = value;
+           return true;
+         }
+         return false;
+       }
+     };
+</pre>
+   <p>To read (and only read) the value of a <code>a1::MonotonicBound</code>, a lock is to be taken on the value, then a call to the <code>read</code> method.
+<pre class="example">     <var>a</var>.acquire();
+     <var>a</var>.read(); // return a const T&amp; on the value
+     <var>a</var>.release();
+</pre>
+   <p>To update the value of  a <code>a1::MonotonicBound</code>, use the <code>update</code> method
+<pre class="example">     <var>a</var>.update(<var>new_val</var>);
+</pre>
+   <!--  -->
+   </body></html>
+
