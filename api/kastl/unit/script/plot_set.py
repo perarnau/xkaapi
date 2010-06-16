@@ -167,7 +167,31 @@ def main(dirname):
         print('-- sequence_size: ' + str(size))
         for impl in ['kastl', 'stl']:
             print('---- impl: ' + impl)
-            for algo in ['find', 'find_if']:
+            for algo in [\
+                "transform",\
+                    "for_each",\
+                "find",\
+                "find_if",\
+                "find_first_of",\
+                "accumulate",\
+                "inner_product",\
+                "count",\
+                "count_if",\
+                "copy",\
+                "search",\
+                "min_element",\
+                "max_element",\
+                "fill",\
+                "generate",\
+                "inner_product",\
+                "replace",\
+                "replace_if",\
+                "equal",\
+                "mismatch",\
+                "search",\
+                "adjacent_find",\
+                "adjacent_difference"
+                ]:
                 samples = ss.find_samples\
                     ({'algo': algo, 'impl': impl, 'seq_size': str(size)})
                 print('---- algo: ' + algo)

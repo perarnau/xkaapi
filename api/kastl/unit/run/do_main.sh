@@ -38,18 +38,19 @@ SIZE5=100000
 
 # iteration
 #ITER=1
-ITER=5
-#ITER=10
+#ITER=5
+ITER=10
 #ITER=20
+#ITER=100
 #ITER=1000
 
 # cpuset
-CPUSET0=12
+#CPUSET0=12
 CPUSET1=12,13
-CPUSET2=12,13,14,15
+#CPUSET2=12,13,14,15
 CPUSET3=8,9,10,11,12,13,14,15
-CPUSET4=4,5,6,7,8,9,10,11,12,13,14,15
-CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+#CPUSET4=4,5,6,7,8,9,10,11,12,13,14,15
+#CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
 #CPUSET0=8,9,10,11,12,13,14,15
 #CPUSET1=7,8,9,10,11,12,13,14,15
@@ -63,34 +64,34 @@ CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
 
 # {algo, lib, do}
-# ALGOS="$ALGOS transform"
-# ALGOS="$ALGOS for_each"
+ALGOS="$ALGOS transform"
+ALGOS="$ALGOS for_each"
 ALGOS="$ALGOS find"
 ALGOS="$ALGOS find_if"
-# ALGOS="$ALGOS find_first_of"
-# ALGOS="$ALGOS accumulate"
-# ALGOS="$ALGOS inner_product"
-# ALGOS="$ALGOS count"
-# ALGOS="$ALGOS count_if"
-# ALGOS="$ALGOS copy"
-# ALGOS="$ALGOS search"
-# ALGOS="$ALGOS min_element"
-# ALGOS="$ALGOS max_element"
-# ALGOS="$ALGOS fill"
-# ALGOS="$ALGOS generate"
-# ALGOS="$ALGOS inner_product"
-# ALGOS="$ALGOS replace"
-# ALGOS="$ALGOS replace_if"
-# ALGOS="$ALGOS equal"
-# ALGOS="$ALGOS mismatch"
-# ALGOS="$ALGOS search"
-# ALGOS="$ALGOS adjacent_find"
-# ALGOS="$ALGOS adjacent_difference"
+ALGOS="$ALGOS find_first_of"
+ALGOS="$ALGOS accumulate"
+ALGOS="$ALGOS inner_product"
+ALGOS="$ALGOS count"
+ALGOS="$ALGOS count_if"
+ALGOS="$ALGOS copy"
+ALGOS="$ALGOS search"
+ALGOS="$ALGOS min_element"
+ALGOS="$ALGOS max_element"
+ALGOS="$ALGOS fill"
+ALGOS="$ALGOS generate"
+ALGOS="$ALGOS inner_product"
+ALGOS="$ALGOS replace"
+ALGOS="$ALGOS replace_if"
+ALGOS="$ALGOS equal"
+ALGOS="$ALGOS mismatch"
+ALGOS="$ALGOS search"
+ALGOS="$ALGOS adjacent_find"
+ALGOS="$ALGOS adjacent_difference"
 # ALGOS="$ALGOS partial_sum"
 
 LIBS=''
 LIBS="$LIBS kastl"
-LIBS="$LIBS stl"
+#LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
 #LIBS="$LIBS pastl"
 #LIBS="$LIBS pthread"
