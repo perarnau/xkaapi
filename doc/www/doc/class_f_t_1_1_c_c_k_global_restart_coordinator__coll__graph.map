@@ -1,0 +1,26 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="796,828,903,857"/>
+<area shape="rect" id="node29" href="$class_util_1_1_event_buffer_manager.html" title="A Generic Buffer Manager : EventBufferManager EventBufferManager is an implementation..." alt="" coords="1165,324,1368,353"/>
+<area shape="rect" id="node4" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="391,776,505,805"/>
+<area shape="rect" id="node49" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="800,724,899,753"/>
+<area shape="rect" id="node7" href="$class_util_1_1_key.html" title="Util::Key\&lt; ByteAllocator \&gt;" alt="" coords="347,829,549,859"/>
+<area shape="rect" id="node9" href="$class_util_1_1_key.html" title="Thread private attributeThis class provides an interface to posix pthread specific..." alt="" coords="23,856,143,885"/>
+<area shape="rect" id="node11" href="$class_util_1_1_key.html" title="Util::Key\&lt; Thread \&gt;" alt="" coords="367,883,529,912"/>
+<area shape="rect" id="node14" href="$class_util_1_1_o_event_stream.html" title="Output events stream: Util::OEventStream." alt="" coords="1517,172,1675,201"/>
+<area shape="rect" id="node16" href="$class_util_1_1_context_id.html" title="Util::ContextId" alt="" coords="788,5,911,35"/>
+<area shape="rect" id="node18" href="$class_util_1_1_event_buffer.html" title="A Generic Trace Buffer class: Util::EventBuffer." alt="" coords="1197,93,1336,123"/>
+<area shape="rect" id="node20" href="$class_util_1_1_queable.html" title="Util::Queable\&lt; EventBuffer \&gt;" alt="" coords="335,155,561,184"/>
+<area shape="rect" id="node39" href="$class_util_1_1_queue.html" title="Util::Queue\&lt; EventBuffer \&gt;" alt="" coords="741,236,957,265"/>
+<area shape="rect" id="node23" href="$class_util_1_1_queable.html" title="Base class of object queueable into double linked list.To be en(de)queueable in a..." alt="" coords="7,155,159,184"/>
+<area shape="rect" id="node26" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="793,183,905,212"/>
+<area shape="rect" id="node32" href="$class_util_1_1_reify_notify_signal.html" title="ReifyNotifySignalThis class allows to reify the invocations to InterfaceSignal::signal..." alt="" coords="761,399,937,428"/>
+<area shape="rect" id="node34" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="367,340,529,369"/>
+<area shape="rect" id="node37" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="388,657,508,687"/>
+<area shape="rect" id="node42" href="$class_util_1_1_queue.html" title="Double linked list (thread unsafe)The queue descriptor is linked to the first and..." alt="" coords="377,236,519,265"/>
+<area shape="rect" id="node44" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="33,464,132,493"/>
+<area shape="rect" id="node56" href="$class_net_1_1_service_manager.html" title="Manager of Kaapi servicesAn active message is send to a service. A service is an..." alt="" coords="361,464,535,493"/>
+<area shape="rect" id="node47" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="368,955,528,984"/>
+<area shape="rect" id="node67" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="799,927,900,956"/>
+<area shape="rect" id="node54" href="$class_net_1_1_service.html" title="Net::Service" alt="" coords="795,452,904,481"/>
+<area shape="rect" id="node63" href="$struct_f_t_1_1_c_c_k_global_restart_info.html" title="FT::CCKGlobalRestartInfo" alt="" coords="749,588,949,617"/>
+</map>

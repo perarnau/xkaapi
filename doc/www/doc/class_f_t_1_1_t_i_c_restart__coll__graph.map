@@ -1,0 +1,49 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="1073,333,1180,363"/>
+<area shape="rect" id="node29" href="$class_util_1_1_event_buffer_manager.html" title="A Generic Buffer Manager : EventBufferManager EventBufferManager is an implementation..." alt="" coords="1445,469,1648,499"/>
+<area shape="rect" id="node135" href="$class_core_1_1_thread.html" title="Flow of controlA Core::Thread is a flow of control which consist of its runtime environnement..." alt="" coords="1489,1203,1604,1232"/>
+<area shape="rect" id="node4" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="631,716,745,745"/>
+<area shape="rect" id="node55" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="1077,1092,1176,1121"/>
+<area shape="rect" id="node7" href="$class_util_1_1_key.html" title="Util::Key\&lt; ByteAllocator \&gt;" alt="" coords="587,324,789,353"/>
+<area shape="rect" id="node9" href="$class_util_1_1_key.html" title="Thread private attributeThis class provides an interface to posix pthread specific..." alt="" coords="263,349,383,379"/>
+<area shape="rect" id="node11" href="$class_util_1_1_key.html" title="Util::Key\&lt; Thread \&gt;" alt="" coords="607,377,769,407"/>
+<area shape="rect" id="node14" href="$class_util_1_1_o_event_stream.html" title="Output events stream: Util::OEventStream." alt="" coords="1977,153,2135,183"/>
+<area shape="rect" id="node16" href="$class_util_1_1_context_id.html" title="Util::ContextId" alt="" coords="1065,5,1188,35"/>
+<area shape="rect" id="node18" href="$class_util_1_1_event_buffer.html" title="A Generic Trace Buffer class: Util::EventBuffer." alt="" coords="1477,84,1616,113"/>
+<area shape="rect" id="node20" href="$class_util_1_1_queable.html" title="Util::Queable\&lt; EventBuffer \&gt;" alt="" coords="575,153,801,183"/>
+<area shape="rect" id="node39" href="$class_util_1_1_queue.html" title="Util::Queue\&lt; EventBuffer \&gt;" alt="" coords="1019,236,1235,265"/>
+<area shape="rect" id="node23" href="$class_util_1_1_queable.html" title="Base class of object queueable into double linked list.To be en(de)queueable in a..." alt="" coords="247,153,399,183"/>
+<area shape="rect" id="node26" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="1071,183,1183,212"/>
+<area shape="rect" id="node60" href="$class_net_1_1_group.html" title="Net::Group" alt="" coords="2408,1048,2507,1077"/>
+<area shape="rect" id="node32" href="$class_util_1_1_reify_notify_signal.html" title="ReifyNotifySignalThis class allows to reify the invocations to InterfaceSignal::signal..." alt="" coords="1039,603,1215,632"/>
+<area shape="rect" id="node34" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="607,1368,769,1397"/>
+<area shape="rect" id="node105" href="$class_core_1_1_work_set.html" title="WorkSet of worksetThe workset is a set of processors with a steal interface to steal..." alt="" coords="1487,1503,1607,1532"/>
+<area shape="rect" id="node37" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="628,1092,748,1121"/>
+<area shape="rect" id="node42" href="$class_util_1_1_queue.html" title="Double linked list (thread unsafe)The queue descriptor is linked to the first and..." alt="" coords="617,220,759,249"/>
+<area shape="rect" id="node44" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="639,1556,737,1585"/>
+<area shape="rect" id="node127" href="$class_net_1_1_service_manager.html" title="Manager of Kaapi servicesAn active message is send to a service. A service is an..." alt="" coords="1969,1476,2143,1505"/>
+<area shape="rect" id="node47" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="5,351,165,380"/>
+<area shape="rect" id="node71" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="272,549,373,579"/>
+<area shape="rect" id="node49" href="$class_f_t_1_1_restart_protocol.html" title="Restart Coordinator." alt="" coords="3272,824,3427,853"/>
+<area shape="rect" id="node51" href="$class_f_t_1_1_community_object.html" title="CommunityObjectClass of objects that request reference to a community object." alt="" coords="3031,1124,3204,1153"/>
+<area shape="rect" id="node53" href="$class_w_s_1_1_community.html" title="Community of distribued PoolsThe community is a dynamic group of process. The Community..." alt="" coords="2701,1108,2835,1137"/>
+<area shape="rect" id="node116" href="$class_w_s_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor and a victim processThis class..." alt="" coords="3015,1071,3220,1100"/>
+<area shape="rect" id="node64" href="$class_net_1_1_network.html" title="Net::Network" alt="" coords="1489,857,1604,887"/>
+<area shape="rect" id="node122" href="$class_w_s_1_1_service_steal.html" title="Steal Service for distributed workstealing algorithm." alt="" coords="1987,1391,2125,1420"/>
+<area shape="rect" id="node62" href="$class_net_1_1_network_object.html" title="Net::NetworkObject" alt="" coords="1976,924,2136,953"/>
+<area shape="rect" id="node67" href="$class_net_1_1_callback.html" title="Net::Callback" alt="" coords="1068,775,1185,804"/>
+<area shape="rect" id="node69" href="$class_util_1_1_callback.html" title="Util::Callback" alt="" coords="631,769,745,799"/>
+<area shape="rect" id="node74" href="$class_net_1_1_upcall.html" title="Net::Upcall" alt="" coords="1077,721,1176,751"/>
+<area shape="rect" id="node132" href="$class_core_1_1_condition.html" title="Condition to signal end of steal operationThis class implements one method for synchronisation..." alt="" coords="1991,1163,2121,1192"/>
+<area shape="rect" id="node125" href="$class_net_1_1_service.html" title="Net::Service" alt="" coords="1492,1428,1601,1457"/>
+<area shape="rect" id="node89" href="$class_util_1_1_callback_collect_counters.html" title="Callback function to collect countersThe class defines interface that should overloaded..." alt="" coords="2344,1652,2571,1681"/>
+<area shape="rect" id="node91" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; CallbackCollectCounters \&gt;" alt="" coords="1899,1769,2213,1799"/>
+<area shape="rect" id="node94" href="$class_util_1_1_linkable.html" title="Base class to make cells linkable in single linked listTo be (de)linkable in single..." alt="" coords="1471,1769,1623,1799"/>
+<area shape="rect" id="node97" href="$class_core_1_1_stealable.html" title="Base interface for object that accepts steal request." alt="" coords="623,1729,753,1759"/>
+<area shape="rect" id="node107" href="$class_core_1_1_stealable_with_instance_reification.html" title="Interface for object that accepts steal request with instance reificationInstances..." alt="" coords="979,1720,1275,1749"/>
+<area shape="rect" id="node99" href="$class_w_s_1_1_strategy.html" title="Strategy to define workstealing selection of nodes." alt="" coords="3293,1600,3405,1629"/>
+<area shape="rect" id="node101" href="$class_core_1_1_work_set_steal_algorithm.html" title="StealAlgorithm on a worksetThis is the base class for stealing over a workset. By..." alt="" coords="1944,1675,2168,1704"/>
+<area shape="rect" id="node103" href="$class_core_1_1_steal_algorithm.html" title="Base class to implement an algorithm for work stealingAll objects that inherit from..." alt="" coords="604,1823,772,1852"/>
+<area shape="rect" id="node118" href="$class_core_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor." alt="" coords="2659,1039,2877,1068"/>
+<area shape="rect" id="node140" href="$class_core_1_1_printable.html" title="Core::Printable" alt="" coords="1063,1212,1191,1241"/>
+</map>

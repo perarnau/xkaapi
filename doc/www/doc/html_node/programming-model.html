@@ -1,0 +1,176 @@
+<html lang="en">
+<head>
+<title>programming model - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Athapascan.html#Athapascan" title="Athapascan">
+<link rel="next" href="programing-environnment.html#programing-environnment" title="programing environnment">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="programming-model"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="programing-environnment.html#programing-environnment">programing environnment</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Athapascan.html#Athapascan">Athapascan</a>
+<hr>
+</div>
+
+<h3 class="section">4.1 Programming Model</h3>
+
+<ul class="menu">
+<li><a accesskey="1" href="task-description.html#task-description">task description</a>:  What is a task ? 
+<li><a accesskey="2" href="shared-memory.html#shared-memory">shared memory</a>:  Distributed memory model
+<li><a accesskey="3" href="task-samples.html#task-samples">task samples</a>:  some kind of tasks
+</ul>
+
+<p><code>KAAPI</code> is a middleware working on Dynamic Acyclic Data flow graphes. 
+Once given this graph, it can dynamically schedule it using a work-stealing algorithm.
+
+   <p>But most distributed computing users are familiar with message passing paradigm, and <code>KAAPI</code> uses an other paradigm:
+     <ol type=1 start=1>
+<li>Describe the task of your graph / program
+<li>Describe the dependencies between your task
+        </ol>
+
+   <p>Once this is done, <code>KAAPI</code> will schedule the taks in an efficient way, making sure that
+
+     <ol type=1 start=1>
+<li>All dependencies are respected
+<li>Parallelism between independant tasks is used as much as possible
+        </ol>
+
+   <p>Of course, this will not work as expected on all kind of graph, but it has been <em>proven</em> to be an
+asymptotically optimal way to schedule tasks from a divided and conquer algorithm, based on <code>fork</code> and <code>join</code> calls.
+
+<!--  -->
+   </body></html>
+

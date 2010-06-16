@@ -1,0 +1,878 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>KAAPI</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="info.css" media="screen" />
+</head>
+<body>
+
+<div id="wrap">
+
+<div id="header">
+<h1><a href="#">KAAPI Library</a></h1>
+<h2>Kernel for Adaptative, Asynchronous Parallel and Interactive programming - A library for ditributed computing</h2>
+</div>
+
+<div id="right">
+
+<!-- SECTION !-->
+<a name="Athapascan"></a>
+
+<p>Let us dive into KAAPI through its main interface, <code>Athapascan</code>
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#programming-model">programming model</a>:  forget message passing library, and learn a task based one
+<li><a accesskey="2" href="atha.html#programing-environnment">programing environnment</a>:  from the model to the code
+<li><a accesskey="3" href="atha.html#performance">performance</a>:  When speed matters
+<li><a accesskey="4" href="atha.html#additionnal-features">additionnal features</a>:  things that can be useful
+</ul>
+
+<!--  -->
+<div class="node">
+<a name="programming-model"></a>
+
+</div>
+
+<h3 class="section">4.1 Programming Model</h3>
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#task-description">task description</a>:  What is a task ? 
+<li><a accesskey="2" href="atha.html#shared-memory">shared memory</a>:  Distributed memory model
+<li><a accesskey="3" href="atha.html#task-samples">task samples</a>:  some kind of tasks
+</ul>
+
+<p><code>KAAPI</code> is a middleware working on Dynamic Acyclic Data flow graphes. 
+Once given this graph, it can dynamically schedule it using a work-stealing algorithm.
+
+   <p>But most distributed computing users are familiar with message passing paradigm, and <code>KAAPI</code> uses an other paradigm:
+     <ol type=1 start=1>
+<li>Describe the task of your graph / program
+<li>Describe the dependencies between your task
+        </ol>
+
+   <p>Once this is done, <code>KAAPI</code> will schedule the taks in an efficient way, making sure that
+
+     <ol type=1 start=1>
+<li>All dependencies are respected
+<li>Parallelism between independant tasks is used as much as possible
+        </ol>
+
+   <p>Of course, this will not work as expected on all kind of graph, but it has been <em>proven</em> to be an
+asymptotically optimal way to schedule tasks from a divided and conquer algorithm, based on <code>fork</code> and <code>join</code> calls.
+
+<!--  -->
+<div class="node">
+<a name="task-description"></a>
+
+</div>
+
+<h4 class="subsection">4.1.1 Task description</h4>
+
+<p>A task in <code>Athapascan</code> is more or less a function object with no side effect. 
+A task execution is somewhat similar to a standard procedure call (Tasks are dynamically created at run time). 
+The only difference is that the created task's execution is fully asynchronous, meaning the creator is not waiting for the execution of the created task to finish to continue with its own execution. 
+So an <code>Athapascan</code> program can be seen as a set of tasks scheduled by the library and distributed among nodes for its execution.
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#task-definition">task definition</a>:  how to define a task
+<li><a accesskey="2" href="atha.html#task-parameters">task parameters</a>:  how to pass parameters to a task
+</ul>
+
+<!--  -->
+<div class="node">
+<a name="task-definition"></a>
+
+</div>
+
+<h5 class="subsubsection">4.1.1.1 Task definition</h5>
+
+<p>A task corresponds to the execution of a  function object, i.e. an object from a class (or structure) having the <code>void operator()(...)</code> defined:
+<pre class="example">     struct <var>user_task</var>
+     {
+       void operator() ( /* formal parameters */ )
+       {
+         /*...*/
+       }
+     };
+</pre>
+   <p>A sequential (hence not asynchronous !) call to this function class is written in C++:
+
+<pre class="example">     user_task() ( /* effective parameters */ ) ;
+</pre>
+   <p>And an asynchronous call to this <em>task</em> is written in <code>Athapascan</code>:
+
+<pre class="example">     a1::Fork&lt; <var>user_task</var> &gt; () ( /* effective parameters */ ) ;
+</pre>
+   <p>See <a href="tuto.html#API">API</a> for a detailed description of the <code>a1::Fork</code> usage.
+
+   <p>Note that this does <em>not</em> provide a way to describe dependencies between tasks. 
+Dependencies are described through the use of <em>formal parameters</em>.
+
+<!--  -->
+<div class="node">
+<a name="task-parameters"></a>
+
+</div>
+
+<h5 class="subsubsection">4.1.1.2 Task parameters</h5>
+
+<p>In C++, the formal parameters can be either passed by
+     <dl>
+<dt><em>copy</em><dd>It as a read only meaning: parameters passed by copy are read by the function, but cannot be modified. 
+It is a <em>read dependency</em>.
+
+     <br><dt><em>reference</em><dd>It as a read / write meaning: parameters can be read and modified by the function. 
+If the parameter is only written, it is a <em>write dependency</em>. 
+Otherwise it is a  <em>read write dependency</em>.
+
+   </dl>
+
+   <p>Unlike functions, tasks will be used in a distibuted environment
+and their parameters will
+     <ul>
+<li>influence their scheduling;
+<li>need to be shared acroos the network  (see <a href="atha.html#serialize-parameters">serialize parameters</a>). 
+</ul>
+
+   <p>Here are the different kinds of parameters allowed for a task:
+
+     <dl>
+<dt><code>T</code><dd>designate a classical <code>C++</code> type that does not affect shared memory. 
+However this type must be communicable (see <a href="atha.html#serialize-parameters">serialize parameters</a>). 
+It will be copied twice with every call. 
+It is a <em>read dependency</em>.
+
+     <br><dt><code>const T &amp;</code><dd>designate a classical constant reference to a <code>C++</code> type that does not affect shared memory. 
+As the above, the type must be communicable (see <a href="atha.html#serialize-parameters">serialize parameters</a>), but it will suffer one less copy. 
+It is a <em>read dependency</em>.
+
+     <br><dt><code>Shared_...&lt; T &gt;</code><dd>designate a parameter that is a reference to a shared object located in the shared memory. 
+<code>T</code> is the type of this object. 
+<code>T</code> must also be communicable (see <a href="atha.html#serialize-parameters">serialize parameters</a>). 
+As explained in <a href="atha.html#shared-memory">shared memory</a>, it is the <code>Athapascan</code> way of describing <em>read dependency</em>,
+<em>write dependency</em> or <em>read write dependency</em>.
+
+   </dl>
+
+   <p>The following kind of parameters are <em>not</em> allowed for a task.
+     <dl>
+<dt><code>T*</code><dd>pointers are linked to local memory. 
+There is no sense in sharing pointers over distibuted memory. 
+<br><dt><code>T&amp;</code><dd>reference are linked to local memory. 
+There is no sense in sharing pointers over distibuted memory. 
+An interesting exception is <code>const</code> references. 
+We know that the object will not be modified, so it can be passed by copy. 
+</dl>
+
+<div class="node">
+<a name="task-samples"></a>
+
+</div>
+
+<h4 class="subsection">4.1.2 Task samples</h4>
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#from-a-procedure">from a procedure</a>:  <code>C</code> procedure to <code>Athapscan</code> task
+</ul>
+
+<div class="node">
+<a name="from-a-procedure"></a>
+
+</div>
+
+<h5 class="subsubsection">4.1.2.1 From a <code>C</code> procedure</h5>
+
+<p>Obviously, a <code>C</code> procedure (i.e. a <code>C</code> function with void as return type) can be directly encapsulated in a <code>C++</code> function class. 
+It becomes a task for Athapascan. 
+Here is an example:
+
+<pre class="example">     /* c procedure */
+     void f ( int i )
+     {
+         printf( "what could I compute with %d ? \n", i );
+     }
+</pre>
+   <p>The transformation to a function class is straight forward:
+<pre class="example">     /* encapsulated procedure */
+     struct f_encapsulated
+     {
+       void operator() ( a1::Shared_r&lt;int&gt; i ) /* i is some formal parameter*/
+       {
+         f( i.read() );
+       }
+     };
+</pre>
+   <!--  -->
+<div class="node">
+<a name="shared-memory"></a>
+
+</div>
+
+<h4 class="subsection">4.1.3 Shared memory</h4>
+
+<p>In the message passing paradigm, developpers manually manage send and receive of data across running programs. 
+In <code>Athapascan</code>, the message are sent by the middleware to share variable among tasks. 
+The user does <em>not</em> need to manage the send and receive, but he must still
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#serialize-parameters">serialize parameters</a>:  manage the serialization of data sent over the network
+<li><a accesskey="2" href="atha.html#dependencies-description">dependencies description</a>:  manage dependecies through task parameters read acces
+</ul>
+
+<!--  -->
+<div class="node">
+<a name="serialize-parameters"></a>
+
+</div>
+
+<h5 class="subsubsection">4.1.3.1 Serialize parameters</h5>
+
+<p>Using a distributed architecture means handling data located in shared memory (mapping, migration, consistency). 
+This implies a serialization step for the arguments of tasks. 
+This serialization has to be explicitly done by the programmer to suit the specific needs of the program.
+
+   <p><code>Athapascan</code> already handles some types:
+     <ul>
+<li>the following <code>C++</code> basic types
+<pre class="verbatim">     char
+     short
+     int
+     long
+     float
+     double
+</pre>
+<li>some types from the STL
+<pre class="verbatim">     vector&lt;...>
+     string
+     pair&lt;...,...>
+</pre>
+</ul>
+
+   <p>Using this communicable types, you can define other communicable types. 
+To do this, a type <var>T</var> must have
+     <ul>
+<li>an empty constructor: <var>T</var><code>()</code> ;
+<li>a copy constructor: <var>T</var><code>(const &amp; </code><var>T</var><code>)</code> ;
+<li>a serializing operator: <code>a1::OStream&amp; operator&lt;&lt;( a1::OStream&amp; </code><var>output_stream</var><code>, const </code><var>T</var><code>&amp; </code><var>x</var><code> )</code>
+which puts into the <var>output_stream</var> the information needed to reconstruct an image of <var>x</var> using the <code>operator &gt;&gt;</code> ;
+<li>a deserializing operator: <code>a1::IStream&amp; operator&gt;&gt;( a1::IStream&amp; </code><var>input_stream</var><code>, </code><var>T</var><code>&amp; </code><var>x</var><code>)</code>
+which takes from the <var>input_stream</var> the information needed to construct the object <var>x</var>; it initializes <var>x</var> with the value related to the information from  <var>input_stream</var>. 
+</ul>
+
+   <p>Following code shows a simple way to serialize a class:
+
+<pre class="example">     struct Complex
+     {
+       double x;
+       double y;
+     
+       //empty constructor
+       Complex()
+         :x(0),y(0) {}
+     
+       //copy constructor
+       Complex( const Complex&amp; <var>z</var>)
+         :x(<var>z</var>.x),y(<var>z</var>.y) {}
+     
+     };
+     
+     //packing operator
+     a1::OStream&amp; operator&lt;&lt; (a1::OStream&amp; <var>out</var>, const Complex&amp; <var>z</var>)
+     {
+       return <var>out </var>&lt;&lt; <var>z</var>.x &lt;&lt; <var>z</var>.y;
+     }
+     
+     //unpacking operator
+     a1::IStream&amp; operator&gt;&gt; (a1::IStream&amp; <var>in</var>, Complex&amp; <var>z</var>)
+     {
+       return <var>in </var>&gt;&gt; <var>z</var>.x&gt;&gt; <var>z</var>.y;
+     }
+</pre>
+   <!--  -->
+<div class="node">
+<a name="dependencies-description"></a>
+
+</div>
+
+<h5 class="subsubsection">4.1.3.2 Dependencies description</h5>
+
+<p>In order to respect the sequential consistency (lexicographic order semantic), <code>Athapascan</code> has to identify the value related to a shared object for each read performed. 
+Parallelism detection is easily possible in the context that any task specifies the shared data objects that it will access during its execution (on-the-fly detection of independent tasks), and which type of access it will perform on them (on-the-fly detection of a task's precedence). 
+All manipulated shared data must be declared in the prototype of the task, and to detect the synchronizations between tasks, according to lexicographic semantic, any shared parameter of a task is tagged in the prototype according to the access performed on it. 
+This tag indicates what kind of manipulation the task (and, due to the lexicographic order semantics, all the sub-tasks it will fork) is allowed to perform on the shared object. 
+This tag is called the access right; it appears in the prototype of the task as a suffix of the type of any shared parameter. 
+Four rights can be distingueshed and are presented below: read, write, update and accumulation.
+
+     <dl>
+<dt><em>read right</em><dd><code>a1::Shared_r&lt;</code><var>T</var><code>&gt;</code> is the type of a parameter whose value can only be read using its <code>const </code><var>T</var><code>&amp; read()</code> method. 
+This reading can be concurrent with other tasks referencing this shared object in the same mode.
+
+     <br><dt><em>write right</em><dd><code>a1::Shared_w&lt;</code><var>T</var><code>&gt;</code> is the type of a parameter whose value can only be written using its <code>void write(</code><var>T</var><code>)</code> method. 
+This writing can be concurrent with other tasks referencing this shared data in the same mode. 
+The final value is the last one according to the reference order.
+
+     <br><dt><em>update right</em><dd><code>a1::Shared_rw&lt;</code><var>T</var><code>&gt;</code> is the type of a parameter whoses value can be updated in place; the related value can be read and/or written using the  <var>T</var><code>&amp; access()</code> method. 
+Such an object represents a critical section for the task. 
+This mode is the only one where the address of the physical object related to the shared object is available. 
+It enables the user to call sequential codes working directly with this pointer.
+
+     <br><dt><em>concurrent write right</em><dd><code>a1::Shared_cw&lt;</code><var>T</var><code>,</code><var>F</var><code>&gt;</code> is the type of a parameter whose value can only be accumulated with respect to the user defined function class <var>F</var>. 
+The resulting value of the concurrent write is an accumulation of all other values written by a call to this function, through the use of the <code>void cumul(</code><var>T</var> method.
+
+   </dl>
+
+   <p>For a more in-depth description of the shared parameters, please refer to the <a href="tuto.html#API">API</a>.
+
+<!--  -->
+<div class="node">
+<a name="programing-environnment"></a>
+
+</div>
+
+<h3 class="section">4.2 Programming environment</h3>
+
+<p>Now that the basic programming model has been described, let us see how it is implemented. 
+To do so we need to
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#initialize-the-library">initialize the library</a>:  parse arguments and create the first task
+<li><a accesskey="2" href="atha.html#define-task">define task</a>:  describe the program architecture
+<li><a accesskey="3" href="atha.html#spawn-task">spawn task</a>:  dynamically fill the graph
+</ul>
+
+<!--  -->
+<div class="node">
+<a name="initialize-the-library"></a>
+
+</div>
+
+<h4 class="subsection">4.2.1 Initialize the library</h4>
+
+<p>The execution of an <code>Athapascan</code> program is handled by a <code>a1::Community</code>. 
+A community restructures a group of nodes so that they can be distributed to the different parallel machines. 
+Therefore, prior to the declaration of any Athapascan object or task, a community must be created. 
+Currently, this community only contains the group of nodes defined at the start of the application.
+
+   <p>Once the community has been created, tasks can be created and submited to the community (see <a href="atha.html#spawn-task">spawn task</a>).
+
+   <p>The library header must first be included to get all prototypes:
+This defines the <code>a1</code> namespace.
+<pre class="example">     #include &lt;athapascan-1&gt;
+</pre>
+   <p>Usually the community is defined in the main method of the program.
+
+<pre class="example">     int main( int argc, char** argv )
+     {
+</pre>
+   <p><code>Athapscan</code> reads its parameters from the program arguments
+<!-- ( see @ref{launching athapscan} ). -->
+They are used to initialize the <code>Community</code>.
+<pre class="example">         a1::Community com = a1::System::join_community( argc, argv );
+</pre>
+   <p>A main task is then spawned. Its prototype is strictely defined: it must define the
+<code>void operator()(int </code><var>argc</var><code>, char **</code><var>argv</var><code>)</code>. 
+It is called <var>doit</var> in the following
+<pre class="example">         a1::ForkMain&lt;doit&gt;()(argc, argv);
+</pre>
+   <p>The starter is hit once we ask to leave the community. 
+A community can only be left if it contains no task.
+<pre class="example">         com.leave();
+</pre>
+   <p>It is often considered to do some cleanup before exiting
+<pre class="example">         a1::System::terminate();
+         return 0;
+     }
+</pre>
+   <p>Now let us define our first task.
+
+<!--  -->
+<div class="node">
+<a name="define-task"></a>
+
+</div>
+
+<h4 class="subsection">4.2.2 Define task</h4>
+
+<p>The task <var>doit</var> should contain the code to be executed in parallel. 
+It is often only a matter of spawning additionnal tasks (hopefully in a recursive way). 
+But let say we just want to print a "hello world".
+
+   <p>First, a task is nothing else than a structure:
+<pre class="example">     struct doit
+     {
+</pre>
+   <p>Second it is also a function obect. As described in <a href="atha.html#initialize-the-library">initialize the library</a>, the <var>doit</var> task
+has specific parameters
+<pre class="example">         void operator()(int <var>argc</var>, char **<var>argv</var>)
+         {
+</pre>
+   <p>The body is known across the world (let us suppose we added <code>#include &lt;iostream&gt;</code> in the header)
+<pre class="example">             std::cout &lt;&lt; "hello world !" &lt;&lt; std::endl;
+        }
+</pre>
+   <p>For <code>Java</code> addict, do not forget to close the structure !
+<pre class="example">     };
+</pre>
+   <p>This is your first Task. 
+Executing it will not result in a parallel execution. 
+We need more task to feed our scheduler. 
+What about a simple sum ? 
+The <code>C</code> procedure would be
+<pre class="example">     int sum(int <var>n</var>, int <var>p</var>);
+</pre>
+   <p>Let us do some semantic analysis to make it a task:
+     <dl>
+<dt><var>n</var><dd>is read by <code>sum</code> : it will become a <code>a1::Shared_r&lt;int&gt;</code> ! 
+<br><dt><var>p</var><dd>is also read by <code>sum</code> : it will become a <code>a1::Shared_r&lt;int&gt;</code> ! 
+<br><dt><var>return value</var><dd>is written by <code>sum</code> : it will become a <code>a1::Shared_w&lt;int&gt;</code> ! 
+</dl>
+
+   <p>So once our task defined:
+<pre class="example">     struct sum_task
+     {
+     };
+</pre>
+   <p>We can provide it with the good <code>operator() </code>
+
+<pre class="example">         void operator()( a1::Shared_r&lt;int&gt; <var>n</var>, a1::Shared_r&lt;int&gt; <var>p</var>, a1::Shared_w&lt;int&gt; <var>r</var>)
+         {
+         }
+</pre>
+   <p>The body should be a simple call to the <code>C</code> procedure <code>sum</code>. 
+But we need to access the content of the shared data (see <a href="tuto.html#API">API</a> for a list of available methods).
+     <dl>
+<dt><var>n</var><code>.read()</code><dd>will read the content of <var>n</var>
+<br><dt><var>p</var><code>.read()</code><dd>will read the content of <var>p</var>
+<br><dt><var>r</var><code>.write(</code><var>val</var><code>)</code><dd>will write <var>val</var> in <var>r</var>. 
+</dl>
+
+   <p>so the body is
+<pre class="example">             <var>r</var>.write( sum( <var>n</var>.read(), <var>p</var>.read() ) );
+</pre>
+   <!--  -->
+<div class="node">
+<a name="spawn-task"></a>
+
+</div>
+
+<h4 class="subsection">4.2.3 Spaw task</h4>
+
+<p>Now that we have defined our first real task <var>sum_task</var>,
+it is time to spawn it. 
+let us go back to our <var>doit</var> special task, and modify it a bit
+<pre class="example">     struct doit
+     {
+         void operator()(int <var>argc</var>, char **<var>argv</var>)
+         {
+             if( <var>argc</var> != 3 )
+                 return;
+             int <var>n</var> = atoi(<var>argv</var>[1]);
+             int <var>p</var> = atoi(<var>argv</var>[2]);
+             int <var>r</var>;
+             <var>r</var> = sum(<var>n</var>,<var>p</var>);
+             std::cout &lt;&lt; <var>r</var> &lt;&lt; std::endl;
+         }
+     };
+</pre>
+   <p>But we want to use our task ! 
+The task takes <code>a1::Shared</code> parameters, so
+<pre class="example">             a1::Shared&lt;int&gt; <var>n</var> = atoi(<var>argv</var>[1]);
+             a1::Shared&lt;int&gt; <var>p</var> = atoi(<var>argv</var>[2]);
+             a1:/Shared&lt;int&gt; <var>r</var>;
+</pre>
+   <p>Once intialized, you can<em>not</em> access the content of the shared variable from this task ! 
+It can only be accessed by other tasks with proper access right. 
+This is easy to understand. Has task calls are asynchrnonous, it is hazardous to access them in an uncontrolled way. 
+Task dependencies will take the control.
+
+   <p>Now spawn the task to get an asynchronous call to <code>sum_task</code>
+<pre class="example">             a1::Fork&lt; sum_task &gt; () ( <var>n</var>, <var>p</var>, <var>r</var> );
+</pre>
+     <dl>
+<dt><em>Question</em><dd>But what if I want the result ?You just wrote it is impossible to read from <var>r</var>! 
+<br><dt><em>Answer</em><dd>Create a new task that will read <var>r</var> with proper access right !
+     <pre class="example">          struct read_task
+          {
+              void operator() ( a1::Shared_r&lt;int&gt; <var>r</var> )
+              {
+                  std::cout &lt;&lt; <var>r</var>.read() &lt;&lt; std::endl;
+              }
+          };
+</pre>
+     </dl>
+
+<!--  -->
+<div class="node">
+<a name="performance"></a>
+
+</div>
+
+<h3 class="section">4.3 When speed matters</h3>
+
+<p>It is important to understand that a work stealing sceduling is efficent only if
+the data flow graph is deep, and grows in a fork / join style. 
+But
+     <ul>
+<li>if the tasks are too small, the cost of task creation / scheduling outperforms the cost of task execution, which leads to poor performance
+<li>if too few tasks are created, CPU power may be lost
+</ul>
+
+   <p>That's why we need a <em>threshold</em>. A threshold is a constant that control when we should stop to create Tasks
+to execute the sequential algorithm. 
+It often looks like this
+<pre class="example">     struct task
+     {
+         void operator()(/* parameters */)
+         {
+             if( size &lt; threshold )
+                 /* sequential_call */
+             else
+                 /* fork new task */
+         }
+     };
+</pre>
+   <p>The fibonnaci example behaves like this. 
+Choosing the threshold is a matter of test and experiments, but it is <strong>really</strong> important.
+
+<!--  -->
+<div class="node">
+<a name="additionnal-features"></a>
+
+</div>
+
+<h3 class="section">4.4 Additionnal feeatures</h3>
+
+<p>Tasks and shared parameters are the basics of <code>Athapascan</code>. 
+But it is not always enough to write real-life programs ! 
+Take a look at
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#global-memory">global memory</a>:  when shared memory is not enough
+<li><a accesskey="2" href="atha.html#sharing-arrays">sharing arrays</a>:  dealing with pointer hell
+<li><a accesskey="3" href="atha.html#control-task-creation">control task creation</a>:  where are the tasks created, and when do they stop
+<li><a accesskey="4" href="atha.html#use-classical-algorithms">use classical algorithms</a>:  for simple cases
+</ul>
+
+<!--  -->
+<div class="node">
+<a name="global-memory"></a>
+
+</div>
+
+<h4 class="subsection">4.4.1 Global memory</h4>
+
+<p>The current release of <code>Athapascan</code> provides the <code>a1::MonotonicBound</code> template that allows several processes to read or update a bound that increases or decreases monotonically. 
+Such a variable has a system wide identifier that should be defined during the declaration. 
+It is communicable and could be a parameter of tasks.
+
+   <p>To declare a <code>a1::MonotonicBound</code>, you must provide the string identifier and two tempalte parameters:
+     <ol type=1 start=1>
+<li>the type of the variable updated, <var>T</var>
+<li>the type of the function obect used to update the variable, <var>F</var>
+        </ol>
+
+<pre class="example">     /* raw initialization */
+     a1::MonotonicBound&lt;T,F&gt; a ("B&amp;B bound");
+     /* initialization by value */
+     a1::MonotonicBound&lt;T,F&gt; b ( "another B&amp;B bound", new T(/*...*/) );
+</pre>
+   <p>The update function <var>F</var> is a function class that should has an <code>operator()</code> with the following signature.
+<pre class="example">     template &lt; class T&gt; struct F
+     {
+       bool operator()( T&amp; res, const T&amp; val);
+     };
+</pre>
+   <p>The return value of the operator is true if and only if the local value has been updated. 
+In this, case during the invocation of the release, the protocol will broadcast the new local bound to all other processors which update their bound in the same way.
+
+   <p>For instance, the definition of the operator that compute the maximal value could be:
+
+<pre class="example">     struct Max
+     {
+       bool operator()( long&amp; result, const long&amp; value)
+       {
+         if (result &lt; value)
+         {
+           result = value;
+           return true;
+         }
+         return false;
+       }
+     };
+</pre>
+   <p>To read (and only read) the value of a <code>a1::MonotonicBound</code>, a lock is to be taken on the value, then a call to the <code>read</code> method.
+<pre class="example">     <var>a</var>.acquire();
+     <var>a</var>.read(); // return a const T&amp; on the value
+     <var>a</var>.release();
+</pre>
+   <p>To update the value of  a <code>a1::MonotonicBound</code>, use the <code>update</code> method
+<pre class="example">     <var>a</var>.update(<var>new_val</var>);
+</pre>
+   <!--  -->
+<div class="node">
+<a name="sharing-arrays"></a>
+
+</div>
+
+<h4 class="subsection">4.4.2 Sharing arrays</h4>
+
+<p>As said in <a href="atha.html#task-parameters">task parameters</a>, tasks parameters are not allowed to be pointers. 
+But High performance Computing make an extensive use of arrays, so what ?
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="atha.html#arrays-through-structures">arrays through structures</a>:  encapsulate your arrays
+<li><a accesskey="2" href="atha.html#arrays-through-verctors">arrays through verctors</a>:  <code>std::vector</code> support
+<li><a accesskey="3" href="atha.html#arrays-through-iterators">arrays through iterators</a>:  iterate on remore arrays
+</ul>
+
+<!--  -->
+<div class="node">
+<a name="arrays-through-structures"></a>
+
+</div>
+
+<h5 class="subsubsection">4.4.2.1 Arrays through structures</h5>
+
+<p>If you hae a static array, whose size never change, the best option is to encapsulate it in
+a structure. To use
+<pre class="example">     int <var>my_array</var>[256];
+</pre>
+   <p>You define a new communicable structure
+<pre class="example">     structure int_array_256
+     {
+         int array[256];
+         int_array_256() {}
+         int_array_256(const int_array_256&amp; <var>a</var>)
+         {
+             std::copy(<var>a</var>,  <var>a</var> +256, array);
+         }
+     };
+     
+     //packing operator
+     a1::OStream&amp; operator&lt;&lt; (a1::OStream&amp; <var>out</var>, const int_array_256&amp; <var>i</var>)
+     {
+         for(int j=0; j&lt;256;j++)
+             <var>out </var> &lt;&lt; <var>i</var>[j];
+         return <var>out </var>;
+     }
+     
+     //unpacking operator
+     a1::IStream&amp; operator&gt;&gt; (a1::IStream&amp; <var>in</var>, int_array_256&amp; <var>i</var>)
+     {
+         for(int j=0; j&lt;256;j++)
+             <var>in</var> &gt;&gt; <var>i</var>[j];
+         return <var>in</var>;
+     }
+</pre>
+   <p>And you can now use it as a formal parameter of your task. 
+Yet note that the copy introduce by such a structure is rarely worth the price !
+
+<!--  -->
+<div class="node">
+<a name="arrays-through-verctors"></a>
+
+</div>
+
+<h5 class="subsubsection">4.4.2.2 Arrays through verctors</h5>
+
+<p>If you want to share value from an array, the best tool is the <code>std::vector</code> class. 
+The <code>std::vector</code> class is communicable.
+<pre class="example">      std::vector&lt;int&gt; <var>v</var>(256);
+      std::fill( <var>v</var>.begin(), <var>v</var>.end(), 42);
+      a1::Shared&lt; std::vector&lt;int&gt; &gt; <var>shared_vector</var> = <var>v</var>;
+      a1::Fork&lt;a_task&gt; () ( <var>shared_vector</var> );
+</pre>
+   <!--  -->
+<div class="node">
+<a name="arrays-through-iterators"></a>
+
+</div>
+
+<h5 class="subsubsection">4.4.2.3 Arrays through iterators</h5>
+
+<p>A remote iterator is a communicable type used to keep the reference of an array across the network, thus allowing access to large amount of remote data. 
+This does not provide any synchronization as a Shared does, so you have to manage dependencies using other means (usually a fake Shared dependencie).
+
+   <p>To use remote iterators, you first declare them, and then init them from a local data
+<pre class="example">     int array[256];
+     // for read-write access
+     a1::remote&lt;int*&gt; begin, end;
+     a1::init(begin, end, array, array + 256);
+     // for read only access
+     a1::const_remote&lt;int*&gt; cbegin, cend;
+     a1::init(cbegin, cend, array, array + 256);
+</pre>
+   <p>The <code>const_remote</code> class will give you a read-only iterator, while the <code>remote</code> class will give you read-write access.
+
+   <p>You can now use the remote iterators as you would use random access iterators : incrementation, copy, dereferencing and so on is allowded. 
+Of course those iterator can be used as arguments of any STL algoroithm as native iterator would. 
+They have the Random access iterator tag. 
+As they are communicable, you can pass them as parameters to an athapascan'task.
+
+   <p>To get a reference on data pointed by the iteratore, you must first ensure a copy of the real data is available on your local machine. 
+You must do so using the <code>fetch</code> function :
+Not using the fetch function may result in a SEGFAULT, for you're trying to access data that may not exist in memory.
+
+<pre class="example">     struct task
+     {
+         void operator() ( a1::remote&lt;int*&gt; b, a1::remote&lt;int*&gt; e)
+         {
+             size_t n = e -b;
+             if( n &lt; 4)
+             {
+                 a1::fetch(b,e);
+                 while(b&lt;e)
+                     std::cout &lt;&lt; *b++ &lt;&lt; std::endl;
+             }
+             else
+             {
+                 a1::Fork&lt;task&gt;()( b, b+n/2);
+                 a1::Fork&lt;task&gt;()( b +n/2, e);
+             }
+         }
+     };
+</pre>
+   <p>No guarantee is given if the split overrides. Try to avoid it. 
+The detailed interface is given in <a href="tuto.html#API">API</a>.
+
+<!--  -->
+<div class="node">
+<a name="control-task-creation"></a>
+
+</div>
+
+<h4 class="subsection">4.4.3 Control task creation</h4>
+
+<p>You sometime want to merge distributed and sequential code. 
+To do this, you must ensure that all tasks have been executed. 
+<code>a1::SyncGuard</code> comes handy there. 
+It is a class that ensures that every task spawned betwwen the creation of an object of type <code>a1::SyncGuard</code>
+and its destruction are executed.
+<pre class="example">     struct task
+     {
+         void operator()()
+         {
+             // all tasks
+             {
+                 // from here
+                     a1::SyncGuard s;
+                     a1::Fork&lt;task1&gt;()();
+                     a1::Fork&lt;task2&gt;()();
+                 // to here
+             }
+             // have finished when I arrive here
+             a1::Fork&lt;task3&gt;()();
+         }
+     };
+</pre>
+   <p>This is often usefull, but beware, it may lower the parallism !
+
+   <p>Once a task is created, you have no control over where it will be executed. 
+It is not a problem if the task had no side effect. 
+But they sometime have, so you can specify attribute to the <code>Fork</code> operator. 
+The most useful attribute is <code>a1::SetLocal</code> which ensure the task will be executed by the process that spawned it. 
+It can be used when preformance matters, or to access local memory.
+<pre class="example">     a1::Fork&lt;task&gt;(a1::SetLocal)(/* task arguments */);
+</pre>
+   <p>Here is a little trick to read from local memory. 
+It uses both <code>a1::SetLocal</code> and <code>a1::SyncGuard</code>. 
+See
+<pre class="example">     int global_int;
+     struct task
+     {
+         void operator()(a1::Shared_r&lt;int&gt; i)
+         {
+             global_int = i.read();
+         }
+     };
+     
+     struct doit
+     {
+         void operator()(int , char **)
+         {
+             a1::Shared&lt;int&gt; i;
+             {
+                 a1::SyncGuard s;
+                 // some_task writes in i
+                 a1::Fork&lt;some_task&gt;()(i);
+                 // task cannot be stolen !
+                 a1::Fork&lt;task&gt;(a1::SetLocal)(i)
+             }
+             // global_int is up to date thanks to the guard
+             std::cout &lt;&lt; global_int &lt;&lt; std::endl;
+         }
+     };
+</pre>
+   <!--  -->
+<div class="node">
+<a name="use-classical-algorithms"></a>
+
+</div>
+
+<h4 class="subsection">4.4.4 Use classical algorithms</h4>
+
+<p>For ease of use, <code>Athapascan</code> offers some high level algorithms, with an interface and a semantic very similar to <code>STL</code> ones. 
+Once <code>Athapascan</code> has been started and the main task forked, you can freely use any of those algorithms.
+
+   <p>Thoses algortihms are described in <a href="tuto.html#API">API</a>, but here is a quick list:
+     <ul>
+<li><code>a1::sort</code>
+<li><code>a1::stable_sort</code>
+<li><code>a1::transform</code>
+<li><code>a1::for_each</code>
+<li><code>a1::find_if</code>
+<li><code>a1::find</code>
+</ul>
+
+<div class="node">
+<a name="tutorials"></a>
+
+</div>
+
+
+</div>
+
+<div id="left">
+<h2>Navigation</h2>
+<ul>
+<li><a href="http://kaapi.gforge.inria.fr">Home Page</a></li>
+<li><a href="http://kaapi.gforge.inria.fr/doc/index.html">Documentation</a>
+<!-- DOCS !-->
+    <ul>
+        <li><a href="install.html">Installation Guide</a></li>
+        <li><a href="compile_run.html">Compile and Run instructions</a></li>
+        <li><a href="atha.html">Athapascan Overview</a></li>
+        <li><a href="tuto.html">Tutorials</a></li>
+        <li><a href="api.html">API</a></li>
+        <li><a href="annotated.html">Doxygen documentation</a></li>
+    </ul>
+
+</li>
+
+<li><a href="http://kaapi.gforge.inria.fr/download.html">Download</a></li>
+<li><a href="http://gforge.inria.fr/projects/kaapi">GForge</a></li>
+</ul>
+
+</div>
+
+<div id="clear">
+<a href="http://www.inria.fr"><img src="INRIA-75x55.png" alt="INRIA" style="float:left;"/></a> <a href="http://lig.imag.fr"><img src="LIG-75x55.png" alt="LIG" style="float:left;" /></a>
+ </div>
+
+<div id="footer">
+serge guelton | Design by <a href="http://www.minimalistic-design.net">Minimalistic Design</a>
+</div>
+
+<!-- If needed, change the copyright block at the bottom. In general, -->
+<!-- all pages on the GNU web server should have the section about    -->
+<!-- verbatim copying.  Please do NOT remove this without talking     -->
+<!-- with the webmasters first. --> 
+<!-- Please make sure the copyright date is consistent with the document -->
+<!-- and that it is like this "2001, 2002" not this "2001-2002." -->
+</div><!-- for id="content", starts in the include above -->
+<!--#include virtual="/server/footer-min.html" -->
+</div>
+</body>
+</html>

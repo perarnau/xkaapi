@@ -1,0 +1,19 @@
+<map id="G" name="G">
+<area shape="rect" id="node9" href="$class_r_f_o_1_1_closure.html" title="A closure object is a call to a function. It is also called task.Closure of type..." alt="" coords="573,325,688,355"/>
+<area shape="rect" id="node2" href="$class_core_1_1_condition.html" title="Condition to signal end of steal operationThis class implements one method for synchronisation..." alt="" coords="176,299,307,328"/>
+<area shape="rect" id="node4" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="7,299,108,328"/>
+<area shape="rect" id="node6" href="$class_r_f_o_1_1_closure_attribut.html" title="Type of attribut for a closureThis type allows to code attribut for a closure on..." alt="" coords="159,352,324,381"/>
+<area shape="rect" id="node11" href="$class_d_f_g_1_1_task_delete.html" title="DFG::TaskDelete" alt="" coords="771,5,912,35"/>
+<area shape="rect" id="node13" href="$class_d_f_g_1_1_task_signal.html" title="DFG::TaskSignal" alt="" coords="773,59,909,88"/>
+<area shape="rect" id="node15" href="$struct_r_f_o_1_1_thread_1_1_type_context.html" title="RFO::Thread::TypeContext" alt="" coords="737,112,945,141"/>
+<area shape="rect" id="node17" href="$struct_sched_1_1_broadcast_task.html" title="Sched::BroadcastTask" alt="" coords="753,165,929,195"/>
+<area shape="rect" id="node19" href="$struct_sched_1_1_copy_task.html" title="Sched::CopyTask" alt="" coords="772,219,911,248"/>
+<area shape="rect" id="node21" href="$struct_sched_1_1_partition_task.html" title="Sched::PartitionTask" alt="" coords="760,272,923,301"/>
+<area shape="rect" id="node23" href="$struct_sched_1_1_receive_task.html" title="Sched::ReceiveTask" alt="" coords="760,325,923,355"/>
+<area shape="rect" id="node25" href="$struct_sched_1_1_reduce_task.html" title="Sched::ReduceTask" alt="" coords="763,379,920,408"/>
+<area shape="rect" id="node27" href="$struct_sched_1_1_signal_ctrl_task.html" title="Sched::SignalCtrlTask" alt="" coords="755,432,928,461"/>
+<area shape="rect" id="node29" href="$struct_sched_1_1_start_task.html" title="Sched::StartTask" alt="" coords="772,485,911,515"/>
+<area shape="rect" id="node31" href="$struct_sched_1_1_wait_ctrl_task.html" title="Sched::WaitCtrlTask" alt="" coords="761,539,921,568"/>
+<area shape="rect" id="node33" href="$struct_sched_1_1_wait_end_task.html" title="Sched::WaitEndTask" alt="" coords="760,592,923,621"/>
+<area shape="rect" id="node35" href="$struct_sched_1_1_wait_task.html" title="Sched::WaitTask" alt="" coords="773,645,909,675"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="39,107,140,136"/>
+<area shape="rect" id="node4" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="5,8,165,37"/>
+<area shape="rect" id="node6" href="$class_util_1_1_global_pointer.html" title="GlobalPointer is a pointer on data on a remote processThis class allows to mask heterogeneous..." alt="" coords="167,107,316,136"/>
+<area shape="rect" id="node8" href="$class_util_1_1_pointer.html" title="Util::Pointer" alt="" coords="189,8,293,37"/>
+<area shape="rect" id="node10" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="317,8,429,37"/>
+</map>

@@ -1,0 +1,10 @@
+<map id="G" name="G">
+<area shape="rect" id="node5" href="$class_f_t_1_1_checkpoint_server.html" title="FT::CheckpointServer" alt="" coords="475,5,648,35"/>
+<area shape="rect" id="node7" href="$class_f_t_1_1_failure_detector_coordinator.html" title="FailureDetectorCooridnator objectThis object represents the failure detector coordinator..." alt="" coords="441,59,681,88"/>
+<area shape="rect" id="node9" href="$class_n_s_1_1_server.html" title="NS::Server" alt="" coords="513,112,609,141"/>
+<area shape="rect" id="node11" href="$class_stat_1_1_statistics_service.html" title="Distributed collection of counters to collect in order to produce statisticsServer..." alt="" coords="475,165,648,195"/>
+<area shape="rect" id="node13" href="$class_util_1_1_event_buffer_manager.html" title="A Generic Buffer Manager : EventBufferManager EventBufferManager is an implementation..." alt="" coords="460,219,663,248"/>
+<area shape="rect" id="node15" href="$class_util_1_1_kill_service.html" title="Default implementation for Signal serviceThis class implements default behavior for..." alt="" coords="497,272,625,301"/>
+<area shape="rect" id="node2" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="5,139,168,168"/>
+<area shape="rect" id="node17" href="$class_ctrl_1_1_kill_service_client.html" title="Client to the KillService, replace the default Util::killservice instance." alt="" coords="732,272,903,301"/>
+</map>

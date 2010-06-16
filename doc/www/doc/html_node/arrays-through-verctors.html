@@ -1,0 +1,160 @@
+<html lang="en">
+<head>
+<title>arrays through verctors - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="sharing-arrays.html#sharing-arrays" title="sharing arrays">
+<link rel="prev" href="arrays-through-structures.html#arrays-through-structures" title="arrays through structures">
+<link rel="next" href="arrays-through-iterators.html#arrays-through-iterators" title="arrays through iterators">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="arrays-through-verctors"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="arrays-through-iterators.html#arrays-through-iterators">arrays through iterators</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="arrays-through-structures.html#arrays-through-structures">arrays through structures</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="sharing-arrays.html#sharing-arrays">sharing arrays</a>
+<hr>
+</div>
+
+<h5 class="subsubsection">4.4.2.2 Arrays through verctors</h5>
+
+<p>If you want to share value from an array, the best tool is the <code>std::vector</code> class. 
+The <code>std::vector</code> class is communicable.
+<pre class="example">      std::vector&lt;int&gt; <var>v</var>(256);
+      std::fill( <var>v</var>.begin(), <var>v</var>.end(), 42);
+      a1::Shared&lt; std::vector&lt;int&gt; &gt; <var>shared_vector</var> = <var>v</var>;
+      a1::Fork&lt;a_task&gt; () ( <var>shared_vector</var> );
+</pre>
+   <!--  -->
+   </body></html>
+

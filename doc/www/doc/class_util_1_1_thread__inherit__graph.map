@@ -1,0 +1,28 @@
+<map id="G" name="G">
+<area shape="rect" id="node5" href="$class_core_1_1_processor.html" title="KAAPI ProcessorProcessor manages scheduling of a set of threads with at most one..." alt="" coords="396,5,529,35"/>
+<area shape="rect" id="node7" href="$class_core_1_1_thread.html" title="Flow of controlA Core::Thread is a flow of control which consist of its runtime environnement..." alt="" coords="405,59,520,88"/>
+<area shape="rect" id="node19" href="$class_f_d_n_e_t_1_1_device_1_1_dispatcher.html" title="FDNET::Device::Dispatcher" alt="" coords="356,112,569,141"/>
+<area shape="rect" id="node21" href="$class_f_t_1_1_c_c_k_checkpoint_coordinator.html" title="CCK coordinator." alt="" coords="344,165,581,195"/>
+<area shape="rect" id="node23" href="$class_f_t_1_1_c_c_k_global_restart_coordinator.html" title="FT::CCKGlobalRestartCoordinator" alt="" coords="336,219,589,248"/>
+<area shape="rect" id="node25" href="$class_f_t_1_1_c_c_k_global_restart_local_controller.html" title="FT::CCKGlobalRestartLocalController" alt="" coords="324,272,601,301"/>
+<area shape="rect" id="node27" href="$class_f_t_1_1_c_c_k_local_checkpoint_controller.html" title="FT::CCKLocalCheckpointController" alt="" coords="332,325,593,355"/>
+<area shape="rect" id="node29" href="$class_f_t_1_1_c_c_k_restart_coordinator.html" title="FT::CCKRestartCoordinator" alt="" coords="357,379,568,408"/>
+<area shape="rect" id="node31" href="$class_f_t_1_1_c_c_k_restart_local_controller.html" title="FT::CCKRestartLocalController" alt="" coords="345,432,580,461"/>
+<area shape="rect" id="node33" href="$class_f_t_1_1_checkpoint_server.html" title="FT::CheckpointServer" alt="" coords="376,485,549,515"/>
+<area shape="rect" id="node35" href="$class_f_t_1_1_t_i_c_restart.html" title="TIC restarter." alt="" coords="401,539,524,568"/>
+<area shape="rect" id="node37" href="$class_m_a_n_e_t_1_1_device_1_1_dispatcher.html" title="MANET::Device::Dispatcher" alt="" coords="355,592,571,621"/>
+<area shape="rect" id="node39" href="$class_m_y_n_e_t_1_1_device_1_1_request___handler.html" title="MYNET::Device::Request_Handler" alt="" coords="332,645,593,675"/>
+<area shape="rect" id="node41" href="$class_net_1_1_i_o_daemon.html" title="Net::IODaemon" alt="" coords="396,699,529,728"/>
+<area shape="rect" id="node43" href="$class_s_o_c_k_n_e_t_1_1_device_1_1_dispatcher.html" title="SOCKNET::Device::Dispatcher" alt="" coords="345,752,580,781"/>
+<area shape="rect" id="node45" href="$class_s_o_c_k_n_e_t_1_1_device_1_1_scavanger.html" title="SOCKNET::Device::Scavanger" alt="" coords="347,805,579,835"/>
+<area shape="rect" id="node47" href="$class_t_a_k_t_u_k_n_e_t_1_1_device_1_1_dispatcher.html" title="TAKTUKNET::Device::Dispatcher" alt="" coords="337,859,588,888"/>
+<area shape="rect" id="node49" href="$class_u_d_p_n_e_t_1_1_device_1_1_dispatcher.html" title="UDPNET::Device::Dispatcher" alt="" coords="351,912,575,941"/>
+<area shape="rect" id="node51" href="$class_util_1_1_event_buffer_manager.html" title="A Generic Buffer Manager : EventBufferManager EventBufferManager is an implementation..." alt="" coords="361,965,564,995"/>
+<area shape="rect" id="node53" href="$class_util_1_1_event_daemon.html" title="Util::EventDaemon" alt="" coords="385,1019,540,1048"/>
+<area shape="rect" id="node2" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="5,512,120,541"/>
+<area shape="rect" id="node9" href="$class_r_f_o_1_1_thread.html" title="Flow of control with data flow graph representationThe RFO::Thread represents computation..." alt="" coords="652,59,764,88"/>
+<area shape="rect" id="node11" href="$class_d_f_g_1_1_thread.html" title="Flow of control with data flow graph representationThe DFG threads inherits from..." alt="" coords="813,59,928,88"/>
+<area shape="rect" id="node13" href="$class_sched_1_1_thread.html" title="Flow of control with data flow graph representation." alt="" coords="977,5,1103,35"/>
+<area shape="rect" id="node15" href="$class_w_s_1_1_loc_thread.html" title="KAAPI leader thread definition." alt="" coords="976,59,1104,88"/>
+<area shape="rect" id="node17" href="$class_w_s_1_1_slv_thread.html" title="KAAPI leader thread definition." alt="" coords="979,112,1101,141"/>
+</map>
