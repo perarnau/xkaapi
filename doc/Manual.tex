@@ -146,20 +146,25 @@ The following compiles the sample applications:
 $> cd examples; make examples
 \end{verbatim}
 
-\section{Using \kaapi}
-
+\section{Programmnig with \kaapi}
 \subsection{\kaapi integration}
 Integrating \kaapi in your project requires the following steps:
 \begin{itemize}
-\item include the header files. Example:
+\item include the header files in your source code. Example:
 \begin{verbatim} 
 #include <kaapi.h> /* C version */
 #include <kaapi++> // C++ version
 \end{verbatim}
-\item link with the library. Example:
+\item add compilation options to your project using pkg-config.
+Note that if you changed the default install directory during
+the configuration process, the PKG\_CONFIG\_PATH environment
+variable must point to \textit{install\_dir/pkgconfig/}.
+Example:
 \begin{verbatim} 
-gcc -o main main.c -lxkaapi /* C version */
-g++ -o main main.cpp -lxkaapixx // C++ version
+# for C applications
+gcc -o main `pkg-config --flags kaapi` main.c `pkg-config --libs kaapi`
+# for C++ applications
+g++ -o main `pkg-config --flags kaapixx` main.c `pkg-config --libs kaapixx`
 \end{verbatim}
 \item the following preprocessor macro must be defined to fully disable
 the debugging code. It can improve the generated code:
@@ -197,6 +202,7 @@ Matrix multiplication using loop parallelization. Implemented using
 the \textit{ka} C++ interface.
 \end{itemize}
 
+\section{Running \kaapi}
 \subsection{Runtime environment variables}
 The runtime behavior can be driven by using the following
 optionnal environment variables.
@@ -275,7 +281,7 @@ Example:
 \end{verbatim}
 
 \item \verb+KAAPI_PERF_PAPIES+\newline
-Asuming \kaapi was configured using --with-papi, this variable contains a
+Assuming \kaapi was configured using --with-papi, this variable contains a
 comma separated list of the PAPI performance counters to use.
 Both counter symbolic names and numeric hexadecimal constants can be used.
 More information can be found on the PAPI website
