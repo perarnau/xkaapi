@@ -50,7 +50,7 @@
 #if (KAAPI_USE_STEALFRAME_METHOD ==KAAPI_STEALCAS_METHOD) 
 #  warning "Use CAS for stealing frame"
 #elif (KAAPI_USE_STEALFRAME_METHOD ==KAAPI_STEALTHE_METHOD)
-#  warning "Use Disjktra like protocol for stealing frame"
+#  warning "Use Dijkstra like protocol for stealing frame"
 #else
 #  error "Bad definition of value for steal frame method"
 #endif
@@ -58,7 +58,7 @@
 #if (KAAPI_USE_STEALTASK_METHOD ==KAAPI_STEALCAS_METHOD) 
 #  warning "Use CAS for stealing task"
 #elif (KAAPI_USE_STEALTASK_METHOD ==KAAPI_STEALTHE_METHOD)
-#  warning "Use Disjktra like protocol for stealing task"
+#  warning "Use Dijkstra like protocol for stealing task"
 #else
 #  error "Bad definition of value for steal frame method"
 #endif

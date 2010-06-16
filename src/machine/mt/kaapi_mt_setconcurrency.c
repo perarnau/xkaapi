@@ -54,32 +54,6 @@ static kaapi_atomic_t barrier_init = {0};
 */
 static kaapi_atomic_t barrier_init2 = {0};
 
-#if HAVE_NUMA_H
-
-#include <numa.h>
-#include <numaif.h>
-
-static inline kaapi_processor_t* allocate_kproc(void)
-{
-  kaapi_processor_t* const kproc =
-    numa_alloc_local(sizeof(kaapi_processor_t));
-  if (kproc == NULL)
-    return NULL;
-
-  memset(kproc, 0, sizeof(kaapi_processor_t));
-
-  return kproc;
-}
-
-#else /* ! HAVE_NUMA_H */
-
-static inline kaapi_processor_t* allocate_kproc(void)
-{
-  return calloc(sizeof(kaapi_processor_t), 1);
-}
-
-#endif /* HAVE_NUMA_H */
-
 /** Create and initialize and start concurrency kernel thread to execute user threads
     TODO: faire une implementation dynamique
       - si appel dans un thread kaapi (kaapi_get_current_processor() !=0)
@@ -155,7 +129,7 @@ int kaapi_setconcurrency( unsigned int concurrency )
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
-      kaapi_all_kprocessors[i] = allocate_kproc();
+      kaapi_all_kprocessors[i] = kaapi_processor_allocate();
       kaapi_assert(0 == pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] ) );
 
       if (kaapi_all_kprocessors[i] ==0) 
@@ -213,9 +187,7 @@ void* kaapi_sched_run_processor( void* arg )
   
   /* force reschedule of the posix thread, we that the thread will be mapped on the correct processor ? */
   sched_yield();
-
-  kproc = kaapi_all_kprocessors[kid] = allocate_kproc();
-
+  kproc = kaapi_all_kprocessors[kid] = kaapi_processor_allocate();
   if (kproc ==0) {
     kaapi_barrier_td_setactive(&barrier_init, 0);
     return 0;

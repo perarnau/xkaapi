@@ -51,12 +51,37 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   thgrp->mainctxt   = _kaapi_get_current_processor()->thread;
-  thgrp->mainthread = kaapi_threadcontext2thread(thgrp->mainctxt);
+  thgrp->threads[-1]= kaapi_threadcontext2thread(thgrp->mainctxt);
   
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
   kaapi_vector_init( &thgrp->ws_vect_input, 0 );
+  kaapi_versionallocator_init( &thgrp->ver_allocator );
   
+  /* same the main thread frame to restore it at the end of parallel computation */
+  kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
+  
+  /* avoid thief to steal the main thread will tasks are added */
+  thgrp->mainctxt->unstealable = 1;
+  kaapi_mem_barrier();
+  
+  /* wait thief get out the thread */
+#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+  while (!KAAPI_ATOMIC_CAS(&thgrp->mainctxt->lock, 0, 1))
+    ;
+#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+  while (thgrp->mainctxt->thieffp != 0)
+    ;
+#endif
+  
+#if 0
+  fprintf(stdout, "Save frame:: pc:%p, sp:%p, spd:%p\n", 
+    (void*)thgrp->mainframe.pc, 
+    (void*)thgrp->mainframe.sp, 
+    (void*)thgrp->mainframe.sp_data 
+  );
+#endif
+    
   return 0;
 }
 
@@ -67,7 +92,6 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
   kaapi_task_t* task;
-  kaapi_hashentries_t* entry;
   
   /* for all threads add a signalend task */
   for (int i=0; i<thgrp->group_size; ++i)
@@ -76,25 +100,12 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
     kaapi_task_init(task, kaapi_tasksignalend_body, thgrp );
     kaapi_thread_pushtask(thgrp->threads[i]);    
   }
-  /* Push the task that will mark synchronisation on the main thread */
-  thgrp->waittask = kaapi_thread_toptask( thgrp->mainthread);
-  kaapi_task_init(thgrp->waittask, kaapi_taskwaitend_body, thgrp );
-  kaapi_task_setbody(thgrp->waittask, kaapi_suspend_body );
-  kaapi_thread_pushtask(thgrp->mainthread);    
   
-  
-  /* free hash map entries */
-  for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
-  {
-    entry = get_hashmap_entry( &thgrp->ws_khm, i );
-    while (entry !=0) {
-      kaapi_version_t* ver = entry->u.dfginfo;
-      entry = entry->next;
-      free(ver);
-    }
-  }
-
+  /* free hash map entries: they are destroy by destruction of the version allocator */
   kaapi_hashmap_destroy( &thgrp->ws_khm );
+  kaapi_versionallocator_destroy( &thgrp->ver_allocator );
+
+  kaapi_mem_barrier();
   
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;

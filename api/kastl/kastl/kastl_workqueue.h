@@ -108,7 +108,7 @@ namespace rts {
 
   
   /** work work_queue_t: the main important data structure.
-      It steal/pop are managed by a Disjkstra like protocol.
+      It steal/pop are managed by a Dijkstra like protocol.
       The threads that want to steal serialize their access
       through a lock.
    */

@@ -49,11 +49,11 @@
 /*
  * E -> execution
  * S -> suspend
- * _ -> nop or terminated
- * X -> terminee after steal op
+ * _ -> nop 
+ * X -> after steal op
  * R -> recv task
- * T -> recv+bcast task
- * B -> bcast task
+ * T -> task+bcast task
+ * B -> pure bcast task
  */
 static char kaapi_getstatename( kaapi_task_t* task )
 {

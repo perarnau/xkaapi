@@ -68,7 +68,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
   kproc->readythread = 0;
   KAAPI_FIFO_CLEAR( &kproc->lready );
-  KAAPI_STACK_CLEAR( &kproc->lfree );
+  kaapi_lfree_clear( kproc );
 
   kproc->fnc_selecarg = 0;
   kproc->fnc_select   = kaapi_default_param.wsselect;

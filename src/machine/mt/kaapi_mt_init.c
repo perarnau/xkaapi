@@ -49,19 +49,6 @@
 
 
 
-#if HAVE_NUMA_H
-#include <numa.h>
-static inline void free_kproc(kaapi_processor_t* kproc)
-{
-  numa_free(kproc, sizeof(kaapi_processor_t));
-}
-#else /* ! HAVE_NUMA_H */
-static inline void free_kproc(kaapi_processor_t* kproc)
-{
-  free(kproc);
-}
-#endif /* HAVE_NUMA_H */
-
 /*
 */
 kaapi_uint32_t kaapi_count_kprocessors = 0;
@@ -79,6 +66,7 @@ pthread_key_t kaapi_current_processor_key;
 */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
 __thread kaapi_thread_t** kaapi_current_thread_key;
+__thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
 #endif
 
 /*
@@ -107,6 +95,14 @@ kaapi_thread_t* kaapi_self_thread(void)
 {
   return (kaapi_thread_t*)_kaapi_self_thread()->sfp;
 }
+kaapi_threadgroup_t kaapi_self_threadgroup(void)
+{
+  return _kaapi_self_thread()->thgrp;
+}
+void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
+{
+  _kaapi_self_thread()->thgrp = thgrp;
+}
 #endif
 
 /**
@@ -132,6 +128,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_current_thread_key = 0;
+  kaapi_current_threadgroup_key = 0;
 #endif
     
   /* setup topology information */
@@ -289,7 +286,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 #endif
 
-    free_kproc(kaapi_all_kprocessors[i]);
+    kaapi_processor_free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
   free( kaapi_all_kprocessors );

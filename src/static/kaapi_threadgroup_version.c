@@ -83,10 +83,15 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
    
   /* here a stack allocation attached with the thread group */
+#if 0
   ver = entry->u.dfginfo = calloc( 1, sizeof(kaapi_version_t) );
+#else
+  ver = entry->u.dfginfo = kaapi_versionallocator_allocate( &thgrp->ver_allocator );
+#endif
+  kaapi_assert( ver != 0 );
   ver->tag = 0; //++thgrp->tag_count;
   ver->writer_task = 0;
-  ver->writer_thread = -1;
+  ver->writer_thread = -1; /* main thread */
   ver->original_data = ver->writer_data = access->data;
   ver->com = 0;
   memset( &ver->readers, 0, sizeof(ver->readers));
@@ -126,10 +131,10 @@ void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t
 */
 kaapi_task_t* kaapi_threadgroup_version_newreader( 
     kaapi_threadgroup_t thgrp, 
-    kaapi_version_t* ver, 
-    int tid, 
-    kaapi_task_t* task, 
-    kaapi_access_t* access,
+    kaapi_version_t*    ver, 
+    int                 tid, 
+    kaapi_task_t*       task, 
+    kaapi_access_t*     access,
     int ith
 )
 {
@@ -137,16 +142,15 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
   kaapi_task_t* taskbcast;
   kaapi_thread_t* writer_thread;
   
+  kaapi_assert( tid < KAAPI_MAX_PARTITION );
+  kaapi_assert( -1 <= tid );
   
   /* initialize the writer data structure if it not on the same partition (else only
      update reader data structure without changing the writer code
   */
   if (ver->writer_thread != tid )
   {
-    if (ver->writer_thread == -1)
-      writer_thread = thgrp->mainthread;
-    else
-      writer_thread = kaapi_threadgroup_thread( thgrp, ver->writer_thread );
+    writer_thread = kaapi_threadgroup_thread( thgrp, ver->writer_thread );
 
     /* if not exist -> first reader, create a pure send task */
     if (ver->writer_task == 0)
@@ -175,6 +179,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 //        ver->tag           = ++thgrp->tag_count;
         kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
       }
+
       /* writer already exist: if it is not a bcast, encapsulate the task by a bcast task
       */
       else if (ver->writer_task->ebody != kaapi_taskbcast_body)
@@ -222,7 +227,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
   }
 
 
-  /* if already has a reader do nothing, else update the reader information */    
+  /* if already has a reader do nothing also if, else update the reader information */    
   if (!ver->readers[tid].used)
   {
     kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
@@ -241,7 +246,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       } else {
         argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       }
-      KAAPI_ATOMIC_INCR( &argrecv->counter );
+//      KAAPI_ATOMIC_INCR( &argrecv->counter );
+      ++argrecv->original_counter;
       KAAPI_THREADGROUP_SETRECVPARAM( argrecv, ith );
         
       if (ver->readers[tid].addr ==0)
@@ -301,6 +307,9 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     int ith
 )
 {
+  kaapi_assert( tid < KAAPI_MAX_PARTITION );
+  kaapi_assert( -1 <= tid );
+
   /* an entry alread exist: 
      - W mode => mute the data => invalidate copies
      - if other copies exist in the thread group then be carefull in order to not modify other read copies
@@ -312,8 +321,8 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
         -> push the original task after
   */
   if (ver->writer_task == 0)
-  { /* this is the first writer */
-    kaapi_assert( ver->cnt_readers == 0);
+  { /* this is the first writer or a reader exist on -1 */
+    kaapi_assert( (ver->cnt_readers == 0) || ver->readers[-1].used);
     ver->writer_data   = access->data;
     ver->writer_task   = task;
     ver->writer_thread = tid;
@@ -329,16 +338,17 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     if (war)
     {
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
-      printf("***Not yet implemented WAR dependency on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
-#else
-      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
-#endif
+//      printf("***Not yet implemented WAR dependency on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
       fflush( stdout );
+#else
+//      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
+//      fflush( stdout );
+#endif
     }
 
     /* mark data on each partition deleted */
     int i, r;
-    for (i=0, r=0; r < ver->cnt_readers; ++i)
+    for (i=-1, r=0; r < ver->cnt_readers; ++i)
     {
       if (ver->readers[i].used)
       {

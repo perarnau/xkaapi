@@ -54,7 +54,16 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
-  thgrp->step = 0;
+
+  /* Push the task that will mark synchronisation on the main thread */
+  thgrp->waittask = kaapi_thread_toptask( thgrp->threads[-1] );
+  kaapi_task_init(thgrp->waittask, kaapi_taskwaitend_body, thgrp );
+  kaapi_task_setbody(thgrp->waittask, kaapi_suspend_body );
+  kaapi_thread_pushtask( thgrp->threads[-1] );    
+  
+  thgrp->mainctxt->partid = -1;
+
+  ++thgrp->step;
   kaapi_mem_barrier();
   
   thgrp->startflag = 1;
@@ -62,16 +71,39 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   /* dispatch thread context to processor ? */
   nproc = kaapi_count_kprocessors;
   /* dispatch them using bloc destribution of size floor(kaapi_count_kprocessors/thgrp->group_size) */
-  blocsize = (nproc+thgrp->group_size-1)/ thgrp->group_size;
-  kaapi_processor_t* current_proc = kaapi_get_current_processor();
+  blocsize = (thgrp->group_size+nproc-1)/ nproc;
   
   for (i=0; i<thgrp->group_size; ++i)
   {
-#if 0 // Method should be implemented. Currently push locally and wait stealer    
-    int victim_procid = i/blocsize;
+    kaapi_processor_id_t victim_procid = i/blocsize;
+#if 1 // Method should be implemented. Currently push locally and wait stealer    
     kaapi_processor_t* victim_kproc = kaapi_all_kprocessors[victim_procid];
-    kaapi_wsqueuectxt_lockpush( &victim_kproc->lsuspend, thgrp->threadctxts[i] );
+    kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
+    kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
+    thgrp->threadctxts[i]->proc = victim_kproc;
+    thgrp->threadctxts[i]->partid = i;
+    thgrp->threadctxts[i]->unstealable = 1; /* do not allow threads to steal tasks inside ??? */
+
+    if (kaapi_thread_isready(thgrp->threadctxts[i]))
+    {
+      kaapi_sched_lock( victim_kproc ); 
+      kaapi_sched_pushready( victim_kproc, thgrp->threadctxts[i] );
+      kaapi_sched_unlock( victim_kproc ); 
+    }
+    else {
+      /* put pad of the first non ready task as if the thread was suspended (but not into a queue) */
+      kaapi_wc_structure_t* wcs = &thgrp->threadctxts[i]->wcs;
+      wcs->wclist   = 0;
+      wcs->wccell   = 0;
+      wcs->affinity = thgrp->threadctxts[i]->affinity;
+      kaapi_task_t* task = thgrp->threadctxts[i]->sfp->pc;
+      task->pad = wcs;
+//      kaapi_wsqueuectxt_lockpush( &victim_kproc->lsuspend, thgrp->threadctxts[i] );
+    }
 #else
+    kaapi_processor_t* current_proc = kaapi_get_current_processor();
+    kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
+    kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
     thgrp->threadctxts[i]->proc = current_proc;
     kaapi_wsqueuectxt_push( &current_proc->lsuspend, thgrp->threadctxts[i] );
 #endif    
@@ -85,16 +117,8 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 */
 int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp )
 {
-  if (thgrp->step == -1) return kaapi_threadgroup_begin_execute( thgrp );
-  
-  if ((thgrp->state != KAAPI_THREAD_GROUP_WAIT_S) && (thgrp->state != KAAPI_THREAD_GROUP_MP_S)) return EINVAL;
-  thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
-
-  ++thgrp->step;
-  
-  kaapi_mem_barrier();
-  thgrp->startflag = 1;
-  return 0;
+  if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
+  return kaapi_threadgroup_begin_execute( thgrp );
 }
 
 
@@ -103,22 +127,23 @@ int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp )
 int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
-  thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
+  if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
   kaapi_sched_sync();
-  kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == thgrp->group_size );
-  
+
 #if 0
-  /* wait end of computation ... */
-  pthread_mutex_lock(&thgrp->mutex);
-  while (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size)
+  if (thgrp->save_mainthread !=0)
   {
-    pthread_cond_wait( &thgrp->cond, &thgrp->mutex);
+    /* restore the main thread */
+    kaapi_assert( 0 == kaapi_threadgroup_restore_thread( thgrp, -1 ) );    
   }
 #endif
+
+  /* counter reset by THE waittask */
+  kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == 0 );
+  
   thgrp->startflag = 0;
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
-  pthread_mutex_unlock(&thgrp->mutex);
   return 0;
 }
 
@@ -127,5 +152,23 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 */
 int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
 {
-  return kaapi_threadgroup_end_step(thgrp);  
+  kaapi_threadgroup_end_step(thgrp);
+  
+  for (int i=0; i<thgrp->group_size; ++i)
+  {
+    kaapi_thread_clear(thgrp->threadctxts[i]);
+  }
+
+  kaapi_thread_restore_frame( thgrp->threads[-1], &thgrp->mainframe);
+#if 0
+  kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
+  fprintf(stdout, "Restore frame:: pc:%p, sp:%p, spd:%p\n", 
+    (void*)thgrp->mainframe.pc, 
+    (void*)thgrp->mainframe.sp, 
+    (void*)thgrp->mainframe.sp_data 
+  );
+#endif
+  
+  thgrp->state = KAAPI_THREAD_GROUP_CREATE_S;
+  return 0;
 }

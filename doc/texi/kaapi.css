@@ -1,0 +1,154 @@
+/* Design : Volker Mentzner (http://www.mentzner.de) */
+/* royalty free photo by marek bernat, found at http://www.sxc.hu/browse.phtml?f=view&id=442713 */
+
+pre {
+    margin: 0px auto 10px auto;
+    background:#EFEFFF;
+    border:thin dashed #666666;
+    width: 90%;
+    padding:2px;
+}
+
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+body {
+	color: #666666;
+	background-color: #f2f2f2;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 100.1%; 
+}
+
+.wrap {
+	background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+  width: 700px;
+  border: 1px solid #027878;
+  border-left: 10px solid #027878;
+  border-right: 10px solid #027878;
+}
+
+p, dl {
+/*	font-size: 90%;*/
+  margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+table {
+  margin: 5px 10px 5px 10px;
+	border-collapse: collapse;
+  border: 1px solid #ffa600;
+}
+
+th {
+	font-size: 90%;
+  padding: 2px 10px 2px 10px;
+  background-color: #ffd380;
+  border: 1px solid #ffa600;
+}
+
+td {
+	font-size: 90%;
+  padding: 2px 10px 2px 10px;
+  border: 1px solid #ffa600;
+}
+
+li {
+	font-size: 90%;
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+  font-size: 130%;
+  margin: 10px 10px 10px 10px;
+  text-align: center;
+}
+
+h1 a {
+  text-decoration: none;
+}
+
+h2 {
+	font-size: 110%;
+  margin: 10px 10px 5px 10px;
+}
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+
+input {
+  margin: 0px 10px 5px 10px;
+  border: 1px solid #027878;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 90%;
+}
+
+textarea {
+  margin: 0px 10px 5px 10px;
+  border: 1px solid #027878;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 90%;
+}
+
+#pagetitle {
+  text-align: center;
+}
+
+#navmenu ul {
+  margin: 0px;
+  padding: 2px 0px 2px 0px;
+  list-style-type: none;
+  width: 100%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+#navmenu li {
+	font-size: 90%;
+  font-weight: bold;
+	line-height:130%;
+  display: inline;
+}
+
+#navmenu a {
+  padding: 2px 10px 2px 10px;
+  text-decoration: none;
+}
+
+#navmenu .active {
+  background-color: #00a8a8;
+  border-left: 1px solid #027878;
+  border-right: 1px solid #027878;
+}
+
+#navmenu a:link, .navmenu a:visited {
+	color: #666666;
+}
+
+#navmenu a:hover {
+	color: #666666;
+  background-color: #027878;
+}
+
+#title {
+    height: 161px;
+    background-image: url(kaapi.png);
+}
+#header {
+    text-align:center;
+}
+
+#meta {
+  text-align: right;
+}
+
+#footer p {
+  margin-bottom: 5px;
+  text-align: right;
+}

@@ -13,7 +13,6 @@
 
 namespace kastl2
 {
-
 struct __global_lock
 {
   static volatile long _lock;
@@ -52,41 +51,31 @@ struct TransformStruct {
   {
     _msc = NULL;
   }
+    
+  template<class InputIterator, class OutputIterator, class UnaryOperator>
+  void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op );
   
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
-
+    
   void doit( kaapi_stealcontext_t* sc_transform, kaapi_thread_t* thread )
   {
-    /* local iterator for the nano loop */
-    InputIterator nano_ibeg;
-    InputIterator nano_iend;
-    InputIterator nano_obeg;
+    __global_lock::acquire();
+    //       kaapi_steal_begincritical( sc_transform );
+    nano_ibeg = _ibeg;
+    nano_obeg = _obeg;
+    tmp_size  = _iend - nano_ibeg;
+    if (unit_size > tmp_size)
+      unit_size = tmp_size;
+    nano_iend = nano_ibeg  + unit_size;
+    _ibeg = nano_iend;
+    _obeg += unit_size;
+    //       kaapi_steal_endcritical( sc_transform );
+    __global_lock::release();
 
-    /* amount of work per iteration of the nano loop */
-    int unit_size = 512;
-    int tmp_size  = 0;
+    if (unit_size == 0)
+      break;
 
-    /* Using THE: critical section could be avoided */
-    while (1)
-    {
-      __global_lock::acquire();
-//       kaapi_steal_begincritical( sc_transform );
-      nano_ibeg = _ibeg;
-      nano_obeg = _obeg;
-      tmp_size  = _iend - nano_ibeg;
-      if (unit_size > tmp_size)
-	unit_size = tmp_size;
-      nano_iend = nano_ibeg  + unit_size;
-      _ibeg = nano_iend;
-      _obeg += unit_size;
-//       kaapi_steal_endcritical( sc_transform );
-      __global_lock::release();
-
-      if (unit_size == 0)
-	break;
-
-      std::transform(nano_ibeg, nano_iend, nano_obeg, _op);
-    }
+    std::transform(nano_ibeg, nano_iend, nano_obeg, _op);
   }
 
   static int static_splitter
@@ -145,30 +134,30 @@ struct TransformStruct {
     {
       if (kaapi_request_ok(&request[i]))
       {
-        kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
-        kaapi_task_t*  thief_task  = kaapi_thread_toptask(thief_thread);
+	kaapi_thread_t* thief_thread = kaapi_request_getthread(&request[i]);
+	kaapi_task_t*  thief_task  = kaapi_thread_toptask(thief_thread);
 	output_work = (Self_t*)kaapi_thread_pushdata_align(thief_thread, sizeof(Self_t), 8);
-
-        output_work->_iend = local_end;
-        output_work->_ibeg = local_end - bloc;
-        local_end         -= bloc;
-        output_work->_obeg = _obeg + (output_work->_ibeg - _ibeg);
-        output_work->_op   = _op;
-	output_work->_msc = _msc;
-
-        kaapi_task_init(thief_task, &static_task_entrypoint, output_work);
-        kaapi_thread_pushtask(thief_thread);
-        kaapi_request_reply_head(sc_transform, &request[i], NULL);
-
-        --count; 
-        ++reply_count;
+          
+	output_work->_iend = local_end;
+	output_work->_ibeg = local_end - bloc;
+	local_end         -= bloc;
+	output_work->_obeg = _obeg + (output_work->_ibeg - _ibeg);
+	output_work->_op   = _op;
+	output_work->_msc  = _msc;
+          
+	kaapi_task_init(thief_task, &static_task_entrypoint, output_work);
+	kaapi_thread_pushtask(thief_thread);
+	kaapi_request_reply_head(sc_transform, &request[i], NULL);
+          
+	--count; 
+	++reply_count;
       }
       ++i;
     }
-    /* mute the end of input work of the victim */
-    _iend  = local_end;
-    return reply_count;      
-  }
+      /* mute the end of input work of the victim */
+      _iend  = local_end;
+      return reply_count;      
+    }
 
   InputIterator  volatile _ibeg __attribute__((aligned(8)));
   InputIterator  volatile _iend __attribute__((aligned(8)));
@@ -200,7 +189,6 @@ void transform
   kaapi_sched_sync();
   kaapi_thread_restore_frame(thread, &frame);
 }
-
 } // kastl2::
 
 #endif

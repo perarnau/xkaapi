@@ -164,8 +164,8 @@ AS_CASE([$enable_mode],
   ])
 
 AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
-		 [choose the work stealing algorithm (cas,hybrid,disjkstra)])],[],
-  [with_steal=disjkstra]
+		 [choose the work stealing algorithm (cas,hybrid,dijkstra)])],[],
+  [with_steal=dijkstra]
 )
 AS_CASE([$with_steal],
   [hybrid], [dnl
@@ -180,8 +180,8 @@ AS_CASE([$with_steal],
     # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
     AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],0,[Support concurrent work stealing/task])
     AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
-  ], [disjkstra], [dnl
-    AC_MSG_NOTICE([configure with full Disjkstra based workstealing protocol])
+  ], [dijkstra], [dnl
+    AC_MSG_NOTICE([configure with full Dijkstra based workstealing protocol])
     # must not change the ABI. Enabling through AC*DEFINE
     # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
     AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
@@ -309,6 +309,7 @@ KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],
   [numa], [], [numa.h], [numa_bind], [
     dnl NUMA is there
     AC_DEFINE(KAAPI_USE_NUMA, 1, [Define to use memory affinity on numa nodes])
+    dnl ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-lnuma])
   ])
 ACX_LIB_LINK([XKAAPILIB],[NUMA])
 

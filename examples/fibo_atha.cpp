@@ -38,21 +38,15 @@ int fiboseq_On(int n){
 /* Print any typed shared
  * this task has read acces on a, it will wait until previous write acces on it are done
 */
-static double start_time;
 template<class T>
 struct Print {
-  void operator() ( a1::Shared_r<T> a, const T& ref_value )
+  void operator() ( a1::Shared_r<T> a, const T& ref_value, double time )
   { 
-    /*  Util::WallTimer::gettime is a wrapper around gettimeofday(2) */
-    double t1 = Util::WallTimer::gettime();
-    double delay = t1 - start_time;
-    start_time= t1;
-
     /*  a1::System::getRank() prints out the id of the node executing the task */
-    std::cout << "-----------------------------------------" << std::endl;
-    std::cout << "Res  = " << a.read() << std::endl;
-    std::cout << "Time(s): " << delay << std::endl;
-    std::cout << "-----------------------------------------" << std::endl;
+    ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
+    ka::logfile() << ka::System::getRank() << ": Res  = " << a.read() << std::endl;
+    ka::logfile() << ka::System::getRank() << ": Time(s): " << time << std::endl;
+    ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
   }
 };
 
@@ -116,15 +110,27 @@ struct doit {
     double delay = Util::WallTimer::gettime() - t;
     Util::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
-    start_time= Util::WallTimer::gettime();
-    for (unsigned int i = 0 ; i < iter ; ++i)
-    {   
-      a1::Shared<int> res(0);
-      
+
+    double start_time;
+    double stop_time;
+    
+    a1::Shared<int> res(0);
+    for (long cutoff=2; cutoff<3; ++cutoff)
+    {
       a1::Fork<Fibo>(a1::SetLocal)( res, n );
+      /* */
+      a1::Sync();
+      start_time= ka::WallTimer::gettime();
+      for (unsigned int i = 0 ; i < iter ; ++i)
+      {   
+        a1::Fork<Fibo>(a1::SetLocal)( res, n );
+        /* */
+        a1::Sync();
+      }
+      stop_time= ka::WallTimer::gettime();
 
       /* a1::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      a1::Fork<Print<int> >(a1::SetLocal)(res, ref_value);
+      a1::Fork<Print<int> >(a1::SetLocal)(res, ref_value, (stop_time-start_time)/iter );
     }
   }
 

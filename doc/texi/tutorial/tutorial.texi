@@ -1,0 +1,13 @@
+@node tutorials
+@chapter Athapascan tutorials
+
+This chapters list some really simple programs that can help you to understand @code{Athpascan}'s primitives
+
+@menu
+* hello world:: distributed version of the famous one
+* fibonacci:: how useless, but how typical
+@end menu
+
+@include doc/tutorial/hello.texi
+@include doc/tutorial/fibo.texi
+

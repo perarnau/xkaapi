@@ -46,7 +46,8 @@
 
 /** Return the number of splitted parts (at most 1 if the task may be steal)
 */
-int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task, int count, struct kaapi_request_t* array)
+int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task, unsigned int war_param, 
+                             int count, struct kaapi_request_t* array)
 {
   int i;
   kaapi_request_t*        request    = 0;
@@ -85,6 +86,7 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   argsteal = kaapi_task_getargst( thief_task, kaapi_tasksteal_arg_t );
   argsteal->origin_thread         = thread;
   argsteal->origin_task           = task;
+  argsteal->war_param             = war_param;
 #if defined(KAAPI_USE_READYLIST)
   task->pad = 0;
 #endif

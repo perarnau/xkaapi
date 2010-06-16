@@ -67,6 +67,7 @@ extern "C" {
 */
 typedef struct kaapi_taskrecv_arg_t {
   kaapi_atomic_t       counter;          /* to signal the task becomes ready */
+  int                  original_counter; /* the original value of the counter */
   kaapi_task_body_t    original_body;    /* the original body to execute */
   void*                original_sp;      /* sp of the original task to execute */
 } kaapi_taskrecv_arg_t;
@@ -102,7 +103,7 @@ typedef struct kaapi_taskbcast_arg_t {
   kaapi_com_t*         last;
 } kaapi_taskbcast_arg_t;
 
-#define KAAPI_MAX_PARTITION 64
+#define KAAPI_MAX_PARTITION 128
 
 
 /** \ingroup DFG
@@ -144,10 +145,22 @@ typedef struct kaapi_version_t {
   kaapi_task_t*    writer_task;                        /* last writer task of the version, 0 if no indentify task (input data) */
   kaapi_com_t*     com;                                /* list of com to used in the bcast task */     
   int              cnt_readers;                        /* number of readers ==1 in readers */
+  kaapi_reader_t   mainreaders;                        /* is readers[-1] for the main thread */
   kaapi_reader_t   readers[KAAPI_MAX_PARTITION];       /* set of readers */
+  void*            main_delete_data;                   /* for delete_data[-1] */
   void*            delete_data[KAAPI_MAX_PARTITION];   /* data deleted on each thread , may be reused if required */
 } kaapi_version_t;
 
+
+
+KAAPI_DECLARE_BLOCENTRIES(kaapi_version_bloc_t, kaapi_version_t);
+
+/*
+*/
+typedef struct kaapi_version_allocator_t {
+  kaapi_version_bloc_t* currentbloc;
+  kaapi_version_bloc_t* allallocatedbloc;
+} kaapi_version_allocator_t;
 
 
 
@@ -211,8 +224,7 @@ typedef enum {
 */
 typedef struct kaapi_threadgrouprep_t {
   /* public part */
-  kaapi_thread_t*            mainthread;   /* the main thread that push task */
-  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt */
+  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
   int                        group_size;   /* number of threads in the group */
    
   /* executive part */
@@ -220,8 +232,17 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_task_t*              waittask;     /* task to mark end of parallel computation */
   int volatile               startflag;    /* set to 1 when threads should starts */
   int volatile               step;         /* iteration step */
+  kaapi_frame_t              mainframe;    /* save/restore main thread */
   kaapi_thread_context_t*    mainctxt;     /* the main thread context */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
+  
+  /* not yet used: to be used for iterative compt */
+  kaapi_task_t*              save_mainthread;
+  kaapi_frame_t              save_maintopframe;
+  int                        size_mainthread;
+  kaapi_task_t**             save_workerthreads;
+  kaapi_frame_t*             save_workertopframe;
+  int*                       size_workerthreads;
   
   /* state of the thread group */
   kaapi_threadgroup_state_t  state;        /* state */
@@ -233,6 +254,7 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_hashmap_t            ws_khm;  
   kaapi_vector_t             ws_vect_input;  /* first reader that are waiting for input data */  
   long                       tag_count;
+  kaapi_version_allocator_t  ver_allocator;
 } kaapi_threadgrouprep_t;
 
 
@@ -250,7 +272,7 @@ void kaapi_delete_body( void* sp, kaapi_thread_t* stack );
 static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   return thread;
 }
@@ -259,18 +281,14 @@ static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgr
 */
 static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
-  kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
-
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, partitionid );
   return kaapi_thread_toptask(thread);
 }
 
 static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, partitionid );
   kaapi_assert_debug( thread !=0 );
   
   /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
@@ -349,7 +367,7 @@ static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
 */
 static inline int kaapi_threadgroup_decrcounter( kaapi_taskrecv_arg_t* arg )
 {
-  return KAAPI_ATOMIC_DECR( &arg->counter ) & 0xFFFF;
+  return (KAAPI_ATOMIC_INCR( &arg->counter ) & 0xFFFF) % arg->original_counter;
 }
 
 /**
@@ -360,11 +378,26 @@ extern int kaapi_vector_init( kaapi_vector_t* v, kaapi_vectentries_bloc_t* initb
 */
 extern int kaapi_vector_destroy( kaapi_vector_t* v );
 
-
 /**
 */
 kaapi_pidreader_t* kaapi_vector_pushback( kaapi_vector_t* v );
 
+
+/**
+*/
+extern int kaapi_versionallocator_init( kaapi_version_allocator_t* va );
+
+/**
+*/
+extern int kaapi_versionallocator_destroy( kaapi_version_allocator_t* va );
+
+/**
+*/
+extern kaapi_version_t* kaapi_versionallocator_allocate( kaapi_version_allocator_t* va );
+
+/**
+*/
+extern int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid );
 
 #if defined(__cplusplus)
 }

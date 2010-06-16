@@ -58,9 +58,9 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
   kaapi_format_t*      task_fmt;
   
   /* pass in parameter ? cf C++ thread interface */
-  kaapi_assert_debug( (threadindex >=0) && (threadindex < thgrp->group_size) );
+  kaapi_assert_debug( (threadindex >=-1) && (threadindex < thgrp->group_size) );
 
-  if(task->body==kaapi_suspend_body && task->ebody!=0)
+  if ((task->body==kaapi_suspend_body) && (task->ebody!=0))
     task_fmt= kaapi_format_resolvebybody(task->ebody);
   else if (task->body!=0)
     task_fmt= kaapi_format_resolvebybody(task->body);

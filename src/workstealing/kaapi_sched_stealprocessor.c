@@ -49,7 +49,6 @@
 */
 int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
 {
-  kaapi_thread_context_t*  thread;
   int count =0;
   int stealok = 0;
   int replycount = 0;
@@ -68,6 +67,7 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
 #endif
 
 #if defined(KAAPI_USE_READYLIST)
+for (int i=0; i<1; ++i)
   if (1)
   {
     if (!KAAPI_FIFO_EMPTY(&kproc->lready))
@@ -95,6 +95,8 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
   }
 #endif
   
+#if 1
+for (int i=0; i<1; ++i)
   if (1)
   { /* WARNING do not try to steal inside suspended stack */
     kaapi_wsqueuectxt_cell_t* cell;
@@ -115,10 +117,16 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
       cell = cell->prev;
     }
   }
-  
+#endif
+
+#if 1
+for (int i=0; i<1; ++i)
+{
   /* steal current thread */
-  thread = kproc->thread;
-  if ((count >0) && (thread !=0) && (kproc->issteal ==0))
+  kaapi_thread_context_t*  thread = kproc->thread;
+  if ( (count >0) && (thread !=0) 
+    && (kproc->issteal ==0) /* last: if a thread is stealing, its current thread will be used to receive work... */ 
+  )
   {
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)||(KAAPI_USE_STEALFRAME_METHOD==KAAPI_STEALTHE_METHOD)
     /* if concurrent WS, then steal directly the current stack of the victim processor
@@ -138,6 +146,9 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
       if (kaapi_isterminated()) break;
     }
 #endif
+
   }  
+}
+#endif // #if 0
   return 0;
 }

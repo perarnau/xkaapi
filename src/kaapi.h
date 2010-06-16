@@ -319,7 +319,7 @@ typedef enum kaapi_access_mode_t {
     a == b and a or b is R or CW
     or a or b is postponed.
 */
-#define KAAPI_ACCESS_IS_CONCURRENT(a,b) ((((a)==(b)) && (((b) & 2) !=0)) || ((a|b) & KAAPI_ACCESS_MODE_P))
+#define KAAPI_ACCESS_IS_CONCURRENT(a,b) ((((a)==(b)) && (((b) == KAAPI_ACCESS_MODE_R)||((b)==KAAPI_ACCESS_MODE_CW))) || ((a|b) & KAAPI_ACCESS_MODE_P))
 /*@}*/
 
 
@@ -417,8 +417,7 @@ typedef struct kaapi_thread_context_t {
 #if !defined(KAAPI_COMPILE_SOURCE)
 struct kaapi_threadgrouprep_t {
   /* public part */
-  kaapi_thread_t*            mainthread;   /* the main thread that push task */
-  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt */
+  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
   int                        group_size;   /* number of threads in the group */
 };
 #else
@@ -595,14 +594,21 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
     Return pointer to the self stack
 */
-  /* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
+/* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   extern __thread kaapi_thread_t** kaapi_current_thread_key;
+  extern __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
 #  define kaapi_self_thread() \
      (*kaapi_current_thread_key)
+#  define kaapi_self_threadgroup() \
+     kaapi_current_threadgroup_key
+#  define kaapi_set_threadgroup( thgrp) \
+     kaapi_current_threadgroup_key = thgrp
 
 #else
 extern kaapi_thread_t* kaapi_self_thread (void);
+extern kaapi_threadgroup_t kaapi_self_threadgroup(void);
+extern void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp);
 #endif
 
 
@@ -656,7 +662,9 @@ static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
   access->data = thread->sp_data;
+#if !defined(KAAPI_NDEBUG)
   access->version = 0;
+#endif
   thread->sp_data += count;
   return;
 }
@@ -1146,7 +1154,7 @@ extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int 
 static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   return thread;
 }
@@ -1156,7 +1164,7 @@ static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgr
 static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
 
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   return kaapi_thread_toptask(thread);
@@ -1165,7 +1173,7 @@ static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp
 static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=0) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   kaapi_assert_debug( thread !=0 );
   
@@ -1206,6 +1214,13 @@ extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp );
 */
 extern int kaapi_threadgroup_print(FILE* file, kaapi_threadgroup_t thgrp );
 
+/**
+*/
+extern int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp );
 
 
 

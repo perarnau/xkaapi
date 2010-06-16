@@ -178,7 +178,7 @@ In case of error, please read carefully the displayed message.
 \item \verb+--enable-mode=debug+ or \verb+release+: choose the compilation mode of the library. The default mode is the release mode.
 \item \verb+--with-perfcounter+: add support for monitoring you \kaapi programs.	
 \item \verb+--with-papi+: enable the PAPI library for low level performance counting. More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
-\item \verb+-with-steal=cas+ or \verb+hybrid+ or \verb+disjkstra+: (default is \verb+disjkstra+). Select the work stealing strategy to execute program. The \verb+cas+ is based on compare and swap atomic instruction. \verb+ disjkstra+ is based on Disjkstra protocol to garante coherency without lock in most of the case (like the Cilk T.H.E. protocol). \verb+hybrid+ is a  mix of \verb+cas+ and \verb+disjkstra+.
+\item \verb+-with-steal=cas+ or \verb+hybrid+ or \verb+dijkstra+: (default is \verb+dijkstra+). Select the work stealing strategy to execute program. The \verb+cas+ is based on compare and swap atomic instruction. \verb+ dijkstra+ is based on Dijkstra protocol to garante coherency without lock in most of the case (like the Cilk T.H.E. protocol). \verb+hybrid+ is a  mix of \verb+cas+ and \verb+dijkstra+.
 \end{itemize}
 
 All configuration options are self-documented. You display the options, enter:
@@ -219,9 +219,10 @@ configuration step.
 If you are not allowed to install files in this directory, either execute previous command with \url{sudo}, else
 contact your system administrator.
 
-\subsection{Supported Architectures}
+\subsection{Supported Architectures and Operating Systems}
 
-\kaapi currently supports SMP and NUMA architectures. It also compile well on Mac machines (32bits works fine, 64bits is in progress).
+\kaapi currently supports SMP and NUMA architectures. 
+It works fine on Linux operating system (x86\_64 architectures) as well as on Mac OS X system with Intel based processor (both 32bits and 64bits work).
 
 \section{Utilization}
 

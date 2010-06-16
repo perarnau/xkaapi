@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <algorithm>
 #include "transform_adapt.h"
+#include "timing.h"
 #include "random.h"
 
 /* basic op
@@ -34,14 +35,17 @@ struct Op2 {
 };
 
 
-
 /* The main thread
 */
 int main(int argc, char** argv)
 {
   int l, n, iter;
   double t0, t1;
+  tick_t tick0, tick1;
   double avrg = 0;
+  double avrgtick = 0;
+
+  timing_init();
 
   if (argc >1) n = atoi(argv[1]);
   else n = 10000;
@@ -75,14 +79,22 @@ int main(int argc, char** argv)
 
 //  Sin op;
   Op2 op;
+
+  for (l=0; l<10; ++l)
+  {
+    kastl2::transform(input, input+n, output, op );
+  }
   
   t0 = kaapi_get_elapsedtime();
+  GET_TICK( tick0 );
   for (l=0; l<iter; ++l)
   {
-    transform(input, input+n, output, op );
+    kastl2::transform(input, input+n, output, op );
   }
+  GET_TICK( tick1 );
   t1 = kaapi_get_elapsedtime();
   avrg = (t1-t0)/ (double)iter;
+  //avrgtick = double(tdns1-tdns0); /// (double)iter;
 
   // Verification of the output
   bool isok = true;
@@ -98,6 +110,7 @@ int main(int argc, char** argv)
   if (isok) std::cout << "Verification ok" << std::endl;
 
   std::cout << "Result-> size: " << n << "  time: " << avrg << std::endl;
+  std::cout << "Result-> size: " << n << "  time(tick): " << TICK_DIFF( tick0, tick1 ) << std::endl;
 
   delete [] input;
   delete [] output;

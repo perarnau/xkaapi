@@ -71,7 +71,7 @@ static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key,
 
 void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
 {
-  return _set_hashmap_entry( khm, key, entries );
+  _set_hashmap_entry( khm, key, entries );
 }
 
 
@@ -108,6 +108,8 @@ int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
     khm->allallocatedbloc = curr->next;
     free (curr);
   }
+  khm->allallocatedbloc = 0;
+  khm->currentbloc = 0;
   return 0;
 }
 
