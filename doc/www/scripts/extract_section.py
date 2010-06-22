@@ -39,7 +39,7 @@ def get_sindex(sname, ifile):
         if line == '<!--End of Table of Contents-->':
             break
         s = match_and_get_first(sentry_re, line)
-        if s == None or s != sname:
+        if s == None or s.find(sname) == -1:
             continue
         s = match_and_get_first(sindex_re, line)
         if s == None:

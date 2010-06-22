@@ -1,9 +1,6 @@
     <ul>
         <li><a href="install.html">Installation Guide</a></li>
-        <li><a href="compile_run.html">Compile and Run instructions</a></li>
-        <li><a href="atha.html">Athapascan Overview</a></li>
-        <li><a href="tuto.html">Tutorials</a></li>
-        <li><a href="api.html">API</a></li>
-        <li><a href="annotated.html">Doxygen documentation</a></li>
+        <li><a href="program.html">Programming</a></li>
+        <li><a href="run.html">Running</a></li>
     </ul>
 
