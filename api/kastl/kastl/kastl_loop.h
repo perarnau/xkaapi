@@ -1076,7 +1076,7 @@ namespace impl
 
   static void wait_a_bit(void)
   {
-    for (unsigned int i = 0; i < 10000; ++i)
+    for (unsigned int i = 0; i < 1000; ++i)
       __asm__ __volatile__ ("nop\n\t");
   }
 

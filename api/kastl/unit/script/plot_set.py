@@ -163,35 +163,11 @@ def main(dirname):
     ss = SampleSet()
     ss.load_directory(dirname, on_sample)
 
-    for size in [100000]:
+    for size in [5000, 8000, 10000, 15000, 20000, 30000]:
         print('-- sequence_size: ' + str(size))
-        for impl in ['kastl', 'stl']:
+        for impl in ['kastl', 'stl', 'pastl', 'tbb', 'pthread']:
             print('---- impl: ' + impl)
-            for algo in [\
-                "transform",\
-                    "for_each",\
-                "find",\
-                "find_if",\
-                "find_first_of",\
-                "accumulate",\
-                "inner_product",\
-                "count",\
-                "count_if",\
-                "copy",\
-                "search",\
-                "min_element",\
-                "max_element",\
-                "fill",\
-                "generate",\
-                "inner_product",\
-                "replace",\
-                "replace_if",\
-                "equal",\
-                "mismatch",\
-                "search",\
-                "adjacent_find",\
-                "adjacent_difference"
-                ]:
+            for algo in ["transform"]:
                 samples = ss.find_samples\
                     ({'algo': algo, 'impl': impl, 'seq_size': str(size)})
                 print('---- algo: ' + algo)
