@@ -142,7 +142,6 @@ struct board
   }
 
   ka::ka_int32_t d[MAXSIZE];
-
 };
 
 /*
@@ -239,6 +238,7 @@ struct param_bt2
         return;
       }
     }
+
     /*
      * 180-degree rotation 
      */
