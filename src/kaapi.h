@@ -209,8 +209,10 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 #define KAAPI_MAX_ARCHITECTURE 3
 
 #define KAAPI_PROC_TYPE_CPU     0x0
-#define KAAPI_PROC_TYPE_GPU     0x1
+#define KAAPI_PROC_TYPE_CUDA    0x1
 #define KAAPI_PROC_TYPE_MPSOC   0x2
+
+#define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
 #define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_CPU
 
 

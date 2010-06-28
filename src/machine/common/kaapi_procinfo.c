@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
 
 

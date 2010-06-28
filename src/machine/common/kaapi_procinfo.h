@@ -53,8 +53,8 @@ typedef unsigned int kaapi_processor_id_t;
 #define KAAPI_MAX_PROCESSOR 32
 #define KAAPI_PROC_TYPE_CPU 0
 #define KAAPI_PROC_TYPE_GPU 1
-#else
-#include "kaapi_impl.h"
+/* #else */
+/* #include "kaapi_impl.h" */
 #endif /* unit */
 
 
@@ -67,6 +67,7 @@ typedef struct kaapi_procinfo
   unsigned int proc_index;
 
   /* here to avoid thread arg allocation */
+  /* assume kaapi_impl.h included */
   kaapi_processor_id_t kid;
 
 } kaapi_procinfo_t;

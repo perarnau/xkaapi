@@ -45,8 +45,12 @@
 
 
 #include <stdlib.h>
-#include "kaapi.h"
+#include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
+
+
+/* from kaapi_init.c */
+extern kaapi_rtparam_t kaapi_default_param;
 
 
 static int make_identity_procinfo_list
@@ -80,8 +84,6 @@ int kaapi_mt_register_procs(kaapi_procinfo_list_t* kpl)
 {
   const char* const cpuset_str = getenv("KAAPI_CPUSET");
   const char* const cpucount_str = getenv("KAAPI_CPUCOUNT");
-  unsigned int i;
-  kaapi_procset_t kps;
 
   /* KAAPI_CPUCOUNT */
   if (cpucount_str != NULL)
@@ -94,13 +96,15 @@ int kaapi_mt_register_procs(kaapi_procinfo_list_t* kpl)
   /* KAAPI_CPUSET */
   if (cpuset_str != NULL)
   {
-    if (kaapi_procinfo_list_parse_string(kpl, cpuset_str, KAAPI_PROC_TYPE_CPU))
+    const int err = kaapi_procinfo_list_parse_string
+      (kpl, cpuset_str, KAAPI_PROC_TYPE_CPU, kaapi_default_param.cpucount);
+    if (err == -1)
       return -1;
     kaapi_default_param.use_affinity = 1;
   }
   else /* identity set */
   {
-    if (make_identity_procinfo_list(&kpl, kaapi_default_param.cpucount))
+    if (make_identity_procinfo_list(kpl, kaapi_default_param.cpucount))
       return -1;
   }
 

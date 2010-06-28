@@ -46,15 +46,9 @@
 
 #include <cuda.h>
 #include <stdlib.h>
+#include "kaapi_impl.h"
 #include "kaapi_cuda.h"
 #include "../common/kaapi_procinfo.h"
-
-
-static int get_device_count(unsigned int* count)
-{
-  *count = 0;
-  return 0;
-}
 
 
 /* exported */
@@ -62,19 +56,21 @@ static int get_device_count(unsigned int* count)
 int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 {
   const char* const gpuset_str = getenv("KAAPI_GPUSET");
-  unsigned int count;
-  int error;
+  int devcount;
+  int err;
 
   if (gpuset_str == NULL)
     return 0;
 
-  error = get_device_count(&count);
-  if (error)
+  if (cuInit(0) != CUDA_SUCCESS)
     return -1;
 
-  error = kaapi_procinfo_list_parse_string
-    (kpl, gpuset_str, KAAPI_PROC_TYPE_GPU, count);
-  if (error)
+  if (cuDeviceGetCount(&devcount) != CUDA_SUCCESS)
+    return -1;
+
+  err = kaapi_procinfo_list_parse_string
+    (kpl, gpuset_str, KAAPI_PROC_TYPE_GPU, (unsigned int)devcount);
+  if (err)
     return -1;
 
   return 0;
