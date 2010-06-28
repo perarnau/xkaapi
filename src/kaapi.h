@@ -224,8 +224,8 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 extern int kaapi_getconcurrency (void);
 
 /** \ingroup WS
-    Set the workstealing concurrency number, i.e. the number of kernel
-    activities to execute the user level thread.
+    Set the workstealing conccurency by instanciating kprocs according
+    to the registration of each subsystem (ie. mt, cuda...)
     If successful, the kaapi_setconcurrency() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.
     This function is machine dependent.
@@ -235,7 +235,24 @@ extern int kaapi_getconcurrency (void);
     \retval EAGAIN if the system laked the necessary ressources to create another thread
     on return, the concurrency number may has been set to a different number than requested.
  */
-extern int kaapi_setconcurrency (unsigned int concurrency);
+extern int kaapi_setconcurrency(void);
+
+
+struct kaapi_procinfo_list;
+
+/* ========================================================================== */
+/** kaapi_mt_register_procs
+    register the kprocs for mt architecture.
+*/
+extern int kaapi_mt_register_procs(struct kaapi_procinfo_list*);
+
+/* ========================================================================== */
+/** kaapi_cuda_register_procs
+    register the kprocs for cuda architecture.
+*/
+#if KAAPI_USE_CUDA
+extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
+#endif
 
 
 /* ========================================================================== */

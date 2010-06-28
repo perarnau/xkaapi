@@ -114,6 +114,12 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_perf.c 
 endif
 
+if KAAPI_USE_CUDA
+libxkaapi_la_SOURCES+=\
+  machine/cuda/kaapi_cuda.h \
+  machine/cuda/kaapi_cuda_register_procs.c
+endif
+
 
 include_HEADERS=\
 	kaapi.h \

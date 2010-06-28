@@ -8,6 +8,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,6 +44,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "../common/kaapi_procinfo.h"
 
 static void* kaapi_sched_run_processor( void* arg );
 
@@ -65,35 +67,60 @@ static kaapi_atomic_t barrier_init2 = {0};
                       (ou amortir une creation ultérieur des threads en les mettant en attente de se terminer apres un timeout)
       - proteger l'appel d'appel concurrents.
 */
-int kaapi_setconcurrency( unsigned int concurrency )
+
+int kaapi_setconcurrency(void)
 {
+  /* kpl contains a list of all the available
+     processing units information. this function
+     instanciates kprocs from the list.
+   */
+
   static int isinit = 0;
+
   pthread_attr_t attr;
   pthread_t tid;
-  int i;
-    
-  if (concurrency <1) return EINVAL;
-  if (concurrency > KAAPI_MAX_PROCESSOR) return EINVAL;
+  kaapi_procinfo_list_t kpl;
+  kaapi_procinfo_t* kpi;
+  kaapi_processor_id_t kid;
 
-  if (isinit) return EINVAL;
+  /* init_once */
+  if (isinit)
+    return EINVAL;
   isinit = 1;
+
+  /* build the procinfo list */
+  kaapi_procinfo_list_init(&kpl);
+  kaapi_mt_register_procs(&kpl);
+#if KAAPI_USE_CUDA
+  kaapi_cuda_register_procs(&kpl);
+#endif
+
+  if ((!kpl.count) || (kpl.count > KAAPI_MAX_PROCESSOR))
+    return EINVAL;
   
-  /* */
-  kaapi_all_kprocessors = calloc( (kaapi_uint32_t)concurrency, sizeof(kaapi_processor_t*) );
-  if (kaapi_all_kprocessors ==0) return ENOMEM;
+  kaapi_all_kprocessors = calloc(kpl.count, sizeof(kaapi_processor_t*));
+  if (kaapi_all_kprocessors == NULL)
+  {
+    kaapi_procinfo_list_free(&kpl);
+    return ENOMEM;
+  }
 
   /* default processor number */
-  kaapi_count_kprocessors = concurrency;
+  kaapi_count_kprocessors = kpl.count;
 
-  kaapi_barrier_td_init( &barrier_init, 0);
-  kaapi_barrier_td_init( &barrier_init2, 1);
+  kaapi_barrier_td_init(&barrier_init, 0);
+  kaapi_barrier_td_init(&barrier_init2, 1);
 
   pthread_attr_init(&attr);
-      
-  /* TODO: allocate each kaapi_processor_t of the selected numa node if it exist */
-  for (i=0; i<kaapi_count_kprocessors; ++i)
+
+  kid = 0;
+  kpi = kpl.head;
+
+  for (; kpi != NULL; ++kid, kpi = kpi->next)
   {
-    if (i>0)
+    kpi->kid = kid;
+
+    if (kid != 0)
     {
       kaapi_barrier_td_setactive(&barrier_init, 1);
 
@@ -102,52 +129,55 @@ int kaapi_setconcurrency( unsigned int concurrency )
       {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        CPU_SET(kaapi_default_param.kid_to_cpu[i], &cpuset);
+        CPU_SET(kpi->bound_cpu, &cpuset);
         kaapi_assert_m((!pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
         sched_yield();
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
-      if (EAGAIN == pthread_create(&tid, &attr, &kaapi_sched_run_processor, (void*)(long)i))
+      if (EAGAIN == pthread_create(&tid, &attr, &kaapi_sched_run_processor, (void*)kpi))
       {
-        kaapi_count_kprocessors = i;
+        kaapi_count_kprocessors = kid;
         kaapi_barrier_td_setactive(&barrier_init, 0);
         pthread_attr_destroy(&attr);
         return EAGAIN;
       }
     }
-    else 
+    else /* if (kid == 0) */
     {
+      kaapi_processor_t* kproc;
+
 #ifdef KAAPI_USE_SCHED_AFFINITY
       if (kaapi_default_param.use_affinity)
       {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        CPU_SET(kaapi_default_param.kid_to_cpu[i], &cpuset);
+        CPU_SET(kpi->bound_cpu, &cpuset);
         kaapi_assert_m((!pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
         sched_yield();
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
-      kaapi_all_kprocessors[i] = kaapi_processor_allocate();
-      kaapi_assert(0 == pthread_setspecific( kaapi_current_processor_key, kaapi_all_kprocessors[0] ) );
-
-      if (kaapi_all_kprocessors[i] ==0) 
+      kproc = kaapi_processor_allocate();
+      kaapi_all_kprocessors[0] = kproc;
+      kaapi_assert(0 == pthread_setspecific(kaapi_current_processor_key, kproc));
+      if (kproc == NULL)
       {
         pthread_attr_destroy(&attr);
         free(kaapi_all_kprocessors);
-        kaapi_all_kprocessors = 0;
+        kaapi_all_kprocessors = NULL;
+	kaapi_procinfo_list_free(&kpl);
         return ENOMEM;
       }
-      kaapi_assert( 0 == kaapi_processor_init( kaapi_all_kprocessors[i] ) );
-      kaapi_all_kprocessors[i]->kid = 0;
+      kaapi_assert(0 == kaapi_processor_init(kproc));
+      kproc->kid = 0;
 
       /* Initialize the hierarchy information and data structure */
-      kaapi_assert( 0 == kaapi_processor_setuphierarchy( kaapi_all_kprocessors[i] ) );
+      kaapi_assert(0 == kaapi_processor_setuphierarchy(kproc));
 
 #if defined(KAAPI_USE_PERFCOUNTER)
       /*  */
-      kaapi_perf_thread_init(kaapi_all_kprocessors[i], KAAPI_PERF_USER_STATE);
+      kaapi_perf_thread_init(kproc, KAAPI_PERF_USER_STATE);
 #endif
 
       /* register the processor */
@@ -159,6 +189,9 @@ int kaapi_setconcurrency( unsigned int concurrency )
 
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init );
+
+  /* destroy the procinfo list, thread args no longer valid */
+  kaapi_procinfo_list_free(&kpl);
 
   /* here is the number of correctly initialized processor, may be less than requested */
   kaapi_count_kprocessors = KAAPI_ATOMIC_READ( &kaapi_term_barrier );
@@ -182,8 +215,9 @@ int kaapi_setconcurrency( unsigned int concurrency )
 */
 void* kaapi_sched_run_processor( void* arg )
 {
-  kaapi_processor_t* kproc =0;
-  int kid = (long)arg;
+  kaapi_procinfo_t* kpi = (kaapi_procinfo_t*)arg;
+  kaapi_processor_t* kproc = NULL;
+  const kaapi_processor_id_t kid = kpi->kid;
   
   /* force reschedule of the posix thread, we that the thread will be mapped on the correct processor ? */
   sched_yield();
@@ -203,6 +237,9 @@ void* kaapi_sched_run_processor( void* arg )
 
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
+
+  /* from here, arg no longer valid */
+  kpi = NULL;
 
   /* quit first steap of the initialization */
   kaapi_barrier_td_setactive(&barrier_init, 0);
