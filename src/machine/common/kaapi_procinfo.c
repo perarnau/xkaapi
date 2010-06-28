@@ -396,7 +396,7 @@ int kaapi_procinfo_list_parse_string
 }
 
 
-#if 0 /* unit */
+#if 0 /* debug */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -418,6 +418,7 @@ void kaapi_procinfo_list_print(const kaapi_procinfo_list_t* kpl)
 	   proc_type_to_str(pos->proc_type), pos->bound_cpu);
 }
 
+#if 0 /* unit */
 int main(int ac, char** av)
 {
   kaapi_procinfo_list_t kpl;
@@ -432,5 +433,6 @@ int main(int ac, char** av)
 
   return 0;
 }
-
 #endif /* unit */
+
+#endif /* debug */

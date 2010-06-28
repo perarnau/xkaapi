@@ -68,8 +68,11 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
   if (cuDeviceGetCount(&devcount) != CUDA_SUCCESS)
     return -1;
 
+  if (devcount == 0)
+    return 0;
+
   err = kaapi_procinfo_list_parse_string
-    (kpl, gpuset_str, KAAPI_PROC_TYPE_GPU, (unsigned int)devcount);
+    (kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA, (unsigned int)devcount);
   if (err)
     return -1;
 
