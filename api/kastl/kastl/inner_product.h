@@ -1,230 +1,133 @@
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
+
+
 #ifndef KASTL_INNER_PRODUCT_H_INCLUDED
 # define KASTL_INNER_PRODUCT_H_INCLUDED
 
 
-
-#include <numeric>
-#include <functional>
-#include <iterator>
-#include "kastl/kastl_impl.h"
-
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
 
 namespace kastl
 {
-
-namespace impl
+template<typename Iterator0, typename Iterator1,
+	 typename Value,
+	 typename Operator0, typename Operator1>
+struct inner_product_body
 {
+  typedef kastl::rts::Sequence<Iterator0, Iterator1> sequence_type;
+  typedef typename sequence_type::iterator_type iterator_type;
+  typedef typename sequence_type::range_type range_type;
+  typedef kastl::impl::numeric_result<Iterator0, Value> result_type;
+
+  Operator0 _op0;
+  Operator1 _op1;
+
+  inner_product_body
+  (const Operator0& op0, const Operator1& op1)
+    : _op0(op0), _op1(op1)
+  {}
+
+  void operator()(result_type& res, Iterator0& ipos0, Iterator1& ipos1)
+  {
+    res._value = _op0(res._value, _op1(*ipos0, *ipos1));
+  }
+
+  void reduce(result_type& lhs, const result_type& rhs)
+  {
+    lhs._value = _op0(lhs._value, rhs._value);
+  }
+};
 
 template
-<
-  typename SequenceType,
-  typename ConstantType,
-  typename ResultType,
-  typename MacroType,
-  typename NanoType,
-  typename SplitterType
->
-class InnerProductWork : public BaseWork
-<SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
+<typename Iterator0, typename Iterator1,
+ typename Operator0, typename Operator1,
+ typename Value, typename Settings>
+Value inner_product
+(Iterator0 ifirst0, Iterator0 ilast, Iterator1 ifirst1,
+ Value init,
+ Operator0 op0, Operator1 op1, const Settings& settings)
 {
-  typedef InnerProductWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> SelfType;
+  kastl::rts::Sequence<Iterator0, Iterator1> seq
+    (ifirst0, ifirst1, ilast - ifirst0);
 
-  typedef BaseWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> BaseType;
+  inner_product_body
+    <Iterator0, Iterator1, Value, Operator0, Operator1>
+    body(op0, op1);
 
-public:
-
-  InnerProductWork() : BaseType() {}
-
-  InnerProductWork
-  (const SequenceType& s, const ConstantType* c, const ResultType& r)
-  : BaseType(s, c, r) {}
-
-  inline void prepare()
-  {
-    this->_res._is_valid = false;
-  }
-
-  inline void reduce_result(const ResultType& res)
-  {
-    if (this->_res._is_valid == true)
-      this->_res._value = (this->_const->_f1)(this->_res._value, res._value);
-    else
-      this->_res = res;
-  }
-
-  inline void compute(SequenceType& seq)
-  {
-    typename SequenceType::SizeType i = 0;
-    if (this->_res._is_valid == false)
-    {
-      this->_res = ResultType(*seq.begin0());
-      i = 1;
-    }
-
-    this->_res._value = std::inner_product
-    (
-     seq.begin0() + i, seq.end0(), seq.begin1(),
-     this->_res._value,
-     this->_const->_f1, this->_const->_f2
-    );
-
-    seq.advance();
-  }
-
-  inline void reduce(const BaseType& tw)
-  {
-    if (tw._res._is_valid == false)
-      return ;
-
-    reduce_result(tw._res);
-  }
-
-};
-
-template<typename T>
-struct InnerProductResult
-{
-  T _value;
-  bool _is_valid;
-
-  InnerProductResult(const T& value)
-    : _value(value), _is_valid(true) {}
-};
-
-template<typename T1, typename T2>
-struct InnerProductConstant
-{
-  T1 _f1;
-  T2 _f2;
-
-  InnerProductConstant(const T1& f1, const T2& f2)
-    : _f1(f1), _f2(f2) {}
-};
-
-// tunning params
-typedef Daouda0TuningParams InnerProductTuningParams;
-
-} // kastl::impl
-
-
-template
-<
-  class RandomAccessIterator1,
-  class RandomAccessIterator2,
-  class ValueType,
-  class BinaryFunction1,
-  class BinaryFunction2,
-  class ParamType
->
-ValueType inner_product
-(
- RandomAccessIterator1 ipos,
- RandomAccessIterator1 iend,
- RandomAccessIterator2 ipos2,
- ValueType init_value,
- BinaryFunction1 f1,
- BinaryFunction2 f2
-)
-{
-  typedef kastl::impl::In2EqSizedSequence
-    <RandomAccessIterator1, RandomAccessIterator2>
-    SequenceType;
-
-  typedef typename kastl::impl::make_macro_type
-    <ParamType::macro_tag, ParamType, SequenceType>::Type
-    MacroType;
-
-  typedef typename kastl::impl::make_nano_type
-    <ParamType::nano_tag, ParamType, SequenceType>::Type
-    NanoType;
-
-  typedef typename kastl::impl::make_splitter_type
-    <ParamType::splitter_tag, ParamType>::Type
-    SplitterType;
-
-  typedef kastl::impl::InnerProductResult<ValueType>
-    ResultType;
-
-  typedef kastl::impl::InnerProductConstant<BinaryFunction1, BinaryFunction2>
-    ConstantType;
-
-  typedef kastl::impl::InnerProductWork
-    <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-    WorkType;
-
-  SequenceType sequence(ipos, iend, ipos2);
-  ResultType result(init_value);
-  ConstantType constant(f1, f2);
-  WorkType work(sequence, &constant, result);
-  kastl::impl::compute<WorkType>(work);
-  return work._res._value;
+  kastl::impl::numeric_result<Iterator0, Value> res(init);
+  kastl::impl::foreach_reduce_loop(res, seq, body, settings);
+  return res._value;
 }
 
-
-template
-<
-  class RandomAccessIterator1,
-  class RandomAccessIterator2,
-  class ValueType,
-  class BinaryFunction1,
-  class BinaryFunction2
->
-ValueType inner_product
-(
- RandomAccessIterator1 ipos,
- RandomAccessIterator1 iend,
- RandomAccessIterator2 ipos2,
- ValueType init_value,
- BinaryFunction1 f1,
- BinaryFunction2 f2
-)
+template<typename Iterator0, typename Iterator1, typename Value,
+	 typename Operator0, typename Operator1>
+Value inner_product
+(Iterator0 ifirst0, Iterator0 ilast, Iterator1 ifirst1,
+ Value init,
+ Operator0 op0, Operator1 op1)
 {
-  typedef typename kastl::impl::InnerProductTuningParams
-    ParamType;
+  kastl::impl::static_settings settings(512, 512);
 
   return kastl::inner_product
-    <
-      RandomAccessIterator1,
-      RandomAccessIterator2,
-      ValueType,
-      BinaryFunction1,
-      BinaryFunction2,
-      ParamType
-    >
-    (ipos, iend, ipos2,  init_value, f1, f2);
+    (ifirst0, ilast, ifirst1, init, op0, op1, settings);
 }
 
-
-template
-<
-  class RandomAccessIterator1,
-  class RandomAccessIterator2,
-  class ValueType
->
-ValueType inner_product
-(
- RandomAccessIterator1 begin,
- RandomAccessIterator1 end,
- RandomAccessIterator2 begin2,
- ValueType init_value
-)
+template<typename Iterator0, typename Iterator1, typename Value>
+Value inner_product
+(Iterator0 ifirst0, Iterator0 ilast, Iterator1 ifirst1, Value init)
 {
-  typedef std::plus<ValueType> BinaryFunction1;
-  typedef std::multiplies<ValueType> BinaryFunction2;
-  
   return kastl::inner_product
-    (
-     begin, end, begin2,
-     init_value,
-     BinaryFunction1(),
-     BinaryFunction2()
-    );
+    (ifirst0, ilast, ifirst1, init,
+     kastl::impl::add<Value>(),
+     kastl::impl::mul<Value>());
 }
 
-} // kastl
+} // kastl::
 
 
 #endif // ! KASTL_INNER_PRODUCT_H_INCLUDED

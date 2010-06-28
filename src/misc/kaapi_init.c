@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -101,283 +102,6 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
 
 
-/** cpuset related routines
- -- grammar
-    cpu_set   : cpu_expr ( ',' cpu_expr ) *
-    cpu_expr  : '!'* cpu_list
-    cpu_list  : cpu_index ':' cpu_index |
-                ':' cpu_index |
-                ':'
-    cpu_index : num
-    num       : [ '0' '9' ]+
- */
-
-struct cpuset_parser
-{
-#define CPU_BIT_IS_DISABLED (1 << 0)
-#define CPU_BIT_IS_USABLE (1 << 1)
-  unsigned char cpu_bits[KAAPI_MAX_PROCESSOR];
-
-  unsigned int* kid_map;
-
-  unsigned int used_ncpus;
-  unsigned int sys_ncpus;
-  unsigned int total_ncpus;
-
-  const char* str_pos;
-  int err_no;
-};
-
-
-typedef struct cpuset_parser cpuset_parser_t;
-
-
-static void init_parser
-(
- cpuset_parser_t* parser,
- unsigned int* kid_map,
- unsigned int sys_ncpus,
- unsigned int total_ncpus,
- const char* str_pos
-)
-{
-  memset(parser, 0, sizeof(cpuset_parser_t));
-
-  parser->kid_map = kid_map;
-
-  parser->total_ncpus = total_ncpus;
-  parser->sys_ncpus = sys_ncpus;
-
-  parser->str_pos = str_pos;
-}
-
-
-static inline void set_parser_error
-(
- cpuset_parser_t* parser,
- int err_no
-)
-{
-  parser->err_no = err_no;
-}
-
-
-static inline int parse_cpu_index
-(
- cpuset_parser_t* parser,
- unsigned int* index
-)
-{
-  char* end_pos;
-
-  *index = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
-
-  if (end_pos == parser->str_pos)
-    {
-      set_parser_error(parser, EINVAL);
-      return -1;
-    }
-
-  if (*index >= parser->sys_ncpus)
-    {
-      set_parser_error(parser, E2BIG);
-      return -1;
-    }
-
-  parser->str_pos = end_pos;
-
-  return 0;
-}
-
-
-static inline int is_digit(const int c)
-{
-  return (c >= '0') && (c <= '9');
-}
-
-
-static inline int is_list_delim(const int c)
-{
-  return c == ':';
-}
-
-
-static inline int is_eol(const int c)
-{
-  /* end of list */
-  return (c == ',') || (c == 0);
-}
-
-
-static int parse_cpu_list
-(
- cpuset_parser_t* parser,
- unsigned int* index_low,
- unsigned int* index_high
-)
-{
-  /* 1 token look ahead */
-  if (is_digit(*(parser->str_pos)))
-    {
-      if (parse_cpu_index(parser, index_low))
-	return -1;
-    }
-  else
-    {
-      *index_low = 0;
-    }
-
-  *index_high = *index_low;
-
-  if (is_list_delim(*parser->str_pos))
-    {
-      ++parser->str_pos;
-
-      /* 1 token look ahead */
-      if (is_eol(*(parser->str_pos)))
-	{
-	  *index_high = parser->total_ncpus - 1;
-	}
-      else if (parse_cpu_index(parser, index_high))
-	{
-	  return -1;
-	}
-    }
-
-  /* swap indices if needed */
-  if (*index_low > *index_high)
-    {
-      const unsigned int tmp_index = *index_high;
-      *index_high = *index_low;
-      *index_low = tmp_index;
-    }
-
-  return 0;
-}
-
-
-static int parse_cpu_expr(cpuset_parser_t* parser)
-{
-  unsigned int is_enabled = 1;
-  unsigned int index_low;
-  unsigned int index_high;
-
-  for (; *parser->str_pos == '!'; ++parser->str_pos)
-    is_enabled ^= 1;
-
-  if (parse_cpu_list(parser, &index_low, &index_high))
-    return -1;
-
-  for (; index_low <= index_high; ++index_low)
-    {
-      if (is_enabled == 0)
-	parser->cpu_bits[index_low] |= CPU_BIT_IS_DISABLED;
-
-      if (parser->cpu_bits[index_low] & CPU_BIT_IS_DISABLED)
-	{
-	  /* this cpu is disabled. if it has been previously
-	     mark usable, discard it and decrement the cpu cuont
-	  */
-
-	  if (parser->cpu_bits[index_low] & CPU_BIT_IS_USABLE)
-	    {
-	      parser->cpu_bits[index_low] &= ~CPU_BIT_IS_USABLE;
-	      --parser->used_ncpus;
-	    }
-	}
-      else if (!(parser->cpu_bits[index_low] & CPU_BIT_IS_USABLE))
-	{
-	  /* cpu not previously usable */
-
-	  parser->cpu_bits[index_low] |= CPU_BIT_IS_USABLE;
-
-	  if (++parser->used_ncpus == parser->total_ncpus)
-	    break;
-	}
-    }
-
-  return 0;
-}
-
-
-static int parse_cpu_set(cpuset_parser_t* parser)
-{
-  unsigned int i;
-  unsigned int j;
-
-  /* build the cpu set from string */
-
-  while (1)
-    {
-      if (parse_cpu_expr(parser))
-	return -1;
-
-      if (*parser->str_pos != ',')
-	{
-	  if (!*parser->str_pos)
-	    break;
-
-	  set_parser_error(parser, EINVAL);
-
-	  return -1;
-	}
-
-      ++parser->str_pos;
-    }
-
-  /* bind kid to available cpus */
-
-  for (j = 0, i = 0; i < parser->used_ncpus; ++i, ++j)
-    {
-      for (; !(parser->cpu_bits[j] & CPU_BIT_IS_USABLE); ++j)
-	;
-
-      parser->kid_map[i] = j;
-    }
-
-  return 0;
-}
-
-
-static void fill_identity_kid_map
-    (
-     unsigned int* kid_map,
-     unsigned int ncpus
-    )
-{
-  unsigned int icpu;
-
-  for (icpu = 0; icpu < ncpus; ++icpu)
-    kid_map[icpu] = icpu;
-}
-
-
-static int str_to_kid_map
-    (
-     unsigned int* kid_map,
-     const char* cpuset_str,
-     unsigned int sys_ncpus,
-     unsigned int* total_ncpus
-    )
-{
-  cpuset_parser_t parser;
-
-  if (cpuset_str == NULL)
-    return 0;
-
-  init_parser(&parser, kid_map, sys_ncpus,
-	      *total_ncpus, cpuset_str);
-
-  if (parse_cpu_set(&parser))
-    return parser.err_no;
-
-  if (parser.used_ncpus < *total_ncpus)
-    *total_ncpus = parser.used_ncpus;
-
-  return 0;
-}
-
-
 /** \ingroup WS
     Initialize from xkaapi runtime parameters from command line
     \param argc [IN] command line argument count
@@ -410,55 +134,21 @@ int kaapi_setup_param( int argc, char** argv )
     kaapi_default_param.syscpucount = KAAPI_MAX_PROCESSOR;
 
   kaapi_default_param.use_affinity = 0;
-    
-  /* Set default values */
+
   kaapi_default_param.cpucount  = kaapi_default_param.syscpucount;
   
-  /* Get values from environment variable */
   if (getenv("KAAPI_DISPLAY_PERF") !=0)
-  {
     kaapi_default_param.display_perfcounter = 1;
-  }
   else
-  {
     kaapi_default_param.display_perfcounter = 0;
-  }
 
-  /* Get values from environment variable */
   if (getenv("KAAPI_STACKSIZE") !=0)
-  {
     kaapi_default_param.stacksize = atoi(getenv("KAAPI_STACKSIZE"));
-  }
-  if (getenv("KAAPI_CPUCOUNT") !=0)
-  {
-    kaapi_default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
-    if (kaapi_default_param.cpucount > KAAPI_MAX_PROCESSOR/* kaapi_default_param.syscpucount*/)
-      kaapi_default_param.cpucount = kaapi_default_param.syscpucount;
-  }
-
-  if (getenv("KAAPI_CPUSET") != 0)
-  {
-    int err_no =
-      str_to_kid_map(kaapi_default_param.kid_to_cpu,
-		     getenv("KAAPI_CPUSET"),
-		     kaapi_default_param.syscpucount,
-		     &kaapi_default_param.cpucount);
-
-    if (err_no)
-      return err_no;
-
-    kaapi_default_param.use_affinity = 1;
-  }
-  else
-  {
-    fill_identity_kid_map(kaapi_default_param.kid_to_cpu,
-			  kaapi_default_param.cpucount);
-  }
 
   /* workstealing selection function */
   {
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
     const char* const wsselect = getenv("KAAPI_WSSELECT");
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
     if ((wsselect != NULL) && !strcmp(wsselect, "workload"))
       kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   }

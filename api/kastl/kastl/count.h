@@ -42,39 +42,73 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_COUNT_H_INCLUDED
 # define KASTL_COUNT_H_INCLUDED
-#include "kastl/kastl_impl.h"
+
+
+#include <iterator>
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
 
 namespace kastl
+{
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* count algorithm                                                       */
-/* -------------------------------------------------------------------- */
-template<typename iterator_type, typename value_type>
-struct BodyCount {
-  BodyCount( const value_type& v ) : value(v), result(0) {}
-  const value_type& value;
-  std::iterator_traits<iterator_type>::difference_type result;
-  void operator()( iterator_type& dummy, iterator_type& current )
+template<typename Iterator, typename Value, typename Size>
+struct count_body
+{
+  typedef kastl::impl::numeric_result<Iterator, Size> result_type;
+
+  const Value& _value;
+
+  count_body(const Value& value)
+    : _value(value)
+  {}
+
+  void operator()(result_type& res, const Iterator& pos)
   {
-    if (*current == value) ++result;
+    if (*pos == _value)
+      ++res._value;
+  }
+
+  void reduce(result_type& lhs, const result_type& rhs)
+  {
+    lhs._value += rhs._value;
   }
 };
 
-}// rts
-
-template <class iterator_type, class value_type, typename Settings = rts::DefaultSetting>
-typename std::iterator_traits<iterator_type>::difference_type
-   count(iterator_type first, iterator_type last, const value_type& value, const Settings& settings = rts::DefaultSetting())
+template<typename Iterator, typename Value, typename Size, typename Settings>
+void count
+(Iterator first, Iterator last,
+ const Value& value, Size& size,
+ const Settings& settings)
 {
-  if (first == last) return init;
-  rts::BodyCount<iterator_type,value_type> bc(value);
-  rts::ReduceLoop( first, last, bc, settings );
-  return bc.result;
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  kastl::impl::numeric_result<Iterator, Size> res(size);
+  count_body<Iterator, Value, Size> body(value);
+  kastl::impl::foreach_reduce_loop(res, seq, body, settings);
+  size = res._value;
 }
 
-} // kastl
+template<typename Iterator, typename Value, typename Size>
+void count(Iterator first, Iterator last, const Value& value, Size& size)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::count(first, last, value, size, settings);
+}
+
+template<typename Iterator, typename Value>
+typename std::iterator_traits<Iterator>::difference_type
+count(Iterator first, Iterator last, const Value& value)
+{
+  typename std::iterator_traits<Iterator>::difference_type size = 0;
+  kastl::count(first, last, value, size);
+  return size;
+}
+
+} // kastl::
+
 
 #endif // ! KASTL_COUNT_H_INCLUDED

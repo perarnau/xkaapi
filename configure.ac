@@ -133,6 +133,24 @@ AS_CASE([$enable_target],
 AC_SUBST([KAAPI_TARGET])
 AM_CONDITIONAL([KAAPI_TARGET_MT],[test x"$KAAPI_TARGET" = x"mt"])
 
+dnl ----------------------------------------------------------------
+# enable support for cuda/gpu
+AC_ARG_WITH([cuda],[AS_HELP_STRING([--with-cuda],
+		 [add cuda support])],[],
+  [with_cuda=default]
+)
+AS_CASE([$with_cuda],
+  [default|no], [dnl
+  ], [yes], [dnl
+    AC_MSG_NOTICE([Adding cuda support])
+    KAAPI_CUDA=yes
+    # not using AC*DEFINE as we want this available for examples too
+    AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1"
+  ], [dnl
+    AC_MSG_ERROR([Unknown value '$with_cuda' for --with-cuda option. Aborting.])
+  ])
+AC_SUBST([KAAPI_CUDA])
+AM_CONDITIONAL([KAAPI_USE_CUDA],[test x"$KAAPI_CUDA" = x"yes"])
 
 dnl ----------------------------------------------------------------
 # Debug mode, CAS and perfcounter

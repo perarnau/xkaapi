@@ -71,8 +71,6 @@ int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task,
   }
   kaapi_assert(request !=0);
 
-//  printf("Steal task %p\n", task );
-//  fflush(stdout );
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
        - the original stack

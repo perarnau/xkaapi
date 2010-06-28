@@ -302,7 +302,7 @@ namespace rts {
   inline bool work_queue_t<bits>::is_empty() const
   {
     /* inverse ici... critical path optimization ? on veut la valeur la plus
-       à jour possible pour la victime (pop)
+       a jour possible pour la victime (pop)
     */
     index_type b = _beg;
     kaapi_readmem_barrier();
@@ -375,12 +375,9 @@ namespace rts {
   inline bool work_queue_t<bits>::pop_safe(range_t<bits>& r, size_type size)
   {
     if (_end <=_beg) return false;
-    if (_end-_beg < size)
-      _beg += size;
-    else {
-      size = _end-_beg;
-      _beg = _end;
-    }
+    if (_end - _beg < size)
+      size = _end - _beg;
+    _beg += size;
     r.last = _beg;
     r.first = r.last - size;
     return true;

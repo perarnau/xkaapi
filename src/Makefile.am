@@ -86,7 +86,8 @@ libxkaapi_la_SOURCES=\
   static/kaapi_threadgroup_saverestore.c\
   static/kaapi_threadgroup_print.c\
   static/kaapi_threadgroup_vect.c\
-  kaapi_staticsched.h
+  kaapi_staticsched.h \
+  machine/common/kaapi_procinfo.c
 
 
 #  task/kaapi_fmt_basictype.c
@@ -111,7 +112,14 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h \
-  machine/mt/kaapi_mt_perf.c 
+  machine/mt/kaapi_mt_perf.c \
+  machine/mt/kaapi_mt_register_procs.c
+endif
+
+if KAAPI_USE_CUDA
+libxkaapi_la_SOURCES+=\
+  machine/cuda/kaapi_cuda.h \
+  machine/cuda/kaapi_cuda_register_procs.c
 endif
 
 

@@ -27,7 +27,7 @@ BIN	:= $(BINDIR)/$(ALGO)-$(LIB)-$(DO)
 
 all	: $(BIN)
 $(BIN)	: clean $(OBJS)
-	$(LD) $(LFLAGS) -o $(BIN) $(OBJS)
+	$(LD) -o $(BIN) $(OBJS) $(LFLAGS)
 %.o	: %.cpp
 	$(CC) $(CFLAGS) -c -o $(@) $(<)
 %.o	: %.c

@@ -1,130 +1,100 @@
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
+
+
 #ifndef KASTL_REPLACE_H_INCLUDED
 # define KASTL_REPLACE_H_INCLUDED
 
 
-
-#include <stddef.h>
-#include <algorithm>
-#include <iterator>
-#include <utility>
-#include "kastl_impl.h"
-
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
 
 namespace kastl
 {
-namespace impl
+
+template<typename Iterator, typename Value>
+struct replace_body
 {
-template
-<
-  typename SequenceType,
-  typename ConstantType,
-  typename ResultType,
-  typename MacroType,
-  typename NanoType,
-  typename SplitterType
->
-struct ReplaceWork : public BaseWork
-<SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-{
-  typedef ReplaceWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> SelfType;
+  typedef kastl::impl::dummy_type result_type;
 
-  typedef BaseWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType> BaseType;
+  const Value& _old_value;
+  const Value& _new_value;
 
-  ReplaceWork() : BaseType() {}
+  replace_body(const Value& old_value, const Value& new_value)
+    : _old_value(old_value), _new_value(new_value)
+  {}
 
-  ReplaceWork(const SequenceType& s, const ConstantType* c)
-    : BaseType(s, c, InvalidResultType()) { }
-
-  inline void compute(SequenceType& seq)
+  void operator()(result_type&, Iterator& pos)
   {
-    std::replace
-    (
-     seq.begin(), seq.end(),
-     this->_const->first,
-     this->_const->second
-    );
-
-    seq.advance();
+    if (*pos == _old_value)
+      *pos = _new_value;
   }
-
 };
 
-// tunning params
-typedef Daouda0TuningParams ReplaceTuningParams;
-
-} // kastl::impl
-
-
-template
-<
-  typename ForwardIterator,
-  typename ValueType,
-  typename ParamType
->
+template<typename Iterator, typename Value, typename Settings>
 void replace
-(
- ForwardIterator begin,
- ForwardIterator end,
- const ValueType& ref_val,
- const ValueType& new_val
-)
+(Iterator first, Iterator last,
+ const Value& old_value, const Value& new_value,
+ const Settings& settings)
 {
-  typedef kastl::impl::BasicSequence<ForwardIterator>
-    SequenceType;
-
-  typedef typename kastl::impl::make_macro_type
-    <ParamType::macro_tag, ParamType, SequenceType>::Type
-    MacroType;
-
-  typedef typename kastl::impl::make_nano_type
-    <ParamType::nano_tag, ParamType, SequenceType>::Type
-    NanoType;
-
-  typedef typename kastl::impl::make_splitter_type
-    <ParamType::splitter_tag, ParamType>::Type
-    SplitterType;
-
-  typedef std::pair<ValueType, ValueType>
-    ConstantType;
-
-  typedef kastl::impl::InvalidResultType
-    ResultType;
-
-  typedef kastl::impl::ReplaceWork
-    <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-    WorkType;
-
-  ConstantType constant(ref_val, new_val);
-  WorkType work(SequenceType(begin, end), &constant);
-  kastl::impl::compute<WorkType>(work);
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  replace_body<Iterator, Value> body(old_value, new_value);
+  kastl::impl::foreach_loop(seq, body, settings);
 }
 
-
-template
-<
- typename ForwardIterator,
- typename ValueType
->
+template<typename Iterator, typename Value>
 void replace
-(
- ForwardIterator begin,
- ForwardIterator end,
- const ValueType& ref_val,
- const ValueType& new_val
-)
+(Iterator first, Iterator last,
+ const Value& old_value, const Value& new_value)
 {
-  typedef kastl::impl::ReplaceTuningParams ParamType;
-
-  return kastl::replace
-    <ForwardIterator, ValueType, ParamType>
-    (begin, end, ref_val, new_val);
+  kastl::impl::static_settings settings(512, 512);
+  kastl::replace(first, last, old_value, new_value, settings);
 }
 
-} // kastl
-
+} // kastl::
 
 
 #endif // ! KASTL_REPLACE_H_INCLUDED

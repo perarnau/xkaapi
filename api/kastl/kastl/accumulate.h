@@ -42,43 +42,66 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_ACCUMULATE_H_INCLUDED
 # define KASTL_ACCUMULATE_H_INCLUDED
-#include "kastl/kastl_impl.h"
 
-namespace kastl {
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* accumulate algorithm                                                       */
-/* -------------------------------------------------------------------- */
-template<typename T, typename input_iterator_type>
-struct BodyAccumulate {
-  BodyAccumulate( const T& init ) : result(init) {}
-  T result;
-  void operator()( input_iterator_type& dummy, input_iterator_type& current )
+#include <iterator>
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
+
+namespace kastl
+{
+template<typename Iterator, typename Value, typename Function>
+struct accumulate_body
+{
+  typedef kastl::impl::numeric_result<Iterator, Value> result_type;
+
+  Function _op;
+
+  accumulate_body(const Function& op)
+    : _op(op)
+  {}
+
+  void operator()(result_type& res, const Iterator& pos)
   {
-    result += *current;
+    res._value = _op(res._value, *pos);
+  }
+
+  void reduce(result_type& lhs, const result_type& rhs)
+  {
+    lhs._value = _op(lhs._value, rhs._value);
   }
 };
 
-}// rts
-
-template <class input_iterator_type, class T, typename Settings>
-T accumulate(input_iterator_type first, input_iterator_type last, T init, const Settings& settings )
+template<typename Iterator, typename Value, typename Function, typename Settings>
+Value accumulate
+(Iterator first, Iterator last, Value init, Function op, const Settings& settings)
 {
-  if (first == last) return init;
-  rts::BodyAccumulate<T,input_iterator_type> ba(init);
-  rts::ReduceLoop( first, last, ba, settings );
-  return ba.result;
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  accumulate_body<Iterator, Value, Function> body(op);
+  kastl::impl::numeric_result<Iterator, Value> result(init);
+  kastl::impl::foreach_reduce_loop(result, seq, body, settings);
+  return result._value;
 }
 
-template <class input_iterator_type, class T>
-T accumulate(input_iterator_type first, input_iterator_type last, T init )
+template<typename Iterator, typename Value, typename Function>
+Value accumulate(Iterator first, Iterator last, Value init, Function op)
 {
-  return accumulate(first, last, init, rts::DefaultSetting());
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::accumulate(first, last, init, op, settings);
 }
 
-} // kastl
+template<typename Iterator, typename Value>
+Value accumulate(Iterator first, Iterator last, Value init)
+{
+  return kastl::accumulate(first, last, init, kastl::impl::add<Value>());
+}
+
+} // kastl::
+
 
 #endif // ! KASTL_ACCUMULATE_H_INCLUDED

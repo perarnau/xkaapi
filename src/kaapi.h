@@ -147,24 +147,28 @@ struct kaapi_taskadaptive_result_t;
 
 
 /* ========================== utilities ====================================== */
-static inline void* kaapi_malloc_align( unsigned int _align, size_t size, void** addr_tofree)
+static inline void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree)
 {
-  kaapi_assert_debug( (_align !=0) && ((_align ==64) || (_align ==32) || (_align ==16) 
-                                    || (_align == 8) || (_align == 4) || (_align == 2) || (_align == 1)) );
-  if (_align < 8)
+  /* align_size in bytes */
+
+  if (align_size == 0)
   {
     *addr_tofree = malloc(size);
     return *addr_tofree;
   }
 
-  kaapi_uintptr_t align = _align-1;
-  void* retval = (void*)malloc(align + size);
-  if (retval) {
-    if (addr_tofree !=0) *addr_tofree = retval;
-    if ( (((kaapi_uintptr_t)retval) & align) !=0U)
-      retval = (void*)(((kaapi_uintptr_t)retval + align) & ~align);
-    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align) == 0U);
+  const kaapi_uintptr_t align_mask = align_size - 1;
+  void* retval = (void*)malloc(align_mask + size);
+  if (retval != NULL)
+  {
+    if (addr_tofree !=0)
+      *addr_tofree = retval;
+
+    if ((((kaapi_uintptr_t)retval) & align_mask) != 0U)
+      retval = (void*)(((kaapi_uintptr_t)retval + align_mask) & ~align_mask);
+    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align_mask) == 0U);
   }
+
   return retval;
 }
 
@@ -205,8 +209,10 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 #define KAAPI_MAX_ARCHITECTURE 3
 
 #define KAAPI_PROC_TYPE_CPU     0x0
-#define KAAPI_PROC_TYPE_GPU     0x1
+#define KAAPI_PROC_TYPE_CUDA    0x1
 #define KAAPI_PROC_TYPE_MPSOC   0x2
+
+#define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
 #define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_CPU
 
 
@@ -220,8 +226,8 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 extern int kaapi_getconcurrency (void);
 
 /** \ingroup WS
-    Set the workstealing concurrency number, i.e. the number of kernel
-    activities to execute the user level thread.
+    Set the workstealing conccurency by instanciating kprocs according
+    to the registration of each subsystem (ie. mt, cuda...)
     If successful, the kaapi_setconcurrency() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.
     This function is machine dependent.
@@ -231,7 +237,24 @@ extern int kaapi_getconcurrency (void);
     \retval EAGAIN if the system laked the necessary ressources to create another thread
     on return, the concurrency number may has been set to a different number than requested.
  */
-extern int kaapi_setconcurrency (unsigned int concurrency);
+extern int kaapi_setconcurrency(void);
+
+
+struct kaapi_procinfo_list;
+
+/* ========================================================================== */
+/** kaapi_mt_register_procs
+    register the kprocs for mt architecture.
+*/
+extern int kaapi_mt_register_procs(struct kaapi_procinfo_list*);
+
+/* ========================================================================== */
+/** kaapi_cuda_register_procs
+    register the kprocs for cuda architecture.
+*/
+#if KAAPI_USE_CUDA
+extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
+#endif
 
 
 /* ========================================================================== */

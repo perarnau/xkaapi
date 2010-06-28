@@ -42,38 +42,76 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_MIN_ELEMENT_H_INCLUDED
 # define KASTL_MIN_ELEMENT_H_INCLUDED
-#include "kastl/kastl_impl.h"
+
+
+#include <iterator>
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
 
 namespace kastl
+{
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* min_element algorithm                                                   */
-/* -------------------------------------------------------------------- */
-template<typename iterator_type>
-struct BodyMinElement {
-  void operator()( iterator_type& result, iterator_type& current )
+template<typename Iterator, typename Predicate>
+struct min_element_body
+{
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  typedef Iterator result_type;
+
+  Predicate _pred;
+
+  min_element_body(const Predicate& pred)
+    : _pred(pred)
+  {}
+
+  void operator()(result_type& res, const Iterator& pos)
   {
-    if (*result > *current)
-     result = current;
+    // result is already touched
+
+    if (!_pred(*res, *pos))
+      res = pos;
   }
+
+  void reduce(result_type& lhs, const result_type& rhs)
+  {
+    if (!_pred(*lhs, *rhs))
+      lhs = rhs;
+  }
+
 };
 
-}// rts
-
-template<typename input_iterator_type, typename Settings = rts::DefaultSetting>
-Iterator min_element( input_iterator_type first, Itinput_iterator_typeerator last, const Settings& settings )
+template<typename Iterator, typename Predicate, typename Settings>
+Iterator min_element
+(Iterator first, Iterator last, Predicate pred, const Settings& settings)
 {
-  if (first == input_iterator_type) return first;
-  return rts::ReduceLoop( first, last, 
-    rts::BodyMinElement<input_iterator_type>,
-    settings
-  );
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  min_element_body<Iterator, Predicate> body(pred);
+  Iterator res(first);
+  kastl::impl::foreach_reduce_loop(res, seq, body, settings);
+  return res;
 }
 
-} // kastl
+template<typename Iterator, typename Predicate>
+Iterator min_element
+(Iterator first, Iterator last, Predicate pred)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::min_element(first, last, pred, settings);
+}
+
+template<typename Iterator>
+Iterator min_element(Iterator first, Iterator last)
+{
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  return kastl::min_element(first, last, kastl::impl::lt<value_type>());
+}
+
+} // kastl::
 
 
-#endif // ! KASTL_MIN_ELEMENT_H_INCLUDED
+
+#endif // KASTL_MIN_ELEMENT_H_INCLUDED
