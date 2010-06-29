@@ -456,6 +456,7 @@ typedef struct kaapi_task_t {
   kaapi_task_bodyid_t   volatile ebody;     /** extra task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
   void*                 pad;       /** padding  */
+  unsigned int		proctype;
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 
@@ -716,6 +717,11 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug((char*)thread->sp >= (char*)thread->sp_data);
 
+#if 0 /* todo: cache the bytype request counts */
+  if (toptask(thread)->proc_type == CUDA)
+    ++thread->tasks_counts[KAAPI_PROC_CUDA];
+#endif
+
   kaapi_writemem_barrier_api();
 
   --thread->sp;
@@ -723,21 +729,41 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 }
 
 
-#define kaapi_task_initdfg( task, taskbody, arg ) \
-  do { \
-    (task)->sp     = (arg);\
-    (task)->body   = taskbody;\
-    (task)->ebody  = taskbody;\
-  } while (0)
+static inline void kaapi_task_initdfg_with_proctype
+(kaapi_task_t* task, unsigned int type, kaapi_task_body_t body, void* arg)
+{
+  task->sp = arg;
+  task->body = body;
+  task->ebody = body;
+  task->proctype = type;
+}
 
+static inline void kaapi_task_initdfg
+(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
+{
+  kaapi_task_initdfg_with_proctype
+    (task, KAAPI_PROC_TYPE_CPU, body, arg);
+}
+
+static inline int kaapi_task_init_with_proctype
+(kaapi_task_t* task, unsigned int type, kaapi_task_body_t body, void* arg)
+{
+  kaapi_task_initdfg_with_proctype(task, type, body, arg);
+  return 0;
+}
+
+static inline int kaapi_task_init_cuda
+(kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg)
+{
+  return kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CUDA, taskbody, arg);
+}
 
 /** \ingroup TASK
-    Initialize a task with given flag for adaptive attribut
+    Initialize a task with given flag for adaptive attribute
 */
 static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
 {
-  kaapi_task_initdfg( task, taskbody, arg );
-  return 0;
+  return kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CPU, taskbody, arg);
 }
 
 

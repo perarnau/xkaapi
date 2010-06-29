@@ -321,6 +321,7 @@ typedef struct kaapi_processor_t {
 
   /* workload */
   kaapi_atomic_t	         workload;
+  unsigned int			proc_type;
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
 

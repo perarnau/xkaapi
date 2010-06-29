@@ -78,3 +78,118 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 
   return 0;
 }
+
+
+/* todo: put in kaapi_sched_select_victim_with_tasks.c */
+
+static inline void lock_kproc(kaapi_processor_t* kproc, kaapi_processor_id_t kid)
+{
+  while (1)
+  {
+    if (KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1 + kid))
+      break;
+  }
+}
+
+static inline void unlock_kproc(kaapi_processor_t* kproc)
+{
+  KAAPI_ATOMIC_WRITE(&kproc->lock, 0);
+}
+
+#if 0 /* unused */
+static inline int is_task_ready(const kaapi_task_t* task)
+{
+  if (task->body == kaapi_adapt_body)
+    return 1;
+  return kaapi_task_isstealable(task);
+}
+#endif /* unused */
+
+static unsigned int __attribute__((unused)) count_tasks_by_type
+(kaapi_thread_t* thread, unsigned int type)
+{
+  /* assume thread kproc locked */
+
+  kaapi_task_t* const end = thread->sp;
+  kaapi_task_t* pos;
+  unsigned int count = 0;
+
+  for (pos = thread->pc; pos != end; --pos)
+  {
+    if (pos->proctype != type)
+      continue ;
+
+#if 0 /* unused */
+    if (!is_task_ready(pos))
+      continue ;
+#endif /* unused */
+
+    ++count;
+  }
+
+  return count;
+}
+
+static unsigned int has_task_by_type
+(kaapi_thread_t* thread, unsigned int type)
+{
+  /* assume thread kproc locked */
+
+  kaapi_task_t* const end = thread->sp;
+  kaapi_task_t* pos;
+
+  for (pos = thread->pc; pos != end; --pos)
+  {
+    if (pos->proctype != type)
+      continue ;
+
+#if 0 /* unused */
+    if (!is_task_ready(pos))
+      continue ;
+#endif /* unused */
+
+    return 1;
+  }
+
+  return 0;
+}
+
+int kaapi_sched_select_victim_with_cuda_tasks
+(kaapi_processor_t* kproc, kaapi_victim_t* victim)
+{
+  unsigned int has_task;
+  int i;
+
+  for (i = 0; i < kaapi_count_kprocessors; ++i)
+  {
+    kaapi_processor_t* const pos = kaapi_all_kprocessors[i];
+
+    if ((pos == NULL) || (pos == kproc))
+      continue ;
+    if (pos->proc_type != KAAPI_PROC_TYPE_CUDA)
+      continue ;
+
+    lock_kproc(pos, kproc->kid);
+    has_task = has_task_by_type
+      (kaapi_threadcontext2thread(pos->thread), KAAPI_PROC_TYPE_CUDA);
+    unlock_kproc(pos);
+
+    /* it potentially has a cuda task */
+    if (has_task)
+    {
+      printf("found!\n"); exit(-1);
+      victim->kproc = pos;
+      victim->level = 0; /* unused? */
+      return 0;
+    }
+  }
+
+  return EINVAL;
+}
+
+
+void kaapi_exec_cuda_task
+(kaapi_task_t* task, kaapi_thread_t* thread)
+{
+  task->body(task->sp, thread);
+}
