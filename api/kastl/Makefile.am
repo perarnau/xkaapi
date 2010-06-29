@@ -35,4 +35,5 @@ kastlinclude_HEADERS=\
 	kastl/mismatch.h\
 	kastl/search.h\
 	kastl/adjacent_find.h\
-	kastl/adjacent_difference.h
+	kastl/adjacent_difference.h\
+	kastl/partial_sum.h
