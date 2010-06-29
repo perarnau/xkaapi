@@ -50,7 +50,6 @@
 #include "kaapi.h"
 #include "kastl_workqueue.h"
 #include "kastl_sequences.h"
-#include "../unit/src/timing.h"
 
 
 // missing decls

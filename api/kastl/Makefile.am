@@ -20,6 +20,7 @@ kastlinclude_HEADERS=\
 	kastl/find.h\
 	kastl/find_if.h\
 	kastl/find_first_of.h\
+	kastl/accumulate.h\
 	kastl/inner_product.h\
 	kastl/count.h\
 	kastl/count_if.h\
