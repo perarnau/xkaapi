@@ -18,9 +18,7 @@ kastlincludedir=$(includedir)/kastl
 
 kastlinclude_HEADERS=\
 	kastl/kastl_types.h\
-	kastl/kastl_fifoqueue.h\
 	kastl/kastl_workqueue.h\
-	kastl/kastl_team.h\
 	kastl/kastl_sequences.h\
 	kastl/kastl_impl.h\
 	kastl/for_each.h\
@@ -29,6 +27,8 @@ kastlinclude_HEADERS=\
 	kastl/accumulate_while.h\
 	kastl/algorithm \
 	kastl/numeric
+
+#	kastl/kastl_fifoqueue.h 	kastl/kastl_team.h
 
 #libkastl_la_SOURCES=\
 	$(kastlinclude_HEADERS)
