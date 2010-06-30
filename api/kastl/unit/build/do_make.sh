@@ -28,14 +28,14 @@ ALGOS="$ALGOS transform"
 
 LIBS=''
 LIBS="$LIBS kastl"
-LIBS="$LIBS stl"
-LIBS="$LIBS tbb"
-LIBS="$LIBS pastl"
-LIBS="$LIBS pthread"
+#LIBS="$LIBS stl"
+#LIBS="$LIBS tbb"
+#LIBS="$LIBS pastl"
+#LIBS="$LIBS pthread"
 
 DOS=''
-DOS="$DOS bench"
-#DOS="$DOS check"
+#DOS="$DOS bench"
+DOS="$DOS check"
 
 for D in $DOS; do
     for A in $ALGOS; do

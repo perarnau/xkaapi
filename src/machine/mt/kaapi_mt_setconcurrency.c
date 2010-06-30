@@ -211,6 +211,10 @@ int kaapi_setconcurrency(void)
   return 0;
 }
 
+/* todo: move somewhere else */
+extern int kaapi_sched_select_victim_with_cuda_tasks
+(kaapi_processor_t*, kaapi_victim_t*);
+
 /**
 */
 void* kaapi_sched_run_processor( void* arg )
@@ -228,7 +232,15 @@ void* kaapi_sched_run_processor( void* arg )
   }
   kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
   kaapi_assert( 0 == kaapi_processor_init( kproc ) );
+
   kproc->kid = kid;
+  kproc->proc_type = kpi->proc_type;
+
+  if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
+    kproc->fnc_selecarg = NULL;
+  }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */

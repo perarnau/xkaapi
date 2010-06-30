@@ -89,7 +89,6 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
   execframe with the state that has been set on return with EWOULDBLOCK.
 */
 
-
 /*
 */
 int kaapi_stack_execframe( kaapi_thread_context_t* thread )
@@ -126,6 +125,10 @@ begin_loop:
   while ((pc = fp->pc) != fp->sp)
   {
     kaapi_assert_debug( pc > fp->sp );
+
+    /* current kproc cannot exec this task type */
+    if (pc->proctype != thread->proc->proc_type)
+      goto error_proc_type;
 
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
     body = pc->body;
@@ -253,6 +256,7 @@ restart_after_steal:
 error_swap_body:
   if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
   kaapi_assert_debug(thread->sfp- fp == 1);
+error_proc_type:
   /* implicityly pop the dummy frame */
   thread->sfp = fp;
 #if defined(KAAPI_USE_PERFCOUNTER)

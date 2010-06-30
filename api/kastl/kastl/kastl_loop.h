@@ -604,6 +604,10 @@ namespace impl
 	   bool TerminateTag, bool ReduceTag>
   static void thief_entry(void*, kaapi_thread_t*);
 
+  template<typename Result, typename Sequence, typename Body, typename Settings,
+	   bool TerminateTag, bool ReduceTag>
+  static void cuda_thief_entry(void*, kaapi_thread_t*);
+
   // split victim context, result
   template
   <typename Result, typename Sequence, typename Body, typename Settings,
@@ -773,11 +777,22 @@ namespace impl
       new (tc) context_type
 	(rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
 
-      kastl_entry_t const entryfn = thief_entry
-	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
+      kastl_entry_t entryfn;
+      kaapi_processor_t* const kproc = kaapi_request_kproc(request);
+      if (kaapi_kproc_type(kproc) == KAAPI_PROC_TYPE_CUDA)
+      {
+	entryfn = cuda_thief_entry
+	  <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
+      }
+      else
+      {
+	entryfn = thief_entry
+	  <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
+      }
 
       kaapi_task_init(thief_task, entryfn, tc);
       kaapi_thread_pushtask(thief_thread);
+
       kaapi_request_reply_head(sc, request, ktr);
 
       kaapi_set_workload(kaapi_request_kproc(request), unit_size);
@@ -1072,6 +1087,16 @@ namespace impl
     kaapi_set_self_workload(0);
 
     kaapi_steal_finalize(sc);
+  }
+
+  template<typename Result, typename Sequence, typename Body, typename Settings,
+	   bool TerminateTag, bool ReduceTag>
+  static void cuda_thief_entry(void* arg, kaapi_thread_t* thread)
+  {
+    printf("CUDA_THIEF_ENTRY\n");
+
+    thief_entry<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>
+      (arg, thread)
   }
 
   static void wait_a_bit(void)
