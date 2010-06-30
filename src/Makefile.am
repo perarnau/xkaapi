@@ -72,8 +72,23 @@ libxkaapi_la_SOURCES=\
   kaapi_machine.h \
   kaapi.h \
   kaapi_impl.h \
-  task/kaapi_stack.h \
-  task/kaapi_task.h
+  static/kaapi_threadgroup_checkdeps.c\
+  static/kaapi_threadgroup_version.c\
+  static/kaapi_threadgroup_veralloc.c\
+  static/kaapi_threadgroup_taskbcast.c\
+  static/kaapi_threadgroup_taskrecv.c\
+  static/kaapi_threadgroup_taskrecvbcast.c\
+  static/kaapi_threadgroup_tasksignal.c\
+  static/kaapi_threadgroup_create.c\
+  static/kaapi_threadgroup_destroy.c\
+  static/kaapi_threadgroup_partition.c\
+  static/kaapi_threadgroup_exec.c\
+  static/kaapi_threadgroup_saverestore.c\
+  static/kaapi_threadgroup_print.c\
+  static/kaapi_threadgroup_vect.c\
+  kaapi_staticsched.h
+
+
 #  task/kaapi_fmt_basictype.c
 
 if KAAPI_TARGET_MT

@@ -6,7 +6,7 @@
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
-SUBDIRS=xkaapi kaapixx atha kastl
+SUBDIRS=xkaapi kaapixx atha fortran kastl
 
 DIST=check-headers.am
 

@@ -145,6 +145,7 @@ struct kaapi_thread_context_t;
 struct kaapi_stealcontext_t;
 struct kaapi_taskadaptive_result_t;
 
+
 /* ========================== utilities ====================================== */
 static inline void* kaapi_malloc_align( unsigned int _align, size_t size, void** addr_tofree)
 {
@@ -314,7 +315,7 @@ typedef enum kaapi_access_mode_t {
     a == b and a or b is R or CW
     or a or b is postponed.
 */
-#define KAAPI_ACCESS_IS_CONCURRENT(a,b) ((((a)==(b)) && (((b) & 2) !=0)) || ((a|b) & KAAPI_ACCESS_MODE_P))
+#define KAAPI_ACCESS_IS_CONCURRENT(a,b) ((((a)==(b)) && (((b) == KAAPI_ACCESS_MODE_R)||((b)==KAAPI_ACCESS_MODE_CW))) || ((a|b) & KAAPI_ACCESS_MODE_P))
 /*@}*/
 
 
@@ -409,6 +410,17 @@ typedef struct kaapi_thread_context_t {
 #endif
 
 
+#if !defined(KAAPI_COMPILE_SOURCE)
+struct kaapi_threadgrouprep_t {
+  /* public part */
+  kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
+  int                        group_size;   /* number of threads in the group */
+};
+#else
+struct kaapi_threadgrouprep_t;
+#endif
+typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
+
 /* ========================================================================= */
 /** Kaapi task definition
     \ingroup TASK
@@ -483,6 +495,7 @@ typedef struct kaapi_taskadaptive_result_t {
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
   int volatile                        req_preempt;
+  int volatile                        is_signaled;
 } kaapi_taskadaptive_result_t;
 #endif
 
@@ -506,7 +519,6 @@ typedef struct kaapi_access_t {
 /* ========================================================================= */
 /* Interface                                                                 */
 /* ========================================================================= */
-
 /** \ingroup TASK
     The function kaapi_access_init() initialize an access from a user defined pointer
     \param access INOUT a pointer to the kaapi_access_t data structure to initialize
@@ -578,14 +590,21 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
     Return pointer to the self stack
 */
-  /* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
+/* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   extern __thread kaapi_thread_t** kaapi_current_thread_key;
+  extern __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
 #  define kaapi_self_thread() \
      (*kaapi_current_thread_key)
+#  define kaapi_self_threadgroup() \
+     kaapi_current_threadgroup_key
+#  define kaapi_set_threadgroup( thgrp) \
+     kaapi_current_threadgroup_key = thgrp
 
 #else
 extern kaapi_thread_t* kaapi_self_thread (void);
+extern kaapi_threadgroup_t kaapi_self_threadgroup(void);
+extern void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp);
 #endif
 
 
@@ -610,12 +629,12 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
 /** \ingroup TASK
     same as kaapi_thread_pushdata, but with alignment constraints.
     note the alignment must be a power of 2 and not 0
-    \param align the alignment size
+    \param align the alignment size, in BYTES
 */
 static inline void* kaapi_thread_pushdata_align
 (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
 {
-  kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) || (align == 8)) );
+  kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
   const uint32_t mask = align - 1;
 
   if ((uintptr_t)thread->sp_data & mask)
@@ -639,7 +658,9 @@ static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
   access->data = thread->sp_data;
+#if !defined(KAAPI_NDEBUG)
   access->version = 0;
+#endif
   thread->sp_data += count;
   return;
 }
@@ -681,8 +702,9 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 
 #define kaapi_task_initdfg( task, taskbody, arg ) \
   do { \
-    (task)->sp       = (arg);\
-    (task)->body     = (task)->ebody = taskbody;\
+    (task)->sp     = (arg);\
+    (task)->body   = taskbody;\
+    (task)->ebody  = taskbody;\
   } while (0)
 
 
@@ -737,6 +759,12 @@ extern int kaapi_sched_sync( void );
 /** \ingroup WS
     Return a new stealcontext to be used with other function of the adaptive API.
     master if only used if flag == KAAPI_STEALCONTEXT_LINKED.
+    * If flag ==KAAPI_STEALCONTEXT_LINKED, then all the linked thieves are waiting
+    during the call to execution of task forked by kaapi_steal_finalize. 
+    In that way the thread that returns synchronize its execution after kaapi_steal_finalize
+    is garanteed to view results of all other thieves.
+    * If flag ==KAAPI_STEALCONTEXT_DEFAULT then the application should ensure termination of
+    thieves, either by call preemption or other synchronisation method.
 */
 kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
   kaapi_thread_t*       thread,
@@ -847,13 +875,6 @@ static inline int kaapi_steal_setsplitter(
 }
 
 
-/** \ingroup ADAPTIVE
-    Synchronize with thieves to prevent a race where
-    the victim returns while a thief is replied to
-    making it unpreempted.
- */
-extern void kaapi_steal_sync(kaapi_stealcontext_t*);
-
 
 /** \ingroup WS
     Helper to expose to many part of the internal API.
@@ -915,9 +936,12 @@ extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_steal
 extern struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc );
 
 
-/** Preempt ktr and return 1 when:
+/** Preempt a thief.
+    Send a preemption request to the thief with result data structure ktr.
+    And pass extra arguments (arg_to_thief).
+    The call to the function returns 1 iff:
     - ktr has been preempted or finished
-TODO->    - ktr has been replaced by the thieves of ktr into the list of stc
+    - ktr has been replaced by the thieves of ktr into the list of stc
 */
 extern int kaapi_preempt_thief_helper( 
   kaapi_stealcontext_t*               stc, 
@@ -944,42 +968,44 @@ extern int kaapi_remove_finishedthief(
   struct kaapi_taskadaptive_result_t* ktr
 );
 
+
 /** \ingroup ADAPTIVE
-   Try to preempt the thief referenced by tr. Wait preemption occurs.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
-   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
-      int (*)( stc, void* thief_work, ... )
-   where ... is the same arguments as passed to kaapi_preempt_nextthief.
+   Try to preempt the thief referenced by tr. Wait either preemption occurs or the end of the thief.
+   Once the thief has received the preempt and send back result to the victim who preempt it, then
+   the function reducer is called.
+   Return value is the return value of the reducer function or 0 if no reducer is given.
+      
+   The reducer function should has the following signature:
+      int (*)( stc, void* thief_arg, void* thief_result, size_t thief_ressize, ... )
+   where ... is the same extra arguments passed to kaapi_preempt_nextthief.
 */
 #define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
 ({									\
   int __res = 0;							\
-  if (((tr) !=0) && kaapi_preempt_thief_helper(stc, (tr), arg_to_thief)) \
+  if (kaapi_preempt_thief_helper(stc, (tr), arg_to_thief)) \
   {									\
     if (!kaapi_is_null((void*)reducer))					\
       __res = ((kaapi_task_reducer_t)reducer)(stc, (tr)->arg_from_thief, (tr)->data, (tr)->size_data, ##__VA_ARGS__);	\
+    while (!tr->is_signaled) kaapi_slowdown_cpu();			\
     kaapi_deallocate_thief_result(tr);					\
   }									\
   __res;								\
 })
 
+
 /** \ingroup ADAPTIVE
    Post a preemption request to thief. Do not wait preemption occurs.
    Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preempt_nextthief() is 0.
-   If it exists a thief, then the call to kaapi_preempt_nextthief() will return the
+   If no more thief can been preempted, then the return value of the function kaapi_preemptasync_thief() is 0.
+   If it exists a thief, then the call to kaapi_preemptasync_thief() will return the
    value the call to reducer function.
    
    reducer function should has the following signature:
       int (*)( stc, void* thief_work, ... )
-   where ... is the same arguments as passed to kaapi_preempt_nextthief.
 */
 #define kaapi_preemptasync_thief( stc, tr, arg_to_thief )	\
   kaapi_preemptasync_thief_helper(stc, (tr), arg_to_thief)
+
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
@@ -1097,6 +1123,100 @@ extern int kaapi_steal_finalize( kaapi_stealcontext_t* stc );
     to ensure end of the computation.
 */
 extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
+
+
+
+/* ========================================================================= */
+/* API for graph partitioning                                                */
+/* ========================================================================= */
+
+/** Create a thread group with size threads. 
+    Return 0 in case of success or the error code.
+*/
+extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size );
+
+/**
+*/
+extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp );
+
+/** Check and compute dependencies if task 'task' is pushed into the i-th partition
+    \return EINVAL if task does not have format
+*/
+extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int partitionid, kaapi_task_t* task);
+
+#if !defined(KAAPI_COMPILE_SOURCE)
+/**
+*/
+static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
+{
+  kaapi_assert_debug( thgrp !=0 );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
+  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  return thread;
+}
+
+/** Equiv to kaapi_thread_toptask( thread ) 
+*/
+static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
+{
+  kaapi_assert_debug( thgrp !=0 );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
+
+  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  return kaapi_thread_toptask(thread);
+}
+
+static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
+{
+  kaapi_assert_debug( thgrp !=0 );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
+  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  kaapi_assert_debug( thread !=0 );
+  
+  /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
+     calculer les dépendances (appel au bon code)
+  */
+  kaapi_threadgroup_computedependencies( thgrp, partitionid, thread->sp );
+  
+  return kaapi_thread_pushtask(thread);
+}
+#endif
+
+/**
+*/
+extern int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_print(FILE* file, kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp );
+
+/**
+*/
+extern int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp );
 
 
 

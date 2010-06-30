@@ -1,0 +1,703 @@
+@c -------------------
+@node API
+@chapter Athapascan Application Programming Interface
+
+This is a quick reference to most classes and functions defined in the
+header @file{<athapascan-1>}.
+Do not forget to had
+@example
+    #include <athapscan-1>
+    using namespace a1; // optional
+@end example
+to your source code !
+
+@menu
+The must have
+* fork:: @code{a1::Fork<...>(...)(...)}
+* shared:: @code{a1::Shared}, @code{a1::Shared_r}, @code{a1::Shared_w}, @code{a1::Shared_rw}, @code{a1::Shared_cw}
+@end menu
+
+@menu
+And the sometimes useful
+* monotonic bound:: @code{a1::MonotonicBound}
+* synchronized blocks::@code{a1::SyncGuard}
+* algorithms:: various algorithms ported from the @acronym{STL,Standard Template Library}
+* utilities:: timers, loggers, resize_vector ...
+* dynamically loaded modules:: external modules that can be loaded dynamically
+@end menu
+@c * remote iterator:: @code{a1::remote}, @code{a1::const_remote}, @code{a1::init}, @code{a1::fetch}
+
+@c -------------------
+@node fork
+@section Fork
+
+@table @strong
+@c ---
+@item Declaration
+
+@example
+template<class @var{Task}, class @var{Attribute} >
+class Fork
+@{
+    Fork(Attribute = DefaultAttribut );
+
+    void operator()( ... );
+@};
+@end example
+
+
+@c ---
+@item Template parameters
+
+@vtable @var
+
+@item Task
+This template parameter is used to know which task will be spawned.
+It must implement a @code{operator()(...)} method.
+The parameters of the @code{Fork} method @code{operator()} are the same as the @code{operator()} from @var{Task}.
+
+@item Attribute
+This template parameter is never specified direclty. Instead, it is deduced from the call to the @code{Fork} constructor.
+The class given can chage the bahavior of the forked task. Possible values are
+
+@vtable @var
+@item DefaultAttribute
+The default behavior, nothing particular
+@item SetLocal
+Force the forked task to be executed locally
+@end vtable
+
+@end vtable
+
+@c ---
+@item Methods
+
+
+@ftable @code
+@item Fork(Attribute = DefaultAttribut)
+The constructor of the @code{Fork} class.
+It is always used to construct a temporary object, from which you call the  @code{operator()} method.
+The @code{Attribute} parameter determines the behavior of forked task, as described before.
+
+@item void operator() (...)
+The parameters of the method @code{operator()} are the same as the @code{operator()} from @var{Task}.
+This method spawns a task of type @var{Task} into the local stack, waiting to be executed by current process, or to be stolen by a remote process.
+
+@end ftable
+
+@end table
+
+@c -------------------
+@node shared
+@section Shared
+
+@ftable @code
+
+@c ---
+@item Shared
+
+@table @strong
+@item Declaration
+@example
+template<class T>
+class Shared
+@{
+    Shared();
+    Shared(T );
+    Shared(T* );
+    const T& get_data();
+@};
+@end example
+
+@item Template Parameters
+@table @var
+@item T 
+Type of the variable to share.
+Type @var{T} must be communicable.
+@end table
+
+@item Methods
+
+@ftable @code
+@item Shared()
+Create an empty shared variable.
+@item Shared(T @var{t})
+Put a copy of @var{t} into the shared memory.
+@item Shared(T* )
+Put a copy of *@var{t} into the shared memory.
+@item get_data()
+Return content of shared, use cautiously because no check on the internal state is done
+@end ftable
+
+@end table
+
+
+@c ---
+@item Shared_r
+
+@table @strong
+@item Declaration
+@example
+template<class T>
+class Shared_r
+@{
+    const T& read();
+@};
+@end example
+
+@item Template Parameters
+@table @var
+@item T 
+Type of the variable to share.
+Type @var{T} must be communicable.
+The variable held can only be read.
+@end table
+
+@item Methods
+
+@ftable @code
+@item read()
+Returns the content (in read only mode) of the object.
+The returned value cannot be modified.
+Further write must wait until the end of current task.
+@end ftable
+
+@end table
+
+@c ---
+@item Shared_w
+
+@table @strong
+@item Declaration
+@example
+template<class T>
+class Shared_w
+@{
+    void write(T t);
+@};
+@end example
+
+@item Template Parameters
+@table @var
+@item T 
+Type of the variable to share.
+Type @var{T} must be communicable.
+The variable held can only be written.
+@end table
+
+@item Methods
+
+@ftable @code
+@item write()
+Write the content of @var{t} into the object.
+Further read must wait until the end of current task.
+In case of concurrent @code{write}, no guarantee on the order is given.
+@end ftable
+
+@end table
+@c ---
+@item Shared_rw
+
+@table @strong
+@item Declaration
+@example
+template<class T>
+class Shared_rw
+@{
+     T& access()
+@};
+@end example
+
+@item Template Parameters
+@table @var
+@item T 
+Type of the variable to share.
+Type @var{T} must be communicable.
+@end table
+
+@item Methods
+
+@ftable @code
+@item access()
+Return the content of @var{t} of the object.
+The returned value can be modified.
+Further read or write must wait until the end of current task.
+@end ftable
+@end table
+
+@c ---
+@item Shared_cw
+
+@table @strong
+@item Declaration
+@example
+template<class T, class F>
+class Shared_cw
+@{
+     void cumul(T t)
+@};
+@end example
+
+@item Template Parameters
+@table @var
+@item T 
+Type of the variable to share.
+Type @var{T} must be communicable.
+@item F
+Type of the update function object.
+@var{F} must have an empty constructor and a @code{void operator()( @var{T}&, const @var{T}&); } method.
+
+@end table
+
+@item Methods
+
+@ftable @code
+@item cumul(T t)
+Add the content of @var{t} to the object in the sense of @var{F}.
+There is no constriant on the order between various @code{cumul} call on the same shared object.
+Further read must wait until the end of current task.
+@end ftable
+
+@end table
+
+@end ftable
+
+@c -------------------
+@node monotonic bound
+@section MonotonicBound
+
+@table @strong
+@item Declaration
+@example
+template<class T, class F>
+class MonotonicBound
+@{
+    MonotonicBound(const string& name, T* initial_value = 0 );
+    void update(const T& t);
+    void acquire();
+    void release();
+    const T& read() const;
+@};
+@end example
+
+@item Template Parameters
+@table @var
+@item T 
+Type of the variable to share.
+Type @var{T} must be communicable.
+@item F
+Type of the update function object.
+@var{F} must have an empty constructor and a @code{ bool operator() (T& result, const T& value ); } method.
+this method returns true if @var{result} was updated.
+@end table
+
+@item Methods
+
+@ftable @code
+@item MonotonicBound(const string& name, T* initial_value = 0 )
+Constructor of the class.
+@var{name} must be a unique identifier.
+If given, the @var{initial_value} is now owned by the object and need not to be realeased.
+
+@item update(const T& t)
+Update the content of the object using the @var{F} update function.
+It is responsible to get the update the local value of the bound.
+The invocation of update should be surround by invocations @code{acquire}/@code{release}.
+Multiple update may be invoked between invocations to @code{acquire}/@code{release}.
+
+@item acquire()
+Is responsible to get the initial value of the bound from processor that manage it.
+If such an initial value exists, then the method take the last updated value as the current value.
+
+@item release()
+Is responsible to update all copies of the bound is the local value has been updated.
+After the invocation of release, the local processor that has release the bound should re-invoke i@code{acquire}: the read value will be the updated value.
+Other processor will be able to read the updated value in a bounded time.
+
+@item read()
+is responsible returns a reference to the last value acquired by the invocation to @code{acquire}.
+The invocation of read should be surround by invocations to @code{acquire}/@code{release}.
+Multiple read may be invoked between invocations to @code{acquire}/@code{release}.
+@end ftable
+
+@end table
+@c -------------------
+@c @node remote iterator
+@c @section Remote
+
+-------------------
+@node synchronized blocks
+@section SyncGuard
+
+@table @strong
+@item Declaration
+@example
+class SyncGuard
+@{
+    SyncGuard();
+    ~SyncGuard();
+@};
+@end example
+
+@item Methods
+
+@ftable @code
+@item SyncGuard()
+Constructor of the class.
+When an object of class @code{SyncGuard} is created, it creates a special fram in which all further tasks willbe spawned.
+When the object is destroyed, the frame is closed and all generated tasks are executed.
+
+@item ~SyncGuard()
+Destructor of the class.
+When called, it forces the execution of all tasks in its frame.
+This method only returns when  all tasks (and children) have been executed.
+@end ftable
+
+@end table
+
+
+@c -------------------
+@node algorithms
+@section Algorithms
+
+@ftable @code
+
+@item for_each
+
+@table @strong
+@item Description
+@example
+template <class InputIterator, class Function>
+void for_each (InputIterator first, InputIterator last, Function f,
+  typename std::iterator_traits<InputIterator>::difference_type threshold = 0);
+@end example
+
+@item Algorithm
+Applies function @var{f} to each of the elements in the range [@var{first},@var{last}).
+
+The behavior of this template function is equivalent to:
+
+@example
+template<class InputIterator, class Function>
+void for_each(InputIterator first, InputIterator last, Function f)
+@{
+  while ( first!=last ) f(*first++);
+@}
+@end example
+
+
+@item Parameters
+
+@table @var
+
+@item first
+@itemx last
+Input iterators to the initial and final positions in a sequence.
+The range used is [@var{first},@var{last}), which contains all the elements between first and last, including the element pointed by first but not the element pointed by last.
+
+@item f
+Unary function taking an element in the range as argument.
+This can either @emph{not} be a pointer to a function.
+It @emph{must} be  an object whose class overloads @code{operator()}.
+Its return value, if any, is ignored.
+
+@item threshold
+integer used as grain size. It is comutedn automatically if not provided, but should be set by hand for best performances.
+@end table
+
+@itemize
+@item as an additionnal requirement, @var{f} and data from @var{first} to @var{last} must all be communicable !!
+@item Currently, only pointers iterator are supported.
+@item no hypothesis can be made on the order of appliance for @var{f}.
+@end itemize
+
+@end table
+
+@item transform
+
+@table @strong
+@item Description
+
+@example
+template < class InputIterator, class OutputIterator, class UnaryOperator >
+void transform ( InputIterator first1, InputIterator last1,
+                           OutputIterator result, UnaryOperator op,
+                           size_t threshold = 0 );
+
+template < class InputIterator1, class InputIterator2,
+           class OutputIterator, class BinaryOperator >
+void transform ( InputIterator1 first1, InputIterator1 last1,
+                           InputIterator2 first2, OutputIterator result,
+                           BinaryOperator binary_op,
+                           size_t threshold = 0 );
+@end example
+
+@item Algorithm
+The first version applies op to all the elements in the input range ([@var{first1},@var{last1})) and stores each returned value in the range beginning at result.
+The second version uses as argument for each call to binary_op one element from the first input range ([@var{first1},@var{last1})) and one element from the second input range (beginning at @var{first2}).
+
+The behavior of this function template is equivalent to:
+
+@example
+template < class InputIterator, class OutputIterator, class UnaryOperator >
+void transform ( InputIterator first1, InputIterator last1,
+                           OutputIterator result, UnaryOperator op )
+@{
+  while (first1 != last1)
+    *result++ = op(*first1++);  // or: *result++=binary_op(*first1++,*first2++);
+@}
+@end example
+
+The function allows for the destination range to be the same as one of the input ranges to make transformations @emph{in place}.
+
+@item Parameters
+
+@table @var
+
+@item first1
+@itemx last1
+
+    Input iterators to the initial and final positions of the first sequence. The range used is [@var{first1},@var{last1}), which contains all the elements between @var{first1} and @var{last1}, including the element pointed by @var{first1} but not the element pointed by @var{last1}.
+
+@item first2
+    Input iterator to the initial position of the second range. The range includes as many elements as [@var{first1},@var{last1}).
+@item result
+    Output iterator to the initial position of the range where function results are stored. The rangeincludes as many elements as [@var{first1},@var{last1}).
+@item op
+    Unary function taking one element as argument, and returning some result value.
+    This can @emph{not} be a pointer to a function.
+    It @emph{must} be an object whose class overloads @code{operator()}.
+    @item binary_op
+    Binary function taking two elements as argument (one of each of the two sequences), and returning some result value.
+    This can @emph{not} be a pointer to a function.
+    It @emph{must} be an object whose class overloads @code{operator()}. 
+@item shold
+    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances.
+@end table
+
+@itemize
+
+@item as an additionnal requirement, @var{binary_op} and data from @var{first1} to @var{last1}, @var{first2}, @var{result} must all be communicable !!
+
+@item Currently, only pointers iterator are supported.
+
+@item no hypothesis can be made on the order of appliance for @var{binary_op}.
+@end itemize
+@end table
+
+@item find
+
+@table @strong
+@item Description
+
+@example
+template <class InputIterator, class T>
+InputIterator find ( InputIterator first, InputIterator last, const T& value,
+                     typename std::iterator_traits<InputIterator>::difference_type threshold = 0);
+@end example
+
+@item Algorithm
+
+Returns an iterator to the first element in the range [@var{first},@var{last}) that compares equal to @var{value}, or @var{last} if not found.
+
+The behavior of this function template is equivalent to:
+
+@example
+template<class InputIterator, class T>
+InputIterator find ( InputIterator first, InputIterator last, const T& value )
+@{
+  for ( ;first!=last; first++) if ( *first==value ) break;
+  return first;
+@}
+@end example
+
+
+@item Parameters
+
+@table @var
+
+@item first
+@itemx last
+Input iterators to the initial and final positions in a sequence.
+The range used is [@var{first},@var{last}), which contains all the elements between @var{first} and @var{last}, including the element pointed by @var{first} but not the element pointed by @var{last}.
+@item value
+Value to be compared to each of the elements.
+@item threshold
+    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances.
+@end table
+
+@item Return value
+An iterator to the first element in the range that matches @var{value}.
+If no element matches, the function returns @var{last}.
+
+@end table
+
+@itemize
+@item as an additionnal requirement, data from @var{first1} to @var{last1} and @var{value} must all be communicable !!
+
+@item Currently, only pointers iterator are supported.
+@end itemize
+
+@item find_if
+
+@table @strong
+
+@item Description
+@example
+template <class InputIterator, class T>
+InputIterator find_if ( InputIterator first, InputIterator last, const T& value, Predicate pred,
+                     typename std::iterator_traits<InputIterator>::difference_type threshold = 0);
+@end example
+
+    
+
+@item Algorithm
+
+Returns an iterator to the first element in the range [@var{first},@var{last}) for which applying @var{pred} to it, is @var{true}.
+
+The behavior of this function template is equivalent to:
+
+@example
+template<class InputIterator, class Predicate>
+InputIterator find_if ( InputIterator first, InputIterator last, Predicate pred )
+@{
+  for ( ; first!=last ; first++ ) if ( pred(*first) ) break;
+  return first;
+@}
+@end example
+
+
+
+@item Parameters
+
+@table @var
+
+@item first
+@itemx last
+    Input iterators to the initial and final positions in a sequence. The range used is [@var{first},@var{last}), which contains all the elements between @var{first} and @var{last}, including the element pointed by @var{first} but not the element pointed by @var{last}.
+@item pred
+    Unary predicate taking an element in the range as argument, and returning a value indicating the falsehood (with false, or a zero value) or truth (true, or non-zero) of some condition applied to it.
+    This can @emph{not} be a pointer to a function.
+    It @emph{must} be an object whose class overloads @code{operator()}.
+@item threshold
+    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances.
+@end table
+
+@item  Return value
+An iterator to the first element in the range for which the application of @var{pred} to it does not return false (zero).
+If @var{pred} is false for all elements, the function returns @var{last}.
+
+@end table
+
+@itemize
+
+@item as an additionnal requirement, @var{pred} and data from @var{first} to @var{last} must all be communicable !!
+@item
+@item Currently, only pointers iterator are supported.
+@end itemize
+
+
+@item sort and stable_sort
+
+@table @strong
+@item Description
+
+@example
+template <class RandomAccessIterator>
+void stable_sort ( RandomAccessIterator first, RandomAccessIterator last,
+    typename std::iterator_traits<RandomAccessIterator>::difference_type threshold = 0);
+
+template <class RandomAccessIterator, class Compare>
+void sort ( RandomAccessIterator first, RandomAccessIterator last,
+    typename std::iterator_traits<RandomAccessIterator>::difference_type threshold = 0);
+@end example
+
+    
+
+@item Algorithm
+
+Sorts the elements in the range [@var{first},@var{last}) into ascending order.
+@code{stable_sort} also grants that the relative order of the elements with equivalent values is preserved.
+
+The elements are compared using @code{operator<}.
+
+@item Parameters 
+
+@table @var
+@item first
+@itemx last
+    Random-Access iterators to the initial and final positions of the sequence to be sorted. The range used is [@var{first},@var{last}), which contains all the elements between @var{first} and @var{last}, including the element pointed by first but not the element pointed by ``last``.
+@item threshold
+    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances.
+@end table
+
+@itemize
+
+@item as an additionnal requirement, data from @var{first} to @var{last} must all be communicable !!
+@item Currently, only pointers iterator are supported.
+@end itemize
+
+@end table
+
+
+@end ftable
+
+
+@c -------------
+@node utilities
+@section Utilities
+
+@ftable @code
+
+@item Util::logfile()
+manage logs.
+@table @strong
+@item Description
+@example
+std::ostream& logfile();
+@end example
+
+@item Return Value
+returns a @code{std::ostream} reference that can be used to print out any kind of text.
+The text will be forwrded to the master node and displayed with a smaal header containing information about
+@itemize
+@item the global id of the source node
+@item the date when the log was taken (according to local clock)
+@end itemize
+@end table
+
+
+@item Util::WallTimer::gettime()
+take time
+@table @strong
+@item Description
+@example
+double gettime();
+@end example
+@item Return Value
+time since the birth of Unix in milliseconds
+@end table
+
+@item resize_vector(std::vector< a1::Shared<...> >, size_type)
+resize a vector of Shared.Its behavior is similar to vector::resize() method
+@table @strong
+@item Description
+@example
+template<class T>
+void resize_vector(std::vector< a1::Shared<T> >& v,
+    typename std::vector< a1::Shared<T> >::size_type sz);
+@end example
+@item Parameters
+
+@table @var
+@item v
+vector of shared to be resized
+@item sz
+new size of the vector
+@end table
+
+@end table
+
+@end ftable
+
+@include doc/athapascan/dlm.texi

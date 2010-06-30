@@ -51,7 +51,7 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 {
   kaapi_taskadaptive_result_t* result;
   void* addr_tofree;
-  int size_alloc;
+  size_t size_alloc;
   
   /* allocate space for futur result of size size
      kaapi_taskadaptive_result_t has correct alignment
@@ -73,13 +73,14 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 
   result->arg_from_victim = 0;
   result->req_preempt     = 0;
+  result->is_signaled	  = 0;
   result->master          = 0;
   result->thief_term      = 0;
   result->rhead           = 0;
   result->rtail           = 0;
   result->prev            = 0;
   result->next            = 0;
-  result->addr_tofree	    = addr_tofree;
+  result->addr_tofree	  = addr_tofree;
 
   return result;
 }

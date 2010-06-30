@@ -1,0 +1,816 @@
+@c ----------------------------
+@node Athapascan
+@chapter  Athapascan Concept
+
+Let us dive into KAAPI through its main interface, @code{Athapascan}
+@menu
+* programming model:: forget message passing library, and learn a task based one
+* programing environnment:: from the model to the code
+* performance:: When speed matters
+* additionnal features:: things that can be useful
+@end menu
+
+@c ----------------------------
+@node programming model
+@section Programming Model
+
+@menu
+* task description:: What is a task ?
+* shared memory:: Distributed memory model
+* task samples:: some kind of tasks
+@end menu
+
+@code{KAAPI} is a middleware working on Dynamic Acyclic Data flow graphes.
+Once given this graph, it can dynamically schedule it using a work-stealing algorithm.
+
+But most distributed computing users are familiar with message passing paradigm, and @code{KAAPI} uses an other paradigm: 
+@enumerate
+@item Describe the task of your graph / program
+@item Describe the dependencies between your task
+@end enumerate
+
+Once this is done, @code{KAAPI} will schedule the taks in an efficient way, making sure that
+
+@enumerate
+@item All dependencies are respected
+@item Parallelism between independant tasks is used as much as possible
+@end enumerate
+
+Of course, this will not work as expected on all kind of graph, but it has been @emph{proven} to be an
+asymptotically optimal way to schedule tasks from a divided and conquer algorithm, based on @code{fork} and @code{join} calls.
+
+
+@c ----------------------------
+@node task description
+@subsection Task description
+
+A task in @code{Athapascan} is more or less a function object with no side effect.
+A task execution is somewhat similar to a standard procedure call (Tasks are dynamically created at run time).
+The only difference is that the created task's execution is fully asynchronous, meaning the creator is not waiting for the execution of the created task to finish to continue with its own execution.
+So an @code{Athapascan} program can be seen as a set of tasks scheduled by the library and distributed among nodes for its execution.
+
+@menu
+* task definition:: how to define a task
+* task parameters:: how to pass parameters to a task
+@end menu
+
+@c ----------------------------
+@node task definition
+@subsubsection Task definition
+
+A task corresponds to the execution of a  function object, i.e. an object from a class (or structure) having the @code{void operator()(...)} defined:
+@example
+struct @var{user_task}
+@{
+  void operator() ( /* formal parameters */ )
+  @{
+    /*...*/
+  @}
+@};
+@end example
+
+A sequential (hence not asynchronous !) call to this function class is written in C++:
+
+@example
+user_task() ( /* effective parameters */ ) ;
+@end example
+
+And an asynchronous call to this @emph{task} is written in @code{Athapascan}:
+
+@example
+a1::Fork< @var{user_task} > () ( /* effective parameters */ ) ;
+@end example
+
+See @ref{API} for a detailed description of the @code{a1::Fork} usage.
+
+Note that this does @emph{not} provide a way to describe dependencies between tasks. 
+Dependencies are described through the use of @emph{formal parameters}.
+
+@c ----------------------------
+@node task parameters
+@subsubsection Task parameters
+
+In C++, the formal parameters can be either passed by
+@table @emph
+@item copy
+It as a read only meaning: parameters passed by copy are read by the function, but cannot be modified.
+It is a @emph{read dependency}.
+
+@item reference
+It as a read / write meaning: parameters can be read and modified by the function.
+If the parameter is only written, it is a @emph{write dependency}.
+Otherwise it is a  @emph{read write dependency}.
+
+@end table
+
+Unlike functions, tasks will be used in a distibuted environment
+and their parameters will
+@itemize
+@item influence their scheduling;
+@item need to be shared acroos the network  (see @ref{serialize parameters}).
+@end itemize
+
+Here are the different kinds of parameters allowed for a task:
+
+@table @code
+@item T
+designate a classical @code{C++} type that does not affect shared memory.
+However this type must be communicable (see @ref{serialize parameters}).
+It will be copied twice with every call.
+It is a @emph{read dependency}.
+
+@item const T &
+designate a classical constant reference to a @code{C++} type that does not affect shared memory.
+As the above, the type must be communicable (see @ref{serialize parameters}), but it will suffer one less copy.
+It is a @emph{read dependency}.
+
+@item Shared_...< T >
+designate a parameter that is a reference to a shared object located in the shared memory.
+@code{T} is the type of this object.
+@code{T} must also be communicable (see @ref{serialize parameters}).
+As explained in @ref{shared memory}, it is the @code{Athapascan} way of describing @emph{read dependency},
+@emph{write dependency} or @emph{read write dependency}.
+
+@end table
+
+The following kind of parameters are @emph{not} allowed for a task.
+@table @code
+@item T*
+pointers are linked to local memory.
+There is no sense in sharing pointers over distibuted memory.
+@item T&
+reference are linked to local memory.
+There is no sense in sharing pointers over distibuted memory.
+An interesting exception is @code{const} references.
+We know that the object will not be modified, so it can be passed by copy.
+@end table
+
+
+@node task samples
+@subsection Task samples
+
+@menu
+* from a procedure:: @code{C} procedure to @code{Athapscan} task
+@end menu
+
+@node from a procedure
+@subsubsection From a @code{C} procedure
+
+Obviously, a @code{C} procedure (i.e. a @code{C} function with void as return type) can be directly encapsulated in a @code{C++} function class.
+It becomes a task for Athapascan.
+Here is an example:
+
+@example
+/* c procedure */
+void f ( int i ) 
+@{
+    printf( "what could I compute with %d ? \n", i );
+@}
+@end example
+
+The transformation to a function class is straight forward:
+@example
+/* encapsulated procedure */
+struct f_encapsulated 
+@{
+  void operator() ( a1::Shared_r<int> i ) /* i is some formal parameter*/
+  @{
+    f( i.read() );
+  @}
+@};
+@end example
+
+@c ----------------------------
+@node shared memory
+@subsection Shared memory
+
+In the message passing paradigm, developpers manually manage send and receive of data across running programs.
+In @code{Athapascan}, the message are sent by the middleware to share variable among tasks.
+The user does @emph{not} need to manage the send and receive, but he must still
+@menu
+* serialize parameters:: manage the serialization of data sent over the network
+* dependencies description:: manage dependecies through task parameters read acces
+@end menu
+
+@c ----------------------------
+@node serialize parameters
+@subsubsection Serialize parameters
+
+Using a distributed architecture means handling data located in shared memory (mapping, migration, consistency).
+This implies a serialization step for the arguments of tasks.
+This serialization has to be explicitly done by the programmer to suit the specific needs of the program.
+
+@code{Athapascan} already handles some types:
+@itemize
+
+@item the following @code{C++} basic types
+@verbatiminclude test/athapascan/basic_comtypes.cfg 
+
+@item some types from the STL 
+@verbatiminclude test/athapascan/stl_comtypes.cfg
+
+@end itemize
+
+
+Using this communicable types, you can define other communicable types.
+To do this, a type @var{T} must have
+@itemize
+@item an empty constructor: @code{@var{T}()} ;
+@item a copy constructor: @code{@var{T}(const & @var{T})} ;
+@item a serializing operator: @code{a1::OStream& operator<<( a1::OStream& @var{output_stream}, const @var{T}& @var{x} )}
+which puts into the @var{output_stream} the information needed to reconstruct an image of @var{x} using the @code{operator >>} ;
+@item  a deserializing operator: @code{a1::IStream& operator>>( a1::IStream& @var{input_stream}, @var{T}& @var{x})}
+which takes from the @var{input_stream} the information needed to construct the object @var{x}; it initializes @var{x} with the value related to the information from  @var{input_stream}.
+@end itemize
+
+Following code shows a simple way to serialize a class:
+
+@example
+struct Complex
+@{
+  double x;
+  double y;
+
+  //empty constructor
+  Complex()
+    :x(0),y(0) @{@}
+
+  //copy constructor
+  Complex( const Complex& @var{z})
+    :x(@var{z}.x),y(@var{z}.y) @{@}
+
+@};
+
+//packing operator
+a1::OStream& operator<< (a1::OStream& @var{out}, const Complex& @var{z})
+@{
+  return @var{out }<< @var{z}.x << @var{z}.y;
+@}
+
+//unpacking operator
+a1::IStream& operator>> (a1::IStream& @var{in}, Complex& @var{z})
+@{
+  return @var{in }>> @var{z}.x>> @var{z}.y;
+@}
+@end example
+
+@c ----------------------------
+@node dependencies description
+@subsubsection Dependencies description
+
+In order to respect the sequential consistency (lexicographic order semantic), @code{Athapascan} has to identify the value related to a shared object for each read performed.
+Parallelism detection is easily possible in the context that any task specifies the shared data objects that it will access during its execution (on-the-fly detection of independent tasks), and which type of access it will perform on them (on-the-fly detection of a task's precedence).
+All manipulated shared data must be declared in the prototype of the task, and to detect the synchronizations between tasks, according to lexicographic semantic, any shared parameter of a task is tagged in the prototype according to the access performed on it.
+This tag indicates what kind of manipulation the task (and, due to the lexicographic order semantics, all the sub-tasks it will fork) is allowed to perform on the shared object.
+This tag is called the access right; it appears in the prototype of the task as a suffix of the type of any shared parameter.
+Four rights can be distingueshed and are presented below: read, write, update and accumulation.
+
+@table @emph
+@item read right
+@code{a1::Shared_r<@var{T}>} is the type of a parameter whose value can only be read using its @code{const @var{T}& read()} method.
+This reading can be concurrent with other tasks referencing this shared object in the same mode.
+
+@item write right
+@code{a1::Shared_w<@var{T}>} is the type of a parameter whose value can only be written using its @code{void write(@var{T})} method.
+This writing can be concurrent with other tasks referencing this shared data in the same mode.
+The final value is the last one according to the reference order.
+
+@item update right
+@code{a1::Shared_rw<@var{T}>} is the type of a parameter whoses value can be updated in place; the related value can be read and/or written using the @code{ @var{T}& access()} method.
+Such an object represents a critical section for the task.
+This mode is the only one where the address of the physical object related to the shared object is available.
+It enables the user to call sequential codes working directly with this pointer.
+
+@item concurrent write right
+@code{a1::Shared_cw<@var{T},@var{F}>} is the type of a parameter whose value can only be accumulated with respect to the user defined function class @var{F}.
+The resulting value of the concurrent write is an accumulation of all other values written by a call to this function, through the use of the @code{void cumul(@var{T}} method.
+
+@end table
+
+For a more in-depth description of the shared parameters, please refer to the @ref{API}.
+
+@c ----------------------------
+@node programing environnment
+@section Programming environment
+
+Now that the basic programming model has been described, let us see how it is implemented.
+To do so we need to
+@menu
+* initialize the library:: parse arguments and create the first task
+* define task:: describe the program architecture
+* spawn task:: dynamically fill the graph
+@end menu
+
+@c ----------------------------
+@node initialize the library
+@subsection Initialize the library
+
+The execution of an @code{Athapascan} program is handled by a @code{a1::Community}.
+A community restructures a group of nodes so that they can be distributed to the different parallel machines.
+Therefore, prior to the declaration of any Athapascan object or task, a community must be created.
+Currently, this community only contains the group of nodes defined at the start of the application.
+
+Once the community has been created, tasks can be created and submited to the community (see @ref{spawn task}).
+
+The library header must first be included to get all prototypes:
+This defines the @code{a1} namespace.
+@example
+#include <athapascan-1>
+@end example
+
+Usually the community is defined in the main method of the program.
+
+@example
+int main( int argc, char** argv )
+@{
+@end example
+
+@code{Athapscan} reads its parameters from the program arguments
+@c ( see @ref{launching athapscan} ).
+They are used to initialize the @code{Community}.
+@example
+    a1::Community com = a1::System::join_community( argc, argv );
+@end example
+
+A main task is then spawned. Its prototype is strictely defined: it must define the
+@code{void operator()(int @var{argc}, char **@var{argv})}.
+It is called @var{doit} in the following
+@example
+    a1::ForkMain<doit>()(argc, argv);    
+@end example
+
+The starter is hit once we ask to leave the community.
+A community can only be left if it contains no task.
+@example
+    com.leave();
+@end example
+
+It is often considered to do some cleanup before exiting
+@example
+    a1::System::terminate();
+    return 0;
+@}
+@end example
+
+Now let us define our first task.
+
+
+
+
+@c ----------------------------
+@node define task
+@subsection Define task
+
+The task @var{doit} should contain the code to be executed in parallel.
+It is often only a matter of spawning additionnal tasks (hopefully in a recursive way).
+But let say we just want to print a "hello world".
+
+First, a task is nothing else than a structure:
+@example
+struct doit
+@{
+@end example
+
+Second it is also a function obect. As described in @ref{initialize the library}, the @var{doit} task
+has specific parameters
+@example
+    void operator()(int @var{argc}, char **@var{argv})
+    @{
+@end example
+
+The body is known across the world (let us suppose we added @code{#include <iostream>} in the header)
+@example
+        std::cout << "hello world !" << std::endl;
+   @} 
+@end example
+
+For @code{Java} addict, do not forget to close the structure !
+@example
+@};
+@end example
+
+This is your first Task.
+Executing it will not result in a parallel execution.
+We need more task to feed our scheduler.
+What about a simple sum ?
+The @code{C} procedure would be
+@example
+int sum(int @var{n}, int @var{p});
+@end example
+
+Let us do some semantic analysis to make it a task:
+@table @var
+@item n
+is read by @code{sum} : it will become a @code{a1::Shared_r<int>} !
+@item p
+is also read by @code{sum} : it will become a @code{a1::Shared_r<int>} !
+@item return value
+is written by @code{sum} : it will become a @code{a1::Shared_w<int>} !
+@end table
+
+So once our task defined:
+@example
+struct sum_task
+@{
+@};
+@end example
+
+We can provide it with the good @code{operator() }
+
+@example
+    void operator()( a1::Shared_r<int> @var{n}, a1::Shared_r<int> @var{p}, a1::Shared_w<int> @var{r})
+    @{
+    @}
+@end example
+
+The body should be a simple call to the @code{C} procedure @code{sum}.
+But we need to access the content of the shared data (see @ref{API} for a list of available methods).
+@table @code
+@item @var{n}.read()
+will read the content of @var{n}
+@item @var{p}.read()
+will read the content of @var{p}
+@item @var{r}.write(@var{val})
+will write @var{val} in @var{r}.
+@end table
+
+so the body is
+@example
+        @var{r}.write( sum( @var{n}.read(), @var{p}.read() ) );
+@end example
+
+
+
+@c ----------------------------
+@node spawn task
+@subsection Spaw task
+
+Now that we have defined our first real task @var{sum_task},
+it is time to spawn it.
+let us go back to our @var{doit} special task, and modify it a bit
+@example
+struct doit
+@{
+    void operator()(int @var{argc}, char **@var{argv})
+    @{
+        if( @var{argc} != 3 )
+            return;
+        int @var{n} = atoi(@var{argv}[1]);
+        int @var{p} = atoi(@var{argv}[2]);
+        int @var{r};
+        @var{r} = sum(@var{n},@var{p});
+        std::cout << @var{r} << std::endl;
+    @}
+@};
+@end example
+
+But we want to use our task !
+The task takes @code{a1::Shared} parameters, so
+@example
+        a1::Shared<int> @var{n} = atoi(@var{argv}[1]);
+        a1::Shared<int> @var{p} = atoi(@var{argv}[2]);
+        a1:/Shared<int> @var{r};
+@end example
+Once intialized, you can@emph{not} access the content of the shared variable from this task !
+It can only be accessed by other tasks with proper access right.
+This is easy to understand. Has task calls are asynchrnonous, it is hazardous to access them in an uncontrolled way.
+Task dependencies will take the control.
+
+Now spawn the task to get an asynchronous call to @code{sum_task}
+@example
+        a1::Fork< sum_task > () ( @var{n}, @var{p}, @var{r} );
+@end example
+
+@table @emph
+@item Question
+But what if I want the result ?You just wrote it is impossible to read from @var{r}!
+@item Answer
+Create a new task that will read @var{r} with proper access right !
+@example
+struct read_task
+@{
+    void operator() ( a1::Shared_r<int> @var{r} )
+    @{
+        std::cout << @var{r}.read() << std::endl;
+    @}
+@};
+@end example
+@end table
+
+
+@c ----------------------------
+@node performance
+@section When speed matters
+
+It is important to understand that a work stealing sceduling is efficent only if
+the data flow graph is deep, and grows in a fork / join style.
+But
+@itemize
+@item if the tasks are too small, the cost of task creation / scheduling outperforms the cost of task execution, which leads to poor performance
+@item if too few tasks are created, CPU power may be lost
+@end itemize
+
+That's why we need a @emph{threshold}. A threshold is a constant that control when we should stop to create Tasks
+to execute the sequential algorithm.
+It often looks like this
+@example
+struct task
+@{
+    void operator()(/* parameters */)
+    @{
+        if( size < threshold )
+            /* sequential_call */
+        else
+            /* fork new task */
+    @}
+@};
+@end example
+The fibonnaci example behaves like this.
+Choosing the threshold is a matter of test and experiments, but it is @strong{really} important.
+
+@c ----------------------------
+@node additionnal features
+@section Additionnal feeatures
+
+Tasks and shared parameters are the basics of @code{Athapascan}.
+But it is not always enough to write real-life programs !
+Take a look at
+@menu
+* global memory:: when shared memory is not enough
+* sharing arrays:: dealing with pointer hell
+* control task creation:: where are the tasks created, and when do they stop
+* use classical algorithms:: for simple cases
+@end menu
+
+@c ----------------------------
+@node global memory
+@subsection Global memory
+
+The current release of @code{Athapascan} provides the @code{a1::MonotonicBound} template that allows several processes to read or update a bound that increases or decreases monotonically.
+Such a variable has a system wide identifier that should be defined during the declaration.
+It is communicable and could be a parameter of tasks.
+
+To declare a @code{a1::MonotonicBound}, you must provide the string identifier and two tempalte parameters:
+@enumerate
+@item the type of the variable updated, @var{T}
+@item the type of the function obect used to update the variable, @var{F}
+@end enumerate
+
+@example
+/* raw initialization */
+a1::MonotonicBound<T,F> a ("B&B bound");
+/* initialization by value */
+a1::MonotonicBound<T,F> b ( "another B&B bound", new T(/*...*/) );
+@end example
+
+The update function @var{F} is a function class that should has an @code{operator()} with the following signature.
+@example
+template < class T> struct F 
+@{
+  bool operator()( T& res, const T& val);
+@};
+@end example
+
+The return value of the operator is true if and only if the local value has been updated.
+In this, case during the invocation of the release, the protocol will broadcast the new local bound to all other processors which update their bound in the same way.
+
+For instance, the definition of the operator that compute the maximal value could be:
+
+@example
+struct Max
+@{
+  bool operator()( long& result, const long& value)
+  @{ 
+    if (result < value) 
+    @{
+      result = value;
+      return true;
+    @}
+    return false;
+  @}
+@};
+@end example
+
+To read (and only read) the value of a @code{a1::MonotonicBound}, a lock is to be taken on the value, then a call to the @code{read} method.
+@example
+@var{a}.acquire();
+@var{a}.read(); // return a const T& on the value
+@var{a}.release();
+@end example
+
+To update the value of  a @code{a1::MonotonicBound}, use the @code{update} method
+@example
+@var{a}.update(@var{new_val});
+@end example
+
+
+@c ----------------------------
+@node sharing arrays
+@subsection Sharing arrays
+
+As said in @ref{task parameters}, tasks parameters are not allowed to be pointers.
+But High performance Computing make an extensive use of arrays, so what ?
+@menu
+* arrays through structures:: encapsulate your arrays
+* arrays through verctors:: @code{std::vector} support
+* arrays through iterators:: iterate on remore arrays
+@end menu
+
+@c ----------------------------
+@node arrays through structures
+@subsubsection Arrays through structures
+
+If you hae a static array, whose size never change, the best option is to encapsulate it in 
+a structure. To use
+@example
+int @var{my_array}[256];
+@end example
+
+You define a new communicable structure
+@example
+structure int_array_256
+@{
+    int array[256];
+    int_array_256() @{@}
+    int_array_256(const int_array_256& @var{a})
+    @{
+        std::copy(@var{a},  @var{a} +256, array);
+    @}
+@};
+
+//packing operator
+a1::OStream& operator<< (a1::OStream& @var{out}, const int_array_256& @var{i})
+@{
+    for(int j=0; j<256;j++)
+        @var{out } << @var{i}[j];
+    return @var{out };
+@}
+
+//unpacking operator
+a1::IStream& operator>> (a1::IStream& @var{in}, int_array_256& @var{i})
+@{
+    for(int j=0; j<256;j++)
+        @var{in} >> @var{i}[j];
+    return @var{in};
+@}
+@end example
+
+And you can now use it as a formal parameter of your task.
+Yet note that the copy introduce by such a structure is rarely worth the price !
+
+
+@c ----------------------------
+@node arrays through verctors
+@subsubsection Arrays through verctors
+
+If you want to share value from an array, the best tool is the @code{std::vector} class.
+The @code{std::vector} class is communicable.
+@example
+ std::vector<int> @var{v}(256);
+ std::fill( @var{v}.begin(), @var{v}.end(), 42);
+ a1::Shared< std::vector<int> > @var{shared_vector} = @var{v};
+ a1::Fork<a_task> () ( @var{shared_vector} );
+@end example
+
+@c ----------------------------
+@node arrays through iterators
+@subsubsection Arrays through iterators
+
+A remote iterator is a communicable type used to keep the reference of an array across the network, thus allowing access to large amount of remote data.
+This does not provide any synchronization as a Shared does, so you have to manage dependencies using other means (usually a fake Shared dependencie).
+
+To use remote iterators, you first declare them, and then init them from a local data
+@example
+int array[256];
+// for read-write access
+a1::remote<int*> begin, end;
+a1::init(begin, end, array, array + 256);
+// for read only access
+a1::const_remote<int*> cbegin, cend;
+a1::init(cbegin, cend, array, array + 256);
+@end example
+
+The @code{const_remote} class will give you a read-only iterator, while the @code{remote} class will give you read-write access.
+
+You can now use the remote iterators as you would use random access iterators : incrementation, copy, dereferencing and so on is allowded.
+Of course those iterator can be used as arguments of any STL algoroithm as native iterator would.
+They have the Random access iterator tag.
+As they are communicable, you can pass them as parameters to an athapascan'task.
+
+
+To get a reference on data pointed by the iteratore, you must first ensure a copy of the real data is available on your local machine.
+You must do so using the @code{fetch} function :
+Not using the fetch function may result in a SEGFAULT, for you're trying to access data that may not exist in memory.
+
+@example
+struct task
+@{
+    void operator() ( a1::remote<int*> b, a1::remote<int*> e)
+    @{
+        size_t n = e -b;
+        if( n < 4)
+        @{
+            a1::fetch(b,e);
+            while(b<e)
+                std::cout << *b++ << std::endl;
+        @}
+        else
+        @{
+            a1::Fork<task>()( b, b+n/2);
+            a1::Fork<task>()( b +n/2, e);
+        @}
+    @}
+@};
+@end example
+
+No guarantee is given if the split overrides. Try to avoid it.
+The detailed interface is given in @ref{API}.
+
+
+
+@c ----------------------------
+@node control task creation
+@subsection Control task creation
+
+You sometime want to merge distributed and sequential code.
+To do this, you must ensure that all tasks have been executed.
+@code{a1::SyncGuard} comes handy there.
+It is a class that ensures that every task spawned betwwen the creation of an object of type @code{a1::SyncGuard}
+and its destruction are executed.
+@example
+struct task
+@{
+    void operator()()
+    @{
+        // all tasks
+        @{
+            // from here
+                a1::SyncGuard s;
+                a1::Fork<task1>()();
+                a1::Fork<task2>()();
+            // to here
+        @}
+        // have finished when I arrive here
+        a1::Fork<task3>()();
+    @}
+@};
+@end example
+This is often usefull, but beware, it may lower the parallism !
+
+
+Once a task is created, you have no control over where it will be executed.
+It is not a problem if the task had no side effect.
+But they sometime have, so you can specify attribute to the @code{Fork} operator.
+The most useful attribute is @code{a1::SetLocal} which ensure the task will be executed by the process that spawned it.
+It can be used when preformance matters, or to access local memory.
+@example
+a1::Fork<task>(a1::SetLocal)(/* task arguments */);
+@end example
+
+Here is a little trick to read from local memory.
+It uses both @code{a1::SetLocal} and @code{a1::SyncGuard}. 
+See
+@example
+int global_int;
+struct task
+@{
+    void operator()(a1::Shared_r<int> i)
+    @{
+        global_int = i.read();
+    @}
+@};
+
+struct doit
+@{
+    void operator()(int , char **)
+    @{
+        a1::Shared<int> i;
+        @{
+            a1::SyncGuard s;
+            // some_task writes in i
+            a1::Fork<some_task>()(i);
+            // task cannot be stolen !
+            a1::Fork<task>(a1::SetLocal)(i)
+        @}
+        // global_int is up to date thanks to the guard
+        std::cout << global_int << std::endl;
+    @}
+@};
+@end example
+
+@c ----------------------------
+@node use classical algorithms
+@subsection Use classical algorithms
+
+For ease of use, @code{Athapascan} offers some high level algorithms, with an interface and a semantic very similar to @code{STL} ones.
+Once @code{Athapascan} has been started and the main task forked, you can freely use any of those algorithms.
+
+Thoses algortihms are described in @ref{API}, but here is a quick list:
+@itemize
+@item @code{a1::sort}
+@item @code{a1::stable_sort}
+@item @code{a1::transform}
+@item @code{a1::for_each}
+@item @code{a1::find_if}
+@item @code{a1::find}
+@end itemize

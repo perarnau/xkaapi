@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** theo.trouillon@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -66,6 +67,21 @@ extern double t_finalize;
 /* Maximal number of recursive call used to store the stack of frames
 */
 #define KAAPI_MAX_RECCALL 1024
+
+/* Define if ready list is used
+   This flag activates :
+   - the use of readythread during work stealing: a thread that signal 
+   a task to becomes ready while the associated thread is suspended move
+   the thread to readythread. The ready thread is never stolen and should
+   only be used in order to reduce latency to retreive work (typically
+   at the end of a steal operation).
+   - if a task activates a suspended thread (e.g. bcast tasks) then activated
+   thread is put into the readylist of the processor that executes the task.
+   [this strategy may change, see code in .... file]
+   The threads in ready list may be stolen by other processors.
+*/
+#define KAAPI_USE_READYLIST 1
+
 
 /* Flags to define method to manage concurrency between victim and thieves
    - STEALCAS: based on compare & swap method
@@ -305,13 +321,34 @@ typedef struct NAME {\
 typedef struct kaapi_stack_t {
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   char*                     data;           /** stack of data with the same scope than task */
-  int                       sticky;         /** 1 iff the stack could not be steal else by a context swap */ 
 
   volatile int              hasrequest __attribute__((aligned (KAAPI_CACHE_LINE)));     /** points to the k-processor structure */
   volatile int              haspreempt;     /** !=0 if preemption is requested */
   kaapi_request_t*          requests;       /** points to the requests set in the processor structure */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
+
+/* ============================= The structure for handling suspendended thread ============================ */
+/** Forward reference to data structure are defined in kaapi_machine.h
+*/
+struct kaapi_wsqueuectxt_cell_t;
+
+/* This data structure is used to help in signaling ready thread after they becomes suspended:
+   - each time a thread tries to execute kaapi_suspend_body, the thread suspended its execution
+   and push it is pushed into the list of suspended thread of the current processor.
+   - in that case, the _wccell structure is set to the cell list.
+   
+   When a thread signal an suspended thread it can use this information in order to wakeup directly
+   the suspended thread.
+   
+   This structure is pointed by the pad field of the task that contains kaapi_suspend_body.
+*/
+typedef struct kaapi_wc_structure_t {
+  struct kaapi_wsqueuectxt_t*      wclist;      /* suspend list that own the suspended thread _wcthread */
+  struct kaapi_wsqueuectxt_cell_t* wccell;      /* waiting cell of the thread in _wclist, or 0 if not suspended */
+  unsigned long                    affinity;    /* affinity of the suspended thread */
+  struct kaapi_thread_context_t*   thread;      /* may be omitted -> shift from the address of wc structure */
+} kaapi_wc_structure_t;
 
 
 /* ============================= The thread context data structure ============================ */
@@ -331,7 +368,6 @@ typedef struct kaapi_thread_context_t {
   int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
-  struct kaapi_thread_context_t* _next;          /** to be stackable */
 
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
@@ -339,17 +375,25 @@ typedef struct kaapi_thread_context_t {
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
   kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
 #endif
+#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
+#endif
+  unsigned long                  affinity;       /* bit i == 1 -> can run on procid i */
+  int                            unstealable;    /* !=0 -> cannot be stolen */
+  int                            partid;         /* used by static scheduling to identify the thread in the group */
+  struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
+  struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
   kaapi_atomic_t                 lock;           /** */ 
 
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
+  kaapi_wc_structure_t           wcs;            /** used if the thread is suspended and poined by ->pad of the task that required suspension */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
 #define kaapi_stack2threadcontext(stack)         ( ((kaapi_thread_context_t*)stack)-1 )
 #define kaapi_threadcontext2stack(thread)        ( (kaapi_stack_t*)((thread)+1) )
 #define kaapi_threadcontext2thread(thread)       ( (kaapi_thread_t*)((thread)->sfp))
-
 
 
 /* ============================= The structure for adaptive algorithm ============================ */
@@ -387,9 +431,11 @@ typedef struct kaapi_taskadaptive_result_t {
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
   int volatile                        req_preempt;
+  int volatile                        is_signaled;
 
   /* Private part of the structure */
   volatile int                        thief_term;       /* */
+
   struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
   int                                 flag;             /* where is allocated data */
 
@@ -624,14 +670,6 @@ static inline kaapi_task_t* kaapi_thread_bottomtask(kaapi_thread_context_t* thre
 
 /* ========================================================================= */
 /* Shared object and access mode                                             */
-/** \ingroup DFG
-*/
-typedef struct kaapi_gd_t {
-  kaapi_access_mode_t last_mode;    /* last access mode to the data */
-  void*               last_version; /* last verion of the data, 0 if not ready */
-} kaapi_gd_t;
-
-
 
 extern struct kaapi_processor_t* kaapi_get_current_processor(void);
 typedef kaapi_uint32_t kaapi_processor_id_t;
@@ -673,27 +711,48 @@ extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
 
+/* ======================== Dependencies resolution function ========================*/
+
+/** \ingroup DFG
+*/
+typedef struct kaapi_gd_t {
+  kaapi_access_mode_t         last_mode;    /* last access mode to the data */
+  void*                       last_version; /* last verion of the data, 0 if not ready */
+} kaapi_gd_t;
+
+/* fwd decl
+*/
+struct kaapi_version_t;
+
+
+
 /* ============================= Hash table for WS ============================ */
+
 /*
 */
 typedef struct kaapi_hashentries_t {
-  kaapi_gd_t                  value;
+  union { /* depending of the kind of hash table... */
+    kaapi_gd_t                value;
+    struct kaapi_version_t*   dfginfo;     /* list of tasks to wakeup at the end */
+  } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 
 } kaapi_hashentries_t;
 
-
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
 
-#define KAAPI_HASHMAP_SIZE 128
+#define KAAPI_HASHMAP_SIZE 32
+
 /*
 */
 typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
+  kaapi_uint32_t entry_map; /* type size must match KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
+
 
 /*
 */
@@ -709,19 +768,132 @@ extern int kaapi_hashmap_destroy( kaapi_hashmap_t* khm );
 
 /*
 */
+extern kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr );
+
+/*
+*/
 extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr );
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr );
+
+/*
+*/
+extern kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key);
+
+/*
+*/
+extern void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries);
 
 
 
 
 
 /* ============================= Commun function for server side (no public) ============================ */
+
+/**
+*/
+static inline int kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
+{
+  th->affinity = 0;
+  return 0;
+}
+
+/**
+*/
+static inline int kaapi_thread_setaffinity(kaapi_thread_context_t* th, kaapi_processor_id_t kid )
+{
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(unsigned long)*8) );
+  th->affinity |= (1<<kid);
+  return 0;
+}
+
+/** Return non 0 iff th as affinity with kid
+*/
+static inline int kaapi_thread_hasaffinity(unsigned long affinity, kaapi_processor_id_t kid )
+{
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(unsigned long)*8) );
+  return (affinity & (1<<kid));
+}
+
 /**
 */
 static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
 {
   if (kproc->lsuspend.head ==0) return 1;
   return 0;
+}
+
+/**
+*/
+static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
+{
+  return (thread->sfp->pc->body != kaapi_suspend_body);
+}
+
+/** 
+*/
+static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
+{
+  int ok;
+  kaapi_mem_barrier();
+  do {
+    ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid);
+    kaapi_slowdown_cpu();
+  } while (!ok);
+  return 0;
+}
+
+
+/**
+*/
+static inline int kaapi_sched_unlock( kaapi_processor_t* kproc )
+{
+  kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(&kproc->lock) == (unsigned)(1+kproc->kid) );
+  kaapi_mem_barrier();
+  KAAPI_ATOMIC_WRITE(&kproc->lock, 0);
+  return 0;
+}
+
+
+static inline int kaapi_sched_pushready( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
+{
+  KAAPI_FIFO_PUSH( &kproc->lready, thread );
+  return 0;
+}
+
+
+
+/** If the owner call this method then it should protect itself again thieves by using sched_lock & sched_unlock
+*/
+static inline kaapi_thread_context_t* kaapi_sched_stealready( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
+{
+  kaapi_thread_context_t* thread = 0;
+  kaapi_thread_context_t* prevthread = 0;
+  
+  /* WARNING should add test of affinity ? and move the function into a .c */
+  if (!KAAPI_FIFO_EMPTY(&kproc->lready))
+  {
+    KAAPI_FIFO_TOP( &kproc->lready, prevthread );
+    if (kaapi_thread_hasaffinity(prevthread->affinity, kproc_thiefid))
+    {
+      KAAPI_FIFO_POP( &kproc->lready, thread );
+      return thread;
+    }
+    thread = prevthread->_next;
+    while (thread !=0) 
+    {
+      if (kaapi_thread_hasaffinity(thread->affinity, kproc_thiefid))
+      {
+        KAAPI_FIFO_REMOVE( &kproc->lready, prevthread, thread );
+        return thread;
+      }
+      prevthread = thread;
+      thread = thread->_next;
+    }
+  }
+  return thread;
 }
 
 /**
@@ -803,6 +975,7 @@ extern void kaapi_sched_idle ( kaapi_processor_t* proc );
 int kaapi_sched_suspend ( kaapi_processor_t* kproc );
 
 
+
 /** \ingroup WS
     The method starts a work stealing operation and return until a sucessfull steal
     operation or 0 if no work may be found.
@@ -814,7 +987,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc );
     \retval 0 in case of not stolen work 
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
-extern int kaapi_sched_stealprocessor ( kaapi_processor_t* kproc );
+extern int kaapi_sched_stealprocessor ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid );
 
 
 /** \ingroup WS
@@ -835,7 +1008,7 @@ extern int kaapi_sched_stealstack  ( struct kaapi_thread_context_t* thread, kaap
     \retval else a context to wakeup
     \TODO faire specs ici
 */
-extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc );
+extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid );
 
 
 /** \ingroup WS
@@ -862,7 +1035,8 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
 /** \ingroup WS
     Splitter for DFG task
 */
-extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t* task, int count, struct kaapi_request_t* array);
+extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t* task, unsigned int war_param, 
+      int count, struct kaapi_request_t* array);
 
 /** \ingroup WS
     Wrapper arround the user level Splitter for Adaptive task
@@ -891,13 +1065,6 @@ static inline int kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
     ;
   return 0;
 }
-
-
-/** \ingroup ADAPTIVE
-    free a result previously allocate with kaapi_allocate_thief_result
-    \param ktr IN the result to free
- */
-extern void kaapi_free_thief_result(struct kaapi_taskadaptive_result_t* ktr);
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
@@ -976,6 +1143,7 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_thread_context_t* origin_thread;     /* stack where task was stolen */
   kaapi_task_t*           origin_task;       /* the stolen task into origin_stack */
   kaapi_format_t*         origin_fmt;        /* set by tasksteal the stolen task into origin_stack */
+  unsigned int            war_param;         /* bit i=1 iff it is a w mode with war dependency */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
 
@@ -1028,6 +1196,8 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 /**
  */
 extern void kaapi_set_workload( kaapi_uint32_t workload );
+
+#include "kaapi_staticsched.h"
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/

@@ -48,6 +48,14 @@
 */
 void doit::operator()(int argc, char** argv )
 {
+   ka::pointer<int> p1;
+   ka::pointer_rpwp<int> p2;
+   ka::pointer_rp<int> p3;
+   ka::pointer_wp<int> p4;
+   ka::pointer_r<int> p5;
+   ka::pointer_w<int> p6;
+   ka::pointer_rw<int> p7;
+
    /* failed Rp,R -> W*/
    ka::Spawn<TaskW<int> >()(p2);
    ka::Spawn<TaskW<int> >()(p5);
@@ -63,4 +71,18 @@ void doit::operator()(int argc, char** argv )
    /* failed Wp,W -> R*/
    ka::Spawn<TaskRp<int> >()(p4);
    ka::Spawn<TaskRp<int> >()(p6);
+
+   /* failed Rp,R,Wp,W,RW -> RW*/
+   ka::Spawn<TaskRW<int> >()(p3);
+   ka::Spawn<TaskRW<int> >()(p5);
+   ka::Spawn<TaskRW<int> >()(p4);
+   ka::Spawn<TaskRW<int> >()(p6);
+   ka::Spawn<TaskRW<int> >()(p7);
+
+   /* failed Rp,R,Wp,W,RW -> RpWp*/
+   ka::Spawn<TaskRpWp<int> >()(p3);
+   ka::Spawn<TaskRpWp<int> >()(p5);
+   ka::Spawn<TaskRpWp<int> >()(p4);
+   ka::Spawn<TaskRpWp<int> >()(p6);
+   ka::Spawn<TaskRpWp<int> >()(p7);
 }

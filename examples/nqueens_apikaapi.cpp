@@ -12,7 +12,7 @@
  * globals
  */
 #if !defined(THRESHOLD)
-#define THRESHOLD 7
+#define THRESHOLD 6
 #endif
 
 #define MAXSIZE 24
@@ -142,7 +142,6 @@ struct board
   }
 
   ka::ka_int32_t d[MAXSIZE];
-
 };
 
 /*
@@ -239,6 +238,7 @@ struct param_bt2
         return;
       }
     }
+
     /*
      * 180-degree rotation 
      */

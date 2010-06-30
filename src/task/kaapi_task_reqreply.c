@@ -47,8 +47,9 @@
 /** Args for tasksignal
 */
 typedef struct kaapi_tasksig_arg_t {
-    kaapi_taskadaptive_t*               ta;         /* the victim or the master */
-    kaapi_taskadaptive_result_t*        result;
+  kaapi_taskadaptive_t*               ta;         /* the victim or the master */
+  volatile kaapi_taskadaptive_result_t* result;
+  volatile int			  inuse;
 } kaapi_tasksig_arg_t;
 
 
@@ -58,9 +59,15 @@ typedef struct kaapi_tasksig_arg_t {
 void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
 {
   kaapi_tasksig_arg_t* arg = (kaapi_tasksig_arg_t*)taskarg;
+
   kaapi_writemem_barrier();
+
   if (arg->result !=0)
+  {
     arg->result->thief_term = 1;
+    arg->result->is_signaled = 1;
+  }
+
   KAAPI_ATOMIC_DECR( &arg->ta->thievescount );
 }
 
@@ -122,11 +129,11 @@ int kaapi_request_reply(
     ta_master = ta;
   }
   KAAPI_ATOMIC_INCR( &ta_master->thievescount );
-  
+
   /* add task to tell to the master that this disappear */
   tasksig = kaapi_thread_toptask( request->thread );
-  kaapi_task_init(tasksig, kaapi_tasksig_body, kaapi_thread_pushdata( request->thread, sizeof(kaapi_tasksig_arg_t) ) );
-  kaapi_tasksig_arg_t* arg = kaapi_task_getargst( tasksig, kaapi_tasksig_arg_t );
+  kaapi_tasksig_arg_t* const arg = kaapi_thread_pushdata( request->thread, sizeof(kaapi_tasksig_arg_t));
+  kaapi_task_init(tasksig, kaapi_tasksig_body, arg);
   arg->ta     = ta_master;
   arg->result = result;
   kaapi_thread_pushtask(request->thread);

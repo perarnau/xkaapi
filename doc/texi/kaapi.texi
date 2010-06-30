@@ -1,0 +1,75 @@
+\input texinfo
+@c %** start of header
+@setfilename kaapi.info
+@settitle kaapi 
+@include version.texi
+@dircategory Software libraries
+@direntry
+* KAAPI: (kaapi).              Kernel for Adaptative, Asynchronous Parallel and Interactive programming
+@end direntry
+@c %** end of header
+
+@copying
+This manual is for KAAPI (version @value{VERSION}, @value{UPDATED}),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright @copyright{} 2007 LIG
+@end copying
+
+@titlepage
+@title KAAPI 
+@subtitle for version @value{VERSION}, @value{UPDATED}
+@author S. Guelton (@email{serge.guelton@@enst-bretagne.fr})
+@page
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top Kaapi
+This manual is for Kaapi library (version @value{VERSION}, @value{UPDATED}).
+@end ifnottex
+
+@menu
+* kaapi overview:: Overview of the package
+* install guide:: Installation guide
+* compile and run:: Link program with @code{KAAPI} 
+* Athapascan :: Detailed overview of Kaapi content
+* tutorials:: understand the basics
+* API :: functions and classes exported by the Kaapi library
+* function methods and classes index :: quickly find your way in the api
+@end menu
+@c * contacts :: flame or grats the authors
+
+
+@node kaapi overview
+@chapter Overview
+KAAPI means Kernel for Adaptative, Asynchronous Parallel and Interactive programming. It is a C++ library that allows to execute multithreaded computation with data flow synchronization between threads. The library is able to schedule fine/medium size grain program on distributed machine. The data flow graph is dynamic (unfold at runtime). Target architectures are clusters of SMP machines.
+
+Main features are
+
+@itemize
+@item It is based on work-stealing algorithms ;
+@item It can run on various processors ;
+@item It can run on various architectures (clusters or grids) ;
+@item It contains non-blocking and scalable algorithms ;
+@end itemize
+
+
+@c -------------------------------------------
+@include install/install.texi
+@include install/compile_and_run.texi
+@include athapascan/overview.texi
+@include tutorial/tutorial.texi
+@include athapascan/api.texi
+@c -------------------------------------------
+
+@node function methods and classes index
+@unnumbered Function, methods and classes index
+@printindex fn
+
+@bye
+

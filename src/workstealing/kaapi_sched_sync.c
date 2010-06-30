@@ -75,20 +75,20 @@ int kaapi_sched_sync(void)
 {
   kaapi_thread_context_t* thread;
   kaapi_task_t*           savepc;
-  kaapi_stack_t*          stack;
   int                     err;
-  int                     save_sticky;
+  unsigned long           save_affinity;
   kaapi_frame_t*          save_esfp;
 #if defined(KAAPI_DEBUG)
   kaapi_frame_t*          save_fp;
 #endif
 
   thread = _kaapi_self_thread();
-  stack = kaapi_threadcontext2stack(thread);
   if (kaapi_frame_isempty( thread->sfp ) ) return 0;
 
-  save_sticky = stack->sticky;
-  stack->sticky = 1;
+  save_affinity = thread->affinity;
+  kaapi_thread_clearaffinity(thread);
+  kaapi_thread_setaffinity( thread, thread->proc->kid );
+
   savepc = thread->sfp->pc;
 #if defined(KAAPI_DEBUG)
   save_fp = (kaapi_frame_t*)thread->sfp;
@@ -97,7 +97,7 @@ int kaapi_sched_sync(void)
   thread->esfp = (kaapi_frame_t*)thread->sfp;
 
   /* write barrier in order to commit update */
-  kaapi_writemem_barrier();
+  kaapi_mem_barrier();
   
 redo:
   err = kaapi_stack_execframe(thread);
@@ -109,8 +109,8 @@ redo:
     goto redo;
   }
 
-  /* reset sticky flag if save_stick != 1 */
-  if (!save_sticky) stack->sticky = 0;
+  /* reset affinity flag if save_stick != 1 */
+  thread->affinity = save_affinity;
   
   if (err) /* but do not restore anyting */
     return err;
