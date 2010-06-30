@@ -5,32 +5,36 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-# Not object in the library !!!
-#lib_LTLIBRARIES=libkastl.la
-
-#libkastl_la_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLLIB_BUILD_CPPFLAGS)
-#libkastl_la_CFLAGS=$(AM_CFLAGS) $(KASTLLIB_BUILD_CFLAGS)
-#libkastl_la_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-#libkastl_la_LDFLAGS = -version-info 1:0:1 $(KASTLLIB_BUILD_LDFLAGS)
-#libkastl_la_LIBADD=../../src/libxkaapi.la $(KASTLLIB_BUILD_LIBS)
-
 kastlincludedir=$(includedir)/kastl
 
 kastlinclude_HEADERS=\
 	kastl/kastl_types.h\
+	kastl/kastl_sequences.h\
 	kastl/kastl_workqueue.h\
 	kastl/kastl_sequences.h\
-	kastl/kastl_impl.h\
-	kastl/for_each.h\
+	kastl/kastl_loop.h\
+	kastl/algorithm\
+	kastl/numeric\
 	kastl/transform.h\
+	kastl/for_each.h\
+	kastl/find.h\
+	kastl/find_if.h\
+	kastl/find_first_of.h\
 	kastl/accumulate.h\
-	kastl/accumulate_while.h\
-	kastl/algorithm \
-	kastl/numeric
-
-#	kastl/kastl_fifoqueue.h 	kastl/kastl_team.h
-
-#libkastl_la_SOURCES=\
-	$(kastlinclude_HEADERS)
-
-#Put in .h 	kastl_workqueue.cpp 
+	kastl/inner_product.h\
+	kastl/count.h\
+	kastl/count_if.h\
+	kastl/copy.h\
+	kastl/search.h\
+	kastl/min_element.h\
+	kastl/max_element.h\
+	kastl/fill.h\
+	kastl/generate.h\
+	kastl/replace.h\
+	kastl/replace_if.h\
+	kastl/equal.h\
+	kastl/mismatch.h\
+	kastl/search.h\
+	kastl/adjacent_find.h\
+	kastl/adjacent_difference.h\
+	kastl/partial_sum.h

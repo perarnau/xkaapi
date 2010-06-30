@@ -65,6 +65,9 @@
 
 #if CONFIG_LIB_KASTL
 
+#include "kastl/numeric"
+#include "kastl/algorithm"
+
 #include "kaapi.h"
 
 static size_t __attribute__((unused)) get_concurrency()
