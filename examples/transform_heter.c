@@ -25,11 +25,12 @@ typedef struct range
 static void create_range(range_t* range, unsigned int nelem)
 {
   unsigned int i;
+  unsigned int* base;
 
-  *KAAPI_DATA(unsigned int*, range->base) = malloc
-    (nelem * sizeof(unsigned int));
+  base = malloc(nelem * sizeof(unsigned int));
   for (i = 0; i < nelem; ++i)
-    (*KAAPI_DATA(unsigned int*, range->base))[i] = 0;
+    base[i] = 0;
+  *KAAPI_DATA(unsigned int*, range->base) = base;
 
   range->i = 0;
   range->j = nelem;
@@ -59,7 +60,11 @@ static int steal_range
 static int split_range
 (range_t* sub, range_t* range, unsigned int size)
 {
-  if (get_range_size(range) < size)
+  if (get_range_size(range) == 0)
+  {
+    return -1;
+  }
+  else if (get_range_size(range) < size)
   {
     /* succeed even if size too large */
     size = get_range_size(range);
@@ -103,7 +108,7 @@ static void lock_work(task_work_t* work)
 {
   while (1)
   {
-    if (__sync_bool_compare_and_swap(&work->lock, 1, 0))
+    if (__sync_bool_compare_and_swap(&work->lock, 0, 1))
       break;
   }
 }
@@ -129,12 +134,14 @@ static void do_work(kaapi_stealcontext_t* sc, task_work_t* work)
   {
     lock_work(work);
     stealres = split_range(&subrange, &work->range, 512);
+    *KAAPI_DATA(unsigned int*, subrange.base) =
+      *KAAPI_DATA(unsigned int*, work->range.base);
     unlock_work(work);
 
     if (stealres == -1)
       break ;
 
-    for (i = 0; i < work->range.j; ++i)
+    for (i = subrange.i; i < subrange.j; ++i)
       (*KAAPI_DATA(unsigned int*, subrange.base))[i] += 1;
 
     if (work->ktr != NULL)
