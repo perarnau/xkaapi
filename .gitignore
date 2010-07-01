@@ -6,6 +6,14 @@
 # better if xkaapi is not built in the source repository
 # but I added most of them.
 
+###################
+# Generated files #
+###################
+/api/atha/athapascan_closure.h
+/api/atha/athapascan_fork.h
+/api/kaapixx/ka_api_clo.h
+/api/kaapixx/ka_api_fork.h
+
 ########################
 # Files from bootstrap #
 ########################
