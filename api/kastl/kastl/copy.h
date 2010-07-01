@@ -42,60 +42,50 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_COPY_H_INCLUDED
 # define KASTL_COPY_H_INCLUDED
-#include "kastl/kastl_impl.h"
+
+
+#include <iterator>
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
 
 namespace kastl
+{
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* transform algorithm                                                   */
-/* -------------------------------------------------------------------- */
-template<typename input_iterator_type, typename output_iterator_type
-struct BodyCopy {
-  bool operator()( iterator_type& result, typename sequence_type::range_type& r )
+template<typename Iterator0, typename Iterator1>
+struct copy_body
+{
+  typedef kastl::impl::dummy_type result_type;
+
+  void operator()(result_type&, Iterator0& ipos, Iterator1& opos)
   {
-    iterator_type first   = r.begin1();
-    iterator_type last    = r.end1();
-    iterator_type to_fill = r.begin2();
-
-    while (first != last)
-       *to_fill++ = *first++;
-
-    result = last;
-    return (first != last);
+    *opos = *ipos;
   }
 };
-} //rts
 
-template< typename input_iterator_type, 
-          typename output_iterator_type, 
-          typename Operation, typename Settings = class rts::DefaultSetting
-        >
-output_iterator_type copy( 
-    input_iterator_type first, input_iterator_type last, 
-    output_iterator_type to_fill, 
-    Settings settings  = rts::DefaultSetting()
-)
+template<typename Iterator0, typename Iterator1, typename Settings>
+Iterator1 copy
+(Iterator0 ifirst, Iterator0 ilast, Iterator1 ofirst, const Settings& settings)
 {
-  typedef rts::Sequence<input_iterator_type,output_iterator_type> sequence_type;
-
-  if (first == last) return first;
-  iterator_type result = first;
-  sequence_type seq(first, to_fill, last-first);
-  
-  rts::MacroLoop< rts::Sequential_MacroLoop_tag >( 
-    result,                                                     /* output: the result */
-    seq,                                                        /* input: the sequence */
-    rts::BodyCopy<input_iterator_type, output_iterator_type>(), /* the body == NanoLoop */
-    rts::empty_reducer<iterator_type>                           /* merge with a thief: do nothing */
-    settings                                                    /* output: the result */
-  );
-  return result;
+  kastl::rts::Sequence<Iterator0, Iterator1> seq
+    (ifirst, ofirst, ilast - ifirst);
+  copy_body<Iterator0, Iterator1> body;
+  kastl::impl::foreach_loop(seq, body, settings);
+  return ofirst + (ilast - ifirst);
 }
 
-} // kastl
+template<typename Iterator0, typename Iterator1>
+Iterator1 copy(Iterator0 ifirst, Iterator1 ilast, Iterator1 ofirst)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::copy(ifirst, ilast, ofirst, settings);
+}
+
+} // kastl::
 
 
 #endif // ! KASTL_COPY_H_INCLUDED

@@ -42,72 +42,56 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_FOR_EACH_H_INCLUDED
-#define KASTL_FOR_EACH_H_INCLUDED
+# define KASTL_FOR_EACH_H_INCLUDED
 
-#include "kastl/kastl_impl.h"
 
-namespace kastl {
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* for_each algorithm                                                   */
-/* -------------------------------------------------------------------- */
-template<typename input_terator_type, typename Operation>
-struct BodyForEach {
-  typedef rts::Sequence<input_terator_type> sequence_type;
 
-  BodyForEach( Operation& o ) : op(o) {}
-  Operation op;
-  bool operator()( input_terator_type& result, typename sequence_type::range_type& r )
+namespace kastl
+{
+
+template<typename Iterator, typename Operation>
+struct for_each_body
+{
+  typedef kastl::rts::Sequence<Iterator> sequence_type;
+  typedef typename sequence_type::range_type range_type;
+  typedef kastl::impl::dummy_type result_type;
+
+  Operation _op;
+
+  for_each_body(const Operation& op, const Iterator& first)
+    : _op(op)
+  {}
+
+  void operator()(result_type&, const Iterator& pos)
   {
-    input_terator_type first = r.begin();
-    input_terator_type last  = r.end();
-
-    while (first != last)
-       op(*first++);
-    result = last;
-    return (first != last);
+    _op(*pos);
   }
 };
 
-}// rts
-
-template<typename input_terator_type, typename Operation, typename Settings>
-Operation for_each( 
-  input_terator_type first, 
-  input_terator_type last, 
-  Operation op, 
-  const Settings& settings
-)
+template<typename Iterator, typename Function, typename Settings>
+Function for_each
+(Iterator first, Iterator last, Function op, const Settings& settings)
 {
-  typedef rts::Sequence<input_terator_type> sequence_type;
-
-  if (first == last) return op;
-  input_terator_type result = first;
-  sequence_type seq(first, last-first);
-  
-  rts::MacroLoop< rts::NoReduce_MacroLoop_tag >::doit( 
-    result,                                                     /* output: the result */
-    seq,                                                        /* input: the sequence */
-    rts::BodyForEach<input_terator_type, Operation>(op),        /* the body == NanoLoop */
-    rts::empty_reducer<input_terator_type>,                     /* merge with a thief: do nothing */
-    settings                                                    /* output: the result */
-  );
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  for_each_body<Iterator, Function> body(op, first);
+  kastl::impl::foreach_loop(seq, body, settings);
   return op;
 }
 
-template<typename input_terator_type, typename Operation>
-Operation for_each( 
-  input_terator_type first, 
-  input_terator_type last, 
-  Operation op
-)
-{ 
-  return for_each( first, last, op, rts::DefaultSetting() );
+template<typename Iterator, typename Function>
+Function for_each(Iterator first, Iterator last, Function op)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::for_each(first, last, op, settings);
 }
 
+} // kastl::
 
-} // kastl
 
 #endif // ! KASTL_FOR_EACH_H_INCLUDED

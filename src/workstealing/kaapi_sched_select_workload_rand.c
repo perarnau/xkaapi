@@ -52,9 +52,9 @@ kaapi_select_victim_workload_atlevel( kaapi_processor_t* kproc, int level, kaapi
   kaapi_assert_debug( victim !=0 );
   
   if (kproc->hlevel < level) return EINVAL;
-  
+
   victim->level = level;
-  
+
   nbproc = kproc->hlcount[level];
   if (nbproc <=1) return EINVAL;
   
@@ -136,21 +136,22 @@ kaapi_select_victim_workload( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 
 /** Do workload then rand selection 
  */
+
 int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 {
   int err, i;
   
   do {
-    
+ 
 #if 1
-    for (i=0; i<kproc->hlevel; ++i)
+    for (i=0; i < kproc->hlevel; ++i)
     {
       err = kaapi_select_victim_workload_atlevel( kproc, i, victim );
       if (err ==0) return 0;
     }
 #else
-    err = kaapi_select_victim_workload( kproc, victim );
-    if (err ==0) return 0;
+      err = kaapi_select_victim_workload( kproc, victim );
+      if (err ==0) return 0;
 #endif
     
     for (i=0; i<kproc->hlevel; ++i)
@@ -160,5 +161,4 @@ int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_vic
     }
     
   } while(1);
-  
 }

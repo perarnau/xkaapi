@@ -1,285 +1,183 @@
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
+
+
 #ifndef KASTL_PARTIAL_SUM_H_INCLUDED
 # define KASTL_PARTIAL_SUM_H_INCLUDED
 
 
-
-#include <algorithm>
-#include <functional>
-#include <numeric>
 #include <iterator>
-#include "kastl_impl.h"
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
 
 namespace kastl
 {
 
-namespace impl
+#if 0 // todo
+template<typename Sequence>
+struct partial_sum_result
 {
-// partial sum result
+  typedef typename Sequence::range_type::iterator1_type iterator1_type;
+  typedef typename Sequence::range_type::iterator2_type iterator2_type;
+  typedef typename std::iterator_traits<iterator2_type>::value_type value_type;
 
-template<typename OutputIteratorType>
-struct PartialSumResult
-{
-  typedef typename std::iterator_traits
-  <OutputIteratorType>::value_type ValueType;
+  iterator2_type _begin;
+  Sequence& _seq;
+  value_type _value;
 
-  bool _has_sum;
-  OutputIteratorType _obeg;
-  OutputIteratorType _oend;
-  ValueType _sum;
+  partial_sum_result(Sequence& seq)
+    : _begin(seq.begin2()), _seq(seq)
+  {
+    // sequence size > 0
 
-  PartialSumResult(const OutputIteratorType& obeg)
-    : _has_sum(false), _obeg(obeg), _oend(obeg) {}
+    _value = *seq.begin1();
+    *seq.begin2() = _value;
 
+    typename Sequence::range_type dummy_range;
+    seq.pop_safe(dummy_range, 1);
+  }
 };
+#endif // todo
 
-
-template
-<
-  typename SequenceType,
-  typename ConstantType,
-  typename ResultType,
-  typename MacroType,
-  typename NanoType,
-  typename SplitterType
->
-class PartialSumWork : public BaseWork
-<SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
+template<typename Iterator0, typename Iterator1, typename Operator>
+struct partial_sum_body
 {
-  typedef PartialSumWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-  SelfType;
-
-  typedef BaseWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-  BaseType;
-
-  typedef typename SequenceType::_InputIteratorType InputIteratorType;
-  typedef typename SequenceType::_OutputIteratorType OutputIteratorType;
-
-public:
-
-  PartialSumWork() : BaseType() {}
-
-  PartialSumWork(const SequenceType& s, const ConstantType* c, const ResultType& r)
-  : BaseType(s, c, r)
-  {
-    prepare();
-  }
-
-  inline void prepare()
-  {
-    this->_res._has_sum = false;
-    this->_res._obeg = this->_seq._opos;
-    this->_res._oend = this->_seq._opos;
-  }
-
-  inline void compute(SequenceType& seq)
-  {
-    // do the partial sum ourselves
-    // to keep track of the sum
-
-    typedef typename std::iterator_traits
-      <OutputIteratorType>::value_type ValueType;
-
-    InputIteratorType ipos = seq._iseq._beg;
-    OutputIteratorType opos = seq._opos;
-    OutputIteratorType oend = this->_res._oend;
-
-#if KASTL_DEBUG
-    typedef typename std::iterator_traits
-      <OutputIteratorType>::difference_type OSizeType;
-    const OSizeType oend_index = std::distance(this->_ori_seq._opos, oend);
-
-    typedef typename std::iterator_traits
-      <InputIteratorType>::difference_type ISizeType;
-    const ISizeType ipos_index = std::distance(this->_ori_seq._iseq._beg, ipos);
-
-    if (oend_index != ipos_index)
-      printf(" [!] %c indices: %lu, %lu\n",
-	     this->_is_master ? 'm' : 's',
-	     oend_index, ipos_index);
-#endif
-
-    ValueType sum;
-
-    if (this->_res._has_sum == false)
-    {
-      this->_res._has_sum = true;
-      this->_res._sum = *ipos;
-      *opos++ = *ipos++;
-      ++oend;
-    }
-
-    sum = this->_res._sum;
-
-    for (; ipos != seq._iseq._end; ++opos, ++ipos, ++oend)
-    {
-      sum = (*this->_const)(sum, *ipos);
-      *opos = sum;
-    }
-
-    this->_res._oend = oend;
-    this->_res._sum = sum;
-
-    seq._iseq._beg = ipos;
-  }
-
-  inline void reduce(const BaseType& tw)
-  {
-    // nothing computed
-    if (tw._res._obeg == tw._res._oend)
-      return ;
-
-    // propagate sum on thief results
-    InputIteratorType pos;
-    for (pos = tw._res._obeg; pos != tw._res._oend; ++pos)
-      *pos = (*this->_const)(this->_res._sum, *pos);
-
-    if (tw._res._has_sum == true)
-    {
-      if (this->_res._has_sum == true)
-	this->_res._sum = (*this->_const)(this->_res._sum, tw._res._sum);
-      else
-	this->_res._sum = tw._res._sum;
-      this->_res._has_sum = true;
-    }
-
-    this->_res._oend = tw._res._oend;
-  }
-
-};
-
-// tuning params
-
-#if 1
-struct PartialSumTuningParams : Daouda1TuningParams
-{
-  static const enum TuningTag macro_tag = TAG_BACKOFF;
-  static const size_t macro_min_size = 8192;
-  static const size_t macro_max_size = 32768;
-  static const size_t nano_size = 2048;
-};
+  typedef kastl::rts::Sequence<Iterator0, Iterator1> sequence_type;
+  typedef typename std::iterator_traits<Iterator1>::value_type value_type;
+#if 0 // todo
+  typedef partial_sum_result<sequence_type> result_type;
 #else
-# warning TESTING
-struct PartialSumTuningParams : Daouda0TuningParams
-{
-  static const enum TuningTag macro_tag = TAG_IDENTITY;
-  static const size_t macro_max_size = 8192;
-  static const enum TuningTag nano_tag = TAG_STATIC;
-  static const size_t nano_size = 512;
-};
+  typedef kastl::impl::dummy_type result_type;
 #endif
 
+  Operator _op;
 
-} // kastl::impl
+  partial_sum_body(const Operator& op)
+    : _op(op)
+  {}
 
-
-template
-<
-  class InputIterator,
-  class OutputIterator,
-  class BinOp,
-  class ParamType
->
-OutputIterator partial_sum
-(
- InputIterator ipos,
- InputIterator iend,
- OutputIterator opos,
- BinOp op
-)
-{
-  typedef kastl::impl::InOutSequence<InputIterator, OutputIterator>
-    SequenceType;
-
-  typedef typename kastl::impl::make_macro_type
-    <ParamType::macro_tag, ParamType, SequenceType>::Type
-    MacroType;
-
-  typedef typename kastl::impl::make_nano_type
-    <ParamType::nano_tag, ParamType, SequenceType>::Type
-    NanoType;
-
-  typedef typename kastl::impl::make_splitter_type
-    <ParamType::splitter_tag, ParamType>::Type
-    SplitterType;
-
-  typedef BinOp ConstantType;
-
-  typedef kastl::impl::PartialSumResult<OutputIterator> ResultType;
-
-  typedef kastl::impl::PartialSumWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-  WorkType;
-
-  SequenceType seq(ipos, iend, opos);
-  WorkType work(seq, &op, ResultType(opos));
-  kastl::impl::compute(work);
-  return work._res._oend;
-}
-
-
-template
-<
-  class InputIterator,
-  class OutputIterator,
-  class BinOp
->
-OutputIterator partial_sum
-(
- InputIterator ipos,
- InputIterator iend,
- OutputIterator opos,
- BinOp op
-)
-{
-  typedef kastl::impl::PartialSumTuningParams ParamType;
-
-  return kastl::partial_sum
-    <InputIterator, OutputIterator, BinOp, ParamType>
-    (ipos, iend, opos, op);
-}
-
-
-#if 0 // KASTL_DEBUG
-
-struct checked_plus
-{
-  unsigned int operator()(const unsigned int& a, const unsigned int& b) const
+  void operator()(result_type& sum, const Iterator0& ipos, Iterator1& opos)
   {
-    if ((a + b) < a)
-      printf("[!] overflow\n");
-    return a + b;
+#if 0 // todo
+    sum._value = _op(sum._value, *ipos);
+    *opos = sum._value;
+#endif
   }
+
+  void reduce(result_type& lhs, result_type& rhs)
+  {
+#if 0 // todo
+
+    // _begin was saved during result init
+    // begin2() points to the first non processed
+    // iterator, thus we apply result on the range
+    // [_begin, begin2()[
+
+    Iterator1 pos = rhs._begin;
+    Iterator1 end = rhs._seq.begin2();
+
+    for (; pos != end; ++pos)
+      *pos = _op(lhs._value, *pos);
+    lhs._value = _op(lhs._value, rhs._value);
+#endif
+  }
+
 };
 
+template<typename Iterator0, typename Iterator1,
+	 typename Operator, typename Settings>
+Iterator1 partial_sum
+(Iterator0 first0, Iterator0 last0,
+ Iterator1 first1, Operator op, const Settings& settings)
+{
+  typedef typename std::iterator_traits<Iterator0>::difference_type size_type;
+  typedef typename std::iterator_traits<Iterator1>::value_type value_type;
+  typedef kastl::rts::Sequence<Iterator0, Iterator1> sequence_type;
+#if 0 // todo
+  typedef partial_sum_result<sequence_type> result_type;
 #endif
 
+  const size_type size = std::distance(first0, last0);
 
-template
-<
-  class InputIterator,
-  class OutputIterator
->
-OutputIterator partial_sum
-(
- InputIterator ipos,
- InputIterator iend,
- OutputIterator opos
-)
-{
-  typedef typename std::iterator_traits
-    <OutputIterator>::value_type ValueType;
+  if (size == 0)
+    return first1;
 
-  typedef std::plus<ValueType> BinOp;
+  sequence_type seq(first0, first1, size);
+#if 0 // todo
+  result_type res(seq);
+#endif
 
-  return kastl::partial_sum
-    <InputIterator, OutputIterator, BinOp>
-    (ipos, iend, opos, BinOp());
+  partial_sum_body<Iterator0, Iterator1, Operator> body(op);
+#if 0
+  kastl::impl::foreach_reduce_loop(res, seq, body, settings);
+#else
+  kastl::impl::foreach_loop(seq, body, settings);
+#endif
+
+  return first1 + size;
 }
 
-} // kastl
+template<typename Iterator0, typename Iterator1, typename Operator>
+Iterator1 partial_sum
+(Iterator0 first0, Iterator0 last0, Iterator1 first1, Operator op)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::partial_sum(first0, last0, first1, op, settings);
+}
+
+template<typename Iterator0, typename Iterator1>
+Iterator1 partial_sum
+(Iterator0 first0, Iterator0 last0, Iterator1 first1)
+{
+  typedef typename std::iterator_traits<Iterator0>::value_type value_type;
+  return kastl::partial_sum
+    (first0, last0, first1, kastl::impl::add<value_type>());
+}
+
+} // kastl::
 
 
 #endif // ! KASTL_PARTIAL_SUM_H_INCLUDED

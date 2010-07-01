@@ -5,7 +5,7 @@ BINDIR	:= $(PWD)/../bin
 CC	:= g++
 LD	:= g++
 CFLAGS	:= -std=gnu++0x -Wall -O3 -march=native
-LFLAGS	:=
+LFLAGS	:= -lm
 SRCS	:= $(SRCDIR)/main.cpp
 
 LIB	?= none

@@ -322,7 +322,7 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
   */
   if (ver->writer_task == 0)
   { /* this is the first writer or a reader exist on -1 */
-    kaapi_assert( (ver->cnt_readers == 0) || ver->readers[-1].used);
+    kaapi_assert( (ver->cnt_readers == 0) || (ver->readers - 1)->used);
     ver->writer_data   = access->data;
     ver->writer_task   = task;
     ver->writer_thread = tid;

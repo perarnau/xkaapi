@@ -1,171 +1,109 @@
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
+
+
 #ifndef KASTL_FIND_IF_H_INCLUDED
 # define KASTL_FIND_IF_H_INCLUDED
 
 
-
-#include <algorithm>
-#include <functional>
-#include <iterator>
-#include "kastl_impl.h"
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
 
 namespace kastl
 {
 
-namespace impl
+template<typename Iterator, typename Predicate>
+struct find_if_body
 {
+  typedef kastl::impl::touched_algorithm_result<Iterator> result_type;
 
-template
-<
-  typename IteratorType,
-  typename PredicateType
->
-struct FindIfConstant
-{
-  IteratorType _bad_res;
-  PredicateType _pred;
+  Predicate _pred;
 
-  FindIfConstant(const IteratorType& bad_res, const PredicateType& pred)
-  : _bad_res(bad_res), _pred(pred) {}
-};
+  find_if_body(const Predicate& pred)
+    : _pred(pred) {}
 
-template
-<
-  typename SequenceType,
-  typename ConstantType,
-  typename ResultType,
-  typename MacroType,
-  typename NanoType,
-  typename SplitterType
->
-class FindIfWork : public BaseWork
-<SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-{
-  typedef FindIfWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-  SelfType;
-
-  typedef BaseWork
-  <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-  BaseType;
-
-  inline void reduce_result(const ResultType& res)
+  bool operator()(result_type& res, const Iterator& pos)
   {
-    this->_res = res;
-    this->_is_done = true;
+    if (!_pred(*pos))
+      return false;
+
+    res.set_iter(pos);
+    return true;
   }
 
-public:
-
-  FindIfWork() : BaseType() {}
-
-  FindIfWork(const SequenceType& s, const ConstantType* c, const ResultType& r)
-  : BaseType(s, c, r) { prepare(); }
-
-  inline void prepare()
-  { this->_res = this->_const->_bad_res; }
-
-  inline void compute(SequenceType& seq)
+  bool reduce(result_type& lhs, const result_type& rhs)
   {
-    ResultType res = std::find_if(seq.begin(), seq.end(), this->_const->_pred);
-
-    seq.advance();
-
-    if (res == seq.end())
-      return ;
-
-    reduce_result(res);
-  }
-
-  inline void reduce(const BaseType& tw)
-  {
-    // result already found
-    if (this->_res != this->_const->_bad_res)
-      return ;
-
-    // thief got a result
-    if (tw._res != tw._const->_bad_res)
-      reduce_result(tw._res);
+    if (rhs._is_touched == false)
+      return false;
+    lhs.set_iter(rhs._iter);
+    return true;
   }
 
 };
 
-// tuning params
-
-struct FindIfTuningParams : Daouda1TuningParams
+template<typename Iterator, typename Predicate, typename Settings>
+Iterator find_if
+(Iterator first, Iterator last, Predicate pred, const Settings& settings)
 {
-  static const enum TuningTag macro_tag = TAG_LINEAR;
-  static const size_t macro_min_size = 1024;
-  static const size_t macro_max_size = 32768;
-  static const size_t macro_step_size = 1024;
-};
-
-} // kastl::impl
-
-
-template
-<
-  class InputIterator,
-  class PredicateType,
-  class ParamType
->
-InputIterator find_if
-(
- InputIterator beg,
- InputIterator end,
- PredicateType pred
-)
-{
-  typedef kastl::impl::InSequence<InputIterator>
-    SequenceType;
-
-  typedef typename kastl::impl::make_macro_type
-    <ParamType::macro_tag, ParamType, SequenceType>::Type
-    MacroType;
-
-  typedef typename kastl::impl::make_nano_type
-    <ParamType::nano_tag, ParamType, SequenceType>::Type
-    NanoType;
-
-  typedef typename kastl::impl::make_splitter_type
-    <ParamType::splitter_tag, ParamType>::Type
-    SplitterType;
-
-  typedef kastl::impl::FindIfConstant<InputIterator, PredicateType> ConstantType;
-  ConstantType constant(end, pred);
-
-  typedef InputIterator ResultType;
-
-  typedef kastl::impl::FindIfWork
-    <SequenceType, ConstantType, ResultType, MacroType, NanoType, SplitterType>
-    WorkType;
-
-  WorkType work(SequenceType(beg, end), &constant, end);
-  kastl::impl::compute(work);
-  return work._res;
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  find_if_body<Iterator, Predicate> body(pred);
+  kastl::impl::touched_algorithm_result<Iterator> res(last);
+  kastl::impl::while_reduce_loop(res, seq, body, settings);
+  return res._iter;
 }
 
-
-template
-<
-  class InputIterator,
-  class Predicate
->
-InputIterator find_if
-(
- InputIterator begin,
- InputIterator end,
- Predicate pred
-)
+template<typename Iterator, typename Predicate>
+Iterator find_if(Iterator first, Iterator last, Predicate pred)
 {
-  typedef kastl::impl::FindTuningParams ParamType;
-
-  return kastl::find_if
-    <InputIterator, Predicate, ParamType>
-    (begin, end, pred);
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::find_if(first, last, pred, settings);
 }
 
-} // kastl
+} // kastl::
 
 
-#endif // ! KASTL_FIND_IF_H_INCLUDED
+
+#endif // KASTL_FIND_IF_H_INCLUDED

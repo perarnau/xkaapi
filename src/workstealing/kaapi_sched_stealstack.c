@@ -250,7 +250,7 @@ static int kaapi_sched_stealframe(
       /* for kaapi_steal_sync */
       KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 1);
       kaapi_writemem_barrier();
-      
+
       kaapi_task_splitter_t  splitter = sc->splitter;
       void*                  argsplitter = sc->argsplitter;
       

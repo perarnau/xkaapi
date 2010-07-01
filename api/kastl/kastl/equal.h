@@ -42,119 +42,84 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_EQUAL_H_INCLUDED
 # define KASTL_EQUAL_H_INCLUDED
-#include "kastl/kastl_impl.h"
+
+
+#include <iterator>
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
 
 namespace kastl
+{
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* equal algorithm                                                   */
-/* -------------------------------------------------------------------- */
-template<typename sequence_type>
-struct BodyEqual1 {
-  bool operator()( bool& result, typename sequence_type::range_type& r )
+template<typename Iterator0, typename Iterator1, typename Predicate>
+struct equal_body
+{
+  typedef kastl::rts::Sequence<Iterator0, Iterator1> sequence_type;
+  typedef typename sequence_type::range_type range_type;
+  typedef kastl::impl::bool_result<Iterator0, true> result_type;
+
+  Predicate _pred;
+
+  equal_body(const Predicate& pred)
+    : _pred(pred)
+  {}
+
+  bool operator()
+  (result_type& res, const Iterator0& pos0, const Iterator1& pos1)
   {
-    sequence_type::input_iterator_type1 first1 = r.begin1();
-    sequence_type::input_iterator_type1 last1  = r.end1();
-    sequence_type::input_iterator_type2 first2 = r.begin2();
+    // terminate if not equal
 
-    while (first1 != last1)
-    {
-      if (*first1 != *first2)
-      {
-        result = false;
-        return false;
-      }
-      ++first1; ++first2;
-    }
+    if (_pred(*pos0, *pos1) == true)
+      return false;
+    res._value = false;
     return true;
   }
-};
 
-template<typename sequence_type, typename BinaryPredicate>
-struct BodyEqual2 {
-  BodyEqual2(BodyEqual2& p) : pred(p) {}
-  bool operator()( bool& result, typename sequence_type::range_type& r )
+  bool reduce(result_type& lhs, const result_type& rhs)
   {
-    sequence_type::input_iterator_type1 first1 = r.begin1();
-    sequence_type::input_iterator_type1 last1  = r.end1();
-    sequence_type::input_iterator_type2 first2 = r.begin2();
-
-    while (first1 != last1)
-    {
-      if ( !pred(*first1, *first2) )
-      {
-        result = false;
-        return false;
-      }
-      ++first1; ++first2;
-    }
-    return true;
-  }
-  BinaryPredicate& pred;
-};
-
-
-struct reducerBodyEqual {  
-  bool operator()(bool& result, const bool& result_thief)
-  { 
-    if (!result) return false;
-    if (!result_thief) return result = false;
+    if ((lhs._value == true) && (rhs._value == false))
+      lhs._value = false;
+    return lhs._value == false;
   }
 };
 
-}// rts
-
-template <typename input_iterator_type1, typename input_iterator_type2, typename Settings = rts::DefaultSetting>
-bool
-   equal( input_iterator_type1 first1, input_iterator_type1 last1, 
-          input_iterator_type2 first2, 
-          const Settings& settings = rts::DefaultSetting())
+template<typename Iterator0, typename Iterator1,
+	 typename Predicate, typename Settings>
+bool equal
+(Iterator0 first0, Iterator0 last, Iterator1 first1,
+ Predicate pred, const Settings& settings)
 {
-  typedef rts::Sequence<input_iterator_type1,input_iterator_type2> sequence_type;
+  kastl::rts::Sequence<Iterator0, Iterator1> seq
+    (first0, first1, last - first0);
 
-  if (first == last) return true;
-  sequence_type seq(first1, first2, last1-first1);
-  bool result = true;
-  rts::BodyEqual1<sequence_type> be;
-  
-  rts::MacroLoop< rts::Sequential_MacroLoop_tag >( 
-    result,                                                     /* output: the result */
-    seq,                                                        /* input: the sequence */
-    be,                                                         /* the body == NanoLoop */
-    rts::reducerBodyEqual                                       /* merge with a thief: do nothing */
-    settings                                                    /* output: the result */
-  );
-  return result;
+  kastl::impl::bool_result<Iterator0, true> res;
+
+  equal_body<Iterator0, Iterator1, Predicate> body(pred);
+  kastl::impl::while_reduce_loop(res, seq, body, settings);
+  return res._value;
 }
 
-
-template <typename input_iterator_type1, typename input_iterator_type2, typename BinaryPredicate, typename Settings = rts::DefaultSetting>
-bool
-   equal( input_iterator_type1 first1, input_iterator_type1 last1, 
-          input_iterator_type2 first2, 
-          BinaryPredicate pred,
-          const Settings& settings = rts::DefaultSetting())
+template<typename Iterator0, typename Iterator1, typename Predicate>
+bool equal(Iterator0 first0, Iterator0 last, Iterator1 first1, Predicate pred)
 {
-  typedef rts::Sequence<input_iterator_type1,input_iterator_type2> sequence_type;
-
-  if (first == last) return true;
-  sequence_type seq(first1, first2, last1-first1);
-  bool result = true;
-  rts::BodyEqual2<sequence_type,BinaryPredicate> be(pred);
-  
-  rts::MacroLoop< rts::Sequential_MacroLoop_tag >( 
-    result,                                                     /* output: the result */
-    seq,                                                        /* input: the sequence */
-    be,                                                         /* the body == NanoLoop */
-    rts::reducerBodyEqual                                       /* merge with a thief: do nothing */
-    settings                                                    /* output: the result */
-  );
-  return result;
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::equal(first0, last, first1, pred, settings);
 }
 
-} // kastl
+template<typename Iterator0, typename Iterator1>
+bool equal(Iterator0 first0, Iterator0 last, Iterator1 first1)
+{
+  typedef typename std::iterator_traits<Iterator0>::value_type value_type;
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::equal(first0, last, first1, eq<value_type>());
+}
+
+} // kastl::
+
 
 #endif // ! KASTL_EQUAL_H_INCLUDED

@@ -87,7 +87,6 @@ for (int i=0; i<1; ++i)
           }
         }
         kaapi_assert(request !=0);
-//        printf("[%u] remote steal thread->%p\n", kproc_thiefid, thread );
         _kaapi_request_reply( request, thread, 1 ); /* success of steal of the thread as a whole ... */
         --count;
         if (count ==0) return 0;

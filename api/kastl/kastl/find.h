@@ -42,90 +42,68 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_FIND_H_INCLUDED
 # define KASTL_FIND_H_INCLUDED
-namespace kastl {
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* find algorithm                                                   */
-/* -------------------------------------------------------------------- */
-template<typename input_iterator_type, typename value_type>
-struct BodyFind {
-  typedef rts::Sequence<input_iterator_type> sequence_type;
-  BodyFind( const value_type& v ) : _value(v) {}
-  const value_type& value;
-  bool operator()( input_iterator_type& result, typename sequence_type::range_type& r )
+
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
+
+
+namespace kastl
+{
+
+template<typename Iterator>
+struct find_body
+{
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
+  typedef kastl::impl::touched_algorithm_result<Iterator> result_type;
+
+  const value_type& _value;
+
+  find_body(const value_type& value) : _value(value) {}
+
+  bool operator()(result_type& res, const Iterator& pos)
   {
-    input_iterator_type first   = r.begin1();
-    input_iterator_type last    = r.end1();
+    if (*pos != _value)
+      return false;
 
-    while (first != last)
-    {
-      if (*first == _value) { result= first; return false; }
-      ++first;
-    }
+    res.set_iter(pos);
     return true;
   }
+
+  bool reduce(result_type& lhs, const result_type& rhs)
+  {
+    if (rhs._is_touched == false)
+      return false;
+    lhs.set_iter(rhs._iter);
+    return true;
+  }
+
 };
 
-template<typename input_iterator_type>
-struct ReduceFind {
-  ReduceFind( const input_iterator_type& l) : _last(l) {}
-  bool operator()(input_iterator_type& result, const input_iterator_type& result_thief)
-  { 
-    if (result == _last) result = result_thief;
-    return (result == _last);
-  }s
-
-  input_iterator_type _last;
-};
-
-
-} //rts
-
-template<typename input_iterator_type, typename value_type, typename Settings >
-input_iterator_type find
-  (
-     input_iterator_type begin,
-     input_iterator_type end,
-     const value_type& value,
-     const Settings& settings
-  )
+template<typename Iterator, typename Value, typename Settings>
+Iterator find
+(Iterator first, Iterator last, const Value& value, const Settings& settings)
 {
-  typedef rts::Sequence<input_iterator_type> sequence_type;
-
-  if (first == last) return last;
-
-  input_iterator_type result = last;
-  sequence_type seq(first, last-first);
-  rts::ReduceFind<input_iterator_type> redop(last);
-  
-  rts::MacroLoop< rts::Parallel_MacroLoop_tag >::doit( 
-    result,                                                     /* output: the result */
-    seq,                                                        /* input: the sequence */
-    rts::BodyFind<input_iterator_type, value_type>(value),      /* the body == NanoLoop */
-    redop,                                                      /* merge with a thief: do nothing */
-    settings                                                    /* output: the result */
-  );
-  return result;
+  kastl::rts::Sequence<Iterator> seq(first, last - first);
+  find_body<Iterator> body(value);
+  kastl::impl::touched_algorithm_result<Iterator> res(last);
+  kastl::impl::while_reduce_loop(res, seq, body, settings);
+  return res._iter;
 }
 
-
-template<typename input_iterator_type, typename value_type, typename Settings >
-input_iterator_type find
-  (
-     input_iterator_type begin,
-     input_iterator_type end,
-     const value_type& value,
-     const Settings& settings
-  )
+template<typename Iterator, typename Value>
+Iterator find(Iterator first, Iterator last, const Value& value)
 {
-  return find(begin, end, value, rts::DefaultSetting() );
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::find(first, last, value, settings);
 }
 
+} // kastl::
 
-} // kastl
 
 
-#endif // ! KASTL_FIND_H_INCLUDED
+#endif // KASTL_FIND_H_INCLUDED

@@ -1,3 +1,50 @@
+/*
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
+
+
+#include <math.h>
 #include "config.hh"
 
 #include <stddef.h>
@@ -8,11 +55,18 @@
 #include <algorithm>
 #include <numeric>
 #include <functional>
+#include <utility>
 #include <sstream>
 #include "pinned_array.hh"
 
 
+#define CONFIG_RENPAR 1
+
+
 #if CONFIG_LIB_KASTL
+
+#include "kastl/numeric"
+#include "kastl/algorithm"
 
 #include "kaapi.h"
 
@@ -329,8 +383,9 @@ static size_t __attribute__((unused)) get_concurrency()
 
 static bool tbb_initialize()
 {
-  static tbb::task_scheduler_init tsi;
-  tsi.initialize(get_concurrency());
+  static tbb::task_scheduler_init tsi
+    (tbb::task_scheduler_init::deferred);
+  tsi.initialize((int)get_concurrency());
   return true;
 }
 
@@ -484,13 +539,74 @@ static const __gnu_parallel::_Parallelism pastl_parallel_tag =
 
 static bool pastl_initialize()
 {
+  const int thread_count = (int)get_concurrency();
   omp_set_dynamic(false);
-  omp_set_num_threads(get_concurrency());
+  omp_set_num_threads(thread_count);
   return true;
 }
 
-#endif
+#endif // CONFIG_LIB_PASTL
 
+#if CONFIG_LIB_PTHREAD
+# include <pthread.h>
+
+struct thread_base
+{
+#define THREAD_STATUS_IDLE 0
+#define THREAD_STATUS_WORK 1
+#define THREAD_STATUS_DONE 2
+  volatile int _status __attribute__((aligned));
+
+  pthread_t _thread;
+
+  thread_base() : _status(THREAD_STATUS_IDLE)
+  {}
+};
+
+template<typename Work>
+struct pthread_pool
+{
+  // todo: dynamic aligned allocation
+  Work _works[32];
+  size_t _thread_count;
+
+  bool initialize(size_t thread_count)
+  {
+    _thread_count = thread_count;
+    for (size_t i = 0; i < thread_count - 1; ++i)
+    {
+      Work& work = _works[i];
+      work._status = THREAD_STATUS_IDLE;
+      pthread_create(&work._thread, NULL, Work::thread_entry, (void*)&work);
+    }
+
+    return true;
+  }
+
+  void cleanup()
+  {
+    void* foo;
+
+    for (size_t i = 0; i < _thread_count; ++i)
+    {
+      _works[i]._status = THREAD_STATUS_DONE;
+      pthread_join(_works[i]._thread, &foo);
+    }
+  }
+
+  void start_work(size_t i)
+  {
+    _works[i]._status = THREAD_STATUS_WORK;
+  }
+
+  void wait_work(size_t i)
+  {
+    while (_works[i]._status == THREAD_STATUS_WORK)
+      ;
+  }
+};
+
+#endif // CONFIG_LIB_PTHREAD
 
 #define DEFAULT_INPUT_SIZE 100000
 #define DEFAULT_ITER_SIZE 10
@@ -674,6 +790,9 @@ namespace timing
   static unsigned long timer_to_usec(const TimerType& t)
   { return t.tv_sec * 1000000 + t.tv_usec; }
 
+  static unsigned long timer_to_ticks(const TimerType& t)
+  { return t.tv_sec * 1000000 + t.tv_usec; }
+
 };
 
 #else // ia32 realtime clock
@@ -685,17 +804,21 @@ namespace timing
   typedef tick_t TimerType;
 
   static void initialize()
-  { timing_init(); }
+  {
+    timing_init();
+  }
 
   static void get_now(TimerType& now)
   { GET_TICK(now); }
 
   static void sub_timers(const TimerType& a, const TimerType& b, TimerType& d)
-  { d.tick = TICK_DIFF(b, a); }
+  { d.tick = TICK_RAW_DIFF(b, a); }
 
   static unsigned long timer_to_usec(const TimerType& t)
   { return (unsigned long)tick2usec(t.tick); }
 
+  static unsigned long timer_to_ticks(const TimerType& t)
+  { return t.tick; }
 };
 
 #endif // gettimeofday
@@ -717,6 +840,7 @@ public:
   virtual void run_kastl(InputType&, OutputType&) {}
   virtual void run_tbb(InputType&, OutputType&) {}
   virtual void run_pastl(InputType&, OutputType&) {}
+  virtual void run_pthread(InputType&, OutputType&) {}
 
   virtual bool check(InputType&, std::vector<OutputType>& os, std::string& es) const
   { return check(os, es); }
@@ -750,6 +874,9 @@ public:
 
 
 #if CONFIG_ALGO_FOR_EACH
+
+#include <math.h>
+
 class ForEachRun : public RunInterface
 {
   template<typename T>
@@ -759,24 +886,31 @@ class ForEachRun : public RunInterface
     { ++n; }
   };
 
+  template<typename T>
+  struct sin_functor
+  {
+    inline void operator()(T& n) const
+    { n = ::sin(n); }
+  };
+
 public:
 
   virtual void run_ref(InputType& i, OutputType&)
   {
-    std::for_each(i.second.begin(), i.second.end(), inc_functor<ValueType>());
+    std::for_each(i.second.begin(), i.second.end(), sin_functor<ValueType>());
   }
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType&)
   {
-    std::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
+    std::for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>());
   }
 #endif
 
 #if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType&)
   {
-    kastl::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
+    kastl::for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>());
   }
 #endif
 
@@ -793,7 +927,7 @@ public:
 
   virtual void run_tbb(InputType& i, OutputType&)
   {
-    tbb_for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>());
+    tbb_for_each(i.first.begin(), i.first.end(), sin_functor<ValueType>());
   }
 
 #endif // CONFIG_LIB_TBB
@@ -801,7 +935,9 @@ public:
 #if CONFIG_LIB_PASTL
   virtual void run_pastl(InputType& i, OutputType&)
   {
-    __gnu_parallel::for_each(i.first.begin(), i.first.end(), inc_functor<ValueType>(), pastl_parallel_tag);
+    __gnu_parallel::for_each
+      (i.first.begin(), i.first.end(), sin_functor<ValueType>(),
+       pastl_parallel_tag);
   }
 #endif
 
@@ -938,6 +1074,126 @@ public:
 #endif // CONFIG_ALGO_COUNT
 
 
+
+#if CONFIG_ALGO_COUNT_IF
+class CountIfRun : public RunInterface
+{
+  struct eq42
+  {
+    bool operator()(const ValueType& n) const
+    {
+      return n == 42;
+    }
+  };
+
+  ptrdiff_t _res[2];
+
+public:
+
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_RAND;
+    are_equal = true;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::count_if
+      (i.first.begin(), i.first.end(), eq42());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::count_if
+      (i.first.begin(), i.first.end(), eq42());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::count_if
+      (i.first.begin(), i.first.end(), eq42());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::count_if
+      (i.first.begin(), i.first.end(), eq42(), pastl_parallel_tag);
+  }
+#endif
+
+#if CONFIG_LIB_TBB
+
+  template<typename IteratorType, typename ValueType>
+  struct CountIfBody
+  {
+    typedef typename std::iterator_traits
+    <IteratorType>::difference_type SizeType;
+
+    typedef SizeType ResultType;
+    typedef ValueType ConstantType;
+
+    inline static void init_result
+    (ResultType& r, const ConstantType& c)
+    {
+      r = 0;
+    }
+
+    inline static void apply
+    (IteratorType& i, const ConstantType& c, ResultType& r)
+    {
+      if (c(*i))
+	++r;
+    }
+
+    inline static void reduce
+    (const ConstantType&, ResultType& lhs, const ResultType& rhs)
+    {
+      lhs += rhs;
+    }
+  };
+
+  template<typename IteratorType, typename OperationType>
+  static typename std::iterator_traits<IteratorType>::difference_type tbb_count_if
+  (IteratorType begin, IteratorType end, const OperationType& op)
+  {
+    typedef CountIfBody<IteratorType, OperationType> BodyType;
+
+    tbb_red_functor<IteratorType, BodyType> tf(begin, &op);
+    const int size = (int)std::distance(begin, end);
+    tbb::parallel_reduce(tbb::blocked_range<int>(0, size, 512), tf);
+    return tf._res;
+  }
+
+  virtual void run_tbb(InputType& i, OutputType& o)
+  {
+    _res[0] = tbb_count_if(i.first.begin(), i.first.end(), eq42());
+  }
+
+#endif
+
+  virtual bool check
+  (std::vector<OutputType>&, std::string& error_string) const
+  {
+    if (_res[0] == _res[1])
+      return true;
+
+    error_string = value_error_string(_res[0], _res[1]);
+
+    return false;
+  }
+
+};
+#endif // CONFIG_ALGO_COUNT_IF
+
 #if CONFIG_ALGO_SEARCH
 class SearchRun : public RunInterface
 {
@@ -1024,23 +1280,38 @@ class AccumulateRun : public RunInterface
 {
   ValueType _res[2];
 
+  template<typename T>
+  struct sinop
+  {
+    T operator()(const T& a, const T& b)
+    {
+      return ::sin(a + b);
+    }
+  };
+
 public:
   virtual void run_ref(InputType& i, OutputType& o)
   {
-    _res[1] = std::accumulate(i.first.begin(), i.first.end(), ValueType(0));
+    _res[1] = std::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+      // (i.first.begin(), i.first.end(), ValueType(0), sinop<ValueType>());
   }
 
 #if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType&)
   {
-    _res[0] = kastl::accumulate(i.first.begin(), i.first.end(), ValueType(0));
+    _res[0] = kastl::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+      // (i.first.begin(), i.first.end(), ValueType(0), sinop<ValueType>());
   }
 #endif
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _res[0] = std::accumulate(i.first.begin(), i.first.end(), ValueType(0));
+    _res[0] = std::accumulate
+      (i.first.begin(), i.first.end(), ValueType(0));
+      // (i.first.begin(), i.first.end(), ValueType(0), sinop<ValueType>());
   }
 #endif
 
@@ -1113,14 +1384,29 @@ public:
 
 
 #if CONFIG_ALGO_TRANSFORM
+
 class TransformRun : public RunInterface
 {
   struct inc
   {
     inc() {}
 
-    ValueType operator()(const ValueType& v)
-    { return v + 1; }
+#if CONFIG_RENPAR
+    ValueType operator()(const ValueType& v) const
+    {
+      // return 2 * v + 1;
+      return 2 * v;
+      // return 3.14 * v;
+      // return v * v;
+      // return ::sqrt(v);
+      // return ::sin(::sqrt(v));
+    }
+#else
+    ValueType operator()(const ValueType& v) const
+    {
+      return v + 1;
+    }
+#endif
   };
 
 public:
@@ -1176,8 +1462,11 @@ public:
   (InIteratorType ipos, InIteratorType iend,
    OutIteratorType opos, OperatorType op)
   {
-    tbb_for_inout_functor<InIteratorType, OutIteratorType, OperatorType> tf(first, f);
-    const int size = (int)std::distance(first, last);
+    tbb_for_inout_functor
+      <InIteratorType, OutIteratorType, OperatorType>
+      tf(ipos, opos, op);
+
+    const int size = (int)std::distance(ipos, iend);
     tbb::parallel_for(tbb::blocked_range<int>(0, size, 512), tf);
   }
 
@@ -1186,7 +1475,108 @@ public:
     tbb_transform
       (i.first.begin(), i.first.end(), o.begin(), inc());
   }
-#endif
+#endif // CONFIG_LIB_TBB
+
+#if CONFIG_LIB_PTHREAD
+  template<typename Iterator0, typename Iterator1, typename Operator>
+  struct thread_work : thread_base
+  {
+    typedef thread_work<Iterator0, Iterator1, Operator> self_type;
+
+    Iterator0 _ipos;
+    Iterator0 _iend;
+    Iterator1 _opos;
+    Operator _op;
+
+    thread_work() {}
+
+    void do_work()
+    {
+      Iterator0 ipos = _ipos;
+      Iterator1 opos = _opos;
+
+      for (; ipos != _iend; ++ipos, ++opos)
+	*opos = _op(*ipos);
+    }
+
+    static void* thread_entry(void* arg)
+    {
+      self_type* const self = static_cast<self_type*>(arg);
+
+      while (self->_status != THREAD_STATUS_DONE)
+      {
+	while (self->_status == THREAD_STATUS_IDLE)
+	  ;
+
+	if (self->_status == THREAD_STATUS_WORK)
+	{
+	  self->do_work();
+	  self->_status = THREAD_STATUS_IDLE;
+	}
+      }
+
+      return NULL;
+    }
+
+  } __attribute__((aligned(64)));
+
+  typedef SequenceType::iterator iterator_type;
+  typedef thread_work<iterator_type, iterator_type, inc> work_type;
+  pthread_pool<work_type> _pool;
+
+  virtual void prepare(InputType&)
+  {
+    _pool.initialize(get_concurrency());
+  }
+
+  template<typename Iterator0, typename Iterator1, typename Operator>
+  void pthread_transform
+  (Iterator0 ipos, Iterator0 iend, Iterator1 opos, Operator op)
+  {
+    typedef thread_work<Iterator0, Iterator1, Operator> work_type;
+
+    typedef typename std::iterator_traits<Iterator0>::difference_type size_type;
+
+    const size_t thread_count = _pool._thread_count;
+
+    const size_type seq_size = std::distance(ipos, iend);
+    const size_type unit_size = seq_size / thread_count;
+
+    for (size_t i = 0; i < (thread_count - 1); ++i)
+    {
+      work_type& work = _pool._works[i];
+
+      work._op = op;
+      work._ipos = ipos;
+      work._iend = ipos + unit_size;
+      work._opos = opos;
+
+      opos += unit_size;
+      ipos += unit_size;
+
+      __sync_synchronize();
+
+      _pool.start_work(i);
+    }
+
+    // take the last work
+    work_type& work = _pool._works[thread_count - 1];
+    work._op = op;
+    work._ipos = ipos;
+    work._iend = iend;
+    work._opos = opos;
+    work.do_work();
+
+    // wait for the work
+    for (size_t i = 0; i < (thread_count - 1); ++i)
+      _pool.wait_work(i);
+  }
+
+  virtual void run_pthread(InputType& i, OutputType& o)
+  {
+    pthread_transform(i.first.begin(), i.first.end(), o.begin(), inc());
+  }
+#endif // CONFIG_LIB_PTHREAD
 
   virtual bool check
   (std::vector<OutputType>& os, std::string& es) const
@@ -1481,7 +1871,7 @@ public:
       if (_beg == _end)
 	return false;
 
-      const size_t size = std::min
+      const size_t size = min
 	(static_cast<size_t>(_end - _beg), (size_t)512);
 
       item._stream = this;
@@ -1576,10 +1966,13 @@ class FindIfRun : public RunInterface
 {
   SequenceType::iterator _res[2];
 
-  static bool is_magic(unsigned int v)
+  struct is_magic
   {
-    return v == 42;
-  }
+    bool operator()(const ValueType& v)
+    {
+      return v == 42;
+    }
+  };
 
 public:
   virtual void prepare(InputType& i)
@@ -1593,14 +1986,14 @@ public:
   virtual void run_ref(InputType& i, OutputType& o)
   {
     _res[1] = std::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 
 #if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
     _res[0] = std::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 #endif
 
@@ -1608,7 +2001,7 @@ public:
   virtual void run_kastl(InputType& i, OutputType& o)
   {
     _res[0] = kastl::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 #endif
 
@@ -1616,7 +2009,7 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::find_if
-      (i.first.begin(), i.first.end(), is_magic);
+      (i.first.begin(), i.first.end(), is_magic());
   }
 #endif
 
@@ -1709,6 +2102,392 @@ public:
 };
 #endif
 
+#if CONFIG_ALGO_ADJACENT_FIND
+class AdjacentFindRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+  virtual void prepare(InputType& i)
+  {
+#define ADJACENT_FIND_VALUE 42
+    i.first[i.first.size() / 2] = ADJACENT_FIND_VALUE;
+    i.first[i.first.size() / 2 + 1] = ADJACENT_FIND_VALUE;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::adjacent_find(i.first.begin(), i.first.end());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::adjacent_find(i.first.begin(), i.first.end());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::adjacent_find(i.first.begin(), i.first.end());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::adjacent_find(i.first.begin(), i.first.end());
+  }
+#endif
+
+  virtual bool check
+  (InputType& i, std::vector<OutputType>&, std::string& es) const
+  {
+    ptrdiff_t indices[2];
+
+    if (_res[0] == _res[1])
+      return true;
+
+    indices[0] = _res[0] - i.first.begin();
+    indices[1] = _res[1] - i.first.begin();
+
+    es = index_error_string(indices[1], indices[0]);
+
+    return false;
+  }
+
+};
+#endif // CONFIG_ALGO_ADJACENT_FIND
+
+#if CONFIG_ALGO_ADJACENT_DIFFERENCE
+class AdjacentDifferenceRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::adjacent_difference
+      (i.first.begin(), i.first.end(), o.begin(),
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType&, std::vector<OutputType>& os, std::string& es) const
+  {
+    // check sequences
+    SequenceType::iterator a = os[0].begin();
+    SequenceType::iterator b = os[1].begin();
+    SequenceType::iterator c = os[1].end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - os[0].begin(), b - os[1].begin());
+      return false;
+    }
+
+    // check indices
+    const ptrdiff_t is[2] =
+    {
+      _res[0] - os[0].begin(),
+      _res[1] - os[1].begin()
+    };
+
+    if (is[0] != is[1])
+    {
+      es = index_error_string(is[1], is[0]);
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_ADJACENT_DIFFERENCE
+
+#if CONFIG_ALGO_PARTIAL_SUM
+class PartialSumRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+
+  virtual void get_seq_constraints
+  (
+   enum seq_order& seq_order,
+   bool& are_equal
+  ) const
+  {
+    seq_order = SEQ_ORDER_ONE;
+    are_equal = true;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::partial_sum
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::partial_sum
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::partial_sum
+      (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::partial_sum
+      (i.first.begin(), i.first.end(), o.begin(),
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType&, std::vector<OutputType>& os, std::string& es) const
+  {
+    // check sequences
+    SequenceType::iterator a = os[0].begin();
+    SequenceType::iterator b = os[1].begin();
+    SequenceType::iterator c = os[1].end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+#if 0
+      a = os[0].begin(); b = os[1].begin();
+      print_sequences(a, b, c);
+#endif
+
+      es = index_error_string
+	(a - os[0].begin(), b - os[1].begin());
+      return false;
+    }
+
+    // check indices
+    const ptrdiff_t is[2] =
+    {
+      _res[0] - os[0].begin(),
+      _res[1] - os[1].begin()
+    };
+
+    if (is[0] != is[1])
+    {
+      es = index_error_string(is[1], is[0]);
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_PARTIAL_SUM
+
+
+#if CONFIG_ALGO_COPY
+class CopyRun : public RunInterface
+{
+  SequenceType::iterator _res[2];
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::copy
+    (i.first.begin(), i.first.end(), o.begin());
+  }
+#endif
+
+  virtual bool check
+  (InputType&, std::vector<OutputType>& os, std::string& es) const
+  {
+    SequenceType::iterator a = os[0].begin();
+    SequenceType::iterator b = os[1].begin();
+    SequenceType::iterator c = os[1].end();
+
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string(a - os[0].begin(), b - os[1].begin());
+      return false;
+    }
+
+    return true;
+  }
+
+};
+#endif // CONFIG_ALGO_COPY
+
+
+#if CONFIG_ALGO_FILL
+class FillRun : public RunInterface
+{
+#define FILL_VALUE 42
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::fill(i.second.begin(), i.second.end(), FILL_VALUE);
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::fill(i.first.begin(), i.first.end(), FILL_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::fill(i.first.begin(), i.first.end(), FILL_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::fill
+      (i.first.begin(), i.first.end(),
+       FILL_VALUE, pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_FILL
+
+
+#if CONFIG_ALGO_GENERATE
+class GenerateRun : public RunInterface
+{
+  template<typename Value>
+  struct gen42
+  {
+    Value operator()() const
+    {
+      return 42;
+    }
+  };
+
+  typedef gen42<ValueType> gen_type;
+
+public:
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::generate(i.second.begin(), i.second.end(), gen_type());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::generate(i.first.begin(), i.first.end(), gen_type());
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::generate(i.first.begin(), i.first.end(), gen_type());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::generate
+      (i.first.begin(), i.first.end(), o.begin(),
+       gen_type(), pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_GENERATE
 
 #if CONFIG_ALGO_SWAP_RANGES
 class SwapRangesRun : public RunInterface
@@ -1806,7 +2585,10 @@ public:
   virtual void run_pastl(InputType& i, OutputType& o)
   {
     _res[0] = __gnu_parallel::inner_product
-      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0));
+      (i.first.begin(), i.first.end(), i.second.begin(), ValueType(0),
+       __gnu_parallel::plus<ValueType, ValueType>(),
+       __gnu_parallel::multiplies<ValueType, ValueType>(),
+       pastl_parallel_tag);
   }
 #endif
 
@@ -1883,12 +2665,155 @@ public:
 };
 #endif // CONFIG_ALGO_INNER_PRODUCT
 
-#if 0 // speed compile time up
 
+#if CONFIG_ALGO_REPLACE
+class ReplaceRun : public RunInterface
+{
+#define REPLACE_OLD_VALUE 42
+#define REPLACE_NEW_VALUE 24
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    std::fill(i.first.begin(), i.first.end(), REPLACE_OLD_VALUE);
+    std::fill(i.second.begin(), i.second.end(), REPLACE_OLD_VALUE);
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::replace
+      (i.second.begin(), i.second.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE);
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::replace
+      (i.first.begin(), i.first.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::replace
+      (i.first.begin(), i.first.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::replace
+      (i.first.begin(), i.first.end(),
+       REPLACE_OLD_VALUE, REPLACE_NEW_VALUE,
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_REPLACE
+
+
+#if CONFIG_ALGO_REPLACE_IF
+class ReplaceIfRun : public RunInterface
+{
+#define REPLACE_IF_VALUE 24
+
+  template<typename Value>
+  struct is42
+  {
+    bool operator()(const Value& v)
+    {
+      return v == 42;
+    }
+  };
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    std::fill(i.first.begin(), i.first.end(), 42);
+    std::fill(i.second.begin(), i.second.end(), 42);
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    std::replace_if
+      (i.second.begin(), i.second.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE);
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    std::replace_if
+      (i.first.begin(), i.first.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    kastl::replace_if
+      (i.first.begin(), i.first.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE);
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    __gnu_parallel::replace_if
+      (i.first.begin(), i.first.end(),
+       is42<ValueType>(), REPLACE_IF_VALUE,
+       pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
+  {
+    SequenceType::iterator a = is.first.begin();
+    SequenceType::iterator b = is.second.begin();
+    SequenceType::iterator c = is.second.end();
+    if (cmp_sequence(a, b, c) == false)
+    {
+      es = index_error_string
+	(a - is.first.begin(), b - is.second.begin());
+      return false;
+    }
+
+    return true;
+  }
+};
+#endif // CONFIG_ALGO_REPLACE_IF
+
+
+#if CONFIG_ALGO_EQUAL
 class EqualRun : public RunInterface
 {
-  bool _kastl_res;
-  bool _stl_res;
+  bool _res[2];
 
 public:
 
@@ -1897,64 +2822,103 @@ public:
     i.first[i.first.size() / 2] = 42;
   }
 
-  virtual void run_kastl(InputType& i, OutputType& o)
+  virtual void run_ref(InputType& i, OutputType& o)
   {
-    _kastl_res = kastl::equal
-      (i.first.begin(), i.first.end(), i.second.begin());
+    _res[1] = std::equal(i.first.begin(), i.first.end(), i.second.begin());
   }
 
+#if CONFIG_LIB_STL
   virtual void run_stl(InputType& i, OutputType& o)
   {
-    _stl_res = std::equal
-      (i.first.begin(), i.first.end(), i.second.begin());
+    _res[0] = std::equal(i.first.begin(), i.first.end(), i.second.begin());
   }
+#endif
 
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    return _kastl_res == _stl_res;
-  }
-
-};
-
-
-#if 0
-
-class CountIfRun : public RunInterface
-{
-  ptrdiff_t _kastl_res;
-  ptrdiff_t _stl_res;
-
-  static bool is_zero(unsigned int v)
-  {
-    return v == 0;
-  }
-
-public:
+#if CONFIG_LIB_KASTL
   virtual void run_kastl(InputType& i, OutputType& o)
   {
-    _kastl_res = kastl::count_if
-      (i.first.begin(), i.first.end(), is_zero);
+    _res[0] = kastl::equal(i.first.begin(), i.first.end(), i.second.begin());
   }
+#endif
 
-  virtual void run_stl(InputType& i, OutputType& o)
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
   {
-    _stl_res = std::count_if
-      (i.first.begin(), i.first.end(), is_zero);
+    _res[0] = __gnu_parallel::equal
+      (i.first.begin(), i.first.end(), i.second.begin(), pastl_parallel_tag);
   }
+#endif
 
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string& es) const
   {
-    if (_kastl_res == _stl_res)
+    if (_res[0] == _res[1])
       return true;
-
-    error_string = value_error_string(_stl_res, _kastl_res);
-
     return false;
   }
 
 };
+#endif // CONFIG_ALGO_EQUAL
 
+
+#if CONFIG_ALGO_MISMATCH
+class MismatchRun : public RunInterface
+{
+  typedef SequenceType::iterator iterator_type;
+  std::pair<iterator_type, iterator_type> _res[2];
+
+public:
+
+  virtual void prepare(InputType& i)
+  {
+    i.first[i.first.size() / 2] = 42;
+  }
+
+  virtual void run_ref(InputType& i, OutputType& o)
+  {
+    _res[1] = std::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin());
+  }
+
+#if CONFIG_LIB_STL
+  virtual void run_stl(InputType& i, OutputType& o)
+  {
+    _res[0] = std::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin());
+  }
 #endif
+
+#if CONFIG_LIB_KASTL
+  virtual void run_kastl(InputType& i, OutputType& o)
+  {
+    _res[0] = kastl::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin());
+  }
+#endif
+
+#if CONFIG_LIB_PASTL
+  virtual void run_pastl(InputType& i, OutputType& o)
+  {
+    _res[0] = __gnu_parallel::mismatch
+      (i.first.begin(), i.first.end(), i.second.begin(), pastl_parallel_tag);
+  }
+#endif
+
+  virtual bool check
+  (InputType& is, std::vector<OutputType>&, std::string&) const
+  {
+    if ((_res[0].first != _res[1].first))
+      return false;
+    else if ((_res[0].second != _res[1].second))
+      return false;
+    return true;
+  }
+
+};
+#endif // CONFIG_ALGO_MISMATCH
+
+
+#if 0
 
 class ReverseRun : public RunInterface
 {
@@ -1993,129 +2957,6 @@ public:
   }
 
 };
-
-class PartialSumRun : public RunInterface
-{
-  SequenceType::iterator _kastl_res;
-  SequenceType::iterator _stl_res;
-
-public:
-
-  virtual void get_seq_constraints
-  (
-   enum seq_order& seq_order,
-   bool& are_equal
-  ) const
-  {
-    seq_order = SEQ_ORDER_ONE;
-    are_equal = true;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::partial_sum
-    (
-     i.first.begin(),
-     i.first.end(),
-     o.begin()
-    );
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::partial_sum
-    (
-     i.first.begin(),
-     i.first.end(),
-     o.begin()
-    );
-  }
-
-  virtual bool check
-  (OutputType& ko, OutputType& so, std::string& error_string) const
-  {
-    const ptrdiff_t kastl_index = std::distance(ko.begin(), _kastl_res);
-    const ptrdiff_t stl_index = std::distance(so.begin(), _stl_res);
-
-    if (kastl_index != stl_index)
-    {
-      error_string = index_error_string(stl_index, kastl_index);
-      return false;
-    }
-
-    SequenceType::iterator kpos = ko.begin();
-    SequenceType::iterator spos = so.begin();
-    SequenceType::iterator send = so.end();
-
-    if (cmp_sequence(kpos, spos, send) == true)
-      return true;
-
-#if 0
-    error_string = index_error_string
-    (
-     std::distance(so.begin(), spos),
-     std::distance(ko.begin(), kpos)
-    );
-#else
-    error_string = index_error_string
-    (  
-     std::distance(so.begin(), spos),
-     std::distance(ko.begin(), kpos)
-    );
-    error_string.append(std::string("\n"));
-    error_string.append(value_error_string(*spos, *kpos));
-#endif
-
-    return false;
-  }
-
-};
-
-
-class MismatchRun : public RunInterface
-{
-  std::pair<SequenceType::iterator, SequenceType::iterator> _kastl_res;
-  std::pair<SequenceType::iterator, SequenceType::iterator> _stl_res;
-
-public:
-
-  virtual void prepare(InputType& i)
-  {
-    if (!(::rand() % 10))
-      return ;
-
-    i.first[::rand() % i.first.size()] = 42;
-  }
-
-  virtual void run_kastl(InputType& i, OutputType& o)
-  {
-    _kastl_res = kastl::mismatch
-      (
-       i.first.begin(),
-       i.first.end(),
-       i.second.begin()
-      );
-  }
-
-  virtual void run_stl(InputType& i, OutputType& o)
-  {
-    _stl_res = std::mismatch
-      (
-       i.first.begin(),
-       i.first.end(),
-       i.second.begin()
-      );
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string& error_string) const
-  {
-    if (_kastl_res == _stl_res)
-      return true;
-    return false;
-  }
-
-};
-
 
 #if 0
 
@@ -2298,160 +3139,6 @@ public:
   }
 
 };
-
-
-class FillRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::fill(i.first.begin(), i.first.end(), 42);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::fill(i.second.begin(), i.second.end(), 42);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
-
-
-#if 0
-
-class ReplaceIfRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-  static bool is_magic(unsigned int v)
-  {
-    return v == 42;
-  }
-
-public:
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::replace_if(i.first.begin(), i.first.end(), is_magic, 24);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::replace_if(i.second.begin(), i.second.end(), is_magic, 24);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
-
-#endif
-
-
-#if CONFIG_ALGO_REPLACE
-class ReplaceRun : public RunInterface
-{
-  // todo hack hack hack
-  SequenceType::iterator _spos;
-  SequenceType::iterator _kpos;
-  SequenceType::iterator _send;
-
-public:
-  virtual void run_kastl(InputType& i, OutputType&)
-  {
-    _kpos = i.first.begin();
-
-    kastl::replace(i.first.begin(), i.first.end(), 42, 24);
-  }
-
-  virtual void run_stl(InputType& i, OutputType&)
-  {
-    _spos = i.second.begin();
-    _send = i.second.end();
-
-    std::replace(i.second.begin(), i.second.end(), 42, 24);
-  }
-
-  virtual bool check(OutputType&, OutputType&, std::string&) const
-  {
-    SequenceType::iterator spos = _spos;
-    SequenceType::iterator kpos = _kpos;
-    SequenceType::iterator send = _send;
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
-#endif
-
-
-class GenerateRun : public RunInterface
-{
-  struct gen_one
-  {
-    gen_one() {}
-
-    unsigned int operator()() { return 1; }
-  };
-
-public:
-  virtual void run_kastl(InputType&, OutputType& o)
-  {
-    kastl::generate(o.begin(), o.end(), gen_one());
-  }
-
-  virtual void run_stl(InputType&, OutputType& o)
-  {
-    std::generate(o.begin(), o.end(), gen_one());
-  }
-
-  virtual bool check
-  (
-   OutputType& os,
-   OutputType& ok,
-   std::string& error_string
-  ) const
-  {
-    SequenceType::iterator kpos = ok.begin();
-    SequenceType::iterator spos = os.begin();
-    SequenceType::iterator send = os.end();
-
-    return cmp_sequence(kpos, spos, send);
-  }
-
-};
-
 
 #if 0
 
@@ -3088,6 +3775,10 @@ RunInterface* RunInterface::create()
   CREATE_RUN( Count );
 #endif
 
+#if CONFIG_ALGO_COUNT_IF
+  CREATE_RUN( CountIf );
+#endif
+
 #if CONFIG_ALGO_SEARCH
   CREATE_RUN( Search );
 #endif
@@ -3128,33 +3819,55 @@ RunInterface* RunInterface::create()
   CREATE_RUN( SwapRanges );
 #endif
 
+#if CONFIG_ALGO_COPY
+  CREATE_RUN( Copy );
+#endif
+
+#if CONFIG_ALGO_FILL
+  CREATE_RUN( Fill );
+#endif
+
+#if CONFIG_ALGO_GENERATE
+  CREATE_RUN( Generate );
+#endif
+
+#if CONFIG_ALGO_REPLACE
+  CREATE_RUN( Replace );
+#endif
+
+#if CONFIG_ALGO_REPLACE_IF
+  CREATE_RUN( ReplaceIf );
+#endif
+
+#if CONFIG_ALGO_EQUAL
+  CREATE_RUN( Equal );
+#endif
+
+#if CONFIG_ALGO_MISMATCH
+  CREATE_RUN( Mismatch );
+#endif
+
+#if CONFIG_ALGO_ADJACENT_FIND
+  CREATE_RUN( AdjacentFind );
+#endif
+
+#if CONFIG_ALGO_ADJACENT_DIFFERENCE
+  CREATE_RUN( AdjacentDifference );
+#endif
+
+#if CONFIG_ALGO_PARTIAL_SUM
+  CREATE_RUN( PartialSum );
+#endif
+
 #if 0 // speed compile time up
   CREATE_RUN( Merge );
   CREATE_RUN( Sort );
-  CREATE_RUN( PartialSum );
-  CREATE_RUN( Copy );
-  CREATE_RUN( Fill );
-  CREATE_RUN( Replace );
-  CREATE_RUN( Generate );
-  CREATE_RUN( Equal );
-  CREATE_RUN( Mismatch );
   CREATE_RUN( Reverse );
   CREATE_RUN( Partition );
   CREATE_RUN( SetUnion );
   CREATE_RUN( SetIntersection );
   CREATE_RUN( SetDifference );
 #endif // speed compile time up
-
-#if 0
-  CREATE_RUN( CountIf );
-  CREATE_RUN( GenerateN );
-  CREATE_RUN( ReplaceCopyIf );
-  CREATE_RUN( ReplaceCopy );
-  CREATE_RUN( ReplaceIf );
-  CREATE_RUN( AdjacentDifference );
-  CREATE_RUN( AdjacentFind );
-  CREATE_RUN( SearchN );
-#endif
 
   return NULL;
 }
@@ -3176,7 +3889,6 @@ public:
    std::vector<OutputType>& outputs
   )
   {
-    // i the run count
     size_t i = 0;
 
 #if CONFIG_DO_BENCH
@@ -3186,6 +3898,14 @@ public:
 
 #if CONFIG_DO_BENCH
     timing::get_now(start_tm);
+#endif
+
+#if CONFIG_RENPAR
+#if CONFIG_DO_BENCH
+    for (size_t j = 0; j < 1000; ++j)
+    {
+      i = 0;
+#endif
 #endif
 
 #if CONFIG_LIB_STL
@@ -3204,6 +3924,16 @@ public:
     run->run_pastl(input, outputs[i++]);
 #endif
 
+#if CONFIG_LIB_PTHREAD
+    run->run_pthread(input, outputs[i++]);
+#endif
+
+#if CONFIG_RENPAR
+#if CONFIG_DO_BENCH
+    }
+#endif
+#endif
+
 #if CONFIG_DO_BENCH
     timing::get_now(now_tm);
     timing::sub_timers(now_tm, start_tm, _tm);
@@ -3218,6 +3948,9 @@ public:
 #if CONFIG_DO_BENCH
   inline unsigned long get_usecs() const
   { return timing::timer_to_usec(_tm); }
+
+  inline unsigned long get_ticks() const
+  { return timing::timer_to_ticks(_tm); }
 #endif
 };
 
@@ -3269,7 +4002,7 @@ static int do_xxx(RunInterface* run, InputType& input, std::vector<OutputType>& 
 {
   RunLauncher l;
   l.launch(run, input, outputs);
-  printf("%lu\n", l.get_usecs());
+  printf("%lu\n", l.get_ticks());
   return 0;
 }
 #endif // CONFIG_DO_BENCH

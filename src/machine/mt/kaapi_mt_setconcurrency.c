@@ -178,7 +178,6 @@ int kaapi_setconcurrency( unsigned int concurrency )
   return 0;
 }
 
-
 /**
 */
 void* kaapi_sched_run_processor( void* arg )
@@ -188,14 +187,12 @@ void* kaapi_sched_run_processor( void* arg )
   
   /* force reschedule of the posix thread, we that the thread will be mapped on the correct processor ? */
   sched_yield();
-  
   kproc = kaapi_all_kprocessors[kid] = kaapi_processor_allocate();
   if (kproc ==0) {
     kaapi_barrier_td_setactive(&barrier_init, 0);
     return 0;
   }
   kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
-
   kaapi_assert( 0 == kaapi_processor_init( kproc ) );
   kproc->kid = kid;
 

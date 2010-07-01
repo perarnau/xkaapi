@@ -42,78 +42,130 @@
  ** terms.
  ** 
  */
+
+
 #ifndef KASTL_TRANSFORM_H_INCLUDED
 # define KASTL_TRANSFORM_H_INCLUDED
 
-#include "kastl/kastl_impl.h"
 
-namespace kastl {
+#include "kastl_loop.h"
+#include "kastl_sequences.h"
 
-namespace rts {
-/* -------------------------------------------------------------------- */
-/* transform algorithm                                                   */
-/* -------------------------------------------------------------------- */
-template<typename input_iterator_type, typename output_iterator_type, typename Operation>
-struct BodyTransform {
-  typedef rts::Sequence<input_iterator_type,output_iterator_type> sequence_type;
-  BodyTransform( Operation& o ) : op(o) {}
-  Operation op;
-  bool operator()( input_iterator_type& result, typename sequence_type::range_type& r )
+
+namespace kastl
+{
+
+template<typename Iterator0, typename Iterator1, typename Operation>
+struct transform_body
+{
+  typedef kastl::rts::Sequence<Iterator0, Iterator1> sequence_type;
+  typedef typename sequence_type::iterator_type iterator_type;
+  typedef typename sequence_type::range_type range_type;
+  typedef kastl::impl::dummy_type result_type;
+
+  Operation _op;
+
+  transform_body(const Operation& op)
+    : _op(op)
+  {}
+
+  void operator()(result_type&, Iterator0& ipos, Iterator1& opos)
   {
-    input_iterator_type first   = r.begin1();
-    input_iterator_type last    = r.end1();
-    input_iterator_type to_fill = r.begin2();
+    *opos = _op(*ipos);
+  }
 
-    while (first != last)
-       *to_fill++ = op(*first++);
-    result = last;
-    return (first != last);
+#if 0 // unused, inlined version
+  void operator()(result_type&, range_type& range)
+  {
+    typename range_type::iterator1_type ipos = range.begin1();
+    typename range_type::iterator1_type iend = range.end1();
+    typename range_type::iterator2_type opos = range.begin2();
+
+    for (; ipos != iend; ++ipos, ++opos)
+      *opos = _op(*ipos);
+  }
+#endif
+};
+
+// second version body
+template<typename Iterator0, typename Iterator1,
+	 typename Iterator2, typename Operation>
+struct transform2_body
+{
+  typedef kastl::rts::Sequence<Iterator0, Iterator1, Iterator2> sequence_type;
+  typedef typename sequence_type::iterator_type iterator_type;
+  typedef typename sequence_type::range_type range_type;
+  typedef kastl::impl::dummy_type result_type;
+
+  Operation _op;
+
+  transform2_body(const Operation& op)
+    : _op(op)
+  {}
+
+  void operator()
+    (result_type&, Iterator0& ipos0, Iterator1& ipos1, Iterator2& opos)
+  {
+    *opos = _op(*ipos0, *ipos1);
   }
 };
-} //rts
 
-template< typename input_iterator_type, 
-          typename output_iterator_type, 
-          typename Operation, typename Settings
-        >
-output_iterator_type transform( 
-    input_iterator_type first, input_iterator_type last, 
-    output_iterator_type to_fill, 
-    Operation op, 
-    const Settings& settings
-)
+// first version
+template<typename Iterator0, typename Iterator1,
+	 typename Operation, typename Settings>
+Iterator1 transform
+(Iterator0 ifirst, Iterator0 ilast,
+ Iterator1 ofirst, Operation op,
+ const Settings& settings)
 {
-  typedef rts::Sequence<input_iterator_type,output_iterator_type> sequence_type;
+  kastl::rts::Sequence<Iterator0, Iterator1> seq
+    (ifirst, ofirst, ilast - ifirst);
 
-  if (first == last) return first;
-  input_iterator_type result = first;
-  sequence_type seq(first, to_fill, last-first);
-  
-  rts::MacroLoop< rts::NoReduce_MacroLoop_tag >::doit( 
-    result,                                                     /* output: the result */
-    seq,                                                        /* input: the sequence */
-    rts::BodyTransform<input_iterator_type, output_iterator_type, Operation>(op), /* the body == NanoLoop */
-    rts::empty_reducer<input_iterator_type>,                    /* merge with a thief: do nothing */
-    settings                                                    /* output: the result */
-  );
-  return result;
+  transform_body<Iterator0, Iterator1, Operation> body(op);
+  kastl::impl::foreach_loop(seq, body, settings);
+  return ofirst + (ilast - ifirst);
 }
 
-
-template< typename input_iterator_type, 
-          typename output_iterator_type, 
-          typename Operation
-        >
-output_iterator_type transform( 
-    input_iterator_type first, input_iterator_type last, 
-    output_iterator_type to_fill, 
-    Operation op
-    
-)
+template<typename Iterator0, typename Iterator1, typename Operation>
+Iterator1 transform
+(Iterator0 ifirst, Iterator0 ilast, Iterator1 ofirst, Operation op)
 {
-  return transform(first, last, to_fill, op, rts::DefaultSetting());
+  kastl::impl::static_settings settings(128, 128);
+  return kastl::transform(ifirst, ilast, ofirst, op, settings);
 }
 
-} // kastl
+// second version
+template<typename Iterator0, typename Iterator1,
+	 typename Iterator2, typename Operation,
+	 typename Settings>
+Iterator2 transform
+(Iterator0 ifirst0, Iterator0 ilast,
+ Iterator1 ifirst1, Iterator2 ofirst,
+ Operation op, const Settings& settings)
+{
+  kastl::rts::Sequence<Iterator0, Iterator1, Iterator2> seq
+    (ifirst0, ifirst1, ofirst, ilast - ifirst0);
+
+  transform2_body<Iterator0, Iterator1, Iterator2, Operation> body(op);
+  kastl::impl::foreach_loop(seq, body, settings);
+  return ofirst + (ilast - ifirst0);
+}
+
+#if 0 // unused due to proto conflict
+template<typename Iterator0, typename Iterator1,
+	 typename Iterator2, typename Operation>
+Iterator2 transform
+(Iterator0 ifirst0, Iterator0 ilast,
+ Iterator1 ifirst1, Iterator2 ofirst,
+ Operation op)
+{
+  kastl::impl::static_settings settings(512, 512);
+  return kastl::transform
+    (ifirst0, ilast, ifirst1, ofirst, op, settings);
+}
+#endif // unused due to proto conflict
+
+} // kastl::
+
 
 #endif // ! KASTL_TRANSFORM_H_INCLUDED
