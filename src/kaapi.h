@@ -377,7 +377,7 @@ typedef struct kaapi_request_t {
   kaapi_uint16_t                 status;         /* server status */
   kaapi_uint16_t                 flag;           /* partial steal of task | processed during the execution of the runing task */
   struct kaapi_reply_t*          reply;          /* caller status */
-  struct kaapi_thread_t*         thread;         /* internal thread pointer where to store result of the steal operation */
+  struct kaapi_thread_t*         thread;         /* external thread pointer where to store result of the steal operation */
   struct kaapi_thread_context_t* mthread;        /* internal thread pointer where to store result of the steal operation */
   struct kaapi_processor_t*      proc;           /* owner of the request */
   kaapi_uint64_t                 delay;          /* if !=0, delay in ns since the thief is waiting for work */
