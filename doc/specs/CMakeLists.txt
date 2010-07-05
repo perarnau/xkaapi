@@ -1,7 +1,7 @@
 INCLUDE(UseLATEX.cmake)
 ADD_LATEX_DOCUMENT(specs.tex
   INPUTS mutex.tex cond.tex
-  IMAGES stack.pdf
+  IMAGES stack.pdf stackfibo1.pdf stackfibo2.pdf
 )
 
 # # 

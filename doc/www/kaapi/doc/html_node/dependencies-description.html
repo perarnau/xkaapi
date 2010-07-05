@@ -1,0 +1,178 @@
+<html lang="en">
+<head>
+<title>dependencies description - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="shared-memory.html#shared-memory" title="shared memory">
+<link rel="prev" href="serialize-parameters.html#serialize-parameters" title="serialize parameters">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="dependencies-description"></a>
+<p>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="serialize-parameters.html#serialize-parameters">serialize parameters</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="shared-memory.html#shared-memory">shared memory</a>
+<hr>
+</div>
+
+<h5 class="subsubsection">4.1.3.2 Dependencies description</h5>
+
+<p>In order to respect the sequential consistency (lexicographic order semantic), <code>Athapascan</code> has to identify the value related to a shared object for each read performed. 
+Parallelism detection is easily possible in the context that any task specifies the shared data objects that it will access during its execution (on-the-fly detection of independent tasks), and which type of access it will perform on them (on-the-fly detection of a task's precedence). 
+All manipulated shared data must be declared in the prototype of the task, and to detect the synchronizations between tasks, according to lexicographic semantic, any shared parameter of a task is tagged in the prototype according to the access performed on it. 
+This tag indicates what kind of manipulation the task (and, due to the lexicographic order semantics, all the sub-tasks it will fork) is allowed to perform on the shared object. 
+This tag is called the access right; it appears in the prototype of the task as a suffix of the type of any shared parameter. 
+Four rights can be distingueshed and are presented below: read, write, update and accumulation.
+
+     <dl>
+<dt><em>read right</em><dd><code>a1::Shared_r&lt;</code><var>T</var><code>&gt;</code> is the type of a parameter whose value can only be read using its <code>const </code><var>T</var><code>&amp; read()</code> method. 
+This reading can be concurrent with other tasks referencing this shared object in the same mode.
+
+     <br><dt><em>write right</em><dd><code>a1::Shared_w&lt;</code><var>T</var><code>&gt;</code> is the type of a parameter whose value can only be written using its <code>void write(</code><var>T</var><code>)</code> method. 
+This writing can be concurrent with other tasks referencing this shared data in the same mode. 
+The final value is the last one according to the reference order.
+
+     <br><dt><em>update right</em><dd><code>a1::Shared_rw&lt;</code><var>T</var><code>&gt;</code> is the type of a parameter whoses value can be updated in place; the related value can be read and/or written using the  <var>T</var><code>&amp; access()</code> method. 
+Such an object represents a critical section for the task. 
+This mode is the only one where the address of the physical object related to the shared object is available. 
+It enables the user to call sequential codes working directly with this pointer.
+
+     <br><dt><em>concurrent write right</em><dd><code>a1::Shared_cw&lt;</code><var>T</var><code>,</code><var>F</var><code>&gt;</code> is the type of a parameter whose value can only be accumulated with respect to the user defined function class <var>F</var>. 
+The resulting value of the concurrent write is an accumulation of all other values written by a call to this function, through the use of the <code>void cumul(</code><var>T</var> method.
+
+   </dl>
+
+   <p>For a more in-depth description of the shared parameters, please refer to the <a href="API.html#API">API</a>.
+
+<!--  -->
+   </body></html>
+

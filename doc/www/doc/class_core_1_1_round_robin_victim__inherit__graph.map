@@ -1,0 +1,6 @@
+<map id="G" name="G">
+<area shape="rect" id="node5" href="$class_core_1_1_round_robin_processor_steal_algorithm.html" title="RoundRobin stealAlgorithm of a K&#45;ProcessorSame as WakeupFirstProcessorStealAlgorithm..." alt="" coords="5,160,323,189"/>
+<area shape="rect" id="node7" href="$class_w_s_1_1_round_robin_victim.html" title="Extend Core::RoundRobinVictim class in order to add round robin selection of process..." alt="" coords="347,160,525,189"/>
+<area shape="rect" id="node2" href="$class_core_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor." alt="" coords="191,5,409,35"/>
+<area shape="rect" id="node9" href="$class_w_s_1_1_round_robin_strategy.html" title="RoundRobinStrategy." alt="" coords="339,237,533,267"/>
+</map>

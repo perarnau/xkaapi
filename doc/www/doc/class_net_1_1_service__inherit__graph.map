@@ -1,0 +1,40 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$class_ctrl_1_1_kill_service.html" title="KillService." alt="" coords="241,5,372,35"/>
+<area shape="rect" id="node5" href="$class_f_t_1_1_c_c_k_checkpoint_coordinator.html" title="CCK coordinator." alt="" coords="188,59,425,88"/>
+<area shape="rect" id="node7" href="$class_f_t_1_1_c_c_k_global_restart_coordinator.html" title="FT::CCKGlobalRestartCoordinator" alt="" coords="180,112,433,141"/>
+<area shape="rect" id="node9" href="$class_f_t_1_1_c_c_k_global_restart_local_controller.html" title="FT::CCKGlobalRestartLocalController" alt="" coords="168,165,445,195"/>
+<area shape="rect" id="node11" href="$class_f_t_1_1_c_c_k_local_checkpoint_controller.html" title="FT::CCKLocalCheckpointController" alt="" coords="176,219,437,248"/>
+<area shape="rect" id="node13" href="$class_f_t_1_1_c_c_k_restart_coordinator.html" title="FT::CCKRestartCoordinator" alt="" coords="201,272,412,301"/>
+<area shape="rect" id="node15" href="$class_f_t_1_1_c_c_k_restart_local_controller.html" title="FT::CCKRestartLocalController" alt="" coords="189,325,424,355"/>
+<area shape="rect" id="node17" href="$class_f_t_1_1_heart_beat_detector.html" title="Heartbeat fault tolerance detectorThe algorithm is to send to randomly selected known..." alt="" coords="216,379,397,408"/>
+<area shape="rect" id="node19" href="$class_f_t_1_1_load_checkpoint_service.html" title="Checkpoint service to load checkpoint fileThe FT::LoadCheckpointService::service..." alt="" coords="200,432,413,461"/>
+<area shape="rect" id="node21" href="$class_f_t_1_1_signal_commit.html" title="SignalCommitThis class is the call back that could be defined in order to receive..." alt="" coords="233,485,380,515"/>
+<area shape="rect" id="node25" href="$class_f_t_1_1_store_checkpoint_service.html" title="Checkpoint service to store fileOn each process of a Kaapi application, a checkpoint..." alt="" coords="200,539,413,568"/>
+<area shape="rect" id="node27" href="$class_f_t_1_1_t_i_c_restart.html" title="TIC restarter." alt="" coords="245,592,368,621"/>
+<area shape="rect" id="node29" href="$class_m_a_n_e_t_1_1_device_1_1_connection_request.html" title="MANET::Device::ConnectionRequest" alt="" coords="168,645,445,675"/>
+<area shape="rect" id="node31" href="$class_m_a_n_e_t_1_1_device_1_1_incoming_connection.html" title="MANET::Device::IncomingConnection" alt="" coords="164,699,449,728"/>
+<area shape="rect" id="node33" href="$class_net_1_1_bast_out_channel.html" title="Net::BastOutChannel" alt="" coords="221,752,392,781"/>
+<area shape="rect" id="node35" href="$class_net_1_1_r_p_c_service.html" title="Net::RPCService" alt="" coords="237,805,376,835"/>
+<area shape="rect" id="node39" href="$class_net_1_1_service_close.html" title="Service called to close all routes from the gid passed in parameter of the messageOne..." alt="" coords="233,859,380,888"/>
+<area shape="rect" id="node41" href="$class_net_1_1_service_error.html" title="Service called to in case of unresolv service identifierOne object ServiceError exists..." alt="" coords="235,912,379,941"/>
+<area shape="rect" id="node43" href="$class_net_1_1_service_group.html" title="Net::ServiceGroup" alt="" coords="232,965,381,995"/>
+<area shape="rect" id="node45" href="$class_net_1_1_service_ping.html" title="Service called to in case of receive ping messageOne object ServicePing exists per..." alt="" coords="237,1019,376,1048"/>
+<area shape="rect" id="node47" href="$class_net_1_1_service_pong.html" title="Service called to in case of receive pong messageOne object ServicePong exists per..." alt="" coords="235,1072,379,1101"/>
+<area shape="rect" id="node49" href="$class_net_1_1_service_void.html" title="Service called to in case of receive void messageOne object ServiceVoid exists per..." alt="" coords="237,1125,376,1155"/>
+<area shape="rect" id="node51" href="$class_net_data_1_1_service_block.html" title="NetData::ServiceBlock" alt="" coords="216,1179,397,1208"/>
+<area shape="rect" id="node53" href="$class_net_data_1_1_service_global_pointer.html" title="Service for GlobalPointer." alt="" coords="188,1232,425,1261"/>
+<area shape="rect" id="node55" href="$class_net_data_1_1_service_global_variable.html" title="Service for ServiceMonotonicBound." alt="" coords="185,1285,428,1315"/>
+<area shape="rect" id="node57" href="$class_net_data_1_1_service_monotonic_bound.html" title="Service for ServiceMonotonicBound." alt="" coords="177,1339,436,1368"/>
+<area shape="rect" id="node59" href="$class_net_data_1_1_service_single_assignment.html" title="Service for ServiceMonotonicBound." alt="" coords="173,1392,440,1421"/>
+<area shape="rect" id="node61" href="$class_sched_1_1_service_bcast.html" title="Sched::ServiceBcast" alt="" coords="224,1445,389,1475"/>
+<area shape="rect" id="node63" href="$class_sched_1_1_service_migrate.html" title="Steal Service for distributed workstealing algorithm using AM." alt="" coords="216,1499,397,1528"/>
+<area shape="rect" id="node65" href="$class_sched_1_1_service_redistribution.html" title="Sched::ServiceRedistribution" alt="" coords="196,1552,417,1581"/>
+<area shape="rect" id="node67" href="$class_s_o_c_k_n_e_t_1_1_service_close.html" title="Service called to in case of receive close messageOne object ServiceClose exists..." alt="" coords="212,1605,401,1635"/>
+<area shape="rect" id="node69" href="$class_stat_1_1_service_receive_stat.html" title="Service to receive collected statistics about running nodesThis service is invoked..." alt="" coords="209,1659,404,1688"/>
+<area shape="rect" id="node71" href="$class_stat_1_1_statistics_service.html" title="Distributed collection of counters to collect in order to produce statisticsServer..." alt="" coords="220,1712,393,1741"/>
+<area shape="rect" id="node73" href="$class_w_s_1_1_service_leader_a_m.html" title="Steal Service for distributed workstealing algorithm using AM." alt="" coords="219,1765,395,1795"/>
+<area shape="rect" id="node75" href="$class_w_s_1_1_service_signal.html" title="Signal Service to implement remote signal." alt="" coords="233,1819,380,1848"/>
+<area shape="rect" id="node77" href="$class_w_s_1_1_service_steal.html" title="Steal Service for distributed workstealing algorithm." alt="" coords="237,1872,376,1901"/>
+<area shape="rect" id="node23" href="$class_f_t_1_1_c_c_k_signal_commit.html" title="FT::CCKSignalCommit" alt="" coords="500,485,676,515"/>
+<area shape="rect" id="node37" href="$class_n_s_1_1_server.html" title="NS::Server" alt="" coords="540,805,636,835"/>
+</map>

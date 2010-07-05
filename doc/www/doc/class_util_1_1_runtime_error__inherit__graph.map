@@ -1,0 +1,10 @@
+<map id="G" name="G">
+<area shape="rect" id="node5" href="$class_util_1_1_i_o_error.html" title="Util::IOError" alt="" coords="199,160,305,189"/>
+<area shape="rect" id="node13" href="$class_util_1_1_posix_error.html" title="Util::PosixError" alt="" coords="420,160,545,189"/>
+<area shape="rect" id="node17" href="$class_util_1_1_range_error.html" title="Util::RangeError" alt="" coords="569,160,705,189"/>
+<area shape="rect" id="node2" href="$class_util_1_1_exception.html" title="Base class for the KAAPI&#39;s exception hierarchy Base class for hierarchy of error..." alt="" coords="421,5,544,35"/>
+<area shape="rect" id="node7" href="$class_util_1_1_bad_u_r_l.html" title="Util::BadURL" alt="" coords="5,237,115,267"/>
+<area shape="rect" id="node9" href="$class_util_1_1_com_failure.html" title="Util::ComFailure" alt="" coords="139,237,275,267"/>
+<area shape="rect" id="node11" href="$class_util_1_1_end_of_file.html" title="Util::EndOfFile" alt="" coords="299,237,421,267"/>
+<area shape="rect" id="node15" href="$class_s_o_c_k_n_e_t_1_1_sock_error.html" title="SOCKNET::SockError" alt="" coords="445,237,611,267"/>
+</map>

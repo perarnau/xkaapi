@@ -1,0 +1,7 @@
+<map id="structs" name="structs">
+<area shape="rect" id="node1" href="$group___misc.html" title="Management of properties, various timers." alt="" coords="136,5,189,35"/>
+<area shape="rect" id="node2" href="$group___container.html" title="Container with fast insertion deletion." alt="" coords="117,59,208,88"/>
+<area shape="rect" id="node4" href="$group___exception.html" title="Definition of exceptions in KAAPI." alt="" coords="117,112,208,141"/>
+<area shape="rect" id="node5" href="$group___multithreading.html" title="Thread creation, synchronization and atomic instructions." alt="" coords="100,165,225,195"/>
+<area shape="rect" id="node6" href="$group___serialization.html" title="Serialization of object." alt="" coords="108,219,217,248"/>
+</map>

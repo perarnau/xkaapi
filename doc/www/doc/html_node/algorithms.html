@@ -1,0 +1,355 @@
+<html lang="en">
+<head>
+<title>algorithms - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="API.html#API" title="API">
+<link rel="prev" href="synchronized-blocks.html#synchronized-blocks" title="synchronized blocks">
+<link rel="next" href="utilities.html#utilities" title="utilities">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="algorithms"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="utilities.html#utilities">utilities</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="synchronized-blocks.html#synchronized-blocks">synchronized blocks</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="API.html#API">API</a>
+<hr>
+</div>
+
+<h3 class="section">6.5 Algorithms</h3>
+
+     <dl>
+<dt><code>for_each</code><a name="index-for_005feach-27"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class InputIterator, class Function&gt;
+               void for_each (InputIterator first, InputIterator last, Function f,
+                 typename std::iterator_traits&lt;InputIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>Applies function <var>f</var> to each of the elements in the range [<var>first</var>,<var>last</var>).
+
+          <p>The behavior of this template function is equivalent to:
+
+          <pre class="example">               template&lt;class InputIterator, class Function&gt;
+               void for_each(InputIterator first, InputIterator last, Function f)
+               {
+                 while ( first!=last ) f(*first++);
+               }
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>Input iterators to the initial and final positions in a sequence. 
+The range used is [<var>first</var>,<var>last</var>), which contains all the elements between first and last, including the element pointed by first but not the element pointed by last.
+
+               <br><dt><var>f</var><dd>Unary function taking an element in the range as argument. 
+This can either <em>not</em> be a pointer to a function. 
+It <em>must</em> be  an object whose class overloads <code>operator()</code>. 
+Its return value, if any, is ignored.
+
+               <br><dt><var>threshold</var><dd>integer used as grain size. It is comutedn automatically if not provided, but should be set by hand for best performances. 
+</dl>
+
+               <ul>
+<li>as an additionnal requirement, <var>f</var> and data from <var>first</var> to <var>last</var> must all be communicable !! 
+<li>Currently, only pointers iterator are supported. 
+<li>no hypothesis can be made on the order of appliance for <var>f</var>. 
+</ul>
+
+     </dl>
+
+     <br><dt><code>transform</code><a name="index-transform-28"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt; class InputIterator, class OutputIterator, class UnaryOperator &gt;
+               void transform ( InputIterator first1, InputIterator last1,
+                                          OutputIterator result, UnaryOperator op,
+                                          size_t threshold = 0 );
+               
+               template &lt; class InputIterator1, class InputIterator2,
+                          class OutputIterator, class BinaryOperator &gt;
+               void transform ( InputIterator1 first1, InputIterator1 last1,
+                                          InputIterator2 first2, OutputIterator result,
+                                          BinaryOperator binary_op,
+                                          size_t threshold = 0 );
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>The first version applies op to all the elements in the input range ([<var>first1</var>,<var>last1</var>)) and stores each returned value in the range beginning at result. 
+The second version uses as argument for each call to binary_op one element from the first input range ([<var>first1</var>,<var>last1</var>)) and one element from the second input range (beginning at <var>first2</var>).
+
+          <p>The behavior of this function template is equivalent to:
+
+          <pre class="example">               template &lt; class InputIterator, class OutputIterator, class UnaryOperator &gt;
+               void transform ( InputIterator first1, InputIterator last1,
+                                          OutputIterator result, UnaryOperator op )
+               {
+                 while (first1 != last1)
+                   *result++ = op(*first1++);  // or: *result++=binary_op(*first1++,*first2++);
+               }
+</pre>
+          <p>The function allows for the destination range to be the same as one of the input ranges to make transformations <em>in place</em>.
+
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first1</var><dt><var>last1</var><dd>
+    Input iterators to the initial and final positions of the first sequence. The range used is [<var>first1</var>,<var>last1</var>), which contains all the elements between <var>first1</var> and <var>last1</var>, including the element pointed by <var>first1</var> but not the element pointed by <var>last1</var>.
+
+               <br><dt><var>first2</var><dd>    Input iterator to the initial position of the second range. The range includes as many elements as [<var>first1</var>,<var>last1</var>). 
+<br><dt><var>result</var><dd>    Output iterator to the initial position of the range where function results are stored. The rangeincludes as many elements as [<var>first1</var>,<var>last1</var>). 
+<br><dt><var>op</var><dd>    Unary function taking one element as argument, and returning some result value. 
+    This can <em>not</em> be a pointer to a function. 
+    It <em>must</em> be an object whose class overloads <code>operator()</code>. 
+    <br><dt><var>binary_op</var><dd>    Binary function taking two elements as argument (one of each of the two sequences), and returning some result value. 
+    This can <em>not</em> be a pointer to a function. 
+    It <em>must</em> be an object whose class overloads <code>operator()</code>. 
+<br><dt><var>shold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+               <ul>
+<li>as an additionnal requirement, <var>binary_op</var> and data from <var>first1</var> to <var>last1</var>, <var>first2</var>, <var>result</var> must all be communicable !!
+
+               <li>Currently, only pointers iterator are supported.
+
+               <li>no hypothesis can be made on the order of appliance for <var>binary_op</var>. 
+</ul>
+          </dl>
+
+     <br><dt><code>find</code><a name="index-find-29"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class InputIterator, class T&gt;
+               InputIterator find ( InputIterator first, InputIterator last, const T&amp; value,
+                                    typename std::iterator_traits&lt;InputIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>
+Returns an iterator to the first element in the range [<var>first</var>,<var>last</var>) that compares equal to <var>value</var>, or <var>last</var> if not found.
+
+          <p>The behavior of this function template is equivalent to:
+
+          <pre class="example">               template&lt;class InputIterator, class T&gt;
+               InputIterator find ( InputIterator first, InputIterator last, const T&amp; value )
+               {
+                 for ( ;first!=last; first++) if ( *first==value ) break;
+                 return first;
+               }
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>Input iterators to the initial and final positions in a sequence. 
+The range used is [<var>first</var>,<var>last</var>), which contains all the elements between <var>first</var> and <var>last</var>, including the element pointed by <var>first</var> but not the element pointed by <var>last</var>. 
+<br><dt><var>value</var><dd>Value to be compared to each of the elements. 
+<br><dt><var>threshold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+          <br><dt><strong>Return value</strong><dd>An iterator to the first element in the range that matches <var>value</var>. 
+If no element matches, the function returns <var>last</var>.
+
+     </dl>
+
+          <ul>
+<li>as an additionnal requirement, data from <var>first1</var> to <var>last1</var> and <var>value</var> must all be communicable !!
+
+          <li>Currently, only pointers iterator are supported. 
+</ul>
+
+     <br><dt><code>find_if</code><a name="index-find_005fif-30"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class InputIterator, class T&gt;
+               InputIterator find_if ( InputIterator first, InputIterator last, const T&amp; value, Predicate pred,
+                                    typename std::iterator_traits&lt;InputIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>
+Returns an iterator to the first element in the range [<var>first</var>,<var>last</var>) for which applying <var>pred</var> to it, is <var>true</var>.
+
+          <p>The behavior of this function template is equivalent to:
+
+          <pre class="example">               template&lt;class InputIterator, class Predicate&gt;
+               InputIterator find_if ( InputIterator first, InputIterator last, Predicate pred )
+               {
+                 for ( ; first!=last ; first++ ) if ( pred(*first) ) break;
+                 return first;
+               }
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>    Input iterators to the initial and final positions in a sequence. The range used is [<var>first</var>,<var>last</var>), which contains all the elements between <var>first</var> and <var>last</var>, including the element pointed by <var>first</var> but not the element pointed by <var>last</var>. 
+<br><dt><var>pred</var><dd>    Unary predicate taking an element in the range as argument, and returning a value indicating the falsehood (with false, or a zero value) or truth (true, or non-zero) of some condition applied to it. 
+    This can <em>not</em> be a pointer to a function. 
+    It <em>must</em> be an object whose class overloads <code>operator()</code>. 
+<br><dt><var>threshold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+          <br><dt><strong>Return value</strong><dd>An iterator to the first element in the range for which the application of <var>pred</var> to it does not return false (zero). 
+If <var>pred</var> is false for all elements, the function returns <var>last</var>.
+
+     </dl>
+
+          <ul>
+<li>as an additionnal requirement, <var>pred</var> and data from <var>first</var> to <var>last</var> must all be communicable !! 
+<li><li>Currently, only pointers iterator are supported. 
+</ul>
+
+     <br><dt><code>sort and stable_sort</code><a name="index-sort-and-stable_005fsort-31"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class RandomAccessIterator&gt;
+               void stable_sort ( RandomAccessIterator first, RandomAccessIterator last,
+                   typename std::iterator_traits&lt;RandomAccessIterator&gt;::difference_type threshold = 0);
+               
+               template &lt;class RandomAccessIterator, class Compare&gt;
+               void sort ( RandomAccessIterator first, RandomAccessIterator last,
+                   typename std::iterator_traits&lt;RandomAccessIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>
+Sorts the elements in the range [<var>first</var>,<var>last</var>) into ascending order. 
+<code>stable_sort</code> also grants that the relative order of the elements with equivalent values is preserved.
+
+          <p>The elements are compared using <code>operator&lt;</code>.
+
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>    Random-Access iterators to the initial and final positions of the sequence to be sorted. The range used is [<var>first</var>,<var>last</var>), which contains all the elements between <var>first</var> and <var>last</var>, including the element pointed by first but not the element pointed by &ldquo;last&ldquo;. 
+<br><dt><var>threshold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+               <ul>
+<li>as an additionnal requirement, data from <var>first</var> to <var>last</var> must all be communicable !! 
+<li>Currently, only pointers iterator are supported. 
+</ul>
+
+     </dl>
+
+</dl>
+
+<!--  -->
+   </body></html>
+

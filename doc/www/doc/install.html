@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>KAAPI</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="info.css" media="screen" />
+</head>
+<body>
+
+<div id="wrap">
+
+<div id="header">
+<h1><a href="#">KAAPI Library</a></h1>
+<h2>Kernel for Adaptative, Asynchronous Parallel and Interactive programming - A library for ditributed computing</h2>
+</div>
+
+<div id="right">
+
+<!-- SECTION !-->
+<a name="install-guide"></a>
+
+<p>In order to use the <code>Athapascan</code>'s API, you need to install <code>KAAPI</code> library. 
+The following steps will help you to do it.
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="install.html#get-the-source">get the source</a>:  download the library
+<li><a accesskey="2" href="install.html#compile-the-package">compile the package</a>:  <samp><span class="command">./configure; make; make install</span></samp>
+</ul>
+
+<div class="node">
+<a name="get-the-source"></a>
+
+</div>
+
+<h3 class="section">2.1 Get the source</h3>
+
+<p>There are several ways to get <code>KAAPI</code> source files:
+
+     <ul>
+<li>You can download the latest stable version available at: <a href="https://gforge.inria.fr/frs/?group_id=94">https://gforge.inria.fr/frs/?group_id=94</a>
+
+     <li>You can also get a tarball of the latest git sources (rebuilt every night): <a href="http://kaapi.gforge.inria.fr/snapshots/kaapi-svn.tar.gz">http://kaapi.gforge.inria.fr/snapshots/kaapi-svn.tar.gz</a>. Please note that if current git version fails to pass the <samp><span class="command">make distchek</span></samp> test, the tarball won't be built (i.e. you will download the latest tarball that pass <samp><span class="command">make distchek</span></samp>).
+
+     <li>At least, you can use the anonymous git server if you want to keep updating sources (but sometimes, sources are totally broken here):
+</ul>
+
+<pre class="example">     $ <samp><span class="command">git</span></samp> clone git://git.ligforge.imag.fr/git/kaapi/kaapi.git kaapi-git
+</pre>
+   <div class="node">
+<a name="compile-the-package"></a>
+
+</div>
+
+<h3 class="section">2.2 Compile the package</h3>
+
+<p>The following details the weel known <samp><span class="command">./configure; make; make install</span></samp> steps.
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="install.html#configure">configure</a>: <samp><span class="command">./configure</span></samp>
+<li><a accesskey="2" href="install.html#make">make</a>: <samp><span class="command">make</span></samp>
+<li><a accesskey="3" href="install.html#make-install">make install</a>: <samp><span class="command">make</span></samp> install
+</ul>
+
+<div class="node">
+<a name="configure"></a>
+
+</div>
+
+<h4 class="subsection">2.2.1 Configuring</h4>
+
+<p>Depending on how you got <code>KAAPI</code> you may need to perform some additionnal actions.
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="install.html#git-users">git users</a>:  For git users only
+<li><a accesskey="2" href="install.html#all-users">all users</a>:  git and non git users
+</ul>
+
+<div class="node">
+<a name="git-users"></a>
+
+</div>
+
+<h5 class="subsubsection">2.2.1.1 For git users only</h5>
+
+<p><code>KAAPI</code> uses GNU <samp><span class="command">autoconf</span></samp> and <samp><span class="command">automake</span></samp> tools to simplify its configuration. 
+For <samp><span class="command">git</span></samp> users, they must run the following script in the source directory to generate autoconf/automake/libtool files (make sure that you have these development tools available on your system). 
+This has already been done When you use the first two other ways to get <code>KAAPI</code> sources.
+
+   <p><strong>NOTE</strong>: In the following, replace &lt;<var>kaapi_src_dir</var>&gt; by the directory where you have gotten kaapi
+
+<pre class="example">     $ cd &lt;<var>kaapi_src_dir</var>&gt; &amp;&amp; ./bootstrap
+</pre>
+   <div class="node">
+<a name="all-users"></a>
+
+</div>
+
+<h5 class="subsubsection">2.2.1.2 For all users</h5>
+
+<p>You can check whether a configure file has been created in the source directory.
+
+   <p>If you want to use more configure options, please read its documentation:
+<pre class="example">     $ <samp><span class="command">./configure</span></samp> <samp><span class="option">--help</span></samp>
+</pre>
+   <p>It is better that KAAPI source files are compiled in a different directory from the source code directory. We suggest you create a directory named build:
+
+<pre class="example">     $ cd ..
+     $ mkdir build ; cd build
+</pre>
+   <p>In the build directory, you now can launch the configure script, using
+<samp><span class="option">--prefix</span></samp>=&lt;<var>install dir</var>&gt; option to choose an installation path which will be
+the root of the installation directory (header files, archive, script,etc. will
+be put here).  This installation directory must be different from the source
+directory (and the build directory).
+
+   <p><strong>NOTE</strong>: Source (and build) directory can be removed after the
+KAAPI library is compiled and installed. The installation directory must be
+kept to be able to compile and run KAAPI applications
+
+<pre class="example">     $ ../&lt;kaapi_src_dir&gt;/configure --prefix=$HOME/KAAPI
+</pre>
+   <div class="node">
+<a name="make"></a>
+
+</div>
+
+<h4 class="subsection">2.2.2 Compiling</h4>
+
+<p>Concerning Compilers : we ensure that KAAPI can be well compiled with the following compilers:
+
+     <ul>
+<li><samp><span class="command">g++-3.4</span></samp> (deprecated)
+<li><samp><span class="command">g++-4.1</span></samp> to <samp><span class="command">g++-4.3</span></samp>
+</ul>
+
+   <p><strong>WARNING</strong>: On Itanium, version 4 or greater is required, older version (especially 3.4) are not supported
+
+   <p>To compile the library, just run <samp><span class="command">make</span></samp> in the build directory:
+
+<pre class="example">     $ <samp><span class="command">make</span></samp>
+</pre>
+   <p>It may take some time. You can also read make documentation to have more compiling options.
+
+<div class="node">
+<a name="make-install"></a>
+
+</div>
+
+<h4 class="subsection">2.2.3 Installing</h4>
+
+<p>If the previous steps succeed, then the installation of the library is simple. 
+(Note: depending on your installation path specified by the prefix option during the previous configuration, you may need root privileges).
+
+<pre class="example">     $ <samp><span class="command">make</span></samp> install
+</pre>
+   <p>Congratulation, you can now use <code>Athapascan</code> and <code>KAAPI</code> !
+
+<div class="node">
+<a name="compile-and-run"></a>
+
+</div>
+
+
+</div>
+
+<div id="left">
+<h2>Navigation</h2>
+<ul>
+<li><a href="http://kaapi.gforge.inria.fr">Home Page</a></li>
+<li><a href="http://kaapi.gforge.inria.fr/doc/index.html">Documentation</a>
+<!-- DOCS !-->
+    <ul>
+        <li><a href="install.html">Installation Guide</a></li>
+        <li><a href="compile_run.html">Compile and Run instructions</a></li>
+        <li><a href="atha.html">Athapascan Overview</a></li>
+        <li><a href="tuto.html">Tutorials</a></li>
+        <li><a href="api.html">API</a></li>
+        <li><a href="annotated.html">Doxygen documentation</a></li>
+    </ul>
+
+</li>
+
+<li><a href="http://kaapi.gforge.inria.fr/download.html">Download</a></li>
+<li><a href="http://gforge.inria.fr/projects/kaapi">GForge</a></li>
+</ul>
+
+</div>
+
+<div id="clear">
+<a href="http://www.inria.fr"><img src="INRIA-75x55.png" alt="INRIA" style="float:left;"/></a> <a href="http://lig.imag.fr"><img src="LIG-75x55.png" alt="LIG" style="float:left;" /></a>
+ </div>
+
+<div id="footer">
+serge guelton | Design by <a href="http://www.minimalistic-design.net">Minimalistic Design</a>
+</div>
+
+<!-- If needed, change the copyright block at the bottom. In general, -->
+<!-- all pages on the GNU web server should have the section about    -->
+<!-- verbatim copying.  Please do NOT remove this without talking     -->
+<!-- with the webmasters first. --> 
+<!-- Please make sure the copyright date is consistent with the document -->
+<!-- and that it is like this "2001, 2002" not this "2001-2002." -->
+</div><!-- for id="content", starts in the include above -->
+<!--#include virtual="/server/footer-min.html" -->
+</div>
+</body>
+</html>

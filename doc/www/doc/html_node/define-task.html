@@ -1,0 +1,209 @@
+<html lang="en">
+<head>
+<title>define task - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="programing-environnment.html#programing-environnment" title="programing environnment">
+<link rel="prev" href="initialize-the-library.html#initialize-the-library" title="initialize the library">
+<link rel="next" href="spawn-task.html#spawn-task" title="spawn task">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="define-task"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="spawn-task.html#spawn-task">spawn task</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="initialize-the-library.html#initialize-the-library">initialize the library</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="programing-environnment.html#programing-environnment">programing environnment</a>
+<hr>
+</div>
+
+<h4 class="subsection">4.2.2 Define task</h4>
+
+<p>The task <var>doit</var> should contain the code to be executed in parallel. 
+It is often only a matter of spawning additionnal tasks (hopefully in a recursive way). 
+But let say we just want to print a "hello world".
+
+   <p>First, a task is nothing else than a structure:
+<pre class="example">     struct doit
+     {
+</pre>
+   <p>Second it is also a function obect. As described in <a href="initialize-the-library.html#initialize-the-library">initialize the library</a>, the <var>doit</var> task
+has specific parameters
+<pre class="example">         void operator()(int <var>argc</var>, char **<var>argv</var>)
+         {
+</pre>
+   <p>The body is known across the world (let us suppose we added <code>#include &lt;iostream&gt;</code> in the header)
+<pre class="example">             std::cout &lt;&lt; "hello world !" &lt;&lt; std::endl;
+        }
+</pre>
+   <p>For <code>Java</code> addict, do not forget to close the structure !
+<pre class="example">     };
+</pre>
+   <p>This is your first Task. 
+Executing it will not result in a parallel execution. 
+We need more task to feed our scheduler. 
+What about a simple sum ? 
+The <code>C</code> procedure would be
+<pre class="example">     int sum(int <var>n</var>, int <var>p</var>);
+</pre>
+   <p>Let us do some semantic analysis to make it a task:
+     <dl>
+<dt><var>n</var><dd>is read by <code>sum</code> : it will become a <code>a1::Shared_r&lt;int&gt;</code> ! 
+<br><dt><var>p</var><dd>is also read by <code>sum</code> : it will become a <code>a1::Shared_r&lt;int&gt;</code> ! 
+<br><dt><var>return value</var><dd>is written by <code>sum</code> : it will become a <code>a1::Shared_w&lt;int&gt;</code> ! 
+</dl>
+
+   <p>So once our task defined:
+<pre class="example">     struct sum_task
+     {
+     };
+</pre>
+   <p>We can provide it with the good <code>operator() </code>
+
+<pre class="example">         void operator()( a1::Shared_r&lt;int&gt; <var>n</var>, a1::Shared_r&lt;int&gt; <var>p</var>, a1::Shared_w&lt;int&gt; <var>r</var>)
+         {
+         }
+</pre>
+   <p>The body should be a simple call to the <code>C</code> procedure <code>sum</code>. 
+But we need to access the content of the shared data (see <a href="API.html#API">API</a> for a list of available methods).
+     <dl>
+<dt><var>n</var><code>.read()</code><dd>will read the content of <var>n</var>
+<br><dt><var>p</var><code>.read()</code><dd>will read the content of <var>p</var>
+<br><dt><var>r</var><code>.write(</code><var>val</var><code>)</code><dd>will write <var>val</var> in <var>r</var>. 
+</dl>
+
+   <p>so the body is
+<pre class="example">             <var>r</var>.write( sum( <var>n</var>.read(), <var>p</var>.read() ) );
+</pre>
+   <!--  -->
+   </body></html>
+

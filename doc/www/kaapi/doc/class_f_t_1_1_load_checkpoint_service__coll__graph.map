@@ -1,0 +1,49 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_net_1_1_service.html" title="Net::Service" alt="" coords="1300,84,1409,113"/>
+<area shape="rect" id="node4" href="$class_net_1_1_service_manager.html" title="Manager of Kaapi servicesAn active message is send to a service. A service is an..." alt="" coords="1827,93,2000,123"/>
+<area shape="rect" id="node6" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="473,784,572,813"/>
+<area shape="rect" id="node15" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="835,784,933,813"/>
+<area shape="rect" id="node121" href="$class_util_1_1_event_buffer_manager.html" title="A Generic Buffer Manager : EventBufferManager EventBufferManager is an implementation..." alt="" coords="783,1105,985,1135"/>
+<area shape="rect" id="node13" href="$class_net_1_1_network.html" title="Net::Network" alt="" coords="1297,419,1412,448"/>
+<area shape="rect" id="node37" href="$class_net_1_1_node_info.html" title="Net::NodeInfo" alt="" coords="3160,585,3283,615"/>
+<area shape="rect" id="node11" href="$class_net_1_1_network_object.html" title="Net::NetworkObject" alt="" coords="1833,428,1993,457"/>
+<area shape="rect" id="node33" href="$class_net_1_1_cluster.html" title="Net::Cluster" alt="" coords="2625,520,2732,549"/>
+<area shape="rect" id="node60" href="$class_net_1_1_device.html" title="Net::Device" alt="" coords="2256,563,2363,592"/>
+<area shape="rect" id="node100" href="$class_net_1_1_i_o_daemon.html" title="Net::IODaemon" alt="" coords="2243,1081,2376,1111"/>
+<area shape="rect" id="node42" href="$class_net_1_1_channel.html" title="Net::Channel" alt="" coords="1297,1300,1412,1329"/>
+<area shape="rect" id="node48" href="$class_net_1_1_i_o_instruction_stream.html" title="Net::IOInstructionStream" alt="" coords="2580,1085,2777,1115"/>
+<area shape="rect" id="node17" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="465,951,580,980"/>
+<area shape="rect" id="node102" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="1860,1143,1967,1172"/>
+<area shape="rect" id="node20" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="463,1133,583,1163"/>
+<area shape="rect" id="node22" href="$class_net_1_1_callback.html" title="Net::Callback" alt="" coords="825,419,943,448"/>
+<area shape="rect" id="node24" href="$class_util_1_1_callback.html" title="Util::Callback" alt="" coords="465,405,580,435"/>
+<area shape="rect" id="node30" href="$class_net_1_1_upcall.html" title="Net::Upcall" alt="" coords="835,329,933,359"/>
+<area shape="rect" id="node26" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="247,1285,348,1315"/>
+<area shape="rect" id="node28" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="5,1533,165,1563"/>
+<area shape="rect" id="node40" href="$class_net_1_1_out_channel.html" title="Net::OutChannel" alt="" coords="2875,1123,3016,1152"/>
+<area shape="rect" id="node45" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="467,1447,579,1476"/>
+<area shape="rect" id="node113" href="$class_util_1_1_o_event_stream.html" title="Output events stream: Util::OEventStream." alt="" coords="1276,1353,1433,1383"/>
+<area shape="rect" id="node117" href="$class_util_1_1_event_buffer.html" title="A Generic Trace Buffer class: Util::EventBuffer." alt="" coords="815,1325,953,1355"/>
+<area shape="rect" id="node50" href="$class_util_1_1_queable.html" title="Util::Queable\&lt; IOInstructionStream \&gt;" alt="" coords="1212,1620,1497,1649"/>
+<area shape="rect" id="node131" href="$class_util_1_1_queue.html" title="Util::Queue\&lt; IOInstructionStream \&gt;" alt="" coords="1776,1491,2051,1520"/>
+<area shape="rect" id="node53" href="$class_util_1_1_queable.html" title="Base class of object queueable into double linked list.To be en(de)queueable in a..." alt="" coords="808,1645,960,1675"/>
+<area shape="rect" id="node86" href="$class_util_1_1_queable.html" title="Util::Queable\&lt; OutChannel \&gt;" alt="" coords="1524,1693,1751,1723"/>
+<area shape="rect" id="node66" href="$class_util_1_1_stack_list.html" title="Util::StackList\&lt; CallStack \&gt;" alt="" coords="1249,753,1460,783"/>
+<area shape="rect" id="node68" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; CallStack \&gt;" alt="" coords="780,716,988,745"/>
+<area shape="rect" id="node71" href="$class_util_1_1_linkable.html" title="Base class to make cells linkable in single linked listTo be (de)linkable in single..." alt="" coords="447,475,599,504"/>
+<area shape="rect" id="node81" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Bloc \&gt;" alt="" coords="797,603,971,632"/>
+<area shape="rect" id="node73" href="$class_util_1_1_stack_list.html" title="Thread linked list (thread unsafe)The StackList descriptor is linked to the top element..." alt="" coords="807,883,961,912"/>
+<area shape="rect" id="node79" href="$class_util_1_1_stack_list.html" title="Util::StackList\&lt; Bloc \&gt;" alt="" coords="1267,700,1443,729"/>
+<area shape="rect" id="node75" href="$class_net_1_1_device_factory.html" title="Net::DeviceFactory" alt="" coords="1835,767,1992,796"/>
+<area shape="rect" id="node77" href="$class_util_1_1_byte_allocator.html" title="ByteAllocator of fixed size objects with cache for fast allocation (thread unsafe)A..." alt="" coords="1840,648,1987,677"/>
+<area shape="rect" id="node92" href="$class_util_1_1_r_w_lock.html" title="Read&#45;Write lockThis class implements interface for Posix Read&#45;Write lock. All errors..." alt="" coords="2255,443,2364,472"/>
+<area shape="rect" id="node106" href="$class_util_1_1_key.html" title="Util::Key\&lt; ByteAllocator \&gt;" alt="" coords="1253,1009,1456,1039"/>
+<area shape="rect" id="node108" href="$class_util_1_1_key.html" title="Thread private attributeThis class provides an interface to posix pthread specific..." alt="" coords="824,1040,944,1069"/>
+<area shape="rect" id="node110" href="$class_util_1_1_key.html" title="Util::Key\&lt; Thread \&gt;" alt="" coords="1273,1063,1436,1092"/>
+<area shape="rect" id="node115" href="$class_util_1_1_context_id.html" title="Util::ContextId" alt="" coords="461,1281,584,1311"/>
+<area shape="rect" id="node134" href="$class_util_1_1_queue.html" title="Double linked list (thread unsafe)The queue descriptor is linked to the first and..." alt="" coords="1284,1508,1425,1537"/>
+<area shape="rect" id="node139" href="$class_i_d_a_impl.html" title="IDAImpl" alt="" coords="1875,273,1952,303"/>
+<area shape="rect" id="node141" href="$class_i_d_a_decoder.html" title="IDADecoder" alt="" coords="1301,252,1408,281"/>
+<area shape="rect" id="node143" href="$class_i_d_a_aux_vectors.html" title="IDAAuxVectors" alt="" coords="1293,305,1416,335"/>
+<area shape="rect" id="node145" href="$class_i_d_a_encoder.html" title="IDAEncoder" alt="" coords="1303,359,1407,388"/>
+</map>

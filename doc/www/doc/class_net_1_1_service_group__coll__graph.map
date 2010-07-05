@@ -1,0 +1,8 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_net_1_1_service.html" title="Net::Service" alt="" coords="45,101,155,131"/>
+<area shape="rect" id="node4" href="$class_net_1_1_service_manager.html" title="Manager of Kaapi servicesAn active message is send to a service. A service is an..." alt="" coords="16,197,189,227"/>
+<area shape="rect" id="node6" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="172,5,271,35"/>
+<area shape="rect" id="node11" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="279,101,377,131"/>
+<area shape="rect" id="node13" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="439,5,553,35"/>
+<area shape="rect" id="node16" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="295,5,415,35"/>
+</map>

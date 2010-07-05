@@ -1,0 +1,20 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Request \&gt;" alt="" coords="468,85,668,115"/>
+<area shape="rect" id="node13" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Bloc \&gt;" alt="" coords="481,139,655,168"/>
+<area shape="rect" id="node17" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Wait_Context \&gt;" alt="" coords="451,192,685,221"/>
+<area shape="rect" id="node21" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Recv_Request_t \&gt;" alt="" coords="441,245,695,275"/>
+<area shape="rect" id="node23" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Wait_Context_t \&gt;" alt="" coords="445,299,691,328"/>
+<area shape="rect" id="node25" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Send_Request_t \&gt;" alt="" coords="441,352,695,381"/>
+<area shape="rect" id="node27" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; CallStack \&gt;" alt="" coords="464,405,672,435"/>
+<area shape="rect" id="node31" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; CallbackCollectCounters \&gt;" alt="" coords="411,459,725,488"/>
+<area shape="rect" id="node5" href="$struct_m_y_n_e_t_1_1_device_1_1_request.html" title="MYNET::Device::Request" alt="" coords="793,32,991,61"/>
+<area shape="rect" id="node11" href="$struct_net_1_1_r_p_c_1_1_request.html" title="Net::RPC::Request" alt="" coords="816,85,968,115"/>
+<area shape="rect" id="node7" href="$struct_m_y_n_e_t_1_1_device_1_1_recv___request.html" title="MYNET::Device::Recv_Request" alt="" coords="1060,5,1297,35"/>
+<area shape="rect" id="node9" href="$struct_m_y_n_e_t_1_1_device_1_1_send___request.html" title="MYNET::Device::Send_Request" alt="" coords="1059,59,1299,88"/>
+<area shape="rect" id="node15" href="$class_util_1_1_byte_allocator_1_1_bloc.html" title="Util::ByteAllocator::Bloc" alt="" coords="799,139,985,168"/>
+<area shape="rect" id="node19" href="$struct_m_y_n_e_t_1_1_device_1_1_wait___context.html" title="MYNET::Device::Wait_Context" alt="" coords="776,192,1008,221"/>
+<area shape="rect" id="node29" href="$class_net_1_1_call_stack.html" title="Net::CallStack" alt="" coords="831,405,953,435"/>
+<area shape="rect" id="node33" href="$class_util_1_1_callback_collect_counters.html" title="Callback function to collect countersThe class defines interface that should overloaded..." alt="" coords="779,459,1005,488"/>
+<area shape="rect" id="node35" href="$class_core_1_1_processor.html" title="KAAPI ProcessorProcessor manages scheduling of a set of threads with at most one..." alt="" coords="1112,432,1245,461"/>
+<area shape="rect" id="node37" href="$class_w_s_1_1_community.html" title="Community of distribued PoolsThe community is a dynamic group of process. The Community..." alt="" coords="1112,485,1245,515"/>
+</map>
