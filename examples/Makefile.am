@@ -29,7 +29,6 @@ check_PROGRAMS= \
 	poisson3d-kaapi        \
 	poisson3d-xkaapinew    \
   jacobi1D               \
-	transform_adapt	       \
 	transform_adapt_preempt\
 	transform_static\
 	transform_std
@@ -37,7 +36,7 @@ check_PROGRAMS= \
 # To correct:
 #check_PROGRAMS+=\
 #	fibo_xkaapi_adapt
-#	transform_concurrent	count_concurrent 	marc_problem	accumulate_while_kastl	foreach_kastl  	transform_kastl  
+#	transform_concurrent	count_concurrent 	marc_problem	accumulate_while_kastl	foreach_kastl  	transform_kastl  	transform_adapt	
 
 
 TESTS=
@@ -67,7 +66,7 @@ foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 transform_std_SOURCES=transform_std.cpp random.cpp random.h
 transform_kastl_SOURCES=transform_kastl.cpp random.cpp random.h
-transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h timing.h
+#transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h timing.h
 transform_adapt_preempt_SOURCES=transform_adapt_preempt.h transform_adapt_preempt.cpp random.cpp random.h
 transform_static_SOURCES=transform_static.cpp random.cpp random.h
 #transform_concurrent_SOURCES=transform_concurrent.h transform_concurrent.cpp random.cpp random.h
@@ -192,10 +191,10 @@ foreach_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)
 foreach_kastl_LDFLAGS =$(AM_LDFLAGS)  $(KASTLPROGS_BUILD_LDFLAGS)
 foreach_kastl_LDADD   =$(LIBS)        $(KASTLPROGS_BUILD_LIBS)
 
-transform_adapt_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-transform_adapt_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-transform_adapt_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-transform_adapt_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+#transform_adapt_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+#transform_adapt_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+#transform_adapt_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+#transform_adapt_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 transform_adapt_preempt_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 transform_adapt_preempt_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
