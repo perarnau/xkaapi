@@ -4,6 +4,7 @@ XKAAPIDIR=$HOME/install
 
 gcc -Wall -std=c99 \
     -I$XKAAPIDIR/include \
-    -DNDEBUG=1 \
+    -DKAAPI_NDEBUG=1 \
+    -DKAAPI_DEBUG=0 \
     transform_heter.c \
     -L$HOME/install/lib -lpthread -lxkaapi -lnuma -lcuda

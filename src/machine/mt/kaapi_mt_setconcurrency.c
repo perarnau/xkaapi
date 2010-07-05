@@ -222,7 +222,7 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_procinfo_t* kpi = (kaapi_procinfo_t*)arg;
   kaapi_processor_t* kproc = NULL;
   const kaapi_processor_id_t kid = kpi->kid;
-  
+
   /* force reschedule of the posix thread, we that the thread will be mapped on the correct processor ? */
   sched_yield();
   kproc = kaapi_all_kprocessors[kid] = kaapi_processor_allocate();

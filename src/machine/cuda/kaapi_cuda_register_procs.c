@@ -130,9 +130,6 @@ static unsigned int __attribute__((unused)) count_tasks_by_type
 
   for (pos = thread->pc; pos != end; --pos)
   {
-    if (pos->proctype != type)
-      continue ;
-
 #if 0 /* unused */
     if (!is_task_ready(pos))
       continue ;
@@ -144,10 +141,12 @@ static unsigned int __attribute__((unused)) count_tasks_by_type
   return count;
 }
 
-static unsigned int has_task_by_proc_type
+static unsigned int __attribute__((unused)) has_task_by_proc_type
 (kaapi_thread_t* thread, unsigned int proc_type)
 {
   /* assume thread kproc locked */
+
+#define CONFIG_DEBUG 0
 
   kaapi_task_t* const end = thread->sp;
   kaapi_task_t* pos;
@@ -159,24 +158,32 @@ static unsigned int has_task_by_proc_type
 
     if (format == NULL)
     {
+#if CONFIG_DEBUG
       printf("format not found, body: %p, ebody: %p\n",
 	     (void*)pos->body, (void*)pos->ebody);
+#endif
       continue ;
     }
 
     if (format->entrypoint[proc_type] == NULL)
     {
+#if CONFIG_DEBUG
       printf("no entrypoint\n");
+#endif
       continue ;
     }
 
     if (!is_task_ready(pos))
     {
+#if CONFIG_DEBUG
       printf("not ready\n");
+#endif
       continue ;
     }
 
+#if CONFIG_DEBUG
     printf("found TASK\n");
+#endif
 
     return 1;
   }
@@ -186,6 +193,13 @@ static unsigned int has_task_by_proc_type
 
 int kaapi_sched_select_victim_with_cuda_tasks
 (kaapi_processor_t* kproc, kaapi_victim_t* victim)
+#if 1 /* disable worksealing */
+{
+  /* this disables workstealing */
+  victim->kproc = kproc;
+  return 0;
+}
+#else
 {
   unsigned int has_task;
   int i;
@@ -198,12 +212,14 @@ int kaapi_sched_select_victim_with_cuda_tasks
       continue ;
 
     has_task = 0;
+
     lock_proc(pos, kproc->kid);
-    if ((pos->thread != NULL) && (pos->thread->unstealable == 0))
+    if (pos->thread != NULL)
     {
-      kaapi_thread_t* const thread = kaapi_threadcontext2thread(pos->thread);
       lock_thread(pos->thread); /* useless since kproc locked? */
-      has_task = has_task_by_proc_type(thread, KAAPI_PROC_TYPE_CUDA);
+      kaapi_thread_t* const thread = kaapi_threadcontext2thread(pos->thread);
+      if (pos->thread->unstealable == 0)
+	has_task = has_task_by_proc_type(thread, KAAPI_PROC_TYPE_CUDA);
       unlock_thread(pos->thread); /* useless since kproc locked? */
     }
     unlock_proc(pos);
@@ -219,6 +235,7 @@ int kaapi_sched_select_victim_with_cuda_tasks
 
   return EINVAL;
 }
+#endif
 
 
 void kaapi_exec_cuda_task

@@ -33,6 +33,7 @@ static void create_range(range_t* range, unsigned int nelem)
   base = malloc(nelem * sizeof(unsigned int));
   for (i = 0; i < nelem; ++i)
     base[i] = 0;
+
   *KAAPI_DATA(unsigned int*, range->base) = base;
 
   range->i = 0;
@@ -47,9 +48,6 @@ static void create_range2
 
   range->i = i;
   range->j = j;
-
-  for (; i < j; ++i)
-    base[i] = 0;
 }
 
 
@@ -304,7 +302,7 @@ static void register_task_format(void)
 {
 #define PARAM_COUNT 3
 
-#define kaapi_mem_format kaapi_long_format
+#define kaapi_mem_format kaapi_ulong_format
 
   static const kaapi_access_mode_t modes[PARAM_COUNT] =
     { KAAPI_ACCESS_MODE_RW, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R };
@@ -381,21 +379,19 @@ main_static_entry(unsigned int nelem)
   kaapi_threadgroup_begin_partition(group);
 
   /* cpu partition */
-  task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU);
-  kaapi_task_init(task, cpu_entry, NULL);
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
   create_range(&work->range, nelem);
   work->range.j = nelem / 2; /* split the work */
-  kaapi_task_setargs(task, (void*)work);
+  task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU);
+  kaapi_task_initdfg(task, cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU);
 
   /* gpu partition */
   unsigned int* base = *KAAPI_DATA(unsigned int*, work->range.base);
-  task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
-  kaapi_task_init(task, cuda_entry, NULL);
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
   create_range2(&work->range, base, nelem / 2, nelem);
-  kaapi_task_setargs(task, (void*)work);
+  task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
+  kaapi_task_initdfg(task, cuda_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
 
   kaapi_threadgroup_end_partition(group);
