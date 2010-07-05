@@ -1,6 +1,7 @@
 #include "kaapi++"
 #include <algorithm>
 #include "random.h"
+#include "timing.h"
 
 struct Op2 {
     Op2(){ };
@@ -58,6 +59,7 @@ struct doit {
     int p, n, iter;
     double t0, t1;
     double avrg = 0;
+    tick_t tick0, tick1;
 
     if (argc >1) n = atoi(argv[1]);
     else n = 10000;
@@ -88,6 +90,12 @@ struct doit {
       ( ka::counting_iterator<int>(0), ka::counting_iterator<int>(iter) ) /* iteration space */
       ( p, n, input, output );                      /* args for the kernel */
 
+    GET_TICK( tick0 );
+    threadgroup.ForEach<KernelTransform>()
+      ( ka::counting_iterator<int>(0), ka::counting_iterator<int>(iter) ) /* iteration space */
+      ( p, n, input, output );                      /* args for the kernel */
+    GET_TICK( tick1 );
+    std::cout << "Result-> size: " << n << "  time(tick): " << TICK_DIFF( tick0, tick1 ) << std::endl;
   }
 };
 
