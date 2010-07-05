@@ -51,7 +51,6 @@
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
-  kaapi_thread_context_t* tmp;
   kaapi_thread_context_t* thread;
   int err;
   
@@ -70,75 +69,60 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* terminaison ? */
     if (kaapi_isterminated())
     {
-#if defined(KAAPI_USE_PERFCOUNTER)
-      /* leave the state to be 'schedule' 
-        t1 = kaapi_get_elapsedtime();
-        kproc->t_sched += t1-t0;
-      */
-#endif
       return;
     }
     
     ctxt = 0;
     /* local wake up first */
-    for (int i=0; i<5; ++i)
-    {
-      if (!kaapi_sched_suspendlist_empty(kproc))
-      {
-        ctxt = kaapi_sched_wakeup(kproc); 
-        if (ctxt !=0) break;
-      }
-    }
+//    if (!kaapi_sched_suspendlist_empty(kproc))
+      ctxt = kaapi_sched_wakeup(kproc, kproc->kid); 
 
-    if (ctxt !=0) /* push kproc->ctxt to free and set ctxt as new ctxt */
+    if (ctxt !=0) /* push kproc->thread to free and set ctxt as new ctxt */
     {
       /* push kproc context into free list */
-      tmp = kproc->thread;
-
-      /* update */
-      kproc->thread = 0;
-
-      KAAPI_STACK_PUSH( &kproc->lfree, tmp );
+      kaapi_lfree_push( kproc, kproc->thread );
 
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
+#if 0
+      printf("proc:%i wakeup thread: %p affinity:%u\n", kproc->kid, ctxt, ctxt->affinity );
+      fflush( stdout );
+#endif
       goto redo_execute;
     }
+/* warning: to avoid steal of processor ! */
+//continue;    
     
     /* steal request */
+    kaapi_assert_debug( kproc->thread !=0 );
+    ctxt = kproc->thread;
     thread = kaapi_sched_emitsteal( kproc );
 
-    /* next assert if ok because we do not steal thread... */
-    kaapi_assert_debug( (thread == 0) || (thread == kproc->thread) );
-
-    if ((thread ==0) || (kaapi_frame_isempty(thread->sfp))) 
-    {
-      kaapi_sched_advance(kproc);
+    if (thread ==0) {
+      //kaapi_sched_advance(kproc);
       continue;
     }
-    kaapi_assert_debug( thread != 0);
-    
-#if defined(LOG_STACK)
-    fprintf(stdout,"\n\n-------------- Thief stack: thief:@=%p\n", kproc );
-    kaapi_stack_print(stdout, kproc->thread );
-    fprintf(stdout,"\n\n-------------- End thief stack: thief:@=%p\n", kproc );
+    if (kaapi_frame_isempty(ctxt->sfp))
+    {
+      /* also means thread != ctxt, so push ctxt into the free list */
+      kaapi_setcontext( kproc , 0);
+      kaapi_lfree_push( kproc, ctxt );
+    }
+    kaapi_setcontext(kproc, thread);
+#if 0
+    printf("proc:%i steals thread: %p affinity:%u\n", kproc->kid, thread, thread->affinity );
+    fflush( stdout );
 #endif
 
 redo_execute:
-
     /* printf("Thief, 0x%p, pc:0x%p,  #task:%u\n", stack, stack->pc, stack->sp - stack->pc ); */
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-    /*
-      t1 = kaapi_get_elapsedtime();
-      kproc->t_sched += t1-t0;
-    */
 #endif
     err = kaapi_stack_execframe( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-    /*t0 = kaapi_get_elapsedtime();*/
 #endif
 
     if (err == EWOULDBLOCK) 
@@ -148,18 +132,38 @@ redo_execute:
 #endif
       kaapi_thread_context_t* ctxt = kproc->thread;
       /* update */
-      kproc->thread = 0;
+      kaapi_setcontext(kproc, 0);
 
       /* push it: suspended because top task is not ready */
+#if 0
+      printf("proc:%i suspends thread: %p affinity:%u\n", kproc->kid, ctxt, ctxt->affinity );
+      fflush( stdout );
+#endif
       kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
 
-      if (kaapi_sched_suspendlist_empty(kproc))
-       kproc->thread = 0;
-      else
-        kproc->thread = kaapi_sched_wakeup(kproc); 
-      if (kproc->thread !=0) goto redo_execute;
+      ctxt = kaapi_sched_wakeup(kproc, kproc->kid);
+      if (ctxt !=0)
+      {
+#if 0
+        printf("proc:%i wakeups Thread: %p affinity:%u\n", kproc->kid, ctxt, ctxt->affinity );
+        fflush( stdout );
+#endif
+        kaapi_setcontext(kproc, ctxt ); 
+        goto redo_execute;
+      }
 
       /* else reallocate a context */
+      ctxt = kaapi_context_alloc(kproc);
+
+      /* set new context to the kprocessor */
+      kaapi_setcontext(kproc, ctxt);
+    }
+    /* WARNING: this case is used by static scheduling in order to detach a thread context 
+       from a thread at the end of an iteration. See kaapi_tasksignalend_body
+       Previous code: without the test else if () {... }
+    */
+    else if (kproc->thread == 0) {
+      /* used to detach the thread of the processor in order to reuse it ... */
       ctxt = kaapi_context_alloc(kproc);
 
       /* set new context to the kprocessor */

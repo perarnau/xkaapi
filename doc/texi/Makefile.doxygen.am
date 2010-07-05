@@ -1,0 +1,87 @@
+#
+## This file is included by (Makefile.am)s in this directory and
+## in subdirectories
+
+htmldocdir = ${htmldir}/$(DOXYGEN_SUBDIR)
+
+noinst_HEADERS= $(DOXYGEN_SOURCES_DEPENDS)
+
+htmlsubdir=$(DOXYGEN_SUBDIR)
+pdfsubdir=pdf
+
+html_STAMP=$(htmlsubdir)/index.html
+pdf_STAMP=$(pdfsubdir)/$(DOXYGEN_PDFNAME).pdf
+
+DOCDIRS=$(htmlsubdir) $(pdfsubdir)
+STAMP_FILES=$(html_STAMP) $(pdf_STAMP)
+
+nodist_noinst_DATA=
+dist_htmldoc_DATA=
+dist_noinst_DATA=
+INSTALL_DATA_HOOKS=
+UNINSTALL_HOOKS=
+
+if KAAPI_DOC_DEVEL_INSTALL
+dist_htmldoc_DATA+=$(html_STAMP)
+INSTALL_DATA_HOOKS+=install-data-hook-html
+UNINSTALL_HOOKS+=uninstall-hook-html
+endif
+
+$(DOXYGEN_SUBDIR):
+	if test "$$AM_CREATE_DIR" = yes; then $(mkdir_p) $@; fi
+
+if KAAPI_DOC_DEVEL_BUILD
+doc-build-html: FORCE-BUILD
+	$(MAKE) $(AM_MAKEFLAGS) AM_CREATE_DIR=yes $(htmlsubdir)
+	$(MAKE) $(AM_MAKEFLAGS) conf-html.cfg local.cfg
+	$(MAKE) $(AM_MAKEFLAGS) -C $(top_builddir) doc/doxyconf/common.cfg doc/doxyconf/html.cfg
+	$(DOXYGEN) conf-html.cfg
+
+$(TAGFILE) $(html_STAMP): conf-html.cfg.in $(top_srcdir)/configure.ac \
+		$(top_srcdir)/doc/doxyconf/common.cfg.in \
+		$(top_srcdir)/doc/doxyconf/html.cfg.in \
+		$(srcdir)/local.cfg.in \
+		$(DOXYGEN_SOURCES_DEPENDS) $(DOXYGEN_DEPENDS_EXTRA)
+	$(MAKE) $(AM_MAKEFLAGS) doc-build-html
+
+CLEANFILES=$(TAGFILE)
+CLEANFILES+=$(STAMP_FILES)
+
+clean-local:
+	for d in $(DOCDIRS); do \
+	  if test -d $$d; then \
+	    find $$d -maxdepth 1 -type f -exec $(RM) -v {} \; ; \
+	  fi; \
+	done
+	-rmdir $(DOCDIRS)
+
+endif
+
+doc: all
+
+dist-hook: dist-hook-doxygen-html
+
+dist-hook-doxygen-html: $(html_STAMP)
+	set -e ; \
+	DESTHTML="$(distdir)/$(htmlsubdir)" ;\
+	echo $(ECHO_N) "Installing HTML files in $$DESTHTML. Please, wait...$(ECHO_C)" ;\
+	find $$(dirname $<) -maxdepth 1 -type f ! -name "*.md5" | xargs -n 50 \
+		$(install_sh_DATA) -t "$$DESTHTML/" ; \
+	echo "$(ECHO_T)"
+
+install-data-hook: $(INSTALL_DATA_HOOKS)
+
+.PHONY: install-data-hook-html uninstall-hook-html FORCE-BUILD
+install-data-hook-html: $(html_STAMP)
+	set -e ; \
+	echo $(ECHO_N) "Installing HTML files in $(DESTDIR)$(htmldocdir). Please, wait...$(ECHO_C)" ;\
+	find $$(dirname $<) -maxdepth 1 -type f ! -name "*.md5" | xargs -n 50 \
+		$(install_sh_DATA) -t "$(DESTDIR)$(htmldocdir)/" ; \
+	echo "$(ECHO_T)"
+
+uninstall-hook: $(UNINSTALL_HOOKS)
+
+uninstall-hook-html:
+	find $(DESTDIR)$(htmldocdir)  -maxdepth 1 -type f -exec $(RM) -v {} \;
+
+# vim: syntax=automake

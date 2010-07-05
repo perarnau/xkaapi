@@ -1,0 +1,51 @@
+. introduction
+
+ . the unit/ stuff has 2 goals:
+  . test kastl algorithm against the ref
+  . benchmark different implementation
+   . up to 4 implementations: kastl, tbb, stl, pastl
+
+ . for some reasons (esp. related to benchmarking, the way the kaapi runtime
+ creates threads ...), different binaries have to be built for the different
+ configuration we want to test
+
+ . this is what the build system is for, and why you encounter so much #defines
+ as you walk along this code
+
+. how to build a binary
+ . ./do_make.sh will build all the unit binaries
+
+ . the system allows to build 2 kinds of binaries
+  . xxx-xxx-check: check an implementation against the ref, usually the stl
+  . xxx-xxx-bench: run an implementation an outputs its times
+
+ . the build directory contains a top Makefile that
+ includes sub makefiles according to the binary you
+ want to build
+
+ . the system is driven by 3 variables
+  . LIB={stl,kastl,pastl,tbb}
+  . ALGO={for_each,min_element...}
+  . DO={bench,check}
+ . ex: make LIB=kastl ALGO=for_each DO=bench
+  . builds a binary to benchmark kastl::for_each
+ . the output directory is bin/
+
+. how to run a binary
+ . run/do_main.sh is the script to use
+ . can take the bin (compiled as above) directory in argument
+ . it contains variables the user has to modify to match needs
+  . LD_LIBRARY_PATH must points to kaapi, tbb paths
+  . SIZE<N>, where N from 0 to 8, the sequence input size
+  . CPUSET<N>, where N from 0 to 8, the cpu set list
+  . ALGOS the algo list. for instance: 'min_element for_each'
+  if empty, all the algorithms are used.
+  . LIBS the algo list. for instance: 'kastl tbb stl'
+  if empty, all the libs are used.
+  . DOS the action list. for instance: 'check bench'
+  if empty, all the actions are used.
+ . ./do_main.sh runs a combination of the above params
+ and output in ../session/this/ where this a symlink on
+ the last run. each file in the directory is named after
+ the combination, and has the following form:
+  . <algo>-<lib>-<do>-<size>-<cpusetid>

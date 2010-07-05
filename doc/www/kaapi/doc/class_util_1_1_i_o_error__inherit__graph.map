@@ -1,0 +1,7 @@
+<map id="G" name="G">
+<area shape="rect" id="node7" href="$class_util_1_1_bad_u_r_l.html" title="Util::BadURL" alt="" coords="5,237,115,267"/>
+<area shape="rect" id="node9" href="$class_util_1_1_com_failure.html" title="Util::ComFailure" alt="" coords="139,237,275,267"/>
+<area shape="rect" id="node11" href="$class_util_1_1_end_of_file.html" title="Util::EndOfFile" alt="" coords="299,237,421,267"/>
+<area shape="rect" id="node2" href="$class_util_1_1_runtime_error.html" title="Util::RuntimeError" alt="" coords="132,83,281,112"/>
+<area shape="rect" id="node4" href="$class_util_1_1_exception.html" title="Base class for the KAAPI&#39;s exception hierarchy Base class for hierarchy of error..." alt="" coords="145,5,268,35"/>
+</map>

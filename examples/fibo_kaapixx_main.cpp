@@ -94,10 +94,14 @@ struct doit {
                     << " (computed in " << delay << " s)" << std::endl;
       
     long* res_value = ka::Alloca<long>(1);
+    *res_value = rand();
     ka::pointer<long> res = res_value;
+    long* res2_value = ka::Alloca<long>(1);
+    *res2_value = rand();
+    ka::pointer<long> res2 = res2_value;
     for (cutoff=2; cutoff<3; ++cutoff)
     {
-      ka::Spawn<TaskFibo>()( res, n );
+      ka::Spawn<TaskFibo>()( res2, n );
       /* */
       ka::Sync();
       start_time= ka::WallTimer::gettime();

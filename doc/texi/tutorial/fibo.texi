@@ -1,0 +1,236 @@
+@node fibonacci
+@section Fibonacci - multiple Fork and Shared
+
+This tutorial will help you to understand how to use sahed memory.
+
+@table @strong
+@item Algorithm
+
+The Fibonacci series is defined as:
+@itemize
+@item F(0) = 0
+@item F(1) = 1
+@item F(n) = F(n - 1) + F(n - 2) for all n > 2
+@end itemize
+
+
+There are different algorithms to resolve Fibonacci numbers, some having a linear time complexity O(n).
+The algorithm we present here is a recursive method.
+
+@strong{NOTE}: It is a very bad implementation as it has an exponential complexity, O(2n), (as opposed to the linear time complexity of other algorithms). However, this approach is easy to understand and to paralleled.
+
+@item Sequential implementation
+
+
+First, let's have a glance at the regular naive recursive sequential program:
+
+@example
+#include <iostream>
+
+int fibonacci(int n)
+@{
+    if (n<2)
+        return n;
+    else
+    return fibonacci(n-1)+fibonacci(n-2);
+@}
+
+int main(int argc, char** argv)
+@{
+    int n = atoi(argv[1]);
+    int res =  fibonacci( n );
+    std::cout << "result= " << res << std::endl;
+    return 0 ;
+@}
+@end example
+
+We will follow the steps described in first tutorial :
+
+@enumerate
+@item identify the tasks
+@item identify the dependencies
+@end enumerate
+
+
+@item Where are the tasks
+
+
+A task is a data transformation. It is easy to see that the Fibonacci function itself is a task, taking a number as input, and returning a number as output.
+
+@table @strong
+@item Task
+fibonacci
+@item Input
+@code{int} n (read)
+@item Output
+@code{int} res (write) = fibonacci(n)
+@end table
+
+But with a little more experience, you will see that the @code{operator+} combining the result of the two function call is also a task. So we write
+
+@table @strong
+@item Task
+add
+@item Input
+@code{int} i (read), @code{int} j (read)
+@item Output
+@code{int} res (write) = i + j 
+@end table
+
+
+@item Where are the dependencies
+
+
+You cannot add fibonacci(n-1) and fibonacci(n-2) before the function call ends : the input of task add are written by tasks fibonacci(n-1) and fibonacci(n-2) : they shared data !
+We describe this in KAAPI by declaring the variable in shared memory, and then describing the access rights used to access the data.
+
+@item Preparing the code
+
+
+To make the usage of KAAPI easier, I will rewrite the code in this way :
+
+@example
+#include <iostream>
+
+int fibonacci(int n)
+@{
+    int res; // output variable
+    if (n<2)
+    @{
+        res = n;
+    @}
+    else
+    @{
+	int arg1 = n-1; // input variable
+	int tmp1 = fibonacci(arg1);
+	int arg2 = n-2; // input variable
+	int tmp2 = fibonacci(arg2);
+	res = tmp1 + tmp2; 
+    @}
+    return res;
+@}
+
+int main(int argc, char** argv)
+@{
+    int n = atoi(argv[1]);
+    int res =  fibonacci( n );
+    std::cout << "result= " << res << std::endl;
+    return 0 ;
+@}
+@end example
+
+@item Using Athapascan
+
+
+The implementation of the add task is a good example of KAAPI task : it is simple, but uses two different of shared variable. The sequential function is
+
+@example
+int add (int i, int j)
+@{
+  int res;
+  res = i + j;
+  return res;
+@}
+@end example
+
+As a function object with no return value, it could be
+
+@example
+struct add
+@{
+  void operator()( int i /* read*/,
+    int j/* read*/, int& res/*write*/)
+    // use a reference instead of return value
+  @{
+    res = i + j ;
+  @}
+@};
+@end example
+
+You note that i and j are read, res is only written, so I will replace the type by the equivalent shared type with the correct access right:
+
+@table @emph
+@item @code{int} [read]
+@code{a1::Shared_r<int>}
+@item @code{int} [write]
+@code{a1::Shared_w<int>}
+@end table
+
+@example
+struct add
+@{
+  void operator()( a1::Shared_r<int> i,
+    a1::Shared_r<int> j,
+    a1::Shared_w<int> res )
+    // replace with shared variable
+  @{
+    res.write( i.read() + j.read() );
+  @}
+@};
+@end example
+
+@strong{NOTE}: You cannot directly access the content of a shared, you must use the appropriate method. Of course, you cannot @code{read()} the content of a @code{shared_w} ...
+
+Let's write the code for the fibonacci task. As usual, we will write it in two steps. First use the function object design :
+
+@example
+struct fibonacci
+@{
+  void operator()( int n /*read*/, int& res /*write*/ )
+  @{
+    if( n < 2 )
+    @{
+      res = n ; /* write operation here */
+    @}
+    else
+    @{
+      int res1;
+      fibonacci()(n-1,res1); // fibo task call
+      int res2;
+      fibonacci()(n-2,res2); // fibo task call
+      add()( res1, res2, res ); // add task call
+    @}
+  @}
+@};
+@end example
+
+Then use the shared memory and task spawning : 
+
+@table @emph
+@item @code{int} [write]
+@code{a1::Shared_w<int>}
+@item @code{add}()(...)
+@code{a1::Fork<add>()}
+@item @code{fibonacci}()(...)
+@code{a1::Fork<fibonacci>()}
+@end table
+
+@strong{NOTE}: As explained in previous tutorial, it is useless to put a read-only variable in shared memory if there is no other dependencies on this variable.
+ 
+@example
+struct fibonacci
+@{
+  void operator()( int n , a1::Shared_w<int> res )
+  @{
+    if( n < 2 )
+    @{
+      res.write(n) ; // replace the affectation by a write call
+    @}
+    else
+    @{
+      a1::Shared<int> res1;
+      a1::Fork<fibonacci>()(n-1,res1); // fibo task call
+      a1::Shared<int> res2;
+      a1::Fork<fibonacci>()(n-2,res2); // fibo task call
+      a1::Fork<add>()( res1, res2, res ); // add task call
+    @}
+  @}
+@};
+@end example
+
+Here you are, both tasks have been written, you just have to include the standard main of an Athapascan program to get the following result :
+
+@verbatiminclude examples/basic/fibo_apiatha.cpp
+
+
+@end table

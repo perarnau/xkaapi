@@ -47,9 +47,8 @@
 
 /** 
 */
-int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
+int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
 {
-  kaapi_thread_context_t*  thread;
   int count =0;
   int stealok = 0;
   int replycount = 0;
@@ -66,7 +65,38 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
 #if 1 /* always true until pure cooperative method is re-implemented */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) == 1+_kaapi_get_current_processor()->kid );
 #endif
+
+#if defined(KAAPI_USE_READYLIST)
+for (int i=0; i<1; ++i)
+  if (1)
+  {
+    if (!KAAPI_FIFO_EMPTY(&kproc->lready))
+    {
+      kaapi_thread_context_t* thread = 0;
+      thread = kaapi_sched_stealready( kproc, kproc_thiefid );
+      if (thread != 0)
+      {
+        kaapi_request_t* request = 0;
+        /* find the first request in the list */
+        for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+        {
+          if (kaapi_request_ok( &kproc->hlrequests.requests[i] )) 
+          {
+            request = &kproc->hlrequests.requests[i];
+            break;
+          }
+        }
+        kaapi_assert(request !=0);
+        _kaapi_request_reply( request, thread, 1 ); /* success of steal of the thread as a whole ... */
+        --count;
+        if (count ==0) return 0;
+      }
+    }
+  }
+#endif
   
+#if 1
+for (int i=0; i<1; ++i)
   if (1)
   { /* WARNING do not try to steal inside suspended stack */
     kaapi_wsqueuectxt_cell_t* cell;
@@ -87,10 +117,16 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
       cell = cell->prev;
     }
   }
-  
+#endif
+
+#if 1
+for (int i=0; i<1; ++i)
+{
   /* steal current thread */
-  thread = kproc->thread;
-  if ((count >0) && (thread !=0) && (kproc->issteal ==0))
+  kaapi_thread_context_t*  thread = kproc->thread;
+  if ( (count >0) && (thread !=0) 
+    && (kproc->issteal ==0) /* last: if a thread is stealing, its current thread will be used to receive work... */ 
+  )
   {
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)||(KAAPI_USE_STEALFRAME_METHOD==KAAPI_STEALTHE_METHOD)
     /* if concurrent WS, then steal directly the current stack of the victim processor
@@ -110,6 +146,9 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc)
       if (kaapi_isterminated()) break;
     }
 #endif
+
   }  
+}
+#endif // #if 0
   return 0;
 }

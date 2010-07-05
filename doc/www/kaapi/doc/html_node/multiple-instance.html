@@ -1,0 +1,169 @@
+<html lang="en">
+<head>
+<title>multiple instance - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="run.html#run" title="run">
+<link rel="prev" href="single-instance.html#single-instance" title="single instance">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="multiple-instance"></a>
+<p>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="single-instance.html#single-instance">single instance</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="run.html#run">run</a>
+<hr>
+</div>
+
+<h4 class="subsection">3.2.2 Running multiple instances of the program on several machines</h4>
+
+<p>To run the same program on several machines, the user may use the <samp><span class="command">karun</span></samp>
+command:
+
+<pre class="example">     $ $HOME/kaapi/bin/karun --np &lt;#processes&gt; -f &lt;hostnames&gt; ./fibo_apiatha 30 15
+</pre>
+   <p>Note that if <samp><span class="command">kaapish</span></samp> is not in you <samp><span class="env">$PATH</span></samp> when executing an <samp><span class="command">ssh</span></samp> on remote
+machines (check with <code>ssh &lt;machine&gt; which kaapish</code>), you will need to specify
+it to <samp><span class="command">karun</span></samp>:
+<pre class="example">     $ $HOME/kaapi/bin/karun --wrapper-binary kaapish=/path/on/remote/node/kaapish \
+         --np &lt;#processes&gt; -f &lt;hostnames&gt; ./fibo_apiatha 30 15
+</pre>
+   <p>more detail about this command can be found in the man page karun(1)
+
+   <p><strong>NOTE</strong>: if you want to run your programm on a single machine but still want to
+use several threads, you can use:
+<pre class="example">     $ $HOME/kaapi/bin/kaapish ./myprog --community -thread.poolsize n my args
+                                     # n is the number of threads
+</pre>
+   <!--  -->
+   </body></html>
+

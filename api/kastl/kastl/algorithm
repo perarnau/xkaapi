@@ -42,10 +42,42 @@
  ** terms.
  ** 
  */
-#ifndef _KASTL_ALGORITHM_
-#define _KASTL_ALGORITHM_
 
-#include "kastl/kastl_foreach.h"
-#include "kastl/kastl_transform.h"
+#ifndef KASTL_ALGORITHM_INCLUDED
+# define KASTL_ALGORITHM_INCLUDED
 
+#include "kastl/for_each.h"
+#include "kastl/find.h"
+#include "kastl/find_if.h"
+#include "kastl/find_first_of.h"
+#include "kastl/min_element.h"
+#include "kastl/max_element.h"
+#include "kastl/count.h"
+#include "kastl/count_if.h"
+#include "kastl/copy.h"
+#include "kastl/transform.h"
+#include "kastl/fill.h"
+#include "kastl/generate.h"
+#include "kastl/replace.h"
+#include "kastl/replace_if.h"
+#include "kastl/equal.h"
+#include "kastl/mismatch.h"
+#include "kastl/search.h"
+#include "kastl/adjacent_find.h"
+
+#if 0
+#include "swap_ranges.h"
+#include "partial_sum.h"
+#include "merge.h"
+#include "sort.h"
+#include "reverse.h"
+#include "partition.h"
+#include "set_union.h"
+#include "set_intersection.h"
+#include "set_difference.h"
+#include "replace_copy.h"
+#include "replace_copy_if.h"
+#include "search_n.h"
 #endif
+
+#endif // ! KASTL_ALGORITHM_INCLUDED

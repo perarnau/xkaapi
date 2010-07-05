@@ -54,6 +54,7 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   void*           data_param;
   kaapi_format_t* fmt_param;
   kaapi_access_t* access_param;
+  kaapi_task_t* task;
   
 //  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, stack);
 //  fflush(stdout);
@@ -62,10 +63,11 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   kaapi_readmem_barrier();
 
   /* the task has been stolen: the extra body contains the original task body */
-  fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(thread[-1].pc) );
+  task = thread[-1].pc;
+  fmt = kaapi_format_resolvebybody( kaapi_task_getextrabody(task) );
   kaapi_assert_debug( fmt !=0 );
-  kaapi_assert_debug( thread[-1].pc->body ==  kaapi_exec_body);
-  kaapi_assert_debug( thread[-1].pc->sp == taskarg );
+  kaapi_assert_debug( task->body ==  kaapi_exec_body);
+  kaapi_assert_debug( task->sp == taskarg );
 
   countparam = fmt->count_params;
 
@@ -77,22 +79,11 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
         - if W mode -> copy + free of the data
         - if CW mode -> accumulation (data is the left side of the accumulation, version the righ side)
   */
-#if defined(KAAPI_DEBUG_LOURD)
-  char buffer[1024];
-  size_t sz_write = 0;
-  sz_write += snprintf( buffer, 1024, "[taskaftersteal] task: @=%p, stack: @=%p", thread[-1].pc, _kaapi_self_thread());
-#endif
   for (i=0; i<countparam; ++i)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
     if (m == KAAPI_ACCESS_MODE_V) 
-    {
-#if defined(KAAPI_DEBUG_LOURD)
-      data_param = (void*)(fmt->off_params[i] + (char*)taskarg);
-      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", value=%li", *(long*)data_param );
-#endif
       continue;
-    }
 
     if (KAAPI_ACCESS_IS_ONLYWRITE(m))
     {
@@ -100,32 +91,23 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
       fmt_param = fmt->fmt_params[i];
       access_param = (kaapi_access_t*)(data_param);
 
-      /* Always keep copy semantic ? At the charge of the user to deal with lazy copy ? */
-      kaapi_assert_debug( access_param->data != access_param->version );
+if ((unsigned long)access_param->data < 4042752UL) {
+  printf("Invalid data: %p\n", access_param->data );
+  exit(1);
+}
 
-#if defined(KAAPI_DEBUG_LOURD)
-      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li / version=%li", *(long*)access_param->data, *(long*)access_param->version );
-#endif
-
-      /* a assign dstor function will avoid 2 calls to function, especially for basic types which do not
-         required to be dstor.
-      */
-      (*fmt_param->assign)( access_param->data, access_param->version );
-      (*fmt_param->dstor) ( access_param->version );
-      free(access_param->version);
+      /* if m == W and data == version it means that data used by W was not copied due to non WAR dependency */
+      if (access_param->data != access_param->version )
+      {
+  printf("AfterSteal with copy, sp:%p\n", (void*)taskarg);
+        /* add an assign + dstor function will avoid 2 calls to function, especially for basic types which do not
+           required to be dstor.
+        */
+        (*fmt_param->assign)( access_param->data, access_param->version );
+        if (fmt_param->dstor !=0) (*fmt_param->dstor) ( access_param->version );
+        free(access_param->version);
+      }
       access_param->version = 0;
     }
-#if defined(KAAPI_DEBUG_LOURD)
-    else { /* debug only */
-      data_param = (void*)(fmt->off_params[i] + (char*)taskarg);
-      fmt_param = fmt->fmt_params[i];
-      access_param = (kaapi_access_t*)(data_param);
-      sz_write += snprintf( buffer+sz_write, 1024-sz_write, ", data=%li", *(long*)access_param->data );
-    }
-#endif
   }
-#if defined(KAAPI_DEBUG_LOURD)
-  fprintf(stdout, "%s\n", buffer );
-  fflush(stdout);
-#endif
 }

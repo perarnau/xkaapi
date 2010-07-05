@@ -1,0 +1,212 @@
+<html lang="en">
+<head>
+<title>serialize parameters - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="shared-memory.html#shared-memory" title="shared memory">
+<link rel="next" href="dependencies-description.html#dependencies-description" title="dependencies description">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="serialize-parameters"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="dependencies-description.html#dependencies-description">dependencies description</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="shared-memory.html#shared-memory">shared memory</a>
+<hr>
+</div>
+
+<h5 class="subsubsection">4.1.3.1 Serialize parameters</h5>
+
+<p>Using a distributed architecture means handling data located in shared memory (mapping, migration, consistency). 
+This implies a serialization step for the arguments of tasks. 
+This serialization has to be explicitly done by the programmer to suit the specific needs of the program.
+
+   <p><code>Athapascan</code> already handles some types:
+     <ul>
+<li>the following <code>C++</code> basic types
+<pre class="verbatim">     char
+     short
+     int
+     long
+     float
+     double
+</pre>
+<li>some types from the STL
+<pre class="verbatim">     vector&lt;...>
+     string
+     pair&lt;...,...>
+</pre>
+</ul>
+
+   <p>Using this communicable types, you can define other communicable types. 
+To do this, a type <var>T</var> must have
+     <ul>
+<li>an empty constructor: <var>T</var><code>()</code> ;
+<li>a copy constructor: <var>T</var><code>(const &amp; </code><var>T</var><code>)</code> ;
+<li>a serializing operator: <code>a1::OStream&amp; operator&lt;&lt;( a1::OStream&amp; </code><var>output_stream</var><code>, const </code><var>T</var><code>&amp; </code><var>x</var><code> )</code>
+which puts into the <var>output_stream</var> the information needed to reconstruct an image of <var>x</var> using the <code>operator &gt;&gt;</code> ;
+<li>a deserializing operator: <code>a1::IStream&amp; operator&gt;&gt;( a1::IStream&amp; </code><var>input_stream</var><code>, </code><var>T</var><code>&amp; </code><var>x</var><code>)</code>
+which takes from the <var>input_stream</var> the information needed to construct the object <var>x</var>; it initializes <var>x</var> with the value related to the information from  <var>input_stream</var>. 
+</ul>
+
+   <p>Following code shows a simple way to serialize a class:
+
+<pre class="example">     struct Complex
+     {
+       double x;
+       double y;
+     
+       //empty constructor
+       Complex()
+         :x(0),y(0) {}
+     
+       //copy constructor
+       Complex( const Complex&amp; <var>z</var>)
+         :x(<var>z</var>.x),y(<var>z</var>.y) {}
+     
+     };
+     
+     //packing operator
+     a1::OStream&amp; operator&lt;&lt; (a1::OStream&amp; <var>out</var>, const Complex&amp; <var>z</var>)
+     {
+       return <var>out </var>&lt;&lt; <var>z</var>.x &lt;&lt; <var>z</var>.y;
+     }
+     
+     //unpacking operator
+     a1::IStream&amp; operator&gt;&gt; (a1::IStream&amp; <var>in</var>, Complex&amp; <var>z</var>)
+     {
+       return <var>in </var>&gt;&gt; <var>z</var>.x&gt;&gt; <var>z</var>.y;
+     }
+</pre>
+   <!--  -->
+   </body></html>
+

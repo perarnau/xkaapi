@@ -1,0 +1,5 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_util_1_1_i_o_error.html" title="Util::IOError" alt="" coords="27,160,133,189"/>
+<area shape="rect" id="node4" href="$class_util_1_1_runtime_error.html" title="Util::RuntimeError" alt="" coords="5,83,155,112"/>
+<area shape="rect" id="node6" href="$class_util_1_1_exception.html" title="Base class for the KAAPI&#39;s exception hierarchy Base class for hierarchy of error..." alt="" coords="19,5,141,35"/>
+</map>

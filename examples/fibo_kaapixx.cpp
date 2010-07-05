@@ -117,8 +117,8 @@ struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */
       return;
     }
     else {
-      ka::auto_pointer<long> res1 = ka::Alloca<long>();
-      ka::auto_pointer<long> res2 = ka::Alloca<long>();
+      ka::pointer<long> res1 = ka::Alloca<long>();
+      ka::pointer<long> res2 = ka::Alloca<long>();
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected

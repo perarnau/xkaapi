@@ -1,0 +1,20 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$class_core_1_1_processor.html" title="KAAPI ProcessorProcessor manages scheduling of a set of threads with at most one..." alt="" coords="237,5,371,35"/>
+<area shape="rect" id="node5" href="$class_core_1_1_thread.html" title="Flow of controlA Core::Thread is a flow of control which consist of its runtime environnement..." alt="" coords="247,59,361,88"/>
+<area shape="rect" id="node17" href="$class_core_1_1_work_set.html" title="WorkSet of worksetThe workset is a set of processors with a steal interface to steal..." alt="" coords="244,112,364,141"/>
+<area shape="rect" id="node19" href="$class_net_1_1_group.html" title="Net::Group" alt="" coords="255,165,353,195"/>
+<area shape="rect" id="node23" href="$class_util_1_1_reify_notify_signal.html" title="ReifyNotifySignalThis class allows to reify the invocations to InterfaceSignal::signal..." alt="" coords="216,299,392,328"/>
+<area shape="rect" id="node7" href="$class_r_f_o_1_1_thread.html" title="Flow of control with data flow graph representationThe RFO::Thread represents computation..." alt="" coords="505,59,617,88"/>
+<area shape="rect" id="node9" href="$class_d_f_g_1_1_thread.html" title="Flow of control with data flow graph representationThe DFG threads inherits from..." alt="" coords="760,59,875,88"/>
+<area shape="rect" id="node11" href="$class_sched_1_1_thread.html" title="Flow of control with data flow graph representation." alt="" coords="953,5,1079,35"/>
+<area shape="rect" id="node13" href="$class_w_s_1_1_loc_thread.html" title="KAAPI leader thread definition." alt="" coords="952,59,1080,88"/>
+<area shape="rect" id="node15" href="$class_w_s_1_1_slv_thread.html" title="KAAPI leader thread definition." alt="" coords="955,112,1077,141"/>
+<area shape="rect" id="node21" href="$class_w_s_1_1_community.html" title="Community of distribued PoolsThe community is a dynamic group of process. The Community..." alt="" coords="495,139,628,168"/>
+<area shape="rect" id="node25" href="$class_f_t_1_1_checkpoint_server.html" title="FT::CheckpointServer" alt="" coords="475,192,648,221"/>
+<area shape="rect" id="node27" href="$class_f_t_1_1_failure_detector_coordinator.html" title="FailureDetectorCooridnator objectThis object represents the failure detector coordinator..." alt="" coords="441,245,681,275"/>
+<area shape="rect" id="node29" href="$class_n_s_1_1_server.html" title="NS::Server" alt="" coords="513,299,609,328"/>
+<area shape="rect" id="node31" href="$class_stat_1_1_statistics_service.html" title="Distributed collection of counters to collect in order to produce statisticsServer..." alt="" coords="475,352,648,381"/>
+<area shape="rect" id="node33" href="$class_util_1_1_event_buffer_manager.html" title="A Generic Buffer Manager : EventBufferManager EventBufferManager is an implementation..." alt="" coords="460,405,663,435"/>
+<area shape="rect" id="node35" href="$class_util_1_1_kill_service.html" title="Default implementation for Signal serviceThis class implements default behavior for..." alt="" coords="497,459,625,488"/>
+<area shape="rect" id="node37" href="$class_ctrl_1_1_kill_service_client.html" title="Client to the KillService, replace the default Util::killservice instance." alt="" coords="732,459,903,488"/>
+</map>

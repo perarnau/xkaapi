@@ -42,12 +42,13 @@
  ** terms.
  ** 
  */
-#ifndef _KASTL_NUMERIC_
-#define _KASTL_NUMERIC_
 
-//#include "kastl/kastl_accumulate.h"
-#include "kastl/kastl_accumulate_while.h"
-//#include "kastl/kastl_inner_product.h"
-//#include "kastl/kastl_partial_sum.h"
+#ifndef KASTL_NUMERIC_INCLUDED
+# define KASTL_NUMERIC_INCLUDED
 
-#endif
+#include "kastl/accumulate.h"
+#include "kastl/adjacent_difference.h"
+#include "kastl/inner_product.h"
+#include "kastl/partial_sum.h"
+
+#endif // ! KASTL_NUMERIC_INCLUDED

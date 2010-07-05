@@ -49,11 +49,18 @@
 */
 int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
 {
-  kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
-  stack->requests   = kproc->hlrequests.requests;
-  stack->hasrequest = 0;
+  if (thread !=0)
+  {
+    kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
+    stack->requests   = kproc->hlrequests.requests;
+    stack->hasrequest = 0;
+    thread->proc      = kproc;
+  }
   kproc->thread     = thread;
-  thread->proc      = kproc;
+
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  kaapi_current_thread_key = (kaapi_thread_t**)thread;
+#endif
   return 0;
 
 #if 0  /* TODO: next version when also saving the stack context */

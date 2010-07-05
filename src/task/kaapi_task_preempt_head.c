@@ -53,7 +53,7 @@ static inline void steal_sync(kaapi_stealcontext_t* stc)
 
 kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* stc )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
 
   if (ta->head == NULL)
     steal_sync(stc);

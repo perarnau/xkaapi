@@ -101,8 +101,6 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
 
 
-
-
 /** cpuset related routines
  -- grammar
     cpu_set   : cpu_expr ( ',' cpu_expr ) *

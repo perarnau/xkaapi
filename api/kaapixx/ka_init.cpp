@@ -235,7 +235,7 @@ int Init::initialize() throw()
     logfile() << "[Init::initialize] catch '" << e.what() << "'" << std::endl;
     return -1;
   } catch ( ... ) {
-    logfile() << "[Init::initialize] catch unkown exception" << std::endl;
+    logfile() << "[Init::initialize] catch unknown exception" << std::endl;
     return -1;
   }
    

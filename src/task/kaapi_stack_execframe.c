@@ -147,7 +147,7 @@ begin_loop:
       ;
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
-    if (body == kaapi_suspend_body) 
+    if (body == kaapi_suspend_body)
       goto error_swap_body;
     pc->body = kaapi_exec_body;
 #else
@@ -157,7 +157,7 @@ begin_loop:
     /* task execution */
     kaapi_assert_debug(pc == thread->sfp[-1].pc);
     body( pc->sp, (kaapi_thread_t*)thread->sfp );
-
+    
 #if 0//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
 #endif

@@ -1,0 +1,172 @@
+<html lang="en">
+<head>
+<title>setting environment - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="compile.html#compile" title="compile">
+<link rel="next" href="compile-with-pkg_002dconfig.html#compile-with-pkg_002dconfig" title="compile with pkg-config">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="setting-environment"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="compile-with-pkg_002dconfig.html#compile-with-pkg_002dconfig">compile with pkg-config</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="compile.html#compile">compile</a>
+<hr>
+</div>
+
+<h4 class="subsection">3.1.1 Setting up an environment to compile Athapascan programs</h4>
+
+<p>If you use environment variables or if KAAPI is not installed in system
+directories (usually if you did not use the &ldquo;&ndash;prefix=/usr&ldquo; with the configure
+script), you need to setup your environment.
+
+   <p>You can either start a new shell
+<pre class="example">     $ $HOME/kaapi/bin/kaapish --mode=devel --flags
+     $ # replace $HOME/kaapi by the prefix used with the configure script
+</pre>
+   <p>or you can add environment variables in the current shell
+<pre class="example">     $ eval `$HOME/kaapi/bin/kaapish --shell --mode=devel --flags`
+     $ # replace $HOME/kaapi by the prefix used with the configure script
+</pre>
+   <p>In the latter case (adding to the current environment), you can add
+the line in your shell rc file (<samp><span class="file">.bashrc</span></samp>, <samp><span class="file">.tcshrc</span></samp>, ...) to avoid to
+type it each time.
+
+   <p>If <samp><span class="command">kaapish</span></samp> does not correctly detect your kind of shell, you can specify it
+<pre class="example">     $ eval `$HOME/kaapi/bin/kaapish --shell=sh --mode=devel --flags`
+     $ # replace $HOME/kaapi by the prefix used with the configure script
+</pre>
+   <p>More detail about the <samp><span class="command">kaapish</span></samp> command can be found in its man page kaapish(1)
+
+   </body></html>
+

@@ -1,0 +1,6 @@
+<map id="G" name="G">
+<area shape="rect" id="node9" href="$class_ctrl_1_1_kill_service_client.html" title="Client to the KillService, replace the default Util::killservice instance." alt="" coords="97,237,268,267"/>
+<area shape="rect" id="node2" href="$class_util_1_1_interface_signal.html" title="InterfaceSignal for the local signal." alt="" coords="5,83,168,112"/>
+<area shape="rect" id="node4" href="$class_util_1_1_reify_notify_signal.html" title="ReifyNotifySignalThis class allows to reify the invocations to InterfaceSignal::signal..." alt="" coords="192,83,368,112"/>
+<area shape="rect" id="node6" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="199,5,361,35"/>
+</map>

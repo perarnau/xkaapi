@@ -1,0 +1,6 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_util_1_1_counters.html" title="Counters generate by each gid and accumulated on the collector processSuch object..." alt="" coords="5,88,123,117"/>
+<area shape="rect" id="node4" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="147,88,259,117"/>
+<area shape="rect" id="node7" href="$class_util_1_1_time_statistic.html" title="Extend basic statistic to compute dynamic valuesSuch object extend the basic statistic..." alt="" coords="379,88,525,117"/>
+<area shape="rect" id="node9" href="$class_util_1_1_statistic.html" title="Compute some statistics about series of valuesThis class acts like as a stream on..." alt="" coords="397,5,507,35"/>
+</map>

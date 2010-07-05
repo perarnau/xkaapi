@@ -1,0 +1,46 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_r_f_o_1_1_closure.html" title="A closure object is a call to a function. It is also called task.Closure of type..." alt="" coords="1396,356,1511,385"/>
+<area shape="rect" id="node137" href="$struct_sched_1_1_wait_task.html" title="Sched::WaitTask" alt="" coords="2379,304,2515,333"/>
+<area shape="rect" id="node140" href="$class_d_f_g_1_1_access.html" title="Access to global data." alt="" coords="1871,224,1980,253"/>
+<area shape="rect" id="node4" href="$class_r_f_o_1_1_base_closure.html" title="A closure object is a call to a function. It is also called task.The closure is created..." alt="" coords="1013,395,1163,424"/>
+<area shape="rect" id="node6" href="$class_core_1_1_condition.html" title="Condition to signal end of steal operationThis class implements one method for synchronisation..." alt="" coords="600,1065,731,1095"/>
+<area shape="rect" id="node12" href="$class_core_1_1_thread.html" title="Flow of controlA Core::Thread is a flow of control which consist of its runtime environnement..." alt="" coords="1031,1000,1145,1029"/>
+<area shape="rect" id="node8" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="288,960,389,989"/>
+<area shape="rect" id="node10" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="5,895,165,924"/>
+<area shape="rect" id="node14" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="612,893,719,923"/>
+<area shape="rect" id="node28" href="$class_core_1_1_processor.html" title="KAAPI ProcessorProcessor manages scheduling of a set of threads with at most one..." alt="" coords="1387,1167,1520,1196"/>
+<area shape="rect" id="node18" href="$class_core_1_1_stealable_with_instance_reification.html" title="Interface for object that accepts steal request with instance reificationInstances..." alt="" coords="517,1120,813,1149"/>
+<area shape="rect" id="node20" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="584,1181,747,1211"/>
+<area shape="rect" id="node22" href="$class_core_1_1_printable.html" title="Core::Printable" alt="" coords="601,1012,729,1041"/>
+<area shape="rect" id="node144" href="$class_d_f_g_1_1_global_data_attribut.html" title="Type of attribut for a versionThis type allows to code attribut for a global data..." alt="" coords="992,240,1184,269"/>
+<area shape="rect" id="node34" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="279,2167,399,2196"/>
+<area shape="rect" id="node77" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="616,1957,715,1987"/>
+<area shape="rect" id="node115" href="$class_net_1_1_i_o_instruction_stream.html" title="Net::IOInstructionStream" alt="" coords="2348,2115,2545,2144"/>
+<area shape="rect" id="node36" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="29,1243,141,1272"/>
+<area shape="rect" id="node69" href="$class_net_1_1_node_info.html" title="Net::NodeInfo" alt="" coords="277,775,400,804"/>
+<area shape="rect" id="node71" href="$class_net_1_1_cluster.html" title="Net::Cluster" alt="" coords="612,1479,719,1508"/>
+<area shape="rect" id="node108" href="$class_net_1_1_channel.html" title="Net::Channel" alt="" coords="2685,1925,2800,1955"/>
+<area shape="rect" id="node39" href="$class_util_1_1_byte_allocator.html" title="ByteAllocator of fixed size objects with cache for fast allocation (thread unsafe)A..." alt="" coords="1015,1345,1161,1375"/>
+<area shape="rect" id="node89" href="$class_net_1_1_device.html" title="Net::Device" alt="" coords="1872,1657,1979,1687"/>
+<area shape="rect" id="node42" href="$class_core_1_1_thread_format.html" title="Format for a Thread." alt="" coords="583,513,748,543"/>
+<area shape="rect" id="node44" href="$class_util_1_1_format.html" title="Definition of the format of a data typeA Format is the definition of the format for..." alt="" coords="285,136,392,165"/>
+<area shape="rect" id="node64" href="$class_r_f_o_1_1_closure_format.html" title="Format for a closureDescribe for each C++ type of closure the format of all associated..." alt="" coords="583,176,748,205"/>
+<area shape="rect" id="node142" href="$class_d_f_g_1_1_global_data.html" title="A GlobalData is a reference to a data into the distributed memory." alt="" coords="1383,213,1524,243"/>
+<area shape="rect" id="node75" href="$class_net_1_1_network.html" title="Net::Network" alt="" coords="1031,1709,1145,1739"/>
+<area shape="rect" id="node49" href="$class_r_f_o_1_1_closure_attribut.html" title="Type of attribut for a closureThis type allows to code attribut for a closure on..." alt="" coords="583,288,748,317"/>
+<area shape="rect" id="node51" href="$class_r_f_o_1_1_partition.html" title="RFO::Partition" alt="" coords="279,371,399,400"/>
+<area shape="rect" id="node56" href="$class_r_f_o_1_1_site.html" title="RFO::Site" alt="" coords="295,249,383,279"/>
+<area shape="rect" id="node62" href="$class_util_1_1_context_id.html" title="Util::ContextId" alt="" coords="604,407,727,436"/>
+<area shape="rect" id="node73" href="$class_net_1_1_network_object.html" title="Net::NetworkObject" alt="" coords="1373,1500,1533,1529"/>
+<area shape="rect" id="node80" href="$class_net_1_1_callback.html" title="Net::Callback" alt="" coords="607,1661,724,1691"/>
+<area shape="rect" id="node82" href="$class_net_1_1_upcall.html" title="Net::Upcall" alt="" coords="616,1768,715,1797"/>
+<area shape="rect" id="node111" href="$class_net_1_1_device_object.html" title="Net::DeviceObject" alt="" coords="2372,1804,2521,1833"/>
+<area shape="rect" id="node95" href="$class_util_1_1_stack_list.html" title="Util::StackList\&lt; CallStack \&gt;" alt="" coords="1348,1604,1559,1633"/>
+<area shape="rect" id="node97" href="$class_net_1_1_device_factory.html" title="Net::DeviceFactory" alt="" coords="1375,1657,1532,1687"/>
+<area shape="rect" id="node102" href="$class_util_1_1_r_w_lock.html" title="Read&#45;Write lockThis class implements interface for Posix Read&#45;Write lock. All errors..." alt="" coords="284,1423,393,1452"/>
+<area shape="rect" id="node106" href="$class_net_1_1_out_channel.html" title="Net::OutChannel" alt="" coords="2883,2060,3024,2089"/>
+<area shape="rect" id="node117" href="$class_util_1_1_queable.html" title="Util::Queable\&lt; IOInstructionStream \&gt;" alt="" coords="1783,2311,2068,2340"/>
+<area shape="rect" id="node120" href="$class_util_1_1_queable.html" title="Base class of object queueable into double linked list.To be en(de)queueable in a..." alt="" coords="1377,2337,1529,2367"/>
+<area shape="rect" id="node129" href="$class_util_1_1_queable.html" title="Util::Queable\&lt; OutChannel \&gt;" alt="" coords="2095,2353,2321,2383"/>
+<area shape="rect" id="node122" href="$struct_net_1_1_i_o_instruction.html" title="Net::IOInstruction" alt="" coords="1852,2097,1999,2127"/>
+</map>

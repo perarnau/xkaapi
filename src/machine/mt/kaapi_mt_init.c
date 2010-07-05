@@ -47,6 +47,8 @@
 #include <inttypes.h> 
 #include "kaapi_impl.h"
 
+
+
 /*
 */
 kaapi_uint32_t kaapi_count_kprocessors = 0;
@@ -62,7 +64,14 @@ pthread_key_t kaapi_current_processor_key;
 
 /*
 */
-pthread_key_t c;
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+__thread kaapi_thread_t** kaapi_current_thread_key;
+__thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
+#endif
+
+/*
+*/
+//pthread_key_t c;
 
 /* 
 */
@@ -81,11 +90,20 @@ void _kaapi_dummy(void* foo)
 
 /** 
 */
+#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
 kaapi_thread_t* kaapi_self_thread(void)
 {
   return (kaapi_thread_t*)_kaapi_self_thread()->sfp;
 }
-
+kaapi_threadgroup_t kaapi_self_threadgroup(void)
+{
+  return _kaapi_self_thread()->thgrp;
+}
+void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
+{
+  _kaapi_self_thread()->thgrp = thgrp;
+}
+#endif
 
 /**
 */
@@ -107,6 +125,11 @@ void __attribute__ ((constructor)) kaapi_init(void)
   
   /* initialize the kprocessor key */
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
+
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  kaapi_current_thread_key = 0;
+  kaapi_current_threadgroup_key = 0;
+#endif
     
   /* setup topology information */
   kaapi_setup_topology();
@@ -141,10 +164,8 @@ void __attribute__ ((constructor)) kaapi_init(void)
   /* dump output information */
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
-#else
-  printf("[KAAPI::INIT] use #physical cpu:%u\n", kaapi_default_param.cpucount);
-#endif
   fflush( stdout );
+#endif
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
 }
@@ -174,8 +195,6 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
         (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
-#else
-  printf("[KAAPI::TERM]\n");
 #endif
   fflush( stdout );
 
@@ -267,7 +286,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   }
 #endif
 
-    free(kaapi_all_kprocessors[i]);
+    kaapi_processor_free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
   free( kaapi_all_kprocessors );

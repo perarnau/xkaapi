@@ -250,18 +250,16 @@ void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill,
     if (thief !=0)
     {
       std::cout << "Master preempt Thief:" << thief << std::endl;
-      if (kaapi_preempt_thief ( 
+      kaapi_preempt_thief ( 
           sc_transform, 
           thief,                       /* thief to preempt */
           0,                           /* arg for the thief */
           Self_t::static_mainreducer,  /* my reducer */
           &work                        /* extra arg for the reducer */
-      )) 
-      {
-        std::cout << "Continue with the remainding work of the thief:" << thief << std::endl;
-        continue;
-      }
-      std::cout << "No work from thief:" << thief << std::endl;
+      ); 
+
+      std::cout << "Continue with the remainding work of the thief:" << thief << std::endl;
+      continue;
     }
     else break;
   } while (1);

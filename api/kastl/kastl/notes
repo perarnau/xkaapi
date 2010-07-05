@@ -1,0 +1,234 @@
+-- bugs
+. a bug in kastl/mismatch.h occurs 1 time on 10000+
+ -> probably a bug in the runtime
+
+
+-- limitation
+. when the result is an output iterator,
+such as in the copy case, maintain the
+result and use reduction... for now we
+only return result + last - first
+
+-- todo
+
+*****
+virer cradosseries du code -> faire un merge propre,
+se ramener a un etat propre.
+
+virer ktrs, faire l optim de la innerloop avaec cehck
+preemption en moins
+
+mesurer la innerloop: ne doit pas vairer
+*****
+
+. retirer le ktr quand pas besoin
+ -> surtout check si preemption dans
+ le cas de la innerloop. on gagne
+ beaucoup dans le cas d un transform
+ a operation fine
+
+. examples
+ . choisir les examples a detailler
+
+. documentation
+ . page web
+ . install guide
+
+. bench
+
+. initialization du result
+ . min_element, max_element
+ . should be: expand_init()
+
+. utilisation du master_sc, flag linked
+ pour eviter d allouer un ktr quand pas
+ besoin
+
+template<typename Result, typename Sequence>
+static void expand_init(Result& res, Sequence& seq)
+{
+_res = Result(seq.begin1());
+}
+
+
+. remove result when unneeded
+ -> inner_loop should not use result according to ReduceTag
+
+. perf: result._value costs! accumulate from 7ms to 6ms
+ -> ce n est pas result._value qui coute, mais la derefence.
+ en maintenant le resultat en local, on gagne en perf
+ -> on peut verifier ca grace a un result local
+
+. initialization du resultat
+ . perte de perf, le resultat devrait etre direct
+ pas de structure, donc initialzer, genre
+ init_result(sequence) -> ResultTag
+  . void_result_tag
+  . bool_result<false>
+  . iterator_result_tag
+   . constructed with the local sequence
+  . value_result_tag
+
+template<typename Result>
+touched_result< result >
+{
+bool _is_touched;
+};
+
+- result specs
+template result_traits<Result>::result_tag;
+
+template<typename>
+struct base_result
+{
+void init_result() {}
+};
+
+. avoir des fonctions par defaut, ce sont
+elles qui feront le 
+
+. une fois ca fait, tester avec accumulate
+1000000, on passe de 7 a 6ms
+
+. le splitter n a pas a etre une structure
+
+ . actuellement, dans thief_context, seq.begin1()
+ . si c est insuffisant, devrait etre base sur
+ un modele expand() ET une fonction utilisateur
+ pour choisir comment initialiser le result
+
+-- todos
+. test, bench
+ . auto plot
+
+. remove some code
+ . if in the innerloop
+ . should be templated with the TerminationTag
+
+ . test
+  . for_each
+  . find
+  . accumulate
+
+ . reducer could be common for known results
+
+. implement unique
+. implement partial_sum
+. implement merge
+. implement sorting
+. implement set operations
+
+. window extractor
+ . should slide as space becomes avail, not at the end of the loop
+ . sizes must be of the right type (ie. sign errors...)
+
+. faire un preempter, meme que reducer
+ . PreemptionTag = nopreempt_tag
+
+. faire un tuner maintenant que les settings sont dynamiques
+
+
+--
+. http://www.sgi.com/tech/stl/table_of_contents.html
+ . sequence model
+  . Algorithms
+   1. Non-mutating algorithms [1 iterator ok]
+         1. for_each
+         2. find
+         3. find_if
+         4. adjacent_find
+         5. find_first_of
+         6. count
+         7. count_if
+         8. mismatch
+         9. equal
+        10. search
+        11. search_n
+        12. find_end 
+   2. Mutating algorithms
+         1. copy [needs 2 iterators]
+         2. copy_n
+         3. copy_backward
+         4. Swap
+               1. swap
+               2. iter_swap
+               3. swap_ranges 
+         5. transform [needs 1/1, 2/1 model]
+         6. Replace [ok with 1 iterator]
+               1. replace
+               2. replace_if
+               3. replace_copy
+               4. replace_copy_if 
+         7. fill [needs 1 output]
+         8. fill_n
+         9. generate [needs 1 output]
+        10. generate_n
+        11. Remove
+               1. remove
+               2. remove_if
+               3. remove_copy
+               4. remove_copy_if 
+        12. unique
+        13. unique_copy
+        14. reverse
+        15. reverse_copy
+        16. rotate
+        17. rotate_copy
+        18. random_shuffle
+        19. random_sample
+        20. random_sample_n
+        21. partition
+        22. stable_partition 
+   3. Sorting
+         1. Sort
+               1. sort
+               2. stable_sort
+               3. partial_sort
+               4. partial_sort_copy
+               5. is_sorted 
+         2. nth_element
+         3. Binary search
+               1. lower_bound
+               2. upper_bound
+               3. equal_range
+               4. binary_search 
+         4. merge
+         5. inplace_merge
+         6. Set operations on sorted ranges
+               1. includes
+               2. set_union
+               3. set_intersection
+               4. set_difference
+               5. set_symmetric_difference 
+         7. Heap operations
+               1. push_heap
+               2. pop_heap
+               3. make_heap
+               4. sort_heap
+               5. is_heap 
+         8. Minimum and maximum
+               1. min
+               2. max
+               3. min_element [ok]
+               4. max_element [ok]
+         9. lexicographical_compare
+        10. lexicographical_compare_3way
+        11. next_permutation
+        12. prev_permutation 
+   4. Generalized numeric algorithms
+         1. iota
+         2. accumulate [ok]
+         3. inner_product [needs 2/0]
+         4. partial_sum
+         5. adjacent_difference
+         6. power 
+
+3- Perfs. Nous pourrons toujours améliorer les perfs, mais il est important
+que cette première release ait de meilleure perfs que (par ordre)
+1/ //èle GNU STL 2/ TBB 3/ OpenMP
+Du point de vu de la création de tâche, cela est /était vrai (faut refaire les benchs).
+Mais il faudrait que ce soit vrai pour kastl aussi.
+
+4- Une doc:
+       a- quick user guide (comment installer / compiler) + une doc
+       l'utilisation de 1/ C++ Kaapi 2/ kastl (répertoire doc à reprendre).
