@@ -766,34 +766,12 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   return 0;
 }
 
-
-static inline void kaapi_task_initdfg_with_proctype
-(kaapi_task_t* task, unsigned int type, kaapi_task_body_t body, void* arg)
+static inline void kaapi_task_initdfg
+(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
   task->sp = arg;
   task->body = body;
   task->ebody = body;
-  task->proctype = type;
-}
-
-static inline void kaapi_task_initdfg
-(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
-{
-  kaapi_task_initdfg_with_proctype
-    (task, KAAPI_PROC_TYPE_CPU, body, arg);
-}
-
-static inline int kaapi_task_init_with_proctype
-(kaapi_task_t* task, unsigned int type, kaapi_task_body_t body, void* arg)
-{
-  kaapi_task_initdfg_with_proctype(task, type, body, arg);
-  return 0;
-}
-
-static inline int kaapi_task_init_cuda
-(kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg)
-{
-  return kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CUDA, taskbody, arg);
 }
 
 /** \ingroup TASK
@@ -801,7 +779,8 @@ static inline int kaapi_task_init_cuda
 */
 static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
 {
-  return kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CPU, taskbody, arg);
+  kaapi_task_initdfg(task, taskbody, arg);
+  return 0;
 }
 
 

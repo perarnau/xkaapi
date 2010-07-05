@@ -41,16 +41,15 @@ static void create_range(range_t* range, unsigned int nelem)
 
 
 static void create_range2
-(range_t* range, unsigned int* base, unsigned int nelem)
+(range_t* range, unsigned int* base, unsigned int i, unsigned j)
 {
-  unsigned int i;
-
-  for (i = 0; i < nelem; ++i)
-    base[i] = 0;
   *KAAPI_DATA(unsigned int*, range->base) = base;
 
-  range->i = 0;
-  range->j = nelem;
+  range->i = i;
+  range->j = j;
+
+  for (; i < j; ++i)
+    base[i] = 0;
 }
 
 
@@ -134,6 +133,7 @@ static void lock_work(task_work_t* work)
 static void unlock_work(task_work_t* work)
 {
   work->lock = 0;
+  __sync_synchronize();
 }
 
 
@@ -238,16 +238,29 @@ static int split_work
   int repcount = 0;
 
   lock_work(vwork);
+
   rangesize = get_range_size(&vwork->range);
-  unitsize = rangesize / (reqcount + 1);
-  if (unitsize == 0)
+
+#if 0 /* fixme */
+  if ((int)rangesize < 0)
   {
-    reqcount = rangesize / 512;
-    unitsize = rangesize / (reqcount + 1);
+    unlock_work(vwork);
+    return 0;
   }
-  if (unitsize)
+#endif /* fixme */
+
+  if (rangesize > 512)
+  {
+    unitsize = rangesize / (reqcount + 1);
+    if (unitsize == 0)
+    {
+      unitsize = 512;
+      reqcount = rangesize / 512;
+    }
+
     stealres = steal_range
       (&subrange, &vwork->range, unitsize * reqcount);
+  }
   unlock_work(vwork);
 
   if (stealres == -1)
@@ -272,6 +285,7 @@ static int split_work
     *KAAPI_DATA(unsigned int*, twork->range.base) =
       *KAAPI_DATA(unsigned int*, vwork->range.base);
     twork->ktr = kaapi_allocate_thief_result(sc, sizeof(task_work_t), NULL);
+
     split_range(&twork->range, &subrange, unitsize);
 
     kaapi_task_setargs(ttask, (void*)twork);
@@ -368,7 +382,7 @@ main_static_entry(unsigned int nelem)
 
   /* cpu partition */
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU);
-  kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CPU, cpu_entry, NULL);
+  kaapi_task_init(task, cpu_entry, NULL);
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
   create_range(&work->range, nelem);
   work->range.j = nelem / 2; /* split the work */
@@ -378,9 +392,9 @@ main_static_entry(unsigned int nelem)
   /* gpu partition */
   unsigned int* base = *KAAPI_DATA(unsigned int*, work->range.base);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
-  kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CUDA, cuda_entry, NULL);
+  kaapi_task_init(task, cuda_entry, NULL);
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
-  create_range2(&work->range, base, nelem / 2);
+  create_range2(&work->range, base, nelem / 2, nelem);
   kaapi_task_setargs(task, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
 
