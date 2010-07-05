@@ -309,8 +309,8 @@ static void register_task_format(void)
     (format, NULL, "heter_task", sizeof(task_work_t),
      PARAM_COUNT, modes, offsets, formats);
 
-  kaapi_format_set_task_body(format, KAAPI_PROC_TYPE_CPU, cpu_entry);
-  kaapi_format_set_task_body(format, KAAPI_PROC_TYPE_CUDA, cuda_entry);
+  kaapi_format_taskregister_body(format, cpu_entry, KAAPI_PROC_TYPE_CPU);
+  kaapi_format_taskregister_body(format, cuda_entry, KAAPI_PROC_TYPE_CUDA);
 }
 
 
