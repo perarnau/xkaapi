@@ -66,6 +66,7 @@ libxkaapi_la_SOURCES=\
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \
+  task/kaapi_fmt_set_task_body.c \
   kaapi_datastructure.h \
   kaapi_defs.h \
   kaapi_error.h \
@@ -101,7 +102,6 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_getconcurrency.c \
   machine/mt/kaapi_mt_getcontext.c \
   machine/mt/kaapi_mt_setcontext.c \
-  machine/mt/kaapi_mt_set_workload.c \
   machine/mt/kaapi_mt_makecontext.c \
   machine/mt/kaapi_mt_selfprocessor.c \
   machine/mt/kaapi_mt_selfstack.c \
@@ -113,7 +113,8 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_perf.c \
-  machine/mt/kaapi_mt_register_procs.c
+  machine/mt/kaapi_mt_register_procs.c \
+  machine/mt/kaapi_mt_processor.c
 endif
 
 if KAAPI_USE_CUDA
