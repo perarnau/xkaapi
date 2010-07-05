@@ -200,21 +200,59 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 */
 #define KAAPI_CACHE_LINE 64
 
-/** Maximal number of architecture
-    Current naming is:
-    - KAAPI_PROC_TYPE_CPU:   core of multicore machine
-    - KAAPI_PROC_TYPE_GPU:   core of GPU card (Nvidia GPU)
-    - KAAPI_PROC_TYPE_MPSOC: core of a MPSoC chip
-*/
-#define KAAPI_MAX_ARCHITECTURE 3
 
-#define KAAPI_PROC_TYPE_CPU     0x0
-#define KAAPI_PROC_TYPE_CUDA    0x1
-#define KAAPI_PROC_TYPE_MPSOC   0x2
+#if 0 /* unused */
 
-#define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
-#define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_CPU
+/* processor capability api
+ */
 
+#define KAAPI_PCAP_ARCH_NATIVE 0x0
+#define KAAPI_PCAP_ARCH_CUDA 0x1
+#define KAAPI_PCAP_ARCH_MPSOC 0x2
+#define KAAPI_PCAP_ARCH_MAX 3
+
+typedef unsigned int kaapi_pcap_t;
+
+static inline unsigned int kaapi_pcap_isset
+(const kaapi_pcap_t* pcap, unsigned int c)
+{
+  return (*pcap) & c;
+}
+
+static inline void kaapi_pcap_set
+(const kaapi_pcap_t* pcap, unsigned int c)
+{
+  *pcap |= c;
+}
+
+static inline void kaapi_pcap_zero(kaapi_pcap_t* pcap)
+{
+  *pcap = 0;
+}
+
+static inline unsigned int kaapi_pcap_to_arch
+(const kaapi_cap_t* pcap)
+{
+  /* pcap to architecture index */
+  return pcap;
+}
+
+static inline void kaapi_proc_arch_to_pcap
+(kaapi_pcap_t* pcap, unsigned int arch)
+{
+  *pcap = arch;
+}
+
+#else
+
+#define KAAPI_PROC_TYPE_HOST 0x0
+#define KAAPI_PROC_TYPE_CUDA 0x1
+#define KAAPI_PROC_TYPE_MPSOC 0x2
+#define KAAPI_PROC_TYPE_MAX 3
+#define KAAPI_PROC_TYPE_CPU KAAPI_PROC_TYPE_HOST
+#define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_HOST
+
+#endif /* unused */
 
 /* ========================================================================== */
 /** \ingroup WS
@@ -1397,6 +1435,12 @@ extern kaapi_format_id_t kaapi_format_taskregister(
         const kaapi_offset_t         offset_param[],
         const struct kaapi_format_t* fmt_params[]
 );
+
+/** \ingroup TASK
+    Register a task format 
+*/
+extern void kaapi_format_set_task_body
+(struct kaapi_format_t*, unsigned int, kaapi_task_body_t);
 
 /** \ingroup TASK
     Register a task body into its format

@@ -135,13 +135,24 @@ static unsigned int has_task_by_type
 {
   /* assume thread kproc locked */
 
+  /* it is more complicated: a task has a
+     format describing the possible implementations
+     it has.
+     for each task present in the thread,
+     we must get the format and check if an
+     implementation matching the kproc caps
+     exists.
+   */
+
   kaapi_task_t* const end = thread->sp;
   kaapi_task_t* pos;
 
   for (pos = thread->pc; pos != end; --pos)
   {
+#if 0
     if (pos->proctype != type)
       continue ;
+#endif
 
 #if 0 /* unused */
     if (!is_task_ready(pos))
@@ -166,8 +177,6 @@ int kaapi_sched_select_victim_with_cuda_tasks
 
     if ((pos == NULL) || (pos == kproc))
       continue ;
-    if (pos->proc_type != KAAPI_PROC_TYPE_CUDA)
-      continue ;
 
     lock_kproc(pos, kproc->kid);
     has_task = has_task_by_type
@@ -177,7 +186,6 @@ int kaapi_sched_select_victim_with_cuda_tasks
     /* it potentially has a cuda task */
     if (has_task)
     {
-      printf("found!\n"); exit(-1);
       victim->kproc = pos;
       victim->level = 0; /* unused? */
       return 0;

@@ -46,12 +46,14 @@
 
 #include "kaapi_impl.h"
 
-unsigned int kaapi_processor_get_type(const kaapi_processor_t* kproc)
+unsigned int kaapi_processor_get_type
+(const kaapi_processor_t* kproc)
 {
   return kproc->proc_type;
 }
 
-void kaapi_processor_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
+void kaapi_processor_set_workload
+(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
 {
   KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
 }

@@ -54,11 +54,12 @@
 
 
 // missing decls
-extern "C" void kaapi_set_workload(kaapi_processor_t*, kaapi_uint32_t);
-extern "C" void kaapi_set_self_workload(kaapi_uint32_t);
 extern "C" kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
 extern "C" kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
 extern "C" unsigned int kaapi_request_kid(kaapi_request_t*);
+extern "C" void kaapi_processor_set_workload(kaapi_processor_t*, kaapi_uint32_t);
+extern "C" void kaapi_processor_set_self_workload(kaapi_uint32_t);
+extern "C" unsigned int kaapi_processor_get_type(const kaapi_processor_t*); 
 
 
 #if CONFIG_KASTL_DEBUG
@@ -729,7 +730,7 @@ namespace impl
     size_t vseq_size = vc->_seq.size();
     if (vseq_size < vc->_settings._par_size)
       vseq_size = 0;
-    kaapi_set_workload(kaapi_stealcontext_kproc(sc), vseq_size);
+    kaapi_processor_set_workload(kaapi_stealcontext_kproc(sc), vseq_size);
 
     // recompute the request count
     if ((size_t)r.size() != steal_size)
@@ -779,13 +780,16 @@ namespace impl
 
       kastl_entry_t entryfn;
       kaapi_processor_t* const kproc = kaapi_request_kproc(request);
-      if (kaapi_kproc_type(kproc) == KAAPI_PROC_TYPE_CUDA)
+
+      if (kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA)
       {
+	printf("CUDA\n");
 	entryfn = cuda_thief_entry
 	  <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
       }
       else
       {
+	printf("CPU\n");
 	entryfn = thief_entry
 	  <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
       }
@@ -795,7 +799,7 @@ namespace impl
 
       kaapi_request_reply_head(sc, request, ktr);
 
-      kaapi_set_workload(kaapi_request_kproc(request), unit_size);
+      kaapi_processor_set_workload(kaapi_request_kproc(request), unit_size);
 
       pos += unit_size;
 
@@ -1084,7 +1088,7 @@ namespace impl
     outter_loop_type::run
       (sc, tc->_ktr, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
 
-    kaapi_set_self_workload(0);
+    kaapi_processor_set_self_workload(0);
 
     kaapi_steal_finalize(sc);
   }
@@ -1096,7 +1100,7 @@ namespace impl
     printf("CUDA_THIEF_ENTRY\n");
 
     thief_entry<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>
-      (arg, thread)
+      (arg, thread);
   }
 
   static void wait_a_bit(void)
@@ -1155,7 +1159,7 @@ namespace impl
     kaapi_task_t* task;
     kaapi_frame_t frame;
 
-    kaapi_set_self_workload(seq.size());
+    kaapi_processor_set_self_workload(seq.size());
 
     context_type tc(res, seq, body, settings);
 
@@ -1167,7 +1171,7 @@ namespace impl
     kaapi_sched_sync();
     kaapi_thread_restore_frame(thread, &frame);
 
-    kaapi_set_self_workload(0);
+    kaapi_processor_set_self_workload(0);
 
     return res;
   }

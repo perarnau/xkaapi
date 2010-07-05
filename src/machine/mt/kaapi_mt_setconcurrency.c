@@ -236,7 +236,7 @@ void* kaapi_sched_run_processor( void* arg )
   kproc->kid = kid;
   kproc->proc_type = kpi->proc_type;
 
-  if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
   {
     kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
     kproc->fnc_selecarg = NULL;
@@ -250,7 +250,7 @@ void* kaapi_sched_run_processor( void* arg )
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
 
-  /* from here, arg no longer valid */
+  /* from here, thread arg no longer valid */
   kpi = NULL;
 
   /* quit first steap of the initialization */

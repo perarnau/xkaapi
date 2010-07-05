@@ -4,6 +4,9 @@
 #include "kaapi.h"
 
 
+#define CONFIG_USE_STATIC 1
+
+
 /* missing decls */
 typedef struct kaapikaapi_processor_t kaapi_processor_t;
 kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
@@ -28,6 +31,20 @@ static void create_range(range_t* range, unsigned int nelem)
   unsigned int* base;
 
   base = malloc(nelem * sizeof(unsigned int));
+  for (i = 0; i < nelem; ++i)
+    base[i] = 0;
+  *KAAPI_DATA(unsigned int*, range->base) = base;
+
+  range->i = 0;
+  range->j = nelem;
+}
+
+
+static void create_range2
+(range_t* range, unsigned int* base, unsigned int nelem)
+{
+  unsigned int i;
+
   for (i = 0; i < nelem; ++i)
     base[i] = 0;
   *KAAPI_DATA(unsigned int*, range->base) = base;
@@ -175,16 +192,18 @@ static void common_entry(void* arg, kaapi_thread_t* thread)
 static void cuda_entry(void* arg, kaapi_thread_t* thread)
 {
   range_t* const range = &((task_work_t*)arg)->range;
-  printf("cuda_entry [%u - %u[\n", range->i, range->j);
+  printf("> cuda_entry [%u - %u[\n", range->i, range->j);
   common_entry(arg, thread);
+  printf("< cuda_entry\n");
 }
 
 
 static void cpu_entry(void* arg, kaapi_thread_t* thread)
 {
   range_t* const range = &((task_work_t*)arg)->range;
-  printf("cpu_entry [%u - %u[\n", range->i, range->j);
+  printf("> cpu_entry [%u - %u[\n", range->i, range->j);
   common_entry(arg, thread);
+  printf("< cpu_entry\n");
 }
 
 
@@ -284,13 +303,19 @@ static void register_task_format(void)
   const struct kaapi_format_t* formats[PARAM_COUNT] =
     { kaapi_mem_format, kaapi_uint_format, kaapi_uint_format };
 
+  struct kaapi_format_t* const format = kaapi_format_allocate();
+
   kaapi_format_taskregister
-    (kaapi_format_allocate(), cpu_entry, "cpu_entry",
-     sizeof(task_work_t), PARAM_COUNT, modes, offsets, formats);
+    (format, NULL, "heter_task", sizeof(task_work_t),
+     PARAM_COUNT, modes, offsets, formats);
+
+  kaapi_format_set_task_body(format, KAAPI_PROC_TYPE_CPU, cpu_entry);
+  kaapi_format_set_task_body(format, KAAPI_PROC_TYPE_CUDA, cuda_entry);
 }
 
 
-static void main_entry(unsigned int nelem)
+static void __attribute__((unused))
+main_adaptive_entry(unsigned int nelem)
 {
   task_work_t* work;
   kaapi_thread_t* thread;
@@ -324,8 +349,57 @@ static void main_entry(unsigned int nelem)
 }
 
 
+static void __attribute__((unused))
+main_static_entry(unsigned int nelem)
+{
+  task_work_t* work;
+  kaapi_task_t* task;
+  kaapi_threadgroup_t group;
+
+  register_task_format();
+
+#define PARTITION_COUNT 2
+#define PARTITION_ID_CPU 0
+#define PARTITION_ID_GPU 1
+
+  kaapi_threadgroup_create(&group, PARTITION_COUNT);
+
+  kaapi_threadgroup_begin_partition(group);
+
+  /* cpu partition */
+  task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU);
+  kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CPU, cpu_entry, NULL);
+  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
+  create_range(&work->range, nelem);
+  work->range.j = nelem / 2; /* split the work */
+  kaapi_task_setargs(task, (void*)work);
+  kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU);
+
+  /* gpu partition */
+  unsigned int* base = *KAAPI_DATA(unsigned int*, work->range.base);
+  task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
+  kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CUDA, cuda_entry, NULL);
+  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
+  create_range2(&work->range, base, nelem / 2);
+  kaapi_task_setargs(task, (void*)work);
+  kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
+
+  kaapi_threadgroup_end_partition(group);
+
+  /* execute */
+  kaapi_threadgroup_begin_execute(group);
+  kaapi_threadgroup_end_execute(group);
+
+  kaapi_threadgroup_destroy(group);
+}
+
+
 int main(int ac, char** av)
 {
-  main_entry(100000);
+#if CONFIG_USE_STATIC
+  main_static_entry(100000);
+#else
+  main_adaptive_entry(100000);
+#endif
   return 0;
 }
