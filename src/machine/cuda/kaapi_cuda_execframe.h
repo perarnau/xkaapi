@@ -1,8 +1,9 @@
 /*
-** kaapi_cuda.h
+** kaapi_cuda_execframe.h
+** xkaapi
 ** 
-** Created on Jun 23
-** Copyright 2009 INRIA.
+** Created on Jul 2010
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
@@ -44,16 +45,12 @@
 */
 
 
-#ifndef KAAPI_CUDA_H_INCLUDED
-# define KAAPI_CUDA_H_INCLUDED
+#ifndef KAAPI_CUDA_EXECFRAME_H_INCLUDED
+# define KAAPI_CUDA_EXECFRAME_H_INCLUDED
 
 
-/* top level include file */
+struct kaapi_thread_context_t;
+int kaapi_cuda_execframe(struct kaapi_thread_context_t*);
 
 
-#include "kaapi_cuda_func.h"
-#include "kaapi_cuda_register_procs.h"
-#include "kaapi_cuda_execframe.h"
-
-
-#endif /* ! KAAPI_CUDA_H_INCLUDED */
+#endif /* ! KAAPI_CUDA_EXECFRAME_H_INCLUDED */

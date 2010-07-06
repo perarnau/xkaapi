@@ -125,7 +125,9 @@ libxkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_proc.c \
   machine/cuda/kaapi_cuda_proc.h \
   machine/cuda/kaapi_cuda_func.h \
-  machine/cuda/kaapi_cuda_func.c
+  machine/cuda/kaapi_cuda_func.c \
+  machine/cuda/kaapi_cuda_execframe.h \
+  machine/cuda/kaapi_cuda_execframe.c
 endif
 
 include_HEADERS=\
