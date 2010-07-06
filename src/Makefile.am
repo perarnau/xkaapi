@@ -128,3 +128,8 @@ endif
 include_HEADERS=\
   kaapi.h \
   kaapi_error.h
+
+if KAAPI_USE_CUDA
+include_HEADERS+=\
+  machine/cuda/kaapi_cuda_func.h
+endif

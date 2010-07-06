@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include "kaapi.h"
+#include "kaapi_cuda_func.h"
 
 
 #define CONFIG_USE_STATIC 1
@@ -215,10 +216,12 @@ static void cuda_entry
 ( /* unsigned int cuda_stream, */ void* arg, kaapi_thread_t* thread)
 {
   /* todo: passed as an argument by the runtime */
-  static unsigned int cuda_stream = 0;
+  static CUstream cuda_stream = NULL;
 
   range_t* const range = &((task_work_t*)arg)->range;
-  CUdeviceptr base_devptr = *KAAPI_DATA(range->base);
+
+  CUdeviceptr const base_devptr = (CUdeviceptr)(uintptr_t)
+    *KAAPI_DATA(unsigned int*, range->base);
 
   printf("> cuda_entry [%u - %u[\n", range->i, range->j);
 
@@ -232,7 +235,7 @@ static void cuda_entry
     kaapi_cuda_func_init(&fn);
 
 #define STERN "transform_heter"
-    kaapi_cuda_func_load_ptx(&fn, STERN ## ".ptx", STERN);
+    kaapi_cuda_func_load_ptx(&fn, STERN ".ptx", STERN);
 
     kaapi_cuda_func_push_ptr(&fn, base_devptr);
     kaapi_cuda_func_push_uint(&fn, range->i);
