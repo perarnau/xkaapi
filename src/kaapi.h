@@ -192,7 +192,7 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align
     \ingroup TASK
     See internal doc in order to have better documentation of invariant between the task and the thread.
 */
-typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread */);
+typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread or stream */);
 /* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
 

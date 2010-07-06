@@ -91,9 +91,13 @@ namespace ka {
 
   // --------------------------------------------------------------------
   class gpuStream {
+  public:
+    gpuStream( kaapi_gpustream_t gs ): stream(gs) {}
+    gpuStream( ): stream(0) {}
   protected:
-    int stream; /* at least for CUDA */
+    kaapi_gpustream_t stream; /* at least for CUDA */
   };
+
 
   // --------------------------------------------------------------------
   /** link C++ format -> kaapi format */
@@ -1519,7 +1523,7 @@ namespace ka {
     {
       kaapi_thread_t* thread = kaapi_self_thread();
       kaapi_task_t* clo = kaapi_thread_toptask( thread );
-      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
+      kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
       kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
       arg->argc = argc;
       arg->argv = argv;
@@ -1531,7 +1535,7 @@ namespace ka {
     {
       kaapi_thread_t* thread = kaapi_self_thread();
       kaapi_task_t* clo = kaapi_thread_toptask( thread );
-      kaapi_task_initdfg( clo, kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
+      kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
       kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
       arg->argc = 0;
       arg->argv = 0;
