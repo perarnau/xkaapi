@@ -2,6 +2,8 @@
 
 XKAAPIDIR=$HOME/install
 
+nvcc --ptx transform_heter.cu
+
 gcc -Wall -std=c99 \
     -I$XKAAPIDIR/include \
     -DKAAPI_NDEBUG=1 \

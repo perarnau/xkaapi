@@ -187,6 +187,73 @@ static void common_entry(void* arg, kaapi_thread_t* thread)
 }
 
 
+/* cuda task */
+
+#if 0 /* prepost scheme */
+
+static void cuda_pre_handler
+(void* arg, kaapi_thread_t* thread, kaapi_cuda_kernel_dim_t* dim)
+{
+  range_t* const range = &((task_work_t*)arg)->range;
+
+  printf("> cuda_pre_handler [%u - %u[\n", range->i, range->j);
+
+  dim->x = 256;
+  dim->y = 1;
+  dim->z = 1;
+}
+
+static void cuda_post_handler
+(void* arg, kaapi_thread_t* thread, int error)
+{
+  printf("> cuda_post_handler (%d)\n", error);
+}
+
+#elif 1 /* high level call */
+
+static void cuda_entry
+( /* unsigned int cuda_stream, */ void* arg, kaapi_thread_t* thread)
+{
+  /* todo: passed as an argument by the runtime */
+  static unsigned int cuda_stream = 0;
+
+  range_t* const range = &((task_work_t*)arg)->range;
+  CUdeviceptr base_devptr = *KAAPI_DATA(range->base);
+
+  printf("> cuda_entry [%u - %u[\n", range->i, range->j);
+
+#if 1 /* driver api */
+  {
+    static const kaapi_cuda_dim3_t tdim = {256, 1, 1};
+    static const kaapi_cuda_dim2_t bdim = {1, 1};
+
+    kaapi_cuda_func_t fn;
+
+    kaapi_cuda_func_init(&fn);
+
+#define STERN "transform_heter"
+    kaapi_cuda_func_load_ptx(&fn, STERN ## ".ptx", STERN);
+
+    kaapi_cuda_func_push_ptr(&fn, base_devptr);
+    kaapi_cuda_func_push_uint(&fn, range->i);
+    kaapi_cuda_func_push_uint(&fn, range->j);
+
+    kaapi_cuda_func_call_async(&fn, cuda_stream, &bdim, &tdim);
+
+    kaapi_cuda_func_unload_ptx(&fn);
+  }
+#else /* c++ api */
+  {
+    transform_heter<<<1, 256, 0, cuda_stream>>>
+      (base_devptr, range->i, range->j);
+  }
+#endif /* driver api */
+
+  printf("< cuda_entry\n");
+}
+
+#else /* cpu call */
+
 static void cuda_entry(void* arg, kaapi_thread_t* thread)
 {
   range_t* const range = &((task_work_t*)arg)->range;
@@ -195,6 +262,10 @@ static void cuda_entry(void* arg, kaapi_thread_t* thread)
   printf("< cuda_entry\n");
 }
 
+#endif /* prepost scheme */
+
+
+/* cpu task */
 
 static void cpu_entry(void* arg, kaapi_thread_t* thread)
 {
@@ -391,7 +462,7 @@ main_static_entry(unsigned int nelem)
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
   create_range2(&work->range, base, nelem / 2, nelem);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
-  kaapi_task_initdfg(task, cuda_entry, (void*)work);
+  kaapi_task_initdfg(task, (kaapi_task_body_t)cuda_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
 
   kaapi_threadgroup_end_partition(group);

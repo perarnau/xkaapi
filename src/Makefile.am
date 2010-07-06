@@ -119,11 +119,12 @@ endif
 if KAAPI_USE_CUDA
 libxkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda.h \
-  machine/cuda/kaapi_cuda_register_procs.c
+  machine/cuda/kaapi_cuda_register_procs.h \
+  machine/cuda/kaapi_cuda_register_procs.c \
+  machine/cuda/kaapi_cuda_func.h \
+  machine/cuda/kaapi_cuda_func.c
 endif
 
-
 include_HEADERS=\
-	kaapi.h \
-	kaapi_error.h
-
+  kaapi.h \
+  kaapi_error.h

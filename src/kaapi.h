@@ -754,11 +754,6 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug((char*)thread->sp >= (char*)thread->sp_data);
 
-#if 0 /* todo: cache the bytype request counts */
-  if (toptask(thread)->proc_type == CUDA)
-    ++thread->tasks_counts[KAAPI_PROC_CUDA];
-#endif
-
   kaapi_writemem_barrier_api();
 
   --thread->sp;
