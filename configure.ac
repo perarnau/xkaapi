@@ -146,6 +146,7 @@ AS_CASE([$with_cuda],
     KAAPI_CUDA=yes
     # not using AC*DEFINE as we want this available for examples too
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1"
+    AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
   ], [dnl
     AC_MSG_ERROR([Unknown value '$with_cuda' for --with-cuda option. Aborting.])
   ])
