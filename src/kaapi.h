@@ -425,6 +425,14 @@ struct kaapi_threadgrouprep_t;
 #endif
 typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 
+
+
+/* ========================================================================= */
+/** Kaapi stream definition
+*/
+typedef int kaapi_gpustream_t;
+
+
 /* ========================================================================= */
 /** Kaapi task definition
     \ingroup TASK
