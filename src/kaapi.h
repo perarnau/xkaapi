@@ -200,21 +200,59 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 */
 #define KAAPI_CACHE_LINE 64
 
-/** Maximal number of architecture
-    Current naming is:
-    - KAAPI_PROC_TYPE_CPU:   core of multicore machine
-    - KAAPI_PROC_TYPE_GPU:   core of GPU card (Nvidia GPU)
-    - KAAPI_PROC_TYPE_MPSOC: core of a MPSoC chip
-*/
-#define KAAPI_MAX_ARCHITECTURE 3
 
-#define KAAPI_PROC_TYPE_CPU     0x0
-#define KAAPI_PROC_TYPE_CUDA    0x1
-#define KAAPI_PROC_TYPE_MPSOC   0x2
+#if 0 /* unused */
 
-#define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
-#define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_CPU
+/* processor capability api
+ */
 
+#define KAAPI_PCAP_ARCH_NATIVE 0x0
+#define KAAPI_PCAP_ARCH_CUDA 0x1
+#define KAAPI_PCAP_ARCH_MPSOC 0x2
+#define KAAPI_PCAP_ARCH_MAX 3
+
+typedef unsigned int kaapi_pcap_t;
+
+static inline unsigned int kaapi_pcap_isset
+(const kaapi_pcap_t* pcap, unsigned int c)
+{
+  return (*pcap) & c;
+}
+
+static inline void kaapi_pcap_set
+(const kaapi_pcap_t* pcap, unsigned int c)
+{
+  *pcap |= c;
+}
+
+static inline void kaapi_pcap_zero(kaapi_pcap_t* pcap)
+{
+  *pcap = 0;
+}
+
+static inline unsigned int kaapi_pcap_to_arch
+(const kaapi_cap_t* pcap)
+{
+  /* pcap to architecture index */
+  return pcap;
+}
+
+static inline void kaapi_proc_arch_to_pcap
+(kaapi_pcap_t* pcap, unsigned int arch)
+{
+  *pcap = arch;
+}
+
+#else
+
+#define KAAPI_PROC_TYPE_HOST 0x0
+#define KAAPI_PROC_TYPE_CUDA 0x1
+#define KAAPI_PROC_TYPE_MPSOC 0x2
+#define KAAPI_PROC_TYPE_MAX 3
+#define KAAPI_PROC_TYPE_CPU KAAPI_PROC_TYPE_HOST
+#define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_HOST
+
+#endif /* unused */
 
 /* ========================================================================== */
 /** \ingroup WS
@@ -300,7 +338,7 @@ typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_V   = 1,        /* 0000 0001 : */
   KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
   KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
-  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1100 : */
+  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
   KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
   KAAPI_ACCESS_MODE_F   = 32,       /* 0010 0000 : only valid with _W or _R */
   KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W
@@ -464,7 +502,6 @@ typedef struct kaapi_task_t {
   kaapi_task_bodyid_t   volatile ebody;     /** extra task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
   void*                 pad;       /** padding  */
-  unsigned int		proctype;
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 
@@ -725,45 +762,18 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug((char*)thread->sp >= (char*)thread->sp_data);
 
-#if 0 /* todo: cache the bytype request counts */
-  if (toptask(thread)->proc_type == CUDA)
-    ++thread->tasks_counts[KAAPI_PROC_CUDA];
-#endif
-
   kaapi_writemem_barrier_api();
 
   --thread->sp;
   return 0;
 }
 
-
-static inline void kaapi_task_initdfg_with_proctype
-(kaapi_task_t* task, unsigned int type, kaapi_task_body_t body, void* arg)
+static inline void kaapi_task_initdfg
+(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
   task->sp = arg;
   task->body = body;
   task->ebody = body;
-  task->proctype = type;
-}
-
-static inline void kaapi_task_initdfg
-(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
-{
-  kaapi_task_initdfg_with_proctype
-    (task, KAAPI_PROC_TYPE_CPU, body, arg);
-}
-
-static inline int kaapi_task_init_with_proctype
-(kaapi_task_t* task, unsigned int type, kaapi_task_body_t body, void* arg)
-{
-  kaapi_task_initdfg_with_proctype(task, type, body, arg);
-  return 0;
-}
-
-static inline int kaapi_task_init_cuda
-(kaapi_task_t* task, kaapi_task_body_t taskbody, void* arg)
-{
-  return kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CUDA, taskbody, arg);
 }
 
 /** \ingroup TASK
@@ -771,7 +781,8 @@ static inline int kaapi_task_init_cuda
 */
 static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
 {
-  return kaapi_task_init_with_proctype(task, KAAPI_PROC_TYPE_CPU, taskbody, arg);
+  kaapi_task_initdfg(task, taskbody, arg);
+  return 0;
 }
 
 
@@ -1405,6 +1416,12 @@ extern kaapi_format_id_t kaapi_format_taskregister(
         const kaapi_offset_t         offset_param[],
         const struct kaapi_format_t* fmt_params[]
 );
+
+/** \ingroup TASK
+    Register a task format 
+*/
+extern void kaapi_format_set_task_body
+(struct kaapi_format_t*, unsigned int, kaapi_task_body_t);
 
 /** \ingroup TASK
     Register a task body into its format

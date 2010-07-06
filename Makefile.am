@@ -3,7 +3,8 @@
 ACLOCAL_AMFLAGS=-I acinclude
 
 #SUBDIRS=src api kastl.wip examples
-SUBDIRS=src api examples tests/static
+#SUBDIRS=src api examples tests/static
+SUBDIRS=src
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA= xkaapi.pc kaapixx.pc atha1.pc

@@ -365,7 +365,6 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 #endif /* KAAPI_USE_NUMA */
 
 
-
 /* ........................................ PRIVATE INTERFACE ........................................*/
 /** \ingroup TASK
     The function kaapi_context_alloc() allocates in the heap a context with a stack containing 

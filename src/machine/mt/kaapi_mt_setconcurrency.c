@@ -223,7 +223,7 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_procinfo_t* kpi = (kaapi_procinfo_t*)arg;
   kaapi_processor_t* kproc = NULL;
   const kaapi_processor_id_t kid = kpi->kid;
-  
+
   /* force reschedule of the posix thread, we that the thread will be mapped on the correct processor ? */
   sched_yield();
   kproc = kaapi_all_kprocessors[kid] = kaapi_processor_allocate();
@@ -238,7 +238,7 @@ void* kaapi_sched_run_processor( void* arg )
   kproc->proc_type = kpi->proc_type;
 
 #if defined(KAAPI_USE_CUDA)
-  if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
   {
     kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
     kproc->fnc_selecarg = NULL;
@@ -253,7 +253,7 @@ void* kaapi_sched_run_processor( void* arg )
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
 
-  /* from here, arg no longer valid */
+  /* from here, thread arg no longer valid */
   kpi = NULL;
 
   /* quit first steap of the initialization */

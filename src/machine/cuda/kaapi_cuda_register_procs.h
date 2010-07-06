@@ -1,13 +1,13 @@
 /*
-** kaapi_fmtresolve.c
-** xkaapi
+** kaapi_cuda.h
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+** Created on Jun 23
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,27 +42,14 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 
-/*
-*/
-kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key)
-{
-  int i;
-  kaapi_uint8_t        entry = ((unsigned long)key) & 0xFF;
-  kaapi_format_t* head =  kaapi_all_format_bybody[entry];
 
-  if (head ==0) return 0;
-  
-  while (head !=0)
-  {
-    /* here we may be only need to look at the current architecture */
-    for (i =0; i<KAAPI_PROC_TYPE_MAX; ++i)
-      if (head->entrypoint[i] == key)
-      {
-        return head;
-      }
-    head = head->next_bybody;
-  }
-  return 0;
-}
+#ifndef KAAPI_CUDA_REGISTER_PROCS_H_INCLUDED
+# define KAAPI_CUDA_REGISTER_PROCS_H_INCLUDED
+
+
+struct kaapi_procinfo_list;
+int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
+
+
+#endif /* ! KAAPI_CUDA_REGISTER_PROCS_H_INCLUDED */
