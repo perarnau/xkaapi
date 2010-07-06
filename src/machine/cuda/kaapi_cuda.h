@@ -45,12 +45,10 @@
 
 
 #ifndef KAAPI_CUDA_H_INCLUDED
-# define KAAPI_CUDA_H_INCLUDED
+#define KAAPI_CUDA_H_INCLUDED
 
 
 /* top level include file */
-
-
 #include "kaapi_cuda_func.h"
 #include "kaapi_cuda_register_procs.h"
 

@@ -1,5 +1,5 @@
 /*
-** kaapi_cuda_func.h
+** kaapi_cuda_error.h
 ** xkaapi
 ** 
 ** Created on Jul 2010
@@ -45,44 +45,20 @@
 */
 
 
-#ifndef KAAPI_CUDA_FUNC_H_INCLUDED
-# define KAAPI_CUDA_FUNC_H_INCLUDED
+#ifndef KAAPI_CUDA_ERROR_H_INCLUDED
+# define KAAPI_CUDA_ERROR_H_INCLUDED
 
+/* internally defined */
+#define KAAPI_CUDA_ERROR 1
 
-#include <cuda.h>
-
-
-typedef struct kaapi_cuda_func
+#if KAAPI_CUDA_ERROR
+#include <stdio.h>
+static void kaapi_cuda_error(const char* s, CUresult e)
 {
-  CUmodule mod;
-  CUfunction fu;
-  int off;
-} kaapi_cuda_func_t;
+  printf("[!] %s: %u\n", s, e);
+}
+#else
+#define kaapi_cuda_error(__a, __b)
+#endif
 
-
-typedef struct kaapi_cuda_dim2
-{
-  unsigned int x;
-  unsigned int y;
-} kaapi_cuda_dim2_t;
-
-
-typedef struct kaapi_cuda_dim3
-{
-  unsigned int x;
-  unsigned int y;
-  unsigned int z;
-} kaapi_cuda_dim3_t;
-
-
-int kaapi_cuda_func_init(kaapi_cuda_func_t*);
-int kaapi_cuda_func_load_ptx(kaapi_cuda_func_t*, const char*, const char*);
-int kaapi_cuda_func_unload_ptx(kaapi_cuda_func_t*);
-int kaapi_cuda_func_push_ptr(kaapi_cuda_func_t*, CUdeviceptr);
-int kaapi_cuda_func_push_uint(kaapi_cuda_func_t*, unsigned int);
-int kaapi_cuda_func_call_async
-(kaapi_cuda_func_t*, CUstream, const kaapi_cuda_dim2_t*, const kaapi_cuda_dim3_t*);
-int kaapi_cuda_func_wait(kaapi_cuda_func_t*, CUstream);
-
-
-#endif /* ! KAAPI_CUDA_FUNC_H_INCLUDED */
+#endif /* ! KAAPI_CUDA_ERROR_H_INCLUDED */

@@ -46,6 +46,12 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
+#if defined(KAAPI_USE_CUDA)
+#if KAAPI_USE_CUDA
+# include "../cuda/kaapi_cuda_proc.h"
+#endif
+#endif
+
 static void* kaapi_sched_run_processor( void* arg );
 
 /**
@@ -91,9 +97,11 @@ int kaapi_setconcurrency(void)
   /* build the procinfo list */
   kaapi_procinfo_list_init(&kpl);
   kaapi_mt_register_procs(&kpl);
+#if defined(KAAPI_USE_CUDA)
 #if KAAPI_USE_CUDA
   kaapi_cuda_register_procs(&kpl);
 #endif
+#endif /* KAAPI_USE_CUDA */
 
   if ((!kpl.count) || (kpl.count > KAAPI_MAX_PROCESSOR))
     return EINVAL;
@@ -238,12 +246,20 @@ void* kaapi_sched_run_processor( void* arg )
   kproc->proc_type = kpi->proc_type;
 
 #if defined(KAAPI_USE_CUDA)
+  /* initialize cuda processor */
   if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
   {
+    if (kaapi_cuda_proc_initialize(&kproc->cuda_proc, kpi->proc_index))
+    {
+      kaapi_processor_free(kproc);
+      kaapi_all_kprocessors[kid] = NULL;
+      kaapi_barrier_td_setactive(&barrier_init, 0);
+      return 0;
+    }
     kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
     kproc->fnc_selecarg = NULL;
   }
-#endif
+#endif /* KAAPI_USE_CUDA */
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
