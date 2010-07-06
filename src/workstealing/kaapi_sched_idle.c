@@ -119,6 +119,17 @@ redo_execute:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
+
+    /* todo: there should be a wrapper around kaapi_stack_execframe
+       that takes the kproc and route execution toward the right impl
+    */
+#if defined(KAAPI_USE_CUDA)
+#if KAAPI_USE_CUDA
+    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+      err = kaapi_cuda_execframe( kproc->thread );
+    else
+#endif
+#endif /* KAAPI_USE_CUDA */
     err = kaapi_stack_execframe( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
