@@ -338,7 +338,7 @@ typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_V   = 1,        /* 0000 0001 : */
   KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
   KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
-  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1100 : */
+  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
   KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
   KAAPI_ACCESS_MODE_F   = 32,       /* 0010 0000 : only valid with _W or _R */
   KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W

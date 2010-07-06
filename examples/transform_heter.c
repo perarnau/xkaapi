@@ -305,7 +305,7 @@ static void register_task_format(void)
 #define kaapi_mem_format kaapi_ulong_format
 
   static const kaapi_access_mode_t modes[PARAM_COUNT] =
-    { KAAPI_ACCESS_MODE_RW, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R };
+    { KAAPI_ACCESS_MODE_RW, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V };
 
   static const kaapi_offset_t offsets[PARAM_COUNT] =
     { offsetof(task_work_t, range.base),
