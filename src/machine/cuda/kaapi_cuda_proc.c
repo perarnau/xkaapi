@@ -1,5 +1,5 @@
 /*
-** kaapi_cuda_func.h
+** kaapi_cuda_proc.h
 ** xkaapi
 ** 
 ** Created on Jul 2010
@@ -45,44 +45,76 @@
 */
 
 
-#ifndef KAAPI_CUDA_FUNC_H_INCLUDED
-# define KAAPI_CUDA_FUNC_H_INCLUDED
+#include "kaapi_cuda_proc.h"
+#include "kaapi_cuda_error.h"
 
 
-#include <cuda.h>
-
-
-typedef struct kaapi_cuda_func
+static int open_cuda_device
+(CUdevice* dev, CUcontext* ctx, unsigned int index)
 {
-  CUmodule mod;
-  CUfunction fu;
-  int off;
-} kaapi_cuda_func_t;
+  CUresult res;
 
+  res = cuDeviceGet(dev, index);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuDeviceGet", res);
+    return -1;
+  }
 
-typedef struct kaapi_cuda_dim2
+  /* use sched_yield while waiting for sync */
+  res = cuCtxCreate(ctx, CU_CTX_SCHED_YIELD | CU_CTX_MAP_HOST, *dev);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuCtxCreate", res);
+    return -1;
+  }
+
+#if 0 /* print device attributes */
+  {
+    int value;
+    cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_GPU_OVERLAP, *dev);
+    printf("gpu_overlap: %u\n", value);
+#if CUDA_VERSION >= 3000
+    cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_CONCCURENT_KERNELS, *dev);
+    printf("conc_kernels: %u\n", value);
+#endif
+  }
+#endif
+
+  return 0;
+}
+
+static void close_cuda_device(CUdevice dev, CUcontext ctx)
 {
-  unsigned int x;
-  unsigned int y;
-} kaapi_cuda_dim2_t;
+  dev = dev; /* unused */
+  cuCtxDestroy(ctx);
+}
 
 
-typedef struct kaapi_cuda_dim3
+/* exported */
+
+int kaapi_cuda_proc_initialize
+(kaapi_cuda_proc_t* proc, unsigned int idev)
 {
-  unsigned int x;
-  unsigned int y;
-  unsigned int z;
-} kaapi_cuda_dim3_t;
+  proc->is_initialized = 0;
+
+  if (open_cuda_device(&proc->dev, &proc->ctx, idev))
+    return -1;
+
+  proc->is_initialized = 1;
+
+  return 0;
+}
 
 
-int kaapi_cuda_func_init(kaapi_cuda_func_t*);
-int kaapi_cuda_func_load_ptx(kaapi_cuda_func_t*, const char*, const char*);
-int kaapi_cuda_func_unload_ptx(kaapi_cuda_func_t*);
-int kaapi_cuda_func_push_ptr(kaapi_cuda_func_t*, CUdeviceptr);
-int kaapi_cuda_func_push_uint(kaapi_cuda_func_t*, unsigned int);
-int kaapi_cuda_func_call_async
-(kaapi_cuda_func_t*, CUstream, const kaapi_cuda_dim2_t*, const kaapi_cuda_dim3_t*);
-int kaapi_cuda_func_wait(kaapi_cuda_func_t*, CUstream);
+int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
+{
+  if (proc->is_initialized == 0)
+    return -1;
 
+  close_cuda_device(proc->dev, proc->ctx);
 
-#endif /* ! KAAPI_CUDA_FUNC_H_INCLUDED */
+  proc->is_initialized = 0;
+
+  return 0;
+}

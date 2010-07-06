@@ -67,7 +67,11 @@
 #  define KAAPI_KPROCESSOR_ALIGNMENT_SIZE KAAPI_CACHE_LINE
 #endif
 
-
+#if defined(KAAPI_USE_CUDA)
+# if KAAPI_USE_CUDA
+#  include "../cuda/kaapi_cuda_proc.h"
+# endif
+#endif
 
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
@@ -321,7 +325,16 @@ typedef struct kaapi_processor_t {
 
   /* workload */
   kaapi_atomic_t	         workload;
+
+  /* processor type */
   unsigned int			proc_type;
+
+  /* cuda */
+#if defined(KAAPI_USE_CUDA)
+# if KAAPI_USE_CUDA
+  kaapi_cuda_proc_t cuda_proc;
+#endif
+#endif /* KAAPI_USE_CUDA */
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
 
