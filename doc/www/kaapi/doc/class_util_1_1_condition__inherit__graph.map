@@ -1,0 +1,50 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$struct_f_t_1_1_load_checkpoint_service_1_1_waiting_context.html" title="FT::LoadCheckpointService::WaitingContext" alt="" coords="177,832,505,861"/>
+<area shape="rect" id="node5" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="292,885,391,915"/>
+<area shape="rect" id="node7" href="$class_core_1_1_work_set.html" title="WorkSet of worksetThe workset is a set of processors with a steal interface to steal..." alt="" coords="639,5,759,35"/>
+<area shape="rect" id="node9" href="$class_f_t_1_1_c_c_k_checkpoint_coordinator.html" title="CCK coordinator." alt="" coords="580,59,817,88"/>
+<area shape="rect" id="node11" href="$class_f_t_1_1_c_c_k_global_restart_coordinator.html" title="FT::CCKGlobalRestartCoordinator" alt="" coords="572,112,825,141"/>
+<area shape="rect" id="node13" href="$class_f_t_1_1_c_c_k_global_restart_local_controller.html" title="FT::CCKGlobalRestartLocalController" alt="" coords="560,165,837,195"/>
+<area shape="rect" id="node15" href="$class_f_t_1_1_c_c_k_local_checkpoint_controller.html" title="FT::CCKLocalCheckpointController" alt="" coords="568,219,829,248"/>
+<area shape="rect" id="node17" href="$class_f_t_1_1_c_c_k_restart_coordinator.html" title="FT::CCKRestartCoordinator" alt="" coords="593,272,804,301"/>
+<area shape="rect" id="node19" href="$class_f_t_1_1_c_c_k_restart_local_controller.html" title="FT::CCKRestartLocalController" alt="" coords="581,325,816,355"/>
+<area shape="rect" id="node21" href="$class_f_t_1_1_checkpoint_server.html" title="FT::CheckpointServer" alt="" coords="612,379,785,408"/>
+<area shape="rect" id="node23" href="$class_f_t_1_1_heart_beat_detector.html" title="Heartbeat fault tolerance detectorThe algorithm is to send to randomly selected known..." alt="" coords="608,432,789,461"/>
+<area shape="rect" id="node25" href="$class_f_t_1_1_load_checkpoint_service.html" title="Checkpoint service to load checkpoint fileThe FT::LoadCheckpointService::service..." alt="" coords="592,485,805,515"/>
+<area shape="rect" id="node27" href="$class_f_t_1_1_map_registered_objects.html" title="FT::MapRegisteredObjects" alt="" coords="596,539,801,568"/>
+<area shape="rect" id="node29" href="$class_f_t_1_1_store_checkpoint_service.html" title="Checkpoint service to store fileOn each process of a Kaapi application, a checkpoint..." alt="" coords="592,592,805,621"/>
+<area shape="rect" id="node31" href="$class_f_t_1_1_t_i_c_checkpoint.html" title="FT::TICCheckpoint" alt="" coords="624,645,773,675"/>
+<area shape="rect" id="node33" href="$class_m_a_n_e_t_1_1_device_1_1_connection_request.html" title="MANET::Device::ConnectionRequest" alt="" coords="560,699,837,728"/>
+<area shape="rect" id="node35" href="$class_m_a_n_e_t_1_1_device_1_1_incoming_connection.html" title="MANET::Device::IncomingConnection" alt="" coords="556,752,841,781"/>
+<area shape="rect" id="node37" href="$class_net_1_1_channel.html" title="Net::Channel" alt="" coords="641,805,756,835"/>
+<area shape="rect" id="node45" href="$class_net_1_1_device.html" title="Net::Device" alt="" coords="645,859,752,888"/>
+<area shape="rect" id="node59" href="$class_net_1_1_i_o_daemon.html" title="Net::IODaemon" alt="" coords="632,912,765,941"/>
+<area shape="rect" id="node61" href="$class_net_1_1_network.html" title="Net::Network" alt="" coords="641,965,756,995"/>
+<area shape="rect" id="node63" href="$class_net_1_1_r_p_c.html" title="Net::RPC" alt="" coords="656,1019,741,1048"/>
+<area shape="rect" id="node67" href="$class_net_1_1_r_p_c_service.html" title="Net::RPCService" alt="" coords="629,1072,768,1101"/>
+<area shape="rect" id="node71" href="$class_net_1_1_service_group.html" title="Net::ServiceGroup" alt="" coords="624,1125,773,1155"/>
+<area shape="rect" id="node73" href="$class_sched_1_1_service_bcast.html" title="Sched::ServiceBcast" alt="" coords="616,1179,781,1208"/>
+<area shape="rect" id="node75" href="$class_sched_1_1_service_migrate.html" title="Steal Service for distributed workstealing algorithm using AM." alt="" coords="608,1232,789,1261"/>
+<area shape="rect" id="node77" href="$class_sched_1_1_service_redistribution.html" title="Sched::ServiceRedistribution" alt="" coords="588,1285,809,1315"/>
+<area shape="rect" id="node79" href="$class_sched_1_1_thread_group.html" title="Local view of Group of Sched::ThreadSuch object exists on each site where a ThreadGroup..." alt="" coords="615,1339,783,1368"/>
+<area shape="rect" id="node83" href="$class_s_o_c_k_n_e_t_1_1_selector.html" title="Definition of a set of connexions in order to waiting from events on the connexions..." alt="" coords="621,1392,776,1421"/>
+<area shape="rect" id="node85" href="$class_stat_1_1_statistics_service.html" title="Distributed collection of counters to collect in order to produce statisticsServer..." alt="" coords="612,1445,785,1475"/>
+<area shape="rect" id="node87" href="$class_util_1_1_counter_manager.html" title="Management of counters to collect in order to produce statisticsEach process generates..." alt="" coords="612,1499,785,1528"/>
+<area shape="rect" id="node89" href="$class_util_1_1_event_daemon.html" title="Util::EventDaemon" alt="" coords="621,1552,776,1581"/>
+<area shape="rect" id="node91" href="$class_w_s_1_1_community.html" title="Community of distribued PoolsThe community is a dynamic group of process. The Community..." alt="" coords="632,1605,765,1635"/>
+<area shape="rect" id="node93" href="$class_w_s_1_1_service_leader_a_m.html" title="Steal Service for distributed workstealing algorithm using AM." alt="" coords="611,1659,787,1688"/>
+<area shape="rect" id="node95" href="$class_w_s_1_1_service_signal.html" title="Signal Service to implement remote signal." alt="" coords="625,1712,772,1741"/>
+<area shape="rect" id="node97" href="$class_w_s_1_1_service_steal.html" title="Steal Service for distributed workstealing algorithm." alt="" coords="629,1765,768,1795"/>
+<area shape="rect" id="node39" href="$class_net_1_1_in_channel.html" title="Net::InChannel" alt="" coords="928,619,1059,648"/>
+<area shape="rect" id="node43" href="$class_net_1_1_out_channel.html" title="Net::OutChannel" alt="" coords="923,672,1064,701"/>
+<area shape="rect" id="node41" href="$class_f_d_n_e_t_1_1_in_channel.html" title="FDNET::InChannel" alt="" coords="1145,619,1297,648"/>
+<area shape="rect" id="node47" href="$class_f_d_n_e_t_1_1_device.html" title="FDNET::Device" alt="" coords="929,725,1057,755"/>
+<area shape="rect" id="node49" href="$class_m_a_n_e_t_1_1_device.html" title="MANET::Device" alt="" coords="928,779,1059,808"/>
+<area shape="rect" id="node51" href="$class_m_y_n_e_t_1_1_device.html" title="MYNET::Device" alt="" coords="928,832,1059,861"/>
+<area shape="rect" id="node53" href="$class_s_o_c_k_n_e_t_1_1_device.html" title="SOCKNET::Device" alt="" coords="920,885,1067,915"/>
+<area shape="rect" id="node55" href="$class_t_a_k_t_u_k_n_e_t_1_1_device.html" title="TAKTUKNET::Device" alt="" coords="912,939,1075,968"/>
+<area shape="rect" id="node57" href="$class_u_d_p_n_e_t_1_1_device.html" title="UDPNET::Device" alt="" coords="924,992,1063,1021"/>
+<area shape="rect" id="node65" href="$class_n_s_1_1_client.html" title="NS::Client" alt="" coords="948,1045,1039,1075"/>
+<area shape="rect" id="node69" href="$class_n_s_1_1_server.html" title="NS::Server" alt="" coords="945,1099,1041,1128"/>
+<area shape="rect" id="node81" href="$class_sched_1_1_local_thread_group.html" title="Group of Sched::ThreadSuch object is created at the top level of the scheduling process..." alt="" coords="891,1339,1096,1368"/>
+</map>

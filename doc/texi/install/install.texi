@@ -1,8 +1,8 @@
 @node install guide
-@chapter Quick installation guide of KAAPI
+@chapter Quick installation guide of X-Kaapi
 
 
-In order to use the @code{Athapascan}'s API, you need to install @code{KAAPI} library.
+In order to use the @code{Kaapi}'s or @code{Athapascan}'s API, you need to install @code{X-Kaapi} library.
 The following steps will help you to do it.
 
 @menu
@@ -13,21 +13,30 @@ The following steps will help you to do it.
 @node get the source
 @section Get the source
 
-There are several ways to get @code{KAAPI} source files:
+There are several ways to get @code{X-Kaapi} source files:
 
 @itemize
 @item You can download the latest stable version available at: @url{https://gforge.inria.fr/frs/?group_id=94}
 
 @item You can also get a tarball of the latest git sources (rebuilt every night): @url{http://kaapi.gforge.inria.fr/snapshots/kaapi-svn.tar.gz}. Please note that if current git version fails to pass the @command{make distchek} test, the tarball won't be built (i.e. you will download the latest tarball that pass @command{make distchek}).
 
+@item Using the debian packages
+Below is a list of the Debian packages provided for using and programming with @code{X-Kaapi}. A brief description is given for each of them:
+@itemize
+@item xkaapi-doc: @code{X-Kaapi} library documentation.
+@item libxkaapi0: @code{X-Kaapi}  shared libraries.
+@item libxkaapi-dev: @code{X-Kaapi}  development files for the low level C runtime.
+@item libxkaapi-dbg: @code{X-Kaapi} debug symbols for the above libraries.
+@item libkaapixx0: @code{X-Kaapi}  C++ higher level interfaces standing on top of the @code{X-Kaapi} core library.
+@item libkaapixx-dev: @code{X-Kaapi} C++ interfaces development files.
+@end itemize
+
 @item At least, you can use the anonymous git server if you want to keep updating sources (but sometimes, sources are totally broken here):
 @end itemize
 
 @example
-$ @command{git} clone git://git.ligforge.imag.fr/git/kaapi/kaapi.git kaapi-git
+$ @command{git} clone git://git.ligforge.imag.fr/git/kaapi/xkaapi.git xkaapi
 @end example
-
-
 
 
 @node compile the package
@@ -43,7 +52,7 @@ The following details the weel known @command{./configure; make; make install} s
 @node configure
 @subsection Configuring
 
-Depending on how you got @code{KAAPI} you may need to perform some additionnal actions.
+Depending on how you got @code{X-Kaapi} you may need to perform some additionnal actions.
 @menu
 * git users:: For git users only
 * all users:: git and non git users
@@ -52,17 +61,16 @@ Depending on how you got @code{KAAPI} you may need to perform some additionnal a
 @node git users
 @subsubsection For git users only
 
-@code{KAAPI} uses GNU @command{autoconf} and @command{automake} tools to simplify its configuration.
-For @command{git} users, they must run the following script in the source directory to generate autoconf/automake/libtool files (make sure that you have these development tools available on your system).
-This has already been done When you use the first two other ways to get @code{KAAPI} sources.
+@code{X-Kaapi} uses GNU @command{autoconf} and @command{automake} tools to simplify its configuration.
+In case you cloned the project repository, you first have to bootstrap the configuration process by running the following script:
+@example
+$>  cd <@var{kaapi_src_dir}> && ./bootstrap
+@end example
+This has already been done When you use the first two other ways to get @code{X-Kaapi} sources.
 
 
 @strong{NOTE}: In the following, replace <@var{kaapi_src_dir}> by the directory where you have gotten kaapi
 
-
-@example
-$ cd <@var{kaapi_src_dir}> && ./bootstrap
-@end example
 
 @node all users
 @subsubsection For all users
@@ -75,7 +83,7 @@ $ @command{./configure} @option{--help}
 @end example
 
 
-It is better that KAAPI source files are compiled in a different directory from the source code directory. We suggest you create a directory named build:
+It is better that X-Kaapi source files are compiled in a different directory from the source code directory. We suggest you create a directory named build:
 
 @example
 $ cd ..
@@ -91,11 +99,11 @@ directory (and the build directory).
 
 
 @strong{NOTE}: Source (and build) directory can be removed after the
-KAAPI library is compiled and installed. The installation directory must be
-kept to be able to compile and run KAAPI applications
+X-Kaapi library is compiled and installed. The installation directory must be
+kept to be able to compile and run X-Kaapi applications
 
 @example
-$ ../<kaapi_src_dir>/configure --prefix=$HOME/KAAPI
+$ ../<kaapi_src_dir>/configure --prefix=$HOME/X-Kaapi
 @end example
 
 
@@ -103,11 +111,11 @@ $ ../<kaapi_src_dir>/configure --prefix=$HOME/KAAPI
 @subsection Compiling
 
 
-Concerning Compilers : we ensure that KAAPI can be well compiled with the following compilers:
+Concerning Compilers : we ensure that X-Kaapi can be well compiled with the following compilers:
 
 @itemize
 @item @command{g++-3.4} (deprecated)
-@item @command{g++-4.1} to @command{g++-4.3}
+@item @command{g++-4.1} to @command{g++-4.5}
 @end itemize
 
 @strong{WARNING}: On Itanium, version 4 or greater is required, older version (especially 3.4) are not supported
@@ -133,5 +141,5 @@ $ @command{make} install
 @end example
 
 
-Congratulation, you can now use @code{Athapascan} and @code{KAAPI} !
+Congratulation, you can now use @code{X-Kaapi} !
 

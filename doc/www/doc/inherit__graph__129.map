@@ -1,0 +1,7 @@
+<map id="G" name="G">
+<area shape="rect" id="node1" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Request \&gt;" alt="" coords="7,59,207,88"/>
+<area shape="rect" id="node3" href="$struct_m_y_n_e_t_1_1_device_1_1_request.html" title="MYNET::Device::Request" alt="" coords="257,32,455,61"/>
+<area shape="rect" id="node9" href="$struct_net_1_1_r_p_c_1_1_request.html" title="Net::RPC::Request" alt="" coords="280,85,432,115"/>
+<area shape="rect" id="node5" href="$struct_m_y_n_e_t_1_1_device_1_1_recv___request.html" title="MYNET::Device::Recv_Request" alt="" coords="505,5,743,35"/>
+<area shape="rect" id="node7" href="$struct_m_y_n_e_t_1_1_device_1_1_send___request.html" title="MYNET::Device::Send_Request" alt="" coords="504,59,744,88"/>
+</map>

@@ -1,0 +1,349 @@
+<html lang="en">
+<head>
+<title>hello world - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="tutorials.html#tutorials" title="tutorials">
+<link rel="next" href="fibonacci.html#fibonacci" title="fibonacci">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="hello-world"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="fibonacci.html#fibonacci">fibonacci</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="tutorials.html#tutorials">tutorials</a>
+<hr>
+</div>
+
+<h3 class="section">5.1 Hello World - 1 Fork, 0 Shared</h3>
+
+<p>Say hello to your friends ! 
+Understand the <code>a1::Fork</code> usage.
+
+     <dl>
+<dt><strong>Basics</strong><dd>
+Each time you want to parallelize a sequential code using Athapascan, you have two things to think of:
+          <ul>
+<li>how can I describe the sequential processing in terms of data transformations ( which will be called "tasks" ) ?
+
+          <li>what are the dependencies between those tasks ? Does one requires the result from another ? 
+</ul>
+
+     <p>Once you have done this, your mind can begin to relax, your finger will begin to code.
+
+     <br><dt><strong>Algorithm</strong><dd>
+
+     <p><em>Algorithm</em> is a bit petty here. 
+The <em>hello world</em> program just displays, for a given value of <var>n</var>
+
+     <pre class="example">          hello world from 0 !
+          hello world from 1 !
+          ...
+          hello world from n-2 !
+          hello world from n-1 !
+</pre>
+     <p>The following <code>C++</code> code will more or less achieve this goal:
+
+     <pre class="example">          #include &lt;iostream&gt;
+          int main(int, char **)
+          {
+            int n = 10; /* number of iteration*/
+            for (int id = 0; id &lt; n; id++)
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id &lt;&lt; " !" &lt;&lt; std::endl;
+            return 0;
+          }
+</pre>
+     <br><dt><strong>Where are the tasks</strong><dd>
+
+     <p>In this <em>very simple</em> code, finding the task, the <strong>job to be done</strong>, is rather simple. 
+What do we want to do ? print a message with a special id (a number). 
+So the task is the printing of the message, it has no return value, and a single int as input.
+
+          <dl>
+<dt><strong>Task</strong><dd>print_hello
+<br><dt><strong>input</strong><dd><code>int</code> id (read)
+<br><dt><strong>output</strong><dd>none
+</dl>
+
+     <br><dt><strong>Where are the dependencies</strong><dd>
+
+     <p>Obviously, each task is independent, isn't it ? The engine will automatically deduce this from the fact that each input parameter only has read access.
+
+     <br><dt><strong>Preparing the code</strong><dd>
+
+     <p>Now that we know what are the tasks and the dependencies, we need to describe them in a piece of code. 
+If I follow the Athapascan guide, I read that a task is a function object with void return value. Let's rewrite previous code !
+
+     <pre class="example">          #include &lt;iostream&gt;
+          /* declare my task as a function object */
+          struct print_hello
+          {
+            void operator()( int id )
+            {
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          int main(int, char **)
+          {
+            int n = 10; /* number of iteration*/
+            for (int i = 0; i &lt; n; i++)
+              print_hello()(i); /* create and use the function object */
+            return 0;
+          }
+</pre>
+     <p><strong>NOTE</strong>: we did not create a single instance of the function object and then make several method calls, as we usually do. This is to prepare to the following : each task will be created separately.
+
+     <br><dt><strong>Using Athapascan</strong><dd>
+Before going further, we have to prepare the use of KAAPI library. It means we have to do some initialization stuff etc.
+
+          <ol type=1 start=1>
+<li>Initialize the library
+<li>Create the main task
+<li>Clean up
+          </ol>
+
+     <pre class="example">          #include &lt;iostream&gt;
+          #include &lt;athapascan-1.h&gt; // add athapascan header
+          
+          struct print_hello
+          {
+            void operator()( int id )
+            {
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          struct do_main // the do_main is also a task
+          {
+            void operator()(int argc, char **argv) // copy main here
+            {
+              int n = 10; /* number of iteration*/
+              for (int i = 0; i &lt; n; i++)
+                print_hello()(i); /* create and use the function object */
+            }
+          };
+          
+          int main(int argc, char **argv)
+          {
+            a1::Community com = a1::System::join_community(argc,argv); // init library
+            do_main()(argc,argv); // main call
+            com.leave(); // ensure no more task left
+            a1::System::terminate(); // clean up
+            return 0;
+          }
+</pre>
+     <p><strong>NOTE</strong>: <code>com.leave()</code> is important, it computes the termination of the program, checking whether the local task list is empty or not.
+
+     <p>After reading the documentation, I understood that there were some kind of shared variables that were used to compute the dependencies. 
+I know that I only need to read the content of id, so I'll put it into a <code>a1::Shared_r&lt;int&gt;</code>
+
+     <pre class="example">          #include &lt;iostream&gt;
+          #include &lt;athapascan-1.h&gt;
+          
+          struct print_hello
+          {
+            void operator()( a1::Shared_r&lt;int&gt; id ) // use shared read access
+            {
+              // use the read() method to get the content of the shared
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id.read() &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          struct do_main // the do_main is also a task
+          {
+            void operator()(int argc, char **argv) // copy main here
+            {
+              int n = 10; /* number of iteration*/
+              for (int i = 0; i &lt; n; i++)
+              {
+                a1::Shared&lt;int&gt; id(i); // put variable in shared memory
+                print_hello()(id);
+              }
+            }
+          };
+          
+          int main(int argc, char **argv)
+          {
+            a1::Community com = a1::System::join_community(argc,argv);
+            do_main()(argc,argv);
+            com.leave();
+            a1::System::terminate();
+            return 0;
+          }
+</pre>
+     <p><strong>NOTE</strong>: In fact, the shared memory is not needed here. Passing normal variable as parameters is equivalent to read access for dependencies computing.
+
+     <p>I also understood that my tasks were designed to be forked instead of begin called. I must replace my function call by <code>a1::Fork</code> !
+
+     <pre class="example">          #include &lt;iostream&gt;
+          #include &lt;athapascan-1.h&gt;
+          
+          struct print_hello
+          {
+            void operator()( a1::Shared_r&lt;int&gt; id )
+            {
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id.read() &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          struct do_main
+          {
+            void operator()(int argc, char **argv)
+            {
+              int n = 10; /* number of iteration*/
+              for (int i = 0; i &lt; n; i++)
+              {
+                a1::Shared&lt;int&gt; id(i);
+                a1::Fork&lt;print_hello&gt;()(id); // fork a new task
+              }
+            }
+          };
+          
+          int main(int argc, char **argv)
+          {
+            a1::Community com = a1::System::join_community(argc,argv);
+            a1::ForkMain&lt;do_main&gt;()(argc,argv); // main fork, only executed by one node
+            com.leave();
+            a1::System::terminate();
+            return 0;
+          }
+</pre>
+     <p>This is your first piece of athapascan code !
+
+     <p><strong>NOTE</strong>: To compile this code, please have a look to the install and compile documentation (see <a href="compile.html#compile">compile</a>)!
+
+     <p><strong>NOTE</strong>: To get better performance , the for loop should be written recursively, and a threshold should be used. More on this in next tutorial ! 
+</dl>
+
+   </body></html>
+

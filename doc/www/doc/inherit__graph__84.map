@@ -1,0 +1,5 @@
+<map id="G" name="G">
+<area shape="rect" id="node1" href="$class_sched_1_1_optimizer.html" title="Optmizer interface." alt="" coords="5,32,149,61"/>
+<area shape="rect" id="node3" href="$class_sched_1_1_optimizer_s_c_o.html" title="Optimize local communication in order to send data before computation.This optimizer..." alt="" coords="197,5,371,35"/>
+<area shape="rect" id="node5" href="$class_sched_1_1_optimizer_s_t_o.html" title="Reorganize BroadcastTask, ReceiveTask and WaitTask in order to reduce stealing.This..." alt="" coords="199,59,369,88"/>
+</map>

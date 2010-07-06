@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
     // Warning: Matrix indexing is 0 based.
     int nn = DEFAULT_MATRIX_SIZE;
     if (argc > 1) {
-        nn = std::atoi(argv[1]);
+        nn = ::atoi(argv[1]);
     }
 
     std::cout << "Simple algorithm: Mulitply two " << nn << " by " << nn

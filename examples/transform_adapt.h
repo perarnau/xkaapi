@@ -52,9 +52,6 @@ struct TransformStruct {
     _msc = NULL;
   }
     
-  template<class InputIterator, class OutputIterator, class UnaryOperator>
-  void transform ( InputIterator begin, InputIterator end, OutputIterator to_fill, UnaryOperator op );
-  
   typedef typename std::iterator_traits<InputIterator>::value_type value_type;
     
   void doit( kaapi_stealcontext_t* sc_transform, kaapi_thread_t* thread )

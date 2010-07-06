@@ -1,0 +1,706 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>KAAPI</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="info.css" media="screen" />
+</head>
+<body>
+
+<div id="wrap">
+
+<div id="header">
+<h1><a href="#">KAAPI Library</a></h1>
+<h2>Kernel for Adaptative, Asynchronous Parallel and Interactive programming - A library for ditributed computing</h2>
+</div>
+
+<div id="right">
+
+<!-- SECTION !-->
+<a name="tutorials"></a>
+
+<p>This chapters list some really simple programs that can help you to understand <code>Athpascan</code>'s primitives
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="tuto.html#hello-world">hello world</a>:  distributed version of the famous one
+<li><a accesskey="2" href="tuto.html#fibonacci">fibonacci</a>:  how useless, but how typical
+</ul>
+
+<div class="node">
+<a name="hello-world"></a>
+
+</div>
+
+<h3 class="section">5.1 Hello World - 1 Fork, 0 Shared</h3>
+
+<p>Say hello to your friends ! 
+Understand the <code>a1::Fork</code> usage.
+
+     <dl>
+<dt><strong>Basics</strong><dd>
+Each time you want to parallelize a sequential code using Athapascan, you have two things to think of:
+          <ul>
+<li>how can I describe the sequential processing in terms of data transformations ( which will be called "tasks" ) ?
+
+          <li>what are the dependencies between those tasks ? Does one requires the result from another ? 
+</ul>
+
+     <p>Once you have done this, your mind can begin to relax, your finger will begin to code.
+
+     <br><dt><strong>Algorithm</strong><dd>
+
+     <p><em>Algorithm</em> is a bit petty here. 
+The <em>hello world</em> program just displays, for a given value of <var>n</var>
+
+     <pre class="example">          hello world from 0 !
+          hello world from 1 !
+          ...
+          hello world from n-2 !
+          hello world from n-1 !
+</pre>
+     <p>The following <code>C++</code> code will more or less achieve this goal:
+
+     <pre class="example">          #include &lt;iostream&gt;
+          int main(int, char **)
+          {
+            int n = 10; /* number of iteration*/
+            for (int id = 0; id &lt; n; id++)
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id &lt;&lt; " !" &lt;&lt; std::endl;
+            return 0;
+          }
+</pre>
+     <br><dt><strong>Where are the tasks</strong><dd>
+
+     <p>In this <em>very simple</em> code, finding the task, the <strong>job to be done</strong>, is rather simple. 
+What do we want to do ? print a message with a special id (a number). 
+So the task is the printing of the message, it has no return value, and a single int as input.
+
+          <dl>
+<dt><strong>Task</strong><dd>print_hello
+<br><dt><strong>input</strong><dd><code>int</code> id (read)
+<br><dt><strong>output</strong><dd>none
+</dl>
+
+     <br><dt><strong>Where are the dependencies</strong><dd>
+
+     <p>Obviously, each task is independent, isn't it ? The engine will automatically deduce this from the fact that each input parameter only has read access.
+
+     <br><dt><strong>Preparing the code</strong><dd>
+
+     <p>Now that we know what are the tasks and the dependencies, we need to describe them in a piece of code. 
+If I follow the Athapascan guide, I read that a task is a function object with void return value. Let's rewrite previous code !
+
+     <pre class="example">          #include &lt;iostream&gt;
+          /* declare my task as a function object */
+          struct print_hello
+          {
+            void operator()( int id )
+            {
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          int main(int, char **)
+          {
+            int n = 10; /* number of iteration*/
+            for (int i = 0; i &lt; n; i++)
+              print_hello()(i); /* create and use the function object */
+            return 0;
+          }
+</pre>
+     <p><strong>NOTE</strong>: we did not create a single instance of the function object and then make several method calls, as we usually do. This is to prepare to the following : each task will be created separately.
+
+     <br><dt><strong>Using Athapascan</strong><dd>
+Before going further, we have to prepare the use of KAAPI library. It means we have to do some initialization stuff etc.
+
+          <ol type=1 start=1>
+<li>Initialize the library
+<li>Create the main task
+<li>Clean up
+          </ol>
+
+     <pre class="example">          #include &lt;iostream&gt;
+          #include &lt;athapascan-1.h&gt; // add athapascan header
+          
+          struct print_hello
+          {
+            void operator()( int id )
+            {
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          struct do_main // the do_main is also a task
+          {
+            void operator()(int argc, char **argv) // copy main here
+            {
+              int n = 10; /* number of iteration*/
+              for (int i = 0; i &lt; n; i++)
+                print_hello()(i); /* create and use the function object */
+            }
+          };
+          
+          int main(int argc, char **argv)
+          {
+            a1::Community com = a1::System::join_community(argc,argv); // init library
+            do_main()(argc,argv); // main call
+            com.leave(); // ensure no more task left
+            a1::System::terminate(); // clean up
+            return 0;
+          }
+</pre>
+     <p><strong>NOTE</strong>: <code>com.leave()</code> is important, it computes the termination of the program, checking whether the local task list is empty or not.
+
+     <p>After reading the documentation, I understood that there were some kind of shared variables that were used to compute the dependencies. 
+I know that I only need to read the content of id, so I'll put it into a <code>a1::Shared_r&lt;int&gt;</code>
+
+     <pre class="example">          #include &lt;iostream&gt;
+          #include &lt;athapascan-1.h&gt;
+          
+          struct print_hello
+          {
+            void operator()( a1::Shared_r&lt;int&gt; id ) // use shared read access
+            {
+              // use the read() method to get the content of the shared
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id.read() &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          struct do_main // the do_main is also a task
+          {
+            void operator()(int argc, char **argv) // copy main here
+            {
+              int n = 10; /* number of iteration*/
+              for (int i = 0; i &lt; n; i++)
+              {
+                a1::Shared&lt;int&gt; id(i); // put variable in shared memory
+                print_hello()(id);
+              }
+            }
+          };
+          
+          int main(int argc, char **argv)
+          {
+            a1::Community com = a1::System::join_community(argc,argv);
+            do_main()(argc,argv);
+            com.leave();
+            a1::System::terminate();
+            return 0;
+          }
+</pre>
+     <p><strong>NOTE</strong>: In fact, the shared memory is not needed here. Passing normal variable as parameters is equivalent to read access for dependencies computing.
+
+     <p>I also understood that my tasks were designed to be forked instead of begin called. I must replace my function call by <code>a1::Fork</code> !
+
+     <pre class="example">          #include &lt;iostream&gt;
+          #include &lt;athapascan-1.h&gt;
+          
+          struct print_hello
+          {
+            void operator()( a1::Shared_r&lt;int&gt; id )
+            {
+              std::cout &lt;&lt; "hello world from " &lt;&lt; id.read() &lt;&lt; " !" &lt;&lt; std::endl;
+            }
+          };
+          
+          struct do_main
+          {
+            void operator()(int argc, char **argv)
+            {
+              int n = 10; /* number of iteration*/
+              for (int i = 0; i &lt; n; i++)
+              {
+                a1::Shared&lt;int&gt; id(i);
+                a1::Fork&lt;print_hello&gt;()(id); // fork a new task
+              }
+            }
+          };
+          
+          int main(int argc, char **argv)
+          {
+            a1::Community com = a1::System::join_community(argc,argv);
+            a1::ForkMain&lt;do_main&gt;()(argc,argv); // main fork, only executed by one node
+            com.leave();
+            a1::System::terminate();
+            return 0;
+          }
+</pre>
+     <p>This is your first piece of athapascan code !
+
+     <p><strong>NOTE</strong>: To compile this code, please have a look to the install and compile documentation (see <a href="compile_run.html#compile">compile</a>)!
+
+     <p><strong>NOTE</strong>: To get better performance , the for loop should be written recursively, and a threshold should be used. More on this in next tutorial ! 
+</dl>
+
+<div class="node">
+<a name="fibonacci"></a>
+
+</div>
+
+<h3 class="section">5.2 Fibonacci - multiple Fork and Shared</h3>
+
+<p>This tutorial will help you to understand how to use sahed memory.
+
+     <dl>
+<dt><strong>Algorithm</strong><dd>
+The Fibonacci series is defined as:
+          <ul>
+<li>F(0) = 0
+<li>F(1) = 1
+<li>F(n) = F(n - 1) + F(n - 2) for all n &gt; 2
+</ul>
+
+     <p>There are different algorithms to resolve Fibonacci numbers, some having a linear time complexity O(n). 
+The algorithm we present here is a recursive method.
+
+     <p><strong>NOTE</strong>: It is a very bad implementation as it has an exponential complexity, O(2n), (as opposed to the linear time complexity of other algorithms). However, this approach is easy to understand and to paralleled.
+
+     <br><dt><strong>Sequential implementation</strong><dd>
+
+     <p>First, let's have a glance at the regular naive recursive sequential program:
+
+     <pre class="example">          #include &lt;iostream&gt;
+          
+          int fibonacci(int n)
+          {
+              if (n&lt;2)
+                  return n;
+              else
+              return fibonacci(n-1)+fibonacci(n-2);
+          }
+          
+          int main(int argc, char** argv)
+          {
+              int n = atoi(argv[1]);
+              int res =  fibonacci( n );
+              std::cout &lt;&lt; "result= " &lt;&lt; res &lt;&lt; std::endl;
+              return 0 ;
+          }
+</pre>
+     <p>We will follow the steps described in first tutorial :
+
+          <ol type=1 start=1>
+<li>identify the tasks
+<li>identify the dependencies
+          </ol>
+
+     <br><dt><strong>Where are the tasks</strong><dd>
+
+     <p>A task is a data transformation. It is easy to see that the Fibonacci function itself is a task, taking a number as input, and returning a number as output.
+
+          <dl>
+<dt><strong>Task</strong><dd>fibonacci
+<br><dt><strong>Input</strong><dd><code>int</code> n (read)
+<br><dt><strong>Output</strong><dd><code>int</code> res (write) = fibonacci(n)
+</dl>
+
+     <p>But with a little more experience, you will see that the <code>operator+</code> combining the result of the two function call is also a task. So we write
+
+          <dl>
+<dt><strong>Task</strong><dd>add
+<br><dt><strong>Input</strong><dd><code>int</code> i (read), <code>int</code> j (read)
+<br><dt><strong>Output</strong><dd><code>int</code> res (write) = i + j
+</dl>
+
+     <br><dt><strong>Where are the dependencies</strong><dd>
+
+     <p>You cannot add fibonacci(n-1) and fibonacci(n-2) before the function call ends : the input of task add are written by tasks fibonacci(n-1) and fibonacci(n-2) : they shared data ! 
+We describe this in KAAPI by declaring the variable in shared memory, and then describing the access rights used to access the data.
+
+     <br><dt><strong>Preparing the code</strong><dd>
+
+     <p>To make the usage of KAAPI easier, I will rewrite the code in this way :
+
+     <pre class="example">          #include &lt;iostream&gt;
+          
+          int fibonacci(int n)
+          {
+              int res; // output variable
+              if (n&lt;2)
+              {
+                  res = n;
+              }
+              else
+              {
+          	int arg1 = n-1; // input variable
+          	int tmp1 = fibonacci(arg1);
+          	int arg2 = n-2; // input variable
+          	int tmp2 = fibonacci(arg2);
+          	res = tmp1 + tmp2;
+              }
+              return res;
+          }
+          
+          int main(int argc, char** argv)
+          {
+              int n = atoi(argv[1]);
+              int res =  fibonacci( n );
+              std::cout &lt;&lt; "result= " &lt;&lt; res &lt;&lt; std::endl;
+              return 0 ;
+          }
+</pre>
+     <br><dt><strong>Using Athapascan</strong><dd>
+
+     <p>The implementation of the add task is a good example of KAAPI task : it is simple, but uses two different of shared variable. The sequential function is
+
+     <pre class="example">          int add (int i, int j)
+          {
+            int res;
+            res = i + j;
+            return res;
+          }
+</pre>
+     <p>As a function object with no return value, it could be
+
+     <pre class="example">          struct add
+          {
+            void operator()( int i /* read*/,
+              int j/* read*/, int&amp; res/*write*/)
+              // use a reference instead of return value
+            {
+              res = i + j ;
+            }
+          };
+</pre>
+     <p>You note that i and j are read, res is only written, so I will replace the type by the equivalent shared type with the correct access right:
+
+          <dl>
+<dt><code>int</code><em> [read]</em><dd><code>a1::Shared_r&lt;int&gt;</code>
+<br><dt><code>int</code><em> [write]</em><dd><code>a1::Shared_w&lt;int&gt;</code>
+</dl>
+
+     <pre class="example">          struct add
+          {
+            void operator()( a1::Shared_r&lt;int&gt; i,
+              a1::Shared_r&lt;int&gt; j,
+              a1::Shared_w&lt;int&gt; res )
+              // replace with shared variable
+            {
+              res.write( i.read() + j.read() );
+            }
+          };
+</pre>
+     <p><strong>NOTE</strong>: You cannot directly access the content of a shared, you must use the appropriate method. Of course, you cannot <code>read()</code> the content of a <code>shared_w</code> ...
+
+     <p>Let's write the code for the fibonacci task. As usual, we will write it in two steps. First use the function object design :
+
+     <pre class="example">          struct fibonacci
+          {
+            void operator()( int n /*read*/, int&amp; res /*write*/ )
+            {
+              if( n &lt; 2 )
+              {
+                res = n ; /* write operation here */
+              }
+              else
+              {
+                int res1;
+                fibonacci()(n-1,res1); // fibo task call
+                int res2;
+                fibonacci()(n-2,res2); // fibo task call
+                add()( res1, res2, res ); // add task call
+              }
+            }
+          };
+</pre>
+     <p>Then use the shared memory and task spawning :
+
+          <dl>
+<dt><code>int</code><em> [write]</em><dd><code>a1::Shared_w&lt;int&gt;</code>
+<br><dt><code>add</code><em>()(...)</em><dd><code>a1::Fork&lt;add&gt;()</code>
+<br><dt><code>fibonacci</code><em>()(...)</em><dd><code>a1::Fork&lt;fibonacci&gt;()</code>
+</dl>
+
+     <p><strong>NOTE</strong>: As explained in previous tutorial, it is useless to put a read-only variable in shared memory if there is no other dependencies on this variable.
+
+     <pre class="example">          struct fibonacci
+          {
+            void operator()( int n , a1::Shared_w&lt;int&gt; res )
+            {
+              if( n &lt; 2 )
+              {
+                res.write(n) ; // replace the affectation by a write call
+              }
+              else
+              {
+                a1::Shared&lt;int&gt; res1;
+                a1::Fork&lt;fibonacci&gt;()(n-1,res1); // fibo task call
+                a1::Shared&lt;int&gt; res2;
+                a1::Fork&lt;fibonacci&gt;()(n-2,res2); // fibo task call
+                a1::Fork&lt;add&gt;()( res1, res2, res ); // add task call
+              }
+            }
+          };
+</pre>
+     <p>Here you are, both tasks have been written, you just have to include the standard main of an Athapascan program to get the following result :
+
+     <pre class="verbatim">     //! run as: karun -np 2 --threads 2 ./fibo_apiatha 36 4
+     
+     /****************************************************************************
+      * 
+      *  Shared usage sample : fibonnaci
+      *
+      ***************************************************************************/
+     
+     
+     #include &lt;iostream>
+     #include "athapascan-1" // this is the header required by athapascan
+     
+     
+     // --------------------------------------------------------------------
+     /* Sequential fibo function
+      */
+     unsigned long long fiboseq(unsigned long long n)
+     { return (n&lt;2 ? n : fiboseq(n-1)+fiboseq(n-2) ); }
+     
+     unsigned long long fiboseq_On(unsigned long long n){
+       if(n&lt;2){
+         return n;
+       }else{
+     
+         unsigned long long fibo=1;
+         unsigned long long fibo_p=1;
+         unsigned long long tmp=0;
+         unsigned long long i=0;
+         for( i=0;i&lt;n-2;i++){
+           tmp = fibo+fibo_p;
+           fibo_p=fibo;
+           fibo=tmp;
+         }
+         return fibo;
+       }
+     }
+     
+     /* Print any typed shared
+      * this task has read acces on a, it will wait until previous write acces on it are done
+     */
+     template&lt;class T>
+     struct Print {
+       void operator() ( a1::Shared_r&lt;T> a, const T&amp; ref_value, a1::Shared_r&lt;double> t )
+       { 
+         /*  Util::WallTimer::gettime is a wrapper around gettimeofday(2) */
+         double delay = Util::WallTimer::gettime() - t.read();
+     
+         /*  a1::System::getRank() prints out the id of the node executing the task */
+         Util::logfile() &lt;&lt; a1::System::getRank() &lt;&lt; ": -----------------------------------------" &lt;&lt; std::endl;
+         Util::logfile() &lt;&lt; a1::System::getRank() &lt;&lt; ": res  = " &lt;&lt; a.read() &lt;&lt; std::endl;
+         Util::logfile() &lt;&lt; a1::System::getRank() &lt;&lt; ": time = " &lt;&lt; delay &lt;&lt; " s" &lt;&lt; std::endl;
+         Util::logfile() &lt;&lt; a1::System::getRank() &lt;&lt; ": -----------------------------------------" &lt;&lt; std::endl;
+         KAAPI_LOG( a.read() != ref_value, "**** Error **** : bad value" );
+       }
+     };
+     
+     
+     /* Sum two integers
+      * this task reads a and b (read acces mode) and write their sum to res (write access mode)
+      * it will wait until previous write to a and b are done
+      * once finished, further read of res will be possible
+      */
+     struct Sum {
+       void operator() ( a1::Shared_w&lt;unsigned long long> res, 
+                         a1::Shared_r&lt;unsigned long long> a, 
+                         a1::Shared_r&lt;unsigned long long> b) 
+       {
+         /* write is used to write data to a Shared_w
+          * read is used to read data from a Shared_r
+          */
+         res.write(a.read()+b.read());
+       }
+     };
+     
+     /* Get current time
+      */
+     struct GetTime {
+       void operator() ( a1::Shared_rw&lt;double> t) 
+       {
+         t.access() = Util::WallTimer::gettime();
+       }
+     };
+     
+     /* Athapascan Fibo task
+      * - res is the return value, return value are usually put in a Shared_w
+      * - n is the order of fibonnaci. It could be a Shared_r, but there are no dependencies to compute on it, so it would be useless
+      * - threshold is used to control the grain of the application. The greater it is, the more task will be created, the more parallelism there will be.
+      *   a high value of threshold also decreases the performances, beacause of athapascan's overhead, choose it wisely
+      */
+     struct Fibo {
+       void operator() ( a1::Shared_w&lt;unsigned long long> res, int n, int threshold, a1::Shared_r&lt;double> t )
+       {  
+         if (n &lt; threshold) {
+           res.write( fiboseq(n) );
+         }
+         else {
+           a1::Shared&lt;unsigned long long> res1;
+           a1::Shared&lt;unsigned long long> res2;
+           a1::Shared&lt;double> t;
+     
+           /* the Fork keyword is used to spawn new task
+            * new tasks are executed in parallel as long as dependencies are respected
+            */
+           a1::Fork&lt;Fibo>() ( res1, n-1, threshold, t );
+           a1::Fork&lt;Fibo>() ( res2, n-2, threshold, t );
+     
+           /* the Sum task depends on res1 and res2 which are written by previous tasks
+            * it must wait until thoses tasks are finished
+            */
+           a1::Fork&lt;Sum>()  ( res, res1, res2 );
+         }
+       }
+     };
+     
+     
+     /* Main of the program
+     */
+     struct doit {
+     
+       void do_experiment(unsigned int n, unsigned int seuil, unsigned int iter )
+       {
+         double t = Util::WallTimer::gettime();
+         unsigned long long ref_value = fiboseq_On(n);
+         double delay = Util::WallTimer::gettime() - t;
+         Util::logfile() &lt;&lt; "[fibo_apiatha] Sequential value for n = " &lt;&lt; n &lt;&lt; " : " &lt;&lt; ref_value 
+                         &lt;&lt; " (computed in " &lt;&lt; delay &lt;&lt; " s)" &lt;&lt; std::endl;
+         a1::Shared&lt;double> time(0.0);
+         for (unsigned int i = 0 ; i &lt; iter ; ++i)
+         {
+           /* notice how useless the init value is */
+           a1::Shared&lt;unsigned long long> res(31415);
+         
+           a1::Fork&lt;GetTime>(a1::SetLocal)(time);
+           
+           a1::Fork&lt;Fibo>()( res, n, seuil, time );
+     
+           /* a1::SetLocal ensures that the task is executed locally (cannot be stolen) */
+           a1::Fork&lt;Print&lt;unsigned long long> >(a1::SetLocal)(res, ref_value, time);
+         }
+       }
+     
+       void operator()(int argc, char** argv )
+       {
+         unsigned int n = 30;
+         if (argc > 1) n = atoi(argv[1]);
+         unsigned int seuil = 2;
+         if (argc > 2) seuil = atoi(argv[2]);
+         unsigned int iter = 3;
+         if (argc > 3) iter = atoi(argv[3]);
+         
+         Util::logfile() &lt;&lt; "In main: n = " &lt;&lt; n &lt;&lt; ", seuil = " &lt;&lt; seuil &lt;&lt; ", iter = " &lt;&lt; iter &lt;&lt; std::endl;
+         do_experiment( n, seuil, iter );
+       }
+     };
+     
+     
+     /* user store for global variable
+     */
+     void fibo_userglobal( Util::OStream&amp; out )
+     {
+       static const char* msg = "ceci est la variable globale de fibonnaci";
+       out.write(Util::WrapperFormat&lt;char>::format, Util::OStream::IA, msg, strlen(msg)+1);
+     }
+     
+     
+     /* main entry point : Athapascan initialization
+     */
+     #if defined(KAAPI_USE_IPHONEOS)
+     void* KaapiMainThread::run_main(int argc, char** argv)
+     #else
+     int main(int argc, char** argv)
+     #endif
+     {
+       try {
+     #if defined(KAAPI_USR_FT)
+         FT::set_savehandler( &amp;fibo_userglobal );
+     #endif
+     
+         /* Join the initial group of computation : it is defining
+            when launching the program by a1run.
+         */
+         a1::Community com = a1::System::join_community( argc, argv );
+         
+         /** Print pid/gid 
+         */
+         KAAPI_LOG(true, "[main] pid=" &lt;&lt; getpid());
+         
+         /* Start computation by forking the main task */
+         a1::ForkMain&lt;doit>()(argc, argv); 
+         
+         /* Leave the community: at return to this call no more athapascan
+            tasks or shared could be created.
+         */
+         com.leave();
+     
+         /* */
+         a1::System::terminate();
+       }
+       catch (const a1::InvalidArgumentError&amp; E) {
+         Util::logfile() &lt;&lt; "Catch invalid arg" &lt;&lt; std::endl;
+       }
+       catch (const a1::BadAlloc&amp; E) {
+         Util::logfile() &lt;&lt; "Catch bad alloc" &lt;&lt; std::endl;
+       }
+       catch (const a1::Exception&amp; E) {
+         Util::logfile() &lt;&lt; "Catch : "; E.print(std::cout); std::cout &lt;&lt; std::endl;
+       }
+       catch (...) {
+         Util::logfile() &lt;&lt; "Catch unknown exception: " &lt;&lt; std::endl;
+       }
+       
+       return 0;
+     }
+     
+</pre>
+
+   </dl>
+
+<!--  -->
+<div class="node">
+<a name="API"></a>
+
+</div>
+
+
+</div>
+
+<div id="left">
+<h2>Navigation</h2>
+<ul>
+<li><a href="http://kaapi.gforge.inria.fr">Home Page</a></li>
+<li><a href="http://kaapi.gforge.inria.fr/doc/index.html">Documentation</a>
+<!-- DOCS !-->
+    <ul>
+        <li><a href="install.html">Installation Guide</a></li>
+        <li><a href="compile_run.html">Compile and Run instructions</a></li>
+        <li><a href="atha.html">Athapascan Overview</a></li>
+        <li><a href="tuto.html">Tutorials</a></li>
+        <li><a href="api.html">API</a></li>
+        <li><a href="annotated.html">Doxygen documentation</a></li>
+    </ul>
+
+</li>
+
+<li><a href="http://kaapi.gforge.inria.fr/download.html">Download</a></li>
+<li><a href="http://gforge.inria.fr/projects/kaapi">GForge</a></li>
+</ul>
+
+</div>
+
+<div id="clear">
+<a href="http://www.inria.fr"><img src="INRIA-75x55.png" alt="INRIA" style="float:left;"/></a> <a href="http://lig.imag.fr"><img src="LIG-75x55.png" alt="LIG" style="float:left;" /></a>
+ </div>
+
+<div id="footer">
+serge guelton | Design by <a href="http://www.minimalistic-design.net">Minimalistic Design</a>
+</div>
+
+<!-- If needed, change the copyright block at the bottom. In general, -->
+<!-- all pages on the GNU web server should have the section about    -->
+<!-- verbatim copying.  Please do NOT remove this without talking     -->
+<!-- with the webmasters first. --> 
+<!-- Please make sure the copyright date is consistent with the document -->
+<!-- and that it is like this "2001, 2002" not this "2001-2002." -->
+</div><!-- for id="content", starts in the include above -->
+<!--#include virtual="/server/footer-min.html" -->
+</div>
+</body>
+</html>

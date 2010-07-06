@@ -1,0 +1,712 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>KAAPI</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="info.css" media="screen" />
+</head>
+<body>
+
+<div id="wrap">
+
+<div id="header">
+<h1><a href="#">KAAPI Library</a></h1>
+<h2>Kernel for Adaptative, Asynchronous Parallel and Interactive programming - A library for ditributed computing</h2>
+</div>
+
+<div id="right">
+
+<!-- SECTION !-->
+<a name="API"></a>
+
+<p>This is a quick reference to most classes and functions defined in the
+header <samp><span class="file">&lt;athapascan-1&gt;</span></samp>. 
+Do not forget to had
+<pre class="example">         #include &lt;athapscan-1&gt;
+         using namespace a1; // optional
+</pre>
+   <p>to your source code !
+
+</li></ul>
+<p>The must have
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="api.html#fork">fork</a>:  <code>a1::Fork&lt;...&gt;(...)(...)</code>
+<li><a accesskey="2" href="api.html#shared">shared</a>:  <code>a1::Shared</code>, <code>a1::Shared_r</code>, <code>a1::Shared_w</code>, <code>a1::Shared_rw</code>, <code>a1::Shared_cw</code>
+</ul>
+
+</li></ul>
+<p>And the sometimes useful
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="api.html#monotonic-bound">monotonic bound</a>:  <code>a1::MonotonicBound</code>
+<li><a accesskey="2" href="api.html#synchronized-blocks">synchronized blocks</a>: <code>a1::SyncGuard</code>
+<li><a accesskey="3" href="api.html#algorithms">algorithms</a>:  various algorithms ported from the <acronym title="Standard Template Library">STL</acronym> (Standard Template Library)
+<li><a accesskey="4" href="api.html#utilities">utilities</a>:  timers, loggers, resize_vector ... 
+<li><a accesskey="5" href="api.html#dynamically-loaded-modules">dynamically loaded modules</a>:  external modules that can be loaded dynamically
+</ul>
+<!-- * remote iterator:: @code{a1::remote}, @code{a1::const_remote}, @code{a1::init}, @code{a1::fetch} -->
+
+<!--  -->
+<div class="node">
+<a name="fork"></a>
+
+</div>
+
+<h3 class="section">6.1 Fork</h3>
+
+     <dl>
+<!--  -->
+<dt><strong>Declaration</strong><dd>
+     <pre class="example">          template&lt;class <var>Task</var>, class <var>Attribute</var> &gt;
+          class Fork
+          {
+              Fork(Attribute = DefaultAttribut );
+          
+              void operator()( ... );
+          };
+</pre>
+     <!--  -->
+     <br><dt><strong>Template parameters</strong><dd>
+          <dl>
+<dt><var>Task</var><a name="index-Task-1"></a><dd>This template parameter is used to know which task will be spawned. 
+It must implement a <code>operator()(...)</code> method. 
+The parameters of the <code>Fork</code> method <code>operator()</code> are the same as the <code>operator()</code> from <var>Task</var>.
+
+          <br><dt><var>Attribute</var><a name="index-Attribute-2"></a><dd>This template parameter is never specified direclty. Instead, it is deduced from the call to the <code>Fork</code> constructor. 
+The class given can chage the bahavior of the forked task. Possible values are
+
+               <dl>
+<dt><var>DefaultAttribute</var><a name="index-DefaultAttribute-3"></a><dd>The default behavior, nothing particular
+<br><dt><var>SetLocal</var><a name="index-SetLocal-4"></a><dd>Force the forked task to be executed locally
+</dl>
+
+     </dl>
+
+     <!--  -->
+     <br><dt><strong>Methods</strong><dd>
+
+          <dl>
+<dt><code>Fork(Attribute = DefaultAttribut)</code><a name="index-Fork_0028Attribute-_003d-DefaultAttribut_0029-5"></a><dd>The constructor of the <code>Fork</code> class. 
+It is always used to construct a temporary object, from which you call the  <code>operator()</code> method. 
+The <code>Attribute</code> parameter determines the behavior of forked task, as described before.
+
+          <br><dt><code>void operator() (...)</code><a name="index-void-operator_0028_0029-_0028_002e_002e_002e_0029-6"></a><dd>The parameters of the method <code>operator()</code> are the same as the <code>operator()</code> from <var>Task</var>. 
+This method spawns a task of type <var>Task</var> into the local stack, waiting to be executed by current process, or to be stolen by a remote process.
+
+     </dl>
+
+</dl>
+
+<!--  -->
+<div class="node">
+<a name="shared"></a>
+
+</div>
+
+<h3 class="section">6.2 Shared</h3>
+
+     <dl>
+<!--  -->
+<dt><code>Shared</code><a name="index-Shared-7"></a><dd>
+          <dl>
+<dt><strong>Declaration</strong><dd>
+          <pre class="example">               template&lt;class T&gt;
+               class Shared
+               {
+                   Shared();
+                   Shared(T );
+                   Shared(T* );
+                   const T&amp; get_data();
+               };
+</pre>
+          <br><dt><strong>Template Parameters</strong><dd>
+               <dl>
+<dt><var>T</var><dd>Type of the variable to share. 
+Type <var>T</var> must be communicable. 
+</dl>
+
+          <br><dt><strong>Methods</strong><dd>
+               <dl>
+<dt><code>Shared()</code><a name="index-Shared_0028_0029-8"></a><dd>Create an empty shared variable. 
+<br><dt><code>Shared(T </code><var>t</var><code>)</code><a name="index-Shared_0028T-_0040var_007bt_007d_0029-9"></a><dd>Put a copy of <var>t</var> into the shared memory. 
+<br><dt><code>Shared(T* )</code><a name="index-Shared_0028T_002a-_0029-10"></a><dd>Put a copy of *<var>t</var> into the shared memory. 
+<br><dt><code>get_data()</code><a name="index-get_005fdata_0028_0029-11"></a><dd>Return content of shared, use cautiously because no check on the internal state is done
+</dl>
+
+     </dl>
+
+     <!--  -->
+     <br><dt><code>Shared_r</code><a name="index-Shared_005fr-12"></a><dd>
+          <dl>
+<dt><strong>Declaration</strong><dd>
+          <pre class="example">               template&lt;class T&gt;
+               class Shared_r
+               {
+                   const T&amp; read();
+               };
+</pre>
+          <br><dt><strong>Template Parameters</strong><dd>
+               <dl>
+<dt><var>T</var><dd>Type of the variable to share. 
+Type <var>T</var> must be communicable. 
+The variable held can only be read. 
+</dl>
+
+          <br><dt><strong>Methods</strong><dd>
+               <dl>
+<dt><code>read()</code><a name="index-read_0028_0029-13"></a><dd>Returns the content (in read only mode) of the object. 
+The returned value cannot be modified. 
+Further write must wait until the end of current task. 
+</dl>
+
+     </dl>
+
+     <!--  -->
+     <br><dt><code>Shared_w</code><a name="index-Shared_005fw-14"></a><dd>
+          <dl>
+<dt><strong>Declaration</strong><dd>
+          <pre class="example">               template&lt;class T&gt;
+               class Shared_w
+               {
+                   void write(T t);
+               };
+</pre>
+          <br><dt><strong>Template Parameters</strong><dd>
+               <dl>
+<dt><var>T</var><dd>Type of the variable to share. 
+Type <var>T</var> must be communicable. 
+The variable held can only be written. 
+</dl>
+
+          <br><dt><strong>Methods</strong><dd>
+               <dl>
+<dt><code>write()</code><a name="index-write_0028_0029-15"></a><dd>Write the content of <var>t</var> into the object. 
+Further read must wait until the end of current task. 
+In case of concurrent <code>write</code>, no guarantee on the order is given. 
+</dl>
+
+     </dl>
+     <!--  -->
+<br><dt><code>Shared_rw</code><a name="index-Shared_005frw-16"></a><dd>
+          <dl>
+<dt><strong>Declaration</strong><dd>
+          <pre class="example">               template&lt;class T&gt;
+               class Shared_rw
+               {
+                    T&amp; access()
+               };
+</pre>
+          <br><dt><strong>Template Parameters</strong><dd>
+               <dl>
+<dt><var>T</var><dd>Type of the variable to share. 
+Type <var>T</var> must be communicable. 
+</dl>
+
+          <br><dt><strong>Methods</strong><dd>
+               <dl>
+<dt><code>access()</code><a name="index-access_0028_0029-17"></a><dd>Return the content of <var>t</var> of the object. 
+The returned value can be modified. 
+Further read or write must wait until the end of current task. 
+</dl>
+          </dl>
+
+     <!--  -->
+     <br><dt><code>Shared_cw</code><a name="index-Shared_005fcw-18"></a><dd>
+          <dl>
+<dt><strong>Declaration</strong><dd>
+          <pre class="example">               template&lt;class T, class F&gt;
+               class Shared_cw
+               {
+                    void cumul(T t)
+               };
+</pre>
+          <br><dt><strong>Template Parameters</strong><dd>
+               <dl>
+<dt><var>T</var><dd>Type of the variable to share. 
+Type <var>T</var> must be communicable. 
+<br><dt><var>F</var><dd>Type of the update function object. 
+<var>F</var> must have an empty constructor and a <code>void operator()( </code><var>T</var><code>&amp;, const </code><var>T</var><code>&amp;); </code> method.
+
+          </dl>
+
+          <br><dt><strong>Methods</strong><dd>
+               <dl>
+<dt><code>cumul(T t)</code><a name="index-cumul_0028T-t_0029-19"></a><dd>Add the content of <var>t</var> to the object in the sense of <var>F</var>. 
+There is no constriant on the order between various <code>cumul</code> call on the same shared object. 
+Further read must wait until the end of current task. 
+</dl>
+
+     </dl>
+
+</dl>
+
+<!--  -->
+<div class="node">
+<a name="monotonic-bound"></a>
+
+</div>
+
+<h3 class="section">6.3 MonotonicBound</h3>
+
+     <dl>
+<dt><strong>Declaration</strong><dd>
+     <pre class="example">          template&lt;class T, class F&gt;
+          class MonotonicBound
+          {
+              MonotonicBound(const string&amp; name, T* initial_value = 0 );
+              void update(const T&amp; t);
+              void acquire();
+              void release();
+              const T&amp; read() const;
+          };
+</pre>
+     <br><dt><strong>Template Parameters</strong><dd>
+          <dl>
+<dt><var>T</var><dd>Type of the variable to share. 
+Type <var>T</var> must be communicable. 
+<br><dt><var>F</var><dd>Type of the update function object. 
+<var>F</var> must have an empty constructor and a <code> bool operator() (T&amp; result, const T&amp; value ); </code> method. 
+this method returns true if <var>result</var> was updated. 
+</dl>
+
+     <br><dt><strong>Methods</strong><dd>
+          <dl>
+<dt><code>MonotonicBound(const string&amp; name, T* initial_value = 0 )</code><a name="index-MonotonicBound_0028const-string_0026-name_002c-T_002a-initial_005fvalue-_003d-0-_0029-20"></a><dd>Constructor of the class. 
+<var>name</var> must be a unique identifier. 
+If given, the <var>initial_value</var> is now owned by the object and need not to be realeased.
+
+          <br><dt><code>update(const T&amp; t)</code><a name="index-update_0028const-T_0026-t_0029-21"></a><dd>Update the content of the object using the <var>F</var> update function. 
+It is responsible to get the update the local value of the bound. 
+The invocation of update should be surround by invocations <code>acquire</code>/<code>release</code>. 
+Multiple update may be invoked between invocations to <code>acquire</code>/<code>release</code>.
+
+          <br><dt><code>acquire()</code><a name="index-acquire_0028_0029-22"></a><dd>Is responsible to get the initial value of the bound from processor that manage it. 
+If such an initial value exists, then the method take the last updated value as the current value.
+
+          <br><dt><code>release()</code><a name="index-release_0028_0029-23"></a><dd>Is responsible to update all copies of the bound is the local value has been updated. 
+After the invocation of release, the local processor that has release the bound should re-invoke i<code>acquire</code>: the read value will be the updated value. 
+Other processor will be able to read the updated value in a bounded time.
+
+          <br><dt><code>read()</code><a name="index-read_0028_0029-24"></a><dd>is responsible returns a reference to the last value acquired by the invocation to <code>acquire</code>. 
+The invocation of read should be surround by invocations to <code>acquire</code>/<code>release</code>. 
+Multiple read may be invoked between invocations to <code>acquire</code>/<code>release</code>. 
+</dl>
+
+</dl>
+   <!--  -->
+<!-- @node remote iterator -->
+<!-- @section Remote -->
+
+   <p>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;
+<div class="node">
+<a name="synchronized-blocks"></a>
+
+</div>
+
+<h3 class="section">6.4 SyncGuard</h3>
+
+     <dl>
+<dt><strong>Declaration</strong><dd>
+     <pre class="example">          class SyncGuard
+          {
+              SyncGuard();
+              ~SyncGuard();
+          };
+</pre>
+     <br><dt><strong>Methods</strong><dd>
+          <dl>
+<dt><code>SyncGuard()</code><a name="index-SyncGuard_0028_0029-25"></a><dd>Constructor of the class. 
+When an object of class <code>SyncGuard</code> is created, it creates a special fram in which all further tasks willbe spawned. 
+When the object is destroyed, the frame is closed and all generated tasks are executed.
+
+          <br><dt><code>~SyncGuard()</code><a name="index-g_t_007eSyncGuard_0028_0029-26"></a><dd>Destructor of the class. 
+When called, it forces the execution of all tasks in its frame. 
+This method only returns when  all tasks (and children) have been executed. 
+</dl>
+
+</dl>
+
+<!--  -->
+<div class="node">
+<a name="algorithms"></a>
+
+</div>
+
+<h3 class="section">6.5 Algorithms</h3>
+
+     <dl>
+<dt><code>for_each</code><a name="index-for_005feach-27"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class InputIterator, class Function&gt;
+               void for_each (InputIterator first, InputIterator last, Function f,
+                 typename std::iterator_traits&lt;InputIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>Applies function <var>f</var> to each of the elements in the range [<var>first</var>,<var>last</var>).
+
+          <p>The behavior of this template function is equivalent to:
+
+          <pre class="example">               template&lt;class InputIterator, class Function&gt;
+               void for_each(InputIterator first, InputIterator last, Function f)
+               {
+                 while ( first!=last ) f(*first++);
+               }
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>Input iterators to the initial and final positions in a sequence. 
+The range used is [<var>first</var>,<var>last</var>), which contains all the elements between first and last, including the element pointed by first but not the element pointed by last.
+
+               <br><dt><var>f</var><dd>Unary function taking an element in the range as argument. 
+This can either <em>not</em> be a pointer to a function. 
+It <em>must</em> be  an object whose class overloads <code>operator()</code>. 
+Its return value, if any, is ignored.
+
+               <br><dt><var>threshold</var><dd>integer used as grain size. It is comutedn automatically if not provided, but should be set by hand for best performances. 
+</dl>
+
+               <ul>
+<li>as an additionnal requirement, <var>f</var> and data from <var>first</var> to <var>last</var> must all be communicable !! 
+<li>Currently, only pointers iterator are supported. 
+<li>no hypothesis can be made on the order of appliance for <var>f</var>. 
+</ul>
+
+     </dl>
+
+     <br><dt><code>transform</code><a name="index-transform-28"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt; class InputIterator, class OutputIterator, class UnaryOperator &gt;
+               void transform ( InputIterator first1, InputIterator last1,
+                                          OutputIterator result, UnaryOperator op,
+                                          size_t threshold = 0 );
+               
+               template &lt; class InputIterator1, class InputIterator2,
+                          class OutputIterator, class BinaryOperator &gt;
+               void transform ( InputIterator1 first1, InputIterator1 last1,
+                                          InputIterator2 first2, OutputIterator result,
+                                          BinaryOperator binary_op,
+                                          size_t threshold = 0 );
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>The first version applies op to all the elements in the input range ([<var>first1</var>,<var>last1</var>)) and stores each returned value in the range beginning at result. 
+The second version uses as argument for each call to binary_op one element from the first input range ([<var>first1</var>,<var>last1</var>)) and one element from the second input range (beginning at <var>first2</var>).
+
+          <p>The behavior of this function template is equivalent to:
+
+          <pre class="example">               template &lt; class InputIterator, class OutputIterator, class UnaryOperator &gt;
+               void transform ( InputIterator first1, InputIterator last1,
+                                          OutputIterator result, UnaryOperator op )
+               {
+                 while (first1 != last1)
+                   *result++ = op(*first1++);  // or: *result++=binary_op(*first1++,*first2++);
+               }
+</pre>
+          <p>The function allows for the destination range to be the same as one of the input ranges to make transformations <em>in place</em>.
+
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first1</var><dt><var>last1</var><dd>
+    Input iterators to the initial and final positions of the first sequence. The range used is [<var>first1</var>,<var>last1</var>), which contains all the elements between <var>first1</var> and <var>last1</var>, including the element pointed by <var>first1</var> but not the element pointed by <var>last1</var>.
+
+               <br><dt><var>first2</var><dd>    Input iterator to the initial position of the second range. The range includes as many elements as [<var>first1</var>,<var>last1</var>). 
+<br><dt><var>result</var><dd>    Output iterator to the initial position of the range where function results are stored. The rangeincludes as many elements as [<var>first1</var>,<var>last1</var>). 
+<br><dt><var>op</var><dd>    Unary function taking one element as argument, and returning some result value. 
+    This can <em>not</em> be a pointer to a function. 
+    It <em>must</em> be an object whose class overloads <code>operator()</code>. 
+    <br><dt><var>binary_op</var><dd>    Binary function taking two elements as argument (one of each of the two sequences), and returning some result value. 
+    This can <em>not</em> be a pointer to a function. 
+    It <em>must</em> be an object whose class overloads <code>operator()</code>. 
+<br><dt><var>shold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+               <ul>
+<li>as an additionnal requirement, <var>binary_op</var> and data from <var>first1</var> to <var>last1</var>, <var>first2</var>, <var>result</var> must all be communicable !!
+
+               <li>Currently, only pointers iterator are supported.
+
+               <li>no hypothesis can be made on the order of appliance for <var>binary_op</var>. 
+</ul>
+          </dl>
+
+     <br><dt><code>find</code><a name="index-find-29"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class InputIterator, class T&gt;
+               InputIterator find ( InputIterator first, InputIterator last, const T&amp; value,
+                                    typename std::iterator_traits&lt;InputIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>
+Returns an iterator to the first element in the range [<var>first</var>,<var>last</var>) that compares equal to <var>value</var>, or <var>last</var> if not found.
+
+          <p>The behavior of this function template is equivalent to:
+
+          <pre class="example">               template&lt;class InputIterator, class T&gt;
+               InputIterator find ( InputIterator first, InputIterator last, const T&amp; value )
+               {
+                 for ( ;first!=last; first++) if ( *first==value ) break;
+                 return first;
+               }
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>Input iterators to the initial and final positions in a sequence. 
+The range used is [<var>first</var>,<var>last</var>), which contains all the elements between <var>first</var> and <var>last</var>, including the element pointed by <var>first</var> but not the element pointed by <var>last</var>. 
+<br><dt><var>value</var><dd>Value to be compared to each of the elements. 
+<br><dt><var>threshold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+          <br><dt><strong>Return value</strong><dd>An iterator to the first element in the range that matches <var>value</var>. 
+If no element matches, the function returns <var>last</var>.
+
+     </dl>
+
+          <ul>
+<li>as an additionnal requirement, data from <var>first1</var> to <var>last1</var> and <var>value</var> must all be communicable !!
+
+          <li>Currently, only pointers iterator are supported. 
+</ul>
+
+     <br><dt><code>find_if</code><a name="index-find_005fif-30"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class InputIterator, class T&gt;
+               InputIterator find_if ( InputIterator first, InputIterator last, const T&amp; value, Predicate pred,
+                                    typename std::iterator_traits&lt;InputIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>
+Returns an iterator to the first element in the range [<var>first</var>,<var>last</var>) for which applying <var>pred</var> to it, is <var>true</var>.
+
+          <p>The behavior of this function template is equivalent to:
+
+          <pre class="example">               template&lt;class InputIterator, class Predicate&gt;
+               InputIterator find_if ( InputIterator first, InputIterator last, Predicate pred )
+               {
+                 for ( ; first!=last ; first++ ) if ( pred(*first) ) break;
+                 return first;
+               }
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>    Input iterators to the initial and final positions in a sequence. The range used is [<var>first</var>,<var>last</var>), which contains all the elements between <var>first</var> and <var>last</var>, including the element pointed by <var>first</var> but not the element pointed by <var>last</var>. 
+<br><dt><var>pred</var><dd>    Unary predicate taking an element in the range as argument, and returning a value indicating the falsehood (with false, or a zero value) or truth (true, or non-zero) of some condition applied to it. 
+    This can <em>not</em> be a pointer to a function. 
+    It <em>must</em> be an object whose class overloads <code>operator()</code>. 
+<br><dt><var>threshold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+          <br><dt><strong>Return value</strong><dd>An iterator to the first element in the range for which the application of <var>pred</var> to it does not return false (zero). 
+If <var>pred</var> is false for all elements, the function returns <var>last</var>.
+
+     </dl>
+
+          <ul>
+<li>as an additionnal requirement, <var>pred</var> and data from <var>first</var> to <var>last</var> must all be communicable !! 
+<li><li>Currently, only pointers iterator are supported. 
+</ul>
+
+     <br><dt><code>sort and stable_sort</code><a name="index-sort-and-stable_005fsort-31"></a><dd>
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template &lt;class RandomAccessIterator&gt;
+               void stable_sort ( RandomAccessIterator first, RandomAccessIterator last,
+                   typename std::iterator_traits&lt;RandomAccessIterator&gt;::difference_type threshold = 0);
+               
+               template &lt;class RandomAccessIterator, class Compare&gt;
+               void sort ( RandomAccessIterator first, RandomAccessIterator last,
+                   typename std::iterator_traits&lt;RandomAccessIterator&gt;::difference_type threshold = 0);
+</pre>
+          <br><dt><strong>Algorithm</strong><dd>
+Sorts the elements in the range [<var>first</var>,<var>last</var>) into ascending order. 
+<code>stable_sort</code> also grants that the relative order of the elements with equivalent values is preserved.
+
+          <p>The elements are compared using <code>operator&lt;</code>.
+
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>first</var><dt><var>last</var><dd>    Random-Access iterators to the initial and final positions of the sequence to be sorted. The range used is [<var>first</var>,<var>last</var>), which contains all the elements between <var>first</var> and <var>last</var>, including the element pointed by first but not the element pointed by &ldquo;last&ldquo;. 
+<br><dt><var>threshold</var><dd>    Value of the Grain size used to bound parallelism. If none given, it will be automatically computed, set it by hand for best performances. 
+</dl>
+
+               <ul>
+<li>as an additionnal requirement, data from <var>first</var> to <var>last</var> must all be communicable !! 
+<li>Currently, only pointers iterator are supported. 
+</ul>
+
+     </dl>
+
+</dl>
+
+<!--  -->
+<div class="node">
+<a name="utilities"></a>
+
+</div>
+
+<h3 class="section">6.6 Utilities</h3>
+
+     <dl>
+<dt><code>Util::logfile()</code><a name="index-Util_003a_003alogfile_0028_0029-32"></a><dd>manage logs.
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               std::ostream&amp; logfile();
+</pre>
+          <br><dt><strong>Return Value</strong><dd>returns a <code>std::ostream</code> reference that can be used to print out any kind of text. 
+The text will be forwrded to the master node and displayed with a smaal header containing information about
+               <ul>
+<li>the global id of the source node
+<li>the date when the log was taken (according to local clock)
+</ul>
+          </dl>
+
+     <br><dt><code>Util::WallTimer::gettime()</code><a name="index-Util_003a_003aWallTimer_003a_003agettime_0028_0029-33"></a><dd>take time
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               double gettime();
+</pre>
+          <br><dt><strong>Return Value</strong><dd>time since the birth of Unix in milliseconds
+</dl>
+
+     <br><dt><code>resize_vector(std::vector&lt; a1::Shared&lt;...&gt; &gt;, size_type)</code><a name="index-resize_005fvector_0028std_003a_003avector_003c-a1_003a_003aShared_003c_002e_002e_002e_003e-_003e_002c-size_005ftype_0029-34"></a><dd>resize a vector of Shared.Its behavior is similar to vector::resize() method
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template&lt;class T&gt;
+               void resize_vector(std::vector&lt; a1::Shared&lt;T&gt; &gt;&amp; v,
+                   typename std::vector&lt; a1::Shared&lt;T&gt; &gt;::size_type sz);
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>v</var><dd>vector of shared to be resized
+<br><dt><var>sz</var><dd>new size of the vector
+</dl>
+
+     </dl>
+
+</dl>
+
+<div class="node">
+<a name="dynamically-loaded-modules"></a>
+
+</div>
+
+<h3 class="section">6.7 Dynamically Loaded Modules - enhance kaapi</h3>
+
+<p>This tutorial will show you how to develop an external module and dynamically load it in any already compiled kaapi program.
+
+<ul class="menu" style="display:none;">
+<li><a accesskey="1" href="api.html#dlm-api">dlm api</a>:  the application programming interface for dynamically loaded module
+<li><a accesskey="2" href="api.html#load-dlm">load dlm</a>:  command line syntax to load extra dlm
+</ul>
+
+<div class="node">
+<a name="dlm-api"></a>
+
+</div>
+
+<h4 class="subsection">6.7.1 API - interface required for a Dynamically loaded module</h4>
+
+<p>Basically, a Dynamically loaded module is a standard <code>Kaapi</code> module. 
+In order to make it dynamically loadable, you must also provide a <code>factory</code> function.
+
+<div class="defun">
+&mdash; Function: <b>create_module</b><var><a name="index-create_005fmodule-35"></a></var><br>
+<blockquote><p><code>extern "C" Util::KaapiComponent* create_module();</code>
+factory function that return a new instance of the <code>Util::KaapiComponent</code> derived class. 
+The kaapi module loader will call the <code>delete_module</code> to free allocated memory. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Function: <b>delete_module</b><var> kaapi_component<a name="index-delete_005fmodule-36"></a></var><br>
+<blockquote><p><code>extern "C" void delete_module(Util::KaapiComponent* </code><var>kaapi_component</var>
+The counterpart of the <code>create_module</code> function. 
+Instead of allocating memory for a new module, it frees the memory of given pointer. 
+</p></blockquote></div>
+
+   <p>A detailed description of the <code>Util::KaapiComponent</code> is given in the doxygen documentation. 
+As a simple reminder, it's interface is given here:
+<pre class="example">     #include &lt;utils_component.h&gt;
+     class Util::KaapiComponent
+     {
+     
+         public:
+         int initialize() throw();
+         int terminate() throw();
+         void add_options( Util::Parser* , Util::Properties* );
+         void declare_dependencies();
+     };
+</pre>
+   <p>Note that the <code>declare_dependencies</code> is of no use for dynamically loaded modules. 
+These modules are loaded after all the static ones, in the order given at the command line.
+
+<div class="node">
+<a name="load-dlm"></a>
+
+</div>
+
+<h4 class="subsection">6.7.2 Command Line Interface - interface to load extra modules from the kaapi command line</h4>
+
+<p>This sections describes the usage of the <em>dl</em> module in charge of the dynamic loading of extra modules. 
+It uses the kaapi way of passing arguments to modules:
+<samp><span class="option">--module-name</span></samp> <samp><span class="option">-option-name</span></samp> <var>value</var>
+A description of a module option can be found by running any kaapi program with
+<pre class="example">     $ kaapi_prog --help <var>module-name</var>
+</pre>
+   <p>The <em>dl</em> module provides two options:
+     <dl>
+<dt><samp><span class="option">-verboseon</span></samp><dd>set it to <var>true</var> or <var>false</var> to get status report from the <em>dl</em> module.
+
+     <br><dt><samp><span class="option">-load</span></samp><dd>description of the module to load, in the form
+     <pre class="example">          (path_to_the_module.so(:arguments of the module)?,)*path_to_the_module.so(:arguments of the module)
+</pre>
+     </dl>
+   <!--  -->
+
+<div class="node">
+<a name="function-methods-and-classes-index"></a>
+
+</div>
+
+
+</div>
+
+<div id="left">
+<h2>Navigation</h2>
+<ul>
+<li><a href="http://kaapi.gforge.inria.fr">Home Page</a></li>
+<li><a href="http://kaapi.gforge.inria.fr/doc/index.html">Documentation</a>
+<!-- DOCS !-->
+    <ul>
+        <li><a href="install.html">Installation Guide</a></li>
+        <li><a href="compile_run.html">Compile and Run instructions</a></li>
+        <li><a href="atha.html">Athapascan Overview</a></li>
+        <li><a href="tuto.html">Tutorials</a></li>
+        <li><a href="api.html">API</a></li>
+        <li><a href="annotated.html">Doxygen documentation</a></li>
+    </ul>
+
+</li>
+
+<li><a href="http://kaapi.gforge.inria.fr/download.html">Download</a></li>
+<li><a href="http://gforge.inria.fr/projects/kaapi">GForge</a></li>
+</ul>
+
+</div>
+
+<div id="clear">
+<a href="http://www.inria.fr"><img src="INRIA-75x55.png" alt="INRIA" style="float:left;"/></a> <a href="http://lig.imag.fr"><img src="LIG-75x55.png" alt="LIG" style="float:left;" /></a>
+ </div>
+
+<div id="footer">
+serge guelton | Design by <a href="http://www.minimalistic-design.net">Minimalistic Design</a>
+</div>
+
+<!-- If needed, change the copyright block at the bottom. In general, -->
+<!-- all pages on the GNU web server should have the section about    -->
+<!-- verbatim copying.  Please do NOT remove this without talking     -->
+<!-- with the webmasters first. --> 
+<!-- Please make sure the copyright date is consistent with the document -->
+<!-- and that it is like this "2001, 2002" not this "2001-2002." -->
+</div><!-- for id="content", starts in the include above -->
+<!--#include virtual="/server/footer-min.html" -->
+</div>
+</body>
+</html>

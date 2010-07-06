@@ -1,0 +1,10 @@
+<map id="G" name="G">
+<area shape="rect" id="node5" href="$class_w_s_1_1_leader_of_cluster_strategy.html" title="LeaderOfClusterStrategy." alt="" coords="5,237,235,267"/>
+<area shape="rect" id="node7" href="$class_w_s_1_1_random_victim.html" title="Extend Core::RandomVictim class in order to add random selection of process." alt="" coords="288,160,443,189"/>
+<area shape="rect" id="node13" href="$class_w_s_1_1_round_robin_victim.html" title="Extend Core::RoundRobinVictim class in order to add round robin selection of process..." alt="" coords="467,160,645,189"/>
+<area shape="rect" id="node17" href="$class_w_s_1_1_strategy.html" title="Strategy to define workstealing selection of nodes." alt="" coords="152,160,264,189"/>
+<area shape="rect" id="node2" href="$class_core_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor." alt="" coords="177,5,396,35"/>
+<area shape="rect" id="node9" href="$class_w_s_1_1_random_strategy.html" title="RandomStrategy." alt="" coords="261,237,432,267"/>
+<area shape="rect" id="node11" href="$class_w_s_1_1_c_r_s_strategy.html" title="CRSStrategy." alt="" coords="277,315,416,344"/>
+<area shape="rect" id="node15" href="$class_w_s_1_1_round_robin_strategy.html" title="RoundRobinStrategy." alt="" coords="457,237,652,267"/>
+</map>

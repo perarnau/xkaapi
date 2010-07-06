@@ -1,0 +1,21 @@
+<map id="G" name="G">
+<area shape="rect" id="node1" href="$class_util_1_1_kaapi_component.html" title="Util::KaapiComponent" alt="" coords="7,459,180,488"/>
+<area shape="rect" id="node3" href="$class_core_1_1_init.html" title="Module initialization for Core functionnalities." alt="" coords="255,5,343,35"/>
+<area shape="rect" id="node5" href="$class_ctrl_1_1_init.html" title="Ctrl::Init" alt="" coords="259,59,339,88"/>
+<area shape="rect" id="node7" href="$class_d_f_g_1_1_init.html" title="Component for initialization of the DFG module." alt="" coords="256,112,341,141"/>
+<area shape="rect" id="node9" href="$class_f_d_n_e_t_1_1_init.html" title="FDNET::Init" alt="" coords="248,165,349,195"/>
+<area shape="rect" id="node11" href="$class_f_t_1_1_init.html" title="Declaration of the component FT." alt="" coords="263,219,335,248"/>
+<area shape="rect" id="node13" href="$class_m_a_n_e_t_1_1_init.html" title="MANET::Init" alt="" coords="247,272,351,301"/>
+<area shape="rect" id="node15" href="$class_m_y_n_e_t_1_1_init.html" title="MYNET::Init" alt="" coords="247,325,351,355"/>
+<area shape="rect" id="node17" href="$class_net_1_1_init.html" title="Net::Init" alt="" coords="259,379,339,408"/>
+<area shape="rect" id="node19" href="$class_net_data_1_1_init.html" title="NetData::Init" alt="" coords="241,432,356,461"/>
+<area shape="rect" id="node21" href="$class_n_s_1_1_init.html" title="NS::Init" alt="" coords="261,485,336,515"/>
+<area shape="rect" id="node23" href="$class_r_f_o_1_1_init.html" title="Component for initialization of the DFG module." alt="" coords="256,539,341,568"/>
+<area shape="rect" id="node25" href="$class_sched_1_1_init.html" title="Sched::Init" alt="" coords="249,592,348,621"/>
+<area shape="rect" id="node27" href="$class_s_o_c_k_n_e_t_1_1_init.html" title="SOCKNET::Init" alt="" coords="237,645,360,675"/>
+<area shape="rect" id="node29" href="$class_stat_1_1_init.html" title="Stat::Init" alt="" coords="257,699,340,728"/>
+<area shape="rect" id="node31" href="$class_t_a_k_t_u_k_n_e_t_1_1_init.html" title="TAKTUKNET::Init" alt="" coords="229,752,368,781"/>
+<area shape="rect" id="node33" href="$class_u_d_p_n_e_t_1_1_init.html" title="UDPNET::Init" alt="" coords="243,805,355,835"/>
+<area shape="rect" id="node35" href="$class_util_1_1_init.html" title="Util::Init" alt="" coords="260,859,337,888"/>
+<area shape="rect" id="node37" href="$class_w_s_1_1_init.html" title="Component for initialization of the WS module." alt="" coords="261,912,336,941"/>
+</map>

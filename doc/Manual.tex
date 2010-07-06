@@ -4,7 +4,7 @@
 \usepackage{url} \urlstyle{sf}
 \usepackage[a4paper,margin=1.9cm]{geometry}
 \usepackage{xspace}
-\usepackage[francais,american]{babel}
+\usepackage[american]{babel}
 \usepackage{palatino}
 \usepackage{bibtopic}
 %\usepackage{graphicx}
@@ -32,302 +32,295 @@
 
 \begin{document}
 
-\title{X-Kaapi's Installation and User's Guide}
-\author{Vincent Danjean, Thierry Gautier, Christophe LaferriÃ¨re, Fabien Lementec}
+\title{\kaapi installation and user guide}
+\author{Vincent Danjean, Thierry Gautier, Christophe Laferrière, Fabien Le Mentec}
 \date{\today}
 \maketitle
 \tableofcontents
 \newpage
 
-\section{Introduction}
+%% intro
+\section{Overview}
 
-Here is a short manual of the \kaapi library. This Manual will guide you through the installation of the library and its usage.
-You may find contact information about people involved in this project in the \verb+AUTHORS+ file in the source directory.
+\subsection{\kaapi runtime}
+\kaapi is a runtime high performance parallelism targeting multicore and
+distributed architectures.
+It relies on workstealing paradigms.
+The core library comes with a full set of complementary programming interfaces,
+allowing for different abstraction levels.
+The following documents the install process, runtime options, as well as a
+description of APIs lying on top of the runtime and a set of examples.
 
+\subsection{Supported Platforms}
+\kaapi targets essentially SMP and NUMA platforms. The runtime should run
+on every system providing:
+\begin{itemize}
+\item a GNU toolchain (4.3),
+\item the pthread library.
+\end{itemize}
+It has been extensively tested on the following operating systems:
+\begin{itemize}
+\item GNU-Linux/x86\_64,
+\item MacOSX/PowerPC.
+\end{itemize}
+There is no version for Windows yet.
+
+\subsection{\kaapi Contacts}
+If you whish to contact the XKaapi team you can send a mail to \verb+thierry.gautier <dot> inrialpes.fr+, \verb+vincent.danjean <dot> imag.fr+, \verb+fabien.lementec <dot> gmail.com+ or \verb+christophe.laferriere <dot> imag.fr>+.
+
+\noindent Please also visit the www of the research project MOAIS at  \url{http://moais.imag.fr}.
+
+
+%% installation
 \section{Installation}
 
-In order to compile and use \kaapi's library, simply follow the next steps.
-You can freely download \kaapi at \url{http://kaapi.gforge.inria.fr}. 
-On the forge you will have access to:
+There are 2 ways to install \kaapi:
 \begin{itemize}
-\item tarball (\url{xkaapi.tgz}) file of the last stable release
-(please visit \url{https://gforge.inria.fr/frs/?group_id=94}).
-\item tarball (\url{xkaapi.tgz}) file of the daily main trunk
-(please visit \url{https://gforge.inria.fr/frs/?group_id=94}).
-\item GIT read only access to the main trunk of the source files\\
+\item using the debian packages,
+\item installing from source.
+\end{itemize}
+
+%% sub
+\subsection{Using the debian packages}
+Below is a list of the Debian packages provided for
+using and programming with \kaapi. A brief description
+is given for each of them:
+\begin{itemize}
+\item{xkaapi-doc}\newline
+\kaapi library documentation.
+\item{libxkaapi0}\newline
+\kaapi shared libraries.
+\item{libxkaapi-dev}\newline
+\kaapi development files for the low level C runtime.
+\item{libxkaapi-dbg}\newline
+\kaapi debug symbols for the above libraries.
+\item{libkaapixx0}\newline
+\kaapi C++ higher level interfaces standing on top of
+the \kaapi core library.
+\item{libkaapixx-dev}\newline
+\kaapi C++ interfaces development files.
+\end{itemize}
+
+%% sub
+\subsection{Installing from sources}
+
+\subsubsection{Retrieving the sources}
+There are 2 ways to retrieve the sources:
+\begin{itemize}
+\item download a release snapshot at the following url:\newline
+\url{https://gforge.inria.fr/frs/?group_id=94}.
+\item clone the project git repository:\newline
 \verb+> git clone git://git.ligforge.imag.fr/git/kaapi/xkaapi.git xkaapi+
 \end{itemize}
-If you want to be developers of \kaapi, please contact one of the administrator of the \kaapi project on the INRIA forge.
-In that case, the \kaapi 's build system uses Automake/Autoconf and Libtool tools. 
 
-\subsection{Starting with tarball archive}
-Once you have selected the directory where you want to extract source files, enter
+\subsubsection{Configuration}
+The build system uses GNU Autotools.
+In case you cloned the project repository, you first have to bootstrap the
+configuration process by running the following script:
 \begin{verbatim}
-$> tar xfvz xkaapi.tgz 
-\end{verbatim}
-It will create in the current directory the directory \url{xkaapi} that contains all necessary files to compile and install the library. You can pass directly to the section~\ref{sec:config}.
-
-\subsection{Starting with git download}
-Once you have got the source files, you need to bootstrap the build system. We assume that \url{xkaapi} is the directory that contains the downloaded source files.
-\begin{verbatim}
-$> cd xkaapi
 $> ./bootstrap
 \end{verbatim}
-It will generate the configure script from automake/autoconf/libtool tools. 
-If you encounter some error, please check the displayed messages and specifically check the version number of these different tools.
-
-\subsection{Configuration} \label{sec:config}
-Once you have extracted files from tarball or bootstrapping the build system in case of git download, you need to configure the library.
-Here we assume that \url{/path/xkaapi} is the source directory. The compilation will be down in the directory \url{/path/xkaapi-build}, and the installation in the director \url{/usr/local/kaapi}. In the following commands, you may change the directory depending of your requirements.
-
-The configuration is based on the \url{configure} file in the source directory (\url{/path/xkaapi/configure}).
-\bigskip
-First we create the directory for compilation:
+The \textit{configure} file should be present. It is used to create the
+\textit{Makefile} accordingly to your system configuration. Command line
+options can be used to modify the default behavior. You can have a complete
+list of the available options by running:
 \begin{verbatim}
-$> make /path/xkaapi-build
-$> cd /path/xkaapi-build
+$> ./configure --help
 \end{verbatim}
-The basic configuration is the following (to enter in the directory where you want to build xkaapi).
-Note that the command produces lot of output and ends by a summary of compilation options.
-\begin{verbatim}
-$> /path/xkaapi/configure --prefix=/usr/local/kaapi
-checking build system type... i386-apple-darwin9.8.0
-checking host system type... i386-apple-darwin9.8.0
 
-... <Here we have suppress output>....
 
-config.status: creating Makefile
-config.status: creating api/Makefile
-config.status: creating examples/Makefile
-config.status: creating src/Makefile
-config.status: creating xkaapi.pc
-config.status: creating atha1.pc
-config.status: creating src/misc/kaapi_version.c
-config.status: creating config.h
-config.status: executing depfiles commands
-configure: *************************************
-configure: *             Summary               *
-configure: *************************************
-configure: Libraries that can be used: 
-  * PTHREAD
-  * NUMA
-configure: Status for PTHREAD external library:
-  Cpp flags:              -D_THREAD_SAFE 
-  Linker flags:           -D_THREAD_SAFE 
-  Static linker flags:    -D_THREAD_SAFE 
-configure: Status for NUMA external library:
-  Not used or found
-configure: *************************************
-configure: Libraries that can be created: 
-  * XKAAPILIB
-  * XKAAPIPPLIB
-configure: Status for XKAAPILIB new library:
-  Link information:       PTHREAD, NOT NUMA
-  BUILD_CPPFLAGS:         -D_THREAD_SAFE 
-  BUILD_LDFLAGS:          -D_THREAD_SAFE 
-  BUILD_LDFLAGS_STATIC:   -D_THREAD_SAFE 
-  PKGCONFIG_LIBS:         -L${libdir} -lxkaapi
-  PKGCONFIG_LIBS_PRIVATE: -L${libdir} -lxkaapi -D_THREAD_SAFE 
-  PKGCONFIG_CFLAGS:       -I${includedir}
-  CONFIG_CPPFLAGS:        -I${includedir}
-  CONFIG_LDFLAGS_STATIC:  -D_THREAD_SAFE 
-  CONFIG_LIBS:            -L${libdir} -lxkaapi
-  CONFIG_LIBS_STATIC:     -L${libdir} -lxkaapi
-configure: Status for XKAAPIPPLIB new library:
-  Link information:       XKAAPILIB (local) [Public]
-  BUILD_LDFLAGS_STATIC:   -D_THREAD_SAFE 
-  PKGCONFIG_REQUIRES:     xkaapi
-  PKGCONFIG_LIBS:         -L${libdir} -lxkaapi++
-  PKGCONFIG_LIBS_PRIVATE: -L${libdir} -lxkaapi++
-  PKGCONFIG_CFLAGS:       -I${includedir}
-  CONFIG_CPPFLAGS:        -I${includedir} -I${includedir}
-  CONFIG_LDFLAGS_STATIC:  -D_THREAD_SAFE 
-  CONFIG_LIBS:            -L${libdir} -lxkaapi++ -L${libdir} -lxkaapi
-  CONFIG_LIBS_STATIC:     -L${libdir} -lxkaapi++ -L${libdir} -lxkaapi
-configure: *************************************
-configure: Programs that can be created: 
-  * XKAAPIPROGS
-  * XKAAPIPPPROGS
-configure: Status for XKAAPIPROGS new program:
-  Link information:       XKAAPILIB (local)
-  BUILD_LDFLAGS_STATIC:   -D_THREAD_SAFE 
-  PKGCONFIG_REQUIRES_PRIVATE:
-                          xkaapi
-configure: Status for XKAAPIPPPROGS new program:
-  Link information:       XKAAPIPPLIB (local)
-  BUILD_LDFLAGS_STATIC:   -D_THREAD_SAFE 
-  PKGCONFIG_REQUIRES_PRIVATE:
-                          xkaapi++
-configure: *************************************
-configure: Compilers and default flags used:
-  CC: gcc
-  CXX: g++
-  AM_CFLAGS: -Wall
-  CFLAGS: -g -O2
-  AM_CXXFLAGS: -Wall
-  CXXFLAGS: -g -O2
-configure: *************************************
-\end{verbatim}
-\bigskip
-In case of error, please read carefully the displayed message.
 
-\bigskip
-\kaapi is a highly configurable library and you can select different flavors of the library using command line options on the previous execution of the configure. For instance:
-\begin{itemize}
-\item \verb+--enable-target=mt+: select the target for multi-threaded implementation on top of Pthreads (default). Other implementations (gpu, mpsoc) are under development. 
-\item \verb+--enable-mode=debug+ or \verb+release+: choose the compilation mode of the library. The default mode is the release mode.
-\item \verb+--with-perfcounter+: add support for monitoring you \kaapi programs.	
-\item \verb+--with-papi+: enable the PAPI library for low level performance counting. More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
+Below is a list of the most important ones:
+\begin{itemize} %% option list
+\item \verb+--enable-target=mt+\newline
+Select the target platform. Defaults to 'mt', for pthread.
+\item \verb+--enable-mode=debug+ or \verb+release+\newline
+Choose the compilation mode of the library. Defaults to release.
 \item \verb+-with-steal=cas+ or \verb+hybrid+ or \verb+dijkstra+: (default is \verb+dijkstra+). Select the work stealing strategy to execute program. The \verb+cas+ is based on compare and swap atomic instruction. \verb+ dijkstra+ is based on Dijkstra protocol to garante coherency without lock in most of the case (like the Cilk T.H.E. protocol). \verb+hybrid+ is a  mix of \verb+cas+ and \verb+dijkstra+.
-\end{itemize}
+\item \verb+--with-perfcounter+\newline
+Enable performance counters support.
+\item \verb+--with-papi+\newline
+Enable the PAPI library for low level performance counting.
+More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
+\item \verb+--prefix=+\newline
+Overload the default installation path.
+\end{itemize} %% option list
+Example:
 
-All configuration options are self-documented. You display the options, enter:
 \begin{verbatim}
-$> /path/xkaapi/configure --help
+./configure --enable-mode=release --enable-target=mt --prefix=$HOME/install
 \end{verbatim}
+If there are errors during the configuration process, you have to solve
+them before going further. It is likely there is a missing dependency on your
+system, in which case the log gives you the name of the software to install.
 
-
-\subsection{Compilation}
-If everything is ok in the previous step, enter (alway in the build directory \verb+/path/xkaapi-build+):
+\subsubsection{Compilation and installation}
+On success, the configuration process generates a Makefile. the 2 following
+commands build and install the \kaapi runtime:
 \begin{verbatim}
 $> make
+$> make install
 \end{verbatim}
 
-By default, the build system is configured in order to compiler both the static and shared library (please look at options during the configuration step).
-
-This will compile both static and dynamic library. 
-
-Then you can check the compilation of the library on your system:
+\subsubsection{Checking the installation}
+The following checks the runtime is correctly installed on your system:
 \begin{verbatim}
 $> make check
 \end{verbatim}
 
-\subsection{Compilation of the examples}
-To compile examples, enter in directory \url{/path/xkaapi-build/examples} and enter:
+\subsubsection{Compilation of the examples}
+The following compiles the sample applications:
 \begin{verbatim}
-$> make examples
+$> cd examples; make examples
 \end{verbatim}
 
-\subsection{Installation}
-Without error in the previous steps, enter:
-\begin{verbatim}
-$> make install
-\end{verbatim}
-It will copy the library, include files in the directory \url{/usr/local/kaapi} specify in the option \url{--prefix} during the
-configuration step.
-
-If you are not allowed to install files in this directory, either execute previous command with \url{sudo}, else
-contact your system administrator.
-
-\subsection{Supported Architectures and Operating Systems}
-
-\kaapi currently supports SMP and NUMA architectures. 
-It works fine on Linux operating system (x86\_64 architectures) as well as on Mac OS X system with Intel based processor (both 32bits and 64bits work).
-
-\section{Utilization}
-
-In the "examples" directory, there is some examples that are compiled with the library. One may run those examples to see how things works.
-Note that not every example in the "examples" directory does work currently.
-
-\subsection{Simple Example}
-\textbf{A revoir}
-\begin{it}
-Let's have a look at the \verb+transform+ example. This code is simply the parallel version (using \kaapi  of course) of the stl::transform
-algorithm. Inputs are a table and a unary operation, the unary operation is applied to each single element of the table and the result is stored into an output table.
-
-The library header has to be include (\verb+kaapi.h+). The work is done in the \verb+doit()+ function, in the while loop. In this loop, there's a call to \verb+kaapi_stealpoint()+. If some steal requests have been recieved since the last call to this function, then the \verb+splitter()+ function is called in order to reply to these requests.
-
-XKaapi aims at providing a finer grain than the previous Kaapi implementation. To do so, the workstealing engine relies upon the application programmer to place its own stealing points, using the \verb+kaapi_stealpoint()+ routine. The stealpoints provide a way to distribute the remaining computation among the thief processors. The splitting occurs dynamically by iterating over the pending stealing requests array (the \verb+request[]+ array argument containing \verb+count+ elements). It is left to the programmer to implement a splitter function, since it is assumed he knows how to partition the computation as it is in a coherent state. Inside the splitting function, the victim uses the \verb+kaapi_request_reply()+ routine to complete the stealing requests.
-\end{it}
-
-
-\subsection{Running Code and Environnement Variables}
-
-In order to control thread placement and global machine usage, there are two environnement variables that you may use to tune an execution :
-
+\section{Programming with \kaapi}
+\subsection{\kaapi integration}
+Integrating \kaapi in your project requires the following steps:
 \begin{itemize}
-\item \verb+KAAPI_CPUCOUNT+ is simply the number of CPU to be used :
+\item include the header files in your source code. Example:
+\begin{verbatim} 
+#include <kaapi.h> /* C version */
+#include <kaapi++> // C++ version
+\end{verbatim}
+\item add compilation options to your project using pkg-config.
+Note that if you changed the default install directory during
+the configuration process, the PKG\_CONFIG\_PATH environment
+variable must point to \textit{install\_dir/pkgconfig/}.
+Example:
+\begin{verbatim} 
+# for C applications
+gcc -o main `pkg-config --flags kaapi` main.c `pkg-config --libs kaapi`
+# for C++ applications
+g++ -o main `pkg-config --flags kaapixx` main.c `pkg-config --libs kaapixx`
+\end{verbatim}
+\item the following preprocessor macro must be defined to fully disable
+the debugging code. It can improve the generated code:
+\begin{verbatim}
+-DNDEBUG
+\end{verbatim}
 
+
+
+\end{itemize}
+Refer to the API documentation for information relative
+to the \kaapi programming interfaces.
+
+\subsection{Examples}
+The directory \textit{examples/} contains sample applications using \kaapi.
+Both C and C++ are used. Some direclty lies on top of the core runtime,
+while other make use of higher level interfaces. Below is a short
+description for some of them:
+\begin{itemize}
+\item fibo\_xkaapi\_adapt.c\newline
+Implementation of the Fibonacci sequence generation using adaptive
+task stealing.
+\item fibo\_xkaapi.c\newline
+Same as above, using DFG tasks.
+\item fibo\_kaapixx.cpp, fibo\_kaapixx\_opt.cpp\newline
+Same as above, using the \textit{ka} C++ interface.
+\item fibo\_atha.cpp\newline
+Same as above, using the \textit{Athapascan} interface.
+\item nqueens\_apikaapi\newline
+Nqueens problem implementation using \textit{ka} C++ interface.
+\item nqueens\_apiatha\newline
+Same as above, using the \textit{Athapascan} interface.
+\item poisson3d-kaapi.cpp\newline
+3 dimension Poisson solver implemented using the \textit{ka}
+C++ interface.
+\item matrix\_multiply\_cilk2kaapi.cpp\newline
+Matrix multiplication using loop parallelization. Implemented using
+the \textit{ka} C++ interface.
+\end{itemize}
+
+\section{Running \kaapi}
+\subsection{Runtime environment variables}
+The runtime behavior can be driven by using the following
+optionnal environment variables.
+
+\begin{itemize} %% env var enumeration
+
+%% KAAPI_CPUCOUNT
+\item \verb+KAAPI_CPUCOUNT+\newline
+The number of process unit to be used by the runtime.
+No assumption is made regarding which unit is used.
+Example:
 \begin{verbatim}
  KAAPI_CPUCOUNT=3 ./transform 100000
 \end{verbatim}
 
-\item \verb+KAAPI_CPUSET+ is the set of CPU to be used explicitly if you only want to use a subset of a machine's cores. The value is a comma separated list. You can also specifie a range using "x:y".
-
+%% KAAPI_CPUSET
+\item \verb+KAAPI_CPUSET+\newline
+The set of CPU to be used. It consists of a comma
+separated list of cpu indices, first index starting
+at 0. By default, and if no KAAPI\_CPUCOUNT is given,
+all the host cpus are used.
+Example:
 \begin{verbatim}
- #this will uses cores 3, 4, 5, 6 and 9 only :
+ #use cores 3, 4, 5, 6 and 9 only:
  KAAPI_CPUSET=3,4,5,6,9 ./transform 100000
- 
- #this will do the same using range :
+\end{verbatim}
+
+An index range can be used via the ':' token.
+Example:
+\begin{verbatim}
+ #same as above using the range syntax:
  KAAPI_CPUSET=3:6,9 ./transform 100000
 \end{verbatim}
 
-You may exclude a cpu from the set by appending the '!' token:
+You may exclude a cpu from the set by appending the '!' token.
+Example:
 \begin{verbatim}
  #this will uses cores from 3 to 9, but not 4:
  KAAPI_CPUSET=3:9,!4 ./transform 100000
 \end{verbatim}
 
+%% KAAPI_STACKSIZE
+\item \verb+KAAPI_STACKSIZE+\newline
+Size of the per thread stack, in bytes. By default, this size
+is set to 64 kilo bytes.
+Example:
+\begin{verbatim}
+ KAAPI_STACKSIZE=4096 ./transform 100000
+\end{verbatim}
+
+%% KAAPI_WSSELECT
+\item \verb+KAAPI_WSSELECT+\newline
+Name of the victim processor selection algorithm to use.
+\begin{itemize}
+\item "workload":
+Use a user defined workload to driver the vicitm selection algorithm.
+\item any other value: falls back to the default random victim selection
+algorithm.
 \end{itemize}
+Example:
+\begin{verbatim}
+ KAAPI_WSSELECT=workload ./transform 100000
+\end{verbatim}
+\end{itemize} %% env var enumeration
 
 \subsection{Monitoring performances}
-If configured by \url{--with-perfcounter}, the \kaapi library allows to output performance counters.
+If configured by \url{--with-perfcounter}, the \kaapi library allows to
+output performance counters.
 
 \begin{itemize}
-\item \verb+KAAPI_DISPLAY_PERF+: if defined, then performance counters are displayed at the end of the execution.
+\item \verb+KAAPI_DISPLAY_PERF+\newline
+If defined, then performance counters are displayed at the end of the execution.
+Example:
 \begin{verbatim}
- KAAPI_DISPLAY_PERF =1 ./fibo 30
+ KAAPI_DISPLAY_PERF=1 ./fibo 30
 \end{verbatim}
 
-\item \verb+KAAPI_DISPLAY_PERF+: if defined, then performance counters are displayed at the end of the execution.
-\begin{verbatim}
- KAAPI_DISPLAY_PERF =1 ./fibo 30
-\end{verbatim}
-
-\item \verb+KAAPI_PERF_PAPIES+: asuming \kaapi was configured using --with-papi, this variable contains a comma separated list of the PAPI performance counters to use. Both counter symbolic names and numeric hexadecimal constants can be used. More information can be found on the PAPI website (http://icl.cs.utk.edu/papi/). Note that counter list cannot exceed 3 elements.
+\item \verb+KAAPI_PERF_PAPIES+\newline
+Assuming \kaapi was configured using --with-papi, this variable contains a
+comma separated list of the PAPI performance counters to use.
+Both counter symbolic names and numeric hexadecimal constants can be used.
+More information can be found on the PAPI website
+(http://icl.cs.utk.edu/papi/).
+Note that counter list cannot exceed 3 elements.
+Example:
 \begin{verbatim}
  KAAPI_PERF_PAPIES=PAPI_TOT_INS,0x80002230,PAPI_L1_DCM ./fibo 30
-\end{verbatim}
-
-As an example, the following is an output produced by the library as the program terminates. It includes both the per core and the cummulated performance counters:
-
-\begin{verbatim}
-KAAPI_DISPLAY_PERF=1 KAAPI_CPUCOUNT=3 KAAPI_PERF_PAPIES=PAPI_TOT_INS ./fibo 10
-[KAAPI::INIT] use #physical cpu:3, start time:1266571053.688506
-#op: 4196640
-Fibo(10) = 55 *** Time: 1.328945e-03(s)
-[KAAPI::TERM] end time:1266571053.690019
------ Performance counters, core   : 0
-Total number of tasks executed     : 2, 0
-Total number of steal OK requests  : 0
-Total number of steal BAD requests : 0
-Total number of steal operations   : 0
-Total number of suspend operations : 0
-Total idle time                    : 1.088381e-03
------ Performance counters, core   : 1
-Total number of tasks executed     : 0, 0
-Total number of steal OK requests  : 0
-Total number of steal BAD requests : 1567
-Total number of steal operations   : 1385
-Total number of suspend operations : 0
-Total idle time                    : 0.000000e+00
------ Performance counters, core   : 2
-Total number of tasks executed     : 0, 0
-Total number of steal OK requests  : 0
-Total number of steal BAD requests : 1515
-Total number of steal operations   : 1302
-Total number of suspend operations : 0
-Total idle time                    : 0.000000e+00
------ Cumulated Performance counters
-Total number of tasks executed     : 2
-Total number of steal OK requests  : 0
-Total number of steal BAD requests : 3082
-Total number of steal operations   : 2687
-Total number of suspend operations : 0
-Total idle time                    : 0.000000e+00
-   sched idle time                 : 0.000000e+00
-   preemption idle time            : 0.000000e+00
-Average steal requests aggregation : 1.147004e+00
 \end{verbatim}
 
 \end{itemize}

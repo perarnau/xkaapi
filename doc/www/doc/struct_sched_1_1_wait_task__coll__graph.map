@@ -1,0 +1,46 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_r_f_o_1_1_closure.html" title="A closure object is a call to a function. It is also called task.Closure of type..." alt="" coords="1852,367,1967,396"/>
+<area shape="rect" id="node129" href="$class_d_f_g_1_1_access.html" title="Access to global data." alt="" coords="2223,285,2332,315"/>
+<area shape="rect" id="node4" href="$class_r_f_o_1_1_base_closure.html" title="A closure object is a call to a function. It is also called task.The closure is created..." alt="" coords="1447,416,1596,445"/>
+<area shape="rect" id="node6" href="$class_core_1_1_condition.html" title="Condition to signal end of steal operationThis class implements one method for synchronisation..." alt="" coords="1053,916,1184,945"/>
+<area shape="rect" id="node12" href="$class_core_1_1_thread.html" title="Flow of controlA Core::Thread is a flow of control which consist of its runtime environnement..." alt="" coords="1464,1000,1579,1029"/>
+<area shape="rect" id="node8" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="591,864,692,893"/>
+<area shape="rect" id="node10" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="205,1008,365,1037"/>
+<area shape="rect" id="node14" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="1065,1196,1172,1225"/>
+<area shape="rect" id="node52" href="$class_core_1_1_processor.html" title="KAAPI ProcessorProcessor manages scheduling of a set of threads with at most one..." alt="" coords="2211,1080,2344,1109"/>
+<area shape="rect" id="node85" href="$class_core_1_1_thread_queue.html" title="ThreadQueue of threads." alt="" coords="1828,1275,1991,1304"/>
+<area shape="rect" id="node89" href="$class_core_1_1_thread_stack.html" title="ThreadStack of threadsLink using _next field of Core::Thread." alt="" coords="1832,1117,1987,1147"/>
+<area shape="rect" id="node16" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="584,1303,699,1332"/>
+<area shape="rect" id="node19" href="$class_util_1_1_key.html" title="Util::Key\&lt; ByteAllocator \&gt;" alt="" coords="540,1196,743,1225"/>
+<area shape="rect" id="node21" href="$class_util_1_1_key.html" title="Thread private attributeThis class provides an interface to posix pthread specific..." alt="" coords="225,1124,345,1153"/>
+<area shape="rect" id="node23" href="$class_util_1_1_key.html" title="Util::Key\&lt; Thread \&gt;" alt="" coords="560,1143,723,1172"/>
+<area shape="rect" id="node95" href="$class_util_1_1_key.html" title="Util::Key\&lt; Processor \&gt;" alt="" coords="768,1357,947,1387"/>
+<area shape="rect" id="node26" href="$class_util_1_1_o_event_stream.html" title="Output events stream: Util::OEventStream." alt="" coords="563,1249,720,1279"/>
+<area shape="rect" id="node28" href="$class_util_1_1_context_id.html" title="Util::ContextId" alt="" coords="5,656,128,685"/>
+<area shape="rect" id="node30" href="$class_util_1_1_event_buffer.html" title="A Generic Trace Buffer class: Util::EventBuffer." alt="" coords="216,1243,355,1272"/>
+<area shape="rect" id="node133" href="$class_d_f_g_1_1_global_data_attribut.html" title="Type of attribut for a versionThis type allows to code attribut for a global data..." alt="" coords="1023,183,1215,212"/>
+<area shape="rect" id="node33" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="11,1275,123,1304"/>
+<area shape="rect" id="node38" href="$class_core_1_1_stealable_with_instance_reification.html" title="Interface for object that accepts steal request with instance reificationInstances..." alt="" coords="971,1033,1267,1063"/>
+<area shape="rect" id="node71" href="$class_core_1_1_work_set.html" title="WorkSet of worksetThe workset is a set of processors with a steal interface to steal..." alt="" coords="2499,637,2619,667"/>
+<area shape="rect" id="node40" href="$class_core_1_1_stealable.html" title="Base interface for object that accepts steal request." alt="" coords="576,971,707,1000"/>
+<area shape="rect" id="node42" href="$class_core_1_1_steal_algorithm.html" title="Base class to implement an algorithm for work stealingAll objects that inherit from..." alt="" coords="557,1024,725,1053"/>
+<area shape="rect" id="node44" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="1037,660,1200,689"/>
+<area shape="rect" id="node46" href="$class_core_1_1_printable.html" title="Core::Printable" alt="" coords="1055,980,1183,1009"/>
+<area shape="rect" id="node56" href="$class_core_1_1_idleable_with_instance_reification.html" title="Interface for object that allows reification of idle_activity." alt="" coords="1765,981,2053,1011"/>
+<area shape="rect" id="node58" href="$class_core_1_1_idleable.html" title="Interface for object that has idle_activity interface..." alt="" coords="1460,888,1583,917"/>
+<area shape="rect" id="node61" href="$class_util_1_1_interface_allocator.html" title="Util::InterfaceAllocator" alt="" coords="1819,1171,2000,1200"/>
+<area shape="rect" id="node63" href="$class_util_1_1_interface_deallocator.html" title="Util::InterfaceDeallocator" alt="" coords="1808,1429,2011,1459"/>
+<area shape="rect" id="node66" href="$class_util_1_1_callback_collect_counters.html" title="Callback function to collect countersThe class defines interface that should overloaded..." alt="" coords="1796,1483,2023,1512"/>
+<area shape="rect" id="node69" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="1849,708,1969,737"/>
+<area shape="rect" id="node76" href="$class_util_1_1_counters.html" title="Counters generate by each gid and accumulated on the collector processSuch object..." alt="" coords="1851,655,1968,684"/>
+<area shape="rect" id="node80" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="1860,601,1959,631"/>
+<area shape="rect" id="node82" href="$struct_core_1_1_spin_lock.html" title="Core::SpinLock" alt="" coords="1459,1273,1584,1303"/>
+<area shape="rect" id="node100" href="$class_util_1_1_byte_allocator.html" title="ByteAllocator of fixed size objects with cache for fast allocation (thread unsafe)A..." alt="" coords="1836,877,1983,907"/>
+<area shape="rect" id="node103" href="$class_core_1_1_thread_format.html" title="Format for a Thread." alt="" coords="1036,713,1201,743"/>
+<area shape="rect" id="node105" href="$class_util_1_1_format.html" title="Definition of the format of a data typeA Format is the definition of the format for..." alt="" coords="588,527,695,556"/>
+<area shape="rect" id="node124" href="$class_r_f_o_1_1_closure_format.html" title="Format for a closureDescribe for each C++ type of closure the format of all associated..." alt="" coords="1036,505,1201,535"/>
+<area shape="rect" id="node131" href="$class_d_f_g_1_1_global_data.html" title="A GlobalData is a reference to a data into the distributed memory." alt="" coords="1451,263,1592,292"/>
+<area shape="rect" id="node110" href="$class_r_f_o_1_1_closure_attribut.html" title="Type of attribut for a closureThis type allows to code attribut for a closure on..." alt="" coords="1036,311,1201,340"/>
+<area shape="rect" id="node112" href="$class_r_f_o_1_1_partition.html" title="RFO::Partition" alt="" coords="581,332,701,361"/>
+<area shape="rect" id="node117" href="$class_r_f_o_1_1_site.html" title="RFO::Site" alt="" coords="597,167,685,196"/>
+</map>

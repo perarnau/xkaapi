@@ -6,6 +6,8 @@
 #include "poisson3d.h"
 #include "poisson3diter.h"
 
+
+#if 0 // network not yet here
 // --------------------------------------------------------------------
 ka::OStream& operator<< (ka::OStream& s_out, const Poisson3D::Direction& dir )
 {
@@ -35,7 +37,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, Poisson3D::Index& index )
   index = Poisson3D::Index(i,j,k);
   return s_in;
 }
-
+#endif
 
 // --------------------------------------------------------------------
 class KaSubDomain : public SubDomain
@@ -44,6 +46,8 @@ class KaSubDomain : public SubDomain
   friend ka::IStream& ::operator>> (ka::IStream&, KaSubDomain& );
 };
 
+
+#if 0 // network not yet here
 ka::OStream& operator<< (ka::OStream& s_out, const KaSubDomain& sd )
 {
   s_out << sd._nx << sd._ny << sd._nz;
@@ -75,7 +79,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomain& sd )
   }
   return s_in;
 }
-
+#endif
 
 // --------------------------------------------------------------------
 class KaSubDomainInterface : public SubDomainInterface
@@ -84,6 +88,7 @@ class KaSubDomainInterface : public SubDomainInterface
   friend ka::IStream& ::operator>> (ka::IStream&, KaSubDomainInterface& );
 };
 
+#if 0 // network not yet here
 ka::OStream& operator<< (ka::OStream& s_out, const KaSubDomainInterface& sdi )
 {
 //   std::cout << "[KaSubDomainInterface::operator<<] @ = " << &sdi << " - nx = " << sdi._nx <<  " - ny = " << sdi._ny << std::endl;
@@ -117,7 +122,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomainInterface& sdi )
 //   std::cout << "[KaSubDomainInterface::operator>>] @ = " << &sdi << " - nx = " << sdi._nx <<  " - ny = " << sdi._ny << std::endl;
   return s_in;
 }
-
+#endif
 
 // --------------------------------------------------------------------
 class SiteGenerator
@@ -347,7 +352,6 @@ struct Kernel {
         if ( curr_index.has_neighbor( dir ) )
         {
           Poisson3D::Index neighbor = curr_index.get_neighbor( dir );
-          int neighbor_site = sg.get_site( neighbor.get_i(), neighbor.get_j() ,neighbor.get_k() );
           ka::Spawn<ExtractSubDomainInterface>(ka::SetPartition(curr_site))
                    ( &old_domain[neighbor()], dir,  &sdi[ curr_index()*Poisson3D::NB_DIRECTIONS + d ] );
         }
@@ -538,12 +542,12 @@ struct doit {
     std::vector< KaSubDomainInterface > sdi( domain.size() * Poisson3D::NB_DIRECTIONS );
     MeshIndex3D mesh3d( Poisson3D::nb_subdomX, Poisson3D::nb_subdomY, Poisson3D::nb_subdomZ );
 
-    double t0, t1, total = 0;
     threadgroup.ForEach<Kernel>()
       ( ka::counting_iterator<int>(0), ka::counting_iterator<int>(Poisson3D::max_iter) ) /* iteration space */
       ( mesh3d, domain, new_domain, frhs, residue, sg, res2, sdi );                      /* args for the kernel */
 
 #if 0
+    double t0, t1, total = 0;
     for (unsigned int i=0; i<Poisson3D::max_iter; ++i)
     {
       t0 = kaapi_get_elapsedtime();

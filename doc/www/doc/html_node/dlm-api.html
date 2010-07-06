@@ -1,0 +1,183 @@
+<html lang="en">
+<head>
+<title>dlm api - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="dynamically-loaded-modules.html#dynamically-loaded-modules" title="dynamically loaded modules">
+<link rel="next" href="load-dlm.html#load-dlm" title="load dlm">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="dlm-api"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="load-dlm.html#load-dlm">load dlm</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="dynamically-loaded-modules.html#dynamically-loaded-modules">dynamically loaded modules</a>
+<hr>
+</div>
+
+<h4 class="subsection">6.7.1 API - interface required for a Dynamically loaded module</h4>
+
+<p>Basically, a Dynamically loaded module is a standard <code>Kaapi</code> module. 
+In order to make it dynamically loadable, you must also provide a <code>factory</code> function.
+
+<div class="defun">
+&mdash; Function: <b>create_module</b><var><a name="index-create_005fmodule-35"></a></var><br>
+<blockquote><p><code>extern "C" Util::KaapiComponent* create_module();</code>
+factory function that return a new instance of the <code>Util::KaapiComponent</code> derived class. 
+The kaapi module loader will call the <code>delete_module</code> to free allocated memory. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Function: <b>delete_module</b><var> kaapi_component<a name="index-delete_005fmodule-36"></a></var><br>
+<blockquote><p><code>extern "C" void delete_module(Util::KaapiComponent* </code><var>kaapi_component</var>
+The counterpart of the <code>create_module</code> function. 
+Instead of allocating memory for a new module, it frees the memory of given pointer. 
+</p></blockquote></div>
+
+   <p>A detailed description of the <code>Util::KaapiComponent</code> is given in the doxygen documentation. 
+As a simple reminder, it's interface is given here:
+<pre class="example">     #include &lt;utils_component.h&gt;
+     class Util::KaapiComponent
+     {
+     
+         public:
+         int initialize() throw();
+         int terminate() throw();
+         void add_options( Util::Parser* , Util::Properties* );
+         void declare_dependencies();
+     };
+</pre>
+   <p>Note that the <code>declare_dependencies</code> is of no use for dynamically loaded modules. 
+These modules are loaded after all the static ones, in the order given at the command line.
+
+   </body></html>
+

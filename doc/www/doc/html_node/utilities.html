@@ -1,0 +1,191 @@
+<html lang="en">
+<head>
+<title>utilities - kaapi</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="kaapi">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="API.html#API" title="API">
+<link rel="prev" href="algorithms.html#algorithms" title="algorithms">
+<link rel="next" href="dynamically-loaded-modules.html#dynamically-loaded-modules" title="dynamically loaded modules">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This manual is for KAAPI (version 2.4.1, 16 June 2010),
+Hyantes is free software; you can redistribute it and/or modify
+it under the terms of the GPL License
+
+Copyright (C) 2007 LIG-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+pre, hr, code, .file, .command, .option, h1, h2, h3, h4, h5 { color: #007676; }
+pre { border:thin dashed #808080; }
+
+pre {
+    padding:2px;
+    margin-left:2%;
+    width:90%;
+}
+
+address {
+    margin-left:1%;
+}
+
+div.contents {
+    border-left:thin dashed #808080;
+    margin-left:1%;
+}
+
+code, .command, .option {
+    font-size:100%;
+    /*border:thin dashed #808080;*/
+    font-family:monospace;
+    font-weight:bolder;
+    padding:2px;
+}
+
+.node {
+    font-size:70%;
+}
+
+
+a:link, a:visited, a:hover {
+	color: #666666;
+}
+
+a.download:before {
+    content:url(download.png);
+}
+/*
+p a:before {
+    content:url(url.png)
+}
+*/
+dt:before {
+    content:url(circle.png);
+}
+
+body {
+  font-family: arial, serif;
+  background-color: #ffffff;
+  margin: 0px auto 10px auto;
+  padding: 0px;
+}
+
+p, dl {
+    margin: 5px 10px 10px 10px;
+	line-height: 130%;
+}
+
+ul li {
+  margin: 5px 0px 5px 0px;
+}
+
+h1 {
+    font-size:200%;
+    font-variant:small-caps;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+}
+
+h2 {
+    font-variant:small-caps;
+	font-size: 110%;
+    margin: 10px 10px 5px 2px;
+}
+
+h3 {
+	font-size: 100%;
+    margin: 10px 10px 5px 4px;
+}
+h4 {
+	font-size: 100%;
+    margin: 10px 10px 5px 6px;
+}
+h5 {
+	font-size: 100%;
+    margin: 10px 10px 5px 8px;
+}
+
+.menu {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+	
+
+ul {
+  margin-top: 5px;
+  margin-bottom: 15px;
+  list-style-image: url("arrow.png");
+}
+
+hr {
+  border: 1;
+  width: 80%;
+  text-align:left;
+}
+
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="utilities"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="dynamically-loaded-modules.html#dynamically-loaded-modules">dynamically loaded modules</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="algorithms.html#algorithms">algorithms</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="API.html#API">API</a>
+<hr>
+</div>
+
+<h3 class="section">6.6 Utilities</h3>
+
+     <dl>
+<dt><code>Util::logfile()</code><a name="index-Util_003a_003alogfile_0028_0029-32"></a><dd>manage logs.
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               std::ostream&amp; logfile();
+</pre>
+          <br><dt><strong>Return Value</strong><dd>returns a <code>std::ostream</code> reference that can be used to print out any kind of text. 
+The text will be forwrded to the master node and displayed with a smaal header containing information about
+               <ul>
+<li>the global id of the source node
+<li>the date when the log was taken (according to local clock)
+</ul>
+          </dl>
+
+     <br><dt><code>Util::WallTimer::gettime()</code><a name="index-Util_003a_003aWallTimer_003a_003agettime_0028_0029-33"></a><dd>take time
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               double gettime();
+</pre>
+          <br><dt><strong>Return Value</strong><dd>time since the birth of Unix in milliseconds
+</dl>
+
+     <br><dt><code>resize_vector(std::vector&lt; a1::Shared&lt;...&gt; &gt;, size_type)</code><a name="index-resize_005fvector_0028std_003a_003avector_003c-a1_003a_003aShared_003c_002e_002e_002e_003e-_003e_002c-size_005ftype_0029-34"></a><dd>resize a vector of Shared.Its behavior is similar to vector::resize() method
+          <dl>
+<dt><strong>Description</strong><dd>
+          <pre class="example">               template&lt;class T&gt;
+               void resize_vector(std::vector&lt; a1::Shared&lt;T&gt; &gt;&amp; v,
+                   typename std::vector&lt; a1::Shared&lt;T&gt; &gt;::size_type sz);
+</pre>
+          <br><dt><strong>Parameters</strong><dd>
+               <dl>
+<dt><var>v</var><dd>vector of shared to be resized
+<br><dt><var>sz</var><dd>new size of the vector
+</dl>
+
+     </dl>
+
+</dl>
+
+   </body></html>
+

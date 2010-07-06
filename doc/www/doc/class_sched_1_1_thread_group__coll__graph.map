@@ -1,0 +1,47 @@
+<map id="G" name="G">
+<area shape="rect" id="node2" href="$class_net_1_1_network_object.html" title="Net::NetworkObject" alt="" coords="969,407,1129,436"/>
+<area shape="rect" id="node25" href="$class_net_1_1_cluster.html" title="Net::Cluster" alt="" coords="2029,764,2136,793"/>
+<area shape="rect" id="node32" href="$class_net_1_1_device.html" title="Net::Device" alt="" coords="1687,848,1793,877"/>
+<area shape="rect" id="node46" href="$class_net_1_1_i_o_daemon.html" title="Net::IODaemon" alt="" coords="1341,361,1475,391"/>
+<area shape="rect" id="node133" href="$class_net_1_1_group.html" title="Net::Group" alt="" coords="1359,1069,1457,1099"/>
+<area shape="rect" id="node4" href="$class_net_1_1_network.html" title="Net::Network" alt="" coords="2415,865,2529,895"/>
+<area shape="rect" id="node6" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="1000,699,1099,728"/>
+<area shape="rect" id="node130" href="$class_w_s_1_1_community.html" title="Community of distribued PoolsThe community is a dynamic group of process. The Community..." alt="" coords="1673,1269,1807,1299"/>
+<area shape="rect" id="node154" href="$class_w_s_1_1_service_steal.html" title="Steal Service for distributed workstealing algorithm." alt="" coords="1500,1087,1639,1116"/>
+<area shape="rect" id="node8" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="32,944,147,973"/>
+<area shape="rect" id="node48" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="453,1089,560,1119"/>
+<area shape="rect" id="node10" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="457,1269,556,1299"/>
+<area shape="rect" id="node84" href="$class_core_1_1_processor.html" title="KAAPI ProcessorProcessor manages scheduling of a set of threads with at most one..." alt="" coords="1341,1419,1475,1448"/>
+<area shape="rect" id="node12" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="447,699,567,728"/>
+<area shape="rect" id="node14" href="$class_net_1_1_callback.html" title="Net::Callback" alt="" coords="1349,796,1467,825"/>
+<area shape="rect" id="node16" href="$class_util_1_1_callback.html" title="Util::Callback" alt="" coords="992,933,1107,963"/>
+<area shape="rect" id="node22" href="$class_net_1_1_upcall.html" title="Net::Upcall" alt="" coords="1359,965,1457,995"/>
+<area shape="rect" id="node18" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="456,995,557,1024"/>
+<area shape="rect" id="node64" href="$class_core_1_1_condition.html" title="Condition to signal end of steal operationThis class implements one method for synchronisation..." alt="" coords="1343,1307,1473,1336"/>
+<area shape="rect" id="node67" href="$class_core_1_1_thread.html" title="Flow of controlA Core::Thread is a flow of control which consist of its runtime environnement..." alt="" coords="992,1568,1107,1597"/>
+<area shape="rect" id="node159" href="$class_sched_1_1_collection.html" title="Collection of distributed global data." alt="" coords="2400,231,2544,260"/>
+<area shape="rect" id="node20" href="$struct_util_1_1kaapi__atomic__t.html" title="Util::kaapi_atomic_t" alt="" coords="9,1049,169,1079"/>
+<area shape="rect" id="node29" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="993,845,1105,875"/>
+<area shape="rect" id="node62" href="$class_r_f_o_1_1_base_closure.html" title="A closure object is a call to a function. It is also called task.The closure is created..." alt="" coords="1665,519,1815,548"/>
+<area shape="rect" id="node38" href="$class_util_1_1_byte_allocator.html" title="ByteAllocator of fixed size objects with cache for fast allocation (thread unsafe)A..." alt="" coords="976,1207,1123,1236"/>
+<area shape="rect" id="node109" href="$class_r_f_o_1_1_thread.html" title="Flow of control with data flow graph representationThe RFO::Thread represents computation..." alt="" coords="3189,843,3301,872"/>
+<area shape="rect" id="node58" href="$struct_sched_1_1_partition_task.html" title="Sched::PartitionTask" alt="" coords="2391,455,2553,484"/>
+<area shape="rect" id="node60" href="$class_r_f_o_1_1_closure.html" title="A closure object is a call to a function. It is also called task.Closure of type..." alt="" coords="2025,508,2140,537"/>
+<area shape="rect" id="node114" href="$class_r_f_o_1_1_frame.html" title="Frame is a list of ordered closure.The frame correspond to an activation frame associated..." alt="" coords="2419,756,2525,785"/>
+<area shape="rect" id="node70" href="$class_core_1_1_stealable_with_instance_reification.html" title="Interface for object that accepts steal request with instance reificationInstances..." alt="" coords="359,1683,655,1712"/>
+<area shape="rect" id="node72" href="$class_core_1_1_stealable.html" title="Base interface for object that accepts steal request." alt="" coords="24,1772,155,1801"/>
+<area shape="rect" id="node74" href="$class_core_1_1_steal_algorithm.html" title="Base class to implement an algorithm for work stealingAll objects that inherit from..." alt="" coords="5,1931,173,1960"/>
+<area shape="rect" id="node122" href="$class_r_f_o_1_1_thread_steal_algorithm.html" title="StealAlgorithm of a RFO threadAn instance of this class is attached for all instance..." alt="" coords="2704,1471,2920,1500"/>
+<area shape="rect" id="node145" href="$class_w_s_1_1_strategy.html" title="Strategy to define workstealing selection of nodes." alt="" coords="2416,1285,2528,1315"/>
+<area shape="rect" id="node147" href="$class_core_1_1_work_set_steal_algorithm.html" title="StealAlgorithm on a worksetThis is the base class for stealing over a workset. By..." alt="" coords="688,1964,912,1993"/>
+<area shape="rect" id="node76" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="425,1457,588,1487"/>
+<area shape="rect" id="node78" href="$class_core_1_1_printable.html" title="Core::Printable" alt="" coords="443,1531,571,1560"/>
+<area shape="rect" id="node89" href="$class_util_1_1_callback_collect_counters.html" title="Callback function to collect countersThe class defines interface that should overloaded..." alt="" coords="936,1735,1163,1764"/>
+<area shape="rect" id="node91" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; CallbackCollectCounters \&gt;" alt="" coords="349,1777,664,1807"/>
+<area shape="rect" id="node107" href="$class_d_f_g_1_1_thread.html" title="Flow of control with data flow graph representationThe DFG threads inherits from..." alt="" coords="3523,595,3637,624"/>
+<area shape="rect" id="node112" href="$class_r_f_o_1_1_stack_frame.html" title="Stack of frames (LIFO queue)." alt="" coords="2739,756,2885,785"/>
+<area shape="rect" id="node118" href="$class_r_f_o_1_1_dotifiable.html" title="The Dotifiable class defines interfaces to dump a dot graph representation of the..." alt="" coords="2748,875,2876,904"/>
+<area shape="rect" id="node126" href="$class_d_f_g_1_1_thread_steal_algorithm.html" title="StealAlgorithm of a RFO threadAn instance of this class is attached for all instance..." alt="" coords="3137,1171,3353,1200"/>
+<area shape="rect" id="node150" href="$class_w_s_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor and a victim processThis class..." alt="" coords="1980,1229,2185,1259"/>
+<area shape="rect" id="node166" href="$class_sched_1_1_logical_collection.html" title="LogicalCollection represents mapping of objects onto a partition set." alt="" coords="3483,1903,3677,1932"/>
+</map>

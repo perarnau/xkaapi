@@ -1,0 +1,6 @@
+<map id="G" name="G">
+<area shape="rect" id="node1" href="$struct_util_1_1_record_key.html" title="Key for record descriptor." alt="" coords="5,32,136,61"/>
+<area shape="rect" id="node3" href="$struct_util_1_1_raw_record.html" title="A RecordBufferEvent class record This class is the root class from which all record..." alt="" coords="187,5,320,35"/>
+<area shape="rect" id="node7" href="$class_util_1_1_record_desc.html" title="A Generic Event record descriptor class." alt="" coords="184,59,323,88"/>
+<area shape="rect" id="node5" href="$struct_util_1_1_record.html" title="Expended record event This class is root class that extend by expending all informations..." alt="" coords="371,5,475,35"/>
+</map>
