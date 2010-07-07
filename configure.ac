@@ -362,9 +362,15 @@ AS_CASE([$with_cuda],
   [dnl
     KAAPI_CUDA=yes
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
-    AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1 -I$with_cuda/include"
-    ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [], [], [], [-L$with_cuda/lib -lcuda], [-L$with_cuda/lib -lcuda])
-    XKAAPI_EXTRALIB="$XKAAPI_EXTRALIB -L$with_cuda/lib -lcuda"
+    if test x"$with_cuda" == x"yes"; then
+      AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1"
+      ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [], [], [], [-lcuda], [-lcuda])
+      XKAAPI_EXTRALIB="$XKAAPI_EXTRALIB -lcuda"
+    else
+      AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1 -I$with_cuda/include"
+      ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [], [], [], [-L$with_cuda/lib -lcuda], [-L$with_cuda/lib -lcuda])
+      XKAAPI_EXTRALIB="$XKAAPI_EXTRALIB -L$with_cuda/lib -lcuda"
+    fi
   ])
 
 dnl KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
