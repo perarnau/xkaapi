@@ -11,7 +11,6 @@ kastlinclude_HEADERS=\
 	kastl/kastl_types.h\
 	kastl/kastl_sequences.h\
 	kastl/kastl_workqueue.h\
-	kastl/kastl_sequences.h\
 	kastl/kastl_loop.h\
 	kastl/algorithm\
 	kastl/numeric\
@@ -34,7 +33,6 @@ kastlinclude_HEADERS=\
 	kastl/replace_if.h\
 	kastl/equal.h\
 	kastl/mismatch.h\
-	kastl/search.h\
 	kastl/adjacent_find.h\
 	kastl/adjacent_difference.h\
 	kastl/partial_sum.h
