@@ -408,6 +408,7 @@ AC_CONFIG_FILES([
 	kaapixx.pc
 	atha1.pc
 	src/misc/kaapi_version.c
+
 ])
 #	kastl.wip/Makefile
 AC_OUTPUT
