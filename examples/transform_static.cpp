@@ -4,10 +4,12 @@
 
 struct Op2 {
     Op2(){ };
-    double operator()(double a){
+    /* __device__ __host__ */ double operator()(double a){
       return  2*a;
     }
 };
+
+extern /* __global__ */ void transform_kernel( const double* beg, const double* end, double* out );
 
 // --------------------------------------------------------------------
 struct TransformTask: public ka::Task<3>::Signature< 
@@ -15,6 +17,30 @@ struct TransformTask: public ka::Task<3>::Signature<
         ka::R<double>,
         ka::W<double>
 > {};
+template<> struct TaskFormat<TransformTask> {
+  static size_t size_param( int i, ka::pointer_r<double> beg, ka::pointer_r<double> end, ka::pointer_w<double> out )
+  {
+    switch (i) {
+      case 0: return end-beg;
+      case 1: return 0;
+      case 2: return end-beg;
+    };
+  }
+  static void pack( ka::StreamFormat& f, 
+    ka::pointer_r<double> beg, ka::pointer_r<double> end, ka::pointer_w<double> out
+  )
+  {
+    f << ka::constArray<double>(beg, end) << ka::Array<double>(out, out+(end-beg));
+  }
+  static void unpack( ka::StreamFormat& f, 
+    ka::pointer_r<double>& beg, ka::pointer_r<double>& end, ka::pointer_w<double>& out
+  )
+  {
+    ka::Array<double> a;
+    f >> ka::Array<double>(beg, end) << ka::Array<double>(out, out+(end-beg));
+  }
+};
+
 
 template<> struct TaskBodyCPU<TransformTask> {
   void operator() ( ka::pointer_r<double> beg, ka::pointer_r<double> end, ka::pointer_w<double> out )
@@ -23,6 +49,19 @@ template<> struct TaskBodyCPU<TransformTask> {
   }
 };
 static ka::RegisterBodyCPU<TransformTask> dummy_object_TransformTask;
+
+
+template<> struct TaskBodyGPU<TransformTask> {
+  void operator() ( ka::gpuStream stream, ka::pointer_r<double> beg, ka::pointer_r<double> end, ka::pointer_w<double> out )
+  {
+#if 0
+    blocks = ...
+    threads = ...
+    transform_kernel<<<blocks, threads, 0, stream>>>( beg, end, out, Op2() );
+#endif
+  }
+};
+
 
 
 // --------------------------------------------------------------------
@@ -57,7 +96,6 @@ struct doit {
   {   
     int p, n, iter;
     double t0, t1;
-    double avrg = 0;
 
     if (argc >1) n = atoi(argv[1]);
     else n = 10000;

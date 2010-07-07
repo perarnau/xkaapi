@@ -46,9 +46,11 @@
 #define _KAAPI_DATA_H_ 1
 
 
-/** Maximal different memory space on multiprocessors:
+/** Maximal different memory spaces on multiprocessors:
     - CPU memory: index 0
-    - accelerator memory (GPU): 
+    - accelerator memory (GPU)
+  This constant will be suppress for supporting distributed memory
+  over network.
 */
 #define KAAPI_MAX_MEMORY_SPACE 8
 
@@ -64,6 +66,7 @@ typedef struct kaapi_local_data_info_t {
     lptr[i].ptr is valid iff validbits & (1<<i) is not null.
     If lptr[i].ptr is 0, then no data has been allocated in the i-th local
     memory. 
+    The size represents the size in bytes of the array.
 */
 typedef struct kaapi_data_info_t {
   unsigned int            validbits;
@@ -114,7 +117,6 @@ extern void kaapi_mem_unbind( kaapi_local_memory_t* klm, kaapi_data_info_t* kdi 
 */
 extern void kaapi_mem_copy( kaapi_local_memory_t* klm, kaapi_data_info_t* kdi );
 
-
 /** Return the meta data associated to a virtual address @ in the host.
     Return 0 if no meta data is attached.
 */
@@ -124,6 +126,6 @@ extern kaapi_data_info_t* kaapi_mem_find( void* ptr );
     Return a new allocated data_info if no meta data is attached.
     The newly created data info structure has no
 */
-extern kaapi_data_info_t* kaapi_mem_findinsert( void* ptr );
+extern kaapi_data_info_t* kaapi_mem_findinsert( void* ptr, size_t size );
 
 #endif /*_KAAPI_DATA_H_*/
