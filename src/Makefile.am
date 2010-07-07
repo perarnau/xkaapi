@@ -116,7 +116,7 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_processor.c
 endif
 
-if KAAPI_USE_CUDA
+if KAAPI_TARGET_CUDA
 libxkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda.h \
   machine/cuda/kaapi_cuda_error.h \
@@ -134,7 +134,7 @@ include_HEADERS=\
   kaapi.h \
   kaapi_error.h
 
-if KAAPI_USE_CUDA
+if KAAPI_TARGET_CUDA
 include_HEADERS+=\
   machine/cuda/kaapi_cuda_func.h
 endif

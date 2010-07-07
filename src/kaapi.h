@@ -99,6 +99,7 @@ typedef int16_t   kaapi_int16_t;
 typedef int32_t   kaapi_int32_t;
 typedef int64_t   kaapi_int64_t;
 
+
 /** Atomic type
 */
 typedef struct kaapi_atomic_t {
