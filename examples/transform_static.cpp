@@ -18,26 +18,25 @@ struct TransformTask: public ka::Task<3>::Signature<
         ka::W<double>
 > {};
 template<> struct TaskFormat<TransformTask> {
-  static size_t size_param( int i, ka::pointer_r<double> beg, ka::pointer_r<double> end, ka::pointer_w<double> out )
-  {
-    switch (i) {
-      case 0: return end-beg;
-      case 1: return 0;
-      case 2: return end-beg;
-    };
-  }
-  static void pack( ka::StreamFormat& f, 
+  typedef ka::Tuple<
+    ka::R<>, ka::ArrayType<1, double>, 
+    ka::W<>, ka::ArrayType<1, double>
+  > View;
+  static void map( View& view,
     ka::pointer_r<double> beg, ka::pointer_r<double> end, ka::pointer_w<double> out
   )
   {
-    f << ka::constArray<double>(beg, end) << ka::Array<double>(out, out+(end-beg));
+    view.r1.bind( beg, end-beg );
+    view.r2.bind( out, end-beg );
   }
-  static void unpack( ka::StreamFormat& f, 
+  static void umap( const View& view,
     ka::pointer_r<double>& beg, ka::pointer_r<double>& end, ka::pointer_w<double>& out
   )
   {
-    ka::Array<double> a;
-    f >> ka::Array<double>(beg, end) << ka::Array<double>(out, out+(end-beg));
+    beg = view.r1.addr();
+    end = beg + view.r1.count();
+    out = view.r2.addr();
+    kaapi_assert( view.r2.count() == view.r1.count() );
   }
 };
 
@@ -61,7 +60,6 @@ template<> struct TaskBodyGPU<TransformTask> {
 #endif
   }
 };
-
 
 
 // --------------------------------------------------------------------

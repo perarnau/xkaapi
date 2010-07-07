@@ -742,14 +742,13 @@ namespace ka {
 
   // --------------------------------------------------------------------
   /* Helpers to declare type in signature of task */
-  template<typename UserType> struct Value {};
-  template<typename UserType, typename AccessMode> struct Composite {};
-  template<typename UserType> struct RPWP {};
-  template<typename UserType> struct RP {};
-  template<typename UserType> struct R  {};
-  template<typename UserType> struct WP {};
-  template<typename UserType> struct W {};
-  template<typename UserType> struct RW {};
+  template<typename UserType=void> struct Value {};
+  template<typename UserType=void> struct RPWP {};
+  template<typename UserType=void> struct RP {};
+  template<typename UserType=void> struct R  {};
+  template<typename UserType=void> struct WP {};
+  template<typename UserType=void> struct W {};
+  template<typename UserType=void> struct RW {};
   
   template<typename UserType>
   struct DefaultAdd {
@@ -757,8 +756,8 @@ namespace ka {
     { result += value; }
   };
   
-  template<typename UserType/*, class OpCumul = DefaultAdd<UserType>*/ > struct CWP {};
-  template<typename UserType/*, class OpCumul = DefaultAdd<UserType>*/ > struct CW {};
+  template<typename UserType=void/*, class OpCumul = DefaultAdd<UserType>*/ > struct CWP {};
+  template<typename UserType=void/*, class OpCumul = DefaultAdd<UserType>*/ > struct CW {};
 
   // --------------------------------------------------------------------  
   /* Trait used in each type of parameter in the signature to retreive the
@@ -774,12 +773,6 @@ namespace ka {
   struct TraitUAMParam<Value<UserType> > {
     typedef TraitUAMType<UserType> uamttype_t;
     typedef ACCESS_MODE_V   mode_t;
-  };
-
-  template<typename UserType, typename AccessMode>
-  struct TraitUAMParam<Composite<UserType, AccessMode> > {
-    typedef TraitUAMType<UserType> uamttype_t;
-    typedef AccessMode             mode_t;
   };
 
   template<typename UserType>
@@ -1552,9 +1545,115 @@ namespace ka {
     
 
   // --------------------------------------------------------------------
+  // View for task arguments description
+#if 0
+  template<
+    typename M1, typename M2, typename M3, typename M4
+  > struct CountTuple {
+    enum { count = 4 };
+  };
+  template<
+    typename M1, typename M2, typename M3
+  > struct CountTuple<M1,M2,M3,void> {
+    enum { count = 3 };
+  };
+  template<
+    typename M1, typename M2
+  > struct CountTuple<M1,M2,void,void> {
+    enum { count = 2 };
+  };
+  template<
+    typename M1
+  > struct CountTuple<M1,void,void,void> {
+    enum { count = 1 };
+  };
+
+  template<
+    typename S1, typename S2, typename S3, typename S4
+  > struct TupleRep {
+    S1  d1;
+    S2  d2;
+    S3  d3;
+    S4  d4;
+  };
+  template<
+    typename S1, typename S2, typename S3
+  > struct TupleRep<S1,S2,S3,void> {
+    S1  d1;
+    S2  d2;
+    S3  d3;
+  };
+  template<
+    typename S1, typename S2
+  > struct TupleRep<S1,S2,void,void> {
+    S1  d1;
+    S2  d2;
+  };
+  template<
+    typename S1
+  > struct TupleRep<S1,void,void,void> {
+    S1  d1;
+  };
+
+  template<
+    typename M1, typename S1,
+    typename M2 = void, typename S2 = void,
+    typename M3 = void, typename S3 = void,
+    typename M4 = void, typename S4 = void
+  > struct Tuple : public TupleRep<S1,S2,S3,S4> {
+    typedef typename TraitUAMParam<M1>::mode_t mode1_t;  
+    typedef typename TraitUAMParam<M2>::mode_t mode2_t;   
+    typedef typename TraitUAMParam<M3>::mode_t mode3_t;
+    typedef typename TraitUAMParam<M4>::mode_t mode4_t;
+    enum { count =CountTuple<M1, M2, M3, M4>::count };
+  };
+#else
+#include "ka_api_tuple.h"
+#endif
+
+  template<int dim, typename T>
+  class ArrayType {};
+
+  template<typename T>
+  class ArrayType<1,T> {
+  public:
+    void bind( T* addr, size_t d ) { _addr = addr; _dim = d; }
+    T* addr() const { return _addr; }
+    size_t count() const { return _dim; }
+  protected:
+    T*     _addr;
+    size_t _dim;
+  };
+
+  template<typename T>
+  class ArrayType<2,T> {
+  public:
+    void bind( T* addr, size_t l, size_t d1, size_t d2 ) { _addr = addr; _ld = l; _dim1 = d1; _dim2 = d2; }
+    void bind( T* addr, size_t d1, size_t d2 ) { _addr = addr; _ld = d2; _dim1 = d1; _dim2 = d2; }
+    T* addr() const { return _addr; }
+    size_t count() const { return _dim1*_dim2; }
+    size_t dim1() const { return _dim1; }
+    size_t dim2() const { return _dim2; }
+  protected:
+    T*     _addr;
+    size_t _ld;
+    size_t _dim1;
+    size_t _dim2;
+  };
+
+
+  // --------------------------------------------------------------------
   template<class T>
   struct TaskDelete : public Task<1>::Signature<RW<T> > { };
+
+
 } // namespace a1
+
+  // --------------------------------------------------------------------
+  template<typename TASK>
+  struct TaskFormat {
+    typedef typename TASK::Signature View; /* here should be defined using default interpretation of args */
+  };
 
   template<class T>
   struct TaskBodyCPU<ka::TaskDelete<T> > : public ka::TaskDelete<T> {
