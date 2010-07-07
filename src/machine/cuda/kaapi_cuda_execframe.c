@@ -45,116 +45,241 @@
 */
 
 
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <cuda.h>
 #include "kaapi_impl.h"
+#include "kaapi_cuda_error.h"
 
 
-#if 0 /* unused */
+/* memory management api */
 
-/* memory management */
+#define KAAPI_MEM_MAX_SPACES 3
 
-struct kaapi_mman_handle
+typedef uintptr_t kaapi_mem_laddr_t;
+
+typedef struct kaapi_mem_laddrs
 {
-  void* addr;
-  size_t size;
-};
+  struct kaapi_mem_laddrs* next;
+  unsigned int bitmap;
+  kaapi_mem_laddr_t laddrs[KAAPI_MEM_MAX_SPACES];
+} kaapi_mem_laddrs_t;
 
-static unsigned int kaapi_mman_is_local(void* addr, size_t size)
+static inline void kaapi_mem_laddrs_init
+(kaapi_mem_laddrs_t* laddrs)
 {
+  laddrs->next = NULL;
+  laddrs->bitmap = 0;
+}
+
+static inline void kaapi_mem_laddrs_set
+(kaapi_mem_laddrs_t* laddrs, kaapi_mem_laddr_t laddr, unsigned int index)
+{
+  laddrs->bitmap |= 1 << index;
+  laddrs->laddrs[index] = laddr;
+}
+
+
+/* a map translates between a device local addrs
+ */
+
+typedef struct kaapi_mem_map
+{
+  kaapi_mem_laddrs_t* head;
+  unsigned int index;
+} kaapi_mem_map_t;
+
+
+static int kaapi_mem_map_initialize(kaapi_mem_map_t* map)
+{
+  map->head = NULL;
+  return 0;
+}
+
+static void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
+{
+  kaapi_mem_laddrs_t* pos = map->head;
+
+  while (pos != NULL)
+  {
+    kaapi_mem_laddrs_t* const tmp = pos;
+    pos = pos->next;
+    free(tmp);
+  }
+
+  map->head = NULL;
+}
+
+static int kaapi_mem_map_find_or_insert
+(kaapi_mem_map_t* map, kaapi_mem_laddr_t laddr, kaapi_mem_laddrs_t** laddrs)
+{
+  kaapi_mem_laddrs_t* pos;
+
+  for (pos = map->head; pos != NULL; pos = pos->next)
+  {
+    if (pos->laddrs[map->index] == laddr)
+      break;
+  }
+
+  if (pos == NULL)
+  {
+    pos = malloc(sizeof(kaapi_mem_laddr_t));
+    if (pos == NULL)
+      return -1;
+
+    kaapi_mem_laddrs_init(pos);
+    kaapi_mem_laddrs_set(pos, laddr, map->index);
+  }
+
+  *laddrs = pos;
+
   return 0;
 }
 
 
-typedef struct kaapi_mem_xfer
+/* device memory allocation */
+
+static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
 {
-  enum /* kaapi_mem_xfer_dir */
+  const CUresult res = cuMemAlloc(devptr, size);
+  if (res != CUDA_SUCCESS)
   {
-    KAAPI_MEM_XFER_DIR_DTOH = 0,
-    KAAPI_MEM_XFER_DIR_HTOD,
-    KAAPI_MEM_XFER_DIR_DTOD,
-    KAAPI_MEM_XFER_DIR_HTOH
-  } dir;
-
-  ulongptr_t src;
-  ulongptr_t dst;
-  size_t size;
-
-  CUstream stream;
-  CUevent event;
-
-} kaapi_mem_xfer_t;
-
-static void start_async_xfer(CUstream stream)
-{
-}
-
-static int test_async_xfer(kaapi_mem_xfer_t* xfer)
-{
-  /* not completed */
-  return -1;
-}
-
-
-/* notes.
-   it is the role of task_bcast to mark the task
-   as ready ? -> for the moment dont know (could
-   be stolen thus in another processor) and we
-   handle the memory logic in execframe
- */
-
-/* algorithme
-   foreach frame
-   foreach task
-
-   task_bcast(reader_tasks)
-   {
-   foreach (task, reader_tasks)
-   mark_task(task, is_ready);
-   }
-
-   if (is_ready(task) == false)
-   continue ;
-
-   on walk la pile de tache de la frame courante.
-   , pour chaque tache
- */
-
-static int ready_or_mem(kaapi_task_t* task)
-{
-  kaapi_format_t* fmt = format(task);
-
-  /* data dependencies not yet met */
-  if (dep_not_ready(task))
+    kaapi_cuda_error("cuMemAlloc", res);
     return -1;
-
-  for (param ; param; ++param)
-  {
-    /* check if data are available locally */
-    if (kaapi_mman_is_local(param->data))
-      continue ;
-
-    if (param->size() < KAAPI_MMAN_ASYNC_SIZE)
-    {
-      /* synchronous xfer */
-      kaapi_mman_xfer(from, to);
-    }
-    else
-    {
-      /* async xfer */
-      pc->body = kaapi_mman_wait_body;
-      kaapi_mman_start_async_xfer();
-    }
   }
 
   return 0;
 }
 
-#endif /* unused */
+static inline void free_device_mem(CUdeviceptr devptr)
+{
+  cuMemFree(devptr);
+}
+
+/* copy memory to device */
+
+static inline int copy_device_mem
+(kaapi_processor_t* proc, CUdeviceptr devptr, void* hostptr, size_t size)
+{
+  const CUresult res = cuMemcpyHtoDAsync
+    (devptr, hostptr, size, proc->cuda_proc.stream);
+
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyHToDAsync", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+/* prepare task args memory */
+
+static kaapi_mem_map_t global_mem_map;
+
+static void prepare_task
+(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_task_body_t body)
+{
+  kaapi_format_t* const format = kaapi_format_resolvebybody(body);
+  kaapi_mem_map_t* map = &global_mem_map;
+
+  kaapi_access_t* access;
+  kaapi_mem_laddrs_t* laddrs;
+  CUdeviceptr devptr;
+  size_t size;
+  unsigned int i;
+
+  kaapi_assert_debug(format != NULL);
+
+  /* to remove */
+  {
+    static unsigned int init_once = 0;
+    if (init_once == 0)
+    {
+      init_once = 1;
+      kaapi_mem_map_initialize(map);
+    }
+  }
+  /* to remove */
+
+  for (i = 0; i < format->count_params; ++i)
+  {
+    const kaapi_access_mode_t mode =
+      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+
+    if (mode & KAAPI_ACCESS_MODE_V)
+      continue ;
+
+    access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
+
+    /* todo: handle error */
+    kaapi_mem_map_find_or_insert
+      (map, (kaapi_mem_laddr_t)access->data, &laddrs);
+
+    if (KAAPI_ACCESS_IS_ONLYWRITE(mode))
+    {
+      /* allocate the memory on device */
+
+      /* todo: size = format->param_size(i); */
+      size = 50000 * sizeof(unsigned int);
+
+      allocate_device_mem(&devptr, size);
+      
+      /* add devptr as a local addr */
+#define KAAPI_MEM_GPU_INDEX 1
+      kaapi_mem_laddrs_set(laddrs, devptr, KAAPI_MEM_GPU_INDEX);
+    }
+    else if (KAAPI_ACCESS_IS_READ(mode)) /* R or RW */
+    {
+      /* todo: size = format->param_size(i); */
+      size = 50000 * sizeof(unsigned int);
+
+      copy_device_mem(proc, devptr, access->data, size);
+    }
+
+    /* update param addr */
+    access->data = (void*)(uintptr_t)devptr;
+  }
+}
+
+/* execute a cuda task */
+
+typedef void (*cuda_task_body_t)(CUstream, void*, kaapi_thread_t*);
+
+static inline void execute_task
+(
+ kaapi_processor_t* proc,
+ cuda_task_body_t body,
+ void* args,
+ kaapi_thread_t* thread
+)
+{
+  body(proc->cuda_proc.stream, args, thread);
+}
+
+
+/* wait for stream completion */
+
+static inline int synchronize_processor(kaapi_processor_t* proc)
+{
+  const CUresult res = cuStreamSynchronize(proc->cuda_proc.stream);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuStreamSynchronize", res);
+    return -1;
+  }
+
+  return 0;
+}
 
 
 /* exported */
 
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
+  kaapi_processor_t* const proc = thread->proc;
+
   kaapi_task_t*              pc;
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
@@ -210,14 +335,18 @@ begin_loop:
     kaapi_assert_debug( body != kaapi_exec_body);
     if (body == kaapi_suspend_body)
       goto error_swap_body;
+
     pc->body = kaapi_exec_body;
 #else
 #  error "Undefined steal task method"    
 #endif
 
-    /* task execution */
-    kaapi_assert_debug(pc == thread->sfp[-1].pc);
-    body( pc->sp, (kaapi_thread_t*)thread->sfp );
+    prepare_task(proc, pc, body);
+    execute_task
+      (proc, (cuda_task_body_t)body, pc->sp, (kaapi_thread_t*)thread->sfp);
+
+    /* todo: move in the end of frame execution */
+    synchronize_processor(proc);
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;

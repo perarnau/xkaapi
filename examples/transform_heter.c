@@ -213,11 +213,8 @@ static void cuda_post_handler
 #elif 1 /* high level call */
 
 static void cuda_entry
-( /* unsigned int cuda_stream, */ void* arg, kaapi_thread_t* thread)
+(CUstream stream, void* arg, kaapi_thread_t* thread)
 {
-  /* todo: passed as an argument by the runtime */
-  static CUstream cuda_stream = NULL;
-
   range_t* const range = &((task_work_t*)arg)->range;
 
   CUdeviceptr const base_devptr = (CUdeviceptr)(uintptr_t)
@@ -241,13 +238,13 @@ static void cuda_entry
     kaapi_cuda_func_push_uint(&fn, range->i);
     kaapi_cuda_func_push_uint(&fn, range->j);
 
-    kaapi_cuda_func_call_async(&fn, cuda_stream, &bdim, &tdim);
+    kaapi_cuda_func_call_async(&fn, stream, &bdim, &tdim);
 
     kaapi_cuda_func_unload_ptx(&fn);
   }
 #else /* c++ api */
   {
-    transform_heter<<<1, 256, 0, cuda_stream>>>
+    transform_heter<<<1, 256, 0, stream>>>
       (base_devptr, range->i, range->j);
   }
 #endif /* driver api */

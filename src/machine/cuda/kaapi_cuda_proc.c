@@ -96,10 +96,20 @@ static void close_cuda_device(CUdevice dev, CUcontext ctx)
 int kaapi_cuda_proc_initialize
 (kaapi_cuda_proc_t* proc, unsigned int idev)
 {
+  CUresult res;
+
   proc->is_initialized = 0;
 
   if (open_cuda_device(&proc->dev, &proc->ctx, idev))
     return -1;
+
+  res = cuStreamCreate(&proc->stream, 0);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuStreamCreate", res);
+    close_cuda_device(proc->dev, proc->ctx);
+    return -1;
+  }
 
   proc->is_initialized = 1;
 
@@ -112,6 +122,7 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
   if (proc->is_initialized == 0)
     return -1;
 
+  cuStreamDestroy(proc->stream);
   close_cuda_device(proc->dev, proc->ctx);
 
   proc->is_initialized = 0;
