@@ -45,9 +45,113 @@
 */
 
 
-#include <stdio.h>
 #include "kaapi_impl.h"
 
+
+#if 0 /* unused */
+
+/* memory management */
+
+struct kaapi_mman_handle
+{
+  void* addr;
+  size_t size;
+};
+
+static unsigned int kaapi_mman_is_local(void* addr, size_t size)
+{
+  return 0;
+}
+
+
+typedef struct kaapi_mem_xfer
+{
+  enum /* kaapi_mem_xfer_dir */
+  {
+    KAAPI_MEM_XFER_DIR_DTOH = 0,
+    KAAPI_MEM_XFER_DIR_HTOD,
+    KAAPI_MEM_XFER_DIR_DTOD,
+    KAAPI_MEM_XFER_DIR_HTOH
+  } dir;
+
+  ulongptr_t src;
+  ulongptr_t dst;
+  size_t size;
+
+  CUstream stream;
+  CUevent event;
+
+} kaapi_mem_xfer_t;
+
+static void start_async_xfer(CUstream stream)
+{
+}
+
+static int test_async_xfer(kaapi_mem_xfer_t* xfer)
+{
+  /* not completed */
+  return -1;
+}
+
+
+/* notes.
+   it is the role of task_bcast to mark the task
+   as ready ? -> for the moment dont know (could
+   be stolen thus in another processor) and we
+   handle the memory logic in execframe
+ */
+
+/* algorithme
+   foreach frame
+   foreach task
+
+   task_bcast(reader_tasks)
+   {
+   foreach (task, reader_tasks)
+   mark_task(task, is_ready);
+   }
+
+   if (is_ready(task) == false)
+   continue ;
+
+   on walk la pile de tache de la frame courante.
+   , pour chaque tache
+ */
+
+static int ready_or_mem(kaapi_task_t* task)
+{
+  kaapi_format_t* fmt = format(task);
+
+  /* data dependencies not yet met */
+  if (dep_not_ready(task))
+    return -1;
+
+  for (param ; param; ++param)
+  {
+    /* check if data are available locally */
+    if (kaapi_mman_is_local(param->data))
+      continue ;
+
+    if (param->size() < KAAPI_MMAN_ASYNC_SIZE)
+    {
+      /* synchronous xfer */
+      kaapi_mman_xfer(from, to);
+    }
+    else
+    {
+      /* async xfer */
+      pc->body = kaapi_mman_wait_body;
+      kaapi_mman_start_async_xfer();
+    }
+  }
+
+  return 0;
+}
+
+#endif /* unused */
+
+
+/* exported */
 
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
@@ -58,8 +162,6 @@ int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;
 #endif
-
-  printf("cuda_execframe\n");
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
