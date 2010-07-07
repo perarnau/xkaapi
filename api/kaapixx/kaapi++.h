@@ -90,6 +90,12 @@ namespace ka {
   
 
   // --------------------------------------------------------------------
+  class gpuStream {
+  protected:
+    int stream; /* at least for CUDA */
+  };
+
+  // --------------------------------------------------------------------
   /** link C++ format -> kaapi format */
   class Format {
   public:

@@ -10,17 +10,17 @@
 @c %** end of header
 
 @copying
-This manual is for KAAPI (version @value{VERSION}, @value{UPDATED}),
+This manual is for X-Kaapi (version @value{VERSION}, @value{UPDATED}),
 Hyantes is free software; you can redistribute it and/or modify
-it under the terms of the GPL License
+it under the terms of the CeCill-C License (GPL like license).
 
-Copyright @copyright{} 2007 LIG
+Copyright @copyright{} 2010 LIG/INRIA
 @end copying
 
 @titlepage
 @title KAAPI 
 @subtitle for version @value{VERSION}, @value{UPDATED}
-@author S. Guelton (@email{serge.guelton@@enst-bretagne.fr})
+@author Kaapi Team (@email{kaapi-leaders@@lists.gforge.inria.fr})
 @page
 @insertcopying
 @end titlepage
@@ -30,16 +30,17 @@ Copyright @copyright{} 2007 LIG
 @ifnottex
 @node Top
 @top Kaapi
-This manual is for Kaapi library (version @value{VERSION}, @value{UPDATED}).
+This manual is for X-Kaapi library (version @value{VERSION}, @value{UPDATED}).
 @end ifnottex
 
 @menu
 * kaapi overview:: Overview of the package
 * install guide:: Installation guide
 * compile and run:: Link program with @code{KAAPI} 
-* Athapascan :: Detailed overview of Kaapi content
+* API-Kaapi :: Detailed overview of the C++ API
+* API-Athapascan :: Overview of old Athapascan API
 * tutorials:: understand the basics
-* API :: functions and classes exported by the Kaapi library
+* Doxygen :: functions and classes exported by the Kaapi library
 * function methods and classes index :: quickly find your way in the api
 @end menu
 @c * contacts :: flame or grats the authors
@@ -47,7 +48,7 @@ This manual is for Kaapi library (version @value{VERSION}, @value{UPDATED}).
 
 @node kaapi overview
 @chapter Overview
-KAAPI means Kernel for Adaptative, Asynchronous Parallel and Interactive programming. It is a C++ library that allows to execute multithreaded computation with data flow synchronization between threads. The library is able to schedule fine/medium size grain program on distributed machine. The data flow graph is dynamic (unfold at runtime). Target architectures are clusters of SMP machines.
+X-Kaapi is a runtime high performance parallelism targeting multicore and distributed architectures. It relies on workstealing paradigms. The core library comes with a full set of complementary programming interfaces, allowing for different abstraction levels. The following documents the install process, runtime options, as well as a description of APIs lying on top of the runtime and a set of examples.
 
 Main features are
 
@@ -62,6 +63,8 @@ Main features are
 @c -------------------------------------------
 @include install/install.texi
 @include install/compile_and_run.texi
+@include kaapi/overview.texi
+@include kaapi/api.texi
 @include athapascan/overview.texi
 @include tutorial/tutorial.texi
 @include athapascan/api.texi

@@ -1,7 +1,7 @@
 @node compile and run
 @chapter Compile and Run Athapascan programs
 
-This chapter details the basic steps needed to compile a source code linked with @code{KAAPI},
+This chapter details the basic steps needed to compile a source code linked with @code{X-Kaapi},
 and how to run it.
 @menu
 * compile::Compiling Athapascan program
@@ -11,33 +11,33 @@ and how to run it.
 @node compile
 @section Compiling Athapascan program
 
-Once @code{KAAPI} is installed (see @ref{install guide}), there are two ways to compile an @code{Athapascan} program.
+Once @code{X-Kaapi} is installed (see @ref{install guide}), there are two ways to compile an @code{X-Kaapi} or @code{Athapascan} program.
 You can either use the help of the pkg-config program if you have it installed or
 you can use environment variables.
 
 @menu
-* setting environment:: if @code{KAAPI} is not installed in default location
+* setting environment:: if @code{X-Kaapi} is not installed in default location
 * compile with pkg-config:: the modern way
 * compile with environment variables:: the old way
 @end menu
 
 @node setting environment
-@subsection Setting up an environment to compile Athapascan programs
+@subsection Setting up an environment to compile X-Kaapi programs
 
-If you use environment variables or if KAAPI is not installed in system
+If you use environment variables or if X-Kaapi is not installed in system
 directories (usually if you did not use the ``--prefix=/usr`` with the configure
 script), you need to setup your environment.
 
 You can either start a new shell
 @example
-$ $HOME/kaapi/bin/kaapish --mode=devel --flags
-$ # replace $HOME/kaapi by the prefix used with the configure script
+$ $HOME/xkaapi/bin/kaapish --mode=devel --flags
+$ # replace $HOME/xkaapi by the prefix used with the configure script
 @end example
 
 or you can add environment variables in the current shell
 @example
-$ eval `$HOME/kaapi/bin/kaapish --shell --mode=devel --flags`
-$ # replace $HOME/kaapi by the prefix used with the configure script
+$ eval `$HOME/xkaapi/bin/kaapish --shell --mode=devel --flags`
+$ # replace $HOME/xkaapi by the prefix used with the configure script
 @end example
 
 
@@ -47,8 +47,8 @@ type it each time.
 
 If @command{kaapish} does not correctly detect your kind of shell, you can specify it
 @example
-$ eval `$HOME/kaapi/bin/kaapish --shell=sh --mode=devel --flags`
-$ # replace $HOME/kaapi by the prefix used with the configure script
+$ eval `$HOME/xkaapi/bin/kaapish --shell=sh --mode=devel --flags`
+$ # replace $HOME/xkaapi by the prefix used with the configure script
 @end example
 
 
@@ -58,13 +58,13 @@ More detail about the @command{kaapish} command can be found in its man page kaa
 @subsection Using the pkg-config tool
 
 
-Once you setup an correct environment or if you installed KAAPI in system
+Once you setup an correct environment or if you installed X-Kaapi in system
 directories (usually if you use the @option{--prefix=/usr} with the configure script),
 you can compile and link with the correct flags by requesting them to
 @command{pkg-config} as for any other library managed by @command{pkg-config}:
 @example
-$ g++ -c atha_test.cpp `pkg-config --cflags kaapi` # compiling step
-$ g++ -o atha_test atha_test.o `pkg-config --libs kaapi` # linking step
+$ g++ -c xkaapi_test.cpp `pkg-config --cflags kaapi` # compiling step
+$ g++ -o xkaapi_test xkaapi_test.o `pkg-config --libs kaapi` # linking step
 @end example
 
 @node compile with environment variables
@@ -74,8 +74,8 @@ $ g++ -o atha_test atha_test.o `pkg-config --libs kaapi` # linking step
 Once you setup an correct environment, you can compile and link with the
 correct flags by using the new defined environment variables:
 @example
-$ g++ -c atha_test.cpp $ATHAPASCAN1_CPPFLAGS # compiling step
-$ g++ -o atha_test atha_test.o $ATHAPASCAN1_LDFLAGS # linking step
+$ g++ -c xkaapi_test.cpp $XKAAPI_CPPFLAGS # compiling step
+$ g++ -o xkaapi_test xkaapi_test.o $XKAAPI_LDFLAGS # linking step
 @end example
 
 
@@ -83,7 +83,7 @@ $ g++ -o atha_test atha_test.o $ATHAPASCAN1_LDFLAGS # linking step
 @section Running an Athapascan program
 
 
-If you have not installed KAAPI in a system-wide location, you will need to use
+If you have not installed X-Kaapi in a system-wide location, you will need to use
 kaapish(1) (or karun(1) to run on several machines, see below) so that environment variables are
 correctly defined.
 
@@ -98,46 +98,43 @@ correctly defined.
 
 You can run the program directly:
 @example
-$ $HOME/kaapi/bin/kaapish ./atha_test
-$ # replace $HOME/kaapi by the prefix used with the configure script
+$ $HOME/xkaapi/bin/kaapish ./atha_test
+$ # replace $HOME/xkaapi by the prefix used with the configure script
 @end example
 
 
 Or you can update environment variables in your shell to be able to run your
 program:
 @example
-$ eval `$HOME/kaapi/bin/kaapish --shell --mode=run`
-$ # replace $HOME/kaapi by the prefix used with the configure script
-$ ./atha_test
+$ eval `$HOME/xkaapi/bin/kaapish --shell --mode=run`
+$ # replace $HOME/xkaapi by the prefix used with the configure script
+$ ./xkaapi_test
 @end example
 
-@strong{NOTE}: in case you already setup an environment to compile KAAPI program or
-if you installed KAAPI in system directories (usually if you use the
+@strong{NOTE}: in case you already setup an environment to compile X-Kaapi program or
+if you installed X-Kaapi in system directories (usually if you use the
 @option{--prefix=/usr} with the configure script), you already have a correct
-environment to run Athapascan programs. So you can run it immediately (the last
+environment to run X-Kaapi programs. So you can run it immediately (the last
 line of the previous example)
 
-Of cause, you can use a more featured program, for example @command{fibo_apiatha}
+Of cause, you can use a more featured program, for example @command{fibo_kapixx}
 (in this example, no running environment is previously setup, so @command{kaapish} is
 used)
 @example
-$ $HOME/kaapi/bin/kaapish ./fibo_apiatha 30 15
+$ $HOME/xkaapi/bin/kaapish ./fibo_kapixx 30 15
                           #30: the 30-th fibonacci number
                           #15: threshold to stop recursive
 @end example
 
-@strong{NOTE}: self documentation of KAAPI is displayed by the command line argument
-@option{--help}.  All KAAPI script or program compiled with KAAPI accept this option.
+@strong{NOTE}: self documentation of X-Kaapi is displayed by the command line argument
+@option{--help}.  All X-Kaapi script or program compiled with X-Kaapi accept this option.
 
 For instance:
 @example
-$ $HOME/kaapi/bin/kaapish --help
-$ $HOME/kaapi/bin/kaapish ./fibo_apiatha --help
+$ $HOME/xkaapi/bin/kaapish --help
+$ $HOME/xkaapi/bin/kaapish ./fibo_kaapixx --help
 @end example
 
-One particular option is @option{--dumprc} in order to dump default value of
-properties into the file @file{dump.rc} in order to change them for next run. KAAPI
-looks for a properties' file named @file{kaapi.rc} in @env{$HOME} and @env{$PWD}.
 
 @node multiple instance
 @subsection Running multiple instances of the program on several machines 
@@ -146,14 +143,14 @@ To run the same program on several machines, the user may use the @command{karun
 command:
 
 @example
-$ $HOME/kaapi/bin/karun --np <#processes> -f <hostnames> ./fibo_apiatha 30 15
+$ $HOME/xkaapi/bin/karun --np <#processes> -f <hostnames> ./fibo_apiatha 30 15
 @end example
 
 Note that if @command{kaapish} is not in you @env{$PATH} when executing an @command{ssh} on remote
 machines (check with @code{ssh <machine> which kaapish}), you will need to specify
 it to @command{karun}:
 @example
-$ $HOME/kaapi/bin/karun --wrapper-binary kaapish=/path/on/remote/node/kaapish \
+$ $HOME/xkaapi/bin/karun --wrapper-binary kaapish=/path/on/remote/node/kaapish \
     --np <#processes> -f <hostnames> ./fibo_apiatha 30 15
 @end example
 
@@ -162,6 +159,6 @@ more detail about this command can be found in the man page karun(1)
 @strong{NOTE}: if you want to run your programm on a single machine but still want to
 use several threads, you can use:
 @example
-$ $HOME/kaapi/bin/kaapish ./myprog --community -thread.poolsize n my args
+$ $HOME/xkaapi/bin/kaapish ./myprog --community -thread.poolsize n my args
                                 # n is the number of threads
 @end example
