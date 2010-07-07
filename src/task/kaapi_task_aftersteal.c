@@ -91,15 +91,19 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
       fmt_param = fmt->fmt_params[i];
       access_param = (kaapi_access_t*)(data_param);
 
+#if 0
 if ((unsigned long)access_param->data < 4042752UL) {
   printf("Invalid data: %p\n", access_param->data );
   exit(1);
 }
+#endif
 
       /* if m == W and data == version it means that data used by W was not copied due to non WAR dependency */
       if (access_param->data != access_param->version )
       {
+#if 0
   printf("AfterSteal with copy, sp:%p\n", (void*)taskarg);
+#endif
         /* add an assign + dstor function will avoid 2 calls to function, especially for basic types which do not
            required to be dstor.
         */
