@@ -55,7 +55,9 @@
 #  endif
 #endif
 #include <sys/time.h>
+#if not defined (_WIN32)
 #include <sys/resource.h>
+#endif
 #include <unistd.h>
 #ifdef KAAPI_USE_IRIX
 #include <time.h> // clock
@@ -397,10 +399,21 @@ inline void CpuTimer::clear()
 
 inline double CpuTimer::gettime()
 {
+#if defined (_WIN32)
+  FILETIME creationtime;
+  FILETIME exittime;
+  FILETIME kerneltime;
+  FILETIME usertime;
+
+  GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
+  return (double)((((ULONGLONG) usertime.dwHighDateTime) << 32) + usertime.dwLowDateTime)/10000000;
+
+#else
    struct rusage tmp;
    getrusage (RUSAGE_SELF, &tmp) ;
-   // user time
    return double(tmp.ru_utime.tv_sec) + double(tmp.ru_utime.tv_usec) * 1e-6;
+#endif
+   // user time
 }
 
 inline void CpuTimer::start()
@@ -424,10 +437,21 @@ inline void SysTimer::clear()
 
 inline double SysTimer::gettime()
 {
+#if defined (_WIN32)
+  FILETIME creationtime;
+  FILETIME exittime;
+  FILETIME kerneltime;
+  FILETIME usertime;
+
+  GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
+  return (double)((((ULONGLONG) kerneltime.dwHighDateTime) << 32) + kerneltime.dwLowDateTime)/10000000;
+
+#else
    struct rusage tmp;
    getrusage (RUSAGE_SELF, &tmp) ;
    // user time
    return double(tmp.ru_stime.tv_sec) + double(tmp.ru_stime.tv_usec) * 1e-6;
+#endif
 }
 
 inline void SysTimer::start()

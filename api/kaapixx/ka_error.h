@@ -380,7 +380,7 @@ public:
 /** Signal handler for SIGSEGV, SIGBUS, SIGFPE, SIGABRT, SIGILL
  *  Print a backtrace
  */
-void backtrace_sighandler(int sig, siginfo_t *info, void *secret);
+void backtrace_sighandler(int sig, void *info, void *secret);
 
 } // - namespace atha...
 
