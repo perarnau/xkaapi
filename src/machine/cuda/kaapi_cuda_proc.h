@@ -56,6 +56,7 @@ typedef struct kaapi_cuda_proc
 {
   CUdevice dev;
   CUcontext ctx;
+  CUstream stream;
   int is_initialized;
 } kaapi_cuda_proc_t;
 

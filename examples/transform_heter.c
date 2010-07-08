@@ -213,15 +213,11 @@ static void cuda_post_handler
 #elif 1 /* high level call */
 
 static void cuda_entry
-( /* unsigned int cuda_stream, */ void* arg, kaapi_thread_t* thread)
+(CUstream stream, void* arg, kaapi_thread_t* thread)
 {
-  /* todo: passed as an argument by the runtime */
-  static CUstream cuda_stream = NULL;
-
-  range_t* const range = &((task_work_t*)arg)->range;
-
-  CUdeviceptr const base_devptr = (CUdeviceptr)(uintptr_t)
-    *KAAPI_DATA(unsigned int*, range->base);
+  task_work_t* const work = (task_work_t*)arg;
+  range_t* const range = &work->range;
+  CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
   printf("> cuda_entry [%u - %u[\n", range->i, range->j);
 
@@ -237,18 +233,18 @@ static void cuda_entry
 #define STERN "transform_heter"
     kaapi_cuda_func_load_ptx(&fn, STERN ".ptx", STERN);
 
-    kaapi_cuda_func_push_ptr(&fn, base_devptr);
+    kaapi_cuda_func_push_ptr(&fn, base);
     kaapi_cuda_func_push_uint(&fn, range->i);
     kaapi_cuda_func_push_uint(&fn, range->j);
 
-    kaapi_cuda_func_call_async(&fn, cuda_stream, &bdim, &tdim);
+    kaapi_cuda_func_call_async(&fn, stream, &bdim, &tdim);
 
     kaapi_cuda_func_unload_ptx(&fn);
   }
 #else /* c++ api */
   {
-    transform_heter<<<1, 256, 0, cuda_stream>>>
-      (base_devptr, range->i, range->j);
+    transform_heter<<<1, 256, 0, stream>>>
+      (base, range->i, range->j);
   }
 #endif /* driver api */
 
@@ -351,7 +347,7 @@ static int split_work
     if (kaapi_processor_get_type(tproc) == KAAPI_PROC_TYPE_CPU)
       kaapi_task_init(ttask, cpu_entry, NULL);
     else
-      kaapi_task_init(ttask, cuda_entry, NULL);
+      kaapi_task_init(ttask, (kaapi_task_body_t)cuda_entry, NULL);
 
     twork = alloc_work(tthread);
     *KAAPI_DATA(unsigned int*, twork->range.base) =
@@ -396,7 +392,7 @@ static void register_task_format(void)
      PARAM_COUNT, modes, offsets, formats);
 
   kaapi_format_taskregister_body(format, cpu_entry, KAAPI_PROC_TYPE_CPU);
-  kaapi_format_taskregister_body(format, cuda_entry, KAAPI_PROC_TYPE_CUDA);
+  kaapi_format_taskregister_body(format, (kaapi_task_body_t)cuda_entry, KAAPI_PROC_TYPE_CUDA);
 }
 
 
@@ -434,6 +430,8 @@ main_adaptive_entry(unsigned int nelem)
   kaapi_thread_restore_frame(thread, &frame);
 }
 
+
+extern void kaapi_mem_read_barrier(void*, size_t);
 
 static void __attribute__((unused))
 main_static_entry(unsigned int nelem)
@@ -475,6 +473,12 @@ main_static_entry(unsigned int nelem)
   kaapi_threadgroup_end_execute(group);
 
   kaapi_threadgroup_destroy(group);
+
+#if 0 /* unused */
+  /* memory barrier */
+  void* const base = *KAAPI_DATA(unsigned int*, range->base);
+  kaapi_mem_read_barrier(base, nelem * sizeof(unsigned int));
+#endif /* unused */
 }
 
 
