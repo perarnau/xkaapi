@@ -219,7 +219,7 @@ static void cuda_entry
   range_t* const range = &work->range;
   CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
-  printf("> cuda_entry [%llx, %u - %u[\n", base, range->i, range->j);
+  printf("> cuda_entry [%u - %u[\n", range->i, range->j);
 
 #if 1 /* driver api */
   {

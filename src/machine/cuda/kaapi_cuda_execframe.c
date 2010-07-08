@@ -179,7 +179,7 @@ static int kaapi_mem_map_find
 
   for (pos = map->head; pos != NULL; pos = pos->next)
   {
-    if (pos->laddrs[map->memid] == laddr)
+    if (pos->laddrs[memid] == laddr)
     {
       *laddrs = pos;
       return 0;
@@ -255,8 +255,6 @@ static inline void free_device_mem(CUdeviceptr devptr)
 static inline int memcpy_htod
 (kaapi_processor_t* proc, CUdeviceptr devptr, void* hostptr, size_t size)
 {
-  printf("memcpy_htod(%llx, %llx)\n", devptr, hostptr);
-
 #if 0 /* async version */
   const CUresult res = cuMemcpyHtoDAsync
     (devptr, hostptr, size, proc->cuda_proc.stream);
@@ -456,7 +454,7 @@ static void finalize_task
 
     /* assume laddrs and laddrs[CPU] */
     kaapi_mem_map_find
-      (gpu_map, (kaapi_mem_laddr_t)devptr, KAAPI_MEM_ID_GPU, &laddrs);
+      (gpu_map, kaapi_get_self_mem_id(), (kaapi_mem_laddr_t)devptr, &laddrs);
     hostptr = (void*)kaapi_mem_laddrs_get(laddrs, KAAPI_MEM_ID_CPU);
     memcpy_dtoh(proc, hostptr, devptr, size);
   }
@@ -540,20 +538,26 @@ begin_loop:
     kaapi_assert_debug( body != kaapi_exec_body);
     if (body == kaapi_suspend_body)
       goto error_swap_body;
-
     pc->body = kaapi_exec_body;
 #else
 #  error "Undefined steal task method"    
 #endif
 
     format = kaapi_format_resolvebybody(body);
-    kaapi_assert_debug(format != NULL);
-
-    prepare_task(proc, pc, format);
-    execute_task
-      (proc, (cuda_task_body_t)body, pc->sp, (kaapi_thread_t*)thread->sfp);
-    synchronize_processor(proc);
-    finalize_task(proc, pc, format);
+    if ((format != NULL) && (format->entrypoint[KAAPI_PROC_TYPE_CUDA]))
+    {
+      kaapi_assert_debug(format != NULL);
+      prepare_task(proc, pc, format);
+      execute_task
+	(proc, (cuda_task_body_t)body, pc->sp, (kaapi_thread_t*)thread->sfp);
+      synchronize_processor(proc);
+      finalize_task(proc, pc, format);
+    }
+    else
+    {
+      kaapi_assert_debug(pc == thread->sfp[-1].pc);
+      body(pc->sp, (kaapi_thread_t*)thread->sfp);
+    }
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
@@ -644,6 +648,7 @@ restart_after_steal:
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
+
   return 0;
 
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
