@@ -147,7 +147,7 @@ static int kaapi_mem_map_find_or_insert
 
   if (pos == NULL)
   {
-    pos = malloc(sizeof(kaapi_mem_laddr_t));
+    pos = malloc(sizeof(kaapi_mem_laddrs_t));
     if (pos == NULL)
       return -1;
 
@@ -379,7 +379,6 @@ static void prepare_task
     if (!kaapi_mem_laddrs_isset(laddrs, kaapi_processor_get_memid(proc)))
     {
       size = 50000 * sizeof(unsigned int);
-
       allocate_device_mem(&devptr, size);
 
       /* host -> gpu mapping */

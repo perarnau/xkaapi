@@ -217,9 +217,9 @@ static void cuda_entry
 {
   task_work_t* const work = (task_work_t*)arg;
   range_t* const range = &work->range;
-  CUdeviceptr base_devptr = (CUdeviceptr)(uintptr_t)range->base.data;
+  CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
-  printf("> cuda_entry [%u - %u[\n", range->i, range->j);
+  printf("> cuda_entry [%llx, %u - %u[\n", base, range->i, range->j);
 
 #if 1 /* driver api */
   {
@@ -233,7 +233,7 @@ static void cuda_entry
 #define STERN "transform_heter"
     kaapi_cuda_func_load_ptx(&fn, STERN ".ptx", STERN);
 
-    kaapi_cuda_func_push_ptr(&fn, base_devptr);
+    kaapi_cuda_func_push_ptr(&fn, base);
     kaapi_cuda_func_push_uint(&fn, range->i);
     kaapi_cuda_func_push_uint(&fn, range->j);
 
@@ -244,7 +244,7 @@ static void cuda_entry
 #else /* c++ api */
   {
     transform_heter<<<1, 256, 0, stream>>>
-      (base_devptr, range->i, range->j);
+      (base, range->i, range->j);
   }
 #endif /* driver api */
 
