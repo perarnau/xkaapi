@@ -351,42 +351,17 @@ fi
 dnl -----------------------------------------------------------------------
 dnl The "--with-cuda"
 dnl -----------------------------------------------------------------------
-AC_ARG_WITH([cuda],[AS_HELP_STRING([--with-cuda],
-		 [add CUDA support, experimental default no])],[],
-  [with_cuda=no]
-)
-AS_CASE([$with_cuda],
-  [no], [dnl
-      AC_MSG_NOTICE([CUDA disable])
-  ], 
-  [dnl
-    KAAPI_CUDA=yes
+KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
+  [build CUDA support [EXPERIMENTAL]],
+  [cuda], [], [cuda.h], [cuDeviceGetProperties], [
+dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
-    if test x"$with_cuda" == x"yes"; then
-      AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1"
-      ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [], [], [], [-lcuda], [-lcuda])
-      XKAAPI_EXTRALIB="$XKAAPI_EXTRALIB -lcuda"
-    else
-      AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1 -I$with_cuda/include"
-      ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [], [], [], [-L$with_cuda/lib -lcuda], [-L$with_cuda/lib -lcuda])
-      XKAAPI_EXTRALIB="$XKAAPI_EXTRALIB -L$with_cuda/lib -lcuda"
-    fi
-  ])
-
-dnl KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
-dnl   [build CUDA support [EXPERIMENTAL]],
-dnl   [cuda], [], [cuda.h], [cudaGetDeviceProperties], [
-dnl     dnl CUDA is there
-dnl     KAAPI_CUDA=yes
-dnl     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
-dnl     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1"
-dnl   ],
-dnl   [
-dnl   ],
-dnl   [])
-dnl ACX_LIB_LINK([XKAAPILIB],[CUDA])
-AC_SUBST([KAAPI_CUDA])
-AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_CUDA" = x"yes"])
+  ],
+  [
+  ],
+  [])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
+ACX_LIB_LINK([XKAAPILIB],[CUDA])
 
 
 dnl -----------------------------------------------------------------------
@@ -400,28 +375,28 @@ ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
 ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la $XKAAPI_EXTRALIB])
+	[\$(top_builddir)/src/libxkaapi.la])
 
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la $XKAAPI_EXTRALIB])
+	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
 
 ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
 ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
 	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la $XKAAPI_EXTRALIB])
+	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
 
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la $XKAAPI_EXTRALIB])
+	[\$(top_builddir)/src/libxkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 ACX_LIB_LINK([KFORTRANPROGS], [KFORTRANLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KFORTRANPROGS],
 	[-I\$(top_srcdir)/api/fortran -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la $XKAAPI_EXTRALIB])
+	[\$(top_builddir)/src/libxkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 AC_SUBST(AM_CPPFLAGS)
