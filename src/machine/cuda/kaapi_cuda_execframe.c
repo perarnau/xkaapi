@@ -55,7 +55,9 @@
 
 /* memory management api */
 
-#define KAAPI_MEM_MAX_SPACES 3
+#define KAAPI_MEM_ID_CPU 0
+#define KAAPI_MEM_ID_GPU 1
+#define KAAPI_MEM_ID_MAX 2
 
 typedef uintptr_t kaapi_mem_laddr_t;
 
@@ -63,7 +65,7 @@ typedef struct kaapi_mem_laddrs
 {
   struct kaapi_mem_laddrs* next;
   unsigned int bitmap;
-  kaapi_mem_laddr_t laddrs[KAAPI_MEM_MAX_SPACES];
+  kaapi_mem_laddr_t laddrs[KAAPI_MEM_ID_MAX];
 } kaapi_mem_laddrs_t;
 
 static inline void kaapi_mem_laddrs_init
@@ -80,6 +82,18 @@ static inline void kaapi_mem_laddrs_set
   laddrs->laddrs[index] = laddr;
 }
 
+static inline kaapi_mem_laddr_t kaapi_mem_laddrs_get
+(kaapi_mem_laddrs_t* laddrs, unsigned int memid)
+{
+  return laddrs->laddrs[memid];
+}
+
+static inline unsigned int kaapi_mem_laddrs_isset
+(const kaapi_mem_laddrs_t* laddrs, unsigned int memid)
+{
+  return laddrs->bitmap & (1 << memid);
+}
+
 
 /* a map translates between a device local addrs
  */
@@ -87,12 +101,14 @@ static inline void kaapi_mem_laddrs_set
 typedef struct kaapi_mem_map
 {
   kaapi_mem_laddrs_t* head;
-  unsigned int index;
+  unsigned int memid;
 } kaapi_mem_map_t;
 
 
-static int kaapi_mem_map_initialize(kaapi_mem_map_t* map)
+static int kaapi_mem_map_initialize
+(kaapi_mem_map_t* map, unsigned int memid)
 {
+  map->memid = memid;
   map->head = NULL;
   return 0;
 }
@@ -112,13 +128,20 @@ static void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
 }
 
 static int kaapi_mem_map_find_or_insert
-(kaapi_mem_map_t* map, kaapi_mem_laddr_t laddr, kaapi_mem_laddrs_t** laddrs)
+(
+ kaapi_mem_map_t* map,
+ unsigned int memid,
+ kaapi_mem_laddr_t laddr,
+ kaapi_mem_laddrs_t** laddrs
+)
 {
+  /* laddr a host local address */
+
   kaapi_mem_laddrs_t* pos;
 
   for (pos = map->head; pos != NULL; pos = pos->next)
   {
-    if (pos->laddrs[map->index] == laddr)
+    if (pos->laddrs[memid] == laddr)
       break;
   }
 
@@ -129,12 +152,82 @@ static int kaapi_mem_map_find_or_insert
       return -1;
 
     kaapi_mem_laddrs_init(pos);
-    kaapi_mem_laddrs_set(pos, laddr, map->index);
+    kaapi_mem_laddrs_set(pos, laddr, memid);
+
+    pos->next = map->head;
+    map->head = pos;
   }
 
   *laddrs = pos;
 
   return 0;
+}
+
+static int kaapi_mem_map_find
+(
+ kaapi_mem_map_t* map,
+ unsigned int memid,
+ kaapi_mem_laddr_t laddr,
+ kaapi_mem_laddrs_t** laddrs
+)
+{
+  /* laddr a host local address */
+
+  kaapi_mem_laddrs_t* pos;
+
+  *laddrs = NULL;
+
+  for (pos = map->head; pos != NULL; pos = pos->next)
+  {
+    if (pos->laddrs[map->memid] == laddr)
+    {
+      *laddrs = pos;
+      return 0;
+    }
+  }
+
+  return -1;
+}
+
+
+/* memory maps */
+
+/* todo: move in kaapi_processor_t */
+static kaapi_mem_map_t mem_maps[2];
+
+static void init_maps_once(void)
+{
+  kaapi_mem_map_initialize(&mem_maps[0], 0);
+  kaapi_mem_map_initialize(&mem_maps[1], 1);
+}
+
+
+/* get processor memory map */
+
+static kaapi_mem_map_t* kaapi_processor_get_mem_map(kaapi_processor_t* proc)
+{
+  return &mem_maps[proc->kid];
+}
+
+static kaapi_mem_map_t* kaapi_get_self_mem_map(void)
+{
+  return kaapi_processor_get_mem_map(kaapi_get_current_processor());
+}
+
+static unsigned int kaapi_get_self_mem_id(void)
+{
+  return kaapi_get_current_processor()->kid;
+}
+
+static kaapi_mem_map_t* kaapi_mem_get_map(unsigned int memid)
+{
+  return &mem_maps[memid];
+}
+
+static unsigned int kaapi_processor_get_memid(kaapi_processor_t* proc)
+{
+  /* ok for now, processor should have a memid */
+  return proc->kid;
 }
 
 
@@ -157,13 +250,20 @@ static inline void free_device_mem(CUdeviceptr devptr)
   cuMemFree(devptr);
 }
 
-/* copy memory to device */
+/* copy from host to device */
 
-static inline int copy_device_mem
+static inline int memcpy_htod
 (kaapi_processor_t* proc, CUdeviceptr devptr, void* hostptr, size_t size)
 {
+  printf("memcpy_htod(%llx, %llx)\n", devptr, hostptr);
+
+#if 0 /* async version */
   const CUresult res = cuMemcpyHtoDAsync
     (devptr, hostptr, size, proc->cuda_proc.stream);
+#else
+  const CUresult res = cuMemcpyHtoD
+    (devptr, hostptr, size);
+#endif
 
   if (res != CUDA_SUCCESS)
   {
@@ -174,23 +274,80 @@ static inline int copy_device_mem
   return 0;
 }
 
+
+/* copy from device to host */
+
+static inline int memcpy_dtoh
+(kaapi_processor_t* proc, void* hostptr, CUdeviceptr devptr, size_t size)
+{
+#if 0 /* async version */
+  const CUresult res = cuMemcpyDtoHAsync
+    (hostptr, devptr, size, proc->cuda_proc.stream);
+#else
+  const CUresult res = cuMemcpyDtoH
+    (hostptr, devptr, size);
+#endif
+
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyDToHAsync", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+
+void kaapi_mem_read_barrier(void* hostptr, size_t size)
+{
+  /* ensure everything past this point
+     has been written to host memory.
+     assumed to be called from host.
+   */
+
+  kaapi_processor_t* self_proc = kaapi_get_current_processor();
+  kaapi_mem_map_t* const self_map = kaapi_get_self_mem_map();
+  const unsigned int self_memid = kaapi_get_self_mem_id();
+
+  CUdeviceptr devptr;
+  unsigned int memid;
+  kaapi_mem_laddrs_t* laddrs;
+
+  /* assume no error */
+  kaapi_mem_map_find
+    (self_map, KAAPI_MEM_ID_CPU, (kaapi_mem_laddr_t)hostptr, &laddrs);
+
+  for (memid = 0; memid < KAAPI_MEM_ID_MAX; ++memid)
+  {
+    /* find the first valid non identity mapping */
+    if (memid == self_memid)
+      continue ;
+    if (!kaapi_mem_laddrs_isset(laddrs, memid))
+      continue ;
+
+    devptr = (CUdeviceptr)kaapi_mem_laddrs_get(laddrs, memid);
+    memcpy_dtoh(self_proc, hostptr, devptr, size);
+
+    /* done */
+    break ;
+  }
+}
+
+
 /* prepare task args memory */
 
-static kaapi_mem_map_t global_mem_map;
-
 static void prepare_task
-(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_task_body_t body)
+(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
 {
-  kaapi_format_t* const format = kaapi_format_resolvebybody(body);
-  kaapi_mem_map_t* map = &global_mem_map;
+  kaapi_mem_map_t* cpu_map = kaapi_mem_get_map(KAAPI_MEM_ID_CPU);
+  kaapi_mem_map_t* gpu_map = kaapi_mem_get_map(KAAPI_MEM_ID_GPU);
 
   kaapi_access_t* access;
   kaapi_mem_laddrs_t* laddrs;
   CUdeviceptr devptr;
+  void* hostptr;
   size_t size;
   unsigned int i;
-
-  kaapi_assert_debug(format != NULL);
 
   /* to remove */
   {
@@ -198,7 +355,7 @@ static void prepare_task
     if (init_once == 0)
     {
       init_once = 1;
-      kaapi_mem_map_initialize(map);
+      init_maps_once();
     }
   }
   /* to remove */
@@ -212,34 +369,46 @@ static void prepare_task
       continue ;
 
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
+    hostptr = (void*)access->data;
 
-    /* todo: handle error */
+    /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
-      (map, (kaapi_mem_laddr_t)access->data, &laddrs);
+      (cpu_map, KAAPI_MEM_ID_CPU, (kaapi_mem_laddr_t)hostptr, &laddrs);
 
-    if (KAAPI_ACCESS_IS_ONLYWRITE(mode))
+    /* mapping does not yet exist */
+    if (!kaapi_mem_laddrs_isset(laddrs, kaapi_processor_get_memid(proc)))
     {
-      /* allocate the memory on device */
-
-      /* todo: size = format->param_size(i); */
       size = 50000 * sizeof(unsigned int);
 
       allocate_device_mem(&devptr, size);
-      
-      /* add devptr as a local addr */
-#define KAAPI_MEM_GPU_INDEX 1
-      kaapi_mem_laddrs_set(laddrs, devptr, KAAPI_MEM_GPU_INDEX);
-    }
-    else if (KAAPI_ACCESS_IS_READ(mode)) /* R or RW */
-    {
-      /* todo: size = format->param_size(i); */
-      size = 50000 * sizeof(unsigned int);
 
-      copy_device_mem(proc, devptr, access->data, size);
+      /* host -> gpu mapping */
+      kaapi_mem_laddrs_set
+	(laddrs, (kaapi_mem_laddr_t)devptr, kaapi_processor_get_memid(proc));
+
+      /* gpu -> gpu mapping */
+      kaapi_mem_map_find_or_insert
+	(gpu_map, KAAPI_MEM_ID_GPU, (kaapi_mem_laddr_t)devptr, &laddrs);
+
+      /* gpu -> host mapping */
+      kaapi_mem_laddrs_set
+	(laddrs, (kaapi_mem_laddr_t)hostptr, KAAPI_MEM_ID_CPU);
+    }
+    else
+    {
+      devptr = kaapi_mem_laddrs_get(laddrs, kaapi_processor_get_memid(proc));
     }
 
     /* update param addr */
     access->data = (void*)(uintptr_t)devptr;
+
+    if (KAAPI_ACCESS_IS_READ(mode)) /* R or RW */
+    {
+      /* todo: size = format->param_size(i); */
+      size = 50000 * sizeof(unsigned int);
+      devptr = (CUdeviceptr)kaapi_mem_laddrs_get(laddrs, KAAPI_MEM_ID_GPU);
+      memcpy_htod(proc, devptr, hostptr, size);
+    }
   }
 }
 
@@ -256,6 +425,42 @@ static inline void execute_task
 )
 {
   body(proc->cuda_proc.stream, args, thread);
+}
+
+/* finalize task args memory */
+
+static void finalize_task
+(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
+{
+  kaapi_mem_map_t* gpu_map = kaapi_processor_get_mem_map(proc);
+
+  kaapi_access_t* access;
+  kaapi_mem_laddrs_t* laddrs;
+  CUdeviceptr devptr;
+  void* hostptr;
+  size_t size;
+  unsigned int i;
+
+  for (i = 0; i < format->count_params; ++i)
+  {
+    const kaapi_access_mode_t mode =
+      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+
+    if (mode & KAAPI_ACCESS_MODE_V)
+      continue ;
+
+    if (!KAAPI_ACCESS_IS_WRITE(mode))
+      continue ;
+
+    access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
+    devptr = (CUdeviceptr)(uintptr_t)access->data;
+
+    /* assume laddrs and laddrs[CPU] */
+    kaapi_mem_map_find
+      (gpu_map, (kaapi_mem_laddr_t)devptr, KAAPI_MEM_ID_GPU, &laddrs);
+    hostptr = (void*)kaapi_mem_laddrs_get(laddrs, KAAPI_MEM_ID_CPU);
+    memcpy_dtoh(proc, hostptr, devptr, size);
+  }
 }
 
 
@@ -280,6 +485,7 @@ int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
   kaapi_processor_t* const proc = thread->proc;
 
+  kaapi_format_t* format;
   kaapi_task_t*              pc;
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
@@ -341,12 +547,14 @@ begin_loop:
 #  error "Undefined steal task method"    
 #endif
 
-    prepare_task(proc, pc, body);
+    format = kaapi_format_resolvebybody(body);
+    kaapi_assert_debug(format != NULL);
+
+    prepare_task(proc, pc, format);
     execute_task
       (proc, (cuda_task_body_t)body, pc->sp, (kaapi_thread_t*)thread->sfp);
-
-    /* todo: move in the end of frame execution */
     synchronize_processor(proc);
+    finalize_task(proc, pc, format);
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
@@ -449,6 +657,7 @@ error_swap_body:
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
+
   return EWOULDBLOCK;
 #endif
 
