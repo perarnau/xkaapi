@@ -124,11 +124,9 @@ redo_execute:
        that takes the kproc and route execution toward the right impl
     */
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
       err = kaapi_cuda_execframe( kproc->thread );
     else
-#endif
 #endif /* KAAPI_USE_CUDA */
     err = kaapi_stack_execframe( kproc->thread );
 
