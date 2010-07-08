@@ -1545,71 +1545,7 @@ namespace ka {
     
 
   // --------------------------------------------------------------------
-  // View for task arguments description
-#if 0
-  template<
-    typename M1, typename M2, typename M3, typename M4
-  > struct CountTuple {
-    enum { count = 4 };
-  };
-  template<
-    typename M1, typename M2, typename M3
-  > struct CountTuple<M1,M2,M3,void> {
-    enum { count = 3 };
-  };
-  template<
-    typename M1, typename M2
-  > struct CountTuple<M1,M2,void,void> {
-    enum { count = 2 };
-  };
-  template<
-    typename M1
-  > struct CountTuple<M1,void,void,void> {
-    enum { count = 1 };
-  };
-
-  template<
-    typename S1, typename S2, typename S3, typename S4
-  > struct TupleRep {
-    S1  d1;
-    S2  d2;
-    S3  d3;
-    S4  d4;
-  };
-  template<
-    typename S1, typename S2, typename S3
-  > struct TupleRep<S1,S2,S3,void> {
-    S1  d1;
-    S2  d2;
-    S3  d3;
-  };
-  template<
-    typename S1, typename S2
-  > struct TupleRep<S1,S2,void,void> {
-    S1  d1;
-    S2  d2;
-  };
-  template<
-    typename S1
-  > struct TupleRep<S1,void,void,void> {
-    S1  d1;
-  };
-
-  template<
-    typename M1, typename S1,
-    typename M2 = void, typename S2 = void,
-    typename M3 = void, typename S3 = void,
-    typename M4 = void, typename S4 = void
-  > struct Tuple : public TupleRep<S1,S2,S3,S4> {
-    typedef typename TraitUAMParam<M1>::mode_t mode1_t;  
-    typedef typename TraitUAMParam<M2>::mode_t mode2_t;   
-    typedef typename TraitUAMParam<M3>::mode_t mode3_t;
-    typedef typename TraitUAMParam<M4>::mode_t mode4_t;
-    enum { count =CountTuple<M1, M2, M3, M4>::count };
-  };
-#else
 #include "ka_api_tuple.h"
-#endif
 
   template<int dim, typename T>
   class ArrayType {};
