@@ -368,9 +368,13 @@ dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
+ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
 
 ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
