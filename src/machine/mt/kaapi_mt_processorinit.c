@@ -43,11 +43,24 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "../common/kaapi_procinfo.h"
+
+#if defined(KAAPI_USE_CUDA)
+#if KAAPI_USE_CUDA
+# include "../cuda/kaapi_cuda_proc.h"
+
+/* todo: move somewhere else */
+extern int kaapi_sched_select_victim_with_cuda_tasks
+(kaapi_processor_t*, kaapi_victim_t*);
+
+#endif
+#endif
+
 
 /*
 */
 int kaapi_processor_init
-( kaapi_processor_t* kproc, kaapi_processor_id_t kid, unsigned int proc_type )
+( kaapi_processor_t* kproc, const kaapi_procinfo_t* kpi)
 {
   kaapi_thread_context_t* ctxt;
   size_t k_stacksize;
@@ -55,8 +68,8 @@ int kaapi_processor_init
   size_t k_sizedata;
 
   kproc->thread       = 0;  
-  kproc->kid          = kid;
-  kproc->proc_type    = proc_type;
+  kproc->kid          = kpi->kid;
+  kproc->proc_type    = kpi->proc_type;
   kproc->issteal      = 0;
   kproc->hlevel       = 0;
   kproc->hindex       = 0;
@@ -79,7 +92,7 @@ int kaapi_processor_init
   kproc->workload._counter= 0;
 
   /* memory */
-  kaapi_mem_map_initialize(&kproc->mem_map, kproc->kid);
+  kaapi_mem_map_initialize(&kproc->mem_map, kpi->kid);
   
   /* allocate a stack */
   k_stacksize = kaapi_default_param.stacksize;
@@ -89,6 +102,20 @@ int kaapi_processor_init
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
+
+#if defined(KAAPI_USE_CUDA)
+#if KAAPI_USE_CUDA
+  /* initialize cuda processor */
+  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    if (kaapi_cuda_proc_initialize(&kproc->cuda_proc, kpi->proc_index))
+      return -1;
+
+    kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
+    kproc->fnc_selecarg = NULL;
+  }
+#endif
+#endif /* KAAPI_USE_CUDA */
   
   return 0;
 }
