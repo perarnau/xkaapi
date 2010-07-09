@@ -48,7 +48,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#if defined (_WIN32)
+#if defined (_WIN32) || defined(KAAPI_USE_APPLE)
 #include <sys/sysctl.h>
 #endif
 #include <unistd.h>
