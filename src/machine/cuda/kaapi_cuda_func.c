@@ -148,6 +148,9 @@ int kaapi_cuda_func_call_async
 {
   CUresult res;
 
+  /* finalize param memory */
+  cuParamSetSize(fn->fu, fn->off);
+
   /* set the number of threads */
   res = cuFuncSetBlockShape(fn->fu, tdim->x, tdim->y, tdim->z);
   if (res != CUDA_SUCCESS)

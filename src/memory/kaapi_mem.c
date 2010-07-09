@@ -227,6 +227,7 @@ static inline int get_cuda_context_by_asid
 {
   /* ok since asid == kid */
   *ctx = kaapi_all_kprocessors[asid]->cuda_proc.ctx;
+  return 0;
 }
 
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
@@ -282,7 +283,6 @@ void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
   kaapi_mem_addr_t devptr;
 
   CUresult res;
-  CUcontext prev_ctx;
   CUcontext dev_ctx;
 
   /* find a valid space associated with device */
@@ -298,9 +298,7 @@ void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
     break;
   }
 
-  /* should not occur */
-  if (asid == KAAPI_MEM_ASID_MAX)
-    return ;
+  kaapi_assert(asid != KAAPI_MEM_ASID_MAX);
 
   devptr = kaapi_mem_mapping_get(mapping, asid);
 
