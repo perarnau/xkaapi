@@ -50,7 +50,9 @@
 
 extern "C" {
 # include <sys/time.h>
+#if not defined (_WIN32)
 # include <sys/resource.h>
+#endif
 # include <stdio.h>
 # include <unistd.h>
 #if defined( KAAPI_USE_DARWIN ) || defined(KAAPI_USE_IPHONEOS)
@@ -138,6 +140,8 @@ HighResTimer::type HighResTimer::gettick()
 #    error "no time counter for this architecture"
 #  endif
 #elif defined(KAAPI_USE_IPHONEOS)
+  return WallTimer::gettime();
+#elif defined(_WIN32)
   return WallTimer::gettime();
 #else
 #  error "no time counter for this architecture"

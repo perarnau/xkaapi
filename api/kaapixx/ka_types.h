@@ -49,8 +49,10 @@
 #include "ka_debug.h"
 #include <typeinfo>
 #include <iosfwd>
+#if not defined (_WIN32)
 #include <sys/uio.h>
 #include <arpa/inet.h>
+#endif
 
 #if defined(KAAPI_USE_LINUX)
 #include <netinet/in.h>

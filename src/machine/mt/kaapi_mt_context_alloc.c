@@ -45,7 +45,9 @@
 */
 #include "kaapi_impl.h"
 #include <unistd.h>
+#if !defined (_WIN32)
 #include <sys/mman.h>
+#endif
 #include <string.h>
 
 /** 
@@ -70,20 +72,35 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   size_data = ((kaapi_default_param.stacksize + KAAPI_MAX_DATA_ALIGNMENT -1) / KAAPI_MAX_DATA_ALIGNMENT) * KAAPI_MAX_DATA_ALIGNMENT;
   
   /* allocate a thread context + stack */
+#if defined (_WIN32)
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  pagesize = si.dwPageSize;
+#else
   pagesize = getpagesize();
+#endif
   count_pages = (size_data + sizeof(kaapi_thread_context_t) + pagesize -1 ) / pagesize;
   k_stacksize = count_pages*pagesize;
+#if defined (_WIN32)
+  ctxt = (kaapi_thread_context_t*) VirtualAlloc(0, k_stacksize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+#else
   ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
+#endif
   if (ctxt == (kaapi_thread_context_t*)-1) {
     int err __attribute__((unused)) = errno;
     return 0;
   }
+#if !defined (_WIN32) //VirtualAlloc initializes memory to zero
   memset(ctxt, 0, k_stacksize );
-
+#endif
   stack = kaapi_threadcontext2stack(ctxt);
   if (kaapi_stack_init( stack, size_data, stack+1 ) !=0)
   {
+#if defined (_WIN32)
+    VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
+#else
     munmap( ctxt, ctxt->size );
+#endif
     return 0;
   }
 
@@ -91,7 +108,11 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
   kaapi_assert_m( (((kaapi_uintptr_t)ctxt->stackframe) & 0x3F)== 0, "StackFrame pointer not aligned to 64 bit boundary");
   if (ctxt->stackframe ==0) {
+#if defined (_WIN32)
+    VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
+#else
     munmap( ctxt, ctxt->size );
+#endif
     return 0;
   }
   kaapi_thread_clear(ctxt);

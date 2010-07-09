@@ -48,7 +48,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#if defined (_WIN32)
 #include <sys/sysctl.h>
+#endif
 #include <unistd.h>
 #include <errno.h>
 
@@ -401,6 +403,11 @@ int kaapi_setup_param( int argc, char** argv )
     len = sizeof(kaapi_default_param.syscpucount);
     sysctl(mib, 2, &kaapi_default_param.syscpucount, &len, 0, 0);
   }
+#elif defined(_WIN32)
+    SYSTEM_INFO sys_info;
+    GetSystemInfo(&sys_info);
+    kaapi_default_param.syscpucount = sys_info.dwNumberOfProcessors;
+
 #else
   #warning "Could not compute number of physical cpu of the system. Default value==1"
   kaapi_default_param.syscpucount = 1;

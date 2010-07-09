@@ -159,7 +159,11 @@ std::ostream& logfile()
     {
       /* create the directory & file for output */
       std::string pwdlog = ka::KaapiComponentManager::prop["util.rootdir"] + "/log";
+#if defined (_WIN32)
+      int err = mkdir(pwdlog.c_str());
+#else
       int err = mkdir(pwdlog.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
+#endif
       if ((err != 0) && (errno !=EEXIST))
       {
         std::ostringstream msg;
@@ -187,7 +191,11 @@ std::ostream& logfile()
   if (fout_per_process ==0) 
   { 
     std::string pwdlog = ka::KaapiComponentManager::prop["util.rootdir"] + "/log";
+#if defined (_WIN32)
+    int err = mkdir(pwdlog.c_str());
+#else
     int err = mkdir(pwdlog.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
+#endif
     if ((err != 0) && (errno !=EEXIST))
     {
       std::ostringstream msg;
