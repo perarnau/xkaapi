@@ -146,7 +146,7 @@ int kaapi_mem_map_find_inverse
      memory mapping set.
    */
 
-  const kaapi_mem_mapping_t* pos;
+  kaapi_mem_mapping_t* pos;
   kaapi_mem_asid_t asid;
 
   *mapping = NULL;

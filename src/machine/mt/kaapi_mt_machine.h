@@ -344,7 +344,7 @@ typedef struct kaapi_processor_t {
 
 /*
 */
-extern int kaapi_processor_init( kaapi_processor_t* kproc );
+extern int kaapi_processor_init( kaapi_processor_t* kproc, kaapi_processor_id_t, unsigned int);
 
 /*
 */

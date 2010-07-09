@@ -177,8 +177,7 @@ int kaapi_setconcurrency(void)
 	kaapi_procinfo_list_free(&kpl);
         return ENOMEM;
       }
-      kaapi_assert(0 == kaapi_processor_init(kproc));
-      kproc->kid = 0;
+      kaapi_assert(0 == kaapi_processor_init(kproc, kid, kpi->proc_type));
 
       /* Initialize the hierarchy information and data structure */
       kaapi_assert(0 == kaapi_processor_setuphierarchy(kproc));
@@ -239,11 +238,8 @@ void* kaapi_sched_run_processor( void* arg )
     return 0;
   }
 
-  kproc->kid = kid;
-  kproc->proc_type = kpi->proc_type;
-
   kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
-  kaapi_assert( 0 == kaapi_processor_init( kproc ) );
+  kaapi_assert( 0 == kaapi_processor_init( kproc, kid, kpi->proc_type) );
 
 #if defined(KAAPI_USE_CUDA)
 #if KAAPI_USE_CUDA

@@ -46,7 +46,8 @@
 
 /*
 */
-int kaapi_processor_init( kaapi_processor_t* kproc )
+int kaapi_processor_init
+( kaapi_processor_t* kproc, kaapi_processor_id_t kid, unsigned int proc_type )
 {
   kaapi_thread_context_t* ctxt;
   size_t k_stacksize;
@@ -54,7 +55,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   size_t k_sizedata;
 
   kproc->thread       = 0;  
-  kproc->kid          = -1U;
+  kproc->kid          = kid;
+  kproc->proc_type    = proc_type;
   kproc->issteal      = 0;
   kproc->hlevel       = 0;
   kproc->hindex       = 0;
