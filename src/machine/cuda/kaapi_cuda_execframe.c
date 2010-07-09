@@ -138,44 +138,6 @@ static inline int memcpy_dtoh
 }
 
 
-#if 0
-void kaapi_mem_read_barrier(void* hostptr, size_t size)
-{
-  /* ensure everything past this point
-     has been written to host memory.
-     assumed to be called from host.
-   */
-
-  kaapi_processor_t* self_proc = kaapi_get_current_processor();
-  kaapi_mem_map_t* const self_map = get_self_mem_map();
-  const unsigned int self_memid = get_self_mem_id();
-
-  CUdeviceptr devptr;
-  unsigned int memid;
-  kaapi_mem_laddrs_t* laddrs;
-
-  /* assume no error */
-  kaapi_mem_map_find
-    (self_map, KAAPI_MEM_ID_CPU, (kaapi_mem_laddr_t)hostptr, &laddrs);
-
-  for (memid = 0; memid < KAAPI_MEM_ID_MAX; ++memid)
-  {
-    /* find the first valid non identity mapping */
-    if (memid == self_memid)
-      continue ;
-    if (!kaapi_mem_laddrs_isset(laddrs, memid))
-      continue ;
-
-    devptr = (CUdeviceptr)kaapi_mem_laddrs_get(laddrs, memid);
-    memcpy_dtoh(self_proc, hostptr, devptr, size);
-
-    /* done */
-    break ;
-  }
-}
-#endif
-
-
 /* prepare task args memory */
 
 static void prepare_task

@@ -49,6 +49,9 @@
 # define KAAPI_MEM_H_INCLUDED
 
 
+#include <sys/types.h>
+
+
 /* memory management api
  */
 
@@ -133,6 +136,7 @@ int kaapi_mem_map_find
 (kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
 int kaapi_mem_map_find_inverse
 (kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
+void kaapi_mem_read_barrier(kaapi_mem_addr_t, size_t);
 
 
 

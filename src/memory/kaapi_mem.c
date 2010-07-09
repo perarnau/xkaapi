@@ -165,3 +165,71 @@ int kaapi_mem_map_find_inverse
 
   return -1;
 }
+
+#if defined(KAAPI_USE_CUDA)
+#if KAAPI_USE_CUDA
+
+#include <cuda.h>
+#include "../machine/cuda/kaapi_cuda_error.h"
+
+/* todo: portability layer should handle this */
+static inline int memcpy_dtoh
+(kaapi_processor_t* proc, void* hostptr, CUdeviceptr devptr, size_t size)
+{
+#if 0 /* async version */
+  const CUresult res = cuMemcpyDtoHAsync
+    (hostptr, devptr, size, proc->cuda_proc.stream);
+#else
+  const CUresult res = cuMemcpyDtoH
+    (hostptr, devptr, size);
+#endif
+
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyDToHAsync", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+void kaapi_mem_read_barrier(kaapi_mem_addr_t hostptr, size_t size)
+{
+  /* ensure everything past this point
+     has been written to host memory.
+     assumed to be called from host.
+   */
+
+  kaapi_processor_t* self_proc = kaapi_get_current_processor();
+  kaapi_mem_map_t* const self_map = &self_proc->mem_map;
+  const kaapi_mem_asid_t self_asid = self_map->asid;
+
+  CUdeviceptr devptr;
+  kaapi_mem_mapping_t* mapping;
+  kaapi_mem_asid_t asid;
+
+  /* assume no error */
+  kaapi_mem_map_find(self_map, hostptr, &mapping);
+
+    /* find the first valid non identity mapping */
+  for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
+  {
+    if (asid == self_asid)
+      continue ;
+    if (!kaapi_mem_mapping_isset(mapping, asid))
+      continue ;
+
+    /* found */
+    break ;
+  }
+
+  /* not found */
+  if (asid == KAAPI_MEM_ASID_MAX)
+    return ;
+
+  devptr = (CUdeviceptr)kaapi_mem_mapping_get(mapping, asid);
+  memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
+}
+
+#endif
+#endif /* KAAPI_USE_CUDA */
