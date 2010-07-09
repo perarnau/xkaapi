@@ -431,6 +431,10 @@ main_adaptive_entry(unsigned int nelem)
 }
 
 
+#include <stdint.h>
+typedef uintptr_t kaapi_mem_addr_t;
+extern void kaapi_mem_read_barrier(kaapi_mem_addr_t, size_t);
+
 static void __attribute__((unused))
 main_static_entry(unsigned int nelem)
 {
@@ -472,11 +476,8 @@ main_static_entry(unsigned int nelem)
 
   kaapi_threadgroup_destroy(group);
 
-#if 0 /* unused */
   /* memory barrier */
-  void* const base = *KAAPI_DATA(unsigned int*, range->base);
-  kaapi_mem_read_barrier(base, nelem * sizeof(unsigned int));
-#endif /* unused */
+  kaapi_mem_read_barrier((kaapi_mem_addr_t)base, nelem * sizeof(unsigned int));
 }
 
 
