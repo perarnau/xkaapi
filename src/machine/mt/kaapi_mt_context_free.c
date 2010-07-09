@@ -44,7 +44,7 @@
 ** 
 */
 #include "kaapi_impl.h"
-#if not defined (_WIN32)
+#if  !defined(_WIN32)
 #include <sys/mman.h>
 #endif
 

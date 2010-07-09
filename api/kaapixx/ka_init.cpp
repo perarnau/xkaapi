@@ -19,7 +19,7 @@
 #include <iomanip>
 #include <signal.h>
 #include <limits>
-#if not defined (_WIN32
+#if not defined(_WIN32)
 #include <sys/resource.h> // for core size limit
 #endif
 #include <sys/types.h>

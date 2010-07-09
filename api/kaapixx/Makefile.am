@@ -40,6 +40,8 @@ include_HEADERS=\
 	ka_error.h \
 	ka_timer.h \
 	ka_api_clo.h \
+	ka_api_execgraph.h\
+	ka_api_execforeach.h\
 	ka_api_spawn.h
 
 libkaapixx_la_SOURCES=\
