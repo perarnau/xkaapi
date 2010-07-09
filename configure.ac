@@ -364,6 +364,57 @@ AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([XKAAPILIB],[CUDA])
 
 
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-socket"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([Socket support], [socknet], [SOCKNET], [no], [KAAPI_USE_SOCKET],
+  [build network support on top of TCP/IP socket],
+  [c], [], [sys/socket.h], [getsockname], [
+dnl    Socket is there
+    AC_DEFINE([KAAPI_USE_SOCKET],1,[Support for Socket])
+  ],
+  [
+  ],
+  [])
+AM_CONDITIONAL([KAAPI_TARGET_SOCKNET],[test x"$USE_KAAPI_SOCKNET" = x"true"])
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-mpi"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([MPI support], [mpi], [MPINET], [no], [KAAPI_USE_MPI],
+  [build network support on top of MPI],
+  [mpi], [], [mpi.h], [MPI_Init], [
+dnl    MPI is there
+    AC_DEFINE([KAAPI_USE_MPI],1,[Support for MPI])
+  ],
+  [
+  ],
+  [])
+AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$USE_KAAPI_MPINET" = x"true"])
+
+AM_CONDITIONAL([KAAPI_TARGET_KANET],[test x"$USE_KAAPI_MPINET" = x"true" -o x"$USE_KAAPI_SOCKNET" = x"true"])
+
+if test x"$USE_KAAPI_MPINET" = x"true" -o x"$USE_KAAPI_SOCKNET" = x"true"; then
+  AC_MSG_NOTICE([Network support activated])
+  ACX_LIB_NEW_LIB([KANETLIB], [-L\${libdir} -lkanet], [kanet])
+  ACX_LIB_ADD_PUBLIC_FLAGS([KANETLIB], [-I\${includedir}])
+
+  if test x"$USE_KAAPI_SOCKNET" = x"true"; then
+    AC_MSG_NOTICE([Socket Network support activated])
+    ACX_LIB_NEW_LIB([KASOCKNETLIB], [-L\${libdir} -lkasocknet], [kasocknet])
+    ACX_LIB_ADD_PUBLIC_FLAGS([KASOCKNETLIB], [-I\${includedir}])
+    ACX_LIB_LINK([KASOCKNETLIB], [PUBLIC], [KANETLIB])
+  fi
+  if test x"$USE_KAAPI_MPINET" = x"true"; then
+    AC_MSG_NOTICE([MPI Network support activated])
+    ACX_LIB_NEW_LIB([KAMPINETLIB], [-L\${libdir} -lkampinet], [kampinet])
+    ACX_LIB_ADD_PUBLIC_FLAGS([KAMPINETLIB], [-I\${includedir}])
+    ACX_LIB_LINK([KAMPINETLIB], [PUBLIC], [KANETLIB])
+  fi
+fi
+
+
 dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
@@ -375,6 +426,7 @@ ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
 ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
+
 
 ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
@@ -412,14 +464,17 @@ AC_SUBST(AM_LDFLAGS)
 
 AC_CONFIG_FILES([
 	Makefile
+	src/Makefile
 	api/Makefile
 	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kastl/Makefile
 	api/xkaapi/Makefile
 	api/fortran/Makefile
+  network/Makefile
+  network/socknet/Makefile
+  network/mpinet/Makefile
 	examples/Makefile
-	src/Makefile
 	tests/static/Makefile
 
 	xkaapi.pc
