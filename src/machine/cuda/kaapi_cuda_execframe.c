@@ -162,7 +162,7 @@ static void prepare_task
       continue ;
 
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
-    hostptr = (void*)access->data;
+    hostptr = *kaapi_data(unsigned int*, access);
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
@@ -183,7 +183,7 @@ static void prepare_task
     }
 
     /* update param addr */
-    access->data = (void*)(uintptr_t)devptr;
+    *kaapi_data(CUdeviceptr, access) = devptr;
 
     if (KAAPI_ACCESS_IS_READ(mode)) /* R or RW */
     {
@@ -237,7 +237,7 @@ static void finalize_task
       continue ;
 
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
-    devptr = (CUdeviceptr)(uintptr_t)access->data;
+    devptr = *kaapi_data(CUdeviceptr, access);
 
     /* inverted search. assume a mapping exists. */
     kaapi_mem_map_find_inverse
@@ -268,6 +268,7 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
   kaapi_processor_t* const proc = thread->proc;
+  CUresult res;
 
   kaapi_format_t* format;
   kaapi_task_t*              pc;
@@ -334,11 +335,25 @@ begin_loop:
     if ((format != NULL) && (format->entrypoint[KAAPI_PROC_TYPE_CUDA]))
     {
       kaapi_assert_debug(format != NULL);
-      prepare_task(proc, pc, format);
-      execute_task
-	(proc, (cuda_task_body_t)body, pc->sp, (kaapi_thread_t*)thread->sfp);
-      synchronize_processor(proc);
-      finalize_task(proc, pc, format);
+
+      /* the context is saved then restore during
+	 the whole task execution. not doing so would
+	 make it non floating, preventing another thread
+	 to use it (ie. for kaapi_mem_synchronize2)
+       */
+
+      res = cuCtxPushCurrent(proc->cuda_proc.ctx);
+      if (res == CUDA_SUCCESS)
+      {
+	prepare_task(proc, pc, format);
+	execute_task
+	  (proc, (cuda_task_body_t)body, pc->sp,
+	   (kaapi_thread_t*)thread->sfp);
+	synchronize_processor(proc);
+	finalize_task(proc, pc, format);
+
+	cuCtxPopCurrent(&proc->cuda_proc.ctx);
+      }
     }
     else
     {

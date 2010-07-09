@@ -112,9 +112,7 @@ int kaapi_mem_map_find_or_insert
      if no mapping is found, create one.
    */
 
-  const int res = kaapi_mem_map_find
-    (map, laddr, mapping);
-
+  const int res = kaapi_mem_map_find(map, laddr, mapping);
   if (res != -1)
     return 0;
 
@@ -224,6 +222,13 @@ static int kaapi_mem_map_find_with_asid
   return -1;
 }
 
+static inline int get_cuda_context_by_asid
+(kaapi_mem_asid_t asid, CUcontext* ctx)
+{
+  /* ok since asid == kid */
+  *ctx = kaapi_all_kprocessors[asid]->cuda_proc.ctx;
+}
+
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
 {
   return &proc->mem_map;
@@ -239,11 +244,11 @@ static inline kaapi_mem_map_t* get_self_mem_map(void)
   return get_proc_mem_map(kaapi_get_current_processor());
 }
 
-void kaapi_mem_read_barrier(kaapi_mem_addr_t devptr, size_t size)
+void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
 {
   /* ensure everything past this point
      has been written to host memory.
-     assumed to be called from gpu.
+     assumed to be called from gpu thread.
    */
 
   kaapi_processor_t* const self_proc = kaapi_get_current_processor();
@@ -262,6 +267,56 @@ void kaapi_mem_read_barrier(kaapi_mem_addr_t devptr, size_t size)
   hostptr = kaapi_mem_mapping_get(mapping, host_asid);
 
   memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
+}
+
+void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
+{
+  /* same as above but to be called on host side */
+
+  kaapi_processor_t* const self_proc = kaapi_get_current_processor();
+  kaapi_mem_map_t* const self_map = get_proc_mem_map(self_proc);
+  const kaapi_mem_asid_t self_asid = self_map->asid;
+
+  kaapi_mem_mapping_t* mapping;
+  kaapi_mem_asid_t asid;
+  kaapi_mem_addr_t devptr;
+
+  CUresult res;
+  CUcontext prev_ctx;
+  CUcontext dev_ctx;
+
+  /* find a valid space associated with device */
+  kaapi_mem_map_find(self_map, hostptr, &mapping);
+  for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
+  {
+    if (asid == self_asid)
+      continue ;
+    if (!kaapi_mem_mapping_isset(mapping, asid))
+      continue ;
+
+    /* found */
+    break;
+  }
+
+  /* should not occur */
+  if (asid == KAAPI_MEM_ASID_MAX)
+    return ;
+
+  devptr = kaapi_mem_mapping_get(mapping, asid);
+
+  /* set the device context */
+  get_cuda_context_by_asid(asid, &dev_ctx);
+
+  res = cuCtxPushCurrent(dev_ctx);
+  if (res == CUDA_SUCCESS)
+  {
+    memcpy_dtoh(self_proc, (void*)hostptr, (CUdeviceptr)devptr, size);
+    cuCtxPopCurrent(&dev_ctx);
+  }
+  else
+  {
+    kaapi_cuda_error("cuCtxPushCurrent", res);
+  }
 }
 
 #endif
