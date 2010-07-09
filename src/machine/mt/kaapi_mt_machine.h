@@ -50,6 +50,7 @@
 #  error This file must not be directly included. Use kaapi_impl.h instead
 #endif
 #include "kaapi_datastructure.h"
+#include "../../memory/kaapi_mem.h"
 #include <stdint.h>
 #include <pthread.h>
 
@@ -329,6 +330,9 @@ typedef struct kaapi_processor_t {
   /* processor type */
   unsigned int			proc_type;
 
+  /* memory map */
+  kaapi_mem_map_t mem_map;
+
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
 # if KAAPI_USE_CUDA
@@ -340,7 +344,8 @@ typedef struct kaapi_processor_t {
 
 /*
 */
-extern int kaapi_processor_init( kaapi_processor_t* kproc );
+struct kaapi_procinfo;
+extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo*);
 
 /*
 */

@@ -46,12 +46,6 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
-#if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
-# include "../cuda/kaapi_cuda_proc.h"
-#endif
-#endif
-
 static void* kaapi_sched_run_processor( void* arg );
 
 /**
@@ -98,9 +92,7 @@ int kaapi_setconcurrency(void)
   kaapi_procinfo_list_init(&kpl);
   kaapi_mt_register_procs(&kpl);
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
   kaapi_cuda_register_procs(&kpl);
-#endif
 #endif /* KAAPI_USE_CUDA */
 
   if ((!kpl.count) || (kpl.count > KAAPI_MAX_PROCESSOR))
@@ -177,8 +169,7 @@ int kaapi_setconcurrency(void)
 	kaapi_procinfo_list_free(&kpl);
         return ENOMEM;
       }
-      kaapi_assert(0 == kaapi_processor_init(kproc));
-      kproc->kid = 0;
+      kaapi_assert(0 == kaapi_processor_init(kproc, kpi));
 
       /* Initialize the hierarchy information and data structure */
       kaapi_assert(0 == kaapi_processor_setuphierarchy(kproc));
@@ -219,11 +210,6 @@ int kaapi_setconcurrency(void)
   return 0;
 }
 
-#if defined(KAAPI_USE_CUDA)
-/* todo: move somewhere else */
-extern int kaapi_sched_select_victim_with_cuda_tasks(kaapi_processor_t*, kaapi_victim_t*);
-#endif
-
 /**
 */
 void* kaapi_sched_run_processor( void* arg )
@@ -239,27 +225,9 @@ void* kaapi_sched_run_processor( void* arg )
     kaapi_barrier_td_setactive(&barrier_init, 0);
     return 0;
   }
+
   kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
-  kaapi_assert( 0 == kaapi_processor_init( kproc ) );
-
-  kproc->kid = kid;
-  kproc->proc_type = kpi->proc_type;
-
-#if defined(KAAPI_USE_CUDA)
-  /* initialize cuda processor */
-  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
-  {
-    if (kaapi_cuda_proc_initialize(&kproc->cuda_proc, kpi->proc_index))
-    {
-      kaapi_processor_free(kproc);
-      kaapi_all_kprocessors[kid] = NULL;
-      kaapi_barrier_td_setactive(&barrier_init, 0);
-      return 0;
-    }
-    kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
-    kproc->fnc_selecarg = NULL;
-  }
-#endif /* KAAPI_USE_CUDA */
+  kaapi_assert( 0 == kaapi_processor_init( kproc, kpi) );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */

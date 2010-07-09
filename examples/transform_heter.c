@@ -431,8 +431,6 @@ main_adaptive_entry(unsigned int nelem)
 }
 
 
-extern void kaapi_mem_read_barrier(void*, size_t);
-
 static void __attribute__((unused))
 main_static_entry(unsigned int nelem)
 {
