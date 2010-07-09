@@ -49,8 +49,7 @@
 #include "kaapi_cuda_error.h"
 
 
-static int open_cuda_device
-(CUdevice* dev, CUcontext* ctx, unsigned int index)
+static int open_cuda_device(CUdevice* dev, CUcontext* ctx, unsigned int index)
 {
   CUresult res;
 
@@ -93,8 +92,7 @@ static void close_cuda_device(CUdevice dev, CUcontext ctx)
 
 /* exported */
 
-int kaapi_cuda_proc_initialize
-(kaapi_cuda_proc_t* proc, unsigned int idev)
+int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 {
   CUresult res;
 

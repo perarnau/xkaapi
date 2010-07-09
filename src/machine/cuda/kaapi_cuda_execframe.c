@@ -369,6 +369,10 @@ static void prepare_task
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
     hostptr = (void*)access->data;
 
+/**
+- L'une des infos cpu_map ou KAAPI_MEM_ID_CPU est redonndante avec l'autre.
+Si la map est précisé, pas besoin de dire MEM_ID_CPU.
+*/
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
       (cpu_map, KAAPI_MEM_ID_CPU, (kaapi_mem_laddr_t)hostptr, &laddrs);
@@ -383,6 +387,10 @@ static void prepare_task
       kaapi_mem_laddrs_set
 	(laddrs, (kaapi_mem_laddr_t)devptr, kaapi_processor_get_memid(proc));
 
+
+/**
+- idem remarque au dessus
+*/
       /* gpu -> gpu mapping */
       kaapi_mem_map_find_or_insert
 	(gpu_map, KAAPI_MEM_ID_GPU, (kaapi_mem_laddr_t)devptr, &laddrs);

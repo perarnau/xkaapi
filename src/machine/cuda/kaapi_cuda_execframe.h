@@ -43,8 +43,6 @@
 ** terms.
 ** 
 */
-
-
 #ifndef KAAPI_CUDA_EXECFRAME_H_INCLUDED
 # define KAAPI_CUDA_EXECFRAME_H_INCLUDED
 
