@@ -87,7 +87,9 @@ libxkaapi_la_SOURCES=\
   static/kaapi_threadgroup_print.c\
   static/kaapi_threadgroup_vect.c\
   kaapi_staticsched.h \
-  machine/common/kaapi_procinfo.c
+  machine/common/kaapi_procinfo.c \
+  memory/kaapi_mem.h \
+  memory/kaapi_mem.c
 
 
 #  task/kaapi_fmt_basictype.c

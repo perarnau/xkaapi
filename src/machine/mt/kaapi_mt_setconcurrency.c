@@ -238,11 +238,12 @@ void* kaapi_sched_run_processor( void* arg )
     kaapi_barrier_td_setactive(&barrier_init, 0);
     return 0;
   }
-  kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
-  kaapi_assert( 0 == kaapi_processor_init( kproc ) );
 
   kproc->kid = kid;
   kproc->proc_type = kpi->proc_type;
+
+  kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
+  kaapi_assert( 0 == kaapi_processor_init( kproc ) );
 
 #if defined(KAAPI_USE_CUDA)
 #if KAAPI_USE_CUDA

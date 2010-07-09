@@ -51,183 +51,24 @@
 #include <cuda.h>
 #include "kaapi_impl.h"
 #include "kaapi_cuda_error.h"
-
-
-/* memory management api */
-
-#define KAAPI_MEM_ID_CPU 0
-#define KAAPI_MEM_ID_GPU 1
-#define KAAPI_MEM_ID_MAX 2
-
-typedef uintptr_t kaapi_mem_laddr_t;
-
-typedef struct kaapi_mem_laddrs
-{
-  struct kaapi_mem_laddrs* next;
-  unsigned int bitmap;
-  kaapi_mem_laddr_t laddrs[KAAPI_MEM_ID_MAX];
-} kaapi_mem_laddrs_t;
-
-static inline void kaapi_mem_laddrs_init
-(kaapi_mem_laddrs_t* laddrs)
-{
-  laddrs->next = NULL;
-  laddrs->bitmap = 0;
-}
-
-static inline void kaapi_mem_laddrs_set
-(kaapi_mem_laddrs_t* laddrs, kaapi_mem_laddr_t laddr, unsigned int index)
-{
-  laddrs->bitmap |= 1 << index;
-  laddrs->laddrs[index] = laddr;
-}
-
-static inline kaapi_mem_laddr_t kaapi_mem_laddrs_get
-(kaapi_mem_laddrs_t* laddrs, unsigned int memid)
-{
-  return laddrs->laddrs[memid];
-}
-
-static inline unsigned int kaapi_mem_laddrs_isset
-(const kaapi_mem_laddrs_t* laddrs, unsigned int memid)
-{
-  return laddrs->bitmap & (1 << memid);
-}
-
-
-/* a map translates between a device local addrs
- */
-
-typedef struct kaapi_mem_map
-{
-  kaapi_mem_laddrs_t* head;
-  unsigned int memid;
-} kaapi_mem_map_t;
-
-
-static int kaapi_mem_map_initialize
-(kaapi_mem_map_t* map, unsigned int memid)
-{
-  map->memid = memid;
-  map->head = NULL;
-  return 0;
-}
-
-static void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
-{
-  kaapi_mem_laddrs_t* pos = map->head;
-
-  while (pos != NULL)
-  {
-    kaapi_mem_laddrs_t* const tmp = pos;
-    pos = pos->next;
-    free(tmp);
-  }
-
-  map->head = NULL;
-}
-
-static int kaapi_mem_map_find_or_insert
-(
- kaapi_mem_map_t* map,
- unsigned int memid,
- kaapi_mem_laddr_t laddr,
- kaapi_mem_laddrs_t** laddrs
-)
-{
-  /* laddr a host local address */
-
-  kaapi_mem_laddrs_t* pos;
-
-  for (pos = map->head; pos != NULL; pos = pos->next)
-  {
-    if (pos->laddrs[memid] == laddr)
-      break;
-  }
-
-  if (pos == NULL)
-  {
-    pos = malloc(sizeof(kaapi_mem_laddrs_t));
-    if (pos == NULL)
-      return -1;
-
-    kaapi_mem_laddrs_init(pos);
-    kaapi_mem_laddrs_set(pos, laddr, memid);
-
-    pos->next = map->head;
-    map->head = pos;
-  }
-
-  *laddrs = pos;
-
-  return 0;
-}
-
-static int kaapi_mem_map_find
-(
- kaapi_mem_map_t* map,
- unsigned int memid,
- kaapi_mem_laddr_t laddr,
- kaapi_mem_laddrs_t** laddrs
-)
-{
-  /* laddr a host local address */
-
-  kaapi_mem_laddrs_t* pos;
-
-  *laddrs = NULL;
-
-  for (pos = map->head; pos != NULL; pos = pos->next)
-  {
-    if (pos->laddrs[memid] == laddr)
-    {
-      *laddrs = pos;
-      return 0;
-    }
-  }
-
-  return -1;
-}
-
-
-/* memory maps */
-
-/* todo: move in kaapi_processor_t */
-static kaapi_mem_map_t mem_maps[2];
-
-static void init_maps_once(void)
-{
-  kaapi_mem_map_initialize(&mem_maps[0], 0);
-  kaapi_mem_map_initialize(&mem_maps[1], 1);
-}
+#include "../../memory/kaapi_mem.h"
 
 
 /* get processor memory map */
 
-static kaapi_mem_map_t* kaapi_processor_get_mem_map(kaapi_processor_t* proc)
+static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
 {
-  return &mem_maps[proc->kid];
+  return &proc->mem_map;
 }
 
-static kaapi_mem_map_t* kaapi_get_self_mem_map(void)
+static inline kaapi_mem_map_t* get_host_mem_map(void)
 {
-  return kaapi_processor_get_mem_map(kaapi_get_current_processor());
+  return get_proc_mem_map(kaapi_all_kprocessors[0]);
 }
 
-static unsigned int kaapi_get_self_mem_id(void)
+static inline kaapi_mem_asid_t get_proc_asid(kaapi_processor_t* proc)
 {
-  return kaapi_get_current_processor()->kid;
-}
-
-static kaapi_mem_map_t* kaapi_mem_get_map(unsigned int memid)
-{
-  return &mem_maps[memid];
-}
-
-static unsigned int kaapi_processor_get_memid(kaapi_processor_t* proc)
-{
-  /* ok for now, processor should have a memid */
-  return proc->kid;
+  return proc->mem_map.asid;
 }
 
 
@@ -249,6 +90,7 @@ static inline void free_device_mem(CUdeviceptr devptr)
 {
   cuMemFree(devptr);
 }
+
 
 /* copy from host to device */
 
@@ -296,6 +138,7 @@ static inline int memcpy_dtoh
 }
 
 
+#if 0
 void kaapi_mem_read_barrier(void* hostptr, size_t size)
 {
   /* ensure everything past this point
@@ -304,8 +147,8 @@ void kaapi_mem_read_barrier(void* hostptr, size_t size)
    */
 
   kaapi_processor_t* self_proc = kaapi_get_current_processor();
-  kaapi_mem_map_t* const self_map = kaapi_get_self_mem_map();
-  const unsigned int self_memid = kaapi_get_self_mem_id();
+  kaapi_mem_map_t* const self_map = get_self_mem_map();
+  const unsigned int self_memid = get_self_mem_id();
 
   CUdeviceptr devptr;
   unsigned int memid;
@@ -330,6 +173,7 @@ void kaapi_mem_read_barrier(void* hostptr, size_t size)
     break ;
   }
 }
+#endif
 
 
 /* prepare task args memory */
@@ -337,26 +181,15 @@ void kaapi_mem_read_barrier(void* hostptr, size_t size)
 static void prepare_task
 (kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
 {
-  kaapi_mem_map_t* cpu_map = kaapi_mem_get_map(KAAPI_MEM_ID_CPU);
-  kaapi_mem_map_t* gpu_map = kaapi_mem_get_map(KAAPI_MEM_ID_GPU);
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+  kaapi_mem_asid_t const self_asid = get_proc_asid(proc);
 
   kaapi_access_t* access;
-  kaapi_mem_laddrs_t* laddrs;
+  kaapi_mem_mapping_t* mapping;
   CUdeviceptr devptr;
   void* hostptr;
   size_t size;
   unsigned int i;
-
-  /* to remove */
-  {
-    static unsigned int init_once = 0;
-    if (init_once == 0)
-    {
-      init_once = 1;
-      init_maps_once();
-    }
-  }
-  /* to remove */
 
   for (i = 0; i < format->count_params; ++i)
   {
@@ -371,29 +204,20 @@ static void prepare_task
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
-      (cpu_map, KAAPI_MEM_ID_CPU, (kaapi_mem_laddr_t)hostptr, &laddrs);
+      (host_map, (kaapi_mem_addr_t)hostptr, &mapping);
 
     /* mapping does not yet exist */
-    if (!kaapi_mem_laddrs_isset(laddrs, kaapi_processor_get_memid(proc)))
+    if (!kaapi_mem_mapping_isset(mapping, self_asid))
     {
       size = 50000 * sizeof(unsigned int);
       allocate_device_mem(&devptr, size);
 
       /* host -> gpu mapping */
-      kaapi_mem_laddrs_set
-	(laddrs, (kaapi_mem_laddr_t)devptr, kaapi_processor_get_memid(proc));
-
-      /* gpu -> gpu mapping */
-      kaapi_mem_map_find_or_insert
-	(gpu_map, KAAPI_MEM_ID_GPU, (kaapi_mem_laddr_t)devptr, &laddrs);
-
-      /* gpu -> host mapping */
-      kaapi_mem_laddrs_set
-	(laddrs, (kaapi_mem_laddr_t)hostptr, KAAPI_MEM_ID_CPU);
+      kaapi_mem_mapping_set(mapping, (kaapi_mem_addr_t)devptr, self_asid);
     }
     else
     {
-      devptr = kaapi_mem_laddrs_get(laddrs, kaapi_processor_get_memid(proc));
+      devptr = kaapi_mem_mapping_get(mapping, self_asid);
     }
 
     /* update param addr */
@@ -403,7 +227,7 @@ static void prepare_task
     {
       /* todo: size = format->param_size(i); */
       size = 50000 * sizeof(unsigned int);
-      devptr = (CUdeviceptr)kaapi_mem_laddrs_get(laddrs, KAAPI_MEM_ID_GPU);
+      devptr = (CUdeviceptr)kaapi_mem_mapping_get(mapping, self_asid);
       memcpy_htod(proc, devptr, hostptr, size);
     }
   }
@@ -429,10 +253,11 @@ static inline void execute_task
 static void finalize_task
 (kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
 {
-  kaapi_mem_map_t* gpu_map = kaapi_processor_get_mem_map(proc);
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+  const kaapi_mem_asid_t host_asid = host_map->asid;
 
   kaapi_access_t* access;
-  kaapi_mem_laddrs_t* laddrs;
+  kaapi_mem_mapping_t* mapping;
   CUdeviceptr devptr;
   void* hostptr;
   size_t size;
@@ -452,10 +277,10 @@ static void finalize_task
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
     devptr = (CUdeviceptr)(uintptr_t)access->data;
 
-    /* assume laddrs and laddrs[CPU] */
-    kaapi_mem_map_find
-      (gpu_map, kaapi_get_self_mem_id(), (kaapi_mem_laddr_t)devptr, &laddrs);
-    hostptr = (void*)kaapi_mem_laddrs_get(laddrs, KAAPI_MEM_ID_CPU);
+    /* inverted search. assume a mapping exists. */
+    kaapi_mem_map_find_inverse
+      (host_map, (kaapi_mem_addr_t)devptr, &mapping);
+    hostptr = (void*)kaapi_mem_mapping_get(mapping, host_asid);
     memcpy_dtoh(proc, hostptr, devptr, size);
   }
 }

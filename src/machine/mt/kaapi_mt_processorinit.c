@@ -73,9 +73,11 @@ int kaapi_processor_init( kaapi_processor_t* kproc )
   kproc->fnc_selecarg = 0;
   kproc->fnc_select   = kaapi_default_param.wsselect;
   
-
   /* workload */
   kproc->workload._counter= 0;
+
+  /* memory */
+  kaapi_mem_map_initialize(&kproc->mem_map, kproc->kid);
   
   /* allocate a stack */
   k_stacksize = kaapi_default_param.stacksize;
