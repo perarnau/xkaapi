@@ -193,41 +193,74 @@ static inline int memcpy_dtoh
   return 0;
 }
 
-void kaapi_mem_read_barrier(kaapi_mem_addr_t hostptr, size_t size)
+static int kaapi_mem_map_find_with_asid
+(
+ kaapi_mem_map_t* map,
+ kaapi_mem_addr_t laddr,
+ kaapi_mem_asid_t asid,
+ kaapi_mem_mapping_t** mapping
+)
+{
+  /* find a mapping in the map such that
+     addrs[asid] == laddr.
+  */
+
+  kaapi_mem_mapping_t* pos;
+
+  *mapping = NULL;
+
+  for (pos = map->head; pos != NULL; pos = pos->next)
+  {
+    if (!kaapi_mem_mapping_isset(pos, asid))
+      continue ;
+
+    if (pos->addrs[asid] == laddr)
+    {
+      *mapping = pos;
+      return 0;
+    }
+  }
+
+  return -1;
+}
+
+static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
+{
+  return &proc->mem_map;
+}
+
+static inline kaapi_mem_map_t* get_host_mem_map(void)
+{
+  return get_proc_mem_map(kaapi_all_kprocessors[0]);
+}
+
+static inline kaapi_mem_map_t* get_self_mem_map(void)
+{
+  return get_proc_mem_map(kaapi_get_current_processor());
+}
+
+void kaapi_mem_read_barrier(kaapi_mem_addr_t devptr, size_t size)
 {
   /* ensure everything past this point
      has been written to host memory.
-     assumed to be called from host.
+     assumed to be called from gpu.
    */
 
-  kaapi_processor_t* self_proc = kaapi_get_current_processor();
-  kaapi_mem_map_t* const self_map = &self_proc->mem_map;
+  kaapi_processor_t* const self_proc = kaapi_get_current_processor();
+
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+  kaapi_mem_map_t* const self_map = get_proc_mem_map(self_proc);
+
+  const kaapi_mem_asid_t host_asid = host_map->asid;
   const kaapi_mem_asid_t self_asid = self_map->asid;
 
-  CUdeviceptr devptr;
+  kaapi_mem_addr_t hostptr;
   kaapi_mem_mapping_t* mapping;
-  kaapi_mem_asid_t asid;
 
-  /* assume no error */
-  kaapi_mem_map_find(self_map, hostptr, &mapping);
+  /* find hostptr, devptr mapping. assume no error. */
+  kaapi_mem_map_find_with_asid(host_map, devptr, self_asid, &mapping);
+  hostptr = kaapi_mem_mapping_get(mapping, host_asid);
 
-    /* find the first valid non identity mapping */
-  for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
-  {
-    if (asid == self_asid)
-      continue ;
-    if (!kaapi_mem_mapping_isset(mapping, asid))
-      continue ;
-
-    /* found */
-    break ;
-  }
-
-  /* not found */
-  if (asid == KAAPI_MEM_ASID_MAX)
-    return ;
-
-  devptr = (CUdeviceptr)kaapi_mem_mapping_get(mapping, asid);
   memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
 }
 

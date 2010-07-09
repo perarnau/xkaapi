@@ -212,11 +212,16 @@ static void cuda_post_handler
 
 #elif 1 /* high level call */
 
+#include <stdint.h>
+typedef uintptr_t kaapi_mem_addr_t;
+extern void kaapi_mem_read_barrier(kaapi_mem_addr_t, size_t);
+
 static void cuda_entry
 (CUstream stream, void* arg, kaapi_thread_t* thread)
 {
   task_work_t* const work = (task_work_t*)arg;
   range_t* const range = &work->range;
+  const size_t nelem = range->j - range->i;
   CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
   printf("> cuda_entry [%u - %u[\n", range->i, range->j);
@@ -247,6 +252,10 @@ static void cuda_entry
       (base, range->i, range->j);
   }
 #endif /* driver api */
+
+  /* ensure memory is written back */
+  kaapi_mem_read_barrier
+    ((kaapi_mem_addr_t)base, nelem * sizeof(unsigned int));
 
   printf("< cuda_entry\n");
 }
@@ -431,10 +440,6 @@ main_adaptive_entry(unsigned int nelem)
 }
 
 
-#include <stdint.h>
-typedef uintptr_t kaapi_mem_addr_t;
-extern void kaapi_mem_read_barrier(kaapi_mem_addr_t, size_t);
-
 static void __attribute__((unused))
 main_static_entry(unsigned int nelem)
 {
@@ -475,9 +480,6 @@ main_static_entry(unsigned int nelem)
   kaapi_threadgroup_end_execute(group);
 
   kaapi_threadgroup_destroy(group);
-
-  /* memory barrier */
-  kaapi_mem_read_barrier((kaapi_mem_addr_t)base, nelem * sizeof(unsigned int));
 }
 
 
