@@ -384,7 +384,8 @@ static void register_task_format(void)
      PARAM_COUNT, modes, offsets, formats);
 
   kaapi_format_taskregister_body(format, cpu_entry, KAAPI_PROC_TYPE_CPU);
-  kaapi_format_taskregister_body(format, (kaapi_task_body_t)cuda_entry, KAAPI_PROC_TYPE_CUDA);
+  kaapi_format_taskregister_body
+    (format, (kaapi_task_body_t)cuda_entry, KAAPI_PROC_TYPE_CUDA);
 }
 
 
