@@ -37,7 +37,7 @@ static void create_range
 }
 
 
-static unsigned int get_range_size(const range_t* range)
+static inline unsigned int get_range_size(const range_t* range)
 {
   return range->j - range->i;
 }
@@ -360,6 +360,15 @@ static int split_work
 }
 
 
+static size_t get_param_size
+(const struct kaapi_format_t* format, unsigned int i, const void* data)
+{
+  /* assume i == 0 */
+  const task_work_t* const work = (task_work_t*)data;
+  return (size_t)get_range_size(&work->range) * sizeof(unsigned int);
+}
+
+
 static void register_task_format(void)
 {
 #define PARAM_COUNT 3
@@ -381,7 +390,7 @@ static void register_task_format(void)
 
   kaapi_format_taskregister
     (format, NULL, "heter_task", sizeof(task_work_t),
-     PARAM_COUNT, modes, offsets, formats);
+     PARAM_COUNT, modes, offsets, formats, get_param_size);
 
   kaapi_format_taskregister_body(format, cpu_entry, KAAPI_PROC_TYPE_CPU);
   kaapi_format_taskregister_body
@@ -494,7 +503,7 @@ static int check_sequence
 
 int main(int ac, char** av)
 {
-#define ELEM_COUNT 100000
+#define ELEM_COUNT (512 * 1000)
   static unsigned int base[ELEM_COUNT];
   unsigned int i;
 

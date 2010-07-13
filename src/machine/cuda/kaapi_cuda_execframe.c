@@ -171,7 +171,7 @@ static void prepare_task
     /* mapping does not yet exist */
     if (!kaapi_mem_mapping_isset(mapping, self_asid))
     {
-      size = 50000 * sizeof(unsigned int);
+      size = format->get_param_size(format, i, task->sp);
       allocate_device_mem(&devptr, size);
 
       /* host -> gpu mapping */
@@ -187,8 +187,7 @@ static void prepare_task
 
     if (KAAPI_ACCESS_IS_READ(mode)) /* R or RW */
     {
-      /* todo: size = format->param_size(i); */
-      size = 50000 * sizeof(unsigned int);
+      size = format->get_param_size(format, i, task->sp);
       devptr = (CUdeviceptr)kaapi_mem_mapping_get(mapping, self_asid);
       memcpy_htod(proc, devptr, hostptr, size);
     }

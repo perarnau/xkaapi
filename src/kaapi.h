@@ -1406,7 +1406,8 @@ extern kaapi_format_id_t kaapi_format_taskregister(
         int                          count,
         const kaapi_access_mode_t    mode_param[],
         const kaapi_offset_t         offset_param[],
-        const struct kaapi_format_t* fmt_params[]
+        const struct kaapi_format_t* fmt_params[],
+	size_t (*)(const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK
