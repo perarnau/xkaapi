@@ -211,7 +211,7 @@ static inline void execute_task
 
 /* finalize task args memory */
 
-static void finalize_task
+static void __attribute__((unused)) finalize_task
 (kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
 {
   kaapi_mem_map_t* const host_map = get_host_mem_map();
@@ -349,7 +349,6 @@ begin_loop:
 	  (proc, (cuda_task_body_t)body, pc->sp,
 	   (kaapi_thread_t*)thread->sfp);
 	synchronize_processor(proc);
-	finalize_task(proc, pc, format);
 
 	cuCtxPopCurrent(&proc->cuda_proc.ctx);
       }
