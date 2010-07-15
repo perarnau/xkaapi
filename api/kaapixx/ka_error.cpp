@@ -49,7 +49,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <iomanip>
-#if not defined(KAAPI_USE_ARCH_PPC)
+#if not defined(KAAPI_USE_ARCH_PPC) && not defined(_WIN32)
 #include <execinfo.h>
 #endif
 #include <cxxabi.h>
@@ -60,7 +60,7 @@ namespace ka {
 // --------------------------------------------------------------------
 void print_backtrace_c()
 {
-#if not defined(KAAPI_USE_ARCH_PPC)
+#if not defined(KAAPI_USE_ARCH_PPC)  && not defined(_WIN32)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size;
@@ -80,7 +80,7 @@ void print_backtrace_c()
 // --------------------------------------------------------------------
 void print_backtrace_cpp()
 {
-#if not defined(KAAPI_USE_ARCH_PPC)
+#if not defined(KAAPI_USE_ARCH_PPC)  && not defined(_WIN32)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size=0;
@@ -144,7 +144,7 @@ void print_backtrace_cpp()
 }
   
 // --------------------------------------------------------------------
-void backtrace_sighandler(int sig, siginfo_t *info, void *secret) 
+void backtrace_sighandler(int sig, void *info, void *secret) 
 {
   switch( sig )
   {
@@ -160,9 +160,11 @@ void backtrace_sighandler(int sig, siginfo_t *info, void *secret)
     case SIGSEGV: 
       logfile() << "Got signal SIGSEGV: Invalid memory reference" << std::endl;
       break;
+#if not defined (_WIN32)
     case SIGBUS: 
       logfile() << "Got signal SIGBUS: Bus error (bad memory access)" << std::endl;
       break;
+#endif
     default: 
       logfile() << "Got signal " << sig << std::endl;
       break;    

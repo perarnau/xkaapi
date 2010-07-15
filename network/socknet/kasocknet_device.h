@@ -73,11 +73,6 @@ public:
 
 // --------------------------------------------------------------------
 /** \name Channel
-    \ingroup Net
-    A Device object should be implemented in order to be able to create Channel
-    object over a specific transport protocol (tcp, myrinet, mpi, ib, taktuk,...)
-    A device is dynamicly linked to the process in order to select the right device
-    online : more over, if the network is not used, then the code is not loaded.
 */
 class Device : public Net::Device {
 public:
@@ -89,52 +84,31 @@ public:
   */
   ~Device();
 
-  /** \name Device initialilization and termination
-  */
-  //@{
-  /** Initialization of the device
-      \exception InvalidArgumentError bad parameters passed in properties
-      \exception RuntimeError kind of exception is thrown in case of error      
+  /** 
   */
   int initialize();
 
-  /** Second stage of initialization of a device
-      Terminate the initialization process, accept incomming message and local node
-      may send message to known hosts.
+  /** 
   */
   int commit();
 
-  /** Terminate the device
-    This function is automatically called at termination of the network.
+  /** 
   */
   int terminate();
-  //@}
 
-  // -----------------------------------------------------------------------
-  //! \name Management of Device
-  // -----------------------------------------------------------------------
-  //@{
-  /** Open a channel to a given url
-      \param url the url to the node on which to open channel
-      \return channel to the node or 0 if route cannot be open.
-      \see close_channel
+  /** 
+  */
+  int abort();
+
+  /** 
   */
   Net::OutChannel* open_channel( const char* url );
   
-  /** Delete the channel
-      The method is called to close the channel after it all references to it have been
-      released on the network level.
-      \param channel the channel to delete
-      \see open_channel
+  /** 
   */
   int close_channel( Net::OutChannel* channel);
-  //@}
 
-  // -----------------------------------------------------------------------
-  //! \name Misc
-  // -----------------------------------------------------------------------
-  /** Return the url to be broadcast if other node want to connect to this node
-      using this specific device.
+  /** 
   */
   const char* get_urlconnect( ) const;
 

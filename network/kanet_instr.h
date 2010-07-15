@@ -250,7 +250,7 @@ protected:
  */
 inline void InstructionStream::insert_rwdma(   
       kaapi_uint64_t     dptr,
-      void*           lptr,
+      void*              lptr,
       kaapi_uint32_t     size 
   )
 {
@@ -268,10 +268,10 @@ inline void InstructionStream::insert_rwdma(
 
 inline void InstructionStream::insert_rwdma(   
       kaapi_uint64_t     dptr,
-      void*           lptr,
+      void*              lptr,
       kaapi_uint32_t     size, 
-      Callback_fnc    cbk,
-      void*           arg 
+      Callback_fnc       cbk,
+      void*              arg 
   )
 {
   kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
@@ -288,7 +288,7 @@ inline void InstructionStream::insert_rwdma(
 
 inline void InstructionStream::insert_am(   
       kaapi_uint64_t     handler,
-      void*           lptr,
+      void*              lptr,
       kaapi_uint32_t     size
   )
 {
@@ -306,10 +306,10 @@ inline void InstructionStream::insert_am(
 
 inline void InstructionStream::insert_am(   
       kaapi_uint64_t     handler,
-      void*           lptr,
+      void*              lptr,
       kaapi_uint32_t     size, 
-      Callback_fnc    cbk,
-      void*           arg 
+      Callback_fnc       cbk,
+      void*              arg 
   )
 {
   kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */

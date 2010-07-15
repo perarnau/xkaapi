@@ -47,6 +47,8 @@
 
 namespace MPINET {
 
+class Device;
+
 // -----------------------------------------------------------------------
 /** \name OutChannel
     \ingroup Net
@@ -67,7 +69,11 @@ protected:
   /** Client stub to write message from the InstructionStream
       An error with an error code is thrown in case of error.
   */
-  int stub( );  
+  int stub( );
+  
+private:
+  int _dest;
+  friend class Device;
 };
 
 } // -namespace

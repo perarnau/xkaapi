@@ -44,8 +44,11 @@
 #define _MPINET_DEVICE_H_
 
 #include "../kanet_device.h"
+#include <map>
 
 namespace MPINET {
+
+class OutChannel;
 
 // --------------------------------------------------------------------
 /** Design Pattern: factory of device over mpinet
@@ -89,57 +92,39 @@ public:
   */
   ~Device();
 
-  /** \name Device initialilization and termination
-  */
-  //@{
-  /** Initialization of the device
-      \exception InvalidArgumentError bad parameters passed in properties
-      \exception RuntimeError kind of exception is thrown in case of error      
+  /**
   */
   int initialize();
 
-  /** Second stage of initialization of a device
-      Terminate the initialization process, accept incomming message and local node
-      may send message to known hosts.
+  /**
   */
   int commit();
 
-  /** Terminate the device
-    This function is automatically called at termination of the network.
+  /** 
   */
   int terminate();
-  //@}
 
-  // -----------------------------------------------------------------------
-  //! \name Management of Device
-  // -----------------------------------------------------------------------
-  //@{
-  /** Open a channel to a given url
-      \param url the url to the node on which to open channel
-      \return channel to the node or 0 if route cannot be open.
-      \see close_channel
+  /** 
+  */
+  int abort();
+
+  /** 
   */
   Net::OutChannel* open_channel( const char* url );
   
-  /** Delete the channel
-      The method is called to close the channel after it all references to it have been
-      released on the network level.
-      \param channel the channel to delete
-      \see open_channel
+  /**
   */
   int close_channel( Net::OutChannel* channel);
-  //@}
 
-  // -----------------------------------------------------------------------
-  //! \name Misc
-  // -----------------------------------------------------------------------
-  /** Return the url to be broadcast if other node want to connect to this node
-      using this specific device.
+  /** 
   */
   const char* get_urlconnect( ) const;
 
 protected:
   char  _name[32];             ///< C-name of the device
+  int   _wcom_rank;
+  int   _wcom_size;
+  std::map<int,OutChannel*> _openchannel;
 }; // -- end class device
 
 

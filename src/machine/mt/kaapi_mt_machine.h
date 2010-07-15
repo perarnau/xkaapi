@@ -358,7 +358,6 @@ static inline kaapi_processor_t* kaapi_processor_allocate(void)
   if (kproc == 0) return 0;
 
   memset(kproc, 0, sizeof(kaapi_processor_t));
-  printf("NUMA kprocessor allocated\n");
 
   return kproc;
 }

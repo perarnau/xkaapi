@@ -113,9 +113,14 @@ public:
   virtual int commit() = 0;
 
   /** Terminate the device
-    This function is automatically called at termination of the network.
+    This function is automatically called at the normal termination of the network.
   */
   virtual int terminate() = 0;
+
+  /** Abort the device
+    This function is automatically called in case of abortion of the process
+  */
+  virtual int abort() = 0;
   //@}
 
   // -----------------------------------------------------------------------

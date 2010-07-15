@@ -40,7 +40,11 @@
 ** terms.
 ** 
 */
-#include "kampinet_device.h" 
+#include "kampinet_device.h"
+#include "kampinet_channel.h"
+#include <string.h>
+#include <stdlib.h>
+#include <mpi.h>
 
 namespace MPINET {
 
@@ -59,6 +63,18 @@ Device::~Device()
 // --------------------------------------------------------------------
 int Device::initialize()
 {
+  int argc  = 1;
+  const char* argv[] = {"merde de mpi"};
+  int err;
+  int provided;
+  err= MPI_Init_thread(&argc, (char***)&argv, MPI_THREAD_MULTIPLE, &provided);
+  if (provided != MPI_THREAD_MULTIPLE)
+  {
+    printf("****Warning the MPI implementation may not work with multithreaded process\n");
+  }
+  
+  _openchannel.clear();
+  
   return 0;
 }
 
@@ -66,6 +82,11 @@ int Device::initialize()
 // --------------------------------------------------------------------
 int Device::commit()
 {
+  int err;
+  err = MPI_Comm_size( MPI_COMM_WORLD, &_wcom_size );
+  if (err != MPI_SUCCESS) return EINVAL;
+  err = MPI_Comm_rank( MPI_COMM_WORLD, &_wcom_rank );
+  if (err != MPI_SUCCESS) return EINVAL;
   return 0;
 }
 
@@ -73,6 +94,20 @@ int Device::commit()
 // --------------------------------------------------------------------
 int Device::terminate()
 {
+  int err;
+  _openchannel.clear();
+  err = MPI_Finalize();
+  if (err != MPI_SUCCESS) return EINVAL;
+  return 0;
+}
+
+
+// --------------------------------------------------------------------
+int Device::abort()
+{
+  int err;
+  err = MPI_Abort( MPI_COMM_WORLD, EINTR );
+  if (err != MPI_SUCCESS) return EINVAL;
   return 0;
 }
 
@@ -80,13 +115,37 @@ int Device::terminate()
 // --------------------------------------------------------------------
 Net::OutChannel* Device::open_channel( const char* url )
 {
-  return 0;
+  int dest;
+  MPINET::OutChannel* channel;
+  
+  /* format: mpinet:rank */
+  if (url ==0) return 0;
+  if (strncmp(url, "mpinet:", 7) != 0) return 0;
+  url += 7;
+  /* verify that all remainder chars are digits */
+  int i = 0;
+  if (url[i] ==0) return 0;
+  while (url[i] !=0) if (!isdigit(url[i++])) return 0;
+  dest = atoi( url );
+  std::map<int,OutChannel*>::iterator icurr = _openchannel.find(dest);
+  if (icurr != _openchannel.end()) return icurr->second;
+  channel = new MPINET::OutChannel();
+  if (0 != channel->initialize()) return 0;
+  _openchannel.insert( std::make_pair(dest, channel) );
+  return channel;
 }
 
 
 // --------------------------------------------------------------------
-int Device::close_channel(Net::OutChannel* channel)
+int Device::close_channel(Net::OutChannel* ch)
 {
+  MPINET::OutChannel* channel = dynamic_cast<MPINET::OutChannel*> (ch);
+  std::map<int,OutChannel*>::iterator icurr = _openchannel.find(channel->_dest);
+  if (icurr == _openchannel.end()) return ENOENT;
+  if (icurr->second != channel) return EINVAL;
+  _openchannel.erase( icurr );
+  channel->terminate();
+  delete channel;
   return 0;
 }
 
@@ -94,6 +153,7 @@ int Device::close_channel(Net::OutChannel* channel)
 // --------------------------------------------------------------------
 const char* Device::get_urlconnect( ) const
 {
+  /* cannot connect MPI process */
   return 0;
 }
 

@@ -18,9 +18,9 @@ libkampinet_la_LDFLAGS = -version-info 1:0:1 $(KAMPINETLIB_BUILD_LDFLAGS)
 include_HEADERS=
 
 libkampinet_la_SOURCES=\
-	kasocknet_device.cpp \
-	kasocknet_devicefactory.cpp \
-	kasocknet_channel.cpp \
+	kampinet_device.cpp \
+	kampinet_devicefactory.cpp \
+	kampinet_channel.cpp \
 	$(include_HEADERS)
 endif
 

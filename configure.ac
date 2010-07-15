@@ -382,7 +382,7 @@ AM_CONDITIONAL([KAAPI_TARGET_SOCKNET],[test x"$USE_KAAPI_SOCKNET" = x"true"])
 dnl -----------------------------------------------------------------------
 dnl The "--with-mpi"
 dnl -----------------------------------------------------------------------
-KAAPI_PKGLIB_CHECK([MPI support], [mpi], [MPINET], [no], [KAAPI_USE_MPI],
+KAAPI_PKGLIB_CHECK([MPI support], [mpinet], [MPINET], [no], [KAAPI_USE_MPI],
   [build network support on top of MPI],
   [mpi], [], [mpi.h], [MPI_Init], [
 dnl    MPI is there
@@ -481,6 +481,7 @@ AC_CONFIG_FILES([
 	kaapixx.pc
 	atha1.pc
 	src/misc/kaapi_version.c
+
 ])
 #	kastl.wip/Makefile
 AC_OUTPUT

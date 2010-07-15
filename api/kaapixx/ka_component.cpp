@@ -159,7 +159,7 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
 #if defined(KAAPI_USE_APPLE) || defined(KAAPI_USE_IPHONEOS)
   /* seed for rand */
   sranddev();
-#elif defined(KAAPI_USE_LINUX)
+#elif defined(KAAPI_USE_LINUX) || defined (_WIN32)
   srand( getpid() );
 #else
 #error "No implemented"
@@ -228,7 +228,11 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
   
   if (rootdir != "")
   {
+#if defined (_WIN32)
+    err = mkdir(rootdir.c_str());
+#else
     err = mkdir(rootdir.c_str(), S_IRUSR|S_IWUSR|S_IXUSR);
+#endif
     if ((err != 0) && (errno !=EEXIST))
     {
       logfile() << "[KaapiComponentManager::initialize] cannot create directory: " << rootdir << std::endl;
@@ -237,7 +241,7 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
     }
     /* verify that the path is a directory */
     struct stat stat_pwd;
-    err = lstat( rootdir.c_str(), &stat_pwd );
+    err = stat( rootdir.c_str(), &stat_pwd );
     if ((err !=0) || ( (stat_pwd.st_mode & S_IFDIR) ==0))
     {
       logfile() << "[KaapiComponentManager::initialize] not a directory: '" << rootdir << "'" << std::endl;

@@ -78,6 +78,12 @@ int Device::terminate()
 
 
 // --------------------------------------------------------------------
+int Device::abort()
+{
+  return 0;
+}
+
+// --------------------------------------------------------------------
 Net::OutChannel* Device::open_channel( const char* url )
 {
   return 0;

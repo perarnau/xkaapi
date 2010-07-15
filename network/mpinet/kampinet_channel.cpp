@@ -61,6 +61,8 @@ int OutChannel::terminate() throw()
 // -----------------------------------------------------------------------
 int OutChannel::stub( )
 {
+  /* */
+  
   return 0;
 }
 
