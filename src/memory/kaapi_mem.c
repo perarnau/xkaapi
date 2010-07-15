@@ -300,6 +300,9 @@ void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
   {
     kaapi_cuda_error("cuCtxPushCurrent", res);
   }
+
+  /* host addr no longer dirty */
+  kaapi_mem_mapping_clear_dirty(mapping, self_asid);
 }
 
 #endif
