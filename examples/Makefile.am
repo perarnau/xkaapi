@@ -18,6 +18,7 @@ check_PROGRAMS= \
 	fibo_atha              \
 	fibo_kaapixx           \
 	fibo_kaapixx_opt       \
+	fibo_kaapixx_sync      \
 	qsort_cilk2kaapi       \
   matrix_multiply_cilk2kaapi \
 	branchbound_apiatha    \
@@ -50,6 +51,7 @@ fibo_xkaapi_SOURCES=fibo_xkaapi.c
 fibo_atha_SOURCES=fibo_atha.cpp
 fibo_kaapixx_SOURCES=    fibo_kaapixx.cpp     fibo_kaapixx_main.cpp
 fibo_kaapixx_opt_SOURCES=fibo_kaapixx_opt.cpp fibo_kaapixx_main.cpp
+fibo_kaapixx_sync_SOURCES=fibo_kaapixx_sync.cpp fibo_kaapixx_main.cpp
 
 # Based on Cilk example
 qsort_cilk2kaapi_SOURCES=qsort_cilk2kaapi.cpp
@@ -105,6 +107,11 @@ fibo_kaapixx_opt_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 fibo_kaapixx_opt_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 fibo_kaapixx_opt_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 fibo_kaapixx_opt_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+fibo_kaapixx_sync_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+fibo_kaapixx_sync_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+fibo_kaapixx_sync_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+fibo_kaapixx_sync_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 qsort_cilk2kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 qsort_cilk2kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

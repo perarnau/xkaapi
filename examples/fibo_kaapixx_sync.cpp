@@ -129,7 +129,9 @@ struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished
        */
-      ka::Spawn<TaskSum>() ( res, res1, res2 );      
+      ka::Spawn<TaskSum>() ( res, res1, res2 );
+      
+      ka::Sync();
     }
   }
 };
