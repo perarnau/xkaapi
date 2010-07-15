@@ -467,6 +467,7 @@ static void register_mul2_task_format(void)
     (format, (kaapi_task_body_t)mul2_cuda_entry, KAAPI_PROC_TYPE_CUDA);
 }
 
+
 /* memset task */
 
 static void memset_cuda_entry
@@ -523,6 +524,62 @@ static void register_memset_task_format(void)
   
 }
 
+
+/* check task */
+
+static int check_sequence
+(const unsigned int* base, unsigned int real_nelem)
+{
+  const unsigned int nelem = (real_nelem / THREAD_DIM_X) * THREAD_DIM_X;
+  unsigned int i;
+
+  for (i = 0; i < nelem; ++base, ++i)
+  {
+#define RESULT_VALUE 4
+    if (*base != RESULT_VALUE)
+    {
+      printf("[!] check_sequence: %u, %u\n", i, *base);
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+static void check_cpu_entry(void* arg, kaapi_thread_t* thread)
+{
+  task_work_t* const work = (task_work_t*)arg;
+  const range_t* const range = &work->range;
+  unsigned int* const base = (unsigned int*)range->base.data;
+
+  printf("> check_cpu_entry [%u - %u[\n", range->i, range->j);
+
+  check_sequence(base, range->j - range->i);
+
+  printf("< check_cpu_entry\n");
+}
+
+static void register_check_task_format(void)
+{
+  static const kaapi_access_mode_t modes[PARAM_COUNT] =
+  { KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V };
+
+  const struct kaapi_format_t* formats[PARAM_COUNT] =
+  { kaapi_mem_format, kaapi_uint_format, kaapi_uint_format };
+
+  struct kaapi_format_t* const format = kaapi_format_allocate();
+
+  kaapi_format_taskregister
+    (format, NULL, "check_task", sizeof(task_work_t),
+     PARAM_COUNT, modes, offsets, formats, get_param_size);
+
+  kaapi_format_taskregister_body
+    (format, check_cpu_entry, KAAPI_PROC_TYPE_CPU);
+}
+
+
+/* main static entry */
+
 static void __attribute__((unused))
 main_static_entry(unsigned int* base, unsigned int nelem)
 {
@@ -534,6 +591,7 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   register_memset_task_format();
   register_add1_task_format();
   register_mul2_task_format();
+  register_check_task_format();
 
 #define PARTITION_COUNT 2
 #define PARTITION_ID_CPU 0
@@ -576,7 +634,7 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   const unsigned int gpu_size = (gpu_j - gpu_i) * sizeof(unsigned int);
 
   /* gpu::memset_task */
-  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
+  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
   create_range(&work->range, gpu_base, gpu_i, gpu_j);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
   kaapi_task_initdfg(task, memset_cpu_entry, (void*)work);
@@ -595,6 +653,13 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
   kaapi_task_initdfg(task, mul2_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
+
+  /* cpu::check_task */
+  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
+  create_range(&work->range, gpu_base, gpu_i, gpu_j);
+  task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU);
+  kaapi_task_initdfg(task, check_cpu_entry, (void*)work);
+  kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU);
 
   /* close group */
   kaapi_threadgroup_end_partition(group);
@@ -642,28 +707,6 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
 
   kaapi_sched_sync();
   kaapi_thread_restore_frame(thread, &frame);
-}
-
-
-/* check sequence */
-
-static int check_sequence
-(const unsigned int* base, unsigned int real_nelem)
-{
-  const unsigned int nelem = (real_nelem / THREAD_DIM_X) * THREAD_DIM_X;
-  unsigned int i;
-
-  for (i = 0; i < nelem; ++base, ++i)
-  {
-#define RESULT_VALUE 4
-    if (*base != RESULT_VALUE)
-    {
-      printf("[!] check_sequence: %u, %u\n", i, *base);
-      return -1;
-    }
-  }
-
-  return 0;
 }
 
 
