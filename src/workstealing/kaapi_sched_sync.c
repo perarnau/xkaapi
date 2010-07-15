@@ -87,7 +87,7 @@ int kaapi_sched_sync(void)
 
   save_affinity = thread->affinity;
   kaapi_thread_clearaffinity(thread);
-  kaapi_thread_setaffinity( thread, thread->proc->kid );
+/* kaapi_thread_setaffinity( thread, thread->proc->kid );*/
 
   savepc = thread->sfp->pc;
 #if defined(KAAPI_DEBUG)

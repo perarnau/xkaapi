@@ -45,19 +45,26 @@
 */
 #include "kaapi_impl.h"
 
-kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
+kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid, struct kaapi_thread_context_t* cond_thread )
 {
   kaapi_thread_context_t* ctxt = 0;
   kaapi_wsqueuectxt_cell_t* cell;
   int wakeupok = 0;
   int garbage;
   
-  /* only steal the ready context if any */
+  /* only steal the ready context if it's my ready list */
   if ((kproc->readythread !=0) && (kproc->kid == kproc_thiefid))
   {
     ctxt = kproc->readythread;
-    kproc->readythread = 0;
-    return ctxt;
+    if ((cond_thread ==0) || (ctxt == cond_thread)) 
+    {
+      kproc->readythread = 0;
+#if defined(KAAPI_DEBUG_PRINT)
+      printf("%i:: get thread:%p from ready thread\n", kproc->kid, (void*)ctxt);
+      fflush( stdout );
+#endif  
+      return ctxt;
+    }
   }
   
   /* */
@@ -82,23 +89,30 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_pro
     if (status != 2 ) /* else already wakeuped */
     {
       ctxt = cell->thread;
-      kaapi_task_t* task = ctxt->sfp->pc;
-      if ( (kaapi_task_getbody(task) != kaapi_suspend_body) )
-      { 
-        garbage  = 1;
-        /* ok wakeup the thread and try to steal it */
-        while (status !=2)
-        {
-          if (KAAPI_ATOMIC_CAS( &cell->state, status, 2 )) /* if already ==1 -> under stealing */
+      if ( (ctxt->affinity !=0) || (cond_thread ==0) || (ctxt == cond_thread)) 
+      {      
+        kaapi_task_t* task = ctxt->sfp->pc;
+        if ( (kaapi_task_getbody(task) != kaapi_suspend_body) )
+        { 
+          garbage  = 1;
+          /* ok wakeup the thread and try to steal it */
+          while (status !=2)
           {
-            cell->thread = 0;
-            wakeupok = 1;
-            status = 2;
+            if (KAAPI_ATOMIC_CAS( &cell->state, status, 2 )) /* if already ==1 -> under stealing */
+            {
+              cell->thread = 0;
+              wakeupok = 1;
+              status = 2;
+            }
+            else status = KAAPI_ATOMIC_READ( &cell->state );
           }
-          else status = KAAPI_ATOMIC_READ( &cell->state );
+          /* if wakeupok the caller has wakeup the thread */
         }
-        /* if wakeupok the caller has wakeup the thread */
-      }
+        else {
+          wakeupok = 0;
+          garbage  = 0;
+        }
+      } /* else ctxt->affinity: */
       else {
         wakeupok = 0;
         garbage  = 0;
@@ -139,7 +153,13 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_pro
       kproc->lsuspend.tailfreecell = cell;
 
       if (wakeupok) 
+      {
+#if defined(KAAPI_DEBUG_PRINT)
+        printf("%i:: wakeup thread:%p from suspend list\n", kproc->kid, (void*)ctxt);
+        fflush( stdout );
+#endif  
         return ctxt;
+      }
     }
 
     cell = nextcell;

@@ -1014,7 +1014,7 @@ extern int kaapi_sched_stealstack  ( struct kaapi_thread_context_t* thread, kaap
     \retval else a context to wakeup
     \TODO faire specs ici
 */
-extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid );
+extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid, struct kaapi_thread_context_t* cond );
 
 
 /** \ingroup WS
