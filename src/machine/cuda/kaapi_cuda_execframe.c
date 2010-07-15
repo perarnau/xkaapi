@@ -71,6 +71,11 @@ static inline kaapi_mem_asid_t get_proc_asid(kaapi_processor_t* proc)
   return proc->mem_map.asid;
 }
 
+static inline kaapi_mem_asid_t get_host_asid(void)
+{
+  return get_host_mem_map()->asid;
+}
+
 
 /* device memory allocation */
 
@@ -138,6 +143,15 @@ static inline int memcpy_dtoh
 }
 
 
+/* copy from device to device */
+
+static inline int memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, size_t size)
+{
+  /* todo: validate the cpu addr that should exist. copy to device then. */
+  return -1;
+}
+
+
 /* prepare task args memory */
 
 static void prepare_task
@@ -164,33 +178,59 @@ static void prepare_task
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
     hostptr = *kaapi_data(unsigned int*, access);
 
+    /* get parameter size */
+    size = format->get_param_size(format, i, task->sp);
+
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
       (host_map, (kaapi_mem_addr_t)hostptr, &mapping);
 
-    /* mapping does not yet exist */
-    if (!kaapi_mem_mapping_isset(mapping, self_asid))
+    /* no addr for this asid. allocate remote memory. */
+    if (!kaapi_mem_mapping_has_addr(mapping, self_asid))
     {
-      size = format->get_param_size(format, i, task->sp);
       allocate_device_mem(&devptr, size);
-
-      /* host -> gpu mapping */
-      kaapi_mem_mapping_set(mapping, (kaapi_mem_addr_t)devptr, self_asid);
+      kaapi_mem_mapping_set_addr(mapping, self_asid, (kaapi_mem_addr_t)devptr);
+      kaapi_mem_mapping_set_dirty(mapping, self_asid);
     }
     else
     {
-      devptr = kaapi_mem_mapping_get(mapping, self_asid);
+      devptr = kaapi_mem_mapping_get_addr(mapping, self_asid);
+    }
+
+    /* read or readwrite, ensure remote memory valid */
+    if (KAAPI_ACCESS_IS_READ(mode))
+    {
+      if (kaapi_mem_mapping_is_dirty(mapping, self_asid))
+      {
+	/* find a non dirty addr */
+	const kaapi_mem_asid_t valid_asid =
+	  kaapi_mem_mapping_get_nondirty_asid(mapping);
+
+	/* valid memory not on the host */
+	if (valid_asid != get_host_asid())
+	{
+	  const kaapi_mem_addr_t raddr =
+	    kaapi_mem_mapping_get_addr(mapping, valid_asid);
+	  memcpy_dtod(devptr, raddr, size);
+	}
+	else
+	{
+	  memcpy_htod(proc, devptr, hostptr, size);
+	}
+
+	/* validate remote memory */
+	kaapi_mem_mapping_clear_dirty(mapping, self_asid);
+      }
+    }
+
+    /* invalidate in other as if written */
+    if (KAAPI_ACCESS_IS_WRITE(mode))
+    {
+      kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
     }
 
     /* update param addr */
     *kaapi_data(CUdeviceptr, access) = devptr;
-
-    if (KAAPI_ACCESS_IS_READ(mode)) /* R or RW */
-    {
-      size = format->get_param_size(format, i, task->sp);
-      devptr = (CUdeviceptr)kaapi_mem_mapping_get(mapping, self_asid);
-      memcpy_htod(proc, devptr, hostptr, size);
-    }
   }
 }
 
@@ -241,7 +281,7 @@ static void __attribute__((unused)) finalize_task
     /* inverted search. assume a mapping exists. */
     kaapi_mem_map_find_inverse
       (host_map, (kaapi_mem_addr_t)devptr, &mapping);
-    hostptr = (void*)kaapi_mem_mapping_get(mapping, host_asid);
+    hostptr = (void*)kaapi_mem_mapping_get_addr(mapping, host_asid);
     memcpy_dtoh(proc, hostptr, devptr, size);
   }
 }
