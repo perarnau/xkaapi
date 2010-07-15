@@ -56,7 +56,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_pro
   if ((kproc->readythread !=0) && (kproc->kid == kproc_thiefid))
   {
     ctxt = kproc->readythread;
-    if ((cond_thread ==0) || (ctxt == cond_thread)) 
+    if ((ctxt->affinity !=0) || (cond_thread ==0) || (ctxt == cond_thread)) 
     {
       kproc->readythread = 0;
 #if defined(KAAPI_DEBUG_PRINT)
