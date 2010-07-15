@@ -57,13 +57,13 @@ struct doit {
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a );
+    threadgroup.Spawn<TaskW>  (ka::SetPartition(0))  ( a );
     threadgroup.Spawn<TaskR1> (ka::SetPartition(1))  ( a );
     threadgroup.Spawn<TaskR2> (ka::SetPartition(1))  ( a );
 
-    threadgroup.end_partition();
-
     threadgroup.print();    
+
+    threadgroup.end_partition();
 
     threadgroup.execute();
   }
