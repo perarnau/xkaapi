@@ -176,7 +176,7 @@ static void prepare_task
       continue ;
 
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
-    hostptr = *kaapi_data(unsigned int*, access);
+    hostptr = access->data;
 
     /* get parameter size */
     size = format->get_param_size(format, i, task->sp);
@@ -230,7 +230,7 @@ static void prepare_task
     }
 
     /* update param addr */
-    *kaapi_data(CUdeviceptr, access) = devptr;
+    access->data = (void*)(uintptr_t)devptr;
   }
 }
 

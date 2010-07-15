@@ -30,8 +30,7 @@ typedef struct range
 static void create_range
 (range_t* range, unsigned int* base, unsigned int i, unsigned j)
 {
-  *KAAPI_DATA(unsigned int*, range->base) = base;
-
+  kaapi_access_init(&range->base, (void*)base);
   range->i = i;
   range->j = j;
 }
@@ -91,9 +90,7 @@ static task_work_t* alloc_work(kaapi_thread_t* thread)
   task_work_t* const work = kaapi_thread_pushdata_align
     (thread, sizeof(task_work_t), 8);
 
-  kaapi_thread_allocateshareddata
-    (&work->range.base, thread, sizeof(unsigned int*));
-
+  work->range.base.data = NULL;
   work->range.i = 0;
   work->range.j = 0;
 
@@ -125,13 +122,12 @@ static int reduce_work(kaapi_stealcontext_t*, void*, void*, size_t, void*);
 
 static void do_work(kaapi_stealcontext_t* sc, task_work_t* work)
 {
+  unsigned int* const base = (unsigned int*)work->range.base.data;
+
   kaapi_taskadaptive_result_t* ktr;
-  unsigned int* base;
   unsigned int i;
   int stealres;
   range_t subrange;
-
-  base = *KAAPI_DATA(unsigned int*, work->range.base);
 
  compute_work:
   while (1)
@@ -208,7 +204,7 @@ static void add1_cuda_entry
 {
   task_work_t* const work = (task_work_t*)arg;
   range_t* const range = &work->range;
-  CUdeviceptr base = *KAAPI_DATA(CUdeviceptr, range->base);
+  CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
   printf("> add1_cuda_entry [%u - %u[\n", range->i, range->j);
 
@@ -274,7 +270,7 @@ static void mul2_cuda_entry
 {
   task_work_t* const work = (task_work_t*)arg;
   range_t* const range = &work->range;
-  CUdeviceptr base = *KAAPI_DATA(CUdeviceptr, range->base);
+  CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
   printf("> mul2_cuda_entry [%u - %u[\n", range->i, range->j);
 
@@ -302,7 +298,7 @@ static void mul2_cpu_entry(void* arg, kaapi_thread_t* thread)
 {
   task_work_t* const work = (task_work_t*)arg;
   const range_t* const range = &work->range;
-  unsigned int* const base = *KAAPI_DATA(unsigned int*, range->base);
+  unsigned int* const base = range->base.data;
 
   printf("> mul2_cpu_entry [%u - %u[\n", range->i, range->j);
 
@@ -391,8 +387,7 @@ static int split_work
       kaapi_task_init(ttask, (kaapi_task_body_t)add1_cuda_entry, NULL);
 
     twork = alloc_work(tthread);
-    *KAAPI_DATA(unsigned int*, twork->range.base) =
-      *KAAPI_DATA(unsigned int*, vwork->range.base);
+    kaapi_access_init(&twork->range.base, vwork->range.base.data);
     twork->ktr = kaapi_allocate_thief_result(sc, sizeof(task_work_t), NULL);
 
     split_range(&twork->range, &subrange, unitsize);
@@ -479,7 +474,7 @@ static void memset_cuda_entry
 {
   task_work_t* const work = (task_work_t*)arg;
   const range_t* const range = &work->range;
-  CUdeviceptr base = *KAAPI_DATA(CUdeviceptr, range->base);
+  CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
   printf("> memset_cuda_entry [%u - %u[\n", range->i, range->j);
 
@@ -495,7 +490,7 @@ static void memset_cpu_entry(void* arg, kaapi_thread_t* thread)
 {
   task_work_t* const work = (task_work_t*)arg;
   const range_t* const range = &work->range;
-  unsigned int* const base = *KAAPI_DATA(unsigned int*, range->base);
+  unsigned int* const base = (unsigned int*)range->base.data;
   unsigned int i;
 
   printf("> memset_cpu_entry [%u - %u[\n", range->i, range->j);

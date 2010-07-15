@@ -144,11 +144,11 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
   
   kaapi_assert( tid < KAAPI_MAX_PARTITION );
   kaapi_assert( -1 <= tid );
-  
+
   /* initialize the writer data structure if it not on the same partition (else only
      update reader data structure without changing the writer code
   */
-  if (ver->writer_thread != tid )
+  if (ver->writer_thread != tid)
   {
     writer_thread = kaapi_threadgroup_thread( thgrp, ver->writer_thread );
 
