@@ -133,24 +133,6 @@ AS_CASE([$enable_target],
 AC_SUBST([KAAPI_TARGET])
 AM_CONDITIONAL([KAAPI_TARGET_MT],[test x"$KAAPI_TARGET" = x"mt"])
 
-dnl ----------------------------------------------------------------
-# enable support for cuda/gpu
-AC_ARG_WITH([cuda],[AS_HELP_STRING([--with-cuda],
-		 [add cuda support])],[],
-  [with_cuda=default]
-)
-AS_CASE([$with_cuda],
-  [default|no], [dnl
-  ], [yes], [dnl
-    AC_MSG_NOTICE([Adding cuda support])
-    KAAPI_CUDA=yes
-    # not using AC*DEFINE as we want this available for examples too
-    AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_CUDA=1"
-  ], [dnl
-    AC_MSG_ERROR([Unknown value '$with_cuda' for --with-cuda option. Aborting.])
-  ])
-AC_SUBST([KAAPI_CUDA])
-AM_CONDITIONAL([KAAPI_USE_CUDA],[test x"$KAAPI_CUDA" = x"yes"])
 
 dnl ----------------------------------------------------------------
 # Debug mode, CAS and perfcounter
@@ -319,6 +301,7 @@ KAAPI_PKGLIB_CHECK([PAPI], [papi], [PAPI], [no], [],
   ])
 ACX_LIB_LINK([XKAAPILIB],[PAPI])
 
+
 dnl -----------------------------------------------------------------------
 dnl The "--with-numa"
 dnl -----------------------------------------------------------------------
@@ -348,9 +331,6 @@ AS_CASE([$with_fortran],
       AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
       KAAPI_FORTRAN=f
     fi
-  ], [yes], [dnl
-    AC_MSG_NOTICE([Adding fortran support using fortran compiler '$with_fortran'])
-    AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
   ], [no], [dnl
       AC_MSG_NOTICE([fortran API disable])
   ], [dnl
@@ -369,12 +349,32 @@ fi
 
 
 dnl -----------------------------------------------------------------------
+dnl The "--with-cuda"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
+  [build CUDA support [EXPERIMENTAL]],
+  [cuda], [], [cuda.h], [cuDeviceGetProperties], [
+dnl    CUDA is there
+    AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
+  ],
+  [
+  ],
+  [])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
+ACX_LIB_LINK([XKAAPILIB],[CUDA])
+
+
+dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
+ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
 
 ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
@@ -423,6 +423,7 @@ AC_CONFIG_FILES([
 	tests/static/Makefile
 
 	xkaapi.pc
+	kaapixx.pc
 	atha1.pc
 	src/misc/kaapi_version.c
 ])
