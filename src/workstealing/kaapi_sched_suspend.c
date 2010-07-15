@@ -68,32 +68,74 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   ctxt_condition = kproc->thread;
   task_condition = ctxt_condition->sfp->pc;
   if (kaapi_task_getbody(task_condition) != kaapi_suspend_body) return 0;
-  
+  /* such threads are sticky: the control flow is on return to this call and
+     without thread user context switch only this activation frame could wakeup
+     the thread
+  */
+  kaapi_assert_debug( ctxt_condition->affinity == 0 );
+
+#if defined(KAAPI_DEBUG_PRINT)
+  printf("%i:: put cond thread:%p in suspend list\n", kproc->kid, (void*)ctxt_condition);
+  fflush( stdout );
+#endif  
   /* put context in the list of suspended contexts: no critical section with respect of thieves */
   kaapi_setcontext(kproc, 0);
   kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt_condition );
 
   do {
-    /* wakeup a context */
-    ctxt = kaapi_sched_wakeup(kproc, kproc->kid);
+    /* wakeup a context: precise the condition else could not wakeup sticky thread */
+    ctxt = kaapi_sched_wakeup(kproc, kproc->kid, ctxt_condition);
     if (ctxt ==0)
+    {
+      kaapi_assert_debug(kproc->thread == 0);
       kproc->thread = 0;
+    }
     else {
-#if 0
-      printf("proc:%i wakeups Thread: %p affinity:%u\n", kproc->kid, ctxt, ctxt->affinity );
+#if defined(KAAPI_DEBUG_PRINT)
+      printf("%i:: wakeup Thread: %p has affinity ?:%i / cond: %p\n", kproc->kid, 
+          (void*)ctxt, 
+          kaapi_thread_hasaffinity(ctxt->affinity, kproc->kid)!=0,
+          (void*)ctxt_condition);
       fflush( stdout );
 #endif
       kaapi_setcontext( kproc, ctxt );
+      kaapi_assert_debug(kproc->thread == ctxt );
     }
 
     if (kproc->thread == ctxt_condition) 
     {
       kaapi_assert(kproc->thread->sfp->pc == task_condition);
+#if defined(KAAPI_DEBUG_PRINT)
+      printf("%i:: return from normal execution after suspended thread: %p\n", kproc->kid, (void*)ctxt_condition);
+      fflush( stdout );
+#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
       return 0;
     }
+#if defined(KAAPI_DEBUG)
+    {
+      kaapi_wsqueuectxt_cell_t* cell;
+      int found = 0;
+      if (kproc->readythread == ctxt_condition)
+        found =1;
+        
+      /* else search iff ctxt_condition is yet in suspend list, it should ! */
+      if (!found)
+      {
+        cell = kproc->lsuspend.head;
+        while (cell !=0)
+        {
+          if (cell->thread == ctxt_condition) { found=1; break; }
+          kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
+          cell = nextcell;
+        }
+      }
+      kaapi_assert_m(found !=0, "cannot find ctxt_condition in lists");
+    }
+#endif    
+
     if (kproc->thread !=0)
       goto redo_execution;
 /* warning: to avoid steal of processor ! */

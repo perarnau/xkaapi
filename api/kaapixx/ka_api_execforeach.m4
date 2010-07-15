@@ -9,7 +9,7 @@
         //_threadgroup->print();    
         _threadgroup->end_partition();
         _threadgroup->save();
-#if 1
+#if 0
         t0 = kaapi_get_elapsedtime();
 #endif
         while (_beg != _end)
@@ -29,14 +29,13 @@
           ++step;
           if (++_beg != _end) _threadgroup->restore();
         }
-#if 1
+#if 0
         t1 = kaapi_get_elapsedtime();
 #endif
 #if 0
         std::cout << ":: ForEach #loops: " << step << ", total time (except first iteration):" << total
                   << ", average:" << total / (step-1) << ", partition step:" << tpart << std::endl;
-#endif
-#if 0
+#else
         std::cout << ":: ForEach #loops: " << step << ", total time (except first iteration):" << total
                   << ", average:" << (t1-t0) / (step) << ", partition step:" << tpart << std::endl;
 #endif

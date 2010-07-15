@@ -75,7 +75,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     ctxt = 0;
     /* local wake up first */
 //    if (!kaapi_sched_suspendlist_empty(kproc))
-      ctxt = kaapi_sched_wakeup(kproc, kproc->kid); 
+    ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0); 
 
     if (ctxt !=0) /* push kproc->thread to free and set ctxt as new ctxt */
     {
@@ -150,7 +150,7 @@ redo_execute:
 #endif
       kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
 
-      ctxt = kaapi_sched_wakeup(kproc, kproc->kid);
+      ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0);
       if (ctxt !=0)
       {
 #if 0

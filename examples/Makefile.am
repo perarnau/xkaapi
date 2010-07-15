@@ -9,8 +9,13 @@ include ./Makefile.examples.am
 
 AM_CPPFLAGS=@AM_CPPFLAGS@
 AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
+<<<<<<< HEAD:examples/Makefile.am
 AM_CXXFLAGS=@AM_CXXFLAGS@ 
 #-std=gnu++0x
+=======
+AM_CXXFLAGS=@AM_CXXFLAGS@
+# -std=gnu++0x
+>>>>>>> thierry/master:examples/Makefile.am
 
 check_PROGRAMS= \
 	fiboseq                \
@@ -18,6 +23,7 @@ check_PROGRAMS= \
 	fibo_atha              \
 	fibo_kaapixx           \
 	fibo_kaapixx_opt       \
+	fibo_kaapixx_sync      \
 	qsort_cilk2kaapi       \
   matrix_multiply_cilk2kaapi \
 	branchbound_apiatha    \
@@ -50,6 +56,7 @@ fibo_xkaapi_SOURCES=fibo_xkaapi.c
 fibo_atha_SOURCES=fibo_atha.cpp
 fibo_kaapixx_SOURCES=    fibo_kaapixx.cpp     fibo_kaapixx_main.cpp
 fibo_kaapixx_opt_SOURCES=fibo_kaapixx_opt.cpp fibo_kaapixx_main.cpp
+fibo_kaapixx_sync_SOURCES=fibo_kaapixx_sync.cpp fibo_kaapixx_main.cpp
 
 # Based on Cilk example
 qsort_cilk2kaapi_SOURCES=qsort_cilk2kaapi.cpp
@@ -69,7 +76,7 @@ transform_std_SOURCES=transform_std.cpp random.cpp random.h
 transform_kastl_SOURCES=transform_kastl.cpp random.cpp random.h
 #transform_adapt_SOURCES=transform_adapt.h transform_adapt.cpp random.cpp random.h timing.h
 transform_adapt_preempt_SOURCES=transform_adapt_preempt.h transform_adapt_preempt.cpp random.cpp random.h
-transform_static_SOURCES=transform_static.cpp random.cpp random.h
+transform_static_SOURCES=transform_static.cpp random.cpp random.h timing.h
 #transform_concurrent_SOURCES=transform_concurrent.h transform_concurrent.cpp random.cpp random.h
 accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
 #count_concurrent_SOURCES=count_concurrent.h count_concurrent.cpp random.cpp random.h
@@ -105,6 +112,11 @@ fibo_kaapixx_opt_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 fibo_kaapixx_opt_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 fibo_kaapixx_opt_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 fibo_kaapixx_opt_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+fibo_kaapixx_sync_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+fibo_kaapixx_sync_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+fibo_kaapixx_sync_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+fibo_kaapixx_sync_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 qsort_cilk2kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 qsort_cilk2kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

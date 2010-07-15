@@ -44,7 +44,9 @@
 ** 
 */
 #include "kaapi_impl.h"
+#if  !defined(_WIN32)
 #include <sys/mman.h>
+#endif
 
 /**
 */
@@ -52,6 +54,10 @@ int kaapi_context_free( kaapi_thread_context_t* ctxt )
 {
   if (ctxt ==0) return 0;
   if (ctxt->alloc_ptr !=0) free(ctxt->alloc_ptr);
+#if defined (_WIN32)
+    VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
+#else
   munmap( ctxt, ctxt->size );
+#endif
   return 0;
 }

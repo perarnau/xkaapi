@@ -61,13 +61,18 @@
 #  endif
 # endif
 #endif
-
+#if defined (_WIN32)
+#include <windows.h>
+#include <winnt.h>
+#endif
 
 #include <stdint.h>
 #include <stdio.h> /* why ? */
 #include <stdlib.h>
 #include <errno.h>
+#if !defined (_WIN32)
 #include <alloca.h>
+#endif
 #include "kaapi_error.h"
 
 #if defined(__cplusplus)
@@ -1562,6 +1567,31 @@ static inline void kaapi_mem_barrier()
   /* Compiler fence to keep operations from */
   __asm__ __volatile__("" : : : "memory" );
 }
+
+#elif defined(_WIN32)
+static inline void kaapi_writemem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+   LONG Barrier = 0;
+   __asm__ __volatile__("xchgl %%eax,%0 "
+     :"=r" (Barrier));
+
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
 
 #else
 #  error "Undefined barrier"

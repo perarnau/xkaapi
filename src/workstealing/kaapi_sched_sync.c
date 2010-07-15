@@ -87,7 +87,7 @@ int kaapi_sched_sync(void)
 
   save_affinity = thread->affinity;
   kaapi_thread_clearaffinity(thread);
-  kaapi_thread_setaffinity( thread, thread->proc->kid );
+/* kaapi_thread_setaffinity( thread, thread->proc->kid );*/
 
   savepc = thread->sfp->pc;
 #if defined(KAAPI_DEBUG)
@@ -104,7 +104,7 @@ redo:
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
-    kaapi_assert_debug( kaapi_get_current_processor()->thread == thread );
+    kaapi_assert_debug( _kaapi_self_thread() == thread );
     kaapi_assert_debug( thread->proc == kaapi_get_current_processor() );
     goto redo;
   }

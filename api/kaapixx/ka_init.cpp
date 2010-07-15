@@ -19,7 +19,9 @@
 #include <iomanip>
 #include <signal.h>
 #include <limits>
+#if not defined(_WIN32)
 #include <sys/resource.h> // for core size limit
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #if defined(KAAPI_USE_DARWIN)
@@ -162,6 +164,7 @@ int Init::initialize() throw()
     }
     
     /* Core dump */
+#if not defined  (_WIN32)
     if (KaapiComponentManager::prop["util.coresize"] != "default")
     {
       struct rlimit core_limit;
@@ -187,6 +190,7 @@ int Init::initialize() throw()
         KAAPI_ASSERT_M(setrlimit(RLIMIT_NOFILE,&nofile_limit) == 0, "[initialize]: Can't set RLIMIT_NOFILE limit");
       }
     }
+#endif
 
     /* Logfile */
     initialize_logfile();

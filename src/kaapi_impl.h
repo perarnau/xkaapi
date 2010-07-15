@@ -917,6 +917,12 @@ extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t
     \retval EINVAL invalid argument: bad stack pointer.
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
 */
+#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+
+#ifndef EWOULDBLOCK
+#  define EWOULDBLOCK     EAGAIN
+#endif 
+#endif 
 extern int kaapi_stack_execframe( kaapi_thread_context_t* thread );
 
 /** Useful
@@ -1008,7 +1014,7 @@ extern int kaapi_sched_stealstack  ( struct kaapi_thread_context_t* thread, kaap
     \retval else a context to wakeup
     \TODO faire specs ici
 */
-extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid );
+extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid, struct kaapi_thread_context_t* cond );
 
 
 /** \ingroup WS

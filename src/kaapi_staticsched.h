@@ -103,7 +103,7 @@ typedef struct kaapi_taskbcast_arg_t {
   kaapi_com_t*         last;
 } kaapi_taskbcast_arg_t;
 
-#define KAAPI_MAX_PARTITION 128
+#define KAAPI_MAX_PARTITION 256
 
 
 /** \ingroup DFG
