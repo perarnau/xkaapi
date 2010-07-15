@@ -546,6 +546,7 @@ main_static_entry(unsigned int* base, unsigned int nelem)
 
   kaapi_threadgroup_create(&group, PARTITION_COUNT);
 
+  /* open group */
   kaapi_threadgroup_begin_partition(group);
 
   /* cpu partition */
@@ -583,23 +584,24 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
   create_range(&work->range, gpu_base, gpu_i, gpu_j);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
-  kaapi_task_initdfg(task, (kaapi_task_body_t)memset_cuda_entry, (void*)work);
+  kaapi_task_initdfg(task, memset_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
 
   /* gpu::add1_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
   create_range(&work->range, gpu_base, gpu_i, gpu_j);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
-  kaapi_task_initdfg(task, (kaapi_task_body_t)add1_cuda_entry, (void*)work);
+  kaapi_task_initdfg(task, add1_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
 
   /* gpu::mul2_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
   create_range(&work->range, gpu_base, gpu_i, gpu_j);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
-  kaapi_task_initdfg(task, (kaapi_task_body_t)mul2_cuda_entry, (void*)work);
+  kaapi_task_initdfg(task, mul2_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU);
 
+  /* close group */
   kaapi_threadgroup_end_partition(group);
 
   /* execute */

@@ -386,8 +386,8 @@ begin_loop:
       {
 	prepare_task(proc, pc, format);
 	execute_task
-	  (proc, (cuda_task_body_t)body, pc->sp,
-	   (kaapi_thread_t*)thread->sfp);
+	  (proc, (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA],
+	   pc->sp, (kaapi_thread_t*)thread->sfp);
 	synchronize_processor(proc);
 
 	cuCtxPopCurrent(&proc->cuda_proc.ctx);
