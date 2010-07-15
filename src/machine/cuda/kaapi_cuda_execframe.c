@@ -71,6 +71,11 @@ static inline kaapi_mem_asid_t get_proc_asid(kaapi_processor_t* proc)
   return proc->mem_map.asid;
 }
 
+static inline kaapi_mem_asid_t get_host_asid(void)
+{
+  return get_host_mem_map()->asid;
+}
+
 
 /* device memory allocation */
 
@@ -138,6 +143,15 @@ static inline int memcpy_dtoh
 }
 
 
+/* copy from device to device */
+
+static inline int memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, size_t size)
+{
+  /* todo: validate the cpu addr that should exist. copy to device then. */
+  return -1;
+}
+
+
 /* prepare task args memory */
 
 static void prepare_task
@@ -162,36 +176,61 @@ static void prepare_task
       continue ;
 
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
-    hostptr = (void*)access->data;
+    hostptr = access->data;
+
+    /* get parameter size */
+    size = format->get_param_size(format, i, task->sp);
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
       (host_map, (kaapi_mem_addr_t)hostptr, &mapping);
 
-    /* mapping does not yet exist */
-    if (!kaapi_mem_mapping_isset(mapping, self_asid))
+    /* no addr for this asid. allocate remote memory. */
+    if (!kaapi_mem_mapping_has_addr(mapping, self_asid))
     {
-      size = 50000 * sizeof(unsigned int);
       allocate_device_mem(&devptr, size);
-
-      /* host -> gpu mapping */
-      kaapi_mem_mapping_set(mapping, (kaapi_mem_addr_t)devptr, self_asid);
+      kaapi_mem_mapping_set_addr(mapping, self_asid, (kaapi_mem_addr_t)devptr);
+      kaapi_mem_mapping_set_dirty(mapping, self_asid);
     }
     else
     {
-      devptr = kaapi_mem_mapping_get(mapping, self_asid);
+      devptr = kaapi_mem_mapping_get_addr(mapping, self_asid);
+    }
+
+    /* read or readwrite, ensure remote memory valid */
+    if (KAAPI_ACCESS_IS_READ(mode))
+    {
+      if (kaapi_mem_mapping_is_dirty(mapping, self_asid))
+      {
+	/* find a non dirty addr */
+	const kaapi_mem_asid_t valid_asid =
+	  kaapi_mem_mapping_get_nondirty_asid(mapping);
+
+	/* valid memory not on the host */
+	if (valid_asid != get_host_asid())
+	{
+	  const kaapi_mem_addr_t raddr =
+	    kaapi_mem_mapping_get_addr(mapping, valid_asid);
+	  memcpy_dtod(devptr, raddr, size);
+	}
+	else
+	{
+	  memcpy_htod(proc, devptr, hostptr, size);
+	}
+
+	/* validate remote memory */
+	kaapi_mem_mapping_clear_dirty(mapping, self_asid);
+      }
+    }
+
+    /* invalidate in other as if written */
+    if (KAAPI_ACCESS_IS_WRITE(mode))
+    {
+      kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
     }
 
     /* update param addr */
     access->data = (void*)(uintptr_t)devptr;
-
-    if (KAAPI_ACCESS_IS_READ(mode)) /* R or RW */
-    {
-      /* todo: size = format->param_size(i); */
-      size = 50000 * sizeof(unsigned int);
-      devptr = (CUdeviceptr)kaapi_mem_mapping_get(mapping, self_asid);
-      memcpy_htod(proc, devptr, hostptr, size);
-    }
   }
 }
 
@@ -212,7 +251,7 @@ static inline void execute_task
 
 /* finalize task args memory */
 
-static void finalize_task
+static void __attribute__((unused)) finalize_task
 (kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
 {
   kaapi_mem_map_t* const host_map = get_host_mem_map();
@@ -237,12 +276,12 @@ static void finalize_task
       continue ;
 
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
-    devptr = (CUdeviceptr)(uintptr_t)access->data;
+    devptr = *kaapi_data(CUdeviceptr, access);
 
     /* inverted search. assume a mapping exists. */
     kaapi_mem_map_find_inverse
       (host_map, (kaapi_mem_addr_t)devptr, &mapping);
-    hostptr = (void*)kaapi_mem_mapping_get(mapping, host_asid);
+    hostptr = (void*)kaapi_mem_mapping_get_addr(mapping, host_asid);
     memcpy_dtoh(proc, hostptr, devptr, size);
   }
 }
@@ -268,6 +307,7 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
   kaapi_processor_t* const proc = thread->proc;
+  CUresult res;
 
   kaapi_format_t* format;
   kaapi_task_t*              pc;
@@ -334,11 +374,24 @@ begin_loop:
     if ((format != NULL) && (format->entrypoint[KAAPI_PROC_TYPE_CUDA]))
     {
       kaapi_assert_debug(format != NULL);
-      prepare_task(proc, pc, format);
-      execute_task
-	(proc, (cuda_task_body_t)body, pc->sp, (kaapi_thread_t*)thread->sfp);
-      synchronize_processor(proc);
-      finalize_task(proc, pc, format);
+
+      /* the context is saved then restore during
+	 the whole task execution. not doing so would
+	 make it non floating, preventing another thread
+	 to use it (ie. for kaapi_mem_synchronize2)
+       */
+
+      res = cuCtxPushCurrent(proc->cuda_proc.ctx);
+      if (res == CUDA_SUCCESS)
+      {
+	prepare_task(proc, pc, format);
+	execute_task
+	  (proc, (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA],
+	   pc->sp, (kaapi_thread_t*)thread->sfp);
+	synchronize_processor(proc);
+
+	cuCtxPopCurrent(&proc->cuda_proc.ctx);
+      }
     }
     else
     {

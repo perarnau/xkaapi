@@ -74,15 +74,9 @@ void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
 }
 
 int kaapi_mem_map_find
-(
- kaapi_mem_map_t* map,
- kaapi_mem_addr_t laddr,
- kaapi_mem_mapping_t** mapping
-)
+(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
 {
-  /* find a mapping in the map such that
-     addrs[map->asid] == laddr.
-  */
+  /* find a mapping in the map such that addrs[map->asid] == addr. */
 
   kaapi_mem_mapping_t* pos;
 
@@ -90,8 +84,8 @@ int kaapi_mem_map_find
 
   for (pos = map->head; pos != NULL; pos = pos->next)
   {
-    /* pos->addrs[map->asid] always set */
-    if (pos->addrs[map->asid] == laddr)
+    /* assume pos->addrs[map->asid] always set */
+    if (kaapi_mem_mapping_get_addr(pos, map->asid) == addr)
     {
       *mapping = pos;
       return 0;
@@ -102,19 +96,11 @@ int kaapi_mem_map_find
 }
 
 int kaapi_mem_map_find_or_insert
-(
- kaapi_mem_map_t* map,
- kaapi_mem_addr_t laddr,
- kaapi_mem_mapping_t** mapping
-)
+(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
 {
-  /* see comments in the above function.
-     if no mapping is found, create one.
-   */
+  /* see comments in the above function. if no mapping is found, create one. */
 
-  const int res = kaapi_mem_map_find
-    (map, laddr, mapping);
-
+  const int res = kaapi_mem_map_find(map, addr, mapping);
   if (res != -1)
     return 0;
 
@@ -123,8 +109,7 @@ int kaapi_mem_map_find_or_insert
     return -1;
 
   /* identity mapping */
-  kaapi_mem_mapping_init(*mapping);
-  kaapi_mem_mapping_set(*mapping, laddr, map->asid);
+  kaapi_mem_mapping_init_identity(*mapping, map->asid, addr);
 
   /* link against others */
   (*mapping)->next = map->head;
@@ -134,11 +119,7 @@ int kaapi_mem_map_find_or_insert
 }
 
 int kaapi_mem_map_find_inverse
-(
- kaapi_mem_map_t* map,
- kaapi_mem_addr_t raddr,
- kaapi_mem_mapping_t** mapping
-)
+(kaapi_mem_map_t* map, kaapi_mem_addr_t raddr, kaapi_mem_mapping_t** mapping)
 {
   /* given a remote address, find the
      corresponding host address. greedy
@@ -155,15 +136,29 @@ int kaapi_mem_map_find_inverse
   {
     for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
     {
-      if (kaapi_mem_mapping_isset(pos, asid))
-      {
-	*mapping = pos;
-	return 0;
-      }
+      if (!kaapi_mem_mapping_has_addr(pos, asid))
+	continue ;
+
+      *mapping = pos;
+      return 0;
     }
   }
 
   return -1;
+}
+
+kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid
+(const kaapi_mem_mapping_t* mapping)
+{
+  /* assuming there is one, find an asid where addr is valid. */
+
+  kaapi_mem_asid_t asid;
+
+  for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
+    if (!kaapi_mem_mapping_is_dirty(mapping, asid))
+      break ;
+
+  return asid;
 }
 
 #if defined(KAAPI_USE_CUDA)
@@ -193,42 +188,121 @@ static inline int memcpy_dtoh
   return 0;
 }
 
-void kaapi_mem_read_barrier(kaapi_mem_addr_t hostptr, size_t size)
+static inline int get_cuda_context_by_asid
+(kaapi_mem_asid_t asid, CUcontext* ctx)
+{
+  /* ok since asid == kid */
+  *ctx = kaapi_all_kprocessors[asid]->cuda_proc.ctx;
+  return 0;
+}
+
+static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
+{
+  return &proc->mem_map;
+}
+
+static inline kaapi_mem_map_t* get_host_mem_map(void)
+{
+  return get_proc_mem_map(kaapi_all_kprocessors[0]);
+}
+
+static inline kaapi_mem_map_t* get_self_mem_map(void)
+{
+  return get_proc_mem_map(kaapi_get_current_processor());
+}
+
+static int kaapi_mem_map_find_with_asid
+(kaapi_mem_map_t* map, kaapi_mem_addr_t addr,
+ kaapi_mem_asid_t asid, kaapi_mem_mapping_t** mapping)
+{
+  /* find a mapping in the map such that addrs[asid] == addr */
+
+  kaapi_mem_mapping_t* pos;
+
+  *mapping = NULL;
+
+  for (pos = map->head; pos != NULL; pos = pos->next)
+  {
+    if (!kaapi_mem_mapping_has_addr(pos, asid))
+      continue ;
+
+    if (kaapi_mem_mapping_get_addr(pos, asid) == addr)
+    {
+      *mapping = pos;
+      return 0;
+    }
+  }
+
+  return -1;
+}
+
+void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
 {
   /* ensure everything past this point
      has been written to host memory.
-     assumed to be called from host.
+     assumed to be called from gpu thread.
    */
 
-  kaapi_processor_t* self_proc = kaapi_get_current_processor();
-  kaapi_mem_map_t* const self_map = &self_proc->mem_map;
+  kaapi_processor_t* const self_proc = kaapi_get_current_processor();
+
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+  kaapi_mem_map_t* const self_map = get_proc_mem_map(self_proc);
+
+  const kaapi_mem_asid_t host_asid = host_map->asid;
   const kaapi_mem_asid_t self_asid = self_map->asid;
 
-  CUdeviceptr devptr;
+  kaapi_mem_addr_t hostptr;
+  kaapi_mem_mapping_t* mapping;
+
+  /* find hostptr, devptr mapping. assume no error. */
+  kaapi_mem_map_find_with_asid(host_map, devptr, self_asid, &mapping);
+  hostptr = kaapi_mem_mapping_get_addr(mapping, host_asid);
+
+  memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
+}
+
+void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
+{
+  /* same as above but to be called on host side */
+
+  kaapi_processor_t* const self_proc = kaapi_get_current_processor();
+  kaapi_mem_map_t* const self_map = get_proc_mem_map(self_proc);
+  const kaapi_mem_asid_t self_asid = self_map->asid;
+
   kaapi_mem_mapping_t* mapping;
   kaapi_mem_asid_t asid;
+  kaapi_mem_addr_t devptr;
 
-  /* assume no error */
+  CUresult res;
+  CUcontext dev_ctx;
+
+  /* find a valid space associated with device */
   kaapi_mem_map_find(self_map, hostptr, &mapping);
 
-    /* find the first valid non identity mapping */
-  for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
-  {
-    if (asid == self_asid)
-      continue ;
-    if (!kaapi_mem_mapping_isset(mapping, asid))
-      continue ;
-
-    /* found */
-    break ;
-  }
-
-  /* not found */
-  if (asid == KAAPI_MEM_ASID_MAX)
+  /* already valid on the host */
+  if (!kaapi_mem_mapping_is_dirty(mapping, self_asid))
     return ;
 
-  devptr = (CUdeviceptr)kaapi_mem_mapping_get(mapping, asid);
-  memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
+  /* get valid remote pointer */
+  asid = kaapi_mem_mapping_get_nondirty_asid(mapping);
+  devptr = kaapi_mem_mapping_get_addr(mapping, asid);
+
+  /* set the device context */
+  get_cuda_context_by_asid(asid, &dev_ctx);
+
+  res = cuCtxPushCurrent(dev_ctx);
+  if (res == CUDA_SUCCESS)
+  {
+    memcpy_dtoh(self_proc, (void*)hostptr, (CUdeviceptr)devptr, size);
+    cuCtxPopCurrent(&dev_ctx);
+  }
+  else
+  {
+    kaapi_cuda_error("cuCtxPushCurrent", res);
+  }
+
+  /* host addr no longer dirty */
+  kaapi_mem_mapping_clear_dirty(mapping, self_asid);
 }
 
 #endif

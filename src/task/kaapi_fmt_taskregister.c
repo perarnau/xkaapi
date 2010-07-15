@@ -80,7 +80,8 @@ kaapi_format_id_t kaapi_format_taskregister(
         int                         count,
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
-        const kaapi_format_t*       fmt_param[]
+        const kaapi_format_t*       fmt_param[],
+	size_t (*get_param_size)(const kaapi_format_t*, unsigned int, const void*)
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();
@@ -101,6 +102,8 @@ kaapi_format_id_t kaapi_format_taskregister(
   memcpy(fmt->fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
   fmt->size = size;
+
+  fmt->get_param_size = get_param_size;
   
   if (body !=0)
     kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);

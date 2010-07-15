@@ -60,7 +60,9 @@ static int open_cuda_device(CUdevice* dev, CUcontext* ctx, unsigned int index)
     return -1;
   }
 
-  /* use sched_yield while waiting for sync */
+  /* use sched_yield while waiting for sync.
+     context is made current for the thread.
+   */
   res = cuCtxCreate(ctx, CU_CTX_SCHED_YIELD | CU_CTX_MAP_HOST, *dev);
   if (res != CUDA_SUCCESS)
   {
@@ -105,6 +107,18 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   if (res != CUDA_SUCCESS)
   {
     kaapi_cuda_error("cuStreamCreate", res);
+    close_cuda_device(proc->dev, proc->ctx);
+    return -1;
+  }
+
+  /* pop the context to make it floating. doing
+     so allow another thread to use it, such
+     as the main one with kaapi_mem_synchronize2
+  */
+  res = cuCtxPopCurrent(&proc->ctx);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuCtxPopCurrent", res);
     close_cuda_device(proc->dev, proc->ctx);
     return -1;
   }

@@ -275,6 +275,8 @@ typedef struct kaapi_format_t {
 
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
   struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
+
+  size_t (*get_param_size)(const struct kaapi_format_t*, unsigned int, const void*);
   
   /* only for Monotonic bound format */
   int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
