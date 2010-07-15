@@ -104,7 +104,7 @@ redo:
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
-    kaapi_assert_debug( kaapi_get_current_processor()->thread == thread );
+    kaapi_assert_debug( _kaapi_self_thread() == thread );
     kaapi_assert_debug( thread->proc == kaapi_get_current_processor() );
     goto redo;
   }
