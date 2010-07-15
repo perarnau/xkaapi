@@ -414,7 +414,7 @@ static void memset_cuda_entry
 
   printf("> memset_cuda_entry [%u - %u[\n", range->i, range->j);
 
-  CUresult res = cuMemsetD32(base, 0, get_range_size(range));
+  CUresult res = cuMemsetD32(base, 0x2a, get_range_size(range));
   if (res != CUDA_SUCCESS)
     printf("cudaError %u\n", res);
 
@@ -426,10 +426,12 @@ static void memset_cpu_entry(void* arg, kaapi_thread_t* thread)
   task_work_t* const work = (task_work_t*)arg;
   const range_t* const range = &work->range;
   unsigned int* const base = *KAAPI_DATA(unsigned int*, range->base);
+  unsigned int i;
 
   printf("> memset_cpu_entry [%u - %u[\n", range->i, range->j);
 
-  memset(base, 0, get_range_size(range) * sizeof(unsigned int));
+  for (i = 0; i <  range->j; ++i)
+    base[i] = 0x2a;
 
   printf("< memset_cpu_entry\n");
 }
