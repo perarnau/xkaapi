@@ -1,50 +1,48 @@
 /*
-** kaapi_cuda_execframe.c
-** xkaapi
-** 
-** Created on Jul 2010
-** Copyright 2010 INRIA.
-**
-** Contributors :
-**
-** thierry.gautier@inrialpes.fr
-** fabien.lementec@imag.fr
-** 
-** This software is a computer program whose purpose is to execute
-** multithreaded computation with data flow synchronization between
-** threads.
-** 
-** This software is governed by the CeCILL-C license under French law
-** and abiding by the rules of distribution of free software.  You can
-** use, modify and/ or redistribute the software under the terms of
-** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
-** following URL "http://www.cecill.info".
-** 
-** As a counterpart to the access to the source code and rights to
-** copy, modify and redistribute granted by the license, users are
-** provided only with a limited warranty and the software's author,
-** the holder of the economic rights, and the successive licensors
-** have only limited liability.
-** 
-** In this respect, the user's attention is drawn to the risks
-** associated with loading, using, modifying and/or developing or
-** reproducing the software by the user in light of its specific
-** status of free software, that may mean that it is complicated to
-** manipulate, and that also therefore means that it is reserved for
-** developers and experienced professionals having in-depth computer
-** knowledge. Users are therefore encouraged to load and test the
-** software's suitability as regards their requirements in conditions
-** enabling the security of their systems and/or data to be ensured
-** and, more generally, to use and operate it in the same conditions
-** as regards security.
-** 
-** The fact that you are presently reading this means that you have
-** had knowledge of the CeCILL-C license and that you accept its
-** terms.
-** 
-*/
-
-
+ ** kaapi_cuda_execframe.c
+ ** xkaapi
+ ** 
+ ** Created on Jul 2010
+ ** Copyright 2010 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@imag.fr
+ ** 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -55,7 +53,6 @@
 
 
 /* get processor memory map */
-
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
 {
   return &proc->mem_map;
@@ -78,7 +75,6 @@ static inline kaapi_mem_asid_t get_host_asid(void)
 
 
 /* device memory allocation */
-
 static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
 {
   const CUresult res = cuMemAlloc(devptr, size);
@@ -87,7 +83,7 @@ static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
     kaapi_cuda_error("cuMemAlloc", res);
     return -1;
   }
-
+  
   return 0;
 }
 
@@ -98,53 +94,49 @@ static inline void free_device_mem(CUdeviceptr devptr)
 
 
 /* copy from host to device */
-
 static inline int memcpy_htod
 (kaapi_processor_t* proc, CUdeviceptr devptr, void* hostptr, size_t size)
 {
 #if 0 /* async version */
   const CUresult res = cuMemcpyHtoDAsync
-    (devptr, hostptr, size, proc->cuda_proc.stream);
+  (devptr, hostptr, size, proc->cuda_proc.stream);
 #else
   const CUresult res = cuMemcpyHtoD
-    (devptr, hostptr, size);
+  (devptr, hostptr, size);
 #endif
-
+  
   if (res != CUDA_SUCCESS)
   {
     kaapi_cuda_error("cuMemcpyHToDAsync", res);
     return -1;
   }
-
   return 0;
 }
 
 
 /* copy from device to host */
-
 static inline int memcpy_dtoh
 (kaapi_processor_t* proc, void* hostptr, CUdeviceptr devptr, size_t size)
 {
 #if 0 /* async version */
   const CUresult res = cuMemcpyDtoHAsync
-    (hostptr, devptr, size, proc->cuda_proc.stream);
+  (hostptr, devptr, size, proc->cuda_proc.stream);
 #else
   const CUresult res = cuMemcpyDtoH
-    (hostptr, devptr, size);
+  (hostptr, devptr, size);
 #endif
-
+  
   if (res != CUDA_SUCCESS)
   {
     kaapi_cuda_error("cuMemcpyDToHAsync", res);
     return -1;
   }
-
+  
   return 0;
 }
 
 
 /* copy from device to device */
-
 static inline int memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, size_t size)
 {
   /* todo: validate the cpu addr that should exist. copy to device then. */
@@ -159,32 +151,32 @@ static void prepare_task
 {
   kaapi_mem_map_t* const host_map = get_host_mem_map();
   kaapi_mem_asid_t const self_asid = get_proc_asid(proc);
-
+  
   kaapi_access_t* access;
   kaapi_mem_mapping_t* mapping;
   CUdeviceptr devptr;
   void* hostptr;
   size_t size;
   unsigned int i;
-
+  
   for (i = 0; i < format->count_params; ++i)
   {
     const kaapi_access_mode_t mode =
-      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
-
+    KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+    
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
-
+    
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
     hostptr = access->data;
-
+    
     /* get parameter size */
     size = format->get_param_size(format, i, task->sp);
-
+    
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
-      (host_map, (kaapi_mem_addr_t)hostptr, &mapping);
-
+    (host_map, (kaapi_mem_addr_t)hostptr, &mapping);
+    
     /* no addr for this asid. allocate remote memory. */
     if (!kaapi_mem_mapping_has_addr(mapping, self_asid))
     {
@@ -196,31 +188,87 @@ static void prepare_task
     {
       devptr = kaapi_mem_mapping_get_addr(mapping, self_asid);
     }
-
+    
     /* read or readwrite, ensure remote memory valid */
     if (KAAPI_ACCESS_IS_READ(mode))
     {
       if (kaapi_mem_mapping_is_dirty(mapping, self_asid))
       {
-	/* find a non dirty addr */
-	const kaapi_mem_asid_t valid_asid =
-	  kaapi_mem_mapping_get_nondirty_asid(mapping);
-
-	/* valid memory not on the host */
-	if (valid_asid != get_host_asid())
-	{
-	  const kaapi_mem_addr_t raddr =
-	    kaapi_mem_mapping_get_addr(mapping, valid_asid);
-	  memcpy_dtod(devptr, raddr, size);
-	}
-	else
-	{
-	  memcpy_htod(proc, devptr, hostptr, size);
-	}
-
-	/* validate remote memory */
-	kaapi_mem_mapping_clear_dirty(mapping, self_asid);
+        /* find a non dirty addr */
+        const kaapi_mem_asid_t valid_asid =
+        kaapi_mem_mapping_get_nondirty_asid(mapping);
+        
+        /* valid memory not on the host */
+        if (valid_asid != get_host_asid())
+        {
+          const kaapi_mem_addr_t raddr =
+          kaapi_mem_mapping_get_addr(mapping, valid_asid);
+          memcpy_dtod(devptr, raddr, size);
+        }
+        else
+        {
+          memcpy_htod(proc, devptr, hostptr, size);
+        }
+        /* validate remote memory */
+        kaapi_mem_mapping_clear_dirty(mapping, self_asid);
       }
+    }
+    
+    /* invalidate in other as if written */
+    if (KAAPI_ACCESS_IS_WRITE(mode))
+    {
+      kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
+    }
+    
+    /* update param addr */
+    access->data = (void*)(uintptr_t)devptr;
+  }
+}
+
+
+
+
+#if 0 // NEW CODE 
+static void prepare_task
+(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
+{
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+  kaapi_mem_map_t* const local_map = get_proc_mem_map();
+  kaapi_mem_asid_t const self_asid = get_proc_asid(proc);
+  
+  kaapi_access_t* access;
+  kaapi_mem_mapping_t* mapping;
+  CUdeviceptr devptr;
+  void* hostptr;
+  size_t size;
+  unsigned int i;
+  
+  for (i = 0; i < format->count_params; ++i)
+  {
+    const kaapi_access_mode_t mode = KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+    
+    if (mode & KAAPI_ACCESS_MODE_V)
+      continue ;
+    
+    access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
+    hostptr = access->data;
+    
+    /* get parameter size */
+    size = format->get_param_size(format, i, task->sp);
+    
+    /* create a mapping on host if not exist
+       - find in the local mapping only: either the shared data was locally created and it will
+       not be visible outside the local thread; either the shared data is an arguments of the thread
+       (in case of partition) or of the first task and it should have been registered locally.
+       - return 0 in case of success else return an error code.
+    */
+    mapping = kaapi_mem_map_find_or_insert(local_map, (kaapi_mem_addr_t)hostptr, &mapping );
+        
+    /* read or readwrite, ensure remote memory valid */
+    if (KAAPI_ACCESS_IS_READ(mode))
+    {
+      /* move data to local memory */
+      kaapi_mem_map_copy( localmap, mapping );
     }
 
     /* invalidate in other as if written */
@@ -228,11 +276,14 @@ static void prepare_task
     {
       kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
     }
-
+    
     /* update param addr */
     access->data = (void*)(uintptr_t)devptr;
   }
 }
+#endif
+
+
 
 /* execute a cuda task */
 
@@ -250,37 +301,36 @@ static inline void execute_task
 }
 
 /* finalize task args memory */
-
 static void __attribute__((unused)) finalize_task
-(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
+  (kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
 {
   kaapi_mem_map_t* const host_map = get_host_mem_map();
   const kaapi_mem_asid_t host_asid = host_map->asid;
-
+  
   kaapi_access_t* access;
   kaapi_mem_mapping_t* mapping;
   CUdeviceptr devptr;
   void* hostptr;
   size_t size;
   unsigned int i;
-
+  
   for (i = 0; i < format->count_params; ++i)
   {
     const kaapi_access_mode_t mode =
-      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
-
+    KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+    
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
-
+    
     if (!KAAPI_ACCESS_IS_WRITE(mode))
       continue ;
-
+    
     access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
     devptr = *kaapi_data(CUdeviceptr, access);
-
+    
     /* inverted search. assume a mapping exists. */
     kaapi_mem_map_find_inverse
-      (host_map, (kaapi_mem_addr_t)devptr, &mapping);
+    (host_map, (kaapi_mem_addr_t)devptr, &mapping);
     hostptr = (void*)kaapi_mem_mapping_get_addr(mapping, host_asid);
     memcpy_dtoh(proc, hostptr, devptr, size);
   }
@@ -288,7 +338,6 @@ static void __attribute__((unused)) finalize_task
 
 
 /* wait for stream completion */
-
 static inline int synchronize_processor(kaapi_processor_t* proc)
 {
   const CUresult res = cuStreamSynchronize(proc->cuda_proc.stream);
@@ -297,18 +346,17 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
     kaapi_cuda_error("cuStreamSynchronize", res);
     return -1;
   }
-
+  
   return 0;
 }
 
 
 /* exported */
-
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
   kaapi_processor_t* const proc = thread->proc;
   CUresult res;
-
+  
   kaapi_format_t* format;
   kaapi_task_t*              pc;
   kaapi_frame_t*             fp;
@@ -317,7 +365,7 @@ int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;
 #endif
-
+  
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
   
@@ -330,11 +378,11 @@ push_frame:
   
   /* force previous write before next write */
   kaapi_writemem_barrier();
-
+  
   /* update the current frame */
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
-
+  
 #if 1/*(KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)*/
 begin_loop:
 #endif
@@ -342,11 +390,11 @@ begin_loop:
   while ((pc = fp->pc) != fp->sp)
   {
     kaapi_assert_debug( pc > fp->sp );
-
+    
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
-
+    
     if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
     { 
       kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
@@ -369,28 +417,29 @@ begin_loop:
 #else
 #  error "Undefined steal task method"    
 #endif
-
+    
     format = kaapi_format_resolvebybody(body);
     if ((format != NULL) && (format->entrypoint[KAAPI_PROC_TYPE_CUDA]))
     {
       kaapi_assert_debug(format != NULL);
-
+      
       /* the context is saved then restore during
-	 the whole task execution. not doing so would
-	 make it non floating, preventing another thread
-	 to use it (ie. for kaapi_mem_synchronize2)
+       the whole task execution. not doing so would
+       make it non floating, preventing another thread
+       to use it (ie. for kaapi_mem_synchronize2)
        */
-
+      
       res = cuCtxPushCurrent(proc->cuda_proc.ctx);
       if (res == CUDA_SUCCESS)
       {
-	prepare_task(proc, pc, format);
-	execute_task
-	  (proc, (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA],
-	   pc->sp, (kaapi_thread_t*)thread->sfp);
-	synchronize_processor(proc);
-
-	cuCtxPopCurrent(&proc->cuda_proc.ctx);
+        prepare_task(proc, pc, format);
+        execute_task(
+            proc, (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA],
+            pc->sp, (kaapi_thread_t*)thread->sfp
+        );
+        synchronize_processor(proc);
+        
+        cuCtxPopCurrent(&proc->cuda_proc.ctx);
       }
     }
     else
@@ -405,9 +454,9 @@ begin_loop:
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
-
+    
 #if  0/*!defined(KAAPI_CONCURRENT_WS)*/
-restart_after_steal:
+  restart_after_steal:
 #endif
     if (unlikely(fp->sp > thread->sfp->sp))
     {
@@ -419,15 +468,15 @@ restart_after_steal:
       kaapi_assert_debug_m( 0, "Should not appear: a task was popping stack ????" );
     }
 #endif
-
+    
     /* next task to execute */
     pc = fp->pc = pc -1;
     kaapi_writemem_barrier();
   } /* end of the loop */
-
+  
   kaapi_assert_debug( fp >= eframe);
   kaapi_assert_debug( fp->pc == fp->sp );
-
+  
   if (fp >= eframe)
   {
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
@@ -436,7 +485,7 @@ restart_after_steal:
     while (fp > eframe) 
     {
       --fp;
-
+      
       /* pop dummy frame */
       --fp->pc;
       if (fp->pc > fp->sp)
@@ -448,7 +497,7 @@ restart_after_steal:
     } 
     fp = eframe;
     fp->sp = fp->pc;
-
+    
     kaapi_writemem_barrier();
     KAAPI_ATOMIC_WRITE(&thread->lock, 0);
 #elif (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
@@ -460,7 +509,7 @@ restart_after_steal:
       /* wait thief get out the frame */
       while (thread->thieffp > fp)
         ;
-
+      
       /* pop dummy frame and the closure inside this frame */
       --fp->pc;
       if (fp->pc > fp->sp)
@@ -470,7 +519,7 @@ restart_after_steal:
     } 
     fp = eframe;
     fp->sp = fp->pc;
-
+    
     kaapi_writemem_barrier();
 #else
 #  error "Bad steal frame method"    
@@ -481,16 +530,16 @@ restart_after_steal:
   /* end of the pop: we have finish to execute all the task */
   kaapi_assert_debug( fp->pc == fp->sp );
   kaapi_assert_debug( thread->sfp == eframe );
-
+  
   /* note: the stack data pointer is the same as saved on enter */
-
+  
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
-
+  
   return 0;
-
+  
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
 error_swap_body:
   if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
@@ -501,10 +550,10 @@ error_swap_body:
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
-
+  
   return EWOULDBLOCK;
 #endif
-
+  
 #if 0
 backtrack_stack:
 #endif
@@ -520,7 +569,7 @@ backtrack_stack:
     if (thread->errcode ==0) goto restart_after_steal;
   }
 #endif
-
+  
   /* here back track the kaapi_stack_execframe until go out */
   return thread->errcode;
 }

@@ -43,8 +43,6 @@
 ** terms.
 ** 
 */
-
-
 #ifndef KAAPI_MEM_H_INCLUDED
 # define KAAPI_MEM_H_INCLUDED
 
@@ -55,13 +53,11 @@
 /* kaapi_mem_addr_t is a type large enough to
    contain all the addresses of all memory spaces.
 */
-
 typedef uintptr_t kaapi_mem_addr_t;
 
 
 /* address space identifier
  */
-
 typedef unsigned int kaapi_mem_asid_t;
 
 
@@ -70,7 +66,6 @@ typedef unsigned int kaapi_mem_asid_t;
    meta data for coherency protocol encoded by the
    dirty and addr bitmaps, one bit per asid.
 */
-
 typedef struct kaapi_mem_mapping
 {
   struct kaapi_mem_mapping* next;
@@ -79,17 +74,17 @@ typedef struct kaapi_mem_mapping
 #define KAAPI_MEM_ASID_MAX 2
   kaapi_mem_addr_t addrs[KAAPI_MEM_ASID_MAX];
 
-  /* meta, one bit per as */
+  /* meta, one bit per asid */
   unsigned int dirty_bits;
   unsigned int addr_bits;
 
 } kaapi_mem_mapping_t;
 
+
 static inline void kaapi_mem_mapping_init_identity
-(kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid, kaapi_mem_addr_t addr)
+  (kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid, kaapi_mem_addr_t addr)
 {
   /* identity mapping */
-
   const unsigned int mask = 1 << asid;
 
   m->dirty_bits = ~mask;
@@ -100,50 +95,49 @@ static inline void kaapi_mem_mapping_init_identity
 }
 
 static inline void kaapi_mem_mapping_set_dirty
-(kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
+  (kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
 {
   m->dirty_bits |= 1 << asid;
 }
 
 static inline void kaapi_mem_mapping_set_all_dirty_except
-(kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
+  (kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
 {
   m->dirty_bits = ~(1 << asid);
 }
 
 static inline void kaapi_mem_mapping_clear_dirty
-(kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
+  (kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
 {
   m->dirty_bits &= ~(1 << asid);
 }
 
 static inline unsigned int kaapi_mem_mapping_is_dirty
-(const kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
+  (const kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
 {
   return m->dirty_bits & (1 << asid);
 }
 
 static inline void kaapi_mem_mapping_set_addr
-(kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid, kaapi_mem_addr_t addr)
+  (kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid, kaapi_mem_addr_t addr)
 {
   m->addrs[asid] = addr;
   m->addr_bits |= 1 << asid;
 }
 
 static inline kaapi_mem_addr_t kaapi_mem_mapping_get_addr
-(const kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
+  (const kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
 {
   return  m->addrs[asid];
 }
 
 static inline unsigned int kaapi_mem_mapping_has_addr
-(const kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
+  (const kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
 {
   return m->addr_bits & (1 << asid);
 }
 
-kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid
-(const kaapi_mem_mapping_t*);
+kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid(const kaapi_mem_mapping_t*);
 
 
 /* a map contains all the mappings of a given as.
@@ -151,22 +145,41 @@ kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid
 
 typedef struct kaapi_mem_map
 {
-  kaapi_mem_asid_t asid;
+  kaapi_mem_asid_t     asid;
   kaapi_mem_mapping_t* head;
 } kaapi_mem_map_t;
 
-
+/*
+*/
 int kaapi_mem_map_initialize(kaapi_mem_map_t*, kaapi_mem_asid_t);
-void kaapi_mem_map_cleanup(kaapi_mem_map_t*);
-int kaapi_mem_map_find_or_insert
-(kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
-int kaapi_mem_map_find
-(kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
-int kaapi_mem_map_find_inverse
-(kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
-void kaapi_mem_synchronize(kaapi_mem_addr_t, size_t);
-void kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
 
+/*
+*/
+void kaapi_mem_map_cleanup(kaapi_mem_map_t*);
+
+/*
+*/
+int kaapi_mem_map_find
+  (kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
+
+
+/*
+*/
+int kaapi_mem_map_find_or_insert
+  (kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
+
+/*
+*/
+int kaapi_mem_map_find_inverse
+  (kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
+
+/*
+*/
+void kaapi_mem_synchronize(kaapi_mem_addr_t, size_t);
+
+/*
+*/
+void kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
 
 
 #endif /* ! KAAPI_MEM_H_INCLUDED */

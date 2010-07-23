@@ -43,8 +43,6 @@
 ** terms.
 ** 
 */
-
-
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_error.h"
 

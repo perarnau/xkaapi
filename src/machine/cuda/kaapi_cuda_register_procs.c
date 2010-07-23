@@ -42,8 +42,6 @@
  ** terms.
  ** 
  */
-
-
 #include <cuda.h>
 #include <stdlib.h>
 #include "kaapi_impl.h"
@@ -52,7 +50,6 @@
 
 
 /* exported */
-
 int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 {
   const char* const gpuset_str = getenv("KAAPI_GPUSET");
@@ -72,7 +69,7 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
     return 0;
   
   err = kaapi_procinfo_list_parse_string
-  (kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA, (unsigned int)devcount);
+      (kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA, (unsigned int)devcount);
   if (err)
     return -1;
   
@@ -81,7 +78,6 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 
 
 /* todo: put in kaapi_sched_select_victim_with_tasks.c */
-
 static inline void lock_proc(kaapi_processor_t* proc, kaapi_processor_id_t kid)
 {
   while (1)

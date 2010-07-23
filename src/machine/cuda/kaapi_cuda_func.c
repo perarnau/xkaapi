@@ -43,8 +43,6 @@
 ** terms.
 ** 
 */
-
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -63,7 +61,7 @@ int kaapi_cuda_func_init(kaapi_cuda_func_t* fn)
 
 
 int kaapi_cuda_func_load_ptx
-(kaapi_cuda_func_t* fn, const char* mpath, const char* fname)
+  (kaapi_cuda_func_t* fn, const char* mpath, const char* fname)
 {
   CUresult res;
 

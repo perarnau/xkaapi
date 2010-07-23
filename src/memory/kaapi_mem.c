@@ -43,16 +43,13 @@
 ** terms.
 ** 
 */
-
-
 #include "kaapi_impl.h"
 #include "kaapi_mem.h"
 
 
 /* exported */
 
-int kaapi_mem_map_initialize
-(kaapi_mem_map_t* map, kaapi_mem_asid_t asid)
+int kaapi_mem_map_initialize(kaapi_mem_map_t* map, kaapi_mem_asid_t asid)
 {
   map->asid = asid;
   map->head = NULL;
@@ -69,12 +66,11 @@ void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
     pos = pos->next;
     free(tmp);
   }
-
   map->head = NULL;
 }
 
-int kaapi_mem_map_find
-(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
+
+int kaapi_mem_map_find(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
 {
   /* find a mapping in the map such that addrs[map->asid] == addr. */
 
@@ -95,11 +91,9 @@ int kaapi_mem_map_find
   return -1;
 }
 
-int kaapi_mem_map_find_or_insert
-(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
+int kaapi_mem_map_find_or_insert(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
 {
   /* see comments in the above function. if no mapping is found, create one. */
-
   const int res = kaapi_mem_map_find(map, addr, mapping);
   if (res != -1)
     return 0;
@@ -118,8 +112,7 @@ int kaapi_mem_map_find_or_insert
   return 0;
 }
 
-int kaapi_mem_map_find_inverse
-(kaapi_mem_map_t* map, kaapi_mem_addr_t raddr, kaapi_mem_mapping_t** mapping)
+int kaapi_mem_map_find_inverse(kaapi_mem_map_t* map, kaapi_mem_addr_t raddr, kaapi_mem_mapping_t** mapping)
 {
   /* given a remote address, find the
      corresponding host address. greedy
@@ -147,8 +140,7 @@ int kaapi_mem_map_find_inverse
   return -1;
 }
 
-kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid
-(const kaapi_mem_mapping_t* mapping)
+kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid(const kaapi_mem_mapping_t* mapping)
 {
   /* assuming there is one, find an asid where addr is valid. */
 
