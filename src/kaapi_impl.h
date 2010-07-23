@@ -1031,6 +1031,7 @@ extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, ka
 */
 extern kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
 
+
 /** \ingroup WS
     Advance polling of request for the current running thread.
     If this method is called from an other running thread than proc,

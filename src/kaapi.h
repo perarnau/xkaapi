@@ -127,6 +127,116 @@ typedef struct kaapi_atomic64_t {
 
 
 #if defined(__i386__)||defined(__x86_64)
+# define kaapi_slowdown_cpu() \
+  do { __asm__ __volatile__("rep; nop;"); } while (0)
+#else
+# define kaapi_slowdown_cpu()
+#endif
+
+
+
+#if defined(__APPLE__)
+#  include <libkern/OSAtomic.h>
+static inline void kaapi_writemem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  OSMemoryBarrier();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+#elif defined(__linux__)
+
+static inline void kaapi_writemem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
+#else
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
+#else
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+#elif defined(_WIN32)
+static inline void kaapi_writemem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+   LONG Barrier = 0;
+   __asm__ __volatile__("xchgl %%eax,%0 "
+     :"=r" (Barrier));
+
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+
+#else
+#  error "Undefined barrier"
+#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
+
+
+/* compatibility: TO BE REMOVED
+#if defined(__i386__)||defined(__x86_64)
      /* WARNING here Compiler fence to keep operations. Note that on X86 no reorder of write ops
         so, we do not need extra hardware fence operation.
      */
@@ -136,12 +246,6 @@ typedef struct kaapi_atomic64_t {
 #endif
 
 
-#if defined(__i386__)||defined(__x86_64)
-# define kaapi_slowdown_cpu() \
-  do { __asm__ __volatile__("rep; nop;"); } while (0)
-#else
-# define kaapi_slowdown_cpu()
-#endif
 
 /* ========================================================================== */
 struct kaapi_task_t;
@@ -1498,106 +1602,6 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
 
 /* ========================= Low level memory barrier, inline for perf... so ============================= */
-
-#if defined(__APPLE__)
-#  include <libkern/OSAtomic.h>
-static inline void kaapi_writemem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  /* nothing: writes are ordered in this architecture */
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  /* nothing: reads are ordered in this architecture */
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  OSMemoryBarrier();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-#elif defined(__linux__)
-
-static inline void kaapi_writemem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  /* nothing: writes are ordered in this architecture */
-#else
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  /* nothing: reads are ordered in this architecture */
-#else
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-#elif defined(_WIN32)
-static inline void kaapi_writemem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-   LONG Barrier = 0;
-   __asm__ __volatile__("xchgl %%eax,%0 "
-     :"=r" (Barrier));
-
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-
-#else
-#  error "Undefined barrier"
-#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
-
 
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)
