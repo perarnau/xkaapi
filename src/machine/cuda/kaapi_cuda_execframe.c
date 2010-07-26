@@ -302,6 +302,175 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 }
 
 
+/* transfer local memory to remote device */
+
+static int kaapi_mem_copy
+(kaapi_mem_map_t* rmap, kaapi_mem_addr_t raddr,
+ kaapi_mem_map_t* lmap, kaapi_mem_addr_t laddr,
+ size_t size)
+{
+  /* general interface to copy an area between 2 as */
+
+  const kaapi_mem_asid_t rasid = rmap->asid;
+  kaapi_mem_mapping_t* mapping;
+
+  /* same addresses */
+  if (rmap->asid == lmap->asid)
+    return 0;
+
+  /* insert or find a mapping for rmap:raddr */
+  if (kaapi_mem_map_find_or_insert(rmap, raddr, &mapping) == -1)
+    return -1;
+
+  /* should always be the case since bcasting and different asid */
+  if (kaapi_mem_mapping_is_dirty(mapping, rasid))
+  {
+#if 0 /* todo: use memory operations */
+    rmap->ops.copy(rmap, raddr, lmap, laddr);
+#endif
+    kaapi_mem_addr_t addr  = kaapi_mem_mapping_get_addr(rmap, rasid);
+    /* to host */
+    if (rproc->proc_type == KAAPI_PROC_TYPE_CPU)
+      memcpy_dtoh(rproc, addr, (CUdeviceptr)laddr, size);
+    else
+      memcpy_dtod(rproc, addr, (CUdeviceptr)ldadr, size);
+#endif
+
+    /* mark the mapping as nondirty */
+    kaapi_mem_mapping_clear_dirty(mapping, rasid);
+  }
+
+  return 0;
+}
+
+
+/* cuda device taskbcast body */
+
+static void new_taskbcast_body(void* sp, kaapi_thread_t* thread)
+{
+  /* thread[-1]->pc is the executing task (pc of the upper frame) */
+  /* kaapi_task_t*          self = thread[-1].pc;*/
+  kaapi_taskbcast_arg_t* arg  = sp;
+  kaapi_com_t* comlist;
+  int i;
+
+  if (arg->common.original_body != 0)
+  { /* encapsulation of the taskbcast on top of an existing task */
+    (*arg->common.original_body)(arg->common.original_sp,thread);
+  }
+  
+  /* write memory barrier to ensure that other threads will view the data produced */
+  kaapi_mem_barrier();
+
+  /* signal all readers */
+  comlist = &arg->head;
+  while(comlist != 0) 
+  {
+    for (i=0; i<comlist->size; ++i)
+    {
+      kaapi_task_t* task = comlist->entry[i].task;
+      kaapi_assert( (task->ebody == kaapi_taskrecv_body) || (task->ebody == kaapi_taskbcast_body) );
+      kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
+      
+      void* newsp;
+      kaapi_task_body_t newbody;
+      if (task->ebody == kaapi_taskrecv_body)
+      {
+        newbody = argrecv->original_body;
+        newsp   = argrecv->original_sp;
+      }
+      else 
+      {
+        newbody = task->ebody;
+        newsp   = task->sp;
+      }
+
+      /* copy from local to remote memory */
+      kaapi_processor_t* const lproc = kaapi_get_current_processor();
+      kaapi_processor_t* const rproc = kaapi_task_get_proc(task);
+      kaapi_mem_copy(&rproc->mem_map, raddr, &lproc->mem_map, laddr, size);
+      
+      if (kaapi_threadgroup_decrcounter(argrecv) ==0)
+      {
+        /* task becomes ready */        
+        task->sp = newsp;
+        kaapi_task_setextrabody(task, newbody);
+
+        /* see code in kaapi_taskwrite_body */
+        if (task->pad != 0) 
+        {
+          kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)task->pad;
+          /* remove it from suspended queue */
+          if (wcs->wccell !=0)
+          {
+            kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
+            if (kthread !=0) 
+            {
+
+#if 0     /* push on the owner of the bcast */
+              kaapi_processor_t* kproc = kaapi_get_current_processor();
+#else     /* push on the owner of the suspended thread */
+              kaapi_processor_t* kproc = kthread->proc;
+#endif
+              if (!kaapi_thread_hasaffinity(kthread->affinity, kproc->kid))
+              {
+                /* find the first kid with affinity */
+                kaapi_processor_id_t kid;
+                for ( kid=0; kid<kaapi_count_kprocessors; ++kid)
+                  if (kaapi_thread_hasaffinity( kthread->affinity, kid)) break;
+                kaapi_assert_debug( kid < kaapi_count_kprocessors );
+                kproc = kaapi_all_kprocessors[ kid ];
+              }
+
+              /* move the thread in the ready list of the victim processor */
+              kaapi_sched_lock( kproc );
+              kaapi_task_setbody(task, newbody );
+              kaapi_sched_pushready( kproc, kthread );
+
+              /* bcast will activate a suspended thread */
+              kaapi_sched_unlock( kproc );
+            } else 
+              kaapi_task_setbody(task, newbody);
+          } else { /* wccell == 0 */
+            kaapi_thread_context_t* kthread = wcs->thread;
+            kaapi_processor_t* kproc = kthread->proc;
+
+            kaapi_sched_lock( kproc );
+            kaapi_task_setbody(task, newbody );
+            kaapi_sched_pushready( kproc, kthread );
+            kaapi_sched_unlock( kproc );
+          }
+        }
+        else {
+          /* thread is not suspended... */        
+          /* may activate the task */
+          kaapi_task_setbody(task, newbody);
+        }
+      }
+    }
+    comlist = comlist->next;
+  }
+
+  if (task->ebody == kaapi_taskbcast_body)
+  {
+    /* dump broadcast information */
+    kaapi_com_t* com;
+    kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->sp;
+    int i;
+    com = &tbcastarg->head;
+    while (com !=0)
+    {
+      printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
+      for (i=0; i<com->size; ++i)
+      {
+        fprintf(file, "\n\t\t\t\t@task:%p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].addr);
+      }
+      com = com->next;
+    }
+  }
+}
+
+
 /* exported */
 
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
@@ -342,6 +511,13 @@ begin_loop:
   while ((pc = fp->pc) != fp->sp)
   {
     kaapi_assert_debug( pc > fp->sp );
+
+    /* hack: replace taskbcast by new_taskbcast */
+    if (pc->body == kaapi_taskbcast_body)
+    {
+      printf("replacing taskbcast body\n");
+      pc->body = new_taskbcast_body;
+    }
 
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
     body = pc->body;
