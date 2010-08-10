@@ -261,7 +261,7 @@ void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
   memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
 }
 
-void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
+int kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
 {
   /* same as above but to be called on host side */
 
@@ -278,10 +278,12 @@ void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
 
   /* find a valid space associated with device */
   kaapi_mem_map_find(self_map, hostptr, &mapping);
+  if (mapping == NULL)
+    return -1;
 
   /* already valid on the host */
   if (!kaapi_mem_mapping_is_dirty(mapping, self_asid))
-    return ;
+    return 0;
 
   /* get valid remote pointer */
   asid = kaapi_mem_mapping_get_nondirty_asid(mapping);
@@ -303,6 +305,8 @@ void kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
 
   /* host addr no longer dirty */
   kaapi_mem_mapping_clear_dirty(mapping, self_asid);
+
+  return 0;
 }
 
 #endif

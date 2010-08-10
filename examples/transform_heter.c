@@ -197,7 +197,7 @@ static void cuda_post_handler
 #include <stdint.h>
 typedef uintptr_t kaapi_mem_addr_t;
 extern void kaapi_mem_synchronize(kaapi_mem_addr_t, size_t);
-extern void kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
+extern int kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
 
 static void add1_cuda_entry
 (CUstream stream, void* arg, kaapi_thread_t* thread)
@@ -300,7 +300,7 @@ static void mul2_cpu_entry(void* arg, kaapi_thread_t* thread)
   const range_t* const range = &work->range;
   unsigned int* const base = range->base.data;
 
-  printf("> mul2_cpu_entry [%u - %u[\n", range->i, range->j);
+  printf("> mul2_cpu_entry [%u - %u[ (%p)\n", range->i, range->j, (void*)base);
 
   unsigned int i;
   for (i = range->i; i < range->j; ++i)
@@ -552,7 +552,9 @@ static void check_cpu_entry(void* arg, kaapi_thread_t* thread)
   const range_t* const range = &work->range;
   unsigned int* const base = (unsigned int*)range->base.data;
 
-  printf("> check_cpu_entry [%u - %u[\n", range->i, range->j);
+  kaapi_mem_synchronize2((kaapi_mem_addr_t)base, (range->j - range->i) * sizeof(unsigned int));
+
+  printf("> check_cpu_entry [%u - %u[ (%p)\n", range->i, range->j, (void*)base);
 
   check_sequence(base, range->j - range->i);
 
@@ -634,7 +636,7 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   const unsigned int gpu_size = (gpu_j - gpu_i) * sizeof(unsigned int);
 
   /* gpu::memset_task */
-  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
+  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU));
   create_range(&work->range, gpu_base, gpu_i, gpu_j);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU);
   kaapi_task_initdfg(task, memset_cpu_entry, (void*)work);

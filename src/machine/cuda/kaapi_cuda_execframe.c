@@ -152,10 +152,15 @@ static inline int memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, size_t size)
 }
 
 
+/* cuda body prototype */
+
+typedef void (*cuda_task_body_t)(CUstream, void*, kaapi_thread_t*);
+
+
 /* prepare task args memory */
 
 static void prepare_task
-(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
+(kaapi_processor_t* proc, void* sp, kaapi_format_t* format)
 {
   kaapi_mem_map_t* const host_map = get_host_mem_map();
   kaapi_mem_asid_t const self_asid = get_proc_asid(proc);
@@ -175,11 +180,11 @@ static void prepare_task
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
 
-    access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
+    access = (kaapi_access_t*)((uint8_t*)sp + format->off_params[i]);
     hostptr = access->data;
 
     /* get parameter size */
-    size = format->get_param_size(format, i, task->sp);
+    size = format->get_param_size(format, i, sp);
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
@@ -234,25 +239,98 @@ static void prepare_task
   }
 }
 
-/* execute a cuda task */
 
-typedef void (*cuda_task_body_t)(CUstream, void*, kaapi_thread_t*);
+/* prepare a task that is to be executed on the cpu of the gpu.
+   in this case, tweaking the proc->mem_map.asid is needed since
+   it describes on the gpu AS.
+ */
 
-static inline void execute_task
-(
- kaapi_processor_t* proc,
- cuda_task_body_t body,
- void* args,
- kaapi_thread_t* thread
-)
+static void __attribute__((unused)) prepare_task_2
+(kaapi_processor_t* proc, void* sp, kaapi_format_t* format)
 {
-  body(proc->cuda_proc.stream, args, thread);
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+  kaapi_mem_asid_t const self_asid = host_map->asid;
+
+  kaapi_access_t* access;
+  kaapi_mem_mapping_t* mapping;
+  CUdeviceptr devptr;
+  void* hostptr;
+  size_t size;
+  unsigned int i;
+
+  for (i = 0; i < format->count_params; ++i)
+  {
+    const kaapi_access_mode_t mode =
+      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+
+    if (mode & KAAPI_ACCESS_MODE_V)
+      continue ;
+
+    access = (kaapi_access_t*)((uint8_t*)sp + format->off_params[i]);
+    hostptr = access->data;
+
+    /* get parameter size */
+    size = format->get_param_size(format, i, sp);
+
+    /* create a mapping on host if not exist */
+    kaapi_mem_map_find_or_insert
+      (host_map, (kaapi_mem_addr_t)hostptr, &mapping);
+
+    /* no addr for this asid. allocate remote memory. */
+    if (!kaapi_mem_mapping_has_addr(mapping, self_asid))
+    {
+      allocate_device_mem(&devptr, size);
+      kaapi_mem_mapping_set_addr(mapping, self_asid, (kaapi_mem_addr_t)devptr);
+      kaapi_mem_mapping_set_dirty(mapping, self_asid);
+    }
+    else
+    {
+      devptr = kaapi_mem_mapping_get_addr(mapping, self_asid);
+    }
+
+    /* read or readwrite, ensure remote memory valid */
+    if (KAAPI_ACCESS_IS_READ(mode))
+    {
+      if (kaapi_mem_mapping_is_dirty(mapping, self_asid))
+      {
+	/* find a non dirty addr */
+	const kaapi_mem_asid_t valid_asid =
+	  kaapi_mem_mapping_get_nondirty_asid(mapping);
+
+	/* valid memory not on the host */
+	if (valid_asid != get_host_asid())
+	{
+	  const kaapi_mem_addr_t raddr =
+	    kaapi_mem_mapping_get_addr(mapping, valid_asid);
+	  memcpy_dtod(devptr, raddr, size);
+	}
+	else
+	{
+	  memcpy_htod(proc, devptr, hostptr, size);
+	}
+
+	/* validate remote memory */
+	kaapi_mem_mapping_clear_dirty(mapping, self_asid);
+      }
+    }
+
+    /* invalidate in other as if written */
+    if (KAAPI_ACCESS_IS_WRITE(mode))
+    {
+      kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
+    }
+
+    /* update param addr */
+    access->data = (void*)(uintptr_t)devptr;
+  }
+
 }
+
 
 /* finalize task args memory */
 
 static void __attribute__((unused)) finalize_task
-(kaapi_processor_t* proc, kaapi_task_t* task, kaapi_format_t* format)
+(kaapi_processor_t* proc, void* sp, kaapi_format_t* format)
 {
   kaapi_mem_map_t* const host_map = get_host_mem_map();
   const kaapi_mem_asid_t host_asid = host_map->asid;
@@ -275,7 +353,7 @@ static void __attribute__((unused)) finalize_task
     if (!KAAPI_ACCESS_IS_WRITE(mode))
       continue ;
 
-    access = (kaapi_access_t*)((uint8_t*)task->sp + format->off_params[i]);
+    access = (kaapi_access_t*)((uint8_t*)sp + format->off_params[i]);
     devptr = *kaapi_data(CUdeviceptr, access);
 
     /* inverted search. assume a mapping exists. */
@@ -302,6 +380,8 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 }
 
 
+#if 0 /* unused, kaapi_mem_copy */
+
 /* transfer local memory to remote device */
 
 static int kaapi_mem_copy
@@ -327,7 +407,7 @@ static int kaapi_mem_copy
   {
 #if 0 /* todo: use memory operations */
     rmap->ops.copy(rmap, raddr, lmap, laddr);
-#endif
+#else
     kaapi_mem_addr_t addr  = kaapi_mem_mapping_get_addr(rmap, rasid);
     /* to host */
     if (rproc->proc_type == KAAPI_PROC_TYPE_CPU)
@@ -343,10 +423,17 @@ static int kaapi_mem_copy
   return 0;
 }
 
+#endif /* unused, kaapi_mem_copy */
 
-/* cuda device taskbcast body */
 
-static void new_taskbcast_body(void* sp, kaapi_thread_t* thread)
+/* cuda device taskbcast body.
+   this is the same as kaapi_taskbcast_body
+   except it calls a cuda prototyped body
+   instead of a cpu one.
+ */
+
+static void cuda_taskbcast_body
+(CUstream stream, void* sp, kaapi_thread_t* thread)
 {
   /* thread[-1]->pc is the executing task (pc of the upper frame) */
   /* kaapi_task_t*          self = thread[-1].pc;*/
@@ -354,9 +441,14 @@ static void new_taskbcast_body(void* sp, kaapi_thread_t* thread)
   kaapi_com_t* comlist;
   int i;
 
-  if (arg->common.original_body != 0)
-  { /* encapsulation of the taskbcast on top of an existing task */
-    (*arg->common.original_body)(arg->common.original_sp,thread);
+  /* the lookup could be avoided by wrapping differently */
+  kaapi_task_body_t original_body = arg->common.original_body;
+  if (original_body != NULL)
+  {
+    /* format and cuda_body known to be non null */
+    kaapi_format_t* const format = kaapi_format_resolvebybody(original_body);
+    cuda_task_body_t cuda_body = (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA];
+    cuda_body(stream, arg->common.original_sp, thread);
   }
   
   /* write memory barrier to ensure that other threads will view the data produced */
@@ -385,10 +477,15 @@ static void new_taskbcast_body(void* sp, kaapi_thread_t* thread)
         newsp   = task->sp;
       }
 
+#if 0 /* todo, copy remote memory */
       /* copy from local to remote memory */
       kaapi_processor_t* const lproc = kaapi_get_current_processor();
       kaapi_processor_t* const rproc = kaapi_task_get_proc(task);
       kaapi_mem_copy(&rproc->mem_map, raddr, &lproc->mem_map, laddr, size);
+#else
+      kaapi_processor_t* const lproc = kaapi_get_current_processor();
+      printf("missing_copy_to(%u)\n", lproc->mem_map.asid);
+#endif /* todo */
       
       if (kaapi_threadgroup_decrcounter(argrecv) ==0)
       {
@@ -450,24 +547,44 @@ static void new_taskbcast_body(void* sp, kaapi_thread_t* thread)
     }
     comlist = comlist->next;
   }
+}
 
-  if (task->ebody == kaapi_taskbcast_body)
+
+/* do nothing, as in the original kaapi_taskrecv_body
+ */
+
+static void cuda_taskrecv_body
+(CUstream stream, void* sp, kaapi_thread_t* thread)
+{
+}
+
+
+/* unwrap a wrapped task
+ */
+
+static inline void unwrap_task
+(cuda_task_body_t* cuda_body, kaapi_task_body_t* original_body, void** original_sp)
+{
+  /* cuda_body will point the adapted body if task is wrapped.
+     original_body the current body. updated to point the original body.
+     original_sp the current sp. updated to point the original sp.
+   */
+
+  if (*original_body == kaapi_taskbcast_body)
   {
-    /* dump broadcast information */
-    kaapi_com_t* com;
-    kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->sp;
-    int i;
-    com = &tbcastarg->head;
-    while (com !=0)
-    {
-      printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
-      for (i=0; i<com->size; ++i)
-      {
-        fprintf(file, "\n\t\t\t\t@task:%p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].addr);
-      }
-      com = com->next;
-    }
+    kaapi_taskbcast_arg_t* const arg = (kaapi_taskbcast_arg_t*)*original_sp;
+    *original_body = arg->common.original_body;
+    *original_sp = arg->common.original_sp;
+    *cuda_body = cuda_taskbcast_body;
   }
+  else if (*original_body == kaapi_taskrecv_body)
+  {
+    kaapi_taskrecv_arg_t* const arg = (kaapi_taskrecv_arg_t*)*original_sp;
+    *original_body = arg->original_body;
+    *original_sp = arg->original_sp;
+    *cuda_body = cuda_taskrecv_body;
+  }
+  /* else, nonwrapped task */
 }
 
 
@@ -512,13 +629,6 @@ begin_loop:
   {
     kaapi_assert_debug( pc > fp->sp );
 
-    /* hack: replace taskbcast by new_taskbcast */
-    if (pc->body == kaapi_taskbcast_body)
-    {
-      printf("replacing taskbcast body\n");
-      pc->body = new_taskbcast_body;
-    }
-
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
@@ -546,11 +656,16 @@ begin_loop:
 #  error "Undefined steal task method"    
 #endif
 
-    format = kaapi_format_resolvebybody(body);
+    /* handle wrapped task */
+    kaapi_task_body_t original_body = body;
+    void* original_sp = pc->sp;
+    cuda_task_body_t cuda_body = NULL;
+
+    unwrap_task(&cuda_body, &original_body, &original_sp);
+
+    format = kaapi_format_resolvebybody(original_body);
     if ((format != NULL) && (format->entrypoint[KAAPI_PROC_TYPE_CUDA]))
     {
-      kaapi_assert_debug(format != NULL);
-
       /* the context is saved then restore during
 	 the whole task execution. not doing so would
 	 make it non floating, preventing another thread
@@ -560,10 +675,17 @@ begin_loop:
       res = cuCtxPushCurrent(proc->cuda_proc.ctx);
       if (res == CUDA_SUCCESS)
       {
-	prepare_task(proc, pc, format);
-	execute_task
-	  (proc, (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA],
-	   pc->sp, (kaapi_thread_t*)thread->sfp);
+	/* this is not a wrapped task */
+	if (cuda_body == NULL)
+	  cuda_body = (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA];
+
+	/* prepare task memory */
+	prepare_task(proc, original_sp, format);
+
+	/* execute the cuda body */
+	cuda_body(proc->cuda_proc.stream, pc->sp, (kaapi_thread_t*)thread->sfp);
+
+	/* synchronize processor execution */
 	synchronize_processor(proc);
 
 	cuCtxPopCurrent(&proc->cuda_proc.ctx);
@@ -571,8 +693,15 @@ begin_loop:
     }
     else
     {
+      /* assume body points to the default cpu implementation */
+
       kaapi_assert_debug(pc == thread->sfp[-1].pc);
+
+      /* warning, temporarly embody the host mem map */
+      kaapi_mem_map_t saved_map = proc->mem_map;
+      proc->mem_map = kaapi_all_kprocessors[0]->mem_map;
       body(pc->sp, (kaapi_thread_t*)thread->sfp);
+      proc->mem_map = saved_map;
     }
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)
