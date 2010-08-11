@@ -191,9 +191,15 @@ static inline int memcpy_dtoh
 static inline int get_cuda_context_by_asid
 (kaapi_mem_asid_t asid, CUcontext* ctx)
 {
-  /* ok since asid == kid */
+  /* todo, lock */
   *ctx = kaapi_all_kprocessors[asid]->cuda_proc.ctx;
   return 0;
+}
+
+static inline void put_cuda_context_by_asid
+(kaapi_mem_asid_t asid, CUcontext ctx)
+{
+  /* todo, lock */
 }
 
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
@@ -302,6 +308,50 @@ int kaapi_mem_synchronize2(kaapi_mem_addr_t hostptr, size_t size)
   {
     kaapi_cuda_error("cuCtxPushCurrent", res);
   }
+
+  put_cuda_context_by_asid(asid, dev_ctx);
+
+  /* host addr no longer dirty */
+  kaapi_mem_mapping_clear_dirty(mapping, self_asid);
+
+  return 0;
+}
+
+int kaapi_mem_synchronize3(kaapi_mem_mapping_t* mapping, size_t size)
+{
+  /* called by the host to validate mapping */
+
+  kaapi_processor_t* const self_proc = kaapi_get_current_processor();
+  kaapi_mem_map_t* const self_map = get_proc_mem_map(self_proc);
+  const kaapi_mem_asid_t self_asid = self_map->asid;
+
+  kaapi_mem_addr_t hostptr = mapping->addrs[self_asid];
+
+  kaapi_mem_asid_t asid;
+  kaapi_mem_addr_t devptr;
+
+  CUresult res;
+  CUcontext dev_ctx;
+
+  /* get valid remote pointer */
+  asid = kaapi_mem_mapping_get_nondirty_asid(mapping);
+  devptr = kaapi_mem_mapping_get_addr(mapping, asid);
+
+  /* set the device context */
+  get_cuda_context_by_asid(asid, &dev_ctx);
+
+  res = cuCtxPushCurrent(dev_ctx);
+  if (res == CUDA_SUCCESS)
+  {
+    memcpy_dtoh(self_proc, (void*)hostptr, (CUdeviceptr)devptr, size);
+    cuCtxPopCurrent(&dev_ctx);
+  }
+  else
+  {
+    kaapi_cuda_error("cuCtxPushCurrent", res);
+  }
+
+  put_cuda_context_by_asid(asid, dev_ctx);
 
   /* host addr no longer dirty */
   kaapi_mem_mapping_clear_dirty(mapping, self_asid);

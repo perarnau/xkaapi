@@ -552,8 +552,6 @@ static void check_cpu_entry(void* arg, kaapi_thread_t* thread)
   const range_t* const range = &work->range;
   unsigned int* const base = (unsigned int*)range->base.data;
 
-  kaapi_mem_synchronize2((kaapi_mem_addr_t)base, (range->j - range->i) * sizeof(unsigned int));
-
   printf("> check_cpu_entry [%u - %u[ (%p)\n", range->i, range->j, (void*)base);
 
   check_sequence(base, range->j - range->i);

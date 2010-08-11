@@ -166,6 +166,7 @@ int kaapi_mem_map_find_inverse
 (kaapi_mem_map_t*, kaapi_mem_addr_t, kaapi_mem_mapping_t**);
 void kaapi_mem_synchronize(kaapi_mem_addr_t, size_t);
 int kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
+int kaapi_mem_synchronize3(kaapi_mem_mapping_t*, size_t);
 
 
 

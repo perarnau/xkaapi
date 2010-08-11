@@ -145,7 +145,8 @@ static inline int memcpy_dtoh
 
 /* copy from device to device */
 
-static inline int memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, size_t size)
+static inline int memcpy_dtod
+(kaapi_processor_t* proc, CUdeviceptr dst, CUdeviceptr src, size_t size)
 {
   /* todo: validate the cpu addr that should exist. copy to device then. */
   return -1;
@@ -216,7 +217,7 @@ static void prepare_task
 	{
 	  const kaapi_mem_addr_t raddr =
 	    kaapi_mem_mapping_get_addr(mapping, valid_asid);
-	  memcpy_dtod(devptr, raddr, size);
+	  memcpy_dtod(proc, devptr, raddr, size);
 	}
 	else
 	{
@@ -245,15 +246,14 @@ static void prepare_task
    it describes on the gpu AS.
  */
 
-static void __attribute__((unused)) prepare_task_2
-(kaapi_processor_t* proc, void* sp, kaapi_format_t* format)
+static void __attribute__((unused)) prepare_task2
+(void* sp, kaapi_format_t* format)
 {
   kaapi_mem_map_t* const host_map = get_host_mem_map();
   kaapi_mem_asid_t const self_asid = host_map->asid;
 
   kaapi_access_t* access;
   kaapi_mem_mapping_t* mapping;
-  CUdeviceptr devptr;
   void* hostptr;
   size_t size;
   unsigned int i;
@@ -276,41 +276,14 @@ static void __attribute__((unused)) prepare_task_2
     kaapi_mem_map_find_or_insert
       (host_map, (kaapi_mem_addr_t)hostptr, &mapping);
 
-    /* no addr for this asid. allocate remote memory. */
-    if (!kaapi_mem_mapping_has_addr(mapping, self_asid))
-    {
-      allocate_device_mem(&devptr, size);
-      kaapi_mem_mapping_set_addr(mapping, self_asid, (kaapi_mem_addr_t)devptr);
-      kaapi_mem_mapping_set_dirty(mapping, self_asid);
-    }
-    else
-    {
-      devptr = kaapi_mem_mapping_get_addr(mapping, self_asid);
-    }
-
     /* read or readwrite, ensure remote memory valid */
     if (KAAPI_ACCESS_IS_READ(mode))
     {
+      /* self AS mapping is dirty */
       if (kaapi_mem_mapping_is_dirty(mapping, self_asid))
       {
-	/* find a non dirty addr */
-	const kaapi_mem_asid_t valid_asid =
-	  kaapi_mem_mapping_get_nondirty_asid(mapping);
-
-	/* valid memory not on the host */
-	if (valid_asid != get_host_asid())
-	{
-	  const kaapi_mem_addr_t raddr =
-	    kaapi_mem_mapping_get_addr(mapping, valid_asid);
-	  memcpy_dtod(devptr, raddr, size);
-	}
-	else
-	{
-	  memcpy_htod(proc, devptr, hostptr, size);
-	}
-
-	/* validate remote memory */
-	kaapi_mem_mapping_clear_dirty(mapping, self_asid);
+	/* validate the host AS mapping */
+	kaapi_mem_synchronize3(mapping, size);
       }
     }
 
@@ -319,9 +292,6 @@ static void __attribute__((unused)) prepare_task_2
     {
       kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
     }
-
-    /* update param addr */
-    access->data = (void*)(uintptr_t)devptr;
   }
 
 }
@@ -380,7 +350,7 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 }
 
 
-#if 0 /* unused, kaapi_mem_copy */
+#if 0 /* unused */
 
 /* transfer local memory to remote device */
 
@@ -423,7 +393,7 @@ static int kaapi_mem_copy
   return 0;
 }
 
-#endif /* unused, kaapi_mem_copy */
+#endif /* unused */
 
 
 /* cuda device taskbcast body.
@@ -477,15 +447,51 @@ static void cuda_taskbcast_body
         newsp   = task->sp;
       }
 
-#if 0 /* todo, copy remote memory */
-      /* copy from local to remote memory */
+      /* --- copy from local to remote memory --- */
+      {
+	/* a write task is done, thus has to validate the
+	   remote mapping before signaling the remote task
+	 */
+
+      kaapi_mem_map_t* const hmap = get_host_mem_map();
+
       kaapi_processor_t* const lproc = kaapi_get_current_processor();
-      kaapi_processor_t* const rproc = kaapi_task_get_proc(task);
-      kaapi_mem_copy(&rproc->mem_map, raddr, &lproc->mem_map, laddr, size);
-#else
-      kaapi_processor_t* const lproc = kaapi_get_current_processor();
-      printf("missing_copy_to(%u)\n", lproc->mem_map.asid);
-#endif /* todo */
+      kaapi_processor_t* const rproc = kaapi_all_kprocessors[0];
+      kaapi_mem_addr_t raddr = (kaapi_mem_addr_t)comlist->entry[i].addr;
+
+      /* find the local address given remote one */
+      const kaapi_mem_asid_t rasid = rproc->mem_map.asid;
+      kaapi_mem_mapping_t* mapping;
+      const int error = kaapi_mem_map_find(hmap, raddr, &mapping);
+      if (error) { printf("!!! kaapi_mem_map_find()\n"); exit(-1); }
+
+      if (kaapi_mem_mapping_is_dirty(mapping, rasid))
+      {
+	/* validate the dirty mapping */
+
+	const kaapi_mem_asid_t lasid = lproc->mem_map.asid;
+	kaapi_mem_addr_t laddr = kaapi_mem_mapping_get_addr(mapping, lasid);
+	const size_t size = 256000 * sizeof(unsigned int);
+
+	/* actual copy */
+	if (lproc->proc_type == KAAPI_PROC_TYPE_CPU)
+	{
+	  if (rproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+	    memcpy_htod(rproc, (CUdeviceptr)raddr, (void*)laddr, size);
+	}
+	else if (lproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+	{
+	  if (rproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+	    memcpy_dtod(rproc, (CUdeviceptr)raddr, (CUdeviceptr)laddr, size);
+	  else
+	    memcpy_dtoh(rproc, (void*)raddr, (CUdeviceptr)laddr, size);
+	}
+
+	/* valdiate local mapping */
+	kaapi_mem_mapping_clear_dirty(mapping, rasid);
+      }
+
+      } /* --- copy from local to remote memory --- */
       
       if (kaapi_threadgroup_decrcounter(argrecv) ==0)
       {
@@ -694,14 +700,21 @@ begin_loop:
     else
     {
       /* assume body points to the default cpu implementation */
-
       kaapi_assert_debug(pc == thread->sfp[-1].pc);
 
-      /* warning, temporarly embody the host mem map */
-      kaapi_mem_map_t saved_map = proc->mem_map;
-      proc->mem_map = kaapi_all_kprocessors[0]->mem_map;
+#if 0 /* todo, is this needed? */
+      if (format != NULL)
+      {
+	cuCtxPushCurrent(proc->cuda_proc.ctx);
+
+	/* prepare task arg for host */
+	prepare_task2(original_sp, format);
+
+	cuCtxPopCurrent(&proc->cuda_proc.ctx);
+      }
+#endif /* todo */
+
       body(pc->sp, (kaapi_thread_t*)thread->sfp);
-      proc->mem_map = saved_map;
     }
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)
