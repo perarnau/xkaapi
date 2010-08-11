@@ -93,6 +93,7 @@ typedef struct kaapi_com_t {
   struct {
     int                         tid;           /* thread id in the group */
     void*                       addr;          /* remote address */
+    size_t                      size;          /* remote size */
     kaapi_task_t*               task;          /* remote recv task */
   } entry[KAAPI_BCASTENTRY_SIZE];
 } kaapi_com_t;
@@ -322,7 +323,7 @@ void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t
 /* New reader
 */
 kaapi_task_t* kaapi_threadgroup_version_newreader
-    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, int ith );
+    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, size_t data_size, int ith );
 
 /* New writer
 */

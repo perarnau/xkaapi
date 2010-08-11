@@ -135,6 +135,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     int                 tid, 
     kaapi_task_t*       task, 
     kaapi_access_t*     access,
+    size_t data_size,
     int ith
 )
 {
@@ -270,6 +271,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 #else
       ver->com->entry[ver->com->size].addr = access->data;
 #endif      
+      ver->com->entry[ver->com->size].size = data_size;
+
       ++ver->com->size;
     }
     else 

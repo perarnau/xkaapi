@@ -449,29 +449,31 @@ static void cuda_taskbcast_body
 
       /* --- copy from local to remote memory --- */
       {
-	/* a write task is done, thus has to validate the
-	   remote mapping before signaling the remote task
+	/* a write task is done, thus has to validate the remote
+	   mapping before signaling the remote task.
+	   source and dest addresses are denoted as local and remote.
 	 */
 
       kaapi_mem_map_t* const hmap = get_host_mem_map();
 
       kaapi_processor_t* const lproc = kaapi_get_current_processor();
       kaapi_processor_t* const rproc = kaapi_all_kprocessors[0];
+
+      /* find the remote address mapping */
       kaapi_mem_addr_t raddr = (kaapi_mem_addr_t)comlist->entry[i].addr;
-
-      /* find the local address given remote one */
-      const kaapi_mem_asid_t rasid = rproc->mem_map.asid;
       kaapi_mem_mapping_t* mapping;
-      const int error = kaapi_mem_map_find(hmap, raddr, &mapping);
-      if (error) { printf("!!! kaapi_mem_map_find()\n"); exit(-1); }
+      kaapi_mem_map_find(hmap, raddr, &mapping);
 
+      const kaapi_mem_asid_t rasid = rproc->mem_map.asid;
       if (kaapi_mem_mapping_is_dirty(mapping, rasid))
       {
 	/* validate the dirty mapping */
 
 	const kaapi_mem_asid_t lasid = lproc->mem_map.asid;
 	kaapi_mem_addr_t laddr = kaapi_mem_mapping_get_addr(mapping, lasid);
-	const size_t size = 256000 * sizeof(unsigned int);
+
+	/* size to copy is cached in each comlist entries */
+	const size_t size = comlist->entry[i].size;
 
 	/* actual copy */
 	if (lproc->proc_type == KAAPI_PROC_TYPE_CPU)
