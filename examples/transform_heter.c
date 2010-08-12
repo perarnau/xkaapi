@@ -593,9 +593,10 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   register_mul2_task_format();
   register_check_task_format();
 
-#define PARTITION_COUNT 2
 #define PARTITION_ID_CPU 0
 #define PARTITION_ID_GPU 1
+#define PARTITION_ID_CPU_2 2
+#define PARTITION_COUNT 3
 
   kaapi_threadgroup_create(&group, PARTITION_COUNT);
 
@@ -614,11 +615,11 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU);
 
   /* cpu::add1_task */
-  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
+  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU_2));
   create_range(&work->range, base, cpu_i, cpu_j);
-  task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU);
+  task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU_2);
   kaapi_task_initdfg(task, add1_cpu_entry, (void*)work);
-  kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU);
+  kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU_2);
 
   /* cpu::mul2_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU));
@@ -660,6 +661,13 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU);
   kaapi_task_initdfg(task, check_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU);
+
+  /* cpu2::check_task, same as above but on other partition */
+  work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU_2));
+  create_range(&work->range, gpu_base, gpu_i, gpu_j);
+  task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU_2);
+  kaapi_task_initdfg(task, check_cpu_entry, (void*)work);
+  kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU_2);
 
   /* close group */
   kaapi_threadgroup_end_partition(group);

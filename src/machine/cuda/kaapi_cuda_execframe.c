@@ -420,7 +420,7 @@ static void cuda_taskbcast_body
     cuda_task_body_t cuda_body = (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA];
     cuda_body(stream, arg->common.original_sp, thread);
   }
-  
+
   /* write memory barrier to ensure that other threads will view the data produced */
   kaapi_mem_barrier();
 
@@ -596,6 +596,30 @@ static inline void unwrap_task
 }
 
 
+#if 0 /* todo, remove */
+static const char* get_body_name(kaapi_task_body_t body)
+{
+  const char* name = "unknown";
+
+#define NAME_CASE(__body) if (body == __body) { name = #__body; }
+
+  NAME_CASE(kaapi_nop_body);
+  NAME_CASE(kaapi_taskstartup_body);
+  NAME_CASE(kaapi_taskmain_body);
+  NAME_CASE(kaapi_exec_body);
+  NAME_CASE(kaapi_suspend_body);
+  NAME_CASE(kaapi_taskbcast_body);
+  NAME_CASE(kaapi_taskrecv_body);
+  NAME_CASE(kaapi_tasksig_body);
+  NAME_CASE(kaapi_tasksteal_body);
+  NAME_CASE(kaapi_aftersteal_body);
+  NAME_CASE(kaapi_tasksignalend_body);
+
+  return name;
+}
+#endif /* todo, remove */
+
+
 /* exported */
 
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
@@ -698,6 +722,9 @@ begin_loop:
 
 	cuCtxPopCurrent(&proc->cuda_proc.ctx);
       }
+      /* todo, remove */
+      else { printf("cuCtxPushCurrent() error\n"); exit(-1); }
+      /* todo, remove */
     }
     else
     {
@@ -707,18 +734,16 @@ begin_loop:
 #if 0 /* todo, is this needed? */
       if (format != NULL)
       {
-	cuCtxPushCurrent(proc->cuda_proc.ctx);
-
 	/* prepare task arg for host */
+	cuCtxPushCurrent(proc->cuda_proc.ctx);
 	prepare_task2(original_sp, format);
-
 	cuCtxPopCurrent(&proc->cuda_proc.ctx);
       }
 #endif /* todo */
 
       body(pc->sp, (kaapi_thread_t*)thread->sfp);
     }
-    
+
 #if 0//!defined(KAAPI_CONCURRENT_WS)
     if (unlikely(thread->errcode)) goto backtrack_stack;
 #endif

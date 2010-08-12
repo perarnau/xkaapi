@@ -76,7 +76,7 @@ typedef struct kaapi_mem_mapping
   struct kaapi_mem_mapping* next;
 
   /* unsigned int bitmaps means 32 max asids */
-#define KAAPI_MEM_ASID_MAX 2
+#define KAAPI_MEM_ASID_MAX 32
   kaapi_mem_addr_t addrs[KAAPI_MEM_ASID_MAX];
 
   /* meta, one bit per as */

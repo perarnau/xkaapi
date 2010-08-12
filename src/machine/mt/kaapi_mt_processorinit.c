@@ -91,8 +91,11 @@ int kaapi_processor_init
   /* workload */
   kproc->workload._counter= 0;
 
-  /* memory */
-  kaapi_mem_map_initialize(&kproc->mem_map, kpi->kid);
+  /* memory: as[0] for cpu, as[1 + gpuindex] for gpu */
+  if (kpi->proc_type == KAAPI_PROC_TYPE_CPU)
+    kaapi_mem_map_initialize(&kproc->mem_map, 0);
+  else
+    kaapi_mem_map_initialize(&kproc->mem_map, 1 + kpi->proc_index);
   
   /* allocate a stack */
   k_stacksize = kaapi_default_param.stacksize;
