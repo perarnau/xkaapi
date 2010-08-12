@@ -4,4 +4,7 @@
 #sudo LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib KAAPI_GPUSET='0~8' KAAPI_CPUSET=0 ./a.out
 
 # 2 cpus, 1 gpu partitions
-sudo LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib KAAPI_GPUSET='0~8' KAAPI_CPUSET=0,1 ./a.out
+#sudo LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib KAAPI_GPUSET='0~8' KAAPI_CPUSET=0,1 ./a.out
+
+# 2 cpus, 2 gpus partitions
+sudo LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib KAAPI_GPUSET='0~8,1~9' KAAPI_CPUSET=0,1 ./a.out
