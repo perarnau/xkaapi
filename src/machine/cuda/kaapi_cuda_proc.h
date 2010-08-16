@@ -49,15 +49,20 @@
 # define KAAPI_CUDA_PROC_H_INCLUDED
 
 
+#include <pthread.h>
 #include <cuda.h>
 
 
 typedef struct kaapi_cuda_proc
 {
   CUdevice dev;
-  CUcontext ctx;
   CUstream stream;
+
+  CUcontext ctx;
+  pthread_mutex_t ctx_lock;
+
   int is_initialized;
+
 } kaapi_cuda_proc_t;
 
 

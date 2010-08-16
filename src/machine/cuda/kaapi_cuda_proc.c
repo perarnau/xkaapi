@@ -125,6 +125,12 @@ int kaapi_cuda_proc_initialize
     return -1;
   }
 
+  if (pthread_mutex_init(&proc->ctx_lock, NULL))
+  {
+    kaapi_cuda_error("pthread_mutex_init", 0);
+    return -1;
+  }
+
   proc->is_initialized = 1;
 
   return 0;
@@ -137,7 +143,11 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
     return -1;
 
   cuStreamDestroy(proc->stream);
+
+  pthread_mutex_lock(&proc->ctx_lock);
   close_cuda_device(proc->dev, proc->ctx);
+  pthread_mutex_unlock(&proc->ctx_lock);
+  pthread_mutex_destroy(&proc->ctx_lock);
 
   proc->is_initialized = 0;
 

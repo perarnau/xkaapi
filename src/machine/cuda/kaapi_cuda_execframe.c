@@ -232,6 +232,7 @@ static void prepare_task
 
 	  kaapi_processor_t* const rproc = get_proc_by_asid(valid_asid);
 
+	  pthread_mutex_lock(&rproc->cuda_proc.ctx_lock);
 	  CUresult res = cuCtxPushCurrent(rproc->cuda_proc.ctx);
 	  if (res != CUDA_SUCCESS)
 	  { kaapi_cuda_error("cuCtxPushCurrent", res); exit(-1); }
@@ -244,6 +245,7 @@ static void prepare_task
 	  memcpy_dtoh(proc, hostptr, (CUdeviceptr)raddr, size);
 
 	  cuCtxPopCurrent(&rproc->cuda_proc.ctx);
+	  pthread_mutex_unlock(&rproc->cuda_proc.ctx_lock);
 
 	  kaapi_mem_mapping_clear_dirty(mapping, host_asid);
 	}
@@ -502,11 +504,13 @@ static void cuda_taskbcast_body
 	  raddr = kaapi_mem_mapping_get_addr(mapping, rasid);
 
 	  /* copy from host to device */
+	  pthread_mutex_lock(&rproc->cuda_proc.ctx_lock);
 	  CUresult res = cuCtxPushCurrent(rproc->cuda_proc.ctx);
 	  if (res != CUDA_SUCCESS)
 	  { kaapi_cuda_error("cuCtxPushCurrent", res); exit(-1); }
 	  memcpy_htod(rproc, (CUdeviceptr)raddr, (void*)host_ptr, size);
 	  cuCtxPopCurrent(&rproc->cuda_proc.ctx);
+	  pthread_mutex_unlock(&rproc->cuda_proc.ctx_lock);
 #endif
 	}
 	else
@@ -736,6 +740,7 @@ begin_loop:
 	 to use it (ie. for kaapi_mem_synchronize2)
        */
 
+      pthread_mutex_lock(&proc->cuda_proc.ctx_lock);
       res = cuCtxPushCurrent(proc->cuda_proc.ctx);
       if (res == CUDA_SUCCESS)
       {
@@ -757,6 +762,8 @@ begin_loop:
       /* todo, remove */
       else { printf("cuCtxPushCurrent() error\n"); exit(-1); }
       /* todo, remove */
+
+      pthread_mutex_unlock(&proc->cuda_proc.ctx_lock);
     }
     else
     {
@@ -767,9 +774,11 @@ begin_loop:
       if (format != NULL)
       {
 	/* prepare task arg for host */
+	pthread_mutex_lock(&proc->cuda_proc.ctx_lock);
 	cuCtxPushCurrent(proc->cuda_proc.ctx);
 	prepare_task2(original_sp, format);
 	cuCtxPopCurrent(&proc->cuda_proc.ctx);
+	pthread_mutex_unlock(&proc->cuda_proc.ctx_lock);
       }
 #endif /* todo */
 
