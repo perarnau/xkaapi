@@ -104,7 +104,7 @@ FormatUpdateFnc::FormatUpdateFnc(
   const std::string& name,
   int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                    const void* value, const struct kaapi_format_t* fmtvalue )
-) : Format::Format(name, 0, 0, 0, 0, 0, 0, 0)
+) : Format(name, 0, 0, 0, 0, 0, 0, 0)
 {
   fmt->update_mb = update_mb;
 }
