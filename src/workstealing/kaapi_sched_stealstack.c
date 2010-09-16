@@ -268,7 +268,7 @@ static int kaapi_sched_stealframe(
           replycount += kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, count-replycount, requests );
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
           /* cas success: reset the ebody */
-          kaapi_task_setextrabody(task_top, kaapi_adapt_body);
+	  kaapi_task_cas_extrastate(task_top, kaapi_suspend_body, kaapi_adapt_body);
 #endif
         }
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
