@@ -136,7 +136,8 @@ FormatTask::FormatTask(
         count,
         mode_param,
         offset_param,
-        fmt_param
+        fmt_param,
+/**/    0
   );
 }
 

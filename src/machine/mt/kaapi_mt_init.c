@@ -141,7 +141,7 @@ void __attribute__ ((constructor)) kaapi_init(void)
 #endif
 
   /* set the kprocessor AFTER topology !!! */
-  kaapi_assert_m( 0 == kaapi_setconcurrency( kaapi_default_param.cpucount ), "kaapi_setconcurrency" );
+  kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
   
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
@@ -285,6 +285,12 @@ void __attribute__ ((destructor)) kaapi_fini(void)
      + KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i],KAAPI_PERF_ID_TPREEMPT)) );
   }
 #endif
+
+#if defined(KAAPI_USE_CUDA)
+    /* initialize cuda processor */
+    if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA)
+      kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
+#endif /* KAAPI_USE_CUDA */
 
     kaapi_processor_free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;

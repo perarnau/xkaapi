@@ -104,6 +104,7 @@ typedef int16_t   kaapi_int16_t;
 typedef int32_t   kaapi_int32_t;
 typedef int64_t   kaapi_int64_t;
 
+
 /** Atomic type
 */
 typedef struct kaapi_atomic_t {
@@ -126,6 +127,116 @@ typedef struct kaapi_atomic64_t {
 
 
 #if defined(__i386__)||defined(__x86_64)
+# define kaapi_slowdown_cpu() \
+  do { __asm__ __volatile__("rep; nop;"); } while (0)
+#else
+# define kaapi_slowdown_cpu()
+#endif
+
+
+
+#if defined(__APPLE__)
+#  include <libkern/OSAtomic.h>
+static inline void kaapi_writemem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  OSMemoryBarrier();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+#elif defined(__linux__)
+
+static inline void kaapi_writemem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  /* nothing: writes are ordered in this architecture */
+#else
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  /* nothing: reads are ordered in this architecture */
+#else
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  __sync_synchronize();
+#endif
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+#elif defined(_WIN32)
+static inline void kaapi_writemem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+   LONG Barrier = 0;
+   __asm__ __volatile__("xchgl %%eax,%0 "
+     :"=r" (Barrier));
+
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+
+#else
+#  error "Undefined barrier"
+#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
+
+
+/* compatibility: TO BE REMOVED
+#if defined(__i386__)||defined(__x86_64)
      /* WARNING here Compiler fence to keep operations. Note that on X86 no reorder of write ops
         so, we do not need extra hardware fence operation.
      */
@@ -135,12 +246,6 @@ typedef struct kaapi_atomic64_t {
 #endif
 
 
-#if defined(__i386__)||defined(__x86_64)
-# define kaapi_slowdown_cpu() \
-  do { __asm__ __volatile__("rep; nop;"); } while (0)
-#else
-# define kaapi_slowdown_cpu()
-#endif
 
 /* ========================================================================== */
 struct kaapi_task_t;
@@ -205,19 +310,59 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 */
 #define KAAPI_CACHE_LINE 64
 
-/** Maximal number of architecture
-    Current naming is:
-    - KAAPI_PROC_TYPE_CPU:   core of multicore machine
-    - KAAPI_PROC_TYPE_GPU:   core of GPU card (Nvidia GPU)
-    - KAAPI_PROC_TYPE_MPSOC: core of a MPSoC chip
-*/
-#define KAAPI_MAX_ARCHITECTURE 3
 
-#define KAAPI_PROC_TYPE_CPU     0x0
-#define KAAPI_PROC_TYPE_GPU     0x1
-#define KAAPI_PROC_TYPE_MPSOC   0x2
-#define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_CPU
+#if 0 /* unused */
 
+/* processor capability api
+ */
+
+#define KAAPI_PCAP_ARCH_NATIVE 0x0
+#define KAAPI_PCAP_ARCH_CUDA 0x1
+#define KAAPI_PCAP_ARCH_MPSOC 0x2
+#define KAAPI_PCAP_ARCH_MAX 3
+
+typedef unsigned int kaapi_pcap_t;
+
+static inline unsigned int kaapi_pcap_isset
+(const kaapi_pcap_t* pcap, unsigned int c)
+{
+  return (*pcap) & c;
+}
+
+static inline void kaapi_pcap_set
+(const kaapi_pcap_t* pcap, unsigned int c)
+{
+  *pcap |= c;
+}
+
+static inline void kaapi_pcap_zero(kaapi_pcap_t* pcap)
+{
+  *pcap = 0;
+}
+
+static inline unsigned int kaapi_pcap_to_arch
+(const kaapi_cap_t* pcap)
+{
+  /* pcap to architecture index */
+  return pcap;
+}
+
+static inline void kaapi_proc_arch_to_pcap
+(kaapi_pcap_t* pcap, unsigned int arch)
+{
+  *pcap = arch;
+}
+
+#else
+
+#define KAAPI_PROC_TYPE_HOST 0x0
+#define KAAPI_PROC_TYPE_CUDA 0x1
+#define KAAPI_PROC_TYPE_MPSOC 0x2
+#define KAAPI_PROC_TYPE_MAX 3
+#define KAAPI_PROC_TYPE_CPU KAAPI_PROC_TYPE_HOST
+#define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_HOST
+
+#endif /* unused */
 
 /* ========================================================================== */
 /** \ingroup WS
@@ -229,8 +374,8 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 extern int kaapi_getconcurrency (void);
 
 /** \ingroup WS
-    Set the workstealing concurrency number, i.e. the number of kernel
-    activities to execute the user level thread.
+    Set the workstealing conccurency by instanciating kprocs according
+    to the registration of each subsystem (ie. mt, cuda...)
     If successful, the kaapi_setconcurrency() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.
     This function is machine dependent.
@@ -240,7 +385,24 @@ extern int kaapi_getconcurrency (void);
     \retval EAGAIN if the system laked the necessary ressources to create another thread
     on return, the concurrency number may has been set to a different number than requested.
  */
-extern int kaapi_setconcurrency (unsigned int concurrency);
+extern int kaapi_setconcurrency(void);
+
+
+struct kaapi_procinfo_list;
+
+/* ========================================================================== */
+/** kaapi_mt_register_procs
+    register the kprocs for mt architecture.
+*/
+extern int kaapi_mt_register_procs(struct kaapi_procinfo_list*);
+
+/* ========================================================================== */
+/** kaapi_cuda_register_procs
+    register the kprocs for cuda architecture.
+*/
+#if KAAPI_USE_CUDA
+extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
+#endif
 
 
 /* ========================================================================== */
@@ -286,7 +448,7 @@ typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_V   = 1,        /* 0000 0001 : */
   KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
   KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
-  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1100 : */
+  KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
   KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
   KAAPI_ACCESS_MODE_F   = 32,       /* 0010 0000 : only valid with _W or _R */
   KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W
@@ -716,21 +878,20 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   return 0;
 }
 
-
-#define kaapi_task_initdfg( task, taskbody, arg ) \
-  do { \
-    (task)->sp     = (arg);\
-    (task)->body   = taskbody;\
-    (task)->ebody  = taskbody;\
-  } while (0)
-
+static inline void kaapi_task_initdfg
+(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
+{
+  task->sp = arg;
+  task->body = body;
+  task->ebody = body;
+}
 
 /** \ingroup TASK
-    Initialize a task with given flag for adaptive attribut
+    Initialize a task with given flag for adaptive attribute
 */
 static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
 {
-  kaapi_task_initdfg( task, taskbody, arg );
+  kaapi_task_initdfg(task, taskbody, arg);
   return 0;
 }
 
@@ -1363,8 +1524,15 @@ extern kaapi_format_id_t kaapi_format_taskregister(
         int                          count,
         const kaapi_access_mode_t    mode_param[],
         const kaapi_offset_t         offset_param[],
-        const struct kaapi_format_t* fmt_params[]
+        const struct kaapi_format_t* fmt_params[],
+	size_t (*)(const struct kaapi_format_t*, unsigned int, const void*)
 );
+
+/** \ingroup TASK
+    Register a task format 
+*/
+extern void kaapi_format_set_task_body
+(struct kaapi_format_t*, unsigned int, kaapi_task_body_t);
 
 /** \ingroup TASK
     Register a task body into its format
@@ -1434,106 +1602,6 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
 
 /* ========================= Low level memory barrier, inline for perf... so ============================= */
-
-#if defined(__APPLE__)
-#  include <libkern/OSAtomic.h>
-static inline void kaapi_writemem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  /* nothing: writes are ordered in this architecture */
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  /* nothing: reads are ordered in this architecture */
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  OSMemoryBarrier();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-#elif defined(__linux__)
-
-static inline void kaapi_writemem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  /* nothing: writes are ordered in this architecture */
-#else
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  /* nothing: reads are ordered in this architecture */
-#else
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-#elif defined(_WIN32)
-static inline void kaapi_writemem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-   LONG Barrier = 0;
-   __asm__ __volatile__("xchgl %%eax,%0 "
-     :"=r" (Barrier));
-
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-
-#else
-#  error "Undefined barrier"
-#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
-
 
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)

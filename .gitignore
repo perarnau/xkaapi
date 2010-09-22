@@ -12,7 +12,9 @@
 /api/atha/athapascan_closure.h
 /api/atha/athapascan_fork.h
 /api/kaapixx/ka_api_clo.h
-/api/kaapixx/ka_api_fork.h
+/api/kaapixx/ka_api_spawn.h
+/api/kaapixx/ka_api_execforeach.h
+/api/kaapixx/ka_api_execgraph.h
 
 ########################
 # Files from bootstrap #
@@ -93,3 +95,5 @@ Makefile
 # Files created after distribution build (make dist*)
 /xkaapi-*.tar.gz
 
+# Doc repository...
+doc/www/scripts/.build

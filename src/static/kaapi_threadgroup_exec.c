@@ -78,6 +78,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     kaapi_processor_id_t victim_procid = i/blocsize;
 #if 1 // Method should be implemented. Currently push locally and wait stealer    
     kaapi_processor_t* victim_kproc = kaapi_all_kprocessors[victim_procid];
+
     kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
     kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
     thgrp->threadctxts[i]->proc = victim_kproc;

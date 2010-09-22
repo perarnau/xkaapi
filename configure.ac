@@ -301,6 +301,7 @@ KAAPI_PKGLIB_CHECK([PAPI], [papi], [PAPI], [no], [],
   ])
 ACX_LIB_LINK([XKAAPILIB],[PAPI])
 
+
 dnl -----------------------------------------------------------------------
 dnl The "--with-numa"
 dnl -----------------------------------------------------------------------
@@ -330,9 +331,6 @@ AS_CASE([$with_fortran],
       AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
       KAAPI_FORTRAN=f
     fi
-  ], [yes], [dnl
-    AC_MSG_NOTICE([Adding fortran support using fortran compiler '$with_fortran'])
-    AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
   ], [no], [dnl
       AC_MSG_NOTICE([fortran API disable])
   ], [dnl
@@ -351,12 +349,34 @@ fi
 
 
 dnl -----------------------------------------------------------------------
+dnl The "--with-cuda"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
+  [build CUDA support [EXPERIMENTAL]],
+  [cuda], [], [cuda.h], [cuDeviceGetProperties], [
+dnl    CUDA is there
+    AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
+    KAAPI_CUDA=c
+  ],
+  [
+  ],
+  [])
+AC_SUBST([KAAPI_CUDA])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_CUDA" = x"c"])
+ACX_LIB_LINK([XKAAPILIB],[CUDA])
+
+
+dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
+ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
 
 ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],

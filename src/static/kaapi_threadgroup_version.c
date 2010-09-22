@@ -135,6 +135,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     int                 tid, 
     kaapi_task_t*       task, 
     kaapi_access_t*     access,
+    size_t data_size,
     int ith
 )
 {
@@ -144,11 +145,11 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
   
   kaapi_assert( tid < KAAPI_MAX_PARTITION );
   kaapi_assert( -1 <= tid );
-  
+
   /* initialize the writer data structure if it not on the same partition (else only
      update reader data structure without changing the writer code
   */
-  if (ver->writer_thread != tid )
+  if (ver->writer_thread != tid)
   {
     writer_thread = kaapi_threadgroup_thread( thgrp, ver->writer_thread );
 
@@ -270,6 +271,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 #else
       ver->com->entry[ver->com->size].addr = access->data;
 #endif      
+      ver->com->entry[ver->com->size].size = data_size;
+
       ++ver->com->size;
     }
     else 

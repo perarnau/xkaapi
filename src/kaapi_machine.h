@@ -53,4 +53,8 @@
 #  error Unknown target
 #endif
 
+#if KAAPI_USE_CUDA /* non exclusive with the above */
+# include "machine/cuda/kaapi_cuda.h"
+#endif
+
 #endif /* _KAAPI_MACHINE_H */

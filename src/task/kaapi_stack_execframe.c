@@ -89,7 +89,6 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
   execframe with the state that has been set on return with EWOULDBLOCK.
 */
 
-
 /*
 */
 int kaapi_stack_execframe( kaapi_thread_context_t* thread )

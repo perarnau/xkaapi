@@ -8,8 +8,8 @@
 
 lib_LTLIBRARIES= libxkaapi.la
 
-libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE
-libxkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS)
+libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE $(XKAAPILIB_BUILD_CPPFLAGS)
+libxkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS) $(XKAAPILIB_BUILD_CFLAGS)
 libxkaapi_la_LDFLAGS = -version-info 0:0:0 $(XKAAPILIB_BUILD_LDFLAGS)
 libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
 
@@ -86,7 +86,10 @@ libxkaapi_la_SOURCES=\
   static/kaapi_threadgroup_saverestore.c\
   static/kaapi_threadgroup_print.c\
   static/kaapi_threadgroup_vect.c\
-  kaapi_staticsched.h
+  kaapi_staticsched.h \
+  machine/common/kaapi_procinfo.c \
+  memory/kaapi_mem.h \
+  memory/kaapi_mem.c
 
 
 #  task/kaapi_fmt_basictype.c
@@ -100,7 +103,6 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_getconcurrency.c \
   machine/mt/kaapi_mt_getcontext.c \
   machine/mt/kaapi_mt_setcontext.c \
-  machine/mt/kaapi_mt_set_workload.c \
   machine/mt/kaapi_mt_makecontext.c \
   machine/mt/kaapi_mt_selfprocessor.c \
   machine/mt/kaapi_mt_selfstack.c \
@@ -111,11 +113,30 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h \
-  machine/mt/kaapi_mt_perf.c 
+  machine/mt/kaapi_mt_perf.c \
+  machine/mt/kaapi_mt_register_procs.c \
+  machine/mt/kaapi_mt_processor.c
 endif
 
+if KAAPI_TARGET_CUDA
+libxkaapi_la_SOURCES+=\
+  machine/cuda/kaapi_cuda.h \
+  machine/cuda/kaapi_cuda_error.h \
+  machine/cuda/kaapi_cuda_register_procs.h \
+  machine/cuda/kaapi_cuda_register_procs.c \
+  machine/cuda/kaapi_cuda_proc.c \
+  machine/cuda/kaapi_cuda_proc.h \
+  machine/cuda/kaapi_cuda_func.h \
+  machine/cuda/kaapi_cuda_func.c \
+  machine/cuda/kaapi_cuda_execframe.h \
+  machine/cuda/kaapi_cuda_execframe.c
+endif
 
 include_HEADERS=\
-	kaapi.h \
-	kaapi_error.h
+  kaapi.h \
+  kaapi_error.h
 
+if KAAPI_TARGET_CUDA
+include_HEADERS+=\
+  machine/cuda/kaapi_cuda_func.h
+endif
