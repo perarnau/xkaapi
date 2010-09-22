@@ -51,7 +51,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_pro
   kaapi_wsqueuectxt_cell_t* cell;
   int wakeupok = 0;
   int garbage;
-  
+
   /* only steal the ready context if it's my ready list */
   if ((kproc->readythread !=0) && (kproc->kid == kproc_thiefid))
   {
@@ -66,18 +66,18 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_pro
       return ctxt;
     }
   }
-  
+
   /* */
   if (!KAAPI_FIFO_EMPTY(&kproc->lready))
   {
     kaapi_thread_context_t* thread = 0;
+
     /* lock if self wakeup to protect lready against thieves because in that case
        wakeup is called directly through sched_suspend or sched_idle, not by passing through 
        the emission of a request
     */
     kaapi_sched_lock( kproc );
     thread = kaapi_sched_stealready( kproc, kproc_thiefid );
-//    printf("[%u] local steal thread->%p\n", kproc_thiefid, thread );
     kaapi_sched_unlock( kproc );
     if (thread !=0) return thread;
   }
@@ -124,7 +124,6 @@ kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_pro
       garbage  = 1;
     }
     
-
     /* If the wakeup is ok or if the cell state is 1, the cell is recyled (push in tail):
     */
     kaapi_wsqueuectxt_cell_t* nextcell = cell->next;

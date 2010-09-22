@@ -50,6 +50,7 @@
 #  error This file must not be directly included. Use kaapi_impl.h instead
 #endif
 #include "kaapi_datastructure.h"
+#include "../../memory/kaapi_mem.h"
 #include <stdint.h>
 #include <pthread.h>
 
@@ -67,7 +68,11 @@
 #  define KAAPI_KPROCESSOR_ALIGNMENT_SIZE KAAPI_CACHE_LINE
 #endif
 
-
+#if defined(KAAPI_USE_CUDA)
+# if KAAPI_USE_CUDA
+#  include "../cuda/kaapi_cuda_proc.h"
+# endif
+#endif
 
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
@@ -322,11 +327,25 @@ typedef struct kaapi_processor_t {
   /* workload */
   kaapi_atomic_t	         workload;
 
+  /* processor type */
+  unsigned int			proc_type;
+
+  /* memory map */
+  kaapi_mem_map_t mem_map;
+
+  /* cuda */
+#if defined(KAAPI_USE_CUDA)
+# if KAAPI_USE_CUDA
+  kaapi_cuda_proc_t cuda_proc;
+#endif
+#endif /* KAAPI_USE_CUDA */
+
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
 
 /*
 */
-extern int kaapi_processor_init( kaapi_processor_t* kproc );
+struct kaapi_procinfo;
+extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo*);
 
 /*
 */
@@ -361,7 +380,6 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 }
 
 #endif /* KAAPI_USE_NUMA */
-
 
 
 /* ........................................ PRIVATE INTERFACE ........................................*/

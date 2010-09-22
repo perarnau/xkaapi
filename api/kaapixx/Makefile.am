@@ -14,6 +14,7 @@ libkaapixx_la_LDFLAGS = -version-info 1:0:1 $(KAAPIXXLIB_BUILD_LDFLAGS)
 libkaapixx_la_LIBADD=../../src/libxkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
+	ka_api_tuple.h\
 	ka_api_clo.h \
 	ka_api_spawn.h\
 	ka_api_execgraph.h\
@@ -25,7 +26,10 @@ M4_SRCS=\
 	ka_api_clo.m4 \
 	ka_api_spawn.m4\
 	ka_api_execgraph.m4\
-	ka_api_execforeach.m4
+	ka_api_execforeach.m4\
+	ka_api_tuple_header.m4\
+	ka_api_tuple.m4\
+	ka_api_tuple_tail.m4
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
 
@@ -39,10 +43,11 @@ include_HEADERS=\
 	kaapi++.h \
 	ka_error.h \
 	ka_timer.h \
+	ka_api_tuple.h\
 	ka_api_clo.h \
+	ka_api_spawn.h \
 	ka_api_execgraph.h\
-	ka_api_execforeach.h\
-	ka_api_spawn.h
+	ka_api_execforeach.h
 
 libkaapixx_la_SOURCES=\
 	ka_init.cpp \

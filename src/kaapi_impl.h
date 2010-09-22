@@ -266,7 +266,7 @@ typedef struct kaapi_format_t {
 
   /* only if it is a format of a task  */
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
-  kaapi_task_body_t          entrypoint[KAAPI_MAX_ARCHITECTURE];      /* maximum architecture considered in the configuration */
+  kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
   int                        count_params;                            /* number of parameters */
   kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
   kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
@@ -275,6 +275,8 @@ typedef struct kaapi_format_t {
 
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
   struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
+
+  size_t (*get_param_size)(const struct kaapi_format_t*, unsigned int, const void*);
   
   /* only for Monotonic bound format */
   int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
@@ -1028,6 +1030,7 @@ extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, ka
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
 extern kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
+
 
 /** \ingroup WS
     Advance polling of request for the current running thread.

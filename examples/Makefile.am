@@ -9,8 +9,8 @@ include ./Makefile.examples.am
 
 AM_CPPFLAGS=@AM_CPPFLAGS@
 AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
-AM_CXXFLAGS=@AM_CXXFLAGS@
-# -std=gnu++0x
+AM_CXXFLAGS=@AM_CXXFLAGS@ 
+#-std=gnu++0x
 
 check_PROGRAMS= \
 	fiboseq                \

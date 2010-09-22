@@ -91,7 +91,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       goto redo_execute;
     }
 /* warning: to avoid steal of processor ! */
-//continue;    
+/* continue; */
     
     /* steal request */
     kaapi_assert_debug( kproc->thread !=0 );
@@ -119,6 +119,15 @@ redo_execute:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
+
+    /* todo: there should be a wrapper around kaapi_stack_execframe
+       that takes the kproc and route execution toward the right impl
+    */
+#if defined(KAAPI_USE_CUDA)
+    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+      err = kaapi_cuda_execframe( kproc->thread );
+    else
+#endif /* KAAPI_USE_CUDA */
     err = kaapi_stack_execframe( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)

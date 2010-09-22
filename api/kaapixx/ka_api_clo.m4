@@ -230,12 +230,12 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
   static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
                                             void (TaskBodyGPU<TASK>::*method)( gpuStream stream M4_PARAM(`, formal$1_t', `', `') ) )
   {
-    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
+    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_CUDA );
   }
   static kaapi_task_body_t registerbodygpu( kaapi_format_t* fmt, 
                                             void (TaskBodyGPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
   {
-    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_GPU );
+    return kaapi_format_taskregister_body( fmt, registergpubody( fmt, method ), KAAPI_PROC_TYPE_CUDA );
   }
 
 

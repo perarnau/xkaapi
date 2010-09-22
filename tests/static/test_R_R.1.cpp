@@ -8,7 +8,7 @@ template<>
 struct TaskBodyCPU<TaskR> {
   void operator() ( ka::pointer_r<int> d )
   {
-    std::cout << "In Task R=" << *d << std::endl;
+    std::cout << "In Task R=" << *d << ", @:" << (int*)d << std::endl;
   }
 };
 static ka::RegisterBodyCPU<TaskR> dummy_object_TaskR;
@@ -30,9 +30,10 @@ struct doit {
     threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
     threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
 
-    threadgroup.end_partition();
 
     threadgroup.print();    
+
+    threadgroup.end_partition();
 
     threadgroup.execute();
   }
