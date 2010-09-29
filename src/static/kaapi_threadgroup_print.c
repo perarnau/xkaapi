@@ -94,7 +94,7 @@ static void kaapi_threadgroup_printinputoutputdata(FILE* file, int tid, kaapi_ha
       printf("@:%p -> first reader on tid: %i by task @:%p, param:%i\n", 
           reader->addr, 
           reader->tid, 
-          reader->task, 
+	  (void*)reader->task, 
           (int)reader->used 
       );
     }
@@ -116,7 +116,7 @@ static void kaapi_threadgroup_printinputoutputdata(FILE* file, int tid, kaapi_ha
         printf("@:%p -> last writer on tid:%i by task @:%p\n", 
             reader->addr, 
             ver->writer_thread,
-            ver->writer_task 
+	    (void*)ver->writer_task 
         );
       }
     }
