@@ -28,7 +28,6 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_time.c \
   misc/kaapi_hashvalue.c \
   misc/kaapi_hashmap.c \
-  misc/kaapi_liststack.c \
   misc/kaapi_thread_clear.c \
   workstealing/kaapi_sched_select_rand_level.c \
   workstealing/kaapi_sched_select_rand_first.c \
@@ -41,7 +40,8 @@ libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_suspend.c \
   workstealing/kaapi_sched_sync.c \
   workstealing/kaapi_sched_criticalsteal.c \
-  workstealing/kaapi_sched_lists.c \
+  workstealing/kaapi_sched_lready.c \
+  workstealing/kaapi_sched_wsqueue.c \
   task/kaapi_stack_init.c \
   task/kaapi_stack_clear.c \
   task/kaapi_stack_print.c \
