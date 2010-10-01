@@ -63,8 +63,8 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   /* already allocated ? */
   if (!kaapi_lfree_isempty(kproc)) 
   {
-    kaapi_lfree_pop(kproc, ctxt);
-    kaapi_thread_clear( ctxt );
+    ctxt = kaapi_lfree_pop(kproc);
+    kaapi_thread_clear(ctxt);
     return ctxt;
   }
 

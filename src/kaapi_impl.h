@@ -875,6 +875,9 @@ static inline int kaapi_sched_isreadyempty(kaapi_processor_t* kproc)
   return kproc->lready._front == NULL;
 }
 
+/* sched lfree routines
+ */
+
 
 /**
 */

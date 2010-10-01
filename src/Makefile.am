@@ -67,7 +67,6 @@ libxkaapi_la_SOURCES=\
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \
-  kaapi_datastructure.h \
   kaapi_defs.h \
   kaapi_error.h \
   kaapi_machine.h \
