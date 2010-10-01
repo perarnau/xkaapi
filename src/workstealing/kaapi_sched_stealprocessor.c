@@ -70,7 +70,8 @@ int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kp
 for (int i=0; i<1; ++i)
   if (1)
   {
-    if (!KAAPI_FIFO_EMPTY(&kproc->lready))
+    /* is the ready list not empty */
+    if (!kaapi_sched_isreadyempty(kproc))
     {
       kaapi_thread_context_t* thread = 0;
       thread = kaapi_sched_stealready( kproc, kproc_thiefid );

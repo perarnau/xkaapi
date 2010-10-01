@@ -184,7 +184,11 @@ KAAPI_QUEUE_DECLARE(kaapi_queuectxt_t, kaapi_thread_context_t);
 
 /** lready data structure
 */
-KAAPI_FIFO_DECLARE(kaapi_fifoctxt_t, kaapi_thread_context_t);
+typedef struct kaapi_lready
+{
+  kaapi_thread_context_t* _front;
+  kaapi_thread_context_t* _back;
+} kaapi_lready_t;
 
 /** push: LIFO order with respect to pop. Only owner may push
 */
@@ -297,7 +301,7 @@ typedef struct kaapi_processor_t {
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-  kaapi_fifoctxt_t         lready;                        /* list of ready context, concurrent access locked by 'lock' */
+  kaapi_lready_t	   lready;                        /* list of ready context, concurrent access locked by 'lock' */
   kaapi_thread_context_t*  readythread;                   /* continuation passing parameter to speed up recovery of activity... */
 
   /* free list */

@@ -113,7 +113,6 @@ static kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_alloccell( kaapi_wsqueuectxt_
 */
 int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread )
 {
-  /*printf( "[sleep thread]: thread: @=%p\n", thread);*/
   kaapi_wsqueuectxt_cell_t* cell = kaapi_wsqueuectxt_alloccell(ls);
 
 #if defined(KAAPI_USE_READYLIST)

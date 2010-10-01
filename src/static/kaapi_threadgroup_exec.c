@@ -160,15 +160,6 @@ int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
   }
 
   kaapi_thread_restore_frame( thgrp->threads[-1], &thgrp->mainframe);
-#if 0
-  kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
-  fprintf(stdout, "Restore frame:: pc:%p, sp:%p, spd:%p\n", 
-    (void*)thgrp->mainframe.pc, 
-    (void*)thgrp->mainframe.sp, 
-    (void*)thgrp->mainframe.sp_data 
-  );
-#endif
-  
   thgrp->state = KAAPI_THREAD_GROUP_CREATE_S;
   return 0;
 }
