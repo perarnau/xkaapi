@@ -323,7 +323,7 @@ AC_ARG_WITH([fortran],[AS_HELP_STRING([--with-fortran],
   [with_fortran=no]
 )
 AS_CASE([$with_fortran],
-  [default], [dnl
+  [yes], [dnl
     if test x"$F77" = x; then
       AC_MSG_NOTICE([fortran API disable, because no Fortran compiler found])
     else

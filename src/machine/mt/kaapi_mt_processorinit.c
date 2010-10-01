@@ -71,10 +71,6 @@ int kaapi_processor_init
   kproc->kid          = kpi->kid;
   kproc->proc_type    = kpi->proc_type;
   kproc->issteal      = 0;
-  kproc->hlevel       = 0;
-  kproc->hindex       = 0;
-  kproc->hlcount      = 0;
-  kproc->hkids        = 0;
   
   KAAPI_ATOMIC_WRITE( &kproc->lock, 0);
   
@@ -123,7 +119,7 @@ int kaapi_processor_init
   return 0;
 }
 
-
+#if 0
 int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc )
 {
   int i;
@@ -142,3 +138,4 @@ int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc )
       
   return 0;
 }
+#endif

@@ -107,10 +107,10 @@ void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
 
 /**
 */
-void __attribute__ ((constructor)) kaapi_init(void)
+int kaapi_init(void)
 {
   static int iscalled = 0;
-  if (iscalled !=0) return;
+  if (iscalled !=0) return 0;
   iscalled = 1;
   
   kaapi_isterm = 0;
@@ -168,12 +168,14 @@ void __attribute__ ((constructor)) kaapi_init(void)
 #endif
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
+  
+  return 1;
 }
 
 
 /**
 */
-void __attribute__ ((destructor)) kaapi_fini(void)
+int kaapi_finalize(void)
 {
   int i;
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -246,15 +248,15 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #   define PRIu32 "u"
 # endif
 
-    cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
-    cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
-    cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
-    cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
-    cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
-    t_sched +=        1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1);
-    t_preempt +=      1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
-    t_1 +=            1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
-      
+  cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
+  cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
+  cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
+  cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
+  cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
+  t_sched +=        1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1);
+  t_preempt +=      1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
+  t_1 +=            1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
+    
   /* */
   if (kaapi_default_param.display_perfcounter)
   {
@@ -317,4 +319,5 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #endif  
   
   /* TODO: destroy topology data structure */
+  return 0;
 }

@@ -174,6 +174,25 @@ struct kaapi_processor_t;
 struct kaapi_listrequest_t;
 
 
+struct kaapi_procinfo_list;
+
+/* ============================= Processor list ============================ */
+
+/* ========================================================================== */
+/** kaapi_mt_register_procs
+    register the kprocs for mt architecture.
+*/
+extern int kaapi_mt_register_procs(struct kaapi_procinfo_list*);
+
+/* ========================================================================== */
+/** kaapi_cuda_register_procs
+    register the kprocs for cuda architecture.
+*/
+#if KAAPI_USE_CUDA
+extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
+#endif
+
+
 
 /* ============================= A VICTIM ============================ */
 /** \ingroup WS
@@ -232,12 +251,10 @@ extern kaapi_rtparam_t kaapi_default_param;
     \ingroup WS
 */
 enum kaapi_request_status_t {
-  KAAPI_REQUEST_S_EMPTY   = 0,
-  KAAPI_REQUEST_S_POSTED  = 1,
-  KAAPI_REQUEST_S_SUCCESS = 2,
-  KAAPI_REQUEST_S_FAIL    = 3,
-  KAAPI_REQUEST_S_ERROR   = 4,
-  KAAPI_REQUEST_S_QUIT    = 5
+  KAAPI_REQUEST_S_POSTED    = 0,
+  KAAPI_REQUEST_S_REPLY_OK  = 1,
+  KAAPI_REQUEST_S_REPLY_NOK = 2,
+  KAAPI_REQUEST_S_ERROR     = 3
 };
 
 
@@ -362,7 +379,7 @@ typedef struct kaapi_wc_structure_t {
     user code.
     
     WARNING: sfp should be the first field of the data structure in order to be able to recover in the public
-    API sfp from the kaapi_thread_context_t pointer stored in kaapi_current_thread_key.
+    API sfp (<=> kaapi_thread_t*) from the kaapi_thread_context_t pointer stored in kaapi_current_thread_key.
 */
 typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
@@ -560,65 +577,6 @@ static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaap
 }
 
 
-#if 0
-/** \ingroup TASK
-    The function kaapi_thread_save_frame() saves the current frame of a stack into
-    the frame data structure.
-    If successful, the kaapi_thread_save_frame() function will return zero.
-    Otherwise, an error number will be returned to indicate the error.
-    \param stack IN a pointer to the kaapi_stack_t data structure.
-    \param frame OUT a pointer to the kaapi_frame_t data structure.
-    \retval EINVAL invalid argument: bad pointer.
-*/
-static inline int _kaapi_thread_save_frame( kaapi_thread_context_t* thread, kaapi_frame_t* frame)
-{
-  kaapi_assert_debug( (thread !=0) && (frame !=0) );
-  frame->pc       = thread->sfp->pc;
-  frame->sp       = thread->sfp->sp;
-  frame->sp_data  = thread->sfp->sp_data;
-  return 0;  
-}
-
-/** \ingroup TASK
-    The function kaapi_thread_restore_frame() restores the frame context of a stack into
-    the stack data structure.
-    If successful, the kaapi_thread_restore_frame() function will return zero.
-    Otherwise, an error number will be returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t data structure.
-    \param frame IN a pointer to the kaapi_frame_t data structure.
-    \retval EINVAL invalid argument: bad pointer.
-*/
-static inline int _kaapi_thread_restore_frame( kaapi_thread_context_t* thread, const kaapi_frame_t* frame)
-{
-  kaapi_assert_debug( (thread !=0) && (frame !=0) );
-  thread->sfp->sp       = frame->sp;
-  thread->sfp->pc       = frame->pc;
-  thread->sfp->sp_data  = frame->sp_data;
-  return 0;  
-}
-
-#endif
-
-#if 0
-/** \ingroup TASK
-    The function kaapi_task_haslocality() will return non-zero value iff the task has locality constraints.
-    In this case, the field locality my be read to resolved locality constraints.
-    \param task IN a pointer to the kaapi_task_t to test.
-*/
-inline static int kaapi_task_haslocality(const kaapi_task_t* task)
-{ return (task->flag & KAAPI_TASK_LOCALITY); }
-
-/** \ingroup TASK
-    The function kaapi_task_isadaptive() will return non-zero value iff the task is an adaptive task.
-    \param task IN a pointer to the kaapi_task_t to test.
-*/
-inline static int kaapi_task_isadaptive(const kaapi_task_t* task)
-{
-  return (task->body == kaapi_adapt_body); 
-}
-#endif
-
-
 /** \ingroup TASK
     The function kaapi_stack_init() initializes the stack using the buffer passed in parameter. 
     The buffer must point to a memory region with at least count bytes allocated.
@@ -674,25 +632,7 @@ static inline kaapi_task_t* kaapi_thread_bottomtask(kaapi_thread_context_t* thre
 /* Shared object and access mode                                             */
 
 extern struct kaapi_processor_t* kaapi_get_current_processor(void);
-typedef kaapi_uint32_t kaapi_processor_id_t;
 extern kaapi_processor_id_t kaapi_get_current_kid(void);
-
-/** Initialize a request
-    \param kpsr a pointer to a kaapi_steal_request_t
-*/
-static inline void kaapi_request_init( struct kaapi_processor_t* kproc, kaapi_request_t* pkr )
-{
-  pkr->status = KAAPI_REQUEST_S_EMPTY; 
-  pkr->flag   = 0; 
-  pkr->reply  = 0;
-  pkr->thread = 0; 
-  pkr->mthread= 0; 
-  pkr->proc   = kproc;
-#if 0
-  fprintf(stdout,"%i kproc clear request @req=%p\n", kaapi_get_current_kid(), (void*)pkr );
-  fflush(stdout);
-#endif
-}
 
 
 /* */
@@ -836,24 +776,32 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 
 /** 
 */
+static inline int kaapi_sched_trylock( kaapi_processor_t* kproc )
+{
+  /* implicit barrier in KAAPI_ATOMIC_CAS if lock is taken */
+  return (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1);
+}
+
+/** 
+*/
 static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
 {
   int ok;
-  kaapi_mem_barrier();
   do {
-    ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid);
+    ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1);
     kaapi_slowdown_cpu();
   } while (!ok);
+  /* implicit barrier in KAAPI_ATOMIC_CAS */
   return 0;
 }
-
 
 /**
 */
 static inline int kaapi_sched_unlock( kaapi_processor_t* kproc )
 {
-  kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(&kproc->lock) == (unsigned)(1+kproc->kid) );
-  kaapi_mem_barrier();
+  kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(&kproc->lock) == (unsigned)(1) );
+  /* no implicit barrier in KAAPI_ATOMIC_WRITE */
+  kaapi_writemem_barrier();
   KAAPI_ATOMIC_WRITE(&kproc->lock, 0);
   return 0;
 }
@@ -995,7 +943,11 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc );
     \retval 0 in case of not stolen work 
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
-extern int kaapi_sched_stealprocessor ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid );
+extern int kaapi_sched_stealprocessor ( 
+  kaapi_processor_t* kproc, 
+  kaapi_listrequest_t* lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+);
 
 
 /** \ingroup WS
@@ -1008,8 +960,12 @@ extern int kaapi_sched_stealprocessor ( kaapi_processor_t* kproc, kaapi_processo
     \param task the current running task (cooperative) or 0 (concurrent)
     \retval the number of positive replies to the thieves
 */
-extern int kaapi_sched_stealstack  ( struct kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request );
-
+extern int kaapi_sched_stealstack  ( 
+  struct kaapi_thread_context_t* thread, 
+  kaapi_task_t* curr, 
+  struct kaapi_listrequest_t* lrequests, 
+  struct kaapi_listrequest_iterator_t* lrrange
+);
 
 /** \ingroup WS
     \retval 0 if no context could be wakeup
@@ -1077,23 +1033,14 @@ static inline int kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
-/** \ingroup ADAPTIVE
-    Reply a value to a steal request. If retval is !=0 it means that the request
-    has successfully adapt to steal work. Else 0.
-    While it reply to a request, the function DO NOT decrement the request count on the stack.
-    This function is machine dependent.
-*/
-extern int _kaapi_request_reply( 
-  kaapi_request_t*        request, 
-  kaapi_thread_context_t* retval, 
-  int                     isok
-);
 
 /** Destroy a request
     A posted request could not be destroyed until a reply has been made
 */
 #define kaapi_request_destroy( kpsr ) 
 
+static inline kaapi_processor_id_t kaapi_request_getthiefid(kaapi_request_t* r)
+{ return (kaapi_processor_id_t) r->kid; }
 
 /** Wait the end of request and return the error code
   \param pksr kaapi_reply_t
@@ -1106,24 +1053,21 @@ extern int kaapi_reply_wait( kaapi_reply_t* ksr );
 
 
 /** Return true iff the request has been posted
-  \param pksr kaapi_request_t
-*/
-static inline int kaapi_request_test( kaapi_request_t* kpsr )
-{ return (kpsr->status == KAAPI_REQUEST_S_POSTED); }
-
-
-/** Return true iff the request has been processed
   \param pksr kaapi_reply_t
+  \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
+  \retval KAAPI_REQUEST_S_FAIL steal request has failed
+  \retval KAAPI_REQUEST_S_ERROR steal request has failed to be posted because the victim refused request
+  \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
-static inline int kaapi_reply_test( kaapi_reply_t* kpsr )
-{ return (kpsr->status != KAAPI_REQUEST_S_POSTED); }
+static inline int kaapi_reply_test( kaapi_reply_t* ksr )
+{ return (ksr->status != KAAPI_REQUEST_S_POSTED); }
 
 
 /** Return true iff the request is a success steal
   \param pksr kaapi_reply_t
 */
-static inline int kaapi_reply_ok( kaapi_reply_t* kpsr )
-{ return (kpsr->status == KAAPI_REQUEST_S_SUCCESS); }
+static inline int kaapi_reply_ok( kaapi_reply_t* ksr )
+{ return (ksr->status == KAAPI_REQUEST_S_REPLY_OK); }
 
 
 /** Return the request status
@@ -1132,17 +1076,17 @@ static inline int kaapi_reply_ok( kaapi_reply_t* kpsr )
   \retval KAAPI_REQUEST_S_FAIL steal request has failed
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
-static inline int kaapi_request_status( kaapi_reply_t* reply ) 
-{ return reply->status; }
+static inline int kaapi_reply_status( kaapi_reply_t* ksr ) 
+{ return ksr->status; }
 
 
 /** Return the data associated with the reply
   \param pksr kaapi_reply_t
 */
-static inline kaapi_thread_context_t* kaapi_request_data( kaapi_reply_t* reply ) 
+static inline kaapi_reply_t* kaapi_replysync_data( kaapi_reply_t* reply ) 
 { 
   kaapi_readmem_barrier();
-  return reply->data; 
+  return reply;
 }
 
 

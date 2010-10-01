@@ -45,7 +45,8 @@
 */
 #include "kaapi_impl.h"
 
-kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid, struct kaapi_thread_context_t* cond_thread )
+kaapi_thread_context_t* kaapi_sched_wakeup 
+  ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid, struct kaapi_thread_context_t* cond_thread )
 {
   kaapi_thread_context_t* ctxt = 0;
   kaapi_wsqueuectxt_cell_t* cell;

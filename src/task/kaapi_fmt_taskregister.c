@@ -81,7 +81,7 @@ kaapi_format_id_t kaapi_format_taskregister(
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
         const kaapi_format_t*       fmt_param[],
-	size_t (*get_param_size)(const kaapi_format_t*, unsigned int, const void*)
+	      size_t (*get_param_size)(const kaapi_format_t*, unsigned int, const void*)
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();

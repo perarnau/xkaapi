@@ -49,7 +49,6 @@
 #include "kaapi_procinfo.h"
 
 
-
 /** procset grammar
     proc_set   : proc_expr ( ',' proc_expr ) *
     proc_expr  : '!'* proc_list '~' proc_index

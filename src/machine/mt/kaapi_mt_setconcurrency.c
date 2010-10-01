@@ -166,7 +166,7 @@ int kaapi_setconcurrency(void)
         pthread_attr_destroy(&attr);
         free(kaapi_all_kprocessors);
         kaapi_all_kprocessors = NULL;
-	kaapi_procinfo_list_free(&kpl);
+        kaapi_procinfo_list_free(&kpl);
         return ENOMEM;
       }
       kaapi_assert(0 == kaapi_processor_init(kproc, kpi));

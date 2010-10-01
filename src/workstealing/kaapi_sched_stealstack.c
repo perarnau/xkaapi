@@ -215,10 +215,11 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
 /** Steal task in the frame [frame->pc:frame->sp)
  */
 static int kaapi_sched_stealframe(
-                                  kaapi_thread_context_t* thread, 
-                                  kaapi_frame_t*          frame, 
-                                  kaapi_hashmap_t*        map, 
-                                  int count, kaapi_request_t* requests 
+  kaapi_thread_context_t* thread, 
+  kaapi_frame_t*          frame, 
+  kaapi_hashmap_t*        map, 
+  kaapi_listrequest_t* lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
 )
 {
   const kaapi_format_t* task_fmt;
@@ -337,7 +338,12 @@ static int kaapi_sched_stealframe(
  Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
  This signature is the same as a splitter function.
  */
-int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr, int count, kaapi_request_t* request )
+int kaapi_sched_stealstack  ( 
+  kaapi_thread_context_t* thread, 
+  kaapi_task_t* curr, 
+  kaapi_listrequest_t* lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
 {
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
   kaapi_frame_t*           top_frame;
@@ -395,9 +401,11 @@ int kaapi_sched_stealstack  ( kaapi_thread_context_t* thread, kaapi_task_t* curr
 }
 
 
+#if 0 //* revoir ici, ces fonctions sont importantes pour le cooperatif */
 /*
  */
 int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
 {
   return kaapi_sched_stealstack( stc->ctxtthread, stc->ownertask, stc->hasrequest, stc->requests );
 }
+#endif
