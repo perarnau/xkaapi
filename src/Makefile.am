@@ -41,6 +41,7 @@ libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_suspend.c \
   workstealing/kaapi_sched_sync.c \
   workstealing/kaapi_sched_criticalsteal.c \
+  workstealing/kaapi_sched_lists.c \
   task/kaapi_stack_init.c \
   task/kaapi_stack_clear.c \
   task/kaapi_stack_print.c \
@@ -66,7 +67,6 @@ libxkaapi_la_SOURCES=\
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \
-  kaapi_datastructure.h \
   kaapi_defs.h \
   kaapi_error.h \
   kaapi_machine.h \

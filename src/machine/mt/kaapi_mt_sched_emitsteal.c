@@ -99,7 +99,6 @@ wait_once:
 
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim.kproc->hlrequests, &lri);
-  kaapi_sched_unlock( victim.kproc );
   
   kaapi_assert_debug( (kaapi_listrequest_iterator_count(&lri) >0) || kaapi_reply_test( replymemory ) );
   
@@ -108,17 +107,22 @@ wait_once:
   
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
+     
+     Warning: In this version the aggregator has a lock on the victim processor.
   */
   kaapi_sched_stealprocessor( victim.kproc, &victim.kproc->hlrequests, &lri );
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
-  
+  kaapi_sched_unlock( victim.kproc );
+
   /* est-ce que cela peut se produire ici ? */
   if (!kaapi_reply_test( replymemory )) 
     goto wait_once;
 
 return_value:
+  kaapi_sched_unlock( victim.kproc );
+  
   /* mark current processor as no stealing anymore */
   kproc->issteal = 0;
 

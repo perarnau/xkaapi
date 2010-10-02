@@ -807,44 +807,27 @@ static inline int kaapi_sched_unlock( kaapi_processor_t* kproc )
 }
 
 
-static inline int kaapi_sched_pushready( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
+/** sched readylist routines
+ */
+kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t*, kaapi_processor_id_t);
+void kaapi_sched_pushready(kaapi_processor_t*, kaapi_thread_context_t*);
+
+static inline void kaapi_sched_initready(kaapi_processor_t* kproc)
 {
-  KAAPI_FIFO_PUSH( &kproc->lready, thread );
-  return 0;
+  /* initialize the ready list */
+  kproc->lready._front = NULL;
+  kproc->lready._back = NULL;
 }
 
-
-
-/** If the owner call this method then it should protect itself again thieves by using sched_lock & sched_unlock
-*/
-static inline kaapi_thread_context_t* kaapi_sched_stealready( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
+static inline int kaapi_sched_isreadyempty(kaapi_processor_t* kproc)
 {
-  kaapi_thread_context_t* thread = 0;
-  kaapi_thread_context_t* prevthread = 0;
-  
-  /* WARNING should add test of affinity ? and move the function into a .c */
-  if (!KAAPI_FIFO_EMPTY(&kproc->lready))
-  {
-    KAAPI_FIFO_TOP( &kproc->lready, prevthread );
-    if (kaapi_thread_hasaffinity(prevthread->affinity, kproc_thiefid))
-    {
-      KAAPI_FIFO_POP( &kproc->lready, thread );
-      return thread;
-    }
-    thread = prevthread->_next;
-    while (thread !=0) 
-    {
-      if (kaapi_thread_hasaffinity(thread->affinity, kproc_thiefid))
-      {
-        KAAPI_FIFO_REMOVE( &kproc->lready, prevthread, thread );
-        return thread;
-      }
-      prevthread = thread;
-      thread = thread->_next;
-    }
-  }
-  return thread;
+  /* is the ready list empty */
+  return kproc->lready._front == NULL;
 }
+
+/* sched lfree routines
+ */
+
 
 /**
 */

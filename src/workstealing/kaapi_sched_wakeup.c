@@ -67,10 +67,10 @@ kaapi_thread_context_t* kaapi_sched_wakeup
       return ctxt;
     }
   }
-
-  /* */
-  if (!KAAPI_FIFO_EMPTY(&kproc->lready))
-  {
+  
+  /* ready list not empty */
+  if (!kaapi_sched_isreadyempty(kproc))
+    {
     kaapi_thread_context_t* thread = 0;
 
     /* lock if self wakeup to protect lready against thieves because in that case

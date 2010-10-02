@@ -49,8 +49,6 @@
 #ifndef _KAAPI_IMPL_H
 #  error This file must not be directly included. Use kaapi_impl.h instead
 #endif
-#include "kaapi_datastructure.h"
-#include "../../memory/kaapi_mem.h"
 #include <stdint.h>
 #include <pthread.h>
 
@@ -73,6 +71,7 @@
 #  include "../cuda/kaapi_cuda_proc.h"
 # endif
 #endif
+#include "kaapi_mem.h"
 
 #if (SIZEOF_VOIDP == 4)
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
@@ -163,44 +162,23 @@ typedef struct kaapi_wsqueuectxt_t {
   kaapi_wsqueuectxt_cellbloc_t* allocatedbloc;
 } kaapi_wsqueuectxt_t;
 
-/** lfree data structure,
-    kaapi_thread_context_t has both next and prev fields.
+
+/** lfree data structure
 */
-KAAPI_QUEUE_DECLARE(kaapi_queuectxt_t, kaapi_thread_context_t);
-#define KAAPI_MAXFREECTXT 2
+typedef struct kaapi_lfree
+{
+  kaapi_thread_context_t* _front;
+  kaapi_thread_context_t* _back;
+} kaapi_lfree_t;
 
-/* clear / is empty / push / pop */
-#define kaapi_lfree_clear( kproc )\
-  {\
-    (kproc)->sizelfree = 0;\
-    KAAPI_QUEUE_CLEAR( &(kproc)->lfree );\
-  }
-
-#define kaapi_lfree_isempty( kproc )\
-    ((kproc)->sizelfree == 0)
-
-#define kaapi_lfree_push( kproc, v )\
-  {\
-    KAAPI_QUEUE_PUSH_FRONT( &(kproc)->lfree, v );\
-    if ((kproc)->sizelfree >= KAAPI_MAXFREECTXT) \
-    {\
-      kaapi_thread_context_t* ctxt = 0;\
-      KAAPI_QUEUE_POP_BACK( &(kproc)->lfree, ctxt ); \
-      kaapi_context_free( ctxt );\
-    }\
-    else\
-      ++(kproc)->sizelfree;\
-  }
-
-#define kaapi_lfree_pop( kproc, v )\
-  {\
-    --(kproc)->sizelfree;\
-    KAAPI_QUEUE_POP_FRONT( &(kproc)->lfree, v );\
-  }
 
 /** lready data structure
 */
-KAAPI_FIFO_DECLARE(kaapi_fifoctxt_t, kaapi_thread_context_t);
+typedef struct kaapi_lready
+{
+  kaapi_thread_context_t* _front;
+  kaapi_thread_context_t* _back;
+} kaapi_lready_t;
 
 /** push: LIFO order with respect to pop. Only owner may push
 */
@@ -437,10 +415,6 @@ typedef struct kaapi_listrequest_t {
 #endif /* type of request */
 
 
-/* list of ready thread utility functions */
-extern int kaapi_readylist_empty(kaapi_fifoctxt_t*);
-extern kaapi_thread_context_t* kaapi_listready_steal( kaapi_fifoctxt_t*, kaapi_processor_id_t );
-
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
     The kid is a system wide identifier. In the current version it only contains a local counter value
@@ -460,11 +434,11 @@ typedef struct kaapi_processor_t {
   kaapi_uint32_t           issteal;                       /* */
   
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-  kaapi_fifoctxt_t         lready;                        /* list of ready context, concurrent access locked by 'lock' */
+  kaapi_lready_t	   lready;                        /* list of ready context, concurrent access locked by 'lock' */
   kaapi_thread_context_t*  readythread;                   /* continuation passing parameter to speed up recovery of activity... */
 
   /* free list */
-  kaapi_queuectxt_t        lfree;                         /* queue of free context */
+  kaapi_lfree_t		   lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
 
   void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
@@ -564,6 +538,74 @@ extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc );
     \retval EINVAL invalid argument: bad stack pointer.
 */
 extern int kaapi_context_free( kaapi_thread_context_t* ctxt );
+
+
+/* lfree list routines
+ */
+
+static inline void kaapi_lfree_clear
+(struct kaapi_processor_t* kproc)
+{
+  kproc->sizelfree = 0;
+  kproc->lfree._front = NULL;
+  kproc->lfree._back = NULL;
+}
+
+static inline int kaapi_lfree_isempty
+(struct kaapi_processor_t* kproc)
+{
+  return kproc->sizelfree == 0;
+}
+
+static inline void kaapi_lfree_push
+(struct kaapi_processor_t* kproc, kaapi_thread_context_t* node)
+{
+  kaapi_lfree_t* const list = &kproc->lfree;
+
+  /* push the node */
+  node->_next = list->_front;
+  node->_prev = NULL;
+  if (list->_front == NULL)
+    list->_back = node;
+  else
+    list->_front->_prev = node;
+  list->_front = node;
+
+  /* pop back if new size exceeds max */
+#define KAAPI_MAXFREECTXT 2
+  if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
+  {
+    /* list size at least 2, no special case handling */
+    node = list->_back;
+    list->_back = list->_back->_prev;
+    list->_back->_next = NULL;
+
+    /* free the popped context */
+    kaapi_context_free(node);
+
+    /* see increment after */
+    --kproc->sizelfree;
+  }
+
+  ++kproc->sizelfree;
+}
+
+static inline kaapi_thread_context_t*
+kaapi_lfree_pop(struct kaapi_processor_t* kproc)
+{
+  kaapi_lfree_t* const list = &kproc->lfree;
+  kaapi_thread_context_t* const node = list->_front;
+
+  --kproc->sizelfree;
+
+  list->_front = node->_next;
+  if (list->_front == NULL)
+    list->_back = NULL;
+  else
+    list->_front->_prev = NULL;
+
+  return node;
+}
 
 
 /** \ingroup WS

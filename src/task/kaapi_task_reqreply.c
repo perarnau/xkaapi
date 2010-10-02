@@ -89,7 +89,7 @@ int kaapi_request_reply(
   
   if ((result ==0) && (stc ==0))
   {
-    return _kaapi_request_reply(request, 0, 0);
+    return _kaapi_request_reply(request, 0);
   }
   
   if (result !=0)

@@ -850,32 +850,49 @@ extern int kaapi_sched_sync( void );
 /* ========================================================================= */
 
 /** \ingroup WS
-    Return a new adaptive task with a splitter function.
-    The splitter function is called to extract parallelism.
-    The splitter is either called in concurrence (flag= KAAPI_CONTEXT_CONCURRENT)
-    with the running thread; if flag = KAAPI_CONTEXT_COOPERATIVE, the running thread
-    should pool regulary the incomming request using kaapi_stealpoint. 
-    After splitting the running thread, it could be necessary to preempt the thieves,
-    In that case, the caller should specify KAAPI_CONTEXT_PREEMPT. Then all
-    the thieves should be preeempted using kaapi_preempt_thief or kaapi_preempt_async_thief.
-    If the result of a thief will not be necessary for the sequential computation,
-    the user may call kaapi_abort_thief.
+    Allows the current thread of execution to create tasks on demand.
+    A thread that begin an adaptive section, allows thiefs to call a splitter
+    function with an arguments in order to push tasks for thiefs.
+    If not thief is idle, then no tasks will be created and there is no cost
+    due to creations of tasks.
+
+    This is the way Kaapi implements adaptive algorithms.
     
-    master if only used if flag == KAAPI_STEALCONTEXT_LINKED.
-    * If flag ==KAAPI_STEALCONTEXT_LINKED, then all the linked thieves are waiting
-    during the call to execution of task forked by kaapi_steal_finalize. 
-    In that way the thread that returns synchronize its execution after kaapi_steal_finalize
-    is garanteed to view results of all other thieves.
-    * If flag ==KAAPI_STEALCONTEXT_DEFAULT then the application should ensure termination of
-    thieves, either by call preemption or other synchronisation method.
+    The current thread of execution (and the current executing task) should
+    mark the section of code where tasks are created on demand by using 
+    the instructions kaapi_task_begin_adaptive and kaapi_task_end_adaptive. 
+    Between this two instructions, a splitter may be invoked with its arguments:
+    - in concurrence with the local execution thread iff flag = KAAPI_SC_CONCURRENT
+    - with cooperation with the local execution thread iff flag =KAAPI_SC_COOPERATIVE.
+    In the case of the cooperative execution, the code should test presence of request
+    using the instruction kaapi_stealpoint.
 */
-kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
+typedef enum kaapi_stealcontext_flag {
+  KAAPI_SC_CONCURRENT    = 0x1,
+  KAAPI_SC_COOPERATIVE   = 0x2,
+  KAAPI_SC_PREEMPTION    = 0x3,
+  KAAPI_SC_NOPREEMPTION  = 0x4,
+  
+  KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
+} kaapi_stealcontext_flag;
+
+
+/** Begin adaptive section of code
+*/
+kaapi_stealcontext_t* kaapi_task_begin_adaptive( 
   kaapi_thread_t*       thread,
   int                   flag,
-  kaapi_task_splitter_t spliter,
-  void*                 argsplitter,
-  kaapi_stealcontext_t* master 
+  kaapi_task_splitter_t splitter,
+  void*                 argsplitter
 );
+
+/** \ingroup ADAPTIVE
+    Mark the end of the adaptive section of code.
+    After the call to this function, all thieves have finish to compute in parallel,
+    and memory location produced in concurrency may be read by the calling thread.
+*/
+extern int kaapi_task_end_adaptive( kaapi_stealcontext_t* stc );
+
 
 /** \ingroup ADAPTIVE
     Allocate the return data structure for the thief. This structure should be passed
@@ -1197,15 +1214,6 @@ extern int kaapi_steal_endcritical( kaapi_stealcontext_t* sc );
 */
 extern int kaapi_steal_endcritical_disabled( kaapi_stealcontext_t* sc );
 
-
-/** \ingroup ADAPTIVE
-    Push the task that, on execution will wait the terminaison of the previous 
-    adaptive task 'task' and all the thieves.
-    The local result, if not null will be pushed after the end of execution of all local tasks.
-    This method should be called in a frame with scope included by the frame where was done the call 
-    to kaapi_thread_pushstealcontext that creates the context.
-*/
-extern int kaapi_steal_finalize( kaapi_stealcontext_t* stc );
 
 /** \ingroup ADAPTIVE
     Signal end of a thief, required to be call if kaapi_steal_finalize is not call in order

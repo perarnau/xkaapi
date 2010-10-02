@@ -162,10 +162,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       }
 
       kaapi_setcontext(kproc, thread);
-#if 0
-      printf("proc:%i steal Thread: %p affinity:%u\n", kproc->kid, thread, thread->affinity );
-      fflush( stdout );
-#endif
     }
 
 redo_execution:
@@ -188,10 +184,6 @@ redo_execution:
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
-#if 0
-      printf("proc:%i suspends thread: %p affinity:%u\n", kproc->kid, ctxt, ctxt->affinity );
-      fflush( stdout );
-#endif
       /* push it: suspended because top task is not ready */
       kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
     } 
@@ -201,11 +193,6 @@ redo_execution:
     */
     else if (ctxt != 0) 
     {
-#if 0
-      printf("proc:%i end executes thread: %p affinity:%u\n", kproc->kid, ctxt, ctxt->affinity );
-      fflush( stdout );
-#endif
-
       /* push it into freelist */
       kaapi_lfree_push( kproc, ctxt );
     }
