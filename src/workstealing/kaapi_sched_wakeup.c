@@ -94,7 +94,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup
     garbage = 1;
 
     /* not already wakeuped */
-    const int status = KAAPI_ATOMIC_READ(&cell->state);
+    int status = KAAPI_ATOMIC_READ(&cell->state);
     if (status != 2)
     {
       /* assume wont garbage */
@@ -108,7 +108,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup
         { 
           garbage = 1;
           /* wakeup the thread and try to steal it */
-          while (KAAPI_ATOMIC_READ(&cell->state) != 2)
+          while (status != 2)
           {
             if (KAAPI_ATOMIC_CAS(&cell->state, status, 2))
             {
@@ -117,6 +117,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup
               wakeupok = 1;
 	      break ;
             }
+
+	    status = KAAPI_ATOMIC_READ(&cell->state);
           }
         }
       }
