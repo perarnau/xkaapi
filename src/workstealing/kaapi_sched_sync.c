@@ -85,6 +85,10 @@ int kaapi_sched_sync(void)
   thread = _kaapi_self_thread();
   if (kaapi_frame_isempty( thread->sfp ) ) return 0;
 
+  /* here affinity should be deleted (not scalable concept) 
+     - use localkid to enforce execution into one specific
+     kprocessor
+  */
   save_affinity = thread->affinity;
   kaapi_thread_clearaffinity(thread);
 /* kaapi_thread_setaffinity( thread, thread->proc->kid );*/

@@ -111,10 +111,11 @@ wait_once:
      Warning: In this version the aggregator has a lock on the victim processor.
   */
   kaapi_sched_stealprocessor( victim.kproc, &victim.kproc->hlrequests, &lri );
+  kaapi_sched_unlock( victim.kproc );
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
-  kaapi_sched_unlock( victim.kproc );
 
   /* est-ce que cela peut se produire ici ? */
   if (!kaapi_reply_test( replymemory )) 

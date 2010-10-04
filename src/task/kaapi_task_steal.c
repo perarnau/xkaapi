@@ -107,25 +107,32 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   }
   else {
     /* copy args == 0: do nothing see task_steal: do not fork this task */
-    kaapi_assert_debug_m(0, "cannot be here !!! ");
-    abort();
+    kaapi_assert_m(0, "cannot be here !!! ");
   }
 
-#if defined(KAAPI_USE_READYLIST)
-  kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)arg->origin_task->pad;
-  if (wcs != 0)
+  /* if signaled thread was suspended, move it to the local queue */
+  kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
+  if (wcs != 0) /* means thread has been suspended */
   { 
+    kaapi_readmem_barrier();
     kaapi_processor_t* kproc = kaapi_get_current_processor();
-    if (kaapi_thread_hasaffinity(wcs->affinity, kproc->kid) && (kproc->readythread ==0))
+    if (kaapi_sched_readyempty(kproc) && kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
     {
-      kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
-      if (kthread != 0)
-        kproc->readythread = kthread;
+      kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
+      if (kthread !=0)
+      {
+        kaapi_sched_lock(kproc);
+        kaapi_sched_pushready(kproc, kthread );
+        kaapi_sched_unlock(kproc);
+      }
+    }
+    else {
+      /* cannot steal it, put the state to READY */
+      KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
     }
   }
-#endif  
 
-  /* flush in memory all pending write and read ops */  
+  /* flush in memory all pending write (and read ops) */  
   kaapi_writemem_barrier();
 
   /* signal the task */

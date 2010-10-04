@@ -72,7 +72,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     
     ctxt = 0;
     /* local wake up first, inline test to avoid function call */
-    if (!kaapi_sched_readyempty(kproc) || (kproc->lsuspend.head !=0) )
+    if (!kaapi_sched_readyempty(kproc) || !kaapi_wsqueuectxt_empty(kproc) )
     {
       ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0); 
 
@@ -140,13 +140,14 @@ redo_execute:
         kaapi_setcontext(kproc, ctxt ); 
         goto redo_execute;
       }
-
+      
       /* else reallocate a context */
       ctxt = kaapi_context_alloc(kproc);
 
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
     }
+
     /* WARNING: this case is used by static scheduling in order to detach a thread context 
        from a thread at the end of an iteration. See kaapi_tasksignalend_body
        Previous code: without the test else if () {... }

@@ -142,12 +142,17 @@ typedef struct kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_cell_ptr_t;
 /** Cell of the list
 */
 typedef struct kaapi_wsqueuectxt_cell_t {
-  kaapi_atomic_t               state;  /* 0: in the list, 1: out the list */
-  kaapi_thread_context_t*      thread; /* */
-  kaapi_wsqueuectxt_cell_ptr_t next;   /* double link list */
-  kaapi_wsqueuectxt_cell_ptr_t prev;   /* shared with thief, used to link in free list */
+  kaapi_atomic_t               state;      /* 0: in the list, 1: out the list */
+  kaapi_affinity_t             affinity;   /* bit i == 1 -> can run on procid i */
+  kaapi_thread_context_t*      thread;     /* */
+  kaapi_wsqueuectxt_cell_ptr_t next;       /* double link list */
+  kaapi_wsqueuectxt_cell_ptr_t prev;       /* shared with thief, used to link in free list */
 } kaapi_wsqueuectxt_cell_t;
 
+#define KAAPI_WSQUEUECELL_INLIST    1
+#define KAAPI_WSQUEUECELL_READY     3 /* see kaapi wakeup */
+#define KAAPI_WSQUEUECELL_OUTLIST   4
+#define KAAPI_WSQUEUECELL_STEALLIST 8
 
 /** Type of bloc of kaapi_liststack_node_t
 */
@@ -335,15 +340,23 @@ typedef struct kaapi_listrequest_iterator_t {
   int idcurr;
 } kaapi_listrequest_iterator_t;
 
+/* return !=0 iff the range is empty
+*/
 static inline int kaapi_listrequest_iterator_empty(kaapi_listrequest_iterator_t* lrrange)
 { return lrrange->bitmap == 0; }
 
+/* return the number of entries in the range
+*/
 static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t* lrrange)
 { return kaapi_bitmap_count(lrrange->bitmap); }
 
+/* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
+*/
 static inline kaapi_request_t* kaapi_listrequest_iterator_get( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
 { return &lrequests->requests[lrrange->idcurr]; }
 
+/* return the next entry in the request. return 0 if the range is empty.
+*/
 static inline kaapi_request_t* kaapi_listrequest_iterator_next( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
 {
   lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap );
@@ -563,7 +576,7 @@ static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* 
 /** \ingroup WS
     Number of used cores
 */
-extern kaapi_uint32_t     kaapi_count_kprocessors;
+extern kaapi_uint32_t volatile kaapi_count_kprocessors;
 
 /** \ingroup WS
     One K-processors per core
@@ -812,25 +825,11 @@ extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
 extern int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* thread );
 
 /** \ingroup WS
-   Pop a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_pop( kaapi_processor_t* kproc, kaapi_thread_context_t** thread );
-
-/** \ingroup WS
-   Steal a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_steal( kaapi_processor_t* kproc, kaapi_thread_context_t** thread );
-
-/** \ingroup WS
    Steal a ctxt on a specific cell
    Return a pointer to the stolen thread in case of success
    Return 0 if the thread was already stolen
 */
-extern kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_processor_t* kproc, kaapi_wsqueuectxt_cell_t* cell );
+extern kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_cell_t* cell );
 
 
 #endif /* _KAAPI_MT_MACHINE_H */

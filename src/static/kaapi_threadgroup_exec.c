@@ -76,6 +76,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   for (i=0; i<thgrp->group_size; ++i)
   {
     kaapi_processor_id_t victim_procid = i/blocsize;
+
 #if 1 // Method should be implemented. Currently push locally and wait stealer    
     kaapi_processor_t* victim_kproc = kaapi_all_kprocessors[victim_procid];
 
@@ -93,13 +94,8 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     }
     else {
       /* put pad of the first non ready task as if the thread was suspended (but not into a queue) */
-      kaapi_wc_structure_t* wcs = &thgrp->threadctxts[i]->wcs;
-      wcs->wclist   = 0;
-      wcs->wccell   = 0;
-      wcs->affinity = thgrp->threadctxts[i]->affinity;
       kaapi_task_t* task = thgrp->threadctxts[i]->sfp->pc;
-      task->pad = wcs;
-//      kaapi_wsqueuectxt_lockpush( &victim_kproc->lsuspend, thgrp->threadctxts[i] );
+      task->pad = thgrp->threadctxts[i];
     }
 #else
     kaapi_processor_t* current_proc = kaapi_get_current_processor();

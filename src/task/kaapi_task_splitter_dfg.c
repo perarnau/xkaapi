@@ -46,53 +46,46 @@
 
 /** Return the number of splitted parts (at most 1 if the task may be steal)
 */
-int kaapi_task_splitter_dfg( kaapi_thread_context_t* thread, kaapi_task_t* task, unsigned int war_param, 
-                             int count, struct kaapi_request_t* array)
+int kaapi_task_splitter_dfg( 
+  kaapi_thread_context_t* thread, 
+  kaapi_task_t* task, 
+  unsigned int war_param, 
+  kaapi_listrequest_t* lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
 {
-  int i;
   kaapi_request_t*        request    = 0;
-  kaapi_task_t*           thief_task   = 0;
-  kaapi_thread_t*         thief_thread = 0;
   kaapi_tasksteal_arg_t*  argsteal;
-  
+  kaapi_reply_steal_t*    stealreply;
 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) == 1+_kaapi_get_current_processor()->kid );
   kaapi_assert_debug( task !=0 );
   kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
 
   /* find the first request in the list */
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    if (kaapi_request_ok( &array[i] )) 
-    {
-      request = &array[i];
-      break;
-    }
-  }
+  request = kaapi_listrequest_iterator_get( lrequests, lrrange );
   kaapi_assert(request !=0);
 
+  stealreply = (kaapi_reply_steal_t*)kaapi_request_getreply(request);
+  
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
-       - the original stack
+       - the original thread
        - the original task pointer
        - the pointer to shared data with R / RW access data
        - and at the end it reserve enough space to store original task arguments
      The original body is saved as the extra body of the original task data structure.
   */
-  thief_thread = request->thread;
-
-  thief_task = kaapi_thread_toptask( thief_thread );
-  kaapi_task_init( thief_task, kaapi_tasksteal_body, kaapi_thread_pushdata(thief_thread, sizeof(kaapi_tasksteal_arg_t)) );
-  argsteal = kaapi_task_getargst( thief_task, kaapi_tasksteal_arg_t );
+  argsteal = (kaapi_tasksteal_arg_t*)stealreply->u.s_task.data;
   argsteal->origin_thread         = thread;
   argsteal->origin_task           = task;
-  argsteal->war_param             = war_param;
-#if defined(KAAPI_USE_READYLIST)
-  task->pad = 0;
-#endif
-  
-  kaapi_thread_pushtask( thief_thread );
+  argsteal->war_param             = war_param;  
+  stealreply->opcode              = KAAPI_REPLY_S_TASK;
+  stealreply->u.s_task.body       = kaapi_tasksteal_body;
 
-  _kaapi_request_reply( request, request->mthread, 1 ); /* success of steal */
+  _kaapi_request_reply( request, 1 ); /* success of steal */
+  
+  /* update next request to process */
+  kaapi_listrequest_iterator_next( lrequests, lrrange );
   return 1;
 }

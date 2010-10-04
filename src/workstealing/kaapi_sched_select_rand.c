@@ -47,10 +47,30 @@
 */
 int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 {
-  int err, i;
-  do {
-      err = kaapi_select_victim_rand_atlevel( kproc, i, victim );
-      if (err ==0) return 0;
-  } while(1);
+  int nbproc, victimid;
+  
+  if (kproc->fnc_selecarg ==0) 
+  {
+    kproc->fnc_selecarg = (void*)(long)rand();
+    /*TG: After very few experiments, it seems to better take random choice first
+        victim->kproc = kaapi_all_kprocessors[ 0 ];
+        return 0;
+    */
+  }
 
+redo_select:
+  nbproc = kaapi_count_kprocessors;
+  if (nbproc <=1) return EINVAL;
+#if 1
+  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
+#else
+  /* \WARNING: test to bias the random generator */
+  victimid = 0; //rand_r( (unsigned int*)&kproc->fnc_selecarg ) % (10*nbproc);
+  if (victimid >= nbproc) victimid = 0;
+#endif
+
+  /* Get the k-processor */    
+  victim->kproc = kaapi_all_kprocessors[ victimid ];
+  if (victim->kproc ==0) goto redo_select;
+  return 1;
 }

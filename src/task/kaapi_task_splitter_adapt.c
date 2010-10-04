@@ -47,23 +47,34 @@
 /**
 */
 int kaapi_task_splitter_adapt( 
-    kaapi_thread_context_t* thread, 
-    kaapi_task_t* task,
-    kaapi_task_splitter_t splitter,
-    void* argsplitter,
-    int count, 
-    struct kaapi_request_t* array
+    kaapi_thread_context_t*       thread, 
+    kaapi_task_t*                 task,
+    kaapi_task_splitter_t         splitter,
+    void*                         argsplitter,
+    kaapi_listrequest_t*          lrequests, 
+    kaapi_listrequest_iterator_t* lrrange
 )
 {
+  int i;
   kaapi_stealcontext_t* stc;
-  
+  kaapi_request_t* requests;
+  kaapi_request_t* curr;
   kaapi_assert_debug( task !=0 );
 
   /* call the user splitter */
   stc = kaapi_task_getargst(task, kaapi_stealcontext_t);
 
   /* call the splitter */
-  count = splitter( stc, count, array, argsplitter);
+  int count = kaapi_listrequest_iterator_count(lrrange);
+  requests = (kaapi_request_t*)alloca(sizeof(kaapi_request_t)*count);
+  curr = kaapi_listrequest_iterator_get( lrequests, lrrange );
+  for (i=0; i<count; ++i)
+  {
+    requests[i].kid   = curr->kid;
+    requests[i].reply = curr->reply;
+    curr = kaapi_listrequest_iterator_next( lrequests, lrrange );
+  }
+  splitter( stc, count, requests, argsplitter);
 
   return count;
 }

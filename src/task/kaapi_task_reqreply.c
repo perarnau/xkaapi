@@ -47,9 +47,9 @@
 /** Args for tasksignal
 */
 typedef struct kaapi_tasksig_arg_t {
-  kaapi_taskadaptive_t*               ta;         /* the victim or the master */
+  kaapi_taskadaptive_t*                 ta;         /* the victim or the master */
   volatile kaapi_taskadaptive_result_t* result;
-  volatile int			  inuse;
+  volatile int			                    inuse;
 } kaapi_tasksig_arg_t;
 
 
@@ -120,6 +120,7 @@ int kaapi_request_reply(
     result->master = ta;
   }
 
+#if 0 // TODO  
   if ((stc->flag & 0x1) == KAAPI_STEALCONTEXT_LINKED) 
   { 
     ta_master = ta->origin_master;
@@ -137,5 +138,6 @@ int kaapi_request_reply(
   arg->ta     = ta_master;
   arg->result = result;
   kaapi_thread_pushtask(request->thread);
-  return _kaapi_request_reply( request, request->mthread, 1 );
+#endif
+  return _kaapi_request_reply( request, 1 );
 }

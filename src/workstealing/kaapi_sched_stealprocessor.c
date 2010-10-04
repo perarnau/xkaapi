@@ -45,14 +45,8 @@
 */
 #include "kaapi_impl.h"
 
-/*
-   Utiliser un iterator sur le lrequests qui a ete crée dans la partie "atomic" de
-   la lecture de l'état du lrequest.
-   - doit permettre aussi d'autoriser la vol en concurrence. Sur un même bloc de request.
-   => listready, suspendlist concurrente.
-*/
-
-/** 
+/** Most important assumption here:
+    kaapi_sched_lock was locked.
 */
 int kaapi_sched_stealprocessor(
   kaapi_processor_t* kproc, 
@@ -65,10 +59,11 @@ int kaapi_sched_stealprocessor(
   /* test should be done before calling the function */
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
   
+  /* first request */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
 
   /* try to steal ready thread */
-  while (!kaapi_sched_readyempty(kproc))
+  while ((request !=0) && !kaapi_sched_readyempty(kproc))
   {
     kaapi_thread_context_t* thread;
     thread = kaapi_sched_stealready( kproc, kaapi_request_getthiefid(request) );
@@ -77,33 +72,38 @@ int kaapi_sched_stealprocessor(
       /* reply */
       _kaapi_request_reply(request, 1);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
-      if (kaapi_listrequest_iterator_empty(lrrange)) return 0;
     }
   }
   
-#if 0
-for (int i=0; i<1; ++i)
   if (1)
-  { /* WARNING do not try to steal inside suspended stack */
+  { /* try to steal into suspended list of threads
+       The only condition to ensure is that a thread context that will be destroy should
+       lock the kprocessor to avoid iterations.
+    */
     kaapi_wsqueuectxt_cell_t* cell;
     cell = kproc->lsuspend.tail;
-    while ((cell !=0) && (count >0))
+    while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0))
     {
-      stealok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
+      /* atomic cas to avoid conflic with task_writebody that may be move the thread
+         from an other queue
+      */
+      int stealok = KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_INLIST, KAAPI_WSQUEUECELL_STEALLIST);
       if (stealok)
       {
         kaapi_thread_context_t* thread = cell->thread;
         if (thread !=0)
         {
-          replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
-          count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
+          kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
         }
-        KAAPI_ATOMIC_CAS( &cell->state, 1, 0); /* may be ==2 -> wakeuped by the owner */
+        KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_STEALLIST, KAAPI_WSQUEUECELL_INLIST); 
+        /*    may be ==KAAPI_WSQUEUECELL_OUTLIST -> wakeuped by the owner 
+           or 
+              may be ==KAAPI_WSQUEUECELL_READYLIST -> set by the thief
+        */
       }
       cell = cell->prev;
     }
   }
-#endif
 
   /* steal current thread */
   kaapi_thread_context_t*  thread = kproc->thread;

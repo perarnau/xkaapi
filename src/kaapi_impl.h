@@ -353,23 +353,6 @@ typedef struct kaapi_stack_t {
 */
 struct kaapi_wsqueuectxt_cell_t;
 
-/* This data structure is used to help in signaling ready thread after they becomes suspended:
-   - each time a thread tries to execute kaapi_suspend_body, the thread suspended its execution
-   and push it is pushed into the list of suspended thread of the current processor.
-   - in that case, the _wccell structure is set to the cell list.
-   
-   When a thread signal an suspended thread it can use this information in order to wakeup directly
-   the suspended thread.
-   
-   This structure is pointed by the pad field of the task that contains kaapi_suspend_body.
-*/
-typedef struct kaapi_wc_structure_t {
-  struct kaapi_wsqueuectxt_t*      wclist;      /* suspend list that own the suspended thread _wcthread */
-  struct kaapi_wsqueuectxt_cell_t* wccell;      /* waiting cell of the thread in _wclist, or 0 if not suspended */
-  kaapi_affinity_t                 affinity;    /* affinity of the suspended thread */
-  struct kaapi_thread_context_t*   thread;      /* may be omitted -> shift from the address of wc structure */
-} kaapi_wc_structure_t;
-
 
 /* ============================= The thread context data structure ============================ */
 /** The thread context data structure
@@ -398,16 +381,16 @@ typedef struct kaapi_thread_context_t {
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif
-  kaapi_affinity_t               affinity;       /* bit i == 1 -> can run on procid i */
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
-  kaapi_atomic_t                 lock;           /** */ 
+  kaapi_atomic_t                 lock;           /** ??? */ 
+  kaapi_affinity_t               affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
-  kaapi_wc_structure_t           wcs;            /** used if the thread is suspended and poined by ->pad of the task that required suspension */
+  struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
@@ -838,7 +821,7 @@ extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
 
 /** Useful
 */
-extern int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread );
+extern int kaapi_stack_print( FILE* file, kaapi_thread_context_t* thread );
 
 /** Useful
 */
@@ -885,17 +868,6 @@ extern int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, ka
        3- if toplevel > maximal level then level=0, toplevel=0
 */
 extern int kaapi_sched_select_victim_rand_incr( kaapi_processor_t* kproc, kaapi_victim_t* victim);
-
-/** \ingroup WS
-    Only do rando ws on the first level of the hierarchy. Assume that all cores are connected
-    together using the first level hierarchy information.
-*/
-extern int kaapi_sched_select_victim_rand_first( kaapi_processor_t* kproc, kaapi_victim_t* victim);
-
-/** \ingroup WS
-    Helper function for some of the above random selection of victim
-*/
-extern int kaapi_select_victim_rand_atlevel( kaapi_processor_t* kproc, int level, kaapi_victim_t* victim );
 
 
 /** \ingroup WS
@@ -958,7 +930,11 @@ extern int kaapi_sched_stealstack  (
     \retval else a context to wakeup
     \TODO faire specs ici
 */
-extern kaapi_thread_context_t* kaapi_sched_wakeup ( kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid, struct kaapi_thread_context_t* cond );
+extern kaapi_thread_context_t* kaapi_sched_wakeup ( 
+  kaapi_processor_t* kproc, 
+  kaapi_processor_id_t kproc_thiefid, 
+  struct kaapi_thread_context_t* cond 
+);
 
 
 /** \ingroup WS
@@ -986,19 +962,24 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
 /** \ingroup WS
     Splitter for DFG task
 */
-extern int kaapi_task_splitter_dfg(kaapi_thread_context_t* thread, kaapi_task_t* task, unsigned int war_param, 
-      int count, struct kaapi_request_t* array);
+extern int kaapi_task_splitter_dfg(
+  kaapi_thread_context_t*       thread, 
+  kaapi_task_t*                 task, 
+  unsigned int                  war_param, 
+  kaapi_listrequest_t*          lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+);
 
 /** \ingroup WS
     Wrapper arround the user level Splitter for Adaptive task
 */
 extern int kaapi_task_splitter_adapt( 
-    kaapi_thread_context_t* thread, 
-    kaapi_task_t* task,
-    kaapi_task_splitter_t splitter,
-    void* argsplitter,
-    int count, 
-    struct kaapi_request_t* array
+    kaapi_thread_context_t*       thread, 
+    kaapi_task_t*                 task,
+    kaapi_task_splitter_t         splitter,
+    void*                         argsplitter,
+    kaapi_listrequest_t*          lrequests, 
+    kaapi_listrequest_iterator_t* lrrange
 );
 
 
@@ -1027,6 +1008,9 @@ static inline int kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
 
 static inline kaapi_processor_id_t kaapi_request_getthiefid(kaapi_request_t* r)
 { return (kaapi_processor_id_t) r->kid; }
+
+static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
+{ return (kaapi_reply_t*) r->reply; }
 
 /** Wait the end of request and return the error code
   \param pksr kaapi_reply_t

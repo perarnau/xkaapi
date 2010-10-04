@@ -51,7 +51,7 @@
 
 /*
 */
-kaapi_uint32_t kaapi_count_kprocessors = 0;
+kaapi_uint32_t volatile kaapi_count_kprocessors = 0;
 
 /*
 */

@@ -53,7 +53,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 {
   int err;
   kaapi_thread_context_t* ctxt;
-  kaapi_thread_context_t* ctxt_condition;
+  kaapi_thread_context_t* thread_condition;
   kaapi_task_t*           task_condition;
   kaapi_thread_context_t* thread;
 
@@ -66,51 +66,40 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 #endif
 
   /* here is the reason of suspension */
-  ctxt_condition = kproc->thread;
-  task_condition = ctxt_condition->sfp->pc;
+  thread_condition = kproc->thread;
+  kaapi_assert_debug( kproc == thread_condition->proc);
+
+  task_condition = thread_condition->sfp->pc;
   if (kaapi_task_getbody(task_condition) != kaapi_suspend_body) return 0;
 
   /* such threads are sticky: the control flow is on return to this call and
      without thread user context switch only this activation frame could wakeup
      the thread
   */
-  kaapi_assert_debug( ctxt_condition->affinity == 0 );
+  kaapi_assert_debug( thread_condition->affinity == 0 );
 
-#if defined(KAAPI_DEBUG_PRINT)
-  printf("%i:: put cond thread:%p in suspend list\n", kproc->kid, (void*)ctxt_condition);
-  fflush( stdout );
-#endif  
   /* put context in the list of suspended contexts: no critical section with respect of thieves */
   kaapi_setcontext(kproc, 0);
-  kaapi_wsqueuectxt_push( kproc, ctxt_condition );
+  kaapi_wsqueuectxt_push( kproc, thread_condition );
 
   do {
-    /* wakeup a context: precise the condition else could not wakeup sticky thread */
-    ctxt = kaapi_sched_wakeup(kproc, kproc->kid, ctxt_condition);
+    /* wakeup a context: either a ready thread (first) or a suspended thread.
+       Precise the suspended thread 'thread_condition' in order to wakeup it first
+    */
+    ctxt = kaapi_sched_wakeup(kproc, kproc->kid, thread_condition);
     if (ctxt ==0)
     {
       kaapi_assert_debug(kproc->thread == 0);
       kproc->thread = 0;
     }
     else {
-#if defined(KAAPI_DEBUG_PRINT)
-      printf("%i:: wakeup Thread: %p has affinity ?:%i / cond: %p\n", kproc->kid, 
-          (void*)ctxt, 
-          kaapi_thread_hasaffinity(ctxt->affinity, kproc->kid)!=0,
-          (void*)ctxt_condition);
-      fflush( stdout );
-#endif
       kaapi_setcontext( kproc, ctxt );
       kaapi_assert_debug(kproc->thread == ctxt );
     }
 
-    if (kproc->thread == ctxt_condition) 
+    if (kproc->thread == thread_condition) 
     {
       kaapi_assert(kproc->thread->sfp->pc == task_condition);
-#if defined(KAAPI_DEBUG_PRINT)
-      printf("%i:: return from normal execution after suspended thread: %p\n", kproc->kid, (void*)ctxt_condition);
-      fflush( stdout );
-#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
@@ -129,7 +118,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         cell = kproc->lsuspend.head;
         while (cell !=0)
         {
-          if (cell->thread == ctxt_condition) { found=1; break; }
+          if (cell->thread == thread_condition) { found=1; break; }
           kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
           cell = nextcell;
         }
@@ -140,6 +129,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
     if (kproc->thread !=0)
       goto redo_execution;
+
 /* warning: to avoid steal of processor ! */
 //continue;    
 

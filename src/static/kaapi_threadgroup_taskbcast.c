@@ -87,21 +87,51 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
       
       if (kaapi_threadgroup_decrcounter(argrecv) ==0)
       {
-        /* task becomes ready */        
+        /* task becomes ready change its body...*/        
         task->sp = newsp;
         kaapi_task_setextrabody(task, newbody);
 
+        /* if signaled thread was suspended, move it to the local queue */
+        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)task->pad;
+        if (wcs != 0) /* means thread has been suspended */
+        { 
+          kaapi_readmem_barrier();
+          kaapi_processor_t* kproc = wcs->thread->proc;
+          if (kaapi_sched_readyempty(kproc) && kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
+          {
+            kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
+            if (kthread !=0)
+            {
+              kaapi_sched_lock(kproc);
+              kaapi_sched_pushready(kproc, kthread );
+              kaapi_sched_unlock(kproc);
+            }
+          }
+          else {
+            /* cannot steal it, put the state to READY */
+            KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
+          }
+        }
+
+        /* flush in memory all pending write (and read ops) */  
+        kaapi_writemem_barrier();
+
+        /* signal the task */
+        kaapi_task_setbody(task, newbody );
+
+#if 0 // OLD CODE, I put the new kaapi_taskwrite_body code just above
         /* see code in kaapi_taskwrite_body */
         if (task->pad != 0) 
         {
-          kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)task->pad;
+          kaapi_thread_context_t* thread_suspended = (kaapi_thread_context_t*)task->pad;
+
           /* remove it from suspended queue */
-          if (wcs->wccell !=0)
+          if (thread_suspended !=0)
           {
             kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
             if (kthread !=0) 
             {
-	      /* push on the owner of the suspended thread */
+	           /* push on the owner of the suspended thread */
               kaapi_processor_t* kproc = kthread->proc;
               if (!kaapi_thread_hasaffinity(kthread->affinity, kproc->kid))
               {
@@ -137,6 +167,7 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
           /* may activate the task */
           kaapi_task_setbody(task, newbody);
         }
+#endif
       }
     }
     comlist = comlist->next;

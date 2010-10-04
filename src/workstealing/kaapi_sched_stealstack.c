@@ -214,11 +214,12 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
 
 /** Steal task in the frame [frame->pc:frame->sp)
  */
-static int kaapi_sched_stealframe(
-  kaapi_thread_context_t* thread, 
-  kaapi_frame_t*          frame, 
-  kaapi_hashmap_t*        map, 
-  kaapi_listrequest_t* lrequests, 
+static int kaapi_sched_stealframe
+(
+  kaapi_thread_context_t*       thread, 
+  kaapi_frame_t*                frame, 
+  kaapi_hashmap_t*              map, 
+  kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 )
 {
@@ -238,7 +239,7 @@ static int kaapi_sched_stealframe(
   replycount = 0;
   
   /* */
-  while ((count > replycount) && (task_top > frame->sp))
+  while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > frame->sp))
   {
     task_body = kaapi_task_getextrabody(task_top);
     
@@ -266,10 +267,10 @@ static int kaapi_sched_stealframe(
 #endif        
         {
           /* steal sucess */
-          replycount += kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, count-replycount, requests );
+          kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
           /* cas success: reset the ebody */
-	  kaapi_task_cas_extrastate(task_top, kaapi_suspend_body, kaapi_adapt_body);
+          kaapi_task_cas_extrastate(task_top, kaapi_suspend_body, kaapi_adapt_body);
 #endif
         }
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
@@ -316,8 +317,7 @@ static int kaapi_sched_stealframe(
               fprintf(stdout,"\n\n>>>>>>>> %p:: STEAL Task=%p, wc=%i\n", thread, (void*)task_top, wc );
               kaapi_stack_print(stdout, thread );
 #endif
-              kaapi_assert_debug( count-replycount <= KAAPI_ATOMIC_READ( &thread->proc->hlrequests.count ) );
-              replycount += kaapi_task_splitter_dfg(thread, task_top, war_param, count-replycount, requests );
+              kaapi_task_splitter_dfg(thread, task_top, war_param, lrequests, lrrange );
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
             }
             thread->thiefpc = 0;
@@ -338,10 +338,11 @@ static int kaapi_sched_stealframe(
  Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
  This signature is the same as a splitter function.
  */
-int kaapi_sched_stealstack  ( 
-  kaapi_thread_context_t* thread, 
-  kaapi_task_t* curr, 
-  kaapi_listrequest_t* lrequests, 
+int kaapi_sched_stealstack  
+( 
+  kaapi_thread_context_t*       thread, 
+  kaapi_task_t*                 curr, 
+  kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 )
 {
@@ -365,10 +366,10 @@ int kaapi_sched_stealstack  (
   kaapi_readmem_barrier();
   
   /* try to steal in each frame */
-  for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && (count > replycount); ++top_frame)
+  for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame)
   {
     if (top_frame->pc == top_frame->sp) continue;
-    replycount += kaapi_sched_stealframe( thread, top_frame, &access_to_gd, count-replycount, request );
+    kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
   }
   
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);  

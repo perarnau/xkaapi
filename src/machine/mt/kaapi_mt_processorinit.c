@@ -119,9 +119,9 @@ int kaapi_processor_init
   return 0;
 }
 
-#if 0
 int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc )
 {
+#if 0
   int i;
   kproc->hlevel    = 1;
   kproc->hindex    = calloc( kproc->hlevel, sizeof(kaapi_uint16_t) );
@@ -136,6 +136,6 @@ int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc )
       kproc->hkids[0][i] = i;  
   }  
       
+#endif
   return 0;
 }
-#endif

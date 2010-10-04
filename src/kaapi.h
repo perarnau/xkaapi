@@ -1562,6 +1562,9 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 #  define KAAPI_ATOMIC_WRITE(a, value) \
     (a)->_counter = value
 
+#  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
+    { kaapi_writemem_barrier(); (a)->_counter = value; }
+
 #if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
 || defined(__INTEL_COMPILER))
 /* Note: ICC seems to also support these builtins functions */

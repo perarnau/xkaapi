@@ -53,8 +53,8 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
   kaapi_thread_context_t* pos;
   kaapi_thread_context_t* pre;
 
-  if (list->_front == NULL)
-    return NULL;
+  if (list->_front == 0)
+    return 0;
 
   pre = list->_front;
   if (kaapi_thread_hasaffinity(pre->affinity, tid))
@@ -66,7 +66,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
   }
 
   pos = pre->_next;
-  while (pos != NULL) 
+  while (pos != 0) 
   {
     if (kaapi_thread_hasaffinity(pos->affinity, tid))
     {
@@ -79,7 +79,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
     pos = pos->_next;
   }
 
-  /* todo: should return NULL (?) */
+  /* todo: should return 0 (?) */
   return pos;
 }
 
@@ -90,9 +90,9 @@ void kaapi_sched_pushready(kaapi_processor_t* kproc, kaapi_thread_context_t* nod
    */
   kaapi_lready_t* const list = &kproc->lready;
 
-  node->_next = NULL;
+  node->_next = 0;
 
-  if (list->_back != NULL)
+  if (list->_back != 0)
     list->_back->_next = node;
   else
     list->_front = node;

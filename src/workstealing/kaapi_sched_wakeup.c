@@ -47,116 +47,93 @@
 #include "kaapi_impl.h"
 
 kaapi_thread_context_t* kaapi_sched_wakeup ( 
-  kaapi_processor_t* kproc, 
-  kaapi_processor_id_t kproc_thiefid, 
-  kaapi_thread_context_t* cond_thread 
-)
+    kaapi_processor_t* kproc, 
+    kaapi_processor_id_t kproc_thiefid, 
+    kaapi_thread_context_t* cond_thread 
+  )
 {
-  kaapi_thread_context_t* ctxt = NULL;
+  /* Not on this line: in the current implementation, only the owner of the suspend queue
+     is able to call kaapi_sched_wakeup.
+  */
+  kaapi_assert_debug( kproc->kid = kproc_thiefid );
+
   kaapi_wsqueuectxt_cell_t* cell;
-  int wakeupok = 0;
-  int garbage;
   
-#if 0 // TG, a voir si necessaire
-  /* only steal the ready context if it's my ready list */
-  if ((kproc->readythread !=0) && (kproc->kid == kproc_thiefid))
+  /* first test the thread that has been suspended 
+     - this thread is initially put into a wsqueue (to be steal)
+     - once the thief task is finished, the state of the cell is marked as
+     ready and the thread cond_thread remains into the list.
+  */ 
+  if (cond_thread !=0)
   {
-    ctxt = kproc->readythread;
-    if ((ctxt->affinity !=0) || (cond_thread ==0) || (ctxt == cond_thread)) 
+    if (kaapi_thread_isready(cond_thread))
     {
-      kproc->readythread = NULL;
-      return ctxt;
+      /* should be atomic ? */
+      cond_thread->wcs->thread = 0;
+      KAAPI_ATOMIC_WRITE(&cond_thread->wcs->state, KAAPI_WSQUEUECELL_OUTLIST);
+      return cond_thread;
     }
+    /* the cell will be garbaged next times */
   }
-#endif
   
-  /* ready list not empty */
+  /* try to steal ready list */
   if (!kaapi_sched_readyempty(kproc))
   {
     /* lock if self wakeup to protect lready against thieves
        because in that case wakeup is called directly through
        sched_suspend or sched_idle, not by passing through 
        the emission of a request
-     */
+    */
     kaapi_thread_context_t* thread;
     
     kaapi_sched_lock( kproc );
     thread = kaapi_sched_stealready( kproc, kproc_thiefid );
     kaapi_sched_unlock( kproc );
     
-    if (thread != NULL)
+    if (thread != 0)
       return thread;
   }
   
-  /* else... */
+  /* else... 
+     - here only do garbage, because in the current version the 
+     thread that becomes ready is pushed into an other queue.
+     Thus, all cell which are marked KAAPI_WSQUEUECELL_OUTLIST or
+     KAAPI_WSQUEUECELL_STEALLIST are garbaged.
+  */
   cell = kproc->lsuspend.head;
-  while (cell != NULL)
+  while (cell != 0)
   {
-    /* assume  will garbage */
-    garbage = 1;
-    
     /* not already wakeuped */
-    const int status = KAAPI_ATOMIC_READ(&cell->state);
-    if (status != 2)
-    {
-      /* assume wont garbage */
-      garbage = 0;
-      
-      ctxt = cell->thread;
-      if ((ctxt->affinity !=0) || (cond_thread ==0) || (ctxt == cond_thread)) 
-      {      
-        kaapi_task_t* task = ctxt->sfp->pc;
-        if ((kaapi_task_getbody(task) != kaapi_suspend_body))
-        { 
-          garbage = 1;
-          /* wakeup the thread awnd try to steal it */
-          while (KAAPI_ATOMIC_READ(&cell->state) != 2)
-          {
-            if (KAAPI_ATOMIC_CASw(&cell->state, status, 2))
-            {
-              /* wakeup success */
-              cell->thread = 0;
-              wakeupok = 1;
-              break ;
-            }
-          }
-        }
-      }
-    }
-    
+    int status = KAAPI_ATOMIC_READ(&cell->state);
     /* save the next cell */
     kaapi_wsqueuectxt_cell_t* const nextcell = cell->next;
-    
-    /* recycle the cell */
-    if (garbage)
+
+    if ((status & 0x3) == 0) /* not INLIST nor READY */
     {
-      kaapi_assert_debug(cell->thread == NULL); 
-      
       /* delete from the queue */
-      if (nextcell != NULL)
+      if (nextcell != 0)
         nextcell->prev = cell->prev;
       else
         kproc->lsuspend.tail = cell->prev;
       
-      if (cell->prev != NULL)
+      if (cell->prev != 0)
         cell->prev->next = nextcell;
       else
         kproc->lsuspend.head = nextcell;
-      cell->next = NULL;
-      cell->prev = NULL;
+      /* should be atomic ? */
+      cell->thread = 0;
+      cell->next   = 0;
+      cell->prev   = 0;
       
       /* insert it in the recycled queue */
       kaapi_wsqueuectxt_cell_t* const tailfreecell = kproc->lsuspend.tailfreecell;
-      if (tailfreecell == NULL)
+      if (tailfreecell == 0)
         kproc->lsuspend.headfreecell = cell;
       else 
         tailfreecell->prev = cell;
       kproc->lsuspend.tailfreecell = cell;
-      
-      if (wakeupok) 
-        return ctxt;
     }
-    
+  
     /* next */
     cell = nextcell;
   }
