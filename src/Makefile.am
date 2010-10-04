@@ -29,8 +29,6 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_hashvalue.c \
   misc/kaapi_hashmap.c \
   misc/kaapi_thread_clear.c \
-  workstealing/kaapi_sched_select_rand_level.c \
-  workstealing/kaapi_sched_select_rand_first.c \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_stealprocessor.c \
@@ -107,7 +105,6 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_selfprocessor.c \
   machine/mt/kaapi_mt_selfstack.c \
   machine/mt/kaapi_mt_sched_emitsteal.c \
-  machine/mt/kaapi_mt_request_reply.c \
   machine/mt/kaapi_mt_sched_advance.c \
   machine/mt/kaapi_mt_context_alloc.c \
   machine/mt/kaapi_mt_context_free.c \

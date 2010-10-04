@@ -72,7 +72,7 @@
 #  include "../cuda/kaapi_cuda_proc.h"
 # endif
 #endif
-#include "kaapi_mem.h"
+#include "../../memory/kaapi_mem.h"
 
 #if (SIZEOF_VOIDP == 4)
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \

@@ -1030,14 +1030,7 @@ static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 #define kaapi_stealpoint( stc, splitter, ...) \
    (kaapi_stealpoint_isactive(stc) ? (splitter)( stc, (stc)->hasrequest, (stc)->requests, ##__VA_ARGS__), 1 : 0 )
 
-#endif
-
-/** \ingroup ADAPTIVE
-    Return true iff the request is correctly posted
-    \param pksr kaapi_request_t
-*/
-#define kaapi_request_ok( kpsr )\
-  ((kpsr)->status == 1 /*== KAAPI_REQUEST_S_POSTED*/)
+#endif // if 0
 
 
 /* Return the thief result of the next thief from the head of the list to preempt or 0 if no thief may be preempted
@@ -1050,7 +1043,7 @@ extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_steal
 
 /* Return the thief result of the next thief from the tail of the list to preempt or 0 if no thief may be preempted
 */
-extern struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc );
+extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_tail( kaapi_stealcontext_t* stc );
 
 
 /** Preempt a thief.
