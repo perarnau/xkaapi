@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -179,51 +180,6 @@ typedef struct kaapi_lready
   kaapi_thread_context_t* _front;
   kaapi_thread_context_t* _back;
 } kaapi_lready_t;
-
-/** push: LIFO order with respect to pop. Only owner may push
-*/
-static inline int kaapi_wsqueuectxt_isempty( kaapi_wsqueuectxt_t* ls )
-{ return (ls->head ==0); }
-
-/**
-*/
-extern int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls );
-
-/**
-*/
-extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
-
-/* Push a ctxt. Must be call by the owner of the queue in case of concurrent execution.
-   Return 0 in case of success
-   Return ENOMEM if allocation failed
-*/
-extern int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
-
-#if 0 // not well defined and not yet implemented 
-/* Push a ctxt. Can be called by thief processors
-   Return 0 in case of success
-   Return ENOMEM if allocation failed
-*/
-extern int kaapi_wsqueuectxt_lockpush( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
-#endif
-
-/* Pop a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
-
-/* Steal a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
-
-/* Steal a ctxt on a specific cell
-   Return a pointer to the stolen thread in case of success
-   Return 0 if the thread was already stolen
-*/
-kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_t* ls, kaapi_wsqueuectxt_cell_t* cell );
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -543,22 +499,19 @@ extern int kaapi_context_free( kaapi_thread_context_t* ctxt );
 /* lfree list routines
  */
 
-static inline void kaapi_lfree_clear
-(struct kaapi_processor_t* kproc)
+static inline void kaapi_lfree_clear(struct kaapi_processor_t* kproc)
 {
   kproc->sizelfree = 0;
   kproc->lfree._front = NULL;
   kproc->lfree._back = NULL;
 }
 
-static inline int kaapi_lfree_isempty
-(struct kaapi_processor_t* kproc)
+static inline int kaapi_lfree_isempty(struct kaapi_processor_t* kproc)
 {
   return kproc->sizelfree == 0;
 }
 
-static inline void kaapi_lfree_push
-(struct kaapi_processor_t* kproc, kaapi_thread_context_t* node)
+static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_thread_context_t* node)
 {
   kaapi_lfree_t* const list = &kproc->lfree;
 
@@ -572,7 +525,7 @@ static inline void kaapi_lfree_push
   list->_front = node;
 
   /* pop back if new size exceeds max */
-#define KAAPI_MAXFREECTXT 2
+#  define KAAPI_MAXFREECTXT 2
   if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
   {
     /* list size at least 2, no special case handling */
@@ -590,8 +543,7 @@ static inline void kaapi_lfree_push
   ++kproc->sizelfree;
 }
 
-static inline kaapi_thread_context_t*
-kaapi_lfree_pop(struct kaapi_processor_t* kproc)
+static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* kproc)
 {
   kaapi_lfree_t* const list = &kproc->lfree;
   kaapi_thread_context_t* const node = list->_front;
@@ -837,5 +789,48 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
 #endif
 #endif
 }
+
+
+/** push: LIFO order with respect to pop. Only owner may push
+*/
+static inline int kaapi_wsqueuectxt_empty( kaapi_processor_t* kproc )
+{ return (kproc->lsuspend.head ==0); }
+
+/**
+*/
+extern int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls );
+
+/**
+*/
+extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
+
+/** \ingroup WS
+   Push a ctxt. Must be call by the owner of the queue in case of concurrent execution.
+   Return 0 in case of success
+   Return ENOMEM if allocation failed
+*/
+extern int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* thread );
+
+/** \ingroup WS
+   Pop a ctxt
+   Return 0 in case of success
+   Return EWOULDBLOCK if list is empty
+*/
+extern int kaapi_wsqueuectxt_pop( kaapi_processor_t* kproc, kaapi_thread_context_t** thread );
+
+/** \ingroup WS
+   Steal a ctxt
+   Return 0 in case of success
+   Return EWOULDBLOCK if list is empty
+*/
+extern int kaapi_wsqueuectxt_steal( kaapi_processor_t* kproc, kaapi_thread_context_t** thread );
+
+/** \ingroup WS
+   Steal a ctxt on a specific cell
+   Return a pointer to the stolen thread in case of success
+   Return 0 if the thread was already stolen
+*/
+extern kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_processor_t* kproc, kaapi_wsqueuectxt_cell_t* cell );
+
 
 #endif /* _KAAPI_MT_MACHINE_H */

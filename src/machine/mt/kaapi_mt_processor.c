@@ -7,7 +7,6 @@
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -46,14 +45,12 @@
 
 #include "kaapi_impl.h"
 
-unsigned int kaapi_processor_get_type
-(const kaapi_processor_t* kproc)
+unsigned int kaapi_processor_get_type(const kaapi_processor_t* kproc)
 {
   return kproc->proc_type;
 }
 
-void kaapi_processor_set_workload
-(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
+void kaapi_processor_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
 {
   KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
 }
@@ -64,7 +61,6 @@ void kaapi_processor_set_self_workload(kaapi_uint32_t workload)
 }
 
 /* todo: move in appropriate files */
-
 kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t* sc)
 {
   return sc->ctxtthread->proc;

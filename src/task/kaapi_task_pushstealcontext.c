@@ -46,16 +46,23 @@
 
 /**
 */
-kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
+kaapi_stealcontext_t* kaapi_task_begin_adaptive( 
   kaapi_thread_t*       thread,
   int                   flag,
-  kaapi_task_splitter_t spliter,
-  void*                 argsplitter,
-  kaapi_stealcontext_t* master
+  kaapi_task_splitter_t splitter,
+  void*                 argsplitter
 )
 {
   kaapi_frame_t frame;
   kaapi_taskadaptive_t* ta;
+  
+  kaapi_assert_debug( (flag & ~0xF) == 0); 
+  kaapi_assert_debug( ((flag & KAAPI_SC_CONCURRENT) && !(flag & KAAPI_SC_COOPERATIVE)) 
+                  ||  (!(flag & KAAPI_SC_CONCURRENT) && (flag & KAAPI_SC_COOPERATIVE)) );
+  kaapi_assert_debug( ((flag & KAAPI_SC_PREEMPTION) && !(flag & KAAPI_SC_NOPREEMPTION)) 
+                  ||  (!(flag & KAAPI_SC_PREEMPTION) && (flag & KAAPI_SC_NOPREEMPTION)) );
+  
+  
   kaapi_thread_save_frame(thread, &frame);
   
   kaapi_mem_barrier();
@@ -65,7 +72,7 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
 
   ta->sc.ctxtthread         = _kaapi_self_thread();
   ta->sc.thread             = thread;
-  ta->sc.splitter           = spliter;
+  ta->sc.splitter           = splitter;
   ta->sc.argsplitter        = argsplitter;
   ta->sc.flag               = flag;
   ta->sc.hasrequest         = 0;
@@ -80,14 +87,6 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
   ta->sc.ownertask          = kaapi_thread_toptask(thread);
   
   /* link two contexts together (master -> {thief*}) relation, ie thief B of a thief A has the same master as the thief A */
-  if ((master !=0) && ((flag & 0x1) == KAAPI_STEALCONTEXT_LINKED))
-  {
-    ta->origin_master        = ((kaapi_taskadaptive_t*)master)->origin_master;
-    if (ta->origin_master ==0) ta->origin_master = (kaapi_taskadaptive_t*)master;
-  }
-  else
-    ta->origin_master        = 0;
-  
   ta->save_splitter         = 0;
   ta->save_argsplitter      = 0;
   kaapi_task_init(ta->sc.ownertask, kaapi_adapt_body, ta);

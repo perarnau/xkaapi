@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -105,6 +106,7 @@ typedef int32_t   kaapi_int32_t;
 typedef int64_t   kaapi_int64_t;
 
 typedef kaapi_uint32_t kaapi_processor_id_t;
+typedef kaapi_uint64_t kaapi_affinity_t;
 
 /** Atomic type
 */
@@ -870,8 +872,8 @@ extern int kaapi_sched_sync( void );
 typedef enum kaapi_stealcontext_flag {
   KAAPI_SC_CONCURRENT    = 0x1,
   KAAPI_SC_COOPERATIVE   = 0x2,
-  KAAPI_SC_PREEMPTION    = 0x3,
-  KAAPI_SC_NOPREEMPTION  = 0x4,
+  KAAPI_SC_PREEMPTION    = 0x4,
+  KAAPI_SC_NOPREEMPTION  = 0x8,
   
   KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
 } kaapi_stealcontext_flag;

@@ -9,7 +9,8 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
-** 
+** fabien.lementec@imag.fr
+**
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
 ** threads.
@@ -71,7 +72,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     
     ctxt = 0;
     /* local wake up first, inline test to avoid function call */
-    if ((kproc->readythread !=0) || !KAAPI_FIFO_EMPTY(&kproc->lready) || (kproc->lsuspend.head !=0) )
+    if (!kaapi_sched_readyempty(kproc) || (kproc->lsuspend.head !=0) )
     {
       ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0); 
 
@@ -131,7 +132,7 @@ redo_execute:
       kaapi_setcontext(kproc, 0);
 
       /* push it: suspended because top task is not ready */
-      kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
+      kaapi_wsqueuectxt_push( kproc, ctxt );
 
       ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0);
       if (ctxt !=0)

@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -68,6 +69,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   ctxt_condition = kproc->thread;
   task_condition = ctxt_condition->sfp->pc;
   if (kaapi_task_getbody(task_condition) != kaapi_suspend_body) return 0;
+
   /* such threads are sticky: the control flow is on return to this call and
      without thread user context switch only this activation frame could wakeup
      the thread
@@ -80,7 +82,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 #endif  
   /* put context in the list of suspended contexts: no critical section with respect of thieves */
   kaapi_setcontext(kproc, 0);
-  kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt_condition );
+  kaapi_wsqueuectxt_push( kproc, ctxt_condition );
 
   do {
     /* wakeup a context: precise the condition else could not wakeup sticky thread */
@@ -185,7 +187,7 @@ redo_execution:
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
       /* push it: suspended because top task is not ready */
-      kaapi_wsqueuectxt_push( &kproc->lsuspend, ctxt );
+      kaapi_wsqueuectxt_push( kproc, ctxt );
     } 
     /* WARNING: this case is used by static scheduling in order to detach a thread context 
        from a thread at the end of an iteration. See kaapi_tasksignalend_body.

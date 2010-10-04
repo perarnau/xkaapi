@@ -1,5 +1,4 @@
 /*
-** kaapi_hashmap.c
 ** xkaapi
 ** 
 ** 
@@ -8,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -111,11 +111,14 @@ static kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_alloccell( kaapi_wsqueuectxt_
 
 /** push: LIFO order with respect to pop. Only owner may push
 */
-int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread )
+int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
 {
+  kaapi_wsqueuectxt_t* ls = &kproc->lsuspend;
   kaapi_wsqueuectxt_cell_t* cell = kaapi_wsqueuectxt_alloccell(ls);
 
 #if defined(KAAPI_USE_READYLIST)
+  /* ready to update this field, in order to be able to move thread to a ready list
+  */
   kaapi_task_t* task = thread->sfp->pc;
   thread->wcs.wclist = ls;
   thread->wcs.wccell = cell;
@@ -146,32 +149,24 @@ int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thr
 }
 
 
-#if 0 /// TO DO
-/*
-*/
-int kaapi_wsqueuectxt_lockpush( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread )
-{
-  printf("In kaapi_wsqueuectxt_lockpush\n");
-  return 0;
-}
-#endif
-
 
 /** pop: LIFO with respect to push op
 */
-int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread )
+int kaapi_wsqueuectxt_pop( kaapi_processor_t* kproc, kaapi_thread_context_t** thread )
 {
+  kaapi_wsqueuectxt_t* ls = &kproc->lsuspend;
   kaapi_wsqueuectxt_cell_t* cell = ls->head;
+  kaapi_wsqueuectxt_cell_t* nextcell;
   while (cell !=0)
   {
     int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
     if (opok)
     {
-      /* R barrier ? */
+      /* WARNING ? here not R barrier, because KAAPI_ATOMIC_CAS... does a full memory barrier */
       *thread = cell->thread;
     }
 
-    kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
+    nextcell = cell->next;
     cell->thread = 0;
 
     /* whatever is the result of the cas, the cell is recyled (push in tail):
@@ -201,8 +196,9 @@ int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thr
 
 /** steal: FIFO with respect to push op
 */
-int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread )
+int kaapi_wsqueuectxt_steal( kaapi_processor_t* kproc, kaapi_thread_context_t** thread )
 {
+  kaapi_wsqueuectxt_t* ls = &kproc->lsuspend;
   kaapi_wsqueuectxt_cell_t* cell = ls->tail;
   while (cell !=0)
   {
@@ -225,8 +221,9 @@ int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** t
 
 /** steal: FIFO with respect to push op
 */
-kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_t* ls, kaapi_wsqueuectxt_cell_t* cell )
+kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_processor_t* kproc, kaapi_wsqueuectxt_cell_t* cell )
 {
+//  kaapi_wsqueuectxt_t* ls = &kproc->lsuspend;
   kaapi_thread_context_t* thread = 0;
 
   int opok = KAAPI_ATOMIC_CAS( &cell->state, 0, 2);

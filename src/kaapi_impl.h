@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** theo.trouillon@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -365,7 +366,7 @@ struct kaapi_wsqueuectxt_cell_t;
 typedef struct kaapi_wc_structure_t {
   struct kaapi_wsqueuectxt_t*      wclist;      /* suspend list that own the suspended thread _wcthread */
   struct kaapi_wsqueuectxt_cell_t* wccell;      /* waiting cell of the thread in _wclist, or 0 if not suspended */
-  unsigned long                    affinity;    /* affinity of the suspended thread */
+  kaapi_affinity_t                 affinity;    /* affinity of the suspended thread */
   struct kaapi_thread_context_t*   thread;      /* may be omitted -> shift from the address of wc structure */
 } kaapi_wc_structure_t;
 
@@ -397,7 +398,7 @@ typedef struct kaapi_thread_context_t {
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif
-  unsigned long                  affinity;       /* bit i == 1 -> can run on procid i */
+  kaapi_affinity_t               affinity;       /* bit i == 1 -> can run on procid i */
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
@@ -426,12 +427,10 @@ struct kaapi_taskadaptive_result_t;
 */
 typedef struct kaapi_taskadaptive_t {
   kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
-
   kaapi_atomic_t                      lock;            /* required for access to list */
   struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
   kaapi_atomic_t                      thievescount __attribute__((aligned(KAAPI_CACHE_LINE)));     /* #thieves of the owner of this structure.... */
-  struct kaapi_taskadaptive_t*        origin_master;    /* who to report global end at the end of computation, 0 iff first master task */
   kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
   void*                               save_argsplitter;/* idem */
   kaapi_frame_t                       frame;
@@ -746,8 +745,8 @@ static inline int kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
 */
 static inline int kaapi_thread_setaffinity(kaapi_thread_context_t* th, kaapi_processor_id_t kid )
 {
-  kaapi_assert_debug( (kid >=0) && (kid < sizeof(unsigned long)*8) );
-  th->affinity |= (1<<kid);
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
+  th->affinity |= ((kaapi_affinity_t)1)<<kid;
   return 0;
 }
 
@@ -755,8 +754,8 @@ static inline int kaapi_thread_setaffinity(kaapi_thread_context_t* th, kaapi_pro
 */
 static inline int kaapi_thread_hasaffinity(unsigned long affinity, kaapi_processor_id_t kid )
 {
-  kaapi_assert_debug( (kid >=0) && (kid < sizeof(unsigned long)*8) );
-  return (affinity & (1<<kid));
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
+  return affinity & ((kaapi_affinity_t)1)<<kid;
 }
 
 /**
@@ -807,26 +806,30 @@ static inline int kaapi_sched_unlock( kaapi_processor_t* kproc )
 }
 
 
-/** sched readylist routines
- */
+/** steal/pop (no distinction) a thread to thief with kid
+    If the owner call this method then it should protect 
+    itself against thieves by using sched_lock & sched_unlock
+*/
 kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t*, kaapi_processor_id_t);
+
+/** push a new thread into a ready list
+*/
 void kaapi_sched_pushready(kaapi_processor_t*, kaapi_thread_context_t*);
 
+/** initialize the ready list 
+*/
 static inline void kaapi_sched_initready(kaapi_processor_t* kproc)
 {
-  /* initialize the ready list */
   kproc->lready._front = NULL;
   kproc->lready._back = NULL;
 }
 
-static inline int kaapi_sched_isreadyempty(kaapi_processor_t* kproc)
+/** is the ready list empty 
+*/
+static inline int kaapi_sched_readyempty(kaapi_processor_t* kproc)
 {
-  /* is the ready list empty */
   return kproc->lready._front == NULL;
 }
-
-/* sched lfree routines
- */
 
 
 /**

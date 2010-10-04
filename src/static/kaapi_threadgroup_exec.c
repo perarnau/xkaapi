@@ -106,7 +106,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
     kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
     thgrp->threadctxts[i]->proc = current_proc;
-    kaapi_wsqueuectxt_push( &current_proc->lsuspend, thgrp->threadctxts[i] );
+    kaapi_wsqueuectxt_push( current_proc, thgrp->threadctxts[i] );
 #endif    
   }
   

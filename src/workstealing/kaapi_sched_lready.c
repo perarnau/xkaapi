@@ -1,5 +1,4 @@
 /*
-** kaapi_hashmap.c
 ** xkaapi
 ** 
 ** 
@@ -7,7 +6,7 @@
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,22 +41,13 @@
 ** terms.
 ** 
 */
-
-
 #include "kaapi_impl.h"
 
 
 /* ready list routines
  */
-
-kaapi_thread_context_t* kaapi_sched_stealready
-(kaapi_processor_t* kproc, kaapi_processor_id_t tid)
+kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_processor_id_t tid)
 {
-  /* if the owner call this method then it
-     should protect itself again thieves by
-     using sched_lock & sched_unlock
-  */
-
   kaapi_lready_t* const list = &kproc->lready;
 
   kaapi_thread_context_t* pos;
@@ -94,12 +84,10 @@ kaapi_thread_context_t* kaapi_sched_stealready
 }
 
 
-void kaapi_sched_pushready
-(kaapi_processor_t* kproc, kaapi_thread_context_t* node)
+void kaapi_sched_pushready(kaapi_processor_t* kproc, kaapi_thread_context_t* node)
 {
   /* push back version. prev not updated.
    */
-
   kaapi_lready_t* const list = &kproc->lready;
 
   node->_next = NULL;
