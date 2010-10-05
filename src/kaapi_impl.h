@@ -1150,7 +1150,7 @@ static inline int kaapi_isvalid_body( kaapi_task_body_t body)
       || (body == kaapi_aftersteal_body)
       || (body == kaapi_nop_body)
   ;
-};
+}
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
