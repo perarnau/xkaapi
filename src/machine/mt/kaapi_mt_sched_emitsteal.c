@@ -106,11 +106,21 @@ wait_once:
     goto return_value;
   
   /* (3)
-     process all requests on the victim kprocessor and reply failed to remaining requests
+     process all requests on	 the victim kprocessor and reply failed to remaining requests
      
      Warning: In this version the aggregator has a lock on the victim processor.
   */
   kaapi_sched_stealprocessor( victim.kproc, &victim.kproc->hlrequests, &lri );
+  
+  if (!kaapi_listrequest_iterator_empty(&lri) ) 
+  {
+    kaapi_request_t* request = kaapi_listrequest_iterator_get( &victim.kproc->hlrequests, &lri );
+    while (request !=0)
+    {
+      _kaapi_request_reply(request, 0);
+      request = kaapi_listrequest_iterator_next( &victim.kproc->hlrequests, &lri );
+    }
+  }
   kaapi_sched_unlock( victim.kproc );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -121,6 +131,8 @@ wait_once:
   if (!kaapi_reply_test( replymemory )) 
     goto wait_once;
 
+  return 0;
+  
 return_value:
   kaapi_sched_unlock( victim.kproc );
   

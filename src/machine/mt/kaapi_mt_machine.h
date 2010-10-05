@@ -261,7 +261,7 @@ static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i )
 { 
   kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
   KAAPI_ATOMIC_OR(b,1<<i); 
-  return 1;
+  return 0;
 }
 
 static inline int kaapi_bitmap_count( kaapi_bitmap_value_t b ) 
@@ -717,6 +717,9 @@ static inline int _kaapi_request_reply(
   else {
     request->reply->status = KAAPI_REQUEST_S_REPLY_NOK;
   }
+#if defined(KAAPI_DEBUG)
+  request->reply = 0;
+#endif
   return 0;
 }
 
@@ -790,7 +793,8 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   req = &victim->hlrequests.requests[thief_kid];
   /* here do not write kid, because it was persistant to all local thread */
   req->reply = reply;
-  return kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
+  kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
+  return 0;
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)
 #else
 #error "Not implemented"
