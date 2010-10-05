@@ -221,7 +221,7 @@ void _kaapi_dummy(void* foo)
 void __attribute__ ((constructor)) __kaapi_init_compatibility(void)
 {
 #if defined(KAAPI_DEBUG)
-  printf("Warning: deprecated function, please called directly kaapi_init");
+  printf("Warning: deprecated function, please called directly kaapi_init\n");
 #endif
   kaapi_init();
 }
@@ -231,7 +231,7 @@ void __attribute__ ((constructor)) __kaapi_init_compatibility(void)
 extern void __attribute__ ((destructor)) __kaapi_fini_compatibility(void)
 {
 #if defined(KAAPI_DEBUG)
-  printf("Warning: deprecated function, please called directly kaapi_finalize");
+  printf("Warning: deprecated function, please called directly kaapi_finalize\n");
 #endif
   kaapi_finalize();
 }
