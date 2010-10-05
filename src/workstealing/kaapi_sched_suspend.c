@@ -109,7 +109,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     {
       kaapi_wsqueuectxt_cell_t* cell;
       int found = 0;
-      if (kproc->readythread == ctxt_condition)
+      if (kproc->readythread == thread_condition)
         found =1;
         
       /* else search iff ctxt_condition is yet in suspend list, it should ! */

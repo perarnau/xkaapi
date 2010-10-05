@@ -72,5 +72,5 @@ redo_select:
   /* Get the k-processor */    
   victim->kproc = kaapi_all_kprocessors[ victimid ];
   if (victim->kproc ==0) goto redo_select;
-  return 1;
+  return 0;
 }
