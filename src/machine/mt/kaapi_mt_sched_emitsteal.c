@@ -152,7 +152,11 @@ return_value:
           /* convert fmtid to a task body */
           reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
         case KAAPI_REPLY_S_TASK:
-          /* push the task, arguments already pushed */
+          /* arguments already pushed, increment the stack pointer */
+          kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), KAAPI_CACHE_LINE);
+          
+          /* push a task with the body */
+          kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
           return kproc->thread;
 
         case KAAPI_REPLY_S_THREAD:
