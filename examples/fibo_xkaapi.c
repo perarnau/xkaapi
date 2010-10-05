@@ -65,7 +65,8 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     3,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_W, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R },
     (kaapi_offset_t[])        { offsetof(sum_arg_t, result), offsetof(sum_arg_t, subresult1), offsetof(sum_arg_t, subresult2) },
-    (const struct kaapi_format_t*[]) { kaapi_int_format, kaapi_int_format, kaapi_int_format }
+    (const struct kaapi_format_t*[]) { kaapi_int_format, kaapi_int_format, kaapi_int_format },
+    0
 )
 
 void sum_body( void* taskarg, kaapi_thread_t* thread )
@@ -86,7 +87,8 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
     2,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_W },
     (kaapi_offset_t[])        { offsetof(fibo_arg_t, n), offsetof(fibo_arg_t, result) },
-    (const struct kaapi_format_t*[]) { kaapi_int_format, kaapi_int_format }
+    (const struct kaapi_format_t*[]) { kaapi_int_format, kaapi_int_format },
+    0
 )
 
 void fibo_body( void* taskarg, kaapi_thread_t* thread )
@@ -142,7 +144,8 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
     4,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_RW },
     (kaapi_offset_t[])        { offsetof(print_arg_t, delay), offsetof(print_arg_t, n), offsetof(print_arg_t, niter), offsetof(print_arg_t, result) },
-    (const struct kaapi_format_t*[]) { kaapi_double_format, kaapi_int_format, kaapi_int_format, kaapi_int_format }
+    (const struct kaapi_format_t*[]) { kaapi_double_format, kaapi_int_format, kaapi_int_format, kaapi_int_format },
+    0
 )
 
 void print_body( void* taskarg, kaapi_thread_t* thread )
@@ -175,9 +178,11 @@ int main(int argc, char** argv)
   else 
     niter = 1;
 
+  kaapi_assert( kaapi_init() == 0);
   thread = kaapi_self_thread();
   kaapi_thread_save_frame(thread, &frame);
   
+  t0 = kaapi_get_elapsedtime();
   for ( i=-1; i<niter; ++i)
   {
     if (i ==0) t0 = kaapi_get_elapsedtime();
@@ -208,6 +213,8 @@ int main(int argc, char** argv)
   
   printf("After sync: Fibo(%i)=%li\n", n, value_result);
   printf("Time Fibo(%i): %f\n", n, t1-t0);
+
+  kaapi_assert( kaapi_finalize() == 0);
   
   return 0;
 }
