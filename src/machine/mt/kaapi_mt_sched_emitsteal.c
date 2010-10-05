@@ -159,6 +159,7 @@ return_value:
     case KAAPI_REQUEST_S_REPLY_TASK_FMT:
       /* convert fmtid to a task body */
       reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
+      kaapi_assert_debug(reply->u.s_task.body != 0);
 
     case KAAPI_REQUEST_S_REPLY_TASK:
       /* arguments already pushed, increment the stack pointer */

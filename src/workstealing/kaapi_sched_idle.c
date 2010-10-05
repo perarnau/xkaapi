@@ -159,6 +159,11 @@ redo_execute:
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
     }
+    else {
+      /* wait end of thieves before releasing a thread */
+      kaapi_sched_lock(kproc);
+      kaapi_sched_unlock(kproc);
+    }
   } while (1);
   
 }

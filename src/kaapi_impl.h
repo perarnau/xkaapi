@@ -786,8 +786,9 @@ static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
   int ok;
   do {
     ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1);
+    if (ok) break;
     kaapi_slowdown_cpu();
-  } while (!ok);
+  } while (1);
   /* implicit barrier in KAAPI_ATOMIC_CAS */
   return 0;
 }

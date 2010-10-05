@@ -155,6 +155,13 @@ begin_loop:
 
     /* task execution */
     kaapi_assert_debug(pc == thread->sfp[-1].pc);
+    kaapi_assert_debug( (kaapi_format_resolvebybody( body ) != 0) 
+      || (body == kaapi_taskmain_body)
+      || (body == kaapi_tasksteal_body)
+      || (body == kaapi_taskwrite_body)
+      || (body == kaapi_aftersteal_body)
+      || (body == kaapi_nop_body)
+    );
     body( pc->sp, (kaapi_thread_t*)thread->sfp );
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)
@@ -190,7 +197,7 @@ restart_after_steal:
   {
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
-    while (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
+    while ((KAAPI_ATOMIC_READ(&thread->lock) == 1) || !KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
     while (fp > eframe) 
     {
       --fp;
@@ -207,8 +214,8 @@ restart_after_steal:
     fp = eframe;
     fp->sp = fp->pc;
 
-    kaapi_writemem_barrier();
-    KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+    KAAPI_ATOMIC_WRITE_BARRIER(&thread->lock, 0);
+    
 #elif (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
     /* here it's a pop of frame: we use THE like protocol */
     while (fp > eframe) 

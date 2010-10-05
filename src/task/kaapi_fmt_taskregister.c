@@ -102,7 +102,8 @@ kaapi_format_id_t kaapi_format_taskregister(
   fmt->size = size;
 
   fmt->get_param_size = get_param_size;
-  
+  memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
+
   if (body !=0)
     kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);
   return fmt->fmtid;
