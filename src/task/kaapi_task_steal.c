@@ -116,7 +116,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   { 
     kaapi_readmem_barrier();
     kaapi_processor_t* kproc = kaapi_get_current_processor();
-    if (kaapi_sched_readyempty(kproc) && kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
+    if (/*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
     {
       kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
       if (kthread !=0)

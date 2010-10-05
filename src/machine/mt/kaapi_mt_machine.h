@@ -508,7 +508,7 @@ static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_threa
   list->_front = node;
 
   /* pop back if new size exceeds max */
-#  define KAAPI_MAXFREECTXT 2
+#  define KAAPI_MAXFREECTXT 8
   if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
   {
     /* list size at least 2, no special case handling */
