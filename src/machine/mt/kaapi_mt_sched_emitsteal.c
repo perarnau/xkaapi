@@ -102,9 +102,6 @@ wait_once:
   
   kaapi_assert_debug( (kaapi_listrequest_iterator_count(&lri) >0) || kaapi_reply_test( replymemory ) );
   
-  if (kaapi_listrequest_iterator_empty(&lri)) 
-    goto return_value;
-  
   /* (3)
      process all requests on	 the victim kprocessor and reply failed to remaining requests
      
@@ -121,6 +118,9 @@ wait_once:
       request = kaapi_listrequest_iterator_next( &victim.kproc->hlrequests, &lri );
     }
   }
+  if (kaapi_reply_test( replymemory ))
+    goto return_value;
+  
   kaapi_sched_unlock( victim.kproc );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
