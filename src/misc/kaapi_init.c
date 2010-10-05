@@ -183,5 +183,55 @@ void kaapi_init_basicformat(void)
 }
 
 
+/**
+*/
+int kaapi_init(void)
+{
+  static int iscalled = 0;
+  if (iscalled !=0) return 0;
+  iscalled = 1;
+
+  kaapi_init_basicformat();
+  
+  /* set up runtime parameters */
+  kaapi_assert_m( 0 ==kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
+  
+  int err = kaapi_mt_init();
+  return err;
+}
 
 
+/**
+*/
+int kaapi_finalize(void)
+{
+  return kaapi_mt_finalize();
+}
+
+
+/** Should be with the same file as kaapi_init
+ */
+void _kaapi_dummy(void* foo)
+{
+}
+
+
+/*
+*/
+void __attribute__ ((constructor)) __kaapi_init_compatibility(void)
+{
+#if defined(KAAPI_DEBUG)
+  printf("Warning: deprecated function, please called directly kaapi_init");
+#endif
+  kaapi_init();
+}
+
+/*
+*/
+extern void __attribute__ ((destructor)) __kaapi_fini_compatibility(void)
+{
+#if defined(KAAPI_DEBUG)
+  printf("Warning: deprecated function, please called directly kaapi_finalize");
+#endif
+  kaapi_finalize();
+}
