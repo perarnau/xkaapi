@@ -169,6 +169,18 @@ extern struct kaapi_format_t* kaapi_all_format_bybody[256];
 extern struct kaapi_format_t* kaapi_all_format_byfmtid[256];
 
 
+/* ================== Library initialization/terminaison ======================= */
+/** Initialize the runtime.
+    Return 0 in case of success. Else an error code.
+*/
+extern int kaapi_mt_init(void);
+
+/** Finalize the runtime.
+    Return 0 in case of success. Else an error code.
+*/
+extern int kaapi_mt_finalize(void);
+
+
 /* Fwd declaration 
 */
 struct kaapi_processor_t;

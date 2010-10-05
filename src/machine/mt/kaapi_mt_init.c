@@ -81,12 +81,6 @@ kaapi_atomic_t kaapi_term_barrier = { 0 };
 */
 volatile int kaapi_isterm = 0;
 
-/** Should be with the same file as kaapi_init
- */
-void _kaapi_dummy(void* foo)
-{
-}
-
 
 /** 
 */
@@ -107,7 +101,7 @@ void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
 
 /**
 */
-int kaapi_init(void)
+int kaapi_mt_init(void)
 {
   static int iscalled = 0;
   if (iscalled !=0) return 0;
@@ -117,11 +111,6 @@ int kaapi_init(void)
   kaapi_thread_context_t* thread;
   kaapi_task_t*   task;
   const char*     version __attribute__((unused)) = get_kaapi_version();
-  
-  kaapi_init_basicformat();
-  
-  /* set up runtime parameters */
-  kaapi_assert_m( 0 ==kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
   
   /* initialize the kprocessor key */
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
@@ -175,7 +164,7 @@ int kaapi_init(void)
 
 /**
 */
-int kaapi_finalize(void)
+int kaapi_mt_finalize(void)
 {
   int i;
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -188,6 +177,10 @@ int kaapi_finalize(void)
   double t_preempt;
   double t_1;
 #endif
+
+  static int iscalled = 0;
+  if (iscalled !=0) return 0;
+  iscalled = 1;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */

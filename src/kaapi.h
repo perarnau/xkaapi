@@ -240,6 +240,19 @@ extern int kaapi_finalize(void);
 extern void kaapi_abort(void);
 
 
+/** For compatibility: add constructor function that will call kaapi_init
+*/
+extern void __attribute__ ((constructor)) __kaapi_init_compatibility(void);
+
+/** For compatibility: add destructor function that will call kaapi_finalize
+*/
+extern void __attribute__ ((destructor)) __kaapi_fini_compatibility(void);
+
+/* Kaapi finalization. 
+   After call to this functions all other kaapi function calls may not success.
+*/
+extern int kaapi_finalize(void);
+
 /* ========================================================================== */
 struct kaapi_task_t;
 struct kaapi_stack_t;
