@@ -157,6 +157,7 @@ return_value:
           
           /* push a task with the body */
           kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
+          kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
           return kproc->thread;
 
         case KAAPI_REPLY_S_THREAD:
