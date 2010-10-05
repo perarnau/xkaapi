@@ -149,10 +149,10 @@ typedef struct kaapi_wsqueuectxt_cell_t {
   kaapi_wsqueuectxt_cell_ptr_t prev;       /* shared with thief, used to link in free list */
 } kaapi_wsqueuectxt_cell_t;
 
-#define KAAPI_WSQUEUECELL_INLIST    1
-#define KAAPI_WSQUEUECELL_READY     3 /* see kaapi wakeup */
-#define KAAPI_WSQUEUECELL_OUTLIST   4
-#define KAAPI_WSQUEUECELL_STEALLIST 8
+#define KAAPI_WSQUEUECELL_INLIST    1  /* a thread has been pushed into the queue */
+#define KAAPI_WSQUEUECELL_READY     3  /* see kaapi wakeup, a suspended thread has been put ready */
+#define KAAPI_WSQUEUECELL_OUTLIST   4  /* */
+#define KAAPI_WSQUEUECELL_STEALLIST 8  /* the thread is under stealing */
 
 /** Type of bloc of kaapi_liststack_node_t
 */
@@ -323,7 +323,7 @@ static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t*
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
 static inline kaapi_request_t* kaapi_listrequest_iterator_get( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
-{ return &lrequests->requests[lrrange->idcurr]; }
+{ return (lrrange->idcurr == -1 ? 0 : &lrequests->requests[lrrange->idcurr]); }
 
 /* return the next entry in the request. return 0 if the range is empty.
 */
@@ -374,11 +374,10 @@ typedef struct kaapi_processor_t {
   kaapi_uint32_t           issteal;                       /* */
   
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-  kaapi_lready_t	   lready;                        /* list of ready context, concurrent access locked by 'lock' */
-  kaapi_thread_context_t*  readythread;                   /* continuation passing parameter to speed up recovery of activity... */
+  kaapi_lready_t	         lready;                        /* list of ready context, concurrent access locked by 'lock' */
 
   /* free list */
-  kaapi_lfree_t		   lfree;                         /* queue of free context */
+  kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
 
   void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
@@ -677,18 +676,12 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, struct k
 */
 static inline int _kaapi_request_reply( 
   kaapi_request_t*        request, 
-  int                     isok,
-  enum kaapi_reply_flag	  flags
+  int	                    flags
 )
 {
   kaapi_writemem_barrier();
-  if (isok) {
-    request->reply->status =
-      (flags << 4) | KAAPI_REQUEST_S_REPLY_OK;
-  }
-  else {
-    request->reply->status = KAAPI_REQUEST_S_REPLY_NOK;
-  }
+  request->reply->status = flags;
+  
 #if defined(KAAPI_DEBUG)
   request->reply = 0;
 #endif

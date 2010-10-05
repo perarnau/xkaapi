@@ -77,7 +77,6 @@ int kaapi_processor_init
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
-  kproc->readythread = 0;
   kaapi_sched_initready(kproc);
   kaapi_lfree_clear( kproc );
 

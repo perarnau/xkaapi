@@ -70,7 +70,9 @@ int kaapi_sched_stealprocessor(
     if (thread != 0)
     {
       /* reply */
-      _kaapi_request_reply(request, 1, KAAPI_REPLY_F_TASK);
+      kaapi_reply_t* reply = kaapi_request_getreply(request);
+      reply->u.thread = thread;
+      _kaapi_request_reply(request, KAAPI_REQUEST_S_REPLY_TASK);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }
   }
@@ -84,22 +86,10 @@ int kaapi_sched_stealprocessor(
     cell = kproc->lsuspend.tail;
     while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0))
     {
-      /* atomic cas to avoid conflic with task_writebody that may be move the thread
-         from an other queue
-      */
-      int stealok = KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_INLIST, KAAPI_WSQUEUECELL_STEALLIST);
-      if (stealok)
+      kaapi_thread_context_t* thread = cell->thread;
+      if (thread !=0)
       {
-        kaapi_thread_context_t* thread = cell->thread;
-        if (thread !=0)
-        {
-          kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
-        }
-        KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_STEALLIST, KAAPI_WSQUEUECELL_INLIST); 
-        /*    may be ==KAAPI_WSQUEUECELL_OUTLIST -> wakeuped by the owner 
-           or 
-              may be ==KAAPI_WSQUEUECELL_READYLIST -> set by the thief
-        */
+        kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
       }
       cell = cell->prev;
     }

@@ -239,7 +239,7 @@ extern int kaapi_finalize(void);
 /* Abort */
 extern void kaapi_abort(void);
 
-
+#if 0
 /** For compatibility: add constructor function that will call kaapi_init
 */
 extern void __attribute__ ((constructor)) __kaapi_init_compatibility(void);
@@ -247,11 +247,8 @@ extern void __attribute__ ((constructor)) __kaapi_init_compatibility(void);
 /** For compatibility: add destructor function that will call kaapi_finalize
 */
 extern void __attribute__ ((destructor)) __kaapi_fini_compatibility(void);
+#endif
 
-/* Kaapi finalization. 
-   After call to this functions all other kaapi function calls may not success.
-*/
-extern int kaapi_finalize(void);
 
 /* ========================================================================== */
 struct kaapi_task_t;
@@ -476,15 +473,8 @@ typedef kaapi_uint32_t kaapi_stack_id_t;
     failure or an error.
 */
 typedef struct kaapi_reply_t {
-  kaapi_uint8_t                  status;
-  kaapi_uint8_t                  data[KAAPI_CACHE_LINE-1];   /* output data[0]...data[KAAPI_REPLY_DATA_SIZE_MIN-1] ? */
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
-
-
-/* reply struct for work stealing */
-typedef struct kaapi_reply_steal_t {
   kaapi_uint8_t                  status;    /* should be the same as in kaapi_reply_t */
-  kaapi_uint16_t                 reserved1;  
+  kaapi_uint8_t                  reserved1;  
   kaapi_uint16_t                 reserved2;  
   kaapi_uint16_t                 reserved3;
   union {
@@ -496,11 +486,9 @@ typedef struct kaapi_reply_steal_t {
       kaapi_format_id_t          fmt;      /* format id */
       kaapi_uint64_t             data[1];  /* @ data */
     } s_taskfmt;
-    struct {
-      struct kaapi_thread_context_t* thread;
-    } s_thread;
+    struct kaapi_thread_context_t* thread;
   } u;
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_steal_t;
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
 
 #define KAAPI_REPLY_DATA_SIZE_MIN (KAAPI_CACHE_LINE-sizeof(kaapi_uint8_t))
 
@@ -1745,6 +1733,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 #endif /* GCC > 4.1 */
 
 
+#if 0
 /**
  */
 extern void _kaapi_dummy(void*);
@@ -1762,7 +1751,7 @@ static void __attribute__((unused)) __kaapi_dumy_dummy(void)
   _kaapi_dummy(NULL);
 }
 #endif
-
+#endif // if 0
 
 #ifdef __cplusplus
 }

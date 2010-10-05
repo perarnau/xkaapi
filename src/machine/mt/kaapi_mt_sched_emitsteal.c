@@ -51,7 +51,7 @@
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_victim_t          victim;
-  kaapi_reply_t*          replymemory ;
+  kaapi_reply_t*          reply ;
   int err;
   kaapi_listrequest_iterator_t lri;
   
@@ -63,7 +63,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_thread_clear( kproc->thread );
   
   /* map the reply data structure into the stack data */
-  replymemory = kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), 2*KAAPI_REPLY_DATA_SIZE_MIN );
+  reply = kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), 2*KAAPI_REPLY_DATA_SIZE_MIN );
 
 redo_select:
   /* select the victim processor */
@@ -78,7 +78,7 @@ redo_select:
   /* (1) 
      Fill & Post the request to the victim processor 
   */
-  kaapi_request_post( kproc->kid, replymemory, victim.kproc );
+  kaapi_request_post( kproc->kid, reply, victim.kproc );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
@@ -91,7 +91,7 @@ wait_once:
   */
   while (!kaapi_sched_trylock( victim.kproc ))
   {
-    if (kaapi_reply_test( replymemory ) ) 
+    if (kaapi_reply_test( reply ) ) 
       goto return_value;
 
     kaapi_slowdown_cpu();
@@ -100,90 +100,84 @@ wait_once:
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim.kproc->hlrequests, &lri);
   
-  kaapi_assert_debug( (kaapi_listrequest_iterator_count(&lri) >0) || kaapi_reply_test( replymemory ) );
+  kaapi_assert_debug( (kaapi_listrequest_iterator_count(&lri) >0) || kaapi_reply_test( reply ) );
   
   /* (3)
      process all requests on	 the victim kprocessor and reply failed to remaining requests
      
      Warning: In this version the aggregator has a lock on the victim processor.
   */
-  kaapi_sched_stealprocessor( victim.kproc, &victim.kproc->hlrequests, &lri );
   
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
+    kaapi_sched_stealprocessor( victim.kproc, &victim.kproc->hlrequests, &lri );
+
+    /* reply failed for all others requests */
     kaapi_request_t* request = kaapi_listrequest_iterator_get( &victim.kproc->hlrequests, &lri );
+    kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
+
     while (request !=0)
     {
-      _kaapi_request_reply(request, 0, 0);
+      _kaapi_request_reply(request, KAAPI_REQUEST_S_REPLY_NOK);
       request = kaapi_listrequest_iterator_next( &victim.kproc->hlrequests, &lri );
+      kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
   }
-  if (kaapi_reply_test( replymemory ))
+
+  kaapi_sched_unlock( victim.kproc );
+
+  if (kaapi_reply_test( reply ))
     goto return_value;
   
-  kaapi_sched_unlock( victim.kproc );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
 
   /* est-ce que cela peut se produire ici ? */
-  if (!kaapi_reply_test( replymemory )) 
+  if (!kaapi_reply_test( reply )) 
     goto wait_once;
 
   return 0;
   
 return_value:
-  kaapi_sched_unlock( victim.kproc );
   
   /* mark current processor as no stealing anymore */
   kproc->issteal = 0;
 
-  kaapi_assert_debug( (kaapi_reply_status(replymemory) != KAAPI_REQUEST_S_POSTED) ); 
+  kaapi_assert_debug( (kaapi_reply_status(reply) != KAAPI_REQUEST_S_POSTED) ); 
 
   /* test if my request is ok
   */
-  switch (kaapi_reply_status(replymemory))
-  {
-    case KAAPI_REQUEST_S_REPLY_OK:
-    {
-      kaapi_reply_steal_t* reply = (kaapi_reply_steal_t*)replymemory;
-      kaapi_replysync_data( replymemory );
+  kaapi_replysync_data( reply );
 #if defined(KAAPI_USE_PERFCOUNTER)
-      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
-      /* protocol for stealing, on reply: 
-         - case of a stack: 
-           replymemory->data[0] == op code= KAAPI_REPLY_S_TASK
-           replymemory->data[1..6] == not used
-           replymemory->data[7] == aligned on 64 bit boundary = body
-           replymemory->data[
-      */
-      switch (kaapi_reply_flags(replymemory)) {
-        case KAAPI_REPLY_F_TASK_FMT:
-          /* convert fmtid to a task body */
-          reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
-        case KAAPI_REPLY_F_TASK:
-          /* arguments already pushed, increment the stack pointer */
-          kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), KAAPI_CACHE_LINE);
-          
-          /* push a task with the body */
-          kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
-          kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
-          return kproc->thread;
 
-        case KAAPI_REPLY_F_THREAD:
-          return reply->u.s_thread.thread;
-        default:
-          kaapi_assert_m( 0, "Bad opcode in reply" );
-      };
-    } break;
+  switch (kaapi_reply_status(reply))
+  {
+    case KAAPI_REQUEST_S_REPLY_TASK_FMT:
+      /* convert fmtid to a task body */
+      reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
+
+    case KAAPI_REQUEST_S_REPLY_TASK:
+      /* arguments already pushed, increment the stack pointer */
+      kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), KAAPI_CACHE_LINE);
+      
+      /* push a task with the body */
+      kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
+      kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
+      return kproc->thread;
+
+    case KAAPI_REQUEST_S_REPLY_THREAD:
+      return reply->u.thread;
 
     case KAAPI_REQUEST_S_REPLY_NOK:
       return 0;
 
     case KAAPI_REQUEST_S_ERROR:
       kaapi_assert_debug_m(0, "Error code in request status" );
+
     default:
       kaapi_assert_debug_m(0, "Bad request status" );
   }

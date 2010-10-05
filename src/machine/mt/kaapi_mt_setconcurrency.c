@@ -99,7 +99,7 @@ int kaapi_setconcurrency(void)
     return EINVAL;
   
   kaapi_all_kprocessors = calloc(kpl.count, sizeof(kaapi_processor_t*));
-  if (kaapi_all_kprocessors == NULL)
+  if (kaapi_all_kprocessors == 0)
   {
     kaapi_procinfo_list_free(&kpl);
     return ENOMEM;
@@ -116,7 +116,7 @@ int kaapi_setconcurrency(void)
   kid = 0;
   kpi = kpl.head;
 
-  for (; kpi != NULL; ++kid, kpi = kpi->next)
+  for (; kpi != 0; ++kid, kpi = kpi->next)
   {
     kpi->kid = kid;
 
@@ -161,11 +161,11 @@ int kaapi_setconcurrency(void)
       kproc = kaapi_processor_allocate();
       kaapi_all_kprocessors[0] = kproc;
       kaapi_assert(0 == pthread_setspecific(kaapi_current_processor_key, kproc));
-      if (kproc == NULL)
+      if (kproc == 0)
       {
         pthread_attr_destroy(&attr);
         free(kaapi_all_kprocessors);
-        kaapi_all_kprocessors = NULL;
+        kaapi_all_kprocessors = 0;
         kaapi_procinfo_list_free(&kpl);
         return ENOMEM;
       }
@@ -215,7 +215,7 @@ int kaapi_setconcurrency(void)
 void* kaapi_sched_run_processor( void* arg )
 {
   kaapi_procinfo_t* kpi = (kaapi_procinfo_t*)arg;
-  kaapi_processor_t* kproc = NULL;
+  kaapi_processor_t* kproc = 0;
   const kaapi_processor_id_t kid = kpi->kid;
 
   /* force reschedule of the posix thread, we that the thread will be mapped on the correct processor ? */
@@ -238,7 +238,7 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
 
   /* from here, thread arg no longer valid */
-  kpi = NULL;
+  kpi = 0;
 
   /* quit first steap of the initialization */
   kaapi_barrier_td_setactive(&barrier_init, 0);
@@ -257,6 +257,8 @@ void* kaapi_sched_run_processor( void* arg )
   /* main work stealing loop */
   kaapi_sched_idle( kproc );
 
+  kaapi_assert_debug( kaapi_isterminated() );
+  
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_stop(kproc);

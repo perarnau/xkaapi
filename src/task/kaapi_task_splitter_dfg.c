@@ -56,7 +56,7 @@ int kaapi_task_splitter_dfg(
 {
   kaapi_request_t*        request    = 0;
   kaapi_tasksteal_arg_t*  argsteal;
-  kaapi_reply_steal_t*    stealreply;
+  kaapi_reply_t*          stealreply;
 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
   kaapi_assert_debug( task !=0 );
@@ -66,7 +66,7 @@ int kaapi_task_splitter_dfg(
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
   kaapi_assert(request !=0);
 
-  stealreply = (kaapi_reply_steal_t*)kaapi_request_getreply(request);
+  stealreply = (kaapi_reply_t*)kaapi_request_getreply(request);
   
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
@@ -82,7 +82,7 @@ int kaapi_task_splitter_dfg(
   argsteal->war_param             = war_param;  
   stealreply->u.s_task.body       = kaapi_tasksteal_body;
 
-  _kaapi_request_reply( request, 1, KAAPI_REPLY_F_TASK); /* success of steal */
+  _kaapi_request_reply( request, KAAPI_REQUEST_S_REPLY_TASK); /* success of steal */
   
   /* update next request to process */
   kaapi_listrequest_iterator_next( lrequests, lrrange );

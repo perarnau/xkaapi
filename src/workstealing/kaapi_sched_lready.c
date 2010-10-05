@@ -61,7 +61,8 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
   {
     /* unlink the thread */
     pos = list->_front;
-    list->_front = list->_front->_next;
+    list->_front = pos->_next;
+    if (list->_back == pos) list->_back = 0;
     return pos;
   }
 
@@ -72,6 +73,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
     {
       /* unlink the thread */
       pre->_next = pos->_next;
+      if (pre->_next ==0) list->_back = pre;
       return pos;
     }
 
@@ -91,6 +93,9 @@ void kaapi_sched_pushready(kaapi_processor_t* kproc, kaapi_thread_context_t* nod
   kaapi_lready_t* const list = &kproc->lready;
 
   node->_next = 0;
+#if defined(KAAPI_DEBUG)
+  node->_prev = 0;
+#endif
 
   if (list->_back != 0)
     list->_back->_next = node;

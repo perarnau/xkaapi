@@ -264,22 +264,15 @@ extern kaapi_rtparam_t kaapi_default_param;
     \ingroup WS
 */
 enum kaapi_request_status_t {
-  KAAPI_REQUEST_S_POSTED    = 0,
-  KAAPI_REQUEST_S_REPLY_OK  = 1,
-  KAAPI_REQUEST_S_REPLY_NOK = 2,
-  KAAPI_REQUEST_S_ERROR     = 3
+  KAAPI_REQUEST_S_POSTED         = 0,
+  KAAPI_REQUEST_S_REPLY_NOK      = 1,
+  KAAPI_REQUEST_S_REPLY_TASK     = 2,
+  KAAPI_REQUEST_S_REPLY_TASK_FMT = 3,
+  KAAPI_REQUEST_S_REPLY_THREAD   = 4,
+  KAAPI_REQUEST_S_ERROR          = 5
 };
 
 
-/* ============================= REPLY ============================ */
-/** Private flags of a reply
-    \ingroup WS
-*/
-enum kaapi_reply_flag {
-  KAAPI_REPLY_F_TASK     = 1,  /* steal a task locally: body is in data[0] */
-  KAAPI_REPLY_F_TASK_FMT = 2,  /* steal a remote task : fmtid is in data[0] */
-  KAAPI_REPLY_F_THREAD   = 3   /* steal a thread */
-};
 
 
 /* ============================= Format for task ============================ */
@@ -1050,16 +1043,7 @@ extern int kaapi_reply_wait( kaapi_reply_t* ksr );
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
 static inline int kaapi_reply_status( kaapi_reply_t* ksr ) 
-{ return ksr->status & 0xf; }
-
-/** Return the request flags
-  \param pksr kaapi_reply_t
-  \retval KAAPI_REQUEST_F_SUCCESS sucessfull steal operation
-  \retval KAAPI_REQUEST_F_FAIL steal request has failed
-  \retval KAAPI_REQUEST_F_QUIT process should terminate
-*/
-static inline int kaapi_reply_flags( kaapi_reply_t* ksr ) 
-{ return (ksr->status >> 4) & 0xf; }
+{ return ksr->status; }
 
 /** Return true iff the request has been posted
   \param pksr kaapi_reply_t
@@ -1076,7 +1060,7 @@ static inline int kaapi_reply_test( kaapi_reply_t* ksr )
   \param pksr kaapi_reply_t
 */
 static inline int kaapi_reply_ok( kaapi_reply_t* ksr )
-{ return kaapi_reply_status(ksr) == KAAPI_REQUEST_S_REPLY_OK; }
+{ return kaapi_reply_status(ksr) != KAAPI_REQUEST_S_REPLY_NOK; }
 
 /** Return the data associated with the reply
   \param pksr kaapi_reply_t

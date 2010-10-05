@@ -209,6 +209,7 @@ int kaapi_finalize(void)
 }
 
 
+#if 0
 /** Should be with the same file as kaapi_init
  */
 void _kaapi_dummy(void* foo)
@@ -235,3 +236,4 @@ extern void __attribute__ ((destructor)) __kaapi_fini_compatibility(void)
 #endif
   kaapi_finalize();
 }
+#endif

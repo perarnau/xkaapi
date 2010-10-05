@@ -52,12 +52,14 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     kaapi_thread_context_t* cond_thread 
   )
 {
-  /* Not on this line: in the current implementation, only the owner of the suspend queue
+  kaapi_thread_context_t* thread;
+  kaapi_wsqueuectxt_cell_t* cell;
+    
+  /* Note on this line: in the current implementation, only the owner of the suspend queue
      is able to call kaapi_sched_wakeup.
   */
   kaapi_assert_debug( kproc->kid == kproc_thiefid );
 
-  kaapi_wsqueuectxt_cell_t* cell;
   
   /* first test the thread that has been suspended 
      - this thread is initially put into a wsqueue (to be steal)
@@ -69,8 +71,10 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     if (kaapi_thread_isready(cond_thread))
     {
       /* should be atomic ? */
-      cond_thread->wcs->thread = 0;
-      KAAPI_ATOMIC_WRITE(&cond_thread->wcs->state, KAAPI_WSQUEUECELL_OUTLIST);
+      cell = cond_thread->wcs;
+      cell->thread = 0;
+      cond_thread->wcs = 0;
+      KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);
       return cond_thread;
     }
     /* the cell will be garbaged next times */
@@ -84,8 +88,6 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
        sched_suspend or sched_idle, not by passing through 
        the emission of a request
     */
-    kaapi_thread_context_t* thread;
-    
     kaapi_sched_lock( kproc );
     thread = kaapi_sched_stealready( kproc, kproc_thiefid );
     kaapi_sched_unlock( kproc );
@@ -105,10 +107,19 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
   {
     /* not already wakeuped */
     int status = KAAPI_ATOMIC_READ(&cell->state);
+
     /* save the next cell */
     kaapi_wsqueuectxt_cell_t* const nextcell = cell->next;
+    thread = cell->thread;
+    
+    if ((thread !=0) && kaapi_thread_isready(thread)) {
+      cell->thread = 0;
+      thread->wcs  = 0;
+      KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);
+      return thread;
+    }
 
-    if ((status & 0x3) == 0) /* not INLIST nor READY */
+    if (status == KAAPI_WSQUEUECELL_OUTLIST) /* not INLIST nor READY */
     {
       /* delete from the queue */
       if (nextcell != 0)
