@@ -58,9 +58,9 @@ int kaapi_task_splitter_dfg(
   kaapi_tasksteal_arg_t*  argsteal;
   kaapi_reply_steal_t*    stealreply;
 
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) == 1+_kaapi_get_current_processor()->kid );
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
   kaapi_assert_debug( task !=0 );
-  kaapi_assert_debug( kaapi_task_getbody(task) ==kaapi_suspend_body );
+  kaapi_assert_debug( kaapi_task_getbody(task) == kaapi_suspend_body );
 
   /* find the first request in the list */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
