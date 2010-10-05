@@ -1383,12 +1383,15 @@ extern void kaapi_taskreturn_body( void* , kaapi_thread_t* );
 #define KAAPI_PERF_ID_STEALREQOK    1  /* count number of successful steal requests */
 #define KAAPI_PERF_ID_STEALREQ      2  /* count number of steal requests */
 #define KAAPI_PERF_ID_STEALOP       3  /* count number of steal operation to reply to requests */
-#define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspend */
+#define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspended thread */
 #define KAAPI_PERF_ID_T1            5  /* nano second of compte time */
 /*#define KAAPI_PERF_ID_TIDLE         6  / * nano second of idle time */ 
 #define KAAPI_PERF_ID_TPREEMPT      7  /* nano second of preempt time */
+#define KAAPI_PERF_ID_ALLOCTHREAD   8  /* count number of allocated thread */
+#define KAAPI_PERF_ID_FREETHREAD    9  /* count number of free thread */
+#define KAAPI_PERF_ID_QUEUETHREAD   10 /* count the maximal number of thread in queue */
 
-#define KAAPI_PERF_ID_ENDSOFTWARE   8  /* mark end of software counters */
+#define KAAPI_PERF_ID_ENDSOFTWARE   11 /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
 #define KAAPI_PERF_ID_PAPI_0       (KAAPI_PERF_ID_PAPI_BASE + 0)
