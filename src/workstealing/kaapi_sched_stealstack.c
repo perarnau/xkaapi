@@ -350,8 +350,6 @@ int kaapi_sched_stealstack
   kaapi_frame_t*           top_frame;
 #endif
 
-  const int count = kaapi_listrequest_iterator_count(lrrange);
-
   int replycount;
   
   kaapi_hashmap_t          access_to_gd;
@@ -386,7 +384,9 @@ int kaapi_sched_stealstack
     thread->thieffp =0;
     return 0;
   }
-  while (count > replycount)
+
+  const int count = kaapi_listrequest_iterator_count(lrrange);
+  while (replycount < count)
   {
     if (thread->thieffp > thread->sfp) break;
     if (thread->thieffp->pc > thread->thieffp->sp) 
