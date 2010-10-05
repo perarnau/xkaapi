@@ -212,29 +212,7 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 
 /* ============================= Kprocessor ============================ */
 #define  KAAPI_USE_BITMAP_REQUEST
-//#define KAAPI_USE_CIRBUF_REQUEST
-
-/* reply struct for work stealing */
-typedef struct kaapi_reply_steal_t {
-  kaapi_uint8_t                  status;    /* should be the same as in kaapi_reply_t */
-  kaapi_uint16_t                 reserved1;  
-  kaapi_uint16_t                 reserved2;  
-  kaapi_uint16_t                 reserved3;
-  union {
-    struct {
-      kaapi_task_bodyid_t        body;
-      kaapi_uint64_t             data[1];  /* @ de sp */
-    } s_task;
-    struct {
-      kaapi_format_id_t          fmt;      /* format id */
-      kaapi_uint64_t             data[1];  /* @ data */
-    } s_taskfmt;
-    struct {
-      kaapi_thread_context_t*    thread;
-    } s_thread;
-  } u;
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_steal_t;
-
+/* #define KAAPI_USE_CIRBUF_REQUEST */
 
 #if defined(KAAPI_USE_BITMAP_REQUEST)
 

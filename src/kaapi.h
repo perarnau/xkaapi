@@ -480,7 +480,30 @@ typedef struct kaapi_reply_t {
   kaapi_uint8_t                  data[KAAPI_CACHE_LINE-1];   /* output data[0]...data[KAAPI_REPLY_DATA_SIZE_MIN-1] ? */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
 
+
+/* reply struct for work stealing */
+typedef struct kaapi_reply_steal_t {
+  kaapi_uint8_t                  status;    /* should be the same as in kaapi_reply_t */
+  kaapi_uint16_t                 reserved1;  
+  kaapi_uint16_t                 reserved2;  
+  kaapi_uint16_t                 reserved3;
+  union {
+    struct {
+      kaapi_task_bodyid_t        body;
+      kaapi_uint64_t             data[1];  /* @ de sp */
+    } s_task;
+    struct {
+      kaapi_format_id_t          fmt;      /* format id */
+      kaapi_uint64_t             data[1];  /* @ data */
+    } s_taskfmt;
+    struct {
+      struct kaapi_thread_context_t* thread;
+    } s_thread;
+  } u;
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_steal_t;
+
 #define KAAPI_REPLY_DATA_SIZE_MIN (KAAPI_CACHE_LINE-sizeof(kaapi_uint8_t))
+
 
 /** \ingroup WS
     Server side of a request send by a processor.

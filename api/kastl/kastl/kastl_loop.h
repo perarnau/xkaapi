@@ -59,7 +59,6 @@ extern "C" void kaapi_set_self_workload(kaapi_uint32_t);
 extern "C" kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
 extern "C" kaapi_processor_id_t kaapi_request_kid(kaapi_request_t*);
 
-
 #if CONFIG_KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
 static volatile unsigned int __attribute__((aligned)) printid = 0;
@@ -746,7 +745,15 @@ namespace impl
 	unit_size = (size_t)r.size();
 
       // allocate thief task context
-      context_type* tc = (context_type*)request->reply->data;
+      kaapi_reply_steal_t* const reply = (kaapi_reply_steal_t*)request->reply;
+
+      // set entrypoint
+      kastl_entry_t const entryfn = thief_entry
+	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
+      reply->u.s_task.body = entryfn;
+
+      // task data
+      context_type* const tc = (context_type*)reply->u.s_task.data;
 
       // allocate task result
       typedef reduce_thief_context
@@ -763,9 +770,6 @@ namespace impl
       // initialize task stack
       new (tc) context_type
 	(rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
-
-      kastl_entry_t const entryfn = thief_entry
-	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
       // reply the request
       kaapi_request_reply_head(sc, request, ktr);
