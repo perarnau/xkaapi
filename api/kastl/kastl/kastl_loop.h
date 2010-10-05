@@ -50,7 +50,6 @@
 #include "kaapi.h"
 #include "kastl_workqueue.h"
 #include "kastl_sequences.h"
-#include "../unit/src/timing.h"
 
 
 // missing decls
@@ -742,14 +741,12 @@ namespace impl
     // balanced workload amongst count thieves
     for (; request_count > 0; ++request)
     {
-      if (!kaapi_request_ok(request))
-	continue;
-
       // pop no more than unit_size
       if (unit_size > (size_t)r.size())
 	unit_size = (size_t)r.size();
 
-      kaapi_thread_t* thief_thread = kaapi_request_getthread(request);
+      // todo: retrieve the thread
+      kaapi_thread_t* thief_thread = NULL;
       kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
 
       // allocate task stack
@@ -1062,8 +1059,8 @@ namespace impl
     kastl_splitter_t const splitfn = split_function
       <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
-    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-      (thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
+    kaapi_stealcontext_t* const sc = kaapi_task_begin_adaptive
+      (thread, KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, splitfn, arg);
 
     xtr_type xtr(tc->_settings);
     outter_loop_type::run
@@ -1071,7 +1068,7 @@ namespace impl
 
     kaapi_set_self_workload(0);
 
-    kaapi_steal_finalize(sc);
+    kaapi_task_end_adaptive(sc);
   }
 
   static void wait_a_bit(void)
@@ -1098,8 +1095,8 @@ namespace impl
     kastl_splitter_t const splitfn = split_function
       <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
-    kaapi_stealcontext_t* const sc = kaapi_thread_pushstealcontext
-      (thread, KAAPI_STEALCONTEXT_DEFAULT, splitfn, arg, tc->_master_sc);
+    kaapi_stealcontext_t* const sc = kaapi_task_begin_adaptive
+      (thread, KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, splitfn, arg);
 
     wait_a_bit();
 
@@ -1107,7 +1104,7 @@ namespace impl
     outter_loop_type::run
       (sc, NULL, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
 
-    kaapi_steal_finalize(sc);
+    kaapi_task_end_adaptive(sc);
   }
 
   // exported entry points
