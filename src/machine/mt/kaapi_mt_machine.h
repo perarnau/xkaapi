@@ -790,9 +790,9 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   /* here do not write kid, because it was persistant to all local thread */
   req->reply = reply;
   return kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
-#elif defiend(KAAPI_USE_CIRBUF_REQUEST)
+#elif defined(KAAPI_USE_CIRBUF_REQUEST)
 #else
-#error "Not implemented
+#error "Not implemented"
 #endif
 #if 0
 #if defined(KAAPI_USE_PERFCOUNTER)

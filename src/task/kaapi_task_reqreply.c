@@ -82,8 +82,6 @@ int kaapi_request_reply(
 )
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_taskadaptive_t* ta_master;
-  kaapi_task_t* tasksig;
   
   kaapi_assert_debug( (flag == KAAPI_REQUEST_REPLY_HEAD) || (flag == KAAPI_REQUEST_REPLY_TAIL) );
   
