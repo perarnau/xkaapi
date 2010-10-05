@@ -162,6 +162,8 @@ return_value:
       kaapi_assert_debug(reply->u.s_task.body != 0);
 
     case KAAPI_REQUEST_S_REPLY_TASK:
+      kaapi_assert_debug( kaapi_isvalid_body( reply->u.s_task.body ) );
+
       /* arguments already pushed, increment the stack pointer */
       kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), KAAPI_CACHE_LINE);
       

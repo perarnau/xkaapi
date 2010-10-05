@@ -155,13 +155,7 @@ begin_loop:
 
     /* task execution */
     kaapi_assert_debug(pc == thread->sfp[-1].pc);
-    kaapi_assert_debug( (kaapi_format_resolvebybody( body ) != 0) 
-      || (body == kaapi_taskmain_body)
-      || (body == kaapi_tasksteal_body)
-      || (body == kaapi_taskwrite_body)
-      || (body == kaapi_aftersteal_body)
-      || (body == kaapi_nop_body)
-    );
+    kaapi_assert_debug( kaapi_isvalid_body( body ) );
     body( pc->sp, (kaapi_thread_t*)thread->sfp );
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)

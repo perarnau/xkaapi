@@ -1137,6 +1137,22 @@ extern void kaapi_set_self_workload( kaapi_uint32_t workload );
 #include "kaapi_staticsched.h"
 
 
+/** Should be only use in debug mode
+    - other body should be added
+*/
+static inline int kaapi_isvalid_body( kaapi_task_body_t body)
+{
+  return 
+    (kaapi_format_resolvebybody( body ) != 0) 
+      || (body == kaapi_taskmain_body)
+      || (body == kaapi_tasksteal_body)
+      || (body == kaapi_taskwrite_body)
+      || (body == kaapi_aftersteal_body)
+      || (body == kaapi_nop_body)
+  ;
+};
+
+
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
 
