@@ -55,7 +55,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
   /* Not on this line: in the current implementation, only the owner of the suspend queue
      is able to call kaapi_sched_wakeup.
   */
-  kaapi_assert_debug( kproc->kid = kproc_thiefid );
+  kaapi_assert_debug( kproc->kid == kproc_thiefid );
 
   kaapi_wsqueuectxt_cell_t* cell;
   

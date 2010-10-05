@@ -118,14 +118,20 @@ int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* th
   kaapi_wsqueuectxt_cell_t* cell = kaapi_wsqueuectxt_alloccell(ls);
 
   cell->affinity = thread->affinity;  
+  cell->thread   = 0;
+
   cell->thread   = thread;
+  thread->wcs    = cell;
 
   /* barrier + write in order thief view correct thread pointer if steal the struct */
-  KAAPI_ATOMIC_WRITE_BARRIER(&cell->state, KAAPI_WSQUEUECELL_INLIST);
+  KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_INLIST);
 
   /* push: LIFO, using next field */
   cell->prev = 0;
   cell->next = ls->head;
+
+  /* avoid reordering of previous field... */
+  kaapi_writemem_barrier();
   if (cell->next == 0) /* if empty head = tail = 0 */
     ls->tail = cell;
   else
