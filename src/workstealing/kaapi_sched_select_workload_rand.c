@@ -44,8 +44,8 @@
 #include "kaapi_impl.h"
 
 
-static int 
-  kaapi_select_victim_workload( kaapi_processor_t* kproc, kaapi_victim_t* victim )
+static int kaapi_select_victim_workload
+( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 {  
   const int count = kaapi_count_kprocessors;
   kaapi_processor_t* const self_kproc = _kaapi_get_current_processor();
@@ -86,7 +86,8 @@ static int
 /** Do workload then rand selection 
  */
 
-int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim )
+int kaapi_sched_select_victim_workload_rand
+( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 {
   int err;
   
@@ -95,4 +96,19 @@ int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_vic
     if (err ==0) return 0;
         
   } while(1);
+}
+
+
+/* workload accessors
+ */
+
+void kaapi_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload)
+{
+  KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
+}
+
+
+void kaapi_set_self_workload(kaapi_uint32_t workload)
+{
+  kaapi_set_workload(_kaapi_get_current_processor(), workload);
 }
