@@ -91,6 +91,7 @@ bool Community::is_leader() const
 void Community::leave() 
 { 
   Sync();
+  kaapi_finalize();
 }
 
 
@@ -99,6 +100,8 @@ Community System::initialize_community( int& argc, char**& argv )
   throw (RuntimeError, RestartException, ServerException)
 {
   static bool is_called = false; if (is_called) return Community(0); is_called = true;
+  
+  kaapi_init();
   
   /* first initialize KaapiComponentManager::prop from file $HOME/.kaapirc */
   std::string filename;
