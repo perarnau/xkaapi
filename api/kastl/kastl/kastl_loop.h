@@ -54,10 +54,10 @@
 
 // missing decls
 extern "C" void kaapi_set_workload(kaapi_processor_t*, kaapi_uint32_t);
+extern "C" void kaapi_set_workload_by_kid(kaapi_processor_id_t, kaapi_uint32_t);
 extern "C" void kaapi_set_self_workload(kaapi_uint32_t);
 extern "C" kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
-extern "C" kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
-extern "C" unsigned int kaapi_request_kid(kaapi_request_t*);
+extern "C" kaapi_processor_id_t kaapi_request_kid(kaapi_request_t*);
 
 
 #if CONFIG_KASTL_DEBUG
@@ -777,7 +777,7 @@ namespace impl
       kaapi_thread_pushtask(thief_thread);
       kaapi_request_reply_head(sc, request, ktr);
 
-      kaapi_set_workload(kaapi_request_kproc(request), unit_size);
+      kaapi_set_workload_by_kid(kaapi_request_kid(request), unit_size);
 
       pos += unit_size;
 

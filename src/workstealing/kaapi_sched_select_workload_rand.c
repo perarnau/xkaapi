@@ -112,3 +112,9 @@ void kaapi_set_self_workload(kaapi_uint32_t workload)
 {
   kaapi_set_workload(_kaapi_get_current_processor(), workload);
 }
+
+
+void kaapi_set_workload_by_kid(kaapi_processor_id_t kid, kaapi_uint32_t workload)
+{
+  kaapi_set_workload(kaapi_all_kprocessors[kid], workload);
+}
