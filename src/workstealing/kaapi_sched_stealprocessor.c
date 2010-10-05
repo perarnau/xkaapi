@@ -70,7 +70,7 @@ int kaapi_sched_stealprocessor(
     if (thread != 0)
     {
       /* reply */
-      _kaapi_request_reply(request, 1);
+      _kaapi_request_reply(request, 1, KAAPI_REPLY_F_TASK);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }
   }

@@ -80,10 +80,9 @@ int kaapi_task_splitter_dfg(
   argsteal->origin_thread         = thread;
   argsteal->origin_task           = task;
   argsteal->war_param             = war_param;  
-  stealreply->opcode              = KAAPI_REPLY_S_TASK;
   stealreply->u.s_task.body       = kaapi_tasksteal_body;
 
-  _kaapi_request_reply( request, 1 ); /* success of steal */
+  _kaapi_request_reply( request, 1, KAAPI_REPLY_F_TASK); /* success of steal */
   
   /* update next request to process */
   kaapi_listrequest_iterator_next( lrequests, lrrange );

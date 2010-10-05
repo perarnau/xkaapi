@@ -114,7 +114,7 @@ wait_once:
     kaapi_request_t* request = kaapi_listrequest_iterator_get( &victim.kproc->hlrequests, &lri );
     while (request !=0)
     {
-      _kaapi_request_reply(request, 0);
+      _kaapi_request_reply(request, 0, 0);
       request = kaapi_listrequest_iterator_next( &victim.kproc->hlrequests, &lri );
     }
   }
@@ -159,11 +159,11 @@ return_value:
            replymemory->data[7] == aligned on 64 bit boundary = body
            replymemory->data[
       */
-      switch (reply->opcode) {
-        case KAAPI_REPLY_S_TASK_FMT:
+      switch (kaapi_reply_flags(replymemory)) {
+        case KAAPI_REPLY_F_TASK_FMT:
           /* convert fmtid to a task body */
           reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
-        case KAAPI_REPLY_S_TASK:
+        case KAAPI_REPLY_F_TASK:
           /* arguments already pushed, increment the stack pointer */
           kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), KAAPI_CACHE_LINE);
           
@@ -172,7 +172,7 @@ return_value:
           kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
           return kproc->thread;
 
-        case KAAPI_REPLY_S_THREAD:
+        case KAAPI_REPLY_F_THREAD:
           return reply->u.s_thread.thread;
         default:
           kaapi_assert_m( 0, "Bad opcode in reply" );

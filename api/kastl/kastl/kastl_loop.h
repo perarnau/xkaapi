@@ -745,14 +745,8 @@ namespace impl
       if (unit_size > (size_t)r.size())
 	unit_size = (size_t)r.size();
 
-      // todo: retrieve the thread
-      kaapi_thread_t* thief_thread = NULL;
-      kaapi_task_t* thief_task = kaapi_thread_toptask(thief_thread);
-
-      // allocate task stack
-      context_type* tc = static_cast<context_type*>
-	(kaapi_thread_pushdata_align
-	 (thief_thread, sizeof(context_type), 8));
+      // allocate thief task context
+      context_type* tc = (context_type*)request->reply->data;
 
       // allocate task result
       typedef reduce_thief_context
@@ -773,8 +767,7 @@ namespace impl
       kastl_entry_t const entryfn = thief_entry
 	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
-      kaapi_task_init(thief_task, entryfn, tc);
-      kaapi_thread_pushtask(thief_thread);
+      // reply the request
       kaapi_request_reply_head(sc, request, ktr);
 
       kaapi_set_workload_by_kid(kaapi_request_kid(request), unit_size);

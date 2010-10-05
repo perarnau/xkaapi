@@ -271,6 +271,16 @@ enum kaapi_request_status_t {
 };
 
 
+/* ============================= REPLY ============================ */
+/** Private flags of a reply
+    \ingroup WS
+*/
+enum kaapi_reply_flag {
+  KAAPI_REPLY_F_TASK     = 1,  /* steal a task locally: body is in data[0] */
+  KAAPI_REPLY_F_TASK_FMT = 2,  /* steal a remote task : fmtid is in data[0] */
+  KAAPI_REPLY_F_THREAD   = 3   /* steal a thread */
+};
+
 
 /* ============================= Format for task ============================ */
 /*
@@ -1033,6 +1043,23 @@ static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
 */
 extern int kaapi_reply_wait( kaapi_reply_t* ksr );
 
+/** Return the request status
+  \param pksr kaapi_reply_t
+  \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
+  \retval KAAPI_REQUEST_S_FAIL steal request has failed
+  \retval KAAPI_REQUEST_S_QUIT process should terminate
+*/
+static inline int kaapi_reply_status( kaapi_reply_t* ksr ) 
+{ return ksr->status & 0xf; }
+
+/** Return the request flags
+  \param pksr kaapi_reply_t
+  \retval KAAPI_REQUEST_F_SUCCESS sucessfull steal operation
+  \retval KAAPI_REQUEST_F_FAIL steal request has failed
+  \retval KAAPI_REQUEST_F_QUIT process should terminate
+*/
+static inline int kaapi_reply_flags( kaapi_reply_t* ksr ) 
+{ return (ksr->status >> 4) & 0xf; }
 
 /** Return true iff the request has been posted
   \param pksr kaapi_reply_t
@@ -1042,25 +1069,14 @@ extern int kaapi_reply_wait( kaapi_reply_t* ksr );
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
 static inline int kaapi_reply_test( kaapi_reply_t* ksr )
-{ return (ksr->status != KAAPI_REQUEST_S_POSTED); }
+{ return kaapi_reply_status(ksr) != KAAPI_REQUEST_S_POSTED; }
 
 
 /** Return true iff the request is a success steal
   \param pksr kaapi_reply_t
 */
 static inline int kaapi_reply_ok( kaapi_reply_t* ksr )
-{ return (ksr->status == KAAPI_REQUEST_S_REPLY_OK); }
-
-
-/** Return the request status
-  \param pksr kaapi_reply_t
-  \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
-  \retval KAAPI_REQUEST_S_FAIL steal request has failed
-  \retval KAAPI_REQUEST_S_QUIT process should terminate
-*/
-static inline int kaapi_reply_status( kaapi_reply_t* ksr ) 
-{ return ksr->status; }
-
+{ return kaapi_reply_status(ksr) == KAAPI_REQUEST_S_REPLY_OK; }
 
 /** Return the data associated with the reply
   \param pksr kaapi_reply_t

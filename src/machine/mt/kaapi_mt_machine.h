@@ -217,7 +217,6 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 /* reply struct for work stealing */
 typedef struct kaapi_reply_steal_t {
   kaapi_uint8_t                  status;    /* should be the same as in kaapi_reply_t */
-  kaapi_uint8_t                  opcode;
   kaapi_uint16_t                 reserved1;  
   kaapi_uint16_t                 reserved2;  
   kaapi_uint16_t                 reserved3;
@@ -235,13 +234,6 @@ typedef struct kaapi_reply_steal_t {
     } s_thread;
   } u;
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_steal_t;
-
-enum {
-  KAAPI_REPLY_S_TASK     = 1,  /* steal a task locally: body is in data[0] */
-  KAAPI_REPLY_S_TASK_FMT = 2,  /* steal a remote task : fmtid is in data[0] */
-  KAAPI_REPLY_S_THREAD   = 3   /* steal a thread */
-};
-
 
 
 #if defined(KAAPI_USE_BITMAP_REQUEST)
@@ -707,12 +699,14 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, struct k
 */
 static inline int _kaapi_request_reply( 
   kaapi_request_t*        request, 
-  int                     isok
+  int                     isok,
+  enum kaapi_reply_flag	  flags
 )
 {
   kaapi_writemem_barrier();
   if (isok) {
-    request->reply->status = KAAPI_REQUEST_S_REPLY_OK;
+    request->reply->status =
+      (flags << 4) | KAAPI_REQUEST_S_REPLY_OK;
   }
   else {
     request->reply->status = KAAPI_REQUEST_S_REPLY_NOK;
