@@ -271,6 +271,6 @@ void* kaapi_sched_run_processor( void* arg )
   /*  */
   kaapi_perf_thread_fini(kproc); 
 #endif
-
+  
   return 0;
 }

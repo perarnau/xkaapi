@@ -286,8 +286,8 @@ int kaapi_mt_finalize(void)
     if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA)
       kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
 #endif /* KAAPI_USE_CUDA */
-
     kaapi_processor_free(kaapi_all_kprocessors[i]);
+    kaapi_wsqueuectxt_destroy(&kaapi_all_kprocessors[i]->lsuspend);
     kaapi_all_kprocessors[i]= 0;
   }
   free( kaapi_all_kprocessors );
