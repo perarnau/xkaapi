@@ -343,12 +343,12 @@ typedef struct kaapi_listrequest_iterator_t {
 /* return !=0 iff the range is empty
 */
 static inline int kaapi_listrequest_iterator_empty(kaapi_listrequest_iterator_t* lrrange)
-{ return lrrange->bitmap == 0; }
+{ return (lrrange->bitmap == 0) && (lrrange->idcurr == -1); }
 
 /* return the number of entries in the range
 */
 static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t* lrrange)
-{ return kaapi_bitmap_count(lrrange->bitmap); }
+{ return kaapi_bitmap_count(lrrange->bitmap) + (lrrange->idcurr == -1 ? 0 : 1); }
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
@@ -359,13 +359,14 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_get( kaapi_listrequest
 */
 static inline kaapi_request_t* kaapi_listrequest_iterator_next( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
 {
-  lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap );
-  return (lrrange->idcurr == 0 ? 0 : &lrequests->requests[lrrange->idcurr-1]);
+  lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+  return (lrrange->idcurr == -1 ? 0 : &lrequests->requests[lrrange->idcurr]);
 } 
 
 /* atomically read the bitmap of the list of requests clear readed bits */
 static inline void kaapi_listrequest_iterator_init(kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange)
 { 
+  lrrange->idcurr = -1;
   lrrange->bitmap = kaapi_bitmap_swap0( &lrequests->bitmap );
   kaapi_listrequest_iterator_next( lrequests, lrrange );
 }
