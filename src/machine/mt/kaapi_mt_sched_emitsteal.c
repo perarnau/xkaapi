@@ -91,6 +91,7 @@ wait_once:
      lock and retest if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return with reply
   */
+#if defined(KAAPI_SCHED_LOCK_CAS)
   while (!kaapi_sched_trylock( victim.kproc ))
   {
     if (kaapi_reply_test( reply ) ) 
@@ -98,6 +99,18 @@ wait_once:
 
     kaapi_slowdown_cpu();
   }
+#else
+acquire:
+  if (KAAPI_ATOMIC_DECR(&victim.kproc->lock) ==0) goto enter;
+  while (KAAPI_ATOMIC_READ(&victim.kproc->lock) <=0)
+  {
+    if (kaapi_reply_test( reply ) ) 
+      goto return_value;
+    kaapi_slowdown_cpu();
+  }
+  goto acquire;
+enter:
+#endif
 
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
   /* here becomes an aggregator... the trylock has synchronized memory */
@@ -112,7 +125,7 @@ wait_once:
   {
     int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
     kaapi_assert( firstbit != 0);
-    kaapi_assert( victim_hlr->requests[firstbit].reply != 0 );
+    kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
   }
 #endif  
   
