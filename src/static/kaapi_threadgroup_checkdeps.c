@@ -72,9 +72,6 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
   /* get the thread where to push the task */
   thread = kaapi_threadgroup_thread( thgrp, threadindex );
   
-  /* initialize the pad for every pushed task */
-  task->pad = 0;
-
   /* find the last writer for each args and in which partition it is 
      -> if all writers are in the same partition do nothing, push the task in the i-th partition
      -> if one of the writer is in a different partition, then change the body of the writer

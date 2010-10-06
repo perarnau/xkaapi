@@ -92,7 +92,8 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
         kaapi_task_setextrabody(task, newbody);
 
         /* if signaled thread was suspended, move it to the local queue */
-        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)task->pad;
+//TO DO        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)task->pad;
+        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)0;
         if (wcs != 0) /* means thread has been suspended */
         { 
           kaapi_readmem_barrier();

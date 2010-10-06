@@ -564,7 +564,6 @@ typedef struct kaapi_task_t {
   kaapi_task_bodyid_t   body;      /** task body  */
   kaapi_task_bodyid_t   volatile ebody;     /** extra task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
-  void*                 pad;       /** padding  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 
