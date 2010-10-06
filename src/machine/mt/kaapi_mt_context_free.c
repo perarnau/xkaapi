@@ -55,9 +55,18 @@ int kaapi_context_free( kaapi_thread_context_t* ctxt )
   if (ctxt ==0) return 0;
   if (ctxt->alloc_ptr !=0) free(ctxt->alloc_ptr);
 #if defined (_WIN32)
-    VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
+  VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
 #else
   munmap( ctxt, ctxt->size );
+#endif
+#if defined(KAAPI_DEBUG)
+  kaapi_uint32_t newvalue = KAAPI_ATOMIC_DECR(&count_alloc_ctxt);
+  kaapi_uint32_t oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
+  while (newvalue > oldvalue)
+  {
+    if (KAAPI_ATOMIC_CAS(&max_count_alloc_ctxt, oldvalue, newvalue)) break;
+    oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
+  }
 #endif
   return 0;
 }

@@ -460,6 +460,10 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
+#if defined(KAAPI_DEBUG)
+extern kaapi_atomic_t count_alloc_ctxt;
+extern kaapi_atomic_t max_count_alloc_ctxt;
+#endif
 /** \ingroup TASK
     The function kaapi_context_alloc() allocates in the heap a context with a stack containing 
     at bytes for tasks and bytes for data.

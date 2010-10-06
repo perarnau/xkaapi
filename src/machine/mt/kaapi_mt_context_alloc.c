@@ -115,6 +115,17 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #endif
     return 0;
   }
+
+#if defined(KAAPI_DEBUG)
+  kaapi_uint32_t newvalue = KAAPI_ATOMIC_INCR(&count_alloc_ctxt);
+  kaapi_uint32_t oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
+  while (newvalue > oldvalue)
+  {
+    if (KAAPI_ATOMIC_CAS(&max_count_alloc_ctxt, oldvalue, newvalue)) break;
+    oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
+  }
+#endif
+
   kaapi_thread_clear(ctxt);
 #if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
   ctxt->thieffp = 0;
