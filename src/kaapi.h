@@ -951,6 +951,13 @@ extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* re
 
 
 /** \ingroup ADAPTIVE
+    push the task associated with an adaptive request
+*/
+void* kaapi_create_athief_task
+(kaapi_stealcontext_t*, kaapi_request_t*, kaapi_task_body_t);
+
+
+/** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request
     has successfully adapt to steal work. Else 0.
     This function could not be called in concurrence with other calls:
