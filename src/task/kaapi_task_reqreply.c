@@ -94,7 +94,7 @@ int kaapi_request_reply(
   {
     /* lock the ta result list */
     while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
-      ;
+      kaapi_slowdown_cpu();
 
     /* insert in head or tail */
     if (ta->head ==0)
