@@ -118,7 +118,7 @@ wait_once:
 
     while (request !=0)
     {
-      _kaapi_request_reply(request, KAAPI_REQUEST_S_REPLY_NOK);
+      _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);
       request = kaapi_listrequest_iterator_next( &victim.kproc->hlrequests, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
@@ -156,12 +156,12 @@ return_value:
 
   switch (kaapi_reply_status(reply))
   {
-    case KAAPI_REQUEST_S_REPLY_TASK_FMT:
+    case KAAPI_REPLY_S_TASK_FMT:
       /* convert fmtid to a task body */
       reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
       kaapi_assert_debug(reply->u.s_task.body != 0);
 
-    case KAAPI_REQUEST_S_REPLY_TASK:
+    case KAAPI_REPLY_S_TASK:
       kaapi_assert_debug( kaapi_isvalid_body( reply->u.s_task.body ) );
 
       /* arguments already pushed, increment the stack pointer */
@@ -172,13 +172,13 @@ return_value:
       kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
       return kproc->thread;
 
-    case KAAPI_REQUEST_S_REPLY_THREAD:
+    case KAAPI_REPLY_S_THREAD:
       return reply->u.thread;
 
-    case KAAPI_REQUEST_S_REPLY_NOK:
+    case KAAPI_REPLY_S_NOK:
       return 0;
 
-    case KAAPI_REQUEST_S_ERROR:
+    case KAAPI_REPLY_S_ERROR:
       kaapi_assert_debug_m(0, "Error code in request status" );
 
     default:

@@ -55,6 +55,7 @@ int kaapi_sched_stealprocessor(
 )
 {
   kaapi_request_t* request;
+  kaapi_wsqueuectxt_cell_t* cell;
 
   /* test should be done before calling the function */
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
@@ -72,11 +73,12 @@ int kaapi_sched_stealprocessor(
       /* reply */
       kaapi_reply_t* reply = kaapi_request_getreply(request);
       reply->u.thread = thread;
-      _kaapi_request_reply(request, KAAPI_REQUEST_S_REPLY_THREAD);
+      _kaapi_request_reply(request, KAAPI_REPLY_S_THREAD);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }
   }
-  
+
+#if 0  
   if (1)
   { /* try to steal into suspended list of threads
        The only condition to ensure is that a thread context that will be destroy should
@@ -94,6 +96,7 @@ int kaapi_sched_stealprocessor(
       cell = cell->prev;
     }
   }
+#endif
 
   /* steal current thread */
   kaapi_thread_context_t*  thread = kproc->thread;

@@ -82,7 +82,7 @@ int kaapi_task_splitter_dfg(
   argsteal->war_param             = war_param;  
   stealreply->u.s_task.body       = kaapi_tasksteal_body;
 
-  _kaapi_request_reply( request, KAAPI_REQUEST_S_REPLY_TASK); /* success of steal */
+  _kaapi_request_reply( request, KAAPI_REPLY_S_TASK); /* success of steal */
   
   /* update next request to process */
   kaapi_listrequest_iterator_next( lrequests, lrrange );

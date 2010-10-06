@@ -87,7 +87,7 @@ int kaapi_request_reply(
   
   if ((result ==0) && (stc ==0))
   {
-    return _kaapi_request_reply(request, KAAPI_REQUEST_S_REPLY_NOK);
+    return _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);
   }
   
   if (result !=0)
@@ -137,5 +137,5 @@ int kaapi_request_reply(
   arg->result = result;
   kaapi_thread_pushtask(request->thread);
 #endif
-  return _kaapi_request_reply( request, KAAPI_REQUEST_S_REPLY_TASK );
+  return _kaapi_request_reply( request, KAAPI_REPLY_S_TASK );
 }

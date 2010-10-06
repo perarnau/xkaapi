@@ -263,13 +263,13 @@ extern kaapi_rtparam_t kaapi_default_param;
 /** Private status of request
     \ingroup WS
 */
-enum kaapi_request_status_t {
-  KAAPI_REQUEST_S_POSTED         = 0,
-  KAAPI_REQUEST_S_REPLY_NOK      = 1,
-  KAAPI_REQUEST_S_REPLY_TASK     = 2,
-  KAAPI_REQUEST_S_REPLY_TASK_FMT = 3,
-  KAAPI_REQUEST_S_REPLY_THREAD   = 4,
-  KAAPI_REQUEST_S_ERROR          = 5
+enum kaapi_reply_status_t {
+  KAAPI_REQUEST_S_POSTED  = 0,
+  KAAPI_REPLY_S_NOK       = 1,
+  KAAPI_REPLY_S_TASK      = 2,
+  KAAPI_REPLY_S_TASK_FMT  = 3,
+  KAAPI_REPLY_S_THREAD    = 4,
+  KAAPI_REPLY_S_ERROR     = 5
 };
 
 
@@ -1032,7 +1032,7 @@ static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
   \param pksr kaapi_reply_t
   \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
   \retval KAAPI_REQUEST_S_FAIL steal request has failed
-  \retval KAAPI_REQUEST_S_ERROR steal request has failed to be posted because the victim refused request
+  \retval KAAPI_REPLY_S_ERROR steal request has failed to be posted because the victim refused request
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
 extern int kaapi_reply_wait( kaapi_reply_t* ksr );
@@ -1050,7 +1050,7 @@ static inline int kaapi_reply_status( kaapi_reply_t* ksr )
   \param pksr kaapi_reply_t
   \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
   \retval KAAPI_REQUEST_S_FAIL steal request has failed
-  \retval KAAPI_REQUEST_S_ERROR steal request has failed to be posted because the victim refused request
+  \retval KAAPI_REPLY_S_ERROR steal request has failed to be posted because the victim refused request
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
 static inline int kaapi_reply_test( kaapi_reply_t* ksr )
@@ -1061,7 +1061,7 @@ static inline int kaapi_reply_test( kaapi_reply_t* ksr )
   \param pksr kaapi_reply_t
 */
 static inline int kaapi_reply_ok( kaapi_reply_t* ksr )
-{ return kaapi_reply_status(ksr) != KAAPI_REQUEST_S_REPLY_NOK; }
+{ return kaapi_reply_status(ksr) != KAAPI_REPLY_S_NOK; }
 
 /** Return the data associated with the reply
   \param pksr kaapi_reply_t

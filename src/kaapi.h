@@ -469,11 +469,11 @@ typedef kaapi_uint32_t kaapi_stack_id_t;
     Depending on the work stealing protocol, more data may be available.
     
     After the data has been write to memory, the status is set to one of
-    the kaapi_request_status_t value indicating the success in stealing, the
+    the kaapi_reply_status_t value indicating the success in stealing, the
     failure or an error.
 */
 typedef struct kaapi_reply_t {
-  kaapi_uint8_t                  status;    /* should be the same as in kaapi_reply_t */
+  kaapi_uint8_t                  status;    /* should be kaapi_reply_status_t */
   kaapi_uint8_t                  reserved1;  
   kaapi_uint16_t                 reserved2;  
   kaapi_uint16_t                 reserved3;
