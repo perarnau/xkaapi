@@ -59,7 +59,7 @@ static char kaapi_getstatename( kaapi_task_t* task )
 {
   kaapi_task_body_t body = kaapi_task_getbody(task);
   if (body == kaapi_exec_body) return 'E';
-  else if (kaapi_task_bodyissteal(body)) 
+  else if (kaapi_task_body_issteal(body)) 
   {
     if ( kaapi_task_body2fnc(task->body) == kaapi_taskbcast_body) return 'T';
     if ( kaapi_task_body2fnc(task->body) == kaapi_taskrecv_body) return 'R';

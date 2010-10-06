@@ -172,7 +172,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       /* if the writer is in fact a recv (case of task with both w and r access), mute the recv data structure */
       if (kaapi_task_body2fnc(ver->writer_task->body) == kaapi_taskrecv_body)
       {
-        kaapi_assert( kaapi_task_bodyissteal(ver->writer_task->body) );
+        kaapi_assert( kaapi_task_body_issteal(ver->writer_task->body) );
         argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
         memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
         argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->sp;
@@ -259,7 +259,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       kaapi_assert (ver->readers[tid].addr != 0);
       
       /* The task is waiting for a parameter -> suspend state */
-      kaapi_task_setbody(task, kaapi_task_bodysetsteal(kaapi_taskrecv_body) );
+      kaapi_task_setbody(task, kaapi_task_body_setsteal(kaapi_taskrecv_body) );
 
 
       kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);

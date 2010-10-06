@@ -62,12 +62,11 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   /* wait write appear in memory... */
   kaapi_readmem_barrier();
 
-  /* the task has been stolen: the extra body contains the original task body */
+  /* the task has been stolen: the body contains the original task body */
   task = thread[-1].pc;
-  fmt = 0; //kaapi_format_resolvebybody( kaapi_task_getextrabody(task) );
-  kaapi_assert_debug( fmt !=0 );
-  kaapi_assert_debug( task->body ==  kaapi_exec_body);
   kaapi_assert_debug( task->sp == taskarg );
+  fmt = kaapi_format_resolvebybody( kaapi_task_body2fnc(task->body) );
+  kaapi_assert_debug( fmt !=0 );
 
   countparam = fmt->count_params;
 

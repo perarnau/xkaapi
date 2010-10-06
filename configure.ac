@@ -164,28 +164,28 @@ AS_CASE([$enable_mode],
   ])
 
 AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
-		 [choose the work stealing algorithm (cas,hybrid,dijkstra)])],[],
+		 [choose the work stealing algorithm (rmw,dijkstra)])],[],
   [with_steal=dijkstra]
 )
 AS_CASE([$with_steal],
-  [hybrid], [dnl
-    AC_MSG_NOTICE([configure with hybrid workstealing algorithm])
+  [cas], [dnl #deprecated
+    AC_MSG_NOTICE([configure with Read Modify Write atomic instruction's based workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
-    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
-  ], [cas], [dnl
-    AC_MSG_NOTICE([configure with CAS based workstealing algorithm])
+    # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/frame])
+  ], [rmw], [dnl
+    AC_MSG_NOTICE([configure with Read Modify Write atomic instruction's based workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
-    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],0,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
+    # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/frame])
   ], [dijkstra], [dnl
     AC_MSG_NOTICE([configure with full Dijkstra based workstealing protocol])
     # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
-    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],1,[Support concurrent work stealing/frame])
+    # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/frame])
   ], [dnl
    AC_MSG_ERROR([Unknown value '$with_steal' for --with-steal option. Aborting.])
   ])

@@ -689,7 +689,7 @@ push_frame:
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-#if 1/*(KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)*/
+#if 1/*(KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)*/
 begin_loop:
 #endif
   /* stack of task growth down ! */
@@ -697,7 +697,7 @@ begin_loop:
   {
     kaapi_assert_debug( pc > fp->sp );
 
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
 
@@ -711,7 +711,7 @@ begin_loop:
       body = kaapi_aftersteal_body;
       pc->body = kaapi_exec_body;
     }
-#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
     /* wait thief get out pc */
     while (thread->thiefpc == pc)
       ;
@@ -816,7 +816,7 @@ restart_after_steal:
 
   if (fp >= eframe)
   {
-#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
     while (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
     while (fp > eframe) 
@@ -837,7 +837,7 @@ restart_after_steal:
 
     kaapi_writemem_barrier();
     KAAPI_ATOMIC_WRITE(&thread->lock, 0);
-#elif (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
     /* here it's a pop of frame: we use THE like protocol */
     while (fp > eframe) 
     {
@@ -877,7 +877,7 @@ restart_after_steal:
 
   return 0;
 
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD) || (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
 error_swap_body:
   if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
   kaapi_assert_debug(thread->sfp- fp == 1);

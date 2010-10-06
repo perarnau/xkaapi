@@ -251,29 +251,33 @@ static int kaapi_sched_stealframe
       
       /* for kaapi_steal_sync */
       KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 1);
+#if !(defined(__x86_64) || defined(__i386__))
       kaapi_writemem_barrier();
+#endif
 
       kaapi_task_splitter_t  splitter = sc->splitter;
       void*                  argsplitter = sc->argsplitter;
       
       if ( (splitter !=0) && (argsplitter !=0) )
       {
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
-        if (kaapi_task_casstate(task_top, kaapi_adapt_body, kaapi_task_bodysetsteal(kaapi_adapt_body)))
-#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+        kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_SUSPEND ));
+        if (likely( !kaapi_task_body_isspecial(body) ) ) // means SUSPEND was not set before
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
           thread->thiefpc = task_top;
         kaapi_writemem_barrier();
         if (thread->sfp[-1].pc != task_top) 
+#else
+        kaapi_assert_m(0, "Sequential execution cannot be used in parallel execution");
 #endif        
         {
           /* steal sucess */
           kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
-          /* cas success: reset the ebody */
-          kaapi_task_casstate(task_top, kaapi_task_bodysetsteal(kaapi_adapt_body), kaapi_adapt_body);
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+          kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_SUSPEND );
 #endif
         }
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
         thread->thiefpc = 0;
 #endif
       }
@@ -299,10 +303,11 @@ static int kaapi_sched_stealframe
         int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
-          if (kaapi_task_casstate(task_top, task_body, kaapi_suspend_body))
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+          kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_SUSPEND ));
+          if (likely( !kaapi_task_body_issteal(body) ) ) // means SUSPEND and EXEC was not set before
           {
-#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
             thread->thiefpc = task_top;
             kaapi_writemem_barrier();
             if ((thread->sfp[-1].pc != task_top) && kaapi_task_isstealable(task_top))
@@ -318,10 +323,10 @@ static int kaapi_sched_stealframe
               kaapi_stack_print(stdout, thread );
 #endif
               kaapi_task_splitter_dfg(thread, task_top, war_param, lrequests, lrrange );
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
             }
             thread->thiefpc = 0;
-#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
           }
 #endif
         }
@@ -346,7 +351,7 @@ int kaapi_sched_stealstack
   kaapi_listrequest_iterator_t* lrrange
 )
 {
-#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   kaapi_frame_t*           top_frame;
 #endif
 
@@ -361,7 +366,7 @@ int kaapi_sched_stealstack
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
   
-#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   /* lock the stack, if cannot return failed */
   if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
   
@@ -374,7 +379,7 @@ int kaapi_sched_stealstack
   
   KAAPI_ATOMIC_WRITE_BARRIER(&thread->lock, 0);  
   
-#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   /* try to steal in each frame */
   thread->thieffp = thread->stackframe;
   kaapi_mem_barrier();

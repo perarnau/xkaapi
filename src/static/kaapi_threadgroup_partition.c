@@ -66,10 +66,10 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   kaapi_mem_barrier();
   
   /* wait thief get out the thread */
-#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   while (!KAAPI_ATOMIC_CAS(&thgrp->mainctxt->lock, 0, 1))
     ;
-#elif (KAAPI_STEALTHE_METHOD == KAAPI_STEALTHE_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   while (thgrp->mainctxt->thieffp != 0)
     ;
 #endif
@@ -81,7 +81,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
     (void*)thgrp->mainframe.sp_data 
   );
 #endif
-    
+
   return 0;
 }
 
@@ -90,7 +90,8 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 */
 int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
 {
-  if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
+  if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) 
+    return EINVAL;
   kaapi_task_t* task;
   
   /* for all threads add a signalend task */

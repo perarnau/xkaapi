@@ -145,9 +145,10 @@ static inline void kaapi_writemem_barrier()
 #ifdef __PPC
   OSMemoryBarrier();
 #elif defined(__x86_64) || defined(__i386__)
-  __asm__ __volatile__ ("sfence":::"memory");
+  /* not need sfence on X86 archi: write are ordered */
+  __asm__ __volatile__ ("":::"memory");
 #else
-#error "bad configuration"
+#  error "bad configuration"
 #endif
 }
 
@@ -156,23 +157,33 @@ static inline void kaapi_readmem_barrier()
 #ifdef __PPC
   OSMemoryBarrier();
 #elif defined(__x86_64) || defined(__i386__)
-  __asm__ __volatile__ ("lfence":::"memory");
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("":::"memory");
 #else
-#error "bad configuration"
+#  error "bad configuration"
 #endif
 }
 
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
+#ifdef __PPC
   OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("mfence":::"memory");
+#else
+#  error "bad configuration"
+#endif
 }
 
 #elif defined(__linux__)
+
 static inline void kaapi_writemem_barrier()  
 {
 #if defined(__x86_64) || defined(__i386__)
-  __asm__ __volatile__ ("sfence":::"memory");
+  /* not need sfence on X86 archi: write are ordered */
+  __asm__ __volatile__ ("":::"memory");
 #else
   __sync_synchronize();
 #endif
@@ -181,7 +192,8 @@ static inline void kaapi_writemem_barrier()
 static inline void kaapi_readmem_barrier()  
 {
 #if defined(__x86_64) || defined(__i386__)
-  __asm__ __volatile__ ("lfence":::"memory");
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("":::"memory");
 #else
   __sync_synchronize();
 #endif
@@ -197,13 +209,15 @@ static inline void kaapi_mem_barrier()
 static inline void kaapi_writemem_barrier()  
 {
   /* Compiler fence to keep operations from */
-  __asm__ __volatile__("sfence" : : : "memory" );
+  /* not need sfence on X86 archi: write are ordered */
+  __asm__ __volatile__ ("":::"memory");
 }
 
 static inline void kaapi_readmem_barrier()  
 {
   /* Compiler fence to keep operations from */
-  __asm__ __volatile__("lfence" : : : "memory" );
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("":::"memory");
 }
 
 /* should be both read & write barrier */
@@ -1628,7 +1642,6 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
 /* functions which return new value (NV) */
 #  define KAAPI_ATOMIC_INCR(a) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ))
-
 #  define KAAPI_ATOMIC_DECR(a) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ))
 
@@ -1684,7 +1697,7 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( (kaapi_uintptr_t*)&((a)->_counter), (kaapi_uintptr_t)o ))
 
 #  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
@@ -1763,26 +1776,21 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
 #  error "Please add support for atomic operations on this system/architecture"
 #endif /* GCC > 4.1 */
 
-
-#if 0
-/**
- */
-extern void _kaapi_dummy(void*);
-
-/* ========================================================================= */
-/* Initialization / destruction functions
- */
-
-#if !defined(KAAPI_COMPILE_SOURCE)
-
-/** To force reference to kaapi_init.c in order to link against kaapi_init and kaapi_fini
- */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
+#if (SIZEOF_VOIDP == 4)
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (kaapi_uint32_t)o, (kaapi_uint32_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR_ORIG( (kaapi_atomic_t*)a, v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND_ORIG( (kaapi_atomic_t*)a, v)
+#else
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)o, (kaapi_uint64_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
 #endif
-#endif // if 0
 
 #ifdef __cplusplus
 }

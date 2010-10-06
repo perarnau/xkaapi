@@ -74,13 +74,6 @@
 #endif
 #include "../../memory/kaapi_mem.h"
 
-#if (SIZEOF_VOIDP == 4)
-#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (kaapi_uint32_t)o, (kaapi_uint32_t)n )
-#else
-#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)a, (kaapi_uint64_t)o, (kaapi_uint64_t)n )
-#endif
 /* ========================================================================== */
 
 
@@ -714,35 +707,6 @@ static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listre
   return 0;
 }
 
-/** 
-*/
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
-#define KAAPI_MASK_BODY_SUSPEND (1UL << (sizeof(kaapi_task_body_t)*8-1))
-#define kaapi_task_body2fnc(body) ((kaapi_task_body_t)(((kaapi_uintptr_t)body) & ~KAAPI_MASK_BODY_SUSPEND))
-#define kaapi_task_bodysetsteal(body) ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | KAAPI_MASK_BODY_SUSPEND))
-#define kaapi_task_bodyissteal(body) (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY_SUSPEND)
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
-  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
-}
-#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
-/*
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
-  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
-}
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  if (task->body != oldbody ) return 0;
-  kaapi_task_setbody(task, newbody );
-  return 1;
-}
-*/
-#else
-#  warning "NOT IMPLEMENTED"
-#endif
 
 /* ============================= Private functions, machine dependent ============================ */
 /* */

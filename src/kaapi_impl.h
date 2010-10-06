@@ -85,35 +85,20 @@ extern double t_finalize;
 
 
 /* Flags to define method to manage concurrency between victim and thieves
-   - STEALCAS: based on compare & swap method
-   - STEALTHE: based on Dijkstra like protocol to ensure mutual exclusion
+   - CAS: based on atomic modify update
+   - THE: based on Dijkstra like protocol to ensure mutual exclusion
+   - SEQ: only used to test performances penalty with comparizon of ideal seq. impl.
 */
-#define KAAPI_STEALCAS_METHOD 0
-#define KAAPI_STEALTHE_METHOD 1
+#define KAAPI_CAS_METHOD 0
+#define KAAPI_THE_METHOD 1
+#define KAAPI_SEQ_METHOD 2
 
 /* Selection of the method to manage concurrency between victim/thief 
    to steal task:
 */
-#ifndef KAAPI_USE_STEALTASK_METHOD
-#define KAAPI_USE_STEALTASK_METHOD KAAPI_STEALCAS_METHOD
+#ifndef KAAPI_USE_EXECTASK_METHOD
+#define KAAPI_USE_EXECTASK_METHOD KAAPI_CAS_METHOD
 #endif
-
-
-/* Selection of the method to steal into frame:
-*/
-#ifndef KAAPI_USE_STEALFRAME_METHOD
-#define KAAPI_USE_STEALFRAME_METHOD KAAPI_STEALTHE_METHOD
-#endif
-
-/* Verification of correct choice of values */
-#if (KAAPI_USE_STEALFRAME_METHOD !=KAAPI_STEALCAS_METHOD) && (KAAPI_USE_STEALFRAME_METHOD !=KAAPI_STEALTHE_METHOD)
-#error "Bad definition of value for steal frame method"
-#endif
-
-#if (KAAPI_USE_STEALTASK_METHOD !=KAAPI_STEALCAS_METHOD) && (KAAPI_USE_STEALTASK_METHOD !=KAAPI_STEALTHE_METHOD)
-#error "Bad definition of value for steal frame method"
-#endif
-
 
 
 /** Highest level, more trace generated */
@@ -387,10 +372,10 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
 
-#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
 #endif
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
 #endif
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
@@ -514,6 +499,43 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 
 /* ============================= Implementation method ============================ */
 
+/** Note: a body is a pointer to a function. We assume that a body <=> void* and has
+    64 bits on 64 bits architecture.
+    The 2 high bits are used to store the state of the task :
+    - 00 : the task has been pushed on the stack (<=> a user pointer function has never high bits == 11)
+    - 01 : the task has been taken by the owner for execution
+    - 10 : the task has been theft by a thief for execution
+    - 11 : the task has been theft by a thief for execution and it was executed, the body is "aftersteal body"
+*/
+#if (SIZEOF_VOIDP == 4)
+#  define KAAPI_MASK_BODY_SUSPEND (0x1UL << 31)
+#  define KAAPI_MASK_BODY_EXEC    (0x1UL << 30)
+#  define KAAPI_MASK_BODY         (0x3UL << 30)
+#  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
+#elif (SIZEOF_VOIDP == 8)
+#  define KAAPI_MASK_BODY_SUSPEND (0x1UL << 63)
+#  define KAAPI_MASK_BODY_EXEC    (0x1UL << 62)
+#  define KAAPI_MASK_BODY         (0x3UL << 62)
+#  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR64_ORIG(a, v)
+#else
+#error "No implementation for pointer to function with size greather than 8 bytes. Please contact the authors."
+#endif
+
+/** \ingroup TASK
+*/
+//@{
+#define kaapi_task_body_issteal(body)       (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY_SUSPEND)
+#define kaapi_task_body_isexec(body)        (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY_EXEC)
+#define kaapi_task_body_isaftersteal(body)  \
+      ((((kaapi_uintptr_t)body) & KAAPI_MASK_BODY)== (KAAPI_MASK_BODY_EXEC|KAAPI_MASK_BODY_SUSPEND))
+#define kaapi_task_body_isspecial(body)     (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY)
+#define kaapi_task_body2fnc(body)           ((kaapi_task_body_t)(((kaapi_uintptr_t)body) & ~KAAPI_MASK_BODY))
+#define kaapi_task_body2int(body)           ((kaapi_uintptr_t)body)
+#define kaapi_task_int2body(ibdy)           ((kaapi_task_body_t)ibdy)
+#define kaapi_task_body_setsteal(body)      ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | KAAPI_MASK_BODY_SUSPEND))
+#define kaapi_task_body_setexec(body)       ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | KAAPI_MASK_BODY_EXEC))
+//@}
+
 /** \ingroup TASK
     The function kaapi_task_isstealable() will return non-zero value iff the task may be stolen.
     All previous internal task body are not stealable. All user task are stealable.
@@ -521,10 +543,16 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 */
 inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 { 
-  return (task->body != kaapi_taskstartup_body) && (task->body != kaapi_nop_body)
-      && (task->body != kaapi_suspend_body) && (task->body != kaapi_exec_body) && (task->body != kaapi_aftersteal_body) 
-      && (task->body != kaapi_tasksteal_body) && (task->body != kaapi_taskwrite_body)
-      && (task->body != kaapi_taskfinalize_body) && (task->body != kaapi_taskreturn_body) && (task->body != kaapi_adapt_body)
+  kaapi_task_body_t body = task->body;
+  return !kaapi_task_body_issteal(body) && !kaapi_task_body_isexec(body)
+      && (body != kaapi_taskstartup_body) 
+      && (body != kaapi_nop_body)
+      && (body != kaapi_aftersteal_body) 
+      && (body != kaapi_tasksteal_body) 
+      && (body != kaapi_taskwrite_body)
+      && (body != kaapi_taskfinalize_body) 
+      && (body != kaapi_taskreturn_body) 
+      && (body != kaapi_adapt_body)
       ;
 }
 
@@ -551,6 +579,58 @@ static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaap
 {
   return kaapi_thread_pushdata( kaapi_threadcontext2thread(thread), count );
 }
+
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+/** Atomic or of the task state with the value in 'state'. 
+    Return the original value
+*/
+static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uintptr_t state )
+{
+  kaapi_uintptr_t retval = KAAPI_ATOMIC_ANDPTR_ORIG((kaapi_uintptr_t*)&task->body, state);
+  return retval;
+}
+static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uintptr_t state )
+{
+  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_uintptr_t*)&task->body, state);
+  return retval;
+}
+static inline int kaapi_task_pop( kaapi_task_t* task )
+{
+  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_atomic_t*)&task->body, KAAPI_MASK_BODY_EXEC);
+  return (retval & KAAPI_MASK_BODY) == KAAPI_MASK_BODY_EXEC;
+}
+static inline int kaapi_task_steal( kaapi_task_t* task )
+{
+  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_uintptr_t*)&task->body, (kaapi_uintptr_t)KAAPI_MASK_BODY_SUSPEND);
+  return (retval & KAAPI_MASK_BODY) == KAAPI_MASK_BODY_SUSPEND;
+}
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+#else
+#  warning "NOT IMPLEMENTED"
+#endif
+
+/** Should be only use in debug mode
+    - other bodies should be added
+*/
+#if !defined(NDEBUG)
+static inline int kaapi_isvalid_body( kaapi_task_body_t body)
+{
+  return 
+    (kaapi_format_resolvebybody( body ) != 0) 
+      || (body == kaapi_taskmain_body)
+      || (body == kaapi_tasksteal_body)
+      || (body == kaapi_taskwrite_body)
+      || (body == kaapi_aftersteal_body)
+      || (body == kaapi_nop_body)
+  ;
+}
+#else
+static inline int kaapi_isvalid_body( kaapi_task_body_t body)
+{
+  return 1;
+}
+#endif
+
 
 
 /** \ingroup TASK
@@ -747,7 +827,7 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
 */
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
-  return (thread->sfp->pc->body != kaapi_suspend_body);
+  return !kaapi_task_body_isaftersteal(thread->sfp->pc->body);
 }
 
 
@@ -1154,28 +1234,6 @@ extern void kaapi_set_self_workload( kaapi_uint32_t workload );
 
 #include "kaapi_staticsched.h"
 
-
-/** Should be only use in debug mode
-    - other bodies should be added
-*/
-#if 0
-static inline int kaapi_isvalid_body( kaapi_task_body_t body)
-{
-  return 
-    (kaapi_format_resolvebybody( body ) != 0) 
-      || (body == kaapi_taskmain_body)
-      || (body == kaapi_tasksteal_body)
-      || (body == kaapi_taskwrite_body)
-      || (body == kaapi_aftersteal_body)
-      || (body == kaapi_nop_body)
-  ;
-}
-#else
-static inline int kaapi_isvalid_body( kaapi_task_body_t body)
-{
-  return 1;
-}
-#endif
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
