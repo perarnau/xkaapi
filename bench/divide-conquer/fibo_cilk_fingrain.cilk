@@ -41,7 +41,7 @@ long fib(long n)
      else {
 	  long x, y;
 	  x = cilk_spawn fib(n - 1);
-	  y = cilk_spawn fib(n - 2);
+	  y = fib(n - 2);
 	  cilk_sync;
 	  return (x + y);
      }
