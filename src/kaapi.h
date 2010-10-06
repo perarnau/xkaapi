@@ -953,7 +953,7 @@ extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* re
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-void* kaapi_create_athief_task
+void* kaapi_reply_pushtask
 (kaapi_stealcontext_t*, kaapi_request_t*, kaapi_task_body_t);
 
 

@@ -65,7 +65,7 @@ static void athief_body(void* arg, kaapi_thread_t* thread)
 
   /* signal the remote master */
   kaapi_writemem_barrier();
-  if (ata->result != NULL)
+  if (ata->result != 0)
   {
     ata->result->thief_term = 1;
     ata->result->is_signaled = 1;
@@ -73,7 +73,7 @@ static void athief_body(void* arg, kaapi_thread_t* thread)
   KAAPI_ATOMIC_DECR(&ata->ta->thievescount);
 }
 
-void* kaapi_create_athief_task
+void* kaapi_reply_pushtask
 (kaapi_stealcontext_t* sc, kaapi_request_t* req, kaapi_task_body_t body)
 {
   kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)sc;
@@ -85,7 +85,7 @@ void* kaapi_create_athief_task
   athief_taskarg_t* const ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
   ata->ta = ta;
-  ata->result = NULL;
+  ata->result = 0;
   ata->ubody = body;
 
   /* user put args in this area */
