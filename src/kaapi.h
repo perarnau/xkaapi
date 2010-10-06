@@ -131,7 +131,7 @@ typedef struct kaapi_atomic64_t {
 
 #if defined(__i386__)||defined(__x86_64)
 # define kaapi_slowdown_cpu() \
-  do { __asm__ __volatile__("rep; nop;"); } while (0)
+  do { __asm__ __volatile__("pause\n\t"); } while (0)
 #else
 # define kaapi_slowdown_cpu()
 #endif

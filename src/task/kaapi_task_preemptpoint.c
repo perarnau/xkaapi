@@ -56,7 +56,7 @@ int kaapi_preemptpoint_before_reducer_call(
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
   kaapi_assert_debug( stc !=0 );
-  
+
   /* disable and wait no more thief on stc */
   kaapi_steal_disable_sync( stc );
   
@@ -90,7 +90,6 @@ int kaapi_preemptpoint_after_reducer_call(
     int reducer_retval 
 )
 {
-
   kaapi_writemem_barrier();   /* serialize previous line with next line */
   ktr->thief_term = 1;
 
