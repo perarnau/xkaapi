@@ -55,7 +55,6 @@ int kaapi_sched_stealprocessor(
 )
 {
   kaapi_request_t* request;
-  kaapi_wsqueuectxt_cell_t* cell;
 
   /* test should be done before calling the function */
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
