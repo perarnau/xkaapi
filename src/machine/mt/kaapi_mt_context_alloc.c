@@ -94,6 +94,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   memset(ctxt, 0, k_stacksize );
 #endif
   stack = kaapi_threadcontext2stack(ctxt);
+  ctxt->size = k_stacksize;
   if (kaapi_stack_init( stack, size_data, stack+1 ) !=0)
   {
 #if defined (_WIN32)
