@@ -128,7 +128,7 @@ enter:
     kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
   }
 #endif  
-  
+
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
      Warning: In this version the aggregator has a lock on the victim processor.
