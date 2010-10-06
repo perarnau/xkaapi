@@ -44,34 +44,58 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-// --------------------------------------------------------------------
-extern long fiboseq( const long n );
-
-extern long fiboseq_On(const long n);
-
 long cutoff;
 
-/* Print any typed shared
- * this task has read acces on a, it will wait until previous write acces on it are done
-*/
-static double start_time;
-static double stop_time;
-template<class T>
-struct PrintBody {
-  void operator() ( ka::pointer_r<T> a, int niter, const T& ref_value)
-  { 
-    /*  ka::WallTimer::gettime is a wrapper around gettimeofday(2) */
-//    double t1 = ka::WallTimer::gettime();
-    double delay = stop_time - start_time;
+// --------------------------------------------------------------------
+/* Sequential fibo function
+ */
+long fiboseq( const long n ) {
+  if( n<2 )
+    return n;
+  else
+    return fiboseq(n-1)+fiboseq(n-2);
+}
 
-    /*  ka::System::getRank() prints out the id of the node executing the task */
-    ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
-    ka::logfile() << ka::System::getRank() << ": res  = " << *a << std::endl;
-    ka::logfile() << ka::System::getRank() << ": cutoff = " << cutoff << ", time = " << delay/niter << " s" << std::endl;
-    ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
+long fiboseq_On(const long n){
+  if(n<2){
+    return n;
+  }else{
+
+    long fibo=1;
+    long fibo_p=1;
+    long tmp=0;
+    int i=0;
+    for( i=0;i<n-2;i++){
+      tmp = fibo+fibo_p;
+      fibo_p=fibo;
+      fibo=tmp;
+    }
+    return fibo;
+  }
+}
+
+
+/* Sum two integers
+ * this task reads a and b (read acces mode) and write their sum to res (write access mode)
+ * it will wait until previous write to a and b are done
+ * once finished, further read of res will be possible
+ */
+struct TaskSum : public ka::Task<3>::Signature<ka::W<long>, ka::R<long>, ka::R<long> > {};
+
+template<>
+struct TaskBodyCPU<TaskSum> //: public TaskSum
+{
+  void operator() ( ka::pointer_w<long> res, 
+                    ka::pointer_r<long> a, 
+                    ka::pointer_r<long> b ) 
+  {
+    /* write is used to write data to a Shared_w
+     * read is used to read data from a Shared_r
+     */
+    *res = *a + *b;
   }
 };
-
+static ka::RegisterBodyCPU<TaskSum> dummy_object0;
 
 
 /* Kaapi Fibo task.
@@ -81,10 +105,37 @@ struct PrintBody {
  */
 struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 
+
+/* Implementation for CPU machine 
+*/
 template<>
-struct TaskBodyCPU<TaskFibo> {
-  void operator() ( /*ka::Thread* thread,*/ ka::pointer_w<long> res, const long n );
+struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */ 
+{
+  void operator() ( ka::pointer_w<long> res, const long n )
+  {  
+    if (n < 2){ //cutoff) {
+      *res = n; //fiboseq(n);
+      return;
+    }
+    else {
+      ka::pointer<long> res1 = ka::Alloca<long>();
+      ka::pointer<long> res2 = ka::Alloca<long>();
+
+      /* the Spawn keyword is used to spawn new task
+       * new tasks are executed in parallel as long as dependencies are respected
+       */
+      ka::Spawn<TaskFibo>() ( res1, n-1 );
+      ka::Spawn<TaskFibo>() ( res2, n-2 );
+
+      /* the Sum task depends on res1 and res2 which are written by previous tasks
+       * it must wait until thoses tasks are finished
+       */
+      ka::Spawn<TaskSum>() ( res, res1, res2 );      
+    }
+  }
 };
+static ka::RegisterBodyCPU<TaskFibo> dummy_object;
+
 
 /* Main of the program
 */
@@ -92,6 +143,8 @@ struct doit {
 
   void do_experiment(unsigned int n, unsigned int iter )
   {
+    double start_time;
+    double stop_time;
     double t = ka::WallTimer::gettime();
     int ref_value = fiboseq_On(n);
     double delay = ka::WallTimer::gettime() - t;
@@ -177,4 +230,3 @@ int main(int argc, char** argv)
   
   return 0;
 }
-
