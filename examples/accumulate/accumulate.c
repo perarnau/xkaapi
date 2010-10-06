@@ -21,6 +21,20 @@ typedef struct work
 static void entry(void*, kaapi_thread_t*);
 
 
+/* memory alignment */
+static inline void* align_addr(void* addr)
+{
+  static const unsigned long ptrsize = sizeof(void*) * 8;
+  static const unsigned long mask = ptrsize - 1UL;
+
+  /* assume n in bytes, power of 2 */
+  if ((unsigned long)addr & mask)
+    addr = (void*)((unsigned long)addr + ptrsize);
+
+  return (void*)((unsigned long)addr & ~mask);
+}
+
+
 /* spinlocking */
 static void lock_work(work_t* w)
 {
@@ -103,7 +117,7 @@ static int split
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
     /* allocate and init thief work */
-    work_t* const tw = kaapi_reply_pushtask(sc, req, entry);
+    work_t* const tw = align_addr(kaapi_reply_pushtask(sc, req, entry));
 
     tw->lock = 0;
     tw->array = vw->array;
@@ -162,6 +176,8 @@ static int extract_seq
 static void entry
 (void* args, kaapi_thread_t* thread)
 {
+  args = align_addr(args);
+
   /* adaptive stealcontext flags */
   const int flags = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION;
 
