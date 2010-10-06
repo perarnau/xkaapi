@@ -44,6 +44,28 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+long cutoff;
+
+// --------------------------------------------------------------------
+/* Sequential fibo function
+ */
+long fiboseq_On(const long n){
+  if(n<2){
+    return n;
+  }else{
+
+    long fibo=1;
+    long fibo_p=1;
+    long tmp=0;
+    int i=0;
+    for( i=0;i<n-2;i++){
+      tmp = fibo+fibo_p;
+      fibo_p=fibo;
+      fibo=tmp;
+    }
+    return fibo;
+  }
+}
 
 
 /* Sum two integers
@@ -66,6 +88,7 @@ struct TaskBodyCPU<TaskSum> : public TaskSum
     *res = *a + *b;
   }
 };
+static ka::RegisterBodyCPU<TaskSum> dummy_object0;
 
 
 /* Kaapi Fibo task.
@@ -82,15 +105,15 @@ template<>
 struct TaskBodyCPU<TaskFibo> : public TaskFibo {
   void operator() ( ka::Thread* thread, ka::pointer_w<long> res, const long n )
   {  
-    if (n < 2){ //cutoff) {
-      *res = n; //fiboseq(n);
+    if (n < 2) {
+      *res = n;
     }
     else {
       ka::auto_pointer<long> res1 = thread->Alloca<long>();
       ka::auto_pointer<long> res2 = thread->Alloca<long>();
 
       /* the Spawn keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
+       * new task is executed in parallel as long as dependencies are respected
        */
       thread->Spawn<TaskFibo>() ( res1, n-1);
       (*this) ( thread, res2, n-2);
@@ -102,6 +125,7 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
     }
   }
 };
+static ka::RegisterBodyCPU<TaskFibo> dummy_object;
 
 
 /* Main of the program
@@ -110,11 +134,23 @@ struct doit {
 
   void do_experiment(unsigned int n, unsigned int iter )
   {
+    double start_time;
+    double stop_time;
+    double t = ka::WallTimer::gettime();
+    int ref_value = fiboseq_On(n);
+    double delay = ka::WallTimer::gettime() - t;
+    ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
+                    << " (computed in " << delay << " s)" << std::endl;
+      
     long* res_value = ka::Alloca<long>(1);
+    *res_value = rand();
     ka::pointer<long> res = res_value;
+    long* res2_value = ka::Alloca<long>(1);
+    *res2_value = rand();
+    ka::pointer<long> res2 = res2_value;
     for (cutoff=2; cutoff<3; ++cutoff)
     {
-      ka::Spawn<TaskFibo>()( res, n );
+      ka::Spawn<TaskFibo>()( res2, n );
       /* */
       ka::Sync();
       start_time= ka::WallTimer::gettime();
@@ -185,4 +221,3 @@ int main(int argc, char** argv)
   
   return 0;
 }
-

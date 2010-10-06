@@ -11,6 +11,7 @@
 ###################
 /api/atha/athapascan_closure.h
 /api/atha/athapascan_fork.h
+/api/kaapixx/ka_api_tuple.h
 /api/kaapixx/ka_api_clo.h
 /api/kaapixx/ka_api_spawn.h
 /api/kaapixx/ka_api_execforeach.h

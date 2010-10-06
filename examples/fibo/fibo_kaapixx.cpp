@@ -44,6 +44,28 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+long cutoff;
+
+// --------------------------------------------------------------------
+/* Sequential fibo function
+ */
+long fiboseq_On(const long n){
+  if(n<2){
+    return n;
+  }else{
+
+    long fibo=1;
+    long fibo_p=1;
+    long tmp=0;
+    int i=0;
+    for( i=0;i<n-2;i++){
+      tmp = fibo+fibo_p;
+      fibo_p=fibo;
+      fibo=tmp;
+    }
+    return fibo;
+  }
+}
 
 
 /* Sum two integers
@@ -54,7 +76,7 @@
 struct TaskSum : public ka::Task<3>::Signature<ka::W<long>, ka::R<long>, ka::R<long> > {};
 
 template<>
-struct TaskBodyCPU<TaskSum> : public TaskSum
+struct TaskBodyCPU<TaskSum> //: public TaskSum
 {
   void operator() ( ka::pointer_w<long> res, 
                     ka::pointer_r<long> a, 
@@ -66,6 +88,7 @@ struct TaskBodyCPU<TaskSum> : public TaskSum
     *res = *a + *b;
   }
 };
+static ka::RegisterBodyCPU<TaskSum> dummy_object0;
 
 
 /* Kaapi Fibo task.
@@ -79,29 +102,32 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 /* Implementation for CPU machine 
 */
 template<>
-struct TaskBodyCPU<TaskFibo> : public TaskFibo {
-  void operator() ( ka::Thread* thread, ka::pointer_w<long> res, const long n )
+struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */ 
+{
+  void operator() ( ka::pointer_w<long> res, const long n )
   {  
-    if (n < 2){ //cutoff) {
-      *res = n; //fiboseq(n);
+    if (n < 2){ 
+      *res = n; 
+      return;
     }
     else {
-      ka::auto_pointer<long> res1 = thread->Alloca<long>();
-      ka::auto_pointer<long> res2 = thread->Alloca<long>();
+      ka::pointer<long> res1 = ka::Alloca<long>();
+      ka::pointer<long> res2 = ka::Alloca<long>();
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
        */
-      thread->Spawn<TaskFibo>() ( res1, n-1);
-      (*this) ( thread, res2, n-2);
+      ka::Spawn<TaskFibo>() ( res1, n-1 );
+      ka::Spawn<TaskFibo>() ( res2, n-2 );
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished
        */
-      thread->Spawn<TaskSum>() ( res, res1, res2 );
+      ka::Spawn<TaskSum>() ( res, res1, res2 );      
     }
   }
 };
+static ka::RegisterBodyCPU<TaskFibo> dummy_object;
 
 
 /* Main of the program
@@ -110,11 +136,23 @@ struct doit {
 
   void do_experiment(unsigned int n, unsigned int iter )
   {
+    double start_time;
+    double stop_time;
+    double t = ka::WallTimer::gettime();
+    int ref_value = fiboseq_On(n);
+    double delay = ka::WallTimer::gettime() - t;
+    ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
+                    << " (computed in " << delay << " s)" << std::endl;
+      
     long* res_value = ka::Alloca<long>(1);
+    *res_value = rand();
     ka::pointer<long> res = res_value;
+    long* res2_value = ka::Alloca<long>(1);
+    *res2_value = rand();
+    ka::pointer<long> res2 = res2_value;
     for (cutoff=2; cutoff<3; ++cutoff)
     {
-      ka::Spawn<TaskFibo>()( res, n );
+      ka::Spawn<TaskFibo>()( res2, n );
       /* */
       ka::Sync();
       start_time= ka::WallTimer::gettime();
@@ -185,4 +223,3 @@ int main(int argc, char** argv)
   
   return 0;
 }
-
