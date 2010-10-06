@@ -119,7 +119,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
       return thread;
     }
 
-    if (status == KAAPI_WSQUEUECELL_OUTLIST) /* not INLIST nor READY */
+    if ((status == KAAPI_WSQUEUECELL_OUTLIST)||(status == KAAPI_WSQUEUECELL_STEALLIST)) /* not INLIST nor READY */
     {
       /* delete from the queue */
       if (nextcell != 0)

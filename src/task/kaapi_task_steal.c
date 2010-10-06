@@ -127,7 +127,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
       }
     }
     else {
-      /* cannot steal it, put the state to READY */
+      /* cannot steal it, put the state of the thread to READY */
       KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
     }
   }
