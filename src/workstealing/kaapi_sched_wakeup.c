@@ -112,10 +112,10 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     kaapi_wsqueuectxt_cell_t* const nextcell = cell->next;
     thread = cell->thread;
     
-    if ((thread !=0) && kaapi_thread_isready(thread)) {
+    if ((thread !=0) && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))) 
+    {
       cell->thread = 0;
       thread->wcs  = 0;
-      KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);
       return thread;
     }
 
