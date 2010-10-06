@@ -501,11 +501,6 @@ extern void kaapi_tasksteal_body( void*, kaapi_thread_t* );
 */
 extern void kaapi_taskwrite_body( void*, kaapi_thread_t* );
 
-/** Body of the task that do signal to a task after steal op
-    \ingroup TASK
-*/
-extern void kaapi_tasksig_body( void*, kaapi_thread_t*);
-
 /** Merge result after a steal
     \ingroup TASK
 */
@@ -528,7 +523,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 { 
   return (task->body != kaapi_taskstartup_body) && (task->body != kaapi_nop_body)
       && (task->body != kaapi_suspend_body) && (task->body != kaapi_exec_body) && (task->body != kaapi_aftersteal_body) 
-      && (task->body != kaapi_tasksteal_body) && (task->body != kaapi_taskwrite_body) && (task->body != kaapi_tasksig_body)
+      && (task->body != kaapi_tasksteal_body) && (task->body != kaapi_taskwrite_body)
       && (task->body != kaapi_taskfinalize_body) && (task->body != kaapi_taskreturn_body) && (task->body != kaapi_adapt_body)
       ;
 }

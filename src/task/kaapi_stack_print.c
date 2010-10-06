@@ -269,8 +269,6 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "suspend";
         else if (ebody == kaapi_taskbcast_body) 
           fname = "send";
-        else if (ebody == kaapi_tasksig_body) 
-          fname = "signal";
         else if (ebody == kaapi_tasksteal_body) 
           fname = "steal";
         else if (ebody == kaapi_aftersteal_body) 

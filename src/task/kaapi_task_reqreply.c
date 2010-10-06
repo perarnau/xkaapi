@@ -44,31 +44,52 @@
 */
 #include "kaapi_impl.h"
 
-/** Args for tasksignal
-*/
-typedef struct kaapi_tasksig_arg_t {
-  kaapi_taskadaptive_t*                 ta;         /* the victim or the master */
-  volatile kaapi_taskadaptive_result_t* result;
-  volatile int			                    inuse;
-} kaapi_tasksig_arg_t;
 
+/* adaptive task body
+ */
 
-
-/**
-*/
-void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
+typedef struct athief_taskarg
 {
-  kaapi_tasksig_arg_t* arg = (kaapi_tasksig_arg_t*)taskarg;
+  kaapi_taskadaptive_t* ta; /* the victim or the master */
+  volatile kaapi_taskadaptive_result_t* result;
+  kaapi_task_body_t ubody; /* user body */
+  unsigned char udata[1]; /* user data */
+} athief_taskarg_t;
 
+static void athief_body(void* arg, kaapi_thread_t* thread)
+{
+  athief_taskarg_t* const ata = (athief_taskarg_t*)arg;
+
+  /* execute the original task */
+  ata->ubody((void*)ata->udata, thread);
+
+  /* signal the remote master */
   kaapi_writemem_barrier();
-
-  if (arg->result !=0)
+  if (ata->result != NULL)
   {
-    arg->result->thief_term = 1;
-    arg->result->is_signaled = 1;
+    ata->result->thief_term = 1;
+    ata->result->is_signaled = 1;
   }
+  KAAPI_ATOMIC_DECR(&ata->ta->thievescount);
+}
 
-  KAAPI_ATOMIC_DECR( &arg->ta->thievescount );
+void* kaapi_create_athief_task
+(kaapi_stealcontext_t* sc, kaapi_request_t* req, kaapi_task_body_t body)
+{
+  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)sc;
+
+  /* athief task body */
+  req->reply->u.s_task.body = (kaapi_task_bodyid_t)athief_body;
+
+  /* athief task args */
+  athief_taskarg_t* const ata = (athief_taskarg_t*)
+    req->reply->u.s_task.data;
+  ata->ta = ta;
+  ata->result = NULL;
+  ata->ubody = body;
+
+  /* user put args in this area */
+  return (void*)ata->udata;
 }
 
 
@@ -83,12 +104,11 @@ int kaapi_request_reply(
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
   
-  kaapi_assert_debug( (flag == KAAPI_REQUEST_REPLY_HEAD) || (flag == KAAPI_REQUEST_REPLY_TAIL) );
+  kaapi_assert_debug
+    ((flag == KAAPI_REQUEST_REPLY_HEAD) || (flag == KAAPI_REQUEST_REPLY_TAIL));
   
   if ((result ==0) && (stc ==0))
-  {
     return _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);
-  }
   
   if (result !=0)
   {
@@ -116,26 +136,15 @@ int kaapi_request_reply(
 
     /* link result to the stc */
     result->master = ta;
+
+    /* set athief result to signal task end */
+    athief_taskarg_t* const ata = (athief_taskarg_t*)
+      request->reply->u.s_task.data;
+    ata->result = result;
   }
 
-#if 0 // TODO  
-  if ((stc->flag & 0x1) == KAAPI_STEALCONTEXT_LINKED) 
-  { 
-    ta_master = ta->origin_master;
-    if (ta_master ==0) ta_master = ta;
-  }
-  else {
-    ta_master = ta;
-  }
-  KAAPI_ATOMIC_INCR( &ta_master->thievescount );
+  /* increment master thief count */
+  KAAPI_ATOMIC_INCR( &ta->thievescount );
 
-  /* add task to tell to the master that this disappear */
-  tasksig = kaapi_thread_toptask( request->thread );
-  kaapi_tasksig_arg_t* const arg = kaapi_thread_pushdata( request->thread, sizeof(kaapi_tasksig_arg_t));
-  kaapi_task_init(tasksig, kaapi_tasksig_body, arg);
-  arg->ta     = ta_master;
-  arg->result = result;
-  kaapi_thread_pushtask(request->thread);
-#endif
   return _kaapi_request_reply( request, KAAPI_REPLY_S_TASK );
 }
