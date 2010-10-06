@@ -811,8 +811,10 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug((char*)thread->sp >= (char*)thread->sp_data);
 
+  /* not need on X86 archi: write are ordered */
+#if !(defined(__x86_64) || defined(__i386__))
   kaapi_writemem_barrier();
-
+#endif
   --thread->sp;
   return 0;
 }
@@ -820,8 +822,8 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 static inline void kaapi_task_initdfg
 (kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
-  task->body = body;
   task->sp = arg;
+  task->body = body;
 }
 
 /** \ingroup TASK
