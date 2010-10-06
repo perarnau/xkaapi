@@ -69,19 +69,20 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
     for (i=0; i<comlist->size; ++i)
     {
       kaapi_task_t* task = comlist->entry[i].task;
-      kaapi_assert( (task->ebody == kaapi_taskrecv_body) || (task->ebody == kaapi_taskbcast_body) );
+      kaapi_task_body_t    task_body = kaapi_task_body2fnc( task->body );
+      kaapi_assert( (task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskbcast_body) );
       kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       
       void* newsp;
       kaapi_task_body_t newbody;
-      if (task->ebody == kaapi_taskrecv_body)
+      if (task_body == kaapi_taskrecv_body)
       {
         newbody = argrecv->original_body;
         newsp   = argrecv->original_sp;
       }
       else 
       {
-        newbody = task->ebody;
+        newbody = task_body;
         newsp   = task->sp;
       }
       
@@ -89,7 +90,7 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
       {
         /* task becomes ready change its body...*/        
         task->sp = newsp;
-        kaapi_task_setextrabody(task, newbody);
+        kaapi_task_setbody(task, newbody);
 
         /* if signaled thread was suspended, move it to the local queue */
 //TO DO        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)task->pad;

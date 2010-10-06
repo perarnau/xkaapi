@@ -717,14 +717,13 @@ static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listre
 /** 
 */
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+#define KAAPI_MASK_BODY_SUSPEND (1UL << (sizeof(kaapi_task_body_t)*8-1))
+#define kaapi_task_body2fnc(body) ((kaapi_task_body_t)(((kaapi_uintptr_t)body) & ~KAAPI_MASK_BODY_SUSPEND))
+#define kaapi_task_bodysetsteal(body) ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | KAAPI_MASK_BODY_SUSPEND))
+#define kaapi_task_bodyissteal(body) (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY_SUSPEND)
 static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
 {
   kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
-  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
-}
-static inline int kaapi_task_cas_extrastate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->ebody;
   return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
 }
 #elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)

@@ -562,7 +562,6 @@ typedef int kaapi_gpustream_t;
 */
 typedef struct kaapi_task_t {
   kaapi_task_bodyid_t   body;      /** task body  */
-  kaapi_task_bodyid_t   volatile ebody;     /** extra task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
@@ -821,9 +820,8 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 static inline void kaapi_task_initdfg
 (kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
-  task->sp = arg;
   task->body = body;
-  task->ebody = body;
+  task->sp = arg;
 }
 
 /** \ingroup TASK

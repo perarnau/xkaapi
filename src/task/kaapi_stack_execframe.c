@@ -130,7 +130,7 @@ begin_loop:
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
 
-    if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
+    if (!kaapi_task_casstate( pc, pc->body, kaapi_exec_body)) 
     { 
       kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
       body = pc->body;
@@ -155,7 +155,13 @@ begin_loop:
 
     /* task execution */
     kaapi_assert_debug(pc == thread->sfp[-1].pc);
-    kaapi_assert_debug( kaapi_isvalid_body( body ) );
+    kaapi_assert_debug( kaapi_isvalid_body( body )
+      || (body == kaapi_taskmain_body)
+      || (body == kaapi_tasksteal_body)
+      || (body == kaapi_taskwrite_body)
+      || (body == kaapi_aftersteal_body)
+      || (body == kaapi_nop_body)
+    );
     body( pc->sp, (kaapi_thread_t*)thread->sfp );
     
 #if 0//!defined(KAAPI_CONCURRENT_WS)

@@ -80,7 +80,6 @@ int kaapi_task_end_adaptive( kaapi_stealcontext_t* stc )
   ta->sc.argsplitter = 0;
   
   kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
-  kaapi_task_setextrabody( ta->sc.ownertask, kaapi_nop_body );
 
   /* push task to wait childs */
   kaapi_task_t* task = kaapi_thread_toptask(stc->thread);

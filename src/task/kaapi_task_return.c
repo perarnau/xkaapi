@@ -73,7 +73,6 @@ int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
   ta->sc.splitter = 0;
   ta->sc.argsplitter = 0;
   kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
-  kaapi_task_setextrabody( ta->sc.ownertask, kaapi_nop_body );
 
 #if defined(KAAPI_DEBUG)
   /* push task to wait childs */

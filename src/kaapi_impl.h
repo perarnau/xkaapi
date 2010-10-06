@@ -530,22 +530,6 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 
 
 /** \ingroup TASK
-    Set the extra body of the task
-*/
-static inline void kaapi_task_setextrabody(kaapi_task_t* task, kaapi_task_bodyid_t body )
-{
-  task->ebody = body;
-}
-
-/** \ingroup TASK
-    Get the extra body of the task
-*/
-static inline kaapi_task_bodyid_t kaapi_task_getextrabody(kaapi_task_t* task)
-{
-  return task->ebody;
-}
-
-/** \ingroup TASK
 */
 static inline kaapi_task_t* _kaapi_thread_toptask( kaapi_thread_context_t* thread ) 
 {

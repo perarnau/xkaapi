@@ -132,7 +132,7 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
   int i, wc, countparam;
   const kaapi_taskrecv_arg_t* arg = (kaapi_taskrecv_arg_t*)sp;
   const kaapi_format_t* task_fmt = kaapi_format_resolvebybody( arg->original_body );
-  if (kaapi_task_getextrabody(task) != kaapi_taskrecv_body) return 0;
+  if (kaapi_task_body2fnc(task->body) != kaapi_taskrecv_body) return 0;
   sp = arg->original_sp;
 
   countparam = wc = task_fmt->count_params;
@@ -241,7 +241,7 @@ static int kaapi_sched_stealframe
   /* */
   while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > frame->sp))
   {
-    task_body = kaapi_task_getextrabody(task_top);
+    task_body = kaapi_task_body2fnc(task_top->body);//TODO kaapi_task_getextrabody(task_top);
     
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body)
@@ -259,7 +259,7 @@ static int kaapi_sched_stealframe
       if ( (splitter !=0) && (argsplitter !=0) )
       {
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
-        if (kaapi_task_cas_extrastate(task_top, kaapi_adapt_body, kaapi_suspend_body))
+        if (kaapi_task_casstate(task_top, kaapi_adapt_body, kaapi_task_bodysetsteal(kaapi_adapt_body)))
 #elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
           thread->thiefpc = task_top;
         kaapi_writemem_barrier();
@@ -270,7 +270,7 @@ static int kaapi_sched_stealframe
           kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
           /* cas success: reset the ebody */
-          kaapi_task_cas_extrastate(task_top, kaapi_suspend_body, kaapi_adapt_body);
+          kaapi_task_casstate(task_top, kaapi_task_bodysetsteal(kaapi_adapt_body), kaapi_adapt_body);
 #endif
         }
 #if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)

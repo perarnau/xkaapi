@@ -173,7 +173,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   arg->copy_task_args = 0;
 
   /* format of the original stolen task */  
-  body            = kaapi_task_getextrabody(arg->origin_task);
+  body            = 0; //TODO kaapi_task_getextrabody(arg->origin_task);
   kaapi_assert_debug( body !=0 );
   kaapi_assert_debug( kaapi_isvalid_body( body ) );
   kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_suspend_body );
