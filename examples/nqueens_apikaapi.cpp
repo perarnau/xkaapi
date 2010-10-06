@@ -75,7 +75,7 @@ struct Task_cumulinplace: ka::Task<2>::Signature<
   ka::R<res_t>
 > {};
 template<>
-struct TaskBodyCPU<Task_cumulinplace> : public Task_cumulinplace {
+struct TaskBodyCPU<Task_cumulinplace> {
   void operator()  (ka::pointer_rw<res_t> left, ka::pointer_r<res_t> right)
   {
     *left += *right;
@@ -89,7 +89,7 @@ struct Task_copy: ka::Task<2>::Signature<
 > {};
 
 template<>
-struct TaskBodyCPU<Task_copy> : public Task_copy {
+struct TaskBodyCPU<Task_copy> {
   void operator()  (ka::pointer_w<res_t> w, ka::pointer_r<res_t> r)
   {
     *w = *r;
@@ -104,7 +104,7 @@ struct Task_display: ka::Task<2>::Signature<
   double
 > {};
 template<>
-struct TaskBodyCPU<Task_display> : public Task_display {
+struct TaskBodyCPU<Task_display> {
   void operator () (ka::pointer_r<res_t> TOTAL, double start)
   {
     double stop = ka::WallTimer::gettime(); 
@@ -347,7 +347,7 @@ struct Task_bt2: ka::Task<9>::Signature<
 > {};
 
 template<>
-struct TaskBodyCPU<Task_bt2> : public Task_bt2 {
+struct TaskBodyCPU<Task_bt2>  {
   void operator()(
       ka::Thread* thread,
       ka::ka_int32_t y, 
@@ -407,7 +407,7 @@ struct Task_bt1: ka::Task<7>::Signature<
 
 
 template<>
-struct TaskBodyCPU<Task_bt1> : public Task_bt1 {
+struct TaskBodyCPU<Task_bt1> {
   void operator()(
       ka::Thread* thread,
       ka::ka_int32_t y, 
