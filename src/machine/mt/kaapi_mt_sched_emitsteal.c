@@ -105,7 +105,7 @@ wait_once:
 #if defined(KAAPI_DEBUG)
   int count_req = kaapi_listrequest_iterator_count(&lri);
   kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
-  kaapi_bitmap_value_t savebitmap = lri.bitmap;
+  kaapi_bitmap_value_t savebitmap = lri.bitmap | (1U << lri.idcurr);
   for (int i=0; i<count_req; ++i)
   {
     int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
