@@ -58,7 +58,9 @@ int kaapi_task_splitter_dfg(
   kaapi_tasksteal_arg_t*  argsteal;
   kaapi_reply_t*          stealreply;
 
+#if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
+#endif
   kaapi_assert_debug( task !=0 );
   kaapi_assert_debug( kaapi_task_getbody(task) == kaapi_suspend_body );
 
