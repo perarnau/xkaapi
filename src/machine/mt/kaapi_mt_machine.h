@@ -296,7 +296,7 @@ typedef kaapi_uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
 /** \ingroup WS
 */
 typedef struct kaapi_listrequest_t {
-  kaapi_bitmap_t  bitmap;
+  kaapi_bitmap_t  bitmap __attribute__((aligned(KAAPI_CACHE_LINE)));
   kaapi_request_t requests[KAAPI_MAX_PROCESSOR+1];
 } kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
 
@@ -460,6 +460,10 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
+#if defined(KAAPI_DEBUG_MEM)
+extern kaapi_atomic_t count_alloc_ctxt;
+extern kaapi_atomic_t max_count_alloc_ctxt;
+#endif
 /** \ingroup TASK
     The function kaapi_context_alloc() allocates in the heap a context with a stack containing 
     at bytes for tasks and bytes for data.
@@ -764,6 +768,7 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   req = &victim->hlrequests.requests[thief_kid];
   /* here do not write kid, because it was persistant to all local thread */
   req->reply = reply;
+  kaapi_writemem_barrier();
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return 0;
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)

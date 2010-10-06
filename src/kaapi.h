@@ -953,7 +953,7 @@ extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* re
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-void* kaapi_create_athief_task
+void* kaapi_reply_pushtask
 (kaapi_stealcontext_t*, kaapi_request_t*, kaapi_task_body_t);
 
 
@@ -1583,6 +1583,10 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     - all functions or macros without _ORIG return the new value after apply the operation.
     - all functions or macros with ORIG return the old value before applying the operation.
 */
+#if !defined(KAAPI_DEBUG)
+#define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
+  instruction
+
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)
 
@@ -1591,6 +1595,24 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
 #  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
     { kaapi_writemem_barrier(); (a)->_counter = value; }
+#else
+static inline int __kaapi_isaligned(volatile void* a, int byte)
+{
+  kaapi_assert( (((unsigned long)a) & (byte-1)) == 0 ); 
+  return 1;
+}
+#define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
+  (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? instruction : 0)
+  
+#  define KAAPI_ATOMIC_READ(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter)
+
+#  define KAAPI_ATOMIC_WRITE(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
+#define ONEARG(a,b)  a,b
+#  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, ONEARG(kaapi_writemem_barrier(), (a)->_counter = value))
+#endif
 
 #if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
 || defined(__INTEL_COMPILER))
@@ -1602,71 +1624,71 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 #  endif
 
 #  define KAAPI_ATOMIC_CAS(a, o, n) \
-    __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
 
 /* functions which return new value (NV) */
 #  define KAAPI_ATOMIC_INCR(a) \
-    __sync_add_and_fetch( &((a)->_counter), 1 ) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ))
 
 #  define KAAPI_ATOMIC_DECR(a) \
-    __sync_sub_and_fetch( &((a)->_counter), 1 ) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ))
 
 #  define KAAPI_ATOMIC_SUB(a, value) \
-    __sync_sub_and_fetch( &((a)->_counter), value ) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ))
 
 #  define KAAPI_ATOMIC_AND(a, o) \
-    __sync_and_and_fetch( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_OR(a, o) \
-    __sync_or_and_fetch( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_XOR(a, o) \
-    __sync_xor_and_fetch( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
 
 
 /* functions which return old value */
 #  define KAAPI_ATOMIC_AND_ORIG(a, o) \
-    __sync_fetch_and_and( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_OR_ORIG(a, o) \
-    __sync_fetch_and_or( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
-    __sync_fetch_and_xor( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
 
 
 /* 64 bit versions */
 #  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
 
 /* functions which return new value (NV) */
 #  define KAAPI_ATOMIC_INCR64(a) \
-    __sync_add_and_fetch( &((a)->_counter), 1 ) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ) )
 
 #  define KAAPI_ATOMIC_DECR64(a) \
-    __sync_sub_and_fetch( &((a)->_counter), 1 ) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ) )
 
 #  define KAAPI_ATOMIC_SUB64(a, value) \
-    __sync_sub_and_fetch( &((a)->_counter), value ) 
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ) )
 
 #  define KAAPI_ATOMIC_AND64(a, o) \
-    __sync_and_and_fetch( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_OR64(a, o) \
-    __sync_or_and_fetch( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_XOR64(a, o) \
-    __sync_xor_and_fetch( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
 
 /* functions which return old value */
 #  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
-    __sync_fetch_and_and( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
-    __sync_fetch_and_or( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
-    __sync_fetch_and_xor( &((a)->_counter), o )
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
 
 
 #elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */

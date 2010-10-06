@@ -115,7 +115,9 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   if (wcs != 0) /* means thread has been suspended */
   { 
     kaapi_readmem_barrier();
+    //kaapi_processor_t* kproc = arg->origin_thread->proc;
     kaapi_processor_t* kproc = kaapi_get_current_processor();
+    kaapi_assert_debug( kproc != 0);
     if (/*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
     {
       kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );

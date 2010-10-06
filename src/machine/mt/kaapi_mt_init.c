@@ -69,10 +69,6 @@ __thread kaapi_thread_t** kaapi_current_thread_key;
 __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
 #endif
 
-/*
-*/
-//pthread_key_t c;
-
 /* 
 */
 kaapi_atomic_t kaapi_term_barrier = { 0 };
@@ -81,6 +77,12 @@ kaapi_atomic_t kaapi_term_barrier = { 0 };
 */
 volatile int kaapi_isterm = 0;
 
+/*
+*/
+#if defined(KAAPI_DEBUG_MEM)
+kaapi_atomic_t count_alloc_ctxt;
+kaapi_atomic_t max_count_alloc_ctxt;
+#endif
 
 /** 
 */
@@ -292,6 +294,10 @@ int kaapi_mt_finalize(void)
   }
   free( kaapi_all_kprocessors );
   kaapi_all_kprocessors =0;
+  
+#if defined(KAAPI_DEBUG_MEM)
+  printf("Max thread context allocated:%ui\n", KAAPI_ATOMIC_READ(&max_count_alloc_ctxt));
+#endif  
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* */

@@ -72,7 +72,7 @@ int kaapi_processor_init
   kproc->proc_type    = kpi->proc_type;
   kproc->issteal      = 0;
   
-  KAAPI_ATOMIC_WRITE( &kproc->lock, 0);
+  kaapi_sched_initlock( kproc );
   
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
