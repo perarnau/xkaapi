@@ -296,7 +296,7 @@ typedef kaapi_uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
 /** \ingroup WS
 */
 typedef struct kaapi_listrequest_t {
-  kaapi_bitmap_t  bitmap;
+  kaapi_bitmap_t  bitmap __attribute__((aligned(KAAPI_CACHE_LINE)));
   kaapi_request_t requests[KAAPI_MAX_PROCESSOR+1];
 } kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
 
