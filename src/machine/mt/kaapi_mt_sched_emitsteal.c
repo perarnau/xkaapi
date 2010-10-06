@@ -112,10 +112,14 @@ acquire:
 enter:
 #endif
 
+#if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
+#endif
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(victim_hlr, &lri);
+#if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
+#endif
   
 #if defined(KAAPI_DEBUG)
   int count_req = kaapi_listrequest_iterator_count(&lri);
@@ -136,9 +140,13 @@ enter:
   
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
+#if defined(KAAPI_SCHED_LOCK_CAS)
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
+#endif
     kaapi_sched_stealprocessor( victim.kproc, victim_hlr, &lri );
+#if defined(KAAPI_SCHED_LOCK_CAS)
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
+#endif
 
     /* reply failed for all others requests */
     kaapi_request_t* request = kaapi_listrequest_iterator_get( victim_hlr, &lri );
