@@ -769,7 +769,6 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   /* here do not write kid, because it was persistant to all local thread */
   req->reply = reply;
   kaapi_writemem_barrier();
-
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return 0;
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)
