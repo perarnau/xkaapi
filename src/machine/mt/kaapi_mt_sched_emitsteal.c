@@ -99,8 +99,10 @@ wait_once:
     kaapi_slowdown_cpu();
   }
 
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(victim_hlr, &lri);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
   
 #if defined(KAAPI_DEBUG)
   int count_req = kaapi_listrequest_iterator_count(&lri);
@@ -121,7 +123,9 @@ wait_once:
   
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
+    kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
     kaapi_sched_stealprocessor( victim.kproc, victim_hlr, &lri );
+    kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 
     /* reply failed for all others requests */
     kaapi_request_t* request = kaapi_listrequest_iterator_get( victim_hlr, &lri );
