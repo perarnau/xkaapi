@@ -110,7 +110,7 @@ wait_once:
   {
     int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
     kaapi_assert( firstbit != 0);
-    kaapi_assert( victim_hlr->requests[firstbit].reply != 0 );
+    kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
   }
 #endif  
   
