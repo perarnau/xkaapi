@@ -83,7 +83,7 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 
 template<>
 struct TaskBodyCPU<TaskFibo> {
-  void operator() ( /*ka::Thread* thread,*/ ka::pointer_w<long> res, const long n );
+  void operator() ( ka::Thread* thread, ka::pointer_w<long> res, const long n );
 };
 
 /* Main of the program
