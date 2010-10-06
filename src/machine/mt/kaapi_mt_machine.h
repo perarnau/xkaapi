@@ -460,7 +460,7 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
-#if defined(KAAPI_DEBUG)
+#if defined(KAAPI_DEBUG_MEM)
 extern kaapi_atomic_t count_alloc_ctxt;
 extern kaapi_atomic_t max_count_alloc_ctxt;
 #endif

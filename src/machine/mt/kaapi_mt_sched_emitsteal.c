@@ -51,7 +51,8 @@
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_victim_t          victim;
-  kaapi_reply_t*          reply ;
+  kaapi_reply_t*          reply;
+  kaapi_listrequest_t*    victim_hlr;
   int err;
   kaapi_listrequest_iterator_t lri;
   
@@ -79,6 +80,7 @@ redo_select:
      Fill & Post the request to the victim processor 
   */
   kaapi_request_post( kproc->kid, reply, victim.kproc );
+  victim_hlr = &victim.kproc->hlrequests;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
@@ -98,28 +100,37 @@ wait_once:
   }
 
   /* here becomes an aggregator... the trylock has synchronized memory */
-  kaapi_listrequest_iterator_init(&victim.kproc->hlrequests, &lri);
+  kaapi_listrequest_iterator_init(victim_hlr, &lri);
   
-  kaapi_assert_debug( (kaapi_listrequest_iterator_count(&lri) >0) || kaapi_reply_test( reply ) );
+#if defined(KAAPI_DEBUG)
+  int count_req = kaapi_listrequest_iterator_count(&lri);
+  kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
+  kaapi_bitmap_value_t savebitmap = lri.bitmap;
+  for (int i=0; i<count_req; ++i)
+  {
+    int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
+    kaapi_assert( firstbit != 0);
+    kaapi_assert( victim_hlr->requests[firstbit].reply != 0 );
+  }
+#endif  
   
   /* (3)
-     process all requests on	 the victim kprocessor and reply failed to remaining requests
-     
+     process all requests on the victim kprocessor and reply failed to remaining requests
      Warning: In this version the aggregator has a lock on the victim processor.
   */
   
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
-    kaapi_sched_stealprocessor( victim.kproc, &victim.kproc->hlrequests, &lri );
+    kaapi_sched_stealprocessor( victim.kproc, victim_hlr, &lri );
 
     /* reply failed for all others requests */
-    kaapi_request_t* request = kaapi_listrequest_iterator_get( &victim.kproc->hlrequests, &lri );
+    kaapi_request_t* request = kaapi_listrequest_iterator_get( victim_hlr, &lri );
     kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
 
     while (request !=0)
     {
       _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);
-      request = kaapi_listrequest_iterator_next( &victim.kproc->hlrequests, &lri );
+      request = kaapi_listrequest_iterator_next( victim_hlr, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
   }

@@ -117,7 +117,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     return 0;
   }
 
-#if defined(KAAPI_DEBUG)
+#if defined(KAAPI_DEBUG_MEM)
   kaapi_uint32_t newvalue = KAAPI_ATOMIC_INCR(&count_alloc_ctxt);
   kaapi_uint32_t oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
   while (newvalue > oldvalue)

@@ -79,8 +79,10 @@ volatile int kaapi_isterm = 0;
 
 /*
 */
+#if defined(KAAPI_DEBUG_MEM)
 kaapi_atomic_t count_alloc_ctxt;
 kaapi_atomic_t max_count_alloc_ctxt;
+#endif
 
 /** 
 */
@@ -293,7 +295,7 @@ int kaapi_mt_finalize(void)
   free( kaapi_all_kprocessors );
   kaapi_all_kprocessors =0;
   
-#if defined(KAAPI_DEBUG)
+#if defined(KAAPI_DEBUG_MEM)
   printf("Max thread context allocated:%ui\n", KAAPI_ATOMIC_READ(&max_count_alloc_ctxt));
 #endif  
 
