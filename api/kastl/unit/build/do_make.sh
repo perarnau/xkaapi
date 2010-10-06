@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 
 ALGOS=''
-ALGOS="$ALGOS transform"
-# ALGOS="$ALGOS for_each"
+#ALGOS="$ALGOS transform"
+ALGOS="$ALGOS for_each"
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"

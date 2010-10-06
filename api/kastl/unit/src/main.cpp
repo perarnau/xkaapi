@@ -4038,6 +4038,10 @@ int main(int ac, char** av)
   }
 #endif
 
+#if CONFIG_LIB_KASTL
+  kaapi_init();
+#endif
+
   // instanciate a run
   RunInterface* const run = RunInterface::create();
   if (run == NULL)
@@ -4083,6 +4087,10 @@ int main(int ac, char** av)
     do_xxx(run, input, outputs);
 
   delete run;
+
+#if CONFIG_LIB_KASTL
+  kaapi_finalize();
+#endif
 
   return 0;
 }
