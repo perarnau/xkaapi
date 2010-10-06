@@ -1138,8 +1138,9 @@ extern void kaapi_set_self_workload( kaapi_uint32_t workload );
 
 
 /** Should be only use in debug mode
-    - other body should be added
+    - other bodies should be added
 */
+#if 0
 static inline int kaapi_isvalid_body( kaapi_task_body_t body)
 {
   return 
@@ -1151,7 +1152,12 @@ static inline int kaapi_isvalid_body( kaapi_task_body_t body)
       || (body == kaapi_nop_body)
   ;
 }
-
+#else
+static inline int kaapi_isvalid_body( kaapi_task_body_t body)
+{
+  return 1;
+}
+#endif
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/

@@ -307,6 +307,9 @@ typedef struct kaapi_listrequest_t {
 */
 typedef struct kaapi_listrequest_iterator_t {
   kaapi_bitmap_value_t bitmap;
+#if defined(KAAPI_DEBUG)
+  kaapi_bitmap_value_t bitmap_t0;
+#endif  
   int idcurr;
 } kaapi_listrequest_iterator_t;
 
@@ -338,6 +341,9 @@ static inline void kaapi_listrequest_iterator_init(kaapi_listrequest_t* lrequest
 { 
   lrrange->idcurr = -1;
   lrrange->bitmap = kaapi_bitmap_swap0( &lrequests->bitmap );
+#if defined(KAAPI_DEBUG)
+  lrrange->bitmap_t0 = lrrange->bitmap;
+#endif
   kaapi_listrequest_iterator_next( lrequests, lrrange );
 }
 
