@@ -776,7 +776,9 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 static inline int kaapi_sched_trylock( kaapi_processor_t* kproc )
 {
   /* implicit barrier in KAAPI_ATOMIC_CAS if lock is taken */
-  return (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1);
+  int ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1);
+  kaapi_assert_debug( !ok || (ok && KAAPI_ATOMIC_READ(&kproc->lock) == 1) );
+  return ok;
 }
 
 /** 
@@ -790,6 +792,7 @@ static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
     kaapi_slowdown_cpu();
   } while (1);
   /* implicit barrier in KAAPI_ATOMIC_CAS */
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) != 0 );
   return 0;
 }
 
