@@ -226,7 +226,7 @@ static int parse_proc_expr(procset_parser_t* parser)
       return -1;
   }
 
-  for (; index_low <= index_high; ++index_low)
+  for (; index_low <= index_high; ++index_low, ++index_binding)
   {
     if (is_enabled == 0)
       parser->proc_bits[index_low] |= PROC_BIT_IS_DISABLED;
@@ -234,7 +234,7 @@ static int parse_proc_expr(procset_parser_t* parser)
     if (parser->proc_bits[index_low] & PROC_BIT_IS_DISABLED)
     {
       /* this proc is disabled. if it has been previously
-	 mark usable, discard it and decrement the cpu cuont
+	 mark usable, discard it and decrement the cpu count
       */
 
       if (parser->proc_bits[index_low] & PROC_BIT_IS_USABLE)
