@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # globals
-export LD_LIBRARY_PATH=$HOME/install/lib
+export LD_LIBRARY_PATH=/home/lementec/install/xkaapi_release/lib
 SESSION_DIR=
 
 # input sizes
@@ -45,15 +45,15 @@ ITER=10
 #ITER=1000
 
 # gpuset
-GPUSET='0~4,1~5'
+#GPUSET='0~4,1~5'
 
 # cpuset
 #CPUSET0=12
-CPUSET1=12,13
+#CPUSET1=12,13
 #CPUSET2=12,13,14,15
 #CPUSET3=8,9,10,11,12,13,14,15
 #CPUSET4=4,5,6,7,8,9,10,11,12,13,14,15
-#CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
 #CPUSET0=8,9,10,11,12,13,14,15
 #CPUSET1=7,8,9,10,11,12,13,14,15
@@ -67,8 +67,8 @@ CPUSET1=12,13
 
 
 # {algo, lib, do}
-ALGOS="$ALGOS transform"
-# ALGOS="$ALGOS for_each"
+#ALGOS="$ALGOS transform"
+ALGOS="$ALGOS for_each"
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"
@@ -191,7 +191,7 @@ run_lists() {
 		    echo $SESSION_DIR/$NAME-$SIZE-$CPUSETID ;
 		    OUTPUT_FILE=$SESSION_DIR/$NAME-$SIZE-$CPUSETID ;
 		    # KAAPI_GPUSET=$GPUSET KAAPI_CPUSET=$CPUSET numactl -C $CPUSET ../bin/$NAME $SIZE $ITER > $OUTPUT_FILE;
-		    KAAPI_GPUSET=$GPUSET KAAPI_CPUSET=$CPUSET numactl -C $CPUSET ../bin/$NAME $SIZE $ITER ;
+		    KAAPI_CPUSET=$CPUSET numactl -C $CPUSET ../bin/$NAME $SIZE $ITER ;
 		fi
 	    done
 	done

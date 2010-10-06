@@ -744,16 +744,11 @@ namespace impl
       if (unit_size > (size_t)r.size())
 	unit_size = (size_t)r.size();
 
-      // allocate thief task context
-      kaapi_reply_steal_t* const reply = (kaapi_reply_steal_t*)request->reply;
-
-      // set entrypoint
+      // push the reply task
       kastl_entry_t const entryfn = thief_entry
 	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
-      reply->u.s_task.body = entryfn;
-
-      // task data
-      context_type* const tc = (context_type*)reply->u.s_task.data;
+      context_type* const tc = (context_type*)
+	kaapi_reply_pushtask(sc, request, entryfn);
 
       // allocate task result
       typedef reduce_thief_context
