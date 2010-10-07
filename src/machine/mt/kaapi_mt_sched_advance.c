@@ -51,7 +51,7 @@ int kaapi_advance ( void )
   /* high level function -> empty macro */
   return 0;
 #else
-  return kaapi_sched_advance( _kaapi_get_current_processor() );
+  return kaapi_sched_advance( kaapi_get_current_processor() );
 #endif
 }
 

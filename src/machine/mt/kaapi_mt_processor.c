@@ -57,7 +57,7 @@ void kaapi_processor_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workl
 
 void kaapi_processor_set_self_workload(kaapi_uint32_t workload) 
 {
-  KAAPI_ATOMIC_WRITE(&_kaapi_get_current_processor()->workload, workload);
+  KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
 }
 
 /* todo: move in appropriate files */

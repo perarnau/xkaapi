@@ -49,7 +49,7 @@
 int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_processor_t* kproc = _kaapi_get_current_processor();
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
 
   ta->save_splitter    = stc->splitter;
   ta->save_argsplitter = stc->argsplitter;

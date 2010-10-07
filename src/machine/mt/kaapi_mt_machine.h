@@ -453,10 +453,6 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
-#if defined(KAAPI_DEBUG_MEM)
-extern kaapi_atomic_t count_alloc_ctxt;
-extern kaapi_atomic_t max_count_alloc_ctxt;
-#endif
 /** \ingroup TASK
     The function kaapi_context_alloc() allocates in the heap a context with a stack containing 
     at bytes for tasks and bytes for data.
@@ -556,29 +552,32 @@ extern kaapi_uint32_t volatile kaapi_count_kprocessors;
 */
 extern kaapi_processor_t** kaapi_all_kprocessors;
 
-/** \ingroup WS
-    A Kprocessor is a posix thread -> the current kprocessor
-*/
-extern pthread_key_t kaapi_current_processor_key;
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  extern __thread kaapi_thread_t** kaapi_current_thread_key;
-  extern __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
+extern __thread kaapi_processor_t*      kaapi_current_processor_key;
+extern __thread kaapi_thread_context_t* kaapi_current_thread_context_key;
+extern __thread kaapi_threadgroup_t     kaapi_current_threadgroup_key;
+
+/* */
+static inline kaapi_processor_t* kaapi_get_current_processor(void)
+{ return kaapi_current_processor_key; }
+
+static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
+{ return kaapi_current_thread_context_key;}
+
+#else
+extern pthread_key_t kaapi_current_processor_key;
+
+static inline kaapi_processor_t* kaapi_get_current_processor(void)
+{ return ((kaapi_processor_t*)pthread_getspecific( kaapi_current_processor_key )); }
+
+static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
+{ return kaapi_get_current_processor()->thread;}
 #endif
 
-extern kaapi_processor_t* kaapi_get_current_processor(void);
-extern kaapi_processor_id_t kaapi_get_current_kid(void);
-
-/** \ingroup WS
-*/
-#define _kaapi_get_current_processor() \
-  ((kaapi_processor_t*)pthread_getspecific( kaapi_current_processor_key ))
-
-/** \ingroup WS
-    Returns the current thread of tasks
-*/
-#define _kaapi_self_thread() \
-  _kaapi_get_current_processor()->thread
+/* */
+static inline kaapi_processor_id_t kaapi_get_current_kid(void)
+{ return kaapi_get_current_processor()->kid; }
 
 
 /* ============================= Hierarchy ============================ */

@@ -1,8 +1,8 @@
 /*
-** kaapi_fmt_predef.c
+** kaapi_abort.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+** Created on Tue Mar 31 15:19:03 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,4 +43,13 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdlib.h>
 
+/**
+*/
+void kaapi_abort(void)
+{
+  /* here: try to flush / collect perf counters or other values */
+  
+  abort();
+}

@@ -93,6 +93,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #if !defined (_WIN32) //VirtualAlloc initializes memory to zero
   memset(ctxt, 0, k_stacksize );
 #endif
+
   stack = kaapi_threadcontext2stack(ctxt);
   ctxt->size = k_stacksize;
   if (kaapi_stack_init( stack, size_data, stack+1 ) !=0)
@@ -117,21 +118,9 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     return 0;
   }
 
-#if defined(KAAPI_DEBUG_MEM)
-  kaapi_uint32_t newvalue = KAAPI_ATOMIC_INCR(&count_alloc_ctxt);
-  kaapi_uint32_t oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
-  while (newvalue > oldvalue)
-  {
-    if (KAAPI_ATOMIC_CAS(&max_count_alloc_ctxt, oldvalue, newvalue)) break;
-    oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
-  }
-#endif
-
   kaapi_thread_clear(ctxt);
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   ctxt->thieffp = 0;
-#endif
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   ctxt->thiefpc = 0;
 #endif
   return ctxt;

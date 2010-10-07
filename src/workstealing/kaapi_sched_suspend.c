@@ -58,7 +58,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_thread_context_t* thread;
 
   kaapi_assert_debug( kproc !=0 );
-  kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
+  kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );

@@ -210,7 +210,6 @@ dnl ----------------------------------------------------------------
 dnl Checks for header files.
 dnl ----------------------------------------------------------------
 AC_CHECK_HEADERS([arpa/inet.h limits.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/time.h unistd.h])
-
 AC_CHECK_HEADERS([errno.h limits.h numa.h pthread.h sched.h sys/sysctl.h])
 
 # Context switch

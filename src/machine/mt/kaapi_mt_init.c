@@ -65,8 +65,23 @@ pthread_key_t kaapi_current_processor_key;
 /*
 */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-__thread kaapi_thread_t** kaapi_current_thread_key;
-__thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
+__thread kaapi_thread_t**        kaapi_current_thread_key;
+__thread kaapi_processor_t*      kaapi_current_processor_key;
+__thread kaapi_thread_context_t* kaapi_current_thread_context_key;
+__thread kaapi_threadgroup_t     kaapi_current_threadgroup_key;
+#else
+kaapi_thread_t* kaapi_self_thread(void)
+{
+  return (kaapi_thread_t*)kaapi_get_current_processor()->thread->sfp;
+}
+kaapi_threadgroup_t kaapi_self_threadgroup(void)
+{
+  return kaapi_get_current_processor()->thread->thgrp;
+}
+void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
+{
+  kaapi_get_current_processor()->thread->thgrp = thgrp;
+}
 #endif
 
 /* 
@@ -77,29 +92,6 @@ kaapi_atomic_t kaapi_term_barrier = { 0 };
 */
 volatile int kaapi_isterm = 0;
 
-/*
-*/
-#if defined(KAAPI_DEBUG_MEM)
-kaapi_atomic_t count_alloc_ctxt;
-kaapi_atomic_t max_count_alloc_ctxt;
-#endif
-
-/** 
-*/
-#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-kaapi_thread_t* kaapi_self_thread(void)
-{
-  return (kaapi_thread_t*)_kaapi_self_thread()->sfp;
-}
-kaapi_threadgroup_t kaapi_self_threadgroup(void)
-{
-  return _kaapi_self_thread()->thgrp;
-}
-void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
-{
-  _kaapi_self_thread()->thgrp = thgrp;
-}
-#endif
 
 /**
 */
@@ -136,7 +128,7 @@ int kaapi_mt_init(void)
   
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
-  thread = _kaapi_self_thread();
+  thread = kaapi_self_thread_context();
   task = kaapi_thread_toptask(kaapi_threadcontext2thread(thread));
   kaapi_task_init( task, kaapi_taskstartup_body, 0 );
   kaapi_task_setbody( task, kaapi_exec_body);
@@ -294,10 +286,6 @@ int kaapi_mt_finalize(void)
   }
   free( kaapi_all_kprocessors );
   kaapi_all_kprocessors =0;
-  
-#if defined(KAAPI_DEBUG_MEM)
-  printf("Max thread context allocated:%ui\n", KAAPI_ATOMIC_READ(&max_count_alloc_ctxt));
-#endif  
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* */

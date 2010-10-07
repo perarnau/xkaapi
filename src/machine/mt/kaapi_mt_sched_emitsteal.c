@@ -58,7 +58,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
-  kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
+  kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
   /* clear thief stack/thread that will receive tasks */
   kaapi_thread_clear( kproc->thread );
@@ -177,8 +177,10 @@ enter:
 
   kproc->issteal = 0;
 
+#if 0
   if (!kaapi_isterminated() && !kaapi_reply_test( reply )) 
     goto wait_once;
+#endif
 
   return 0;
   

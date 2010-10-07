@@ -56,7 +56,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   int err;
   
   kaapi_assert_debug( kproc !=0 );
-  kaapi_assert_debug( kproc == _kaapi_get_current_processor() );
+  kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   kaapi_assert_debug( kproc->thread !=0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)

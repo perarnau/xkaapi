@@ -71,7 +71,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive(
     (thread, sizeof(kaapi_taskadaptive_t), sizeof(void*));
   kaapi_assert_debug( ta !=0 );
 
-  ta->sc.ctxtthread         = _kaapi_self_thread();
+  ta->sc.ctxtthread         = kaapi_self_thread_context();
   ta->sc.thread             = thread;
   ta->sc.splitter           = splitter;
   ta->sc.argsplitter        = argsplitter;

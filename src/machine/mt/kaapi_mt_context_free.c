@@ -59,14 +59,5 @@ int kaapi_context_free( kaapi_thread_context_t* ctxt )
 #else
   munmap( ctxt, ctxt->size );
 #endif
-#if defined(KAAPI_DEBUG_MEM)
-  kaapi_uint32_t newvalue = KAAPI_ATOMIC_DECR(&count_alloc_ctxt);
-  kaapi_uint32_t oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
-  while (newvalue > oldvalue)
-  {
-    if (KAAPI_ATOMIC_CAS(&max_count_alloc_ctxt, oldvalue, newvalue)) break;
-    oldvalue = KAAPI_ATOMIC_READ(&max_count_alloc_ctxt);
-  }
-#endif
   return 0;
 }

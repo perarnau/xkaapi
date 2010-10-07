@@ -48,7 +48,7 @@ static int kaapi_select_victim_workload
 ( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 {  
   const int count = kaapi_count_kprocessors;
-  kaapi_processor_t* const self_kproc = _kaapi_get_current_processor();
+  kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
   
   kaapi_processor_t* max_kproc = NULL;
   kaapi_uint32_t max_workload = 1;
@@ -110,7 +110,7 @@ void kaapi_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload)
 
 void kaapi_set_self_workload(kaapi_uint32_t workload)
 {
-  kaapi_set_workload(_kaapi_get_current_processor(), workload);
+  kaapi_set_workload(kaapi_get_current_processor(), workload);
 }
 
 

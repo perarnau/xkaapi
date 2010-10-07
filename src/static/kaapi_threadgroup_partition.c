@@ -50,7 +50,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
-  thgrp->mainctxt   = _kaapi_get_current_processor()->thread;
+  thgrp->mainctxt   = kaapi_get_current_processor()->thread;
   thgrp->threads[-1]= kaapi_threadcontext2thread(thgrp->mainctxt);
   
   /* be carrefull, the map should be clear before used */

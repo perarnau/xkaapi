@@ -13,18 +13,10 @@ libxkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS) $(XKAAPILIB_BUILD_CFL
 libxkaapi_la_LDFLAGS = -version-info 0:0:0 $(XKAAPILIB_BUILD_LDFLAGS)
 libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
 
-## Set up compilation of the hardware depend part
-#if (KAAPI_TARGET_MT)
-#  execute_process( 
-#    COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/machine/mt/kaapi_mt_machine.h ${CMAKE_CURRENT_BINARY_DIR}/kaapi_machine.h
-#  )
-#endif (KAAPI_TARGET_MT)
-
-#deprecated   workstealing/kaapi_sched_stealtask.c 
-
 libxkaapi_la_SOURCES=\
   misc/kaapi_version.c \
   misc/kaapi_init.c \
+  misc/kaapi_abort.c \
   misc/kaapi_time.c \
   misc/kaapi_hashvalue.c \
   misc/kaapi_hashmap.c \
@@ -90,8 +82,6 @@ libxkaapi_la_SOURCES=\
   memory/kaapi_mem.c
 
 
-#  task/kaapi_fmt_basictype.c
-
 if KAAPI_TARGET_MT
 
 libxkaapi_la_SOURCES+=\
@@ -102,7 +92,6 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_getcontext.c \
   machine/mt/kaapi_mt_setcontext.c \
   machine/mt/kaapi_mt_makecontext.c \
-  machine/mt/kaapi_mt_selfprocessor.c \
   machine/mt/kaapi_mt_selfstack.c \
   machine/mt/kaapi_mt_sched_emitsteal.c \
   machine/mt/kaapi_mt_sched_advance.c \

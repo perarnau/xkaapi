@@ -61,7 +61,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   }
   
   /* */
-  proc = _kaapi_get_current_processor();
+  proc = kaapi_get_current_processor();
 
   thgrp->group_size  = size;
   thgrp->startflag   = 0;
