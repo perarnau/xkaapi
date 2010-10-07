@@ -229,6 +229,12 @@ static int kaapi_sched_stealframe
   kaapi_task_t*         task_top;
   kaapi_task_t*         task_exec;
   int                   replycount;
+  kaapi_task_splitter_t splitter; 
+  void*                 argsplitter;
+  kaapi_request_t*      request;
+  
+  request = kaapi_listrequest_iterator_get(lrequests, lrrange);
+  if (request ==0) return 0;
   
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
@@ -239,32 +245,31 @@ static int kaapi_sched_stealframe
   replycount = 0;
   
   /* */
-  while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > frame->sp))
+  while ( (request != 0) && (task_top > frame->sp))
   {
     task_body = kaapi_task_body2fnc(task_top->body);//TODO kaapi_task_getextrabody(task_top);
     
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body)
     {
-      kaapi_stealcontext_t* const sc =
-      kaapi_task_getargst(task_top, kaapi_stealcontext_t);
+      kaapi_stealcontext_t* const sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
       
       /* for kaapi_steal_sync */
-      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 1);
-#if !(defined(__x86_64) || defined(__i386__))
       kaapi_writemem_barrier();
-#endif
-
-      kaapi_task_splitter_t  splitter = sc->splitter;
-      void*                  argsplitter = sc->argsplitter;
+      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 1);
+      kaapi_readmem_barrier();
+      
+      /* should not be reorder before the barrier */
+      splitter = sc->splitter;
+      argsplitter = sc->argsplitter;
       
       if ( (splitter !=0) && (argsplitter !=0) )
       {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
         kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_SUSPEND ));
-        if (likely( !kaapi_task_body_isspecial(body) ) ) // means SUSPEND was not set before
+        if (likely( !kaapi_task_body_isspecial(body) ) ) // means SUSPEND was not set before and it was set
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-          thread->thiefpc = task_top;
+        thread->thiefpc = task_top;
         kaapi_writemem_barrier();
         if (thread->sfp[-1].pc != task_top) 
 #else
@@ -274,6 +279,7 @@ static int kaapi_sched_stealframe
           /* steal sucess */
           kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+          /* here suspend bit was set: reset it */
           kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_SUSPEND );
 #endif
         }
@@ -314,13 +320,8 @@ static int kaapi_sched_stealframe
             {
               /* else victim get owner of task_top */
               task_top->body = kaapi_suspend_body;
-#else          
-#  error "Should be implemented"
-#endif
-
-#if defined(LOG_STACK)
-              fprintf(stdout,"\n\n>>>>>>>> %p:: STEAL Task=%p, wc=%i\n", thread, (void*)task_top, wc );
-              kaapi_stack_print(stdout, thread );
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
+              kaapi_assert_m(0,"Not implemented for work stealing"
 #endif
               kaapi_task_splitter_dfg(thread, task_top, war_param, lrequests, lrrange );
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
@@ -355,7 +356,7 @@ int kaapi_sched_stealstack
   kaapi_frame_t*           top_frame;
 #endif
 
-  int replycount;
+  int                      replycount;
   
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
@@ -373,6 +374,7 @@ int kaapi_sched_stealstack
   /* try to steal in each frame */
   for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame)
   {
+    /* void frame ? */
     if (top_frame->pc == top_frame->sp) continue;
     kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
   }
@@ -394,8 +396,7 @@ int kaapi_sched_stealstack
   {
     if (thread->thieffp > thread->sfp) break;
     if (thread->thieffp->pc > thread->thieffp->sp) 
-      replycount += kaapi_sched_stealframe
-	( thread, thread->thieffp, &access_to_gd, lrequests, lrrange );
+      replycount += kaapi_sched_stealframe( thread, thread->thieffp, &access_to_gd, lrequests, lrrange );
     ++thread->thieffp;
     kaapi_mem_barrier();
   }
@@ -408,13 +409,3 @@ int kaapi_sched_stealstack
   
   return replycount;
 }
-
-
-#if 0 //* revoir ici, ces fonctions sont importantes pour le cooperatif */
-/*
- */
-int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
-{
-  return kaapi_sched_stealstack( stc->ctxtthread, stc->ownertask, stc->hasrequest, stc->requests );
-}
-#endif
