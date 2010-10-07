@@ -555,7 +555,6 @@ extern kaapi_processor_t** kaapi_all_kprocessors;
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
 extern __thread kaapi_processor_t*      kaapi_current_processor_key;
-extern __thread kaapi_thread_context_t* kaapi_current_thread_context_key;
 extern __thread kaapi_threadgroup_t     kaapi_current_threadgroup_key;
 
 /* */
@@ -563,7 +562,7 @@ static inline kaapi_processor_t* kaapi_get_current_processor(void)
 { return kaapi_current_processor_key; }
 
 static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
-{ return kaapi_current_thread_context_key;}
+{ return kaapi_current_processor_key->thread;}
 
 #else
 extern pthread_key_t kaapi_current_processor_key;
