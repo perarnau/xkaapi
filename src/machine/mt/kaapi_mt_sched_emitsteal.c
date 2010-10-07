@@ -125,7 +125,8 @@ enter:
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
-  
+
+ /* fabien: not working, tocheck */
 #if defined(KAAPI_DEBUG)
   int count_req = kaapi_listrequest_iterator_count(&lri);
   kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );

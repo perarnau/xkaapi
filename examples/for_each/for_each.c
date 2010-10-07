@@ -23,7 +23,7 @@ static void entry(void*, kaapi_thread_t*);
 static inline void* align_addr(void* addr)
 {
   static const unsigned long ptrsize = sizeof(void*) * 8;
-  static const unsigned long mask = ptrsize - 1UL;
+  static const unsigned long mask = (sizeof(void*) * 8) - 1UL;
 
   /* assume n in bytes, power of 2 */
   if ((unsigned long)addr & mask)
