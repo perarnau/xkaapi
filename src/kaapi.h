@@ -487,7 +487,7 @@ typedef kaapi_uint32_t kaapi_stack_id_t;
     failure or an error.
 */
 typedef struct kaapi_reply_t {
-  kaapi_uint8_t                  status;    /* should be kaapi_reply_status_t */
+  volatile kaapi_uint8_t         status;    /* should be kaapi_reply_status_t */
   kaapi_uint8_t                  reserved1;  
   kaapi_uint16_t                 reserved2;  
   kaapi_uint16_t                 reserved3;
@@ -764,10 +764,10 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
     \param align the alignment size, in BYTES
 */
 static inline void* kaapi_thread_pushdata_align
-(kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
+(kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint64_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
-  const uint32_t mask = align - 1;
+  const uint64_t mask = align - 1;
 
   if ((uintptr_t)thread->sp_data & mask)
     thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);

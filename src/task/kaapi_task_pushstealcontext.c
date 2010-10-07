@@ -67,7 +67,8 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive(
   
   kaapi_mem_barrier();
   
-  ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_t));
+  ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata_align
+    (thread, sizeof(kaapi_taskadaptive_t), sizeof(void*));
   kaapi_assert_debug( ta !=0 );
 
   ta->sc.ctxtthread         = _kaapi_self_thread();

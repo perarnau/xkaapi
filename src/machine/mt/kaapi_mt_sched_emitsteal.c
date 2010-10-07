@@ -64,7 +64,12 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_thread_clear( kproc->thread );
   
   /* map the reply data structure into the stack data */
-  reply = kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), 2*KAAPI_REPLY_DATA_SIZE_MIN );
+  reply = kaapi_thread_pushdata_align
+    ( kaapi_threadcontext2thread(kproc->thread), 4 * KAAPI_CACHE_LINE, sizeof(void*) );
+
+#if defined(KAAPI_DEBUG)
+  memset(reply, 0, 4 * KAAPI_CACHE_LINE);
+#endif
 
 redo_select:
   /* select the victim processor */
@@ -120,18 +125,6 @@ enter:
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
-  
-#if defined(KAAPI_DEBUG)
-  int count_req = kaapi_listrequest_iterator_count(&lri);
-  kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
-  kaapi_bitmap_value_t savebitmap = lri.bitmap | (1U << lri.idcurr);
-  for (int i=0; i<count_req; ++i)
-  {
-    int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
-    kaapi_assert( firstbit != 0);
-    kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
-  }
-#endif  
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
@@ -140,6 +133,18 @@ enter:
   
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
+#if defined(KAAPI_DEBUG)
+    int count_req = kaapi_listrequest_iterator_count(&lri);
+    kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
+    kaapi_bitmap_value_t savebitmap = lri.bitmap | (1UL << lri.idcurr);
+    for (int i=0; i<count_req; ++i)
+    {
+      int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
+      kaapi_assert( firstbit != 0);
+      kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
+    }
+#endif  
+
 #if defined(KAAPI_SCHED_LOCK_CAS)
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
@@ -170,8 +175,9 @@ enter:
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
 
-  /* est-ce que cela peut se produire ici ? */
-  if (!kaapi_reply_test( reply )) 
+  kproc->issteal = 0;
+
+  if (!kaapi_isterminated() && !kaapi_reply_test( reply )) 
     goto wait_once;
 
   return 0;
@@ -201,7 +207,7 @@ return_value:
       kaapi_assert_debug( kaapi_isvalid_body( reply->u.s_task.body ) );
 
       /* arguments already pushed, increment the stack pointer */
-      kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), 4 * KAAPI_CACHE_LINE);
+      /* kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), 4 * KAAPI_CACHE_LINE); */
       
       /* push a task with the body */
       kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
