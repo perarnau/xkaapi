@@ -160,7 +160,11 @@ int kaapi_setconcurrency(void)
 
       kproc = kaapi_processor_allocate();
       kaapi_all_kprocessors[0] = kproc;
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+      kaapi_current_processor_key = kproc;
+#else
       kaapi_assert(0 == pthread_setspecific(kaapi_current_processor_key, kproc));
+#endif
       if (kproc == 0)
       {
         pthread_attr_destroy(&attr);
@@ -226,7 +230,11 @@ void* kaapi_sched_run_processor( void* arg )
     return 0;
   }
 
-  kaapi_assert( 0 == pthread_setspecific( kaapi_current_processor_key, kproc ) );
+#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
+  kaapi_current_processor_key = kproc;
+#else
+  kaapi_assert(0 == pthread_setspecific(kaapi_current_processor_key, kproc));
+#endif
   kaapi_assert( 0 == kaapi_processor_init( kproc, kpi) );
 
 #if defined(KAAPI_USE_PERFCOUNTER)

@@ -91,7 +91,7 @@ redo_select:
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
 
-wait_once:
+//wait_once:
   /* (2)
      lock and retest if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return with reply

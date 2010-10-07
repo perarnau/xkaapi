@@ -58,9 +58,6 @@ kaapi_uint32_t volatile kaapi_count_kprocessors = 0;
 kaapi_processor_t** kaapi_all_kprocessors = 0;
 
 
-/*
-*/
-pthread_key_t kaapi_current_processor_key;
 
 /*
 */
@@ -70,6 +67,8 @@ __thread kaapi_processor_t*      kaapi_current_processor_key;
 __thread kaapi_thread_context_t* kaapi_current_thread_context_key;
 __thread kaapi_threadgroup_t     kaapi_current_threadgroup_key;
 #else
+pthread_key_t kaapi_current_processor_key;
+
 kaapi_thread_t* kaapi_self_thread(void)
 {
   return (kaapi_thread_t*)kaapi_get_current_processor()->thread->sfp;
@@ -107,11 +106,12 @@ int kaapi_mt_init(void)
   const char*     version __attribute__((unused)) = get_kaapi_version();
   
   /* initialize the kprocessor key */
-  kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_current_thread_key = 0;
   kaapi_current_threadgroup_key = 0;
+#else
+  kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 #endif
     
   /* setup topology information */
