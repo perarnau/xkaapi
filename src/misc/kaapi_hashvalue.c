@@ -108,6 +108,42 @@ kaapi_uint32_t kaapi_hash_value_len(const char * data, int len)
   return hash;
 }
 
+
+kaapi_uint32_t kaapi_hash_ulong(unsigned long value)
+{
+#define UINT_LOW16_MASK ((1 << 16) - 1)
+#define ULONG_LOW32_MASK ((1UL << 32) - 1UL)
+
+  /* low high 32 bits words */
+  const kaapi_uint32_t h = (value >> 32) & ULONG_LOW32_MASK;
+  const kaapi_uint32_t l = (value >>  0) & ULONG_LOW32_MASK;
+
+  kaapi_uint32_t hash = 0;
+  kaapi_uint32_t tmp;
+
+  /* mix high uint32 */
+  hash += (h >> 16) & UINT_LOW16_MASK;
+  tmp = ((h & UINT_LOW16_MASK) << 11) ^ hash;
+  hash = (hash << 16) ^ tmp;
+  hash += hash >> 11;
+
+  /* mix low uint32 */
+  hash += (l >> 16) & UINT_LOW16_MASK;
+  tmp = ((l & UINT_LOW16_MASK) << 11) ^ hash;
+  hash = (hash << 16) ^ tmp;
+  hash += hash >> 11;
+
+  /* avalanche */
+  hash ^= hash << 3;
+  hash += hash >> 5;
+  hash ^= hash << 2;
+  hash += hash >> 15;
+  hash ^= hash << 10;
+
+  return hash;
+}
+
+
 kaapi_uint32_t kaapi_hash_value(const char * data) 
 {
   if (data == 0) return 0;

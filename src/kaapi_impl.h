@@ -643,6 +643,7 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* k
 */
 extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
+extern kaapi_uint32_t kaapi_hash_ulong(unsigned long);
 
 
 /* ======================== Dependencies resolution function ========================*/
