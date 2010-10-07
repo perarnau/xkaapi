@@ -119,6 +119,7 @@ kaapi_uint32_t kaapi_hash_value_len(const char * data, int len)
   return hash;
 }
 
+
 kaapi_uint32_t kaapi_hash_value(const char * data) 
 {
   if (data == 0) return 0;

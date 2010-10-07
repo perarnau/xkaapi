@@ -94,8 +94,11 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     }
     else {
       /* put pad of the first non ready task as if the thread was suspended (but not into a queue) */
-      kaapi_task_t* task = thgrp->threadctxts[i]->sfp->pc;
-//TODO      task->pad = thgrp->threadctxts[i];
+
+      /* todo
+	 kaapi_task_t* const task = thgrp->threadctxts[i]->sfp->pc;
+	 task->pad = thgrp->threadctxts[i];
+       */
     }
 #else
     kaapi_processor_t* current_proc = kaapi_get_current_processor();

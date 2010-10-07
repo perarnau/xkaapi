@@ -706,11 +706,21 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* k
 /** Compute a hash value from a string
 */
 extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
+
+/*
+*/
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
+/*
+*/
+static inline kaapi_uint32_t kaapi_hash_ulong(kaapi_uint64_t ptr)
+{
+  /* */
+  kaapi_uintptr_t val = ptr >> 3;
+  val = (val & 0xFFFF) ^ (val>>32);
+}
 
 /* ======================== Dependencies resolution function ========================*/
-
 /** \ingroup DFG
 */
 typedef struct kaapi_gd_t {
@@ -725,7 +735,6 @@ struct kaapi_version_t;
 
 
 /* ============================= Hash table for WS ============================ */
-
 /*
 */
 typedef struct kaapi_hashentries_t {
@@ -740,7 +749,9 @@ typedef struct kaapi_hashentries_t {
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
 
-#define KAAPI_HASHMAP_SIZE 32
+/* Hashmap 
+*/
+#define KAAPI_HASHMAP_SIZE 64
 
 /*
 */

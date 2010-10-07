@@ -46,6 +46,8 @@
 #include "kaapi_impl.h"
 
 
+/*
+*/
 static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
@@ -56,12 +58,16 @@ static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, kaa
   return 0;
 }
 
+/*
+*/
 kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key)
 {
   return _get_hashmap_entry( khm, key );
 }
 
 
+/*
+*/
 static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
@@ -69,6 +75,8 @@ static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key,
   khm->entry_map |= 1 << key;
 }
 
+/*
+*/
 void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
 {
   _set_hashmap_entry( khm, key, entries );
@@ -86,6 +94,7 @@ int kaapi_hashmap_init( kaapi_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc
     khm->currentbloc->pos = 0;
   return 0;
 }
+
 
 /*
 */
@@ -119,7 +128,7 @@ int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
 */
 kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr )
 {
-  kaapi_uint32_t hkey = kaapi_hash_value_len( (const char*)&ptr, sizeof( void* ) );
+  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
 
   hkey = hkey % KAAPI_HASHMAP_SIZE;
   kaapi_hashentries_t* list_hash = _get_hashmap_entry( khm, hkey );
@@ -157,7 +166,7 @@ kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr )
 */
 kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
 {
-  kaapi_uint32_t hkey = kaapi_hash_value_len( (const char*)&ptr, sizeof( void* ) );
+  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
 #if defined(KAAPI_DEBUG_LOURD)
 fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
 #endif
@@ -172,9 +181,12 @@ fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
   return 0;
 }
 
+
+/*
+*/
 kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr )
 {
-  kaapi_uint32_t hkey = kaapi_hash_value_len( (const char*)&ptr, sizeof( void* ) );
+  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
   hkey = hkey % KAAPI_HASHMAP_SIZE;
   kaapi_hashentries_t* list_hash = _get_hashmap_entry( khm, hkey );
   kaapi_hashentries_t* entry = list_hash;
