@@ -473,7 +473,7 @@ typedef kaapi_uint32_t kaapi_stack_id_t;
     failure or an error.
 */
 typedef struct kaapi_reply_t {
-  kaapi_uint8_t                  status;    /* should be kaapi_reply_status_t */
+  volatile kaapi_uint8_t         status;    /* should be kaapi_reply_status_t */
   kaapi_uint8_t                  reserved1;  
   kaapi_uint16_t                 reserved2;  
   kaapi_uint16_t                 reserved3;

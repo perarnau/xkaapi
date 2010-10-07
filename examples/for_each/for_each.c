@@ -237,7 +237,7 @@ int main(int ac, char** av)
     for_each(array, ITEM_COUNT, addone);
     if (check(array, ITEM_COUNT) == -1)
     {
-      printf("invalid\n");
+      printf("invalid %d\n", ac);
       break ;
     }
   }

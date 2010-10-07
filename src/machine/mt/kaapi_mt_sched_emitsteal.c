@@ -126,19 +126,6 @@ enter:
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
 
- /* fabien: not working, tocheck */
-#if defined(KAAPI_DEBUG)
-  int count_req = kaapi_listrequest_iterator_count(&lri);
-  kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
-  kaapi_bitmap_value_t savebitmap = lri.bitmap | (1U << lri.idcurr);
-  for (int i=0; i<count_req; ++i)
-  {
-    int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
-    kaapi_assert( firstbit != 0);
-    kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
-  }
-#endif  
-
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
      Warning: In this version the aggregator has a lock on the victim processor.
@@ -146,6 +133,18 @@ enter:
   
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
+#if defined(KAAPI_DEBUG)
+    int count_req = kaapi_listrequest_iterator_count(&lri);
+    kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
+    kaapi_bitmap_value_t savebitmap = lri.bitmap | (1UL << lri.idcurr);
+    for (int i=0; i<count_req; ++i)
+    {
+      int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
+      kaapi_assert( firstbit != 0);
+      kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
+    }
+#endif  
+
 #if defined(KAAPI_SCHED_LOCK_CAS)
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
@@ -176,9 +175,8 @@ enter:
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
 
-  /* tg: est-ce que cela peut se produire ici ?
-     fabien: oui, ca peut.
-   */
+  kproc->issteal = 0;
+
   if (!kaapi_isterminated() && !kaapi_reply_test( reply )) 
     goto wait_once;
 
