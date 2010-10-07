@@ -751,10 +751,10 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
     \param align the alignment size, in BYTES
 */
 static inline void* kaapi_thread_pushdata_align
-(kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
+(kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint64_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
-  const uint32_t mask = align - 1;
+  const uint64_t mask = align - 1;
 
   if ((uintptr_t)thread->sp_data & mask)
     thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);

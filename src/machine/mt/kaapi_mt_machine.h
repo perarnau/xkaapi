@@ -230,7 +230,7 @@ static inline kaapi_bitmap_value_t kaapi_bitmap_swap0( kaapi_bitmap_t* b )
 static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i ) 
 { 
   kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
-  KAAPI_ATOMIC_OR(b,1<<i); 
+  KAAPI_ATOMIC_OR(b,1UL<<i); 
   return 0;
 }
 
@@ -265,7 +265,7 @@ static inline kaapi_bitmap_value_t kaapi_bitmap_swap0( kaapi_bitmap_t* b )
 static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i ) 
 { 
   kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
-  KAAPI_ATOMIC_OR64(b, 1U<<i); 
+  KAAPI_ATOMIC_OR64(b, 1UL<<i); 
   return 1;
 }
 

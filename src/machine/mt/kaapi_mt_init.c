@@ -198,7 +198,7 @@ int kaapi_mt_finalize(void)
   /* wait end of the initialization */
   kaapi_isterm = 1;
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
-  
+
   while (!kaapi_barrier_td_isterminated( &kaapi_term_barrier ))
   {
     kaapi_sched_advance( kaapi_all_kprocessors[0] );
