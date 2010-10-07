@@ -115,6 +115,8 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")
 */
 int kaapi_setup_param( int argc, char** argv )
 {
+  const char* wsselect;
+  
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
   kaapi_default_param.syscpucount = sysconf(_SC_NPROCESSORS_CONF);
@@ -128,10 +130,9 @@ int kaapi_setup_param( int argc, char** argv )
     sysctl(mib, 2, &kaapi_default_param.syscpucount, &len, 0, 0);
   }
 #elif defined(_WIN32)
-    SYSTEM_INFO sys_info;
-    GetSystemInfo(&sys_info);
-    kaapi_default_param.syscpucount = sys_info.dwNumberOfProcessors;
-
+  SYSTEM_INFO sys_info;
+  GetSystemInfo(&sys_info);
+  kaapi_default_param.syscpucount = sys_info.dwNumberOfProcessors;
 #else
   #warning "Could not compute number of physical cpu of the system. Default value==1"
   kaapi_default_param.syscpucount = 1;
@@ -153,12 +154,12 @@ int kaapi_setup_param( int argc, char** argv )
     kaapi_default_param.stacksize = atoi(getenv("KAAPI_STACKSIZE"));
 
   /* workstealing selection function */
-  {
-    const char* const wsselect = getenv("KAAPI_WSSELECT");
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
-    if ((wsselect != NULL) && !strcmp(wsselect, "workload"))
-      kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
-  }
+  wsselect = getenv("KAAPI_WSSELECT");
+  kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
+  if ((wsselect != NULL) && !strcmp(wsselect, "workload"))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+  else if ((wsselect != NULL) && !strcmp(wsselect, "first0"))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   
   return 0;
 }

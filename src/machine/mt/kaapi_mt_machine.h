@@ -405,10 +405,8 @@ typedef struct kaapi_processor_t {
 
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
-# if KAAPI_USE_CUDA
   kaapi_cuda_proc_t cuda_proc;
 #endif
-#endif /* KAAPI_USE_CUDA */
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
 
@@ -417,9 +415,6 @@ typedef struct kaapi_processor_t {
 struct kaapi_procinfo;
 extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo*);
 
-/*
-*/
-extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 
 #if defined(KAAPI_USE_NUMA)
 static inline kaapi_processor_t* kaapi_processor_allocate(void)
@@ -579,48 +574,6 @@ static inline kaapi_processor_id_t kaapi_get_current_kid(void)
 { return kaapi_get_current_processor()->kid; }
 
 
-/* ============================= Hierarchy ============================ */
-/** The hierarchy level for this configuration of the library.
-    TODO: Should be defined during the configuration of the library.
-    The hierarchy level allows to code memory hierarchy.
-    The default level is 1, meaning that all processors share a same memory.
-    In case of coding other hierarchy level, for instance 2 where subset of processors
-    are able to shared common memory (L2 cache) that are faster than main memory.
-
-    Each of the MaxProc_level processor at the hierarchy level has a local index 
-    from 0..MaxProc_level-1. The root processor of a given hierarchy level has always
-    local index 0.
-*/
-extern kaapi_uint32_t kaapi_hierarchy_level;
-
-/** \ingroup WS
-    Definition of the neighbors type for a given processors at a given level.
-*/
-typedef struct kaapi_neighbors_t {
-  kaapi_uint16_t      count;         /* number of neighbors */
-  kaapi_processor_t** kproc;         /* list of neighbor processors, of size count */
-  kaapi_uint32_t*     kplid;         /* list of neighbor processor local indexes, of size count */
-} kaapi_neighbors_t;
-
-
-/** \ingroup WS
-    Definition of the neighbors for all processors for all level.
-    The pointer points to an array of size kaapi_count_kprocessors of arrays of size kaapi_hierarchy_level.
-    - kaapi_neighbors[kid][0] returns the neighbors information for the kprocessor with kid at the lowest hierarchy level.
-    - kaapi_neighbors[kid][l] returns the neighbors information for the kprocessor with kid at level l.
-    - kaapi_neighbors[kid][kaapi_hierarchy_level] returns the neighbors information for the kprocessor with kid 
-    at the highest hierarchy level.
-*/
-extern kaapi_neighbors_t** kaapi_neighbors;
-
-
-/** \ingroup WS
-*/
-extern int kaapi_setup_topology(void);
-
-
-
-
 /* ========================================================================== */
 /** Termination dectecting barrier
 */
@@ -680,12 +633,11 @@ static inline int _kaapi_request_reply(
   int	                    flags
 )
 {
-  kaapi_writemem_barrier();
-  request->reply->status = flags;
-  
 #if defined(KAAPI_DEBUG)
   request->reply = 0;
 #endif
+  kaapi_writemem_barrier();
+  request->reply->status = flags;
   return 0;
 }
 
@@ -711,7 +663,7 @@ static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listre
 extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 /** Post a request to a given k-processor
-  This method posts a request to victim k-processor. 
+  This method posts a request to victim k-processor.
   \param kproc the sender of the request 
   \param reply where to receive result
   \param dest the receiver (victim) of the request
@@ -733,15 +685,9 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return 0;
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)
+#  error "Not implemented"
 #else
-#error "Not implemented"
-#endif
-#if 0
-#if defined(KAAPI_USE_PERFCOUNTER)
-  req->delay       = kaapi_perf_thread_delayinstate(kproc);
-#else  
-  req->delay       = 0;
-#endif
+#  error "Not implemented"
 #endif
 }
 
@@ -772,6 +718,41 @@ extern int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_contex
    Return 0 if the thread was already stolen
 */
 extern kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_cell_t* cell );
+
+/**
+*/
+static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kproc)
+{
+  return kproc->proc_type;
+}
+
+/**
+*/
+static inline void kaapi_processor_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
+{
+  KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
+}
+
+/**
+*/
+static inline void kaapi_processor_set_self_workload(kaapi_uint32_t workload) 
+{
+  KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
+}
+
+/**
+*/
+static inline kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t* sc)
+{
+  return sc->ctxtthread->proc;
+}
+
+/**
+*/
+static inline unsigned int kaapi_request_kid(kaapi_request_t* kr)
+{
+  return kr->kid;
+}
 
 
 #endif /* _KAAPI_MT_MACHINE_H */

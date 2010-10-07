@@ -6,7 +6,7 @@
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
- **
+ ** thierry.gautier@imag.fr
  ** theo.trouillon@imag.fr
  ** 
  ** This software is a computer program whose purpose is to execute

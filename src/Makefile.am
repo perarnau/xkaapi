@@ -17,10 +17,27 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_version.c \
   misc/kaapi_init.c \
   misc/kaapi_abort.c \
-  misc/kaapi_time.c \
+  misc/kaapi_time_elapse.c \
+  misc/kaapi_time_elapsedns.c \
   misc/kaapi_hashvalue.c \
   misc/kaapi_hashmap.c \
+  misc/kaapi_hashmap_find.c \
+  misc/kaapi_hashmap_insert.c \
+  misc/kaapi_hashmap_findinsert.c \
   misc/kaapi_thread_clear.c \
+  task/kaapi_fmt_register.c \
+  task/kaapi_fmt_taskregister.c \
+  task/kaapi_fmt_structregister.c \
+  task/kaapi_fmt_resolvebybody.c \
+  task/kaapi_fmt_resolvebyfmtid.c \
+  kaapi_defs.h \
+  kaapi_error.h \
+  kaapi_machine.h \
+  kaapi.h \
+  kaapi_impl.h \
+  machine/common/kaapi_procinfo.c \
+  memory/kaapi_mem.h \
+  memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_stealprocessor.c \
@@ -31,7 +48,10 @@ libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_sync.c \
   workstealing/kaapi_sched_criticalsteal.c \
   workstealing/kaapi_sched_lready.c \
-  workstealing/kaapi_sched_wsqueue.c \
+  workstealing/kaapi_sched_wsqueue.c 
+
+#Libtask
+libxkaapi_la_SOURCES+=\
   task/kaapi_stack_init.c \
   task/kaapi_stack_clear.c \
   task/kaapi_stack_print.c \
@@ -51,17 +71,10 @@ libxkaapi_la_SOURCES=\
   task/kaapi_task_preempt_thief.c \
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
-  task/kaapi_task_return.c \
-  task/kaapi_fmt_register.c \
-  task/kaapi_fmt_taskregister.c \
-  task/kaapi_fmt_structregister.c \
-  task/kaapi_fmt_resolvebybody.c \
-  task/kaapi_fmt_resolvebyfmtid.c \
-  kaapi_defs.h \
-  kaapi_error.h \
-  kaapi_machine.h \
-  kaapi.h \
-  kaapi_impl.h \
+  task/kaapi_task_return.c
+
+#Partitionning
+libxkaapi_la_SOURCES+=\
   static/kaapi_threadgroup_checkdeps.c\
   static/kaapi_threadgroup_version.c\
   static/kaapi_threadgroup_veralloc.c\
@@ -76,17 +89,13 @@ libxkaapi_la_SOURCES=\
   static/kaapi_threadgroup_saverestore.c\
   static/kaapi_threadgroup_print.c\
   static/kaapi_threadgroup_vect.c\
-  kaapi_staticsched.h \
-  machine/common/kaapi_procinfo.c \
-  memory/kaapi_mem.h \
-  memory/kaapi_mem.c
+  kaapi_staticsched.h 
 
 
 if KAAPI_TARGET_MT
 
 libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_processorinit.c  \
-  machine/mt/kaapi_mt_topology.c \
   machine/mt/kaapi_mt_setconcurrency.c \
   machine/mt/kaapi_mt_getconcurrency.c \
   machine/mt/kaapi_mt_getcontext.c \
@@ -100,8 +109,7 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_perf.c \
-  machine/mt/kaapi_mt_register_procs.c \
-  machine/mt/kaapi_mt_processor.c
+  machine/mt/kaapi_mt_register_procs.c
 endif
 
 if KAAPI_TARGET_CUDA

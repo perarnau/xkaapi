@@ -114,9 +114,6 @@ int kaapi_mt_init(void)
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 #endif
     
-  /* setup topology information */
-  kaapi_setup_topology();
-
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
   kaapi_perf_global_init();
@@ -184,17 +181,13 @@ int kaapi_mt_finalize(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
         (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
-#endif
   fflush( stdout );
+#endif
 
   /* wait end of the initialization */
   kaapi_isterm = 1;
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
 
-  while (!kaapi_barrier_td_isterminated( &kaapi_term_barrier ))
-  {
-    kaapi_sched_advance( kaapi_all_kprocessors[0] );
-  }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);

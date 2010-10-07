@@ -1,8 +1,8 @@
 /*
-** kaapi_sched_advance.c
+** kaapi_time.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -44,64 +44,14 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <sys/time.h>
 
-int kaapi_advance ( void )
-{
-#if 1/*defined(KAAPI_CONCURRENT_WS)*/
-  /* high level function -> empty macro */
-  return 0;
-#else
-  return kaapi_sched_advance( kaapi_get_current_processor() );
-#endif
-}
-
-
-/*
+/**
 */
-int kaapi_sched_advance ( kaapi_processor_t* kproc )
+double kaapi_get_elapsedtime(void)
 {
-  int count;
-  kaapi_stack_t* stack = kaapi_threadcontext2stack(kproc->thread);
-  count = stack->hasrequest;
-  if (count ==0) return 0;
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  int saved_state = kaapi_perf_thread_state(kproc);
-  kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-#endif
-#if 0 //TODO
-  kaapi_stealpoint_isactive(kproc->thread,0);
-#endif
-  count = stack->hasrequest;
-  
-  if (count !=0) 
-  {
-#if 0
-    replycount = 0;
-    for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-    {
-      if (kaapi_request_ok(&kproc->hlrequests.requests[i]))
-      {
-        /* user version that do not decrement the counter */
-        _kaapi_request_reply( kproc->ctxt, 0, &kproc->hlrequests.requests[i], 0, 0, 0 );
-        ++replycount;
-        if (replycount == count) break;
-      }
-    }
-
-    /* assert on the counter of victim processor request count */
-    if (replycount >0)
-    {
-      KAAPI_ATOMIC_SUB( &kproc->hlrequests.count, replycount );
-      kaapi_assert_debug( KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) >= 0 );
-    }
-#endif
-    stack->hasrequest = 0;
-  }
-#if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_perf_thread_stopswapstart(kproc, saved_state );
-#endif
-  return 0;
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
-
-

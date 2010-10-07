@@ -175,9 +175,6 @@ int kaapi_setconcurrency(void)
       }
       kaapi_assert(0 == kaapi_processor_init(kproc, kpi));
 
-      /* Initialize the hierarchy information and data structure */
-      kaapi_assert(0 == kaapi_processor_setuphierarchy(kproc));
-
 #if defined(KAAPI_USE_PERFCOUNTER)
       /*  */
       kaapi_perf_thread_init(kproc, KAAPI_PERF_USER_STATE);
@@ -199,9 +196,6 @@ int kaapi_setconcurrency(void)
   /* here is the number of correctly initialized processor, may be less than requested */
   kaapi_count_kprocessors = KAAPI_ATOMIC_READ( &kaapi_term_barrier );
     
-  /* Initialize the hierarchy information and data structure: AFTER kaapi_count_kprocessors is known  */
-  kaapi_processor_setuphierarchy( kaapi_all_kprocessors[0] );
-
   /* broadcast to all threads that they have been started */
   kaapi_barrier_td_setactive(&barrier_init2, 0);
   
@@ -250,9 +244,6 @@ void* kaapi_sched_run_processor( void* arg )
 
   /* quit first steap of the initialization */
   kaapi_barrier_td_setactive(&barrier_init, 0);
-
-  /* Initialize the hierarchy information and data structure */
-  kaapi_processor_setuphierarchy( kproc );
   
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init2 );

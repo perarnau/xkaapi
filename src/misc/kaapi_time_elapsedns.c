@@ -1,13 +1,14 @@
 /*
-** kaapi_mt_threadcontext.c
+** kaapi_time.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:16:47 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** fabien.lementec@imag.fr
+** christophe.laferriere@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,31 +43,19 @@
 ** terms.
 ** 
 */
-
 #include "kaapi_impl.h"
+#include <sys/time.h>
 
-unsigned int kaapi_processor_get_type(const kaapi_processor_t* kproc)
+/**
+*/
+kaapi_uint64_t kaapi_get_elapsedns(void)
 {
-  return kproc->proc_type;
-}
-
-void kaapi_processor_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
-{
-  KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
-}
-
-void kaapi_processor_set_self_workload(kaapi_uint32_t workload) 
-{
-  KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
-}
-
-/* todo: move in appropriate files */
-kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t* sc)
-{
-  return sc->ctxtthread->proc;
-}
-
-unsigned int kaapi_request_kid(kaapi_request_t* kr)
-{
-  return kr->kid;
+  struct timeval tv;
+  kaapi_uint64_t retval = 0;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  retval = (kaapi_uint64_t)tv.tv_sec;
+  retval *= 1000000UL;
+  retval += (kaapi_uint64_t)tv.tv_usec;
+  return retval*1000UL;
 }

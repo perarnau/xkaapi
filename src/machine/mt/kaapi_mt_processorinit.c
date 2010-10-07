@@ -46,14 +46,12 @@
 #include "../common/kaapi_procinfo.h"
 
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
 # include "../cuda/kaapi_cuda_proc.h"
 
 /* todo: move somewhere else */
 extern int kaapi_sched_select_victim_with_cuda_tasks
 (kaapi_processor_t*, kaapi_victim_t*);
 
-#endif
 #endif
 
 
@@ -102,7 +100,6 @@ int kaapi_processor_init
   kaapi_setcontext(kproc, ctxt);
 
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
   /* initialize cuda processor */
   if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
   {
@@ -113,28 +110,6 @@ int kaapi_processor_init
     kproc->fnc_selecarg = NULL;
   }
 #endif
-#endif /* KAAPI_USE_CUDA */
   
-  return 0;
-}
-
-int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc )
-{
-#if 0
-  int i;
-  kproc->hlevel    = 1;
-  kproc->hindex    = calloc( kproc->hlevel, sizeof(kaapi_uint16_t) );
-  kproc->hlcount   = calloc( kproc->hlevel, sizeof(kaapi_uint16_t) );
-  kproc->hkids     = calloc( kproc->hlevel, sizeof(kaapi_processor_id_t*) );
-/*  for (i=0; i<kproc->hlevel; ++i) */
-  {
-    kproc->hindex[0]  = kproc->kid; /* only one level !!!! */
-    kproc->hlcount[0] = kaapi_count_kprocessors;
-    kproc->hkids[0]   = calloc( kproc->hlcount[0], sizeof(kaapi_processor_id_t) );
-    for (i=0; i<kproc->hlcount[0]; ++i)
-      kproc->hkids[0][i] = i;  
-  }  
-      
-#endif
   return 0;
 }

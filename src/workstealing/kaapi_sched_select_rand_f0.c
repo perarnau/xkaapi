@@ -1,13 +1,11 @@
 /*
-** kaapi_time.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+** Created on Tue Mar 31 15:21:00 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -44,30 +42,26 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <sys/time.h>
 
-
-/**
+/** Do rand selection 
 */
-double kaapi_get_elapsedtime(void)
+int kaapi_sched_select_victim_rand_first0( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 {
-  struct timeval tv;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
-}
+  int nbproc, victimid;
+  
+  if (kproc->fnc_selecarg ==0) 
+  {
+    kproc->fnc_selecarg = (void*)(long)rand();
+    victim->kproc = kaapi_all_kprocessors[ 0 ];
+    return 0;
+  }
 
+redo_select:
+  nbproc = kaapi_count_kprocessors;
+  if (nbproc <=1) return EINVAL;
 
-/**
-*/
-kaapi_uint64_t kaapi_get_elapsedns(void)
-{
-  struct timeval tv;
-  kaapi_uint64_t retval = 0;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  retval = (kaapi_uint64_t)tv.tv_sec;
-  retval *= 1000000UL;
-  retval += (kaapi_uint64_t)tv.tv_usec;
-  return retval*1000UL;
+  /* Get the k-processor */    
+  victim->kproc = kaapi_all_kprocessors[ victimid ];
+  if (victim->kproc ==0) goto redo_select;
+  return 0;
 }

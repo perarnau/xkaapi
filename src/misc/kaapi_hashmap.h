@@ -1,13 +1,14 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:21:00 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** 
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+**
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
 ** threads.
@@ -41,24 +42,31 @@
 ** terms.
 ** 
 */
+#ifndef _KAAPI_HASHMAP_H_
+#define _KAAPI_HASHMAP_H_
 #include "kaapi_impl.h"
 
-/** Do rand selection 
+
+/*
 */
-int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim )
+static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key)
 {
-  int nbproc, victimid;
-  
-  if (kproc->fnc_selecarg ==0) 
-    kproc->fnc_selecarg = (void*)(long)rand();
+  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
 
-redo_select:
-  nbproc = kaapi_count_kprocessors;
-  if (nbproc <=1) return EINVAL;
-  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
+  if (khm->entry_map & (1 << key))
+    return khm->entries[key];
 
-  /* Get the k-processor */    
-  victim->kproc = kaapi_all_kprocessors[ victimid ];
-  if (victim->kproc ==0) goto redo_select;
   return 0;
 }
+
+
+/*
+*/
+static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
+{
+  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
+  khm->entries[key] = entries;
+  khm->entry_map |= 1 << key;
+}
+
+#endif

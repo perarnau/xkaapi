@@ -62,7 +62,7 @@ int kaapi_sched_stealprocessor(
   /* first request */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
 
-  /* try to steal ready thread */
+  /* try to steal ready threads until nore more request is available */
   while ((request !=0) && !kaapi_sched_readyempty(kproc))
   {
     kaapi_thread_context_t* thread;

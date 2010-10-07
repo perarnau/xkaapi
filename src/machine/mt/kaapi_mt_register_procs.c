@@ -53,11 +53,9 @@
 extern kaapi_rtparam_t kaapi_default_param;
 
 
-static int make_identity_procinfo_list
-(kaapi_procinfo_list_t* kpl, unsigned int count)
+static int make_identity_procinfo_list(kaapi_procinfo_list_t* kpl, unsigned int count)
 {
   /* make an identity cpu list for the range [0, count[ */
-
   unsigned int cpu_index;
 
   for (cpu_index = 0; cpu_index < count; ++cpu_index)
@@ -79,7 +77,6 @@ static int make_identity_procinfo_list
 
 
 /* exported */
-
 int kaapi_mt_register_procs(kaapi_procinfo_list_t* kpl)
 {
   const char* const cpuset_str = getenv("KAAPI_CPUSET");
@@ -96,10 +93,11 @@ int kaapi_mt_register_procs(kaapi_procinfo_list_t* kpl)
   /* KAAPI_CPUSET */
   if (cpuset_str != NULL)
   {
-    const int err = kaapi_procinfo_list_parse_string
-      (kpl, cpuset_str, KAAPI_PROC_TYPE_CPU, kaapi_default_param.cpucount);
-    if (err == -1)
-      return -1;
+    const int err = kaapi_procinfo_list_parse_string(
+            kpl, cpuset_str, KAAPI_PROC_TYPE_CPU, 
+            kaapi_default_param.cpucount
+    );
+    if (err == -1) return -1;
     kaapi_default_param.use_affinity = 1;
   }
   else /* identity set */

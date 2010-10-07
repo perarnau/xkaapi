@@ -1,12 +1,14 @@
 /*
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:21:00 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,23 +44,41 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "kaapi_hashmap.h"
 
-/** Do rand selection 
+/*
 */
-int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim )
+kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr )
 {
-  int nbproc, victimid;
+  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
+
+  hkey = hkey % KAAPI_HASHMAP_SIZE;
+  kaapi_hashentries_t* list_hash = _get_hashmap_entry( khm, hkey );
+  kaapi_hashentries_t* entry = list_hash;
+  while (entry != 0)
+  {
+    if (entry->key == ptr) return entry;
+    entry = entry->next;
+  }
   
-  if (kproc->fnc_selecarg ==0) 
-    kproc->fnc_selecarg = (void*)(long)rand();
-
-redo_select:
-  nbproc = kaapi_count_kprocessors;
-  if (nbproc <=1) return EINVAL;
-  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
-
-  /* Get the k-processor */    
-  victim->kproc = kaapi_all_kprocessors[ victimid ];
-  if (victim->kproc ==0) goto redo_select;
-  return 0;
+  /* allocate new entry */
+  if (khm->currentbloc == 0) 
+  {
+    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
+    khm->currentbloc->next = khm->allallocatedbloc;
+    khm->allallocatedbloc = khm->currentbloc;
+    khm->currentbloc->pos = 0;
+  }
+  
+  entry = &khm->currentbloc->data[khm->currentbloc->pos];
+  entry->key = ptr;
+  entry->u.value.last_version = 0;
+  entry->u.value.last_mode = KAAPI_ACCESS_MODE_VOID;
+  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
+  {
+    khm->currentbloc = 0;
+  }
+  entry->next = list_hash;
+  set_hashmap_entry(khm, hkey, entry);
+  return entry;
 }

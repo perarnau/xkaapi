@@ -10,7 +10,6 @@
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
-** theo.trouillon@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -236,7 +235,7 @@ typedef struct kaapi_rtparam_t {
   unsigned int             cpucount;               /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;               /* default method to select a victim */
   unsigned int		         use_affinity;           /* use cpu affinity */
-  unsigned int		         kid_to_cpu[KAAPI_MAX_PROCESSOR];
+  unsigned int		         kid_to_cpu[KAAPI_MAX_PROCESSOR]; /* mapping: kid->phys cpu  ?*/
   int                      display_perfcounter;    /* set to 1 iff KAAPI_DISPLAY_PERF */
   kaapi_uint64_t           startuptime;            /* time at the end of kaapi_init */
 } kaapi_rtparam_t;
@@ -962,14 +961,9 @@ extern int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victi
 extern int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim);
 
 /** \ingroup WS
-    Select a victim for next steal request using random selection level by level. Each time the method
-    try to steal at level i, it first try to steal at level 0 until i.
-    The idea of the algorithm is the following. Initial values are: level=0, toplevel=0
-       1- the method do random selection at level and increment toplevel
-       2- it increment level, if level >= toplevel then level=0, toplevel++
-       3- if toplevel > maximal level then level=0, toplevel=0
+    First steal is 0 then select a victim for next steal request using uniform random selection over all cores.
 */
-extern int kaapi_sched_select_victim_rand_incr( kaapi_processor_t* kproc, kaapi_victim_t* victim);
+extern int kaapi_sched_select_victim_rand_first0( kaapi_processor_t* kproc, kaapi_victim_t* victim);
 
 /** \ingroup WS
     Enter in the infinite loop of trying to steal work.

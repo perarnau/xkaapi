@@ -8,7 +8,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** theo.trouillon@imag.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -44,19 +44,8 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "kaapi_hashmap.h"
 
-
-/*
-*/
-static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key)
-{
-  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
-
-  if (khm->entry_map & (1 << key))
-    return khm->entries[key];
-
-  return 0;
-}
 
 /*
 */
@@ -65,15 +54,6 @@ kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key
   return _get_hashmap_entry( khm, key );
 }
 
-
-/*
-*/
-static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
-{
-  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
-  khm->entries[key] = entries;
-  khm->entry_map |= 1 << key;
-}
 
 /*
 */
@@ -120,95 +100,5 @@ int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
   khm->allallocatedbloc = 0;
   khm->currentbloc = 0;
   return 0;
-}
-
-
-
-/*
-*/
-kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr )
-{
-  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
-
-  hkey = hkey % KAAPI_HASHMAP_SIZE;
-  kaapi_hashentries_t* list_hash = _get_hashmap_entry( khm, hkey );
-  kaapi_hashentries_t* entry = list_hash;
-  while (entry != 0)
-  {
-    if (entry->key == ptr) return entry;
-    entry = entry->next;
-  }
-  
-  /* allocate new entry */
-  if (khm->currentbloc == 0) 
-  {
-    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
-    khm->currentbloc->next = khm->allallocatedbloc;
-    khm->allallocatedbloc = khm->currentbloc;
-    khm->currentbloc->pos = 0;
-  }
-  
-  entry = &khm->currentbloc->data[khm->currentbloc->pos];
-  entry->key = ptr;
-  entry->u.value.last_version = 0;
-  entry->u.value.last_mode = KAAPI_ACCESS_MODE_VOID;
-  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
-  {
-    khm->currentbloc = 0;
-  }
-  entry->next = list_hash;
-  set_hashmap_entry(khm, hkey, entry);
-  return entry;
-}
-
-
-/*
-*/
-kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
-{
-  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
-#if defined(KAAPI_DEBUG_LOURD)
-fprintf(stdout," [@=%p, hkey=%u]", ptr, hkey);
-#endif
-  hkey = hkey % KAAPI_HASHMAP_SIZE;
-  kaapi_hashentries_t* list_hash = _get_hashmap_entry(khm, hkey);
-  kaapi_hashentries_t* entry = list_hash;
-  while (entry != 0)
-  {
-    if (entry->key == ptr) return entry;
-    entry = entry->next;
-  }
-  return 0;
-}
-
-
-/*
-*/
-kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr )
-{
-  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
-  hkey = hkey % KAAPI_HASHMAP_SIZE;
-  kaapi_hashentries_t* list_hash = _get_hashmap_entry( khm, hkey );
-  kaapi_hashentries_t* entry = list_hash;
-
-  /* allocate new entry */
-  if (khm->currentbloc == 0) 
-  {
-    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
-    khm->currentbloc->next = khm->allallocatedbloc;
-    khm->allallocatedbloc = khm->currentbloc;
-    khm->currentbloc->pos = 0;
-  }
-  
-  entry = &khm->currentbloc->data[khm->currentbloc->pos];
-  entry->key = ptr;
-  memset( &entry->u, 0, sizeof(entry->u) );
-  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
-  {
-    khm->currentbloc = 0;
-  }
-  entry->next = list_hash;
-  set_hashmap_entry(khm, hkey, entry);
-  return entry;
 }
 

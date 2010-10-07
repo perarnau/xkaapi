@@ -1,14 +1,14 @@
 /*
-** kaapi_mt_selfstack.c
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -44,4 +44,20 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "kaapi_hashmap.h"
 
+/*
+*/
+kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
+{
+  kaapi_uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
+  hkey = hkey % KAAPI_HASHMAP_SIZE;
+  kaapi_hashentries_t* list_hash = _get_hashmap_entry(khm, hkey);
+  kaapi_hashentries_t* entry = list_hash;
+  while (entry != 0)
+  {
+    if (entry->key == ptr) return entry;
+    entry = entry->next;
+  }
+  return 0;
+}

@@ -64,8 +64,11 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_thread_clear( kproc->thread );
   
   /* map the reply data structure into the stack data */
-  reply = kaapi_thread_pushdata_align
-    ( kaapi_threadcontext2thread(kproc->thread), 4 * KAAPI_CACHE_LINE, sizeof(void*) );
+  reply = kaapi_thread_pushdata_align( 
+        kaapi_threadcontext2thread(kproc->thread), 
+        4 * KAAPI_CACHE_LINE, 
+        sizeof(void*) 
+  );
 
 #if defined(KAAPI_DEBUG)
   memset(reply, 0, 4 * KAAPI_CACHE_LINE);
@@ -91,7 +94,6 @@ redo_select:
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
 
-//wait_once:
   /* (2)
      lock and retest if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return with reply
@@ -130,7 +132,6 @@ enter:
      process all requests on the victim kprocessor and reply failed to remaining requests
      Warning: In this version the aggregator has a lock on the victim processor.
   */
-  
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
 #if defined(KAAPI_DEBUG)
@@ -170,33 +171,22 @@ enter:
   if (kaapi_reply_test( reply ))
     goto return_value;
   
-
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
 
   kproc->issteal = 0;
-
-#if 0
-  if (!kaapi_isterminated() && !kaapi_reply_test( reply )) 
-    goto wait_once;
-#endif
-
   return 0;
   
 return_value:
   
   /* mark current processor as no stealing anymore */
   kproc->issteal = 0;
-
   kaapi_assert_debug( (kaapi_reply_status(reply) != KAAPI_REQUEST_S_POSTED) ); 
 
   /* test if my request is ok
   */
   kaapi_replysync_data( reply );
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
-#endif
 
   switch (kaapi_reply_status(reply))
   {
@@ -208,15 +198,19 @@ return_value:
     case KAAPI_REPLY_S_TASK:
       kaapi_assert_debug( kaapi_isvalid_body( reply->u.s_task.body ) );
 
-      /* arguments already pushed, increment the stack pointer */
-      /* kaapi_thread_pushdata( kaapi_threadcontext2thread(kproc->thread), 4 * KAAPI_CACHE_LINE); */
-      
+      /* arguments are store into the reply data structure and have been already pushed */
       /* push a task with the body */
       kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
       kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
       return kproc->thread;
 
     case KAAPI_REPLY_S_THREAD:
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
       return reply->u.thread;
 
     case KAAPI_REPLY_S_NOK:
