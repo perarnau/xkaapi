@@ -25,6 +25,7 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_hashmap_insert.c \
   misc/kaapi_hashmap_findinsert.c \
   misc/kaapi_thread_clear.c \
+  misc/kaapi_malloc_align.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \

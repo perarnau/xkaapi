@@ -118,11 +118,9 @@ extern "C" {
 #else
 #  define kaapi_assert_debug_m(cond, msg)
 #  define KAAPI_LOG(l, fmt, ...) 
-#endif
+#endif /* defined(KAAPI_DEBUG)*/
 
-/**
-*/
-#  define kaapi_assert_m(cond, msg) \
+#define kaapi_assert_m(cond, msg) \
       { \
         if (!(cond)) \
         { \
@@ -501,16 +499,34 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     - 11 : the task has been theft by a thief for execution and it was executed, the body is "aftersteal body"
 */
 #if (SIZEOF_VOIDP == 4)
-#  define KAAPI_MASK_BODY_SUSPEND (0x1UL << 31)
 #  define KAAPI_MASK_BODY_EXEC    (0x1UL << 30)
+#  define KAAPI_MASK_BODY_SUSPEND (0x2UL << 30)
 #  define KAAPI_MASK_BODY         (0x3UL << 30)
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
 
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (kaapi_uint32_t)o, (kaapi_uint32_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR_ORIG( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND_ORIG( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
+#  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
+
 #elif (SIZEOF_VOIDP == 8)
-#  define KAAPI_MASK_BODY_SUSPEND (0x1UL << 63)
-#  define KAAPI_MASK_BODY_EXEC    (0x1UL << 62)
-#  define KAAPI_MASK_BODY         (0x3UL << 62)
+#  define KAAPI_MASK_BODY_EXEC    (0x1UL << 62UL)
+#  define KAAPI_MASK_BODY_SUSPEND (0x2UL << 62UL)
+#  define KAAPI_MASK_BODY         (0x3UL << 62UL)
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR64_ORIG(a, v)
+
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)o, (kaapi_uint64_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
+#  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic64_t*)a, (kaapi_uint64_t)v)
 
 #else
 #  error "No implementation for pointer to function with size greather than 8 bytes. Please contact the authors."
@@ -520,19 +536,22 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 */
 //@{
 #define kaapi_task_body_issteal(body)       \
-      (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY_SUSPEND)
+      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_SUSPEND)
 
 #define kaapi_task_body_isexec(body)        \
-      (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY_EXEC)
+      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_EXEC)
 
 #define kaapi_task_body_isaftersteal(body)  \
-      ((((kaapi_uintptr_t)body) & KAAPI_MASK_BODY)== (KAAPI_MASK_BODY_EXEC|KAAPI_MASK_BODY_SUSPEND))
+      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY)== (KAAPI_MASK_BODY_EXEC|KAAPI_MASK_BODY_SUSPEND))
 
 #define kaapi_task_body_isspecial(body)     \
-      (((kaapi_uintptr_t)body) & KAAPI_MASK_BODY)
+      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY)
+
+#define kaapi_task_body_isnormal(body)     \
+      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY) ==0)
 
 #define kaapi_task_body2fnc(body)           \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) & ~KAAPI_MASK_BODY))
+    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) & ~(kaapi_uintptr_t)KAAPI_MASK_BODY))
     
 #define kaapi_task_body2int(body)           \
     ((kaapi_uintptr_t)body)
@@ -541,10 +560,10 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     ((kaapi_task_body_t)ibdy)
 
 #define kaapi_task_body_setsteal(body)      \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | KAAPI_MASK_BODY_SUSPEND))
+    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_SUSPEND))
 
 #define kaapi_task_body_setexec(body)       \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | KAAPI_MASK_BODY_EXEC))
+    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_EXEC))
 //@}
 
 /** \ingroup TASK
@@ -582,6 +601,11 @@ static inline int _kaapi_thread_pushtask( kaapi_thread_context_t* thread )
 static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaapi_uint32_t count)
 { return kaapi_thread_pushdata( kaapi_threadcontext2thread(thread), count ); }
 
+static inline void kaapi_task_setstate( kaapi_task_t* task, kaapi_task_body_t state )
+{
+  KAAPI_ATOMIC_WRITEPTR_BARRIER((kaapi_uintptr_t*)&task->body, state);
+}
+
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
 /** Atomically: OR of the task state with the value in 'state' and return the previous value.
 */
@@ -596,19 +620,8 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
   kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_uintptr_t*)&task->body, state);
   return retval;
 }
-
-static inline int kaapi_task_pop( kaapi_task_t* task )
-{
-  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_atomic_t*)&task->body, KAAPI_MASK_BODY_EXEC);
-  return (retval & KAAPI_MASK_BODY) == KAAPI_MASK_BODY_EXEC;
-}
-
-static inline int kaapi_task_steal( kaapi_task_t* task )
-{
-  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_uintptr_t*)&task->body, (kaapi_uintptr_t)KAAPI_MASK_BODY_SUSPEND);
-  return (retval & KAAPI_MASK_BODY) == KAAPI_MASK_BODY_SUSPEND;
-}
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+#  error "NOT IMPLEMENTED"
 #else
 #  warning "NOT IMPLEMENTED"
 #endif
@@ -742,7 +755,9 @@ typedef struct kaapi_hashentries_t {
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
 
 
-/* Hashmap 
+/* Hashmap default size.
+   Warning in kapai_hashmap_t, entry_map type should have a size that is
+   equal to KAAPI_HASHMAP_SIZE.
 */
 #define KAAPI_HASHMAP_SIZE 64
 
@@ -752,7 +767,7 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
-  kaapi_uint32_t entry_map; /* type size must match KAAPI_HASHMAP_SIZE */
+  kaapi_uint64_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
 

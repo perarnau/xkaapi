@@ -62,9 +62,10 @@
 #  endif
 # endif
 #endif
+
 #if defined (_WIN32)
-#include <windows.h>
-#include <winnt.h>
+#  include <windows.h>
+#  include <winnt.h>
 #endif
 
 #include <stdint.h>
@@ -72,8 +73,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #if !defined (_WIN32)
-#include <alloca.h>
+#  include <alloca.h>
 #endif
+
 #include "kaapi_error.h"
 
 #if defined(__cplusplus)
@@ -144,10 +146,10 @@ typedef struct kaapi_atomic64_t {
 
 
 #if defined(__i386__)||defined(__x86_64)
-# define kaapi_slowdown_cpu() \
-  do { __asm__ __volatile__("pause\n\t"); } while (0)
+#  define kaapi_slowdown_cpu() \
+      do { __asm__ __volatile__("pause\n\t"); } while (0)
 #else
-# define kaapi_slowdown_cpu()
+#  define kaapi_slowdown_cpu()
 #endif
 
 
@@ -270,29 +272,7 @@ extern void kaapi_abort(void);
 
 
 /* ========================== utilities ====================================== */
-static inline void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree)
-{
-  /* align_size in bytes */
-  if (align_size == 0)
-  {
-    *addr_tofree = malloc(size);
-    return *addr_tofree;
-  }
-
-  const kaapi_uintptr_t align_mask = align_size - 1;
-  void* retval = (void*)malloc(align_mask + size);
-  if (retval != NULL)
-  {
-    if (addr_tofree !=0)
-      *addr_tofree = retval;
-
-    if ((((kaapi_uintptr_t)retval) & align_mask) != 0U)
-      retval = (void*)(((kaapi_uintptr_t)retval + align_mask) & ~align_mask);
-    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align_mask) == 0U);
-  }
-
-  return retval;
-}
+extern void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree);
 
 static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align)
 {
@@ -1270,7 +1250,7 @@ static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int par
   
   return kaapi_thread_pushtask(thread);
 }
-#endif
+#endif /* !defined(KAAPI_COMPILE_SOURCE) */
 
 /**
 */
@@ -1391,7 +1371,6 @@ typedef struct kaapi_perf_idset_t
 } kaapi_perf_idset_t;
 
 #define KAAPI_PERF_IDSET_SINGLETON(I) {1, {I}}
-
 #define KAAPI_PERF_IDSET_TASKS ((kaapi_perf_idset_t*)(uintptr_t)KAAPI_PERF_ID_TASKS)
 #define KAAPI_PERF_IDSET_STEALREQOK ((kaapi_perf_idset_t*)(uintptr_t)KAAPI_PERF_ID_STEALREQOK)
 #define KAAPI_PERF_IDSET_STEALREQ ((kaapi_perf_idset_t*)(uintptr_t)KAAPI_PERF_ID_STEALREQ)
@@ -1553,7 +1532,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
 
 #  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
     { kaapi_writemem_barrier(); (a)->_counter = value; }
-#else
+#else /* defined(KAAPI_DEBUG) */
 static inline int __kaapi_isaligned(volatile void* a, int byte)
 {
   kaapi_assert( (((unsigned long)a) & (byte-1)) == 0 ); 
@@ -1571,7 +1550,7 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
 #  define BIDON_ONEARG(a,b)  a,b
 #  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
     __KAAPI_ISALIGNED_ATOMIC(a, BIDON_ONEARG(kaapi_writemem_barrier(), (a)->_counter = value))
-#endif
+#endif /* defined(KAAPI_DEBUG) */
 
 #if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
 || defined(__INTEL_COMPILER))
@@ -1604,7 +1583,7 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
 #  define KAAPI_ATOMIC_XOR(a, o) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
 
-/* functions which return old value */
+/* linux functions which return old value */
 #  define KAAPI_ATOMIC_AND_ORIG(a, o) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
 
@@ -1614,11 +1593,11 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
 #  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
 
-/* 64 bit versions */
+/* linux 64 bit versions */
 #  define KAAPI_ATOMIC_CAS64(a, o, n) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
 
-/* functions which return new value (NV) */
+/* linux functions which return new value (NV) */
 #  define KAAPI_ATOMIC_INCR64(a) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ) )
 
@@ -1642,13 +1621,16 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( (kaapi_uintptr_t*)&((a)->_counter), (kaapi_uintptr_t)o ))
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
 
 #  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
 
+
 #elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
+
 #  include <libkern/OSAtomic.h>
+
 #  define KAAPI_ATOMIC_CAS(a, o, n) \
     OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
 
@@ -1716,22 +1698,6 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
 #else
 #  error "Please add support for atomic operations on this system/architecture"
 #endif /* GCC > 4.1 */
-
-#if (SIZEOF_VOIDP == 4)
-#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (kaapi_uint32_t)o, (kaapi_uint32_t)n )
-#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_OR_ORIG( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
-#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_AND_ORIG( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
-#else
-#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)o, (kaapi_uint64_t)n )
-#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_OR64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
-#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_AND64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
-#endif
 
 #ifdef __cplusplus
 }
