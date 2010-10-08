@@ -101,9 +101,7 @@ libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_getcontext.c \
   machine/mt/kaapi_mt_setcontext.c \
   machine/mt/kaapi_mt_makecontext.c \
-  machine/mt/kaapi_mt_selfstack.c \
   machine/mt/kaapi_mt_sched_emitsteal.c \
-  machine/mt/kaapi_mt_sched_advance.c \
   machine/mt/kaapi_mt_context_alloc.c \
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \

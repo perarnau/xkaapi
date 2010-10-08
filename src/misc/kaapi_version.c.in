@@ -55,15 +55,6 @@
 #  error "Bad definition of value for steal frame method"
 #endif
 
-#if (KAAPI_USE_EXECTASK_METHOD ==KAAPI_CAS_METHOD) 
-#  warning "Use CAS for stealing task"
-#elif (KAAPI_USE_EXECTASK_METHOD ==KAAPI_THE_METHOD)
-#  warning "Use Dijkstra like protocol for stealing task"
-#else
-#  error "Bad definition of value for steal frame method"
-#endif
-
-
 // autotools can prompt for this ...
 const char* get_kaapi_version()
 { return "@PACKAGE_NAME@-@PACKAGE_VERSION@"; }
