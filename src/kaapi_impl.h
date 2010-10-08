@@ -948,7 +948,7 @@ static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
   /* mplicit barrier in KAAPI_ATOMIC_WRITE_BARRIER */
   KAAPI_ATOMIC_WRITE_BARRIER(lock, 0);
 #else
-  KAAPI_ATOMIC_WRITE(lock, 1);
+  KAAPI_ATOMIC_WRITE_BARRIER(lock, 1);
 #endif
   return 0;
 }
