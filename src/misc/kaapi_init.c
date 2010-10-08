@@ -161,6 +161,7 @@ int kaapi_setup_param( int argc, char** argv )
   else if ((wsselect != NULL) && !strcmp(wsselect, "first0"))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   
+  
   return 0;
 }
 

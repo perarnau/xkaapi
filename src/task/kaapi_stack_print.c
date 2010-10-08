@@ -46,29 +46,43 @@
 #include "kaapi_impl.h"
 #include <stdio.h>
 
+/** Bits are SEAT
+*/
+static const char* tab_bit[] = {
+  "0000",
+  "0001",
+  "0010",
+  "0011",
+  "0100",
+  "0101",
+  "0110",
+  "0111",
+  "1000",
+  "1001",
+  "1010",
+  "111",
+  "1100",
+  "1101",
+  "1110",
+  "1111"
+};
+
 /*
  * E -> execution
- * S -> suspend
+ * S -> steal
  * _ -> nop 
- * X -> after steal op
- * R -> recv task
- * T -> task+bcast task
- * B -> pure bcast task
+ * A -> after steal op
+ * T -> term
+ * X -> term after steal
  */
-static char kaapi_getstatename( kaapi_task_t* task )
+typedef char state_type_t[4];
+static void kaapi_getstatename( kaapi_task_t* task, state_type_t state )
 {
   kaapi_task_body_t body = kaapi_task_getbody(task);
-  if (body == kaapi_exec_body) return 'E';
-  else if (kaapi_task_body_issteal(body)) 
-  {
-    if ( kaapi_task_body2fnc(task->body) == kaapi_taskbcast_body) return 'T';
-    if ( kaapi_task_body2fnc(task->body) == kaapi_taskrecv_body) return 'R';
-    return 'S';
-  }
-  else if (body ==kaapi_nop_body) return '_';
-  else if (body ==kaapi_aftersteal_body) return 'X';
-  else if (body ==kaapi_taskbcast_body) return 'B';
-  return 'I';
+  state[0] = (kaapi_task_body_isterm(body) ? 'T' : '_');
+  state[1] = (kaapi_task_body_isaftersteal(body) ? 'A' : '_');
+  state[2] = (kaapi_task_body_isexec(body) ? 'E' : '_');
+  state[3] = (kaapi_task_body_issteal(body) ? 'S' : '_');
 }
 
 static char kaapi_getmodename( kaapi_access_mode_t m )
@@ -113,10 +127,13 @@ int kaapi_task_print(
   else
     sp = task->sp;
 
-  fprintf( file, "@%p |%c|, name:%-40.40s, sp:%p, #p:%i\n", 
+  state_type_t state;
+  kaapi_getstatename(task, state);
+  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%i\n", 
         (void*)task, 
-        kaapi_getstatename(task), 
+        state[3], state[2], state[1], state[0],
         fmt->name, 
+        tab_bit[kaapi_task_body_getstate(task->body)],
         sp,
         fmt->count_params );
         
@@ -142,12 +159,14 @@ int kaapi_task_print(
       {
         kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)sp);
         fprintf(file, "<%s > @:%p value=", fmt_param->name, access->data);
+#if 0 /* due to invalid pointer */
         (*fmt_param->print)(file, access->data );
         if (access->version !=0)
         {
           fprintf(file, ", ver:%p value=", access->version );
           (*fmt_param->print)(file, access->version );
         }
+#endif
       }
       if (i <fmt->count_params-1)
       {
@@ -278,10 +297,12 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
         else if (body == kaapi_tasksignalend_body) 
           fname = "signal end iteration";
           
-        fprintf( file, "  [%04i]: @%p |%c|, name:%-40.40s", 
+        state_type_t state;
+        kaapi_getstatename(task_bot, state);
+        fprintf( file, "  [%04i]: @%p |%c%c%c%c|, name:%-20.20s", 
               count, 
               (void*)task_bot,
-              kaapi_getstatename(task_bot), 
+              state[3], state[2], state[1], state[0],
               fname
         );
         

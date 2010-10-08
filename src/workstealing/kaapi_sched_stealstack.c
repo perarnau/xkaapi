@@ -239,11 +239,7 @@ static int kaapi_sched_stealframe
   int                   replycount;
   kaapi_task_splitter_t splitter; 
   void*                 argsplitter;
-  kaapi_request_t*      request;
-  
-  request = kaapi_listrequest_iterator_get(lrequests, lrrange);
-  if (request ==0) return 0;
-  
+    
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
   stack      = kaapi_threadcontext2stack(thread);
@@ -253,7 +249,7 @@ static int kaapi_sched_stealframe
   replycount = 0;
   
   /* */
-  while ( (request != 0) && (task_top > frame->sp))
+  while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > frame->sp))
   {
     task_body = kaapi_task_body2fnc(task_top->body);//TODO kaapi_task_getextrabody(task_top);
     
@@ -274,7 +270,7 @@ static int kaapi_sched_stealframe
       if ( (splitter !=0) && (argsplitter !=0) )
       {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-        kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_SUSPEND ));
+        kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL ));
         if (likely( !kaapi_task_body_isspecial(body) ) ) // means SUSPEND was not set before and it was set
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
         thread->thiefpc = task_top;
@@ -288,7 +284,8 @@ static int kaapi_sched_stealframe
           kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
           /* here suspend bit was set: reset it */
-          kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_SUSPEND );
+          printf("I'm here !!!!\n"); fflush(stdout);
+          kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_STEAL );
 #endif
         }
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
@@ -303,7 +300,6 @@ static int kaapi_sched_stealframe
       continue;
     }
     
-#if defined(KAAPI_USE_STATICSCHED)
     /* * weak symbol may also be used ? 
        * not that recv body is an empty function to serve as a mark. It could
        be put into the nonpartitioning code...
@@ -313,7 +309,6 @@ static int kaapi_sched_stealframe
       kaapi_task_markready_recv( task_top, kaapi_task_getargs(task_top), map );
     }
     else 
-#endif
     {
       task_fmt = kaapi_format_resolvebybody( task_body );
       if (task_fmt !=0)
@@ -323,8 +318,8 @@ static int kaapi_sched_stealframe
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-          kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_SUSPEND ));
-          if (likely( !kaapi_task_body_issteal(body) ) ) // means SUSPEND and EXEC was not set before
+          kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL ));
+          if (likely( kaapi_task_body_isstealable(body) ) ) // means SUSPEND and EXEC was not set before
           {
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
             thread->thiefpc = task_top;

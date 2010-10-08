@@ -330,7 +330,21 @@ kaapi_task_t* kaapi_threadgroup_version_newreader
 kaapi_task_t* kaapi_threadgroup_version_newwriter
     ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, int ith );
 
-/* task recv body 
+#if !defined(KAAPI_USE_STATICSCHED)
+/* task recv body
+*/
+static inline void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread ) {}
+
+/* task tbcast body 
+*/
+static inline void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread ) {}
+
+/* task to signal end of a step
+*/
+static inline void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread ) {}
+
+#else
+/* task recv body
 */
 void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread );
 
@@ -349,6 +363,7 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread );
 /* task to wait end of a step
 */
 void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread );
+#endif
 
 /**
 */

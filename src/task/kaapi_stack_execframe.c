@@ -68,7 +68,7 @@
    
    On return, we leave the stack in the following state after execution of all tasks into the
    frame pointed by sfp, including all the child tasks.
-   All task body are set to executed.
+   All task bodies are set to executed.
    
                      | task0  |
 thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
@@ -83,7 +83,7 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
                      | ....   |
 
   The method could returns EWOULDBLOCK in order to indicate that a task cannot be executed.
-  In that case, thread->pc points to the tasks (body== kaapi_suspend_body) and thread->sfp
+  In that case, thread->pc points to the tasks (body is marked as suspended) and thread->sfp
   points to the current frame where the suspend task has been tried to be executed.
 
   Where the task becomes ready, one may continue the execution simply by calling
@@ -129,35 +129,61 @@ begin_loop:
     body = pc->body;
     kaapi_assert_debug( body != kaapi_exec_body);
     pc->body = kaapi_exec_body;
+    /* task execution */
+    kaapi_assert_debug(pc == thread->sfp[-1].pc);
+    kaapi_assert_debug( kaapi_isvalid_body( body ) );
+
+    /* here... */
+    body( pc->sp, (kaapi_thread_t*)thread->sfp );      
+
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-    body = kaapi_task_int2body(kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC ));
-    if (unlikely( kaapi_task_body_isspecial(body) ) )
-    { 
-      /* its special task, test in the following order !:
-         - kaapi_task_body_isaftersteal(body) -> call aftersteal body
-         - kaapi_task_body_issteal(body) -> return to suspend the thread
-         - else it is already executed task...
-      */
-      if ( kaapi_task_body_isaftersteal(body) )
-      {
-        body = kaapi_aftersteal_body;
-      }
-      else if ( kaapi_task_body_issteal(body) )
-      {
-        goto error_swap_body;
-      }
-      else {
-        kaapi_assert_debug_m(0, "Task is already executed");
-      }
-    }
-    else {
+    body = kaapi_task_int2body( kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC ) );
+    if (likely( kaapi_task_body_isnormal(body) ) )
+    {
       /* task execution */
       kaapi_assert_debug(pc == thread->sfp[-1].pc);
       kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
       /* here... */
-      body( pc->sp, (kaapi_thread_t*)thread->sfp );      
+      body( pc->sp, (kaapi_thread_t*)thread->sfp );
     }
+    else
+    { 
+//      kaapi_stack_print(stdout, thread);
+
+      /* It is a special task: it means that before atomic or update, the body
+         has already one of the special flag set (either exec, either suspend).
+         Test the following case with THIS (!) order :
+         - kaapi_task_body_isaftersteal(body) -> call aftersteal body
+         - kaapi_task_body_issteal(body) -> return to suspend the thread
+         - else it means that the task has been executed by a thief, but it 
+         does not require aftersteal body to merge results.
+      */
+      if ( kaapi_task_body_isaftersteal(body) )
+      {
+        /* means that task has been steal & not yet terminated due
+           to some merge to do
+        */
+        kaapi_assert_debug( kaapi_task_body_issteal(body) );
+        kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
+      }
+      else if ( kaapi_task_body_isterm(body) ){
+        /* means that task has been steal */
+        kaapi_assert_debug( kaapi_task_body_issteal(body) );
+      }
+      else if ( kaapi_task_body_issteal(body)  ) /* but not terminate ! so swap */
+      {
+//        printf("Suspend thread: %p on pc:%p\n", thread, pc );
+//        fflush(stdout);
+        goto error_swap_body;
+      }
+    }
+#if defined(KAAPI_DEBUG)
+    body = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
+    kaapi_assert_debug( !kaapi_task_body_isterm(body) || (kaapi_task_body_isterm(body) && kaapi_task_body_issteal(body))  );
+    kaapi_assert_debug( kaapi_task_body_isexec(body) );
+#endif    
+
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
 #  error "Not implemented"
 #else
@@ -167,6 +193,8 @@ begin_loop:
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
+
+    /* post execution: new task ??? */
     if (unlikely(fp->sp > thread->sfp->sp))
     {
       goto push_frame;
@@ -178,7 +206,7 @@ begin_loop:
     }
 #endif
 
-    /* next task to execute, store pc */
+    /* next task to execute, store pc in memory */
     pc = fp->pc = pc -1;
     
     kaapi_writemem_barrier();
@@ -206,7 +234,8 @@ begin_loop:
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
-    while ((KAAPI_ATOMIC_READ(&thread->lock) == 1) || !KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
+    kaapi_sched_lock(thread->proc);
+//    while ((KAAPI_ATOMIC_READ(&thread->lock) == 1) || !KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
     while (fp > eframe) 
     {
       --fp;
@@ -215,7 +244,8 @@ begin_loop:
       --fp->pc;
       if (fp->pc > fp->sp)
       {
-        KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+        kaapi_sched_unlock(thread->proc);
+//        KAAPI_ATOMIC_WRITE(&thread->lock, 0);
         thread->sfp = fp;
         goto push_frame; /* remains work do do */
       }
@@ -223,7 +253,8 @@ begin_loop:
     fp = eframe;
     fp->sp = fp->pc;
 
-    KAAPI_ATOMIC_WRITE_BARRIER(&thread->lock, 0);
+    kaapi_sched_unlock(thread->proc);
+//    KAAPI_ATOMIC_WRITE_BARRIER(&thread->lock, 0);
     
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
     /* here it's a pop of frame: we use THE like protocol */
@@ -264,9 +295,11 @@ begin_loop:
 #endif
   return 0;
 
+
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+anormal_exec_body:
+
 error_swap_body:
-  if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */
   thread->sfp = fp;

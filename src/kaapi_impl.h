@@ -492,16 +492,24 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 /* ============================= Implementation method ============================ */
 /** Note: a body is a pointer to a function. We assume that a body <=> void* and has
     64 bits on 64 bits architecture.
-    The 2 highest bits are used to store the state of the task :
-    - 00 : the task has been pushed on the stack (<=> a user pointer function has never high bits == 11)
-    - 01 : the task has been taken by the owner for execution
-    - 10 : the task has been theft by a thief for execution
-    - 11 : the task has been theft by a thief for execution and it was executed, the body is "aftersteal body"
+    The 4 highest bits are used to store the state of the task :
+    - 0000 : the task has been pushed on the stack (<=> a user pointer function has never high bits == 11)
+    - 0100 : the task has been execute either by the owner / either by a thief
+    - 1000 : the task has been steal by a thief for execution
+    - 1100 : the task has been theft by a thief for execution and it was executed, the body is "aftersteal body"
+    
+    Other reserved bits are :
+    - 0010 : the task is terminated. This state if only put for debugging.
 */
 #if (SIZEOF_VOIDP == 4)
-#  define KAAPI_MASK_BODY_EXEC    (0x1UL << 30)
-#  define KAAPI_MASK_BODY_SUSPEND (0x2UL << 30)
-#  define KAAPI_MASK_BODY         (0x3UL << 30)
+#warning "This code assume that 4 higher bits is available on any function pointer. It was not verify of this configuration"
+#  define KAAPI_MASK_BODY_AFTER   (0x1UL << 28)
+#  define KAAPI_MASK_BODY_TERM    (0x2UL << 28)
+#  define KAAPI_MASK_BODY_EXEC    (0x4UL << 28)
+#  define KAAPI_MASK_BODY_STEAL   (0x8UL << 28)
+#  define KAAPI_MASK_BODY_STATE   (0xEUL << 28)
+#  define KAAPI_MASK_BODY         (0xFUL << 28)
+#  define KAAPI_MASK_BODY_SHIFTR   28UL
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
 
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
@@ -514,9 +522,13 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
 
 #elif (SIZEOF_VOIDP == 8)
-#  define KAAPI_MASK_BODY_EXEC    (0x1UL << 62UL)
-#  define KAAPI_MASK_BODY_SUSPEND (0x2UL << 62UL)
-#  define KAAPI_MASK_BODY         (0x3UL << 62UL)
+#  define KAAPI_MASK_BODY_TERM    (0x1UL << 60UL)
+#  define KAAPI_MASK_BODY_AFTER   (0x2UL << 60UL)
+#  define KAAPI_MASK_BODY_EXEC    (0x4UL << 60UL)
+#  define KAAPI_MASK_BODY_STEAL   (0x8UL << 60UL)
+#  define KAAPI_MASK_BODY_STATE   (0xEUL << 60UL)
+#  define KAAPI_MASK_BODY         (0xFUL << 60UL)
+#  define KAAPI_MASK_BODY_SHIFTR   60UL
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR64_ORIG(a, v)
 
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
@@ -535,20 +547,32 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
 */
 //@{
+#define kaapi_task_body_getstate(body)\
+      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY) >> KAAPI_MASK_BODY_SHIFTR)
+
 #define kaapi_task_body_issteal(body)       \
-      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_SUSPEND)
+      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_STEAL)
 
 #define kaapi_task_body_isexec(body)        \
       (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_EXEC)
 
+#define kaapi_task_body_isterm(body)        \
+      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_TERM)
+
 #define kaapi_task_body_isaftersteal(body)  \
-      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY)== (KAAPI_MASK_BODY_EXEC|KAAPI_MASK_BODY_SUSPEND))
+      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_AFTER)
 
 #define kaapi_task_body_isspecial(body)     \
       (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY)
 
 #define kaapi_task_body_isnormal(body)     \
       ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY) ==0)
+
+#define kaapi_task_body_isready(body)       \
+      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)(KAAPI_MASK_BODY_AFTER|KAAPI_MASK_BODY_TERM)) !=0)
+
+#define kaapi_task_body_isstealable(body)   \
+      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)(KAAPI_MASK_BODY_STEAL|KAAPI_MASK_BODY_EXEC)) ==0)
 
 #define kaapi_task_body2fnc(body)           \
     ((kaapi_task_body_t)(((kaapi_uintptr_t)body) & ~(kaapi_uintptr_t)KAAPI_MASK_BODY))
@@ -560,10 +584,16 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     ((kaapi_task_body_t)ibdy)
 
 #define kaapi_task_body_setsteal(body)      \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_SUSPEND))
+    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_STEAL  ))
 
 #define kaapi_task_body_setexec(body)       \
     ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_EXEC))
+
+#define kaapi_task_body_setterm(body)       \
+    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_TERM))
+
+#define kaapi_task_body_setafter(body)       \
+    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_AFTER))
 //@}
 
 /** \ingroup TASK
@@ -617,6 +647,11 @@ static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uin
 
 static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uintptr_t state )
 {
+#if defined(__i386__)||defined(__x86_64)
+  /* WARNING: here we assume that the locked instruction do a writememory barrier */
+#else
+  kaapi_writemem_barrier();
+#endif
   kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_uintptr_t*)&task->body, state);
   return retval;
 }
@@ -759,7 +794,7 @@ KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
    Warning in kapai_hashmap_t, entry_map type should have a size that is
    equal to KAAPI_HASHMAP_SIZE.
 */
-#define KAAPI_HASHMAP_SIZE 64
+#define KAAPI_HASHMAP_SIZE 32
 
 /*
 */
@@ -767,7 +802,7 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
-  kaapi_uint64_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
+  kaapi_uint32_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
 
@@ -838,11 +873,12 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
   return 0;
 }
 
-/**
+/** Call only on thread that has the top task theft.
 */
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
-  return !kaapi_task_body_isaftersteal(thread->sfp->pc->body);
+  kaapi_assert_debug( kaapi_task_body_issteal(thread->sfp->pc->body) );
+  return kaapi_task_body_isready(thread->sfp->pc->body);
 }
 
 /** Note on scheduler lock:
