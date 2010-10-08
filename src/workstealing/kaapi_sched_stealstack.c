@@ -50,7 +50,11 @@
 /* Compute if the task with arguments pointed by sp and with format task_fmt is ready
  Return the number of non ready data
  */
-static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, unsigned int* war_param, kaapi_hashmap_t* map )
+static int kaapi_task_computeready( 
+  kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, 
+  unsigned int* war_param, 
+  kaapi_hashmap_t* map 
+)
 {
   int i, wc, countparam;
   
@@ -123,6 +127,7 @@ static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_fo
   return wc;
 }
 
+
 /* Mark non ready data that are waiting.
    Only call in case of static scheduling.
    This is the same code as computeready except the mutation of r access mode.
@@ -130,9 +135,12 @@ static int kaapi_task_computeready( kaapi_task_t* task, void* sp, const kaapi_fo
 static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashmap_t* map )
 {
   int i, wc, countparam;
-  const kaapi_taskrecv_arg_t* arg = (kaapi_taskrecv_arg_t*)sp;
-  const kaapi_format_t* task_fmt = kaapi_format_resolvebybody( arg->original_body );
-  if (kaapi_task_body2fnc(task->body) != kaapi_taskrecv_body) return 0;
+  const kaapi_format_t* task_fmt;
+  const kaapi_taskrecv_arg_t* arg;
+
+  arg = (kaapi_taskrecv_arg_t*)sp;
+  task_fmt = kaapi_format_resolvebybody( arg->original_body );
+
   sp = arg->original_sp;
 
   countparam = wc = task_fmt->count_params;
@@ -295,12 +303,17 @@ static int kaapi_sched_stealframe
       continue;
     }
     
-    if (task_body == kaapi_taskrecv_body)
+#if defined(KAAPI_USE_STATICSCHED)
+    /* * weak symbol may also be used ? 
+       * not that recv body is an empty function to serve as a mark. It could
+       be put into the nonpartitioning code...
+    */
+    if (task_body == &kaapi_taskrecv_body)
     {
-/*      fprintf(stdout,"\n\n>>>>>>>> %p:: Try to STEAL RECV task Task=%p, wc=%i\n", thread, (void*)task_top );*/
       kaapi_task_markready_recv( task_top, kaapi_task_getargs(task_top), map );
     }
     else 
+#endif
     {
       task_fmt = kaapi_format_resolvebybody( task_body );
       if (task_fmt !=0)

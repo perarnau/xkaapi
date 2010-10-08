@@ -168,25 +168,21 @@ AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
   [with_steal=dijkstra]
 )
 AS_CASE([$with_steal],
-  [cas], [dnl #deprecated
-    AC_MSG_NOTICE([configure with Read Modify Write atomic instruction's based workstealing algorithm])
+  [cas|cas], [dnl
+    AC_MSG_NOTICE([Configure with Read Modify Write atomic instruction's based workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
     # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
     AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/task])
     AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/frame])
-  ], [rmw], [dnl
-    AC_MSG_NOTICE([configure with Read Modify Write atomic instruction's based workstealing algorithm])
-    # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
-    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/frame])
-  ], [dijkstra], [dnl
-    AC_MSG_NOTICE([configure with full Dijkstra based workstealing protocol])
+  ], 
+  [dijkstra], [dnl
+    AC_MSG_NOTICE([Configured with Dijkstra based workstealing protocol])
     # must not change the ABI. Enabling through AC*DEFINE
     # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
     AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/task])
     AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/frame])
-  ], [dnl
+  ], 
+  [dnl
    AC_MSG_ERROR([Unknown value '$with_steal' for --with-steal option. Aborting.])
   ])
 
@@ -204,6 +200,25 @@ AS_CASE([$with_perfcounter],
     AC_MSG_ERROR([Unknown value '$with_perfcounter' for --with-perfcounter option. Aborting.])
   ])
 
+
+# Select compilation of static scheduling as part of the library
+# Default is to compile it
+AC_ARG_ENABLE([partitioning],[AS_HELP_STRING([--disable-partitioning],
+	[Disable to not compile static scheduling code, default: enable])]
+)
+AS_IF([test "x$enable_partitioning" != "xno"], 
+  [dnl Do the stuff needed for enabling the feature
+    AC_MSG_NOTICE([Compiling static scheduling])
+    KAAPI_USE_STATICSCHED=yes
+    AC_DEFINE([KAAPI_USE_STATICSCHED],1,[defined to 1 when compiling with static scheduling])
+  ],
+ 
+  [dnl Do the stuff needed for disable the feature
+    AC_MSG_NOTICE([Do not compile static scheduling])
+  ]
+)
+AC_SUBST([KAAPI_USE_STATICSCHED])
+AM_CONDITIONAL([KAAPI_TARGET_STATICSCHED],[test x"$KAAPI_USE_STATICSCHED" = x"yes"])
 
 
 dnl ----------------------------------------------------------------

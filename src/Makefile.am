@@ -73,6 +73,8 @@ libxkaapi_la_SOURCES+=\
   task/kaapi_task_finalize.c \
   task/kaapi_task_return.c
 
+
+if KAAPI_TARGET_STATICSCHED
 #Partitionning
 libxkaapi_la_SOURCES+=\
   static/kaapi_threadgroup_checkdeps.c\
@@ -90,10 +92,9 @@ libxkaapi_la_SOURCES+=\
   static/kaapi_threadgroup_print.c\
   static/kaapi_threadgroup_vect.c\
   kaapi_staticsched.h 
-
+endif
 
 if KAAPI_TARGET_MT
-
 libxkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_processorinit.c  \
   machine/mt/kaapi_mt_setconcurrency.c \
