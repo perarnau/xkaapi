@@ -377,7 +377,8 @@ int kaapi_sched_stealstack
   
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   /* lock the stack, if cannot return failed */
-  if (!kaapi_sched_trylock(&thread->lock)) return 0;
+//  if (!kaapi_sched_trylock(&thread->lock)) return 0;
+  kaapi_sched_lock(&thread->lock);
   
   /* try to steal in each frame */
   for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame)
