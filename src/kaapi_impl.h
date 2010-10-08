@@ -932,12 +932,38 @@ static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
 #else
 acquire:
   if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
-  while (KAAPI_ATOMIC_READ(lock) <=0) 
-    kaapi_slowdown_cpu();  
+  while (KAAPI_ATOMIC_READ(lock) <=0)
+    kaapi_slowdown_cpu(); 
   goto acquire;
 #endif
   return 0;
 }
+
+
+/**
+*/
+static inline int kaapi_sched_lock_spin( kaapi_atomic_t* lock, int spincount )
+{
+#if defined(KAAPI_SCHED_LOCK_CAS)
+  int ok;
+  do {
+    ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
+    if (ok) break;
+    kaapi_slowdown_cpu();
+  } while (1);
+  /* implicit barrier in KAAPI_ATOMIC_CAS */
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
+#else
+  int i;
+acquire:
+  if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
+  for (i=0; (KAAPI_ATOMIC_READ(lock) <=0) && (i<spincount); ++i)
+    kaapi_slowdown_cpu();
+  if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
+#endif
+  return 0;
+}
+
 
 /**
 */

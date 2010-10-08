@@ -109,8 +109,8 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   if (wcs != 0) /* means thread has been suspended */
   { 
     kaapi_readmem_barrier();
-    kaapi_processor_t* kproc = arg->origin_thread->proc;
-    //kaapi_processor_t* kproc = kaapi_get_current_processor();
+    //kaapi_processor_t* kproc = arg->origin_thread->proc;
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
     kaapi_assert_debug( kproc != 0);
     if (0)//  /*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
     {
@@ -140,7 +140,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
         kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
       else
         kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
-//      KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
+      //KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
     }
   }
 

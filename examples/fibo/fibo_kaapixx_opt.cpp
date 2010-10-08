@@ -116,6 +116,7 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
        * new task is executed in parallel as long as dependencies are respected
        */
       thread->Spawn<TaskFibo>() ( res1, n-1);
+      //thread->Spawn<TaskFibo>() ( res2, n-2);
       (*this) ( thread, res2, n-2);
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
