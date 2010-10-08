@@ -77,7 +77,7 @@ int kaapi_sched_stealprocessor(
     }
   }
 
-#if 0  
+#if 1  
   if (1)
   { /* try to steal into suspended list of threads
        The only condition to ensure is that a thread context that will be destroy should
