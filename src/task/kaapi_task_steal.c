@@ -127,11 +127,11 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
         else
           kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 
-        kaapi_sched_lock(kproc);
+        kaapi_sched_lock(&kproc->lock);
 //        printf("Write signal wakeup ready task:%p, body:%p\n", (void*)arg->origin_task, (void*)arg->origin_task->body);
 //        fflush(stdout);
         kaapi_sched_pushready(kproc, kthread );
-        kaapi_sched_unlock(kproc);
+        kaapi_sched_unlock(&kproc->lock);
       }
     }
     else {

@@ -234,8 +234,8 @@ begin_loop:
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
-    kaapi_sched_lock(thread->proc);
-//    while ((KAAPI_ATOMIC_READ(&thread->lock) == 1) || !KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
+//    kaapi_sched_lock(&thread->proc->lock);
+    kaapi_sched_lock(&thread->lock);
     while (fp > eframe) 
     {
       --fp;
@@ -244,8 +244,7 @@ begin_loop:
       --fp->pc;
       if (fp->pc > fp->sp)
       {
-        kaapi_sched_unlock(thread->proc);
-//        KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+        kaapi_sched_unlock(&thread->lock);
         thread->sfp = fp;
         goto push_frame; /* remains work do do */
       }
@@ -253,8 +252,8 @@ begin_loop:
     fp = eframe;
     fp->sp = fp->pc;
 
-    kaapi_sched_unlock(thread->proc);
-//    KAAPI_ATOMIC_WRITE_BARRIER(&thread->lock, 0);
+//    kaapi_sched_unlock(&thread->proc->lock);
+    kaapi_sched_unlock(&thread->lock);
     
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
     /* here it's a pop of frame: we use THE like protocol */

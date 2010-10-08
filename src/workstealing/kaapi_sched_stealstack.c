@@ -377,7 +377,7 @@ int kaapi_sched_stealstack
   
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   /* lock the stack, if cannot return failed */
-  if (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1)) return 0;
+  if (!kaapi_sched_trylock(&thread->lock)) return 0;
   
   /* try to steal in each frame */
   for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame)
@@ -387,7 +387,7 @@ int kaapi_sched_stealstack
     kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
   }
   
-  KAAPI_ATOMIC_WRITE_BARRIER(&thread->lock, 0);  
+  kaapi_sched_unlock(&thread->lock);  
   
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   /* try to steal in each frame */

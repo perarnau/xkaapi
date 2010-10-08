@@ -166,7 +166,7 @@ enter:
     }
   }
 
-  kaapi_sched_unlock( victim.kproc );
+  kaapi_sched_unlock( &victim.kproc->lock );
 
   if (kaapi_reply_test( reply ))
     goto return_value;

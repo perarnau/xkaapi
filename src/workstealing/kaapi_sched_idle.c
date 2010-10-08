@@ -161,8 +161,8 @@ redo_execute:
     }
     else {
       /* wait end of thieves before releasing a thread */
-      kaapi_sched_lock(kproc);
-      kaapi_sched_unlock(kproc);
+      kaapi_sched_lock(&kproc->lock);
+      kaapi_sched_unlock(&kproc->lock);
     }
   } while (1);
   

@@ -184,8 +184,8 @@ redo_execution:
     else if (ctxt != 0) 
     {
       /* wait end of thieves before releasing a thread */
-      kaapi_sched_lock(kproc);
-      kaapi_sched_unlock(kproc);
+      kaapi_sched_lock(&kproc->lock);
+      kaapi_sched_unlock(&kproc->lock);
 
       /* push it into freelist */
       kaapi_lfree_push( kproc, ctxt );

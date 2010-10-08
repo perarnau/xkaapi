@@ -88,9 +88,9 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
        sched_suspend or sched_idle, not by passing through 
        the emission of a request
     */
-    kaapi_sched_lock( kproc );
+    kaapi_sched_lock( &kproc->lock );
     thread = kaapi_sched_stealready( kproc, kproc_thiefid );
-    kaapi_sched_unlock( kproc );
+    kaapi_sched_unlock( &kproc->lock );
     
     if (thread != 0)
       return thread;

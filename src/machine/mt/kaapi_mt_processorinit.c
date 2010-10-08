@@ -70,7 +70,7 @@ int kaapi_processor_init
   kproc->proc_type    = kpi->proc_type;
   kproc->issteal      = 0;
   
-  kaapi_sched_initlock( kproc );
+  kaapi_sched_initlock( &kproc->lock );
   
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
 

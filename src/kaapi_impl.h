@@ -889,46 +889,50 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
     Commun. ACM 53, 7 (Jul. 2010), 89-97. 
     DOI= http://doi.acm.org/10.1145/1785414.1785443
 */
-static inline int kaapi_sched_initlock( kaapi_processor_t* kproc )
+static inline int kaapi_sched_initlock( kaapi_atomic_t* lock )
 {
 #if defined(KAAPI_SCHED_LOCK_CAS)
-  KAAPI_ATOMIC_WRITE(&kproc->lock,0);
+  KAAPI_ATOMIC_WRITE(lock,0);
 #else
-  KAAPI_ATOMIC_WRITE(&kproc->lock,1);
+  KAAPI_ATOMIC_WRITE(lock,1);
 #endif
   return 0;
 }
 
-#if defined(KAAPI_SCHED_LOCK_CAS)
-/* Else cannot be implemented easily
-*/
-static inline int kaapi_sched_trylock( kaapi_processor_t* kproc )
+static inline int kaapi_sched_trylock( kaapi_atomic_t* lock )
 {
+#if defined(KAAPI_SCHED_LOCK_CAS)
   int ok;
   /* implicit barrier in KAAPI_ATOMIC_CAS if lock is taken */
-  ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1);
-  kaapi_assert_debug( !ok || (ok && KAAPI_ATOMIC_READ(&kproc->lock) == 1) );
+  ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
+  kaapi_assert_debug( !ok || (ok && KAAPI_ATOMIC_READ(lock) == 1) );
   return ok;
-}
+#else
+  if (KAAPI_ATOMIC_DECR(lock) ==0) 
+  {
+    return 1;
+  }
+  return 0;
 #endif
+}
 
 /** 
 */
-static inline int kaapi_sched_lock( kaapi_processor_t* kproc )
+static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
 {
 #if defined(KAAPI_SCHED_LOCK_CAS)
   int ok;
   do {
-    ok = (KAAPI_ATOMIC_READ(&kproc->lock) ==0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1);
+    ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
     if (ok) break;
     kaapi_slowdown_cpu();
   } while (1);
   /* implicit barrier in KAAPI_ATOMIC_CAS */
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) != 0 );
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
 #else
 acquire:
-  if (KAAPI_ATOMIC_DECR(&kproc->lock) ==0) return 1;
-  while (KAAPI_ATOMIC_READ(&kproc->lock) <=0) 
+  if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
+  while (KAAPI_ATOMIC_READ(lock) <=0) 
     kaapi_slowdown_cpu();  
   goto acquire;
 #endif
@@ -937,14 +941,14 @@ acquire:
 
 /**
 */
-static inline int kaapi_sched_unlock( kaapi_processor_t* kproc )
+static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
 {
 #if defined(KAAPI_SCHED_LOCK_CAS)
-  kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(&kproc->lock) == (unsigned)(1) );
+  kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(lock) == (unsigned)(1) );
   /* mplicit barrier in KAAPI_ATOMIC_WRITE_BARRIER */
-  KAAPI_ATOMIC_WRITE_BARRIER(&kproc->lock, 0);
+  KAAPI_ATOMIC_WRITE_BARRIER(lock, 0);
 #else
-  KAAPI_ATOMIC_WRITE(&kproc->lock, 1);
+  KAAPI_ATOMIC_WRITE(lock, 1);
 #endif
   return 0;
 }
