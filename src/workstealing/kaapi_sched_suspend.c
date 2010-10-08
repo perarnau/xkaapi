@@ -144,7 +144,11 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       {
         /* push it into the free list */
         kaapi_setcontext( kproc , 0);
+
+        /* wait end of thieves before releasing a thread */
+        kaapi_sched_lock(&kproc->lock);
         kaapi_lfree_push( kproc, ctxt );
+        kaapi_sched_unlock(&kproc->lock);
       }
       if (thread ==0) {
         //kaapi_sched_advance(kproc);
@@ -185,10 +189,8 @@ redo_execution:
     {
       /* wait end of thieves before releasing a thread */
       kaapi_sched_lock(&kproc->lock);
-      kaapi_sched_unlock(&kproc->lock);
-
-      /* push it into freelist */
       kaapi_lfree_push( kproc, ctxt );
+      kaapi_sched_unlock(&kproc->lock);
     }
   } while (1);
   return EINTR;

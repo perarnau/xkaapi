@@ -120,8 +120,10 @@ push_frame:
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
 begin_loop:
+  pc = fp->pc;
+  
   /* stack of task growth down ! */
-  while ((pc = fp->pc) != fp->sp)
+  while (pc != fp->sp)
   {
     kaapi_assert_debug( pc > fp->sp );
 
@@ -194,7 +196,7 @@ begin_loop:
     ++cnt_tasks;
 #endif
 
-    /* post execution: new task ??? */
+    /* post execution: new tasks created ??? */
     if (unlikely(fp->sp > thread->sfp->sp))
     {
       goto push_frame;
@@ -207,7 +209,7 @@ begin_loop:
 #endif
 
     /* next task to execute, store pc in memory */
-    pc = fp->pc = pc -1;
+    fp->pc = --pc;
     
     kaapi_writemem_barrier();
   } /* end of the loop */
@@ -234,8 +236,8 @@ begin_loop:
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
-//    kaapi_sched_lock(&thread->proc->lock);
-    kaapi_sched_lock(&thread->lock);
+    kaapi_sched_lock(&thread->proc->lock);
+//    kaapi_sched_lock(&thread->lock);
     while (fp > eframe) 
     {
       --fp;
@@ -244,7 +246,8 @@ begin_loop:
       --fp->pc;
       if (fp->pc > fp->sp)
       {
-        kaapi_sched_unlock(&thread->lock);
+        kaapi_sched_unlock(&thread->proc->lock);
+//        kaapi_sched_unlock(&thread->lock);
         thread->sfp = fp;
         goto push_frame; /* remains work do do */
       }
@@ -252,8 +255,8 @@ begin_loop:
     fp = eframe;
     fp->sp = fp->pc;
 
-//    kaapi_sched_unlock(&thread->proc->lock);
-    kaapi_sched_unlock(&thread->lock);
+    kaapi_sched_unlock(&thread->proc->lock);
+//    kaapi_sched_unlock(&thread->lock);
     
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
     /* here it's a pop of frame: we use THE like protocol */

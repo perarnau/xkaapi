@@ -631,10 +631,10 @@ static inline int _kaapi_thread_pushtask( kaapi_thread_context_t* thread )
 static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaapi_uint32_t count)
 { return kaapi_thread_pushdata( kaapi_threadcontext2thread(thread), count ); }
 
+/** \ingroup TASK
+*/
 static inline void kaapi_task_setstate( kaapi_task_t* task, kaapi_task_body_t state )
-{
-  KAAPI_ATOMIC_WRITEPTR_BARRIER((kaapi_uintptr_t*)&task->body, state);
-}
+{ KAAPI_ATOMIC_WRITEPTR_BARRIER((kaapi_uintptr_t*)&task->body, state); }
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
 /** Atomically: OR of the task state with the value in 'state' and return the previous value.
@@ -955,7 +955,6 @@ static inline int kaapi_sched_lock_spin( kaapi_atomic_t* lock, int spincount )
   kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
 #else
   int i;
-acquire:
   if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
   for (i=0; (KAAPI_ATOMIC_READ(lock) <=0) && (i<spincount); ++i)
     kaapi_slowdown_cpu();

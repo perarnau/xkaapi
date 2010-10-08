@@ -79,7 +79,9 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       if (ctxt !=0) /* push kproc->thread to free and set ctxt as new ctxt */
       {
         /* push kproc context into free list */
+        kaapi_sched_lock(&kproc->lock);
         kaapi_lfree_push( kproc, kproc->thread );
+        kaapi_sched_unlock(&kproc->lock);
 
         /* set new context to the kprocessor */
         kaapi_setcontext(kproc, ctxt);
@@ -99,7 +101,10 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     {
       /* also means ctxt is empty, so push ctxt into the free list */
       kaapi_setcontext( kproc , 0);
+      /* wait end of thieves before releasing a thread */
+      kaapi_sched_lock(&kproc->lock);
       kaapi_lfree_push( kproc, ctxt );
+      kaapi_sched_unlock(&kproc->lock);
     }
     kaapi_setcontext(kproc, thread);
 
@@ -158,11 +163,6 @@ redo_execute:
 
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
-    }
-    else {
-      /* wait end of thieves before releasing a thread */
-      kaapi_sched_lock(&kproc->lock);
-      kaapi_sched_unlock(&kproc->lock);
     }
   } while (1);
   
