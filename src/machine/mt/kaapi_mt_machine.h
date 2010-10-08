@@ -634,10 +634,18 @@ static inline int _kaapi_request_reply(
 )
 {
 #if defined(KAAPI_DEBUG)
+  /* Warning: we cannot set req->reply to 0 after the write of the 
+     status: an other thread may have 1/ view the reply; 2/ post a new request 
+     before the write to req->reply=0 which will discard the request.
+  */
+  kaapi_reply_t* savereply = request->reply;
   request->reply = 0;
-#endif
+  kaapi_writemem_barrier();
+  savereply->status = flags;
+#else
   kaapi_writemem_barrier();
   request->reply->status = flags;
+#endif
   return 0;
 }
 
