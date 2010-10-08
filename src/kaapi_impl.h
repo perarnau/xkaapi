@@ -378,7 +378,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
-  kaapi_atomic_t                 lock;           /** ??? */ 
+  kaapi_atomic_t                 lock __attribute__((aligned (KAAPI_CACHE_LINE)));           /** ??? */ 
   kaapi_affinity_t               affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
