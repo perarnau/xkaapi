@@ -140,6 +140,13 @@ begin_loop:
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     body = kaapi_task_int2body( kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC ) );
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+    thread->pc = pc;
+    if (thread->thiefpc == pc) {
+      kaapi_sched_lock(&thread->proc->lock);s
+      kaapi_sched_unlock(&thread->proc->lock);s
+    }
+#endif
     if (likely( kaapi_task_body_isnormal(body) ) )
     {
       /* task execution */
@@ -186,12 +193,6 @@ begin_loop:
     kaapi_assert_debug( kaapi_task_body_isexec(body) );
 #endif    
 
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-#  error "Not implemented"
-#else
-#  error "Undefined steal task method"    
-#endif
-
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
@@ -237,7 +238,6 @@ begin_loop:
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
     kaapi_sched_lock(&thread->proc->lock);
-//    kaapi_sched_lock(&thread->lock);
     while (fp > eframe) 
     {
       --fp;
@@ -247,7 +247,6 @@ begin_loop:
       if (fp->pc > fp->sp)
       {
         kaapi_sched_unlock(&thread->proc->lock);
-//        kaapi_sched_unlock(&thread->lock);
         thread->sfp = fp;
         goto push_frame; /* remains work do do */
       }
@@ -256,24 +255,28 @@ begin_loop:
     fp->sp = fp->pc;
 
     kaapi_sched_unlock(&thread->proc->lock);
-//    kaapi_sched_unlock(&thread->lock);
     
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
     /* here it's a pop of frame: we use THE like protocol */
     while (fp > eframe) 
     {
-      thread->sfp = --fp;
+      /* decide to decrement +  */
       kaapi_writemem_barrier();
+      thread->sfp = --fp;
+      
+      kaapi_readmem_barrier();
+
       /* wait thief get out the frame */
-      while (thread->thieffp > fp)
-        ;
+      if (thread->thieffp > fp) 
+      { /* wait until no more thief in the frame */
+        kaapi_sched_lock(&thread->proc->lock);
+        kaapi_sched_unlock(&thread->proc->lock);
+      }
 
       /* pop dummy frame and the closure inside this frame */
       --fp->pc;
       if (fp->pc > fp->sp)
-      {
         goto push_frame; /* remains work do do */
-      }
     } 
     fp = eframe;
     fp->sp = fp->pc;
@@ -299,8 +302,6 @@ begin_loop:
 
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-anormal_exec_body:
-
 error_swap_body:
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */

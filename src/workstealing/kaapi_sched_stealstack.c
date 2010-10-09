@@ -375,12 +375,7 @@ int kaapi_sched_stealstack
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
   
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-  /* lock the stack, if cannot return failed */
-//  if (!kaapi_sched_trylock(&thread->lock)) return 0;
-//  kaapi_sched_lock(&thread->lock);
-// Execframe lock the kproc  kaapi_sched_lock_spin(&thread->lock, 1000);
-  
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)  
   /* try to steal in each frame */
   for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame)
   {
@@ -388,8 +383,6 @@ int kaapi_sched_stealstack
     if (top_frame->pc == top_frame->sp) continue;
     kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
   }
-  
-//  kaapi_sched_unlock(&thread->lock);  
   
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   /* try to steal in each frame */

@@ -127,7 +127,7 @@ struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */
     }
   }
 };
-static ka::RegisterBodyCPU<TaskFibo> dummy_object;
+static ka::RegisterBodyCPU<TaskFibo> dummy_object1;
 
 
 /* Main of the program
@@ -147,9 +147,11 @@ struct doit {
     long* res_value = ka::Alloca<long>(1);
     *res_value = rand();
     ka::pointer<long> res = res_value;
+
     long* res2_value = ka::Alloca<long>(1);
     *res2_value = rand();
     ka::pointer<long> res2 = res2_value;
+
     for (cutoff=2; cutoff<3; ++cutoff)
     {
       ka::Spawn<TaskFibo>()( res2, n );

@@ -360,11 +360,11 @@ struct kaapi_wsqueuectxt_cell_t;
 typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
-  int                            errcode;        /** set by task execution to signal incorrect execution */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+  kaapi_task_t*         volatile pc      __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the task the thief wants to steal */
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
   kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
 #endif

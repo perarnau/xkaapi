@@ -48,7 +48,7 @@ int main(int argc, char** argv)
   {
     for (i=0; i<niter; ++i)
     {
-        result += fiboseq(n);
+      result += fiboseq(n);
     }
   }
   t1 = kaapi_get_elapsedtime();
