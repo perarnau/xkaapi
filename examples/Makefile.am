@@ -13,6 +13,7 @@ AM_CXXFLAGS=@AM_CXXFLAGS@
 #-std=gnu++0x
 
 check_PROGRAMS= \
+  hello_world            \
 	fiboseq                \
 	fibo_xkaapi            \
 	fibo_atha              \
@@ -32,6 +33,7 @@ TESTS=
 
 all-fibo: fiboseq fibo_xkaapi fibo_atha fibo_kaapixx fibo_kaapixx_opt
 
+hello_world_SOURCES=hello/hello_world.cpp
 fiboseq_SOURCES=fibo/fiboseq.c
 fibo_xkaapi_SOURCES=fibo/fibo_xkaapi.c
 fibo_atha_SOURCES=fibo/fibo_atha.cpp
@@ -52,6 +54,11 @@ nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 #accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
+
+hello_world_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+hello_world_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+hello_world_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+hello_world_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 fiboseq_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS) -DFIBOCODE -DMAINCODE
 fiboseq_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
