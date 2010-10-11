@@ -10,6 +10,9 @@ typedef struct work
   volatile size_t i;
   volatile size_t j;
 
+  /* master stealcontext */
+  kaapi_stealcontext_t* msc;
+
   /* result */
   double res;
   kaapi_taskadaptive_result_t* ktr;
@@ -22,10 +25,11 @@ static void entry(void*, kaapi_thread_t*);
 
 
 /* memory alignment */
-static inline void* align_addr(void* addr)
+static inline void* __attribute__((unused))
+align_addr(void* addr)
 {
-  static const unsigned long ptrsize = sizeof(void*) * 8;
-  static const unsigned long mask = (sizeof(void*) * 8) - 1UL;
+  static const unsigned long ptrsize = sizeof(void*);
+  static const unsigned long mask = sizeof(void*) - 1UL;
 
   /* assume n in bytes, power of 2 */
   if ((unsigned long)addr & mask)
@@ -76,6 +80,9 @@ static int split
   /* victim work */
   work_t* const vw = (work_t*)args;
 
+  /* master stealcontext */
+  kaapi_stealcontext_t* msc = (vw->msc == NULL) ? sc : vw->msc;
+
   /* stolen range */
   size_t i, j;
 
@@ -117,12 +124,13 @@ static int split
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
     /* allocate and init thief work */
-    work_t* const tw = align_addr(kaapi_reply_pushtask(sc, req, entry));
+    work_t* const tw = kaapi_reply_pushtask(msc, req, entry);
 
     tw->lock = 0;
     tw->array = vw->array;
     tw->i = j - unit_size;
     tw->j = j;
+    tw->msc = msc;
 
     tw->ktr = kaapi_allocate_thief_result(sc, sizeof(work_t), NULL);
     ((work_t*)tw->ktr->data)->i = 0;
@@ -176,8 +184,6 @@ static int extract_seq
 static void entry
 (void* args, kaapi_thread_t* thread)
 {
-  args = align_addr(args);
-
   /* adaptive stealcontext flags */
   const int flags = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION;
 
@@ -249,6 +255,7 @@ static double accumulate(const double* array, size_t size)
   w->i = 0;
   w->j = size;
   w->res = 0.f;
+  w->msc = NULL;
   w->ktr = NULL;
 
   /* fork root task */
