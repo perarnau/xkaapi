@@ -109,6 +109,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     kaapi_setcontext(kproc, thread);
 
 redo_execute:
+//  kaapi_stack_print( stdout, kproc->thread );
+
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif

@@ -129,11 +129,12 @@ int kaapi_task_print(
 
   state_type_t state;
   kaapi_getstatename(task, state);
+  int st = kaapi_task_state2int( kaapi_task_getstate(task) );
   fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%i\n", 
         (void*)task, 
         state[3], state[2], state[1], state[0],
         fmt->name, 
-        tab_bit[kaapi_task_body2state(body)],
+        tab_bit[st],
         sp,
         fmt->count_params );
         

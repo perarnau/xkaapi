@@ -503,8 +503,8 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 */
 #if (SIZEOF_VOIDP == 4)
 #warning "This code assume that 4 higher bits is available on any function pointer. It was not verify of this configuration"
-#  define KAAPI_MASK_BODY_AFTER   (0x1UL << 28)
-#  define KAAPI_MASK_BODY_TERM    (0x2UL << 28)
+#  define KAAPI_MASK_BODY_TERM    (0x1UL << 28)
+#  define KAAPI_MASK_BODY_AFTER   (0x2UL << 28)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 28)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 28)
 #  define KAAPI_MASK_BODY_STATE   (0xEUL << 28)
@@ -602,6 +602,8 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #define kaapi_task_state2body(state)           \
     ((kaapi_task_body_t)(state))
 
+#define kaapi_task_state2int(state)            \
+    (state >> KAAPI_MASK_BODY_SHIFTR)
 
 /** \ingroup TASK
     Set the body of the task
@@ -629,7 +631,7 @@ inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
 { 
   kaapi_uintptr_t state  = (kaapi_uintptr_t)body;
   body = kaapi_task_state2body(state);
-  return !kaapi_task_state_isstealable(state)
+  return kaapi_task_state_isstealable(state)
       && (body != kaapi_taskstartup_body) 
       && (body != kaapi_nop_body)
       && (body != kaapi_tasksteal_body) 

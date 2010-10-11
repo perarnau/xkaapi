@@ -181,9 +181,9 @@ begin_loop:
       }
     }
 #if defined(KAAPI_DEBUG)
-    body = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
-    kaapi_assert_debug( !kaapi_task_body_isterm(body) || (kaapi_task_body_isterm(body) && kaapi_task_body_issteal(body))  );
-    kaapi_assert_debug( kaapi_task_body_isexec(body) );
+    kaapi_uintptr_t state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
+    kaapi_assert_debug( !kaapi_task_state_isterm(state) || (kaapi_task_state_isterm(state) && kaapi_task_state_issteal(state))  );
+    kaapi_assert_debug( kaapi_task_state_isexec(state) );
 #endif    
 
 #if defined(KAAPI_USE_PERFCOUNTER)
