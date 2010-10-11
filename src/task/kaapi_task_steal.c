@@ -145,7 +145,7 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   }
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
-  kaapi_assert_debug( kaapi_task_body_issteal( arg->origin_task->body ) );
+  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
   if (war_param ==0)
     kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
   else
@@ -181,10 +181,10 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   
   /* get information of the task to execute */
   arg = (kaapi_tasksteal_arg_t*)taskarg;
-  kaapi_assert_debug( kaapi_task_body_issteal( arg->origin_task->body ) );
+  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
 
   /* format of the original stolen task */  
-  body            = kaapi_task_body2fnc(arg->origin_task->body);
+  body            = kaapi_task_getbody(arg->origin_task);
   kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
   fmt             = kaapi_format_resolvebybody( body );

@@ -369,7 +369,7 @@ void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread );
 */
 static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
 {
-  if (task->body != kaapi_suspend_body) return 0;
+  if (kaapi_task_state_issteal( kaapi_task_getstate(task))) return 0;
   kaapi_taskrecv_arg_t* tr = (kaapi_taskrecv_arg_t*)task->sp;
   kaapi_assert_debug( tr != 0 );
   int bitfield = KAAPI_ATOMIC_READ( &tr->counter );

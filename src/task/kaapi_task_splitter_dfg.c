@@ -62,7 +62,7 @@ int kaapi_task_splitter_dfg(
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
 #endif
   kaapi_assert_debug( task !=0 );
-  kaapi_assert_debug( kaapi_task_body_issteal(task->body) );
+  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( task) ) );
 
   /* find the first request in the list */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );

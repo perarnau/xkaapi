@@ -69,7 +69,7 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
     for (i=0; i<comlist->size; ++i)
     {
       kaapi_task_t* task = comlist->entry[i].task;
-      kaapi_task_body_t    task_body = kaapi_task_body2fnc( task->body );
+      kaapi_task_body_t task_body = kaapi_task_getbody( task );
       kaapi_assert( (task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskbcast_body) );
       kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       
@@ -104,9 +104,9 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
             kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
             if (kthread !=0)
             {
-              kaapi_sched_lock(kproc);
+              kaapi_sched_lock( &kproc->lock );
               kaapi_sched_pushready(kproc, kthread );
-              kaapi_sched_unlock(kproc);
+              kaapi_sched_unlock( &kproc->lock);
             }
           }
           else {

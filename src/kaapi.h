@@ -533,8 +533,11 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
-  kaapi_task_bodyid_t   body;      /** task body  */
-  void*                 sp;        /** data stack pointer of the data frame for the task  */
+  union task_and_body {
+    kaapi_task_bodyid_t      body;      /** task body  */
+    volatile kaapi_uintptr_t state;     /** bit */
+  } u;
+  void*                   sp;        /** data stack pointer of the data frame for the task  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 
@@ -659,22 +662,6 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
   return task->sp = arg;
 }
 
-/** \ingroup TASK
-    Set the body of the task
-*/
-static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
-{
-  task->body = body;
-}
-
-/** \ingroup TASK
-    Get the body of the task
-*/
-static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
-{
-  return task->body;
-}
-
 
 /** \ingroup TASK
     Return pointer to the self stack
@@ -793,7 +780,7 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 static inline void kaapi_task_initdfg(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
   task->sp = arg;
-  task->body = body;
+  task->u.body = body;
 }
 
 /** \ingroup TASK
