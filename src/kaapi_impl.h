@@ -634,7 +634,8 @@ static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaap
 /** \ingroup TASK
 */
 static inline void kaapi_task_setstate( kaapi_task_t* task, kaapi_task_body_t state )
-{ KAAPI_ATOMIC_WRITEPTR_BARRIER((kaapi_uintptr_t*)&task->body, state); }
+{ KAAPI_ATOMIC_WRITEPTR_BARRIER(&task->body, state); }
+//{ KAAPI_ATOMIC_WRITEPTR_BARRIER((kaapi_uintptr_t*)&task->body, state); }
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
 /** Atomically: OR of the task state with the value in 'state' and return the previous value.
