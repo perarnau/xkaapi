@@ -165,22 +165,22 @@ AS_CASE([$enable_mode],
 
 AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
 		 [choose the work stealing algorithm (rmw,dijkstra)])],[],
-  [with_steal=dijkstra]
+  [with_steal=rmw]
 )
 AS_CASE([$with_steal],
   [cas|cas], [dnl
     AC_MSG_NOTICE([Configure with Read Modify Write atomic instruction's based workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
+    # 0 -> KAAPI_CAS_METHOD
     AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/task])
     AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/frame])
   ], 
   [dijkstra], [dnl
-    AC_MSG_NOTICE([Configured with Dijkstra based workstealing protocol])
+    AC_MSG_ERROR([Configured with Dijkstra based workstealing protocol: not yet fully implemented])
     # must not change the ABI. Enabling through AC*DEFINE
     # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
-    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/frame])
+    #AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/task])
+    #AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/frame])
   ], 
   [dnl
    AC_MSG_ERROR([Unknown value '$with_steal' for --with-steal option. Aborting.])
