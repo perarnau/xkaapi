@@ -54,7 +54,6 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->esfp     = thread->stackframe;
   thread->sfp->sp  = thread->sfp->pc  = stack->task; /* empty frame */
   thread->sfp->sp_data = stack->data; /* empty frame */
-  thread->errcode  = 0;
   thread->_next    = 0;
   thread->_prev    = 0;
   thread->affinity = ~0UL;

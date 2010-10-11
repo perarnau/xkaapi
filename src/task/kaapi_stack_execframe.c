@@ -92,6 +92,7 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 
 /*
 */
+#if ((KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD))
 int kaapi_stack_execframe( kaapi_thread_context_t* thread )
 {
   kaapi_task_t*              pc; /* cache */
@@ -140,12 +141,6 @@ begin_loop:
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     body = kaapi_task_int2body( kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC ) );
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-    thread->pc = pc;
-    if (thread->thiefpc == pc) {
-      kaapi_sched_lock(&thread->proc->lock);s
-      kaapi_sched_unlock(&thread->proc->lock);s
-    }
 #endif
     if (likely( kaapi_task_body_isnormal(body) ) )
     {
@@ -158,8 +153,6 @@ begin_loop:
     }
     else
     { 
-//      kaapi_stack_print(stdout, thread);
-
       /* It is a special task: it means that before atomic or update, the body
          has already one of the special flag set (either exec, either suspend).
          Test the following case with THIS (!) order :
@@ -255,35 +248,6 @@ begin_loop:
     fp->sp = fp->pc;
 
     kaapi_sched_unlock(&thread->proc->lock);
-    
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-    /* here it's a pop of frame: we use THE like protocol */
-    while (fp > eframe) 
-    {
-      /* decide to decrement +  */
-      kaapi_writemem_barrier();
-      thread->sfp = --fp;
-      
-      kaapi_readmem_barrier();
-
-      /* wait thief get out the frame */
-      if (thread->thieffp > fp) 
-      { /* wait until no more thief in the frame */
-        kaapi_sched_lock(&thread->proc->lock);
-        kaapi_sched_unlock(&thread->proc->lock);
-      }
-
-      /* pop dummy frame and the closure inside this frame */
-      --fp->pc;
-      if (fp->pc > fp->sp)
-        goto push_frame; /* remains work do do */
-    } 
-    fp = eframe;
-    fp->sp = fp->pc;
-
-    kaapi_writemem_barrier();
-#else
-#  error "Bad steal frame method"    
 #endif
   }
   thread->sfp = fp;
@@ -301,7 +265,7 @@ begin_loop:
   return 0;
 
 
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) 
 error_swap_body:
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */
@@ -319,5 +283,12 @@ error_swap_body:
 #endif
 
   /* here back track the kaapi_stack_execframe until go out */
-  return thread->errcode;
+  return 0;
 }
+
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+int kaapi_stack_execframe( kaapi_thread_context_t* thread )
+{
+  return 0;
+}
+#endif

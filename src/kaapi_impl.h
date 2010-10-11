@@ -656,7 +656,6 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
   return retval;
 }
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-#  error "NOT IMPLEMENTED"
 #else
 #  warning "NOT IMPLEMENTED"
 #endif
