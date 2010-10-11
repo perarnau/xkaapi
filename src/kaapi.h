@@ -463,6 +463,7 @@ typedef struct kaapi_reply_t {
     } s_task;
     struct {
       kaapi_format_id_t          fmt;      /* format id */
+      void*                      sp;
       kaapi_uint64_t             data[1];  /* @ data */
     } s_taskfmt;
     struct kaapi_thread_context_t* thread;
@@ -899,9 +900,54 @@ extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* result );
 
 /** \ingroup ADAPTIVE
+    Initialize a task to be executed by a thief.
+    In case of sucess, the function returns the pointer of a memory region where to store 
+    arguments for the entrypoint. Once pushed, the task is executed by the thief with
+    first argument the pointer return the call to kaapi_reply_init_task.
+    \param req the request emitted by a thief
+    \param body the entry point of the task to execute
+*/
+extern void* kaapi_reply_init_task (
+    kaapi_request_t*                    req,
+    kaapi_task_body_t                   body
+);
+
+/** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-void* kaapi_reply_pushtask(kaapi_stealcontext_t*, kaapi_request_t*, kaapi_task_body_t);
+extern void kaapi_reply_pushtask(kaapi_request_t*);
+
+/** \ingroup ADAPTIVE
+    Initialize an adaptive task to be executed by a thief.
+    In case of sucess, the function returns the pointer of a memory region where to store 
+    arguments for the entrypoint. Once pushed, the task is executed by the thief with
+    first argument the pointer return the call to kaapi_reply_init_adaptive_task.
+    \param req the request emitted by a thief
+    \param body the entry point of the task to execute
+    \param msc the steal... TO DO
+    \param result that taskadaptive_result used for signalisation.
+*/
+extern void* kaapi_reply_init_adaptive_task (
+    kaapi_request_t*                    req,
+    kaapi_task_body_t                   body,
+    struct kaapi_stealcontext_t*        msc,
+    struct kaapi_taskadaptive_result_t* result
+);
+
+/** \ingroup ADAPTIVE
+    push the task associated with an adaptive request
+*/
+extern void kaapi_reply_push_adaptive_task(kaapi_request_t*, kaapi_stealcontext_t* );
+
+/** \ingroup ADAPTIVE
+    push the task associated with an adaptive request
+*/
+extern void kaapi_reply_pushhead_adaptive_task(kaapi_request_t*, kaapi_stealcontext_t* );
+
+/** \ingroup ADAPTIVE
+    push the task associated with an adaptive request
+*/
+extern void kaapi_reply_pushtail_adaptive_task(kaapi_request_t*, kaapi_stealcontext_t* );
 
 /** \ingroup ADAPTIVE
     Reply a value to a steal request. If retval is !=0 it means that the request

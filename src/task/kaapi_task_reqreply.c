@@ -77,11 +77,41 @@ static void athief_body(void* arg, kaapi_thread_t* thread)
     KAAPI_ATOMIC_DECR(&ata->mta->thievescount);
 }
 
-void* kaapi_reply_pushtask
+
+/*
+*/
+void* kaapi_reply_init_task
 (
- kaapi_stealcontext_t* msc,
- kaapi_request_t* req,
- kaapi_task_body_t body
+  kaapi_request_t*             req,
+  kaapi_task_body_t            body
+)
+{
+  /* athief task body */
+  req->reply->u.s_task.body = body;
+
+  /* user put args in this area */
+  return req->reply->u.s_task.data;
+}
+
+/*
+*/
+void kaapi_reply_push_task
+(
+  kaapi_request_t*      request
+)
+{
+  _kaapi_request_reply( request, KAAPI_REPLY_S_TASK );
+}
+
+
+/*
+*/
+void* kaapi_reply_init_adaptive_task
+(
+  kaapi_request_t*             req,
+  kaapi_task_body_t            body,
+  kaapi_stealcontext_t*        msc,
+  kaapi_taskadaptive_result_t* result
 )
 {
   /* athief task body */
@@ -90,9 +120,9 @@ void* kaapi_reply_pushtask
   /* athief task args */
   athief_taskarg_t* const ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  ata->mta = (kaapi_taskadaptive_t*)msc;
-  ata->result = 0;
-  ata->ubody = body;
+  ata->mta    = (kaapi_taskadaptive_t*)msc;
+  ata->result = result;
+  ata->ubody  = body;
 
   /* user put args in this area */
   return (void*)ata->udata;
@@ -101,11 +131,52 @@ void* kaapi_reply_pushtask
 
 /*
 */
+void kaapi_reply_push_adaptive_task
+(
+  kaapi_request_t*      req,
+  kaapi_stealcontext_t* msc
+)
+{
+  athief_taskarg_t* ata = (athief_taskarg_t*)
+    req->reply->u.s_task.data;
+  kaapi_request_reply( msc, req, ata->result, KAAPI_REQUEST_REPLY_HEAD);
+}
+
+/*
+*/
+void kaapi_reply_pushhead_adaptive_task
+(
+  kaapi_request_t*      req,
+  kaapi_stealcontext_t* msc
+)
+{
+  athief_taskarg_t* ata = (athief_taskarg_t*)
+    req->reply->u.s_task.data;
+  kaapi_request_reply( msc, req, ata->result, KAAPI_REQUEST_REPLY_HEAD);
+}
+
+
+/*
+*/
+void kaapi_reply_pushtail_adaptive_task
+(
+  kaapi_request_t*      req,
+  kaapi_stealcontext_t* msc
+)
+{
+  athief_taskarg_t* ata = (athief_taskarg_t*)
+    req->reply->u.s_task.data;
+  kaapi_request_reply( msc, req, ata->result, KAAPI_REQUEST_REPLY_TAIL);
+}
+
+
+/*
+*/
 int kaapi_request_reply(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
-    kaapi_taskadaptive_result_t*        result,
-    int                                 flag
+    kaapi_stealcontext_t*        stc,
+    kaapi_request_t*             request, 
+    kaapi_taskadaptive_result_t* result,
+    int                          flag
 )
 {
   kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;

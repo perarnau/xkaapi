@@ -48,8 +48,15 @@
 /** Description of the example.
 
     Overview of the execution.
+      The previous example, for_each_0.c has a main drawback: 
+    - if the work load is unbalanced, then some of the thief becomes idle and
+    try to steal other threads. But an overloaded thief cannot be steal once
+    it begins its execution.
     
     What is shown in this example.
+      The purpose of this example is to show how to allow thief to be theft
+    by other idle thread. The idea is just to declare executed task as new 
+    adaptive algorithm.
     
     Next example(s) to read.
 */
@@ -65,13 +72,10 @@ typedef struct work
 
 } work_t;
 
+
 /**
 */
-typedef struct thief_work_t {
-  void (*op)(double);
-  double* beg;
-  double* end;
-} thief_work_t;
+typedef work_t thief_work_t;
 
 
 /* fwd decl */
@@ -130,7 +134,7 @@ static int split (
 
     /* steal and update victim range */
     const size_t stolen_size = unit_size * nreq;
-    i = vw->beg - stolen_size;
+    i = vw->end - stolen_size;
     j = vw->end;
     vw->end -= stolen_size;
   }
@@ -142,11 +146,12 @@ static int split (
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    /* thief work: not adaptive result because no preemption is used here  */
+    /* thief work */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task( req, sc thief_entrypoint, 0 );
-    thief_work_t->op  = vw->op;
-    thief_work_t->beg = vw->array+j-unit_size;
-    thief_work_t->end = vw->array+j;
+    thief_work_t->op    = vw->op;
+    thief_work_t->array = vw->array+j-unit_size;
+    thief_work_t->beg   = 0;
+    thief_work_t->end   = unit_size;
 
     kaapi_reply_push_adaptive_task( req, sc );
   }
@@ -187,20 +192,30 @@ static int extract_seq(work_t* w, double** pos, double** end)
 }
 
 
-/** thief entrypoint 
+/** thief entrypoint:
+    - the extra args hodls a pointer to the implicit stealcontext where the task is running
+    - at the end of the function, the entry point does not need to explicitly call 
+    kaapi_task_end_adaptive, which is called into the callee.
 */
-static void thief_entrypoint(void* args, kaapi_thread_t* thread)
+static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
 {
-  /* process the work */
-  thief_work_t thief_work* = (thief_work_t*)args;
-
   /* range to process */
-  double* beg = thief_work->begin;
-  double* end = thief_work->end;
+  double* beg;
+  double* end;
 
-  /* apply w->op foreach item in [pos, end[ */
-  for (; beg != end; ++beg)
-    thief_work->op(*beg);
+  /* process the work */
+  thief_work_t* thief_work = (thief_work_t*)args;
+  
+  /* set the splitter for this task */
+  kaapi_steal_setsplitter(sc, splitter, thief_work );
+
+  /* while there is sequential work to do*/
+  while (extract_seq(thief_work, &beg, &end) != -1)
+  {
+    /* apply w->op foreach item in [pos, end[ */
+    for (; beg != end; ++beg)
+      (op)(*beg);
+  }
 }
 
 
