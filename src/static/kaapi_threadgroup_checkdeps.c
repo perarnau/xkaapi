@@ -60,7 +60,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
   /* pass in parameter ? cf C++ thread interface */
   kaapi_assert_debug( (threadindex >=-1) && (threadindex < thgrp->group_size) );
 
-  task_body = kaapi_task_body2fnc( task->body );
+  task_body = kaapi_task_getbody( task );
   if (task_body!=0)
     task_fmt= kaapi_format_resolvebybody(task_body);
   else

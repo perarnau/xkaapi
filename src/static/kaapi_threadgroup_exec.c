@@ -88,9 +88,9 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 
     if (kaapi_thread_isready(thgrp->threadctxts[i]))
     {
-      kaapi_sched_lock( victim_kproc ); 
+      kaapi_sched_lock( &victim_kproc->lock ); 
       kaapi_sched_pushready( victim_kproc, thgrp->threadctxts[i] );
-      kaapi_sched_unlock( victim_kproc ); 
+      kaapi_sched_unlock( &victim_kproc->lock ); 
     }
     else {
       /* put pad of the first non ready task as if the thread was suspended (but not into a queue) */

@@ -169,10 +169,11 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       kaapi_thread_pushtask(writer_thread);
     }
     else {
+      kaapi_task_body_t body = kaapi_task_getbody(ver->writer_task);
       /* if the writer is in fact a recv (case of task with both w and r access), mute the recv data structure */
-      if (kaapi_task_body2fnc(ver->writer_task->body) == kaapi_taskrecv_body)
+      if (body == kaapi_taskrecv_body)
       {
-        kaapi_assert( kaapi_task_body_issteal(ver->writer_task->body) );
+        kaapi_assert( kaapi_task_state_issteal( kaapi_task_getstate( ver->writer_task) ) );
         argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
         memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
         argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->sp;
@@ -183,13 +184,13 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 
       /* writer already exist: if it is not a bcast, encapsulate the task by a bcast task
       */
-      else if (kaapi_task_body2fnc(ver->writer_task->body) != kaapi_taskbcast_body)
+      else if (body != kaapi_taskbcast_body)
       {
 //        kaapi_assert(kaapi_task_getbody(ver->writer_task) != kaapi_taskbcast_body);
         argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
         memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
         argbcast->common.original_sp   = ver->writer_task->sp;
-        argbcast->common.original_body = kaapi_task_body2fnc(ver->writer_task->body);
+        argbcast->common.original_body = body;
         ver->writer_task->sp = argbcast;
 //        ver->tag           = ++thgrp->tag_count;
         kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body );
@@ -237,7 +238,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     if (ver->writer_thread != tid )
     {
       kaapi_taskrecv_arg_t* argrecv = 0;
-      kaapi_task_body_t body = kaapi_task_body2fnc(task->body);
+      kaapi_task_body_t body = kaapi_task_getbody(task);
       if ((body != kaapi_taskbcast_body) && (body != kaapi_taskrecv_body))
       {
         argrecv = kaapi_thread_pushdata( thread, sizeof(kaapi_taskrecv_arg_t) );
@@ -259,8 +260,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       kaapi_assert (ver->readers[tid].addr != 0);
       
       /* The task is waiting for a parameter -> suspend state */
-      kaapi_task_setbody(task, kaapi_task_body_setsteal(kaapi_taskrecv_body) );
-
+      
+      kaapi_task_setstate(task, kaapi_task_state_setsteal( kaapi_task_body2state(kaapi_taskrecv_body) ) );
 
       kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);
       if (ver->com->tag ==0) ver->com->tag = ++thgrp->tag_count;

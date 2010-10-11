@@ -547,54 +547,98 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
 */
 //@{
-#define kaapi_task_body_getstate(body)\
-      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY) >> KAAPI_MASK_BODY_SHIFTR)
+#define kaapi_task_getstate(task)\
+      (task)->u.state
 
-#define kaapi_task_body_issteal(body)       \
-      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_STEAL)
+#define kaapi_task_setstate(task, value)\
+      (task)->u.state = (value)
 
-#define kaapi_task_body_isexec(body)        \
-      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_EXEC)
+#define kaapi_task_setstate_barrier(task, value)\
+      { kaapi_writemem_barrier(); (task)->u.state = (value); }
 
-#define kaapi_task_body_isterm(body)        \
-      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_TERM)
+#define kaapi_task_state_get(state)\
+      (((state) & KAAPI_MASK_BODY) >> KAAPI_MASK_BODY_SHIFTR)
 
-#define kaapi_task_body_isaftersteal(body)  \
-      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY_AFTER)
+#define kaapi_task_state_issteal(state)       \
+      ((state) & KAAPI_MASK_BODY_STEAL)
 
-#define kaapi_task_body_isspecial(body)     \
-      (((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY)
+#define kaapi_task_state_isexec(state)        \
+      ((state) & KAAPI_MASK_BODY_EXEC)
 
-#define kaapi_task_body_isnormal(body)     \
-      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)KAAPI_MASK_BODY) ==0)
+#define kaapi_task_state_isterm(state)        \
+      ((state) & KAAPI_MASK_BODY_TERM)
 
-#define kaapi_task_body_isready(body)       \
-      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)(KAAPI_MASK_BODY_AFTER|KAAPI_MASK_BODY_TERM)) !=0)
+#define kaapi_task_state_isaftersteal(state)  \
+      ((state) & KAAPI_MASK_BODY_AFTER)
 
-#define kaapi_task_body_isstealable(body)   \
-      ((((kaapi_uintptr_t)body) & (kaapi_uintptr_t)(KAAPI_MASK_BODY_STEAL|KAAPI_MASK_BODY_EXEC)) ==0)
+#define kaapi_task_state_isspecial(state)     \
+      ((state) & KAAPI_MASK_BODY)
 
-#define kaapi_task_body2fnc(body)           \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) & ~(kaapi_uintptr_t)KAAPI_MASK_BODY))
+#define kaapi_task_state_isnormal(state)     \
+      (((state) & KAAPI_MASK_BODY) ==0)
+
+/* this macro should only be called on a theft task to determine if it is ready */
+#define kaapi_task_state_isready(state)       \
+      (((state) & (KAAPI_MASK_BODY_AFTER|KAAPI_MASK_BODY_TERM)) !=0)
+
+#define kaapi_task_state_isstealable(state)   \
+      (((state) & (KAAPI_MASK_BODY_STEAL|KAAPI_MASK_BODY_EXEC)) ==0)
+
+#define kaapi_task_state_setsteal(state)      \
+    ((state) | KAAPI_MASK_BODY_STEAL)
+
+#define kaapi_task_state_setexec(state)       \
+    ((state) | KAAPI_MASK_BODY_EXEC)
+
+#define kaapi_task_state_setterm(state)       \
+    ((state) | KAAPI_MASK_BODY_TERM)
+
+#define kaapi_task_state_setafter(state)       \
+    ((state) | KAAPI_MASK_BODY_AFTER)
     
-#define kaapi_task_body2int(body)           \
+#define kaapi_task_body2state(body)           \
     ((kaapi_uintptr_t)body)
 
-#define kaapi_task_int2body(ibdy)           \
-    ((kaapi_task_body_t)ibdy)
+#define kaapi_task_state2body(state)           \
+    ((kaapi_task_body_t)(state))
 
-#define kaapi_task_body_setsteal(body)      \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_STEAL  ))
 
-#define kaapi_task_body_setexec(body)       \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_EXEC))
+/** \ingroup TASK
+    Set the body of the task
+*/
+static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
+{
+  task->u.body = body;
+}
 
-#define kaapi_task_body_setterm(body)       \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_TERM))
-
-#define kaapi_task_body_setafter(body)       \
-    ((kaapi_task_body_t)(((kaapi_uintptr_t)body) | (kaapi_uintptr_t)KAAPI_MASK_BODY_AFTER))
+/** \ingroup TASK
+    Get the body of the task
+*/
+static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
+{
+  return kaapi_task_state2body( (kaapi_task_body2state(task->u.body) & ~KAAPI_MASK_BODY) );
+}
 //@}
+
+/** \ingroup TASK
+    The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
+    All user tasks are stealable.
+    \param body IN a task body
+*/
+inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
+{ 
+  kaapi_uintptr_t state  = (kaapi_uintptr_t)body;
+  body = kaapi_task_state2body(state);
+  return !kaapi_task_state_isstealable(state)
+      && (body != kaapi_taskstartup_body) 
+      && (body != kaapi_nop_body)
+      && (body != kaapi_tasksteal_body) 
+      && (body != kaapi_taskwrite_body)
+      && (body != kaapi_taskfinalize_body) 
+      && (body != kaapi_taskreturn_body) 
+      && (body != kaapi_adapt_body)
+      ;
+}
 
 /** \ingroup TASK
     The function kaapi_task_isstealable() will return non-zero value iff the task may be stolen.
@@ -603,17 +647,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 */
 inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 { 
-  kaapi_task_body_t body = task->body;
-  return !kaapi_task_body_issteal(body) && !kaapi_task_body_isexec(body)
-      && (body != kaapi_taskstartup_body) 
-      && (body != kaapi_nop_body)
-      && (body != kaapi_aftersteal_body) 
-      && (body != kaapi_tasksteal_body) 
-      && (body != kaapi_taskwrite_body)
-      && (body != kaapi_taskfinalize_body) 
-      && (body != kaapi_taskreturn_body) 
-      && (body != kaapi_adapt_body)
-      ;
+  return kaapi_task_body_isstealable(task->u.body);
 }
 
 /** \ingroup TASK
@@ -631,18 +665,12 @@ static inline int _kaapi_thread_pushtask( kaapi_thread_context_t* thread )
 static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaapi_uint32_t count)
 { return kaapi_thread_pushdata( kaapi_threadcontext2thread(thread), count ); }
 
-/** \ingroup TASK
-*/
-static inline void kaapi_task_setstate( kaapi_task_t* task, kaapi_task_body_t state )
-{ KAAPI_ATOMIC_WRITEPTR_BARRIER(&task->body, state); }
-//{ KAAPI_ATOMIC_WRITEPTR_BARRIER((kaapi_uintptr_t*)&task->body, state); }
-
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
 /** Atomically: OR of the task state with the value in 'state' and return the previous value.
 */
 static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uintptr_t state )
 {
-  kaapi_uintptr_t retval = KAAPI_ATOMIC_ANDPTR_ORIG((kaapi_uintptr_t*)&task->body, state);
+  kaapi_uintptr_t retval = KAAPI_ATOMIC_ANDPTR_ORIG(&task->u.state, state);
   return retval;
 }
 
@@ -653,7 +681,7 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
 #else
   kaapi_writemem_barrier();
 #endif
-  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG((kaapi_uintptr_t*)&task->body, state);
+  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
   return retval;
 }
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
@@ -877,8 +905,8 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
 */
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
-  kaapi_assert_debug( kaapi_task_body_issteal(thread->sfp->pc->body) );
-  return kaapi_task_body_isready(thread->sfp->pc->body);
+  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->u.state) );
+  return kaapi_task_state_isready(thread->sfp->pc->u.state);
 }
 
 /** Note on scheduler lock:
@@ -1013,7 +1041,7 @@ extern int kaapi_stack_print( FILE* file, kaapi_thread_context_t* thread );
 
 /** Useful
 */
-extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_bodyid_t taskid );
+extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
 
 /** \ingroup TASK
     The function kaapi_stack_execframe() execute all the tasks in the thread' stack following

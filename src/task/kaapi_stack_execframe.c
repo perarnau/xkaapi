@@ -140,9 +140,9 @@ begin_loop:
     body( pc->sp, (kaapi_thread_t*)thread->sfp );      
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-    body = kaapi_task_int2body( kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC ) );
+    body = kaapi_task_state2body( kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC ) );
 #endif
-    if (likely( kaapi_task_body_isnormal(body) ) )
+    if (likely( kaapi_task_state_isnormal( kaapi_task_body2state(body) ) ) )
     {
       /* task execution */
       kaapi_assert_debug(pc == thread->sfp[-1].pc);
@@ -161,19 +161,19 @@ begin_loop:
          - else it means that the task has been executed by a thief, but it 
          does not require aftersteal body to merge results.
       */
-      if ( kaapi_task_body_isaftersteal(body) )
+      if ( kaapi_task_state_isaftersteal( kaapi_task_body2state(body) ) )
       {
         /* means that task has been steal & not yet terminated due
            to some merge to do
         */
-        kaapi_assert_debug( kaapi_task_body_issteal(body) );
+        kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_body2state(body) ) );
         kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
       }
-      else if ( kaapi_task_body_isterm(body) ){
+      else if ( kaapi_task_state_isterm( kaapi_task_body2state(body) ) ){
         /* means that task has been steal */
-        kaapi_assert_debug( kaapi_task_body_issteal(body) );
+        kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_body2state(body) ) );
       }
-      else if ( kaapi_task_body_issteal(body)  ) /* but not terminate ! so swap */
+      else if ( kaapi_task_state_issteal( kaapi_task_body2state(body) ) ) /* but not terminate ! so swap */
       {
 //        printf("Suspend thread: %p on pc:%p\n", thread, pc );
 //        fflush(stdout);

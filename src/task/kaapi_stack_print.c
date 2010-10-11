@@ -76,13 +76,13 @@ static const char* tab_bit[] = {
  * X -> term after steal
  */
 typedef char state_type_t[4];
-static void kaapi_getstatename( kaapi_task_t* task, state_type_t state )
+static void kaapi_getstatename( kaapi_task_t* task, state_type_t char_state )
 {
-  kaapi_task_body_t body = kaapi_task_getbody(task);
-  state[0] = (kaapi_task_body_isterm(body) ? 'T' : '_');
-  state[1] = (kaapi_task_body_isaftersteal(body) ? 'A' : '_');
-  state[2] = (kaapi_task_body_isexec(body) ? 'E' : '_');
-  state[3] = (kaapi_task_body_issteal(body) ? 'S' : '_');
+  kaapi_uintptr_t state = kaapi_task_getstate(task);
+  char_state[0] = (kaapi_task_state_isterm(state) ? 'T' : '_');
+  char_state[1] = (kaapi_task_state_isaftersteal(state) ? 'A' : '_');
+  char_state[2] = (kaapi_task_state_isexec(state) ? 'E' : '_');
+  char_state[3] = (kaapi_task_state_issteal(state) ? 'S' : '_');
 }
 
 static char kaapi_getmodename( kaapi_access_mode_t m )
@@ -102,14 +102,14 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
 */
 int kaapi_task_print( 
   FILE* file,
-  kaapi_task_t* task, 
-  kaapi_task_body_t body 
+  kaapi_task_t* task
 )
 {
   const kaapi_format_t* fmt;
   int i;
+  kaapi_task_body_t body;
 
-  body = kaapi_task_body2fnc(body);
+  body = kaapi_task_getbody(task);
   fmt = kaapi_format_resolvebybody( body );
   if (fmt ==0) return 0;
   
@@ -133,7 +133,7 @@ int kaapi_task_print(
         (void*)task, 
         state[3], state[2], state[1], state[0],
         fmt->name, 
-        tab_bit[kaapi_task_body_getstate(task->body)],
+        tab_bit[kaapi_task_body2state(body)],
         sp,
         fmt->count_params );
         
@@ -174,7 +174,7 @@ int kaapi_task_print(
       }
     }
   }
-  if (task->body == kaapi_taskbcast_body)
+  if (body == kaapi_taskbcast_body)
   {
     /* dump broadcast information */
     kaapi_com_t* com;
@@ -265,7 +265,7 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
     task_top = frame->sp;
     while (task_bot != task_top)
     {
-      body = kaapi_task_body2fnc( kaapi_task_getbody(task_bot) );
+      body = kaapi_task_getbody(task_bot);
       if (body == kaapi_taskbcast_body)
       {
         body = ((kaapi_taskbcast_arg_t*)task_bot->sp)->common.original_body;
@@ -310,17 +310,17 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
         {
           kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( task_bot, kaapi_tasksteal_arg_t );
           fprintf(file, ", thief task:" );
-          kaapi_task_print(file, arg->origin_task, kaapi_task_getbody(arg->origin_task));
+          kaapi_task_print(file, arg->origin_task );
         }
         else if (body == kaapi_aftersteal_body)
         {
           fprintf(file, ", steal/term task:" );
-          kaapi_task_print(file, task_bot,body);
+          kaapi_task_print(file, task_bot );
         }
         else if (body == kaapi_suspend_body)
         {
           fprintf(file, ", steal/under task:" );
-          kaapi_task_print(file, task_bot,body);
+          kaapi_task_print(file, task_bot );
         }
         else if (body == kaapi_taskbcast_body) 
           kaapi_print_bcasttask( file, task_bot );
@@ -333,7 +333,7 @@ int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
 
       /* print the task */
       fprintf( file, "  [%04i]: ", count );
-      kaapi_task_print(file, task_bot, body );
+      kaapi_task_print(file, task_bot );
 
       ++count;
       --task_bot;

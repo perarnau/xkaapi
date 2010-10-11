@@ -251,7 +251,7 @@ static int kaapi_sched_stealframe
   /* */
   while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > frame->sp))
   {
-    task_body = kaapi_task_body2fnc(task_top->body);//TODO kaapi_task_getextrabody(task_top);
+    task_body = kaapi_task_getbody(task_top);
     
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body)
@@ -270,8 +270,8 @@ static int kaapi_sched_stealframe
       if ( (splitter !=0) && (argsplitter !=0) )
       {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-        kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL ));
-        if (likely( !kaapi_task_body_isspecial(body) ) ) // means SUSPEND was not set before and it was set
+        kaapi_uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
+        if (likely( !kaapi_task_state_isspecial(state) ) ) // means SUSPEND was not set before and it was set
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
         thread->thiefpc = task_top;
         kaapi_writemem_barrier();
@@ -318,8 +318,8 @@ static int kaapi_sched_stealframe
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-          kaapi_task_body_t body = kaapi_task_int2body(kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL ));
-          if (likely( kaapi_task_body_isstealable(body) ) ) // means SUSPEND and EXEC was not set before
+          kaapi_uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL);
+          if (likely( kaapi_task_state_isstealable(state) ) ) // means SUSPEND and EXEC was not set before
           {
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
             thread->thiefpc = task_top;

@@ -77,7 +77,7 @@ void kaapi_exec_body( void* taskarg, kaapi_thread_t* thread )
 */
 void kaapi_adapt_body( void* taskarg, kaapi_thread_t* thread  )
 {
-  kaapi_assert_debug( thread[-1].pc->body == kaapi_exec_body );
+  kaapi_assert_debug( kaapi_task_getbody(thread[-1].pc) == kaapi_exec_body );
 }
 
 
