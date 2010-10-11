@@ -53,10 +53,8 @@ int kaapi_remove_finishedthief(
   kaapi_taskadaptive_result_t* ktr
 )
 {
-  kaapi_taskadaptive_t* ta;
-  if (!ktr->thief_term) return EBUSY;
-
-  ta = (kaapi_taskadaptive_t*)stc;
+  kaapi_taskadaptive_t* const ta =
+    (kaapi_taskadaptive_t*)stc;
 
   /*ok: here thief has been preempted */
   kaapi_readmem_barrier();

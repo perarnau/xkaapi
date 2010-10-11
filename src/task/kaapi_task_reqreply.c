@@ -48,9 +48,11 @@
 /* adaptive task body
  */
 
+extern volatile unsigned int g;
+
 typedef struct athief_taskarg
 {
-  kaapi_taskadaptive_t* ta; /* the victim or the master */
+  kaapi_taskadaptive_t* mta; /* master ta */
   volatile kaapi_taskadaptive_result_t* result;
   kaapi_task_body_t ubody; /* user body */
   unsigned char udata[1]; /* user data */
@@ -70,21 +72,25 @@ static void athief_body(void* arg, kaapi_thread_t* thread)
     ata->result->thief_term = 1;
     ata->result->is_signaled = 1;
   }
-  KAAPI_ATOMIC_DECR(&ata->ta->thievescount);
+
+  if (ata->mta != NULL)
+    KAAPI_ATOMIC_DECR(&ata->mta->thievescount);
 }
 
 void* kaapi_reply_pushtask
-(kaapi_stealcontext_t* sc, kaapi_request_t* req, kaapi_task_body_t body)
+(
+ kaapi_stealcontext_t* msc,
+ kaapi_request_t* req,
+ kaapi_task_body_t body
+)
 {
-  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)sc;
-
   /* athief task body */
   req->reply->u.s_task.body = (kaapi_task_bodyid_t)athief_body;
 
   /* athief task args */
   athief_taskarg_t* const ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  ata->ta = ta;
+  ata->mta = (kaapi_taskadaptive_t*)msc;
   ata->result = 0;
   ata->ubody = body;
 
@@ -144,7 +150,11 @@ int kaapi_request_reply(
   }
 
   /* increment master thief count */
-  KAAPI_ATOMIC_INCR( &ta->thievescount );
+  athief_taskarg_t* const ata = (athief_taskarg_t*)
+    request->reply->u.s_task.data;
+
+  if (ata->mta != NULL)
+    KAAPI_ATOMIC_INCR( &ata->mta->thievescount );
 
   return _kaapi_request_reply( request, KAAPI_REPLY_S_TASK );
 }

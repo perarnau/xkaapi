@@ -55,8 +55,7 @@ void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
   while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
     kaapi_slowdown_cpu();
 
-  /* sometimes drops to -1... */
-  while ((int)KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
+  while (KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
     kaapi_slowdown_cpu();
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
