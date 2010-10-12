@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi++"
+#include <algorithm>
 #include <string.h>
 #include <math.h>
 
@@ -126,7 +127,7 @@ void Work<T,OP>::splitter (
 )
 {
   /* stolen range */
-  size_t beg_theft, end_theft;
+  size_t beg_theft, end_theft = 0;
 
   /* reply count */
   int nrep = 0;
@@ -232,9 +233,9 @@ static void for_each( T* array, size_t size, OP op )
 
 /**
 */
-void apply_sin( double& v )
+void apply_cos( double& v )
 {
-  v = sin(v);
+  v = cos(v);
 }
 
 
@@ -251,8 +252,18 @@ int main(int ac, char** av)
   for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
-    memset(array, 0, sizeof(array));
-    for_each( array, ITEM_COUNT, apply_sin );
+
+    for (size_t i = 0; i < ITEM_COUNT; ++i)
+      array[i] = 0.f;
+
+    for_each( array, ITEM_COUNT, apply_cos );
+
+    for (size_t i = 0; i < ITEM_COUNT; ++i)
+      if (array[i] != 1.f)
+      {
+	printf("invalid @%lu == %lf\n", i, array[i]);
+	break ;
+      }
   }
 
   printf("done\n");
