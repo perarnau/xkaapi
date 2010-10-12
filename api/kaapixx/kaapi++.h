@@ -1001,22 +1001,55 @@ namespace ka {
     typedef ACCESS_MODE_CW         mode_t;
   };
 
-#if 1 /* be carrefull: is convert format definition of void (*)(double)
-         to be a pointer_rpwp */
+
+  /* here requires to distinguish pointer to object from pointer to function */
+  template<class R> struct __kaapi_is_function { enum { value = false }; };
+  template<class R> struct __kaapi_is_function<R (*)()> { enum { value = true }; };
+  template<class R> struct __kaapi_is_function<R (*)(...)> { enum { value = true }; };
+  template<class R, class T0> struct __kaapi_is_function<R (*)(T0)> { enum { value = true }; };
+  template<class R, class T0, class T1> struct __kaapi_is_function<R (*)(T0, T1)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2> struct __kaapi_is_function<R (*)(T0, T1, T2)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3> struct __kaapi_is_function<R (*)(T0, T1, T2, T3)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3,T4, T5, T6)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7)> { enum { value = true }; };
+
+  template<bool isfunc, class UserType> struct __kaapi_pointer_switcher {};
+  template<class UserType> struct __kaapi_pointer_switcher<false, const UserType*> {
+    typedef TraitUAMType<pointer_rp<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RP                      mode_t;
+  };
+  template<class UserType> struct __kaapi_pointer_switcher<false, UserType*> {
+    typedef TraitUAMType<pointer_rpwp<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP                      mode_t;
+  };
+  template<class UserType> struct __kaapi_pointer_switcher<true, const UserType*> {
+    typedef TraitUAMType<const UserType*> uamttype_t;
+    typedef ACCESS_MODE_V                 mode_t;
+  };
+  template<class UserType> struct __kaapi_pointer_switcher<true, UserType*> {
+    typedef TraitUAMType<const UserType*> uamttype_t;
+    typedef ACCESS_MODE_V                 mode_t;
+  };
+  
   /* to be able to use point as arg of spawn */
   template<typename UserType>
   struct TraitUAMParam<const UserType*> {
-    typedef TraitUAMType<pointer_rp<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP         mode_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::uamttype_t uamttype_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::mode_t mode_t;
   };
 
   /* to be able to use point as arg of spawn */
   template<typename UserType>
   struct TraitUAMParam<UserType*> {
-    typedef TraitUAMType<pointer_rpwp<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP         mode_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::uamttype_t uamttype_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::mode_t mode_t;
   };
-#endif
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
