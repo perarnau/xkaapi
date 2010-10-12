@@ -43,6 +43,7 @@
 */
 #include "kaapi.h"
 #include <string.h>
+#include <math.h>
 
 
 /** Description of the example.
@@ -93,7 +94,7 @@ static void unlock_work(work_t* w)
 
 
 /* parallel work splitter */
-static int split (
+static int splitter (
   kaapi_stealcontext_t* sc, 
   int nreq, kaapi_request_t* req, 
   void* args
@@ -143,10 +144,10 @@ static int split (
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
     /* thief work: not adaptive result because no preemption is used here  */
-    thief_work_t* const tw = kaapi_reply_init_adaptive_task( req, sc thief_entrypoint, 0 );
-    thief_work_t->op  = vw->op;
-    thief_work_t->beg = vw->array+j-unit_size;
-    thief_work_t->end = vw->array+j;
+    thief_work_t* const tw = kaapi_reply_init_adaptive_task( req, thief_entrypoint, sc, 0 );
+    tw->op  = vw->op;
+    tw->beg = vw->array+j-unit_size;
+    tw->end = vw->array+j;
 
     kaapi_reply_push_adaptive_task( req, sc );
   }
@@ -192,10 +193,10 @@ static int extract_seq(work_t* w, double** pos, double** end)
 static void thief_entrypoint(void* args, kaapi_thread_t* thread)
 {
   /* process the work */
-  thief_work_t thief_work* = (thief_work_t*)args;
+  thief_work_t* const thief_work = (thief_work_t*)args;
 
   /* range to process */
-  double* beg = thief_work->begin;
+  double* beg = thief_work->beg;
   double* end = thief_work->end;
 
   /* apply w->op foreach item in [pos, end[ */
@@ -207,7 +208,7 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread)
 
 
 /* For each main function */
-static void for_each( double* array, size_t size, void* (*op)(double) )
+static void for_each( double* array, size_t size, void (*op)(double) )
 {
   /* range to process */
   kaapi_thread_t* thread;
@@ -220,8 +221,8 @@ static void for_each( double* array, size_t size, void* (*op)(double) )
   KAAPI_ATOMIC_WRITE(&work.lock, 0);
   work.op    = op;
   work.array = array;
-  work.i     = 0;
-  work.j     = size;
+  work.beg   = 0;
+  work.end   = size;
 
   /* push an adaptive task */
   thread = kaapi_self_thread();
@@ -250,7 +251,8 @@ static void for_each( double* array, size_t size, void* (*op)(double) )
 */
 void apply_sin( double v )
 {
-  sin(v);
+  volatile double res = sin(v);
+  res = res; /* unused variable */
 }
 
 
