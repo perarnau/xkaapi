@@ -66,7 +66,7 @@ typedef struct work
 {
   kaapi_atomic_t lock;
 
-  void (*op)(double);
+  void (*op)(double*);
   double* array;
 
   volatile size_t beg;
@@ -217,7 +217,7 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
   {
     /* apply w->op foreach item in [pos, end[ */
     for (; beg != end; ++beg)
-      thief_work->op(*beg);
+      thief_work->op(beg);
   }
 }
 
@@ -225,14 +225,21 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
 
 
 /* For each main function */
-static void for_each( double* array, size_t size, void (*op)(double) )
+static void for_each( double* array, size_t size, void (*op)(double*) )
 {
   /* range to process */
   kaapi_thread_t* thread;
   kaapi_stealcontext_t* sc;
+  kaapi_frame_t frame;
   work_t  work;
   double* pos;
   double* end;
+
+  /* get the self thread */
+  thread = kaapi_self_thread();
+
+  /* save the frame for later restore */
+  kaapi_thread_save_frame(thread, &frame);
 
   /* initialize work */
   KAAPI_ATOMIC_WRITE(&work.lock, 0);
@@ -242,7 +249,6 @@ static void for_each( double* array, size_t size, void (*op)(double) )
   work.end   = size;
 
   /* push an adaptive task */
-  thread = kaapi_self_thread();
   sc = kaapi_task_begin_adaptive(
         thread, 
         KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION, 
@@ -255,21 +261,24 @@ static void for_each( double* array, size_t size, void (*op)(double) )
   {
     /* apply w->op foreach item in [pos, end[ */
     for (; pos != end; ++pos)
-      (op)(*pos);
+      op(pos);
   }
 
   /* wait for thieves */
   kaapi_task_end_adaptive(sc);
+  kaapi_sched_sync();
   /* here: 1/ all thieves have finish their result */
+
+  /* restore the frame */
+  kaapi_thread_restore_frame(thread, &frame);
 }
 
 
 /**
 */
-static void apply_sin( double v )
+static void apply_cos( double* v )
 {
-  volatile double res = sin(v);
-  res = res; /* unused variable */
+  *v = cos(*v);
 }
 
 
@@ -277,6 +286,8 @@ static void apply_sin( double v )
 */
 int main(int ac, char** av)
 {
+  size_t i;
+
 #define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
 
@@ -286,8 +297,18 @@ int main(int ac, char** av)
   for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
-    memset(array, 0, sizeof(array));
-    for_each( array, ITEM_COUNT, apply_sin );
+
+    for (i = 0; i < ITEM_COUNT; ++i)
+      array[i] = 0.f;
+
+    for_each( array, ITEM_COUNT, apply_cos );
+
+    for (i = 0; i < ITEM_COUNT; ++i)
+      if (array[i] != 1.f)
+      {
+	printf("invalid @%lu == %lf\n", i, array[i]);
+	break ;
+      }
   }
 
   printf("done\n");

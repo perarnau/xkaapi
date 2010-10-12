@@ -187,6 +187,9 @@ int kaapi_request_reply(
   
   if ((ktr ==0) && (stc ==0))
     return _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);
+
+  athief_taskarg_t* const ata = (athief_taskarg_t*)
+    request->reply->u.s_task.data;
   
   if (ktr !=0)
   {
@@ -216,15 +219,10 @@ int kaapi_request_reply(
     ktr->master = ta;
 
     /* set athief result to signal task end */
-    athief_taskarg_t* const ata = (athief_taskarg_t*)
-      request->reply->u.s_task.data;
     ata->ktr = ktr;
   }
 
   /* increment master thief count */
-  athief_taskarg_t* const ata = (athief_taskarg_t*)
-    request->reply->u.s_task.data;
-
   if (ata->mta != NULL)
     KAAPI_ATOMIC_INCR( &ata->mta->thievescount );
 
