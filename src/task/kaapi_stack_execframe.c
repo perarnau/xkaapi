@@ -146,7 +146,7 @@ begin_loop:
     {
       /* task execution */
       kaapi_assert_debug(pc == thread->sfp[-1].pc);
-      kaapi_assert_debug( kaapi_isvalid_body( body ) );
+//      kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
       /* here... */
       body( pc->sp, (kaapi_thread_t*)thread->sfp );
