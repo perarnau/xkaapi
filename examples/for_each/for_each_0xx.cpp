@@ -110,7 +110,7 @@ struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
 
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( typename TaskThief<T,OP>::formal1_t /* ka::pointer_rw<T>*/ beg, typename TaskThief<T,OP>::formal2_t/*ka::pointer_rw<T>*/ end, OP op) 
+  void operator() ( ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) 
   {
     std::for_each( beg, end, op );
   }
