@@ -76,12 +76,128 @@ namespace ka {
     kaapi_task_body_t default_body;
   };
   
+  /* C++ atomics encapsulation, low level memory routines 
+     * only specialized for signed 32 bits and 64 bits integer
+  */
+  template<int bits>
+  struct atomic_t;
+  
+  template<>
+  class atomic_t<32> {
+  public:
+    atomic_t<32>(kaapi_int32_t value =0)
+    { 
+#if defined(__i386__)||defined(__x86_64)
+      kaapi_assert_debug( ((unsigned long)&_atom & (32/8-1)) == 0 ); 
+#endif
+      KAAPI_ATOMIC_WRITE(&_atom, value);
+    }
+
+    kaapi_int32_t read() const 
+    { return KAAPI_ATOMIC_READ(&_atom); }
+
+    void write( kaapi_int32_t value ) 
+    { KAAPI_ATOMIC_WRITE(&_atom, value); }
+    
+    void write_barrier( kaapi_int32_t value ) 
+    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
+    
+    bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
+    { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
+
+    kaapi_int32_t incr( )
+    { return KAAPI_ATOMIC_INCR( &_atom ); }
+
+    kaapi_int32_t sub( kaapi_int32_t v )
+    { return KAAPI_ATOMIC_SUB( &_atom, v ); }
+
+    kaapi_int32_t fetch_and_or( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_OR_ORIG( &_atom, mask ); }
+
+    kaapi_int32_t fetch_and_and( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_AND_ORIG( &_atom, mask ); }
+
+    kaapi_int32_t fetch_and_xor( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_XOR_ORIG( &_atom, mask ); }
+
+    kaapi_int32_t or_and_fetch( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_OR( &_atom, mask ); }
+
+    kaapi_int32_t and_and_fetch( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_AND( &_atom, mask ); }
+
+    kaapi_int32_t xor_and_fetch( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_XOR( &_atom, mask ); }
+
+  protected:
+    kaapi_atomic32_t _atom;
+  };
+
+
+  template<>
+  class atomic_t<64> {
+  public:
+    atomic_t<64>(kaapi_int64_t value =0)
+    { 
+      KAAPI_ATOMIC_WRITE(&_atom, value);
+#if defined(__i386__)||defined(__x86_64)
+      kaapi_assert_debug( ((unsigned long)this & (64/8-1)) == 0 ); 
+#endif
+    }
+
+    kaapi_int64_t read() const 
+    { return KAAPI_ATOMIC_READ(&_atom); }
+
+    void write( kaapi_int64_t value )
+    { KAAPI_ATOMIC_WRITE(&_atom, value); }
+    
+    void write_barrier( kaapi_int64_t value ) 
+    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
+        
+    bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
+    { return KAAPI_ATOMIC_CAS64( &_atom, oldvalue, newvalue ); }
+
+    kaapi_int64_t incr( )
+    { return KAAPI_ATOMIC_INCR64( &_atom ); }
+
+    kaapi_int64_t sub( kaapi_int64_t v )
+    { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
+
+    kaapi_int64_t fetch_and_or( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_OR64_ORIG( &_atom, mask ); }
+
+    kaapi_int64_t fetch_and_and( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_AND64_ORIG( &_atom, mask ); }
+
+    kaapi_int64_t fetch_and_xor( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_XOR64_ORIG( &_atom, mask ); }
+
+    kaapi_int64_t or_and_fetch( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_OR64( &_atom, mask ); }
+
+    kaapi_int64_t and_and_fetch( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_AND64( &_atom, mask ); }
+
+    kaapi_int64_t xor_and_fetch( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_XOR64( &_atom, mask ); }
+
+  protected:
+    kaapi_atomic64_t _atom;
+  };
+  
+  
   /* Kaapi C++ thread <-> Kaapi C thread */
   class Thread;
 
   /* Kaapi C++ threadgroup <-> Kaapi C threadgroup */
   class ThreadGroup;
   
+  /* Kaapi C++ StealContext <-> Kaapi C kaapi_stealcontext_t */
+  class StealContext;
+
+  /* Kaapi C++ Request <-> Kaapi C kaapi_request_t */
+  class Request;
+
   /* for next networking part */
   class IStream;
   class OStream;
@@ -699,6 +815,8 @@ namespace ka {
   struct TraitUAMTypeParam { typedef T type_t; };
   template<typename T>
   struct TraitUAMTypeParam<const T&, TYPE_INTASK> { typedef T type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<const T, TYPE_INTASK> { typedef T type_t; };
 
   template<typename T>
   struct TraitUAMType {
@@ -883,20 +1001,55 @@ namespace ka {
     typedef ACCESS_MODE_CW         mode_t;
   };
 
+
+  /* here requires to distinguish pointer to object from pointer to function */
+  template<class R> struct __kaapi_is_function { enum { value = false }; };
+  template<class R> struct __kaapi_is_function<R (*)()> { enum { value = true }; };
+  template<class R> struct __kaapi_is_function<R (*)(...)> { enum { value = true }; };
+  template<class R, class T0> struct __kaapi_is_function<R (*)(T0)> { enum { value = true }; };
+  template<class R, class T0, class T1> struct __kaapi_is_function<R (*)(T0, T1)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2> struct __kaapi_is_function<R (*)(T0, T1, T2)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3> struct __kaapi_is_function<R (*)(T0, T1, T2, T3)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3,T4, T5, T6)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7)> { enum { value = true }; };
+
+  template<bool isfunc, class UserType> struct __kaapi_pointer_switcher {};
+  template<class UserType> struct __kaapi_pointer_switcher<false, const UserType*> {
+    typedef TraitUAMType<pointer_rp<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RP                      mode_t;
+  };
+  template<class UserType> struct __kaapi_pointer_switcher<false, UserType*> {
+    typedef TraitUAMType<pointer_rpwp<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RPWP                      mode_t;
+  };
+  template<class UserType> struct __kaapi_pointer_switcher<true, const UserType*> {
+    typedef TraitUAMType<const UserType*> uamttype_t;
+    typedef ACCESS_MODE_V                 mode_t;
+  };
+  template<class UserType> struct __kaapi_pointer_switcher<true, UserType*> {
+    typedef TraitUAMType<const UserType*> uamttype_t;
+    typedef ACCESS_MODE_V                 mode_t;
+  };
+  
   /* to be able to use point as arg of spawn */
   template<typename UserType>
   struct TraitUAMParam<const UserType*> {
-    typedef TraitUAMType<pointer_rp<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP         mode_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::uamttype_t uamttype_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::mode_t mode_t;
   };
 
   /* to be able to use point as arg of spawn */
   template<typename UserType>
   struct TraitUAMParam<UserType*> {
-    typedef TraitUAMType<pointer_rpwp<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP         mode_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::uamttype_t uamttype_t;
+    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::mode_t mode_t;
   };
-
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
@@ -1203,6 +1356,77 @@ namespace ka {
     friend class SyncGuard;
   };
 
+
+  // --------------------------------------------------------------------
+  class Request;
+  class StealContext {
+  protected:
+    kaapi_stealcontext_t _sc;
+    friend class Request;
+  };
+  
+  /* New API: request->Spawn<TASK>(sc)( args ) for adaptive tasks
+  */
+  class Request {
+  private:
+    Request() {}
+
+    template<class TASK>
+    class Spawner {
+    protected:
+      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc ) : _req(r), _sc(sc) {}
+
+    public:
+      /**
+      **/      
+      void operator()()
+      { 
+        void* arg __attribute__((unused)) = kaapi_reply_init_adaptive_task( _req, _sc, KaapiTask0<TASK>::body );
+        kaapi_reply_push_adaptive_task( _req, _sc );
+      }
+
+#include "ka_api_reqspawn.h"
+
+    protected:
+      kaapi_request_t*      _req;
+      kaapi_stealcontext_t* _sc;
+      friend class Request;
+    };
+
+  public:
+    template<class TASK>
+    Spawner<TASK> Spawn(StealContext* sc) { return Spawner<TASK>(&_request, (kaapi_stealcontext_t*)sc); }
+
+  protected:
+    kaapi_request_t _request;
+  };
+
+
+  /* push new steal context */
+  inline StealContext* TaskBeginAdaptive(
+        int flag,
+        kaapi_task_splitter_t splitter,
+        void* arg
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+  
+  /* push new steal context */
+  template<class OBJECT>
+  inline int __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  { OBJECT* o = (OBJECT*)arg; 
+    o->splitter( (StealContext*)sc, nreq, (Request*)req );
+    return 0;
+  }
+
+  template<class OBJECT>
+  inline StealContext* TaskBeginAdaptive(
+        int flag,
+        OBJECT* arg
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_splitter<OBJECT>, arg); }
+
+  inline void TaskEndAdaptive( StealContext* sc )
+  { kaapi_task_end_adaptive((kaapi_stealcontext_t*)sc); }
 
   // --------------------------------------------------------------------
   /* API: 

@@ -146,10 +146,11 @@ int kaapi_mt_init(void)
 /*** END */
 
   /* dump output information */
-#if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
-  fflush( stdout );
-#endif
+  if (kaapi_default_param.display_perfcounter)
+  {
+    printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
+    fflush( stdout );
+  }
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
   
@@ -181,12 +182,13 @@ int kaapi_mt_finalize(void)
   /*  */
   kaapi_perf_thread_stop(kaapi_all_kprocessors[0]);
 #endif
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
-        (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
-  fflush( stdout );
-#endif
+
+  if (kaapi_default_param.display_perfcounter)
+  {  
+    printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
+          (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
+    fflush( stdout );
+  }
 
   /* wait end of the initialization */
   kaapi_isterm = 1;

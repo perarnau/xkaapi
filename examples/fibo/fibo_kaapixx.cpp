@@ -102,7 +102,7 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 /* Implementation for CPU machine 
 */
 template<>
-struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */ 
+struct TaskBodyCPU<TaskFibo>
 {
   void operator() ( ka::pointer_w<long> res, const long n )
   {  
@@ -210,14 +210,8 @@ int main(int argc, char** argv)
     /* */
     ka::System::terminate();
   }
-  catch (const ka::InvalidArgumentError& E) {
-    ka::logfile() << "Catch invalid arg" << std::endl;
-  }
-  catch (const ka::BadAlloc& E) {
-    ka::logfile() << "Catch bad alloc" << std::endl;
-  }
   catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+    ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;
