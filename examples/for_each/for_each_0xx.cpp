@@ -71,7 +71,7 @@ public:
   /* extract sequential work */
   bool extract_seq( T*& beg, T*& end);
 
-  /* split work and reply to requests */
+  /* name of the method should be splitter !!! split work and reply to requests */
   void splitter (
     ka::StealContext* sc, 
     int nreq, 
@@ -214,7 +214,8 @@ static void for_each( T* array, size_t size, OP op )
           KAAPI_SC_CONCURRENT 
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
-        &work     /* arg for splitter = work to split */
+        /* this function should have a method splitter named 'splitter' = work to split */
+        &work
   );
   
   /* while there is sequential work to do*/
