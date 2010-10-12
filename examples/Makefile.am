@@ -27,7 +27,8 @@ check_PROGRAMS=				\
 	poisson3d-kaapi			\
 	poisson3d-xkaapinew		\
 	for_each_0			\
-	for_each_1
+	for_each_1			\
+	find_xkaapi
 
 
 TESTS=
@@ -52,6 +53,7 @@ nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 
 for_each_0_SOURCES=for_each/for_each_0.c
 for_each_1_SOURCES=for_each/for_each_1.c
+find_xkaapi_SOURCES=find/find.c
 
 #foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
@@ -132,6 +134,11 @@ for_each_1_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
 for_each_1_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
 for_each_1_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
 for_each_1_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
+
+find_xkaapi_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
+find_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
+find_xkaapi_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
+find_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
 
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)

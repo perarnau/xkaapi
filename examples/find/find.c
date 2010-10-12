@@ -50,15 +50,8 @@
 /** Description of the example.
 
     Overview of the execution.
-      The previous example, for_each_0.c has a main drawback: 
-    - if the work load is unbalanced, then some of the thief becomes idle and
-    try to steal other threads. But an overloaded thief cannot be steal once
-    it begins its execution.
     
     What is shown in this example.
-      The purpose of this example is to show how to allow thief to be theft
-    by other idle thread. The idea is just to declare executed task as new 
-    adaptive algorithm.
     
     Next example(s) to read.
 */
@@ -66,18 +59,26 @@ typedef struct work
 {
   kaapi_atomic_t lock;
 
-  void (*op)(double*);
+  double key;
+
   double* array;
 
   volatile size_t beg;
   volatile size_t end;
 
-} work_t;
+  size_t res;
 
+} work_t;
 
 /**
 */
-typedef work_t thief_work_t;
+typedef struct thief_work_t {
+  double* beg;
+  double* end;
+  double key;
+  double* res;
+  kaapi_taskadaptive_result_t* ktr;
+} thief_work_t;
 
 
 /* fwd decl */
@@ -136,7 +137,7 @@ static int splitter (
 
     /* steal and update victim range */
     const size_t stolen_size = unit_size * nreq;
-    i = vw->end - stolen_size;
+    i = vw->beg - stolen_size;
     j = vw->end;
     vw->end -= stolen_size;
   }
@@ -148,18 +149,61 @@ static int splitter (
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    /* thief work */
+    /* for reduction, a result is needed. take care of initializing it */
+    kaapi_taskadaptive_result_t* const ktr =
+      kaapi_allocate_thief_result(sc, sizeof(thief_work_t), NULL);
+    ((thief_work_t*)ktr->data)->beg = 0;
+    ((thief_work_t*)ktr->data)->end = 0;
+    ((thief_work_t*)ktr->data)->res = 0;
+
+    /* thief work: not adaptive result because no preemption is used here  */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task
       ( req, (kaapi_task_body_t)thief_entrypoint, sc, 0 );
-    tw->op    = vw->op;
-    tw->array = vw->array+j-unit_size;
-    tw->beg   = 0;
-    tw->end   = unit_size;
+    tw->key = vw->key;
+    tw->beg = vw->array+j-unit_size;
+    tw->end = vw->array+j;
+    tw->res = 0;
+    tw->ktr = ktr;
 
-    kaapi_reply_push_adaptive_task( req, sc );
+    /* reply head, preempt head */
+    kaapi_reply_pushhead_adaptive_task( req, sc );
   }
 
   return nrep;
+}
+
+
+/** thief reducer
+ */
+static int reducer
+(kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
+{
+  /* victim work */
+  work_t* const vw = (work_t*)varg;
+
+  /* thief work */
+  thief_work_t* const tw = (thief_work_t*)tdata;
+
+  /* if the master already has a result, the
+     reducer purpose is only to abort thieves
+   */
+  if (vw->res != (size_t)-1)
+    return 0;
+
+  /* check if the thief found a result */
+  if (tw->res != 0)
+  {
+    vw->res = tw->res - vw->array;
+    return 0;
+  }
+
+  /* otherwise, continue preempted thief work */
+  lock_work(vw);
+  vw->beg = tw->beg - vw->array;
+  vw->end = tw->end - vw->array;
+  unlock_work(vw);
+
+  return 0;
 }
 
 
@@ -195,42 +239,62 @@ static int extract_seq(work_t* w, double** pos, double** end)
 }
 
 
-/** thief entrypoint:
-    - the extra args hodls a pointer to the implicit stealcontext where the task is running
-    - at the end of the function, the entry point does not need to explicitly call 
-    kaapi_task_end_adaptive, which is called into the callee.
+/** thief entrypoint 
 */
-static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
+static void thief_entrypoint
+(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
 {
-  /* range to process */
-  double* beg;
-  double* end;
-
   /* process the work */
-  thief_work_t* thief_work = (thief_work_t*)args;
+  thief_work_t* const work = (thief_work_t*)args;
 
-  printf("setting splitter %p\n", (void*)sc);
+  /* range to process */
+  double* beg = work->beg;
+  double* end = work->end;
 
-  /* set the splitter for this task */
-  kaapi_steal_setsplitter(sc, splitter, thief_work );
+  /* key to find */
+  const double key = work->key;
 
-  /* while there is sequential work to do*/
-  while (extract_seq(thief_work, &beg, &end) != -1)
+  /* for key in [pos, end[ */
+  for (; beg != end; ++beg)
   {
-    /* apply w->op foreach item in [pos, end[ */
-    for (; beg != end; ++beg)
-      thief_work->op(beg);
+    if (*beg == key)
+    {
+      work->res = beg;
+      break ;
+    }
+
+    /* check if we have been preempted. if this is the
+       case, work is copied into the ktr data and then
+       passed as an argument to the reducer called by
+       the master.
+       note that checking for preemption should not be
+       done at each step of the iteration for performance
+       reasons.
+     */
+    const unsigned int is_preempted = kaapi_preemptpoint
+      (work->ktr, sc, NULL, NULL, (void*)work, sizeof(thief_work_t), NULL);
+    if (is_preempted)
+    {
+      /* we have been preempted, return. */
+      return ;
+    }
   }
+
+  /* we are finished, update results. */
+  thief_work_t* const res_work = (thief_work_t*)work->ktr->data;
+  res_work->beg = 0;
+  res_work->end = 0;
+  res_work->res = work->res;
 }
 
 
-
-
-/* For each main function */
-static void for_each( double* array, size_t size, void (*op)(double*) )
+/* find main function */
+static size_t find( double* array, size_t size, double key )
 {
-  /* range to process */
+  /* return the key position, or (size_t)-1 if not found */
+
   kaapi_thread_t* thread;
+  kaapi_taskadaptive_result_t* ktr;
   kaapi_stealcontext_t* sc;
   work_t  work;
   double* pos;
@@ -241,38 +305,56 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
 
   /* initialize work */
   KAAPI_ATOMIC_WRITE(&work.lock, 0);
-  work.op    = op;
+  work.key   = key;
   work.array = array;
   work.beg   = 0;
   work.end   = size;
+  work.res   = (size_t)-1;
 
-  /* push an adaptive task */
+  /* push an adaptive task. set the preemption flag. */
   sc = kaapi_task_begin_adaptive(
         thread, 
-        KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION, 
+        KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, 
         splitter, 
         &work     /* arg for splitter = work to split */
     );
   
-  /* while there is sequential work to do*/
+  /* while there is sequential work to do */
+ redo_work:
   while (extract_seq(&work, &pos, &end) != -1)
   {
-    /* apply w->op foreach item in [pos, end[ */
+    /* find the key in [pos, end[ */
     for (; pos != end; ++pos)
-      op(pos);
+      if (key == *pos)
+      {
+	/* key found, disable stealing... */
+	kaapi_steal_setsplitter(sc, 0, 0);
+	work.res = pos - array;
+	/* ... and abort thieves processing */
+	goto preempt_thieves;
+      }
+  }
+
+  /* preempt and reduce thieves */
+ preempt_thieves:
+  ktr = kaapi_get_thief_head(sc);
+  if (ktr != NULL)
+  {
+    kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
+
+    /* result not found, continue the work */
+    if (work.res == (size_t)-1)
+      goto redo_work;
+
+    /* continue until no more thief */
+    goto preempt_thieves;
   }
 
   /* wait for thieves */
   kaapi_task_end_adaptive(sc);
   /* here: 1/ all thieves have finish their result */
-}
 
-
-/**
-*/
-static void apply_cos( double* v )
-{
-  *v = cos(*v);
+  return work.res;
 }
 
 
@@ -293,16 +375,18 @@ int main(int ac, char** av)
     /* initialize, apply, check */
 
     for (i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
+      array[i] = (double)i;
 
-    for_each( array, ITEM_COUNT, apply_cos );
+    const double key = (double)(ITEM_COUNT / 2);
+    const size_t res = find( array, ITEM_COUNT, key );
 
     for (i = 0; i < ITEM_COUNT; ++i)
-      if (array[i] != 1.f)
-      {
-	printf("invalid @%lu == %lf\n", i, array[i]);
+      if (array[i] == key)
 	break ;
-      }
+    if (i == ITEM_COUNT)
+      i = (size_t)-1;
+    if (i != res)
+      printf("invalid %lu != %lu\n", i, res);
   }
 
   printf("done\n");
