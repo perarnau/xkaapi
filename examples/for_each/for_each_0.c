@@ -145,7 +145,8 @@ static int splitter (
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
     /* thief work: not adaptive result because no preemption is used here  */
-    thief_work_t* const tw = kaapi_reply_init_adaptive_task( req, thief_entrypoint, sc, 0 );
+    thief_work_t* const tw =
+      kaapi_reply_init_adaptive_task( req, thief_entrypoint, sc, 0 );
     tw->op  = vw->op;
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;
@@ -213,16 +214,12 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
 {
   kaapi_thread_t* thread;
   kaapi_stealcontext_t* sc;
-  kaapi_frame_t frame;
   work_t  work;
   double* pos;
   double* end;
 
   /* get the self thread */
   thread = kaapi_self_thread();
-
-  /* save the frame for later restore */
-  kaapi_thread_save_frame(thread, &frame);
 
   /* initialize work */
   KAAPI_ATOMIC_WRITE(&work.lock, 0);
@@ -251,9 +248,6 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   kaapi_task_end_adaptive(sc);
   kaapi_sched_sync();
   /* here: 1/ all thieves have finish their result */
-
-  /* restore the frame */
-  kaapi_thread_restore_frame(thread, &frame);
 }
 
 

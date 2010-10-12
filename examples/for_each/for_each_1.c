@@ -230,16 +230,12 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   /* range to process */
   kaapi_thread_t* thread;
   kaapi_stealcontext_t* sc;
-  kaapi_frame_t frame;
   work_t  work;
   double* pos;
   double* end;
 
   /* get the self thread */
   thread = kaapi_self_thread();
-
-  /* save the frame for later restore */
-  kaapi_thread_save_frame(thread, &frame);
 
   /* initialize work */
   KAAPI_ATOMIC_WRITE(&work.lock, 0);
@@ -268,9 +264,6 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   kaapi_task_end_adaptive(sc);
   kaapi_sched_sync();
   /* here: 1/ all thieves have finish their result */
-
-  /* restore the frame */
-  kaapi_thread_restore_frame(thread, &frame);
 }
 
 

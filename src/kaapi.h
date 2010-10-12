@@ -915,7 +915,7 @@ extern void* kaapi_reply_init_task (
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-extern void kaapi_reply_pushtask(kaapi_request_t*);
+extern void kaapi_reply_push_task(kaapi_request_t*);
 
 /** \ingroup ADAPTIVE
     Initialize an adaptive task to be executed by a thief.
