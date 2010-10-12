@@ -85,5 +85,9 @@ int kaapi_task_end_adaptive( kaapi_stealcontext_t* stc )
   kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
   kaapi_task_init( task, kaapi_taskfinalize_body, stc );
   kaapi_thread_pushtask(stc->thread);
+
+  /* block until done */
+  kaapi_sched_sync();
+
   return 0;
 }

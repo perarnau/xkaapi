@@ -262,7 +262,6 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
 
   /* wait for thieves */
   kaapi_task_end_adaptive(sc);
-  kaapi_sched_sync();
   /* here: 1/ all thieves have finish their result */
 }
 
