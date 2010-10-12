@@ -76,6 +76,116 @@ namespace ka {
     kaapi_task_body_t default_body;
   };
   
+  /* C++ atomics encapsulation, low level memory routines 
+     * only specialized for signed 32 bits and 64 bits integer
+  */
+  template<int bits>
+  struct atomic_t;
+  
+  template<>
+  class atomic_t<32> {
+  public:
+    atomic_t<32>(kaapi_int32_t value =0)
+    { 
+#if defined(__i386__)||defined(__x86_64)
+      kaapi_assert_debug( ((unsigned long)&_atom & (32/8-1)) == 0 ); 
+#endif
+      KAAPI_ATOMIC_WRITE(&_atom, value);
+    }
+
+    kaapi_int32_t read() const 
+    { return KAAPI_ATOMIC_READ(&_atom); }
+
+    void write( kaapi_int32_t value ) 
+    { KAAPI_ATOMIC_WRITE(&_atom, value); }
+    
+    void write_barrier( kaapi_int32_t value ) 
+    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
+    
+    bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
+    { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
+
+    kaapi_int32_t incr( )
+    { return KAAPI_ATOMIC_INCR( &_atom ); }
+
+    kaapi_int32_t sub( kaapi_int32_t v )
+    { return KAAPI_ATOMIC_SUB( &_atom, v ); }
+
+    kaapi_int32_t fetch_and_or( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_OR_ORIG( &_atom, mask ); }
+
+    kaapi_int32_t fetch_and_and( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_AND_ORIG( &_atom, mask ); }
+
+    kaapi_int32_t fetch_and_xor( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_XOR_ORIG( &_atom, mask ); }
+
+    kaapi_int32_t or_and_fetch( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_OR( &_atom, mask ); }
+
+    kaapi_int32_t and_and_fetch( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_AND( &_atom, mask ); }
+
+    kaapi_int32_t xor_and_fetch( kaapi_int32_t mask )
+    { return KAAPI_ATOMIC_XOR( &_atom, mask ); }
+
+  protected:
+    kaapi_atomic32_t _atom;
+  };
+
+
+  template<>
+  class atomic_t<64> {
+  public:
+    atomic_t<64>(kaapi_int64_t value =0)
+    { 
+      KAAPI_ATOMIC_WRITE(&_atom, value);
+#if defined(__i386__)||defined(__x86_64)
+      kaapi_assert_debug( ((unsigned long)this & (64/8-1)) == 0 ); 
+#endif
+    }
+
+    kaapi_int64_t read() const 
+    { return KAAPI_ATOMIC_READ(&_atom); }
+
+    void write( kaapi_int64_t value )
+    { KAAPI_ATOMIC_WRITE(&_atom, value); }
+    
+    void write_barrier( kaapi_int64_t value ) 
+    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
+        
+    bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
+    { return KAAPI_ATOMIC_CAS64( &_atom, oldvalue, newvalue ); }
+
+    kaapi_int64_t incr( )
+    { return KAAPI_ATOMIC_INCR64( &_atom ); }
+
+    kaapi_int64_t sub( kaapi_int64_t v )
+    { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
+
+    kaapi_int64_t fetch_and_or( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_OR64_ORIG( &_atom, mask ); }
+
+    kaapi_int64_t fetch_and_and( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_AND64_ORIG( &_atom, mask ); }
+
+    kaapi_int64_t fetch_and_xor( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_XOR64_ORIG( &_atom, mask ); }
+
+    kaapi_int64_t or_and_fetch( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_OR64( &_atom, mask ); }
+
+    kaapi_int64_t and_and_fetch( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_AND64( &_atom, mask ); }
+
+    kaapi_int64_t xor_and_fetch( kaapi_int64_t mask )
+    { return KAAPI_ATOMIC_XOR64( &_atom, mask ); }
+
+  protected:
+    kaapi_atomic64_t _atom;
+  };
+  
+  
   /* Kaapi C++ thread <-> Kaapi C thread */
   class Thread;
 

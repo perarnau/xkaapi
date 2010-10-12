@@ -1573,9 +1573,17 @@ static inline int __kaapi_isaligned(volatile void* a, int byte)
 }
 #define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
   (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? instruction : 0)
+
+static inline int __kaapi_isaligned_const(const volatile void* a, int byte)
+{
+  kaapi_assert( (((unsigned long)a) & (byte-1)) == 0 ); 
+  return 1;
+}
+#define __KAAPI_ISALIGNED_CONST_ATOMIC(a,instruction)\
+  (__kaapi_isaligned_const( &(a)->_counter, sizeof((a)->_counter)) ? instruction : 0)
   
 #  define KAAPI_ATOMIC_READ(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter)
+    __KAAPI_ISALIGNED_CONST_ATOMIC(a, (a)->_counter)
 
 #  define KAAPI_ATOMIC_WRITE(a, value) \
     __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
