@@ -44,6 +44,7 @@
 #include "kaapi.h"
 #include <string.h>
 #include <math.h>
+#include <sys/types.h>
 
 
 /** Description of the example.
@@ -249,7 +250,7 @@ static void for_each( double* array, size_t size, void (*op)(double) )
 
 /**
 */
-void apply_sin( double v )
+static void apply_sin( double v )
 {
   volatile double res = sin(v);
   res = res; /* unused variable */
