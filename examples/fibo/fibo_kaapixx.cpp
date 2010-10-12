@@ -102,7 +102,7 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 /* Implementation for CPU machine 
 */
 template<>
-struct TaskBodyCPU<TaskFibo> /* : public TaskFibo */ 
+struct TaskBodyCPU<TaskFibo>
 {
   void operator() ( ka::pointer_w<long> res, const long n )
   {  

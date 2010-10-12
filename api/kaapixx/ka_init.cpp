@@ -228,7 +228,7 @@ int Init::initialize() throw()
     //Format::init_format();
 
     /* log file */    
-    KAAPI_ASSERT_M( (KaapiComponentManager::prop["util.log.type"] == "term")
+    KAAPI_ASSERT_M(  (KaapiComponentManager::prop["util.log.type"] == "term")
                   || (KaapiComponentManager::prop["util.log.type"] == "file")
                   || (KaapiComponentManager::prop["util.log.type"] == "thread"), 
               "[Init::initialize] bad util.log.type option" );
