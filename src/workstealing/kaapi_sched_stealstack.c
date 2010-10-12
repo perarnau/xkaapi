@@ -284,7 +284,6 @@ static int kaapi_sched_stealframe
           kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
           /* here suspend bit was set: reset it */
-          printf("I'm here !!!!\n"); fflush(stdout);
           kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_STEAL );
 #endif
         }

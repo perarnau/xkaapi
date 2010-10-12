@@ -26,8 +26,10 @@ check_PROGRAMS= \
 	nqueens_apiatha        \
 	nqueens_apikaapi       \
 	poisson3d-kaapi        \
-	poisson3d-xkaapinew 
-
+	poisson3d-xkaapinew		\
+	for_each_0            \
+	for_each_1            \
+  for_each_0xx
 
 TESTS=
 
@@ -50,6 +52,10 @@ poisson3d_xkaapinew_SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h pois
 nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
 nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 
+for_each_0_SOURCES=for_each/for_each_0.c
+for_each_1_SOURCES=for_each/for_each_1.c
+for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
+
 #foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 #accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
@@ -66,7 +72,7 @@ fiboseq_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
 fiboseq_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS)
 
 fibo_xkaapi_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
-fibo_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)   $(NESTED_FUNCTIONS_CFLAGS)
+fibo_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS) $(NESTED_FUNCTIONS_CFLAGS)
 fibo_xkaapi_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
 fibo_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS)
 
@@ -125,6 +131,21 @@ poisson3d_xkaapinew_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 poisson3d_xkaapinew_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 poisson3d_xkaapinew_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
+for_each_0_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
+for_each_0_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
+for_each_0_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
+for_each_0_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
+
+for_each_1_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
+for_each_1_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
+for_each_1_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
+for_each_1_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
+
+for_each_0xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_0xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_0xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_0xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)
 #accumulate_while_kastl_LDFLAGS =$(AM_LDFLAGS)  $(KASTLPROGS_BUILD_LDFLAGS)
@@ -138,4 +159,4 @@ poisson3d_xkaapinew_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 #foreach_std_CPPFLAGS=$(AM_CPPFLAGS)
 #foreach_std_CXXFLAGS=$(AM_CXXFLAGS)
 #foreach_std_LDFLAGS =$(AM_LDFLAGS)
-#oreach_std_LDADD   =$(LIBS)
+#foreach_std_LDADD   =$(LIBS)

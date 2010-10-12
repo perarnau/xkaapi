@@ -25,6 +25,7 @@ M4_SRCS=\
 	m4_macros \
 	ka_api_clo.m4 \
 	ka_api_spawn.m4\
+	ka_api_reqspawn.m4\
 	ka_api_execgraph.m4\
 	ka_api_execforeach.m4\
 	ka_api_tuple_header.m4\
@@ -46,6 +47,7 @@ include_HEADERS=\
 	ka_api_tuple.h\
 	ka_api_clo.h \
 	ka_api_spawn.h \
+	ka_api_reqspawn.h \
 	ka_api_execgraph.h\
 	ka_api_execforeach.h
 

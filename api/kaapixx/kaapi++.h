@@ -192,6 +192,12 @@ namespace ka {
   /* Kaapi C++ threadgroup <-> Kaapi C threadgroup */
   class ThreadGroup;
   
+  /* Kaapi C++ StealContext <-> Kaapi C kaapi_stealcontext_t */
+  class StealContext;
+
+  /* Kaapi C++ Request <-> Kaapi C kaapi_request_t */
+  class Request;
+
   /* for next networking part */
   class IStream;
   class OStream;
@@ -809,6 +815,8 @@ namespace ka {
   struct TraitUAMTypeParam { typedef T type_t; };
   template<typename T>
   struct TraitUAMTypeParam<const T&, TYPE_INTASK> { typedef T type_t; };
+  template<typename T>
+  struct TraitUAMTypeParam<const T, TYPE_INTASK> { typedef T type_t; };
 
   template<typename T>
   struct TraitUAMType {
@@ -993,6 +1001,8 @@ namespace ka {
     typedef ACCESS_MODE_CW         mode_t;
   };
 
+#if 1 /* be carrefull: is convert format definition of void (*)(double)
+         to be a pointer_rpwp */
   /* to be able to use point as arg of spawn */
   template<typename UserType>
   struct TraitUAMParam<const UserType*> {
@@ -1006,7 +1016,7 @@ namespace ka {
     typedef TraitUAMType<pointer_rpwp<UserType> > uamttype_t;
     typedef ACCESS_MODE_RPWP         mode_t;
   };
-
+#endif
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
@@ -1315,40 +1325,18 @@ namespace ka {
 
 
   // --------------------------------------------------------------------
+  class Request;
   class StealContext {
   protected:
     kaapi_stealcontext_t _sc;
     friend class Request;
   };
   
-  /* push new steal context */
-  inline StealContext* TaskBeginAdaptive(
-        int flag,
-        kaapi_task_splitter_t splitter,
-        void* arg
-  )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
-  
-  /* push new steal context */
-  template<class OBJECT>
-  inline void __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
-  { OBJECT* o = (OBJECT*)arg; 
-    o->splitter( (StealContext*)sc, nreq, (Request*)req );
-  }
-
-  template<class OBJECT>
-  inline StealContext* TaskBeginAdaptive(
-        int flag,
-        OBJECT* arg
-  )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_splitter<OBJECT>, arg); }
-    
   /* New API: request->Spawn<TASK>(sc)( args ) for adaptive tasks
   */
   class Request {
   private:
     Request() {}
-  public:
 
     template<class TASK>
     class Spawner {
@@ -1367,18 +1355,45 @@ namespace ka {
 #include "ka_api_reqspawn.h"
 
     protected:
-      kaapi_request_t*     _req;
-      kaapi_stealcontext_*  _sc;
+      kaapi_request_t*      _req;
+      kaapi_stealcontext_t* _sc;
       friend class Request;
     };
 
+  public:
     template<class TASK>
-    Spawner<TASK> Spawn(StealContext* sc) { return Spawner<TASK>(&_request, sc._sc); }
+    Spawner<TASK> Spawn(StealContext* sc) { return Spawner<TASK>(&_request, (kaapi_stealcontext_t*)sc); }
 
   protected:
     kaapi_request_t _request;
   };
 
+
+  /* push new steal context */
+  inline StealContext* TaskBeginAdaptive(
+        int flag,
+        kaapi_task_splitter_t splitter,
+        void* arg
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+  
+  /* push new steal context */
+  template<class OBJECT>
+  inline int __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  { OBJECT* o = (OBJECT*)arg; 
+    o->splitter( (StealContext*)sc, nreq, (Request*)req );
+    return 0;
+  }
+
+  template<class OBJECT>
+  inline StealContext* TaskBeginAdaptive(
+        int flag,
+        OBJECT* arg
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_splitter<OBJECT>, arg); }
+
+  inline void TaskEndAdaptive( StealContext* sc )
+  { kaapi_task_end_adaptive((kaapi_stealcontext_t*)sc); }
 
   // --------------------------------------------------------------------
   /* API: 

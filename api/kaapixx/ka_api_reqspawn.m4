@@ -18,7 +18,7 @@
       M4_PARAM(`WARNING_UNDEFINED_PASSING_RULE<mode_effective$1_t, mode_formal$1_t, FOR_ARG<$1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
       ', `', `')
 #endif
-      TaskArg_t* arg = (TaskArg_t*)kaapi_reply_init_adaptive_task( _req, _sc, KaapiFormatTask_t::default_bodies.cpu_body );
+      TaskArg_t* arg = (TaskArg_t*)kaapi_reply_init_adaptive_task( _req, KaapiFormatTask_t::default_bodies.cpu_body, _sc, 0 );
 
       // here we do not detect a compile time the error without compilation with -DKAAPI_DEBUG 
       // todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure

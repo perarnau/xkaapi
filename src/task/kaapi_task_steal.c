@@ -159,8 +159,10 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
   int i;
   int                    countparam;
+#if 0 /* remove unused warning */
   int                    push_write;
   int                    w_param;
+#endif
   kaapi_task_t*          task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */

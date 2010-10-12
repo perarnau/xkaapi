@@ -120,7 +120,6 @@ push_frame:
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-begin_loop:
   pc = fp->pc;
   
   /* stack of task growth down ! */

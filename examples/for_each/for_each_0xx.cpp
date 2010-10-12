@@ -41,10 +41,9 @@
 ** terms.
 ** 
 */
-#include "kaapi.h"
+#include "kaapi++"
 #include <string.h>
 #include <math.h>
-#include <sys/types.h>
 
 
 /** Description of the example.
@@ -55,57 +54,79 @@
     
     Next example(s) to read.
 */
-typedef struct work
-{
-  kaapi_atomic_t lock;
+template<typename T, typename OP>
+class Work {
+public:
+  /* cstor */
+  Work(T* array, size_t size, OP op)
+  {
+    /* initialize work */
+    _lock.write(0);
+    _op    = op;
+    _array = array;
+    _beg   = 0;
+    _end   = size;
+  }
 
-  void (*op)(double*);
-  double* array;
+  /* extract sequential work */
+  bool extract_seq( T*& beg, T*& end);
 
-  volatile size_t beg;
-  volatile size_t end;
+  /* split work and reply to requests */
+  void splitter (
+    ka::StealContext* sc, 
+    int nreq, 
+    ka::Request* req
+  );
 
-} work_t;
+  
+protected:
+  /* spinlocking */
+  void lock()
+  {
+    while ( (_lock.read() == 1) || !_lock.cas(0, 1))
+      ;
+  }
 
-/**
+  /* unlock */
+  void unlock()
+  { 
+    _lock.write_barrier(0); 
+  }
+
+protected:
+  ka::atomic_t<32> _lock;
+  OP _op;
+  T* _array;
+  volatile size_t _beg;
+  volatile size_t _end;
+};
+
+
+
+/** Task for the thief
 */
-typedef struct thief_work_t {
-  void (*op)(double*);
-  double* beg;
-  double* end;
-} thief_work_t;
+template<typename T, typename OP>
+struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
 
-
-/* fwd decl */
-static void thief_entrypoint(void*, kaapi_thread_t*);
-
-
-/* spinlocking */
-static void lock_work(work_t* w)
-{
-  while ( (KAAPI_ATOMIC_READ(&w->lock) == 1) || !KAAPI_ATOMIC_CAS(&w->lock, 0, 1))
-    ;
-}
-
-/* unlock */
-static void unlock_work(work_t* w)
-{
-  KAAPI_ATOMIC_WRITE(&w->lock, 0);
-}
+template<typename T, typename OP>
+struct TaskBodyCPU<TaskThief<T, OP> > {
+  void operator() ( typename TaskThief<T,OP>::formal1_t /* ka::pointer_rw<T>*/ beg, typename TaskThief<T,OP>::formal2_t/*ka::pointer_rw<T>*/ end, OP op) 
+  {
+    std::for_each( beg, end, op );
+  }
+};
 
 
 /* parallel work splitter */
-static int splitter (
-  kaapi_stealcontext_t* sc, 
-  int nreq, kaapi_request_t* req, 
-  void* args
+template<typename T, typename OP>
+void Work<T,OP>::splitter (
+    ka::StealContext* sc, 
+    int nreq, 
+    ka::Request* req
 )
 {
-  /* victim work */
-  work_t* const vw = (work_t*)args;
-
   /* stolen range */
-  size_t i, j;
+  size_t beg_theft, end_theft;
 
   /* reply count */
   int nrep = 0;
@@ -114,9 +135,9 @@ static int splitter (
   unsigned int unit_size;
 
   /* concurrent with victim */
-  lock_work(vw);
+  lock();
 
-  const size_t total_size = vw->end - vw->beg;
+  const size_t total_size = _end - _beg;
 
   /* how much per req */
 #define CONFIG_PAR_GRAIN 128
@@ -132,35 +153,25 @@ static int splitter (
 
     /* steal and update victim range */
     const size_t stolen_size = unit_size * nreq;
-    i = vw->beg - stolen_size;
-    j = vw->end;
-    vw->end -= stolen_size;
+    beg_theft = _beg - stolen_size;
+    end_theft = _end;
+    _end -= stolen_size;
   }
-
-  unlock_work(vw);
+  unlock();
 
   if (unit_size == 0)
-    return 0;
+    return;
 
-  for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
-  {
-    /* thief work: not adaptive result because no preemption is used here  */
-    thief_work_t* const tw =
-      kaapi_reply_init_adaptive_task( req, thief_entrypoint, sc, 0 );
-    tw->op  = vw->op;
-    tw->beg = vw->array+j-unit_size;
-    tw->end = vw->array+j;
-
-    kaapi_reply_push_adaptive_task( req, sc );
-  }
-
-  return nrep;
+  for (; nreq; --nreq, ++req, ++nrep, end_theft -= unit_size)
+    /* thief work: create a task */
+    req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(_array+end_theft-unit_size), ka::pointer<T>(_array+end_theft), _op );
 }
 
 
 /** seq work extractor 
 */
-static int extract_seq(work_t* w, double** pos, double** end)
+template<typename T, typename OP>
+bool Work<T,OP>::extract_seq(T*& beg, T*& end)
 {
   /* extract from range beginning */
 #define CONFIG_SEQ_GRAIN 64
@@ -168,93 +179,61 @@ static int extract_seq(work_t* w, double** pos, double** end)
 
   size_t i, j;
 
-  lock_work(w);
+  lock();
+  i = _beg;
+  if (seq_size > (_end - _beg))
+    seq_size = _end - _beg;
 
-  i = w->beg;
-
-  if (seq_size > (w->end - w->beg))
-    seq_size = w->end - w->beg;
-
-  j = w->beg + seq_size;
-  w->beg += seq_size;
-
-  unlock_work(w);
+  j = _beg + seq_size;
+  _beg += seq_size;
+  unlock();
 
   if (seq_size == 0)
-    return -1;
+    return false;
 
-  *pos = w->array + i;
-  *end = w->array + j;
+  beg = _array + i;
+  end = _array + j;
 
-  return 0;
+  return true;
 }
-
-
-/** thief entrypoint 
-*/
-static void thief_entrypoint(void* args, kaapi_thread_t* thread)
-{
-  /* process the work */
-  thief_work_t* const thief_work = (thief_work_t*)args;
-
-  /* range to process */
-  double* beg = thief_work->beg;
-  double* end = thief_work->end;
-
-  /* apply w->op foreach item in [pos, end[ */
-  for (; beg != end; ++beg)
-    thief_work->op(beg);
-}
-
-
 
 
 /* For each main function */
-static void for_each( double* array, size_t size, void (*op)(double*) )
+template<typename T, class OP>
+static void for_each( T* array, size_t size, OP op )
 {
-  kaapi_thread_t* thread;
-  kaapi_stealcontext_t* sc;
-  work_t  work;
-  double* pos;
-  double* end;
-
-  /* get the self thread */
-  thread = kaapi_self_thread();
-
-  /* initialize work */
-  KAAPI_ATOMIC_WRITE(&work.lock, 0);
-  work.op    = op;
-  work.array = array;
-  work.beg   = 0;
-  work.end   = size;
+  /* range to process */
+  ka::StealContext* sc;
+  Work<T,OP> work(array, size, op);
+  T* beg;
+  T* end;
 
   /* push an adaptive task */
-  sc = kaapi_task_begin_adaptive(
-        thread, 
-        KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION, 
-        splitter, 
+  sc = ka::TaskBeginAdaptive(
+        /* flag: concurrent which means concurrence between extrac_seq & splitter executions */
+          KAAPI_SC_CONCURRENT 
+        /* flag: no preemption which means that not preemption will be available (few ressources) */
+        | KAAPI_SC_NOPREEMPTION, 
         &work     /* arg for splitter = work to split */
-    );
+  );
   
   /* while there is sequential work to do*/
-  while (extract_seq(&work, &pos, &end) != -1)
-  {
+  while (work.extract_seq(beg, end))
     /* apply w->op foreach item in [pos, end[ */
-    for (; pos != end; ++pos)
-      op(pos);
-  }
+    std::for_each( beg, end, op );
 
   /* wait for thieves */
-  kaapi_task_end_adaptive(sc);
+  ka::TaskEndAdaptive(sc);
+
   /* here: 1/ all thieves have finish their result */
 }
 
 
 /**
 */
-static void apply_cos( double* v )
+void apply_sin( double& v )
 {
-  *v = cos(*v);
+  v = sin(v);
 }
 
 
@@ -262,8 +241,6 @@ static void apply_cos( double* v )
 */
 int main(int ac, char** av)
 {
-  size_t i;
-
 #define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
 
@@ -273,18 +250,8 @@ int main(int ac, char** av)
   for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
-
-    for (i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
-
-    for_each( array, ITEM_COUNT, apply_cos );
-
-    for (i = 0; i < ITEM_COUNT; ++i)
-      if (array[i] != 1.f)
-      {
-	printf("invalid @%lu == %lf\n", i, array[i]);
-	break ;
-      }
+    memset(array, 0, sizeof(array));
+    for_each( array, ITEM_COUNT, apply_sin );
   }
 
   printf("done\n");
