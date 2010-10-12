@@ -54,7 +54,7 @@ extern volatile unsigned int g;
 typedef struct athief_taskarg
 {
   kaapi_taskadaptive_t* mta; /* master ta */
-  volatile kaapi_taskadaptive_result_t* result;
+  kaapi_taskadaptive_result_t* ktr;
   kaapi_task_body_t ubody; /* user body */
   unsigned char udata[1]; /* user data */
 } athief_taskarg_t;
@@ -68,10 +68,10 @@ static void athief_body(void* arg, kaapi_thread_t* thread)
 
   /* signal the remote master */
   kaapi_writemem_barrier();
-  if (ata->result != 0)
+  if (ata->ktr != 0)
   {
-    ata->result->thief_term = 1;
-    ata->result->is_signaled = 1;
+    ata->ktr->thief_term = 1;
+    ata->ktr->is_signaled = 1;
   }
 
   if (ata->mta != NULL)
@@ -112,7 +112,7 @@ void* kaapi_reply_init_adaptive_task
   kaapi_request_t*             req,
   kaapi_task_body_t            body,
   kaapi_stealcontext_t*        msc,
-  kaapi_taskadaptive_result_t* result
+  kaapi_taskadaptive_result_t* ktr
 )
 {
   /* athief task body */
@@ -122,7 +122,7 @@ void* kaapi_reply_init_adaptive_task
   athief_taskarg_t* const ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
   ata->mta    = (kaapi_taskadaptive_t*)msc;
-  ata->result = result;
+  ata->ktr    = ktr;
   ata->ubody  = body;
 
   /* user put args in this area */
@@ -140,7 +140,7 @@ void kaapi_reply_push_adaptive_task
 {
   athief_taskarg_t* ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, (kaapi_taskadaptive_result_t*)ata->result, KAAPI_REQUEST_REPLY_HEAD);
+  kaapi_request_reply( msc, req, ata->ktr, KAAPI_REQUEST_REPLY_HEAD);
 }
 
 /*
@@ -153,7 +153,7 @@ void kaapi_reply_pushhead_adaptive_task
 {
   athief_taskarg_t* ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, (kaapi_taskadaptive_result_t*)ata->result, KAAPI_REQUEST_REPLY_HEAD);
+  kaapi_request_reply( msc, req, ata->ktr, KAAPI_REQUEST_REPLY_HEAD);
 }
 
 
@@ -167,7 +167,7 @@ void kaapi_reply_pushtail_adaptive_task
 {
   athief_taskarg_t* ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, (kaapi_taskadaptive_result_t*)ata->result, KAAPI_REQUEST_REPLY_TAIL);
+  kaapi_request_reply( msc, req, ata->ktr, KAAPI_REQUEST_REPLY_TAIL);
 }
 
 
@@ -176,7 +176,7 @@ void kaapi_reply_pushtail_adaptive_task
 int kaapi_request_reply(
     kaapi_stealcontext_t*        stc,
     kaapi_request_t*             request, 
-    kaapi_taskadaptive_result_t* result,
+    kaapi_taskadaptive_result_t* ktr,
     int                          flag
 )
 {
@@ -185,10 +185,10 @@ int kaapi_request_reply(
   kaapi_assert_debug
     ((flag == KAAPI_REQUEST_REPLY_HEAD) || (flag == KAAPI_REQUEST_REPLY_TAIL));
   
-  if ((result ==0) && (stc ==0))
+  if ((ktr ==0) && (stc ==0))
     return _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);
   
-  if (result !=0)
+  if (ktr !=0)
   {
     /* lock the ta result list */
     while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
@@ -196,29 +196,29 @@ int kaapi_request_reply(
 
     /* insert in head or tail */
     if (ta->head ==0)
-      ta->tail = ta->head = result;
+      ta->tail = ta->head = ktr;
     else if ((flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD) 
     { 
-      result->next   = ta->head;
-      ta->head->prev = result;
-      ta->head       = result;
+      ktr->next   = ta->head;
+      ta->head->prev = ktr;
+      ta->head       = ktr;
     } 
     else 
     {
-      result->prev   = ta->tail;
-      ta->tail->next = result;
-      ta->tail       = result;
+      ktr->prev	     = ta->tail;
+      ta->tail->next = ktr;
+      ta->tail       = ktr;
     }
 
     KAAPI_ATOMIC_WRITE( &ta->lock, 0 );
 
     /* link result to the stc */
-    result->master = ta;
+    ktr->master = ta;
 
     /* set athief result to signal task end */
     athief_taskarg_t* const ata = (athief_taskarg_t*)
       request->reply->u.s_task.data;
-    ata->result = result;
+    ata->ktr = ktr;
   }
 
   /* increment master thief count */
