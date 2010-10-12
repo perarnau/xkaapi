@@ -140,7 +140,7 @@ void kaapi_reply_push_adaptive_task
 {
   athief_taskarg_t* ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, ata->result, KAAPI_REQUEST_REPLY_HEAD);
+  kaapi_request_reply( msc, req, (kaapi_taskadaptive_result_t*)ata->result, KAAPI_REQUEST_REPLY_HEAD);
 }
 
 /*
@@ -153,7 +153,7 @@ void kaapi_reply_pushhead_adaptive_task
 {
   athief_taskarg_t* ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, ata->result, KAAPI_REQUEST_REPLY_HEAD);
+  kaapi_request_reply( msc, req, (kaapi_taskadaptive_result_t*)ata->result, KAAPI_REQUEST_REPLY_HEAD);
 }
 
 
@@ -167,7 +167,7 @@ void kaapi_reply_pushtail_adaptive_task
 {
   athief_taskarg_t* ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, ata->result, KAAPI_REQUEST_REPLY_TAIL);
+  kaapi_request_reply( msc, req, (kaapi_taskadaptive_result_t*)ata->result, KAAPI_REQUEST_REPLY_TAIL);
 }
 
 
