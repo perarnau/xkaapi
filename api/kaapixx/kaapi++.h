@@ -1315,6 +1315,72 @@ namespace ka {
 
 
   // --------------------------------------------------------------------
+  class StealContext {
+  protected:
+    kaapi_stealcontext_t _sc;
+    friend class Request;
+  };
+  
+  /* push new steal context */
+  inline StealContext* TaskBeginAdaptive(
+        int flag,
+        kaapi_task_splitter_t splitter,
+        void* arg
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+  
+  /* push new steal context */
+  template<class OBJECT>
+  inline void __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  { OBJECT* o = (OBJECT*)arg; 
+    o->splitter( (StealContext*)sc, nreq, (Request*)req );
+  }
+
+  template<class OBJECT>
+  inline StealContext* TaskBeginAdaptive(
+        int flag,
+        OBJECT* arg
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_splitter<OBJECT>, arg); }
+    
+  /* New API: request->Spawn<TASK>(sc)( args ) for adaptive tasks
+  */
+  class Request {
+  private:
+    Request() {}
+  public:
+
+    template<class TASK>
+    class Spawner {
+    protected:
+      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc ) : _req(r), _sc(sc) {}
+
+    public:
+      /**
+      **/      
+      void operator()()
+      { 
+        void* arg __attribute__((unused)) = kaapi_reply_init_adaptive_task( _req, _sc, KaapiTask0<TASK>::body );
+        kaapi_reply_push_adaptive_task( _req, _sc );
+      }
+
+#include "ka_api_reqspawn.h"
+
+    protected:
+      kaapi_request_t*     _req;
+      kaapi_stealcontext_*  _sc;
+      friend class Request;
+    };
+
+    template<class TASK>
+    Spawner<TASK> Spawn(StealContext* sc) { return Spawner<TASK>(&_request, sc._sc); }
+
+  protected:
+    kaapi_request_t _request;
+  };
+
+
+  // --------------------------------------------------------------------
   /* API: 
      * threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args )
      * threadgroup[i]->Spawn<TASK>
