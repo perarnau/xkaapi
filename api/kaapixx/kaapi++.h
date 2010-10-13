@@ -1401,7 +1401,6 @@ namespace ka {
     kaapi_request_t _request;
   };
 
-
   /* push new steal context */
   inline StealContext* TaskBeginAdaptive(
         int flag,
