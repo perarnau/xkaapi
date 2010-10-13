@@ -509,19 +509,24 @@ namespace ka {
     Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }\
     Self_t operator--(int) { return base_pointer<T>::_ptr--; }\
     Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }\
+    Self_t operator+(unsigned int i) const { return base_pointer<T>::_ptr+i; }\
     Self_t operator+(long i) const { return base_pointer<T>::_ptr+i; }\
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }\
+    Self_t operator+(unsigned long i) const { return base_pointer<T>::_ptr+i; }\
     Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }\
+    Self_t& operator+=(unsigned int i) { base_pointer<T>::_ptr+=i; return *this; }\
     Self_t& operator+=(long i) { base_pointer<T>::_ptr+=i; return *this; }\
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }\
+    Self_t& operator+=(unsigned long i) { base_pointer<T>::_ptr+=i; return *this; }\
     Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }\
+    Self_t operator-(unsigned int i) const { return base_pointer<T>::_ptr-i; }\
     Self_t operator-(long i) const { return base_pointer<T>::_ptr-i; }\
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }\
+    Self_t operator-(unsigned long i) const { return base_pointer<T>::_ptr-i; }\
     Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }\
+    Self_t& operator-=(unsigned int i) { return base_pointer<T>::_ptr-=i; }\
     Self_t& operator-=(long i) { return base_pointer<T>::_ptr-=i; }\
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }\
+    Self_t& operator-=(unsigned long i) { return base_pointer<T>::_ptr-=i; }\
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
-  
+
+
   // --------------------------------------------------------------------
   /* Information notes.
      - Access mode types (ka::W, ka::WP, ka::RW..) are defined to be used 
@@ -532,7 +537,6 @@ namespace ka {
      They are closed to the Shared types of the previous Athapascan API but 
      may be used like normal pointer (arithmetic + deferencing of pointers).
   */
-
   // --------------------------------------------------------------------
   template<class T>
   class pointer : public base_pointer<T> {
@@ -542,7 +546,7 @@ namespace ka {
     typedef pointer<T> Self_t;
     pointer() : base_pointer<T>() {}
     pointer( value_type* ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -559,7 +563,7 @@ namespace ka {
     pointer_rpwp() : base_pointer<T>() {}
     pointer_rpwp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rpwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -602,7 +606,7 @@ namespace ka {
     explicit pointer_rp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_rp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -648,7 +652,7 @@ namespace ka {
     explicit pointer_wp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_wp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_wp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -693,7 +697,7 @@ namespace ka {
     pointer_cwp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cwp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cwp( const pointer_cwp<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
