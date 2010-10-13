@@ -1404,10 +1404,10 @@ namespace ka {
   /* push new steal context */
   inline StealContext* TaskBeginAdaptive(
         int flag,
-        kaapi_task_splitter_t splitter,
-        void* arg
+        void (*splitter)(StealContext*, int, Request*),
+        void* arg = (void*)~0U
   )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, (kaapi_task_splitter_t)splitter, arg); }
   
   /* push new steal context */
   template<class OBJECT>
