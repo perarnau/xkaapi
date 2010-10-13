@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi++"
+#include "algorithm"
 #include <string.h>
 #include <math.h>
 
