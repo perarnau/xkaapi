@@ -29,6 +29,7 @@ check_PROGRAMS= \
 	poisson3d-xkaapinew		\
 	for_each_0            \
 	for_each_1            \
+  for_each_rec_xx       \
   for_each_0xx          \
   for_each_0xx_lambda
 
@@ -55,6 +56,7 @@ nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 
 for_each_0_SOURCES=for_each/for_each_0.c
 for_each_1_SOURCES=for_each/for_each_1.c
+for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
 for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
 for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
 
@@ -143,6 +145,11 @@ for_each_1_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
 for_each_1_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
 for_each_1_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
 for_each_1_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
+
+for_each_rec_xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_rec_xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_rec_xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_rec_xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
 for_each_0xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_0xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)

@@ -59,14 +59,14 @@ template<typename T, typename OP>
 class Work {
 public:
   /* cstor */
-  Work(T* array, size_t size, OP op)
+  Work(T* beg, T* end, OP op)
   {
     /* initialize work */
     _lock.write(0);
     _op    = op;
-    _array = array;
+    _array = beg;
     _beg   = 0;
-    _end   = size;
+    _end   = end-beg;
   }
 
   /* extract sequential work */
@@ -82,7 +82,6 @@ public:
     ka::Request* req
   );
 
-  
 protected:
   /* spinlocking */
   void lock()
@@ -166,8 +165,6 @@ unsigned int Work<T,OP>::extract_par(int nreq, T*& beg_theft, T*& end_theft)
 }
 
 
-
-
 /** Task for the thief
 */
 template<typename T, typename OP>
@@ -180,7 +177,6 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
     std::for_each( beg, end, op );
   }
 };
-
 
 
 /* parallel work splitter */
@@ -204,16 +200,13 @@ void Work<T,OP>::split (
 }
 
 
-
 /* For each main function */
 template<typename T, class OP>
-static void for_each( T* array, size_t size, OP op )
+static void for_each( T* beg, T* end, OP op )
 {
   /* range to process */
   ka::StealContext* sc;
-  Work<T,OP> work(array, size, op);
-  T* beg;
-  T* end;
+  Work<T,OP> work(beg, end, op);
 
   /* push an adaptive task */
   sc = ka::TaskBeginAdaptive(
@@ -223,7 +216,6 @@ static void for_each( T* array, size_t size, OP op )
         | KAAPI_SC_NOPREEMPTION, 
         /* this function should have a method splitter named 'splitter' = work to split */
         &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
-//        &ka::Wrapper<Work<T,OP>,&Work<T,OP>::split>::splitter,
         &work
   );
   
@@ -234,7 +226,6 @@ static void for_each( T* array, size_t size, OP op )
 
   /* wait for thieves */
   ka::TaskEndAdaptive(sc);
-
   /* here: 1/ all thieves have finish their result */
 }
 
@@ -249,22 +240,22 @@ void apply_sin( double& v )
 
 /**
 */
-int main(int ac, char** av)
+int main(int argc, char** argv)
 {
-#define ITEM_COUNT 100000
-  static double array[ITEM_COUNT];
-
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 1000; ++ac)
-  {
-    /* initialize, apply, check */
-    memset(array, 0, sizeof(array));
-    for_each( array, ITEM_COUNT, apply_sin );
-  }
+  size_t size = 10000;
+  if (argc >1) size = atoi(argv[1]);
+  
+  double* array = new double[size];
 
-  printf("done\n");
+  /* initialize, apply, check */
+  memset(array, 0, sizeof(array));
+
+  for_each( array, array+size, apply_sin );
+
+  std::cout << "Done" << std::endl;
 
   /* finalize the runtime */
   kaapi_finalize();

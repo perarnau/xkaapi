@@ -233,22 +233,22 @@ void apply_sin( double& v )
 
 /**
 */
-int main(int ac, char** av)
+int main(int argc, char** argv)
 {
-#define ITEM_COUNT 100000
-  static double array[ITEM_COUNT];
-
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 1000; ++ac)
-  {
-    /* initialize, apply, check */
-    memset(array, 0, sizeof(array));
-    for_each( array, ITEM_COUNT, apply_sin );
-  }
+  size_t size = 10000;
+  if (argc >1) size = atoi(argv[1]);
+  
+  double* array = new double[size];
 
-  printf("done\n");
+  /* initialize, apply, check */
+  memset(array, 0, sizeof(array));
+
+  for_each( array, array+size, apply_sin );
+
+  std::cout << "Done" << std::endl;
 
   /* finalize the runtime */
   kaapi_finalize();
