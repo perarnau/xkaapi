@@ -1404,11 +1404,26 @@ namespace ka {
   /* push new steal context */
   inline StealContext* TaskBeginAdaptive(
         int flag,
-        void (*splitter)(StealContext*, int, Request*),
-        void* arg = (void*)~0U
+        void splitter(StealContext*, int, Request*),
+        void* arg
   )
   { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, (kaapi_task_splitter_t)splitter, arg); }
   
+  /* push new steal context */
+  template<class OBJECT>
+  inline int __kaapi_trampoline_lambda( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  { OBJECT* o = (OBJECT*)arg; 
+    (*o)( (StealContext*)sc, nreq, (Request*)req );
+    return 0;
+  }
+
+  template<class OBJECT>
+  inline StealContext* TaskBeginAdaptive(
+        int flag,
+        OBJECT& func
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_lambda<OBJECT>, &func); }
+
   /* push new steal context */
   template<class OBJECT>
   inline int __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
