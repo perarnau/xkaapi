@@ -76,7 +76,7 @@ public:
   unsigned int  extract_par( int nreq, T*& beg, T*& end);
 
   /* name of the method should be splitter !!! split work and reply to requests */
-  void splitter (
+  void split (
     ka::StealContext* sc, 
     int nreq, 
     ka::Request* req
@@ -185,7 +185,7 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 
 /* parallel work splitter */
 template<typename T, typename OP>
-void Work<T,OP>::splitter (
+void Work<T,OP>::split (
     ka::StealContext* sc, 
     int nreq, 
     ka::Request* req
@@ -222,9 +222,9 @@ static void for_each( T* array, size_t size, OP op )
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
         /* this function should have a method splitter named 'splitter' = work to split */
-        ka::WrapperSplitter< &Work<T,OP>::splitter >,
+        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
+//        &ka::Wrapper<Work<T,OP>,&Work<T,OP>::split>::splitter,
         &work
-//        &Work<T,OP>::splitter
   );
   
   /* while there is sequential work to do*/

@@ -1428,27 +1428,37 @@ namespace ka {
 
   /* push new steal context */
   template<class OBJECT, void (OBJECT::*const SPLITTER)(StealContext*, int, Request*)>
-  inline int __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  inline int __kaapi_trampoline_splitter( struct kaapi_stealcontext_t* sc, int nreq, struct kaapi_request_t* req, void* arg )
   { OBJECT* o = (OBJECT*)arg; 
     (o->*SPLITTER)( (StealContext*)sc, nreq, (Request*)req );
     return 0;
   }
 
-  /* push new steal context */
-  template<class OBJECT, void (OBJECT::*const SPLITTER)(StealContext*, int, Request*)>
-  inline int WrapperSplitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
-  { OBJECT* o = (OBJECT*)arg; 
-    (o->*SPLITTER)( (StealContext*)sc, nreq, (Request*)req );
+  /* wrapper to splitter method */
+  template<typename OBJECT, void (OBJECT::*s)(StealContext*, int, Request*)>
+  struct Wrapper {
+    static int splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+    { OBJECT* o = (OBJECT*)arg; 
+      (o->*s)( (StealContext*)sc, nreq, (Request*)req );
+      return 0;
+    };
+  };
+
+  template<typename OBJECT, void (OBJECT::*s)(StealContext*, int, Request*)>
+  int WrapperSplitter(kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  { 
+    OBJECT* o = (OBJECT*)arg; 
+    (o->*s)( (StealContext*)sc, nreq, (Request*)req );
     return 0;
   }
 
   template<class OBJECT>
   inline StealContext* TaskBeginAdaptive(
-        int flag,
-        kaapi_task_splitter_t splitter,//void (OBJECT::* const splitter)(StealContext*, int, Request*)
-        OBJECT* arg
+        int                   flag,
+        kaapi_task_splitter_t splitter,
+        OBJECT*               arg
   )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter/*__kaapi_trampoline_splitter<OBJECT,splitter>*/, arg); }
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
 
   inline void TaskEndAdaptive( StealContext* sc )
   { kaapi_task_end_adaptive((kaapi_stealcontext_t*)sc); }
