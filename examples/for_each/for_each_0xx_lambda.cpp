@@ -183,6 +183,7 @@ static void for_each( T* array, size_t size, OP op )
   Work<T,OP> work(array, size, op);
   T* beg;
   T* end;
+  char tmp[128];
 
   /* push an adaptive task */
   sc = ka::TaskBeginAdaptive(
@@ -191,11 +192,11 @@ static void for_each( T* array, size_t size, OP op )
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
         /* this lambda is implements the splitter */
-        [&](                       /* standard arguments for the splitter function */
+        [&work,op,beg,&tmp](            /* standard arguments for the splitter function */
             ka::StealContext* sc,  /* the steal context */
             int nreq,              /* number of requests */
             ka::Request* req       /* array of request */
-           )
+           ) -> void
           {
             /* stolen range */
             T* beg_theft;
