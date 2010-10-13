@@ -1401,6 +1401,7 @@ namespace ka {
     kaapi_request_t _request;
   };
 
+#if 0
   /* push new steal context */
   inline StealContext* TaskBeginAdaptive(
         int flag,
@@ -1408,6 +1409,7 @@ namespace ka {
         void* arg
   )
   { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, (kaapi_task_splitter_t)splitter, arg); }
+#endif
   
   /* push new steal context */
   template<class OBJECT>
@@ -1425,19 +1427,28 @@ namespace ka {
   { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_lambda<OBJECT>, (void*)&func); }
 
   /* push new steal context */
-  template<class OBJECT>
+  template<class OBJECT, void (OBJECT::*const SPLITTER)(StealContext*, int, Request*)>
   inline int __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
   { OBJECT* o = (OBJECT*)arg; 
-    o->splitter( (StealContext*)sc, nreq, (Request*)req );
+    (o->*SPLITTER)( (StealContext*)sc, nreq, (Request*)req );
+    return 0;
+  }
+
+  /* push new steal context */
+  template<class OBJECT, void (OBJECT::*const SPLITTER)(StealContext*, int, Request*)>
+  inline int WrapperSplitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  { OBJECT* o = (OBJECT*)arg; 
+    (o->*SPLITTER)( (StealContext*)sc, nreq, (Request*)req );
     return 0;
   }
 
   template<class OBJECT>
   inline StealContext* TaskBeginAdaptive(
         int flag,
+        kaapi_task_splitter_t splitter,//void (OBJECT::* const splitter)(StealContext*, int, Request*)
         OBJECT* arg
   )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_splitter<OBJECT>, arg); }
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter/*__kaapi_trampoline_splitter<OBJECT,splitter>*/, arg); }
 
   inline void TaskEndAdaptive( StealContext* sc )
   { kaapi_task_end_adaptive((kaapi_stealcontext_t*)sc); }

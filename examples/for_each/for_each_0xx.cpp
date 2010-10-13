@@ -222,7 +222,9 @@ static void for_each( T* array, size_t size, OP op )
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
         /* this function should have a method splitter named 'splitter' = work to split */
+        ka::WrapperSplitter< &Work<T,OP>::splitter >,
         &work
+//        &Work<T,OP>::splitter
   );
   
   /* while there is sequential work to do*/
