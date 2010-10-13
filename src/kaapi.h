@@ -123,6 +123,8 @@ struct kaapi_stealcontext_t;
 struct kaapi_taskadaptive_result_t;
 struct kaapi_format_t;
 struct kaapi_processor_t;
+struct kaapi_request_t;
+struct kaapi_reply_t;
 
 /** Atomic type
 */
@@ -451,38 +453,6 @@ extern struct kaapi_format_t* kaapi_double_format;
     the kaapi_reply_status_t value indicating the success in stealing, the
     failure or an error.
 */
-typedef struct kaapi_reply_t {
-  volatile kaapi_uint8_t         status;    /* should be kaapi_reply_status_t */
-  kaapi_uint8_t                  reserved1;  
-  kaapi_uint16_t                 reserved2;  
-  kaapi_uint16_t                 reserved3;
-  union {
-    struct {
-      kaapi_task_bodyid_t        body;
-      kaapi_uint64_t             data[1];  /* @ de sp */
-    } s_task;
-    struct {
-      kaapi_format_id_t          fmt;      /* format id */
-      void*                      sp;
-      kaapi_uint64_t             data[1];  /* @ data */
-    } s_taskfmt;
-    struct kaapi_thread_context_t* thread;
-  } u;
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
-
-#define KAAPI_REPLY_DATA_SIZE_MIN (KAAPI_CACHE_LINE-sizeof(kaapi_uint8_t))
-
-
-/** \ingroup WS
-    Server side of a request send by a processor.
-    This opaque data structure is pass in parameter of the splitter function.
-*/
-typedef struct kaapi_request_t {
-  kaapi_processor_id_t      kid;            /* system wide kproc id */
-  kaapi_reply_t*            reply;          /* internal thread to signal in case of preemption */
-  kaapi_uint8_t             data[1];        /* not used data[0]...data[XX] ? */
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
-
 
 /** Kaapi Thread context
     This is the public view of the stack of frame contains in kaapi_thread_context_t
@@ -575,9 +545,10 @@ typedef struct kaapi_stealcontext_t {
   int                            flag; 
 
   volatile int                   hasrequest;
-  kaapi_request_t*               requests;
+  struct kaapi_request_t*        requests;
 
   kaapi_atomic_t                 is_there_thief;
+  kaapi_atomic_t                 thievescount;
 
 } kaapi_stealcontext_t;
 
@@ -606,6 +577,37 @@ typedef struct kaapi_taskadaptive_result_t {
   int volatile                        is_signaled;
 } kaapi_taskadaptive_result_t;
 #endif
+
+typedef struct kaapi_reply_t {
+  volatile kaapi_uint32_t        status;    /* should be kaapi_reply_status_t */
+  kaapi_stealcontext_t		 sc;
+  volatile kaapi_uint32_t	 req_preempt;
+  union {
+    struct {
+      kaapi_task_bodyid_t        body;
+      void*			 data;
+    } s_task;
+    struct {
+      kaapi_format_id_t          fmt;      /* format id */
+      void*                      sp;
+    } s_taskfmt;
+    struct kaapi_thread_context_t* thread;
+  } u;
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
+
+#define KAAPI_REPLY_DATA_SIZE_MIN (KAAPI_CACHE_LINE-sizeof(kaapi_uint8_t))
+
+
+/** \ingroup WS
+    Server side of a request send by a processor.
+    This opaque data structure is pass in parameter of the splitter function.
+*/
+typedef struct kaapi_request_t {
+  kaapi_processor_id_t      kid;            /* system wide kproc id */
+  kaapi_reply_t*            reply;          /* internal thread to signal in case of preemption */
+  kaapi_uint8_t             data[1];        /* not used data[0]...data[XX] ? */
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
+
 
 /* ========================================================================= */
 /** \ingroup DFG
@@ -869,7 +871,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive(
     After the call to this function, all thieves have finish to compute in parallel,
     and memory location produced in concurrency may be read by the calling thread.
 */
-extern int kaapi_task_end_adaptive( kaapi_stealcontext_t* stc );
+extern void kaapi_task_end_adaptive( kaapi_stealcontext_t* stc );
 
 /** \ingroup ADAPTIVE
     Allocate the return data structure for the thief. This structure should be passed

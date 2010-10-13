@@ -66,7 +66,8 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive(
   kaapi_thread_save_frame(thread, &frame);
   
   kaapi_mem_barrier();
-  
+
+  /* todo: should be pushed cacheline aligned */
   ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata_align
     (thread, sizeof(kaapi_taskadaptive_t), sizeof(void*));
   kaapi_assert_debug( ta !=0 );
@@ -79,9 +80,9 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive(
   ta->sc.hasrequest         = 0;
   ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
   KAAPI_ATOMIC_WRITE(&ta->sc.is_there_thief, 0);
+  KAAPI_ATOMIC_WRITE(&ta->sc.thievescount, 0);
 
   KAAPI_ATOMIC_WRITE(&ta->lock, 0);
-  KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);
   ta->head                  = 0;
   ta->tail                  = 0;
   ta->frame                 = frame;

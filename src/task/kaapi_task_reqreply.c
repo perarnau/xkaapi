@@ -49,33 +49,42 @@
 /* adaptive task body
  */
 
-extern volatile unsigned int g;
-
 typedef struct athief_taskarg
 {
-  kaapi_taskadaptive_t* mta; /* master ta */
+  kaapi_taskadaptive_t* msc; /* master sc */
   kaapi_taskadaptive_result_t* ktr;
   kaapi_task_body_t ubody; /* user body */
   unsigned char udata[1]; /* user data */
 } athief_taskarg_t;
+
+typedef void (*athief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
 static void athief_body(void* arg, kaapi_thread_t* thread)
 {
   athief_taskarg_t* const ata = (athief_taskarg_t*)arg;
 
   /* execute the original task */
-  ata->ubody((void*)ata->udata, thread);
+  athief_body_t const body = (athief_body_t)ata->ubody;
+  body((void*)ata->udata, thread, &kaapi_self_thread_context()->reply.sc);
 
-  /* signal the remote master */
   kaapi_writemem_barrier();
-  if (ata->ktr != 0)
+
+  if (!(ata->msc->flags & KAAPI_SC_PREEMPTION))
   {
+    /* non preemptive algorithm decrement the
+       thievecount. this is the only way for
+       the master to sync on algorithm term.
+     */
+    KAAPI_ATOMIC_DECR(&ata->msc->thievescount);
+  }
+  else if (ata->ktr != 0)
+  {
+    /* preemptive algorithms need to inform
+       they are done so they can be reduced.
+     */
     ata->ktr->thief_term = 1;
     ata->ktr->is_signaled = 1;
   }
-
-  if (ata->mta != NULL)
-    KAAPI_ATOMIC_DECR(&ata->mta->thievescount);
 }
 
 
@@ -121,7 +130,7 @@ void* kaapi_reply_init_adaptive_task
   /* athief task args */
   athief_taskarg_t* const ata = (athief_taskarg_t*)
     req->reply->u.s_task.data;
-  ata->mta    = (kaapi_taskadaptive_t*)msc;
+  ata->msc    = msc;
   ata->ktr    = ktr;
   ata->ubody  = body;
 
@@ -199,7 +208,10 @@ int kaapi_request_reply(
 
     /* insert in head or tail */
     if (ta->head ==0)
-      ta->tail = ta->head = ktr;
+    {
+      ta->tail = ktr;
+      ta->head = ktr;
+    }
     else if ((flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD) 
     { 
       ktr->next   = ta->head;
@@ -214,9 +226,6 @@ int kaapi_request_reply(
     }
 
     KAAPI_ATOMIC_WRITE( &ta->lock, 0 );
-
-    /* link result to the stc */
-    ktr->master = ta;
 
     /* set athief result to signal task end */
     ata->ktr = ktr;

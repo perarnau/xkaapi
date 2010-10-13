@@ -51,6 +51,7 @@
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_victim_t          victim;
+  kaapi_thread_t*	  thread;
   kaapi_reply_t*          reply;
   kaapi_listrequest_t*    victim_hlr;
   int err;
@@ -63,16 +64,14 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   /* clear thief stack/thread that will receive tasks */
   kaapi_thread_clear( kproc->thread );
   
-  /* map the reply data structure into the stack data */
-  reply = kaapi_thread_pushdata_align( 
-        kaapi_threadcontext2thread(kproc->thread), 
-        4 * KAAPI_CACHE_LINE, 
-        sizeof(void*) 
-  );
+  /* allocate reply data on the stack */
+  thread = kaapi_threadcontext2thread(kproc->thread);
+  reply = &kproc->thread->reply;
+  reply->u.s_task.data = kaapi_thread_pushdata_align
+    (thread, 4 * KAAPI_CACHE_LINE, sizeof(void*));
 
-#if defined(KAAPI_DEBUG)
-  memset(reply, 0, 4 * KAAPI_CACHE_LINE);
-#endif
+  /* reset the preemption request */
+  reply->req_preempt = 0;
 
 redo_select:
   /* select the victim processor */
@@ -198,10 +197,13 @@ return_value:
     case KAAPI_REPLY_S_TASK:
       kaapi_assert_debug( kaapi_isvalid_body( reply->u.s_task.body ) );
 
-      /* arguments are store into the reply data structure and have been already pushed */
-      /* push a task with the body */
-      kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
-      kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
+      /* initialize the stealcontext according to flags
+       */
+
+      /* arguments are store into the reply data structure and
+	 have been already pushed. push a task with the body */
+      kaapi_task_init(kaapi_thread_toptask(thread), reply->u.s_task.body, reply->u.s_task.data);
+      kaapi_thread_pushtask(thread);
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif

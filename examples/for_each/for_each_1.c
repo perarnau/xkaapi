@@ -209,8 +209,6 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
   /* process the work */
   thief_work_t* thief_work = (thief_work_t*)args;
 
-  printf("setting splitter %p\n", (void*)sc);
-
   /* set the splitter for this task */
   kaapi_steal_setsplitter(sc, splitter, thief_work );
 

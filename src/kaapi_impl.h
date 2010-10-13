@@ -384,6 +384,9 @@ typedef struct kaapi_thread_context_t {
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
+
+  kaapi_reply_t  		 reply;		/** per thread reply block */
+
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
@@ -406,7 +409,6 @@ typedef struct kaapi_taskadaptive_t {
   kaapi_atomic_t                      lock;            /* required for access to list */
   struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
   struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
-  kaapi_atomic_t                      thievescount __attribute__((aligned(KAAPI_CACHE_LINE)));   /* #thieves of the owner of this structure.... */
   kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
   void*                               save_argsplitter;/* idem */
   kaapi_frame_t                       frame;
@@ -430,7 +432,6 @@ typedef struct kaapi_taskadaptive_result_t {
   /* here begins the private part of the structure */
   volatile int                        thief_term;       /* */
 
-  struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
   int                                 flag;             /* where is allocated data */
 
   struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
