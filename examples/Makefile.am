@@ -29,7 +29,8 @@ check_PROGRAMS= \
 	poisson3d-xkaapinew		\
 	for_each_0            \
 	for_each_1            \
-  for_each_0xx
+  for_each_0xx          \
+  for_each_0xx_lambda
 
 TESTS=
 
@@ -55,10 +56,12 @@ nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 for_each_0_SOURCES=for_each/for_each_0.c
 for_each_1_SOURCES=for_each/for_each_1.c
 for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
+for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
 
 #foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 #accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
+
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 
 hello_world_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
@@ -145,6 +148,11 @@ for_each_0xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_0xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
 for_each_0xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 for_each_0xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_0xx_lambda_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_0xx_lambda_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_0xx_lambda_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_0xx_lambda_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)

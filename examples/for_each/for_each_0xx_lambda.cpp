@@ -74,14 +74,6 @@ public:
   /* extract parallel work for nreq. Return the unit size */
   unsigned int  extract_par( int nreq, T*& beg, T*& end);
 
-  /* name of the method should be splitter !!! split work and reply to requests */
-  void splitter (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-  );
-
-  
 protected:
   /* spinlocking */
   void lock()
@@ -181,29 +173,6 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 };
 
 
-
-/* parallel work splitter */
-template<typename T, typename OP>
-void Work<T,OP>::splitter (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-)
-{
-  /* stolen range */
-  T* beg_theft;
-  T* end_theft;
-
-  unsigned int unit_size = extract_par( nreq, beg_theft, end_theft );
-  if (unit_size ==0) return;
-
-  for (; nreq; --nreq, ++req, end_theft -= unit_size)
-    /* thief work: create a task */
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), _op );
-}
-
-
-
 /* For each main function */
 template<typename T, class OP>
 static void for_each( T* array, size_t size, OP op )
@@ -220,8 +189,24 @@ static void for_each( T* array, size_t size, OP op )
           KAAPI_SC_CONCURRENT 
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
-        /* this function should have a method splitter named 'splitter' = work to split */
-        &work
+        /* this lambda is implements the splitter */
+        [&](                       /* standard arguments for the splitter function */
+            ka::StealContext* sc,  /* the steal context */
+            int nreq,              /* number of requests */
+            ka::Request* req       /* array of request */
+           )
+          {
+            /* stolen range */
+            T* beg_theft;
+            T* end_theft;
+
+            unsigned int unit_size = work.extract_par( nreq, beg_theft, end_theft );
+            if (unit_size ==0) return;
+
+            for (; nreq; --nreq, ++req, end_theft -= unit_size)
+              /* thief work: create a task */
+              req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), op );
+          }
   );
   
   /* while there is sequential work to do*/
