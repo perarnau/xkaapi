@@ -100,8 +100,7 @@ protected:
 };
 
 
-/** seq work extractor 
-*/
+/* seq work extractor  */
 template<typename T, typename OP>
 bool Work<T,OP>::extract_seq(T*& beg, T*& end)
 {
@@ -214,7 +213,7 @@ static void for_each( T* beg, T* end, OP op )
           KAAPI_SC_CONCURRENT 
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
-        /* this function should have a method splitter named 'splitter' = work to split */
+        /* use a wrapper to specify the method to used during parallel split */
         &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
         &work
   );
