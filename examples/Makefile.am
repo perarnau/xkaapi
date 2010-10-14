@@ -12,25 +12,10 @@ AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
 AM_CXXFLAGS=@AM_CXXFLAGS@ 
 #-std=gnu++0x
 
-check_PROGRAMS= \
-  hello_world            \
-	fiboseq                \
-	fibo_xkaapi            \
-	fibo_atha              \
-	fibo_kaapixx           \
-	fibo_kaapixx_opt       \
-	fibo_kaapixx_sync      \
-	qsort_cilk2kaapi       \
-  matrix_multiply_cilk2kaapi \
-	branchbound_apiatha    \
-	nqueens_apiatha        \
-	nqueens_apikaapi       \
-	poisson3d-kaapi        \
-	poisson3d-xkaapinew		\
-	for_each_0			\
-	for_each_1			\
-	find_xkaapi			\
-	 for_each_0xx
+check_PROGRAMS=	\
+for_each_0	\
+for_each_1	\
+find_xkaapi
 
 TESTS=
 

@@ -87,7 +87,13 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive(
   ta->tail                  = 0;
   ta->frame                 = frame;
   ta->sc.ownertask          = kaapi_thread_toptask(thread);
-  
+
+  /* athief related data */
+  ta->msc    = NULL;
+  ta->ktr    = NULL;
+  ta->ubody  = NULL;
+  ta->udata  = NULL;
+
   /* link two contexts together (master -> {thief*}) relation, ie thief B of a thief A has the same master as the thief A */
   ta->save_splitter         = 0;
   ta->save_argsplitter      = 0;

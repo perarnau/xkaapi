@@ -156,7 +156,7 @@ static int splitter (
     tw->beg   = 0;
     tw->end   = unit_size;
 
-    kaapi_reply_push_adaptive_task( req, sc );
+    kaapi_reply_push_adaptive_task( req );
   }
 
   return nrep;
@@ -301,6 +301,8 @@ int main(int ac, char** av)
 	printf("invalid @%lu == %lf\n", i, array[i]);
 	break ;
       }
+
+    getchar();
   }
 
   printf("done\n");

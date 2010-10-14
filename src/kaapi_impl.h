@@ -394,27 +394,6 @@ typedef struct kaapi_thread_context_t {
 #define kaapi_threadcontext2stack(thread)        ( (kaapi_stack_t*)((thread)+1) )
 #define kaapi_threadcontext2thread(thread)       ( (kaapi_thread_t*)((thread)->sfp) )
 
-
-/* ============================= The structure for adaptive algorithm ============================ */
-/** 
-*/
-struct kaapi_taskadaptive_result_t;
-
-/** \ingroup ADAPT
-    Extent data structure for adaptive task.
-    This data structure is attached to any adaptative tasks.
-*/
-typedef struct kaapi_taskadaptive_t {
-  kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
-  kaapi_atomic_t                      lock;            /* required for access to list */
-  struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
-  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
-  kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
-  void*                               save_argsplitter;/* idem */
-  kaapi_frame_t                       frame;
-} kaapi_taskadaptive_t;
-
-
 /** \ingroup ADAPT
     Data structure that allows to store results of child tasks of an adaptive task.
     This data structure is stored... in the victim heap and serve as communication 

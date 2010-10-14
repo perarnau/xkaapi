@@ -576,11 +576,34 @@ typedef struct kaapi_taskadaptive_result_t {
   int volatile                        req_preempt;
   int volatile                        is_signaled;
 } kaapi_taskadaptive_result_t;
+#else
+struct kaapi_taskadaptive_result_t;
 #endif
 
+/** \ingroup ADAPT
+    Extent data structure for adaptive task.
+    This data structure is attached to any adaptative tasks.
+*/
+typedef struct kaapi_taskadaptive_t {
+  kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
+  kaapi_atomic_t                      lock;            /* required for access to list */
+  struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
+  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
+  kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
+  void*                               save_argsplitter;/* idem */
+  kaapi_frame_t                       frame;
+  kaapi_stealcontext_t*		      msc;	       /* msater stealcontext */
+  struct kaapi_taskadaptive_result_t* ktr;
+  kaapi_task_body_t		      ubody;
+  void*				      udata;
+} kaapi_taskadaptive_t;
+
+/** \ingroup ADAPT
+    reply to a steal request
+*/
 typedef struct kaapi_reply_t {
   volatile kaapi_uint32_t        status;    /* should be kaapi_reply_status_t */
-  kaapi_stealcontext_t		 sc;
+  kaapi_taskadaptive_t		 ta;
   volatile kaapi_uint32_t	 req_preempt;
   union {
     struct {
@@ -902,24 +925,6 @@ extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* result );
 
 /** \ingroup ADAPTIVE
-    Initialize a task to be executed by a thief.
-    In case of sucess, the function returns the pointer of a memory region where to store 
-    arguments for the entrypoint. Once pushed, the task is executed by the thief with
-    first argument the pointer return the call to kaapi_reply_init_task.
-    \param req the request emitted by a thief
-    \param body the entry point of the task to execute
-*/
-extern void* kaapi_reply_init_task (
-    kaapi_request_t*                    req,
-    kaapi_task_body_t                   body
-);
-
-/** \ingroup ADAPTIVE
-    push the task associated with an adaptive request
-*/
-extern void kaapi_reply_push_task(kaapi_request_t*);
-
-/** \ingroup ADAPTIVE
     Initialize an adaptive task to be executed by a thief.
     In case of sucess, the function returns the pointer of a memory region where to store 
     arguments for the entrypoint. Once pushed, the task is executed by the thief with
@@ -939,61 +944,24 @@ extern void* kaapi_reply_init_adaptive_task (
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-extern void kaapi_reply_push_adaptive_task(kaapi_request_t*, kaapi_stealcontext_t* );
+extern void kaapi_reply_pushhead_adaptive_task(kaapi_request_t*);
 
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-extern void kaapi_reply_pushhead_adaptive_task(kaapi_request_t*, kaapi_stealcontext_t* );
+extern void kaapi_reply_pushtail_adaptive_task(kaapi_request_t*);
+
+/** \ingroup ADAPTIVE
+*/
+extern void kaapi_request_reply_failed(kaapi_request_t*);
 
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-extern void kaapi_reply_pushtail_adaptive_task(kaapi_request_t*, kaapi_stealcontext_t* );
-
-/** \ingroup ADAPTIVE
-    Reply a value to a steal request. If retval is !=0 it means that the request
-    has successfully adapt to steal work. Else 0.
-    This function could not be called in concurrence with other calls:
-    - if the adaptive algorithm matches correctly the standard structure (beginsteal/endsteal) etc..
-    the scheduler ensure that only one thief is able to call the method.
-    \param sc INOUT the steal context
-    \param request INOUT data structure used to replied by the thief
-    \param result IN the result data structure for the thief or 0 if reply failed.
-    \param insert_head =1 if insert the thief in the head of the thieves list
-*/
-extern int kaapi_request_reply(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
-    struct kaapi_taskadaptive_result_t* result,
-    int                                 flag
-);
-
-#define KAAPI_REQUEST_REPLY_HEAD   0x0
-#define KAAPI_REQUEST_REPLY_TAIL   0x1
-
-static inline int kaapi_request_reply_head(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
-    struct kaapi_taskadaptive_result_t* result
-)
-{ return kaapi_request_reply(stc, request, result, KAAPI_REQUEST_REPLY_HEAD); }
-
-/** \ingroup ADAPTIVE
-*/
-static inline int kaapi_request_reply_tail(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
-    struct kaapi_taskadaptive_result_t* result
-)
-{ return kaapi_request_reply(stc, request, result, KAAPI_REQUEST_REPLY_TAIL); }
-
-/** \ingroup ADAPTIVE
-*/
-static inline int kaapi_request_reply_failed(     
-    kaapi_request_t*               request
-)
-{ return kaapi_request_reply( 0 /* means failed */, request, 0, KAAPI_REQUEST_REPLY_HEAD ); }
+static inline void kaapi_reply_push_adaptive_task(kaapi_request_t* r)
+{
+  kaapi_reply_pushhead_adaptive_task(r);
+}
 
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction

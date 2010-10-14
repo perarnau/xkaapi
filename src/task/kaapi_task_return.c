@@ -49,7 +49,8 @@
 */
 void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
+  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)taskarg;
+
   kaapi_assert_debug( ta !=0 );
 
   /* wait end of pending thief, if any */
@@ -60,7 +61,7 @@ void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
 
   kaapi_assert(ta->head ==0)
   kaapi_assert(ta->tail ==0)
-  kaapi_assert( KAAPI_ATOMIC_READ(&ta->thievescount) ==0 ); /* else pb -> call kaapi_steal_finalize ! */
+  kaapi_assert( KAAPI_ATOMIC_READ(&ta->sc.thievescount) ==0 ); /* else pb -> call kaapi_steal_finalize ! */
 }
 
 

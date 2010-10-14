@@ -166,7 +166,7 @@ static int splitter (
     tw->ktr = ktr;
 
     /* reply head, preempt head */
-    kaapi_reply_pushhead_adaptive_task( req, sc );
+    kaapi_reply_pushhead_adaptive_task( req );
   }
 
   return nrep;

@@ -43,79 +43,110 @@
 ** terms.
 ** 
 */
+
+
 #include "kaapi_impl.h"
 
 
 /* adaptive task body
  */
 
-typedef struct athief_taskarg
-{
-  kaapi_taskadaptive_t* msc; /* master sc */
-  kaapi_taskadaptive_result_t* ktr;
-  kaapi_task_body_t ubody; /* user body */
-  unsigned char udata[1]; /* user data */
-} athief_taskarg_t;
-
 typedef void (*athief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
-static void athief_body(void* arg, kaapi_thread_t* thread)
+void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 {
-  athief_taskarg_t* const ata = (athief_taskarg_t*)arg;
+  /* 2 cases to handle:
+     . either we are an adaptive task created with
+     kaapi_task_begin_adpative. the argument is a
+     kaapi_taskadaptive task. This is the user role
+     to ensure task finalization.
+     . otherwise, we have been forked during a steal.
+     the argument is a athief_taskarg and we retrieve
+     the stealcontext since it is global to the thread
+   */
 
-  /* execute the original task */
-  athief_body_t const body = (athief_body_t)ata->ubody;
-  body((void*)ata->udata, thread, &kaapi_self_thread_context()->reply.sc);
+  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)arg;
 
-  kaapi_writemem_barrier();
+  /* this is a root adaptive task, do not execute body */
+  if (ta->msc == NULL)
+    return ;
 
-  if (!(ata->msc->flags & KAAPI_SC_PREEMPTION))
+  /* retrieve the stealcontext from the thread */
+  kaapi_stealcontext_t* const sc =
+    &kaapi_self_thread_context()->reply.ta.sc;
+
+  /* todo: save the sp and sync if changed during
+     the call (ie. wait for tasks forked)
+  */
+
+  /* execute the user task entrypoint */
+  athief_body_t const body = (athief_body_t)ta->ubody;
+  kaapi_assert_debug(body != NULL);
+  body((void*)ta->udata, thread, sc);
+
+  if (!(ta->msc->flag & KAAPI_SC_PREEMPTION))
   {
     /* non preemptive algorithm decrement the
        thievecount. this is the only way for
        the master to sync on algorithm term.
-     */
-    KAAPI_ATOMIC_DECR(&ata->msc->thievescount);
+    */
+    KAAPI_ATOMIC_DECR(&ta->msc->thievescount);
   }
-  else if (ata->ktr != 0)
+  else if (ta->ktr != 0)
   {
     /* preemptive algorithms need to inform
        they are done so they can be reduced.
-     */
-    ata->ktr->thief_term = 1;
-    ata->ktr->is_signaled = 1;
+    */
+    ta->ktr->thief_term = 1;
+    ta->ktr->is_signaled = 1;
   }
+
+  kaapi_writemem_barrier();
 }
 
 
-/*
-*/
-void* kaapi_reply_init_task
-(
-  kaapi_request_t*             req,
-  kaapi_task_body_t            body
-)
+/* common reply internal function
+ */
+
+#define KAAPI_REQUEST_REPLY_HEAD 0x0
+#define KAAPI_REQUEST_REPLY_TAIL 0x1
+
+static int request_reply(kaapi_request_t* request, int flag)
 {
-  /* athief task body */
-  req->reply->u.s_task.body = body;
+  kaapi_taskadaptive_t* const ta = &request->reply->ta;
+  
+  if (ta->ktr !=0)
+  {
+    /* insert in head or tail */
+    if (ta->head ==0)
+    {
+      ta->tail = ta->ktr;
+      ta->head = ta->ktr;
+    }
+    else if ((flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD) 
+    { 
+      ta->ktr->next   = ta->head;
+      ta->head->prev = ta->ktr;
+      ta->head       = ta->ktr;
+    } 
+    else 
+    {
+      ta->ktr->prev  = ta->tail;
+      ta->tail->next = ta->ktr;
+      ta->tail       = ta->ktr;
+    }
+  }
 
-  /* user put args in this area */
-  return req->reply->u.s_task.data;
+  /* non preemptive algorithm */
+  if (!(ta->msc->flag & KAAPI_SC_PREEMPTION))
+    KAAPI_ATOMIC_INCR(&ta->msc->thievescount);
+
+  return _kaapi_request_reply(request, KAAPI_REPLY_S_TASK);
 }
 
-/*
-*/
-void kaapi_reply_push_task
-(
-  kaapi_request_t*      request
-)
-{
-  _kaapi_request_reply( request, KAAPI_REPLY_S_TASK );
-}
-
 
 /*
-*/
+ */
 void* kaapi_reply_init_adaptive_task
 (
   kaapi_request_t*             req,
@@ -124,116 +155,36 @@ void* kaapi_reply_init_adaptive_task
   kaapi_taskadaptive_result_t* ktr
 )
 {
-  /* athief task body */
-  req->reply->u.s_task.body = (kaapi_task_bodyid_t)athief_body;
-
-  /* athief task args */
-  athief_taskarg_t* const ata = (athief_taskarg_t*)
-    req->reply->u.s_task.data;
-  ata->msc    = msc;
-  ata->ktr    = ktr;
-  ata->ubody  = body;
+  /* initialize the remote adaptive task */
+  kaapi_taskadaptive_t* const ta = &req->reply->ta;
+  ta->msc    = msc;
+  ta->ktr    = ktr;
+  ta->ubody  = body;
+  ta->udata  = req->reply->u.s_task.data;
 
   /* user put args in this area */
-  return (void*)ata->udata;
+  return (void*)ta->udata;
 }
 
 
 /*
 */
-void kaapi_reply_push_adaptive_task
-(
-  kaapi_request_t*      req,
-  kaapi_stealcontext_t* msc
-)
+void kaapi_reply_pushhead_adaptive_task(kaapi_request_t* req)
 {
-  athief_taskarg_t* ata = (athief_taskarg_t*)
-    req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, ata->ktr, KAAPI_REQUEST_REPLY_HEAD);
-}
-
-/*
-*/
-void kaapi_reply_pushhead_adaptive_task
-(
-  kaapi_request_t*      req,
-  kaapi_stealcontext_t* msc
-)
-{
-  athief_taskarg_t* ata = (athief_taskarg_t*)
-    req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, ata->ktr, KAAPI_REQUEST_REPLY_HEAD);
+  request_reply(req, KAAPI_REQUEST_REPLY_HEAD);
 }
 
 
 /*
 */
-void kaapi_reply_pushtail_adaptive_task
-(
-  kaapi_request_t*      req,
-  kaapi_stealcontext_t* msc
-)
+void kaapi_reply_pushtail_adaptive_task(kaapi_request_t* req)
 {
-  athief_taskarg_t* ata = (athief_taskarg_t*)
-    req->reply->u.s_task.data;
-  kaapi_request_reply( msc, req, ata->ktr, KAAPI_REQUEST_REPLY_TAIL);
+  request_reply(req, KAAPI_REQUEST_REPLY_TAIL);
 }
 
 
-/*
-*/
-int kaapi_request_reply(
-    kaapi_stealcontext_t*        stc,
-    kaapi_request_t*             request, 
-    kaapi_taskadaptive_result_t* ktr,
-    int                          flag
-)
+
+void kaapi_request_reply_failed(kaapi_request_t* req)
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  
-  kaapi_assert_debug
-    ((flag == KAAPI_REQUEST_REPLY_HEAD) || (flag == KAAPI_REQUEST_REPLY_TAIL));
-  
-  if ((ktr ==0) && (stc ==0))
-    return _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);
-
-  athief_taskarg_t* const ata = (athief_taskarg_t*)
-    request->reply->u.s_task.data;
-  
-  if (ktr !=0)
-  {
-    /* lock the ta result list */
-    while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
-      kaapi_slowdown_cpu();
-
-    /* insert in head or tail */
-    if (ta->head ==0)
-    {
-      ta->tail = ktr;
-      ta->head = ktr;
-    }
-    else if ((flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD) 
-    { 
-      ktr->next   = ta->head;
-      ta->head->prev = ktr;
-      ta->head       = ktr;
-    } 
-    else 
-    {
-      ktr->prev	     = ta->tail;
-      ta->tail->next = ktr;
-      ta->tail       = ktr;
-    }
-
-    KAAPI_ATOMIC_WRITE( &ta->lock, 0 );
-
-    /* set athief result to signal task end */
-    ata->ktr = ktr;
-  }
-
-  /* increment master thief count */
-  if (ata->mta != NULL)
-    KAAPI_ATOMIC_INCR( &ata->mta->thievescount );
-
-  return _kaapi_request_reply( request, KAAPI_REPLY_S_TASK );
+  _kaapi_request_reply(req, KAAPI_REPLY_S_NOK);
 }

@@ -42,6 +42,8 @@
 ** terms.
 ** 
 */
+
+
 #include "kaapi_impl.h"
 
 
@@ -50,13 +52,14 @@
 void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 {
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)args;
+  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)args;
 
   /* ensure no one is in the splitter (set to 0 previously) */
-  while (KAAPI_ATOMIC_READ(&ta->is_there_thief) != 0)
+  while (KAAPI_ATOMIC_READ(&sc->is_there_thief) != 0)
     kaapi_slowdown_cpu();
 
   /* ensure all working thieves are done */
-  while (KAAPI_ATOMIC_READ(&ta->thievescount) > 0)
+  while (KAAPI_ATOMIC_READ(&sc->thievescount) > 0)
     kaapi_slowdown_cpu();
 
   /* avoid read reordering */
@@ -85,7 +88,7 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
      an error). we restore the frame and return without
      waiting for anyting.
    */
-  if (ta->sc.flags & KAAPI_SC_PREEMPTION)
+  if (ta->sc.flag & KAAPI_SC_PREEMPTION)
   {
     kaapi_thread_restore_frame(sc->thread - 1, &ta->frame);
     return ;

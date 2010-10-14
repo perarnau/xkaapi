@@ -47,11 +47,40 @@
 
 #define KAAPI_USE_AGGREGATION
 
+
+static void prepare_taskadaptive
+(kaapi_thread_t* self_thread, kaapi_taskadaptive_t* ta)
+{
+  /* prepare the taskadaptive used by reply */
+
+  /* todo: dont initialize every member */
+
+  kaapi_stealcontext_t* const sc = &ta->sc;
+
+  ta->head = NULL;
+  ta->tail = NULL;
+  ta->save_splitter = NULL;
+  ta->save_argsplitter = NULL;
+  ta->ubody = NULL;
+  ta->udata = NULL;
+  ta->ktr = NULL;
+  ta->msc = NULL;
+  sc->splitter = NULL;
+  sc->argsplitter = NULL;
+  KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
+  KAAPI_ATOMIC_WRITE(&sc->thievescount, 0);
+
+  kaapi_thread_save_frame(self_thread, &ta->frame);
+
+  /* kaapi_writemem_barrier(); */
+}
+
 #if defined(KAAPI_USE_AGGREGATION)
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_victim_t          victim;
-  kaapi_thread_t*	  thread;
+  kaapi_thread_t*	  thread; /* the victim thread */
+  kaapi_thread_t*	  self_thread;
   kaapi_reply_t*          reply;
   kaapi_listrequest_t*    victim_hlr;
   int err;
@@ -82,6 +111,10 @@ redo_select:
 
   /* mark current processor as stealing */
   kproc->issteal = 1;
+
+  /* clear the taskadaptive before posting */
+  self_thread = kaapi_self_thread();
+  prepare_taskadaptive(self_thread, &reply->ta);
 
   /* (1) 
      Fill & Post the request to the victim processor 
@@ -191,22 +224,20 @@ return_value:
   {
     case KAAPI_REPLY_S_TASK_FMT:
       /* convert fmtid to a task body */
-      reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
-      kaapi_assert_debug(reply->u.s_task.body != 0);
+      reply->u.s_task.body = kaapi_format_resolvebyfmit
+	( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
+      kaapi_assert_debug(reply->u.s_task.body);
 
     case KAAPI_REPLY_S_TASK:
-      kaapi_assert_debug( kaapi_isvalid_body( reply->u.s_task.body ) );
 
-      /* initialize the stealcontext according to flags
-       */
+      kaapi_task_init
+	(kaapi_thread_toptask(self_thread), kaapi_adapt_body, (void*)&reply->ta);
+      kaapi_thread_pushtask(self_thread);
 
-      /* arguments are store into the reply data structure and
-	 have been already pushed. push a task with the body */
-      kaapi_task_init(kaapi_thread_toptask(thread), reply->u.s_task.body, reply->u.s_task.data);
-      kaapi_thread_pushtask(thread);
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
+
       return kproc->thread;
 
     case KAAPI_REPLY_S_THREAD:

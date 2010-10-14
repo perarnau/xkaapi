@@ -62,7 +62,7 @@ void kaapi_taskstartup_body( void* taskarg, kaapi_thread_t* thread )
 void kaapi_suspend_body( void* taskarg, kaapi_thread_t* thread )
 {
   printf("In kaapi_suspend_body\n"); fflush(stdout);
-//  kaapi_self_thread_context()->errcode |= EWOULDBLOCK << 8;
+  /* kaapi_self_thread_context()->errcode |= EWOULDBLOCK << 8; */
 }
 
 /*
@@ -72,14 +72,6 @@ void kaapi_exec_body( void* taskarg, kaapi_thread_t* thread )
   /* do not allow rexecuting already executed task */
   kaapi_assert_debug( 0 );
 }
-
-/*
-*/
-void kaapi_adapt_body( void* taskarg, kaapi_thread_t* thread  )
-{
-  kaapi_assert_debug( kaapi_task_getbody(thread[-1].pc) == kaapi_exec_body );
-}
-
 
 /*
 */
