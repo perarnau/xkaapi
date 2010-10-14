@@ -1363,7 +1363,17 @@ namespace ka {
 
   // --------------------------------------------------------------------
   class Request;
+
+  /* Stealcontext */
   class StealContext {
+  public:
+    template<class OBJECT>
+    void set_splitter(
+          kaapi_task_splitter_t splitter,
+          OBJECT*               arg
+    )
+    { kaapi_steal_setsplitter(&_sc, splitter, arg); }
+
   protected:
     kaapi_stealcontext_t _sc;
     friend class Request;

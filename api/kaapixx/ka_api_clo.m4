@@ -93,7 +93,7 @@ struct KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`, TraitUAMPara
   static void body(void* taskarg, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
-    dummy( sc M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
+    dummy( (StealContext*)sc M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitUAMParam_F$1', `', ` ')>
@@ -224,7 +224,7 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( StealContext* M4_PARAM(`, formal$1_t', `', `') ) )
   {
-    typedef void (TASK::*type_default_t)(StealContext* M4_PARAM(`, formal$1_t', `', `'));
+    typedef void (TASK::*type_default_t)(Thread* M4_PARAM(`, formal$1_t', `', `'));
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     return (kaapi_task_body_t)KAAPIWRAPPERCPUBODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`,TraitUAMParam_F$1', `', ` ')>::body;
