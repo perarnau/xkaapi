@@ -65,8 +65,15 @@ static void prepare_taskadaptive
   ta->udata = NULL;
   ta->ktr = NULL;
   ta->msc = NULL;
+  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+
+  sc->ctxtthread = kaapi_self_thread_context();
+  sc->thread = self_thread;
   sc->splitter = NULL;
   sc->argsplitter = NULL;
+  sc->flag = KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION;
+  sc->hasrequest = 0;
+  sc->requests = sc->ctxtthread->proc->hlrequests.requests;
   KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
   KAAPI_ATOMIC_WRITE(&sc->thievescount, 0);
 

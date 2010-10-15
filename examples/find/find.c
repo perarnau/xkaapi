@@ -178,6 +178,8 @@ static int splitter (
 static int reducer
 (kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
 {
+  printf("-- reducer\n");
+
   /* victim work */
   work_t* const vw = (work_t*)varg;
 
@@ -340,6 +342,8 @@ static size_t find( double* array, size_t size, double key )
   ktr = kaapi_get_thief_head(sc);
   if (ktr != NULL)
   {
+    printf("foobar\n");
+
     kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
 
     /* result not found, continue the work */
@@ -370,7 +374,7 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 1000; ++ac)
+  for (ac = 0; ac < 10; ++ac)
   {
     /* initialize, apply, check */
 

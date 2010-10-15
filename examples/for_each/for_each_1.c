@@ -105,6 +105,8 @@ static int splitter (
   void* args
 )
 {
+  printf("splitter(%p)\n", (void*)args);
+
   /* victim work */
   work_t* const vw = (work_t*)args;
 
@@ -123,16 +125,21 @@ static int splitter (
   const size_t total_size = vw->end - vw->beg;
 
   /* how much per req */
-#define CONFIG_PAR_GRAIN 128
+#define CONFIG_PAR_GRAIN 1
   unit_size = 0;
   if (total_size > CONFIG_PAR_GRAIN)
   {
+#if 0
     unit_size = total_size / (nreq + 1);
     if (unit_size == 0)
     {
       nreq = (total_size / CONFIG_PAR_GRAIN) - 1;
       unit_size = CONFIG_PAR_GRAIN;
     }
+#else
+    nreq = 1;
+    unit_size = total_size / 2;
+#endif
 
     /* steal and update victim range */
     const size_t stolen_size = unit_size * nreq;
@@ -168,7 +175,7 @@ static int splitter (
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 1
   size_t seq_size = CONFIG_SEQ_GRAIN;
 
   size_t i, j;
@@ -208,6 +215,8 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
 
   /* process the work */
   thief_work_t* thief_work = (thief_work_t*)args;
+
+  printf("thief_entrypoint(%p)\n", (void*)thief_work);
 
   /* set the splitter for this task */
   kaapi_steal_setsplitter(sc, splitter, thief_work );
@@ -280,13 +289,14 @@ int main(int ac, char** av)
 {
   size_t i;
 
-#define ITEM_COUNT 100000
+#define ITEM_COUNT 1000000
   static double array[ITEM_COUNT];
 
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 1000; ++ac)
+  /* for (ac = 0; ac < 1000; ++ac) */
+  for (ac = 0; ac < 1; ++ac)
   {
     /* initialize, apply, check */
 
@@ -301,8 +311,6 @@ int main(int ac, char** av)
 	printf("invalid @%lu == %lf\n", i, array[i]);
 	break ;
       }
-
-    getchar();
   }
 
   printf("done\n");

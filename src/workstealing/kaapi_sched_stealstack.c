@@ -266,12 +266,14 @@ static int kaapi_sched_stealframe
       /* should not be reorder before the barrier */
       splitter = sc->splitter;
       argsplitter = sc->argsplitter;
-      
+     
       if ( (splitter !=0) && (argsplitter !=0) )
       {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-        kaapi_uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
-        if (likely( !kaapi_task_state_isspecial(state) ) ) // means SUSPEND was not set before and it was set
+        const kaapi_uintptr_t state = kaapi_task_orstate
+	  ( task_top, KAAPI_MASK_BODY_STEAL );
+	/* do not steal if terminated */
+        if (likely( !kaapi_task_state_isterm(state) ) )
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
         thread->thiefpc = task_top;
         kaapi_writemem_barrier();
@@ -281,7 +283,14 @@ static int kaapi_sched_stealframe
 #endif        
         {
           /* steal sucess */
-          kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
+
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+	  /* possible race, reread the splitter */
+	  if ((splitter != 0) && (argsplitter != 0))
+#endif
+          kaapi_task_splitter_adapt
+	    (thread, task_top, splitter, argsplitter, lrequests, lrrange );
+
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
           /* here suspend bit was set: reset it */
           kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_STEAL );
