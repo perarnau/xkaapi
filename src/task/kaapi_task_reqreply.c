@@ -101,6 +101,8 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     ta->ktr->is_signaled = 1;
   }
 
+  /* todo: kaapi_thread_restore_frame */
+
   kaapi_writemem_barrier();
 }
 
