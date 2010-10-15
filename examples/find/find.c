@@ -158,7 +158,7 @@ static int splitter (
 
     /* thief work: not adaptive result because no preemption is used here  */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task
-      ( req, (kaapi_task_body_t)thief_entrypoint, sc, 0 );
+      ( req, (kaapi_task_body_t)thief_entrypoint, sc, ktr );
     tw->key = vw->key;
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;

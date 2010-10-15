@@ -157,6 +157,11 @@ void* kaapi_reply_init_adaptive_task
 {
   /* initialize the remote adaptive task */
   kaapi_taskadaptive_t* const ta = &req->reply->ta;
+
+  /* take the root master sc */
+  if (((kaapi_taskadaptive_t*)msc)->msc != NULL)
+    msc = ((kaapi_taskadaptive_t*)msc)->msc;
+
   ta->msc    = msc;
   ta->ktr    = ktr;
   ta->ubody  = body;
