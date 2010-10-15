@@ -121,6 +121,10 @@ static int request_reply
     kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)sc;
     kaapi_taskadaptive_result_t* const ktr = req->reply->ta.ktr;
 
+    /* lock the task, race with preempt_thief */
+    while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1))
+      kaapi_slowdown_cpu();
+
     /* insert in head or tail */
     if (ta->head ==0)
     {
@@ -139,6 +143,8 @@ static int request_reply
       ta->tail->next = ktr;
       ta->tail       = ktr;
     }
+
+    KAAPI_ATOMIC_WRITE(&ta->lock, 0);
   }
 
   /* non preemptive algorithm, inc the root master theifcount */

@@ -364,13 +364,13 @@ int main(int ac, char** av)
 {
   size_t i;
 
-#define ITEM_COUNT 1000000
+#define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
 
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 100; ++ac)
+  for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
 
