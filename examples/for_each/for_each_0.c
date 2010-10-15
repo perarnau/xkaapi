@@ -151,7 +151,7 @@ static int splitter (
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;
 
-    kaapi_reply_push_adaptive_task( req );
+    kaapi_reply_push_adaptive_task(sc, req);
   }
 
   return nrep;

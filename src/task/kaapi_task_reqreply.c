@@ -111,37 +111,41 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 #define KAAPI_REQUEST_REPLY_HEAD 0x0
 #define KAAPI_REQUEST_REPLY_TAIL 0x1
 
-static int request_reply(kaapi_request_t* request, int flag)
+static int request_reply
+(kaapi_stealcontext_t* sc, kaapi_request_t* req, int flag)
 {
-  kaapi_taskadaptive_t* const ta = &request->reply->ta;
-  
-  if (ta->ktr !=0)
+  /* link to the thief list of the stolen task */  
+  if (req->reply->ta.ktr !=0)
   {
+    /* stolen task */
+    kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)sc;
+    kaapi_taskadaptive_result_t* const ktr = req->reply->ta.ktr;
+
     /* insert in head or tail */
     if (ta->head ==0)
     {
-      ta->tail = ta->ktr;
-      ta->head = ta->ktr;
+      ta->tail = ktr;
+      ta->head = ktr;
     }
     else if ((flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD) 
     { 
-      ta->ktr->next   = ta->head;
-      ta->head->prev = ta->ktr;
-      ta->head       = ta->ktr;
+      ktr->next      = ta->head;
+      ta->head->prev = ktr;
+      ta->head       = ktr;
     } 
     else 
     {
-      ta->ktr->prev  = ta->tail;
-      ta->tail->next = ta->ktr;
-      ta->tail       = ta->ktr;
+      ktr->prev      = ta->tail;
+      ta->tail->next = ktr;
+      ta->tail       = ktr;
     }
   }
 
-  /* non preemptive algorithm */
-  if (!(ta->msc->flag & KAAPI_SC_PREEMPTION))
-    KAAPI_ATOMIC_INCR(&ta->msc->thievescount);
+  /* non preemptive algorithm, inc the root master theifcount */
+  if (!(req->reply->ta.msc->flag & KAAPI_SC_PREEMPTION))
+    KAAPI_ATOMIC_INCR(&req->reply->ta.msc->thievescount);
 
-  return _kaapi_request_reply(request, KAAPI_REPLY_S_TASK);
+  return _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
 }
 
 
@@ -174,17 +178,19 @@ void* kaapi_reply_init_adaptive_task
 
 /*
 */
-void kaapi_reply_pushhead_adaptive_task(kaapi_request_t* req)
+void kaapi_reply_pushhead_adaptive_task
+(kaapi_stealcontext_t* sc, kaapi_request_t* req)
 {
-  request_reply(req, KAAPI_REQUEST_REPLY_HEAD);
+  request_reply(sc, req, KAAPI_REQUEST_REPLY_HEAD);
 }
 
 
 /*
 */
-void kaapi_reply_pushtail_adaptive_task(kaapi_request_t* req)
+void kaapi_reply_pushtail_adaptive_task
+(kaapi_stealcontext_t* sc, kaapi_request_t* req)
 {
-  request_reply(req, KAAPI_REQUEST_REPLY_TAIL);
+  request_reply(sc, req, KAAPI_REQUEST_REPLY_TAIL);
 }
 
 

@@ -105,8 +105,6 @@ static int splitter (
   void* args
 )
 {
-  printf("splitter(%p)\n", (void*)args);
-
   /* victim work */
   work_t* const vw = (work_t*)args;
 
@@ -163,7 +161,7 @@ static int splitter (
     tw->beg   = 0;
     tw->end   = unit_size;
 
-    kaapi_reply_push_adaptive_task( req );
+    kaapi_reply_push_adaptive_task(sc, req);
   }
 
   return nrep;
@@ -215,8 +213,6 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
 
   /* process the work */
   thief_work_t* thief_work = (thief_work_t*)args;
-
-  printf("thief_entrypoint(%p)\n", (void*)thief_work);
 
   /* set the splitter for this task */
   kaapi_steal_setsplitter(sc, splitter, thief_work );
@@ -289,14 +285,13 @@ int main(int ac, char** av)
 {
   size_t i;
 
-#define ITEM_COUNT 1000000
+#define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
 
   /* initialize the runtime */
   kaapi_init();
 
-  /* for (ac = 0; ac < 1000; ++ac) */
-  for (ac = 0; ac < 1; ++ac)
+  for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
 

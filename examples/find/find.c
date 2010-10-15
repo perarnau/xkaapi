@@ -166,7 +166,7 @@ static int splitter (
     tw->ktr = ktr;
 
     /* reply head, preempt head */
-    kaapi_reply_pushhead_adaptive_task( req );
+    kaapi_reply_pushhead_adaptive_task(sc, req);
   }
 
   return nrep;
@@ -178,8 +178,6 @@ static int splitter (
 static int reducer
 (kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
 {
-  printf("-- reducer\n");
-
   /* victim work */
   work_t* const vw = (work_t*)varg;
 
@@ -339,11 +337,9 @@ static size_t find( double* array, size_t size, double key )
 
   /* preempt and reduce thieves */
  preempt_thieves:
-  ktr = kaapi_get_thief_head(sc);
-  if (ktr != NULL)
-  {
-    printf("foobar\n");
 
+  if ((ktr = kaapi_get_thief_head(sc)) != NULL)
+  {
     kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
 
     /* result not found, continue the work */
@@ -368,20 +364,20 @@ int main(int ac, char** av)
 {
   size_t i;
 
-#define ITEM_COUNT 100000
+#define ITEM_COUNT 1000000
   static double array[ITEM_COUNT];
 
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 10; ++ac)
+  for (ac = 0; ac < 100; ++ac)
   {
     /* initialize, apply, check */
 
     for (i = 0; i < ITEM_COUNT; ++i)
       array[i] = (double)i;
 
-    const double key = (double)(ITEM_COUNT / 2);
+    const double key = (double)(ITEM_COUNT - 1);
     const size_t res = find( array, ITEM_COUNT, key );
 
     for (i = 0; i < ITEM_COUNT; ++i)

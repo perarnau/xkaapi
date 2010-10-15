@@ -71,7 +71,7 @@ static void prepare_taskadaptive
   sc->thread = self_thread;
   sc->splitter = NULL;
   sc->argsplitter = NULL;
-  sc->flag = KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION;
+  sc->flag = 0;
   sc->hasrequest = 0;
   sc->requests = sc->ctxtthread->proc->hlrequests.requests;
   KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
@@ -80,6 +80,12 @@ static void prepare_taskadaptive
   kaapi_thread_save_frame(self_thread, &ta->frame);
 
   /* kaapi_writemem_barrier(); */
+}
+
+static void finalize_taskadaptive(kaapi_taskadaptive_t* ta)
+{
+  ((kaapi_stealcontext_t*)ta)->flag = ta->msc->flag;
+  kaapi_writemem_barrier();
 }
 
 #if defined(KAAPI_USE_AGGREGATION)
@@ -236,6 +242,8 @@ return_value:
       kaapi_assert_debug(reply->u.s_task.body);
 
     case KAAPI_REPLY_S_TASK:
+
+      finalize_taskadaptive(&reply->ta);
 
       kaapi_task_init
 	(kaapi_thread_toptask(self_thread), kaapi_adapt_body, (void*)&reply->ta);
