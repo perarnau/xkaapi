@@ -32,7 +32,8 @@ check_PROGRAMS= \
   for_each_rec_xx       \
   for_each_0xx          \
   for_each_0xx_lambda   \
-  for_each_1xx         
+  for_each_1xx          \
+  for_each_2xx         
 
 TESTS=
 
@@ -61,6 +62,7 @@ for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
 for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
 for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
 for_each_1xx_SOURCES=for_each/for_each_1xx.cpp
+for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
 
 #foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
@@ -167,6 +169,11 @@ for_each_1xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_1xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
 for_each_1xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 for_each_1xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_2xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_2xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_2xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_2xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)

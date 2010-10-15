@@ -42,7 +42,6 @@
 ** 
 */
 #include "kaapi++"
-#include <algorithm>
 #include <string.h>
 #include <math.h>
 
@@ -59,37 +58,35 @@ template<typename T, typename OP>
 class Work {
 public:
   /* cstor */
-  Work(T* beg, T* end, OP op)
+  Work(T* array, size_t size, OP op)
   {
     /* initialize work */
     _lock.write(0);
     _op    = op;
-    _array = beg;
+    _array = array;
     _beg   = 0;
-    _end   = end-beg;
+    _end   = size;
   }
 
   /* extract sequential work */
   bool extract_seq( T*& beg, T*& end);
 
-  /* extract parallel work for nreq. Return the unit size */
-  unsigned int  extract_par( int nreq, T*& beg, T*& end);
-
-  /* name of the method should be splitter !!! split work and reply to requests */
-  void split (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-  );
-
+  /* extract parallel work */
+  bool extract_par( T*& beg, T*& end);
+  
 protected:
   /* spinlocking */
   void lock()
-  { while ( (_lock.read() == 1) || !_lock.cas(0, 1)); }
+  {
+    while ( (_lock.read() == 1) || !_lock.cas(0, 1))
+      ;
+  }
 
   /* unlock */
   void unlock()
-  { _lock.write_barrier(0); }
+  { 
+    _lock.write_barrier(0); 
+  }
 
 protected:
   ka::atomic_t<32> _lock;
@@ -100,7 +97,32 @@ protected:
 };
 
 
-/* seq work extractor  */
+
+/** Task for the thief
+*/
+template<typename T, typename OP>
+struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
+
+template<typename T, typename OP>
+struct TaskBodyCPU<TaskThief<T, OP> > {
+  void operator() ( ka::pointer_rw<T> first, ka::pointer_rw<T> last, OP op )
+  {
+    T* beg;
+    T* end;
+    Work<T,OP> work(first, last-first, op);
+
+    /* while there is sequential work to do*/
+    while (work.extract_seq(beg, end))
+      /* apply w->op foreach item in [pos, end[ */
+      std::for_each( beg, end, op );
+  }
+};
+
+
+
+
+/** seq work extractor 
+*/
 template<typename T, typename OP>
 bool Work<T,OP>::extract_seq(T*& beg, T*& end)
 {
@@ -129,20 +151,17 @@ bool Work<T,OP>::extract_seq(T*& beg, T*& end)
 }
 
 
-/* parallel work extractor */
 template<typename T, typename OP>
-unsigned int Work<T,OP>::extract_par(int nreq, T*& beg_theft, T*& end_theft)
+bool Work<T,OP>::extract_par(T*& beg_theft, T*& end_theft)
 {
-  /* size per request */
-  unsigned int unit_size = 0;
-
   /* concurrent with victim */
   lock();
 
   const size_t total_size = _end - _beg;
 
   /* how much per req */
-#define CONFIG_PAR_GRAIN 128
+# define CONFIG_PAR_GRAIN 128
+  unit_size = 0;
   if (total_size > CONFIG_PAR_GRAIN)
   {
     unit_size = total_size / (nreq + 1);
@@ -155,57 +174,23 @@ unsigned int Work<T,OP>::extract_par(int nreq, T*& beg_theft, T*& end_theft)
     /* steal and update victim range */
     const size_t stolen_size = unit_size * nreq;
     beg_theft = _array + _beg - stolen_size;
-    end_theft = _array + _end + _end;
+    end_theft = _array + _end;
     _end -= stolen_size;
   }
   unlock();
-  
-  return unit_size;
 }
 
-
-/** Task for the thief
-*/
-template<typename T, typename OP>
-struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
-
-template<typename T, typename OP>
-struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) 
-  {
-    std::for_each( beg, end, op );
-  }
-};
-
-
-/* parallel work splitter */
-template<typename T, typename OP>
-void Work<T,OP>::split (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-)
-{
-  /* stolen range */
-  T* beg_theft;
-  T* end_theft;
-
-  unsigned int unit_size = extract_par( nreq, beg_theft, end_theft );
-  if (unit_size ==0) return;
-
-  for (; nreq; --nreq, ++req, end_theft -= unit_size)
-    /* thief work: create a task */
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), _op );
-}
 
 
 /* For each main function */
 template<typename T, class OP>
-static void for_each( T* beg, T* end, OP op )
+static void for_each( T* array, size_t size, OP op )
 {
   /* range to process */
   ka::StealContext* sc;
-  Work<T,OP> work(beg, end, op);
+  Work<T,OP> work(array, size, op);
+  T* beg;
+  T* end;
 
   /* push an adaptive task */
   sc = ka::TaskBeginAdaptive(
@@ -213,9 +198,23 @@ static void for_each( T* beg, T* end, OP op )
           KAAPI_SC_CONCURRENT 
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
-        /* use a wrapper to specify the method to used during parallel split */
-        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
-        &work
+        /* this lambda is implements the splitter */
+        [&](                       /* standard arguments for the splitter function */
+            ka::StealContext* sc,  /* the steal context */
+            int nreq,              /* number of requests */
+            ka::Request* req       /* array of request */
+           )
+          {
+            /* stolen range */
+            T* beg_theft;
+            T* end_theft;
+            
+            if (!extract_par(beg_theft, end_theft)) return;
+
+            for (; nreq >0; --nreq, ++req, end_theft -= unit_size)
+              /* thief work: create a task */
+              req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), _op );
+          }
   );
   
   /* while there is sequential work to do*/
@@ -225,6 +224,7 @@ static void for_each( T* beg, T* end, OP op )
 
   /* wait for thieves */
   ka::TaskEndAdaptive(sc);
+
   /* here: 1/ all thieves have finish their result */
 }
 
@@ -286,4 +286,3 @@ int main(int argc, char** argv)
   
   return 0;
 }
-

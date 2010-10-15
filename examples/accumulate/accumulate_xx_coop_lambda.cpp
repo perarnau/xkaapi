@@ -41,71 +41,52 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
-#include <algorithm>
-#include <string.h>
-#include <math.h>
+#include "kaapi.h"
 
+#define CONFIG_PAR_GRAIN 128
 
-/** Description of the example.
-
-    Overview of the execution.
-    
-    What is shown in this example.
-    
-    Next example(s) to read.
-*/
-
-
-/* task signature */
-template<typename T, typename OP>
-struct TaskForEachTerminal : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
-
-/* CPU implementation */
-template<typename T, typename OP>
-struct TaskBodyCPU<TaskForEachTerminal<T, OP> > {
-  void operator() ( ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) 
-  {
-    std::for_each( beg, end, op );
-  }
-};
-
-/* task signature */
-template<typename T, typename OP>
-struct TaskForEach : public ka::Task<3>::Signature<ka::RPWP<T>, ka::RPWP<T>, OP> {};
-
-/* CPU implementation */
-template<typename T, typename OP>
-struct TaskBodyCPU<TaskForEach<T, OP> > {
-  void operator() ( ka::pointer_rpwp<T> beg, ka::pointer_rpwp<T> end, OP op) 
-  {
-    if (end-beg < 2)
-      ka::Spawn<TaskForEachTerminal<T,OP> >()( beg, end, op );
-    else {
-      int med = (end-beg)/2;
-      ka::Spawn<TaskForEach<T,OP> >()( beg, beg+med, op );
-      ka::Spawn<TaskForEach<T,OP> >()( beg+med, end, op );
-    }
-  }
-};
-
-
-/* For each main function */
-template<typename T, class OP>
-void for_each( T* beg, T* end, OP op )
+/* algorithm main function */
+double accumulate(const double* beg, const double* end, double res)
 {
-  ka::Spawn<TaskForEach<T,OP> >()(beg, end, op);
+  /* push an adaptive task */
+  ka::StealContext* sc = ka::TaskBeginAdaptive(
+        /* flag: concurrent which means concurrence between extrac_seq & splitter executions */
+          KAAPI_SC_COOPERATIVE 
+        /* flag: no preemption which means that not preemption will be available (few ressources) */
+        | KAAPI_SC_NOPREEMPTION
+  );
 
-  /* here: wait all thieves have finish their result */
-  ka::Sync();
-}
+  for ( ; beg != end; ++beg)
+  {
+    ka::StealPoint( sc, 
+        [&end, beg]( 
+              int nreq,              /* number of requests */
+              ka::Request* req       /* array of request */
+        ) -> ka::Responder
+        {
+          size_t size = end - beg;
+          if (size == 0) return;
+          size_t req_size = size / (nreq + 1);
+          if (req_size == 0)
+          {
+            nreq = size;
+            req_size = 1;
+          }
+          double* end_theft = end;
 
+          /* store new end ... */
+          end -= nreq * req_size;
+          
+          /* here remains code may be executed in concurrence */
+          for (; nreq; --nreq, ++req, end_theft -= unit_size)
+            /* thief work: create a task */
+            req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-req_size), ka::pointer<T>(end_theft), _op );
+        }
+    ); /* end steal point */
+    res = res + *beg;
+  }
 
-/**
-*/
-void apply_sin( double& v )
-{
-  v = sin(v);
+  return res;
 }
 
 
@@ -121,7 +102,7 @@ struct doit {
     /* initialize, apply, check */
     memset(array, 0, sizeof(array));
 
-    for_each( array, array+size, apply_sin );
+    double res = accumulate( array, array+size, apply_sin );
 
     std::cout << "Done" << std::endl;
   }

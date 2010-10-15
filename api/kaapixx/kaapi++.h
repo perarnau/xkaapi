@@ -727,7 +727,35 @@ namespace ka {
     
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
-  
+
+  // --------------------------------------------------------------------  
+  /* here requires to distinguish pointer to object from pointer to function */
+  template<class R> struct __kaapi_is_function { enum { value = false }; };
+  template<class R> struct __kaapi_is_function<R (*)()> { enum { value = true }; };
+  template<class R> struct __kaapi_is_function<R (*)(...)> { enum { value = true }; };
+  template<class R, class T0> 
+  struct __kaapi_is_function<R (*)(T0)> { enum { value = true }; };
+  template<class R, class T0, class T1> 
+  struct __kaapi_is_function<R (*)(T0, T1)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3,T4, T5, T6)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7, T8)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)> { enum { value = true }; };
+
 
 
   // --------------------------------------------------------------------
@@ -1005,23 +1033,13 @@ namespace ka {
     typedef ACCESS_MODE_CW         mode_t;
   };
 
-
-  /* here requires to distinguish pointer to object from pointer to function */
-  template<class R> struct __kaapi_is_function { enum { value = false }; };
-  template<class R> struct __kaapi_is_function<R (*)()> { enum { value = true }; };
-  template<class R> struct __kaapi_is_function<R (*)(...)> { enum { value = true }; };
-  template<class R, class T0> struct __kaapi_is_function<R (*)(T0)> { enum { value = true }; };
-  template<class R, class T0, class T1> struct __kaapi_is_function<R (*)(T0, T1)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2> struct __kaapi_is_function<R (*)(T0, T1, T2)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3> struct __kaapi_is_function<R (*)(T0, T1, T2, T3)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4>
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4, class T5>
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6>
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3,T4, T5, T6)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7> 
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7)> { enum { value = true }; };
+  /* ------ */
+  template<typename UserType>
+  struct TraitUAMParam<pointer_rw<UserType>& > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RW         mode_t;
+  };
+  
 
   template<bool isfunc, class UserType> struct __kaapi_pointer_switcher {};
   template<class UserType> struct __kaapi_pointer_switcher<false, const UserType*> {
@@ -1374,6 +1392,11 @@ namespace ka {
     )
     { kaapi_steal_setsplitter(&_sc, splitter, arg); }
 
+    bool has_preemption() const
+    { return _sc.hasrequest; }
+
+    bool commit_preemption();
+    
   protected:
     kaapi_stealcontext_t _sc;
     friend class Request;
@@ -1473,6 +1496,12 @@ namespace ka {
         OBJECT*               arg
   )
   { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+
+  template<class OBJECT>
+  inline StealContext* TaskBeginAdaptive(
+        int                   flag
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, 0, 0); }
 
   inline void TaskEndAdaptive( StealContext* sc )
   { kaapi_task_end_adaptive((kaapi_stealcontext_t*)sc); }
