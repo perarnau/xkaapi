@@ -59,14 +59,14 @@ template<typename T, typename OP>
 class Work {
 public:
   /* cstor */
-  Work(T* beg, T* end, OP op)
+  Work(T* array, size_t size, OP op)
   {
     /* initialize work */
     _lock.write(0);
     _op    = op;
-    _array = beg;
+    _array = array;
     _beg   = 0;
-    _end   = end-beg;
+    _end   = size;
   }
 
   /* extract sequential work */
@@ -74,13 +74,6 @@ public:
 
   /* extract parallel work for nreq. Return the unit size */
   unsigned int  extract_par( int nreq, T*& beg, T*& end);
-
-  /* name of the method should be splitter !!! split work and reply to requests */
-  void split (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-  );
 
 protected:
   /* spinlocking */
@@ -100,7 +93,8 @@ protected:
 };
 
 
-/* seq work extractor  */
+/** seq work extractor 
+*/
 template<typename T, typename OP>
 bool Work<T,OP>::extract_seq(T*& beg, T*& end)
 {
@@ -164,6 +158,8 @@ unsigned int Work<T,OP>::extract_par(int nreq, T*& beg_theft, T*& end_theft)
 }
 
 
+
+
 /** Task for the thief
 */
 template<typename T, typename OP>
@@ -178,34 +174,16 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 };
 
 
-/* parallel work splitter */
-template<typename T, typename OP>
-void Work<T,OP>::split (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-)
-{
-  /* stolen range */
-  T* beg_theft;
-  T* end_theft;
-
-  unsigned int unit_size = extract_par( nreq, beg_theft, end_theft );
-  if (unit_size ==0) return;
-
-  for (; nreq; --nreq, ++req, end_theft -= unit_size)
-    /* thief work: create a task */
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), _op );
-}
-
-
 /* For each main function */
 template<typename T, class OP>
-static void for_each( T* beg, T* end, OP op )
+static void for_each( T* array, size_t size, OP op )
 {
   /* range to process */
   ka::StealContext* sc;
-  Work<T,OP> work(beg, end, op);
+  Work<T,OP> work(array, size, op);
+  T* beg;
+  T* end;
+  char tmp[128];
 
   /* push an adaptive task */
   sc = ka::TaskBeginAdaptive(
@@ -213,9 +191,24 @@ static void for_each( T* beg, T* end, OP op )
           KAAPI_SC_CONCURRENT 
         /* flag: no preemption which means that not preemption will be available (few ressources) */
         | KAAPI_SC_NOPREEMPTION, 
-        /* use a wrapper to specify the method to used during parallel split */
-        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
-        &work
+        /* this lambda is implements the splitter */
+        [&work,op,beg,&tmp](            /* standard arguments for the splitter function */
+            ka::StealContext* sc,  /* the steal context */
+            int nreq,              /* number of requests */
+            ka::Request* req       /* array of request */
+           ) -> void
+          {
+            /* stolen range */
+            T* beg_theft;
+            T* end_theft;
+
+            unsigned int unit_size = work.extract_par( nreq, beg_theft, end_theft );
+            if (unit_size ==0) return;
+
+            for (; nreq; --nreq, ++req, end_theft -= unit_size)
+              /* thief work: create a task */
+              req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), op );
+          }
   );
   
   /* while there is sequential work to do*/
@@ -225,17 +218,17 @@ static void for_each( T* beg, T* end, OP op )
 
   /* wait for thieves */
   ka::TaskEndAdaptive(sc);
+
   /* here: 1/ all thieves have finish their result */
 }
 
 
 /**
 */
-void apply_cos( double& v )
+void apply_sin( double& v )
 {
-  v = cos(v);
+  v = sin(v);
 }
-
 
 /* My main task */
 struct doit {
@@ -247,10 +240,9 @@ struct doit {
     double* array = new double[size];
 
     /* initialize, apply, check */
-    for (size_t i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
+    memset(array, 0, sizeof(array));
 
-    for_each( array, array+size, apply_cos );
+    for_each( array, array+size, apply_sin );
 
     std::cout << "Done" << std::endl;
   }
@@ -287,4 +279,3 @@ int main(int argc, char** argv)
   
   return 0;
 }
-

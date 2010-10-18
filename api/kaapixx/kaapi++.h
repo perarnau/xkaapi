@@ -509,19 +509,24 @@ namespace ka {
     Self_t& operator--() { --base_pointer<T>::_ptr; return *this; }\
     Self_t operator--(int) { return base_pointer<T>::_ptr--; }\
     Self_t operator+(int i) const { return base_pointer<T>::_ptr+i; }\
+    Self_t operator+(unsigned int i) const { return base_pointer<T>::_ptr+i; }\
     Self_t operator+(long i) const { return base_pointer<T>::_ptr+i; }\
-    Self_t operator+(difference_type i) const { return base_pointer<T>::_ptr+i; }\
+    Self_t operator+(unsigned long i) const { return base_pointer<T>::_ptr+i; }\
     Self_t& operator+=(int i) { base_pointer<T>::_ptr+=i; return *this; }\
+    Self_t& operator+=(unsigned int i) { base_pointer<T>::_ptr+=i; return *this; }\
     Self_t& operator+=(long i) { base_pointer<T>::_ptr+=i; return *this; }\
-    Self_t& operator+=(difference_type i) { base_pointer<T>::_ptr+=i; return *this; }\
+    Self_t& operator+=(unsigned long i) { base_pointer<T>::_ptr+=i; return *this; }\
     Self_t operator-(int i) const { return base_pointer<T>::_ptr-i; }\
+    Self_t operator-(unsigned int i) const { return base_pointer<T>::_ptr-i; }\
     Self_t operator-(long i) const { return base_pointer<T>::_ptr-i; }\
-    Self_t operator-(difference_type i) const { return base_pointer<T>::_ptr-i; }\
+    Self_t operator-(unsigned long i) const { return base_pointer<T>::_ptr-i; }\
     Self_t& operator-=(int i) { return base_pointer<T>::_ptr-=i; }\
+    Self_t& operator-=(unsigned int i) { return base_pointer<T>::_ptr-=i; }\
     Self_t& operator-=(long i) { return base_pointer<T>::_ptr-=i; }\
-    Self_t& operator-=(difference_type i) { base_pointer<T>::_ptr-=i; return *this; }\
+    Self_t& operator-=(unsigned long i) { return base_pointer<T>::_ptr-=i; }\
     difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
-  
+
+
   // --------------------------------------------------------------------
   /* Information notes.
      - Access mode types (ka::W, ka::WP, ka::RW..) are defined to be used 
@@ -532,7 +537,6 @@ namespace ka {
      They are closed to the Shared types of the previous Athapascan API but 
      may be used like normal pointer (arithmetic + deferencing of pointers).
   */
-
   // --------------------------------------------------------------------
   template<class T>
   class pointer : public base_pointer<T> {
@@ -542,7 +546,7 @@ namespace ka {
     typedef pointer<T> Self_t;
     pointer() : base_pointer<T>() {}
     pointer( value_type* ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -559,7 +563,7 @@ namespace ka {
     pointer_rpwp() : base_pointer<T>() {}
     pointer_rpwp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rpwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -602,7 +606,7 @@ namespace ka {
     explicit pointer_rp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_rp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_rp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -648,7 +652,7 @@ namespace ka {
     explicit pointer_wp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_wp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_wp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -693,7 +697,7 @@ namespace ka {
     pointer_cwp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cwp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cwp( const pointer_cwp<T>& ptr ) : base_pointer<T>(ptr) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -723,7 +727,35 @@ namespace ka {
     
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
-  
+
+  // --------------------------------------------------------------------  
+  /* here requires to distinguish pointer to object from pointer to function */
+  template<class R> struct __kaapi_is_function { enum { value = false }; };
+  template<class R> struct __kaapi_is_function<R (*)()> { enum { value = true }; };
+  template<class R> struct __kaapi_is_function<R (*)(...)> { enum { value = true }; };
+  template<class R, class T0> 
+  struct __kaapi_is_function<R (*)(T0)> { enum { value = true }; };
+  template<class R, class T0, class T1> 
+  struct __kaapi_is_function<R (*)(T0, T1)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6>
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3,T4, T5, T6)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7, T8)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)> { enum { value = true }; };
+  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10> 
+  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)> { enum { value = true }; };
+
 
 
   // --------------------------------------------------------------------
@@ -1001,23 +1033,13 @@ namespace ka {
     typedef ACCESS_MODE_CW         mode_t;
   };
 
-
-  /* here requires to distinguish pointer to object from pointer to function */
-  template<class R> struct __kaapi_is_function { enum { value = false }; };
-  template<class R> struct __kaapi_is_function<R (*)()> { enum { value = true }; };
-  template<class R> struct __kaapi_is_function<R (*)(...)> { enum { value = true }; };
-  template<class R, class T0> struct __kaapi_is_function<R (*)(T0)> { enum { value = true }; };
-  template<class R, class T0, class T1> struct __kaapi_is_function<R (*)(T0, T1)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2> struct __kaapi_is_function<R (*)(T0, T1, T2)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3> struct __kaapi_is_function<R (*)(T0, T1, T2, T3)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4>
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4, class T5>
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6>
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3,T4, T5, T6)> { enum { value = true }; };
-  template<class R, class T0, class T1, class T2, class T3, class T4, class T5, class T6, class T7> 
-  struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7)> { enum { value = true }; };
+  /* ------ */
+  template<typename UserType>
+  struct TraitUAMParam<pointer_rw<UserType>& > {
+    typedef TraitUAMType<pointer<UserType> > uamttype_t;
+    typedef ACCESS_MODE_RW         mode_t;
+  };
+  
 
   template<bool isfunc, class UserType> struct __kaapi_pointer_switcher {};
   template<class UserType> struct __kaapi_pointer_switcher<false, const UserType*> {
@@ -1359,7 +1381,22 @@ namespace ka {
 
   // --------------------------------------------------------------------
   class Request;
+
+  /* Stealcontext */
   class StealContext {
+  public:
+    template<class OBJECT>
+    void set_splitter(
+          kaapi_task_splitter_t splitter,
+          OBJECT*               arg
+    )
+    { kaapi_steal_setsplitter(&_sc, splitter, arg); }
+
+    bool has_preemption() const
+    { return _sc.hasrequest; }
+
+    bool commit_preemption();
+    
   protected:
     kaapi_stealcontext_t _sc;
     friend class Request;
@@ -1401,29 +1438,70 @@ namespace ka {
     kaapi_request_t _request;
   };
 
-
+#if 0
   /* push new steal context */
   inline StealContext* TaskBeginAdaptive(
         int flag,
-        kaapi_task_splitter_t splitter,
+        void splitter(StealContext*, int, Request*),
         void* arg
   )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, (kaapi_task_splitter_t)splitter, arg); }
+#endif
   
   /* push new steal context */
   template<class OBJECT>
-  inline int __kaapi_trampoline_splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  inline int __kaapi_trampoline_lambda( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
   { OBJECT* o = (OBJECT*)arg; 
-    o->splitter( (StealContext*)sc, nreq, (Request*)req );
+    (*o)( (StealContext*)sc, nreq, (Request*)req );
     return 0;
   }
 
   template<class OBJECT>
   inline StealContext* TaskBeginAdaptive(
         int flag,
-        OBJECT* arg
+        const OBJECT& func
   )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_splitter<OBJECT>, arg); }
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_lambda<OBJECT>, (void*)&func); }
+
+  /* push new steal context */
+  template<class OBJECT, void (OBJECT::*const SPLITTER)(StealContext*, int, Request*)>
+  inline int __kaapi_trampoline_splitter( struct kaapi_stealcontext_t* sc, int nreq, struct kaapi_request_t* req, void* arg )
+  { OBJECT* o = (OBJECT*)arg; 
+    (o->*SPLITTER)( (StealContext*)sc, nreq, (Request*)req );
+    return 0;
+  }
+
+  /* wrapper to splitter method */
+  template<typename OBJECT, void (OBJECT::*s)(StealContext*, int, Request*)>
+  struct Wrapper {
+    static int splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+    { OBJECT* o = (OBJECT*)arg; 
+      (o->*s)( (StealContext*)sc, nreq, (Request*)req );
+      return 0;
+    };
+  };
+
+  template<typename OBJECT, void (OBJECT::*s)(StealContext*, int, Request*)>
+  int WrapperSplitter(kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  { 
+    OBJECT* o = (OBJECT*)arg; 
+    (o->*s)( (StealContext*)sc, nreq, (Request*)req );
+    return 0;
+  }
+
+  template<class OBJECT>
+  inline StealContext* TaskBeginAdaptive(
+        int                   flag,
+        kaapi_task_splitter_t splitter,
+        OBJECT*               arg
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+
+  template<class OBJECT>
+  inline StealContext* TaskBeginAdaptive(
+        int                   flag
+  )
+  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, 0, 0); }
 
   inline void TaskEndAdaptive( StealContext* sc )
   { kaapi_task_end_adaptive((kaapi_stealcontext_t*)sc); }

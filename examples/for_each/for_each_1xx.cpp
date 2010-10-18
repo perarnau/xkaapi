@@ -42,7 +42,6 @@
 ** 
 */
 #include "kaapi++"
-#include <algorithm>
 #include <string.h>
 #include <math.h>
 
@@ -50,10 +49,19 @@
 /** Description of the example.
 
     Overview of the execution.
-    
+      The previous example, for_each_0_xx.cpp has a main drawback: 
+    - if the work load is unbalanced, then some of the thief becomes idle and
+    try to steal other threads. But an overloaded thief cannot be steal once
+    it begins its execution.
+        
     What is shown in this example.
-    
+      The purpose of this example is to show how to allow thief to be theft
+    by other idle thread. The idea is just to declare the executed task as new 
+    adaptive algorithm.
+
+
     Next example(s) to read.
+      for_each_2xx.cpp
 */
 template<typename T, typename OP>
 class Work {
@@ -171,9 +179,23 @@ struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
 
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) 
+  void operator() ( ka::StealContext* sc, ka::pointer_rw<T> first, ka::pointer_rw<T> last, OP op )
   {
-    std::for_each( beg, end, op );
+    Work<T,OP> work(first, last, op);
+    T* beg;
+    T* end;
+
+    /* set the splitter for this task */
+    sc->set_splitter(
+        /* as for the initial work: set the method to call and the object */
+        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
+        &work
+    );
+
+    /* while there is sequential work to do*/
+    while (work.extract_seq(beg, end))
+      /* apply w->op foreach item in [pos, end[ */
+      std::for_each( beg, end, op );
   }
 };
 
@@ -231,11 +253,10 @@ static void for_each( T* beg, T* end, OP op )
 
 /**
 */
-void apply_cos( double& v )
+void apply_sin( double& v )
 {
-  v = cos(v);
+  v = sin(v);
 }
-
 
 /* My main task */
 struct doit {
@@ -247,10 +268,9 @@ struct doit {
     double* array = new double[size];
 
     /* initialize, apply, check */
-    for (size_t i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
+    memset(array, 0, sizeof(array));
 
-    for_each( array, array+size, apply_cos );
+    for_each( array, array+size, apply_sin );
 
     std::cout << "Done" << std::endl;
   }
@@ -287,4 +307,3 @@ int main(int argc, char** argv)
   
   return 0;
 }
-

@@ -42,7 +42,6 @@
 ** 
 */
 #include "kaapi++"
-#include <algorithm>
 #include <string.h>
 #include <math.h>
 
@@ -50,8 +49,17 @@
 /** Description of the example.
 
     Overview of the execution.
-    
+          The previous example, for_each_1xx.cpp has a main drawback: 
+    - if the work load is very unbalanced, then the master thread may
+    finish before thieves. Then it has choice 1/ to steal becomes to
+    steal other thread or 2/ to preempt the thieves in order to get back
+    computations.
+
     What is shown in this example.
+      The purpose of this example is to show how to preempt thief in order
+    to reduce. If the for_each algorithm does not required such preempt to
+    be efficient, it is necessary for more complex algorithme such as prefix
+    computation where the parallelism introduce overhead in the computation.
     
     Next example(s) to read.
 */
@@ -69,6 +77,10 @@ public:
     _end   = end-beg;
   }
 
+  /* return the state of the computation */
+  T* begin() { return _array + _beg; }
+  T* end() { return _array + _end; }
+  
   /* extract sequential work */
   bool extract_seq( T*& beg, T*& end);
 
@@ -171,9 +183,34 @@ struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
 
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) 
+  void operator() ( ka::StealContext* sc, ka::pointer_rw<T> first, ka::pointer_rw<T> last, OP op )
   {
-    std::for_each( beg, end, op );
+    Work<T,OP> work(first, last, op);
+    T* beg;
+    T* end;
+
+    /* set the splitter for this task */
+    sc->set_splitter(
+        /* as for the initial work: set the method to call and the object */
+        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
+        &work
+    );
+
+    /* while there is sequential work to do*/
+    while (work.extract_seq(beg, end))
+    {
+      /* apply w->op foreach item in [pos, end[ */
+      std::for_each( beg, end, op );
+      if (sc->is_preempted()) 
+      {
+        /* copy back the work state to the output state for the master */
+        std::pair<T*, T*>* thief_context = sc->arg_preemption<std::pair<T*, T*> >();
+        thief_context->first   = work.begin();
+        thief_context->second  = work.end();
+        sc->ack_preemption();
+        return;
+      }
+    }
   }
 };
 
@@ -217,11 +254,33 @@ static void for_each( T* beg, T* end, OP op )
         &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
         &work
   );
-  
+
+redo_work:  
   /* while there is sequential work to do*/
   while (work.extract_seq(beg, end))
     /* apply w->op foreach item in [pos, end[ */
     std::for_each( beg, end, op );
+
+  /* end of the sequential computation, preempt my thieves */
+  ka::StealContext::thief_iterator beg = sc->begin_thief();
+  ka::StealContext::thief_iterator end = sc->end_thief();
+  
+  while (beg != end)
+  {
+    if (beg->signal_preempt() == 0) 
+    { /* send successed because thief was not finished */
+      std::pair<T*, T*>* thief_context = beg->wait_preempt<std::pair<T*, T*> >();
+      if (thief_context->first != thief_context->second) 
+      {
+        beg = thief_context->first;
+        end = thief_context->second;
+        goto redo_work;
+      }
+    } /* else send_preempt !=0 which means that this thief is finished */
+    ++beg;
+  }
+  
+  /* here : it is garanteed that all thieves and their thieves have finished */
 
   /* wait for thieves */
   ka::TaskEndAdaptive(sc);
@@ -231,60 +290,33 @@ static void for_each( T* beg, T* end, OP op )
 
 /**
 */
-void apply_cos( double& v )
+void apply_sin( double& v )
 {
-  v = cos(v);
+  v = sin(v);
 }
 
 
-/* My main task */
-struct doit {
-  void operator()(int argc, char** argv )
-  {
-    size_t size = 10000;
-    if (argc >1) size = atoi(argv[1]);
-    
-    double* array = new double[size];
-
-    /* initialize, apply, check */
-    for (size_t i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
-
-    for_each( array, array+size, apply_cos );
-
-    std::cout << "Done" << std::endl;
-  }
-};
-
-
-/* main entry point : Kaapi initialization
+/**
 */
 int main(int argc, char** argv)
 {
-  try {
-    /* Join the initial group of computation : it is defining
-       when launching the program by a1run.
-    */
-    ka::Community com = ka::System::join_community( argc, argv );
-    
-    /* Start computation by forking the main task */
-    ka::SpawnMain<doit>()(argc, argv); 
-    
-    /* Leave the community: at return to this call no more athapascan
-       tasks or shared could be created.
-    */
-    com.leave();
+  /* initialize the runtime */
+  kaapi_init();
 
-    /* */
-    ka::System::terminate();
-  }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : " << E.what() << std::endl;
-  }
-  catch (...) {
-    ka::logfile() << "Catch unknown exception: " << std::endl;
-  }
+  size_t size = 10000;
+  if (argc >1) size = atoi(argv[1]);
   
+  double* array = new double[size];
+
+  /* initialize, apply, check */
+  memset(array, 0, sizeof(array));
+
+  for_each( array, array+size, apply_sin );
+
+  std::cout << "Done" << std::endl;
+
+  /* finalize the runtime */
+  kaapi_finalize();
+
   return 0;
 }
-

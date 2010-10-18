@@ -12,10 +12,29 @@ AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
 AM_CXXFLAGS=@AM_CXXFLAGS@ 
 #-std=gnu++0x
 
-check_PROGRAMS=	\
-for_each_0	\
-for_each_1	\
-find_xkaapi
+check_PROGRAMS= \
+  hello_world            \
+	fiboseq                \
+	fibo_xkaapi            \
+	fibo_atha              \
+	fibo_kaapixx           \
+	fibo_kaapixx_opt       \
+	fibo_kaapixx_sync      \
+	qsort_cilk2kaapi       \
+  matrix_multiply_cilk2kaapi \
+	branchbound_apiatha    \
+	nqueens_apiatha        \
+	nqueens_apikaapi       \
+	poisson3d-kaapi        \
+	poisson3d-xkaapinew		\
+	for_each_0            \
+	for_each_1            \
+	find_xkaapi		\
+  for_each_rec_xx       \
+  for_each_0xx          \
+  for_each_0xx_lambda   \
+  for_each_1xx          \
+  for_each_2xx         
 
 TESTS=
 
@@ -41,11 +60,16 @@ nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 for_each_0_SOURCES=for_each/for_each_0.c
 for_each_1_SOURCES=for_each/for_each_1.c
 find_xkaapi_SOURCES=find/find.c
+for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
 for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
+for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
+for_each_1xx_SOURCES=for_each/for_each_1xx.cpp
+for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
 
 #foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 #accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
+
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 
 hello_world_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
@@ -133,10 +157,30 @@ find_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
 find_xkaapi_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
 find_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
 
+for_each_rec_xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_rec_xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_rec_xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_rec_xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
 for_each_0xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_0xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
 for_each_0xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 for_each_0xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_0xx_lambda_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_0xx_lambda_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_0xx_lambda_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_0xx_lambda_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_1xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_1xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_1xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_1xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_2xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_2xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
+for_each_2xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_2xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)
