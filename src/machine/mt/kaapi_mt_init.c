@@ -194,7 +194,7 @@ int kaapi_mt_finalize(void)
   kaapi_isterm = 1;
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
   kaapi_barrier_td_waitterminated(&kaapi_term_barrier);
-  
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
