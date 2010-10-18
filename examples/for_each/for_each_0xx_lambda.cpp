@@ -178,6 +178,8 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 template<typename T, class OP>
 static void for_each( T* array, size_t size, OP op )
 {
+#if 0 // todo
+
   /* range to process */
   ka::StealContext* sc;
   Work<T,OP> work(array, size, op);
@@ -210,7 +212,7 @@ static void for_each( T* array, size_t size, OP op )
               req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), op );
           }
   );
-  
+
   /* while there is sequential work to do*/
   while (work.extract_seq(beg, end))
     /* apply w->op foreach item in [pos, end[ */
@@ -218,6 +220,8 @@ static void for_each( T* array, size_t size, OP op )
 
   /* wait for thieves */
   ka::TaskEndAdaptive(sc);
+
+#endif // todo
 
   /* here: 1/ all thieves have finish their result */
 }
@@ -242,7 +246,9 @@ struct doit {
     /* initialize, apply, check */
     memset(array, 0, sizeof(array));
 
+#if 0 // todo
     for_each( array, array+size, apply_sin );
+#endif
 
     std::cout << "Done" << std::endl;
   }

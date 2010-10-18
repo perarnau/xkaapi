@@ -39,6 +39,7 @@ struct TaskBodyCPU<Task_QSort>
 {
   void operator()(ka::pointer_rpwp<int> begin, ka::pointer_rpwp<int> end)
   {
+#if 0 // todo
     if (begin != end) 
     {
         --end;  // Exclude last element (pivot) from partition
@@ -50,12 +51,14 @@ struct TaskBodyCPU<Task_QSort>
         (*this)(++middle, ++end); // Exclude pivot and restore end
         ka::Sync();
     }
+#endif // todo
   }
 };
 
 // A simple test harness 
 int qmain(int n)
 {
+#if 0 // todo
     ka::pointer_rpwp<int> a = new int[n];
 
     for (int i = 0; i < n; ++i)
@@ -82,6 +85,7 @@ int qmain(int n)
     }
     std::cout << "Sort succeeded." << std::endl;
     delete[] a;
+#endif // todo
     return 0;
 }
 

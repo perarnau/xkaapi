@@ -247,7 +247,7 @@ struct doit {
     double* array = new double[size];
 
     /* initialize, apply, check */
-    for (size_t i = 0; i < ITEM_COUNT; ++i)
+    for (size_t i = 0; i < size; ++i)
       array[i] = 0.f;
 
     for_each( array, array+size, apply_cos );

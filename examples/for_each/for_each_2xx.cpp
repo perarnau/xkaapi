@@ -44,6 +44,7 @@
 #include "kaapi++"
 #include <string.h>
 #include <math.h>
+#include <algorithm>
 
 
 /** Description of the example.
@@ -185,6 +186,7 @@ template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
   void operator() ( ka::StealContext* sc, ka::pointer_rw<T> first, ka::pointer_rw<T> last, OP op )
   {
+#if 0 // todo
     Work<T,OP> work(first, last, op);
     T* beg;
     T* end;
@@ -211,6 +213,7 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
         return;
       }
     }
+#endif // todo
   }
 };
 
@@ -240,6 +243,8 @@ void Work<T,OP>::split (
 template<typename T, class OP>
 static void for_each( T* beg, T* end, OP op )
 {
+#if 0 // todo
+
   /* range to process */
   ka::StealContext* sc;
   Work<T,OP> work(beg, end, op);
@@ -285,6 +290,8 @@ redo_work:
   /* wait for thieves */
   ka::TaskEndAdaptive(sc);
   /* here: 1/ all thieves have finish their result */
+
+#endif
 }
 
 

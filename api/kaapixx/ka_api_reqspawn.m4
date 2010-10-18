@@ -32,5 +32,5 @@
       KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
-      kaapi_reply_push_adaptive_task( _req, _sc );
+      kaapi_reply_push_adaptive_task( _sc, _req );
     }
