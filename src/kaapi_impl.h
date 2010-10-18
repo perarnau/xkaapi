@@ -10,6 +10,7 @@
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** clement.pernet@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -782,15 +783,64 @@ extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
 */
 extern kaapi_uint32_t kaapi_hash_value(const char * data);
 
-/*
+/** Hash value for pointer.
+    Used for data flow dependencies
 */
 static inline kaapi_uint32_t kaapi_hash_ulong(kaapi_uint64_t ptr)
 {
   /* */
-  kaapi_uintptr_t val = ptr >> 3;
+  kaapi_uint64_t val = ptr >> 3;
   val = (val & 0xFFFF) ^ (val>>32);
   return val;
 }
+
+
+/**
+ * Compression 64 -> 7 bits
+ * Sums the 8 bytes modulo 2, then reduces the resulting degree 7 
+ * polynomial modulo X^7 + X^3 + 1
+ */
+static inline kaapi_uint32_t kaapi_hash_ulong7(kaapi_uint64_t v)
+{
+    v ^= (v >> 32);
+    v ^= (v >> 16);
+    v ^= (v >> 8);
+    if (v & 0x00000080) v ^= 0x00000009;
+    return (kaapi_uint32_t) (v&0x0000007F);
+}
+
+
+/**
+ * Compression 64 -> 6 bits
+ * Sums the 8 bytes modulo 2, then reduces the resulting degree 7 
+ * polynomial modulo X^6 + X + 1
+ */
+static inline kaapi_uint32_t kaapi_hash_ulong6(kaapi_uint64_t v)
+{
+    v ^= (v >> 32);
+    v ^= (v >> 16);
+    v ^= (v >> 8);
+    if (v & 0x00000040) v ^= 0x00000003;
+    if (v & 0x00000080) v ^= 0x00000006;
+    return (kaapi_uint32_t) (v&0x0000003F);
+}
+
+/**
+ * Compression 64 -> 5 bits
+ * Sums the 8 bytes modulo 2, then reduces the resulting degree 7 
+ * polynomial modulo X^5 + X^2 + 1
+ */
+static inline kaapi_uint32_t kaapi_hash_ulong5(kaapi_uint64_t v)
+{
+    v ^= (v >> 32);
+    v ^= (v >> 16);
+    v ^= (v >> 8);
+    if (v & 0x00000020) v ^= 0x00000005;
+    if (v & 0x00000040) v ^= 0x0000000A;
+    if (v & 0x00000080) v ^= 0x00000014;
+    return (kaapi_uint32_t) (v&0x0000001F);
+}
+
 
 /* ======================== Dependencies resolution function ========================*/
 /** \ingroup DFG
