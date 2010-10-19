@@ -1,5 +1,5 @@
 /*
-** kaapi_stack_execframe.c
+** kaapi_thread_execframe.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -45,7 +45,7 @@
 #include "kaapi_impl.h"
 
 
-/** kaapi_stack_execframe
+/** kaapi_thread_execframe
     Here the stack of task is organised like this, task1 is pointed by pc and
     it will be the first running task.
 
@@ -93,7 +93,7 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 /*
 */
 #if ((KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD))
-int kaapi_stack_execframe( kaapi_thread_context_t* thread )
+int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 {
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp;
@@ -281,12 +281,12 @@ error_swap_body:
   cnt_tasks = 0;
 #endif
 
-  /* here back track the kaapi_stack_execframe until go out */
+  /* here back track the kaapi_thread_execframe until go out */
   return 0;
 }
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-int kaapi_stack_execframe( kaapi_thread_context_t* thread )
+int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 {
   return 0;
 }

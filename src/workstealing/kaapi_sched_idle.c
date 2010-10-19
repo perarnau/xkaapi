@@ -109,13 +109,13 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     kaapi_setcontext(kproc, thread);
 
 redo_execute:
-//  kaapi_stack_print( stdout, kproc->thread );
+//  kaapi_thread_print( stdout, kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
 
-    /* todo: there should be a wrapper around kaapi_stack_execframe
+    /* todo: there should be a wrapper around kaapi_thread_execframe
        that takes the kproc and route execution toward the right impl
     */
 #if defined(KAAPI_USE_CUDA)
@@ -123,7 +123,7 @@ redo_execute:
       err = kaapi_cuda_execframe( kproc->thread );
     else
 #endif /* KAAPI_USE_CUDA */
-    err = kaapi_stack_execframe( kproc->thread );
+    err = kaapi_thread_execframe( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );

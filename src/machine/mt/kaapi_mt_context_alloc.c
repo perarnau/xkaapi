@@ -50,12 +50,40 @@
 #endif
 #include <string.h>
 
+
+/** kaapi_context_alloc
+    Initialize the Kaapi thread context data structure.
+    The stack of the thread is organized in two parts : the first, from address 0 to sp_data,
+    contains the stack of data; the second contains the stack of tasks from address task down to sp.
+    Pc points on the next task to execute.
+
+       -------------------  <- thread
+       | thread internal |
+       |                 | 
+   |   -------------------  <- thread->data
+   |   |  data[]         |
+   |   |                 |
+   |   |                 |
+   |   |                 |
+  \|/  -------------------  <- thread->sfp->sp_data
+       |                 |
+       |  free zone      |
+       |                 |
+       -------------------  <- thread->sfp->sp
+  /|\  |                 |  
+   |   |                 |  
+   |   |                 |  <- thread->sfp->pc
+   |   |                 |
+   |   -------------------  <- thread->task
+  
+  The stack is full when sfp->sp_data == sfp->sp.
+*/
+
 /** 
 */
 kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
-  kaapi_stack_t* stack;
   kaapi_uint32_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
@@ -94,17 +122,10 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   memset(ctxt, 0, k_stacksize );
 #endif
 
-  stack = kaapi_threadcontext2stack(ctxt);
+  /* its correctly aligned ? */
+  ctxt->task = (kaapi_task_t*)(((kaapi_uintptr_t)ctxt)+k_stacksize-sizeof(kaapi_task_t));
+  kaapi_assert_m( (((kaapi_uintptr_t)ctxt->task) & 0x3F)== 0, "Stack of task not aligned to 64 bit boundary");
   ctxt->size = k_stacksize;
-  if (kaapi_stack_init( stack, size_data, stack+1 ) !=0)
-  {
-#if defined (_WIN32)
-    VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
-#else
-    munmap( ctxt, ctxt->size );
-#endif
-    return 0;
-  }
 
   /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
   ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);

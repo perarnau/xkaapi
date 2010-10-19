@@ -104,7 +104,7 @@ int kaapi_sched_sync(void)
   kaapi_mem_barrier();
   
 redo:
-  err = kaapi_stack_execframe(thread);
+  err = kaapi_thread_execframe(thread);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );

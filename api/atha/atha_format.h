@@ -245,7 +245,7 @@ public:
 */
 class ClosureFormat : public Format {
 public:
-  typedef void (*RunFunction)(kaapi_task_t*, kaapi_stack_t* );
+  typedef void (*RunFunction)(kaapi_task_t*, kaapi_thread_t* );
   
   /** Constructor of basic function format
     @param name : the name of the closure

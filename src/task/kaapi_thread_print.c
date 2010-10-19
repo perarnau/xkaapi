@@ -1,5 +1,5 @@
 /*
-** kaapi_stack_print.c
+** kaapi_thread_print.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -240,7 +240,7 @@ static int kaapi_print_bcasttask(
 
 /** 
 */
-int kaapi_stack_print  ( FILE* file, kaapi_thread_context_t* thread )
+int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 {
   kaapi_frame_t* frame;
   kaapi_task_t*  task_top;

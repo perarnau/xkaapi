@@ -232,7 +232,6 @@ static int kaapi_sched_stealframe
 )
 {
   const kaapi_format_t* task_fmt;
-  kaapi_stack_t*        stack;
   kaapi_task_body_t     task_body;
   kaapi_task_t*         task_top;
   kaapi_task_t*         task_exec;
@@ -242,7 +241,6 @@ static int kaapi_sched_stealframe
     
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
-  stack      = kaapi_threadcontext2stack(thread);
   task_body  = kaapi_nop_body;
   task_top   = frame->pc;
   task_exec  = 0;

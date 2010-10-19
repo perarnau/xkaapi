@@ -312,36 +312,6 @@ typedef struct NAME {\
 } NAME
 
 
-/* ============================= The stack data structure ============================ */
-/** Kaapi stack of tasks definition
-   \ingroup TASK
-   The stack store list of tasks as well as a stack of data.
-   Both sizes are fixed at initialization of the stack object.
-   The stack is truly a stack when used in conjonction with frame.
-   A frame capture the state (pc, sp, sp_data) of the stack in order
-   to restore it. The implementation also used kaapi_retn_body in order 
-   to postpone the restore operation after a set of tasks (see kaapi_stack_taskexecall).
-
-   Before and after the execution of a task, the state of the computation is only
-   defined by the stack state (pc, sp, sp_data and the content of the stack). Not that
-   kaapi_stack_execframe and other funcitons to execute tasks may cached internal state (pc). 
-   The C-stack doesnot need to be saved in that case.
-   
-   \TODO save also the C-stack if we try to suspend execution during a task execution
-   \TODO a better separation between the thread context and the stack it self
-   
-   Warning this stack structure is just after the internal kaapi_threadcontext_t structure
-   which is opaque to the API.
-*/
-typedef struct kaapi_stack_t {
-  struct kaapi_task_t*      task;           /** pointer to the first pushed task */
-  char*                     data;           /** stack of data with the same scope than task */
-  volatile int              hasrequest __attribute__((aligned (KAAPI_CACHE_LINE)));     /** points to the k-processor structure */
-  volatile int              haspreempt;     /** !=0 if preemption is requested */
-  kaapi_request_t*          requests;       /** points to the requests set in the processor structure */
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
-
-
 /* ============================= The structure for handling suspendended thread ============================ */
 /** Forward reference to data structure are defined in kaapi_machine.h
 */
@@ -363,7 +333,7 @@ typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
-  kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_stack_execframe */
+  kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_thread_execframe */
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   kaapi_task_t*         volatile pc      __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the task the thief wants to steal */
@@ -386,6 +356,9 @@ typedef struct kaapi_thread_context_t {
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
+
+  kaapi_task_t*                  task;           /** bottom task */
+  kaapi_uint64_t                 data[1];        /** begin of stack of data */ 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
@@ -716,28 +689,6 @@ static inline int kaapi_isvalid_body( kaapi_task_body_t body)
 #endif
 
 /** \ingroup TASK
-    The function kaapi_stack_init() initializes the stack using the buffer passed in parameter. 
-    The buffer must point to a memory region with at least count bytes allocated.
-    If successful, the kaapi_stack_init() function will return zero and the buffer should
-    never be used again.
-    Otherwise, an error number will be returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t to initialize.
-    \param size  IN the size in bytes of the buffer for the tasks.
-    \param buffer INOUT the buffer to used to store the stack of tasks.
-    \retval EINVAL invalid argument: bad stack pointer or count is not enough to store at least one task or buffer is 0.
-*/
-extern int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer );
-
-/** \ingroup TASK
-    The function kaapi_stack_clear() clears the stack.
-    If successful, the kaapi_stack_clear() function will return zero.
-    Otherwise, an error number will be returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t to clear.
-    \retval EINVAL invalid argument: bad stack pointer.
-*/
-extern int kaapi_stack_clear( kaapi_stack_t* stack );
-
-/** \ingroup TASK
     The function kaapi_frame_isempty() will return non-zero value iff the frame is empty. Otherwise return 0.
     \param stack IN the pointer to the kaapi_stack_t data structure. 
     \retval !=0 if the stack is empty
@@ -757,7 +708,7 @@ static inline int kaapi_frame_isempty(volatile kaapi_frame_t* frame)
 static inline kaapi_task_t* kaapi_thread_bottomtask(kaapi_thread_context_t* thread) 
 {
   kaapi_assert_debug( thread != 0 );
-  return kaapi_threadcontext2stack(thread)->task;
+  return thread->task;
 }
 
 
@@ -1090,22 +1041,22 @@ extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
 
 /** Useful
 */
-extern int kaapi_stack_print( FILE* file, kaapi_thread_context_t* thread );
+extern int kaapi_thread_print( FILE* file, kaapi_thread_context_t* thread );
 
 /** Useful
 */
 extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
 
 /** \ingroup TASK
-    The function kaapi_stack_execframe() execute all the tasks in the thread' stack following
+    The function kaapi_thread_execframe() execute all the tasks in the thread' stack following
     the RFO order in the closures of the frame [frame_sp,..,sp[
-    If successful, the kaapi_stack_execframe() function will return zero and the stack is empty.
+    If successful, the kaapi_thread_execframe() function will return zero and the stack is empty.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
 */
-extern int kaapi_stack_execframe( kaapi_thread_context_t* thread );
+extern int kaapi_thread_execframe( kaapi_thread_context_t* thread );
 
 /** Useful
 */

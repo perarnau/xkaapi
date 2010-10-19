@@ -53,11 +53,9 @@ libxkaapi_la_SOURCES=\
 
 #Libtask
 libxkaapi_la_SOURCES+=\
-  task/kaapi_stack_init.c \
-  task/kaapi_stack_clear.c \
-  task/kaapi_stack_print.c \
-  task/kaapi_stack_execframe.c \
-  task/kaapi_stack_saveframe.c \
+  task/kaapi_thread_print.c \
+  task/kaapi_thread_execframe.c \
+  task/kaapi_thread_saveframe.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \

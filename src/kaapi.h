@@ -116,7 +116,6 @@ typedef int            kaapi_gpustream_t;
 /* Fwd decl
 */
 struct kaapi_task_t;
-struct kaapi_stack_t;
 struct kaapi_thread_t;
 struct kaapi_thread_context_t;
 struct kaapi_stealcontext_t;
@@ -739,11 +738,11 @@ static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi
 }
 
 /** \ingroup TASK
-    The function kaapi_stack_top() will return the top task.
+    The function kaapi_thread_toptask() will return the top task.
     The top task is not part of the stack, it will be the next pushed task.
-    If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
+    If successful, the kaapi_thread_toptask() function will return a pointer to the next task to push.
     Otherwise, an 0 is returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \param stack INOUT a pointer to the kaapi_thread_t data structure.
     \retval a pointer to the next task to push or 0.
 */
 static inline kaapi_task_t* kaapi_thread_toptask( kaapi_thread_t* thread) 
@@ -755,8 +754,8 @@ static inline kaapi_task_t* kaapi_thread_toptask( kaapi_thread_t* thread)
 
 
 /** \ingroup TASK
-    The function kaapi_stack_push() pushes the top task into the stack.
-    If successful, the kaapi_stack_push() function will return zero.
+    The function kaapi_thread_pushtask() pushes the top task into the stack.
+    If successful, the kaapi_thread_pushtask() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.

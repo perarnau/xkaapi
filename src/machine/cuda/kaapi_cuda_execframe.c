@@ -907,6 +907,6 @@ backtrack_stack:
   }
 #endif
 
-  /* here back track the kaapi_stack_execframe until go out */
+  /* here back track the kaapi_thread_execframe until go out */
   return thread->errcode;
 }

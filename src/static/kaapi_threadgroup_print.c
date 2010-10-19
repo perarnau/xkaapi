@@ -135,12 +135,12 @@ int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
   fprintf(file, "ThreadGroup size=%i, state=%s\n", thgrp->group_size, tab_state[thgrp->state] );
   
   fprintf(file, "Main thread\n");
-  kaapi_stack_print( file, thgrp->mainctxt );
+  kaapi_thread_print( file, thgrp->mainctxt );
   
   for (i=0; i<thgrp->group_size; ++i)
   {
     fprintf(file, "Partition %i/%i:\n", i, thgrp->group_size);
-    kaapi_stack_print( file, thgrp->threadctxts[i] );
+    kaapi_thread_print( file, thgrp->threadctxts[i] );
   }
   fprintf(file, "First input data on thread %i/%i:\n", i, thgrp->group_size);
   kaapi_threadgroup_printinputoutputdata(file, i, &thgrp->ws_khm, &thgrp->ws_vect_input );

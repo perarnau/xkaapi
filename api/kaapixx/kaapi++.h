@@ -1313,7 +1313,7 @@ namespace ka {
   template<class TASK>
   struct KaapiTask0 {
     static TASK dummy;
-    static void body( kaapi_task_t* task, kaapi_stack_t* stack )
+    static void body( kaapi_task_t* task, kaapi_thread_t* stack )
     { 
       dummy();
     }

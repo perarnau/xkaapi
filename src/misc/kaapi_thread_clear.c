@@ -48,12 +48,11 @@
 */
 int kaapi_thread_clear( kaapi_thread_context_t* thread )
 {
-  kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
   kaapi_assert_debug( thread != 0);
   thread->sfp      = thread->stackframe;
   thread->esfp     = thread->stackframe;
-  thread->sfp->sp  = thread->sfp->pc  = stack->task; /* empty frame */
-  thread->sfp->sp_data = stack->data; /* empty frame */
+  thread->sfp->sp  = thread->sfp->pc  = thread->task; /* empty frame */
+  thread->sfp->sp_data = (void*)&thread->data; /* empty frame */
   thread->_next    = 0;
   thread->_prev    = 0;
   thread->affinity = ~0UL;
@@ -62,7 +61,6 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->wcs        = 0;
   /*thread->thieffp  = 0; do not put here this instruction : always set by thief */
   kaapi_sched_initlock(&thread->lock);
-  kaapi_stack_clear(stack);
 
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;
