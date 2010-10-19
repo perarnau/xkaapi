@@ -128,19 +128,10 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
           kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 
         kaapi_sched_lock(&kproc->lock);
-//        printf("Write signal wakeup ready task:%p, body:%p\n", (void*)arg->origin_task, (void*)arg->origin_task->body);
-//        fflush(stdout);
         kaapi_sched_pushready(kproc, kthread );
         kaapi_sched_unlock(&kproc->lock);
+        return;
       }
-    }
-    else {
-      /* Ok, here we cannot theft the thread: only update state of the task */
-      if (war_param ==0)
-        kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
-      else
-        kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
-      //KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
     }
   }
 
