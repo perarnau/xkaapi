@@ -524,7 +524,9 @@ namespace ka {
     Self_t& operator-=(unsigned int i) { return base_pointer<T>::_ptr-=i; }\
     Self_t& operator-=(long i) { return base_pointer<T>::_ptr-=i; }\
     Self_t& operator-=(unsigned long i) { return base_pointer<T>::_ptr-=i; }\
-    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }
+    difference_type operator-(const Self_t& p) const { return base_pointer<T>::_ptr-p._ptr; }\
+    bool operator==(const Self_t& p) const { return base_pointer<T>::_ptr == p._ptr; }\
+    bool operator!=(const Self_t& p) const { return base_pointer<T>::_ptr != p._ptr; }
 
 
   // --------------------------------------------------------------------
@@ -563,7 +565,7 @@ namespace ka {
     pointer_rpwp() : base_pointer<T>() {}
     pointer_rpwp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rpwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-//    operator value_type*() { return base_pointer<T>::ptr(); }
+    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -1392,11 +1394,54 @@ namespace ka {
     )
     { kaapi_steal_setsplitter(&_sc, splitter, arg); }
 
-    bool has_preemption() const
+    bool is_preempted() const
     { return _sc.hasrequest; }
 
-    bool commit_preemption();
+    template<class T>
+    T* arg_preemption();
+
+    bool ack_preemption();
     
+    /* thief iterator: forward iterator */
+    struct thief_iterator {
+      struct DUMMY_TYPE {};
+      
+      struct one_thief {
+        int signal_preempt();
+
+        /* arg_victim: to pass data to the thief
+           arg_thief: where to store value returned by the thief
+        */
+        template<class T, class R>
+        int signal_preempt(T* arg_victim, R* arg_thief = 0);
+
+        /* return where is stored value returned by the thief */
+        template<class R>
+        R* wait_preempt();
+      };
+      
+
+      /* */
+      one_thief* operator->()
+      { return &curr; }
+
+      /* */
+      bool operator==(const thief_iterator& i) const;
+
+      /* */
+      bool operator!=(const thief_iterator& i) const;
+
+      /* */
+      void operator++(int);
+
+      /* */
+      void operator++();
+    protected:
+      one_thief curr;
+    };
+    
+    thief_iterator begin_thief();
+    thief_iterator end_thief();
   protected:
     kaapi_stealcontext_t _sc;
     friend class Request;
@@ -1439,15 +1484,6 @@ namespace ka {
     kaapi_request_t _request;
   };
 
-#if 0
-  /* push new steal context */
-  inline StealContext* TaskBeginAdaptive(
-        int flag,
-        void splitter(StealContext*, int, Request*),
-        void* arg
-  )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, (kaapi_task_splitter_t)splitter, arg); }
-#endif
   
   /* push new steal context */
   template<class OBJECT>

@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi++"
+#include <algorithm>
 #include <string.h>
 #include <math.h>
 #include <algorithm>
@@ -241,13 +242,13 @@ void Work<T,OP>::split (
 
 /* For each main function */
 template<typename T, class OP>
-static void for_each( T* beg, T* end, OP op )
+static void for_each( T* first, T* last, OP op )
 {
 #if 0 // todo
 
   /* range to process */
   ka::StealContext* sc;
-  Work<T,OP> work(beg, end, op);
+  Work<T,OP> work(first, last, op);
 
   /* push an adaptive task */
   sc = ka::TaskBeginAdaptive(
@@ -262,9 +263,9 @@ static void for_each( T* beg, T* end, OP op )
 
 redo_work:  
   /* while there is sequential work to do*/
-  while (work.extract_seq(beg, end))
+  while (work.extract_seq(first, last))
     /* apply w->op foreach item in [pos, end[ */
-    std::for_each( beg, end, op );
+    std::for_each( first, last, op );
 
   /* end of the sequential computation, preempt my thieves */
   ka::StealContext::thief_iterator beg = sc->begin_thief();
@@ -277,8 +278,8 @@ redo_work:
       std::pair<T*, T*>* thief_context = beg->wait_preempt<std::pair<T*, T*> >();
       if (thief_context->first != thief_context->second) 
       {
-        beg = thief_context->first;
-        end = thief_context->second;
+        first = thief_context->first;
+        last = thief_context->second;
         goto redo_work;
       }
     } /* else send_preempt !=0 which means that this thief is finished */
