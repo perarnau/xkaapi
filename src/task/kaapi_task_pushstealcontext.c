@@ -89,9 +89,11 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   sc->save_splitter         = 0;
   sc->save_argsplitter      = 0;
 
-  /* push the adaptive task */
+  /* push the adaptive task. 0 is passed as an argument
+     so that the body knows it has nothing to execute.
+   */
   kaapi_task_init
-    (kaapi_thread_toptask(thread), kaapi_adapt_body, sc);
+    (kaapi_thread_toptask(thread), kaapi_adapt_body, 0);
   kaapi_thread_pushtask(thread);
 
   return sc;

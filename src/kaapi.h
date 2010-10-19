@@ -299,6 +299,7 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align
 typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread or stream */);
 /* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
+typedef void (*kaapi_athief_body_t)(void*, struct kaapi_thread_t*, struct kaapi_stealcontext_t*);
 
 
 /** Define the cache line size. 
@@ -610,21 +611,6 @@ struct kaapi_taskadaptive_result_t;
 #endif
 
 /** \ingroup ADAPT
-    Extent data structure for adaptive task.
-    This data structure is attached to any adaptative tasks.
-*/
-typedef struct kaapi_taskadaptive_t {
-  kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
-  kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
-  void*                               save_argsplitter;/* idem */
-  kaapi_frame_t                       frame;
-  kaapi_stealcontext_t*		      msc;	       /* msater stealcontext */
-  struct kaapi_taskadaptive_result_t* ktr;
-  kaapi_task_body_t		      ubody;
-  void*				      udata;
-} kaapi_taskadaptive_t;
-
-/** \ingroup ADAPT
     reply to a steal request
 */
 typedef struct kaapi_reply_t {
@@ -639,7 +625,7 @@ typedef struct kaapi_reply_t {
     struct /* non formated body */
     {
       kaapi_task_bodyid_t	body;
-      void*			data;
+      kaapi_athief_body_t	ubody;
     } s_task;
 
     struct /* formated body */
@@ -657,7 +643,7 @@ typedef struct kaapi_reply_t {
 
   /* actual start: task_data + task_data_size */
   unsigned char stack_data[1];
-  
+
 #endif /* private */
 
 } __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_reply_t;

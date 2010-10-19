@@ -51,36 +51,39 @@
 /* adaptive task body
  */
 
-typedef void (*athief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
-
 void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 {
   /* 2 cases to handle:
-     . either we are an adaptive task created with
-     kaapi_task_begin_adpative. the argument is a
-     kaapi_taskadaptive task. This is the user role
-     to ensure task finalization.
+     . either we are in the master task created with
+     kaapi_task_begin_adpative. the argument is 0
+     and we return without further processing since
+     the sequential code is assumed to run by itself.
      . otherwise, we have been forked during a steal.
      the argument is a athief_taskarg and we retrieve
      the stealcontext since it is global to the thread
    */
 
-  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)arg;
+  kaapi_stealcontext_t* sc;
+  kaapi_reply_t* reply;
 
-  /* this is a root adaptive task, do not execute body */
-  if (sc->msc == sc)
+  /* this is the master task, return */
+  if (arg == 0)
     return ;
+
+  rep = (kaapi_reply_t*)arg;
+  sc = &rep->sc;
+
+  kaapi_assert_debug(sc->msc && (sc->msc != sc));
 
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
   */
 
   /* execute the user task entrypoint */
-  athief_body_t const body = (athief_body_t)sc->ubody;
-  kaapi_assert_debug(body != NULL);
-  body((void*)sc->udata, thread, sc);
+  kaapi_assert_debug(rep->u.s_task.ubody != NULL);
+  rep->u.s_task.ubody((void*)rep->task_data, thread, sc);
 
-  if (!(sc->msc->flag & KAAPI_SC_PREEMPTION))
+  if (!(sc->flags & KAAPI_SC_PREEMPTION))
   {
     /* non preemptive algorithm decrement the
        thievecount. this is the only way for
@@ -88,7 +91,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     */
     KAAPI_ATOMIC_DECR(&sc->msc->thievescount);
   }
-  else if (ta->ktr != 0)
+  else if (sc->ktr != 0)
   {
     /* preemptive algorithms need to inform
        they are done so they can be reduced.
@@ -186,13 +189,12 @@ void* kaapi_reply_init_adaptive_task
    */
 
   rep->data_size = size;
-  rep->s_task.ubody = kaapi_adapt_body;
-  rep->s_task.udata = req->reply->u.s_task.data;
+  rep->u.s_task.ubody = (kaapi_athief_body_t)kaapi_adapt_body;
 
   /* user put args in this area
    */
 
-  return (void*)tsc->udata;
+  return (void*)tsc->task_data;
 }
 
 
