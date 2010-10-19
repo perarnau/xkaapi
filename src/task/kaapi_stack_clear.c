@@ -49,7 +49,6 @@
 int kaapi_stack_clear( kaapi_stack_t* stack )
 {
   if (stack == 0) return EINVAL;
-  stack->hasrequest = 0;
   stack->haspreempt = 0;
   return 0;
 }

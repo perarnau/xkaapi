@@ -72,7 +72,6 @@ static void prepare_taskadaptive
   sc->splitter = NULL;
   sc->argsplitter = NULL;
   sc->flag = 0;
-  sc->hasrequest = 0;
   sc->requests = sc->ctxtthread->proc->hlrequests.requests;
   KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
   KAAPI_ATOMIC_WRITE(&sc->thievescount, 0);

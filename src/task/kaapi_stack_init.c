@@ -74,7 +74,6 @@ int kaapi_stack_init( kaapi_stack_t* stack, kaapi_uint32_t size, void* buffer )
   
   if (stack == 0) return EINVAL;
   stack->haspreempt = 0;
-  stack->hasrequest = 0; /* 0 means no thiefs */
 
   if (size ==0) 
   { 

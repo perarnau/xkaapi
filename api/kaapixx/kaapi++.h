@@ -1395,7 +1395,16 @@ namespace ka {
     { kaapi_steal_setsplitter(&_sc, splitter, arg); }
 
     bool is_preempted() const
-    { return _sc.hasrequest; }
+    {
+#if 0 /* todo */
+      /* previously, _hasrequest used.
+	 currently, the preemption must
+	 be tested on ktr->req_preempt
+       */
+      /* fixme: return _ktr->req_preempt; */
+#endif /* todo */
+      return false;
+    }
 
     template<class T>
     T* arg_preemption();

@@ -335,7 +335,6 @@ typedef struct NAME {\
 typedef struct kaapi_stack_t {
   struct kaapi_task_t*      task;           /** pointer to the first pushed task */
   char*                     data;           /** stack of data with the same scope than task */
-  volatile int              hasrequest __attribute__((aligned (KAAPI_CACHE_LINE)));     /** points to the k-processor structure */
   volatile int              haspreempt;     /** !=0 if preemption is requested */
   kaapi_request_t*          requests;       /** points to the requests set in the processor structure */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;

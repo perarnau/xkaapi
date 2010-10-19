@@ -544,7 +544,6 @@ typedef struct kaapi_stealcontext_t {
   void* volatile                 argsplitter;
   int                            flag; 
 
-  volatile int                   hasrequest;
   struct kaapi_request_t*        requests;
 
   kaapi_atomic_t                 is_there_thief;
@@ -1000,17 +999,13 @@ extern int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc );
 */
 static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 {
-  if (stc->hasrequest) 
-  {
-    /* \TODO: ici appel systematique a kaapi_sched_stealprocessor dans le cas ou la seule tache
-       est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
-       
-       Dans le cas concurrent, on ne passe jamais par la (appel direct de kaapi_stealprocessor).
-       Dans le cas cooperatif, le thread courant se vol lui meme puis repond
-    */
-    return kaapi_sched_stealstack_helper( stc );
-  }
-  return 0;
+  /* \TODO: ici appel systematique a kaapi_sched_stealprocessor dans le cas ou la seule tache
+     est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
+     
+     Dans le cas concurrent, on ne passe jamais par la (appel direct de kaapi_stealprocessor).
+     Dans le cas cooperatif, le thread courant se vol lui meme puis repond
+  */
+  return kaapi_sched_stealstack_helper( stc );
 }
 
 
@@ -1022,7 +1017,7 @@ static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 #define kaapi_stealpoint( stc, splitter, ...) \
    (kaapi_stealpoint_isactive(stc) ? (splitter)( stc, (stc)->hasrequest, (stc)->requests, ##__VA_ARGS__), 1 : 0 )
 
-#endif // if 0
+#endif /* if 0 */
 
 
 /* Return the thief result of the next thief from the head of the list to preempt or 0 if no thief may be preempted

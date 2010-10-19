@@ -53,7 +53,6 @@ int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
   {
     kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
     stack->requests      = kproc->hlrequests.requests;
-    stack->hasrequest    = 0;
     thread->proc         = kproc;
   }
   kproc->thread     = thread;
