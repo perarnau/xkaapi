@@ -123,8 +123,8 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #endif
 
   /* its correctly aligned ? */
-  ctxt->task = (kaapi_task_t*)(((kaapi_uintptr_t)ctxt)+k_stacksize-sizeof(kaapi_task_t));
-  kaapi_assert_m( (((kaapi_uintptr_t)ctxt->task) & 0x3F)== 0, "Stack of task not aligned to 64 bit boundary");
+  ctxt->task = (kaapi_task_t*)((((kaapi_uintptr_t)ctxt) + k_stacksize-sizeof(kaapi_task_t) - 0x3FUL) & ~0x3FUL);
+  kaapi_assert_m( (((kaapi_uintptr_t)ctxt->task) & 0x3FUL)== 0, "Stack of task not aligned to 64 bit boundary");
   ctxt->size = k_stacksize;
 
   /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
