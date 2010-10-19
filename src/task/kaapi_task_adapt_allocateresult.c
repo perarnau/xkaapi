@@ -72,7 +72,6 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   }
 
   result->arg_from_victim = 0;
-  result->req_preempt     = 0;
   result->is_signaled	  = 0;
   result->thief_term      = 0;
   result->rhead           = 0;

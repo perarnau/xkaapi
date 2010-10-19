@@ -548,7 +548,7 @@ typedef struct kaapi_stealcontext_t {
   /* steal method modifiers */
   int flag; 
 
-#if !defined(KAAPI_COMPILE_SOURCE) /* private */
+#if defined(KAAPI_COMPILE_SOURCE) /* private */
 
   /* initial saved frame */
   kaapi_frame_t frame;
@@ -557,7 +557,7 @@ typedef struct kaapi_stealcontext_t {
   struct kaapi_stealcontext_t* msc;
 
   /* thief result, independent of preemption */
-  kaapi_taskadaptive_result_t* ktr;
+  struct kaapi_taskadaptive_result_t* ktr;
 
   /* thieves related context, 2 cases */
   union
@@ -570,10 +570,10 @@ typedef struct kaapi_stealcontext_t {
     {
       kaapi_atomic_t lock;
 
-      struct kaapi_taskadaptive_result_t* head
+      struct kaapi_taskadaptive_result_t* volatile head
       __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-      struct kaapi_taskadaptive_result_t* tail
+      struct kaapi_taskadaptive_result_t* volatile tail
       __attribute__((aligned(KAAPI_CACHE_LINE)));
     } list;
   } thieves;
@@ -614,10 +614,15 @@ struct kaapi_taskadaptive_result_t;
     reply to a steal request
 */
 typedef struct kaapi_reply_t {
+
+  /* the status word */
+  volatile unsigned int status;
+
+  /* pseudo stealcontext */
   kaapi_stealcontext_t sc;
 
   /* private, since sc is private and sizeof differs */
-#if !defined(KAAPI_COMPILE_SOURCE)
+#if defined(KAAPI_COMPILE_SOURCE)
 
   /* either an adaptive or a dfg steal */
   union
@@ -633,6 +638,9 @@ typedef struct kaapi_reply_t {
       kaapi_format_id_t		fmt;
       void*			sp;
     } s_taskfmt;
+
+    /* thread stealing */
+    struct kaapi_thread_context_t* thread;
   } u;
 
   /* task data size */

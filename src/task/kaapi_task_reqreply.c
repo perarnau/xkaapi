@@ -64,14 +64,14 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
    */
 
   kaapi_stealcontext_t* sc;
-  kaapi_reply_t* reply;
+  kaapi_reply_t* krep;
 
   /* this is the master task, return */
   if (arg == 0)
     return ;
 
-  rep = (kaapi_reply_t*)arg;
-  sc = &rep->sc;
+  krep = (kaapi_reply_t*)arg;
+  sc = &krep->sc;
 
   kaapi_assert_debug(sc->msc && (sc->msc != sc));
 
@@ -80,16 +80,16 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   */
 
   /* execute the user task entrypoint */
-  kaapi_assert_debug(rep->u.s_task.ubody != NULL);
-  rep->u.s_task.ubody((void*)rep->task_data, thread, sc);
+  kaapi_assert_debug(krep->u.s_task.ubody != NULL);
+  krep->u.s_task.ubody((void*)krep->task_data, thread, sc);
 
-  if (!(sc->flags & KAAPI_SC_PREEMPTION))
+  if (!(sc->flag & KAAPI_SC_PREEMPTION))
   {
     /* non preemptive algorithm decrement the
        thievecount. this is the only way for
        the master to sync on algorithm term.
     */
-    KAAPI_ATOMIC_DECR(&sc->msc->thievescount);
+    KAAPI_ATOMIC_DECR(&sc->msc->thieves.count);
   }
   else if (sc->ktr != 0)
   {
@@ -142,8 +142,8 @@ static int request_reply
     else 
     {
       ktr->prev = sc->thieves.list.tail;
-      sc->thieves.tail->next = ktr;
-      sc->thieves.tail = ktr;
+      sc->thieves.list.tail->next = ktr;
+      sc->thieves.list.tail = ktr;
     }
 
     KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
@@ -151,7 +151,7 @@ static int request_reply
   else
   {
     /* non preemptive algorithm, inc the root master theifcount */
-    KAAPI_ATOMIC_INCR(&sc->msc->thievescount);
+    KAAPI_ATOMIC_INCR(&sc->msc->thieves.count);
   }
 
   return _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
@@ -162,7 +162,7 @@ static int request_reply
  */
 void* kaapi_reply_init_adaptive_task
 (
-  kaapi_request_t*             req,
+  kaapi_request_t*             kreq,
   kaapi_task_body_t            body,
   size_t		       size,
   kaapi_stealcontext_t*        vsc,
@@ -172,8 +172,8 @@ void* kaapi_reply_init_adaptive_task
   /* vsc the victim stealcontext */
   /* tsc the thief stealcontext */
 
-  kaapi_reply_t* const rep = req->reply;
-  kaapi_stealcontext_t* const tsc = &rep->sc;
+  kaapi_reply_t* const krep = kreq->reply;
+  kaapi_stealcontext_t* const tsc = &krep->sc;
 
   /* first part initialization. finalization
      is done in kaapi_sched_emitsteal. only
@@ -188,13 +188,13 @@ void* kaapi_reply_init_adaptive_task
   /* initialize the reply
    */
 
-  rep->data_size = size;
-  rep->u.s_task.ubody = (kaapi_athief_body_t)kaapi_adapt_body;
+  krep->data_size = size;
+  krep->u.s_task.ubody = (kaapi_athief_body_t)kaapi_adapt_body;
 
   /* user put args in this area
    */
 
-  return (void*)tsc->task_data;
+  return (void*)krep->task_data;
 }
 
 

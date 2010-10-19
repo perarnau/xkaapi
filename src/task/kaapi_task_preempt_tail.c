@@ -44,19 +44,18 @@
 #include "kaapi_impl.h"
 
 
-static inline void steal_sync(kaapi_stealcontext_t* stc)
+static inline void sync_steal(void)
 {
-  while (KAAPI_ATOMIC_READ(&stc->is_there_thief))
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  while (KAAPI_ATOMIC_READ(&kproc->lock) == 1)
     kaapi_slowdown_cpu();
 }
 
-struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc )
+struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* sc )
 {
-  volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  /* comments in kaapi_task_preempt_head.c */
 
-  if (ta->tail == NULL)
-    steal_sync(stc);
-
-  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
-  return ta->tail;  
+  if (sc->thieves.list.tail == 0)
+    sync_steal();
+  return sc->thieves.list.tail;
 }

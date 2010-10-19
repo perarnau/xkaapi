@@ -49,19 +49,30 @@
 */
 void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
 {
-  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)taskarg;
+  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)taskarg;
 
-  kaapi_assert_debug( ta !=0 );
+  kaapi_assert_debug( sc !=0 );
 
+#warning TODO
+#if 0 /* sync on kproc */
   /* wait end of pending thief, if any */
   while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
     kaapi_slowdown_cpu();
+#endif
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
-  kaapi_assert(ta->head ==0)
-  kaapi_assert(ta->tail ==0)
-  kaapi_assert( KAAPI_ATOMIC_READ(&ta->sc.thievescount) ==0 ); /* else pb -> call kaapi_steal_finalize ! */
+#if !defined(NDEBUG)
+  if (sc->flag & KAAPI_SC_PREEMPTION)
+  {
+    kaapi_assert(sc->thieves.list.head == 0);
+    kaapi_assert(sc->thieves.list.tail == 0);
+  }
+  else
+  {
+    kaapi_assert( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0 );
+  }
+#endif /* NDEBUG */
 }
 
 
@@ -69,12 +80,12 @@ void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
 */
 int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_assert_debug( ta !=0 );
+  kaapi_assert_debug( stc != 0 );
 
-  ta->sc.splitter = 0;
-  ta->sc.argsplitter = 0;
-  kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
+  stc->splitter = 0;
+  stc->argsplitter = 0;
+#warning TODO
+  /* todo: kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body ); */
 
 #if defined(KAAPI_DEBUG)
   /* push task to wait childs */

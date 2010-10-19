@@ -258,11 +258,6 @@ static int kaapi_sched_stealframe
     {
       kaapi_stealcontext_t* const sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
       
-      /* for kaapi_steal_sync */
-      kaapi_writemem_barrier();
-      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 1);
-      kaapi_readmem_barrier();
-      
       /* should not be reorder before the barrier */
       splitter = sc->splitter;
       argsplitter = sc->argsplitter;
@@ -302,9 +297,6 @@ static int kaapi_sched_stealframe
         thread->thiefpc = 0;
 #endif
       }
-      
-      /* for kaapi_steal_sync */
-      KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
       
       --task_top;
       continue;

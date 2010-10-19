@@ -54,7 +54,6 @@ int kaapi_preemptpoint_before_reducer_call(
     int result_size
 )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
   kaapi_assert_debug( stc !=0 );
 
   /* disable and wait no more thief on stc */
@@ -72,11 +71,18 @@ int kaapi_preemptpoint_before_reducer_call(
   ktr->arg_from_thief = arg_for_victim;
 
   /* no lock needed since no more steal possible */
-  ktr->rhead = ta->head; ta->head = 0;
-  ktr->rtail = ta->tail; ta->tail = 0;
+  ktr->rhead = stc->thieves.list.head;
+  stc->thieves.list.head = 0;
+
+  ktr->rtail = stc->thieves.list.tail;
+  stc->thieves.list.tail = 0;
   
   /* delete the preemption flag */
-  ktr->req_preempt = 0;
+#warning TODO
+  /* todo: ktr->req_preempt = 0;
+     now in the reply, the ktr should have
+     a pointer on the status or reply
+   */
 
   return 0;
 }

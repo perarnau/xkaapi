@@ -69,7 +69,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   sc->splitter          = splitter;
   sc->argsplitter       = argsplitter;
   sc->flag              = flag;
-  sc->msc		= msc; /* self reference */
+  sc->msc		= sc; /* self reference */
   sc->ktr		= 0;
 
   if (flag & KAAPI_SC_PREEMPTION)

@@ -49,17 +49,14 @@
 /*
 */
 int kaapi_remove_finishedthief( 
-  kaapi_stealcontext_t*        stc, 
+  kaapi_stealcontext_t*        sc,
   kaapi_taskadaptive_result_t* ktr
 )
 {
-  kaapi_taskadaptive_t* const ta =
-    (kaapi_taskadaptive_t*)stc;
-
-  /*ok: here thief has been preempted */
+  /* ok: here thief has been preempted */
   kaapi_readmem_barrier();
   
-  while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
+  while (!KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
     kaapi_slowdown_cpu();
 
   if (ktr->rhead != NULL)
@@ -71,31 +68,32 @@ int kaapi_remove_finishedthief(
     if (ktr->prev != NULL)
       ktr->prev->next = ktr->rhead;
     else
-      ta->head = ktr->rhead;
+      sc->thieves.list.head = ktr->rhead;
 
     if (ktr->next != NULL)
       ktr->next->prev = ktr->rtail;
     else
-      ta->tail = ktr->rtail;
+      sc->thieves.list.tail = ktr->rtail;
   }
   else /* no thieves, unlink */
   {
     if (ktr->prev != NULL)
       ktr->prev->next = ktr->next;
     else
-      ta->head = ktr->next;
+      sc->thieves.list.head = ktr->next;
 
     if (ktr->next != NULL)
       ktr->next->prev = ktr->prev;
     else
-      ta->tail = ktr->prev;
+      sc->thieves.list.tail = ktr->prev;
   }
 
   /* mostly for debug: */
   ktr->next = 0;
   ktr->prev = 0;
 
-  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+
   return 0;
 }
 
@@ -104,23 +102,23 @@ int kaapi_remove_finishedthief(
 
 /*
 */
-int kaapi_preempt_thief_helper( 
-  kaapi_stealcontext_t*        stc, 
-  kaapi_taskadaptive_result_t* ktr, 
-  void*                        arg_to_thief
+int kaapi_preempt_thief_helper
+( 
+ kaapi_stealcontext_t*        sc,
+ kaapi_taskadaptive_result_t* ktr, 
+ void*                        arg_to_thief
 )
 {
-  kaapi_taskadaptive_t* ta;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint64_t t1;
   kaapi_uint64_t t0;
 #endif
-  if (ktr ==0) return 0;
+
+  if (ktr == 0) return 0;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   t0 = kaapi_get_elapsedns();
 #endif
-  ta = (kaapi_taskadaptive_t*)stc;
 
   /* pass arg to the thief */
   ktr->arg_from_victim = arg_to_thief;  
@@ -128,7 +126,8 @@ int kaapi_preempt_thief_helper(
   /* next write should ne be reorder with previous */
   kaapi_writemem_barrier();
 
-  ktr->req_preempt = 1;
+#warning TODO
+  /* todo: ktr->req_preempt = 1; now in the reply */
   kaapi_mem_barrier();
     
   /* busy wait thief receive preemption */
@@ -136,11 +135,12 @@ int kaapi_preempt_thief_helper(
     kaapi_slowdown_cpu();
 
   /* remove thief and replace the thieves of ktr into the list */
-  kaapi_remove_finishedthief(stc, ktr);    
+  kaapi_remove_finishedthief(sc, ktr);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+#warning TODO
   t1 = kaapi_get_elapsedns();
-  stc->ctxtthread->proc->t_preempt += (double)(t1-t0)*1e-9;
+  sc->ctxtthread->proc->t_preempt += (double)(t1-t0)*1e-9;
 //  printf("Delay preempt:%15f, Total=%15f\n", (double)(t1-t0)*1e-9, stc->ctxtthread->proc->t_preempt );
 #endif
   
@@ -151,22 +151,21 @@ int kaapi_preempt_thief_helper(
 
 /*
 */
-int kaapi_preemptasync_thief_helper( 
-  kaapi_stealcontext_t*               stc, 
-  struct kaapi_taskadaptive_result_t* ktr, 
-  void*                               arg_to_thief 
+int kaapi_preemptasync_thief_helper
+( 
+ kaapi_stealcontext_t*               sc, 
+ struct kaapi_taskadaptive_result_t* ktr, 
+ void*                               arg_to_thief 
 )
 {
-  kaapi_taskadaptive_t* ta;
   if (ktr ==0) return 0;
-
-  ta = (kaapi_taskadaptive_t*)stc;
 
   /* pass arg to the thief */
   ktr->arg_from_victim = arg_to_thief;  
   kaapi_writemem_barrier();
 
-  ktr->req_preempt = 1;
+#warning TODO
+  /* todo: ktr->req_preempt = 1; now in the reply */
   kaapi_mem_barrier();
   
   if (!ktr->thief_term) return EBUSY;

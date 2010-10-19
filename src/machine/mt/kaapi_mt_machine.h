@@ -750,13 +750,6 @@ static inline void kaapi_processor_set_self_workload(kaapi_uint32_t workload)
 
 /**
 */
-static inline kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t* sc)
-{
-  return sc->ctxtthread->proc;
-}
-
-/**
-*/
 static inline unsigned int kaapi_request_kid(kaapi_request_t* kr)
 {
   return kr->kid;

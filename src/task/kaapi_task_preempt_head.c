@@ -45,34 +45,38 @@
 #include "kaapi_impl.h"
 
 
-static inline void steal_sync(kaapi_stealcontext_t* stc)
+static inline void sync_steal(void)
 {
-  while (KAAPI_ATOMIC_READ(&stc->is_there_thief))
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  while (KAAPI_ATOMIC_READ(&kproc->lock) == 1)
     kaapi_slowdown_cpu();
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* stc )
+kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
 {
-  volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
+  /* if empty, wait for no one to be stealing
+     and rely upon thefact the master calls
+     this function when its work is empty.
+   */
 
-  if (ta->head == NULL)
-    steal_sync(stc);
+  if (sc->thieves.list.head == 0)
+    sync_steal();
 
-  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
-  return ta->head;  
+  return sc->thieves.list.head;
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* stc, kaapi_taskadaptive_result_t* curr )
+kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_taskadaptive_result_t* ncurr;
+  kaapi_taskadaptive_result_t* next;
   
-  while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
+  while (!KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
     kaapi_slowdown_cpu();
-  ncurr = curr->next;
-  if (ncurr ==0) ncurr = ta->head; /* try restarting from head */
-  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+
+  /* try restarting from head */
+  if ((next = pos->next) == 0)
+    next = sc->thieves.list.head;
+
+  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
   
-  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
-  return ncurr;
+  return next;
 }
