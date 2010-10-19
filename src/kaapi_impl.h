@@ -419,7 +419,9 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
   struct kaapi_taskadaptive_result_t* prev;             /* */
 
-  void*				      addr_tofree;	                      /* the non aligned malloc()ed addr */
+  void*				      addr_tofree;	/* the non aligned malloc()ed addr */
+
+  volatile unsigned int*	      status;		/* pointer on the reply status, needed for preemption */
   
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 

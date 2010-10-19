@@ -949,7 +949,7 @@ extern void kaapi_task_end_adaptive( kaapi_stealcontext_t* stc );
     \param data IN a user defined data or 0 to means to be allocated by the runtime
 */
 extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
-    kaapi_stealcontext_t* stc, int size, void* data
+    struct kaapi_request_t* kreq, int size, void* data
 );
 
 /** \ingroup ADAPTIVE

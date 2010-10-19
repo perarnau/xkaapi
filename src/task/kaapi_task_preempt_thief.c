@@ -126,8 +126,7 @@ int kaapi_preempt_thief_helper
   /* next write should ne be reorder with previous */
   kaapi_writemem_barrier();
 
-#warning TODO
-  /* todo: ktr->req_preempt = 1; now in the reply */
+  *ktr->status = KAAPI_TASK_S_PREEMPTED;
   kaapi_mem_barrier();
     
   /* busy wait thief receive preemption */

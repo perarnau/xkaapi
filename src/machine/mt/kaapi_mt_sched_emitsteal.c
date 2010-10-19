@@ -230,6 +230,7 @@ return_value:
       }
 
       /* initialize and push the task */
+      self_thread = kaapi_self_thread();
       kaapi_task_init
 	(kaapi_thread_toptask(self_thread),
 	 reply->u.s_task.body, reply->task_data);
