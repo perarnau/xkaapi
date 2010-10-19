@@ -533,21 +533,51 @@ typedef int (*kaapi_task_reducer_t) (
 #endif
 );
 
-/** Steal context for adaptive algorithm
+/** Adaptive stealing context
     \ingroup ADAPT
 */
 typedef struct kaapi_stealcontext_t {
-  kaapi_task_t*                  ownertask;
-  struct kaapi_thread_context_t* ctxtthread;
-  kaapi_thread_t*                thread;
+  /* splitter context */
   kaapi_task_splitter_t volatile splitter;
-  void* volatile                 argsplitter;
-  int                            flag; 
+  void* volatile argsplitter;
 
-  struct kaapi_request_t*        requests;
+  kaapi_task_splitter_t save_splitter;
+  void* save_argsplitter;
 
-  kaapi_atomic_t                 is_there_thief;
-  kaapi_atomic_t                 thievescount;
+  /* steal method modifiers */
+  int flag; 
+
+#if !defined(KAAPI_COMPILE_SOURCE) /* private */
+
+  /* initial saved frame */
+  kaapi_frame_t frame;
+
+  /* (topmost) master stealcontext */
+  struct kaapi_stealcontext_t* msc;
+
+  /* thief result, independent of preemption */
+  kaapi_taskadaptive_result_t* ktr;
+
+  /* thieves related context, 2 cases */
+  union
+  {
+    /* 0) an atomic counter if preemption disabled */
+    kaapi_atomic_t count;
+
+    /* 1) a thief list if preemption enabled */
+    struct
+    {
+      kaapi_atomic_t lock;
+
+      struct kaapi_taskadaptive_result_t* head
+      __attribute__((aligned(KAAPI_CACHE_LINE)));
+
+      struct kaapi_taskadaptive_result_t* tail
+      __attribute__((aligned(KAAPI_CACHE_LINE)));
+    } list;
+  } thieves;
+
+#endif /* private */
 
 } kaapi_stealcontext_t;
 
@@ -585,9 +615,6 @@ struct kaapi_taskadaptive_result_t;
 */
 typedef struct kaapi_taskadaptive_t {
   kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
-  kaapi_atomic_t                      lock;            /* required for access to list */
-  struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
-  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
   kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
   void*                               save_argsplitter;/* idem */
   kaapi_frame_t                       frame;
@@ -601,21 +628,39 @@ typedef struct kaapi_taskadaptive_t {
     reply to a steal request
 */
 typedef struct kaapi_reply_t {
-  volatile kaapi_uint32_t        status;    /* should be kaapi_reply_status_t */
-  kaapi_taskadaptive_t		 ta;
-  volatile kaapi_uint32_t	 req_preempt;
-  union {
-    struct {
-      kaapi_task_bodyid_t        body;
-      void*			 data;
+  kaapi_stealcontext_t sc;
+
+  /* private, since sc is private and sizeof differs */
+#if !defined(KAAPI_COMPILE_SOURCE)
+
+  /* either an adaptive or a dfg steal */
+  union
+  {
+    struct /* non formated body */
+    {
+      kaapi_task_bodyid_t	body;
+      void*			data;
     } s_task;
-    struct {
-      kaapi_format_id_t          fmt;      /* format id */
-      void*                      sp;
+
+    struct /* formated body */
+    {
+      kaapi_format_id_t		fmt;
+      void*			sp;
     } s_taskfmt;
-    struct kaapi_thread_context_t* thread;
   } u;
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
+
+  /* task data size */
+  size_t data_size;
+
+  /* todo: align on something (page or cacheline size) */
+  unsigned char task_data[4 * KAAPI_CACHE_LINE];
+
+  /* actual start: task_data + task_data_size */
+  unsigned char stack_data[1];
+  
+#endif /* private */
+
+} __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_reply_t;
 
 #define KAAPI_REPLY_DATA_SIZE_MIN (KAAPI_CACHE_LINE-sizeof(kaapi_uint8_t))
 
@@ -930,13 +975,15 @@ extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* re
     first argument the pointer return the call to kaapi_reply_init_adaptive_task.
     \param req the request emitted by a thief
     \param body the entry point of the task to execute
-    \param msc the steal... TO DO
+    \param size the user data size
+    \param sc the stealcontext
     \param result that taskadaptive_result used for signalisation.
 */
 extern void* kaapi_reply_init_adaptive_task (
     kaapi_request_t*                    req,
     kaapi_task_body_t                   body,
-    struct kaapi_stealcontext_t*        msc,
+    size_t				size,
+    struct kaapi_stealcontext_t*        sc,
     struct kaapi_taskadaptive_result_t* result
 );
 
@@ -1107,9 +1154,10 @@ extern int kaapi_remove_finishedthief(
     \retval 0 else
 */
 #if !defined(KAAPI_COMPILE_SOURCE)
-static inline int kaapi_preemptpoint_isactive( kaapi_taskadaptive_result_t* ktr )
+static inline int kaapi_preemptpoint_isactive(void)
 {
-  return ktr->req_preempt;
+  /* 0 is preempted */
+  return (kaapi_self_thread_context()->status.preempt == 0);
 }
 #endif
 

@@ -247,12 +247,13 @@ extern kaapi_rtparam_t kaapi_default_param;
     \ingroup WS
 */
 enum kaapi_reply_status_t {
-  KAAPI_REQUEST_S_POSTED  = 0,
-  KAAPI_REPLY_S_NOK       = 1,
-  KAAPI_REPLY_S_TASK      = 2,
-  KAAPI_REPLY_S_TASK_FMT  = 3,
-  KAAPI_REPLY_S_THREAD    = 4,
-  KAAPI_REPLY_S_ERROR     = 5
+  KAAPI_TASK_S_PREEMPTED = 0,
+  KAAPI_REQUEST_S_POSTED,
+  KAAPI_REPLY_S_NOK,
+  KAAPI_REPLY_S_TASK,
+  KAAPI_REPLY_S_TASK_FMT,
+  KAAPI_REPLY_S_THREAD,
+  KAAPI_REPLY_S_ERROR
 };
 
 
@@ -405,8 +406,7 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  int volatile                        req_preempt;
-  int volatile                        is_signaled;
+  volatile int                        is_signaled;
 
   /* here begins the private part of the structure */
   volatile int                        thief_term;       /* */

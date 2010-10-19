@@ -48,43 +48,27 @@
 #define KAAPI_USE_AGGREGATION
 
 
-static void prepare_taskadaptive
-(kaapi_thread_t* self_thread, kaapi_taskadaptive_t* ta)
+static void finalize_stealcontext(kaapi_stealcontext_t* sc)
 {
-  /* prepare the taskadaptive used by reply */
+  /* stealcontext post steal finalization */
+  /* fields assume set by reply: flag, ktr, msc */
 
-  /* todo: dont initialize every member */
+  /*  todo: factorize with begin_adaptive */
 
-  kaapi_stealcontext_t* const sc = &ta->sc;
+  kaapi_thread_save_frame(kaapi_self_thread(), &sc->frame);
 
-  ta->head = NULL;
-  ta->tail = NULL;
-  ta->save_splitter = NULL;
-  ta->save_argsplitter = NULL;
-  ta->ubody = NULL;
-  ta->udata = NULL;
-  ta->ktr = NULL;
-  ta->msc = NULL;
-  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
+  sc->splitter = 0;
+  sc->argsplitter = 0;
+  sc->save_splitter = 0;
+  sc->save_argsplitter = 0;
 
-  sc->ctxtthread = kaapi_self_thread_context();
-  sc->thread = self_thread;
-  sc->splitter = NULL;
-  sc->argsplitter = NULL;
-  sc->flag = 0;
-  sc->requests = sc->ctxtthread->proc->hlrequests.requests;
-  KAAPI_ATOMIC_WRITE(&sc->is_there_thief, 0);
-  KAAPI_ATOMIC_WRITE(&sc->thievescount, 0);
-
-  kaapi_thread_save_frame(self_thread, &ta->frame);
-
-  /* kaapi_writemem_barrier(); */
-}
-
-static void finalize_taskadaptive(kaapi_taskadaptive_t* ta)
-{
-  ((kaapi_stealcontext_t*)ta)->flag = ta->msc->flag;
-  kaapi_writemem_barrier();
+  if (sc->flag & KAAPI_SC_PREEMPTION)
+  {
+    /* if preemption, thief list used */
+    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+    sc->thieves.list.head = 0;
+    sc->thieves.list.tail = 0;
+  }
 }
 
 #if defined(KAAPI_USE_AGGREGATION)
@@ -108,11 +92,6 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   /* allocate reply data on the stack */
   thread = kaapi_threadcontext2thread(kproc->thread);
   reply = &kproc->thread->reply;
-  reply->u.s_task.data = kaapi_thread_pushdata_align
-    (thread, 4 * KAAPI_CACHE_LINE, sizeof(void*));
-
-  /* reset the preemption request */
-  reply->req_preempt = 0;
 
 redo_select:
   /* select the victim processor */
@@ -123,10 +102,6 @@ redo_select:
 
   /* mark current processor as stealing */
   kproc->issteal = 1;
-
-  /* clear the taskadaptive before posting */
-  self_thread = kaapi_self_thread();
-  prepare_taskadaptive(self_thread, &reply->ta);
 
   /* (1) 
      Fill & Post the request to the victim processor 
@@ -228,8 +203,7 @@ return_value:
   kproc->issteal = 0;
   kaapi_assert_debug( (kaapi_reply_status(reply) != KAAPI_REQUEST_S_POSTED) ); 
 
-  /* test if my request is ok
-  */
+  /* test if my request is ok */
   kaapi_replysync_data( reply );
 
   switch (kaapi_reply_status(reply))
@@ -240,12 +214,25 @@ return_value:
 	( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
       kaapi_assert_debug(reply->u.s_task.body);
 
+    case KAAPI_TASK_S_PREEMPTED:
+      /* the task may have been preempted
+	 in between. in this case, we assume
+	 the reply was previously replied with
+	 a REPLY_S_TASK.
+       */
+
     case KAAPI_REPLY_S_TASK:
 
-      finalize_taskadaptive(&reply->ta);
+      if (reply->u.s_task.body == kaapi_adapt_body)
+      {
+	/* post steal stealcontext processing */
+	finalize_stealcontext(&reply->sc);
+      }
 
+      /* initialize and push the task */
       kaapi_task_init
-	(kaapi_thread_toptask(self_thread), kaapi_adapt_body, (void*)&reply->ta);
+	(kaapi_thread_toptask(self_thread)
+	 reply->u.s_task.body, reply->u.s_task.data);
       kaapi_thread_pushtask(self_thread);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
