@@ -463,10 +463,9 @@ typedef struct kaapi_reply_t {
     } s_task;
     struct {
       kaapi_format_id_t          fmt;      /* format id */
-      void*                      sp;
       kaapi_uint64_t             data[1];  /* @ data */
     } s_taskfmt;
-    struct kaapi_thread_context_t* thread;
+    struct kaapi_thread_context_t* s_thread;
   } u;
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
 

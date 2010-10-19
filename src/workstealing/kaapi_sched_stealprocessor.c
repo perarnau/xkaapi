@@ -71,7 +71,7 @@ int kaapi_sched_stealprocessor(
     {
       /* reply */
       kaapi_reply_t* reply = kaapi_request_getreply(request);
-      reply->u.thread = thread;
+      reply->u.s_thread = thread;
       _kaapi_request_reply(request, KAAPI_REPLY_S_THREAD);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }

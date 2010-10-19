@@ -211,7 +211,7 @@ return_value:
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
-      return reply->u.thread;
+      return reply->u.s_thread;
 
     case KAAPI_REPLY_S_NOK:
       return 0;

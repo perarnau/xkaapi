@@ -68,7 +68,7 @@ int kaapi_task_splitter_dfg(
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
   kaapi_assert(request !=0);
 
-  stealreply = (kaapi_reply_t*)kaapi_request_getreply(request);
+  stealreply = kaapi_request_getreply(request);
   
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:

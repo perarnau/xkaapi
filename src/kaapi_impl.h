@@ -252,7 +252,8 @@ enum kaapi_reply_status_t {
   KAAPI_REPLY_S_TASK      = 2,
   KAAPI_REPLY_S_TASK_FMT  = 3,
   KAAPI_REPLY_S_THREAD    = 4,
-  KAAPI_REPLY_S_ERROR     = 5
+  KAAPI_REPLY_S_ERROR     = 5,
+  KAAPI_REPLY_S_PREEMPTED = 6
 };
 
 
@@ -1262,7 +1263,7 @@ static inline kaapi_processor_id_t kaapi_request_getthiefid(kaapi_request_t* r)
 { return (kaapi_processor_id_t) r->kid; }
 
 static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
-{ return (kaapi_reply_t*) r->reply; }
+{ return r->reply; }
 
 /** Wait the end of request and return the error code
   \param pksr kaapi_reply_t
