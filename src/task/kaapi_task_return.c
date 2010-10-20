@@ -51,7 +51,7 @@ void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
 {
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)taskarg;
 
-  kaapi_assert_debug( sc !=0 );
+  kaapi_assert_debug( sc != 0 );
 
 #warning TODO
 #if 0 /* sync on kproc */
