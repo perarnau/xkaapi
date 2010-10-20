@@ -47,18 +47,16 @@
 
 /**
 */
+
+extern void synchronize_steal(kaapi_stealcontext_t*);
+
 void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
 {
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)taskarg;
 
   kaapi_assert_debug( sc != 0 );
 
-#warning TODO
-#if 0 /* sync on kproc */
-  /* wait end of pending thief, if any */
-  while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
-    kaapi_slowdown_cpu();
-#endif
+  synchronize_steal(sc);
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
@@ -84,8 +82,7 @@ int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
 
   stc->splitter = 0;
   stc->argsplitter = 0;
-#warning TODO
-  /* todo: kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body ); */
+  kaapi_task_setbody( stc->ownertask, kaapi_nop_body );
 
 #if defined(KAAPI_DEBUG)
   /* push task to wait childs */

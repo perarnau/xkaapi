@@ -108,7 +108,7 @@ int kaapi_preempt_thief_helper
   kaapi_uint64_t t0;
 #endif
 
-  if (ktr == 0) return 0;
+  kaapi_assert_debug(ktr != 0);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   t0 = kaapi_get_elapsedns();

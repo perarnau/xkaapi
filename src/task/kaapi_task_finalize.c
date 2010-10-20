@@ -92,7 +92,7 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
   if (sc->flag & KAAPI_SC_PREEMPTION)
   {
     kaapi_assert_debug(sc->thieves.list.head == 0);
-    kaapi_task_setbody(sc->task, kaapi_nop_body);
+    kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
     kaapi_thread_restore_frame(thread - 1, &sc->frame);
     return ;
   }
@@ -104,7 +104,7 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
   */
   synchronize_steal(sc);
 
-  kaapi_task_setbody(sc->task, kaapi_nop_body);
+  kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
 
   /* not a preemptive algorithm. push a finalization task
      to wait for thieves and block until finalization done.

@@ -598,18 +598,41 @@ typedef struct kaapi_stealcontext_t {
     Only public part of the data structure.
     Warning: update of this structure should also be an update of the structure in kaapi_impl.h
 */
-#if !defined(KAAPI_COMPILE_SOURCE)
+
+
+/** \ingroup ADAPT
+    Data structure that allows to store results of child tasks of an adaptive task.
+    This data structure is stored... in the victim heap and serve as communication 
+    media between victim and thief.
+*/
 typedef struct kaapi_taskadaptive_result_t {
+  /* same as public part of the structure in kaapi.h */
   void*                               data;             /* the data produced by the thief */
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  int volatile                        req_preempt;
-  int volatile                        is_signaled;
-} kaapi_taskadaptive_result_t;
-#else
-struct kaapi_taskadaptive_result_t;
-#endif
+
+#if defined(KAAPI_COMPILE_SOURCE)
+  /* here begins the private part of the structure */
+  volatile int                        thief_term;       /* */
+
+#define KAAPI_RESULT_DATAUSR    0x01
+#define KAAPI_RESULT_DATARTS    0x02
+  int                                 flag;             /* where is allocated data */
+
+  struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
+  struct kaapi_taskadaptive_result_t* rtail;            /* */
+
+  struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
+  struct kaapi_taskadaptive_result_t* prev;             /* */
+
+  void*				      addr_tofree;	/* the non aligned malloc()ed addr */
+
+  volatile unsigned int*	      status;		/* pointer on the reply status, needed for preemption */
+#endif /* defined(KAAPI_COMPILE_SOURCE) */
+  
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+
 
 /** \ingroup ADAPT
     reply to a steal request
@@ -1126,7 +1149,6 @@ extern int kaapi_remove_finishedthief(
   {									\
     if (!kaapi_is_null((void*)reducer))					\
       __res = ((kaapi_task_reducer_t)reducer)(stc, (tr)->arg_from_thief, (tr)->data, (tr)->size_data, ##__VA_ARGS__);	\
-    while (!tr->is_signaled) kaapi_slowdown_cpu();			\
     kaapi_deallocate_thief_result(tr);					\
   }									\
   __res;								\

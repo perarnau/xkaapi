@@ -395,40 +395,6 @@ typedef struct kaapi_thread_context_t {
 #define kaapi_threadcontext2stack(thread)        ( (kaapi_stack_t*)((thread)+1) )
 #define kaapi_threadcontext2thread(thread)       ( (kaapi_thread_t*)((thread)->sfp) )
 
-/** \ingroup ADAPT
-    Data structure that allows to store results of child tasks of an adaptive task.
-    This data structure is stored... in the victim heap and serve as communication 
-    media between victim and thief.
-*/
-typedef struct kaapi_taskadaptive_result_t {
-  /* same as public part of the structure in kaapi.h */
-  void*                               data;             /* the data produced by the thief */
-  size_t                              size_data;        /* size of data */
-  void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
-  void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  volatile int                        is_signaled;
-
-  /* here begins the private part of the structure */
-  volatile int                        thief_term;       /* */
-
-  int                                 flag;             /* where is allocated data */
-
-  struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
-  struct kaapi_taskadaptive_result_t* rtail;            /* */
-
-  struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
-  struct kaapi_taskadaptive_result_t* prev;             /* */
-
-  void*				      addr_tofree;	/* the non aligned malloc()ed addr */
-
-  volatile unsigned int*	      status;		/* pointer on the reply status, needed for preemption */
-  
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
-
-#define KAAPI_RESULT_DATAUSR    0x01
-#define KAAPI_RESULT_DATARTS    0x02
-
-
 /* ===================== Default internal task body ==================================== */
 /** Body of the nop task 
     \ingroup TASK
@@ -705,11 +671,8 @@ inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
 
   while (1)
   {
-    const uintptr_t prev_state =
-      kaapi_task_orstate(task, locked_state);
-
     /* the previous state was not locked, we won */
-    if (prev_state != locked_state)
+    if (kaapi_task_orstate(task, locked_state) != locked_state)
       break ;
 
     kaapi_slowdown_cpu();

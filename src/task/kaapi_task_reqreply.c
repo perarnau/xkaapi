@@ -89,6 +89,9 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   if (sc->msc == sc)
     return ;
 
+#warning TODO
+#if 0 /* TODO */
+
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
   */
@@ -97,7 +100,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   kaapi_stealcontext_t* usc;
 
   /* get the sc reply part and execute the user body */
-  krep = (kaapi_reply_t*)&sc->reply;
+  kaapi_reply_t* const krep = (kaapi_reply_t*)&sc->reply;
 
   /* execute the user task entrypoint */
   kaapi_assert_debug(krep->u.s_task.ubody != NULL);
@@ -117,12 +120,13 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
        they are done so they can be reduced.
     */
     sc->ktr->thief_term = 1;
-    sc->ktr->is_signaled = 1;
   }
 
   /* todo: kaapi_thread_restore_frame */
 
   kaapi_writemem_barrier();
+
+#endif /* TODO */
 }
 
 
@@ -202,6 +206,8 @@ void* kaapi_reply_init_adaptive_task
   /* todo: move in stack_clear */
   tsc->splitter = 0;
   tsc->argsplitter = 0;
+  /* todo: move in stack_clear */
+
   tsc->msc = vsc->msc;
   tsc->flag = vsc->msc->flag;
   tsc->ktr = ktr;
