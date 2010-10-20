@@ -163,8 +163,8 @@ int kaapi_preemptasync_thief_helper
   ktr->arg_from_victim = arg_to_thief;  
   kaapi_writemem_barrier();
 
-#warning TODO
-  /* todo: ktr->req_preempt = 1; now in the reply */
+  /* signal thief preemption */
+  *ktr->status = KAAPI_TASK_S_PREEMPTED;
   kaapi_mem_barrier();
   
   if (!ktr->thief_term) return EBUSY;

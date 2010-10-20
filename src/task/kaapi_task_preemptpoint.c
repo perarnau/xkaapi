@@ -54,7 +54,7 @@ int kaapi_preemptpoint_before_reducer_call(
     int result_size
 )
 {
-  kaapi_assert_debug( stc !=0 );
+  kaapi_assert_debug( stc != 0 );
 
   /* disable and wait no more thief on stc */
   kaapi_steal_disable_sync( stc );
@@ -77,12 +77,12 @@ int kaapi_preemptpoint_before_reducer_call(
   ktr->rtail = stc->thieves.list.tail;
   stc->thieves.list.tail = 0;
   
-  /* delete the preemption flag */
-#warning TODO
-  /* todo: ktr->req_preempt = 0;
-     now in the reply, the ktr should have
-     a pointer on the status or reply
+  /* delete the preemption flag. if we are here
+     the previous request has been replied ok
+     and we put this status back. dont know if
+     this is needed.
    */
+  *ktr->status = KAAPI_REPLY_S_TASK;
 
   return 0;
 }

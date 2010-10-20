@@ -1039,6 +1039,13 @@ static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
   return 0;
 }
 
+static inline void kaapi_sched_waitlock(kaapi_atomic_t* lock)
+{
+  /* wait until the lock drops to 0 */
+  while (KAAPI_ATOMIC_READ(lock))
+    kaapi_slowdown_cpu();
+}
+
 /** steal/pop (no distinction) a thread to thief with kid
     If the owner call this method then it should protect 
     itself against thieves by using sched_lock & sched_unlock
@@ -1226,7 +1233,7 @@ static inline void kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
   kaapi_mem_barrier();
 
   /* synchronize on the kproc lock */
-  kaapi_sched_lock(&kaapi_get_current_processor()->lock);
+  kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
 }
 
 

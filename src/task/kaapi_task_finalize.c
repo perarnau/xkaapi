@@ -53,24 +53,24 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 {
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)args;
 
-#warning TODO
-#if 0 /* wait until kproc unlocked */
-  /* ensure no one is in the splitter (set to 0 previously) */
-  while (KAAPI_ATOMIC_READ(&sc->is_there_thief) != 0)
-    kaapi_slowdown_cpu();
-#endif
+  kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
 
-  if (!(sc->flag & KAAPI_SC_PREEMPTION))
-  {
-    /* ensure all working thieves are done */
-    while (KAAPI_ATOMIC_READ(&sc->thieves.count) > 0)
-      kaapi_slowdown_cpu();
-  }
+  /* steal sync protocol. the idea is that:
+     . if the processor is unlocked
+     . and there is nothing more to steal
+     then we cannot miss a thief that would
+     have incremented the thief count.
+   */
+  kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
+
+  /* ensure all working thieves are done */
+  while (KAAPI_ATOMIC_READ(&sc->thieves.count))
+    kaapi_slowdown_cpu();
 
   /* avoid read reordering */
   kaapi_readmem_barrier();
 
-  /* restore the upper frame (that should have execute pushstealcontext */
+  /* restore the upper frame (that should have execute pushstealcontext) */
   kaapi_thread_restore_frame(thread - 1, &sc->frame);
 }
 
@@ -81,12 +81,14 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
 {
   /* end with the adapt dummy task -> change body with nop */
 
+  kaapi_thread_t* const thread = kaapi_self_thread();
+  kaapi_task_t* const task = kaapi_thread_toptask(thread);
+
   /* avoid to steal old instance of this task */
   sc->splitter = 0;
   sc->argsplitter = 0;
   
-#warning TODO
-  /* todo: kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body ); */
+  kaapi_task_setbody(task, kaapi_nop_body);
 
   /* if this is a preemptive algorithm, it is assumed the
      user has preempted all the children (not doing so is
@@ -95,19 +97,14 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
    */
   if (sc->flag & KAAPI_SC_PREEMPTION)
   {
-#warning TODO
-    /* todo: kaapi_thread_restore_frame(sc->thread - 1, &ta->frame); */
+    kaapi_thread_restore_frame(thread - 1, &sc->frame);
     return ;
   }
 
-#warning TODO
-#if 0 /* missing thread */
   /* not a preemptive algorithm. push a finalization task
      to wait for thieves. block until finalization done.
    */
-  kaapi_task_t* const task = kaapi_thread_toptask(sc->thread);
   kaapi_task_init(task, kaapi_taskfinalize_body, sc);
-  kaapi_thread_pushtask(sc->thread);
+  kaapi_thread_pushtask(thread);
   kaapi_sched_sync();
-#endif
 }

@@ -45,27 +45,18 @@
 #include "kaapi_impl.h"
 
 
-static inline void sync_steal(void)
-{
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  while (KAAPI_ATOMIC_READ(&kproc->lock) == 1)
-    kaapi_slowdown_cpu();
-}
-
 kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
 {
-  /* if empty, wait for no one to be stealing
-     and rely upon thefact the master calls
-     this function when its work is empty.
-   */
+  /* comments about steal sync protocol in kaapi_task_finalize.c */
 
   if (sc->thieves.list.head == 0)
-    sync_steal();
+    kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
 
   return sc->thieves.list.head;
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
+kaapi_taskadaptive_result_t* kaapi_get_nextthief_head
+( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
 {
   kaapi_taskadaptive_result_t* next;
   

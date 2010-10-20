@@ -43,19 +43,12 @@
 */
 #include "kaapi_impl.h"
 
-
-static inline void sync_steal(void)
-{
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  while (KAAPI_ATOMIC_READ(&kproc->lock) == 1)
-    kaapi_slowdown_cpu();
-}
-
 struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* sc )
 {
   /* comments in kaapi_task_preempt_head.c */
 
   if (sc->thieves.list.tail == 0)
-    sync_steal();
+    kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
+
   return sc->thieves.list.tail;
 }
