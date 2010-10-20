@@ -386,6 +386,7 @@ typedef struct kaapi_thread_context_t {
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
+  /* todo: structure */
   kaapi_reply_t  		 reply;		/** per thread reply block */
 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;

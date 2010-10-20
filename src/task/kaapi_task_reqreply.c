@@ -80,13 +80,15 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
      without further processing since the sequential
      code is assumed to run by itself.
      . otherwise, we have been forked during a steal.
-     build a stealcontext and cal the user body 
+     the stealcontext is a partial sc (psc) and we
+     have to build a full stealcontext. then call the
+     user body.
    */
 
-  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)arg;
+  kaapi_stealcontext_t* const psc = (kaapi_stealcontext_t*)arg;
 
   /* this is the master task, return */
-  if (sc->msc == sc)
+  if (psc->msc == psc)
     return ;
 
 #warning TODO
@@ -97,14 +99,17 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   */
 
   /* build a user stealcontext from the reply */
-  kaapi_stealcontext_t* usc;
+  kaapi_stealcontext_t* full_sc;
+
+  /* todo: move if possible */
+  usc->ownertask = kaapi_thread_toptask(thread);
 
   /* get the sc reply part and execute the user body */
   kaapi_reply_t* const krep = (kaapi_reply_t*)&sc->reply;
 
   /* execute the user task entrypoint */
   kaapi_assert_debug(krep->u.s_task.ubody != NULL);
-  krep->u.s_task.ubody((void*)krep->task_data, thread, usc);
+  krep->u.s_task.ubody((void*)krep->task_data, thread, sc);
 
   if (!(sc->flag & KAAPI_SC_PREEMPTION))
   {
@@ -157,7 +162,7 @@ static int request_reply
       sc->thieves.list.tail = ktr;
       sc->thieves.list.head = ktr;
     }
-    else if ((headtail_flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD)
+    else if (headtail_flag == KAAPI_REQUEST_REPLY_HEAD)
     { 
       ktr->next = sc->thieves.list.head;
       sc->thieves.list.head->prev = ktr;
@@ -203,14 +208,19 @@ void* kaapi_reply_init_adaptive_task
      remote reads are initialized.
    */
 
-  /* todo: move in stack_clear */
+  /* initialize here: used in adapt_body */
+  tsc->msc = vsc->msc;
+
+  /* initialize here: not available after */
+  tsc->ktr = ktr;
+
+  /* initialize here: thief avoid remote read */
+  tsc->flag = vsc->msc->flag;
+
+  /* todo: move otherwhere in thief path */
   tsc->splitter = 0;
   tsc->argsplitter = 0;
-  /* todo: move in stack_clear */
-
-  tsc->msc = vsc->msc;
-  tsc->flag = vsc->msc->flag;
-  tsc->ktr = ktr;
+  /* todo: move otherwhere in thief path */
 
   /* initialize the reply
    */
