@@ -668,6 +668,64 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
   kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
   return retval;
 }
+
+static inline int kaapi_task_teststate( kaapi_task_t* task, kaapi_uintptr_t state )
+{
+  /* assume a mem barrier has been done */
+  return task->u.state & state;
+}
+
+/** \ingroup TASK
+   adaptive steal mode locking.
+   Task state is encoded in body TAES bits.
+   in the case of an adaptive task, we have:
+   TAESbits | task_adapt_body, where
+   (T)erm = 0
+   (A)fter = 0
+   (E)xec = 1
+   (S)teal = ?
+   Thus we assume lock_steal() is called once
+   the adaptive task has started execution,
+   which is a valid assumption (otherwise it
+   would not have any work to split and we
+   would not be here).
+   Then the TAES bits state holds true for the
+   whole execution of the adaptive task and allows
+   us to implement steal locking based on the
+   Steal bit and an atomic or operation.
+   Steal = 1 means locked.
+ */
+
+inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
+{
+  const uintptr_t locked_state =
+    KAAPI_MASK_BODY_STEAL |
+    KAAPI_MASK_BODY_EXEC |
+    (uintptr_t)kaapi_adapt_body;
+
+  while (1)
+  {
+    const uintptr_t prev_state =
+      kaapi_task_orstate(task, locked_state);
+
+    /* the previous state was not locked, we won */
+    if (prev_state != locked_state)
+      break ;
+
+    kaapi_slowdown_cpu();
+  }
+}
+
+inline static void kaapi_task_unlock_adaptive_steal(kaapi_task_t* task)
+{
+  const uintptr_t unlocked_state =
+    (~KAAPI_MASK_BODY_STEAL) |
+    KAAPI_MASK_BODY_EXEC |
+    (uintptr_t)kaapi_adapt_body;
+
+  kaapi_task_setstate_barrier(task, unlocked_state);
+}
+
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
 #else
 #  warning "NOT IMPLEMENTED"

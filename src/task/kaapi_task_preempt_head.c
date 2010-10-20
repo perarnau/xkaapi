@@ -45,29 +45,38 @@
 #include "kaapi_impl.h"
 
 
+
+void synchronize_steal(kaapi_stealcontext_t* sc)
+{
+  /* steal sync protocol. if the 2 conds hold:
+     . the work is empty, no steal is possible,
+     . we see a non BODY_STEAL, then every in
+     progress steal has passed.
+     then we cannot miss a thief that would
+     have incremented the thief count or add
+     itself into the thieves list.
+   */
+
+  kaapi_writemem_barrier();
+  while (kaapi_task_teststate(sc->ownertask, KAAPI_MASK_BODY_STEAL))
+    kaapi_slowdown_cpu();
+}
+
 kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
 {
-  /* comments about steal sync protocol in kaapi_task_finalize.c */
-
   if (sc->thieves.list.head == 0)
-    kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
-
+    synchronize_steal(sc);
   return sc->thieves.list.head;
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_nextthief_head
+kaapi_taskadaptive_result_t* kaapi_get_next_thief
 ( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
 {
-  kaapi_taskadaptive_result_t* next;
-  
-  while (!KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
-    kaapi_slowdown_cpu();
+  return pos->next;
+}
 
-  /* try restarting from head */
-  if ((next = pos->next) == 0)
-    next = sc->thieves.list.head;
-
-  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
-  
-  return next;
+kaapi_taskadaptive_result_t* kaapi_get_prev_thief
+( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
+{
+  return pos->prev;
 }

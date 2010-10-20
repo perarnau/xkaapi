@@ -51,37 +51,57 @@
 /* adaptive task body
  */
 
+static void finalize_stealcontext(kaapi_stealcontext_t* sc)
+{
+  /* stealcontext post steal finalization */
+  /* fields assume set by reply: flag, ktr, msc */
+
+  /*  todo: factorize with begin_adaptive */
+
+  kaapi_thread_save_frame(kaapi_self_thread(), &sc->frame);
+
+  sc->save_splitter = 0;
+  sc->save_argsplitter = 0;
+
+  if (sc->flag & KAAPI_SC_PREEMPTION)
+  {
+    /* if preemption, thief list used */
+    sc->thieves.list.head = 0;
+    sc->thieves.list.tail = 0;
+  }
+}
+
 void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 {
   /* 2 cases to handle:
      . either we are in the master task created with
-     kaapi_task_begin_adpative. the argument is 0
-     and we return without further processing since
-     the sequential code is assumed to run by itself.
+     kaapi_task_begin_adpative. the argument is the
+     master stealcontext and sc->msc = sc. we return
+     without further processing since the sequential
+     code is assumed to run by itself.
      . otherwise, we have been forked during a steal.
-     the argument is a athief_taskarg and we retrieve
-     the stealcontext since it is global to the thread
+     build a stealcontext and cal the user body 
    */
 
-  kaapi_stealcontext_t* sc;
-  kaapi_reply_t* krep;
+  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)arg;
 
   /* this is the master task, return */
-  if (arg == 0)
+  if (sc->msc == sc)
     return ;
-
-  krep = (kaapi_reply_t*)arg;
-  sc = &krep->sc;
-
-  kaapi_assert_debug(sc->msc && (sc->msc != sc));
 
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
   */
 
+  /* build a user stealcontext from the reply */
+  kaapi_stealcontext_t* usc;
+
+  /* get the sc reply part and execute the user body */
+  krep = (kaapi_reply_t*)&sc->reply;
+
   /* execute the user task entrypoint */
   kaapi_assert_debug(krep->u.s_task.ubody != NULL);
-  krep->u.s_task.ubody((void*)krep->task_data, thread, sc);
+  krep->u.s_task.ubody((void*)krep->task_data, thread, usc);
 
   if (!(sc->flag & KAAPI_SC_PREEMPTION))
   {
@@ -118,14 +138,14 @@ static int request_reply
   /* sc the stolen stealcontext */
 
   /* if there is preemption, link to thieves */
-  if (sc->msc->flag & KAAPI_SC_PREEMPTION)
+  if (sc->flag & KAAPI_SC_PREEMPTION)
   {
     /* stolen task */
     kaapi_taskadaptive_result_t* const ktr = req->reply->sc.ktr;
 
-    /* concurrence with preempt_thief */
-    while (!KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
-      kaapi_slowdown_cpu();
+    /* concurrent with preempt_thief, but the splitter
+       (ie. ourself) already holds the steal lock
+     */
 
     /* insert in head or tail */
     if (sc->thieves.list.head == 0)
@@ -145,8 +165,6 @@ static int request_reply
       sc->thieves.list.tail->next = ktr;
       sc->thieves.list.tail = ktr;
     }
-
-    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
   }
   else
   {
@@ -181,6 +199,9 @@ void* kaapi_reply_init_adaptive_task
      remote reads are initialized.
    */
 
+  /* todo: move in stack_clear */
+  tsc->splitter = 0;
+  tsc->argsplitter = 0;
   tsc->msc = vsc->msc;
   tsc->flag = vsc->msc->flag;
   tsc->ktr = ktr;

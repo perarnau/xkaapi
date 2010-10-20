@@ -548,6 +548,9 @@ typedef struct kaapi_stealcontext_t {
   /* steal method modifiers */
   int flag; 
 
+  /* needed for steal sync protocol */
+  kaapi_task_t* ownertask;
+
 #if defined(KAAPI_COMPILE_SOURCE) /* private */
 
   /* initial saved frame */
@@ -568,8 +571,6 @@ typedef struct kaapi_stealcontext_t {
     /* 1) a thief list if preemption enabled */
     struct
     {
-      kaapi_atomic_t lock;
-
       struct kaapi_taskadaptive_result_t* volatile head
       __attribute__((aligned(KAAPI_CACHE_LINE)));
 
@@ -1065,13 +1066,16 @@ static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 */
 extern struct kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* stc );
 
-/* Return the next field of curr
-*/
-extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* stc, struct  kaapi_taskadaptive_result_t* curr );
-
 /* Return the thief result of the next thief from the tail of the list to preempt or 0 if no thief may be preempted
 */
-extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_tail( kaapi_stealcontext_t* stc );
+extern struct kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* stc );
+
+struct kaapi_taskadaptive_result_t* kaapi_get_next_thief
+( kaapi_stealcontext_t* sc, struct kaapi_taskadaptive_result_t* pos );
+
+struct kaapi_taskadaptive_result_t* kaapi_get_prev_thief
+( kaapi_stealcontext_t* sc, struct kaapi_taskadaptive_result_t* pos );
+
 
 
 /** Preempt a thief.

@@ -43,12 +43,13 @@
 */
 #include "kaapi_impl.h"
 
-struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* sc )
+extern void synchronize_steal(kaapi_stealcontext_t*);
+
+kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* sc )
 {
   /* comments in kaapi_task_preempt_head.c */
 
   if (sc->thieves.list.tail == 0)
-    kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
-
+    synchronize_steal(sc);
   return sc->thieves.list.tail;
 }

@@ -55,15 +55,9 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 
   kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
 
-  /* steal sync protocol. the idea is that:
-     . if the processor is unlocked
-     . and there is nothing more to steal
-     then we cannot miss a thief that would
-     have incremented the thief count.
+  /* ensure all working thieves are done. the steal
+     sync has been done in kaapi_task_end_adaptive
    */
-  kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
-
-  /* ensure all working thieves are done */
   while (KAAPI_ATOMIC_READ(&sc->thieves.count))
     kaapi_slowdown_cpu();
 
@@ -77,19 +71,19 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 
 /**
 */
+
+extern void synchronize_steal(kaapi_stealcontext_t*);
+
 void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
 {
   /* end with the adapt dummy task -> change body with nop */
 
   kaapi_thread_t* const thread = kaapi_self_thread();
-  kaapi_task_t* const task = kaapi_thread_toptask(thread);
 
   /* avoid to steal old instance of this task */
   sc->splitter = 0;
   sc->argsplitter = 0;
   
-  kaapi_task_setbody(task, kaapi_nop_body);
-
   /* if this is a preemptive algorithm, it is assumed the
      user has preempted all the children (not doing so is
      an error). we restore the frame and return without
@@ -97,14 +91,26 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
    */
   if (sc->flag & KAAPI_SC_PREEMPTION)
   {
+    kaapi_assert_debug(sc->thieves.list.head == 0);
+    kaapi_task_setbody(sc->task, kaapi_nop_body);
     kaapi_thread_restore_frame(thread - 1, &sc->frame);
     return ;
   }
 
+  /* steal synchronization protocol. it is done
+     here since we need to access the ownertask
+     before the nop body is set.
+     see comments in kaapi_task_preempt_head.c
+  */
+  synchronize_steal(sc);
+
+  kaapi_task_setbody(sc->task, kaapi_nop_body);
+
   /* not a preemptive algorithm. push a finalization task
-     to wait for thieves. block until finalization done.
+     to wait for thieves and block until finalization done.
    */
-  kaapi_task_init(task, kaapi_taskfinalize_body, sc);
+  kaapi_task_init
+    (kaapi_thread_toptask(thread), kaapi_taskfinalize_body, sc);
   kaapi_thread_pushtask(thread);
   kaapi_sched_sync();
 }

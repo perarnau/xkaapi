@@ -47,30 +47,6 @@
 
 #define KAAPI_USE_AGGREGATION
 
-
-static void finalize_stealcontext(kaapi_stealcontext_t* sc)
-{
-  /* stealcontext post steal finalization */
-  /* fields assume set by reply: flag, ktr, msc */
-
-  /*  todo: factorize with begin_adaptive */
-
-  kaapi_thread_save_frame(kaapi_self_thread(), &sc->frame);
-
-  sc->splitter = 0;
-  sc->argsplitter = 0;
-  sc->save_splitter = 0;
-  sc->save_argsplitter = 0;
-
-  if (sc->flag & KAAPI_SC_PREEMPTION)
-  {
-    /* if preemption, thief list used */
-    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
-    sc->thieves.list.head = 0;
-    sc->thieves.list.tail = 0;
-  }
-}
-
 #if defined(KAAPI_USE_AGGREGATION)
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
@@ -222,12 +198,6 @@ return_value:
        */
 
     case KAAPI_REPLY_S_TASK:
-
-      if (reply->u.s_task.body == kaapi_adapt_body)
-      {
-	/* post steal stealcontext processing */
-	finalize_stealcontext(&reply->sc);
-      }
 
       /* initialize and push the task */
       self_thread = kaapi_self_thread();

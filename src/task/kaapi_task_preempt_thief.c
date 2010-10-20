@@ -44,8 +44,6 @@
 */
 #include "kaapi_impl.h"
 
-
-
 /*
 */
 int kaapi_remove_finishedthief( 
@@ -53,36 +51,32 @@ int kaapi_remove_finishedthief(
   kaapi_taskadaptive_result_t* ktr
 )
 {
-  /* ok: here thief has been preempted */
-  kaapi_readmem_barrier();
-  
-  while (!KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
-    kaapi_slowdown_cpu();
+  kaapi_task_lock_adaptive_steal(sc->ownertask);
 
-  if (ktr->rhead != NULL)
+  if (ktr->rhead != 0)
   {
     /* rtail non null too */
     ktr->rhead->prev = ktr->prev;
     ktr->rtail->next = ktr->next;
 
-    if (ktr->prev != NULL)
+    if (ktr->prev != 0)
       ktr->prev->next = ktr->rhead;
     else
       sc->thieves.list.head = ktr->rhead;
 
-    if (ktr->next != NULL)
+    if (ktr->next != 0)
       ktr->next->prev = ktr->rtail;
     else
       sc->thieves.list.tail = ktr->rtail;
   }
   else /* no thieves, unlink */
   {
-    if (ktr->prev != NULL)
+    if (ktr->prev != 0)
       ktr->prev->next = ktr->next;
     else
       sc->thieves.list.head = ktr->next;
 
-    if (ktr->next != NULL)
+    if (ktr->next != 0)
       ktr->next->prev = ktr->prev;
     else
       sc->thieves.list.tail = ktr->prev;
@@ -92,7 +86,7 @@ int kaapi_remove_finishedthief(
   ktr->next = 0;
   ktr->prev = 0;
 
-  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+  kaapi_task_unlock_adaptive_steal(sc->ownertask);
 
   return 0;
 }

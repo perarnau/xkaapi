@@ -55,6 +55,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
 )
 {
   kaapi_stealcontext_t* sc;
+  kaapi_task_t* task;
   kaapi_frame_t frame;
   
   kaapi_thread_save_frame(thread, &frame);
@@ -74,8 +75,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
 
   if (flag & KAAPI_SC_PREEMPTION)
   {
-    /* if preemption, thief list used... */
-    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+    /* if preemption, thief list used ... */
     sc->thieves.list.head = 0;
     sc->thieves.list.tail = 0;
   }
@@ -89,11 +89,19 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   sc->save_splitter         = 0;
   sc->save_argsplitter      = 0;
 
-  /* push the adaptive task. 0 is passed as an argument
-     so that the body knows it has nothing to execute.
+  task = kaapi_thread_toptask(thread);
+  sc->ownertask = task;
+
+  /* change our execution state before pushing the task.
+     this is needed for the assumptions made by the
+     kaapi_task_lock_steal rouines, see for comments.
    */
-  kaapi_task_init
-    (kaapi_thread_toptask(thread), kaapi_adapt_body, 0);
+
+  kaapi_task_init(task, kaapi_adapt_body, sc);
+  kaapi_task_setstate(task, KAAPI_MASK_BODY_EXEC);
+
+  /* barrier done by kaapi_thread_pushtask */
+
   kaapi_thread_pushtask(thread);
 
   return sc;
