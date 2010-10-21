@@ -1,5 +1,4 @@
 /*
-** kaapi_task_preempt_next.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -8,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -46,6 +46,8 @@
 
 
 
+/** \ingroup ADAPTIVE
+*/
 void synchronize_steal(kaapi_stealcontext_t* sc)
 {
   /* steal sync protocol. if the 2 conds hold:
@@ -62,6 +64,9 @@ void synchronize_steal(kaapi_stealcontext_t* sc)
     kaapi_slowdown_cpu();
 }
 
+
+/** \ingroup ADAPTIVE
+*/
 kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
 {
   if (sc->thieves.list.head == 0)
@@ -69,14 +74,18 @@ kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
   return sc->thieves.list.head;
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_next_thief
-( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
+
+/** \ingroup ADAPTIVE
+*/
+kaapi_taskadaptive_result_t* kaapi_get_next_thief( kaapi_taskadaptive_result_t* pos )
 {
   return pos->next;
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_prev_thief
-( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
+
+/** \ingroup ADAPTIVE
+*/
+kaapi_taskadaptive_result_t* kaapi_get_prev_thief( kaapi_taskadaptive_result_t* pos )
 {
   return pos->prev;
 }

@@ -51,7 +51,9 @@
  Return the number of non ready data
  */
 static int kaapi_task_computeready( 
-  kaapi_task_t* task, void* sp, const kaapi_format_t* task_fmt, 
+  kaapi_task_t* task __attribute__((unused)),
+  void* sp, 
+  const kaapi_format_t* task_fmt, 
   unsigned int* war_param, 
   kaapi_hashmap_t* map 
 )
@@ -338,7 +340,7 @@ static int kaapi_sched_stealframe
 int kaapi_sched_stealstack  
 ( 
   kaapi_thread_context_t*       thread, 
-  kaapi_task_t*                 curr, 
+  kaapi_task_t*                 curr __attribute__((unused)), 
   kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 )

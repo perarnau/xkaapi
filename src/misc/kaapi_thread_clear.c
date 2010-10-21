@@ -59,8 +59,12 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */
   thread->wcs        = 0;
-  /*thread->thieffp  = 0; do not put here this instruction : always set by thief */
   kaapi_sched_initlock(&thread->lock);
+
+  /* here link between initial sc & the status where signal will be delivered */
+  thread->sc.preempt     = &thread->reply.status;
+  thread->sc.splitter    = 0;
+  thread->sc.argsplitter = 0;
 
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;

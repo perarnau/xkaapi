@@ -298,6 +298,7 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 #define KAAPI_PROC_TYPE_MPSOC   0x2
 #define KAAPI_PROC_TYPE_MAX     3
 #define KAAPI_PROC_TYPE_CPU     KAAPI_PROC_TYPE_HOST
+#define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
 #define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_HOST
 
 
@@ -511,6 +512,8 @@ typedef int (*kaapi_task_reducer_t) (
     \ingroup ADAPT
 */
 typedef struct kaapi_stealcontext_t {
+  /* preempt flag: */
+  volatile kaapi_uint64_t*	preempt;
 
   /* startof reply visible part.
      the reply visible part has to be
@@ -521,17 +524,16 @@ typedef struct kaapi_stealcontext_t {
   struct kaapi_stealcontext_t* msc;
 
   /* steal method modifiers */
-  int flag; 
+  kaapi_uint32_t flag; 
 
   /* thief result, independent of preemption */
   struct kaapi_taskadaptive_result_t* ktr;
+  /* endof reply visible part */
 
   /* splitter context */
   kaapi_task_splitter_t volatile splitter;
   void* volatile argsplitter;
-
-  /* endof reply visible part */
-
+  
   /* needed for steal sync protocol */
   kaapi_task_t* ownertask;
 
@@ -592,7 +594,7 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  volatile unsigned long*	      status;		/* pointer on the reply status, needed for preemption */
+  volatile kaapi_uint64_t*	          status;		        /* pointer on the reply status, needed for preemption */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   /* here begins the private part of the structure */
@@ -631,7 +633,7 @@ typedef struct kaapi_reply_t {
      on this word is used both for the
      reply and the preemption.
    */
-  volatile unsigned long status;
+  volatile kaapi_uint64_t status;
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
@@ -1076,11 +1078,9 @@ extern struct kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcont
 */
 extern struct kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* stc );
 
-struct kaapi_taskadaptive_result_t* kaapi_get_next_thief
-( kaapi_stealcontext_t* sc, struct kaapi_taskadaptive_result_t* pos );
+struct kaapi_taskadaptive_result_t* kaapi_get_next_thief( struct kaapi_taskadaptive_result_t* pos );
 
-struct kaapi_taskadaptive_result_t* kaapi_get_prev_thief
-( kaapi_stealcontext_t* sc, struct kaapi_taskadaptive_result_t* pos );
+struct kaapi_taskadaptive_result_t* kaapi_get_prev_thief( struct kaapi_taskadaptive_result_t* pos );
 
 
 
@@ -1353,11 +1353,6 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
     \ingroup TASK
 */
 extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
-
-/** Body of the task in charge of returning from a thief adaptive task
-    \ingroup TASK
-*/
-extern void kaapi_taskreturn_body( void* , kaapi_thread_t* );
 
 /** \ingroup PERF
     performace counters

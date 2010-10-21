@@ -50,11 +50,19 @@
 
 extern void synchronize_steal(kaapi_stealcontext_t*);
 
-void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
+/**
+*/
+int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
 {
-  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)taskarg;
+  kaapi_assert_debug( stc != 0 );
 
-  kaapi_assert_debug( sc != 0 );
+  stc->splitter = 0;
+  stc->argsplitter = 0;
+  kaapi_task_setbody( stc->ownertask, kaapi_nop_body );
+
+#if defined(KAAPI_DEBUG)
+#warning TODO missing /* stc->thread */
+#if 0 /* TODO */
 
   synchronize_steal(sc);
 
@@ -71,26 +79,7 @@ void kaapi_taskreturn_body( void* taskarg, kaapi_thread_t* thread )
     kaapi_assert( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0 );
   }
 #endif /* NDEBUG */
-}
 
-
-/**
-*/
-int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
-{
-  kaapi_assert_debug( stc != 0 );
-
-  stc->splitter = 0;
-  stc->argsplitter = 0;
-  kaapi_task_setbody( stc->ownertask, kaapi_nop_body );
-
-#if defined(KAAPI_DEBUG)
-#warning TODO missing /* stc->thread */
-#if 0 /* TODO */
-  /* push task to wait childs */
-  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
-  kaapi_task_init( task, kaapi_taskreturn_body, ta );
-  kaapi_thread_pushtask(stc->thread);
 #endif  /* TODO */
 #endif /* KAAPI_DEBUG */
 

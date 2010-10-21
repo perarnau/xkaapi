@@ -48,7 +48,10 @@
 
 /**
 */
-void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
+void kaapi_taskwrite_body( 
+  void* taskarg, 
+  kaapi_thread_t* thread  __attribute__((unused))
+)
 {
   int i;
   int countparam;

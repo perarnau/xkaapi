@@ -54,24 +54,26 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   void*                 argsplitter
 )
 {
-  kaapi_stealcontext_t* sc;
-  kaapi_task_t* task;
-  kaapi_frame_t frame;
+  kaapi_stealcontext_t*   sc;
+  kaapi_thread_context_t* self_thread;
+  kaapi_task_t*           task;
+  kaapi_frame_t           frame;
   
   kaapi_thread_save_frame(thread, &frame);
   
-  kaapi_mem_barrier();
-
+  self_thread = kaapi_self_thread_context();
+  
   /* todo: should be pushed cacheline aligned */
   sc = (kaapi_stealcontext_t*)kaapi_thread_pushdata_align
     (thread, sizeof(kaapi_stealcontext_t), sizeof(void*));
   kaapi_assert_debug(sc != 0);
 
+  sc->preempt           = &self_thread->reply.status;
   sc->splitter          = splitter;
   sc->argsplitter       = argsplitter;
   sc->flag              = flag;
-  sc->msc		= sc; /* self reference */
-  sc->ktr		= 0;
+  sc->msc		            = 0;
+  sc->ktr		            = 0;
 
   if (flag & KAAPI_SC_PREEMPTION)
   {
@@ -102,7 +104,6 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   kaapi_task_init(task, kaapi_task_state2body(state), sc);
 
   /* barrier done by kaapi_thread_pushtask */
-
   kaapi_thread_pushtask(thread);
 
   return sc;

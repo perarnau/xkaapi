@@ -113,7 +113,10 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")
     \retval E2BIG because of a cpu index too high in KAAPI_CPUSET
     
 */
-int kaapi_setup_param( int argc, char** argv )
+int kaapi_setup_param( 
+  int argc __attribute__((unused)), 
+  char** argv __attribute__((unused))
+)
 {
   const char* wsselect;
   

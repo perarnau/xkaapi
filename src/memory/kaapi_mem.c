@@ -112,14 +112,17 @@ int kaapi_mem_map_find_or_insert(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, ka
   return 0;
 }
 
-int kaapi_mem_map_find_inverse(kaapi_mem_map_t* map, kaapi_mem_addr_t raddr, kaapi_mem_mapping_t** mapping)
+int kaapi_mem_map_find_inverse(
+  kaapi_mem_map_t*      map, 
+  kaapi_mem_addr_t      raddr __attribute__((unused)), 
+  kaapi_mem_mapping_t** mapping
+)
 {
   /* given a remote address, find the
      corresponding host address. greedy
      inverted search, exhaust all the
      memory mapping set.
    */
-
   kaapi_mem_mapping_t* pos;
   kaapi_mem_asid_t asid;
 

@@ -66,10 +66,10 @@ static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm
     while (entry !=0) {
       kaapi_version_t* ver = entry->u.dfginfo;
       if (ver->readers[tid].used) {
-        printf("@:%p -> local @:%p\n", ver->original_data, ver->readers[tid].addr );
+        fprintf(file, "@:%p -> local @:%p\n", ver->original_data, ver->readers[tid].addr );
       }
       if (ver->delete_data[tid] !=0)
-        printf("@:%p -> to delete @:%p\n", ver->original_data, ver->delete_data[tid] );
+        fprintf(file, "@:%p -> to delete @:%p\n", ver->original_data, ver->delete_data[tid] );
       entry = entry->next;
     }
   }
@@ -91,7 +91,7 @@ static void kaapi_threadgroup_printinputoutputdata(FILE* file, int tid, kaapi_ha
     for (int i=0; i<entry->pos; ++i)
     {
       kaapi_pidreader_t* reader = &entry->data[i];
-      printf("@:%p -> first reader on tid: %i by task @:%p, param:%i\n", 
+      fprintf(file, "@:%p -> first reader on tid: %i by task @:%p, param:%i\n", 
              reader->addr, 
              reader->tid, 
              (void*)reader->task, 

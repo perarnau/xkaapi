@@ -629,8 +629,8 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, struct k
     This function is machine dependent.
 */
 static inline int _kaapi_request_reply( 
-  kaapi_request_t*        request, 
-  int	                  status
+  kaapi_request_t* request, 
+  int	             status
 )
 {
 #if defined(KAAPI_DEBUG)

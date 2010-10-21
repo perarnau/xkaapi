@@ -46,7 +46,7 @@
 /*
 */
 kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
-    kaapi_request_t* kreq, int size, void* data
+  kaapi_request_t* kreq, int size, void* data
 )
 {
   kaapi_taskadaptive_result_t* result;
@@ -78,8 +78,8 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   result->rtail           = 0;
   result->prev            = 0;
   result->next            = 0;
-  result->addr_tofree	  = addr_tofree;
-  result->status	  = &kreq->reply->status;
+  result->addr_tofree	    = addr_tofree;
+  result->status	        = &kreq->reply->status;
 
   return result;
 }

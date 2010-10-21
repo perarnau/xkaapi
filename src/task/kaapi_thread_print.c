@@ -143,9 +143,9 @@ int kaapi_task_print(
   {
     for (i=0; i<fmt->count_params; ++i)
     {
-      char state = kaapi_threadgroup_paramiswait(task, i) ? 'W' : '?';
+      char cstate = kaapi_threadgroup_paramiswait(task, i) ? 'W' : '?';
 
-      fprintf( file, "\t\t\t [%i]%c:", i, state );
+      fprintf( file, "\t\t\t [%i]%c:", i, cstate );
       const kaapi_format_t* fmt_param = fmt->fmt_params[i];
       kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
       fputc(kaapi_getmodename(m), file );
@@ -180,7 +180,6 @@ int kaapi_task_print(
     /* dump broadcast information */
     kaapi_com_t* com;
     kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->sp;
-    int i;
     com = &tbcastarg->head;
     while (com !=0)
     {

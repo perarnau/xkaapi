@@ -137,17 +137,21 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
 
 /*
 */
+#if defined(KAAPI_USE_PAPIPERFCOUNTER)
 void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
 {
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
   if (kproc->papi_event_count)
   {
     PAPI_stop(kproc->papi_event_set, NULL);
     PAPI_cleanup_eventset(kproc->papi_event_set);
     PAPI_destroy_eventset(&kproc->papi_event_set);
   }
-#endif
 }
+#else
+void kaapi_perf_thread_fini(kaapi_processor_t* kproc __attribute__((unused)) )
+{
+}
+#endif
 
 
 /*

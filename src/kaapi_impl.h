@@ -359,6 +359,9 @@ typedef struct kaapi_thread_context_t {
 
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
+  /* initial steal context after stealing of adaptive task */
+  kaapi_stealcontext_t           sc;
+
   /* statically allocated reply */
   kaapi_reply_t			             reply;
 
@@ -563,7 +566,6 @@ inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
       && (body != kaapi_tasksteal_body) 
       && (body != kaapi_taskwrite_body)
       && (body != kaapi_taskfinalize_body) 
-      && (body != kaapi_taskreturn_body) 
       && (body != kaapi_adapt_body)
       ;
 }

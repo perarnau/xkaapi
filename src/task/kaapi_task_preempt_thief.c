@@ -146,7 +146,7 @@ int kaapi_preempt_thief_helper
 */
 int kaapi_preemptasync_thief_helper
 ( 
- kaapi_stealcontext_t*               sc, 
+ kaapi_stealcontext_t*               sc __attribute__((unused)), 
  struct kaapi_taskadaptive_result_t* ktr, 
  void*                               arg_to_thief 
 )
@@ -159,7 +159,6 @@ int kaapi_preemptasync_thief_helper
 
   /* signal thief preemption */
   *ktr->status = KAAPI_TASK_S_PREEMPTED;
-  kaapi_mem_barrier();
   
   if (!ktr->thief_term) return EBUSY;
   return 0;

@@ -47,7 +47,7 @@
 /**
 */
 int kaapi_task_splitter_adapt( 
-    kaapi_thread_context_t*       thread, 
+    kaapi_thread_context_t*       thread __attribute__((unused)), 
     kaapi_task_t*                 task,
     kaapi_task_splitter_t         splitter,
     void*                         argsplitter,

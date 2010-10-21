@@ -44,6 +44,9 @@
 #include "kaapi_impl.h"
 
 
-void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread )
+void kaapi_taskrecv_body( 
+  void* sp __attribute__((unused)), 
+  kaapi_thread_t* thread __attribute__((unused))
+)
 {
 }

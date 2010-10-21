@@ -44,8 +44,10 @@
 #include "kaapi_impl.h"
 
 
-static int kaapi_select_victim_workload
-( kaapi_processor_t* kproc, kaapi_victim_t* victim )
+static int kaapi_select_victim_workload( 
+  kaapi_processor_t* kproc __attribute__((unused)), 
+  kaapi_victim_t* victim 
+)
 {  
   const int count = kaapi_count_kprocessors;
   kaapi_processor_t* const self_kproc = kaapi_get_current_processor();

@@ -92,8 +92,8 @@ int kaapi_preemptpoint_before_reducer_call(
 */
 int kaapi_preemptpoint_after_reducer_call( 
     kaapi_taskadaptive_result_t* ktr, 
-    kaapi_stealcontext_t* stc,
-    int reducer_retval 
+    kaapi_stealcontext_t* stc __attribute__((unused)), 
+    int reducer_retval __attribute__((unused))
 )
 {
   kaapi_writemem_barrier();   /* serialize previous line with next line */
