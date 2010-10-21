@@ -32,10 +32,13 @@ check_PROGRAMS= \
   for_each_rec_xx       \
   for_each_0xx          \
   for_each_1xx          \
-  for_each_2xx          \
-  for_each_0xx_lambda
+  for_each_2xx
 
-TESTS=
+TESTS=  
+
+lambda_TESTS=  \
+  for_each_0xx_lambda\
+  for_each_1xx_lambda
 
 all-fibo: fiboseq fibo_xkaapi fibo_atha fibo_kaapixx fibo_kaapixx_opt
 

@@ -201,7 +201,6 @@ struct TaskBodyCPU<ExtractSubDomainInterface> {
 //     std::cout << "[ExtractSubDomainInterface] @ = " << sdi << " - nx = " << sdi->get_nx() <<  " - ny = " << sdi->get_ny() << std::endl;
   }
 };
-static ka::RegisterBodyCPU<ExtractSubDomainInterface> dummy_object_TaskExtractSubDomainInterface;
 
 
 // --------------------------------------------------------------------
@@ -218,7 +217,6 @@ struct TaskBodyCPU<UpdateInternal> {
     shared_new_subdomain->update_internal( *shared_old_subdomain );
   }
 };
-static ka::RegisterBodyCPU<UpdateInternal> dummy_object_TaskUpdateInternal;
 
 
 // --------------------------------------------------------------------
@@ -238,7 +236,6 @@ struct TaskBodyCPU<UpdateExternal> {
     shared_subdomain->update_external( dir, *shared_sdi );
   }
 };
-static ka::RegisterBodyCPU<UpdateExternal> dummy_object_TaskUpdateExternal;
 
 
 // --------------------------------------------------------------------
@@ -257,7 +254,6 @@ struct TaskBodyCPU<UpdateExternalVal> {
     shared_subdomain->update_external( dir, value );
   }
 };
-static ka::RegisterBodyCPU<UpdateExternalVal> dummy_object_TaskUpdateExternalVal;
 
 
 // --------------------------------------------------------------------
@@ -278,7 +274,6 @@ struct TaskBodyCPU<ComputeResidueAndSwap> {
     *shared_res2 = shared_old_subdomain->compute_residue_and_swap( *shared_new_subdomain, *shared_frhs );
   }
 };
-static ka::RegisterBodyCPU<ComputeResidueAndSwap> dummy_object_TaskComputeResidueAndSwap;
 
 
 // --------------------------------------------------------------------
@@ -460,7 +455,6 @@ struct TaskBodyCPU<InitializeSubDomain> {
     Poisson3D::initialize_subdomains( index, *shared_subdom, *shared_frhs, *shared_sol );
   }
 };
-static ka::RegisterBodyCPU<InitializeSubDomain> dummy_object_TaskInitializeSubDomain;
 
 
 // --------------------------------------------------------------------
@@ -519,7 +513,6 @@ struct TaskBodyCPU<ComputeError> {
     *shared_error = shared_subdomain->compute_error( *shared_solution );
   }
 };
-static ka::RegisterBodyCPU<ComputeError> dummy_object_TaskComputeError;
 
 
 // --------------------------------------------------------------------

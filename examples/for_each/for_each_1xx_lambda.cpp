@@ -48,6 +48,9 @@
 
 /** Description of the example.
 
+    This example is the same as for_each_1xx.cpp excepted the use of C++ lambda 
+    expression to define the splitter.
+
     Overview of the execution.
     
     What is shown in this example.

@@ -200,7 +200,6 @@ template<> struct TaskBodyCPU<ExtractSubDomainInterface> {
     shared_subdomain->extract_interface( dir, *shared_sdi );
   }
 };
-static ka::RegisterBodyCPU<ExtractSubDomainInterface> dummy_object_TaskExtractSubDomainInterface;
 
 
 // --------------------------------------------------------------------
@@ -217,7 +216,6 @@ template<> struct TaskBodyCPU<UpdateInternal> {
     shared_new_subdomain->update_internal( *shared_old_subdomain );
   }
 };
-static ka::RegisterBodyCPU<UpdateInternal> dummy_object_TaskUpdateInternal;
 
 
 // --------------------------------------------------------------------
@@ -236,7 +234,6 @@ template<> struct TaskBodyCPU<UpdateExternal> {
     shared_subdomain->update_external( dir, *shared_sdi );
   }
 };
-static ka::RegisterBodyCPU<UpdateExternal> dummy_object_TaskUpdateExternal;
 
 
 // --------------------------------------------------------------------
@@ -255,7 +252,6 @@ template<> struct TaskBodyCPU<UpdateExternalVal> {
     shared_subdomain->update_external( dir, value );
   }
 };
-static ka::RegisterBodyCPU<UpdateExternalVal> dummy_object_TaskUpdateExternalVal;
 
 
 // --------------------------------------------------------------------
@@ -276,7 +272,6 @@ template<> struct TaskBodyCPU<ComputeResidueAndSwap> {
     *shared_res2 = shared_old_subdomain->compute_residue_and_swap( *shared_new_subdomain, *shared_frhs );
   }
 };
-static ka::RegisterBodyCPU<ComputeResidueAndSwap> dummy_object_TaskComputeResidueAndSwap;
 
 #if 1
 // --------------------------------------------------------------------
@@ -292,7 +287,6 @@ template<> struct TaskBodyCPU<ResidueSum> {
     *s_residue += *s_respartial;
   }
 };
-static ka::RegisterBodyCPU<ResidueSum> dummy_object_ResidueSum;
 
 // --------------------------------------------------------------------
 struct PrintResidueSum: public ka::Task<1>::Signature< 
@@ -305,7 +299,6 @@ template<> struct TaskBodyCPU<PrintResidueSum> {
     *s_residue = 0;
   }
 };
-static ka::RegisterBodyCPU<PrintResidueSum> dummy_object_PrintResidueSum;
 #else
 
 // --------------------------------------------------------------------
@@ -423,7 +416,6 @@ struct TaskBodyCPU<InitializeSubDomain> {
     Poisson3D::initialize_subdomains( index, *shared_subdom, *shared_frhs, *shared_sol );
   }
 };
-static ka::RegisterBodyCPU<InitializeSubDomain> dummy_object_TaskInitializeSubDomain;
 
 
 // --------------------------------------------------------------------
@@ -468,7 +460,6 @@ struct TaskBodyCPU<ComputeError> {
     *shared_error = shared_subdomain->compute_error( *shared_solution );
   }
 };
-static ka::RegisterBodyCPU<ComputeError> dummy_object_TaskComputeError;
 
 
 // --------------------------------------------------------------------

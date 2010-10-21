@@ -88,7 +88,6 @@ struct TaskBodyCPU<TaskSum> : public TaskSum
     *res = *a + *b;
   }
 };
-static ka::RegisterBodyCPU<TaskSum> dummy_object0;
 
 
 /* Kaapi Fibo task.
@@ -126,7 +125,6 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
     }
   }
 };
-static ka::RegisterBodyCPU<TaskFibo> dummy_object;
 
 
 /* Main of the program
