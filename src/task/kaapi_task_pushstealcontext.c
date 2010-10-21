@@ -97,8 +97,9 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
      kaapi_task_lock_steal rouines, see for comments.
    */
 
-  kaapi_task_init(task, kaapi_adapt_body, sc);
-  kaapi_task_setstate(task, KAAPI_MASK_BODY_EXEC);
+  const kaapi_uintptr_t state =
+    kaapi_task_state_setexec(kaapi_task_body2state(kaapi_adapt_body));
+  kaapi_task_init(task, kaapi_task_state2body(state), sc);
 
   /* barrier done by kaapi_thread_pushtask */
 

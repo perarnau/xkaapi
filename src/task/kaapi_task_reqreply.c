@@ -45,31 +45,26 @@
 */
 
 
+#include <stddef.h> /* offsetof */
 #include "kaapi_impl.h"
+
+
+/* adaptive reply format
+ */
+
+typedef void (*adaptive_thief_body_t)
+(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+
+typedef struct adaptive_reply_data
+{
+  /* user defined body, data */
+  adaptive_thief_body_t ubody;
+  unsigned char udata[1];
+} adaptive_reply_data_t;
 
 
 /* adaptive task body
  */
-
-static void finalize_stealcontext(kaapi_stealcontext_t* sc)
-{
-  /* stealcontext post steal finalization */
-  /* fields assume set by reply: flag, ktr, msc */
-
-  /*  todo: factorize with begin_adaptive */
-
-  kaapi_thread_save_frame(kaapi_self_thread(), &sc->frame);
-
-  sc->save_splitter = 0;
-  sc->save_argsplitter = 0;
-
-  if (sc->flag & KAAPI_SC_PREEMPTION)
-  {
-    /* if preemption, thief list used */
-    sc->thieves.list.head = 0;
-    sc->thieves.list.tail = 0;
-  }
-}
 
 void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 {
@@ -80,36 +75,39 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
      without further processing since the sequential
      code is assumed to run by itself.
      . otherwise, we have been forked during a steal.
-     the stealcontext is a partial sc (psc) and we
-     have to build a full stealcontext. then call the
-     user body.
+     the stealcontext is a partial sc and we have to
+     build a full stealcontext. then call the user body.
    */
 
-  kaapi_stealcontext_t* const psc = (kaapi_stealcontext_t*)arg;
+  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)arg;
 
   /* this is the master task, return */
-  if (psc->msc == psc)
+  if (sc->msc == sc)
     return ;
-
-#warning TODO
-#if 0 /* TODO */
 
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
   */
 
-  /* build a user stealcontext from the reply */
-  kaapi_stealcontext_t* full_sc;
+  /* from original reply get adaptive data */
+  kaapi_reply_t* const krep =
+    (kaapi_reply_t*)((uintptr_t)sc - offsetof(kaapi_reply_t, sc));
+  adaptive_reply_data_t* const adata =
+    (adaptive_reply_data_t*)krep->task_data;
 
-  /* todo: move if possible */
-  usc->ownertask = kaapi_thread_toptask(thread);
+  /* finalize the stealcontext creation */
+  kaapi_thread_save_frame(thread, &sc->frame);
 
-  /* get the sc reply part and execute the user body */
-  kaapi_reply_t* const krep = (kaapi_reply_t*)&sc->reply;
+  sc->save_splitter = 0;
+  sc->save_argsplitter = 0;
+  sc->ownertask = kaapi_thread_toptask(thread);
+
+  /* read from remote msc */
+  sc->flag = sc->msc->flag;
 
   /* execute the user task entrypoint */
-  kaapi_assert_debug(krep->u.s_task.ubody != NULL);
-  krep->u.s_task.ubody((void*)krep->task_data, thread, sc);
+  kaapi_assert_debug(adata->ubody != 0);
+  adata->ubody((void*)adata->udata, thread, sc);
 
   if (!(sc->flag & KAAPI_SC_PREEMPTION))
   {
@@ -119,8 +117,10 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     */
     KAAPI_ATOMIC_DECR(&sc->msc->thieves.count);
   }
-  else if (sc->ktr != 0)
+  else /* if (sc->ktr != 0) */
   {
+    kaapi_assert_debug(sc->ktr);
+
     /* preemptive algorithms need to inform
        they are done so they can be reduced.
     */
@@ -130,8 +130,6 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   /* todo: kaapi_thread_restore_frame */
 
   kaapi_writemem_barrier();
-
-#endif /* TODO */
 }
 
 
@@ -201,6 +199,8 @@ void* kaapi_reply_init_adaptive_task
 
   kaapi_reply_t* const krep = kreq->reply;
   kaapi_stealcontext_t* const tsc = &krep->sc;
+  adaptive_reply_data_t* const adata =
+    (adaptive_reply_data_t*)krep->task_data;
 
   /* first part initialization. finalization
      is done in kaapi_sched_emitsteal. only
@@ -214,9 +214,6 @@ void* kaapi_reply_init_adaptive_task
   /* initialize here: not available after */
   tsc->ktr = ktr;
 
-  /* initialize here: thief avoid remote read */
-  tsc->flag = vsc->msc->flag;
-
   /* todo: move otherwhere in thief path */
   tsc->splitter = 0;
   tsc->argsplitter = 0;
@@ -226,12 +223,17 @@ void* kaapi_reply_init_adaptive_task
    */
 
   krep->data_size = size;
-  krep->u.s_task.ubody = (kaapi_athief_body_t)kaapi_adapt_body;
+  krep->u.s_task.body = kaapi_adapt_body;
 
-  /* user put args in this area
+  /* user defined function
    */
 
-  return (void*)krep->task_data;
+  adata->ubody = (adaptive_thief_body_t)body;
+
+  /* return this area to the user
+   */
+
+  return (void*)adata->udata;
 }
 
 

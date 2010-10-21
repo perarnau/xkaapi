@@ -299,7 +299,6 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align
 typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread or stream */);
 /* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
-typedef void (*kaapi_athief_body_t)(void*, struct kaapi_thread_t*, struct kaapi_stealcontext_t*);
 
 
 /** Define the cache line size. 
@@ -628,7 +627,7 @@ typedef struct kaapi_taskadaptive_result_t {
 
   void*				      addr_tofree;	/* the non aligned malloc()ed addr */
 
-  volatile unsigned int*	      status;		/* pointer on the reply status, needed for preemption */
+  volatile unsigned long*	      status;		/* pointer on the reply status, needed for preemption */
 #endif /* defined(KAAPI_COMPILE_SOURCE) */
   
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
@@ -639,14 +638,19 @@ typedef struct kaapi_taskadaptive_result_t {
 */
 typedef struct kaapi_reply_t {
 
-  /* the status word */
-  volatile unsigned int status;
+  /* pointer on the status word */
+  volatile unsigned long* status;
 
-  /* pseudo stealcontext */
+  /* stealcontext, partially filled by the replying
+     thread and finalized by kaapi_adapt_body prolog 
+   */
   kaapi_stealcontext_t sc;
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
+
+  /* task data size */
+  size_t data_size;
 
   /* either an adaptive or a dfg steal */
   union
@@ -654,7 +658,6 @@ typedef struct kaapi_reply_t {
     struct /* non formated body */
     {
       kaapi_task_bodyid_t	body;
-      kaapi_athief_body_t	ubody;
     } s_task;
 
     struct /* formated body */
@@ -666,9 +669,6 @@ typedef struct kaapi_reply_t {
     /* thread stealing */
     struct kaapi_thread_context_t* thread;
   } u;
-
-  /* task data size */
-  size_t data_size;
 
   /* todo: align on something (page or cacheline size) */
   unsigned char task_data[4 * KAAPI_CACHE_LINE];

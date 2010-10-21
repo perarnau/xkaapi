@@ -644,7 +644,7 @@ static inline int _kaapi_request_reply(
   savereply->status = flags;
 #else
   kaapi_writemem_barrier();
-  request->reply->status = flags;
+  *request->reply->status = flags;
 #endif
   return 0;
 }
@@ -683,7 +683,7 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   kaapi_request_t* req;
   if (victim ==0) return EINVAL;
 
-  reply->status = KAAPI_REQUEST_S_POSTED;
+  *reply->status = KAAPI_REQUEST_S_POSTED;
 
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   req = &victim->hlrequests.requests[thief_kid];

@@ -386,8 +386,19 @@ typedef struct kaapi_thread_context_t {
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
-  /* todo: structure */
-  kaapi_reply_t  		 reply;		/** per thread reply block */
+  /* every thread has a status word used
+     for remote communication. A pointer
+     on this word is used both for the
+     reply and the preemption.
+   */
+  volatile unsigned long	status;
+
+  /* statically allocated reply */
+  kaapi_reply_t			reply;
+
+  /* warning: reply is variable sized
+     so do not add members from here
+   */
 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
@@ -1272,23 +1283,14 @@ static inline kaapi_processor_id_t kaapi_request_getthiefid(kaapi_request_t* r)
 static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
 { return (kaapi_reply_t*) r->reply; }
 
-/** Wait the end of request and return the error code
-  \param pksr kaapi_reply_t
-  \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
-  \retval KAAPI_REQUEST_S_FAIL steal request has failed
-  \retval KAAPI_REPLY_S_ERROR steal request has failed to be posted because the victim refused request
-  \retval KAAPI_REQUEST_S_QUIT process should terminate
-*/
-extern int kaapi_reply_wait( kaapi_reply_t* ksr );
-
 /** Return the request status
   \param pksr kaapi_reply_t
   \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
   \retval KAAPI_REQUEST_S_FAIL steal request has failed
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
-static inline int kaapi_reply_status( kaapi_reply_t* ksr ) 
-{ return ksr->status; }
+static inline unsigned long kaapi_reply_status( kaapi_reply_t* ksr ) 
+{ return *ksr->status; }
 
 /** Return true iff the request has been posted
   \param pksr kaapi_reply_t
