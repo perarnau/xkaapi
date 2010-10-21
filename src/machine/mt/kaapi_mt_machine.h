@@ -630,7 +630,7 @@ static inline void kaapi_request_init( struct kaapi_processor_t* kproc, struct k
 */
 static inline int _kaapi_request_reply( 
   kaapi_request_t*        request, 
-  int	                    flags
+  int	                  status
 )
 {
 #if defined(KAAPI_DEBUG)
@@ -641,10 +641,10 @@ static inline int _kaapi_request_reply(
   kaapi_reply_t* savereply = request->reply;
   request->reply = 0;
   kaapi_writemem_barrier();
-  savereply->status = flags;
+  savereply->status = status;
 #else
   kaapi_writemem_barrier();
-  *request->reply->status = flags;
+  request->reply->status = status;
 #endif
   return 0;
 }
@@ -683,7 +683,7 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   kaapi_request_t* req;
   if (victim ==0) return EINVAL;
 
-  *reply->status = KAAPI_REQUEST_S_POSTED;
+  reply->status = KAAPI_REQUEST_S_POSTED;
 
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   req = &victim->hlrequests.requests[thief_kid];

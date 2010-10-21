@@ -386,13 +386,6 @@ typedef struct kaapi_thread_context_t {
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
-  /* every thread has a status word used
-     for remote communication. A pointer
-     on this word is used both for the
-     reply and the preemption.
-   */
-  volatile unsigned long	status;
-
   /* statically allocated reply */
   kaapi_reply_t			reply;
 
@@ -1290,7 +1283,7 @@ static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
 static inline unsigned long kaapi_reply_status( kaapi_reply_t* ksr ) 
-{ return *ksr->status; }
+{ return ksr->status; }
 
 /** Return true iff the request has been posted
   \param pksr kaapi_reply_t

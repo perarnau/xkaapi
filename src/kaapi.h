@@ -637,8 +637,12 @@ typedef struct kaapi_taskadaptive_result_t {
 */
 typedef struct kaapi_reply_t {
 
-  /* pointer on the status word */
-  volatile unsigned long* status;
+  /* every thread has a status word used
+     for remote communication. A pointer
+     on this word is used both for the
+     reply and the preemption.
+   */
+  volatile unsigned long status;
 
   /* stealcontext, partially filled by the replying
      thread and finalized by kaapi_adapt_body prolog 
