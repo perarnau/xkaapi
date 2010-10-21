@@ -85,11 +85,14 @@ int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
   kaapi_task_setbody( stc->ownertask, kaapi_nop_body );
 
 #if defined(KAAPI_DEBUG)
+#warning TODO missing /* stc->thread */
+#if 0 /* TODO */
   /* push task to wait childs */
   kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
   kaapi_task_init( task, kaapi_taskreturn_body, ta );
   kaapi_thread_pushtask(stc->thread);
-#endif
+#endif  /* TODO */
+#endif /* KAAPI_DEBUG */
 
   return 0;
 }
