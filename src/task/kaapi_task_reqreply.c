@@ -222,6 +222,9 @@ void* kaapi_reply_init_adaptive_task
   /* initialize the reply
    */
 
+  kaapi_assert_debug
+    (size + sizeof(adaptive_reply_data_t) <= 4 * KAAPI_CACHE_LINE);
+
   krep->data_size = size;
   krep->u.s_task.body = kaapi_adapt_body;
 
