@@ -1018,8 +1018,13 @@ static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
 
 static inline void kaapi_sched_waitlock(kaapi_atomic_t* lock)
 {
-  /* wait until the lock drops to 0 */
+  /* wait until reaches the unlocked state */
+
+#if defined(KAAPI_SCHED_LOCK_CAS)
   while (KAAPI_ATOMIC_READ(lock))
+#else
+  while (KAAPI_ATOMIC_READ(lock) == 0)
+#endif
     kaapi_slowdown_cpu();
 }
 

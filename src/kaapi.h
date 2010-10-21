@@ -511,29 +511,37 @@ typedef int (*kaapi_task_reducer_t) (
     \ingroup ADAPT
 */
 typedef struct kaapi_stealcontext_t {
-  /* splitter context */
-  kaapi_task_splitter_t volatile splitter;
-  void* volatile argsplitter;
 
-  kaapi_task_splitter_t save_splitter;
-  void* save_argsplitter;
+  /* startof reply visible part.
+     the reply visible part has to be
+     initialized by the reply code.
+   */
+
+  /* (topmost) master stealcontext */
+  struct kaapi_stealcontext_t* msc;
 
   /* steal method modifiers */
   int flag; 
 
+  /* thief result, independent of preemption */
+  struct kaapi_taskadaptive_result_t* ktr;
+
+  /* splitter context */
+  kaapi_task_splitter_t volatile splitter;
+  void* volatile argsplitter;
+
+  /* endof reply visible part */
+
   /* needed for steal sync protocol */
   kaapi_task_t* ownertask;
 
-  /* thief result, independent of preemption */
-  struct kaapi_taskadaptive_result_t* ktr;
+  kaapi_task_splitter_t save_splitter;
+  void* save_argsplitter;
 
 #if defined(KAAPI_COMPILE_SOURCE) /* private */
 
   /* initial saved frame */
   kaapi_frame_t frame;
-
-  /* (topmost) master stealcontext */
-  struct kaapi_stealcontext_t* msc;
 
   /* thieves related context, 2 cases */
   union
@@ -627,14 +635,6 @@ typedef struct kaapi_reply_t {
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
-
-  /* stealcontext, partially filled by the replying
-     thread and finalized by kaapi_adapt_body prolog 
-   */
-  kaapi_stealcontext_t sc;
-
-  /* task data size */
-  size_t data_size;
 
   /* either an adaptive or a dfg steal */
   union
@@ -761,10 +761,10 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
 */
 static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_t count)
 {
-  void* retval;
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-  retval = thread->sp_data;
+
+  void* const retval = thread->sp_data;
   thread->sp_data += count;
   return retval;
 }

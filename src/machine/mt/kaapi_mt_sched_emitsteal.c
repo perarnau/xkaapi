@@ -184,7 +184,8 @@ return_value:
   {
     case KAAPI_REPLY_S_TASK_FMT:
       /* convert fmtid to a task body */
-      reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
+      reply->u.s_task.body 
+        = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
       kaapi_assert_debug(reply->u.s_task.body);
 
     case KAAPI_TASK_S_PREEMPTED:

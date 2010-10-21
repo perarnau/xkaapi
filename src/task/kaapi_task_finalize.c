@@ -64,8 +64,8 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
   /* avoid read reordering */
   kaapi_readmem_barrier();
 
-  /* restore the upper frame (that should have execute pushstealcontext) */
-  kaapi_thread_restore_frame(thread - 1, &sc->frame);
+  /* restore the upper frame */
+  kaapi_thread_restore_frame(thread, &sc->frame);
 }
 
 
@@ -93,7 +93,7 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
   {
     kaapi_assert_debug(sc->thieves.list.head == 0);
     kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
-    kaapi_thread_restore_frame(thread - 1, &sc->frame);
+    kaapi_thread_restore_frame(thread, &sc->frame);
     return ;
   }
 
