@@ -1306,7 +1306,6 @@ namespace ka {
   template<class TASK>
   struct TaskBodyGPU : public TASK {};
 
-
 namespace ka {
 
   // --------------------------------------------------------------------
@@ -1370,10 +1369,12 @@ namespace ka {
     };
 
     template<class TASK>
-    Spawner<TASK, DefaultAttribut> Spawn() { return Spawner<TASK, DefaultAttribut>(&_thread, DefaultAttribut()); }
+    Spawner<TASK, DefaultAttribut> Spawn() 
+    { return Spawner<TASK, DefaultAttribut>(&_thread, DefaultAttribut()); }
 
     template<class TASK, class Attr>
-    Spawner<TASK, Attr> Spawn(const Attr& a) { return Spawner<TASK, Attr>(&_thread, a); }
+    Spawner<TASK, Attr> Spawn(const Attr& a) 
+    { return Spawner<TASK, Attr>(&_thread, a); }
 
   protected:
     kaapi_thread_t _thread;
@@ -1506,11 +1507,18 @@ namespace ka {
         int flag,
         const OBJECT& func
   )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, __kaapi_trampoline_lambda<OBJECT>, (void*)&func); }
+  { return (StealContext*)kaapi_task_begin_adaptive(
+        kaapi_self_thread(), 
+        flag, 
+        __kaapi_trampoline_lambda<OBJECT>, 
+        (void*)&func); 
+  }
 
   /* push new steal context */
   template<class OBJECT, void (OBJECT::*const SPLITTER)(StealContext*, int, Request*)>
-  inline int __kaapi_trampoline_splitter( struct kaapi_stealcontext_t* sc, int nreq, struct kaapi_request_t* req, void* arg )
+  inline int __kaapi_trampoline_splitter( 
+      struct kaapi_stealcontext_t* sc, int nreq, struct kaapi_request_t* req, void* arg 
+  )
   { OBJECT* o = (OBJECT*)arg; 
     (o->*SPLITTER)( (StealContext*)sc, nreq, (Request*)req );
     return 0;
@@ -1550,6 +1558,7 @@ namespace ka {
 
   inline void TaskEndAdaptive( StealContext* sc )
   { kaapi_task_end_adaptive((kaapi_stealcontext_t*)sc); }
+
 
   // --------------------------------------------------------------------
   /* API: 
@@ -1793,6 +1802,7 @@ namespace ka {
   { return Thread::Spawner<TASK, Attr>(kaapi_self_thread(), a); }
 
 
+#if 0
   template<class TASK>
   struct RegisterBodyCPU {
     static void doit() __attribute__((constructor)) 
@@ -1829,11 +1839,12 @@ namespace ka {
       doit();
     }  
   };
+#endif
+
 
   // --------------------------------------------------------------------
   /** Wait execution of all forked tasks of the running task */
   extern void Sync();
-
 
 
   // --------------------------------------------------------------------
