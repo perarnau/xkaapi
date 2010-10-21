@@ -145,8 +145,8 @@ static int splitter (
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
     /* thief work: not adaptive result because no preemption is used here  */
-    thief_work_t* const tw =
-      kaapi_reply_init_adaptive_task( req, thief_entrypoint, sc, 0 );
+    thief_work_t* const tw = kaapi_reply_init_adaptive_task
+      ( req, thief_entrypoint, sizeof(thief_work_t), sc, 0 );
     tw->op  = vw->op;
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;

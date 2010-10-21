@@ -151,14 +151,14 @@ static int splitter (
   {
     /* for reduction, a result is needed. take care of initializing it */
     kaapi_taskadaptive_result_t* const ktr =
-      kaapi_allocate_thief_result(sc, sizeof(thief_work_t), NULL);
+      kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
     ((thief_work_t*)ktr->data)->beg = 0;
     ((thief_work_t*)ktr->data)->end = 0;
     ((thief_work_t*)ktr->data)->res = 0;
 
     /* thief work: not adaptive result because no preemption is used here  */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task
-      ( req, (kaapi_task_body_t)thief_entrypoint, sc, ktr );
+      ( req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), sc, ktr );
     tw->key = vw->key;
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;
@@ -272,7 +272,7 @@ static void thief_entrypoint
        reasons.
      */
     const unsigned int is_preempted = kaapi_preemptpoint
-      (work->ktr, sc, NULL, NULL, (void*)work, sizeof(thief_work_t), NULL);
+      (sc, NULL, NULL, (void*)work, sizeof(thief_work_t), NULL);
     if (is_preempted)
     {
       /* we have been preempted, return. */

@@ -1226,20 +1226,20 @@ static inline int kaapi_is_null(void* p)
 */
 #ifdef __cplusplus
 typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
-#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, result_data, result_size, ...)\
-  ( kaapi_preemptpoint_isactive(ktr) ? \
-        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call( ktr, stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
+#define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
+  ( kaapi_preemptpoint_isactive(stc) ? \
+        kaapi_preemptpoint_before_reducer_call(stc->ktr, stc, arg_for_victim, result_data, result_size),\
+        kaapi_preemptpoint_after_reducer_call(stc->ktr, stc, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->ktr, stc->ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )
 #else
-#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, result_data, result_size, ...)\
-  ( kaapi_preemptpoint_isactive(ktr) ? \
-        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call( ktr, stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
+#define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
+  ( kaapi_preemptpoint_isactive(stc) ? \
+        kaapi_preemptpoint_before_reducer_call(stc->ktr, stc, arg_for_victim, result_data, result_size),\
+        kaapi_preemptpoint_after_reducer_call(stc->ktr, stc, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( stc->ktr, stc->ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )
