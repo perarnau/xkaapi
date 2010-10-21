@@ -644,11 +644,6 @@ typedef struct kaapi_reply_t {
    */
   volatile unsigned long status;
 
-  /* stealcontext, partially filled by the replying
-     thread and finalized by kaapi_adapt_body prolog 
-   */
-  kaapi_stealcontext_t sc;
-
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
 
@@ -672,6 +667,11 @@ typedef struct kaapi_reply_t {
     /* thread stealing */
     struct kaapi_thread_context_t* thread;
   } u;
+
+  /* stealcontext, partially filled by the replying
+     thread and finalized by kaapi_adapt_body prolog 
+   */
+  kaapi_stealcontext_t sc;
 
   /* todo: align on something (page or cacheline size) */
   unsigned char task_data[4 * KAAPI_CACHE_LINE];
