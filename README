@@ -12,10 +12,19 @@ read the INSTALL file
 == About XKAAPI ==
 
 XKAAPI is a C implementation of Kernel for Adaptative, Asynchronous Parallel
-and Interactive programming. It is a C library that allows to execute
-multithreaded computation with data flow synchronization between threads. The
-library is able to schedule fine/medium size grain program on distributed
+and Interactive programming. The library allows to execute multithreaded 
+computation with data flow synchronization between threads. 
+The library is able to schedule fine/medium size grain program on distributed
 machine. The data flow graph is dynamic (unfold at runtime).
+
+On top of the C library, several interfaces co-exist: 
+  - C++ data flow graph interface that allows to express in a simple way
+  dependencies between tasks. It is called Kaapi++.
+  - a C++ interface that match STL algorithms.
+  - a low level C++ interface for adaptive algorithms, called AAPI.
+  
+An old C++ interface called Athapscan was yet supported.
+
 Target architectures are **clusters of SMP machines** and MPSOC.
 
 == Main features are ==
