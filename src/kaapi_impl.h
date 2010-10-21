@@ -247,13 +247,13 @@ extern kaapi_rtparam_t kaapi_default_param;
     \ingroup WS
 */
 enum kaapi_reply_status_t {
-  KAAPI_REQUEST_S_POSTED  = 0,
-  KAAPI_REPLY_S_NOK       = 1,
-  KAAPI_REPLY_S_TASK      = 2,
-  KAAPI_REPLY_S_TASK_FMT  = 3,
-  KAAPI_REPLY_S_THREAD    = 4,
-  KAAPI_REPLY_S_ERROR     = 5,
-  KAAPI_REPLY_S_PREEMPTED = 6
+  KAAPI_TASK_S_PREEMPTED = 0,
+  KAAPI_REQUEST_S_POSTED,
+  KAAPI_REPLY_S_NOK,
+  KAAPI_REPLY_S_TASK,
+  KAAPI_REPLY_S_TASK_FMT,
+  KAAPI_REPLY_S_THREAD,
+  KAAPI_REPLY_S_ERROR
 };
 
 
@@ -355,9 +355,16 @@ typedef struct kaapi_thread_context_t {
 
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
+  kaapi_task_t*                  task;           /** bottom of the stack of task */
+
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
-  kaapi_task_t*                  task;           /** bottom task */
+  /* statically allocated reply */
+  kaapi_reply_t			             reply;
+
+  /* warning: reply is variable sized
+     so do not add members from here
+   */
   kaapi_uint64_t                 data[1];        /** begin of stack of data */ 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
@@ -365,62 +372,6 @@ typedef struct kaapi_thread_context_t {
 #define kaapi_stack2threadcontext(stack)         ( ((kaapi_thread_context_t*)stack)-1 )
 #define kaapi_threadcontext2stack(thread)        ( (kaapi_stack_t*)((thread)+1) )
 #define kaapi_threadcontext2thread(thread)       ( (kaapi_thread_t*)((thread)->sfp) )
-
-
-/* ============================= The structure for adaptive algorithm ============================ */
-/** 
-*/
-struct kaapi_taskadaptive_result_t;
-
-/** \ingroup ADAPT
-    Extent data structure for adaptive task.
-    This data structure is attached to any adaptative tasks.
-*/
-typedef struct kaapi_taskadaptive_t {
-  kaapi_stealcontext_t                sc;              /* user visible part of the data structure &sc == kaapi_stealcontext_t* */
-  kaapi_atomic_t                      lock;            /* required for access to list */
-  struct kaapi_taskadaptive_result_t* head __attribute__((aligned(KAAPI_CACHE_LINE))); /* head of the LIFO order of result */
-  struct kaapi_taskadaptive_result_t* tail __attribute__((aligned(KAAPI_CACHE_LINE))); /* tail of the LIFO order of result */
-  kaapi_atomic_t                      thievescount __attribute__((aligned(KAAPI_CACHE_LINE)));   /* #thieves of the owner of this structure.... */
-  kaapi_task_splitter_t               save_splitter;   /* for steal_[begin|end]critical section */
-  void*                               save_argsplitter;/* idem */
-  kaapi_frame_t                       frame;
-} kaapi_taskadaptive_t;
-
-
-/** \ingroup ADAPT
-    Data structure that allows to store results of child tasks of an adaptive task.
-    This data structure is stored... in the victim heap and serve as communication 
-    media between victim and thief.
-*/
-typedef struct kaapi_taskadaptive_result_t {
-  /* same as public part of the structure in kaapi.h */
-  void*                               data;             /* the data produced by the thief */
-  size_t                              size_data;        /* size of data */
-  void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
-  void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  int volatile                        req_preempt;
-  int volatile                        is_signaled;
-
-  /* here begins the private part of the structure */
-  volatile int                        thief_term;       /* */
-
-  struct kaapi_taskadaptive_t*        master;           /* who to signal at the end of computation, 0 iff master task */
-  int                                 flag;             /* where is allocated data */
-
-  struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
-  struct kaapi_taskadaptive_result_t* rtail;            /* */
-
-  struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
-  struct kaapi_taskadaptive_result_t* prev;             /* */
-
-  void*				      addr_tofree;	                      /* the non aligned malloc()ed addr */
-  
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
-
-#define KAAPI_RESULT_DATAUSR    0x01
-#define KAAPI_RESULT_DATARTS    0x02
-
 
 /* ===================== Default internal task body ==================================== */
 /** Body of the nop task 
@@ -578,7 +529,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     ((kaapi_task_body_t)(state))
 
 #define kaapi_task_state2int(state)            \
-    (state >> KAAPI_MASK_BODY_SHIFTR)
+    ((int)(state >> KAAPI_MASK_BODY_SHIFTR))
 
 /** \ingroup TASK
     Set the body of the task
@@ -661,6 +612,61 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
   kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
   return retval;
 }
+
+static inline int kaapi_task_teststate( kaapi_task_t* task, kaapi_uintptr_t state )
+{
+  /* assume a mem barrier has been done */
+  return (task->u.state & state) !=0;
+}
+
+/** \ingroup TASK
+   adaptive steal mode locking.
+   Task state is encoded in body TAES bits.
+   in the case of an adaptive task, we have:
+   TAESbits | task_adapt_body, where
+   (T)erm = 0
+   (A)fter = 0
+   (E)xec = 1
+   (S)teal = ?
+   Thus we assume lock_steal() is called once
+   the adaptive task has started execution,
+   which is a valid assumption (otherwise it
+   would not have any work to split and we
+   would not be here).
+   Then the TAES bits state holds true for the
+   whole execution of the adaptive task and allows
+   us to implement steal locking based on the
+   Steal bit and an atomic or operation.
+   Steal = 1 means locked.
+ */
+
+inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
+{
+  const uintptr_t locked_state =
+    KAAPI_MASK_BODY_STEAL |
+    KAAPI_MASK_BODY_EXEC |
+    (uintptr_t)kaapi_adapt_body;
+
+  while (1)
+  {
+    /* the previous state was not locked, we won */
+    if (kaapi_task_orstate(task, locked_state) != locked_state)
+      break ;
+
+    kaapi_slowdown_cpu();
+  }
+}
+
+inline static void kaapi_task_unlock_adaptive_steal(kaapi_task_t* task)
+{
+  const uintptr_t unlocked_state =
+    (~KAAPI_MASK_BODY_STEAL) |
+    KAAPI_MASK_BODY_EXEC |
+    (uintptr_t)kaapi_adapt_body;
+
+  kaapi_task_setstate_barrier(task, unlocked_state);
+}
+
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
 #else
 #  warning "NOT IMPLEMENTED"
@@ -743,7 +749,7 @@ static inline kaapi_uint32_t kaapi_hash_ulong(kaapi_uint64_t ptr)
   /* */
   kaapi_uint64_t val = ptr >> 3;
   val = (val & 0xFFFF) ^ (val>>32);
-  return val;
+  return (kaapi_uint32_t)val;
 }
 
 
@@ -894,7 +900,7 @@ static inline int kaapi_thread_setaffinity(kaapi_thread_context_t* th, kaapi_pro
 static inline int kaapi_thread_hasaffinity(unsigned long affinity, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
-  return affinity & ((kaapi_affinity_t)1)<<kid;
+  return (int)(affinity & ((kaapi_affinity_t)1)<<kid);
 }
 
 /**
@@ -1008,6 +1014,13 @@ static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
   KAAPI_ATOMIC_WRITE_BARRIER(lock, 1);
 #endif
   return 0;
+}
+
+static inline void kaapi_sched_waitlock(kaapi_atomic_t* lock)
+{
+  /* wait until the lock drops to 0 */
+  while (KAAPI_ATOMIC_READ(lock))
+    kaapi_slowdown_cpu();
 }
 
 /** steal/pop (no distinction) a thread to thief with kid
@@ -1189,17 +1202,15 @@ extern int kaapi_task_splitter_adapt(
 
 /** \ingroup ADAPTIVE
      Disable steal on stealcontext and wait not more thief is stealing.
-     Return 0 in case of success else return an error code.
  */
-static inline int kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
+static inline void kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
 {
   stc->splitter    = 0;
   stc->argsplitter = 0;
   kaapi_mem_barrier();
 
-  while (KAAPI_ATOMIC_READ(&stc->is_there_thief) !=0)
-    ;
-  return 0;
+  /* synchronize on the kproc lock */
+  kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
 }
 
 
@@ -1216,22 +1227,13 @@ static inline kaapi_processor_id_t kaapi_request_getthiefid(kaapi_request_t* r)
 static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
 { return r->reply; }
 
-/** Wait the end of request and return the error code
-  \param pksr kaapi_reply_t
-  \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
-  \retval KAAPI_REQUEST_S_FAIL steal request has failed
-  \retval KAAPI_REPLY_S_ERROR steal request has failed to be posted because the victim refused request
-  \retval KAAPI_REQUEST_S_QUIT process should terminate
-*/
-extern int kaapi_reply_wait( kaapi_reply_t* ksr );
-
 /** Return the request status
   \param pksr kaapi_reply_t
   \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
   \retval KAAPI_REQUEST_S_FAIL steal request has failed
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
-static inline int kaapi_reply_status( kaapi_reply_t* ksr ) 
+static inline unsigned long kaapi_reply_status( kaapi_reply_t* ksr ) 
 { return ksr->status; }
 
 /** Return true iff the request has been posted

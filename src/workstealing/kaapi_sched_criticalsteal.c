@@ -48,11 +48,10 @@
 */
 int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
-  ta->save_splitter    = stc->splitter;
-  ta->save_argsplitter = stc->argsplitter;
+  stc->save_splitter    = stc->splitter;
+  stc->save_argsplitter = stc->argsplitter;
   stc->splitter    = 0;
   stc->argsplitter = 0;
   kaapi_mem_barrier();
@@ -92,12 +91,10 @@ int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
 */
 int kaapi_steal_endcritical( kaapi_stealcontext_t* stc )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-
   kaapi_mem_barrier();
 
-  stc->splitter    = ta->save_splitter;
-  stc->argsplitter = ta->save_argsplitter;
+  stc->splitter    = stc->save_splitter;
+  stc->argsplitter = stc->save_argsplitter;
   
   return 0;
 }
@@ -110,10 +107,8 @@ int kaapi_steal_endcritical_disabled(kaapi_stealcontext_t* stc)
      as the critical section is done
    */
 
-  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)stc;
-
-  ta->save_splitter = NULL;
-  ta->save_argsplitter = NULL;
+  stc->save_splitter = 0;
+  stc->save_argsplitter = 0;
 
   return kaapi_steal_endcritical(stc);
 }

@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <string.h>
 #include <math.h>
+#include <algorithm>
 
 
 /** Description of the example.
@@ -291,9 +292,9 @@ redo_work:
 
 /**
 */
-void apply_sin( double& v )
+void apply_cos( double& v )
 {
-  v = sin(v);
+  v = cos(v);
 }
 
 
@@ -312,7 +313,7 @@ int main(int argc, char** argv)
   /* initialize, apply, check */
   memset(array, 0, sizeof(array));
 
-  for_each( array, array+size, apply_sin );
+  for_each( array, array+size, apply_cos );
 
   std::cout << "Done" << std::endl;
 

@@ -51,6 +51,7 @@
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_victim_t          victim;
+  kaapi_thread_t*	        self_thread;
   kaapi_reply_t*          reply;
   kaapi_listrequest_t*    victim_hlr;
   int err;
@@ -63,16 +64,8 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   /* clear thief stack/thread that will receive tasks */
   kaapi_thread_clear( kproc->thread );
   
-  /* map the reply data structure into the stack data */
-  reply = kaapi_thread_pushdata_align( 
-        kaapi_threadcontext2thread(kproc->thread), 
-        4 * KAAPI_CACHE_LINE, 
-        sizeof(void*) 
-  );
-
-#if defined(KAAPI_DEBUG)
-  memset(reply, 0, 4 * KAAPI_CACHE_LINE);
-#endif
+  /* allocate reply data on the stack */
+  reply = &kproc->thread->reply;
 
 redo_select:
   /* select the victim processor */
@@ -137,7 +130,7 @@ enter:
 #if defined(KAAPI_DEBUG)
     int count_req = kaapi_listrequest_iterator_count(&lri);
     kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
-    kaapi_bitmap_value_t savebitmap = lri.bitmap | (1UL << lri.idcurr);
+    kaapi_bitmap_value_t savebitmap = (kaapi_bitmap_value_t)(lri.bitmap | (1UL << lri.idcurr));
     for (int i=0; i<count_req; ++i)
     {
       int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
@@ -184,8 +177,7 @@ return_value:
   kproc->issteal = 0;
   kaapi_assert_debug( (kaapi_reply_status(reply) != KAAPI_REQUEST_S_POSTED) ); 
 
-  /* test if my request is ok
-  */
+  /* test if my request is ok */
   kaapi_replysync_data( reply );
 
   switch (kaapi_reply_status(reply))
@@ -193,18 +185,31 @@ return_value:
     case KAAPI_REPLY_S_TASK_FMT:
       /* convert fmtid to a task body */
       reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
-      kaapi_assert_debug(reply->u.s_task.body != 0);
+      reply->u.s_task.data = reply->u.s_taskfmt.sp;
+      kaapi_assert_debug(reply->u.s_task.body);
+
+    case KAAPI_TASK_S_PREEMPTED:
+      /* the task may have been preempted
+	 in between. in this case, we assume
+	 the reply was previously replied with
+	 a REPLY_S_TASK.
+       */
 
     case KAAPI_REPLY_S_TASK:
-      kaapi_assert_debug( kaapi_isvalid_body( reply->u.s_task.body ) );
 
-      /* arguments are store into the reply data structure and have been already pushed */
-      /* push a task with the body */
-      kaapi_task_init( kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)), reply->u.s_task.body, reply->u.s_task.data );
-      kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
+      /* initialize and push the task */
+      self_thread = kaapi_threadcontext2thread(kproc->thread);
+      kaapi_task_init(
+         kaapi_thread_toptask(self_thread),
+         reply->u.s_task.body,
+         reply->u.s_task.data
+      );
+      kaapi_thread_pushtask(self_thread);
+
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
+
       return kproc->thread;
 
     case KAAPI_REPLY_S_THREAD:

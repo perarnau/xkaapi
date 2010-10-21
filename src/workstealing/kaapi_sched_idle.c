@@ -134,7 +134,7 @@ redo_execute:
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
-      kaapi_thread_context_t* ctxt = kproc->thread;
+      ctxt = kproc->thread;
       /* update */
       kaapi_setcontext(kproc, 0);
 

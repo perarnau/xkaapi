@@ -123,16 +123,21 @@ static int splitter (
   const size_t total_size = vw->end - vw->beg;
 
   /* how much per req */
-#define CONFIG_PAR_GRAIN 128
+#define CONFIG_PAR_GRAIN 1
   unit_size = 0;
   if (total_size > CONFIG_PAR_GRAIN)
   {
+#if 0
     unit_size = total_size / (nreq + 1);
     if (unit_size == 0)
     {
       nreq = (total_size / CONFIG_PAR_GRAIN) - 1;
       unit_size = CONFIG_PAR_GRAIN;
     }
+#else
+    nreq = 1;
+    unit_size = total_size / 2;
+#endif
 
     /* steal and update victim range */
     const size_t stolen_size = unit_size * nreq;
@@ -150,13 +155,13 @@ static int splitter (
   {
     /* thief work */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task
-      ( req, (kaapi_task_body_t)thief_entrypoint, sc, 0 );
+      ( sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), 0 );
     tw->op    = vw->op;
     tw->array = vw->array+j-unit_size;
     tw->beg   = 0;
     tw->end   = unit_size;
 
-    kaapi_reply_push_adaptive_task( req, sc );
+    kaapi_reply_push_adaptive_task(sc, req);
   }
 
   return nrep;
@@ -168,7 +173,7 @@ static int splitter (
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 1
   size_t seq_size = CONFIG_SEQ_GRAIN;
 
   size_t i, j;
@@ -208,7 +213,7 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
 
   /* process the work */
   thief_work_t* thief_work = (thief_work_t*)args;
-  
+
   /* set the splitter for this task */
   kaapi_steal_setsplitter(sc, splitter, thief_work );
 

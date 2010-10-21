@@ -46,7 +46,7 @@
 /*
 */
 kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
-    kaapi_stealcontext_t* stc, int size, void* data
+    kaapi_request_t* kreq, int size, void* data
 )
 {
   kaapi_taskadaptive_result_t* result;
@@ -58,8 +58,9 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   */
   size_alloc = sizeof(kaapi_taskadaptive_result_t);
   if ((size >0) && (data ==0)) size_alloc += size;
-  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
-  if (result==0) return 0;
+  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align
+    ( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
+  if (result== 0) return 0;
   
   result->size_data = size;
   if ((size >0) && (data ==0)) {
@@ -72,15 +73,13 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   }
 
   result->arg_from_victim = 0;
-  result->req_preempt     = 0;
-  result->is_signaled	  = 0;
-  result->master          = 0;
   result->thief_term      = 0;
   result->rhead           = 0;
   result->rtail           = 0;
   result->prev            = 0;
   result->next            = 0;
   result->addr_tofree	  = addr_tofree;
+  result->status	  = &kreq->reply->status;
 
   return result;
 }

@@ -45,34 +45,38 @@
 #include "kaapi_impl.h"
 
 
-static inline void steal_sync(kaapi_stealcontext_t* stc)
+
+void synchronize_steal(kaapi_stealcontext_t* sc)
 {
-  while (KAAPI_ATOMIC_READ(&stc->is_there_thief))
+  /* steal sync protocol. if the 2 conds hold:
+     . the work is empty, no steal is possible,
+     . we see a non BODY_STEAL, then every in
+     progress steal has passed.
+     then we cannot miss a thief that would
+     have incremented the thief count or add
+     itself into the thieves list.
+   */
+
+  kaapi_writemem_barrier();
+  while (kaapi_task_teststate(sc->ownertask, KAAPI_MASK_BODY_STEAL))
     kaapi_slowdown_cpu();
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* stc )
+kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
 {
-  volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-
-  if (ta->head == NULL)
-    steal_sync(stc);
-
-  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
-  return ta->head;  
+  if (sc->thieves.list.head == 0)
+    synchronize_steal(sc);
+  return sc->thieves.list.head;
 }
 
-kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* stc, kaapi_taskadaptive_result_t* curr )
+kaapi_taskadaptive_result_t* kaapi_get_next_thief
+( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_taskadaptive_result_t* ncurr;
-  
-  while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
-    kaapi_slowdown_cpu();
-  ncurr = curr->next;
-  if (ncurr ==0) ncurr = ta->head; /* try restarting from head */
-  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
-  
-  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
-  return ncurr;
+  return pos->next;
+}
+
+kaapi_taskadaptive_result_t* kaapi_get_prev_thief
+( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* pos )
+{
+  return pos->prev;
 }

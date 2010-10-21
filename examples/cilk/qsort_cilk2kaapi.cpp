@@ -82,6 +82,7 @@ int qmain(int n)
     }
     std::cout << "Sort succeeded." << std::endl;
     delete[] a;
+
     return 0;
 }
 

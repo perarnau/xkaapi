@@ -17,6 +17,7 @@ M4_BUILT_FILES=\
 	ka_api_tuple.h\
 	ka_api_clo.h \
 	ka_api_spawn.h\
+	ka_api_reqspawn.h\
 	ka_api_execgraph.h\
 	ka_api_execforeach.h
 

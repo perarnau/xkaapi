@@ -254,9 +254,9 @@ static void for_each( T* beg, T* end, OP op )
 
 /**
 */
-void apply_sin( double& v )
+void apply_cos( double& v )
 {
-  v = sin(v);
+  v = cos(v);
 }
 
 /* My main task */
@@ -271,7 +271,7 @@ struct doit {
     /* initialize, apply, check */
     memset(array, 0, sizeof(array));
 
-    for_each( array, array+size, apply_sin );
+    for_each( array, array+size, apply_cos );
 
     std::cout << "Done" << std::endl;
   }

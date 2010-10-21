@@ -9,8 +9,7 @@ include ./Makefile.examples.am
 
 AM_CPPFLAGS=@AM_CPPFLAGS@
 AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
-AM_CXXFLAGS=@AM_CXXFLAGS@ 
-#-std=gnu++0x
+AM_CXXFLAGS=@AM_CXXFLAGS@
 
 check_PROGRAMS= \
   hello_world            \
@@ -29,6 +28,7 @@ check_PROGRAMS= \
 	poisson3d-xkaapinew		\
 	for_each_0            \
 	for_each_1            \
+	find_xkaapi		\
   for_each_rec_xx       \
   for_each_0xx          \
   for_each_1xx          \
@@ -58,6 +58,7 @@ nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 
 for_each_0_SOURCES=for_each/for_each_0.c
 for_each_1_SOURCES=for_each/for_each_1.c
+find_xkaapi_SOURCES=find/find.c
 for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
 for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
 for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
@@ -149,6 +150,11 @@ for_each_1_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
 for_each_1_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
 for_each_1_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
 for_each_1_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
+
+find_xkaapi_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
+find_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
+find_xkaapi_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
+find_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
 
 for_each_rec_xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_rec_xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)

@@ -46,51 +46,64 @@
 
 /**
 */
-kaapi_stealcontext_t* kaapi_task_begin_adaptive( 
+kaapi_stealcontext_t* kaapi_task_begin_adaptive
+(
   kaapi_thread_t*       thread,
   int                   flag,
   kaapi_task_splitter_t splitter,
   void*                 argsplitter
 )
 {
+  kaapi_stealcontext_t* sc;
+  kaapi_task_t* task;
   kaapi_frame_t frame;
-  kaapi_taskadaptive_t* ta;
-  
-  kaapi_assert_debug( (flag & ~0xF) == 0); 
-  kaapi_assert_debug( ((flag & KAAPI_SC_CONCURRENT) && !(flag & KAAPI_SC_COOPERATIVE)) 
-                  ||  (!(flag & KAAPI_SC_CONCURRENT) && (flag & KAAPI_SC_COOPERATIVE)) );
-  kaapi_assert_debug( ((flag & KAAPI_SC_PREEMPTION) && !(flag & KAAPI_SC_NOPREEMPTION)) 
-                  ||  (!(flag & KAAPI_SC_PREEMPTION) && (flag & KAAPI_SC_NOPREEMPTION)) );
-  
   
   kaapi_thread_save_frame(thread, &frame);
   
   kaapi_mem_barrier();
-  
-  ta = (kaapi_taskadaptive_t*) kaapi_thread_pushdata_align
-    (thread, sizeof(kaapi_taskadaptive_t), sizeof(void*));
-  kaapi_assert_debug( ta !=0 );
 
-  ta->sc.ctxtthread         = kaapi_self_thread_context();
-  ta->sc.thread             = thread;
-  ta->sc.splitter           = splitter;
-  ta->sc.argsplitter        = argsplitter;
-  ta->sc.flag               = flag;
-  ta->sc.hasrequest         = 0;
-  ta->sc.requests           = ta->sc.ctxtthread->proc->hlrequests.requests;
-  KAAPI_ATOMIC_WRITE(&ta->sc.is_there_thief, 0);
+  /* todo: should be pushed cacheline aligned */
+  sc = (kaapi_stealcontext_t*)kaapi_thread_pushdata_align
+    (thread, sizeof(kaapi_stealcontext_t), sizeof(void*));
+  kaapi_assert_debug(sc != 0);
 
-  KAAPI_ATOMIC_WRITE(&ta->lock, 0);
-  KAAPI_ATOMIC_WRITE(&ta->thievescount, 0);
-  ta->head                  = 0;
-  ta->tail                  = 0;
-  ta->frame                 = frame;
-  ta->sc.ownertask          = kaapi_thread_toptask(thread);
-  
-  /* link two contexts together (master -> {thief*}) relation, ie thief B of a thief A has the same master as the thief A */
-  ta->save_splitter         = 0;
-  ta->save_argsplitter      = 0;
-  kaapi_task_init(ta->sc.ownertask, kaapi_adapt_body, ta);
+  sc->splitter          = splitter;
+  sc->argsplitter       = argsplitter;
+  sc->flag              = flag;
+  sc->msc		= sc; /* self reference */
+  sc->ktr		= 0;
+
+  if (flag & KAAPI_SC_PREEMPTION)
+  {
+    /* if preemption, thief list used ... */
+    sc->thieves.list.head = 0;
+    sc->thieves.list.tail = 0;
+  }
+  else
+  {
+    /* ... otherwise thief count */
+    KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
+  }
+
+  sc->frame                 = frame;
+  sc->save_splitter         = 0;
+  sc->save_argsplitter      = 0;
+
+  task = kaapi_thread_toptask(thread);
+  sc->ownertask = task;
+
+  /* change our execution state before pushing the task.
+     this is needed for the assumptions made by the
+     kaapi_task_lock_steal rouines, see for comments.
+   */
+
+  const kaapi_uintptr_t state =
+    kaapi_task_state_setexec(kaapi_task_body2state(kaapi_adapt_body));
+  kaapi_task_init(task, kaapi_task_state2body(state), sc);
+
+  /* barrier done by kaapi_thread_pushtask */
+
   kaapi_thread_pushtask(thread);
-  return &ta->sc;
+
+  return sc;
 }

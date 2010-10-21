@@ -1395,7 +1395,16 @@ namespace ka {
     { kaapi_steal_setsplitter(&_sc, splitter, arg); }
 
     bool is_preempted() const
-    { return _sc.hasrequest; }
+    {
+#if 0 /* todo */
+      /* previously, _hasrequest used.
+	 currently, the preemption must
+	 be tested on ktr->req_preempt
+       */
+      /* fixme: return _ktr->req_preempt; */
+#endif /* todo */
+      return false;
+    }
 
     template<class T>
     T* arg_preemption();
@@ -1463,8 +1472,8 @@ namespace ka {
       **/      
       void operator()()
       { 
-        void* arg __attribute__((unused)) = kaapi_reply_init_adaptive_task( _req, _sc, KaapiTask0<TASK>::body );
-        kaapi_reply_push_adaptive_task( _req, _sc );
+        void* arg __attribute__((unused)) = kaapi_reply_init_adaptive_task( _sc, _req, KaapiTask0<TASK>::body, 0, 0 );
+        kaapi_reply_push_adaptive_task( _sc, _req );
       }
 
 #include "ka_api_reqspawn.h"

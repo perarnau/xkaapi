@@ -210,7 +210,7 @@ static void for_each( T* array, size_t size, OP op )
               req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), op );
           }
   );
-  
+
   /* while there is sequential work to do*/
   while (work.extract_seq(beg, end))
     /* apply w->op foreach item in [pos, end[ */
@@ -225,9 +225,9 @@ static void for_each( T* array, size_t size, OP op )
 
 /**
 */
-void apply_sin( double& v )
+void apply_cos( double& v )
 {
-  v = sin(v);
+  v = cos(v);
 }
 
 /* My main task */
@@ -242,7 +242,7 @@ struct doit {
     /* initialize, apply, check */
     memset(array, 0, sizeof(array));
 
-    for_each( array, array+size, apply_sin );
+    for_each( array, array+size, apply_cos );
 
     std::cout << "Done" << std::endl;
   }

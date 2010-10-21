@@ -23,10 +23,7 @@ ka::OStream& operator<< (ka::OStream& s_out, const Poisson3D::Direction& dir )
 
 ka::IStream& operator>> ( ka::IStream& s_in, Poisson3D::Direction& dir )
 {
-  unsigned int value;
-  s_in >> value;
-  dir = (Poisson3D::Direction) value;
-  return s_in;
+  return s_in >> dir;
 }
 
 // --------------------------------------------------------------------
@@ -38,7 +35,7 @@ ka::OStream& operator<< (ka::OStream& s_out, const Poisson3D::Index& index )
 
 ka::IStream& operator>> ( ka::IStream& s_in, Poisson3D::Index& index )
 {
-  unsigned int i, j, k;
+  unsigned int i = 0, j = 0, k = 0;
   s_in >> i >> j >> k;
   index = Poisson3D::Index(i,j,k);
   return s_in;
@@ -68,11 +65,11 @@ ka::OStream& operator<< (ka::OStream& s_out, const KaSubDomain& sd )
 
 ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomain& sd )
 {
-  unsigned int nx, ny, nz;
+  unsigned int nx = 0, ny = 0, nz = 0;
   s_in >> nx >> ny >> nz;
   sd.resize( nx, ny, nz );
 
-  ka::ka_uint8_t flag;
+  ka::ka_uint8_t flag = 0;
   s_in >> flag;
   if (flag == 1){
     s_in.read( &ka::WrapperFormat<double>::format, ka::OStream::DA, sd._data, (nx+2)*(ny+2)*(nz+2) );
@@ -109,11 +106,11 @@ ka::OStream& operator<< (ka::OStream& s_out, const KaSubDomainInterface& sdi )
 
 ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomainInterface& sdi )
 {
-  unsigned int nx, ny;
+  unsigned int nx = 0, ny = 0;
   s_in >> nx >> ny;
  sdi.resize( nx, ny );
 
-  ka::ka_uint8_t flag;
+  ka::ka_uint8_t flag = 0;
   s_in >> flag;
   if (flag == 1){
     s_in.read(  &ka::WrapperFormat<double>::format, ka::OStream::DA, sdi._data, nx*ny );
@@ -347,7 +344,7 @@ struct Kernel {
         if ( curr_index.has_neighbor( dir ) )
         {
           Poisson3D::Index neighbor = curr_index.get_neighbor( dir );
-          int neighbor_site = sg.get_site( neighbor.get_i(), neighbor.get_j() ,neighbor.get_k() );
+	  sg.get_site( neighbor.get_i(), neighbor.get_j() ,neighbor.get_k() );
 #if defined(USE_THGRP)
           threadgroup.
 #else

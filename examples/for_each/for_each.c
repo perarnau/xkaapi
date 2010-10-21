@@ -42,7 +42,17 @@
 ** 
 */
 #include "kaapi.h"
+#include <string.h>
 
+
+/** Description of the example.
+
+    Overview of the execution.
+    
+    What is shown in this example.
+    
+    Next example(s) to read.
+*/
 
 typedef struct work
 {
@@ -255,21 +265,14 @@ static void for_each
 }
 
 
-/* unit */
 
-#include <string.h>
 
-static int check(const double* array, size_t size)
+
+/**
+*/
+static void apply_cos( double* v )
 {
-  for (; size; ++array, --size)
-    if (*array != 1.f)
-      return -1;
-  return 0;
-}
-
-static void addone(double* d)
-{
-  ++*d;
+  *v = cos(*v);
 }
 
 int main(int ac, char** av)
@@ -284,12 +287,7 @@ int main(int ac, char** av)
   {
     /* initialize, apply, check */
     memset(array, 0, sizeof(array));
-    for_each(array, ITEM_COUNT, addone);
-    if (check(array, ITEM_COUNT) == -1)
-    {
-      printf("invalid %d\n", ac);
-      break ;
-    }
+    for_each(array, ITEM_COUNT, apply_cos);
   }
 
   printf("done\n");

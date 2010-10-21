@@ -84,7 +84,7 @@
 kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
-  kaapi_uint32_t size_data;
+  kaapi_uint64_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
 
@@ -97,7 +97,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   }
 
   /* round to the nearest closest value */
-  size_data = ((kaapi_default_param.stacksize + KAAPI_MAX_DATA_ALIGNMENT -1) / KAAPI_MAX_DATA_ALIGNMENT) * KAAPI_MAX_DATA_ALIGNMENT;
+  size_data = ((kaapi_default_param.stacksize + KAAPI_MAX_DATA_ALIGNMENT -1) / KAAPI_MAX_DATA_ALIGNMENT) *KAAPI_MAX_DATA_ALIGNMENT;
   
   /* allocate a thread context + stack */
 #if defined (_WIN32)
@@ -125,7 +125,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   /* force alignment of ctxt->task to be aligned on 64 bits boundary */
   ctxt->task = (kaapi_task_t*)((((kaapi_uintptr_t)ctxt) + k_stacksize - sizeof(kaapi_task_t) - 0x3FUL) & ~0x3FUL);
   kaapi_assert_m( (((kaapi_uintptr_t)ctxt->task) & 0x3FUL)== 0, "Stack of task not aligned to 64 bit boundary");
-  ctxt->size = k_stacksize;
+  ctxt->size = (kaapi_uint32_t)k_stacksize;
 
   /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
   ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
