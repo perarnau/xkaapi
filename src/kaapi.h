@@ -785,10 +785,10 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
 */
 static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_t count)
 {
-  void* retval;
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-  retval = thread->sp_data;
+
+  void* const retval = thread->sp_data;
   thread->sp_data += count;
   return retval;
 }

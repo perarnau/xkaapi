@@ -127,7 +127,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     sc->ktr->thief_term = 1;
   }
 
-  /* todo: kaapi_thread_restore_frame */
+  kaapi_thread_restore_frame(thread, &sc->frame);
 
   kaapi_writemem_barrier();
 }

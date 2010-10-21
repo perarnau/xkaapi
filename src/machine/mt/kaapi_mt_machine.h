@@ -683,12 +683,11 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   kaapi_request_t* req;
   if (victim ==0) return EINVAL;
 
-  reply->status = KAAPI_REQUEST_S_POSTED;
-
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   req = &victim->hlrequests.requests[thief_kid];
   /* here do not write kid, because it was persistant to all local thread */
   req->reply = reply;
+  reply->status = KAAPI_REQUEST_S_POSTED;
   kaapi_writemem_barrier();
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return 0;
