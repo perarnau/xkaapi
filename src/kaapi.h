@@ -550,6 +550,9 @@ typedef struct kaapi_stealcontext_t {
   /* needed for steal sync protocol */
   kaapi_task_t* ownertask;
 
+  /* thief result, independent of preemption */
+  struct kaapi_taskadaptive_result_t* ktr;
+
 #if defined(KAAPI_COMPILE_SOURCE) /* private */
 
   /* initial saved frame */
@@ -557,9 +560,6 @@ typedef struct kaapi_stealcontext_t {
 
   /* (topmost) master stealcontext */
   struct kaapi_stealcontext_t* msc;
-
-  /* thief result, independent of preemption */
-  struct kaapi_taskadaptive_result_t* ktr;
 
   /* thieves related context, 2 cases */
   union
@@ -610,6 +610,7 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
+  volatile unsigned long*	      status;		/* pointer on the reply status, needed for preemption */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   /* here begins the private part of the structure */
@@ -626,8 +627,6 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* prev;             /* */
 
   void*				      addr_tofree;	/* the non aligned malloc()ed addr */
-
-  volatile unsigned long*	      status;		/* pointer on the reply status, needed for preemption */
 #endif /* defined(KAAPI_COMPILE_SOURCE) */
   
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
@@ -1174,10 +1173,12 @@ extern int kaapi_remove_finishedthief(
     \retval 0 else
 */
 #if !defined(KAAPI_COMPILE_SOURCE)
-static inline int kaapi_preemptpoint_isactive(void)
+static inline int kaapi_preemptpoint_isactive(kaapi_stealcontext_t* ksc)
 {
-  /* 0 is preempted */
-  return (kaapi_self_thread_context()->status.preempt == 0);
+  kaapi_assert_debug(ksc->ktr);
+
+  /* KAAPI_TASK_S_PREEMPTED = 0 */
+  return *ksc->ktr->status == 0;
 }
 #endif
 
