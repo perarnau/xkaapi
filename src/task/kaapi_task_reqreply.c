@@ -227,6 +227,7 @@ void* kaapi_reply_init_adaptive_task
 
   krep->data_size = size;
   krep->u.s_task.body = kaapi_adapt_body;
+  krep->u.s_task.data = (void*)&krep->sc;
 
   /* user defined function
    */

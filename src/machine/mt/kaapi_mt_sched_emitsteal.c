@@ -203,7 +203,8 @@ return_value:
       self_thread = kaapi_self_thread();
       kaapi_task_init
 	(kaapi_thread_toptask(self_thread),
-	 reply->u.s_task.body, reply->task_data);
+	 reply->u.s_task.body,
+	 reply->u.s_task.data);
       kaapi_thread_pushtask(self_thread);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
