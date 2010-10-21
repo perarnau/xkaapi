@@ -185,7 +185,6 @@ return_value:
     case KAAPI_REPLY_S_TASK_FMT:
       /* convert fmtid to a task body */
       reply->u.s_task.body = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
-      reply->u.s_task.data = reply->u.s_taskfmt.sp;
       kaapi_assert_debug(reply->u.s_task.body);
 
     case KAAPI_TASK_S_PREEMPTED:
@@ -202,7 +201,7 @@ return_value:
       kaapi_task_init(
          kaapi_thread_toptask(self_thread),
          reply->u.s_task.body,
-         reply->u.s_task.data
+         reply->task_data
       );
       kaapi_thread_pushtask(self_thread);
 

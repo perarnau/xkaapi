@@ -642,13 +642,11 @@ typedef struct kaapi_reply_t {
     struct /* non formated body */
     {
       kaapi_task_bodyid_t	body;
-      void*			data;
     } s_task;
 
     struct /* formated body */
     {
       kaapi_format_id_t		fmt;
-      void*			sp;
     } s_taskfmt;
 
     /* thread stealing */
@@ -657,9 +655,6 @@ typedef struct kaapi_reply_t {
 
   /* todo: align on something (page or cacheline size) */
   unsigned char task_data[4 * KAAPI_CACHE_LINE];
-
-  /* actual start: task_data + task_data_size */
-  unsigned char stack_data[1];
 
 #endif /* private */
 
