@@ -25,7 +25,6 @@
  * negligence, tort, or otherwise.
  *
  */
-
 #include <iostream>
 
 #if defined(STD_CXX0X)  

@@ -12,26 +12,25 @@ AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
 AM_CXXFLAGS=@AM_CXXFLAGS@
 
 check_PROGRAMS= \
-  hello_world            \
-	fiboseq                \
-	fibo_xkaapi            \
-	fibo_atha              \
-	fibo_kaapixx           \
-	fibo_kaapixx_opt       \
-	fibo_kaapixx_sync      \
-	qsort_cilk2kaapi       \
+  hello_world             \
+	fiboseq                 \
+	fibo_xkaapi             \
+	fibo_atha               \
+	fibo_kaapixx            \
+	fibo_kaapixx_opt        \
+	fibo_kaapixx_sync       \
+	qsort_cilk2kaapi        \
   matrix_multiply_cilk2kaapi \
-	branchbound_apiatha    \
-	nqueens_apiatha        \
-	nqueens_apikaapi       \
-	poisson3d-kaapi        \
-	poisson3d-xkaapinew		\
-	for_each_0            \
-	for_each_1            \
-	find_xkaapi		\
-  for_each_rec_xx       \
-  for_each_0xx          \
-  for_each_1xx
+	branchbound_apiatha     \
+	nqueens_apiatha         \
+	nqueens_apikaapi        \
+	poisson3d_kaapi_xx      \
+	for_each_0              \
+	for_each_1              \
+	find_xkaapi             \
+  for_each_rec_xx         \
+  for_each_0xx            \
+  for_each_1xx 
 
 TESTS=  
 
@@ -57,8 +56,7 @@ qsort_cilk2kaapi_SOURCES=cilk/qsort_cilk2kaapi.cpp
 matrix_multiply_cilk2kaapi_SOURCES=cilk/matrix_multiply_cilk2kaapi.cpp
 
 # Domain decomposition
-poisson3d_kaapi_SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h poisson3D/poisson3d-kaapi.cpp poisson3D/poisson3d.cpp poisson3D/poisson3diter.cpp
-poisson3d_xkaapinew_SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h poisson3D/poisson3d-xkaapinew.cpp poisson3D/poisson3d.cpp poisson3D/poisson3diter.cpp
+poisson3d_kaapi_xx_SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h poisson3D/poisson3d-kaapi_xx.cpp poisson3D/poisson3d.cpp poisson3D/poisson3diter.cpp
 
 #Nqueens program.
 nqueens_apiatha_SOURCES=nqueens/nqueens_apiatha.cpp
@@ -141,15 +139,10 @@ nqueens_apikaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 nqueens_apikaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 nqueens_apikaapi_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
-poisson3d_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
-poisson3d_kaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-poisson3d_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-poisson3d_kaapi_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
-
-poisson3d_xkaapinew_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) -I/System/Library/Frameworks/vecLib.framework/Versions/A/Headers
-poisson3d_xkaapinew_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-poisson3d_xkaapinew_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-poisson3d_xkaapinew_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+poisson3d_kaapi_xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+poisson3d_kaapi_xx_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+poisson3d_kaapi_xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+poisson3d_kaapi_xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 for_each_0_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
 for_each_0_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)

@@ -474,6 +474,7 @@ struct ErrorMax {
   }
 };
 
+
 // --------------------------------------------------------------------
 struct Verification {
   void operator() ( std::vector<double>& error,
@@ -511,14 +512,14 @@ struct doit {
     SiteGenerator sg(0, 1, 1, 1, Poisson3D::nb_subdomX, Poisson3D::nb_subdomY, Poisson3D::nb_subdomZ);
 
     // Computation domain
-    std::vector< KaSubDomain > domain( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
-    std::vector< KaSubDomain > new_domain( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
+    std::vector<KaSubDomain> domain( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
+    std::vector<KaSubDomain> new_domain( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
 
     // Righ-hand side
-    std::vector< KaSubDomain > frhs( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
+    std::vector<KaSubDomain> frhs( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
 
     // Solution
-    std::vector< KaSubDomain > solution( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
+    std::vector<KaSubDomain> solution( Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
 
     // Error
     std::vector<double> error(Poisson3D::nb_subdomX * Poisson3D::nb_subdomY * Poisson3D::nb_subdomZ );
@@ -566,8 +567,6 @@ int main( int argc, char** argv )
 {
   try {
     ka::Community com = ka::System::join_community( argc, argv );
-//     ka::logfile() << "[Poisson3Dbis::main] pid = " << getpid() << " - gid = " << Util::Init::local_gid 
-//         << " - nb_total_nodes = " << WS::Init::world->size() << " - nb_local_threads = " << Util::KaapiComponentManager::prop["community.thread.poolsize"] << std::endl;
 
     if (!Poisson3D::parse_args( argc, argv )) exit(1);  
     Poisson3D::initialize();
