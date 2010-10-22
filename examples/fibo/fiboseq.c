@@ -38,7 +38,7 @@ int main(int argc, char** argv)
   if (argc >1)
     n = atoi(argv[1]);
   else 
-    n = 20;
+    n = 30;
   if (argc >2)
     niter =  atoi(argv[2]);
   else 

@@ -98,6 +98,5 @@ int kaapi_preemptpoint_after_reducer_call(
 {
   kaapi_writemem_barrier();   /* serialize previous line with next line */
   ktr->thief_term = 1;
-
   return 1;
 }

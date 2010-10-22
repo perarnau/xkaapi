@@ -512,7 +512,7 @@ typedef int (*kaapi_task_reducer_t) (
     \ingroup ADAPT
 */
 typedef struct kaapi_stealcontext_t {
-  /* preempt flag: */
+  /* reference to the preempt flag in the thread's reply_t data structure */
   volatile kaapi_uint64_t*	preempt;
 
   /* startof reply visible part.
@@ -539,7 +539,10 @@ typedef struct kaapi_stealcontext_t {
 
   kaapi_task_splitter_t save_splitter;
   void* save_argsplitter;
-
+  
+  void* data_victim;       /* pointer on the thief side to store args from the victim */
+  size_t sz_data_victim;
+  
 #if defined(KAAPI_COMPILE_SOURCE) /* private */
 
   /* initial saved frame */
@@ -628,10 +631,9 @@ typedef struct kaapi_taskadaptive_result_t {
 */
 typedef struct kaapi_reply_t {
 
-  /* every thread has a status word used
-     for remote communication. A pointer
-     on this word is used both for the
-     reply and the preemption.
+  /* every thread has a status word used for remote communication. 
+     A pointer on this word is used both on the victim side to
+     send preemption signal. The thief test preemption on this flag
    */
   volatile kaapi_uint64_t status;
 
@@ -1159,13 +1161,13 @@ extern int kaapi_remove_finishedthief(
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
 */
-#if !defined(KAAPI_COMPILE_SOURCE)
-static inline int kaapi_preemptpoint_isactive(kaapi_stealcontext_t* ksc)
+#if 1//!defined(KAAPI_COMPILE_SOURCE)
+static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
 {
-  kaapi_assert_debug(ksc->ktr);
+  kaapi_assert_debug(ksc->preempt !=0);
 
   /* KAAPI_TASK_S_PREEMPTED = 0 */
-  return *ksc->ktr->status == 0;
+  return *ksc->preempt == 0;
 }
 #endif
 

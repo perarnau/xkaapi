@@ -10,7 +10,7 @@ struct TaskBodyCPU<TaskWRW> {
   {
   }
 };
-static ka::RegisterBodyCPU<TaskWRW> dummy_object_TaskWRW;
+
 
 // --------------------------------------------------------------------
 struct TaskR: public ka::Task<1>::Signature<ka::R<int> > {};
@@ -20,7 +20,6 @@ struct TaskBodyCPU<TaskR> {
   {
   }
 };
-static ka::RegisterBodyCPU<TaskR> dummy_object_TaskR;
 
 
 /* Main of the program

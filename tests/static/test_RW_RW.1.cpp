@@ -10,7 +10,6 @@ struct TaskBodyCPU<TaskRW> {
   {
   }
 };
-static ka::RegisterBodyCPU<TaskRW> dummy_object_TaskW;
 
 
 /* Main of the program

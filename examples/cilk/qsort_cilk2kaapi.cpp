@@ -42,8 +42,9 @@ struct TaskBodyCPU<Task_QSort>
     if (begin != end) 
     {
         --end;  // Exclude last element (pivot) from partition
-        ka::pointer_rpwp<int> middle = std::partition((int*)begin, (int*)end,
-                          std::bind2nd(std::less<int>(), *end));
+        ka::pointer_rpwp<int> middle 
+            = std::partition( (int*)begin, (int*)end, 
+                              std::bind2nd(std::less<int>(), *end));
         using std::swap;
         swap(*end, *middle);    // move pivot to middle
         ka::Spawn<Task_QSort> ()(begin, middle);

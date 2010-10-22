@@ -1395,21 +1395,19 @@ namespace ka {
     )
     { kaapi_steal_setsplitter(&_sc, splitter, arg); }
 
+    /* test preemption on the steal context */
     bool is_preempted() const
-    {
-#if 0 /* todo */
-      /* previously, _hasrequest used.
-	 currently, the preemption must
-	 be tested on ktr->req_preempt
-       */
-      /* fixme: return _ktr->req_preempt; */
-#endif /* todo */
-      return false;
+    { return kaapi_preemptpoint_isactive(&_sc) != 0; }
+
+    /* return a pointer to args passed by the victim */
+    template<class T>
+    const T* arg_preemption()
+    { 
+      kaapi_assert_debug( sizeof(T) <= _sc.sz_data_victim );
+      return static_cast<const T*> (_sc.data_victim); 
     }
 
-    template<class T>
-    T* arg_preemption();
-
+    /* signal the victim that it can get */
     bool ack_preemption();
     
     /* thief iterator: forward iterator */

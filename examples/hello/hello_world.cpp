@@ -64,7 +64,9 @@ struct TaskBodyCPU<TaskHello> {
 struct doit {
   void operator()(int argc, char** argv )
   {
-    ka::Spawn<TaskHello>()( atoi(argv[1]) );
+    int n = 3.1415;
+    if (argc >1) n = atoi(argv[1]);
+    ka::Spawn<TaskHello>()( n );
   }
 };
 

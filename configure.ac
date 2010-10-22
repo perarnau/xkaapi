@@ -168,7 +168,7 @@ AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
   [with_steal=rmw]
 )
 AS_CASE([$with_steal],
-  [cas|cas], [dnl
+  [rmw|cas], [dnl
     AC_MSG_NOTICE([Configure with Read Modify Write atomic instruction's based workstealing algorithm])
     # must not change the ABI. Enabling through AC*DEFINE
     # 0 -> KAAPI_CAS_METHOD

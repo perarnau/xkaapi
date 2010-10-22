@@ -20,6 +20,7 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \
   misc/kaapi_hashvalue.c \
+  misc/kaapi_hashmap.h\
   misc/kaapi_hashmap.c \
   misc/kaapi_hashmap_find.c \
   misc/kaapi_hashmap_insert.c \
@@ -37,6 +38,7 @@ libxkaapi_la_SOURCES=\
   kaapi.h \
   kaapi_impl.h \
   machine/common/kaapi_procinfo.c \
+  machine/common/kaapi_procinfo.h \
   memory/kaapi_mem.h \
   memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \

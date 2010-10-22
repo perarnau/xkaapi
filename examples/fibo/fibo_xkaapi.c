@@ -172,13 +172,13 @@ int main(int argc, char** argv)
   if (argc >1)
     n = atoi(argv[1]);
   else 
-    n = 20;
+    n = 30;
   if (argc >2)
     niter =  atoi(argv[2]);
   else 
     niter = 1;
 
-  kaapi_assert( kaapi_init() == 0);
+  kaapi_init();
   thread = kaapi_self_thread();
   kaapi_thread_save_frame(thread, &frame);
   
@@ -214,7 +214,7 @@ int main(int argc, char** argv)
   printf("After sync: Fibo(%i)=%li\n", n, value_result);
   printf("Time Fibo(%i): %f\n", n, t1-t0);
 
-  kaapi_assert( kaapi_finalize() == 0);
+  kaapi_finalize();
   
   return 0;
 }

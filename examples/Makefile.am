@@ -31,10 +31,12 @@ check_PROGRAMS= \
 	find_xkaapi		\
   for_each_rec_xx       \
   for_each_0xx          \
-  for_each_1xx          \
-  for_each_2xx
+  for_each_1xx
 
 TESTS=  
+
+adaptive_API=\
+  for_each_2xx
 
 lambda_TESTS=  \
   for_each_0xx_lambda\
@@ -54,14 +56,17 @@ fibo_kaapixx_sync_SOURCES=fibo/fibo_kaapixx_sync.cpp
 qsort_cilk2kaapi_SOURCES=cilk/qsort_cilk2kaapi.cpp
 matrix_multiply_cilk2kaapi_SOURCES=cilk/matrix_multiply_cilk2kaapi.cpp
 
+# Domain decomposition
 poisson3d_kaapi_SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h poisson3D/poisson3d-kaapi.cpp poisson3D/poisson3d.cpp poisson3D/poisson3diter.cpp
 poisson3d_xkaapinew_SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h poisson3D/poisson3d-xkaapinew.cpp poisson3D/poisson3d.cpp poisson3D/poisson3diter.cpp
-nqueens_apiatha_SOURCES=nqueens_apiatha.cpp
-nqueens_apikaapi_SOURCES=nqueens_apikaapi.cpp
 
+#Nqueens program.
+nqueens_apiatha_SOURCES=nqueens/nqueens_apiatha.cpp
+nqueens_apikaapi_SOURCES=nqueens/nqueens_apikaapi.cpp
+
+#For each variation
 for_each_0_SOURCES=for_each/for_each_0.c
 for_each_1_SOURCES=for_each/for_each_1.c
-find_xkaapi_SOURCES=find/find.c
 for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
 for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
 for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
@@ -71,6 +76,8 @@ for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
 #foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 #accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
+
+find_xkaapi_SOURCES=find/find.c
 
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 
