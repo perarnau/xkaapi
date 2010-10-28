@@ -1279,6 +1279,26 @@ typedef struct kaapi_tasksteal_arg_t {
 } kaapi_tasksteal_arg_t;
 
 
+/** Extra body with kaapi_stealcontext_t as extra arg.
+*/
+typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+
+/** Args for kaapi_adapt_body
+*/
+typedef struct adaptive_reply_data {
+  kaapi_stealcontext_t*        msc;
+  kaapi_taskadaptive_result_t* ktr;
+  kaapi_uint32_t               flag;
+
+  /* user defined body, size, data
+   */
+  kaapi_adaptive_thief_body_t ubody;
+  size_t                      usize;
+  unsigned char               udata[1];
+
+} kaapi_adaptive_reply_data_t;
+
+
 /* ======================== Perf counter interface: machine dependent ========================*/
 /* for perf_regs access: SHOULD BE 0 and 1 
    All counters have both USER and SYS definition (sys == program that execute the scheduler).

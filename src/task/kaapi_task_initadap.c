@@ -1,5 +1,4 @@
 /*
-** kaapi_task_reqreply.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:18:04 2009
@@ -45,65 +44,41 @@
 */
 #include "kaapi_impl.h"
 
-
-/* common reply internal function
+/*
  */
-int kaapi_request_reply(
-  kaapi_stealcontext_t* sc, 
-  kaapi_request_t*      req, 
-  int                   headtail_flag
+void* kaapi_reply_init_adaptive_task
+(
+  kaapi_stealcontext_t*        vsc,
+  kaapi_request_t*             kreq,
+  kaapi_task_body_t            body,
+  size_t		                   size,
+  kaapi_taskadaptive_result_t* ktr
 )
 {
-  /* sc the stolen stealcontext */
+  /* vsc the victim stealcontext */
+  /* tsc the thief stealcontext */
 
-  /* if there is preemption, link to thieves */
-  if (sc->flag & KAAPI_SC_PREEMPTION)
-  {
-    kaapi_taskadaptive_result_t* const ktr = req->ktr;
-#if defined(KAAPI_DEBUG)
-    kaapi_assert_debug( ktr != 0 );
-    {
-      kaapi_adaptive_reply_data_t* const adata =
-        (kaapi_adaptive_reply_data_t*)req->reply->task_data;
-      kaapi_assert_debug( adata->ktr == ktr );
-    }
-#endif
+  kaapi_reply_t* const krep = kreq->reply;
+  kaapi_adaptive_reply_data_t* const adata =
+    (kaapi_adaptive_reply_data_t*)krep->task_data;
 
-    /* concurrent with preempt_thief, but the splitter
-       (ie. ourself) already holds the steal lock
-     */
+  kaapi_assert_debug(size + sizeof(kaapi_adaptive_reply_data_t) <= 4 * KAAPI_CACHE_LINE);
 
-    /* insert in head or tail */
-    if (sc->thieves.list.head == 0)
-    {
-      sc->thieves.list.tail = ktr;
-      sc->thieves.list.head = ktr;
-    }
-    else if (headtail_flag == KAAPI_REQUEST_REPLY_HEAD)
-    { 
-      ktr->next = sc->thieves.list.head;
-      sc->thieves.list.head->prev = ktr;
-      sc->thieves.list.head = ktr;
-    } 
-    else 
-    {
-      ktr->prev = sc->thieves.list.tail;
-      sc->thieves.list.tail->next = ktr;
-      sc->thieves.list.tail = ktr;
-    }
-  }
-  else
-  {
-    /* non preemptive algorithm, inc the root master thiefcount */
-    KAAPI_ATOMIC_INCR(&sc->msc->thieves.count);
-  }
+  /* initialize here: used in adapt_body */
+  adata->msc = vsc->msc;
 
-  return _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
-}
+  /* cannot be read from remote msc */
+  adata->flag = vsc->msc->flag;
 
+  /* ktr is also store in request data structure in order to be linked */
+  adata->ktr = ktr;
 
-void kaapi_request_reply_failed(kaapi_request_t* req)
-{
-  /* sc the stolen stealcontext */
-  _kaapi_request_reply(req, KAAPI_REPLY_S_NOK);
+  /* initialize user related */
+  adata->ubody = (kaapi_adaptive_thief_body_t)body;
+  adata->usize = size;
+  
+  krep->u.s_task.body = kaapi_adapt_body;
+
+  /* return this area to the user */
+  return (void*)adata->udata;
 }

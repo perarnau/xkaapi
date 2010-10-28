@@ -245,18 +245,21 @@ static inline void kaapi_mem_barrier()
    In case of normal terminaison, all internal objects are (I hope so !) deleted.
    The abort function is used in order to try to flush most of the internal buffer.
    kaapi_init should be called before any other kaapi function.
+   \retval 0 in case of sucsess
+   \retval EALREADY if already called
 */
 extern int kaapi_init(void);
 
 /* Kaapi finalization. 
    After call to this functions all other kaapi function calls may not success.
+   \retval 0 in case of sucsess
+   \retval EALREADY if already called
 */
 extern int kaapi_finalize(void);
 
 /* Abort 
 */
 extern void kaapi_abort(void);
-
 
 /* ========================== utilities ====================================== */
 extern void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree);
@@ -515,20 +518,14 @@ typedef struct kaapi_stealcontext_t {
   /* reference to the preempt flag in the thread's reply_t data structure */
   volatile kaapi_uint64_t*	preempt;
 
-  /* startof reply visible part.
-     the reply visible part has to be
-     initialized by the reply code.
-   */
+  /* steal method modifiers */
+  kaapi_uint32_t flag; 
 
   /* (topmost) master stealcontext */
   struct kaapi_stealcontext_t* msc;
 
-  /* steal method modifiers */
-  kaapi_uint32_t flag; 
-
   /* thief result, independent of preemption */
   struct kaapi_taskadaptive_result_t* ktr;
-  /* endof reply visible part */
 
   /* splitter context */
   kaapi_task_splitter_t volatile splitter;
@@ -538,10 +535,10 @@ typedef struct kaapi_stealcontext_t {
   kaapi_task_t* ownertask;
 
   kaapi_task_splitter_t save_splitter;
-  void* save_argsplitter;
+  void*                 save_argsplitter;
   
-  void* data_victim;       /* pointer on the thief side to store args from the victim */
-  size_t sz_data_victim;
+  void*                 data_victim;       /* pointer on the thief side to store args from the victim */
+  size_t                sz_data_victim;
   
 #if defined(KAAPI_COMPILE_SOURCE) /* private */
 
@@ -575,11 +572,6 @@ typedef struct kaapi_stealcontext_t {
 #define KAAPI_CONTEXT_CONCURRENT      0x2   /* concurrent call to splitter through kaapi_stealpoint */
 #define KAAPI_CONTEXT_PREEMPT         0x3   /* allow preemption of thieves */
 
-/* no used macro:
-#define KAAPI_STEALCONTEXT_NOPREEMPT  0x1   // no preemption 
-#define KAAPI_STEALCONTEXT_NOSYNC     0x2   // do not wait end of thieves 
-*/
-
 /** Thief result
     Only public part of the data structure.
     Warning: update of this structure should also be an update of the structure in kaapi_impl.h
@@ -597,7 +589,7 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  volatile kaapi_uint64_t*	          status;		        /* pointer on the reply status, needed for preemption */
+  volatile kaapi_uint64_t*	          status;		        /* pointer on the reply status, needed to send preemption */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   /* here begins the private part of the structure */
@@ -613,9 +605,8 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
   struct kaapi_taskadaptive_result_t* prev;             /* */
 
-  void*				      addr_tofree;	/* the non aligned malloc()ed addr */
+  void*				                        addr_tofree;	    /* the non aligned malloc()ed addr */
 #endif /* defined(KAAPI_COMPILE_SOURCE) */
-  
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 
 
@@ -672,9 +663,10 @@ typedef struct kaapi_reply_t {
     This opaque data structure is pass in parameter of the splitter function.
 */
 typedef struct kaapi_request_t {
-  kaapi_processor_id_t      kid;            /* system wide kproc id */
-  kaapi_reply_t*            reply;          /* internal thread to signal in case of preemption */
-  kaapi_uint8_t             data[1];        /* not used data[0]...data[XX] ? */
+  kaapi_processor_id_t         kid;            /* system wide kproc id */
+  kaapi_reply_t*               reply;          /* points to thief thread reply data structure */
+  kaapi_taskadaptive_result_t* ktr;            /* only used in adaptive interface to avoid  */
+  kaapi_uint8_t                data[1];        /* not used data[0]...data[XX] ? */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
 
@@ -970,6 +962,17 @@ extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 */
 extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* result );
 
+#define KAAPI_REQUEST_REPLY_HEAD 0x0
+#define KAAPI_REQUEST_REPLY_TAIL 0x1
+
+/** \ingroup ADAPTIVE
+*/
+extern int kaapi_request_reply(
+  kaapi_stealcontext_t* sc, 
+  kaapi_request_t*      req, 
+  int                   headtail_flag
+);
+
 /** \ingroup ADAPTIVE
     Initialize an adaptive task to be executed by a thief.
     In case of sucess, the function returns the pointer of a memory region where to store 
@@ -978,26 +981,35 @@ extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* re
     \param sc the stealcontext
     \param req the request emitted by a thief
     \param body the entry point of the task to execute
-    \param size the user data size
+    \param size the user data size of the task arguments
     \param result that taskadaptive_result used for signalisation.
 */
 extern void* kaapi_reply_init_adaptive_task (
     struct kaapi_stealcontext_t*        sc,
     kaapi_request_t*                    req,
     kaapi_task_body_t                   body,
-    size_t				size,
+    size_t				                      size,
     struct kaapi_taskadaptive_result_t* result
 );
 
-/** \ingroup ADAPTIVE
-    push the task associated with an adaptive request
-*/
-extern void kaapi_reply_pushhead_adaptive_task(kaapi_stealcontext_t*, kaapi_request_t*);
 
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-extern void kaapi_reply_pushtail_adaptive_task(kaapi_stealcontext_t*, kaapi_request_t*);
+static inline void kaapi_reply_pushhead_adaptive_task(kaapi_stealcontext_t* sc, kaapi_request_t* req)
+{
+  /* sc the stolen stealcontext */
+  kaapi_request_reply(sc, req, KAAPI_REQUEST_REPLY_HEAD);
+}
+
+/** \ingroup ADAPTIVE
+    push the task associated with an adaptive request
+*/
+static inline void kaapi_reply_pushtail_adaptive_task(kaapi_stealcontext_t* sc, kaapi_request_t* req)
+{
+  /* sc the stolen stealcontext */
+  kaapi_request_reply(sc, req, KAAPI_REQUEST_REPLY_TAIL);
+}
 
 /** \ingroup ADAPTIVE
 */
@@ -1161,7 +1173,6 @@ extern int kaapi_remove_finishedthief(
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
 */
-#if 1//!defined(KAAPI_COMPILE_SOURCE)
 static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
 {
   kaapi_assert_debug(ksc->preempt !=0);
@@ -1169,7 +1180,7 @@ static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
   /* KAAPI_TASK_S_PREEMPTED = 0 */
   return *ksc->preempt == 0;
 }
-#endif
+
 
 /** \ingroup ADAPTIVE
     Helper function to pass argument between the victim and the thief.
@@ -1317,6 +1328,8 @@ extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
 extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp );
 
 /**
+    \retval 0 in case of success
+    \retval EBUSY if threads are already attached to the group
 */
 extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp );
 
