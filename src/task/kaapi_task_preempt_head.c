@@ -45,10 +45,9 @@
 #include "kaapi_impl.h"
 
 
-
 /** \ingroup ADAPTIVE
 */
-void synchronize_steal(kaapi_stealcontext_t* sc)
+void kaapi_synchronize_steal(kaapi_stealcontext_t* sc)
 {
   /* steal sync protocol. if the 2 conds hold:
      . the work is empty, no steal is possible,
@@ -58,7 +57,6 @@ void synchronize_steal(kaapi_stealcontext_t* sc)
      have incremented the thief count or add
      itself into the thieves list.
    */
-
   kaapi_writemem_barrier();
   while (kaapi_task_teststate(sc->ownertask, KAAPI_MASK_BODY_STEAL))
     kaapi_slowdown_cpu();
@@ -70,7 +68,7 @@ void synchronize_steal(kaapi_stealcontext_t* sc)
 kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
 {
   if (sc->thieves.list.head == 0)
-    synchronize_steal(sc);
+    kaapi_synchronize_steal(sc);
   return sc->thieves.list.head;
 }
 

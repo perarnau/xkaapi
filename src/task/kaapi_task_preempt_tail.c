@@ -43,7 +43,7 @@
 */
 #include "kaapi_impl.h"
 
-extern void synchronize_steal(kaapi_stealcontext_t*);
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 
 /** \ingroup ADAPTIVE
 */
@@ -52,6 +52,6 @@ kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* sc )
   /* comments in kaapi_task_preempt_head.c */
 
   if (sc->thieves.list.tail == 0)
-    synchronize_steal(sc);
+    kaapi_synchronize_steal(sc);
   return sc->thieves.list.tail;
 }

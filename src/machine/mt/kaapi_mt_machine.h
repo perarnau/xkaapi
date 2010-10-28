@@ -649,6 +649,7 @@ static inline int _kaapi_request_reply(
   return 0;
 }
 
+
 /** \ingroup WS
 */
 static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listrequest_t* pklr ) 

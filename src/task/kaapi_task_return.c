@@ -47,8 +47,7 @@
 
 /**
 */
-
-extern void synchronize_steal(kaapi_stealcontext_t*);
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 
 /**
 */
@@ -64,11 +63,11 @@ int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc )
 #warning TODO missing /* stc->thread */
 #if 0 /* TODO */
 
-  synchronize_steal(sc);
+  kaapi_synchronize_steal(sc);
 
   kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
 
-#if !defined(NDEBUG)
+#if defined(KAAPI_DEBUG)
   if (sc->flag & KAAPI_SC_PREEMPTION)
   {
     kaapi_assert(sc->thieves.list.head == 0);

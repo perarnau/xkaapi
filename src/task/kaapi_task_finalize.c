@@ -72,7 +72,7 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 /**
 */
 
-extern void synchronize_steal(kaapi_stealcontext_t*);
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 
 void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
 {
@@ -102,7 +102,7 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
      before the nop body is set.
      see comments in kaapi_task_preempt_head.c
   */
-  synchronize_steal(sc);
+  kaapi_synchronize_steal(sc);
 
   kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
 

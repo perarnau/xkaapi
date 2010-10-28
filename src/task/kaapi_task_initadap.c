@@ -70,8 +70,9 @@ void* kaapi_reply_init_adaptive_task
   /* cannot be read from remote msc */
   adata->flag = vsc->msc->flag;
 
-  /* ktr is also store in request data structure in order to be linked */
+  /* ktr is also store in request data structure in order to be linked in kaapi_request_reply */
   adata->ktr = ktr;
+  kreq->ktr = ktr;
 
   /* initialize user related */
   adata->ubody = (kaapi_adaptive_thief_body_t)body;
