@@ -69,9 +69,6 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   while (!KAAPI_ATOMIC_CAS(&thgrp->mainctxt->lock, 0, 1))
     ;
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-  while (thgrp->mainctxt->thieffp != 0)
-    ;
 #endif
   
 #if 0

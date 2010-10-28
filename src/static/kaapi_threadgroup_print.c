@@ -63,7 +63,8 @@ static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm
   for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
   {
     entry = get_hashmap_entry( hm, i );
-    while (entry !=0) {
+    while (entry !=0) 
+    {
       kaapi_version_t* ver = entry->u.dfginfo;
       if (ver->readers[tid].used) {
         fprintf(file, "@:%p -> local @:%p\n", ver->original_data, ver->readers[tid].addr );
@@ -79,7 +80,12 @@ static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm
 
 /**
  */
-static void kaapi_threadgroup_printinputoutputdata(FILE* file, int tid, kaapi_hashmap_t* hm, kaapi_vector_t* v )
+static void kaapi_threadgroup_printinputoutputdata(
+  FILE* file, 
+  int tid, 
+  kaapi_hashmap_t* hm, 
+  kaapi_vector_t* v 
+)
 {
   kaapi_vectentries_bloc_t* entry;
   
@@ -106,7 +112,7 @@ static void kaapi_threadgroup_printinputoutputdata(FILE* file, int tid, kaapi_ha
   {
     for (int i=0; i<entry->pos; ++i)
     {
-      kaapi_pidreader_t* reader = &entry->data[i];
+      kaapi_pidreader_t* reader   = &entry->data[i];
       kaapi_hashentries_t* hentry = kaapi_hashmap_find(hm, reader->addr);
       if (hentry ==0) {
         printf("*** error, cannot find data with address:%p\n", reader->addr);

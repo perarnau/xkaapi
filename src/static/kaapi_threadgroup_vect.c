@@ -57,6 +57,7 @@ int kaapi_vector_init( kaapi_vector_t* v, kaapi_vectentries_bloc_t* initbloc )
 }
 
 
+
 /*
 */
 int kaapi_vector_destroy( kaapi_vector_t* v )
