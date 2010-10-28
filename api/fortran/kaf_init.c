@@ -74,7 +74,7 @@ KAAPIF_DECL_BASICTYPEFORMAT(kaapi_dcomplex_format, Complex16, "%e,%e")
 
 
 /* -------------------------------------------------------------------- */
-void kaapi_init_( KAAPI_Fint* ierr )
+void FNAME(kaapi_init)( KAAPI_Fint* ierr )
 { 
   /* Here is for gfortran that export these variables
   */
@@ -101,7 +101,7 @@ void kaapi_init_( KAAPI_Fint* ierr )
 /* -------------------------------------------------------------------- */
 /* Initialize the library
 */
-void kaapi_finalize_( KAAPI_Fint* ierr )
+void FNAME(kaapi_finalize)( KAAPI_Fint* ierr )
 {
   kaapi_sched_sync();
   *ierr = 0;
@@ -111,7 +111,7 @@ void kaapi_finalize_( KAAPI_Fint* ierr )
 /* -------------------------------------------------------------------- */
 /* Initialize the library
 */
-int kaapi_isleader_(void)
+int FNAME(kaapi_isleader)(void)
 {
   return 1;
 }

@@ -50,23 +50,27 @@
 extern "C" {
 #endif
 
+/* fortran name: compiler dependent. Todo: put it into the configure
+*/
+#define FNAME(f) f##_
+
 /* -------------------------------------------------------------------- */
 /* fwd declaration */
 typedef long int KAAPI_Fint;
 
 typedef int KAAPI_Graph;
 
-extern long kaapi_new_signature_( char* name, void (*function)(), char* format );
+extern long FNAME(kaapi_new_signature)( char* name, void (*function)(), char* format );
 
-extern void kaapi_new_task_( KAAPI_Fint* addrformat, ... );
+extern void FNAME(kaapi_new_task)( KAAPI_Fint* addrformat, ... );
 
-extern void kaapi_sync_(void);
+extern void FNAME(kaapi_sync(void);
 
-extern void kaapi_init_( KAAPI_Fint* ierr );
+extern void FNAME(kaapi_init)( KAAPI_Fint* ierr );
 
-extern void kaapi_finalize_( KAAPI_Fint* ierr );
+extern void FNAME(kaapi_finalize)( KAAPI_Fint* ierr );
 
-extern int kaapi_isleader_(void);
+extern int FNAME(kaapi_isleader)(void);
 
 /* -------------------------------------------------------------------- */
 typedef struct Complex8 {
