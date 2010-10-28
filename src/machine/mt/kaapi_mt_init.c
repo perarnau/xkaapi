@@ -97,7 +97,7 @@ volatile int kaapi_isterm = 0;
 int kaapi_mt_init(void)
 {
   static int iscalled = 0;
-  if (iscalled !=0) return 0;
+  if (iscalled !=0) return EALREADY;
   iscalled = 1;
   
   kaapi_isterm = 0;
@@ -154,7 +154,7 @@ int kaapi_mt_init(void)
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
   
-  return 1;
+  return 0;
 }
 
 
@@ -175,7 +175,7 @@ int kaapi_mt_finalize(void)
 #endif
 
   static int iscalled = 0;
-  if (iscalled !=0) return 0;
+  if (iscalled !=0) return EALREADY;
   iscalled = 1;
 
 #if defined(KAAPI_USE_PERFCOUNTER)

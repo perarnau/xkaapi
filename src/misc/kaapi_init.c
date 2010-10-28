@@ -193,7 +193,7 @@ void kaapi_init_basicformat(void)
 int kaapi_init(void)
 {
   static int iscalled = 0;
-  if (iscalled !=0) return 0;
+  if (iscalled !=0) return EALREADY;
   iscalled = 1;
 
   kaapi_init_basicformat();
