@@ -381,6 +381,9 @@ namespace ka {
   // --------------------------------------------------------------------
   class System {
   public:
+    static Community join_community()
+      throw (RuntimeError,RestartException,ServerException);
+
     static Community join_community( int& argc, char**& argv )
       throw (RuntimeError,RestartException,ServerException);
 
@@ -1401,11 +1404,17 @@ namespace ka {
 
     /* return a pointer to args passed by the victim */
     template<class T>
-    const T* arg_preemption()
+    const T& arg_preemption()
     { 
       kaapi_assert_debug( sizeof(T) <= _sc.sz_data_victim );
-      return static_cast<const T*> (_sc.data_victim); 
+      return *static_cast<const T*> (_sc.data_victim); 
     }
+
+    /* return a pointer to a memory zone that will be received
+       by the victim upon the acknowledge will be send.
+    */
+    template<class T>
+    T* return_arg();
 
     /* signal the victim that it can get */
     bool ack_preemption();
@@ -1415,16 +1424,47 @@ namespace ka {
       struct DUMMY_TYPE {};
       
       struct one_thief {
+
+        /* signal_preempt: send preemption signal to the thief.
+           When the victim caller send a signal to one of its thief,
+           the control flow continues (it is a non blocking operation).
+           The returns value depend of the state of the thief. If the thief
+           is detected 'finished' before sending the preemption flag, then
+           the return value is ECHILD (no child). Else the return values is
+           0.
+           \retval 0 iff the signal was correctly send to an active thief
+           \retval ECHILD iff the thief was finished before the signal occurs
+           \retval an error code
+        */
         int signal_preempt();
 
-        /* arg_victim: to pass data to the thief
-           arg_thief: where to store value returned by the thief
+        /* signal_preempt: send preemption signal to the thief.
+           When the victim caller send a signal to one of its thief,
+           the control flow continues (it is a non blocking operation).
+           The returns value depend of the state of the thief. If the thief
+           is detected 'finished' before sending the preemption flag, then
+           the return value is ECHILD (no child). Else the return values is
+           0.
+           The victim may use the variation signal_preempt( arg ) with a
+           extra args to pass to the thief. This value is possibly recopied
+           and should not change until the victim wait the ack from the thief
+           using wait_preempt. 
+           \retval 0 iff the signal was correctly send to an active thief
+           \retval ECHILD iff the thief was finished before the signal occurs
+           \retval an error code
         */
-        template<class T, class R>
-        int signal_preempt(T* arg_victim, R* arg_thief = 0);
+        template<class T>
+        int signal_preempt( const T* arg );
 
-        /* return where is stored value returned by the thief */
-        template<class R>
+        /* wait_preempt: waits until the thief has received the preemption flag. 
+           The caller is suspended until the thief has received the preemption flag
+           and has reply to the preemption request. The return value is a pointer
+           to the memory region reserved when ones replied to steal requests.
+           The value is stored by the thief when it processes the preemption request
+           (see ).
+           \retval a pointer to data passed by the thief for the victim
+        */
+        template<class R=void>
         R* wait_preempt();
       };
       
@@ -1471,7 +1511,8 @@ namespace ka {
       **/      
       void operator()()
       { 
-        void* arg __attribute__((unused)) = kaapi_reply_init_adaptive_task( _sc, _req, KaapiTask0<TASK>::body, 0, 0 );
+        void* arg __attribute__((unused))
+            =kaapi_reply_init_adaptive_task( _sc, _req, KaapiTask0<TASK>::body, 0, 0 );
         kaapi_reply_push_adaptive_task( _sc, _req );
       }
 
@@ -1800,44 +1841,6 @@ namespace ka {
   { return Thread::Spawner<TASK, Attr>(kaapi_self_thread(), a); }
 
 
-#if 0
-  template<class TASK>
-  struct RegisterBodyCPU {
-    static void doit() __attribute__((constructor)) 
-    {
-      static volatile int isinit __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
-    }
-    RegisterBodyCPU() 
-    { 
-      doit();
-    }
-  };
-
-  template<class TASK>
-  struct RegisterBodyGPU {
-    static void doit() __attribute__((constructor))
-    { 
-      static volatile int isinit __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
-    }
-    RegisterBodyGPU()
-    {
-      doit();
-    }
-  };
-
-  template<class TASK>
-  struct RegisterBodies {
-    static void doit() __attribute__((constructor))
-    { 
-      static volatile int isinit1 __attribute__((unused))= DoRegisterBodyCPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
-      static volatile int isinit2 __attribute__((unused))= DoRegisterBodyGPU<TASK>( &TASK::dummy_method_to_have_formal_param_type ); 
-    }
-    RegisterBodies()
-    {
-      doit();
-    }  
-  };
-#endif
 
 
   // --------------------------------------------------------------------
@@ -1880,7 +1883,7 @@ namespace ka {
       kaapi_thread_pushtask( thread);    
     }
 
-    void operator()( )
+    void operator()()
     {
       kaapi_thread_t* thread = kaapi_self_thread();
       kaapi_task_t* clo = kaapi_thread_toptask( thread );

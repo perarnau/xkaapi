@@ -147,6 +147,19 @@ Community System::join_community( int& argc, char**& argv )
 
 
 // --------------------------------------------------------------------
+Community System::join_community( )
+  throw (RuntimeError, RestartException, ServerException)
+{
+  int argc = 1;
+  const char* targv[] = {"kaapi"};
+  char** argv = (char**)targv;
+  Community thecom = System::initialize_community( argc, argv);
+  thecom.commit();
+  return thecom;
+}
+
+
+// --------------------------------------------------------------------
 void System::terminate()
 {
   KaapiComponentManager::terminate();
