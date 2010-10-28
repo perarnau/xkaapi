@@ -206,9 +206,9 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
       if (sc->is_preempted()) 
       {
         /* copy back the work state to the output state for the master */
-        std::pair<T*, T*>* thief_context = sc->arg_preemption<std::pair<T*, T*> >();
-        thief_context->first   = work.begin();
-        thief_context->second  = work.end();
+        std::pair<T*, T*>& thief_context = sc->arg_preemption<std::pair<T*, T*> >();
+        thief_context.first  = work.begin();
+        thief_context.second = work.end();
         sc->ack_preemption();
         return;
       }
@@ -275,7 +275,7 @@ redo_work:
       if (thief_context->first != thief_context->second) 
       {
         first = thief_context->first;
-        last = thief_context->second;
+        last  = thief_context->second;
         goto redo_work;
       }
     } /* else send_preempt !=0 which means that this thief is finished */

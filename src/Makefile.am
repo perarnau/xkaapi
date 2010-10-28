@@ -66,6 +66,8 @@ libxkaapi_la_SOURCES+=\
   task/kaapi_task_pushstealcontext.c\
   task/kaapi_task_adapt_allocateresult.c\
   task/kaapi_task_adapt_deallocateresult.c\
+  task/kaapi_task_adap_body.c \
+  task/kaapi_task_initadap.c \
   task/kaapi_task_reqreply.c \
   task/kaapi_task_preempt_head.c \
   task/kaapi_task_preempt_tail.c \

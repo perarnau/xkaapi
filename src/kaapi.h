@@ -992,6 +992,9 @@ extern void* kaapi_reply_init_adaptive_task (
     struct kaapi_taskadaptive_result_t* result
 );
 
+/** \ingroup ADAPTIVE
+*/
+extern void kaapi_request_reply_failed(kaapi_request_t*);
 
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
@@ -1012,14 +1015,9 @@ static inline void kaapi_reply_pushtail_adaptive_task(kaapi_stealcontext_t* sc, 
 }
 
 /** \ingroup ADAPTIVE
-*/
-extern void kaapi_request_reply_failed(kaapi_request_t*);
-
-/** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-static inline void kaapi_reply_push_adaptive_task
-(kaapi_stealcontext_t* sc, kaapi_request_t* r)
+static inline void kaapi_reply_push_adaptive_task(kaapi_stealcontext_t* sc, kaapi_request_t* r)
 {
   kaapi_reply_pushhead_adaptive_task(sc, r);
 }

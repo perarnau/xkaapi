@@ -53,6 +53,8 @@ SetStack SetInStack;
 SetHeap SetInHeap;
 SetLocalAttribut SetLocal;
 DefaultAttribut SetDefault;
+FlagReplyHead ReplyHead;
+FlagReplyTail ReplyTail;
 
 // --------------------------------------------------------------------------
 std::string get_localhost()

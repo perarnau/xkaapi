@@ -30,12 +30,13 @@ check_PROGRAMS= \
 	find_xkaapi             \
   for_each_rec_xx         \
   for_each_0xx            \
-  for_each_1xx 
+  for_each_1xx            \
+  for_each_2xx
 
 TESTS=  
 
-adaptive_API=\
-  for_each_2xx
+adaptive_API=
+
 
 lambda_TESTS=  \
   for_each_0xx_lambda\

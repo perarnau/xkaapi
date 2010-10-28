@@ -1404,10 +1404,18 @@ namespace ka {
 
     /* return a pointer to args passed by the victim */
     template<class T>
-    const T& arg_preemption()
+    const T& victim_arg_preemption()
     { 
       kaapi_assert_debug( sizeof(T) <= _sc.sz_data_victim );
       return *static_cast<const T*> (_sc.data_victim); 
+    }
+
+    /* return a pointer to args that will be passed to the victim */
+    template<class T>
+    T& arg_preemption()
+    { 
+      kaapi_assert_debug( sizeof(T) <= _sc.sz_data_victim );
+      return *static_cast<T*> (_sc.data_victim); 
     }
 
     /* return a pointer to a memory zone that will be received
@@ -1464,11 +1472,10 @@ namespace ka {
            (see ).
            \retval a pointer to data passed by the thief for the victim
         */
-        template<class R=void>
+        template<class R>
         R* wait_preempt();
       };
       
-
       /* */
       one_thief* operator->()
       { return &curr; }
@@ -1495,6 +1502,14 @@ namespace ka {
     friend class Request;
   };
   
+  
+  /**
+  */
+  struct FlagReplyHead {};
+  extern FlagReplyHead ReplyHead;
+  struct FlagReplyTail {};
+  extern FlagReplyTail ReplyTail;
+
   /* New API: request->Spawn<TASK>(sc)( args ) for adaptive tasks
   */
   class Request {
@@ -1504,7 +1519,8 @@ namespace ka {
     template<class TASK>
     class Spawner {
     protected:
-      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc ) : _req(r), _sc(sc) {}
+      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc ) : _req(r), _sc(sc), _flag(KAAPI_REQUEST_REPLY_HEAD) {}
+      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc, int flag_push ) : _req(r), _sc(sc), _flag(flag_push) {}
 
     public:
       /**
@@ -1513,7 +1529,7 @@ namespace ka {
       { 
         void* arg __attribute__((unused))
             =kaapi_reply_init_adaptive_task( _sc, _req, KaapiTask0<TASK>::body, 0, 0 );
-        kaapi_reply_push_adaptive_task( _sc, _req );
+        kaapi_request_reply(_sc, _req, _flag );
       }
 
 #include "ka_api_reqspawn.h"
@@ -1521,12 +1537,19 @@ namespace ka {
     protected:
       kaapi_request_t*      _req;
       kaapi_stealcontext_t* _sc;
+      int                   _flag;
       friend class Request;
     };
 
   public:
     template<class TASK>
     Spawner<TASK> Spawn(StealContext* sc) { return Spawner<TASK>(&_request, (kaapi_stealcontext_t*)sc); }
+    template<class TASK>
+    Spawner<TASK> Spawn(StealContext* sc, FlagReplyHead flag) 
+    { return Spawner<TASK>(&_request, (kaapi_stealcontext_t*)sc, KAAPI_REQUEST_REPLY_HEAD); }
+    template<class TASK>
+    Spawner<TASK> Spawn(StealContext* sc, FlagReplyTail flag) 
+    { return Spawner<TASK>(&_request, (kaapi_stealcontext_t*)sc, KAAPI_REQUEST_REPLY_TAIL); }
 
   protected:
     kaapi_request_t _request;
