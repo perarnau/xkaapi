@@ -48,7 +48,10 @@
 */
 int kaapi_thread_clear( kaapi_thread_context_t* thread )
 {
+  kaapi_stealcontext_t* sc;
+
   kaapi_assert_debug( thread != 0);
+
   thread->sfp      = thread->stackframe;
   thread->esfp     = thread->stackframe;
   thread->sfp->sp  = thread->sfp->pc  = thread->task; /* empty frame */
@@ -62,9 +65,10 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   kaapi_sched_initlock(&thread->lock);
 
   /* here link between initial sc & the status where signal will be delivered */
-  thread->sc.preempt     = &thread->reply.status;
-  thread->sc.splitter    = 0;
-  thread->sc.argsplitter = 0;
+  sc = (kaapi_stealcontext_t*)&thread->static_reply.task_data.krd.header;
+  sc->preempt     = &thread->static_reply.status;
+  sc->splitter    = 0;
+  sc->argsplitter = 0;
 
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;

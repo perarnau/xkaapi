@@ -511,13 +511,15 @@ typedef int (*kaapi_task_reducer_t) (
 #endif
 );
 
-/** Adaptive stealing context
-    \ingroup ADAPT
-*/
-typedef struct kaapi_stealcontext_t {
-  /* reference to the preempt flag in the thread's reply_t data structure */
-  volatile kaapi_uint64_t*	preempt;
 
+/** \ingroup ADAPT
+    Adaptive stealing header. The header is the
+    part visible by the remote write during the
+    reply. Thus we separate it from the remaining
+    context to avoid duplicating fields.
+*/
+typedef struct kaapi_stealheader_t
+{
   /* steal method modifiers */
   kaapi_uint32_t flag; 
 
@@ -526,6 +528,19 @@ typedef struct kaapi_stealcontext_t {
 
   /* thief result, independent of preemption */
   struct kaapi_taskadaptive_result_t* ktr;
+
+} kaapi_stealheader_t;
+
+
+/** Adaptive stealing context
+    \ingroup ADAPT
+*/
+typedef struct kaapi_stealcontext_t {
+
+  kaapi_stealheader_t header;
+
+  /* reference to the preempt flag in the thread's reply_t data structure */
+  volatile kaapi_uint64_t* preempt;
 
   /* splitter context */
   kaapi_task_splitter_t volatile splitter;
@@ -572,10 +587,36 @@ typedef struct kaapi_stealcontext_t {
 #define KAAPI_CONTEXT_CONCURRENT      0x2   /* concurrent call to splitter through kaapi_stealpoint */
 #define KAAPI_CONTEXT_PREEMPT         0x3   /* allow preemption of thieves */
 
-/** Thief result
-    Only public part of the data structure.
-    Warning: update of this structure should also be an update of the structure in kaapi_impl.h
+/** \ingroup ADAPT
+    Extra body with kaapi_stealcontext_t as extra arg.
 */
+typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+
+
+/** \ingroup ADAPT
+    Args for kaapi_adapt_body. this area represents the
+    part to be sent by the combinator during the remote
+    write of the adaptive reply.
+*/
+typedef struct kaapi_adaptive_reply_data_t {
+
+  /* user defined body, size, data
+   */
+
+  kaapi_adaptive_thief_body_t ubody;
+  size_t                      usize;
+  unsigned char               udata[8 * KAAPI_CACHE_LINE];
+
+  /* stealcontext part visible during remote write
+   */
+
+  kaapi_stealheader_t	      header;
+
+  /* WARNING: do not add anything past the header field
+     since the stealcontext remainings follow right after
+   */
+
+} kaapi_adaptive_reply_data_t;
 
 
 /** \ingroup ADAPT
@@ -649,7 +690,16 @@ typedef struct kaapi_reply_t {
   } u;
 
   /* todo: align on something (page or cacheline size) */
-  unsigned char task_data[4 * KAAPI_CACHE_LINE];
+
+  union
+  {
+    /* adaptive specialization */
+    kaapi_adaptive_reply_data_t krd;
+
+    /* fitall area */
+    unsigned char fubar[8 * KAAPI_CACHE_LINE];
+
+  } task_data;
 
 #endif /* private */
 

@@ -51,7 +51,7 @@ void* kaapi_reply_init_adaptive_task
   kaapi_stealcontext_t*        vsc,
   kaapi_request_t*             kreq,
   kaapi_task_body_t            body,
-  size_t		                   size,
+  size_t                       size,
   kaapi_taskadaptive_result_t* ktr
 )
 {
@@ -59,19 +59,20 @@ void* kaapi_reply_init_adaptive_task
   /* tsc the thief stealcontext */
 
   kaapi_reply_t* const krep = kreq->reply;
-  kaapi_adaptive_reply_data_t* const adata =
-    (kaapi_adaptive_reply_data_t*)krep->task_data;
+  kaapi_adaptive_reply_data_t* const adata = &krep->task_data.krd;
 
-  kaapi_assert_debug(size + sizeof(kaapi_adaptive_reply_data_t) <= 4 * KAAPI_CACHE_LINE);
+  kaapi_assert_debug
+    ((size + sizeof(kaapi_adaptive_reply_data_t)) <= 8 * KAAPI_CACHE_LINE);
 
   /* initialize here: used in adapt_body */
-  adata->msc = vsc->msc;
+  adata->header.msc = vsc->header.msc;
 
   /* cannot be read from remote msc */
-  adata->flag = vsc->msc->flag;
+  adata->header.flag = vsc->header.flag;
 
-  /* ktr is also store in request data structure in order to be linked in kaapi_request_reply */
-  adata->ktr = ktr;
+  /* ktr is also stored in request data structure
+     in order to be linked in kaapi_request_reply */
+  adata->header.ktr = ktr;
   kreq->ktr = ktr;
 
   /* initialize user related */

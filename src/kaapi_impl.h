@@ -363,7 +363,7 @@ typedef struct kaapi_thread_context_t {
   kaapi_stealcontext_t           sc;
 
   /* statically allocated reply */
-  kaapi_reply_t			             reply;
+  kaapi_reply_t			 static_reply;
 
   /* warning: reply is variable sized
      so do not add members from here
@@ -662,10 +662,7 @@ inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
 inline static void kaapi_task_unlock_adaptive_steal(kaapi_task_t* task)
 {
   const uintptr_t unlocked_state =
-    (~KAAPI_MASK_BODY_STEAL) |
-    KAAPI_MASK_BODY_EXEC |
-    (uintptr_t)kaapi_adapt_body;
-
+    KAAPI_MASK_BODY_EXEC | (uintptr_t)kaapi_adapt_body;
   kaapi_task_setstate_barrier(task, unlocked_state);
 }
 
@@ -1277,26 +1274,6 @@ typedef struct kaapi_tasksteal_arg_t {
   unsigned int            war_param;         /* bit i=1 iff it is a w mode with war dependency */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
-
-
-/** Extra body with kaapi_stealcontext_t as extra arg.
-*/
-typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
-
-/** Args for kaapi_adapt_body
-*/
-typedef struct adaptive_reply_data {
-  kaapi_stealcontext_t*        msc;
-  kaapi_taskadaptive_result_t* ktr;
-  kaapi_uint32_t               flag;
-
-  /* user defined body, size, data
-   */
-  kaapi_adaptive_thief_body_t ubody;
-  size_t                      usize;
-  unsigned char               udata[1];
-
-} kaapi_adaptive_reply_data_t;
 
 
 /* ======================== Perf counter interface: machine dependent ========================*/
