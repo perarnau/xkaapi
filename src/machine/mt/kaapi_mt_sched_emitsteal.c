@@ -202,7 +202,7 @@ return_value:
       kaapi_task_init(
          kaapi_thread_toptask(self_thread),
          reply->u.s_task.body,
-         (void*)&reply->task_data.fubar
+         (void*)reply->task_data.fubar
       );
       kaapi_thread_pushtask(self_thread);
 
