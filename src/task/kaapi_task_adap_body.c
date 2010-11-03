@@ -42,6 +42,9 @@
 ** terms.
 ** 
 */
+
+#include <stdint.h>
+#include <stddef.h>
 #include "kaapi_impl.h"
 
 
@@ -63,24 +66,27 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
      the stealcontext is a partial sc and we have to
      build a full stealcontext. then call the user body.
    */
-  /* this is the master task, return */
-  if (sc->msc == 0) return;
 
   self_thread = kaapi_self_thread_context();
-  sc = (kaapi_stealcontext_t*)&self_thread->sc;
 
-  /* cast adaptive reply data */
+  /* retrieve the adaptive reply data */
   adata = (kaapi_adaptive_reply_data_t*)arg;
 
-  /* sync with the inherited flags from the reply */
-  sc->flag             = adata->flag;
-  sc->ktr              = adata->ktr;
-  sc->msc              = adata->msc;
+  /* sc is not the same as self_thread->sc. it is located
+     in static_reply. btw, there is no gain avoiding adata
+     dereference.
+   */
+  sc = &adata->sc;
+
+  /* this is the master task, return */
+  if (sc->header.msc == sc) return ;
 
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
   */  
-  sc->preempt          = &self_thread->reply.preempt;
+
+  /* header flag, msc, ktr init by remote write */
+  sc->preempt          = &self_thread->static_reply.status;
   sc->save_splitter    = 0;
   sc->save_argsplitter = 0;
   sc->ownertask = kaapi_thread_toptask(thread);
@@ -92,7 +98,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   kaapi_assert_debug(adata->ubody != 0);
   adata->ubody((void*)adata->udata, thread, sc);
 
-  if (!(adata->flag & KAAPI_SC_PREEMPTION))
+  if (!(adata->sc.header.flag & KAAPI_SC_PREEMPTION))
   {
     /* non preemptive algorithm decrement the
        thievecount. this is the only way for
@@ -100,16 +106,16 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
        
        HERE TODO: store a pointer to the thieves_count
     */
-    KAAPI_ATOMIC_DECR(&adata->msc->thieves.count);
+    KAAPI_ATOMIC_DECR(&adata->sc.header.msc->thieves.count);
   }
   else /* if (sc->ktr != 0) */
   {
-    kaapi_assert_debug(adata->ktr);
+    kaapi_assert_debug(adata->sc.header.ktr);
 
     /* preemptive algorithms need to inform
        they are done so they can be reduced.
     */
-    adata->ktr->thief_term = 1;
+    adata->sc.header.ktr->thief_term = 1;
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);

@@ -511,13 +511,15 @@ typedef int (*kaapi_task_reducer_t) (
 #endif
 );
 
-/** Adaptive stealing context
-    \ingroup ADAPT
-*/
-typedef struct kaapi_stealcontext_t {
-  /* reference to the preempt flag in the thread's reply_t data structure */
-  volatile kaapi_uint64_t*	preempt;
 
+/** \ingroup ADAPT
+    Adaptive stealing header. The header is the
+    part visible by the remote write during the
+    reply. Thus we separate it from the remaining
+    context to avoid duplicating fields.
+*/
+typedef struct kaapi_stealheader_t
+{
   /* steal method modifiers */
   kaapi_uint32_t flag; 
 
@@ -527,20 +529,28 @@ typedef struct kaapi_stealcontext_t {
   /* thief result, independent of preemption */
   struct kaapi_taskadaptive_result_t* ktr;
 
+} kaapi_stealheader_t;
+
+
+/** Adaptive stealing context
+    \ingroup ADAPT
+*/
+typedef struct kaapi_stealcontext_t {
+  /* reference to the preempt flag in the thread's reply_t data structure */
+  volatile kaapi_uint64_t* preempt __attribute__((aligned));
+
   /* splitter context */
   kaapi_task_splitter_t volatile splitter;
   void* volatile argsplitter;
   
   /* needed for steal sync protocol */
-  kaapi_task_t* ownertask;
+  kaapi_task_t*		ownertask;
 
   kaapi_task_splitter_t save_splitter;
   void*                 save_argsplitter;
   
   void*                 data_victim;       /* pointer on the thief side to store args from the victim */
   size_t                sz_data_victim;
-  
-#if defined(KAAPI_COMPILE_SOURCE) /* private */
 
   /* initial saved frame */
   kaapi_frame_t frame;
@@ -562,7 +572,8 @@ typedef struct kaapi_stealcontext_t {
     } list;
   } thieves;
 
-#endif /* private */
+  /* header seen by both combinator and local */
+  kaapi_stealheader_t header;
 
 } kaapi_stealcontext_t;
 
@@ -572,10 +583,34 @@ typedef struct kaapi_stealcontext_t {
 #define KAAPI_CONTEXT_CONCURRENT      0x2   /* concurrent call to splitter through kaapi_stealpoint */
 #define KAAPI_CONTEXT_PREEMPT         0x3   /* allow preemption of thieves */
 
-/** Thief result
-    Only public part of the data structure.
-    Warning: update of this structure should also be an update of the structure in kaapi_impl.h
+/** \ingroup ADAPT
+    Extra body with kaapi_stealcontext_t as extra arg.
 */
+typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+
+
+/** \ingroup ADAPT
+    Args for kaapi_adapt_body. this area represents the
+    part to be sent by the combinator during the remote
+    write of the adaptive reply.
+*/
+typedef struct kaapi_adaptive_reply_data_t {
+
+  /* stealcontext. only the header part is visible
+     during the reply, making the range
+     [ &sc.header, &udata[usize] [ writable
+   */
+
+  kaapi_stealcontext_t	      sc;
+
+  /* user defined body, size, data
+   */
+
+  kaapi_adaptive_thief_body_t ubody;
+  size_t                      usize;
+  unsigned char               udata[1];
+
+} kaapi_adaptive_reply_data_t;
 
 
 /** \ingroup ADAPT
@@ -608,6 +643,17 @@ typedef struct kaapi_taskadaptive_result_t {
   void*				                        addr_tofree;	    /* the non aligned malloc()ed addr */
 #endif /* defined(KAAPI_COMPILE_SOURCE) */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+
+
+/** \ingroup ADAPT
+    Get the adaptive result data from stealcontext ktr
+*/
+static inline void* kaapi_adaptive_result_data
+(kaapi_stealcontext_t* sc)
+{
+  kaapi_assert_debug(sc->header.ktr);
+  return sc->header.ktr->data;
+}
 
 
 /** \ingroup WS
@@ -651,7 +697,18 @@ typedef struct kaapi_reply_t {
   } u;
 
   /* todo: align on something (page or cacheline size) */
-  unsigned char task_data[4 * KAAPI_CACHE_LINE];
+
+  union
+  {
+    /* adaptive specialization */
+    kaapi_adaptive_reply_data_t krd;
+
+    /* more specialization here */
+
+    /* fitall area */
+    unsigned char fubar[8 * KAAPI_CACHE_LINE];
+
+  } task_data;
 
 #endif /* private */
 
@@ -1220,9 +1277,9 @@ static inline int kaapi_is_null(void* p)
 typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
 #define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(stc) ? \
-        kaapi_preemptpoint_before_reducer_call(stc->ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call(stc->ktr, stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->ktr, stc->ktr->arg_from_victim, ##__VA_ARGS__))) \
+        kaapi_preemptpoint_before_reducer_call(stc->header.ktr, stc, arg_for_victim, result_data, result_size),\
+        kaapi_preemptpoint_after_reducer_call(stc->header.ktr, stc, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->header.ktr, stc->header.ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )

@@ -57,15 +57,15 @@ int kaapi_request_reply(
   /* sc the stolen stealcontext */
 
   /* if there is preemption, link to thieves */
-  if (sc->flag & KAAPI_SC_PREEMPTION)
+  if (sc->header.flag & KAAPI_SC_PREEMPTION)
   {
     kaapi_taskadaptive_result_t* const ktr = req->ktr;
 #if defined(KAAPI_DEBUG)
     kaapi_assert_debug( ktr != 0 );
     {
       kaapi_adaptive_reply_data_t* const adata =
-        (kaapi_adaptive_reply_data_t*)req->reply->task_data;
-      kaapi_assert_debug( adata->ktr == ktr );
+	&req->reply->task_data.krd;
+      kaapi_assert_debug( adata->sc.header.ktr == ktr );
     }
 #endif
 
@@ -95,7 +95,7 @@ int kaapi_request_reply(
   else
   {
     /* non preemptive algorithm, inc the root master thiefcount */
-    KAAPI_ATOMIC_INCR(&sc->msc->thieves.count);
+    KAAPI_ATOMIC_INCR(&sc->header.msc->thieves.count);
   }
 
   return _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);

@@ -53,7 +53,7 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 {
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)args;
 
-  kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
+  kaapi_assert_debug(!(sc->header.flag & KAAPI_SC_PREEMPTION));
 
   /* ensure all working thieves are done. the steal
      sync has been done in kaapi_task_end_adaptive
@@ -65,7 +65,7 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
   kaapi_readmem_barrier();
 
   /* restore the upper frame */
-  kaapi_thread_restore_frame(thread, &sc->frame);
+  kaapi_thread_restore_frame(thread - 1, &sc->frame);
 }
 
 
@@ -89,7 +89,7 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
      an error). we restore the frame and return without
      waiting for anyting.
    */
-  if (sc->flag & KAAPI_SC_PREEMPTION)
+  if (sc->header.flag & KAAPI_SC_PREEMPTION)
   {
     kaapi_assert_debug(sc->thieves.list.head == 0);
     kaapi_task_setbody(sc->ownertask, kaapi_nop_body);

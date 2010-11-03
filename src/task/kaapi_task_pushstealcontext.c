@@ -60,7 +60,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   kaapi_frame_t           frame;
   
   kaapi_thread_save_frame(thread, &frame);
-  
+
   self_thread = kaapi_self_thread_context();
   
   /* todo: should be pushed cacheline aligned */
@@ -68,12 +68,12 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
     (thread, sizeof(kaapi_stealcontext_t), sizeof(void*));
   kaapi_assert_debug(sc != 0);
 
-  sc->preempt           = &self_thread->reply.status;
+  sc->preempt           = &self_thread->static_reply.status;
   sc->splitter          = splitter;
   sc->argsplitter       = argsplitter;
-  sc->flag              = flag;
-  sc->msc		            = 0;
-  sc->ktr		            = 0;
+  sc->header.flag       = flag;
+  sc->header.msc	= sc; /* self pointer to detect master */
+  sc->header.ktr	= 0;
 
   if (flag & KAAPI_SC_PREEMPTION)
   {
