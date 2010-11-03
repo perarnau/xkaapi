@@ -76,7 +76,6 @@ typedef struct thief_work_t {
   double* end;
   double key;
   double* res;
-  kaapi_taskadaptive_result_t* ktr;
 } thief_work_t;
 
 
@@ -162,7 +161,6 @@ static int splitter (
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;
     tw->res = 0;
-    tw->ktr = ktr;
 
     /* reply head, preempt head */
     kaapi_reply_pushhead_adaptive_task(sc, req);
@@ -280,7 +278,7 @@ static void thief_entrypoint
   }
 
   /* we are finished, update results. */
-  thief_work_t* const res_work = (thief_work_t*)work->ktr->data;
+  thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
   res_work->beg = 0;
   res_work->end = 0;
   res_work->res = work->res;
@@ -369,7 +367,8 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 1000; ++ac)
+/*   for (ac = 0; ac < 1000; ++ac) */
+  for (ac = 0; ac < 1; ++ac)
   {
     /* initialize, apply, check */
 

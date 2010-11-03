@@ -72,6 +72,7 @@ void* kaapi_reply_init_adaptive_task
 
   /* ktr is also stored in request data structure
      in order to be linked in kaapi_request_reply */
+
   adata->sc.header.ktr = ktr;
   kreq->ktr = ktr;
 

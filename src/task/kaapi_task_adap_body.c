@@ -68,13 +68,18 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
    */
 
   self_thread = kaapi_self_thread_context();
-  sc = (kaapi_stealcontext_t*)&self_thread->sc;
-
-  /* this is the master task, return */
-  if (sc->header.msc == sc) return ;
 
   /* retrieve the adaptive reply data */
   adata = (kaapi_adaptive_reply_data_t*)arg;
+
+  /* sc is not the same as self_thread->sc. it is located
+     in static_reply. btw, there is no gain avoiding adata
+     dereference.
+   */
+  sc = &adata->sc;
+
+  /* this is the master task, return */
+  if (sc->header.msc == sc) return ;
 
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)

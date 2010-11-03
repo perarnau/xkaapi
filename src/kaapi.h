@@ -645,6 +645,17 @@ typedef struct kaapi_taskadaptive_result_t {
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 
 
+/** \ingroup ADAPT
+    Get the adaptive result data from stealcontext ktr
+*/
+static inline void* kaapi_adaptive_result_data
+(kaapi_stealcontext_t* sc)
+{
+  kaapi_assert_debug(sc->header.ktr);
+  return sc->header.ktr->data;
+}
+
+
 /** \ingroup WS
     Reply data structure used to return work after a steal request.
     When work is stolen from a victim, work could be stored in the memory data. 
