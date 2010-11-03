@@ -65,7 +65,7 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
   kaapi_readmem_barrier();
 
   /* restore the upper frame */
-  kaapi_thread_restore_frame(thread, &sc->frame);
+  kaapi_thread_restore_frame(thread - 1, &sc->frame);
 }
 
 

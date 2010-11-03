@@ -60,7 +60,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   kaapi_frame_t           frame;
   
   kaapi_thread_save_frame(thread, &frame);
-  
+
   self_thread = kaapi_self_thread_context();
   
   /* todo: should be pushed cacheline aligned */
