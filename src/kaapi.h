@@ -552,8 +552,6 @@ typedef struct kaapi_stealcontext_t {
   void*                 data_victim;       /* pointer on the thief side to store args from the victim */
   size_t                sz_data_victim;
 
-#if defined(KAAPI_COMPILE_SOURCE) /* private */
-
   /* initial saved frame */
   kaapi_frame_t frame;
 
@@ -576,8 +574,6 @@ typedef struct kaapi_stealcontext_t {
 
   /* header seen by both combinator and local */
   kaapi_stealheader_t header;
-
-#endif /* private */
 
 } kaapi_stealcontext_t;
 
@@ -1268,9 +1264,9 @@ static inline int kaapi_is_null(void* p)
 typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
 #define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(stc) ? \
-        kaapi_preemptpoint_before_reducer_call(stc->ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call(stc->ktr, stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->ktr, stc->ktr->arg_from_victim, ##__VA_ARGS__))) \
+        kaapi_preemptpoint_before_reducer_call(stc->header.ktr, stc, arg_for_victim, result_data, result_size),\
+        kaapi_preemptpoint_after_reducer_call(stc->header.ktr, stc, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->header.ktr, stc->header.ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\
   )

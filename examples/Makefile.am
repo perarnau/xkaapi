@@ -27,6 +27,7 @@ check_PROGRAMS= \
 	poisson3d_kaapi_xx      \
 	for_each_0              \
 	for_each_1              \
+	find_xkaapi		\
   for_each_rec_xx         \
   for_each_0xx            \
   for_each_1xx            \
@@ -74,6 +75,9 @@ for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
 #foreach_std_SOURCES=foreach_std.cpp random.cpp random.h
 #foreach_kastl_SOURCES=foreach_kastl.cpp random.cpp random.h
 #accumulate_while_kastl_SOURCES=accumulate_while_kastl.cpp random.cpp random.h
+
+#Find STL algorithm
+find_xkaapi_SOURCES=find/find.c
 
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 
@@ -176,6 +180,11 @@ for_each_2xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_2xx_CFLAGS  =$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CFLAGS)
 for_each_2xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 for_each_2xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+find_xkaapi_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
+find_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
+find_xkaapi_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
+find_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
 
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)
