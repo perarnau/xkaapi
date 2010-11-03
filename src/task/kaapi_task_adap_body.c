@@ -48,13 +48,6 @@
 #include "kaapi_impl.h"
 
 
-static inline kaapi_adaptive_reply_data_t*
-stealheader_to_reply_data(kaapi_stealheader_t* header)
-{
-  return (kaapi_adaptive_reply_data_t*)
-    ((uintptr_t)header - offsetof(kaapi_adaptive_reply_data_t, header));
-}
-
 /* adaptive task body
  */
 void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
@@ -81,7 +74,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   if (sc->header.msc == sc) return ;
 
   /* retrieve the adaptive reply data */
-  adata = stealheader_to_reply_data(arg);
+  adata = (kaapi_adaptive_reply_data_t*)arg;
 
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
@@ -100,7 +93,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   kaapi_assert_debug(adata->ubody != 0);
   adata->ubody((void*)adata->udata, thread, sc);
 
-  if (!(adata->header.flag & KAAPI_SC_PREEMPTION))
+  if (!(adata->sc.header.flag & KAAPI_SC_PREEMPTION))
   {
     /* non preemptive algorithm decrement the
        thievecount. this is the only way for
@@ -108,16 +101,16 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
        
        HERE TODO: store a pointer to the thieves_count
     */
-    KAAPI_ATOMIC_DECR(&adata->header.msc->thieves.count);
+    KAAPI_ATOMIC_DECR(&adata->sc.header.msc->thieves.count);
   }
   else /* if (sc->ktr != 0) */
   {
-    kaapi_assert_debug(adata->header.ktr);
+    kaapi_assert_debug(adata->sc.header.ktr);
 
     /* preemptive algorithms need to inform
        they are done so they can be reduced.
     */
-    adata->header.ktr->thief_term = 1;
+    adata->sc.header.ktr->thief_term = 1;
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);

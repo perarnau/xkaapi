@@ -65,14 +65,14 @@ void* kaapi_reply_init_adaptive_task
     ((size + sizeof(kaapi_adaptive_reply_data_t)) <= 8 * KAAPI_CACHE_LINE);
 
   /* initialize here: used in adapt_body */
-  adata->header.msc = vsc->header.msc;
+  adata->sc.header.msc = vsc->header.msc;
 
   /* cannot be read from remote msc */
-  adata->header.flag = vsc->header.flag;
+  adata->sc.header.flag = vsc->header.flag;
 
   /* ktr is also stored in request data structure
      in order to be linked in kaapi_request_reply */
-  adata->header.ktr = ktr;
+  adata->sc.header.ktr = ktr;
   kreq->ktr = ktr;
 
   /* initialize user related */

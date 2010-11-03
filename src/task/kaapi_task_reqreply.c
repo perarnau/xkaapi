@@ -65,7 +65,7 @@ int kaapi_request_reply(
     {
       kaapi_adaptive_reply_data_t* const adata =
 	&req->reply->task_data.krd;
-      kaapi_assert_debug( adata->header.ktr == ktr );
+      kaapi_assert_debug( adata->sc.header.ktr == ktr );
     }
 #endif
 

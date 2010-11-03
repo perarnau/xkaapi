@@ -536,25 +536,22 @@ typedef struct kaapi_stealheader_t
     \ingroup ADAPT
 */
 typedef struct kaapi_stealcontext_t {
-
-  kaapi_stealheader_t header;
-
   /* reference to the preempt flag in the thread's reply_t data structure */
-  volatile kaapi_uint64_t* preempt;
+  volatile kaapi_uint64_t* preempt __attribute__((aligned));
 
   /* splitter context */
   kaapi_task_splitter_t volatile splitter;
   void* volatile argsplitter;
   
   /* needed for steal sync protocol */
-  kaapi_task_t* ownertask;
+  kaapi_task_t*		ownertask;
 
   kaapi_task_splitter_t save_splitter;
   void*                 save_argsplitter;
   
   void*                 data_victim;       /* pointer on the thief side to store args from the victim */
   size_t                sz_data_victim;
-  
+
 #if defined(KAAPI_COMPILE_SOURCE) /* private */
 
   /* initial saved frame */
@@ -576,6 +573,9 @@ typedef struct kaapi_stealcontext_t {
       __attribute__((aligned(KAAPI_CACHE_LINE)));
     } list;
   } thieves;
+
+  /* header seen by both combinator and local */
+  kaapi_stealheader_t header;
 
 #endif /* private */
 
@@ -600,21 +600,19 @@ typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealc
 */
 typedef struct kaapi_adaptive_reply_data_t {
 
+  /* stealcontext. only the header part is visible
+     during the reply, making the range
+     [ &sc.header, &udata[usize] [ writable
+   */
+
+  kaapi_stealcontext_t	      sc;
+
   /* user defined body, size, data
    */
 
   kaapi_adaptive_thief_body_t ubody;
   size_t                      usize;
-  unsigned char               udata[8 * KAAPI_CACHE_LINE];
-
-  /* stealcontext part visible during remote write
-   */
-
-  kaapi_stealheader_t	      header;
-
-  /* WARNING: do not add anything past the header field
-     since the stealcontext remainings follow right after
-   */
+  unsigned char               udata[1];
 
 } kaapi_adaptive_reply_data_t;
 
@@ -695,6 +693,8 @@ typedef struct kaapi_reply_t {
   {
     /* adaptive specialization */
     kaapi_adaptive_reply_data_t krd;
+
+    /* more specialization here */
 
     /* fitall area */
     unsigned char fubar[8 * KAAPI_CACHE_LINE];

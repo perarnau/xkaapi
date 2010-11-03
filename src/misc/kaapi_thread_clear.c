@@ -65,7 +65,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   kaapi_sched_initlock(&thread->lock);
 
   /* here link between initial sc & the status where signal will be delivered */
-  sc = (kaapi_stealcontext_t*)&thread->static_reply.task_data.krd.header;
+  sc = &thread->static_reply.task_data.krd.sc;
   sc->preempt     = &thread->static_reply.status;
   sc->splitter    = 0;
   sc->argsplitter = 0;
