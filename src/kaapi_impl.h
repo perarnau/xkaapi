@@ -359,9 +359,6 @@ typedef struct kaapi_thread_context_t {
 
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
-  /* initial steal context after stealing of adaptive task */
-  kaapi_stealcontext_t           sc;
-
   /* statically allocated reply */
   kaapi_reply_t			 static_reply;
 
