@@ -123,21 +123,16 @@ static int splitter (
   const size_t total_size = vw->end - vw->beg;
 
   /* how much per req */
-#define CONFIG_PAR_GRAIN 1
+#define CONFIG_PAR_GRAIN 512
   unit_size = 0;
   if (total_size > CONFIG_PAR_GRAIN)
   {
-#if 0
     unit_size = total_size / (nreq + 1);
     if (unit_size == 0)
     {
       nreq = (total_size / CONFIG_PAR_GRAIN) - 1;
       unit_size = CONFIG_PAR_GRAIN;
     }
-#else
-    nreq = 1;
-    unit_size = total_size / 2;
-#endif
 
     /* steal and update victim range */
     const size_t stolen_size = unit_size * nreq;
@@ -173,7 +168,7 @@ static int splitter (
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-#define CONFIG_SEQ_GRAIN 1
+#define CONFIG_SEQ_GRAIN 512
   size_t seq_size = CONFIG_SEQ_GRAIN;
 
   size_t i, j;
@@ -275,7 +270,7 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
 */
 static void apply_cos( double* v )
 {
-  *v = cos(*v);
+  *v += cos(*v);
 }
 
 
