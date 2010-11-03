@@ -82,7 +82,7 @@ int kaapi_preemptpoint_before_reducer_call(
      and we put this status back. dont know if
      this is needed.
    */
-  *ktr->status = KAAPI_REPLY_S_TASK;
+  *ktr->preempt = KAAPI_REPLY_S_TASK;
 
   return 0;
 }

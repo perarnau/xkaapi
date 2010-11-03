@@ -189,14 +189,11 @@ return_value:
       kaapi_assert_debug(reply->u.s_task.body);
 
     case KAAPI_TASK_S_PREEMPTED:
-      /* the task may have been preempted
-	 in between. in this case, we assume
-	 the reply was previously replied with
-	 a REPLY_S_TASK.
+      /* the task may have been preempted in between. in this case, we assume the 
+         reply was previously replied with a REPLY_S_TASK.
        */
 
     case KAAPI_REPLY_S_TASK:
-
       /* initialize and push the task */
       self_thread = kaapi_threadcontext2thread(kproc->thread);
       kaapi_task_init(

@@ -589,7 +589,7 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  volatile kaapi_uint64_t*	          status;		        /* pointer on the reply status, needed to send preemption */
+  volatile kaapi_uint64_t*	          preempt;		        /* pointer on the reply status, needed to send preemption */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   /* here begins the private part of the structure */
@@ -627,6 +627,8 @@ typedef struct kaapi_reply_t {
      send preemption signal. The thief test preemption on this flag
    */
   volatile kaapi_uint64_t status;
+
+  volatile kaapi_uint64_t	preempt;		  /* needed to recv preemption signal */
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)

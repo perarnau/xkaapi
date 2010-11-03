@@ -120,7 +120,7 @@ int kaapi_preempt_thief_helper
   /* next write should ne be reorder with previous */
   kaapi_writemem_barrier();
 
-  *ktr->status = KAAPI_TASK_S_PREEMPTED;
+  *ktr->preempt = KAAPI_TASK_S_PREEMPTED;
   kaapi_mem_barrier();
     
   /* busy wait thief receive preemption */
@@ -158,7 +158,7 @@ int kaapi_preemptasync_thief_helper
   kaapi_writemem_barrier();
 
   /* signal thief preemption */
-  *ktr->status = KAAPI_TASK_S_PREEMPTED;
+  *ktr->preempt = KAAPI_TASK_S_PREEMPTED;
   
   if (!ktr->thief_term) return EBUSY;
   return 0;

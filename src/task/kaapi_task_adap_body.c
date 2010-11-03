@@ -80,7 +80,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
   */  
-  sc->preempt          = &self_thread->reply.status;
+  sc->preempt          = &self_thread->reply.preempt;
   sc->save_splitter    = 0;
   sc->save_argsplitter = 0;
   sc->ownertask = kaapi_thread_toptask(thread);
