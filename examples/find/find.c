@@ -241,8 +241,11 @@ static int extract_seq(work_t* w, double** pos, double** end)
 static void thief_entrypoint
 (void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
 {
-  /* process the work */
+  /* input work */
   thief_work_t* const work = (thief_work_t*)args;
+
+  /* resulting work */
+  thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
 
   /* key to find */
   const double key = work->key;
@@ -252,7 +255,7 @@ static void thief_entrypoint
   {
     if (*work->beg == key)
     {
-      work->res = work->beg;
+      res_work->res = work->beg;
       break ;
     }
 
@@ -274,10 +277,8 @@ static void thief_entrypoint
   }
 
   /* we are finished, update results. */
-  thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
-  res_work->beg = 0;
-  res_work->end = 0;
-  res_work->res = work->res;
+  res_work->beg = work->beg;
+  res_work->end = work->end;
 }
 
 
