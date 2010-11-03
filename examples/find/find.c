@@ -244,19 +244,15 @@ static void thief_entrypoint
   /* process the work */
   thief_work_t* const work = (thief_work_t*)args;
 
-  /* range to process */
-  double* beg = work->beg;
-  double* end = work->end;
-
   /* key to find */
   const double key = work->key;
 
   /* for key in [pos, end[ */
-  for (; beg != end; ++beg)
+  for (; work->beg < work->end; ++work->beg)
   {
-    if (*beg == key)
+    if (*work->beg == key)
     {
-      work->res = beg;
+      work->res = work->beg;
       break ;
     }
 
@@ -367,8 +363,7 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
 
-/*   for (ac = 0; ac < 1000; ++ac) */
-  for (ac = 0; ac < 1; ++ac)
+  for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
 
@@ -376,6 +371,7 @@ int main(int ac, char** av)
       array[i] = (double)i;
 
     const double key = (double)(ITEM_COUNT - 1);
+
     const size_t res = find( array, ITEM_COUNT, key );
 
     for (i = 0; i < ITEM_COUNT; ++i)
