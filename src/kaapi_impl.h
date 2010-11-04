@@ -639,8 +639,14 @@ static inline int kaapi_task_teststate( kaapi_task_t* task, kaapi_uintptr_t stat
    Steal = 1 means locked.
  */
 
-inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
+inline static void kaapi_task_lock_adaptive_steal(kaapi_stealcontext_t* sc)
 {
+#if 0
+  /* does not work, unlock may overwrite the
+     STEAL state set by the splitter, making
+     the synchro protocol fail.
+   */
+
   const uintptr_t locked_state =
     KAAPI_MASK_BODY_STEAL |
     KAAPI_MASK_BODY_EXEC |
@@ -654,13 +660,25 @@ inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
 
     kaapi_slowdown_cpu();
   }
+#else
+  while (1)
+  {
+    if ((KAAPI_ATOMIC_READ(&sc->thieves.list.lock) == 0) && KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
+      break ;
+    kaapi_slowdown_cpu();
+  }
+#endif
 }
 
-inline static void kaapi_task_unlock_adaptive_steal(kaapi_task_t* task)
+inline static void kaapi_task_unlock_adaptive_steal(kaapi_stealcontext_t* sc)
 {
+#if 0 /* not working, cf. above comment */
   const uintptr_t unlocked_state =
     KAAPI_MASK_BODY_EXEC | (uintptr_t)kaapi_adapt_body;
   kaapi_task_setstate_barrier(task, unlocked_state);
+#else
+  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+#endif
 }
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

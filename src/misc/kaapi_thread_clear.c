@@ -70,6 +70,12 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   sc->splitter    = 0;
   sc->argsplitter = 0;
 
+  /* todo: should it go to the adapt body to shorten steal path */
+  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+  sc->thieves.list.head = 0;
+  sc->thieves.list.tail = 0;
+  KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
+
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;
 #endif

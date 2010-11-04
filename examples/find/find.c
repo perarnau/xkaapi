@@ -62,8 +62,8 @@ typedef struct work
 
   double* array;
 
-  volatile size_t beg;
-  volatile size_t end;
+  volatile size_t beg __attribute__((aligned));
+  volatile size_t end __attribute__((aligned));
 
   size_t res;
 
@@ -150,6 +150,7 @@ static int splitter (
     /* for reduction, a result is needed. take care of initializing it */
     kaapi_taskadaptive_result_t* const ktr =
       kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
+
     ((thief_work_t*)ktr->data)->beg = 0;
     ((thief_work_t*)ktr->data)->end = 0;
     ((thief_work_t*)ktr->data)->res = 0;
@@ -190,6 +191,7 @@ static int reducer
   /* check if the thief found a result */
   if (tw->res != 0)
   {
+    /* do not continue the work */
     vw->res = tw->res - vw->array;
     return 0;
   }
@@ -322,7 +324,15 @@ static size_t find( double* array, size_t size, double key )
       if (key == *pos)
       {
 	/* key found, disable stealing... */
+	lock_work(&work);
+
 	kaapi_steal_setsplitter(sc, 0, 0);
+
+	work.beg = 0;
+	work.end = 0;
+
+	unlock_work(&work);
+
 	work.res = pos - array;
 	/* ... and abort thieves processing */
 	goto preempt_thieves;
@@ -380,8 +390,12 @@ int main(int ac, char** av)
 	break ;
     if (i == ITEM_COUNT)
       i = (size_t)-1;
+
     if (i != res)
+    {
       printf("invalid %lu != %lu\n", i, res);
+      exit(-1);
+    }
   }
 
   printf("done\n");

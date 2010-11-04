@@ -161,7 +161,7 @@ static inline void kaapi_readmem_barrier()
   OSMemoryBarrier();
 #elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("":::"memory");
+  __asm__ __volatile__ ("lfence":::"memory");
 #else
 #  error "bad configuration"
 #endif
@@ -564,6 +564,8 @@ typedef struct kaapi_stealcontext_t {
     /* 1) a thief list if preemption enabled */
     struct
     {
+      kaapi_atomic_t lock;
+
       struct kaapi_taskadaptive_result_t* volatile head
       __attribute__((aligned(KAAPI_CACHE_LINE)));
 

@@ -51,7 +51,7 @@ int kaapi_remove_finishedthief(
   kaapi_taskadaptive_result_t* ktr
 )
 {
-  kaapi_task_lock_adaptive_steal(sc->ownertask);
+  kaapi_task_lock_adaptive_steal(sc);
 
   if (ktr->rhead != 0)
   {
@@ -86,7 +86,7 @@ int kaapi_remove_finishedthief(
   ktr->next = 0;
   ktr->prev = 0;
 
-  kaapi_task_unlock_adaptive_steal(sc->ownertask);
+  kaapi_task_unlock_adaptive_steal(sc);
 
   return 0;
 }

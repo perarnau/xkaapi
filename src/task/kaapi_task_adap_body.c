@@ -67,15 +67,9 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
      build a full stealcontext. then call the user body.
    */
 
-  self_thread = kaapi_self_thread_context();
-
   /* retrieve the adaptive reply data */
   adata = (kaapi_adaptive_reply_data_t*)arg;
 
-  /* sc is not the same as self_thread->sc. it is located
-     in static_reply. btw, there is no gain avoiding adata
-     dereference.
-   */
   sc = &adata->sc;
 
   /* this is the master task, return */
@@ -83,13 +77,15 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 
   /* todo: save the sp and sync if changed during
      the call (ie. wait for tasks forked)
-  */  
+  */
+
+  self_thread = kaapi_self_thread_context();
 
   /* header flag, msc, ktr init by remote write */
   sc->preempt          = &self_thread->static_reply.status;
   sc->save_splitter    = 0;
   sc->save_argsplitter = 0;
-  sc->ownertask = kaapi_thread_toptask(thread);
+  sc->ownertask	       = kaapi_thread_toptask(thread) + 1;
 
   /* finalize the stealcontext creation */
   kaapi_thread_save_frame(thread, &sc->frame);

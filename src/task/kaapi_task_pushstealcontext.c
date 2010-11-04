@@ -78,6 +78,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   if (flag & KAAPI_SC_PREEMPTION)
   {
     /* if preemption, thief list used ... */
+    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
     sc->thieves.list.head = 0;
     sc->thieves.list.tail = 0;
   }

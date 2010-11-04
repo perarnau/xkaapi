@@ -57,9 +57,11 @@ void kaapi_synchronize_steal(kaapi_stealcontext_t* sc)
      have incremented the thief count or add
      itself into the thieves list.
    */
+
   kaapi_writemem_barrier();
   while (kaapi_task_teststate(sc->ownertask, KAAPI_MASK_BODY_STEAL))
     kaapi_slowdown_cpu();
+  kaapi_readmem_barrier();
 }
 
 

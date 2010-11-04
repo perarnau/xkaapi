@@ -199,11 +199,13 @@ return_value:
 
       /* initialize and push the task */
       self_thread = kaapi_threadcontext2thread(kproc->thread);
+
       kaapi_task_init(
          kaapi_thread_toptask(self_thread),
          reply->u.s_task.body,
          (void*)reply->task_data.fubar
       );
+
       kaapi_thread_pushtask(self_thread);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
