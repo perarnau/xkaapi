@@ -65,7 +65,7 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   result->size_data = size;
   if ((size >0) && (data ==0)) {
     result->flag = KAAPI_RESULT_DATARTS;
-    result->data = (void*)(result+1);
+    result->data = (void*)((uintptr_t)result + sizeof(*result));
   }
   else {
     result->flag = KAAPI_RESULT_DATAUSR;
@@ -78,8 +78,8 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   result->rtail           = 0;
   result->prev            = 0;
   result->next            = 0;
-  result->addr_tofree	    = addr_tofree;
-  result->status	        = &kreq->reply->status;
+  result->addr_tofree	  = addr_tofree;
+  result->status	  = &kreq->reply->status;
 
   return result;
 }

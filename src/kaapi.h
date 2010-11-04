@@ -626,7 +626,7 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  volatile kaapi_uint64_t*	          status;		        /* pointer on the reply status, needed to send preemption */
+  volatile kaapi_uint64_t*	      status;	        /* pointer on the reply status, needed to send preemption */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   /* here begins the private part of the structure */
@@ -1244,14 +1244,12 @@ static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
     On return the victim argument may be read.
 */
 extern int kaapi_preemptpoint_before_reducer_call( 
-    struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
     void* arg_for_victim, 
     void* result_data, 
     int result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
-    struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
     int reducer_retval 
 );
@@ -1277,8 +1275,8 @@ static inline int kaapi_is_null(void* p)
 typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
 #define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(stc) ? \
-        kaapi_preemptpoint_before_reducer_call(stc->header.ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call(stc->header.ktr, stc, \
+    kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, result_data, result_size),  \
+        kaapi_preemptpoint_after_reducer_call( stc, \
         ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->header.ktr, stc->header.ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\

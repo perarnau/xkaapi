@@ -104,10 +104,8 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     */
     KAAPI_ATOMIC_DECR(&adata->sc.header.msc->thieves.count);
   }
-  else /* if (sc->ktr != 0) */
+  else if (adata->sc.header.ktr != 0) /* otherwise, preempted */
   {
-    kaapi_assert_debug(adata->sc.header.ktr);
-
     /* preemptive algorithms need to inform
        they are done so they can be reduced.
     */
