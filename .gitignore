@@ -14,6 +14,7 @@
 /api/kaapixx/ka_api_tuple.h
 /api/kaapixx/ka_api_clo.h
 /api/kaapixx/ka_api_spawn.h
+/api/kaapixx/ka_api_reqspawn.h
 /api/kaapixx/ka_api_execforeach.h
 /api/kaapixx/ka_api_execgraph.h
 
@@ -64,6 +65,7 @@ Makefile
 .dirstamp
 .libs/
 
+
 # Files created after tests (make ckeck)
 # Removed by 'make clean'
 /api/atha/check_header
@@ -98,3 +100,6 @@ Makefile
 
 # Doc repository...
 doc/www/scripts/.build
+
+#Mac OS
+.DS_Store
