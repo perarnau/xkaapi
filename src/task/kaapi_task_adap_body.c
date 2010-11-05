@@ -82,7 +82,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   self_thread = kaapi_self_thread_context();
 
   /* header flag, msc, ktr init by remote write */
-  sc->preempt          = &self_thread->static_reply.status;
+  sc->preempt          = &self_thread->static_reply.preempt;
   sc->save_splitter    = 0;
   sc->save_argsplitter = 0;
   sc->ownertask	       = kaapi_thread_toptask(thread) + 1;
@@ -122,7 +122,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 	 request and see the KAAPI_TASK_S_PREEMPTED reply.
        */
 
-      while (*ktr->status != KAAPI_TASK_S_PREEMPTED)
+      while (*ktr->preempt == 0)
 	kaapi_slowdown_cpu();
     }
   }

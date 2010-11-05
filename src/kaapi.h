@@ -626,7 +626,9 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  volatile kaapi_uint64_t*	      status;	        /* pointer on the reply status, needed to send preemption */
+
+  volatile kaapi_uint64_t*	      status;	        /* reply status pointer */
+  volatile kaapi_uint64_t*	      preempt;		/* preemption pointer */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   kaapi_task_t			      state;		/* ktr state represented by a task */
@@ -669,11 +671,13 @@ static inline void* kaapi_adaptive_result_data
 */
 typedef struct kaapi_reply_t {
 
-  /* every thread has a status word used for remote communication. 
+  /* every thread has a status and a preempt words used for remote
+     communication. 
      A pointer on this word is used both on the victim side to
      send preemption signal. The thief test preemption on this flag
    */
   volatile kaapi_uint64_t status;
+  volatile kaapi_uint64_t preempt;
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
@@ -1231,10 +1235,8 @@ extern int kaapi_remove_finishedthief(
 */
 static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
 {
-  kaapi_assert_debug(ksc->preempt !=0);
-
-  /* KAAPI_TASK_S_PREEMPTED = 0 */
-  return *ksc->preempt == 0;
+  kaapi_assert_debug(ksc->preempt != 0);
+  return *ksc->preempt == 1;
 }
 
 

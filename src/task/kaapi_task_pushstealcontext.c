@@ -68,7 +68,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
     (thread, sizeof(kaapi_stealcontext_t), sizeof(void*));
   kaapi_assert_debug(sc != 0);
 
-  sc->preempt           = &self_thread->static_reply.status;
+  sc->preempt           = &self_thread->static_reply.preempt;
   sc->splitter          = splitter;
   sc->argsplitter       = argsplitter;
   sc->header.flag       = flag;

@@ -126,9 +126,7 @@ int kaapi_preempt_thief_helper
   state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_PREEMPT);
   if (!(state & KAAPI_MASK_BODY_TERM))
   {
-    kaapi_assert_debug(*ktr->status == KAAPI_REPLY_S_TASK);
-
-    *ktr->status = KAAPI_TASK_S_PREEMPTED;
+    *ktr->preempt = 1;
     kaapi_mem_barrier();
 
     /* wait until task is terminated */
@@ -171,7 +169,8 @@ int kaapi_preemptasync_thief_helper
   kaapi_writemem_barrier();
 
   /* signal thief preemption */
-  *ktr->status = KAAPI_TASK_S_PREEMPTED;
+  *ktr->preempt = 1;
+
   if (kaapi_task_teststate(&ktr->state, KAAPI_MASK_BODY_TERM))
     return 0;
   return EBUSY;

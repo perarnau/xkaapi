@@ -103,7 +103,7 @@ int kaapi_preemptpoint_after_reducer_call(
   if (state & KAAPI_MASK_BODY_PREEMPT)
   {
     /* @see comment in kaapi_task_adap_body */
-    while (*ktr->status != KAAPI_TASK_S_PREEMPTED)
+    while (*ktr->preempt == 0)
       kaapi_slowdown_cpu();
   }
 

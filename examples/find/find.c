@@ -384,7 +384,7 @@ int main(int ac, char** av)
   double sum = 0.f;
   size_t i;
 
-#define ITEM_COUNT 100000
+#define ITEM_COUNT 1000000
   static double array[ITEM_COUNT];
 
   /* initialize the runtime */

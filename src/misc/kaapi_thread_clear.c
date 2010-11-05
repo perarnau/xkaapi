@@ -66,9 +66,12 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 
   /* here link between initial sc & the status where signal will be delivered */
   sc = &thread->static_reply.task_data.krd.sc;
-  sc->preempt     = &thread->static_reply.status;
+  sc->preempt     = &thread->static_reply.preempt;
   sc->splitter    = 0;
   sc->argsplitter = 0;
+
+  /* clear the preemption flag */
+  *sc->preempt	  = 0;
 
   /* todo: should it go to the adapt body to shorten steal path */
   KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
