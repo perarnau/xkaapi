@@ -1,8 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node5" href="$class_w_s_1_1_strategy.html" title="Strategy to define workstealing selection of nodes." alt="" coords="288,160,400,189"/>
-<area shape="rect" id="node2" href="$class_core_1_1_steal_algorithm.html" title="Base class to implement an algorithm for work stealingAll objects that inherit from..." alt="" coords="260,5,428,35"/>
-<area shape="rect" id="node7" href="$class_w_s_1_1_leader_of_cluster_strategy.html" title="LeaderOfClusterStrategy." alt="" coords="5,237,235,267"/>
-<area shape="rect" id="node9" href="$class_w_s_1_1_random_strategy.html" title="RandomStrategy." alt="" coords="259,237,429,267"/>
-<area shape="rect" id="node13" href="$class_w_s_1_1_round_robin_strategy.html" title="RoundRobinStrategy." alt="" coords="453,237,648,267"/>
-<area shape="rect" id="node11" href="$class_w_s_1_1_c_r_s_strategy.html" title="CRSStrategy." alt="" coords="275,315,413,344"/>
-</map>

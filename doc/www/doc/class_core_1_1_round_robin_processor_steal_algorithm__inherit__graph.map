@@ -1,7 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_core_1_1_wakeup_first_processor_steal_algorithm.html" title="DefaultStealAlgorithm of a K&#45;Processor1/ if local steal then try to wakeup thread..." alt="" coords="5,160,325,189"/>
-<area shape="rect" id="node4" href="$class_core_1_1_processor_steal_algorithm.html" title="StealAlgorithm of a K&#45;ProcessorAn instance of this class is attached to each processor..." alt="" coords="79,83,313,112"/>
-<area shape="rect" id="node6" href="$class_core_1_1_steal_algorithm.html" title="Base class to implement an algorithm for work stealingAll objects that inherit from..." alt="" coords="112,5,280,35"/>
-<area shape="rect" id="node8" href="$class_core_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor." alt="" coords="312,5,531,35"/>
-<area shape="rect" id="node10" href="$class_core_1_1_round_robin_victim.html" title="RoundRobin work stealing algorithm on a worksetDo roundrobin choice of the processor..." alt="" coords="349,160,539,189"/>
-</map>

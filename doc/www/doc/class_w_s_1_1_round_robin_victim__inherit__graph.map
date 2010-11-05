@@ -1,6 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node10" href="$class_w_s_1_1_round_robin_strategy.html" title="RoundRobinStrategy." alt="" coords="121,237,316,267"/>
-<area shape="rect" id="node2" href="$class_w_s_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor and a victim processThis class..." alt="" coords="5,83,211,112"/>
-<area shape="rect" id="node4" href="$class_core_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor." alt="" coords="109,5,328,35"/>
-<area shape="rect" id="node6" href="$class_core_1_1_round_robin_victim.html" title="RoundRobin work stealing algorithm on a worksetDo roundrobin choice of the processor..." alt="" coords="235,83,424,112"/>
-</map>

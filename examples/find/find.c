@@ -240,22 +240,25 @@ static int extract_seq(work_t* w, double** pos, double** end)
  */
 static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
 {
-  /* process the work */
+  /* input work */
   thief_work_t* const work = (thief_work_t*)args;
   
   /* range to process */
   double* beg = work->beg;
   double* end = work->end;
   
+  /* resulting work */
+  thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
+
   /* key to find */
   const double key = work->key;
   
   /* for key in [pos, end[ */
-  for (; beg != end; ++beg)
+  for (; work->beg < work->end; ++work->beg)
   {
-    if (*beg == key)
+    if (*work->beg == key)
     {
-      work->res = beg;
+      res_work->res = work->beg;
       break ;
     }
     
@@ -263,10 +266,10 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
      case, work is copied into the ktr data and then
      passed as an argument to the reducer called by
      the master.
-     note that checking for preemption should not be
-     done at each step of the iteration for performance
-     reasons.
-     */
+     Because preemption is a cooperative process, to be 
+     reactive the check of preemption should not be done 
+     at regular step of the iteration.
+    */
     const unsigned int is_preempted = kaapi_preemptpoint(
         sc, NULL, NULL, 
         (void*)work, sizeof(thief_work_t), 
@@ -280,10 +283,8 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
   }
   
   /* we are finished, update results. */
-  thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
-  res_work->beg = 0;
-  res_work->end = 0;
-  res_work->res = work->res;
+  res_work->beg = work->beg;
+  res_work->end = work->end;
 }
 
 
@@ -367,9 +368,8 @@ int main(int ac, char** av)
   
   /* initialize the runtime */
   kaapi_init();
-  
-  /*   for (ac = 0; ac < 1000; ++ac) */
-  for (ac = 0; ac < 1; ++ac)
+
+  for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
     
@@ -377,6 +377,7 @@ int main(int ac, char** av)
       array[i] = (double)i;
     
     const double key = (double)(ITEM_COUNT - 1);
+
     const size_t res = find( array, ITEM_COUNT, key );
     
     for (i = 0; i < ITEM_COUNT; ++i)

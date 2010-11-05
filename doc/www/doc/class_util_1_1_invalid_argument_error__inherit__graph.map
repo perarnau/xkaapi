@@ -1,6 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node7" href="$class_util_1_1_already_bind.html" title="Util::AlreadyBind" alt="" coords="5,237,147,267"/>
-<area shape="rect" id="node9" href="$class_util_1_1_no_found.html" title="Util::NoFound" alt="" coords="171,237,288,267"/>
-<area shape="rect" id="node2" href="$class_util_1_1_logic_error.html" title="Util::LogicError" alt="" coords="89,83,215,112"/>
-<area shape="rect" id="node4" href="$class_util_1_1_exception.html" title="Base class for the KAAPI&#39;s exception hierarchy Base class for hierarchy of error..." alt="" coords="91,5,213,35"/>
-</map>

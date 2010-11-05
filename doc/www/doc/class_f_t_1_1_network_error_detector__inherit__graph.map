@@ -1,6 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_f_t_1_1_failure_detector.html" title="FailureDetector objectThis object represents a failure detector. It defines methods..." alt="" coords="5,83,163,112"/>
-<area shape="rect" id="node4" href="$class_net_1_1_callback.html" title="Net::Callback" alt="" coords="187,83,304,112"/>
-<area shape="rect" id="node6" href="$class_util_1_1_callback.html" title="Util::Callback" alt="" coords="253,5,368,35"/>
-<area shape="rect" id="node8" href="$class_net_1_1_upcall.html" title="Net::Upcall" alt="" coords="328,83,427,112"/>
-</map>
