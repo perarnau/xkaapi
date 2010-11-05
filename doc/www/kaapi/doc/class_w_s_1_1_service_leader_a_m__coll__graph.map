@@ -1,9 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_w_s_1_1_service_leader_interface.html" title="Steal Service for distributed workstealing algorithm." alt="" coords="5,181,227,211"/>
-<area shape="rect" id="node4" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="135,85,233,115"/>
-<area shape="rect" id="node6" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="56,5,171,35"/>
-<area shape="rect" id="node8" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="376,5,475,35"/>
-<area shape="rect" id="node15" href="$class_net_1_1_service_manager.html" title="Manager of Kaapi servicesAn active message is send to a service. A service is an..." alt="" coords="383,85,556,115"/>
-<area shape="rect" id="node10" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="195,5,315,35"/>
-<area shape="rect" id="node13" href="$class_net_1_1_service.html" title="Net::Service" alt="" coords="307,181,416,211"/>
-</map>

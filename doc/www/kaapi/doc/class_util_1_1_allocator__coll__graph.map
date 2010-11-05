@@ -1,7 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_util_1_1_byte_allocator.html" title="ByteAllocator of fixed size objects with cache for fast allocation (thread unsafe)A..." alt="" coords="207,293,353,323"/>
-<area shape="rect" id="node4" href="$class_util_1_1_stack_list.html" title="Util::StackList\&lt; Bloc \&gt;" alt="" coords="192,197,368,227"/>
-<area shape="rect" id="node6" href="$class_util_1_1_linkable.html" title="Util::Linkable\&lt; Bloc \&gt;" alt="" coords="5,101,179,131"/>
-<area shape="rect" id="node9" href="$class_util_1_1_linkable.html" title="Base class to make cells linkable in single linked listTo be (de)linkable in single..." alt="" coords="16,5,168,35"/>
-<area shape="rect" id="node11" href="$class_util_1_1_stack_list.html" title="Thread linked list (thread unsafe)The StackList descriptor is linked to the top element..." alt="" coords="265,101,420,131"/>
-</map>

@@ -1,8 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node13" href="$class_sched_1_1_local_thread_group.html" title="Group of Sched::ThreadSuch object is created at the top level of the scheduling process..." alt="" coords="59,237,264,267"/>
-<area shape="rect" id="node2" href="$class_net_1_1_network_object.html" title="Net::NetworkObject" alt="" coords="5,83,165,112"/>
-<area shape="rect" id="node4" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="189,83,288,112"/>
-<area shape="rect" id="node6" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="51,5,165,35"/>
-<area shape="rect" id="node8" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="189,5,288,35"/>
-<area shape="rect" id="node10" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="312,5,432,35"/>
-</map>
