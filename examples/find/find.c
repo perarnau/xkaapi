@@ -153,9 +153,7 @@ static int splitter (
     kaapi_taskadaptive_result_t* const ktr =
       kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
 
-    ((thief_work_t*)ktr->data)->beg = 0;
-    ((thief_work_t*)ktr->data)->end = 0;
-    ((thief_work_t*)ktr->data)->res = 0;
+    /* printf("KTR(%p) -> %u\n", (void*)ktr, unit_size); fflush(stdout); */
 
     /* thief work: not adaptive result because no preemption is used here  */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task
@@ -164,6 +162,11 @@ static int splitter (
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;
     tw->res = 0;
+
+    /* initialize ktr task may be preempted before entrypoint */
+    ((thief_work_t*)ktr->data)->beg = tw->beg;
+    ((thief_work_t*)ktr->data)->end = tw->end;
+    ((thief_work_t*)ktr->data)->res = 0;
 
     /* reply head, preempt head */
     kaapi_reply_pushhead_adaptive_task(sc, req);
@@ -183,6 +186,8 @@ static int reducer
 
   /* thief work */
   thief_work_t* const tw = (thief_work_t*)tdata;
+
+  /* printf("REDUX_SIZE: %lu\n", tw->end - tw->beg); */
 
   /* if the master already has a result, the
      reducer purpose is only to abort thieves
@@ -248,6 +253,8 @@ static void thief_entrypoint
   /* input work */
   thief_work_t* const work = (thief_work_t*)args;
 
+  /* printf("WORK(%lu)\n", work->end - work->beg); */
+
   /* resulting work */
   thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
 
@@ -276,6 +283,7 @@ static void thief_entrypoint
     if (is_preempted)
     {
       /* we have been preempted, return. */
+      /* printf("PREEMPTED\n"); */
       return ;
     }
   }
@@ -346,6 +354,8 @@ static size_t find( double* array, size_t size, double key )
 
   if ((ktr = kaapi_get_thief_head(sc)) != NULL)
   {
+    /* printf("PREEMPT(%p)\n", (void*)ktr); */
+
     kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
 
     /* result not found, continue the work */
@@ -355,6 +365,8 @@ static size_t find( double* array, size_t size, double key )
     /* continue until no more thief */
     goto preempt_thieves;
   }
+
+  /* printf("DONE\n"); fflush(stdout); */
 
   /* wait for thieves */
   kaapi_task_end_adaptive(sc);
@@ -387,7 +399,7 @@ int main(int ac, char** av)
 
     const double key = (double)(ITEM_COUNT - 1);
 
-    printf("--\n");
+    /* printf("--\n"); */
 
     gettimeofday(&tms[0], NULL);
     const size_t res = find( array, ITEM_COUNT, key );

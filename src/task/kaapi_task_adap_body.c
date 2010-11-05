@@ -104,12 +104,27 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     */
     KAAPI_ATOMIC_DECR(&adata->sc.header.msc->thieves.count);
   }
-  else if (adata->sc.header.ktr != 0) /* otherwise, preempted */
+  /* otherwise, SC_PREEMPTION but not preempted */
+  else if (adata->sc.header.ktr != 0)
   {
     /* preemptive algorithms need to inform
        they are done so they can be reduced.
     */
-    adata->sc.header.ktr->thief_term = 1;
+
+    kaapi_taskadaptive_result_t* const ktr = adata->sc.header.ktr;
+    uintptr_t state;
+
+    state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
+    if (state & KAAPI_MASK_BODY_PREEMPT)
+    {
+      /* wait for the preemption status to be seen, otherwise we
+	 have a race where this thread leaves this code, emits a
+	 request and see the KAAPI_TASK_S_PREEMPTED reply.
+       */
+
+      while (*ktr->status != KAAPI_TASK_S_PREEMPTED)
+	kaapi_slowdown_cpu();
+    }
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);

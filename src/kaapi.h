@@ -629,8 +629,7 @@ typedef struct kaapi_taskadaptive_result_t {
   volatile kaapi_uint64_t*	      status;	        /* pointer on the reply status, needed to send preemption */
 
 #if defined(KAAPI_COMPILE_SOURCE)
-  /* here begins the private part of the structure */
-  volatile int                        thief_term;       /* */
+  kaapi_task_t			      state;		/* ktr state represented by a task */
 
 #define KAAPI_RESULT_DATAUSR    0x01
 #define KAAPI_RESULT_DATARTS    0x02

@@ -73,13 +73,13 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   }
 
   result->arg_from_victim = 0;
-  result->thief_term      = 0;
   result->rhead           = 0;
   result->rtail           = 0;
   result->prev            = 0;
   result->next            = 0;
   result->addr_tofree	  = addr_tofree;
   result->status	  = &kreq->reply->status;
+  result->state.u.state	  = 0;
 
   return result;
 }

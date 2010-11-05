@@ -52,8 +52,7 @@ void* kaapi_malloc_align
   uintptr_t align_addr;
   void* malloc_addr;
 
-  /* assume align_size a pow2 ie. 2^n+1 == 2^n * 2 */
-  kaapi_assert_debug((!align_size) || ((align_size << 1) == (align_size * 2)));
+  kaapi_assert_debug((!align_size) || !(align_size & (align_size - 1)));
 
   /* align_size in bytes */
   if (align_size)

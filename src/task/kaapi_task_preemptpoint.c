@@ -79,13 +79,6 @@ int kaapi_preemptpoint_before_reducer_call(
   ktr->rtail = stc->thieves.list.tail;
   stc->thieves.list.tail = 0;
   
-  /* delete the preemption flag. if we are here
-     the previous request has been replied ok
-     and we put this status back. dont know if
-     this is needed.
-   */
-  *ktr->status = KAAPI_REPLY_S_TASK;
-
   return 0;
 }
 
@@ -97,11 +90,22 @@ int kaapi_preemptpoint_after_reducer_call(
     int reducer_retval __attribute__((unused))
 )
 {
-  kaapi_assert_debug( stc->header.ktr != 0 );
+  kaapi_taskadaptive_result_t* const ktr = stc->header.ktr;
+  uintptr_t state;
+
+  kaapi_assert_debug( ktr != 0 );
 
   /* serialize previous line with next line */
   kaapi_writemem_barrier();
-  stc->header.ktr->thief_term = 1;
+
+  /* signal termination */
+  state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
+  if (state & KAAPI_MASK_BODY_PREEMPT)
+  {
+    /* @see comment in kaapi_task_adap_body */
+    while (*ktr->status != KAAPI_TASK_S_PREEMPTED)
+      kaapi_slowdown_cpu();
+  }
 
   /* adapt_body needs to know about preemption */
   stc->header.ktr = 0;

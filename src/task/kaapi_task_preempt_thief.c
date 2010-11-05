@@ -108,6 +108,8 @@ int kaapi_preempt_thief_helper
   kaapi_uint64_t t0;
 #endif
 
+  kaapi_uintptr_t state;
+
   kaapi_assert_debug(ktr != 0);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -120,12 +122,23 @@ int kaapi_preempt_thief_helper
   /* next write should ne be reorder with previous */
   kaapi_writemem_barrier();
 
-  *ktr->status = KAAPI_TASK_S_PREEMPTED;
-  kaapi_mem_barrier();
-    
-  /* busy wait thief receive preemption */
-  while (!ktr->thief_term) 
-    kaapi_slowdown_cpu();
+  /* preempt the task if not already terminated */
+  state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_PREEMPT);
+  if (!(state & KAAPI_MASK_BODY_TERM))
+  {
+    kaapi_assert_debug(*ktr->status == KAAPI_REPLY_S_TASK);
+
+    *ktr->status = KAAPI_TASK_S_PREEMPTED;
+    kaapi_mem_barrier();
+
+    /* wait until task is terminated */
+    while (1)
+    {
+      if (kaapi_task_teststate(&ktr->state, KAAPI_MASK_BODY_TERM))
+	break ;
+      kaapi_slowdown_cpu();
+    }
+  }
 
   /* remove thief and replace the thieves of ktr into the list */
   kaapi_remove_finishedthief(sc, ktr);
@@ -159,8 +172,8 @@ int kaapi_preemptasync_thief_helper
 
   /* signal thief preemption */
   *ktr->status = KAAPI_TASK_S_PREEMPTED;
-  
-  if (!ktr->thief_term) return EBUSY;
-  return 0;
+  if (kaapi_task_teststate(&ktr->state, KAAPI_MASK_BODY_TERM))
+    return 0;
+  return EBUSY;
 }
 

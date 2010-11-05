@@ -430,6 +430,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #if (SIZEOF_VOIDP == 4)
 #warning "This code assume that 4 higher bits is available on any function pointer. It was not verify of this configuration"
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 28)
+#  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 28)
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 28)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 28)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 28)
@@ -449,6 +450,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 
 #elif (SIZEOF_VOIDP == 8)
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 60UL)
+#  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 60UL)
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 60UL)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 60UL)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 60UL)
