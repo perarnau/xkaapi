@@ -182,10 +182,6 @@ static void thief_entrypoint
   /* resulting work */
   thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
 
-#if 0 /* uncomment to make thief stealable */
-  kaapi_steal_setsplitter(sc, splitter, work);
-#endif
-
   /* res += [work->beg, work->end[ */
   while (work->beg != work->end)
   {
