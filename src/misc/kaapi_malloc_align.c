@@ -43,28 +43,37 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdint.h>
 #include <stdlib.h>
 
-void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree)
+void* kaapi_malloc_align
+(unsigned int align_size, size_t size, void** addr_tofree)
 {
+  uintptr_t align_addr;
+  void* malloc_addr;
+
+  kaapi_assert_debug((!align_size) || !(align_size & (align_size - 1)));
+
   /* align_size in bytes */
-  if (align_size == 0)
+  if (align_size)
   {
-    *addr_tofree = malloc(size);
-    return *addr_tofree;
+    const kaapi_uintptr_t align_mask = align_size - 1UL;
+
+    malloc_addr = malloc(align_size + size);
+    align_addr = (uintptr_t)malloc_addr;
+    if ((align_addr & align_mask) != 0UL)
+      align_addr = (align_addr + align_mask) & ~align_mask;
+
+    kaapi_assert_debug((align_addr & align_mask) == 0U);
+  }
+  else /* if (align_size == 0) */
+  {
+    malloc_addr = malloc(size);
+    align_addr = (uintptr_t)malloc_addr;
   }
 
-  const kaapi_uintptr_t align_mask = align_size - 1;
-  void* retval = (void*)malloc(align_mask + size);
-  if (retval != NULL)
-  {
-    if (addr_tofree !=0)
-      *addr_tofree = retval;
+  if (addr_tofree != 0)
+    *addr_tofree = malloc_addr;
 
-    if ((((kaapi_uintptr_t)retval) & align_mask) != 0U)
-      retval = (void*)(((kaapi_uintptr_t)retval + align_mask) & ~align_mask);
-    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align_mask) == 0U);
-  }
-
-  return retval;
+  return (void*)align_addr;
 }

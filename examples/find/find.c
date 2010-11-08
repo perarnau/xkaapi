@@ -44,6 +44,8 @@
 #include "kaapi.h"
 #include <string.h>
 #include <sys/types.h>
+#define __USE_BSD 1
+#include <sys/time.h>
 
 
 /** Description of the example.
@@ -61,10 +63,10 @@ typedef struct work
   double key;
   
   double* array;
-  
-  volatile size_t beg;
-  volatile size_t end;
-  
+
+  volatile size_t beg __attribute__((aligned));
+  volatile size_t end __attribute__((aligned));
+
   size_t res;
   
 } work_t;
@@ -149,11 +151,10 @@ static int splitter (
   {
     /* for reduction, a result is needed. take care of initializing it */
     kaapi_taskadaptive_result_t* const ktr =
-    kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
-    ((thief_work_t*)ktr->data)->beg = 0;
-    ((thief_work_t*)ktr->data)->end = 0;
-    ((thief_work_t*)ktr->data)->res = 0;
-    
+      kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
+
+    /* printf("KTR(%p) -> %u\n", (void*)ktr, unit_size); fflush(stdout); */
+
     /* thief work: not adaptive result because no preemption is used here  */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task
     ( sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), ktr );
@@ -161,7 +162,12 @@ static int splitter (
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;
     tw->res = 0;
-    
+
+    /* initialize ktr task may be preempted before entrypoint */
+    ((thief_work_t*)ktr->data)->beg = tw->beg;
+    ((thief_work_t*)ktr->data)->end = tw->end;
+    ((thief_work_t*)ktr->data)->res = 0;
+
     /* reply head, preempt head */
     kaapi_reply_pushhead_adaptive_task(sc, req);
   }
@@ -180,7 +186,9 @@ static int reducer
   
   /* thief work */
   thief_work_t* const tw = (thief_work_t*)tdata;
-  
+
+  /* printf("REDUX_SIZE: %lu\n", tw->end - tw->beg); */
+
   /* if the master already has a result, the
    reducer purpose is only to abort thieves
    */
@@ -190,6 +198,7 @@ static int reducer
   /* check if the thief found a result */
   if (tw->res != 0)
   {
+    /* do not continue the work */
     vw->res = tw->res - vw->array;
     return 0;
   }
@@ -242,11 +251,9 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
 {
   /* input work */
   thief_work_t* const work = (thief_work_t*)args;
-  
-  /* range to process */
-  double* beg = work->beg;
-  double* end = work->end;
-  
+
+  /* printf("WORK(%lu)\n", work->end - work->beg); */
+
   /* resulting work */
   thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
 
@@ -278,6 +285,7 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread, kaapi_stealcont
     if (is_preempted)
     {
       /* we have been preempted, return. */
+      /* printf("PREEMPTED\n"); */
       return ;
     }
   }
@@ -327,11 +335,19 @@ redo_work:
     for (; pos != end; ++pos)
       if (key == *pos)
       {
-        /* key found, disable stealing... */
-        kaapi_steal_setsplitter(sc, 0, 0);
-        work.res = pos - array;
-        /* ... and abort thieves processing */
-        goto preempt_thieves;
+	/* key found, disable stealing... */
+	lock_work(&work);
+
+	kaapi_steal_setsplitter(sc, 0, 0);
+
+	work.beg = 0;
+	work.end = 0;
+
+	unlock_work(&work);
+
+	work.res = pos - array;
+	/* ... and abort thieves processing */
+	goto preempt_thieves;
       }
   }
   
@@ -339,6 +355,8 @@ redo_work:
 preempt_thieves:
   if ((ktr = kaapi_get_thief_head(sc)) != NULL)
   {
+    /* printf("PREEMPT(%p)\n", (void*)ktr); */
+
     kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
     
     /* result not found, continue the work */
@@ -348,7 +366,9 @@ preempt_thieves:
     /* continue until no more thief */
     goto preempt_thieves;
   }
-  
+
+  /* printf("DONE\n"); fflush(stdout); */
+
   /* wait for thieves */
   kaapi_task_end_adaptive(sc);
   /* here: 1/ all thieves have finish their result */
@@ -361,9 +381,11 @@ preempt_thieves:
  */
 int main(int ac, char** av)
 {
+  struct timeval tms[3];
+  double sum = 0.f;
   size_t i;
-  
-#define ITEM_COUNT 100000
+
+#define ITEM_COUNT 1000000
   static double array[ITEM_COUNT];
   
   /* initialize the runtime */
@@ -378,19 +400,30 @@ int main(int ac, char** av)
     
     const double key = (double)(ITEM_COUNT - 1);
 
+    /* printf("--\n"); */
+
+    gettimeofday(&tms[0], NULL);
     const size_t res = find( array, ITEM_COUNT, key );
-    
+    gettimeofday(&tms[1], NULL);
+    timersub(&tms[1], &tms[0], &tms[2]);
+    const double diff = (double)(tms[2].tv_sec * 1000000 + tms[2].tv_usec);
+    sum += diff;
+
     for (i = 0; i < ITEM_COUNT; ++i)
       if (array[i] == key)
         break ;
     if (i == ITEM_COUNT)
       i = (size_t)-1;
+
     if (i != res)
+    {
       printf("invalid %lu != %lu\n", i, res);
+/*       exit(-1); */
+    }
   }
-  
-  printf("done\n");
-  
+
+  printf("done: %lf\n", sum / 1000);
+
   /* finalize the runtime */
   kaapi_finalize();
   

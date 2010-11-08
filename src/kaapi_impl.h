@@ -247,8 +247,7 @@ extern kaapi_rtparam_t kaapi_default_param;
     \ingroup WS
 */
 enum kaapi_reply_status_t {
-  KAAPI_TASK_S_PREEMPTED = 0,
-  KAAPI_REQUEST_S_POSTED,
+  KAAPI_REQUEST_S_POSTED = 0,
   KAAPI_REPLY_S_NOK,
   KAAPI_REPLY_S_TASK,
   KAAPI_REPLY_S_TASK_FMT,
@@ -430,6 +429,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #if (SIZEOF_VOIDP == 4)
 #warning "This code assume that 4 higher bits is available on any function pointer. It was not verify of this configuration"
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 28)
+#  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 28) /* must be different from term */
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 28)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 28)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 28)
@@ -449,6 +449,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 
 #elif (SIZEOF_VOIDP == 8)
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 60UL)
+#  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 60UL) /* must be different from term */
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 60UL)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 60UL)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 60UL)
@@ -639,8 +640,14 @@ static inline int kaapi_task_teststate( kaapi_task_t* task, kaapi_uintptr_t stat
    Steal = 1 means locked.
  */
 
-inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
+inline static void kaapi_task_lock_adaptive_steal(kaapi_stealcontext_t* sc)
 {
+#if 0
+  /* does not work, unlock may overwrite the
+     STEAL state set by the splitter, making
+     the synchro protocol fail.
+   */
+
   const uintptr_t locked_state =
     KAAPI_MASK_BODY_STEAL |
     KAAPI_MASK_BODY_EXEC |
@@ -654,13 +661,25 @@ inline static void kaapi_task_lock_adaptive_steal(kaapi_task_t* task)
 
     kaapi_slowdown_cpu();
   }
+#else
+  while (1)
+  {
+    if ((KAAPI_ATOMIC_READ(&sc->thieves.list.lock) == 0) && KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
+      break ;
+    kaapi_slowdown_cpu();
+  }
+#endif
 }
 
-inline static void kaapi_task_unlock_adaptive_steal(kaapi_task_t* task)
+inline static void kaapi_task_unlock_adaptive_steal(kaapi_stealcontext_t* sc)
 {
+#if 0 /* not working, cf. above comment */
   const uintptr_t unlocked_state =
     KAAPI_MASK_BODY_EXEC | (uintptr_t)kaapi_adapt_body;
   kaapi_task_setstate_barrier(task, unlocked_state);
+#else
+  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+#endif
 }
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

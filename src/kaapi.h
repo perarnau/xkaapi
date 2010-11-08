@@ -161,7 +161,7 @@ static inline void kaapi_readmem_barrier()
   OSMemoryBarrier();
 #elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("":::"memory");
+  __asm__ __volatile__ ("lfence":::"memory");
 #else
 #  error "bad configuration"
 #endif
@@ -564,6 +564,8 @@ typedef struct kaapi_stealcontext_t {
     /* 1) a thief list if preemption enabled */
     struct
     {
+      kaapi_atomic_t lock;
+
       struct kaapi_taskadaptive_result_t* volatile head
       __attribute__((aligned(KAAPI_CACHE_LINE)));
 
@@ -624,11 +626,12 @@ typedef struct kaapi_taskadaptive_result_t {
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  volatile kaapi_uint64_t*	          preempt;		        /* pointer on the reply status, needed to send preemption */
+
+  volatile kaapi_uint64_t*	          status;	          /* reply status pointer */
+  volatile kaapi_uint64_t*	          preempt;          /* preemption pointer */
 
 #if defined(KAAPI_COMPILE_SOURCE)
-  /* here begins the private part of the structure */
-  volatile int                        thief_term;       /* */
+  kaapi_task_t			      state;		/* ktr state represented by a task */
 
 #define KAAPI_RESULT_DATAUSR    0x01
 #define KAAPI_RESULT_DATARTS    0x02
@@ -668,13 +671,13 @@ static inline void* kaapi_adaptive_result_data
 */
 typedef struct kaapi_reply_t {
 
-  /* every thread has a status word used for remote communication. 
+  /* every thread has a status and a preempt words used for remote
+     communication. 
      A pointer on this word is used both on the victim side to
      send preemption signal. The thief test preemption on this flag
    */
   volatile kaapi_uint64_t status;
-
-  volatile kaapi_uint64_t	preempt;		  /* needed to recv preemption signal */
+  volatile kaapi_uint64_t preempt;
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
@@ -1232,10 +1235,8 @@ extern int kaapi_remove_finishedthief(
 */
 static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
 {
-  kaapi_assert_debug(ksc->preempt !=0);
-
-  /* KAAPI_TASK_S_PREEMPTED = 0 */
-  return *ksc->preempt == 0;
+  kaapi_assert_debug(ksc->preempt != 0);
+  return *ksc->preempt == 1;
 }
 
 
@@ -1244,14 +1245,12 @@ static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
     On return the victim argument may be read.
 */
 extern int kaapi_preemptpoint_before_reducer_call( 
-    struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
     void* arg_for_victim, 
     void* result_data, 
     int result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
-    struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
     int reducer_retval 
 );
@@ -1277,8 +1276,8 @@ static inline int kaapi_is_null(void* p)
 typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
 #define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(stc) ? \
-        kaapi_preemptpoint_before_reducer_call(stc->header.ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call(stc->header.ktr, stc, \
+    kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, result_data, result_size),  \
+        kaapi_preemptpoint_after_reducer_call( stc, \
         ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->header.ktr, stc->header.ktr->arg_from_victim, ##__VA_ARGS__))) \
     : \
         0\

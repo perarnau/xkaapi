@@ -188,19 +188,16 @@ return_value:
         = kaapi_format_resolvebyfmit( reply->u.s_taskfmt.fmt )->entrypoint[kproc->proc_type];
       kaapi_assert_debug(reply->u.s_task.body);
 
-    case KAAPI_TASK_S_PREEMPTED:
-      /* the task may have been preempted in between. in this case, we assume the 
-         reply was previously replied with a REPLY_S_TASK.
-       */
-
     case KAAPI_REPLY_S_TASK:
       /* initialize and push the task */
       self_thread = kaapi_threadcontext2thread(kproc->thread);
+
       kaapi_task_init(
          kaapi_thread_toptask(self_thread),
          reply->u.s_task.body,
          (void*)reply->task_data.fubar
       );
+
       kaapi_thread_pushtask(self_thread);
 
 #if defined(KAAPI_USE_PERFCOUNTER)

@@ -20,7 +20,7 @@ check_PROGRAMS= \
 	fibo_kaapixx_opt        \
 	fibo_kaapixx_sync       \
 	qsort_cilk2kaapi        \
-  matrix_multiply_cilk2kaapi \
+	matrix_multiply_cilk2kaapi \
 	branchbound_apiatha     \
 	nqueens_apiatha         \
 	nqueens_apikaapi        \

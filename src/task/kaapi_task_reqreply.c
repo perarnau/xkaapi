@@ -69,9 +69,7 @@ int kaapi_request_reply(
     }
 #endif
 
-    /* concurrent with preempt_thief, but the splitter
-       (ie. ourself) already holds the steal lock
-     */
+    kaapi_task_lock_adaptive_steal(sc);
 
     /* insert in head or tail */
     if (sc->thieves.list.head == 0)
@@ -91,6 +89,8 @@ int kaapi_request_reply(
       sc->thieves.list.tail->next = ktr;
       sc->thieves.list.tail = ktr;
     }
+
+    kaapi_task_unlock_adaptive_steal(sc);
   }
   else
   {
