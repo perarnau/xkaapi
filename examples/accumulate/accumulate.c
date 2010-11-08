@@ -182,6 +182,10 @@ static void thief_entrypoint
   /* resulting work */
   thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
 
+#if 0 /* uncomment to make thief stealable */
+  kaapi_steal_setsplitter(sc, splitter, work);
+#endif
+
   /* res += [work->beg, work->end[ */
   while (work->beg != work->end)
   {
@@ -254,7 +258,7 @@ static double accumulate(const double* array, size_t size)
 
 int main(int ac, char** av)
 {
-#define ITEM_COUNT 100000
+#define ITEM_COUNT 1000000
   static double array[ITEM_COUNT];
 
   /* initialize the runtime */
@@ -264,7 +268,7 @@ int main(int ac, char** av)
   for (size_t i = 0; i < ITEM_COUNT; ++i)
     array[i] = 2.f;
 
-  for (ac = 0; ac < 1000; ++ac)
+  for (ac = 0; ac < 100; ++ac)
   {
     double res = accumulate(array, ITEM_COUNT);
     if (res != (double)(2 * ITEM_COUNT))
