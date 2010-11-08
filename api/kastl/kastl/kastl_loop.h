@@ -294,6 +294,9 @@ namespace impl
 
   typedef void (*kastl_entry_t)(void*, kaapi_thread_t*);
 
+  typedef void (*kastl_thief_entry_t)
+  (void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+
   // reduction implmentation.
 
   // reduce thief context, no termination
@@ -593,7 +596,7 @@ namespace impl
   // forward decls
   template<typename Result, typename Sequence, typename Body, typename Settings,
 	   bool TerminateTag, bool ReduceTag>
-  static void thief_entry(void*, kaapi_thread_t*);
+  static void thief_entry(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
   // split victim context, result
   template
@@ -745,11 +748,11 @@ namespace impl
 	(request, Sequence(pos, unit_size));
 
       // push the reply task
-      kastl_entry_t const entryfn = thief_entry
+      kastl_thief_entry_t const entryfn = thief_entry
 	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
       context_type* const tc = (context_type*)
 	kaapi_reply_init_adaptive_task
-	(sc, request, entryfn, sizeof(context_type), ktr);
+	(sc, request, (kaapi_task_body_t)entryfn, sizeof(context_type), ktr);
 
       thief_context_type* const rtc =
 	static_cast<thief_context_type*>(ktr->data);
@@ -1025,7 +1028,8 @@ namespace impl
   // task entry points
   template<typename Result, typename Sequence, typename Body, typename Settings,
 	   bool TerminateTag, bool ReduceTag>
-  static void thief_entry(void* arg, kaapi_thread_t* thread)
+  static void thief_entry
+  (void* arg, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
   {
     typedef split_task_context
       <Result, Sequence, Body, Settings, ReduceTag> context_type;
@@ -1041,14 +1045,12 @@ namespace impl
     kastl_splitter_t const splitfn = split_function
       <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
-    kaapi_stealcontext_t* const sc = kaapi_task_begin_adaptive
-      (thread, KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, splitfn, arg);
+    // enable stealing
+    kaapi_steal_setsplitter(sc, splitfn, arg);
 
     xtr_type xtr(tc->_settings);
     outter_loop_type::run
       (sc, tc->_ktr, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
-
-    kaapi_task_end_adaptive(sc);
   }
 
   static void wait_a_bit(void)
