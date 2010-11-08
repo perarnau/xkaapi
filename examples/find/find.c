@@ -124,7 +124,7 @@ static int splitter (
   const size_t total_size = vw->end - vw->beg;
 
   /* how much per req */
-#define CONFIG_PAR_GRAIN 128
+#define CONFIG_PAR_GRAIN 256
   unit_size = 0;
   if (total_size > CONFIG_PAR_GRAIN)
   {
@@ -218,7 +218,7 @@ static int reducer
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 128
   size_t seq_size = CONFIG_SEQ_GRAIN;
 
   size_t i, j;
