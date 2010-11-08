@@ -65,6 +65,12 @@ static inline void conc_range_init
   cr->_end = end;
 }
 
+static inline void conc_range_empty
+(conc_range_t* cr)
+{
+  cr->_beg = CONC_SIZE_MAX;
+}
+
 static inline unsigned int conc_range_pop_front
 (conc_range_t* cr, conc_size_t* beg, conc_size_t* end, conc_size_t size)
 {
@@ -95,6 +101,8 @@ static inline unsigned int conc_range_pop_front_max
 {
   /* wrapper around the above function with size a maximum size
    */
+
+  /* todo: should reread size = min(max_size, cur_size) */
 
   for (; size; --size)
     if (conc_range_pop_front(cr, beg, end, size))
