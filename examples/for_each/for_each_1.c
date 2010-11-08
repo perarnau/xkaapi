@@ -45,6 +45,7 @@
 #include <string.h>
 #include <math.h>
 #include <sys/types.h>
+#include "../common/conc_range.h"
 
 
 /** Description of the example.
@@ -64,13 +65,10 @@
 */
 typedef struct work
 {
-  kaapi_atomic_t lock;
+  conc_range_t cr;
 
   void (*op)(double*);
   double* array;
-
-  volatile size_t beg;
-  volatile size_t end;
 
 } work_t;
 
@@ -84,20 +82,6 @@ typedef work_t thief_work_t;
 static void thief_entrypoint(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
 
-/* spinlocking */
-static void lock_work(work_t* w)
-{
-  while ( (KAAPI_ATOMIC_READ(&w->lock) == 1) || !KAAPI_ATOMIC_CAS(&w->lock, 0, 1))
-    ;
-}
-
-/* unlock */
-static void unlock_work(work_t* w)
-{
-  KAAPI_ATOMIC_WRITE(&w->lock, 0);
-}
-
-
 /* parallel work splitter */
 static int splitter (
   kaapi_stealcontext_t* sc, 
@@ -109,52 +93,45 @@ static int splitter (
   work_t* const vw = (work_t*)args;
 
   /* stolen range */
-  size_t i, j;
+  conc_size_t i, j;
+  conc_size_t range_size;
 
   /* reply count */
   int nrep = 0;
 
   /* size per request */
-  unsigned int unit_size;
+  conc_size_t unit_size;
 
-  /* concurrent with victim */
-  lock_work(vw);
-
-  const size_t total_size = vw->end - vw->beg;
+ redo_steal:
+  /* do not steal if range size <= PAR_GRAIN */
+#define CONFIG_PAR_GRAIN 128
+  range_size = conc_range_size(&vw->cr);
+  if (range_size <= CONFIG_PAR_GRAIN)
+    return 0;
 
   /* how much per req */
-#define CONFIG_PAR_GRAIN 512
-  unit_size = 0;
-  if (total_size > CONFIG_PAR_GRAIN)
+  unit_size = range_size / (nreq + 1);
+  if (unit_size == 0)
   {
-    unit_size = total_size / (nreq + 1);
-    if (unit_size == 0)
-    {
-      nreq = (total_size / CONFIG_PAR_GRAIN) - 1;
-      unit_size = CONFIG_PAR_GRAIN;
-    }
-
-    /* steal and update victim range */
-    const size_t stolen_size = unit_size * nreq;
-    i = vw->end - stolen_size;
-    j = vw->end;
-    vw->end -= stolen_size;
+    nreq = (range_size / CONFIG_PAR_GRAIN) - 1;
+    unit_size = CONFIG_PAR_GRAIN;
   }
 
-  unlock_work(vw);
-
-  if (unit_size == 0)
-    return 0;
+  /* perform the actual steal. if the range
+     changed size in between, redo the steal
+   */
+  if (!conc_range_pop_back(&vw->cr, &i, &j, nreq * unit_size))
+    goto redo_steal;
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
     /* thief work */
     thief_work_t* const tw = kaapi_reply_init_adaptive_task
       ( sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), 0 );
+
+    conc_range_init(&tw->cr, j - unit_size, j);
     tw->op    = vw->op;
-    tw->array = vw->array+j-unit_size;
-    tw->beg   = 0;
-    tw->end   = unit_size;
+    tw->array = vw->array;
 
     kaapi_reply_push_adaptive_task(sc, req);
   }
@@ -168,30 +145,17 @@ static int splitter (
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-#define CONFIG_SEQ_GRAIN 512
-  size_t seq_size = CONFIG_SEQ_GRAIN;
 
-  size_t i, j;
+  conc_size_t i, j;
 
-  lock_work(w);
-
-  i = w->beg;
-
-  if (seq_size > (w->end - w->beg))
-    seq_size = w->end - w->beg;
-
-  j = w->beg + seq_size;
-  w->beg += seq_size;
-
-  unlock_work(w);
-
-  if (seq_size == 0)
-    return -1;
+#define CONFIG_SEQ_GRAIN 128
+  if (conc_range_pop_front_max(&w->cr, &i, &j, CONFIG_SEQ_GRAIN) == 0)
+    return -1; /* failure */
 
   *pos = w->array + i;
   *end = w->array + j;
 
-  return 0;
+  return 0; /* success */
 }
 
 
@@ -238,11 +202,9 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   thread = kaapi_self_thread();
 
   /* initialize work */
-  KAAPI_ATOMIC_WRITE(&work.lock, 0);
+  conc_range_init(&work.cr, 0, (conc_size_t)size);
   work.op    = op;
   work.array = array;
-  work.beg   = 0;
-  work.end   = size;
 
   /* push an adaptive task */
   sc = kaapi_task_begin_adaptive(

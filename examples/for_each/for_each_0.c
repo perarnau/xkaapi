@@ -140,9 +140,10 @@ static int splitter (
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
+
   conc_size_t i, j;
 
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 128
   if (conc_range_pop_front_max(&w->cr, &i, &j, CONFIG_SEQ_GRAIN) == 0)
     return -1; /* failure */
 
