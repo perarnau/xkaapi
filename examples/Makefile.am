@@ -28,6 +28,7 @@ check_PROGRAMS= \
 	for_each_0              \
 	for_each_1              \
 	find_xkaapi		\
+	accumulate_xkaapi	\
   for_each_rec_xx         \
   for_each_0xx            \
   for_each_1xx            \
@@ -78,6 +79,9 @@ for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
 
 #Find STL algorithm
 find_xkaapi_SOURCES=find/find.c
+
+#Accumulate STL algorithm
+accumulate_xkaapi_SOURCES=accumulate/accumulate.c
 
 branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
 
@@ -184,7 +188,12 @@ for_each_2xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 find_xkaapi_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
 find_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
 find_xkaapi_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
-find_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS) -lm
+find_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS)
+
+accumulate_xkaapi_CPPFLAGS=$(AM_CPPFLAGS) $(XKAAPIPROGS_BUILD_CPPFLAGS)
+accumulate_xkaapi_CFLAGS  =$(AM_CFLAGS)   $(XKAAPIPROGS_BUILD_CFLAGS)
+accumulate_xkaapi_LDFLAGS =$(AM_LDFLAGS)  $(XKAAPIPROGS_BUILD_LDFLAGS)
+accumulate_xkaapi_LDADD   =$(LIBS)        $(XKAAPIPROGS_BUILD_LIBS)
 
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)

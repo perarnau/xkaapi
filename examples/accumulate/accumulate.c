@@ -42,148 +42,112 @@
 ** 
 */
 #include "kaapi.h"
+#include "../common/conc_range.h"
 
 
 typedef struct work
 {
-  volatile long lock;
-
-  /* range */
+  conc_range_t cr;
   const double* array;
-  volatile size_t i;
-  volatile size_t j;
-
-  /* master stealcontext */
-  kaapi_stealcontext_t* msc;
-
-  /* result */
   double res;
-  kaapi_taskadaptive_result_t* ktr;
-
 } work_t;
 
 
+typedef struct thief_work_t {
+  const double* beg;
+  const double* end;
+  double res;
+} thief_work_t;
+
+
 /* fwd decl */
-static void entry(void*, kaapi_thread_t*);
-
-
-/* memory alignment */
-static inline void* __attribute__((unused))
-align_addr(void* addr)
-{
-  static const unsigned long ptrsize = sizeof(void*);
-  static const unsigned long mask = sizeof(void*) - 1UL;
-
-  /* assume n in bytes, power of 2 */
-  if ((unsigned long)addr & mask)
-    addr = (void*)((unsigned long)addr + ptrsize);
-
-  return (void*)((unsigned long)addr & ~mask);
-}
-
-
-/* spinlocking */
-static void lock_work(work_t* w)
-{
-  while (!__sync_bool_compare_and_swap(&w->lock, 0, 1))
-    __asm__ __volatile__ ("pause\n\t");
-}
-
-static void unlock_work(work_t* w)
-{
-  __sync_fetch_and_and(&w->lock, 0);
-}
+static void thief_entrypoint(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
 
 /* result reducer */
-static int reduce
+static int reducer
 (kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
 {
   /* victim work */
   work_t* const vw = (work_t*)varg;
 
   /* thief work */
-  work_t* const tw = (work_t*)tdata;
+  thief_work_t* const tw = (thief_work_t*)tdata;
+
+  /* thief range continuation */
+  conc_size_t beg, end;
 
   /* accumulate */
   vw->res += tw->res;
 
   /* retrieve the range */
-  vw->i = tw->i;
-  vw->j = tw->j;
+  beg = (conc_size_t)(tw->beg - vw->array);
+  end = (conc_size_t)(tw->end - vw->array);
+
+  conc_range_set(&vw->cr, beg, end);
 
   return 0;
 }
 
 
 /* parallel work splitter */
-static int split
+static int splitter
 (kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* args)
 {
   /* victim work */
   work_t* const vw = (work_t*)args;
 
-  /* master stealcontext */
-  kaapi_stealcontext_t* msc = (vw->msc == NULL) ? sc : vw->msc;
-
   /* stolen range */
-  size_t i, j;
+  conc_size_t i, j;
+  conc_size_t range_size;
 
   /* reply count */
   int nrep = 0;
 
   /* size per request */
-  unsigned int unit_size;
+  conc_size_t unit_size;
 
-  /* concurrent with victim */
-  lock_work(vw);
-
-  const size_t total_size = vw->j - vw->i;
+ redo_steal:
+  /* do not steal if range size <= PAR_GRAIN */
+#define CONFIG_PAR_GRAIN 128
+  range_size = conc_range_size(&vw->cr);
+  if (range_size <= CONFIG_PAR_GRAIN)
+    return 0;
 
   /* how much per req */
-#define CONFIG_PAR_GRAIN 128
-  unit_size = 0;
-  if (total_size > CONFIG_PAR_GRAIN)
+  unit_size = range_size / (nreq + 1);
+  if (unit_size == 0)
   {
-    unit_size = total_size / (nreq + 1);
-    if (unit_size == 0)
-    {
-      nreq = (total_size / CONFIG_PAR_GRAIN) - 1;
-      unit_size = CONFIG_PAR_GRAIN;
-    }
-
-    /* steal and update victim range */
-    const size_t stolen_size = unit_size * nreq;
-    i = vw->j - stolen_size;
-    j = vw->j;
-    vw->j -= stolen_size;
+    nreq = (range_size / CONFIG_PAR_GRAIN) - 1;
+    unit_size = CONFIG_PAR_GRAIN;
   }
 
-  unlock_work(vw);
-
-  if (unit_size == 0)
-    return 0;
+  /* perform the actual steal. if the range
+     changed size in between, redo the steal
+   */
+  if (!conc_range_pop_back(&vw->cr, &i, &j, nreq * unit_size))
+    goto redo_steal;
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    /* allocate and init thief work */
-    work_t* const tw = kaapi_reply_pushtask(msc, req, entry);
+    /* for reduction, a result is needed. take care of initializing it */
+    kaapi_taskadaptive_result_t* const ktr =
+      kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
 
-    tw->lock = 0;
-    tw->array = vw->array;
-    tw->i = j - unit_size;
-    tw->j = j;
-    tw->msc = msc;
-
-    tw->ktr = kaapi_allocate_thief_result(sc, sizeof(work_t), NULL);
-    ((work_t*)tw->ktr->data)->i = 0;
-    ((work_t*)tw->ktr->data)->j = 0;
-    ((work_t*)tw->ktr->data)->res = 0.f;
-
+    /* thief work: not adaptive result because no preemption is used here  */
+    thief_work_t* const tw = kaapi_reply_init_adaptive_task
+      ( sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), ktr );
+    tw->beg = vw->array+j-unit_size;
+    tw->end = vw->array+j;
     tw->res = 0.f;
 
-    /* actually reply the thief request */
-    kaapi_request_reply_head(sc, req, tw->ktr);
+    /* initialize ktr task may be preempted before entrypoint */
+    ((thief_work_t*)ktr->data)->beg = tw->beg;
+    ((thief_work_t*)ktr->data)->end = tw->end;
+    ((thief_work_t*)ktr->data)->res = 0.f;
+
+    /* reply head, preempt head */
+    kaapi_reply_pushhead_adaptive_task(sc, req);
   }
 
   return nrep;
@@ -191,91 +155,50 @@ static int split
 
 
 /* seq work extractor */
-static int extract_seq
-(work_t* w, const double** pos, const double** end)
+static int extract_seq(work_t* w, const double** pos, const double** end)
 {
   /* extract from range beginning */
 
-#define CONFIG_SEQ_GRAIN 64
-  size_t seq_size = CONFIG_SEQ_GRAIN;
+  conc_size_t i, j;
 
-  size_t i, j;
-
-  lock_work(w);
-
-  i = w->i;
-
-  if (seq_size > (w->j - w->i))
-    seq_size = w->j - w->i;
-
-  j = w->i + seq_size;
-  w->i += seq_size;
-
-  unlock_work(w);
-
-  if (seq_size == 0)
-    return -1;
+#define CONFIG_SEQ_GRAIN 128
+  if (conc_range_pop_front_max(&w->cr, &i, &j, CONFIG_SEQ_GRAIN) == 0)
+    return -1; /* failure */
 
   *pos = w->array + i;
   *end = w->array + j;
 
-  return 0;
+  return 0; /* success */
 }
 
 
 /* entrypoint */
-static void entry
-(void* args, kaapi_thread_t* thread)
+static void thief_entrypoint
+(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
 {
-  /* adaptive stealcontext flags */
-  const int flags = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION;
+  /* input work */
+  thief_work_t* const work = (thief_work_t*)args;
 
-  /* push an adaptive task */
-  kaapi_stealcontext_t* const sc =
-    kaapi_task_begin_adaptive(thread, flags, split, args);
+  /* resulting work */
+  thief_work_t* const res_work = kaapi_adaptive_result_data(sc);
 
-  /* process the work */
-  work_t* const w = (work_t*)args;
-
-  /* range to process */
-  const double* pos;
-  const double* end;
-
-  /* while there is sequential work to do*/
- redo_work:
-  while (extract_seq(w, &pos, &end) != -1)
+  /* res += [work->beg, work->end[ */
+  while (work->beg != work->end)
   {
-    /* accumulate [pos, end[ in w->res */
-    for (; pos != end; ++pos)
-      w->res += *pos;
+    work->res += *work->beg;
 
-    /* look for preemption */
-    if (w->ktr != NULL)
-    {
-      const unsigned int is_preempted = kaapi_preemptpoint
-	(w->ktr, sc, NULL, NULL, (void*)w, sizeof(work_t), NULL);
-      if (is_preempted)
-	return ;
-    }
+    /* update prior reducing */
+    ++work->beg;
+
+    const unsigned int is_preempted = kaapi_preemptpoint
+      (sc, NULL, NULL, (void*)work, sizeof(thief_work_t), NULL);
+    if (is_preempted) return ;
   }
 
-  /* preempt and reduce thieves */
-  kaapi_taskadaptive_result_t* const ktr = kaapi_get_thief_head(sc);
-  if (ktr != NULL)
-  {
-    kaapi_preempt_thief(sc, ktr, NULL, reduce, (void*)w);
-    goto redo_work;
-  }
-
-  /* not preempted, update ktr */
-  if (w->ktr != NULL)
-  {
-    work_t* const res_work = (work_t*)w->ktr->data;
-    res_work->res = w->res;
-  }
-
-  /* wait for thieves */
-  kaapi_task_end_adaptive(sc);
+  /* we are finished, update results. */
+  res_work->beg = work->beg;
+  res_work->end = work->end;
+  res_work->res = work->res;
 }
 
 
@@ -284,38 +207,50 @@ static double accumulate(const double* array, size_t size)
 {
   /* self thread, task */
   kaapi_thread_t* const thread = kaapi_self_thread();
-  kaapi_task_t* const task = kaapi_thread_toptask(thread);
+  kaapi_taskadaptive_result_t* ktr;
+  kaapi_stealcontext_t* sc;
 
-  kaapi_frame_t frame;
-  kaapi_thread_save_frame(thread, &frame);
-
-  /* work */
-  work_t* const w = kaapi_alloca_align(64, sizeof(work_t));
+  /* sequential work */
+  const double* pos, *end;
 
   /* initialize work */
-  w->lock = 0;
-  w->array = array;
-  w->i = 0;
-  w->j = size;
-  w->res = 0.f;
-  w->msc = NULL;
-  w->ktr = NULL;
+  work_t work;
+  conc_range_init(&work.cr, 0, (conc_size_t)size);
+  work.array = array;
+  work.res = 0.f;
 
-  /* fork root task */
-  kaapi_task_init(task, entry, (void*)w);
-  kaapi_thread_pushtask(thread);
-  kaapi_sched_sync();
+  /* push an adaptive task. set the preemption flag. */
+  sc = kaapi_task_begin_adaptive(
+        thread, 
+        KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, 
+        splitter, 
+        &work     /* arg for splitter = work to split */
+    );
 
-  kaapi_thread_restore_frame(thread, &frame);
+  /* while there is sequential work to do */
+ redo_work:
+  while (extract_seq(&work, &pos, &end) != -1)
+  {
+    /* res += [pos, end[ */
+    for (; pos != end; ++pos)
+      work.res += *pos;
+  }
 
-  return w->res;
+  /* preempt and reduce thieves */
+  if ((ktr = kaapi_get_thief_head(sc)) != NULL)
+  {
+    kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
+    goto redo_work;
+  }
+
+  /* wait for thieves */
+  kaapi_task_end_adaptive(sc);
+
+  return work.res;
 }
 
 
 /* unit */
-
-#include <string.h>
-
 
 int main(int ac, char** av)
 {
@@ -334,7 +269,7 @@ int main(int ac, char** av)
     double res = accumulate(array, ITEM_COUNT);
     if (res != (double)(2 * ITEM_COUNT))
     {
-      printf("invalid\n");
+      printf("invalid: %lf != %lf\n", res, 2.f * ITEM_COUNT);
       break ;
     }
   }
