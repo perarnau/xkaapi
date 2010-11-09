@@ -11,7 +11,7 @@ libkaapixx_la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXLIB_BUILD_CPPFLAGS)
 libkaapixx_la_CFLAGS=$(AM_CFLAGS) $(KAAPIXXLIB_BUILD_CFLAGS)
 libkaapixx_la_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 libkaapixx_la_LDFLAGS = -version-info 1:0:1 $(KAAPIXXLIB_BUILD_LDFLAGS)
-libkaapixx_la_LIBADD=../../src/libxkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
+libkaapixx_la_LIBADD=../../src/libkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
 	ka_api_tuple.h\

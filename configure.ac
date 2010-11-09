@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.60])
 
-AC_INIT([X-KAAPI], [0.1], [kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI], [0.1], [kaapi-dev-info@lists.gforge.inria.fr],[kaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
@@ -81,8 +81,8 @@ AX_CHECK_COMPILER_STD([STD_CXX0X], [C++], [-std=c++0x], [], [
 ])
 
 
-ACX_LIB_NEW_LIB([XKAAPILIB], [-L\${libdir} -lxkaapi], [xkaapi])
-ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-I\${includedir}])
+ACX_LIB_NEW_LIB([KAAPILIB], [-L\${libdir} -lkaapi], [kaapi])
+ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])
 
 ACX_LIB_NEW_LIB([KAAPIXXLIB], [-L\${libdir} -lkaapi++], [kaapi++])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
@@ -96,7 +96,7 @@ ACX_LIB_ADD_PUBLIC_FLAGS([ATHALIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KFORTRANLIB], [-L\${libdir} -lkaapif], [kaapif])
 ACX_LIB_ADD_PUBLIC_FLAGS([KFORTRANLIB], [-I\${includedir}])
 
-ACX_LIB_NEW_PRG([XKAAPIPROGS])
+ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KASTLPROGS])
 ACX_LIB_NEW_PRG([ATHAPROGS])
@@ -285,7 +285,7 @@ ACX_LIB_CHECK_PLAIN([PTHREAD],[],[
     ACX_LIB_NOTFOUND
   ])
 ])
-ACX_LIB_LINK([XKAAPILIB],[PTHREAD])
+ACX_LIB_LINK([KAAPILIB],[PTHREAD])
 
 # search pthread_attr_setaffinity_np within libpthread
 saveCFLAGS="$CFLAGS"
@@ -313,7 +313,7 @@ KAAPI_PKGLIB_CHECK([PAPI], [papi], [PAPI], [no], [],
     AC_DEFINE(KAAPI_USE_PAPI, 1, [Define to use PAPI perfcounters])
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_PAPIPERFCOUNTER=1"
   ])
-ACX_LIB_LINK([XKAAPILIB],[PAPI])
+ACX_LIB_LINK([KAAPILIB],[PAPI])
 
 
 dnl -----------------------------------------------------------------------
@@ -324,9 +324,9 @@ KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],
   [numa], [], [numa.h], [numa_bind], [
     dnl NUMA is there
     AC_DEFINE(KAAPI_USE_NUMA, 1, [Define to use memory affinity on numa nodes])
-    dnl ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-lnuma])
+    dnl ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-lnuma])
   ])
-ACX_LIB_LINK([XKAAPILIB],[NUMA])
+ACX_LIB_LINK([KAAPILIB],[NUMA])
 
 
 dnl -----------------------------------------------------------------------
@@ -377,46 +377,46 @@ dnl    CUDA is there
   [])
 AC_SUBST([KAAPI_CUDA])
 AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_CUDA" = x"c"])
-ACX_LIB_LINK([XKAAPILIB],[CUDA])
+ACX_LIB_LINK([KAAPILIB],[CUDA])
 
 
 dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
-ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
-ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
-ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
 
-ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
-ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
+ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
 ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
 	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/src/libkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 ACX_LIB_LINK([KFORTRANPROGS], [KFORTRANLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KFORTRANPROGS],
 	[-I\$(top_srcdir)/api/fortran -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/src/libkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 AC_SUBST(AM_CPPFLAGS)
@@ -432,13 +432,13 @@ AC_CONFIG_FILES([
 	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kastl/Makefile
-	api/xkaapi/Makefile
+	api/kaapi/Makefile
 	api/fortran/Makefile
 	examples/Makefile
 	src/Makefile
 	tests/static/Makefile
 
-	xkaapi.pc
+	kaapi.pc
 	kaapixx.pc
 	atha1.pc
 	src/misc/kaapi_version.c

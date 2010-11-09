@@ -34,7 +34,7 @@ AC_CHECK_HEADER(papi.h, acx_papi_header=yes)
 if test x"${acx_papi_header}" = x"yes"; then
     acx_papi=yes
     AC_DEFINE(HAVE_PAPI, 1, [PAPI is available])
-    AC_MSG_NOTICE([xkaapi will use PAPI for performance measuring])
+    AC_MSG_NOTICE([kaapi will use PAPI for performance measuring])
     PAPI_LIBS=-lpapi
     PAPI_CFLAGS=-DKAAPI_USE_PAPIPERFCOUNTER=1
 fi

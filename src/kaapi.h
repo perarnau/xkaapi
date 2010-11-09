@@ -1190,7 +1190,6 @@ extern int kaapi_remove_finishedthief(
 );
 
 
-#if !defined(__cplusplus)
 /** \ingroup ADAPTIVE
    Try to preempt the thief referenced by tr. Wait either preemption occurs or the end of the thief.
    Once the thief has received the preempt and send back result to the victim who preempt it, then
@@ -1212,7 +1211,6 @@ extern int kaapi_remove_finishedthief(
   }									\
   __res;								\
 })
-#endif
 
 /** \ingroup ADAPTIVE
    Post a preemption request to thief. Do not wait preemption occurs.
@@ -1255,7 +1253,6 @@ extern int kaapi_preemptpoint_after_reducer_call (
     int reducer_retval 
 );
 
-#if !defined(__cplusplus)
 /* checking for null on a macro param
  */
 static inline int kaapi_is_null(void* p)
@@ -1282,7 +1279,6 @@ typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_vi
     : \
         0\
   )
-#endif /* __cplusplus */
 
 /** Begin critical section with respect to steal operation
     \ingroup TASK

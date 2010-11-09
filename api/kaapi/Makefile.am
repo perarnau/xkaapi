@@ -11,6 +11,6 @@ check_headers_SRC_C=\
 check_headers_SRC_CXX=\
 	check/kaapi_h.c \
 	check/kaapi_error_h.c
-check_headers_LIBS=$(XKAAPIPROGS_BUILD_LDFLAGS) $(XKAAPIPROGS_BUILD_LIBS)
+check_headers_LIBS=$(KAAPIPROGS_BUILD_LDFLAGS) $(KAAPIPROGS_BUILD_LIBS)
 
 include ../check-headers.am

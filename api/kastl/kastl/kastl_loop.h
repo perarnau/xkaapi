@@ -52,13 +52,6 @@
 #include "kastl_sequences.h"
 
 
-// missing decls
-extern "C" void kaapi_set_workload(kaapi_processor_t*, kaapi_uint32_t);
-extern "C" void kaapi_set_workload_by_kid(kaapi_processor_id_t, kaapi_uint32_t);
-extern "C" void kaapi_set_self_workload(kaapi_uint32_t);
-extern "C" kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
-extern "C" kaapi_processor_id_t kaapi_request_kid(kaapi_request_t*);
-
 #if CONFIG_KASTL_DEBUG
 extern "C" unsigned int kaapi_get_current_kid(void);
 static volatile unsigned int __attribute__((aligned)) printid = 0;
@@ -301,6 +294,9 @@ namespace impl
 
   typedef void (*kastl_entry_t)(void*, kaapi_thread_t*);
 
+  typedef void (*kastl_thief_entry_t)
+  (void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+
   // reduction implmentation.
 
   // reduce thief context, no termination
@@ -402,13 +398,13 @@ namespace impl
 	   bool TerminateTag,
 	   bool ReduceTag>
   static kaapi_taskadaptive_result_t* allocate_ktr
-  (kaapi_stealcontext_t* sc, const Sequence& seq, Body& body)
+  (kaapi_request_t* req, const Sequence& seq)
   {
     typedef reduce_thief_context<Result, Sequence, Body, TerminateTag, ReduceTag>
       context_type;
 
     kaapi_taskadaptive_result_t* const ktr =
-      kaapi_allocate_thief_result(sc, sizeof(context_type), NULL);
+      kaapi_allocate_thief_result(req, sizeof(context_type), NULL);
     new (ktr->data) context_type(seq);
     return ktr;
   }
@@ -593,14 +589,14 @@ namespace impl
   (kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* ktr)
   {
     const int is_preempted = kaapi_preemptpoint
-      (ktr, sc, NULL, NULL, NULL, 0, NULL);
+      (sc, NULL, NULL, NULL, 0, NULL);
     return (bool)is_preempted;
   }
 
   // forward decls
   template<typename Result, typename Sequence, typename Body, typename Settings,
 	   bool TerminateTag, bool ReduceTag>
-  static void thief_entry(void*, kaapi_thread_t*);
+  static void thief_entry(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
   // split victim context, result
   template
@@ -723,7 +719,6 @@ namespace impl
     size_t vseq_size = vc->_seq.size();
     if (vseq_size < vc->_settings._par_size)
       vseq_size = 0;
-    kaapi_set_workload(kaapi_stealcontext_kproc(sc), vseq_size);
 
     // recompute the request count
     if ((size_t)r.size() != steal_size)
@@ -744,20 +739,20 @@ namespace impl
       if (unit_size > (size_t)r.size())
 	unit_size = (size_t)r.size();
 
-      // push the reply task
-      kastl_entry_t const entryfn = thief_entry
-	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
-      context_type* const tc = (context_type*)
-	kaapi_reply_pushtask(sc, request, entryfn);
-
       // allocate task result
       typedef reduce_thief_context
 	<Result, Sequence, Body, TerminateTag, ReduceTag>
 	thief_context_type;
-
       kaapi_taskadaptive_result_t* const ktr =
 	allocate_ktr<Result, Sequence, Body, TerminateTag, ReduceTag>
-	(sc, Sequence(pos, unit_size), tc->_body);
+	(request, Sequence(pos, unit_size));
+
+      // push the reply task
+      kastl_thief_entry_t const entryfn = thief_entry
+	<Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
+      context_type* const tc = (context_type*)
+	kaapi_reply_init_adaptive_task
+	(sc, request, (kaapi_task_body_t)entryfn, sizeof(context_type), ktr);
 
       thief_context_type* const rtc =
 	static_cast<thief_context_type*>(ktr->data);
@@ -767,9 +762,7 @@ namespace impl
 	(rtc->_res, rtc->_seq, vc->_body, vc->_settings, sc, ktr);
 
       // reply the request
-      kaapi_request_reply_head(sc, request, ktr);
-
-      kaapi_set_workload_by_kid(kaapi_request_kid(request), unit_size);
+      kaapi_reply_pushhead_adaptive_task(sc, request);
 
       pos += unit_size;
 
@@ -1035,7 +1028,8 @@ namespace impl
   // task entry points
   template<typename Result, typename Sequence, typename Body, typename Settings,
 	   bool TerminateTag, bool ReduceTag>
-  static void thief_entry(void* arg, kaapi_thread_t* thread)
+  static void thief_entry
+  (void* arg, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
   {
     typedef split_task_context
       <Result, Sequence, Body, Settings, ReduceTag> context_type;
@@ -1051,16 +1045,12 @@ namespace impl
     kastl_splitter_t const splitfn = split_function
       <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
-    kaapi_stealcontext_t* const sc = kaapi_task_begin_adaptive
-      (thread, KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, splitfn, arg);
+    // enable stealing
+    kaapi_steal_setsplitter(sc, splitfn, arg);
 
     xtr_type xtr(tc->_settings);
     outter_loop_type::run
       (sc, tc->_ktr, xtr, tc->_res, tc->_seq, tc->_body, tc->_settings);
-
-    kaapi_set_self_workload(0);
-
-    kaapi_task_end_adaptive(sc);
   }
 
   static void wait_a_bit(void)
@@ -1119,8 +1109,6 @@ namespace impl
     kaapi_task_t* task;
     kaapi_frame_t frame;
 
-    kaapi_set_self_workload(seq.size());
-
     context_type tc(res, seq, body, settings);
 
     thread = kaapi_self_thread();
@@ -1130,8 +1118,6 @@ namespace impl
     kaapi_thread_pushtask(thread);
     kaapi_sched_sync();
     kaapi_thread_restore_frame(thread, &frame);
-
-    kaapi_set_self_workload(0);
 
     return res;
   }

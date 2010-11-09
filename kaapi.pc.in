@@ -7,11 +7,11 @@ Name: XKAAPI
 Description: C Kernel for Adaptative, Asynchronous Parallel and Interactive programming
 Version: @VERSION@
 #URL: http://kaapi.gforge.inria.fr
-Requires: @XKAAPILIB_PKGCONFIG_REQUIRES@
-Requires.private: @XKAAPILIB_PKGCONFIG_REQUIRES_PRIVATE@
+Requires: @KAAPILIB_PKGCONFIG_REQUIRES@
+Requires.private: @KAAPILIB_PKGCONFIG_REQUIRES_PRIVATE@
 #Conflicts: foobar <= 4.5
 # Libs: bibliothèques nécessaire pour linker dynamiquement une appli externe
 # Libs.private: bibliothèques à rajouter en cas de link statique
-Libs: @XKAAPILIB_PKGCONFIG_LIBS@
-Libs.private: @XKAAPILIB_PKGCONFIG_LIBS_PRIVATE@
-Cflags: @XKAAPILIB_PKGCONFIG_CFLAGS@
+Libs: @KAAPILIB_PKGCONFIG_LIBS@
+Libs.private: @KAAPILIB_PKGCONFIG_LIBS_PRIVATE@
+Cflags: @KAAPILIB_PKGCONFIG_CFLAGS@
