@@ -162,13 +162,13 @@ static int extract_seq(work_t* w, const double** pos, const double** end)
   conc_size_t i, j;
 
 #define CONFIG_SEQ_GRAIN 128
-  if (conc_range_pop_front_max(&w->cr, &i, &j, CONFIG_SEQ_GRAIN) == 0)
-    return -1; /* failure */
+  conc_range_pop_front(&w->cr, &i, &j, CONFIG_SEQ_GRAIN);
+  if (i == j) return -1;
 
   *pos = w->array + i;
   *end = w->array + j;
 
-  return 0; /* success */
+  return 0;
 }
 
 
