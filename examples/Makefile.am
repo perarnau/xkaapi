@@ -31,9 +31,8 @@ check_PROGRAMS= \
 	accumulate_xkaapi	\
   for_each_rec_xx         \
   for_each_0xx            \
-  for_each_1xx  
-
-#  for_each_2xx
+  for_each_1xx            \
+  for_each_2xx
 
 TESTS=  
 

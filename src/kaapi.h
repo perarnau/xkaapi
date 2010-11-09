@@ -1171,13 +1171,25 @@ extern int kaapi_preempt_thief_helper(
   void*                               arg_to_thief 
 );
 
-/** Set flag to preempt the thief and return whatever is the state of the thief (terminate or not).
-    Returns 0 if the thief if finished else returns EBUSY.
+/** \ingroup ADAPTIVE
+   Post a preemption request to thief. Do not wait preemption occurs.
+   Return 0 iff some work have been preempted and should be processed locally.
+   If the thief has already finished its computation bfore sending the signal,
+   then the return value is ECHILD.
 */
-extern int kaapi_preemptasync_thief_helper( 
+extern int kaapi_preemptasync_thief( 
   kaapi_stealcontext_t*               stc, 
   struct kaapi_taskadaptive_result_t* ktr, 
   void*                               arg_to_thief 
+);
+
+/** The thief should have been preempted using preempasync_thief
+    Returns 0 when the thief has reply to its preemption flag
+*/
+extern int kaapi_preemptasync_waitthief
+( 
+ kaapi_stealcontext_t*               sc,
+ struct kaapi_taskadaptive_result_t* ktr
 );
 
 /** \ingroup ADAPTIVE
@@ -1212,18 +1224,6 @@ extern int kaapi_remove_finishedthief(
   __res;								\
 })
 
-/** \ingroup ADAPTIVE
-   Post a preemption request to thief. Do not wait preemption occurs.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preemptasync_thief() is 0.
-   If it exists a thief, then the call to kaapi_preemptasync_thief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
-      int (*)( stc, void* thief_work, ... )
-*/
-#define kaapi_preemptasync_thief( stc, tr, arg_to_thief )	\
-  kaapi_preemptasync_thief_helper(stc, (tr), arg_to_thief)
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task

@@ -100,7 +100,7 @@ int kaapi_preemptpoint_after_reducer_call(
 
   /* signal termination */
   state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
-  if (state & KAAPI_MASK_BODY_PREEMPT)
+  if (kaapi_task_state_ispreempted(state))
   {
     /* @see comment in kaapi_task_adap_body */
     while (*ktr->preempt == 0)

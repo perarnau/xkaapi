@@ -498,6 +498,9 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #define kaapi_task_state_isaftersteal(state)  \
       ((state) & KAAPI_MASK_BODY_AFTER)
 
+#define kaapi_task_state_ispreempted(state)  \
+      ((state) & KAAPI_MASK_BODY_PREEMPT)
+
 #define kaapi_task_state_isspecial(state)     \
       ((state) & KAAPI_MASK_BODY)
 
