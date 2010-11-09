@@ -8,6 +8,11 @@
    extractor (resp. pop_front and pop_back). this is
    ensured by the concurrent version of the xkaapi
    runtime (resp. sequential work and splitter).
+
+   locking must be used to solve concurrency issuses
+   between pop_back and set since they both write the
+   _end pointer. full locking is used for debugging
+   and locks everywhere the range is accessed.
  */
 
 
@@ -19,20 +24,16 @@
 #include "kaapi.h"
 #endif /* CONFIG_USE_KAAPI */
 
-
-/* used only for debugging */
-#define CONFIG_USE_LOCK 1
-
+#define CONFIG_USE_FULL_LOCK 0
 
 typedef long conc_size_t;
+#define CONC_SIZE_MIN LONG_MIN
 #define CONC_SIZE_MAX LONG_MAX
 
 
 typedef struct conc_range
 {
-#if CONFIG_USE_LOCK
   volatile long _lock;
-#endif
 
   /* separated cache lines since concurrent update */
   volatile conc_size_t _beg __attribute__((aligned(64)));
@@ -41,12 +42,7 @@ typedef struct conc_range
 } conc_range_t;
 
 
-#if CONFIG_USE_LOCK
-# define CONC_RANGE_INITIALIZER(__beg, __end) { 0L, __beg, __end }
-#else
-# define CONC_RANGE_INITIALIZER(__beg, __end) { __beg, __end }
-#endif
-
+#define CONC_RANGE_INITIALIZER(__beg, __end) { 0L, __beg, __end }
 
 static inline void __full_barrier(void)
 {
@@ -62,7 +58,7 @@ static inline void __write_barrier(void)
 #if CONFIG_USE_KAAPI
   kaapi_writemem_barrier();
 #else
-  __asm__ __volatile__ ("":::"memory");
+  __asm__ __volatile__ ("sfence\n\t":::"memory");
 #endif
 }
 
@@ -88,10 +84,7 @@ static inline void __slowdown(void)
 static inline void conc_range_init
 (conc_range_t* cr, conc_size_t beg, conc_size_t end)
 {
-#if CONFIG_USE_LOCK
   cr->_lock = 0L;
-#endif
-
   cr->_beg = beg;
   cr->_end = end;
 }
@@ -103,8 +96,6 @@ static inline void conc_range_empty
   cr->_beg = CONC_SIZE_MAX;
 }
 
-
-#if CONFIG_USE_LOCK
 
 static inline void __lock_range(conc_range_t* cr)
 {
@@ -121,6 +112,9 @@ static inline void __unlock_range(conc_range_t* cr)
   __full_barrier();
   cr->_lock = 0L;
 }
+
+
+#if CONFIG_USE_FULL_LOCK /* full locking */
 
 static inline void conc_range_pop_front
 (conc_range_t* cr, conc_size_t* beg, conc_size_t* end, conc_size_t max_size)
@@ -188,53 +182,42 @@ static inline void conc_range_set
   __unlock_range(cr);
 }
 
-#else /* CONFIG_USE_LOCK == 0 */
+#else /* CONFIG_USE_FULL_LOCK == 0 */
 
 static inline void conc_range_pop_front
 (conc_range_t* cr, conc_size_t* beg, conc_size_t* end, conc_size_t max_size)
 {
+  /* concurrency requirements: pop_back */
+
   /* it is possible the returned range is empty,
      but this function never fails, contrary to
      pop_back (ie. sequential extraction always
      succeeds)
    */
 
-  /* concurrency requirements: pop_back */
-
   conc_size_t size = max_size;
 
- redo_pop:
   cr->_beg += size;
   __full_barrier();
 
-  if (cr->_beg > cr->_end)
-  {
-    /* there is a conflict. the protocol is to wait
-       for the other thread to ack and undo the
-       conflicting operation. this is done by waiting
-       cr->_beg to be >= cr->_end.
-    */
+  if (cr->_beg <= cr->_end)
+    goto no_conflict;
 
-    cr->_beg -= size;
-    __full_barrier();
+  /* handle conflict */
 
-    /* wait until the otherside ack the conflict */
-  redo_size:
-    while (cr->_end < cr->_beg)
-      __slowdown();
+  cr->_beg -= size;
 
-    /* recompute the size to avoid infinite loop */
-    size = cr->_end - cr->_beg;
-    if (size < 0) goto redo_size;
+  __lock_range(cr);
 
-    /* adjust the size, if needed */
-    if (size > max_size)
-      size = max_size;
+  size = cr->_end - cr->_beg;
+  if (size > max_size)
+    size = max_size;
 
-    /* redo the pop */
-    goto redo_pop;
-  }
+  cr->_beg += size;
 
+  __unlock_range(cr);
+
+ no_conflict:
   *end = cr->_beg;
   *beg = *end - size;
 }
@@ -251,27 +234,37 @@ static inline unsigned int conc_range_pop_back
      conc_range_pop_front
    */
 
+  unsigned int has_popped = 0;
+
+  /* disable gcc warning */
+  *beg = 0;
+  *end = 0;
+
+  __lock_range(cr);
+
   cr->_end -= size;
   __full_barrier();
 
   if (cr->_end < cr->_beg)
   {
     cr->_end += size;
-    __full_barrier();
-
-    return 0; /* false */
+    goto unlock_return;
   }
+
+  has_popped = 1;
 
   *beg = cr->_end;
   *end = *beg + size;
 
-  return 1; /* true */
+ unlock_return:
+  __unlock_range(cr);
+
+  return has_popped; /* true */
 }
 
 static inline conc_size_t conc_range_size
 (conc_range_t* cr)
 {
-  __full_barrier();
   return cr->_end - cr->_beg;
 }
 
@@ -282,22 +275,25 @@ static inline void conc_range_set
      conc_range_pop_back
    */
 
-  /* typically in the reducer routine */
+  /* NOT calling this routine concurrently
+     with pop_front ensures _beg wont move.
+     this is required to avoid underflows
+   */
+
+  __lock_range(cr);
 
   cr->_beg = CONC_SIZE_MAX;
-
-  /* ensure everyone see the previous store */
   __full_barrier();
 
   cr->_end = end;
-
-  /* ensure everyone see _end before _beg */
   __full_barrier();
 
   cr->_beg = beg;
+
+  __unlock_range(cr);
 }
 
-#endif
+#endif /* CONFIG_USE_FULL_LOCK */
 
 
 #if 0 /* use_case */
