@@ -84,7 +84,7 @@ find_xkaapi_SOURCES=find/find.c
 #Accumulate STL algorithm
 accumulate_xkaapi_SOURCES=accumulate/accumulate.c
 
-branchbound_apiatha_SOURCES=branchbound_apiatha.cpp
+branchbound_apiatha_SOURCES=branchbound/branchbound_apiatha.cpp
 
 hello_world_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 hello_world_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
