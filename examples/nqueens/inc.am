@@ -1,0 +1,28 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+# This file is included by the Makefile.am from upper directory
+# Hence, all paths are relative to the parent (and not current) directory
+
+NQUEENS_PRGS=nqueens_apiatha nqueens_apikaapi
+
+check_PROGRAMS+=$(NQUEENS_PRGS)
+
+#Nqueens program.
+all-nqueens: $(NQUEENS_PRGS)
+nqueens_apiatha_SOURCES=nqueens/nqueens_apiatha.cpp
+nqueens_apikaapi_SOURCES=nqueens/nqueens_apikaapi.cpp
+
+nqueens_apiatha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHAPROGS_BUILD_CPPFLAGS)
+nqueens_apiatha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHAPROGS_BUILD_CXXFLAGS)
+nqueens_apiatha_LDFLAGS =$(AM_LDFLAGS)  $(ATHAPROGS_BUILD_LDFLAGS)
+nqueens_apiatha_LDADD   =$(LIBS)        $(ATHAPROGS_BUILD_LIBS)
+
+nqueens_apikaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+nqueens_apikaapi_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+nqueens_apikaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+nqueens_apikaapi_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+

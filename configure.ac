@@ -80,6 +80,11 @@ AX_CHECK_COMPILER_STD([STD_CXX0X], [C++], [-std=c++0x], [], [
    AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
 ])
 
+CXXFLAGS_save="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $STD_CXX0X_FLAGS"
+AC_CXX_LAMBDA()
+AM_CONDITIONAL([KAAPI_CXX_HAS_LAMBDA],[test x"$ac_cv_cxx_lambda" = x"yes"])
+CXXFLAGS="$CXXFLAGS_save"
 
 ACX_LIB_NEW_LIB([KAAPILIB], [-L\${libdir} -lkaapi], [kaapi])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])

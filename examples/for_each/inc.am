@@ -1,0 +1,69 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+# This file is included by the Makefile.am from upper directory
+# Hence, all paths are relative to the parent (and not current) directory
+
+FOREACH_PRGS=for_each_0 for_each_1 for_each_rec_xx \
+        for_each_0xx for_each_1xx for_each_2xx
+if KAAPI_CXX_HAS_LAMBDA
+FOREACH_PRGS+=for_each_0xx_lambda for_each_1xx_lambda
+endif
+
+
+check_PROGRAMS+=$(FOREACH_PRGS)
+
+#For each variation
+all-for_each: $(FOREACH_PRGS)
+for_each_0_SOURCES=for_each/for_each_0.c
+for_each_1_SOURCES=for_each/for_each_1.c
+for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
+for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
+for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
+for_each_1xx_SOURCES=for_each/for_each_1xx.cpp
+for_each_1xx_lambda_SOURCES=for_each/for_each_1xx_lambda.cpp
+for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
+
+for_each_0_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
+for_each_0_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
+for_each_0_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
+for_each_0_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS) -lm
+
+for_each_1_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
+for_each_1_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
+for_each_1_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
+for_each_1_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS) -lm
+
+for_each_rec_xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_rec_xx_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+for_each_rec_xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_rec_xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_0xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_0xx_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+for_each_0xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_0xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_0xx_lambda_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_0xx_lambda_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+for_each_0xx_lambda_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_0xx_lambda_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_1xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_1xx_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+for_each_1xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_1xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_1xx_lambda_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_1xx_lambda_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+for_each_1xx_lambda_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_1xx_lambda_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
+for_each_2xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_2xx_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+for_each_2xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_2xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
