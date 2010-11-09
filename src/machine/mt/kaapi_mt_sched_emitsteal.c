@@ -99,7 +99,7 @@ redo_select:
 
     kaapi_slowdown_cpu();
   }
-#else
+#else /* cannot rely on kaapi_sched_trylock... */
 acquire:
   if (KAAPI_ATOMIC_DECR(&victim.kproc->lock) ==0) goto enter;
   while (KAAPI_ATOMIC_READ(&victim.kproc->lock) <=0)
