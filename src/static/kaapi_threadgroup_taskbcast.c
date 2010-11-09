@@ -70,28 +70,28 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
     {
       kaapi_task_t* task = comlist->entry[i].task;
       kaapi_task_body_t task_body = kaapi_task_getbody( task );
-      kaapi_assert( (task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskbcast_body) );
+      kaapi_assert( (task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskrecvbcast_body) );
       kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
-      
-      void* newsp;
-      kaapi_task_body_t newbody;
-      if (task_body == kaapi_taskrecv_body)
-      {
-        newbody = argrecv->original_body;
-        newsp   = argrecv->original_sp;
-      }
-      else 
-      {
-        newbody = task_body;
-        newsp   = task->sp;
-      }
       
       if (kaapi_threadgroup_decrcounter(argrecv) ==0)
       {
-        /* task becomes ready change its body...*/        
-        task->sp = newsp;
-        kaapi_task_setbody(task, newbody);
+        void* newsp;
+        kaapi_task_body_t newbody;
+        if (task_body == kaapi_taskrecv_body)
+        {
+          newbody = argrecv->original_body;
+          newsp   = argrecv->original_sp;
+        }
+        else 
+        {
+          newbody = task_body;
+          newsp   = task->sp;
+        }
+      
+        /* task becomes ready change its body */        
+//        task->sp = newsp;
 
+#if 0
         /* if signaled thread was suspended, move it to the local queue */
 //TO DO        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)task->pad;
         kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)0;
@@ -114,62 +114,14 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
             KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
           }
         }
-
+#endif
         /* flush in memory all pending write (and read ops) */  
         kaapi_writemem_barrier();
 
         /* signal the task */
-        kaapi_task_setbody(task, newbody );
+        kaapi_task_orstate( task, KAAPI_MASK_BODY_TERM );
+//        kaapi_task_setbody(task, newbody );
 
-#if 0 // OLD CODE, I put the new kaapi_taskwrite_body code just above
-        /* see code in kaapi_taskwrite_body */
-        if (task->pad != 0) 
-        {
-          kaapi_thread_context_t* thread_suspended = (kaapi_thread_context_t*)task->pad;
-
-          /* remove it from suspended queue */
-          if (thread_suspended !=0)
-          {
-            kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
-            if (kthread !=0) 
-            {
-	           /* push on the owner of the suspended thread */
-              kaapi_processor_t* kproc = kthread->proc;
-              if (!kaapi_thread_hasaffinity(kthread->affinity, kproc->kid))
-              {
-                /* find the first kid with affinity */
-                kaapi_processor_id_t kid;
-                for ( kid=0; kid<kaapi_count_kprocessors; ++kid)
-                  if (kaapi_thread_hasaffinity( kthread->affinity, kid)) break;
-                kaapi_assert_debug( kid < kaapi_count_kprocessors );
-                kproc = kaapi_all_kprocessors[ kid ];
-              }
-
-              /* move the thread in the ready list of the victim processor */
-              kaapi_sched_lock( kproc );
-              kaapi_task_setbody(task, newbody );
-              kaapi_sched_pushready( kproc, kthread );
-
-              /* bcast will activate a suspended thread */
-              kaapi_sched_unlock( kproc );
-            } else 
-              kaapi_task_setbody(task, newbody);
-          } else { /* wccell == 0 */
-            kaapi_thread_context_t* kthread = wcs->thread;
-            kaapi_processor_t* kproc = kthread->proc;
-
-            kaapi_sched_lock( kproc );
-            kaapi_task_setbody(task, newbody );
-            kaapi_sched_pushready( kproc, kthread );
-            kaapi_sched_unlock( kproc );
-          }
-        }
-        else {
-          /* thread is not suspended... */
-          /* may activate the task */
-          kaapi_task_setbody(task, newbody);
-        }
-#endif
       }
     }
     comlist = comlist->next;

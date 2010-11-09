@@ -1653,7 +1653,9 @@ namespace ka {
     /* internal class required for spawn method */
     class AttributComputeDependencies {
     public:
-      AttributComputeDependencies( kaapi_threadgroup_t thgrp, int thid ) : _threadgroup(thgrp), _threadindex(thid) {}
+      AttributComputeDependencies( kaapi_threadgroup_t thgrp, int thid ) 
+       : _threadgroup(thgrp), _threadindex(thid) 
+      {}
       void operator()(kaapi_thread_t* thread, kaapi_task_t* task)
       { kaapi_threadgroup_computedependencies( _threadgroup, _threadindex, task ); }
     public:
@@ -1693,7 +1695,6 @@ namespace ka {
                   kaapi_threadgroup_thread(_threadgroup, a.get_partition())
               ); 
     }
-
 
     /** Executor of one task for ThreadGroup */
     template<class TASKGENERATOR>

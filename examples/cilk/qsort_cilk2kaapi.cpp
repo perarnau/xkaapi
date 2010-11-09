@@ -88,16 +88,20 @@ int qmain(int n)
 
 int main(int argc, char* argv[])
 {
-    int n = 10 * 1000 * 1000;
-    if (argc > 1) {
-         n = std::atoi(argv[1]);
-         if (n <= 0) {
-              std::cerr << "Invalid argument" << std::endl;
-              std::cerr << "Usage: qsort N" << std::endl;
-              std::cerr << "       N = number of elements to sort" << std::endl;
-              return 1;
-         }
-    }
+  ka::Community com = ka::System::join_community(argc,argv);
+  int n = 10 * 1000 * 1000;
+  if (argc > 1) {
+       n = std::atoi(argv[1]);
+       if (n <= 0) {
+            std::cerr << "Invalid argument" << std::endl;
+            std::cerr << "Usage: qsort N" << std::endl;
+            std::cerr << "       N = number of elements to sort" << std::endl;
+            return 1;
+       }
+  }
 
-    return qmain(n);
+  int err = qmain(n);
+  com.leave();
+  ka::System::terminate();
+  return err;
 }

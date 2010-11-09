@@ -73,7 +73,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) return 0;
 
   /* such threads are sticky: the control flow is on return to this call and
-     without thread user context switch only this activation frame could wakeup
+     without thread user context switch, only this activation frame could wakeup
      the thread
   */
   kaapi_assert_debug( thread_condition->affinity == 0 );

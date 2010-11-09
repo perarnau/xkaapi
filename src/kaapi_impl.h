@@ -545,7 +545,7 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 {
-  return kaapi_task_state2body( (kaapi_task_body2state(task->u.body) & ~KAAPI_MASK_BODY) );
+  return kaapi_task_state2body( task->u.state & ~KAAPI_MASK_BODY );
 }
 //@}
 

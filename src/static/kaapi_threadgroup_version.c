@@ -46,8 +46,7 @@
 /* ........................................ Implementation notes ........................................*/
 /* Each time a task is forked on a partition, the kaapi_threadgroup_computedependencies method is called
    to compute and update dependencies. 
-   At the difference with the pure workstealing execution, here the read after write dependencies (RAW)
-   are handle in order to:
+   The read after write dependencies (RAW) are handle in order to:
       1- envelop the writer task to first execute the original task and then forward dependencies by
       moving state of the reader to ready (in fact: decrement a counter + moving kaapi_suspend_body body
       to the original read task body). The envelopp is build by storing original body and sp fields the
@@ -83,11 +82,7 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
    
   /* here a stack allocation attached with the thread group */
-#if 0
-  ver = entry->u.dfginfo = calloc( 1, sizeof(kaapi_version_t) );
-#else
   ver = entry->u.dfginfo = kaapi_versionallocator_allocate( &thgrp->ver_allocator );
-#endif
   kaapi_assert( ver != 0 );
   ver->tag = 0; //++thgrp->tag_count;
   ver->writer_task = 0;
@@ -157,7 +152,10 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     if (ver->writer_task == 0)
     { 
       taskbcast = kaapi_thread_toptask(writer_thread);
-      kaapi_task_init(taskbcast, kaapi_taskbcast_body, kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) ) );
+      kaapi_task_init(
+            taskbcast, 
+            kaapi_taskbcast_body, 
+            kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) ) );
       argbcast = kaapi_task_getargst( taskbcast, kaapi_taskbcast_arg_t );
       memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
       argbcast->last     = &argbcast->head;
@@ -176,6 +174,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
         kaapi_assert( kaapi_task_state_issteal( kaapi_task_getstate( ver->writer_task) ) );
         argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
         memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
+        /* recopy old field */
         argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->sp;
         ver->writer_task->sp = argbcast;
 //        ver->tag           = ++thgrp->tag_count;
