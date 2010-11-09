@@ -2,7 +2,7 @@
  * qsort_cilk2kaapi.cpp
  *
  * An implementation of quicksort based on Cilk parallelization but using Kaapi C++ construction
- * 
+ * TG
  *
  * Copyright (c) 2007-2008 Cilk Arts, Inc.  55 Cambridge Street,
  * Burlington, MA 01803.  Patents pending.  All rights reserved. You may
@@ -49,7 +49,6 @@ struct TaskBodyCPU<Task_QSort>
         swap(*end, *middle);    // move pivot to middle
         ka::Spawn<Task_QSort> ()(begin, middle);
         (*this)(++middle, ++end); // Exclude pivot and restore end
-        ka::Sync();
     }
   }
 };
@@ -74,12 +73,12 @@ int qmain(int n)
 
     // Confirm that a is sorted and that each element contains the index.
     for (int i = 0; i < n - 1; ++i) {
-        if (a[i] >= a[i + 1] || a[i] != i) {
-            std::cout << "Sort failed at location i=" << i << " a[i] = "
-                      << a[i] << " a[i+1] = " << a[i + 1] << std::endl;
-            delete[] a;
-            return 1;
-        }
+      if (a[i] >= a[i + 1] || a[i] != i) {
+          std::cout << "Sort failed at location i=" << i << " a[i] = "
+                    << a[i] << " a[i+1] = " << a[i + 1] << std::endl;
+          delete[] a;
+          return 1;
+      }
     }
     std::cout << "Sort succeeded." << std::endl;
     delete[] a;
