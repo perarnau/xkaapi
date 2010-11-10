@@ -1,8 +1,0 @@
-for_each_0.c implements the for_each stl algorithm using the low level xkaapi
-C adaptive interface. The master can be stolen by any thief, but the thief
-cannot be stolen. This is the simplest possible way to implement an algorithm
-using this interface. A concurrent range is used to maintain the range to
-process.
-
-for_each_1.c implements the same as above, except a thief can be stolen by
-another thief.
