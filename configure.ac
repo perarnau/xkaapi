@@ -405,12 +405,12 @@ ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libxkaapi.la])
 
 ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
 ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
 	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libxkaapi.la])
 
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
@@ -444,7 +444,7 @@ AC_CONFIG_FILES([
 	tests/static/Makefile
 
 	xkaapi.pc
-	kaapixx.pc
+	kaapi++.pc
 	atha1.pc
 	src/misc/kaapi_version.c
 

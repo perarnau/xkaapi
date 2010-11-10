@@ -5,13 +5,13 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-lib_LTLIBRARIES=libkaapixx.la
+lib_LTLIBRARIES=libkaapi++.la
 
-libkaapixx_la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXLIB_BUILD_CPPFLAGS)
-libkaapixx_la_CFLAGS=$(AM_CFLAGS) $(KAAPIXXLIB_BUILD_CFLAGS)
-libkaapixx_la_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-libkaapixx_la_LDFLAGS = -version-info 1:0:1 $(KAAPIXXLIB_BUILD_LDFLAGS)
-libkaapixx_la_LIBADD=../../src/libxkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
+libkaapi___la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXLIB_BUILD_CPPFLAGS)
+libkaapi___la_CFLAGS=$(AM_CFLAGS) $(KAAPIXXLIB_BUILD_CFLAGS)
+libkaapi___la_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+libkaapi___la_LDFLAGS = -version-info 1:0:1 $(KAAPIXXLIB_BUILD_LDFLAGS)
+libkaapi___la_LIBADD=../../src/libxkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
 	ka_api_tuple.h\
@@ -52,7 +52,7 @@ include_HEADERS=\
 	ka_api_execgraph.h\
 	ka_api_execforeach.h
 
-libkaapixx_la_SOURCES=\
+libkaapi___la_SOURCES=\
 	ka_init.cpp \
 	ka_error.cpp \
 	ka_timer.cpp \
