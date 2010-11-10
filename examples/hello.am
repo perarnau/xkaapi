@@ -13,6 +13,7 @@ check_PROGRAMS+=$(HELLO_PRGS)
 
 all-hello: $(HELLO_PRGS)
 hello_world_SOURCES=hello/hello_world.cpp
+hello_world_PKGLIBS=kaapixx
 
 hello_world_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 hello_world_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

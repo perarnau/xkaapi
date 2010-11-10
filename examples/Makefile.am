@@ -14,14 +14,14 @@ AM_CXXFLAGS=@AM_CXXFLAGS@
 
 check_PROGRAMS=
 
-include accumulate/inc.am
-include cilk/inc.am
-include fibo/inc.am
-include find/inc.am
-include for_each/inc.am
-include hello/inc.am
-include nqueens/inc.am
-include poisson3D/inc.am
+include accumulate.am
+include cilk.am
+include fibo.am
+include find.am
+include for_each.am
+include hello.am
+include nqueens.am
+include poisson3D.am
 
 
 check_PROGRAMS+= \
