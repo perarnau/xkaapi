@@ -24,7 +24,6 @@ for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
 for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
 for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
 for_each_1xx_SOURCES=for_each/for_each_1xx.cpp
-for_each_1xx_lambda_SOURCES=for_each/for_each_1xx_lambda.cpp
 for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
 
 for_each_0_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
@@ -56,11 +55,6 @@ for_each_1xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_1xx_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 for_each_1xx_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 for_each_1xx_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
-
-for_each_1xx_lambda_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-for_each_1xx_lambda_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-for_each_1xx_lambda_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-for_each_1xx_lambda_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
 for_each_2xx_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_2xx_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

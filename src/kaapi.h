@@ -1455,16 +1455,16 @@ typedef struct {
 
 /** Initialize the workqueue to be an empty (null) range workqueue.
 */
-static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq )
+static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
 {
 #if defined(__i386__)||defined(__x86_64)
   kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
   kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
-  return EINVAL;
 #else
 #  error "May be alignment constraints exit to garantee atomic read write"
 #endif
-  kwq->beg = kwq->end = 0;
+  kwq->beg = b;
+  kwq->end = e;
   return 0;
 }
 
@@ -1479,11 +1479,28 @@ static inline int kaapi_workqueue_set
   ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e)
 {
   kaapi_assert_debug( b <= e );
-  /* no reorder over volatile variable */
+  /* no reorder over volatile variables */
   kwq->end = LONG_MIN;
+  kaapi_mem_barrier();
   kwq->beg = b;
+  kaapi_mem_barrier();
   kwq->end = e;
   return 0;
+}
+
+/**
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_range_begin( kaapi_workqueue_t* kwq )
+{
+  return kwq->beg;
+}
+
+
+/**
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_range_end( kaapi_workqueue_t* kwq )
+{
+  return kwq->end;
 }
 
 /** Returns a non negative value which is the size of the queue.
@@ -1561,25 +1578,30 @@ static inline int kaapi_workqueue_steal(
   kaapi_workqueue_index_t size
 )
 {
+  kaapi_workqueue_index_t loc_beg;
+  kaapi_workqueue_index_t loc_end;
+
   kaapi_assert_debug( 1 <= size );
-  kwq->end -= size;
+
+  /* disable gcc warning */
+  *beg = 0;
+  *end = 0;
+  loc_end = kwq->end-size;
+  kwq->end = loc_end;
   kaapi_mem_barrier();
-  if (kwq->end < kwq->beg)
+
+  /* test if conflict */
+  loc_end = kwq->end;
+  loc_beg = kwq->beg;
+  if (loc_end < loc_beg)
   {
-    kwq->end += size - 1;
+    kwq->end = loc_end+size;
     kaapi_mem_barrier();
-    if (kwq->beg < kwq->end)
-    {
-      *beg = kwq->end;
-      *end  = *beg+1;
-      return 0;
-    }
-    kwq->end += 1; 
     return EBUSY;
   }
   
-  *beg = kwq->end;
-  *end  = *beg + size;
+  *beg = loc_end;
+  *end = loc_end + size;
   
   return 0;
 }  

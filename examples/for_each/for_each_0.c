@@ -45,7 +45,6 @@
 #include <string.h>
 #include <math.h>
 #include <sys/types.h>
-#include "../common/conc_range.h"
 
 
 /** Description of the example.
@@ -58,7 +57,7 @@
 */
 typedef struct work
 {
-  conc_range_t cr;
+  kaapi_workqueue_t cr;
 
   void (*op)(double*);
   double* array;
@@ -89,19 +88,19 @@ static int splitter (
   work_t* const vw = (work_t*)args;
 
   /* stolen range */
-  conc_size_t i, j;
-  conc_size_t range_size;
+  kaapi_workqueue_index_t i, j;
+  kaapi_workqueue_index_t range_size;
 
   /* reply count */
   int nrep = 0;
 
   /* size per request */
-  conc_size_t unit_size;
+  kaapi_workqueue_index_t unit_size;
 
  redo_steal:
   /* do not steal if range size <= PAR_GRAIN */
 #define CONFIG_PAR_GRAIN 128
-  range_size = conc_range_size(&vw->cr);
+  range_size = kaapi_workqueue_size(&vw->cr);
   if (range_size <= CONFIG_PAR_GRAIN)
     return 0;
 
@@ -116,7 +115,7 @@ static int splitter (
   /* perform the actual steal. if the range
      changed size in between, redo the steal
    */
-  if (!conc_range_pop_back(&vw->cr, &i, &j, nreq * unit_size))
+  if (!kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
     goto redo_steal;
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
@@ -141,10 +140,10 @@ static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
 
-  conc_size_t i, j;
+  kaapi_workqueue_index_t i, j;
 
 #define CONFIG_SEQ_GRAIN 128
-  conc_range_pop_front(&w->cr, &i, &j, CONFIG_SEQ_GRAIN);
+  kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN);
   if (i == j) return -1;
 
   *pos = w->array + i;
@@ -186,7 +185,7 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   thread = kaapi_self_thread();
 
   /* initialize work */
-  conc_range_init(&work.cr, 0, (conc_size_t)size);
+  kaapi_workqueue_init(&work.cr, 0, (kaapi_workqueue_index_t)size);
   work.op    = op;
   work.array = array;
 

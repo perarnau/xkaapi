@@ -54,6 +54,8 @@ int kaapi_workqueue_slowpop(
 )
 {
   kaapi_processor_t* kproc;
+  kaapi_workqueue_index_t loc_beg, loc_end;
+  kaapi_workqueue_index_t size_range;
   
   kproc = kaapi_get_current_processor();
   if (kproc ==0) return ESRCH;
@@ -68,22 +70,20 @@ int kaapi_workqueue_slowpop(
 
   /* memory barrier is included into kaapi_sched_lock */
   kaapi_sched_lock(&kproc->lock);
-   
-  *beg = kwq->beg;
-  
-  if ((*beg + size) > kwq->end)
-  {
-    size = kwq->end - *beg;
-    if (size == 0)
-    {
-      kaapi_sched_unlock(&kproc->lock);
-      return EBUSY;
-    }
-  }
-  
-  *end = (kwq->beg += size);
-  
+  loc_beg = kwq->beg;
+  loc_end = kwq->end;
+
+  size_range = loc_end - loc_beg;
+  if (size_range > size)
+    size_range = size;
+
+  kwq->beg = (loc_beg += size_range);
+
   kaapi_sched_unlock(&kproc->lock);
+  if (size_range ==0) return EBUSY;
+  
+  *end = loc_beg;
+  *beg = loc_beg-size_range;
   
   return 0;
 }

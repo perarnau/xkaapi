@@ -41,10 +41,7 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
-#include <algorithm>
-#include <string.h>
-#include <math.h>
+#include "for_each_work.h"
 
 
 /** Description of the example.
@@ -64,120 +61,11 @@
     Next example(s) to read.
       for_each_2xx.cpp
 */
-template<typename T, typename OP>
-class Work {
-public:
-  /* cstor */
-  Work(T* beg, T* end, OP op)
-  {
-    /* initialize work */
-    _lock.write(0);
-    _op    = op;
-    _array = beg;
-    _beg   = 0;
-    _end   = end-beg;
-  }
 
-  /* extract sequential work */
-  bool extract_seq( T*& beg, T*& end);
-
-  /* extract parallel work for nreq. Return the unit size */
-  unsigned int  extract_par( int nreq, T*& beg, T*& end);
-
-  /* name of the method should be splitter !!! split work and reply to requests */
-  void split (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-  );
-
-protected:
-  /* spinlocking */
-  void lock()
-  { while ( (_lock.read() == 1) || !_lock.cas(0, 1)); }
-
-  /* unlock */
-  void unlock()
-  { _lock.write_barrier(0); }
-
-protected:
-  ka::atomic_t<32> _lock;
-  OP _op;
-  T* _array;
-  volatile size_t _beg;
-  volatile size_t _end;
-};
-
-
-/* seq work extractor  */
-template<typename T, typename OP>
-bool Work<T,OP>::extract_seq(T*& beg, T*& end)
-{
-  /* extract from range beginning */
-#define CONFIG_SEQ_GRAIN 64
-  size_t seq_size = CONFIG_SEQ_GRAIN;
-
-  size_t i, j;
-
-  lock();
-  i = _beg;
-  if (seq_size > (_end - _beg))
-    seq_size = _end - _beg;
-
-  j = _beg + seq_size;
-  _beg += seq_size;
-  unlock();
-
-  if (seq_size == 0)
-    return false;
-
-  beg = _array + i;
-  end = _array + j;
-
-  return true;
-}
-
-
-/* parallel work extractor */
-template<typename T, typename OP>
-unsigned int Work<T,OP>::extract_par(int nreq, T*& beg_theft, T*& end_theft)
-{
-  /* size per request */
-  unsigned int unit_size = 0;
-
-  /* concurrent with victim */
-  lock();
-
-  const size_t total_size = _end - _beg;
-
-  /* how much per req */
-#define CONFIG_PAR_GRAIN 128
-  if (total_size > CONFIG_PAR_GRAIN)
-  {
-    unit_size = total_size / (nreq + 1);
-    if (unit_size == 0)
-    {
-      nreq = (total_size / CONFIG_PAR_GRAIN) - 1;
-      unit_size = CONFIG_PAR_GRAIN;
-    }
-
-    /* steal and update victim range */
-    const size_t stolen_size = unit_size * nreq;
-    beg_theft = _array + _beg - stolen_size;
-    end_theft = _array + _end + _end;
-    _end -= stolen_size;
-  }
-  unlock();
-  
-  return unit_size;
-}
-
-
-/** Task for the thief
+/** Here the thief task is defined with an extra optional parameter which is the
+    StealContext of the thief. This version of the task redefines splitter on
+    its work in order to allows other thieves to steal it.
 */
-template<typename T, typename OP>
-struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
-
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
   void operator() ( ka::StealContext* sc, ka::pointer_rw<T> first, ka::pointer_rw<T> last, OP op )
@@ -199,27 +87,6 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
       std::for_each( beg, end, op );
   }
 };
-
-
-/* parallel work splitter */
-template<typename T, typename OP>
-void Work<T,OP>::split (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-)
-{
-  /* stolen range */
-  T* beg_theft;
-  T* end_theft;
-
-  unsigned int unit_size = extract_par( nreq, beg_theft, end_theft );
-  if (unit_size ==0) return;
-
-  for (; nreq; --nreq, ++req, end_theft -= unit_size)
-    /* thief work: create a task */
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(end_theft-unit_size), ka::pointer<T>(end_theft), _op );
-}
 
 
 /* For each main function */
