@@ -10,7 +10,7 @@
 FOREACH_PRGS=for_each_0 for_each_1 for_each_rec_xx \
         for_each_0xx for_each_1xx for_each_2xx
 if KAAPI_CXX_HAS_LAMBDA
-FOREACH_PRGS+=for_each_0xx_lambda for_each_1xx_lambda
+FOREACH_PRGS+=for_each_0xx_lambda
 endif
 
 
@@ -21,10 +21,10 @@ all-for_each: $(FOREACH_PRGS)
 for_each_0_SOURCES=for_each/for_each_0.c
 for_each_1_SOURCES=for_each/for_each_1.c
 for_each_rec_xx_SOURCES=for_each/for_each_rec_xx.cpp
-for_each_0xx_SOURCES=for_each/for_each_0xx.cpp
-for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp
-for_each_1xx_SOURCES=for_each/for_each_1xx.cpp
-for_each_2xx_SOURCES=for_each/for_each_2xx.cpp
+for_each_0xx_SOURCES=for_each/for_each_0xx.cpp for_each/for_each_work.h
+for_each_0xx_lambda_SOURCES=for_each/for_each_0xx_lambda.cpp for_each/for_each_work.h
+for_each_1xx_SOURCES=for_each/for_each_1xx.cpp for_each/for_each_work.h
+for_each_2xx_SOURCES=for_each/for_each_2xx.cpp for_each/for_each_work.h
 
 for_each_0_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 for_each_0_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)

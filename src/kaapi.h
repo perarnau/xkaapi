@@ -1474,19 +1474,12 @@ static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_
     to access to the size of the queue while a thread set the workqueue, 
     then the concurrent thread will see the size of the queue before the call to set
     or it will see a nul size queue.
+    \retval 0 in case of success
+    \retval ESRCH if the current thread is not a kaapi thread.
 */
-static inline int kaapi_workqueue_set
-  ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e)
-{
-  kaapi_assert_debug( b <= e );
-  /* no reorder over volatile variables */
-  kwq->end = LONG_MIN;
-  kaapi_mem_barrier();
-  kwq->beg = b;
-  kaapi_mem_barrier();
-  kwq->end = e;
-  return 0;
-}
+extern int kaapi_workqueue_set
+  ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
+
 
 /**
 */

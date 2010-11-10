@@ -28,6 +28,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_thread_clear.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_wq_slowpop.c\
+  misc/kaapi_wq_set.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \
