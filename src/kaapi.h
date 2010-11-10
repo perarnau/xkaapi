@@ -63,6 +63,7 @@
 #endif
 
 #include "kaapi_error.h"
+#include <limits.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -541,19 +542,19 @@ typedef struct kaapi_stealcontext_t {
 
   /* splitter context */
   kaapi_task_splitter_t volatile splitter;
-  void* volatile argsplitter;
+  void* volatile                 argsplitter;
   
   /* needed for steal sync protocol */
-  kaapi_task_t*		ownertask;
+  kaapi_task_t*		               ownertask;
 
-  kaapi_task_splitter_t save_splitter;
-  void*                 save_argsplitter;
+  kaapi_task_splitter_t          save_splitter;
+  void*                          save_argsplitter;
   
-  void*                 data_victim;       /* pointer on the thief side to store args from the victim */
-  size_t                sz_data_victim;
+  void*                          data_victim;       /* pointer on the thief side to store args from the victim */
+  size_t                         sz_data_victim;
 
   /* initial saved frame */
-  kaapi_frame_t frame;
+  kaapi_frame_t                  frame;
 
   /* thieves related context, 2 cases */
   union
@@ -627,8 +628,8 @@ typedef struct kaapi_taskadaptive_result_t {
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
 
-  volatile kaapi_uint64_t*	      status;	        /* reply status pointer */
-  volatile kaapi_uint64_t*	      preempt;		/* preemption pointer */
+  volatile kaapi_uint64_t*	          status;	          /* reply status pointer */
+  volatile kaapi_uint64_t*	          preempt;          /* preemption pointer */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   kaapi_task_t			      state;		/* ktr state represented by a task */
@@ -1171,13 +1172,25 @@ extern int kaapi_preempt_thief_helper(
   void*                               arg_to_thief 
 );
 
-/** Set flag to preempt the thief and return whatever is the state of the thief (terminate or not).
-    Returns 0 if the thief if finished else returns EBUSY.
+/** \ingroup ADAPTIVE
+   Post a preemption request to thief. Do not wait preemption occurs.
+   Return 0 iff some work have been preempted and should be processed locally.
+   If the thief has already finished its computation bfore sending the signal,
+   then the return value is ECHILD.
 */
-extern int kaapi_preemptasync_thief_helper( 
+extern int kaapi_preemptasync_thief( 
   kaapi_stealcontext_t*               stc, 
   struct kaapi_taskadaptive_result_t* ktr, 
   void*                               arg_to_thief 
+);
+
+/** The thief should have been preempted using preempasync_thief
+    Returns 0 when the thief has reply to its preemption flag
+*/
+extern int kaapi_preemptasync_waitthief
+( 
+ kaapi_stealcontext_t*               sc,
+ struct kaapi_taskadaptive_result_t* ktr
 );
 
 /** \ingroup ADAPTIVE
@@ -1212,18 +1225,6 @@ extern int kaapi_remove_finishedthief(
   __res;								\
 })
 
-/** \ingroup ADAPTIVE
-   Post a preemption request to thief. Do not wait preemption occurs.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preemptasync_thief() is 0.
-   If it exists a thief, then the call to kaapi_preemptasync_thief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
-      int (*)( stc, void* thief_work, ... )
-*/
-#define kaapi_preemptasync_thief( stc, tr, arg_to_thief )	\
-  kaapi_preemptasync_thief_helper(stc, (tr), arg_to_thief)
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
@@ -1421,6 +1422,188 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 */
 extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 
+
+
+/* ========================================================================= */
+/* THE workqueue to be used with adaptive interface                          */
+/* ========================================================================= */
+/** work work_queue_t: the main important data structure.
+    It steal/pop are managed by a Dijkstra like protocol.
+    The threads that want to steal serialize their access
+    through a lock.
+    The workqueue can only be used within adaptive interface.
+    The following assumptions should be true:
+    - the current thread of control should be an kaapi thread in order to ensure
+    correctness of the implementation.
+    - the owner of the queue can call _init, _set, _pop, _size and _isempty
+    - the function _steal must be call in the context of the splitter (see adaptive interface)
+
+    Note about the implementation.
+    - The internal lock used in case of conflic is the kaapi_processor lock.
+    - data field required to be correctly aligned in order to ensure atomicity of read/write. 
+     Put them on two separate lines of cache (assume == 64bytes) due to different access by 
+     concurrent threads. Currently only IA32 & x86-64.
+     An assertion is put inside the constructor to verify that this field are correctly aligned.
+*/
+typedef long kaapi_workqueue_index_t;
+
+typedef struct {
+  kaapi_workqueue_index_t volatile beg; /*_beg & _end on two cache lines */
+  kaapi_workqueue_index_t volatile end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
+} kaapi_workqueue_t;
+
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+*/
+static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
+{
+#if defined(__i386__)||defined(__x86_64)
+  kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
+  kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
+#else
+#  error "May be alignment constraints exit to garantee atomic read write"
+#endif
+  kwq->beg = b;
+  kwq->end = e;
+  return 0;
+}
+
+
+/** This function set new bounds for the workqueue.
+    The only garantee is that is a concurrent thread tries
+    to access to the size of the queue while a thread set the workqueue, 
+    then the concurrent thread will see the size of the queue before the call to set
+    or it will see a nul size queue.
+    \retval 0 in case of success
+    \retval ESRCH if the current thread is not a kaapi thread.
+*/
+extern int kaapi_workqueue_set
+  ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
+
+
+/**
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_range_begin( kaapi_workqueue_t* kwq )
+{
+  return kwq->beg;
+}
+
+
+/**
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_range_end( kaapi_workqueue_t* kwq )
+{
+  return kwq->end;
+}
+
+/** Returns a non negative value which is the size of the queue.
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_size( kaapi_workqueue_t* kwq )
+{
+  /* on lit d'abord _end avant _beg afin que le voleur puisse qui a besoin
+     en general d'avoir la taille puis avoir la valeur la + ajour possible...
+  */
+  kaapi_workqueue_index_t e = kwq->end;
+  kaapi_readmem_barrier();
+  kaapi_workqueue_index_t b = kwq->beg;
+  return b < e ? e-b : 0;
+}
+
+/** Returns 0 if the queue is empty, else it returns a non null value.
+*/
+static inline int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
+{
+  /* on lit d'abord _end avant _beg afin que le voleur puisse qui a besoin
+     en general d'avoir la taille puis avoir la valeur la + ajour possible...
+  */
+  kaapi_workqueue_index_t e = kwq->end;
+  kaapi_readmem_barrier();
+  kaapi_workqueue_index_t b = kwq->beg;
+  return e <= b;
+}
+
+
+/** Helper function called in case of conflict.
+*/
+extern int kaapi_workqueue_slowpop(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t* beg,
+  kaapi_workqueue_index_t* end,
+  kaapi_workqueue_index_t size
+);
+
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    Return 0 in case of success 
+    Return EBUSY is the queue is empty.
+    Return EINVAL if invalid arguments
+    Return ESRCH if the current thread is not a kaapi thread.
+*/
+static inline int kaapi_workqueue_pop(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t* beg,
+  kaapi_workqueue_index_t* end,
+  kaapi_workqueue_index_t size
+)
+{
+  kwq->beg += size;
+  /* read of _end after write of _beg */
+  kaapi_mem_barrier();
+  if (kwq->beg > kwq->end) 
+    return kaapi_workqueue_slowpop( kwq, beg, end, size );
+  
+  *end = kwq->beg;
+  *beg = *end - size;
+  
+  return 0;
+}
+
+
+/** This function should only be called into a splitter to ensure correctness
+    the lock of the victim kprocessor is assumed to handle conflict.
+    Return 0 in case of success 
+    Return EBUSY is the queue is empty.
+ */
+static inline int kaapi_workqueue_steal(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t* beg,
+  kaapi_workqueue_index_t* end,
+  kaapi_workqueue_index_t size
+)
+{
+  kaapi_workqueue_index_t loc_beg;
+  kaapi_workqueue_index_t loc_end;
+
+  kaapi_assert_debug( 1 <= size );
+
+  /* disable gcc warning */
+  *beg = 0;
+  *end = 0;
+  loc_end = kwq->end-size;
+  kwq->end = loc_end;
+  kaapi_mem_barrier();
+
+  /* test if conflict */
+  loc_end = kwq->end;
+  loc_beg = kwq->beg;
+  if (loc_end < loc_beg)
+  {
+    kwq->end = loc_end+size;
+    kaapi_mem_barrier();
+    return EBUSY;
+  }
+  
+  *beg = loc_end;
+  *end = loc_end + size;
+  
+  return 0;
+}  
+
+
+
+/* ========================================================================= */
+/* Perf counter                                                              */
+/* ========================================================================= */
 /** \ingroup PERF
     performace counters
 */

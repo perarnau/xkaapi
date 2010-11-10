@@ -44,12 +44,9 @@
 #include "kaapi_impl.h"
 
 
-/** 2 gros bug dans le code de Theo:
-    hashmap avec access au lieu de access->data
-    ATOMIC_DECR
-*/
-
 /** task is the top task not yet pushed.
+    This function is called is task is pushed into a specific thread using
+    the C++ ka::SetPartition(site) attribut or the thread group access.
  */
 int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadindex, kaapi_task_t* task)
 {

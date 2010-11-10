@@ -1,5 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_util_1_1_r_w_lock.html" title="Read&#45;Write lockThis class implements interface for Posix Read&#45;Write lock. All errors..." alt="" coords="5,5,115,35"/>
-<area shape="rect" id="node4" href="$struct_util_1_1_r_w_critical_guard_1_1_e___read.html" title="Util::RWCriticalGuard::E_Read" alt="" coords="139,5,371,35"/>
-<area shape="rect" id="node6" href="$struct_util_1_1_r_w_critical_guard_1_1_e___write.html" title="Util::RWCriticalGuard::E_Write" alt="" coords="395,5,627,35"/>
-</map>

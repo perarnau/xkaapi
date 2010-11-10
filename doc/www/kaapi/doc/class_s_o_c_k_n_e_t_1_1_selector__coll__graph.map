@@ -1,9 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_util_1_1_object.html" title="Object with synchronisation mutex and condition variablesThe Object class defines..." alt="" coords="159,181,257,211"/>
-<area shape="rect" id="node4" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="5,101,120,131"/>
-<area shape="rect" id="node6" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="144,101,243,131"/>
-<area shape="rect" id="node8" href="$class_util_1_1_condition.html" title="Posix conditionsThis class implements interface to posix condition variable. All..." alt="" coords="267,101,387,131"/>
-<area shape="rect" id="node10" href="$class_s_o_c_k_n_e_t_1_1_socket_client.html" title="SOCKNET::SocketClient" alt="" coords="312,181,499,211"/>
-<area shape="rect" id="node12" href="$class_s_o_c_k_n_e_t_1_1_socket.html" title="SOCKNET::Socket" alt="" coords="411,101,555,131"/>
-<area shape="rect" id="node14" href="$class_s_o_c_k_n_e_t_1_1_address.html" title="SOCKNET::Address" alt="" coords="405,5,560,35"/>
-</map>

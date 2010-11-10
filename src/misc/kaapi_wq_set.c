@@ -1,12 +1,14 @@
 /*
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,44 +45,26 @@
 */
 #include "kaapi_impl.h"
 
-/*
+/** This function set new bounds for the workqueue.
+    The only garantee is that is a concurrent thread tries
+    to access to the size of the queue while a thread set the workqueue, 
+    then the concurrent thread will see the size of the queue before the call to set
+    or it will see a nul size queue.
 */
-kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
-  kaapi_request_t* kreq, int size, void* data
-)
+int kaapi_workqueue_set
+  ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e)
 {
-  kaapi_taskadaptive_result_t* result;
-  void* addr_tofree;
-  size_t size_alloc;
-  
-  /* allocate space for futur result of size size
-     kaapi_taskadaptive_result_t has correct alignment
-  */
-  size_alloc = sizeof(kaapi_taskadaptive_result_t);
-  if ((size >0) && (data ==0)) size_alloc += size;
-  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align
-    ( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
-  if (result== 0) return 0;
-  
-  result->size_data = size;
-  if ((size >0) && (data ==0)) {
-    result->flag = KAAPI_RESULT_DATARTS;
-    result->data = (void*)((uintptr_t)result + sizeof(*result));
-  }
-  else {
-    result->flag = KAAPI_RESULT_DATAUSR;
-    result->data = data;
-  }
+  kaapi_assert_debug( b <= e );
+  kaapi_processor_t* kproc;
 
-  result->arg_from_victim = 0;
-  result->rhead           = 0;
-  result->rtail           = 0;
-  result->prev            = 0;
-  result->next            = 0;
-  result->addr_tofree	    = addr_tofree;
-  result->status	        = &kreq->reply->status;
-  result->preempt	        = &kreq->reply->preempt;
-  result->state.u.state	  = 0;
-
-  return result;
+  kproc = kaapi_get_current_processor();
+  if (kproc ==0) return ESRCH;
+  kaapi_sched_lock(&kproc->lock);
+  /* no reorder over volatile variables */
+  kwq->end = LONG_MIN;
+  kwq->beg = b;
+  kwq->end = e;
+  kaapi_sched_unlock(&kproc->lock);
+  return 0;
 }
+

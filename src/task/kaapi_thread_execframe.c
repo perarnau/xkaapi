@@ -156,7 +156,7 @@ push_frame:
          has already one of the special flag set (either exec, either suspend).
          Test the following case with THIS (!) order :
          - kaapi_task_body_isaftersteal(body) -> call aftersteal body
-         - kaapi_task_body_issteal(body) -> return to suspend the thread
+         - kaapi_task_body_issteal(body) -> error
          - else it means that the task has been executed by a thief, but it 
          does not require aftersteal body to merge results.
       */

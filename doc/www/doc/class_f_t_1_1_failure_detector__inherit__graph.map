@@ -1,4 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node3" href="$class_f_t_1_1_heart_beat_detector.html" title="Heartbeat fault tolerance detectorThe algorithm is to send to randomly selected known..." alt="" coords="5,83,187,112"/>
-<area shape="rect" id="node5" href="$class_f_t_1_1_network_error_detector.html" title="Network Error detectorDetects network errors by intercepting network Upcalls and..." alt="" coords="211,83,413,112"/>
-</map>

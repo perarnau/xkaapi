@@ -1,8 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node1" href="$class_util_1_1_cpu_timer.html" title="CPU timer class." alt="" coords="21,5,144,35"/>
-<area shape="rect" id="node3" href="$class_util_1_1_timer.html" title="Util::Timer" alt="" coords="209,112,305,141"/>
-<area shape="rect" id="node4" href="$class_util_1_1_high_res_timer.html" title="Util::HighResTimer" alt="" coords="5,59,160,88"/>
-<area shape="rect" id="node6" href="$class_util_1_1_logical_timer.html" title="Util::LogicalTimer" alt="" coords="9,112,156,141"/>
-<area shape="rect" id="node8" href="$class_util_1_1_sys_timer.html" title="SYS timer class." alt="" coords="23,165,143,195"/>
-<area shape="rect" id="node10" href="$class_util_1_1_wall_timer.html" title="Wall clock timer class." alt="" coords="20,219,145,248"/>
-</map>

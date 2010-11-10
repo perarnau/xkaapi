@@ -1,6 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node3" href="$class_w_s_1_1_c_r_s_strategy_factory.html" title="CRSStrategyFactory." alt="" coords="264,5,456,35"/>
-<area shape="rect" id="node5" href="$class_w_s_1_1_leader_of_cluster_strategy_factory.html" title="LeaderOfClusterStrategyFactory." alt="" coords="220,59,500,88"/>
-<area shape="rect" id="node7" href="$class_w_s_1_1_random_strategy_factory.html" title="RandomStrategyFactory." alt="" coords="249,112,471,141"/>
-<area shape="rect" id="node9" href="$class_w_s_1_1_round_robin_strategy_factory.html" title="RoundRobinStrategyFactory." alt="" coords="237,165,483,195"/>
-</map>

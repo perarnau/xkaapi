@@ -1,0 +1,3 @@
+find.c implements the find stl algorithm using the low level xkaapi C adaptive
+interface. Among other things, it shows how to make use of the preemption and
+reduction related routines to interrupt any running thief if a result is found.

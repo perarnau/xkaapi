@@ -1136,6 +1136,16 @@ namespace ka {
   inline SetStaticSchedAttribut SetStaticSched(int npart, int iter = 1 )
   { return SetStaticSchedAttribut(npart, iter); }
 
+  // --------------------------------------------------------------------
+  template<class F>
+  struct TraitIsOut {
+    enum { value = 0 };
+  };
+  template<class F>
+  struct TraitIsOut<F&> {
+    enum { value = 1 };
+  };
+  
 
   // --------------------------------------------------------------------
   /* for better understand error message */
@@ -1425,14 +1435,14 @@ namespace ka {
     T* return_arg();
 
     /* signal the victim that it can get */
-    bool ack_preemption();
+    void ack_preemption()
+    { kaapi_preemptpoint_after_reducer_call(&_sc, 0); }
     
     /* thief iterator: forward iterator */
     struct thief_iterator {
       struct DUMMY_TYPE {};
       
       struct one_thief {
-
         /* signal_preempt: send preemption signal to the thief.
            When the victim caller send a signal to one of its thief,
            the control flow continues (it is a non blocking operation).
@@ -1444,7 +1454,8 @@ namespace ka {
            \retval ECHILD iff the thief was finished before the signal occurs
            \retval an error code
         */
-        int signal_preempt();
+        int signal_preempt()
+        { return kaapi_preemptasync_thief(_sc, _ktr, 0); }
 
         /* signal_preempt: send preemption signal to the thief.
            When the victim caller send a signal to one of its thief,
@@ -1462,7 +1473,8 @@ namespace ka {
            \retval an error code
         */
         template<class T>
-        int signal_preempt( const T* arg );
+        int signal_preempt( const T* arg )
+        { return kaapi_preemptasync_thief(_sc, _ktr, 0); }
 
         /* wait_preempt: waits until the thief has received the preemption flag. 
            The caller is suspended until the thief has received the preemption flag
@@ -1472,8 +1484,24 @@ namespace ka {
            (see ).
            \retval a pointer to data passed by the thief for the victim
         */
+        void wait_preempt()
+        {
+          kaapi_preemptasync_waitthief(_sc,_ktr);
+        }
+
         template<class R>
-        R* wait_preempt();
+        R* wait_preempt()
+        {
+          kaapi_preemptasync_waitthief(_sc,_ktr);
+          return (R*)_ktr->data;
+        }
+      
+        /* private part */
+        one_thief( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* ktr)
+         : _sc(sc), _ktr(ktr)
+        {}
+        kaapi_stealcontext_t*        _sc;
+        kaapi_taskadaptive_result_t* _ktr;
       };
       
       /* */
@@ -1481,22 +1509,35 @@ namespace ka {
       { return &curr; }
 
       /* */
-      bool operator==(const thief_iterator& i) const;
+      bool operator==(const thief_iterator& i) const
+      { return (curr._sc == i.curr._sc) && (curr._ktr == i.curr._ktr); }
 
       /* */
-      bool operator!=(const thief_iterator& i) const;
-
-      /* */
-      void operator++(int);
-
-      /* */
-      void operator++();
+      bool operator!=(const thief_iterator& i) const
+      { return (curr._sc != i.curr._sc) || (curr._ktr != i.curr._ktr); }
+  
+      /* prefix op*/
+      thief_iterator& operator++()
+      {
+        curr._ktr = kaapi_get_next_thief(curr._ktr);
+        return *this;
+      }
     protected:
+      friend class StealContext;
+      thief_iterator( kaapi_stealcontext_t* sc, kaapi_taskadaptive_result_t* ktr)
+       : curr(sc, ktr)
+      {}
       one_thief curr;
     };
     
-    thief_iterator begin_thief();
-    thief_iterator end_thief();
+    thief_iterator begin_thief()
+    {
+      return thief_iterator(&_sc, kaapi_get_thief_head(&_sc) );
+    }
+    thief_iterator end_thief()
+    {
+      return thief_iterator(&_sc, 0 );
+    }
   protected:
     kaapi_stealcontext_t _sc;
     friend class Request;
@@ -1519,12 +1560,45 @@ namespace ka {
     template<class TASK>
     class Spawner {
     protected:
-      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc ) : _req(r), _sc(sc), _flag(KAAPI_REQUEST_REPLY_HEAD) {}
-      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc, int flag_push ) : _req(r), _sc(sc), _flag(flag_push) {}
+      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc ) 
+        : _req(r), _sc(sc), _flag(KAAPI_REQUEST_REPLY_HEAD) 
+      {}
+      Spawner( kaapi_request_t* r, kaapi_stealcontext_t* sc, int flag_push ) 
+        : _req(r), _sc(sc), _flag(flag_push) 
+      {}
 
     public:
       /**
-      **/      
+      */      
+      void operator()()
+      { 
+        void* arg __attribute__((unused))
+            =kaapi_reply_init_adaptive_task( _sc, _req, KaapiTask0<TASK>::body, 0, 0 );
+        kaapi_request_reply(_sc, _req, _flag );
+      }
+
+#include "ka_api_reqspawn.h"
+
+    protected:
+      kaapi_request_t*      _req;
+      kaapi_stealcontext_t* _sc;
+      int                   _flag;
+      friend class Request;
+    };
+
+    template<class TASK, class OUTSTATE>
+    class SpawnerKtr {
+    protected:
+      SpawnerKtr( kaapi_request_t* r, kaapi_stealcontext_t* sc ) 
+        : _req(r), _sc(sc), _flag(KAAPI_REQUEST_REPLY_HEAD) 
+      {}
+      SpawnerKtr( kaapi_request_t* r, kaapi_stealcontext_t* sc, int flag_push ) 
+        : _req(r), _sc(sc), _flag(flag_push) 
+      {}
+
+    public:
+      /**
+      */      
       void operator()()
       { 
         void* arg __attribute__((unused))
@@ -1551,6 +1625,16 @@ namespace ka {
     Spawner<TASK> Spawn(StealContext* sc, FlagReplyTail flag) 
     { return Spawner<TASK>(&_request, (kaapi_stealcontext_t*)sc, KAAPI_REQUEST_REPLY_TAIL); }
 
+    template<class TASK, class OUTSTATE>
+    SpawnerKtr<TASK,OUTSTATE> Spawn(StealContext* sc) 
+    { return SpawnerKtr<TASK,OUTSTATE>(&_request, (kaapi_stealcontext_t*)sc); }
+    template<class TASK, class OUTSTATE>
+    SpawnerKtr<TASK,OUTSTATE> Spawn(StealContext* sc, FlagReplyHead flag) 
+    { return SpawnerKtr<TASK,OUTSTATE>(&_request, (kaapi_stealcontext_t*)sc, KAAPI_REQUEST_REPLY_HEAD); }
+    template<class TASK, class OUTSTATE>
+    SpawnerKtr<TASK,OUTSTATE> Spawn(StealContext* sc, FlagReplyTail flag) 
+    { return SpawnerKtr<TASK,OUTSTATE>(&_request, (kaapi_stealcontext_t*)sc, KAAPI_REQUEST_REPLY_TAIL); }
+
   protected:
     kaapi_request_t _request;
   };
@@ -1574,16 +1658,6 @@ namespace ka {
         flag, 
         __kaapi_trampoline_lambda<OBJECT>, 
         (void*)&func); 
-  }
-
-  /* push new steal context */
-  template<class OBJECT, void (OBJECT::*const SPLITTER)(StealContext*, int, Request*)>
-  inline int __kaapi_trampoline_splitter( 
-      struct kaapi_stealcontext_t* sc, int nreq, struct kaapi_request_t* req, void* arg 
-  )
-  { OBJECT* o = (OBJECT*)arg; 
-    (o->*SPLITTER)( (StealContext*)sc, nreq, (Request*)req );
-    return 0;
   }
 
   /* wrapper to splitter method */
@@ -1653,7 +1727,9 @@ namespace ka {
     /* internal class required for spawn method */
     class AttributComputeDependencies {
     public:
-      AttributComputeDependencies( kaapi_threadgroup_t thgrp, int thid ) : _threadgroup(thgrp), _threadindex(thid) {}
+      AttributComputeDependencies( kaapi_threadgroup_t thgrp, int thid ) 
+       : _threadgroup(thgrp), _threadindex(thid) 
+      {}
       void operator()(kaapi_thread_t* thread, kaapi_task_t* task)
       { kaapi_threadgroup_computedependencies( _threadgroup, _threadindex, task ); }
     public:
@@ -1684,7 +1760,8 @@ namespace ka {
       AttributComputeDependencies _attr;
       kaapi_thread_t*             _thread;
     };  
-    
+
+
     /* Interface: threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
     template<class TASK>
     Spawner<TASK> Spawn(const AttributSetPartition& a) 
@@ -1693,7 +1770,6 @@ namespace ka {
                   kaapi_threadgroup_thread(_threadgroup, a.get_partition())
               ); 
     }
-
 
     /** Executor of one task for ThreadGroup */
     template<class TASKGENERATOR>

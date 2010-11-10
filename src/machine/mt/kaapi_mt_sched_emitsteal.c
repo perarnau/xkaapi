@@ -99,7 +99,7 @@ redo_select:
 
     kaapi_slowdown_cpu();
   }
-#else
+#else /* cannot rely on kaapi_sched_trylock... */
 acquire:
   if (KAAPI_ATOMIC_DECR(&victim.kproc->lock) ==0) goto enter;
   while (KAAPI_ATOMIC_READ(&victim.kproc->lock) <=0)
@@ -189,7 +189,6 @@ return_value:
       kaapi_assert_debug(reply->u.s_task.body);
 
     case KAAPI_REPLY_S_TASK:
-
       /* initialize and push the task */
       self_thread = kaapi_threadcontext2thread(kproc->thread);
 

@@ -1,12 +1,14 @@
 /*
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,44 +45,45 @@
 */
 #include "kaapi_impl.h"
 
-/*
-*/
-kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
-  kaapi_request_t* kreq, int size, void* data
+/** */
+int kaapi_workqueue_slowpop(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t* beg,
+  kaapi_workqueue_index_t* end,
+  kaapi_workqueue_index_t size
 )
 {
-  kaapi_taskadaptive_result_t* result;
-  void* addr_tofree;
-  size_t size_alloc;
+  kaapi_processor_t* kproc;
+  kaapi_workqueue_index_t loc_beg, loc_end;
+  kaapi_workqueue_index_t size_range;
   
-  /* allocate space for futur result of size size
-     kaapi_taskadaptive_result_t has correct alignment
+  kproc = kaapi_get_current_processor();
+  if (kproc ==0) return ESRCH;
+  
+  /* already done in inlined pop :
+     _beg += size_max;
+     mem_synchronize();
+     test (_beg > _end) was true.
+     The real interval is [_beg-size_max, _end)
   */
-  size_alloc = sizeof(kaapi_taskadaptive_result_t);
-  if ((size >0) && (data ==0)) size_alloc += size;
-  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align
-    ( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
-  if (result== 0) return 0;
+  kwq->beg -= size; /* abort transaction */
+
+  /* memory barrier is included into kaapi_sched_lock */
+  kaapi_sched_lock(&kproc->lock);
+  loc_beg = kwq->beg;
+  loc_end = kwq->end;
+
+  size_range = loc_end - loc_beg;
+  if (size_range > size)
+    size_range = size;
+
+  kwq->beg = (loc_beg += size_range);
+
+  kaapi_sched_unlock(&kproc->lock);
+  if (size_range ==0) return EBUSY;
   
-  result->size_data = size;
-  if ((size >0) && (data ==0)) {
-    result->flag = KAAPI_RESULT_DATARTS;
-    result->data = (void*)((uintptr_t)result + sizeof(*result));
-  }
-  else {
-    result->flag = KAAPI_RESULT_DATAUSR;
-    result->data = data;
-  }
-
-  result->arg_from_victim = 0;
-  result->rhead           = 0;
-  result->rtail           = 0;
-  result->prev            = 0;
-  result->next            = 0;
-  result->addr_tofree	    = addr_tofree;
-  result->status	        = &kreq->reply->status;
-  result->preempt	        = &kreq->reply->preempt;
-  result->state.u.state	  = 0;
-
-  return result;
+  *end = loc_beg;
+  *beg = loc_beg-size_range;
+  
+  return 0;
 }

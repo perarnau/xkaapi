@@ -6,14 +6,14 @@
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
-lib_LTLIBRARIES= libxkaapi.la
+lib_LTLIBRARIES= libkaapi.la
 
-libxkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE $(XKAAPILIB_BUILD_CPPFLAGS)
-libxkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS) $(XKAAPILIB_BUILD_CFLAGS)
-libxkaapi_la_LDFLAGS = -version-info 0:0:0 $(XKAAPILIB_BUILD_LDFLAGS)
-libxkaapi_la_LIBADD = $(XKAAPILIB_BUILD_LIBS)
+libkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE $(KAAPILIB_BUILD_CPPFLAGS)
+libkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS) $(KAAPILIB_BUILD_CFLAGS)
+libkaapi_la_LDFLAGS = -version-info 0:0:0 $(KAAPILIB_BUILD_LDFLAGS)
+libkaapi_la_LIBADD = $(KAAPILIB_BUILD_LIBS)
 
-libxkaapi_la_SOURCES=\
+libkaapi_la_SOURCES=\
   misc/kaapi_version.c \
   misc/kaapi_init.c \
   misc/kaapi_abort.c \
@@ -27,6 +27,8 @@ libxkaapi_la_SOURCES=\
   misc/kaapi_hashmap_findinsert.c \
   misc/kaapi_thread_clear.c \
   misc/kaapi_malloc_align.c \
+  misc/kaapi_wq_slowpop.c\
+  misc/kaapi_wq_set.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_structregister.c \
@@ -54,7 +56,7 @@ libxkaapi_la_SOURCES=\
   workstealing/kaapi_sched_wsqueue.c 
 
 #Libtask
-libxkaapi_la_SOURCES+=\
+libkaapi_la_SOURCES+=\
   task/kaapi_thread_print.c \
   task/kaapi_thread_execframe.c \
   task/kaapi_thread_saveframe.c \
@@ -79,7 +81,7 @@ libxkaapi_la_SOURCES+=\
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
-libxkaapi_la_SOURCES+=\
+libkaapi_la_SOURCES+=\
   static/kaapi_threadgroup_checkdeps.c\
   static/kaapi_threadgroup_version.c\
   static/kaapi_threadgroup_veralloc.c\
@@ -98,7 +100,7 @@ libxkaapi_la_SOURCES+=\
 endif
 
 if KAAPI_TARGET_MT
-libxkaapi_la_SOURCES+=\
+libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_processorinit.c  \
   machine/mt/kaapi_mt_setconcurrency.c \
   machine/mt/kaapi_mt_getconcurrency.c \
@@ -115,7 +117,7 @@ libxkaapi_la_SOURCES+=\
 endif
 
 if KAAPI_TARGET_CUDA
-libxkaapi_la_SOURCES+=\
+libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda.h \
   machine/cuda/kaapi_cuda_error.h \
   machine/cuda/kaapi_cuda_register_procs.h \

@@ -76,8 +76,7 @@ static void entry(void*, kaapi_thread_t*);
 
 
 /* memory alignment */
-static inline void* __attribute__((unused))
-align_addr(void* addr)
+static inline void* __attribute__((unused)) align_addr(void* addr)
 {
   static const unsigned long ptrsize = sizeof(void*);
   static const unsigned long mask = sizeof(void*) - 1UL;
