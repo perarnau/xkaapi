@@ -603,12 +603,10 @@ typedef struct kaapi_adaptive_reply_data_t {
      during the reply, making the range
      [ &sc.header, &udata[usize] [ writable
    */
-
   kaapi_stealcontext_t	      sc;
 
   /* user defined body, size, data
    */
-
   kaapi_adaptive_thief_body_t ubody;
   size_t                      usize;
   unsigned char               udata[1];
@@ -709,7 +707,7 @@ typedef struct kaapi_reply_t {
 
     /* more specialization here */
 
-    /* fitall area */
+    /* fitall area: task arg of the steal (dfg task or adaptive task) */
     unsigned char fubar[8 * KAAPI_CACHE_LINE];
 
   } task_data;

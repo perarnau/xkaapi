@@ -124,7 +124,7 @@ static int splitter
   /* perform the actual steal. if the range
      changed size in between, redo the steal
    */
-  if (!kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
+  if (kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
     goto redo_steal;
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
@@ -156,13 +156,12 @@ static int splitter
 /* seq work extractor */
 static int extract_seq(work_t* w, const double** pos, const double** end)
 {
+  int err;
   /* extract from range beginning */
-
   kaapi_workqueue_index_t i, j;
 
 #define CONFIG_SEQ_GRAIN 128
-  kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN);
-  if (i == j) return -1;
+  if ((err =kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) !=0) return 1;
 
   *pos = w->array + i;
   *end = w->array + j;
@@ -228,7 +227,7 @@ static double accumulate(const double* array, size_t size)
 
   /* while there is sequential work to do */
  redo_work:
-  while (extract_seq(&work, &pos, &end) != -1)
+  while (!extract_seq(&work, &pos, &end))
   {
     /* res += [pos, end[ */
     for (; pos != end; ++pos)
