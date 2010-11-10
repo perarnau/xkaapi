@@ -159,6 +159,7 @@ enter:
     }
   }
 
+  /* unlock the victim kproc after processing the steal operation */
   kaapi_sched_unlock( &victim.kproc->lock );
 
   if (kaapi_reply_test( reply ))

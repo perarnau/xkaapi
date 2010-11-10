@@ -117,6 +117,8 @@ static int splitter (
    */
   if (!kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
     goto redo_steal;
+  
+  printf("steal [%li,%li]\n", i, j);
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
@@ -139,15 +141,16 @@ static int splitter (
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-
+  int err;
   kaapi_workqueue_index_t i, j;
 
 #define CONFIG_SEQ_GRAIN 128
-  kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN);
-  if (i == j) return -1;
+  if ((err =kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) !=0) return -1;
+//  if (i == j) return -1;
 
   *pos = w->array + i;
   *end = w->array + j;
+  printf("pop [%li,%li]\n", i, j);
 
   return 0; /* success */
 }
