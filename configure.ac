@@ -445,7 +445,7 @@ AC_CONFIG_FILES([
 
 	kaapi.pc
 	kaapi++.pc
-	atha1.pc
+	atha.pc
 	src/misc/kaapi_version.c
 
 ])
