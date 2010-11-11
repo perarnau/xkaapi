@@ -43,41 +43,28 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <strings.h>
 
 /**
 */
 int kaapi_thread_clear( kaapi_thread_context_t* thread )
 {
-  kaapi_stealcontext_t* sc;
-
   kaapi_assert_debug( thread != 0);
 
-  thread->sfp      = thread->stackframe;
-  thread->esfp     = thread->stackframe;
-  thread->sfp->sp  = thread->sfp->pc  = thread->task; /* empty frame */
+  thread->sfp        = thread->stackframe;
+  thread->esfp       = thread->stackframe;
+  thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
   thread->sfp->sp_data = (void*)&thread->data; /* empty frame */
-  thread->_next    = 0;
-  thread->_prev    = 0;
-  thread->affinity = ~0UL;
+  thread->_next      = 0;
+  thread->_prev      = 0;
+  thread->affinity   = ~0UL;
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */
   thread->wcs        = 0;
   kaapi_sched_initlock(&thread->lock);
 
-  /* here link between initial sc & the status where signal will be delivered */
-  sc = (kaapi_stealcontext_t*)&thread->static_reply.sc_header;
-  sc->preempt     = &thread->static_reply.preempt;
-  sc->splitter    = 0;
-  sc->argsplitter = 0;
-
-  /* clear the preemption flag */
-  *sc->preempt	  = 0;
-
-  /* todo: should it go to the adapt body to shorten steal path */
-  KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
-  sc->thieves.list.head = 0;
-  sc->thieves.list.tail = 0;
-  KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
+  /* zero all bytes from static_reply until end of sc_data */
+  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
 
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;

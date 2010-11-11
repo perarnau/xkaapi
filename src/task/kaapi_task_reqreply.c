@@ -63,7 +63,8 @@ int kaapi_request_reply(
 #if defined(KAAPI_DEBUG)
     kaapi_assert_debug( ktr != 0 );
     {
-      kaapi_assert_debug( req->reply->sc_header.ktr == ktr );
+      kaapi_stealheader_t* stch = (kaapi_stealheader_t*)(req->reply->udata+req->reply->offset);
+      kaapi_assert_debug( stch->ktr == ktr );
     }
 #endif
 

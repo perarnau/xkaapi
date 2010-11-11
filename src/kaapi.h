@@ -593,22 +593,6 @@ typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealc
 
 
 /** \ingroup ADAPT
-    Args for kaapi_adapt_body. this area represents the
-    part to be sent by the combinator during the remote
-    write of the adaptive reply.
-*/
-typedef struct kaapi_adaptive_reply_data_t {
-
-  /* user defined body, size, data
-   */
-  kaapi_adaptive_thief_body_t ubody;
-  size_t                      usize;
-  unsigned char               udata[1];
-
-} kaapi_adaptive_reply_data_t;
-
-
-/** \ingroup ADAPT
     Data structure that allows to store results of child tasks of an adaptive task.
     This data structure is stored... in the victim heap and serve as communication 
     media between victim and thief.
@@ -684,10 +668,10 @@ typedef struct kaapi_reply_t {
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
-
+  kaapi_uint16_t offset;    /* offset in udata of the task arg */
   union
   {
-    struct /* non formated body */
+    struct /* task body */ 
     {
       kaapi_task_bodyid_t	body;
     } s_task;
@@ -697,23 +681,11 @@ typedef struct kaapi_reply_t {
       kaapi_format_id_t		fmt;
     } s_taskfmt;
 
-    /* thread stealing */
+    /* thread */
     struct kaapi_thread_context_t* s_thread;
   } u;
 
-  /* todo: align on something (page or cacheline size) */
-
-  union
-  {
-    /* adaptive specialization */
-    kaapi_adaptive_reply_data_t krd;
-
-    /* more specialization here */
-
-    /* fitall area: task arg of the steal (dfg task or adaptive task) */
-    unsigned char fubar[8 * KAAPI_CACHE_LINE];
-
-  } task_data;
+  unsigned char udata[8 * KAAPI_CACHE_LINE]; /* task data */
 
 #endif /* private */
 

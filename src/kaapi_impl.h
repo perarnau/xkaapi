@@ -360,6 +360,7 @@ typedef struct kaapi_thread_context_t {
 
   /* statically allocated reply */
   kaapi_reply_t			              static_reply;
+  /* enough space to store a stealcontext that begins at static_reply->udata+static_reply->offset */
   char	                          sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
   /* warning: reply is variable sized
@@ -1294,6 +1295,22 @@ typedef struct kaapi_tasksteal_arg_t {
   unsigned int            war_param;         /* bit i=1 iff it is a w mode with war dependency */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
+
+
+/** User task + args for kaapi_adapt_body. 
+    This area represents the part to be sent by the combinator during the remote
+    write of the adaptive reply.
+    It is store into the field reply->udata of the kaapi_reply_t data structure.
+*/
+typedef struct kaapi_taskadaptive_user_taskarg_t {
+  /* user defined body, size, data
+   */
+  kaapi_adaptive_thief_body_t ubody;
+  unsigned char               udata[1];
+
+} kaapi_taskadaptive_user_taskarg_t;
+
+
 
 
 /* ======================== Perf counter interface: machine dependent ========================*/

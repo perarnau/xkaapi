@@ -54,7 +54,7 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
   kaapi_thread_save_frame( thgrp->threads[-1], &thgrp->save_maintopframe);
   
   /* recopy the task data structure: WARNING Stack growth down */
-  thgrp->size_mainthread = thgrp->save_maintopframe.pc - thgrp->save_maintopframe.sp;
+  thgrp->size_mainthread = (kaapi_uint32_t)(thgrp->save_maintopframe.pc - thgrp->save_maintopframe.sp);
   thgrp->save_mainthread = malloc( thgrp->size_mainthread * sizeof(kaapi_task_t) );
   memcpy(thgrp->save_mainthread, thgrp->save_maintopframe.sp+1, thgrp->size_mainthread*sizeof(kaapi_task_t) );
   

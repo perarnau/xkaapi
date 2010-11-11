@@ -195,13 +195,10 @@ push_frame:
       goto push_frame;
     }
 #if defined(KAAPI_DEBUG)
-#warning TODO
-#if 0 /* todo */
     else if (unlikely(fp->sp < thread->sfp->sp))
     {
       kaapi_assert_debug_m( 0, "Should not appear: a task was popping stack ????" );
     }
-#endif /* todo */
 #endif
 
     /* next task to execute, store pc in memory */

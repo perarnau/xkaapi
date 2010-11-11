@@ -66,6 +66,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   
   /* allocate reply data on the stack */
   reply = &kproc->thread->static_reply;
+  reply->offset =0;
 
 redo_select:
   /* select the victim processor */
@@ -196,7 +197,7 @@ return_value:
       kaapi_task_init(
          kaapi_thread_toptask(self_thread),
          reply->u.s_task.body,
-         (void*)reply->task_data.fubar
+         (void*)(reply->udata+reply->offset)
       );
 
       kaapi_thread_pushtask(self_thread);

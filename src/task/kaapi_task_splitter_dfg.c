@@ -78,7 +78,7 @@ int kaapi_task_splitter_dfg(
        - and at the end it reserve enough space to store original task arguments
      The original body is saved as the extra body of the original task data structure.
   */
-  argsteal = (kaapi_tasksteal_arg_t*)stealreply->task_data.fubar;
+  argsteal = (kaapi_tasksteal_arg_t*)stealreply->udata;
   argsteal->origin_thread         = thread;
   argsteal->origin_task           = task;
   argsteal->war_param             = war_param;  
