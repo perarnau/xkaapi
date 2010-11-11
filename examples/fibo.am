@@ -9,10 +9,9 @@
 
 FIBO_PRGS=fiboseq fibo_xkaapi fibo_atha \
         fibo_kaapixx fibo_kaapixx_opt fibo_kaapixx_sync
-
 check_PROGRAMS+=$(FIBO_PRGS)
-
 all-fibo: $(FIBO_PRGS)
+
 fiboseq_SOURCES=fibo/fiboseq.c
 fibo_xkaapi_SOURCES=fibo/fibo_xkaapi.c
 fibo_atha_SOURCES=fibo/fibo_atha.cpp
