@@ -537,6 +537,9 @@ typedef struct kaapi_stealheader_t
     \ingroup ADAPT
 */
 typedef struct kaapi_stealcontext_t {
+  /* header seen by both combinator and local */
+  kaapi_stealheader_t header;
+
   /* reference to the preempt flag in the thread's reply_t data structure */
   volatile kaapi_uint64_t* preempt __attribute__((aligned));
 
@@ -575,9 +578,6 @@ typedef struct kaapi_stealcontext_t {
     } list;
   } thieves;
 
-  /* header seen by both combinator and local */
-  kaapi_stealheader_t header;
-
 } kaapi_stealcontext_t;
 
 /* flags (or ed) for kaapi_stealcontext_t */
@@ -598,12 +598,6 @@ typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealc
     write of the adaptive reply.
 */
 typedef struct kaapi_adaptive_reply_data_t {
-
-  /* stealcontext. only the header part is visible
-     during the reply, making the range
-     [ &sc.header, &udata[usize] [ writable
-   */
-  kaapi_stealcontext_t	      sc;
 
   /* user defined body, size, data
    */
@@ -667,6 +661,16 @@ static inline void* kaapi_adaptive_result_data
     After the data has been write to memory, the status is set to one of
     the kaapi_reply_status_t value indicating the success in stealing, the
     failure or an error.
+
+    Thread kinds of objects may be pass in the reply data structure:
+    - a task with its body (pointer to function)
+    - a format of a task (its format id)
+    - a thread (a pointer to a thread)
+    
+    On return to a successfull theft request of a task or task format, the caller will invoke:
+    1/ decode the format if it is a format and store the body into u.s_task.body
+    2/ push a task <body,sp> = <u.s_task.body, fubar+offset> into its frame
+    3/ execute all the tasks into the frame
 */
 typedef struct kaapi_reply_t {
 
@@ -681,7 +685,6 @@ typedef struct kaapi_reply_t {
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
 
-  /* either an adaptive or a dfg steal */
   union
   {
     struct /* non formated body */

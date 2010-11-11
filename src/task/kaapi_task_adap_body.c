@@ -70,7 +70,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   /* retrieve the adaptive reply data */
   adata = (kaapi_adaptive_reply_data_t*)arg;
 
-  sc = &adata->sc;
+  sc = (kaapi_stealcontext_t*)&adata->sc_header;
 
   /* this is the master task, return */
   if (sc->header.msc == sc) return ;

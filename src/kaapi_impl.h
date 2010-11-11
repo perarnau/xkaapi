@@ -359,7 +359,8 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
   /* statically allocated reply */
-  kaapi_reply_t			 static_reply;
+  kaapi_reply_t			              static_reply;
+  char	                          sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
   /* warning: reply is variable sized
      so do not add members from here
