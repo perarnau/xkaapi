@@ -47,8 +47,11 @@
 #ifndef _KAAPI_H
 #define _KAAPI_H 1
 #define KAAPI_H _KAAPI_H
-
-
+/*!
+    @header kaapi
+    @abstract   This is the public header for XKaapi
+    @discussion XKaapi
+*/
 #if defined (_WIN32)
 #  include <windows.h>
 #  include <winnt.h>
@@ -538,7 +541,7 @@ typedef struct kaapi_stealheader_t
 */
 typedef struct kaapi_stealcontext_t {
   /* header seen by both combinator and local */
-  kaapi_stealheader_t header;
+  kaapi_stealheader_t            header;
 
   /* reference to the preempt flag in the thread's reply_t data structure */
   volatile kaapi_uint64_t* preempt __attribute__((aligned));
@@ -580,11 +583,6 @@ typedef struct kaapi_stealcontext_t {
 
 } kaapi_stealcontext_t;
 
-/* flags (or ed) for kaapi_stealcontext_t */
-#define KAAPI_CONTEXT_DEFAULT         0x0   /* no flag */
-#define KAAPI_CONTEXT_COOPERATIVE     0x1   /* cooperative call to splitter through kaapi_stealpoint */
-#define KAAPI_CONTEXT_CONCURRENT      0x2   /* concurrent call to splitter through kaapi_stealpoint */
-#define KAAPI_CONTEXT_PREEMPT         0x3   /* allow preemption of thieves */
 
 /** \ingroup ADAPT
     Extra body with kaapi_stealcontext_t as extra arg.
@@ -950,6 +948,7 @@ typedef enum kaapi_stealcontext_flag {
   KAAPI_SC_COOPERATIVE   = 0x2,
   KAAPI_SC_PREEMPTION    = 0x4,
   KAAPI_SC_NOPREEMPTION  = 0x8,
+  KAAPI_SC_INIT          = 0x10,   /* 1 == iff initilized (for lazy init) */
   
   KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
 } kaapi_stealcontext_flag;

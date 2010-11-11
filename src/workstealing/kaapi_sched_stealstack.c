@@ -256,39 +256,41 @@ static int kaapi_sched_stealframe
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body)
     {
+      /* only steal into an correctly initialized steal context */
       kaapi_stealcontext_t* const sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
-      
-      /* should not be reorder before the barrier */
-      splitter = sc->splitter;
-      argsplitter = sc->argsplitter;
-     
-      if ( (splitter !=0) && (argsplitter !=0) )
+      if (sc->header.flag & KAAPI_SC_INIT) 
       {
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-        const kaapi_uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
-        /* do not steal if terminated */
-        if (likely( !kaapi_task_state_isterm(state) ) )
-#else
-        kaapi_assert_m(0, "Sequential execution cannot be used in parallel execution");
-#endif        
+        /* should not be reorder before the barrier */
+        splitter = sc->splitter;
+        argsplitter = sc->argsplitter;
+       
+        if ( (splitter !=0) && (argsplitter !=0) )
         {
-          /* steal sucess */
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+          const kaapi_uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
+          /* do not steal if terminated */
+          if (likely( !kaapi_task_state_isterm(state) ) )
+#else
+          kaapi_assert_m(0, "Sequential execution cannot be used in parallel execution");
+#endif        
+          {
+            /* steal sucess */
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-	  /* possible race, reread the splitter */
-	  splitter = sc->splitter;
-	  argsplitter = sc->argsplitter;
-	  if ((splitter != 0) && (argsplitter != 0))
+            /* possible race, reread the splitter */
+            splitter = sc->splitter;
+            argsplitter = sc->argsplitter;
+            if ((splitter != 0) && (argsplitter != 0))
 #endif
-          kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
+            kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-          /* here suspend bit was set: reset it */
-          kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_STEAL );
+            /* here suspend bit was set: reset it */
+            kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_STEAL );
 #endif
+          }
         }
-      }
-      
+      } /* end if init */
       --task_top;
       continue;
     }

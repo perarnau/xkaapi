@@ -77,8 +77,8 @@ void* kaapi_reply_init_adaptive_task
 
   /* initialize here: used in adapt_body */
   sc_header->msc = vsc->header.msc;
-  /* cannot be read from remote msc */
-  sc_header->flag = vsc->header.flag;
+  /* copy flag without init flag: steal cannot occurs */
+  sc_header->flag = vsc->header.flag & ~KAAPI_SC_INIT;
   /* ktr is also stored in request data structure
      in order to be linked in kaapi_request_reply */
   sc_header->ktr = ktr;

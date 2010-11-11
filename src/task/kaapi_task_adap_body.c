@@ -81,11 +81,33 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
    the call (ie. wait for tasks forked)
    */
   
-  /* header flag, msc, ktr init by remote write */
+  /* here is more or less like in function kaapi_task_begin_adaptive
+     * header flag, msc, ktr init by remote write 
+     * remains to initialize other field
+  */
   sc->preempt          = &self_thread->static_reply.preempt;
   sc->save_splitter    = 0;
   sc->save_argsplitter = 0;
   sc->ownertask	       = kaapi_thread_toptask(thread) + 1;
+
+  if (sc->header.flag & KAAPI_SC_PREEMPTION)
+  {
+    /* if preemption, thief list used ... */
+    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+    sc->thieves.list.head = 0;
+    sc->thieves.list.tail = 0;
+  }
+  else
+  {
+    /* ... otherwise thief count */
+    KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
+  }
+  sc->save_splitter         = 0;
+  sc->save_argsplitter      = 0;
+
+  /* ok from here steal may occurs */
+  kaapi_writemem_barrier();
+  sc->header.flag     |= KAAPI_SC_INIT;
   
   /* finalize the stealcontext creation */
   kaapi_thread_save_frame(thread, &sc->frame);

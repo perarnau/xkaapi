@@ -95,14 +95,17 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   task = kaapi_thread_toptask(thread);
   sc->ownertask = task;
 
+  /* ok is initialized */
+  sc->header.flag       |= KAAPI_SC_INIT;
+
   /* change our execution state before pushing the task.
      this is needed for the assumptions made by the
      kaapi_task_lock_steal rouines, see for comments.
    */
-
   const kaapi_uintptr_t state =
     kaapi_task_state_setexec(kaapi_task_body2state(kaapi_adapt_body));
   kaapi_task_init(task, kaapi_task_state2body(state), sc);
+
 
   /* barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);
