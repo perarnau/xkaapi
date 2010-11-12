@@ -72,7 +72,7 @@ void* kaapi_reply_init_adaptive_task
   kaapi_assert_debug((krep->offset + sizeof(kaapi_stealheader_t)) <= 8 * KAAPI_CACHE_LINE);
 
   adata = (kaapi_taskadaptive_user_taskarg_t*)&krep->udata;
-  sc_header = (kaapi_stealheader_t*)(&krep->udata + krep->offset);
+  sc_header = (kaapi_stealheader_t*)(krep->udata + krep->offset);
   kaapi_assert_debug( (((unsigned long)sc_header) & 0x7UL) == 0 ); 
 
   /* initialize here: used in adapt_body */

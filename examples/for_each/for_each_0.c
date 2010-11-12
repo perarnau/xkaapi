@@ -231,7 +231,7 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
   
-  for (iter = 0; iter < 1000; ++iter)
+  for (iter = 0; iter < 100; ++iter)
   {
     /* initialize, apply, check */
     for (i = 0; i < ITEM_COUNT; ++i)

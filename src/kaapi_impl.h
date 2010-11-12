@@ -1307,7 +1307,6 @@ typedef struct kaapi_taskadaptive_user_taskarg_t {
    */
   kaapi_adaptive_thief_body_t ubody;
   unsigned char               udata[1];
-
 } kaapi_taskadaptive_user_taskarg_t;
 
 

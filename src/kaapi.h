@@ -682,14 +682,12 @@ typedef struct kaapi_reply_t {
     /* thread */
     struct kaapi_thread_context_t* s_thread;
   } u;
-
+#define KAAPI_REPLY_DATA_SIZE_MIN (8*KAAPI_CACHE_LINE)
   unsigned char udata[8 * KAAPI_CACHE_LINE]; /* task data */
-
 #endif /* private */
 
 } __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_reply_t;
 
-#define KAAPI_REPLY_DATA_SIZE_MIN (KAAPI_CACHE_LINE-sizeof(kaapi_uint8_t))
 
 
 /** \ingroup WS
@@ -1420,8 +1418,8 @@ extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 typedef long kaapi_workqueue_index_t;
 
 typedef struct {
-  kaapi_workqueue_index_t volatile beg; /*_beg & _end on two cache lines */
-  kaapi_workqueue_index_t volatile end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
+  volatile kaapi_workqueue_index_t beg __attribute__((aligned(64)));
+  volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
 } kaapi_workqueue_t;
 
 
@@ -1440,7 +1438,6 @@ static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_
   return 0;
 }
 
-
 /** This function set new bounds for the workqueue.
     The only garantee is that is a concurrent thread tries
     to access to the size of the queue while a thread set the workqueue, 
@@ -1449,9 +1446,7 @@ static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_
     \retval 0 in case of success
     \retval ESRCH if the current thread is not a kaapi thread.
 */
-extern int kaapi_workqueue_set
-  ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
-
+extern int kaapi_workqueue_set( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
 
 /**
 */
@@ -1460,7 +1455,6 @@ static inline kaapi_workqueue_index_t kaapi_workqueue_range_begin( kaapi_workque
   return kwq->beg;
 }
 
-
 /**
 */
 static inline kaapi_workqueue_index_t kaapi_workqueue_range_end( kaapi_workqueue_t* kwq )
@@ -1468,34 +1462,27 @@ static inline kaapi_workqueue_index_t kaapi_workqueue_range_end( kaapi_workqueue
   return kwq->end;
 }
 
-/** Returns a non negative value which is the size of the queue.
+/**
 */
 static inline kaapi_workqueue_index_t kaapi_workqueue_size( kaapi_workqueue_t* kwq )
 {
-  /* on lit d'abord _end avant _beg afin que le voleur puisse qui a besoin
-     en general d'avoir la taille puis avoir la valeur la + ajour possible...
-  */
-  kaapi_workqueue_index_t e = kwq->end;
-  kaapi_readmem_barrier();
-  kaapi_workqueue_index_t b = kwq->beg;
-  return b < e ? e-b : 0;
+  kaapi_workqueue_index_t size = kwq->end - kwq->beg;
+  return (size <0 ? 0 : size);
 }
 
-/** Returns 0 if the queue is empty, else it returns a non null value.
+/**
 */
-static inline int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
+static inline unsigned int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
 {
-  /* on lit d'abord _end avant _beg afin que le voleur puisse qui a besoin
-     en general d'avoir la taille puis avoir la valeur la + ajour possible...
-  */
-  kaapi_workqueue_index_t e = kwq->end;
-  kaapi_readmem_barrier();
-  kaapi_workqueue_index_t b = kwq->beg;
-  return e <= b;
+  kaapi_workqueue_index_t size = kwq->end - kwq->beg;
+  return size <= 0;
 }
 
 
 /** Helper function called in case of conflict.
+    Return EBUSY is the queue is empty.
+    Return EINVAL if invalid arguments
+    Return ESRCH if the current thread is not a kaapi thread.
 */
 extern int kaapi_workqueue_slowpop(
   kaapi_workqueue_t* kwq, 
@@ -1515,26 +1502,33 @@ static inline int kaapi_workqueue_pop(
   kaapi_workqueue_t* kwq, 
   kaapi_workqueue_index_t* beg,
   kaapi_workqueue_index_t* end,
-  kaapi_workqueue_index_t size
+  kaapi_workqueue_index_t max_size
 )
 {
-  kwq->beg += size;
-  /* read of _end after write of _beg */
+  kaapi_assert_debug( max_size >0 );
+  kwq->beg += max_size;
   kaapi_mem_barrier();
-  if (kwq->beg > kwq->end) 
-    return kaapi_workqueue_slowpop( kwq, beg, end, size );
-  
-  *end = kwq->beg;
-  *beg = *end - size;
-  
-  return 0;
+
+  if (kwq->beg < kwq->end)
+  {
+    /* no conflict */
+    *end = kwq->beg;
+    *beg = *end - max_size;
+    return 0;
+  }
+
+  /* conflict */
+  kwq->beg -= max_size;
+  if (kwq->beg == kwq->end) 
+    return EBUSY;
+  return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
 
 
 /** This function should only be called into a splitter to ensure correctness
-    the lock of the victim kprocessor is assumed to handle conflict.
+    the lock of the victim kprocessor is assumed to be locked to handle conflict.
     Return 0 in case of success 
-    Return EBUSY is the queue is empty.
+    Return ERANGE is the queue is empty or less than requested size.
  */
 static inline int kaapi_workqueue_steal(
   kaapi_workqueue_t* kwq, 
@@ -1543,22 +1537,25 @@ static inline int kaapi_workqueue_steal(
   kaapi_workqueue_index_t size
 )
 {
-  kaapi_assert_debug( 1 <= size );
+  kaapi_assert_debug( 0 < size );
 
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
 
-  if (size > (kwq->end - kwq->beg))
-    return EBUSY;
+  kwq->end -= size;
+  kaapi_mem_barrier();
 
-  has_popped = 1;
+  if (kwq->end < kwq->beg)
+  {
+    kwq->end += size;
+    return ERANGE; /* false */
+  }
 
-  *end = kwq->end;
-  *beg = *end - size;
-  kwq->end = *beg;
-
-  return 0;
+  *beg = kwq->end;
+  *end = *beg + size;
+  
+  return 0; /* true */
 }  
 
 

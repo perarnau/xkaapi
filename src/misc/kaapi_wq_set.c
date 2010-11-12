@@ -52,18 +52,15 @@
     or it will see a nul size queue.
 */
 int kaapi_workqueue_set
-  ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e)
+( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t beg, kaapi_workqueue_index_t end)
 {
-  kaapi_assert_debug( b <= e );
-  kaapi_processor_t* kproc;
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
 
-  kproc = kaapi_get_current_processor();
-  if (kproc ==0) return ESRCH;
+  if ( kproc ==0 ) return ESRCH;
+
   kaapi_sched_lock(&kproc->lock);
-  /* no reorder over volatile variables */
-  kwq->end = LONG_MIN;
-  kwq->beg = b;
-  kwq->end = e;
+  kwq->beg = beg;
+  kwq->end = end;
   kaapi_sched_unlock(&kproc->lock);
   return 0;
 }
