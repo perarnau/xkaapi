@@ -44,6 +44,7 @@
 */
 #include "kaapi_impl.h"
 #include <strings.h>
+#include <stddef.h>
 
 /**
 */
