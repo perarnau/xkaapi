@@ -18,6 +18,7 @@ include accumulate.am
 include cilk.am
 include fibo.am
 include find.am
+include prefix.am
 include for_each.am
 include hello.am
 include nqueens.am
