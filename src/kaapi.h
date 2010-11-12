@@ -1519,8 +1519,6 @@ static inline int kaapi_workqueue_pop(
 
   /* conflict */
   kwq->beg -= max_size;
-  if (kwq->beg == kwq->end) 
-    return EBUSY;
   return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
 
