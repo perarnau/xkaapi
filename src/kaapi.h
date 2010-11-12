@@ -1543,31 +1543,21 @@ static inline int kaapi_workqueue_steal(
   kaapi_workqueue_index_t size
 )
 {
-  kaapi_workqueue_index_t loc_beg;
-  kaapi_workqueue_index_t loc_end;
-
   kaapi_assert_debug( 1 <= size );
 
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
-  loc_end = kwq->end-size;
-  kwq->end = loc_end;
-  kaapi_mem_barrier();
 
-  /* test if conflict */
-  loc_end = kwq->end;
-  loc_beg = kwq->beg;
-  if (loc_end < loc_beg)
-  {
-    kwq->end = loc_end+size;
-    kaapi_mem_barrier();
+  if (size > (kwq->end - kwq->beg))
     return EBUSY;
-  }
-  
-  *beg = loc_end;
-  *end = loc_end + size;
-  
+
+  has_popped = 1;
+
+  *end = kwq->end;
+  *beg = *end - size;
+  kwq->end = *beg;
+
   return 0;
 }  
 
