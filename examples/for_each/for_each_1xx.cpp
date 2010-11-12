@@ -130,7 +130,7 @@ void apply_cos( double& v )
 struct doit {
   void operator()(int argc, char** argv )
   {
-    size_t size = 10000;
+    size_t size = 100000;
     if (argc >1) size = atoi(argv[1]);
     
     double* array = new double[size];

@@ -79,7 +79,8 @@ template<typename T, typename OP>
 struct TaskBodyCPU<TaskForEach<T, OP> > {
   void operator() ( ka::pointer_rpwp<T> beg, ka::pointer_rpwp<T> end, OP op) 
   {
-    if (end-beg < 2)
+#define CONFIG_SEQ_GRAIN 128
+    if (end-beg < CONFIG_SEQ_GRAIN)
       ka::Spawn<TaskForEachTerminal<T,OP> >()( beg, end, op );
     else {
       int med = (end-beg)/2;
@@ -113,7 +114,7 @@ void apply_cos( double& v )
 struct doit {
   void operator()(int argc, char** argv )
   {
-    size_t size = 10000;
+    size_t size = 100000;
     if (argc >1) size = atoi(argv[1]);
     
     double* array = new double[size];

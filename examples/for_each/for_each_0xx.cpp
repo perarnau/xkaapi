@@ -87,9 +87,11 @@ static void for_each( T* beg, T* end, OP op )
   
   /* while there is sequential work to do*/
   while (work.extract_seq(beg, end))
+  {
     /* apply w->op foreach item in [pos, end[ */
     std::for_each( beg, end, op );
-
+  }
+  
   /* wait for thieves */
   ka::TaskEndAdaptive(sc);
   /* here: 1/ all thieves have finish their result */
@@ -100,15 +102,14 @@ static void for_each( T* beg, T* end, OP op )
 */
 void apply_cos( double& v )
 {
-  v = cos(v);
+  v += cos(v);
 }
-
 
 /* My main task */
 struct doit {
   void operator()(int argc, char** argv )
   {
-    size_t size = 10000;
+    size_t size = 100000;
     if (argc >1) size = atoi(argv[1]);
     
     double* array = new double[size];
@@ -116,8 +117,15 @@ struct doit {
     /* initialize, apply, check */
     for (size_t i = 0; i < size; ++i)
       array[i] = 0.f;
-
+      
     for_each( array, array+size, apply_cos );
+
+    for (size_t i = 0; i < size; ++i)
+      if (array[i] != 1.f)
+      {
+        std::cout << "invalid @" << i << " == " << array[i] << std::endl;
+        break ;
+      }
 
     std::cout << "Done" << std::endl;
   }
