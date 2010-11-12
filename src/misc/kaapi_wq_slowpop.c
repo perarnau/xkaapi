@@ -46,44 +46,27 @@
 #include "kaapi_impl.h"
 
 /** */
-int kaapi_workqueue_slowpop(
+void kaapi_workqueue_slowpop(
   kaapi_workqueue_t* kwq, 
   kaapi_workqueue_index_t* beg,
   kaapi_workqueue_index_t* end,
-  kaapi_workqueue_index_t size
+  kaapi_workqueue_index_t max_size
 )
 {
-  kaapi_processor_t* kproc;
-  kaapi_workqueue_index_t loc_beg, loc_end;
-  kaapi_workqueue_index_t size_range;
-  
-  kproc = kaapi_get_current_processor();
-  if (kproc ==0) return ESRCH;
-  
-  /* already done in inlined pop :
-     _beg += size_max;
-     mem_synchronize();
-     test (_beg > _end) was true.
-     The real interval is [_beg-size_max, _end)
-  */
-  kwq->beg -= size; /* abort transaction */
+  kaapi_workqueue_index_t size = max_size;
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
 
-  /* memory barrier is included into kaapi_sched_lock */
+  kaapi_assert_debug(kproc);
+
   kaapi_sched_lock(&kproc->lock);
-  loc_beg = kwq->beg;
-  loc_end = kwq->end;
 
-  size_range = loc_end - loc_beg;
-  if (size_range > size)
-    size_range = size;
-
-  kwq->beg = (loc_beg += size_range);
+  size = kwq->end - kwq->beg;
+  if (size > max_size)
+    size = max_size;
+  kwq->beg += size;
 
   kaapi_sched_unlock(&kproc->lock);
-  if (size_range ==0) return EBUSY;
-  
-  *end = loc_beg;
-  *beg = loc_beg-size_range;
-  
-  return 0;
+
+  *end = kwq->beg;
+  *beg = *end - size;
 }

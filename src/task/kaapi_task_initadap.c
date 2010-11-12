@@ -62,7 +62,7 @@ void* kaapi_reply_init_adaptive_task
   kaapi_adaptive_reply_data_t* const adata = &krep->task_data.krd;
 
   kaapi_assert_debug
-    ((size + sizeof(kaapi_adaptive_reply_data_t)) <= 8 * KAAPI_CACHE_LINE);
+    ((size + sizeof(kaapi_adaptive_reply_data_t)) <= 16 * KAAPI_CACHE_LINE);
 
   /* initialize here: used in adapt_body */
   adata->sc.header.msc = vsc->header.msc;

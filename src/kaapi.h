@@ -710,7 +710,7 @@ typedef struct kaapi_reply_t {
     /* more specialization here */
 
     /* fitall area */
-    unsigned char fubar[8 * KAAPI_CACHE_LINE];
+    unsigned char fubar[16 * KAAPI_CACHE_LINE];
 
   } task_data;
 
@@ -1448,8 +1448,8 @@ extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 typedef long kaapi_workqueue_index_t;
 
 typedef struct {
-  kaapi_workqueue_index_t volatile beg; /*_beg & _end on two cache lines */
-  kaapi_workqueue_index_t volatile end __attribute__((aligned(64))); /* minimal constraints for _end / _beg _lock and _end on same cache line */
+  volatile kaapi_workqueue_index_t beg __attribute__((aligned(64)));
+  volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
 } kaapi_workqueue_t;
 
 
@@ -1477,8 +1477,8 @@ static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_
     \retval 0 in case of success
     \retval ESRCH if the current thread is not a kaapi thread.
 */
-extern int kaapi_workqueue_set
-  ( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
+extern void kaapi_workqueue_set
+( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
 
 
 /**
@@ -1496,36 +1496,22 @@ static inline kaapi_workqueue_index_t kaapi_workqueue_range_end( kaapi_workqueue
   return kwq->end;
 }
 
-/** Returns a non negative value which is the size of the queue.
+/**
 */
 static inline kaapi_workqueue_index_t kaapi_workqueue_size( kaapi_workqueue_t* kwq )
 {
-  /* on lit d'abord _end avant _beg afin que le voleur puisse qui a besoin
-     en general d'avoir la taille puis avoir la valeur la + ajour possible...
-  */
-  kaapi_workqueue_index_t e = kwq->end;
-  kaapi_readmem_barrier();
-  kaapi_workqueue_index_t b = kwq->beg;
-  return b < e ? e-b : 0;
+  return kwq->end - kwq->beg;
 }
 
-/** Returns 0 if the queue is empty, else it returns a non null value.
-*/
-static inline int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
+static inline unsigned int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
 {
-  /* on lit d'abord _end avant _beg afin que le voleur puisse qui a besoin
-     en general d'avoir la taille puis avoir la valeur la + ajour possible...
-  */
-  kaapi_workqueue_index_t e = kwq->end;
-  kaapi_readmem_barrier();
-  kaapi_workqueue_index_t b = kwq->beg;
-  return e <= b;
+  return kwq->beg >= kwq->end;
 }
 
 
 /** Helper function called in case of conflict.
 */
-extern int kaapi_workqueue_slowpop(
+extern void kaapi_workqueue_slowpop(
   kaapi_workqueue_t* kwq, 
   kaapi_workqueue_index_t* beg,
   kaapi_workqueue_index_t* end,
@@ -1539,23 +1525,27 @@ extern int kaapi_workqueue_slowpop(
     Return EINVAL if invalid arguments
     Return ESRCH if the current thread is not a kaapi thread.
 */
-static inline int kaapi_workqueue_pop(
+static inline void kaapi_workqueue_pop(
   kaapi_workqueue_t* kwq, 
   kaapi_workqueue_index_t* beg,
   kaapi_workqueue_index_t* end,
-  kaapi_workqueue_index_t size
+  kaapi_workqueue_index_t max_size
 )
 {
-  kwq->beg += size;
-  /* read of _end after write of _beg */
+  kwq->beg += max_size;
   kaapi_mem_barrier();
-  if (kwq->beg > kwq->end) 
-    return kaapi_workqueue_slowpop( kwq, beg, end, size );
-  
-  *end = kwq->beg;
-  *beg = *end - size;
-  
-  return 0;
+
+  if (kwq->beg <= kwq->end)
+  {
+    /* no conflict */
+    *end = kwq->beg;
+    *beg = *end - max_size;
+    return ;
+  }
+
+  /* conflict */
+  kwq->beg -= max_size;
+  kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
 
 
@@ -1571,32 +1561,27 @@ static inline int kaapi_workqueue_steal(
   kaapi_workqueue_index_t size
 )
 {
-  kaapi_workqueue_index_t loc_beg;
-  kaapi_workqueue_index_t loc_end;
+  /* assume kproc locked */
 
   kaapi_assert_debug( 1 <= size );
 
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
-  loc_end = kwq->end-size;
-  kwq->end = loc_end;
+
+  kwq->end -= size;
   kaapi_mem_barrier();
 
-  /* test if conflict */
-  loc_end = kwq->end;
-  loc_beg = kwq->beg;
-  if (loc_end < loc_beg)
+  if (kwq->end < kwq->beg)
   {
-    kwq->end = loc_end+size;
-    kaapi_mem_barrier();
-    return EBUSY;
+    kwq->end += size;
+    return 0; /* false */
   }
+
+  *beg = kwq->end;
+  *end = *beg + size;
   
-  *beg = loc_end;
-  *end = loc_end + size;
-  
-  return 0;
+  return 1; /* true */
 }  
 
 
