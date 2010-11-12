@@ -1505,20 +1505,23 @@ static inline int kaapi_workqueue_pop(
   kaapi_workqueue_index_t max_size
 )
 {
+  kaapi_workqueue_index_t loc_beg;
   kaapi_assert_debug( max_size >0 );
-  kwq->beg += max_size;
+  loc_beg = kwq->beg + max_size;
+  kwq->beg = loc_beg;
   kaapi_mem_barrier();
 
-  if (kwq->beg < kwq->end)
+  if (loc_beg < kwq->end)
   {
     /* no conflict */
-    *end = kwq->beg;
+    *end = loc_beg;
     *beg = *end - max_size;
     return 0;
   }
 
   /* conflict */
-  kwq->beg -= max_size;
+  loc_beg -= max_size;
+  kwq->beg = loc_beg;
   return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
 
