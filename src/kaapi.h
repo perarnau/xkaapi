@@ -1271,7 +1271,14 @@ static inline int kaapi_is_null(void* p)
     \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
 */
-typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
+
+typedef int (*kaapi_ppreducer_t) (
+#ifdef __cplusplus
+ kaapi_taskadaptive_result_t*,
+ void* arg_from_victim, ...
+#endif
+);
+
 #define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(stc) ? \
     kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, result_data, result_size),  \
