@@ -45,6 +45,8 @@
 #include <string.h>
 #include <math.h>
 #include <sys/types.h>
+#define __USE_BSD 1
+#include <sys/time.h>
 
 
 /** Description of the example.
@@ -223,6 +225,8 @@ static void apply_cos( double* v )
 */
 int main(int ac, char** av)
 {
+  struct timeval tms[3];
+  double sum = 0.f;
   size_t i;
 
 #define ITEM_COUNT 100000
@@ -238,7 +242,12 @@ int main(int ac, char** av)
     for (i = 0; i < ITEM_COUNT; ++i)
       array[i] = 0.f;
 
+    gettimeofday(&tms[0], NULL);
     for_each( array, ITEM_COUNT, apply_cos );
+    gettimeofday(&tms[1], NULL);
+    timersub(&tms[1], &tms[0], &tms[2]);
+    const double diff = (double)(tms[2].tv_sec * 1000000 + tms[2].tv_usec);
+    sum += diff;
 
     for (i = 0; i < ITEM_COUNT; ++i)
       if (array[i] != 1.f)
@@ -248,7 +257,7 @@ int main(int ac, char** av)
       }
   }
 
-  printf("done\n");
+  printf("done: %lf\n", sum / 1000);
 
   /* finalize the runtime */
   kaapi_finalize();
