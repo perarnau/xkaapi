@@ -42,6 +42,8 @@
 ** 
 */
 #include "kaapi.h"
+#define __USE_BSD 1
+#include <sys/time.h>
 
 
 typedef struct work
@@ -108,6 +110,14 @@ static void common_reducer(work_t* vw, thief_work_t* tw)
     vw->oarray[pos] += vw->prefix;
 
 #else /* parallel reduction */
+
+  /* todo: for on the thread that touched the data. in
+     the case of a thief reduction, that thread is the
+     current one, inactive. but if we are reducing on
+     the victim, there is a problem since we cannot
+     push a task in a thread that is active, and we
+     dont know the thief thread state.
+   */
 
   kaapi_thread_t* const thread = kaapi_self_thread();
   kaapi_task_t* const task = kaapi_thread_toptask(thread);
@@ -338,6 +348,9 @@ static void prefix(const double* iarray, double* oarray, size_t size)
 
 int main(int ac, char** av)
 {
+  struct timeval tms[3];
+  double sum = 0.f;
+
 #define ITEM_COUNT 100000
   static double iarray[ITEM_COUNT];
   static double oarray[ITEM_COUNT];
@@ -355,7 +368,12 @@ int main(int ac, char** av)
       oarray[i] = 42.f;
     }
 
+    gettimeofday(&tms[0], NULL);
     prefix(iarray, oarray, ITEM_COUNT);
+    gettimeofday(&tms[1], NULL);
+    timersub(&tms[1], &tms[0], &tms[2]);
+    const double diff = (double)(tms[2].tv_sec * 1000000 + tms[2].tv_usec);
+    sum += diff;
 
     /* check */
     double sum = 0.f;
@@ -370,7 +388,7 @@ int main(int ac, char** av)
     }
   }
 
-  printf("done\n");
+  printf("done: %lf\n", sum / 1000);
 
   /* finalize the runtime */
   kaapi_finalize();
