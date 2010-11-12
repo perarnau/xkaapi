@@ -73,7 +73,7 @@ public:
   /* extract sequential work */
   bool extract_seq( T*& beg, T*& end)
   {
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 256
     kaapi_workqueue_index_t b, e;
     if (kaapi_workqueue_pop(&wq, &b, &e, CONFIG_SEQ_GRAIN)) return false;
 //    printf("Pop: [%li, %li)\n", b, e);

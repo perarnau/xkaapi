@@ -44,9 +44,6 @@
 #include "kaapi.h"
 #include <string.h>
 #include <math.h>
-#include <sys/types.h>
-#define __USE_BSD 1
-#include <sys/time.h>
 
 
 /** Description of the example.
@@ -143,7 +140,7 @@ static int extract_seq(work_t* w, double** pos, double** end)
   /* extract from range beginning */
   kaapi_workqueue_index_t i, j;
   
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 256
   if (kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) return 1;
   
   *pos = w->array + i;
@@ -223,7 +220,7 @@ static void apply_cos( double* v )
  */
 int main(int ac, char** av)
 {
-  struct timeval tms[3];
+  double t0,t1;
   double sum = 0.f;
   size_t i;
   size_t iter;
@@ -240,12 +237,10 @@ int main(int ac, char** av)
     for (i = 0; i < ITEM_COUNT; ++i)
       array[i] = 0.f;
 
-    gettimeofday(&tms[0], NULL);
+    t0 = kaapi_get_elapsedns();
     for_each( array, ITEM_COUNT, apply_cos );
-    gettimeofday(&tms[1], NULL);
-    timersub(&tms[1], &tms[0], &tms[2]);
-    const double diff = (double)(tms[2].tv_sec * 1000000 + tms[2].tv_usec);
-    sum += diff;
+    t1 = kaapi_get_elapsedns();
+    sum += (t1-t0)/1000; /* ms */
 
     for (i = 0; i < ITEM_COUNT; ++i)
       if (array[i] != 1.f)
@@ -255,7 +250,7 @@ int main(int ac, char** av)
       }
   }
 
-  printf("done: %lf\n", sum / 1000);
+  printf("done: %lf (ms)\n", sum / 100);
 
   /* finalize the runtime */
   kaapi_finalize();
