@@ -12,7 +12,6 @@ extern double kaapi_get_elapsedtime();
 }
 #endif
 
-#if defined(FIBOCODE)
 /* Sequential fibo function
 */
 long fiboseq( const long n ) {
@@ -22,11 +21,7 @@ long fiboseq( const long n ) {
         return fiboseq(n-1)+fiboseq(n-2);
 }
 
-#else
-extern long fiboseq(long);
-#endif
 
-#if defined(MAINCODE)
 int main(int argc, char** argv)
 {
   int i;
@@ -52,8 +47,6 @@ int main(int argc, char** argv)
     }
   }
   t1 = kaapi_get_elapsedtime();
-/*  printf("Fibo(%i) = %i *** Time: t1=%e(s), t0=%e(s)\n", n, result, t1,t0 );*/
   printf("Fibo(%i) = %li *** Time(s): %e\n", n, result/niter, (t1-t0)/(double)niter );
   return 0;
 }
-#endif
