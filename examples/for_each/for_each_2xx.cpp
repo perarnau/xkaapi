@@ -168,10 +168,21 @@ struct doit {
     
     double* array = new double[size];
 
-    /* initialize, apply, check */
-    memset(array, 0, sizeof(array));
+    for (int iter = 0; iter < 100; ++iter)
+    {
+      /* initialize, apply, check */
+      for (size_t i = 0; i < size; ++i)
+        array[i] = 0.f;
+        
+      for_each( array, array+size, apply_cos );
 
-    for_each( array, array+size, apply_cos );
+      for (size_t i = 0; i < size; ++i)
+        if (array[i] != 1.f)
+        {
+          std::cout << "invalid @" << i << " == " << array[i] << std::endl;
+          break ;
+        }
+    }
 
     std::cout << "Done" << std::endl;
   }

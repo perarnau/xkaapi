@@ -139,11 +139,10 @@ redo_steal:
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-  int err;
   kaapi_workqueue_index_t i, j;
   
-#define CONFIG_SEQ_GRAIN 128
-  if ((err =kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) !=0) return 1;
+#define CONFIG_SEQ_GRAIN 64
+  if (kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) return 1;
   
   *pos = w->array + i;
   *end = w->array + j;

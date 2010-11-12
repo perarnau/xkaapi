@@ -142,12 +142,11 @@ static int splitter (
 */
 static int extract_seq(work_t* w, double** pos, double** end)
 {
-  int err;
   /* extract from range beginning */
   kaapi_workqueue_index_t i, j;
   
-#define CONFIG_SEQ_GRAIN 128
-  if ((err =kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) !=0) return 1;
+#define CONFIG_SEQ_GRAIN 64
+  if (kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) return 1;
   
   *pos = w->array + i;
   *end = w->array + j;
@@ -245,7 +244,7 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
 
-  for (ac = 0; ac < 1000; ++ac)
+  for (ac = 0; ac < 100; ++ac)
   {
     /* initialize, apply, check */
 
