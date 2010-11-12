@@ -37,8 +37,15 @@ BUILT_SOURCES = $(M4_BUILT_FILES)
 
 EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
 
-$(M4_BUILT_FILES): $(M4_SRCS)
-	(cd $(srcdir); ./m4_generator 10)
+$(M4_BUILT_FILES): stamp-m4_generator
+
+.INTERMEDIATE: stamp-m4_generator
+stamp-m4_generator: $(M4_SRCS)
+	cd $(srcdir) && ./m4_generator 10
+	touch $@
+
+clean-local:
+	$(RM) stamp-m4_generator
 
 include_HEADERS=\
 	kaapi++ \
