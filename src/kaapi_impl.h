@@ -998,6 +998,7 @@ static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
   } while (1);
   /* implicit barrier in KAAPI_ATOMIC_CAS */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
+  return 0;
 #else
 acquire:
   if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
@@ -1005,7 +1006,6 @@ acquire:
     kaapi_slowdown_cpu(); 
   goto acquire;
 #endif
-  return 0;
 }
 
 

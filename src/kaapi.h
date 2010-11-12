@@ -1545,22 +1545,25 @@ static inline int kaapi_workqueue_steal(
   kaapi_workqueue_index_t size
 )
 {
+  kaapi_workqueue_index_t loc_end;
+
   kaapi_assert_debug( 0 < size );
 
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
 
-  kwq->end -= size;
+  loc_end = kwq->end - size;
+  kwq->end = loc_end;
   kaapi_mem_barrier();
 
-  if (kwq->end < kwq->beg)
+  if (loc_end < kwq->beg)
   {
-    kwq->end += size;
+    kwq->end = loc_end+size;
     return ERANGE; /* false */
   }
 
-  *beg = kwq->end;
+  *beg = loc_end;
   *end = *beg + size;
   
   return 0; /* true */

@@ -68,9 +68,7 @@
 #endif
 
 #if defined(KAAPI_USE_CUDA)
-# if KAAPI_USE_CUDA
 #  include "../cuda/kaapi_cuda_proc.h"
-# endif
 #endif
 #include "../../memory/kaapi_mem.h"
 
