@@ -637,7 +637,7 @@ static inline void* kaapi_adaptive_result_data
 /** \ingroup WS
     Reply data structure used to return work after a steal request.
     When work is stolen from a victim, work could be stored in the memory data. 
-    The runtime ensure that at least KAAPI_REPLY_DATA_SIZE_MIN byte is available.
+    The runtime ensure that at least KAAPI_REPLY_DATA_SIZE_MAX byte is available.
     Depending on the work stealing protocol, more data may be available.
     
     After the data has been write to memory, the status is set to one of
@@ -682,8 +682,8 @@ typedef struct kaapi_reply_t {
     /* thread */
     struct kaapi_thread_context_t* s_thread;
   } u;
-#define KAAPI_REPLY_DATA_SIZE_MIN (8*KAAPI_CACHE_LINE)
-  unsigned char udata[8 * KAAPI_CACHE_LINE]; /* task data */
+#define KAAPI_REPLY_DATA_SIZE_MAX (8*KAAPI_CACHE_LINE)
+  unsigned char udata[KAAPI_REPLY_DATA_SIZE_MAX]; /* task data */
 #endif /* private */
 
 } __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_reply_t;

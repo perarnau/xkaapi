@@ -61,11 +61,10 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
-  /* clear thief stack/thread that will receive tasks */
-  kaapi_thread_clear( kproc->thread );
-  
   /* allocate reply data on the stack */
   reply = &kproc->thread->static_reply;
+  
+  /* mark off of task arg to 0 prior to post request, because DFG reply do not write it */
   reply->offset =0;
 
 redo_select:
@@ -82,6 +81,11 @@ redo_select:
      Fill & Post the request to the victim processor 
   */
   kaapi_request_post( kproc->kid, reply, victim.kproc );
+  
+  /* reset thief stack/thread will steals are under progression */
+  kaapi_thread_reset( kproc->thread );
+  
+
   victim_hlr = &victim.kproc->hlrequests;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
