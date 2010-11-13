@@ -12,7 +12,7 @@
 #
 # LAST MODIFICATION
 #
-#   2008-05-20
+#   2010-11-13
 #
 # COPYLEFT
 #
@@ -80,20 +80,20 @@ AC_DEFUN([_ACX_PROG_CCACHE_C], [
   AS_VAR_PUSHDEF([VAR],[ac_cv_prog_ccache_$1])dnl
   AC_CACHE_CHECK([weather ccache is already invoked with '$$1'],
   VAR,[VAR="no"
-   AC_LANG_SAVE
-   $3
+   AC_LANG_PUSH([$3])
    ac_save_[]FLAGS="$[]FLAGS"
    acx_ccache_logfile="$(pwd)/config.ccache.log"
    rm -f "$acx_ccache_logfile"
    (
      CCACHE_LOGFILE="$acx_ccache_logfile"
      export CCACHE_LOGFILE
-     AC_TRY_COMPILE([],[return 0;])
+     AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM([],[[return 0;]])])
    )
    AS_IF([test -f "$acx_ccache_logfile"],
 	[rm -f "$acx_ccache_logfile" ; VAR=yes])
    FLAGS="$ac_save_[]FLAGS"
-   AC_LANG_RESTORE
+   AC_LANG_POP([$3])
   ])
   case "$VAR,$have_ccache,$with_ccache" in
     yes,*) AC_MSG_NOTICE([ccache already enabled. Not doing anything.]) ;;
@@ -111,11 +111,11 @@ AC_DEFUN([_ACX_PROG_CCACHE_C], [
 ])dnl _ACX_PROG_CCACHE_C
 
 AC_DEFUN([ACX_PROG_CCACHE_CC], [
-  _ACX_PROG_CCACHE_C([CC], [CFLAGS], [AC_LANG_C])
+  _ACX_PROG_CCACHE_C([CC], [CFLAGS], [C])
 ])
 
 AC_DEFUN([ACX_PROG_CCACHE_CXX], [
-  _ACX_PROG_CCACHE_C([CXX], [CXXFLAGS], [AC_LANG_CPLUSPLUS])
+  _ACX_PROG_CCACHE_C([CXX], [CXXFLAGS], [C++])
 ])
 
 

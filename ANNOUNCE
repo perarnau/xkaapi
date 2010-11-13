@@ -1,6 +1,6 @@
 
 
-We announce the  release, as libre/free software, of  revision rc1 of 
+We announce the  release, as libre/free software, of  version 1.0rc2 of 
 the XKaapi  package for parallel programming. KAAPI means Kernel for Adaptative, 
 Asynchronous Parallel and Interactive programming. It is a C/C++ library that 
 allows to execute multithreaded computation with data flow synchronization 
@@ -25,7 +25,7 @@ found into the STL.
 
 
 
-What is SCOTCH
+What is XKaapi
 ==============
 
 XKaapi  is a project carried out within  the MOAIS  team of INRIA Grenoble

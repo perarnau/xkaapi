@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.60])
 
-AC_INIT([X-KAAPI], [1.0-rc2], [kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI],[1.0-rc2],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
@@ -56,7 +56,7 @@ ACX_PROG_CCACHE_CXX
 
 # if next line is comented out, we can create only dynamic libraries be default
 # AC_DISABLE_STATIC
-AC_PROG_LIBTOOL
+LT_INIT
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_PROG_MKDIR_P
@@ -175,6 +175,7 @@ AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
 AS_CASE([$with_steal],
   [rmw|cas], [dnl
     AC_MSG_NOTICE([Configure with Read Modify Write atomic instruction's based workstealing algorithm])
+    # dnl add a quote for vim syntax parser '
     # must not change the ABI. Enabling through AC*DEFINE
     # 0 -> KAAPI_CAS_METHOD
     AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/task])
@@ -262,6 +263,7 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+AC_TYPE_MODE_T
 AC_CHECK_TYPES([ptrdiff_t])
 
 AC_CHECK_SIZEOF([void*])
@@ -270,11 +272,13 @@ dnl ----------------------------------------------------------------
 dnl Checks for library functions.
 dnl ----------------------------------------------------------------
 AC_FUNC_ALLOCA
-AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
 AC_FUNC_MMAP
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([clock_gettime getcwd gethostname getpagesize gettimeofday memset mkdir munmap strdup strerror strtoul])
+AC_CHECK_FUNCS([bzero clock_gettime getcwd gethostname getpagesize gettimeofday memset mkdir munmap sqrt strdup strerror strtoul])
+
+AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
 
 dnl ----------------------------------------------------------------
 dnl Checks for libraries.
