@@ -1,7 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node10" href="$class_w_s_1_1_random_strategy.html" title="RandomStrategy." alt="" coords="128,237,299,267"/>
-<area shape="rect" id="node2" href="$class_w_s_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor and a victim processThis class..." alt="" coords="5,83,211,112"/>
-<area shape="rect" id="node4" href="$class_core_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor." alt="" coords="104,5,323,35"/>
-<area shape="rect" id="node6" href="$class_core_1_1_random_victim.html" title="Random work stealing algorithm on a worksetDo random choice of the processor." alt="" coords="235,83,403,112"/>
-<area shape="rect" id="node12" href="$class_w_s_1_1_c_r_s_strategy.html" title="CRSStrategy." alt="" coords="144,315,283,344"/>
-</map>

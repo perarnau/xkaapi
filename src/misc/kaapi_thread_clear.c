@@ -43,27 +43,29 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <strings.h>
+#include <stddef.h>
 
 /**
 */
 int kaapi_thread_clear( kaapi_thread_context_t* thread )
 {
-  kaapi_stack_t* stack = kaapi_threadcontext2stack(thread);
   kaapi_assert_debug( thread != 0);
-  thread->sfp      = thread->stackframe;
-  thread->esfp     = (kaapi_frame_t*)thread->sfp;
-  thread->sfp->sp  = thread->sfp->pc  = stack->task; /* empty frame */
-  thread->sfp->sp_data = stack->data; /* empty frame */
-  thread->errcode  = 0;
-  thread->_next    = 0;
-  thread->_prev    = 0;
-  thread->affinity = ~0UL;
+
+  thread->sfp        = thread->stackframe;
+  thread->esfp       = thread->stackframe;
+  thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
+  thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
+  thread->_next      = 0;
+  thread->_prev      = 0;
+  thread->affinity   = ~0UL;
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */
-  thread->wcs.thread = thread;
-  /*thread->thieffp  = 0; do not put here this instruction : always set by thief */
-  KAAPI_ATOMIC_WRITE(&thread->lock, 0);
-  kaapi_stack_clear(stack);
+  thread->wcs        = 0;
+  kaapi_sched_initlock(&thread->lock);
+
+  /* zero all bytes from static_reply until end of sc_data */
+  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
 
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;

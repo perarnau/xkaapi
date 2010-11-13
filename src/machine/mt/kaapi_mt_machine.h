@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -49,8 +50,6 @@
 #ifndef _KAAPI_IMPL_H
 #  error This file must not be directly included. Use kaapi_impl.h instead
 #endif
-#include "kaapi_datastructure.h"
-#include "../../memory/kaapi_mem.h"
 #include <stdint.h>
 #include <pthread.h>
 
@@ -69,10 +68,13 @@
 #endif
 
 #if defined(KAAPI_USE_CUDA)
-# if KAAPI_USE_CUDA
 #  include "../cuda/kaapi_cuda_proc.h"
-# endif
 #endif
+#include "../../memory/kaapi_mem.h"
+
+/* ========================================================================== */
+
+
 
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
@@ -131,12 +133,17 @@ typedef struct kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_cell_ptr_t;
 /** Cell of the list
 */
 typedef struct kaapi_wsqueuectxt_cell_t {
-  kaapi_atomic_t               state;  /* 0: in the list, 1: out the list */
-  kaapi_thread_context_t*      thread; /* */
-  kaapi_wsqueuectxt_cell_ptr_t next;   /* double link list */
-  kaapi_wsqueuectxt_cell_ptr_t prev;   /* shared with thief, used to link in free list */
+  kaapi_atomic_t               state;      /* 0: in the list, 1: out the list */
+  kaapi_affinity_t             affinity;   /* bit i == 1 -> can run on procid i */
+  kaapi_thread_context_t*      thread;     /* */
+  kaapi_wsqueuectxt_cell_ptr_t next;       /* double link list */
+  kaapi_wsqueuectxt_cell_ptr_t prev;       /* shared with thief, used to link in free list */
 } kaapi_wsqueuectxt_cell_t;
 
+#define KAAPI_WSQUEUECELL_INLIST    1  /* a thread has been pushed into the queue */
+#define KAAPI_WSQUEUECELL_READY     3  /* see kaapi wakeup, a suspended thread has been put ready */
+#define KAAPI_WSQUEUECELL_OUTLIST   4  /* */
+#define KAAPI_WSQUEUECELL_STEALLIST 8  /* the thread is under stealing */
 
 /** Type of bloc of kaapi_liststack_node_t
 */
@@ -152,89 +159,23 @@ typedef struct kaapi_wsqueuectxt_t {
   kaapi_wsqueuectxt_cellbloc_t* allocatedbloc;
 } kaapi_wsqueuectxt_t;
 
-/** lfree data structure,
-    kaapi_thread_context_t has both next and prev fields.
+
+/** lfree data structure
 */
-KAAPI_QUEUE_DECLARE(kaapi_queuectxt_t, kaapi_thread_context_t);
-#define KAAPI_MAXFREECTXT 2
+typedef struct kaapi_lfree
+{
+  kaapi_thread_context_t* _front;
+  kaapi_thread_context_t* _back;
+} kaapi_lfree_t;
 
-/* clear / is empty / push / pop */
-#define kaapi_lfree_clear( kproc )\
-  {\
-    (kproc)->sizelfree = 0;\
-    KAAPI_QUEUE_CLEAR( &(kproc)->lfree );\
-  }
-
-#define kaapi_lfree_isempty( kproc )\
-    ((kproc)->sizelfree == 0)
-
-#define kaapi_lfree_push( kproc, v )\
-  {\
-    KAAPI_QUEUE_PUSH_FRONT( &(kproc)->lfree, v );\
-    if ((kproc)->sizelfree >= KAAPI_MAXFREECTXT) \
-    {\
-      kaapi_thread_context_t* ctxt = 0;\
-      KAAPI_QUEUE_POP_BACK( &(kproc)->lfree, ctxt ); \
-      kaapi_context_free( ctxt );\
-    }\
-    else\
-      ++(kproc)->sizelfree;\
-  }
-
-#define kaapi_lfree_pop( kproc, v )\
-  {\
-    --(kproc)->sizelfree;\
-    KAAPI_QUEUE_POP_FRONT( &(kproc)->lfree, v );\
-  }
 
 /** lready data structure
 */
-KAAPI_FIFO_DECLARE(kaapi_fifoctxt_t, kaapi_thread_context_t);
-
-/** push: LIFO order with respect to pop. Only owner may push
-*/
-static inline int kaapi_wsqueuectxt_isempty( kaapi_wsqueuectxt_t* ls )
-{ return (ls->head ==0); }
-
-/**
-*/
-extern int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls );
-
-/**
-*/
-extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
-
-/* Push a ctxt. Must be call by the owner of the queue in case of concurrent execution.
-   Return 0 in case of success
-   Return ENOMEM if allocation failed
-*/
-extern int kaapi_wsqueuectxt_push( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
-
-#if 0 // not well defined and not yet implemented 
-/* Push a ctxt. Can be called by thief processors
-   Return 0 in case of success
-   Return ENOMEM if allocation failed
-*/
-extern int kaapi_wsqueuectxt_lockpush( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t* thread );
-#endif
-
-/* Pop a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_pop( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
-
-/* Steal a ctxt
-   Return 0 in case of success
-   Return EWOULDBLOCK if list is empty
-*/
-extern int kaapi_wsqueuectxt_steal( kaapi_wsqueuectxt_t* ls, kaapi_thread_context_t** thread );
-
-/* Steal a ctxt on a specific cell
-   Return a pointer to the stolen thread in case of success
-   Return 0 if the thread was already stolen
-*/
-kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_t* ls, kaapi_wsqueuectxt_cell_t* cell );
+typedef struct kaapi_lready
+{
+  kaapi_thread_context_t* _front;
+  kaapi_thread_context_t* _back;
+} kaapi_lready_t;
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -261,52 +202,179 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 
 
 /* ============================= Kprocessor ============================ */
+#define  KAAPI_USE_BITMAP_REQUEST
+/* #define KAAPI_USE_CIRBUF_REQUEST */
+
+#if defined(KAAPI_USE_BITMAP_REQUEST)
+
+#if (KAAPI_MAX_PROCESSOR <=32)
+
+typedef kaapi_atomic32_t kaapi_bitmap_t;
+typedef kaapi_uint32_t kaapi_bitmap_value_t;
+
+static inline void kaapi_bitmap_clear( kaapi_bitmap_t* b ) 
+{ KAAPI_ATOMIC_WRITE(b, 0); }
+
+static inline kaapi_bitmap_value_t kaapi_bitmap_swap0( kaapi_bitmap_t* b ) 
+{ return KAAPI_ATOMIC_AND_ORIG(b, 0); }
+
+static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i ) 
+{ 
+  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
+  KAAPI_ATOMIC_OR(b,1UL<<i); 
+  return 0;
+}
+
+static inline int kaapi_bitmap_count( kaapi_bitmap_value_t b ) 
+{ return __builtin_popcount(b); }
+
+/* Return the 1+index of the least significant bit set to 1.
+   If the value is 0 return 0.
+   Else return the number of trailing zero (from to least significant
+   bit to the most significant bit). And set to 0 the bit.
+*/
+static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
+{
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  unsigned int fb = __builtin_ffs( *b );
+  if (fb ==0) return 0;
+  *b &= ~( 1 << (fb-1) );
+  return fb;
+}
+
+#elif (KAAPI_MAX_PROCESSOR <=64)
+
+typedef kaapi_atomic64_t kaapi_bitmap_t;
+typedef kaapi_uint64_t kaapi_bitmap_value_t;
+
+static inline void kaapi_bitmap_clear( kaapi_bitmap_t* b ) 
+{ KAAPI_ATOMIC_WRITE(b, 0); }
+
+static inline kaapi_bitmap_value_t kaapi_bitmap_swap0( kaapi_bitmap_t* b ) 
+{ return KAAPI_ATOMIC_AND64_ORIG(b, 0); }
+
+static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i ) 
+{ 
+  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
+  KAAPI_ATOMIC_OR64(b, 1UL<<i); 
+  return 1;
+}
+
+static inline int kaapi_bitmap_count( kaapi_bitmap_value_t b ) 
+{ return __builtin_popcountl(b); }
+
+/* Return the 1+index of the least significant bit set to 1.
+   If the value is 0 return 0.
+   Else return the number of trailing zero (from to least significant
+   bit to the most significant bit). And set to 0 the bit.
+*/
+static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
+{
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  unsigned int fb = __builtin_ffsl( *b );
+  if (fb ==0) return 0;
+  *b &= ~( 1 << (fb-1) );
+  return fb;
+}
+
+#else // (KAAPI_MAX_PROCESSOR >64)
+
+typedef kaapi_uint64_t kaapi_bitmap_t[ (KAAPI_MAX_PROCESSOR+63)/64 ];
+typedef kaapi_uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
+
+#endif //
+
 /** \ingroup WS
 */
 typedef struct kaapi_listrequest_t {
-  kaapi_atomic_t  count;
-  kaapi_request_t requests[KAAPI_MAX_PROCESSOR];
+  kaapi_bitmap_t  bitmap __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapi_request_t requests[KAAPI_MAX_PROCESSOR+1];
 } kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
+
+/* to iterate over list of request: once an iterator has been captured, 
+   the bitmap is reset to 0 into the listrequest.
+   All the futur iterations will be done on top of captured bitmap, not
+   those associated with the listrequest which can continue to receive requests
+*/
+typedef struct kaapi_listrequest_iterator_t {
+  kaapi_bitmap_value_t bitmap;
+#if defined(KAAPI_DEBUG)
+  kaapi_bitmap_value_t bitmap_t0;
+#endif  
+  int idcurr;
+} kaapi_listrequest_iterator_t;
+
+/* return !=0 iff the range is empty
+*/
+static inline int kaapi_listrequest_iterator_empty(kaapi_listrequest_iterator_t* lrrange)
+{ return (lrrange->bitmap == 0) && (lrrange->idcurr == -1); }
+
+/* return the number of entries in the range
+*/
+static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t* lrrange)
+{ return kaapi_bitmap_count(lrrange->bitmap) + (lrrange->idcurr == -1 ? 0 : 1); }
+
+/* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
+*/
+static inline kaapi_request_t* kaapi_listrequest_iterator_get( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
+{ return (lrrange->idcurr == -1 ? 0 : &lrequests->requests[lrrange->idcurr]); }
+
+/* return the next entry in the request. return 0 if the range is empty.
+*/
+static inline kaapi_request_t* kaapi_listrequest_iterator_next( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
+{
+  lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+  return (lrrange->idcurr == -1 ? 0 : &lrequests->requests[lrrange->idcurr]);
+} 
+
+/* atomically read the bitmap of the list of requests clear readed bits */
+static inline void kaapi_listrequest_iterator_init(kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange)
+{ 
+  lrrange->idcurr = -1;
+  lrrange->bitmap = kaapi_bitmap_swap0( &lrequests->bitmap );
+#if defined(KAAPI_DEBUG)
+  lrrange->bitmap_t0 = lrrange->bitmap;
+#endif
+  kaapi_listrequest_iterator_next( lrequests, lrrange );
+}
+
+#elif defined(KAAPI_USE_CIRBUF_REQUEST)
+
+/** \ingroup WS
+    Circular list implementation
+*/
+typedef struct kaapi_listrequest_t {
+  kaapi_atomic_t  rpos __attribute__((aligned (KAAPI_CACHE_LINE)));
+  kaapi_atomic_t  wpos __attribute__((aligned (KAAPI_CACHE_LINE)));
+  kaapi_request_t requests[KAAPI_MAX_PROCESSOR+1];
+} kaapi_listrequest_t __attribute__((aligned (KAAPI_CACHE_LINE)));
+
+#endif /* type of request */
+
 
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
     The kid is a system wide identifier. In the current version it only contains a local counter value
     from 0 to N-1.
-    Each kprocessor stores neighbor information in a hierarchical as defined by the topology.
-    When a kprocessor i wants to send a steal request to the kprocessor j, it should 
-      - have j in its neighbor set
-      - use its requests in the kprocessor j at position kproc_j->request[kproc_i->hindex[level]],
-      where level is the lower level set in kprocessor i that contains the kprocessor j.
-    
-    On each kprocessor i, hkids[l][j] points to the j-th kprocessor at level l.
-    
-    
-    TODO: HIERARCHICAL STRUCTURE IS NOT YET IMPLEMENTED. ONLY FLAT STEAL.
 */
-
 typedef struct kaapi_processor_t {
   kaapi_thread_context_t*  thread;                        /* current thread under execution */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
-  kaapi_uint32_t           issteal;                       /* */
-  kaapi_uint32_t           hlevel;                        /* number of level for this Kprocessor >0 */
-  kaapi_uint16_t*          hindex;                        /* id local identifier of request at each level of the hierarchy, size hlevel */
-  kaapi_uint16_t*          hlcount;                       /* count of proc. at each level of the hierarchy, size hlevel */
-  kaapi_processor_id_t**   hkids;                         /* ids of all processors at each level of the hierarchy, size hlevel */
-  kaapi_reply_t            reply;                         /* use when a request has been emited */
-  
-  /* cache align */
-  kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
 
   /* cache align */
   kaapi_atomic_t           lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
+  /* cache align */
+  kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
+
+  kaapi_uint32_t           issteal;                       /* */
+  
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-  kaapi_fifoctxt_t         lready;                        /* list of ready context, concurrent access locked by 'lock' */
-  kaapi_thread_context_t*  readythread;                   /* continuation passing parameter to speed up recovery of activity... */
+  kaapi_lready_t	         lready;                        /* list of ready context, concurrent access locked by 'lock' */
 
   /* free list */
-  kaapi_queuectxt_t        lfree;                         /* queue of free context */
+  kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
 
   void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
@@ -328,17 +396,15 @@ typedef struct kaapi_processor_t {
   kaapi_atomic_t	         workload;
 
   /* processor type */
-  unsigned int			proc_type;
+  unsigned int			       proc_type;
 
   /* memory map */
-  kaapi_mem_map_t mem_map;
+  kaapi_mem_map_t          mem_map;
 
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
-# if KAAPI_USE_CUDA
   kaapi_cuda_proc_t cuda_proc;
 #endif
-#endif /* KAAPI_USE_CUDA */
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
 
@@ -347,9 +413,6 @@ typedef struct kaapi_processor_t {
 struct kaapi_procinfo;
 extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo*);
 
-/*
-*/
-extern int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc );
 
 #if defined(KAAPI_USE_NUMA)
 static inline kaapi_processor_t* kaapi_processor_allocate(void)
@@ -408,192 +471,105 @@ extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc );
 extern int kaapi_context_free( kaapi_thread_context_t* ctxt );
 
 
+/* lfree list routines
+ */
+
+static inline void kaapi_lfree_clear(struct kaapi_processor_t* kproc)
+{
+  kproc->sizelfree = 0;
+  kproc->lfree._front = NULL;
+  kproc->lfree._back = NULL;
+}
+
+static inline int kaapi_lfree_isempty(struct kaapi_processor_t* kproc)
+{
+  return kproc->sizelfree == 0;
+}
+
+static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_thread_context_t* node)
+{
+  kaapi_lfree_t* const list = &kproc->lfree;
+
+  /* push the node */
+  node->_next = list->_front;
+  node->_prev = NULL;
+  if (list->_front == NULL)
+    list->_back = node;
+  else
+    list->_front->_prev = node;
+  list->_front = node;
+
+  /* pop back if new size exceeds max */
+#  define KAAPI_MAXFREECTXT 4
+  if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
+  {
+    /* list size at least 2, no special case handling */
+    node = list->_back;
+    list->_back = list->_back->_prev;
+    list->_back->_next = NULL;
+
+    /* free the popped context */
+    kaapi_context_free(node);
+
+    /* see increment after */
+    --kproc->sizelfree;
+  }
+
+  ++kproc->sizelfree;
+}
+
+static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* kproc)
+{
+  kaapi_lfree_t* const list = &kproc->lfree;
+  kaapi_thread_context_t* const node = list->_front;
+
+  --kproc->sizelfree;
+
+  list->_front = node->_next;
+  if (list->_front == NULL)
+    list->_back = NULL;
+  else
+    list->_front->_prev = NULL;
+
+  return node;
+}
+
+
 /** \ingroup WS
     Number of used cores
 */
-extern kaapi_uint32_t     kaapi_count_kprocessors;
+extern kaapi_uint32_t volatile kaapi_count_kprocessors;
 
 /** \ingroup WS
     One K-processors per core
 */
 extern kaapi_processor_t** kaapi_all_kprocessors;
 
-/** \ingroup WS
-    A Kprocessor is a posix thread -> the current kprocessor
-*/
-extern pthread_key_t kaapi_current_processor_key;
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  extern __thread kaapi_thread_t** kaapi_current_thread_key;
-  extern __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
-#endif
+extern __thread kaapi_processor_t*      kaapi_current_processor_key;
+extern __thread kaapi_threadgroup_t     kaapi_current_threadgroup_key;
 
-extern kaapi_processor_t* kaapi_get_current_processor(void);
-extern kaapi_processor_id_t kaapi_get_current_kid(void);
+/* */
+static inline kaapi_processor_t* kaapi_get_current_processor(void)
+{ return kaapi_current_processor_key; }
 
-/** \ingroup WS
-*/
-#define _kaapi_get_current_processor() \
-  ((kaapi_processor_t*)pthread_getspecific( kaapi_current_processor_key ))
-
-/** \ingroup WS
-    Returns the current thread of tasks
-*/
-#define _kaapi_self_thread() \
-  _kaapi_get_current_processor()->thread
-
-
-/* ============================= Hierarchy ============================ */
-/** The hierarchy level for this configuration of the library.
-    TODO: Should be defined during the configuration of the library.
-    The hierarchy level allows to code memory hierarchy.
-    The default level is 1, meaning that all processors share a same memory.
-    In case of coding other hierarchy level, for instance 2 where subset of processors
-    are able to shared common memory (L2 cache) that are faster than main memory.
-
-    Each of the MaxProc_level processor at the hierarchy level has a local index 
-    from 0..MaxProc_level-1. The root processor of a given hierarchy level has always
-    local index 0.
-*/
-extern kaapi_uint32_t kaapi_hierarchy_level;
-
-/** \ingroup WS
-    Definition of the neighbors type for a given processors at a given level.
-*/
-typedef struct kaapi_neighbors_t {
-  kaapi_uint16_t      count;         /* number of neighbors */
-  kaapi_processor_t** kproc;         /* list of neighbor processors, of size count */
-  kaapi_uint32_t*     kplid;         /* list of neighbor processor local indexes, of size count */
-} kaapi_neighbors_t;
-
-
-/** \ingroup WS
-    Definition of the neighbors for all processors for all level.
-    The pointer points to an array of size kaapi_count_kprocessors of arrays of size kaapi_hierarchy_level.
-    - kaapi_neighbors[kid][0] returns the neighbors information for the kprocessor with kid at the lowest hierarchy level.
-    - kaapi_neighbors[kid][l] returns the neighbors information for the kprocessor with kid at level l.
-    - kaapi_neighbors[kid][kaapi_hierarchy_level] returns the neighbors information for the kprocessor with kid 
-    at the highest hierarchy level.
-*/
-extern kaapi_neighbors_t** kaapi_neighbors;
-
-
-/** \ingroup WS
-*/
-extern int kaapi_setup_topology(void);
-
-
-
-
-/* ============================= Atomic Function ============================ */
-#if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
-|| defined(__INTEL_COMPILER))
-/* Note: ICC seems to also support these builtins functions */
-#  if defined(__INTEL_COMPILER)
-#    warning Using ICC. Please, check if icc really support atomic operations
-/* ia64 impl using compare and exchange */
-/*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
-#  endif
-
-/** TODO: try to use same function without barrier
-*/
-#  ifndef KAAPI_ATOMIC_CAS
-#    define KAAPI_ATOMIC_CAS(a, o, n) \
-      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
-#  endif
-
-#  ifndef KAAPI_ATOMIC_CAS64
-#    define KAAPI_ATOMIC_CAS64(a, o, n) \
-      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
-#  endif
-
-#  define KAAPI_ATOMIC_AND(a, o) \
-    __sync_fetch_and_and( &((a)->_counter), o )
-
-#  ifndef KAAPI_ATOMIC_INCR
-#    define KAAPI_ATOMIC_INCR(a) \
-      __sync_add_and_fetch( &((a)->_counter), 1 ) 
-#  endif
-
-#  ifndef KAAPI_ATOMIC_INCR64
-#    define KAAPI_ATOMIC_INCR54(a) \
-      __sync_add_and_fetch( &((a)->_counter), 1 ) 
-#  endif
-
-#  define KAAPI_ATOMIC_DECR(a) \
-    __sync_sub_and_fetch( &((a)->_counter), 1 ) 
-
-#  ifndef KAAPI_ATOMIC_SUB
-#    define KAAPI_ATOMIC_SUB(a, value) \
-      __sync_sub_and_fetch( &((a)->_counter), value ) 
-#  endif      
-
-#  ifndef KAAPI_ATOMIC_SUB64
-#    define KAAPI_ATOMIC_SUB64(a, value) \
-      __sync_sub_and_fetch( &((a)->_counter), value ) 
-#  endif      
-
-#  define KAAPI_ATOMIC_ADD(a, value) \
-    __sync_add_and_fetch( &((a)->_counter), value ) 
-
-
-#elif defined(KAAPI_USE_APPLE) /* if gcc version on Apple is less than 4.1 */
-
-#  include <libkern/OSAtomic.h>
-
-#  ifndef KAAPI_ATOMIC_CAS
-#    define KAAPI_ATOMIC_CAS(a, o, n) \
-      OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
-#  endif
-
-#  ifndef KAAPI_ATOMIC_CAS64
-#    define KAAPI_ATOMIC_CAS64(a, o, n) \
-      OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
-#  endif
-
-#  define KAAPI_ATOMIC_AND(a, o)			\
-    OSAtomicAnd32( &((a)->_counter), o )
-
-#  ifndef KAAPI_ATOMIC_INCR
-#    define KAAPI_ATOMIC_INCR(a) \
-      OSAtomicIncrement32( &((a)->_counter) ) 
-#  endif
-
-#  ifndef KAAPI_ATOMIC_INCR64
-#    define KAAPI_ATOMIC_INCR64(a) \
-      OSAtomicIncrement64( &((a)->_counter) ) 
-#  endif
-
-#  define KAAPI_ATOMIC_DECR(a) \
-    OSAtomicDecrement32(&((a)->_counter) ) 
-
-#  ifndef KAAPI_ATOMIC_SUB
-#    define KAAPI_ATOMIC_SUB(a, value) \
-      OSAtomicAdd32( -value, &((a)->_counter) ) 
-#  endif
-
-#  ifndef KAAPI_ATOMIC_SUB64
-#    define KAAPI_ATOMIC_SUB64(a, value) \
-      OSAtomicAdd64( -value, &((a)->_counter) ) 
-#  endif
-
-#  define KAAPI_ATOMIC_ADD(a, value) \
-    OSAtomicAdd32( value, &((a)->_counter) ) 
+static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
+{ return kaapi_current_processor_key->thread;}
 
 #else
-#  error "Please add support for atomic operations on this system/architecture"
-#endif /* GCC > 4.1 */
+extern pthread_key_t kaapi_current_processor_key;
 
-#if (SIZEOF_VOIDP == 4)
-#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (kaapi_uint32_t)o, (kaapi_uint32_t)n )
-#else
-#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)a, (kaapi_uint64_t)o, (kaapi_uint64_t)n )
+static inline kaapi_processor_t* kaapi_get_current_processor(void)
+{ return ((kaapi_processor_t*)pthread_getspecific( kaapi_current_processor_key )); }
+
+static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
+{ return kaapi_get_current_processor()->thread;}
 #endif
 
-
-/* ========================================================================== */
+/* */
+static inline kaapi_processor_id_t kaapi_get_current_kid(void)
+{ return kaapi_get_current_processor()->kid; }
 
 
 /* ========================================================================== */
@@ -633,99 +609,150 @@ static inline int kaapi_isterminated(void)
   return kaapi_isterm !=0;
 }
 
+/** Initialize a request
+    \param kpsr a pointer to a kaapi_steal_request_t
+*/
+static inline void kaapi_request_init( struct kaapi_processor_t* kproc, struct kaapi_request_t* pkr )
+{
+#if defined(KAAPI_USE_BITMAP_REQUEST)
+  pkr->kid    = (kaapi_uint16_t)kproc->kid; 
+#elif defined(KAAPI_USE_CIRBUF_REQUEST)
+#else
+#endif
+}
+
+/** \ingroup ADAPTIVE
+    Reply to a steal request. If retval is !=0 it means that the request
+    has successfully adapt to steal work. Else 0.
+    This function is machine dependent.
+*/
+static inline int _kaapi_request_reply( 
+  kaapi_request_t* request, 
+  int	             status
+)
+{
+#if defined(KAAPI_DEBUG)
+  /* Warning: we cannot set req->reply to 0 after the write of the 
+     status: an other thread may have 1/ view the reply; 2/ post a new request 
+     before the write to req->reply=0 which will discard the request.
+  */
+  kaapi_reply_t* savereply = request->reply;
+  request->reply = 0;
+  kaapi_writemem_barrier();
+  savereply->status = status;
+#else
+  kaapi_writemem_barrier();
+  request->reply->status = status;
+#endif
+  return 0;
+}
+
+
 /** \ingroup WS
 */
 static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listrequest_t* pklr ) 
 {
   int i; 
-  KAAPI_ATOMIC_WRITE(&pklr->count, 0);
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+#if defined(KAAPI_USE_BITMAP_REQUEST)
+  KAAPI_ATOMIC_WRITE(&pklr->bitmap, 0);
+#elif defined(KAAPI_USE_CIRBUF_REQUEST)
+#endif  
+  for (i=0; i<KAAPI_MAX_PROCESSOR+1; ++i)
   {  
     kaapi_request_init(kproc, &pklr->requests[i]);
   }
   return 0;
 }
 
-/** 
-*/
-#if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
-  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
-}
-static inline int kaapi_task_cas_extrastate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->ebody;
-  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
-}
-#elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
-/*
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  kaapi_atomic_t* kat = (kaapi_atomic_t*)&task->body;
-  return KAAPI_ATOMIC_CASPTR( kat, oldbody, newbody );
-}
-static inline int kaapi_task_casstate( kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody )
-{
-  if (task->body != oldbody ) return 0;
-  kaapi_task_setbody(task, newbody );
-  return 1;
-}
-*/
-#else
-#  warning "NOT IMPLEMENTED"
-#endif
 
 /* ============================= Private functions, machine dependent ============================ */
 /* */
 extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 /** Post a request to a given k-processor
-  This method posts a request to victim k-processor. 
+  This method posts a request to victim k-processor.
   \param kproc the sender of the request 
   \param reply where to receive result
   \param dest the receiver (victim) of the request
   \param return 0 if the request has been successully posted
   \param return !=0 if the request been not been successully posted and the status of the request contains the error code
 */
-static inline int kaapi_request_post( kaapi_processor_t* kproc, kaapi_reply_t* reply, kaapi_victim_t* victim )
+static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_reply_t* reply, kaapi_processor_t* victim )
 {
   kaapi_request_t* req;
-  if (kproc ==0) return EINVAL;
   if (victim ==0) return EINVAL;
-  
-//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim->kproc->hlrequests.count) >= 0 );
 
-  req              = &victim->kproc->hlrequests.requests[ kproc->kid ];
-  kaapi_assert_debug( req->status == KAAPI_REQUEST_S_EMPTY);
-  kaapi_assert_debug( req->proc == victim->kproc);
-
-  reply->status    = KAAPI_REQUEST_S_POSTED;
-  req->reply       = reply;
-  req->mthread     = kproc->thread;
-  req->thread      = kaapi_threadcontext2thread(kproc->thread);
-#if defined(KAAPI_USE_PERFCOUNTER)
-  req->delay       = kaapi_perf_thread_delayinstate(kproc);
-#else  
-  req->delay       = 0;
-#endif
-  reply->data      = 0;
-
+#if defined(KAAPI_USE_BITMAP_REQUEST)
+  req = &victim->hlrequests.requests[thief_kid];
+  /* here do not write kid, because it was persistant to all local thread */
+  req->reply = reply;
+  reply->preempt = 0;
+  reply->status = KAAPI_REQUEST_S_POSTED;
   kaapi_writemem_barrier();
-#if 0
-  fprintf(stdout,"%i kproc post request to:%p, @req=%p\n", kproc->kid, (void*)victim->kproc, (void*)req );
-  fflush(stdout);
-#endif
-  req->status      = KAAPI_REQUEST_S_POSTED;
-  
-  /* incr without mem. barrier here if the victim see the request status as ok is enough,
-     even if the new counter is not yet view
-  */
-  KAAPI_ATOMIC_INCR( &victim->kproc->hlrequests.count );
-//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim->kproc->hlrequests.count) > 0 );
-  
+  kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return 0;
+#elif defined(KAAPI_USE_CIRBUF_REQUEST)
+#  error "Not implemented"
+#else
+#  error "Not implemented"
+#endif
 }
+
+
+/** push: LIFO order with respect to pop. Only owner may push
+*/
+static inline int kaapi_wsqueuectxt_empty( kaapi_processor_t* kproc )
+{ return (kproc->lsuspend.head ==0); }
+
+/**
+*/
+extern int kaapi_wsqueuectxt_init( kaapi_wsqueuectxt_t* ls );
+
+/**
+*/
+extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
+
+/** \ingroup WS
+   Push a ctxt. Must be call by the owner of the queue in case of concurrent execution.
+   Return 0 in case of success
+   Return ENOMEM if allocation failed
+*/
+extern int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* thread );
+
+/** \ingroup WS
+   Steal a ctxt on a specific cell
+   Return a pointer to the stolen thread in case of success
+   Return 0 if the thread was already stolen
+*/
+extern kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_cell_t* cell );
+
+/**
+*/
+static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kproc)
+{
+  return kproc->proc_type;
+}
+
+/**
+*/
+static inline void kaapi_processor_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
+{
+  KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
+}
+
+/**
+*/
+static inline void kaapi_processor_set_self_workload(kaapi_uint32_t workload) 
+{
+  KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
+}
+
+/**
+*/
+static inline unsigned int kaapi_request_kid(kaapi_request_t* kr)
+{
+  return kr->kid;
+}
+
 
 #endif /* _KAAPI_MT_MACHINE_H */

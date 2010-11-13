@@ -44,6 +44,11 @@
 #include "kaapi_impl.h"
 
 
-void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread )
+void kaapi_taskrecv_body( 
+  void* sp,
+  kaapi_thread_t* thread __attribute__((unused))
+)
 {
+  kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)sp;
+  argrecv->original_body( argrecv->original_sp, thread);
 }

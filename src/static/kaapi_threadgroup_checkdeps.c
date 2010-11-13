@@ -6,8 +6,7 @@
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
- **
- ** theo.trouillon@imag.fr
+ ** thierry.gautier@imag.fr
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -45,25 +44,22 @@
 #include "kaapi_impl.h"
 
 
-/** 2 gros bug dans le code de Theo:
-    hashmap avec access au lieu de access->data
-    ATOMIC_DECR
-*/
-
 /** task is the top task not yet pushed.
+    This function is called is task is pushed into a specific thread using
+    the C++ ka::SetPartition(site) attribut or the thread group access.
  */
 int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadindex, kaapi_task_t* task)
 {
   kaapi_thread_t*      thread;
   kaapi_format_t*      task_fmt;
+  kaapi_task_body_t    task_body;
   
   /* pass in parameter ? cf C++ thread interface */
   kaapi_assert_debug( (threadindex >=-1) && (threadindex < thgrp->group_size) );
 
-  if ((task->body==kaapi_suspend_body) && (task->ebody!=0))
-    task_fmt= kaapi_format_resolvebybody(task->ebody);
-  else if (task->body!=0)
-    task_fmt= kaapi_format_resolvebybody(task->body);
+  task_body = kaapi_task_getbody( task );
+  if (task_body!=0)
+    task_fmt= kaapi_format_resolvebybody(task_body);
   else
     task_fmt = 0;
 
@@ -72,9 +68,6 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
   /* get the thread where to push the task */
   thread = kaapi_threadgroup_thread( thgrp, threadindex );
   
-  /* initialize the pad for every pushed task */
-  task->pad = 0;
-
   /* find the last writer for each args and in which partition it is 
      -> if all writers are in the same partition do nothing, push the task in the i-th partition
      -> if one of the writer is in a different partition, then change the body of the writer
@@ -108,7 +101,8 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
 
     if (KAAPI_ACCESS_IS_READ(m))
     {
-      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, access, i );
+      const size_t size = task_fmt->get_param_size(task_fmt, i, sp);
+      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, access, size, i );
     }
     if (KAAPI_ACCESS_IS_WRITE(m))
     {

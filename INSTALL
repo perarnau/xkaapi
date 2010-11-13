@@ -7,6 +7,9 @@ Copyright (C) 1994, 1995, 1996, 1999, 2000, 2001, 2002, 2004, 2005,
    This file is free documentation; the Free Software Foundation gives
 unlimited permission to copy, distribute and modify it.
 
+WARNING:  If you want to bootstrap the library before the first configure you
+need to enter ./bootstrap in the top level directory of the source tree.
+
 Basic Installation
 ==================
 

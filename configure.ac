@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.60])
 
-AC_INIT([X-KAAPI], [0.1], [kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI],[1.0-rc2],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
@@ -56,7 +56,7 @@ ACX_PROG_CCACHE_CXX
 
 # if next line is comented out, we can create only dynamic libraries be default
 # AC_DISABLE_STATIC
-AC_PROG_LIBTOOL
+LT_INIT
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_PROG_MKDIR_P
@@ -80,9 +80,14 @@ AX_CHECK_COMPILER_STD([STD_CXX0X], [C++], [-std=c++0x], [], [
    AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
 ])
 
+CXXFLAGS_save="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $STD_CXX0X_FLAGS"
+AC_CXX_LAMBDA()
+AM_CONDITIONAL([KAAPI_CXX_HAS_LAMBDA],[test x"$ac_cv_cxx_lambda" = x"yes"])
+CXXFLAGS="$CXXFLAGS_save"
 
-ACX_LIB_NEW_LIB([XKAAPILIB], [-L\${libdir} -lxkaapi], [xkaapi])
-ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-I\${includedir}])
+ACX_LIB_NEW_LIB([KAAPILIB], [-L\${libdir} -lkaapi], [kaapi])
+ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])
 
 ACX_LIB_NEW_LIB([KAAPIXXLIB], [-L\${libdir} -lkaapi++], [kaapi++])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
@@ -96,7 +101,7 @@ ACX_LIB_ADD_PUBLIC_FLAGS([ATHALIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KFORTRANLIB], [-L\${libdir} -lkaapif], [kaapif])
 ACX_LIB_ADD_PUBLIC_FLAGS([KFORTRANLIB], [-I\${includedir}])
 
-ACX_LIB_NEW_PRG([XKAAPIPROGS])
+ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KASTLPROGS])
 ACX_LIB_NEW_PRG([ATHAPROGS])
@@ -148,8 +153,8 @@ AS_CASE([$enable_mode],
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_DEBUG"
     CFLAGS=""
     CXXFLAGS=""
-    AM_CFLAGS="$AM_CFLAGS -g"
-    AM_CXXFLAGS="$AM_CXXFLAGS -g"
+    AM_CFLAGS="$AM_CFLAGS -ggdb"
+    AM_CXXFLAGS="$AM_CXXFLAGS -ggdb"
   ], [release], [dnl
     AC_MSG_NOTICE([Using release compile mode])
     # using CFLAGS and not AM_CFLAGS as the user must be able to overwrite
@@ -164,29 +169,26 @@ AS_CASE([$enable_mode],
   ])
 
 AC_ARG_WITH([steal],[AS_HELP_STRING([--with-steal],
-		 [choose the work stealing algorithm (cas,hybrid,dijkstra)])],[],
-  [with_steal=dijkstra]
+		 [choose the work stealing algorithm (rmw,dijkstra)])],[],
+  [with_steal=rmw]
 )
 AS_CASE([$with_steal],
-  [hybrid], [dnl
-    AC_MSG_NOTICE([configure with hybrid workstealing algorithm])
+  [rmw|cas], [dnl
+    AC_MSG_NOTICE([Configure with Read Modify Write atomic instruction's based workstealing algorithm])
+    # dnl add a quote for vim syntax parser '
     # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
-    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
-  ], [cas], [dnl
-    AC_MSG_NOTICE([configure with CAS based workstealing algorithm])
+    # 0 -> KAAPI_CAS_METHOD
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/task])
+    AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],0,[Support concurrent work stealing/frame])
+  ], 
+  [dijkstra], [dnl
+    AC_MSG_ERROR([Configured with Dijkstra based workstealing protocol: not yet fully implemented])
     # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
-    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],0,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],0,[Support concurrent work stealing/frame])
-  ], [dijkstra], [dnl
-    AC_MSG_NOTICE([configure with full Dijkstra based workstealing protocol])
-    # must not change the ABI. Enabling through AC*DEFINE
-    # 0 -> KAAPI_STEALCAS_METHOD 1->KAAPI_STEALTHE_METHOD 
-    AC_DEFINE([KAAPI_USE_STEALFRAME_METHOD],1,[Support concurrent work stealing/task])
-    AC_DEFINE([KAAPI_USE_STEALTASK_METHOD],1,[Support concurrent work stealing/frame])
-  ], [dnl
+    # 0 -> KAAPI_CAS_METHOD 1->KAAPI_THE_METHOD 
+    #AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/task])
+    #AC_DEFINE([KAAPI_USE_EXECTASK_METHOD],1,[Support concurrent work stealing/frame])
+  ], 
+  [dnl
    AC_MSG_ERROR([Unknown value '$with_steal' for --with-steal option. Aborting.])
   ])
 
@@ -205,12 +207,30 @@ AS_CASE([$with_perfcounter],
   ])
 
 
+# Select compilation of static scheduling as part of the library
+# Default is to compile it
+AC_ARG_ENABLE([partitioning],[AS_HELP_STRING([--disable-partitioning],
+	[Disable to not compile static scheduling code, default: enable])]
+)
+AS_IF([test "x$enable_partitioning" != "xno"], 
+  [dnl Do the stuff needed for enabling the feature
+    AC_MSG_NOTICE([Compiling static scheduling])
+    KAAPI_USE_STATICSCHED=yes
+    AC_DEFINE([KAAPI_USE_STATICSCHED],1,[defined to 1 when compiling with static scheduling])
+  ],
+ 
+  [dnl Do the stuff needed for disable the feature
+    AC_MSG_NOTICE([Do not compile static scheduling])
+  ]
+)
+AC_SUBST([KAAPI_USE_STATICSCHED])
+AM_CONDITIONAL([KAAPI_TARGET_STATICSCHED],[test x"$KAAPI_USE_STATICSCHED" = x"yes"])
+
 
 dnl ----------------------------------------------------------------
 dnl Checks for header files.
 dnl ----------------------------------------------------------------
 AC_CHECK_HEADERS([arpa/inet.h limits.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/time.h unistd.h])
-
 AC_CHECK_HEADERS([errno.h limits.h numa.h pthread.h sched.h sys/sysctl.h])
 
 # Context switch
@@ -243,6 +263,7 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+AC_TYPE_MODE_T
 AC_CHECK_TYPES([ptrdiff_t])
 
 AC_CHECK_SIZEOF([void*])
@@ -251,11 +272,13 @@ dnl ----------------------------------------------------------------
 dnl Checks for library functions.
 dnl ----------------------------------------------------------------
 AC_FUNC_ALLOCA
-AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
 AC_FUNC_MMAP
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([clock_gettime getcwd gethostname getpagesize gettimeofday memset mkdir munmap strdup strerror strtoul])
+AC_CHECK_FUNCS([bzero clock_gettime getcwd gethostname getpagesize gettimeofday memset mkdir munmap sqrt strdup strerror strtoul])
+
+AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
 
 dnl ----------------------------------------------------------------
 dnl Checks for libraries.
@@ -271,7 +294,7 @@ ACX_LIB_CHECK_PLAIN([PTHREAD],[],[
     ACX_LIB_NOTFOUND
   ])
 ])
-ACX_LIB_LINK([XKAAPILIB],[PTHREAD])
+ACX_LIB_LINK([KAAPILIB],[PTHREAD])
 
 # search pthread_attr_setaffinity_np within libpthread
 saveCFLAGS="$CFLAGS"
@@ -299,7 +322,7 @@ KAAPI_PKGLIB_CHECK([PAPI], [papi], [PAPI], [no], [],
     AC_DEFINE(KAAPI_USE_PAPI, 1, [Define to use PAPI perfcounters])
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_USE_PAPIPERFCOUNTER=1"
   ])
-ACX_LIB_LINK([XKAAPILIB],[PAPI])
+ACX_LIB_LINK([KAAPILIB],[PAPI])
 
 
 dnl -----------------------------------------------------------------------
@@ -310,9 +333,9 @@ KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],
   [numa], [], [numa.h], [numa_bind], [
     dnl NUMA is there
     AC_DEFINE(KAAPI_USE_NUMA, 1, [Define to use memory affinity on numa nodes])
-    dnl ACX_LIB_ADD_PUBLIC_FLAGS([XKAAPILIB], [-lnuma])
+    dnl ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-lnuma])
   ])
-ACX_LIB_LINK([XKAAPILIB],[NUMA])
+ACX_LIB_LINK([KAAPILIB],[NUMA])
 
 
 dnl -----------------------------------------------------------------------
@@ -323,7 +346,7 @@ AC_ARG_WITH([fortran],[AS_HELP_STRING([--with-fortran],
   [with_fortran=no]
 )
 AS_CASE([$with_fortran],
-  [default], [dnl
+  [yes], [dnl
     if test x"$F77" = x; then
       AC_MSG_NOTICE([fortran API disable, because no Fortran compiler found])
     else
@@ -356,103 +379,53 @@ KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
   [cuda], [], [cuda.h], [cuDeviceGetProperties], [
 dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
+    KAAPI_CUDA=c
   ],
   [
   ],
   [])
-AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
-ACX_LIB_LINK([XKAAPILIB],[CUDA])
-
-
-
-dnl -----------------------------------------------------------------------
-dnl The "--with-socket"
-dnl -----------------------------------------------------------------------
-KAAPI_PKGLIB_CHECK([Socket support], [socknet], [SOCKNET], [no], [KAAPI_USE_SOCKET],
-  [build network support on top of TCP/IP socket],
-  [c], [], [sys/socket.h], [getsockname], [
-dnl    Socket is there
-    AC_DEFINE([KAAPI_USE_SOCKET],1,[Support for Socket])
-  ],
-  [
-  ],
-  [])
-AM_CONDITIONAL([KAAPI_TARGET_SOCKNET],[test x"$USE_KAAPI_SOCKNET" = x"true"])
-
-dnl -----------------------------------------------------------------------
-dnl The "--with-mpi"
-dnl -----------------------------------------------------------------------
-KAAPI_PKGLIB_CHECK([MPI support], [mpinet], [MPINET], [no], [KAAPI_USE_MPI],
-  [build network support on top of MPI],
-  [mpi], [], [mpi.h], [MPI_Init], [
-dnl    MPI is there
-    AC_DEFINE([KAAPI_USE_MPI],1,[Support for MPI])
-  ],
-  [
-  ],
-  [])
-AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$USE_KAAPI_MPINET" = x"true"])
-
-AM_CONDITIONAL([KAAPI_TARGET_KANET],[test x"$USE_KAAPI_MPINET" = x"true" -o x"$USE_KAAPI_SOCKNET" = x"true"])
-
-if test x"$USE_KAAPI_MPINET" = x"true" -o x"$USE_KAAPI_SOCKNET" = x"true"; then
-  AC_MSG_NOTICE([Network support activated])
-  ACX_LIB_NEW_LIB([KANETLIB], [-L\${libdir} -lkanet], [kanet])
-  ACX_LIB_ADD_PUBLIC_FLAGS([KANETLIB], [-I\${includedir}])
-
-  if test x"$USE_KAAPI_SOCKNET" = x"true"; then
-    AC_MSG_NOTICE([Socket Network support activated])
-    ACX_LIB_NEW_LIB([KASOCKNETLIB], [-L\${libdir} -lkasocknet], [kasocknet])
-    ACX_LIB_ADD_PUBLIC_FLAGS([KASOCKNETLIB], [-I\${includedir}])
-    ACX_LIB_LINK([KASOCKNETLIB], [PUBLIC], [KANETLIB])
-  fi
-  if test x"$USE_KAAPI_MPINET" = x"true"; then
-    AC_MSG_NOTICE([MPI Network support activated])
-    ACX_LIB_NEW_LIB([KAMPINETLIB], [-L\${libdir} -lkampinet], [kampinet])
-    ACX_LIB_ADD_PUBLIC_FLAGS([KAMPINETLIB], [-I\${includedir}])
-    ACX_LIB_LINK([KAMPINETLIB], [PUBLIC], [KANETLIB])
-  fi
-fi
+AC_SUBST([KAAPI_CUDA])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_CUDA" = x"c"])
+ACX_LIB_LINK([KAAPILIB],[CUDA])
 
 
 dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
-ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
-ACX_LIB_LINK([KASTLLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
-ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [XKAAPILIB])
+ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
 
-
-ACX_LIB_LINK([XKAAPIPROGS], [XKAAPILIB])
-ACX_LIB_ADD_BUILD_FLAGS([XKAAPIPROGS],
+ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
 ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
 	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapixx.la \$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/src/libkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 ACX_LIB_LINK([KFORTRANPROGS], [KFORTRANLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KFORTRANPROGS],
 	[-I\$(top_srcdir)/api/fortran -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libxkaapi.la])
+	[\$(top_builddir)/src/libkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 AC_SUBST(AM_CPPFLAGS)
@@ -464,22 +437,19 @@ AC_SUBST(AM_LDFLAGS)
 
 AC_CONFIG_FILES([
 	Makefile
-	src/Makefile
 	api/Makefile
 	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kastl/Makefile
-	api/xkaapi/Makefile
+	api/kaapi/Makefile
 	api/fortran/Makefile
-  network/Makefile
-  network/socknet/Makefile
-  network/mpinet/Makefile
 	examples/Makefile
+	src/Makefile
 	tests/static/Makefile
 
-	xkaapi.pc
-	kaapixx.pc
-	atha1.pc
+	kaapi.pc
+	kaapi++.pc
+	atha.pc
 	src/misc/kaapi_version.c
 
 ])

@@ -43,8 +43,6 @@
 ** terms.
 ** 
 */
-
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -63,7 +61,7 @@ int kaapi_cuda_func_init(kaapi_cuda_func_t* fn)
 
 
 int kaapi_cuda_func_load_ptx
-(kaapi_cuda_func_t* fn, const char* mpath, const char* fname)
+  (kaapi_cuda_func_t* fn, const char* mpath, const char* fname)
 {
   CUresult res;
 
@@ -147,6 +145,9 @@ int kaapi_cuda_func_call_async
 )
 {
   CUresult res;
+
+  /* finalize param memory */
+  cuParamSetSize(fn->fu, fn->off);
 
   /* set the number of threads */
   res = cuFuncSetBlockShape(fn->fu, tdim->x, tdim->y, tdim->z);

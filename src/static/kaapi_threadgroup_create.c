@@ -61,7 +61,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   }
   
   /* */
-  proc = _kaapi_get_current_processor();
+  proc = kaapi_get_current_processor();
 
   thgrp->group_size  = size;
   thgrp->startflag   = 0;
@@ -106,14 +106,14 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   if (error !=0) goto return_error_3;
 
   /* ok */
-  thgrp->step     = -1;
-  thgrp->state    = KAAPI_THREAD_GROUP_CREATE_S;
-  thgrp->tag_count= 0;
-  thgrp->save_mainthread = 0;
-  thgrp->size_mainthread = 0;
+  thgrp->step               = -1;
+  thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;
+  thgrp->tag_count          = 0;
+  thgrp->save_mainthread    = 0;
+  thgrp->size_mainthread    = 0;
   thgrp->save_workerthreads = 0;
   thgrp->size_workerthreads = 0;
-  *pthgrp = thgrp;
+  *pthgrp                   = thgrp;
   return 0;
 
 return_error_3:

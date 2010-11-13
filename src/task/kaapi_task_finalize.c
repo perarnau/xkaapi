@@ -42,49 +42,75 @@
 ** terms.
 ** 
 */
+
+
 #include "kaapi_impl.h"
 
 
 /**
 */
-void kaapi_taskfinalize_body( void* taskarg, kaapi_thread_t* thread )
+void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)taskarg;
-  kaapi_assert_debug( ta !=0 );
+  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)args;
 
-  while (KAAPI_ATOMIC_READ(&ta->sc.is_there_thief) !=0)
+  kaapi_assert_debug(!(sc->header.flag & KAAPI_SC_PREEMPTION));
+
+  /* ensure all working thieves are done. the steal
+     sync has been done in kaapi_task_end_adaptive
+   */
+  while (KAAPI_ATOMIC_READ(&sc->thieves.count))
     kaapi_slowdown_cpu();
 
-  while (KAAPI_ATOMIC_READ( &ta->thievescount ) >0)
-    kaapi_slowdown_cpu();
+  /* avoid read reordering */
+  kaapi_readmem_barrier();
 
-  kaapi_readmem_barrier(); /* avoid read reorder before the barrier, for instance reading some data */
-
-  kaapi_assert(ta->head ==0)
-  kaapi_assert(ta->tail ==0)
-
-  /* hack ? restore the upper frame (the one that should have execute pushstealcontext 
-  */
-  kaapi_thread_restore_frame(thread-1, &ta->frame);
+  /* restore the upper frame */
+  kaapi_thread_restore_frame(thread - 1, &sc->frame);
 }
 
 
 /**
 */
-int kaapi_steal_finalize( kaapi_stealcontext_t* stc )
+
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
+
+void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
 {
   /* end with the adapt dummy task -> change body with nop */
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  /* avoid to steal old instance of this task */
-  ta->sc.splitter = 0;
-  ta->sc.argsplitter = 0;
-  
-  kaapi_task_setbody( ta->sc.ownertask, kaapi_nop_body );
-  kaapi_task_setextrabody( ta->sc.ownertask, kaapi_nop_body );
 
-  /* push task to wait childs */
-  kaapi_task_t* task = kaapi_thread_toptask(stc->thread);
-  kaapi_task_init( task, kaapi_taskfinalize_body, stc );
-  kaapi_thread_pushtask(stc->thread);
-  return 0;
+  kaapi_thread_t* const thread = kaapi_self_thread();
+
+  /* avoid to steal old instance of this task */
+  sc->splitter = 0;
+  sc->argsplitter = 0;
+  
+  /* if this is a preemptive algorithm, it is assumed the
+     user has preempted all the children (not doing so is
+     an error). we restore the frame and return without
+     waiting for anyting.
+   */
+  if (sc->header.flag & KAAPI_SC_PREEMPTION)
+  {
+    kaapi_assert_debug(sc->thieves.list.head == 0);
+    kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
+    kaapi_thread_restore_frame(thread, &sc->frame);
+    return ;
+  }
+
+  /* steal synchronization protocol. it is done
+     here since we need to access the ownertask
+     before the nop body is set.
+     see comments in kaapi_task_preempt_head.c
+  */
+  kaapi_synchronize_steal(sc);
+
+  kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
+
+  /* not a preemptive algorithm. push a finalization task
+     to wait for thieves and block until finalization done.
+   */
+  kaapi_task_init
+    (kaapi_thread_toptask(thread), kaapi_taskfinalize_body, sc);
+  kaapi_thread_pushtask(thread);
+  kaapi_sched_sync();
 }

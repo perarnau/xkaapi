@@ -46,8 +46,7 @@
 /* ........................................ Implementation notes ........................................*/
 /* Each time a task is forked on a partition, the kaapi_threadgroup_computedependencies method is called
    to compute and update dependencies. 
-   At the difference with the pure workstealing execution, here the read after write dependencies (RAW)
-   are handle in order to:
+   The read after write dependencies (RAW) are handle in order to:
       1- envelop the writer task to first execute the original task and then forward dependencies by
       moving state of the reader to ready (in fact: decrement a counter + moving kaapi_suspend_body body
       to the original read task body). The envelopp is build by storing original body and sp fields the
@@ -83,11 +82,7 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
    
   /* here a stack allocation attached with the thread group */
-#if 0
-  ver = entry->u.dfginfo = calloc( 1, sizeof(kaapi_version_t) );
-#else
   ver = entry->u.dfginfo = kaapi_versionallocator_allocate( &thgrp->ver_allocator );
-#endif
   kaapi_assert( ver != 0 );
   ver->tag = 0; //++thgrp->tag_count;
   ver->writer_task = 0;
@@ -135,6 +130,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     int                 tid, 
     kaapi_task_t*       task, 
     kaapi_access_t*     access,
+    size_t data_size,
     int ith
 )
 {
@@ -144,11 +140,11 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
   
   kaapi_assert( tid < KAAPI_MAX_PARTITION );
   kaapi_assert( -1 <= tid );
-  
+
   /* initialize the writer data structure if it not on the same partition (else only
      update reader data structure without changing the writer code
   */
-  if (ver->writer_thread != tid )
+  if (ver->writer_thread != tid)
   {
     writer_thread = kaapi_threadgroup_thread( thgrp, ver->writer_thread );
 
@@ -156,7 +152,10 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     if (ver->writer_task == 0)
     { 
       taskbcast = kaapi_thread_toptask(writer_thread);
-      kaapi_task_init(taskbcast, kaapi_taskbcast_body, kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) ) );
+      kaapi_task_init(
+            taskbcast, 
+            kaapi_taskbcast_body, 
+            kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) ) );
       argbcast = kaapi_task_getargst( taskbcast, kaapi_taskbcast_arg_t );
       memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
       argbcast->last     = &argbcast->head;
@@ -168,31 +167,33 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       kaapi_thread_pushtask(writer_thread);
     }
     else {
+      kaapi_task_body_t body = kaapi_task_getbody(ver->writer_task);
       /* if the writer is in fact a recv (case of task with both w and r access), mute the recv data structure */
-      if (ver->writer_task->ebody == kaapi_taskrecv_body)
+      if (body == kaapi_taskrecv_body)
       {
-        kaapi_assert( ver->writer_task->body == kaapi_suspend_body);
+        kaapi_assert( kaapi_task_state_issteal( kaapi_task_getstate( ver->writer_task) ) );
         argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
         memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
+        /* recopy old field */
         argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->sp;
         ver->writer_task->sp = argbcast;
 //        ver->tag           = ++thgrp->tag_count;
-        kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
+//WARNINGTODO        kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
       }
 
       /* writer already exist: if it is not a bcast, encapsulate the task by a bcast task
       */
-      else if (ver->writer_task->ebody != kaapi_taskbcast_body)
+      else if (body != kaapi_taskbcast_body)
       {
-        kaapi_assert(kaapi_task_getbody(ver->writer_task) != kaapi_taskbcast_body);
+//        kaapi_assert(kaapi_task_getbody(ver->writer_task) != kaapi_taskbcast_body);
         argbcast = (kaapi_taskbcast_arg_t*)kaapi_thread_pushdata(writer_thread, sizeof(kaapi_taskbcast_arg_t) );
         memset(argbcast, 0, sizeof(kaapi_taskbcast_arg_t) );
         argbcast->common.original_sp   = ver->writer_task->sp;
-        argbcast->common.original_body = ver->writer_task->ebody;
+        argbcast->common.original_body = body;
         ver->writer_task->sp = argbcast;
 //        ver->tag           = ++thgrp->tag_count;
         kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body );
-        kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
+//        kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
       } 
       else {
         /* else its already a bcast kind of task */
@@ -236,11 +237,12 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
     if (ver->writer_thread != tid )
     {
       kaapi_taskrecv_arg_t* argrecv = 0;
-      if ((task->ebody != kaapi_taskbcast_body) && (task->ebody != kaapi_taskrecv_body))
+      kaapi_task_body_t body = kaapi_task_getbody(task);
+      if ((body != kaapi_taskbcast_body) && (body != kaapi_taskrecv_body))
       {
         argrecv = kaapi_thread_pushdata( thread, sizeof(kaapi_taskrecv_arg_t) );
         memset( argrecv, 0, sizeof(kaapi_taskrecv_arg_t) );
-        argrecv->original_body = task->ebody;
+        argrecv->original_body = body;
         argrecv->original_sp   = task->sp;
         task->sp = argrecv;
       } else {
@@ -257,9 +259,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       kaapi_assert (ver->readers[tid].addr != 0);
       
       /* The task is waiting for a parameter -> suspend state */
-      kaapi_task_setbody(task, kaapi_suspend_body );
-      kaapi_task_setextrabody(task, kaapi_taskrecv_body );
-
+      
+      kaapi_task_setstate(task, kaapi_task_state_setsteal( kaapi_task_body2state(kaapi_taskrecv_body) ) );
 
       kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);
       if (ver->com->tag ==0) ver->com->tag = ++thgrp->tag_count;
@@ -270,6 +271,8 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 #else
       ver->com->entry[ver->com->size].addr = access->data;
 #endif      
+      ver->com->entry[ver->com->size].size = data_size;
+
       ++ver->com->size;
     }
     else 

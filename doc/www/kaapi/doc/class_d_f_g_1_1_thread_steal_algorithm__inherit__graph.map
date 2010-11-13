@@ -1,6 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node7" href="$class_w_s_1_1_loc_thread_steal_algorithm.html" title="StealAlgorithm of a K&#45;ProcessorAn instance of this class is attached for all instance..." alt="" coords="5,237,235,267"/>
-<area shape="rect" id="node9" href="$class_w_s_1_1_slv_thread_steal_algorithm.html" title="WS::SlvThreadStealAlgorithm" alt="" coords="259,237,485,267"/>
-<area shape="rect" id="node2" href="$class_r_f_o_1_1_thread_steal_algorithm.html" title="StealAlgorithm of a RFO threadAn instance of this class is attached for all instance..." alt="" coords="137,83,353,112"/>
-<area shape="rect" id="node4" href="$class_core_1_1_steal_algorithm.html" title="Base class to implement an algorithm for work stealingAll objects that inherit from..." alt="" coords="161,5,329,35"/>
-</map>

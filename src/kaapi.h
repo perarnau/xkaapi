@@ -9,6 +9,7 @@
 **
 ** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -46,24 +47,14 @@
 #ifndef _KAAPI_H
 #define _KAAPI_H 1
 #define KAAPI_H _KAAPI_H
-
-#ifndef _KAAPI_DISABLE_WARNINGS
-# if defined(__cplusplus)
-#  if !defined(__GXX_EXPERIMENTAL_CXX0X__)
-#   warning kaapi.h use variadic macros
-#   warning you should try a compiler supporting the upcomming C++ standard
-#   warning (with g++, try -std=c++0x or -std=gnu++0x for example)
-#  endif
-# else
-#  if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
-#   warning kaapi.h use C99 constructions (such as variadic macros)
-#   warning you should use a -std=c99 with gcc for example
-#  endif
-# endif
-#endif
+/*!
+    @header kaapi
+    @abstract   This is the public header for XKaapi
+    @discussion XKaapi
+*/
 #if defined (_WIN32)
-#include <windows.h>
-#include <winnt.h>
+#  include <windows.h>
+#  include <winnt.h>
 #endif
 
 #include <stdint.h>
@@ -71,9 +62,11 @@
 #include <stdlib.h>
 #include <errno.h>
 #if !defined (_WIN32)
-#include <alloca.h>
+#  include <alloca.h>
 #endif
+
 #include "kaapi_error.h"
+#include <limits.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -104,17 +97,34 @@ typedef int16_t   kaapi_int16_t;
 typedef int32_t   kaapi_int32_t;
 typedef int64_t   kaapi_int64_t;
 
+typedef kaapi_uint32_t kaapi_processor_id_t;
+typedef kaapi_uint64_t kaapi_affinity_t;
+typedef kaapi_uint32_t kaapi_format_id_t;
+typedef kaapi_uint32_t kaapi_offset_t;
+typedef int            kaapi_gpustream_t;
+
+/* Fwd decl
+*/
+struct kaapi_task_t;
+struct kaapi_thread_t;
+struct kaapi_thread_context_t;
+struct kaapi_stealcontext_t;
+struct kaapi_taskadaptive_result_t;
+struct kaapi_format_t;
+struct kaapi_processor_t;
+struct kaapi_request_t;
+struct kaapi_reply_t;
 
 /** Atomic type
 */
-typedef struct kaapi_atomic_t {
+typedef struct kaapi_atomic32_t {
 #if defined(__APPLE__)
   volatile kaapi_int32_t  _counter;
 #else
   volatile kaapi_uint32_t _counter;
 #endif
-} kaapi_atomic_t;
-typedef kaapi_atomic_t kaapi_atomic32_t;
+} kaapi_atomic32_t;
+typedef kaapi_atomic32_t kaapi_atomic_t;
 
 
 typedef struct kaapi_atomic64_t {
@@ -127,56 +137,136 @@ typedef struct kaapi_atomic64_t {
 
 
 #if defined(__i386__)||defined(__x86_64)
-     /* WARNING here Compiler fence to keep operations. Note that on X86 no reorder of write ops
-        so, we do not need extra hardware fence operation.
-     */
-#    define kaapi_writemem_barrier_api()  __asm__ __volatile__("" : : : "memory" )
+#  define kaapi_slowdown_cpu() \
+      do { __asm__ __volatile__("pause\n\t"); } while (0)
 #else
-#    error "Fence operation should must put here. See the memory consistency of the hardware you use"
+#  define kaapi_slowdown_cpu()
 #endif
 
 
-#if defined(__i386__)||defined(__x86_64)
-# define kaapi_slowdown_cpu() \
-  do { __asm__ __volatile__("rep; nop;"); } while (0)
+
+#if defined(__APPLE__)
+#  include <libkern/OSAtomic.h>
+static inline void kaapi_writemem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* not need sfence on X86 archi: write are ordered */
+  __asm__ __volatile__ ("":::"memory");
 #else
-# define kaapi_slowdown_cpu()
+#  error "bad configuration"
 #endif
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("lfence":::"memory");
+#else
+#  error "bad configuration"
+#endif
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+#ifdef __PPC
+  OSMemoryBarrier();
+#elif defined(__x86_64) || defined(__i386__)
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("mfence":::"memory");
+#else
+#  error "bad configuration"
+#endif
+}
+
+#elif defined(__linux__)
+
+static inline void kaapi_writemem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  /* not need sfence on X86 archi: write are ordered */
+  __asm__ __volatile__ ("":::"memory");
+#else
+  __sync_synchronize();
+#endif
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+#if defined(__x86_64) || defined(__i386__)
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("":::"memory");
+#else
+  __sync_synchronize();
+#endif
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+  __sync_synchronize();
+}
+
+#elif defined(_WIN32)
+static inline void kaapi_writemem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  /* not need sfence on X86 archi: write are ordered */
+  __asm__ __volatile__ ("":::"memory");
+}
+
+static inline void kaapi_readmem_barrier()  
+{
+  /* Compiler fence to keep operations from */
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("":::"memory");
+}
+
+/* should be both read & write barrier */
+static inline void kaapi_mem_barrier()  
+{
+   LONG Barrier = 0;
+   __asm__ __volatile__("xchgl %%eax,%0 "
+     :"=r" (Barrier));
+
+  /* Compiler fence to keep operations from */
+  __asm__ __volatile__("" : : : "memory" );
+}
+
+
+#else
+#  error "Undefined barrier"
+#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
+
 
 /* ========================================================================== */
-struct kaapi_task_t;
-struct kaapi_stack_t;
-struct kaapi_thread_t;
-struct kaapi_thread_context_t;
-struct kaapi_stealcontext_t;
-struct kaapi_taskadaptive_result_t;
+/* Main function: initialization of the library; terminaison and abort        
+   In case of normal terminaison, all internal objects are (I hope so !) deleted.
+   The abort function is used in order to try to flush most of the internal buffer.
+   kaapi_init should be called before any other kaapi function.
+   \retval 0 in case of sucsess
+   \retval EALREADY if already called
+*/
+extern int kaapi_init(void);
 
+/* Kaapi finalization. 
+   After call to this functions all other kaapi function calls may not success.
+   \retval 0 in case of sucsess
+   \retval EALREADY if already called
+*/
+extern int kaapi_finalize(void);
+
+/* Abort 
+*/
+extern void kaapi_abort(void);
 
 /* ========================== utilities ====================================== */
-static inline void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree)
-{
-  /* align_size in bytes */
-
-  if (align_size == 0)
-  {
-    *addr_tofree = malloc(size);
-    return *addr_tofree;
-  }
-
-  const kaapi_uintptr_t align_mask = align_size - 1;
-  void* retval = (void*)malloc(align_mask + size);
-  if (retval != NULL)
-  {
-    if (addr_tofree !=0)
-      *addr_tofree = retval;
-
-    if ((((kaapi_uintptr_t)retval) & align_mask) != 0U)
-      retval = (void*)(((kaapi_uintptr_t)retval + align_mask) & ~align_mask);
-    kaapi_assert_debug( (((kaapi_uintptr_t)retval) & align_mask) == 0U);
-  }
-
-  return retval;
-}
+extern void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree);
 
 static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align)
 {
@@ -202,63 +292,22 @@ typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* 
 /* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
+
 /** Define the cache line size. 
 */
 #define KAAPI_CACHE_LINE 64
 
 
-#if 0 /* unused */
-
-/* processor capability api
- */
-
-#define KAAPI_PCAP_ARCH_NATIVE 0x0
-#define KAAPI_PCAP_ARCH_CUDA 0x1
-#define KAAPI_PCAP_ARCH_MPSOC 0x2
-#define KAAPI_PCAP_ARCH_MAX 3
-
-typedef unsigned int kaapi_pcap_t;
-
-static inline unsigned int kaapi_pcap_isset
-(const kaapi_pcap_t* pcap, unsigned int c)
-{
-  return (*pcap) & c;
-}
-
-static inline void kaapi_pcap_set
-(const kaapi_pcap_t* pcap, unsigned int c)
-{
-  *pcap |= c;
-}
-
-static inline void kaapi_pcap_zero(kaapi_pcap_t* pcap)
-{
-  *pcap = 0;
-}
-
-static inline unsigned int kaapi_pcap_to_arch
-(const kaapi_cap_t* pcap)
-{
-  /* pcap to architecture index */
-  return pcap;
-}
-
-static inline void kaapi_proc_arch_to_pcap
-(kaapi_pcap_t* pcap, unsigned int arch)
-{
-  *pcap = arch;
-}
-
-#else
-
-#define KAAPI_PROC_TYPE_HOST 0x0
-#define KAAPI_PROC_TYPE_CUDA 0x1
-#define KAAPI_PROC_TYPE_MPSOC 0x2
-#define KAAPI_PROC_TYPE_MAX 3
-#define KAAPI_PROC_TYPE_CPU KAAPI_PROC_TYPE_HOST
+/** Processor type
+*/
+#define KAAPI_PROC_TYPE_HOST    0x0
+#define KAAPI_PROC_TYPE_CUDA    0x1
+#define KAAPI_PROC_TYPE_MPSOC   0x2
+#define KAAPI_PROC_TYPE_MAX     3
+#define KAAPI_PROC_TYPE_CPU     KAAPI_PROC_TYPE_HOST
+#define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
 #define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_HOST
 
-#endif /* unused */
 
 /* ========================================================================== */
 /** \ingroup WS
@@ -284,35 +333,11 @@ extern int kaapi_getconcurrency (void);
 extern int kaapi_setconcurrency(void);
 
 
-struct kaapi_procinfo_list;
-
-/* ========================================================================== */
-/** kaapi_mt_register_procs
-    register the kprocs for mt architecture.
-*/
-extern int kaapi_mt_register_procs(struct kaapi_procinfo_list*);
-
-/* ========================================================================== */
-/** kaapi_cuda_register_procs
-    register the kprocs for cuda architecture.
-*/
-#if KAAPI_USE_CUDA
-extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
-#endif
-
-
-/* ========================================================================== */
-/** kaapi_advance.
-    The function kaapi_advance() makes progress of steal requests in order to 
-    help the runtim to be more reactive.
-*/
-extern int kaapi_advance(void);
-
-
 /* ========================================================================== */
 /** kaapi_get_elapsedtime
     The function kaapi_get_elapsedtime() will return the elapsed time in second
     since an epoch.
+    Default (generic) function is based on system clock (gettimeofday).
 */
 extern double kaapi_get_elapsedtime(void);
 
@@ -390,13 +415,6 @@ typedef enum kaapi_access_mode_t {
 /* ========================================================================= */
 /* Format of a task                                                          */
 /* ========================================================================= */
-/** \ingroup DFG
-     Format identifier of data structure or task
-*/
-typedef kaapi_uint32_t kaapi_format_id_t;
-
-struct kaapi_format_t;
-
 /** predefined format 
 */
 /*@{*/
@@ -418,35 +436,6 @@ extern struct kaapi_format_t* kaapi_double_format;
 /* ========================================================================= */
 /* Task and stack interface                                                  */
 /* ========================================================================= */
-struct kaapi_processor_t;
-
-/* Stack identifier */
-typedef kaapi_uint32_t kaapi_stack_id_t;
-
-/** \ingroup WS
-    Reply structure to return value after a steal request
-*/
-typedef struct kaapi_reply_t {
-  volatile kaapi_uint16_t        status;          /* reply status */
-  struct kaapi_thread_context_t* data;            /* output data */
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_reply_t;
-
-
-/** \ingroup WS
-    Server side of a request send by a processor.
-    This data structure is pass in parameter of the splitter function.
-*/
-typedef struct kaapi_request_t {
-  kaapi_uint16_t                 status;         /* server status */
-  kaapi_uint16_t                 flag;           /* partial steal of task | processed during the execution of the runing task */
-  struct kaapi_reply_t*          reply;          /* caller status */
-  struct kaapi_thread_t*         thread;         /* external thread pointer where to store result of the steal operation */
-  struct kaapi_thread_context_t* mthread;        /* internal thread pointer where to store result of the steal operation */
-  struct kaapi_processor_t*      proc;           /* owner of the request */
-  kaapi_uint64_t                 delay;          /* if !=0, delay in ns since the thief is waiting for work */
-} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
-
-
 /** Kaapi Thread context
     This is the public view of the stack of frame contains in kaapi_thread_context_t
     We only expose the field to push task or data.
@@ -472,7 +461,7 @@ typedef struct kaapi_frame_t {
 
 #if !defined(KAAPI_COMPILE_SOURCE)
 typedef struct kaapi_thread_context_t {
-  kaapi_thread_t*                 truc;           /** pointer to the current frame (in stackframe) */
+  kaapi_thread_t*                 truc;    /** pointer to the current frame (in stackframe) */
 } kaapi_thread_context_t;
 #endif
 
@@ -489,13 +478,6 @@ struct kaapi_threadgrouprep_t;
 typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 
 
-
-/* ========================================================================= */
-/** Kaapi stream definition
-*/
-typedef int kaapi_gpustream_t;
-
-
 /* ========================================================================= */
 /** Kaapi task definition
     \ingroup TASK
@@ -504,10 +486,11 @@ typedef int kaapi_gpustream_t;
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
-  kaapi_task_bodyid_t   body;      /** task body  */
-  kaapi_task_bodyid_t   volatile ebody;     /** extra task body  */
-  void*                 sp;        /** data stack pointer of the data frame for the task  */
-  void*                 pad;       /** padding  */
+  union task_and_body {
+    kaapi_task_bodyid_t      body;      /** task body  */
+    volatile kaapi_uintptr_t state;     /** bit */
+  } u;
+  void*                   sp;        /** data stack pointer of the data frame for the task  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 
@@ -532,47 +515,192 @@ typedef int (*kaapi_task_reducer_t) (
 #endif
 );
 
-/** Steal context for adaptive algorithm
+
+/** \ingroup ADAPT
+    Adaptive stealing header. The header is the
+    part visible by the remote write during the
+    reply. Thus we separate it from the remaining
+    context to avoid duplicating fields.
+*/
+typedef struct kaapi_stealheader_t
+{
+  /* steal method modifiers */
+  kaapi_uint32_t flag; 
+
+  /* (topmost) master stealcontext */
+  struct kaapi_stealcontext_t* msc;
+
+  /* thief result, independent of preemption */
+  struct kaapi_taskadaptive_result_t* ktr;
+
+} kaapi_stealheader_t;
+
+
+/** Adaptive stealing context
     \ingroup ADAPT
 */
 typedef struct kaapi_stealcontext_t {
-  kaapi_task_t*                  ownertask;
-  struct kaapi_thread_context_t* ctxtthread;
-  kaapi_thread_t*                thread;
+  /* header seen by both combinator and local */
+  kaapi_stealheader_t            header;
+
+  /* reference to the preempt flag in the thread's reply_t data structure */
+  volatile kaapi_uint64_t* preempt __attribute__((aligned));
+
+  /* splitter context */
   kaapi_task_splitter_t volatile splitter;
   void* volatile                 argsplitter;
-  int                            flag; 
+  
+  /* needed for steal sync protocol */
+  kaapi_task_t*		               ownertask;
 
-  volatile int                   hasrequest;
-  kaapi_request_t*               requests;
+  kaapi_task_splitter_t          save_splitter;
+  void*                          save_argsplitter;
+  
+  void*                          data_victim;       /* pointer on the thief side to store args from the victim */
+  size_t                         sz_data_victim;
 
-  kaapi_atomic_t                 is_there_thief;
+  /* initial saved frame */
+  kaapi_frame_t                  frame;
+
+  /* thieves related context, 2 cases */
+  union
+  {
+    /* 0) an atomic counter if preemption disabled */
+    kaapi_atomic_t count;
+
+    /* 1) a thief list if preemption enabled */
+    struct
+    {
+      kaapi_atomic_t lock;
+
+      struct kaapi_taskadaptive_result_t* volatile head
+      __attribute__((aligned(KAAPI_CACHE_LINE)));
+
+      struct kaapi_taskadaptive_result_t* volatile tail
+      __attribute__((aligned(KAAPI_CACHE_LINE)));
+    } list;
+  } thieves;
 
 } kaapi_stealcontext_t;
 
-/* flags (or ed) for kaapi_stealcontext_t */
-#define KAAPI_STEALCONTEXT_DEFAULT    0x0   /* no flag */
-#define KAAPI_STEALCONTEXT_LINKED     0x1   /* link thief context to a master context */
 
-/* no used macro:
-#define KAAPI_STEALCONTEXT_NOPREEMPT  0x1   // no preemption 
-#define KAAPI_STEALCONTEXT_NOSYNC     0x2   // do not wait end of thieves 
+/** \ingroup ADAPT
+    Extra body with kaapi_stealcontext_t as extra arg.
 */
+typedef void (*kaapi_adaptive_thief_body_t)(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
-/** Thief result
-    Only public part of the data structure.
-    Warning: update of this structure should also be an update of the structure in kaapi_impl.h
+
+/** \ingroup ADAPT
+    Data structure that allows to store results of child tasks of an adaptive task.
+    This data structure is stored... in the victim heap and serve as communication 
+    media between victim and thief.
 */
-#if !defined(KAAPI_COMPILE_SOURCE)
 typedef struct kaapi_taskadaptive_result_t {
+  /* same as public part of the structure in kaapi.h */
   void*                               data;             /* the data produced by the thief */
   size_t                              size_data;        /* size of data */
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
-  int volatile                        req_preempt;
-  int volatile                        is_signaled;
-} kaapi_taskadaptive_result_t;
-#endif
+
+  volatile kaapi_uint64_t*	          status;	          /* reply status pointer */
+  volatile kaapi_uint64_t*	          preempt;          /* preemption pointer */
+
+#if defined(KAAPI_COMPILE_SOURCE)
+  kaapi_task_t			      state;		/* ktr state represented by a task */
+
+#define KAAPI_RESULT_DATAUSR    0x01
+#define KAAPI_RESULT_DATARTS    0x02
+  int                                 flag;             /* where is allocated data */
+
+  struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
+  struct kaapi_taskadaptive_result_t* rtail;            /* */
+
+  struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
+  struct kaapi_taskadaptive_result_t* prev;             /* */
+
+  void*				                        addr_tofree;	    /* the non aligned malloc()ed addr */
+#endif /* defined(KAAPI_COMPILE_SOURCE) */
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
+
+
+/** \ingroup ADAPT
+    Get the adaptive result data from stealcontext ktr
+*/
+static inline void* kaapi_adaptive_result_data
+(kaapi_stealcontext_t* sc)
+{
+  kaapi_assert_debug(sc->header.ktr);
+  return sc->header.ktr->data;
+}
+
+
+/** \ingroup WS
+    Reply data structure used to return work after a steal request.
+    When work is stolen from a victim, work could be stored in the memory data. 
+    The runtime ensure that at least KAAPI_REPLY_DATA_SIZE_MAX byte is available.
+    Depending on the work stealing protocol, more data may be available.
+    
+    After the data has been write to memory, the status is set to one of
+    the kaapi_reply_status_t value indicating the success in stealing, the
+    failure or an error.
+
+    Thread kinds of objects may be pass in the reply data structure:
+    - a task with its body (pointer to function)
+    - a format of a task (its format id)
+    - a thread (a pointer to a thread)
+    
+    On return to a successfull theft request of a task or task format, the caller will invoke:
+    1/ decode the format if it is a format and store the body into u.s_task.body
+    2/ push a task <body,sp> = <u.s_task.body, fubar+offset> into its frame
+    3/ execute all the tasks into the frame
+*/
+typedef struct kaapi_reply_t {
+
+  /* every thread has a status and a preempt words used for remote
+     communication. 
+     A pointer on this word is used both on the victim side to
+     send preemption signal. The thief test preemption on this flag
+   */
+  volatile kaapi_uint64_t status;
+  volatile kaapi_uint64_t preempt;
+
+  /* private, since sc is private and sizeof differs */
+#if defined(KAAPI_COMPILE_SOURCE)
+  kaapi_uint16_t offset;    /* offset in udata of the task arg */
+  union
+  {
+    struct /* task body */ 
+    {
+      kaapi_task_bodyid_t	body;
+    } s_task;
+
+    struct /* formated body */
+    {
+      kaapi_format_id_t		fmt;
+    } s_taskfmt;
+
+    /* thread */
+    struct kaapi_thread_context_t* s_thread;
+  } u;
+#define KAAPI_REPLY_DATA_SIZE_MAX (8*KAAPI_CACHE_LINE)
+  unsigned char udata[KAAPI_REPLY_DATA_SIZE_MAX]; /* task data */
+#endif /* private */
+
+} __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_reply_t;
+
+
+
+/** \ingroup WS
+    Server side of a request send by a processor.
+    This opaque data structure is pass in parameter of the splitter function.
+*/
+typedef struct kaapi_request_t {
+  kaapi_processor_id_t         kid;            /* system wide kproc id */
+  kaapi_reply_t*               reply;          /* points to thief thread reply data structure */
+  kaapi_taskadaptive_result_t* ktr;            /* only used in adaptive interface to avoid  */
+  kaapi_uint8_t                data[1];        /* not used data[0]...data[XX] ? */
+} __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
+
 
 /* ========================================================================= */
 /** \ingroup DFG
@@ -581,7 +709,6 @@ typedef struct kaapi_taskadaptive_result_t {
 typedef struct kaapi_access_t {
   void*                  data;    /* global data */
   void*                  version; /* used to set the data to access (R/W/RW/CW) if steal, used to store output after steal */
-//  struct kaapi_access_t* next;    /* not necessary used */
 } kaapi_access_t;
 
 #define kaapi_data(type, a)\
@@ -631,43 +758,13 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
   return task->sp = arg;
 }
 
-/** \ingroup TASK
-    Set the body of the task
-*/
-static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
-{
-  task->body = body;
-}
-
-/** \ingroup TASK
-    Get the body of the task
-*/
-static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
-{
-  return task->body;
-}
-
-/** The main task arguments
-    \ingroup TASK
-*/
-typedef struct kaapi_taskmain_arg_t {
-  int    argc;
-  char** argv;
-  void (*mainentry)(int, char**);
-} kaapi_taskmain_arg_t;
-
-/** The main task
-    \ingroup TASK
-*/
-extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
-
 
 /** \ingroup TASK
     Return pointer to the self stack
+    Only work if sfp is the first field of kaapi_thread_context_t
 */
-/* this optimisation only work if sfp is the first field of kaapi_thread_context_t */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  extern __thread kaapi_thread_t** kaapi_current_thread_key;
+  extern __thread kaapi_thread_t**    kaapi_current_thread_key;
   extern __thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
 #  define kaapi_self_thread() \
      (*kaapi_current_thread_key)
@@ -677,11 +774,10 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
      kaapi_current_threadgroup_key = thgrp
 
 #else
-extern kaapi_thread_t* kaapi_self_thread (void);
-extern kaapi_threadgroup_t kaapi_self_threadgroup(void);
-extern void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp);
+  extern kaapi_thread_t* kaapi_self_thread (void);
+  extern kaapi_threadgroup_t kaapi_self_threadgroup(void);
+  extern void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp);
 #endif
-
 
 /** \ingroup TASK
     The function kaapi_thread_pushdata() will return the pointer to the next top data.
@@ -693,10 +789,10 @@ extern void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp);
 */
 static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_t count)
 {
-  void* retval;
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-  retval = thread->sp_data;
+
+  void* const retval = thread->sp_data;
   thread->sp_data += count;
   return retval;
 }
@@ -707,18 +803,16 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
     \param align the alignment size, in BYTES
 */
 static inline void* kaapi_thread_pushdata_align
-(kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint32_t align)
+  (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint64_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
-  const uint32_t mask = align - 1;
+  const kaapi_uint64_t mask = align - 1;
 
   if ((uintptr_t)thread->sp_data & mask)
     thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
 
   return kaapi_thread_pushdata(thread, count);
 }
-
-
 
 /** \ingroup TASK
     The function kaapi_thread_pushdata() will return the pointer to the next top data.
@@ -741,11 +835,11 @@ static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi
 }
 
 /** \ingroup TASK
-    The function kaapi_stack_top() will return the top task.
+    The function kaapi_thread_toptask() will return the top task.
     The top task is not part of the stack, it will be the next pushed task.
-    If successful, the kaapi_stack_top() function will return a pointer to the next task to push.
+    If successful, the kaapi_thread_toptask() function will return a pointer to the next task to push.
     Otherwise, an 0 is returned to indicate the error.
-    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \param stack INOUT a pointer to the kaapi_thread_t data structure.
     \retval a pointer to the next task to push or 0.
 */
 static inline kaapi_task_t* kaapi_thread_toptask( kaapi_thread_t* thread) 
@@ -757,8 +851,8 @@ static inline kaapi_task_t* kaapi_thread_toptask( kaapi_thread_t* thread)
 
 
 /** \ingroup TASK
-    The function kaapi_stack_push() pushes the top task into the stack.
-    If successful, the kaapi_stack_push() function will return zero.
+    The function kaapi_thread_pushtask() pushes the top task into the stack.
+    If successful, the kaapi_thread_pushtask() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
@@ -768,18 +862,21 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug((char*)thread->sp >= (char*)thread->sp_data);
 
-  kaapi_writemem_barrier_api();
-
+  /* not need on X86 archi: write are ordered.
+   */
+#if !(defined(__x86_64) || defined(__i386__))
+  kaapi_writemem_barrier();
+#endif
   --thread->sp;
   return 0;
 }
 
-static inline void kaapi_task_initdfg
-(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
+/** \ingroup TASK
+*/
+static inline void kaapi_task_initdfg(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
   task->sp = arg;
-  task->body = body;
-  task->ebody = body;
+  task->u.body = body;
 }
 
 /** \ingroup TASK
@@ -790,7 +887,6 @@ static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskb
   kaapi_task_initdfg(task, taskbody, arg);
   return 0;
 }
-
 
 /** \ingroup TASK
     The function kaapi_thread_save_frame() saves the current frame of a stack into
@@ -803,7 +899,6 @@ static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskb
 */
 extern int kaapi_thread_save_frame( kaapi_thread_t*, kaapi_frame_t*);
 
-
 /** \ingroup TASK
     The function kaapi_thread_restore_frame() restores the frame context of a stack into
     the stack data structure.
@@ -814,7 +909,6 @@ extern int kaapi_thread_save_frame( kaapi_thread_t*, kaapi_frame_t*);
     \retval EINVAL invalid argument: bad pointer.
 */
 extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
-
 
 /** \ingroup TASK
     The function kaapi_sched_sync() execute all childs tasks of the current running task.
@@ -829,24 +923,49 @@ extern int kaapi_sched_sync( void );
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
 /* ========================================================================= */
-
 /** \ingroup WS
-    Return a new stealcontext to be used with other function of the adaptive API.
-    master if only used if flag == KAAPI_STEALCONTEXT_LINKED.
-    * If flag ==KAAPI_STEALCONTEXT_LINKED, then all the linked thieves are waiting
-    during the call to execution of task forked by kaapi_steal_finalize. 
-    In that way the thread that returns synchronize its execution after kaapi_steal_finalize
-    is garanteed to view results of all other thieves.
-    * If flag ==KAAPI_STEALCONTEXT_DEFAULT then the application should ensure termination of
-    thieves, either by call preemption or other synchronisation method.
+    Allows the current thread of execution to create tasks on demand.
+    A thread that begin an adaptive section, allows thiefs to call a splitter
+    function with an arguments in order to push tasks for thiefs.
+    If not thief is idle, then no tasks will be created and there is no cost
+    due to creations of tasks.
+
+    This is the way Kaapi implements adaptive algorithms.
+    
+    The current thread of execution (and the current executing task) should
+    mark the section of code where tasks are created on demand by using 
+    the instructions kaapi_task_begin_adaptive and kaapi_task_end_adaptive. 
+    Between this two instructions, a splitter may be invoked with its arguments:
+    - in concurrence with the local execution thread iff flag = KAAPI_SC_CONCURRENT
+    - with cooperation with the local execution thread iff flag =KAAPI_SC_COOPERATIVE.
+    In the case of the cooperative execution, the code should test presence of request
+    using the instruction kaapi_stealpoint.
 */
-kaapi_stealcontext_t* kaapi_thread_pushstealcontext( 
+typedef enum kaapi_stealcontext_flag {
+  KAAPI_SC_CONCURRENT    = 0x1,
+  KAAPI_SC_COOPERATIVE   = 0x2,
+  KAAPI_SC_PREEMPTION    = 0x4,
+  KAAPI_SC_NOPREEMPTION  = 0x8,
+  KAAPI_SC_INIT          = 0x10,   /* 1 == iff initilized (for lazy init) */
+  
+  KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
+} kaapi_stealcontext_flag;
+
+/** Begin adaptive section of code
+*/
+kaapi_stealcontext_t* kaapi_task_begin_adaptive( 
   kaapi_thread_t*       thread,
   int                   flag,
-  kaapi_task_splitter_t spliter,
-  void*                 argsplitter,
-  kaapi_stealcontext_t* master 
+  kaapi_task_splitter_t splitter,
+  void*                 argsplitter
 );
+
+/** \ingroup ADAPTIVE
+    Mark the end of the adaptive section of code.
+    After the call to this function, all thieves have finish to compute in parallel,
+    and memory location produced in concurrency may be read by the calling thread.
+*/
+extern void kaapi_task_end_adaptive( kaapi_stealcontext_t* stc );
 
 /** \ingroup ADAPTIVE
     Allocate the return data structure for the thief. This structure should be passed
@@ -863,9 +982,8 @@ kaapi_stealcontext_t* kaapi_thread_pushstealcontext(
     \param data IN a user defined data or 0 to means to be allocated by the runtime
 */
 extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
-    kaapi_stealcontext_t* stc, int size, void* data
+    struct kaapi_request_t* kreq, int size, void* data
 );
-
 
 /** \ingroup ADAPTIVE
     Dellocate the return data structure already allocated to the thief. 
@@ -877,57 +995,65 @@ extern struct kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
 */
 extern int kaapi_deallocate_thief_result( struct kaapi_taskadaptive_result_t* result );
 
+#define KAAPI_REQUEST_REPLY_HEAD 0x0
+#define KAAPI_REQUEST_REPLY_TAIL 0x1
 
 /** \ingroup ADAPTIVE
-    Reply a value to a steal request. If retval is !=0 it means that the request
-    has successfully adapt to steal work. Else 0.
-    This function could not be called in concurrence with other calls:
-    - if the adaptive algorithm matches correctly the standard structure (beginsteal/endsteal) etc..
-    the scheduler ensure that only one thief is able to call the method.
-    \param sc INOUT the steal context
-    \param request INOUT data structure used to replied by the thief
-    \param result IN the result data structure for the thief or 0 if reply failed.
-    \param insert_head =1 if insert the thief in the head of the thieves list
 */
 extern int kaapi_request_reply(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
-    struct kaapi_taskadaptive_result_t* result,
-    int                                 flag
+  kaapi_stealcontext_t* sc, 
+  kaapi_request_t*      req, 
+  int                   headtail_flag
 );
 
-#define KAAPI_REQUEST_REPLY_HEAD   0x0
-#define KAAPI_REQUEST_REPLY_TAIL   0x1
-
-static inline int kaapi_request_reply_head(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
+/** \ingroup ADAPTIVE
+    Initialize an adaptive task to be executed by a thief.
+    In case of sucess, the function returns the pointer of a memory region where to store 
+    arguments for the entrypoint. Once pushed, the task is executed by the thief with
+    first argument the pointer return the call to kaapi_reply_init_adaptive_task.
+    \param sc the stealcontext
+    \param req the request emitted by a thief
+    \param body the entry point of the task to execute
+    \param size the user data size of the task arguments
+    \param result that taskadaptive_result used for signalisation.
+*/
+extern void* kaapi_reply_init_adaptive_task (
+    struct kaapi_stealcontext_t*        sc,
+    kaapi_request_t*                    req,
+    kaapi_task_body_t                   body,
+    size_t				                      size,
     struct kaapi_taskadaptive_result_t* result
-)
-{ return kaapi_request_reply(stc, request, result, KAAPI_REQUEST_REPLY_HEAD); }
+);
 
 /** \ingroup ADAPTIVE
 */
-static inline int kaapi_request_reply_tail(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
-    struct kaapi_taskadaptive_result_t* result
-)
-{ return kaapi_request_reply(stc, request, result, KAAPI_REQUEST_REPLY_TAIL); }
-
+extern void kaapi_request_reply_failed(kaapi_request_t*);
 
 /** \ingroup ADAPTIVE
+    push the task associated with an adaptive request
 */
-static inline int kaapi_request_reply_failed(     
-    kaapi_request_t*               request
-)
-{ return kaapi_request_reply( 0 /* means failed */, request, 0, KAAPI_REQUEST_REPLY_HEAD ); }
+static inline void kaapi_reply_pushhead_adaptive_task(kaapi_stealcontext_t* sc, kaapi_request_t* req)
+{
+  /* sc the stolen stealcontext */
+  kaapi_request_reply(sc, req, KAAPI_REQUEST_REPLY_HEAD);
+}
 
 /** \ingroup ADAPTIVE
-    retrieve the request associated thread
+    push the task associated with an adaptive request
 */
-static inline kaapi_thread_t* kaapi_request_getthread(kaapi_request_t* r)
-{ return r->thread; }
+static inline void kaapi_reply_pushtail_adaptive_task(kaapi_stealcontext_t* sc, kaapi_request_t* req)
+{
+  /* sc the stolen stealcontext */
+  kaapi_request_reply(sc, req, KAAPI_REQUEST_REPLY_TAIL);
+}
+
+/** \ingroup ADAPTIVE
+    push the task associated with an adaptive request
+*/
+static inline void kaapi_reply_push_adaptive_task(kaapi_stealcontext_t* sc, kaapi_request_t* r)
+{
+  kaapi_reply_pushhead_adaptive_task(sc, r);
+}
 
 /** \ingroup ADAPTIVE
     Set an splitter to be called in concurrence with the execution of the next instruction
@@ -942,14 +1068,13 @@ static inline int kaapi_steal_setsplitter(
 {
   stc->argsplitter = 0;
   stc->splitter    = 0;
-  kaapi_writemem_barrier_api();
+  kaapi_writemem_barrier();
   stc->argsplitter = arg_tasksplitter;
   stc->splitter    = splitter;
   return 0;
 }
 
-
-
+#if 0 //* revoir ici, ces fonctions sont importantes pour le cooperatif */
 /** \ingroup WS
     Helper to expose to many part of the internal API.
     Return 1 iff its remains works...
@@ -966,20 +1091,17 @@ extern int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc );
 */
 static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 {
-  if (stc->hasrequest) 
-  {
-    /* \TODO: ici appel systematique a kaapi_sched_stealprocessor dans le cas ou la seule tache
-       est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
-       
-       Dans le cas concurrent, on ne passe jamais par la (appel direct de kaapi_stealprocessor).
-       Dans le cas cooperatif, le thread courant se vol lui meme puis repond
-    */
-    return kaapi_sched_stealstack_helper( stc );
-  }
-  return 0;
+  /* \TODO: ici appel systematique a kaapi_sched_stealprocessor dans le cas ou la seule tache
+     est la tache 'task' afin de retourner vite pour le traitement au niveau applicatif.
+     
+     Dans le cas concurrent, on ne passe jamais par la (appel direct de kaapi_stealprocessor).
+     Dans le cas cooperatif, le thread courant se vol lui meme puis repond
+  */
+  return kaapi_sched_stealstack_helper( stc );
 }
 
 
+#if !defined(__cplusplus)
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
     and then call the splitter function with given arguments.
@@ -987,27 +1109,24 @@ static inline int kaapi_stealpoint_isactive( kaapi_stealcontext_t* stc )
 */
 #define kaapi_stealpoint( stc, splitter, ...) \
    (kaapi_stealpoint_isactive(stc) ? (splitter)( stc, (stc)->hasrequest, (stc)->requests, ##__VA_ARGS__), 1 : 0 )
-    
-    
-/** \ingroup ADAPTIVE
-    Return true iff the request correctly posted
-    \param pksr kaapi_request_t
-*/
-#define kaapi_request_ok( kpsr )\
-  ((kpsr)->status == 1 /*== KAAPI_REQUEST_S_POSTED*/)
+
+#endif
+
+#endif /* if 0 */
 
 
 /* Return the thief result of the next thief from the head of the list to preempt or 0 if no thief may be preempted
 */
 extern struct kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* stc );
 
-/* Return the next field of curr
-*/
-extern struct kaapi_taskadaptive_result_t* kaapi_get_nextthief_head( kaapi_stealcontext_t* stc, struct  kaapi_taskadaptive_result_t* curr );
-
 /* Return the thief result of the next thief from the tail of the list to preempt or 0 if no thief may be preempted
 */
-extern struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc );
+extern struct kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* stc );
+
+struct kaapi_taskadaptive_result_t* kaapi_get_next_thief( struct kaapi_taskadaptive_result_t* pos );
+
+struct kaapi_taskadaptive_result_t* kaapi_get_prev_thief( struct kaapi_taskadaptive_result_t* pos );
+
 
 
 /** Preempt a thief.
@@ -1023,15 +1142,26 @@ extern int kaapi_preempt_thief_helper(
   void*                               arg_to_thief 
 );
 
-/** Set flag to preempt the thief and return whatever is the state of the thief (terminate or not).
-    Returns 0 if the thief if finished else returns EBUSY.
+/** \ingroup ADAPTIVE
+   Post a preemption request to thief. Do not wait preemption occurs.
+   Return 0 iff some work have been preempted and should be processed locally.
+   If the thief has already finished its computation bfore sending the signal,
+   then the return value is ECHILD.
 */
-extern int kaapi_preemptasync_thief_helper( 
+extern int kaapi_preemptasync_thief( 
   kaapi_stealcontext_t*               stc, 
   struct kaapi_taskadaptive_result_t* ktr, 
   void*                               arg_to_thief 
 );
 
+/** The thief should have been preempted using preempasync_thief
+    Returns 0 when the thief has reply to its preemption flag
+*/
+extern int kaapi_preemptasync_waitthief
+( 
+ kaapi_stealcontext_t*               sc,
+ struct kaapi_taskadaptive_result_t* ktr
+);
 
 /** \ingroup ADAPTIVE
     Remove the thief ktr form the list of stc iff it is has finished its computation and returns 0.
@@ -1060,25 +1190,10 @@ extern int kaapi_remove_finishedthief(
   {									\
     if (!kaapi_is_null((void*)reducer))					\
       __res = ((kaapi_task_reducer_t)reducer)(stc, (tr)->arg_from_thief, (tr)->data, (tr)->size_data, ##__VA_ARGS__);	\
-    while (!tr->is_signaled) kaapi_slowdown_cpu();			\
     kaapi_deallocate_thief_result(tr);					\
   }									\
   __res;								\
 })
-
-
-/** \ingroup ADAPTIVE
-   Post a preemption request to thief. Do not wait preemption occurs.
-   Return true iff some work have been preempted and should be processed locally.
-   If no more thief can been preempted, then the return value of the function kaapi_preemptasync_thief() is 0.
-   If it exists a thief, then the call to kaapi_preemptasync_thief() will return the
-   value the call to reducer function.
-   
-   reducer function should has the following signature:
-      int (*)( stc, void* thief_work, ... )
-*/
-#define kaapi_preemptasync_thief( stc, tr, arg_to_thief )	\
-  kaapi_preemptasync_thief_helper(stc, (tr), arg_to_thief)
 
 
 /** \ingroup ADAPTIVE
@@ -1087,12 +1202,11 @@ extern int kaapi_remove_finishedthief(
     \retval !=0 if it exists a prending preempt request(s) to process onto the given task.
     \retval 0 else
 */
-#if !defined(KAAPI_COMPILE_SOURCE)
-static inline int kaapi_preemptpoint_isactive( kaapi_taskadaptive_result_t* ktr )
+static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
 {
-  return ktr->req_preempt;
+  kaapi_assert_debug(ksc->preempt != 0);
+  return *ksc->preempt == 1;
 }
-#endif
 
 
 /** \ingroup ADAPTIVE
@@ -1100,30 +1214,22 @@ static inline int kaapi_preemptpoint_isactive( kaapi_taskadaptive_result_t* ktr 
     On return the victim argument may be read.
 */
 extern int kaapi_preemptpoint_before_reducer_call( 
-    struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
     void* arg_for_victim, 
     void* result_data, 
     int result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
-    struct kaapi_taskadaptive_result_t* ktr, 
     kaapi_stealcontext_t* stc,
     int reducer_retval 
 );
 
-
 /* checking for null on a macro param
-   where param is an address makes g++
-   complain about the never nullness
-   of the arg. so we use this function
-   to check for null pointers.
  */
 static inline int kaapi_is_null(void* p)
 {
   return p == 0;
 }
-
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request to the current task
@@ -1135,27 +1241,22 @@ static inline int kaapi_is_null(void* p)
     \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
 */
-#ifdef __cplusplus
-typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
-#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, result_data, result_size, ...)\
-  ( kaapi_preemptpoint_isactive(ktr) ? \
-        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call( ktr, stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
-    : \
-        0\
-  )
-#else
-#define kaapi_preemptpoint( ktr, stc, reducer, arg_for_victim, result_data, result_size, ...)\
-  ( kaapi_preemptpoint_isactive(ktr) ? \
-        kaapi_preemptpoint_before_reducer_call(ktr, stc, arg_for_victim, result_data, result_size),\
-        kaapi_preemptpoint_after_reducer_call( ktr, stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((int(*)())(reducer))( ktr, ktr->arg_from_victim, ##__VA_ARGS__))) \
-    : \
-        0\
-  )
-#endif  
 
+typedef int (*kaapi_ppreducer_t) (
+#ifdef __cplusplus
+ kaapi_taskadaptive_result_t*,
+ void* arg_from_victim, ...
+#endif
+);
+
+#define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
+  ( kaapi_preemptpoint_isactive(stc) ? \
+    kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, result_data, result_size),  \
+        kaapi_preemptpoint_after_reducer_call( stc, \
+        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->header.ktr, stc->header.ktr->arg_from_victim, ##__VA_ARGS__))) \
+    : \
+        0\
+  )
 
 /** Begin critical section with respect to steal operation
     \ingroup TASK
@@ -1173,31 +1274,11 @@ extern int kaapi_steal_endcritical( kaapi_stealcontext_t* sc );
 */
 extern int kaapi_steal_endcritical_disabled( kaapi_stealcontext_t* sc );
 
-/** Body of the task in charge of finalize of adaptive task
-    \ingroup TASK
-*/
-extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
-
-/** Body of the task in charge of returning from a thief adaptive task
-    \ingroup TASK
-*/
-extern void kaapi_taskreturn_body( void* , kaapi_thread_t* );
-
-/** \ingroup ADAPTIVE
-    Push the task that, on execution will wait the terminaison of the previous 
-    adaptive task 'task' and all the thieves.
-    The local result, if not null will be pushed after the end of execution of all local tasks.
-    This method should be called in a frame with scope included by the frame where was done the call 
-    to kaapi_thread_pushstealcontext that creates the context.
-*/
-extern int kaapi_steal_finalize( kaapi_stealcontext_t* stc );
-
 /** \ingroup ADAPTIVE
     Signal end of a thief, required to be call if kaapi_steal_finalize is not call in order
     to ensure end of the computation.
 */
 extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
-
 
 
 /* ========================================================================= */
@@ -1254,7 +1335,7 @@ static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int par
   
   return kaapi_thread_pushtask(thread);
 }
-#endif
+#endif /* !defined(KAAPI_COMPILE_SOURCE) */
 
 /**
 */
@@ -1277,6 +1358,8 @@ extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
 extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp );
 
 /**
+    \retval 0 in case of success
+    \retval EBUSY if threads are already attached to the group
 */
 extern int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp );
 
@@ -1294,6 +1377,203 @@ extern int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp );
 
 
 
+/* ========================================================================= */
+/* Standard task body                                                        */
+/* ========================================================================= */
+/** The main task arguments
+    \ingroup TASK
+*/
+typedef struct kaapi_taskmain_arg_t {
+  int    argc;
+  char** argv;
+  void (*mainentry)(int, char**);
+} kaapi_taskmain_arg_t;
+
+/** The main task
+    \ingroup TASK
+*/
+extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
+
+/** Body of the task in charge of finalize of adaptive task
+    \ingroup TASK
+*/
+extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
+
+
+
+/* ========================================================================= */
+/* THE workqueue to be used with adaptive interface                          */
+/* ========================================================================= */
+/** work work_queue_t: the main important data structure.
+    It steal/pop are managed by a Dijkstra like protocol.
+    The threads that want to steal serialize their access
+    through a lock.
+    The workqueue can only be used within adaptive interface.
+    The following assumptions should be true:
+    - the current thread of control should be an kaapi thread in order to ensure
+    correctness of the implementation.
+    - the owner of the queue can call _init, _set, _pop, _size and _isempty
+    - the function _steal must be call in the context of the splitter (see adaptive interface)
+
+    Note about the implementation.
+    - The internal lock used in case of conflic is the kaapi_processor lock.
+    - data field required to be correctly aligned in order to ensure atomicity of read/write. 
+     Put them on two separate lines of cache (assume == 64bytes) due to different access by 
+     concurrent threads. Currently only IA32 & x86-64.
+     An assertion is put inside the constructor to verify that this field are correctly aligned.
+*/
+typedef long kaapi_workqueue_index_t;
+
+typedef struct {
+  volatile kaapi_workqueue_index_t beg __attribute__((aligned(64)));
+  volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
+} kaapi_workqueue_t;
+
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+*/
+static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
+{
+#if defined(__i386__)||defined(__x86_64)
+  kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
+  kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
+#else
+#  error "May be alignment constraints exit to garantee atomic read write"
+#endif
+  kwq->beg = b;
+  kwq->end = e;
+  return 0;
+}
+
+/** This function set new bounds for the workqueue.
+    The only garantee is that is a concurrent thread tries
+    to access to the size of the queue while a thread set the workqueue, 
+    then the concurrent thread will see the size of the queue before the call to set
+    or it will see a nul size queue.
+    \retval 0 in case of success
+    \retval ESRCH if the current thread is not a kaapi thread.
+*/
+extern int kaapi_workqueue_set( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
+
+/**
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_range_begin( kaapi_workqueue_t* kwq )
+{
+  return kwq->beg;
+}
+
+/**
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_range_end( kaapi_workqueue_t* kwq )
+{
+  return kwq->end;
+}
+
+/**
+*/
+static inline kaapi_workqueue_index_t kaapi_workqueue_size( kaapi_workqueue_t* kwq )
+{
+  kaapi_workqueue_index_t size = kwq->end - kwq->beg;
+  return (size <0 ? 0 : size);
+}
+
+/**
+*/
+static inline unsigned int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
+{
+  kaapi_workqueue_index_t size = kwq->end - kwq->beg;
+  return size <= 0;
+}
+
+
+/** Helper function called in case of conflict.
+    Return EBUSY is the queue is empty.
+    Return EINVAL if invalid arguments
+    Return ESRCH if the current thread is not a kaapi thread.
+*/
+extern int kaapi_workqueue_slowpop(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t* beg,
+  kaapi_workqueue_index_t* end,
+  kaapi_workqueue_index_t size
+);
+
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    Return 0 in case of success 
+    Return EBUSY is the queue is empty.
+    Return EINVAL if invalid arguments
+    Return ESRCH if the current thread is not a kaapi thread.
+*/
+static inline int kaapi_workqueue_pop(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t* beg,
+  kaapi_workqueue_index_t* end,
+  kaapi_workqueue_index_t max_size
+)
+{
+  kaapi_workqueue_index_t loc_beg;
+  kaapi_assert_debug( max_size >0 );
+  loc_beg = kwq->beg + max_size;
+  kwq->beg = loc_beg;
+  kaapi_mem_barrier();
+
+  if (loc_beg < kwq->end)
+  {
+    /* no conflict */
+    *end = loc_beg;
+    *beg = *end - max_size;
+    return 0;
+  }
+
+  /* conflict */
+  loc_beg -= max_size;
+  kwq->beg = loc_beg;
+  return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
+}
+
+
+/** This function should only be called into a splitter to ensure correctness
+    the lock of the victim kprocessor is assumed to be locked to handle conflict.
+    Return 0 in case of success 
+    Return ERANGE is the queue is empty or less than requested size.
+ */
+static inline int kaapi_workqueue_steal(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t* beg,
+  kaapi_workqueue_index_t* end,
+  kaapi_workqueue_index_t size
+)
+{
+  kaapi_workqueue_index_t loc_end;
+
+  kaapi_assert_debug( 0 < size );
+
+  /* disable gcc warning */
+  *beg = 0;
+  *end = 0;
+
+  loc_end = kwq->end - size;
+  kwq->end = loc_end;
+  kaapi_mem_barrier();
+
+  if (loc_end < kwq->beg)
+  {
+    kwq->end = loc_end+size;
+    return ERANGE; /* false */
+  }
+
+  *beg = loc_end;
+  *end = *beg + size;
+  
+  return 0; /* true */
+}  
+
+
+
+/* ========================================================================= */
+/* Perf counter                                                              */
+/* ========================================================================= */
 /** \ingroup PERF
     performace counters
 */
@@ -1312,12 +1592,15 @@ extern int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp );
 #define KAAPI_PERF_ID_STEALREQOK    1  /* count number of successful steal requests */
 #define KAAPI_PERF_ID_STEALREQ      2  /* count number of steal requests */
 #define KAAPI_PERF_ID_STEALOP       3  /* count number of steal operation to reply to requests */
-#define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspend */
+#define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspended thread */
 #define KAAPI_PERF_ID_T1            5  /* nano second of compte time */
 /*#define KAAPI_PERF_ID_TIDLE         6  / * nano second of idle time */ 
 #define KAAPI_PERF_ID_TPREEMPT      7  /* nano second of preempt time */
+#define KAAPI_PERF_ID_ALLOCTHREAD   8  /* count number of allocated thread */
+#define KAAPI_PERF_ID_FREETHREAD    9  /* count number of free thread */
+#define KAAPI_PERF_ID_QUEUETHREAD   10 /* count the maximal number of thread in queue */
 
-#define KAAPI_PERF_ID_ENDSOFTWARE   8  /* mark end of software counters */
+#define KAAPI_PERF_ID_ENDSOFTWARE   11 /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
 #define KAAPI_PERF_ID_PAPI_0       (KAAPI_PERF_ID_PAPI_BASE + 0)
@@ -1345,7 +1628,6 @@ typedef struct kaapi_perf_idset_t
 } kaapi_perf_idset_t;
 
 #define KAAPI_PERF_IDSET_SINGLETON(I) {1, {I}}
-
 #define KAAPI_PERF_IDSET_TASKS ((kaapi_perf_idset_t*)(uintptr_t)KAAPI_PERF_ID_TASKS)
 #define KAAPI_PERF_IDSET_STEALREQOK ((kaapi_perf_idset_t*)(uintptr_t)KAAPI_PERF_ID_STEALREQOK)
 #define KAAPI_PERF_IDSET_STEALREQ ((kaapi_perf_idset_t*)(uintptr_t)KAAPI_PERF_ID_STEALREQ)
@@ -1392,11 +1674,6 @@ extern size_t kaapi_perf_counter_num(void);
 /* Format declaration & registration                                         */
 /* ========================================================================= */
 /** \ingroup TASK
-     Offset to access to parameter of a task
-*/
-typedef kaapi_uint32_t kaapi_offset_t;
-
-/** \ingroup TASK
     Allocate a new format data
 */
 extern struct kaapi_format_t* kaapi_format_allocate(void);
@@ -1413,14 +1690,15 @@ extern kaapi_format_id_t kaapi_format_register(
     Register a task format 
 */
 extern kaapi_format_id_t kaapi_format_taskregister( 
-        struct kaapi_format_t*       fmt, //(*fmt_fnc)(void),
+        struct kaapi_format_t*       fmt, 
         kaapi_task_body_t            body,
         const char*                  name,
         size_t                       size,
         int                          count,
         const kaapi_access_mode_t    mode_param[],
         const kaapi_offset_t         offset_param[],
-        const struct kaapi_format_t* fmt_params[]
+        const struct kaapi_format_t* fmt_params[],
+        size_t (*)(const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK
@@ -1494,115 +1772,50 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
   }
 
 
-
-
 /* ========================= Low level memory barrier, inline for perf... so ============================= */
-
-#if defined(__APPLE__)
-#  include <libkern/OSAtomic.h>
-static inline void kaapi_writemem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  /* nothing: writes are ordered in this architecture */
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  /* nothing: reads are ordered in this architecture */
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#ifdef __PPC
-  OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
-  OSMemoryBarrier();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-#elif defined(__linux__)
-
-static inline void kaapi_writemem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  /* nothing: writes are ordered in this architecture */
-#else
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  /* nothing: reads are ordered in this architecture */
-#else
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#if defined(__x86_64) || defined(__i386__)
-  __sync_synchronize();
-#endif
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-#elif defined(_WIN32)
-static inline void kaapi_writemem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-   LONG Barrier = 0;
-   __asm__ __volatile__("xchgl %%eax,%0 "
-     :"=r" (Barrier));
-
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-
-#else
-#  error "Undefined barrier"
-#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
-
+/** Implementation note
+    - all functions or macros without _ORIG return the new value after apply the operation.
+    - all functions or macros with ORIG return the old value before applying the operation.
+*/
+#if !defined(KAAPI_DEBUG)
+#define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
+    instruction
 
 #  define KAAPI_ATOMIC_READ(a) \
     ((a)->_counter)
 
 #  define KAAPI_ATOMIC_WRITE(a, value) \
     (a)->_counter = value
+
+#  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
+    { kaapi_writemem_barrier(); (a)->_counter = value; }
+#else /* defined(KAAPI_DEBUG) */
+static inline int __kaapi_isaligned(volatile void* a, int byte)
+{
+  kaapi_assert( (((unsigned long)a) & (byte-1)) == 0 ); 
+  return 1;
+}
+#define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
+  (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? instruction : 0)
+
+static inline int __kaapi_isaligned_const(const volatile void* a, int byte)
+{
+  kaapi_assert( (((unsigned long)a) & (byte-1)) == 0 ); 
+  return 1;
+}
+#define __KAAPI_ISALIGNED_CONST_ATOMIC(a,instruction)\
+  (__kaapi_isaligned_const( &(a)->_counter, sizeof((a)->_counter)) ? instruction : 0)
+  
+#  define KAAPI_ATOMIC_READ(a) \
+    __KAAPI_ISALIGNED_CONST_ATOMIC(a, (a)->_counter)
+
+#  define KAAPI_ATOMIC_WRITE(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
+
+#  define BIDON_ONEARG(a,b)  a,b
+#  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, BIDON_ONEARG(kaapi_writemem_barrier(), (a)->_counter = value))
+#endif /* defined(KAAPI_DEBUG) */
 
 #if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
 || defined(__INTEL_COMPILER))
@@ -1613,96 +1826,143 @@ static inline void kaapi_mem_barrier()
 /*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
 #  endif
 
-#  ifndef KAAPI_ATOMIC_CAS
-#    define KAAPI_ATOMIC_CAS(a, o, n) \
-      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
-#  endif
+#  define KAAPI_ATOMIC_CAS(a, o, n) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
 
-#  ifndef KAAPI_ATOMIC_CAS64
-#    define KAAPI_ATOMIC_CAS64(a, o, n) \
-      __sync_bool_compare_and_swap( &((a)->_counter), o, n) 
-#  endif
+/* functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ))
 
-#  ifndef KAAPI_ATOMIC_INCR
-#    define KAAPI_ATOMIC_INCR(a) \
-      __sync_add_and_fetch( &((a)->_counter), 1 ) 
-#  endif
+#  define KAAPI_ATOMIC_DECR(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ))
 
-#  ifndef KAAPI_ATOMIC_INCR64
-#    define KAAPI_ATOMIC_INCR64(a) \
-      __sync_add_and_fetch( &((a)->_counter), 1 ) 
-#  endif
+#  define KAAPI_ATOMIC_SUB(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ))
 
-#  ifndef KAAPI_ATOMIC_SUB
-#    define KAAPI_ATOMIC_SUB(a, value) \
-      __sync_sub_and_fetch( &((a)->_counter), value ) 
-#  endif      
+#  define KAAPI_ATOMIC_AND(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
 
-#  ifndef KAAPI_ATOMIC_SUB64
-#    define KAAPI_ATOMIC_SUB64(a, value) \
-      __sync_sub_and_fetch( &((a)->_counter), value ) 
-#  endif      
+#  define KAAPI_ATOMIC_OR(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
+
+/* linux functions which return old value */
+#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
+
+/* linux 64 bit versions */
+#  define KAAPI_ATOMIC_CAS64(a, o, n) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
+
+/* linux functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR64(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ) )
+
+#  define KAAPI_ATOMIC_DECR64(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ) )
+
+#  define KAAPI_ATOMIC_SUB64(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ) )
+
+#  define KAAPI_ATOMIC_AND64(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_OR64(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR64(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
+
+/* functions which return old value */
+#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
+
 
 #elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
 
 #  include <libkern/OSAtomic.h>
 
-#  ifndef KAAPI_ATOMIC_CAS
-#    define KAAPI_ATOMIC_CAS(a, o, n) \
-      OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
-#  endif
+#  define KAAPI_ATOMIC_CAS(a, o, n) \
+    OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
 
-#  ifndef KAAPI_ATOMIC_CAS64
-#    define KAAPI_ATOMIC_CAS64(a, o, n) \
-      OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
-#  endif
+/* functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR(a) \
+    OSAtomicIncrement32Barrier( &((a)->_counter) ) 
 
-#  ifndef KAAPI_ATOMIC_INCR
-#    define KAAPI_ATOMIC_INCR(a) \
-      OSAtomicIncrement32( &((a)->_counter) ) 
-#  endif
+#  define KAAPI_ATOMIC_DECR32(a) \
+    OSAtomicDecrement32Barrier(&((a)->_counter) ) 
 
-#  ifndef KAAPI_ATOMIC_INCR64
-#    define KAAPI_ATOMIC_INCR64(a) \
-      OSAtomicIncrement64( &((a)->_counter) ) 
-#  endif
+#  define KAAPI_ATOMIC_SUB(a, value) \
+    OSAtomicAdd32Barrier( -value, &((a)->_counter) ) 
 
-#  ifndef KAAPI_ATOMIC_SUB
-#    define KAAPI_ATOMIC_SUB(a, value) \
-      OSAtomicAdd32( -value, &((a)->_counter) ) 
-#  endif
+#  define KAAPI_ATOMIC_AND(a, o) \
+    OSAtomicAnd32Barrier( o, &((a)->_counter) )
 
-#  ifndef KAAPI_ATOMIC_SUB64
-#    define KAAPI_ATOMIC_SUB64(a, value) \
-      OSAtomicAdd64( -value, &((a)->_counter) ) 
-#  endif
+#  define KAAPI_ATOMIC_OR(a, o) \
+    OSAtomicOr32Barrier( o, &((a)->_counter) )
 
+#  define KAAPI_ATOMIC_XOR(a, o) \
+    OSAtomicXor32Barrier( o, &((a)->_counter) )
+
+/* functions which return old value */
+#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
+    OSAtomicAnd32OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
+    OSAtomicOr32OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
+    OSAtomicXor32OrigBarrier( o, &((a)->_counter) )
+
+/* 64 bit versions */
+#  define KAAPI_ATOMIC_CAS64(a, o, n) \
+    OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+
+/* functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR64(a) \
+    OSAtomicIncrement64Barrier( &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_DECR64(a) \
+    OSAtomicDecrement64Barrier(&((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_SUB64(a, value) \
+    OSAtomicAdd64Barrier( -value, &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_AND64(a, o) \
+    OSAtomicAnd64Barrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_OR64(a, o) \
+    OSAtomicOr64Barrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_XOR64(a, o) \
+    OSAtomicXor64Barrier( o, &((a)->_counter) )
+
+/* functions which return old value */
+#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
+    OSAtomicAnd64OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
+    OSAtomicOr64OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
+    OSAtomicXor64OrigBarrier( o, &((a)->_counter) )
 #else
 #  error "Please add support for atomic operations on this system/architecture"
 #endif /* GCC > 4.1 */
-
-
-/**
- */
-extern void _kaapi_dummy(void*);
-
-/* ========================================================================= */
-/* Initialization / destruction functions
- */
-extern void __attribute__ ((constructor)) kaapi_init(void);
-
-extern void __attribute__ ((destructor)) kaapi_fini(void);
-
-#if !defined(KAAPI_COMPILE_SOURCE)
-
-/** To force reference to kaapi_init.c in order to link against kaapi_init and kaapi_fini
- */
-static void __attribute__((unused)) __kaapi_dumy_dummy(void)
-{
-  _kaapi_dummy(NULL);
-}
-#endif
-
 
 #ifdef __cplusplus
 }

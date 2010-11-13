@@ -47,13 +47,18 @@
 */
 int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim )
 {
-  int err, i;
-  do {
-    for (i=0; i<kproc->hlevel; ++i)
-    {
-      err = kaapi_select_victim_rand_atlevel( kproc, i, victim );
-      if (err ==0) return 0;
-    }
-  } while(1);
+  int nbproc, victimid;
+  
+  if (kproc->fnc_selecarg ==0) 
+    kproc->fnc_selecarg = (void*)(long)rand();
 
+redo_select:
+  nbproc = kaapi_count_kprocessors;
+  if (nbproc <=1) return EINVAL;
+  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
+
+  /* Get the k-processor */    
+  victim->kproc = kaapi_all_kprocessors[ victimid ];
+  if (victim->kproc ==0) goto redo_select;
+  return 0;
 }

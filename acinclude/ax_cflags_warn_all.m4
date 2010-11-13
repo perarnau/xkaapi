@@ -28,6 +28,7 @@
 # LICENSE
 #
 #   Copyright (c) 2008 Guido U. Draheim <guidod@gmx.de>
+#   Copyright (c) 2010 Vincent Danjean <Vincent.Danjean@ens-lyon.org>
 #
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License as published by the
@@ -60,8 +61,7 @@ AS_VAR_PUSHDEF([FLAGS],[CFLAGS])dnl
 AS_VAR_PUSHDEF([VAR],[ac_cv_cflags_warn_all])dnl
 AC_CACHE_CHECK([m4_ifval($1,$1,FLAGS) for maximum warnings],
 VAR,[VAR="no, unknown"
- AC_LANG_SAVE
- AC_LANG_C
+ AC_LANG_PUSH([C])
  ac_save_[]FLAGS="$[]FLAGS"
 for ac_arg dnl
 in "-pedantic  % -Wall"       dnl   GCC
@@ -74,11 +74,12 @@ in "-pedantic  % -Wall"       dnl   GCC
    "-h conform % -h msglevel 2" dnl Cray C (Unicos)
    #
 do FLAGS="$ac_save_[]FLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   AC_TRY_COMPILE([],[return 0;],
-   [VAR=`echo $ac_arg | sed -e 's,.*% *,,'` ; break])
+   AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([],[[return 0;]])],
+     [VAR=`echo $ac_arg | sed -e 's,.*% *,,'` ; break])
 done
  FLAGS="$ac_save_[]FLAGS"
- AC_LANG_RESTORE
+ AC_LANG_POP([C])
 ])
 case ".$VAR" in
      .ok|.ok,*) m4_ifvaln($3,$3) ;;
@@ -103,8 +104,7 @@ AS_VAR_PUSHDEF([FLAGS],[CXXFLAGS])dnl
 AS_VAR_PUSHDEF([VAR],[ac_cv_cxxflags_warn_all])dnl
 AC_CACHE_CHECK([m4_ifval($1,$1,FLAGS) for maximum warnings],
 VAR,[VAR="no, unknown"
- AC_LANG_SAVE
- AC_LANG_CPLUSPLUS
+ AC_LANG_PUSH([C++])
  ac_save_[]FLAGS="$[]FLAGS"
 for ac_arg dnl
 in "-pedantic  % -Wall"       dnl   GCC
@@ -117,11 +117,12 @@ in "-pedantic  % -Wall"       dnl   GCC
    "-h conform % -h msglevel 2" dnl Cray C (Unicos)
    #
 do FLAGS="$ac_save_[]FLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   AC_TRY_COMPILE([],[return 0;],
-   [VAR=`echo $ac_arg | sed -e 's,.*% *,,'` ; break])
+   AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([],[[return 0;]])],
+     [VAR=`echo $ac_arg | sed -e 's,.*% *,,'` ; break])
 done
  FLAGS="$ac_save_[]FLAGS"
- AC_LANG_RESTORE
+ AC_LANG_POP([C++])
 ])
 case ".$VAR" in
      .ok|.ok,*) m4_ifvaln($3,$3) ;;

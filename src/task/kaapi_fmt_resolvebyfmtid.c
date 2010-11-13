@@ -48,7 +48,7 @@
 */
 kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key)
 {
-  kaapi_uint8_t        entry = ((unsigned long)key) & 0xFF;
+  kaapi_uint8_t  entry = (kaapi_uint8_t)(key & (kaapi_format_id_t)0xFFUL);
   kaapi_format_t* head =  kaapi_all_format_byfmtid[entry];
 
   if (head ==0) return 0;

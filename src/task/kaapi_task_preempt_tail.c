@@ -43,20 +43,15 @@
 */
 #include "kaapi_impl.h"
 
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 
-static inline void steal_sync(kaapi_stealcontext_t* stc)
+/** \ingroup ADAPTIVE
+*/
+kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* sc )
 {
-  while (KAAPI_ATOMIC_READ(&stc->is_there_thief))
-    kaapi_slowdown_cpu();
-}
+  /* comments in kaapi_task_preempt_head.c */
 
-struct kaapi_taskadaptive_result_t* kaapi_getnext_thief_tail( kaapi_stealcontext_t* stc )
-{
-  volatile kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-
-  if (ta->tail == NULL)
-    steal_sync(stc);
-
-  /* should be an atomic read -> 64 alignment boundary of IA32/IA64 */
-  return ta->tail;  
+  if (sc->thieves.list.tail == 0)
+    kaapi_synchronize_steal(sc);
+  return sc->thieves.list.tail;
 }

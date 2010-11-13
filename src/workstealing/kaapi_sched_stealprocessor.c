@@ -45,110 +45,66 @@
 */
 #include "kaapi_impl.h"
 
-/** 
+/** Most important assumption here:
+    kaapi_sched_lock was locked.
 */
-int kaapi_sched_stealprocessor(kaapi_processor_t* kproc, kaapi_processor_id_t kproc_thiefid )
+int kaapi_sched_stealprocessor(
+  kaapi_processor_t* kproc, 
+  kaapi_listrequest_t* lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
 {
-  int count =0;
-  int stealok = 0;
-  int replycount = 0;
+  kaapi_request_t* request;
 
-  count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-  kaapi_assert_debug( count > 0 );
-  if (count ==0) return 0;
+  /* test should be done before calling the function */
+  kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
   
-  /* a second read my only view a count greather or equal to the previous because here
-     the caller is in critical section to reply to posted requests.
-  */
-  kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
+  /* first request */
+  request = kaapi_listrequest_iterator_get( lrequests, lrrange );
 
-#if 1 /* always true until pure cooperative method is re-implemented */
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kproc->lock) == 1+_kaapi_get_current_processor()->kid );
-#endif
-
-#if defined(KAAPI_USE_READYLIST)
-for (int i=0; i<1; ++i)
-  if (1)
+  /* try to steal ready threads until nore more request is available */
+  while ((request !=0) && !kaapi_sched_readyempty(kproc))
   {
-    if (!KAAPI_FIFO_EMPTY(&kproc->lready))
+    kaapi_thread_context_t* thread;
+    thread = kaapi_sched_stealready( kproc, kaapi_request_getthiefid(request) );
+    if (thread != 0)
     {
-      kaapi_thread_context_t* thread = 0;
-      thread = kaapi_sched_stealready( kproc, kproc_thiefid );
-      if (thread != 0)
-      {
-        kaapi_request_t* request = 0;
-        /* find the first request in the list */
-        for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-        {
-          if (kaapi_request_ok( &kproc->hlrequests.requests[i] )) 
-          {
-            request = &kproc->hlrequests.requests[i];
-            break;
-          }
-        }
-        kaapi_assert(request !=0);
-        _kaapi_request_reply( request, thread, 1 ); /* success of steal of the thread as a whole ... */
-        --count;
-        if (count ==0) return 0;
-      }
+      /* reply */
+      kaapi_reply_t* reply = kaapi_request_getreply(request);
+      reply->u.s_thread = thread;
+      _kaapi_request_reply(request, KAAPI_REPLY_S_THREAD);
+      request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }
   }
-#endif
-  
-#if 1
-for (int i=0; i<1; ++i)
+
+#if 1  
   if (1)
-  { /* WARNING do not try to steal inside suspended stack */
+  { /* try to steal into suspended list of threads
+       The only condition to ensure is that a thread context that will be destroy should
+       lock the kprocessor to avoid iterations.
+    */
     kaapi_wsqueuectxt_cell_t* cell;
     cell = kproc->lsuspend.tail;
-    while ((cell !=0) && (count >0))
+    while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0))
     {
-      stealok = KAAPI_ATOMIC_CAS( &cell->state, 0, 1);
-      if (stealok)
+      kaapi_thread_context_t* thread = cell->thread;
+      if (thread !=0)
       {
-        kaapi_thread_context_t* thread = cell->thread;
-        if (thread !=0)
-        {
-          replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
-          count = KAAPI_ATOMIC_READ( &kproc->hlrequests.count );
-        }
-        KAAPI_ATOMIC_CAS( &cell->state, 1, 0); /* may be ==2 -> wakeuped by the owner */
+        kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
       }
       cell = cell->prev;
     }
   }
 #endif
 
-#if 1
-for (int i=0; i<1; ++i)
-{
   /* steal current thread */
   kaapi_thread_context_t*  thread = kproc->thread;
-  if ( (count >0) && (thread !=0) 
+  if ( (thread !=0) 
     && (kproc->issteal ==0) /* last: if a thread is stealing, its current thread will be used to receive work... */ 
   )
   {
-#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)||(KAAPI_USE_STEALFRAME_METHOD==KAAPI_STEALTHE_METHOD)
-    /* if concurrent WS, then steal directly the current stack of the victim processor
-    */
-    kaapi_assert_debug( count <= KAAPI_ATOMIC_READ( &kproc->hlrequests.count ) );
     /* signal that count thefts are waiting */
-    replycount += kaapi_sched_stealstack( thread, 0, count, kproc->hlrequests.requests );
-#else
-#error  "TO REDO"
-    /* signal that count thefts are waiting */
-    kaapi_threadcontext2stack(thread)->hasrequest = count;
-    thread->errcode |= 0x1; /* interrupt the executor flag to request steal... */
-
-    /* busy wait: on return the negative value of correct reply or the ctxt_top is no more the active contexte */
-    while ((kaapi_threadcontext2stack(thread)->hasrequest !=0) && (thread == kproc->thread))
-    {
-      if (kaapi_isterminated()) break;
-    }
-#endif
-
+    kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
   }  
-}
-#endif // #if 0
   return 0;
 }

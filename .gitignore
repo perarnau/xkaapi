@@ -11,8 +11,10 @@
 ###################
 /api/atha/athapascan_closure.h
 /api/atha/athapascan_fork.h
+/api/kaapixx/ka_api_tuple.h
 /api/kaapixx/ka_api_clo.h
 /api/kaapixx/ka_api_spawn.h
+/api/kaapixx/ka_api_reqspawn.h
 /api/kaapixx/ka_api_execforeach.h
 /api/kaapixx/ka_api_execgraph.h
 
@@ -45,13 +47,14 @@ Makefile.in
 # Removed by 'make distclean'
 Makefile
 .deps/
-/atha1.pc
+/atha.pc
 /config.h
 /config.log
 /config.status
+/kaapi.pc
+/kaapi++.pc
 /src/misc/kaapi_version.c
 /stamp-h1
-/xkaapi.pc
 
 # Files created after build (make)
 # Removed by 'make clean' (but '.dirstamp' that are removed by 'make distclean')
@@ -63,14 +66,15 @@ Makefile
 .dirstamp
 .libs/
 
+
 # Files created after tests (make ckeck)
 # Removed by 'make clean'
 /api/atha/check_header
 /api/atha/check_header_strict
 /api/kaapixx/check_header
 /api/kaapixx/check_header_strict
-/api/xkaapi/check_header
-/api/xkaapi/check_header_strict
+/api/kaapi/check_header
+/api/kaapi/check_header_strict
 /examples/accumulate_while_kastl
 /examples/branchbound_apiatha
 /examples/dgemm_cblas
@@ -97,3 +101,6 @@ Makefile
 
 # Doc repository...
 doc/www/scripts/.build
+
+#Mac OS
+.DS_Store

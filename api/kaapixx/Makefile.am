@@ -5,18 +5,19 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-lib_LTLIBRARIES=libkaapixx.la
+lib_LTLIBRARIES=libkaapi++.la
 
-libkaapixx_la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXLIB_BUILD_CPPFLAGS)
-libkaapixx_la_CFLAGS=$(AM_CFLAGS) $(KAAPIXXLIB_BUILD_CFLAGS)
-libkaapixx_la_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-libkaapixx_la_LDFLAGS = -version-info 1:0:1 $(KAAPIXXLIB_BUILD_LDFLAGS)
-libkaapixx_la_LIBADD=../../src/libxkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
+libkaapi___la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXLIB_BUILD_CPPFLAGS)
+libkaapi___la_CFLAGS=$(AM_CFLAGS) $(KAAPIXXLIB_BUILD_CFLAGS)
+libkaapi___la_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
+libkaapi___la_LDFLAGS = -version-info 1:0:1 $(KAAPIXXLIB_BUILD_LDFLAGS)
+libkaapi___la_LIBADD=../../src/libkaapi.la $(KAAPIXXLIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
 	ka_api_tuple.h\
 	ka_api_clo.h \
 	ka_api_spawn.h\
+	ka_api_reqspawn.h\
 	ka_api_execgraph.h\
 	ka_api_execforeach.h
 
@@ -25,6 +26,7 @@ M4_SRCS=\
 	m4_macros \
 	ka_api_clo.m4 \
 	ka_api_spawn.m4\
+	ka_api_reqspawn.m4\
 	ka_api_execgraph.m4\
 	ka_api_execforeach.m4\
 	ka_api_tuple_header.m4\
@@ -35,8 +37,15 @@ BUILT_SOURCES = $(M4_BUILT_FILES)
 
 EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
 
-$(M4_BUILT_FILES): $(M4_SRCS)
-	(cd $(srcdir); ./m4_generator 10)
+$(M4_BUILT_FILES): stamp-m4_generator
+
+.INTERMEDIATE: stamp-m4_generator
+stamp-m4_generator: $(M4_SRCS)
+	cd $(srcdir) && ./m4_generator 10
+	touch $@
+
+clean-local:
+	$(RM) stamp-m4_generator
 
 include_HEADERS=\
 	kaapi++ \
@@ -46,10 +55,11 @@ include_HEADERS=\
 	ka_api_tuple.h\
 	ka_api_clo.h \
 	ka_api_spawn.h \
+	ka_api_reqspawn.h \
 	ka_api_execgraph.h\
 	ka_api_execforeach.h
 
-libkaapixx_la_SOURCES=\
+libkaapi___la_SOURCES=\
 	ka_init.cpp \
 	ka_error.cpp \
 	ka_timer.cpp \

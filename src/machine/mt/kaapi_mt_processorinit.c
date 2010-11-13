@@ -46,14 +46,12 @@
 #include "../common/kaapi_procinfo.h"
 
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
 # include "../cuda/kaapi_cuda_proc.h"
 
 /* todo: move somewhere else */
 extern int kaapi_sched_select_victim_with_cuda_tasks
 (kaapi_processor_t*, kaapi_victim_t*);
 
-#endif
 #endif
 
 
@@ -71,18 +69,13 @@ int kaapi_processor_init
   kproc->kid          = kpi->kid;
   kproc->proc_type    = kpi->proc_type;
   kproc->issteal      = 0;
-  kproc->hlevel       = 0;
-  kproc->hindex       = 0;
-  kproc->hlcount      = 0;
-  kproc->hkids        = 0;
   
-  KAAPI_ATOMIC_WRITE( &kproc->lock, 0);
+  kaapi_sched_initlock( &kproc->lock );
   
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
-  kproc->readythread = 0;
-  KAAPI_FIFO_CLEAR( &kproc->lready );
+  kaapi_sched_initready(kproc);
   kaapi_lfree_clear( kproc );
 
   kproc->fnc_selecarg = 0;
@@ -91,8 +84,11 @@ int kaapi_processor_init
   /* workload */
   kproc->workload._counter= 0;
 
-  /* memory */
-  kaapi_mem_map_initialize(&kproc->mem_map, kpi->kid);
+  /* memory: as[0] for cpu, as[1 + gpuindex] for gpu */
+  if (kpi->proc_type == KAAPI_PROC_TYPE_CPU)
+    kaapi_mem_map_initialize(&kproc->mem_map, 0);
+  else
+    kaapi_mem_map_initialize(&kproc->mem_map, 1 + kpi->proc_index);
   
   /* allocate a stack */
   k_stacksize = kaapi_default_param.stacksize;
@@ -104,7 +100,6 @@ int kaapi_processor_init
   kaapi_setcontext(kproc, ctxt);
 
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
   /* initialize cuda processor */
   if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
   {
@@ -115,27 +110,6 @@ int kaapi_processor_init
     kproc->fnc_selecarg = NULL;
   }
 #endif
-#endif /* KAAPI_USE_CUDA */
   
-  return 0;
-}
-
-
-int kaapi_processor_setuphierarchy( kaapi_processor_t* kproc )
-{
-  int i;
-  kproc->hlevel    = 1;
-  kproc->hindex    = calloc( kproc->hlevel, sizeof(kaapi_uint16_t) );
-  kproc->hlcount   = calloc( kproc->hlevel, sizeof(kaapi_uint16_t) );
-  kproc->hkids     = calloc( kproc->hlevel, sizeof(kaapi_processor_id_t*) );
-/*  for (i=0; i<kproc->hlevel; ++i) */
-  {
-    kproc->hindex[0]  = kproc->kid; /* only one level !!!! */
-    kproc->hlcount[0] = kaapi_count_kprocessors;
-    kproc->hkids[0]   = calloc( kproc->hlcount[0], sizeof(kaapi_processor_id_t) );
-    for (i=0; i<kproc->hlcount[0]; ++i)
-      kproc->hkids[0][i] = i;  
-  }  
-      
   return 0;
 }

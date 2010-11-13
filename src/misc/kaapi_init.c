@@ -113,8 +113,13 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")
     \retval E2BIG because of a cpu index too high in KAAPI_CPUSET
     
 */
-int kaapi_setup_param( int argc, char** argv )
+int kaapi_setup_param( 
+  int argc __attribute__((unused)), 
+  char** argv __attribute__((unused))
+)
 {
+  const char* wsselect;
+  
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
   kaapi_default_param.syscpucount = sysconf(_SC_NPROCESSORS_CONF);
@@ -128,10 +133,9 @@ int kaapi_setup_param( int argc, char** argv )
     sysctl(mib, 2, &kaapi_default_param.syscpucount, &len, 0, 0);
   }
 #elif defined(_WIN32)
-    SYSTEM_INFO sys_info;
-    GetSystemInfo(&sys_info);
-    kaapi_default_param.syscpucount = sys_info.dwNumberOfProcessors;
-
+  SYSTEM_INFO sys_info;
+  GetSystemInfo(&sys_info);
+  kaapi_default_param.syscpucount = sys_info.dwNumberOfProcessors;
 #else
   #warning "Could not compute number of physical cpu of the system. Default value==1"
   kaapi_default_param.syscpucount = 1;
@@ -153,12 +157,13 @@ int kaapi_setup_param( int argc, char** argv )
     kaapi_default_param.stacksize = atoi(getenv("KAAPI_STACKSIZE"));
 
   /* workstealing selection function */
-  {
-    const char* const wsselect = getenv("KAAPI_WSSELECT");
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
-    if ((wsselect != NULL) && !strcmp(wsselect, "workload"))
-      kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
-  }
+  wsselect = getenv("KAAPI_WSSELECT");
+  kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
+  if ((wsselect != NULL) && (strcmp(wsselect, "workload") ==0))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+  else if ((wsselect != NULL) && (strcmp(wsselect, "first0") ==0))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+  
   
   return 0;
 }
@@ -183,5 +188,27 @@ void kaapi_init_basicformat(void)
 }
 
 
+/**
+*/
+int kaapi_init(void)
+{
+  static int iscalled = 0;
+  if (iscalled !=0) return EALREADY;
+  iscalled = 1;
+
+  kaapi_init_basicformat();
+  
+  /* set up runtime parameters */
+  kaapi_assert_m( 0 ==kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
+  
+  int err = kaapi_mt_init();
+  return err;
+}
 
 
+/**
+*/
+int kaapi_finalize(void)
+{
+  return kaapi_mt_finalize();
+}

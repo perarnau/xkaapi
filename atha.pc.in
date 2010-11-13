@@ -1,0 +1,17 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Athapascan1
+Description: Parallel programming interface based on XKAAPI
+Version: @VERSION@
+#URL: http://kaapi.gforge.inria.fr
+Requires: @ATHALIB_PKGCONFIG_REQUIRES@
+Requires.private: @ATHALIB_PKGCONFIG_REQUIRES_PRIVATE@
+#Conflicts: foobar <= 4.5
+# Libs: bibliothèques nécessaire pour linker dynamiquement une appli externe
+# Libs.private: bibliothèques à rajouter en cas de link statique
+Libs: @ATHALIB_PKGCONFIG_LIBS@
+Libs.private: @ATHALIB_PKGCONFIG_LIBS_PRIVATE@
+Cflags: @ATHALIB_PKGCONFIG_CFLAGS@

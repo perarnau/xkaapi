@@ -48,16 +48,15 @@
 */
 int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_processor_t* kproc = _kaapi_get_current_processor();
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
 
-  ta->save_splitter    = stc->splitter;
-  ta->save_argsplitter = stc->argsplitter;
+  stc->save_splitter    = stc->splitter;
+  stc->save_argsplitter = stc->argsplitter;
   stc->splitter    = 0;
   stc->argsplitter = 0;
   kaapi_mem_barrier();
 
-#if (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALCAS_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   while (1)
   {
     if ( (KAAPI_ATOMIC_READ( &kproc->lock ) == 0) && KAAPI_ATOMIC_CAS(&kproc->lock, 0, 1+kproc->kid) ) break;
@@ -65,8 +64,8 @@ int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
   }
   KAAPI_ATOMIC_WRITE( &kproc->lock, 0 );
 
-#elif (KAAPI_USE_STEALFRAME_METHOD == KAAPI_STEALTHE_METHOD) 
-#  if (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALCAS_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD) 
+#  if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   /* solution to lock (lite) the frame 
     while (kproc->thread->thieffp == stc->thread)
       ;
@@ -77,7 +76,7 @@ int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
   /* cas success, so the thief will view here splitter ==0 */
   kaapi_task_setextrabody(stc->ownertask, kaapi_adapt_body);
   
-#  elif (KAAPI_USE_STEALTASK_METHOD == KAAPI_STEALTHE_METHOD)
+#  elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   kaapi_mem_barrier();
   while (kproc->thread->thiefpc == stc->ownertask)
     ;
@@ -92,12 +91,10 @@ int kaapi_steal_begincritical( kaapi_stealcontext_t* stc )
 */
 int kaapi_steal_endcritical( kaapi_stealcontext_t* stc )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-
   kaapi_mem_barrier();
 
-  stc->splitter    = ta->save_splitter;
-  stc->argsplitter = ta->save_argsplitter;
+  stc->splitter    = stc->save_splitter;
+  stc->argsplitter = stc->save_argsplitter;
   
   return 0;
 }
@@ -110,10 +107,8 @@ int kaapi_steal_endcritical_disabled(kaapi_stealcontext_t* stc)
      as the critical section is done
    */
 
-  kaapi_taskadaptive_t* const ta = (kaapi_taskadaptive_t*)stc;
-
-  ta->save_splitter = NULL;
-  ta->save_argsplitter = NULL;
+  stc->save_splitter = 0;
+  stc->save_argsplitter = 0;
 
   return kaapi_steal_endcritical(stc);
 }

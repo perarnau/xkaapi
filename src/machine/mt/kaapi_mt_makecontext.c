@@ -122,7 +122,12 @@ static void kaapi_trampoline_context( kaapi_thread_context_t * ctxt );
 
 /*
 */
-int kaapi_makecontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt, void (*entrypoint)(void* arg), void* arg )
+int kaapi_makecontext( 
+  kaapi_processor_t* proc __attribute__((unused)), 
+  kaapi_thread_context_t* ctxt __attribute__((unused)), 
+  void (*entrypoint)(void*) __attribute__((unused)), 
+  void* arg __attribute__((unused))
+)
 {
 #if 0 /* SHOULD BE REINSERT IN THE COMPILATION PROCESS IF WE WANT TO SUSPEND THREADS */
   ctxt->arg = arg;

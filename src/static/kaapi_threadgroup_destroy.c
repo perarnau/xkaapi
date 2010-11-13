@@ -43,7 +43,6 @@
 */
 #include "kaapi_impl.h"
 
-
 /**
 */
 int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )

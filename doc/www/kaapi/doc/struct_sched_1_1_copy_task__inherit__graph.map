@@ -1,7 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_r_f_o_1_1_closure.html" title="A closure object is a call to a function. It is also called task.Closure of type..." alt="" coords="99,237,213,267"/>
-<area shape="rect" id="node4" href="$class_r_f_o_1_1_base_closure.html" title="A closure object is a call to a function. It is also called task.The closure is created..." alt="" coords="81,160,231,189"/>
-<area shape="rect" id="node6" href="$class_core_1_1_condition.html" title="Condition to signal end of steal operationThis class implements one method for synchronisation..." alt="" coords="5,83,136,112"/>
-<area shape="rect" id="node8" href="$class_util_1_1_atomic.html" title="Atomic object represents atomic operation over integer.This class implements object..." alt="" coords="20,5,121,35"/>
-<area shape="rect" id="node10" href="$class_r_f_o_1_1_closure_attribut.html" title="Type of attribut for a closureThis type allows to code attribut for a closure on..." alt="" coords="160,83,325,112"/>
-</map>

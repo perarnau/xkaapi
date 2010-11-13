@@ -49,8 +49,7 @@
 /** Maximal different memory spaces on multiprocessors:
     - CPU memory: index 0
     - accelerator memory (GPU)
-  This constant will be suppress for supporting distributed memory
-  over network.
+  This constant will be suppress for supporting distributed memory over network.
 */
 #define KAAPI_MAX_MEMORY_SPACE 8
 

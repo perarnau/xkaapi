@@ -11,7 +11,6 @@ struct TaskBodyCPU<TaskR> {
     std::cout << "In Task R=" << *d << ", @:" << (int*)d << std::endl;
   }
 };
-static ka::RegisterBodyCPU<TaskR> dummy_object_TaskR;
 
 
 /* Main of the program

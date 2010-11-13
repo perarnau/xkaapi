@@ -1,9 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node5" href="$class_core_1_1_n_u_m_a_processor_steal_algorithm.html" title="NUMAStealAlgorithm of a K&#45;Processor1/ if local steal then try to wakeup thread 2/..." alt="" coords="497,5,775,35"/>
-<area shape="rect" id="node7" href="$class_core_1_1_random_processor_steal_algorithm.html" title="Random stealAlgorithm of a K&#45;ProcessorSame as WakeupFirstProcessorStealAlgorithm..." alt="" coords="489,59,783,88"/>
-<area shape="rect" id="node9" href="$class_w_s_1_1_leader_of_cluster_strategy.html" title="LeaderOfClusterStrategy." alt="" coords="521,112,751,141"/>
-<area shape="rect" id="node11" href="$class_w_s_1_1_random_victim.html" title="Extend Core::RandomVictim class in order to add random selection of process." alt="" coords="559,165,713,195"/>
-<area shape="rect" id="node2" href="$class_core_1_1_select_victim_interface.html" title="Virtual base class for selection of a victim processor." alt="" coords="5,85,224,115"/>
-<area shape="rect" id="node13" href="$class_w_s_1_1_random_strategy.html" title="RandomStrategy." alt="" coords="832,165,1003,195"/>
-<area shape="rect" id="node15" href="$class_w_s_1_1_c_r_s_strategy.html" title="CRSStrategy." alt="" coords="1052,165,1191,195"/>
-</map>

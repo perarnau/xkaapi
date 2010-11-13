@@ -1,5 +1,4 @@
 /*
-** kaapi_stack_free.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -55,7 +54,7 @@ int kaapi_context_free( kaapi_thread_context_t* ctxt )
   if (ctxt ==0) return 0;
   if (ctxt->alloc_ptr !=0) free(ctxt->alloc_ptr);
 #if defined (_WIN32)
-    VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
+  VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
 #else
   munmap( ctxt, ctxt->size );
 #endif

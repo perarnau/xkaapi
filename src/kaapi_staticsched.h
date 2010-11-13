@@ -93,6 +93,7 @@ typedef struct kaapi_com_t {
   struct {
     int                         tid;           /* thread id in the group */
     void*                       addr;          /* remote address */
+    size_t                      size;          /* remote size */
     kaapi_task_t*               task;          /* remote recv task */
   } entry[KAAPI_BCASTENTRY_SIZE];
 } kaapi_com_t;
@@ -322,14 +323,28 @@ void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t
 /* New reader
 */
 kaapi_task_t* kaapi_threadgroup_version_newreader
-    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, int ith );
+    ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, size_t data_size, int ith );
 
 /* New writer
 */
 kaapi_task_t* kaapi_threadgroup_version_newwriter
     ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, int ith );
 
-/* task recv body 
+#if !defined(KAAPI_USE_STATICSCHED)
+/* task recv body
+*/
+static inline void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread ) {}
+
+/* task tbcast body 
+*/
+static inline void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread ) {}
+
+/* task to signal end of a step
+*/
+static inline void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread ) {}
+
+#else
+/* task recv body
 */
 void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread );
 
@@ -348,12 +363,13 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread );
 /* task to wait end of a step
 */
 void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread );
+#endif
 
 /**
 */
 static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
 {
-  if (task->body != kaapi_suspend_body) return 0;
+  if (kaapi_task_state_issteal( kaapi_task_getstate(task))) return 0;
   kaapi_taskrecv_arg_t* tr = (kaapi_taskrecv_arg_t*)task->sp;
   kaapi_assert_debug( tr != 0 );
   int bitfield = KAAPI_ATOMIC_READ( &tr->counter );

@@ -61,7 +61,7 @@ kaapi_format_id_t kaapi_format_structregister(
 {
   kaapi_format_t* fmt = (*fmt_fnc)();
   kaapi_format_register( fmt, name );
-  fmt->size      = size;
+  fmt->size      = (kaapi_uint32_t)size;
   fmt->cstor     = cstor;
   fmt->dstor     = dstor;
   fmt->cstorcopy = cstorcopy;

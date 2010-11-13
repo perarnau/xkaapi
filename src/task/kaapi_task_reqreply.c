@@ -8,6 +8,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -44,98 +45,64 @@
 */
 #include "kaapi_impl.h"
 
-/** Args for tasksignal
-*/
-typedef struct kaapi_tasksig_arg_t {
-  kaapi_taskadaptive_t*               ta;         /* the victim or the master */
-  volatile kaapi_taskadaptive_result_t* result;
-  volatile int			  inuse;
-} kaapi_tasksig_arg_t;
 
-
-
-/**
-*/
-void kaapi_tasksig_body( void* taskarg, kaapi_thread_t* thread)
-{
-  kaapi_tasksig_arg_t* arg = (kaapi_tasksig_arg_t*)taskarg;
-
-  kaapi_writemem_barrier();
-
-  if (arg->result !=0)
-  {
-    arg->result->thief_term = 1;
-    arg->result->is_signaled = 1;
-  }
-
-  KAAPI_ATOMIC_DECR( &arg->ta->thievescount );
-}
-
-
-/*
-*/
+/* common reply internal function
+ */
 int kaapi_request_reply(
-    kaapi_stealcontext_t*               stc,
-    kaapi_request_t*                    request, 
-    kaapi_taskadaptive_result_t*        result,
-    int                                 flag
+  kaapi_stealcontext_t* sc, 
+  kaapi_request_t*      req, 
+  int                   headtail_flag
 )
 {
-  kaapi_taskadaptive_t* ta = (kaapi_taskadaptive_t*)stc;
-  kaapi_taskadaptive_t* ta_master;
-  kaapi_task_t* tasksig;
-  
-  kaapi_assert_debug( (flag == KAAPI_REQUEST_REPLY_HEAD) || (flag == KAAPI_REQUEST_REPLY_TAIL) );
-  
-  if ((result ==0) && (stc ==0))
+  /* sc the stolen stealcontext */
+
+  /* if there is preemption, link to thieves */
+  if (sc->header.flag & KAAPI_SC_PREEMPTION)
   {
-    return _kaapi_request_reply(request, 0, 0);
-  }
-  
-  if (result !=0)
-  {
-    /* lock the ta result list */
-    while (!KAAPI_ATOMIC_CAS(&ta->lock, 0, 1)) 
-      ;
+    kaapi_taskadaptive_result_t* const ktr = req->ktr;
+#if defined(KAAPI_DEBUG)
+    kaapi_assert_debug( ktr != 0 );
+    {
+      kaapi_stealheader_t* stch = (kaapi_stealheader_t*)(req->reply->udata+req->reply->offset);
+      kaapi_assert_debug( stch->ktr == ktr );
+    }
+#endif
+
+    kaapi_task_lock_adaptive_steal(sc);
 
     /* insert in head or tail */
-    if (ta->head ==0)
-      ta->tail = ta->head = result;
-    else if ((flag & 0x1) == KAAPI_REQUEST_REPLY_HEAD) 
+    if (sc->thieves.list.head == 0)
+    {
+      sc->thieves.list.tail = ktr;
+      sc->thieves.list.head = ktr;
+    }
+    else if (headtail_flag == KAAPI_REQUEST_REPLY_HEAD)
     { 
-      result->next   = ta->head;
-      ta->head->prev = result;
-      ta->head       = result;
+      ktr->next = sc->thieves.list.head;
+      sc->thieves.list.head->prev = ktr;
+      sc->thieves.list.head = ktr;
     } 
     else 
     {
-      result->prev   = ta->tail;
-      ta->tail->next = result;
-      ta->tail       = result;
+      ktr->prev = sc->thieves.list.tail;
+      sc->thieves.list.tail->next = ktr;
+      sc->thieves.list.tail = ktr;
     }
 
-    KAAPI_ATOMIC_WRITE( &ta->lock, 0 );
-
-    /* link result to the stc */
-    result->master = ta;
+    kaapi_task_unlock_adaptive_steal(sc);
+  }
+  else
+  {
+    /* non preemptive algorithm, inc the root master thiefcount */
+    KAAPI_ATOMIC_INCR(&sc->header.msc->thieves.count);
   }
 
-  if ((stc->flag & 0x1) == KAAPI_STEALCONTEXT_LINKED) 
-  { 
-    ta_master = ta->origin_master;
-    if (ta_master ==0) ta_master = ta;
-  }
-  else {
-    ta_master = ta;
-  }
-  KAAPI_ATOMIC_INCR( &ta_master->thievescount );
+  return _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
+}
 
-  /* add task to tell to the master that this disappear */
-  tasksig = kaapi_thread_toptask( request->thread );
-  kaapi_tasksig_arg_t* const arg = kaapi_thread_pushdata( request->thread, sizeof(kaapi_tasksig_arg_t));
-  kaapi_task_init(tasksig, kaapi_tasksig_body, arg);
-  arg->ta     = ta_master;
-  arg->result = result;
-  kaapi_thread_pushtask(request->thread);
-  return _kaapi_request_reply( request, request->mthread, 1 );
+
+void kaapi_request_reply_failed(kaapi_request_t* req)
+{
+  /* sc the stolen stealcontext */
+  _kaapi_request_reply(req, KAAPI_REPLY_S_NOK);
 }

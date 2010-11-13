@@ -1,7 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="12,83,119,112"/>
-<area shape="rect" id="node4" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="5,5,120,35"/>
-<area shape="rect" id="node6" href="$class_f_t_1_1_restart_protocol.html" title="Restart Coordinator." alt="" coords="149,83,304,112"/>
-<area shape="rect" id="node8" href="$class_f_t_1_1_community_object.html" title="CommunityObjectClass of objects that request reference to a community object." alt="" coords="144,5,317,35"/>
-<area shape="rect" id="node10" href="$class_net_1_1_service.html" title="Net::Service" alt="" coords="328,83,437,112"/>
-</map>

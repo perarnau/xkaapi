@@ -82,12 +82,16 @@ int kaapi_sched_sync(void)
   kaapi_frame_t*          save_fp;
 #endif
 
-  thread = _kaapi_self_thread();
+  thread = kaapi_self_thread_context();
   if (kaapi_frame_isempty( thread->sfp ) ) return 0;
 
+  /* here affinity should be deleted (not scalable concept) 
+     - use localkid to enforce execution into one specific
+     kprocessor
+  */
   save_affinity = thread->affinity;
   kaapi_thread_clearaffinity(thread);
-  kaapi_thread_setaffinity( thread, thread->proc->kid );
+/* kaapi_thread_setaffinity( thread, thread->proc->kid );*/
 
   savepc = thread->sfp->pc;
 #if defined(KAAPI_DEBUG)
@@ -100,11 +104,11 @@ int kaapi_sched_sync(void)
   kaapi_mem_barrier();
   
 redo:
-  err = kaapi_stack_execframe(thread);
+  err = kaapi_thread_execframe(thread);
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
-    kaapi_assert_debug( kaapi_get_current_processor()->thread == thread );
+    kaapi_assert_debug( kaapi_self_thread_context() == thread );
     kaapi_assert_debug( thread->proc == kaapi_get_current_processor() );
     goto redo;
   }

@@ -65,7 +65,7 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
   /* reload the thread if it was saved */
   if (thgrp->save_mainthread !=0)
   {
-    int partid = _kaapi_self_thread()->partid;
+    int partid = kaapi_self_thread_context()->partid;
     if (partid != -1)
       kaapi_assert( 0 == kaapi_threadgroup_restore_thread( thgrp, partid ) );
   }
@@ -78,7 +78,7 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
   }
 
   /* detach the thread from the processor (it was managed by the group) */
-  kaapi_processor_t* kproc = _kaapi_get_current_processor();
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* kthread = kproc->thread;
   
   if (kthread != thgrp->mainctxt)

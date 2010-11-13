@@ -1,6 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$class_util_1_1_thread.html" title="POSIX interface to thread." alt="" coords="9,83,116,112"/>
-<area shape="rect" id="node4" href="$class_util_1_1_object_id.html" title="Object with identifierThe Object class defines object that needs to have and identifier..." alt="" coords="5,5,120,35"/>
-<area shape="rect" id="node6" href="$class_util_1_1_reify_notify_signal.html" title="ReifyNotifySignalThis class allows to reify the invocations to InterfaceSignal::signal..." alt="" coords="140,83,316,112"/>
-<area shape="rect" id="node8" href="$class_util_1_1_interface_notify.html" title="InterfaceNotify for the local signal." alt="" coords="147,5,309,35"/>
-</map>

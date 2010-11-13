@@ -90,7 +90,7 @@ kaapi_format_id_t kaapi_format_register(
   fmt->next_bybody = 0;
   
   /* register it into hashmap: fmtid -> fmt */
-  entry = ((unsigned long)fmt->fmtid) & 0xFF;
+  entry = (kaapi_uint8_t) (fmt->fmtid & (kaapi_format_id_t)0xFFUL);
   head =  kaapi_all_format_byfmtid[entry];
   fmt->next_byfmtid = head;
   kaapi_all_format_byfmtid[entry] = fmt;

@@ -47,27 +47,39 @@
 
 /**
 */
-void kaapi_nop_body( void* taskarg, kaapi_thread_t* thread )
+void kaapi_nop_body( 
+  void* taskarg __attribute__((unused)), 
+  kaapi_thread_t* thread __attribute__((unused))
+)
 {
 }
 
 /** Dumy task pushed at startup into the main thread
 */
-void kaapi_taskstartup_body( void* taskarg, kaapi_thread_t* thread )
+void kaapi_taskstartup_body( 
+  void* taskarg __attribute__((unused)), 
+  kaapi_thread_t* thread __attribute__((unused))
+)
 {
 }
 
 /*
 */
-void kaapi_suspend_body( void* taskarg, kaapi_thread_t* thread )
+void kaapi_suspend_body( 
+  void* taskarg __attribute__((unused)), 
+  kaapi_thread_t* thread __attribute__((unused))
+)
 {
   printf("In kaapi_suspend_body\n"); fflush(stdout);
-  _kaapi_self_thread()->errcode |= EWOULDBLOCK << 8;
+  /* kaapi_self_thread_context()->errcode |= EWOULDBLOCK << 8; */
 }
 
 /*
 */
-void kaapi_exec_body( void* taskarg, kaapi_thread_t* thread )
+void kaapi_exec_body( 
+  void* taskarg __attribute__((unused)), 
+  kaapi_thread_t* thread __attribute__((unused))
+)
 {
   /* do not allow rexecuting already executed task */
   kaapi_assert_debug( 0 );
@@ -75,15 +87,11 @@ void kaapi_exec_body( void* taskarg, kaapi_thread_t* thread )
 
 /*
 */
-void kaapi_adapt_body( void* taskarg, kaapi_thread_t* thread  )
-{
-  kaapi_assert_debug( thread[-1].pc->body == kaapi_exec_body );
-}
+void kaapi_taskmain_body( 
+  void* taskarg __attribute__((unused)), 
+  kaapi_thread_t* thread __attribute__((unused))
+)
 
-
-/*
-*/
-void kaapi_taskmain_body( void* taskarg, kaapi_thread_t* thread  )
 {
   kaapi_taskmain_arg_t* arg = (kaapi_taskmain_arg_t*)taskarg;
   arg->mainentry( arg->argc, arg->argv );

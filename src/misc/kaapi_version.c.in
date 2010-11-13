@@ -47,22 +47,13 @@
 
 
 /* Verification of correct choice of values */
-#if (KAAPI_USE_STEALFRAME_METHOD ==KAAPI_STEALCAS_METHOD) 
+#if (KAAPI_USE_EXECTASK_METHOD ==KAAPI_CAS_METHOD) 
 #  warning "Use CAS for stealing frame"
-#elif (KAAPI_USE_STEALFRAME_METHOD ==KAAPI_STEALTHE_METHOD)
+#elif (KAAPI_USE_EXECTASK_METHOD ==KAAPI_THE_METHOD)
 #  warning "Use Dijkstra like protocol for stealing frame"
 #else
 #  error "Bad definition of value for steal frame method"
 #endif
-
-#if (KAAPI_USE_STEALTASK_METHOD ==KAAPI_STEALCAS_METHOD) 
-#  warning "Use CAS for stealing task"
-#elif (KAAPI_USE_STEALTASK_METHOD ==KAAPI_STEALTHE_METHOD)
-#  warning "Use Dijkstra like protocol for stealing task"
-#else
-#  error "Bad definition of value for steal frame method"
-#endif
-
 
 // autotools can prompt for this ...
 const char* get_kaapi_version()

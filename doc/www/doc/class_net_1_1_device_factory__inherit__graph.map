@@ -1,8 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node3" href="$class_f_d_n_e_t_1_1_factory.html" title="FDNET::Factory" alt="" coords="232,5,363,35"/>
-<area shape="rect" id="node5" href="$class_m_a_n_e_t_1_1_factory.html" title="MANET::Factory" alt="" coords="231,59,364,88"/>
-<area shape="rect" id="node7" href="$class_m_y_n_e_t_1_1_factory.html" title="MYNET::Factory" alt="" coords="231,112,364,141"/>
-<area shape="rect" id="node9" href="$class_s_o_c_k_n_e_t_1_1_factory.html" title="SOCKNET::Factory" alt="" coords="223,165,372,195"/>
-<area shape="rect" id="node11" href="$class_t_a_k_t_u_k_n_e_t_1_1_factory.html" title="TAKTUKNET::Factory" alt="" coords="215,219,380,248"/>
-<area shape="rect" id="node13" href="$class_u_d_p_n_e_t_1_1_factory.html" title="UDPNET::Factory" alt="" coords="227,272,368,301"/>
-</map>

@@ -66,9 +66,7 @@ kaapi_format_t* kaapi_all_format_bybody[256] =
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
-#if 0
-static kaapi_task_bodyid_t bodyidcounter = KAAPI_TASK_BODY_USER_BASE;
-#endif
+
 
 /**
 */
@@ -80,7 +78,8 @@ kaapi_format_id_t kaapi_format_taskregister(
         int                         count,
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
-        const kaapi_format_t*       fmt_param[]
+        const kaapi_format_t*       fmt_param[],
+	      size_t (*get_param_size)(const kaapi_format_t*, unsigned int, const void*)
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();
@@ -100,8 +99,11 @@ kaapi_format_id_t kaapi_format_taskregister(
   kaapi_assert(  fmt->fmt_params !=0);
   memcpy(fmt->fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
-  fmt->size = size;
-  
+  fmt->size = (kaapi_uint32_t)size;
+
+  fmt->get_param_size = get_param_size;
+  memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
+
   if (body !=0)
     kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);
   return fmt->fmtid;
@@ -130,7 +132,7 @@ kaapi_task_body_t kaapi_format_taskregister_body(
     fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = fmt->default_body = body;
 
 #if defined(KAAPI_DEBUG)
-  fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)body, fmt->name );
+  fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)(uintptr_t)body, fmt->name );
   fflush(stdout);
 #endif
 

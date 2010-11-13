@@ -15,7 +15,7 @@ struct TaskBodyCPU<TaskW> {
     usleep(100);
   }
 };
-static ka::RegisterBodyCPU<TaskW> dummy_object_TaskW;
+
 
 // --------------------------------------------------------------------
 struct TaskR1: public ka::Task<1>::Signature<ka::R<int> > {};
@@ -28,7 +28,7 @@ struct TaskBodyCPU<TaskR1> {
     usleep(100);
   }
 };
-static ka::RegisterBodyCPU<TaskR1> dummy_object_TaskR1;
+
 
 // --------------------------------------------------------------------
 struct TaskR2: public ka::Task<1>::Signature<ka::R<int> > {};
@@ -41,7 +41,7 @@ struct TaskBodyCPU<TaskR2> {
     usleep(100);
   }
 };
-static ka::RegisterBodyCPU<TaskR2> dummy_object_TaskR2;
+
 
 
 /* Main of the program
@@ -57,13 +57,13 @@ struct doit {
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a );
+    threadgroup.Spawn<TaskW>  (ka::SetPartition(0))  ( a );
     threadgroup.Spawn<TaskR1> (ka::SetPartition(1))  ( a );
     threadgroup.Spawn<TaskR2> (ka::SetPartition(1))  ( a );
 
-    threadgroup.end_partition();
-
     threadgroup.print();    
+
+    threadgroup.end_partition();
 
     threadgroup.execute();
   }

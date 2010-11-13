@@ -1,9 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node3" href="$class_r_f_o_1_1_stack_frame.html" title="Stack of frames (LIFO queue)." alt="" coords="149,83,296,112"/>
-<area shape="rect" id="node5" href="$class_r_f_o_1_1_stack_frame_with_allocator.html" title="Stack of frames with bloc allocator." alt="" coords="5,160,243,189"/>
-<area shape="rect" id="node7" href="$class_r_f_o_1_1_thread.html" title="Flow of control with data flow graph representationThe RFO::Thread represents computation..." alt="" coords="267,160,379,189"/>
-<area shape="rect" id="node9" href="$class_d_f_g_1_1_thread.html" title="Flow of control with data flow graph representationThe DFG threads inherits from..." alt="" coords="265,237,380,267"/>
-<area shape="rect" id="node11" href="$class_sched_1_1_thread.html" title="Flow of control with data flow graph representation." alt="" coords="109,315,235,344"/>
-<area shape="rect" id="node13" href="$class_w_s_1_1_loc_thread.html" title="KAAPI leader thread definition." alt="" coords="259,315,387,344"/>
-<area shape="rect" id="node15" href="$class_w_s_1_1_slv_thread.html" title="KAAPI leader thread definition." alt="" coords="411,315,533,344"/>
-</map>

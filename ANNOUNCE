@@ -1,0 +1,55 @@
+
+
+We announce the  release, as libre/free software, of  version 1.0rc2 of 
+the XKaapi  package for parallel programming. KAAPI means Kernel for Adaptative, 
+Asynchronous Parallel and Interactive programming. It is a C/C++ library that 
+allows to execute multithreaded computation with data flow synchronization 
+between threads. The library is able to schedule fine/medium size grain program 
+on distributed machine. The data flow graph is dynamic (unfold at runtime). 
+This release targets multiprocessors machines.
+
+
+Important features
+==================
+
+- XKaapi is build on top of a C runtime that uses work stealing scheduling
+strategies.
+
+- kaapi.h define a C api for creating tasks with dependencies as well as to
+program adaptive algorithm using a original interface.
+
+- kaapi++ is the C++ high level interface.
+
+- kastl is a set of parallel algorithm that mimic the standard algorithms
+found into the STL.
+
+
+
+What is XKaapi
+==============
+
+XKaapi  is a project carried out within  the MOAIS  team of INRIA Grenoble
+(http://moais.imag.fr) and at  the Laboratoire  d'Informatique de Grenoble (LIG). 
+Its goal is  to apply fundamental scheduling theory with fine grain implementation 
+for multiprocessors.
+
+
+How to get XKaapi
+=================
+
+XKaapi can be freely  downloaded, under  the terms of the  CeCILL-C license.
+To ease the development, diffusion, and circulation of information regarding
+the XKaapi project, most of its resources  are now hosted on the InriaGforge
+platform provided by INRIA. Please refer to the XKaapi web page at :
+
+http://kaapi.gforge.inria.fr
+
+Tarball can be downloaded at https://gforge.inria.fr/frs/?group_id=94.
+
+for more information. People interested in the XKaapi project are welcome to
+subscribe to the one of the mmailing list at :
+
+https://gforge.inria.fr/mail/?group_id=94
+
+
+

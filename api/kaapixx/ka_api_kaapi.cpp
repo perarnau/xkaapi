@@ -53,6 +53,8 @@ SetStack SetInStack;
 SetHeap SetInHeap;
 SetLocalAttribut SetLocal;
 DefaultAttribut SetDefault;
+FlagReplyHead ReplyHead;
+FlagReplyTail ReplyTail;
 
 // --------------------------------------------------------------------------
 std::string get_localhost()
@@ -91,6 +93,7 @@ bool Community::is_leader() const
 void Community::leave() 
 { 
   Sync();
+  kaapi_finalize();
 }
 
 
@@ -99,6 +102,8 @@ Community System::initialize_community( int& argc, char**& argv )
   throw (RuntimeError, RestartException, ServerException)
 {
   static bool is_called = false; if (is_called) return Community(0); is_called = true;
+  
+  kaapi_init();
   
   /* first initialize KaapiComponentManager::prop from file $HOME/.kaapirc */
   std::string filename;
@@ -137,6 +142,19 @@ Community System::initialize_community( int& argc, char**& argv )
 Community System::join_community( int& argc, char**& argv )
   throw (RuntimeError, RestartException, ServerException)
 {
+  Community thecom = System::initialize_community( argc, argv);
+  thecom.commit();
+  return thecom;
+}
+
+
+// --------------------------------------------------------------------
+Community System::join_community( )
+  throw (RuntimeError, RestartException, ServerException)
+{
+  int argc = 1;
+  const char* targv[] = {"kaapi"};
+  char** argv = (char**)targv;
   Community thecom = System::initialize_community( argc, argv);
   thecom.commit();
   return thecom;

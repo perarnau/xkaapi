@@ -51,27 +51,37 @@
 
 /*
 */
-kaapi_uint32_t kaapi_count_kprocessors = 0;
+kaapi_uint32_t volatile kaapi_count_kprocessors = 0;
 
 /*
 */
 kaapi_processor_t** kaapi_all_kprocessors = 0;
 
 
-/*
-*/
-pthread_key_t kaapi_current_processor_key;
 
 /*
 */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-__thread kaapi_thread_t** kaapi_current_thread_key;
-__thread kaapi_threadgroup_t kaapi_current_threadgroup_key;
-#endif
+__thread kaapi_thread_t**        kaapi_current_thread_key;
+__thread kaapi_processor_t*      kaapi_current_processor_key;
+__thread kaapi_thread_context_t* kaapi_current_thread_context_key;
+__thread kaapi_threadgroup_t     kaapi_current_threadgroup_key;
+#else
+pthread_key_t kaapi_current_processor_key;
 
-/*
-*/
-//pthread_key_t c;
+kaapi_thread_t* kaapi_self_thread(void)
+{
+  return (kaapi_thread_t*)kaapi_get_current_processor()->thread->sfp;
+}
+kaapi_threadgroup_t kaapi_self_threadgroup(void)
+{
+  return kaapi_get_current_processor()->thread->thgrp;
+}
+void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
+{
+  kaapi_get_current_processor()->thread->thgrp = thgrp;
+}
+#endif
 
 /* 
 */
@@ -81,36 +91,13 @@ kaapi_atomic_t kaapi_term_barrier = { 0 };
 */
 volatile int kaapi_isterm = 0;
 
-/** Should be with the same file as kaapi_init
- */
-void _kaapi_dummy(void* foo)
-{
-}
-
-
-/** 
-*/
-#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-kaapi_thread_t* kaapi_self_thread(void)
-{
-  return (kaapi_thread_t*)_kaapi_self_thread()->sfp;
-}
-kaapi_threadgroup_t kaapi_self_threadgroup(void)
-{
-  return _kaapi_self_thread()->thgrp;
-}
-void kaapi_set_threadgroup(kaapi_threadgroup_t thgrp)
-{
-  _kaapi_self_thread()->thgrp = thgrp;
-}
-#endif
 
 /**
 */
-void __attribute__ ((constructor)) kaapi_init(void)
+int kaapi_mt_init(void)
 {
   static int iscalled = 0;
-  if (iscalled !=0) return;
+  if (iscalled !=0) return EALREADY;
   iscalled = 1;
   
   kaapi_isterm = 0;
@@ -118,22 +105,15 @@ void __attribute__ ((constructor)) kaapi_init(void)
   kaapi_task_t*   task;
   const char*     version __attribute__((unused)) = get_kaapi_version();
   
-  kaapi_init_basicformat();
-  
-  /* set up runtime parameters */
-  kaapi_assert_m( 0 ==kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
-  
   /* initialize the kprocessor key */
-  kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_current_thread_key = 0;
   kaapi_current_threadgroup_key = 0;
+#else
+  kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 #endif
     
-  /* setup topology information */
-  kaapi_setup_topology();
-
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
   kaapi_perf_global_init();
@@ -145,10 +125,14 @@ void __attribute__ ((constructor)) kaapi_init(void)
   
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
-  thread = _kaapi_self_thread();
+  thread = kaapi_self_thread_context();
   task = kaapi_thread_toptask(kaapi_threadcontext2thread(thread));
-  kaapi_task_init( task, kaapi_taskstartup_body, 0 );
-  kaapi_task_setbody( task, kaapi_exec_body);
+  kaapi_task_init( task, 
+    kaapi_task_state2body( 
+      kaapi_task_state_setexec( kaapi_task_body2state(kaapi_taskstartup_body) )
+    ),
+    0 
+  );
   kaapi_thread_pushtask(kaapi_threadcontext2thread(thread));
 
   /* push the current frame that correspond to the execution of the startup task */
@@ -162,18 +146,21 @@ void __attribute__ ((constructor)) kaapi_init(void)
 /*** END */
 
   /* dump output information */
-#if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
-  fflush( stdout );
-#endif
+  if (kaapi_default_param.display_perfcounter)
+  {
+    printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
+    fflush( stdout );
+  }
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
+  
+  return 0;
 }
 
 
 /**
 */
-void __attribute__ ((destructor)) kaapi_fini(void)
+int kaapi_mt_finalize(void)
 {
   int i;
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -187,25 +174,26 @@ void __attribute__ ((destructor)) kaapi_fini(void)
   double t_1;
 #endif
 
+  static int iscalled = 0;
+  if (iscalled !=0) return EALREADY;
+  iscalled = 1;
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_stop(kaapi_all_kprocessors[0]);
 #endif
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
-        (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
-#endif
-  fflush( stdout );
+
+  if (kaapi_default_param.display_perfcounter)
+  {  
+    printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
+          (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );
+    fflush( stdout );
+  }
 
   /* wait end of the initialization */
   kaapi_isterm = 1;
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
-  
-  while (!kaapi_barrier_td_isterminated( &kaapi_term_barrier ))
-  {
-    kaapi_sched_advance( kaapi_all_kprocessors[0] );
-  }
+  kaapi_barrier_td_waitterminated(&kaapi_term_barrier);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
@@ -246,15 +234,15 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #   define PRIu32 "u"
 # endif
 
-    cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
-    cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
-    cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
-    cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
-    cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
-    t_sched +=        1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1);
-    t_preempt +=      1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
-    t_1 +=            1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
-      
+  cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
+  cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
+  cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
+  cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
+  cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
+  t_sched +=        1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1);
+  t_preempt +=      1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
+  t_1 +=            1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
+    
   /* */
   if (kaapi_default_param.display_perfcounter)
   {
@@ -291,7 +279,7 @@ void __attribute__ ((destructor)) kaapi_fini(void)
     if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA)
       kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
 #endif /* KAAPI_USE_CUDA */
-
+    kaapi_wsqueuectxt_destroy(&kaapi_all_kprocessors[i]->lsuspend);
     kaapi_processor_free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
@@ -317,4 +305,5 @@ void __attribute__ ((destructor)) kaapi_fini(void)
 #endif  
   
   /* TODO: destroy topology data structure */
+  return 0;
 }

@@ -48,7 +48,10 @@
 
 /**
 */
-void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
+void kaapi_taskwrite_body( 
+  void* taskarg, 
+  kaapi_thread_t* thread  __attribute__((unused))
+)
 {
   int i;
   int countparam;
@@ -69,12 +72,8 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
   kaapi_tasksteal_arg_t* arg = (kaapi_tasksteal_arg_t*)taskarg;
   orig_task_args             = kaapi_task_getargs(arg->origin_task);
   copy_task_args             = arg->copy_task_args;
-  fmt                        = arg->origin_fmt;
-  countparam                 = fmt->count_params;
   war_param                  = arg->war_param;
   
-  kaapi_assert_debug( arg->origin_task->body == kaapi_suspend_body );
-
   if (copy_task_args !=0)
   {
     /* for each parameter of the copy of the theft' task on mode:
@@ -82,6 +81,8 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
        - R,RW: do nothing
        - W,CW: set in field ->version of the original task args the field ->data of the copy args.
     */
+    fmt         = arg->origin_fmt;
+    countparam  = fmt->count_params;
     for (i=0; i<countparam; ++i)
     {
       mode_param = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
@@ -105,31 +106,44 @@ void kaapi_taskwrite_body( void* taskarg, kaapi_thread_t* thread  )
       }
     }
   }
-  else {
-    /* copy args == 0: do nothing see task_steal: do not fork this task */
-    kaapi_assert_debug_m(0, "cannot be here !!! ");
-    abort();
-  }
 
-#if defined(KAAPI_USE_READYLIST)
-  kaapi_wc_structure_t* wcs = (kaapi_wc_structure_t*)arg->origin_task->pad;
-  if (wcs != 0)
+  /* if signaled thread was suspended, move it to the local queue */
+  kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
+  if (wcs != 0) /* means thread has been suspended */
   { 
+    kaapi_readmem_barrier();
+    //kaapi_processor_t* kproc = arg->origin_thread->proc;
     kaapi_processor_t* kproc = kaapi_get_current_processor();
-    if (kaapi_thread_hasaffinity(wcs->affinity, kproc->kid) && (kproc->readythread ==0))
+    kaapi_assert_debug( kproc != 0);
+    if (0)//  /*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
     {
-      kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
-      if (kthread != 0)
-        kproc->readythread = kthread;
+      kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
+      if (kthread !=0)
+      {
+        /* Ok, here we have theft the thread and no body else can steal it
+           Signal the end of execution of forked task: 
+           -if no war => mark the task as terminated 
+           -if war and due to copy => mark the task as aftersteal in order to merge value
+        */
+        if (war_param ==0)
+          kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
+        else
+          kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
+
+        kaapi_sched_lock(&kproc->lock);
+        kaapi_sched_pushready(kproc, kthread );
+        kaapi_sched_unlock(&kproc->lock);
+        return;
+      }
     }
   }
-#endif  
 
-  /* flush in memory all pending write and read ops */  
-  kaapi_writemem_barrier();
-
-  /* signal the task */
-  kaapi_task_setbody(arg->origin_task, kaapi_aftersteal_body );
+  /* signal the task : mark it as executed, the old returned body should have steal flag */
+  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
+  if (war_param ==0)
+    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
+  else
+    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 }
 
 
@@ -139,8 +153,10 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
   int i;
   int                    countparam;
+#if 0 /* remove unused warning */
   int                    push_write;
   int                    w_param;
+#endif
   kaapi_task_t*          task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */
@@ -161,16 +177,19 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   
   /* get information of the task to execute */
   arg = (kaapi_tasksteal_arg_t*)taskarg;
-  arg->copy_task_args = 0;
+  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
 
   /* format of the original stolen task */  
-  body            = kaapi_task_getextrabody(arg->origin_task);
+  body            = kaapi_task_getbody(arg->origin_task);
+  kaapi_assert_debug( kaapi_isvalid_body( body ) );
+
   fmt             = kaapi_format_resolvebybody( body );
   kaapi_assert_debug( fmt !=0 );
   
   /* the the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
   countparam      = fmt->count_params;
+  arg->copy_task_args = 0;
   
   /**/
   war_param = arg->war_param;
@@ -181,6 +200,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     fflush(stdout);
   }
 
+#if 0
   /* If it exist a W or CW access then recreate a new structure 
      of input arguments to execute the stolen task.
      Args passed by value are copied again into the stack.
@@ -194,19 +214,22 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       w_param = 1;
       if ((war_param & (1<<i)) !=0) 
         push_write=1;
-//push_write=1;
       break;
     }
   }
+#endif
 
-  if (!w_param) //(!push_write)
+  if (!war_param)
   {
-//    printf("Steal without W, without copy, task:%p, sp:%p\n", (void*)body, (void*)orig_task_args);
-//    fflush(stdout);
-    /* Execute the orinal body function with the original args
-    */
+    /* Execute the orinal body function with the original args */
     body(orig_task_args, thread);
 
+    /* push task that will be executed after all created task by the user task */
+    task = kaapi_thread_toptask( thread );
+    kaapi_task_init( task, kaapi_taskwrite_body, arg );
+    kaapi_thread_pushtask( thread );
+
+#if 0
     /* if no barrier here: only read data signal the task */
     if (w_param != 0)
     {
@@ -223,11 +246,12 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       }
       kaapi_writemem_barrier();
     }
-    kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_suspend_body );
-    kaapi_task_setbody(arg->origin_task, kaapi_aftersteal_body );
+#endif
   }
   else /* it exists at least one w parameter with war dependency */
   {
+    printf("Execute task after recopy some args\n");
+    fflush(stdout);
     copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
@@ -255,9 +279,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       {
         if ((war_param & (1<<i)) !=0)
         { 
-//          printf("Steal with copy, war_param: %li, task:%p, sp:%p\n", war_param, (void*)body, (void*)orig_task_args);
-//          fflush(stdout);
-
           /* allocate new data */
 #if defined(KAAPI_DEBUG)
           copy_access_param->data    = calloc(1,fmt_param->size);
@@ -266,14 +287,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 #endif
           if (fmt_param->cstor !=0) (*fmt_param->cstor)(copy_access_param->data);
         }
-        else {
-//          printf("Steal without copy, task:%p, sp:%p\n", (void*)body, (void*)orig_task_args);
-//          fflush(stdout);
-        } 
       }
     }
 
     /* Execute the orinal body function with the copy of args: do not push it... ?
+       WHY to push a nop ?
     */
     task = kaapi_thread_toptask( thread );
     kaapi_task_init( task, kaapi_nop_body, copy_task_args);
@@ -282,7 +300,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     /* call directly the stolen body function */
     body( copy_task_args, thread);
 
-    /* ... and we push the write task if w, cw or rw mode */
+    /* push task that will be executed after all created task by the user task */
     task = kaapi_thread_toptask( thread );
     kaapi_task_init( task, kaapi_taskwrite_body, arg );
     kaapi_thread_pushtask( thread );

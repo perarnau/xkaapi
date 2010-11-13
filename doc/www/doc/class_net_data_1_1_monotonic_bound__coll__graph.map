@@ -1,7 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" id="node2" href="$struct_net_data_1_1_monotonic_bound_1_1_rep.html" title="NetData::MonotonicBound::Rep" alt="" coords="238,225,481,254"/>
-<area shape="rect" id="node4" href="$class_util_1_1_format.html" title="Definition of the format of a data typeA Format is the definition of the format for..." alt="" coords="10,17,117,46"/>
-<area shape="rect" id="node12" href="$class_net_data_1_1_update_function_format.html" title="MonotonicBound reference a global variable visible from all process." alt="" coords="97,110,348,139"/>
-<area shape="rect" id="node7" href="$class_util_1_1_mutex.html" title="Exclusive code execution.This class implements interface for Posix mutex. All errors..." alt="" coords="372,110,470,139"/>
-<area shape="rect" id="node9" href="$class_util_1_1_global_id.html" title="Class for representing a global identifier of the distributed processusGlobal Identifier..." alt="" coords="494,110,606,139"/>
-</map>

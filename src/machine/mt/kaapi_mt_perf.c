@@ -16,26 +16,6 @@ static unsigned int papi_event_count = 0;
   ((kproc)->curr_perf_regs == (kproc)->perf_regs[KAAPI_PERF_USER_STATE] ? KAAPI_PERF_USER_STATE : KAAPI_PERF_SCHEDULE_STATE)
 
 
-#if 0 // unused
-static int get_event_code(char* name, int* code)
-{
-  char* end;
-
-  /* hexa constant */
-  *code = (int)strtoul(name, &end, 16);
-  if (end != name)
-    return 0;
-
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
-  /* fallback to default case */
-  if (PAPI_event_name_to_code(name, code) != PAPI_OK)
-    return -1;
-#endif
-
-  return 0;
-}
-#endif
-
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
 static int get_papi_events(void)
 {
@@ -157,17 +137,21 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
 
 /*
 */
+#if defined(KAAPI_USE_PAPIPERFCOUNTER)
 void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
 {
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
   if (kproc->papi_event_count)
   {
     PAPI_stop(kproc->papi_event_set, NULL);
     PAPI_cleanup_eventset(kproc->papi_event_set);
     PAPI_destroy_eventset(&kproc->papi_event_set);
   }
-#endif
 }
+#else
+void kaapi_perf_thread_fini(kaapi_processor_t* kproc __attribute__((unused)) )
+{
+}
+#endif
 
 
 /*
@@ -232,7 +216,6 @@ void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
     KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_T1) += date - kproc->start_t[1-isuser];
     kproc->start_t[isuser]   = date;
     kproc->start_t[1-isuser] = 0;
-//printf("%lu:: %p swap to mode '%s'\n", kaapi_get_elapsedns(), (void*)kproc, (isuser ==0 ? "USER" : "SYS" ) );
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
     if (papi_event_count)
     {

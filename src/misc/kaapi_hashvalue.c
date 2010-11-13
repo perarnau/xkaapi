@@ -49,16 +49,27 @@
 // --------------------------------------------------------------------
 /* source of this function from Paul Hsieh at url
   http://www.azillionmonkeys.com/qed/hash.html
+
+  On the web page, 2010-10-06:
+  "IMPORTANT NOTE: Since there has been a lot of interest for the code below, 
+  I have decided to additionally provide it under the GPL 2.0 license. 
+  This provision applies to the code below only and not to any other code including 
+  other source archives or listings from this site unless otherwise specified. 
+
+  The GPL 2.0 is not necessarily a more liberal license than my derivative license, 
+  but this additional licensing makes the code available to more developers. 
+  Note that this does not give you multi-licensing rights. 
+  You can only use the code under one of the licenses at a time."
 */
+#if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) \
+  || defined(_MSC_VER) || defined (__BORLANDC__) || defined (__TURBOC__)
+#  define get16bits(d) (*((const uint16_t *) (d)))
+#endif
+
 #if !defined (get16bits)
-/* [TG] indep from big/little endian. */
-#if 1
 #define get16bits(d) ( (((const kaapi_uint8_t *)(d))[1] << (kaapi_uint32_t)8)\
                        +((const kaapi_uint8_t *)(d))[0] \
                      )
-#else
-#  define get16bits(d) ( 0xFFFF & ((const kaapi_uint32_t*)d)[0] )
-#endif
 #endif
 
 kaapi_uint32_t kaapi_hash_value_len(const char * data, int len) 
@@ -108,10 +119,11 @@ kaapi_uint32_t kaapi_hash_value_len(const char * data, int len)
   return hash;
 }
 
+
 kaapi_uint32_t kaapi_hash_value(const char * data) 
 {
   if (data == 0) return 0;
 
-  int len = strlen( data );
+  int len = (int)strlen( data );
   return kaapi_hash_value_len( data, len );
 }

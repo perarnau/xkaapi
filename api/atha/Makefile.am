@@ -11,7 +11,7 @@ libatha_la_CPPFLAGS=$(AM_CPPFLAGS) $(ATHALIB_BUILD_CPPFLAGS)
 libatha_la_CFLAGS=$(AM_CFLAGS) $(ATHALIB_BUILD_CFLAGS)
 libatha_la_CXXFLAGS=$(AM_CXXFLAGS) $(ATHALIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 libatha_la_LDFLAGS = -version-info 1:0:1 $(ATHALIB_BUILD_LDFLAGS)
-libatha_la_LIBADD=../kaapixx/libkaapixx.la $(ATHALIB_BUILD_LIBS)
+libatha_la_LIBADD=../kaapixx/libkaapi++.la $(ATHALIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
 	athapascan_closure.h \
@@ -27,8 +27,15 @@ BUILT_SOURCES = $(M4_BUILT_FILES)
 
 EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
 
-$(M4_BUILT_FILES): $(M4_SRCS)
-	(cd $(srcdir); ./m4_generator 10)
+$(M4_BUILT_FILES): stamp-m4_generator
+
+.INTERMEDIATE: stamp-m4_generator
+stamp-m4_generator: $(M4_SRCS)
+	cd $(srcdir) && ./m4_generator 10
+	touch $@
+
+clean-local:
+	$(RM) stamp-m4_generator
 
 include_HEADERS=\
 	athapascan-1 \

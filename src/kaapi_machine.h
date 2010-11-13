@@ -8,7 +8,9 @@
 ** Contributors :
 **
 ** Vincent.Danjean@imag.fr
-** 
+** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+**
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
 ** threads.
@@ -53,7 +55,7 @@
 #  error Unknown target
 #endif
 
-#if KAAPI_USE_CUDA /* non exclusive with the above */
+#ifdef KAAPI_USE_CUDA /* non exclusive with the above */
 # include "machine/cuda/kaapi_cuda.h"
 #endif
 

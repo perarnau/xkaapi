@@ -14,7 +14,6 @@ struct TaskBodyCPU<TaskUpdate> {
   {
   }
 };
-static ka::RegisterBodyCPU<TaskUpdate> dummy_object_TaskUpdate;
 
 // --------------------------------------------------------------------
 struct TaskSwap: public ka::Task<3>::Signature<int, ka::R<double>, ka::W<double> > {};
@@ -24,7 +23,6 @@ struct TaskBodyCPU<TaskSwap> {
   {
   }
 };
-static ka::RegisterBodyCPU<TaskSwap> dummy_object_TaskSwap;
 
 // --------------------------------------------------------------------
 struct TaskExtractF: public ka::Task<4>::Signature<Direction, int, ka::R<double>, ka::W<double> > {};
@@ -34,7 +32,6 @@ struct TaskBodyCPU<TaskExtractF> {
   {
   }
 };
-static ka::RegisterBodyCPU<TaskExtractF> dummy_object_TaskExtractF;
 
 // --------------------------------------------------------------------
 struct TaskUpdateFontier: public ka::Task<4>::Signature<Direction, int, ka::RW<double>, ka::R<double> > {};
@@ -44,7 +41,6 @@ struct TaskBodyCPU<TaskUpdateFontier> {
   {
   }
 };
-static ka::RegisterBodyCPU<TaskUpdateFontier> dummy_object_TaskUpdateFontier;
 
 
 /* Main of the program

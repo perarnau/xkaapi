@@ -43,8 +43,6 @@
 ** terms.
 ** 
 */
-
-
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_error.h"
 
@@ -60,7 +58,9 @@ static int open_cuda_device(CUdevice* dev, CUcontext* ctx, unsigned int index)
     return -1;
   }
 
-  /* use sched_yield while waiting for sync */
+  /* use sched_yield while waiting for sync.
+     context is made current for the thread.
+   */
   res = cuCtxCreate(ctx, CU_CTX_SCHED_YIELD | CU_CTX_MAP_HOST, *dev);
   if (res != CUDA_SUCCESS)
   {
@@ -109,6 +109,24 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
     return -1;
   }
 
+  /* pop the context to make it floating. doing
+     so allow another thread to use it, such
+     as the main one with kaapi_mem_synchronize2
+  */
+  res = cuCtxPopCurrent(&proc->ctx);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuCtxPopCurrent", res);
+    close_cuda_device(proc->dev, proc->ctx);
+    return -1;
+  }
+
+  if (pthread_mutex_init(&proc->ctx_lock, NULL))
+  {
+    kaapi_cuda_error("pthread_mutex_init", 0);
+    return -1;
+  }
+
   proc->is_initialized = 1;
 
   return 0;
@@ -121,7 +139,11 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
     return -1;
 
   cuStreamDestroy(proc->stream);
+
+  pthread_mutex_lock(&proc->ctx_lock);
   close_cuda_device(proc->dev, proc->ctx);
+  pthread_mutex_unlock(&proc->ctx_lock);
+  pthread_mutex_destroy(&proc->ctx_lock);
 
   proc->is_initialized = 0;
 
