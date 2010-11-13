@@ -83,7 +83,6 @@ clean::
 define([LINKER],[ifelse($1_CXX_SOURCES,[],[$(CC)],[$(CXX)])])dnl
 define([_CLEANUP_SOURCES],dnl
 [dnl
-DI=DIR
 define($1_REAL,
 	[foreach_w([SRC],$1,[ifelse(substr(SRC,0,len(DIR)),[DIR],[../SRC],[substr(SRC,incr(len(DIR))) ])])])dnl
 ])dnl

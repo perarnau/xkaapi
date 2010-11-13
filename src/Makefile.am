@@ -75,9 +75,7 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preempt_tail.c \
   task/kaapi_task_preempt_thief.c \
   task/kaapi_task_preemptpoint.c \
-  task/kaapi_task_finalize.c \
-  task/kaapi_task_return.c
-
+  task/kaapi_task_finalize.c
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning

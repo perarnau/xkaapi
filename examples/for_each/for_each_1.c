@@ -145,7 +145,7 @@ static int extract_seq(work_t* w, double** pos, double** end)
   /* extract from range beginning */
   kaapi_workqueue_index_t i, j;
   
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 256
   if (kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) return 1;
   
   *pos = w->array + i;
@@ -236,35 +236,40 @@ static void apply_cos( double* v )
 */
 int main(int ac, char** av)
 {
+  double t0,t1;
+  double sum = 0.f;
   size_t i;
-
+  size_t iter;
+  
 #define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
-
+  
   /* initialize the runtime */
   kaapi_init();
-
-  for (ac = 0; ac < 100; ++ac)
+  
+  for (iter = 0; iter < 100; ++iter)
   {
     /* initialize, apply, check */
-
     for (i = 0; i < ITEM_COUNT; ++i)
       array[i] = 0.f;
 
+    t0 = kaapi_get_elapsedns();
     for_each( array, ITEM_COUNT, apply_cos );
+    t1 = kaapi_get_elapsedns();
+    sum += (t1-t0)/1000; /* ms */
 
     for (i = 0; i < ITEM_COUNT; ++i)
       if (array[i] != 1.f)
       {
-	printf("invalid @%lu == %lf\n", i, array[i]);
-	break ;
+        printf("invalid @%lu == %lf\n", i, array[i]);
+        break ;
       }
   }
 
-  printf("done\n");
+  printf("done: %lf (ms)\n", sum / 100);
 
   /* finalize the runtime */
   kaapi_finalize();
-
+  
   return 0;
 }

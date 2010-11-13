@@ -151,6 +151,5 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   
   kaapi_thread_restore_frame(thread, &sc->frame);
   
-#warning " warning here: zero all the bytes for sc in the thread "
   kaapi_writemem_barrier();
 }

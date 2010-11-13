@@ -42,6 +42,8 @@
 ** 
 */
 #include "kaapi.h"
+#define __USE_BSD 1
+#include <sys/time.h>
 
 
 typedef struct work
@@ -58,6 +60,7 @@ typedef struct thief_work_t {
   const double* iend;
   double* obeg;
   double prefix;
+  unsigned int is_reduced;
 } thief_work_t;
 
 
@@ -66,7 +69,7 @@ static void thief_entrypoint(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
 
 /* choose between parallel and sequential reduction */
-#define CONFIG_PARALLEL_REDUCE 1
+#define CONFIG_PARALLEL_REDUCE 0
 
 #if CONFIG_PARALLEL_REDUCE
 
@@ -89,16 +92,8 @@ static void reduce_entrypoint(void* arg, kaapi_thread_t* thread)
 #endif /* CONFIG_PARALLEL_REDUCE */
 
 
-/* result reducer */
-static int reducer
-(kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
+static void common_reducer(work_t* vw, thief_work_t* tw)
 {
-  /* victim work */
-  work_t* const vw = (work_t*)varg;
-
-  /* thief work */
-  thief_work_t* const tw = (thief_work_t*)tdata;
-
   /* thief range continuation */
   kaapi_workqueue_index_t beg, end;
   beg = (kaapi_workqueue_index_t)(tw->ibeg - vw->iarray);
@@ -110,11 +105,19 @@ static int reducer
 
 #if (CONFIG_PARALLEL_REDUCE == 0) /* sequential reduction */
 
-  kaapi_workqueue_index_t pos = kaapi_workqueue_rnage_begin(&vw->cr);
+  kaapi_workqueue_index_t pos = kaapi_workqueue_range_begin(&vw->cr);
   for (; pos < beg; ++pos)
     vw->oarray[pos] += vw->prefix;
 
 #else /* parallel reduction */
+
+  /* todo: for on the thread that touched the data. in
+     the case of a thief reduction, that thread is the
+     current one, inactive. but if we are reducing on
+     the victim, there is a problem since we cannot
+     push a task in a thread that is active, and we
+     dont know the thief thread state.
+   */
 
   kaapi_thread_t* const thread = kaapi_self_thread();
   kaapi_task_t* const task = kaapi_thread_toptask(thread);
@@ -133,6 +136,33 @@ static int reducer
   /* continue the thief work */
   vw->prefix += tw->prefix;
   kaapi_workqueue_set(&vw->cr, beg, end);
+}
+
+
+static int thief_reducer
+(kaapi_taskadaptive_result_t* ktr, void* varg, void* targ)
+{
+  /* called from the thief upon victim preemption request */
+
+  common_reducer(varg, (thief_work_t*)ktr->data);
+
+  /* inform the victim we did the reduction */
+  ((thief_work_t*)ktr->data)->is_reduced = 1;
+
+  return 0;
+}
+
+
+static int victim_reducer
+(kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
+{
+  /* called from the victim to reduce a thief result */
+
+  if (((thief_work_t*)tdata)->is_reduced == 0)
+  {
+    /* not already reduced */
+    common_reducer(varg, tdata);
+  }
 
   return 0;
 }
@@ -173,7 +203,7 @@ static int splitter
   /* perform the actual steal. if the range
      changed size in between, redo the steal
    */
-  if (!kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
+  if (kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
     goto redo_steal;
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
@@ -189,12 +219,14 @@ static int splitter
     tw->iend = vw->iarray+j;
     tw->obeg = vw->oarray+j-unit_size;
     tw->prefix = 0.f;
+    tw->is_reduced = 0;
 
     /* initialize ktr task may be preempted before entrypoint */
     ((thief_work_t*)ktr->data)->ibeg = tw->ibeg;
     ((thief_work_t*)ktr->data)->iend = tw->iend;
     ((thief_work_t*)ktr->data)->obeg = tw->obeg;
     ((thief_work_t*)ktr->data)->prefix = 0.f;
+    ((thief_work_t*)ktr->data)->is_reduced = 0;
 
     /* reply head, preempt head */
     kaapi_reply_pushhead_adaptive_task(sc, req);
@@ -208,13 +240,13 @@ static int splitter
 static int extract_seq
 (work_t* w, const double** ipos, const double** iend, double** opos)
 {
-  /* extract from range beginning */
+  int err;
 
+  /* extract from range beginning */
   kaapi_workqueue_index_t i, j;
 
 #define CONFIG_SEQ_GRAIN 128
-  kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN);
-  if (i == j) return -1;
+  if ((err =kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) !=0) return 1;
 
   *ipos = w->iarray + i;
   *opos = w->oarray + i;
@@ -245,7 +277,7 @@ static void thief_entrypoint
     ++work->obeg;
 
     const unsigned int is_preempted = kaapi_preemptpoint
-      (sc, NULL, NULL, (void*)work, sizeof(thief_work_t), NULL);
+      (sc, thief_reducer, NULL, (void*)work, sizeof(thief_work_t), NULL);
     if (is_preempted) return ;
   }
 
@@ -286,7 +318,7 @@ static void prefix(const double* iarray, double* oarray, size_t size)
 
   /* while there is sequential work to do */
  continue_work:
-  while (extract_seq(&work, &ipos, &iend, &opos) != -1)
+  while (!extract_seq(&work, &ipos, &iend, &opos))
   {
     for (; ipos != iend; ++ipos, ++opos)
     {
@@ -298,7 +330,7 @@ static void prefix(const double* iarray, double* oarray, size_t size)
   /* preempt and reduce thieves */
   if ((ktr = kaapi_get_thief_head(sc)) != NULL)
   {
-    kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
+    kaapi_preempt_thief(sc, ktr, (void*)&work, victim_reducer, (void*)&work);
     goto continue_work;
   }
 
@@ -316,7 +348,10 @@ static void prefix(const double* iarray, double* oarray, size_t size)
 
 int main(int ac, char** av)
 {
-#define ITEM_COUNT 10000
+  struct timeval tms[3];
+  double sum = 0.f;
+
+#define ITEM_COUNT 100000
   static double iarray[ITEM_COUNT];
   static double oarray[ITEM_COUNT];
 
@@ -333,7 +368,12 @@ int main(int ac, char** av)
       oarray[i] = 42.f;
     }
 
+    gettimeofday(&tms[0], NULL);
     prefix(iarray, oarray, ITEM_COUNT);
+    gettimeofday(&tms[1], NULL);
+    timersub(&tms[1], &tms[0], &tms[2]);
+    const double diff = (double)(tms[2].tv_sec * 1000000 + tms[2].tv_usec);
+    sum += diff;
 
     /* check */
     double sum = 0.f;
@@ -348,7 +388,7 @@ int main(int ac, char** av)
     }
   }
 
-  printf("done\n");
+  printf("done: %lf\n", sum / 1000);
 
   /* finalize the runtime */
   kaapi_finalize();

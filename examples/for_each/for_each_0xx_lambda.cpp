@@ -131,6 +131,8 @@ void apply_cos( double& v )
 struct doit {
   void operator()(int argc, char** argv )
   {
+    double t0,t1;
+    double sum = 0.f;
     size_t size = 100000;
     if (argc >1) size = atoi(argv[1]);
     
@@ -142,7 +144,10 @@ struct doit {
       for (size_t i = 0; i < size; ++i)
         array[i] = 0.f;
         
+      t0 = kaapi_get_elapsedns();
       for_each( array, array+size, apply_cos );
+      t1 = kaapi_get_elapsedns();
+      sum += (t1-t0)/1000; /* ms */
 
       for (size_t i = 0; i < size; ++i)
         if (array[i] != 1.f)
@@ -152,7 +157,7 @@ struct doit {
         }
     }
 
-    std::cout << "Done" << std::endl;
+    std::cout << "Done " << sum/100 << " (ms)" << std::endl;
   }
 };
 

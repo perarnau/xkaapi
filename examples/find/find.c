@@ -337,7 +337,7 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
   
-  for (ac = 0; ac < 100; ++ac)
+  for (ac = 0; ac < 1000; ++ac)
   {
     /* initialize, apply, check */
     

@@ -1241,7 +1241,14 @@ static inline int kaapi_is_null(void* p)
     \retval !=0 if a prending preempt request(s) has been processed onto the given task.
     \retval 0 else
 */
-typedef int (*kaapi_ppreducer_t)(kaapi_taskadaptive_result_t*, void* arg_from_victim, ...);
+
+typedef int (*kaapi_ppreducer_t) (
+#ifdef __cplusplus
+ kaapi_taskadaptive_result_t*,
+ void* arg_from_victim, ...
+#endif
+);
+
 #define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
   ( kaapi_preemptpoint_isactive(stc) ? \
     kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, result_data, result_size),  \
@@ -1505,20 +1512,23 @@ static inline int kaapi_workqueue_pop(
   kaapi_workqueue_index_t max_size
 )
 {
+  kaapi_workqueue_index_t loc_beg;
   kaapi_assert_debug( max_size >0 );
-  kwq->beg += max_size;
+  loc_beg = kwq->beg + max_size;
+  kwq->beg = loc_beg;
   kaapi_mem_barrier();
 
-  if (kwq->beg < kwq->end)
+  if (loc_beg < kwq->end)
   {
     /* no conflict */
-    *end = kwq->beg;
+    *end = loc_beg;
     *beg = *end - max_size;
     return 0;
   }
 
   /* conflict */
-  kwq->beg -= max_size;
+  loc_beg -= max_size;
+  kwq->beg = loc_beg;
   return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
 
@@ -1535,22 +1545,25 @@ static inline int kaapi_workqueue_steal(
   kaapi_workqueue_index_t size
 )
 {
+  kaapi_workqueue_index_t loc_end;
+
   kaapi_assert_debug( 0 < size );
 
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
 
-  kwq->end -= size;
+  loc_end = kwq->end - size;
+  kwq->end = loc_end;
   kaapi_mem_barrier();
 
-  if (kwq->end < kwq->beg)
+  if (loc_end < kwq->beg)
   {
-    kwq->end += size;
+    kwq->end = loc_end+size;
     return ERANGE; /* false */
   }
 
-  *beg = kwq->end;
+  *beg = loc_end;
   *end = *beg + size;
   
   return 0; /* true */
