@@ -44,6 +44,7 @@
 */
 #include "kaapi_impl.h"
 #include <strings.h>
+#include <stddef.h>
 
 /**
 */
@@ -54,7 +55,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->sfp        = thread->stackframe;
   thread->esfp       = thread->stackframe;
   thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
-  thread->sfp->sp_data = (void*)&thread->data; /* empty frame */
+  thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
   thread->_next      = 0;
   thread->_prev      = 0;
   thread->affinity   = ~0UL;

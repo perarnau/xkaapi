@@ -50,9 +50,6 @@
 
 
 /* from kaapi_init.c */
-extern kaapi_rtparam_t kaapi_default_param;
-
-
 static int make_identity_procinfo_list(kaapi_procinfo_list_t* kpl, unsigned int count)
 {
   /* make an identity cpu list for the range [0, count[ */

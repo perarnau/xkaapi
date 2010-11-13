@@ -44,7 +44,6 @@
 #include "kaapi.h"
 #include <string.h>
 #include <math.h>
-#include <sys/types.h>
 
 
 /** Description of the example.
@@ -139,11 +138,10 @@ redo_steal:
 static int extract_seq(work_t* w, double** pos, double** end)
 {
   /* extract from range beginning */
-  int err;
   kaapi_workqueue_index_t i, j;
   
-#define CONFIG_SEQ_GRAIN 128
-  if ((err =kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) !=0) return 1;
+#define CONFIG_SEQ_GRAIN 256
+  if (kaapi_workqueue_pop(&w->cr, &i, &j, CONFIG_SEQ_GRAIN)) return 1;
   
   *pos = w->array + i;
   *end = w->array + j;
@@ -222,6 +220,8 @@ static void apply_cos( double* v )
  */
 int main(int ac, char** av)
 {
+  double t0,t1;
+  double sum = 0.f;
   size_t i;
   size_t iter;
   
@@ -231,14 +231,17 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
   
-  for (iter = 0; iter < 1000; ++iter)
+  for (iter = 0; iter < 100; ++iter)
   {
     /* initialize, apply, check */
     for (i = 0; i < ITEM_COUNT; ++i)
       array[i] = 0.f;
-    
+
+    t0 = kaapi_get_elapsedns();
     for_each( array, ITEM_COUNT, apply_cos );
-    
+    t1 = kaapi_get_elapsedns();
+    sum += (t1-t0)/1000; /* ms */
+
     for (i = 0; i < ITEM_COUNT; ++i)
       if (array[i] != 1.f)
       {
@@ -246,9 +249,9 @@ int main(int ac, char** av)
         break ;
       }
   }
-  
-  printf("done\n");
-  
+
+  printf("done: %lf (ms)\n", sum / 100);
+
   /* finalize the runtime */
   kaapi_finalize();
   

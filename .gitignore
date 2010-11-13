@@ -47,13 +47,14 @@ Makefile.in
 # Removed by 'make distclean'
 Makefile
 .deps/
-/atha1.pc
+/atha.pc
 /config.h
 /config.log
 /config.status
+/kaapi.pc
+/kaapi++.pc
 /src/misc/kaapi_version.c
 /stamp-h1
-/kaapi.pc
 
 # Files created after build (make)
 # Removed by 'make clean' (but '.dirstamp' that are removed by 'make distclean')

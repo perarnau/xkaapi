@@ -73,9 +73,11 @@ public:
   /* extract sequential work */
   bool extract_seq( T*& beg, T*& end)
   {
-#define CONFIG_SEQ_GRAIN 64
+#define CONFIG_SEQ_GRAIN 256
     kaapi_workqueue_index_t b, e;
     if (kaapi_workqueue_pop(&wq, &b, &e, CONFIG_SEQ_GRAIN)) return false;
+//    printf("Pop: [%li, %li)\n", b, e);
+//    fflush(stdout);
     beg = _array+b;
     end = _array+e;
     return true;
@@ -100,8 +102,10 @@ public:
     /* perform the actual steal. if the range
        changed size in between, redo the steal
      */
-    if (!kaapi_workqueue_steal(&wq, &i, &j, steal_size))
+    if (kaapi_workqueue_steal(&wq, &i, &j, steal_size))
       return false;
+//    printf("Steal: [%li, %li)\n", i, j);
+//    fflush(stdout);
     beg = _array + i;
     end = _array + j;
     return true;
@@ -148,8 +152,14 @@ void Work<T,OP>::split (
   
   /* thief work: create a task */
   for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
+  {
     req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(beg_theft+size_theft), _op );
+//    printf("reply: [%p, %p)\n", beg_theft, beg_theft+size_theft);
+//    fflush(stdout);
+  }
   req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(end_theft), _op );
+//  printf("reply: [%p, %p)\n", beg_theft, end_theft);
+//  fflush(stdout);
 }
 
 #endif

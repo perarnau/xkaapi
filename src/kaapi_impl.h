@@ -898,8 +898,19 @@ extern void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_h
 
 
 /* ============================= Commun function for server side (no public) ============================ */
-/**
+/** lighter than kaapi_thread_clear and used during the steal emit request function
 */
+static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
+{
+  th->sfp        = th->stackframe;
+  th->esfp       = th->stackframe;
+  th->sfp->sp    = th->sfp->pc  = th->task; /* empty frame */
+  th->sfp->sp_data = (char*)&th->data;     /* empty frame */
+  th->affinity   = ~0UL;
+  th->unstealable= 0;
+  return 0;
+}
+
 static inline int kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
 {
   th->affinity = 0;
@@ -987,6 +998,7 @@ static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
   } while (1);
   /* implicit barrier in KAAPI_ATOMIC_CAS */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
+  return 0;
 #else
 acquire:
   if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
@@ -994,7 +1006,6 @@ acquire:
     kaapi_slowdown_cpu(); 
   goto acquire;
 #endif
-  return 0;
 }
 
 
@@ -1302,12 +1313,12 @@ typedef struct kaapi_tasksteal_arg_t {
     write of the adaptive reply.
     It is store into the field reply->udata of the kaapi_reply_t data structure.
 */
+#define KAAPI_REPLY_USER_DATA_SIZE_MAX (KAAPI_REPLY_DATA_SIZE_MAX-sizeof(kaapi_adaptive_thief_body_t))
 typedef struct kaapi_taskadaptive_user_taskarg_t {
-  /* user defined body, size, data
-   */
+  /* user defined body */
   kaapi_adaptive_thief_body_t ubody;
-  unsigned char               udata[1];
-
+  /* user defined args for the body */
+  unsigned char               udata[KAAPI_REPLY_USER_DATA_SIZE_MAX];
 } kaapi_taskadaptive_user_taskarg_t;
 
 

@@ -159,27 +159,68 @@ void apply_cos( double& v )
 }
 
 
-/**
+/* My main task */
+struct doit {
+  void operator()(int argc, char** argv )
+  {
+    double t0,t1;
+    double sum = 0.f;
+    size_t size = 100000;
+    if (argc >1) size = atoi(argv[1]);
+    
+    double* array = new double[size];
+
+    for (int iter = 0; iter < 100; ++iter)
+    {
+      /* initialize, apply, check */
+      for (size_t i = 0; i < size; ++i)
+        array[i] = 0.f;
+        
+      t0 = kaapi_get_elapsedns();
+      for_each( array, array+size, apply_cos );
+      t1 = kaapi_get_elapsedns();
+      sum += (t1-t0)/1000; /* ms */
+
+      for (size_t i = 0; i < size; ++i)
+        if (array[i] != 1.f)
+        {
+          std::cout << "invalid @" << i << " == " << array[i] << std::endl;
+          break ;
+        }
+    }
+
+    std::cout << "Done " << sum/100 << " (ms)" << std::endl;
+  }
+};
+
+
+/* main entry point : Kaapi initialization
 */
 int main(int argc, char** argv)
 {
-  /* initialize the runtime */
-  kaapi_init();
+  try {
+    /* Join the initial group of computation : it is defining
+       when launching the program by a1run.
+    */
+    ka::Community com = ka::System::join_community( argc, argv );
+    
+    /* Start computation by forking the main task */
+    ka::SpawnMain<doit>()(argc, argv); 
+    
+    /* Leave the community: at return to this call no more athapascan
+       tasks or shared could be created.
+    */
+    com.leave();
 
-  size_t size = 10000;
-  if (argc >1) size = atoi(argv[1]);
+    /* */
+    ka::System::terminate();
+  }
+  catch (const ka::Exception& E) {
+    ka::logfile() << "Catch : " << E.what() << std::endl;
+  }
+  catch (...) {
+    ka::logfile() << "Catch unknown exception: " << std::endl;
+  }
   
-  double* array = new double[size];
-
-  /* initialize, apply, check */
-  memset(array, 0, sizeof(array));
-
-  for_each( array, array+size, apply_cos );
-
-  std::cout << "Done" << std::endl;
-
-  /* finalize the runtime */
-  kaapi_finalize();
-
   return 0;
 }
