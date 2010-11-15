@@ -113,12 +113,6 @@ static int parse_proc_index(procset_parser_t* parser, unsigned int* index)
     return -1;
   }
   
-  if (*index >= parser->max_count)
-  {
-    set_parser_error(parser, E2BIG);
-    return -1;
-  }
-  
   parser->str_pos = end_pos;
   
   return 0;
