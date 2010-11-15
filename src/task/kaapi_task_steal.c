@@ -109,7 +109,7 @@ void kaapi_taskwrite_body(
 
   /* if signaled thread was suspended, move it to the local queue */
   kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
-  if (wcs != 0) /* means thread has been suspended */
+  if ((wcs != 0) && (arg->origin_thread->sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
   { 
     kaapi_readmem_barrier();
     //kaapi_processor_t* kproc = arg->origin_thread->proc;
@@ -140,10 +140,11 @@ void kaapi_taskwrite_body(
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
+  kaapi_uintptr_t oldstate;
   if (war_param ==0)
-    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
+    oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
   else
-    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
+    oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 }
 
 

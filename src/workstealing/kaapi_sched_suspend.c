@@ -84,9 +84,9 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
   do {
     /* wakeup a context: either a ready thread (first) or a suspended thread.
-       Precise the suspended thread 'thread_condition' in order to wakeup it first
+       Precise the suspended thread 'thread_condition' in order to wakeup it first and task_condition.
     */
-    ctxt = kaapi_sched_wakeup(kproc, kproc->kid, thread_condition);
+    ctxt = kaapi_sched_wakeup(kproc, kproc->kid, thread_condition, task_condition);
     if (ctxt ==0)
     {
       kaapi_assert_debug(kproc->thread == 0);
