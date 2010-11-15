@@ -49,7 +49,8 @@
 kaapi_thread_context_t* kaapi_sched_wakeup ( 
     kaapi_processor_t* kproc, 
     kaapi_processor_id_t kproc_thiefid, 
-    kaapi_thread_context_t* cond_thread 
+    kaapi_thread_context_t* cond_thread,
+    kaapi_task_t* cond_task 
   )
 {
   kaapi_thread_context_t* thread;
@@ -68,7 +69,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
   */ 
   if (cond_thread !=0)
   {
-    if (kaapi_thread_isready(cond_thread))
+    if ((cond_thread->sfp->pc ==cond_task) && kaapi_thread_isready(cond_thread))
     {
       /* should be atomic ? */
       cell = cond_thread->wcs;
@@ -112,7 +113,9 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     kaapi_wsqueuectxt_cell_t* const nextcell = cell->next;
     thread = cell->thread;
     
-    if ((thread !=0) && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))) 
+    /* add affinity here because in dfg the signal of suspended thread does not move it to ready list */
+    if ((thread !=0) && kaapi_thread_hasaffinity(thread->affinity, kproc_thiefid) 
+    && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))) 
     {
       cell->thread = 0;
       thread->wcs  = 0;

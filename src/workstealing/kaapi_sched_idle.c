@@ -74,7 +74,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* local wake up first, inline test to avoid function call */
     if (!kaapi_sched_readyempty(kproc) || !kaapi_wsqueuectxt_empty(kproc) )
     {
-      ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0); 
+      ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0); 
 
       if (ctxt !=0) /* push kproc->thread to free and set ctxt as new ctxt */
       {
@@ -141,7 +141,7 @@ redo_execute:
       /* push it: suspended because top task is not ready */
       kaapi_wsqueuectxt_push( kproc, ctxt );
 
-      ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0);
+      ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0);
       if (ctxt !=0)
       {
         kaapi_setcontext(kproc, ctxt ); 

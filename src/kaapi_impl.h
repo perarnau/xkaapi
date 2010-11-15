@@ -1186,7 +1186,8 @@ extern int kaapi_sched_stealstack  (
 extern kaapi_thread_context_t* kaapi_sched_wakeup ( 
   kaapi_processor_t* kproc, 
   kaapi_processor_id_t kproc_thiefid, 
-  struct kaapi_thread_context_t* cond 
+  struct kaapi_thread_context_t* cond_thread,
+  kaapi_task_t* cond_task
 );
 
 
