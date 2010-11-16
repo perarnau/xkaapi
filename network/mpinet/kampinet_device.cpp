@@ -48,9 +48,10 @@
 
 namespace MPINET {
 
+
 // --------------------------------------------------------------------
-Device::Device( const char* name )
- : Net::Device(name)
+Device::Device( )
+ : Net::Device("mpinet")
 { }
 
 
@@ -127,6 +128,7 @@ Net::OutChannel* Device::open_channel( const char* url )
   if (url[i] ==0) return 0;
   while (url[i] !=0) if (!isdigit(url[i++])) return 0;
   dest = atoi( url );
+  if ((dest <0) || (dest > _wcom_size)) return 0;
   std::map<int,OutChannel*>::iterator icurr = _openchannel.find(dest);
   if (icurr != _openchannel.end()) return icurr->second;
   channel = new MPINET::OutChannel();

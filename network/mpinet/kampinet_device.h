@@ -86,7 +86,7 @@ class Device : public Net::Device {
 public:
   /** Constructor 
   */
-  Device( const char* name );
+  Device();
 
   /** Destructor 
   */
@@ -121,10 +121,9 @@ public:
   const char* get_urlconnect( ) const;
 
 protected:
-  char  _name[32];             ///< C-name of the device
-  int   _wcom_rank;
-  int   _wcom_size;
-  std::map<int,OutChannel*> _openchannel;
+  int   _wcom_rank;                       ///< my rank
+  int   _wcom_size;                       ///< communicator size
+  std::map<int,OutChannel*> _openchannel; ///< route to node rank i
 }; // -- end class device
 
 

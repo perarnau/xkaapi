@@ -151,6 +151,14 @@ public:
   */
   virtual const char* get_urlconnect( ) const = 0;
 
+  /** Register device factory 
+  */
+  static int register_factory( const char* name, DeviceFactory* df );
+
+  /** Resolve device factory 
+  */
+  static DeviceFactory* resolve_factory( const char* name );
+
 protected:
   char  _name[32];             ///< C-name of the device
 }; // -- end class device

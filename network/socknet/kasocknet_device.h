@@ -78,7 +78,7 @@ class Device : public Net::Device {
 public:
   /** Constructor 
   */
-  Device( const char* name );
+  Device( );
 
   /** Destructor 
   */
@@ -113,7 +113,6 @@ public:
   const char* get_urlconnect( ) const;
 
 protected:
-  char  _name[32];             ///< C-name of the device
 }; // -- end class device
 
 

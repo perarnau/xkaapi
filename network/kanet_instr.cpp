@@ -72,13 +72,13 @@ InstructionStream::~InstructionStream()
 }
 
 // -----------------------------------------------------------------------
-int InstructionStream::initialize() throw()
+int InstructionStream::initialize(size_t capacity) throw()
 { 
-  _start      = new Instruction[1024];
-  _last = _start + 1024;
+  _start    = new Instruction[capacity];
+  _last     = _start + capacity;
+  _capacity = capacity;
   KAAPI_ATOMIC_WRITE(&_pos_w, 0 );
   _pos_r      = 0;
-
   return 0;
 }
 
@@ -100,10 +100,6 @@ int InstructionStream::terminate() throw()
 bool InstructionStream::empty() const
 { return (_pos_r == _pos_close) && !_full; }
 
-
-// -----------------------------------------------------------------------
-bool InstructionStream::full() const
-{ return (_pos_w == _pos_r) && _full; }
 
 
 // -----------------------------------------------------------------------

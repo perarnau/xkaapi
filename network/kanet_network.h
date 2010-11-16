@@ -45,6 +45,12 @@
 
 namespace Net {
 
+/* Fwd decl
+*/
+class Device;
+class IOInstructionStream;
+class Channel;
+
 // --------------------------------------------------------------------
 /** Network is the class for network adapter interface.
     Network object has only local vision of the topology. A network object only 
@@ -333,31 +339,11 @@ public:
   */
   Device* get_device_for_this_cluster( const std::string& clustername ) const throw();
    
-  /** Return default leader for this cluster name in a hierarchy
-  */
-  NodeInfo* get_leader_for_this_cluster( const std::string& clustername ) throw();
-   
-  /** Set the default leader for this cluster name in a hierarchy
-  */
-  void set_leader_for_this_cluster( const Util::GlobalId& gid, const std::string& clustername ) throw();
-   
-  /** Return true if the local process is leader of its cluster
-	 */
-  bool is_leader( ) const throw();
-
-  /** Return true if the ni is leader of the cluster
-	 */
-  bool is_a_leader( const Util::GlobalId& gid, const std::string& clustername ) const throw();
-
   /** Return the identifier of this type of Network used to identify network
   */
   ka_uint8_t get_id() const;
 
-  /** Wakeup IODaemon
-  */
-  void wakeup_iodaemon();
-
-  /** Flush all channel
+  /** Flush all channels to all devices
   */
   void flush_channels();
 
@@ -406,20 +392,9 @@ public:
   */
   void deattach_iostream( IOInstructionStream* ios );
     
-  static std::string                   clustername;      ///< The name of the cluster for this process
-  static Cluster*                      cluster;          ///< The cluster for the running process
-  static Cluster*                      parentcluster;    ///< The cluster for the running process and its brothers
-  static Cluster*                      rootcluster;      ///< The root cluster of the whole computation
-	static std::vector<Cluster*>				 _cluster;         ///< known clusters
-  static std::vector<GlobalId>	       _leaders;         ///< known clusters
-    
 protected:
   ka_uint8_t                           _nid;              ///< id of the network instance
   std::string                          _name;             ///< The name of the network
-  
-  std::map<std::string, Cluster*>      _all_clusters;     /// all the clusters
-	
-
   Upcall*                              _upcall;           ///< object to forward upcall, default is the network object
   Callback*                            _callback;         ///< object to forward callback, default is the network object
   mutable ka_uint16_t                  _next_lid;         ///< next local id for a node
@@ -429,7 +404,6 @@ protected:
   mutable size_t                       _count_nodes;      ///< number of nodes
   mutable std::map<GlobalId,NodeInfo*> _gid2nodes;        ///< global to nodeinfo lookup table
   
-  IODaemon*                            _iodaemon;
   Device*                              _default_device;   ///< Default device
 
   /* somes counters */

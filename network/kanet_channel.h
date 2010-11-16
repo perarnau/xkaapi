@@ -140,6 +140,18 @@ public:
 };
 
 
+/*
+ * inline definition
+ */
+inline GlobalId Channel::get_peer_globalid() const
+{ return _peer_gid; }
+
+inline void Channel::set_peer_globalid( GlobalId gid)
+{ _peer_gid = gid; }
+
+inline const char* Channel::get_peer_url() const
+{ return _peer_url; }
+
 
 } // -namespace
 

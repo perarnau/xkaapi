@@ -50,6 +50,7 @@ Channel::Channel()
 {
 }
 
+
 // -----------------------------------------------------------------------
 Channel::~Channel()
 {
@@ -74,21 +75,6 @@ int Channel::terminate() throw()
 
 
 // -----------------------------------------------------------------------
-GlobalId Channel::get_peer_globalid() const
-{ return _peer_gid; }
-
-
-// -----------------------------------------------------------------------
-void Channel::set_peer_globalid( GlobalId gid)
-{ _peer_gid = gid; }
-
-
-// -----------------------------------------------------------------------
-const char* Channel::get_peer_url() const
-{ return _peer_url; }
-
-
-// -----------------------------------------------------------------------
 void Channel::set_peer_url( const char* url )
 { 
   kaapi_assert(_peer_url ==0); /* cannot change the peer */
@@ -99,7 +85,8 @@ void Channel::set_peer_url( const char* url )
 // -----------------------------------------------------------------------
 int OutChannel::initialize( ) throw()
 {
-  return InstructionStream::initialize();
+  size_t capacity = (4096-sizeof(OutChannel))/sizeof(Instruction);
+  return InstructionStream::initialize(capacity);
 }
 
 

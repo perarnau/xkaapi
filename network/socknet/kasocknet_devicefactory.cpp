@@ -57,7 +57,7 @@ const char* DeviceFactory::get_name() const
 // --------------------------------------------------------------------
 Net::Device* DeviceFactory::create( )
 { 
-  Device* dev = new SOCKNET::Device(get_name());
+  Device* dev = new SOCKNET::Device();
   if (dev->initialize() !=0) {
     delete dev;
     return 0;

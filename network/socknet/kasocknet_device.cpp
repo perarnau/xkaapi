@@ -45,8 +45,8 @@
 namespace SOCKNET {
 
 // --------------------------------------------------------------------
-Device::Device( const char* name )
- : Net::Device(name)
+Device::Device( )
+ : Net::Device("socknet")
 { }
 
 

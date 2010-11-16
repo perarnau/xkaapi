@@ -42,12 +42,17 @@
 */
 #include "kanet_device.h" 
 #include <string.h>
+#include <map>
 
 namespace Net {
+// --------------------------------------------------------------------
+static std::map<const char*,DeviceFactory*> all_devicefact;
+
 
 // --------------------------------------------------------------------
 DeviceFactory::~DeviceFactory()
 { }
+
 
 // --------------------------------------------------------------------
 void DeviceFactory::destroy( Device* dev )
@@ -58,6 +63,7 @@ void DeviceFactory::destroy( Device* dev )
   }
 }
 
+
 // --------------------------------------------------------------------
 Device::Device( const char* name ) 
 {
@@ -66,9 +72,26 @@ Device::Device( const char* name )
     strncpy(_name, name, 31);  
 }
 
+
 // --------------------------------------------------------------------
 Device::~Device()
 { 
+}
+
+
+// --------------------------------------------------------------------
+int Device::register_factory( const char* name, DeviceFactory* df )
+{
+  all_devicefact.insert( std::make_pair(name, df) );
+}
+
+
+// --------------------------------------------------------------------
+DeviceFactory* Device::resolve_factory( const char* name )
+{
+  std::map<const char*,DeviceFactory*>::const_iterator iterator = all_devicefact.find(name);
+  if (iterator == all_devicefact.end()) return 0;
+  return iterator->second;
 }
 
 } // - namespace Net...
