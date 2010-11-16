@@ -94,10 +94,6 @@
 #define KAAPI_STACK_MIN 8192
 
 
-//struct kaapi_processor_t;
-//typedef kaapi_uint32_t kaapi_processor_id_t;
-
-
 /* ========================================================================= */
 /** Termination detecting barrier
 */
@@ -277,12 +273,12 @@ static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
   return fb;
 }
 
-#else // (KAAPI_MAX_PROCESSOR >64)
+#else /* (KAAPI_MAX_PROCESSOR >64) */
 
 typedef kaapi_uint64_t kaapi_bitmap_t[ (KAAPI_MAX_PROCESSOR+63)/64 ];
 typedef kaapi_uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
 
-#endif //
+#endif
 
 /** \ingroup WS
 */

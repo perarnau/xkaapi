@@ -96,14 +96,16 @@ volatile int kaapi_isterm = 0;
 */
 int kaapi_mt_init(void)
 {
+  kaapi_thread_context_t* thread;
+  kaapi_task_t*   task;
+  const char*     version;
+
   static int iscalled = 0;
   if (iscalled !=0) return EALREADY;
   iscalled = 1;
   
   kaapi_isterm = 0;
-  kaapi_thread_context_t* thread;
-  kaapi_task_t*   task;
-  const char*     version __attribute__((unused)) = get_kaapi_version();
+  version = get_kaapi_version();
   
   /* initialize the kprocessor key */
 

@@ -169,7 +169,6 @@ void kaapi_perf_thread_start(kaapi_processor_t* kproc)
   }
 #endif
   kproc->start_t[KAAPI_GET_THREAD_STATE(kproc)] = kaapi_get_elapsedns();
-//printf("%lu:: %p start in mode '%s'\n", kaapi_get_elapsedns(), (void*)kproc, (KAAPI_GET_THREAD_STATE(kproc) ==0 ? "USER" : "SYS" ) );
 }
 
 
@@ -186,7 +185,6 @@ void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
     kaapi_assert_m( PAPI_OK, PAPI_accum(kproc->papi_event_set, kproc->curr_perf_regs+KAAPI_PERF_ID_PAPI_BASE), "PAPI_accum" );
   }
 #endif
-//printf("%lu:: %p stop in mode '%s'\n", kaapi_get_elapsedns(), (void*)kproc, (KAAPI_GET_THREAD_STATE(kproc) ==0 ? "USER" : "SYS" ) );
   mode = KAAPI_GET_THREAD_STATE(kproc);
   kaapi_assert_debug( kproc->start_t[mode] != 0 ); /* else none started */
   delay = kaapi_get_elapsedns() - kproc->start_t[mode];
@@ -207,12 +205,14 @@ kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc)
 */
 void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 {
+  kaapi_perf_counter_t date;
+  
   kaapi_assert( (isuser ==KAAPI_PERF_SCHEDULE_STATE)||(isuser==KAAPI_PERF_USER_STATE) );
   if (kproc->curr_perf_regs != kproc->perf_regs[isuser])
   { /* doit only iff real swap */
     kaapi_assert_debug( kproc->start_t[1-isuser] != 0 ); /* else none started */
     kaapi_assert_debug( kproc->start_t[isuser] == 0 );   /* else already started */
-    kaapi_perf_counter_t date = kaapi_get_elapsedns();
+    date = kaapi_get_elapsedns();
     KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_T1) += date - kproc->start_t[1-isuser];
     kproc->start_t[isuser]   = date;
     kproc->start_t[1-isuser] = 0;
@@ -280,15 +280,16 @@ static const kaapi_perf_idset_t* get_perf_idset
 */
 void _kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
 {
-  kaapi_assert( (isuser ==KAAPI_PERF_USR_COUNTER)||
-                (isuser==KAAPI_PERF_SYS_COUNTER)||
-                (isuser== (KAAPI_PERF_SYS_COUNTER|KAAPI_PERF_USR_COUNTER))
-  );
   unsigned int k;
   unsigned int i;
   unsigned int j;
   kaapi_perf_idset_t local_idset;
   kaapi_perf_counter_t accum[KAAPI_PERF_ID_MAX];
+
+  kaapi_assert( (isuser ==KAAPI_PERF_USR_COUNTER)||
+                (isuser==KAAPI_PERF_SYS_COUNTER)||
+                (isuser== (KAAPI_PERF_SYS_COUNTER|KAAPI_PERF_USR_COUNTER))
+  );
 
   idset = get_perf_idset(idset, &local_idset);
 
@@ -335,12 +336,13 @@ void _kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuser, kaap
  */
 void _kaapi_perf_read_register(const kaapi_perf_idset_t* idset, int isuser, kaapi_perf_counter_t* counter)
 {
-  kaapi_assert( (isuser ==0)||(isuser==1) );
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  kaapi_processor_t* kproc;
   unsigned int j;
   unsigned int i;
   kaapi_perf_idset_t local_idset;
 
+  kaapi_assert( (isuser ==0)||(isuser==1) );
+  kproc = kaapi_get_current_processor();
   idset = get_perf_idset(idset, &local_idset);
 
   for (j = 0, i = 0; j < idset->count; ++i)

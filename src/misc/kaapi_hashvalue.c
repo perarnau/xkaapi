@@ -46,7 +46,6 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
-// --------------------------------------------------------------------
 /* source of this function from Paul Hsieh at url
   http://www.azillionmonkeys.com/qed/hash.html
 
@@ -74,13 +73,13 @@
 
 kaapi_uint32_t kaapi_hash_value_len(const char * data, int len) 
 {
-  if (data == 0) return 0;
-
-  kaapi_uint32_t hash = 0, tmp;
+  kaapi_uint32_t hash, tmp;
   int rem;
 
+  if (data == 0) return 0;
   if (len <= 0) return 0;
 
+  hash = 0;
   rem = len & 3;
   len >>= 2;
 
@@ -122,8 +121,9 @@ kaapi_uint32_t kaapi_hash_value_len(const char * data, int len)
 
 kaapi_uint32_t kaapi_hash_value(const char * data) 
 {
+  int len;
   if (data == 0) return 0;
 
-  int len = (int)strlen( data );
+  len = (int)strlen( data );
   return kaapi_hash_value_len( data, len );
 }

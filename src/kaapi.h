@@ -791,10 +791,11 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-
-  void* const retval = thread->sp_data;
-  thread->sp_data += count;
-  return retval;
+  {
+    void* const retval = thread->sp_data;
+    thread->sp_data += count;
+    return retval;
+  }
 }
 
 /** \ingroup TASK
@@ -806,12 +807,14 @@ static inline void* kaapi_thread_pushdata_align
   (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint64_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
-  const kaapi_uint64_t mask = align - 1;
+  {
+    const kaapi_uint64_t mask = align - 1;
 
-  if ((uintptr_t)thread->sp_data & mask)
-    thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
+    if ((uintptr_t)thread->sp_data & mask)
+      thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
 
-  return kaapi_thread_pushdata(thread, count);
+    return kaapi_thread_pushdata(thread, count);
+  }
 }
 
 /** \ingroup TASK
@@ -1074,7 +1077,7 @@ static inline int kaapi_steal_setsplitter(
   return 0;
 }
 
-#if 0 //* revoir ici, ces fonctions sont importantes pour le cooperatif */
+#if 0 /* revoir ici, ces fonctions sont importantes pour le cooperatif */
 /** \ingroup WS
     Helper to expose to many part of the internal API.
     Return 1 iff its remains works...
