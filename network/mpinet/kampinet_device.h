@@ -121,6 +121,10 @@ public:
   const char* get_urlconnect( ) const;
 
 protected:
+  /** Infinite loop to read incomming message */
+  int skel();
+
+protected:
   int   _wcom_rank;                       ///< my rank
   int   _wcom_size;                       ///< communicator size
   std::map<int,OutChannel*> _openchannel; ///< route to node rank i

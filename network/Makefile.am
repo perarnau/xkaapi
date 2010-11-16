@@ -4,13 +4,14 @@
 ##
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-SUBDIRS= . socknet mpinet
+SUBDIRS= . 
+#socknet mpinet
 
 if KAAPI_TARGET_KANET
 
 lib_LTLIBRARIES=libkanet.la
 
-libkanet_la_CPPFLAGS=$(AM_CPPFLAGS) $(KANETLIB_BUILD_CPPFLAGS)
+libkanet_la_CPPFLAGS=$(AM_CPPFLAGS) -I$(top_srcdir)/api/kaapixx $(KANETLIB_BUILD_CPPFLAGS)
 libkanet_la_CFLAGS=$(AM_CFLAGS) $(KANETLIB_BUILD_CFLAGS)
 libkanet_la_CXXFLAGS=$(AM_CXXFLAGS) $(KANETLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 libkanet_la_LDFLAGS = -version-info 1:0:1 $(KANETLIB_BUILD_LDFLAGS)

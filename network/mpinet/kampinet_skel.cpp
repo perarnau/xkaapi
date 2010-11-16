@@ -40,60 +40,65 @@
 ** terms.
 ** 
 */
-#include "kanet_device.h" 
-#include <string.h>
-#include <map>
+#include "kaapi_impl.h"
+#include "kampinet_channel.h"
+#include "kampinet_device.h"
+#include <mpi.h>
 
-namespace Net {
-// --------------------------------------------------------------------
-static std::map<const char*,DeviceFactory*> all_devicefact;
-
-
-// --------------------------------------------------------------------
-DeviceFactory::~DeviceFactory()
-{ }
+namespace MPINET {
 
 
 // --------------------------------------------------------------------
-void DeviceFactory::destroy( Device* dev )
-{ 
-  if (dev !=0) {
-    dev->terminate();
-    delete dev;
+int Device::skel()
+{
+  MPI_Status status;
+  union {
+    Net::RWInstruction rw;
+    Net::AMInstruction am;
+  } header;
+  void*          buffer_am = 0;
+  kaapi_uint64_t sz_buffer_am = 0;
+
+  Net::Service_fnc service = 0;
+  int err;
+  
+  while (1)
+  {
+    err = MPI_Recv(&header, 2*sizeof(kaapi_uint64_t), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    kaapi_assert( (err == MPI_SUCCESS) );
+    kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );
+
+    /* switch tag: 1 -> AM, 3 -> RW */
+    switch (status.MPI_TAG) {
+      case 1: /* AM */
+        if (sz_buffer_am < header.am.size)
+        {
+          if (buffer_am !=0) free(buffer_am);
+          buffer_am = malloc( header.am.size );
+          sz_buffer_am = header.am.size;
+        }
+        err = MPI_Recv(buffer_am, header.am.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
+        kaapi_assert( (err == MPI_SUCCESS) );
+        kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );
+        
+        /* call the service handler */
+        service = (Net::Service_fnc)header.am.handler;
+        (*service)(0, status.MPI_SOURCE, buffer_am, sz_buffer_am );
+        break;
+
+      case 2: /* RW */
+        err = MPI_Recv((void*)header.rw.dptr, header.rw.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
+        kaapi_assert(err == MPI_SUCCESS);
+        kaapi_assert(status.MPI_ERROR == MPI_SUCCESS);
+        break;
+
+      default:
+        kaapi_assert_m(false, "bad tag");
+        break;
+    }
   }
-}
-
-
-// --------------------------------------------------------------------
-Device::Device( const char* name ) 
-{
-  memset(_name, 0, sizeof(_name));
-  if (name != 0)
-    strncpy(_name, name, 31);  
-}
-
-
-// --------------------------------------------------------------------
-Device::~Device()
-{ 
-}
-
-
-// --------------------------------------------------------------------
-int Device::register_factory( const char* name, DeviceFactory* df )
-{
-  if (all_devicefact.find(name) != all_devicefact.end()) return EEXIST;
-  all_devicefact.insert( std::make_pair(name, df) );
   return 0;
 }
 
 
-// --------------------------------------------------------------------
-DeviceFactory* Device::resolve_factory( const char* name )
-{
-  std::map<const char*,DeviceFactory*>::const_iterator iterator = all_devicefact.find(name);
-  if (iterator == all_devicefact.end()) return 0;
-  return iterator->second;
-}
-
-} // - namespace Net...
+} // -namespace

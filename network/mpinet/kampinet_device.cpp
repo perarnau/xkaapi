@@ -117,7 +117,7 @@ int Device::abort()
 Net::OutChannel* Device::open_channel( const char* url )
 {
   int dest;
-  MPINET::OutChannel* channel;
+  OutChannel* channel;
   
   /* format: mpinet:rank */
   if (url ==0) return 0;
@@ -158,6 +158,5 @@ const char* Device::get_urlconnect( ) const
   /* cannot connect MPI process */
   return 0;
 }
-
 
 } // - namespace Net...

@@ -47,8 +47,6 @@
 
 namespace Net {
 
-typedef kaapi_uint64_t GlobalId;
-
 // --------------------------------------------------------------------------
 /** \name Channel
     \ingroup Net
@@ -119,10 +117,6 @@ public:
   int terminate() throw();
 
 protected:
-  /** Client stub to write message from the InstructionStream
-      An error with an error code is thrown in case of error.
-  */
-  virtual int stub( ) =0;
 };
 
 

@@ -41,26 +41,15 @@
 ** terms.
 ** 
 */
-/* Correct 2 bugs:
-- In pack_ibegin :
-     1. suspend_producer
-     2. allocate_data
-  -> suspend_producer ne garanti pas un emplacement libre apres le allocate_data
-  Semble etre la cause des erreurs de transimission : oubli d'un paquet apres aggregation
-
-- ajout d'un champ _pos_last qui est la derniere instruction a lire pour
-  mise a jour dans Channel::stub et utilise pour deplacer le pointeur _pos_r 
-  dans notify. Avant: lecture de _pos_close comme marqueur de fin qui aurait pu
-  changer de valeur entre chaque lecture !
-*/
 #include <iostream>
+#include "kaapi_impl.h"
 #include "kanet_instr.h"
 
 namespace Net {
 
 // -----------------------------------------------------------------------
 InstructionStream::InstructionStream() 
- : _start(0), _last(0), _pos_r(0)
+ : _start(0), _last(0), _capacity(0)
 {
   KAAPI_ATOMIC_WRITE(&_pos_w, 0 );
 }
@@ -74,11 +63,16 @@ InstructionStream::~InstructionStream()
 // -----------------------------------------------------------------------
 int InstructionStream::initialize(size_t capacity) throw()
 { 
+  kaapi_sched_initlock(&_lock);
   _start    = new Instruction[capacity];
   _last     = _start + capacity;
-  _capacity = capacity;
+  _capacity = (kaapi_int32_t)capacity;
   KAAPI_ATOMIC_WRITE(&_pos_w, 0 );
-  _pos_r      = 0;
+  _pos_r = 0;
+  _tosend._state = SB_FREE;
+  _tosend._start = new Instruction[capacity];;
+  _tosend._last  = _tosend._start + capacity;
+  _tosend._pos_w = 0;
   return 0;
 }
 
@@ -89,38 +83,71 @@ int InstructionStream::terminate() throw()
   if (_start !=0) delete [] _start;
   _start = _last = 0;
   KAAPI_ATOMIC_WRITE(&_pos_w, 0);
-  _pos_r = 0;
 
   return 0;
 }
 
-#if 0
 
 // -----------------------------------------------------------------------
-bool InstructionStream::empty() const
-{ return (_pos_r == _pos_close) && !_full; }
-
-
-
-// -----------------------------------------------------------------------
-void InstructionStream::suspend_producer()
+void InstructionStream::switch_buffer()
 {
-  KAAPI_LOG( false,
-               "[Suspend producer]" 
-            << ", pos_r @=" << (void*)_pos_r 
-            << ", last_r @=" << (void*)_pos_last
-            << ", pos_w @=" << (void*)_pos_w 
-            << ", pos_close @=" << (void*)_pos_close 
-            << ", full? =" << (_full ? "yes" : "no") 
-            << ", full? =" << (_full ? "yes" : "no") 
-  );
+redo:
+  kaapi_sched_lock(&_lock);
+  if (!isfull()) 
+  {
+    kaapi_sched_unlock(&_lock);
+    return;
+  }
+  if (_tosend._state != SB_FREE)
+  {
+    /* wait state becomes SB_FREE */
+    kaapi_sched_unlock(&_lock);
+    while (_tosend._state != SB_FREE)
+      kaapi_slowdown_cpu();
+    goto redo;
+  }
   
-  if (!full()) return;
-  Util::CriticalGuard critical( *_sync );
-  _wait_prod = true;
-  _manager->get_network()->wakeup_iodaemon();
-  while (_wait_prod) _cond_prod.wait( *_sync );
+  /* reset current buffer: the last op code with reset the _pos_w field ! */
+  _tosend._state = SB_POSTED;
+  _tosend.swap( *this );
+
+  /* release lock and flush the buffer */
+  kaapi_sched_unlock(&_lock);
+  flush( _tosend._start + _tosend._pos_r, _tosend._start + _tosend._pos_w );
+  kaapi_sched_lock(&_lock);
+  _tosend._pos_r = 0;
+  _tosend._pos_w = 0;
+  _tosend._state = SB_FREE;
+  kaapi_sched_unlock(&_lock);
 }
-#endif
+
+
+// -----------------------------------------------------------------------
+void InstructionStream::sync()
+{
+redo:
+  while (_tosend._state != SB_FREE)
+    kaapi_slowdown_cpu();
+  kaapi_sched_lock(&_lock);
+  if (_tosend._state != SB_FREE) 
+  {
+    kaapi_sched_unlock(&_lock);
+    goto redo;
+  }
+  /* here _tosend is free, flush all message from start to _pos_w */
+
+  /* reset current buffer: the last op code with reset the _pos_w field ! */
+  kaapi_int32_t pos_w = KAAPI_ATOMIC_READ(&_pos_w);
+  _tosend._state = SB_POSTED;
+  _tosend.swap( *this );
+  _pos_r = pos_w;
+  kaapi_sched_unlock(&_lock);
+  flush( _tosend._start + _tosend._pos_r, _tosend._start + _tosend._pos_w );
+  kaapi_sched_lock(&_lock);
+  _tosend._pos_r = 0;
+  _tosend._pos_w = 0;
+  _tosend._state = SB_FREE;
+  kaapi_sched_unlock(&_lock);
+}
 
 } // -namespace

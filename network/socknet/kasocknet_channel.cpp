@@ -59,9 +59,9 @@ int OutChannel::terminate() throw()
 
 
 // -----------------------------------------------------------------------
-int OutChannel::stub( )
+void OutChannel::flush( Net::Instruction* first, Net::Instruction* last )
 {
-  return 0;
+  return;
 }
 
 } // -namespace

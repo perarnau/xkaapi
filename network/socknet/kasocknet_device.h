@@ -43,7 +43,7 @@
 #ifndef _SOCKNET_DEVICE_H_
 #define _SOCKNET_DEVICE_H_
 
-#include "../kanet_device.h"
+#include "kanet_device.h"
 
 namespace SOCKNET {
 

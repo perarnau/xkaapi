@@ -43,7 +43,7 @@
 #ifndef _KASOCKNET_IOCHANNEL_H
 #define _KASOCKNET_IOCHANNEL_H
 
-#include "../kanet_channel.h"
+#include "kanet_channel.h"
 
 namespace SOCKNET {
 
@@ -67,7 +67,7 @@ protected:
   /** Client stub to write message from the InstructionStream
       An error with an error code is thrown in case of error.
   */
-  int stub( );  
+  void flush( Net::Instruction* first, Net::Instruction* last );
 };
 
 } // -namespace

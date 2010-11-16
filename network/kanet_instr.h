@@ -43,12 +43,10 @@
 #ifndef _KANETWORK_INSTR_H
 #define _KANETWORK_INSTR_H
 
-#include "kaapi.h"
+#include "kanet_types.h"
 
 namespace Net {
 
-class Channel;
-typedef void (*Callback_fnc)(int errocode, Channel* ch, void* userarg);
 
 // -----------------------------------------------------------------------
 /** \name Callback
@@ -84,8 +82,8 @@ struct Callback {
 */
 struct RWInstruction {
   kaapi_uint64_t     dptr;  /// remote pointer / displacement where to write
+  kaapi_uint64_t     size;  /// size in bytes of the pointed memory
   void*              lptr;  /// pointer on the local bloc to send
-  kaapi_uint32_t     size;  /// size in bytes of the pointed memory
 };
 
 
@@ -96,8 +94,8 @@ struct RWInstruction {
 */
 struct AMInstruction {
   kaapi_uint64_t     handler;  /// handler of the service (function to call)
+  kaapi_uint64_t     size;     /// size in byte of the pointed memory
   void*              lptr;     /// points on the bloc of data for the AM
-  kaapi_uint32_t     size;     /// size in byte of the pointed memory
 };
 
 
@@ -200,7 +198,8 @@ public:
       void*              arg     /// The argument of the callback function 
   );
 
-  /** Insert a Write Memory Barrier
+  /** Insert a Write Memory Barrier: disable write ops posted after the barrier to be
+      reordered before the barrier.
   */
   void insert_wb( );
 
@@ -222,6 +221,12 @@ public:
       void*           arg     /// The argument of the callback function 
   );
 
+  /** Synchronize the stream
+      Wait until all posted messages have been localy sent. This do not implic a
+      global synchronization: no guarantee exists about the reception of the messages.
+  */
+  void sync();
+  
 protected:
   InstructionStream();
 
@@ -242,13 +247,42 @@ protected:
   /** Suspend producer while not enough space in the circular buffer
   */
   void switch_buffer();
+  
+  /** Called to flush buffer 
+  */
+  virtual void flush( Instruction* first, Instruction* last ) = 0;
 
 protected:
+  enum StateBuffer_t { 
+    SB_FREE,
+    SB_POSTED
+  };
+  
+  struct FlipFlopBloc {
+    StateBuffer_t            _state;      /// state
+    Instruction*             _start;      /// first instruction in the buffer
+    Instruction*             _last;       /// past the last instruction in the buffer
+    kaapi_int32_t            _pos_w;      /// next position for writing an entry in _start
+    kaapi_int32_t            _pos_r;      /// next position to read
+    void swap( InstructionStream& is )
+    {
+      std::swap(_start,    is._start);
+      std::swap(_last,     is._last);
+      std::swap(_pos_r,    is._pos_r);
+      kaapi_int32_t pos_w_tmp = _pos_w;
+      _pos_w                  = KAAPI_ATOMIC_READ(&is._pos_w);
+      kaapi_writemem_barrier();
+      KAAPI_ATOMIC_WRITE(&is._pos_w, pos_w_tmp);
+    }
+  };
+  
+  kaapi_atomic_t           _lock;       ///
+  FlipFlopBloc             _tosend;     /// cpy of data member of instruction to sent
   Instruction*             _start;      /// first instruction in the buffer
   Instruction*             _last;       /// past the last instruction in the buffer
   kaapi_int32_t            _capacity;   /// capacity of the circular buffer
   kaapi_atomic_t           _pos_w __attribute__((aligned(64/8))); /// next position for writing an entry in _start
-  volatile kaapi_uint32_t  _pos_r;      /// next position for reading an entry in _start
+  kaapi_int32_t            _pos_r;      /// next position to read
 };
 
 
@@ -256,7 +290,6 @@ protected:
 /*
  * inline definition
  */
-
 inline bool InstructionStream::isfull() const
 { return (KAAPI_ATOMIC_READ(&_pos_w) == _capacity); }
 

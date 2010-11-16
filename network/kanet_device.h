@@ -43,7 +43,7 @@
 #ifndef _NETWORK_DEVICE_H_
 #define _NETWORK_DEVICE_H_
 
-#include "kaapi.h"
+#include "kanet_types.h"
 
 namespace Net {
 
