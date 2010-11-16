@@ -63,6 +63,18 @@
 */
 namespace ka {
 
+  // --------------------------------------------------------------------
+  typedef kaapi_uint8_t  uint8_t;
+  typedef kaapi_uint16_t uint16_t;
+  typedef kaapi_uint32_t uint32_t;
+  typedef kaapi_uint64_t uint64_t;
+
+  typedef kaapi_int8_t   int8_t;
+  typedef kaapi_int16_t  int16_t;
+  typedef kaapi_int32_t  int32_t;
+  typedef kaapi_int64_t  int64_t;
+
+
 //@{
 
 /** Return an system wide identifier of the type of an expression
@@ -289,13 +301,6 @@ inline Pointer operator-( const unsigned int v, const Pointer& p )
 inline Pointer operator-( const int v, const Pointer& p )
 { Pointer retval = v - p.ptr; return retval; }
 
-
-// -------------------------------------------------------------------------
-/** \name get_hostname
-    \brief Return the canonical name of the machine
-    \ingroup Util
-*/
-extern const std::string& get_hostname();
 
 
 // -------------------------------------------------------------------------

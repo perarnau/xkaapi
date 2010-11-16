@@ -20,9 +20,9 @@
 int SOL;   /* SOL for debug */
 #if !defined(SIZE)
 int SIZEE;                /* SIZE -1 */
-ka::ka_int32_t TOPBIT;    /* 1 << SIZEE */
-ka::ka_int32_t MASK;      /*  MASK = ((1 << (SIZEE+1)) - 1); */
-ka::ka_int32_t SIDEMASK;  /* SIDEMASK = ( ( 1 << SIZEE) | 1); */
+ka::int32_t TOPBIT;    /* 1 << SIZEE */
+ka::int32_t MASK;      /*  MASK = ((1 << (SIZEE+1)) - 1); */
+ka::int32_t SIDEMASK;  /* SIDEMASK = ( ( 1 << SIZEE) | 1); */
 #else
 #define SIZEE     (SIZE-1)
 #define TOPBIT    (1 << SIZEE)
@@ -35,7 +35,7 @@ ka::ka_int32_t SIDEMASK;  /* SIDEMASK = ( ( 1 << SIZEE) | 1); */
  */
 struct res_t
 {
-  ka::ka_uint64_t COUNT2, COUNT4, COUNT8;
+  ka::uint64_t COUNT2, COUNT4, COUNT8;
 
   friend std::ostream& operator<< (std::ostream & out, const res_t & r);
 
@@ -131,17 +131,17 @@ struct board
   {
     for(int i=0; i<SIZEE;++i){ d[i]=b.d[i]; }
   }
-  ka::ka_int32_t &operator[] (int i)
+  ka::int32_t &operator[] (int i)
   {
     return d[i];
   }
 
-  const ka::ka_int32_t &operator[] (int i) const
+  const ka::int32_t &operator[] (int i) const
   {
     return d[i];
   }
 
-  ka::ka_int32_t d[MAXSIZE];
+  ka::int32_t d[MAXSIZE];
 };
 
 /*
@@ -168,14 +168,14 @@ a1::IStream & operator>> (a1::IStream & s_in, board & b)
  ***************************************************************/
 struct param_bt1
 {
-  param_bt1(ka::ka_int32_t b1, board& b)
+  param_bt1(ka::int32_t b1, board& b)
     :BOUND1(b1),BOARD(b),TOTAL()
   {
   }
 
-  void backtrack1 (ka::ka_int32_t y, ka::ka_int32_t left, ka::ka_int32_t down, ka::ka_int32_t right)
+  void backtrack1 (ka::int32_t y, ka::int32_t left, ka::int32_t down, ka::int32_t right)
   {
-    ka::ka_int32_t bitmap = MASK & ~(left | down | right);
+    ka::int32_t bitmap = MASK & ~(left | down | right);
     if (y == SIZEE)
     {
       if (bitmap)
@@ -193,14 +193,14 @@ struct param_bt1
       }
       while (bitmap)
       {
-        ka::ka_int32_t bit=-bitmap & bitmap;
+        ka::int32_t bit=-bitmap & bitmap;
         bitmap ^= BOARD[y] = bit;
         backtrack1 (y + 1, (left | bit) << 1, down | bit, (right | bit) >> 1);
       }
     }
   }
 
-  ka::ka_int32_t BOUND1;
+  ka::int32_t BOUND1;
   board& BOARD;
   res_t TOTAL;
 };
@@ -208,7 +208,7 @@ struct param_bt1
 
 struct param_bt2
 {
-  param_bt2(board& b, ka::ka_int32_t lm, ka::ka_int32_t b1, ka::ka_int32_t eb)
+  param_bt2(board& b, ka::int32_t lm, ka::int32_t b1, ka::int32_t eb)
     :BOARD(b),LASTMASK(lm),BOUND1(b1),ENDBIT(eb), BOUND2(SIZEE-b1)
   {
   }
@@ -220,12 +220,12 @@ struct param_bt2
      */
     if (BOARD[BOUND2] == 1)
     {
-      ka::ka_int32_t own=1;
-      const ka::ka_int32_t *own_val=BOARD.d+1;
-      for (ka::ka_int32_t ptn = 2; own <= SIZEE; own++, ptn <<= 1,own_val++)
+      ka::int32_t own=1;
+      const ka::int32_t *own_val=BOARD.d+1;
+      for (ka::int32_t ptn = 2; own <= SIZEE; own++, ptn <<= 1,own_val++)
       {
-        ka::ka_int32_t bit = 1;
-        for (const ka::ka_int32_t *you = BOARD.d+SIZEE; *you != ptn && *own_val >= bit; you--)
+        ka::int32_t bit = 1;
+        for (const ka::int32_t *you = BOARD.d+SIZEE; *you != ptn && *own_val >= bit; you--)
           bit <<= 1;
         if (*own_val > bit)
           return;
@@ -244,12 +244,12 @@ struct param_bt2
      */
     if (BOARD[SIZEE] == ENDBIT)
     {
-      ka::ka_int32_t own=1;
-      const ka::ka_int32_t *own_val= 1+BOARD.d;
-      for (const ka::ka_int32_t* you = BOARD.d+SIZEE - 1; own <= SIZEE; own++,own_val++, you--)
+      ka::int32_t own=1;
+      const ka::int32_t *own_val= 1+BOARD.d;
+      for (const ka::int32_t* you = BOARD.d+SIZEE - 1; own <= SIZEE; own++,own_val++, you--)
       {
-        ka::ka_int32_t bit = 1;
-        for (ka::ka_int32_t ptn = TOPBIT; ptn != *you && *own_val >= bit; ptn >>= 1)
+        ka::int32_t bit = 1;
+        for (ka::int32_t ptn = TOPBIT; ptn != *you && *own_val >= bit; ptn >>= 1)
           bit <<= 1;
         if (*own_val > bit)
           return;
@@ -268,12 +268,12 @@ struct param_bt2
 
     if (BOARD[BOUND1] == TOPBIT)
     {
-      ka::ka_int32_t own=1;
-      const ka::ka_int32_t *own_val= 1+BOARD.d;
-      for (ka::ka_int32_t ptn = TOPBIT >> 1; own <= SIZEE; own++,own_val++, ptn >>= 1)
+      ka::int32_t own=1;
+      const ka::int32_t *own_val= 1+BOARD.d;
+      for (ka::int32_t ptn = TOPBIT >> 1; own <= SIZEE; own++,own_val++, ptn >>= 1)
       {
-        ka::ka_int32_t bit = 1;
-        for (const ka::ka_int32_t *you = BOARD.d; *you != ptn && *own_val >= bit; you++)
+        ka::int32_t bit = 1;
+        for (const ka::int32_t *you = BOARD.d; *you != ptn && *own_val >= bit; you++)
           bit <<= 1;
         if (*own_val > bit)
           return;
@@ -284,9 +284,9 @@ struct param_bt2
     ++TOTAL.COUNT8;
   }
 
-    void backtrack2 (ka::ka_int32_t y, ka::ka_int32_t left, ka::ka_int32_t down, ka::ka_int32_t right)
+    void backtrack2 (ka::int32_t y, ka::int32_t left, ka::int32_t down, ka::int32_t right)
     {
-      ka::ka_int32_t bitmap = MASK & ~(left | down | right);
+      ka::int32_t bitmap = MASK & ~(left | down | right);
       if (y == SIZEE) {
         if ( bitmap && !(bitmap & LASTMASK) )
         {
@@ -310,7 +310,7 @@ struct param_bt2
       }
       while (bitmap)
       {
-        ka::ka_int32_t bit = -bitmap & bitmap;
+        ka::int32_t bit = -bitmap & bitmap;
         bitmap ^= BOARD[y] = bit;
         backtrack2( y+1, (left | bit) << 1, down | bit,
             (right | bit) >> 1);
@@ -320,10 +320,10 @@ struct param_bt2
   board& BOARD;
   res_t TOTAL;
 
-  ka::ka_int32_t LASTMASK;
-  ka::ka_int32_t BOUND1;
-  ka::ka_int32_t ENDBIT;
-  ka::ka_int32_t BOUND2;
+  ka::int32_t LASTMASK;
+  ka::int32_t BOUND1;
+  ka::int32_t ENDBIT;
+  ka::int32_t BOUND2;
 };
 
 
@@ -335,13 +335,13 @@ struct param_bt2
  ***********************************************************************/
 
 struct Task_bt2: ka::Task<9>::Signature<
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
   board,
   ka::W<res_t>
 > {};
@@ -350,13 +350,13 @@ template<>
 struct TaskBodyCPU<Task_bt2>  {
   void operator()(
       ka::Thread* thread,
-      ka::ka_int32_t y, 
-      ka::ka_int32_t left, 
-      ka::ka_int32_t down, 
-      ka::ka_int32_t right, 
-      ka::ka_int32_t LASTMASK, 
-      ka::ka_int32_t BOUND1, 
-      ka::ka_int32_t ENDBIT, 
+      ka::int32_t y, 
+      ka::int32_t left, 
+      ka::int32_t down, 
+      ka::int32_t right, 
+      ka::int32_t LASTMASK, 
+      ka::int32_t BOUND1, 
+      ka::int32_t ENDBIT, 
       board BOARD, 
       ka::pointer_w<res_t> a1TOTAL
   )
@@ -369,7 +369,7 @@ struct TaskBodyCPU<Task_bt2>  {
     }
     else
     {
-      ka::ka_int32_t bitmap = MASK & ~(left | down | right);
+      ka::int32_t bitmap = MASK & ~(left | down | right);
 
       if (y < BOUND1)
       {
@@ -382,7 +382,7 @@ struct TaskBodyCPU<Task_bt2>  {
         ka::pointer<res_t> a1TOTALc = thread->Alloca<res_t>();
         do
         {
-          ka::ka_int32_t bit=-bitmap & bitmap;
+          ka::int32_t bit=-bitmap & bitmap;
           bitmap ^= BOARD[y] = bit;
           ka::pointer<res_t> a1TOTALt = thread->Alloca<res_t>();
           thread->Spawn<Task_bt2>() (1+y, (left | bit) << 1, down | bit,(right | bit) >> 1,LASTMASK, BOUND1,ENDBIT,BOARD,a1TOTALt);
@@ -396,11 +396,11 @@ struct TaskBodyCPU<Task_bt2>  {
 
 
 struct Task_bt1: ka::Task<7>::Signature<
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
-  ka::ka_int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
+  ka::int32_t,
   board,
   ka::W<res_t>
 > {};
@@ -410,11 +410,11 @@ template<>
 struct TaskBodyCPU<Task_bt1> {
   void operator()(
       ka::Thread* thread,
-      ka::ka_int32_t y, 
-      ka::ka_int32_t left, 
-      ka::ka_int32_t down, 
-      ka::ka_int32_t right, 
-      ka::ka_int32_t BOUND1, 
+      ka::int32_t y, 
+      ka::int32_t left, 
+      ka::int32_t down, 
+      ka::int32_t right, 
+      ka::int32_t BOUND1, 
       board BOARD, 
       ka::pointer_w<res_t> a1TOTAL
   )
@@ -427,7 +427,7 @@ struct TaskBodyCPU<Task_bt1> {
     }
     else
     {
-      ka::ka_int32_t bitmap = MASK & ~(left | down | right);
+      ka::int32_t bitmap = MASK & ~(left | down | right);
       if (y < BOUND1)
       {
         bitmap |= 2;
@@ -438,7 +438,7 @@ struct TaskBodyCPU<Task_bt1> {
         ka::pointer<res_t> a1TOTALc = thread->Alloca<res_t>();
         do
         {
-          ka::ka_int32_t bit=-bitmap & bitmap;
+          ka::int32_t bit=-bitmap & bitmap;
           bitmap ^= BOARD[y] = bit;
 
           ka::pointer<res_t> a1TOTALt = thread->Alloca<res_t>();
@@ -462,7 +462,7 @@ struct TaskBodyCPU<Task_bt1> {
 
 struct COMMAND(NQueens)
 {
-  void operator () (ka::ka_int32_t , char **)
+  void operator () (ka::int32_t , char **)
   {
     /*
      * Initialize 
@@ -478,9 +478,9 @@ struct COMMAND(NQueens)
      * 1:011111100 
      */
     BOARD[0] = 1;
-    for (ka::ka_int32_t BOUND1 = 2; BOUND1 < SIZEE; BOUND1++)
+    for (ka::int32_t BOUND1 = 2; BOUND1 < SIZEE; BOUND1++)
     {
-      ka::ka_int32_t bit = 1 << BOUND1;
+      ka::int32_t bit = 1 << BOUND1;
       BOARD[1] = bit;
       ka::pointer<res_t> TOTAL = ka::Alloca<res_t>();
       ka::Spawn< Task_bt1 >()(2, (2 | bit) << 1, 1 | bit, bit >> 1, BOUND1, BOARD,  TOTAL);
@@ -490,12 +490,12 @@ struct COMMAND(NQueens)
     /*
      * 0:000001110 
      */
-    ka::ka_int32_t LASTMASK = TOPBIT | 1;
-    ka::ka_int32_t ENDBIT = TOPBIT >> 1;
-    ka::ka_int32_t BOUND1;
+    ka::int32_t LASTMASK = TOPBIT | 1;
+    ka::int32_t ENDBIT = TOPBIT >> 1;
+    ka::int32_t BOUND1;
     for (BOUND1 =1 ; 2 * BOUND1 < SIZEE; BOUND1++)
     {
-      ka::ka_int32_t bit = 1 << BOUND1;
+      ka::int32_t bit = 1 << BOUND1;
       BOARD[0] = bit;
       ka::pointer<res_t> TOTAL = ka::Alloca<res_t>();
       ka::Spawn< Task_bt2 >()(1, bit << 1, bit, bit >> 1, LASTMASK, BOUND1, ENDBIT, BOARD,TOTAL);

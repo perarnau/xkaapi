@@ -56,20 +56,6 @@ DefaultAttribut SetDefault;
 FlagReplyHead ReplyHead;
 FlagReplyTail ReplyTail;
 
-// --------------------------------------------------------------------------
-std::string get_localhost()
-{
-  /* get canonical name from the syscall gethostname */
-  std::string hostname;
-  char buffer[1024];
-  if ( gethostname( buffer, 1024 ) != 0) 
-  {
-    hostname = "localhost";
-  } else {
-   hostname = buffer;
-  }
-  return hostname;
-}
 
 // --------------------------------------------------------------------
 Community::Community( const Community& com )

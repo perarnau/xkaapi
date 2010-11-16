@@ -59,15 +59,15 @@ namespace ka {
   enum { STACK_ALLOC_THRESHOLD = KAAPI_MAX_DATA_ALIGNMENT };  
 
   // --------------------------------------------------------------------
-  typedef kaapi_uint8_t  ka_uint8_t;
-  typedef kaapi_uint16_t ka_uint16_t;
-  typedef kaapi_uint32_t ka_uint32_t;
-  typedef kaapi_uint64_t ka_uint64_t;
+  typedef kaapi_uint8_t  uint8_t;
+  typedef kaapi_uint16_t uint16_t;
+  typedef kaapi_uint32_t uint32_t;
+  typedef kaapi_uint64_t uint64_t;
 
-  typedef kaapi_int8_t   ka_int8_t;
-  typedef kaapi_int16_t  ka_int16_t;
-  typedef kaapi_int32_t  ka_int32_t;
-  typedef kaapi_int64_t  ka_int64_t;
+  typedef kaapi_int8_t   int8_t;
+  typedef kaapi_int16_t  int16_t;
+  typedef kaapi_int32_t  int32_t;
+  typedef kaapi_int64_t  int64_t;
 
   struct kaapi_bodies_t {
     kaapi_bodies_t( kaapi_task_body_t cpu_body, kaapi_task_body_t gpu_body );
@@ -804,7 +804,7 @@ namespace ka {
       - and to convert TypeInTask -> TypeFormal.
   */
   struct Access {
-    Access( const Access& a ) : a(a.a)
+    Access( const Access& access ) : a(access.a)
     { }
     template<typename pointer>
     explicit Access( pointer* p )
@@ -1706,12 +1706,12 @@ namespace ka {
     ThreadGroup() {}
   public:
 
-    ThreadGroup(size_t size) 
-     : _size(size), _created(false)
+    ThreadGroup(size_t sz) 
+     : _size(sz), _created(false)
     {
     }
-    void resize(size_t size)
-    { _size = size; }
+    void resize(size_t sz)
+    { _size = sz; }
     
     size_t size() const
     { return _size; }
@@ -1719,7 +1719,7 @@ namespace ka {
     /* begin to partition task */
     void begin_partition()
     {
-      if (!_created) { kaapi_threadgroup_create( &_threadgroup, _size ); _created = true; }
+      if (!_created) { kaapi_threadgroup_create( &_threadgroup, (kaapi_uint32_t)_size ); _created = true; }
       kaapi_threadgroup_begin_partition( _threadgroup );
       kaapi_set_threadgroup(_threadgroup);
     }
@@ -2011,7 +2011,7 @@ namespace ka {
   template<typename T>
   class ArrayType<1,T> {
   public:
-    void bind( T* addr, size_t d ) { _addr = addr; _dim = d; }
+    void bind( T* a, size_t d ) { _addr = a; _dim = d; }
     T* addr() const { return _addr; }
     size_t count() const { return _dim; }
   protected:
@@ -2022,8 +2022,8 @@ namespace ka {
   template<typename T>
   class ArrayType<2,T> {
   public:
-    void bind( T* addr, size_t l, size_t d1, size_t d2 ) { _addr = addr; _ld = l; _dim1 = d1; _dim2 = d2; }
-    void bind( T* addr, size_t d1, size_t d2 ) { _addr = addr; _ld = d2; _dim1 = d1; _dim2 = d2; }
+    void bind( T* a, size_t l, size_t d1, size_t d2 ) { _addr = a; _ld = l; _dim1 = d1; _dim2 = d2; }
+    void bind( T* a, size_t d1, size_t d2 ) { _addr = a; _ld = d2; _dim1 = d1; _dim2 = d2; }
     T* addr() const { return _addr; }
     size_t count() const { return _dim1*_dim2; }
     size_t dim1() const { return _dim1; }

@@ -71,9 +71,6 @@ void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 
 /**
 */
-
-extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
-
 void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
 {
   /* end with the adapt dummy task -> change body with nop */
