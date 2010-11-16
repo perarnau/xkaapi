@@ -1217,7 +1217,7 @@ extern int kaapi_preemptpoint_before_reducer_call(
     kaapi_stealcontext_t* stc,
     void* arg_for_victim, 
     void* result_data, 
-    int result_size
+    size_t result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
     kaapi_stealcontext_t* stc,

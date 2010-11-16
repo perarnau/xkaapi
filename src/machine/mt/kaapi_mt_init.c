@@ -162,7 +162,7 @@ int kaapi_mt_init(void)
 */
 int kaapi_mt_finalize(void)
 {
-  int i;
+  unsigned int i;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint64_t cnt_tasks;
   kaapi_uint64_t cnt_stealreqok;

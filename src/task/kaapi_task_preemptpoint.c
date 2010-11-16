@@ -50,7 +50,7 @@ int kaapi_preemptpoint_before_reducer_call(
     kaapi_stealcontext_t* stc,
     void* arg_for_victim, 
     void* result_data, 
-    int result_size
+    size_t result_size
 )
 {
   kaapi_taskadaptive_result_t* const ktr = stc->header.ktr;
