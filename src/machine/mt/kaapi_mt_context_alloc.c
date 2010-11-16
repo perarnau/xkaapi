@@ -118,7 +118,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     int err __attribute__((unused)) = errno;
     return 0;
   }
-#if !defined (_WIN32) //VirtualAlloc initializes memory to zero
+#if !defined (_WIN32) /*VirtualAlloc initializes memory to zero*/
   memset(ctxt, 0, k_stacksize );
 #endif
 

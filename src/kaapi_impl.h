@@ -475,7 +475,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 
 /** \ingroup TASK
 */
-//@{
+/**@{ */
 #define kaapi_task_getstate(task)\
       (task)->u.state
 
@@ -537,22 +537,20 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #define kaapi_task_state2int(state)            \
     ((int)(state >> KAAPI_MASK_BODY_SHIFTR))
 
-/** \ingroup TASK
-    Set the body of the task
+/** Set the body of the task
 */
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
 {
   task->u.body = body;
 }
 
-/** \ingroup TASK
-    Get the body of the task
+/** Get the body of the task
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 {
   return kaapi_task_state2body( task->u.state & ~KAAPI_MASK_BODY );
 }
-//@}
+/**@} */
 
 /** \ingroup TASK
     The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
