@@ -429,7 +429,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     - 0010 : the task is terminated. This state if only put for debugging.
 */
 #if (SIZEOF_VOIDP == 4)
-#warning "This code assume that 4 higher bits is available on any function pointer. It was not verify of this configuration"
+#warning "This code assumes that the 4 higher bits is available on any function pointer. It was not verified on this configuration"
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 28)
 #  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 28) /* must be different from term */
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 28)
@@ -1247,6 +1247,11 @@ static inline void kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
   /* synchronize on the kproc lock */
   kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
 }
+
+
+/**
+*/
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
