@@ -92,6 +92,9 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KAAPIXXLIB], [-L\${libdir} -lkaapi++], [kaapi++])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
 
+ACX_LIB_NEW_LIB([KANETLIB], [-L\${libdir} -lkanet -lmpi], [kanet])
+ACX_LIB_ADD_PUBLIC_FLAGS([KANETLIB], [-I\${includedir}])
+
 ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir} -lkastl], [kastl])
 ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
 
@@ -106,6 +109,7 @@ ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KASTLPROGS])
 ACX_LIB_NEW_PRG([ATHAPROGS])
 ACX_LIB_NEW_PRG([KFORTRANPROGS])
+ACX_LIB_NEW_PRG([KANETPROGS])
 
 # add warning flags to the C and C++ compilers
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
@@ -225,6 +229,26 @@ AS_IF([test "x$enable_partitioning" != "xno"],
 )
 AC_SUBST([KAAPI_USE_STATICSCHED])
 AM_CONDITIONAL([KAAPI_TARGET_STATICSCHED],[test x"$KAAPI_USE_STATICSCHED" = x"yes"])
+
+
+# Select compilation of network support as part of the library
+# Default is to compile it
+AC_ARG_ENABLE([network],[AS_HELP_STRING([--disable-network],
+	[Disable to not compile network code, default: enable])]
+)
+AS_IF([test "x$enable_network" != "xno"], 
+  [dnl Do the stuff needed for enabling the feature
+    AC_MSG_NOTICE([Compiling network])
+    KAAPI_USE_NETWORK=yes
+    AC_DEFINE([KAAPI_USE_NETWORK],1,[defined to 1 when compiling with network support])
+  ],
+ 
+  [dnl Do the stuff needed for disable the feature
+    AC_MSG_NOTICE([Do not compile network support])
+  ]
+)
+AC_SUBST([KAAPI_USE_NETWORK])
+AM_CONDITIONAL([KAAPI_TARGET_KANET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
 
 
 dnl ----------------------------------------------------------------
@@ -394,6 +418,8 @@ dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
+ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPILIB])
@@ -410,6 +436,11 @@ ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
+
+ACX_LIB_LINK([KANETPROGS], [KANETLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KANETPROGS],
+	[-I\$(top_srcdir)/network -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/network/libkanet.la \$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
 ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
@@ -437,21 +468,21 @@ AC_SUBST(AM_LDFLAGS)
 
 AC_CONFIG_FILES([
 	Makefile
+	src/misc/kaapi_version.c
+	src/Makefile
 	api/Makefile
 	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kastl/Makefile
 	api/kaapi/Makefile
 	api/fortran/Makefile
+	network/Makefile
 	examples/Makefile
-	src/Makefile
 	tests/static/Makefile
 
 	kaapi.pc
 	kaapi++.pc
 	atha.pc
-	src/misc/kaapi_version.c
-
 ])
 #	kastl.wip/Makefile
 AC_OUTPUT
