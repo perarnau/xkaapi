@@ -24,7 +24,7 @@ include hello.am
 include nqueens.am
 include poisson3D.am
 include branchbound.am
-include ping.am
+include net.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
@@ -36,7 +36,7 @@ USER_MAKEFILES=\
 	nqueens/Makefile \
 	poisson3D/Makefile \
 	branchbound/Makefile\
-	ping/Makefile
+	net/Makefile
 
 TESTS=  
 
