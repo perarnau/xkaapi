@@ -391,10 +391,18 @@ namespace ka {
       throw (RuntimeError,RestartException,ServerException);
 
     static Thread* get_current_thread();
+
     static int getRank();
+
     static void terminate();
 
+
+    /** The global id of this process
+    */
+    static kaapi_uint32_t local_gid;
   public:
+    static int saved_argc;
+    static char** saved_argv;
   };
 
   // --------------------------------------------------------------------
