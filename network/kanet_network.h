@@ -188,6 +188,10 @@ public:
   // -----------------------------------------------------------------------
   //! \name Misc
   // -----------------------------------------------------------------------
+  /** Return the number of known node
+  */
+  int size() const;
+  
   /** Return the url to be broadcast if other node want to connect to this node
   */
   const char* get_urlconnect( ) const

@@ -54,6 +54,30 @@ void Device::service_term(int errocode, ka::GlobalId source, void* buffer, size_
 
 
 // --------------------------------------------------------------------
+void Device::ack_term()
+{
+  int err;
+  kaapi_uint64_t handler[2] = { (kaapi_uint64_t)&Device::service_term, 0 };
+  err = MPI_Send( &handler, 2*sizeof(kaapi_uint64_t), MPI_BYTE, 0, 1, _comm );
+  kaapi_assert(err == MPI_SUCCESS);
+  printf("%i::Send ack term message to:0\n", ka::System::local_gid );
+  fflush(stdout);
+}
+
+
+// --------------------------------------------------------------------
+void* Device::skeleton( void* arg )
+{
+  ka::logfile() << "In " << __PRETTY_FUNCTION__ << std::endl;
+  Device* device = (Device*)arg;
+  device->skel();
+  device->_state.write( Device::S_FINISHED );
+  ka::logfile() << "Out " << __PRETTY_FUNCTION__ << std::endl;
+  return 0;
+}
+
+
+// --------------------------------------------------------------------
 int Device::skel()
 {
   MPI_Status status;
@@ -70,32 +94,51 @@ int Device::skel()
   while (1)
   {
     err = MPI_Recv(&header, 2*sizeof(kaapi_uint64_t), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
     kaapi_assert( (err == MPI_SUCCESS) );
     kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );
 
     /* switch tag: 1 -> AM, 3 -> RW */
     switch (status.MPI_TAG) {
       case 1: /* AM */
-        if (sz_buffer_am < header.am.size)
+        if (header.am.size >0)
         {
-          if (buffer_am !=0) free(buffer_am);
-          buffer_am = malloc( header.am.size );
-          sz_buffer_am = header.am.size;
+          if (sz_buffer_am < header.am.size)
+          {
+            if (buffer_am !=0) free(buffer_am);
+            buffer_am = malloc( header.am.size );
+            sz_buffer_am = header.am.size;
+          }
+          err = MPI_Recv(buffer_am, (int)header.am.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
+          kaapi_assert( (err == MPI_SUCCESS) );
+          kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );
         }
-        err = MPI_Recv(buffer_am, (int)header.am.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
-        kaapi_assert( (err == MPI_SUCCESS) );
-        kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );
         
         /* call the service handler */
         service = (ka::Service_fnc)header.am.handler;
-        if (service == Device::service_term) return 0;
+        if (service == Device::service_term) 
+        {
+          printf("%i::Recv term message from:0\n", ka::System::local_gid,  status.MPI_SOURCE);
+          fflush(stdout);
+          if (ka::System::local_gid ==0)
+          {
+            if (++_ack_term == _wcom_size-1) return 0;
+          }
+          else {
+            ack_term();
+            return 0;
+          }
+        }
         (*service)(0, status.MPI_SOURCE, buffer_am, sz_buffer_am );
         break;
 
       case 2: /* RW */
-        err = MPI_Recv((void*)header.rw.dptr, (int)header.rw.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
-        kaapi_assert(err == MPI_SUCCESS);
-        kaapi_assert(status.MPI_ERROR == MPI_SUCCESS);
+        if (header.rw.size >0)
+        {
+          err = MPI_Recv((void*)header.rw.dptr, (int)header.rw.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
+          kaapi_assert(err == MPI_SUCCESS);
+          kaapi_assert(status.MPI_ERROR == MPI_SUCCESS);
+        }
         break;
 
       default:

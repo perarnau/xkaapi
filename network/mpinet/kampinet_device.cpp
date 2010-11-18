@@ -57,7 +57,8 @@ Device::Device( )
  : ka::Device("mpinet"),
    _comm(MPI_COMM_WORLD),
    _wcom_rank(0),
-   _wcom_size(0)
+   _wcom_size(0),
+   _ack_term(0)
 { 
   _state.write(S_CREATE);
 }
@@ -68,12 +69,10 @@ Device::~Device()
 {
 }
 
-
 // --------------------------------------------------------------------
 int Device::initialize()
 {
   int err;
-
 #if 0 
   err = MPI_Init(&ka::System::saved_argc, (char***)&ka::System::saved_argv);
 #else
@@ -87,6 +86,10 @@ int Device::initialize()
   kaapi_assert( err == MPI_SUCCESS);
   _comm = MPI_COMM_WORLD;    
   _state.write(S_INIT);
+
+  err = pthread_create(&_tid, 0, &Device::skeleton, this);
+  kaapi_assert(err ==0);
+
   return 0;
 }
 
@@ -117,18 +120,33 @@ int Device::commit()
 int Device::terminate()
 {
   int err;
-  _state.write(S_TERM);
+  printf("%i::Device should stop\n", ka::System::local_gid);
+  fflush(stdout);
   
-  for (int i=0; i<_wcom_size; ++i)
+  err = MPI_Barrier(_comm);
+  kaapi_assert(err == MPI_SUCCESS);
+
+  printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
+  fflush(stdout);
+  
+  if (ka::System::local_gid ==0)
   {
-    if (i == ka::System::local_gid) continue;
-    ka::OutChannel* channel = ka::Network::object.get_default_local_route(i);
-    if (channel !=0)
+    for (int i=1; i<_wcom_size; ++i)
     {
+      ka::OutChannel* channel = ka::Network::object.get_default_local_route(i);
+      kaapi_assert( channel != 0 );
       channel->insert_am( &service_term, 0, 0);
       channel->sync();
+      printf("%i::Send term message to:%s\n", ka::System::local_gid,  channel->get_peer_url());
+      fflush(stdout);
     }
   }
+  printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
+  fflush(stdout);
+  
+  err = pthread_join(_tid, 0);
+  kaapi_assert(err ==0);
+  _state.write(S_TERM);
   
   err = MPI_Finalize();
   if (err != MPI_SUCCESS) return EINVAL;

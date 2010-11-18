@@ -300,14 +300,29 @@ std::ostream& Network::print_info( std::ostream& o )
 // --------------------------------------------------------------------
 void Network::dump_info()
 {
-  print_info(std::cout << "Node info:\n"); std::cout << std::endl;
-  print_route(std::cout << "Node routenfo:\n"); std::cout << std::endl;
+  std::ostringstream buff1;
+  print_info(buff1); buff1 << std::endl;
+  
+  std::ostringstream buff2;
+  print_route(buff2); buff2 << std::endl;
+
+  printf("%i::Node info:\n%s\n%i::Node route info:\n%s\n", 
+    ka::System::local_gid, buff1.str().c_str(), 
+    ka::System::local_gid, buff2.str().c_str() 
+  );
+  fflush(stdout);
 }
 
 
 #ifdef MACOSX_EDITOR
 #pragma mark --- misc
 #endif
+// --------------------------------------------------------------------
+int Network::size() const
+{ 
+  return _gid2urls.size();
+}
+
 // --------------------------------------------------------------------
 const char* Network::get_urlconnect( ) const throw (IOError)
 {
@@ -337,7 +352,6 @@ Device* Network::get_device_from_url( const std::string& url_peer ) throw ()
   {
     Device* device = df->create();
     kaapi_assert( device != 0);
-    device->initialize();
     _all_devices.push_back( device );
     _name2device.insert( std::make_pair(device->get_name(), device) );
     return device;

@@ -66,6 +66,7 @@ int OutChannel::terminate() throw()
 void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
 {
   /* */
+//  ka::logfile() << "In " << __PRETTY_FUNCTION__ << " " << last-first << std::endl;
   ka::Instruction* curr = first;
   int err;
   while (curr != last)
@@ -86,26 +87,32 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
 
       case ka::Instruction::INST_AM:
         /* send header: first 2 fields */
-        err = MPI_Send( &curr->i_am.handler, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 1, MPI_COMM_WORLD );
+        err = MPI_Send( &curr->i_am.handler, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 1, _comm );
         kaapi_assert(err == MPI_SUCCESS);
 
         /* send message: pointed by the third field */
         /* here use asynchronous send if available... */
-        err = MPI_Send( (void*)curr->i_am.lptr, (int)curr->i_am.size, MPI_BYTE, _dest, 3, MPI_COMM_WORLD );
-        kaapi_assert(err == MPI_SUCCESS);
+        if (curr->i_am.size >0)
+        {
+          err = MPI_Send( (void*)curr->i_am.lptr, (int)curr->i_am.size, MPI_BYTE, _dest, 3, _comm );
+          kaapi_assert(err == MPI_SUCCESS);
+        }
         if (curr->i_cbk.cbk !=0)
           (*curr->i_cbk.cbk)(err, this, curr->i_cbk.arg);
       break;
 
       case ka::Instruction::INST_RWDMA:
         /* send header: first 2 fields */
-        err = MPI_Send( &curr->i_rw.dptr, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 2, MPI_COMM_WORLD );
+        err = MPI_Send( &curr->i_rw.dptr, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 2, _comm );
         kaapi_assert(err == MPI_SUCCESS);
 
         /* send message: pointed by the third field */
         /* here use remote write op if available... */
-        err = MPI_Send( (void*)curr->i_rw.lptr, (int)curr->i_rw.size, MPI_BYTE, _dest, 3, MPI_COMM_WORLD );
-        kaapi_assert(err == MPI_SUCCESS);
+        if (curr->i_rw.size >0)
+        {
+          err = MPI_Send( (void*)curr->i_rw.lptr, (int)curr->i_rw.size, MPI_BYTE, _dest, 3, _comm );
+          kaapi_assert(err == MPI_SUCCESS);
+        }
 
         if (curr->i_cbk.cbk !=0)
           (*curr->i_cbk.cbk)(err, this, curr->i_cbk.arg);
@@ -113,6 +120,7 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
     };
     ++curr;
   }
+//  ka::logfile() << "In " << __PRETTY_FUNCTION__ << std::endl;
   return;
 }
 

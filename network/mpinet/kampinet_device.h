@@ -103,18 +103,27 @@ protected:
   int skel();
 
   /* */
+  static void* skeleton( void* arg );
+
+  /* */
   static void service_term(int errocode, ka::GlobalId source, void* buffer, size_t size);
-  
+
+  /* */
+  void ack_term();
+
 protected:
   MPI_Comm                  _comm;       ///< the communicator
   int                       _wcom_rank;  ///< my rank
   int                       _wcom_size;  ///< communicator size
   ka::atomic_t<32>          _state;      ///< state of the device
+  volatile int              _ack_term;   ///< On node 0
+  pthread_t                 _tid;        ///< Thread that wait incomming message
   
   enum DeviceState {
     S_CREATE,
     S_INIT,
     S_TERM,
+    S_FINISHED,
     S_ERROR
   };
 }; // -- end class device
