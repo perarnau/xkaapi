@@ -151,7 +151,8 @@ std::ostream& logfile()
 #if defined(KAAPI_USE_IPHONEOS)
   return iphone_out;
 #else
-  kaapi_processor_id_t self = kaapi_get_current_processor()->kid;
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  int self = (kproc == 0 ? -1 : kproc->kid);
   if (Init::on_thread) 
   {
     std::map<kaapi_processor_id_t,std::ofstream*>::iterator curr = fout_per_kprocessor.find(self);
