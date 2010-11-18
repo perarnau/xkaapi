@@ -40,8 +40,11 @@
 ** terms.
 ** 
 */
+#include "kaapi++"
 #include "kampinet_device.h"
 #include "kampinet_channel.h"
+#include "kanet_network.h"
+#include "ka_init.h"
 #include <string.h>
 #include <stdlib.h>
 #include <mpi.h>
@@ -51,8 +54,13 @@ namespace MPINET {
 
 // --------------------------------------------------------------------
 Device::Device( )
- : Net::Device("mpinet")
-{ }
+ : ka::Device("mpinet"),
+   _comm(MPI_COMM_WORLD),
+   _wcom_rank(0),
+   _wcom_size(0)
+{ 
+  _state.write(S_CREATE);
+}
 
 
 // --------------------------------------------------------------------
@@ -64,18 +72,21 @@ Device::~Device()
 // --------------------------------------------------------------------
 int Device::initialize()
 {
-  int argc  = 1;
-  const char* argv[] = {"merde de mpi"};
   int err;
+
+#if 0 
+  err = MPI_Init(&ka::System::saved_argc, (char***)&ka::System::saved_argv);
+#else
   int provided;
-  err= MPI_Init_thread(&argc, (char***)&argv, MPI_THREAD_MULTIPLE, &provided);
+  err= MPI_Init_thread(&ka::System::saved_argc, (char***)&ka::System::saved_argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided != MPI_THREAD_MULTIPLE)
   {
-    printf("****Warning the MPI implementation may not work with multithreaded process\n");
+    std::cerr << "****Warning the MPI implementation may not work with multithreaded process" << std::endl;
   }
-  
-  _openchannel.clear();
-  
+#endif
+  kaapi_assert( err == MPI_SUCCESS);
+  _comm = MPI_COMM_WORLD;    
+  _state.write(S_INIT);
   return 0;
 }
 
@@ -88,6 +99,16 @@ int Device::commit()
   if (err != MPI_SUCCESS) return EINVAL;
   err = MPI_Comm_rank( MPI_COMM_WORLD, &_wcom_rank );
   if (err != MPI_SUCCESS) return EINVAL;
+  
+  /* declare all nodes */
+  for (int i=0; i<_wcom_size; ++i)
+  {
+    std::ostringstream surl;
+    surl << get_name() << ":" << i;
+    ka::Network::object.add_node(i, surl.str().c_str());
+  }
+  
+  ka::Init::set_local_gid( _wcom_rank );
   return 0;
 }
 
@@ -96,7 +117,19 @@ int Device::commit()
 int Device::terminate()
 {
   int err;
-  _openchannel.clear();
+  _state.write(S_TERM);
+  
+  for (int i=0; i<_wcom_size; ++i)
+  {
+    if (i == ka::System::local_gid) continue;
+    ka::OutChannel* channel = ka::Network::object.get_default_local_route(i);
+    if (channel !=0)
+    {
+      channel->insert_am( &service_term, 0, 0);
+      channel->sync();
+    }
+  }
+  
   err = MPI_Finalize();
   if (err != MPI_SUCCESS) return EINVAL;
   return 0;
@@ -107,6 +140,7 @@ int Device::terminate()
 int Device::abort()
 {
   int err;
+  _state.write(S_ERROR);
   err = MPI_Abort( MPI_COMM_WORLD, EINTR );
   if (err != MPI_SUCCESS) return EINVAL;
   return 0;
@@ -114,10 +148,12 @@ int Device::abort()
 
 
 // --------------------------------------------------------------------
-Net::OutChannel* Device::open_channel( const char* url )
+ka::OutChannel* Device::open_channel( const char* url )
 {
   int dest;
   OutChannel* channel;
+  
+  if (_state.read() != S_INIT) return 0;
   
   /* format: mpinet:rank */
   if (url ==0) return 0;
@@ -129,23 +165,19 @@ Net::OutChannel* Device::open_channel( const char* url )
   while (url[i] !=0) if (!isdigit(url[i++])) return 0;
   dest = atoi( url );
   if ((dest <0) || (dest > _wcom_size)) return 0;
-  std::map<int,OutChannel*>::iterator icurr = _openchannel.find(dest);
-  if (icurr != _openchannel.end()) return icurr->second;
+
   channel = new MPINET::OutChannel();
-  if (0 != channel->initialize()) return 0;
-  _openchannel.insert( std::make_pair(dest, channel) );
+  if (channel->initialize(_comm, dest) !=0) return 0;
+  channel->set_device( this );
+
   return channel;
 }
 
 
 // --------------------------------------------------------------------
-int Device::close_channel(Net::OutChannel* ch)
+int Device::close_channel(ka::OutChannel* ch)
 {
   MPINET::OutChannel* channel = dynamic_cast<MPINET::OutChannel*> (ch);
-  std::map<int,OutChannel*>::iterator icurr = _openchannel.find(channel->_dest);
-  if (icurr == _openchannel.end()) return ENOENT;
-  if (icurr->second != channel) return EINVAL;
-  _openchannel.erase( icurr );
   channel->terminate();
   delete channel;
   return 0;

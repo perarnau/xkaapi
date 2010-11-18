@@ -1,7 +1,8 @@
 /*
 ** xkaapi
 ** 
-** Copyright 2010 INRIA.
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
@@ -40,36 +41,65 @@
 ** terms.
 ** 
 */
-#ifndef _KASOCKNET_IOCHANNEL_H
-#define _KASOCKNET_IOCHANNEL_H
+#include <iostream>
+#include "kaapi++" // this is the new C++ interface for Kaapi
+#include "kanet_network.h" // this is the new C++ interface for Kaapi
 
-#include "kanet_channel.h"
-
-namespace SOCKNET {
-
-// -----------------------------------------------------------------------
-/** \name OutChannel
-    \ingroup Net
-    
-    Specialization of OutChannel over TCP/IP.
+/*
 */
-class OutChannel : public ka::OutChannel  {
-public:
-  /** Default constructor
-  */
-  int initialize() throw();
+static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer )
+{
+  char* msg = (char*)buffer;
+  ka::logfile() << ": local_gid:" << ka::System::local_gid << ", receive msg= '" << msg << "'" << std::endl;
+}
+
+
+/* main entry point : Kaapi initialization
+*/
+int main(int argc, char** argv)
+{
+  try {
+    /* Join the initial group of computation : it is defining
+       when launching the program by a1run.
+    */
+    ka::System::join_community( argc, argv );
+    
+    /*
+    */
+    ka::Network::object.initialize();
+    ka::Network::object.commit();
+    
+    /*
+    */
+    ka::Network::object.dump_info();
+    std::cout << "My local_gid is:" << ka::System::local_gid << std::endl << std::flush;    
+
+    if (ka::System::local_gid == 0)
+    {
+      ka::OutChannel* channel = ka::Network::object.get_default_local_route(1);
+      const char* msg = "Ceci est un message de 0";
+      channel->insert_am( service, msg, strlen(msg)+1 );
+      channel->sync();
+    }
+    else {
+      ka::Device* device = ka::Network::object.get_device_from_url( "mpinet:0" );
+      device->skel();
+    }
+    ka::Network::object.dump_info();
+
+    /*
+    */
+    ka::Network::object.terminate();
+
+    /* */
+    ka::System::terminate();
+  }
+  catch (const ka::Exception& E) {
+    ka::logfile() << "Catch : " << E.what() << std::endl;
+  }
+  catch (...) {
+    ka::logfile() << "Catch unknown exception: " << std::endl;
+  }
   
-  /** Destructor
-  */
-  int terminate() throw();
-
-protected:
-  /** Client stub to write message from the InstructionStream
-      An error with an error code is thrown in case of error.
-  */
-  void flush( ka::Instruction* first, ka::Instruction* last );
-};
-
-} // -namespace
-
-#endif // 
+  return 0;
+}

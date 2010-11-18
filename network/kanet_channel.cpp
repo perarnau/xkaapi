@@ -43,11 +43,14 @@
 #include "kanet_channel.h"
 #include <string.h>
 
-namespace Net {
+namespace ka {
 
 // -----------------------------------------------------------------------
 Channel::Channel()
 {
+  /* no peer gid */
+  _peer_gid = -1;
+  _peer_url = 0;
 }
 
 
@@ -75,9 +78,19 @@ int Channel::terminate() throw()
 
 
 // -----------------------------------------------------------------------
+void Channel::set_peer( GlobalId gid, const char* url)
+{
+  kaapi_assert(_peer_url ==0); /* cannot change the peer */
+  kaapi_assert(url !=0); /* cannot set 0 peer */
+  _peer_gid = gid;
+  _peer_url = strdup(url);
+}
+
+// -----------------------------------------------------------------------
 void Channel::set_peer_url( const char* url )
 { 
   kaapi_assert(_peer_url ==0); /* cannot change the peer */
+  kaapi_assert(url !=0); /* cannot set 0 peer */
   _peer_url = strdup(url);
 }
 
@@ -85,6 +98,7 @@ void Channel::set_peer_url( const char* url )
 // -----------------------------------------------------------------------
 int OutChannel::initialize( ) throw()
 {
+  Channel::initialize();
   size_t capacity = (4096-sizeof(OutChannel))/sizeof(Instruction);
   return InstructionStream::initialize(capacity);
 }

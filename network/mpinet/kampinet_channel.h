@@ -44,6 +44,7 @@
 #define _KAMPINET_IOCHANNEL_H
 
 #include "kanet_channel.h"
+#include "kampinet_device.h"
 
 namespace MPINET {
 
@@ -55,11 +56,11 @@ class Device;
     
     Specialization of OutChannel over TCP/IP.
 */
-class OutChannel : public Net::OutChannel  {
+class OutChannel : public ka::OutChannel  {
 public:
   /** Default constructor
   */
-  int initialize() throw();
+  int initialize(MPI_Comm comm, int dest) throw();
   
   /** Destructor
   */
@@ -69,11 +70,11 @@ protected:
   /** Client stub to write message from the InstructionStream
       An error with an error code is thrown in case of error.
   */
-  void flush( Net::Instruction* first, Net::Instruction* last );
+  void flush( ka::Instruction* first, ka::Instruction* last );
   
 private:
   friend class Device;
-
+  MPI_Comm     _comm;
   int          _dest;
 };
 

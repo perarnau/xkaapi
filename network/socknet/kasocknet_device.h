@@ -50,7 +50,7 @@ namespace SOCKNET {
 // --------------------------------------------------------------------
 /** Design Pattern: factory of device over socknet
 */
-class DeviceFactory : public Net::DeviceFactory {
+class DeviceFactory : public ka::DeviceFactory {
 public:
   /** Virtual dstor 
   */
@@ -62,11 +62,11 @@ public:
   
   /** Return a new device
   */
-  Net::Device* create();
+  ka::Device* create();
 
   /** Destroy a created network 
   */
-  void destroy( Net::Device* );
+  void destroy( ka::Device* );
 };
 
 
@@ -74,7 +74,7 @@ public:
 // --------------------------------------------------------------------
 /** \name Channel
 */
-class Device : public Net::Device {
+class Device : public ka::Device {
 public:
   /** Constructor 
   */
@@ -102,11 +102,11 @@ public:
 
   /** 
   */
-  Net::OutChannel* open_channel( const char* url );
+  ka::OutChannel* open_channel( const char* url );
   
   /** 
   */
-  int close_channel( Net::OutChannel* channel);
+  int close_channel( ka::OutChannel* channel);
 
   /** 
   */

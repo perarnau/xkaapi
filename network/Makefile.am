@@ -4,8 +4,8 @@
 ##
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-SUBDIRS= . 
-#socknet mpinet
+SUBDIRS= . mpinet
+#socknet 
 
 if KAAPI_TARGET_KANET
 
@@ -26,6 +26,7 @@ libkanet_la_SOURCES=\
 	kanet_instr.cpp \
 	kanet_channel.cpp \
 	kanet_device.cpp \
+	kanet_network.cpp \
 	$(include_HEADERS)
 
 check_headers_SRC_C=

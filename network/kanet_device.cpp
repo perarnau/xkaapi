@@ -43,8 +43,11 @@
 #include "kanet_device.h" 
 #include <string.h>
 #include <map>
+#include <dlfcn.h>
+#include <iostream>
 
-namespace Net {
+namespace ka {
+
 // --------------------------------------------------------------------
 static std::map<const char*,DeviceFactory*> all_devicefact;
 
@@ -58,9 +61,60 @@ DeviceFactory::~DeviceFactory()
 void DeviceFactory::destroy( Device* dev )
 { 
   if (dev !=0) {
-    dev->terminate();
     delete dev;
   }
+}
+
+// --------------------------------------------------------------------
+int DeviceFactory::register_factory( const char* name, DeviceFactory* df )
+{
+  if (all_devicefact.find(name) != all_devicefact.end()) return EEXIST;
+  all_devicefact.insert( std::make_pair(name, df) );
+  return 0;
+}
+
+
+// --------------------------------------------------------------------
+DeviceFactory* DeviceFactory::resolve_factory( const char* name )
+{
+  std::map<const char*,DeviceFactory*>::const_iterator iterator = all_devicefact.find(name);
+  if (iterator != all_devicefact.end()) 
+    return iterator->second;
+  
+  /* else try to load the shared library */
+  std::ostringstream sh_path;
+  sh_path << "libkadev_" << name;
+#if defined(__APPLE__)
+  sh_path << ".0.dylib";
+#elif defined(__linux__)
+  sh_path << ".so";  
+#else
+#  warning "File extension for shared library should be defined"
+#endif
+  const char* c_sh_path = strdup(sh_path.str().c_str());
+  void* handle = dlopen(c_sh_path, RTLD_NOW);
+  if (handle ==0) 
+  {
+#if defined(KAAPI_DEBUG)
+    std::cerr << "Cannot find shared library with name: '" << c_sh_path << "'"
+              << ", error:" << dlerror() << std::endl;
+#endif 
+    return 0;
+  }
+  
+  /* find the initializer C method and call it */
+  std::ostringstream sh_initializator;
+  sh_initializator << name << "_factory";
+  void* device_init = dlsym( handle, sh_initializator.str().c_str() );
+  if (device_init ==0)
+  {
+    std::cerr << "Device library " << c_sh_path << " does not contain initializator: '" << sh_initializator.str() << std::endl;
+    return 0;
+  }
+  ka::DeviceFactory* (*fnc)() = (ka::DeviceFactory* (*)())device_init;
+  ka::DeviceFactory* df = (*fnc)();
+  register_factory(name, df );
+  return df;
 }
 
 
@@ -76,24 +130,6 @@ Device::Device( const char* name )
 // --------------------------------------------------------------------
 Device::~Device()
 { 
-}
-
-
-// --------------------------------------------------------------------
-int Device::register_factory( const char* name, DeviceFactory* df )
-{
-  if (all_devicefact.find(name) != all_devicefact.end()) return EEXIST;
-  all_devicefact.insert( std::make_pair(name, df) );
-  return 0;
-}
-
-
-// --------------------------------------------------------------------
-DeviceFactory* Device::resolve_factory( const char* name )
-{
-  std::map<const char*,DeviceFactory*>::const_iterator iterator = all_devicefact.find(name);
-  if (iterator == all_devicefact.end()) return 0;
-  return iterator->second;
 }
 
 } // - namespace Net...

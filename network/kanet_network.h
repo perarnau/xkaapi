@@ -43,13 +43,22 @@
 #ifndef _KANETWORK_NETWORK_H_
 #define _KANETWORK_NETWORK_H_
 
-namespace Net {
+#include "ka_error.h"
+#include "kanet_types.h"
+#include "kanet_device.h"
+#include "kanet_channel.h"
+#include <map>
+#include <vector>
+
+namespace ka {
 
 /* Fwd decl
 */
 class Device;
-class IOInstructionStream;
+class InstructionStream;
 class Channel;
+
+
 
 // --------------------------------------------------------------------
 /** Network is the class for network adapter interface.
@@ -64,13 +73,15 @@ class Channel;
     * The peer node for I on node NO1 is 3.
     * The peer node for I on node NO2 is 1.
     * The channel I has an identifier and several channels between NO1 and NO2
-    may exists. The channel is associated to a Net::Device that manage connexion
+    may exists. The channel is associated to a ka::Device that manage connexion
     between node.
     On top of Network and local numbering of nodes, distributed algorithms have
     to be used to provide more convenient numbering. 
-    
-    Default properties:
-    * net.blocsize = <integer>;      // the size in bytes for bloc allocation
+
+
+    A node can communicate to an other node using a OutChannel object. 
+    Using the get_XX_route class of method, the caller can have access to such an
+    OutChannel object.
 */
 class Network {
 public:
@@ -80,7 +91,7 @@ public:
 
   /** Destructor 
   */
-  ~Network();
+  virtual ~Network();
 
   /** \name Network initialilization and termination
   */
@@ -119,101 +130,18 @@ public:
   //@}
 
 
-  // ----------------------------------------------------------------------
-  //! \name Properties and name management
-  // ----------------------------------------------------------------------
-  //@{
-  /** Get the name of the network.
-      This method equivalent to calling 'get_property("name")'.
-  */
-  const std::string& get_name( ) const;
-
-  /** Set the name of the network. 
-      This method equivalent to calling 'set_property("name")'.
-  */
-  const std::string& set_name(const std::string& name );
-  //@}
-
-
   // -----------------------------------------------------------------------
   //! \name Routing
   // -----------------------------------------------------------------------
   //@{
-  /** Typedef
-  */
-  typedef ::Net::NodeInfo NodeInfo;
-  
-  /** iterator over known nodes
-  */
-  typedef std::vector<NodeInfo*>::iterator iterator_node;
-
-  /** iterator over known nodes
-  */
-  typedef std::vector<NodeInfo*>::const_iterator const_iterator_node;
-  
-  /** iterator over declared routes
-  */
-  typedef std::vector<OutChannel*>::iterator iterator_route;
-
-  /** iterator over declared routes
-  */
-  typedef std::vector<OutChannel*>::const_iterator const_iterator_route;
-
-  /** Return the node information from its local identifier
-      The method allocates a new local id for the given node if it is not known.
+  /** Add a new node
+      If the same route exists to this node then it is not added.
+      A same channel may declared as a route to several nodes.
       This method is not reentrant and the Network object may be locked before the invocation.
-      \param lid the local identifier of the node
-      \return the pointer to the node info structure if the node is known or 0
+      \param ni the pointer to the node info structure
+      \param channel the new route to add
   */
-  NodeInfo* localid_to_nodeinfo(ka_uint16_t lid);
-  
-  /** Return the node information from its global identifier
-      This method is not reentrant and the Network object may be locked before the invocation.
-      \param gid the global id of the node
-      \return the pointer to the node info structure if the node is known or 0
-  */
-  NodeInfo* globalid_to_nodeinfo(GlobalId gid);
-
-  /** Return the node information from its global identifier
-   *  This method lock the Network object.
-   *  If not found, try it will ask to the nameserver.
-   *  \param gid the global id of the node
-   *  \return the pointer to the node info structure if the node is known or 0
-   */
-  Network::NodeInfo* resolve_nodeinfo(GlobalId gid);
-  
-  /** Return the cluster object with clustername
-      If the object does not exist allocate it and register it.
-      This method is not reentrant and the Network object may be locked before the invocation.
-      \param clustername the name of the cluster
-      \return the node info of the new added node with a local id
-  */
-  Cluster* resolve_cluster( const std::string& clusterpath );
-
-  /** Register the cluster object with its clusterpath
-      This method is not reentrant and the Network object may be locked before the invocation.
-      \param clusterpath the name of the cluster
-      \return the node info of the new added node with a local id
-  */
-  void register_cluster( Cluster* cluster, const std::string& clusterpath );
-
-  /** Add a new node with its global identifier and url to connect
-      If the global id as already been declared, the return value is the previously delcared node.
-      This method is not reentrant and the Network object may be locked before the invocation.
-      \param gid the global identifier of the new node
-      \param url_peer the url of the added node
-      \return the node info of the new added node with a local id
-  */
-  NodeInfo* add_node(GlobalId gid, const std::string& url_peer, const std::string& cluster);
-
-  /** Del a node from the routing tables
-      The invocation call supress all known route to this node.
-      The channels associated to the routes are not close neither deallocated.
-      The node info data structure should be deallocated using delete.
-      This method is not reentrant and the Network object may be locked before the invocation.
-      \param ni the node info 
-  */
-  void del_node(NodeInfo* ni);
+  void add_node(GlobalId gid, const char* url);
 
   /** Add a route to node
       If the same route exists to this node then it is not added.
@@ -222,98 +150,36 @@ public:
       \param ni the pointer to the node info structure
       \param channel the new route to add
   */
-  void add_route(NodeInfo* ni, OutChannel* channel);
+  void add_route(GlobalId gid, OutChannel* channel);
   
   /** Delete the route to the node info using the channel
       This method is not reentrant and the Network object may be locked before the invocation.
       \param channel the route to del
   */
-  void del_route(NodeInfo* ni, OutChannel* channel);
+  void del_route(GlobalId gid, OutChannel* channel);
   
-  /** Delete all the routes to any node info using the channel
-      This method is not reentrant and the Network object may be locked before the invocation.
-      \param channel the route to del
-  */
-  void del_routes(OutChannel* channel);
-  
-  /** Return the route (channel) to send data to local node identifier
-      This method is reentrant and the Network object is locked during the invocation.
-      \param ni the node info
-      \return a pointer to the default route to reach the node or 0 if route doesnot exist
-  */
-  OutChannel* get_default_local_route( NodeInfo* ni );
-
   /** Return the route (channel) to send data to local node identifier using a specific device
       This method is reentrant and the Network object is locked during the invocation.
-      \param ni the node info
-      \return a pointer to the default route to reach the node or 0 if route doesnot exist
+      \param gid the remote 
+      \return a pointer to the default route to reach the node or 0 if route does not exist
   */
-  OutChannel* get_default_local_route( Device* device, NodeInfo* ni );
+  OutChannel* get_default_local_route( GlobalId gid );
 
   /** Set a channel as a default channel to the destination to the local node identifier
       This method is not reentrant and the Network object may be locked before the invocation.
-      \param ni the node info
+      \param gid the node
       \param ch the default route to define for the node
   */
-  void set_default_local_route( NodeInfo* ni, OutChannel* ch );
-
-  /** open a route to ni using url as connection address
-      May return an existing route.
-      This method is not reentrant and the Network object may be locked before the invocation.
-  */
-  OutChannel* open_route( NodeInfo* ni, const std::string& url );
-
-  /** close a route channel to ni 
-      This method is not reentrant and the Network object may be locked before the invocation.
-  */
-  void close_route( NodeInfo* ni, OutChannel* channel );
-
-  /** close all routes channel to ni 
-      This method is not reentrant and the Network object may be locked before the invocation.
-  */
-  void close_routes( NodeInfo* ni );
-
-  /** return the number of known node including myself
-      This method is reentrant.
-  */
-  size_t count_nodes();
-
-  /** return the iterator over the first known node
-      It is to the responsability of the caller to assure that the iteration 
-      is protected against concurrent modification of the set of node by locking
-      the network object.
-  */
-  iterator_node begin_node();
-
-  /** return the iterator over the first known node
-      It is to the responsability of the caller to assure that the iteration 
-      is protected against concurrent modification of the set of node by locking
-      the network object.
-  */
-  const_iterator_node begin_node() const;
-
-  /** return the iterator over the past-the-last known node
-      It is to the responsability of the caller to assure that the iteration 
-      is protected against concurrent modification of the set of node by locking
-      the network object.
-  */
-  iterator_node end_node();
-
-  /** return the iterator over the past-the-last known node
-      It is to the responsability of the caller to assure that the iteration 
-      is protected against concurrent modification of the set of node by locking
-      the network object.
-  */
-  const_iterator_node end_node() const;
-  
-  /** Print routing nodes information
-  */
-  std::ostream& print_node( std::ostream& o );  
+  void set_default_local_route( GlobalId gid, OutChannel* ch );
 
   /** Print routing routes information
   */
   std::ostream& print_route( std::ostream& o );
   
+  /** Print info about nodes
+  */
+  std::ostream& print_info( std::ostream& o );
+
   /** Dump on std::cout (debug)
   */
   void dump_info();
@@ -324,87 +190,25 @@ public:
   // -----------------------------------------------------------------------
   /** Return the url to be broadcast if other node want to connect to this node
   */
-  const std::string& get_urlconnect( ) const
+  const char* get_urlconnect( ) const
        throw (IOError);
-
-  /** Return the device name of the address
-  */
-  std::string get_devicename_from_url( const std::string& url_peer ) const throw ();
 
   /** Return the device of the address
   */
-  Device* get_device_from_url( const std::string& url_peer ) const throw ();
+  Device* get_device_from_url( const std::string& url_peer ) throw ();
   
-  /** Return default device for a cluster name in a hierarchy
+  /** The network object
   */
-  Device* get_device_for_this_cluster( const std::string& clustername ) const throw();
-   
-  /** Return the identifier of this type of Network used to identify network
-  */
-  ka_uint8_t get_id() const;
+  static Network object;
 
-  /** Flush all channels to all devices
-  */
-  void flush_channels();
-
-  /** Set a new upcall object to forward upcall from network
-      \param new_upcall the new object used to forward upcall
-      \return the previous upcall object
-  */
-  Upcall* set_upcall( Upcall* new_upcall );
-
-  /** Set a new Callback object to forward callback from network
-  \param new_callback the new object used to forward callback
-  \return the previous callback object
-   */
-  Callback* set_callback( Callback* new_callback );
-
-  /** Signal event to the upcall object associated with the network
-      Override the definition of Upcall::signal
-  */  
-  void signal(ComFailure::Code error_no, InChannel* ch, CallStack* cc);
-
-  /** Signal event to the upcall object associated with the network
-      Override the definition of Upcall::signal
-  */  
-  void signal(ComFailure::Code error_no, OutChannel* ch, Header* header);
-
-  /** Method call on the server side when disconnection appears
-      Inherited from Util::Callback
-  */
-  void notify(ComFailure::Code error_no);
-
-  /** Method call on the server side when disconnection appears
-      Inherited from Upcall
-  */
-  void notify(ComFailure::Code error_no, InChannel* ch, CallStack* cc);
-
-  /** Method call on the client side when disconnection appears
-      Inherited from Callback
-  */
-  void notify(ComFailure::Code error_no, OutChannel* ch, Header* header);
-
-  /** Attach an IOInstructionStream to the process of sending message
-  */
-  void attach_iostream( IOInstructionStream* ios );
-
-  /** Deattach an IOInstructionStream from the process of sending message
-  */
-  void deattach_iostream( IOInstructionStream* ios );
-    
-protected:
-  ka_uint8_t                           _nid;              ///< id of the network instance
-  std::string                          _name;             ///< The name of the network
-  Upcall*                              _upcall;           ///< object to forward upcall, default is the network object
-  Callback*                            _callback;         ///< object to forward callback, default is the network object
-  mutable ka_uint16_t                  _next_lid;         ///< next local id for a node
-  mutable std::list<ka_uint16_t>       _free_lid_entries; ///< list of free entries in _known_nodes
-
-  mutable std::vector<NodeInfo*>       _known_nodes;      ///< known nodes from local id
-  mutable size_t                       _count_nodes;      ///< number of nodes
-  mutable std::map<GlobalId,NodeInfo*> _gid2nodes;        ///< global to nodeinfo lookup table
+//protected:
+  typedef std::set<const char*>  ListUrls; 
   
-  Device*                              _default_device;   ///< Default device
+  std::map<GlobalId,ListUrls*>   _gid2urls;       ///< global to list of its url
+  std::map<GlobalId,OutChannel*> _gid2channel;    ///< global to default channel lookup table
+  std::map<std::string,Device*>  _name2device;    ///< map name->device
+  std::vector<Device*>           _all_devices;    ///< all devices
+  Device*                        _default_device; ///< default device
 
   /* somes counters */
 public:  

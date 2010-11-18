@@ -69,7 +69,7 @@ public:
       \param count [in] number of entries in iov
       \return the size of written data
   */
-  ssize_t writev(Net::IOVectEntry* iov, int count );
+  ssize_t writev(ka::IOVectEntry* iov, int count );
 
   /** Write a string
       \param s [in] the string to write
@@ -98,7 +98,7 @@ public:
       \param count [in] number of entries in iov
       \return the size of read data
   */
-  ssize_t readv(Net::IOVectEntry* iov, int count);
+  ssize_t readv(ka::IOVectEntry* iov, int count);
 
   /** Read a string
       \param s [in] the string to read

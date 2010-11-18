@@ -43,35 +43,13 @@
 #ifndef _MPINET_DEVICE_H_
 #define _MPINET_DEVICE_H_
 
-#include "../kanet_device.h"
-#include <map>
+#include "kaapi++"
+#include "kanet_device.h"
+#include <mpi.h>
 
 namespace MPINET {
 
 class OutChannel;
-
-// --------------------------------------------------------------------
-/** Design Pattern: factory of device over mpinet
-*/
-class DeviceFactory : public Net::DeviceFactory {
-public:
-  /** Virtual dstor 
-  */
-  ~DeviceFactory();
-  
-  /** Return the name of the type of created network 
-  */
-  const char* get_name() const;
-  
-  /** Return a new device
-  */
-  Net::Device* create();
-
-  /** Destroy a created network 
-  */
-  void destroy( Net::Device* );
-};
-
 
 
 // --------------------------------------------------------------------
@@ -82,7 +60,7 @@ public:
     A device is dynamicly linked to the process in order to select the right device
     online : more over, if the network is not used, then the code is not loaded.
 */
-class Device : public Net::Device {
+class Device : public ka::Device {
 public:
   /** Constructor 
   */
@@ -110,11 +88,11 @@ public:
 
   /** 
   */
-  Net::OutChannel* open_channel( const char* url );
+  ka::OutChannel* open_channel( const char* url );
   
   /**
   */
-  int close_channel( Net::OutChannel* channel);
+  int close_channel( ka::OutChannel* channel);
 
   /** 
   */
@@ -124,10 +102,21 @@ protected:
   /** Infinite loop to read incomming message */
   int skel();
 
+  /* */
+  static void service_term(int errocode, ka::GlobalId source, void* buffer, size_t size);
+  
 protected:
-  int   _wcom_rank;                       ///< my rank
-  int   _wcom_size;                       ///< communicator size
-  std::map<int,OutChannel*> _openchannel; ///< route to node rank i
+  MPI_Comm                  _comm;       ///< the communicator
+  int                       _wcom_rank;  ///< my rank
+  int                       _wcom_size;  ///< communicator size
+  ka::atomic_t<32>          _state;      ///< state of the device
+  
+  enum DeviceState {
+    S_CREATE,
+    S_INIT,
+    S_TERM,
+    S_ERROR
+  };
 }; // -- end class device
 
 

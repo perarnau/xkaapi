@@ -47,19 +47,24 @@
 
 namespace MPINET {
 
+// --------------------------------------------------------------------
+void Device::service_term(int errocode, ka::GlobalId source, void* buffer, size_t size)
+{
+}
+
 
 // --------------------------------------------------------------------
 int Device::skel()
 {
   MPI_Status status;
   union {
-    Net::RWInstruction rw;
-    Net::AMInstruction am;
+    ka::RWInstruction rw;
+    ka::AMInstruction am;
   } header;
   void*          buffer_am = 0;
   kaapi_uint64_t sz_buffer_am = 0;
 
-  Net::Service_fnc service = 0;
+  ka::Service_fnc service = 0;
   int err;
   
   while (1)
@@ -77,17 +82,18 @@ int Device::skel()
           buffer_am = malloc( header.am.size );
           sz_buffer_am = header.am.size;
         }
-        err = MPI_Recv(buffer_am, header.am.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
+        err = MPI_Recv(buffer_am, (int)header.am.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
         kaapi_assert( (err == MPI_SUCCESS) );
         kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );
         
         /* call the service handler */
-        service = (Net::Service_fnc)header.am.handler;
+        service = (ka::Service_fnc)header.am.handler;
+        if (service == Device::service_term) return 0;
         (*service)(0, status.MPI_SOURCE, buffer_am, sz_buffer_am );
         break;
 
       case 2: /* RW */
-        err = MPI_Recv((void*)header.rw.dptr, header.rw.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
+        err = MPI_Recv((void*)header.rw.dptr, (int)header.rw.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);
         kaapi_assert(err == MPI_SUCCESS);
         kaapi_assert(status.MPI_ERROR == MPI_SUCCESS);
         break;

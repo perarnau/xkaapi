@@ -59,7 +59,7 @@ int OutChannel::terminate() throw()
 
 
 // -----------------------------------------------------------------------
-void OutChannel::flush( Net::Instruction* first, Net::Instruction* last )
+void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
 {
   return;
 }

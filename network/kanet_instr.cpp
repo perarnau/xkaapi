@@ -6,7 +6,6 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** xavier.besseron@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -45,13 +44,13 @@
 #include "kaapi_impl.h"
 #include "kanet_instr.h"
 
-namespace Net {
+namespace ka {
 
 // -----------------------------------------------------------------------
 InstructionStream::InstructionStream() 
  : _start(0), _last(0), _capacity(0)
 {
-  KAAPI_ATOMIC_WRITE(&_pos_w, 0 );
+  _pos_w.write( 0 );
 }
 
 // -----------------------------------------------------------------------
@@ -67,7 +66,7 @@ int InstructionStream::initialize(size_t capacity) throw()
   _start    = new Instruction[capacity];
   _last     = _start + capacity;
   _capacity = (kaapi_int32_t)capacity;
-  KAAPI_ATOMIC_WRITE(&_pos_w, 0 );
+  _pos_w.write( 0 );
   _pos_r = 0;
   _tosend._state = SB_FREE;
   _tosend._start = new Instruction[capacity];;
@@ -82,7 +81,7 @@ int InstructionStream::terminate() throw()
 { 
   if (_start !=0) delete [] _start;
   _start = _last = 0;
-  KAAPI_ATOMIC_WRITE(&_pos_w, 0);
+  _pos_w.write( 0);
 
   return 0;
 }
@@ -137,8 +136,9 @@ redo:
   /* here _tosend is free, flush all message from start to _pos_w */
 
   /* reset current buffer: the last op code with reset the _pos_w field ! */
-  kaapi_int32_t pos_w = KAAPI_ATOMIC_READ(&_pos_w);
+  kaapi_int32_t pos_w = _pos_w.read();
   _tosend._state = SB_POSTED;
+  _tosend._pos_w = pos_w;
   _tosend.swap( *this );
   _pos_r = pos_w;
   kaapi_sched_unlock(&_lock);
@@ -147,6 +147,7 @@ redo:
   _tosend._pos_r = 0;
   _tosend._pos_w = 0;
   _tosend._state = SB_FREE;
+  
   kaapi_sched_unlock(&_lock);
 }
 

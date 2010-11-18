@@ -45,7 +45,9 @@
 
 #include "kanet_instr.h"
 
-namespace Net {
+namespace ka {
+
+class Device;
 
 // --------------------------------------------------------------------------
 /** \name Channel
@@ -67,6 +69,10 @@ public:
   */
   const char* get_peer_url() const;
   
+  /** Return the attached device
+  */
+  Device* get_device();
+
 protected:
   /** Cstor
   */
@@ -86,15 +92,26 @@ protected:
     
   /** Set the global id of the peer node
   */
+  void set_peer( GlobalId gid, const char* url);
+
+  /** Set the global id of the peer node
+  */
   void set_peer_globalid( GlobalId gid);
 
   /** Set the url of the peer node
   */
   void set_peer_url( const char* url );
   
-protected:
+  /** Set the attached device
+  */
+  void set_device(Device* dev);
+
+  friend class Network;
+
+protected:  
   char*        _peer_url;      /* url of the peer node */
   GlobalId     _peer_gid;      /* global identifier of the peer node */
+  Device*      _device;        /* device that manage this route */
 };
 
 
@@ -120,19 +137,6 @@ protected:
 };
 
 
-// -----------------------------------------------------------------------
-/** \name InChannel
-    \brief 
-    \ingroup Net
-*/
-class InChannel : virtual public Channel {
-public:
-  /** Server stub to read message from a device.
-      The call should call do_call on the callstack object in order to invoke the services
-  */
-  virtual int skel( ) =0;
-};
-
 
 /*
  * inline definition
@@ -146,6 +150,11 @@ inline void Channel::set_peer_globalid( GlobalId gid)
 inline const char* Channel::get_peer_url() const
 { return _peer_url; }
 
+inline Device* Channel::get_device()
+{ return _device; }
+
+inline void Channel::set_device(Device* dev)
+{ _device = dev; }
 
 } // -namespace
 

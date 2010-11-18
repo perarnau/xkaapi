@@ -171,7 +171,7 @@ doit_again:
 
 
 // --------------------------------------------------------------------------
-ssize_t SocketClient::writev( Net::IOVectEntry* iov, int countiov )
+ssize_t SocketClient::writev( ka::IOVectEntry* iov, int countiov )
 {
   if (!good()) return 0;
   if (countiov ==0) return 0;
@@ -321,7 +321,7 @@ doit_again:
 
 
 // --------------------------------------------------------------------------
-ssize_t SocketClient::readv(Net::IOVectEntry* iov, int countiov)
+ssize_t SocketClient::readv(ka::IOVectEntry* iov, int countiov)
 {
   if (!good()) return 0;
   if (countiov ==0) return 0;

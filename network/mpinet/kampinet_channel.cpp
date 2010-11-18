@@ -46,8 +46,11 @@
 namespace MPINET {
 
 // -----------------------------------------------------------------------
-int OutChannel::initialize() throw()
+int OutChannel::initialize(MPI_Comm comm, int dest) throw()
 {
+  ka::OutChannel::initialize();
+  _comm = comm;
+  _dest = dest;
   return 0;
 }
 
@@ -60,48 +63,48 @@ int OutChannel::terminate() throw()
 
 
 // -----------------------------------------------------------------------
-void OutChannel::flush( Net::Instruction* first, Net::Instruction* last )
+void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
 {
   /* */
-  Net::Instruction* curr = first;
+  ka::Instruction* curr = first;
   int err;
   while (curr != last)
   {
     switch (curr->type) {
-      case Net::Instruction::INST_VOID:
+      case ka::Instruction::INST_VOID:
         break;
 
-      case Net::Instruction::INST_NOP:
+      case ka::Instruction::INST_NOP:
         if (curr->i_cbk.cbk !=0)
           (*curr->i_cbk.cbk)(0, this, curr->i_cbk.arg);
         break;
 
-      case Net::Instruction::INST_WB:
+      case ka::Instruction::INST_WB:
         if (curr->i_cbk.cbk !=0)
           (*curr->i_cbk.cbk)(0, this, curr->i_cbk.arg);
         break;
 
-      case Net::Instruction::INST_AM:
+      case ka::Instruction::INST_AM:
         /* send header: first 2 fields */
         err = MPI_Send( &curr->i_am.handler, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 1, MPI_COMM_WORLD );
         kaapi_assert(err == MPI_SUCCESS);
 
         /* send message: pointed by the third field */
         /* here use asynchronous send if available... */
-        err = MPI_Send( curr->i_am.lptr, curr->i_am.size, MPI_BYTE, _dest, 3, MPI_COMM_WORLD );
+        err = MPI_Send( (void*)curr->i_am.lptr, (int)curr->i_am.size, MPI_BYTE, _dest, 3, MPI_COMM_WORLD );
         kaapi_assert(err == MPI_SUCCESS);
         if (curr->i_cbk.cbk !=0)
           (*curr->i_cbk.cbk)(err, this, curr->i_cbk.arg);
       break;
 
-      case Net::Instruction::INST_RWDMA:
+      case ka::Instruction::INST_RWDMA:
         /* send header: first 2 fields */
         err = MPI_Send( &curr->i_rw.dptr, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 2, MPI_COMM_WORLD );
         kaapi_assert(err == MPI_SUCCESS);
 
         /* send message: pointed by the third field */
         /* here use remote write op if available... */
-        err = MPI_Send( curr->i_rw.lptr, curr->i_rw.size, MPI_BYTE, _dest, 3, MPI_COMM_WORLD );
+        err = MPI_Send( (void*)curr->i_rw.lptr, (int)curr->i_rw.size, MPI_BYTE, _dest, 3, MPI_COMM_WORLD );
         kaapi_assert(err == MPI_SUCCESS);
 
         if (curr->i_cbk.cbk !=0)

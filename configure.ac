@@ -231,26 +231,6 @@ AC_SUBST([KAAPI_USE_STATICSCHED])
 AM_CONDITIONAL([KAAPI_TARGET_STATICSCHED],[test x"$KAAPI_USE_STATICSCHED" = x"yes"])
 
 
-# Select compilation of network support as part of the library
-# Default is to compile it
-AC_ARG_ENABLE([network],[AS_HELP_STRING([--disable-network],
-	[Disable to not compile network code, default: enable])]
-)
-AS_IF([test "x$enable_network" != "xno"], 
-  [dnl Do the stuff needed for enabling the feature
-    AC_MSG_NOTICE([Compiling network])
-    KAAPI_USE_NETWORK=yes
-    AC_DEFINE([KAAPI_USE_NETWORK],1,[defined to 1 when compiling with network support])
-  ],
- 
-  [dnl Do the stuff needed for disable the feature
-    AC_MSG_NOTICE([Do not compile network support])
-  ]
-)
-AC_SUBST([KAAPI_USE_NETWORK])
-AM_CONDITIONAL([KAAPI_TARGET_KANET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
-
-
 dnl ----------------------------------------------------------------
 dnl Checks for header files.
 dnl ----------------------------------------------------------------
@@ -412,6 +392,32 @@ AC_SUBST([KAAPI_CUDA])
 AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_CUDA" = x"c"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 
+dnl -----------------------------------------------------------------------
+dnl The "--enable-network"
+dnl -----------------------------------------------------------------------
+# Select compilation of network support as part of the library
+# Default is to compile it
+AC_ARG_ENABLE([network],[AS_HELP_STRING([--disable-network],
+	[Disable to not compile network code, default: enable])]
+)
+AS_IF([test "x$enable_network" != "xno"], 
+  [dnl Do the stuff needed for enabling the feature
+    AC_MSG_NOTICE([Compiling network])
+    KAAPI_USE_NETWORK=yes
+    AC_DEFINE([KAAPI_USE_NETWORK],1,[defined to 1 when compiling with network support])
+  ],
+ 
+  [dnl Do the stuff needed for disable the feature
+    AC_MSG_NOTICE([Do not compile network support])
+  ]
+)
+AC_SUBST([KAAPI_USE_NETWORK])
+AM_CONDITIONAL([KAAPI_TARGET_KANET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
+## ICI il faudrait preciser le reseau dans le commande --with-network=...
+## sinon choix par défaut
+AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
+
+
 
 dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
@@ -477,6 +483,7 @@ AC_CONFIG_FILES([
 	api/kaapi/Makefile
 	api/fortran/Makefile
 	network/Makefile
+	network/mpinet/Makefile
 	examples/Makefile
 	tests/static/Makefile
 

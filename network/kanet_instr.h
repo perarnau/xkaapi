@@ -44,8 +44,9 @@
 #define _KANETWORK_INSTR_H
 
 #include "kanet_types.h"
+#include "kaapi++"
 
-namespace Net {
+namespace ka {
 
 
 // -----------------------------------------------------------------------
@@ -83,7 +84,7 @@ struct Callback {
 struct RWInstruction {
   kaapi_uint64_t     dptr;  /// remote pointer / displacement where to write
   kaapi_uint64_t     size;  /// size in bytes of the pointed memory
-  void*              lptr;  /// pointer on the local bloc to send
+  const void*        lptr;  /// pointer on the local bloc to send
 };
 
 
@@ -95,7 +96,7 @@ struct RWInstruction {
 struct AMInstruction {
   kaapi_uint64_t     handler;  /// handler of the service (function to call)
   kaapi_uint64_t     size;     /// size in byte of the pointed memory
-  void*              lptr;     /// points on the bloc of data for the AM
+  const void*        lptr;     /// points on the bloc of data for the AM
 };
 
 
@@ -165,7 +166,7 @@ public:
   */
   void insert_rwdma(   
       kaapi_uint64_t     dptr,  /// remote pointer / displacement where to write
-      void*              lptr,  /// pointer on the local bloc to send
+      const void*        lptr,  /// pointer on the local bloc to send
       kaapi_uint32_t     size   /// size in bytes of the pointed memory
   );
 
@@ -174,7 +175,7 @@ public:
   */
   void insert_rwdma(   
       kaapi_uint64_t     dptr,  /// remote pointer / displacement where to write
-      void*              lptr,  /// pointer on the local bloc to send
+      const void*        lptr,  /// pointer on the local bloc to send
       kaapi_uint32_t     size,  /// size in bytes of the pointed memory
       Callback_fnc       cbk,   /// Type of the call back function
       void*              arg    /// The argument of the callback function 
@@ -183,16 +184,16 @@ public:
   /** Insert a AM operation.
   */
   void insert_am(   
-      kaapi_uint64_t     handler,/// handler of the service (function to call)
-      void*              lptr,   /// points on the bloc of data for the AM
+      Service_fnc        handler,/// handler of the service (function to call)
+      const void*        lptr,   /// points on the bloc of data for the AM
       kaapi_uint32_t     size    /// size in byte of the pointed memory
   );
 
   /** Insert a AM operation with call back
   */
   void insert_am(   
-      kaapi_uint64_t     handler,/// handler of the service (function to call)
-      void*              lptr,   /// points on the bloc of data for the AM
+      Service_fnc        handler,/// handler of the service (function to call)
+      const void*        lptr,   /// points on the bloc of data for the AM
       kaapi_uint32_t     size,   /// size in byte of the pointed memory
       Callback_fnc       cbk,    /// Type of the call back function
       void*              arg     /// The argument of the callback function 
@@ -270,9 +271,9 @@ protected:
       std::swap(_last,     is._last);
       std::swap(_pos_r,    is._pos_r);
       kaapi_int32_t pos_w_tmp = _pos_w;
-      _pos_w                  = KAAPI_ATOMIC_READ(&is._pos_w);
+      _pos_w                  = is._pos_w.read();
       kaapi_writemem_barrier();
-      KAAPI_ATOMIC_WRITE(&is._pos_w, pos_w_tmp);
+      is._pos_w.write(pos_w_tmp);
     }
   };
   
@@ -281,7 +282,7 @@ protected:
   Instruction*             _start;      /// first instruction in the buffer
   Instruction*             _last;       /// past the last instruction in the buffer
   kaapi_int32_t            _capacity;   /// capacity of the circular buffer
-  kaapi_atomic_t           _pos_w __attribute__((aligned(64/8))); /// next position for writing an entry in _start
+  ka::atomic_t<32>         _pos_w __attribute__((aligned(64/8))); /// next position for writing an entry in _start
   kaapi_int32_t            _pos_r;      /// next position to read
 };
 
@@ -291,17 +292,17 @@ protected:
  * inline definition
  */
 inline bool InstructionStream::isfull() const
-{ return (KAAPI_ATOMIC_READ(&_pos_w) == _capacity); }
+{ return (_pos_w.read() == _capacity); }
 
 
 inline void InstructionStream::insert_rwdma(   
       kaapi_uint64_t     dptr,
-      void*              lptr,
+      const void*        lptr,
       kaapi_uint32_t     size 
   )
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
   _start[posw].i_rw.dptr = dptr;
   _start[posw].i_rw.lptr = lptr;
@@ -315,14 +316,14 @@ inline void InstructionStream::insert_rwdma(
 
 inline void InstructionStream::insert_rwdma(   
       kaapi_uint64_t     dptr,
-      void*              lptr,
+      const void*        lptr,
       kaapi_uint32_t     size, 
       Callback_fnc       cbk,
       void*              arg 
   )
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
   _start[posw].i_rw.dptr = dptr;
   _start[posw].i_rw.lptr = lptr;
@@ -335,15 +336,15 @@ inline void InstructionStream::insert_rwdma(
 }
 
 inline void InstructionStream::insert_am(   
-      kaapi_uint64_t     handler,
-      void*              lptr,
+      Service_fnc        handler,
+      const void*        lptr,
       kaapi_uint32_t     size
   )
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
-  _start[posw].i_am.handler = handler;
+  _start[posw].i_am.handler = (kaapi_uintptr_t)handler;
   _start[posw].i_am.lptr    = lptr;
   _start[posw].i_am.size    = size;
   _start[posw].i_cbk.cbk    = 0;
@@ -354,17 +355,17 @@ inline void InstructionStream::insert_am(
 }
 
 inline void InstructionStream::insert_am(   
-      kaapi_uint64_t     handler,
-      void*              lptr,
+      Service_fnc        handler,
+      const void*        lptr,
       kaapi_uint32_t     size, 
       Callback_fnc       cbk,
       void*              arg 
   )
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
-  _start[posw].i_am.handler = handler;
+  _start[posw].i_am.handler = (kaapi_uintptr_t)handler;
   _start[posw].i_am.lptr    = lptr;
   _start[posw].i_am.size    = size;
   _start[posw].i_cbk.cbk    = cbk;
@@ -377,7 +378,7 @@ inline void InstructionStream::insert_am(
 inline void InstructionStream::insert_wb()
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
   _start[posw].i_cbk.cbk    = 0;
   _start[posw].i_cbk.arg    = 0;
@@ -392,7 +393,7 @@ inline void InstructionStream::insert_wb(
   )
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
   _start[posw].i_cbk.cbk    = cbk;
   _start[posw].i_cbk.arg    = arg;
@@ -404,7 +405,7 @@ inline void InstructionStream::insert_wb(
 inline void InstructionStream::insert_nop()
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
   _start[posw].i_cbk.cbk    = 0;
   _start[posw].i_cbk.arg    = 0;
@@ -419,7 +420,7 @@ inline void InstructionStream::insert_nop(
   )
 {
   if (isfull()) switch_buffer();
-  kaapi_uint32_t posw = KAAPI_ATOMIC_INCR( &_pos_w ) -1; /* increment (atomic) and get the previous value */
+  kaapi_uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
   kaapi_assert( posw < _last-_start);
   _start[posw].i_cbk.cbk    = cbk;
   _start[posw].i_cbk.arg    = arg;

@@ -45,7 +45,7 @@
 
 #include "kanet_types.h"
 
-namespace Net {
+namespace ka {
 
 // --------------------------------------------------------------------
 /** Fwd decl
@@ -56,6 +56,15 @@ class Device;
 
 // --------------------------------------------------------------------
 /** Design Pattern: factory of network
+    The factory is based on using shared library loaded and unloaded at
+    runtime.
+    The name of the device directly defines the name of the shared library.
+    
+    The device implementation is loaded upon the resolve factory call:
+    - either a factory was registered to the device factory
+    - either the factory was not registered and the runtime will try to
+    load the shared library with name "libkadev_<device name>.so".
+    
 */
 class DeviceFactory {
 public:
@@ -63,18 +72,27 @@ public:
   */
   virtual ~DeviceFactory();
   
-  /** Return the name of the type of created network 
+  /** Return the name of the type of created device 
   */
   virtual const char* get_name() const = 0;
   
-  /** Return a new network 
+  /** Load .so and return a new device 
   */
   virtual Device* create() =0;
 
-  /** Destroy a created network 
+  /** Destroy a created device 
   */
   virtual void destroy( Device* );
 
+  /** Register device factory
+     \retval 0 in case of successful call
+     \retval EEXIST if the name is already bind to a factory
+  */
+  static int register_factory( const char* name, DeviceFactory* df );
+
+  /** Resolve device factory 
+  */
+  static DeviceFactory* resolve_factory( const char* name );
 protected:
 };
 
@@ -128,7 +146,7 @@ public:
   // -----------------------------------------------------------------------
   //@{
   /** Open a channel to a given url
-      \param url the url to the node on which to open channel
+      \param gid of the node on which to open channel
       \return channel to the node or 0 if route cannot be open.
       \see close_channel
   */
@@ -150,19 +168,22 @@ public:
       using this specific device.
   */
   virtual const char* get_urlconnect( ) const = 0;
-
-  /** Register device factory 
+  
+  /** Return the name of the device
   */
-  static int register_factory( const char* name, DeviceFactory* df );
+  const char* get_name() const;
 
-  /** Resolve device factory 
-  */
-  static DeviceFactory* resolve_factory( const char* name );
+  /** Infinite loop to read incomming message */
+  virtual int skel() =0;
 
 protected:
   char  _name[32];             ///< C-name of the device
 }; // -- end class device
 
+
+
+inline const char* Device::get_name() const
+{ return _name; }
 
 } // end namespace 
 #endif 

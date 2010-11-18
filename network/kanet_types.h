@@ -26,13 +26,10 @@
 #include <inttypes.h>
 #endif
 
-namespace Net {
+namespace ka {
 class Channel;
 class OutChannel;
 
-
-// ----------------------------------------------------------------------
-typedef kaapi_uint64_t GlobalId;
 
 // ----------------------------------------------------------------------
 /** \name Protocol definition

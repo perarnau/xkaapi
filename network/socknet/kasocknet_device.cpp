@@ -46,7 +46,7 @@ namespace SOCKNET {
 
 // --------------------------------------------------------------------
 Device::Device( )
- : Net::Device("socknet")
+ : ka::Device("socknet")
 { }
 
 
@@ -84,14 +84,14 @@ int Device::abort()
 }
 
 // --------------------------------------------------------------------
-Net::OutChannel* Device::open_channel( const char* url )
+ka::OutChannel* Device::open_channel( const char* url )
 {
   return 0;
 }
 
 
 // --------------------------------------------------------------------
-int Device::close_channel(Net::OutChannel* channel)
+int Device::close_channel(ka::OutChannel* channel)
 {
   return 0;
 }
