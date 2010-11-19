@@ -7,13 +7,14 @@
 # This file is included by the Makefile.am from upper directory
 # Hence, all paths are relative to the parent (and not current) directory
 
-NET_PRG=ping_xx ping_mt_xx
+NET_PRG=ping_xx ping_mt_xx rdma1
 check_PROGRAMS+=$(NET_PRG)
 all-net: $(NET_PRG)
 
 #For each variation
 ping_xx_SOURCES=net/ping_xx.cpp
 ping_mt_xx_SOURCES=net/ping_mt_xx.cpp
+rdma1_SOURCES=net/rdma1.cpp
 
 ping_xx_CPPFLAGS=$(AM_CPPFLAGS) $(KANETPROGS_BUILD_CPPFLAGS)
 ping_xx_CXXFLAGS=$(AM_CXXFLAGS) $(KANETPROGS_BUILD_CXXFLAGS)
@@ -24,3 +25,9 @@ ping_mt_xx_CPPFLAGS=$(AM_CPPFLAGS) $(KANETPROGS_BUILD_CPPFLAGS)
 ping_mt_xx_CXXFLAGS=$(AM_CXXFLAGS) $(KANETPROGS_BUILD_CXXFLAGS)
 ping_mt_xx_LDFLAGS =$(AM_LDFLAGS)  $(KANETPROGS_BUILD_LDFLAGS)
 ping_mt_xx_LDADD   =$(LIBS)        $(KANETPROGS_BUILD_LIBS)
+
+
+rdma1_CPPFLAGS=$(AM_CPPFLAGS) $(KANETPROGS_BUILD_CPPFLAGS)
+rdma1_CXXFLAGS=$(AM_CXXFLAGS) $(KANETPROGS_BUILD_CXXFLAGS)
+rdma1_LDFLAGS =$(AM_LDFLAGS)  $(KANETPROGS_BUILD_LDFLAGS)
+rdma1_LDADD   =$(LIBS)        $(KANETPROGS_BUILD_LIBS)
