@@ -505,16 +505,17 @@ typedef int (*kaapi_task_splitter_t)(
   struct kaapi_request_t* /*array*/, 
   void* /*userarg*/);
 
-/** Task reducer
+/** Reducer called on the victim side
     \ingroup TASK
 */
-typedef int (*kaapi_task_reducer_t) (
-#ifdef __cplusplus
- kaapi_stealcontext_t* /* stc */,
- void* arg_thief, ...
-#endif
-);
+typedef int (*kaapi_victim_reducer_t)
+(struct kaapi_stealcontext_t*, void* arg_thief, void*, size_t, void*);
 
+/** Reducer called on the thief side
+    \ingroup TASK
+*/
+typedef int (*kaapi_thief_reducer_t)
+(struct kaapi_taskadaptive_result_t*, void* arg_from_victim, void*);
 
 /** \ingroup ADAPT
     Adaptive stealing header. The header is the
@@ -1186,18 +1187,29 @@ extern int kaapi_remove_finishedthief(
       int (*)( stc, void* thief_arg, void* thief_result, size_t thief_ressize, ... )
    where ... is the same extra arguments passed to kaapi_preempt_nextthief.
 */
-#define kaapi_preempt_thief( stc, tr, arg_to_thief, reducer, ... )	\
-({									\
-  int __res = 0;							\
-  if (kaapi_preempt_thief_helper(stc, (tr), arg_to_thief)) \
-  {									\
-    if (!kaapi_is_null((void*)reducer))					\
-      __res = ((kaapi_task_reducer_t)reducer)(stc, (tr)->arg_from_thief, (tr)->data, (tr)->size_data, ##__VA_ARGS__);	\
-    kaapi_deallocate_thief_result(tr);					\
-  }									\
-  __res;								\
-})
 
+static inline int kaapi_preempt_thief
+(kaapi_stealcontext_t* sc,
+ kaapi_taskadaptive_result_t* ktr,
+ void* thief_arg,
+ kaapi_victim_reducer_t reducer,
+ void* reducer_arg)
+{
+  int res = 0;
+
+  if (kaapi_preempt_thief_helper(sc, ktr, thief_arg))
+  {
+    if (reducer)
+    {
+      res = reducer
+	(sc, ktr->arg_from_thief, ktr->data, ktr->size_data, reducer_arg);
+    }
+
+    kaapi_deallocate_thief_result(ktr);
+  }
+
+  return res;
+}
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request into the task
@@ -1223,16 +1235,8 @@ extern int kaapi_preemptpoint_before_reducer_call(
     size_t result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
-    kaapi_stealcontext_t* stc,
-    int reducer_retval 
+    kaapi_stealcontext_t* stc
 );
-
-/* checking for null on a macro param
- */
-static inline int kaapi_is_null(void* p)
-{
-  return p == 0;
-}
 
 /** \ingroup ADAPTIVE
     Test if the current execution should process preemt request to the current task
@@ -1245,21 +1249,30 @@ static inline int kaapi_is_null(void* p)
     \retval 0 else
 */
 
-typedef int (*kaapi_ppreducer_t) (
-#ifdef __cplusplus
- kaapi_taskadaptive_result_t*,
- void* arg_from_victim, ...
-#endif
-);
+static inline int kaapi_preemptpoint
+(kaapi_stealcontext_t* sc,
+ kaapi_thief_reducer_t reducer,
+ void* victim_arg,
+ void* result_data,
+ size_t result_size,
+ void* reducer_arg)
+{
+  int res = 0;
 
-#define kaapi_preemptpoint( stc, reducer, arg_for_victim, result_data, result_size, ...)\
-  ( kaapi_preemptpoint_isactive(stc) ? \
-    kaapi_preemptpoint_before_reducer_call(stc, arg_for_victim, result_data, result_size),  \
-        kaapi_preemptpoint_after_reducer_call( stc, \
-        ( kaapi_is_null((void*)reducer) ? 0: ((kaapi_ppreducer_t)(reducer))( stc->header.ktr, stc->header.ktr->arg_from_victim, ##__VA_ARGS__))) \
-    : \
-        0\
-  )
+  if (kaapi_preemptpoint_isactive(sc)) /* unlikely */
+  {
+    res = 1; /* tell the thief about reduction */
+
+    kaapi_preemptpoint_before_reducer_call
+      (sc, victim_arg, result_data, result_size);
+    if (reducer)
+      reducer(sc->header.ktr, sc->header.ktr->arg_from_victim, reducer_arg);
+
+    kaapi_preemptpoint_after_reducer_call(sc);
+  }
+
+  return res;
+}
 
 /** Begin critical section with respect to steal operation
     \ingroup TASK

@@ -1444,7 +1444,7 @@ namespace ka {
 
     /* signal the victim that it can get */
     void ack_preemption()
-    { kaapi_preemptpoint_after_reducer_call(&_sc, 0); }
+    { kaapi_preemptpoint_after_reducer_call(&_sc); }
     
     /* thief iterator: forward iterator */
     struct thief_iterator {

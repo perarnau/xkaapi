@@ -86,8 +86,7 @@ int kaapi_preemptpoint_before_reducer_call(
 /**
 */
 int kaapi_preemptpoint_after_reducer_call( 
-    kaapi_stealcontext_t* stc,
-    int reducer_retval __attribute__((unused))
+    kaapi_stealcontext_t* stc
 )
 {
   kaapi_taskadaptive_result_t* const ktr = stc->header.ktr;
