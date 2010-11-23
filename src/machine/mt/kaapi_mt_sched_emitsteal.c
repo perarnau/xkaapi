@@ -73,6 +73,7 @@ redo_select:
   if (unlikely(err !=0)) goto redo_select;
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) return 0;
+  kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
   /* mark current processor as stealing */
   kproc->issteal = 1;
@@ -109,7 +110,7 @@ acquire:
   if (KAAPI_ATOMIC_DECR(&victim.kproc->lock) ==0) goto enter;
   while (KAAPI_ATOMIC_READ(&victim.kproc->lock) <=0)
   {
-    if (kaapi_reply_test( reply ) ) 
+    if (kaapi_reply_test( reply )) 
       goto return_value;
     kaapi_slowdown_cpu();
   }
@@ -138,7 +139,8 @@ enter:
     kaapi_bitmap_value_t savebitmap;
     int count_req = kaapi_listrequest_iterator_count(&lri);
     kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
-    savebitmap = (kaapi_bitmap_value_t)(lri.bitmap | (1UL << lri.idcurr));
+    kaapi_bitmap_value_copy( &savebitmap, &lri.bitmap );
+    kaapi_bitmap_value_set( &savebitmap, lri.idcurr );
     for (i=0; i<count_req; ++i)
     {
       int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );

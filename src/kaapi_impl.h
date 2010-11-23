@@ -248,11 +248,11 @@ extern kaapi_rtparam_t kaapi_default_param;
 */
 enum kaapi_reply_status_t {
   KAAPI_REQUEST_S_POSTED = 0,
-  KAAPI_REPLY_S_NOK,
-  KAAPI_REPLY_S_TASK,
-  KAAPI_REPLY_S_TASK_FMT,
-  KAAPI_REPLY_S_THREAD,
-  KAAPI_REPLY_S_ERROR
+  KAAPI_REPLY_S_NOK      = 1,
+  KAAPI_REPLY_S_TASK     = 2,
+  KAAPI_REPLY_S_TASK_FMT = 3,
+  KAAPI_REPLY_S_THREAD   = 4,
+  KAAPI_REPLY_S_ERROR    = 5
 };
 
 
@@ -435,7 +435,6 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 28)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 28)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 28)
-#  define KAAPI_MASK_BODY_STATE   (0xEUL << 28)
 #  define KAAPI_MASK_BODY         (0xFUL << 28)
 #  define KAAPI_MASK_BODY_SHIFTR   28UL
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
@@ -455,7 +454,6 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 60UL)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 60UL)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 60UL)
-#  define KAAPI_MASK_BODY_STATE   (0xEUL << 60UL)
 #  define KAAPI_MASK_BODY         (0xFUL << 60UL)
 #  define KAAPI_MASK_BODY_SHIFTR   60UL
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR64_ORIG(a, v)
@@ -601,6 +599,7 @@ static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaap
 */
 static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uintptr_t state )
 {
+  kaapi_assert_debug( (task->u.state & KAAPI_MASK_BODY ) == 0 );
   kaapi_uintptr_t retval = KAAPI_ATOMIC_ANDPTR_ORIG(&task->u.state, state);
   return retval;
 }
@@ -904,15 +903,25 @@ static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
   th->esfp       = th->stackframe;
   th->sfp->sp    = th->sfp->pc  = th->task; /* empty frame */
   th->sfp->sp_data = (char*)&th->data;     /* empty frame */
-  th->affinity   = ~0UL;
+  th->affinity[0] = ~0UL;
+  th->affinity[1] = ~0UL;
   th->unstealable= 0;
   return 0;
 }
 
-static inline int kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
+/**
+*/
+static inline void kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
 {
-  th->affinity = 0;
-  return 0;
+  th->affinity[0] = 0;
+  th->affinity[1] = 0;
+}
+
+/**
+*/
+static inline int kaapi_thread_emptyaffinity(kaapi_thread_context_t* th)
+{
+  return (th->affinity[0] == 0) && (th->affinity[1] == 0);
 }
 
 /**
@@ -920,16 +929,34 @@ static inline int kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
 static inline int kaapi_thread_setaffinity(kaapi_thread_context_t* th, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
-  th->affinity |= ((kaapi_affinity_t)1)<<kid;
+  if (kid <64)
+    th->affinity[0] |= ((kaapi_uint64_t)1)<<kid;
+  else
+    th->affinity[1] |= ((kaapi_uint64_t)1)<< (kid-64);
   return 0;
 }
 
+/**
+*/
+static inline int kaapi_thread_copyaffinity(kaapi_affinity_t* dest, kaapi_affinity_t* src )
+{
+  (*dest)[0] = (*src)[0];
+  (*dest)[1] = (*src)[1];
+  return 0;
+}
+
+
 /** Return non 0 iff th as affinity with kid
 */
-static inline int kaapi_thread_hasaffinity(unsigned long affinity, kaapi_processor_id_t kid )
+static inline int kaapi_thread_hasaffinity(kaapi_affinity_t* affinity, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
-  return (int)(affinity & ((kaapi_affinity_t)1)<<kid);
+  if (kid <64)
+    return ( (*affinity)[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
+  else
+    return ( (*affinity)[1] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)(kid-64)) != (kaapi_uint64_t)0;
+
+//OLD  return (affinity & ((kaapi_affinkaapi_uint64_tity_t)1)<< (kaapi_affinkaapi_uint64_tity_t)kid) != (kaapi_affkaapi_uint64_tinity_t)0;
 }
 
 /**

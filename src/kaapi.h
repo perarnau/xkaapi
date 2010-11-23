@@ -98,7 +98,7 @@ typedef int32_t   kaapi_int32_t;
 typedef int64_t   kaapi_int64_t;
 
 typedef kaapi_uint32_t kaapi_processor_id_t;
-typedef kaapi_uint64_t kaapi_affinity_t;
+typedef kaapi_uint64_t kaapi_affinity_t[2];
 typedef kaapi_uint32_t kaapi_format_id_t;
 typedef kaapi_uint32_t kaapi_offset_t;
 typedef int            kaapi_gpustream_t;
@@ -1826,7 +1826,7 @@ static inline int __kaapi_isaligned_const(const volatile void* a, int byte)
     __KAAPI_ISALIGNED_CONST_ATOMIC(a, (a)->_counter)
 
 #  define KAAPI_ATOMIC_WRITE(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
+    __KAAPI_ISALIGNED_ATOMIC( (a), (a)->_counter = value)
 
 #  define BIDON_ONEARG(a,b)  a,b
 #  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \

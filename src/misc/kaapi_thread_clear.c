@@ -58,7 +58,8 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
   thread->_next      = 0;
   thread->_prev      = 0;
-  thread->affinity   = ~0UL;
+  thread->affinity[0]= ~0UL;
+  thread->affinity[1]= ~0UL;
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */
   thread->wcs        = 0;
