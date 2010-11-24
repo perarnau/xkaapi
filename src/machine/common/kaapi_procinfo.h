@@ -42,22 +42,11 @@
 ** terms.
 ** 
 */
-
-
 #ifndef KAAPI_PROCINFO_H_INCLUDED
 # define KAAPI_PROCINFO_H_INCLUDED
 
 
-#if 0 /* unit */
-typedef unsigned int kaapi_processor_id_t;
-#define KAAPI_MAX_PROCESSOR 32
-#define KAAPI_PROC_TYPE_CPU 0
-#define KAAPI_PROC_TYPE_GPU 1
-/* #else */
-/* #include "kaapi_impl.h" */
-#endif /* unit */
-
-
+/* ========================================================================== */
 typedef struct kaapi_procinfo
 {
   struct kaapi_procinfo* next;
@@ -73,6 +62,7 @@ typedef struct kaapi_procinfo
 } kaapi_procinfo_t;
 
 
+/* ========================================================================== */
 typedef struct kaapi_procinfo_list
 {
   unsigned int count;
@@ -81,11 +71,28 @@ typedef struct kaapi_procinfo_list
 } kaapi_procinfo_list_t;
 
 
+/** Allocate new procinfo data structure
+*/
 kaapi_procinfo_t* kaapi_procinfo_alloc(void);
+
+/** Deallocate new procinfo data structure
+*/
 void kaapi_procinfo_free(kaapi_procinfo_t*);
+
+/** Initialize the list of proc info
+*/
 void kaapi_procinfo_list_init(kaapi_procinfo_list_t*);
+
+/** Free a list of proc info
+*/
 void kaapi_procinfo_list_free(kaapi_procinfo_list_t*);
+
+/** Add new element into the list of proc info
+*/
 void kaapi_procinfo_list_add(kaapi_procinfo_list_t*, kaapi_procinfo_t*);
+
+/** Initialize the list of proc info from list of parameter
+*/
 int kaapi_procinfo_list_parse_string
 (kaapi_procinfo_list_t*, const char*, unsigned int, unsigned int);
 

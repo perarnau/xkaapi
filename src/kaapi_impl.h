@@ -259,7 +259,7 @@ enum kaapi_memory_type_t {
 /**
 */
 typedef struct kaapi_memory_t {
-    kaapi_affinity_t who;
+    kaapi_cpuset_t who;
     size_t           size;
     short            type;
 } kaapi_memory_t;
@@ -291,8 +291,8 @@ typedef struct kaapi_rtparam_t {
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
   unsigned int		         use_affinity;                    /* use cpu affinity */
-  unsigned int		         kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
-  unsigned int		         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
+  unsigned short	         kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
+  unsigned short	         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
   kaapi_hierarchy_t        memory;                          /* memory hierarchy */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   kaapi_uint64_t           startuptime;                     /* time at the end of kaapi_init */
@@ -409,7 +409,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
   kaapi_atomic_t                 lock __attribute__((aligned (KAAPI_CACHE_LINE)));           /** ??? */ 
-  kaapi_affinity_t               affinity;       /* bit i == 1 -> can run on procid i */
+  kaapi_cpuset_t               affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
@@ -970,24 +970,25 @@ static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
 
 /**
 */
-static inline void kaapi_affinity_clear(kaapi_affinity_t* affinity )
+static inline void kaapi_cpuset_clear(kaapi_cpuset_t* affinity )
 {
   (*affinity)[0] = 0;
   (*affinity)[1] = 0;
 }
 
+
 /**
 */
-static inline int kaapi_affinity_empty(kaapi_affinity_t* affinity)
+static inline int kaapi_cpuset_empty(kaapi_cpuset_t* affinity)
 {
   return ((*affinity)[0] == 0) && ((*affinity)[1] == 0);
 }
 
 /**
 */
-static inline int kaapi_affinity_set(kaapi_affinity_t* affinity, kaapi_processor_id_t kid )
+static inline int kaapi_cpuset_set(kaapi_cpuset_t* affinity, kaapi_processor_id_t kid )
 {
-  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
     (*affinity)[0] |= ((kaapi_uint64_t)1)<<kid;
   else
@@ -997,7 +998,7 @@ static inline int kaapi_affinity_set(kaapi_affinity_t* affinity, kaapi_processor
 
 /**
 */
-static inline int kaapi_affinity_copy(kaapi_affinity_t* dest, kaapi_affinity_t* src )
+static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, kaapi_cpuset_t* src )
 {
   (*dest)[0] = (*src)[0];
   (*dest)[1] = (*src)[1];
@@ -1007,9 +1008,9 @@ static inline int kaapi_affinity_copy(kaapi_affinity_t* dest, kaapi_affinity_t* 
 
 /** Return non 0 iff th as affinity with kid
 */
-static inline int kaapi_affinity_has(kaapi_affinity_t* affinity, kaapi_processor_id_t kid )
+static inline int kaapi_cpuset_has(kaapi_cpuset_t* affinity, kaapi_processor_id_t kid )
 {
-  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
     return ( (*affinity)[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
   else

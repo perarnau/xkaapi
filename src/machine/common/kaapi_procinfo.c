@@ -57,7 +57,7 @@
  ':'
  proc_index : num
  num        : [ '0' '9' ]+
- */
+*/
 
 struct procset_parser
 {
@@ -259,7 +259,6 @@ static int parse_proc_expr(procset_parser_t* parser)
     else if (!(parser->proc_bits[index_low] & PROC_BIT_IS_USABLE))
     {
       /* proc not previously usable */
-      
       parser->proc_bits[index_low] |= PROC_BIT_IS_USABLE;
       parser->proc_binding[index_low] = index_binding;
       

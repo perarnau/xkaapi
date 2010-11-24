@@ -56,13 +56,13 @@ int kaapi_hw_init()
 
 /*
 */
-static void kaapi_hwcpuset2affinity( kaapi_affinity_t* affinity, int nproc, hwloc_cpuset_t cpuset )
+static void kaapi_hwcpuset2affinity( kaapi_cpuset_t* affinity, int nproc, hwloc_cpuset_t cpuset )
 {
-  kaapi_affinity_clear( affinity );
+  kaapi_cpuset_clear( affinity );
   for (int i=0; i<nproc; ++i)
   {
     if (hwloc_cpuset_isset(cpuset, i))
-      kaapi_affinity_set(affinity, i);
+      kaapi_cpuset_set(affinity, i);
   }
 }
 
@@ -85,12 +85,12 @@ static size_t kaapi_hw_countcousin( hwloc_obj_t obj )
 }
 
 
-static const char* kaapi_affinity2string( int nproc, kaapi_affinity_t* affinity )
+static const char* kaapi_affinity2string( int nproc, kaapi_cpuset_t* affinity )
 {
   static char string[128];
   for (int i=0; i<nproc; ++i)
   {
-    if (kaapi_affinity_has(affinity, i))
+    if (kaapi_cpuset_has(affinity, i))
       string[i] = '1';
     else
       string[i] = '0';
@@ -177,7 +177,10 @@ int kaapi_hw_init()
   root = hwloc_get_obj_by_depth(topology, 0, 0);
   kaapi_default_param.syscpucount = hwloc_cpuset_weight( root->cpuset );
 
-  /* count the depth of the memory hierarchy */
+  /* count the depth of the memory hierarchy 
+     In order to have lower index in kaapi_default_param.memory
+     that represents first cache level.
+  */
   memdepth = 0;
   for (depth = 0; depth < topodepth; depth++) 
   {
@@ -196,7 +199,7 @@ int kaapi_hw_init()
       ++memdepth;
     }
   }
-  printf("Memory depth: %i\n", memdepth );
+
   kaapi_default_param.memory.depth  = memdepth;
   kaapi_default_param.memory.levels = (kaapi_hierarchy_one_level_t*)calloc( memdepth, sizeof(kaapi_hierarchy_one_level_t) );
   for (depth = 0; depth < topodepth; depth++) 
@@ -266,41 +269,6 @@ int kaapi_hw_init()
     printf("\n");
   }
   
-  
-  for (depth = 0; depth < topodepth; depth++) 
-  {
-    obj = hwloc_get_obj_by_depth(topology, depth, 0);
-    printf("Object depth: %i, index: 0, has type:%s\n", depth, get_human_type(obj) );
-    printf("\t->");
-    /* iterate over the same sub group of sibling objects */
-    while (obj !=0)
-    {
-      get_cpuset_snprintf( string, 128, 4, obj->cpuset );
-      printf("[logical index:%i, type:%s cpuset: %s] ", obj->logical_index, get_human_type(obj), string);
-      if (obj->next_sibling !=0) 
-         obj = obj->next_sibling;
-      else
-      {
-        obj = obj->next_cousin;
-        if (obj !=0) printf(" || ");
-      }
-    }
-    printf("\n");
-
-#if 0
-    printf("*** Objects at level %d\n", depth);
-    for (i = 0; 
-         i < hwloc_get_nbobjs_by_depth(topology, depth); 
-         i++) 
-    {
-      hwloc_obj_snprintf(string, sizeof(string), topology,
-                 hwloc_get_obj_by_depth(topology, depth, i),
-                 "#", 0);
-      printf("Index %u: %s\n", i, string);
-    }
-#endif
-  }
-
   return 0;
 }
 

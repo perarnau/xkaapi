@@ -73,7 +73,7 @@
 #include "../../memory/kaapi_mem.h"
 
 /* ========================================================================== */
-
+struct kaapi_procinfo_t;
 
 
 /* ============================= Documentation ============================ */
@@ -130,7 +130,7 @@ typedef struct kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_cell_ptr_t;
 */
 typedef struct kaapi_wsqueuectxt_cell_t {
   kaapi_atomic_t               state;      /* 0: in the list, 1: out the list */
-  kaapi_affinity_t             affinity;   /* bit i == 1 -> can run on procid i */
+  kaapi_cpuset_t             affinity;   /* bit i == 1 -> can run on procid i */
   kaapi_thread_context_t*      thread;     /* */
   kaapi_wsqueuectxt_cell_ptr_t next;       /* double link list */
   kaapi_wsqueuectxt_cell_ptr_t prev;       /* shared with thief, used to link in free list */
@@ -484,6 +484,9 @@ typedef struct kaapi_processor_t {
   kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
+
+  /* proc info */
+  const struct kaapi_procinfo_t* kpi;
 
   /* workload */
   kaapi_atomic_t	         workload;
