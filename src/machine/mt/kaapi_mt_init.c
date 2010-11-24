@@ -53,6 +53,7 @@
 */
 kaapi_uint32_t volatile kaapi_count_kprocessors = 0;
 
+
 /*
 */
 kaapi_processor_t** kaapi_all_kprocessors = 0;
@@ -107,8 +108,15 @@ int kaapi_mt_init(void)
   kaapi_isterm = 0;
   version = get_kaapi_version();
   
-  /* initialize the kprocessor key */
+  /* build the memory hierarchy
+     update kaapi_default_param data structure fields:
+      * kid2cpu
+      * cpu2kid
+      * memory
+   */
+  kaapi_hw_init();
 
+  /* initialize the kprocessor key */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_current_thread_key = 0;
   kaapi_current_threadgroup_key = 0;

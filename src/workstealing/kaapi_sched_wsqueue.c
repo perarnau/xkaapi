@@ -117,7 +117,7 @@ int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* th
   kaapi_wsqueuectxt_t* ls = &kproc->lsuspend;
   kaapi_wsqueuectxt_cell_t* cell = kaapi_wsqueuectxt_alloccell(ls);
 
-  kaapi_thread_copyaffinity(&cell->affinity, &thread->affinity);
+  kaapi_affinity_copy(&cell->affinity, &thread->affinity);
   cell->thread   = 0;
 
   cell->thread   = thread;

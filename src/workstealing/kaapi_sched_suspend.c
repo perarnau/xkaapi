@@ -76,7 +76,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
      without thread user context switch, only this activation frame could wakeup
      the thread
   */
-  kaapi_assert_debug( kaapi_thread_emptyaffinity( thread_condition ) );
+  kaapi_assert_debug( kaapi_affinity_empty( &thread_condition->affinity ) );
 
   /* put context in the list of suspended contexts: no critical section with respect of thieves */
   kaapi_setcontext(kproc, 0);

@@ -375,6 +375,7 @@ if test x"$KAAPI_FORTRAN" = x"f"; then
 fi
 
 
+
 dnl -----------------------------------------------------------------------
 dnl The "--with-cuda"
 dnl -----------------------------------------------------------------------
@@ -383,14 +384,30 @@ KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
   [cuda], [], [cuda.h], [cuDeviceGetProperties], [
 dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
-    KAAPI_CUDA=c
   ],
   [
   ],
   [])
-AC_SUBST([KAAPI_CUDA])
-AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_CUDA" = x"c"])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
+
+
+
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-hwloc"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([HWloc], [hwloc], [HWLOC], [no], [KAAPI_USE_HWLOC],
+  [build with HWloc support for discover hardware topology],
+  [hwloc], [], [hwloc.h], [hwloc_topology_init], [
+dnl    CUDA is there
+    AC_DEFINE([KAAPI_USE_HWLOC],1,[Use with HWLoc])
+  ],
+  [
+  ],
+  [])
+AM_CONDITIONAL([KAAPI_TARGET_HWLOC],[test x"$KAAPI_USE_HWLOC" = x"yes"])
+ACX_LIB_LINK([KAAPILIB],[HWLOC])
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-network"
@@ -423,15 +440,19 @@ dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
-ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
-ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
+dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
+dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [HWLOC])
+dnl ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
+dnl ACX_LIB_LINK([ATHALIB], [PRIVATE], [HWLOC])
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
+dnl ACX_LIB_LINK([KASTLLIB], [PRIVATE], [HWLOC])
 ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
+dnl ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [HWLOC])
 
 ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
