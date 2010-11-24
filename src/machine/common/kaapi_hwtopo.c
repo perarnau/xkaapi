@@ -117,7 +117,7 @@ const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t affinity )
   kaapi_assert( nproc < 128 );
   for (int i=0; i<nproc; ++i)
   {
-    if (kaapi_cpuset_has(affinity, i))
+    if (kaapi_cpuset_has(affinity, nproc-i-1))
       string[i] = '1';
     else
       string[i] = '0';
@@ -219,12 +219,18 @@ int kaapi_hw_init()
     obj = hwloc_get_obj_by_depth(topology, depth, 0);
     if (obj->type == HWLOC_OBJ_MACHINE)
     {
+/*
       if (obj->arity >1) { ++memdepth; countmachine = 1; }
       else countmachine = 0;
+*/
+      ++memdepth;
     }
     else if (obj->type == HWLOC_OBJ_NODE)
     {
+/*
       if (!countmachine) ++memdepth;
+*/
+      ++memdepth;
     } 
     else if (obj->type == HWLOC_OBJ_CACHE)
     {
@@ -239,8 +245,9 @@ int kaapi_hw_init()
     obj = hwloc_get_obj_by_depth(topology, depth, 0);
     if (obj->type == HWLOC_OBJ_MACHINE)
     {
-      if (obj->arity ==1) 
+ //     if (obj->arity ==1) 
       {
+printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memory);
         --memdepth;
         ncpu = hwloc_cpuset_weight( obj->cpuset );
         kaapi_default_param.memory.levels[memdepth].count = 1;
@@ -250,13 +257,16 @@ int kaapi_hw_init()
         kaapi_default_param.memory.levels[memdepth].affinity[0].mem_size = obj->memory.total_memory;
         kaapi_default_param.memory.levels[memdepth].affinity[0].type = KAAPI_MEM_NODE;
         kaapi_hwcpuset2affinity(&kaapi_default_param.memory.levels[memdepth].affinity[0].who, KAAPI_MAX_PROCESSOR, obj->cpuset );
-        countmachine = 1; 
+        countmachine = 0; 
       }
-      else countmachine = 0;
+/*
+      else 
+        countmachine = obj->memory.total_memory;
+*/
     }
     else if ((obj->type == HWLOC_OBJ_NODE) || (obj->type == HWLOC_OBJ_CACHE))
     {
-      if ((!countmachine) || (obj->type == HWLOC_OBJ_CACHE))
+ //     if ((countmachine ==0) || (obj->type == HWLOC_OBJ_CACHE))
       {
         --memdepth;
         ncousin = (int)kaapi_hw_countcousin( obj );
@@ -303,9 +313,10 @@ int kaapi_hw_init()
     {
       if (kaapi_cpuset_intersect(kaapi_default_param.memory.levels[depth].affinity[i].who, kaapi_default_param.usedcpu))
       {
-        printf("[size:%u, cpuset:%s, type:%u]   ", 
-          (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
-          kaapi_cpuset2string(kaapi_default_param.syscpucount, kaapi_default_param.memory.levels[depth].affinity[i].who),
+        const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kaapi_default_param.memory.levels[depth].affinity[i].who);
+        printf("[size:%lu, cpuset:'%s', %lu, type:%u]   ", 
+          (unsigned long)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
+          str, strlen(str),
           (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].type
         );
       }
