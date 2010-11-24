@@ -112,7 +112,7 @@ int kaapi_setconcurrency(void)
 
   for (; kpi != 0; ++kid, kpi = kpi->next)
   {
-    kpi->kid = kid;
+    kaapi_assert(kpi->kid == kid);
 
     if (kid != 0)
     {

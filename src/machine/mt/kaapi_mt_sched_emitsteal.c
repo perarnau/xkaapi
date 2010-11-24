@@ -54,7 +54,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_thread_t*	        self_thread;
   kaapi_reply_t*          reply;
   kaapi_listrequest_t*    victim_hlr;
-  int                     i, err;
+  int                     i,err;
   kaapi_listrequest_iterator_t lri;
   
   kaapi_assert_debug( kproc !=0 );
