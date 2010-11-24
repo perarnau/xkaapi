@@ -47,8 +47,11 @@
 */
 static void kaapi_hw_standardinit()
 {
-  bzero( kaapi_default_param.kid2cpu, sizeof(kaapi_default_param.kid2cpu) );
-  bzero( kaapi_default_param.cpu2kid, sizeof(kaapi_default_param.cpu2kid) );
+  for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  {
+    kaapi_default_param.kid2cpu[i]= -1;
+    kaapi_default_param.cpu2kid[i]= -1;
+  }
   bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
 
   kaapi_cpuset_clear(&kaapi_default_param.usedcpu);

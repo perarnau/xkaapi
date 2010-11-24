@@ -387,6 +387,7 @@ int kaapi_procinfo_list_parse_string
   procset_parser_t parser;
   unsigned int count;
   unsigned int i;
+  unsigned int kid = 0;
   
   /* parse string */
   init_parser(&parser, procset_str, max_count);
@@ -412,7 +413,7 @@ int kaapi_procinfo_list_parse_string
     if (proc_type == KAAPI_PROC_TYPE_CPU)
     {
       kaapi_cpuset_set( &kaapi_default_param.usedcpu, kpi->bound_cpu );
-      kpi->kid = i;
+      kpi->kid = kid++;
       kaapi_default_param.kid2cpu[kpi->kid] = kpi->bound_cpu;
       kaapi_default_param.cpu2kid[kpi->bound_cpu] = kpi->kid;
     }
