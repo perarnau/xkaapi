@@ -98,7 +98,7 @@ typedef int32_t   kaapi_int32_t;
 typedef int64_t   kaapi_int64_t;
 
 typedef kaapi_uint32_t kaapi_processor_id_t;
-typedef kaapi_uint64_t kaapi_affinity_t[2];
+typedef kaapi_uint64_t kaapi_cpuset_t[2];
 typedef kaapi_uint32_t kaapi_format_id_t;
 typedef kaapi_uint32_t kaapi_offset_t;
 typedef int            kaapi_gpustream_t;

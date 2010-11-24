@@ -73,7 +73,7 @@
 #include "../../memory/kaapi_mem.h"
 
 /* ========================================================================== */
-
+struct kaapi_procinfo_t;
 
 
 /* ============================= Documentation ============================ */
@@ -130,7 +130,7 @@ typedef struct kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_cell_ptr_t;
 */
 typedef struct kaapi_wsqueuectxt_cell_t {
   kaapi_atomic_t               state;      /* 0: in the list, 1: out the list */
-  kaapi_affinity_t             affinity;   /* bit i == 1 -> can run on procid i */
+  kaapi_cpuset_t             affinity;   /* bit i == 1 -> can run on procid i */
   kaapi_thread_context_t*      thread;     /* */
   kaapi_wsqueuectxt_cell_ptr_t next;       /* double link list */
   kaapi_wsqueuectxt_cell_ptr_t prev;       /* shared with thief, used to link in free list */
@@ -445,6 +445,24 @@ typedef struct kaapi_listrequest_t {
 #endif /* type of request */
 
 
+/** Compact coding of topology.
+    For each processor, we store the hierarchy of the
+    mapping. Assuming that the machine has 4 memory hierarchy
+    level, the processor kid has the following information.
+    neighbors[0]: neighbor kprocessors sharing L1 cache
+    neighbors[1]: neighbor kprocessors sharing L2 cache
+    neighbors[2]: neighbor kprocessors sharing L3 cache
+    neighbors[3]: neighbor kprocessors sharing node
+    neighbors[4]: neighbor kprocessors sharing the machine
+*/
+typedef struct kaapi_neighbor_t {
+  short                 count;
+  kaapi_cpuset_t        cpuset;
+  kaapi_processor_id_t* neighbors;
+} kaapi_neighbor_t;
+
+
+
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
     The kid is a system wide identifier. In the current version it only contains a local counter value
@@ -474,6 +492,11 @@ typedef struct kaapi_processor_t {
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
+  
+  /* hierachical information of other kprocessor */
+  int                      cpuid;                         /* os index of the bound cpu */
+  int                      hlevel_depth;                  /* hierarchy depth, 0 = L1 cache */
+  kaapi_neighbor_t*        hlevel;                        /* hierarchy */
 
   /* performance register */
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
@@ -484,6 +507,9 @@ typedef struct kaapi_processor_t {
   kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
+
+  /* proc info */
+  const struct kaapi_procinfo_t* kpi;
 
   /* workload */
   kaapi_atomic_t	         workload;
@@ -504,7 +530,7 @@ typedef struct kaapi_processor_t {
 /*
 */
 struct kaapi_procinfo;
-extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo*);
+extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_t*);
 
 
 #if defined(KAAPI_USE_NUMA)

@@ -179,7 +179,7 @@ extern int kaapi_hw_init();
 /* Fwd declaration 
 */
 struct kaapi_listrequest_t;
-struct kaapi_procinfo_list;
+struct kaapi_procinfo_list_t;
 
 /* ============================= Processor list ============================ */
 
@@ -187,15 +187,20 @@ struct kaapi_procinfo_list;
 /** kaapi_mt_register_procs
     register the kprocs for mt architecture.
 */
-extern int kaapi_mt_register_procs(struct kaapi_procinfo_list*);
+extern int kaapi_mt_register_procs(struct kaapi_procinfo_list_t*);
 
 /* ========================================================================== */
 /** kaapi_cuda_register_procs
     register the kprocs for cuda architecture.
 */
 #if defined(KAAPI_USE_CUDA)
-extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
+extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list_t*);
 #endif
+
+/* ========================================================================== */
+/** free list
+*/
+extern void kaapi_procinfo_list_free(struct kaapi_procinfo_list_t*);
 
 
 /* ============================= A VICTIM ============================ */
@@ -232,23 +237,6 @@ extern void kaapi_init_basicformat(void);
 */
 extern int kaapi_setup_param( int argc, char** argv );
 
-
-/** Compact coding of topology.
-    For each processor, we store the hierarchy of the
-    mapping. Assuming that the machine has 4 memory hierarchy
-    level, the processor kid has the following information.
-    neighbors[0]: neighbor kprocessors sharing L1 cache
-    neighbors[1]: neighbor kprocessors sharing L2 cache
-    neighbors[2]: neighbor kprocessors sharing L3 cache
-    neighbors[3]: neighbor kprocessors sharing node
-    neighbors[4]: neighbor kprocessors sharing the machine
-*/
-typedef struct kaapi_neighbor_t {
-  short count;
-  kaapi_processor_id_t* neighbors;
-} kaapi_neighbor_t;
-
-
 /**
 */
 enum kaapi_memory_type_t {
@@ -258,17 +246,19 @@ enum kaapi_memory_type_t {
 
 /**
 */
-typedef struct kaapi_memory_t {
-    kaapi_affinity_t who;
-    size_t           size;
-    short            type;
-} kaapi_memory_t;
+typedef struct kaapi_affinityset_t {
+    size_t                nkids;
+    kaapi_processor_id_t* kids;
+    kaapi_cpuset_t        who;
+    size_t                mem_size;
+    short                 type;
+} kaapi_affinityset_t;
 
 /**
 */
 typedef struct kaapi_hierarchy_one_level_t {
-  short             count;           /* number of memory at this level */
-  kaapi_memory_t*   mem;  
+  short                count;           /* number of kaapi_affinityset_t at this level */
+  kaapi_affinityset_t* affinity;  
 } kaapi_hierarchy_one_level_t;
 
 /** Memory hierarchy of the local machine
@@ -282,6 +272,14 @@ typedef struct kaapi_hierarchy_t {
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
+/** CPU Memory hierarchy of the local machine
+    points to the affiniset defined into the memory hierarchy
+*/
+typedef struct kaapi_cpuhierarchy_t {
+  short                 depth;
+  kaapi_affinityset_t** levels;
+} kaapi_cpuhierarchy_t;
+
 
 /** Definition of parameters for the runtime system
 */
@@ -291,11 +289,15 @@ typedef struct kaapi_rtparam_t {
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
   unsigned int		         use_affinity;                    /* use cpu affinity */
-  unsigned int		         kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
-  unsigned int		         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
-  kaapi_hierarchy_t        memory;                          /* memory hierarchy */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   kaapi_uint64_t           startuptime;                     /* time at the end of kaapi_init */
+
+  struct kaapi_procinfo_list_t*   kproc_list;                      /* list of kprocessors to initialized */
+  kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
+  kaapi_hierarchy_t        memory;                          /* memory hierarchy */
+  unsigned short	         kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
+  unsigned short	         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
+  kaapi_cpuhierarchy_t     cpu2mem[KAAPI_MAX_PROCESSOR];    /* memory hierarchy for each cpu */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
@@ -409,7 +411,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
   kaapi_atomic_t                 lock __attribute__((aligned (KAAPI_CACHE_LINE)));           /** ??? */ 
-  kaapi_affinity_t               affinity;       /* bit i == 1 -> can run on procid i */
+  kaapi_cpuset_t               affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
   kaapi_uint32_t                 size;           /** size of the data structure allocated */
@@ -968,26 +970,33 @@ static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
   return 0;
 }
 
+
 /**
 */
-static inline void kaapi_affinity_clear(kaapi_affinity_t* affinity )
+extern const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t* affinity );
+
+
+/**
+*/
+static inline void kaapi_cpuset_clear(kaapi_cpuset_t* affinity )
 {
   (*affinity)[0] = 0;
   (*affinity)[1] = 0;
 }
 
+
 /**
 */
-static inline int kaapi_affinity_empty(kaapi_affinity_t* affinity)
+static inline int kaapi_cpuset_empty(kaapi_cpuset_t* affinity)
 {
   return ((*affinity)[0] == 0) && ((*affinity)[1] == 0);
 }
 
 /**
 */
-static inline int kaapi_affinity_set(kaapi_affinity_t* affinity, kaapi_processor_id_t kid )
+static inline int kaapi_cpuset_set(kaapi_cpuset_t* affinity, kaapi_processor_id_t kid )
 {
-  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
     (*affinity)[0] |= ((kaapi_uint64_t)1)<<kid;
   else
@@ -997,7 +1006,7 @@ static inline int kaapi_affinity_set(kaapi_affinity_t* affinity, kaapi_processor
 
 /**
 */
-static inline int kaapi_affinity_copy(kaapi_affinity_t* dest, kaapi_affinity_t* src )
+static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, kaapi_cpuset_t* src )
 {
   (*dest)[0] = (*src)[0];
   (*dest)[1] = (*src)[1];
@@ -1007,9 +1016,9 @@ static inline int kaapi_affinity_copy(kaapi_affinity_t* dest, kaapi_affinity_t* 
 
 /** Return non 0 iff th as affinity with kid
 */
-static inline int kaapi_affinity_has(kaapi_affinity_t* affinity, kaapi_processor_id_t kid )
+static inline int kaapi_cpuset_has(kaapi_cpuset_t* affinity, kaapi_processor_id_t kid )
 {
-  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
+  kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
     return ( (*affinity)[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
   else

@@ -57,7 +57,7 @@
  ':'
  proc_index : num
  num        : [ '0' '9' ]+
- */
+*/
 
 struct procset_parser
 {
@@ -101,11 +101,11 @@ static inline void set_parser_error (procset_parser_t* parser, int err_no)
 
 /**
  */
-static int parse_proc_index(procset_parser_t* parser, unsigned int* index)
+static int parse_proc_index(procset_parser_t* parser, unsigned int* idx)
 {
   char* end_pos;
   
-  *index = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
+  *idx = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
   
   if (end_pos == parser->str_pos)
   {
@@ -194,14 +194,14 @@ static int parse_proc_list(procset_parser_t* parser, unsigned int* index_low, un
 
 /**
  */
-static inline int parse_proc_binding(procset_parser_t* parser, unsigned int* index)
+static inline int parse_proc_binding(procset_parser_t* parser, unsigned int* idx)
 {
   /* assume beginning of binding already checked */
   /* for the moment, only one binding possible */
   
   char* end_pos;
   
-  *index = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
+  *idx = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
   
   if (end_pos == parser->str_pos)
   {
@@ -259,7 +259,6 @@ static int parse_proc_expr(procset_parser_t* parser)
     else if (!(parser->proc_bits[index_low] & PROC_BIT_IS_USABLE))
     {
       /* proc not previously usable */
-      
       parser->proc_bits[index_low] |= PROC_BIT_IS_USABLE;
       parser->proc_binding[index_low] = index_binding;
       
@@ -407,8 +406,13 @@ int kaapi_procinfo_list_parse_string
       return -1;
     
     kpi->proc_index = i;
-    kpi->proc_type = proc_type;
-    kpi->bound_cpu = parser.proc_binding[i];
+    kpi->proc_type  = proc_type;
+    kpi->bound_cpu  = parser.proc_binding[i];
+    
+    if (proc_type == KAAPI_PROC_TYPE_CPU)
+    {
+      kaapi_cpuset_set( &kaapi_default_param.usedcpu, kpi->bound_cpu );
+    }
     
     kaapi_procinfo_list_add(kpl, kpi);
     

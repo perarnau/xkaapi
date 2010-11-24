@@ -79,7 +79,7 @@ int kaapi_setconcurrency(void)
 
   pthread_attr_t attr;
   pthread_t tid;
-  kaapi_procinfo_list_t kpl;
+  kaapi_procinfo_list_t* kpl;
   kaapi_procinfo_t* kpi;
   kaapi_processor_id_t kid;
 
@@ -87,26 +87,20 @@ int kaapi_setconcurrency(void)
   if (isinit)
     return EINVAL;
   isinit = 1;
+  
+  kpl = kaapi_default_param.kproc_list;
 
-  /* build the procinfo list */
-  kaapi_procinfo_list_init(&kpl);
-  kaapi_mt_register_procs(&kpl);
-#if defined(KAAPI_USE_CUDA)
-  kaapi_cuda_register_procs(&kpl);
-#endif /* KAAPI_USE_CUDA */
-
-  if ((!kpl.count) || (kpl.count > KAAPI_MAX_PROCESSOR))
+  if ((!kpl->count) || (kpl->count > KAAPI_MAX_PROCESSOR))
     return EINVAL;
   
-  kaapi_all_kprocessors = calloc(kpl.count, sizeof(kaapi_processor_t*));
+  kaapi_all_kprocessors = calloc(kpl->count, sizeof(kaapi_processor_t*));
   if (kaapi_all_kprocessors == 0)
   {
-    kaapi_procinfo_list_free(&kpl);
     return ENOMEM;
   }
 
   /* default processor number */
-  kaapi_count_kprocessors = kpl.count;
+  kaapi_count_kprocessors = kpl->count;
 
   kaapi_barrier_td_init(&barrier_init, 0);
   kaapi_barrier_td_init(&barrier_init2, 1);
@@ -114,7 +108,7 @@ int kaapi_setconcurrency(void)
   pthread_attr_init(&attr);
 
   kid = 0;
-  kpi = kpl.head;
+  kpi = kpl->head;
 
   for (; kpi != 0; ++kid, kpi = kpi->next)
   {
@@ -132,6 +126,9 @@ int kaapi_setconcurrency(void)
         CPU_SET(kpi->bound_cpu, &cpuset);
         kaapi_assert_m((!pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
         sched_yield();
+        kaapi_cpuset_set(&kaapi_default_param.usedcpu, kpi->bound_cpu);
+        kaapi_default_param.kid2cpu[kpi->kid] = kpi->bound_cpu;
+        kaapi_default_param.cpu2kid[kpi->bound_cpu] = kpi->kid;
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
@@ -155,6 +152,9 @@ int kaapi_setconcurrency(void)
         CPU_SET(kpi->bound_cpu, &cpuset);
         kaapi_assert_m((!pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
         sched_yield();
+        kaapi_cpuset_set(&kaapi_default_param.usedcpu, kpi->bound_cpu);
+        kaapi_default_param.kid2cpu[0] = kpi->bound_cpu;
+        kaapi_default_param.cpu2kid[kpi->bound_cpu] = 0;
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
@@ -170,7 +170,6 @@ int kaapi_setconcurrency(void)
         pthread_attr_destroy(&attr);
         free(kaapi_all_kprocessors);
         kaapi_all_kprocessors = 0;
-        kaapi_procinfo_list_free(&kpl);
         return ENOMEM;
       }
       kaapi_assert(0 == kaapi_processor_init(kproc, kpi));
@@ -190,9 +189,6 @@ int kaapi_setconcurrency(void)
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init );
 
-  /* destroy the procinfo list, thread args no longer valid */
-  kaapi_procinfo_list_free(&kpl);
-
   /* here is the number of correctly initialized processor, may be less than requested */
   kaapi_count_kprocessors = KAAPI_ATOMIC_READ( &kaapi_term_barrier );
     
@@ -207,6 +203,7 @@ int kaapi_setconcurrency(void)
 #endif
   return 0;
 }
+
 
 /**
 */
@@ -229,6 +226,8 @@ void* kaapi_sched_run_processor( void* arg )
 #else
   kaapi_assert(0 == pthread_setspecific(kaapi_current_processor_key, kproc));
 #endif
+
+  /* processor initialization */
   kaapi_assert( 0 == kaapi_processor_init( kproc, kpi) );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
