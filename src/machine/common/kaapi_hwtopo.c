@@ -299,9 +299,9 @@ int kaapi_hw_init()
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
     printf("level[%i]: #memory:%i \t", depth, kaapi_default_param.memory.levels[depth].count );
-    if (kaapi_cpuset_intersect(kaapi_default_param.memory.levels[depth].affinity[i].who, kaapi_default_param.usedcpu))
+    for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
-      for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
+      if (kaapi_cpuset_intersect(kaapi_default_param.memory.levels[depth].affinity[i].who, kaapi_default_param.usedcpu))
       {
         printf("[size:%u, cpuset:%s, type:%u]   ", 
           (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
