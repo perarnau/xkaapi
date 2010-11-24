@@ -101,7 +101,7 @@ Community System::initialize_community( int& argc, char**& argv )
   System::saved_argv = new char*[argc];
   for (int i=0; i<argc; ++i)
   {
-    int lenargvi = strlen(argv[i]);
+    size_t lenargvi = strlen(argv[i]);
     System::saved_argv[i] = new char[lenargvi+1];
     memcpy(System::saved_argv[i], argv[i], lenargvi );
     System::saved_argv[i][lenargvi] = 0;
