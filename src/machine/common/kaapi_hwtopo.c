@@ -259,7 +259,7 @@ int kaapi_hw_init()
     {
       printf("[size:%u, cpuset:%s, type:%u]   ", 
         (unsigned int)kaapi_default_param.memory.levels[depth].mem[i].size,
-        kaapi_affinity2string(4, &kaapi_default_param.memory.levels[depth].mem[i].who),
+        kaapi_affinity2string(16, &kaapi_default_param.memory.levels[depth].mem[i].who),
         (unsigned int)kaapi_default_param.memory.levels[depth].mem[i].type
       );
     }
