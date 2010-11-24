@@ -76,9 +76,6 @@ typedef struct thief_work_t {
 static void thief_entrypoint(void*, kaapi_thread_t*);
 
 
-static volatile long print_count = 0;
-
-
 /* parallel work splitter */
 static int splitter (
                      kaapi_stealcontext_t* sc, 
@@ -106,12 +103,6 @@ redo_steal:
   if (range_size <= CONFIG_PAR_GRAIN)
     return 0;
 
-/*   if (print_count) */
-/*   { */
-/*     print_count = 0; */
-/*     printf("%d %d\n", range_size, nreq); */
-/*   } */
-  
   /* how much per req */
   unit_size = range_size / (nreq + 1);
   if (unit_size == 0)
@@ -195,8 +186,6 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   work.op    = op;
   work.array = array;
 
-  print_count = 1;
-  
   /* push an adaptive task */
   sc = kaapi_task_begin_adaptive(
                                  thread, 
@@ -206,12 +195,12 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
                                  );
   
   /* while there is sequential work to do*/
-/*   while (!extract_seq(&work, &pos, &end)) */
-/*   { */
-/*     /\* apply w->op foreach item in [pos, end[ *\/ */
-/*     for (; pos != end; ++pos) */
-/*       op(pos); */
-/*   } */
+  while (!extract_seq(&work, &pos, &end))
+  {
+    /* apply w->op foreach item in [pos, end[ */
+    for (; pos != end; ++pos)
+      op(pos);
+  }
   
   /* wait for thieves */
   kaapi_task_end_adaptive(sc);
@@ -242,7 +231,7 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init();
   
-  for (iter = 0; iter < 1000; ++iter)
+  for (iter = 0; iter < 100; ++iter)
   {
     /* initialize, apply, check */
     for (i = 0; i < ITEM_COUNT; ++i)
@@ -253,15 +242,15 @@ int main(int ac, char** av)
     t1 = kaapi_get_elapsedns();
     sum += (t1-t0)/1000; /* ms */
 
-/*     for (i = 0; i < ITEM_COUNT; ++i) */
-/*       if (array[i] != 1.f) */
-/*       { */
-/*         printf("invalid @%lu == %lf\n", i, array[i]); */
-/*         break ; */
-/*       } */
+    for (i = 0; i < ITEM_COUNT; ++i)
+      if (array[i] != 1.f)
+      {
+        printf("invalid @%lu == %lf\n", i, array[i]);
+        break ;
+      }
   }
 
-  printf("done: %lf (ms)\n", sum / 1000);
+  printf("done: %lf (ms)\n", sum / 100);
 
   /* finalize the runtime */
   kaapi_finalize();
