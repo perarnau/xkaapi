@@ -44,6 +44,55 @@
 */
 #include "kaapi_impl.h"
 
+
+static void acquire_kproc_lock(kaapi_processor_t* kproc)
+{
+#if defined(KAAPI_SCHED_LOCK_CAS)
+  while (!kaapi_sched_trylock( kproc ))
+    kaapi_slowdown_cpu();
+#else /* cannot rely on kaapi_sched_trylock... */
+  while (1)
+  {
+    if (KAAPI_ATOMIC_DECR(&kproc->lock) ==0)
+      break;
+    while (KAAPI_ATOMIC_READ(&kproc->lock) <=0)
+      kaapi_slowdown_cpu();
+  }
+#endif
+}
+
+static inline int get_request_count(kaapi_listrequest_t* klr)
+{
+  /* todo: better way to count request */
+  return kaapi_bitmap_count(*(volatile kaapi_bitmap_value_t*)&klr->bitmap);
+}
+
+static void wait_for_aggregation(kaapi_processor_t* kproc)
+{
+  /* assuming nearly all processors take part to the algorithm */
+  const int concurrency = kaapi_getconcurrency();
+
+  kaapi_listrequest_t* const klr = &kproc->hlrequests;
+
+  int prev_count;
+  int iter;
+  int delay;
+
+  for (iter = 0; iter < concurrency; ++iter)
+  {
+    prev_count = get_request_count(klr);
+    for (delay = 2000; delay; --delay)
+    {
+      if (get_request_count(klr) != prev_count)
+	break ;
+      kaapi_slowdown_cpu();
+    }
+
+    /* the count didnot change, we are done */
+    if (delay == 0) break;
+  }
+}
+
 /**
 */
 kaapi_stealcontext_t* kaapi_task_begin_adaptive
@@ -54,6 +103,8 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   void*                 argsplitter
 )
 {
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+
   kaapi_stealcontext_t*   sc;
   kaapi_thread_context_t* self_thread;
   kaapi_task_t*           task;
@@ -98,6 +149,9 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   /* ok is initialized */
   sc->header.flag       |= KAAPI_SC_INIT;
 
+  if (flag & KAAPI_SC_AGGREGATE)
+    acquire_kproc_lock(kproc);
+
   /* change our execution state before pushing the task.
      this is needed for the assumptions made by the
      kaapi_task_lock_steal rouines, see for comments.
@@ -106,9 +160,14 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
     kaapi_task_state_setexec(kaapi_task_body2state(kaapi_adapt_body));
   kaapi_task_init(task, kaapi_task_state2body(state), sc);
 
-
   /* barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);
+
+  if (flag & KAAPI_SC_AGGREGATE)
+  {
+    wait_for_aggregation(kproc);
+    kaapi_sched_unlock( &kproc->lock );
+  }
 
   return sc;
 }

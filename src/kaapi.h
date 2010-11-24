@@ -948,6 +948,7 @@ typedef enum kaapi_stealcontext_flag {
   KAAPI_SC_PREEMPTION    = 0x4,
   KAAPI_SC_NOPREEMPTION  = 0x8,
   KAAPI_SC_INIT          = 0x10,   /* 1 == iff initilized (for lazy init) */
+  KAAPI_SC_AGGREGATE	 = 0x20,
   
   KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
 } kaapi_stealcontext_flag;
