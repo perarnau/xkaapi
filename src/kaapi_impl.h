@@ -257,7 +257,7 @@ typedef struct kaapi_affinityset_t {
 /**
 */
 typedef struct kaapi_hierarchy_one_level_t {
-  short                count;           /* number of kaapi_affinityset_t at this level */
+  unsigned short       count;           /* number of kaapi_affinityset_t at this level */
   kaapi_affinityset_t* affinity;  
 } kaapi_hierarchy_one_level_t;
 
@@ -268,7 +268,7 @@ typedef struct kaapi_hierarchy_one_level_t {
     * memory.levels[i].size[k]: size of the k memory  at level i
 */
 typedef struct kaapi_hierarchy_t {
-  short                        depth;
+  unsigned short               depth;
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
@@ -276,7 +276,7 @@ typedef struct kaapi_hierarchy_t {
     points to the affiniset defined into the memory hierarchy
 */
 typedef struct kaapi_cpuhierarchy_t {
-  short                 depth;
+  unsigned short        depth;
   kaapi_affinityset_t** levels;
 } kaapi_cpuhierarchy_t;
 
@@ -973,7 +973,7 @@ static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
 
 /**
 */
-extern const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t* affinity );
+extern const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t affinity );
 
 
 /**
@@ -987,16 +987,16 @@ static inline void kaapi_cpuset_clear(kaapi_cpuset_t* affinity )
 
 /**
 */
-static inline int kaapi_cpuset_intersect(kaapi_cpuset_t* s1, kaapi_cpuset_t* s2)
+static inline int kaapi_cpuset_intersect(kaapi_cpuset_t s1, kaapi_cpuset_t s2)
 {
-  return (((*s1)[0] & (*s2)[0]) != 0) || (((*s1)[1] & (*s2)[1]) != 0);
+  return ((s1[0] & s2[0]) != 0) || ((s1[1] & s2[1]) != 0);
 }
 
 /**
 */
-static inline int kaapi_cpuset_empty(kaapi_cpuset_t* affinity)
+static inline int kaapi_cpuset_empty(kaapi_cpuset_t affinity)
 {
-  return ((*affinity)[0] == 0) && ((*affinity)[1] == 0);
+  return (affinity[0] == 0) && (affinity[1] == 0);
 }
 
 /**
@@ -1023,13 +1023,13 @@ static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, kaapi_cpuset_t* src )
 
 /** Return non 0 iff th as affinity with kid
 */
-static inline int kaapi_cpuset_has(kaapi_cpuset_t* affinity, kaapi_processor_id_t kid )
+static inline int kaapi_cpuset_has(kaapi_cpuset_t affinity, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
-    return ( (*affinity)[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
+    return ( affinity[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
   else
-    return ( (*affinity)[1] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)(kid-64)) != (kaapi_uint64_t)0;
+    return ( affinity[1] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)(kid-64)) != (kaapi_uint64_t)0;
 
 //OLD  return (affinity & ((kaapi_affinkaapi_uint64_tity_t)1)<< (kaapi_affinkaapi_uint64_tity_t)kid) != (kaapi_affkaapi_uint64_tinity_t)0;
 }
