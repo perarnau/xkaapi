@@ -120,11 +120,7 @@ int kaapi_setup_param(
 )
 {
   const char* wsselect;
-  
-  bzero( kaapi_default_param.kid2cpu, sizeof(kaapi_default_param.kid2cpu) );
-  bzero( kaapi_default_param.cpu2kid, sizeof(kaapi_default_param.cpu2kid) );
-  bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
-  
+    
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
   kaapi_default_param.syscpucount = sysconf(_SC_NPROCESSORS_CONF);

@@ -47,6 +47,10 @@
 */
 static void kaapi_hw_standardinit()
 {
+  bzero( kaapi_default_param.kid2cpu, sizeof(kaapi_default_param.kid2cpu) );
+  bzero( kaapi_default_param.cpu2kid, sizeof(kaapi_default_param.cpu2kid) );
+  bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
+
   kaapi_cpuset_clear(&kaapi_default_param.usedcpu);
 
   /* build the procinfo list */
