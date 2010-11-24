@@ -412,6 +412,7 @@ int kaapi_procinfo_list_parse_string
     if (proc_type == KAAPI_PROC_TYPE_CPU)
     {
       kaapi_cpuset_set( &kaapi_default_param.usedcpu, kpi->bound_cpu );
+      kpi->kid = i;
       kaapi_default_param.kid2cpu[kpi->kid] = kpi->bound_cpu;
       kaapi_default_param.cpu2kid[kpi->bound_cpu] = kpi->kid;
     }
