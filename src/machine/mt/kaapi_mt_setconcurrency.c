@@ -126,9 +126,6 @@ int kaapi_setconcurrency(void)
         CPU_SET(kpi->bound_cpu, &cpuset);
         kaapi_assert_m((!pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
         sched_yield();
-        kaapi_cpuset_set(&kaapi_default_param.usedcpu, kpi->bound_cpu);
-        kaapi_default_param.kid2cpu[kpi->kid] = kpi->bound_cpu;
-        kaapi_default_param.cpu2kid[kpi->bound_cpu] = kpi->kid;
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
@@ -152,9 +149,6 @@ int kaapi_setconcurrency(void)
         CPU_SET(kpi->bound_cpu, &cpuset);
         kaapi_assert_m((!pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)), "pthread_attr_setaffinity_np");
         sched_yield();
-        kaapi_cpuset_set(&kaapi_default_param.usedcpu, kpi->bound_cpu);
-        kaapi_default_param.kid2cpu[0] = kpi->bound_cpu;
-        kaapi_default_param.cpu2kid[kpi->bound_cpu] = 0;
       }
 #endif /* KAAPI_USE_SCHED_AFFINITY */
 
