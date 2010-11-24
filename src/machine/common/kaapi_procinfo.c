@@ -101,11 +101,11 @@ static inline void set_parser_error (procset_parser_t* parser, int err_no)
 
 /**
  */
-static int parse_proc_index(procset_parser_t* parser, unsigned int* index)
+static int parse_proc_index(procset_parser_t* parser, unsigned int* idx)
 {
   char* end_pos;
   
-  *index = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
+  *idx = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
   
   if (end_pos == parser->str_pos)
   {
@@ -194,14 +194,14 @@ static int parse_proc_list(procset_parser_t* parser, unsigned int* index_low, un
 
 /**
  */
-static inline int parse_proc_binding(procset_parser_t* parser, unsigned int* index)
+static inline int parse_proc_binding(procset_parser_t* parser, unsigned int* idx)
 {
   /* assume beginning of binding already checked */
   /* for the moment, only one binding possible */
   
   char* end_pos;
   
-  *index = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
+  *idx = (unsigned int)strtoul(parser->str_pos, &end_pos, 10);
   
   if (end_pos == parser->str_pos)
   {

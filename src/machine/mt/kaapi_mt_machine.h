@@ -507,7 +507,7 @@ typedef struct kaapi_processor_t {
 /*
 */
 struct kaapi_procinfo;
-extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo*);
+extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_t*);
 
 
 #if defined(KAAPI_USE_NUMA)

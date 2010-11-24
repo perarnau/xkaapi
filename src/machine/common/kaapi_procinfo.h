@@ -47,9 +47,9 @@
 
 
 /* ========================================================================== */
-typedef struct kaapi_procinfo
+typedef struct kaapi_procinfo_t
 {
-  struct kaapi_procinfo* next;
+  struct kaapi_procinfo_t* next;
 
   unsigned int bound_cpu;
   unsigned int proc_type;
