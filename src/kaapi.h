@@ -98,7 +98,7 @@ typedef int32_t   kaapi_int32_t;
 typedef int64_t   kaapi_int64_t;
 
 typedef kaapi_uint32_t kaapi_processor_id_t;
-typedef kaapi_uint64_t kaapi_affinity_t;
+typedef kaapi_uint64_t kaapi_affinity_t[2];
 typedef kaapi_uint32_t kaapi_format_id_t;
 typedef kaapi_uint32_t kaapi_offset_t;
 typedef int            kaapi_gpustream_t;
@@ -792,10 +792,11 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-
-  void* const retval = thread->sp_data;
-  thread->sp_data += count;
-  return retval;
+  {
+    void* const retval = thread->sp_data;
+    thread->sp_data += count;
+    return retval;
+  }
 }
 
 /** \ingroup TASK
@@ -807,12 +808,14 @@ static inline void* kaapi_thread_pushdata_align
   (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint64_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
-  const kaapi_uint64_t mask = align - 1;
+  {
+    const kaapi_uint64_t mask = align - 1;
 
-  if ((uintptr_t)thread->sp_data & mask)
-    thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
+    if ((uintptr_t)thread->sp_data & mask)
+      thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
 
-  return kaapi_thread_pushdata(thread, count);
+    return kaapi_thread_pushdata(thread, count);
+  }
 }
 
 /** \ingroup TASK
@@ -1075,7 +1078,7 @@ static inline int kaapi_steal_setsplitter(
   return 0;
 }
 
-#if 0 //* revoir ici, ces fonctions sont importantes pour le cooperatif */
+#if 0 /* revoir ici, ces fonctions sont importantes pour le cooperatif */
 /** \ingroup WS
     Helper to expose to many part of the internal API.
     Return 1 iff its remains works...
@@ -1229,7 +1232,7 @@ extern int kaapi_preemptpoint_before_reducer_call(
     kaapi_stealcontext_t* stc,
     void* arg_for_victim, 
     void* result_data, 
-    int result_size
+    size_t result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
     kaapi_stealcontext_t* stc
@@ -1823,7 +1826,7 @@ static inline int __kaapi_isaligned_const(const volatile void* a, int byte)
     __KAAPI_ISALIGNED_CONST_ATOMIC(a, (a)->_counter)
 
 #  define KAAPI_ATOMIC_WRITE(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
+    __KAAPI_ISALIGNED_ATOMIC( (a), (a)->_counter = value)
 
 #  define BIDON_ONEARG(a,b)  a,b
 #  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \

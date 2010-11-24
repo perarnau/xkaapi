@@ -24,7 +24,7 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#if defined(KAAPI_USE_DARWIN)
+#if defined(__APPLE__)
 #include <sys/sysctl.h>
 #endif
 #if defined(KAAPI_USE_IPHONEOS)
@@ -51,7 +51,7 @@ Init Init::component;
 bool Init::verboseon = false;
 
 // --------------------------------------------------------------------
-kaapi_uint32_t Init::local_gid = kaapi_uint32_t( -1U ); // <-> GlobalId::NO_SITE;
+kaapi_uint32_t System::local_gid = kaapi_uint32_t( -1U ); // <-> GlobalId::NO_SITE;
 
 // --------------------------------------------------------------------
 Architecture Init::local_archi;
@@ -100,6 +100,13 @@ InitKaapiCXX::InitKaapiCXX()
   WrapperFormat<unsigned long>::format.reinit(kaapi_ulong_format);
   WrapperFormat<float>::format.reinit(kaapi_float_format);
   WrapperFormat<double>::format.reinit(kaapi_double_format);
+}
+
+
+// --------------------------------------------------------------------
+void Init::set_local_gid( GlobalId newgid )
+{
+  System::local_gid = newgid;
 }
 
 
@@ -204,21 +211,21 @@ int Init::initialize() throw()
     /* Global Id */
     if (KaapiComponentManager::prop["util.globalid"] == "") 
     {
-      Init::local_gid = 0;
+      System::local_gid = 0;
     }
     else if (KaapiComponentManager::prop["util.globalid"] == "auto")
     {
       std::ostringstream gidtxt;
       gidtxt << getpid() << HighResTimer::gettime();
-      Init::local_gid = kaapi_hash_value( gidtxt.str().c_str() );
+      System::local_gid = kaapi_hash_value( gidtxt.str().c_str() );
     }
     else
     {
-      Init::local_gid = Parser::String2ULong(KaapiComponentManager::prop["util.globalid"]);
+      System::local_gid = (kaapi_uint32_t)Parser::String2ULong(KaapiComponentManager::prop["util.globalid"]);
     }
     
     /* Set the global id of the process */
-    KaapiComponentManager::prop["util.globalid"] = Parser::ULong2String( Init::local_gid );
+    KaapiComponentManager::prop["util.globalid"] = Parser::ULong2String( System::local_gid );
     
 
     /* Compute local archi */

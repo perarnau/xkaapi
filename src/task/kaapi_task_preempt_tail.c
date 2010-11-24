@@ -43,8 +43,6 @@
 */
 #include "kaapi_impl.h"
 
-extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
-
 /** \ingroup ADAPTIVE
 */
 kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* sc )

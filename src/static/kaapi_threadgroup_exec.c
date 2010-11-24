@@ -78,8 +78,8 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     kaapi_processor_id_t victim_procid = i/blocsize;
     kaapi_processor_t* victim_kproc = kaapi_all_kprocessors[victim_procid];
 
-    kaapi_thread_clearaffinity( thgrp->threadctxts[i] );
-    kaapi_thread_setaffinity( thgrp->threadctxts[i], victim_procid );
+    kaapi_affinity_clear( &thgrp->threadctxts[i]->affinity);
+    kaapi_affinity_set( &thgrp->threadctxts[i]->affinity, victim_procid );
     thgrp->threadctxts[i]->proc = victim_kproc;
     thgrp->threadctxts[i]->partid = i;
     thgrp->threadctxts[i]->unstealable = 1;/* do not allow threads to steal tasks inside ??? */

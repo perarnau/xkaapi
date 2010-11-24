@@ -56,20 +56,10 @@ DefaultAttribut SetDefault;
 FlagReplyHead ReplyHead;
 FlagReplyTail ReplyTail;
 
-// --------------------------------------------------------------------------
-std::string get_localhost()
-{
-  /* get canonical name from the syscall gethostname */
-  std::string hostname;
-  char buffer[1024];
-  if ( gethostname( buffer, 1024 ) != 0) 
-  {
-    hostname = "localhost";
-  } else {
-   hostname = buffer;
-  }
-  return hostname;
-}
+
+// --------------------------------------------------------------------
+int System::saved_argc = 0;
+char** System::saved_argv = 0;
 
 // --------------------------------------------------------------------
 Community::Community( const Community& com )
@@ -103,7 +93,19 @@ Community System::initialize_community( int& argc, char**& argv )
 {
   static bool is_called = false; if (is_called) return Community(0); is_called = true;
   
-  kaapi_init();
+  /** Init should have been called by InitKaapiCXX
+  */
+  kaapi_assert(kaapi_init() == EALREADY );
+  
+  System::saved_argc = argc;
+  System::saved_argv = new char*[argc];
+  for (int i=0; i<argc; ++i)
+  {
+    int lenargvi = strlen(argv[i]);
+    System::saved_argv[i] = new char[lenargvi+1];
+    memcpy(System::saved_argv[i], argv[i], lenargvi );
+    System::saved_argv[i][lenargvi] = 0;
+  }
   
   /* first initialize KaapiComponentManager::prop from file $HOME/.kaapirc */
   std::string filename;

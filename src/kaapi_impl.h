@@ -165,10 +165,16 @@ extern struct kaapi_format_t* kaapi_all_format_byfmtid[256];
 */
 extern int kaapi_mt_init(void);
 
-/** Finalize the runtime.
+/** Finalize the machine level runtime.
     Return 0 in case of success. Else an error code.
 */
 extern int kaapi_mt_finalize(void);
+
+/** Initialize hw topo.
+    Based on hwloc library.
+    Return 0 in case of success else an error code
+*/
+extern int kaapi_hw_init();
 
 /* Fwd declaration 
 */
@@ -225,18 +231,71 @@ extern void kaapi_init_basicformat(void);
     3/ default values
 */
 extern int kaapi_setup_param( int argc, char** argv );
-    
+
+
+/** Compact coding of topology.
+    For each processor, we store the hierarchy of the
+    mapping. Assuming that the machine has 4 memory hierarchy
+    level, the processor kid has the following information.
+    neighbors[0]: neighbor kprocessors sharing L1 cache
+    neighbors[1]: neighbor kprocessors sharing L2 cache
+    neighbors[2]: neighbor kprocessors sharing L3 cache
+    neighbors[3]: neighbor kprocessors sharing node
+    neighbors[4]: neighbor kprocessors sharing the machine
+*/
+typedef struct kaapi_neighbor_t {
+  short count;
+  kaapi_processor_id_t* neighbors;
+} kaapi_neighbor_t;
+
+
+/**
+*/
+enum kaapi_memory_type_t {
+  KAAPI_MEM_NODE,
+  KAAPI_MEM_CACHE
+};
+
+/**
+*/
+typedef struct kaapi_memory_t {
+    kaapi_affinity_t who;
+    size_t           size;
+    short            type;
+} kaapi_memory_t;
+
+/**
+*/
+typedef struct kaapi_hierarchy_one_level_t {
+  short             count;           /* number of memory at this level */
+  kaapi_memory_t*   mem;  
+} kaapi_hierarchy_one_level_t;
+
+/** Memory hierarchy of the local machine
+    * memory.depth: depth of the hierarchy
+    * memory.levels[i].count: number of kind of memory at level i
+    * memory.levels[i].who[k]: cpu set of which PU is contains by memory k at level i
+    * memory.levels[i].size[k]: size of the k memory  at level i
+*/
+typedef struct kaapi_hierarchy_t {
+  short                        depth;
+  kaapi_hierarchy_one_level_t* levels;
+} kaapi_hierarchy_t;
+
+
 /** Definition of parameters for the runtime system
 */
 typedef struct kaapi_rtparam_t {
-  size_t                   stacksize;              /* default stack size */
-  unsigned int             syscpucount;            /* number of physical cpus of the system */
-  unsigned int             cpucount;               /* number of physical cpu used for execution */
-  kaapi_selectvictim_fnc_t wsselect;               /* default method to select a victim */
-  unsigned int		         use_affinity;           /* use cpu affinity */
-  unsigned int		         kid_to_cpu[KAAPI_MAX_PROCESSOR]; /* mapping: kid->phys cpu  ?*/
-  int                      display_perfcounter;    /* set to 1 iff KAAPI_DISPLAY_PERF */
-  kaapi_uint64_t           startuptime;            /* time at the end of kaapi_init */
+  size_t                   stacksize;                       /* default stack size */
+  unsigned int             syscpucount;                     /* number of physical cpus of the system */
+  unsigned int             cpucount;                        /* number of physical cpu used for execution */
+  kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
+  unsigned int		         use_affinity;                    /* use cpu affinity */
+  unsigned int		         kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
+  unsigned int		         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
+  kaapi_hierarchy_t        memory;                          /* memory hierarchy */
+  int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
+  kaapi_uint64_t           startuptime;                     /* time at the end of kaapi_init */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
@@ -248,11 +307,11 @@ extern kaapi_rtparam_t kaapi_default_param;
 */
 enum kaapi_reply_status_t {
   KAAPI_REQUEST_S_POSTED = 0,
-  KAAPI_REPLY_S_NOK,
-  KAAPI_REPLY_S_TASK,
-  KAAPI_REPLY_S_TASK_FMT,
-  KAAPI_REPLY_S_THREAD,
-  KAAPI_REPLY_S_ERROR
+  KAAPI_REPLY_S_NOK      = 1,
+  KAAPI_REPLY_S_TASK     = 2,
+  KAAPI_REPLY_S_TASK_FMT = 3,
+  KAAPI_REPLY_S_THREAD   = 4,
+  KAAPI_REPLY_S_ERROR    = 5
 };
 
 
@@ -429,13 +488,12 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     - 0010 : the task is terminated. This state if only put for debugging.
 */
 #if (SIZEOF_VOIDP == 4)
-#warning "This code assume that 4 higher bits is available on any function pointer. It was not verify of this configuration"
+#warning "This code assumes that the 4 higher bits is available on any function pointer. It was not verified on this configuration"
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 28)
 #  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 28) /* must be different from term */
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 28)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 28)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 28)
-#  define KAAPI_MASK_BODY_STATE   (0xEUL << 28)
 #  define KAAPI_MASK_BODY         (0xFUL << 28)
 #  define KAAPI_MASK_BODY_SHIFTR   28UL
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
@@ -455,7 +513,6 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 60UL)
 #  define KAAPI_MASK_BODY_EXEC    (0x4UL << 60UL)
 #  define KAAPI_MASK_BODY_STEAL   (0x8UL << 60UL)
-#  define KAAPI_MASK_BODY_STATE   (0xEUL << 60UL)
 #  define KAAPI_MASK_BODY         (0xFUL << 60UL)
 #  define KAAPI_MASK_BODY_SHIFTR   60UL
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR64_ORIG(a, v)
@@ -475,7 +532,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 
 /** \ingroup TASK
 */
-//@{
+/**@{ */
 #define kaapi_task_getstate(task)\
       (task)->u.state
 
@@ -537,22 +594,20 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #define kaapi_task_state2int(state)            \
     ((int)(state >> KAAPI_MASK_BODY_SHIFTR))
 
-/** \ingroup TASK
-    Set the body of the task
+/** Set the body of the task
 */
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body )
 {
   task->u.body = body;
 }
 
-/** \ingroup TASK
-    Get the body of the task
+/** Get the body of the task
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 {
   return kaapi_task_state2body( task->u.state & ~KAAPI_MASK_BODY );
 }
-//@}
+/**@} */
 
 /** \ingroup TASK
     The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
@@ -603,6 +658,7 @@ static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaap
 */
 static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uintptr_t state )
 {
+  kaapi_assert_debug( (task->u.state & KAAPI_MASK_BODY ) == 0 );
   kaapi_uintptr_t retval = KAAPI_ATOMIC_ANDPTR_ORIG(&task->u.state, state);
   return retval;
 }
@@ -906,32 +962,60 @@ static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
   th->esfp       = th->stackframe;
   th->sfp->sp    = th->sfp->pc  = th->task; /* empty frame */
   th->sfp->sp_data = (char*)&th->data;     /* empty frame */
-  th->affinity   = ~0UL;
+  th->affinity[0] = ~0UL;
+  th->affinity[1] = ~0UL;
   th->unstealable= 0;
-  return 0;
-}
-
-static inline int kaapi_thread_clearaffinity(kaapi_thread_context_t* th )
-{
-  th->affinity = 0;
   return 0;
 }
 
 /**
 */
-static inline int kaapi_thread_setaffinity(kaapi_thread_context_t* th, kaapi_processor_id_t kid )
+static inline void kaapi_affinity_clear(kaapi_affinity_t* affinity )
+{
+  (*affinity)[0] = 0;
+  (*affinity)[1] = 0;
+}
+
+/**
+*/
+static inline int kaapi_affinity_empty(kaapi_affinity_t* affinity)
+{
+  return ((*affinity)[0] == 0) && ((*affinity)[1] == 0);
+}
+
+/**
+*/
+static inline int kaapi_affinity_set(kaapi_affinity_t* affinity, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
-  th->affinity |= ((kaapi_affinity_t)1)<<kid;
+  if (kid <64)
+    (*affinity)[0] |= ((kaapi_uint64_t)1)<<kid;
+  else
+    (*affinity)[1] |= ((kaapi_uint64_t)1)<< (kid-64);
   return 0;
 }
 
+/**
+*/
+static inline int kaapi_affinity_copy(kaapi_affinity_t* dest, kaapi_affinity_t* src )
+{
+  (*dest)[0] = (*src)[0];
+  (*dest)[1] = (*src)[1];
+  return 0;
+}
+
+
 /** Return non 0 iff th as affinity with kid
 */
-static inline int kaapi_thread_hasaffinity(unsigned long affinity, kaapi_processor_id_t kid )
+static inline int kaapi_affinity_has(kaapi_affinity_t* affinity, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_affinity_t)*8) );
-  return (int)(affinity & ((kaapi_affinity_t)1)<<kid);
+  if (kid <64)
+    return ( (*affinity)[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
+  else
+    return ( (*affinity)[1] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)(kid-64)) != (kaapi_uint64_t)0;
+
+//OLD  return (affinity & ((kaapi_affinkaapi_uint64_tity_t)1)<< (kaapi_affinkaapi_uint64_tity_t)kid) != (kaapi_affkaapi_uint64_tinity_t)0;
 }
 
 /**
@@ -1249,6 +1333,11 @@ static inline void kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
   /* synchronize on the kproc lock */
   kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
 }
+
+
+/**
+*/
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/

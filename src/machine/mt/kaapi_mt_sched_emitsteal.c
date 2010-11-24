@@ -54,7 +54,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_thread_t*	        self_thread;
   kaapi_reply_t*          reply;
   kaapi_listrequest_t*    victim_hlr;
-  int err;
+  int                     i, err;
   kaapi_listrequest_iterator_t lri;
   
   kaapi_assert_debug( kproc !=0 );
@@ -73,6 +73,7 @@ redo_select:
   if (unlikely(err !=0)) goto redo_select;
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) return 0;
+  kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
   /* mark current processor as stealing */
   kproc->issteal = 1;
@@ -109,7 +110,7 @@ acquire:
   if (KAAPI_ATOMIC_DECR(&victim.kproc->lock) ==0) goto enter;
   while (KAAPI_ATOMIC_READ(&victim.kproc->lock) <=0)
   {
-    if (kaapi_reply_test( reply ) ) 
+    if (kaapi_reply_test( reply )) 
       goto return_value;
     kaapi_slowdown_cpu();
   }
@@ -132,11 +133,15 @@ enter:
   */
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
+    kaapi_request_t* request;
+    
 #if defined(KAAPI_DEBUG)
+    kaapi_bitmap_value_t savebitmap;
     int count_req = kaapi_listrequest_iterator_count(&lri);
     kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
-    kaapi_bitmap_value_t savebitmap = (kaapi_bitmap_value_t)(lri.bitmap | (1UL << lri.idcurr));
-    for (int i=0; i<count_req; ++i)
+    kaapi_bitmap_value_copy( &savebitmap, &lri.bitmap );
+    kaapi_bitmap_value_set( &savebitmap, lri.idcurr );
+    for (i=0; i<count_req; ++i)
     {
       int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
       kaapi_assert( firstbit != 0);
@@ -153,7 +158,7 @@ enter:
 #endif
 
     /* reply failed for all others requests */
-    kaapi_request_t* request = kaapi_listrequest_iterator_get( victim_hlr, &lri );
+    request = kaapi_listrequest_iterator_get( victim_hlr, &lri );
     kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
 
     while (request !=0)
@@ -230,6 +235,6 @@ return_value:
   return 0;  
 }
 
-#else // KAAPI_USE_AGGREGATION
+#else /* KAAPI_USE_AGGREGATION */
 #error "Should use aggregation ! else not implemented"
 #endif

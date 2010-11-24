@@ -71,14 +71,14 @@ public:
   */
   static Architecture local_archi;
 
-  /** The global id of this process
-  */
-  static kaapi_uint32_t local_gid;
-
   /** Should be defined for internal purpose only...
   */
   static bool on_term;
   static bool on_thread;
+  
+  /** Change the current local_gid
+  */
+  static void set_local_gid( GlobalId newgid );
   
   /** Default constructor: assign the most prioritary number (0) for this component
   */
@@ -102,7 +102,6 @@ public:
   /** Declare dependencies with other component
   */
   void declare_dependencies();
-
 };
 
 

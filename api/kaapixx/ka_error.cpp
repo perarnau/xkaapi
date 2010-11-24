@@ -57,30 +57,12 @@
 
 namespace ka {
 
-// --------------------------------------------------------------------
-void print_backtrace_c()
-{
-#if not defined(KAAPI_USE_ARCH_PPC)  && not defined(_WIN32)
-  const unsigned int MAX_DEPTH = 100;
-  void *trace[MAX_DEPTH];
-  unsigned int trace_size;
-  char **trace_strings;
+static void print_backtrace_cpp();
 
-  trace_size = backtrace(trace, MAX_DEPTH);
-  trace_strings = backtrace_symbols(trace, trace_size);
-  for (unsigned int i=0; i<trace_size; ++i)
-  {  
-    logfile() << std::setfill(' ') << std::right << std::setw(3) << i << ": "
-        << trace_strings[i] << std::endl;
-  }
-  free(trace_strings); // malloc()ed by backtrace_symbols
-#endif
-}
-  
 // --------------------------------------------------------------------
-void print_backtrace_cpp()
+static void print_backtrace_cpp()
 {
-#if not defined(KAAPI_USE_ARCH_PPC)  && not defined(_WIN32)
+#if not (defined(__ppc__)||defined(__ppc64__))  && not defined(_WIN32)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size=0;
@@ -189,8 +171,8 @@ Exception::Exception()
 
 
 // --------------------------------------------------------------------
-Exception::Exception(int code) 
- : _code(code) 
+Exception::Exception(int err) 
+ : _code(err) 
 {}
 
 
@@ -227,8 +209,8 @@ ServerException::ServerException()
 {}
 
 // --------------------------------------------------------------------
-RuntimeError::RuntimeError(const std::string& msg, int code) 
- : Exception(code), _msg(msg)
+RuntimeError::RuntimeError(const std::string& msg, int err) 
+ : Exception(err), _msg(msg)
 {}
 
 
@@ -241,8 +223,8 @@ const char* RuntimeError::what () const
 }
 
 // --------------------------------------------------------------------
-PosixError::PosixError( const std::string& msg, int code )
- : RuntimeError(msg,code) {}
+PosixError::PosixError( const std::string& msg, int err )
+ : RuntimeError(msg,err) {}
 
 // --------------------------------------------------------------------
 const char* PosixError::what () const
@@ -273,8 +255,8 @@ RangeError::RangeError(const std::string& msg)
 {}
 
 // --------------------------------------------------------------------
-LogicError::LogicError(const std::string& msg, int code) 
- : Exception(code), _msg(msg) 
+LogicError::LogicError(const std::string& msg, int err) 
+ : Exception(err), _msg(msg) 
 {}
 
 // --------------------------------------------------------------------
@@ -283,8 +265,8 @@ const char* LogicError::what () const
 
 
 // --------------------------------------------------------------------
-InvalidArgumentError::InvalidArgumentError(const std::string& msg, int code)
- : LogicError(msg, code) 
+InvalidArgumentError::InvalidArgumentError(const std::string& msg, int err)
+ : LogicError(msg, err) 
 {}
 
 // --------------------------------------------------------------------
@@ -309,8 +291,8 @@ BadAlloc::BadAlloc(const std::string& )
 
 
 // --------------------------------------------------------------------
-IOError::IOError( const std::string& msg, int code) 
- : RuntimeError(msg,code) 
+IOError::IOError( const std::string& msg, int err) 
+ : RuntimeError(msg,err) 
 {}
 
 // --------------------------------------------------------------------

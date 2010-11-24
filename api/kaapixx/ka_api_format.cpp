@@ -64,7 +64,7 @@ Format::Format(
   if (fmt ==0) 
     fmt = new kaapi_format_t;
   kaapi_format_register( fmt, strdup(fmt_name.c_str()));
-  fmt->size      = size;
+  fmt->size      = (kaapi_uint32_t)size;
   fmt->cstor     = cstor;
   fmt->dstor     = dstor;
   fmt->cstorcopy = cstorcopy;

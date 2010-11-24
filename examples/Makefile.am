@@ -24,6 +24,7 @@ include hello.am
 include nqueens.am
 include poisson3D.am
 include branchbound.am
+include net.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
@@ -34,7 +35,8 @@ USER_MAKEFILES=\
 	hello/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
-	branchbound/Makefile
+	branchbound/Makefile\
+	net/Makefile
 
 TESTS=  
 
@@ -58,19 +60,20 @@ gen-%.am.m4.info: %.am
 	  | sed -e '/^[^=]\+_\(SOURCES\|PRGS\|\(C\(PP\|XX\|\)\|LD\)FLAGS\|LDADD\)[$S]*=/p;d' \
 	  > $@
 	
+MAKE_VAR=$(MAKE) -s --no-print-directory
 gen-%.am.m4: gen-%.am.m4.info Makefile
 	$(AM_V_GEN)echo 'define([DIR],[$*])dnl' > $@
 	$(AM_V_at)sed < $< -e \
 		's/^[$S]*\([^$S][^=]*_PRGS\)[$S]*=[$S]*\(.*\)$$/\1/p;d' \
 	  | while read VAR ; do \
-	    VALUE="$$($(MAKE) -s VAR="$$VAR" .get-var)" ; \
+	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" .get-var)" ; \
 	    echo "define([PROGS],[$$VALUE])dnl" ; \
 	  done >> $@
 	$(AM_V_at)sed < $< -e \
 		'/^[$S]*\([^$S][^=]*_SOURCES\)[$S]*=[$S]*\(.*\)$$/p;d' \
 	  | while read EQ ; do \
 	    VAR=$$(echo "$$EQ" | sed -e 's/=.*//' -e 's/[$S]//g' ) ;\
-	    VALUE="$$($(MAKE) -s VAR="$$VAR" "$$EQ" .get-var)" ; \
+	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
 	$(AM_V_at)sed < $< -e \
@@ -78,7 +81,7 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 	  | sed -e 's/$$(\(AM\|[A-Z]*_BUILD\)_[^_]\+FLAGS)//g' \
 	  | while read EQ ; do \
 	    VAR=$$(echo "$$EQ" | sed -e 's/=.*//' -e 's/[$S]//g' ) ;\
-	    VALUE="$$($(MAKE) -s VAR="$$VAR" "$$EQ" .get-var)" ; \
+	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
 	$(AM_V_at)sed < $< -e \
@@ -86,7 +89,7 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 	  | sed -e 's/$$(\(\|[A-Z]*_BUILD_\)LIBS)//g' \
 	  | while read EQ ; do \
 	    VAR=$$(echo "$$EQ" | sed -e 's/=.*//' -e 's/[$S]//g' ) ;\
-	    VALUE="$$($(MAKE) -s VAR="$$VAR" "$$EQ" .get-var)" ; \
+	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
 	$(AM_V_at)sed < $< -e \

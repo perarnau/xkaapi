@@ -8,9 +8,9 @@
 
 lib_LTLIBRARIES= libkaapi.la
 
-libkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE $(KAAPILIB_BUILD_CPPFLAGS)
+libkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE $(KAAPILIB_BUILD_CPPFLAGS) -I$(srcdir)/machine/common -I/usr/local/hwloc/include
 libkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS) $(KAAPILIB_BUILD_CFLAGS)
-libkaapi_la_LDFLAGS = -version-info 0:0:0 $(KAAPILIB_BUILD_LDFLAGS)
+libkaapi_la_LDFLAGS = -version-info 0:0:0 $(KAAPILIB_BUILD_LDFLAGS) -L/usr/local/hwloc/include -lhwloc
 libkaapi_la_LIBADD = $(KAAPILIB_BUILD_LIBS)
 
 libkaapi_la_SOURCES=\
@@ -41,6 +41,7 @@ libkaapi_la_SOURCES=\
   kaapi_impl.h \
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
+  machine/common/kaapi_hwtopo.c \
   memory/kaapi_mem.h \
   memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \

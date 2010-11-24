@@ -42,9 +42,9 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "kaapi++"
 #include "ka_error.h"
 #include "ka_debug.h"
-//#include "atha_format.h"
 #include "ka_init.h"
 #include "ka_timer.h"
 #include <map>
@@ -55,7 +55,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#if defined(KAAPI_USE_DARWIN)
+#if defined(__APPLE__)
 #include <sys/sysctl.h>
 #endif
 #if defined(KAAPI_USE_IPHONEOS)
@@ -151,7 +151,8 @@ std::ostream& logfile()
 #if defined(KAAPI_USE_IPHONEOS)
   return iphone_out;
 #else
-  kaapi_processor_id_t self = kaapi_get_current_processor()->kid;
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  int self = (kproc == 0 ? -1 : kproc->kid);
   if (Init::on_thread) 
   {
     std::map<kaapi_processor_id_t,std::ofstream*>::iterator curr = fout_per_kprocessor.find(self);
@@ -171,7 +172,7 @@ std::ostream& logfile()
         Exception_throw( ka::PosixError(msg.str(),errno) );
       }
       std::ostringstream sname;
-      sname << pwdlog << "/cout." << ka::Init::local_gid << "." << self << "." << getpid();
+      sname << pwdlog << "/cout." << ka::System::local_gid << "." << self << "." << getpid();
       std::ofstream* fout = new std::ofstream(sname.str().c_str());
       KAAPI_ASSERT_M( fout->good(), "cannot create per process cout file");
       fout_per_kprocessor.insert( std::make_pair(self, fout) );
@@ -182,7 +183,7 @@ std::ostream& logfile()
   }
   if (Init::on_term) 
   {
-    std::cout << self << "::[" << std::setw(9) << std::setprecision(7) << std::showpoint; 
+    std::cout << System::local_gid << "::" << self << "::[" << std::setw(9) << std::setprecision(7) << std::showpoint; 
     std::cout.fill( '0' );
     std::cout.setf( std::ios_base::left, std::ios_base::adjustfield);
     std::cout << double(kaapi_get_elapsedns() - kaapi_default_param.startuptime)*1e-6 << "]: ";
@@ -203,11 +204,11 @@ std::ostream& logfile()
       Exception_throw( ka::PosixError(msg.str(),errno) );
     }
     std::ostringstream sname; 
-    sname << pwdlog << "/cout." << ka::Init::local_gid << "." << getpid();
+    sname << pwdlog << "/cout." << ka::System::local_gid << "." << getpid();
     fout_per_process = new std::ofstream(sname.str().c_str());
     KAAPI_ASSERT_M( fout_per_process->good(), "cannot create per process cout file");
   }
-  *fout_per_process << std::flush << ka::Init::local_gid << "::[" << std::setw(9) << std::setprecision(7); 
+  *fout_per_process << std::flush << ka::System::local_gid << "::" << self << "::[" << std::setw(9) << std::setprecision(7); 
   fout_per_process->fill( '0' );
   fout_per_process->setf( std::ios_base::left, std::ios_base::adjustfield);
   *fout_per_process << ka::WallTimer::gettime() - Init::component.startup_time() << "]: ";

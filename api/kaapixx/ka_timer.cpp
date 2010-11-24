@@ -55,7 +55,7 @@ extern "C" {
 #endif
 # include <stdio.h>
 # include <unistd.h>
-#if defined( KAAPI_USE_DARWIN ) || defined(KAAPI_USE_IPHONEOS)
+#if defined( __APPLE__ )
 # include <sys/types.h>
 # include <sys/sysctl.h>
 #endif
@@ -100,7 +100,7 @@ const std::string& LogicalTimer::unit()
 }
 
 
-#if defined(KAAPI_USE_ARCH_X86) && defined(KAAPI_USE_DARWIN)
+#if defined(__x86_64__) && defined(__APPLE__)
 #  ifndef myrdtsc
 #    define myrdtsc(x) \
       __asm__ volatile ("rdtsc" : "=A" (x));
@@ -112,7 +112,7 @@ const std::string& LogicalTimer::unit()
 // --------------------------------------------------------------------
 HighResTimer::type HighResTimer::gettick()
 {
-#if (defined( KAAPI_USE_APPLE ) && defined(KAAPI_USE_ARCH_PPC) ) ||  defined(KAAPI_USE_ARCH_PPC64)
+#if (defined( __APPLE__ ) && defined(__ppc__) ) ||  defined(__ppc64__)
   register unsigned long t_u;
   register unsigned long t_l;
   asm volatile ("mftbu %0" : "=r" (t_u) );
@@ -121,9 +121,9 @@ HighResTimer::type HighResTimer::gettick()
   retval <<= 32UL;
   retval |= t_l;
   return retval;
-#elif defined( KAAPI_USE_APPLE)&& (defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)) 
+#elif defined( __APPLE__)&& (defined(__x86_64__) || defined(KAAPI_USE_ARCH_IA64)) 
   return (HighResTimer::type)WallTimer::gettime();
-#elif defined( KAAPI_USE_LINUX)&& (defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)) 
+#elif defined( __linux__)&& (defined(__x86_64__) || defined(KAAPI_USE_ARCH_IA64)) 
   uint32_t lo,hi;
   __asm__ volatile ( "rdtsc" : "=a" ( lo ) , "=d" ( hi ) );
   return (uint64_t)hi << 32 | lo;
@@ -139,7 +139,7 @@ HighResTimer::type HighResTimer::gettick()
 #  else
 #    error "no time counter for this architecture"
 #  endif
-#elif defined(KAAPI_USE_IPHONEOS)
+#elif defined(__APPLE__)
   return WallTimer::gettime();
 #elif defined(_WIN32)
   return WallTimer::gettime();
@@ -165,7 +165,7 @@ void HighResTimer::calibrate()
 #if defined(USE_SOFT_CALIBRATION)
   size_t count;
   double t00, t11;
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
+#  if defined( __APPLE__ ) && (defined(__ppc64__)||defined(__ppc__))
   union utype {
     struct {
       ka_uint32_t t_h;
@@ -178,7 +178,7 @@ void HighResTimer::calibrate()
   asm volatile ("mftb %0" : "=r" (hrt0.u.t_l) );
   asm volatile ("mftbu %0" : "=r" (hrt2.u.t_h) );
   asm volatile ("mftb %0" : "=r" (hrt2.u.t_l) );
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  elif defined(__x86_64__) || defined(KAAPI_USE_ARCH_IA64)
   HighResTimer::type hrt0, hrt1, hrt2;
   hrt0 = HighResTimer::gettick();
 #  else 
@@ -187,16 +187,16 @@ void HighResTimer::calibrate()
   /* loop 1 */
   for (int i=0; i<128; ++i)
     t00 = WallTimer::gettime();
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
+#  if defined( __APPLE__ ) && (defined(__ppc64__)||defined(__ppc__))
   asm volatile ("mftbu %0" : "=r" (hrt1.u.t_h) );
   asm volatile ("mftb %0" : "=r" (hrt1.u.t_l) );
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  elif defined(__x86_64__) || defined(KAAPI_USE_ARCH_IA64)
   hrt1 = HighResTimer::gettick();
 #  endif
 
   /* loop 2 */
   t00 = WallTimer::gettime();
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
+#  if defined( __APPLE__ ) && (defined(__ppc64__)||defined(__ppc__))
   for (int i=0; i<200; ++i)
 #  else
   for (int i=0; i<200; ++i)
@@ -204,14 +204,14 @@ void HighResTimer::calibrate()
     for (int j=0; j<100000; ++j)
       count++;
   t11 = WallTimer::gettime();
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
+#  if defined( __APPLE__ ) && (defined(__ppc64__)||defined(__ppc__))
   asm volatile ("mftbu %0" : "=r" (hrt2.u.t_h) );
   asm volatile ("mftb %0" : "=r" (hrt2.u.t_l) );
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  elif defined(__x86_64__) || defined(KAAPI_USE_ARCH_IA64)
   hrt2 = HighResTimer::gettick();
 #  endif
 
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
+#  if defined( __APPLE__ ) && (defined(__ppc64__)||defined(__ppc__))
   /* hrt0: ticks for 128 gettimeofday */
   hrt0.ll = hrt1.ll - hrt0.ll;
 
@@ -222,7 +222,7 @@ void HighResTimer::calibrate()
   double d = double(hrt1.ll)-double(hrt0.ll)/64.0;
   HighResTimer::dtick_per_s = d / (t11-t00);
 
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  elif defined(__x86_64__) || defined(KAAPI_USE_ARCH_IA64)
   /* hrt0: ticks for 128 gettimeofday */
   hrt0 = hrt1 - hrt0;
 
@@ -237,7 +237,7 @@ void HighResTimer::calibrate()
 
 #else // NO SOFT_CALIBRATION
 
-#  if defined( KAAPI_USE_DARWIN ) || defined(KAAPI_USE_IPHONEOS)
+#  if defined( __APPLE__ ) || defined(KAAPI_USE_IPHONEOS)
   int mib[2];
   size_t len;
   unsigned long mhz;

@@ -168,12 +168,12 @@ void Properties::store(
 //
 void Properties::print( std::ostream& cout ) const
 {
-  std::map<std::string,std::string>::const_iterator curr = _map.begin(); 
-  std::map<std::string,std::string>::const_iterator end = _map.end(); 
-  while (curr != end) {
-    if ( (*curr).second != "") 
-      cout << (*curr).first << "=" << (*curr).second << ';' << std::endl;
-    ++curr;
+  std::map<std::string,std::string>::const_iterator icurr = _map.begin(); 
+  std::map<std::string,std::string>::const_iterator iend = _map.end(); 
+  while (icurr != iend) {
+    if ( (*icurr).second != "") 
+      cout << (*icurr).first << "=" << (*icurr).second << ';' << std::endl;
+    ++icurr;
   }
 }
 

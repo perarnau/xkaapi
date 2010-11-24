@@ -60,7 +60,8 @@
 */
 kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0,
-   .stacksize = 64*4096
+   .stacksize   = 64*4096,
+   .cpucount    = 0,
 };
 
 
@@ -119,6 +120,10 @@ int kaapi_setup_param(
 )
 {
   const char* wsselect;
+  
+  bzero( kaapi_default_param.kid2cpu, sizeof(kaapi_default_param.kid2cpu) );
+  bzero( kaapi_default_param.cpu2kid, sizeof(kaapi_default_param.cpu2kid) );
+  bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
   
   /* compute the number of cpu of the system */
 #if defined(KAAPI_USE_LINUX)
