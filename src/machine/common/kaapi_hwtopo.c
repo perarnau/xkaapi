@@ -109,7 +109,8 @@ static size_t kaapi_hw_countcousin( hwloc_obj_t obj )
   return count;
 }
 
-
+/*
+*/
 const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t* affinity )
 {
   static char string[128];
@@ -124,6 +125,7 @@ const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t* affinity )
   string[nproc] = 0;
   return string;
 }
+
 
 #if 0
 /*
@@ -297,13 +299,16 @@ int kaapi_hw_init()
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
     printf("level[%i]: #memory:%i \t", depth, kaapi_default_param.memory.levels[depth].count );
-    for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
+    if (kaapi_cpuset_intersect(&kaapi_default_param.memory.levels[depth].affinity[i].who, kaapi_default_param.usedcpu))
     {
-      printf("[size:%u, cpuset:%s, type:%u]   ", 
-        (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
-        kaapi_cpuset2string(kaapi_default_param.syscpucount, &kaapi_default_param.memory.levels[depth].affinity[i].who),
-        (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].type
-      );
+      for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
+      {
+        printf("[size:%u, cpuset:%s, type:%u]   ", 
+          (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
+          kaapi_cpuset2string(kaapi_default_param.syscpucount, &kaapi_default_param.memory.levels[depth].affinity[i].who),
+          (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].type
+        );
+      }
     }
     printf("\n");
   }

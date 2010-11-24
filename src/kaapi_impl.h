@@ -987,6 +987,13 @@ static inline void kaapi_cpuset_clear(kaapi_cpuset_t* affinity )
 
 /**
 */
+static inline int kaapi_cpuset_intersect(kaapi_cpuset_t* s1, kaapi_cpuset_t* s2)
+{
+  return (((*s1)[0] & (*s2)[0]) != 0) || (((*s1)[1] & (*s2)[1]) != 0);
+}
+
+/**
+*/
 static inline int kaapi_cpuset_empty(kaapi_cpuset_t* affinity)
 {
   return ((*affinity)[0] == 0) && ((*affinity)[1] == 0);
