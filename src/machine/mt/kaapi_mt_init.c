@@ -133,6 +133,11 @@ int kaapi_mt_init(void)
   /* set the kprocessor AFTER topology !!! */
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
   
+  /* destroy the procinfo list, thread args no longer valid */
+  kaapi_procinfo_list_free(kaapi_default_param.kproc_list);
+  free(kaapi_default_param.kproc_list);
+  kaapi_default_param.kproc_list = 0;
+  
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
   thread = kaapi_self_thread_context();

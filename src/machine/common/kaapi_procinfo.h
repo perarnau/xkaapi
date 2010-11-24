@@ -63,7 +63,7 @@ typedef struct kaapi_procinfo_t
 
 
 /* ========================================================================== */
-typedef struct kaapi_procinfo_list
+typedef struct kaapi_procinfo_list_t
 {
   unsigned int count;
   kaapi_procinfo_t* head;
@@ -81,11 +81,11 @@ void kaapi_procinfo_free(kaapi_procinfo_t*);
 
 /** Initialize the list of proc info
 */
-void kaapi_procinfo_list_init(kaapi_procinfo_list_t*);
+extern void kaapi_procinfo_list_init(kaapi_procinfo_list_t*);
 
 /** Free a list of proc info
 */
-void kaapi_procinfo_list_free(kaapi_procinfo_list_t*);
+extern void kaapi_procinfo_list_free(kaapi_procinfo_list_t*);
 
 /** Add new element into the list of proc info
 */

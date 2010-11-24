@@ -406,8 +406,13 @@ int kaapi_procinfo_list_parse_string
       return -1;
     
     kpi->proc_index = i;
-    kpi->proc_type = proc_type;
-    kpi->bound_cpu = parser.proc_binding[i];
+    kpi->proc_type  = proc_type;
+    kpi->bound_cpu  = parser.proc_binding[i];
+    
+    if (proc_type == KAAPI_PROC_TYPE_CPU)
+    {
+      kaapi_cpuset_set( &kaapi_default_param.usedcpu, kpi->bound_cpu );
+    }
     
     kaapi_procinfo_list_add(kpl, kpi);
     

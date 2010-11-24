@@ -445,6 +445,24 @@ typedef struct kaapi_listrequest_t {
 #endif /* type of request */
 
 
+/** Compact coding of topology.
+    For each processor, we store the hierarchy of the
+    mapping. Assuming that the machine has 4 memory hierarchy
+    level, the processor kid has the following information.
+    neighbors[0]: neighbor kprocessors sharing L1 cache
+    neighbors[1]: neighbor kprocessors sharing L2 cache
+    neighbors[2]: neighbor kprocessors sharing L3 cache
+    neighbors[3]: neighbor kprocessors sharing node
+    neighbors[4]: neighbor kprocessors sharing the machine
+*/
+typedef struct kaapi_neighbor_t {
+  short                 count;
+  kaapi_cpuset_t        cpuset;
+  kaapi_processor_id_t* neighbors;
+} kaapi_neighbor_t;
+
+
+
 /** \ingroup WS
     This data structure defines a work stealer processor thread.
     The kid is a system wide identifier. In the current version it only contains a local counter value
@@ -474,6 +492,11 @@ typedef struct kaapi_processor_t {
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
+  
+  /* hierachical information of other kprocessor */
+  int                      cpuid;                         /* os index of the bound cpu */
+  int                      hlevel_depth;                  /* hierarchy depth, 0 = L1 cache */
+  kaapi_neighbor_t*        hlevel;                        /* hierarchy */
 
   /* performance register */
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
