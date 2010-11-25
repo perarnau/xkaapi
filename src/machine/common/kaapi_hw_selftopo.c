@@ -242,10 +242,10 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
         if ( (ncpu !=kproc->hlevel.levels[depth].nkids) && (kproc->hlevel.levels[depth].kids !=0))
           free(kproc->hlevel.levels[depth].kids);
         else {
-          kproc->hlevel.levels[depth].kids = (kaapi_processor_t*)calloc(ncpu, sizeof(kaapi_processor_t));
+          kproc->hlevel.levels[depth].kids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
         }
         /* compute the kids array for this processor */
-        kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(&kproc->hlevel.levels[depth].set->who, kproc->hlevel.levels[depth].kids, ncpu);
+        kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(&kproc->hlevel.levels[depth].set->who, kproc->hlevel.levels[depth].kids, KAAPI_MAX_PROCESSOR);
         break;
       }
     }
@@ -255,14 +255,14 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   printf("\nNew topo for procesor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
-    const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth]->who);
+    const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth].set->who);
     printf("cpu:%i, kid:%i, level:%i [size:%lu, cpuset:'%s', kids: '%s', type:%u] \n", processor, kproc->kid, depth, 
-    (unsigned long)kproc->hlevel.levels[depth]->mem_size,
+    (unsigned long)kproc->hlevel.levels[depth].set->mem_size,
     str, 
     kaapi_kids2string(
-        kproc->hlevel.levels[depth]->nkids, 
-        kproc->hlevel.levels[depth]->kids), 
-    (unsigned int)kproc->hlevel.levels[depth]->type
+        kproc->hlevel.levels[depth].nkids, 
+        kproc->hlevel.levels[depth].kids), 
+    (unsigned int)kproc->hlevel.levels[depth].set->type
     );
   }
 
