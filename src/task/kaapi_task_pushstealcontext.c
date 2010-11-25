@@ -93,6 +93,26 @@ static void wait_for_aggregation(kaapi_processor_t* kproc)
   }
 }
 
+static void do_initial_split(kaapi_processor_t* kproc)
+{
+  kaapi_listrequest_t* const klr = &kproc->hlrequests;
+  kaapi_listrequest_iterator_t kli;
+
+  kaapi_listrequest_iterator_init(klr, &kli);
+  if (!kaapi_listrequest_iterator_empty(&kli))
+  {
+    kaapi_sched_stealprocessor(kproc, klr, &kli);
+
+    /* reply failed for all others requests */
+    kaapi_request_t* kreq = kaapi_listrequest_iterator_get(klr, &kli);
+    while (kreq != 0)
+    {
+      _kaapi_request_reply(kreq, KAAPI_REPLY_S_NOK);
+      kreq = kaapi_listrequest_iterator_next(klr, &kli);
+    }
+  }
+}
+
 /**
 */
 kaapi_stealcontext_t* kaapi_task_begin_adaptive
@@ -164,6 +184,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   if (flag & KAAPI_SC_AGGREGATE)
   {
     wait_for_aggregation(kproc);
+    do_initial_split(kproc);
     kaapi_sched_unlock( &kproc->lock );
   }
 
