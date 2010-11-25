@@ -728,11 +728,11 @@ typedef struct kaapi_access_t {
     \param value INOUT a pointer to the user data
     \retval a pointer to the next task to push or 0.
 */
-static inline void kaapi_access_init(kaapi_access_t* access, void* value )
+static inline void kaapi_access_init(kaapi_access_t* a, void* value )
 {
-  access->data = value;
+  a->data = value;
 #if !defined(KAAPI_NDEBUG)
-  access->version = 0;
+  a->version = 0;
 #endif  
   return;
 }

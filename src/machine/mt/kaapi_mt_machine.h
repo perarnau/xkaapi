@@ -445,22 +445,14 @@ typedef struct kaapi_listrequest_t {
 #endif /* type of request */
 
 
-/** Compact coding of topology.
-    For each processor, we store the hierarchy of the
-    mapping. Assuming that the machine has 4 memory hierarchy
-    level, the processor kid has the following information.
-    neighbors[0]: neighbor kprocessors sharing L1 cache
-    neighbors[1]: neighbor kprocessors sharing L2 cache
-    neighbors[2]: neighbor kprocessors sharing L3 cache
-    neighbors[3]: neighbor kprocessors sharing node
-    neighbors[4]: neighbor kprocessors sharing the machine
+/** CPU Memory hierarchy of the local machine
+    points to the affiniset defined into the memory hierarchy
 */
-typedef struct kaapi_neighbor_t {
-  short                 count;
-  kaapi_cpuset_t        cpuset;
-  kaapi_processor_id_t* neighbors;
-} kaapi_neighbor_t;
-
+#define ENCORE_UNE_MACRO_DETAILLE 8
+typedef struct kaapi_cpuhierarchy_t {
+  unsigned short        depth;
+  kaapi_affinityset_t*  levels[ENCORE_UNE_MACRO_DETAILLE];
+} kaapi_cpuhierarchy_t;
 
 
 /** \ingroup WS
@@ -494,9 +486,8 @@ typedef struct kaapi_processor_t {
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
   
   /* hierachical information of other kprocessor */
-  int                      cpuid;                         /* os index of the bound cpu */
-  int                      hlevel_depth;                  /* hierarchy depth, 0 = L1 cache */
-  kaapi_neighbor_t*        hlevel;                        /* hierarchy */
+  int                      cpuid;                         /* os index of the bound physical cpu */
+  kaapi_cpuhierarchy_t     hlevel;                        /* hierarchy */
 
   /* performance register */
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
@@ -532,6 +523,15 @@ typedef struct kaapi_processor_t {
 struct kaapi_procinfo;
 extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_t*);
 
+
+/** Initialize the topology information from each thread
+    Update kprocessor data structure only if kaapi_default_param.memory
+    has been initialized by the kaapi_hw_init function.
+    If hw cannot detect topology nothing is done.
+    If KAAPI_CPUSET was not set but the topology is available, then the
+    function will get the physical CPU on which the thread is running.
+*/
+extern int kaapi_processor_computetopo(kaapi_processor_t* kproc);
 
 #if defined(KAAPI_USE_NUMA)
 static inline kaapi_processor_t* kaapi_processor_allocate(void)

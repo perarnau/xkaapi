@@ -272,14 +272,6 @@ typedef struct kaapi_hierarchy_t {
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
-/** CPU Memory hierarchy of the local machine
-    points to the affiniset defined into the memory hierarchy
-*/
-typedef struct kaapi_cpuhierarchy_t {
-  unsigned short        depth;
-  kaapi_affinityset_t** levels;
-} kaapi_cpuhierarchy_t;
-
 
 /** Definition of parameters for the runtime system
 */
@@ -295,9 +287,8 @@ typedef struct kaapi_rtparam_t {
   struct kaapi_procinfo_list_t*   kproc_list;                      /* list of kprocessors to initialized */
   kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
   kaapi_hierarchy_t        memory;                          /* memory hierarchy */
-  unsigned short	         kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
-  unsigned short	         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
-  kaapi_cpuhierarchy_t     cpu2mem[KAAPI_MAX_PROCESSOR];    /* memory hierarchy for each cpu */
+  unsigned int	           kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
+  unsigned int  	         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
