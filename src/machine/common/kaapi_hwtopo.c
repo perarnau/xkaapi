@@ -89,6 +89,7 @@ static int kaapi_hwcpuset2affinity(
 )
 {
   int cnt;
+  cnt = 0;
   kaapi_cpuset_clear( affinity );
   for (int i=0; i<nproc; ++i)
   {
@@ -160,7 +161,7 @@ int kaapi_hw_init()
   hwloc_obj_t obj;
   int topodepth, depth;
   int memdepth;
-  int countmachine, idx, ncousin;
+  int idx, ncousin;
   unsigned int i;
   int ncpu;
 

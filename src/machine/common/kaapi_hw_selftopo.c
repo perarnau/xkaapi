@@ -50,6 +50,28 @@
 
 #include "kaapi_impl.h"
 
+
+static const char* kaapi_kids2string(
+ int nkids,
+ kaapi_processor_id_t* kids
+)
+{
+  static char buffer[1024];
+  int i, err, size;
+  size = 0;
+  
+  for (i =0; i<nkids; ++i)
+  {
+    err = sprintf(buffer+size,"%i ", kids[i]);
+    kaapi_assert(err >0);
+    size += err;
+    kaapi_assert(size <1023);
+  }
+  buffer[size+1] = 0;
+  return buffer;
+}
+
+
 /** Initialize the topology information from each thread
  Update kprocessor data structure only if kaapi_default_param.memory
  has been initialized by the kaapi_hw_init function.
@@ -110,15 +132,20 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   char filename[256];
   FILE* file;
   int depth;
+  pid_t tid;
+  int err;
   
   if (kaapi_default_param.memory.depth == 0) 
     return ENOENT;
+#if 0
   if (kaapi_default_param.use_affinity ==0)
     return ENOENT;
+#endif
   
-  sprintf(filename, "/proc/%i/task/%i/stat", getpid(), gettid());
+  tid = syscall(SYS_gettid);
+  sprintf(filename, "/proc/%i/task/%i/stat", getpid(), tid);
   file = fopen(filename, "rt");
-  fscanf(file,"%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %ld %lu %llu %lu %lu %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %lu %lu %lu %d %d %u %u %llu %lu %ld",
+  err = fscanf(file,"%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %ld %lu %llu %lu %lu %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %lu %lu %lu %d %d %u %u %llu %lu %ld",
          &pid,
          comm,
          &state,
@@ -175,28 +202,35 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
     - we recompute the stack of affinity_set from the memory hierarchy
   */
   kproc->cpuid = processor;
+  kaapi_default_param.cpu2kid[processor]  = kproc->kid;
+  kaapi_default_param.kid2cpu[kproc->kid] = processor;
   kaapi_assert_m(kaapi_default_param.memory.depth <ENCORE_UNE_MACRO_DETAILLE, "To increase..." );
 
-  kproc->hlevel.depth == 0;
+  kproc->hlevel.depth = 0;
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
+    int i;
     for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
       if (kaapi_cpuset_has(kaapi_default_param.memory.levels[depth].affinity[i].who, kproc->cpuid))
       {
-        kproc->hlevel.levels[depth] = kaapi_default_param.memory.levels[depth].affinity[i];
+        kproc->hlevel.levels[depth] = &kaapi_default_param.memory.levels[depth].affinity[i];
         break;
       }
     }
   }
   kproc->hlevel.depth = depth;
   
+  printf("\nNew topo for procesor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
     const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth]->who);
-    printf("[size:%lu, cpuset:'%s', %lu, type:%u]   ", 
+    printf("cpu:%i, kid:%i, level:%i [size:%lu, cpuset:'%s', kids: '%s', type:%u] \n", processor, kproc->kid, depth, 
     (unsigned long)kproc->hlevel.levels[depth]->mem_size,
-    str, strlen(str),
+    str, 
+    kaapi_kids2string(
+        kproc->hlevel.levels[depth]->nkids, 
+        kproc->hlevel.levels[depth]->kids), 
     (unsigned int)kproc->hlevel.levels[depth]->type
     );
   }

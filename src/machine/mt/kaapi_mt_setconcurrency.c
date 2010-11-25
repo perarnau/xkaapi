@@ -188,6 +188,12 @@ int kaapi_setconcurrency(void)
 
   /* here is the number of correctly initialized processor, may be less than requested */
   kaapi_count_kprocessors = KAAPI_ATOMIC_READ( &kaapi_term_barrier );
+
+  /* recompute topology information here, if CPUSET is not set
+     then the threads have self determined their processor,
+     thus the mappings cpu2kid and kid2cpu are valid.
+  */
+  kaapi_processor_computetopo( kaapi_all_kprocessors[0] );
     
   /* broadcast to all threads that they have been started */
   kaapi_barrier_td_setactive(&barrier_init2, 0);
@@ -238,11 +244,17 @@ void* kaapi_sched_run_processor( void* arg )
   /* from here, thread arg no longer valid */
   kpi = 0;
 
-  /* quit first steap of the initialization */
+  /* quit first step of the initialization */
   kaapi_barrier_td_setactive(&barrier_init, 0);
   
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init2 );
+
+  /* recompute topology information here, if CPUSET is not set
+     then the threads have self determined their processor,
+     thus the mappings cpu2kid and kid2cpu are valid.
+  */
+  kaapi_processor_computetopo( kproc );
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
