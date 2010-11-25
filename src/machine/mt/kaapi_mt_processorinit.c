@@ -70,25 +70,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kproc->kpi          = kpi;
   kproc->issteal      = 0;
   
-#if 0//defined(KAAPI_USE_HWLOC)
-  /* hierarchy information */
-  kproc->cpuid        = kpi->bound_cpu;
-  kproc->hlevel_depth = kaapi_default_param.memory.depth;
-  kproc->hlevel       = (kaapi_neighbor_t*)malloc(
-      sizeof(kaapi_neighbor_t) * kaapi_default_param.memory.depth 
-    + sizeof(kaapi_processor_id_t) * (kaapi_default_param.memory.depth * kaapi_count_kprocessors)
-  );
-  kaapi_assert(kproc->hlevel != 0);
-  start_kprocid = kproc->hlevel+kaapi_default_param.memory.depth:
-  for (int i=0; i<kproc->hlevel_depth; ++i)
-  {
-    kproc->hlevel[i].count = 0;
-    kaapi_cpuset_copy(&kproc->hlevel[i].cpuset, kaapi_default_param.memory.levels[i].);
-  }
-#endif  
-
   kaapi_processor_computetopo( kproc );  
-  
+
   kaapi_sched_initlock( &kproc->lock );
   
   kaapi_listrequest_init( kproc, &kproc->hlrequests );

@@ -43,6 +43,7 @@ libkaapi_la_SOURCES=\
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \
+  machine/common/kaapi_hw_selftopo.c \
   memory/kaapi_mem.h \
   memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \
@@ -113,8 +114,7 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_perf.c \
-  machine/mt/kaapi_mt_register_procs.c\
-  machine/mt/kaapi_mt_selftopo.c
+  machine/mt/kaapi_mt_register_procs.c
 endif
 
 if KAAPI_TARGET_CUDA

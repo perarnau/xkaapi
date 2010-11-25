@@ -446,12 +446,20 @@ typedef struct kaapi_listrequest_t {
 
 
 /** CPU Memory hierarchy of the local machine
-    points to the affiniset defined into the memory hierarchy
+    points to the affiniset defined into the memory hierarchy.
+    The array of kids and nkids is a local information that may
+    depends on the view of the global map cpu2kid and kid2cpu.
 */
 #define ENCORE_UNE_MACRO_DETAILLE 8
+typedef struct kaapi_onelevel_t {
+  size_t                nkids;
+  kaapi_processor_id_t* kids;
+  kaapi_affinityset_t*  set;
+} kaapi_onelevel_t;
+
 typedef struct kaapi_cpuhierarchy_t {
   unsigned short        depth;
-  kaapi_affinityset_t*  levels[ENCORE_UNE_MACRO_DETAILLE];
+  kaapi_onelevel_t      levels[ENCORE_UNE_MACRO_DETAILLE];
 } kaapi_cpuhierarchy_t;
 
 

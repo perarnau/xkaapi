@@ -247,9 +247,8 @@ enum kaapi_memory_type_t {
 /**
 */
 typedef struct kaapi_affinityset_t {
-    size_t                nkids;
-    kaapi_processor_id_t* kids;
     kaapi_cpuset_t        who;
+    size_t                ncpu;
     size_t                mem_size;
     short                 type;
 } kaapi_affinityset_t;

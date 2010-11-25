@@ -79,27 +79,20 @@ int kaapi_hw_init()
 
 #include "hwloc.h"
 
-/* Return the size of the kids array
+/* 
 */
-static int kaapi_hwcpuset2affinity( 
-  kaapi_cpuset_t*       affinity, 
-  kaapi_processor_id_t* kids, 
-  int nproc, 
-  hwloc_cpuset_t cpuset 
+static void kaapi_hwcpuset2affinity( 
+  kaapi_cpuset_t* affinity, 
+  int             nproc, 
+  hwloc_cpuset_t  cpuset 
 )
 {
-  int cnt;
   kaapi_cpuset_clear( affinity );
   for (int i=0; i<nproc; ++i)
   {
     if (hwloc_cpuset_isset(cpuset, i))
-    {
       kaapi_cpuset_set(affinity, i);
-      kids[cnt] = kaapi_default_param.cpu2kid[i];
-      if (kids[cnt] != -1) ++cnt;
-    }
   }
-  return cnt;
 }
 
 /*
@@ -160,7 +153,7 @@ int kaapi_hw_init()
   hwloc_obj_t obj;
   int topodepth, depth;
   int memdepth;
-  int countmachine, idx, ncousin;
+  int idx, ncousin;
   unsigned int i;
   int ncpu;
 
@@ -215,16 +208,13 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
         ncpu = hwloc_cpuset_weight( obj->cpuset );
         kaapi_default_param.memory.levels[memdepth].count = 1;
         kaapi_default_param.memory.levels[memdepth].affinity = (kaapi_affinityset_t*)calloc( 1, sizeof(kaapi_affinityset_t) );
-        kaapi_default_param.memory.levels[memdepth].affinity[0].kids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t) );
         kaapi_default_param.memory.levels[memdepth].affinity[0].mem_size = obj->memory.total_memory;
         kaapi_default_param.memory.levels[memdepth].affinity[0].type = KAAPI_MEM_NODE;
-        kaapi_default_param.memory.levels[memdepth].affinity[0].nkids = 
-          kaapi_hwcpuset2affinity(
-              &kaapi_default_param.memory.levels[memdepth].affinity[0].who,
-              kaapi_default_param.memory.levels[memdepth].affinity[0].kids,
-              KAAPI_MAX_PROCESSOR, 
-              obj->cpuset 
-        );
+        kaapi_hwcpuset2affinity(
+            &kaapi_default_param.memory.levels[memdepth].affinity[0].who,
+            KAAPI_MAX_PROCESSOR, 
+            obj->cpuset 
+      );
       }
     }
     else if ((obj->type == HWLOC_OBJ_NODE) || (obj->type == HWLOC_OBJ_CACHE))
@@ -244,14 +234,11 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
           kaapi_default_param.memory.levels[memdepth].affinity[idx].mem_size = obj->attr->cache.size;
 
         ncpu = hwloc_cpuset_weight( obj->cpuset );
-        kaapi_default_param.memory.levels[memdepth].affinity[idx].kids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t) );
         kaapi_default_param.memory.levels[memdepth].affinity[idx].type = (obj->type == HWLOC_OBJ_CACHE ? KAAPI_MEM_CACHE : KAAPI_MEM_NODE);
-        kaapi_default_param.memory.levels[memdepth].affinity[idx].nkids = 
-          kaapi_hwcpuset2affinity(
-              &kaapi_default_param.memory.levels[memdepth].affinity[idx].who,
-              kaapi_default_param.memory.levels[memdepth].affinity[idx].kids,
-              KAAPI_MAX_PROCESSOR, 
-              obj->cpuset 
+        kaapi_hwcpuset2affinity(
+            &kaapi_default_param.memory.levels[memdepth].affinity[idx].who,
+            KAAPI_MAX_PROCESSOR, 
+            obj->cpuset 
         );
 
         ++idx;
@@ -279,12 +266,9 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
       if (kaapi_cpuset_intersect(kaapi_default_param.memory.levels[depth].affinity[i].who, kaapi_default_param.usedcpu))
       {
         const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kaapi_default_param.memory.levels[depth].affinity[i].who);
-        printf("[size:%lu, cpuset:'%s', kids:'%s', type:%u]   ", 
+        printf("[size:%lu, cpuset:'%s', type:%u]   ", 
           (unsigned long)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
           str, 
-          kaapi_kids2string(
-            kaapi_default_param.memory.levels[depth].affinity[i].nkids, 
-            kaapi_default_param.memory.levels[depth].affinity[i].kids), 
           (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].type
         );
       }
