@@ -254,6 +254,7 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
   /* end of detection of memory hierarchy */
   
   
+#if 0
   /* display result... */
   printf("Memory hierarchy levels:%i\n", kaapi_default_param.memory.depth);
   printf("System cpu:%i\n", kaapi_default_param.syscpucount);
@@ -286,6 +287,7 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
   for (i=0; i<kaapi_default_param.cpucount; ++i)
     printf("%i ", kaapi_default_param.cpu2kid[i] );
   printf("\n");
+#endif
   
   return 0;
 }
