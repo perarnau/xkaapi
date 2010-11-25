@@ -98,6 +98,7 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
+  kaapi_uintptr_t	     state;
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_uint32_t             cnt_tasks = 0;
@@ -129,6 +130,13 @@ push_frame:
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
     body = pc->body;
+
+#if (SIZEOF_VOIDP == 4)
+    state = pc->state;
+#else
+    state = kaapi_task_body2state(body);
+#endif
+
     kaapi_assert_debug( body != kaapi_exec_body);
     pc->body = kaapi_exec_body;
     /* task execution */
@@ -139,13 +147,21 @@ push_frame:
     body( pc->sp, (kaapi_thread_t*)thread->sfp );      
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-    body = kaapi_task_state2body( kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC ) );
-#endif
-    if (likely( kaapi_task_state_isnormal( kaapi_task_body2state(body) ) ) )
+
+    state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
+
+#if (SIZEOF_VOIDP == 4)
+    body = pc->body;
+#else
+    body = kaapi_task_state2body( state );
+#endif /* SIZEOF_VOIDP */
+
+#endif /* KAAPI_USE_EXECTASK_METHOD */
+
+    if (likely( kaapi_task_state_isnormal(state) ))
     {
       /* task execution */
       kaapi_assert_debug(pc == thread->sfp[-1].pc);
-//      kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
       /* here... */
       body( pc->sp, (kaapi_thread_t*)thread->sfp );
@@ -160,19 +176,19 @@ push_frame:
          - else it means that the task has been executed by a thief, but it 
          does not require aftersteal body to merge results.
       */
-      if ( kaapi_task_state_isaftersteal( kaapi_task_body2state(body) ) )
+      if ( kaapi_task_state_isaftersteal( state ) )
       {
         /* means that task has been steal & not yet terminated due
            to some merge to do
         */
-        kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_body2state(body) ) );
+        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
         kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
       }
-      else if ( kaapi_task_state_isterm( kaapi_task_body2state(body) ) ){
+      else if ( kaapi_task_state_isterm( state ) ){
         /* means that task has been steal */
-        kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_body2state(body) ) );
+        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
       }
-      else if ( kaapi_task_state_issteal( kaapi_task_body2state(body) ) ) /* but not terminate ! so swap */
+      else if ( kaapi_task_state_issteal( state ) ) /* but not terminate ! so swap */
       {
 //        printf("Suspend thread: %p on pc:%p\n", thread, pc );
 //        fflush(stdout);
@@ -180,9 +196,9 @@ push_frame:
       }
     }
 #if defined(KAAPI_DEBUG)
-    kaapi_uintptr_t state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
-    kaapi_assert_debug( !kaapi_task_state_isterm(state) || (kaapi_task_state_isterm(state) && kaapi_task_state_issteal(state))  );
-    kaapi_assert_debug( kaapi_task_state_isexec(state) );
+    const kaapi_uintptr_t debug_state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
+    kaapi_assert_debug( !kaapi_task_state_isterm(debug_state) || (kaapi_task_state_isterm(debug_state) && kaapi_task_state_issteal(debug_state))  );
+    kaapi_assert_debug( kaapi_task_state_isexec(debug_state) );
 #endif    
 
 #if defined(KAAPI_USE_PERFCOUNTER)

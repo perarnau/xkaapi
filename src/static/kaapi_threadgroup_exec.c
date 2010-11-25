@@ -57,8 +57,8 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 
   /* Push the task that will mark synchronisation on the main thread */
   thgrp->waittask = kaapi_thread_toptask( thgrp->threads[-1] );
-  kaapi_uintptr_t state = kaapi_task_state_setsteal( kaapi_task_body2state(kaapi_taskwaitend_body) );
-  kaapi_task_init( thgrp->waittask, kaapi_task_state2body( state ), thgrp );
+
+  kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
   kaapi_thread_pushtask( thgrp->threads[-1] );    
   
   thgrp->mainctxt->partid = -1;
