@@ -114,11 +114,11 @@ struct TaskBodyCPU<TaskFibo> : public TaskFibo {
       /* the Spawn keyword is used to spawn new task
        * new task is executed in parallel as long as dependencies are respected
        */
-      thread->Spawn<TaskFibo>() ( &res1, n-2);
+      thread->Spawn<TaskFibo>() ( &res1, n-1);
       
       /* here call in sequential the second recursive call
       */
-      (*this) ( thread, &res2, n-1);
+      (*this) ( thread, &res2, n-2);
 
       /* the Sum after sync
        */
