@@ -259,6 +259,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   }
   kproc->hlevel.depth = depth;
   
+#if 0
   printf("\nNew topo for procesor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
@@ -272,6 +273,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
     (unsigned int)kproc->hlevel.levels[depth].set->type
     );
   }
+#endif
 
   return 0;
 #endif
