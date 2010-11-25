@@ -113,7 +113,8 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_init.c \
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_perf.c \
-  machine/mt/kaapi_mt_register_procs.c
+  machine/mt/kaapi_mt_register_procs.c\
+  machine/mt/kaapi_mt_selftopo.c
 endif
 
 if KAAPI_TARGET_CUDA
