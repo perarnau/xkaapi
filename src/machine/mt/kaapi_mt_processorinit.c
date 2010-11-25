@@ -76,6 +76,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   for (i=0; i<ENCORE_UNE_MACRO_DETAILLE; ++i)
   {
     kproc->hlevel.levels[i].nkids = 0;
+    kproc->hlevel.levels[i].nsize = 0;
     kproc->hlevel.levels[i].kids = 0;
     kproc->hlevel.levels[i].set = 0;
   }

@@ -453,6 +453,7 @@ typedef struct kaapi_listrequest_t {
 #define ENCORE_UNE_MACRO_DETAILLE 8
 typedef struct kaapi_onelevel_t {
   size_t                nkids;
+  size_t                nsize;   /* allocation size of kids */
   kaapi_processor_id_t* kids;
   kaapi_affinityset_t*  set;
 } kaapi_onelevel_t;

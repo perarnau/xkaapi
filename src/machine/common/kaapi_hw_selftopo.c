@@ -239,11 +239,18 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
       {
         kproc->hlevel.levels[depth].set = &kaapi_default_param.memory.levels[depth].affinity[i];
         ncpu = kproc->hlevel.levels[depth].set->ncpu;
-        if ( (ncpu !=kproc->hlevel.levels[depth].nkids) && (kproc->hlevel.levels[depth].kids !=0))
-          free(kproc->hlevel.levels[depth].kids);
-        else {
+        if (ncpu > kproc->hlevel.levels[depth].nsize) 
+        {
+          if (kproc->hlevel.levels[depth].kids !=0)
+            free(kproc->hlevel.levels[depth].kids);
+          kproc->hlevel.levels[depth].kids = 0;
+        }
+        if (kproc->hlevel.levels[depth].kids == 0)
+        {
+          kproc->hlevel.levels[depth].nsize = ncpu;
           kproc->hlevel.levels[depth].kids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
         }
+        
         /* compute the kids array for this processor */
         kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(&kproc->hlevel.levels[depth].set->who, kproc->hlevel.levels[depth].kids, KAAPI_MAX_PROCESSOR);
         break;
