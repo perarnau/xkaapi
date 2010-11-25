@@ -893,7 +893,7 @@ static inline void kaapi_task_initdfg_with_state
 #  define KAAPI_MASK_BODY_SHIFTR 60UL
 # endif
   task->u.body = (kaapi_task_body_t)
-    (kaapi_uintptr_t)body | (state << KAAPI_MASK_BODY_SHIFTR);
+    ((kaapi_uintptr_t)body | (state << KAAPI_MASK_BODY_SHIFTR));
 #endif
 }
 

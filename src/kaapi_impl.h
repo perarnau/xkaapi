@@ -703,7 +703,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 
 #else /* SIZEOF_VOIDP == 8 */
 
-  const kaapi_uintptr_t state = task->u.body;
+  const kaapi_uintptr_t state = (kaapi_uintptr_t)task->u.body;
   return kaapi_task_state_isstealable(state) &&
     kaapi_task_body_isstealable(kaapi_task_state2body(state));
 
