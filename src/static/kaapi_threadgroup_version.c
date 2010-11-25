@@ -259,8 +259,13 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       kaapi_assert (ver->readers[tid].addr != 0);
       
       /* The task is waiting for a parameter -> suspend state */
-      
+
+#if (SIZEOF_VOIDP == 4)
+      kaapi_task_setstate(task, KAAPI_MASK_BODY_STEAL);
+      kaapi_task_setbody(task, kaapi_taskrecv_body);
+#else
       kaapi_task_setstate(task, kaapi_task_state_setsteal( kaapi_task_body2state(kaapi_taskrecv_body) ) );
+#endif
 
       kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);
       if (ver->com->tag ==0) ver->com->tag = ++thgrp->tag_count;

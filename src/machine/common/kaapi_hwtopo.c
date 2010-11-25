@@ -113,6 +113,8 @@ static size_t kaapi_hw_countcousin( hwloc_obj_t obj )
   return count;
 }
 
+
+#if 0
 static const char* kaapi_kids2string(
  int nkids,
  kaapi_processor_id_t* kids
@@ -132,6 +134,7 @@ static const char* kaapi_kids2string(
   buffer[size+1] = 0;
   return buffer;
 }
+#endif
 
 
 /** Initialize hw topo.

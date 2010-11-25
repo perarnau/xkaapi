@@ -50,6 +50,7 @@
 
 #include "kaapi_impl.h"
 
+#if defined(__linux__)
 /* Return the size of the kids array
 */
 static int kaapi_cpuset2kids( 
@@ -71,6 +72,7 @@ static int kaapi_cpuset2kids(
   return cnt;
 }
 
+#if defined(KAAPI_DEBUG)
 static const char* kaapi_kids2string(
  int nkids,
  kaapi_processor_id_t* kids
@@ -90,6 +92,9 @@ static const char* kaapi_kids2string(
   buffer[size+1] = 0;
   return buffer;
 }
+#endif
+
+#endif // __linux__
 
 
 /** Initialize the topology information from each thread

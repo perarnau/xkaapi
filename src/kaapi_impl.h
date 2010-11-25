@@ -480,14 +480,13 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     - 0010 : the task is terminated. This state if only put for debugging.
 */
 #if (SIZEOF_VOIDP == 4)
-#warning "This code assumes that the 4 higher bits is available on any function pointer. It was not verified on this configuration"
-#  define KAAPI_MASK_BODY_TERM    (0x1UL << 28)
-#  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 28) /* must be different from term */
-#  define KAAPI_MASK_BODY_AFTER   (0x2UL << 28)
-#  define KAAPI_MASK_BODY_EXEC    (0x4UL << 28)
-#  define KAAPI_MASK_BODY_STEAL   (0x8UL << 28)
-#  define KAAPI_MASK_BODY         (0xFUL << 28)
-#  define KAAPI_MASK_BODY_SHIFTR   28UL
+#  define KAAPI_MASK_BODY_TERM    (0x1)
+#  define KAAPI_MASK_BODY_PREEMPT (0x2) /* must be different from term */
+#  define KAAPI_MASK_BODY_AFTER   (0x2)
+#  define KAAPI_MASK_BODY_EXEC    (0x4)
+#  define KAAPI_MASK_BODY_STEAL   (0x8)
+
+
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
 
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
@@ -525,6 +524,126 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
 */
 /**@{ */
+
+#if (SIZEOF_VOIDP == 4)
+
+static inline kaapi_uintptr_t kaapi_task_getstate
+(const kaapi_task_t* task)
+{
+  return task->state;
+}
+
+static inline void kaapi_task_setstate
+(kaapi_task_t* task, kaapi_uintptr_t state)
+{
+  task->state = state;
+}
+
+static inline void kaapi_task_setstate_barrier
+(kaapi_task_t* task, kaapi_uintptr_t state)
+{
+  kaapi_writemem_barrier();
+  task->state = state;
+}
+
+static inline kaapi_uintptr_t kaapi_task_state_get
+(kaapi_uintptr_t state)
+{
+  return state;
+}
+
+static inline unsigned int kaapi_task_state_issteal
+(kaapi_uintptr_t state)
+{
+  return state & KAAPI_MASK_BODY_STEAL;
+}
+
+static inline unsigned int kaapi_task_state_isexec
+(kaapi_uintptr_t state)
+{
+  return state & KAAPI_MASK_BODY_EXEC;
+}
+
+static inline unsigned int kaapi_task_state_isterm
+(kaapi_uintptr_t state)
+{
+  return state & KAAPI_MASK_BODY_TERM;
+}
+
+static inline unsigned int kaapi_task_state_isaftersteal
+(kaapi_uintptr_t state)
+{
+  return state & KAAPI_MASK_BODY_AFTER;
+}
+
+static inline unsigned int kaapi_task_state_ispreempted
+(kaapi_uintptr_t state)
+{
+  return state & KAAPI_MASK_BODY_PREEMPT;
+}
+
+static inline unsigned int kaapi_task_state_isspecial
+(kaapi_uintptr_t state)
+{
+  return !(state == 0);
+}
+
+static inline unsigned int kaapi_task_state_isnormal
+(kaapi_uintptr_t state)
+{
+  return !kaapi_task_state_isspecial(state);
+}
+
+static inline unsigned int kaapi_task_state_isready
+(kaapi_uintptr_t state)
+{
+  return (state & (KAAPI_MASK_BODY_AFTER | KAAPI_MASK_BODY_TERM)) != 0;
+}
+
+static inline unsigned int kaapi_task_state_isstealable
+(kaapi_uintptr_t state)
+{
+  return (state & (KAAPI_MASK_BODY_STEAL | KAAPI_MASK_BODY_EXEC)) == 0;
+}
+
+static inline unsigned int kaapi_task_state2int(kaapi_uintptr_t state)
+{
+  return (unsigned int)state;
+}
+
+#define kaapi_task_state_setsteal(__state)	\
+    ((__state) | KAAPI_MASK_BODY_STEAL)
+
+#define kaapi_task_state_setexec(__state)       \
+    ((__state) | KAAPI_MASK_BODY_EXEC)
+
+#define kaapi_task_state_setterm(__state)       \
+    ((__state) | KAAPI_MASK_BODY_TERM)
+
+#define kaapi_task_state_setafter(__state)      \
+    ((__state) | KAAPI_MASK_BODY_AFTER)
+
+/** \ingroup TASK
+    Set the body of the task
+*/
+static inline void kaapi_task_setbody
+(kaapi_task_t* task, kaapi_task_bodyid_t body)
+{
+  task->state = 0;
+  task->body = body;
+}
+
+/** \ingroup TASK
+    Get the body of the task
+*/
+static inline kaapi_task_bodyid_t kaapi_task_getbody
+(const kaapi_task_t* task)
+{
+  return task->body;
+}
+
+#else /* SIZEOF_VOIDP == 8 */
+
 #define kaapi_task_getstate(task)\
       (task)->u.state
 
@@ -601,6 +720,8 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 }
 /**@} */
 
+#endif /* SIZEOF_VOIDP == 8 */
+
 /** \ingroup TASK
     The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
     All user tasks are stealable.
@@ -608,10 +729,7 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 */
 inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
 { 
-  kaapi_uintptr_t state  = (kaapi_uintptr_t)body;
-  body = kaapi_task_state2body(state);
-  return kaapi_task_state_isstealable(state)
-      && (body != kaapi_taskstartup_body) 
+  return (body != kaapi_taskstartup_body) 
       && (body != kaapi_nop_body)
       && (body != kaapi_tasksteal_body) 
       && (body != kaapi_taskwrite_body)
@@ -626,8 +744,19 @@ inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
     \param task IN a pointer to the kaapi_task_t to test.
 */
 inline static int kaapi_task_isstealable(const kaapi_task_t* task)
-{ 
-  return kaapi_task_body_isstealable(task->u.body);
+{
+#if (SIZEOF_VOIDP == 4)
+
+  return kaapi_task_state_isstealable(task->state) &&
+   kaapi_task_body_isstealable(task->body);
+
+#else /* SIZEOF_VOIDP == 8 */
+
+  const kaapi_uintptr_t state = (kaapi_uintptr_t)task->u.body;
+  return kaapi_task_state_isstealable(state) &&
+    kaapi_task_body_isstealable(kaapi_task_state2body(state));
+
+#endif
 }
 
 /** \ingroup TASK
@@ -650,8 +779,12 @@ static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaap
 */
 static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uintptr_t state )
 {
-  kaapi_assert_debug( (task->u.state & KAAPI_MASK_BODY ) == 0 );
-  kaapi_uintptr_t retval = KAAPI_ATOMIC_ANDPTR_ORIG(&task->u.state, state);
+  const kaapi_uintptr_t retval =
+#if (SIZEOF_VOIDP == 4)
+    KAAPI_ATOMIC_ANDPTR_ORIG(&task->state, state);
+#else /* (SIZEOF_VOIDP == 8) */
+    KAAPI_ATOMIC_ANDPTR_ORIG(&task->u.state, state);
+#endif
   return retval;
 }
 
@@ -662,77 +795,40 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
 #else
   kaapi_writemem_barrier();
 #endif
-  kaapi_uintptr_t retval = KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
+
+  const kaapi_uintptr_t retval =
+#if (SIZEOF_VOIDP == 4)
+    KAAPI_ATOMIC_ORPTR_ORIG(&task->state, state);
+#else
+    KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
+#endif
   return retval;
 }
 
 static inline int kaapi_task_teststate( kaapi_task_t* task, kaapi_uintptr_t state )
 {
   /* assume a mem barrier has been done */
-  return (task->u.state & state) !=0;
+  return
+#if (SIZEOF_VOIDP == 4)
+    (task->state & state) != 0;
+#else
+    (task->u.state & state) != 0;
+#endif
 }
-
-/** \ingroup TASK
-   adaptive steal mode locking.
-   Task state is encoded in body TAES bits.
-   in the case of an adaptive task, we have:
-   TAESbits | task_adapt_body, where
-   (T)erm = 0
-   (A)fter = 0
-   (E)xec = 1
-   (S)teal = ?
-   Thus we assume lock_steal() is called once
-   the adaptive task has started execution,
-   which is a valid assumption (otherwise it
-   would not have any work to split and we
-   would not be here).
-   Then the TAES bits state holds true for the
-   whole execution of the adaptive task and allows
-   us to implement steal locking based on the
-   Steal bit and an atomic or operation.
-   Steal = 1 means locked.
- */
 
 inline static void kaapi_task_lock_adaptive_steal(kaapi_stealcontext_t* sc)
 {
-#if 0
-  /* does not work, unlock may overwrite the
-     STEAL state set by the splitter, making
-     the synchro protocol fail.
-   */
-
-  const uintptr_t locked_state =
-    KAAPI_MASK_BODY_STEAL |
-    KAAPI_MASK_BODY_EXEC |
-    (uintptr_t)kaapi_adapt_body;
-
-  while (1)
-  {
-    /* the previous state was not locked, we won */
-    if (kaapi_task_orstate(task, locked_state) != locked_state)
-      break ;
-
-    kaapi_slowdown_cpu();
-  }
-#else
   while (1)
   {
     if ((KAAPI_ATOMIC_READ(&sc->thieves.list.lock) == 0) && KAAPI_ATOMIC_CAS(&sc->thieves.list.lock, 0, 1))
       break ;
     kaapi_slowdown_cpu();
   }
-#endif
 }
 
 inline static void kaapi_task_unlock_adaptive_steal(kaapi_stealcontext_t* sc)
 {
-#if 0 /* not working, cf. above comment */
-  const uintptr_t unlocked_state =
-    KAAPI_MASK_BODY_EXEC | (uintptr_t)kaapi_adapt_body;
-  kaapi_task_setstate_barrier(task, unlocked_state);
-#else
   KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
-#endif
 }
 
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
@@ -1036,8 +1132,13 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
 */
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
+#if (SIZEOF_VOIDP == 4)
+  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->state) );
+  return kaapi_task_state_isready(thread->sfp->pc->state);
+#else
   kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->u.state) );
   return kaapi_task_state_isready(thread->sfp->pc->u.state);
+#endif
 }
 
 /** Note on scheduler lock:

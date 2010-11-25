@@ -486,10 +486,15 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
+#if (__SIZEOF_POINTER__ == 4)
+  kaapi_task_bodyid_t      body;      /** task body  */
+  volatile kaapi_uintptr_t state;     /** bit */
+#else
   union task_and_body {
     kaapi_task_bodyid_t      body;      /** task body  */
     volatile kaapi_uintptr_t state;     /** bit */
   } u;
+#endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
@@ -805,17 +810,15 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
     \param align the alignment size, in BYTES
 */
 static inline void* kaapi_thread_pushdata_align
-  (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uint64_t align)
+  (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uintptr_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
-  {
-    const kaapi_uint64_t mask = align - 1;
+  const kaapi_uintptr_t mask = align - (kaapi_uintptr_t)1;
 
-    if ((uintptr_t)thread->sp_data & mask)
-      thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
+  if ((kaapi_uintptr_t)thread->sp_data & mask)
+    thread->sp_data = (char*)((kaapi_uintptr_t)(thread->sp_data + align) & ~mask);
 
-    return kaapi_thread_pushdata(thread, count);
-  }
+  return kaapi_thread_pushdata(thread, count);
 }
 
 /** \ingroup TASK
@@ -876,17 +879,46 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 }
 
 /** \ingroup TASK
+    Task initialization routines
 */
-static inline void kaapi_task_initdfg(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
+static inline void kaapi_task_initdfg_with_state
+(kaapi_task_t* task, kaapi_task_body_t body, kaapi_uintptr_t state, void* arg)
 {
   task->sp = arg;
-  task->u.body = body;
+
+#if (__SIZEOF_POINTER__ == 4)
+  task->state = state;
+  task->body = body;
+#else
+# ifndef KAAPI_MASK_BODY_SHIFTR
+#  define KAAPI_MASK_BODY_SHIFTR 60UL
+# endif
+  task->u.body = (kaapi_task_body_t)
+    ((kaapi_uintptr_t)body | (state << KAAPI_MASK_BODY_SHIFTR));
+#endif
 }
 
-/** \ingroup TASK
-    Initialize a task with given flag for adaptive attribute
-*/
-static inline int kaapi_task_init( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
+static inline void kaapi_task_init_with_state
+(kaapi_task_t* task, kaapi_task_body_t body, kaapi_uintptr_t state, void* arg)
+{
+  kaapi_task_initdfg_with_state(task, body, state, arg);
+}
+
+static inline void kaapi_task_initdfg
+(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
+{
+  task->sp = arg;
+
+#if (__SIZEOF_POINTER__ == 4)
+  task->state = 0;
+  task->body = body;
+#else
+  task->u.body = body;
+#endif
+}
+
+static inline int kaapi_task_init
+( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
 {
   kaapi_task_initdfg(task, taskbody, arg);
   return 0;
@@ -951,6 +983,7 @@ typedef enum kaapi_stealcontext_flag {
   KAAPI_SC_PREEMPTION    = 0x4,
   KAAPI_SC_NOPREEMPTION  = 0x8,
   KAAPI_SC_INIT          = 0x10,   /* 1 == iff initilized (for lazy init) */
+  KAAPI_SC_AGGREGATE	 = 0x20,
   
   KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
 } kaapi_stealcontext_flag;
