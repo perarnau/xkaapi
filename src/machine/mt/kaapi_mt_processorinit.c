@@ -86,6 +86,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
     kaapi_cpuset_copy(&kproc->hlevel[i].cpuset, kaapi_default_param.memory.levels[i].);
   }
 #endif  
+
+  kaapi_processor_computetopo( kproc );  
   
   kaapi_sched_initlock( &kproc->lock );
   
