@@ -43,24 +43,76 @@
 */
 #include "kaapi_impl.h"
 
+typedef struct kaapi_hier_arg {
+  short         depth;
+  short         depth_min;
+  unsigned int  index;
+  unsigned int  seed;
+} kaapi_hier_arg;
+
 /** Do rand selection 
 */
-int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag )
+int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag )
 {
-  int nbproc, victimid;
-  
-  if (flag != KAAPI_SELECT_VICTIM) return 0;
-  
-  if (kproc->fnc_selecarg ==0) 
-    kproc->fnc_selecarg[0] = (void*)(long)rand();
+  int victimid;
+  kaapi_hier_arg* arg;
+  kaapi_onelevel_t* level;
+
+  kaapi_assert_debug( sizeof(kaapi_hier_arg) <= sizeof(kproc->fnc_selecarg) );
+
+  if (kproc->hlevel.depth ==0) 
+    return kaapi_sched_select_victim_rand(kproc, victim, flag );
+
+  arg = (kaapi_hier_arg*)&kproc->fnc_selecarg;
+
+  if (flag == KAAPI_STEAL_FAILED)
+  {
+    level = &kproc->hlevel.levels[arg->depth];
+    if (++arg->index >= level->nkids)
+    {
+      ++arg->depth;
+      arg->index = 0;
+      if (arg->depth == kproc->hlevel.depth) 
+        arg->depth = arg->depth_min-1;
+    }
+    return 0;
+  }
+  if (flag == KAAPI_STEAL_SUCCESS)
+  {
+    arg->depth = arg->depth_min-1;
+    arg->index = 0;
+  }
+
+  if (arg->depth_min ==-1) 
+    return kaapi_sched_select_victim_rand(kproc, victim, flag );
+
+  if (flag != KAAPI_SELECT_VICTIM) 
+    return 0;
+
+  if (arg->depth_min ==0) 
+  {
+    arg->seed = rand();
+    level = &kproc->hlevel.levels[arg->depth_min];
+    /* set to the mini level where at least 2 threads */
+    while (level->nkids ==1)
+    {
+      ++arg->depth_min;
+      if (arg->depth_min >= kproc->hlevel.depth)
+      {
+        arg->depth_min = -1;
+        break;
+      }
+      level = &kproc->hlevel.levels[arg->depth_min];
+    }
+    /* always used with -1 */
+    ++arg->depth_min;
+  }
 
 redo_select:
-  nbproc = kaapi_count_kprocessors;
-  if (nbproc <=1) return EINVAL;
-  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
-
-  /* Get the k-processor */    
+  level = &kproc->hlevel.levels[arg->depth];
+  victimid = level->kids[ rand_r(&arg->seed) % level->nkids];  
   victim->kproc = kaapi_all_kprocessors[ victimid ];
-  if (victim->kproc ==0) goto redo_select;
+  if (victim->kproc ==0) 
+    goto redo_select;
   return 0;
 }

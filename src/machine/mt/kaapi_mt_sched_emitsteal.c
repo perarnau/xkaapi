@@ -69,7 +69,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 
 redo_select:
   /* select the victim processor */
-  err = (*kproc->fnc_select)( kproc, &victim );
+  err = (*kproc->fnc_select)( kproc, &victim, KAAPI_SELECT_VICTIM );
   if (unlikely(err !=0)) goto redo_select;
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) return 0;
@@ -214,6 +214,7 @@ return_value:
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
+      (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
 
       return kproc->thread;
 
@@ -221,12 +222,15 @@ return_value:
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
+      (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
       return reply->u.s_thread;
 
     case KAAPI_REPLY_S_NOK:
+      (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
       return 0;
 
     case KAAPI_REPLY_S_ERROR:
+      (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_ERROR );
       kaapi_assert_debug_m(0, "Error code in request status" );
 
     default:

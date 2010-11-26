@@ -50,7 +50,6 @@
 
 #include "kaapi_impl.h"
 
-#if defined(__linux__)
 /* Return the size of the kids array
 */
 static int kaapi_cpuset2kids( 
@@ -94,7 +93,6 @@ static const char* kaapi_kids2string(
 }
 #endif
 
-#endif // __linux__
 
 
 /** Initialize the topology information from each thread
@@ -106,12 +104,13 @@ static const char* kaapi_kids2string(
  */
 int kaapi_processor_computetopo(kaapi_processor_t* kproc)
 {
-#if !defined(__linux__)
-  return 0;
-#else
+  int	processor;
+  int depth;
+
+#if defined(__linux__)
   int	pid;
   char comm[64];
-  char	state;
+  char state;
   int	ppid;
   int	pgrp;
   int	session;
@@ -147,7 +146,6 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   unsigned long int	nswap;
   unsigned long int	cnswap;
   int	exit_signal;
-  int	processor;
   unsigned int	rt_priority;
   unsigned int	policy;
   unsigned long long int	delayacct_blkio_ticks;
@@ -156,16 +154,11 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   
   char filename[256];
   FILE* file;
-  int depth;
   pid_t tid;
   int err;
   
   if (kaapi_default_param.memory.depth == 0) 
     return ENOENT;
-#if 0
-  if (kaapi_default_param.use_affinity ==0)
-    return ENOENT;
-#endif
   
   tid = syscall(SYS_gettid);
   sprintf(filename, "/proc/%i/task/%i/stat", getpid(), tid);
@@ -222,6 +215,10 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   {
     return ESRCH;
   }
+#else // __linux__
+  /* here we set an arbitrary cpudd in the processor */
+  processor = kproc->kid;
+#endif  
   
   /* ok: here we have the current running processor :
     - we recompute the stack of affinity_set from the memory hierarchy
@@ -230,8 +227,6 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   kaapi_default_param.cpu2kid[processor]  = kproc->kid;
   kaapi_default_param.kid2cpu[kproc->kid] = processor;
   kaapi_assert_m(kaapi_default_param.memory.depth <ENCORE_UNE_MACRO_DETAILLE, "To increase..." );
-
-
 
   kproc->hlevel.depth = 0;
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
@@ -281,5 +276,4 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
 #endif
 
   return 0;
-#endif
 }

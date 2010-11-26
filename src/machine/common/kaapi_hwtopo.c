@@ -114,7 +114,7 @@ static size_t kaapi_hw_countcousin( hwloc_obj_t obj )
 }
 
 
-#if 0
+#if 1
 static const char* kaapi_kids2string(
  int nkids,
  kaapi_processor_id_t* kids
@@ -257,7 +257,7 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
   /* end of detection of memory hierarchy */
   
   
-#if 0
+#if 1
   /* display result... */
   printf("Memory hierarchy levels:%i\n", kaapi_default_param.memory.depth);
   printf("System cpu:%i\n", kaapi_default_param.syscpucount);

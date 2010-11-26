@@ -489,8 +489,8 @@ typedef struct kaapi_processor_t {
   kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
 
-  void*                    fnc_selecarg;                  /* arguments for select victim function, 0 at initialization */
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
+  void*                    fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
 
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
   

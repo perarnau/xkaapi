@@ -61,9 +61,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
 {
   int i;
   kaapi_thread_context_t* ctxt;
-  size_t k_stacksize;
-  size_t k_sizetask;
-  size_t k_sizedata;
 
   kproc->thread       = 0;  
   kproc->kid          = kpi->kid;
@@ -81,8 +78,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
     kproc->hlevel.levels[i].set = 0;
   }
   
-  kaapi_processor_computetopo( kproc );  
-
   kaapi_sched_initlock( &kproc->lock );
   
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
@@ -91,8 +86,11 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kaapi_sched_initready(kproc);
   kaapi_lfree_clear( kproc );
 
-  kproc->fnc_selecarg = 0;
-  kproc->fnc_select   = kaapi_default_param.wsselect;
+  kproc->fnc_selecarg[0] = 0;
+  kproc->fnc_selecarg[1] = 0;
+  kproc->fnc_selecarg[2] = 0;
+  kproc->fnc_selecarg[3] = 0;
+  kproc->fnc_select      = kaapi_default_param.wsselect;
   
   /* workload */
   kproc->workload._counter= 0;
@@ -103,12 +101,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   else
     kaapi_mem_map_initialize(&kproc->mem_map, 1 + kpi->proc_index);
   
-  /* allocate a stack */
-  k_stacksize = kaapi_default_param.stacksize;
-  k_sizetask  = k_stacksize / 2;
-  k_sizedata  = k_stacksize - k_sizetask;
+  kaapi_processor_computetopo( kproc );  
 
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
+
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
 
@@ -120,7 +116,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
       return -1;
 
     kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
-    kproc->fnc_selecarg = NULL;
   }
 #endif
   
