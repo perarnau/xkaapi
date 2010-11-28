@@ -57,13 +57,11 @@
 #  include <winnt.h>
 #endif
 
-#if !defined(__SIZEOF_POINTER__)
-#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__) || defined(__x86_64__)
-#    define __SIZEOF_POINTER__ 8
-#  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc64__))
-#    define __SIZEOF_POINTER__ 4
+#if (__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)
+#  if !defined(__SIZEOF_POINTER__)
+#    error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
 #  else
-#    error KAAPI not ready for this architechture. Report to developpers.
+#    error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
 #  endif
 #endif
 

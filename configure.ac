@@ -173,6 +173,11 @@ ACX_LIB_NEW_PRG([KANETPROGS])
 
 default_experimental=no
 
+# check for automatic macros that are used by KAAPI
+AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
+  AC_MSG_ERROR([The '__SIZEOF_POINTER__' macro must be defined by the compiler. Try a recent version of gcc for example])
+])
+
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
@@ -225,6 +230,7 @@ KAAPI_FEATURE([api-kaapi++], [compile Kaapi++ API],
       FEATURE_ENABLE
     fi
   ])
+
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-atha"
