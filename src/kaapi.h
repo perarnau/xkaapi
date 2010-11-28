@@ -57,6 +57,14 @@
 #  include <winnt.h>
 #endif
 
+#if (__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)
+#  if !defined(__SIZEOF_POINTER__)
+#    error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
+#  else
+#    error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
+#  endif
+#endif
+
 #include <stdint.h>
 #include <stdio.h> /* why ? */
 #include <stdlib.h>

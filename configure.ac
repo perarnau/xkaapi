@@ -111,6 +111,11 @@ ACX_LIB_NEW_PRG([KFORTRANPROGS])
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 
+# check for automatic macros that are used by KAAPI
+AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
+  AC_MSG_ERROR([The '__SIZEOF_POINTER__' macro must be defined by the compiler. Try a recent version of gcc for example])
+])
+
 dnl ----------------------------------------------------------------
 dnl Force flag to be empty...
 dnl ----------------------------------------------------------------
