@@ -123,9 +123,6 @@ int Device::terminate()
   printf("%i::Device should stop\n", ka::System::local_gid);
   fflush(stdout);
   
-  err = MPI_Barrier(_comm);
-  kaapi_assert(err == MPI_SUCCESS);
-
   printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
   fflush(stdout);
   

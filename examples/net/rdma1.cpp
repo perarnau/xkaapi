@@ -45,14 +45,28 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 #include "kanet_network.h" // this is the new C++ interface for Kaapi
 
+
 /*
 */
-volatile int isrecv = 0;
+char* buffer_message;
+kaapi_uintptr_t remote_ptr = 0;
+volatile int cnt_msg = 0;
+
+
 static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer )
 {
-  char* msg = (char*)buffer;
-  ka::logfile() << ": local_gid:" << ka::System::local_gid << ", receive msg= '" << msg << "'" << std::endl;
-  isrecv = 1;
+  kaapi_uintptr_t* msg = (kaapi_uintptr_t*)buffer;
+  remote_ptr = *msg;
+  printf("%i:: receive mesg, remote addr = %lx\n", ka::System::local_gid, remote_ptr);
+  fflush(stdout);
+  ++cnt_msg;
+}
+
+static void service_ack(int err, ka::GlobalId source, void* buffer, size_t sz_buffer )
+{
+  printf("%i:: receive ack mesg\n", ka::System::local_gid);
+  fflush(stdout);
+  ++cnt_msg;
 }
 
 
@@ -61,6 +75,8 @@ static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer
 int main(int argc, char** argv)
 {
   try {
+    buffer_message = new char[256];
+    
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */
@@ -73,20 +89,44 @@ int main(int argc, char** argv)
     
     /*
     */
-    ka::Network::object.dump_info();
-    std::cout << "My local_gid is:" << ka::System::local_gid << std::endl << std::flush;    
-
-    if (ka::System::local_gid == 0)
+    if (ka::Network::object.size() ==2)
     {
-      ka::OutChannel* channel = ka::Network::object.get_default_local_route(1);
-      kaapi_assert(channel != 0);
-      const char* msg = "Ceci est un message de 0";
-      channel->insert_am( service, msg, strlen(msg)+1 );
-      channel->sync();
+      if (ka::System::local_gid ==0)
+      { /* send to 1 my buffer address */
+        ka::OutChannel* channel = ka::Network::object.get_default_local_route( 1 );
+        kaapi_assert(channel !=0);
+        std::cout << "Send message handler:" << (void*)service << ", data:" << (void*)buffer_message << std::endl;
+        channel->insert_am( service, &buffer_message, sizeof( void* ) );
+        channel->sync();
+        
+        for (int i=0; i<10; ++i)
+        {
+          while (cnt_msg == i) sleep(1);
+          std::cout << "Recv message:" << buffer_message << std::endl;
+        }
+        
+      } 
+      else
+      {
+        char msg[128];
+
+        while (remote_ptr ==0) sleep(1);
+        std::cout << "Recv remote address:" << (void*)remote_ptr << std::endl;
+        
+        /* remote write on node 0 */
+        ka::OutChannel* channel = ka::Network::object.get_default_local_route( 0 );
+        kaapi_assert(channel !=0);
+        for (int i=0; i<10; ++i)
+        {
+          sprintf(msg, " Ceci est le message numero %i de %i", i, ka::System::local_gid);
+          channel->insert_rwdma(remote_ptr, msg, strlen(msg)+1);
+          channel->insert_am( service_ack, 0, 0 );
+          channel->sync();
+          sleep(1);
+        }
+      }      
     }
-    else {
-      while (isrecv ==0) sleep(1);
-    }
+      
     ka::Network::object.dump_info();
 
     /*

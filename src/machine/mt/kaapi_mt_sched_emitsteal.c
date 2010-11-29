@@ -86,7 +86,6 @@ redo_select:
   /* reset thief stack/thread will steals are under progression */
   kaapi_thread_reset( kproc->thread );
   
-
   victim_hlr = &victim.kproc->hlrequests;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
