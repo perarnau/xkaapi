@@ -77,12 +77,14 @@ int main(int argc, char** argv)
     if (ka::System::local_gid == 0)
     {
       ka::OutChannel* channel = ka::Network::object.get_default_local_route(1);
+      kaapi_assert(channel != 0);
       const char* msg = "Ceci est un message de 0";
       channel->insert_am( service, msg, strlen(msg)+1 );
       channel->sync();
     }
     else {
-      ka::Device* device = ka::Network::object.get_device_from_url( "mpinet:0" );
+      ka::Device* device = ka::Network::object.get_device_from_url( "gasnet:0" );
+      kaapi_assert(device != 0);
       device->skel();
     }
     ka::Network::object.dump_info();

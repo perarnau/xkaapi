@@ -46,6 +46,12 @@
 namespace GASNET {
 
 // --------------------------------------------------------------------
+DeviceFactory::DeviceFactory()
+  : ka::DeviceFactory()
+{
+}
+
+// --------------------------------------------------------------------
 DeviceFactory::~DeviceFactory()
 { }
 

@@ -496,11 +496,11 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 typedef struct kaapi_task_t {
 #if (__SIZEOF_POINTER__ == 4)
   kaapi_task_bodyid_t      body;      /** task body  */
-  volatile kaapi_uintptr_t state;     /** bit */
+  volatile kaapi_uintptr_t state;     /** bit        */
 #else
   union task_and_body {
-    kaapi_task_bodyid_t      body;      /** task body  */
-    volatile kaapi_uintptr_t state;     /** bit */
+    kaapi_task_bodyid_t      body;    /** task body  */
+    volatile kaapi_uintptr_t state;   /** bit        */
   } u;
 #endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */

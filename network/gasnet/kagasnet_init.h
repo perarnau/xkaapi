@@ -52,6 +52,10 @@ namespace GASNET {
 */
 class DeviceFactory : public ka::DeviceFactory {
 public:
+  /**
+  */
+  DeviceFactory();
+  
   /** Virtual dstor 
   */
   ~DeviceFactory();

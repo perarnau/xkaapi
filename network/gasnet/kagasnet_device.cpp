@@ -100,9 +100,14 @@ int Device::initialize()
 int Device::commit()
 {
   int err;
+  printf("%i::Device gather network information\n", ka::System::local_gid);
+  fflush(stdout);
   _wcom_rank = gasnet_mynode();
   _wcom_size = gasnet_nodes();
   
+  printf("%i::Device gather network information: rank:%i, size: %i\n", ka::System::local_gid, _wcom_rank, _wcom_size);
+  fflush(stdout);
+
   /* declare all nodes */
   for (int i=0; i<_wcom_size; ++i)
   {

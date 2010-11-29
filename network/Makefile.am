@@ -4,7 +4,7 @@
 ##
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-SUBDIRS= . mpinet
+SUBDIRS= . mpinet gasnet
 #socknet 
 
 if KAAPI_TARGET_KANET

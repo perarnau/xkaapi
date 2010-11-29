@@ -277,6 +277,7 @@ AC_CHECK_TYPES([ptrdiff_t])
 
 AC_CHECK_SIZEOF([void*])
 
+
 dnl ----------------------------------------------------------------
 dnl Checks for library functions.
 dnl ----------------------------------------------------------------
@@ -461,12 +462,20 @@ AS_CASE([$with_gasnet],
     tmpfilename=`mktemp -t kaapi`
     make -f $srcdir/acinclude/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
     source $tmpfilename
-    KAAPI_GASNET_CPPFLAGS=$GASNET_CPPFLAGS
-    KAAPI_GASNET_CFLAGS=$GASNET_CFLAGS
-    KAAPI_GASNET_LDFLAGS=$GASNET_LDFLAGS
-    KAAPI_GASNET_LIBS=$GASNET_LIBS
+    KAGASNETLIB_BUILD_CPPFLAGS=$GASNET_CPPFLAGS
+    KAGASNETLIB_BUILD_CFLAGS=$GASNET_CFLAGS
+    KAGASNETLIB_BUILD_LDFLAGS=$GASNET_LDFLAGS
+    KAGASNETLIB_BUILD_LIBS=$GASNET_LIBS
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_CPPFLAGS=$KAGASNETLIB_BUILD_CPPFLAGS])
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_CFLAGS=$KAGASNETLIB_BUILD_CFLAGS])
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_LDFLAGS=$KAGASNETLIB_BUILD_LDFLAGS])
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_LIBS=$KAGASNETLIB_BUILD_LIBS])
   ]
 )
+AC_SUBST(KAGASNETLIB_BUILD_CPPFLAGS)
+AC_SUBST(KAGASNETLIB_BUILD_CFLAGS)
+AC_SUBST(KAGASNETLIB_BUILD_LDFLAGS)
+AC_SUBST(KAGASNETLIB_BUILD_LIBS)
 AM_CONDITIONAL([KAAPI_TARGET_GASNET],[test x"$KAAPI_USE_GASNET" = x"yes"])
 
 
@@ -541,6 +550,7 @@ AC_CONFIG_FILES([
 	api/fortran/Makefile
 	network/Makefile
 	network/mpinet/Makefile
+	network/gasnet/Makefile
 	examples/Makefile
 	tests/static/Makefile
 

@@ -200,7 +200,10 @@ OutChannel* Network::get_default_local_route( GlobalId gid )
     return curr->second;
   
   /* try to open a route to gid using its urls */
+  std::map<GlobalId,ListUrls*>::iterator lur = _gid2urls.find(gid);
+  if (lur == _gid2urls.end()) return 0;
   ListUrls* listurls = _gid2urls.find(gid)->second;
+  if (listurls ==0) return 0;
   ListUrls::iterator urlbeg = listurls->begin();
   ListUrls::iterator urlend = listurls->end();
   while (urlbeg != urlend)

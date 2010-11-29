@@ -53,7 +53,7 @@ namespace GASNET {
 class OutChannel;
 
 enum {
-  kaapi_gasnet_service_call_id       = 201,
+  kaapi_gasnet_service_call_id       = 201
 };
 
 /* Macro to check return codes and terminate with useful message. */
