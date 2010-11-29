@@ -118,6 +118,7 @@ HighResTimer::type HighResTimer::gettick()
   __asm__ volatile ( "rdtsc" : "=a" ( lo ) , "=d" ( hi ) );
   return (uint64_t)hi << 32UL | lo;
 #elif defined(__ia64__)
+#elif defined(KAAPI_USE_ARCH_ITA)
   register unsigned long ret;
   __asm__ __volatile__ ("mov %0=ar.itc" : "=r"(ret));
   return ret;
