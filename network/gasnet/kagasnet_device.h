@@ -124,7 +124,7 @@ protected:
   static void* skeleton( void* arg );
 
   /* */
-  static void kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, gasnet_handlerarg_t handler);
+  static void kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, gasnet_handlerarg_t handlerH, gasnet_handlerarg_t handlerL);
   
 protected:
   int                       _wcom_rank;  ///< my rank

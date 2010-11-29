@@ -309,11 +309,13 @@ void Network::dump_info()
   std::ostringstream buff2;
   print_route(buff2); buff2 << std::endl;
 
+#if 0
   printf("%i::Node info:\n%s\n%i::Node route info:\n%s\n", 
     ka::System::local_gid, buff1.str().c_str(), 
     ka::System::local_gid, buff2.str().c_str() 
   );
   fflush(stdout);
+#endif
 }
 
 

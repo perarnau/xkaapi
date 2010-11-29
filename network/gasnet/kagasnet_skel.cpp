@@ -48,12 +48,18 @@ namespace GASNET {
 
 
 // --------------------------------------------------------------------
-void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, gasnet_handlerarg_t handler)
+void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, 
+  gasnet_handlerarg_t handlerH, gasnet_handlerarg_t handlerL)
 {
   gasnet_node_t src;
   int err = gasnet_AMGetMsgSource( token, &src );
   kaapi_assert( err == GASNET_OK );
+  kaapi_uintptr_t handler = (kaapi_uintptr_t)handlerH;
+  handler = handler << (kaapi_uintptr_t)32UL;
+  handler = handler | (kaapi_uintptr_t)handlerL;
   ka::Service_fnc service = (ka::Service_fnc)handler;
+  std::cout << ka::System::local_gid << "::[Device::kaapi_gasnet_service_call] recv message from:" << src << ", fnc:(" 
+            << handlerH << "," << handlerL << ")=" << (void*)handler << std::endl << std::flush;    
   service(0, src, buffer_am, sz_buffer_am );
 }
 
