@@ -437,6 +437,37 @@ AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
 
 
 dnl -----------------------------------------------------------------------
+dnl The "--with-gasnet"
+dnl -----------------------------------------------------------------------
+AC_ARG_WITH([gasnet],[AS_HELP_STRING([--with-gasnet=<conduit>],
+		 [choose gasnet support and specify the conduit to use])],
+     [],
+     [with_gasnet=no]
+)
+
+AS_CASE([$with_gasnet],
+  [no], [dnl
+  ], 
+  [*], [dnl
+    AC_MSG_NOTICE([Adding gasnet support for conduit '$with_gasnet'])
+    # not using AC*DEFINE as we want this available for examples too
+    AC_DEFINE([KAAPI_USE_GASNET],1,[Use with GASNet])
+    KAAPI_USE_GASNET=yes
+    tmpfilename=`mktemp -t kaapi`
+    make -f $srcdir/acinclude/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
+    source $tmpfilename
+    KAAPI_GASNET_CPPFLAGS=$GASNET_CPPFLAGS
+    KAAPI_GASNET_CFLAGS=$GASNET_CFLAGS
+    KAAPI_GASNET_LDFLAGS=$GASNET_LDFLAGS
+    KAAPI_GASNET_LIBS=$GASNET_LIBS
+  ]
+)
+AM_CONDITIONAL([KAAPI_TARGET_GASNET],[test x"$KAAPI_USE_GASNET" = x"yes"])
+
+
+
+
+dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
