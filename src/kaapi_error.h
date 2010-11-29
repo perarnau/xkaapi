@@ -50,8 +50,18 @@
 
 #if defined(__cplusplus)
 extern "C" {
+#if defined(NDEBUG)
+#  define kaapi_assert( cond ) if (!(cond)) ::abort();
+#  define kaapi_assert_debug( cond )
+#  define KAAPI_NDEBUG 1
+#else
+#  include <errno.h>
+#  include <stdio.h>
+#  define kaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); ::abort(); }
+#  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); ::abort(); }
 #endif
-
+}
+#else
 #if defined(NDEBUG)
 #  define kaapi_assert( cond ) if (!(cond)) abort();
 #  define kaapi_assert_debug( cond )
@@ -62,9 +72,6 @@ extern "C" {
 #  define kaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
 #  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
 #endif
-
-#if defined(__cplusplus)
-}
 #endif
 
 /* \TODO report here all errocode that kaapi use (I do not think that OS21 will have the same error code ...

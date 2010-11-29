@@ -318,7 +318,7 @@ void Network::dump_info()
 #pragma mark --- misc
 #endif
 // --------------------------------------------------------------------
-int Network::size() const
+size_t Network::size() const
 { 
   return _gid2urls.size();
 }

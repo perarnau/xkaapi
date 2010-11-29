@@ -44,7 +44,7 @@
 #define _KANETWORK_INSTR_H
 
 #include "kanet_types.h"
-#include "kaapi++"
+#include "kaapi++.h"
 
 namespace ka {
 
