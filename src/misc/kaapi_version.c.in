@@ -48,9 +48,9 @@
 
 /* Verification of correct choice of values */
 #if (KAAPI_USE_EXECTASK_METHOD ==KAAPI_CAS_METHOD) 
-#  warning "Use CAS for stealing frame"
+#  pragma message "Use CAS for stealing frame"
 #elif (KAAPI_USE_EXECTASK_METHOD ==KAAPI_THE_METHOD)
-#  warning "Use Dijkstra like protocol for stealing frame"
+#  pragma CGG message "Use Dijkstra like protocol for stealing frame"
 #else
 #  error "Bad definition of value for steal frame method"
 #endif

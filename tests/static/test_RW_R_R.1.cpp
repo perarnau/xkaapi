@@ -11,7 +11,8 @@ struct TaskBodyCPU<TaskRW> {
   {
     *d += 100;
     kaapi_processor_t* kproc = kaapi_get_current_processor();
-    printf("[%p->%p] :: In TaskRW=(+=100)\n", kproc, kproc->thread);
+    printf("[%p->%p] :: In TaskRW=(+=100)\n",
+	(void*)kproc, (void*)kproc->thread);
     usleep(100);
   }
 };
@@ -23,7 +24,8 @@ struct TaskBodyCPU<TaskR> {
   void operator() ( ka::pointer_r<int> d )
   {
     kaapi_processor_t* kproc = kaapi_get_current_processor();
-    printf("[%p->%p] :: In TaskR=(%i)\n", kproc, kproc->thread, *d);
+    printf("[%p->%p] :: In TaskR=(%i)\n",
+	(void*)kproc, (void*)kproc->thread, *d);
     usleep(100);
   }
 };
