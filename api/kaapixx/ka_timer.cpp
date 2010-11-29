@@ -99,20 +99,11 @@ const std::string& LogicalTimer::unit()
   return u;
 }
 
-
-#if defined(KAAPI_USE_ARCH_X86) && defined(KAAPI_USE_DARWIN)
-#  ifndef myrdtsc
-#    define myrdtsc(x) \
-      __asm__ volatile ("rdtsc" : "=A" (x));
-#  endif
-#endif
-
-//       __asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))
-
 // --------------------------------------------------------------------
 HighResTimer::type HighResTimer::gettick()
 {
-#if (defined( KAAPI_USE_APPLE ) && defined(KAAPI_USE_ARCH_PPC) ) ||  defined(KAAPI_USE_ARCH_PPC64)
+#if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64)
+  /* Linux or Mac */
   register unsigned long t_u;
   register unsigned long t_l;
   asm volatile ("mftbu %0" : "=r" (t_u) );
@@ -121,24 +112,14 @@ HighResTimer::type HighResTimer::gettick()
   retval <<= 32UL;
   retval |= t_l;
   return retval;
-#elif defined( KAAPI_USE_APPLE)&& (defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)) 
-  return (HighResTimer::type)WallTimer::gettime();
-#elif defined( KAAPI_USE_LINUX)&& (defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)) 
+#elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
   uint32_t lo,hi;
   __asm__ volatile ( "rdtsc" : "=a" ( lo ) , "=d" ( hi ) );
-  return (uint64_t)hi << 32 | lo;
+  return (uint64_t)hi << 32UL | lo;
 #elif defined(KAAPI_USE_ARCH_ITA)
   register unsigned long ret;
   __asm__ __volatile__ ("mov %0=ar.itc" : "=r"(ret));
   return ret;
-#elif defined(KAAPI_USE_IRIX)
-#  if defined(HAVE_CLOCK_GETTIME)
-  struct timespec tp;
-  clock_gettime( CLOCK_SGI_CYCLE, &tp );
-  return type(double(tp.tv_sec)  + double(tp.tv_nsec)*1e-9);
-#  else
-#    error "no time counter for this architecture"
-#  endif
 #elif defined(KAAPI_USE_IPHONEOS)
   return WallTimer::gettime();
 #elif defined(_WIN32)
@@ -163,66 +144,32 @@ double HighResTimer::inv_dtick_per_s =0;
 void HighResTimer::calibrate()
 {
 #if defined(USE_SOFT_CALIBRATION)
-  size_t count;
-  double t00, t11;
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
-  union utype {
-    struct {
-      ka_uint32_t t_h;
-      ka_uint32_t t_l;
-    } u;
-    kaapi_uint64_t ll;
-  };
-  utype hrt0, hrt1, hrt2;
-  asm volatile ("mftbu %0" : "=r" (hrt0.u.t_h) );
-  asm volatile ("mftb %0" : "=r" (hrt0.u.t_l) );
-  asm volatile ("mftbu %0" : "=r" (hrt2.u.t_h) );
-  asm volatile ("mftb %0" : "=r" (hrt2.u.t_l) );
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+  size_t count=0;
+  double t00=0, t11=0;
+#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
   HighResTimer::type hrt0, hrt1, hrt2;
   hrt0 = HighResTimer::gettick();
 #  else 
-#    warning "Cannot make soft calibration of clock"
+#    error "Cannot make soft calibration of clock"
 #  endif
   /* loop 1 */
   for (int i=0; i<128; ++i)
-    t00 = WallTimer::gettime();
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
-  asm volatile ("mftbu %0" : "=r" (hrt1.u.t_h) );
-  asm volatile ("mftb %0" : "=r" (hrt1.u.t_l) );
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+    t00 += WallTimer::gettime();
+#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
   hrt1 = HighResTimer::gettick();
 #  endif
 
   /* loop 2 */
   t00 = WallTimer::gettime();
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
   for (int i=0; i<200; ++i)
-#  else
-  for (int i=0; i<200; ++i)
-#  endif
     for (int j=0; j<100000; ++j)
       count++;
   t11 = WallTimer::gettime();
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
-  asm volatile ("mftbu %0" : "=r" (hrt2.u.t_h) );
-  asm volatile ("mftb %0" : "=r" (hrt2.u.t_l) );
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
   hrt2 = HighResTimer::gettick();
 #  endif
 
-#  if defined( KAAPI_USE_DARWIN ) && defined(KAAPI_USE_ARCH_PPC)
-  /* hrt0: ticks for 128 gettimeofday */
-  hrt0.ll = hrt1.ll - hrt0.ll;
-
-  /* hrt1: ticks for the loops + 2 gettimeofday -> hrt1 : loop 2 */
-  hrt1.ll = hrt2.ll - hrt1.ll;
-
-  /* ticks for loop */
-  double d = double(hrt1.ll)-double(hrt0.ll)/64.0;
-  HighResTimer::dtick_per_s = d / (t11-t00);
-
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
   /* hrt0: ticks for 128 gettimeofday */
   hrt0 = hrt1 - hrt0;
 
@@ -246,13 +193,7 @@ void HighResTimer::calibrate()
   len =sizeof(mhz);
   sysctl(mib, 2, &mhz, &len, NULL, 0);
   HighResTimer::dtick_per_s = double(mhz); /* it seems that tick freq is about 2/3e9 of the frequency on PowerbOOK*/
-#  elif defined( KAAPI_USE_IRIX )
-  struct timespec tp; 
-  clock_getres( CLOCK_SGI_CYCLE, &tp );
-//  std::cout << "SGI res: " << tp.tv_sec << ", " << tp.tv_nsec << std::endl;
-  HighResTimer::dtick_per_s = double(tp.tv_sec) + double(tp.tv_nsec)*1e-9;
-  HighResTimer::dtick_per_s = 1/dtick_per_s;
-#  elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  elif defined(KAAPI_USE_LINUX)
   /* open cpuinfo and scan cpu Mhz: */
   FILE* file = fopen("/proc/cpuinfo","r");
   double mhz = 1.0;
@@ -267,7 +208,7 @@ void HighResTimer::calibrate()
   HighResTimer::dtick_per_s = mhz*1e6;
   fclose(file);
 #  else
-#  warning "unknown system / architecture"
+#  error "unknown system / architecture"
 #  endif
 
 #endif // END CALIBRATION
