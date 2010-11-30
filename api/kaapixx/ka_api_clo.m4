@@ -186,7 +186,7 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format')
-      );
+    );
       
     return task_fmt.get_c_format();
   }

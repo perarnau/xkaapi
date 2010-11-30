@@ -106,8 +106,10 @@ int kaapi_task_print(
 )
 {
   const kaapi_format_t* fmt;
-  int i;
+  unsigned int i;
   kaapi_task_body_t body;
+  size_t count_params;
+  state_type_t state;
 
   body = kaapi_task_getbody(task);
   fmt = kaapi_format_resolvebybody( body );
@@ -127,38 +129,39 @@ int kaapi_task_print(
   else
     sp = task->sp;
 
-  state_type_t state;
+  count_params = kaapi_format_get_count_params(fmt, sp );
   kaapi_getstatename(task, state);
+
   int st = kaapi_task_state2int( kaapi_task_getstate(task) );
-  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%i\n", 
+  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%lu\n", 
         (void*)task, 
         state[3], state[2], state[1], state[0],
         fmt->name, 
         tab_bit[st],
         sp,
-        fmt->count_params );
+        count_params );
         
   /* access mode */
-  if (fmt->count_params >0)
+  if (count_params >0)
   {
-    for (i=0; i<fmt->count_params; ++i)
+    for (i=0; i<count_params; ++i)
     {
-      char cstate = kaapi_threadgroup_paramiswait(task, i) ? 'W' : '?';
+      int cstate = kaapi_threadgroup_paramiswait(task, i) !=0 ? 'W' : '?';
 
-      fprintf( file, "\t\t\t [%i]%c:", i, cstate );
-      const kaapi_format_t* fmt_param = fmt->fmt_params[i];
-      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
+      fprintf( file, "\t\t\t [%u]%c:", i, (char)cstate );
+      const kaapi_format_t* fmt_param = kaapi_format_get_fmt_param(fmt, i, sp );
+      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp));
       fputc(kaapi_getmodename(m), file );
       fputs("", file );
       if (m == KAAPI_ACCESS_MODE_V)
       {
-        void* data = (void*)(fmt->off_params[i] + (char*)sp);
+        void* data = kaapi_format_get_param(fmt, i, sp );
         fprintf(file, "<%s >, @:%p=", fmt_param->name, data );
         (*fmt_param->print)(file, data );
       }
       else 
       {
-        kaapi_access_t* access = (kaapi_access_t*)(fmt->off_params[i] + (char*)sp);
+        kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_param(fmt, i, sp );
         fprintf(file, "<%s > @:%p value=", fmt_param->name, access->data);
 #if 0 /* due to invalid pointer */
         (*fmt_param->print)(file, access->data );
@@ -169,7 +172,7 @@ int kaapi_task_print(
         }
 #endif
       }
-      if (i <fmt->count_params-1)
+      if (i < count_params-1)
       {
         fputs("\n", file );
       }
@@ -184,7 +187,7 @@ int kaapi_task_print(
     while (com !=0)
     {
       printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
-      for (i=0; i<com->size; ++i)
+      for (i=0; i< (size_t)com->size; ++i)
       {
         fprintf(file, "\n\t\t\t\t@task:%p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].addr);
       }

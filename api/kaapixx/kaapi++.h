@@ -52,7 +52,11 @@
 #include <vector>
 #include <typeinfo>
 
-
+/** Version number for the API
+  * v1: task with dependencies + spawn
+  * v2: v1+static graph partitioning 
+*/
+#define KAAPIXX_API_VERSION 1
 namespace ka {
 
   /* take a constant... should be adjusted */
@@ -865,7 +869,7 @@ namespace ka {
 
   template<typename T>
   struct TraitUAMType {
-    typedef typename TraitUAMTypeFormat<T>::type_t typeformat_t;
+    typedef typename TraitUAMTypeFormat<T>::type_t      typeformat_t;
 
     template<typename Mode>
     struct UAMParam {
@@ -1064,22 +1068,24 @@ namespace ka {
     typedef ACCESS_MODE_RPWP                      mode_t;
   };
   template<class UserType> struct __kaapi_pointer_switcher<true, const UserType*> {
-    typedef TraitUAMType<const UserType*> uamttype_t;
-    typedef ACCESS_MODE_V                 mode_t;
+    typedef TraitUAMType<const UserType*>         uamttype_t;
+    typedef ACCESS_MODE_V                         mode_t;
   };
   template<class UserType> struct __kaapi_pointer_switcher<true, UserType*> {
-    typedef TraitUAMType<const UserType*> uamttype_t;
-    typedef ACCESS_MODE_V                 mode_t;
+    typedef TraitUAMType<const UserType*>         uamttype_t;
+    typedef ACCESS_MODE_V                         mode_t;
   };
   
-  /* to be able to use point as arg of spawn */
+  /* to be able to use pointer to data as arg of spawn. If it is a pointer to function, 
+     consider it as a pass-by-value passing rule
+  */
   template<typename UserType>
   struct TraitUAMParam<const UserType*> {
     typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::uamttype_t uamttype_t;
     typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::mode_t mode_t;
   };
 
-  /* to be able to use point as arg of spawn */
+  /* to be able to use siù^me pointer as arg of spawn */
   template<typename UserType>
   struct TraitUAMParam<UserType*> {
     typedef typename __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::uamttype_t uamttype_t;

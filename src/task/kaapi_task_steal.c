@@ -53,8 +53,8 @@ void kaapi_taskwrite_body(
   kaapi_thread_t* thread  __attribute__((unused))
 )
 {
-  int i;
-  int countparam;
+  unsigned int i;
+  size_t count_params;
 
   const kaapi_format_t* fmt;
   void*                 orig_task_args;
@@ -82,12 +82,12 @@ void kaapi_taskwrite_body(
        - W,CW: set in field ->version of the original task args the field ->data of the copy args.
     */
     fmt         = arg->origin_fmt;
-    countparam  = fmt->count_params;
-    for (i=0; i<countparam; ++i)
+    count_params = kaapi_format_get_count_params( fmt, orig_task_args );
+    for (i=0; i<count_params; ++i)
     {
-      mode_param = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
-      copy_data_param = (void*)(fmt->off_params[i] + (char*)copy_task_args);
-      fmt_param       = fmt->fmt_params[i];
+      mode_param = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, copy_task_args) );
+      copy_data_param = (void*)kaapi_format_get_param(fmt, i, copy_task_args);
+      fmt_param       = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
       if (mode_param == KAAPI_ACCESS_MODE_V) 
       {
         (*fmt_param->dstor)(copy_data_param);
@@ -96,8 +96,8 @@ void kaapi_taskwrite_body(
 
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
       {
-        data_param        = (void*)(fmt->off_params[i] + (char*)orig_task_args);
-        copy_data_param   = (void*)(fmt->off_params[i] + (char*)copy_task_args);
+        data_param        = kaapi_format_get_param(fmt, i, orig_task_args); 
+        copy_data_param   = kaapi_format_get_param(fmt, i, copy_task_args); 
         access_param      = (kaapi_access_t*)(data_param);
         copy_access_param = (kaapi_access_t*)(copy_data_param);
 
@@ -152,8 +152,8 @@ void kaapi_taskwrite_body(
 */
 void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
-  int i;
-  int                    countparam;
+  unsigned int           i;
+  size_t                 count_params;
 #if 0 /* remove unused warning */
   int                    push_write;
   int                    w_param;
@@ -169,7 +169,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   kaapi_access_t*        access_param;
 
   kaapi_access_mode_t    mode_param;
-  kaapi_format_t*        fmt_param;
+  const kaapi_format_t*  fmt_param;
 
   void*                  copy_task_args;
   void*                  copy_data_param;
@@ -189,7 +189,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   
   /* the the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
-  countparam      = fmt->count_params;
+  count_params    = kaapi_format_get_count_params(fmt, arg->origin_task); 
   arg->copy_task_args = 0;
   
   /**/
@@ -208,7 +208,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   */
   push_write  = 0;
   w_param     = 0;
-  for (i=0; i<countparam; ++i)
+  for (i=0; i<count_params; ++i)
   {
     if (KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(fmt->mode_params[i])))
     {
@@ -234,7 +234,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     /* if no barrier here: only read data signal the task */
     if (w_param != 0)
     {
-      for (i=0; i<countparam; ++i)
+      for (i=0; i<count_params; ++i)
       {
         mode_param      = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
         if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
@@ -257,12 +257,12 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
-    for (i=0; i<countparam; ++i)
+    for (i=0; i<count_params; ++i)
     {
-      mode_param      = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
-      data_param      = (void*)(fmt->off_params[i] + (char*)orig_task_args);
-      copy_data_param = (void*)(fmt->off_params[i] + (char*)copy_task_args);
-      fmt_param       = fmt->fmt_params[i];
+      mode_param      = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, orig_task_args) ); 
+      data_param      = kaapi_format_get_param(fmt, i, orig_task_args);
+      copy_data_param = kaapi_format_get_param(fmt, i, copy_task_args);
+      fmt_param       = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
       
       if (mode_param == KAAPI_ACCESS_MODE_V) 
       {

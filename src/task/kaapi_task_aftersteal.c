@@ -49,12 +49,13 @@
 */
 void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
 {
-  int i, countparam;
-  kaapi_task_t*     task;
-  kaapi_format_t*   fmt;   /* format of the task */
-  void*             data_param;
-  kaapi_format_t*   fmt_param;
-  kaapi_access_t*   access_param;
+  unsigned int          i;
+  size_t                count_params;
+  kaapi_task_t*         task;
+  const kaapi_format_t* fmt;   /* format of the task */
+  void*                 data_param;
+  const kaapi_format_t* fmt_param;
+  kaapi_access_t*       access_param;
   
 //  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, stack);
 //  fflush(stdout);
@@ -65,7 +66,7 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   fmt = kaapi_format_resolvebybody( kaapi_task_getbody(task) );
   kaapi_assert_debug( fmt !=0 );
 
-  countparam = fmt->count_params;
+  count_params = kaapi_format_get_count_params(fmt, task->sp );
 
   /* for each access parameter, we have:
      - data that points to the original effective parameter
@@ -75,16 +76,16 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
         - if W mode -> copy + free of the data
         - if CW mode -> accumulation (data is the left side of the accumulation, version the righ side)
   */
-  for (i=0; i<countparam; ++i)
+  for (i=0; i<count_params; ++i)
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, taskarg) );
     if (m == KAAPI_ACCESS_MODE_V) 
       continue;
 
     if (KAAPI_ACCESS_IS_ONLYWRITE(m))
     {
-      data_param = (void*)(fmt->off_params[i] + (char*)taskarg);
-      fmt_param = fmt->fmt_params[i];
+      data_param   = kaapi_format_get_param(fmt, i, taskarg);
+      fmt_param    = kaapi_format_get_fmt_param(fmt, i, taskarg);
       access_param = (kaapi_access_t*)(data_param);
 
       /* if m == W and data == version it means that data used by W was not copied due to non WAR dependency */

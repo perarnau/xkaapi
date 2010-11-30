@@ -54,7 +54,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_thread_t*	        self_thread;
   kaapi_reply_t*          reply;
   kaapi_listrequest_t*    victim_hlr;
-  int                     i,err;
+  int                     err;
   kaapi_listrequest_iterator_t lri;
   
   kaapi_assert_debug( kproc !=0 );
@@ -136,7 +136,7 @@ enter:
     
 #if defined(KAAPI_DEBUG)
     kaapi_bitmap_value_t savebitmap;
-    int count_req = kaapi_listrequest_iterator_count(&lri);
+    int i, count_req = kaapi_listrequest_iterator_count(&lri);
     kaapi_assert( (count_req >0) || kaapi_reply_test( reply ) );
     kaapi_bitmap_value_copy( &savebitmap, &lri.bitmap );
     kaapi_bitmap_value_set( &savebitmap, lri.idcurr );

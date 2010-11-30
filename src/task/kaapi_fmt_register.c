@@ -79,10 +79,10 @@ kaapi_format_id_t kaapi_format_register(
   fmt->fmtid = kaapi_hash_value( name );
   fmt->isinit       = 0;
   fmt->name         = name; /* TODO: strdup ? */
-  fmt->count_params = 0;
-  fmt->mode_params  = 0;
-  fmt->off_params   = 0;  
-  fmt->fmt_params   = 0;
+  fmt->_count_params = 0;
+  fmt->_mode_params  = 0;
+  fmt->_off_params   = 0;  
+  fmt->_fmt_params   = 0;
   fmt->size         = 0;
   fmt->isinit       = 1;
 

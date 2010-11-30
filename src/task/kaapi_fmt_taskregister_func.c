@@ -47,59 +47,39 @@
 
 /**
 */
-kaapi_format_t* kaapi_all_format_bybody[256] = 
-{
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-};
-
-
-/** TODO:
-    - utilisation d'une autre structure de chainage que le format: 3 archi possible
-    mais qu'un champ de link => seulement une archi dans la table de hash...
-    - 
-*/
-kaapi_task_body_t kaapi_format_taskregister_body( 
-        kaapi_format_t*             fmt,
-        kaapi_task_body_t           body,
-        int                         archi
+kaapi_format_id_t kaapi_format_taskregister_func( 
+        struct kaapi_format_t*       fmt, 
+        kaapi_task_body_t            body,
+        const char*                  name,
+        size_t                       size,
+        size_t                     (*get_count_params)(const struct kaapi_format_t*, const void*),
+        kaapi_access_mode_t        (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+        void*                      (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        struct kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        kaapi_uint32_t             (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
 )
 {
-  kaapi_uint8_t   entry;
-  kaapi_format_t* head;
+//  kaapi_format_t* fmt = (*fmt_fnc)();
+  kaapi_format_register( fmt, name );
 
-  if (body ==0) return fmt->entrypoint[archi];
+  fmt->flag = KAAPI_FORMAT_DYNAMIC_FIELD;
   
-  if (fmt->entrypoint[archi] ==body) return fmt->entrypoint[archi];
-  fmt->entrypoint[archi] = body;
-  if (archi == KAAPI_PROC_TYPE_DEFAULT)
-    fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = fmt->default_body = body;
+  fmt->size = (kaapi_uint32_t)size;
+  fmt->_count_params = 0;
+  fmt->_mode_params  = 0;
+  fmt->_off_params   = 0;
+  fmt->_fmt_params   = 0;
+  fmt->_size_params  = 0;
 
-#if defined(KAAPI_DEBUG)
-  fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)(uintptr_t)body, fmt->name );
-  fflush(stdout);
-#endif
-
-  /* register it into hashmap: body -> fmt */
-  entry = ((unsigned long)body) & 0xFF;
-  head =  kaapi_all_format_bybody[entry];
-  fmt->next_bybody = head;
-  kaapi_all_format_bybody[entry] = fmt;
-
-  /* already registered into hashmap: fmtid -> fmt */  
-  return body;
+  fmt->get_count_params = get_count_params;
+  fmt->get_mode_param   = get_mode_param;
+  fmt->get_off_param    = get_off_param;
+  fmt->get_fmt_param    = get_fmt_param;
+  fmt->get_size_param   = get_size_param;
+  
+  memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
+  
+  if (body !=0)
+    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);
+  return fmt->fmtid;
 }

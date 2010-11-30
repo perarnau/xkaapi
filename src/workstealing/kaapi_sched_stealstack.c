@@ -50,7 +50,7 @@
 /* Compute if the task with arguments pointed by sp and with format task_fmt is ready
  Return the number of non ready data
  */
-static int kaapi_task_computeready( 
+static size_t kaapi_task_computeready( 
   kaapi_task_t* task __attribute__((unused)),
   void* sp, 
   const kaapi_format_t* task_fmt, 
@@ -58,18 +58,21 @@ static int kaapi_task_computeready(
   kaapi_hashmap_t* map 
 )
 {
-  int i, wc, countparam;
+  size_t count_params;
+  size_t wc;
+  unsigned int i;
   
-  countparam = wc = task_fmt->count_params;
-  for (i=0; i<countparam; ++i)
+  count_params = wc = kaapi_format_get_count_params(task_fmt, sp); 
+
+  for (i=0; i<count_params; ++i)
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task_fmt->mode_params[i]);
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(  kaapi_format_get_mode_param(task_fmt, i, sp) );
     if (m == KAAPI_ACCESS_MODE_V) 
     {
       --wc;
       continue;
     }
-    kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)sp);
+    kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_mode_param(task_fmt, i, sp);
     
     /* */
     kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
@@ -134,9 +137,10 @@ static int kaapi_task_computeready(
    Only call in case of static scheduling.
    This is the same code as computeready except the mutation of r access mode.
 */
-static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashmap_t* map )
+static size_t kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashmap_t* map )
 {
-  int i, wc, countparam;
+  unsigned int i;
+  size_t wc, count_params;
   const kaapi_format_t* task_fmt;
   const kaapi_taskrecv_arg_t* arg;
 
@@ -145,10 +149,10 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
 
   sp = arg->original_sp;
 
-  countparam = wc = task_fmt->count_params;
-  for (i=0; i<countparam; ++i)
+  count_params = wc = kaapi_format_get_count_params(task_fmt, sp); 
+  for (i=0; i<count_params; ++i)
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task_fmt->mode_params[i]);
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) ); 
     if (m == KAAPI_ACCESS_MODE_V) 
     {
       --wc;
@@ -163,7 +167,7 @@ static int kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashma
 /*        printf("->>> recv task: %p, mute r mode to w\n",task); */
       }
     }
-    kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)sp);
+    kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_param(task_fmt, i, sp);
     
     /* */
     kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
@@ -309,7 +313,7 @@ static int kaapi_sched_stealframe
       if (task_fmt !=0)
       {
         unsigned int war_param = 0;
-        int wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, map );
+        size_t wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)

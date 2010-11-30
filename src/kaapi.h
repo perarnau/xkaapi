@@ -837,13 +837,13 @@ static inline void* kaapi_thread_pushdata_align
     \param frame INOUT a pointer to the kaapi_frame_t data structure where to push data
     \retval a pointer to the next task to push or 0.
 */
-static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi_thread_t* thread, kaapi_uint32_t count)
+static inline void kaapi_thread_allocateshareddata(kaapi_access_t* a, kaapi_thread_t* thread, kaapi_uint32_t count)
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-  access->data = thread->sp_data;
+  a->data = thread->sp_data;
 #if !defined(KAAPI_NDEBUG)
-  access->version = 0;
+  a->version = 0;
 #endif
   thread->sp_data += count;
   return;
@@ -1744,18 +1744,33 @@ extern kaapi_format_id_t kaapi_format_register(
 );
 
 /** \ingroup TASK
-    Register a task format 
+    Register a task format with static definition
 */
-extern kaapi_format_id_t kaapi_format_taskregister( 
+extern kaapi_format_id_t kaapi_format_taskregister_static( 
+        struct kaapi_format_t*      fmt,
+        kaapi_task_body_t           body,
+        const char*                 name,
+        size_t                      size,
+        int                         count,
+        const kaapi_access_mode_t   mode_param[],
+        const kaapi_offset_t        offset_param[],
+        const struct kaapi_format_t*fmt_param[],
+        const size_t                size_param[]
+);
+
+/** \ingroup TASK
+    Register a task format with dynamic definition
+*/
+extern kaapi_format_id_t kaapi_format_taskregister_func( 
         struct kaapi_format_t*       fmt, 
         kaapi_task_body_t            body,
         const char*                  name,
         size_t                       size,
-        int                          count,
-        const kaapi_access_mode_t    mode_param[],
-        const kaapi_offset_t         offset_param[],
-        const struct kaapi_format_t* fmt_params[],
-        size_t (*)(const struct kaapi_format_t*, unsigned int, const void*)
+        size_t                     (*get_count_params)(const struct kaapi_format_t*, const void*),
+        kaapi_access_mode_t        (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+        void*                      (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        struct kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        kaapi_uint32_t             (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK
@@ -1810,7 +1825,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister( formatobject(), fnc_body, name, ##__VA_ARGS__);\
+    kaapi_format_taskregister_static( formatobject(), fnc_body, name, ##__VA_ARGS__);\
   }
 
 

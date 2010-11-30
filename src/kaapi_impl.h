@@ -318,7 +318,13 @@ enum kaapi_reply_status_t {
 };
 
 
-/* ============================= Format for task ============================ */
+
+/* ============================= Format for task/data structure ============================ */
+typedef enum kaapi_format_flag_t {
+  KAAPI_FORMAT_STATIC_FIELD,   /* the format of the task is interpreted using static offset/fmt etc */ 
+  KAAPI_FORMAT_DYNAMIC_FIELD      /* the format is interpreted using the function, required for variable args tasks */
+} kaapi_format_flag_t;
+
 /** \ingroup TASK
     Kaapi task format
     The format should be 1/ declared 2/ register before any use in task.
@@ -329,7 +335,10 @@ typedef struct kaapi_format_t {
   short                      isinit;                                  /* ==1 iff initialize */
   const char*                name;                                    /* debug information */
   
-  /* case of format for a structure or for a task */
+  /* flag to indicate how to interpret the following fields */
+  kaapi_format_flag_t        flag;
+  
+  /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
   kaapi_uint32_t             size;                                    /* sizeof the object */  
   void                       (*cstor)( void* dest);
   void                       (*dstor)( void* dest);
@@ -341,21 +350,76 @@ typedef struct kaapi_format_t {
   /* only if it is a format of a task  */
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
-  int                        count_params;                            /* number of parameters */
-  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
-  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
-  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
-  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
 
+  /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
+  int                         _count_params;                           /* number of parameters */
+  kaapi_access_mode_t        *_mode_params;                           /* only consider value with mask 0xF0 */
+  kaapi_offset_t             *_off_params;                             /* access to the i-th parameter: a value or a shared */
+  struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
+  kaapi_uint32_t             *_size_params;                            /* sizeof of each params */
+
+  /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
+     - the unsigned int argument is the index of the parameter 
+     - the last argument is the pointer to the sp data of the task
+  */
+  size_t                (*get_count_params)(const struct kaapi_format_t*, const void*);
+  kaapi_access_mode_t   (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+  void*                 (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*);
+  struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
+  kaapi_uint32_t        (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+
+  /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
   struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
 
-  size_t (*get_param_size)(const struct kaapi_format_t*, unsigned int, const void*);
   
   /* only for Monotonic bound format */
   int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                       const void* value, const struct kaapi_format_t* fmtvalue );
 } kaapi_format_t;
+
+/* Helper to interpret the format 
+*/
+static inline 
+size_t                kaapi_format_get_count_params(const struct kaapi_format_t* fmt, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_count_params;
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_count_params)(fmt, sp);
+}
+
+static inline 
+kaapi_access_mode_t   kaapi_format_get_mode_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_mode_params[ith];
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_mode_param)(fmt, ith, sp);
+}
+
+static inline 
+void*                 kaapi_format_get_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_off_params[ith] + (char*)sp;
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_off_param)(fmt, ith, sp);
+}
+
+static inline 
+const struct kaapi_format_t* kaapi_format_get_fmt_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_fmt_params[ith];
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_fmt_param)(fmt, ith, sp);
+}
+
+static inline 
+kaapi_uint32_t        kaapi_format_get_size_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_size_params[ith];
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_size_param)(fmt, ith, sp);
+}
+
 
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */

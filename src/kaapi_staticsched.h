@@ -371,7 +371,7 @@ void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread );
 
 /**
 */
-static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
+static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, unsigned int ith )
 {
   if (kaapi_task_state_issteal( kaapi_task_getstate(task))) return 0;
   {
