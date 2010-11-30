@@ -113,7 +113,7 @@ AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 
 # check for automatic macros that are used by KAAPI
 AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
-  AC_MSG_ERROR([The '__SIZEOF_POINTER__' macro must be defined by the compiler. Try a recent version of gcc for example])
+  AC_MSG_WARN([The '__SIZEOF_POINTER__' macro is not defined by the compiler. Support for such old compilers will be removed in a future release])
 ])
 
 dnl ----------------------------------------------------------------
