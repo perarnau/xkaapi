@@ -131,7 +131,7 @@ HighResTimer::type HighResTimer::gettick()
 
 
 // --------------------------------------------------------------------
-kaapi_uint64_t HighResTimer::latency =0;
+uint64_t HighResTimer::latency =0;
 double HighResTimer::dtick_per_s =0;
 double HighResTimer::inv_dtick_per_s =0;
 

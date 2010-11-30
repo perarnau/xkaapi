@@ -199,7 +199,7 @@ template<>
 struct ChunkTrait<bool> {
   typedef bool value_t;
 
-  typedef kaapi_uint64_t chunk_t;
+  typedef uint64_t chunk_t;
   enum { bitchunk = (8*sizeof(chunk_t))};
 
   struct iterator {

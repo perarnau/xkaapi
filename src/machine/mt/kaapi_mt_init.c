@@ -51,7 +51,7 @@
 
 /*
 */
-kaapi_uint32_t volatile kaapi_count_kprocessors = 0;
+uint32_t volatile kaapi_count_kprocessors = 0;
 
 /*
 */
@@ -159,11 +159,11 @@ int kaapi_mt_finalize(void)
 {
   int i;
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint64_t cnt_tasks;
-  kaapi_uint64_t cnt_stealreqok;
-  kaapi_uint64_t cnt_stealreq;
-  kaapi_uint64_t cnt_stealop;
-  kaapi_uint64_t cnt_suspend;
+  uint64_t cnt_tasks;
+  uint64_t cnt_stealreqok;
+  uint64_t cnt_stealreq;
+  uint64_t cnt_stealop;
+  uint64_t cnt_suspend;
   double t_sched;
   double t_preempt;
   double t_1;

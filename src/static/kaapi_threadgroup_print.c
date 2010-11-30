@@ -60,7 +60,7 @@ static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm
 {
   kaapi_hashentries_t* entry;
   
-  for (kaapi_uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
+  for (uint32_t i=0; i<KAAPI_HASHMAP_SIZE; ++i)
   {
     entry = get_hashmap_entry( hm, i );
     while (entry !=0) 

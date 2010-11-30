@@ -59,16 +59,6 @@ namespace ka {
   enum { STACK_ALLOC_THRESHOLD = KAAPI_MAX_DATA_ALIGNMENT };  
 
   // --------------------------------------------------------------------
-  typedef kaapi_uint8_t  ka_uint8_t;
-  typedef kaapi_uint16_t ka_uint16_t;
-  typedef kaapi_uint32_t ka_uint32_t;
-  typedef kaapi_uint64_t ka_uint64_t;
-
-  typedef kaapi_int8_t   ka_int8_t;
-  typedef kaapi_int16_t  ka_int16_t;
-  typedef kaapi_int32_t  ka_int32_t;
-  typedef kaapi_int64_t  ka_int64_t;
-
   struct kaapi_bodies_t {
     kaapi_bodies_t( kaapi_task_body_t cpu_body, kaapi_task_body_t gpu_body );
     kaapi_task_body_t cpu_body;
@@ -85,7 +75,7 @@ namespace ka {
   template<>
   class atomic_t<32> {
   public:
-    atomic_t<32>(kaapi_int32_t value =0)
+    atomic_t<32>(int32_t value =0)
     { 
 #if defined(__i386__)||defined(__x86_64)
       kaapi_assert_debug( ((unsigned long)&_atom & (32/8-1)) == 0 ); 
@@ -93,40 +83,40 @@ namespace ka {
       KAAPI_ATOMIC_WRITE(&_atom, value);
     }
 
-    kaapi_int32_t read() const 
+    int32_t read() const 
     { return KAAPI_ATOMIC_READ(&_atom); }
 
-    void write( kaapi_int32_t value ) 
+    void write( int32_t value ) 
     { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    void write_barrier( kaapi_int32_t value ) 
+    void write_barrier( int32_t value ) 
     { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
     
-    bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
+    bool cas( int32_t oldvalue, int32_t newvalue )
     { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
 
-    kaapi_int32_t incr( )
+    int32_t incr( )
     { return KAAPI_ATOMIC_INCR( &_atom ); }
 
-    kaapi_int32_t sub( kaapi_int32_t v )
+    int32_t sub( int32_t v )
     { return KAAPI_ATOMIC_SUB( &_atom, v ); }
 
-    kaapi_int32_t fetch_and_or( kaapi_int32_t mask )
+    int32_t fetch_and_or( int32_t mask )
     { return KAAPI_ATOMIC_OR_ORIG( &_atom, mask ); }
 
-    kaapi_int32_t fetch_and_and( kaapi_int32_t mask )
+    int32_t fetch_and_and( int32_t mask )
     { return KAAPI_ATOMIC_AND_ORIG( &_atom, mask ); }
 
-    kaapi_int32_t fetch_and_xor( kaapi_int32_t mask )
+    int32_t fetch_and_xor( int32_t mask )
     { return KAAPI_ATOMIC_XOR_ORIG( &_atom, mask ); }
 
-    kaapi_int32_t or_and_fetch( kaapi_int32_t mask )
+    int32_t or_and_fetch( int32_t mask )
     { return KAAPI_ATOMIC_OR( &_atom, mask ); }
 
-    kaapi_int32_t and_and_fetch( kaapi_int32_t mask )
+    int32_t and_and_fetch( int32_t mask )
     { return KAAPI_ATOMIC_AND( &_atom, mask ); }
 
-    kaapi_int32_t xor_and_fetch( kaapi_int32_t mask )
+    int32_t xor_and_fetch( int32_t mask )
     { return KAAPI_ATOMIC_XOR( &_atom, mask ); }
 
   protected:
@@ -137,7 +127,7 @@ namespace ka {
   template<>
   class atomic_t<64> {
   public:
-    atomic_t<64>(kaapi_int64_t value =0)
+    atomic_t<64>(int64_t value =0)
     { 
       KAAPI_ATOMIC_WRITE(&_atom, value);
 #if defined(__i386__)||defined(__x86_64)
@@ -145,40 +135,40 @@ namespace ka {
 #endif
     }
 
-    kaapi_int64_t read() const 
+    int64_t read() const 
     { return KAAPI_ATOMIC_READ(&_atom); }
 
-    void write( kaapi_int64_t value )
+    void write( int64_t value )
     { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    void write_barrier( kaapi_int64_t value ) 
+    void write_barrier( int64_t value ) 
     { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
         
-    bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
+    bool cas( int64_t oldvalue, int64_t newvalue )
     { return KAAPI_ATOMIC_CAS64( &_atom, oldvalue, newvalue ); }
 
-    kaapi_int64_t incr( )
+    int64_t incr( )
     { return KAAPI_ATOMIC_INCR64( &_atom ); }
 
-    kaapi_int64_t sub( kaapi_int64_t v )
+    int64_t sub( int64_t v )
     { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
 
-    kaapi_int64_t fetch_and_or( kaapi_int64_t mask )
+    int64_t fetch_and_or( int64_t mask )
     { return KAAPI_ATOMIC_OR64_ORIG( &_atom, mask ); }
 
-    kaapi_int64_t fetch_and_and( kaapi_int64_t mask )
+    int64_t fetch_and_and( int64_t mask )
     { return KAAPI_ATOMIC_AND64_ORIG( &_atom, mask ); }
 
-    kaapi_int64_t fetch_and_xor( kaapi_int64_t mask )
+    int64_t fetch_and_xor( int64_t mask )
     { return KAAPI_ATOMIC_XOR64_ORIG( &_atom, mask ); }
 
-    kaapi_int64_t or_and_fetch( kaapi_int64_t mask )
+    int64_t or_and_fetch( int64_t mask )
     { return KAAPI_ATOMIC_OR64( &_atom, mask ); }
 
-    kaapi_int64_t and_and_fetch( kaapi_int64_t mask )
+    int64_t and_and_fetch( int64_t mask )
     { return KAAPI_ATOMIC_AND64( &_atom, mask ); }
 
-    kaapi_int64_t xor_and_fetch( kaapi_int64_t mask )
+    int64_t xor_and_fetch( int64_t mask )
     { return KAAPI_ATOMIC_XOR64( &_atom, mask ); }
 
   protected:

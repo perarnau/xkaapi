@@ -104,11 +104,11 @@ int kaapi_preempt_thief_helper
  )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint64_t t1;
-  kaapi_uint64_t t0;
+  uint64_t t1;
+  uint64_t t0;
 #endif
   
-  kaapi_uintptr_t state;
+  uintptr_t state;
   
   kaapi_assert_debug(ktr != 0);
   
@@ -162,7 +162,7 @@ int kaapi_preemptasync_thief
  void*                               arg_to_thief 
  )
 {
-  kaapi_uintptr_t state;
+  uintptr_t state;
 
   if (ktr ==0) return 0;
   
@@ -189,7 +189,7 @@ int kaapi_preemptasync_waitthief
  struct kaapi_taskadaptive_result_t* ktr 
  )
 {
-  kaapi_uintptr_t state;
+  uintptr_t state;
 
   if (ktr ==0) return 0;
   

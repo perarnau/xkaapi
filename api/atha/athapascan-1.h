@@ -892,17 +892,6 @@ namespace Util {
   using ka::HighResTimer;
   using ka::logfile;
 
-  /* old names */
-  typedef kaapi_uint8_t  ka_uint8_t;
-  typedef kaapi_uint16_t ka_uint16_t;
-  typedef kaapi_uint32_t ka_uint32_t;
-  typedef kaapi_uint64_t ka_uint64_t;
-
-  typedef kaapi_int8_t   ka_int8_t;
-  typedef kaapi_int16_t  ka_int16_t;
-  typedef kaapi_int32_t  ka_int32_t;
-  typedef kaapi_int64_t  ka_int64_t;
-  
   using a1::WrapperFormat;
 }
 

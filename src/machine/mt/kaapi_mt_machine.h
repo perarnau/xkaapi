@@ -95,7 +95,7 @@
 
 
 //struct kaapi_processor_t;
-//typedef kaapi_uint32_t kaapi_processor_id_t;
+//typedef uint32_t kaapi_processor_id_t;
 
 
 /* ========================================================================= */
@@ -210,7 +210,7 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 #if (KAAPI_MAX_PROCESSOR <=32)
 
 typedef kaapi_atomic32_t kaapi_bitmap_t;
-typedef kaapi_uint32_t kaapi_bitmap_value_t;
+typedef uint32_t kaapi_bitmap_value_t;
 
 static inline void kaapi_bitmap_clear( kaapi_bitmap_t* b ) 
 { KAAPI_ATOMIC_WRITE(b, 0); }
@@ -245,7 +245,7 @@ static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
 #elif (KAAPI_MAX_PROCESSOR <=64)
 
 typedef kaapi_atomic64_t kaapi_bitmap_t;
-typedef kaapi_uint64_t kaapi_bitmap_value_t;
+typedef uint64_t kaapi_bitmap_value_t;
 
 static inline void kaapi_bitmap_clear( kaapi_bitmap_t* b ) 
 { KAAPI_ATOMIC_WRITE(b, 0); }
@@ -279,8 +279,8 @@ static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
 
 #else // (KAAPI_MAX_PROCESSOR >64)
 
-typedef kaapi_uint64_t kaapi_bitmap_t[ (KAAPI_MAX_PROCESSOR+63)/64 ];
-typedef kaapi_uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
+typedef uint64_t kaapi_bitmap_t[ (KAAPI_MAX_PROCESSOR+63)/64 ];
+typedef uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
 
 #endif //
 
@@ -368,7 +368,7 @@ typedef struct kaapi_processor_t {
   /* cache align */
   kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
 
-  kaapi_uint32_t           issteal;                       /* */
+  uint32_t                 issteal;                       /* */
   
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
   kaapi_lready_t	         lready;                        /* list of ready context, concurrent access locked by 'lock' */
@@ -538,7 +538,7 @@ static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* 
 /** \ingroup WS
     Number of used cores
 */
-extern kaapi_uint32_t volatile kaapi_count_kprocessors;
+extern uint32_t volatile kaapi_count_kprocessors;
 
 /** \ingroup WS
     One K-processors per core
@@ -615,7 +615,7 @@ static inline int kaapi_isterminated(void)
 static inline void kaapi_request_init( struct kaapi_processor_t* kproc, struct kaapi_request_t* pkr )
 {
 #if defined(KAAPI_USE_BITMAP_REQUEST)
-  pkr->kid    = (kaapi_uint16_t)kproc->kid; 
+  pkr->kid    = (uint16_t)kproc->kid; 
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)
 #else
 #endif
@@ -667,7 +667,7 @@ static inline int kaapi_listrequest_init( kaapi_processor_t* kproc, kaapi_listre
 
 /* ============================= Private functions, machine dependent ============================ */
 /* */
-extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
+extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 /** Post a request to a given k-processor
   This method posts a request to victim k-processor.
@@ -735,14 +735,14 @@ static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kpr
 
 /**
 */
-static inline void kaapi_processor_set_workload(kaapi_processor_t* kproc, kaapi_uint32_t workload) 
+static inline void kaapi_processor_set_workload(kaapi_processor_t* kproc, uint32_t workload) 
 {
   KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
 }
 
 /**
 */
-static inline void kaapi_processor_set_self_workload(kaapi_uint32_t workload) 
+static inline void kaapi_processor_set_self_workload(uint32_t workload) 
 {
   KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
 }

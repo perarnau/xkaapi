@@ -99,7 +99,7 @@ kaapi_format_id_t kaapi_format_taskregister(
   kaapi_assert(  fmt->fmt_params !=0);
   memcpy(fmt->fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
-  fmt->size = (kaapi_uint32_t)size;
+  fmt->size = (uint32_t)size;
 
   fmt->get_param_size = get_param_size;
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
@@ -121,7 +121,7 @@ kaapi_task_body_t kaapi_format_taskregister_body(
         int                         archi
 )
 {
-  kaapi_uint8_t   entry;
+  uint8_t         entry;
   kaapi_format_t* head;
 
   if (body ==0) return fmt->entrypoint[archi];

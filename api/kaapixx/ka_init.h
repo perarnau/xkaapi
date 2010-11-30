@@ -73,7 +73,7 @@ public:
 
   /** The global id of this process
   */
-  static kaapi_uint32_t local_gid;
+  static uint32_t local_gid;
 
   /** Should be defined for internal purpose only...
   */

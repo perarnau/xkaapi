@@ -180,7 +180,7 @@ public:
   static const std::string& unit();
 
   /** */
-  typedef kaapi_uint64_t type;
+  typedef uint64_t type;
 
   /** */
   HighResTimer( )
@@ -219,7 +219,7 @@ public:
 protected:
   friend class Init;
   static void calibrate();
-  static kaapi_uint64_t latency;
+  static uint64_t latency;
 #ifdef KAAPI_USE_IRIX
   static struct timespec tspec;
 #endif
