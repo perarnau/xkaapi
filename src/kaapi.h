@@ -157,61 +157,61 @@ typedef struct kaapi_atomic64_t {
 #  include <libkern/OSAtomic.h>
 static inline void kaapi_writemem_barrier()  
 {
-#ifdef __PPC
+#  ifdef __PPC
   OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
+#  elif defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
   __asm__ __volatile__ ("":::"memory");
-#else
-#  error "bad configuration"
-#endif
+#  else
+#    error "bad configuration"
+#  endif
 }
 
 static inline void kaapi_readmem_barrier()  
 {
-#ifdef __PPC
+#  ifdef __PPC
   OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
+#  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
   __asm__ __volatile__ ("lfence":::"memory");
-#else
-#  error "bad configuration"
-#endif
+#  else
+#    error "bad configuration"
+#  endif
 }
 
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
-#ifdef __PPC
+#  ifdef __PPC
   OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
+#  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
   __asm__ __volatile__ ("mfence":::"memory");
-#else
-#  error "bad configuration"
-#endif
+#  else
+#    error "bad configuration"
+#  endif
 }
 
 #elif defined(__linux__)
 
 static inline void kaapi_writemem_barrier()  
 {
-#if defined(__x86_64) || defined(__i386__)
+#  if defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
   __asm__ __volatile__ ("":::"memory");
-#else
+#  else
   __sync_synchronize();
-#endif
+#  endif
 }
 
 static inline void kaapi_readmem_barrier()  
 {
-#if defined(__x86_64) || defined(__i386__)
+#  if defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
   __asm__ __volatile__ ("":::"memory");
-#else
+#  else
   __sync_synchronize();
-#endif
+#  endif
 }
 
 /* should be both read & write barrier */
