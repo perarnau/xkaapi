@@ -49,7 +49,7 @@
 
 /*
 */
-kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key)
+kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key)
 {
   return _get_hashmap_entry( khm, key );
 }
@@ -57,7 +57,7 @@ kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key
 
 /*
 */
-void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
+void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
 {
   _set_hashmap_entry( khm, key, entries );
 }

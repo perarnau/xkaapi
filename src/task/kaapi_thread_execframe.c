@@ -98,10 +98,10 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
-  kaapi_uintptr_t	     state;
+  uintptr_t	             state;
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint32_t             cnt_tasks = 0;
+  uint32_t                   cnt_tasks = 0;
 #endif
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
@@ -196,7 +196,7 @@ push_frame:
       }
     }
 #if defined(KAAPI_DEBUG)
-    const kaapi_uintptr_t debug_state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
+    const uintptr_t debug_state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
     kaapi_assert_debug( !kaapi_task_state_isterm(debug_state) || (kaapi_task_state_isterm(debug_state) && kaapi_task_state_issteal(debug_state))  );
     kaapi_assert_debug( kaapi_task_state_isexec(debug_state) );
 #endif    

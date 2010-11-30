@@ -79,7 +79,7 @@ kaapi_task_body_t kaapi_format_taskregister_body(
         int                         archi
 )
 {
-  kaapi_uint8_t   entry;
+  uint8_t         entry;
   kaapi_format_t* head;
 
   if (body ==0) return fmt->entrypoint[archi];

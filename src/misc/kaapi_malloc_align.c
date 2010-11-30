@@ -57,7 +57,7 @@ void* kaapi_malloc_align
   /* align_size in bytes */
   if (align_size)
   {
-    const kaapi_uintptr_t align_mask = align_size - 1UL;
+    const uintptr_t align_mask = align_size - 1UL;
 
     malloc_addr = malloc(align_size + size);
     align_addr = (uintptr_t)malloc_addr;

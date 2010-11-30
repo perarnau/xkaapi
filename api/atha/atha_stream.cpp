@@ -61,7 +61,7 @@ namespace atha {
 #define MASK_NORMAL     0x4
 
 // --------------------------------------------------------------------
-void Stream_base::set_type( kaapi_uint8_t type ) throw(InvalidArgumentError)
+void Stream_base::set_type( uint8_t type ) throw(InvalidArgumentError)
 {
   if ((type & MASK_ALLTYPE) !=0)
     Exception_throw(InvalidArgumentError("bad type"));
@@ -81,7 +81,7 @@ void Stream_base::set_type( kaapi_uint8_t type ) throw(InvalidArgumentError)
 
 
 // --------------------------------------------------------------------
-bool Stream_base::is_type( kaapi_uint8_t type ) const
+bool Stream_base::is_type( uint8_t type ) const
 {
   bool retval = false;
   retval |= (((type & MASK_DIRECTION) ? 0U : 1U) == _direction);

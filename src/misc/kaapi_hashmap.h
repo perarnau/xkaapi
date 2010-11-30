@@ -49,7 +49,7 @@
 
 /*
 */
-static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key)
+static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
 
@@ -62,7 +62,7 @@ static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, kaa
 
 /*
 */
-static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries)
+static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
   khm->entries[key] = entries;

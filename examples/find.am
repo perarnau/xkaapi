@@ -12,7 +12,7 @@ check_PROGRAMS+=$(FIND_PRGS)
 all-find: $(FIND_PRGS)
 
 #Find STL algorithm
-find_kaapi_SOURCES=find/find.c
+find_kaapi_SOURCES=find/find_kaapi.c
 
 find_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 find_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)

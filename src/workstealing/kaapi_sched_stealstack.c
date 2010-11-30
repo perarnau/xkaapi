@@ -271,7 +271,7 @@ static int kaapi_sched_stealframe
         if ( (splitter !=0) && (argsplitter !=0) )
         {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-          const kaapi_uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
+          const uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
           /* do not steal if terminated */
           if (likely( !kaapi_task_state_isterm(state) ) )
 #else
@@ -317,7 +317,7 @@ static int kaapi_sched_stealframe
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-          kaapi_uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL);
+          uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL);
           if (likely( kaapi_task_state_isstealable(state) ) ) // means SUSPEND and EXEC was not set before
           {
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

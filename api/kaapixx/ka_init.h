@@ -71,6 +71,10 @@ public:
   */
   static Architecture local_archi;
 
+  /** The global id of this process
+  */
+  static uint32_t local_gid;
+
   /** Should be defined for internal purpose only...
   */
   static bool on_term;

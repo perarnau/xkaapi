@@ -57,11 +57,13 @@
 #  include <winnt.h>
 #endif
 
-#if (__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)
-#  if !defined(__SIZEOF_POINTER__)
-#    error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
+#if !defined(__SIZEOF_POINTER__)
+#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__)
+#    define __SIZEOF_POINTER__ 8
+#  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc__))
+#    define __SIZEOF_POINTER__ 4
 #  else
-#    error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
+#    error KAAPI not ready for this architechture. Report to developpers.
 #  endif
 #endif
 
@@ -91,25 +93,13 @@ extern "C" {
 #  define KAAPI_MAX_DATA_ALIGNMENT 8
 #endif
 
-/* Kaapi name for stdint typedefs.
+/* Kaapi types.
  */
-typedef uintptr_t kaapi_uintptr_t;
-typedef uint8_t   kaapi_uint8_t;
-typedef uint16_t  kaapi_uint16_t;
-typedef uint32_t  kaapi_uint32_t;
-typedef uint64_t  kaapi_uint64_t;
-
-typedef intptr_t  kaapi_intptr_t;
-typedef int8_t    kaapi_int8_t;
-typedef int16_t   kaapi_int16_t;
-typedef int32_t   kaapi_int32_t;
-typedef int64_t   kaapi_int64_t;
-
-typedef kaapi_uint32_t kaapi_processor_id_t;
-typedef kaapi_uint64_t kaapi_cpuset_t[2];
-typedef kaapi_uint32_t kaapi_format_id_t;
-typedef kaapi_uint32_t kaapi_offset_t;
-typedef int            kaapi_gpustream_t;
+typedef uint32_t kaapi_processor_id_t;
+typedef uint64_t kaapi_affinity_t;
+typedef uint32_t kaapi_format_id_t;
+typedef uint32_t kaapi_offset_t;
+typedef int      kaapi_gpustream_t;
 
 /* Fwd decl
 */
@@ -127,9 +117,9 @@ struct kaapi_reply_t;
 */
 typedef struct kaapi_atomic32_t {
 #if defined(__APPLE__)
-  volatile kaapi_int32_t  _counter;
+  volatile int32_t  _counter;
 #else
-  volatile kaapi_uint32_t _counter;
+  volatile uint32_t _counter;
 #endif
 } kaapi_atomic32_t;
 typedef kaapi_atomic32_t kaapi_atomic_t;
@@ -137,9 +127,9 @@ typedef kaapi_atomic32_t kaapi_atomic_t;
 
 typedef struct kaapi_atomic64_t {
 #if defined(__APPLE__)
-  volatile kaapi_int64_t  _counter;
+  volatile int64_t  _counter;
 #else
-  volatile kaapi_uint64_t _counter;
+  volatile uint64_t _counter;
 #endif
 } kaapi_atomic64_t;
 
@@ -157,61 +147,61 @@ typedef struct kaapi_atomic64_t {
 #  include <libkern/OSAtomic.h>
 static inline void kaapi_writemem_barrier()  
 {
-#ifdef __PPC
+#  ifdef __PPC
   OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
+#  elif defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
   __asm__ __volatile__ ("":::"memory");
-#else
-#  error "bad configuration"
-#endif
+#  else
+#    error "bad configuration"
+#  endif
 }
 
 static inline void kaapi_readmem_barrier()  
 {
-#ifdef __PPC
+#  ifdef __PPC
   OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
+#  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
   __asm__ __volatile__ ("lfence":::"memory");
-#else
-#  error "bad configuration"
-#endif
+#  else
+#    error "bad configuration"
+#  endif
 }
 
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
-#ifdef __PPC
+#  ifdef __PPC
   OSMemoryBarrier();
-#elif defined(__x86_64) || defined(__i386__)
+#  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
   __asm__ __volatile__ ("mfence":::"memory");
-#else
-#  error "bad configuration"
-#endif
+#  else
+#    error "bad configuration"
+#  endif
 }
 
 #elif defined(__linux__)
 
 static inline void kaapi_writemem_barrier()  
 {
-#if defined(__x86_64) || defined(__i386__)
+#  if defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
   __asm__ __volatile__ ("":::"memory");
-#else
+#  else
   __sync_synchronize();
-#endif
+#  endif
 }
 
 static inline void kaapi_readmem_barrier()  
 {
-#if defined(__x86_64) || defined(__i386__)
+#  if defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
   __asm__ __volatile__ ("":::"memory");
-#else
+#  else
   __sync_synchronize();
-#endif
+#  endif
 }
 
 /* should be both read & write barrier */
@@ -276,15 +266,15 @@ extern void kaapi_abort(void);
 /* ========================== utilities ====================================== */
 extern void* kaapi_malloc_align( unsigned int align_size, size_t size, void** addr_tofree);
 
-static inline void* _kaapi_align_ptr_for_alloca(void* ptr, kaapi_uintptr_t align)
+static inline void* _kaapi_align_ptr_for_alloca(void* ptr, uintptr_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align ==64) || (align ==32) || (align ==16) \
                                    || (align == 8) || (align == 4) || (align == 2) || (align == 1)) );\
   if (align <8) return ptr;
   --align;
-  if ( (((kaapi_uintptr_t)ptr) & align) !=0U)
-    ptr = (void*)((((kaapi_uintptr_t)ptr) + align ) & ~align);
-  kaapi_assert_debug( (((kaapi_uintptr_t)ptr) & align) == 0U);
+  if ( (((uintptr_t)ptr) & align) !=0U)
+    ptr = (void*)((((uintptr_t)ptr) + align ) & ~align);
+  kaapi_assert_debug( (((uintptr_t)ptr) & align) == 0U);
   return ptr;
 }
 
@@ -353,7 +343,7 @@ extern double kaapi_get_elapsedtime(void);
     The function kaapi_get_elapsedtime() will return the elapsed time since an epoch
     in nano second unit.
 */
-extern kaapi_uint64_t kaapi_get_elapsedns(void);
+extern uint64_t kaapi_get_elapsedns(void);
 
 
 /* ========================================================================= */
@@ -495,12 +485,12 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 */
 typedef struct kaapi_task_t {
 #if (__SIZEOF_POINTER__ == 4)
-  kaapi_task_bodyid_t      body;      /** task body  */
-  volatile kaapi_uintptr_t state;     /** bit        */
+  kaapi_task_bodyid_t     body;      /** task body  */
+  volatile uintptr_t      state;     /** bit */
 #else
   union task_and_body {
-    kaapi_task_bodyid_t      body;    /** task body  */
-    volatile kaapi_uintptr_t state;   /** bit        */
+    kaapi_task_bodyid_t   body;      /** task body  */
+    volatile uintptr_t    state;     /** bit */
   } u;
 #endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */
@@ -539,7 +529,7 @@ typedef int (*kaapi_thief_reducer_t)
 typedef struct kaapi_stealheader_t
 {
   /* steal method modifiers */
-  kaapi_uint32_t flag; 
+  uint32_t flag; 
 
   /* (topmost) master stealcontext */
   struct kaapi_stealcontext_t* msc;
@@ -558,7 +548,7 @@ typedef struct kaapi_stealcontext_t {
   kaapi_stealheader_t            header;
 
   /* reference to the preempt flag in the thread's reply_t data structure */
-  volatile kaapi_uint64_t* preempt __attribute__((aligned));
+  volatile uint64_t* preempt __attribute__((aligned));
 
   /* splitter context */
   kaapi_task_splitter_t volatile splitter;
@@ -616,8 +606,8 @@ typedef struct kaapi_taskadaptive_result_t {
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
 
-  volatile kaapi_uint64_t*	          status;	          /* reply status pointer */
-  volatile kaapi_uint64_t*	          preempt;          /* preemption pointer */
+  volatile uint64_t*	          status;	          /* reply status pointer */
+  volatile uint64_t*	          preempt;          /* preemption pointer */
 
 #if defined(KAAPI_COMPILE_SOURCE)
   kaapi_task_t			      state;		/* ktr state represented by a task */
@@ -675,12 +665,12 @@ typedef struct kaapi_reply_t {
      A pointer on this word is used both on the victim side to
      send preemption signal. The thief test preemption on this flag
    */
-  volatile kaapi_uint64_t status;
-  volatile kaapi_uint64_t preempt;
+  volatile uint64_t status;
+  volatile uint64_t preempt;
 
   /* private, since sc is private and sizeof differs */
 #if defined(KAAPI_COMPILE_SOURCE)
-  kaapi_uint16_t offset;    /* offset in udata of the task arg */
+  uint16_t offset;    /* offset in udata of the task arg */
   union
   {
     struct /* task body */ 
@@ -712,7 +702,7 @@ typedef struct kaapi_request_t {
   kaapi_processor_id_t         kid;            /* system wide kproc id */
   kaapi_reply_t*               reply;          /* points to thief thread reply data structure */
   kaapi_taskadaptive_result_t* ktr;            /* only used in adaptive interface to avoid  */
-  kaapi_uint8_t                data[1];        /* not used data[0]...data[XX] ? */
+  uint8_t                data[1];        /* not used data[0]...data[XX] ? */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
 
@@ -801,7 +791,7 @@ static inline void* kaapi_task_setargs(kaapi_task_t* task, void* arg)
     \param thread INOUT a pointer to the kaapi_thread_t data structure where to push data
     \retval a pointer to the next task to push or 0.
 */
-static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_t count)
+static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, uint32_t count)
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
@@ -818,13 +808,13 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, kaapi_uint32_
     \param align the alignment size, in BYTES
 */
 static inline void* kaapi_thread_pushdata_align
-  (kaapi_thread_t* thread, kaapi_uint32_t count, kaapi_uintptr_t align)
+  (kaapi_thread_t* thread, uint32_t count, uintptr_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
-  const kaapi_uintptr_t mask = align - (kaapi_uintptr_t)1;
+  const uintptr_t mask = align - (uintptr_t)1;
 
-  if ((kaapi_uintptr_t)thread->sp_data & mask)
-    thread->sp_data = (char*)((kaapi_uintptr_t)(thread->sp_data + align) & ~mask);
+  if ((uintptr_t)thread->sp_data & mask)
+    thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
 
   return kaapi_thread_pushdata(thread, count);
 }
@@ -837,7 +827,7 @@ static inline void* kaapi_thread_pushdata_align
     \param frame INOUT a pointer to the kaapi_frame_t data structure where to push data
     \retval a pointer to the next task to push or 0.
 */
-static inline void kaapi_thread_allocateshareddata(kaapi_access_t* a, kaapi_thread_t* thread, kaapi_uint32_t count)
+static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi_thread_t* thread, uint32_t count)
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
@@ -890,7 +880,7 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
     Task initialization routines
 */
 static inline void kaapi_task_initdfg_with_state
-(kaapi_task_t* task, kaapi_task_body_t body, kaapi_uintptr_t state, void* arg)
+(kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
 {
   task->sp = arg;
 
@@ -902,12 +892,12 @@ static inline void kaapi_task_initdfg_with_state
 #  define KAAPI_MASK_BODY_SHIFTR 60UL
 # endif
   task->u.body = (kaapi_task_body_t)
-    ((kaapi_uintptr_t)body | (state << KAAPI_MASK_BODY_SHIFTR));
+    ((uintptr_t)body | (state << KAAPI_MASK_BODY_SHIFTR));
 #endif
 }
 
 static inline void kaapi_task_init_with_state
-(kaapi_task_t* task, kaapi_task_body_t body, kaapi_uintptr_t state, void* arg)
+(kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
 {
   kaapi_task_initdfg_with_state(task, body, state, arg);
 }

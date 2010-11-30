@@ -65,7 +65,7 @@ namespace rts {
   template<>
   class atomic_t<32> {
   public:
-    atomic_t<32>(kaapi_int32_t value =0)
+    atomic_t<32>(int32_t value =0)
     { 
 #if defined(__i386__)||defined(__x86_64)
       kaapi_assert_debug( ((unsigned long)&_atom & (32/8-1)) == 0 ); 
@@ -73,19 +73,19 @@ namespace rts {
       KAAPI_ATOMIC_WRITE(&_atom, value);
     }
 
-    kaapi_int32_t read() const 
+    int32_t read() const 
     { return KAAPI_ATOMIC_READ(&_atom); }
 
-    void write( kaapi_int32_t value ) 
+    void write( int32_t value ) 
     { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    bool cas( kaapi_int32_t oldvalue, kaapi_int32_t newvalue )
+    bool cas( int32_t oldvalue, int32_t newvalue )
     { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
 
-    kaapi_int32_t incr( )
+    int32_t incr( )
     { return KAAPI_ATOMIC_INCR( &_atom ); }
 
-    kaapi_int32_t sub( kaapi_int32_t v )
+    int32_t sub( int32_t v )
     { return KAAPI_ATOMIC_SUB( &_atom, v ); }
 
   protected:
@@ -96,7 +96,7 @@ namespace rts {
   template<>
   class atomic_t<64> {
   public:
-    atomic_t<64>(kaapi_int64_t value =0)
+    atomic_t<64>(int64_t value =0)
     { 
       KAAPI_ATOMIC_WRITE(&_atom, value);
 #if defined(__i386__)||defined(__x86_64)
@@ -104,19 +104,19 @@ namespace rts {
 #endif
     }
 
-    kaapi_int64_t read() const 
+    int64_t read() const 
     { return KAAPI_ATOMIC_READ(&_atom); }
 
-    void write( kaapi_int64_t value )
+    void write( int64_t value )
     { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    bool cas( kaapi_int64_t oldvalue, kaapi_int64_t newvalue )
+    bool cas( int64_t oldvalue, int64_t newvalue )
     { return KAAPI_ATOMIC_CAS64( &_atom, oldvalue, newvalue ); }
 
-    kaapi_int64_t incr( )
+    int64_t incr( )
     { return KAAPI_ATOMIC_INCR64( &_atom ); }
 
-    kaapi_int64_t sub( kaapi_int64_t v )
+    int64_t sub( int64_t v )
     { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
 
   protected:
@@ -128,10 +128,10 @@ namespace rts {
      on given bits 
   */
   template<int bits> struct signed_type_that_have_bits{ };
-  template<> struct signed_type_that_have_bits<8> { typedef  kaapi_int8_t type; };
-  template<> struct signed_type_that_have_bits<16>{ typedef  kaapi_int16_t type; };
-  template<> struct signed_type_that_have_bits<32>{ typedef  kaapi_int32_t type; };
-  template<> struct signed_type_that_have_bits<64>{ typedef  kaapi_int64_t type; };
+  template<> struct signed_type_that_have_bits<8> { typedef  int8_t type; };
+  template<> struct signed_type_that_have_bits<16>{ typedef  int16_t type; };
+  template<> struct signed_type_that_have_bits<32>{ typedef  int32_t type; };
+  template<> struct signed_type_that_have_bits<64>{ typedef  int64_t type; };
 
   template<typename type> struct bits_for_type{ 
     enum { bits = sizeof(type)*8 };
@@ -145,19 +145,19 @@ namespace rts {
 
   template<>
   struct signed_type_that_is_less<true,true,true,true> {
-    typedef kaapi_int8_t type;
+    typedef int8_t type;
   };
   template<>
   struct signed_type_that_is_less<false,true,true,true> {
-    typedef kaapi_int16_t type;
+    typedef int16_t type;
   };
   template<>
   struct signed_type_that_is_less<false,false,true,true> {
-    typedef kaapi_int32_t type;
+    typedef int32_t type;
   };
   template<>
   struct signed_type_that_is_less<false,false,false,true> {
-    typedef kaapi_int64_t type;
+    typedef int64_t type;
   };
   template<unsigned long long capacity>
   struct signed_type_that_represents_capacity

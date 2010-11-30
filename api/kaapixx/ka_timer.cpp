@@ -131,7 +131,7 @@ HighResTimer::type HighResTimer::gettick()
 
 
 // --------------------------------------------------------------------
-kaapi_uint64_t HighResTimer::latency =0;
+uint64_t HighResTimer::latency =0;
 double HighResTimer::dtick_per_s =0;
 double HighResTimer::inv_dtick_per_s =0;
 
@@ -208,7 +208,7 @@ void HighResTimer::calibrate()
   HighResTimer::dtick_per_s = mhz*1e6;
   fclose(file);
 #  else
-#  error "unknown system / architecture"
+#    error "unknown system / architecture"
 #  endif
 
 #endif // END CALIBRATION
