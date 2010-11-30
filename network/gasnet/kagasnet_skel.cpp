@@ -46,7 +46,6 @@
 
 namespace GASNET {
 
-
 // --------------------------------------------------------------------
 void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, 
   gasnet_handlerarg_t handlerH, gasnet_handlerarg_t handlerL)
