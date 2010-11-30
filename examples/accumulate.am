@@ -13,7 +13,7 @@ all-accumulate: $(ACCUMULATE_PRGS)
 
 #Accumulate STL algorithm
 
-accumulate_kaapi_SOURCES=accumulate/accumulate.c
+accumulate_kaapi_SOURCES=accumulate/accumulate_kaapi.c
 
 accumulate_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 accumulate_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS) $(STD_C99_FLAGS)

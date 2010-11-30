@@ -52,12 +52,12 @@ ka::OStream& operator<< (ka::OStream& s_out, const KaSubDomain& sd )
 {
   s_out << sd._nx << sd._ny << sd._nz;
   if (sd._data != 0 && sd._nx * sd._ny * sd._nz > 0){
-    s_out << (ka::uint8_t)1;
+    s_out << (uint8_t)1;
     s_out.write( &ka::WrapperFormat<double>::format, ka::OStream::DA, sd._data, (sd._nx+2) * (sd._ny+2) * (sd._nz+2) ) ;
   }
   else 
   {
-    s_out << (ka::uint8_t)0;
+    s_out << (uint8_t)0;
   }
   return s_out;
 }
@@ -68,7 +68,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomain& sd )
   s_in >> nx >> ny >> nz;
   sd.resize( nx, ny, nz );
 
-  ka::uint8_t flag;
+  uint8_t flag;
   s_in >> flag;
   if (flag == 1){
     s_in.read( &ka::WrapperFormat<double>::format, ka::OStream::DA, sd._data, (nx+2)*(ny+2)*(nz+2) );
@@ -94,12 +94,12 @@ ka::OStream& operator<< (ka::OStream& s_out, const KaSubDomainInterface& sdi )
 //   std::cout << "[KaSubDomainInterface::operator<<] @ = " << &sdi << " - nx = " << sdi._nx <<  " - ny = " << sdi._ny << std::endl;
   s_out << sdi._nx << sdi._ny;
   if (sdi._data != 0 && sdi._nx * sdi._ny > 0){
-    s_out << (ka::uint8_t)1;
+    s_out << (uint8_t)1;
     s_out.write(  &ka::WrapperFormat<double>::format, ka::OStream::DA, sdi._data, sdi._nx * sdi._ny ) ;
   }
   else 
   {
-    s_out << (ka::uint8_t)0;
+    s_out << (uint8_t)0;
   }
   return s_out;
 }
@@ -110,7 +110,7 @@ ka::IStream& operator>> ( ka::IStream& s_in, KaSubDomainInterface& sdi )
   s_in >> nx >> ny;
  sdi.resize( nx, ny );
 
-  ka::uint8_t flag;
+  uint8_t flag;
   s_in >> flag;
   if (flag == 1){
     s_in.read(  &ka::WrapperFormat<double>::format, ka::OStream::DA, sdi._data, nx*ny );

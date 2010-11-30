@@ -15,18 +15,19 @@ AM_CXXFLAGS=@AM_CXXFLAGS@
 check_PROGRAMS=
 
 include accumulate.am
+include branchbound.am
 include cilk.am
 include fibo.am
 include find.am
-include prefix.am
 include for_each.am
 include hello.am
 include nqueens.am
 include poisson3D.am
-include branchbound.am
+include prefix.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
+	branchbound/Makefile \
 	cilk/Makefile \
 	fibo/Makefile \
 	find/Makefile \
@@ -34,7 +35,7 @@ USER_MAKEFILES=\
 	hello/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
-	branchbound/Makefile
+	prefix/Makefile
 
 TESTS=  
 
