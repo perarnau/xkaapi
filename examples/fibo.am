@@ -8,7 +8,7 @@
 # Hence, all paths are relative to the parent (and not current) directory
 
 FIBO_PRGS=fibo_seq fibo_kaapi fibo_atha \
-        fibo_kaapi++ fibo_kaapi++_opt fibo_kaapi++_sync
+        fibo_kaapi++ fibo_kaapi++_opt fibo_kaapi++_sync fibo_kaapi++_opt_sync
 check_PROGRAMS+=$(FIBO_PRGS)
 all-fibo: $(FIBO_PRGS)
 
@@ -18,6 +18,7 @@ fibo_atha_SOURCES=fibo/fibo_atha.cpp
 fibo_kaapi___SOURCES=    fibo/fibo_kaapi++.cpp
 fibo_kaapi___opt_SOURCES=fibo/fibo_kaapi++_opt.cpp
 fibo_kaapi___sync_SOURCES=fibo/fibo_kaapi++_sync.cpp
+fibo_kaapi___opt_sync_SOURCES=fibo/fibo_kaapi++_opt_sync.cpp
 
 fibo_seq_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS) -DFIBOCODE -DMAINCODE
 fibo_seq_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
@@ -49,8 +50,8 @@ fibo_kaapi___sync_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 fibo_kaapi___sync_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 fibo_kaapi___sync_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
-fibo_kaapixx_opt_sync_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-fibo_kaapixx_opt_sync_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-fibo_kaapixx_opt_sync_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-fibo_kaapixx_opt_sync_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+fibo_kaapi___opt_sync_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+fibo_kaapi___opt_sync_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+fibo_kaapi___opt_sync_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+fibo_kaapi___opt_sync_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
