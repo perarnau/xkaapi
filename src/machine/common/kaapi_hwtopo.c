@@ -157,7 +157,6 @@ int kaapi_hw_init()
   int topodepth, depth;
   int memdepth;
   int idx, ncousin;
-  unsigned int i;
   int ncpu;
 
   kaapi_hw_standardinit();
@@ -258,6 +257,8 @@ int kaapi_hw_init()
   
   
 #if 0
+{
+  unsigned int i;
   /* display result... */
   printf("Memory hierarchy levels:%i\n", kaapi_default_param.memory.depth);
   printf("System cpu:%i\n", kaapi_default_param.syscpucount);
@@ -290,6 +291,7 @@ int kaapi_hw_init()
   for (i=0; i<kaapi_default_param.cpucount; ++i)
     printf("%i ", kaapi_default_param.cpu2kid[i] );
   printf("\n");
+}
 #endif
   
   return 0;
