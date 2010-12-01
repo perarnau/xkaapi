@@ -72,7 +72,7 @@ static size_t kaapi_task_computeready(
       --wc;
       continue;
     }
-    kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_mode_param(task_fmt, i, sp);
+    kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_param(task_fmt, i, sp);
     
     /* */
     kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
