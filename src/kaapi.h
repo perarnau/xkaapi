@@ -827,7 +827,7 @@ static inline void* kaapi_thread_pushdata_align
     \param frame INOUT a pointer to the kaapi_frame_t data structure where to push data
     \retval a pointer to the next task to push or 0.
 */
-static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi_thread_t* thread, uint32_t count)
+static inline void kaapi_thread_allocateshareddata(kaapi_access_t* a, kaapi_thread_t* thread, uint32_t count)
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
@@ -1760,7 +1760,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
         kaapi_access_mode_t        (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
         void*                      (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
         struct kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        kaapi_uint32_t             (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+        uint32_t             (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK

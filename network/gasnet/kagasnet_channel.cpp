@@ -89,7 +89,7 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
       case ka::Instruction::INST_AM:
       {
         /* send header: first 2 fields */
-        kaapi_uintptr_t handler = curr->i_am.handler;
+        uintptr_t handler = curr->i_am.handler;
         gasnet_handlerarg_t handlerH = handler >> 32UL;
         gasnet_handlerarg_t handlerL = handler & 4294967295UL;
         std::cout << ka::System::local_gid << "::[OutChannel::flush] send AM to:" << _dest << ", size:" << curr->i_am.size 

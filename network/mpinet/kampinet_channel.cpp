@@ -93,7 +93,7 @@ printf("%i::Send AM message to %i, handler=%p, size=%i\n", ka::System::local_gid
 fflush(stdout);
 #endif
         /* send header: first 2 fields */
-        err = MPI_Send( &curr->i_am.handler, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 1, _comm );
+        err = MPI_Send( &curr->i_am.handler, 2*sizeof(uint64_t), MPI_BYTE, _dest, 1, _comm );
         kaapi_assert(err == MPI_SUCCESS);
 
         /* send message: pointed by the third field */
@@ -117,7 +117,7 @@ printf("%i::Send rDMA message to %i, @=%p, size=%i\n", ka::System::local_gid, _d
 fflush(stdout);
 #endif
         /* send header: first 2 fields */
-        err = MPI_Send( &curr->i_rw.dptr, 2*sizeof(kaapi_uint64_t), MPI_BYTE, _dest, 2, _comm );
+        err = MPI_Send( &curr->i_rw.dptr, 2*sizeof(uint64_t), MPI_BYTE, _dest, 2, _comm );
         kaapi_assert(err == MPI_SUCCESS);
 
         /* send message: pointed by the third field */

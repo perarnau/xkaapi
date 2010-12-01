@@ -140,7 +140,7 @@ void kaapi_taskwrite_body(
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
-  kaapi_uintptr_t oldstate;
+  uintptr_t oldstate;
   if (war_param ==0)
     oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
   else

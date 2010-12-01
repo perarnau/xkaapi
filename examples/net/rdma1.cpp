@@ -49,13 +49,13 @@
 /*
 */
 char* buffer_message;
-kaapi_uintptr_t remote_ptr = 0;
+uintptr_t remote_ptr = 0;
 volatile int cnt_msg = 0;
 
 
 static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer )
 {
-  kaapi_uintptr_t* msg = (kaapi_uintptr_t*)buffer;
+  uintptr_t* msg = (uintptr_t*)buffer;
   remote_ptr = *msg;
   printf("%i:: receive mesg, remote addr = %lx\n", ka::System::local_gid, remote_ptr);
   fflush(stdout);

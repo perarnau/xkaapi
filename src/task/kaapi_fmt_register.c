@@ -73,7 +73,7 @@ kaapi_format_id_t kaapi_format_register(
         const char*               name
 )
 {
-  uint8_t         entry;
+  uint8_t        entry;
   kaapi_format_t* head;
 
   fmt->fmtid = kaapi_hash_value( name );

@@ -45,8 +45,6 @@
 #include "kampinet_device.h"
 #include <mpi.h>
 
-// #define TRACE_THIS_FILE
-
 namespace MPINET {
 
 // --------------------------------------------------------------------
@@ -59,28 +57,22 @@ void Device::service_term(int errocode, ka::GlobalId source, void* buffer, size_
 void Device::ack_term()
 {
   int err;
-  kaapi_uint64_t handler[2] = { (kaapi_uint64_t)&Device::service_term, 0 };
-  err = MPI_Send( &handler, 2*sizeof(kaapi_uint64_t), MPI_BYTE, 0, 1, _comm );
+  uint64_t handler[2] = { (uint64_t)&Device::service_term, 0 };
+  err = MPI_Send( &handler, 2*sizeof(uint64_t), MPI_BYTE, 0, 1, _comm );
   kaapi_assert(err == MPI_SUCCESS);
-#if defined(TRACE_THIS_FILE)
   printf("%i::Send ack term message to:0\n", ka::System::local_gid );
   fflush(stdout);
-#endif
 }
 
 
 // --------------------------------------------------------------------
 void* Device::skeleton( void* arg )
 {
-#if defined(TRACE_THIS_FILE)
   ka::logfile() << "In " << __PRETTY_FUNCTION__ << std::endl;
-#endif
   Device* device = (Device*)arg;
   device->skel();
   device->_state.write( Device::S_FINISHED );
-#if defined(TRACE_THIS_FILE)
   ka::logfile() << "Out " << __PRETTY_FUNCTION__ << std::endl;
-#endif
   return 0;
 }
 
@@ -94,14 +86,14 @@ int Device::skel()
     ka::AMInstruction am;
   } header;
   void*          buffer_am = 0;
-  kaapi_uint64_t sz_buffer_am = 0;
+  uint64_t sz_buffer_am = 0;
 
   ka::Service_fnc service = 0;
   int err;
   
   while (1)
   {
-    err = MPI_Recv(&header, 2*sizeof(kaapi_uint64_t), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    err = MPI_Recv(&header, 2*sizeof(uint64_t), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     kaapi_assert( (err == MPI_SUCCESS) );
     kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );
@@ -109,11 +101,6 @@ int Device::skel()
     /* switch tag: 1 -> AM, 3 -> RW */
     switch (status.MPI_TAG) {
       case 1: /* AM */
-#if defined(TRACE_THIS_FILE)
-printf("%i::Recv AM message from %i, handler=%p, size=%i\n", ka::System::local_gid, status.MPI_SOURCE, 
-      (void*)header.am.handler, (int)header.am.size);
-fflush(stdout);
-#endif
         if (header.am.size >0)
         {
           if (sz_buffer_am < header.am.size)
@@ -131,10 +118,8 @@ fflush(stdout);
         service = (ka::Service_fnc)header.am.handler;
         if (service == Device::service_term) 
         {
-#if defined(TRACE_THIS_FILE)
-          printf("%i::Recv term message from:0\n", ka::System::local_gid);
+          printf("%i::Recv term message from:0\n", ka::System::local_gid,  status.MPI_SOURCE);
           fflush(stdout);
-#endif
           if (ka::System::local_gid ==0)
           {
             if (++_ack_term == _wcom_size-1) return 0;
@@ -148,11 +133,6 @@ fflush(stdout);
         break;
 
       case 2: /* RW */
-#if defined(TRACE_THIS_FILE)
-printf("%i::Recv rDMA message from %i, @=%p, size=%i\n", ka::System::local_gid, status.MPI_SOURCE, 
-      (void*)header.rw.dptr, (int)header.rw.size);
-fflush(stdout);
-#endif
         if (header.rw.size >0)
         {
           err = MPI_Recv((void*)header.rw.dptr, (int)header.rw.size, MPI_BYTE, status.MPI_SOURCE, 3, MPI_COMM_WORLD, &status);

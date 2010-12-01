@@ -257,6 +257,10 @@ enum kaapi_memory_type_t {
 
 /**
 */
+typedef uint64_t kaapi_cpuset_t[2];
+
+/**
+*/
 typedef struct kaapi_affinityset_t {
     kaapi_cpuset_t        who;
     size_t                ncpu;
@@ -413,7 +417,7 @@ const struct kaapi_format_t* kaapi_format_get_fmt_param  (const struct kaapi_for
 }
 
 static inline 
-kaapi_uint32_t        kaapi_format_get_size_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+uint32_t        kaapi_format_get_size_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
 {
   if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_size_params[ith];
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
@@ -476,7 +480,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
   kaapi_atomic_t                 lock __attribute__((aligned (KAAPI_CACHE_LINE)));           /** ??? */ 
-  kaapi_cpuset_t               affinity;       /* bit i == 1 -> can run on procid i */
+  kaapi_cpuset_t                 affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
   uint32_t                       size;           /** size of the data structure allocated */
@@ -1166,9 +1170,9 @@ static inline int kaapi_cpuset_set(kaapi_cpuset_t* affinity, kaapi_processor_id_
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
-    (*affinity)[0] |= ((kaapi_uint64_t)1)<<kid;
+    (*affinity)[0] |= ((uint64_t)1)<<kid;
   else
-    (*affinity)[1] |= ((kaapi_uint64_t)1)<< (kid-64);
+    (*affinity)[1] |= ((uint64_t)1)<< (kid-64);
   return 0;
 }
 
@@ -1188,11 +1192,9 @@ static inline int kaapi_cpuset_has(kaapi_cpuset_t affinity, kaapi_processor_id_t
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
-    return ( affinity[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
+    return ( affinity[0] & ((uint64_t)1)<< (uint64_t)kid) != (uint64_t)0;
   else
-    return ( affinity[1] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)(kid-64)) != (kaapi_uint64_t)0;
-
-//OLD  return (affinity & ((kaapi_affinkaapi_uint64_tity_t)1)<< (kaapi_affinkaapi_uint64_tity_t)kid) != (kaapi_affkaapi_uint64_tinity_t)0;
+    return ( affinity[1] & ((uint64_t)1)<< (uint64_t)(kid-64)) != (uint64_t)0;
 }
 
 /**

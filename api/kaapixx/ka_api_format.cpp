@@ -64,7 +64,7 @@ Format::Format(
   if (fmt ==0) 
     fmt = new kaapi_format_t;
   kaapi_format_register( fmt, strdup(fmt_name.c_str()));
-  fmt->size      = (kaapi_uint32_t)size;
+  fmt->size      = (uint32_t)size;
   fmt->cstor     = cstor;
   fmt->dstor     = dstor;
   fmt->cstorcopy = cstorcopy;
@@ -105,7 +105,7 @@ FormatUpdateFnc::FormatUpdateFnc(
   const std::string& name,
   int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                    const void* value, const struct kaapi_format_t* fmtvalue )
-) : Format(name, 0, 0, 0, 0, 0, 0, 0)
+) : Format::Format(name, 0, 0, 0, 0, 0, 0, 0)
 {
   fmt->update_mb = update_mb;
 }

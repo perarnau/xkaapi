@@ -208,7 +208,7 @@ void HighResTimer::calibrate()
   HighResTimer::dtick_per_s = mhz*1e6;
   fclose(file);
 #  else
-#    error "unknown system / architecture"
+#  error "unknown system / architecture"
 #  endif
 
 #endif // END CALIBRATION

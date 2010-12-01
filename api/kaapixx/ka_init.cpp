@@ -221,7 +221,7 @@ int Init::initialize() throw()
     }
     else
     {
-      System::local_gid = (kaapi_uint32_t)Parser::String2ULong(KaapiComponentManager::prop["util.globalid"]);
+      System::local_gid = (uint32_t)Parser::String2ULong(KaapiComponentManager::prop["util.globalid"]);
     }
     
     /* Set the global id of the process */

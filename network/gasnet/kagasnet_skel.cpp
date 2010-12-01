@@ -53,9 +53,9 @@ void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, si
   gasnet_node_t src;
   int err = gasnet_AMGetMsgSource( token, &src );
   kaapi_assert( err == GASNET_OK );
-  kaapi_uintptr_t handler = (kaapi_uintptr_t)handlerH;
-  handler = handler << (kaapi_uintptr_t)32UL;
-  handler = handler | (kaapi_uintptr_t)handlerL;
+  uintptr_t handler = (uintptr_t)handlerH;
+  handler = handler << (uintptr_t)32UL;
+  handler = handler | (uintptr_t)handlerL;
   ka::Service_fnc service = (ka::Service_fnc)handler;
   std::cout << ka::System::local_gid << "::[Device::kaapi_gasnet_service_call] recv message from:" << src << ", fnc:(" 
             << handlerH << "," << handlerL << ")=" << (void*)handler << std::endl << std::flush;    

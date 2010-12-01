@@ -393,7 +393,7 @@ namespace ka {
 
     /** The global id of this process
     */
-    static kaapi_uint32_t local_gid;
+    static uint32_t local_gid;
   public:
     static int saved_argc;
     static char** saved_argv;
@@ -1723,7 +1723,7 @@ namespace ka {
     /* begin to partition task */
     void begin_partition()
     {
-      if (!_created) { kaapi_threadgroup_create( &_threadgroup, (kaapi_uint32_t)_size ); _created = true; }
+      if (!_created) { kaapi_threadgroup_create( &_threadgroup, (uint32_t)_size ); _created = true; }
       kaapi_threadgroup_begin_partition( _threadgroup );
       kaapi_set_threadgroup(_threadgroup);
     }
