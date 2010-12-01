@@ -155,20 +155,20 @@ int kaapi_task_print(
       fputs("", file );
       if (m == KAAPI_ACCESS_MODE_V)
       {
-        void* data = kaapi_format_get_param(fmt, i, sp );
+        void* data = kaapi_format_get_data_param(fmt, i, sp );
         fprintf(file, "<%s >, @:%p=", fmt_param->name, data );
         (*fmt_param->print)(file, data );
       }
       else 
       {
-        kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_param(fmt, i, sp );
-        fprintf(file, "<%s > @:%p value=", fmt_param->name, access->data);
+        kaapi_access_t access = kaapi_format_get_access_param(fmt, i, sp );
+        fprintf(file, "<%s > @:%p value=", fmt_param->name, access.data);
 #if 0 /* due to invalid pointer */
-        (*fmt_param->print)(file, access->data );
-        if (access->version !=0)
+        (*fmt_param->print)(file, access.data );
+        if (access.version !=0)
         {
-          fprintf(file, ", ver:%p value=", access->version );
-          (*fmt_param->print)(file, access->version );
+          fprintf(file, ", ver:%p value=", access.version );
+          (*fmt_param->print)(file, access.version );
         }
 #endif
       }

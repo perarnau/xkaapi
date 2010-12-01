@@ -245,7 +245,8 @@ namespace ka {
     );
   };
 
-  /** format for update function */
+  // --------------------------------------------------------------------  
+  /** format for all kind of task */
   class FormatTask : public Format {
   public:
     FormatTask( 
@@ -254,6 +255,7 @@ namespace ka {
       int                         count,
       const kaapi_access_mode_t   mode_param[],
       const kaapi_offset_t        offset_param[],
+      const kaapi_offset_t        offset_version[],
       const kaapi_format_t*       fmt_param[]
     );
   };
@@ -850,21 +852,42 @@ namespace ka {
   template<typename T>
   struct TraitUAMTypeFormat<pointer<T> > { typedef T type_t; };
 
+  template<typename Mode>
+  struct TraitUAMGetAddress {};
+
+  template<>
+  struct TraitUAMGetAddress<TYPE_INTASK> {
+    template<typename type_t>
+    static void* address_data( type_t* t ) { return t; }
+    template<typename type_t>
+    static void* address_version( type_t* t ) { return 0; }
+  };
+
   template<typename T, typename Mode>
-  struct TraitUAMTypeParam { typedef T type_t; };
+  struct TraitUAMTypeParam : public TraitUAMGetAddress<Mode> { 
+    typedef T type_t;
+  };
   template<typename T>
-  struct TraitUAMTypeParam<const T&, TYPE_INTASK> { typedef T type_t; };
+  struct TraitUAMTypeParam<const T&, TYPE_INTASK> { 
+    typedef T type_t; 
+    static void* address_data( type_t* t ) { return t; }
+    static void* address_version( type_t* t ) { return 0; }
+  };
   template<typename T>
-  struct TraitUAMTypeParam<const T, TYPE_INTASK> { typedef T type_t; };
+  struct TraitUAMTypeParam<const T, TYPE_INTASK> { 
+    typedef T type_t; 
+    static void* address_data( type_t* t ) { return t; }
+    static void* address_version( type_t* t ) { return 0; }
+  };
 
   template<typename T>
   struct TraitUAMType {
     typedef typename TraitUAMTypeFormat<T>::type_t      typeformat_t;
 
     template<typename Mode>
-    struct UAMParam {
+    struct UAMParam : public TraitUAMTypeParam<T,Mode> {
       typedef TraitUAMType<T>                            uamparam_t;
-      typedef typename TraitUAMTypeParam<T,Mode>::type_t type_t;
+//      typedef typename TraitUAMTypeParam<T,Mode>::type_t type_t;
       typedef Mode                                       mode_t;
     };
 
@@ -876,7 +899,11 @@ namespace ka {
   /* This specialization describes how to represent Kaapi pointer
   */
   template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, TYPE_INTASK> { typedef Access type_t; };
+  struct TraitUAMTypeParam<pointer<T>, TYPE_INTASK> { 
+    typedef Access type_t; 
+    static void* address_data( Access* t ) { return &t->a.data; }
+    static void* address_version( Access* t ) { return &t->a.version; }
+  };
   template<typename T>
   struct TraitUAMTypeParam<pointer<T>, TYPE_INPROG> { typedef pointer<T> type_t; };
   template<typename T>

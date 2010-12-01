@@ -357,8 +357,9 @@ typedef struct kaapi_format_t {
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
   int                         _count_params;                           /* number of parameters */
-  kaapi_access_mode_t        *_mode_params;                           /* only consider value with mask 0xF0 */
+  kaapi_access_mode_t        *_mode_params;                            /* only consider value with mask 0xF0 */
   kaapi_offset_t             *_off_params;                             /* access to the i-th parameter: a value or a shared */
+  kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
   uint32_t                   *_size_params;                            /* sizeof of each params */
 
@@ -369,6 +370,8 @@ typedef struct kaapi_format_t {
   size_t                (*get_count_params)(const struct kaapi_format_t*, const void*);
   kaapi_access_mode_t   (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void*                 (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*);
+  kaapi_access_t        (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*);
+  void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, const void*, kaapi_access_t*);
   struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
   uint32_t              (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*);
 
@@ -401,11 +404,39 @@ kaapi_access_mode_t   kaapi_format_get_mode_param (const struct kaapi_format_t* 
 }
 
 static inline 
-void*                 kaapi_format_get_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+void*                 kaapi_format_get_data_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
 {
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) == KAAPI_ACCESS_MODE_V );
   if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_off_params[ith] + (char*)sp;
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
   return (*fmt->get_off_param)(fmt, ith, sp);
+}
+
+static inline 
+kaapi_access_t         kaapi_format_get_access_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    kaapi_access_t retval;
+    retval.data    = (void*)(fmt->_off_params[ith] + (char*)sp);
+    retval.version = (void*)(fmt->_off_versions[ith] + (char*)sp);
+    return retval;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_access_param)(fmt, ith, sp);
+}
+
+static inline 
+void         kaapi_format_set_access_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, kaapi_access_t* a)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    *(void**)(fmt->_off_params[ith] + (char*)sp) = a->data;
+    *(void**)(fmt->_off_versions[ith] + (char*)sp) = a->version;
+    return;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  (*fmt->set_access_param)(fmt, ith, sp, a);
 }
 
 static inline 

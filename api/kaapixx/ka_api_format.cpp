@@ -117,6 +117,7 @@ FormatTask::FormatTask(
   int                         count,
   const kaapi_access_mode_t   mode_param[],
   const kaapi_offset_t        offset_param[],
+  const kaapi_offset_t        offset_version[],
   const kaapi_format_t*       fmt_param[]
 ) : Format(0)
 {
@@ -130,10 +131,13 @@ FormatTask::FormatTask(
         count,
         mode_param,
         offset_param,
+        offset_version,
         fmt_param,
 /**/    0
   );
 }
+
+
 
 // --------------------------------------------------------------------------
 template <> const WrapperFormat<char> WrapperFormat<char>::format(kaapi_char_format);

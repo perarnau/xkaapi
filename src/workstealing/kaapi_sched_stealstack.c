@@ -72,10 +72,10 @@ static size_t kaapi_task_computeready(
       --wc;
       continue;
     }
-    kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_param(task_fmt, i, sp);
+    kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
     
     /* */
-    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
+    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access.data )->u.value;
     
     /* compute readyness of access */
     if (   KAAPI_ACCESS_IS_ONLYWRITE(m)
@@ -167,10 +167,10 @@ static size_t kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_has
 /*        printf("->>> recv task: %p, mute r mode to w\n",task); */
       }
     }
-    kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_param(task_fmt, i, sp);
+    kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
     
     /* */
-    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access->data )->u.value;
+    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access.data )->u.value;
     
     /* compute readyness of access */
     if (   KAAPI_ACCESS_IS_ONLYWRITE(m)

@@ -58,8 +58,7 @@ void kaapi_taskwrite_body(
 
   const kaapi_format_t* fmt;
   void*                 orig_task_args;
-  void*                 data_param;
-  kaapi_access_t*       access_param;
+  kaapi_access_t        access_param;
 
   kaapi_access_mode_t   mode_param;
   const kaapi_format_t* fmt_param;
@@ -67,7 +66,7 @@ void kaapi_taskwrite_body(
 
   void*                 copy_task_args;
   void*                 copy_data_param;
-  kaapi_access_t*       copy_access_param;
+  kaapi_access_t        copy_access_param;
 
   kaapi_tasksteal_arg_t* arg = (kaapi_tasksteal_arg_t*)taskarg;
   orig_task_args             = kaapi_task_getargs(arg->origin_task);
@@ -86,23 +85,22 @@ void kaapi_taskwrite_body(
     for (i=0; i<count_params; ++i)
     {
       mode_param = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, copy_task_args) );
-      copy_data_param = (void*)kaapi_format_get_param(fmt, i, copy_task_args);
-      fmt_param       = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
       if (mode_param == KAAPI_ACCESS_MODE_V) 
       {
+        fmt_param       = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
+        copy_data_param = (void*)kaapi_format_get_data_param(fmt, i, copy_task_args);
         (*fmt_param->dstor)(copy_data_param);
         continue;
       }
 
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
       {
-        data_param        = kaapi_format_get_param(fmt, i, orig_task_args); 
-        copy_data_param   = kaapi_format_get_param(fmt, i, copy_task_args); 
-        access_param      = (kaapi_access_t*)(data_param);
-        copy_access_param = (kaapi_access_t*)(copy_data_param);
+        fmt_param         = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
+        access_param      = kaapi_format_get_access_param(fmt, i, orig_task_args); 
+        copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args); 
 
         /* write the new version */
-        access_param->version = copy_access_param->data;
+        access_param.version = copy_access_param.data;
       }
     }
   }
@@ -166,14 +164,14 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
   void*                  orig_task_args;
   void*                  data_param;
-  kaapi_access_t*        access_param;
+  kaapi_access_t         access_param;
 
   kaapi_access_mode_t    mode_param;
   const kaapi_format_t*  fmt_param;
 
   void*                  copy_task_args;
   void*                  copy_data_param;
-  kaapi_access_t*        copy_access_param;
+  kaapi_access_t         copy_access_param;
 
   
   /* get information of the task to execute */
@@ -260,21 +258,21 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     for (i=0; i<count_params; ++i)
     {
       mode_param      = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, orig_task_args) ); 
-      data_param      = kaapi_format_get_param(fmt, i, orig_task_args);
-      copy_data_param = kaapi_format_get_param(fmt, i, copy_task_args);
       fmt_param       = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
       
       if (mode_param == KAAPI_ACCESS_MODE_V) 
       {
+        data_param      = kaapi_format_get_data_param(fmt, i, orig_task_args);
+        copy_data_param = kaapi_format_get_data_param(fmt, i, copy_task_args);
         (*fmt_param->cstorcopy)(copy_data_param, data_param);
         continue;
       }
 
       /* initialize all parameters ... */
-      access_param               = (kaapi_access_t*)(data_param);
-      copy_access_param          = (kaapi_access_t*)(copy_data_param);
-      copy_access_param->data    = access_param->data;
-      copy_access_param->version = 0; /*access_param->version; / * not required... * / */
+      access_param               = kaapi_format_get_access_param(fmt, i, orig_task_args);
+      copy_access_param          = kaapi_format_get_access_param(fmt, i, copy_task_args);
+      copy_access_param.data    = access_param.data;
+      copy_access_param.version = 0; /*access_param->version; / * not required... * / */
       
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) )
       {
@@ -282,11 +280,14 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
         { 
           /* allocate new data */
 #if defined(KAAPI_DEBUG)
-          copy_access_param->data    = calloc(1,fmt_param->size);
+          copy_access_param.data    = calloc(1, kaapi_format_get_size_param(fmt_param, i, orig_task_args));
 #else
-          copy_access_param->data    = malloc(fmt_param->size);
+          copy_access_param.data    = malloc(kaapi_format_get_size_param(fmt_param, i, orig_task_args));
 #endif
-          if (fmt_param->cstor !=0) (*fmt_param->cstor)(copy_access_param->data);
+          if (fmt_param->cstor !=0) {
+            (*fmt_param->cstor)(copy_access_param.data);
+            kaapi_format_set_access_param(fmt, i, copy_task_args, &copy_access_param );
+          }
         }
       }
     }

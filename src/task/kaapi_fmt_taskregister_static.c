@@ -55,6 +55,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
         int                         count,
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
+        const kaapi_offset_t        offset_version[],
         const kaapi_format_t*       fmt_param[],
         const size_t                size_param[]
 )
@@ -73,6 +74,10 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->_off_params = malloc( sizeof(kaapi_offset_t)*count );
   kaapi_assert( fmt->_off_params !=0);
   memcpy(fmt->_off_params, offset_param, sizeof(kaapi_offset_t)*count );
+
+  fmt->_off_versions = malloc( sizeof(kaapi_offset_t)*count );
+  kaapi_assert( fmt->_off_versions !=0);
+  memcpy(fmt->_off_versions, offset_version, sizeof(kaapi_offset_t)*count );
   
   fmt->_fmt_params = malloc( sizeof(kaapi_format_t*)*count );
   kaapi_assert( fmt->_fmt_params !=0);

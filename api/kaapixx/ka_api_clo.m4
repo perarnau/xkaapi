@@ -167,14 +167,20 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
   static kaapi_format_t* registerformat()
   {
+    // select at compile time between static format or dynamic format if one of the parameters
+    // has variable size (array etc...
+    
     // here we assume no concurrency during startup calls of the library that initialize format objects
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_data[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_version[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
-    TaskArg_t* dummy;
+    TaskArg_t* dummy =0;
     M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)TraitUAMParam_F$1::mode_t::value;
     ',`', `')
-    M4_PARAM(`array_offset[$1-1] = (char*)&dummy->f$1 - (char*)dummy; // BUG ? offsetof(TaskArg_t, f$1);
+    M4_PARAM(`array_offset_data[$1-1] = (char*)uamttype$1_t::template UAMParam<TYPE_INTASK>::address_data( &dummy->f$1 ) - (char*)dummy; // BUG ? offsetof(TaskArg_t, f$1);
+    ',`', `')
+    M4_PARAM(`array_offset_version[$1-1] = (char*)uamttype$1_t::template UAMParam<TYPE_INTASK>::address_version( &dummy->f$1 ) - (char*)dummy; // BUG ? offsetof(TaskArg_t, f$1);
     ',`', `')
     M4_PARAM(`array_format[$1-1] = WrapperFormat<typeformat$1_t>::format.get_c_format();
     ',`', `')
@@ -184,7 +190,8 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
           sizeof(TaskArg_t),
           KAAPI_NUMBER_PARAMS,
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
-          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset'),
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_data'),
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_version'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format')
     );
       

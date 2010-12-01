@@ -1734,7 +1734,17 @@ extern kaapi_format_id_t kaapi_format_register(
 );
 
 /** \ingroup TASK
-    Register a task format with static definition
+    Register a task format with static definition.
+    \param fmt the kaapi_format_t object
+    \param body the default body (if !=0) of the function to execute
+    \param name the name of the format
+    \param size the size in byte of the task arguments
+    \param count the number of parameters
+    \param mode_param, an array of size count given the access mode for each param
+    \param offset_param, an array of size count given the offset of the data from the pointer to the argument of the task
+    \param offset_version, an array of size count given the offset of the version (if any)
+    \param fmt_param, an array of size count given the format of each param
+    \param size_param, an array of size count given the size of each parameter.
 */
 extern kaapi_format_id_t kaapi_format_taskregister_static( 
         struct kaapi_format_t*      fmt,
@@ -1744,6 +1754,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_static(
         int                         count,
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
+        const kaapi_offset_t        offset_version[],
         const struct kaapi_format_t*fmt_param[],
         const size_t                size_param[]
 );

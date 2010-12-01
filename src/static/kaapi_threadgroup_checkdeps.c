@@ -87,27 +87,27 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
       continue;
     
     /* its an access */
-    kaapi_access_t* access = (kaapi_access_t*)kaapi_format_get_param(task_fmt, i, sp);
+    kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
     entry = 0;
 
     /* find the last writer (task & thread) using the hash map */
-    entry = kaapi_hashmap_find(&thgrp->ws_khm, access->data);
+    entry = kaapi_hashmap_find(&thgrp->ws_khm, access.data);
     if (entry ==0)
     {
       /* no entry -> new version object */
-      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, access );
+      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, &access );
       if (KAAPI_ACCESS_IS_READ(m))
-        kaapi_threadgroup_version_addfirstreader( thgrp, &thgrp->ws_vect_input, threadindex, task, access, i );
+        kaapi_threadgroup_version_addfirstreader( thgrp, &thgrp->ws_vect_input, threadindex, task, &access, i );
     }
 
     if (KAAPI_ACCESS_IS_READ(m))
     {
       const size_t size = kaapi_format_get_size_param( task_fmt, i, sp);
-      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, access, size, i );
+      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, &access, size, i );
     }
     if (KAAPI_ACCESS_IS_WRITE(m))
     {
-      task = kaapi_threadgroup_version_newwriter( thgrp, entry->u.dfginfo, threadindex, task, access, i );
+      task = kaapi_threadgroup_version_newwriter( thgrp, entry->u.dfginfo, threadindex, task, &access, i );
     }
     
   } /* end for all arguments of the task */
