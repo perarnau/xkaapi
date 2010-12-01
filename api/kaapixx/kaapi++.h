@@ -423,6 +423,13 @@ namespace ka {
      return new (data) T[1];
   }
 
+} // end of namespace ka
+
+/* for variable length arguments */
+#include "ka_api_array.h"
+
+namespace ka {
+
   // --------------------------------------------------------------------
   struct SetStack {};
   extern SetStack SetInStack;
@@ -824,7 +831,16 @@ namespace ka {
     kaapi_access_t a;    
   };
   
-
+  // --------------------------------------------------------------------
+  /* Helpers to declare type in signature of task */
+  template<typename UserType=void> struct Value {};
+  template<typename UserType=void> struct RPWP {};
+  template<typename UserType=void> struct RP {};
+  template<typename UserType=void> struct R  {};
+  template<typename UserType=void> struct WP {};
+  template<typename UserType=void> struct W {};
+  template<typename UserType=void> struct RW {};
+  
   // --------------------------------------------------------------------
   /** Trait for universal access mode type.
       The universal access mode type allows to 1/ compact code by providing generic information; 2/ define
@@ -857,6 +873,7 @@ namespace ka {
 
   template<>
   struct TraitUAMGetAddress<TYPE_INTASK> {
+    static const bool is_static = true;
     template<typename type_t>
     static void* address_data( type_t* t ) { return t; }
     template<typename type_t>
@@ -866,18 +883,6 @@ namespace ka {
   template<typename T, typename Mode>
   struct TraitUAMTypeParam : public TraitUAMGetAddress<Mode> { 
     typedef T type_t;
-  };
-  template<typename T>
-  struct TraitUAMTypeParam<const T&, TYPE_INTASK> { 
-    typedef T type_t; 
-    static void* address_data( type_t* t ) { return t; }
-    static void* address_version( type_t* t ) { return 0; }
-  };
-  template<typename T>
-  struct TraitUAMTypeParam<const T, TYPE_INTASK> { 
-    typedef T type_t; 
-    static void* address_data( type_t* t ) { return t; }
-    static void* address_version( type_t* t ) { return 0; }
   };
 
   template<typename T>
@@ -896,11 +901,27 @@ namespace ka {
     static const int offset_pointer[];
   };
 
-  /* This specialization describes how to represent Kaapi pointer
+  /* This specialization describes how to represent format parameters of tasks
   */
+  template<typename T>
+  struct TraitUAMTypeParam<const T&, TYPE_INTASK> { 
+    typedef T type_t; 
+    static const bool is_static = true;
+    static void* address_data( type_t* t ) { return t; }
+    static void* address_version( type_t* t ) { return 0; }
+  };
+  template<typename T>
+  struct TraitUAMTypeParam<const T, TYPE_INTASK> { 
+    typedef T type_t; 
+    static const bool is_static = true;
+    static void* address_data( type_t* t ) { return t; }
+    static void* address_version( type_t* t ) { return 0; }
+  };
+
   template<typename T>
   struct TraitUAMTypeParam<pointer<T>, TYPE_INTASK> { 
     typedef Access type_t; 
+    static const bool is_static = true;
     static void* address_data( Access* t ) { return &t->a.data; }
     static void* address_version( Access* t ) { return &t->a.version; }
   };
@@ -923,17 +944,63 @@ namespace ka {
   template<typename T>
   struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_CWP> { typedef pointer_cwp<T> type_t; };
 
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, TYPE_INTASK> { 
+    struct type_t {
+      /* cstor only called to pass effective parameter */
+      type_t( const ka::array<dim, T>& a )
+      {
+        a->d;
+      }
+      size_t size;
+      T*     data;
+      T*     version;
+    private:
+      type_t() {}
+    };
+    static const bool is_static = false;
+    static void* address_data( type_t* t ) { return &t->a.data; }
+    static void* address_version( type_t* t ) { return &t->a.version; }
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, R<T> >, ACCESS_MODE_R> { 
+    struct type_t : public ka::array<dim, T> {
+      type_t( const typename TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, TYPE_INTASK>::type_t& a )
+      { 
+        a.A;
+      }
+    };
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_W> { 
+    typedef pointer_w<T> type_t; 
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_RW> { 
+    typedef pointer_rw<T> type_t; 
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_CW> { 
+    typedef pointer_cw<T> type_t; 
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_RP> { 
+    typedef pointer_rp<T> type_t; 
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_WP> { 
+    typedef pointer_wp<T> type_t; 
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_RPWP> { 
+    typedef pointer_rpwp<T> type_t;
+  };
+  template<int dim, typename T>
+  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_CWP> { 
+    typedef pointer_cwp<T> type_t; 
+  };
 
-  // --------------------------------------------------------------------
-  /* Helpers to declare type in signature of task */
-  template<typename UserType=void> struct Value {};
-  template<typename UserType=void> struct RPWP {};
-  template<typename UserType=void> struct RP {};
-  template<typename UserType=void> struct R  {};
-  template<typename UserType=void> struct WP {};
-  template<typename UserType=void> struct W {};
-  template<typename UserType=void> struct RW {};
-  
+
   template<typename UserType>
   struct DefaultAdd {
     void operator()( UserType& result, const UserType& value ) const
@@ -1007,6 +1074,63 @@ namespace ka {
     typedef ACCESS_MODE_CW         mode_t;
   };
 
+
+  /* array of access mode */
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,UserType> > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_RPWP         mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,RPWP<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_RPWP       mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,RW<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_RW         mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,RP<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_RP         mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,R<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_R          mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,WP<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_WP         mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,W<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_W          mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,CWP<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_CWP        mode_t;
+  };
+
+  template<int dim, typename UserType>
+  struct TraitUAMParam<array<dim,CW<UserType> > > {
+    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
+    typedef ACCESS_MODE_CW         mode_t;
+  };
+
+  /* pointer ... */
   template<typename UserType>
   struct TraitUAMParam<pointer<UserType> > {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
@@ -1066,6 +1190,7 @@ namespace ka {
     typedef TraitUAMType<pointer<UserType> > uamttype_t;
     typedef ACCESS_MODE_CW         mode_t;
   };
+
 
   /* ------ */
   template<typename UserType>

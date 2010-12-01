@@ -21,6 +21,7 @@ include fibo.am
 include find.am
 include for_each.am
 include hello.am
+include iterative.am
 include net.am
 include nqueens.am
 include poisson3D.am
@@ -34,6 +35,7 @@ USER_MAKEFILES=\
 	find/Makefile \
 	for_each/Makefile \
 	hello/Makefile \
+	iterative/Makefile \
 	net/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
