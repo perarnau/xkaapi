@@ -60,7 +60,7 @@
 #if !defined(__SIZEOF_POINTER__)
 #  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__)
 #    define __SIZEOF_POINTER__ 8
-#  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc__))
+#  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc64__))
 #    define __SIZEOF_POINTER__ 4
 #  else
 #    error KAAPI not ready for this architechture. Report to developpers.
