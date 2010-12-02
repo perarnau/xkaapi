@@ -1078,7 +1078,7 @@ namespace impl
       <Result, Sequence, Body, Settings, TerminateTag, ReduceTag>;
 
     kaapi_stealcontext_t* const sc = kaapi_task_begin_adaptive
-      (thread, KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, splitfn, arg);
+      (thread, KAAPI_SC_AGGREGATE | KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION, splitfn, arg);
 
     wait_a_bit();
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 
 ALGOS=''
-#ALGOS="$ALGOS transform"
-ALGOS="$ALGOS for_each"
+ALGOS="$ALGOS transform"
+# ALGOS="$ALGOS for_each"
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"
@@ -27,14 +27,14 @@ ALGOS="$ALGOS for_each"
 
 LIBS=''
 LIBS="$LIBS kastl"
-#LIBS="$LIBS stl"
+LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
 #LIBS="$LIBS pastl"
-#LIBS="$LIBS pthread"
+LIBS="$LIBS pthread"
 
 DOS=''
-#DOS="$DOS bench"
-DOS="$DOS check"
+DOS="$DOS bench"
+#DOS="$DOS check"
 
 for D in $DOS; do
     for A in $ALGOS; do

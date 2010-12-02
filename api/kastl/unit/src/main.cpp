@@ -772,7 +772,7 @@ static void __attribute__((unused)) print_sequence
 // timing
 #if CONFIG_DO_BENCH
 
-#if 0 // gettimeofday
+#if 1 // gettimeofday
 
 namespace timing
 {
@@ -1395,11 +1395,11 @@ class TransformRun : public RunInterface
     ValueType operator()(const ValueType& v) const
     {
       // return 2 * v + 1;
-      return 2 * v;
+      // return 2 * v;
       // return 3.14 * v;
       // return v * v;
       // return ::sqrt(v);
-      // return ::sin(::sqrt(v));
+      return ::sin(::sqrt(v) + 42.f);
     }
 #else
     ValueType operator()(const ValueType& v) const
