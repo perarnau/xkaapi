@@ -41,63 +41,13 @@
 ** terms.
 ** 
 */
-#include <iostream>
-#include <stdlib.h>
-#include "kaapi++" // this is the new C++ interface for Kaapi
+#include "kaapi++"
 
-/* Task Hello
- * this task takes an integer n and write the value to the std::cout stream.
- */
-struct TaskHello : public ka::Task<1>::Signature<double> {};
+namespace ka {
 
-template<>
-struct TaskBodyCPU<TaskHello> {
-  void operator() ( double n )
-  {
-    std::cout << "Hello World !, n=" << n << std::endl;
-  }
-};
+const range::CstorFull range::init_full;
 
+/** Full range */
+const range range::full( range::init_full );
 
-/* Main task of the program
-*/
-struct doit {
-  void operator()(int argc, char** argv )
-  {
-    double n = 3.1415;
-    if (argc >1) n = atof(argv[1]);
-    ka::Spawn<TaskHello>()( n );
-  }
-};
-
-
-/* main entry point : Kaapi initialization
-*/
-int main(int argc, char** argv)
-{
-  try {
-    /* Join the initial group of computation : it is defining
-       when launching the program by a1run.
-    */
-    ka::Community com = ka::System::join_community( argc, argv );
-    
-    /* Start computation by forking the main task */
-    ka::SpawnMain<doit>()(argc, argv); 
-    
-    /* Leave the community: at return to this call no more athapascan
-       tasks or shared could be created.
-    */
-    com.leave();
-
-    /* */
-    ka::System::terminate();
-  }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : " << E.what() << std::endl;
-  }
-  catch (...) {
-    ka::logfile() << "Catch unknown exception: " << std::endl;
-  }
-  
-  return 0;
 }

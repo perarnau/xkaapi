@@ -45,16 +45,35 @@
 #include <stdlib.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-/* Task Hello
- * this task takes an integer n and write the value to the std::cout stream.
+/* Task Init
+ * this task initialize each entries of the array to 1
+ * each entries is view as a pointer object:
+    array<1,W<int> > means that each entry may be write by the task
  */
-#if 1
-struct TaskAccumulate : public ka::Task<2>::Signature<ka::RW<int>, 
-  ka::array<1, ka::R<int> > > {};
+struct TaskInit : public ka::Task<1>::Signature<ka::array<1, ka::W<int> > > {};
+
+template<>
+struct TaskBodyCPU<TaskInit> {
+  void operator() ( ka::array<1, ka::pointer_w<int> > array )
+  {
+    size_t sz = array.size();
+    std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
+    for (size_t i=0; i < sz; ++i)
+      array[i] = 1;
+  }
+};
+
+
+/* Task Accumulate
+ * this task compute the sum of the entries of an array 
+ * each entries is view as a pointer object:
+    array<1,R<int> > means that each entry may be read by the task
+ */
+struct TaskAccumulate : public ka::Task<2>::Signature<ka::RW<int>, ka::array<1, ka::R<int> > > {};
 
 template<>
 struct TaskBodyCPU<TaskAccumulate> {
-  void operator() ( ka::pointer_rw<int> acc, const ka::array<1,int>& array  )
+  void operator() ( ka::pointer_rw<int> acc, ka::array<1, ka::pointer_r<int> > array  )
   {
     size_t sz = array.size();
     for (size_t i=0; i < sz; ++i)
@@ -62,7 +81,6 @@ struct TaskBodyCPU<TaskAccumulate> {
   }
 };
 
-#endif
 
 /* Main task of the program
 */
@@ -71,13 +89,32 @@ struct doit {
   {
     int n= 10;
     if (argc >1) n = atoi(argv[1]);
+    int med = n/2;
+    if (med ==0) { n = 2; med = 1; }
 
     int* data = new int[n];
+
+    /* form a view of data as an 1-dimensional array */
     ka::array<1,int> arr(n, data); 
     int res = 0;
 
-    ka::Spawn<TaskAccumulate>()( &res, arr[ka::range(0,n,2)] );
+    /* be carrefull here: the array equivalent as if each entries have
+       been passed to the task
+    */
+    ka::Spawn<TaskInit>()( arr[ka::range(0,med)] );
+
+    /* be carrefull here: the array equivalent as if each entries have
+       been passed to the task
+    */
+    ka::Spawn<TaskInit>()( arr[ka::range(med,n)] );
+
+
+    /* Here the dependencies is accross each entries of the array arr,
+       thus this task is ready iff the two previous tasks are finished
+    */
+    ka::Spawn<TaskAccumulate>()( &res, arr );
     ka::Sync();
+
     std::cout << "Res = " << res << std::endl;
   }
 };

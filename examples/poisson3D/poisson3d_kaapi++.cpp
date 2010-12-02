@@ -221,13 +221,13 @@ template<> struct TaskBodyCPU<UpdateInternal> {
 // --------------------------------------------------------------------
 struct UpdateExternal: public ka::Task<3>::Signature< 
         ka::RW<KaSubDomain>,
-        const Poisson3D::Direction&,
+        Poisson3D::Direction,
         ka::R<KaSubDomainInterface>
 > {};
 
 template<> struct TaskBodyCPU<UpdateExternal> {
   void operator() ( ka::pointer_rw<KaSubDomain> shared_subdomain, 
-                    const Poisson3D::Direction& dir, 
+                    Poisson3D::Direction dir, 
                     ka::pointer_r<KaSubDomainInterface> shared_sdi )
   {
     //std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;

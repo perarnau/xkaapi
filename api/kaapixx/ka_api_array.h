@@ -46,6 +46,7 @@
 
 namespace ka {
 
+
 /** Only use specialisation of this class
     -1D specialisation
     -2D specialisation
@@ -76,7 +77,7 @@ public:
   }
   
   /** Full range */
-  static const range Full; //
+  static const range full; //
 
   /** size of entry, (index_t)-1U if full range */
   index_t size() const 
@@ -198,19 +199,81 @@ public:
     }
     kaapi_assert_debug( (r.size() <= size()) );
     retval = (*this)[r._begin];
-    _end   = (*this)[r._end] - retval;
+    _end   = _begin + _stride * r._end - retval;
     _begin = 0;
     _stride *= r._stride;
     return retval;
   }
 
 private:
+  /* specific cstor to build full static data member */
+  struct CstorFull { CstorFull() {} };
+  static const CstorFull init_full;
+  range( CstorFull ) 
+   : _begin((index_t)-1), _end((index_t)-1), _stride((index_t)-1) 
+  {}
+
   template <int dim, class T> friend class array;
   friend std::ostream& operator<<( std::ostream& sout, const range& a );
 
   index_t _begin;
   index_t _end;
   index_t _stride;
+};
+
+
+/**
+*/
+template<int dim, class T>
+class array_rep {
+public:
+  typedef range::index_t index_t;
+  typedef T*             pointer_t;
+  typedef T&             reference_t;
+  typedef const T&       const_reference_t;
+
+  /** */
+  array_rep() : _data(0) {}
+
+  /** */
+  array_rep(T* ptr) : _data(ptr) {}
+
+  /** */
+  array_rep<dim,T>& operator=(T* ptr) 
+  { 
+    _data = ptr; 
+    return *this;
+  }
+
+  /** */
+  reference_t operator[](index_t i)
+  { return _data[i]; }
+
+  /** */
+  const_reference_t operator[](index_t i) const
+  { return _data[i]; }
+
+  /** */
+  pointer_t operator+(index_t i) const
+  { return _data+ i; }
+  
+  // Set the (i) element to value
+  void set (index_t i, reference_t value) 
+  {
+	  _data[i] = value;
+  }
+
+  // Access to the (i) element (to rewrite)
+  const_reference_t get (index_t i) const 
+  {
+	  return _data[i];
+  }
+  
+  pointer_t shift_base(index_t shift) 
+  { return _data+shift; }
+
+protected:
+  T* _data;
 };
 
 
@@ -228,46 +291,58 @@ private:
     subarray.
 */
 template<class T>
-class array<1,T> {
+class array<1,T> : public array_rep<1, T> {
 public:
   typedef range::index_t index_t;
   typedef T              value_t;
+  typedef array_rep<1,T> rep_t;
   
   // Dflt cstor
   array<1,T>() 
-   : _range(), _data(0) 
+   : array_rep<1, T>() , _range()
   {}
 
   // Recopy cstor
   array<1,T>(const array<1,T>& a) 
-   : _range(a._range), _data(a._data)
+   : array_rep<1,T>(a), _range(a._range)
   {
   }
 
   // Cstor
   // Cstor of a 1-D array from a pointer 'data' of size 'count' with stride 'stride' access from data
   array<1,T>(index_t count, T* data, index_t stride = 1)
-   : _range(0,count,stride), _data(data)
+   : array_rep<1,T>(data), _range(0,count,stride)
+  {
+  }
+  
+  // Cstor, used to convert type in closure to formal parameter type
+  template<class InternalRep>
+  explicit array<1,T>(InternalRep& ir )
+   : array_rep<1,T>(ir), _range(ir)
   {
   }
   
   // Access to the (i) element (to rewrite)
-  T& operator[] (index_t i) 
+  typename rep_t::reference_t operator[] (index_t i) 
   {
     kaapi_assert_debug( (i >= 0) && (i < size()) );
-	  return _data[_range[i]];
+	  return array_rep<1,T>::operator[](_range[i]);
   }
 
   // Access to the (i) element (to rewrite)
-  const T& operator[] (index_t i) const 
+  typename rep_t::const_reference_t operator[] (index_t i) const 
   {
     kaapi_assert_debug( (i >= 0) && (i < size()));
-	  return _data[_range[i]];
+	  return array_rep<1,T>::operator[](_range[i]);
   }
 
   // size of the array
   size_t size() const 
   { return _range.size(); }
+
+  // Range of the array
+  range slice() const
+  { return _range; }
 
   // Assignment
   array<1,T>& operator=( const array<1,T>& a )
@@ -279,22 +354,22 @@ public:
     if ((_range._stride ==1) && (a._range._stride ==1))
     {
         for (index_t i=0; i<sz; ++i)
-        _data[i] = a._data[i];
+        (*this)[i] = a[i];
     }
     else if ((_range._stride !=1) && (a._range._stride !=1))
     {
       for (index_t i=0, j=0, k=0; i<sz; ++i, j+= _range._stride, k+= a._range._stride)
-        _data[j] = a._data[k];
+        (*this)[j] = a[k];
     }
     else if ((_range._stride ==1) && (a._range._stride !=1))
     {
       for (index_t i=0, k=0; i<sz; ++i, k+= a._range._stride)
-        _data[i] = a._data[k];
+        (*this)[i] = a[k];
     }
     else if ((_range._stride !=1) && (a._range._stride ==1))
     {
       for (index_t i=0, j=0; i<sz; ++i, j+=_range._stride)
-        _data[j] = a._data[i];
+        (*this)[j] = a[i];
     }
     return *this;
   }
@@ -307,12 +382,12 @@ public:
     if (_range._stride == 1)
     {
       for (index_t i=0; i< sz; ++i)
-        _data[i] = value;
+        (*this)[i] = value;
     }
     else 
     {
       for (index_t i=0, j=0; i< sz; ++i, j+=_range._stride)
-        _data[j] = value;
+        (*this)[j] = value;
     }
     return *this;
   }
@@ -322,24 +397,10 @@ public:
   void swap( array<1,Y>& a )
   {
     std::swap( _range, a._range );
-    std::swap( _data,  a._data );
+    std::swap( (array_rep<1,T>&)(*this),  (array_rep<1,T>&)a );
   }
+
   
-  // Set the (i) element to value
-  void set (index_t i, const T& value) 
-  {
-    kaapi_assert_debug( (i >= 0) && (i < size()) );
-	  _data[_range[i]]=value;
-  }
-
-  // Access to the (i) element (to rewrite)
-  T& get (index_t i) const 
-  {
-    kaapi_assert_debug( (i >= 0) && (i < size()) );
-	  return _data[_range[i]];
-  }
-
-
   // Access to the (i) element (to rewrite)
   // 0 1 2 3 4 5 6 7 8 9 10 11 12 = A / size = 13
   // 0   2   4   6   8   10    12 = A[range(0,14,2)] = B / size = 7
@@ -350,7 +411,7 @@ public:
     kaapi_assert_debug( r.size() < _range.size() );
     range rthis = _range;
     index_t shift = rthis.compose_shift0(r);
-	  return array<1,T>( rthis.size(), _data+shift, rthis._stride );
+	  return array<1,T>( rthis.size(), array_rep<1,T>::shift_base(shift), rthis._stride );
   }
 
   // Access to the (i) element (to rewrite)
@@ -360,12 +421,11 @@ public:
     kaapi_assert_debug( r.size() < _range.size() );
     range rthis = _range;
     index_t shift = rthis.compose_shift0(r);
-	  return array<1,T>( rthis.size(), _data+shift, rthis._stride );
+	  return array<1,T>( rthis.size(), array_rep<1,T>::shift_base(shift), rthis._stride );
   }
 
 public:
-  range   _range;        // always shift to 0 during composition
-  T*      _data;         // pointer to the data
+  range         _range;        // always shift to 0 during composition
 };
 
 
