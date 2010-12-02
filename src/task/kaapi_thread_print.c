@@ -133,13 +133,13 @@ int kaapi_task_print(
   kaapi_getstatename(task, state);
 
   int st = kaapi_task_state2int( kaapi_task_getstate(task) );
-  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%lu\n", 
+  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%u\n", 
         (void*)task, 
         state[3], state[2], state[1], state[0],
         fmt->name, 
         tab_bit[st],
         sp,
-        count_params );
+	(unsigned int)count_params );
         
   /* access mode */
   if (count_params >0)
