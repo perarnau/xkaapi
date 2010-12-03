@@ -253,7 +253,23 @@ AC_CHECK_HEADERS([stdio.h])
 # library name
 AC_DEFINE([KAAPI_MAX_ARCH],3,[Maximum number of architectures])
 
-AC_DEFINE([KAAPI_MAX_PROCESSOR],16,[Maximum number of processors])
+default_max_processors=16
+AC_ARG_ENABLE([max-processors],
+  [AS_HELP_STRING([--enable-max-processors], [Maximum number of processors (default $default_max_processors)])],
+  [], [enable_max_processors=$default_max_processors])
+AS_CASE(["$enable_max_processors"],
+  [yes|no], [
+	AC_MSG_ERROR([A numeric value (or "host") is required for --enable-max-processors])
+  ],
+  [host], [
+    enable_max_processors=`getconf _NPROCESSORS_ONLN 2>/dev/null`
+    if test x"$enable_max_processors" = x; then
+        AC_MSG_WARN([Cannot use getconf to get the number of processors in this system. Using default value])
+	enable_max_processors=$default_max_processors
+    fi
+  ])
+AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
+AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
