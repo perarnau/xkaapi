@@ -63,18 +63,6 @@
 */
 namespace ka {
 
-  // --------------------------------------------------------------------
-  typedef kaapi_uint8_t  uint8_t;
-  typedef kaapi_uint16_t uint16_t;
-  typedef kaapi_uint32_t uint32_t;
-  typedef kaapi_uint64_t uint64_t;
-
-  typedef kaapi_int8_t   int8_t;
-  typedef kaapi_int16_t  int16_t;
-  typedef kaapi_int32_t  int32_t;
-  typedef kaapi_int64_t  int64_t;
-
-
 //@{
 
 /** Return an system wide identifier of the type of an expression
@@ -86,7 +74,7 @@ namespace ka {
 // -------------------------------------------------------------------------
 /** Compatibility
 */
-typedef kaapi_uint32_t GlobalId;
+typedef uint32_t GlobalId;
 
 
 // -------------------------------------------------------------------------
@@ -110,11 +98,11 @@ public:
 
   /** Constructor from an 64 bits unsigned integer
   */
-  Pointer(kaapi_uint64_t v) : ptr(v) {}
+  Pointer(uint64_t v) : ptr(v) {}
 
   /** return 64 bits unsigned integer
   */
-  operator kaapi_uint64_t() const { return ptr; }
+  operator uint64_t() const { return ptr; }
 
   /** Test operators 
   */
@@ -152,12 +140,12 @@ public:
   /** Return true if remote pointer is equal to a local pointer
   */
   bool operator==(const void* lp) const
-  { return (ptr == (kaapi_uintptr_t)lp); }
+  { return (ptr == (uintptr_t)lp); }
   
   /** Return true if remote pointer is not equal to a local pointer
   */
   bool operator!=(const void* lp) const
-  { return (ptr != (kaapi_uintptr_t)lp); }
+  { return (ptr != (uintptr_t)lp); }
   
   /** Return true if two remote pointers are equals.
   */
@@ -249,7 +237,7 @@ public:
   */
   Pointer& operator=(void* l)
   { 
-    ptr = (kaapi_uintptr_t)l;
+    ptr = (uintptr_t)l;
     return *this; 
   }
 
@@ -257,22 +245,22 @@ public:
   */
   void from_local( void* l)
   {
-    ptr = (kaapi_uintptr_t)l;
+    ptr = (uintptr_t)l;
   }
 
   /** Return local pointer */
   void* to_local()
   {
-    return (void*)(kaapi_uintptr_t)ptr;
+    return (void*)(uintptr_t)ptr;
   }
 
   /** Return local pointer */
   const void* to_local() const
   { 
-    return (void*)(kaapi_uintptr_t)ptr; 
+    return (void*)(uintptr_t)ptr; 
   }  
 public:
-  kaapi_uint64_t ptr;
+  uint64_t ptr;
 };
 
 inline Pointer operator+( const unsigned long long v, const Pointer& p )
@@ -307,7 +295,7 @@ inline Pointer operator-( const int v, const Pointer& p )
 // --------- Conversion of long double -------------------------------------
 
 #define MANTISSA_MAXSIZE 14 // bytes ( 14 minimum for ieee quadruple)
-typedef kaapi_int32_t exptype;
+typedef int32_t exptype;
 
 enum LongDoubleFormat {
   IEEE_DOUBLE      = 0,
@@ -394,15 +382,15 @@ inline LongDoubleFormat LongDouble::get_local_format()
 */
 class Architecture {
 public:
-  kaapi_uint8_t _archi;
+  uint8_t _archi;
 
-  Architecture(kaapi_uint8_t a = 0) : _archi(a) {};
+  Architecture(uint8_t a = 0) : _archi(a) {};
 
-  operator kaapi_uint8_t() const {
+  operator uint8_t() const {
     return _archi;
   }
 
-  kaapi_uint8_t operator()() const {
+  uint8_t operator()() const {
     return _archi;
   }
   

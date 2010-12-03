@@ -190,7 +190,7 @@ public:
   // -----------------------------------------------------------------------
   /** Return the number of known node
   */
-  int size() const;
+  size_t size() const;
   
   /** Return the url to be broadcast if other node want to connect to this node
   */

@@ -56,7 +56,7 @@
 /** Whatis a pointer into a local memory
 */
 typedef struct kaapi_local_data_info_t {
-  kaapi_uintptr_t ptr;
+  uintptr_t ptr;
 } kaapi_local_data_info_t;
 
 
@@ -77,9 +77,9 @@ typedef struct kaapi_data_info_t {
 /** Should represent the memory of a device (CPU or a GPUs)
 */
 typedef struct kaapi_local_memory_t {
-  unsigned int       index;                                        /* to be used in kaapi_data_info_t */
-  kaapi_uintptr_t   (*allocate)(size_t size);                      /* allocate memory */
-  void              (*deallocate)(kaapi_uintptr_t, size_t size);   /* free allocated memory */
+  unsigned int index;                                        /* to be used in kaapi_data_info_t */
+  uintptr_t    (*allocate)(size_t size);                      /* allocate memory */
+  void         (*deallocate)(uintptr_t, size_t size);   /* free allocated memory */
 } kaapi_local_memory_t;
 
 

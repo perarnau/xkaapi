@@ -65,7 +65,7 @@ int InstructionStream::initialize(size_t capacity) throw()
   kaapi_sched_initlock(&_lock);
   _start    = new Instruction[capacity];
   _last     = _start + capacity;
-  _capacity = (kaapi_int32_t)capacity;
+  _capacity = (int32_t)capacity;
   _pos_w.write( 0 );
   _pos_r = 0;
   _tosend._state = SB_FREE;
@@ -136,7 +136,7 @@ redo:
   /* here _tosend is free, flush all message from start to _pos_w */
 
   /* reset current buffer: the last op code with reset the _pos_w field ! */
-  kaapi_int32_t pos_w = _pos_w.read();
+  int32_t pos_w = _pos_w.read();
   _tosend._state = SB_POSTED;
   _tosend._pos_w = pos_w;
   _tosend.swap( *this );

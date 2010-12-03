@@ -669,7 +669,7 @@ int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
   kaapi_task_body_t          body;
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_uint32_t             cnt_tasks = 0;
+  uint32_t                   cnt_tasks = 0;
 #endif
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);

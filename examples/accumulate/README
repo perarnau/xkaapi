@@ -1,4 +1,4 @@
-accumulate.c implements the accumulate stl algorithm using the low level xkaapi
-C adaptive interface. Among other things, it shows how to make use of the
-preemption and reduction related routines. A concurrent range is used to
+accumulate_kaapi.c implements the accumulate stl algorithm using the low level
+kaapi C adaptive interface. Among other things, it shows how to make use of
+the preemption and reduction related routines. A concurrent range is used to
 maintain the range to process.

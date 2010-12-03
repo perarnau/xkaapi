@@ -15,28 +15,31 @@ AM_CXXFLAGS=@AM_CXXFLAGS@
 check_PROGRAMS=
 
 include accumulate.am
+include array.am
+include branchbound.am
 include cilk.am
 include fibo.am
 include find.am
-include prefix.am
 include for_each.am
 include hello.am
+include net.am
 include nqueens.am
 include poisson3D.am
-include branchbound.am
-include net.am
+include prefix.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
+	array/Makefile \
+	branchbound/Makefile \
 	cilk/Makefile \
 	fibo/Makefile \
 	find/Makefile \
 	for_each/Makefile \
 	hello/Makefile \
+	net/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
-	branchbound/Makefile\
-	net/Makefile
+	prefix/Makefile
 
 TESTS=  
 
@@ -63,20 +66,20 @@ gen-%.am.m4.info: %.am
 MAKE_VAR=$(MAKE) -s --no-print-directory
 gen-%.am.m4: gen-%.am.m4.info Makefile
 	$(AM_V_GEN)echo 'define([DIR],[$*])dnl' > $@
-	$(AM_V_at)sed < $< -e \
+	+$(AM_V_at)sed < $< -e \
 		's/^[$S]*\([^$S][^=]*_PRGS\)[$S]*=[$S]*\(.*\)$$/\1/p;d' \
 	  | while read VAR ; do \
 	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" .get-var)" ; \
 	    echo "define([PROGS],[$$VALUE])dnl" ; \
 	  done >> $@
-	$(AM_V_at)sed < $< -e \
+	+$(AM_V_at)sed < $< -e \
 		'/^[$S]*\([^$S][^=]*_SOURCES\)[$S]*=[$S]*\(.*\)$$/p;d' \
 	  | while read EQ ; do \
 	    VAR=$$(echo "$$EQ" | sed -e 's/=.*//' -e 's/[$S]//g' ) ;\
 	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
-	$(AM_V_at)sed < $< -e \
+	+$(AM_V_at)sed < $< -e \
 		'/^[$S]*\([^$S][^=]*_[^_]\+FLAGS\)[$S]*=[$S]*\(.*\)$$/p;d' \
 	  | sed -e 's/$$(\(AM\|[A-Z]*_BUILD\)_[^_]\+FLAGS)//g' \
 	  | while read EQ ; do \
@@ -84,7 +87,7 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
-	$(AM_V_at)sed < $< -e \
+	+$(AM_V_at)sed < $< -e \
 		'/^[$S]*\([^$S][^=]*_LDADD\)[$S]*=[$S]*\(.*\)$$/p;d' \
 	  | sed -e 's/$$(\(\|[A-Z]*_BUILD_\)LIBS)//g' \
 	  | while read EQ ; do \

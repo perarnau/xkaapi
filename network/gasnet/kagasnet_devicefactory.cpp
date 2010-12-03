@@ -1,8 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
@@ -41,63 +40,36 @@
 ** terms.
 ** 
 */
-#include <iostream>
-#include <stdlib.h>
-#include "kaapi++" // this is the new C++ interface for Kaapi
+#include "kagasnet_init.h" 
+#include "kagasnet_device.h" 
 
-/* Task Hello
- * this task takes an integer n and write the value to the std::cout stream.
- */
-struct TaskHello : public ka::Task<1>::Signature<int> {};
+namespace GASNET {
 
-template<>
-struct TaskBodyCPU<TaskHello> {
-  void operator() ( int n )
-  {
-    std::cout << "Hello World !, n=" << n << std::endl;
-  }
-};
-
-
-/* Main task of the program
-*/
-struct doit {
-  void operator()(int argc, char** argv )
-  {
-    int n = 3.1415;
-    if (argc >1) n = atoi(argv[1]);
-    ka::Spawn<TaskHello>()( n );
-  }
-};
-
-
-/* main entry point : Kaapi initialization
-*/
-int main(int argc, char** argv)
+// --------------------------------------------------------------------
+DeviceFactory::DeviceFactory()
+  : ka::DeviceFactory()
 {
-  try {
-    /* Join the initial group of computation : it is defining
-       when launching the program by a1run.
-    */
-    ka::Community com = ka::System::join_community( argc, argv );
-    
-    /* Start computation by forking the main task */
-    ka::SpawnMain<doit>()(argc, argv); 
-    
-    /* Leave the community: at return to this call no more athapascan
-       tasks or shared could be created.
-    */
-    com.leave();
-
-    /* */
-    ka::System::terminate();
-  }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : " << E.what() << std::endl;
-  }
-  catch (...) {
-    ka::logfile() << "Catch unknown exception: " << std::endl;
-  }
-  
-  return 0;
 }
+
+// --------------------------------------------------------------------
+DeviceFactory::~DeviceFactory()
+{ }
+
+
+// --------------------------------------------------------------------
+const char* DeviceFactory::get_name() const
+{ return "gasnet"; }
+
+
+// --------------------------------------------------------------------
+ka::Device* DeviceFactory::create( )
+{ 
+  ka::Device* dev = new GASNET::Device;
+  if (dev->initialize() !=0) {
+    delete dev;
+    return 0;
+  }
+  return dev;
+}
+
+} // - namespace Net...

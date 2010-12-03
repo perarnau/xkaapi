@@ -63,7 +63,7 @@ public:
   //@{
   /** type of a format identifier
   */
-  typedef kaapi_uint32_t Id;
+  typedef uint32_t Id;
   //@}
 
   /** cstor with parameter to define a format.
@@ -1198,8 +1198,8 @@ inline atha::OStream& operator<< (atha::OStream& m, const long double& v )
 
 inline atha::OStream& operator<< (atha::OStream& m, const std::string& v )
 {
-  kaapi_uint32_t sz = v.size();
-  m.write( atha::WrapperFormat<kaapi_uint32_t>::format, atha::OStream::IA, &sz, 1);
+  uint32_t sz = v.size();
+  m.write( atha::WrapperFormat<uint32_t>::format, atha::OStream::IA, &sz, 1);
   m.write( atha::WrapperFormat<char>::format, atha::OStream::IA, (const char*)(v.c_str()), sz);
   return m;
 }
@@ -1213,8 +1213,8 @@ inline atha::OStream& operator<< (atha::OStream& o, const atha::Pointer& s)
 template<class T>
 inline atha::OStream& operator<< (atha::OStream& m, const std::vector<T>& v )
 {
-  kaapi_uint32_t sz =v.size();
-  m.write( atha::WrapperFormat<kaapi_uint32_t>::format, atha::OStream::IA, &sz, 1);
+  uint32_t sz =v.size();
+  m.write( atha::WrapperFormat<uint32_t>::format, atha::OStream::IA, &sz, 1);
   for (unsigned i=0; i<sz; ++i)
     m.write( atha::WrapperFormat<T>::format, atha::OStream::IA, (const T*)&v[i], 1);
   return m;
@@ -1309,8 +1309,8 @@ inline atha::IStream& operator>> (atha::IStream& m, long double& v )
 
 inline atha::IStream& operator>> (atha::IStream& m, std::string& v )
 {
-  kaapi_uint32_t sz =0;
-  m.read( atha::WrapperFormat<kaapi_uint32_t>::format, atha::OStream::IA, &sz, 1);
+  uint32_t sz =0;
+  m.read( atha::WrapperFormat<uint32_t>::format, atha::OStream::IA, &sz, 1);
   v.resize(sz);
   m.read( atha::WrapperFormat<char>::format, atha::OStream::IA, (char*)&v[0], sz);
   return m;
@@ -1325,8 +1325,8 @@ inline atha::IStream& operator>> (atha::IStream& i, atha::Pointer& s)
 template<class T>
 inline atha::IStream& operator>> (atha::IStream& m, std::vector<T>& v )
 {
-  kaapi_uint32_t sz = 0;
-  m.read( atha::WrapperFormat<kaapi_uint32_t>::format, atha::IStream::IA, &sz, 1);
+  uint32_t sz = 0;
+  m.read( atha::WrapperFormat<uint32_t>::format, atha::IStream::IA, &sz, 1);
   v.resize(sz);
   for (unsigned i=0; i<sz; ++i)
     m.read( atha::WrapperFormat<T>::format, atha::IStream::IA, (T*)&v[i], 1);

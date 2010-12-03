@@ -195,7 +195,7 @@ void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
 
 /*
 */
-kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc)
+uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc)
 {
   kaapi_perf_counter_t delay = kaapi_get_elapsedns() - kproc->start_t[KAAPI_GET_THREAD_STATE(kproc)];
   return delay;

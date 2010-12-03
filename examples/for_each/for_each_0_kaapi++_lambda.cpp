@@ -68,14 +68,13 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 
 /* For each main function */
 template<typename T, class OP>
-static void for_each( T* array, size_t size, OP op )
+static void for_each( T* ibeg, T* iend, OP op )
 {
   /* range to process */
   ka::StealContext* sc;
-  Work<T,OP> work(array, size, op);
+  Work<T,OP> work(ibeg, iend, op);
   T* beg;
   T* end;
-  char tmp[128];
 
   /* push an adaptive task */
   sc = ka::TaskBeginAdaptive(
@@ -103,8 +102,8 @@ static void for_each( T* array, size_t size, OP op )
             
             /* thief work: create a task */
             for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
-              req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(beg_theft+size_theft), _op );
-            req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(end_theft), _op );
+              req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(beg_theft+size_theft), op );
+            req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(end_theft), op );
           }
   );
 

@@ -157,7 +157,6 @@ int kaapi_hw_init()
   int topodepth, depth;
   int memdepth;
   int idx, ncousin;
-  unsigned int i;
   int ncpu;
 
   kaapi_hw_standardinit();
@@ -204,7 +203,7 @@ int kaapi_hw_init()
     obj = hwloc_get_obj_by_depth(topology, depth, 0);
     if (obj->type == HWLOC_OBJ_MACHINE)
     {
-printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memory);
+//printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memory);
       if (obj->arity >1) 
       {
         --memdepth;
@@ -257,7 +256,9 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
   /* end of detection of memory hierarchy */
   
   
-#if 1
+#if 0
+{
+  unsigned int i;
   /* display result... */
   printf("Memory hierarchy levels:%i\n", kaapi_default_param.memory.depth);
   printf("System cpu:%i\n", kaapi_default_param.syscpucount);
@@ -290,6 +291,7 @@ printf("Find machine level, memory:%lu\n", (unsigned long)obj->memory.total_memo
   for (i=0; i<kaapi_default_param.cpucount; ++i)
     printf("%i ", kaapi_default_param.cpu2kid[i] );
   printf("\n");
+}
 #endif
   
   return 0;

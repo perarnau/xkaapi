@@ -46,7 +46,7 @@
 #ifndef _ATHAPASCAN_1_H_H
 #define _ATHAPASCAN_1_H_H
 
-#include "kaapi++.h"
+#include "kaapi++"
 
 namespace a1 {
 
@@ -459,6 +459,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
+    static void* address_data( type_inclosure* t ) { return t; }
+    static void* address_version( type_inclosure* t ) { return 0; }
   };
 
   template<class T>
@@ -472,6 +474,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_V };
     template<class E>
     static void link( type_inclosure& f, const E& e) { f = e; }
+    static void* address_data( type_inclosure* t ) { return t; }
+    static void* address_version( type_inclosure* t ) { return 0; }
   };
 
   template<class T>
@@ -484,6 +488,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T>
@@ -497,6 +503,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T>
@@ -510,6 +518,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T>
@@ -523,6 +533,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T, class F>
@@ -536,6 +548,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T>
@@ -549,6 +563,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_RW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T>
@@ -562,6 +578,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_R| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T>
@@ -575,6 +593,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_W| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
   template<class T, class F>
@@ -588,6 +608,8 @@ namespace a1 {
     enum { xkaapi_mode = KAAPI_ACCESS_MODE_CW| KAAPI_ACCESS_MODE_P };
     template<class S>
     static void link( type_inclosure& f, const S& e) { f = (kaapi_access_t&)e; }
+    static void* address_data( type_inclosure* t ) { return &t->data; }
+    static void* address_version( type_inclosure* t ) { return &t->version; }
   };
 
 
@@ -892,17 +914,6 @@ namespace Util {
   using ka::HighResTimer;
   using ka::logfile;
 
-  /* old names */
-  typedef kaapi_uint8_t  ka_uint8_t;
-  typedef kaapi_uint16_t ka_uint16_t;
-  typedef kaapi_uint32_t ka_uint32_t;
-  typedef kaapi_uint64_t ka_uint64_t;
-
-  typedef kaapi_int8_t   ka_int8_t;
-  typedef kaapi_int16_t  ka_int16_t;
-  typedef kaapi_int32_t  ka_int32_t;
-  typedef kaapi_int64_t  ka_int64_t;
-  
   using a1::WrapperFormat;
 }
 

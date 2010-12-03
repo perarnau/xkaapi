@@ -58,6 +58,10 @@ FlagReplyTail ReplyTail;
 
 
 // --------------------------------------------------------------------
+uint32_t System::local_gid = uint32_t( -1U ); // <-> GlobalId::NO_SITE;
+
+
+// --------------------------------------------------------------------
 int System::saved_argc = 0;
 char** System::saved_argv = 0;
 

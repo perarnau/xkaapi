@@ -210,7 +210,7 @@ extern void kaapi_procinfo_list_free(struct kaapi_procinfo_list_t*);
 */
 typedef struct kaapi_victim_t {
   struct kaapi_processor_t* kproc; /** the victim processor */
-  kaapi_uint16_t            level; /** level in the hierarchy of the source k-processor to reach kproc */
+  uint16_t                  level; /** level in the hierarchy of the source k-processor to reach kproc */
 } kaapi_victim_t;
 
 
@@ -257,6 +257,10 @@ enum kaapi_memory_type_t {
 
 /**
 */
+typedef uint64_t kaapi_cpuset_t[2];
+
+/**
+*/
 typedef struct kaapi_affinityset_t {
     kaapi_cpuset_t        who;
     size_t                ncpu;
@@ -292,7 +296,7 @@ typedef struct kaapi_rtparam_t {
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
   unsigned int		         use_affinity;                    /* use cpu affinity */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
-  kaapi_uint64_t           startuptime;                     /* time at the end of kaapi_init */
+  uint64_t                 startuptime;                     /* time at the end of kaapi_init */
 
   struct kaapi_procinfo_list_t*   kproc_list;                      /* list of kprocessors to initialized */
   kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
@@ -318,7 +322,13 @@ enum kaapi_reply_status_t {
 };
 
 
-/* ============================= Format for task ============================ */
+
+/* ============================= Format for task/data structure ============================ */
+typedef enum kaapi_format_flag_t {
+  KAAPI_FORMAT_STATIC_FIELD,   /* the format of the task is interpreted using static offset/fmt etc */ 
+  KAAPI_FORMAT_DYNAMIC_FIELD      /* the format is interpreted using the function, required for variable args tasks */
+} kaapi_format_flag_t;
+
 /** \ingroup TASK
     Kaapi task format
     The format should be 1/ declared 2/ register before any use in task.
@@ -329,8 +339,11 @@ typedef struct kaapi_format_t {
   short                      isinit;                                  /* ==1 iff initialize */
   const char*                name;                                    /* debug information */
   
-  /* case of format for a structure or for a task */
-  kaapi_uint32_t             size;                                    /* sizeof the object */  
+  /* flag to indicate how to interpret the following fields */
+  kaapi_format_flag_t        flag;
+  
+  /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
+  uint32_t                   size;                                    /* sizeof the object */  
   void                       (*cstor)( void* dest);
   void                       (*dstor)( void* dest);
   void                       (*cstorcopy)( void* dest, const void* src);
@@ -341,21 +354,107 @@ typedef struct kaapi_format_t {
   /* only if it is a format of a task  */
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
-  int                        count_params;                            /* number of parameters */
-  kaapi_access_mode_t        *mode_params;                            /* only consider value with mask 0xF0 */
-  kaapi_offset_t             *off_params;                             /* access to the i-th parameter: a value or a shared */
-  struct kaapi_format_t*     *fmt_params;                             /* format for each params */
-  kaapi_uint32_t             *size_params;                            /* sizeof of each params */
 
+  /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
+  int                         _count_params;                           /* number of parameters */
+  kaapi_access_mode_t        *_mode_params;                            /* only consider value with mask 0xF0 */
+  kaapi_offset_t             *_off_params;                             /* access to the i-th parameter: a value or a shared */
+  kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
+  struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
+  uint32_t                   *_size_params;                            /* sizeof of each params */
+
+  /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
+     - the unsigned int argument is the index of the parameter 
+     - the last argument is the pointer to the sp data of the task
+  */
+  size_t                (*get_count_params)(const struct kaapi_format_t*, const void*);
+  kaapi_access_mode_t   (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+  void*                 (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*);
+  kaapi_access_t        (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*);
+  void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, const void*, kaapi_access_t*);
+  struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
+  uint32_t              (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+
+  /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
   struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
 
-  size_t (*get_param_size)(const struct kaapi_format_t*, unsigned int, const void*);
   
   /* only for Monotonic bound format */
   int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                       const void* value, const struct kaapi_format_t* fmtvalue );
 } kaapi_format_t;
+
+/* Helper to interpret the format 
+*/
+static inline 
+size_t                kaapi_format_get_count_params(const struct kaapi_format_t* fmt, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_count_params;
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_count_params)(fmt, sp);
+}
+
+static inline 
+kaapi_access_mode_t   kaapi_format_get_mode_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_mode_params[ith];
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_mode_param)(fmt, ith, sp);
+}
+
+static inline 
+void*                 kaapi_format_get_data_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) == KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_off_params[ith] + (char*)sp;
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_off_param)(fmt, ith, sp);
+}
+
+static inline 
+kaapi_access_t         kaapi_format_get_access_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    kaapi_access_t retval;
+    retval.data    = (void*)(fmt->_off_params[ith] + (char*)sp);
+    retval.version = (void*)(fmt->_off_versions[ith] + (char*)sp);
+    return retval;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_access_param)(fmt, ith, sp);
+}
+
+static inline 
+void         kaapi_format_set_access_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, kaapi_access_t* a)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    *(void**)(fmt->_off_params[ith] + (char*)sp) = a->data;
+    *(void**)(fmt->_off_versions[ith] + (char*)sp) = a->version;
+    return;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  (*fmt->set_access_param)(fmt, ith, sp, a);
+}
+
+static inline 
+const struct kaapi_format_t* kaapi_format_get_fmt_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_fmt_params[ith];
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_fmt_param)(fmt, ith, sp);
+}
+
+static inline 
+uint32_t        kaapi_format_get_size_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_size_params[ith];
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_size_param)(fmt, ith, sp);
+}
+
 
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */
@@ -412,10 +511,10 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
   kaapi_atomic_t                 lock __attribute__((aligned (KAAPI_CACHE_LINE)));           /** ??? */ 
-  kaapi_cpuset_t               affinity;       /* bit i == 1 -> can run on procid i */
+  kaapi_cpuset_t                 affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
-  kaapi_uint32_t                 size;           /** size of the data structure allocated */
+  uint32_t                       size;           /** size of the data structure allocated */
   kaapi_task_t*                  task;           /** bottom of the stack of task */
 
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
@@ -423,12 +522,12 @@ typedef struct kaapi_thread_context_t {
   /* statically allocated reply */
   kaapi_reply_t			              static_reply;
   /* enough space to store a stealcontext that begins at static_reply->udata+static_reply->offset */
-  char	                          sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
+  char	                         sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
   /* warning: reply is variable sized
      so do not add members from here
    */
-  kaapi_uint64_t                 data[1];        /** begin of stack of data */ 
+  uint64_t                       data[1];        /** begin of stack of data */ 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
@@ -501,13 +600,13 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
 
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (kaapi_uint32_t)o, (kaapi_uint32_t)n )
+    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (uint32_t)o, (uint32_t)n )
 #  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_OR_ORIG( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
+    KAAPI_ATOMIC_OR_ORIG( (kaapi_atomic_t*)a, (uint32_t)v)
 #  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_AND_ORIG( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
+    KAAPI_ATOMIC_AND_ORIG( (kaapi_atomic_t*)a, (uint32_t)v)
 #  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
-    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (kaapi_uint32_t)v)
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (uint32_t)v)
 
 #elif (SIZEOF_VOIDP == 8)
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 60UL)
@@ -520,13 +619,13 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR64_ORIG(a, v)
 
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
-    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)o, (kaapi_uint64_t)n )
+    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)(a), (uint64_t)o, (uint64_t)n )
 #  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_OR64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
+    KAAPI_ATOMIC_OR64_ORIG( (kaapi_atomic64_t*)(a), (uint64_t)v)
 #  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
-    KAAPI_ATOMIC_AND64_ORIG( (kaapi_atomic64_t*)(a), (kaapi_uint64_t)v)
+    KAAPI_ATOMIC_AND64_ORIG( (kaapi_atomic64_t*)(a), (uint64_t)v)
 #  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
-    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic64_t*)a, (kaapi_uint64_t)v)
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic64_t*)a, (uint64_t)v)
 
 #else
 #  error "No implementation for pointer to function with size greather than 8 bytes. Please contact the authors."
@@ -538,86 +637,86 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 
 #if (SIZEOF_VOIDP == 4)
 
-static inline kaapi_uintptr_t kaapi_task_getstate
+static inline uintptr_t kaapi_task_getstate
 (const kaapi_task_t* task)
 {
   return task->state;
 }
 
 static inline void kaapi_task_setstate
-(kaapi_task_t* task, kaapi_uintptr_t state)
+(kaapi_task_t* task, uintptr_t state)
 {
   task->state = state;
 }
 
 static inline void kaapi_task_setstate_barrier
-(kaapi_task_t* task, kaapi_uintptr_t state)
+(kaapi_task_t* task, uintptr_t state)
 {
   kaapi_writemem_barrier();
   task->state = state;
 }
 
-static inline kaapi_uintptr_t kaapi_task_state_get
-(kaapi_uintptr_t state)
+static inline uintptr_t kaapi_task_state_get
+(uintptr_t state)
 {
   return state;
 }
 
 static inline unsigned int kaapi_task_state_issteal
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return state & KAAPI_MASK_BODY_STEAL;
 }
 
 static inline unsigned int kaapi_task_state_isexec
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return state & KAAPI_MASK_BODY_EXEC;
 }
 
 static inline unsigned int kaapi_task_state_isterm
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return state & KAAPI_MASK_BODY_TERM;
 }
 
 static inline unsigned int kaapi_task_state_isaftersteal
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return state & KAAPI_MASK_BODY_AFTER;
 }
 
 static inline unsigned int kaapi_task_state_ispreempted
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return state & KAAPI_MASK_BODY_PREEMPT;
 }
 
 static inline unsigned int kaapi_task_state_isspecial
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return !(state == 0);
 }
 
 static inline unsigned int kaapi_task_state_isnormal
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return !kaapi_task_state_isspecial(state);
 }
 
 static inline unsigned int kaapi_task_state_isready
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return (state & (KAAPI_MASK_BODY_AFTER | KAAPI_MASK_BODY_TERM)) != 0;
 }
 
 static inline unsigned int kaapi_task_state_isstealable
-(kaapi_uintptr_t state)
+(uintptr_t state)
 {
   return (state & (KAAPI_MASK_BODY_STEAL | KAAPI_MASK_BODY_EXEC)) == 0;
 }
 
-static inline unsigned int kaapi_task_state2int(kaapi_uintptr_t state)
+static inline unsigned int kaapi_task_state2int(uintptr_t state)
 {
   return (unsigned int)state;
 }
@@ -708,7 +807,7 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody
     ((state) | KAAPI_MASK_BODY_AFTER)
     
 #define kaapi_task_body2state(body)           \
-    ((kaapi_uintptr_t)body)
+    ((uintptr_t)body)
 
 #define kaapi_task_state2body(state)           \
     ((kaapi_task_body_t)(state))
@@ -763,7 +862,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 
 #else /* SIZEOF_VOIDP == 8 */
 
-  const kaapi_uintptr_t state = (kaapi_uintptr_t)task->u.body;
+  const uintptr_t state = (uintptr_t)task->u.body;
   return kaapi_task_state_isstealable(state) &&
     kaapi_task_body_isstealable(kaapi_task_state2body(state));
 
@@ -782,15 +881,15 @@ static inline int _kaapi_thread_pushtask( kaapi_thread_context_t* thread )
 
 /** \ingroup TASK
 */
-static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, kaapi_uint32_t count)
+static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, uint32_t count)
 { return kaapi_thread_pushdata( kaapi_threadcontext2thread(thread), count ); }
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
 /** Atomically: OR of the task state with the value in 'state' and return the previous value.
 */
-static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uintptr_t state )
+static inline uintptr_t kaapi_task_andstate( kaapi_task_t* task, uintptr_t state )
 {
-  const kaapi_uintptr_t retval =
+  const uintptr_t retval =
 #if (SIZEOF_VOIDP == 4)
     KAAPI_ATOMIC_ANDPTR_ORIG(&task->state, state);
 #else /* (SIZEOF_VOIDP == 8) */
@@ -799,7 +898,7 @@ static inline kaapi_uintptr_t kaapi_task_andstate( kaapi_task_t* task, kaapi_uin
   return retval;
 }
 
-static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uintptr_t state )
+static inline uintptr_t kaapi_task_orstate( kaapi_task_t* task, uintptr_t state )
 {
 #if defined(__i386__)||defined(__x86_64)
   /* WARNING: here we assume that the locked instruction do a writememory barrier */
@@ -807,7 +906,7 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
   kaapi_writemem_barrier();
 #endif
 
-  const kaapi_uintptr_t retval =
+  const uintptr_t retval =
 #if (SIZEOF_VOIDP == 4)
     KAAPI_ATOMIC_ORPTR_ORIG(&task->state, state);
 #else
@@ -816,7 +915,7 @@ static inline kaapi_uintptr_t kaapi_task_orstate( kaapi_task_t* task, kaapi_uint
   return retval;
 }
 
-static inline int kaapi_task_teststate( kaapi_task_t* task, kaapi_uintptr_t state )
+static inline int kaapi_task_teststate( kaapi_task_t* task, uintptr_t state )
 {
   /* assume a mem barrier has been done */
   return
@@ -895,7 +994,7 @@ static inline kaapi_task_t* kaapi_thread_bottomtask(kaapi_thread_context_t* thre
 
 /* ========================================================================= */
 /* */
-extern kaapi_uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
+extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 
 
 
@@ -910,21 +1009,21 @@ extern kaapi_uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* k
 /* ========================================================================== */
 /** Compute a hash value from a string
 */
-extern kaapi_uint32_t kaapi_hash_value_len(const char * data, int len);
+extern uint32_t kaapi_hash_value_len(const char * data, int len);
 
 /*
 */
-extern kaapi_uint32_t kaapi_hash_value(const char * data);
+extern uint32_t kaapi_hash_value(const char * data);
 
 /** Hash value for pointer.
     Used for data flow dependencies
 */
-static inline kaapi_uint32_t kaapi_hash_ulong(kaapi_uint64_t ptr)
+static inline uint32_t kaapi_hash_ulong(uint64_t ptr)
 {
   /* */
-  kaapi_uint64_t val = ptr >> 3;
+  uint64_t val = ptr >> 3;
   val = (val & 0xFFFF) ^ (val>>32);
-  return (kaapi_uint32_t)val;
+  return (uint32_t)val;
 }
 
 
@@ -933,13 +1032,13 @@ static inline kaapi_uint32_t kaapi_hash_ulong(kaapi_uint64_t ptr)
  * Sums the 8 bytes modulo 2, then reduces the resulting degree 7 
  * polynomial modulo X^7 + X^3 + 1
  */
-static inline kaapi_uint32_t kaapi_hash_ulong7(kaapi_uint64_t v)
+static inline uint32_t kaapi_hash_ulong7(uint64_t v)
 {
     v ^= (v >> 32);
     v ^= (v >> 16);
     v ^= (v >> 8);
     if (v & 0x00000080) v ^= 0x00000009;
-    return (kaapi_uint32_t) (v&0x0000007F);
+    return (uint32_t) (v&0x0000007F);
 }
 
 
@@ -948,14 +1047,14 @@ static inline kaapi_uint32_t kaapi_hash_ulong7(kaapi_uint64_t v)
  * Sums the 8 bytes modulo 2, then reduces the resulting degree 7 
  * polynomial modulo X^6 + X + 1
  */
-static inline kaapi_uint32_t kaapi_hash_ulong6(kaapi_uint64_t v)
+static inline uint32_t kaapi_hash_ulong6(uint64_t v)
 {
     v ^= (v >> 32);
     v ^= (v >> 16);
     v ^= (v >> 8);
     if (v & 0x00000040) v ^= 0x00000003;
     if (v & 0x00000080) v ^= 0x00000006;
-    return (kaapi_uint32_t) (v&0x0000003F);
+    return (uint32_t) (v&0x0000003F);
 }
 
 /**
@@ -963,7 +1062,7 @@ static inline kaapi_uint32_t kaapi_hash_ulong6(kaapi_uint64_t v)
  * Sums the 8 bytes modulo 2, then reduces the resulting degree 7 
  * polynomial modulo X^5 + X^2 + 1
  */
-static inline kaapi_uint32_t kaapi_hash_ulong5(kaapi_uint64_t v)
+static inline uint32_t kaapi_hash_ulong5(uint64_t v)
 {
     v ^= (v >> 32);
     v ^= (v >> 16);
@@ -971,7 +1070,7 @@ static inline kaapi_uint32_t kaapi_hash_ulong5(kaapi_uint64_t v)
     if (v & 0x00000020) v ^= 0x00000005;
     if (v & 0x00000040) v ^= 0x0000000A;
     if (v & 0x00000080) v ^= 0x00000014;
-    return (kaapi_uint32_t) (v&0x0000001F);
+    return (uint32_t) (v&0x0000001F);
 }
 
 
@@ -1015,7 +1114,7 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
-  kaapi_uint32_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
+  uint32_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
 
@@ -1045,11 +1144,11 @@ extern kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* pt
 
 /*
 */
-extern kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key);
+extern kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key);
 
 /*
 */
-extern void set_hashmap_entry( kaapi_hashmap_t* khm, kaapi_uint32_t key, kaapi_hashentries_t* entries);
+extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries);
 
 
 /* ============================= Commun function for server side (no public) ============================ */
@@ -1102,9 +1201,9 @@ static inline int kaapi_cpuset_set(kaapi_cpuset_t* affinity, kaapi_processor_id_
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
-    (*affinity)[0] |= ((kaapi_uint64_t)1)<<kid;
+    (*affinity)[0] |= ((uint64_t)1)<<kid;
   else
-    (*affinity)[1] |= ((kaapi_uint64_t)1)<< (kid-64);
+    (*affinity)[1] |= ((uint64_t)1)<< (kid-64);
   return 0;
 }
 
@@ -1124,11 +1223,9 @@ static inline int kaapi_cpuset_has(kaapi_cpuset_t affinity, kaapi_processor_id_t
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
-    return ( affinity[0] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)kid) != (kaapi_uint64_t)0;
+    return ( affinity[0] & ((uint64_t)1)<< (uint64_t)kid) != (uint64_t)0;
   else
-    return ( affinity[1] & ((kaapi_uint64_t)1)<< (kaapi_uint64_t)(kid-64)) != (kaapi_uint64_t)0;
-
-//OLD  return (affinity & ((kaapi_affinkaapi_uint64_tity_t)1)<< (kaapi_affinkaapi_uint64_tity_t)kid) != (kaapi_affkaapi_uint64_tinity_t)0;
+    return ( affinity[1] & ((uint64_t)1)<< (uint64_t)(kid-64)) != (uint64_t)0;
 }
 
 /**
@@ -1578,13 +1675,13 @@ extern void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuse
 /* */
 extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
 /* */
-extern kaapi_uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
+extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 /* */
-extern void kaapi_set_workload( kaapi_processor_t*, kaapi_uint32_t workload );
+extern void kaapi_set_workload( kaapi_processor_t*, uint32_t workload );
 
 /* */
-extern void kaapi_set_self_workload( kaapi_uint32_t workload );
+extern void kaapi_set_self_workload( uint32_t workload );
 
 #include "kaapi_staticsched.h"
 

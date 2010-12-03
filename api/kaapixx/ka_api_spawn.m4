@@ -2,18 +2,18 @@
     template<class SIGNATURE, M4_PARAM(`class E$1, class F$1', `', `, ')>
     kaapi_task_t* KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)( void (SIGNATURE::*)( Thread* M4_PARAM(`, F$1', `', `') ), M4_PARAM(`const E$1& e$1', `', `,') )
     {
-      M4_PARAM(`typedef typename TraitUAMParam<F$1>::uamttype_t uamttype$1_t;
+      M4_PARAM(`typedef TraitFormalParam<F$1> TraitFormalParam$1_t;
       ', `', `')
-      M4_PARAM(`typedef typename uamttype$1_t::template UAMParam<TYPE_INTASK>::type_t inclosure$1_t;
+      M4_PARAM(`typedef typename TraitFormalParam$1_t::type_inclosure_t inclosure$1_t;
       ', `', `')
-      typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`uamttype$1_t', `', `,')>') TaskArg_t;
+      typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1_t', `', `,')>') TaskArg_t;
 
-      typedef KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK, M4_PARAM(`TraitUAMParam<F$1> ', `', `,')> KaapiFormatTask_t;
+      typedef KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK, M4_PARAM(`TraitFormalParam$1_t ', `', `,')> KaapiFormatTask_t;
       
 #if !defined(KAAPI_NDEBUG)
-      M4_PARAM(`typedef typename TraitUAMParam<F$1>::mode_t mode_formal$1_t;
+      M4_PARAM(`typedef typename TraitFormalParam$1_t::mode_t mode_formal$1_t;
       ', `', `')
-      M4_PARAM(`typedef typename TraitUAMParam<E$1>::mode_t mode_effective$1_t;
+      M4_PARAM(`typedef typename TraitFormalParam<E$1>::mode_t mode_effective$1_t;
       ', `', `')
       M4_PARAM(`WARNING_UNDEFINED_PASSING_RULE<mode_effective$1_t, mode_formal$1_t, FOR_ARG<$1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
       ', `', `')

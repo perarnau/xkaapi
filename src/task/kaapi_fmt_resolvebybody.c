@@ -49,7 +49,7 @@
 kaapi_format_t* kaapi_format_resolvebybody(kaapi_task_bodyid_t key)
 {
   int i;
-  kaapi_uint8_t        entry = ((unsigned long)key) & 0xFF;
+  uint8_t         entry = ((unsigned long)key) & 0xFF;
   kaapi_format_t* head =  kaapi_all_format_bybody[entry];
 
   if (head ==0) return 0;

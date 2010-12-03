@@ -32,6 +32,8 @@ libkaapi_la_SOURCES=\
   misc/kaapi_cpuset2str.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
+  task/kaapi_fmt_taskregister_static.c \
+  task/kaapi_fmt_taskregister_func.c \
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \

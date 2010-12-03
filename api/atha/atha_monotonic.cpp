@@ -57,7 +57,7 @@ public:
   void*                 data;
   const kaapi_format_t* fmtdata;
   const kaapi_format_t* fupdate;
-  kaapi_uint64_t        version;
+  uint64_t        	version;
 };
 
 

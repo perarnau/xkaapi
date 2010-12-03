@@ -200,7 +200,10 @@ OutChannel* Network::get_default_local_route( GlobalId gid )
     return curr->second;
   
   /* try to open a route to gid using its urls */
+  std::map<GlobalId,ListUrls*>::iterator lur = _gid2urls.find(gid);
+  if (lur == _gid2urls.end()) return 0;
   ListUrls* listurls = _gid2urls.find(gid)->second;
+  if (listurls ==0) return 0;
   ListUrls::iterator urlbeg = listurls->begin();
   ListUrls::iterator urlend = listurls->end();
   while (urlbeg != urlend)
@@ -306,11 +309,13 @@ void Network::dump_info()
   std::ostringstream buff2;
   print_route(buff2); buff2 << std::endl;
 
+#if 0
   printf("%i::Node info:\n%s\n%i::Node route info:\n%s\n", 
     ka::System::local_gid, buff1.str().c_str(), 
     ka::System::local_gid, buff2.str().c_str() 
   );
   fflush(stdout);
+#endif
 }
 
 
@@ -318,7 +323,7 @@ void Network::dump_info()
 #pragma mark --- misc
 #endif
 // --------------------------------------------------------------------
-int Network::size() const
+size_t Network::size() const
 { 
   return _gid2urls.size();
 }

@@ -51,9 +51,6 @@ Init Init::component;
 bool Init::verboseon = false;
 
 // --------------------------------------------------------------------
-kaapi_uint32_t System::local_gid = kaapi_uint32_t( -1U ); // <-> GlobalId::NO_SITE;
-
-// --------------------------------------------------------------------
 Architecture Init::local_archi;
 
 // --------------------------------------------------------------------
@@ -221,7 +218,7 @@ int Init::initialize() throw()
     }
     else
     {
-      System::local_gid = (kaapi_uint32_t)Parser::String2ULong(KaapiComponentManager::prop["util.globalid"]);
+      System::local_gid = (uint32_t)Parser::String2ULong(KaapiComponentManager::prop["util.globalid"]);
     }
     
     /* Set the global id of the process */
@@ -271,7 +268,7 @@ int Init::terminate() throw()
 // -------------------------------------------------------------------------
 void Architecture::set_local()
 {
-  kaapi_uint8_t endian, sz_l, sz_ld, sz_b;
+  uint8_t endian, sz_l, sz_ld, sz_b;
   #ifdef WORDS_BIGENDIAN
     endian = 0x01;
   #else
@@ -647,7 +644,7 @@ void LongDouble::set(LongDoubleFormat f, unsigned char *r){
     } else if (_exp._exp > 0) {
       // Normalized
       if (DEBUG_SET) printf("Normalized\n");
-    } else if (_exp._exp >= (1-(kaapi_int32_t)infos[f].mant_size)) {
+    } else if (_exp._exp >= (1-(int32_t)infos[f].mant_size)) {
       // Denormalized
       if (DEBUG_SET) printf("Denormalized\n");
       _mant.shift_right(true);

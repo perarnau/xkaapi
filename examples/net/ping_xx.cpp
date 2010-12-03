@@ -47,10 +47,12 @@
 
 /*
 */
+volatile int isrecv = 0;
 static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer )
 {
   char* msg = (char*)buffer;
   ka::logfile() << ": local_gid:" << ka::System::local_gid << ", receive msg= '" << msg << "'" << std::endl;
+  isrecv = 1;
 }
 
 
@@ -77,13 +79,13 @@ int main(int argc, char** argv)
     if (ka::System::local_gid == 0)
     {
       ka::OutChannel* channel = ka::Network::object.get_default_local_route(1);
+      kaapi_assert(channel != 0);
       const char* msg = "Ceci est un message de 0";
       channel->insert_am( service, msg, strlen(msg)+1 );
       channel->sync();
     }
     else {
-      ka::Device* device = ka::Network::object.get_device_from_url( "mpinet:0" );
-      device->skel();
+      while (isrecv ==0) sleep(1);
     }
     ka::Network::object.dump_info();
 

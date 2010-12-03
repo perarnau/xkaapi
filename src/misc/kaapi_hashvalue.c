@@ -66,14 +66,16 @@
 #endif
 
 #if !defined (get16bits)
-#define get16bits(d) ( (((const kaapi_uint8_t *)(d))[1] << (kaapi_uint32_t)8)\
-                       +((const kaapi_uint8_t *)(d))[0] \
+#define get16bits(d) ( (((const uint8_t *)(d))[1] << (uint32_t)8)\
+                       +((const uint8_t *)(d))[0] \
                      )
 #endif
 
-kaapi_uint32_t kaapi_hash_value_len(const char * data, int len) 
+uint32_t kaapi_hash_value_len(const char * data, int len) 
 {
-  kaapi_uint32_t hash, tmp;
+  if (data == 0) return 0;
+
+  uint32_t hash = 0, tmp;
   int rem;
 
   if (data == 0) return 0;
@@ -88,7 +90,7 @@ kaapi_uint32_t kaapi_hash_value_len(const char * data, int len)
       hash  += get16bits (data);
       tmp    = (get16bits (data+2) << 11) ^ hash;
       hash   = (hash << 16) ^ tmp;
-      data  += 2*sizeof (kaapi_uint16_t);
+      data  += 2*sizeof (uint16_t);
       hash  += hash >> 11;
   }
 
@@ -96,7 +98,7 @@ kaapi_uint32_t kaapi_hash_value_len(const char * data, int len)
   switch (rem) {
       case 3: hash += get16bits (data);
               hash ^= hash << 16;
-              hash ^= data[sizeof (kaapi_uint16_t)] << 18;
+              hash ^= data[sizeof (uint16_t)] << 18;
               hash += hash >> 11;
               break;
       case 2: hash += get16bits (data);
@@ -119,7 +121,7 @@ kaapi_uint32_t kaapi_hash_value_len(const char * data, int len)
 }
 
 
-kaapi_uint32_t kaapi_hash_value(const char * data) 
+uint32_t kaapi_hash_value(const char * data) 
 {
   int len;
   if (data == 0) return 0;

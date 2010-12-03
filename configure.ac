@@ -51,6 +51,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_F77
 AC_PROG_INSTALL
+AC_PROG_LIBTOOL
 ACX_PROG_CCACHE_CC
 ACX_PROG_CCACHE_CXX
 
@@ -114,6 +115,11 @@ ACX_LIB_NEW_PRG([KANETPROGS])
 # add warning flags to the C and C++ compilers
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
+
+# check for automatic macros that are used by KAAPI
+AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
+  AC_MSG_WARN([The '__SIZEOF_POINTER__' macro is not defined by the compiler. Support for such old compilers will be removed in a future release])
+])
 
 dnl ----------------------------------------------------------------
 dnl Force flag to be empty...
@@ -252,7 +258,23 @@ AC_CHECK_HEADERS([stdio.h])
 # library name
 AC_DEFINE([KAAPI_MAX_ARCH],3,[Maximum number of architectures])
 
-AC_DEFINE([KAAPI_MAX_PROCESSOR],16,[Maximum number of processors])
+default_max_processors=16
+AC_ARG_ENABLE([max-processors],
+  [AS_HELP_STRING([--enable-max-processors], [Maximum number of processors (default $default_max_processors)])],
+  [], [enable_max_processors=$default_max_processors])
+AS_CASE(["$enable_max_processors"],
+  [yes|no], [
+	AC_MSG_ERROR([A numeric value (or "host") is required for --enable-max-processors])
+  ],
+  [host], [
+    enable_max_processors=`getconf _NPROCESSORS_ONLN 2>/dev/null`
+    if test x"$enable_max_processors" = x; then
+        AC_MSG_WARN([Cannot use getconf to get the number of processors in this system. Using default value])
+	enable_max_processors=$default_max_processors
+    fi
+  ])
+AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
+AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -271,6 +293,7 @@ AC_TYPE_MODE_T
 AC_CHECK_TYPES([ptrdiff_t])
 
 AC_CHECK_SIZEOF([void*])
+
 
 dnl ----------------------------------------------------------------
 dnl Checks for library functions.
@@ -437,6 +460,45 @@ AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
 
 
 dnl -----------------------------------------------------------------------
+dnl The "--with-gasnet"
+dnl -----------------------------------------------------------------------
+AC_ARG_WITH([gasnet],[AS_HELP_STRING([--with-gasnet=<conduit>],
+		 [choose gasnet support and specify the conduit to use])],
+     [],
+     [with_gasnet=no]
+)
+
+AS_CASE([$with_gasnet],
+  [no], [dnl
+  ], 
+  [*], [dnl
+    AC_MSG_NOTICE([Adding gasnet support for conduit '$with_gasnet'])
+    # not using AC*DEFINE as we want this available for examples too
+    AC_DEFINE([KAAPI_USE_GASNET],1,[Use with GASNet])
+    KAAPI_USE_GASNET=yes
+    tmpfilename=`mktemp -t kaapi`
+    make -f $srcdir/acinclude/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
+    source $tmpfilename
+    KAGASNETLIB_BUILD_CPPFLAGS=$GASNET_CPPFLAGS
+    KAGASNETLIB_BUILD_CFLAGS=$GASNET_CFLAGS
+    KAGASNETLIB_BUILD_LDFLAGS=$GASNET_LDFLAGS
+    KAGASNETLIB_BUILD_LIBS=$GASNET_LIBS
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_CPPFLAGS=$KAGASNETLIB_BUILD_CPPFLAGS])
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_CFLAGS=$KAGASNETLIB_BUILD_CFLAGS])
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_LDFLAGS=$KAGASNETLIB_BUILD_LDFLAGS])
+    AC_MSG_NOTICE([KAGASNETLIB_BUILD_LIBS=$KAGASNETLIB_BUILD_LIBS])
+  ]
+)
+AC_SUBST(KAGASNETLIB_BUILD_CPPFLAGS)
+AC_SUBST(KAGASNETLIB_BUILD_CFLAGS)
+AC_SUBST(KAGASNETLIB_BUILD_LDFLAGS)
+AC_SUBST(KAGASNETLIB_BUILD_LIBS)
+AM_CONDITIONAL([KAAPI_TARGET_GASNET],[test x"$KAAPI_USE_GASNET" = x"yes"])
+
+
+
+
+dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
@@ -505,6 +567,7 @@ AC_CONFIG_FILES([
 	api/fortran/Makefile
 	network/Makefile
 	network/mpinet/Makefile
+	network/gasnet/Makefile
 	examples/Makefile
 	tests/static/Makefile
 

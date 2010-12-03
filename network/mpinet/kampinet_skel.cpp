@@ -57,8 +57,8 @@ void Device::service_term(int errocode, ka::GlobalId source, void* buffer, size_
 void Device::ack_term()
 {
   int err;
-  kaapi_uint64_t handler[2] = { (kaapi_uint64_t)&Device::service_term, 0 };
-  err = MPI_Send( &handler, 2*sizeof(kaapi_uint64_t), MPI_BYTE, 0, 1, _comm );
+  uint64_t handler[2] = { (uint64_t)&Device::service_term, 0 };
+  err = MPI_Send( &handler, 2*sizeof(uint64_t), MPI_BYTE, 0, 1, _comm );
   kaapi_assert(err == MPI_SUCCESS);
   printf("%i::Send ack term message to:0\n", ka::System::local_gid );
   fflush(stdout);
@@ -86,14 +86,14 @@ int Device::skel()
     ka::AMInstruction am;
   } header;
   void*          buffer_am = 0;
-  kaapi_uint64_t sz_buffer_am = 0;
+  uint64_t sz_buffer_am = 0;
 
   ka::Service_fnc service = 0;
   int err;
   
   while (1)
   {
-    err = MPI_Recv(&header, 2*sizeof(kaapi_uint64_t), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    err = MPI_Recv(&header, 2*sizeof(uint64_t), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     kaapi_assert( (err == MPI_SUCCESS) );
     kaapi_assert( (status.MPI_ERROR == MPI_SUCCESS) );

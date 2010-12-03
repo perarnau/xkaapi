@@ -96,7 +96,7 @@ public:
       For instance is_type( DECODE | CHECKPOINT ) return true iff
       the stream is of kind 'checkpoint' with direction 'encode'.
   */
-  bool is_type( kaapi_uint8_t type ) const;
+  bool is_type( uint8_t type ) const;
 
 protected:
   /** Set the type of the stream
@@ -105,7 +105,7 @@ protected:
       the stream is for encoding into a checkpoint kind of stream.
       \param type a ORed value of type
   */
-  void set_type( kaapi_uint8_t type ) throw(InvalidArgumentError);
+  void set_type( uint8_t type ) throw(InvalidArgumentError);
 
   /** Function called when the array of mode 'm' is fill.
     The return value is 'true' is a the stream process of defining
@@ -193,7 +193,7 @@ public:
 
 protected:
   Context     _context;
-  kaapi_uint64_t _current_id;
+  uint64_t    _current_id;
 };
 
 

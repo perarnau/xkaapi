@@ -52,6 +52,7 @@ include_HEADERS=\
 	kaapi++.h \
 	ka_error.h \
 	ka_timer.h \
+	ka_api_array.h \
 	ka_api_tuple.h\
 	ka_api_clo.h \
 	ka_api_spawn.h \
