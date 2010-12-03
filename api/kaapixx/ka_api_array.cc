@@ -41,75 +41,13 @@
 ** terms.
 ** 
 */
-#include <iostream>
-#include <stdlib.h>
-#include "kaapi++" // this is the new C++ interface for Kaapi
+#include "kaapi++"
 
-/* Task Hello
- * this task takes an integer n and write the value to the std::cout stream.
- */
-#if 1
-struct TaskAccumulate : public ka::Task<2>::Signature<ka::RW<int>, 
-  ka::array<1, ka::R<int> > > {};
+namespace ka {
 
-template<>
-struct TaskBodyCPU<TaskAccumulate> {
-  void operator() ( ka::pointer_rw<int> acc, const ka::array<1,int>& array  )
-  {
-    size_t sz = array.size();
-    for (size_t i=0; i < sz; ++i)
-      *acc += array[i];
-  }
-};
+const range::CstorFull range::init_full;
 
-#endif
+/** Full range */
+const range range::full( range::init_full );
 
-/* Main task of the program
-*/
-struct doit {
-  void operator()(int argc, char** argv )
-  {
-    int n= 10;
-    if (argc >1) n = atoi(argv[1]);
-
-    int* data = new int[n];
-    ka::array<1,int> arr(n, data); 
-    int res = 0;
-
-    ka::Spawn<TaskAccumulate>()( &res, arr[ka::range(0,n,2)] );
-    ka::Sync();
-    std::cout << "Res = " << res << std::endl;
-  }
-};
-
-
-/* main entry point : Kaapi initialization
-*/
-int main(int argc, char** argv)
-{
-  try {
-    /* Join the initial group of computation : it is defining
-       when launching the program by a1run.
-    */
-    ka::Community com = ka::System::join_community( argc, argv );
-    
-    /* Start computation by forking the main task */
-    ka::SpawnMain<doit>()(argc, argv); 
-    
-    /* Leave the community: at return to this call no more athapascan
-       tasks or shared could be created.
-    */
-    com.leave();
-
-    /* */
-    ka::System::terminate();
-  }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : " << E.what() << std::endl;
-  }
-  catch (...) {
-    ka::logfile() << "Catch unknown exception: " << std::endl;
-  }
-  
-  return 0;
 }

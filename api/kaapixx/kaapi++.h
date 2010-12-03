@@ -423,13 +423,6 @@ namespace ka {
      return new (data) T[1];
   }
 
-} // end of namespace ka
-
-/* for variable length arguments */
-#include "ka_api_array.h"
-
-namespace ka {
-
   // --------------------------------------------------------------------
   struct SetStack {};
   extern SetStack SetInStack;
@@ -441,6 +434,10 @@ namespace ka {
   // --------------------------------------------------------------------
   class SetStickyC{};
   extern SetStickyC SetSticky;
+
+  // --------------------------------------------------------------------
+  /* type for nothing */
+  struct THIS_TYPE_IS_USED_ONLY_INTERNALLY  { };
 
   // --------------------------------------------------------------------
   /* typenames for access mode */
@@ -814,21 +811,20 @@ namespace ka {
       - to convert TypeEff -> TypeInTask.
       - and to convert TypeInTask -> TypeFormal.
   */
-  struct Access {
-    Access( const Access& access ) : a(access.a)
+  struct Access : public kaapi_access_t{
+    Access( const Access& access ) : kaapi_access_t(access)
     { }
     template<typename pointer>
     explicit Access( pointer* p )
-    { kaapi_access_init(&a, p); }
+    { kaapi_access_init(this, p); }
     template<typename pointer>
     explicit Access( const pointer* p )
-    { kaapi_access_init(&a, (void*)p); }
+    { kaapi_access_init(this, (void*)p); }
     template<typename T>
     explicit Access( const base_pointer<T>& p )
-    { kaapi_access_init(&a, p.ptr()); }
+    { kaapi_access_init(this, p.ptr()); }
     operator kaapi_access_t&() 
-    { return a; }
-    kaapi_access_t a;    
+    { return *this; }
   };
   
   // --------------------------------------------------------------------
@@ -842,164 +838,415 @@ namespace ka {
   template<typename UserType=void> struct RW {};
   
   // --------------------------------------------------------------------
-  /** Trait for universal access mode type.
-      The universal access mode type allows to 1/ compact code by providing generic information; 2/ define
-      for any user level type, the way the type may be accessed in task, its task internal representation as
-      well as its program level representation.
-      Moreover, the UAMParam is used during conversion of type when effective parameter is binded to the internal
-      parameter and when the internal parameter is binded to formal parameter during the call of the task body.
-       *  TraitUAMType<T>::UAMParam<MODE>::type_t gives the representation of the type for all kinds of access mode.
-       *  TraitUAMType<T>::UAMParam<TYPE_INTASK>::type_t gives the representation of the type in a task.
-       *  TraitUAMType<T>::UAMParam<TYPE_INPROG>::type_t gives the representation of the type in the user program.
+  /** Trait to encode operations / types required to spawn task
+       *  TraitFormalParam<T>::type_t gives type of the underlaying C++ object. If not pointer, this is T
+       *  TraitFormalParam<T>::formal_t gives type of the formal parameter
+       *  TraitFormalParam<T>::mode_t gives type of the access mode of T
+       *  TraitFormalParam<T>::type_inclosure_t gives type of C++ object store in the task argument
+       *  TraitFormalParam<T>::is_static retuns true or false if the type does not contains a dynamic set 
+       of pointer access.
        
-      During the creation of tasks with a parameter fi of type F, the recopy constructor is called like this:
-        new (&task->fi) TraitUAMType<F>::UAMParam<TYPE_INTASK>::type_t( ei )
-      where the effective parameter ei is of type TraitUAMType<F>::UAMParam<EffectiveAccessMode>::type_t
-        
-      Once the task is created and scheduled, the runtime will invokes the user defined function and required
-      to convert TraitUAMType<F>::UAMParam<TYPE_INTASK>::type_t to TraitUAMType<F>::UAMParam<FORMAL_MODE>::type_t.
-      This is called using the explicit constructor of recopy of TraitUAMType<F>::UAMParam<FORMAL_MODE>::type_t
-      from TraitUAMType<F>::UAMParam<TYPE_INTASK>::type_t.
+       *  TraitFormalParam<T>::address_data return the address in the task argument data structure of the i-th data parameter
+       *  TraitFormalParam<T>::address_version return the address in the task argument data structure of the i-th version parameter
+       
+      During the creation of task with a formal parameter fi of type Fi, then the task argument data structure
+      stores an object of type TraitFormalParam<T>::type_inclosure_t called taskarg->fi.
+      Then, to bind the effective parameter ei of type Ei to fi:
+      1- the effective argument ei is bind to the type into the closure:
+        new (&taskarg->fi) TraitFormalParam<T>::type_inclosure_t( ei )
+      2- the object store into the task argument data structure is binded to the formal parameter during
+        bootstrap code to execute a task body: taskbody( ..., taskarg->fi, ... )
+        It means that the type to the closure should be convertible to the type of the formal parameter.        
   */
   template<typename T>
-  struct TraitUAMTypeFormat { typedef T type_t; };
-  template<typename T>
-  struct TraitUAMTypeFormat<const T&> { typedef T type_t; };
-  template<typename T>
-  struct TraitUAMTypeFormat<pointer<T> > { typedef T type_t; };
-
-  template<typename Mode>
-  struct TraitUAMGetAddress {};
-
-  template<>
-  struct TraitUAMGetAddress<TYPE_INTASK> {
-    static const bool is_static = true;
-    template<typename type_t>
-    static void* address_data( type_t* t ) { return t; }
-    template<typename type_t>
-    static void* address_version( type_t* t ) { return 0; }
-  };
-
-  template<typename T, typename Mode>
-  struct TraitUAMTypeParam : public TraitUAMGetAddress<Mode> { 
-    typedef T type_t;
+  struct TraitFormalParam { 
+    typedef T                type_t; 
+    typedef T                signature_t; 
+    typedef T                formal_t; 
+    typedef ACCESS_MODE_V    mode_t; 
+    typedef T                type_inclosure_t; 
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return a; }
+    static const void*       address_version( const type_inclosure_t* a ) { return 0; }
   };
 
   template<typename T>
-  struct TraitUAMType {
-    typedef typename TraitUAMTypeFormat<T>::type_t      typeformat_t;
-
-    template<typename Mode>
-    struct UAMParam : public TraitUAMTypeParam<T,Mode> {
-      typedef TraitUAMType<T>                            uamparam_t;
-//      typedef typename TraitUAMTypeParam<T,Mode>::type_t type_t;
-      typedef Mode                                       mode_t;
-    };
-
-    /* tells where are the pointer in the structure */
-    static const int count_pointer = 0;
-    static const int offset_pointer[];
+  struct TraitFormalParam<Value<T> > { 
+    typedef T                type_t; 
+    typedef T                signature_t; 
+    typedef T                formal_t; 
+    typedef ACCESS_MODE_V    mode_t; 
+    typedef T                type_inclosure_t; 
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return a; }
+    static const void*       address_version( const type_inclosure_t* a ) { return 0; }
   };
 
-  /* This specialization describes how to represent format parameters of tasks
+  template<typename T>
+  struct TraitFormalParam<const T&> { 
+    typedef T                type_t; 
+    typedef T                signature_t; 
+    typedef const T&         formal_t; 
+    typedef ACCESS_MODE_V    mode_t; 
+    typedef T                type_inclosure_t; 
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return a; }
+    static const void*       address_version( const type_inclosure_t* a ) { return 0; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<const T> { 
+    typedef T                type_t; 
+    typedef const T          signature_t; 
+    typedef const T          formal_t; 
+    typedef ACCESS_MODE_V    mode_t; 
+    typedef T                type_inclosure_t; 
+    static const bool        is_static = true;
+    static void*             address_data   ( type_inclosure_t* a ) { return a; }
+    static void*             address_version( type_inclosure_t* a ) { return 0; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer<T> > { 
+    typedef T                type_t; 
+    typedef RPWP<T>          signature_t; 
+//    typedef pointer<T>       formal_t; 
+    typedef ACCESS_MODE_RPWP mode_t; 
+    typedef Access           type_inclosure_t; 
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<auto_pointer<T> > { 
+    typedef T                type_t; 
+    typedef RPWP<T>          signature_t; 
+//    typedef pointer<T>       formal_t; 
+    typedef ACCESS_MODE_RPWP mode_t; 
+    typedef Access           type_inclosure_t; 
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer_r<T> > { 
+    typedef T                type_t; 
+    typedef R<T>             signature_t; 
+    typedef pointer_r<T>     formal_t; 
+    typedef ACCESS_MODE_R    mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer_rp<T> > { 
+    typedef T                type_t; 
+    typedef RP<T>            signature_t; 
+    typedef pointer_rp<T>    formal_t; 
+    typedef ACCESS_MODE_RP   mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer_w<T> > { 
+    typedef T                type_t; 
+    typedef W<T>             signature_t; 
+    typedef pointer_w<T>     formal_t; 
+    typedef ACCESS_MODE_W    mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer_wp<T> > { 
+    typedef T                type_t; 
+    typedef WP<T>            signature_t; 
+    typedef pointer_wp<T>    formal_t; 
+    typedef ACCESS_MODE_WP   mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer_rw<T> > { 
+    typedef T                type_t; 
+    typedef RW<T>            signature_t; 
+    typedef pointer_rw<T>    formal_t; 
+    typedef ACCESS_MODE_RW   mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer_rpwp<T> > {
+    typedef T                type_t; 
+    typedef RPWP<T>          signature_t; 
+    typedef pointer_rpwp<T>  formal_t; 
+    typedef ACCESS_MODE_RPWP mode_t; 
+    typedef Access           type_inclosure_t; 
+    static const bool        is_static = true;
+    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
+    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+  };  
+
+  template<typename T>
+  struct TraitFormalParam<W<T> > : public TraitFormalParam<pointer_w<T> > { };
+  template<typename T>
+  struct TraitFormalParam<R<T> > : public TraitFormalParam<pointer_r<T> > { };
+  template<typename T>
+  struct TraitFormalParam<WP<T> > : public TraitFormalParam<pointer_wp<T> > { };
+  template<typename T>
+  struct TraitFormalParam<RP<T> > : public TraitFormalParam<pointer_rp<T> > { };
+  template<typename T>
+  struct TraitFormalParam<RW<T> > : public TraitFormalParam<pointer_rw<T> > { };
+  template<typename T>
+  struct TraitFormalParam<RPWP<T> > : public TraitFormalParam<pointer_rpwp<T> > { };
+
+} // end of namespace ka
+
+/* for variable length arguments */
+#include "ka_api_array.h"
+
+namespace ka {
+
+  /* ------ rep of array into a closure      
   */
-  template<typename T>
-  struct TraitUAMTypeParam<const T&, TYPE_INTASK> { 
-    typedef T type_t; 
-    static const bool is_static = true;
-    static void* address_data( type_t* t ) { return t; }
-    static void* address_version( type_t* t ) { return 0; }
-  };
-  template<typename T>
-  struct TraitUAMTypeParam<const T, TYPE_INTASK> { 
-    typedef T type_t; 
-    static const bool is_static = true;
-    static void* address_data( type_t* t ) { return t; }
-    static void* address_version( type_t* t ) { return 0; }
-  };
-
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, TYPE_INTASK> { 
-    typedef Access type_t; 
-    static const bool is_static = true;
-    static void* address_data( Access* t ) { return &t->a.data; }
-    static void* address_version( Access* t ) { return &t->a.version; }
-  };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, TYPE_INPROG> { typedef pointer<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_R> { typedef pointer_r<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_W> { typedef pointer_w<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RW> { typedef pointer_rw<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_CW> { typedef pointer_cw<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RP> { typedef pointer_rp<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_WP> { typedef pointer_wp<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_RPWP> { typedef pointer_rpwp<T> type_t; };
-  template<typename T>
-  struct TraitUAMTypeParam<pointer<T>, ACCESS_MODE_CWP> { typedef pointer_cwp<T> type_t; };
-
   template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, TYPE_INTASK> { 
-    struct type_t {
-      /* cstor only called to pass effective parameter */
-      type_t( const ka::array<dim, T>& a )
-      {
-        a->d;
-      }
-      size_t size;
-      T*     data;
-      T*     version;
+  struct arraytype_inclosure_t {
+    arraytype_inclosure_t( const array<dim, T>& a ) : _range(a.slice()), _data(a), _version() {}
+    operator const range&() const { return _range; }
+    range            _range;
+    array_rep<dim,T> _data;
+    array<dim,T*>    _version; /* only used if the task is stolen */
+  private:
+    arraytype_inclosure_t() {}
+  };
+
+  /* ------ specialisation of representation of array */
+  template<typename T>
+  class array_rep_with_write {
+  public:
+    typedef range::index_t index_t;
+    typedef T*             pointer_t;
+
+    class reference_t {
+    public:
+      reference_t( T& v ) : ref(v) {}
+      reference_t operator=( const T& v )
+      { ref = v; return *this; }
     private:
-      type_t() {}
+      T& ref;
     };
-    static const bool is_static = false;
-    static void* address_data( type_t* t ) { return &t->a.data; }
-    static void* address_version( type_t* t ) { return &t->a.version; }
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, R<T> >, ACCESS_MODE_R> { 
-    struct type_t : public ka::array<dim, T> {
-      type_t( const typename TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, TYPE_INTASK>::type_t& a )
-      { 
-        a.A;
-      }
+
+    class const_reference_t {
+    public:
+      const_reference_t( T& v ) : ref(v) {}
+    private:
+      T& ref;
     };
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_W> { 
-    typedef pointer_w<T> type_t; 
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_RW> { 
-    typedef pointer_rw<T> type_t; 
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_CW> { 
-    typedef pointer_cw<T> type_t; 
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_RP> { 
-    typedef pointer_rp<T> type_t; 
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_WP> { 
-    typedef pointer_wp<T> type_t; 
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_RPWP> { 
-    typedef pointer_rpwp<T> type_t;
-  };
-  template<int dim, typename T>
-  struct TraitUAMTypeParam<ka::array<dim, ka::pointer<T> >, ACCESS_MODE_CWP> { 
-    typedef pointer_cwp<T> type_t; 
+
+    /** */
+    array_rep_with_write() : _data(0) {}
+    /** */
+    array_rep_with_write(T* ptr) : _data(ptr) {}
+    /** */
+    reference_t operator[](index_t i)
+    { return reference_t(_data[i]); }
+    /** */
+    pointer_t operator+(index_t i) const
+    { return _data+ i; }
+    /** */
+    void set (index_t i, const T& value) const 
+    { _data[i] = value; }
+    /** */
+    pointer_t shift_base(index_t shift) 
+    { return _data+shift; }
+  protected:
+    T* _data;
   };
 
+  template<typename T>
+  class array_rep_with_read {
+  public:
+    typedef range::index_t index_t;
+    typedef T*             pointer_t;
+    typedef const T&       const_reference_t;
+    typedef const T&       reference_t;
+
+    /** */
+    array_rep_with_read() : _data(0) {}
+    /** */
+    array_rep_with_read(T* ptr) : _data(ptr) {}
+    /** */
+    const_reference_t operator[](index_t i)
+    { return _data[i]; }
+    /** */
+    const_reference_t operator[](index_t i) const
+    { return _data[i]; }
+    /** */
+    pointer_t operator+(index_t i) const
+    { return _data+ i; }
+    /** */
+    const_reference_t get (index_t i) const 
+    { return _data[i]; }
+    /** */
+    pointer_t shift_base(index_t shift) 
+    { return _data+shift; }
+  protected:
+    T* _data;
+  };
+
+  /* ------ specialisation of representation of array */
+  template<typename T>
+  class array_rep_with_readwrite {
+  public:
+    typedef range::index_t index_t;
+    typedef T*             pointer_t;
+
+    class reference_t {
+    public:
+      reference_t( T& v ) : ref(v) {}
+      reference_t operator=( const T& v )
+      { ref = v; return *this; }
+      operator T&() { return ref; }
+    private:
+      T& ref;
+    };
+
+    class const_reference_t {
+    public:
+      const_reference_t( T& v ) : ref(v) {}
+      operator const T&() const { return ref; }
+    private:
+      T& ref;
+    };
+
+    /** */
+    array_rep_with_readwrite() : _data(0) {}
+    /** */
+    array_rep_with_readwrite(T* ptr) : _data(ptr) {}
+    /** */
+    reference_t operator[](index_t i)
+    { return reference_t(_data[i]); }
+    /** */
+    const_reference_t operator[](index_t i) const
+    { return const_reference_t(_data[i]); }
+    /** */
+    pointer_t operator+(index_t i) const
+    { return _data+ i; }
+    /** */
+    void set (index_t i, const T& value) const 
+    { _data[i] = value; }
+    /** */
+    pointer_t shift_base(index_t shift) 
+    { return _data+shift; }
+  protected:
+    T* _data;
+  };
+  
+  /* specialisation of array representation */
+  template<int dim, typename T>
+  class array_rep<dim,pointer_r<T> > : public array_rep_with_read<T> {
+  public:
+    array_rep<dim, pointer_r<T> >( arraytype_inclosure_t<dim,T>& arg_clo )
+     : array_rep_with_read<T>( arg_clo._data.shift_base(0) ) 
+    {
+    }
+  };
+
+  /* specialisation of array representation */
+  template<int dim, typename T>
+  class array_rep<dim,pointer_w<T> > : public array_rep_with_write<T> {
+  public:    
+    array_rep<dim, pointer_w<T> >( arraytype_inclosure_t<dim,T>& arg_clo )
+     : array_rep_with_write<T>( arg_clo._data.shift_base(0) ) 
+    {
+    }
+  };
+
+  /* specialisation of array representation */
+  template<int dim, typename T>
+  class array_rep<dim,pointer_rw<T> > : public array_rep_with_readwrite<T> {
+  public:    
+    array_rep<dim, pointer_rw<T> >( arraytype_inclosure_t<dim,T>& arg_clo )
+     : array_rep_with_readwrite<T>( arg_clo._data.shift_base(0) ) 
+    {
+    }
+  };
+  
+
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, pointer<T> > > { 
+    typedef arraytype_inclosure_t<dim,T> type_inclosure_t;
+    typedef ACCESS_MODE_RPWP   mode_t; 
+    typedef T                  type_t;
+    static const bool          is_static = false;
+  };
+
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, T> > { 
+    typedef arraytype_inclosure_t<dim,T> type_inclosure_t;
+    typedef ACCESS_MODE_RPWP   mode_t; 
+    typedef T                  type_t;
+    static const bool          is_static = false;
+  };
+
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, pointer_r<T> > > { 
+    typedef arraytype_inclosure_t<dim,T> type_inclosure_t;
+    typedef array<dim, R<T> >         signature_t; 
+    typedef array<dim, pointer_r<T> > formal_t; 
+    typedef ACCESS_MODE_R             mode_t; 
+    typedef T                         type_t;
+    static const bool                 is_static = false;
+    static const void*                address_data   ( const type_inclosure_t* a ) { return &a->_data; }
+    static const void*                address_version( const type_inclosure_t* a ) { return &a->_version; }
+  };
+
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, pointer_w<T> > > { 
+    typedef arraytype_inclosure_t<dim,T> type_inclosure_t;
+    typedef array<dim, W<T> >         signature_t; 
+    typedef array<dim, pointer_w<T> > formal_t; 
+    typedef ACCESS_MODE_W             mode_t; 
+    typedef T                         type_t;
+    static const bool                 is_static = false;
+    static const void*                address_data   ( const type_inclosure_t* a ) { return &a->_data; }
+    static const void*                address_version( const type_inclosure_t* a ) { return &a->_version; }
+  };
+
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, pointer_rw<T> > > { 
+    typedef arraytype_inclosure_t<dim,T> type_inclosure_t;
+    typedef array<dim, RW<T> >        signature_t; 
+    typedef array<dim, pointer_rw<T> > formal_t; 
+    typedef ACCESS_MODE_RW            mode_t; 
+    typedef T                         type_t;
+    static const bool                 is_static = false;
+    static const void*                address_data   ( const type_inclosure_t* a ) { return &a->_data; }
+    static const void*                address_version( const type_inclosure_t* a ) { return &a->_version; }
+  };
+
+
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, R<T> > > : public TraitFormalParam<array<dim, pointer_r<T> > > {};
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, W<T> > > : public TraitFormalParam<array<dim, pointer_w<T> > > {};
+  template<int dim, typename T>
+  struct TraitFormalParam<array<dim, RW<T> > > : public TraitFormalParam<array<dim, pointer_rw<T> > > {};
 
   template<typename UserType>
   struct DefaultAdd {
@@ -1010,228 +1257,40 @@ namespace ka {
   template<typename UserType=void/*, class OpCumul = DefaultAdd<UserType>*/ > struct CWP {};
   template<typename UserType=void/*, class OpCumul = DefaultAdd<UserType>*/ > struct CW {};
 
-  // --------------------------------------------------------------------  
-  /* Trait used in each type of parameter in the signature to retreive the
-     UAMType and its access mode.
-  */
-  template<typename UserType>
-  struct TraitUAMParam {
-    typedef TraitUAMType<UserType> uamttype_t;
-    typedef ACCESS_MODE_V   mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<Value<UserType> > {
-    typedef TraitUAMType<UserType> uamttype_t;
-    typedef ACCESS_MODE_V   mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<RPWP<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP       mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<RW<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RW         mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<RP<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RP         mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<R<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_R          mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<WP<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_WP         mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<W<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_W          mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<CWP<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_CWP        mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<CW<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_CW         mode_t;
-  };
-
-
-  /* array of access mode */
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,UserType> > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_RPWP         mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,RPWP<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_RPWP       mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,RW<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_RW         mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,RP<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_RP         mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,R<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_R          mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,WP<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_WP         mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,W<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_W          mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,CWP<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_CWP        mode_t;
-  };
-
-  template<int dim, typename UserType>
-  struct TraitUAMParam<array<dim,CW<UserType> > > {
-    typedef TraitUAMType< ka::array<dim, ka::pointer<UserType> > > uamttype_t;
-    typedef ACCESS_MODE_CW         mode_t;
-  };
-
-  /* pointer ... */
-  template<typename UserType>
-  struct TraitUAMParam<pointer<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP       mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<auto_pointer<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP       mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_rpwp<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP       mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_rw<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RW         mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_rp<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RP         mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_r<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_R          mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_wp<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_WP         mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_w<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_W          mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_cwp<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_CWP        mode_t;
-  };
-
-  template<typename UserType>
-  struct TraitUAMParam<pointer_cw<UserType> > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_CW         mode_t;
-  };
-
-
   /* ------ */
-  template<typename UserType>
-  struct TraitUAMParam<pointer_rw<UserType>& > {
-    typedef TraitUAMType<pointer<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RW         mode_t;
-  };
-  
+//  template<typename UserType>
+//  template<typename T>
+//  struct TraitFormalParam<pointer_rw<T>& > : public TraitFormalParam<pointer_rw<T> > { 
+//  };
 
   template<bool isfunc, class UserType> struct __kaapi_pointer_switcher {};
+
   template<class UserType> struct __kaapi_pointer_switcher<false, const UserType*> {
-    typedef TraitUAMType<pointer_rp<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RP                      mode_t;
+    typedef TraitFormalParam<pointer_rp<UserType> >   tfp_t;
   };
   template<class UserType> struct __kaapi_pointer_switcher<false, UserType*> {
-    typedef TraitUAMType<pointer_rpwp<UserType> > uamttype_t;
-    typedef ACCESS_MODE_RPWP                      mode_t;
+    typedef TraitFormalParam<pointer_rpwp<UserType> > tfp_t;
   };
   template<class UserType> struct __kaapi_pointer_switcher<true, const UserType*> {
-    typedef TraitUAMType<const UserType*>         uamttype_t;
-    typedef ACCESS_MODE_V                         mode_t;
-  };
+    typedef TraitFormalParam<Value<UserType*> >        tfp_t;
+   };
   template<class UserType> struct __kaapi_pointer_switcher<true, UserType*> {
-    typedef TraitUAMType<const UserType*>         uamttype_t;
-    typedef ACCESS_MODE_V                         mode_t;
+    typedef TraitFormalParam<Value<UserType*> >        tfp_t;
   };
   
   /* to be able to use pointer to data as arg of spawn. If it is a pointer to function, 
      consider it as a pass-by-value passing rule
   */
   template<typename UserType>
-  struct TraitUAMParam<const UserType*> {
-    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::uamttype_t uamttype_t;
-    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::mode_t mode_t;
+  struct TraitFormalParam<const UserType*> : public 
+       __kaapi_pointer_switcher< __kaapi_is_function<const UserType*>::value, const UserType*>::tfp_t
+  {
   };
 
-  /* to be able to use siù^me pointer as arg of spawn */
   template<typename UserType>
-  struct TraitUAMParam<UserType*> {
-    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::uamttype_t uamttype_t;
-    typedef typename __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::mode_t mode_t;
+  struct TraitFormalParam<UserType*> : public 
+       __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::tfp_t
+  {
   };
 
   // --------------------------------------------------------------------  
@@ -2158,6 +2217,7 @@ namespace ka {
   }
     
 
+#if 0
   // --------------------------------------------------------------------
 #include "ka_api_tuple.h"
 
@@ -2190,6 +2250,7 @@ namespace ka {
     size_t _dim1;
     size_t _dim2;
   };
+#endif
 
 
   // --------------------------------------------------------------------

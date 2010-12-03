@@ -48,11 +48,11 @@
 /* Task Hello
  * this task takes an integer n and write the value to the std::cout stream.
  */
-struct TaskHello : public ka::Task<1>::Signature<int> {};
+struct TaskHello : public ka::Task<1>::Signature<double> {};
 
 template<>
 struct TaskBodyCPU<TaskHello> {
-  void operator() ( int n )
+  void operator() ( double n )
   {
     std::cout << "Hello World !, n=" << n << std::endl;
   }
@@ -64,8 +64,8 @@ struct TaskBodyCPU<TaskHello> {
 struct doit {
   void operator()(int argc, char** argv )
   {
-    int n = 3.1415;
-    if (argc >1) n = atoi(argv[1]);
+    double n = 3.1415;
+    if (argc >1) n = atof(argv[1]);
     ka::Spawn<TaskHello>()( n );
   }
 };
