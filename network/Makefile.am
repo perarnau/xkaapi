@@ -20,6 +20,8 @@ libkanet_la_LDFLAGS = -version-info 1:0:1 $(KANETLIB_BUILD_LDFLAGS)
 include_HEADERS=\
 	kanet_instr.h \
 	kanet_channel.h \
+	kanet_types.h\
+	kanet_network.h\
 	kanet_device.h
 
 libkanet_la_SOURCES=\

@@ -171,7 +171,7 @@ struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
 
   static kaapi_format_t* registerformat_dynamic()
   {
-#warning "Here: todo !!!"
+//#warning "Here: todo !!!"
     // select at compile time between static format or dynamic format if one of the parameters
     // has variable size (array etc...
     

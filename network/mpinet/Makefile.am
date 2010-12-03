@@ -18,8 +18,11 @@ libkadev_mpinet_la_LDFLAGS = -version-info 1:0:1 $(KAMPINETLIB_BUILD_LDFLAGS) -L
 include_HEADERS=
 
 libkadev_mpinet_la_SOURCES=\
+	kampinet_init.h \
 	kampinet_init.cpp \
+	kampinet_device.h \
 	kampinet_device.cpp \
+	kampinet_channel.h \
 	kampinet_channel.cpp \
 	kampinet_skel.cpp \
 	$(include_HEADERS)

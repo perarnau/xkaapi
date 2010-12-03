@@ -18,9 +18,12 @@ libkadev_gasnet_la_LDFLAGS = -version-info 1:0:1 $(KAGASNETLIB_BUILD_LDFLAGS) $(
 include_HEADERS=
 
 libkadev_gasnet_la_SOURCES=\
+	kagasnet_init.h \
 	kagasnet_init.cpp \
+	kagasnet_device.h \
 	kagasnet_device.cpp \
 	kagasnet_devicefactory.cpp \
+	kagasnet_channel.h \
 	kagasnet_channel.cpp \
 	kagasnet_skel.cpp \
 	$(include_HEADERS)
