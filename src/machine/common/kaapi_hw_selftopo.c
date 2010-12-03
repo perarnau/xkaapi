@@ -73,7 +73,7 @@ static int kaapi_cpuset2kids(
   return cnt;
 }
 
-#if 1//defined(KAAPI_DEBUG)
+#if defined(KAAPI_DEBUG)
 static const char* kaapi_kids2string(
  int nkids,
  kaapi_processor_id_t* kids
@@ -261,7 +261,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   }
   kproc->hlevel.depth = depth;
   
-#if 1
+#if 0
   printf("\nNew topo for procesor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {

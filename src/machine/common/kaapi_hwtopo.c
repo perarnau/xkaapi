@@ -114,7 +114,7 @@ static size_t kaapi_hw_countcousin( hwloc_obj_t obj )
 }
 
 
-#if 1
+#if 0
 static const char* kaapi_kids2string(
  int nkids,
  kaapi_processor_id_t* kids
