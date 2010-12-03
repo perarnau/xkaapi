@@ -104,6 +104,8 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
       }
       level = &kproc->hlevel.levels[arg->depth_min];
     }
+    printf("kid:%i, cpu:%i mindepth:%i\n", kproc->kid, kproc->cpuid, arg->depth_min);
+
     /* always used with -1 */
     ++arg->depth_min;
   }
