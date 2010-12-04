@@ -26,16 +26,16 @@ AC_CONFIG_HEADERS([config.h])
 AMX_SILENT_RULES([AM_DEFAULT_VERBOSITY=0])
 
 dnl Sanity checks on prefix : do not install kaapi in the source tree
-dnl or in the build tree
+dnl nor in the build tree
 if test -d "$prefix" ; then
    prefix_pwd=`cd $prefix ; pwd`
    if test x"$prefix_pwd" = x`test -n "$srcdir" && cd "$srcdir" ; pwd` ; then
       AC_MSG_WARN([Invalid installation prefix '$prefix':])
-      AC_MSG_ERROR([X-KAAPI cannot be installed at the root of the source directory])
+      AC_MSG_ERROR([KAAPI cannot be installed at the root of the source directory])
    fi
    if test x"$prefix_pwd" = x`test -n "$builddir" && cd "$builddir" ; pwd` ; then
       AC_MSG_WARN([Invalid installation prefix '$prefix':])
-      AC_MSG_ERROR([X-KAAPI cannot be installed at the root of the build directory])
+      AC_MSG_ERROR([KAAPI cannot be installed at the root of the build directory])
    fi
 fi
 
