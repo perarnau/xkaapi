@@ -5,6 +5,8 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
+if KAAPI_API_KAAPIXX
+
 lib_LTLIBRARIES=libkaapi++.la
 
 libkaapi___la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXLIB_BUILD_CPPFLAGS)
@@ -87,3 +89,4 @@ check_headers_LIBS=$(KAAPIXXPROGS_BUILD_LDFLAGS) $(KAAPIXXPROGS_BUILD_LIBS)
 
 include ../check-headers.am
 
+endif

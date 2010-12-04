@@ -43,16 +43,27 @@ dnl do not change order of --with and --enable options
 AC_PRESERVE_HELP_ORDER
 
 dnl ----------------------------------------------------------------
-dnl Checks for programs.
+dnl Checks for programs and compilers options
 dnl ----------------------------------------------------------------
 PKG_PROG_PKG_CONFIG
-AC_PROG_CXX
 AC_PROG_CC
+AC_PROG_CC_C99
 AM_PROG_CC_C_O
-AC_PROG_F77
 AC_PROG_INSTALL
 ACX_PROG_CCACHE_CC
+AC_PROG_CXX
 ACX_PROG_CCACHE_CXX
+AC_PROG_F77
+
+AC_MSG_CHECKING([whether $CXX works])
+AC_LANG_PUSH([C++])
+AC_COMPILE_IFELSE(
+            [AC_LANG_PROGRAM([],[return 0;])],
+            [have_cxx=yes],
+            [have_cxx=no])
+AC_LANG_POP([C++])
+AC_MSG_RESULT([$have_cxx])
+AM_CONDITIONAL([HAVE_CXX],[test $have_cxx = yes])
 
 # if next line is comented out, we can create only dynamic libraries be default
 # AC_DISABLE_STATIC
@@ -68,24 +79,72 @@ AX_CHECK_COMPILER_FLAGS([-fnested-functions],
   [NESTED_FUNCTIONS_CFLAGS="-fnested-functions"])
 AC_SUBST([NESTED_FUNCTIONS_CFLAGS])
 
-
-AX_CHECK_COMPILER_STD([STD_C99], [C], [-std=c99], [], [
-   STD_C99_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
+AC_LANG_PUSH([C])
+save_CC="$CC"
+AC_PROG_CC_C99
+STD_C99_FLAGS=""
+if test x"$ac_cv_prog_cc_c99" = xno ; then
    AC_MSG_WARN([Unable to select C99 standard with the current C compiler.])
    AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
-])
-AX_CHECK_COMPILER_STD([STD_CXX0X], [C++], [-std=c++0x], [], [
-   STD_CXX0X_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
-   AC_MSG_WARN([Unable to select C++0X standard with the current C++ compiler.])
-   AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
-])
+   STD_C99_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
+   STD_C99=no
+else
+   for arg in $CC ; do
+     AS_CASE([" $save_CC "],
+       [*" $arg "*], [],
+       [STD_C99_FLAGS="$STD_C99_FLAGS $arg"])
+   done
+   AX_CHECK_COMPILER_FLAGS([-pedantic],
+     [ STD_C99_FLAGS="$STD_C99_FLAGS -pedantic" ])
+   STD_C99=yes
+fi 
+AC_SUBST([STD_C99_FLAGS])
+AM_CONDITIONAL([STD_C99], [test x"$STD_C99" = xyes])
+CC="$save_CC"
+AC_LANG_POP([C])
 
-CXXFLAGS_save="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS $STD_CXX0X_FLAGS"
-AC_CXX_LAMBDA()
+STD_CXX0X_FLAGS=""
+STD_CXX0X=no
+if test $have_cxx = yes ; then
+  AC_LANG_PUSH([C++])
+  AX_CHECK_COMPILER_FLAGS([-std=c++0x],
+    [STD_CXX0X=yes
+     AX_CHECK_COMPILER_FLAGS([-pedantic],
+       [STD_CXX0X_FLAGS="-std=c++0x -pedantic"],
+       [STD_CXX0X_FLAGS="-std=c++0x"])
+    ],
+    [
+     STD_CXX0X_FLAGS="-D_KAAPI_DISABLE_WARNINGS"
+     AC_MSG_WARN([Unable to select C++0X standard with the current C++ compiler.])
+     AC_MSG_WARN([Pedantic mode is disabled and some warning and/or errors can occur])
+    ])
+  AC_LANG_POP([C++])
+fi
+AC_SUBST([STD_CXX0X_FLAGS])
+AM_CONDITIONAL([STD_CXX0X], [test x"$STD_CXX0X" = xyes])
+
+if test $have_cxx = yes ; then
+  CXXFLAGS_save="$CXXFLAGS"
+  CXXFLAGS="$CXXFLAGS $STD_CXX0X_FLAGS"
+  AC_CXX_LAMBDA()
+  CXXFLAGS="$CXXFLAGS_save"
+fi
 AM_CONDITIONAL([KAAPI_CXX_HAS_LAMBDA],[test x"$ac_cv_cxx_lambda" = x"yes"])
-CXXFLAGS="$CXXFLAGS_save"
 
+# add warning flags to the C and C++ compilers
+AX_CFLAGS_WARN_ALL([AM_CFLAGS])
+if test $have_cxx = yes ; then
+  AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
+fi
+
+# check for automatic macros that are used by KAAPI
+AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
+  AC_MSG_WARN([The '__SIZEOF_POINTER__' macro is not defined by the compiler. Support for such old compilers will be removed in a future release])
+])
+
+dnl ----------------------------------------------------------------
+dnl Define libs and progs created by this software
+dnl ----------------------------------------------------------------
 ACX_LIB_NEW_LIB([KAAPILIB], [-L\${libdir} -lkaapi], [kaapi])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])
 
@@ -107,19 +166,96 @@ ACX_LIB_NEW_PRG([KASTLPROGS])
 ACX_LIB_NEW_PRG([ATHAPROGS])
 ACX_LIB_NEW_PRG([KFORTRANPROGS])
 
-# add warning flags to the C and C++ compilers
-AX_CFLAGS_WARN_ALL([AM_CFLAGS])
-AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
+default_experimental=no
 
-# check for automatic macros that are used by KAAPI
-AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
-  AC_MSG_WARN([The '__SIZEOF_POINTER__' macro is not defined by the compiler. Support for such old compilers will be removed in a future release])
-])
+dnl -----------------------------------------------------------------------
+dnl -----------------------------------------------------------------------
+dnl -----------------------------------------------------------------------
+dnl -----------------------------------------------------------------------
+dnl Selection of APIs
+dnl -----------------------------------------------------------------------
+dnl -----------------------------------------------------------------------
+dnl -----------------------------------------------------------------------
+dnl -----------------------------------------------------------------------
+dnl -----------------------------------------------------------------------
 
-dnl ----------------------------------------------------------------
-dnl Force flag to be empty...
-dnl ----------------------------------------------------------------
+dnl -----------------------------------------------------------------------
+dnl The "--enable-api-fortran"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([api-fortran], [compile fortran API [[experimental]]],
+  [fortran API compiled], [$default_experimental],
+  [
+    AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
+  ],
+  [ 
+    ACX_LIB_NOLIB([FORTRAN])
+  ],
+  [KAAPI_API_FORTRAN],
+  [
+    if test x"$F77" = x; then
+      FEATURE_DISABLE
+    else
+      ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
+        AC_F77_LIBRARY_LDFLAGS
+        ACX_LIB_FOUND([Libs="$F77LIBS"])
+        FEATURE_ENABLE
+      ],[
+        FEATURE_DISABLE
+      ])
+    fi
+  ])
+ACX_LIB_LINK([KFORTRANLIB], [FORTRAN])
 
+dnl -----------------------------------------------------------------------
+dnl The "--enable-api-kaapi++"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([api-kaapi++], [compile Kaapi++ API],
+  [Kaapi++ API compiled], [yes],
+  [],
+  [],
+  [KAAPI_API_KAAPIXX],
+  [
+    if test "$have_cxx" = no; then
+      AC_MSG_WARN([a C++ compiler is required for Kaapi++ API])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-api-atha"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([api-atha], [compile Athapascan-1 API],
+  [Athapascan-1 API compiled], [yes],
+  [],
+  [],
+  [KAAPI_API_ATHA],
+  [
+    if test "$enable_api_kaapi__" != yes ; then
+      AC_MSG_NOTICE([Kaapi++ API is required for Athapascan-1 API])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-api-kastl"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([api-kastl], [compile KaSTL API],
+  [KaSTL API compiled], [yes],
+  [],
+  [],
+  [KAAPI_API_KASTL],
+  [
+    if test "$have_cxx" = no; then
+      AC_MSG_WARN([a C++ compiler is required for KaSTL API])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
 
 dnl ----------------------------------------------------------------
 dnl Compilation options
@@ -254,19 +390,25 @@ AC_CHECK_HEADERS([stdio.h])
 AC_DEFINE([KAAPI_MAX_ARCH],3,[Maximum number of architectures])
 
 default_max_processors=16
-AC_ARG_ENABLE([max-processors],
-  [AS_HELP_STRING([--enable-max-processors], [Maximum number of processors (default $default_max_processors)])],
-  [], [enable_max_processors=$default_max_processors])
-AS_CASE(["$enable_max_processors"],
-  [yes|no], [
-	AC_MSG_ERROR([A numeric value (or "host") is required for --enable-max-processors])
+KAAPI_FEATURE([max-processors], [Maximum number of processors], [], [$default_max_processors],
+  [], [], [],
+  [ 
+  AS_CASE(["$enable_max_processors"],
+    [host], [
+      AC_MSG_CHECKING([how many processors on this system])
+      value=`getconf _NPROCESSORS_ONLN 2>/dev/null`
+      if test x"$value" = x; then
+        AC_MSG_RESULT([Unknown (using default value)])
+  	FEATURE_SET(["$default_max_processors"])
+      else
+        AC_MSG_RESULT([$value])
+  	FEATURE_SET(["$value"])
+      fi
+    ])
   ],
-  [host], [
-    enable_max_processors=`getconf _NPROCESSORS_ONLN 2>/dev/null`
-    if test x"$enable_max_processors" = x; then
-        AC_MSG_WARN([Cannot use getconf to get the number of processors in this system. Using default value])
-	enable_max_processors=$default_max_processors
-    fi
+  [
+    FEATURE_CASE_VALUE([no,*|yes,*], [AC_MSG_ERROR([A numeric value (or "host") is required for --enable-max-processors])])
+    FEATURE_CASE_VALUE([[[1-9]]*], [])
   ])
 AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
 AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors])
@@ -357,40 +499,6 @@ KAAPI_PKGLIB_CHECK([NUMA extensions], [numa], [NUMA], [no], [KAAPI_USE_NUMA],
     dnl ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-lnuma])
   ])
 ACX_LIB_LINK([KAAPILIB],[NUMA])
-
-
-dnl -----------------------------------------------------------------------
-dnl The "--with-fortran"
-dnl -----------------------------------------------------------------------
-AC_ARG_WITH([fortran],[AS_HELP_STRING([--with-fortran],
-		 [add fortran API, experimental default no])],[],
-  [with_fortran=no]
-)
-AS_CASE([$with_fortran],
-  [yes], [dnl
-    if test x"$F77" = x; then
-      AC_MSG_NOTICE([fortran API disable, because no Fortran compiler found])
-    else
-      AC_MSG_NOTICE([fortran API enable, Fortran compiler found])
-      AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
-      KAAPI_FORTRAN=f
-    fi
-  ], [no], [dnl
-      AC_MSG_NOTICE([fortran API disable])
-  ], [dnl
-    AC_MSG_ERROR([Unknown value '$with_fortran' for --with-fortran option. Aborting.])
-  ])
-AC_SUBST([KAAPI_FORTRAN])
-AM_CONDITIONAL([KAAPI_TARGET_FORTRAN],[test x"$KAAPI_FORTRAN" = x"f"])
-
-if test x"$KAAPI_FORTRAN" = x"f"; then
-  ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
-    AC_F77_LIBRARY_LDFLAGS
-    ACX_LIB_FOUND([Libs="$F77LIBS"])
-  ])
-  ACX_LIB_LINK([KFORTRANLIB], [FORTRAN])
-fi
-
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-cuda"

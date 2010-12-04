@@ -5,6 +5,8 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
+if KAAPI_API_KASTL
+
 kastlincludedir=$(includedir)/kastl
 
 kastlinclude_HEADERS=\
@@ -36,3 +38,6 @@ kastlinclude_HEADERS=\
 	kastl/adjacent_find.h\
 	kastl/adjacent_difference.h\
 	kastl/partial_sum.h
+
+endif
+
