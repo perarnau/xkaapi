@@ -554,7 +554,6 @@ inline const WrapperFormatOperationCumul<T,OpCumul>* WrapperFormatOperationCumul
 
 
 // --------------------------------------------------------------------
-#ifndef KAAPI_USE_IRIX
 #define KAAPI_SPECIALIZED_FORMAT(TYPE)\
 template<>\
 class WrapperFormat<TYPE> : virtual public Format {\
@@ -619,73 +618,6 @@ public:\
   static const WrapperFormat<TYPE>* get_format()\
   { return format; }\
 };
-
-#else
-#define KAAPI_SPECIALIZED_FORMAT(TYPE)\
-template<>\
-class WrapperFormat<TYPE> : virtual public Format {\
-public:\
-  void write( OStream& s, const void* val, size_t count ) const\
-  { s.write( format, OStream::DA, val, count ); }\
-  void read( IStream& s, void* val, size_t count ) const\
-  { s.read( format, OStream::DA, val, count ); }\
-  void* allocate( InterfaceAllocator* a, size_t count ) const\
-  { return a == 0 ? _kaapi_malloc(count*sizeof(TYPE)) : a->allocate(count*sizeof(TYPE)) ; }\
-  void* allocate( size_t count ) const\
-  { return _kaapi_malloc(count*sizeof(TYPE)); }\
-  void deallocate( InterfaceDeallocator* a, void* d, size_t ) const\
-  { if (a ==0) _kaapi_free(d); else a->deallocate(d); }\
-  void deallocate( void* d, size_t ) const\
-  { _kaapi_free(d); }\
-  void cstor(InterfaceAllocator* ,  void* d, size_t count ) const\
-  { TYPE*dd=(TYPE*)d; for (size_t i=0; i<count; ++i) new (&dd[i]) TYPE(0); }\
-  void cstor(void* d, size_t count ) const\
-  { TYPE*dd=(TYPE*)d; for (size_t i=0; i<count; ++i) new (&dd[i]) TYPE(0); }\
-  void cstor( InterfaceAllocator* , void* d, const void* s, size_t count ) const\
-  { TYPE* dd = (TYPE*)d; const TYPE* ss = (TYPE*)s;\
-    for (size_t i=0; i<count; ++i) \
-      new (&dd[i]) TYPE(ss[i]);\
-  }\
-  void cstor( void* d, const void* s, size_t count ) const\
-  { TYPE* dd = (TYPE*)d; const TYPE* ss = (TYPE*)s;\
-    for (size_t i=0; i<count; ++i) \
-      new (&dd[i]) TYPE(ss[i]);\
-  }\
-  void dstor( InterfaceDeallocator* , void*, size_t ) const\
-  { }\
-  void dstor( void*, size_t ) const\
-  { }\
-  void* create( InterfaceAllocator* a, size_t count ) const\
-  { TYPE*d=(TYPE*)(a == 0 ? _kaapi_malloc(count*sizeof(TYPE)) : a->allocate(count*sizeof(TYPE)));\
-    for (size_t i=0; i<count; ++i) new (&d[i]) TYPE(0); return d; }\
-  void* create( size_t count ) const\
-  { TYPE*d=(TYPE*)_kaapi_malloc(count*sizeof(TYPE));\
-    for (size_t i=0; i<count; ++i) new (&d[i]) TYPE(0); return d; }\
-  void destroy( InterfaceDeallocator* a, void* d, size_t ) const\
-  { if (a ==0) _kaapi_free(d); else a->deallocate(d); }\
-  void destroy( void* d, size_t ) const\
-  { _kaapi_free(d); }\
-  void copy( InterfaceAllocator* , void* dest, const void* src, size_t count ) const\
-  { TYPE* ddest = (TYPE*)dest; \
-    const TYPE* dsrc = (const TYPE*)src;\
-    for (size_t i=0; i<count; ++i) \
-      ddest[i] = dsrc[i];\
-  }\
-  void copy( void* dest, const void* src, size_t count ) const\
-  { TYPE* ddest = (TYPE*)dest; \
-    const TYPE* dsrc = (const TYPE*)src;\
-    for (size_t i=0; i<count; ++i) \
-      ddest[i] = dsrc[i];\
-  }\
-  void print( std::ostream& o, const void* t ) const\
-  { o << *(const TYPE*)t; }\
-  WrapperFormat(const std::string& name) : Format(kaapi_get_swid(TYPE),sizeof(TYPE),name) {}\
-  static const WrapperFormat<TYPE>& theformat;\
-  static const WrapperFormat<TYPE>* const format;\
-  static const WrapperFormat<TYPE>* get_format()\
-  { return format; }\
-};
-#endif
 
 // --------------------------------------------------------------------
 #define KAAPI_DECL_SPECIALIZED_FORMAT(TYPE,OBJ)\
@@ -707,7 +639,6 @@ const WrapperFormat<T> NN(\
 /* Used to specialized on Type without << and >> for OStream/IStream
    and ostream
 */
-#ifndef KAAPI_USE_IRIX
 #define KAAPI_SPECIALIZED_VOIDFORMAT(TYPE)\
 template<>\
 class WrapperFormat<TYPE> : virtual public Format {\
@@ -772,73 +703,6 @@ public:\
   static const WrapperFormat<TYPE>* get_format()\
   { return format; }\
 };
-#else
-#define KAAPI_SPECIALIZED_VOIDFORMAT(TYPE)\
-template<>\
-class WrapperFormat<TYPE> : virtual public Format {\
-public:\
-  void write( OStream& , const void* , size_t ) const\
-  { }\
-  void read( IStream& , void* , size_t ) const\
-  { }\
-  void* allocate( InterfaceAllocator* a, size_t count ) const\
-  { return a == 0 ? _kaapi_malloc(count*sizeof(TYPE)) : a->allocate(count*sizeof(TYPE)) ; }\
-  void* allocate( size_t count ) const\
-  { return _kaapi_malloc(count*sizeof(TYPE)); }\
-  void deallocate( InterfaceDeallocator* a, void* d, size_t ) const\
-  { if (a ==0) _kaapi_free(d); else a->deallocate(d); }\
-  void deallocate( void* d, size_t ) const\
-  { _kaapi_free(d); }\
-  void cstor(InterfaceAllocator* ,  void* d, size_t count ) const\
-  { TYPE*dd=(TYPE*)d; for (size_t i=0; i<count; ++i) new (&dd[i]) TYPE; }\
-  void cstor(void* d, size_t count ) const\
-  { TYPE*dd=(TYPE*)d; for (size_t i=0; i<count; ++i) new (&dd[i]) TYPE; }\
-  void cstor( InterfaceAllocator* , void* d, const void* s, size_t count ) const\
-  { TYPE* dd = (TYPE*)d; const TYPE* ss = (TYPE*)s;\
-    for (size_t i=0; i<count; ++i) \
-      new (&dd[i]) TYPE(ss[i]);\
-  }\
-  void cstor( void* d, const void* s, size_t count ) const\
-  { TYPE* dd = (TYPE*)d; const TYPE* ss = (TYPE*)s;\
-    for (size_t i=0; i<count; ++i) \
-      new (&dd[i]) TYPE(ss[i]);\
-  }\
-  void dstor( InterfaceDeallocator* , void*, size_t ) const\
-  { }\
-  void dstor( void*, size_t ) const\
-  { }\
-  void* create( InterfaceAllocator* a, size_t count ) const\
-  { TYPE*d=(TYPE*)(a == 0 ? _kaapi_malloc(count*sizeof(TYPE)) : a->allocate(count*sizeof(TYPE)));\
-    for (size_t i=0; i<count; ++i) new (&d[i]) TYPE; return d; }\
-  void* create( size_t count ) const\
-  { TYPE*d=(TYPE*)_kaapi_malloc(count*sizeof(TYPE));\
-    for (size_t i=0; i<count; ++i) new (&d[i]) TYPE; return d; }\
-  void destroy( InterfaceDeallocator* a, void* d, size_t ) const\
-  { if (a ==0) _kaapi_free(d); else a->deallocate(d); }\
-  void destroy( void* d, size_t ) const\
-  { _kaapi_free(d); }\
-  void copy( InterfaceAllocator* , void* dest, const void* src, size_t count ) const\
-  { TYPE* ddest = (TYPE*)dest; \
-    const TYPE* dsrc = (const TYPE*)src;\
-    for (size_t i=0; i<count; ++i) \
-      ddest[i] = dsrc[i];\
-  }\
-  void copy( void* dest, const void* src, size_t count ) const\
-  { TYPE* ddest = (TYPE*)dest; \
-    const TYPE* dsrc = (const TYPE*)src;\
-    for (size_t i=0; i<count; ++i) \
-      ddest[i] = dsrc[i];\
-  }\
-  void print( std::ostream& , const void*  ) const\
-  { }\
-  WrapperFormat(const std::string& name) : Format(kaapi_get_swid(TYPE),sizeof(TYPE),name) {}\
-  static const WrapperFormat<TYPE>& theformat;\
-  static const WrapperFormat<TYPE>* const format;\
-  static const WrapperFormat<TYPE>* get_format()\
-  { return format; }\
-};
-#endif
-
 
 KAAPI_SPECIALIZED_FORMAT(bool)
 KAAPI_SPECIALIZED_FORMAT(char)
