@@ -48,7 +48,7 @@
 #include <iostream>
 #include <string>
 #include <limits.h>
-#if defined(KAAPI_USE_ARCH_IA32) || defined(KAAPI_USE_ARCH_IA64)
+#if defined(__i386__) || defined(__i386__) || defined(__ia64__)
 #  ifndef rdtsc
 #    define rdtsc(low,high) \
        __asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))

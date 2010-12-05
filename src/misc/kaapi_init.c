@@ -49,7 +49,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#if defined (_WIN32) || defined(KAAPI_USE_APPLE)
+#if defined (_WIN32) || defined(__APPLE__)
 #include <sys/sysctl.h>
 #endif
 #include <unistd.h>
@@ -121,9 +121,9 @@ int kaapi_setup_param(
   const char* wsselect;
   
   /* compute the number of cpu of the system */
-#if defined(KAAPI_USE_LINUX)
+#if defined(__linux__)
   kaapi_default_param.syscpucount = sysconf(_SC_NPROCESSORS_CONF);
-#elif defined(KAAPI_USE_APPLE)
+#elif defined(__APPLE__)
   {
     int mib[2];
     size_t len;
@@ -137,7 +137,7 @@ int kaapi_setup_param(
   GetSystemInfo(&sys_info);
   kaapi_default_param.syscpucount = sys_info.dwNumberOfProcessors;
 #else
-  #warning "Could not compute number of physical cpu of the system. Default value==1"
+#  warning "Could not compute number of physical cpu of the system. Default value==1"
   kaapi_default_param.syscpucount = 1;
 #endif
   /* adjust system limit, if library is compiled with greather number of processors that available */

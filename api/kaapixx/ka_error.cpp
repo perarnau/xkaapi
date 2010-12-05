@@ -49,7 +49,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <iomanip>
-#if not defined(KAAPI_USE_ARCH_PPC) && not defined(_WIN32)
+#if not defined(__APPLE__) && not defined(_WIN32)
 #include <execinfo.h>
 #endif
 #include <cxxabi.h>
@@ -60,7 +60,7 @@ namespace ka {
 // --------------------------------------------------------------------
 void print_backtrace_c()
 {
-#if not defined(KAAPI_USE_ARCH_PPC)  && not defined(_WIN32)
+#if not defined(__APPLE__)  && not defined(_WIN32)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size;
@@ -80,7 +80,7 @@ void print_backtrace_c()
 // --------------------------------------------------------------------
 void print_backtrace_cpp()
 {
-#if not defined(KAAPI_USE_ARCH_PPC)  && not defined(_WIN32)
+#if not defined(__APPLE__)  && not defined(_WIN32)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size=0;

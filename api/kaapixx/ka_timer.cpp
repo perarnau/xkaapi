@@ -55,7 +55,7 @@ extern "C" {
 #endif
 # include <stdio.h>
 # include <unistd.h>
-#if defined( KAAPI_USE_DARWIN ) || defined(KAAPI_USE_IPHONEOS)
+#if defined(__APPLE__) || defined(KAAPI_USE_IPHONEOS)
 # include <sys/types.h>
 # include <sys/sysctl.h>
 #endif
@@ -102,7 +102,7 @@ const std::string& LogicalTimer::unit()
 // --------------------------------------------------------------------
 HighResTimer::type HighResTimer::gettick()
 {
-#if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64)
+#if defined(__PPC__) || defined(__PPC64__)
   /* Linux or Mac */
   register unsigned long t_u;
   register unsigned long t_l;
@@ -112,11 +112,11 @@ HighResTimer::type HighResTimer::gettick()
   retval <<= 32UL;
   retval |= t_l;
   return retval;
-#elif defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#elif defined(__i386__) || defined(__x86_64__)
   uint32_t lo,hi;
   __asm__ volatile ( "rdtsc" : "=a" ( lo ) , "=d" ( hi ) );
   return (uint64_t)hi << 32UL | lo;
-#elif defined(KAAPI_USE_ARCH_ITA)
+#elif defined(__ia64__)
   register unsigned long ret;
   __asm__ __volatile__ ("mov %0=ar.itc" : "=r"(ret));
   return ret;
@@ -146,7 +146,7 @@ void HighResTimer::calibrate()
 #if defined(USE_SOFT_CALIBRATION)
   size_t count=0;
   double t00=0, t11=0;
-#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  if defined(__PPC__) || defined(__PPC64__) || defined(__i386__) || defined(__x86_64__)
   HighResTimer::type hrt0, hrt1, hrt2;
   hrt0 = HighResTimer::gettick();
 #  else 
@@ -155,7 +155,7 @@ void HighResTimer::calibrate()
   /* loop 1 */
   for (int i=0; i<128; ++i)
     t00 += WallTimer::gettime();
-#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  if defined(__PPC__) || defined(__PPC64__) || defined(__i386__) || defined(__x86_64__)
   hrt1 = HighResTimer::gettick();
 #  endif
 
@@ -165,11 +165,11 @@ void HighResTimer::calibrate()
     for (int j=0; j<100000; ++j)
       count++;
   t11 = WallTimer::gettime();
-#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  if defined(__PPC__) || defined(__PPC64__) || defined(__i386__) || defined(__x86_64__)
   hrt2 = HighResTimer::gettick();
 #  endif
 
-#  if defined(KAAPI_USE_ARCH_PPC) || defined(KAAPI_USE_ARCH_PPC64) || defined(KAAPI_USE_ARCH_X86) || defined(KAAPI_USE_ARCH_IA64)
+#  if defined(__PPC__) || defined(__PPC64__) || defined(__i386__) || defined(__x86_64__)
   /* hrt0: ticks for 128 gettimeofday */
   hrt0 = hrt1 - hrt0;
 
@@ -184,7 +184,7 @@ void HighResTimer::calibrate()
 
 #else // NO SOFT_CALIBRATION
 
-#  if defined( KAAPI_USE_DARWIN ) || defined(KAAPI_USE_IPHONEOS)
+#  if defined(__APPLE__) || defined(KAAPI_USE_IPHONEOS)
   int mib[2];
   size_t len;
   unsigned long mhz;
@@ -193,7 +193,7 @@ void HighResTimer::calibrate()
   len =sizeof(mhz);
   sysctl(mib, 2, &mhz, &len, NULL, 0);
   HighResTimer::dtick_per_s = double(mhz); /* it seems that tick freq is about 2/3e9 of the frequency on PowerbOOK*/
-#  elif defined(KAAPI_USE_LINUX)
+#  elif defined(__linux__)
   /* open cpuinfo and scan cpu Mhz: */
   FILE* file = fopen("/proc/cpuinfo","r");
   double mhz = 1.0;

@@ -46,39 +46,39 @@
 #include "kaapi_impl.h"
 
 #if defined(KAAPI_USE_SETJMP)
-#include <setjmp.h>
+#  include <setjmp.h>
 
-#if defined(KAAPI_USE_APPLE) || defined(KAAPI_USE_IPHONEOS) /* DARWING */
+#  if defined(__APPLE__) || defined(KAAPI_USE_IPHONEOS) /* DARWING */
 
-#if defined(KAAPI_USE_ARCH_PPC)
+#    if defined(__PPC__)
 /* update stack pointer of the save context and the return address used by _longjmp
    in order to pass the function to call as it is returned from setjmp.
    The first argument of the user called function is the parameter of _longjmp which
    is always this.
 */
-#define KAAPI_SAVE_SPACE (16)
-#define kaapi_update_context( jb, f, sp, bz )\
+#      define KAAPI_SAVE_SPACE (16)
+#      define kaapi_update_context( jb, f, sp, bz )\
   ((unsigned long*)jb)[0]  = (((unsigned long)sp)+bz-KAAPI_SAVE_SPACE) & ~0x1f;\
   ((unsigned long*)jb)[21] = (unsigned long)(f);
 
-#define get_sp() \
+#      define get_sp() \
 ({ \
   register unsigned long sp asm("r1"); \
   sp; \
 })
 
-#elif defined(KAAPI_USE_ARCH_ARM)
+#    elif defined(__arm__)
 /* update stack pointer of the save context and the return address used by _longjmp
    in order to pass the function to call as it is returned from setjmp.
    The first argument of the user called function is the parameter of _longjmp which
    is always this.
 */
-#define KAAPI_SAVE_SPACE (16)
-#define kaapi_update_context( jb, f, sp, bz )\
+#      define KAAPI_SAVE_SPACE (16)
+#      define kaapi_update_context( jb, f, sp, bz )\
   ((unsigned long*)jb)[7]  = (((unsigned long)sp)+bz-KAAPI_SAVE_SPACE) & ~0x1f;\
   ((unsigned long*)jb)[8] = ((unsigned long)(f));
 
-#define get_sp() \
+#      define get_sp() \
 ({ \
   register unsigned long sp asm("r13"); \
   sp; \
@@ -86,17 +86,17 @@
 
 
  /* */
-#elif defined(KAAPI_USE_ARCH_X86)
+#    elif defined(__i386__) || defined(__x86_64__)
 
 /* update stack pointer of the save context and the return address used by _longjmp
    in order to pass the function to call as it is returned from setjmp.
    The first argument of the user called function is the parameter of _longjmp which
    is always this.
 */
-#define KAAPI_SAVE_SPACE (16+4)/*l ajout de 4+4*nb_arg une fois 
+#      define KAAPI_SAVE_SPACE (16+4)/*l ajout de 4+4*nb_arg une fois 
                                  l allignement sur 16 est effectue 
                                  pour l emplacement de l adresse de retour*/
-#define kaapi_update_context( jb, f, sp, bz )\
+#      define kaapi_update_context( jb, f, sp, bz )\
   ((unsigned long*)jb)[8]  = (((unsigned long)sp)+bz-KAAPI_SAVE_SPACE);\
   ((unsigned long*)jb)[9]  = ((unsigned long*)jb)[8];\
   ((unsigned long*)jb)[10] = (unsigned long)0x1f;\
@@ -105,14 +105,14 @@
   ((unsigned long*)jb)[17] = (unsigned long)0x37;\
   ((unsigned long*)jb)[12] = (unsigned long)(f);
 
-#define get_sp() \
+#      define get_sp() \
 ({ \
   register unsigned long sp asm("esp"); \
   sp; \
 })
 
-#endif /* PPC and ARM and IA32  */
-#endif /* KAAPI_USE_APPLE) || defined(KAAPI_USE_IPHONEOS */
+#    endif /* PPC and ARM and IA32  */
+#  endif /* __APPLE__ || defined(KAAPI_USE_IPHONEOS */
 #endif /* KAAPI_USE_SETJMP */
 
 
@@ -163,11 +163,11 @@ static void __attribute__((unused)) kaapi_trampoline_context ( kaapi_thread_cont
 #if defined(KAAPI_USE_UCONTEXT)
   kaapi_thread_context_t* ctxt __attribute__((unused))= shouldbe_ctxt;
 #else
-#if defined(KAAPI_USE_APPLE) && defined(KAAPI_USE_ARCH_PPC)
+#if defined(__APPLE__) && defined(__PPC__)
   /* should be parameter, but ... ? */
   kaapi_thread_context_t* ctxt = ({ register kaapi_thread_context_t* arg0 asm("r3"); arg0; });
 
-#elif defined(KAAPI_USE_APPLE) && defined(KAAPI_USE_ARCH_X86) 
+#elif defined(__APPLE__) && (defined(__i386) || defined(__x86_64__))
   /* should be parameter, but ... ? */
   register kaapi_thread_context_t* ctxt;
   __asm__ ("movl %%eax, %0;"
@@ -179,10 +179,10 @@ static void __attribute__((unused)) kaapi_trampoline_context ( kaapi_thread_cont
   /*some problems with this. But without it doesn't do anything, so it is
    * better*/
 #elif defined(KAAPI_USE_IPHONEOS) 
-#  if defined(KAAPI_USE_ARCH_ARM) 
+#  if defined(__arm__) 
   kaapi_thread_context_t* ctxt = ({ register kaapi_thread_context_t* arg0 asm("r0"); arg0; });
   ctxt = shouldbe_ctxt;
-#  elif defined(KAAPI_USE_ARCH_X86) 
+#  elif defined(__i386__) || defined(__x86_64__) 
   kaapi_thread_context_t* ctxt = ({ register kaapi_thread_context_t* arg0 asm("eax"); arg0; });
 #  else
 #    warning "error for iPhoneOS"

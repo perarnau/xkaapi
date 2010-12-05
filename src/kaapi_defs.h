@@ -51,7 +51,6 @@ extern "C" {
 #endif
 
 #ifdef __linux__
-#  define KAAPI_USE_LINUX 1
 #  ifdef HAVE_UCONTEXT_H
 #    define KAAPI_USE_UCONTEXT
 #  elif HAVE_SETJMP_H
@@ -64,43 +63,16 @@ extern "C" {
 #  include <libkern/OSAtomic.h>
 #endif
 
-#if !defined(KAAPI_USE_APPLE)
-#  ifdef __APPLE__
-#    define KAAPI_USE_APPLE 1
-#    ifdef HAVE_SETJMP_H
-#      define KAAPI_USE_SETJMP
-#    elif HAVE_UCONTEXT_H
-#      define KAAPI_USE_UCONTEXT
-#    endif
+#ifdef __APPLE__
+#  ifdef HAVE_SETJMP_H
+#    define KAAPI_USE_SETJMP
+#  elif HAVE_UCONTEXT_H
+#    define KAAPI_USE_UCONTEXT
 #  endif
 #endif
 
-#ifdef __i386__
-#  define KAAPI_USE_ARCH_X86 1
-#endif
-
-#ifdef __x86_64
-#  define KAAPI_USE_ARCH_X86_64 1
-#  define KAAPI_USE_ARCH_X86 1
-#endif
-
-#ifdef __ia64__
-#  define KAAPI_USE_ARCH_IA64 1
-#endif
-
-#ifdef __PPC
-#  define KAAPI_USE_ARCH_PPC 1
-#endif
-
-#ifdef __arm
-#  define KAAPI_USE_ARCH_ARM 1
-#endif
- 
-#ifdef __sparc__
-#  error "Unsupported Architecture"
-#endif
-
-#ifdef __mips
+#if not (defined(__i386__) || defined(__x86_64__) || defined(__ia64__) || \
+	 defined(__PPC__) || defined(__PPC64__) || defined(__arm__))
 #  error "Unsupported Architecture"
 #endif
 

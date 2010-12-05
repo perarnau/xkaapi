@@ -54,7 +54,7 @@
 #include <arpa/inet.h>
 #endif
 
-#if defined(KAAPI_USE_LINUX)
+#if defined(HAVE_NETINET_IN_H)
 #include <netinet/in.h>
 #endif
 

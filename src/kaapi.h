@@ -239,7 +239,7 @@ static inline void kaapi_mem_barrier()
 
 #else
 #  error "Undefined barrier"
-#endif /* KAAPI_USE_APPLE, KAAPI_USE_LINUX */
+#endif
 
 
 /* ========================================================================== */

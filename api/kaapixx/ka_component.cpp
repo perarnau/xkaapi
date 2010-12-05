@@ -156,10 +156,10 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
 {
   static bool is_called = false; if (is_called) return 0; is_called = true;
 
-#if defined(KAAPI_USE_APPLE) || defined(KAAPI_USE_IPHONEOS)
+#if defined(__APPLE__) || defined(KAAPI_USE_IPHONEOS)
   /* seed for rand */
   sranddev();
-#elif defined(KAAPI_USE_LINUX) || defined (_WIN32)
+#elif defined(__linux__) || defined (_WIN32)
   srand( getpid() );
 #else
 #error "No implemented"
