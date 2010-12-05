@@ -47,17 +47,6 @@
 #ifndef KAAPI_PROCINFO_H_INCLUDED
 # define KAAPI_PROCINFO_H_INCLUDED
 
-
-#if 0 /* unit */
-typedef unsigned int kaapi_processor_id_t;
-#define KAAPI_MAX_PROCESSOR 32
-#define KAAPI_PROC_TYPE_CPU 0
-#define KAAPI_PROC_TYPE_GPU 1
-/* #else */
-/* #include "kaapi_impl.h" */
-#endif /* unit */
-
-
 typedef struct kaapi_procinfo
 {
   struct kaapi_procinfo* next;

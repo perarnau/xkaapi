@@ -688,19 +688,10 @@ public:\
 #endif
 
 // --------------------------------------------------------------------
-#if (__GNUC__ < 4 ) && !defined(KAAPI_USE_DARWIN) && !defined(KAAPI_USE_ARCH_IA64) && !defined(KAAPI_USE_ARCH_ITA)
-#define KAAPI_DECL_SPECIALIZED_FORMAT(TYPE,OBJ)\
-template<>\
-const WrapperFormat<TYPE>& WrapperFormat<TYPE>::theformat = OBJ;\
-template<>\
-const WrapperFormat<TYPE>* const WrapperFormat<TYPE>::format \
-  = &WrapperFormat<TYPE>::theformat;
-#else
 #define KAAPI_DECL_SPECIALIZED_FORMAT(TYPE,OBJ)\
 const WrapperFormat<TYPE>& WrapperFormat<TYPE>::theformat = OBJ;\
 const WrapperFormat<TYPE>* const WrapperFormat<TYPE>::format \
   = &WrapperFormat<TYPE>::theformat;
-#endif
 
 
 // --------------------------------------------------------------------

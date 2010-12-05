@@ -184,9 +184,7 @@ dnl The "--enable-api-fortran"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-fortran], [compile fortran API [[experimental]]],
   [fortran API compiled], [$default_experimental],
-  [
-    AC_DEFINE(KAAPI_USE_FORTRAN, 1, [Define to use Fortran API])
-  ],
+  [ ],
   [ 
     ACX_LIB_NOLIB([FORTRAN])
   ],
