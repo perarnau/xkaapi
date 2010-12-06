@@ -48,20 +48,11 @@
 #include <iostream>
 #include <string>
 #include <limits.h>
-#if defined(KAAPI_USE_ARCH_IA32) || defined(KAAPI_USE_ARCH_IA64)
-#  ifndef rdtsc
-#    define rdtsc(low,high) \
-       __asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))
-#  endif
-#endif
 #include <sys/time.h>
 #if not defined (_WIN32)
 #include <sys/resource.h>
 #endif
 #include <unistd.h>
-#ifdef KAAPI_USE_IRIX
-#include <time.h> // clock
-#endif
 
 namespace ka {
 
@@ -220,9 +211,6 @@ protected:
   friend class Init;
   static void calibrate();
   static uint64_t latency;
-#ifdef KAAPI_USE_IRIX
-  static struct timespec tspec;
-#endif
   type  _delta;
 };
 

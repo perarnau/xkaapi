@@ -21,6 +21,9 @@ auto my_lambda_func = [&](int x) { return x; };
 ])
 if test "$ac_cv_cxx_lambda" = yes; then
   AC_DEFINE(HAVE_CXX_LAMBDA,,[define if the compiler supports lambda expressions])
+  $1
+else :
+  $2
 fi
 ])
 

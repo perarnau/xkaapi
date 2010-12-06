@@ -88,28 +88,70 @@ dnl ******************************************************************
 dnl ******************************************************************
 dnl ******************************************************************
 
+AC_DEFUN([_KAAPI_FEATURE_SET],[VAR=$1])
+AC_DEFUN([_KAAPI_FEATURE_CASE_VALUE],[ [$1], [$2], ])
+AC_DEFUN([_KAAPI_FEATURE_CASE_YESNO],[dnl
+    FEATURE_CASE_VALUE([no,check], [AC_MSG_NOTICE([$2... no])])
+    FEATURE_CASE_VALUE([no,auto],  [AC_MSG_NOTICE([$2... no])])
+    FEATURE_CASE_VALUE([no,no],    [AC_MSG_NOTICE([$2... no])])
+    FEATURE_CASE_VALUE([no,*],     [AC_MSG_ERROR([$2... no])])
+    FEATURE_CASE_VALUE([check,*],  [AC_MSG_WARN(
+	[Internal error: macro not called for --enable-$1. Please, report this bug])
+	VAR=no
+	AC_MSG_NOTICE([$2... disabled])])
+    FEATURE_CASE_VALUE([yes,*],    [AC_MSG_NOTICE([$2... yes])])
+])
 AC_DEFUN([KAAPI_FEATURE], [dnl
-  dnl 1: description
-  dnl 2: name
-  dnl 3: default (yes/no)
-  dnl 4: COND_NAME
-  dnl 5: right-string help
-  dnl 6: action-if-enabled
-  dnl 7: action-if-not-enabled
+  dnl 1: name
+  dnl 2: right-string help
+  dnl 3: description
+  dnl 4: default (yes/no/check)
+  dnl 5: action-if-enabled
+  dnl 6: action-if-not-enabled
+  dnl 7: COND_NAME
+  dnl 8: check_code
+  dnl 9: verif results
   dnl
-  AC_ARG_ENABLE([$2],
-    [AS_HELP_STRING([--enable-$2], [$5 (default $3)])],
-    [], [enable_$2=$3])
-  if test x"$enable_$2" != x"no"; then
-    AC_MSG_NOTICE([$1... enabled])
-    $6
-  else
-    AC_MSG_NOTICE([$1... disabled])
-    $7
+  m4_pushdef([VAR],[m4_translit([enable_$1], [-+.], [___])])
+  AC_ARG_ENABLE([$1],
+    [AS_HELP_STRING([--enable-$1], [$2 (default $4)])],
+    [], [VAR=$4])
+
+  VAR[]_user="$VAR"
+
+  if test x"$VAR" != x"no"; then
+    m4_pushdef([FEATURE_ENABLE],[VAR=yes])
+    m4_pushdef([FEATURE_SET],m4_defn([_KAAPI_FEATURE_SET]))
+    m4_pushdef([FEATURE_DISABLE],[VAR=no])
+    m4_if([$8],[],[ENABLE_FEATURE],[
+      # Checking if $1 must be enabled
+      $8
+    ])
+    m4_popdef([FEATURE_ENABLE])
+    m4_popdef([FEATURE_SET])
+    m4_popdef([FEATURE_DISABLE])
   fi
-  m4_if([$4],[],[],[
-    AM_CONDITIONAL([$4], [test x"$enable_$2" != x"no"])
+
+  m4_pushdef([FEATURE_CASE_VALUE], m4_defn([_KAAPI_FEATURE_CASE_VALUE]))
+  m4_pushdef([FEATURE_CASE_YESNO], [_KAAPI_FEATURE_CASE_YESNO([$1],[$3])])
+  AS_CASE(["$VAR,$VAR[]_user"],
+    m4_if([$9],[],[FEATURE_CASE_YESNO],[$9])
+    [   AC_MSG_WARN([strange argument $VAR for --enable-$1])
+	VAR=no
+	AC_MSG_NOTICE([$3... disabled])]
+  )
+  m4_popdef([FEATURE_CASE_YESNO])
+  m4_popdef([FEATURE_CASE_VALUE])
+
+  if test x"$VAR" != x"no"; then :
+    $5
+  else :
+    $6
+  fi
+  m4_if([$7],[],[],[
+    AM_CONDITIONAL([$7], [test x"$VAR" != x"no"])
   ])
+  m4_popdef([VAR])
 ])
 
 dnl ******************************************************************

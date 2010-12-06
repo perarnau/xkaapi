@@ -5,7 +5,7 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-if KAAPI_TARGET_FORTRAN
+if KAAPI_API_FORTRAN
 
 lib_LTLIBRARIES=libkaapif.la
 

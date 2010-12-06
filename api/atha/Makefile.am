@@ -5,6 +5,8 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir) -I$(srcdir)/../kaapixx
 
+if KAAPI_API_ATHA
+
 lib_LTLIBRARIES=libatha.la
 
 libatha_la_CPPFLAGS=$(AM_CPPFLAGS) $(ATHALIB_BUILD_CPPFLAGS)
@@ -56,3 +58,4 @@ check_headers_LIBS=$(ATHAPROGS_BUILD_LDFLAGS) $(ATHAPROGS_BUILD_LIBS)
 
 include ../check-headers.am
 
+endif
