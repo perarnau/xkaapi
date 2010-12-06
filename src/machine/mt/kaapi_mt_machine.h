@@ -369,9 +369,6 @@ static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
   return 64+fb;
 }
 
-typedef uint64_t kaapi_bitmap_t[ (KAAPI_MAX_PROCESSOR+63)/64 ];
-typedef uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
-
 #endif
 
 /** \ingroup WS
