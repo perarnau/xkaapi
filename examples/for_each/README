@@ -6,3 +6,5 @@ range to process.
 
 for_each_kaapi_1.c implements the same as above, except a thief can be stolen
 by another thief.
+
+for_each_kastl shows how to use a KASTL algorithm.
