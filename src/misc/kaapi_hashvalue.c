@@ -43,87 +43,50 @@
 ** terms.
 ** 
 */
+
 #include "kaapi_impl.h"
 #include <string.h>
 
-// --------------------------------------------------------------------
-/* source of this function from Paul Hsieh at url
-  http://www.azillionmonkeys.com/qed/hash.html
-
-  On the web page, 2010-10-06:
-  "IMPORTANT NOTE: Since there has been a lot of interest for the code below, 
-  I have decided to additionally provide it under the GPL 2.0 license. 
-  This provision applies to the code below only and not to any other code including 
-  other source archives or listings from this site unless otherwise specified. 
-
-  The GPL 2.0 is not necessarily a more liberal license than my derivative license, 
-  but this additional licensing makes the code available to more developers. 
-  Note that this does not give you multi-licensing rights. 
-  You can only use the code under one of the licenses at a time."
-*/
-#if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) \
-  || defined(_MSC_VER) || defined (__BORLANDC__) || defined (__TURBOC__)
-#  define get16bits(d) (*((const uint16_t *) (d)))
-#endif
-
-#if !defined (get16bits)
-#define get16bits(d) ( (((const uint8_t *)(d))[1] << (uint32_t)8)\
-                       +((const uint8_t *)(d))[0] \
-                     )
-#endif
-
-uint32_t kaapi_hash_value_len(const char * data, int len) 
+#if 0
+uint32_t kaapi_hash_value_len(const char* s, int len)
 {
-  if (data == 0) return 0;
-
-  uint32_t hash = 0, tmp;
-  int rem;
-
-  if (len <= 0) return 0;
-
-  rem = len & 3;
-  len >>= 2;
-
-  /* Main loop */
-  for (;len > 0; len--) {
-      hash  += get16bits (data);
-      tmp    = (get16bits (data+2) << 11) ^ hash;
-      hash   = (hash << 16) ^ tmp;
-      data  += 2*sizeof (uint16_t);
-      hash  += hash >> 11;
-  }
-
-  /* Handle end cases */
-  switch (rem) {
-      case 3: hash += get16bits (data);
-              hash ^= hash << 16;
-              hash ^= data[sizeof (uint16_t)] << 18;
-              hash += hash >> 11;
-              break;
-      case 2: hash += get16bits (data);
-              hash ^= hash << 11;
-              hash += hash >> 17;
-              break;
-      case 1: hash += *data;
-              hash ^= hash << 10;
-              hash += hash >> 1;
-  }
-
-  /* Force "avalanching" of final 127 bits */
-  hash ^= hash << 3;
-  hash += hash >> 5;
-  hash ^= hash << 2;
-  hash += hash >> 15;
-  hash ^= hash << 10;
-
-  return hash;
+  /* fnv */
+  uint32_t h = 2166136261;
+  for (; len; --len, ++s) h = (h * 16777619) ^ *s;
+  return h;
 }
 
-
-uint32_t kaapi_hash_value(const char * data) 
+uint32_t kaapi_hash_value_len(const char* s, int len)
 {
-  if (data == 0) return 0;
+  /* bernstein */
+  uint32_t h = 5381;
+  for (; len; --len, ++s) h = ((h << 5) + h) + *s;
+  return h;
+}
+#endif
 
-  int len = (int)strlen( data );
-  return kaapi_hash_value_len( data, len );
+uint32_t kaapi_hash_value_len(const char* s, int len)
+{
+  /* oat */
+
+  uint32_t h = 0;
+
+  for (; len; ++s, --len)
+  {
+    h += *s;
+    h += (h << 10);
+    h ^= (h >>  6);
+  }
+
+  h += (h <<  3);
+  h ^= (h >> 11);
+  h += (h << 15);
+
+  return h;
+}
+
+uint32_t kaapi_hashvalue(const char* s)
+{
+  if (*s == 0) return 0;
+  return kaapi_hash_value_len(s, strlen(s));
 }
