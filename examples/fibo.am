@@ -12,7 +12,7 @@ if KAAPI_API_ATHA
 FIBO_PRGS+=fibo_atha
 endif
 if KAAPI_API_KAAPIXX
-FIBO_PRGS+=fibo_kaapi++ fibo_kaapi++_opt fibo_kaapi++_sync
+FIBO_PRGS+=fibo_kaapi++  fibo_kaapi++_sync fibo_kaapi++_opt fibo_kaapi++_opt_sync
 endif
 
 check_PROGRAMS+=$(FIBO_PRGS)
