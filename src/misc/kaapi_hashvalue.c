@@ -85,7 +85,7 @@ uint32_t kaapi_hash_value_len(const char* s, int len)
   return h;
 }
 
-uint32_t kaapi_hashvalue(const char* s)
+uint32_t kaapi_hash_value(const char* s)
 {
   if (*s == 0) return 0;
   return kaapi_hash_value_len(s, strlen(s));
