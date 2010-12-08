@@ -45,18 +45,21 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
+
 /**
 */
 kaapi_format_id_t kaapi_format_taskregister_func( 
-        struct kaapi_format_t*       fmt, 
-        kaapi_task_body_t            body,
-        const char*                  name,
-        size_t                       size,
-        size_t                     (*get_count_params)(const struct kaapi_format_t*, const void*),
-        kaapi_access_mode_t        (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-        void*                      (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        struct kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        uint32_t             (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+    struct kaapi_format_t*        fmt, 
+    kaapi_task_body_t             body,
+    const char*                   name,
+    size_t                        size,
+    size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
+    kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+    kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+    const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+    size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();
@@ -74,6 +77,8 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->get_count_params = get_count_params;
   fmt->get_mode_param   = get_mode_param;
   fmt->get_off_param    = get_off_param;
+  fmt->get_access_param = get_access_param;
+  fmt->set_access_param = set_access_param;
   fmt->get_fmt_param    = get_fmt_param;
   fmt->get_size_param   = get_size_param;
   

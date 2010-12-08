@@ -83,6 +83,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   kaapi_assert( fmt->_fmt_params !=0);
   memcpy(fmt->_fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
+  fmt->_size_params = 0;
   if (size_param !=0)
   {
     fmt->_size_params = malloc( sizeof(size_t)*count );
@@ -93,6 +94,8 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->get_count_params=0;
   fmt->get_mode_param  =0;
   fmt->get_off_param   =0;
+  fmt->get_access_param=0;
+  fmt->set_access_param=0;
   fmt->get_fmt_param   =0;
   fmt->get_size_param  =0;
   

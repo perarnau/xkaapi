@@ -63,7 +63,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */
   thread->wcs        = 0;
-  kaapi_sched_initlock(&thread->lock);
+//  kaapi_sched_initlock(&thread->lock);
 
   /* zero all bytes from static_reply until end of sc_data */
   bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );

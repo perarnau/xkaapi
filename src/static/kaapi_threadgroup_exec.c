@@ -84,7 +84,9 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     thgrp->threadctxts[i]->partid = i;
     thgrp->threadctxts[i]->unstealable = 1;/* do not allow threads to steal tasks inside ??? */
 
-    if (kaapi_thread_isready(thgrp->threadctxts[i]))
+    uintptr_t state = kaapi_task_getstate( kaapi_thread_toptask(thgrp->threadctxts[i]) );
+    
+    if (!kaapi_task_state_issteal(state) || kaapi_task_state_isready(state) ) 
     {
       kaapi_sched_lock( &victim_kproc->lock ); 
       kaapi_sched_pushready( victim_kproc, thgrp->threadctxts[i] );
