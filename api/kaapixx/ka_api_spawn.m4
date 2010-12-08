@@ -25,7 +25,7 @@
 
       // here we do not detect a compile time the error without compilation with -DKAAPI_DEBUG 
       // todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure
-      M4_PARAM(`ConvertEffective2InClosure<E$1,F$1,inclosure$1_t>::doit(&arg->f$1, &e$1);
+      M4_PARAM(`ConvertEffective2InClosure<E$1,F$1,inclosure$1_t>::doit(&arg->f$1, e$1);
       ', `', `')
       return clo;
     }

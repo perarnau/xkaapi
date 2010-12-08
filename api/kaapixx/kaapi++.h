@@ -1415,13 +1415,13 @@ namespace ka {
 
   template<class E, class F, class InClosure>
   struct ConvertEffective2InClosure {
-    static void doit(InClosure* inclo, const E* e) { new (inclo) InClosure(*e); }
+    static void doit(InClosure* inclo, const E& e) { new (inclo) InClosure(e); }
   };
 
   template<class F, int dim, class T>
   struct ConvertEffective2InClosure<array<dim,T>, F, Access> {
-    static void doit(Access* inclo, const array<dim,T>* e) 
-    { new (inclo) Access(e); }
+    static void doit(Access* inclo, const array<dim,T>& e) 
+    { new (inclo) Access(&e); }
   };
 
 //  template<class E, class F, class InClosure>
