@@ -160,7 +160,9 @@ int kaapi_setup_param(
   /* workstealing selection function */
   wsselect = getenv("KAAPI_WSSELECT");
   kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
-  if ((wsselect != 0) && (strcmp(wsselect, "workload") ==0))
+  if ((wsselect != 0) && (strcmp(wsselect, "rand") ==0))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+  else if ((wsselect != 0) && (strcmp(wsselect, "workload") ==0))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   else if ((wsselect != 0) && (strcmp(wsselect, "first0") ==0))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand_first0;
