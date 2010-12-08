@@ -162,7 +162,6 @@ int main(int argc, char** argv)
 {
   kaapi_frame_t frame;
   double t0, t1;
-  kaapi_access_t result1;
   long value_result;
   int n;
   int niter;
@@ -190,13 +189,12 @@ int main(int argc, char** argv)
   {
     if (i ==0) t0 = kaapi_get_elapsedtime();
   
-    kaapi_access_init( &result1, &value_result );
 
     task = kaapi_thread_toptask(thread);
     kaapi_task_init( task, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
     argf = kaapi_task_getargst( task, fibo_arg_t );
     argf->n      = n;
-    argf->result = result1;
+    kaapi_access_init( &argf->result, &value_result );
     kaapi_thread_pushtask(thread);
   }
   kaapi_sched_sync( );
@@ -209,7 +207,7 @@ int main(int argc, char** argv)
   argp->delay  = t1-t0;
   argp->n      = n;
   argp->niter  = niter;
-  argp->result = result1;
+  kaapi_access_init( &argp->result, &value_result );
   kaapi_thread_pushtask(thread);
 
   kaapi_sched_sync( );
