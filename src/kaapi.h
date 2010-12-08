@@ -806,8 +806,7 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, uint32_t coun
     note the alignment must be a power of 2 and not 0
     \param align the alignment size, in BYTES
 */
-static inline void* kaapi_thread_pushdata_align
-  (kaapi_thread_t* thread, uint32_t count, uintptr_t align)
+static inline void* kaapi_thread_pushdata_align(kaapi_thread_t* thread, uint32_t count, uintptr_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
   const uintptr_t mask = align - (uintptr_t)1;

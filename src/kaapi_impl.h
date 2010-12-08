@@ -899,6 +899,7 @@ static inline uintptr_t kaapi_task_orstate( kaapi_task_t* task, uintptr_t state 
 #else
     KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
 #endif
+
   return retval;
 }
 
