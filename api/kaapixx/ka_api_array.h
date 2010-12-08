@@ -321,6 +321,11 @@ public:
    : array_rep<1,T>(ir), _range(ir)
   {
   }
+
+  explicit array<1,T>(array<1,T>& a )
+   : array_rep<1,T>(a), _range(a._range)
+  {
+  }
   
   // Access to the (i) element (to rewrite)
   typename rep_t::reference_t operator[] (index_t i) 

@@ -118,7 +118,8 @@ FormatTask::FormatTask(
   const kaapi_access_mode_t   mode_param[],
   const kaapi_offset_t        offset_param[],
   const kaapi_offset_t        offset_version[],
-  const kaapi_format_t*       fmt_param[]
+  const kaapi_format_t*       fmt_param[],
+  const size_t                size_param[]
 ) : Format(0)
 {
   if (fmt ==0)
@@ -133,7 +134,38 @@ FormatTask::FormatTask(
         offset_param,
         offset_version,
         fmt_param,
-/**/    0
+        size_param
+  );
+}
+
+
+// --------------------------------------------------------------------------
+FormatTask::FormatTask( 
+  const std::string&          name,
+  size_t                      size,
+  size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
+  kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+  void*                     (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+  kaapi_access_t            (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+  void                      (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+  const kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+  size_t                    (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+) : Format(0)
+{
+  if (fmt ==0)
+    fmt = new kaapi_format_t;
+  kaapi_format_taskregister_func( 
+        fmt,
+        0, 
+        name.c_str(),
+        size,
+        get_count_params,
+        get_mode_param,
+        get_off_param,
+        get_access_param,
+        set_access_param,
+        get_fmt_param,
+/**/    get_size_param
   );
 }
 

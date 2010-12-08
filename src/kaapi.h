@@ -58,7 +58,7 @@
 #endif
 
 #if !defined(__SIZEOF_POINTER__)
-#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__)
+#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__) || defined(__x86_64__)
 #    define __SIZEOF_POINTER__ 8
 #  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc64__))
 #    define __SIZEOF_POINTER__ 4
@@ -630,8 +630,7 @@ typedef struct kaapi_taskadaptive_result_t {
 /** \ingroup ADAPT
     Get the adaptive result data from stealcontext ktr
 */
-static inline void* kaapi_adaptive_result_data
-(kaapi_stealcontext_t* sc)
+static inline void* kaapi_adaptive_result_data(kaapi_stealcontext_t* sc)
 {
   kaapi_assert_debug(sc->header.ktr);
   return sc->header.ktr->data;
@@ -1767,11 +1766,13 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
         kaapi_task_body_t            body,
         const char*                  name,
         size_t                       size,
-        size_t                     (*get_count_params)(const struct kaapi_format_t*, const void*),
-        kaapi_access_mode_t        (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-        void*                      (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        struct kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        uint32_t             (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+        size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
+        kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+        void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+        void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+        const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK

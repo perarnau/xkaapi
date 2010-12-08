@@ -249,6 +249,7 @@ namespace ka {
   /** format for all kind of task */
   class FormatTask : public Format {
   public:
+    /* task with static format */
     FormatTask( 
       const std::string&          name,
       size_t                      size,
@@ -256,7 +257,21 @@ namespace ka {
       const kaapi_access_mode_t   mode_param[],
       const kaapi_offset_t        offset_param[],
       const kaapi_offset_t        offset_version[],
-      const kaapi_format_t*       fmt_param[]
+      const kaapi_format_t*       fmt_param[],
+      const size_t                size_param[]
+    );
+
+    /* task with dynamic format */
+    FormatTask( 
+      const std::string&          name,
+      size_t                      size,
+      size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
+      kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+      void*                     (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+      kaapi_access_t            (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+      void                      (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+      const struct kaapi_format_t*(*get_fmt_param) (const struct kaapi_format_t*, unsigned int, const void*),
+      size_t                    (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
     );
   };
   
@@ -461,6 +476,23 @@ namespace ka {
   typedef WRITE_P     ACCESS_MODE_WP;
   typedef READWRITE_P ACCESS_MODE_RPWP;
   typedef C_WRITE_P   ACCESS_MODE_CWP;
+  
+  template<class Mode>
+  struct TYPEMODE2VALUE{};
+
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_V>    { enum { value = ACCESS_MODE_V::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_R>    { enum { value = ACCESS_MODE_R::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_W>    { enum { value = ACCESS_MODE_W::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RW>   { enum { value = ACCESS_MODE_RW::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_CW>   { enum { value = ACCESS_MODE_CW::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RP>   { enum { value = ACCESS_MODE_RP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_WP>   { enum { value = ACCESS_MODE_WP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RPWP> { enum { value = ACCESS_MODE_RPWP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_CWP>  { enum { value = ACCESS_MODE_CWP::value}; };
+
+  template<class Mode> 
+  struct IsAccessMode { static const bool value = true; };
+  template<> struct IsAccessMode<ACCESS_MODE_V> { static const bool value = false; };
 
   struct TYPE_INTASK {}; /* internal purpose to define representation of a type in a task */
   struct TYPE_INPROG {}; /* internal purpose to define representation of a type in the user program */
@@ -485,6 +517,20 @@ namespace ka {
   template<class T>
   class pointer_cw;
 
+
+  // --------------------------------------------------------------------
+  template<class T> 
+  struct TraitIsStatic { static const bool value = true; };
+
+} // end of namespace ka
+
+/* for variable length arguments */
+#include "ka_api_array.h"
+
+namespace ka {
+
+  template<int dim, class T> 
+  struct TraitIsStatic<array<dim,T> > { static const bool value = false; };
 
   // --------------------------------------------------------------------
   template<class T>
@@ -770,7 +816,6 @@ namespace ka {
   struct __kaapi_is_function<R (*)(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)> { enum { value = true }; };
 
 
-
   // --------------------------------------------------------------------
   template<class T>
   struct TraitNoDeleteTask {
@@ -814,17 +859,34 @@ namespace ka {
   struct Access : public kaapi_access_t{
     Access( const Access& access ) : kaapi_access_t(access)
     { }
-    template<typename pointer>
-    explicit Access( pointer* p )
-    { kaapi_access_init(this, p); }
-    template<typename pointer>
-    explicit Access( const pointer* p )
-    { kaapi_access_init(this, (void*)p); }
     template<typename T>
     explicit Access( const base_pointer<T>& p )
     { kaapi_access_init(this, p.ptr()); }
+
+#if 0
+    template<typename object>
+    explicit Access( object& p )
+    { kaapi_access_init(this, (void*)&p); }
+
+    template<typename object>
+    explicit Access<const object&>( const object& p )
+    { kaapi_access_init(this, (void*)&p); }
+#endif
+
+#if 1
+    template<typename pointer>
+    explicit Access( pointer* p )
+    { kaapi_access_init(this, p); }
+
+    template<typename pointer>
+    explicit Access( const pointer* p )
+    { kaapi_access_init(this, (void*)p); }
+#endif
+
     operator kaapi_access_t&() 
     { return *this; }
+    void operator=( const kaapi_access_t& a)
+    { data = a.data; version = a.version; }
   };
   
   // --------------------------------------------------------------------
@@ -846,8 +908,11 @@ namespace ka {
        *  TraitFormalParam<T>::is_static retuns true or false if the type does not contains a dynamic set 
        of pointer access.
        
-       *  TraitFormalParam<T>::address_data return the address in the task argument data structure of the i-th data parameter
-       *  TraitFormalParam<T>::address_version return the address in the task argument data structure of the i-th version parameter
+       *  TraitFormalParam<T>::get_data return the address in the task argument data structure of the i-th data parameter
+       *  TraitFormalParam<T>::get_version return the address in the task argument data structure of the i-th version parameter
+       
+       * TraitFormalParam<T>::get_nparam( typeinclosure* ): size_t
+       * TraitFormalParam<T>::is_access( typeinclosure* ): bool
        
       During the creation of task with a formal parameter fi of type Fi, then the task argument data structure
       stores an object of type TraitFormalParam<T>::type_inclosure_t called taskarg->fi.
@@ -865,9 +930,13 @@ namespace ka {
     typedef T                formal_t; 
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return a; }
-    static const void*       address_version( const type_inclosure_t* a ) { return 0; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
+    static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
+//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return 1; }
   };
 
   template<typename T>
@@ -877,9 +946,12 @@ namespace ka {
     typedef T                formal_t; 
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return a; }
-    static const void*       address_version( const type_inclosure_t* a ) { return 0; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
+    static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
+//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static size_t            get_nparam  ( const type_inclosure_t* a ) { return 1; }
   };
 
   template<typename T>
@@ -889,9 +961,12 @@ namespace ka {
     typedef const T&         formal_t; 
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return a; }
-    static const void*       address_version( const type_inclosure_t* a ) { return 0; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
+    static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
+//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
   };
 
   template<typename T>
@@ -901,9 +976,12 @@ namespace ka {
     typedef const T          formal_t; 
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
-    static const bool        is_static = true;
-    static void*             address_data   ( type_inclosure_t* a ) { return a; }
-    static void*             address_version( type_inclosure_t* a ) { return 0; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
+    static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
+//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
   };
 
   template<typename T>
@@ -913,9 +991,10 @@ namespace ka {
 //    typedef pointer<T>       formal_t; 
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+//    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+//    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+//    static size_t            get_nparam( const type_inclosure_t* a ) { return 1; }
   };
 
   template<typename T>
@@ -925,9 +1004,12 @@ namespace ka {
 //    typedef pointer<T>       formal_t; 
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+//    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+//    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+//    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+//    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
 
   template<typename T>
@@ -937,9 +1019,12 @@ namespace ka {
     typedef pointer_r<T>     formal_t; 
     typedef ACCESS_MODE_R    mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
 
   template<typename T>
@@ -949,9 +1034,12 @@ namespace ka {
     typedef pointer_rp<T>    formal_t; 
     typedef ACCESS_MODE_RP   mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
 
   template<typename T>
@@ -961,9 +1049,12 @@ namespace ka {
     typedef pointer_w<T>     formal_t; 
     typedef ACCESS_MODE_W    mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
 
   template<typename T>
@@ -973,9 +1064,12 @@ namespace ka {
     typedef pointer_wp<T>    formal_t; 
     typedef ACCESS_MODE_WP   mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
 
   template<typename T>
@@ -985,9 +1079,12 @@ namespace ka {
     typedef pointer_rw<T>    formal_t; 
     typedef ACCESS_MODE_RW   mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
 
   template<typename T>
@@ -997,9 +1094,12 @@ namespace ka {
     typedef pointer_rpwp<T>  formal_t; 
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
-    static const bool        is_static = true;
-    static const void*       address_data   ( const type_inclosure_t* a ) { return &a->data; }
-    static const void*       address_version( const type_inclosure_t* a ) { return &a->version; }
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };  
 
   template<typename T>
@@ -1015,12 +1115,6 @@ namespace ka {
   template<typename T>
   struct TraitFormalParam<RPWP<T> > : public TraitFormalParam<pointer_rpwp<T> > { };
 
-} // end of namespace ka
-
-/* for variable length arguments */
-#include "ka_api_array.h"
-
-namespace ka {
 
   /* ------ rep of array into a closure      
   */
@@ -1028,9 +1122,9 @@ namespace ka {
   struct arraytype_inclosure_t {
     arraytype_inclosure_t( const array<dim, T>& a ) : _range(a.slice()), _data(a), _version() {}
     operator const range&() const { return _range; }
-    range            _range;
-    array_rep<dim,T> _data;
-    array<dim,T*>    _version; /* only used if the task is stolen */
+    range             _range;
+    array_rep<dim,T>  _data;
+    array_rep<dim,T*> _version; /* only used if the task is stolen */
   private:
     arraytype_inclosure_t() {}
   };
@@ -1202,6 +1296,7 @@ namespace ka {
     typedef ACCESS_MODE_RPWP   mode_t; 
     typedef T                  type_t;
     static const bool          is_static = false;
+    static size_t              get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
   };
 
   template<int dim, typename T>
@@ -1212,9 +1307,17 @@ namespace ka {
     typedef ACCESS_MODE_R             mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                address_data   ( const type_inclosure_t* a ) { return &a->_data; }
-    static const void*                address_version( const type_inclosure_t* a ) { return &a->_version; }
-  };
+    static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->_data[i]; }
+    static const void*                get_version( const type_inclosure_t* a, unsigned int i ) { return &a->_version[i]; }
+    static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = (void*)&a->_data[i]; r->version = (void*)&a->_version[i]; }
+    static void                       set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { if( &a->_data[i] != (type_t*)r->data)
+        a->_data[i] = *(type_t*)r->data; 
+      a->_version[i] = (type_t*)r->version; 
+    }
+    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
+   };
 
   template<int dim, typename T>
   struct TraitFormalParam<array<dim, pointer_w<T> > > { 
@@ -1224,8 +1327,16 @@ namespace ka {
     typedef ACCESS_MODE_W             mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                address_data   ( const type_inclosure_t* a ) { return &a->_data; }
-    static const void*                address_version( const type_inclosure_t* a ) { return &a->_version; }
+    static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->_data[i]; }
+    static const void*                get_version( const type_inclosure_t* a, unsigned int i ) { return &a->_version[i]; }
+    static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = (void*)&a->_data[i]; r->version = (void*)&a->_version[i]; }
+    static void                       set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { if( &a->_data[i] != (type_t*)r->data)
+        a->_data[i] = *(type_t*)r->data; 
+      a->_version[i] = (type_t*)r->version; 
+    }
+    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
   };
 
   template<int dim, typename T>
@@ -1236,9 +1347,17 @@ namespace ka {
     typedef ACCESS_MODE_RW            mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                address_data   ( const type_inclosure_t* a ) { return &a->_data; }
-    static const void*                address_version( const type_inclosure_t* a ) { return &a->_version; }
-  };
+    static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->_data[i]; }
+    static const void*                get_version( const type_inclosure_t* a, unsigned int i ) { return &a->_version[i]; }
+    static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = (void*)&a->_data[i]; r->version = (void*)&a->_version[i]; }
+    static void                       set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { if( &a->_data[i] != (type_t*)r->data)
+        a->_data[i] = *(type_t*)r->data; 
+      a->_version[i] = (type_t*)r->version; 
+    }
+    static size_t                     get_nparam ( const type_inclosure_t* a ) { return a->_range.size(); }
+  };  
 
 
   template<int dim, typename T>
@@ -1289,9 +1408,26 @@ namespace ka {
 
   template<typename UserType>
   struct TraitFormalParam<UserType*> : public 
-       __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::tfp_t
+    __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::tfp_t
   {
   };
+
+
+  template<class E, class F, class InClosure>
+  struct ConvertEffective2InClosure {
+    static void doit(InClosure* inclo, const E* e) { new (inclo) InClosure(*e); }
+  };
+
+  template<class F, int dim, class T>
+  struct ConvertEffective2InClosure<array<dim,T>, F, Access> {
+    static void doit(Access* inclo, const array<dim,T>* e) 
+    { new (inclo) Access(e); }
+  };
+
+//  template<class E, class F, class InClosure>
+//  void ConvertEffective2InClosure(InClosure* inclo, const E* e) { new (inclo) InClosure(*e); };
+  
+//ConvertEffective2InClosure<E$1,F$1,inclosure$1_t>(&arg->f$1, &e$1)
 
   // --------------------------------------------------------------------  
   class DefaultAttribut {
