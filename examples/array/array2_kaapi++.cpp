@@ -98,13 +98,13 @@ struct doit {
     ka::array<1,int> arr(n, data); 
     int res = 0;
 
-    /* be carrefull here: the array equivalent as if each entries have
-       been passed to the task
+    /* be carrefull here: the array is equivalent as if each of its entries has
+       been passed to the task (the formal parameter is array<1,W<int> >).
     */
     ka::Spawn<TaskInit>()( arr[ka::range(0,med)] );
 
-    /* be carrefull here: the array equivalent as if each entries have
-       been passed to the task
+    /* be carrefull here: the array is equivalent as if each of its entries has
+       been passed to the task (the formal parameter is array<1,W<int> >).
     */
     ka::Spawn<TaskInit>()( arr[ka::range(med,n)] );
 
