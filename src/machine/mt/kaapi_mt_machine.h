@@ -202,174 +202,273 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 
 #if defined(KAAPI_USE_BITMAP_REQUEST)
 
-#if (KAAPI_MAX_PROCESSOR <=32)
+#  if (KAAPI_MAX_PROCESSOR == 0)
+#    define KAAPI_MAX_PROCESSOR_GENERIC
+#    define KAAPI_MAX_PROCESSOR_32
+#    define KAAPI_MAX_PROCESSOR_64
+#    define KAAPI_MAX_PROCESSOR_128
+//#    define KAAPI_MAX_PROCESSOR_LARGE
+#  elif (KAAPI_MAX_PROCESSOR <=32)
+#    define KAAPI_MAX_PROCESSOR_32
+#  elif (KAAPI_MAX_PROCESSOR <=64)
+#    define KAAPI_MAX_PROCESSOR_64
+#  elif (KAAPI_MAX_PROCESSOR <=128)
+#    define KAAPI_MAX_PROCESSOR_128
+#  else // (KAAPI_MAX_PROCESSOR >64)
+#    define KAAPI_MAX_PROCESSOR_LARGE
+#  endif
 
-typedef kaapi_atomic32_t kaapi_bitmap_t;
-typedef uint32_t kaapi_bitmap_value_t;
+#  ifdef KAAPI_MAX_PROCESSOR_LARGE
+#    define KAAPI_MAX_PROCESSOR_LIMIT ((unsigned int)(-1) >> 1)
+#  elif defined(KAAPI_MAX_PROCESSOR_128)
+#    define KAAPI_MAX_PROCESSOR_LIMIT 128
+#  elif defined(KAAPI_MAX_PROCESSOR_64)
+#    define KAAPI_MAX_PROCESSOR_LIMIT 64
+#  elif defined(KAAPI_MAX_PROCESSOR_32)
+#    define KAAPI_MAX_PROCESSOR_LIMIT 32
+#  else
+#    error No implementation are available to select processors
+#  endif
 
-static inline void kaapi_bitmap_clear( kaapi_bitmap_t* b ) 
-{ KAAPI_ATOMIC_WRITE(b, 0); }
 
-static inline int kaapi_bitmap_value_empty( kaapi_bitmap_value_t* b )
-{ 
-  return (*b) ==0;
+
+typedef union {
+#  ifdef KAAPI_MAX_PROCESSOR_32
+	kaapi_atomic32_t proc32;
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_64
+	kaapi_atomic64_t proc64;
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_128
+	kaapi_atomic64_t proc128[2];
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_LARGE
+	uint64_t *proc_large;	
+#  endif
+} kaapi_bitmap_t;
+
+typedef union {
+#  ifdef KAAPI_MAX_PROCESSOR_32
+	uint32_t proc32;
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_64
+	uint64_t proc64;
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_128
+	uint64_t proc128[2];
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_LARGE
+	uint64_t *proc_large;	
+#  endif
+} kaapi_bitmap_value_t;
+
+#  ifdef KAAPI_MAX_PROCESSOR_32
+static inline void kaapi_bitmap_clear_32( kaapi_bitmap_t* b ) 
+{
+  KAAPI_ATOMIC_WRITE(&b->proc32, 0);
 }
 
-static inline void kaapi_bitmap_value_set( kaapi_bitmap_value_t* b, int i ) 
+static inline int kaapi_bitmap_value_empty_32( kaapi_bitmap_value_t* b )
 { 
-  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
-  (*b) |= ((uint32_t)1)<< i; 
+  return b->proc32 ==0;
 }
 
-static inline void kaapi_bitmap_value_copy( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b ) 
+static inline void kaapi_bitmap_value_set_32( kaapi_bitmap_value_t* b, int i ) 
 { 
-  (*retval) = (*b);
+  kaapi_assert_debug( (i<32) && (i>=0) );
+  (b->proc32) |= ((uint32_t)1)<< i; 
 }
 
-static inline void kaapi_bitmap_swap0( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v ) 
-{ *v = KAAPI_ATOMIC_AND_ORIG(b, 0); }
-
-static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i ) 
+static inline void kaapi_bitmap_value_copy_32( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b ) 
 { 
-  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
-  KAAPI_ATOMIC_OR(b, 1U<<i); 
+  retval->proc32 = b->proc32;
+}
+
+static inline void kaapi_bitmap_swap0_32( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v ) 
+{
+  v->proc32 = KAAPI_ATOMIC_AND_ORIG(&b->proc32, 0);
+}
+
+static inline int kaapi_bitmap_set_32( kaapi_bitmap_t* b, int i )
+{
+  kaapi_assert_debug( (i<32) && (i>=0) );
+  KAAPI_ATOMIC_OR(&b->proc32, 1U<<i);
   return 0;
 }
 
-static inline int kaapi_bitmap_count( kaapi_bitmap_value_t b ) 
-{ return __builtin_popcount(b); }
+static inline int kaapi_bitmap_count_32( kaapi_bitmap_value_t b ) 
+{ return __builtin_popcount(b.proc32); }
 
 /* Return the 1+index of the least significant bit set to 1.
    If the value is 0 return 0.
    Else return the number of trailing zero (from to least significant
    bit to the most significant bit). And set to 0 the bit.
 */
-static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
+static inline int kaapi_bitmap_first1_and_zero_32( kaapi_bitmap_value_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
-  int fb = __builtin_ffs( *b );
+  int fb = __builtin_ffs( b->proc32 );
   if (fb ==0) return 0;
-  *b &= ~( 1 << (fb-1) );
+  b->proc32 &= ~( 1 << (fb-1) );
   return fb;
 }
+#  endif
 
-#elif (KAAPI_MAX_PROCESSOR <=64)
+#  ifdef KAAPI_MAX_PROCESSOR_64
+static inline void kaapi_bitmap_clear_64( kaapi_bitmap_t* b ) 
+{ KAAPI_ATOMIC_WRITE(&b->proc64, 0); }
 
-typedef kaapi_atomic64_t kaapi_bitmap_t;
-typedef uint64_t kaapi_bitmap_value_t;
-
-static inline void kaapi_bitmap_clear( kaapi_bitmap_t* b ) 
-{ KAAPI_ATOMIC_WRITE(b, 0); }
-
-static inline int kaapi_bitmap_value_empty( kaapi_bitmap_value_t* b )
+static inline int kaapi_bitmap_value_empty_64( kaapi_bitmap_value_t* b )
 { 
-  return (*b) ==0;
+  return b->proc64 == 0;
 }
 
-static inline void kaapi_bitmap_value_set( kaapi_bitmap_value_t* b, int i ) 
+static inline void kaapi_bitmap_value_set_64( kaapi_bitmap_value_t* b, int i ) 
 { 
-  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
-  (*b) |= ((uint64_t)1)<< i; 
+  kaapi_assert_debug( (i<64) && (i>=0) );
+  (b->proc64) |= ((uint64_t)1)<< i; 
 }
 
-static inline void kaapi_bitmap_value_copy( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b ) 
+static inline void kaapi_bitmap_value_copy_64( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b ) 
 { 
-  (*retval) = (*b);
+  retval->proc64 = b->proc64;
 }
 
-static inline void kaapi_bitmap_swap0( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v ) 
-{ *v = KAAPI_ATOMIC_AND64_ORIG(b, (uint64_t)0); }
+static inline void kaapi_bitmap_swap0_64( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v ) 
+{
+  v->proc64 = KAAPI_ATOMIC_AND64_ORIG(&b->proc64, (uint64_t)0);
+}
 
-static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i ) 
+static inline int kaapi_bitmap_set_64( kaapi_bitmap_t* b, int i ) 
 { 
-  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
-  KAAPI_ATOMIC_OR64(b, ((uint64_t)1)<<i); 
+  kaapi_assert_debug( (i<64) && (i>=0) );
+  KAAPI_ATOMIC_OR64(&b->proc64, ((uint64_t)1)<<i); 
   return 1;
 }
 
-static inline int kaapi_bitmap_count( kaapi_bitmap_value_t b ) 
-{ return __builtin_popcountl(b); }
+static inline int kaapi_bitmap_count_64( kaapi_bitmap_value_t b ) 
+{ return __builtin_popcountl(b.proc64); }
 
 /* Return the 1+index of the least significant bit set to 1.
    If the value is 0 return 0.
    Else return the number of trailing zero (from to least significant
    bit to the most significant bit). And set to 0 the bit.
 */
-static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
+static inline int kaapi_bitmap_first1_and_zero_64( kaapi_bitmap_value_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
-  int fb = __builtin_ffsl( *b );
+  int fb = __builtin_ffsl( b->proc64 );
   if (fb ==0) return 0;
-  *b &= ~( ((uint64_t)1) << (fb-1) );
+  b->proc64 &= ~( ((uint64_t)1) << (fb-1) );
   return fb;
 }
+#  endif
 
-#elif (KAAPI_MAX_PROCESSOR <=128)
-typedef kaapi_atomic64_t kaapi_bitmap_t[2];
-typedef uint64_t kaapi_bitmap_value_t[2];
+#  if defined KAAPI_MAX_PROCESSOR_128
 
-static inline void kaapi_bitmap_clear( kaapi_bitmap_t* b ) 
-{ KAAPI_ATOMIC_WRITE( &(*b)[0], 0); KAAPI_ATOMIC_WRITE( &(*b)[1], 0); }
+static inline void kaapi_bitmap_clear_128( kaapi_bitmap_t* b ) 
+{ KAAPI_ATOMIC_WRITE( &(b->proc128)[0], 0); KAAPI_ATOMIC_WRITE( &(b->proc128)[1], 0); }
 
-static inline int kaapi_bitmap_value_empty( kaapi_bitmap_value_t* b )
+static inline int kaapi_bitmap_value_empty_128( kaapi_bitmap_value_t* b )
 { 
-  return ((*b)[0] ==0) && ((*b)[1] ==0);
+  return ((b->proc128)[0] ==0) && ((b->proc128)[1] ==0);
 }
 
-static inline void kaapi_bitmap_value_set( kaapi_bitmap_value_t* b, int i ) 
+static inline void kaapi_bitmap_value_set_128( kaapi_bitmap_value_t* b, int i ) 
 { 
-  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
+  kaapi_assert_debug( (i<128) && (i>=0) );
   if (i<64)
-    (*b)[0] |= ((uint64_t)1)<< i; 
+    (b->proc128)[0] |= ((uint64_t)1)<< i; 
   else
-    (*b)[1] |= ((uint64_t)1)<< (i-64); 
+    (b->proc128)[1] |= ((uint64_t)1)<< (i-64); 
 }
 
-static inline void kaapi_bitmap_value_copy( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b ) 
+static inline void kaapi_bitmap_value_copy_128( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b ) 
 { 
-  (*retval)[0] = (*b)[0];
-  (*retval)[1] = (*b)[1];
+  (retval->proc128)[0] = (b->proc128)[0];
+  (retval->proc128)[1] = (b->proc128)[1];
 }
 
-static inline void kaapi_bitmap_swap0( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v ) 
+static inline void kaapi_bitmap_swap0_128( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v ) 
 { 
-  (*v)[0] = KAAPI_ATOMIC_AND64_ORIG( &(*b)[0], (uint64_t)0); 
-  (*v)[1] = KAAPI_ATOMIC_AND64_ORIG( &(*b)[1], (uint64_t)0); 
+  (v->proc128)[0] = KAAPI_ATOMIC_AND64_ORIG( &(b->proc128)[0], (uint64_t)0); 
+  (v->proc128)[1] = KAAPI_ATOMIC_AND64_ORIG( &(b->proc128)[1], (uint64_t)0); 
 }
 
-static inline int kaapi_bitmap_set( kaapi_bitmap_t* b, int i ) 
+static inline int kaapi_bitmap_set_128( kaapi_bitmap_t* b, int i ) 
 { 
-  kaapi_assert_debug( (i<KAAPI_MAX_PROCESSOR) && (i>=0) );
+  kaapi_assert_debug( (i<128) && (i>=0) );
   if (i<64)
-    KAAPI_ATOMIC_OR64( &(*b)[0], ((uint64_t)1)<< i); 
+    KAAPI_ATOMIC_OR64( &(b->proc128)[0], ((uint64_t)1)<< i); 
   else
-    KAAPI_ATOMIC_OR64( &(*b)[1], ((uint64_t)1)<< (i-64)); 
+    KAAPI_ATOMIC_OR64( &(b->proc128)[1], ((uint64_t)1)<< (i-64)); 
   return 1;
 }
 
-static inline int kaapi_bitmap_count( kaapi_bitmap_value_t b ) 
-{ return __builtin_popcountl( b[0] ) + __builtin_popcountl( b[1] ) ; }
+static inline int kaapi_bitmap_count_128( kaapi_bitmap_value_t b ) 
+{ return __builtin_popcountl( b.proc128[0] ) + __builtin_popcountl( b.proc128[1] ) ; }
 
 /* Return the 1+index of the least significant bit set to 1.
    If the value is 0 return 0.
    Else return the number of trailing zero (from to least significant
    bit to the most significant bit). And set to 0 the bit.
 */
-static inline int kaapi_bitmap_first1_and_zero( kaapi_bitmap_value_t* b )
+static inline int kaapi_bitmap_first1_and_zero_128( kaapi_bitmap_value_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
-  int fb = __builtin_ffsl( (*b)[0] );
+  int fb = __builtin_ffsl( (b->proc128)[0] );
   if (fb !=0) {
-    *b[0] &= ~( ((uint64_t)1) << (fb-1) );
+    b->proc128[0] &= ~( ((uint64_t)1) << (fb-1) );
     return fb;
   }
-  fb = __builtin_ffsl( (*b)[1] );
+  fb = __builtin_ffsl( (b->proc128)[1] );
   if (fb ==0) return 0;
-  (*b)[1] &= ~( ((uint64_t)1) << (fb-1) );
+  (b->proc128)[1] &= ~( ((uint64_t)1) << (fb-1) );
   return 64+fb;
 }
 
-#endif
+#  endif
+
+#  ifdef KAAPI_MAX_PROCESSOR_LARGE
+//typedef uint64_t kaapi_bitmap_t[ (KAAPI_MAX_PROCESSOR+63)/64 ];
+//typedef uint64_t kaapi_bitmap_value_t[[(KAAPI_MAX_PROCESSOR+63)/64];
+
+#  endif
+
+
+
+
+#  ifdef KAAPI_MAX_PROCESSOR_GENERIC
+/* Global function pointers initialized in kaapi_hw_standardinit() */
+extern void (*kaapi_bitmap_clear)( kaapi_bitmap_t* b );
+extern int (*kaapi_bitmap_value_empty)( kaapi_bitmap_value_t* b );
+extern void (*kaapi_bitmap_value_set)( kaapi_bitmap_value_t* b, int i );
+extern void (*kaapi_bitmap_value_copy)( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b);
+extern void (*kaapi_bitmap_swap0)( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
+extern int (*kaapi_bitmap_set)( kaapi_bitmap_t* b, int i );
+extern int (*kaapi_bitmap_count)( kaapi_bitmap_value_t b );
+extern int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
+#  else
+#    if defined(KAAPI_MAX_PROCESSOR_32)
+#      define KAAPI_MAX_PROCESSOR_SUFFIX(f) f##_32
+#    elif defined(KAAPI_MAX_PROCESSOR_64)
+#      define KAAPI_MAX_PROCESSOR_SUFFIX(f) f##_64
+#    elif defined(KAAPI_MAX_PROCESSOR_128)
+#      define KAAPI_MAX_PROCESSOR_SUFFIX(f) f##_128
+#    elif defined(KAAPI_MAX_PROCESSOR_LARGE)
+#      define KAAPI_MAX_PROCESSOR_SUFFIX(f) f##_large
+#    else
+#      error No implementation available
+#    endif
+#    define kaapi_bitmap_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_clear)(b)
+#    define kaapi_bitmap_value_empty(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_empty)(b)
+#    define kaapi_bitmap_value_set(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_set)((b),(i))
+#    define kaapi_bitmap_value_copy(r,b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_copy)((r),(b))
+#    define kaapi_bitmap_swap0(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_swap0)((b),(v))
+#    define kaapi_bitmap_set(b, i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_set)((b), (i))
+#    define kaapi_bitmap_count(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_count)(b)
+#    define kaapi_bitmap_first1_and_zero(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1_and_zero)(b)
+#  endif
 
 /** \ingroup WS
 */
@@ -805,7 +904,7 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
   if (victim ==0) return EINVAL;
 
 #if defined(KAAPI_USE_BITMAP_REQUEST)
-  kaapi_assert_debug((thief_kid >=0) && (thief_kid < KAAPI_MAX_PROCESSOR));
+  kaapi_assert_debug((thief_kid >=0) && (thief_kid < KAAPI_MAX_PROCESSOR_LIMIT));
   req = &victim->hlrequests.requests[thief_kid];
   /* here do not write kid, because it was persistant to all local thread */
   req->reply = reply;

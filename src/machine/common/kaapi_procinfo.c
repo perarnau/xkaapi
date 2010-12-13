@@ -63,8 +63,8 @@ struct procset_parser
 {
 # define PROC_BIT_IS_DISABLED (1 << 0)
 # define PROC_BIT_IS_USABLE (1 << 1)
-  unsigned char proc_bits[KAAPI_MAX_PROCESSOR];
-  unsigned int proc_binding[KAAPI_MAX_PROCESSOR];
+  unsigned char proc_bits[KAAPI_MAX_PROCESSOR_LIMIT];
+  unsigned int proc_binding[KAAPI_MAX_PROCESSOR_LIMIT];
   unsigned int proc_count;
   unsigned int max_count;
   const char* str_pos;

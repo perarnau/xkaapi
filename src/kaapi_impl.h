@@ -294,8 +294,8 @@ typedef struct kaapi_rtparam_t {
   struct kaapi_procinfo_list_t*   kproc_list;               /* list of kprocessors to initialized */
   kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
   kaapi_hierarchy_t        memory;                          /* memory hierarchy */
-  unsigned int	           kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
-  unsigned int  	         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
+  unsigned int	           *kid2cpu;                        /* mapping: kid->phys cpu  */
+  unsigned int  	   *cpu2kid;                        /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;

@@ -139,8 +139,8 @@ static int kaapi_setup_param()
   kaapi_default_param.syscpucount = 1;
 #endif
   /* adjust system limit, if library is compiled with greather number of processors that available */
-  if (kaapi_default_param.syscpucount > KAAPI_MAX_PROCESSOR)
-    kaapi_default_param.syscpucount = KAAPI_MAX_PROCESSOR;
+  if (kaapi_default_param.syscpucount > KAAPI_MAX_PROCESSOR_LIMIT)
+    kaapi_default_param.syscpucount = KAAPI_MAX_PROCESSOR_LIMIT;
 
   kaapi_default_param.use_affinity = 0;
 

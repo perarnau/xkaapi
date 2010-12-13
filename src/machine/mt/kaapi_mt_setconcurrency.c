@@ -90,7 +90,7 @@ int kaapi_setconcurrency(void)
   
   kpl = kaapi_default_param.kproc_list;
 
-  if ((!kpl->count) || (kpl->count > KAAPI_MAX_PROCESSOR))
+  if ((!kpl->count) || (kpl->count > KAAPI_MAX_PROCESSOR_LIMIT))
     return EINVAL;
   
   kaapi_all_kprocessors = calloc(kpl->count, sizeof(kaapi_processor_t*));

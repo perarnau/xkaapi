@@ -392,8 +392,7 @@ AC_CHECK_HEADERS([stdio.h])
 # library name
 AC_DEFINE([KAAPI_MAX_ARCH],3,[Maximum number of architectures])
 
-default_max_processors=16
-KAAPI_FEATURE([max-processors], [Maximum number of processors], [], [$default_max_processors],
+KAAPI_FEATURE([max-processors], [Maximum number of processors (special values "host" to optimize for current host and "generic" for runtime-choice)], [], [generic],
   [], [], [],
   [ 
   AS_CASE(["$enable_max_processors"],
@@ -402,7 +401,7 @@ KAAPI_FEATURE([max-processors], [Maximum number of processors], [], [$default_ma
       value=`getconf _NPROCESSORS_ONLN 2>/dev/null`
       if test x"$value" = x; then
         AC_MSG_RESULT([Unknown (using default value)])
-  	FEATURE_SET(["$default_max_processors"])
+  	FEATURE_SET(["generic"])
       else
         AC_MSG_RESULT([$value])
   	FEATURE_SET(["$value"])
@@ -410,11 +409,17 @@ KAAPI_FEATURE([max-processors], [Maximum number of processors], [], [$default_ma
     ])
   ],
   [
-    FEATURE_CASE_VALUE([no,*|yes,*], [AC_MSG_ERROR([A numeric value (or "host") is required for --enable-max-processors])])
+    FEATURE_CASE_VALUE([no,*], [enable_max_processors=0])
+    FEATURE_CASE_VALUE([generic,*], [enable_max_processors=0])
+    FEATURE_CASE_VALUE([no,*|yes,*], [AC_MSG_ERROR([A numeric value (or "host" or "generic") is required for --enable-max-processors])])
     FEATURE_CASE_VALUE([[[1-9]]*], [])
   ])
-AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
-AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors])
+if test "$enable_max_processors" = 0 ; then
+  AC_MSG_NOTICE([Maximum number of usable processors... generic])
+else
+  AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
+fi
+AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors (0 for generic implementation)])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
