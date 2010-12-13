@@ -526,39 +526,43 @@ ACX_LIB_LINK([KAAPILIB],[CUDA])
 dnl -----------------------------------------------------------------------
 dnl The "--with-hwloc"
 dnl -----------------------------------------------------------------------
-KAAPI_PKGLIB_CHECK([HWloc], [hwloc], [HWLOC], [no], [KAAPI_USE_HWLOC],
-  [build with HWloc support for discover hardware topology],
-  [hwloc], [], [hwloc.h], [hwloc_topology_init], [
-dnl    CUDA is there
-    AC_DEFINE([KAAPI_USE_HWLOC],1,[Use with HWLoc])
-  ],
+KAAPI_FEATURE([hwloc], [build with HWloc support for discover hardware topology], [], [check],
   [
-  ],
-  [])
-AM_CONDITIONAL([KAAPI_TARGET_HWLOC],[test x"$KAAPI_USE_HWLOC" = x"yes"])
+    AC_DEFINE([KAAPI_USE_HWLOC],1,[Use HWLoc to discover the topology])
+  ], [], [],
+  [ 
+    KAAPI_PKGLIB_CHECK([HWLOC], [hwloc], [HWLOC], [], [KAAPI_USE_HWLOC],
+     [build with HWloc support for discover hardware topology],
+     [hwloc], [], [hwloc.h], [hwloc_topology_init], [
+       FEATURE_ENABLE
+     ],
+     [
+       FEATURE_DISABLE
+     ],
+     [])
+
+  ])
 ACX_LIB_LINK([KAAPILIB],[HWLOC])
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-network"
 dnl -----------------------------------------------------------------------
 # Select compilation of network support as part of the library
-# Default is to compile it
-AC_ARG_ENABLE([network],[AS_HELP_STRING([--disable-network],
-	[Disable to not compile network code, default: enable])]
-)
-AS_IF([test "x$enable_network" != "xno"], 
-  [dnl Do the stuff needed for enabling the feature
-    AC_MSG_NOTICE([Compiling network])
-    KAAPI_USE_NETWORK=yes
+# Default is to not compile it until it works
+KAAPI_FEATURE([network], [allow distributed Kaapi programs],
+  [Network support compiled], [no],
+  [
     AC_DEFINE([KAAPI_USE_NETWORK],1,[defined to 1 when compiling with network support])
+    KAAPI_USE_NETWORK=yes
   ],
- 
-  [dnl Do the stuff needed for disable the feature
-    AC_MSG_NOTICE([Do not compile network support])
-  ]
-)
-AC_SUBST([KAAPI_USE_NETWORK])
-AM_CONDITIONAL([KAAPI_TARGET_KANET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
+  [],
+  [KAAPI_TARGET_KANET],
+  [
+    ## Ici, il faudrait tester les r√seaux possibles et les souhait
+    # de l'utilisateur.
+    FEATURE_ENABLE
+  ])
+
 ## ICI il faudrait preciser le reseau dans le commande --with-network=...
 ## sinon choix par d√©faut
 AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
@@ -661,8 +665,9 @@ AC_SUBST(AM_CXXFLAGS)
 AM_LDFLAGS="$LDFLAGS"
 AC_SUBST(AM_LDFLAGS)
 
+dnl First, alphabetic order of directory of Makefiles
+dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
-	# Alphabetic order of directory of Makefiles
 	Makefile
 	api/Makefile
 	api/atha/Makefile
@@ -677,7 +682,6 @@ AC_CONFIG_FILES([
 	src/Makefile
 	tests/static/Makefile
 
-	# Alphabetic order of other files
 	atha.pc
 	kaapi.pc
 	kaapi++.pc

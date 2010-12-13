@@ -42,44 +42,12 @@
 */
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
+#if defined(KAAPI_USE_HWLOC)
+#  include "hwloc.h"
+#endif
 
-/** Common initialization 
-*/
-static void kaapi_hw_standardinit()
-{
-  for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    kaapi_default_param.kid2cpu[i]= -1;
-    kaapi_default_param.cpu2kid[i]= -1;
-  }
-  bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
-
-  kaapi_cpuset_clear(&kaapi_default_param.usedcpu);
-
-  /* build the procinfo list */
-  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)malloc(sizeof(kaapi_procinfo_list_t) );
-  kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
-  kaapi_mt_register_procs(kaapi_default_param.kproc_list);
-#if defined(KAAPI_USE_CUDA)
-  kaapi_cuda_register_procs(kaapi_default_param.kproc_list);
-#endif /* KAAPI_USE_CUDA */
-}
-
-
-#if !defined(KAAPI_USE_HWLOC)
-/** Initialize hw topo.
-*/
-int kaapi_hw_init()
-{
-  kaapi_hw_standardinit();
-  return 0;
-}
-
-#else
-
-#include "hwloc.h"
-
-/* 
+#if defined(KAAPI_USE_HWLOC)
+/*
 */
 static void kaapi_hwcpuset2affinity( 
   kaapi_cpuset_t* affinity, 
@@ -136,6 +104,31 @@ static const char* kaapi_kids2string(
 }
 #endif
 
+#endif
+
+/** Common initialization 
+*/
+static void kaapi_hw_standardinit()
+{
+  for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
+  {
+    kaapi_default_param.kid2cpu[i]= -1;
+    kaapi_default_param.cpu2kid[i]= -1;
+  }
+  bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
+
+  kaapi_cpuset_clear(&kaapi_default_param.usedcpu);
+
+  /* build the procinfo list */
+  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)malloc(sizeof(kaapi_procinfo_list_t) );
+  kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
+  kaapi_mt_register_procs(kaapi_default_param.kproc_list);
+
+#if defined(KAAPI_USE_CUDA)
+  kaapi_cuda_register_procs(kaapi_default_param.kproc_list);
+#endif /* KAAPI_USE_CUDA */
+}
+
 
 /** Initialize hw topo.
     The goal here is to build for each system resources.
@@ -151,6 +144,7 @@ static const char* kaapi_kids2string(
 */
 int kaapi_hw_init()
 {
+#if defined(KAAPI_USE_HWLOC)
   hwloc_topology_t topology;
   hwloc_obj_t root;
   hwloc_obj_t obj;
@@ -158,9 +152,11 @@ int kaapi_hw_init()
   int memdepth;
   int idx, ncousin;
   int ncpu;
+#endif
 
   kaapi_hw_standardinit();
   
+#if defined(KAAPI_USE_HWLOC)
   /* Allocate and initialize topology object. */
   hwloc_topology_init(&topology);
 
@@ -294,7 +290,8 @@ int kaapi_hw_init()
 }
 #endif
   
+#endif
+
   return 0;
 }
 
-#endif
