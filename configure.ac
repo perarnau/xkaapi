@@ -151,7 +151,7 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KAAPIXXLIB], [-L\${libdir} -lkaapi++], [kaapi++])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
 
-ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir} -lkastl], [kastl])
+ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir}], [kastl])
 ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
 
 ACX_LIB_NEW_LIB([ATHALIB], [-L\${libdir} -latha], [atha])
@@ -576,6 +576,7 @@ AC_CONFIG_FILES([
 
 	kaapi.pc
 	kaapi++.pc
+	kastl.pc
 	atha.pc
 	src/misc/kaapi_version.c
 
