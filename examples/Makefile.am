@@ -102,6 +102,8 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 		VALUE="$$VALUE kaapi++" ;; esac ; \
 	    case " $$EQ " in *'$$(ATHAPROGS_BUILD_LIBS)'*) \
 		VALUE="$$VALUE atha" ;; esac ; \
+	    case " $$EQ " in *'$$(KASTLPROGS_BUILD_LIBS)'*) \
+		VALUE="$$VALUE kastl" ;; esac ; \
 	    echo "define([$${VAR}_PKGLIBS],[$$VALUE])dnl" ; \
 	  done >> $@
 	$(AM_V_at)echo 'Makefile' >> $@

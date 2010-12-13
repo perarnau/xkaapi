@@ -576,6 +576,7 @@ AC_CONFIG_FILES([
 
 	kaapi.pc
 	kaapi++.pc
+	kastl.pc
 	atha.pc
 	src/misc/kaapi_version.c
 
