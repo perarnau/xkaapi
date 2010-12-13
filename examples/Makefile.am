@@ -39,6 +39,13 @@ USER_MAKEFILES=\
 
 TESTS=  
 
+installcheck-local:
+	set -e ; \
+	for f in $(USER_MAKEFILES) ; do \
+		d="$$(dirname "$$f")" ; \
+		$(MAKE) $(AM_MAKEFLAGS) -C "$(examplesdir)/$$d" ; \
+	done
+
 EXTRA_DIST=gen-Makefile.m4
 
 ###########################################
@@ -48,8 +55,9 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 %/Makefile: gen-Makefile.m4 gen-%.am.m4
 	$(AM_V_GEN)m4 $^ > $@
-	$(AM_V_at)echo "###################" >> $@
-	$(AM_V_at)echo "PKG_CONFIG=env PKG_CONFIG_PATH=$(pkgconfigdir) pkg-config" >> $@
+	$(AM_V_at)sed -i -e "s|^PKGCONFIG=$$|PKG_CONFIG=env PKG_CONFIG_PATH=$(pkgconfigdir) pkg-config|" $@
+	$(AM_V_at)sed -i -e "s|^CC=$$|CC=$(CC)|" $@
+	$(AM_V_at)sed -i -e "s|^CXX=$$|CXX=$(CXX)|" $@
 
 SEP=
 S=$(SEP) 	$(SEP)
