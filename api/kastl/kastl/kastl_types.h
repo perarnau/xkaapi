@@ -179,7 +179,8 @@ namespace rts {
   public:
       typedef type value_type;
       typedef ptrdiff_t difference_type;
-      typedef const type& reference;
+      typedef type& reference;
+      typedef const type& const_reference;
       typedef const type* pointer;
 
       counting_iterator()
@@ -225,6 +226,16 @@ namespace rts {
       { 
         return counting_iterator(_rep -v); 
       }
+      counting_iterator& operator+=(value_type v)
+      { 
+        _rep += v; 
+        return *this;
+      }
+      counting_iterator& operator-=(value_type v)
+      { 
+        _rep -= v; 
+        return *this;
+      }
       counting_iterator operator[](int i) const
       { 
         return counting_iterator(_rep +i); 
@@ -236,6 +247,10 @@ namespace rts {
       { return (_rep!=rhs._rep); }
 
       reference operator*() 
+      { 
+        return _rep;
+      }
+      const_reference operator*() const
       { 
         return _rep;
       }
