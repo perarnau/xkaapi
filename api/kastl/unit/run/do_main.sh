@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # globals
-export LD_LIBRARY_PATH=/home/lementec/install/xkaapi_release/lib
+export LD_LIBRARY_PATH=$HOME/install/xkaapi_release/lib
 SESSION_DIR=
 
 # input sizes
@@ -38,22 +38,23 @@ SIZE6=200000
 
 # iteration
 #ITER=1
-#ITER=5
+ITER=5
 #ITER=10
 #ITER=20
-ITER=10
-#ITER=1000
+#ITER=10
+#ITER=100
 
 # gpuset
 #GPUSET='0~4,1~5'
 
 # cpuset
+CPUSET1=0,1
 #CPUSET0=12
 #CPUSET1=12,13
 #CPUSET2=12,13,14,15
 #CPUSET3=8,9,10,11,12,13,14,15
 #CPUSET4=4,5,6,7,8,9,10,11,12,13,14,15
-CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+#CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
 #CPUSET0=8,9,10,11,12,13,14,15
 #CPUSET1=7,8,9,10,11,12,13,14,15
@@ -67,8 +68,8 @@ CPUSET5=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
 
 # {algo, lib, do}
-#ALGOS="$ALGOS transform"
-ALGOS="$ALGOS for_each"
+ALGOS="$ALGOS transform"
+# ALGOS="$ALGOS for_each"
 # ALGOS="$ALGOS find"
 # ALGOS="$ALGOS find_if"
 # ALGOS="$ALGOS find_first_of"
@@ -92,15 +93,15 @@ ALGOS="$ALGOS for_each"
 # ALGOS="$ALGOS partial_sum"
 
 LIBS=''
-LIBS="$LIBS kastl"
-#LIBS="$LIBS stl"
+LIBS="$LIBS stl"
 #LIBS="$LIBS tbb"
 #LIBS="$LIBS pastl"
-#LIBS="$LIBS pthread"
+LIBS="$LIBS pthread"
+LIBS="$LIBS kastl"
 
 DOS=''
-#DOS="$DOS bench"
-DOS="$DOS check"
+DOS="$DOS bench"
+#DOS="$DOS check"
 
 
 gen_session_dir() {
@@ -187,7 +188,6 @@ run_lists() {
 	    for LIB in $LIBS; do
 		NAME=$ALGO-$LIB-$DO
 		if [ -e ../bin/$NAME ]; then
-		    export KAAPI_WSSELECT="workload"
 		    echo $SESSION_DIR/$NAME-$SIZE-$CPUSETID ;
 		    OUTPUT_FILE=$SESSION_DIR/$NAME-$SIZE-$CPUSETID ;
 		    # KAAPI_GPUSET=$GPUSET KAAPI_CPUSET=$CPUSET numactl -C $CPUSET ../bin/$NAME $SIZE $ITER > $OUTPUT_FILE;

@@ -76,7 +76,7 @@ int kaapi_sched_sync(void)
   kaapi_thread_context_t* thread;
   kaapi_task_t*           savepc;
   int                     err;
-  unsigned long           save_affinity;
+  kaapi_cpuset_t        save_affinity;
   kaapi_frame_t*          save_esfp;
 #if defined(KAAPI_DEBUG)
   kaapi_frame_t*          save_fp;
@@ -89,9 +89,8 @@ int kaapi_sched_sync(void)
      - use localkid to enforce execution into one specific
      kprocessor
   */
-  save_affinity = thread->affinity;
-  kaapi_thread_clearaffinity(thread);
-/* kaapi_thread_setaffinity( thread, thread->proc->kid );*/
+  kaapi_cpuset_copy(&save_affinity, &thread->affinity);
+  kaapi_cpuset_clear(&thread->affinity);
 
   savepc = thread->sfp->pc;
 #if defined(KAAPI_DEBUG)
@@ -114,7 +113,7 @@ redo:
   }
 
   /* reset affinity flag if save_stick != 1 */
-  thread->affinity = save_affinity;
+  kaapi_cpuset_copy(&thread->affinity, &save_affinity);
   
   if (err) /* but do not restore anyting */
     return err;

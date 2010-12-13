@@ -80,6 +80,10 @@ public:
   static bool on_term;
   static bool on_thread;
   
+  /** Change the current local_gid
+  */
+  static void set_local_gid( GlobalId newgid );
+  
   /** Default constructor: assign the most prioritary number (0) for this component
   */
   Init();
@@ -102,7 +106,6 @@ public:
   /** Declare dependencies with other component
   */
   void declare_dependencies();
-
 };
 
 

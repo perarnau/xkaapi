@@ -8,7 +8,7 @@
 
 lib_LTLIBRARIES= libkaapi.la
 
-libkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE $(KAAPILIB_BUILD_CPPFLAGS)
+libkaapi_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -D_GNU_SOURCE $(KAAPILIB_BUILD_CPPFLAGS) -I$(srcdir)/machine/common 
 libkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS) $(KAAPILIB_BUILD_CFLAGS)
 libkaapi_la_LDFLAGS = -version-info 0:0:0 $(KAAPILIB_BUILD_LDFLAGS)
 libkaapi_la_LIBADD = $(KAAPILIB_BUILD_LIBS)
@@ -29,8 +29,11 @@ libkaapi_la_SOURCES=\
   misc/kaapi_malloc_align.c \
   misc/kaapi_wq_slowpop.c\
   misc/kaapi_wq_set.c\
+  misc/kaapi_cpuset2str.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
+  task/kaapi_fmt_taskregister_static.c \
+  task/kaapi_fmt_taskregister_func.c \
   task/kaapi_fmt_structregister.c \
   task/kaapi_fmt_resolvebybody.c \
   task/kaapi_fmt_resolvebyfmtid.c \
@@ -41,10 +44,14 @@ libkaapi_la_SOURCES=\
   kaapi_impl.h \
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
+  machine/common/kaapi_hwtopo.c \
+  machine/common/kaapi_hw_selftopo.c \
   memory/kaapi_mem.h \
   memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \
+  workstealing/kaapi_sched_select_rand_f0.c \
   workstealing/kaapi_sched_select_workload_rand.c \
+  workstealing/kaapi_sched_select_hierarchy.c\
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
   workstealing/kaapi_sched_idle.c \

@@ -49,7 +49,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <iomanip>
-#if not defined(__APPLE__) && not defined(_WIN32)
+#if not defined(_WIN32)
 #include <execinfo.h>
 #endif
 #include <cxxabi.h>
@@ -189,8 +189,8 @@ Exception::Exception()
 
 
 // --------------------------------------------------------------------
-Exception::Exception(int code) 
- : _code(code) 
+Exception::Exception(int errorcode) 
+ : _code(errorcode) 
 {}
 
 
@@ -227,8 +227,8 @@ ServerException::ServerException()
 {}
 
 // --------------------------------------------------------------------
-RuntimeError::RuntimeError(const std::string& msg, int code) 
- : Exception(code), _msg(msg)
+RuntimeError::RuntimeError(const std::string& msg, int errorcode) 
+ : Exception(errorcode), _msg(msg)
 {}
 
 
@@ -241,8 +241,8 @@ const char* RuntimeError::what () const
 }
 
 // --------------------------------------------------------------------
-PosixError::PosixError( const std::string& msg, int code )
- : RuntimeError(msg,code) {}
+PosixError::PosixError( const std::string& msg, int errorcode )
+ : RuntimeError(msg, errorcode) {}
 
 // --------------------------------------------------------------------
 const char* PosixError::what () const
@@ -273,8 +273,8 @@ RangeError::RangeError(const std::string& msg)
 {}
 
 // --------------------------------------------------------------------
-LogicError::LogicError(const std::string& msg, int code) 
- : Exception(code), _msg(msg) 
+LogicError::LogicError(const std::string& msg, int errorcode) 
+ : Exception(errorcode), _msg(msg) 
 {}
 
 // --------------------------------------------------------------------
@@ -283,8 +283,8 @@ const char* LogicError::what () const
 
 
 // --------------------------------------------------------------------
-InvalidArgumentError::InvalidArgumentError(const std::string& msg, int code)
- : LogicError(msg, code) 
+InvalidArgumentError::InvalidArgumentError(const std::string& msg, int errorcode)
+ : LogicError(msg, errorcode) 
 {}
 
 // --------------------------------------------------------------------
@@ -309,8 +309,8 @@ BadAlloc::BadAlloc(const std::string& )
 
 
 // --------------------------------------------------------------------
-IOError::IOError( const std::string& msg, int code) 
- : RuntimeError(msg,code) 
+IOError::IOError( const std::string& msg, int errorcode) 
+ : RuntimeError(msg, errorcode) 
 {}
 
 // --------------------------------------------------------------------

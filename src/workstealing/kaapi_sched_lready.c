@@ -57,7 +57,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
     return 0;
 
   pre = list->_front;
-  if (kaapi_thread_hasaffinity(pre->affinity, tid))
+  if (kaapi_cpuset_has(pre->affinity, tid))
   {
     /* unlink the thread */
     pos = list->_front;
@@ -69,7 +69,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
   pos = pre->_next;
   while (pos != 0) 
   {
-    if (kaapi_thread_hasaffinity(pos->affinity, tid))
+    if (kaapi_cpuset_has(pos->affinity, tid))
     {
       /* unlink the thread */
       pre->_next = pos->_next;

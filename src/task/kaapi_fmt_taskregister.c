@@ -68,48 +68,6 @@ kaapi_format_t* kaapi_all_format_bybody[256] =
 };
 
 
-/**
-*/
-kaapi_format_id_t kaapi_format_taskregister( 
-        kaapi_format_t*             fmt,
-        kaapi_task_body_t           body,
-        const char*                 name,
-        size_t                      size,
-        int                         count,
-        const kaapi_access_mode_t   mode_param[],
-        const kaapi_offset_t        offset_param[],
-        const kaapi_format_t*       fmt_param[],
-	      size_t (*get_param_size)(const kaapi_format_t*, unsigned int, const void*)
-)
-{
-//  kaapi_format_t* fmt = (*fmt_fnc)();
-  kaapi_format_register( fmt, name );
-
-  fmt->count_params    = count;
-  
-  fmt->mode_params = malloc( sizeof(kaapi_access_mode_t)*count );
-  kaapi_assert(  fmt->mode_params !=0);
-  memcpy(fmt->mode_params, mode_param, sizeof(kaapi_access_mode_t)*count );
-
-  fmt->off_params = malloc( sizeof(kaapi_offset_t)*count );
-  kaapi_assert(  fmt->off_params !=0);
-  memcpy(fmt->off_params, offset_param, sizeof(kaapi_offset_t)*count );
-  
-  fmt->fmt_params = malloc( sizeof(kaapi_format_t*)*count );
-  kaapi_assert(  fmt->fmt_params !=0);
-  memcpy(fmt->fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
-
-  fmt->size = (uint32_t)size;
-
-  fmt->get_param_size = get_param_size;
-  memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
-
-  if (body !=0)
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);
-  return fmt->fmtid;
-}
-
-
 /** TODO:
     - utilisation d'une autre structure de chainage que le format: 3 archi possible
     mais qu'un champ de link => seulement une archi dans la table de hash...

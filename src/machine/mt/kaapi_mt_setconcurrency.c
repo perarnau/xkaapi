@@ -79,7 +79,7 @@ int kaapi_setconcurrency(void)
 
   pthread_attr_t attr;
   pthread_t tid;
-  kaapi_procinfo_list_t kpl;
+  kaapi_procinfo_list_t* kpl;
   kaapi_procinfo_t* kpi;
   kaapi_processor_id_t kid;
 
@@ -87,26 +87,20 @@ int kaapi_setconcurrency(void)
   if (isinit)
     return EINVAL;
   isinit = 1;
+  
+  kpl = kaapi_default_param.kproc_list;
 
-  /* build the procinfo list */
-  kaapi_procinfo_list_init(&kpl);
-  kaapi_mt_register_procs(&kpl);
-#if defined(KAAPI_USE_CUDA)
-  kaapi_cuda_register_procs(&kpl);
-#endif /* KAAPI_USE_CUDA */
-
-  if ((!kpl.count) || (kpl.count > KAAPI_MAX_PROCESSOR))
+  if ((!kpl->count) || (kpl->count > KAAPI_MAX_PROCESSOR))
     return EINVAL;
   
-  kaapi_all_kprocessors = calloc(kpl.count, sizeof(kaapi_processor_t*));
+  kaapi_all_kprocessors = calloc(kpl->count, sizeof(kaapi_processor_t*));
   if (kaapi_all_kprocessors == 0)
   {
-    kaapi_procinfo_list_free(&kpl);
     return ENOMEM;
   }
 
   /* default processor number */
-  kaapi_count_kprocessors = kpl.count;
+  kaapi_count_kprocessors = kpl->count;
 
   kaapi_barrier_td_init(&barrier_init, 0);
   kaapi_barrier_td_init(&barrier_init2, 1);
@@ -114,11 +108,14 @@ int kaapi_setconcurrency(void)
   pthread_attr_init(&attr);
 
   kid = 0;
-  kpi = kpl.head;
+  kpi = kpl->head;
 
   for (; kpi != 0; ++kid, kpi = kpi->next)
   {
-    kpi->kid = kid;
+    /* here either kpi->kid was set due to KAAPI_CPUSET definition or use_affinity was not set */
+    kaapi_assert( (kpi->kid == kid) || (kaapi_default_param.use_affinity ==0) );
+    if (kaapi_default_param.use_affinity ==0)
+      kpi->kid = kid;
 
     if (kid != 0)
     {
@@ -170,7 +167,6 @@ int kaapi_setconcurrency(void)
         pthread_attr_destroy(&attr);
         free(kaapi_all_kprocessors);
         kaapi_all_kprocessors = 0;
-        kaapi_procinfo_list_free(&kpl);
         return ENOMEM;
       }
       kaapi_assert(0 == kaapi_processor_init(kproc, kpi));
@@ -190,11 +186,14 @@ int kaapi_setconcurrency(void)
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init );
 
-  /* destroy the procinfo list, thread args no longer valid */
-  kaapi_procinfo_list_free(&kpl);
-
   /* here is the number of correctly initialized processor, may be less than requested */
   kaapi_count_kprocessors = KAAPI_ATOMIC_READ( &kaapi_term_barrier );
+
+  /* recompute topology information here, if CPUSET is not set
+     then the threads have self determined their processor,
+     thus the mappings cpu2kid and kid2cpu are valid.
+  */
+  kaapi_processor_computetopo( kaapi_all_kprocessors[0] );
     
   /* broadcast to all threads that they have been started */
   kaapi_barrier_td_setactive(&barrier_init2, 0);
@@ -207,6 +206,7 @@ int kaapi_setconcurrency(void)
 #endif
   return 0;
 }
+
 
 /**
 */
@@ -229,6 +229,8 @@ void* kaapi_sched_run_processor( void* arg )
 #else
   kaapi_assert(0 == pthread_setspecific(kaapi_current_processor_key, kproc));
 #endif
+
+  /* processor initialization */
   kaapi_assert( 0 == kaapi_processor_init( kproc, kpi) );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -242,11 +244,17 @@ void* kaapi_sched_run_processor( void* arg )
   /* from here, thread arg no longer valid */
   kpi = 0;
 
-  /* quit first steap of the initialization */
+  /* quit first step of the initialization */
   kaapi_barrier_td_setactive(&barrier_init, 0);
   
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init2 );
+
+  /* recompute topology information here, if CPUSET is not set
+     then the threads have self determined their processor,
+     thus the mappings cpu2kid and kid2cpu are valid.
+  */
+  kaapi_processor_computetopo( kproc );
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */

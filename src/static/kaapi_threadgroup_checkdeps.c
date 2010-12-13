@@ -79,34 +79,35 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
   */
   kaapi_hashentries_t* entry; //Current argument's entry in the Hashmap
   void* sp = task->sp;
-  for (int i=0;i<task_fmt->count_params;i++) 
+  size_t count_params = kaapi_format_get_count_params(task_fmt, sp );
+  for (unsigned int i=0; i < count_params; i++) 
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(task_fmt->mode_params[i]);
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
     if (m == KAAPI_ACCESS_MODE_V) 
       continue;
     
     /* its an access */
-    kaapi_access_t* access = (kaapi_access_t*)(task_fmt->off_params[i] + (char*)sp);
+    kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
     entry = 0;
 
     /* find the last writer (task & thread) using the hash map */
-    entry = kaapi_hashmap_find(&thgrp->ws_khm, access->data);
+    entry = kaapi_hashmap_find(&thgrp->ws_khm, access.data);
     if (entry ==0)
     {
       /* no entry -> new version object */
-      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, access );
+      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, &access );
       if (KAAPI_ACCESS_IS_READ(m))
-        kaapi_threadgroup_version_addfirstreader( thgrp, &thgrp->ws_vect_input, threadindex, task, access, i );
+        kaapi_threadgroup_version_addfirstreader( thgrp, &thgrp->ws_vect_input, threadindex, task, &access, i );
     }
 
     if (KAAPI_ACCESS_IS_READ(m))
     {
-      const size_t size = task_fmt->get_param_size(task_fmt, i, sp);
-      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, access, size, i );
+      const size_t size = kaapi_format_get_size_param( task_fmt, i, sp);
+      task = kaapi_threadgroup_version_newreader( thgrp, entry->u.dfginfo, threadindex, task, &access, size, i );
     }
     if (KAAPI_ACCESS_IS_WRITE(m))
     {
-      task = kaapi_threadgroup_version_newwriter( thgrp, entry->u.dfginfo, threadindex, task, access, i );
+      task = kaapi_threadgroup_version_newwriter( thgrp, entry->u.dfginfo, threadindex, task, &access, i );
     }
     
   } /* end for all arguments of the task */

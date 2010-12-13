@@ -154,7 +154,7 @@ namespace ka {
     }
 
 
-/*! \def KAAPI_LOG(cond, msg)
+/*! \def KAAPI_CPPLOG(cond, msg)
     \ingroup atha
     \brief Log message iff the condition cond is true
 */
@@ -164,7 +164,7 @@ namespace ka {
     ka::logfile() << msg << ::std::endl;\
   }
 
-/*! \def KAAPI_LOG_INST(cond, inst)
+/*! \def KAAPI_CPPLOG_INST(cond, inst)
     \ingroup atha
     \brief Dot instruction iff the condition cond is true
 */

@@ -47,24 +47,6 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
-#if 0
-uint32_t kaapi_hash_value_len(const char* s, int len)
-{
-  /* fnv */
-  uint32_t h = 2166136261;
-  for (; len; --len, ++s) h = (h * 16777619) ^ *s;
-  return h;
-}
-
-uint32_t kaapi_hash_value_len(const char* s, int len)
-{
-  /* bernstein */
-  uint32_t h = 5381;
-  for (; len; --len, ++s) h = ((h << 5) + h) + *s;
-  return h;
-}
-#endif
-
 uint32_t kaapi_hash_value_len(const char* s, int len)
 {
   /* oat */

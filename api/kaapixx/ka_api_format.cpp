@@ -64,7 +64,7 @@ Format::Format(
   if (fmt ==0) 
     fmt = new kaapi_format_t;
   kaapi_format_register( fmt, strdup(fmt_name.c_str()));
-  fmt->size      = size;
+  fmt->size      = (uint32_t)size;
   fmt->cstor     = cstor;
   fmt->dstor     = dstor;
   fmt->cstorcopy = cstorcopy;
@@ -80,7 +80,6 @@ Format::Format( kaapi_format_t* f )
 {
 }
 
-
 // --------------------------------------------------------------------------
 void Format::reinit( kaapi_format_t* f ) const
 {
@@ -93,6 +92,8 @@ struct kaapi_format_t* Format::get_c_format()
   if (fmt ==0) fmt = new kaapi_format_t;
   return fmt; 
 }
+
+// --------------------------------------------------------------------------
 const struct kaapi_format_t* Format::get_c_format() const 
 { 
   if (fmt ==0) fmt = new kaapi_format_t;
@@ -104,11 +105,10 @@ FormatUpdateFnc::FormatUpdateFnc(
   const std::string& name,
   int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                    const void* value, const struct kaapi_format_t* fmtvalue )
-) : Format(name, 0, 0, 0, 0, 0, 0, 0)
+) : Format::Format(name, 0, 0, 0, 0, 0, 0, 0)
 {
   fmt->update_mb = update_mb;
 }
-
 
 // --------------------------------------------------------------------------
 FormatTask::FormatTask( 
@@ -117,18 +117,14 @@ FormatTask::FormatTask(
   int                         count,
   const kaapi_access_mode_t   mode_param[],
   const kaapi_offset_t        offset_param[],
-  const kaapi_format_t*       fmt_param[]
+  const kaapi_offset_t        offset_version[],
+  const kaapi_format_t*       fmt_param[],
+  const size_t                size_param[]
 ) : Format(0)
 {
   if (fmt ==0)
     fmt = new kaapi_format_t;
-/*
-  const kaapi_format_t* cfmt_param[count];
-  for (int i=0; i<count; ++i)
-    cfmt_param[i] = fmt_param[i]->get_c_format();
-*/
-
-  kaapi_format_taskregister( 
+  kaapi_format_taskregister_static( 
         fmt,
         0, 
         name.c_str(),
@@ -136,14 +132,46 @@ FormatTask::FormatTask(
         count,
         mode_param,
         offset_param,
+        offset_version,
         fmt_param,
-/**/    0
+        size_param
   );
 }
 
 
 // --------------------------------------------------------------------------
-#if 1
+FormatTask::FormatTask( 
+  const std::string&          name,
+  size_t                      size,
+  size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
+  kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+  void*                     (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+  kaapi_access_t            (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+  void                      (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+  const kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+  size_t                    (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+) : Format(0)
+{
+  if (fmt ==0)
+    fmt = new kaapi_format_t;
+  kaapi_format_taskregister_func( 
+        fmt,
+        0, 
+        name.c_str(),
+        size,
+        get_count_params,
+        get_mode_param,
+        get_off_param,
+        get_access_param,
+        set_access_param,
+        get_fmt_param,
+/**/    get_size_param
+  );
+}
+
+
+
+// --------------------------------------------------------------------------
 template <> const WrapperFormat<char> WrapperFormat<char>::format(kaapi_char_format);
 template <> const WrapperFormat<short> WrapperFormat<short>::format(kaapi_short_format);
 template <> const WrapperFormat<int> WrapperFormat<int>::format(kaapi_int_format);
@@ -154,6 +182,5 @@ template <> const WrapperFormat<unsigned int> WrapperFormat<unsigned int>::forma
 template <> const WrapperFormat<unsigned long> WrapperFormat<unsigned long>::format(kaapi_ulong_format);
 template <> const WrapperFormat<float> WrapperFormat<float>::format(kaapi_float_format);
 template <> const WrapperFormat<double> WrapperFormat<double>::format(kaapi_double_format);
-#endif
   
 } // namespace ka

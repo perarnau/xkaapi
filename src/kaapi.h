@@ -58,7 +58,7 @@
 #endif
 
 #if !defined(__SIZEOF_POINTER__)
-#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__)
+#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__) || defined(__x86_64__)
 #    define __SIZEOF_POINTER__ 8
 #  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc64__))
 #    define __SIZEOF_POINTER__ 4
@@ -485,12 +485,12 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 */
 typedef struct kaapi_task_t {
 #if (__SIZEOF_POINTER__ == 4)
-  kaapi_task_bodyid_t      body;      /** task body  */
-  volatile uintptr_t state;     /** bit */
+  kaapi_task_bodyid_t     body;      /** task body  */
+  volatile uintptr_t      state;     /** bit */
 #else
   union task_and_body {
-    kaapi_task_bodyid_t      body;      /** task body  */
-    volatile uintptr_t state;     /** bit */
+    kaapi_task_bodyid_t   body;      /** task body  */
+    volatile uintptr_t    state;     /** bit */
   } u;
 #endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */
@@ -630,8 +630,7 @@ typedef struct kaapi_taskadaptive_result_t {
 /** \ingroup ADAPT
     Get the adaptive result data from stealcontext ktr
 */
-static inline void* kaapi_adaptive_result_data
-(kaapi_stealcontext_t* sc)
+static inline void* kaapi_adaptive_result_data(kaapi_stealcontext_t* sc)
 {
   kaapi_assert_debug(sc->header.ktr);
   return sc->header.ktr->data;
@@ -731,11 +730,11 @@ typedef struct kaapi_access_t {
     \param value INOUT a pointer to the user data
     \retval a pointer to the next task to push or 0.
 */
-static inline void kaapi_access_init(kaapi_access_t* access, void* value )
+static inline void kaapi_access_init(kaapi_access_t* a, void* value )
 {
-  access->data = value;
+  a->data = value;
 #if !defined(KAAPI_NDEBUG)
-  access->version = 0;
+  a->version = 0;
 #endif  
   return;
 }
@@ -795,10 +794,11 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, uint32_t coun
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-
-  void* const retval = thread->sp_data;
-  thread->sp_data += count;
-  return retval;
+  {
+    void* const retval = thread->sp_data;
+    thread->sp_data += count;
+    return retval;
+  }
 }
 
 /** \ingroup TASK
@@ -806,8 +806,7 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, uint32_t coun
     note the alignment must be a power of 2 and not 0
     \param align the alignment size, in BYTES
 */
-static inline void* kaapi_thread_pushdata_align
-  (kaapi_thread_t* thread, uint32_t count, uintptr_t align)
+static inline void* kaapi_thread_pushdata_align(kaapi_thread_t* thread, uint32_t count, uintptr_t align)
 {
   kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
   const uintptr_t mask = align - (uintptr_t)1;
@@ -826,13 +825,13 @@ static inline void* kaapi_thread_pushdata_align
     \param frame INOUT a pointer to the kaapi_frame_t data structure where to push data
     \retval a pointer to the next task to push or 0.
 */
-static inline void kaapi_thread_allocateshareddata(kaapi_access_t* access, kaapi_thread_t* thread, uint32_t count)
+static inline void kaapi_thread_allocateshareddata(kaapi_access_t* a, kaapi_thread_t* thread, uint32_t count)
 {
   kaapi_assert_debug( thread !=0 );
   kaapi_assert_debug( (char*)thread->sp_data+count <= (char*)thread->sp );
-  access->data = thread->sp_data;
+  a->data = thread->sp_data;
 #if !defined(KAAPI_NDEBUG)
-  access->version = 0;
+  a->version = 0;
 #endif
   thread->sp_data += count;
   return;
@@ -1108,7 +1107,7 @@ static inline int kaapi_steal_setsplitter(
   return 0;
 }
 
-#if 0 //* revoir ici, ces fonctions sont importantes pour le cooperatif */
+#if 0 /* revoir ici, ces fonctions sont importantes pour le cooperatif */
 /** \ingroup WS
     Helper to expose to many part of the internal API.
     Return 1 iff its remains works...
@@ -1262,7 +1261,7 @@ extern int kaapi_preemptpoint_before_reducer_call(
     kaapi_stealcontext_t* stc,
     void* arg_for_victim, 
     void* result_data, 
-    int result_size
+    size_t result_size
 );
 extern int kaapi_preemptpoint_after_reducer_call ( 
     kaapi_stealcontext_t* stc
@@ -1733,18 +1732,46 @@ extern kaapi_format_id_t kaapi_format_register(
 );
 
 /** \ingroup TASK
-    Register a task format 
+    Register a task format with static definition.
+    \param fmt the kaapi_format_t object
+    \param body the default body (if !=0) of the function to execute
+    \param name the name of the format
+    \param size the size in byte of the task arguments
+    \param count the number of parameters
+    \param mode_param, an array of size count given the access mode for each param
+    \param offset_param, an array of size count given the offset of the data from the pointer to the argument of the task
+    \param offset_version, an array of size count given the offset of the version (if any)
+    \param fmt_param, an array of size count given the format of each param
+    \param size_param, an array of size count given the size of each parameter.
 */
-extern kaapi_format_id_t kaapi_format_taskregister( 
+extern kaapi_format_id_t kaapi_format_taskregister_static( 
+        struct kaapi_format_t*      fmt,
+        kaapi_task_body_t           body,
+        const char*                 name,
+        size_t                      size,
+        int                         count,
+        const kaapi_access_mode_t   mode_param[],
+        const kaapi_offset_t        offset_param[],
+        const kaapi_offset_t        offset_version[],
+        const struct kaapi_format_t*fmt_param[],
+        const size_t                size_param[]
+);
+
+/** \ingroup TASK
+    Register a task format with dynamic definition
+*/
+extern kaapi_format_id_t kaapi_format_taskregister_func( 
         struct kaapi_format_t*       fmt, 
         kaapi_task_body_t            body,
         const char*                  name,
         size_t                       size,
-        int                          count,
-        const kaapi_access_mode_t    mode_param[],
-        const kaapi_offset_t         offset_param[],
-        const struct kaapi_format_t* fmt_params[],
-        size_t (*)(const struct kaapi_format_t*, unsigned int, const void*)
+        size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
+        kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+        void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+        void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+        const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+        size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK
@@ -1799,7 +1826,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister( formatobject(), fnc_body, name, ##__VA_ARGS__);\
+    kaapi_format_taskregister_static( formatobject(), fnc_body, name, ##__VA_ARGS__);\
   }
 
 
@@ -1856,7 +1883,7 @@ static inline int __kaapi_isaligned_const(const volatile void* a, int byte)
     __KAAPI_ISALIGNED_CONST_ATOMIC(a, (a)->_counter)
 
 #  define KAAPI_ATOMIC_WRITE(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
+    __KAAPI_ISALIGNED_ATOMIC( (a), (a)->_counter = value)
 
 #  define BIDON_ONEARG(a,b)  a,b
 #  define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \

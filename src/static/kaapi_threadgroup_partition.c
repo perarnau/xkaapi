@@ -48,6 +48,8 @@
 */
 int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 {
+  kaapi_processor_t* kproc;
+
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   thgrp->mainctxt   = kaapi_get_current_processor()->thread;
@@ -66,11 +68,11 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   kaapi_mem_barrier();
   
   /* wait thief get out the thread */
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-  while (!KAAPI_ATOMIC_CAS(&thgrp->mainctxt->lock, 0, 1))
-    ;
-#endif
-  
+  kproc = thgrp->mainctxt->proc;
+  kaapi_sched_lock(&kproc->lock);
+  thgrp->mainctxt->unstealable = 1;
+  kaapi_sched_unlock(&kproc->lock);
+    
 #if 0
   fprintf(stdout, "Save frame:: pc:%p, sp:%p, spd:%p\n", 
     (void*)thgrp->mainframe.pc, 

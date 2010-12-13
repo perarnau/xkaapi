@@ -53,6 +53,7 @@
 */
 uint32_t volatile kaapi_count_kprocessors = 0;
 
+
 /*
 */
 kaapi_processor_t** kaapi_all_kprocessors = 0;
@@ -96,17 +97,26 @@ volatile int kaapi_isterm = 0;
 */
 int kaapi_mt_init(void)
 {
+  kaapi_thread_context_t* thread;
+  kaapi_task_t*   task;
+  const char*     version;
+
   static int iscalled = 0;
   if (iscalled !=0) return EALREADY;
   iscalled = 1;
   
   kaapi_isterm = 0;
-  kaapi_thread_context_t* thread;
-  kaapi_task_t*   task;
-  const char*     version __attribute__((unused)) = get_kaapi_version();
+  version = get_kaapi_version();
   
-  /* initialize the kprocessor key */
+  /* build the memory hierarchy
+     update kaapi_default_param data structure fields:
+      * kid2cpu
+      * cpu2kid
+      * memory
+   */
+  kaapi_hw_init();
 
+  /* initialize the kprocessor key */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_current_thread_key = 0;
   kaapi_current_threadgroup_key = 0;
@@ -122,6 +132,11 @@ int kaapi_mt_init(void)
 
   /* set the kprocessor AFTER topology !!! */
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
+  
+  /* destroy the procinfo list, thread args no longer valid */
+  kaapi_procinfo_list_free(kaapi_default_param.kproc_list);
+  free(kaapi_default_param.kproc_list);
+  kaapi_default_param.kproc_list = 0;
   
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
@@ -157,7 +172,7 @@ int kaapi_mt_init(void)
 */
 int kaapi_mt_finalize(void)
 {
-  int i;
+  unsigned int i;
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint64_t cnt_tasks;
   uint64_t cnt_stealreqok;

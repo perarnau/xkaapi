@@ -290,13 +290,6 @@ inline Pointer operator-( const int v, const Pointer& p )
 { Pointer retval = v - p.ptr; return retval; }
 
 
-// -------------------------------------------------------------------------
-/** \name get_hostname
-    \brief Return the canonical name of the machine
-    \ingroup Util
-*/
-extern const std::string& get_hostname();
-
 
 // -------------------------------------------------------------------------
 // --------- Conversion of long double -------------------------------------

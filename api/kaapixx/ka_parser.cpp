@@ -76,15 +76,15 @@ void Parser::Module::set_helper( void (*h)(std::ostream& o) )
 
 
 // --------------------------------------------------------------------
-void Parser::Module::add_option( const std::string& name, 
+void Parser::Module::add_option( const std::string& n, 
                                  const std::string& value, 
                                  const std::string& usage,
-                                 char mode,
-                                const std::string& separator
+                                 char  mode,
+                                 const std::string& separator
   )
 {
-  std::string no = "-" + name;
-  options.insert(std::make_pair(no,OptionInfo(name,value,usage,mode,separator)));
+  std::string no = "-" + n;
+  options.insert(std::make_pair(no,OptionInfo(n,value,usage,mode,separator)));
 }
 
 

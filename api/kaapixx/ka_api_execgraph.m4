@@ -6,4 +6,3 @@
       _threadgroup->end_partition();
       _threadgroup->execute();
     }
-

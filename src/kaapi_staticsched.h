@@ -274,8 +274,10 @@ static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgr
 {
   kaapi_assert_debug( thgrp !=0 );
   kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
-  return thread;
+  {
+    kaapi_thread_t* thread = thgrp->threads[partitionid];
+    return thread;
+  }
 }
 
 /** Equiv to kaapi_thread_toptask( thread ) 
@@ -289,15 +291,17 @@ static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp
 static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, partitionid );
-  kaapi_assert_debug( thread !=0 );
-  
-  /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
-     calculer les dépendances (appel au bon code)
-  */
-  kaapi_threadgroup_computedependencies( thgrp, partitionid, thread->sp );
-  
-  return kaapi_thread_pushtask(thread);
+  {
+    kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, partitionid );
+    kaapi_assert_debug( thread !=0 );
+    
+    /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
+       calculer les dépendances (appel au bon code)
+    */
+    kaapi_threadgroup_computedependencies( thgrp, partitionid, thread->sp );
+    
+    return kaapi_thread_pushtask(thread);
+  }
 }
 
 
@@ -367,14 +371,18 @@ void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread );
 
 /**
 */
-static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, int ith )
+static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, unsigned int ith )
 {
   if (kaapi_task_state_issteal( kaapi_task_getstate(task))) return 0;
-  kaapi_taskrecv_arg_t* tr = (kaapi_taskrecv_arg_t*)task->sp;
-  kaapi_assert_debug( tr != 0 );
-  int bitfield = KAAPI_ATOMIC_READ( &tr->counter );
-  bitfield = (bitfield >> 16) & ~(1<<15);
-  if (bitfield & (1<< ith)) return 1;
+  {
+    kaapi_taskrecv_arg_t* tr = (kaapi_taskrecv_arg_t*)task->sp;
+    kaapi_assert_debug( tr != 0 );
+    {
+      int bitfield = KAAPI_ATOMIC_READ( &tr->counter );
+      bitfield = (bitfield >> 16) & ~(1<<15);
+      if (bitfield & (1<< ith)) return 1;
+    }
+  }
   return 0;
 }
 

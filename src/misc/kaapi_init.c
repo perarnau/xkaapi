@@ -60,7 +60,8 @@
 */
 kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0,
-   .stacksize = 64*4096
+   .stacksize   = 64*4096,
+   .cpucount    = 0,
 };
 
 
@@ -119,7 +120,7 @@ int kaapi_setup_param(
 )
 {
   const char* wsselect;
-  
+    
   /* compute the number of cpu of the system */
 #if defined(__linux__)
   kaapi_default_param.syscpucount = sysconf(_SC_NPROCESSORS_CONF);
@@ -159,10 +160,14 @@ int kaapi_setup_param(
   /* workstealing selection function */
   wsselect = getenv("KAAPI_WSSELECT");
   kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
-  if ((wsselect != NULL) && (strcmp(wsselect, "workload") ==0))
+  if ((wsselect != 0) && (strcmp(wsselect, "rand") ==0))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
-  else if ((wsselect != NULL) && (strcmp(wsselect, "first0") ==0))
+  else if ((wsselect != 0) && (strcmp(wsselect, "workload") ==0))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+  else if ((wsselect != 0) && (strcmp(wsselect, "first0") ==0))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand_first0;
+  else if ((wsselect != 0) && (strcmp(wsselect, "hierarchy") ==0))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_hierarchy;
   
   
   return 0;
