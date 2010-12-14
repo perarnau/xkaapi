@@ -22,6 +22,7 @@ include fibo.am
 include find.am
 include for_each.am
 include hello.am
+include listranking.am
 include net.am
 include nqueens.am
 include poisson3D.am
@@ -35,6 +36,7 @@ USER_MAKEFILES=\
 	fibo/Makefile \
 	find/Makefile \
 	for_each/Makefile \
+	listranking/Makefile \
 	hello/Makefile \
 	net/Makefile \
 	nqueens/Makefile \
