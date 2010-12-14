@@ -18,10 +18,10 @@ check_PROGRAMS+=$(LISTRANKING_PRGS)
 all-list_ranking: $(LISTRANKING_PRGS)
 
 #For each variation
-lr_sequential_SOURCES=listranking/lr_sequential.cpp listranking/lr_list.cpp
-lr_jaja_seq_SOURCES=listranking/lr_jaja_seq.cpp listranking/lr_list.cpp
-lr_jaja_seq_opt1_SOURCES=listranking/lr_jaja_seq_opt1.cpp listranking/lr_list.cpp
-listranking_opt1_kaapi___SOURCES=listranking/listranking_opt1_kaapi++.cpp
+lr_sequential_SOURCES=listranking/lr_sequential.cpp listranking/lr_list.cpp  listranking/lr_list.h
+lr_jaja_seq_SOURCES=listranking/lr_jaja_seq.cpp listranking/lr_list.cpp listranking/lr_list.h
+lr_jaja_seq_opt1_SOURCES=listranking/lr_jaja_seq_opt1.cpp listranking/lr_list.cpp listranking/lr_list.h
+listranking_opt1_kaapi___SOURCES=listranking/listranking_opt1_kaapi++.cpp listranking/lr_list.h
 
 lr_sequential_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 lr_sequential_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
