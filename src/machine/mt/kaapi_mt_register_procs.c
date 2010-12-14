@@ -48,8 +48,6 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
-
-/* from kaapi_init.c */
 static int make_identity_procinfo_list(kaapi_procinfo_list_t* kpl, unsigned int count)
 {
   /* make an identity cpu list for the range [0, count[ */

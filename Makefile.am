@@ -5,4 +5,4 @@ ACLOCAL_AMFLAGS=-I acinclude
 SUBDIRS=src api network examples tests/static 
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA= kaapi.pc kaapi++.pc atha.pc
+pkgconfig_DATA= kaapi.pc kaapi++.pc atha.pc kastl.pc

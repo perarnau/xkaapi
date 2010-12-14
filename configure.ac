@@ -152,10 +152,10 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KAAPIXXLIB], [-L\${libdir} -lkaapi++], [kaapi++])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
 
-ACX_LIB_NEW_LIB([KANETLIB], [-L\${libdir} -lkanet -lmpi], [kanet])
+ACX_LIB_NEW_LIB([KANETLIB], [-L\${libdir} -lkanet], [kanet])
 ACX_LIB_ADD_PUBLIC_FLAGS([KANETLIB], [-I\${includedir}])
 
-ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir} -lkastl], [kastl])
+ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir}], [kastl])
 ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
 
 ACX_LIB_NEW_LIB([ATHALIB], [-L\${libdir} -latha], [atha])
@@ -392,8 +392,7 @@ AC_CHECK_HEADERS([stdio.h])
 # library name
 AC_DEFINE([KAAPI_MAX_ARCH],3,[Maximum number of architectures])
 
-default_max_processors=16
-KAAPI_FEATURE([max-processors], [Maximum number of processors], [], [$default_max_processors],
+KAAPI_FEATURE([max-processors], [Maximum number of processors (special values "host" to optimize for current host and "generic" for runtime-choice)], [], [generic],
   [], [], [],
   [ 
   AS_CASE(["$enable_max_processors"],
@@ -402,7 +401,7 @@ KAAPI_FEATURE([max-processors], [Maximum number of processors], [], [$default_ma
       value=`getconf _NPROCESSORS_ONLN 2>/dev/null`
       if test x"$value" = x; then
         AC_MSG_RESULT([Unknown (using default value)])
-  	FEATURE_SET(["$default_max_processors"])
+  	FEATURE_SET(["generic"])
       else
         AC_MSG_RESULT([$value])
   	FEATURE_SET(["$value"])
@@ -410,11 +409,17 @@ KAAPI_FEATURE([max-processors], [Maximum number of processors], [], [$default_ma
     ])
   ],
   [
-    FEATURE_CASE_VALUE([no,*|yes,*], [AC_MSG_ERROR([A numeric value (or "host") is required for --enable-max-processors])])
+    FEATURE_CASE_VALUE([no,*], [enable_max_processors=0])
+    FEATURE_CASE_VALUE([generic,*], [enable_max_processors=0])
+    FEATURE_CASE_VALUE([no,*|yes,*], [AC_MSG_ERROR([A numeric value (or "host" or "generic") is required for --enable-max-processors])])
     FEATURE_CASE_VALUE([[[1-9]]*], [])
   ])
-AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
-AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors])
+if test "$enable_max_processors" = 0 ; then
+  AC_MSG_NOTICE([Maximum number of usable processors... generic])
+else
+  AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
+fi
+AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors (0 for generic implementation)])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -526,39 +531,43 @@ ACX_LIB_LINK([KAAPILIB],[CUDA])
 dnl -----------------------------------------------------------------------
 dnl The "--with-hwloc"
 dnl -----------------------------------------------------------------------
-KAAPI_PKGLIB_CHECK([HWloc], [hwloc], [HWLOC], [no], [KAAPI_USE_HWLOC],
-  [build with HWloc support for discover hardware topology],
-  [hwloc], [], [hwloc.h], [hwloc_topology_init], [
-dnl    CUDA is there
-    AC_DEFINE([KAAPI_USE_HWLOC],1,[Use with HWLoc])
-  ],
+KAAPI_FEATURE([hwloc], [build with HWloc support for discover hardware topology], [], [check],
   [
-  ],
-  [])
-AM_CONDITIONAL([KAAPI_TARGET_HWLOC],[test x"$KAAPI_USE_HWLOC" = x"yes"])
+    AC_DEFINE([KAAPI_USE_HWLOC],1,[Use HWLoc to discover the topology])
+  ], [], [],
+  [ 
+    KAAPI_PKGLIB_CHECK([HWLOC], [hwloc], [HWLOC], [], [KAAPI_USE_HWLOC],
+     [build with HWloc support for discover hardware topology],
+     [hwloc], [], [hwloc.h], [hwloc_topology_init], [
+       FEATURE_ENABLE
+     ],
+     [
+       FEATURE_DISABLE
+     ],
+     [])
+
+  ])
 ACX_LIB_LINK([KAAPILIB],[HWLOC])
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-network"
 dnl -----------------------------------------------------------------------
 # Select compilation of network support as part of the library
-# Default is to compile it
-AC_ARG_ENABLE([network],[AS_HELP_STRING([--disable-network],
-	[Disable to not compile network code, default: enable])]
-)
-AS_IF([test "x$enable_network" != "xno"], 
-  [dnl Do the stuff needed for enabling the feature
-    AC_MSG_NOTICE([Compiling network])
-    KAAPI_USE_NETWORK=yes
+# Default is to not compile it until it works
+KAAPI_FEATURE([network], [allow distributed Kaapi programs],
+  [Network support compiled], [no],
+  [
     AC_DEFINE([KAAPI_USE_NETWORK],1,[defined to 1 when compiling with network support])
+    KAAPI_USE_NETWORK=yes
   ],
- 
-  [dnl Do the stuff needed for disable the feature
-    AC_MSG_NOTICE([Do not compile network support])
-  ]
-)
-AC_SUBST([KAAPI_USE_NETWORK])
-AM_CONDITIONAL([KAAPI_TARGET_KANET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
+  [],
+  [KAAPI_TARGET_KANET],
+  [
+    ## Ici, il faudrait tester les r√seaux possibles et les souhait
+    # de l'utilisateur.
+    FEATURE_ENABLE
+  ])
+
 ## ICI il faudrait preciser le reseau dans le commande --with-network=...
 ## sinon choix par d√©faut
 AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
@@ -588,7 +597,7 @@ AS_CASE([$with_gasnet],
     KAGASNETLIB_BUILD_CPPFLAGS=$GASNET_CPPFLAGS
     KAGASNETLIB_BUILD_CFLAGS=$GASNET_CFLAGS
     KAGASNETLIB_BUILD_LDFLAGS=$GASNET_LDFLAGS
-    KAGASNETLIB_BUILD_LIBS=$GASNET_LIBS
+    KAGASNETLIB_BUILD_LIBS="$GASNET_LIBS -lmpi"
     AC_MSG_NOTICE([KAGASNETLIB_BUILD_CPPFLAGS=$KAGASNETLIB_BUILD_CPPFLAGS])
     AC_MSG_NOTICE([KAGASNETLIB_BUILD_CFLAGS=$KAGASNETLIB_BUILD_CFLAGS])
     AC_MSG_NOTICE([KAGASNETLIB_BUILD_LDFLAGS=$KAGASNETLIB_BUILD_LDFLAGS])
@@ -661,27 +670,29 @@ AC_SUBST(AM_CXXFLAGS)
 AM_LDFLAGS="$LDFLAGS"
 AC_SUBST(AM_LDFLAGS)
 
+dnl First, alphabetic order of directory of Makefiles
+dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
-	src/misc/kaapi_version.c
-	src/Makefile
 	api/Makefile
 	api/atha/Makefile
+	api/fortran/Makefile
+	api/kaapi/Makefile
 	api/kaapixx/Makefile
 	api/kastl/Makefile
-	api/kaapi/Makefile
-	api/fortran/Makefile
+	examples/Makefile
 	network/Makefile
 	network/mpinet/Makefile
 	network/gasnet/Makefile
-	examples/Makefile
+	src/Makefile
 	tests/static/Makefile
 
+	atha.pc
 	kaapi.pc
 	kaapi++.pc
-	atha.pc
+	kastl.pc
+	src/misc/kaapi_version.c
 ])
-#	kastl.wip/Makefile
 AC_OUTPUT
 
 AC_MSG_NOTICE([*************************************])

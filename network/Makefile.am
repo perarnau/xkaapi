@@ -31,8 +31,4 @@ libkanet_la_SOURCES=\
 	kanet_network.cpp \
 	$(include_HEADERS)
 
-check_headers_SRC_C=
-check_headers_SRC_CXX=
-check_headers_LIBS=$(KANETPROGS_BUILD_LDFLAGS) $(KANETPROGS_BUILD_LIBS)
-
 endif

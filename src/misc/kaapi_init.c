@@ -114,10 +114,7 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")
     \retval E2BIG because of a cpu index too high in KAAPI_CPUSET
     
 */
-int kaapi_setup_param( 
-  int argc __attribute__((unused)), 
-  char** argv __attribute__((unused))
-)
+static int kaapi_setup_param()
 {
   const char* wsselect;
     
@@ -142,8 +139,8 @@ int kaapi_setup_param(
   kaapi_default_param.syscpucount = 1;
 #endif
   /* adjust system limit, if library is compiled with greather number of processors that available */
-  if (kaapi_default_param.syscpucount > KAAPI_MAX_PROCESSOR)
-    kaapi_default_param.syscpucount = KAAPI_MAX_PROCESSOR;
+  if (kaapi_default_param.syscpucount > KAAPI_MAX_PROCESSOR_LIMIT)
+    kaapi_default_param.syscpucount = KAAPI_MAX_PROCESSOR_LIMIT;
 
   kaapi_default_param.use_affinity = 0;
 
@@ -204,7 +201,7 @@ int kaapi_init(void)
   kaapi_init_basicformat();
   
   /* set up runtime parameters */
-  kaapi_assert_m( 0 ==kaapi_setup_param( 0, 0 ), "kaapi_setup_param" );
+  kaapi_assert_m( 0 == kaapi_setup_param(), "kaapi_setup_param" );
   
   int err = kaapi_mt_init();
   return err;

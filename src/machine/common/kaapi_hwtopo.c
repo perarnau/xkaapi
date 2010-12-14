@@ -42,44 +42,12 @@
 */
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
+#if defined(KAAPI_USE_HWLOC)
+#  include "hwloc.h"
+#endif
 
-/** Common initialization 
-*/
-static void kaapi_hw_standardinit()
-{
-  for (int i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-  {
-    kaapi_default_param.kid2cpu[i]= -1;
-    kaapi_default_param.cpu2kid[i]= -1;
-  }
-  bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
-
-  kaapi_cpuset_clear(&kaapi_default_param.usedcpu);
-
-  /* build the procinfo list */
-  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)malloc(sizeof(kaapi_procinfo_list_t) );
-  kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
-  kaapi_mt_register_procs(kaapi_default_param.kproc_list);
-#if defined(KAAPI_USE_CUDA)
-  kaapi_cuda_register_procs(kaapi_default_param.kproc_list);
-#endif /* KAAPI_USE_CUDA */
-}
-
-
-#if !defined(KAAPI_USE_HWLOC)
-/** Initialize hw topo.
-*/
-int kaapi_hw_init()
-{
-  kaapi_hw_standardinit();
-  return 0;
-}
-
-#else
-
-#include "hwloc.h"
-
-/* 
+#if defined(KAAPI_USE_HWLOC)
+/*
 */
 static void kaapi_hwcpuset2affinity( 
   kaapi_cpuset_t* affinity, 
@@ -136,6 +104,100 @@ static const char* kaapi_kids2string(
 }
 #endif
 
+#endif
+
+#ifdef KAAPI_MAX_PROCESSOR_GENERIC
+void (*kaapi_bitmap_clear)( kaapi_bitmap_t* b );
+int (*kaapi_bitmap_value_empty)( kaapi_bitmap_value_t* b );
+void (*kaapi_bitmap_value_set)( kaapi_bitmap_value_t* b, int i );
+void (*kaapi_bitmap_value_copy)( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b);
+void (*kaapi_bitmap_swap0)( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
+int (*kaapi_bitmap_set)( kaapi_bitmap_t* b, int i );
+int (*kaapi_bitmap_count)( kaapi_bitmap_value_t b );
+int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
+#endif
+
+/** Common initialization 
+*/
+static void kaapi_hw_standardinit()
+{
+  bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
+
+  kaapi_cpuset_clear(&kaapi_default_param.usedcpu);
+
+  /* build the procinfo list */
+  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)malloc(sizeof(kaapi_procinfo_list_t) );
+  kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
+  kaapi_mt_register_procs(kaapi_default_param.kproc_list);
+  kaapi_default_param.kid2cpu=(unsigned int*)malloc(kaapi_default_param.cpucount*sizeof(unsigned int));
+  kaapi_default_param.cpu2kid=(unsigned int*)malloc(kaapi_default_param.cpucount*sizeof(unsigned int));
+  for (int i=0; i<kaapi_default_param.cpucount; ++i)
+  {
+    kaapi_default_param.kid2cpu[i]= -1;
+    kaapi_default_param.cpu2kid[i]= -1;
+  }
+
+#ifdef KAAPI_MAX_PROCESSOR_GENERIC
+  /* Choosing an implementation depending on the available ones */ 
+#  ifdef KAAPI_MAX_PROCESSOR_32
+  if (kaapi_default_param.cpucount <= 32) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_32;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_32;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_32;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_32;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_32;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_32;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_32;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_32;
+  } else
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_64
+  if (kaapi_default_param.cpucount <= 64) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_64;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_64;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_64;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_64;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_64;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_64;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_64;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_64;
+  } else
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_128
+  if (kaapi_default_param.cpucount <= 128) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_128;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_128;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_128;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_128;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_128;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_128;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_128;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_128;
+  } else
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_LARGE
+  if (kaapi_default_param.cpucount) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_large;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_large;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_large;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_large;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_large;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_large;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_large;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_large;
+  } else
+#  endif
+  {
+    fprintf(stderr, "Too many processors\nAborting\n");
+    exit(1);
+  }
+#endif
+
+#if defined(KAAPI_USE_CUDA)
+  kaapi_cuda_register_procs(kaapi_default_param.kproc_list);
+#endif /* KAAPI_USE_CUDA */
+}
+
 
 /** Initialize hw topo.
     The goal here is to build for each system resources.
@@ -151,6 +213,7 @@ static const char* kaapi_kids2string(
 */
 int kaapi_hw_init()
 {
+#if defined(KAAPI_USE_HWLOC)
   hwloc_topology_t topology;
   hwloc_obj_t root;
   hwloc_obj_t obj;
@@ -158,9 +221,11 @@ int kaapi_hw_init()
   int memdepth;
   int idx, ncousin;
   int ncpu;
+#endif
 
   kaapi_hw_standardinit();
   
+#if defined(KAAPI_USE_HWLOC)
   /* Allocate and initialize topology object. */
   hwloc_topology_init(&topology);
 
@@ -294,7 +359,8 @@ int kaapi_hw_init()
 }
 #endif
   
+#endif
+
   return 0;
 }
 
-#endif

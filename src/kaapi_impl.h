@@ -241,13 +241,6 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
 */
 extern void kaapi_init_basicformat(void);
 
-/** Setup KAAPI parameter from
-    1/ the command line option
-    2/ form the environment variable
-    3/ default values
-*/
-extern int kaapi_setup_param( int argc, char** argv );
-
 /**
 */
 enum kaapi_memory_type_t {
@@ -294,15 +287,15 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;                     /* number of physical cpus of the system */
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
-  unsigned int		         use_affinity;                    /* use cpu affinity */
+  unsigned int		   use_affinity;                    /* use cpu affinity */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   uint64_t                 startuptime;                     /* time at the end of kaapi_init */
 
-  struct kaapi_procinfo_list_t*   kproc_list;                      /* list of kprocessors to initialized */
+  struct kaapi_procinfo_list_t*   kproc_list;               /* list of kprocessors to initialized */
   kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
   kaapi_hierarchy_t        memory;                          /* memory hierarchy */
-  unsigned int	           kid2cpu[KAAPI_MAX_PROCESSOR];    /* mapping: kid->phys cpu  */
-  unsigned int  	         cpu2kid[KAAPI_MAX_PROCESSOR];    /* mapping: phys cpu -> kid */
+  unsigned int	           *kid2cpu;                        /* mapping: kid->phys cpu  */
+  unsigned int  	   *cpu2kid;                        /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
