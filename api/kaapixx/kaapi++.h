@@ -2468,7 +2468,9 @@ namespace ka {
   struct InitKaapiCXX {
     InitKaapiCXX();
   };
+#if 0
   static InitKaapiCXX stroumph;
+#endif
   
 } // namespace ka
 
