@@ -1610,6 +1610,16 @@ namespace ka {
         ++_rep;
         return *this;
       }
+      counting_iterator& operator+=(int i) 
+      { 
+        _rep+=i;
+        return *this;
+      }
+      counting_iterator& operator+=(size_t i) 
+      { 
+        _rep+=i;
+        return *this;
+      }
       counting_iterator operator++(int) 
       { 
         counting_iterator retval = *this;
@@ -1620,6 +1630,16 @@ namespace ka {
       { 
         --_rep;
         return *this;
+      }
+      counting_iterator& operator-=(int i) 
+      { 
+        _rep -=i;
+        return *this;
+      }
+      counting_iterator& operator-=(size_t i) 
+      { 
+        _rep -=i;
+        return *this; 
       }
       counting_iterator operator--(int) 
       { 
@@ -2468,7 +2488,7 @@ namespace ka {
   struct InitKaapiCXX {
     InitKaapiCXX();
   };
-#if 0
+#if 0 
   static InitKaapiCXX stroumph;
 #endif
   
