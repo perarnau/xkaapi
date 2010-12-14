@@ -1,4 +1,4 @@
-#include "mylist.h"
+#include "lr_list.h"
 #include <sys/time.h>
 #include <stdlib.h>
 #include <iostream>
@@ -138,7 +138,7 @@ list::index_t list::head( ) const
 /* =============================================================== */
 /*
 */
-list::index_t lr_head( index_t h_head, index_t nh, index_t& lR)
+list::index_t list::lr_head( index_t h_head, index_t nh, index_t& lR)
 {
   index_t curr = 0;
   _rep[h_head].R = curr;
@@ -161,13 +161,12 @@ list::index_t lr_head( index_t h_head, index_t nh, index_t& lR)
 /* =============================================================== */
 /*
 */
-list::index_t list::split( sublist& sL, index_t s_beg, index_t s_end )
+list::index_t list::split( sublist* sL, index_t s_beg, index_t s_end )
 {
   int t;
   index_t scurr = s_beg;  
-  if (s_end - s_beg < sL.size()) 
-    return index_t(-1);
-  for (index_t i=0; i< (s_end-s_beg); ++i)
+  index_t n = s_end - s_beg;
+  for (index_t i=0; i< n; ++i)
   {
     index_t k;
     for (t=0; t<100; ++t)

@@ -50,11 +50,11 @@
 
 int main(int argc, char * argv[])
 {
-	long int i, j, first_el;
-
 	list LV;
-
-  list::size_t num_elements = (list::size_t)atoi(argv[1]);
+  list::size_t num_elements = 10;
+  
+  if (argc > 1) (list::size_t)atoi(argv[1]);
+  
 	if (num_elements < 1)
 	{
 		printf("The number of the elements on the list should be 1 at least\n");
@@ -67,20 +67,20 @@ int main(int argc, char * argv[])
 #endif
 
   /* randomize the list */
-  LR.randomize();
+  LV.randomize();
   if (num_elements < 100)
   {
-    LV.print( std::cout << "List is:" );
+    LV.print( std::cout << "List is:\n" );
     std::cout << std::endl;
   }
 
   double start = kaapi_get_elapsedtime();
   /* find the head of the list */
-  list::index_t h_head = LS.head();
+  list::index_t h_head = LV.head();
   list::index_t lR;
   list::index_t le = LV.lr_head( h_head, LV[h_head].nS, lR);
   LV[le].R = lR+1;
-  double stop = get_elapsedtime();
+  double stop = kaapi_get_elapsedtime();
 
 #if DEBUG
   std::cout << "Head of the list is at index: " << h_head << std::endl;

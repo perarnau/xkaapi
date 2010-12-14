@@ -11,6 +11,9 @@
 
 /*========================================== LIST MANAGEMENT ==========================================*/
 
+/* fwd decl */
+class sublist;
+
 /* List data structure: stored into an array 
    The last element of the list has its index to the successor equal to -n the size of the list.
 */
@@ -76,7 +79,15 @@ public:
      Return the number of splitters: If after 100 random selections, a new splitter cannot
      be selected, then it was not generated.
   */
-  index_t  split_list( sublist& sL, long int s_beg, long int s_end );
+  index_t  split( sublist* sL, long int s_beg, long int s_end );
+  
+  /* access to the element ith of the underlaying array */
+  const node& operator[](index_t i) const
+  { return _rep[i]; }
+
+  /* access to the element ith of the underlaying array */
+  node& operator[](index_t i) 
+  { return _rep[i]; }
 
 protected:
   index_t _size;
@@ -90,17 +101,11 @@ public:
   typedef list::index_t index_t;
   
 public:
-  /* List data structure: stored into an array, used for Jaja algorithm */
-  struct nodesublist
-  {
-    long int head;     // Position of the head of the sublist into the list L
-    long int next;     // Index of the next sublist
-    long int save_nS;  // copy of the successor of L[j].ns 
-    long int R;        // The last rank of the sublist
-    long int pR;       // Prefix of the rank to add for each sublist
-  };
-
-  nodesublist _rep;
+  long int head;     // Position of the head of the sublist into the list L
+  long int next;     // Index of the next sublist
+  long int save_nS;  // copy of the successor of L[j].ns 
+  long int R;        // The last rank of the sublist
+  long int pR;       // Prefix of the rank to add for each sublist
 };
 
 
