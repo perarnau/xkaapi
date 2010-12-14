@@ -53,7 +53,7 @@ int main(int argc, char * argv[])
 	list LV;
   list::size_t num_elements = 10;
   
-  if (argc > 1) (list::size_t)atoi(argv[1]);
+  if (argc > 1) num_elements = (list::size_t)atoi(argv[1]);
   
 	if (num_elements < 1)
 	{

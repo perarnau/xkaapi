@@ -30,9 +30,8 @@ public:
     long int R;  // Rank
   };
   
-  /* Initialize the list such as initial R = 1 and all successors == -n
-  */
-  void initialize();
+  /* cstor */
+  list();
   
   /* Allocate the memory for a list of size n elements
   */
@@ -42,7 +41,13 @@ public:
      The last element of the list has its successor value == -n.
      Return the head of the list.
   */
-  long int randomize();
+  index_t randomize();
+
+  /* This version generates ordered list.
+     The last element of the list has its successor value == -n.
+     Return the head of the list.
+  */
+  index_t ordered();
 
   /* print a list of n elements 
   */
@@ -51,6 +56,12 @@ public:
   /* Verify the result of the list ranking 
   */
   int testOK() const;
+
+  /* Compute the sum of all successor index.
+     See Helman & Jaja, design pratical efficient algorithms for symmetric multiprocessors.
+  */
+  size_t size( ) const
+  { return _size; }
 
   /* Compute the sum of all successor index.
      See Helman & Jaja, design pratical efficient algorithms for symmetric multiprocessors.
@@ -72,6 +83,16 @@ public:
   */
   index_t lr_head( index_t h_head, index_t nh, index_t& lR);
 
+  /* Do list ranking on the sublist starting at position h_head. 
+     nh is the successor of the head.
+     On return lR contains the last rank computed for the sublist.
+     On return the SLi arrays contains the sublist index of each elements.
+     The return value is the index of the last element of the (sub) list.
+     The next element of the return value is either the marker of the end of the list,
+     or the head of the next sublist.
+  */
+  index_t lr_head( index_t h_head, index_t nh, index_t& lR, index_t SLindex, index_t* SLi);
+
   /* Split the list L[0], ..., L[n-1] into s sublist and add
      description of splitters into sL[s_beg], .., sL[s_end-1].
      For the j-th splitter with index k into L, then on return we have
@@ -81,12 +102,31 @@ public:
   */
   index_t  split( sublist* sL, long int s_beg, long int s_end );
   
+  /* Split the list L[0], ..., L[n-1] into s sublist and add
+     description of splitters into sL[s_beg], .., sL[s_end-1].
+     For the j-th splitter with index k into L, then on return we have
+        * sL[j].save_nS = L[k].nS and L[k].nS = -(j+1)
+     Return the number of splitters: If after 100 random selections, a new splitter cannot
+     be selected, then it was not generated.
+     On return the SLi array is updated for head of list.
+     SLindex_offset is an offset on SLi
+  */
+  index_t split( sublist* sL, index_t s_beg, index_t s_end, index_t SLindex_offset, index_t* SLi );
+
   /* access to the element ith of the underlaying array */
   const node& operator[](index_t i) const
   { return _rep[i]; }
 
   /* access to the element ith of the underlaying array */
   node& operator[](index_t i) 
+  { return _rep[i]; }
+
+  /* access to the element ith of the underlaying array */
+  const node& operator[](size_t i) const
+  { return _rep[i]; }
+
+  /* access to the element ith of the underlaying array */
+  node& operator[](size_t i) 
   { return _rep[i]; }
 
 protected:
