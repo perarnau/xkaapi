@@ -1094,7 +1094,7 @@ namespace impl
   <typename Result, typename Sequence, typename Body, typename Settings,
    bool TerminateTag, bool ReduceTag>
   static Result& generic_loop
-  (Result& res, Sequence& seq, Body& body, const Settings& settings)
+    (Result& res, Sequence& seq, Body& body, const Settings& settings)
   {
     // create a context and call master_entry
     // note that result is inout and returned

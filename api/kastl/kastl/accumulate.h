@@ -78,8 +78,7 @@ struct accumulate_body
 };
 
 template<typename Iterator, typename Value, typename Function, typename Settings>
-Value accumulate
-(Iterator first, Iterator last, Value init, Function op, const Settings& settings)
+Value accumulate(Iterator first, Iterator last, Value init, Function op, const Settings& settings)
 {
   kastl::rts::Sequence<Iterator> seq(first, last - first);
   accumulate_body<Iterator, Value, Function> body(op);
