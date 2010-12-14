@@ -81,7 +81,7 @@ int kaapi_mt_register_procs(kaapi_procinfo_list_t* kpl)
   if (cpucount_str != NULL)
   {
     kaapi_default_param.cpucount = atoi(getenv("KAAPI_CPUCOUNT"));
-    if (kaapi_default_param.cpucount > KAAPI_MAX_PROCESSOR)
+    if (kaapi_default_param.cpucount > KAAPI_MAX_PROCESSOR_LIMIT)
       kaapi_default_param.cpucount = kaapi_default_param.syscpucount;
   }
 

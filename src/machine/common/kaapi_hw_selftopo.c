@@ -254,7 +254,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
         }
         
         /* compute the kids array for this processor */
-        kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(&kproc->hlevel.levels[depth].set->who, kproc->hlevel.levels[depth].kids, KAAPI_MAX_PROCESSOR);
+        kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(&kproc->hlevel.levels[depth].set->who, kproc->hlevel.levels[depth].kids, kaapi_default_param.cpucount);
         break;
       }
     }

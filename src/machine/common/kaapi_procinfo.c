@@ -63,8 +63,8 @@ struct procset_parser
 {
 # define PROC_BIT_IS_DISABLED (1 << 0)
 # define PROC_BIT_IS_USABLE (1 << 1)
-  unsigned char proc_bits[KAAPI_MAX_PROCESSOR_LIMIT];
-  unsigned int proc_binding[KAAPI_MAX_PROCESSOR_LIMIT];
+  unsigned char *proc_bits;
+  unsigned int *proc_binding;
   unsigned int proc_count;
   unsigned int max_count;
   const char* str_pos;
@@ -77,17 +77,35 @@ typedef struct procset_parser procset_parser_t;
 
 /**
  */
-static void init_parser(
+static int init_parser(
                         procset_parser_t* parser, 
                         const char* str_pos, 
                         unsigned int max_count
                         )
 {
-  memset(parser->proc_bits, 0, sizeof(parser->proc_bits));
+  parser->proc_bits=(unsigned char*)calloc(max_count, sizeof(char));
+  if (!parser->proc_bits)
+    return -1;
+  parser->proc_binding=(unsigned int*)malloc(max_count*sizeof(int));
+  if (!parser->proc_binding) {
+    free(parser->proc_bits);
+    return -1;
+  }
   parser->proc_count = 0;
   parser->max_count = max_count;
   parser->str_pos = str_pos;
   parser->err_no = 0;
+  return 0;
+}
+
+/**
+ */
+static void finish_parser(
+                        procset_parser_t* parser
+                        )
+{
+  free(parser->proc_bits);
+  free(parser->proc_binding);
 }
 
 
@@ -388,24 +406,30 @@ int kaapi_procinfo_list_parse_string
   unsigned int count;
   unsigned int i;
   unsigned int kid = 0;
+  int ret;
   
   /* parse string */
-  init_parser(&parser, procset_str, max_count);
-  if (parse_string(&parser))
+  if (init_parser(&parser, procset_str, max_count))
     return -1;
+  if (parse_string(&parser)) {
+    ret=-1;
+    goto free_parser;
+  }
   
   /* turn to kpl */
   count = parser.proc_count;
-  for (i = 0; count && (i < KAAPI_MAX_PROCESSOR); ++i)
+  for (i = 0; count && (i < max_count); ++i)
   {
     /* not usable */
     if (!(parser.proc_bits[i] & PROC_BIT_IS_USABLE))
       continue ;
     
     kpi = kaapi_procinfo_alloc();
-    if (kpi == NULL)
-      return -1;
-    
+    if (kpi == NULL) {
+      ret=-1;
+      goto free_parser;
+    }
+ 
     kpi->proc_index = i;
     kpi->proc_type  = proc_type;
     kpi->bound_cpu  = parser.proc_binding[i];
@@ -422,6 +446,9 @@ int kaapi_procinfo_list_parse_string
     
     --count;
   }
-  
-  return 0;
+  ret=0;
+
+free_parser:
+  finish_parser(&parser); 
+  return ret;
 }
