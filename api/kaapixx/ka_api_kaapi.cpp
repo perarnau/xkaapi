@@ -97,9 +97,9 @@ Community System::initialize_community( int& argc, char**& argv )
 {
   static bool is_called = false; if (is_called) return Community(0); is_called = true;
   
-  /** Init should have been called by InitKaapiCXX
+  /** Init should not have been called by InitKaapiCXX
   */
-  kaapi_assert(kaapi_init() == EALREADY );
+  kaapi_assert(kaapi_init() == 0 );
   
   System::saved_argc = argc;
   System::saved_argv = new char*[argc];
