@@ -92,6 +92,16 @@ kaapi_atomic_t kaapi_term_barrier = { 0 };
 */
 volatile int kaapi_isterm = 0;
 
+#ifdef KAAPI_MAX_PROCESSOR_GENERIC
+void (*kaapi_bitmap_clear)( kaapi_bitmap_t* b );
+int (*kaapi_bitmap_value_empty)( kaapi_bitmap_value_t* b );
+void (*kaapi_bitmap_value_set)( kaapi_bitmap_value_t* b, int i );
+void (*kaapi_bitmap_value_copy)( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b);
+void (*kaapi_bitmap_swap0)( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
+int (*kaapi_bitmap_set)( kaapi_bitmap_t* b, int i );
+int (*kaapi_bitmap_count)( kaapi_bitmap_value_t b );
+int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
+#endif
 
 /**
 */
@@ -115,6 +125,62 @@ int kaapi_mt_init(void)
       * memory
    */
   kaapi_hw_init();
+
+#ifdef KAAPI_MAX_PROCESSOR_GENERIC
+  /* Choosing an implementation depending on the available ones */ 
+#  ifdef KAAPI_MAX_PROCESSOR_32
+  if (kaapi_default_param.cpucount <= 32) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_32;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_32;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_32;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_32;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_32;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_32;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_32;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_32;
+  } else
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_64
+  if (kaapi_default_param.cpucount <= 64) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_64;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_64;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_64;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_64;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_64;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_64;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_64;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_64;
+  } else
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_128
+  if (kaapi_default_param.cpucount <= 128) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_128;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_128;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_128;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_128;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_128;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_128;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_128;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_128;
+  } else
+#  endif
+#  ifdef KAAPI_MAX_PROCESSOR_LARGE
+  if (kaapi_default_param.cpucount) {
+    kaapi_bitmap_clear           = &kaapi_bitmap_clear_large;
+    kaapi_bitmap_value_empty     = &kaapi_bitmap_value_empty_large;
+    kaapi_bitmap_value_set       = &kaapi_bitmap_value_set_large;
+    kaapi_bitmap_value_copy      = &kaapi_bitmap_value_copy_large;
+    kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_large;
+    kaapi_bitmap_set             = &kaapi_bitmap_set_large;
+    kaapi_bitmap_count           = &kaapi_bitmap_count_large;
+    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_large;
+  } else
+#  endif
+  {
+    fprintf(stderr, "Too many processors\nAborting\n");
+    exit(1);
+  }
+#endif
 
   /* initialize the kprocessor key */
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
