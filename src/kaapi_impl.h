@@ -287,15 +287,15 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;                     /* number of physical cpus of the system */
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
-  unsigned int		   use_affinity;                    /* use cpu affinity */
+  unsigned int		         use_affinity;                    /* use cpu affinity */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   uint64_t                 startuptime;                     /* time at the end of kaapi_init */
 
-  struct kaapi_procinfo_list_t*   kproc_list;               /* list of kprocessors to initialized */
+  struct kaapi_procinfo_list_t* kproc_list;                 /* list of kprocessors to initialized */
   kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
   kaapi_hierarchy_t        memory;                          /* memory hierarchy */
   unsigned int	           *kid2cpu;                        /* mapping: kid->phys cpu  */
-  unsigned int  	   *cpu2kid;                        /* mapping: phys cpu -> kid */
+  unsigned int  	         *cpu2kid;                        /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
@@ -462,8 +462,9 @@ size_t          kaapi_format_get_size_param (const struct kaapi_format_t* fmt, u
 #define KAAPI_DECLARE_BLOCENTRIES(NAME, TYPE) \
 typedef struct NAME {\
   TYPE         data[KAAPI_BLOCENTRIES_SIZE]; \
-  int          pos;  /* next free in data */\
+  uintptr_t    pos;  /* next free in data */\
   struct NAME* next; /* link list of bloc */\
+  void*        ptr;  /* memory pointer of allocated bloc */\
 } NAME
 
 
