@@ -74,10 +74,8 @@ static int kaapi_cpuset2kids(
 }
 
 #if defined(KAAPI_DEBUG)
-static const char* kaapi_kids2string(
- int nkids,
- kaapi_processor_id_t* kids
-)
+__attribute__((unused)) static const char* kaapi_kids2string
+(int nkids, kaapi_processor_id_t* kids)
 {
   static char buffer[1024];
   int i, err, size;
