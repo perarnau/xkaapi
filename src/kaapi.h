@@ -1851,9 +1851,9 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     - all functions or macros with ORIG return the old value before applying the operation.
 */
 #if defined(KAAPI_DEBUG)
-static inline int __kaapi_isaligned(const volatile void* a, int byte)
+static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 {
-  kaapi_assert( (((unsigned long)a) & (byte-1)) == 0 ); 
+  kaapi_assert( (((uintptr_t)a) & ((unsigned long)byte - 1)) == 0 );
   return 1;
 }
 #  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
