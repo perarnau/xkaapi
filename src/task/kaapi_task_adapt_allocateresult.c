@@ -58,8 +58,7 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   */
   size_alloc = sizeof(kaapi_taskadaptive_result_t);
   if ((size >0) && (data ==0)) size_alloc += size;
-  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align
-    ( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
+  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
   if (result== 0) return 0;
   
   result->size_data = size;

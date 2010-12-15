@@ -129,7 +129,7 @@ typedef struct kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_cell_ptr_t;
 */
 typedef struct kaapi_wsqueuectxt_cell_t {
   kaapi_atomic_t               state;      /* 0: in the list, 1: out the list */
-  kaapi_cpuset_t             affinity;   /* bit i == 1 -> can run on procid i */
+  kaapi_cpuset_t               affinity;   /* bit i == 1 -> can run on procid i */
   kaapi_thread_context_t*      thread;     /* */
   kaapi_wsqueuectxt_cell_ptr_t next;       /* double link list */
   kaapi_wsqueuectxt_cell_ptr_t prev;       /* shared with thief, used to link in free list */
@@ -214,7 +214,7 @@ extern int kaapi_getcontext( struct kaapi_processor_t* proc, kaapi_thread_contex
 #    define KAAPI_MAX_PROCESSOR_64
 #  elif (KAAPI_MAX_PROCESSOR <=128)
 #    define KAAPI_MAX_PROCESSOR_128
-#  else // (KAAPI_MAX_PROCESSOR >64)
+#  else // (KAAPI_MAX_PROCESSOR >128)
 #    define KAAPI_MAX_PROCESSOR_LARGE
 #  endif
 
@@ -573,8 +573,6 @@ typedef struct kaapi_processor_t {
   /* cache align */
   kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
 
-  uint32_t                 issteal;                       /* */
-  
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
   kaapi_lready_t	         lready;                        /* list of ready context, concurrent access locked by 'lock' */
 
@@ -582,6 +580,8 @@ typedef struct kaapi_processor_t {
   kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
 
+  uint32_t                 issteal;                       /* */
+  
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
   void*                    fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
 
