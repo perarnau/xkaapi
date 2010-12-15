@@ -106,18 +106,22 @@ void kaapi_taskwrite_body(
   }
 
   /* if signaled thread was suspended, move it to the local queue */
+#if 1
   kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
   if ((wcs != 0) && (arg->origin_thread->sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
   { 
     kaapi_readmem_barrier();
-    //kaapi_processor_t* kproc = arg->origin_thread->proc;
-    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    kaapi_processor_t* kproc = arg->origin_thread->proc;
+    //kaapi_processor_t* kproc = kaapi_get_current_processor();
     kaapi_assert_debug( kproc != 0);
-    if (0)//  /*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
+    if (kaapi_cpuset_has(wcs->affinity, kproc->kid))
+    //  /*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
     {
       kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
       if (kthread !=0)
       {
+      
+//    printf("Put thread %p, on myqueue: %li\n", (void*)thread, kproc->kid ); fflush(stdout);
         /* Ok, here we have theft the thread and no body else can steal it
            Signal the end of execution of forked task: 
            -if no war => mark the task as terminated 
@@ -135,6 +139,7 @@ void kaapi_taskwrite_body(
       }
     }
   }
+#endif
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
