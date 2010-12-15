@@ -392,7 +392,7 @@ AC_CHECK_HEADERS([stdio.h])
 # library name
 AC_DEFINE([KAAPI_MAX_ARCH],3,[Maximum number of architectures])
 
-KAAPI_FEATURE([max-processors], [Maximum number of processors (special values "host" to optimize for current host and "generic" for runtime-choice)], [], [generic],
+KAAPI_FEATURE([max-processors], [Maximum number of processors (special values "host" to optimize for current host and "generic" for runtime-choice)], [], [host],
   [], [], [],
   [ 
   AS_CASE(["$enable_max_processors"],
@@ -401,10 +401,10 @@ KAAPI_FEATURE([max-processors], [Maximum number of processors (special values "h
       value=`getconf _NPROCESSORS_ONLN 2>/dev/null`
       if test x"$value" = x; then
         AC_MSG_RESULT([Unknown (using default value)])
-  	FEATURE_SET(["generic"])
+  	    FEATURE_SET(["generic"])
       else
         AC_MSG_RESULT([$value])
-  	FEATURE_SET(["$value"])
+  	    FEATURE_SET(["$value"])
       fi
     ])
   ],
@@ -526,8 +526,6 @@ AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 
 
-
-
 dnl -----------------------------------------------------------------------
 dnl The "--with-hwloc"
 dnl -----------------------------------------------------------------------
@@ -624,7 +622,7 @@ ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([ATHALIB], [PRIVATE], [HWLOC])
-ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPILIB])
+ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KASTLLIB], [PRIVATE], [HWLOC])
 ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [KAAPILIB])
@@ -653,8 +651,8 @@ ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
 
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
-	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libkaapi.la])
+	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 ACX_LIB_LINK([KFORTRANPROGS], [KFORTRANLIB])
