@@ -69,7 +69,7 @@ int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls )
   {
     bloc = ls->allocatedbloc;
     ls->allocatedbloc = bloc->next;
-    free(bloc);
+    free(bloc->ptr);
   }
   return 0;
 }
@@ -90,9 +90,12 @@ static kaapi_wsqueuectxt_cell_t* kaapi_wsqueuectxt_alloccell( kaapi_wsqueuectxt_
   else /* allocate a new bloc */
   {
     int i;
-    kaapi_wsqueuectxt_cellbloc_t* bloc = malloc( sizeof(kaapi_wsqueuectxt_cellbloc_t) );
+    void* ptr;
+    kaapi_wsqueuectxt_cellbloc_t* bloc = 
+        (kaapi_wsqueuectxt_cellbloc_t*)kaapi_malloc_align( KAAPI_CACHE_LINE, sizeof(kaapi_wsqueuectxt_cellbloc_t), &ptr );
     if (bloc ==0) return 0;
-    bloc->next = ls->allocatedbloc;
+    bloc->ptr         = ptr;
+    bloc->next        = ls->allocatedbloc;
     ls->allocatedbloc = bloc;
     for (i=1; i<KAAPI_BLOCENTRIES_SIZE; ++i)
     {
