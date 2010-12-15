@@ -82,11 +82,8 @@ static size_t kaapi_hw_countcousin( hwloc_obj_t obj )
 }
 
 
-#if 0
-static const char* kaapi_kids2string(
- int nkids,
- kaapi_processor_id_t* kids
-)
+__attribute__((unused))
+static const char* kaapi_kids2string(int nkids, kaapi_processor_id_t* kids)
 {
   static char buffer[1024];
   int i, err, size;
@@ -102,13 +99,12 @@ static const char* kaapi_kids2string(
   buffer[size+1] = 0;
   return buffer;
 }
-#endif
 
 #endif
 
 /** Common initialization 
 */
-static void kaapi_hw_standardinit()
+static void kaapi_hw_standardinit(void)
 {
   bzero( &kaapi_default_param.memory, sizeof(kaapi_default_param.memory) );
 
@@ -116,16 +112,20 @@ static void kaapi_hw_standardinit()
 
   /* build the procinfo list */
   kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)malloc(sizeof(kaapi_procinfo_list_t) );
-  kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
-  kaapi_mt_register_procs(kaapi_default_param.kproc_list);
+  kaapi_assert_debug(kaapi_default_param.kproc_list);
+
   kaapi_default_param.kid2cpu=(unsigned int*)malloc(kaapi_default_param.cpucount*sizeof(unsigned int));
+  kaapi_assert_debug(kaapi_default_param.kid2cpu);
   kaapi_default_param.cpu2kid=(unsigned int*)malloc(kaapi_default_param.cpucount*sizeof(unsigned int));
+  kaapi_assert_debug(kaapi_default_param.cpu2kid);
   for (int i=0; i<kaapi_default_param.cpucount; ++i)
   {
     kaapi_default_param.kid2cpu[i]= -1;
     kaapi_default_param.cpu2kid[i]= -1;
   }
 
+  kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
+  kaapi_mt_register_procs(kaapi_default_param.kproc_list);
 
 #if defined(KAAPI_USE_CUDA)
   kaapi_cuda_register_procs(kaapi_default_param.kproc_list);

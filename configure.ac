@@ -410,7 +410,8 @@ KAAPI_FEATURE([max-processors], [Maximum number of processors (special values "h
   ],
   [
     FEATURE_CASE_VALUE([no,*], [enable_max_processors=0])
-    FEATURE_CASE_VALUE([generic,*], [enable_max_processors=0])
+#    FEATURE_CASE_VALUE([generic,*], [enable_max_processors=0])
+    FEATURE_CASE_VALUE([generic,*], [AC_MSG_ERROR([Option "generic" is under progress])])
     FEATURE_CASE_VALUE([no,*|yes,*], [AC_MSG_ERROR([A numeric value (or "host" or "generic") is required for --enable-max-processors])])
     FEATURE_CASE_VALUE([[[1-9]]*], [])
   ])
