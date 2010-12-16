@@ -27,6 +27,7 @@ include net.am
 include nqueens.am
 include poisson3D.am
 include prefix.am
+include bfs.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
@@ -41,7 +42,8 @@ USER_MAKEFILES=\
 	net/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
-	prefix/Makefile
+	prefix/Makefile \
+	bfs/Makefile
 
 TESTS=  
 
