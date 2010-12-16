@@ -75,7 +75,9 @@ list::index_t list::randomize()
   delete [] whereisrank;
   return head;
 #else
-	index_t i,pos,pos_ant,pos_end,head;
+	index_t i,pos,pos_ant;
+  index_t pos_end =0;
+  index_t head = 0;
 
   for (index_t i=0; i<_size; ++i)
   {
