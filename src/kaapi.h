@@ -259,6 +259,11 @@ extern int kaapi_init(void);
 */
 extern int kaapi_finalize(void);
 
+/* Get the current processor kid. 
+   \retval the current processor id
+*/
+extern unsigned int kaapi_get_self_kid(void);
+
 /* Abort 
 */
 extern void kaapi_abort(void);
