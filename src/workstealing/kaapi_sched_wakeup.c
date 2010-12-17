@@ -115,7 +115,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     
     /* add affinity here because in dfg the signal of suspended thread does not move it to ready list */
     if ((thread !=0) && kaapi_cpuset_has(thread->affinity, kproc_thiefid) 
-    && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))) 
+        && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))) 
     {
       cell->thread = 0;
       thread->wcs  = 0;
