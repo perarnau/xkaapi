@@ -45,12 +45,14 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
+
 #if defined(KAAPI_USE_CUDA)
+
 # include "../cuda/kaapi_cuda_proc.h"
 
 /* todo: move somewhere else */
 extern int kaapi_sched_select_victim_with_cuda_tasks
-(kaapi_processor_t*, kaapi_victim_t*);
+(kaapi_processor_t*, kaapi_victim_t*,  kaapi_selecvictim_flag_t);
 
 #endif
 

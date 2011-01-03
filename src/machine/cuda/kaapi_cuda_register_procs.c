@@ -187,9 +187,16 @@ static unsigned int __attribute__((unused)) has_task_by_proc_type
   return 0;
 }
 
-int kaapi_sched_select_victim_with_cuda_tasks(kaapi_processor_t* kproc, kaapi_victim_t* victim)
+int kaapi_sched_select_victim_with_cuda_tasks
+(
+ kaapi_processor_t* kproc,
+ kaapi_victim_t* victim,
+ kaapi_selecvictim_flag_t flag
+)
 #if 1 /* disable worksealing */
 {
+  if (flag != KAAPI_SELECT_VICTIM) return 0;
+
   /* this disables workstealing */
   victim->kproc = kproc;
   return 0;
@@ -198,6 +205,8 @@ int kaapi_sched_select_victim_with_cuda_tasks(kaapi_processor_t* kproc, kaapi_vi
 {
   unsigned int has_task;
   int i;
+
+  if (flag != KAAPI_SELECT_VICTIM) return 0;
   
   for (i = 0; i < kaapi_count_kprocessors; ++i)
   {
