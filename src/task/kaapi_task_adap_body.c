@@ -48,6 +48,9 @@
 #include "kaapi_impl.h"
 
 
+extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
+
+
 /* adaptive task body
  */
 void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
@@ -135,6 +138,11 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     
     kaapi_taskadaptive_result_t* const ktr = sc->header.ktr;
     uintptr_t state;
+
+    /* prevent ktr insertion race by steal syncing */
+    kaapi_synchronize_steal(sc);
+    ktr->rhead = sc->thieves.list.head;
+    ktr->rtail = sc->thieves.list.tail;
     
     state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
     if (state & KAAPI_MASK_BODY_PREEMPT)

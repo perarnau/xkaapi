@@ -1,13 +1,15 @@
 /*
+** kaapi_init.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+** Created on Tue Mar 31 15:19:03 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
+** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,49 +44,10 @@
 ** terms.
 ** 
 */
+
 #include "kaapi_impl.h"
 
-
-/** \ingroup ADAPTIVE
-*/
-void kaapi_synchronize_steal(kaapi_stealcontext_t* sc)
+unsigned int kaapi_get_self_kid(void)
 {
-  /* steal sync protocol. if the 2 conds hold:
-     . the work is empty, no steal is possible,
-     . we see a non BODY_STEAL, then every in
-     progress steal has passed.
-     then we cannot miss a thief that would
-     have incremented the thief count or add
-     itself into the thieves list.
-   */
-
-  kaapi_writemem_barrier();
-  while (kaapi_task_teststate(sc->ownertask, KAAPI_MASK_BODY_STEAL))
-    kaapi_slowdown_cpu();
-  kaapi_readmem_barrier();
-}
-
-
-/** \ingroup ADAPTIVE
-*/
-kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
-{
-  kaapi_synchronize_steal(sc);
-  return sc->thieves.list.head;
-}
-
-
-/** \ingroup ADAPTIVE
-*/
-kaapi_taskadaptive_result_t* kaapi_get_next_thief( kaapi_taskadaptive_result_t* pos )
-{
-  return pos->next;
-}
-
-
-/** \ingroup ADAPTIVE
-*/
-kaapi_taskadaptive_result_t* kaapi_get_prev_thief( kaapi_taskadaptive_result_t* pos )
-{
-  return pos->prev;
+  return (unsigned int)kaapi_get_current_processor()->kid;
 }

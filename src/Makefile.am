@@ -30,6 +30,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_wq_slowpop.c\
   misc/kaapi_wq_set.c\
   misc/kaapi_cpuset2str.c\
+  misc/kaapi_get_self_kid.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_taskregister_static.c \

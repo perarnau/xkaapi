@@ -1,0 +1,22 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+
+if KAAPI_API_KAAPIXX
+BFS_PRGS=bfs_kaapi++
+endif
+
+check_PROGRAMS+=$(BFS_PRGS)
+
+all-bfs: $(BFS_PRGS)
+
+bfs_kaapi___SOURCES=bfs/bfs_kaapi++.cpp
+
+bfs_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) -DCONFIG_PARALLEL=1
+bfs_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) -DCONFIG_PARALLEL=1
+bfs_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+bfs_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+

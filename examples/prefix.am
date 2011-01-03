@@ -8,7 +8,7 @@
 PREFIX_PRGS=prefix_kaapi
 # need kaapi_adapt.h: prefix_kaapi++ and others
 check_PROGRAMS+=$(PREFIX_PRGS)
-all-find: $(PREFIX_PRGS)
+all-prefix: $(PREFIX_PRGS)
 
 #Find STL algorithm
 prefix_kaapi_SOURCES=prefix/prefix_kaapi.c
