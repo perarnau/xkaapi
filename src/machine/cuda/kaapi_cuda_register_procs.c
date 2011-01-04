@@ -53,6 +53,8 @@
 int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 {
   const char* const gpuset_str = getenv("KAAPI_GPUSET");
+  kaapi_procinfo_t* pos = kpl->tail;
+  unsigned int kid = kpl->count;
   int devcount;
   int err;
 
@@ -70,14 +72,15 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
  
   err = kaapi_procinfo_list_parse_string
     (kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA, (unsigned int)devcount);
-
-  {
-    kaapi_procinfo_t* pos = kpl->head;
-    for (; pos; pos = pos->next)
-      printf("%u\n", pos->kid);
-  }
-
   if (err) return -1;
+
+  if (kpl->tail == NULL) return 0;
+
+  /* affect kids */
+  if (pos == NULL) pos = kpl->tail;
+  else pos = pos->next;
+  for (; pos; pos = pos->next, ++kid)
+    pos->kid = kid;
 
   return 0;
 }
