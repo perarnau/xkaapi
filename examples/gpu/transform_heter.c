@@ -412,13 +412,13 @@ static void memset_cuda_entry
   const range_t* const range = &work->range;
   CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
-  printf("> memset_cuda_entry [%u] [%u - %u[\n",
-	 kaapi_get_self_kid(), range->i, range->j);
+  printf("> memset_cuda_entry [%u] [%u - %u[ 0x%lx\n",
+	 kaapi_get_self_kid(), range->i, range->j, (uintptr_t)base);
 
 #define MEMSET_VALUE 1
   CUresult res = cuMemsetD32(base, MEMSET_VALUE, get_range_size(range));
   if (res != CUDA_SUCCESS)
-    printf("cudaError %u\n", res);
+    printf("cudaError 0x%lx %u\n", (uintptr_t)base, res);
 
   printf("< memset_cuda_entry\n");
 }
@@ -530,7 +530,9 @@ static kaapi_access_t get_access_param
 
 static void set_access_param
 (const struct kaapi_format_t* f, unsigned int i, void* p, const kaapi_access_t* a)
-{ ((task_work_t*)p)->range.base = *a; }
+{
+  ((task_work_t*)p)->range.base = *a;
+}
 
 static const struct kaapi_format_t* get_fmt_param
 (const struct kaapi_format_t* f, unsigned int i, const void* p)

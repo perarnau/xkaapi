@@ -178,23 +178,22 @@ static void prepare_task
   kaapi_mem_asid_t const host_asid = host_map->asid;
   kaapi_mem_asid_t const self_asid = get_proc_asid(proc);
 
-  kaapi_access_t* access;
+  const size_t param_count = format->get_count_params(format, sp);
+
+  kaapi_access_t access;
   kaapi_mem_mapping_t* mapping;
   CUdeviceptr devptr;
   void* hostptr;
   size_t size;
   unsigned int i;
 
-  for (i = 0; i < format->_count_params; ++i)
+  for (i = 0; i < param_count; ++i)
   {
-    const kaapi_access_mode_t mode =
-      KAAPI_ACCESS_GET_MODE(format->_mode_params[i]);
+    const kaapi_access_mode_t mode = format->get_mode_param(format, i, sp);
+    if (mode & KAAPI_ACCESS_MODE_V) continue ;
 
-    if (mode & KAAPI_ACCESS_MODE_V)
-      continue ;
-
-    access = (kaapi_access_t*)((uint8_t*)sp + format->_off_params[i]);
-    hostptr = access->data;
+    access = format->get_access_param(format, i, sp);
+    hostptr = access.data;
 
     /* get parameter size */
     size = format->get_size_param(format, i, sp);
@@ -265,12 +264,11 @@ static void prepare_task
 
     /* invalidate in other as if written */
     if (KAAPI_ACCESS_IS_WRITE(mode))
-    {
       kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
-    }
 
     /* update param addr */
-    access->data = (void*)(uintptr_t)devptr;
+    access.data = (void*)(uintptr_t)devptr;
+    format->set_access_param(format, i, sp, &access);
   }
 }
 
@@ -384,8 +382,6 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 }
 
 
-#if 0 /* todo, wrapped task */
-
 /* cuda device taskbcast body.
    this is the same as kaapi_taskbcast_body
    except it calls a cuda prototyped body
@@ -395,6 +391,8 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 static void cuda_taskbcast_body
 (CUstream stream, void* sp, kaapi_thread_t* thread)
 {
+#if 0 /* todo, wrapped task */
+
   /* thread[-1]->pc is the executing task (pc of the upper frame) */
   /* kaapi_task_t*          self = thread[-1].pc;*/
   kaapi_taskbcast_arg_t* arg  = sp;
@@ -592,10 +590,9 @@ static void cuda_taskbcast_body
     }
     comlist = comlist->next;
   }
-}
-
 #endif /* todo, wrapped task */
 
+}
 
 /* do nothing, as in the original kaapi_taskrecv_body
  */
@@ -605,15 +602,12 @@ static void cuda_taskrecv_body
 {
 }
 
-
 /* unwrap a wrapped task
  */
 
 static inline void unwrap_task
 (cuda_task_body_t* cuda_body, kaapi_task_body_t* original_body, void** original_sp)
 {
-#if 0 /* todo, handle wrapped task */
-
   /* cuda_body will point the adapted body if task is wrapped.
      original_body the current body. updated to point the original body.
      original_sp the current sp. updated to point the original sp.
@@ -633,14 +627,11 @@ static inline void unwrap_task
     *original_sp = arg->original_sp;
     *cuda_body = cuda_taskrecv_body;
   }
-
-#endif /* todo */
-
   /* else, nonwrapped task */
 }
 
 
-#if 0 /* todo, remove */
+#if 1 /* todo, remove */
 static const char* get_body_name(kaapi_task_body_t body)
 {
   const char* name = "unknown";
@@ -654,7 +645,6 @@ static const char* get_body_name(kaapi_task_body_t body)
   NAME_CASE(kaapi_suspend_body);
   NAME_CASE(kaapi_taskbcast_body);
   NAME_CASE(kaapi_taskrecv_body);
-  NAME_CASE(kaapi_tasksig_body);
   NAME_CASE(kaapi_tasksteal_body);
   NAME_CASE(kaapi_aftersteal_body);
   NAME_CASE(kaapi_tasksignalend_body);
@@ -665,19 +655,15 @@ static const char* get_body_name(kaapi_task_body_t body)
 
 
 /* exported */
-
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
-  printf("cuda_execframe\n");
-
-#if 0 /* todo */
   kaapi_processor_t* const proc = thread->proc;
-  CUresult res;
 
-  kaapi_format_t* format;
   kaapi_task_t*              pc;
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
+  uintptr_t	             state;
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
@@ -700,112 +686,134 @@ push_frame:
   ++thread->sfp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-#if 1/*(KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)*/
-begin_loop:
-#endif
+  pc = fp->pc;
+
   /* stack of task growth down ! */
-  while ((pc = fp->pc) != fp->sp)
+  while (pc != fp->sp)
   {
     kaapi_assert_debug( pc > fp->sp );
 
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-    body = kaapi_task_getbody(pc);
-    kaapi_assert_debug( body != kaapi_exec_body);
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
 
-    if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
-    { 
-      kaapi_assert_debug((pc->body == kaapi_suspend_body) || (pc->body == kaapi_aftersteal_body) );
-      body = pc->body;
-      if (body == kaapi_suspend_body)
-        goto error_swap_body;
-      /* else ok its aftersteal */
-      body = kaapi_aftersteal_body;
-      pc->body = kaapi_exec_body;
-    }
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-    /* wait thief get out pc */
-    while (thread->thiefpc == pc)
-      ;
+#if 0 /* unimplemented */
     body = pc->body;
-    kaapi_assert_debug( body != kaapi_exec_body);
-    if (body == kaapi_suspend_body)
-      goto error_swap_body;
-    pc->body = kaapi_exec_body;
+
+#if (SIZEOF_VOIDP == 4)
+    state = pc->state;
 #else
-#  error "Undefined steal task method"    
+    state = kaapi_task_body2state(body);
 #endif
 
-    /* handle wrapped task */
-    kaapi_task_body_t original_body = body;
-    void* original_sp = pc->sp;
-    cuda_task_body_t cuda_body = NULL;
+    kaapi_assert_debug( body != kaapi_exec_body);
+    pc->body = kaapi_exec_body;
+    /* task execution */
+    kaapi_assert_debug(pc == thread->sfp[-1].pc);
+    kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
-    unwrap_task(&cuda_body, &original_body, &original_sp);
+    /* here... */
+    body( pc->sp, (kaapi_thread_t*)thread->sfp );      
+#endif /* unimplemented */
 
-    format = kaapi_format_resolvebybody(original_body);
-    if ((format != NULL) && (format->entrypoint[KAAPI_PROC_TYPE_CUDA]))
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+
+    state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
+
+#if (SIZEOF_VOIDP == 4)
+    body = pc->body;
+#else
+    body = kaapi_task_state2body( state );
+#endif /* SIZEOF_VOIDP */
+
+#endif /* KAAPI_USE_EXECTASK_METHOD */
+
+    if (likely( kaapi_task_state_isnormal(state) ))
     {
-      /* the context is saved then restore during
+      /* task execution */
+
+      kaapi_format_t* format;
+
+      kaapi_assert_debug(pc == thread->sfp[-1].pc);
+
+      /* look for cuda task */
+      format = kaapi_format_resolvebybody(body);
+      if ((format != NULL) && format->entrypoint[KAAPI_PROC_TYPE_CUDA])
+      {
+	/* the context is saved then restore during
 	 the whole task execution. not doing so would
 	 make it non floating, preventing another thread
 	 to use it (ie. for kaapi_mem_synchronize2)
-       */
+	 */
 
-      pthread_mutex_lock(&proc->cuda_proc.ctx_lock);
-      res = cuCtxPushCurrent(proc->cuda_proc.ctx);
-      if (res == CUDA_SUCCESS)
-      {
-	/* this is not a wrapped task */
-	if (cuda_body == NULL)
-	  cuda_body = (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA];
+	CUresult res;
 
-	/* prepare task memory */
-	prepare_task(proc, original_sp, format);
+	pthread_mutex_lock(&proc->cuda_proc.ctx_lock);
+	res = cuCtxPushCurrent(proc->cuda_proc.ctx);
+	if (res == CUDA_SUCCESS)
+	{
+	  const cuda_task_body_t cuda_body =
+	    (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA];
 
-	/* execute the cuda body */
-	cuda_body(proc->cuda_proc.stream, pc->sp, (kaapi_thread_t*)thread->sfp);
+	  /* prepare task memory */
+	  prepare_task(proc, pc->sp, format);
 
-	/* synchronize processor execution */
-	synchronize_processor(proc);
+	  /* execute the cuda body */
+	  cuda_body(proc->cuda_proc.stream, pc->sp, (kaapi_thread_t*)thread->sfp);
 
-	cuCtxPopCurrent(&proc->cuda_proc.ctx);
+	  /* synchronize processor execution */
+	  synchronize_processor(proc);
+
+	  cuCtxPopCurrent(&proc->cuda_proc.ctx);
+	}
+	/* todo, remove */
+	else { printf("cuCtxPushCurrent() error\n"); exit(-1); }
+	/* todo, remove */
+
+	pthread_mutex_unlock(&proc->cuda_proc.ctx_lock);
       }
-      /* todo, remove */
-      else { printf("cuCtxPushCurrent() error\n"); exit(-1); }
-      /* todo, remove */
-
-      pthread_mutex_unlock(&proc->cuda_proc.ctx_lock);
+      else
+      {
+	/* here... */
+	body( pc->sp, (kaapi_thread_t*)thread->sfp );
+      }
     }
     else
     {
-      /* assume body points to the default cpu implementation */
-      kaapi_assert_debug(pc == thread->sfp[-1].pc);
-
-#if 0 /* todo, is this needed? */
-      if (format != NULL)
+      /* It is a special task: it means that before atomic or update, the body
+         has already one of the special flag set (either exec, either suspend).
+         Test the following case with THIS (!) order :
+         - kaapi_task_body_isaftersteal(body) -> call aftersteal body
+         - kaapi_task_body_issteal(body) -> error
+         - else it means that the task has been executed by a thief, but it 
+         does not require aftersteal body to merge results.
+      */
+      if ( kaapi_task_state_isaftersteal( state ) )
       {
-	/* prepare task arg for host */
-	pthread_mutex_lock(&proc->cuda_proc.ctx_lock);
-	cuCtxPushCurrent(proc->cuda_proc.ctx);
-	prepare_task2(original_sp, format);
-	cuCtxPopCurrent(&proc->cuda_proc.ctx);
-	pthread_mutex_unlock(&proc->cuda_proc.ctx_lock);
+        /* means that task has been steal & not yet terminated due
+           to some merge to do
+        */
+        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
+        kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
       }
-#endif /* todo */
-
-      body(pc->sp, (kaapi_thread_t*)thread->sfp);
+      else if ( kaapi_task_state_isterm( state ) ){
+        /* means that task has been steal */
+        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
+      }
+      else if ( kaapi_task_state_issteal( state ) ) /* but not terminate ! so swap */
+      {
+        goto error_swap_body;
+      }
     }
+#if defined(KAAPI_DEBUG)
+    const uintptr_t debug_state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
+    kaapi_assert_debug( !kaapi_task_state_isterm(debug_state) || (kaapi_task_state_isterm(debug_state) && kaapi_task_state_issteal(debug_state))  );
+    kaapi_assert_debug( kaapi_task_state_isexec(debug_state) );
+#endif    
 
-#if 0//!defined(KAAPI_CONCURRENT_WS)
-    if (unlikely(thread->errcode)) goto backtrack_stack;
-#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
 
-#if  0/*!defined(KAAPI_CONCURRENT_WS)*/
-restart_after_steal:
-#endif
+    /* post execution: new tasks created ??? */
     if (unlikely(fp->sp > thread->sfp->sp))
     {
       goto push_frame;
@@ -817,8 +825,9 @@ restart_after_steal:
     }
 #endif
 
-    /* next task to execute */
-    pc = fp->pc = pc -1;
+    /* next task to execute, store pc in memory */
+    fp->pc = --pc;
+    
     kaapi_writemem_barrier();
   } /* end of the loop */
 
@@ -827,9 +836,24 @@ restart_after_steal:
 
   if (fp >= eframe)
   {
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
+    while (fp > eframe) 
+    {
+      --fp;
+      /* pop dummy frame */
+      --fp->pc;
+      if (fp->pc > fp->sp)
+      {
+        thread->sfp = fp;
+        goto push_frame; /* remains work do do */
+      }
+    } 
+    fp = eframe;
+    fp->sp = fp->pc;
+
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
-    while (!KAAPI_ATOMIC_CAS(&thread->lock, 0, 1));
+    kaapi_sched_lock(&thread->proc->lock);
     while (fp > eframe) 
     {
       --fp;
@@ -838,7 +862,7 @@ restart_after_steal:
       --fp->pc;
       if (fp->pc > fp->sp)
       {
-        KAAPI_ATOMIC_WRITE(&thread->lock, 0);
+        kaapi_sched_unlock(&thread->proc->lock);
         thread->sfp = fp;
         goto push_frame; /* remains work do do */
       }
@@ -846,31 +870,7 @@ restart_after_steal:
     fp = eframe;
     fp->sp = fp->pc;
 
-    kaapi_writemem_barrier();
-    KAAPI_ATOMIC_WRITE(&thread->lock, 0);
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-    /* here it's a pop of frame: we use THE like protocol */
-    while (fp > eframe) 
-    {
-      thread->sfp = --fp;
-      kaapi_writemem_barrier();
-      /* wait thief get out the frame */
-      while (thread->thieffp > fp)
-        ;
-
-      /* pop dummy frame and the closure inside this frame */
-      --fp->pc;
-      if (fp->pc > fp->sp)
-      {
-        goto push_frame; /* remains work do do */
-      }
-    } 
-    fp = eframe;
-    fp->sp = fp->pc;
-
-    kaapi_writemem_barrier();
-#else
-#  error "Bad steal frame method"    
+    kaapi_sched_unlock(&thread->proc->lock);
 #endif
   }
   thread->sfp = fp;
@@ -885,12 +885,11 @@ restart_after_steal:
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
-
   return 0;
 
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) 
 error_swap_body:
-  if (fp->pc->body == kaapi_aftersteal_body) goto begin_loop;
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */
   thread->sfp = fp;
@@ -898,30 +897,20 @@ error_swap_body:
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
-
   return EWOULDBLOCK;
 #endif
 
-#if 0
-backtrack_stack:
-#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
-#if 0 /*!defined(KAAPI_CONCURRENT_WS)*/
-  if ((thread->errcode & 0x1) !=0) 
-  {
-    kaapi_sched_advance(thread->proc);
-    thread->errcode = thread->errcode & ~0x1;
-    if (thread->errcode ==0) goto restart_after_steal;
-  }
-#endif
 
   /* here back track the kaapi_thread_execframe until go out */
-  return thread->errcode;
-
-#else
-  return -1;
-#endif /* todo */
+  return 0;
 }
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
+int kaapi_thread_execframe( kaapi_thread_context_t* thread )
+{
+  return 0;
+}
+#endif
