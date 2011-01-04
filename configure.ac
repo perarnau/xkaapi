@@ -523,7 +523,7 @@ dnl    CUDA is there
   [
   ],
   [])
-AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" != x"no"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 
 
