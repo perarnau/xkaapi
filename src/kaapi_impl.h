@@ -722,7 +722,7 @@ static inline unsigned int kaapi_task_state2int(uintptr_t state)
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body)
 {
   task->state = 0;
-  task->body = body;
+  task->body  = body;
 }
 
 /** \ingroup TASK
@@ -991,7 +991,7 @@ extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 /* ========================================================================== */
 /** Compute a hash value from a string
 */
-extern uint32_t kaapi_hash_value_len(const char * data, int len);
+extern uint32_t kaapi_hash_value_len(const char * data, size_t len);
 
 /*
 */
