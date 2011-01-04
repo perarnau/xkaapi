@@ -506,6 +506,10 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
+#if defined(KAAPI_USE_CUDA)
+  kaapi_atomic_t                 lock;           /** */ 
+#endif
+
   kaapi_cpuset_t                 affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
@@ -805,7 +809,7 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 
 /** Get the body of the task
 */
-static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
+static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 {
   return kaapi_task_state2body( task->u.state & ~KAAPI_MASK_BODY );
 }

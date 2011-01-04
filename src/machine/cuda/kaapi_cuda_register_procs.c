@@ -109,7 +109,7 @@ static inline void unlock_thread(kaapi_thread_context_t* thread)
 #if 1 /* unused */
 static inline int is_task_ready(const kaapi_task_t* task)
 {
-  if (task->body == kaapi_adapt_body)
+  if (kaapi_task_getbody(task) == kaapi_adapt_body)
     return 1;
   return kaapi_task_isstealable(task);
 }
@@ -137,6 +137,7 @@ static unsigned int __attribute__((unused)) count_tasks_by_type
   return count;
 }
 
+#if 0 /* todo, unused */
 static unsigned int __attribute__((unused)) has_task_by_proc_type
 (kaapi_thread_t* thread, unsigned int proc_type)
 {
@@ -186,6 +187,7 @@ static unsigned int __attribute__((unused)) has_task_by_proc_type
   
   return 0;
 }
+#endif /* todo, unused */
 
 int kaapi_sched_select_victim_with_cuda_tasks
 (
@@ -245,5 +247,5 @@ int kaapi_sched_select_victim_with_cuda_tasks
 void kaapi_exec_cuda_task
 (kaapi_task_t* task, kaapi_thread_t* thread)
 {
-  task->body(task->sp, thread);
+  kaapi_task_getbody(task)(task->sp, thread);
 }

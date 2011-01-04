@@ -185,19 +185,19 @@ static void prepare_task
   size_t size;
   unsigned int i;
 
-  for (i = 0; i < format->count_params; ++i)
+  for (i = 0; i < format->_count_params; ++i)
   {
     const kaapi_access_mode_t mode =
-      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+      KAAPI_ACCESS_GET_MODE(format->_mode_params[i]);
 
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
 
-    access = (kaapi_access_t*)((uint8_t*)sp + format->off_params[i]);
+    access = (kaapi_access_t*)((uint8_t*)sp + format->_off_params[i]);
     hostptr = access->data;
 
     /* get parameter size */
-    size = format->get_param_size(format, i, sp);
+    size = format->get_size_param(format, i, sp);
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
@@ -292,19 +292,19 @@ static void __attribute__((unused)) prepare_task2
   size_t size;
   unsigned int i;
 
-  for (i = 0; i < format->count_params; ++i)
+  for (i = 0; i < format->_count_params; ++i)
   {
     const kaapi_access_mode_t mode =
-      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+      KAAPI_ACCESS_GET_MODE(format->_mode_params[i]);
 
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
 
-    access = (kaapi_access_t*)((uint8_t*)sp + format->off_params[i]);
+    access = (kaapi_access_t*)((uint8_t*)sp + format->_off_params[i]);
     hostptr = access->data;
 
     /* get parameter size */
-    size = format->get_param_size(format, i, sp);
+    size = format->get_size_param(format, i, sp);
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
@@ -346,10 +346,10 @@ static void __attribute__((unused)) finalize_task
   size_t size;
   unsigned int i;
 
-  for (i = 0; i < format->count_params; ++i)
+  for (i = 0; i < format->_count_params; ++i)
   {
     const kaapi_access_mode_t mode =
-      KAAPI_ACCESS_GET_MODE(format->mode_params[i]);
+      KAAPI_ACCESS_GET_MODE(format->_mode_params[i]);
 
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
@@ -357,7 +357,7 @@ static void __attribute__((unused)) finalize_task
     if (!KAAPI_ACCESS_IS_WRITE(mode))
       continue ;
 
-    access = (kaapi_access_t*)((uint8_t*)sp + format->off_params[i]);
+    access = (kaapi_access_t*)((uint8_t*)sp + format->_off_params[i]);
     devptr = *kaapi_data(CUdeviceptr, access);
 
     /* inverted search. assume a mapping exists. */
@@ -383,6 +383,8 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
   return 0;
 }
 
+
+#if 0 /* todo, wrapped task */
 
 /* cuda device taskbcast body.
    this is the same as kaapi_taskbcast_body
@@ -420,12 +422,11 @@ static void cuda_taskbcast_body
     for (i=0; i<comlist->size; ++i)
     {
       kaapi_task_t* task = comlist->entry[i].task;
-      kaapi_assert( (task->ebody == kaapi_taskrecv_body) || (task->ebody == kaapi_taskbcast_body) );
       kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       
       void* newsp;
       kaapi_task_body_t newbody;
-      if (task->ebody == kaapi_taskrecv_body)
+      if (kaapi_task_getbody(task) == kaapi_taskrecv_body)
       {
         newbody = argrecv->original_body;
         newsp   = argrecv->original_sp;
@@ -593,6 +594,8 @@ static void cuda_taskbcast_body
   }
 }
 
+#endif /* todo, wrapped task */
+
 
 /* do nothing, as in the original kaapi_taskrecv_body
  */
@@ -609,6 +612,8 @@ static void cuda_taskrecv_body
 static inline void unwrap_task
 (cuda_task_body_t* cuda_body, kaapi_task_body_t* original_body, void** original_sp)
 {
+#if 0 /* todo, handle wrapped task */
+
   /* cuda_body will point the adapted body if task is wrapped.
      original_body the current body. updated to point the original body.
      original_sp the current sp. updated to point the original sp.
@@ -628,6 +633,9 @@ static inline void unwrap_task
     *original_sp = arg->original_sp;
     *cuda_body = cuda_taskrecv_body;
   }
+
+#endif /* todo */
+
   /* else, nonwrapped task */
 }
 
@@ -660,6 +668,9 @@ static const char* get_body_name(kaapi_task_body_t body)
 
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
+  printf("cuda_execframe\n");
+
+#if 0 /* todo */
   kaapi_processor_t* const proc = thread->proc;
   CUresult res;
 
@@ -698,7 +709,7 @@ begin_loop:
     kaapi_assert_debug( pc > fp->sp );
 
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-    body = pc->body;
+    body = kaapi_task_getbody(pc);
     kaapi_assert_debug( body != kaapi_exec_body);
 
     if (!kaapi_task_casstate( pc, pc->ebody, kaapi_exec_body)) 
@@ -909,4 +920,8 @@ backtrack_stack:
 
   /* here back track the kaapi_thread_execframe until go out */
   return thread->errcode;
+
+#else
+  return -1;
+#endif /* todo */
 }
