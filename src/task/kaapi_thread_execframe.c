@@ -98,7 +98,7 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
-  uintptr_t	             state;
+  uintptr_t	                 state;
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
