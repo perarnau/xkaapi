@@ -69,7 +69,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kproc->proc_type    = kpi->proc_type;
   kproc->kpi          = kpi;
   kproc->issteal      = 0;
-  
+ 
   /* init hierarchy information */
   kproc->hlevel.depth = 0;
   for (i=0; i<ENCORE_UNE_MACRO_DETAILLE; ++i)
