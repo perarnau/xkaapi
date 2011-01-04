@@ -47,8 +47,7 @@
 */
 void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread )
 {
-  kaapi_threadgroup_t thgrp = (kaapi_threadgroup_t)sp;
-  KAAPI_ATOMIC_WRITE( &thgrp->countend, 0 );
+  kaapi_assert(0);
 }
 
 
@@ -73,8 +72,8 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
 
   if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
   {
-    kaapi_task_setbody( thgrp->waittask, kaapi_taskwaitend_body );
-/*    pthread_cond_signal( &thgrp->cond ); */
+    KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->countend, 0 );
+    kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
   }
 
   /* detach the thread from the processor (it was managed by the group) */

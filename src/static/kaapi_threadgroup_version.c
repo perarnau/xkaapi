@@ -62,11 +62,17 @@
   In case of RW access (both read and write accesses), the XX points to a structure with is 
     - kaapi_taskbcast_arg_t if we consider the W access
     - kaapi_taskrecv_arg_t if we consider the R access
-  Both this data structures shared the same fields: we can view this as if kaapi_taskbcast_arg_t inerit 
+  Both these data structures shared the same fields: we can view this as if kaapi_taskbcast_arg_t inerit 
   from kaapi_taskrecv_arg_t.
   
 */
 
+/*
+#error
+NBUG:
+- task_RWW_R_R: encapsulation d'une tâche kaapi_task_recvbcast par une tâche kaapi_bcast.
+recvbcast <=> bcast + state à steal. Donc ne devrait rien changer.... ? Si ce n'est des asserts
+*/
 
 /*
 */
@@ -176,9 +182,15 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
         memset( argbcast, 0, sizeof(kaapi_taskbcast_arg_t));
         /* recopy old field */
         argbcast->common = *(kaapi_taskrecv_arg_t*)ver->writer_task->sp;
-        ver->writer_task->sp = argbcast;
+        ver->writer_task->sp   = argbcast;
+
+#if (SIZEOF_VOIDP == 4)
+        kaapi_task_setbody(ver->writer_task, kaapi_taskbcast_body);
+#else
+        kaapi_task_setstate(ver->writer_task, kaapi_task_state_setsteal( kaapi_task_body2state(kaapi_taskbcast_body) ) );
+#endif
+
 //        ver->tag           = ++thgrp->tag_count;
-//WARNINGTODO        kaapi_task_setextrabody(ver->writer_task, kaapi_taskbcast_body );
       }
 
       /* writer already exist: if it is not a bcast, encapsulate the task by a bcast task

@@ -66,10 +66,11 @@ extern "C" {
     This data structure is used at runtime.
 */
 typedef struct kaapi_taskrecv_arg_t {
-  kaapi_atomic_t       counter;          /* to signal the task becomes ready */
-  int                  original_counter; /* the original value of the counter */
-  kaapi_task_body_t    original_body;    /* the original body to execute */
-  void*                original_sp;      /* sp of the original task to execute */
+  kaapi_atomic_t            counter;          /* to signal the task becomes ready */
+  int                       original_counter; /* the original value of the counter */
+  kaapi_task_body_t         original_body;    /* the original body to execute */
+  void*                     original_sp;      /* sp of the original task to execute */
+  kaapi_wsqueuectxt_cell_t* wcs;              /* set if the thread owner of the task is suspended */
 } kaapi_taskrecv_arg_t;
 
 #define KAAPI_THREADGROUP_SETRECVPARAM( ra, ith )\
@@ -84,7 +85,7 @@ typedef struct kaapi_taskrecv_arg_t {
     the task_writer->pad points on the kaapi_taskbcast_arg_t data structure.
     This data structure is used at runtime.
 */
-#define KAAPI_BCASTENTRY_SIZE 7
+#define KAAPI_BCASTENTRY_SIZE 16
 typedef struct kaapi_com_t {
   short                         size;          /* max size: KAAPI_COUNTER_LIST_BLOCSIZE */
   long                          tag;
@@ -386,7 +387,6 @@ static inline int kaapi_threadgroup_paramiswait( kaapi_task_t* task, unsigned in
   return 0;
 }
 
-
 /**
 */
 static inline int kaapi_threadgroup_decrcounter( kaapi_taskrecv_arg_t* arg )
@@ -405,7 +405,6 @@ extern int kaapi_vector_destroy( kaapi_vector_t* v );
 /**
 */
 kaapi_pidreader_t* kaapi_vector_pushback( kaapi_vector_t* v );
-
 
 /**
 */

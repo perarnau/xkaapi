@@ -70,7 +70,8 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
     {
       kaapi_task_t* task = comlist->entry[i].task;
       kaapi_task_body_t task_body = kaapi_task_getbody( task );
-      kaapi_assert( (task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskrecvbcast_body) );
+      kaapi_assert( ((task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskbcast_body)) 
+                  && kaapi_task_state_issteal(kaapi_task_getstate(task)) );
       kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
       
       if (kaapi_threadgroup_decrcounter(argrecv) ==0)
@@ -91,37 +92,35 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
         /* task becomes ready change its body */        
 //        task->sp = newsp;
 
-#if 0
         /* if signaled thread was suspended, move it to the local queue */
-//TO DO        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)task->pad;
-        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)0;
+        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)argrecv->wcs;
         if (wcs != 0) /* means thread has been suspended */
         { 
-          kaapi_readmem_barrier();
           kaapi_processor_t* kproc = wcs->thread->proc;
-          if (kaapi_sched_readyempty(kproc) && kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
+          kaapi_assert_debug( kaapi_cpuset_has(wcs->affinity, kproc->kid) );
+
+          kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
+          if (kthread !=0)
           {
-            kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
-            if (kthread !=0)
-            {
-              kaapi_sched_lock( &kproc->lock );
-              kaapi_sched_pushready(kproc, kthread );
-              kaapi_sched_unlock( &kproc->lock);
-            }
-          }
-          else {
-            /* cannot steal it, put the state to READY */
-            KAAPI_ATOMIC_WRITE(&wcs->state, KAAPI_WSQUEUECELL_READY);
+            kaapi_sched_lock( &kproc->lock );
+            /* signal the task */
+            kaapi_task_andstate( task, ~KAAPI_MASK_BODY_STEAL );
+            kaapi_task_setargs(task, newsp);
+            kaapi_task_setbody(task, newbody);
+            kaapi_sched_pushready(kproc, kthread );
+            kaapi_sched_unlock( &kproc->lock);
           }
         }
-#endif
-        /* flush in memory all pending write (and read ops) */  
-        kaapi_writemem_barrier();
+        else {
+          kaapi_task_setargs(task, newsp);
+          kaapi_task_setbody(task, newbody);
 
-        /* signal the task */
-        kaapi_task_orstate( task, KAAPI_MASK_BODY_TERM );
-//        kaapi_task_setbody(task, newbody );
+          /* flush in memory all pending write (and read ops) */  
+          kaapi_writemem_barrier();
 
+          /* signal the task */
+          kaapi_task_andstate( task, ~KAAPI_MASK_BODY_STEAL );
+        }
       }
     }
     comlist = comlist->next;

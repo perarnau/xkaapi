@@ -119,12 +119,23 @@ int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* th
 {
   kaapi_wsqueuectxt_t* ls = &kproc->lsuspend;
   kaapi_wsqueuectxt_cell_t* cell = kaapi_wsqueuectxt_alloccell(ls);
-
+#if defined(KAAPI_USE_STATICSCHED)  
+  kaapi_task_t* task = thread->sfp->pc;
+  kaapi_task_body_t task_body = kaapi_task_getbody(task);
+  kaapi_taskrecv_arg_t* argrecv;
+#endif
   kaapi_cpuset_copy(&cell->affinity, &thread->affinity);
   cell->thread   = 0;
 
   cell->thread   = thread;
   thread->wcs    = cell;
+#if defined(KAAPI_USE_STATICSCHED)
+  if ( (task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskrecvbcast_body) || (task_body == kaapi_taskbcast_body) )
+  {
+    argrecv = (kaapi_taskrecv_arg_t*)kaapi_task_getargs(task);
+    argrecv->wcs = cell;
+  }
+#endif  
 
   /* barrier + write in order thief view correct thread pointer if steal the struct */
   KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_INLIST);

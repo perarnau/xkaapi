@@ -8,6 +8,10 @@ template<>
 struct TaskBodyCPU<TaskWRW> {
   void operator() ( ka::pointer_w<int> d0, ka::pointer_rw<int> d1 )
   {
+    std::cout << "In Task WRW= " << 10 << ", @:" << (int*)d0 << std::endl;
+    std::cout << "In Task WRW= +" << 20 << ", @:" << (int*)d1 << std::endl;
+    *d0  = 10;
+    *d1 += 20;
   }
 };
 
@@ -18,6 +22,7 @@ template<>
 struct TaskBodyCPU<TaskR> {
   void operator() ( ka::pointer_r<int> d )
   {
+    std::cout << "In Task R=" << *d << ", @:" << (int*)d << std::endl;
   }
 };
 
@@ -38,6 +43,10 @@ struct doit {
     threadgroup.Spawn<TaskWRW> (ka::SetPartition(0)) ( a,b );
     threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( a );
     threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( b );
+
+    threadgroup.Spawn<TaskWRW> (ka::SetPartition(1)) ( a,b );
+    threadgroup.Spawn<TaskR>  (ka::SetPartition(0))  ( a );
+    threadgroup.Spawn<TaskR>  (ka::SetPartition(0))  ( b );
 
     threadgroup.print();    
 

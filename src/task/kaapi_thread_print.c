@@ -113,21 +113,23 @@ int kaapi_task_print(
 
   body = kaapi_task_getbody(task);
   fmt = kaapi_format_resolvebybody( body );
-  if (fmt ==0) return 0;
   
   char* sp;
   if (body == kaapi_taskbcast_body)
   {
     kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->sp;
     sp = tbcastarg->common.original_sp;
+    fmt = kaapi_format_resolvebybody( tbcastarg->common.original_body );
   }
   else if (body == kaapi_taskrecv_body)
   {
     kaapi_taskrecv_arg_t* trecvarg = (kaapi_taskrecv_arg_t*)task->sp;
     sp = trecvarg->original_sp;
+    fmt = kaapi_format_resolvebybody( trecvarg->original_body );
   }
   else
     sp = task->sp;
+  if (fmt ==0) return 0;
 
   count_params = kaapi_format_get_count_params(fmt, sp );
   kaapi_getstatename(task, state);
@@ -189,7 +191,9 @@ int kaapi_task_print(
       printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
       for (i=0; i< (size_t)com->size; ++i)
       {
-        fprintf(file, "\n\t\t\t\t@task:%p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].addr);
+        fprintf(file, "\n\t\t\t\t@task:%p, @sp: %p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].task->sp, (void*)com->entry[i].addr);
+        kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)com->entry[i].task->sp;
+        fprintf(file, "\t#counter:%i -> %i", argrecv->original_counter, KAAPI_ATOMIC_READ(&argrecv->counter) );
       }
       com = com->next;
     }
@@ -228,7 +232,9 @@ static int kaapi_print_bcasttask(
     printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
     for (i=0; i<com->size; ++i)
     {
-      fprintf(file, "\n\t\t\t\t@task:%p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].addr);
+      fprintf(file, "\n\t\t\t\t@task:%p, @sp: %p, @data:%p", (void*)com->entry[i].task, (void*)com->entry[i].task->sp, (void*)com->entry[i].addr);
+      kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)com->entry[i].task->sp;
+      fprintf(file, "\t#counter:%i -> %i", argrecv->original_counter, KAAPI_ATOMIC_READ(&argrecv->counter) );
     }
     com = com->next;
   }
