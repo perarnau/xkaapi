@@ -94,7 +94,10 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     kaapi_sched_unlock( &kproc->lock );
     
     if (thread != 0)
+    {
+      kaapi_assert_debug( kaapi_cpuset_has(thread->affinity, kproc_thiefid) );
       return thread;
+    }
   }
   
   /* else... 
