@@ -46,7 +46,7 @@
 
 /* ready list routines
  */
-kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_processor_id_t tid)
+kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_processor_id_t thief_kid)
 {
   kaapi_lready_t* const list = &kproc->lready;
 
@@ -57,7 +57,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
     return 0;
 
   pre = list->_front;
-  if (kaapi_cpuset_has(pre->affinity, tid))
+  if (kaapi_cpuset_has(pre->affinity, thief_kid))
   {
     /* unlink the thread */
     pos = list->_front;
@@ -69,7 +69,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
   pos = pre->_next;
   while (pos != 0) 
   {
-    if (kaapi_cpuset_has(pos->affinity, tid))
+    if (kaapi_cpuset_has(pos->affinity, thief_kid))
     {
       /* unlink the thread */
       pre->_next = pos->_next;
@@ -86,6 +86,8 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
 }
 
 
+/*
+*/
 void kaapi_sched_pushready(kaapi_processor_t* kproc, kaapi_thread_context_t* node)
 {
   /* push back version. prev not updated.
