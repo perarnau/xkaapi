@@ -100,7 +100,12 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
           if (kthread !=0)
           {
             kaapi_sched_lock( &kproc->lock );
-            /* signal the task : also reset the state to init */
+            /* signal the task : also reset the state to init 
+               Do not change the body and keep the recvbody or recvbcast body that
+               will directly call the user function (one more indirection).
+               Else the assertion in kaapi_thread_isready and the way to test if a
+               thread is ready should be adapted to consider 0 as a ready state (initial state).
+            */
             kaapi_writemem_barrier();
             kaapi_task_setbody(task, task_body);
             kaapi_sched_pushready( kproc, kthread );
@@ -109,7 +114,9 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
         }
         else {
           kaapi_writemem_barrier();
-          /* signal the task : also reset the state to init */
+          /* signal the task : also reset the state to init 
+             See comment above.
+          */
           kaapi_task_setbody(task, task_body);
         }
       }
