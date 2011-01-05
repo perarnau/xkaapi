@@ -116,11 +116,18 @@ static void add1_cuda_entry
 #define STERN "transform_heter"
     kaapi_cuda_func_load_ptx(&fn, STERN ".ptx", "add1");
 
+    /* since base points to the start of the range */
     kaapi_cuda_func_push_ptr(&fn, base);
-    kaapi_cuda_func_push_uint(&fn, range->i);
-    kaapi_cuda_func_push_uint(&fn, range->j);
+    kaapi_cuda_func_push_uint(&fn, 0);
+    kaapi_cuda_func_push_uint(&fn, range->j - range->i);
 
     kaapi_cuda_func_call_async(&fn, stream, &bdim, &tdim);
+
+#if 1 /* synchronous api */
+    kaapi_cuda_func_wait(&fn, stream);
+    const size_t size = (range->j - range->i) * sizeof(unsigned int);
+    kaapi_mem_synchronize((kaapi_mem_addr_t)base, size);
+#endif
 
     kaapi_cuda_func_unload_ptx(&fn);
   }
@@ -335,14 +342,20 @@ static kaapi_access_mode_t get_readwrite_mode_param
 static kaapi_access_t get_access_param
 (const struct kaapi_format_t* f, unsigned int i, const void* p)
 {
-  /* only range is not byvalue, assume i == 0 */
-  return ((task_work_t*)p)->range.base;
+  task_work_t* const w = (task_work_t*)p;
+
+  kaapi_access_t a;
+  a.data = (unsigned int*)w->range.base.data + w->range.i;
+  a.version = w->range.base.version;
+  return a;
 }
 
 static void set_access_param
 (const struct kaapi_format_t* f, unsigned int i, void* p, const kaapi_access_t* a)
 {
-  ((task_work_t*)p)->range.base = *a;
+  task_work_t* const w = (task_work_t*)p;
+  w->range.base.data = a->data;
+  w->range.base.version = a->version;
 }
 
 static const struct kaapi_format_t* get_fmt_param

@@ -250,9 +250,8 @@ static void prepare_task
 	}
 
 	printf("memcpy_htod(%u:%p -> %u:%p, %lu)\n",
-	       0, (void*)hostptr,
-	       self_asid, (void*)(uintptr_t)devptr,
-	       size);
+	       0, (void*)hostptr, self_asid,
+	       (void*)(uintptr_t)devptr, size);
 
 	/* copy from host to device */
 	memcpy_htod(proc, devptr, hostptr, size);

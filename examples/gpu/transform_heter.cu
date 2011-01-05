@@ -4,10 +4,11 @@ extern "C" __global__ void add1
   const unsigned int nelems = last - first;
   const unsigned int per_thread = nelems / blockDim.x;
   unsigned int i = first + threadIdx.x * per_thread;
-  const unsigned int j = i + per_thread;
 
-  for (; i < j; ++i)
-    ++array[i];
+  unsigned int j = last;
+  if (threadIdx.x != (blockDim.x - 1)) j = i + per_thread;
+
+  for (; i < j; ++i) ++array[i];
 }
 
 extern "C" __global__ void mul2
@@ -16,8 +17,9 @@ extern "C" __global__ void mul2
   const unsigned int nelems = last - first;
   const unsigned int per_thread = nelems / blockDim.x;
   unsigned int i = first + threadIdx.x * per_thread;
-  const unsigned int j = i + per_thread;
 
-  for (; i < j; ++i)
-    array[i] *= 2;
+  unsigned int j = last;
+  if (threadIdx.x != (blockDim.x - 1)) j = i + per_thread;
+
+  for (; i < j; ++i) array[i] *= 2;
 }
