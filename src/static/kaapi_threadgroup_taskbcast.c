@@ -89,9 +89,6 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
           newsp   = task->sp;
         }
       
-        /* task becomes ready change its body */        
-//        task->sp = newsp;
-
         /* if signaled thread was suspended, move it to the local queue */
         kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)argrecv->wcs;
         if (wcs != 0) /* means thread has been suspended */
@@ -103,23 +100,17 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
           if (kthread !=0)
           {
             kaapi_sched_lock( &kproc->lock );
-            /* signal the task */
-            kaapi_task_andstate( task, ~KAAPI_MASK_BODY_STEAL );
-            kaapi_task_setargs(task, newsp);
-            kaapi_task_setbody(task, newbody);
-            kaapi_sched_pushready(kproc, kthread );
-            kaapi_sched_unlock( &kproc->lock);
+            /* signal the task : also reset the state to init */
+            kaapi_writemem_barrier();
+            kaapi_task_setbody(task, task_body);
+            kaapi_sched_pushready( kproc, kthread );
+            kaapi_sched_unlock( &kproc->lock );
           }
         }
         else {
-          kaapi_task_setargs(task, newsp);
-          kaapi_task_setbody(task, newbody);
-
-          /* flush in memory all pending write (and read ops) */  
           kaapi_writemem_barrier();
-
-          /* signal the task */
-          kaapi_task_andstate( task, ~KAAPI_MASK_BODY_STEAL );
+          /* signal the task : also reset the state to init */
+          kaapi_task_setbody(task, task_body);
         }
       }
     }
