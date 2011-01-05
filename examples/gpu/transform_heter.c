@@ -596,15 +596,12 @@ static int steal_range
 static int split_range
 (range_t* sub, range_t* range, unsigned int size)
 {
-  if (get_range_size(range) == 0)
-  {
-    return -1;
-  }
-  else if (get_range_size(range) < size)
-  {
-    /* succeed even if size too large */
-    size = get_range_size(range);
-  }
+  const unsigned int range_size = get_range_size(range);
+  if (range_size == 0) return -1;
+
+  /* succeed even if size too large */
+  if (range_size < size)
+    size = range_size;
 
   sub->i = range->i;
   sub->j = range->i + size;

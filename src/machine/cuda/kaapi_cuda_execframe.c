@@ -631,7 +631,7 @@ static inline void unwrap_task
 }
 
 
-#if 1 /* todo, remove */
+#if 0 /* todo, remove */
 static const char* get_body_name(kaapi_task_body_t body)
 {
   const char* name = "unknown";
@@ -914,3 +914,30 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
   return 0;
 }
 #endif
+
+int kaapi_cuda_exectask
+(kaapi_thread_context_t* thread, void* data, kaapi_format_t* format)
+{
+  kaapi_processor_t* const kproc = thread->proc;
+  int res = -1;
+
+  pthread_mutex_lock(&kproc->cuda_proc.ctx_lock);
+  if (cuCtxPushCurrent(kproc->cuda_proc.ctx) == CUDA_SUCCESS)
+  {
+    const cuda_task_body_t cuda_body = (cuda_task_body_t)
+      format->entrypoint[KAAPI_PROC_TYPE_CUDA];
+
+    prepare_task(kproc, data, format);
+    cuda_body(kproc->cuda_proc.stream, data, (kaapi_thread_t*)thread->sfp);
+    synchronize_processor(kproc);
+
+    cuCtxPopCurrent(&kproc->cuda_proc.ctx);
+    
+    /* success */
+    res = 0;
+  }
+
+  pthread_mutex_unlock(&kproc->cuda_proc.ctx_lock);
+
+  return res;
+}

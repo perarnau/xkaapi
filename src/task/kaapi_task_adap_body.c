@@ -50,6 +50,11 @@
 
 extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 
+#if defined(KAAPI_USE_CUDA)
+#include "../machine/common/kaapi_procinfo.h"
+extern int kaapi_cuda_exectask(kaapi_thread_context_t*, void*, kaapi_format_t*);
+#endif
+
 
 /* adaptive task body
  */
@@ -71,7 +76,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
    */
   
   self_thread = kaapi_self_thread_context();
-  
+ 
   /* retrieve the adaptive reply data */
   sc = (kaapi_stealcontext_t*)arg;
   adata = (kaapi_taskadaptive_user_taskarg_t*)self_thread->static_reply.udata;
@@ -117,7 +122,26 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   
   /* execute the user task entrypoint */
   kaapi_assert_debug(adata->ubody != 0);
+
+#if defined(KAAPI_USE_CUDA)
+  kaapi_processor_t* const kproc = self_thread->proc;
+  if (kproc->kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    /* has the task a cuda implementation */
+    kaapi_format_t* const format =
+      kaapi_format_resolvebybody((kaapi_task_bodyid_t)adata->ubody);
+    if (format == NULL) goto execute_ubody;
+    if (format->entrypoint[KAAPI_PROC_TYPE_CUDA] == NULL) goto execute_ubody;
+    kaapi_cuda_exectask(self_thread, adata->udata, format);
+  }
+  else
+  {
+  execute_ubody:
+#endif /* KAAPI_USE_CUDA */
   adata->ubody((void*)adata->udata, thread, sc);
+#if defined(KAAPI_USE_CUDA)
+  }
+#endif
   
   if (!(sc->header.flag & KAAPI_SC_PREEMPTION))
   {

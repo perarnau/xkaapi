@@ -206,11 +206,7 @@ int kaapi_sched_select_victim_with_cuda_tasks
 )
 #if 1 /* disable worksealing */
 {
-  if (flag != KAAPI_SELECT_VICTIM) return 0;
-
-  /* this disables workstealing */
-  victim->kproc = kproc;
-  return 0;
+  return kaapi_sched_select_victim_rand(kproc, victim, flag);
 }
 #else
 {
