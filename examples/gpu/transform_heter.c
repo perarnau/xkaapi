@@ -6,7 +6,7 @@
 #include "kaapi_cuda_func.h"
 
 
-#define CONFIG_USE_STATIC 1
+#define CONFIG_USE_STATIC 0
 
 
 /* missing decls */
@@ -40,51 +40,10 @@ static inline unsigned int get_range_size(const range_t* range)
   return range->j - range->i;
 }
 
-
-#if 0 /* adaptive */
-
-static int steal_range
-(range_t* sub, range_t* range, unsigned int size)
-{
-  if (get_range_size(range) < size)
-    return -1;
-
-  sub->j = range->j;
-  sub->i = range->j - size;
-  range->j = sub->i;
-
-  return 0;
-}
-
-
-static int split_range
-(range_t* sub, range_t* range, unsigned int size)
-{
-  if (get_range_size(range) == 0)
-  {
-    return -1;
-  }
-  else if (get_range_size(range) < size)
-  {
-    /* succeed even if size too large */
-    size = get_range_size(range);
-  }
-
-  sub->i = range->i;
-  sub->j = range->i + size;
-  range->i += size;
-
-  return 0;
-}
-
-#endif /* adaptive */
-
-
 typedef struct task_work
 {
   volatile long lock;
   range_t range;
-  kaapi_taskadaptive_result_t* ktr;
 } task_work_t;
 
 
@@ -98,160 +57,9 @@ static task_work_t* alloc_work(kaapi_thread_t* thread)
   work->range.j = 0;
 
   work->lock = 0;
-  work->ktr = NULL;
 
   return work;
 }
-
-
-#if 0 /* adaptive */
-
-static void lock_work(task_work_t* work)
-{
-  while (1)
-  {
-    if (__sync_bool_compare_and_swap(&work->lock, 0, 1))
-      break;
-  }
-}
-
-static void unlock_work(task_work_t* work)
-{
-  work->lock = 0;
-  __sync_synchronize();
-}
-
-
-static int reduce_work(kaapi_stealcontext_t*, void*, void*, size_t, void*);
-
-static int splitter(kaapi_stealcontext_t*, int, kaapi_request_t*, void*);
-
-static void thief_entry
-(void* arg, kaapi_thread_t* thread, kaapi_stealcontext_t* ksc)
-{
-  task_work_t* const work = (task_work_t*)arg;
-  unsigned int* const base = (unsigned int*)work->range.base.data;
-
-  int stealres;
-  range_t subrange;
-
-  kaapi_steal_setsplitter(ksc, splitter, arg);
-
-  while (1)
-  {
-    lock_work(work);
-    stealres = split_range(&subrange, &work->range, 512);
-    unlock_work(work);
-
-    if (stealres == -1)
-      break ;
-
-    for (i = subrange.i; i < subrange.j; ++i)
-      base[i] += 1;
-
-    const unsigned int is_preempted = kaapi_preemptpoint
-      (sc, NULL, NULL, (void*)work, sizeof(thief_work_t), NULL);
-    if (is_preempted) return ;
-  }
-}
-
-#endif /* adaptive */
-
-#if 0 /* adaptive */
-
-static int reduce_work
-(kaapi_stealcontext_t* sc, void* targ, void* tptr, size_t tsize, void* vptr)
-{
-  task_work_t* const vwork = (task_work_t*)vptr;
-  task_work_t* const twork = (task_work_t*)tptr;
-
-  /* twork is a copy, dont lock */
-  lock_work(vwork);
-  vwork->range.i = twork->range.i;
-  vwork->range.j = twork->range.j;
-  unlock_work(vwork);
-
-  return 0;
-}
-
-
-static int split_work
-(kaapi_stealcontext_t* sc, int reqcount, kaapi_request_t* reqs, void* arg)
-{
-  task_work_t* const vwork = (task_work_t*)arg;
-  task_work_t* twork;
-  kaapi_thread_t* tthread;
-  kaapi_task_t* ttask;
-  kaapi_processor_t* tproc;
-  unsigned int rangesize;
-  unsigned int unitsize;
-  range_t subrange;
-  int stealres = -1;
-  int repcount = 0;
-
-  lock_work(vwork);
-
-  rangesize = get_range_size(&vwork->range);
-
-#if 0 /* fixme */
-  if ((int)rangesize < 0)
-  {
-    unlock_work(vwork);
-    return 0;
-  }
-#endif /* fixme */
-
-  if (rangesize > 512)
-  {
-    unitsize = rangesize / (reqcount + 1);
-    if (unitsize == 0)
-    {
-      unitsize = 512;
-      reqcount = rangesize / 512;
-    }
-
-    stealres = steal_range
-      (&subrange, &vwork->range, unitsize * reqcount);
-  }
-  unlock_work(vwork);
-
-  if (stealres == -1)
-    return 0;
-
-  for (; reqcount > 0; ++reqs)
-  {
-    if (!kaapi_request_ok(reqs))
-      continue ;
-
-    tthread = kaapi_request_getthread(reqs);
-    ttask = kaapi_thread_toptask(tthread);
-
-    tproc = kaapi_request_kproc(reqs);
-
-    if (kaapi_processor_get_type(tproc) == KAAPI_PROC_TYPE_CPU)
-      kaapi_task_init(ttask, add1_cpu_entry, NULL);
-    else
-      kaapi_task_init(ttask, (kaapi_task_body_t)add1_cuda_entry, NULL);
-
-    twork = alloc_work(tthread);
-    kaapi_access_init(&twork->range.base, vwork->range.base.data);
-    twork->ktr = kaapi_allocate_thief_result(sc, sizeof(task_work_t), NULL);
-
-    split_range(&twork->range, &subrange, unitsize);
-
-    kaapi_task_setargs(ttask, (void*)twork);
-    kaapi_thread_pushtask(tthread);
-    kaapi_request_reply_head(sc, reqs, twork->ktr);
-
-    --reqcount;
-    ++repcount;
-  }
-
-  return repcount;
-}
-
-#endif /* adaptive */
-
 
 /* task bodies */
 
@@ -757,38 +565,143 @@ main_static_entry(unsigned int* base, unsigned int nelem)
 
 #else /* CONFIG_USE_STATIC == 0 */
 
+static void lock_work(task_work_t* work)
+{
+  while (1)
+  {
+    if (__sync_bool_compare_and_swap(&work->lock, 0, 1))
+      break;
+  }
+}
+
+static void unlock_work(task_work_t* work)
+{
+  work->lock = 0;
+  __sync_synchronize();
+}
+
+static int steal_range
+(range_t* sub, range_t* range, unsigned int size)
+{
+  if (get_range_size(range) < size)
+    return -1;
+
+  sub->j = range->j;
+  sub->i = range->j - size;
+  range->j = sub->i;
+
+  return 0;
+}
+
+static int split_range
+(range_t* sub, range_t* range, unsigned int size)
+{
+  if (get_range_size(range) == 0)
+  {
+    return -1;
+  }
+  else if (get_range_size(range) < size)
+  {
+    /* succeed even if size too large */
+    size = get_range_size(range);
+  }
+
+  sub->i = range->i;
+  sub->j = range->i + size;
+  range->i += size;
+
+  return 0;
+}
+
+static int splitter
+(kaapi_stealcontext_t* sc, int reqcount, kaapi_request_t* reqs, void* arg)
+{
+  task_work_t* const vwork = (task_work_t*)arg;
+  unsigned int rangesize;
+  unsigned int unitsize;
+  range_t subrange;
+  int stealres = -1;
+  int repcount = 0;
+
+  lock_work(vwork);
+
+  rangesize = get_range_size(&vwork->range);
+  if (rangesize > 512)
+  {
+    unitsize = rangesize / (reqcount + 1);
+    if (unitsize == 0)
+    {
+      unitsize = 512;
+      reqcount = rangesize / 512;
+    }
+
+    stealres = steal_range
+      (&subrange, &vwork->range, unitsize * reqcount);
+  }
+
+  unlock_work(vwork);
+
+  if (stealres == -1)
+    return 0;
+
+  for (; reqcount > 0; ++reqs)
+  {
+    task_work_t* const twork = kaapi_reply_init_adaptive_task
+      (sc, reqs, (kaapi_task_body_t)add1_cpu_entry, sizeof(task_work_t), NULL);
+
+    twork->lock = 0;
+    kaapi_access_init(&twork->range.base, vwork->range.base.data);
+    split_range(&twork->range, &subrange, unitsize);
+
+    kaapi_reply_pushhead_adaptive_task(sc, reqs);
+
+    --reqcount;
+    ++repcount;
+  }
+
+  return repcount;
+}
+
+static int next_seq(task_work_t* work)
+{
+  unsigned int* const base = (unsigned int*)work->range.base.data;
+
+  int stealres;
+  range_t subrange;
+  unsigned int i;
+
+  lock_work(work);
+  stealres = split_range(&subrange, &work->range, 512);
+  unlock_work(work);
+
+  if (stealres == -1) return -1;
+
+  for (i = subrange.i; i < subrange.j; ++i)
+    base[i] += 1;
+
+  return 0;
+}
+
 static void __attribute__((unused))
 main_adaptive_entry(unsigned int* base, unsigned int nelem)
 {
+  kaapi_thread_t* const thread = kaapi_self_thread();
+
   task_work_t* work;
-  kaapi_thread_t* thread;
-  kaapi_task_t* task;
-  kaapi_frame_t frame;
+  kaapi_stealcontext_t* ksc;
 
   register_add1_task_format();
-
-  thread = kaapi_self_thread();
-  kaapi_thread_save_frame(thread, &frame);
-
-  /* processing task */
-  task = kaapi_thread_toptask(thread);
-  kaapi_task_init(task, add1_cpu_entry, NULL);
 
   work = alloc_work(thread);
   create_range(&work->range, base, 0, nelem);
 
-  kaapi_task_setargs(task, (void*)work);
-  kaapi_thread_pushtask(thread);
+  ksc = kaapi_task_begin_adaptive
+    (thread, KAAPI_SC_CONCURRENT, splitter, work);
 
-#if 0
-  /* checking task */
-  task = kaapi_thread_toptask(thread);
-  kaapi_task_init(task, print_entry, (void*)work);
-  kaapi_thread_pushtask(thread);
-#endif
+  while (next_seq(work) != -1)
+    ;
 
-  kaapi_sched_sync();
-  kaapi_thread_restore_frame(thread, &frame);
+  kaapi_task_end_adaptive(ksc);
 }
 
 #endif /* CONFIG_USE_STATIC */
