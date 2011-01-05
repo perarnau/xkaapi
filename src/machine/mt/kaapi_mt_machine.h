@@ -906,7 +906,7 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   kaapi_assert_debug((thief_kid >=0) && (thief_kid < KAAPI_MAX_PROCESSOR_LIMIT));
   req = &victim->hlrequests.requests[thief_kid];
-  /* here do not write kid, because it was persistant to all local thread */
+  req->kid   = thief_kid;
   req->reply = reply;
   reply->preempt = 0;
   reply->status = KAAPI_REQUEST_S_POSTED;
