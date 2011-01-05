@@ -7,6 +7,7 @@
 
 
 #define CONFIG_USE_STATIC 0
+#define CONFIG_KERNEL_DIM 256
 
 
 /* missing decls */
@@ -74,7 +75,7 @@ static void cuda_pre_handler
 
   printf("> cuda_pre_handler [%u - %u[\n", range->i, range->j);
 
-  dim->x = 256;
+  dim->x = CONFIG_KERNEL_DIM;
   dim->y = 1;
   dim->z = 1;
 }
@@ -99,12 +100,12 @@ static void add1_cuda_entry
   range_t* const range = &work->range;
   CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
-  printf("> add1_cuda_entry [%u] [%u - %u[\n",
-	 kaapi_get_self_kid(), range->i, range->j);
+  printf("> add1_cuda_entry [%u] 0x%lx [%u - %u[\n",
+	 kaapi_get_self_kid(), (uintptr_t)base, range->i, range->j);
 
 #if 1 /* driver api */
   {
-#define THREAD_DIM_X 256
+#define THREAD_DIM_X CONFIG_KERNEL_DIM
     static const kaapi_cuda_dim3_t tdim = {THREAD_DIM_X, 1, 1};
     static const kaapi_cuda_dim2_t bdim = {1, 1};
 
@@ -125,7 +126,7 @@ static void add1_cuda_entry
   }
 #else /* c++ api */
   {
-    add1_heter<<<1, 256, 0, stream>>>
+    add1_heter<<<1, CONFIG_KERNEL_DIM, 0, stream>>>
       (base, range->i, range->j);
   }
 #endif /* driver api */
@@ -152,13 +153,15 @@ static void cuda_entry(void* arg, kaapi_thread_t* thread)
 static void add1_cpu_entry(void* arg, kaapi_thread_t* thread)
 {
   range_t* const range = &((task_work_t*)arg)->range;
+  unsigned int* const base = range->base.data;
+
+  unsigned int i;
 
   printf("> add1_cpu_entry [%u] [%u - %u[\n",
 	 kaapi_get_self_kid(), range->i, range->j);
 
-#if 0 /* todo */
-  common_entry(arg, thread);
-#endif
+  for (i = range->i; i < range->j; ++i)
+    base[i] += 1;
 
   printf("< add1_cpu_entry\n");
 }
@@ -687,6 +690,10 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
   task_work_t* work;
   kaapi_stealcontext_t* ksc;
 
+  /* initialize the sequence */
+  size_t i;
+  for (i = 0; i < nelem; ++i) base[i] = 3;
+
   register_add1_task_format();
 
   work = alloc_work(thread);
@@ -708,7 +715,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
 
 int main(int ac, char** av)
 {
-#define ELEM_COUNT (512 * 1000)
+#define ELEM_COUNT (CONFIG_KERNEL_DIM * 1000)
   static unsigned int base[ELEM_COUNT];
   unsigned int i;
 

@@ -922,6 +922,7 @@ int kaapi_cuda_exectask
   int res = -1;
 
   pthread_mutex_lock(&kproc->cuda_proc.ctx_lock);
+
   if (cuCtxPushCurrent(kproc->cuda_proc.ctx) == CUDA_SUCCESS)
   {
     const cuda_task_body_t cuda_body = (cuda_task_body_t)
