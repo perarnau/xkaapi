@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include "kaapi.h"
 #include "kaapi_cuda_func.h"
@@ -66,31 +67,7 @@ static task_work_t* alloc_work(kaapi_thread_t* thread)
 
 /* add1 task */
 
-#if 0 /* prepost scheme */
-
-static void cuda_pre_handler
-(void* arg, kaapi_thread_t* thread, kaapi_cuda_kernel_dim_t* dim)
-{
-  range_t* const range = &((task_work_t*)arg)->range;
-
-  printf("> cuda_pre_handler [%u - %u[\n", range->i, range->j);
-
-  dim->x = CONFIG_KERNEL_DIM;
-  dim->y = 1;
-  dim->z = 1;
-}
-
-static void cuda_post_handler
-(void* arg, kaapi_thread_t* thread, int error)
-{
-  printf("> cuda_post_handler (%d)\n", error);
-}
-
-#elif 1 /* high level call */
-
-#include <stdint.h>
 typedef uintptr_t kaapi_mem_addr_t;
-extern void kaapi_mem_synchronize(kaapi_mem_addr_t, size_t);
 extern int kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
 
 static void add1_cuda_entry
@@ -123,12 +100,6 @@ static void add1_cuda_entry
 
     kaapi_cuda_func_call_async(&fn, stream, &bdim, &tdim);
 
-#if 1 /* synchronous api */
-    kaapi_cuda_func_wait(&fn, stream);
-    const size_t size = (range->j - range->i) * sizeof(unsigned int);
-    kaapi_mem_synchronize((kaapi_mem_addr_t)base, size);
-#endif
-
     kaapi_cuda_func_unload_ptx(&fn);
   }
 #else /* c++ api */
@@ -140,22 +111,6 @@ static void add1_cuda_entry
 
   printf("< add1_cuda_entry\n");
 }
-
-#else /* cpu call */
-
-static void cuda_entry(void* arg, kaapi_thread_t* thread)
-{
-  range_t* const range = &((task_work_t*)arg)->range;
-  printf("> cuda_entry [%u] [%u - %u[\n",
-	 kaapi_get_self_kid(), range->i, range->j);
-  common_entry(arg, thread);
-  printf("< cuda_entry\n");
-}
-
-#endif /* prepost scheme */
-
-
-/* add1 task */
 
 static void add1_cpu_entry(void* arg, kaapi_thread_t* thread)
 {

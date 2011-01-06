@@ -169,6 +169,21 @@ static inline int memcpy_dtoh
 typedef void (*cuda_task_body_t)(CUstream, void*, kaapi_thread_t*);
 
 
+/* access data wrappers */
+
+static inline kaapi_access_t* get_access_at
+(kaapi_format_t* f, unsigned int i, void* p)
+{ return (kaapi_access_t*)f->get_off_param(f, i, p); }
+
+static inline void* get_access_data_at
+(kaapi_format_t* f, unsigned int i, void* p)
+{ return get_access_at(f, i, p)->data; }
+
+static inline void set_access_data_at
+(kaapi_format_t* f, unsigned int i, void* p, void* d)
+{ get_access_at(f, i, p)->data = d; }
+
+
 /* prepare task args memory */
 
 static void prepare_task
@@ -192,6 +207,9 @@ static void prepare_task
     const kaapi_access_mode_t mode = format->get_mode_param(format, i, sp);
     if (mode & KAAPI_ACCESS_MODE_V) continue ;
 
+    /* we use get_access_param since the user may need
+       to update the actual addr value. after that, we
+       handle access directly in memory */
     access = format->get_access_param(format, i, sp);
     hostptr = access.data;
 
@@ -265,9 +283,8 @@ static void prepare_task
     if (KAAPI_ACCESS_IS_WRITE(mode))
       kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
 
-    /* update param addr */
-    access.data = (void*)(uintptr_t)devptr;
-    format->set_access_param(format, i, sp, &access);
+    /* update param addr (todo: use cached access) */
+    set_access_data_at(format, i, sp, (void*)(uintptr_t)devptr);
   }
 }
 
@@ -328,25 +345,20 @@ static void __attribute__((unused)) prepare_task2
 }
 
 
-/* finalize task args memory */
+/* sycnhronize write parameters host memory */
 
-static void __attribute__((unused)) finalize_task
+static void finalize_task
 (kaapi_processor_t* proc, void* sp, kaapi_format_t* format)
 {
-  kaapi_mem_map_t* const host_map = get_host_mem_map();
-  const kaapi_mem_asid_t host_asid = host_map->asid;
+  const size_t param_count = format->get_count_params(format, sp);
 
-  kaapi_access_t* access;
-  kaapi_mem_mapping_t* mapping;
-  CUdeviceptr devptr;
-  void* hostptr;
+  kaapi_mem_addr_t devptr;
   size_t size;
   unsigned int i;
 
-  for (i = 0; i < format->_count_params; ++i)
+  for (i = 0; i < param_count; ++i)
   {
-    const kaapi_access_mode_t mode =
-      KAAPI_ACCESS_GET_MODE(format->_mode_params[i]);
+    const kaapi_access_mode_t mode = format->get_mode_param(format, i, sp);
 
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
@@ -354,14 +366,14 @@ static void __attribute__((unused)) finalize_task
     if (!KAAPI_ACCESS_IS_WRITE(mode))
       continue ;
 
-    access = (kaapi_access_t*)((uint8_t*)sp + format->_off_params[i]);
-    devptr = *kaapi_data(CUdeviceptr, access);
+    /* assume every KAAPI_ACCESS_MODE_W has been dirtied */
 
-    /* inverted search. assume a mapping exists. */
-    kaapi_mem_map_find_inverse
-      (host_map, (kaapi_mem_addr_t)devptr, &mapping);
-    hostptr = (void*)kaapi_mem_mapping_get_addr(mapping, host_asid);
-    memcpy_dtoh(proc, hostptr, devptr, size);
+    /* get data, size */
+    devptr = (kaapi_mem_addr_t)get_access_data_at(format, i, sp);
+    size = format->get_size_param(format, i, sp);
+
+    /* sync host memory */
+    kaapi_mem_synchronize(devptr, size);
   }
 }
 
@@ -761,6 +773,9 @@ push_frame:
 	  /* synchronize processor execution */
 	  synchronize_processor(proc);
 
+	  /* revalidate the host memory */
+	  finalize_task(proc, pc->sp, format);
+
 	  cuCtxPopCurrent(&proc->cuda_proc.ctx);
 	}
 	/* todo, remove */
@@ -930,6 +945,7 @@ int kaapi_cuda_exectask
     prepare_task(kproc, data, format);
     cuda_body(kproc->cuda_proc.stream, data, (kaapi_thread_t*)thread->sfp);
     synchronize_processor(kproc);
+    finalize_task(kproc, data, format);
 
     cuCtxPopCurrent(&kproc->cuda_proc.ctx);
     
