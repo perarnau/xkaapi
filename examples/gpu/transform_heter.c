@@ -658,10 +658,6 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
   task_work_t* work;
   kaapi_stealcontext_t* ksc;
 
-  /* initialize the sequence */
-  size_t i;
-  for (i = 0; i < nelem; ++i) base[i] = 3;
-
   register_add1_task_format();
 
   work = alloc_work(thread);
@@ -687,18 +683,15 @@ int main(int ac, char** av)
   static unsigned int base[ELEM_COUNT];
   unsigned int i;
 
-  if (kaapi_init())
-  {
-    printf("initialization failure\n");
-    return -1;
-  }
+  kaapi_init();
 
-  for (i = 0; i < ELEM_COUNT; ++i)
-    base[i] = 0x2a;
+  for (i = 0; i < ELEM_COUNT; ++i) base[i] = 1;
 
 #if CONFIG_USE_STATIC
   main_static_entry(base, ELEM_COUNT);
 #else
+  main_adaptive_entry(base, ELEM_COUNT);
+  main_adaptive_entry(base, ELEM_COUNT);
   main_adaptive_entry(base, ELEM_COUNT);
 #endif
 
