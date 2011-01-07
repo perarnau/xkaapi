@@ -46,6 +46,7 @@ typedef struct task_work
 {
   volatile long lock;
   range_t range;
+  enum { MEMSET, ADD1 } func;
 } task_work_t;
 
 
@@ -188,7 +189,7 @@ static void memset_cuda_entry
   printf("> memset_cuda_entry [%u] [%u - %u[ 0x%lx\n",
 	 kaapi_get_self_kid(), range->i, range->j, (uintptr_t)base);
 
-#define MEMSET_VALUE 1
+#define MEMSET_VALUE 3
   CUresult res = cuMemsetD32(base, MEMSET_VALUE, get_range_size(range));
   if (res != CUDA_SUCCESS)
     printf("cudaError 0x%lx %u\n", (uintptr_t)base, res);
@@ -603,9 +604,17 @@ static int splitter
 
   for (; reqcount > 0; ++reqs)
   {
-    task_work_t* const twork = kaapi_reply_init_adaptive_task
-      (sc, reqs, (kaapi_task_body_t)add1_cpu_entry, sizeof(task_work_t), NULL);
+    /* algo func to bodies */
+    const kaapi_task_body_t to_bodies[] =
+    {
+      (kaapi_task_body_t)memset_cpu_entry,
+      (kaapi_task_body_t)add1_cpu_entry
+    };
 
+    task_work_t* const twork = kaapi_reply_init_adaptive_task
+      (sc, reqs, to_bodies[vwork->func], sizeof(task_work_t), NULL);
+
+    twork->func = vwork->func;
     twork->lock = 0;
     kaapi_access_init(&twork->range.base, vwork->range.base.data);
     split_range(&twork->range, &subrange, unitsize);
@@ -634,7 +643,12 @@ static int next_seq(task_work_t* work)
   if (stealres == -1) return -1;
 
   for (i = subrange.i; i < subrange.j; ++i)
-    base[i] += 1;
+  {
+    if (work->func == MEMSET)
+      base[i] = MEMSET_VALUE;
+    else /* work->func == add1 */
+      base[i] += 1;
+  }
 
   return 0;
 }
@@ -647,18 +661,44 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
   task_work_t* work;
   kaapi_stealcontext_t* ksc;
 
-  register_add1_task_format();
-
   work = alloc_work(thread);
-  create_range(&work->range, base, 0, nelem);
 
-  ksc = kaapi_task_begin_adaptive
-    (thread, KAAPI_SC_CONCURRENT, splitter, work);
+  /* memset adaptive task */
+  {
+    /* register format */
+    register_memset_task_format();
 
-  while (next_seq(work) != -1)
-    ;
+    /* init range */
+    create_range(&work->range, base, 0, nelem);
+    work->func = MEMSET;
 
-  kaapi_task_end_adaptive(ksc);
+    /* start adaptive algorithm */
+    ksc = kaapi_task_begin_adaptive
+      (thread, KAAPI_SC_CONCURRENT, splitter, work);
+
+    /* sequential work */
+    while (next_seq(work) != -1)
+      ;
+
+    /* wait for thieves */
+    kaapi_task_end_adaptive(ksc);
+  }
+
+  /* add1 adaptive task */
+  {
+    register_add1_task_format();
+
+    create_range(&work->range, base, 0, nelem);
+    work->func = ADD1;
+
+    ksc = kaapi_task_begin_adaptive
+      (thread, KAAPI_SC_CONCURRENT, splitter, work);
+
+    while (next_seq(work) != -1)
+      ;
+
+    kaapi_task_end_adaptive(ksc);
+  }
 }
 
 #endif /* CONFIG_USE_STATIC */
@@ -674,13 +714,11 @@ int main(int ac, char** av)
 
   kaapi_init();
 
-  for (i = 0; i < ELEM_COUNT; ++i) base[i] = 1;
+  for (i = 0; i < ELEM_COUNT; ++i) base[i] = MEMSET_VALUE;
 
 #if CONFIG_USE_STATIC
   main_static_entry(base, ELEM_COUNT);
 #else
-  main_adaptive_entry(base, ELEM_COUNT);
-  main_adaptive_entry(base, ELEM_COUNT);
   main_adaptive_entry(base, ELEM_COUNT);
 #endif
 
