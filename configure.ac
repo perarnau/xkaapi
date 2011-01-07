@@ -519,11 +519,12 @@ KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
   [cuda], [], [cuda.h], [cuDeviceGetProperties], [
 dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
+    HACK_USE_CUDA=yes
   ],
   [
   ],
   [])
-AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" != x"no"])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$HACK_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 
 
