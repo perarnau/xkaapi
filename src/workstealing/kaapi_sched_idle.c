@@ -153,10 +153,11 @@ redo_execute:
     }
 
     /* WARNING: this case is used by static scheduling in order to detach a thread context 
-       from a thread at the end of an iteration. See kaapi_tasksignalend_body
+       from a thread at the end of an iteration. See kaapi_thread_execframe kaapi_tasksignalend_body
        Previous code: without the test else if () {... }
     */
-    else if (kproc->thread == 0) {
+    else if (err == EINTR) 
+    {
       /* used to detach the thread of the processor in order to reuse it ... */
       ctxt = kaapi_context_alloc(kproc);
 

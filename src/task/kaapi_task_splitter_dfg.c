@@ -64,6 +64,7 @@ int kaapi_task_splitter_dfg(
   kaapi_assert_debug( task !=0 );
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( task) ) );
 
+//printf("Task: %p steal in thread: %p\n", (void*)task, (void*)thread ); fflush(stdout);
   /* find the first request in the list */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
   kaapi_assert(request !=0);

@@ -64,6 +64,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   if (kproc->hlevel.depth ==0) 
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
 
+  kaapi_assert_debug( sizeof(kaapi_hier_arg)  <= sizeof(kproc->fnc_selecarg) );
   arg = (kaapi_hier_arg*)&kproc->fnc_selecarg;
 
   if (flag == KAAPI_STEAL_FAILED)
@@ -94,7 +95,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   {
     arg->seed = rand();
     level = &kproc->hlevel.levels[arg->depth_min];
-    /* set to the mini level where at least 2 threads */
+    /* set to the min level where at least 2 threads */
     while (level->nkids ==1)
     {
       ++arg->depth_min;

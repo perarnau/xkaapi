@@ -93,11 +93,13 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
     return EINVAL;
   kaapi_task_t* task;
   
-  /* for all threads add a signalend task */
+  /* for all threads add a signalend task in order to signal end of iteration 
+     and to detach the thread.
+  */
   for (int i=0; i<thgrp->group_size; ++i)
   {
     task = kaapi_thread_toptask( thgrp->threads[i] );
-    kaapi_task_init(task, kaapi_tasksignalend_body, thgrp );
+    kaapi_task_init_with_state( task, kaapi_tasksignalend_body, KAAPI_MASK_BODY_TERM, thgrp );
     kaapi_thread_pushtask(thgrp->threads[i]);    
   }
   

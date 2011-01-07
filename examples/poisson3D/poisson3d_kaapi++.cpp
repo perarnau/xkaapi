@@ -273,6 +273,7 @@ template<> struct TaskBodyCPU<ComputeResidueAndSwap> {
   }
 };
 
+
 #if 1
 // --------------------------------------------------------------------
 struct ResidueSum: public ka::Task<2>::Signature< 
@@ -288,6 +289,7 @@ template<> struct TaskBodyCPU<ResidueSum> {
   }
 };
 
+
 // --------------------------------------------------------------------
 struct PrintResidueSum: public ka::Task<1>::Signature< 
         ka::RW<double>
@@ -300,6 +302,7 @@ template<> struct TaskBodyCPU<PrintResidueSum> {
   }
 };
 #else
+
 
 // --------------------------------------------------------------------
 struct ResidueSum {
@@ -396,6 +399,7 @@ struct Kernel {
 //    ResidueSum()(res2, residue);
   }
 };
+
 
 // --------------------------------------------------------------------
 struct InitializeSubDomain: public ka::Task<4>::Signature< 

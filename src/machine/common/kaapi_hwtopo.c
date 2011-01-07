@@ -118,7 +118,7 @@ static void kaapi_hw_standardinit(void)
   kaapi_assert_debug(kaapi_default_param.kid2cpu);
   kaapi_default_param.cpu2kid=(unsigned int*)malloc(kaapi_default_param.cpucount*sizeof(unsigned int));
   kaapi_assert_debug(kaapi_default_param.cpu2kid);
-  for (int i=0; i<kaapi_default_param.cpucount; ++i)
+  for (size_t i=0; i<kaapi_default_param.cpucount; ++i)
   {
     kaapi_default_param.kid2cpu[i]= -1;
     kaapi_default_param.cpu2kid[i]= -1;

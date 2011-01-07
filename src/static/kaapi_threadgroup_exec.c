@@ -65,6 +65,17 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 
   ++thgrp->step;
   kaapi_mem_barrier();
+
+#if defined(KAAPI_DEBUG)
+static int isprint = 0;
+if (isprint ==1)
+{
+  kaapi_threadgroup_print(stdout, thgrp);
+//  fprintf(stdout, "Main thread\n");
+//  kaapi_thread_print( stdout, thgrp->mainctxt );
+}
+++isprint;
+#endif
   
   thgrp->startflag = 1;
   
@@ -84,10 +95,12 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     thgrp->threadctxts[i]->partid = i;
     thgrp->threadctxts[i]->unstealable = 1;/* do not allow threads to steal tasks inside ??? */
 
+    /* look at the state of the first task to execute */
     uintptr_t state = kaapi_task_getstate( 
-      kaapi_thread_toptask( kaapi_threadcontext2thread(thgrp->threadctxts[i])) 
+      kaapi_threadcontext2thread(thgrp->threadctxts[i])->pc 
     );
     
+//printf("Push thread: %i, %p, on processor kid:%i\n", i, (void*)thgrp->threadctxts[i], victim_kproc->kid);
     if (!kaapi_task_state_issteal(state) || kaapi_task_state_isready(state) ) 
     {
       kaapi_sched_lock( &victim_kproc->lock ); 
@@ -95,12 +108,9 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
       kaapi_sched_unlock( &victim_kproc->lock ); 
     }
     else {
-      /* put pad of the first non ready task as if the thread was suspended (but not into a queue) */
-printf("First task not ready ! What to do ?\n");
-      /* todo
-	 kaapi_task_t* const task = thgrp->threadctxts[i]->sfp->pc;
-	 task->pad = thgrp->threadctxts[i];
-       */
+      /* put thread into waiting queue of the kproc and initialize the wcs field */
+//printf("First task not ready, push in suspended list\n");
+      kaapi_wsqueuectxt_push( victim_kproc, thgrp->threadctxts[i] );
     }
   }
   

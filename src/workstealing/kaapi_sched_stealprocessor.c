@@ -69,12 +69,15 @@ int kaapi_sched_stealprocessor(
     thread = kaapi_sched_stealready( kproc, kaapi_request_getthiefid(request) );
     if (thread != 0)
     {
+      kaapi_assert_debug( kaapi_cpuset_has(thread->affinity, kaapi_request_getthiefid(request)) );
       /* reply */
       kaapi_reply_t* reply = kaapi_request_getreply(request);
       reply->u.s_thread = thread;
       _kaapi_request_reply(request, KAAPI_REPLY_S_THREAD);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
+      continue;
     }
+    break;
   }
 
 #if 1  

@@ -109,6 +109,7 @@ int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid )
 
     kaapi_thread_restore_frame(thgrp->threads[tid], &(thgrp->save_workertopframe[tid]) );
   }
+//  printf("Thread: %p,  partid: %i restored\n", thgrp->threadctxts[tid], tid); fflush(stdout);
   return 0;
 }
 

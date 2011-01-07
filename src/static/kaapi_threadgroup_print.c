@@ -94,7 +94,7 @@ static void kaapi_threadgroup_printinputoutputdata(
   entry = v->firstbloc;
   while (entry !=0) 
   {
-    for (int i=0; i<entry->pos; ++i)
+    for (size_t i=0; i<entry->pos; ++i)
     {
       kaapi_pidreader_t* reader = &entry->data[i];
       fprintf(file, "@:%p -> first reader on tid: %i by task @:%p, param:%i\n", 
@@ -110,7 +110,7 @@ static void kaapi_threadgroup_printinputoutputdata(
   entry = v->firstbloc;
   while (entry !=0) 
   {
-    for (int i=0; i<entry->pos; ++i)
+    for (size_t i=0; i<entry->pos; ++i)
     {
       kaapi_pidreader_t* reader   = &entry->data[i];
       kaapi_hashentries_t* hentry = kaapi_hashmap_find(hm, reader->addr);
@@ -150,12 +150,14 @@ int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
   }
   fprintf(file, "First input data on thread %i/%i:\n", i, thgrp->group_size);
   kaapi_threadgroup_printinputoutputdata(file, i, &thgrp->ws_khm, &thgrp->ws_vect_input );
-  
+
+#if 0  
   for (i=0; i<thgrp->group_size; ++i)
   {
     fprintf(file, "Data on thread %i/%i:\n", i, thgrp->group_size);
     kaapi_threadgroup_printdata(file, i, &thgrp->ws_khm );
   }  
+#endif
   
   return 0;  
 }
