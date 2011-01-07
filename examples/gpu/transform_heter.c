@@ -708,7 +708,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
 
 int main(int ac, char** av)
 {
-#define ELEM_COUNT (CONFIG_KERNEL_DIM * 1000)
+#define ELEM_COUNT (CONFIG_KERNEL_DIM * 10000)
   static unsigned int base[ELEM_COUNT];
   unsigned int i;
 

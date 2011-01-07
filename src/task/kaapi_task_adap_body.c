@@ -125,7 +125,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
 
 #if defined(KAAPI_USE_CUDA)
   kaapi_processor_t* const kproc = self_thread->proc;
-  if (kproc->kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
+  if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
   {
     /* has the task a cuda implementation */
     kaapi_format_t* const format =
