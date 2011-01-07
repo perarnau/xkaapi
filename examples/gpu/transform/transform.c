@@ -91,7 +91,7 @@ static void add1_cuda_entry
 
     kaapi_cuda_func_init(&fn);
 
-#define STERN "transform_heter"
+#define STERN "transform"
     kaapi_cuda_func_load_ptx(&fn, STERN ".ptx", "add1");
 
     /* since base points to the start of the range */
@@ -105,7 +105,7 @@ static void add1_cuda_entry
   }
 #else /* c++ api */
   {
-    add1_heter<<<1, CONFIG_KERNEL_DIM, 0, stream>>>
+    add1<<<1, CONFIG_KERNEL_DIM, 0, stream>>>
       (base, range->i, range->j);
   }
 #endif /* driver api */
