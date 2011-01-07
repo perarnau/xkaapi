@@ -810,12 +810,23 @@ push_frame:
         kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
       }
       else if ( kaapi_task_state_isterm( state ) ){
+#if defined(KAAPI_USE_STATICSCHED)
+        body = kaapi_task_getbody(pc);
+        if (body == kaapi_tasksignalend_body) 
+        {
+          kaapi_tasksignalend_body(pc->sp, (kaapi_thread_t*)thread->sfp );
+          return EINTR;
+        }
+#endif        
         /* means that task has been steal */
         kaapi_assert_debug( kaapi_task_state_issteal( state ) );
       }
       else if ( kaapi_task_state_issteal( state ) ) /* but not terminate ! so swap */
       {
         goto error_swap_body;
+      }
+      else {
+        kaapi_assert_debug(0);
       }
     }
 #if defined(KAAPI_DEBUG)
