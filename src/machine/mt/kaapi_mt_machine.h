@@ -942,11 +942,21 @@ extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
 extern int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* thread );
 
 /** \ingroup WS
-   Steal a ctxt on a specific cell
+   Steal a ctxt on a specific cell.
+   After the thread has been stolen with success, the caller must call kaapi_wsqueuectxt_finish_steal_cell
+   in order to allows garbage of cell.
    Return a pointer to the stolen thread in case of success
    Return 0 if the thread was already stolen
 */
 extern kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_cell_t* cell );
+
+/**
+*/
+static inline void kaapi_wsqueuectxt_finish_steal_cell( kaapi_wsqueuectxt_cell_t* cell )
+{
+  int ok = KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_STEALLIST, KAAPI_WSQUEUECELL_OUTLIST);
+  kaapi_assert( ok );
+}
 
 /**
 */

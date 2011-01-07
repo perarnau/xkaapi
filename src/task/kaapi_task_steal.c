@@ -120,7 +120,7 @@ void kaapi_taskwrite_body(
       kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
       if (kthread !=0)
       {
-      
+        kaapi_wsqueuectxt_finish_steal_cell(wcs);
 //    printf("Put thread %p, on myqueue: %li\n", (void*)thread, kproc->kid ); fflush(stdout);
         /* Ok, here we have theft the thread and no body else can steal it
            Signal the end of execution of forked task: 
