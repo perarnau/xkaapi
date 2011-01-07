@@ -93,12 +93,11 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
         kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)argrecv->wcs;
         if (wcs != 0) /* means thread has been suspended */
         { 
-          kaapi_processor_t* kproc = wcs->thread->proc;
-          kaapi_assert_debug( kaapi_cpuset_has(wcs->affinity, kproc->kid) );
-
           kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
           if (kthread !=0)
           {
+            kaapi_processor_t* kproc = kthread->proc;
+            kaapi_assert_debug( kaapi_cpuset_has(kthread->affinity, kproc->kid) || kaapi_cpuset_empty(kthread->affinity) );
             kaapi_sched_lock( &kproc->lock );
             /* signal the task : also reset the state to init 
                Do not change the body and keep the recvbody or recvbcast body that
@@ -111,6 +110,13 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
             kaapi_sched_pushready( kproc, kthread );
             kaapi_sched_unlock( &kproc->lock );
           }
+          else {
+            /* signal the task : also reset the state to init 
+               See comment above.
+            */
+            kaapi_writemem_barrier();
+            kaapi_task_setbody(task, task_body);
+          }
         }
         else {
           kaapi_writemem_barrier();
@@ -119,6 +125,7 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
           */
           kaapi_task_setbody(task, task_body);
         }
+//        printf("Task: %p signaled to: %p  =%p\n", (void*)task, (void*)task_body, (void*)task->u.body ); fflush(stdout);
       }
     }
     comlist = comlist->next;
