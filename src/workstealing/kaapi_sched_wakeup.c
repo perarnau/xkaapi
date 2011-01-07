@@ -124,12 +124,11 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     if ((thread !=0) && kaapi_cpuset_has(thread->affinity, kproc_thiefid) 
         && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))) 
     {
-      cell->thread = 0;
-      thread->wcs  = 0;
+      kaapi_wsqueuectxt_finish_steal_cell(cell);
       return thread;
     }
 
-    if ((status == KAAPI_WSQUEUECELL_OUTLIST)||(status == KAAPI_WSQUEUECELL_STEALLIST)) /* not INLIST nor READY */
+    if (status == KAAPI_WSQUEUECELL_OUTLIST) /* not INLIST nor READY */
     {
       /* delete from the queue */
       if (nextcell != 0)

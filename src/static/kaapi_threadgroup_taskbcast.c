@@ -96,6 +96,7 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
           kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
           if (kthread !=0)
           {
+            kaapi_wsqueuectxt_finish_steal_cell( wcs );
             kaapi_processor_t* kproc = kthread->proc;
             kaapi_assert_debug( kaapi_cpuset_has(kthread->affinity, kproc->kid) || kaapi_cpuset_empty(kthread->affinity) );
             kaapi_sched_lock( &kproc->lock );
