@@ -254,10 +254,10 @@ static void prepare_task
 	  if (res != CUDA_SUCCESS)
 	  { kaapi_cuda_error("cuCtxPushCurrent", res); exit(-1); }
 
+#if defined (KAAPI_DEBUG)
 	  printf("memcpy_dtoh(%u:%p -> %u:%p, %lu)\n",
-		 valid_asid, (void*)raddr,
-		 0, (void*)hostptr,
-		 size);
+		 valid_asid, (void*)raddr, 0, (void*)hostptr, size);
+#endif
 
 	  memcpy_dtoh(proc, hostptr, (CUdeviceptr)raddr, size);
 
@@ -267,9 +267,10 @@ static void prepare_task
 	  kaapi_mem_mapping_clear_dirty(mapping, host_asid);
 	}
 
+#if defined (KAAPI_DEBUG)
 	printf("memcpy_htod(%u:%p -> %u:%p, %lu)\n",
-	       0, (void*)hostptr, self_asid,
-	       (void*)(uintptr_t)devptr, size);
+	       0, (void*)hostptr, self_asid, (void*)(uintptr_t)devptr, size);
+#endif
 
 	/* copy from host to device */
 	memcpy_htod(proc, devptr, hostptr, size);
@@ -493,10 +494,10 @@ static void cuda_taskbcast_body
 	  {
 	    memcpy_dtoh(rproc, (void*)host_ptr, (CUdeviceptr)laddr, size);
 
+#if defined (KAAPI_DEBUG)
 	    printf("memcpy_dtoh(%u:%p -> %u:%p, %lu)\n",
-		   lasid, (void*)laddr,
-		   0, (void*)host_ptr,
-		   size);
+		   lasid, (void*)laddr, 0, (void*)host_ptr, size);
+#endif
 
 	    kaapi_mem_mapping_clear_dirty(mapping, host_asid);
 	  }
@@ -528,10 +529,10 @@ static void cuda_taskbcast_body
 	  /* normal device to host copy */
 	  memcpy_dtoh(rproc, (void*)host_ptr, (CUdeviceptr)laddr, size);
 
+#if defined (KAAPI_DEBUG)
 	  printf("memcpy_dtoh(%u:%p -> %u:%p, %lu)\n",
-		 lasid, (void*)laddr,
-		 0, (void*)host_ptr,
-		 size);
+		 lasid, (void*)laddr, 0, (void*)host_ptr, size);
+#endif
 	}
 
 	/* valdiate remote mapping */
@@ -778,9 +779,9 @@ push_frame:
 
 	  cuCtxPopCurrent(&proc->cuda_proc.ctx);
 	}
-	/* todo, remove */
+#if defined (KAAPI_DEBUG)
 	else { printf("cuCtxPushCurrent() error\n"); exit(-1); }
-	/* todo, remove */
+#endif
 
 	pthread_mutex_unlock(&proc->cuda_proc.ctx_lock);
       }

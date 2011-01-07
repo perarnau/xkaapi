@@ -80,6 +80,7 @@ int kaapi_cuda_func_load_ptx(kaapi_cuda_func_t*, const char*, const char*);
 int kaapi_cuda_func_unload_ptx(kaapi_cuda_func_t*);
 int kaapi_cuda_func_push_ptr(kaapi_cuda_func_t*, CUdeviceptr);
 int kaapi_cuda_func_push_uint(kaapi_cuda_func_t*, unsigned int);
+int kaapi_cuda_func_push_float(kaapi_cuda_func_t*, float);
 int kaapi_cuda_func_call_async
 (kaapi_cuda_func_t*, CUstream, const kaapi_cuda_dim2_t*, const kaapi_cuda_dim3_t*);
 int kaapi_cuda_func_wait(kaapi_cuda_func_t*, CUstream);
