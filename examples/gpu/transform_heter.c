@@ -250,7 +250,8 @@ static void check_cpu_entry(void* arg, kaapi_thread_t* thread)
 
 /* task formatting */
 
-#define PARAM_COUNT 3
+/* the whole range is viewed as a single param */
+#define PARAM_COUNT 1
 
 static size_t get_count_params
 (const struct kaapi_format_t* f, const void* p)
@@ -260,11 +261,7 @@ static void* get_off_param
 (const struct kaapi_format_t* f, unsigned int i, const void* p)
 {
   static const kaapi_offset_t param_offsets[PARAM_COUNT] =
-  {
-    offsetof(task_work_t, range.base),
-    offsetof(task_work_t, range.i),
-    offsetof(task_work_t, range.j)
-  };
+    { offsetof(task_work_t, range.base) };
   return (void*)((uintptr_t)p + param_offsets[i]);
 }
 
@@ -273,7 +270,7 @@ static kaapi_access_mode_t get_write_mode_param
 {
   /* memset task first param modes is write */
   static const kaapi_access_mode_t modes[PARAM_COUNT] =
-    { KAAPI_ACCESS_MODE_W, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V };
+    { KAAPI_ACCESS_MODE_W };
   return modes[i];
 }
 
@@ -282,7 +279,7 @@ static kaapi_access_mode_t get_read_mode_param
 {
   /* check task first param modes is read */
   static const kaapi_access_mode_t modes[PARAM_COUNT] =
-    { KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V };
+    { KAAPI_ACCESS_MODE_R };
   return modes[i];
 }
 
@@ -290,7 +287,7 @@ static kaapi_access_mode_t get_readwrite_mode_param
 (const struct kaapi_format_t* f, unsigned int i, const void* p)
 {
   static const kaapi_access_mode_t modes[PARAM_COUNT] =
-    { KAAPI_ACCESS_MODE_RW, KAAPI_ACCESS_MODE_V, KAAPI_ACCESS_MODE_V };
+    { KAAPI_ACCESS_MODE_RW };
   return modes[i];
 }
 
@@ -318,23 +315,15 @@ static const struct kaapi_format_t* get_fmt_param
 {
 #define kaapi_mem_format kaapi_ulong_format
   const struct kaapi_format_t* formats[PARAM_COUNT] =
-    { kaapi_mem_format, kaapi_uint_format, kaapi_uint_format };
+    { kaapi_mem_format };
   return formats[i];
 }
 
 static size_t get_size_param
 (const struct kaapi_format_t* f, unsigned int i, const void* p)
 {
-  switch (i)
-  {
-  case 0: /* range */
-  {
-    const task_work_t* const work = (task_work_t*)p;
-    return (size_t)get_range_size(&work->range) * sizeof(unsigned int);
-  }
-
-  default: return sizeof(unsigned int);
-  }
+  const task_work_t* const work = (task_work_t*)p;
+  return (size_t)get_range_size(&work->range) * sizeof(unsigned int);
 }
 
 static void register_add1_task_format(void)
