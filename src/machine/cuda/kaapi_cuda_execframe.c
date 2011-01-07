@@ -964,6 +964,10 @@ int kaapi_cuda_exectask
     /* success */
     res = 0;
   }
+#if defined (KAAPI_DEBUG)
+  else
+  { kaapi_cuda_error("cuCtxPushCurrent", res); exit(-1); }
+#endif
 
   pthread_mutex_unlock(&kproc->cuda_proc.ctx_lock);
 

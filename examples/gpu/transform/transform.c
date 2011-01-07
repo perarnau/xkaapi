@@ -474,7 +474,6 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   unsigned int* const gpu_base = base + nelem / 2;
   const unsigned int gpu_i = 0;
   const unsigned int gpu_j = nelem / 2;
-  const unsigned int gpu_size = (gpu_j - gpu_i) * sizeof(unsigned int);
 
   /* gpu::memset_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU_0));
@@ -517,9 +516,6 @@ main_static_entry(unsigned int* base, unsigned int nelem)
   /* execute */
   kaapi_threadgroup_begin_execute(group);
   kaapi_threadgroup_end_execute(group);
-
-  /* ensure memory is written back to host */
-  kaapi_mem_synchronize2((kaapi_mem_addr_t)gpu_base, gpu_size);
 
   kaapi_threadgroup_destroy(group);
 }
