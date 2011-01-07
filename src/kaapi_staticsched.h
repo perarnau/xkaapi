@@ -100,12 +100,12 @@ typedef struct kaapi_com_t {
 } kaapi_com_t;
 
 typedef struct kaapi_taskbcast_arg_t {
-  kaapi_taskrecv_arg_t common;                  /* common data structure with kaapi_taskrecv_arg_t */
-  kaapi_com_t          head;
-  kaapi_com_t*         last;
+  kaapi_taskrecv_arg_t  common;                  /* common data structure with kaapi_taskrecv_arg_t */
+  kaapi_com_t           head;
+  kaapi_com_t*          last;
 } kaapi_taskbcast_arg_t;
 
-#define KAAPI_MAX_PARTITION 256
+#define KAAPI_MAX_PARTITION 4096
 
 
 /** \ingroup DFG
