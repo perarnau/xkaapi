@@ -66,7 +66,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   ++thgrp->step;
   kaapi_mem_barrier();
 
-#if defined(KAAPI_DEBUG)
+#if 0 //defined(KAAPI_DEBUG)
 static int isprint = 0;
 if (isprint ==1)
 {

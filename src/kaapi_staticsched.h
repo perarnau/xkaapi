@@ -80,33 +80,38 @@ typedef struct kaapi_taskrecv_arg_t {
       KAAPI_ATOMIC_WRITE( &ra->counter, b );\
     }
 
+
 /** \ingroup DFG
     In case of dependency W -> R with the writer and reader tasks on two different partitions,
     the task_writer->pad points on the kaapi_taskbcast_arg_t data structure.
     This data structure is used at runtime.
 */
-#define KAAPI_BCASTENTRY_SIZE 16
+typedef struct kaapi_comentry_t {
+    int                         tid;           /* thread id in the group */
+    void*                       addr;          /* remote address */
+    size_t                      size;          /* remote size */
+    kaapi_task_t*               task;          /* remote recv task */
+    struct kaapi_comentry_t*    next;          /* next entry */
+} kaapi_comentry_t;
+
+/** \ingroup DFG
+    In case of dependency W -> R with the writer and reader tasks on two different partitions,
+    the task_writer->pad points on the kaapi_taskbcast_arg_t data structure.
+    This data structure is used at runtime.
+*/
 typedef struct kaapi_com_t {
   short                         size;          /* max size: KAAPI_COUNTER_LIST_BLOCSIZE */
   long                          tag;
   struct kaapi_com_t*           next;          /* next in bcast envelop task */
   kaapi_access_t                a;             /* address of data to send */
-  struct {
-    int                         tid;           /* thread id in the group */
-    void*                       addr;          /* remote address */
-    size_t                      size;          /* remote size */
-    kaapi_task_t*               task;          /* remote recv task */
-  } entry[KAAPI_BCASTENTRY_SIZE];
+  kaapi_comentry_t*             entry;         /* list of readers */
 } kaapi_com_t;
 
 typedef struct kaapi_taskbcast_arg_t {
   kaapi_taskrecv_arg_t  common;                  /* common data structure with kaapi_taskrecv_arg_t */
-  kaapi_com_t           head;
+  kaapi_com_t           head;                    /* list of task to signal */
   kaapi_com_t*          last;
 } kaapi_taskbcast_arg_t;
-
-#define KAAPI_MAX_PARTITION 4096
-
 
 /** \ingroup DFG
     Identification of a reader of a data writen in an other partition.
@@ -117,6 +122,31 @@ typedef struct kaapi_reader_t {
   kaapi_task_t*    task;                               /* the last reader tasks that owns a reference to the data */
   void*            addr;                               /* address of data in this thread */
 } kaapi_reader_t;
+
+
+
+/** \ingroup DFG
+    Information about copy of a data into a partition. It includes:
+    - reader information (if used)
+    - a pointer that store the data that was deleted after it use.
+    
+    This structure is managed into simple linked list.
+*/
+typedef struct kaapi_part_datainfo_t {
+  int                           tid;
+  struct kaapi_part_datainfo_t* next;
+  kaapi_reader_t                reader;
+  void*                         delete_data;
+} kaapi_part_datainfo_t;
+
+KAAPI_DECLARE_BLOCENTRIES(kaapi_part_datainfo_bloc_t, kaapi_part_datainfo_t);
+
+/*
+*/
+typedef struct kaapi_part_datainfo_allocator_t {
+  kaapi_part_datainfo_bloc_t* currentbloc;
+  kaapi_part_datainfo_bloc_t* allallocatedbloc;
+} kaapi_part_datainfo_allocator_t;
 
 
 
@@ -140,20 +170,16 @@ typedef struct kaapi_reader_t {
     may be replaced by nop in order to reuse the data.
 */
 typedef struct kaapi_version_t {
-  long             tag;                                /* the tag (thread group wide) identifier of the data */
-  void*            original_data;                      /* address of the reference data */
-  int              writer_thread;                      /* index of the last thread that writes the data, -1 if outside the group*/
-  void*            writer_data;                        /* address of the reference data */
-  kaapi_task_t*    writer_task;                        /* last writer task of the version, 0 if no indentify task (input data) */
-  kaapi_com_t*     com;                                /* list of com to used in the bcast task */     
-  int              cnt_readers;                        /* number of readers ==1 in readers */
-  kaapi_reader_t   mainreaders;                        /* is readers[-1] for the main thread */
-  kaapi_reader_t   readers[KAAPI_MAX_PARTITION];       /* set of readers */
-  void*            main_delete_data;                   /* for delete_data[-1] */
-  void*            delete_data[KAAPI_MAX_PARTITION];   /* data deleted on each thread , may be reused if required */
+  long                   tag;                                /* the tag (thread group wide) identifier of the data */
+  void*                  original_data;                      /* address of the reference data */
+  int                    writer_thread;                      /* index of the last thread that writes the data, -1 if outside the group*/
+  void*                  writer_data;                        /* address of the reference data */
+  kaapi_task_t*          writer_task;                        /* last writer task of the version, 0 if no indentify task (input data) */
+  kaapi_com_t*           com;                                /* list of com to used in the bcast task */     
+  int                    cnt_readers;                        /* number of readers ==1 in readers */
+  kaapi_part_datainfo_t* readerslist;                        /* list of copies to different partition */
+  kaapi_part_datainfo_t* tail_readerslist;                   /* tail of the list of copies to different partition, O(1) free */
 } kaapi_version_t;
-
-
 
 KAAPI_DECLARE_BLOCENTRIES(kaapi_version_bloc_t, kaapi_version_t);
 
@@ -257,6 +283,7 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_vector_t             ws_vect_input;  /* first reader that are waiting for input data */  
   long                       tag_count;
   kaapi_version_allocator_t  ver_allocator;
+  kaapi_part_datainfo_allocator_t  part_datainfo_allocator;
 } kaapi_threadgrouprep_t;
 
 
@@ -336,6 +363,8 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter
     ( kaapi_threadgroup_t thgrp, kaapi_version_t* ver, int tid, kaapi_task_t* task, kaapi_access_t* a, int ith );
 
 #if !defined(KAAPI_USE_STATICSCHED)
+/* defined body because they was used in other part of the runtime */
+
 /* task recv body
 */
 static inline void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread ) {}
@@ -417,6 +446,42 @@ extern int kaapi_versionallocator_destroy( kaapi_version_allocator_t* va );
 /**
 */
 extern kaapi_version_t* kaapi_versionallocator_allocate( kaapi_version_allocator_t* va );
+
+/**
+*/
+extern int kaapi_part_datainfo_allocator_init( kaapi_part_datainfo_allocator_t* va );
+
+/**
+*/
+extern int kaapi_part_datainfo_allocator_destroy( kaapi_part_datainfo_allocator_t* va );
+
+/** Allocate a new part_datainfo_t
+*/
+extern kaapi_part_datainfo_t* kaapi_part_datainfo_allocate(kaapi_threadgroup_t thgrp);
+
+/** Return 0 iff tid does not belong to the list of readers of the version.
+    Else return a pointer to the entry.
+*/
+extern kaapi_part_datainfo_t* kaapi_version_reader_find_tid( const kaapi_version_t* v, int tid );
+
+/** Return a pointer to the information of the copy holds into partition tid.
+    If the partition tid does not have entry it creates a default one.
+*/
+extern kaapi_part_datainfo_t* kaapi_version_reader_find_insert_tid( kaapi_threadgroup_t thgrp, kaapi_version_t* v, int tid );
+
+
+/** Return !=0 iff version v has a reader on partition tid. Else return 0.
+*/
+static inline int kaapi_version_hasreader_tid( const kaapi_version_t* v, int tid )
+{
+#if 0 /* old static size based code */
+  return v->readers[tid].used;
+#else
+  kaapi_part_datainfo_t* curr = kaapi_version_reader_find_tid( v, tid );
+  if (curr ==0) return 0;
+  return curr->reader.used;
+#endif
+}
 
 /**
 */

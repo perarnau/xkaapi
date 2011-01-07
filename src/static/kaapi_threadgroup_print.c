@@ -66,11 +66,15 @@ static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm
     while (entry !=0) 
     {
       kaapi_version_t* ver = entry->u.dfginfo;
-      if (ver->readers[tid].used) {
-        fprintf(file, "@:%p -> local @:%p\n", ver->original_data, ver->readers[tid].addr );
+      kaapi_part_datainfo_t* verinfo = kaapi_version_reader_find_tid( ver, tid );
+      if (verinfo !=0)
+      {
+        if (verinfo->reader.used) {
+          fprintf(file, "@:%p -> local @:%p\n", ver->original_data, verinfo->reader.addr );
+        }
+        if (verinfo->delete_data !=0)
+          fprintf(file, "@:%p -> to delete @:%p\n", ver->original_data, verinfo->delete_data );
       }
-      if (ver->delete_data[tid] !=0)
-        fprintf(file, "@:%p -> to delete @:%p\n", ver->original_data, ver->delete_data[tid] );
       entry = entry->next;
     }
   }
