@@ -73,10 +73,13 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     {
       /* should be atomic ? */
       cell = cond_thread->wcs;
-      cell->thread = 0;
-      cond_thread->wcs = 0;
-      KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);
-      return cond_thread;
+      if (cell !=0) {
+        cell->thread = 0;
+        cond_thread->wcs = 0;
+        KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);
+        return cond_thread;
+      }
+      /* else the thread was put into the lready list */
     }
     /* the cell will be garbaged next times */
   }
@@ -95,7 +98,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     
     if (thread != 0)
     {
-      kaapi_assert_debug( kaapi_cpuset_has(thread->affinity, kproc_thiefid) );
+      kaapi_assert_debug( kaapi_cpuset_has(thread->affinity, kproc_thiefid)
+        || (kaapi_cpuset_empty(thread->affinity) && (kproc->kid == kproc_thiefid)) );
       return thread;
     }
   }

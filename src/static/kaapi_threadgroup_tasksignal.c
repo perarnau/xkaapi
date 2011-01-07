@@ -80,13 +80,17 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* kthread = kproc->thread;
   
+#if 0
+  printf("Signal end: Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
+  fflush(stdout);
+#endif
   if (kthread != thgrp->mainctxt)
   {
 #if 0
     printf("Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
     fflush(stdout);
 #endif
-    /* detach the thread */
+    /* detach the thread: may it should be put into the execframe function */
     kproc->thread = 0;
   }
 }

@@ -107,10 +107,19 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     }
 #if defined(KAAPI_DEBUG)
     {
+      kaapi_sched_lock( &kproc->lock );
       kaapi_wsqueuectxt_cell_t* cell;
+      kaapi_thread_context_t* curr;
       int found = 0;
+      /* search iff ctxt_condition is ready list */
+      curr = kproc->lready._front;
+      while (curr !=0) 
+      {
+        if (curr == thread_condition) { found = 1; break; }
+        curr = curr->_next;
+      }
         
-      /* else search iff ctxt_condition is yet in suspend list, it should ! */
+      /* else search iff ctxt_condition is yet in suspend list, else it should be in it! */
       if (!found)
       {
         cell = kproc->lsuspend.head;
@@ -122,6 +131,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         }
       }
       kaapi_assert_m(found !=0, "cannot find ctxt_condition in lists");
+      kaapi_sched_unlock( &kproc->lock );
     }
 #endif    
 
@@ -182,10 +192,10 @@ redo_execution:
       kaapi_wsqueuectxt_push( kproc, ctxt );
     } 
     /* WARNING: this case is used by static scheduling in order to detach a thread context 
-       from a thread at the end of an iteration. See kaapi_tasksignalend_body.
+       from a thread at the end of an iteration. See kaapi_thread_execframe, kaapi_tasksignalend_body.
        Previous code: without the if
     */
-    else if (ctxt != 0) 
+    else if (ctxt !=0) //(err == EINTR) 
     {
       /* wait end of thieves before releasing a thread */
       kaapi_sched_lock(&kproc->lock);
