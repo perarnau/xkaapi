@@ -291,7 +291,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       readerentry->addr = access->data;
 #endif
       readerentry->size = data_size;
-//      printf("New comentry: %p\n", (void*)readerentry ); fflush(stdout);
+      //printf("New comentry: %p\n", (void*)readerentry ); fflush(stdout);
 
       /* link it */
       readerentry->next = ver->com->entry;

@@ -120,7 +120,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   }
 
 #if !defined (_WIN32) /*VirtualAlloc initializes memory to zero*/
-  memset(ctxt, 0, k_stacksize );
+  memset(ctxt, 0, sizeof(kaapi_thread_context_t) ); 
 #endif
 
   /* force alignment of ctxt->task to be aligned on 64 bits boundary */
