@@ -110,6 +110,8 @@ void Poisson3D::initialize_subdomains( Poisson3D::Index index, SubDomain& subdom
           subdom(x,y,z) = 0.0;
           solution(x,y,z) = xx*yy*zz*(xx-1.)*(yy-1.)*(zz-1.);
         }
+    subdom.print( std::cout << "Subdomain" );
+    solution.print( std::cout << "Solution" );
 //     printf( "[Poisson3D::initialize_subdomains] [%d,%d,%d] - (%d,%d,%d) - frhs(0,0,0) = %f\n", nx, ny, nz, index.get_i(), index.get_j(), index.get_k(), frhs(0,0,0) );
 }
 
@@ -449,6 +451,7 @@ double SubDomain::compute_residue_and_swap( const SubDomain& new_sd, const SubDo
         res2 += d*d;
         old_sd(x,y,z) = old_sd(x,y,z) + d * invdcoef;
       }
+  print( std::cout << "Sub Domain: res=" << res2 << "\n" );
   return res2;
 }
 
@@ -460,6 +463,19 @@ double SubDomain::compute_error( const SubDomain& solution ) const
       for ( unsigned int z = 0 ; z < _nz ; ++z )
         error = std::max( error, fabs( (*this)(x,y,z) - solution(x,y,z) ) );
   return error;
+}
+
+void SubDomain::print(std::ostream& cout ) const
+{
+  for ( unsigned int z = 0 ; z < _nz ; ++z )
+  {
+    for ( unsigned int x = 0 ; x < _nx ; ++x )
+    {
+      for ( unsigned int y = 0 ; y < _ny ; ++y )
+        cout << (*this)(x,y,z) << '\t';
+      cout << std::endl;
+    }
+  }
 }
 
 //------------------------------------------------------------
