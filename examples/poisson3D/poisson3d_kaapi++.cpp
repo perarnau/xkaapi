@@ -295,9 +295,9 @@ template<> struct TaskBodyCPU<ResidueSum> {
   void operator()( ka::pointer_rw<double> s_residue, 
                    ka::pointer_r<double> s_respartial )
   {
-    std::cout << "In " << __PRETTY_FUNCTION__ << *s_residue << " += " << s_respartial << std::endl;
+//    std::cout << "In " << __PRETTY_FUNCTION__ << *s_residue << " += " << s_respartial << std::endl;
     *s_residue += *s_respartial;
-    std::cout << "Out " << __PRETTY_FUNCTION__ << *s_residue << std::endl;
+//    std::cout << "Out " << __PRETTY_FUNCTION__ << *s_residue << std::endl;
   }
 };
 
@@ -377,6 +377,7 @@ struct Kernel {
       // Internal computation
       ka::Spawn<UpdateInternal>( ka::SetPartition(curr_site) )( &new_domain[curr_index()], &old_domain[curr_index()] );
 
+#if 0
       // SubDomainInterface contributions
       for( unsigned int d = 0 ; d < Poisson3D::NB_DIRECTIONS ; d++ )
       {
@@ -391,7 +392,7 @@ struct Kernel {
           ka::Spawn<UpdateExternalVal>(ka::SetPartition(curr_site))( &new_domain[curr_index()], dir, Poisson3D::DIR_CONSTRAINTS[d] );
         }
       }
-
+#endif
       ka::Spawn<ComputeResidueAndSwap>(ka::SetPartition(curr_site))
           ( &old_domain[curr_index()], &new_domain[curr_index()], &frhs[curr_index()], &res2[curr_index()] );
       ++ibeg;

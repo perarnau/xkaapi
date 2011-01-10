@@ -5,7 +5,7 @@
         _threadgroup->begin_partition();
         tpart = kaapi_get_elapsedtime();
         TASKGENERATOR()( M4_PARAM(`e$1', `', `, ') );
-        //_threadgroup->print();    
+//        _threadgroup->print();    
         _threadgroup->end_partition();
         tpart = kaapi_get_elapsedtime()-tpart;
         _threadgroup->save();

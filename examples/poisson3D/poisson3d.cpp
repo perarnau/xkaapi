@@ -110,8 +110,6 @@ void Poisson3D::initialize_subdomains( Poisson3D::Index index, SubDomain& subdom
           subdom(x,y,z) = 0.0;
           solution(x,y,z) = xx*yy*zz*(xx-1.)*(yy-1.)*(zz-1.);
         }
-    subdom.print( std::cout << "Subdomain" );
-    solution.print( std::cout << "Solution" );
 //     printf( "[Poisson3D::initialize_subdomains] [%d,%d,%d] - (%d,%d,%d) - frhs(0,0,0) = %f\n", nx, ny, nz, index.get_i(), index.get_j(), index.get_k(), frhs(0,0,0) );
 }
 
@@ -427,15 +425,15 @@ void SubDomain::swap( SubDomain& sd )
   unsigned int tmp_nx = sd._nx;
   unsigned int tmp_ny = sd._ny;
   unsigned int tmp_nz = sd._nz;
-  double* tmp_data = sd._data;
-  sd._nx = _nx;
-  sd._ny = _ny;
-  sd._nz = _nz;
+  double* tmp_data    = sd._data;
+  sd._nx   = _nx;
+  sd._ny   = _ny;
+  sd._nz   = _nz;
   sd._data = _data;  
-  _nx = tmp_nx;
-  _ny = tmp_ny;
-  _nz = tmp_nz;
-  _data = tmp_data;
+  _nx      = tmp_nx;
+  _ny      = tmp_ny;
+  _nz      = tmp_nz;
+  _data    = tmp_data;
 }
 
 double SubDomain::compute_residue_and_swap( const SubDomain& new_sd, const SubDomain& frhs )
@@ -451,7 +449,6 @@ double SubDomain::compute_residue_and_swap( const SubDomain& new_sd, const SubDo
         res2 += d*d;
         old_sd(x,y,z) = old_sd(x,y,z) + d * invdcoef;
       }
-  print( std::cout << "Sub Domain: res=" << res2 << "\n" );
   return res2;
 }
 
