@@ -933,8 +933,8 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
     static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return 1; }
   };
@@ -949,9 +949,9 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-    static size_t            get_nparam  ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
   };
 
   template<typename T>
@@ -964,8 +964,8 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
   };
 
@@ -979,8 +979,8 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
   };
 
@@ -992,9 +992,9 @@ namespace ka {
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
-//    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
-//    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
-//    static size_t            get_nparam( const type_inclosure_t* a ) { return 1; }
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
   };
 
   template<typename T>
@@ -1005,9 +1005,9 @@ namespace ka {
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
-//    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
-//    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
-//    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
 //    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
 //    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
@@ -1119,14 +1119,31 @@ namespace ka {
   /* ------ rep of array into a closure      
   */
   template<int dim, typename T>
-  struct arraytype_inclosure_t {
-    arraytype_inclosure_t( const array<dim, T>& a ) : _range(a.slice()), _data(a), _version() {}
+  struct arraytype_inclosure_t;
+
+  template<typename T>
+  struct arraytype_inclosure_t<1,T> {
+    arraytype_inclosure_t<1,T>( const array<1, T>& a ) : _range(a.slice()), _data(a), _version() {}
+    size_t size() const { return size(); }
+
     operator const range&() const { return _range; }
     range             _range;
-    array_rep<dim,T>  _data;
-    array_rep<dim,T*> _version; /* only used if the task is stolen */
+    array_rep<1,T>    _data;
+    array_rep<1,T*>   _version; /* only used if the task is stolen */
   private:
-    arraytype_inclosure_t() {}
+    arraytype_inclosure_t<1,T>() {}
+  };
+
+  template<typename T>
+  struct arraytype_inclosure_t<2,T> {
+    arraytype_inclosure_t<2,T>( const array<2, T>& a ) : _data(a), _version() { _range[0] = a.slice(0); _range[1] = a.slice(1); }
+    size_t size() const { return _range[0].size()*_range[1].size(); }
+
+    range             _range[2];
+    array_rep<2,T>    _data;
+    array_rep<2,T*>   _version; /* only used if the task is stolen */
+  private:
+    arraytype_inclosure_t<2,T>() {}
   };
 
   /* ------ specialisation of representation of array */
@@ -1216,6 +1233,7 @@ namespace ka {
       reference_t operator=( const T& v )
       { ref = v; return *this; }
       operator T&() { return ref; }
+      T* operator ->() { return &ref; }
     private:
       T& ref;
     };
@@ -1296,7 +1314,7 @@ namespace ka {
     typedef ACCESS_MODE_RPWP   mode_t; 
     typedef T                  type_t;
     static const bool          is_static = false;
-    static size_t              get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
+    static size_t              get_nparam( const type_inclosure_t* a ) { return a->size(); }
   };
 
   template<int dim, typename T>
@@ -1316,7 +1334,7 @@ namespace ka {
         a->_data[i] = *(type_t*)r->data; 
       a->_version[i] = (type_t*)r->version; 
     }
-    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
+    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->size(); }
    };
 
   template<int dim, typename T>
@@ -1336,7 +1354,7 @@ namespace ka {
         a->_data[i] = *(type_t*)r->data; 
       a->_version[i] = (type_t*)r->version; 
     }
-    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
+    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->size(); }
   };
 
   template<int dim, typename T>
@@ -1356,7 +1374,7 @@ namespace ka {
         a->_data[i] = *(type_t*)r->data; 
       a->_version[i] = (type_t*)r->version; 
     }
-    static size_t                     get_nparam ( const type_inclosure_t* a ) { return a->_range.size(); }
+    static size_t                     get_nparam ( const type_inclosure_t* a ) { return a->size(); }
   };  
 
 
