@@ -158,7 +158,7 @@ public:
   index_t operator[](index_t i) const
   { 
     if (_begin == (index_t)-1) return (index_t)-1;
-    kaapi_assert_debug( (i < size()) && (i>=0) );
+    kaapi_assert_debug( (i <= size()) && (i>=0) );
     return _begin + i*_stride;
   }
   
@@ -337,14 +337,14 @@ public:
   // Access to the (i) element (to rewrite)
   typename rep_t::reference_t operator[] (index_t i) 
   {
-    kaapi_assert_debug( (i >= 0) && (i < size()) );
+    kaapi_assert_debug( (i >= 0) && (i <= size()) );
 	  return array_rep<1,T>::operator[](_range[i]);
   }
 
   // Access to the (i) element (to rewrite)
   typename rep_t::const_reference_t operator[] (index_t i) const 
   {
-    kaapi_assert_debug( (i >= 0) && (i < size()));
+    kaapi_assert_debug( (i >= 0) && (i <= size()));
 	  return array_rep<1,T>::operator[](_range[i]);
   }
 
