@@ -73,26 +73,16 @@ static inline int memcpy_dtoh
   return 0;
 }
 
-static kaapi_processor_t* asid_to_kproc(kaapi_mem_asid_t asid)
-{
-  /* todo, asid_to_kproc[asid] -> kproc */
-
-  unsigned int i;
-
-  for (i = 0; i < kaapi_count_kprocessors; ++i)
-    if (kaapi_all_kprocessors[i]->mem_map.asid == asid)
-      break ;
-
-  /* assume found */
-  return kaapi_all_kprocessors[i];
-}
+extern kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t);
 
 static inline int get_cuda_context_by_asid
 (kaapi_mem_asid_t asid, CUcontext* ctx)
 {
   /* todo, lock */
 
-  kaapi_processor_t* const kproc = asid_to_kproc(asid);
+  kaapi_processor_t* const kproc = get_proc_by_asid(asid);
+  kaapi_assert_debug(kproc);
+
   *ctx = kproc->cuda_proc.ctx;
   return 0;
 }

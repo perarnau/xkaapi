@@ -81,8 +81,10 @@ static inline kaapi_mem_asid_t get_host_asid(void)
   return get_host_mem_map()->asid;
 }
 
-static kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
+kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
 {
+  /* todo, asid_to_kproc[asid] -> kproc */
+
   kaapi_processor_t** kproc = kaapi_all_kprocessors;
   size_t count = kaapi_count_kprocessors;
 
