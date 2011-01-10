@@ -7,17 +7,19 @@
 #include "kaapi_cuda_func.h"
 
 
-#define CONFIG_USE_STATIC 0
+#define CONFIG_USE_STATIC 1
 #define CONFIG_KERNEL_DIM 256
 
 
 /* missing decls */
 typedef struct kaapi_processor_t kaapi_processor_t;
-kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
-kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
-unsigned int kaapi_request_kid(kaapi_request_t*);
-unsigned int kaapi_processor_get_type(const struct kaapi_processor_t*); 
-unsigned int kaapi_get_self_kid(void);
+typedef uintptr_t kaapi_mem_addr_t;
+extern kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
+extern kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
+extern unsigned int kaapi_request_kid(kaapi_request_t*);
+extern unsigned int kaapi_processor_get_type(const struct kaapi_processor_t*); 
+extern unsigned int kaapi_get_self_kid(void);
+extern void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 
 
 typedef struct range
@@ -67,9 +69,6 @@ static task_work_t* alloc_work(kaapi_thread_t* thread)
 /* task bodies */
 
 /* add1 task */
-
-typedef uintptr_t kaapi_mem_addr_t;
-extern int kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
 
 static void add1_cuda_entry
 (CUstream stream, void* arg, kaapi_thread_t* thread)
@@ -717,9 +716,6 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
 }
 
 #endif /* CONFIG_USE_STATIC */
-
-
-extern void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 
 
 /* main */

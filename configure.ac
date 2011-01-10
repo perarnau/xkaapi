@@ -617,7 +617,7 @@ dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
-dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [HWLOC])
 dnl ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])
