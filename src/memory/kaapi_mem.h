@@ -180,5 +180,10 @@ void kaapi_mem_synchronize(kaapi_mem_addr_t, size_t);
 int kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
 int kaapi_mem_synchronize3(kaapi_mem_mapping_t*, size_t);
 
+/*
+ */
+void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
+
+
 
 #endif /* ! KAAPI_MEM_H_INCLUDED */

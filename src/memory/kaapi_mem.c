@@ -46,6 +46,106 @@
 #include "kaapi_impl.h"
 #include "kaapi_mem.h"
 
+#if defined(KAAPI_USE_CUDA)
+#if KAAPI_USE_CUDA
+
+#include <cuda.h>
+#include "../machine/cuda/kaapi_cuda_error.h"
+
+/* todo: portability layer should handle this */
+static inline int memcpy_dtoh
+(kaapi_processor_t* proc, void* hostptr, CUdeviceptr devptr, size_t size)
+{
+#if 0 /* async version */
+  const CUresult res = cuMemcpyDtoHAsync
+    (hostptr, devptr, size, proc->cuda_proc.stream);
+#else
+  const CUresult res = cuMemcpyDtoH
+    (hostptr, devptr, size);
+#endif
+
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyDToHAsync", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+static kaapi_processor_t* asid_to_kproc(kaapi_mem_asid_t asid)
+{
+  /* todo, asid_to_kproc[asid] -> kproc */
+
+  unsigned int i;
+
+  for (i = 0; i < kaapi_count_kprocessors; ++i)
+    if (kaapi_all_kprocessors[i]->mem_map.asid == asid)
+      break ;
+
+  /* assume found */
+  return kaapi_all_kprocessors[i];
+}
+
+static inline int get_cuda_context_by_asid
+(kaapi_mem_asid_t asid, CUcontext* ctx)
+{
+  /* todo, lock */
+
+  kaapi_processor_t* const kproc = asid_to_kproc(asid);
+  *ctx = kproc->cuda_proc.ctx;
+  return 0;
+}
+
+static inline void put_cuda_context_by_asid
+(kaapi_mem_asid_t asid, CUcontext ctx)
+{
+  /* todo, lock */
+}
+
+static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
+{
+  return &proc->mem_map;
+}
+
+static inline kaapi_mem_map_t* get_host_mem_map(void)
+{
+  return get_proc_mem_map(kaapi_all_kprocessors[0]);
+}
+
+static inline kaapi_mem_map_t* get_self_mem_map(void)
+{
+  return get_proc_mem_map(kaapi_get_current_processor());
+}
+
+static int kaapi_mem_map_find_with_asid
+(kaapi_mem_map_t* map, kaapi_mem_addr_t addr,
+ kaapi_mem_asid_t asid, kaapi_mem_mapping_t** mapping)
+{
+  /* find a mapping in the map such that addrs[asid] == addr */
+
+  kaapi_mem_mapping_t* pos;
+
+  *mapping = NULL;
+
+  for (pos = map->head; pos != NULL; pos = pos->next)
+  {
+    if (!kaapi_mem_mapping_has_addr(pos, asid))
+      continue ;
+
+    if (kaapi_mem_mapping_get_addr(pos, asid) == addr)
+    {
+      *mapping = pos;
+      return 0;
+    }
+  }
+
+  return -1;
+}
+
+#endif
+#endif /* KAAPI_USE_CUDA */
+
 
 /* exported */
 
@@ -143,7 +243,8 @@ int kaapi_mem_map_find_inverse(
   return -1;
 }
 
-kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid(const kaapi_mem_mapping_t* mapping)
+kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid
+(const kaapi_mem_mapping_t* mapping)
 {
   /* assuming there is one, find an asid where addr is valid. */
 
@@ -156,86 +257,90 @@ kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid(const kaapi_mem_mapping_t* 
   return asid;
 }
 
-#if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
-
-#include <cuda.h>
-#include "../machine/cuda/kaapi_cuda_error.h"
-
-/* todo: portability layer should handle this */
-static inline int memcpy_dtoh
-(kaapi_processor_t* proc, void* hostptr, CUdeviceptr devptr, size_t size)
+void kaapi_mem_delete_host_mappings
+(kaapi_mem_addr_t addr, size_t size)
 {
-#if 0 /* async version */
-  const CUresult res = cuMemcpyDtoHAsync
-    (hostptr, devptr, size, proc->cuda_proc.stream);
-#else
-  const CUresult res = cuMemcpyDtoH
-    (hostptr, devptr, size);
+  /* delete all the host mappings on [addr, size[
+     this function deallocates any remote memory
+     but it is up to the host to deallocate the
+     local memory if needed.
+  */
+
+  /* non inclusive */
+  const kaapi_mem_addr_t last_addr = addr + size;
+
+  kaapi_processor_t* const kproc = kaapi_all_kprocessors[0];
+
+  kaapi_mem_mapping_t* pos = kproc->mem_map.head;
+  kaapi_mem_mapping_t* prev = NULL;
+
+  while (pos != NULL)
+  {
+    kaapi_mem_asid_t asid;
+
+    kaapi_mem_mapping_t* const tmp = pos;
+    pos = pos->next;
+
+    /* skip if does not map the host addr */
+
+    if (!((tmp->addrs[0] >= addr) && (tmp->addrs[0] < last_addr)))
+    {
+      prev = tmp;
+      continue ;
+    }
+
+    /* free remote mem and delete the mapping */
+
+    for (asid = 1; asid < KAAPI_MEM_ASID_MAX; ++asid)
+    {
+      if (kaapi_mem_mapping_has_addr(tmp, asid) == 0)
+	continue ;
+
+#if defined(KAAPI_DEBUG)
+      printf("delete: %u::0x%lx\n", asid, (unsigned long)tmp->addrs[asid]);
 #endif
 
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuMemcpyDToHAsync", res);
-    return -1;
-  }
+      /* assume the remote device is a gpu.
+	 todo: asid_to_kproc[] map
+      */
+#if defined(KAAPI_USE_CUDA)
+      {
+	CUresult res;
+	CUcontext ctx;
 
-  return 0;
-}
+	get_cuda_context_by_asid(asid, &ctx);
 
-static inline int get_cuda_context_by_asid
-(kaapi_mem_asid_t asid, CUcontext* ctx)
-{
-  /* todo, lock */
-  *ctx = kaapi_all_kprocessors[asid]->cuda_proc.ctx;
-  return 0;
-}
+	res = cuCtxPushCurrent(ctx);
+	if (res == CUDA_SUCCESS)
+	{
+	  res = cuMemFree(tmp->addrs[asid]);
+#if defined(KAAPI_DEBUG)
+	  if (res != CUDA_SUCCESS)
+	    kaapi_cuda_error("cuMemFree", res);
+#endif
+	  cuCtxPopCurrent(&ctx);
+	}
+#if defined(KAAPI_DEBUG)
+	else
+	  kaapi_cuda_error("cuCtxPushCurrent", res);
+#endif
 
-static inline void put_cuda_context_by_asid
-(kaapi_mem_asid_t asid, CUcontext ctx)
-{
-  /* todo, lock */
-}
-
-static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
-{
-  return &proc->mem_map;
-}
-
-static inline kaapi_mem_map_t* get_host_mem_map(void)
-{
-  return get_proc_mem_map(kaapi_all_kprocessors[0]);
-}
-
-static inline kaapi_mem_map_t* get_self_mem_map(void)
-{
-  return get_proc_mem_map(kaapi_get_current_processor());
-}
-
-static int kaapi_mem_map_find_with_asid
-(kaapi_mem_map_t* map, kaapi_mem_addr_t addr,
- kaapi_mem_asid_t asid, kaapi_mem_mapping_t** mapping)
-{
-  /* find a mapping in the map such that addrs[asid] == addr */
-
-  kaapi_mem_mapping_t* pos;
-
-  *mapping = NULL;
-
-  for (pos = map->head; pos != NULL; pos = pos->next)
-  {
-    if (!kaapi_mem_mapping_has_addr(pos, asid))
-      continue ;
-
-    if (kaapi_mem_mapping_get_addr(pos, asid) == addr)
-    {
-      *mapping = pos;
-      return 0;
+	put_cuda_context_by_asid(asid, ctx);
+      }
+#endif /* KAAPI_USE_CUDA */
     }
-  }
 
-  return -1;
+    /* unlink tmp the node */
+    if (prev == NULL)
+      kproc->mem_map.head = tmp->next;
+    else
+      prev->next = tmp->next;
+    free(tmp);
+  }
 }
+
+#if defined(KAAPI_USE_CUDA)
+#if KAAPI_USE_CUDA
 
 void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
 {

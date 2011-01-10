@@ -719,11 +719,14 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
 #endif /* CONFIG_USE_STATIC */
 
 
+extern void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
+
+
 /* main */
 
 int main(int ac, char** av)
 {
-#define ELEM_COUNT (CONFIG_KERNEL_DIM * 100000)
+#define ELEM_COUNT (CONFIG_KERNEL_DIM * 10000)
   static unsigned int base[ELEM_COUNT];
 
   kaapi_init();
@@ -733,6 +736,13 @@ int main(int ac, char** av)
 #else
   main_adaptive_entry(base, ELEM_COUNT);
 #endif
+
+  /* use this to delete kaapi mappings. For instance,
+     if the user free() then malloc(), associated kaapi
+     mapping is no longer valid.
+     It releases the remotely allocated memory too.
+  */
+  kaapi_mem_delete_host_mappings((kaapi_mem_addr_t)base, sizeof(base));
 
   check_sequence(base, ELEM_COUNT);
 
