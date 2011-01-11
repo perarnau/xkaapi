@@ -95,7 +95,8 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS) {};
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')> {
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>') TaskArg_t;
-
+  M4_PARAM(`typedef typename TraitFormalParam$1::formal_t formal$1_t;
+  ', ` ', `')
   //
   static TaskBodyGPU<TASK> dummy;
   static void body(void* taskarg, kaapi_gpustream_t gpustream)
@@ -113,7 +114,8 @@ TaskBodyGPU<TASK>  KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')> {
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>') TaskArg_t;
-
+  M4_PARAM(`typedef typename TraitFormalParam$1::formal_t formal$1_t;
+  ', ` ', `')
   // with stack parameters
   static TaskBodyGPU<TASK> dummy;
   static void body(void* taskarg, kaapi_gpustream_t gpustream)
