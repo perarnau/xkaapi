@@ -8,7 +8,6 @@ $CUDADIR/bin/nvcc -w \
     -I$CUDADIR/include \
     -DKAAPI_NDEBUG=1 \
     -DKAAPI_DEBUG=0 \
-    -o transform \
     transform++.cu \
     -L$XKAAPIDIR/lib -lkaapi++ \
     -L$CUDADIR/lib64 -lcuda

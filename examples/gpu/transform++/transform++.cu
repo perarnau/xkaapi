@@ -51,6 +51,7 @@
 // missing decls
 typedef uintptr_t kaapi_mem_addr_t;
 extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
+typedef float double_type;
 
 
 /** Description of the example.
@@ -63,7 +64,7 @@ extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 */
 
 __global__ void add1
-(unsigned int* array, unsigned int first, unsigned int last)
+(double_type* array, unsigned int first, unsigned int last)
 {
   const unsigned int nelems = last - first;
   const unsigned int per_thread = nelems / blockDim.x;
@@ -87,14 +88,17 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 
 template<typename T, typename OP>
 struct TaskBodyGPU<TaskThief<T, OP> > {
-  void operator() ( gpuStream stream, ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) {}
-  // void operator() ( gpuStream stream, ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) {}
-  // void operator() ( gpuStream stream, ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op)
-  // {
-    // double* const array = beg;
-    // const size_t size = (size_t)(end - beg);
-    // add1<<<1, 256, 0, stream>>>(array, 0, size);
-// }
+  void operator()
+  ( ka::gpuStream stream, ka::Access beg, ka::Access end, OP op)
+  {
+    printf("cudaTask\n"); fflush(stdout);
+
+    double_type* const beg_data = (double_type*)beg.data;
+    double_type* const end_data = (double_type*)end.data;
+    const size_t size = (size_t)(end_data - beg_data);
+    // add1<<<1, 256, 0, stream.stream>>>(beg_data, 0, size);
+    add1<<<1, 256, 0>>>(beg_data, 0, size);
+  }
 };
 
 /* For each main function */
@@ -136,7 +140,7 @@ static void for_each( T* beg, T* end, OP op )
 
 /**
 */
-void apply_add1( double& v )
+void apply_add1( double_type& v )
 {
   v += 1;
 }
@@ -150,7 +154,7 @@ struct doit {
     size_t size = 100000;
     if (argc >1) size = atoi(argv[1]);
     
-    double* array = new double[size];
+    double_type* array = new double_type[size];
 
     for (int iter = 0; iter < 100; ++iter)
     {
