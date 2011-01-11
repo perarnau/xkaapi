@@ -218,6 +218,9 @@ static void prepare_task
     /* get parameter size */
     size = format->get_size_param(format, i, sp);
 
+    if (format->flag == KAAPI_FORMAT_STATIC_FIELD)
+      printf("___STATIC___\n");
+
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
       (host_map, (kaapi_mem_addr_t)hostptr, &mapping);

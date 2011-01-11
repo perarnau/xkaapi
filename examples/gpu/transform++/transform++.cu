@@ -88,8 +88,10 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 template<typename T, typename OP>
 struct TaskBodyGPU<TaskThief<T, OP> > {
   void operator()
-  ( ka::gpuStream stream, ka::Access beg, ka::Access end, OP op)
+  (ka::gpuStream stream, ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op)
+    // ( ka::gpuStream stream, ka::Access beg, ka::Access end, OP op)
   {
+#if 0
     const CUstream custream = (CUstream)stream.stream;
 
     double_type* const beg_data = (double_type*)beg.data;
@@ -99,6 +101,7 @@ struct TaskBodyGPU<TaskThief<T, OP> > {
     printf("cudaTask(0x%lx 0x%lx, %lu)\n",
 	   (uintptr_t)custream, beg_data, size);
     fflush(stdout);
+#endif
 
     // add1<<<1, 256, 0, custream>>>(beg_data, 0, size);
   }

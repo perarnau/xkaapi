@@ -117,6 +117,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   if (size_param !=0)
   {
     fmt->_size_params = malloc( sizeof(size_t)*count );
+    printf("registering size: %lu %lu / %lu\n", fmt->_size_params[1], fmt->_size_params[2], count);
     kaapi_assert( fmt->_size_params !=0);
     memcpy(fmt->_size_params, size_param, sizeof(size_t)*count );
   }
