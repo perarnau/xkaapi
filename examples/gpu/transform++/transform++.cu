@@ -43,9 +43,8 @@
 */
 #include <stdint.h>
 #include <sys/types.h>
+#include <cuda.h>
 #include "kaapi++.h"
-// #include "ka_api_clo.h"
-// #include "kaapi++"
 #include "for_each_work.h"
 
 // missing decls
@@ -91,13 +90,17 @@ struct TaskBodyGPU<TaskThief<T, OP> > {
   void operator()
   ( ka::gpuStream stream, ka::Access beg, ka::Access end, OP op)
   {
-    printf("cudaTask\n"); fflush(stdout);
+    const CUstream custream = (CUstream)stream.stream;
 
     double_type* const beg_data = (double_type*)beg.data;
     double_type* const end_data = (double_type*)end.data;
     const size_t size = (size_t)(end_data - beg_data);
-    // add1<<<1, 256, 0, stream.stream>>>(beg_data, 0, size);
-    add1<<<1, 256, 0>>>(beg_data, 0, size);
+
+    printf("cudaTask(0x%lx 0x%lx, %lu)\n",
+	   (uintptr_t)custream, beg_data, size);
+    fflush(stdout);
+
+    // add1<<<1, 256, 0, custream>>>(beg_data, 0, size);
   }
 };
 
