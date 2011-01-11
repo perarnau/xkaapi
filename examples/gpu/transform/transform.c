@@ -7,7 +7,7 @@
 #include "kaapi_cuda_func.h"
 
 
-#define CONFIG_USE_STATIC 1
+#define CONFIG_USE_STATIC 0
 #define CONFIG_KERNEL_DIM 256
 
 

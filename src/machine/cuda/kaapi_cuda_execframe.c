@@ -350,6 +350,10 @@ static void __attribute__((unused)) prepare_task2
 
 /* sycnhronize write parameters host memory */
 
+static inline unsigned int access_is_readonly
+(kaapi_access_mode_t m)
+{ return KAAPI_ACCESS_IS_READ(m) && !KAAPI_ACCESS_IS_WRITE(m); }
+
 static void finalize_task
 (kaapi_processor_t* proc, void* sp, kaapi_format_t* format)
 {
@@ -365,6 +369,34 @@ static void finalize_task
 
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
+
+    /* deallocate remote mem for readonly mappings */
+    if (access_is_readonly(mode))
+    {
+      const kaapi_mem_asid_t self_asid = proc->mem_map.asid;
+      kaapi_mem_map_t* const host_map = get_host_mem_map();
+
+      kaapi_mem_mapping_t* mapping;
+      devptr = (kaapi_mem_addr_t)get_access_data_at(format, i, sp);
+
+      kaapi_mem_map_find(host_map, devptr, &mapping);
+      kaapi_assert_debug(kaapi_mem_mapping_has_addr(self_asid));
+
+      kaapi_mem_mapping_clear_addr(mapping, self_asid);
+
+      pthread_mutex_lock(&proc->cuda_proc.ctx_lock);
+      if (cuCtxPushCurrent(proc->cuda_proc.ctx) == CUDA_SUCCESS)
+      {
+	free_device_mem(devptr);
+	cuCtxPopCurrent(&proc->cuda_proc.ctx);
+      }
+#if defined(KAAPI_DEBUG)
+      else
+      { kaapi_cuda_error("cuCtxPushCurrent", 666); }
+#endif
+
+      continue ;
+    }
 
     if (!KAAPI_ACCESS_IS_WRITE(mode))
       continue ;

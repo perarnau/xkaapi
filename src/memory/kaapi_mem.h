@@ -137,6 +137,12 @@ static inline unsigned int kaapi_mem_mapping_has_addr
   return m->addr_bits & (1 << asid);
 }
 
+static inline void kaapi_mem_mapping_clear_addr
+(kaapi_mem_mapping_t* m, kaapi_mem_asid_t asid)
+{
+  m->addr_bits &= ~(1 << asid);
+}
+
 kaapi_mem_asid_t kaapi_mem_mapping_get_nondirty_asid(const kaapi_mem_mapping_t*);
 
 

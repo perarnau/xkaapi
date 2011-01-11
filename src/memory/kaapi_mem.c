@@ -160,7 +160,8 @@ void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
 }
 
 
-int kaapi_mem_map_find(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
+int kaapi_mem_map_find
+(kaapi_mem_map_t* map, kaapi_mem_addr_t addr, kaapi_mem_mapping_t** mapping)
 {
   /* find a mapping in the map such that addrs[map->asid] == addr. */
 
