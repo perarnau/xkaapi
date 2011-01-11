@@ -101,7 +101,7 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitForma
   static void body(void* taskarg, kaapi_gpustream_t gpustream)
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
-    dummy( M4_PARAM(`args->f$1', `', `,'));
+    dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
@@ -119,7 +119,7 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitForma
   static void body(void* taskarg, kaapi_gpustream_t gpustream)
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
-    dummy( (gpuStream)gpustream M4_PARAM(`, args->f$1', `', `'));
+    dummy( (gpuStream)gpustream M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>

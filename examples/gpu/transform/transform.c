@@ -13,11 +13,13 @@
 
 /* missing decls */
 typedef struct kaapi_processor_t kaapi_processor_t;
-kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
-kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
-unsigned int kaapi_request_kid(kaapi_request_t*);
-unsigned int kaapi_processor_get_type(const struct kaapi_processor_t*); 
-unsigned int kaapi_get_self_kid(void);
+typedef uintptr_t kaapi_mem_addr_t;
+extern kaapi_processor_t* kaapi_stealcontext_kproc(kaapi_stealcontext_t*);
+extern kaapi_processor_t* kaapi_request_kproc(kaapi_request_t*);
+extern unsigned int kaapi_request_kid(kaapi_request_t*);
+extern unsigned int kaapi_processor_get_type(const struct kaapi_processor_t*); 
+extern unsigned int kaapi_get_self_kid(void);
+extern void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 
 
 typedef struct range
@@ -67,9 +69,6 @@ static task_work_t* alloc_work(kaapi_thread_t* thread)
 /* task bodies */
 
 /* add1 task */
-
-typedef uintptr_t kaapi_mem_addr_t;
-extern int kaapi_mem_synchronize2(kaapi_mem_addr_t, size_t);
 
 static void add1_cuda_entry
 (CUstream stream, void* arg, kaapi_thread_t* thread)
@@ -723,7 +722,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
 
 int main(int ac, char** av)
 {
-#define ELEM_COUNT (CONFIG_KERNEL_DIM * 100000)
+#define ELEM_COUNT (CONFIG_KERNEL_DIM * 10000)
   static unsigned int base[ELEM_COUNT];
 
   kaapi_init();
@@ -733,6 +732,13 @@ int main(int ac, char** av)
 #else
   main_adaptive_entry(base, ELEM_COUNT);
 #endif
+
+  /* use this to delete kaapi mappings. For instance,
+     if the user free() then malloc(), associated kaapi
+     mapping is no longer valid.
+     It releases the remotely allocated memory too.
+  */
+  kaapi_mem_delete_host_mappings((kaapi_mem_addr_t)base, sizeof(base));
 
   check_sequence(base, ELEM_COUNT);
 

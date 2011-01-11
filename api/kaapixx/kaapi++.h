@@ -204,7 +204,6 @@ namespace ka {
   public:
     gpuStream( kaapi_gpustream_t gs ): stream(gs) {}
     gpuStream( ): stream(0) {}
-  protected:
     kaapi_gpustream_t stream; /* at least for CUDA */
   };
 

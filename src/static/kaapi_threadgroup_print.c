@@ -56,7 +56,9 @@ static const char* tab_state[] = {
 
 /**
  */
-static void kaapi_threadgroup_printdata(FILE* file, int tid, kaapi_hashmap_t* hm )
+__attribute__((unused))
+static void kaapi_threadgroup_printdata
+(FILE* file, int tid, kaapi_hashmap_t* hm )
 {
   kaapi_hashentries_t* entry;
   
