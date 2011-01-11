@@ -1,5 +1,7 @@
 #ifndef _POISSON3D_H_
 #define _POISSON3D_H_
+#include <iostream>
+
 class SubDomain;
 class SubDomainInterface;
 
@@ -104,6 +106,7 @@ public:
   double compute_residue_and_swap( const SubDomain& new_sd, const SubDomain& frhs );
   double compute_error( const SubDomain& solution ) const;  
 
+  void print(std::ostream& cout ) const;
 protected:
   unsigned int _nx;
   unsigned int _ny;

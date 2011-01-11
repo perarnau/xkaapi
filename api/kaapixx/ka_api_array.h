@@ -86,6 +86,12 @@ public:
     return (_end-_begin+_stride -1)/_stride; 
   }
   
+  /** size of entry, (index_t)-1U if full range */
+  index_t stride() const 
+  {  
+    return _stride;
+  }
+  
   /** iterator over values of a range */
   class const_iterator {
   public:
@@ -108,7 +114,6 @@ public:
     const_iterator& operator++()
     {
       _begin += _stride; 
-      if (_begin > _end) _begin = _end;
       return *this; 
     }
     
@@ -142,16 +147,18 @@ public:
   };
   
   /** begin */
-  const_iterator begin() const { return const_iterator(_begin, _end, _stride); }
+  const_iterator begin() const 
+  { return const_iterator(_begin, _end, _stride); }
 
   /** end */
-  const_iterator end() const { return const_iterator(_end, _end, _stride); }
+  const_iterator end() const {
+   return const_iterator(_begin+size()*_stride, _end, _stride); }
 
   /** Return the i-th value of the range. Return -1 in case of a Full range */
   index_t operator[](index_t i) const
   { 
     if (_begin == (index_t)-1) return (index_t)-1;
-    kaapi_assert_debug( (i < size()) && (i>=0) );
+    kaapi_assert_debug( (i <= size()) && (i>=0) );
     return _begin + i*_stride;
   }
   
@@ -318,7 +325,7 @@ public:
   // Cstor, used to convert type in closure to formal parameter type
   template<class InternalRep>
   explicit array<1,T>(InternalRep& ir )
-   : array_rep<1,T>(ir), _range(ir)
+   : array_rep<1,T>(ir), _range(ir._range)
   {
   }
 
@@ -330,14 +337,14 @@ public:
   // Access to the (i) element (to rewrite)
   typename rep_t::reference_t operator[] (index_t i) 
   {
-    kaapi_assert_debug( (i >= 0) && (i < size()) );
+    kaapi_assert_debug( (i >= 0) && (i <= size()) );
 	  return array_rep<1,T>::operator[](_range[i]);
   }
 
   // Access to the (i) element (to rewrite)
   typename rep_t::const_reference_t operator[] (index_t i) const 
   {
-    kaapi_assert_debug( (i >= 0) && (i < size()));
+    kaapi_assert_debug( (i >= 0) && (i <= size()));
 	  return array_rep<1,T>::operator[](_range[i]);
   }
 
@@ -432,6 +439,167 @@ public:
 public:
   range         _range;        // always shift to 0 during composition
 };
+
+
+
+/** 2-dimensional array of objects of type T
+    Recopy constructor makes an alias to the same 
+    memory region.
+    Assignement has a 'copy semantic', ie each elements
+    of the source array is copied to the destination array. 
+    Subarray with stride may be extracted.
+    It was to the responsability to the caller to ensure
+    that the container of data (either the sub array built
+    from some constructor, either the memory region given
+    to build the array) has a scope bigger that all of its
+    subarrays.
+*/
+template<class T>
+class array<2,T> : public array_rep<2, T> {
+  // row storage of the array: if different memory organization then
+  typename range::index_t index(range::index_t i, range::index_t j) const
+  { 
+    kaapi_assert_debug( (i < dim(0)) && (j< dim(1)) );
+    return i*dim(1)+j; 
+  }
+public:
+  typedef range::index_t index_t;
+  typedef T              value_t;
+  typedef array_rep<2,T> rep_t;
+  
+  // Dflt cstor
+  array<2,T>() 
+   : array_rep<2, T>() , _range()
+  {}
+
+  // Recopy cstor
+  array<2,T>(const array<2,T>& a) 
+   : array_rep<2,T>(a), _range(a._range)
+  {
+  }
+
+  // Cstor
+  // Cstor of a 2-D array from a pointer 'data' of size 'count1'x 'count2' with stride 'stride1' and stride2
+  // in each dimension
+  array<2,T>(index_t count1, index_t count2, T* data, index_t stride1 = 1, index_t stride2 =1)
+   : array_rep<2,T>(data)
+  {
+    _range[0]=range(0, count1, stride1);
+    _range[1]=range(0, count2, stride2);
+  }
+  
+  // Cstor, used to convert type in closure to formal parameter type
+  template<class InternalRep>
+  explicit array<2,T>(InternalRep& ir )
+   : array_rep<2,T>(ir), _range(ir._range)
+  {
+  }
+
+  // make alias
+  explicit array<2,T>(array<2,T>& a )
+   : array_rep<2,T>(a), _range(a._range)
+  {
+  }
+  
+  // Access to the (i,j) element (to rewrite)
+  typename rep_t::reference_t operator() (index_t i, index_t j) 
+  {
+    kaapi_assert_debug( (i >= 0) && (i < dim(0)) );
+    kaapi_assert_debug( (j >= 0) && (j < dim(1)) );
+	  return array_rep<2,T>::operator[]( index(_range[0][i], _range[1][j]) );
+  }
+
+  // Access to the (i,j) element (to rewrite)
+  typename rep_t::const_reference_t operator() (index_t i, index_t j) const 
+  {
+    kaapi_assert_debug( (i >= 0) && (i < dim(0)) );
+    kaapi_assert_debug( (j >= 0) && (j < dim(1)) );
+	  return array_rep<2,T>::operator[]( index(_range[0][i], _range[1][j]) );
+  }
+
+  // size of the array
+  size_t size() const 
+  { return _range[0].size()*_range[1].size(); }
+
+  // Range of the array
+  size_t dim(int dim) const
+  { 
+    kaapi_assert_debug( (dim == 0) || (dim ==1) );
+    return _range[dim].size(); 
+  }
+
+  // Range of the array
+  range slice(int dim) const
+  { 
+    kaapi_assert_debug( (dim == 0) || (dim ==1) );
+    return _range[dim]; 
+  }
+
+  // Assignment
+  array<2,T>& operator=( const array<2,T>& a )
+  {
+    kaapi_assert_debug( dim(0) == a.dim(0) );
+    kaapi_assert_debug( dim(1) == a.dim(1) );
+
+    for (index_t i=0; i< dim(0); ++i)
+      for (index_t j=0; j< dim(1); ++j)
+        (*this)(i,j) = a(i,j);
+
+    return *this;
+  }
+
+  // Assignment to a value
+  array<2,T>& operator=( const T& value )
+  {
+    for (index_t i=0; i< dim(0); ++i)
+      for (index_t j=0; j< dim(1); ++j)
+        (*this)(i,j) = value;
+    return *this;
+  }
+
+  // swap
+  template<class Y>
+  void swap( array<2,Y>& a )
+  {
+    std::swap( _range, a._range );
+    std::swap( (array_rep<2,T>&)(*this),  (array_rep<2,T>&)a );
+  }
+
+  
+  // Subarray extraction
+  array<2,T> operator() (const range& r1, const range& r2)  
+  {
+/*
+    if (r._begin == (index_t)-1) return *this;
+    kaapi_assert_debug( r.size() < _range.size() );
+    range rthis = _range;
+    index_t shift = rthis.compose_shift0(r);
+	  return array<1,T>( rthis.size(), array_rep<1,T>::shift_base(shift), rthis._stride );
+*/
+    return *this;
+  }
+
+  // Return the i-th col
+  array<1,T> col(int j)
+  {
+    /* only for 2D dimensional array without stride. lda == _range[0].size() */
+    kaapi_assert( (_range[0].stride() == 1) && (_range[1].stride() ==1) );
+    return array<1,T>( _range[1].size(), array_rep<2,T>::shift_base(_range[1][j]), _range[1].size() );
+  }
+
+  // Return the i-th row
+  array<1,T> row(int i)
+  {
+    /* only for 2D dimensional array without stride. lda == _range[0].size() */
+    kaapi_assert( (_range[0].stride() == 1) && (_range[1].stride() ==1) );
+    return array<1,T>( _range[0].size(), array_rep<2,T>::shift_base(i), _range[0].size() );
+  }
+
+public:
+  range         _range[2];        // always shift to 0 during composition
+};
+
+
 
 
 #if 0
@@ -582,6 +750,8 @@ std::ostream& operator<<( std::ostream& sout, const array<2,T>& a )
 
 
 #endif /** #if 0 array2 */
+
+
 
 inline std::ostream& operator<<( std::ostream& sout, const range& a )
 {

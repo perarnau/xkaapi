@@ -268,8 +268,19 @@ template<> struct TaskBodyCPU<ComputeResidueAndSwap> {
                     ka::pointer_r<KaSubDomain> shared_frhs,
                     ka::pointer_w<double> shared_res2 )
   {
-    //std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
     *shared_res2 = shared_old_subdomain->compute_residue_and_swap( *shared_new_subdomain, *shared_frhs );
+  }
+};
+
+
+// --------------------------------------------------------------------
+struct PrintSubDomain: public ka::Task<1>::Signature< 
+        ka::RW<KaSubDomain>
+> {};
+template<> struct TaskBodyCPU<PrintSubDomain> {
+  void operator()( ka::pointer_rw<KaSubDomain> d )
+  {
+    d->print( std::cout );
   }
 };
 
@@ -284,8 +295,9 @@ template<> struct TaskBodyCPU<ResidueSum> {
   void operator()( ka::pointer_rw<double> s_residue, 
                    ka::pointer_r<double> s_respartial )
   {
-//    std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
+//    std::cout << "In " << __PRETTY_FUNCTION__ << *s_residue << " += " << s_respartial << std::endl;
     *s_residue += *s_respartial;
+//    std::cout << "Out " << __PRETTY_FUNCTION__ << *s_residue << std::endl;
   }
 };
 
@@ -365,6 +377,7 @@ struct Kernel {
       // Internal computation
       ka::Spawn<UpdateInternal>( ka::SetPartition(curr_site) )( &new_domain[curr_index()], &old_domain[curr_index()] );
 
+#if 0
       // SubDomainInterface contributions
       for( unsigned int d = 0 ; d < Poisson3D::NB_DIRECTIONS ; d++ )
       {
@@ -379,7 +392,7 @@ struct Kernel {
           ka::Spawn<UpdateExternalVal>(ka::SetPartition(curr_site))( &new_domain[curr_index()], dir, Poisson3D::DIR_CONSTRAINTS[d] );
         }
       }
-
+#endif
       ka::Spawn<ComputeResidueAndSwap>(ka::SetPartition(curr_site))
           ( &old_domain[curr_index()], &new_domain[curr_index()], &frhs[curr_index()], &res2[curr_index()] );
       ++ibeg;
@@ -395,7 +408,7 @@ struct Kernel {
     }
     ka::Spawn<PrintResidueSum>(ka::SetPartition(-1))( &residue );
 
-    // Compute residue sum
+//    // Compute residue sum
 //    ResidueSum()(res2, residue);
   }
 };
@@ -443,6 +456,7 @@ struct Initialize {
               &frhs[curr_index()],
               &solution[curr_index()] 
           );
+//          ka::Spawn<PrintSubDomain>(ka::SetPartition(site))( &domain[curr_index()] );
         }
   }
 };

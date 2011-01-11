@@ -90,3 +90,53 @@ kaapi_version_t* kaapi_versionallocator_allocate( kaapi_version_allocator_t* va 
   return entry;
 }
 
+
+/**
+*/
+int kaapi_part_datainfo_allocator_init( kaapi_part_datainfo_allocator_t* va )
+{
+  va->allallocatedbloc = 0;
+  va->currentbloc = 0;
+  return 0;
+}
+
+
+/**
+*/
+int kaapi_part_datainfo_allocator_destroy( kaapi_part_datainfo_allocator_t* va )
+{
+  while (va->allallocatedbloc !=0)
+  {
+    kaapi_part_datainfo_bloc_t* curr = va->allallocatedbloc;
+    va->allallocatedbloc = curr->next;
+    free (curr);
+  }
+  va->allallocatedbloc = 0;
+  va->currentbloc = 0;
+  return 0;
+}
+
+
+/**
+*/
+kaapi_part_datainfo_t* kaapi_part_datainfo_allocate(kaapi_threadgroup_t thgrp)
+{
+  kaapi_part_datainfo_allocator_t* va = &thgrp->part_datainfo_allocator;
+  /* allocate new entry */
+  if (va->currentbloc == 0) 
+  {
+    va->currentbloc = malloc( sizeof(kaapi_part_datainfo_bloc_t) );
+    va->currentbloc->next = va->allallocatedbloc;
+    va->allallocatedbloc = va->currentbloc;
+    va->currentbloc->pos = 0;
+  }
+  
+  kaapi_part_datainfo_t* entry = &va->currentbloc->data[va->currentbloc->pos];
+  if (++va->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
+  {
+    va->currentbloc = 0;
+  }
+  memset(entry, 0, sizeof(entry) );
+  return entry;
+}
+

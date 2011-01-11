@@ -59,6 +59,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
   kaapi_vector_init( &thgrp->ws_vect_input, 0 );
   kaapi_versionallocator_init( &thgrp->ver_allocator );
+  kaapi_part_datainfo_allocator_init( &thgrp->part_datainfo_allocator );
   
   /* same the main thread frame to restore it at the end of parallel computation */
   kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
@@ -106,6 +107,7 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   /* free hash map entries: they are destroy by destruction of the version allocator */
   kaapi_hashmap_destroy( &thgrp->ws_khm );
   kaapi_versionallocator_destroy( &thgrp->ver_allocator );
+  kaapi_part_datainfo_allocator_destroy( &thgrp->part_datainfo_allocator );
 
   kaapi_mem_barrier();
   

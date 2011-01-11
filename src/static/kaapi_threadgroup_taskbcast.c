@@ -52,7 +52,6 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
   /* kaapi_task_t*          self = thread[-1].pc;*/
   kaapi_taskbcast_arg_t* arg  = sp;
   kaapi_com_t* comlist;
-  int i;
 
   if (arg->common.original_body != 0)
   { /* encapsulation of the taskbcast on top of an existing task */
@@ -66,9 +65,10 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
   comlist = &arg->head;
   while(comlist != 0) 
   {
-    for (i=0; i<comlist->size; ++i)
+    kaapi_comentry_t* entry; 
+    for ( entry = comlist->entry; entry !=0; entry = entry->next)
     {
-      kaapi_task_t* task = comlist->entry[i].task;
+      kaapi_task_t* task = entry->task;
       kaapi_task_body_t task_body = kaapi_task_getbody( task );
       kaapi_assert( ((task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskbcast_body)) 
                   && kaapi_task_state_issteal(kaapi_task_getstate(task)) );
