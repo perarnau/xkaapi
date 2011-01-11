@@ -45,6 +45,36 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
+
+/* default functions */
+static size_t get_count_params
+(const struct kaapi_format_t* f, const void* p)
+{ return f->_count_params; }
+
+static kaapi_access_mode_t get_mode_param
+(const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return f->_mode_params[i]; }
+
+static void* get_off_param
+(const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return (void*)((uintptr_t)p + f->_off_params[i]); }
+
+static kaapi_access_t get_access_param
+(const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return *(kaapi_access_t*)((uintptr_t)p + f->_off_params[i]); }
+
+static void set_access_param
+(const struct kaapi_format_t* f, unsigned int i, void* p, const kaapi_access_t* a)
+{ *(kaapi_access_t*)((uintptr_t)p + f->_off_params[i]) = *a; }
+
+static const struct kaapi_format_t* get_fmt_param
+(const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return f->_fmt_params[i]; }
+
+static size_t get_size_param
+(const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return f->_size_params[i]; }
+
 /**
 */
 kaapi_format_id_t kaapi_format_taskregister_static( 
@@ -91,13 +121,14 @@ kaapi_format_id_t kaapi_format_taskregister_static(
     memcpy(fmt->_size_params, size_param, sizeof(size_t)*count );
   }
 
-  fmt->get_count_params=0;
-  fmt->get_mode_param  =0;
-  fmt->get_off_param   =0;
-  fmt->get_access_param=0;
-  fmt->set_access_param=0;
-  fmt->get_fmt_param   =0;
-  fmt->get_size_param  =0;
+  /* initialize to default functions */
+  fmt->get_count_params = get_count_params;
+  fmt->get_mode_param   = get_mode_param;
+  fmt->get_off_param    = get_off_param;
+  fmt->get_access_param = get_access_param;
+  fmt->set_access_param = set_access_param;
+  fmt->get_fmt_param    = get_fmt_param;
+  fmt->get_size_param   = get_size_param;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   
