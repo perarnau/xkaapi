@@ -10,7 +10,7 @@ if KAAPI_API_ATHA
 FIBO_PRGS+=fibo_atha
 endif
 if KAAPI_API_KAAPIXX
-FIBO_PRGS+=fibo_kaapi++  fibo_kaapi++_sync fibo_kaapi++_opt fibo_kaapi++_opt_sync
+FIBO_PRGS+=fibo_kaapi++  fibo_kaapi++_sync fibo_kaapi++_opt fibo_kaapi++_opt_sync fibo_kaapi++_cumul
 endif
 
 check_PROGRAMS+=$(FIBO_PRGS)
@@ -23,6 +23,7 @@ fibo_kaapi___SOURCES=    fibo/fibo_kaapi++.cpp
 fibo_kaapi___opt_SOURCES=fibo/fibo_kaapi++_opt.cpp
 fibo_kaapi___sync_SOURCES=fibo/fibo_kaapi++_sync.cpp
 fibo_kaapi___opt_sync_SOURCES=fibo/fibo_kaapi++_opt_sync.cpp
+fibo_kaapi___cumul_SOURCES=fibo/fibo_kaapi++_cumul.cpp
 
 fibo_seq_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS) -DFIBOCODE -DMAINCODE
 fibo_seq_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
@@ -58,4 +59,10 @@ fibo_kaapi___opt_sync_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 fibo_kaapi___opt_sync_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 fibo_kaapi___opt_sync_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 fibo_kaapi___opt_sync_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+
+fibo_kaapi___cumul_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+fibo_kaapi___cumul_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+fibo_kaapi___cumul_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+fibo_kaapi___cumul_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
