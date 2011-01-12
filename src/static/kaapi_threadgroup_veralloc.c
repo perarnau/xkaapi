@@ -136,7 +136,7 @@ kaapi_part_datainfo_t* kaapi_part_datainfo_allocate(kaapi_threadgroup_t thgrp)
   {
     va->currentbloc = 0;
   }
-  memset(entry, 0, sizeof(entry) );
+  memset(entry, 0, sizeof(*entry) );
   return entry;
 }
 
