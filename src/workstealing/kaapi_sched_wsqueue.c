@@ -170,6 +170,5 @@ kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_cell_t* 
     thread->wcs  = 0;
     return thread;
   }
-
   return 0;
 }

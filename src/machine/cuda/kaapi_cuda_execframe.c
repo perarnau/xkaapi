@@ -592,7 +592,6 @@ static void cuda_taskbcast_body
             kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs->wclist, wcs->wccell );
             if (kthread !=0) 
             {
-
 #if 0     /* push on the owner of the bcast */
               kaapi_processor_t* kproc = kaapi_get_current_processor();
 #else     /* push on the owner of the suspended thread */
