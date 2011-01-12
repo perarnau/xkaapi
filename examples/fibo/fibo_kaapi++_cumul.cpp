@@ -95,7 +95,7 @@ struct TaskBodyCPU<TaskSum> //: public TaskSum
    and the type and access mode for each parameters.
    Here the first parameter is declared with a write mode. The second is passed by value.
  */
-struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
+struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
 
 
 /* Implementation for CPU machine 
@@ -140,17 +140,18 @@ struct doit {
     ka::pointer<long> res = res_value;
 
     long* res2_value = ka::Alloca<long>(1);
-    *res2_value = rand();
     ka::pointer<long> res2 = res2_value;
 
     for (cutoff=2; cutoff<3; ++cutoff)
     {
+      *res2_value = 0;
       ka::Spawn<TaskFibo>()( res2, n );
       /* */
       ka::Sync();
       start_time= ka::WallTimer::gettime();
       for (unsigned int i = 0 ; i < iter ; ++i)
       {   
+        *res_value = 0;
         ka::Spawn<TaskFibo>()( res, n );
         /* */
         ka::Sync();
