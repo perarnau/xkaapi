@@ -48,6 +48,8 @@
 #include <algorithm>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
+#include <sys/types.h>
 
 
 /** Description of the example.
@@ -76,8 +78,6 @@ public:
 #define CONFIG_SEQ_GRAIN 256
     kaapi_workqueue_index_t b, e;
     if (kaapi_workqueue_pop(&wq, &b, &e, CONFIG_SEQ_GRAIN)) return false;
-//    printf("Pop: [%li, %li)\n", b, e);
-//    fflush(stdout);
     beg = _array+b;
     end = _array+e;
     return true;
@@ -104,8 +104,6 @@ public:
      */
     if (kaapi_workqueue_steal(&wq, &i, &j, steal_size))
       return false;
-//    printf("Steal: [%li, %li)\n", i, j);
-//    fflush(stdout);
     beg = _array + i;
     end = _array + j;
     return true;
@@ -131,7 +129,7 @@ protected:
     CPU implementation: see different implementations
 */
 template<typename T, typename OP>
-struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
+struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, size_t, OP> {};
 
 /* name of the method should be splitter !!! split work and reply to requests */
 template<typename T, typename OP>
@@ -151,14 +149,11 @@ void Work<T,OP>::split (
   
   /* thief work: create a task */
   for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
-  {
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(beg_theft+size_theft), _op );
-//    printf("reply: [%p, %p)\n", beg_theft, beg_theft+size_theft);
-//    fflush(stdout);
-  }
-  req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(end_theft), _op );
-//  printf("reply: [%p, %p)\n", beg_theft, end_theft);
-//  fflush(stdout);
+    req->Spawn<TaskThief<T,OP> >(sc)
+      (ka::pointer<T>(beg_theft), size_theft, _op);
+
+  req->Spawn<TaskThief<T,OP> >(sc)
+    ( ka::pointer<T>(beg_theft), (size_t)(end_theft - beg_theft), _op );
 }
 
 #endif
