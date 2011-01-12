@@ -57,7 +57,8 @@ kaapi_format_id_t kaapi_format_taskregister_static(
         const kaapi_offset_t        offset_param[],
         const kaapi_offset_t        offset_version[],
         const kaapi_format_t*       fmt_param[],
-        const size_t                size_param[]
+        const size_t                size_param[],
+        const kaapi_reducor_t       reducor_param[]
 )
 {
   kaapi_format_register( fmt, name );
@@ -91,13 +92,12 @@ kaapi_format_id_t kaapi_format_taskregister_static(
     memcpy(fmt->_size_params, size_param, sizeof(size_t)*count );
   }
 
-  fmt->get_count_params=0;
-  fmt->get_mode_param  =0;
-  fmt->get_off_param   =0;
-  fmt->get_access_param=0;
-  fmt->set_access_param=0;
-  fmt->get_fmt_param   =0;
-  fmt->get_size_param  =0;
+  if (reducor_param !=0)
+  {
+    fmt->_reducor_params = malloc( sizeof(kaapi_reducor_t)*count );
+    kaapi_assert( fmt->_reducor_params !=0);
+    memcpy(fmt->_reducor_params, reducor_param, sizeof(kaapi_reducor_t)*count );
+  }
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   

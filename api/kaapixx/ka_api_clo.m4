@@ -149,6 +149,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_version[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static size_t                array_size[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_reducor_t       array_reducor[KAAPI_NUMBER_PARAMS];')
     TaskArg_t* dummy =0;
     M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)TraitFormalParam$1::mode_t::value;
     ',`', `')
@@ -160,6 +161,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ',`', `')
     M4_PARAM(`array_size[$1-1] = 0;
     ',`', `')
+    M4_PARAM(`array_reducor[$1-1] = &TraitFormalParam$1::reducor_fnc;
+    ',`', `')
     static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
     static FormatTask task_fmt( 
           task_name,
@@ -169,7 +172,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_data'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_version'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format'),
-          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_size')
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_size'),
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_reducor')
     );
       
     return task_fmt.get_c_format();
@@ -275,6 +279,16 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     return 0;
   }
 
+  static void reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg, void* result, const void* value)
+  {
+    const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
+    size_t count __attribute__((unused)) = 0;
+   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
+    if (ith < count) { TraitFormalParam$1::reducor_fnc(result, value); return; }
+    ', ` ', `
+    ')
+  }
+
   static kaapi_format_t* registerformat()
   {
     // here we assume no concurrency during startup calls of the library that initialize format objects
@@ -288,7 +302,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
           &get_access_param,
           &set_access_param,
           &get_fmt_param,
-          &get_size_param
+          &get_size_param,
+          &reducor
     );
       
     return task_fmt.get_c_format();
