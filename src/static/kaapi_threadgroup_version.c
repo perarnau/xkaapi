@@ -144,7 +144,7 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 {
   kaapi_taskbcast_arg_t* argbcast =0;
   kaapi_task_t* taskbcast;
-  kaapi_thread_t* writer_thread;
+  kaapi_thread_t* writer_thread = 0;
   kaapi_part_datainfo_t* kpdi;
 
   kaapi_assert( -1 <= tid );
