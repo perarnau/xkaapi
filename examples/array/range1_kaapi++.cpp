@@ -45,23 +45,49 @@
 #include <stdlib.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+template<typename T>
+struct op_rand {
+  T& operator()(T& v)
+  { return v+=rand(); }
+};
+
 /* Task Init
  * this task initialize each entries of the array to 1
-    RW<array<1,int> > means that the task takes an exclusive access to the entire array
+ * each entries is view as a pointer object:
+    array<1,W<int> > means that each entry may be write by the task
  */
-struct TaskInit : public ka::Task<1>::Signature<ka::RW<ka::array<1, int> > > {};
+struct TaskInit : public ka::Task<1>::Signature<ka::W<ka::range1d<int> > > {};
 
 template<>
 struct TaskBodyCPU<TaskInit> {
-  void operator() ( ka::pointer_rw<ka::array<1,int> > array )
+  void operator() ( ka::range1d_w<int> array )
   {
     size_t sz = array.size();
     std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
     for (size_t i=0; i < sz; ++i)
       array[i] = 1;
+    
+    std::for_each( array.begin(), array.end(), op_rand<int>() );
   }
 };
 
+
+/* Task Accumulate
+ * this task compute the sum of the entries of an array 
+ * each entries is view as a pointer object:
+    array<1,R<int> > means that each entry may be read by the task
+ */
+struct TaskAccumulate : public ka::Task<2>::Signature<ka::RW<int>,  ka::R<ka::range1d<int> > > {};
+
+template<>
+struct TaskBodyCPU<TaskAccumulate> {
+  void operator() ( ka::pointer_rw<int> acc, ka::range1d_r<int> array  )
+  {
+    size_t sz = array.size();
+    for (size_t i=0; i < sz; ++i)
+      *acc += array[i];
+  }
+};
 
 
 /* Main task of the program
@@ -71,22 +97,22 @@ struct doit {
   {
     int n= 10;
     if (argc >1) n = atoi(argv[1]);
-    int med = n/2;
-    if (med ==0) { n = 2; med = 1; }
 
     int* data = new int[n];
-
+    
     /* form a view of data as an 1-dimensional array */
-    ka::array<1,int> arr(n, data); 
+    ka::range1d<int> arr(data, data+n); 
     int res = 0;
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
     ka::Spawn<TaskInit>()( arr );
-
+    
+    /* Here the dependencies is accross each entries of the array arr
+    */
+    ka::Spawn<TaskAccumulate>()( &res, arr );
     ka::Sync();
-
     std::cout << "Res = " << res << std::endl;
   }
 };

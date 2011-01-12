@@ -45,9 +45,9 @@
 
 namespace ka {
 
-const range::CstorFull range::init_full;
+const base_array::range::CstorFull base_array::range::init_full;
 
 /** Full range */
-const range range::full( range::init_full );
+const base_array::range base_array::range::full( base_array::range::init_full );
 
 }

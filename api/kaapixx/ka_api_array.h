@@ -54,203 +54,218 @@ namespace ka {
 template< int dim, class T>
 class array;
 
-class range;
-std::ostream& operator<<( std::ostream& sout, const range& a );
 
 
-/** 1D range.
-    Allows to define strided interval and composition of ranges is a range
+/** base array: export range type
 */
-class range {
+class base_array {
 public:
-  typedef size_t index_t;
 
-  /** empty range */
-  range() : _begin(0), _end(0), _stride(1) {}
-  
-  /** given range */
-  range(index_t b, index_t e, index_t s=1) : _begin(b), _end(e), _stride(s) 
-  {
-    kaapi_assert_debug( b >=0 );
-    kaapi_assert_debug( e >=0 );
-    kaapi_assert_debug( s >0 );
-  }
-  
-  /** Full range */
-  static const range full; //
-
-  /** size of entry, (index_t)-1U if full range */
-  index_t size() const 
-  {  
-    if (_begin == (index_t)-1) return (index_t)-1U;
-    return (_end-_begin+_stride -1)/_stride; 
-  }
-  
-  /** size of entry, (index_t)-1U if full range */
-  index_t stride() const 
-  {  
-    return _stride;
-  }
-  
-  /** iterator over values of a range */
-  class const_iterator {
+  /** 1D range.
+      Allows to define strided interval and composition of ranges is a range
+  */
+  class range {
   public:
-    /** default cstor */
-    const_iterator() : _begin(0), _end(0), _stride(0) {}
+    typedef size_t index_t;
+
+    /** empty range */
+    range() : _begin(0), _end(0), _stride(1) {}
     
-    /** assignment */
-    const_iterator& operator=(const const_iterator& it)
-    { _begin = it._begin; _end = it._end; _stride = it._stride; return *this; }
-    
-    /** equality */
-    bool operator==(const const_iterator& it) const
-    { return (_begin == it._begin); }
-    
-    /** not equal */
-    bool operator!=(const const_iterator& it) const
-    { return (_begin != it._begin); }
-    
-    /** pre increment */
-    const_iterator& operator++()
+    /** given range */
+    range(index_t b, index_t e, index_t s=1) : _begin(b), _end(e), _stride(s) 
     {
-      _begin += _stride; 
-      return *this; 
+      kaapi_assert_debug( b >=0 );
+      kaapi_assert_debug( e >=0 );
+      kaapi_assert_debug( s >0 );
     }
     
-    /** post increment */
-    const_iterator operator++(int)
-    {
-      const_iterator it = *this;
-      ++*this;
-      return it;
+    /** Full range */
+    static const range full; //
+
+    /** size of entry, (index_t)-1U if full range */
+    index_t size() const 
+    {  
+      if (_begin == (index_t)-1) return (index_t)-1U;
+      return (_end-_begin+_stride -1)/_stride; 
     }
     
-    /** indirection */
-    index_t operator*()
-    {
-      return _begin;
+    /** size of entry, (index_t)-1U if full range */
+    index_t stride() const 
+    {  
+      return _stride;
     }
     
-    /** indirection */
-    index_t* operator->()
-    {
-      return &_begin;
+    /** iterator over values of a range */
+    class const_iterator {
+    public:
+      /** default cstor */
+      const_iterator() : _begin(0), _end(0), _stride(0) {}
+      
+      /** assignment */
+      const_iterator& operator=(const const_iterator& it)
+      { _begin = it._begin; _end = it._end; _stride = it._stride; return *this; }
+      
+      /** equality */
+      bool operator==(const const_iterator& it) const
+      { return (_begin == it._begin); }
+      
+      /** not equal */
+      bool operator!=(const const_iterator& it) const
+      { return (_begin != it._begin); }
+      
+      /** pre increment */
+      const_iterator& operator++()
+      {
+        _begin += _stride; 
+        return *this; 
+      }
+      
+      /** post increment */
+      const_iterator operator++(int)
+      {
+        const_iterator it = *this;
+        ++*this;
+        return it;
+      }
+      
+      /** indirection */
+      index_t operator*()
+      {
+        return _begin;
+      }
+      
+      /** indirection */
+      index_t* operator->()
+      {
+        return &_begin;
+      }
+      
+    private:
+      template<int dim, typename T>
+      friend class array;
+      friend class range;
+      const_iterator( index_t b, index_t e, index_t s) : _begin(b), _end(e), _stride(s) {}
+      index_t _begin;
+      index_t _end;
+      index_t _stride;
+    };
+    
+    /** begin */
+    const_iterator begin() const 
+    { return const_iterator(_begin, _end, _stride); }
+
+    /** end */
+    const_iterator end() const {
+     return const_iterator(_begin+size()*_stride, _end, _stride); }
+
+    /** Return the i-th value of the range. Return -1 in case of a Full range */
+    index_t operator[](index_t i) const
+    { 
+      if (_begin == (index_t)-1) return (index_t)-1;
+      kaapi_assert_debug( (i <= size()) && (i>=0) );
+      return _begin + i*_stride;
     }
     
+    /** compose range :  R = A(B) return range::Full iff A or B is full range  
+         A(B)[i] is the i-th value of A o B, ie it is equal to A[B[i]]
+    */
+    range operator[](const range& r) const
+    { 
+      if (_begin == (index_t)-1) return r;
+      if (r._begin == (index_t)-1) return *this;
+      kaapi_assert_debug( (r.size() <= size()) );
+
+      range retval;
+      retval._begin  = (*this)[r._begin];
+      retval._end    = (*this)[r._end];
+      retval._stride = _stride * r._stride;
+      return retval;
+    }
+
+    /** compose range :  R = A(B).
+        Shift the range to 0 and return the shift index_t value.
+        If A(B) is the full range return -1
+    */
+    index_t compose_shift0(const range& r)
+    { 
+      index_t retval;
+      if (_begin == (index_t)-1) 
+      {
+        retval = r._begin;
+        if (retval == (index_t)-1) 
+          return (index_t)-1;
+        _begin  = 0;
+        _end    = r._end-retval;
+        _stride = r._stride;
+        return retval;
+      }
+      if (r._begin == (index_t)-1)
+      {
+        retval = _begin;
+        if (retval == (index_t)-1) 
+          return (index_t)-1;
+        _begin = 0;
+        _end -= retval;
+        return retval;
+      }
+      kaapi_assert_debug( (r.size() <= size()) );
+      retval = (*this)[r._begin];
+      _end   = _begin + _stride * r._end - retval;
+      _begin = 0;
+      _stride *= r._stride;
+      return retval;
+    }
+
   private:
-    template <int dim, class T> friend class array;
-    friend class range;
-    const_iterator( index_t b, index_t e, index_t s) : _begin(b), _end(e), _stride(s) {}
+    /* specific cstor to build full static data member */
+    struct CstorFull { CstorFull() {} };
+    static const CstorFull init_full;
+    range( CstorFull ) 
+     : _begin((index_t)-1), _end((index_t)-1), _stride((index_t)-1) 
+    {}
+
+    template<int dim, typename T>
+    friend class array;
+//    friend std::ostream& operator<<( std::ostream& sout, const typename array<dim,T>::range& a );
+
     index_t _begin;
     index_t _end;
     index_t _stride;
   };
-  
-  /** begin */
-  const_iterator begin() const 
-  { return const_iterator(_begin, _end, _stride); }
-
-  /** end */
-  const_iterator end() const {
-   return const_iterator(_begin+size()*_stride, _end, _stride); }
-
-  /** Return the i-th value of the range. Return -1 in case of a Full range */
-  index_t operator[](index_t i) const
-  { 
-    if (_begin == (index_t)-1) return (index_t)-1;
-    kaapi_assert_debug( (i <= size()) && (i>=0) );
-    return _begin + i*_stride;
-  }
-  
-  /** compose range :  R = A(B) return range::Full iff A or B is full range  
-       A(B)[i] is the i-th value of A o B, ie it is equal to A[B[i]]
-  */
-  range operator[](const range& r) const
-  { 
-    if (_begin == (index_t)-1) return r;
-    if (r._begin == (index_t)-1) return *this;
-    kaapi_assert_debug( (r.size() <= size()) );
-
-    range retval;
-    retval._begin  = (*this)[r._begin];
-    retval._end    = (*this)[r._end];
-    retval._stride = _stride * r._stride;
-    return retval;
-  }
-
-  /** compose range :  R = A(B).
-      Shift the range to 0 and return the shift index_t value.
-      If A(B) is the full range return -1
-  */
-  index_t compose_shift0(const range& r)
-  { 
-    index_t retval;
-    if (_begin == (index_t)-1) 
-    {
-      retval = r._begin;
-      if (retval == (index_t)-1) 
-        return (index_t)-1;
-      _begin  = 0;
-      _end    = r._end-retval;
-      _stride = r._stride;
-      return retval;
-    }
-    if (r._begin == (index_t)-1)
-    {
-      retval = _begin;
-      if (retval == (index_t)-1) 
-        return (index_t)-1;
-      _begin = 0;
-      _end -= retval;
-      return retval;
-    }
-    kaapi_assert_debug( (r.size() <= size()) );
-    retval = (*this)[r._begin];
-    _end   = _begin + _stride * r._end - retval;
-    _begin = 0;
-    _stride *= r._stride;
-    return retval;
-  }
-
-private:
-  /* specific cstor to build full static data member */
-  struct CstorFull { CstorFull() {} };
-  static const CstorFull init_full;
-  range( CstorFull ) 
-   : _begin((index_t)-1), _end((index_t)-1), _stride((index_t)-1) 
-  {}
-
-  template <int dim, class T> friend class array;
-  friend std::ostream& operator<<( std::ostream& sout, const range& a );
-
-  index_t _begin;
-  index_t _end;
-  index_t _stride;
 };
-
 
 /**
 */
 template<int dim, class T>
-class array_rep {
+class array_rep : public base_array {
+
+
 public:
-  typedef range::index_t index_t;
-  typedef T*             pointer_t;
-  typedef T&             reference_t;
-  typedef const T&       const_reference_t;
+  typedef typename range::index_t index_t;
+  typedef T*                      pointer_t;
+  typedef T&                      reference_t;
+  typedef const T&                const_reference_t;
 
   /** */
   array_rep() : _data(0) {}
 
   /** */
-  array_rep(T* ptr) : _data(ptr) {}
+  array_rep(T* p) : _data(p) {}
 
   /** */
-  array_rep<dim,T>& operator=(T* ptr) 
+  array_rep<dim,T>& operator=(T* p) 
   { 
-    _data = ptr; 
+    _data = p; 
     return *this;
   }
+
+  /** */
+  pointer_t ptr() 
+  { return _data; }
+
+  /** */
+  const pointer_t ptr() const
+  { return _data; }
 
   /** */
   reference_t operator[](index_t i)
@@ -300,9 +315,10 @@ protected:
 template<class T>
 class array<1,T> : public array_rep<1, T> {
 public:
-  typedef range::index_t index_t;
-  typedef T              value_t;
-  typedef array_rep<1,T> rep_t;
+  typedef typename array_rep<1, T>::range range;
+  typedef typename range::index_t         index_t;
+  typedef T                               value_t;
+  typedef array_rep<1,T>                  rep_t;
   
   // Dflt cstor
   array<1,T>() 
@@ -456,16 +472,20 @@ public:
 */
 template<class T>
 class array<2,T> : public array_rep<2, T> {
+public:
+  typedef typename array_rep<2, T>::range range;
+  typedef typename range::index_t         index_t;
+  typedef T                               value_t;
+  typedef array_rep<2,T>                  rep_t;
+
+protected:
   // row storage of the array: if different memory organization then
-  typename range::index_t index(range::index_t i, range::index_t j) const
+  index_t index(index_t i, index_t j) const
   { 
     kaapi_assert_debug( (i < dim(0)) && (j< dim(1)) );
     return i*dim(1)+j; 
   }
 public:
-  typedef range::index_t index_t;
-  typedef T              value_t;
-  typedef array_rep<2,T> rep_t;
   
   // Dflt cstor
   array<2,T>() 
@@ -753,7 +773,8 @@ std::ostream& operator<<( std::ostream& sout, const array<2,T>& a )
 
 
 
-inline std::ostream& operator<<( std::ostream& sout, const range& a )
+template<int dim, typename T>
+inline std::ostream& operator<<( std::ostream& sout, const typename array_rep<dim,T>::range& a )
 {
   return sout << "[" << a._begin << "," << a._stride << "," << a._end << ")";
 }

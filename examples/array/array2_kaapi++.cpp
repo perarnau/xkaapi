@@ -101,12 +101,12 @@ struct doit {
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
-    ka::Spawn<TaskInit>()( arr[ka::range(0,med)] );
+    ka::Spawn<TaskInit>()( arr[ka::array<1,int>::range(0,med)] );
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
-    ka::Spawn<TaskInit>()( arr[ka::range(med,n)] );
+    ka::Spawn<TaskInit>()( arr[ka::array<1,int>::range(med,n)] );
 
 
     /* Here the dependencies is accross each entries of the array arr,

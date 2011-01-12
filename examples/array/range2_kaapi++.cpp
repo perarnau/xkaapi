@@ -49,11 +49,11 @@
  * this task initialize each entries of the array to 1
     RW<array<1,int> > means that the task takes an exclusive access to the entire array
  */
-struct TaskInit : public ka::Task<1>::Signature<ka::RW<ka::array<1, int> > > {};
+struct TaskInit : public ka::Task<1>::Signature<ka::RW<ka::range1d<int> > > {};
 
 template<>
 struct TaskBodyCPU<TaskInit> {
-  void operator() ( ka::pointer_rw<ka::array<1,int> > array )
+  void operator() ( ka::range1d_rw<int> array )
   {
     size_t sz = array.size();
     std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
@@ -77,7 +77,7 @@ struct doit {
     int* data = new int[n];
 
     /* form a view of data as an 1-dimensional array */
-    ka::array<1,int> arr(n, data); 
+    ka::range1d<int> arr(data, data+n); 
     int res = 0;
 
     /* be carrefull here: the array is equivalent as if each of its entries has
