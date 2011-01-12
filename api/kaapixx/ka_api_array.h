@@ -522,17 +522,17 @@ public:
   { return _range[0].size()*_range[1].size(); }
 
   // Range of the array
-  size_t dim(int dim) const
+  size_t dim(int d) const
   { 
-    kaapi_assert_debug( (dim == 0) || (dim ==1) );
-    return _range[dim].size(); 
+    kaapi_assert_debug( (d == 0) || (d ==1) );
+    return _range[d].size(); 
   }
 
   // Range of the array
-  range slice(int dim) const
+  range slice(int d) const
   { 
-    kaapi_assert_debug( (dim == 0) || (dim ==1) );
-    return _range[dim]; 
+    kaapi_assert_debug( (d == 0) || (d ==1) );
+    return _range[d]; 
   }
 
   // Assignment

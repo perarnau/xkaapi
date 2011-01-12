@@ -317,6 +317,7 @@ enum kaapi_reply_status_t {
 
 
 /* ============================= Format for task/data structure ============================ */
+
 typedef enum kaapi_format_flag_t {
   KAAPI_FORMAT_STATIC_FIELD,   /* the format of the task is interpreted using static offset/fmt etc */ 
   KAAPI_FORMAT_DYNAMIC_FIELD      /* the format is interpreted using the function, required for variable args tasks */
@@ -355,6 +356,7 @@ typedef struct kaapi_format_t {
   kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
   uint32_t                   *_size_params;                            /* sizeof of each params */
+  kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
      - the unsigned int argument is the index of the parameter 
@@ -367,6 +369,7 @@ typedef struct kaapi_format_t {
   void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*);
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
   size_t                (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+  void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -448,6 +451,19 @@ size_t          kaapi_format_get_size_param (const struct kaapi_format_t* fmt, u
   if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_size_params[ith];
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
   return (*fmt->get_size_param)(fmt, ith, sp);
+}
+
+
+static inline 
+void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, void* result, const void* value)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+  {
+    (*fmt->_reducor_params[ith])(result, value);
+    return;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  (*fmt->reducor)(fmt, ith, sp, result, value);
 }
 
 
