@@ -800,7 +800,7 @@ namespace ka {
     operator value_type*() { return base_pointer<T>::ptr(); }
 
     cumul_value_ref<T> operator*() { return cumul_value_ref<T>(base_pointer<T>::ptr()); }
-    cumul_value_ref<T>* operator->() { return (cumul_value_ref<T>*)(base_pointer<T>::ptr()); }
+    cumul_value_ref<T>* operator->() { return (cumul_value_ref<T>*)(this); }
     cumul_value_ref<T> operator[](int i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
     cumul_value_ref<T> operator[](long i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
     cumul_value_ref<T> operator[](difference_type i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
