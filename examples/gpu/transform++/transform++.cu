@@ -71,7 +71,11 @@ template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
   void operator()(ka::range1d_rw<T> range, OP op)
   {
-    T* const beg = &range[0];
+    printf("cpuTask(0x%lx, %lu)\n",
+	   (uintptr_t)range.begin(), range.size());
+    fflush(stdout);
+
+    T* const beg = range.begin();
     T* const end = beg + range.size();
     std::for_each( beg, end, op );
   }
@@ -84,7 +88,7 @@ struct TaskBodyGPU<TaskThief<T, OP> > {
   {
     const CUstream custream = (CUstream)stream.stream;
 
-    T* const base = &range[0];
+    T* const base = range.begin();
 
     printf("cudaTask(0x%lx 0x%lx, %lu)\n",
 	   (uintptr_t)custream, (uintptr_t)base, range.size());

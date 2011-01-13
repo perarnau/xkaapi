@@ -287,7 +287,8 @@ static void prepare_task
       kaapi_mem_mapping_set_all_dirty_except(mapping, self_asid);
 
     /* update param addr (todo: use cached access) */
-    set_access_data_at(format, i, sp, (void*)(uintptr_t)devptr);
+    access.data = (void*)(uintptr_t)devptr;
+    format->set_access_param(format, i, sp, &access);
   }
 }
 
@@ -365,10 +366,14 @@ static void finalize_task
 
   for (i = 0; i < param_count; ++i)
   {
+    kaapi_access_t access;
+
     const kaapi_access_mode_t mode = format->get_mode_param(format, i, sp);
 
     if (mode & KAAPI_ACCESS_MODE_V)
       continue ;
+
+    access = format->get_access_param(format, i, sp);
 
     /* deallocate remote mem for readonly mappings */
     if (access_is_readonly(mode))
@@ -377,7 +382,7 @@ static void finalize_task
       kaapi_mem_map_t* const host_map = get_host_mem_map();
 
       kaapi_mem_mapping_t* mapping;
-      devptr = (kaapi_mem_addr_t)get_access_data_at(format, i, sp);
+      devptr = (kaapi_mem_addr_t)access.data;
 
       kaapi_mem_map_find(host_map, devptr, &mapping);
       kaapi_assert_debug(kaapi_mem_mapping_has_addr(self_asid));
@@ -404,7 +409,7 @@ static void finalize_task
     /* assume every KAAPI_ACCESS_MODE_W has been dirtied */
 
     /* get data, size */
-    devptr = (kaapi_mem_addr_t)get_access_data_at(format, i, sp);
+    devptr = (kaapi_mem_addr_t)access.data;
     size = format->get_size_param(format, i, sp);
 
     /* sync host memory */
