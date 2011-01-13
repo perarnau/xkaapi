@@ -571,8 +571,9 @@ namespace ka {
   class cumul_value_ref {
   public:
     cumul_value_ref(T* p) : _ptr(p){}
-//    operator T&() { return *_ptr; }
     void operator+=( const T& value ) { *_ptr += value; }
+    template<typename OP>
+    void cumul( const T& value ) { OP()(*_ptr,value); }
   protected:
     T* _ptr;
   };
@@ -799,6 +800,7 @@ namespace ka {
     operator value_type*() { return base_pointer<T>::ptr(); }
 
     cumul_value_ref<T> operator*() { return cumul_value_ref<T>(base_pointer<T>::ptr()); }
+    cumul_value_ref<T>* operator->() { return (cumul_value_ref<T>*)(base_pointer<T>::ptr()); }
     cumul_value_ref<T> operator[](int i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
     cumul_value_ref<T> operator[](long i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
     cumul_value_ref<T> operator[](difference_type i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
@@ -1639,7 +1641,7 @@ namespace ka {
     }
     static size_t                     get_nparam( const type_inclosure_t* a ) { return a->size(); }
     static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
-    { return TraitFormalParam<type_t>::get_size_param( &(*a)[i], 0); }
+    { return TraitFormalParam<type_t>::get_size_param( &a->_data[i], 0); }
     static void                       reducor_fnc(void*, const void*) {}
    };
 
@@ -1662,7 +1664,7 @@ namespace ka {
     }
     static size_t                     get_nparam( const type_inclosure_t* a ) { return a->size(); }
     static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
-    { return TraitFormalParam<type_t>::get_size_param( &(*a)[i], 0); }
+    { return TraitFormalParam<type_t>::get_size_param( &a->_data[i], 0); }
     static void                       reducor_fnc(void*, const void*) {}
   };
 
@@ -1685,7 +1687,7 @@ namespace ka {
     }
     static size_t                     get_nparam ( const type_inclosure_t* a ) { return a->size(); }
     static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
-    { return TraitFormalParam<type_t>::get_size_param( &(*a)[i], 0); }
+    { return TraitFormalParam<type_t>::get_size_param( &a->_data[i], 0); }
     static void                       reducor_fnc(void*, const void*) {}
   };   
 

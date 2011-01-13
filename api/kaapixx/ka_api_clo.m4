@@ -275,7 +275,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
     size_t count __attribute__((unused)) = 0;
    M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
-//    if (ith < count) return TraitFormalParam$1::get_size_param(&taskarg->f$1, ith);
+    if (ith < count) return TraitFormalParam$1::get_size_param(&taskarg->f$1, ith);
     ', ` ', `
     ')
     return 0;
