@@ -59,7 +59,8 @@ kaapi_format_id_t kaapi_format_taskregister_func(
     kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
     const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-    size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+    size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();
@@ -68,11 +69,6 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->flag = KAAPI_FORMAT_DYNAMIC_FIELD;
   
   fmt->size = (uint32_t)size;
-  fmt->_count_params = 0;
-  fmt->_mode_params  = 0;
-  fmt->_off_params   = 0;
-  fmt->_fmt_params   = 0;
-  fmt->_size_params  = 0;
 
   fmt->get_count_params = get_count_params;
   fmt->get_mode_param   = get_mode_param;
@@ -81,6 +77,7 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->set_access_param = set_access_param;
   fmt->get_fmt_param    = get_fmt_param;
   fmt->get_size_param   = get_size_param;
+  fmt->reducor          = reducor;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   
