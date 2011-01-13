@@ -385,7 +385,7 @@ static void finalize_task
       devptr = (kaapi_mem_addr_t)access.data;
 
       kaapi_mem_map_find(host_map, devptr, &mapping);
-      kaapi_assert_debug(kaapi_mem_mapping_has_addr(self_asid));
+      kaapi_assert_debug(kaapi_mem_mapping_has_addr(mapping, self_asid));
 
       kaapi_mem_mapping_clear_addr(mapping, self_asid);
 
@@ -440,7 +440,7 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
  */
 
 static void cuda_taskbcast_body
-(CUstream stream, void* sp, kaapi_thread_t* thread)
+(void* sp, CUstream stream)
 {
 #if 0 /* todo, wrapped task */
 
@@ -648,7 +648,7 @@ static void cuda_taskbcast_body
  */
 
 static void cuda_taskrecv_body
-(CUstream stream, void* sp, kaapi_thread_t* thread)
+(void* sp, CUstream stream)
 {
 }
 

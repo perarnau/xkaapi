@@ -99,7 +99,7 @@ typedef uint32_t kaapi_processor_id_t;
 typedef uint64_t kaapi_affinity_t;
 typedef uint32_t kaapi_format_id_t;
 typedef uint32_t kaapi_offset_t;
-typedef int      kaapi_gpustream_t;
+typedef uint64_t kaapi_gpustream_t;
 
 /** Reducor to accumulate value with cw access mode */
 typedef void (*kaapi_reducor_t)(void*, const void*);
