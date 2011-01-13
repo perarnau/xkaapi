@@ -25,24 +25,20 @@ extern void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 typedef struct range
 {
   kaapi_access_t base;
-  unsigned int i;
-  unsigned int j;
+  size_t size;
 } range_t;
 
 
 static void create_range
-(range_t* range, unsigned int* base, unsigned int i, unsigned j)
+(range_t* range, unsigned int* base, size_t size)
 {
   kaapi_access_init(&range->base, (void*)base);
-  range->i = i;
-  range->j = j;
+  range->size = size;
 }
 
 
 static inline unsigned int get_range_size(const range_t* range)
-{
-  return range->j - range->i;
-}
+{ return range->size; }
 
 typedef struct task_work
 {
@@ -58,8 +54,7 @@ static task_work_t* alloc_work(kaapi_thread_t* thread)
     (thread, sizeof(task_work_t), 8);
 
   work->range.base.data = NULL;
-  work->range.i = 0;
-  work->range.j = 0;
+  work->range.size = 0;
 
   work->lock = 0;
 
@@ -71,14 +66,14 @@ static task_work_t* alloc_work(kaapi_thread_t* thread)
 /* add1 task */
 
 static void add1_cuda_entry
-(CUstream stream, void* arg, kaapi_thread_t* thread)
+(void* arg, CUstream stream)
 {
   task_work_t* const work = (task_work_t*)arg;
   range_t* const range = &work->range;
   CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
-  printf("> add1_cuda_entry [%u] 0x%lx [%u - %u[\n",
-	 kaapi_get_self_kid(), (uintptr_t)base, range->i, range->j);
+  printf("> add1_cuda_entry [%u] 0x%lx, %lu\n",
+	 kaapi_get_self_kid(), (uintptr_t)base, range->size);
 
 #if 1 /* driver api */
   {
@@ -95,7 +90,6 @@ static void add1_cuda_entry
 
     /* since base points to the start of the range */
     kaapi_cuda_func_push_ptr(&fn, base);
-    kaapi_cuda_func_push_uint(&fn, 0);
     kaapi_cuda_func_push_uint(&fn, get_range_size(range));
 
     kaapi_cuda_func_call_async(&fn, stream, &bdim, &tdim);
@@ -119,11 +113,9 @@ static void add1_cpu_entry(void* arg, kaapi_thread_t* thread)
 
   unsigned int i;
 
-  printf("> add1_cpu_entry [%u] [%u - %u[\n",
-	 kaapi_get_self_kid(), range->i, range->j);
+  printf("> add1_cpu_entry [%u] %lu\n", kaapi_get_self_kid(), range->size);
 
-  for (i = range->i; i < range->j; ++i)
-    base[i] += 1;
+  for (i = 0; i < range->size; ++i) base[i] += 1;
 
   printf("< add1_cpu_entry\n");
 }
@@ -131,14 +123,13 @@ static void add1_cpu_entry(void* arg, kaapi_thread_t* thread)
 /* mul2 task */
 
 static void mul2_cuda_entry
-(CUstream stream, void* arg, kaapi_thread_t* thread)
+(void* arg, CUstream stream)
 {
   task_work_t* const work = (task_work_t*)arg;
   range_t* const range = &work->range;
   CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
-  printf("> mul2_cuda_entry [%u] [%u - %u[\n",
-	 kaapi_get_self_kid(), range->i, range->j);
+  printf("> mul2_cuda_entry [%u] %lu\n", kaapi_get_self_kid(), range->size);
 
   static const kaapi_cuda_dim3_t tdim = {THREAD_DIM_X, 1, 1};
   static const kaapi_cuda_dim2_t bdim = {1, 1};
@@ -150,7 +141,6 @@ static void mul2_cuda_entry
   kaapi_cuda_func_load_ptx(&fn, STERN ".ptx", "mul2");
 
   kaapi_cuda_func_push_ptr(&fn, base);
-  kaapi_cuda_func_push_uint(&fn, 0);
   kaapi_cuda_func_push_uint(&fn, get_range_size(range));
 
   kaapi_cuda_func_call_async(&fn, stream, &bdim, &tdim);
@@ -166,12 +156,10 @@ static void mul2_cpu_entry(void* arg, kaapi_thread_t* thread)
   const range_t* const range = &work->range;
   unsigned int* const base = range->base.data;
 
-  printf("> mul2_cpu_entry [%u] [%u - %u[ (%p)\n",
-	 kaapi_get_self_kid(), range->i, range->j, (void*)base);
+  printf("> mul2_cpu_entry [%u] %lu\n", kaapi_get_self_kid(), range->size);
 
   unsigned int i;
-  for (i = range->i; i < range->j; ++i)
-    base[i] *= 2;
+  for (i = 0; i < range->size; ++i) base[i] *= 2;
 
   printf("< mul2_cpu_entry\n");
 }
@@ -179,14 +167,13 @@ static void mul2_cpu_entry(void* arg, kaapi_thread_t* thread)
 /* memset task */
 
 static void memset_cuda_entry
-(CUstream stream, void* arg, kaapi_thread_t* thread)
+(void* arg, CUstream stream)
 {
   task_work_t* const work = (task_work_t*)arg;
   const range_t* const range = &work->range;
   CUdeviceptr base = (CUdeviceptr)(uintptr_t)range->base.data;
 
-  printf("> memset_cuda_entry [%u] [%u - %u[ 0x%lx\n",
-	 kaapi_get_self_kid(), range->i, range->j, (uintptr_t)base);
+  printf("> memset_cuda_entry [%u] %lu\n", kaapi_get_self_kid(), range->size);
 
 #define MEMSET_VALUE 3
   CUresult res = cuMemsetD32(base, MEMSET_VALUE, get_range_size(range));
@@ -201,13 +188,11 @@ static void memset_cpu_entry(void* arg, kaapi_thread_t* thread)
   task_work_t* const work = (task_work_t*)arg;
   const range_t* const range = &work->range;
   unsigned int* const base = (unsigned int*)range->base.data;
+
+  printf("> memset_cpu_entry [%u] %lu\n", kaapi_get_self_kid(), range->size);
+
   unsigned int i;
-
-  printf("> memset_cpu_entry [%u] [%u - %u[\n",
-	 kaapi_get_self_kid(), range->i, range->j);
-
-  for (i = 0; i <  range->j; ++i)
-    base[i] = MEMSET_VALUE;
+  for (i = 0; i < range->size; ++i) base[i] = MEMSET_VALUE;
 
   printf("< memset_cpu_entry\n");
 }
@@ -240,9 +225,9 @@ static void check_cpu_entry(void* arg, kaapi_thread_t* thread)
   const range_t* const range = &work->range;
   unsigned int* const base = (unsigned int*)range->base.data;
 
-  printf("> check_cpu_entry [%u - %u[ (%p)\n", range->i, range->j, (void*)base);
+  printf("> check_cpu_entry %lu (%p)\n", range->size, (void*)base);
 
-  check_sequence(base, range->j - range->i);
+  check_sequence(base, range->size);
 
   printf("< check_cpu_entry\n");
 }
@@ -261,7 +246,7 @@ static void* get_off_param
 (const struct kaapi_format_t* f, unsigned int i, const void* p)
 {
   static const kaapi_offset_t param_offsets[PARAM_COUNT] =
-    { offsetof(task_work_t, range.base) };
+    { offsetof(task_work_t, range) };
   return (void*)((uintptr_t)p + param_offsets[i]);
 }
 
@@ -297,7 +282,7 @@ static kaapi_access_t get_access_param
   task_work_t* const w = (task_work_t*)p;
 
   kaapi_access_t a;
-  a.data = (unsigned int*)w->range.base.data + w->range.i;
+  a.data = (unsigned int*)w->range.base.data;
   a.version = w->range.base.version;
   return a;
 }
@@ -339,7 +324,8 @@ static void register_add1_task_format(void)
    get_access_param,
    set_access_param,
    get_fmt_param,
-   get_size_param
+   get_size_param,
+   0
   );
 
   kaapi_format_taskregister_body
@@ -362,7 +348,8 @@ static void register_mul2_task_format(void)
    get_access_param,
    set_access_param,
    get_fmt_param,
-   get_size_param
+   get_size_param,
+   0
   );
 
   kaapi_format_taskregister_body
@@ -386,7 +373,8 @@ static void register_memset_task_format(void)
    get_access_param,
    set_access_param,
    get_fmt_param,
-   get_size_param
+   get_size_param,
+   0
   );
 
   kaapi_format_taskregister_body
@@ -410,7 +398,8 @@ static void register_check_task_format(void)
    get_access_param,
    set_access_param,
    get_fmt_param,
-   get_size_param
+   get_size_param,
+   0
   );
 
   kaapi_format_taskregister_body
@@ -450,21 +439,21 @@ main_static_entry(unsigned int* base, unsigned int nelem)
 
   /* cpu::memset_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU_0));
-  create_range(&work->range, base, cpu_i, cpu_j);
+  create_range(&work->range, base + cpu_i, cpu_j - cpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU_0);
   kaapi_task_initdfg(task, memset_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU_0);
 
   /* cpu::add1_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU_1));
-  create_range(&work->range, base, cpu_i, cpu_j);
+  create_range(&work->range, base + cpu_i, cpu_j - cpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU_1);
   kaapi_task_initdfg(task, add1_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU_1);
 
   /* cpu::mul2_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU_0));
-  create_range(&work->range, base, cpu_i, cpu_j);
+  create_range(&work->range, base + cpu_i, cpu_j - cpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU_0);
   kaapi_task_initdfg(task, mul2_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU_0);
@@ -476,35 +465,35 @@ main_static_entry(unsigned int* base, unsigned int nelem)
 
   /* gpu::memset_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU_0));
-  create_range(&work->range, gpu_base, gpu_i, gpu_j);
+  create_range(&work->range, gpu_base + gpu_i, gpu_j - gpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU_0);
   kaapi_task_initdfg(task, memset_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU_0);
 
   /* gpu::add1_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU_0));
-  create_range(&work->range, gpu_base, gpu_i, gpu_j);
+  create_range(&work->range, gpu_base + gpu_i, gpu_j - gpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU_0);
   kaapi_task_initdfg(task, add1_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU_0);
 
   /* gpu1::mul2_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_GPU_1));
-  create_range(&work->range, gpu_base, gpu_i, gpu_j);
+  create_range(&work->range, gpu_base + gpu_i, gpu_j - gpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_GPU_1);
   kaapi_task_initdfg(task, mul2_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_GPU_1);
 
   /* cpu::check_task */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU_0));
-  create_range(&work->range, gpu_base, gpu_i, gpu_j);
+  create_range(&work->range, gpu_base + gpu_i, gpu_j - gpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU_0);
   kaapi_task_initdfg(task, check_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU_0);
 
   /* cpu2::check_task, same as above but on other partition */
   work = alloc_work(kaapi_threadgroup_thread(group, PARTITION_ID_CPU_1));
-  create_range(&work->range, gpu_base, gpu_i, gpu_j);
+  create_range(&work->range, gpu_base + gpu_i, gpu_j - gpu_i);
   task = kaapi_threadgroup_toptask(group, PARTITION_ID_CPU_1);
   kaapi_task_initdfg(task, check_cpu_entry, (void*)work);
   kaapi_threadgroup_pushtask(group, PARTITION_ID_CPU_1);
@@ -542,9 +531,10 @@ static int steal_range
   if (get_range_size(range) < size)
     return -1;
 
-  sub->j = range->j;
-  sub->i = range->j - size;
-  range->j = sub->i;
+  sub->base.data = (unsigned int*)range->base.data + range->size - size;
+  sub->size = range->size;
+
+  range->size -= size;
 
   return 0;
 }
@@ -559,9 +549,10 @@ static int split_range
   if (range_size < size)
     size = range_size;
 
-  sub->i = range->i;
-  sub->j = range->i + size;
-  range->i += size;
+  sub->base.data = (unsigned int*)range->base.data + range->size - size;
+  sub->size = size;
+
+  range->size -= size;
 
   return 0;
 }
@@ -638,7 +629,7 @@ static int next_seq(task_work_t* work)
 
   if (stealres == -1) return -1;
 
-  for (i = subrange.i; i < subrange.j; ++i)
+  for (i = 0; i < subrange.size; ++i)
   {
     if (work->func == MEMSET)
       base[i] = MEMSET_VALUE;
@@ -667,7 +658,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
     register_memset_task_format();
 
     /* init range */
-    create_range(&work->range, base, 0, nelem);
+    create_range(&work->range, base, nelem);
     work->func = MEMSET;
 
     /* start adaptive algorithm */
@@ -686,7 +677,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
   {
     register_add1_task_format();
 
-    create_range(&work->range, base, 0, nelem);
+    create_range(&work->range, base, nelem);
     work->func = ADD1;
 
     ksc = kaapi_task_begin_adaptive
@@ -702,7 +693,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
   {
     register_mul2_task_format();
 
-    create_range(&work->range, base, 0, nelem);
+    create_range(&work->range, base, nelem);
     work->func = MUL2;
 
     ksc = kaapi_task_begin_adaptive
