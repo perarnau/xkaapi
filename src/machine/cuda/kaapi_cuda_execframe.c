@@ -168,7 +168,7 @@ static inline int memcpy_dtoh
 
 /* cuda body prototype */
 
-typedef void (*cuda_task_body_t)(CUstream, void*, kaapi_thread_t*);
+typedef void (*cuda_task_body_t)(void*, CUstream);
 
 
 /* access data wrappers */
@@ -458,7 +458,7 @@ static void cuda_taskbcast_body
     kaapi_format_t* const format = kaapi_format_resolvebybody(original_body);
     cuda_task_body_t cuda_body = (cuda_task_body_t)
       format->entrypoint[KAAPI_PROC_TYPE_CUDA];
-    cuda_body(stream, arg->common.original_sp, thread);
+    cuda_body(arg->common.original_sp, stream);
   }
 
   /* write memory barrier to ensure that other threads will view the data produced */
@@ -807,7 +807,7 @@ push_frame:
 	  prepare_task(proc, pc->sp, format);
 
 	  /* execute the cuda body */
-	  cuda_body(proc->cuda_proc.stream, pc->sp, (kaapi_thread_t*)thread->sfp);
+	  cuda_body(pc->sp, proc->cuda_proc.stream);
 
 	  /* synchronize processor execution */
 	  synchronize_processor(proc);
@@ -993,7 +993,7 @@ int kaapi_cuda_exectask
       format->entrypoint[KAAPI_PROC_TYPE_CUDA];
 
     prepare_task(kproc, data, format);
-    cuda_body(kproc->cuda_proc.stream, data, (kaapi_thread_t*)thread->sfp);
+    cuda_body(data, kproc->cuda_proc.stream);
     synchronize_processor(kproc);
     finalize_task(kproc, data, format);
 
