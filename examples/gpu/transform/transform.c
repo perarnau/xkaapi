@@ -532,7 +532,7 @@ static int steal_range
     return -1;
 
   sub->base.data = (unsigned int*)range->base.data + range->size - size;
-  sub->size = range->size;
+  sub->size = size;
 
   range->size -= size;
 
@@ -603,7 +603,7 @@ static int splitter
 
     twork->func = vwork->func;
     twork->lock = 0;
-    kaapi_access_init(&twork->range.base, vwork->range.base.data);
+    kaapi_access_init(&twork->range.base, 0);
     split_range(&twork->range, &subrange, unitsize);
 
     kaapi_reply_pushhead_adaptive_task(sc, reqs);
@@ -617,8 +617,6 @@ static int splitter
 
 static int next_seq(task_work_t* work)
 {
-  unsigned int* const base = (unsigned int*)work->range.base.data;
-
   int stealres;
   range_t subrange;
   unsigned int i;
@@ -629,6 +627,7 @@ static int next_seq(task_work_t* work)
 
   if (stealres == -1) return -1;
 
+  unsigned int* const base = (unsigned int*)subrange.base.data;
   for (i = 0; i < subrange.size; ++i)
   {
     if (work->func == MEMSET)
