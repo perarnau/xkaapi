@@ -54,57 +54,6 @@ extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 typedef float double_type;
 
 
-#if 0 // runtime iteration
-foreach (i in task_format->param_count())
-{
-  param_format = get_format(i);
-
-  // ...
-
-  // allocate on gpu
-
-  size = param_format->get_size();
-  devptr = alloc_dev_mem(size);
-  if (task_format->mode(i) & READ)
-  {
-  }
-
-  // rewrite range base pointer
-  param->map(remote_addr);
-
-  // il faudrait aussi un param->get_key()
-  // de maniere a faire une revalidation de
-  // la memoire
-}
-#endif
-
-
-// ka::range type
-namespace ka {
-
-template<typename item_type>
-struct range_rw
-{
-  typedef size_t size_type;
-
-  item_type* _base;
-  size_type _size;
-
-  range_rw(item_type* base, size_type size)
-    : _base(base), _size(size) {}
-
-  item_type* base() { return _base; }
-  size_type size() const { return _size; }
-
-  static void register_format()
-  {
-    // todo
-  }
-};
-
-} // ka::
-
-
 __global__ void add1(double_type* array, unsigned int size)
 {
   const unsigned int per_thread = size / blockDim.x;
@@ -120,40 +69,28 @@ __global__ void add1(double_type* array, unsigned int size)
 */
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator()(ka::range_rw<T> range, OP op)
+  void operator()(ka::range1d_rw<T> range, OP op)
   {
-    T* const beg = range.base();
+    T* const beg = &range[0];
     T* const end = beg + range.size();
     std::for_each( beg, end, op );
-  }
-
-  void operator()
-  (ka::pointer_rw<T> base, size_t size, OP op)
-  {
-    ka::range_rw<T> range(base, size);
-    (*this)(range, op);
   }
 };
 
 template<typename T, typename OP>
 struct TaskBodyGPU<TaskThief<T, OP> > {
   void operator()
-  (ka::gpuStream stream, ka::range_rw<T> range, OP)
+  (ka::gpuStream stream, ka::range1d_rw<T> range, OP)
   {
     const CUstream custream = (CUstream)stream.stream;
 
+    T* const base = &range[0];
+
     printf("cudaTask(0x%lx 0x%lx, %lu)\n",
-	   (uintptr_t)custream, (uintptr_t)range.base(), range.size());
+	   (uintptr_t)custream, (uintptr_t)base, range.size());
     fflush(stdout);
 
-    add1<<<1, 256, 0, custream>>>(range.base(), range.size());
-  }
-
-  void operator()
-  (ka::gpuStream stream, ka::pointer_rw<T> base, size_t size, OP op)
-  {
-    ka::range_rw<T> range(base, size);
-    (*this)(stream, range, op);
+    add1<<<1, 256, 0, custream>>>(base, range.size());
   }
 };
 

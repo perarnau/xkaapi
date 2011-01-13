@@ -494,9 +494,8 @@ public:
 
   // Recopy cstor
   array<2,T>(const array<2,T>& a) 
-   : array_rep<2,T>(a), _range(a._range)
-  {
-  }
+    : array_rep<2,T>(a)
+  { _range = a._range; }
 
   // Cstor
   // Cstor of a 2-D array from a pointer 'data' of size 'count1'x 'count2' with stride 'stride1' and stride2
@@ -511,15 +510,13 @@ public:
   // Cstor, used to convert type in closure to formal parameter type
   template<class InternalRep>
   explicit array<2,T>(InternalRep& ir )
-   : array_rep<2,T>(ir), _range(ir._range)
-  {
-  }
+    : array_rep<2,T>(ir)
+  { _range = ir._range; }
 
   // make alias
   explicit array<2,T>(array<2,T>& a )
-   : array_rep<2,T>(a), _range(a._range)
-  {
-  }
+    : array_rep<2,T>(a)
+  { _range = a._range; }
   
   // Access to the (i,j) element (to rewrite)
   typename rep_t::reference_t operator() (index_t i, index_t j) 

@@ -48,7 +48,6 @@
 #include <algorithm>
 #include <string.h>
 #include <math.h>
-#include <stdlib.h>
 #include <sys/types.h>
 
 
@@ -129,7 +128,7 @@ protected:
     CPU implementation: see different implementations
 */
 template<typename T, typename OP>
-struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, size_t, OP> {};
+struct TaskThief : public ka::Task<2>::Signature< ka::RW< ka::range1d<T> >, OP > {};
 
 /* name of the method should be splitter !!! split work and reply to requests */
 template<typename T, typename OP>
@@ -150,10 +149,10 @@ void Work<T,OP>::split (
   /* thief work: create a task */
   for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
     req->Spawn<TaskThief<T,OP> >(sc)
-      (ka::pointer<T>(beg_theft), size_theft, _op);
+      (ka::range1d<T>(beg_theft, size_theft), _op);
 
   req->Spawn<TaskThief<T,OP> >(sc)
-    ( ka::pointer<T>(beg_theft), (size_t)(end_theft - beg_theft), _op );
+    ( ka::range1d<T>(beg_theft, end_theft), _op );
 }
 
 #endif
