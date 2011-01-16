@@ -260,7 +260,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   kproc->hlevel.depth = depth;
   
 #if 0
-  printf("\nNew topo for procesor: %i\n", kproc->kid );
+  printf("\nNew topo for K-processor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
     const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth].set->who);

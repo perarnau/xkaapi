@@ -93,6 +93,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
 
   if (arg->depth_min ==0) 
   {
+    int i;
     arg->seed = rand();
     level = &kproc->hlevel.levels[arg->depth_min];
     /* set to the min level where at least 2 threads */
@@ -106,8 +107,11 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
       }
       level = &kproc->hlevel.levels[arg->depth_min];
     }
-    printf("kid:%i, cpu:%i mindepth:%i\n", kproc->kid, kproc->cpuid, arg->depth_min);
-
+    printf("kid:%i, cpu:%i mindepth:%i ", kproc->kid, kproc->cpuid, arg->depth_min);
+    for (i=0; i<level->nkids; ++i)
+      printf(", kid: %i ", level->kids[i] ); 
+    printf("\n");
+    fflush(stdout);
     /* always used with -1 */
     ++arg->depth_min;
   }
