@@ -46,14 +46,13 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 /* Task Init
- * this task initialize each entries of the array to 1
-    RW<array<1,int> > means that the task takes an exclusive access to the entire array
+ * This task initializes each entries of the array to 1
+ * The task declares an write access pointer to an array object.
  */
-struct TaskInit : public ka::Task<1>::Signature<ka::RW<ka::array<1, int> > > {};
-
+struct TaskTerminalInit : public ka::Task<1>::Signature<ka::W<ka::array<1, int> > > {};
 template<>
-struct TaskBodyCPU<TaskInit> {
-  void operator() ( ka::pointer_rw<ka::array<1,int> > array )
+struct TaskBodyCPU<TaskTerminalInit> {
+  void operator() ( ka::pointer_w<ka::array<1,int> > array )
   {
     size_t sz = array.size();
     std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
@@ -62,6 +61,44 @@ struct TaskBodyCPU<TaskInit> {
   }
 };
 
+/* Task Init
+ * This task initializes each entries of the array to 1 by a recursive splitting tree of sub tasks
+ * The task declares an write access pointer to an array object.
+ */
+struct TaskInit : public ka::Task<1>::Signature<ka::RPWP<ka::array<1, int> > > {};
+
+template<>
+struct TaskBodyCPU<TaskInit> {
+  void operator() ( ka::pointer_rpwp<ka::array<1,int> > array )
+  {
+    size_t sz = array.size();
+    if (sz >=5)
+    {
+      int med = sz/2;
+      ka::Spawn<TaskInit>()( array[ka::rangeindex(0,med)] );
+      ka::Spawn<TaskInit>()( array[ka::rangeindex(med,sz)] );
+    }
+    else 
+      ka::Spawn<TaskTerminalInit>()(array);
+  }
+};
+
+
+/* Task Accumulate
+ * This task computes the sum of the entries of an array 
+ * The task declares an object with CW access to accumulate the result and read pointer to an array object.
+ */
+struct TaskAccumulate : public ka::Task<2>::Signature<ka::CW<int>, ka::R<ka::array<1,int> > > {};
+
+template<>
+struct TaskBodyCPU<TaskAccumulate> {
+  void operator() ( ka::pointer_cw<int> acc, ka::pointer_r<ka::array<1,int> > array  )
+  {
+    size_t sz = array.size();
+    for (size_t i=0; i < sz; ++i)
+      *acc += array[i];
+  }
+};
 
 
 /* Main task of the program
@@ -77,13 +114,15 @@ struct doit {
     int* data = new int[n];
 
     /* form a view of data as an 1-dimensional array */
-    ka::array<1,int> arr(n, data); 
+    ka::array<1,int> arr(data, n); 
     int res = 0;
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
     ka::Spawn<TaskInit>()( arr );
+
+    ka::Spawn<TaskAccumulate>()( &res, arr );
 
     ka::Sync();
 

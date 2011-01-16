@@ -46,15 +46,14 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 /* Task Init
- * this task initialize each entries of the array to 1
- * each entries is view as a pointer object:
-    array<1,W<int> > means that each entry may be write by the task
+ * This task initializes each entries of the array to 1
+ * The task declares an write access pointer to an array object.
  */
-struct TaskInit : public ka::Task<1>::Signature<ka::array<1, ka::W<int> > > {};
+struct TaskInit : public ka::Task<1>::Signature<ka::W<ka::array<1,int> > > {};
 
 template<>
 struct TaskBodyCPU<TaskInit> {
-  void operator() ( ka::array<1, ka::pointer_w<int> > array )
+  void operator() ( ka::pointer_w<ka::array<1,int> > array )
   {
     size_t sz = array.size();
     std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
@@ -64,16 +63,16 @@ struct TaskBodyCPU<TaskInit> {
 };
 
 
+
 /* Task Accumulate
- * this task compute the sum of the entries of an array 
- * each entries is view as a pointer object:
-    array<1,R<int> > means that each entry may be read by the task
+ * This task computes the sum of the entries of an array 
+ * The task declares an object with CW access to accumulate the result and read pointer to an array object.
  */
-struct TaskAccumulate : public ka::Task<2>::Signature<ka::RW<int>, ka::array<1, ka::R<int> > > {};
+struct TaskAccumulate : public ka::Task<2>::Signature<ka::CW<int>, ka::R<ka::array<1,int> > > {};
 
 template<>
 struct TaskBodyCPU<TaskAccumulate> {
-  void operator() ( ka::pointer_rw<int> acc, ka::array<1, ka::pointer_r<int> > array  )
+  void operator() ( ka::pointer_cw<int> acc, ka::pointer_r<ka::array<1,int> > array  )
   {
     size_t sz = array.size();
     for (size_t i=0; i < sz; ++i)
@@ -95,18 +94,18 @@ struct doit {
     int* data = new int[n];
 
     /* form a view of data as an 1-dimensional array */
-    ka::array<1,int> arr(n, data); 
+    ka::array<1,int> arr(data, n); 
     int res = 0;
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
-    ka::Spawn<TaskInit>()( arr[ka::array<1,int>::range(0,med)] );
+    ka::Spawn<TaskInit>()( arr[ka::rangeindex(0,med)] );
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
-    ka::Spawn<TaskInit>()( arr[ka::array<1,int>::range(med,n)] );
+    ka::Spawn<TaskInit>()( arr[ka::rangeindex(med,n)] );
 
 
     /* Here the dependencies is accross each entries of the array arr,
