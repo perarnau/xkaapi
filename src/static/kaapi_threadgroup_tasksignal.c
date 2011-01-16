@@ -55,20 +55,32 @@ void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread )
 */
 void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
 {
+  /* detach the thread from the processor (it was managed by the group) */
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_thread_context_t* kthread = kproc->thread;
+  
   kaapi_threadgroup_t thgrp = (kaapi_threadgroup_t)sp;
 
-#if 0 // TODO: distributed re-execution.
-/* Thread should not be referenced by a thief during this operation and after all
-   other thread have been re-executed
-*/
+  if (kthread != thgrp->mainctxt)
+  {
+    /* detach the thread: may it should be put into the execframe function */
+    kaapi_sched_lock(&kthread->proc->lock);
+    kproc->thread = 0;
+    kaapi_sched_unlock(&kthread->proc->lock);
+  }
+
+  /* Thread should not be referenced by a thief during this operation and after all
+     other thread have been re-executed.
+     This is true for all threads exccept the main, due to the lock before 
+  */
+
   /* reload the thread if it was saved */
   if (thgrp->save_mainthread !=0)
   {
-    int partid = kaapi_self_thread_context()->partid;
+    int partid = kthread->partid;
     if (partid != -1)
       kaapi_assert( 0 == kaapi_threadgroup_restore_thread( thgrp, partid ) );
   }
-#endif
 
   if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
   {
@@ -76,17 +88,8 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
     kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
   }
 
-  /* detach the thread from the processor (it was managed by the group) */
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_thread_context_t* kthread = kproc->thread;
-  
-  if (kthread != thgrp->mainctxt)
-  {
 #if 0
-    printf("Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
-    fflush(stdout);
+  printf("Signal end: Thread: %p affinity:%u  mapped on proc:%i\n", kthread, kthread->affinity, kproc->kid );
+  fflush(stdout);
 #endif
-    /* detach the thread */
-    kproc->thread = 0;
-  }
 }

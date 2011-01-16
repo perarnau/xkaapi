@@ -1,8 +1,8 @@
 #ifndef _POISSON3DITER_H_
 #define _POISSON3DITER_H_
-#include "poisson3d.h"
 
-/* iteration over 3D mesh index */
+/* Iteration over 3D mesh index
+*/
 class MeshIndex3D {
 public:
   /**
@@ -19,6 +19,100 @@ public:
   */
   void resize( unsigned short i, unsigned short j, unsigned short k )
   { dim[0] = i; dim[1] = j; dim[2] = k; }
+
+  /** Point of a mesh 
+  */
+  class point {
+  public:
+    point() : _i(0), _j(0), _k(0) {}
+    point( int i, int j, int k ) : _i(i), _j(j), _k(k) {}
+
+    int get_i() const { return _i; }
+    int get_j() const { return _j; }
+    int get_k() const { return _k; }
+
+    int operator[](unsigned short i) const
+    {
+      const int* v = (const int *)this;
+      return v[i];
+    }
+    bool operator==(const point& p) const
+    { return (_i == p._i) && (_j == p._j) && (_k == p._k); }
+    bool operator!=(const point& p) const
+    { return (_i != p._i) || (_j != p._j) || (_k != p._k); }
+
+    point operator+( const point& p ) const
+    { return point(_i+p._i, _j+p._j, _k+p._k); }
+  protected:
+    int _i;
+    int _j;
+    int _k;
+    friend class MeshIndex3D;
+  };
+
+  /* convert to unsigned int value in order to linearize mesh */
+  unsigned int get_index( const point& p) const
+  { 
+    return ( (p._i * dim[1]) + p._j ) * dim[2] + p._k; 
+  }
+
+  /* return true iff the point is inside the mesh */
+  bool is_inside( const point& p) const
+  { 
+    return (p[0] >=0) && (p[0] < dim[0]) 
+        && (p[1] >=0) && (p[1] < dim[1]) 
+        && (p[2] >=0) && (p[2] < dim[2]);
+  }
+
+  enum Direction {
+    LEFT,    /* X-1,Y,Z */
+    RIGHT,   /* X+1,Y,Z */
+    BOTTOM,  /* X,Y-1,Z */
+    TOP,     /* X,Y+1,Z */
+    FRONT,   /* X,Y,Z-1 */
+    BACK     /* X,Y,Z+1 */
+  };
+  
+  static const point directions[6];
+
+  /**
+  */
+  class const_neighbor_iterator {
+  public:
+    /* equality */
+    bool operator==(const const_neighbor_iterator& it) const
+    { return (p == it.p) && (dir == it.dir); }
+    /* not equal */
+    bool operator!=(const const_neighbor_iterator& it) const
+    { return (p != it.p) && (dir != it.dir); }
+    /* pre increment */
+    const_neighbor_iterator& operator++()
+    {
+      ++dir;
+      for ( ; dir < 6; ++dir)
+        if (mesh->is_inside( p+MeshIndex3D::directions[dir])) return *this;
+    }
+
+    /* post increment */
+    const_neighbor_iterator operator++(int)
+    {
+      const_neighbor_iterator retval = *this;
+      ++(*this);
+      return retval;
+    }
+    
+    /* indirection return the point */
+    point operator*()
+    { return p+MeshIndex3D::directions[dir]; }
+
+  protected:
+    friend class MeshIndex3D;
+  
+  private:
+    const MeshIndex3D* mesh;
+    unsigned int       dir;
+    point              p;
+  };
   
   /**
   */
@@ -33,9 +127,9 @@ public:
     /* pre increment */
     const_iterator& operator++()
     {
-      if (++pos[2] < dim[2]) return *this;
+      if (++pos[2] < mesh->dim[2]) return *this;
       pos[2] = 0;
-      if (++pos[1] < dim[1]) return *this;
+      if (++pos[1] < mesh->dim[1]) return *this;
       pos[1] = 0;
       ++pos[0];
       return *this;
@@ -44,23 +138,42 @@ public:
     const_iterator operator++(int)
     {
       const_iterator retval = *this;
-      if (++pos[2] < dim[2]) return *this;
-      pos[2] = 0;
-      if (++pos[1] < dim[1]) return *this;
-      pos[1] = 0;
-      ++pos[0];
+      ++*this;
       return retval;
     }
-    /* indirection */
-    Poisson3D::Index operator*()
-    { return Poisson3D::Index(pos[0], pos[1], pos[2]); }
+    /* indirection return the point */
+    point operator*()
+    { return point(pos[0], pos[1], pos[2]); }
+
+    /**
+    */
+    const_neighbor_iterator begin() const
+    { 
+      const_neighbor_iterator retval;
+      retval.mesh = mesh;
+      retval.dir  = -1;
+      retval.p    = point(pos[0], pos[1], pos[2]); 
+      ++retval;
+      return retval;
+    }
+    
+    /**
+    */
+    const_neighbor_iterator end() const
+    {
+      const_neighbor_iterator retval;
+      retval.mesh = mesh;
+      retval.dir  = 6;
+      retval.p    = point(pos[0], pos[1], pos[2]); 
+      return retval;
+    }
 
   protected:
     friend class MeshIndex3D;
   
   private:
-    unsigned short dim[3];
-    unsigned short pos[3];
+    const MeshIndex3D* mesh;
+    int pos[3];
   };
 
   /**
@@ -68,9 +181,7 @@ public:
   const_iterator begin() const
   { 
     const_iterator retval;
-    retval.dim[0] = dim[0];
-    retval.dim[1] = dim[1];
-    retval.dim[2] = dim[2];
+    retval.mesh = this;
     retval.pos[0] = 0;
     retval.pos[1] = 0;
     retval.pos[2] = 0;
@@ -82,9 +193,7 @@ public:
   const_iterator end() const
   {
     const_iterator retval;
-    retval.dim[0] = dim[0];
-    retval.dim[1] = dim[1];
-    retval.dim[2] = dim[2];
+    retval.mesh = this;
     retval.pos[0] = dim[0];
     retval.pos[1] = 0;
     retval.pos[2] = 0;
@@ -118,7 +227,7 @@ public:
       return retval;
     }
     /* indirection */
-    Poisson3D::Index operator*()
+    point operator*()
     { 
       /* decode the 3D Morton code */
       int i =       table2[ lpos & 0x3f ]               /* take bit b0, b1 */
@@ -135,7 +244,7 @@ public:
             + 4U  * table0[ (lpos & (0x3f << 6))>>6 ]   /* take bit b2, b3 */
             + 16U * table0[ (lpos & (0x3f << 12))>>12 ] /* take bit b4, b5 */
             + 64U * table0[ (lpos & (0x3f << 18))>>18 ];/* take bit b6, b7 */
-      return Poisson3D::Index(i,j,k); 
+      return point(i,j,k); 
     }
 
   protected:

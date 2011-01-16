@@ -73,10 +73,13 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     {
       /* should be atomic ? */
       cell = cond_thread->wcs;
-      cell->thread = 0;
-      cond_thread->wcs = 0;
-      KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);
-      return cond_thread;
+      if (cell !=0) {
+        cell->thread = 0;
+        cond_thread->wcs = 0;
+        KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);
+        return cond_thread;
+      }
+      /* else the thread was put into the lready list */
     }
     /* the cell will be garbaged next times */
   }
@@ -94,7 +97,11 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     kaapi_sched_unlock( &kproc->lock );
     
     if (thread != 0)
+    {
+      kaapi_assert_debug( kaapi_cpuset_has(thread->affinity, kproc_thiefid)
+        || (kaapi_cpuset_empty(thread->affinity) && (kproc->kid == kproc_thiefid)) );
       return thread;
+    }
   }
   
   /* else... 
@@ -117,12 +124,11 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     if ((thread !=0) && kaapi_cpuset_has(thread->affinity, kproc_thiefid) 
         && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))) 
     {
-      cell->thread = 0;
-      thread->wcs  = 0;
+      kaapi_wsqueuectxt_finish_steal_cell(cell);
       return thread;
     }
 
-    if ((status == KAAPI_WSQUEUECELL_OUTLIST)||(status == KAAPI_WSQUEUECELL_STEALLIST)) /* not INLIST nor READY */
+    if (status == KAAPI_WSQUEUECELL_OUTLIST) /* not INLIST nor READY */
     {
       /* delete from the queue */
       if (nextcell != 0)

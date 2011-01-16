@@ -317,6 +317,7 @@ enum kaapi_reply_status_t {
 
 
 /* ============================= Format for task/data structure ============================ */
+
 typedef enum kaapi_format_flag_t {
   KAAPI_FORMAT_STATIC_FIELD,   /* the format of the task is interpreted using static offset/fmt etc */ 
   KAAPI_FORMAT_DYNAMIC_FIELD      /* the format is interpreted using the function, required for variable args tasks */
@@ -355,6 +356,7 @@ typedef struct kaapi_format_t {
   kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
   uint32_t                   *_size_params;                            /* sizeof of each params */
+  kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
      - the unsigned int argument is the index of the parameter 
@@ -367,6 +369,7 @@ typedef struct kaapi_format_t {
   void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*);
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
   size_t                (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+  void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -451,6 +454,19 @@ size_t          kaapi_format_get_size_param (const struct kaapi_format_t* fmt, u
 }
 
 
+static inline 
+void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, void* result, const void* value)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+  {
+    (*fmt->_reducor_params[ith])(result, value);
+    return;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  (*fmt->reducor)(fmt, ith, sp, result, value);
+}
+
+
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */
 /*
@@ -505,6 +521,10 @@ typedef struct kaapi_thread_context_t {
 
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
+
+#if defined(KAAPI_USE_CUDA)
+  kaapi_atomic_t                 lock;           /** */ 
+#endif
 
   kaapi_cpuset_t                 affinity;       /* bit i == 1 -> can run on procid i */
 
@@ -770,7 +790,7 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 
 /* this macro should only be called on a theft task to determine if it is ready */
 #define kaapi_task_state_isready(state)       \
-      (((state) & (KAAPI_MASK_BODY_AFTER|KAAPI_MASK_BODY_TERM)) !=0)
+      ((((state) & KAAPI_MASK_BODY)==0) || (((state) & (KAAPI_MASK_BODY_AFTER|KAAPI_MASK_BODY_TERM)) !=0))
 
 #define kaapi_task_state_isstealable(state)   \
       (((state) & (KAAPI_MASK_BODY_STEAL|KAAPI_MASK_BODY_EXEC)) ==0)
@@ -805,7 +825,7 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 
 /** Get the body of the task
 */
-static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
+static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 {
   return kaapi_task_state2body( task->u.state & ~KAAPI_MASK_BODY );
 }
@@ -813,42 +833,6 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(kaapi_task_t* task)
 
 #endif /* SIZEOF_VOIDP == 8 */
 
-/** \ingroup TASK
-    The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
-    All user tasks are stealable.
-    \param body IN a task body
-*/
-inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
-{ 
-  return (body != kaapi_taskstartup_body) 
-      && (body != kaapi_nop_body)
-      && (body != kaapi_tasksteal_body) 
-      && (body != kaapi_taskwrite_body)
-      && (body != kaapi_taskfinalize_body) 
-      && (body != kaapi_adapt_body)
-      ;
-}
-
-/** \ingroup TASK
-    The function kaapi_task_isstealable() will return non-zero value iff the task may be stolen.
-    All previous internal task body are not stealable. All user task are stealable.
-    \param task IN a pointer to the kaapi_task_t to test.
-*/
-inline static int kaapi_task_isstealable(const kaapi_task_t* task)
-{
-#if (SIZEOF_VOIDP == 4)
-
-  return kaapi_task_state_isstealable(task->state) &&
-   kaapi_task_body_isstealable(task->body);
-
-#else /* SIZEOF_VOIDP == 8 */
-
-  const uintptr_t state = (uintptr_t)task->u.body;
-  return kaapi_task_state_isstealable(state) &&
-    kaapi_task_body_isstealable(kaapi_task_state2body(state));
-
-#endif
-}
 
 /** \ingroup TASK
 */
@@ -1096,7 +1080,7 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
-  uint32_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
+  uint64_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
 
@@ -1223,10 +1207,10 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
 #if (SIZEOF_VOIDP == 4)
-  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->state) );
+//  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->state) );
   return kaapi_task_state_isready(thread->sfp->pc->state);
 #else
-  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->u.state) );
+//  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->u.state) );
   return kaapi_task_state_isready(thread->sfp->pc->u.state);
 #endif
 }
@@ -1342,7 +1326,7 @@ static inline void kaapi_sched_waitlock(kaapi_atomic_t* lock)
 
 /** steal/pop (no distinction) a thread to thief with kid
     If the owner call this method then it should protect 
-    itself against thieves by using sched_lock & sched_unlock
+    itself against thieves by using sched_lock & sched_unlock on the kproc.
 */
 kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t*, kaapi_processor_id_t);
 
@@ -1385,6 +1369,7 @@ extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
+    \retval EINTR the execution of the stack is interupt and the thread is detached to the kprocessor.
 */
 extern int kaapi_thread_execframe( kaapi_thread_context_t* thread );
 
@@ -1666,6 +1651,49 @@ extern void kaapi_set_workload( kaapi_processor_t*, uint32_t workload );
 extern void kaapi_set_self_workload( uint32_t workload );
 
 #include "kaapi_staticsched.h"
+
+
+/** \ingroup TASK
+    The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
+    All user tasks are stealable.
+    \param body IN a task body
+*/
+inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
+{ 
+  return (body != kaapi_taskstartup_body) 
+      && (body != kaapi_nop_body)
+      && (body != kaapi_tasksteal_body) 
+      && (body != kaapi_taskwrite_body)
+      && (body != kaapi_taskfinalize_body) 
+      && (body != kaapi_adapt_body)
+      && (body != kaapi_tasksignalend_body)
+      && (body != kaapi_taskbcast_body)
+      && (body != kaapi_taskrecv_body)
+      && (body != kaapi_taskwaitend_body)
+      ;
+}
+
+/** \ingroup TASK
+    The function kaapi_task_isstealable() will return non-zero value iff the task may be stolen.
+    All previous internal task body are not stealable. All user task are stealable.
+    \param task IN a pointer to the kaapi_task_t to test.
+*/
+inline static int kaapi_task_isstealable(const kaapi_task_t* task)
+{
+#if (SIZEOF_VOIDP == 4)
+
+  return kaapi_task_state_isstealable(task->state) &&
+   kaapi_task_body_isstealable(task->body);
+
+#else /* SIZEOF_VOIDP == 8 */
+
+  const uintptr_t state = (uintptr_t)task->u.body;
+  return kaapi_task_state_isstealable(state) &&
+    kaapi_task_body_isstealable(kaapi_task_state2body(state));
+
+#endif
+}
+
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/

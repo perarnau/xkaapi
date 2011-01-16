@@ -81,7 +81,7 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
     if (m == KAAPI_ACCESS_MODE_V) 
       continue;
 
-    if (KAAPI_ACCESS_IS_ONLYWRITE(m))
+    if (KAAPI_ACCESS_IS_ONLYWRITE(m) || KAAPI_ACCESS_IS_CUMULWRITE(m) )
     {
       fmt_param    = kaapi_format_get_fmt_param(fmt, i, taskarg);
       access_param = kaapi_format_get_access_param(fmt, i, taskarg);
@@ -93,7 +93,11 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
         /* add an assign + dstor function will avoid 2 calls to function, especially for basic types which do not
            required to be dstor.
         */
-        (*fmt_param->assign)( access_param.data, access_param.version );
+        if (!KAAPI_ACCESS_IS_CUMULWRITE(m))
+          (*fmt_param->assign)( access_param.data, access_param.version );
+        else {
+          kaapi_format_reduce_param( fmt, i, taskarg, access_param.data, access_param.version );
+        }
         if (fmt_param->dstor !=0) (*fmt_param->dstor) ( access_param.version );
         free(access_param.version);
       }

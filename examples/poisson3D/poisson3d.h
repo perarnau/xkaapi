@@ -1,5 +1,8 @@
 #ifndef _POISSON3D_H_
 #define _POISSON3D_H_
+#include <iostream>
+#include "poisson3diter.h"
+
 class SubDomain;
 class SubDomainInterface;
 
@@ -26,6 +29,7 @@ public:
     public:
       Index() : _i(-1), _j(-1), _k(-1) {}
       Index( unsigned int i, unsigned int j, unsigned int k ) : _i(i), _j(j), _k(k) {}
+      Index( const MeshIndex3D::point& p ) : _i(p.get_i()), _j(p.get_j()), _k(p.get_k()) {}
       bool has_neighbor( Direction dir );
       Index get_neighbor( Direction dir );
       inline unsigned int operator()() const
@@ -104,6 +108,7 @@ public:
   double compute_residue_and_swap( const SubDomain& new_sd, const SubDomain& frhs );
   double compute_error( const SubDomain& solution ) const;  
 
+  void print(std::ostream& cout ) const;
 protected:
   unsigned int _nx;
   unsigned int _ny;

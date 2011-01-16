@@ -53,26 +53,35 @@
 int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 {
   const char* const gpuset_str = getenv("KAAPI_GPUSET");
+  kaapi_procinfo_t* pos = kpl->tail;
+  unsigned int kid = kpl->count;
   int devcount;
   int err;
-  
+
   if (gpuset_str == NULL)
     return 0;
-  
+
   if (cuInit(0) != CUDA_SUCCESS)
     return -1;
-  
+
   if (cuDeviceGetCount(&devcount) != CUDA_SUCCESS)
     return -1;
   
   if (devcount == 0)
     return 0;
-  
+ 
   err = kaapi_procinfo_list_parse_string
-      (kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA, (unsigned int)devcount);
-  if (err)
-    return -1;
-  
+    (kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA, (unsigned int)devcount);
+  if (err) return -1;
+
+  if (kpl->tail == NULL) return 0;
+
+  /* affect kids */
+  if (pos == NULL) pos = kpl->tail;
+  else pos = pos->next;
+  for (; pos; pos = pos->next, ++kid)
+    pos->kid = kid;
+
   return 0;
 }
 
@@ -109,7 +118,7 @@ static inline void unlock_thread(kaapi_thread_context_t* thread)
 #if 1 /* unused */
 static inline int is_task_ready(const kaapi_task_t* task)
 {
-  if (task->body == kaapi_adapt_body)
+  if (kaapi_task_getbody(task) == kaapi_adapt_body)
     return 1;
   return kaapi_task_isstealable(task);
 }
@@ -137,6 +146,7 @@ static unsigned int __attribute__((unused)) count_tasks_by_type
   return count;
 }
 
+#if 0 /* todo, unused */
 static unsigned int __attribute__((unused)) has_task_by_proc_type
 (kaapi_thread_t* thread, unsigned int proc_type)
 {
@@ -186,18 +196,24 @@ static unsigned int __attribute__((unused)) has_task_by_proc_type
   
   return 0;
 }
+#endif /* todo, unused */
 
-int kaapi_sched_select_victim_with_cuda_tasks(kaapi_processor_t* kproc, kaapi_victim_t* victim)
+int kaapi_sched_select_victim_with_cuda_tasks
+(
+ kaapi_processor_t* kproc,
+ kaapi_victim_t* victim,
+ kaapi_selecvictim_flag_t flag
+)
 #if 1 /* disable worksealing */
 {
-  /* this disables workstealing */
-  victim->kproc = kproc;
-  return 0;
+  return kaapi_sched_select_victim_rand(kproc, victim, flag);
 }
 #else
 {
   unsigned int has_task;
   int i;
+
+  if (flag != KAAPI_SELECT_VICTIM) return 0;
   
   for (i = 0; i < kaapi_count_kprocessors; ++i)
   {
@@ -236,5 +252,5 @@ int kaapi_sched_select_victim_with_cuda_tasks(kaapi_processor_t* kproc, kaapi_vi
 void kaapi_exec_cuda_task
 (kaapi_task_t* task, kaapi_thread_t* thread)
 {
-  task->body(task->sp, thread);
+  kaapi_task_getbody(task)(task->sp, thread);
 }

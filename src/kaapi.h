@@ -99,7 +99,10 @@ typedef uint32_t kaapi_processor_id_t;
 typedef uint64_t kaapi_affinity_t;
 typedef uint32_t kaapi_format_id_t;
 typedef uint32_t kaapi_offset_t;
-typedef int      kaapi_gpustream_t;
+typedef uint64_t kaapi_gpustream_t;
+
+/** Reducor to accumulate value with cw access mode */
+typedef void (*kaapi_reducor_t)(void*, const void*);
 
 /* Fwd decl
 */
@@ -392,6 +395,9 @@ typedef enum kaapi_access_mode_t {
 
 #define KAAPI_ACCESS_IS_WRITE( m ) \
   ((m) & KAAPI_ACCESS_MODE_W)
+
+#define KAAPI_ACCESS_IS_CUMULWRITE( m ) \
+  ((m) & KAAPI_ACCESS_MODE_CW)
 
 #define KAAPI_ACCESS_IS_POSTPONED( m ) \
   ((m) & KAAPI_ACCESS_MASK_MODE_P)
@@ -1755,7 +1761,8 @@ extern kaapi_format_id_t kaapi_format_taskregister_static(
         const kaapi_offset_t        offset_param[],
         const kaapi_offset_t        offset_version[],
         const struct kaapi_format_t*fmt_param[],
-        const size_t                size_param[]
+        const size_t                size_param[],
+        const kaapi_reducor_t       reducor_param[]
 );
 
 /** \ingroup TASK
@@ -1772,7 +1779,8 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
         kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
         void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
         const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+        size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+        void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
 );
 
 /** \ingroup TASK
@@ -1827,7 +1835,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister_static( formatobject(), fnc_body, name, ##__VA_ARGS__);\
+    kaapi_format_taskregister_static( formatobject(), fnc_body, name, ##__VA_ARGS__, 0 /* for reduction operators not supported in C */);\
   }
 
 

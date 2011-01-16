@@ -46,7 +46,7 @@
 
 /* ready list routines
  */
-kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_processor_id_t tid)
+kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_processor_id_t thief_kid)
 {
   kaapi_lready_t* const list = &kproc->lready;
 
@@ -57,23 +57,29 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
     return 0;
 
   pre = list->_front;
-  if (kaapi_cpuset_has(pre->affinity, tid))
+  /* extra condition pre->affinity ==0 & kproc->kid == thief_kid is used to wakeup suspended thread (affinity ==0)
+     on a kproc
+  */
+  if (kaapi_cpuset_has(pre->affinity, thief_kid) || (kaapi_cpuset_empty(pre->affinity) && (kproc->kid == thief_kid)) )
   {
     /* unlink the thread */
     pos = list->_front;
     list->_front = pos->_next;
     if (list->_back == pos) list->_back = 0;
+//printf("%i: Steal thread:%p on victim kid: %i\n", thief_kid, pos, kproc->kid);
     return pos;
   }
 
   pos = pre->_next;
   while (pos != 0) 
   {
-    if (kaapi_cpuset_has(pos->affinity, tid))
+    /* see comment above about the condition after the "||" */
+    if (kaapi_cpuset_has(pos->affinity, thief_kid) || (kaapi_cpuset_empty(pos->affinity) && (kproc->kid == thief_kid)))
     {
       /* unlink the thread */
       pre->_next = pos->_next;
       if (pre->_next ==0) list->_back = pre;
+//printf("%i: Steal thread:%p on victim kid: %i\n", thief_kid, pos, kproc->kid);
       return pos;
     }
 
@@ -86,6 +92,8 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
 }
 
 
+/*
+*/
 void kaapi_sched_pushready(kaapi_processor_t* kproc, kaapi_thread_context_t* node)
 {
   /* push back version. prev not updated.

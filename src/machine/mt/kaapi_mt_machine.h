@@ -906,7 +906,7 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   kaapi_assert_debug((thief_kid >=0) && (thief_kid < KAAPI_MAX_PROCESSOR_LIMIT));
   req = &victim->hlrequests.requests[thief_kid];
-  /* here do not write kid, because it was persistant to all local thread */
+  req->kid   = thief_kid;
   req->reply = reply;
   reply->preempt = 0;
   reply->status = KAAPI_REQUEST_S_POSTED;
@@ -942,11 +942,21 @@ extern int kaapi_wsqueuectxt_destroy( kaapi_wsqueuectxt_t* ls );
 extern int kaapi_wsqueuectxt_push( kaapi_processor_t* kproc, kaapi_thread_context_t* thread );
 
 /** \ingroup WS
-   Steal a ctxt on a specific cell
+   Steal a ctxt on a specific cell.
+   After the thread has been stolen with success, the caller must call kaapi_wsqueuectxt_finish_steal_cell
+   in order to allows garbage of cell.
    Return a pointer to the stolen thread in case of success
    Return 0 if the thread was already stolen
 */
 extern kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_cell_t* cell );
+
+/**
+*/
+static inline void kaapi_wsqueuectxt_finish_steal_cell( kaapi_wsqueuectxt_cell_t* cell )
+{
+  int ok = KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_STEALLIST, KAAPI_WSQUEUECELL_OUTLIST);
+  kaapi_assert( ok );
+}
 
 /**
 */

@@ -73,14 +73,6 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
             thgrp->size_workerthreads[i]*sizeof(kaapi_task_t) );
   }
   
-#if 0
-  fprintf(stdout, "Save frame:: pc:%p, sp:%p, spd:%p\n", 
-    (void*)thgrp->mainframe.pc, 
-    (void*)thgrp->mainframe.sp, 
-    (void*)thgrp->mainframe.sp_data 
-  );
-#endif
-    
   return 0;
 }
 
@@ -108,6 +100,9 @@ int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid )
             thgrp->size_workerthreads[tid]*sizeof(kaapi_task_t) );
 
     kaapi_thread_restore_frame(thgrp->threads[tid], &(thgrp->save_workertopframe[tid]) );
+
+    /* reset frame pointer to the first frame: assume only one thread */
+    thgrp->threadctxts[tid]->sfp = thgrp->threadctxts[tid]->stackframe;
   }
   return 0;
 }
@@ -120,11 +115,16 @@ int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_WAIT_S) return EINVAL;
 
+#if 0
   /* do the same for each worker */
   for (int i=-1; i<thgrp->group_size; ++i)
   {
     kaapi_threadgroup_restore_thread(thgrp, i);
   }
+#else
+  /* worker threads are already restored in signalend */
+  kaapi_threadgroup_restore_thread(thgrp, -1);
+#endif
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;
 }

@@ -204,7 +204,6 @@ namespace ka {
   public:
     gpuStream( kaapi_gpustream_t gs ): stream(gs) {}
     gpuStream( ): stream(0) {}
-  protected:
     kaapi_gpustream_t stream; /* at least for CUDA */
   };
 
@@ -258,7 +257,8 @@ namespace ka {
       const kaapi_offset_t        offset_param[],
       const kaapi_offset_t        offset_version[],
       const kaapi_format_t*       fmt_param[],
-      const size_t                size_param[]
+      const size_t                size_param[],
+      const kaapi_reducor_t       reducor_param[]
     );
 
     /* task with dynamic format */
@@ -271,7 +271,8 @@ namespace ka {
       kaapi_access_t            (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
       void                      (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
       const struct kaapi_format_t*(*get_fmt_param) (const struct kaapi_format_t*, unsigned int, const void*),
-      size_t                    (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*)
+      size_t                    (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+      void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
     );
   };
   
@@ -497,6 +498,12 @@ namespace ka {
   struct TYPE_INTASK {}; /* internal purpose to define representation of a type in a task */
   struct TYPE_INPROG {}; /* internal purpose to define representation of a type in the user program */
 
+  template<class T>
+  struct DefaultAdd {
+    void operator()( T& result, const T& value)
+    { result += value; }
+  };
+  
   /* fwd declarations */
   template<class T>
   class pointer;
@@ -514,7 +521,7 @@ namespace ka {
   class pointer_w;
   template<class T>
   class pointer_cwp;
-  template<class T>
+  template<class T, typename OP=DefaultAdd<T> >
   class pointer_cw;
 
 
@@ -555,6 +562,18 @@ namespace ka {
     value_ref(T* p) : _ptr(p){}
     operator T&() { return *_ptr; }
     void operator=( const T& value ) { *_ptr = value; }
+  protected:
+    T* _ptr;
+  };
+
+  /* capture cumulative write */
+  template<class T>
+  class cumul_value_ref {
+  public:
+    cumul_value_ref(T* p) : _ptr(p){}
+    void operator+=( const T& value ) { *_ptr += value; }
+    template<typename OP>
+    void cumul( const T& value ) { OP()(*_ptr,value); }
   protected:
     T* _ptr;
   };
@@ -763,7 +782,7 @@ namespace ka {
 
 
   // --------------------------------------------------------------------
-  template<class T>
+  template<class T, typename OP >
   class pointer_cw: public base_pointer<T> {
   public:
     typedef T value_type;
@@ -776,13 +795,15 @@ namespace ka {
     pointer_cw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cw( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cw( const pointer_cwp<T>& ptr ) : base_pointer<T>(ptr) {}
-    pointer_cw( const pointer_cw<T>& ptr ) : base_pointer<T>(ptr) {}
+    template<class OP2>
+    pointer_cw( const pointer_cw<T, OP2>& ptr ) : base_pointer<T>(ptr) {}
     operator value_type*() { return base_pointer<T>::ptr(); }
 
-    value_type& operator*() { return *base_pointer<T>::ptr(); }
-    value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
-    value_type& operator[](long i) { return base_pointer<T>::ptr()[i]; }
-    value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
+    cumul_value_ref<T> operator*() { return cumul_value_ref<T>(base_pointer<T>::ptr()); }
+    cumul_value_ref<T>* operator->() { return (cumul_value_ref<T>*)(this); }
+    cumul_value_ref<T> operator[](int i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
+    cumul_value_ref<T> operator[](long i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
+    cumul_value_ref<T> operator[](difference_type i) { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
     
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -898,7 +919,10 @@ namespace ka {
   template<typename UserType=void> struct WP {};
   template<typename UserType=void> struct W {};
   template<typename UserType=void> struct RW {};
-  
+  template<typename UserType=void, typename OpCumul = DefaultAdd<UserType> > struct CW {};
+  template<typename UserType=void> struct CWP {};
+
+
   // --------------------------------------------------------------------
   /** Trait to encode operations / types required to spawn task
        *  TraitFormalParam<T>::type_t gives type of the underlaying C++ object. If not pointer, this is T
@@ -933,10 +957,11 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_inclosure_t); }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -949,9 +974,11 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-    static size_t            get_nparam  ( const type_inclosure_t* a ) { return 1; }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_inclosure_t); }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -964,9 +991,11 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_inclosure_t); }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -979,9 +1008,10 @@ namespace ka {
     static const bool        is_static = TraitIsStatic<T>::value;
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
-//    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
-//    static void              set_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -992,9 +1022,10 @@ namespace ka {
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
-//    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
-//    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
-//    static size_t            get_nparam( const type_inclosure_t* a ) { return 1; }
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
   };
 
   template<typename T>
@@ -1005,9 +1036,10 @@ namespace ka {
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
-//    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
-//    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
-//    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
 //    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
 //    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
@@ -1023,8 +1055,10 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -1038,8 +1072,10 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -1053,8 +1089,10 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -1068,8 +1106,10 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -1083,8 +1123,10 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
   };
 
   template<typename T>
@@ -1098,8 +1140,48 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
+  };  
+
+ template<typename T, typename OP>
+  struct TraitFormalParam<pointer_cw<T,OP> > { 
+    typedef T                type_t; 
+    typedef CW<T,OP>         signature_t; 
+    typedef pointer_cw<T,OP> formal_t; 
+    typedef ACCESS_MODE_CW   mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void* result, const void* value) 
+    { T* r = static_cast<T*> (result); 
+      const T* v = static_cast<const T*> (value);
+      OP()(*r, *v);
+    }
+  };
+
+  template<typename T>
+  struct TraitFormalParam<pointer_cwp<T> > {
+    typedef T                type_t; 
+    typedef CWP<T>           signature_t; 
+    typedef pointer_cwp<T>   formal_t; 
+    typedef ACCESS_MODE_CWP  mode_t; 
+    typedef Access           type_inclosure_t; 
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
   };  
 
   template<typename T>
@@ -1114,27 +1196,363 @@ namespace ka {
   struct TraitFormalParam<RW<T> > : public TraitFormalParam<pointer_rw<T> > { };
   template<typename T>
   struct TraitFormalParam<RPWP<T> > : public TraitFormalParam<pointer_rpwp<T> > { };
+  template<typename T>
+  struct TraitFormalParam<CWP<T> > : public TraitFormalParam<pointer_cwp<T> > { };
+  template<typename T, typename OP>
+  struct TraitFormalParam<CW<T,OP> > : public TraitFormalParam<pointer_cw<T,OP> > { };
+
+
+  /* ------ rep of range of contiguous array of data: pointer_XX<array<dim, T> >
+  */
+  /* alias: ka::range1d<T> in place of array<1,T> */
+  template<typename T>
+  struct range1d : public array<1,T> {
+    range1d( T* beg, T* end ) : array<1,T>(beg, end-beg) {}
+    range1d( T* beg, size_t size ) : array<1,T>(beg, size ) {}
+  };
+
+  /* alias ka::range2d<T> in place of array<2,T> */
+  template<typename T>
+  struct range2d : public array<2,T> {
+    range2d( T* beg, size_t n, size_t m, size_t lda ) : array<2,T>(beg, n, m, lda ) {}
+  };
+
+#if 0
+  template<int dim, typename T>
+  struct rangetype_inclosure_t;
+
+  template<typename T>
+  struct rangetype_inclosure_t<1,T> {
+    rangetype_inclosure_t<1,T>( const array<1,T>& a ) 
+     : ptr((void*)a.ptr()), size(a.size()) 
+    {}
+    operator kaapi_access_t&() { return ptr; }
+    Access ptr;
+    size_t size;
+  };
+
+
+  template<typename T>
+  struct rangetype_inclosure_t<2,T> {
+    rangetype_inclosure_t<2,T>( const array<2,T>& a ) 
+     : ptr((void*)a.ptr()), n(a.dim(0)), m(a.dim(1)), lda(a.lda()) 
+    {}
+    operator kaapi_access_t&() { return ptr; }
+
+    Access ptr;
+    size_t n;
+    size_t m;
+    size_t lda;
+  };
+#endif
+
+  template<int dim, typename T>
+  struct array_inclosure_t : public array<dim,T> {
+    array_inclosure_t() : array<dim,T>(), version(0) {}
+    array_inclosure_t(const array<dim,T>& a) : array<dim,T>(a), version(0) {}
+    template<typename P>
+    array_inclosure_t( const P& p ) : array<dim,T>(p) {}
+    void* version;
+  };
+
+  /* ------ formal parameter of type _r, _w and _rw and rpwp over array */
+  template<int dim, typename T>
+  class pointer_r<array<dim,T> > : protected array<dim,T> {
+    friend class array_inclosure_t<dim,T>;
+  public:
+    typedef T      value_type;
+    typedef size_t difference_type;
+    typedef pointer_r<array<dim,T> > Self_t;
+
+    pointer_r() : array<dim,T>() {}
+    pointer_r( const array<dim,T>& a ) : array<dim,T>(a) {}
+    /* cstor call on closure creation */
+    explicit pointer_r( array_inclosure_t<dim,T>& a ) : array<dim,T>(a) {}
+    /* use in spawn effective -> in closure */
+    operator array_inclosure_t<dim,T>() const { return array_inclosure_t<dim,T>(*this); }
+    
+    /* public interface */
+    array<dim,T>& operator*() { return *this; }
+    T& operator[](int i)  { return array<dim,T>::operator[](i); }
+    T& operator[](long i) { return array<dim,T>::operator[](i); }
+    T& operator[](difference_type i) { return array<dim,T>::operator[](i); }
+    size_t size() const { return array<dim,T>::size(); }
+
+    const T* begin() const { return array<dim,T>::ptr(); }
+    const T* end() const { return array<dim,T>::ptr()+array<dim,T>::size(); }
+    Self_t operator[] (const rangeindex& r) const 
+    { return pointer_r( array<dim,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return pointer_r( array<dim,T>::operator()(r) ); }
+  };
+
+  /* alias: ka::range1d_r<T> in place of pointer_r<array<1,T> > */
+  template<typename T>
+  struct range1d_r : public pointer_r<array<1,T> > {
+    range1d_r( range1d<T>& a ) : pointer_r<array<1,T> >(a) {}
+    explicit range1d_r( array<1,T>& a ) : pointer_r<array<1,T> >(a) {}
+  };
+
+
+  template<int dim, typename T>
+  class pointer_w<array<dim,T> > : protected array<dim,T> {
+    friend class array_inclosure_t<dim,T>;
+  public:
+    typedef T                        value_type;
+    typedef size_t                   difference_type;
+    typedef pointer_w<array<dim,T> > Self_t;
+
+    pointer_w() : array<dim,T>() {}
+    pointer_w( const array_inclosure_t<dim,T>& a ) : array<dim,T>(a) {}
+    /* cstor call on closure creation */
+    explicit pointer_w( array<dim,T>& a ) : array<dim,T>(a) {}
+    /* use in spawn effective -> in closure */
+    operator array<dim,T>() const { return *this; }
+    
+    /* public interface */
+    array<dim,T>& operator*() { return *this; }
+    T& operator[](int i)  { return array<dim,T>::operator[](i); }
+    T& operator[](long i) { return array<dim,T>::operator[](i); }
+    T& operator[](difference_type i) { return array<dim,T>::operator[](i); }
+    size_t size() const { return array<dim,T>::size(); }
+
+    T* begin() { return array<dim,T>::ptr(); }
+    T* end() { return array<dim,T>::ptr()+array<dim,T>::size(); }
+    Self_t operator[] (const rangeindex& r) const 
+    { return pointer_w( array<dim,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return pointer_w( array<dim,T>::operator()(r) ); }
+  };
+
+  /* alias: ka::range1d_w<T> in place of pointer_w<array<1,T> > */
+  template<typename T>
+  struct range1d_w : public pointer_w<array<1,T> > {
+    range1d_w( range1d<T>& a ) : pointer_w<array<1,T> >(a) {}
+    explicit range1d_w( array<1,T>& a ) : pointer_w<array<1,T> >(a) {}
+  };
+
+
+  template<int dim, typename T>
+  class pointer_rw<array<dim,T> > : protected array<dim,T> {
+    friend class array_inclosure_t<dim,T>;
+  public:
+    typedef T                        value_type;
+    typedef size_t                   difference_type;
+    typedef pointer_rw<array<dim,T> > Self_t;
+
+    pointer_rw() : array<dim,T>() {}
+    pointer_rw( const array<dim,T>& a ) : array<dim,T>(a) {}
+    /* cstor call on closure creation */
+    explicit pointer_rw( array_inclosure_t<dim,T>& a ) : array<dim,T>(a) {}
+    /* use in spawn effective -> in closure */
+    operator array_inclosure_t<dim,T>() const { return array_inclosure_t<dim,T>(*this); }
+    
+    /* public interface */
+    array<dim,T>& operator*() { return *this; }
+    T& operator[](int i)  { return array<dim,T>::operator[](i); }
+    T& operator[](long i) { return array<dim,T>::operator[](i); }
+    T& operator[](difference_type i) { return array<dim,T>::operator[](i); }
+    size_t size() const { return array<dim,T>::size(); }
+
+    T* begin() { return array<dim,T>::ptr(); }
+    T* end() { return array<dim,T>::ptr()+array<dim,T>::size(); }
+    Self_t operator[] (const rangeindex& r) const 
+    { return pointer_rw( array<dim,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return pointer_rw( array<dim,T>::operator()(r) ); }
+  };
+
+  /* alias: ka::range1d_rw<T> in place of pointer_rw<array<1,T> > */
+  template<typename T>
+  struct range1d_rw : public pointer_rw<array<1,T> > {
+    range1d_rw( range1d<T>& a ) : pointer_rw<array<1,T> >(a) {}
+    explicit range1d_rw( array<1,T>& a ) : pointer_rw<array<1,T> >(a) {}
+  };
+
+
+  template<int dim, typename T>
+  class pointer_rpwp<array<dim,T> > : protected array<dim,T> {
+    friend class array_inclosure_t<dim,T>;
+  public:
+    typedef T                        value_type;
+    typedef size_t                   difference_type;
+    typedef pointer_rpwp<array<dim,T> > Self_t;
+
+    pointer_rpwp() : array<dim,T>() {}
+    pointer_rpwp( const array<dim,T>& a ) : array<dim,T>(a) {}
+    /* cstor call on closure creation */
+    explicit pointer_rpwp( array_inclosure_t<dim,T>& a ) : array<dim,T>(a) {}
+    /* use in spawn effective -> in closure */
+    operator array_inclosure_t<dim,T>() const { return array_inclosure_t<dim,T>(*this); }
+    
+    /* public interface */
+    array<dim,T>& operator*() { return *this; }
+    T& operator[](int i)  { return array<dim,T>::operator[](i); }
+    T& operator[](long i) { return array<dim,T>::operator[](i); }
+    T& operator[](difference_type i) { return array<dim,T>::operator[](i); }
+    size_t size() const { return array<dim,T>::size(); }
+
+    Self_t operator[] (const rangeindex& r) const 
+    { return pointer_rpwp( array<dim,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return pointer_rpwp( array<dim,T>::operator()(r) ); }
+  };
+
+  /* alias: ka::range1d_rpwp<T> in place of pointer_rw<array<1,T> > */
+  template<typename T>
+  struct range1d_rpwp : public pointer_rpwp<array<1,T> > {
+    range1d_rpwp( range1d<T>& a ) : pointer_rpwp<array<1,T> >(a) {}
+    explicit range1d_rpwp( array<1,T>& a ) : pointer_rpwp<array<1,T> >(a) {}
+  };
+
+  
+  template<int dim, typename T>
+  struct TraitFormalParam<pointer_r<array<dim,T> > > { 
+    typedef array_inclosure_t<dim,T>  type_inclosure_t;
+    typedef R<array<dim,T> >          signature_t; 
+    typedef pointer_r<array<dim,T> >  formal_t; 
+    typedef ACCESS_MODE_R             mode_t; 
+    typedef T                         type_t;
+    static const bool                 is_static = false;
+    static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
+    static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = a->ptr(); r->version = a->version; }
+    static void                       set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { a->setptr( (T*)r->data ); a->version = r->version; }
+    static size_t                     get_nparam( const type_inclosure_t* a ) 
+    { return 1; }
+    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
+    { return sizeof(type_t)*a->size(); }
+    static void                       reducor_fnc(void*, const void*) {}
+   };
+
+  template<int dim, typename T>
+  struct TraitFormalParam<pointer_w<array<dim,T> > > { 
+    typedef array_inclosure_t<dim,T>  type_inclosure_t;
+    typedef W<array<dim,T> >          signature_t; 
+    typedef pointer_w<array<dim,T> >  formal_t; 
+    typedef ACCESS_MODE_W             mode_t; 
+    typedef T                         type_t;
+    static const bool                 is_static = false;
+    static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
+    static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = a->ptr(); r->version = a->version; }
+    static void                       set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { a->setptr( (T*)r->data ); a->version = r->version; }
+    static size_t                     get_nparam( const type_inclosure_t* a ) 
+    { return 1; }
+    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
+    { return sizeof(type_t)*a->size(); }
+    static void                       reducor_fnc(void*, const void*) {}
+  };
+
+  template<int dim, typename T>
+  struct TraitFormalParam<pointer_rw<array<dim,T> > > { 
+    typedef array_inclosure_t<dim,T>  type_inclosure_t;
+    typedef RW<array<dim,T> >         signature_t; 
+    typedef pointer_rw<array<dim,T> > formal_t; 
+    typedef ACCESS_MODE_RW            mode_t; 
+    typedef T                         type_t;
+    static const bool                 is_static = false;
+    static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
+    static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = a->ptr(); r->version = a->version; }
+    static void                       set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { a->setptr( (T*)r->data ); a->version = r->version; }
+    static size_t                     get_nparam( const type_inclosure_t* a ) 
+    { return 1; }
+    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
+    { return sizeof(type_t)*a->size(); }
+    static void                       reducor_fnc(void*, const void*) {}
+  };   
+
+  template<int dim, typename T>
+  struct TraitFormalParam<pointer_rpwp<array<dim,T> > > { 
+    typedef array_inclosure_t<dim,T>  type_inclosure_t;
+    typedef RPWP<array<dim,T> >       signature_t; 
+    typedef pointer_rpwp<array<dim,T> > formal_t; 
+    typedef ACCESS_MODE_RPWP          mode_t; 
+    typedef T                         type_t;
+    static const bool                 is_static = false;
+    static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
+    static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = a->ptr(); r->version = a->version; }
+    static void                       set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { a->setptr( (T*)r->data ); a->version = r->version; }
+    static size_t                     get_nparam( const type_inclosure_t* a ) 
+    { return 1; }
+    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
+    { return sizeof(type_t)*a->size(); }
+    static void                       reducor_fnc(void*, const void*) {}
+  };   
+
+
+  template<int dim, typename T>
+  struct TraitFormalParam< R<array<dim,T> > > : public TraitFormalParam<pointer_r<array<dim,T> > > {};
+  template<int dim, typename T>
+  struct TraitFormalParam< W<array<dim,T> > > : public TraitFormalParam<pointer_w<array<dim,T> > > {};
+  template<int dim, typename T>
+  struct TraitFormalParam< RW<array<dim,T> > > : public TraitFormalParam<pointer_rw<array<dim,T> > > {};
+  
+  template<typename T>
+  struct TraitFormalParam<range1d<T> > : public TraitFormalParam<array<1,T> > { };
+  template<typename T>
+  struct TraitFormalParam<range1d_r<T> > : public TraitFormalParam<pointer_r<array<1,T> > > { 
+    typedef range1d_r<T>    formal_t; 
+    typedef R<range1d <T> > signature_t; 
+  };
+  template<typename T>
+  struct TraitFormalParam<range1d_w<T> > : public TraitFormalParam<pointer_w<array<1,T> > > {
+    typedef range1d_w<T>    formal_t; 
+    typedef W<range1d<T> >  signature_t; 
+  };
+  template<typename T>
+  struct TraitFormalParam<range1d_rw<T> > : public TraitFormalParam<pointer_rw<array<1,T> > > {
+    typedef range1d_rw<T>   formal_t; 
+    typedef RW<range1d<T> > signature_t; 
+  };
+  template<typename T>
+  struct TraitFormalParam< R<range1d<T> > > : public TraitFormalParam<range1d_r<T> > {};
+  template<typename T>
+  struct TraitFormalParam< W<range1d<T> > > : public TraitFormalParam<range1d_w<T> > {};
+  template<typename T>
+  struct TraitFormalParam< RW<range1d<T> > > : public TraitFormalParam<range1d_rw<T> > {};
 
 
   /* ------ rep of array into a closure      
   */
   template<int dim, typename T>
-  struct arraytype_inclosure_t {
-    arraytype_inclosure_t( const array<dim, T>& a ) : _range(a.slice()), _data(a), _version() {}
-    operator const range&() const { return _range; }
-    range             _range;
-    array_rep<dim,T>  _data;
-    array_rep<dim,T*> _version; /* only used if the task is stolen */
+  struct arraytype_inclosure_t;
+
+  template<typename T>
+  struct arraytype_inclosure_t<1,T> {
+    arraytype_inclosure_t<1,T>( const array<1, T>& a ) : _data(a), _version() {}
+
+    int size() const { return _data.size(); }
+
+    array_rep<1,T>              _data;
+    array_rep<1,T*>             _version; /* only used if the task is stolen */
   private:
-    arraytype_inclosure_t() {}
+    arraytype_inclosure_t<1,T>() {}
+  };
+
+  template<typename T>
+  struct arraytype_inclosure_t<2,T> {
+    arraytype_inclosure_t<2,T>( const array<2, T>& a ) : _data(a), _version() { }
+    size_t size() const { return _data.dim(0)*_data.dim(1); }
+
+    array_rep<2,T>              _data;
+    array_rep<2,T*>             _version; /* only used if the task is stolen */
+  private:
+    arraytype_inclosure_t<2,T>() {}
   };
 
   /* ------ specialisation of representation of array */
   template<typename T>
-  class array_rep_with_write {
+  class array1d_rep_with_write {
   public:
-    typedef range::index_t index_t;
-    typedef T*             pointer_t;
+    typedef base_array::index_t index_t;
+    typedef T*                  pointer_t;
 
     class reference_t {
     public:
@@ -1153,9 +1571,14 @@ namespace ka {
     };
 
     /** */
-    array_rep_with_write() : _data(0) {}
+    array1d_rep_with_write() : _data(0) {}
     /** */
-    array_rep_with_write(T* ptr) : _data(ptr) {}
+    array1d_rep_with_write(T* ptr, size_t size) : _data(ptr), _size(size) {}
+
+    /** */
+    int size() const
+    { return _size; }
+
     /** */
     reference_t operator[](index_t i)
     { return reference_t(_data[i]); }
@@ -1169,21 +1592,27 @@ namespace ka {
     pointer_t shift_base(index_t shift) 
     { return _data+shift; }
   protected:
-    T* _data;
+    T*  _data;
+    int _size;
   };
 
   template<typename T>
-  class array_rep_with_read {
+  class array1d_rep_with_read {
   public:
-    typedef range::index_t index_t;
-    typedef T*             pointer_t;
-    typedef const T&       const_reference_t;
-    typedef const T&       reference_t;
+    typedef base_array::index_t index_t;
+    typedef T*                  pointer_t;
+    typedef const T&            const_reference_t;
+    typedef const T&            reference_t;
 
     /** */
-    array_rep_with_read() : _data(0) {}
+    array1d_rep_with_read() : _data(0) {}
     /** */
-    array_rep_with_read(T* ptr) : _data(ptr) {}
+    array1d_rep_with_read(T* ptr, size_t size) : _data(ptr), _size(size) {}
+
+    /** */
+    int size() const
+    { return _size; }
+
     /** */
     const_reference_t operator[](index_t i)
     { return _data[i]; }
@@ -1200,15 +1629,16 @@ namespace ka {
     pointer_t shift_base(index_t shift) 
     { return _data+shift; }
   protected:
-    T* _data;
+    T*  _data;
+    int _size;
   };
 
   /* ------ specialisation of representation of array */
   template<typename T>
-  class array_rep_with_readwrite {
+  class array1d_rep_with_readwrite {
   public:
-    typedef range::index_t index_t;
-    typedef T*             pointer_t;
+    typedef base_array::index_t index_t;
+    typedef T*                  pointer_t;
 
     class reference_t {
     public:
@@ -1216,6 +1646,7 @@ namespace ka {
       reference_t operator=( const T& v )
       { ref = v; return *this; }
       operator T&() { return ref; }
+      T* operator ->() { return &ref; }
     private:
       T& ref;
     };
@@ -1229,9 +1660,13 @@ namespace ka {
     };
 
     /** */
-    array_rep_with_readwrite() : _data(0) {}
+    int size() const
+    { return _size; }
+
     /** */
-    array_rep_with_readwrite(T* ptr) : _data(ptr) {}
+    array1d_rep_with_readwrite() : _data(0), _size(size) {}
+    /** */
+    array1d_rep_with_readwrite(T* ptr, size_t size) : _data(ptr), _size(size) {}
     /** */
     reference_t operator[](index_t i)
     { return reference_t(_data[i]); }
@@ -1248,35 +1683,36 @@ namespace ka {
     pointer_t shift_base(index_t shift) 
     { return _data+shift; }
   protected:
-    T* _data;
+    T*  _data;
+    int _size;
   };
   
   /* specialisation of array representation */
-  template<int dim, typename T>
-  class array_rep<dim,pointer_r<T> > : public array_rep_with_read<T> {
+  template<typename T>
+  class array_rep<1,pointer_r<T> > : public array1d_rep_with_read<T> {
   public:
-    array_rep<dim, pointer_r<T> >( arraytype_inclosure_t<dim,T>& arg_clo )
-     : array_rep_with_read<T>( arg_clo._data.shift_base(0) ) 
+    array_rep<1,pointer_r<T> >( arraytype_inclosure_t<1,T>& arg_clo )
+     : array1d_rep_with_read<T>( arg_clo._data.ptr(), arg_clo._data.size() ) 
     {
     }
   };
 
   /* specialisation of array representation */
-  template<int dim, typename T>
-  class array_rep<dim,pointer_w<T> > : public array_rep_with_write<T> {
+  template<typename T>
+  class array_rep<1,pointer_w<T> > : public array1d_rep_with_write<T> {
   public:    
-    array_rep<dim, pointer_w<T> >( arraytype_inclosure_t<dim,T>& arg_clo )
-     : array_rep_with_write<T>( arg_clo._data.shift_base(0) ) 
+    array_rep<1,pointer_w<T> >( arraytype_inclosure_t<1,T>& arg_clo )
+     : array1d_rep_with_write<T>( arg_clo._data.ptr(), arg_clo._data.size() ) 
     {
     }
   };
 
   /* specialisation of array representation */
-  template<int dim, typename T>
-  class array_rep<dim,pointer_rw<T> > : public array_rep_with_readwrite<T> {
+  template<typename T>
+  class array_rep<1,pointer_rw<T> > : public array1d_rep_with_readwrite<T> {
   public:    
-    array_rep<dim, pointer_rw<T> >( arraytype_inclosure_t<dim,T>& arg_clo )
-     : array_rep_with_readwrite<T>( arg_clo._data.shift_base(0) ) 
+    array_rep<1,pointer_rw<T> >( arraytype_inclosure_t<1,T>& arg_clo )
+     : array1d_rep_with_readwrite<T>( arg_clo._data.ptr(), arg_clo._data.size() ) 
     {
     }
   };
@@ -1296,7 +1732,7 @@ namespace ka {
     typedef ACCESS_MODE_RPWP   mode_t; 
     typedef T                  type_t;
     static const bool          is_static = false;
-    static size_t              get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
+    static size_t              get_nparam( const type_inclosure_t* a ) { return a->size(); }
   };
 
   template<int dim, typename T>
@@ -1316,7 +1752,10 @@ namespace ka {
         a->_data[i] = *(type_t*)r->data; 
       a->_version[i] = (type_t*)r->version; 
     }
-    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
+    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->size(); }
+    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
+    { return TraitFormalParam<type_t>::get_size_param( &a->_data[i], 0); }
+    static void                       reducor_fnc(void*, const void*) {}
    };
 
   template<int dim, typename T>
@@ -1336,7 +1775,10 @@ namespace ka {
         a->_data[i] = *(type_t*)r->data; 
       a->_version[i] = (type_t*)r->version; 
     }
-    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->_range.size(); }
+    static size_t                     get_nparam( const type_inclosure_t* a ) { return a->size(); }
+    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
+    { return TraitFormalParam<type_t>::get_size_param( &a->_data[i], 0); }
+    static void                       reducor_fnc(void*, const void*) {}
   };
 
   template<int dim, typename T>
@@ -1356,8 +1798,11 @@ namespace ka {
         a->_data[i] = *(type_t*)r->data; 
       a->_version[i] = (type_t*)r->version; 
     }
-    static size_t                     get_nparam ( const type_inclosure_t* a ) { return a->_range.size(); }
-  };  
+    static size_t                     get_nparam ( const type_inclosure_t* a ) { return a->size(); }
+    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
+    { return TraitFormalParam<type_t>::get_size_param( &a->_data[i], 0); }
+    static void                       reducor_fnc(void*, const void*) {}
+  };   
 
 
   template<int dim, typename T>
@@ -1366,16 +1811,7 @@ namespace ka {
   struct TraitFormalParam<array<dim, W<T> > > : public TraitFormalParam<array<dim, pointer_w<T> > > {};
   template<int dim, typename T>
   struct TraitFormalParam<array<dim, RW<T> > > : public TraitFormalParam<array<dim, pointer_rw<T> > > {};
-
-  template<typename UserType>
-  struct DefaultAdd {
-    void operator()( UserType& result, const UserType& value ) const
-    { result += value; }
-  };
   
-  template<typename UserType=void/*, class OpCumul = DefaultAdd<UserType>*/ > struct CWP {};
-  template<typename UserType=void/*, class OpCumul = DefaultAdd<UserType>*/ > struct CW {};
-
   /* ------ */
 //  template<typename UserType>
 //  template<typename T>
@@ -1412,17 +1848,19 @@ namespace ka {
   {
   };
 
-
+  /* used to initialize representation into a closure from effective parameter */
   template<class E, class F, class InClosure>
   struct ConvertEffective2InClosure {
     static void doit(InClosure* inclo, const E& e) { new (inclo) InClosure(e); }
   };
 
+#if 0
   template<class F, int dim, class T>
   struct ConvertEffective2InClosure<array<dim,T>, F, Access> {
     static void doit(Access* inclo, const array<dim,T>& e) 
     { new (inclo) Access(&e); }
   };
+#endif
 
 //  template<class E, class F, class InClosure>
 //  void ConvertEffective2InClosure(InClosure* inclo, const E* e) { new (inclo) InClosure(*e); };

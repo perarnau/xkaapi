@@ -42,6 +42,7 @@
  ** 
  */
 #include "kaapi_impl.h"
+#include "kaapi_staticsched.h"
 
 /* ........................................ Implementation notes ........................................*/
 /* Each time a task is forked on a partition, the kaapi_threadgroup_computedependencies method is called
@@ -85,7 +86,7 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
 {
   kaapi_hashentries_t* entry;
   kaapi_version_t* ver;
-  entry = kaapi_hashmap_insert(&thgrp->ws_khm, access->data);
+  entry = kaapi_hashmap_insert( &thgrp->ws_khm, access->data );
    
   /* here a stack allocation attached with the thread group */
   ver = entry->u.dfginfo = kaapi_versionallocator_allocate( &thgrp->ver_allocator );
@@ -95,7 +96,7 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   ver->writer_thread = -1; /* main thread */
   ver->original_data = ver->writer_data = access->data;
   ver->com = 0;
-  memset( &ver->readers, 0, sizeof(ver->readers));
+  memset( &ver->readerslist, 0, sizeof(ver->readerslist));
   ver->cnt_readers = 0;
   return entry;
 }
@@ -121,6 +122,7 @@ void kaapi_threadgroup_version_addfirstreader(
   entry->task = task;
 }
 
+
 /*
 */
 void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t* ver )
@@ -142,9 +144,9 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
 {
   kaapi_taskbcast_arg_t* argbcast =0;
   kaapi_task_t* taskbcast;
-  kaapi_thread_t* writer_thread;
-  
-  kaapi_assert( tid < KAAPI_MAX_PARTITION );
+  kaapi_thread_t* writer_thread = 0;
+  kaapi_part_datainfo_t* kpdi;
+
   kaapi_assert( -1 <= tid );
 
   /* initialize the writer data structure if it not on the same partition (else only
@@ -235,13 +237,12 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
         argbcast->last       = ver->com;
         ver->com->a          = *access;
       }
-//      ver->com->tag        = ver->tag;
     }
   }
 
-
-  /* if already has a reader do nothing also if, else update the reader information */    
-  if (!ver->readers[tid].used)
+  /* if already has a reader do nothing, else update the reader information */
+  kpdi = kaapi_version_reader_find_insert_tid( thgrp, ver, tid );
+  if (!kpdi->reader.used)
   {
     kaapi_thread_t* thread = kaapi_threadgroup_thread( thgrp, tid );
 
@@ -264,11 +265,11 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       ++argrecv->original_counter;
       KAAPI_THREADGROUP_SETRECVPARAM( argrecv, ith );
         
-      if (ver->readers[tid].addr ==0)
-        ver->readers[tid].addr = ver->delete_data[tid];
-      if (ver->readers[tid].addr == 0)
-        ver->readers[tid].addr = ver->writer_data;
-      kaapi_assert (ver->readers[tid].addr != 0);
+      if (kpdi->reader.addr ==0)
+        kpdi->reader.addr = kpdi->delete_data;
+      if (kpdi->reader.addr == 0)
+        kpdi->reader.addr = ver->writer_data;
+      kaapi_assert (kpdi->reader.addr != 0);
       
       /* The task is waiting for a parameter -> suspend state */
 
@@ -279,33 +280,38 @@ kaapi_task_t* kaapi_threadgroup_version_newreader(
       kaapi_task_setstate(task, kaapi_task_state_setsteal( kaapi_task_body2state(kaapi_taskrecv_body) ) );
 #endif
 
-      kaapi_assert(ver->com->size <= KAAPI_BCASTENTRY_SIZE);
       if (ver->com->tag ==0) ver->com->tag = ++thgrp->tag_count;
-      ver->com->entry[ver->com->size].tid  = tid;
-      ver->com->entry[ver->com->size].task = task;
+      kaapi_comentry_t* readerentry = kaapi_thread_pushdata(writer_thread, sizeof(kaapi_comentry_t) );
+      kaapi_assert_m(readerentry !=0,"cannot allocated new reader");
+      readerentry->tid  = tid;
+      readerentry->task = task;
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
-      ver->com->entry[ver->com->size].addr = ver->readers[tid].addr;
+      readerentry->addr = kpdi->reader.addr;
 #else
-      ver->com->entry[ver->com->size].addr = access->data;
-#endif      
-      ver->com->entry[ver->com->size].size = data_size;
+      readerentry->addr = access->data;
+#endif
+      readerentry->size = data_size;
+      //printf("New comentry: %p\n", (void*)readerentry ); fflush(stdout);
+
+      /* link it */
+      readerentry->next = ver->com->entry;
+      ver->com->entry   = readerentry;
 
       ++ver->com->size;
     }
     else 
     { /* on the same partition, only store the task info about who is reading the data */
-      ver->readers[tid].addr = ver->writer_data;
+      kpdi->reader.addr = ver->writer_data;
     }
-      
-    
+
     /* WARNING here the data should be allocated in the THREAD if we want to avoid WAR */
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
-    access->data = ver->readers[tid].addr;
+    access->data = kpdi->reader.addr;
 #else
-    access->data = ver->readers[tid].addr = ver->writer_data;
+    access->data = kpdi->reader.addr = ver->writer_data;
 #endif
-    ver->readers[tid].task = task;
-    ver->readers[tid].used = 1;
+    kpdi->reader.task = task;
+    kpdi->reader.used = 1;
     ++ver->cnt_readers;
   }
   else {
@@ -327,7 +333,6 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     int ith
 )
 {
-  kaapi_assert( tid < KAAPI_MAX_PARTITION );
   kaapi_assert( -1 <= tid );
 
   /* an entry alread exist: 
@@ -342,7 +347,7 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
   */
   if (ver->writer_task == 0)
   { /* this is the first writer or a reader exist on -1 */
-    kaapi_assert( (ver->cnt_readers == 0) || (ver->readers - 1)->used);
+    kaapi_assert( (ver->cnt_readers == 0) || kaapi_version_hasreader_tid(ver, -1)); 
     ver->writer_data   = access->data;
     ver->writer_task   = task;
     ver->writer_thread = tid;
@@ -354,37 +359,40 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
          * update the writer information, reset the list of readers
     */
     /* print a warning about WAR dependencies */
-    int war = (ver->cnt_readers>1) || !(ver->readers[tid].used);
+    kaapi_part_datainfo_t* kpdi = kaapi_version_reader_find_tid(ver, tid);
+    int war = (ver->cnt_readers>1) || !kpdi->reader.used;
     if (war)
     {
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
 //      printf("***Not yet implemented WAR dependency on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
-      fflush( stdout );
-#else
-//      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
 //      fflush( stdout );
+#else
+      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
+      fflush( stdout );
 #endif
     }
 
-    /* mark data on each partition deleted */
-    int i, r;
-    for (i=-1, r=0; r < ver->cnt_readers; ++i)
+    /* for all readers, mark data on each partition has deleted and store its address */
+    kaapi_part_datainfo_t* curr = ver->readerslist;
+    while (curr != 0)
     {
-      if (ver->readers[i].used)
+      if (curr->reader.used)
       {
-        if (ver->readers[i].addr != ver->original_data)
-          ver->delete_data[i] = ver->readers[i].addr;
-        ver->readers[i].addr = 0;
-        ++r;
-        ver->readers[i].used = 0;
+        if (curr->reader.addr != ver->original_data)
+          curr->delete_data = curr->reader.addr;
+        curr->reader.addr = 0;
+        curr->reader.used = 0;
       }
-      else ver->delete_data[i] = 0;
+      else curr->delete_data = 0;
+      
+      curr = curr->next;
     }
     ver->cnt_readers =0;
-    
-    if (ver->delete_data[tid] !=0)
+        
+    /* re-use data if it was delete in partition tid */
+    if (kpdi->delete_data !=0)
     {
-      ver->writer_data = access->data = ver->delete_data[tid];
+      ver->writer_data = access->data = kpdi->delete_data;
     }
     else {
 #if defined(KAAPI_STATIC_HANDLE_WARWAW)
@@ -411,5 +419,39 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
   }
   
   return task;
+}
+
+
+/*
+*/
+kaapi_part_datainfo_t* kaapi_version_reader_find_tid( const kaapi_version_t* v, int tid )
+{
+  kaapi_part_datainfo_t* curr = v->readerslist;
+  while (curr !=0)
+  {
+    if (curr->tid == tid) return curr;
+    curr = curr->next;
+  }
+  return curr;
+}
+
+
+/*
+*/
+kaapi_part_datainfo_t* kaapi_version_reader_find_insert_tid( kaapi_threadgroup_t thgrp, kaapi_version_t* v, int tid )
+{
+  kaapi_part_datainfo_t* curr = v->readerslist;
+  while (curr !=0)
+  {
+    if (curr->tid == tid) return curr;
+    curr = curr->next;
+  }
+  curr = kaapi_part_datainfo_allocate(thgrp); /* allocate into the group */
+  curr->tid = tid;
+  
+  /* link */
+  curr->next = v->readerslist;
+  v->readerslist = curr;
+  return curr;
 }
 

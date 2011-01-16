@@ -84,7 +84,8 @@ static size_t kaapi_task_computeready(
        )
     {
       --wc;
-      if (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
+      if (  (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
+         || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) )
         *war_param |= 1<<i;
     }
     /* optimization: break from enclosest loop here */

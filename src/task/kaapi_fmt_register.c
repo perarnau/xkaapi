@@ -76,19 +76,11 @@ kaapi_format_id_t kaapi_format_register(
   uint8_t        entry;
   kaapi_format_t* head;
 
+  memset( fmt, 0, sizeof(kaapi_format_t) );
   fmt->fmtid = kaapi_hash_value( name );
-  fmt->isinit       = 0;
   fmt->name         = name; /* TODO: strdup ? */
-  fmt->_count_params = 0;
-  fmt->_mode_params  = 0;
-  fmt->_off_params   = 0;  
-  fmt->_fmt_params   = 0;
-  fmt->size         = 0;
   fmt->isinit       = 1;
 
-  /* no register it into hashmap: body -> fmt */
-  fmt->next_bybody = 0;
-  
   /* register it into hashmap: fmtid -> fmt */
   entry = (uint8_t) (fmt->fmtid & (kaapi_format_id_t)0xFFUL);
   head =  kaapi_all_format_byfmtid[entry];
