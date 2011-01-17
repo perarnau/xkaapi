@@ -5,7 +5,7 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-ITER_PRGS=array1_kaapi++ array2_kaapi++ array3_kaapi++ range1_kaapi++
+ITER_PRGS=array1_kaapi++ array2_kaapi++ array3_kaapi++ range1_kaapi++ range3_kaapi++ range4_kaapi++
 check_PROGRAMS+=$(ITER_PRGS)
 all-hello: $(ITER_PRGS)
 
@@ -13,6 +13,8 @@ array1_kaapi___SOURCES=array/array1_kaapi++.cpp
 array2_kaapi___SOURCES=array/array2_kaapi++.cpp
 array3_kaapi___SOURCES=array/array3_kaapi++.cpp
 range1_kaapi___SOURCES=array/range1_kaapi++.cpp
+range3_kaapi___SOURCES=array/range3_kaapi++.cpp
+range4_kaapi___SOURCES=array/range4_kaapi++.cpp
 
 array1_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 array1_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
@@ -33,4 +35,14 @@ range1_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 range1_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 range1_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 range1_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+range3_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+range3_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+range3_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+range3_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+range4_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+range4_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+range4_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+range4_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
