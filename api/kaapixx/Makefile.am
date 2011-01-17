@@ -72,6 +72,7 @@ libkaapi___la_SOURCES=\
 	ka_parser.cpp \
 	ka_api_format.cpp \
 	ka_api_kaapi.cpp \
+	ka_api_array.cpp \
 	ka_component.h \
 	ka_debug.h \
 	ka_error.h \
