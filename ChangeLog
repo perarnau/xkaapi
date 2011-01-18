@@ -1,4 +1,4 @@
-Version 1.0rc2
+Version 1.0rc3
 ==============
 Fabien Le Mentec (65):
       [fix] cpuset parsing error due to changed semantic.
@@ -260,7 +260,6 @@ Vincent Danjean (32):
       [examples] comment-out unused examples in *.am files
       [examples] fix includes when using std::for_each
       [release] update ChangeLog and bump version
-
 
 Version 1.0rc2
 ==============
