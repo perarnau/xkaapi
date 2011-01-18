@@ -37,3 +37,15 @@ unsigned char MeshIndex3D::const_z_iterator::table2[] =
     2, 2, 2, 2, 3, 3, 3, 3
 };
 
+const MeshIndex3D::point MeshIndex3D::directions[6]
+ = {
+  point(-1,0,0),
+  point(1,0,0),
+  point(0,-1,0),
+  point(0,1,0),
+  point(0,0,-1),
+  point(0,0,1)
+};
+
+
+

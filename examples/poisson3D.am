@@ -6,7 +6,7 @@
 ##
 
 if KAAPI_API_KAAPIXX
-POISSON3D_PRGS=poisson3d_kaapi++
+POISSON3D_PRGS=poisson3d_kaapi++ poisson3d_seq
 endif
 
 check_PROGRAMS+=$(POISSON3D_PRGS)
@@ -17,8 +17,16 @@ poisson3d_kaapi___SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h \
         poisson3D/poisson3d_kaapi++.cpp poisson3D/poisson3d.cpp \
         poisson3D/poisson3diter.cpp
 
+poisson3d_seq_SOURCES=poisson3D/poisson3d.h poisson3D/poisson3diter.h \
+        poisson3D/poisson3d_seq.cpp poisson3D/poisson3d.cpp
+
 poisson3d_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 poisson3d_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 poisson3d_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 poisson3d_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+poisson3d_seq_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+poisson3d_seq_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+poisson3d_seq_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+poisson3d_seq_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 

@@ -59,6 +59,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
   kaapi_vector_init( &thgrp->ws_vect_input, 0 );
   kaapi_versionallocator_init( &thgrp->ver_allocator );
+  kaapi_part_datainfo_allocator_init( &thgrp->part_datainfo_allocator );
   
   /* same the main thread frame to restore it at the end of parallel computation */
   kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
@@ -93,17 +94,20 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
     return EINVAL;
   kaapi_task_t* task;
   
-  /* for all threads add a signalend task */
+  /* for all threads add a signalend task in order to signal end of iteration 
+     and to detach the thread.
+  */
   for (int i=0; i<thgrp->group_size; ++i)
   {
     task = kaapi_thread_toptask( thgrp->threads[i] );
-    kaapi_task_init(task, kaapi_tasksignalend_body, thgrp );
+    kaapi_task_init_with_state( task, kaapi_tasksignalend_body, KAAPI_MASK_BODY_TERM, thgrp );
     kaapi_thread_pushtask(thgrp->threads[i]);    
   }
   
   /* free hash map entries: they are destroy by destruction of the version allocator */
   kaapi_hashmap_destroy( &thgrp->ws_khm );
   kaapi_versionallocator_destroy( &thgrp->ver_allocator );
+  kaapi_part_datainfo_allocator_destroy( &thgrp->part_datainfo_allocator );
 
   kaapi_mem_barrier();
   

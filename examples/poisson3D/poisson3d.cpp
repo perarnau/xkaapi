@@ -425,15 +425,15 @@ void SubDomain::swap( SubDomain& sd )
   unsigned int tmp_nx = sd._nx;
   unsigned int tmp_ny = sd._ny;
   unsigned int tmp_nz = sd._nz;
-  double* tmp_data = sd._data;
-  sd._nx = _nx;
-  sd._ny = _ny;
-  sd._nz = _nz;
+  double* tmp_data    = sd._data;
+  sd._nx   = _nx;
+  sd._ny   = _ny;
+  sd._nz   = _nz;
   sd._data = _data;  
-  _nx = tmp_nx;
-  _ny = tmp_ny;
-  _nz = tmp_nz;
-  _data = tmp_data;
+  _nx      = tmp_nx;
+  _ny      = tmp_ny;
+  _nz      = tmp_nz;
+  _data    = tmp_data;
 }
 
 double SubDomain::compute_residue_and_swap( const SubDomain& new_sd, const SubDomain& frhs )
@@ -460,6 +460,19 @@ double SubDomain::compute_error( const SubDomain& solution ) const
       for ( unsigned int z = 0 ; z < _nz ; ++z )
         error = std::max( error, fabs( (*this)(x,y,z) - solution(x,y,z) ) );
   return error;
+}
+
+void SubDomain::print(std::ostream& cout ) const
+{
+  for ( unsigned int z = 0 ; z < _nz ; ++z )
+  {
+    for ( unsigned int x = 0 ; x < _nx ; ++x )
+    {
+      for ( unsigned int y = 0 ; y < _ny ; ++y )
+        cout << (*this)(x,y,z) << '\t';
+      cout << std::endl;
+    }
+  }
 }
 
 //------------------------------------------------------------

@@ -98,7 +98,7 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp;
   kaapi_task_body_t          body;
-  uintptr_t	             state;
+  uintptr_t	                 state;
   kaapi_frame_t*             eframe = thread->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
@@ -165,6 +165,7 @@ push_frame:
 
       /* here... */
       body( pc->sp, (kaapi_thread_t*)thread->sfp );
+//      printf("e:%p\n", (void*)pc); fflush(stdout);
     }
     else
     { 
@@ -184,7 +185,16 @@ push_frame:
         kaapi_assert_debug( kaapi_task_state_issteal( state ) );
         kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
       }
-      else if ( kaapi_task_state_isterm( state ) ){
+      else if ( kaapi_task_state_isterm( state ) )
+      {
+#if defined(KAAPI_USE_STATICSCHED)
+        body = kaapi_task_getbody(pc);
+        if (body == kaapi_tasksignalend_body) 
+        {
+          kaapi_tasksignalend_body(pc->sp, (kaapi_thread_t*)thread->sfp );
+          return EINTR;
+        }
+#endif        
         /* means that task has been steal */
         kaapi_assert_debug( kaapi_task_state_issteal( state ) );
       }
@@ -193,6 +203,9 @@ push_frame:
 //        printf("Suspend thread: %p on pc:%p\n", thread, pc );
 //        fflush(stdout);
         goto error_swap_body;
+      }
+      else {
+        kaapi_assert_debug(0);
       }
     }
 #if defined(KAAPI_DEBUG)

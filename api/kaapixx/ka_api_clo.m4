@@ -95,13 +95,14 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS) {};
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')> {
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>') TaskArg_t;
-
+  M4_PARAM(`typedef typename TraitFormalParam$1::formal_t formal$1_t;
+  ', ` ', `')
   //
   static TaskBodyGPU<TASK> dummy;
   static void body(void* taskarg, kaapi_gpustream_t gpustream)
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
-    dummy( M4_PARAM(`args->f$1', `', `,'));
+    dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
@@ -113,13 +114,14 @@ TaskBodyGPU<TASK>  KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')> {
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>') TaskArg_t;
-
+  M4_PARAM(`typedef typename TraitFormalParam$1::formal_t formal$1_t;
+  ', ` ', `')
   // with stack parameters
   static TaskBodyGPU<TASK> dummy;
   static void body(void* taskarg, kaapi_gpustream_t gpustream)
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
-    dummy( (gpuStream)gpustream M4_PARAM(`, args->f$1', `', `'));
+    dummy( (gpuStream)gpustream M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
@@ -149,6 +151,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_version[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static size_t                array_size[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_reducor_t       array_reducor[KAAPI_NUMBER_PARAMS];')
     TaskArg_t* dummy =0;
     M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)TraitFormalParam$1::mode_t::value;
     ',`', `')
@@ -160,6 +163,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ',`', `')
     M4_PARAM(`array_size[$1-1] = 0;
     ',`', `')
+    M4_PARAM(`array_reducor[$1-1] = &TraitFormalParam$1::reducor_fnc;
+    ',`', `')
     static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
     static FormatTask task_fmt( 
           task_name,
@@ -169,7 +174,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_data'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_version'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format'),
-          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_size')
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_size'),
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_reducor')
     );
       
     return task_fmt.get_c_format();
@@ -209,7 +215,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
   
   static void* get_off_param(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
   {
-    const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
+    TaskArg_t* taskarg = static_cast<TaskArg_t*>((void*)_taskarg);
     size_t countp __attribute__((unused)) = 0, count __attribute__((unused)) = 0;
    M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
     if (ith < count) return (void*)TraitFormalParam$1::get_data(&taskarg->f$1, ith-countp);
@@ -221,7 +227,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
 
   static kaapi_access_t get_access_param(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
   {
-    kaapi_access_t retval;
+    kaapi_access_t retval = {0, 0};
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
     size_t countp __attribute__((unused)) = 0, count __attribute__((unused)) = 0;
    M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
@@ -269,10 +275,20 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
     size_t count __attribute__((unused)) = 0;
    M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
-//    if (ith < count) return TraitFormalParam$1::get_size_param(&taskarg->f$1, ith);
+    if (ith < count) return TraitFormalParam$1::get_size_param(&taskarg->f$1, ith);
     ', ` ', `
     ')
     return 0;
+  }
+
+  static void reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg, void* result, const void* value)
+  {
+    const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
+    size_t count __attribute__((unused)) = 0;
+   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
+    if (ith < count) { TraitFormalParam$1::reducor_fnc(result, value); return; }
+    ', ` ', `
+    ')
   }
 
   static kaapi_format_t* registerformat()
@@ -288,7 +304,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
           &get_access_param,
           &set_access_param,
           &get_fmt_param,
-          &get_size_param
+          &get_size_param,
+          &reducor
     );
       
     return task_fmt.get_c_format();

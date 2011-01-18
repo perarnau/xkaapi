@@ -1,13 +1,12 @@
 /*
-** kaapi_cuda.h
+** xkaapi
 ** 
-** Created on Jun 23
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,14 +41,13 @@
 ** terms.
 ** 
 */
+#include "kaapi++"
 
+namespace ka {
 
-#ifndef KAAPI_CUDA_REGISTER_PROCS_H_INCLUDED
-# define KAAPI_CUDA_REGISTER_PROCS_H_INCLUDED
+const base_array::range::CstorFull base_array::range::init_full;
 
+/** Full range */
+const base_array::range base_array::range::full( base_array::range::init_full );
 
-struct kaapi_procinfo_list;
-int kaapi_cuda_register_procs(struct kaapi_procinfo_list*);
-
-
-#endif /* ! KAAPI_CUDA_REGISTER_PROCS_H_INCLUDED */
+}

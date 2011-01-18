@@ -519,11 +519,12 @@ KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
   [cuda], [], [cuda.h], [cuDeviceGetProperties], [
 dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
+    HACK_USE_CUDA=yes
   ],
   [
   ],
   [])
-AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$KAAPI_USE_CUDA" = x"yes"])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$HACK_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 
 
@@ -616,7 +617,7 @@ dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
-dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [HWLOC])
 dnl ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])

@@ -112,9 +112,7 @@ int kaapi_setconcurrency(void)
 
   for (; kpi != 0; ++kid, kpi = kpi->next)
   {
-    /* here either kpi->kid was set due to KAAPI_CPUSET definition or use_affinity was not set */
-    kaapi_assert( (kpi->kid == kid) || (kaapi_default_param.use_affinity ==0) );
-    if (kaapi_default_param.use_affinity ==0)
+    if (kaapi_default_param.use_affinity == 0)
       kpi->kid = kid;
 
     if (kid != 0)

@@ -45,6 +45,42 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
+
+/* default functions */
+static size_t kaapi_format_default_get_count_params
+    (const struct kaapi_format_t* f, const void* p)
+{ return f->_count_params; }
+
+static kaapi_access_mode_t kaapi_format_default_get_mode_param
+    (const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return f->_mode_params[i]; }
+
+static void* kaapi_format_default_get_off_param
+    (const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return (void*)((uintptr_t)p + f->_off_params[i]); }
+
+static kaapi_access_t kaapi_format_default_get_access_param
+    (const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return *(kaapi_access_t*)((uintptr_t)p + f->_off_params[i]); }
+
+static void kaapi_format_default_set_access_param
+    (const struct kaapi_format_t* f, unsigned int i, void* p, const kaapi_access_t* a)
+{ *(kaapi_access_t*)((uintptr_t)p + f->_off_params[i]) = *a; }
+
+static const struct kaapi_format_t* kaapi_format_default_get_fmt_param
+    (const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return f->_fmt_params[i]; }
+
+static size_t kaapi_format_default_get_size_param
+    (const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return f->_size_params[i]; }
+
+
+static void kaapi_format_default_reduce_param 
+    (const struct kaapi_format_t* f, unsigned int i, const void* sp, void* result, const void* value)
+{ (*f->_reducor_params[i])(result, value); }
+
+
 /**
 */
 kaapi_format_id_t kaapi_format_taskregister_static( 
@@ -57,7 +93,8 @@ kaapi_format_id_t kaapi_format_taskregister_static(
         const kaapi_offset_t        offset_param[],
         const kaapi_offset_t        offset_version[],
         const kaapi_format_t*       fmt_param[],
-        const size_t                size_param[]
+        const size_t                size_param[],
+        const kaapi_reducor_t       reducor_param[]
 )
 {
   kaapi_format_register( fmt, name );
@@ -91,13 +128,22 @@ kaapi_format_id_t kaapi_format_taskregister_static(
     memcpy(fmt->_size_params, size_param, sizeof(size_t)*count );
   }
 
-  fmt->get_count_params=0;
-  fmt->get_mode_param  =0;
-  fmt->get_off_param   =0;
-  fmt->get_access_param=0;
-  fmt->set_access_param=0;
-  fmt->get_fmt_param   =0;
-  fmt->get_size_param  =0;
+  if (reducor_param !=0)
+  {
+    fmt->_reducor_params = malloc( sizeof(kaapi_reducor_t)*count );
+    kaapi_assert( fmt->_reducor_params !=0);
+    memcpy(fmt->_reducor_params, reducor_param, sizeof(kaapi_reducor_t)*count );
+  }
+
+  /* initialize to default functions */
+  fmt->get_count_params = kaapi_format_default_get_count_params;
+  fmt->get_mode_param   = kaapi_format_default_get_mode_param;
+  fmt->get_off_param    = kaapi_format_default_get_off_param;
+  fmt->get_access_param = kaapi_format_default_get_access_param;
+  fmt->set_access_param = kaapi_format_default_set_access_param;
+  fmt->get_fmt_param    = kaapi_format_default_get_fmt_param;
+  fmt->get_size_param   = kaapi_format_default_get_size_param;
+  fmt->reducor          = kaapi_format_default_reduce_param;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   

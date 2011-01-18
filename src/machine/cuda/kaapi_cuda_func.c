@@ -61,7 +61,7 @@ int kaapi_cuda_func_init(kaapi_cuda_func_t* fn)
 
 
 int kaapi_cuda_func_load_ptx
-  (kaapi_cuda_func_t* fn, const char* mpath, const char* fname)
+(kaapi_cuda_func_t* fn, const char* mpath, const char* fname)
 {
   CUresult res;
 
@@ -112,6 +112,25 @@ int kaapi_cuda_func_push_uint(kaapi_cuda_func_t* fn, unsigned int value)
   }
 
   fn->off += sizeof(unsigned int);
+
+  return 0;
+}
+
+
+int kaapi_cuda_func_push_float(kaapi_cuda_func_t* fn, float value)
+{
+  CUresult res;
+
+  ALIGN_UP(fn->off, __alignof(value));
+
+  res = cuParamSetf(fn->fu, fn->off, value);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuParamSetf", res);
+    return -1;
+  }
+
+  fn->off += sizeof(float);
 
   return 0;
 }

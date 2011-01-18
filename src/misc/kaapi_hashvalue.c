@@ -47,7 +47,9 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
-uint32_t kaapi_hash_value_len(const char* s, int len)
+/*
+*/
+uint32_t kaapi_hash_value_len(const char* s, size_t len)
 {
   /* oat */
 
@@ -67,6 +69,8 @@ uint32_t kaapi_hash_value_len(const char* s, int len)
   return h;
 }
 
+/*
+*/
 uint32_t kaapi_hash_value(const char* s)
 {
   if (*s == 0) return 0;

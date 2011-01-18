@@ -93,14 +93,15 @@ void kaapi_taskwrite_body(
         continue;
       }
 
-      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
+      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || KAAPI_ACCESS_IS_CUMULWRITE(mode_param))
       {
         fmt_param         = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
         access_param      = kaapi_format_get_access_param(fmt, i, orig_task_args); 
         copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args); 
 
-        /* write the new version */
+        /* write the value as the version */
         access_param.version = copy_access_param.data;
+        kaapi_format_set_access_param(fmt, i, orig_task_args, &access_param );
       }
     }
   }
@@ -120,7 +121,7 @@ void kaapi_taskwrite_body(
       kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
       if (kthread !=0)
       {
-      
+        kaapi_wsqueuectxt_finish_steal_cell(wcs);
 //    printf("Put thread %p, on myqueue: %li\n", (void*)thread, kproc->kid ); fflush(stdout);
         /* Ok, here we have theft the thread and no body else can steal it
            Signal the end of execution of forked task: 
@@ -198,11 +199,13 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   /**/
   war_param = arg->war_param;
   
+#if 0
   if (war_param)
   {
-    printf( "[tasksteal] exec task steal with WAR dependencies: @=%p, thread: @=%p\n", (void*)arg->origin_task, (void*)thread);
+    printf( "[tasksteal] exec task '%s', steal with WAR dependencies: @=%p, thread: @=%p\n", fmt->name, (void*)arg->origin_task, (void*)thread);
     fflush(stdout);
   }
+#endif
 
 #if 0
   /* If it exist a W or CW access then recreate a new structure 
@@ -254,8 +257,10 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   }
   else /* it exists at least one w parameter with war dependency */
   {
+#if 0
     printf("Execute task after recopy some args\n");
     fflush(stdout);
+#endif
     copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
@@ -274,20 +279,20 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       }
 
       /* initialize all parameters ... */
-      access_param               = kaapi_format_get_access_param(fmt, i, orig_task_args);
-      copy_access_param          = kaapi_format_get_access_param(fmt, i, copy_task_args);
+      access_param              = kaapi_format_get_access_param(fmt, i, orig_task_args);
+      copy_access_param         = kaapi_format_get_access_param(fmt, i, copy_task_args);
       copy_access_param.data    = access_param.data;
       copy_access_param.version = 0; /*access_param->version; / * not required... * / */
       
-      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) )
+      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || KAAPI_ACCESS_IS_CUMULWRITE(mode_param) )
       {
         if ((war_param & (1<<i)) !=0)
         { 
           /* allocate new data */
 #if defined(KAAPI_DEBUG)
-          copy_access_param.data    = calloc(1, kaapi_format_get_size_param(fmt_param, i, orig_task_args));
+          copy_access_param.data    = calloc(1, kaapi_format_get_size_param(fmt, i, orig_task_args));
 #else
-          copy_access_param.data    = malloc(kaapi_format_get_size_param(fmt_param, i, orig_task_args));
+          copy_access_param.data    = malloc(kaapi_format_get_size_param(fmt, i, orig_task_args));
 #endif
           if (fmt_param->cstor !=0) {
             (*fmt_param->cstor)(copy_access_param.data);

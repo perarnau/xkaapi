@@ -47,8 +47,9 @@
 /*
 */
 void kaapi_taskrecvbcast_body(
-  void* sp __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
+  void* sp,
+  kaapi_thread_t* thread 
 )
 {
+  kaapi_taskbcast_body( sp, thread );
 }
