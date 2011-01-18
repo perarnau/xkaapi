@@ -21,7 +21,7 @@ all-list_ranking: $(LISTRANKING_PRGS)
 lr_sequential_SOURCES=listranking/lr_sequential.cpp listranking/lr_list.cpp  listranking/lr_list.h
 lr_jaja_seq_SOURCES=listranking/lr_jaja_seq.cpp listranking/lr_list.cpp listranking/lr_list.h
 lr_jaja_seq_opt1_SOURCES=listranking/lr_jaja_seq_opt1.cpp listranking/lr_list.cpp listranking/lr_list.h
-listranking_opt1_kaapi___SOURCES=listranking/listranking_opt1_kaapi++.cpp listranking/lr_list.h
+#listranking_opt1_kaapi___SOURCES=listranking/listranking_opt1_kaapi++.cpp listranking/lr_list.h
 
 lr_sequential_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 lr_sequential_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
@@ -38,8 +38,8 @@ lr_jaja_seq_opt1_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS) $(KAAPIXXP
 lr_jaja_seq_opt1_LDFLAGS =$(AM_LDFLAGS)  $(KASTLPROGS_BUILD_LDFLAGS) $(KAAPIXXPROGS_BUILD_LDFLAGS)
 lr_jaja_seq_opt1_LDADD   =$(LIBS)        $(KASTLPROGS_BUILD_LIBS) $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
-listranking_opt1_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-listranking_opt1_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-listranking_opt1_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KASTLPROGS_BUILD_LDFLAGS) $(KAAPIXXPROGS_BUILD_LDFLAGS)
-listranking_opt1_kaapi___LDADD   =$(LIBS)        $(KASTLPROGS_BUILD_LIBS) $(KAAPIXXPROGS_BUILD_LIBS) -lm
+#listranking_opt1_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+#listranking_opt1_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+#listranking_opt1_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KASTLPROGS_BUILD_LDFLAGS) $(KAAPIXXPROGS_BUILD_LDFLAGS)
+#listranking_opt1_kaapi___LDADD   =$(LIBS)        $(KASTLPROGS_BUILD_LIBS) $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
