@@ -1230,7 +1230,7 @@ namespace ka {
   struct range2d : public array<2,T> {
     range2d( T* beg, size_t n, size_t m, size_t lda ) : array<2,T>(beg, n, m, lda ) {}
     range2d( const array<2,T>& a ) : array<2,T>(a) {}
-    range2d operator() (const rangeindex& ri, const rangeindex& rj) const 
+    range2d operator() (const rangeindex& ri, const rangeindex& rj) 
     { return range2d( array<2,T>::operator()(ri,rj) ); }
   };
 
