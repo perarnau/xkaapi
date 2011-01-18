@@ -43,48 +43,28 @@
 */
 #include <iostream>
 #include <stdlib.h>
+#include <string>
 #include "kaapi++" // this is the new C++ interface for Kaapi
-
-/* Task Init
- * This task initializes each entries of the array to 1
- * The task declares an write access pointer to an array object.
- */
-struct TaskInitMatrix : public ka::Task<1>::Signature<ka::W<ka::range2d<double> > > {};
-
-template<>
-struct TaskBodyCPU<TaskInitMatrix> {
-  void operator() ( ka::range2d_w<double> array )
-  {
-    size_t d0 = array.dim(0);
-    size_t d1 = array.dim(1);
-    std::cout << "In TaslInitMatrix/CPU, matrix = " << d0 << "x" << d1 << std::endl;
-    for (size_t i=0; i < d0; ++i)
-      for (size_t j=0; j < d1; ++j)
-        array(i,j) = 1;    
-  }
-};
-
 
 /* Task Print
  * this task prints the sum of the entries of an array 
  * each entries is view as a pointer object:
     array<1,R<int> > means that each entry may be read by the task
  */
-struct TaskPrintMatrix : public ka::Task<2>::Signature<ka::RW<double>,  ka::R<ka::range2d<double> > > {};
+struct TaskPrintMatrix : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
 
 template<>
 struct TaskBodyCPU<TaskPrintMatrix> {
-  void operator() ( ka::pointer_rw<double> acc, ka::range2d_r<double> array  )
+  void operator() ( std::string s, ka::range2d_r<double> array  )
   {
     size_t d0 = array.dim(0);
     size_t d1 = array.dim(1);
-    std::cout << "In TaskPrintMatrix/CPU, matrix = " << d0 << "x" << d1 << std::endl;
+    std::cout << "In '" << s << "' TaskPrintMatrix/CPU, matrix = " << d0 << "x" << d1 << std::endl;
     for (size_t i=0; i < d0; ++i)
     {
       for (size_t j=0; j < d1; ++j)
       {
         std::cout << array(i,j) << " ";
-        *acc += array(i,j);
       }
       std::cout << std::endl;
     }
@@ -100,20 +80,22 @@ struct doit {
     int n= 10;
     if (argc >1) n = atoi(argv[1]);
 
-    double* data = new double[n*n];
+    double* data = new double[2*n*2*n];
+    for (int i=0; i<2*n; ++i)
+      for (int j=0; j<2*n; ++j)
+        data[i*n+j] = i*n+j;
     
     /* form a view of data as an 2-dimensional array */
-    ka::range2d<double> arr(data, n, n, n); 
+    ka::range2d<double> array(data, n, n, 2*n); 
     int res = 0;
-
-    /* be carrefull here: the array is equivalent as if each of its entries has
-       been passed to the task (the formal parameter is array<1,W<int> >).
-    */
-    ka::Spawn<TaskInitMatrix>()( arr );
     
     /* Here the dependencies is accross each entries of the array arr
     */
-    ka::Spawn<TaskPrintMatrix>()( &res, arr );
+    ka::Spawn<TaskPrintMatrix>()( "A =", array(ka::rangeindex::full, ka::rangeindex::full) );
+    ka::Spawn<TaskPrintMatrix>()( "A C1=", array(ka::rangeindex::full, ka::rangeindex(0, n/2)) );
+    ka::Spawn<TaskPrintMatrix>()( "A C2=", array(ka::rangeindex::full, ka::rangeindex(n/2, n)) );
+    ka::Spawn<TaskPrintMatrix>()( "A 11=", array(ka::rangeindex(0, n/2), ka::rangeindex(0, n/2)) );
+    ka::Spawn<TaskPrintMatrix>()( "A 22=", array(ka::rangeindex(n/2, n),ka::rangeindex(n/2, n)) );
     ka::Sync();
     std::cout << "Res = " << res << std::endl;
   }

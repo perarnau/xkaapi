@@ -5,9 +5,9 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-ITER_PRGS=array1_kaapi++ array2_kaapi++ array3_kaapi++ range1_kaapi++ range3_kaapi++ range4_kaapi++
-check_PROGRAMS+=$(ITER_PRGS)
-all-hello: $(ITER_PRGS)
+ARRAY_PRGS=array1_kaapi++ array2_kaapi++ array3_kaapi++ range1_kaapi++ range3_kaapi++ range4_kaapi++
+check_PROGRAMS+=$(ARRAY_PRGS)
+all-array: $(ARRAY_PRGS)
 
 array1_kaapi___SOURCES=array/array1_kaapi++.cpp
 array2_kaapi___SOURCES=array/array2_kaapi++.cpp
