@@ -69,8 +69,7 @@ void kaapi_synchronize_steal(kaapi_stealcontext_t* sc)
 */
 kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
 {
-  if (sc->thieves.list.head == 0)
-    kaapi_synchronize_steal(sc);
+  kaapi_synchronize_steal(sc);
   return sc->thieves.list.head;
 }
 
