@@ -16,6 +16,7 @@ check_PROGRAMS=
 
 include accumulate.am
 include array.am
+include bfs.am
 include branchbound.am
 include cilk.am
 include fibo.am
@@ -23,15 +24,16 @@ include find.am
 include for_each.am
 include hello.am
 include listranking.am
+include matrixproduct.am
 include net.am
 include nqueens.am
 include poisson3D.am
 include prefix.am
-include bfs.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
 	array/Makefile \
+	bfs/Makefile \
 	branchbound/Makefile \
 	cilk/Makefile \
 	fibo/Makefile \
@@ -39,11 +41,11 @@ USER_MAKEFILES=\
 	for_each/Makefile \
 	listranking/Makefile \
 	hello/Makefile \
+	matrixproduct/Makefile \
 	net/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
-	prefix/Makefile \
-	bfs/Makefile
+	prefix/Makefile
 
 TESTS=  
 

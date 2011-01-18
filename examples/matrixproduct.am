@@ -1,0 +1,17 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+
+MATPROD_PRGS=matprod_kaapi++
+check_PROGRAMS+=$(MATPROD_PRGS)
+all-matrixproduct: $(MATPROD_PRGS)
+
+matprod_kaapi___SOURCES=matrixproduct/matprod_kaapi++.cpp
+
+matprod_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+matprod_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matprod_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+matprod_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
