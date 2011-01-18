@@ -1229,6 +1229,9 @@ namespace ka {
   template<typename T>
   struct range2d : public array<2,T> {
     range2d( T* beg, size_t n, size_t m, size_t lda ) : array<2,T>(beg, n, m, lda ) {}
+    range2d( const array<2,T>& a ) : array<2,T>(a) {}
+    range2d operator() (const rangeindex& ri, const rangeindex& rj) const 
+    { return range2d( array<2,T>::operator()(ri,rj) ); }
   };
 
   /* ------ formal parameter of type _r, _w and _rw and rpwp over array */
@@ -1249,6 +1252,7 @@ namespace ka {
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
+    array<1,T>* operator->() { return this; }
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
@@ -1287,6 +1291,7 @@ namespace ka {
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
+    array<1,T>* operator->() { return this; }
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
@@ -1325,6 +1330,7 @@ namespace ka {
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
+    array<1,T>* operator->() { return this; }
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
@@ -1363,6 +1369,7 @@ namespace ka {
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
+    array<1,T>* operator->() { return this; }
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
@@ -1401,20 +1408,25 @@ namespace ka {
     
     /* public interface */
     array<2,T>& operator*() { return *this; }
+    array<2,T>* operator->() { return this; }
     T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
     T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
     size_t dim(int i) const { return array_rep<2,T>::dim(i); }
 
-    Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 
-    { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
+    Self_t operator() (const rangeindex& ri, const rangeindex& rj) 
+    { return Self_t( array<2,T>::operator()(ri,rj) ); }
   };
 
   /* alias: ka::range1d_r<T> in place of pointer_r<array<2,T> > */
   template<typename T>
-  struct range2d_r : public pointer_r<array<2,T> > {
+  class range2d_r : public pointer_r<array<2,T> > {
+  public:
     range2d_r( range2d<T>& a ) : pointer_r<array<2,T> >(a) {}
-    explicit range2d_r( array<2,T>& a ) : pointer_r<array<2,T> >(a) {}
+    explicit range2d_r(  const array<2,T>& a ) : pointer_r<array<2,T> >(a) {}
+    range2d_r<T> operator() (const rangeindex& ri, const rangeindex& rj)  
+    { return range2d_r<T>( range2d_r<T>(array<2,T>::operator()(ri,rj) ) ); }
+    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
   };
 
 
@@ -1435,12 +1447,13 @@ namespace ka {
     
     /* public interface */
     array<2,T>& operator*() { return *this; }
+    array<2,T>* operator->() { return this; }
     T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
     T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
     size_t dim(int i) const { return array_rep<2,T>::dim(i); }
 
-    Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 
+    Self_t operator() (const rangeindex& ri, const rangeindex& rj) 
     { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
   };
 
@@ -1448,7 +1461,10 @@ namespace ka {
   template<typename T>
   struct range2d_w : public pointer_w<array<2,T> > {
     range2d_w( range2d<T>& a ) : pointer_w<array<2,T> >(a) {}
-    explicit range2d_w( array<2,T>& a ) : pointer_w<array<2,T> >(a) {}
+    explicit range2d_w( const array<2,T>& a ) : pointer_w<array<2,T> >(a) {}
+    range2d_w<T> operator() (const rangeindex& ri, const rangeindex& rj) 
+    { return range2d_w<T>( array<2,T>::operator()(ri,rj) ); }
+    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
   };
 
 
@@ -1469,6 +1485,7 @@ namespace ka {
     
     /* public interface */
     array<2,T>& operator*() { return *this; }
+    array<2,T>* operator->() { return this; }
     T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
     T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
@@ -1483,6 +1500,8 @@ namespace ka {
   struct range2d_rw : public pointer_rw<array<2,T> > {
     range2d_rw( range2d<T>& a ) : pointer_rw<array<2,T> >(a) {}
     explicit range2d_rw( array<2,T>& a ) : pointer_rw<array<2,T> >(a) {}
+    range2d_rw<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
+    { return range2d_rw<T>( array<2,T>::operator()(ri,rj) ); }
   };
 
 
@@ -1503,6 +1522,7 @@ namespace ka {
     
     /* public interface */
     array<2,T>& operator*() { return *this; }
+    array<2,T>* operator->() { return this; }
     T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
     T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
@@ -1517,6 +1537,8 @@ namespace ka {
   struct range2d_rpwp : public pointer_rpwp<array<2,T> > {
     range2d_rpwp( range2d<T>& a ) : pointer_rpwp<array<2,T> >(a) {}
     explicit range2d_rpwp( array<2,T>& a ) : pointer_rpwp<array<2,T> >(a) {}
+    range2d_rpwp<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
+    { return range2d_rpwp<T>( array<2,T>::operator()(ri,rj) ); }
   };
 
 
