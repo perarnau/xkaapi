@@ -42,6 +42,7 @@
 ** 
 */
 #include <iostream>
+#include <algorithm>
 #include <stdlib.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
