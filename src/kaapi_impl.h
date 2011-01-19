@@ -1080,7 +1080,7 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
-  uint64_t entry_map;                 /* type size must match KAAPI_HASHMAP_SIZE */
+  uint32_t entry_map;                 /* type size must at least KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
 

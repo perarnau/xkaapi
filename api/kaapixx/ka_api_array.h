@@ -575,6 +575,7 @@ public:
     index_t shift = r.first();
 	  return array<1,T>( array_rep<1,T>::ptr()+shift, r.size() );
   }
+
   array<1,T> operator() (const range& r)
   { return (*this)[r]; }
 };
@@ -636,8 +637,8 @@ public:
 
 #if 0
   // make alias to sub array
-  explicit array<2,T>(array<2,T>& a, const range& ri, const range& rj )
-    : array_rep<2,T>(&a(ri[0], rj[0]), ri.size(), rj.size(), a._lda )
+  explicit array<2,T>( array<2,T>& a, const range& ri, const range& rj )
+    : array_rep<2,T>( &a(ri[0], rj[0]), ri.size(), rj.size(), a._lda )
   { 
     kaapi_assert_debug( ri.last() <= a.dim(0));
     kaapi_assert_debug( rj.last() <= a.dim(1));
@@ -650,7 +651,7 @@ public:
     std::swap( array_rep<2,T>::_data,  a._data );
     std::swap( array_rep<2,T>::_n,  a._n );
     std::swap( array_rep<2,T>::_m,  a._m );
-    std::swap( array_rep<2,T>::_lda,  a._lda);
+    std::swap( array_rep<2,T>::_lda,  a._lda );
   }
   
   // Subarray extraction
