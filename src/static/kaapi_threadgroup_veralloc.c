@@ -87,6 +87,9 @@ kaapi_version_t* kaapi_versionallocator_allocate( kaapi_version_allocator_t* va 
   {
     va->currentbloc = 0;
   }
+#if defined(kAAPI_DEBUG)
+  memset( entry, 0, sizeof(entry) );
+#endif
   return entry;
 }
 

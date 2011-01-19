@@ -65,7 +65,6 @@
     - kaapi_taskrecv_arg_t if we consider the R access
   Both these data structures shared the same fields: we can view this as if kaapi_taskbcast_arg_t inerit 
   from kaapi_taskrecv_arg_t.
-  
 */
 
 /*
@@ -89,7 +88,9 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   entry = kaapi_hashmap_insert( &thgrp->ws_khm, access->data );
    
   /* here a stack allocation attached with the thread group */
-  ver = entry->u.dfginfo = kaapi_versionallocator_allocate( &thgrp->ver_allocator );
+  entry->u.value.last_mode    = KAAPI_ACCESS_MODE_VOID;
+  entry->u.value.last_version = 0;
+  ver = entry->u.dfginfo      = kaapi_versionallocator_allocate( &thgrp->ver_allocator );
   kaapi_assert( ver != 0 );
   ver->tag = 0; //++thgrp->tag_count;
   ver->writer_task = 0;
@@ -360,58 +361,65 @@ kaapi_task_t* kaapi_threadgroup_version_newwriter(
     */
     /* print a warning about WAR dependencies */
     kaapi_part_datainfo_t* kpdi = kaapi_version_reader_find_tid(ver, tid);
-    int war = (ver->cnt_readers>1) || !kpdi->reader.used;
-    if (war)
+    if (kpdi !=0) /* there are writer */
     {
-#if defined(KAAPI_STATIC_HANDLE_WARWAW)
-//      printf("***Not yet implemented WAR dependency on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
-//      fflush( stdout );
-#else
-      printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
-      fflush( stdout );
-#endif
-    }
-
-    /* for all readers, mark data on each partition has deleted and store its address */
-    kaapi_part_datainfo_t* curr = ver->readerslist;
-    while (curr != 0)
-    {
-      if (curr->reader.used)
-      {
-        if (curr->reader.addr != ver->original_data)
-          curr->delete_data = curr->reader.addr;
-        curr->reader.addr = 0;
-        curr->reader.used = 0;
-      }
-      else curr->delete_data = 0;
-      
-      curr = curr->next;
-    }
-    ver->cnt_readers =0;
-        
-    /* re-use data if it was delete in partition tid */
-    if (kpdi->delete_data !=0)
-    {
-      ver->writer_data = access->data = kpdi->delete_data;
-    }
-    else {
-#if defined(KAAPI_STATIC_HANDLE_WARWAW)
-      /* two possibilities here:
-         - allocate (rename) before execution the data to access.
-         - flag the task in order it reallocates at runtime the data 
-         and let it to forward the new pointer following the access chain.
-      */
+      int war = (ver->cnt_readers >1) || !kpdi->reader.used;
       if (war)
       {
-        access->data = ver->writer_data = ver->original_data;/* alias ? malloc( sizeof(void*) ); */
-//WARNING        exit(1);
-      }
-      else 
-        access->data = ver->writer_data = ver->original_data;
+#if defined(KAAPI_STATIC_HANDLE_WARWAW)
+  //      printf("***Not yet implemented WAR dependency on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
+  //      fflush( stdout );
 #else
-      kaapi_assert( ver->original_data == access->data );
-      ver->writer_data = ver->original_data;
+        printf("***Warning, WAR dependency writer not correctly handle on task: %p, data:%p\n", (void*)task, (void*)ver->original_data);
+        fflush( stdout );
 #endif
+      }
+
+      /* for all readers, mark data on each partition has deleted and store its address */
+      kaapi_part_datainfo_t* curr = ver->readerslist;
+      while (curr != 0)
+      {
+        if (curr->reader.used)
+        {
+          if (curr->reader.addr != ver->original_data)
+            curr->delete_data = curr->reader.addr;
+          curr->reader.addr = 0;
+          curr->reader.used = 0;
+        }
+        else curr->delete_data = 0;
+        
+        curr = curr->next;
+      }
+      ver->cnt_readers =0;
+          
+      /* re-use data if it was delete in partition tid */
+      if (kpdi->delete_data !=0)
+      {
+        ver->writer_data = access->data = kpdi->delete_data;
+      }
+      else {
+  #if defined(KAAPI_STATIC_HANDLE_WARWAW)
+        /* two possibilities here:
+           - allocate (rename) before execution the data to access.
+           - flag the task in order it reallocates at runtime the data 
+           and let it to forward the new pointer following the access chain.
+        */
+        if (war)
+        {
+          access->data = ver->writer_data = ver->original_data;/* alias ? malloc( sizeof(void*) ); */
+  //WARNING        exit(1);
+        }
+        else 
+          access->data = ver->writer_data = ver->original_data;
+  #else
+        kaapi_assert( ver->original_data == access->data );
+        ver->writer_data = ver->original_data;
+  #endif
+      }
+    } 
+    else { // no reader: 2 writer on the same data on two different threads
+printf("Data: %p has already a writer but no reader in the same partition\n", access->data );
+exit(1);
     }
     ver->writer_thread = tid;
     ver->writer_task   = task;
