@@ -1,3 +1,10 @@
+Version 1.0rc4
+==============
+Vincent Danjean (3):
+      [doc] fix typo in ChangeLog
+      [build] manage Extended Regular Expression with sed
+      [release] update ChangeLog and bump version
+
 Version 1.0rc3
 ==============
 Fabien Le Mentec (65):
