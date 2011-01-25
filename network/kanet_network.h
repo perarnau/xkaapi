@@ -191,6 +191,11 @@ public:
   /** Return the number of known node
   */
   size_t size() const;
+
+  /** Return the identifier of the running process
+  */
+  GlobalId local_gid() const
+  { return System::local_gid; }
   
   /** Return the url to be broadcast if other node want to connect to this node
   */

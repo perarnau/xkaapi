@@ -57,7 +57,7 @@ static int kaapi_threadgroup_resolved_for( kaapi_threadgroup_t thgrp, int tid, k
       kaapi_assert_debug( recv != 0);
       lraddr->rsignal = (kaapi_pointer_t)recv;
       lraddr->raddr   = (kaapi_pointer_t)recv->data;
-      lraddr->rsize   = recv->size;
+      lraddr->rview   = recv->view;
       lraddr = lraddr->next;
     }
     cl = cl->next;

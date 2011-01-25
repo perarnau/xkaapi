@@ -52,24 +52,28 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
 
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
-  thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
-  thgrp->threads[-1] = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
   
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
 
   /* same the main thread frame to restore it at the end of parallel computation */
-  kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
+  if (thgrp->localgid == 0)
+  {
+    kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
+    /* avoid thief to steal the main thread will tasks are added */
+    thgrp->threadctxts[-1]->unstealable = 1;
+  }
   
-  /* avoid thief to steal the main thread will tasks are added */
-  thgrp->threadctxts[-1]->unstealable = 1;
   kaapi_mem_barrier();
   
   /* wait thief get out the thread */
-  kproc = thgrp->threadctxts[-1]->proc;
-  kaapi_sched_lock(&kproc->lock);
-  thgrp->threadctxts[-1]->unstealable = 1;
-  kaapi_sched_unlock(&kproc->lock);
+  if (thgrp->localgid == 0)
+  {
+    kproc = thgrp->threadctxts[-1]->proc;
+    kaapi_sched_lock(&kproc->lock);
+    thgrp->threadctxts[-1]->unstealable = 1;
+    kaapi_sched_unlock(&kproc->lock);
+  }
   
   kaapi_assert_debug( (flag == 0) || (flag == KAAPI_THGRP_SAVE_FLAG) );
   thgrp->flag = flag;

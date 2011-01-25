@@ -60,18 +60,24 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
   
   for (int i=-1; i<thgrp->group_size; ++i)
   {
-    thgrp->size_readylists[i] = thgrp->threadctxts[i]->readytasklist->sp;
-    thgrp->save_readylists[i] = malloc( thgrp->size_readylists[i] + 2*sizeof(void*) );
-    memcpy( thgrp->save_readylists[i], 
-            thgrp->threadctxts[i]->readytasklist->stack,
-            thgrp->size_readylists[i] 
-    );
-    
-    /* save head and tail of the list */
-    memcpy( thgrp->save_readylists[i] + thgrp->size_readylists[i], 
-            &thgrp->threadctxts[i]->readytasklist->front,
-            2*sizeof(void*)
-    );
+    if (thgrp->localgid == thgrp->tid2gid[i])
+    {
+      thgrp->size_readylists[i] = thgrp->threadctxts[i]->readytasklist->sp;
+      thgrp->save_readylists[i] = malloc( thgrp->size_readylists[i] + 2*sizeof(void*) );
+      memcpy( thgrp->save_readylists[i], 
+              thgrp->threadctxts[i]->readytasklist->stack,
+              thgrp->size_readylists[i] 
+      );
+      
+      /* save head and tail of the list */
+      memcpy( thgrp->save_readylists[i] + thgrp->size_readylists[i], 
+              &thgrp->threadctxts[i]->readytasklist->front,
+              2*sizeof(void*)
+      );
+    }
+    else {
+      thgrp->save_readylists[i] = 0;
+    }
   }
   return 0;
 }
@@ -82,6 +88,8 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
 int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid )
 {
   kaapi_assert( (tid >=-1) && (tid < thgrp->group_size) );
+  kaapi_assert_debug(thgrp->localgid == thgrp->tid2gid[tid]);
+
   memcpy( thgrp->threadctxts[tid]->readytasklist->stack,
           thgrp->save_readylists[tid], 
           thgrp->size_readylists[tid] 
@@ -109,7 +117,8 @@ int kaapi_threadgroup_restore(kaapi_threadgroup_t thgrp )
   /* do the same for each worker */
   for (int i=-1; i<thgrp->group_size; ++i)
   {
-    kaapi_threadgroup_restore_thread(thgrp, i);
+    if (thgrp->localgid == thgrp->tid2gid[i])
+      kaapi_threadgroup_restore_thread(thgrp, i);
   }
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;

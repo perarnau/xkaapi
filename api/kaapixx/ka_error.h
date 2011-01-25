@@ -43,8 +43,8 @@
 ** terms.
 ** 
 */
-#ifndef _ATHA_ERROR_H_
-#define _ATHA_ERROR_H_
+#ifndef _KA_ERROR_H_
+#define _KA_ERROR_H_
 
 #include "kaapi.h"
 #include <iosfwd>

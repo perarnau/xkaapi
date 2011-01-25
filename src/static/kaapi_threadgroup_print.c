@@ -151,7 +151,12 @@ static int kaapi_thread_recv_comlist_print( FILE* file, kaapi_comlink_t* cl )
   kaapi_activationlink_t* al;
   if (cl != 0)
   {
-    fprintf(file, "[tag:%llu laddr:%p lsize:%lu ->", cl->u.recv->tag, cl->u.recv->data, cl->u.recv->size);
+    fprintf(file, "[tag:%llu laddr:%p lsize:(%lu x %lu) ->", 
+            cl->u.recv->tag, 
+            cl->u.recv->data, 
+            cl->u.recv->view.size[0],
+            cl->u.recv->view.size[1]
+    );
     al = cl->u.recv->list.front;
     while (al !=0)
     {
@@ -173,11 +178,12 @@ static int kaapi_thread_send_comaddr_print( FILE* file, kaapi_comsend_raddr_t* l
 {
   while (lraddr !=0)
   {
-    fprintf(file, "(asid:%i, rsignal:%p,  raddr:%p, rsize:%lu) ", 
+    fprintf(file, "(asid:%i, rsignal:%p,  raddr:%p, rsize:(%lu x %lu) ) ", 
         lraddr->asid, 
         (void*)lraddr->rsignal, 
         (void*)lraddr->raddr, 
-        lraddr->rsize 
+        lraddr->rview.size[0], 
+        lraddr->rview.size[1] 
     );
     lraddr = lraddr->next;
   }
@@ -191,7 +197,12 @@ static int kaapi_thread_send_comlist_print( FILE* file, kaapi_comlink_t* cl )
   kaapi_comsend_raddr_t* lraddr;
   while (cl != 0)
   {
-    fprintf(file, "[tag:%llu laddr:%p lsize:%lu ->", cl->u.send->tag, cl->u.send->data, cl->u.send->size);
+    fprintf(file, "[tag:%llu laddr:%p lsize:(%lu x %lu) ->", 
+        cl->u.send->tag, 
+        cl->u.send->data, 
+        cl->u.send->view.size[0],
+        cl->u.send->view.size[1]
+    );
     lraddr = &cl->u.send->front;
     kaapi_thread_send_comaddr_print( file, lraddr );
     fprintf(file, "]\n");
@@ -231,7 +242,12 @@ static int kaapi_task_descriptor_print( FILE* file, kaapi_taskdescr_t* td )
     while (com !=0)
     {
       kaapi_comsend_raddr_t* lraddr = &com->front;
-      fprintf(file, "\n\t[tag:%llu, laddr:%p, lsize:%lu ->", com->tag, com->data, com->size );
+      fprintf(file, "\n\t[tag:%llu, laddr:%p, lsize:(%lu x %lu) ->", 
+          com->tag, 
+          com->data, 
+          com->view.size[0], 
+          com->view.size[1]  
+      );
       kaapi_thread_send_comaddr_print( file, lraddr );
       fprintf(file, "]\n");
       com = com->next;
@@ -269,13 +285,16 @@ int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
     
   for (i=-1; i<thgrp->group_size; ++i)
   {
-    fprintf(file, "\n\nPartition %i/%i:\n", i, thgrp->group_size);
-    kaapi_thread_print( file, thgrp->threadctxts[i] );
-    kaapi_thread_readylist_print( file, thgrp->threadctxts[i]->readytasklist );
-    fprintf(file, "\n*** Send on thread %i/%i:\n", i, thgrp->group_size);
-    kaapi_thread_send_comlist_print( file, thgrp->threadctxts[i]->list_send );
-    fprintf(file, "\n*** Recv on thread %i/%i:\n", i, thgrp->group_size);
-    kaapi_thread_recv_comlist_print( file, thgrp->threadctxts[i]->list_recv );
+    if (thgrp->localgid == thgrp->tid2gid[i])
+    {
+      fprintf(file, "\n\nPartition %i/%i, on gid:u\n", i, thgrp->group_size, thgrp->localgid);
+      kaapi_thread_print( file, thgrp->threadctxts[i] );
+      kaapi_thread_readylist_print( file, thgrp->threadctxts[i]->readytasklist );
+      fprintf(file, "\n*** Send on thread %i/%i:\n", i, thgrp->group_size);
+      kaapi_thread_send_comlist_print( file, thgrp->threadctxts[i]->list_send );
+      fprintf(file, "\n*** Recv on thread %i/%i:\n", i, thgrp->group_size);
+      kaapi_thread_recv_comlist_print( file, thgrp->threadctxts[i]->list_recv );
+    }
   }
 #if 0
   fprintf(file, "First input data on thread %i/%i:\n", i, thgrp->group_size);

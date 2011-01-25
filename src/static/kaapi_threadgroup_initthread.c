@@ -48,7 +48,11 @@
 int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
 {
   int error = 0;
-  kaapi_tasklist_t* tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_t* tl;
+  
+  if (thgrp->localgid != thgrp->tid2gid[i]) return 0;
+
+  tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_assert( tl !=0);  
 
   kaapi_tasklist_ready_clear(tl);

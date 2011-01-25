@@ -51,11 +51,19 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
     return EBUSY;
 
-  /* reset stealing attribute on the main thread */
-  thgrp->threadctxts[-1]->unstealable = 0;
+  if (thgrp->localgid == thgrp->tid2gid[-1])
+    /* reset stealing attribute on the main thread */
+    thgrp->threadctxts[-1]->unstealable = 0;
     
   for (i=0; i<thgrp->group_size; ++i)
-    kaapi_context_free(thgrp->threadctxts[i]);
+  {
+    if (thgrp->localgid == thgrp->tid2gid[i])
+    {
+      kaapi_context_free(thgrp->threadctxts[i]);
+      if (thgrp->save_readylists[i] !=0)
+        free( thgrp->save_readylists[i] );
+    }
+  }
 
   --thgrp->threadctxts;
   free( thgrp->threadctxts );
@@ -69,6 +77,9 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   thgrp->tid2asid = 0;
   
   kaapi_assert( kaapi_allocator_destroy(&thgrp->allocator) ==0);
+  
+  free(thgrp->save_readylists);
+  free(thgrp->size_readylists);
 
   pthread_mutex_destroy(&thgrp->mutex);
   pthread_cond_destroy(&thgrp->cond);
