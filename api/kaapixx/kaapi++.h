@@ -51,6 +51,7 @@
 #include "ka_timer.h"
 #include <vector>
 #include <typeinfo>
+#include <iterator>
 
 /** Version number for the API
   * v1: task with dependencies + spawn
@@ -2705,11 +2706,17 @@ namespace ka {
     { return _size; }
 
     /* begin to partition task */
-    void begin_partition()
+    void begin_partition( int flag =KAAPI_THGRP_DEFAULT_FLAG)
     {
       if (!_created) { kaapi_threadgroup_create( &_threadgroup, (uint32_t)_size ); _created = true; }
-      kaapi_threadgroup_begin_partition( _threadgroup );
+      kaapi_threadgroup_begin_partition( _threadgroup, flag );
       kaapi_set_threadgroup(_threadgroup);
+    }
+
+    /* begin to partition task */
+    void set_iteration_step( int maxstep )
+    {
+      kaapi_threadgroup_set_iteration_step( _threadgroup, maxstep );
     }
 
     /* internal class required for spawn method */
@@ -2783,23 +2790,29 @@ namespace ka {
     { return Executor<TASKGENERATOR>( this ); }
 
 
-    /** ForEach */
+    /* ForEachDriverLoop: specialized only for random access iterator */
+    template<class TASKGENERATOR, typename Iterator, typename tag>
+    class ForEachDriverLoop {};
+
     template<class TASKGENERATOR, typename Iterator>
-    class ForEachDriver {
+    class ForEachDriverLoop<TASKGENERATOR,Iterator,std::random_access_iterator_tag> {
     public:
-      ForEachDriver(ThreadGroup* thgrp, Iterator beg, Iterator end)
+      ForEachDriverLoop(ThreadGroup* thgrp, Iterator beg, Iterator end)
        : _threadgroup(thgrp), _beg(beg), _end(end), step(0), total(0)
       {}
-      /** 0 args **/
-      void operator()()
+      void prologue()
       {
-        if (_beg == _end) return;
-        _threadgroup->begin_partition();
+        /* flag to save */
+        _threadgroup->begin_partition( _end-_beg > 1 ? KAAPI_THGRP_SAVE_FLAG : KAAPI_THGRP_DEFAULT_FLAG );
+        _threadgroup->set_iteration_step( _end-_beg );
         tpart = kaapi_get_elapsedtime();
-        TASKGENERATOR();
+      }
+
+      void epilogue()
+      {
         tpart = kaapi_get_elapsedtime()-tpart;
         _threadgroup->end_partition();
-        _threadgroup->save();
+        s0 = kaapi_get_elapsedtime();
         while (_beg != _end)
         {
           t0 = kaapi_get_elapsedtime();
@@ -2809,18 +2822,40 @@ namespace ka {
           if (step >0) total += t1-t0;
           std::cout << step << ":: Time: " << t1 - t0 << std::endl;
           ++step;
-          if (++_beg != _end) _threadgroup->restore();
         }
+        s1 = kaapi_get_elapsedtime();
+        std::cout << ":: ForEach #loops: " << step << ", total time (except first iteration):" << total
+                  << ", average:" << total / (step-1) << ", partition step:" << tpart << std::endl;
         _threadgroup->end_execute(); /* free data structure */
       }
-#include "ka_api_execforeach.h"
+
     protected:
       ThreadGroup*  _threadgroup;
       Iterator      _beg;
       Iterator      _end;
       int           step;
       double        tpart;
-      double        t0,t1,total;
+      double        s0, s1, t0,t1,total;
+    };
+
+    /** ForEachDriver */
+    template<class TASKGENERATOR, typename Iterator>
+    class ForEachDriver : 
+        public ForEachDriverLoop<TASKGENERATOR, Iterator,typename std::iterator_traits<Iterator>::iterator_category> {
+    public:
+      ForEachDriver(ThreadGroup* thgrp, Iterator beg, Iterator end)
+       : ForEachDriverLoop<TASKGENERATOR, Iterator, typename std::iterator_traits<Iterator>::iterator_category>(
+          thgrp, beg, end)
+      {}
+      /** 0 args **/
+      void operator()()
+      {
+        if (this->_beg == this->_end) return;
+        this->prologue();
+        TASKGENERATOR();
+        this->epilogue();
+      }
+#include "ka_api_execforeach.h"
     };  
 
     /** ForEach */
