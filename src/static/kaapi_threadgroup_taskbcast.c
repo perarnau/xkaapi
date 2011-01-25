@@ -48,6 +48,8 @@
 */
 void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
 {
+#warning "TODO"
+#if 0
   /* thread[-1]->pc is the executing task (pc of the upper frame) */
   /* kaapi_task_t*          self = thread[-1].pc;*/
   kaapi_taskbcast_arg_t* arg  = sp;
@@ -131,4 +133,5 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
     }
     comlist = comlist->next;
   }
+#endif
 }

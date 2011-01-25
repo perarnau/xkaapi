@@ -93,7 +93,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
 
   if (arg->depth_min ==0) 
   {
-    int i;
+    unsigned int i;
     arg->seed = rand();
     level = &kproc->hlevel.levels[arg->depth_min];
     /* set to the min level where at least 2 threads */

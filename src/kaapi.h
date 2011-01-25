@@ -95,6 +95,7 @@ extern "C" {
 
 /* Kaapi types.
  */
+typedef uint32_t kaapi_globalid_t;
 typedef uint32_t kaapi_processor_id_t;
 typedef uint64_t kaapi_affinity_t;
 typedef uint32_t kaapi_format_id_t;
@@ -1361,33 +1362,8 @@ static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgr
   kaapi_thread_t* thread = thgrp->threads[partitionid];
   return thread;
 }
-
-/** Equiv to kaapi_thread_toptask( thread ) 
-*/
-static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
-{
-  kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
-
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
-  return kaapi_thread_toptask(thread);
-}
-
-static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
-{
-  kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
-  kaapi_assert_debug( thread !=0 );
-  
-  /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
-     calculer les dépendances (appel au bon code)
-  */
-  kaapi_threadgroup_computedependencies( thgrp, partitionid, thread->sp );
-  
-  return kaapi_thread_pushtask(thread);
-}
 #endif /* !defined(KAAPI_COMPILE_SOURCE) */
+
 
 /**
 */

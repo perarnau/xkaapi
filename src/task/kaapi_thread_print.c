@@ -115,20 +115,7 @@ int kaapi_task_print(
   fmt = kaapi_format_resolvebybody( body );
   
   char* sp;
-  if (body == kaapi_taskbcast_body)
-  {
-    kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->sp;
-    sp = tbcastarg->common.original_sp;
-    fmt = kaapi_format_resolvebybody( tbcastarg->common.original_body );
-  }
-  else if (body == kaapi_taskrecv_body)
-  {
-    kaapi_taskrecv_arg_t* trecvarg = (kaapi_taskrecv_arg_t*)task->sp;
-    sp = trecvarg->original_sp;
-    fmt = kaapi_format_resolvebybody( trecvarg->original_body );
-  }
-  else
-    sp = task->sp;
+  sp = task->sp;
   if (fmt ==0) return 0;
 
   count_params = kaapi_format_get_count_params(fmt, sp );
@@ -148,11 +135,11 @@ int kaapi_task_print(
   {
     for (i=0; i<count_params; ++i)
     {
-      int cstate = kaapi_threadgroup_paramiswait(task, i) !=0 ? 'W' : '?';
-
-      fprintf( file, "\t\t\t [%u]%c:", i, (char)cstate );
       const kaapi_format_t* fmt_param = kaapi_format_get_fmt_param(fmt, i, sp );
       kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp));
+      int cstate = KAAPI_ACCESS_IS_ONLYWRITE(m) ? 'W' : '?';
+
+      fprintf( file, "\t\t\t [%u]%c:", i, (char)cstate );
       fputc(kaapi_getmodename(m), file );
       fputs("", file );
       if (m == KAAPI_ACCESS_MODE_V)
@@ -180,81 +167,12 @@ int kaapi_task_print(
       }
     }
   }
-  if (body == kaapi_taskbcast_body)
-  {
-    /* dump broadcast information */
-    kaapi_com_t* com;
-    kaapi_taskbcast_arg_t* tbcastarg = (kaapi_taskbcast_arg_t*)task->sp;
-    com = &tbcastarg->head;
-    while (com !=0)
-    {
-      int count = 0;
-      kaapi_comentry_t* entry = com->entry;
-      printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
-      while (entry !=0)
-      {
-        fprintf(file, "\n\t\t\t\t@task:%p, @sp: %p, @data:%p", (void*)entry->task, (void*)entry->task->sp, (void*)entry->addr);
-        kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)entry->task->sp;
-        fprintf(file, "\t#counter:%i -> %i", argrecv->original_counter, KAAPI_ATOMIC_READ(&argrecv->counter) );
 
-        ++count;
-        entry = entry->next;
-      }
-      kaapi_assert(count == com->size);
-      com = com->next;
-    }
-  }
   fputc('\n', file );
 
   fflush(file);
   return 0;
 }
-
-
-/** Used to print standalone bcast task
-*/
-static int kaapi_print_bcasttask( 
-  FILE* file,
-  kaapi_task_t* task
-)
-{
-  kaapi_taskbcast_arg_t* tbcastarg;
-  kaapi_access_mode_t m;
-  kaapi_com_t* com;
-  
-  fprintf( file, ", sp:%p, #p:1\n", 
-        task->sp
-  );
-  fputs( "\t\t\t [0]:", file );
-  m = KAAPI_ACCESS_MODE_R;
-  fputc(kaapi_getmodename(m), file );
-  fputs("", file );
-
-  tbcastarg = kaapi_task_getargst(task, kaapi_taskbcast_arg_t);
-  com = &tbcastarg->head;
-  while (com !=0)
-  {
-    int count = 0;
-    kaapi_comentry_t* entry = com->entry;
-    printf("\n\t\t\t->tag: %li to %i task(s): ", com->tag, com->size);
-    while (entry !=0)
-    {
-      fprintf(file, "\n\t\t\t\t@task:%p, @sp: %p, @data:%p", (void*)entry->task, (void*)entry->task->sp, (void*)entry->addr);
-      kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)entry->task->sp;
-      fprintf(file, "\t#counter:%i -> %i", argrecv->original_counter, KAAPI_ATOMIC_READ(&argrecv->counter) );
-
-      ++count;
-      entry = entry->next;
-    }
-    kaapi_assert(count == com->size);
-    com = com->next;
-  }
-
-  fputc('\n', file );
-  fflush(file);
-  return 0;
-}
-
 
 
 /** 
@@ -286,13 +204,6 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
     while (task_bot != task_top)
     {
       body = kaapi_task_getbody(task_bot);
-      if (body == kaapi_taskbcast_body)
-      {
-        body = ((kaapi_taskbcast_arg_t*)task_bot->sp)->common.original_body;
-        if (body == 0) body = kaapi_taskbcast_body;
-      }
-      else if (body == kaapi_taskrecv_body)
-        body = ((kaapi_taskrecv_arg_t*)task_bot->sp)->original_body;
       fmt = kaapi_format_resolvebybody( body );
       
       if (fmt ==0) 
@@ -342,8 +253,10 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fprintf(file, ", steal/under task:" );
           kaapi_task_print(file, task_bot );
         }
+#if 0
         else if (body == kaapi_taskbcast_body) 
           kaapi_print_bcasttask( file, task_bot );
+#endif
         fputc('\n', file);
         ++count;
 

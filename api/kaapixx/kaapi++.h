@@ -1752,7 +1752,7 @@ namespace ka {
     /** */
     array1d_rep_with_write() : _data(0) {}
     /** */
-    array1d_rep_with_write(T* ptr, size_t size) : _data(ptr), _size(size) {}
+    array1d_rep_with_write(T* ptr, size_t sz) : _data(ptr), _size(sz) {}
 
     /** */
     int size() const
@@ -1786,7 +1786,7 @@ namespace ka {
     /** */
     array1d_rep_with_read() : _data(0) {}
     /** */
-    array1d_rep_with_read(T* ptr, size_t size) : _data(ptr), _size(size) {}
+    array1d_rep_with_read(T* ptr, size_t sz) : _data(ptr), _size(sz) {}
 
     /** */
     int size() const
@@ -1845,7 +1845,7 @@ namespace ka {
     /** */
     array1d_rep_with_readwrite() : _data(0), _size(size) {}
     /** */
-    array1d_rep_with_readwrite(T* ptr, size_t size) : _data(ptr), _size(size) {}
+    array1d_rep_with_readwrite(T* ptr, size_t sz) : _data(ptr), _size(sz) {}
     /** */
     reference_t operator[](index_t i)
     { return reference_t(_data[i]); }

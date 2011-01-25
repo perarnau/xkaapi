@@ -43,15 +43,83 @@
  */
 #include "kaapi_impl.h"
 
-
-void kaapi_taskrecv_body( 
-  void* sp,
-  kaapi_thread_t* thread __attribute__((unused))
-)
+/**/
+kaapi_data_version_t* kaapi_version_findasid_in( kaapi_version_t* ver, kaapi_address_space_t asid )
 {
-#warning "TODO"
-#if 0
-  kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)sp;
-  argrecv->original_body( argrecv->original_sp, thread);
-#endif
+  if (ver ==0) return 0;
+  kaapi_data_version_t* curr = ver->copies.front;
+  while (curr !=0)
+  {
+    if (curr->asid == asid) return curr;
+    curr = curr->next;
+  }
+  if (ver->writer.asid == asid) return &ver->writer;
+  return 0;
 }
+
+
+/**/
+kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid )
+{
+  if (ver ==0) return 0;
+  kaapi_data_version_t* curr = ver->copies.front;
+  kaapi_data_version_t* prev = curr;
+  while (curr !=0)
+  {
+    if (curr->asid == asid) 
+    {
+      if (prev == curr) 
+      {
+        ver->copies.front = curr->next;
+        if (ver->copies.front == 0) ver->copies.back = 0;
+        prev = ver->copies.front;
+        curr->next = 0;
+        return curr;
+      }
+
+      prev->next = curr->next;
+      if (ver->copies.back == curr) ver->copies.front = prev;
+      return curr;
+    }
+    prev = curr;
+    curr = curr->next;
+  }
+  return 0;
+}
+
+
+/**/
+kaapi_comsend_t* kaapi_sendcomlist_find_tag( kaapi_taskbcast_arg_t* bcast, kaapi_comtag_t tag )
+{
+  kaapi_comsend_t* curr = &bcast->front;
+  while (curr !=0)
+  {
+    if (curr->tag == tag) return curr;
+    curr = curr->next;
+  }
+  return 0;
+}
+
+kaapi_comsend_raddr_t* kaapi_sendcomlist_find_asid( kaapi_comsend_t* com, kaapi_address_space_t asid )
+{
+  kaapi_comsend_raddr_t* curr = &com->front;
+  while (curr !=0)
+  {
+    if (curr->asid == asid) return curr;
+    curr = curr->next;
+  }
+  return 0;
+}
+
+
+/**/
+kaapi_comrecv_t* kaapi_recvcomlist_find_tag( kaapi_comlink_t* recvl, kaapi_comtag_t tag )
+{
+  while (recvl !=0)
+  {
+    if (recvl->u.recv->tag == tag) return recvl->u.recv;
+    recvl = recvl->next;
+  }
+  return 0;
+}
+

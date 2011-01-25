@@ -65,28 +65,43 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
 
   thgrp->group_size  = size;
   thgrp->startflag   = 0;
-  thgrp->mainctxt    = proc->thread;
-  thgrp->mainctxt->partid = -1;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
   thgrp->waittask    = 0;
-  thgrp->threadctxts = malloc( size* sizeof(kaapi_thread_context_t*) );
+  thgrp->threadctxts = malloc( (1+size)* sizeof(kaapi_thread_context_t*) );
   if (thgrp->threadctxts ==0) 
   {
     error = ENOMEM;
     goto return_error_1;
   }
+  thgrp->threadctxts[0] = proc->thread;
+  thgrp->threadctxts[0]->partid = -1;
+  ++thgrp->threadctxts; /* shift, because -1 ==> main thread */
+  
   thgrp->threads    = malloc( (1+size)* sizeof(kaapi_thread_t*) );
   if (thgrp->threads ==0) 
   {
     error = ENOMEM;
     goto return_error_15;
   }
+  thgrp->tid2gid  = (kaapi_globalid_t*)malloc( (1+size) * sizeof(kaapi_globalid_t) );
+  thgrp->tid2asid = (kaapi_address_space_t*)malloc( (1+size) * sizeof(kaapi_address_space_t) );
+
   /* shift +1, -1 == main thread */
   ++thgrp->threads;
+  ++thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
+  ++thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */
   
+  /* here allocate thread -1 == main thread */
+  kaapi_threadgroup_initthread( thgrp, -1 );
+  thgrp->tid2asid[-1] = -1;
+  thgrp->tid2gid[-1]  = 0;
+
   /* here may be dispatch allocation of all processors */
   for (i=0; i<size; ++i)
   {
+    thgrp->tid2asid[i] = i;
+    thgrp->tid2gid[i]  = 1+i;
+    
     thgrp->threadctxts[i] = kaapi_context_alloc( proc );
     if (thgrp->threadctxts[i] ==0) 
     {
@@ -94,7 +109,9 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
       error = ENOMEM;
       goto return_error_2;
     }
+
     /* init the thread from the thread context */
+    kaapi_threadgroup_initthread( thgrp, i );
     thgrp->threadctxts[i]->partid = i;
     thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
   }
@@ -106,9 +123,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   if (error !=0) goto return_error_3;
 
   /* ok */
+  
   thgrp->step               = -1;
   thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;
   thgrp->tag_count          = 0;
+  kaapi_assert( kaapi_allocator_init(&thgrp->allocator) ==0);
+  thgrp->free_dataversion_list=0;
   thgrp->save_mainthread    = 0;
   thgrp->size_mainthread    = 0;
   thgrp->save_workerthreads = 0;

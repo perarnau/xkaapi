@@ -10,7 +10,7 @@
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
-** threadctxts.
+** threads.
 ** 
 ** This software is governed by the CeCILL-C license under French law
 ** and abiding by the rules of distribution of free software.  You can
@@ -43,37 +43,46 @@
 */
 #include "kaapi_impl.h"
 
-/**
-*/
-int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
+static int kaapi_threadgroup_resolved_for( kaapi_threadgroup_t thgrp, int tid, kaapi_comlink_t* cl )
 {
-  int i;
-  if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
-    return EBUSY;
+  kaapi_comsend_t* com;
+  kaapi_comsend_raddr_t* lraddr;
+  while (cl != 0)
+  {
+    com = cl->u.send;
+    lraddr = &com->front;
+    while (lraddr !=0)
+    {
+      kaapi_comrecv_t* recv = kaapi_recvcomlist_find_tag( thgrp->threadctxts[lraddr->asid]->list_recv, com->tag );
+      kaapi_assert_debug( recv != 0);
+      lraddr->rsignal = (kaapi_pointer_t)recv;
+      lraddr->raddr   = (kaapi_pointer_t)recv->data;
+      lraddr->rsize   = recv->size;
+      lraddr = lraddr->next;
+    }
+    cl = cl->next;
+  }
+  return 0;
+}
 
-  /* reset stealing attribute on the main thread */
-  thgrp->threadctxts[-1]->unstealable = 0;
-    
-  for (i=0; i<thgrp->group_size; ++i)
-    kaapi_context_free(thgrp->threadctxts[i]);
 
-  --thgrp->threadctxts;
-  free( thgrp->threadctxts );
-  thgrp->threadctxts = 0;
+static int kaapi_threadgroup_update_recv( kaapi_threadgroup_t thgrp, int tid, kaapi_comlink_t* cl )
+{
+  while (cl !=0)
+  {
+    KAAPI_ATOMIC_INCR( &thgrp->threadctxts[tid]->readytasklist->count_recv );
+    cl = cl->next;
+  }
+  return 0;
+}
 
-  --thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
-  --thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */
-  free( thgrp->tid2gid );
-  free( thgrp->tid2asid );
-  thgrp->tid2gid  = 0;
-  thgrp->tid2asid = 0;
-  
-  kaapi_assert( kaapi_allocator_destroy(&thgrp->allocator) ==0);
-
-  pthread_mutex_destroy(&thgrp->mutex);
-  pthread_cond_destroy(&thgrp->cond);
-  
-  thgrp->group_size = 0;
-
+int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
+{
+  /* this version is only for multicore machine */
+  for (int i=-1; i<thgrp->group_size; ++i)
+  {
+    kaapi_threadgroup_resolved_for( thgrp, i, thgrp->threadctxts[i]->list_send );
+    kaapi_threadgroup_update_recv( thgrp, i, thgrp->threadctxts[i]->list_recv );
+  }
   return 0;
 }

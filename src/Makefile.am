@@ -89,20 +89,24 @@ if KAAPI_TARGET_STATICSCHED
 #Partitionning
 libkaapi_la_SOURCES+=\
   static/kaapi_threadgroup_checkdeps.c\
-  static/kaapi_threadgroup_version.c\
-  static/kaapi_threadgroup_veralloc.c\
+  static/kaapi_threadgroup_version_new.c\
+  static/kaapi_threadgroup_version_find.c\
+  static/kaapi_threadgroup_version_reader.c\
+  static/kaapi_threadgroup_version_writer.c\
+  static/kaapi_threadgroup_create.c\
+  static/kaapi_threadgroup_initthread.c\
+  static/kaapi_threadgroup_destroy.c\
+  static/kaapi_threadgroup_partition.c\
+  static/kaapi_threadgroup_partition_barrier.c\
+  static/kaapi_threadgroup_exec.c\
+  static/kaapi_threadgroup_execframe.c\
+  static/kaapi_threadgroup_print.c\
+  static/kaapi_threadgroup_saverestore.c\
   static/kaapi_threadgroup_taskbcast.c\
   static/kaapi_threadgroup_taskrecv.c\
   static/kaapi_threadgroup_taskrecvbcast.c\
   static/kaapi_threadgroup_tasksignal.c\
-  static/kaapi_threadgroup_create.c\
-  static/kaapi_threadgroup_destroy.c\
-  static/kaapi_threadgroup_partition.c\
-  static/kaapi_threadgroup_exec.c\
-  static/kaapi_threadgroup_saverestore.c\
-  static/kaapi_threadgroup_print.c\
-  static/kaapi_threadgroup_vect.c\
-  kaapi_staticsched.h 
+  kaapi_staticsched.h
 endif
 
 if KAAPI_TARGET_MT

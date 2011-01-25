@@ -45,35 +45,22 @@
 
 /**
 */
-int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
+int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
 {
-  int i;
-  if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
-    return EBUSY;
+  int error = 0;
+  kaapi_tasklist_t* tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_assert( tl !=0);  
 
-  /* reset stealing attribute on the main thread */
-  thgrp->threadctxts[-1]->unstealable = 0;
-    
-  for (i=0; i<thgrp->group_size; ++i)
-    kaapi_context_free(thgrp->threadctxts[i]);
+  kaapi_tasklist_ready_clear(tl);
+  tl->stack = malloc( kaapi_default_param.stacksize ); /* last three == stack */
+  kaapi_assert( tl->stack != 0 );
+  tl->sp    = 0;
+  tl->size  = kaapi_default_param.stacksize;
 
-  --thgrp->threadctxts;
-  free( thgrp->threadctxts );
-  thgrp->threadctxts = 0;
-
-  --thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
-  --thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */
-  free( thgrp->tid2gid );
-  free( thgrp->tid2asid );
-  thgrp->tid2gid  = 0;
-  thgrp->tid2asid = 0;
-  
-  kaapi_assert( kaapi_allocator_destroy(&thgrp->allocator) ==0);
-
-  pthread_mutex_destroy(&thgrp->mutex);
-  pthread_cond_destroy(&thgrp->cond);
-  
-  thgrp->group_size = 0;
-
-  return 0;
+  thgrp->threadctxts[i]->execframe     = kaapi_threadgroup_execframe;
+  thgrp->threadctxts[i]->the_thgrp     = thgrp;
+  thgrp->threadctxts[i]->readytasklist = tl;
+  thgrp->threadctxts[i]->list_send     = 0;
+  thgrp->threadctxts[i]->list_recv     = 0;
+  return error;  
 }

@@ -56,14 +56,22 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->esfp       = thread->stackframe;
   thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
   thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
-  thread->_next      = 0;
-  thread->_prev      = 0;
-  thread->affinity[0]= ~0UL;
-  thread->affinity[1]= ~0UL;
+  
+  thread->execframe  = kaapi_thread_execframe;
+  thread->the_thgrp  = 0;
+  thread->readytasklist= 0;
+  thread->list_send  = 0;
+  thread->list_recv  = 0;
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */
+
+  thread->_next      = 0;
+  thread->_prev      = 0;
+
+  thread->affinity[0]= ~0UL;
+  thread->affinity[1]= ~0UL;
+
   thread->wcs        = 0;
-//  kaapi_sched_initlock(&thread->lock);
 
   /* zero all bytes from static_reply until end of sc_data */
   bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );

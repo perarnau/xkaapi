@@ -172,7 +172,7 @@ redo_execution:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
-    err = kaapi_thread_execframe( kproc->thread );
+    err = (*kproc->thread->execframe)(kproc->thread );
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif

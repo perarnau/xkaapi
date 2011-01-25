@@ -42,16 +42,37 @@
  ** 
  */
 #include "kaapi_impl.h"
+#include "kaapi_staticsched.h"
 
 
-void kaapi_taskrecv_body( 
-  void* sp,
-  kaapi_thread_t* thread __attribute__((unused))
+/* New version.
+   This method is called when no entry has been found into the mapping for data referenced by access.
+   The method declare in the hash map a newversion 
+*/
+kaapi_hashentries_t* kaapi_threadgroup_newversion( 
+    kaapi_threadgroup_t thgrp, 
+    kaapi_hashmap_t*    hmap, 
+    int                 tid, 
+    kaapi_access_t*     access 
 )
 {
-#warning "TODO"
-#if 0
-  kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)sp;
-  argrecv->original_body( argrecv->original_sp, thread);
-#endif
+  kaapi_hashentries_t* entry;
+  kaapi_version_t* ver;
+  entry = kaapi_hashmap_insert( &thgrp->ws_khm, access->data );
+   
+  /* here a stack allocation attached with the thread group */
+  entry->u.value.last_mode    = KAAPI_ACCESS_MODE_VOID;
+  entry->u.value.last_version = 0;
+  ver = entry->u.version      = kaapi_threadgroup_allocate_version( thgrp );
+  kaapi_assert( ver != 0 );
+  ver->writer_thread = -1; /* main thread */
+  ver->writer.asid = thgrp->tid2asid[ver->writer_thread];
+  return entry;
+}
+
+
+/*
+*/
+void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t* ver )
+{
 }

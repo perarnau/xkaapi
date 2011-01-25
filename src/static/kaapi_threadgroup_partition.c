@@ -52,26 +52,23 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
 
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
-  thgrp->mainctxt   = kaapi_get_current_processor()->thread;
-  thgrp->threads[-1]= kaapi_threadcontext2thread(thgrp->mainctxt);
+  thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
+  thgrp->threads[-1] = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
   
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
-  kaapi_vector_init( &thgrp->ws_vect_input, 0 );
-  kaapi_versionallocator_init( &thgrp->ver_allocator );
-  kaapi_part_datainfo_allocator_init( &thgrp->part_datainfo_allocator );
-  
+
   /* same the main thread frame to restore it at the end of parallel computation */
   kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
   
   /* avoid thief to steal the main thread will tasks are added */
-  thgrp->mainctxt->unstealable = 1;
+  thgrp->threadctxts[-1]->unstealable = 1;
   kaapi_mem_barrier();
   
   /* wait thief get out the thread */
-  kproc = thgrp->mainctxt->proc;
+  kproc = thgrp->threadctxts[-1]->proc;
   kaapi_sched_lock(&kproc->lock);
-  thgrp->mainctxt->unstealable = 1;
+  thgrp->threadctxts[-1]->unstealable = 1;
   kaapi_sched_unlock(&kproc->lock);
     
 #if 0
@@ -93,7 +90,10 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) 
     return EINVAL;
   kaapi_task_t* task;
-  
+
+  /* update remote reference */
+  kaapi_threadgroup_barrier_partition( thgrp );
+    
   /* for all threads add a signalend task in order to signal end of iteration 
      and to detach the thread.
   */
@@ -104,10 +104,11 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
     kaapi_thread_pushtask(thgrp->threads[i]);    
   }
   
+  /* */
+  kaapi_threadgroup_print( stdout, thgrp );
+  
   /* free hash map entries: they are destroy by destruction of the version allocator */
   kaapi_hashmap_destroy( &thgrp->ws_khm );
-  kaapi_versionallocator_destroy( &thgrp->ver_allocator );
-  kaapi_part_datainfo_allocator_destroy( &thgrp->part_datainfo_allocator );
 
   kaapi_mem_barrier();
   

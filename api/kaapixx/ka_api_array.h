@@ -264,7 +264,7 @@ public:
   array_rep<1,T>() : _data(0) {}
 
   /** */
-  array_rep<1,T>(T* p, index_t size) : _data(p), _size(size) {}
+  array_rep<1,T>(T* p, index_t sz) : _data(p), _size(sz) {}
 
   /** */
 #if 0  
@@ -381,7 +381,7 @@ public:
   array_rep<2,T>() : _data(0), _n(0), _m(0), _lda(0) {}
 
   /** */
-  array_rep<2,T>(T* p, index_t n, index_t m, index_t lda) : _data(p), _n(n), _m(m), _lda(lda) {}
+  array_rep<2,T>(T* p, index_t n, index_t m, index_t l) : _data(p), _n(n), _m(m), _lda(l) {}
 
   // Range of the array
   size_t dim(int d) const

@@ -116,9 +116,11 @@ extern "C" {
 #  define KAAPI_LOG(l, fmt, ...) \
       do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
 
+#  define KAAPI_DEBUG_INST(inst) inst
 #else
 #  define kaapi_assert_debug_m(cond, msg)
 #  define KAAPI_LOG(l, fmt, ...) 
+#  define KAAPI_DEBUG_INST(inst)
 #endif /* defined(KAAPI_DEBUG)*/
 
 #define kaapi_assert_m(cond, msg) \
@@ -180,6 +182,11 @@ extern int kaapi_hw_init();
 */
 struct kaapi_listrequest_t;
 struct kaapi_procinfo_list_t;
+
+/* Fwd declaration
+*/
+struct kaapi_tasklist_t;
+struct kaapi_comlink_t;
 
 /* ============================= Processor list ============================ */
 
@@ -472,6 +479,7 @@ void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsig
 /*
 */
 #define KAAPI_BLOCENTRIES_SIZE 32
+#define KAAPI_BLOCALLOCATOR_SIZE 4096
 
 /*
 */
@@ -482,6 +490,70 @@ typedef struct NAME {\
   struct NAME* next; /* link list of bloc */\
   void*        ptr;  /* memory pointer of allocated bloc */\
 } NAME
+
+
+/* Macro to define a generic bloc allocator of byte.
+*/
+typedef struct kaapi_allocator_bloc_t {
+  double                           data[KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(struct kaapi_allocator_bloc_t*)];
+  uintptr_t                        pos;  /* next free in data */
+  struct kaapi_allocator_bloc_t*   next; /* link list of bloc */
+} kaapi_allocator_bloc_t;
+
+typedef struct kaapi_allocator_t {
+  kaapi_allocator_bloc_t* currentbloc;
+  kaapi_allocator_bloc_t* allocatedbloc;
+} kaapi_allocator_t;
+
+#define KAAPI_DECLARE_GENBLOCENTRIES(ALLOCATORNAME) \
+  typedef kaapi_allocator_t ALLOCATORNAME
+
+/**/
+static inline int kaapi_allocator_init( kaapi_allocator_t* va ) 
+{
+  va->allocatedbloc = 0;
+  va->currentbloc = 0;
+  return 0;
+}
+
+/**/
+static inline int kaapi_allocator_destroy( kaapi_allocator_t* va )
+{
+  while (va->allocatedbloc !=0)
+  {
+    kaapi_allocator_bloc_t* curr = va->allocatedbloc;
+    va->allocatedbloc = curr->next;
+    free (curr);
+  }
+  va->allocatedbloc = 0;
+  va->currentbloc = 0;
+  return 0;
+}
+
+/**/
+static inline void* kaapi_allocator_allocate( kaapi_allocator_t* va, size_t size )
+{
+  void* entry;
+  /* round size to double size */
+  size = (size+sizeof(double)-1)/sizeof(double);
+  const size_t sz_max = KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(kaapi_allocator_bloc_t*);
+  if ((va->currentbloc == 0) || (va->currentbloc->pos + size >= sz_max))
+  {
+    kaapi_assert_debug( sizeof(kaapi_allocator_bloc_t) > size );
+    va->currentbloc = (kaapi_allocator_bloc_t*)malloc( sizeof(kaapi_allocator_bloc_t) );
+    va->currentbloc->next = va->allocatedbloc;
+    va->allocatedbloc = va->currentbloc;
+    va->currentbloc->pos = 0;
+  }
+  
+  entry = &va->currentbloc->data[va->currentbloc->pos];
+  va->currentbloc->pos += size;
+  KAAPI_DEBUG_INST( memset( entry, 0, size*sizeof(double) ) );
+  return entry;
+}
+
+
+
 
 
 /* ============================= The structure for handling suspendended thread ============================ */
@@ -516,6 +588,12 @@ typedef struct kaapi_thread_context_t {
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif
 
+  /* the way to execute task inside a thread, if ==0 uses kaapi_thread_execframe */
+  int (*execframe)( struct kaapi_thread_context_t* thread );
+  kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
+  struct kaapi_tasklist_t*       readytasklist;  /* Not null -> list of ready task, see static_sched.h */
+  struct kaapi_comlink_t*        list_send;      /* send and recv list of comsend or comrecv descriptor */
+  struct kaapi_comlink_t*        list_recv;
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
 
@@ -535,7 +613,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
   /* statically allocated reply */
-  kaapi_reply_t			              static_reply;
+  kaapi_reply_t			             static_reply;
   /* enough space to store a stealcontext that begins at static_reply->udata+static_reply->offset */
   char	                         sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
@@ -1059,7 +1137,7 @@ struct kaapi_version_t;
 typedef struct kaapi_hashentries_t {
   union { /* depending of the kind of hash table... */
     kaapi_gd_t                value;
-    struct kaapi_version_t*   dfginfo;     /* list of tasks to wakeup at the end */
+    struct kaapi_version_t*   version;     /* for static scheduling */
   } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 
@@ -1373,6 +1451,18 @@ extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
 */
 extern int kaapi_thread_execframe( kaapi_thread_context_t* thread );
 
+/** \ingroup TASK
+    The function kaapi_threadgroup_execframe() execute all the tasks in the thread' stack following
+    using the list of ready tasks.
+    If successful, the kaapi_threadgroup_execframe() function will return zero and the stack is empty.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer.
+    \retval EWOULDBLOCK the execution of the stack will block the control flow.
+    \retval EINTR the execution of the stack is interupt and the thread is detached to the kprocessor.
+*/
+extern int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread );
+
 /** Useful
 */
 extern kaapi_processor_t* kaapi_get_current_processor(void);
@@ -1650,15 +1740,13 @@ extern void kaapi_set_workload( kaapi_processor_t*, uint32_t workload );
 /* */
 extern void kaapi_set_self_workload( uint32_t workload );
 
-#include "kaapi_staticsched.h"
-
 
 /** \ingroup TASK
     The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
     All user tasks are stealable.
     \param body IN a task body
 */
-inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
+static inline int kaapi_task_body_isstealable(kaapi_task_body_t body)
 { 
   return (body != kaapi_taskstartup_body) 
       && (body != kaapi_nop_body)
@@ -1666,10 +1754,6 @@ inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
       && (body != kaapi_taskwrite_body)
       && (body != kaapi_taskfinalize_body) 
       && (body != kaapi_adapt_body)
-      && (body != kaapi_tasksignalend_body)
-      && (body != kaapi_taskbcast_body)
-      && (body != kaapi_taskrecv_body)
-      && (body != kaapi_taskwaitend_body)
       ;
 }
 
@@ -1694,6 +1778,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 #endif
 }
 
+#include "kaapi_staticsched.h"
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/

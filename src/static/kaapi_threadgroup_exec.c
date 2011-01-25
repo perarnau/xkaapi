@@ -61,21 +61,10 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
   kaapi_thread_pushtask( thgrp->threads[-1] );    
   
-  thgrp->mainctxt->partid = -1;
+  thgrp->threadctxts[-1]->partid = -1;
 
   ++thgrp->step;
   kaapi_mem_barrier();
-
-#if 0 //defined(KAAPI_DEBUG)
-static int isprint = 0;
-if (isprint ==1)
-{
-  kaapi_threadgroup_print(stdout, thgrp);
-//  fprintf(stdout, "Main thread\n");
-//  kaapi_thread_print( stdout, thgrp->mainctxt );
-}
-++isprint;
-#endif
   
   thgrp->startflag = 1;
   
@@ -134,6 +123,7 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
+  kaapi_threadgroup_execframe( thgrp->threadctxts[-1] );
   kaapi_sched_sync();
 
   /* counter reset by THE waittask */

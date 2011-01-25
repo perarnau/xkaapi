@@ -61,7 +61,7 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
   
   kaapi_threadgroup_t thgrp = (kaapi_threadgroup_t)sp;
 
-  if (kthread != thgrp->mainctxt)
+  if (kthread != thgrp->threadctxts[-1])
   {
     /* detach the thread: may it should be put into the execframe function */
     kaapi_sched_lock(&kthread->proc->lock);
