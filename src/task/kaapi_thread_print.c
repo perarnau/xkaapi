@@ -219,14 +219,10 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "maintask";
         else if (body == kaapi_suspend_body) 
           fname = "suspend";
-        else if (body == kaapi_taskbcast_body) 
-          fname = "send";
         else if (body == kaapi_tasksteal_body) 
           fname = "steal";
         else if (body == kaapi_aftersteal_body) 
           fname = "aftersteal";
-        else if (body == kaapi_tasksignalend_body) 
-          fname = "signal end iteration";
           
         state_type_t state;
         kaapi_getstatename(task_bot, state);
