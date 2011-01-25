@@ -3,13 +3,13 @@
 
 
 // --------------------------------------------------------------------
-struct TaskRW: public ka::Task<1>::Signature<ka::RW<int> > {};
+struct TaskW: public ka::Task<2>::Signature<ka::W<int>,int > {};
 template<>
-struct TaskBodyCPU<TaskRW> {
-  void operator() ( ka::pointer_rw<int> d )
+struct TaskBodyCPU<TaskW> {
+  void operator() ( ka::pointer_w<int> d, int value )
   {
-    *d += 10;
-    std::cout << "In Task RW=" << *d << ", @:" << (int*)d << std::endl;
+    std::cout << "In Task W=" << value << ", @:" << (int*)d << std::endl;
+    *d = value;
   }
 };
 
@@ -33,11 +33,14 @@ struct doit {
 
     ka::ThreadGroup threadgroup( 2 );
     ka::auto_pointer<int> a      = ka::Alloca<int>(1);
+    *a = 123;
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskRW> (ka::SetPartition(1))  ( a );
-    threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
+    threadgroup.Spawn<TaskW> (ka::SetPartition(1))  ( a,10 );
+    threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a,20 );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
 
     threadgroup.end_partition();
 
