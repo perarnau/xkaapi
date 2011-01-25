@@ -359,6 +359,10 @@ public:
     return *this;
   }
   
+  // return the view
+  kaapi_memory_view_t get_view() const
+  { return kaapi_memory_view_make1d(_size*sizeof(T)); }
+  
 protected:
   T*      _data;
   index_t _size;
@@ -479,6 +483,9 @@ public:
     }
     return *this;
   }
+
+  kaapi_memory_view_t get_view() const
+  { return kaapi_memory_view_make2d(_n,_m*sizeof(T),_lda); }
 
 protected:
   T*      _data;

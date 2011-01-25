@@ -71,9 +71,9 @@ static const struct kaapi_format_t* kaapi_format_default_get_fmt_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
 { return f->_fmt_params[i]; }
 
-static size_t kaapi_format_default_get_size_param
+static kaapi_memory_view_t kaapi_format_default_get_view_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
-{ return f->_size_params[i]; }
+{ return f->_view_params[i]; }
 
 
 static void kaapi_format_default_reduce_param 
@@ -93,7 +93,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
         const kaapi_offset_t        offset_param[],
         const kaapi_offset_t        offset_version[],
         const kaapi_format_t*       fmt_param[],
-        const size_t                size_param[],
+        const kaapi_memory_view_t   view_param[],
         const kaapi_reducor_t       reducor_param[]
 )
 {
@@ -120,14 +120,12 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   kaapi_assert( fmt->_fmt_params !=0);
   memcpy(fmt->_fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
-  fmt->_size_params = 0;
-  if (size_param !=0)
+  fmt->_view_params = 0;
+  if (view_param !=0)
   {
-    fmt->_size_params = malloc( sizeof(size_t)*count );
-    kaapi_assert( fmt->_size_params !=0);
-    /* cast value size_t -> uint32_t */
-    for (int i=0; i<count; ++i)
-      fmt->_size_params[i] = (uint32_t)size_param[i];
+    fmt->_view_params = malloc( sizeof(kaapi_memory_view_t)*count );
+    kaapi_assert( fmt->_view_params !=0);
+    memcpy(fmt->_view_params, view_param, sizeof(kaapi_memory_view_t*)*count );
   }
 
   if (reducor_param !=0)
@@ -144,7 +142,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->get_access_param = kaapi_format_default_get_access_param;
   fmt->set_access_param = kaapi_format_default_set_access_param;
   fmt->get_fmt_param    = kaapi_format_default_get_fmt_param;
-  fmt->get_size_param   = kaapi_format_default_get_size_param;
+  fmt->get_view_param   = kaapi_format_default_get_view_param;
   fmt->reducor          = kaapi_format_default_reduce_param;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));

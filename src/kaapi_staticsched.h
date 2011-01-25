@@ -134,7 +134,7 @@ typedef uint64_t kaapi_taskarg_descr_t;
 typedef struct kaapi_comrecv_t {
   kaapi_comtag_t            tag;          /* tag */
   void*                     data;         /* where to store incomming data */
-  size_t                    size;         /* local size */
+  kaapi_memory_view_t       view;         /* view */
   kaapi_activationlist_t    list;         /* list of the task descriptor to signal on receive */
   struct kaapi_comrecv_t*   next;         /* used to link together comrecv activated due to incomming data */
 } kaapi_comrecv_t;
@@ -146,7 +146,7 @@ typedef struct kaapi_comsend_raddr_t {
   kaapi_address_space_t         asid;          /* thread id in the group */
   kaapi_pointer_t               rsignal;       /* remote kaapi_comrecv_t data structure */
   kaapi_pointer_t               raddr;         /* remote data address */
-  size_t                        rsize;         /* remote data size */
+  kaapi_memory_view_t           rview;         /* remote data view */
   struct kaapi_comsend_raddr_t* next;          /* next entry where to send */
 } kaapi_comsend_raddr_t ;
 
@@ -156,7 +156,7 @@ typedef struct kaapi_comsend_raddr_t {
 typedef struct kaapi_comsend_t {
   kaapi_comtag_t                tag;
   void*                         data;          /* used if not task attached */
-  size_t                        size;          /* used if not task attached */
+  kaapi_memory_view_t           view;          /* used if not task attached */
   int                           ith;           /* the parameter of the task that will be send */
   struct kaapi_comsend_t*       next;          /* next kaapi_comonedata_t for an other tag for the same task*/
   struct kaapi_comsend_raddr_t  front;         /* list of readers */
@@ -221,7 +221,7 @@ typedef struct kaapi_data_version_t {
   kaapi_taskdescr_t*           task;                /* the last reader tasks that owns a reference to the data */
   int                          ith;                 /* index of the argument wich has read access */
   void*                        addr;                /* address of data */
-  size_t                       size;                /* size of data */
+  kaapi_memory_view_t          view;                /* view of data */
   struct kaapi_data_version_t* next;                /* next kaapi_data_version_t */
 } kaapi_data_version_t;
 
@@ -232,7 +232,7 @@ static inline int kaapi_data_version_clear( kaapi_data_version_t* dv )
   dv->task = 0;
   dv->ith  = -1;
   dv->addr = 0;
-  dv->size = 0;
+  kaapi_memory_view_clear(&dv->view);
   dv->next = 0;
   return 0;
 }
@@ -354,7 +354,7 @@ static inline int kaapi_tasklist_ready_clear( kaapi_tasklist_t* tl )
 /**/
 static inline int kaapi_tasklist_ready_isempty( kaapi_tasklist_t* tl )
 {
-  return (tl->front ==0) && (tl->recvlist ==0);
+  return (tl ==0) || ((tl->front ==0) && (tl->recvlist ==0));
 }
 
 /**/
@@ -478,7 +478,7 @@ KAAPI_DECLARE_GENBLOCENTRIES(kaapi_dataforversion_allocator_t);
        of their access mode, extra tasks required for the synchronisation are added
     3/ the thread group begin its execution.
     
-    Model (publica interface= kaapi_threadgroup_t == kaapi_threadgroup_t* of the implementation
+    Model (public interface= kaapi_threadgroup_t == kaapi_threadgroup_t* of the implementation
     intergace).
       kaapi_threadgroup_t* group; 
       kaapi_threadgroup_create( &group, 10 );
@@ -491,6 +491,11 @@ KAAPI_DECLARE_GENBLOCENTRIES(kaapi_dataforversion_allocator_t);
       kaapi_threadgroup_pushtask( group, 2 )
       
       kaapi_threadgroup_end_partition( group );
+      
+    In case of distributed execution, the threadgroup is replicated among the processors set.
+    If all tasks pushed into the threadgroup are in the same order with the same arguments
+    on all processors, and if the mapping is deterministic, then the different thread group
+    may be built in parallel.
 */
 typedef enum {
   KAAPI_THREAD_GROUP_CREATE_S,     /* created */
@@ -511,6 +516,8 @@ typedef struct kaapi_threadgrouprep_t {
   int                        group_size;   /* number of threads in the group */
    
   /* executive part */
+  kaapi_globalid_t           localgid;     /* local gid of this thread group rep */
+  uint32_t                   nodecount;    /* number of nodes */
   kaapi_globalid_t*          tid2gid;      /* mapping of threads onto the unix processes */
   kaapi_address_space_t*     tid2asid;     /* mapping of threads onto address spaces */
 
@@ -677,7 +684,8 @@ static inline int kaapi_taskready_merge_activationlist( kaapi_tasklist_t* tl, ka
 /**/
 static inline void kaapi_activationlist_pushback( kaapi_threadgroup_t thgrp, kaapi_activationlist_t* al, kaapi_taskdescr_t* td)
 {
-  kaapi_activationlink_t* l = (kaapi_activationlink_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_activationlink_t));
+  kaapi_activationlink_t* l 
+    = (kaapi_activationlink_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_activationlink_t));
   l->td = td;
   l->next = 0;
   if (al->back ==0)

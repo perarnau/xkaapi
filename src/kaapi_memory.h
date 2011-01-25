@@ -42,16 +42,9 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_DATA_H_
-#define _KAAPI_DATA_H_ 1
+#ifndef _KAAPI_MEMORY_H_
+#define _KAAPI_MEMORY_H_ 1
 #include <stdint.h>
-
-/** Maximal different memory spaces on multiprocessors:
-    - CPU memory: index 0
-    - accelerator memory (GPU)
-  This constant will be suppress for supporting large scale distributed memory over network.
-*/
-#define KAAPI_MAX_MEMORY_SPACE 64
 
 /** Type of pointer for all address spaces.
     Pointer arithmetic is allowed on this type for some architecture (e.g.: remote pointer
@@ -59,6 +52,81 @@
     OpenCL seems not to support arithmetic pointer.
 */
 typedef uintptr_t kaapi_pointer_t;
+
+
+#if 0 /* definition moved into kaapi.h for public interface */
+/** Type of allowed memory view for the memory interface:
+    - 1D array (base, size)
+      simple contiguous 1D array
+    - 2D array (base, size[2], lda)
+      assume a row major storage of the memory : the 2D array has
+      size[0] rows of size[1] rowwidth. lda is used to pass from
+      one row to the next one.
+    The base (kaapi_pointer_t) is not part of the view description
+*/
+#define KAAPI_MEM_VIEW_1D 1
+#define KAAPI_MEM_VIEW_2D 2  /* assume row major */
+#define KAAPI_MEM_VIEW_3D 3
+typedef struct kaapi_memory_view_t {
+  int    type;
+  size_t size[2];
+  size_t lda;
+} kaapi_memory_view_t;
+#endif
+
+/** Clear the view
+*/
+static inline void kaapi_memory_view_clear( kaapi_memory_view_t* kmv )
+{
+  kmv->type = -1;
+#if defined(KAAPI_DEBUG)
+  kmv->size[0] = kmv->size[0] = 0;
+  kmv->lda = 0;
+#endif
+}
+
+/** return the size of the view
+*/
+static inline size_t kaapi_memory_view_size( kaapi_memory_view_t* kmv )
+{
+  switch (kmv->type) 
+  {
+    case KAAPI_MEM_VIEW_1D: return kmv->size[0];
+    case KAAPI_MEM_VIEW_2D: return kmv->size[0]*kmv->size[1];
+    default:
+      kaapi_assert(0);
+      break;
+  }
+  return 0;
+}
+
+
+/** assume that now the view points to a new allocate view
+*/
+static inline void kaapi_memory_view_reallocated( kaapi_memory_view_t* kmv )
+{
+  switch (kmv->type) 
+  {
+    case KAAPI_MEM_VIEW_1D: return;
+    case KAAPI_MEM_VIEW_2D: kmv->lda = kmv->size[1]; return;
+    default:
+      kaapi_assert(0);
+      break;
+  }
+}
+
+/** Return non negative value iff the view is contiguous
+*/
+static inline int kaapi_memory_view_iscontiguous( kaapi_memory_view_t* kmv )
+{
+  switch (kmv->type) {
+    case KAAPI_MEM_VIEW_1D: return 1;
+    case KAAPI_MEM_VIEW_2D: return  kmv->lda == kmv->size[1]; /* row major storage */
+    default:
+      break;
+  } 
+  return 0;
+}
 
 
 /** Meta data attached to a pointer and its remote copies.
@@ -76,8 +144,8 @@ typedef struct kaapi_metadata_info_t {
   uint64_t                validbits;
   uint64_t                dirtybits;
   uint64_t                stickybits;
-  kaapi_pointer_t         ptr[KAAPI_MAX_MEMORY_SPACE];
-  size_t                  size[KAAPI_MAX_MEMORY_SPACE];
+  kaapi_pointer_t         ptr[1];
+  size_t                  size[1];
 } kaapi_metadata_info_t;
 
 
@@ -117,7 +185,7 @@ extern void kaapi_mem_deallocate( kaapi_address_space_t kasid, kaapi_metadata_in
     Return the pointer.
 */
 extern kaapi_pointer_t kaapi_mem_bind( kaapi_address_space_t kasid, kaapi_metadata_info_t* kdmi, int flag, void* ptr, size_t size );
-#define KAAPI_MEM_DEFAUL_FLAG 0x0
+#define KAAPI_MEM_DEFAULT_FLAG 0x0
 #define KAAPI_MEM_STICKY_FLAG 0x1
 
 /** Unbind the address from the address space kasid.

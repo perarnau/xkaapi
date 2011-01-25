@@ -258,7 +258,7 @@ namespace ka {
       const kaapi_offset_t        offset_param[],
       const kaapi_offset_t        offset_version[],
       const kaapi_format_t*       fmt_param[],
-      const size_t                size_param[],
+      const kaapi_memory_view_t   view_param[],
       const kaapi_reducor_t       reducor_param[]
     );
 
@@ -272,7 +272,7 @@ namespace ka {
       kaapi_access_t            (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
       void                      (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
       const struct kaapi_format_t*(*get_fmt_param) (const struct kaapi_format_t*, unsigned int, const void*),
-      size_t                    (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+      kaapi_memory_view_t       (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
       void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
     );
   };
@@ -961,7 +961,8 @@ namespace ka {
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_inclosure_t); }
+    static kaapi_memory_view_t  get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_inclosure_t) ); }
     static void              reducor_fnc(void*, const void*) {}
   };
 
@@ -978,7 +979,8 @@ namespace ka {
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_inclosure_t); }
+    static kaapi_memory_view_t  get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_inclosure_t) ); }
     static void              reducor_fnc(void*, const void*) {}
   };
 
@@ -995,7 +997,8 @@ namespace ka {
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) {}
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_inclosure_t); }
+    static kaapi_memory_view_t  get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_inclosure_t) ); }
     static void              reducor_fnc(void*, const void*) {}
   };
 
@@ -1026,7 +1029,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t  get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
   };
 
   template<typename T>
@@ -1040,7 +1044,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t  get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
 //    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
 //    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
   };
@@ -1056,7 +1061,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
@@ -1073,7 +1079,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
@@ -1090,7 +1097,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
@@ -1107,7 +1115,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
@@ -1124,7 +1133,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
@@ -1141,7 +1151,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
@@ -1158,7 +1169,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void* result, const void* value) 
@@ -1179,7 +1191,8 @@ namespace ka {
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static size_t            get_size_param( const type_inclosure_t* a, unsigned int i ) { return sizeof(type_t); }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( sizeof(type_t) ); }
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
@@ -1211,10 +1224,7 @@ namespace ka {
     array_inclosure_t(const array<d,T>& a) : array<d,T>(a), version(0) {}
     template<typename P>
     array_inclosure_t( const P& p ) : array<d,T>(p) {}
-  
-    size_t size() const 
-    { size_t sz = 0; for (int i=0; i<d; ++i) sz += this->dim(i); return sz; }
-  
+    
     void* version;
   };
   
@@ -1560,8 +1570,8 @@ namespace ka {
     { a->setptr( (T*)r->data ); a->version = r->version; }
     static size_t                     get_nparam( const type_inclosure_t* a ) 
     { return 1; }
-    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
-    { return sizeof(type_t)*a->size(); }
+    static kaapi_memory_view_t        get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return a->get_view(); }
     static void                       reducor_fnc(void*, const void*) {}
    };
 
@@ -1580,8 +1590,8 @@ namespace ka {
     { a->setptr( (T*)r->data ); a->version = r->version; }
     static size_t                     get_nparam( const type_inclosure_t* a ) 
     { return 1; }
-    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
-    { return sizeof(type_t)*a->size(); }
+    static kaapi_memory_view_t        get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return a->get_view(); }
     static void                       reducor_fnc(void*, const void*) {}
   };
 
@@ -1600,8 +1610,8 @@ namespace ka {
     { a->setptr( (T*)r->data ); a->version = r->version; }
     static size_t                     get_nparam( const type_inclosure_t* a ) 
     { return 1; }
-    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
-    { return sizeof(type_t)*a->size(); }
+    static kaapi_memory_view_t        get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return a->get_view(); }
     static void                       reducor_fnc(void*, const void*) {}
   };   
 
@@ -1620,8 +1630,8 @@ namespace ka {
     { a->setptr( (T*)r->data ); a->version = r->version; }
     static size_t                     get_nparam( const type_inclosure_t* a ) 
     { return 1; }
-    static size_t                     get_size_param( const type_inclosure_t* a, unsigned int i ) 
-    { return sizeof(type_t)*a->size(); }
+    static kaapi_memory_view_t        get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return a->get_view(); }
     static void                       reducor_fnc(void*, const void*) {}
   };   
 

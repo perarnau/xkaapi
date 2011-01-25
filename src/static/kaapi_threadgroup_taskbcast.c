@@ -53,7 +53,39 @@ int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com)
     while (lraddr !=0)
     {
       /* copy (com->data, com->size) to (lraddr->raddr, lraddr->rsize) */
-      memcpy( (void*)lraddr->raddr, (const void*)com->data, com->size );
+      /* this code should be in the memory library */
+      kaapi_assert_debug (kaapi_memory_view_size(&com->view) == kaapi_memory_view_size(&lraddr->rview));
+      switch (com->view.type) 
+      {
+        case KAAPI_MEM_VIEW_1D:
+        {
+          memcpy( (void*)lraddr->raddr, (const void*)com->data, com->view.size[0] );
+        } break;
+
+        case KAAPI_MEM_VIEW_2D:
+        {
+          size_t i;
+          size_t llda  = com->view.lda;
+          size_t rlda  = lraddr->rview.lda;
+          const char* laddr = (const char*)com->data;
+          char* raddr = (char*)lraddr->raddr;
+          
+          if (kaapi_memory_view_iscontiguous(&com->view) && kaapi_memory_view_iscontiguous(&lraddr->rview))
+          {
+              memcpy( raddr, laddr, kaapi_memory_view_size( &com->view) );
+          }
+          else 
+          {
+            for (i=0; i<com->view.size[0]; ++i, laddr += llda, raddr += rlda)
+              memcpy( raddr, laddr, com->view.size[1] );
+          }
+
+          break;
+        }
+        default:
+          kaapi_assert(0);
+          break;
+      }
 
       /* memory barrier if required */
       kaapi_writemem_barrier();

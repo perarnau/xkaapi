@@ -60,6 +60,7 @@ extern "C" {
 #include "config.h"
 #include "kaapi.h"
 #include "kaapi_error.h"
+#include "kaapi_memory.h"
 #include <string.h>
 
 #include "kaapi_defs.h"
@@ -243,7 +244,7 @@ typedef enum kaapi_selecvictim_flag_t {
 typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi_victim_t*, kaapi_selecvictim_flag_t flag );
 
 
-/* ============================= Default parameters ============================ */
+/* =======vvvvvvvvvvvvvvvvvv===================== Default parameters ============================ */
 /** Initialise default formats
 */
 extern void kaapi_init_basicformat(void);
@@ -362,7 +363,7 @@ typedef struct kaapi_format_t {
   kaapi_offset_t             *_off_params;                             /* access to the i-th parameter: a value or a shared */
   kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
-  uint32_t                   *_size_params;                            /* sizeof of each params */
+  kaapi_memory_view_t        *_view_params;                            /* sizeof of each params */
   kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
@@ -375,7 +376,7 @@ typedef struct kaapi_format_t {
   kaapi_access_t        (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*);
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
-  size_t                (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+  kaapi_memory_view_t   (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
 
   /* fields to link the format is the internal tables */
@@ -453,11 +454,11 @@ const struct kaapi_format_t* kaapi_format_get_fmt_param  (const struct kaapi_for
 }
 
 static inline 
-size_t          kaapi_format_get_size_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+kaapi_memory_view_t kaapi_format_get_view_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
 {
-  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_size_params[ith];
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_view_params[ith];
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
-  return (*fmt->get_size_param)(fmt, ith, sp);
+  return (*fmt->get_view_param)(fmt, ith, sp);
 }
 
 

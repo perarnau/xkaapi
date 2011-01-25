@@ -59,7 +59,7 @@ int kaapi_threadgroup_version_newwriter(
 )
 {
   void*  data;
-  size_t size;
+  kaapi_memory_view_t view;
   int retval;
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
   kaapi_assert_debug( !KAAPI_ACCESS_IS_CUMULWRITE(mode) );
@@ -75,7 +75,7 @@ int kaapi_threadgroup_version_newwriter(
   if (dv !=0) 
   {
     data = dv->addr;
-    size = dv->size;
+    view = dv->view;
     dv->addr = 0;
     /* recycle the data version */
     kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
@@ -91,8 +91,9 @@ int kaapi_threadgroup_version_newwriter(
   else 
   {
     dv = kaapi_version_findtodelrmv_asid_in( ver, asid );
-    size = kaapi_format_get_size_param(fmt, ith, task->task->sp);
-    if ((dv !=0) && (dv->size == size))
+    view = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+    if ((dv !=0) 
+     && (kaapi_memory_view_size(&dv->view) == kaapi_memory_view_size(&view)) )
     {
       data = dv->addr;
       dv->addr = 0;
@@ -109,7 +110,7 @@ int kaapi_threadgroup_version_newwriter(
       }
     }
     else 
-      data = malloc(size);
+      data = malloc(kaapi_memory_view_size(&view))  ;
   }
   
   /* data already exist: multiple cases must be considered.
@@ -133,7 +134,7 @@ int kaapi_threadgroup_version_newwriter(
   ver->writer.ith    = ith;
 
   ver->writer.addr   = data;
-  ver->writer.size   = size;
+  ver->writer.view   = view;
   ver->writer.next   = 0;
   ver->writer_thread = tid;
 

@@ -72,11 +72,11 @@ static inline void kaapi_threadgroup_add_recvtask(
     bcast->front.tag             = ver->tag;
     bcast->front.ith             = -1;  /* no parameter */
     bcast->front.data            = access->data;
-    bcast->front.size            = kaapi_format_get_size_param(fmt, ith, task->task->sp);
+    bcast->front.view            = kaapi_format_get_view_param(fmt, ith, task->task->sp);
     bcast->front.next            = 0;
     bcast->front.front.asid      = asid;
     bcast->front.front.raddr     = 0;
-    bcast->front.front.rsize     = 0;
+    kaapi_memory_view_clear( &bcast->front.front.rview );
     bcast->front.front.next      = 0;
     bcast->front.back            = &bcast->front.front;
 
@@ -104,13 +104,13 @@ static inline void kaapi_threadgroup_add_recvtask(
       bcast->front.tag         = ver->tag;
       bcast->front.ith         = -1;  /* no parameter */
       bcast->front.data        = ver->writer.addr;
-      bcast->front.size        = (ver->writer.ith == -1 ? 
-                                      kaapi_format_get_size_param(fmt, ith, task->task->sp) 
-                                    : ver->writer.size);
+      bcast->front.view        = (ver->writer.ith == -1 ? 
+                                      kaapi_format_get_view_param(fmt, ith, task->task->sp) 
+                                    : ver->writer.view);
       bcast->front.next        = 0;
       bcast->front.front.asid  = asid;
       bcast->front.front.raddr = 0;
-      bcast->front.front.rsize = 0;
+      kaapi_memory_view_clear( &bcast->front.front.rview );
       bcast->front.front.next  = 0;
       bcast->front.back        = &bcast->front.front;
 
@@ -133,14 +133,14 @@ static inline void kaapi_threadgroup_add_recvtask(
         comd->tag               = ver->tag;
         comd->ith               = -1;  /* here: ith of the parameter of the writer task */
         comd->data              = ver->writer.addr;
-        comd->size              = (ver->writer.ith == -1 ? 
-                                        kaapi_format_get_size_param(fmt, ith, task->task->sp) 
-                                      : ver->writer.size);
+        comd->view              = (ver->writer.ith == -1 ? 
+                                        kaapi_format_get_view_param(fmt, ith, task->task->sp) 
+                                      : ver->writer.view);
         comd->next              = 0;
         comd->front.asid        = asid;
         comd->front.rsignal     = 0;
         comd->front.raddr       = 0;
-        comd->front.rsize       = 0;
+        kaapi_memory_view_clear( &comd->front.rview );
         comd->front.next        = 0;
         comd->back              = &comd->front;
         
@@ -161,7 +161,7 @@ static inline void kaapi_threadgroup_add_recvtask(
           comasid->asid    = asid;
           comasid->rsignal = 0;
           comasid->raddr   = 0;
-          comasid->rsize   = 0;
+          kaapi_memory_view_clear( &comasid->rview );
           comasid->next    = 0;
 
           /* push it at the end: always back exist */
@@ -187,8 +187,9 @@ static inline void kaapi_threadgroup_add_recvtask(
     wc->tag        = ver->tag;
     wc->list.front = 0;
     wc->list.back  = 0;
-    wc->size       = kaapi_format_get_size_param(fmt, ith, task->task->sp);
-    wc->data       = a.data = malloc( wc->size );
+    wc->view       = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+    wc->data       = a.data = malloc( kaapi_memory_view_size(&wc->view) );
+    kaapi_memory_view_reallocated( &wc->view );
     wc->next       = 0;
   }
   else {
@@ -209,7 +210,7 @@ static inline void kaapi_threadgroup_add_recvtask(
   dv_reader->task = task; 
   dv_reader->ith  = ith; 
   dv_reader->addr = a.data; 
-  dv_reader->size = kaapi_format_get_size_param(fmt, ith, task->task->sp);
+  dv_reader->view = kaapi_format_get_view_param(fmt, ith, task->task->sp);
   
   /* link it into list of copies */
   kaapi_data_version_list_add(&ver->copies, dv_reader );
@@ -246,9 +247,9 @@ static inline int kaapi_version_add_reader(
     dv_reader->task = task; 
     dv_reader->ith  = ith; 
     dv_reader->addr = over->addr; 
-    dv_reader->size = (over->ith == -1 ? 
-                            kaapi_format_get_size_param(fmt, ith, task->task->sp) 
-                          : over->size);
+    dv_reader->view = (over->ith == -1 ? 
+                            kaapi_format_get_view_param(fmt, ith, task->task->sp) 
+                          : over->view);
 
 
     kaapi_access_t a; /* to store data access and allocate */
