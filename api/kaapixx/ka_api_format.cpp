@@ -125,20 +125,22 @@ FormatTask::FormatTask(
 ) : Format(0)
 {
   if (fmt ==0)
+  {
     fmt = new kaapi_format_t;
-  kaapi_format_taskregister_static( 
-        fmt,
-        0, 
-        name.c_str(),
-        size,
-        count,
-        mode_param,
-        offset_param,
-        offset_version,
-        fmt_param,
-        size_param,
-        reducor_param
-  );
+    kaapi_format_taskregister_static( 
+          fmt,
+          0, 
+          name.c_str(),
+          size,
+          count,
+          mode_param,
+          offset_param,
+          offset_version,
+          fmt_param,
+          size_param,
+          reducor_param
+    );
+  }
 }
 
 
@@ -156,22 +158,23 @@ FormatTask::FormatTask(
   void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
 ) : Format(0)
 {
-  if (fmt ==0)
+  if (fmt ==0) {
     fmt = new kaapi_format_t;
-  kaapi_format_taskregister_func( 
-        fmt,
-        0, 
-        name.c_str(),
-        size,
-        get_count_params,
-        get_mode_param,
-        get_off_param,
-        get_access_param,
-        set_access_param,
-        get_fmt_param,
-/**/    get_size_param,
-        reducor
-  );
+    kaapi_format_taskregister_func( 
+          fmt,
+          0, 
+          name.c_str(),
+          size,
+          get_count_params,
+          get_mode_param,
+          get_off_param,
+          get_access_param,
+          set_access_param,
+          get_fmt_param,
+  /**/    get_size_param,
+          reducor
+    );
+  }
 }
 
 

@@ -161,7 +161,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ',`', `')
     M4_PARAM(`array_format[$1-1] = WrapperFormat<typename TraitFormalParam$1::type_t>::format.get_c_format();
     ',`', `')
-    M4_PARAM(`array_size[$1-1]   = TraitFormalParam$1::get_size_param(&dummy->f$1, $1);
+    M4_PARAM(`array_size[$1-1]   = TraitFormalParam$1::get_size_param(&dummy->f$1, $1-1);
     ',`', `')
     M4_PARAM(`array_reducor[$1-1]= &TraitFormalParam$1::reducor_fnc;
     ',`', `')
