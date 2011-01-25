@@ -1,29 +1,50 @@
+#include "kaapi_impl.h"
 #include "kaapi++"
 #include <iostream>
 
 
 // --------------------------------------------------------------------
-struct TaskW: public ka::Task<2>::Signature<ka::W<int>, ka::W<int> > {};
+struct TaskW: public ka::Task<1>::Signature<ka::W<int> > {};
 template<>
 struct TaskBodyCPU<TaskW> {
-  void operator() ( ka::pointer_w<int> d0, ka::pointer_w<int> d1 )
+  void operator() ( ka::pointer_w<int> d )
   {
-    std::cout << "In Task W=" << 20 << ", @:" << (int*)d0 << std::endl;
-    std::cout << "In Task W=" << 40 << ", @:" << (int*)d1 << std::endl;
-    *d0 = 20;
-    *d1 = 40;
+    *d = 123;
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    printf("[%p->%p] :: In Task W=123\n",
+	(void*)kproc, (void*)kproc->thread);
+    usleep(100);
   }
 };
 
+
 // --------------------------------------------------------------------
-struct TaskR: public ka::Task<1>::Signature<ka::R<int> > {};
+struct TaskR1: public ka::Task<1>::Signature<ka::R<int> > {};
 template<>
-struct TaskBodyCPU<TaskR> {
-  void operator() ( ka::pointer_r<int> d )
+struct TaskBodyCPU<TaskR1> {
+  void operator() ( ka::Thread* thread, ka::pointer_r<int> d )
   {
-    std::cout << "In Task R=" << *d << ", @:" << (int*)d << std::endl;
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    printf("[%p->%p] :: In Task R1=%i\n",
+	(void*)kproc, (void*)kproc->thread, *d);
+    usleep(100);
   }
 };
+
+
+// --------------------------------------------------------------------
+struct TaskR2: public ka::Task<1>::Signature<ka::R<int> > {};
+template<>
+struct TaskBodyCPU<TaskR2> {
+  void operator() ( ka::Thread* thread, ka::pointer_r<int> d )
+  {
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    printf("[%p->%p] :: In Task R2=%i\n",
+	(void*)kproc, (void*)kproc->thread, *d);
+    usleep(100);
+  }
+};
+
 
 
 /* Main of the program
@@ -33,17 +54,15 @@ struct doit {
   {
     std::cout << "My pid=" << getpid() << std::endl;
 
-    ka::ThreadGroup threadgroup( 3 );
+    ka::ThreadGroup threadgroup( 2 );
     ka::auto_pointer<int> a      = ka::Alloca<int>(1);
-    ka::auto_pointer<int> b      = ka::Alloca<int>(1);
+    *a = 1;
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a, b );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(2))  ( b );
-
-    threadgroup.print();    
+    threadgroup.Spawn<TaskW>  (ka::SetPartition(0))  ( a );
+    threadgroup.Spawn<TaskR1> (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskR2> (ka::SetPartition(1))  ( a );
 
     threadgroup.end_partition();
 

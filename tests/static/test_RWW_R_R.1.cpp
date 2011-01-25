@@ -51,8 +51,6 @@ struct doit {
     threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( a );
     threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( b );
 
-    threadgroup.print();    
-
     threadgroup.end_partition();
 
     threadgroup.execute();

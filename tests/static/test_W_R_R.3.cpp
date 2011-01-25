@@ -3,13 +3,15 @@
 
 
 // --------------------------------------------------------------------
-struct TaskW: public ka::Task<2>::Signature<ka::W<int>, int > {};
+struct TaskW: public ka::Task<2>::Signature<ka::W<int>, ka::W<int> > {};
 template<>
 struct TaskBodyCPU<TaskW> {
-  void operator() ( ka::pointer_w<int> d, int value )
+  void operator() ( ka::pointer_w<int> d0, ka::pointer_w<int> d1 )
   {
-    std::cout << "In Task W=" << value << ", @:" << (int*)d << std::endl;
-    *d = value;
+    std::cout << "In Task W=" << 20 << ", @:" << (int*)d0 << std::endl;
+    std::cout << "In Task W=" << 40 << ", @:" << (int*)d1 << std::endl;
+    *d0 = 20;
+    *d1 = 40;
   }
 };
 
@@ -31,16 +33,15 @@ struct doit {
   {
     std::cout << "My pid=" << getpid() << std::endl;
 
-    ka::ThreadGroup threadgroup( 2 );
+    ka::ThreadGroup threadgroup( 3 );
     ka::auto_pointer<int> a      = ka::Alloca<int>(1);
+    ka::auto_pointer<int> b      = ka::Alloca<int>(1);
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a, 10 );
+    threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a, b );
     threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
-    threadgroup.Spawn<TaskW> (ka::SetPartition(1))  ( a, 20 ); /* war */
-    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(2))  ( b );
 
     threadgroup.end_partition();
 
