@@ -58,14 +58,59 @@ int kaapi_threadgroup_version_newwriter(
     kaapi_access_t*       access
 )
 {
+  void*  data;
+  size_t size;
+  int retval;
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
   kaapi_assert_debug( !KAAPI_ACCESS_IS_CUMULWRITE(mode) );
 
+  /* retval = 1: assume access is ready */
+  retval = 1;
+  
   /* asid for the target thread */
   kaapi_address_space_t asid = thgrp->tid2asid[tid];
 
   /* find the data info in the map attached to the version and remove it from list if found, else return 0 */
   kaapi_data_version_t* dv = kaapi_version_findcopiesrmv_asid_in( ver, asid );
+  if (dv !=0) 
+  {
+    data = dv->addr;
+    size = dv->size;
+    dv->addr = 0;
+    /* recycle the data version */
+    kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
+    
+    /* avoid WAR here: may be solved at runtime */
+    retval = 0;
+    if (dv->task !=0)
+    {
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[asid]->readytasklist;
+      kaapi_taskdescr_push_successor( tasklist, dv->task, task );
+    }
+  }
+  else 
+  {
+    dv = kaapi_version_findtodelrmv_asid_in( ver, asid );
+    size = kaapi_format_get_size_param(fmt, ith, task->task->sp);
+    if ((dv !=0) && (dv->size == size))
+    {
+      data = dv->addr;
+      dv->addr = 0;
+      /* recycle the data version */
+      kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
+      
+    /* avoid WAR here: may be solved at runtime */
+      retval = 0;
+
+      if (dv->task !=0)
+      {
+        kaapi_tasklist_t* tasklist = thgrp->threadctxts[asid]->readytasklist;
+        kaapi_taskdescr_push_successor( tasklist, dv->task, task );
+      }
+    }
+    else 
+      data = malloc(size);
+  }
   
   /* data already exist: multiple cases must be considered.
      1- if it exists readers (>=1), then copies are invalidated 
@@ -87,8 +132,8 @@ int kaapi_threadgroup_version_newwriter(
   ver->writer.task   = task;
   ver->writer.ith    = ith;
 
-  ver->writer.addr   = (dv !=0 ? dv->addr : access->data);
-  ver->writer.size   = (dv !=0 ? dv->size : kaapi_format_get_size_param(fmt, ith, task->task->sp));
+  ver->writer.addr   = data;
+  ver->writer.size   = size;
   ver->writer.next   = 0;
   ver->writer_thread = tid;
 
@@ -96,15 +141,9 @@ int kaapi_threadgroup_version_newwriter(
   a.data = ver->writer.addr;
   kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
 
-  if (dv !=0)
-  {
-     /* recycle the data version */
-     kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
-  }
-
   /* reset the tag for the version */
   ver->tag = 0;
 
   /* return 1: the access is ready ! */
-  return 1;
+  return retval;
 }

@@ -457,8 +457,11 @@ static inline int kaapi_taskargdescr_ishandle( kaapi_taskdescr_t* td, int ith )
 /**/
 extern kaapi_data_version_t* kaapi_version_findasid_in( kaapi_version_t* ver, kaapi_address_space_t asid );
 
-/* find and unlink entry (if found) before return it */
+/* find in list of copies and unlink entry (if found) before return it */
 extern kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid );
+
+/* find in list of data to dele and unlink entry (if found) before return it */
+extern kaapi_data_version_t* kaapi_version_findtodelrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid );
 
 
 
@@ -515,17 +518,15 @@ typedef struct kaapi_threadgrouprep_t {
 
   kaapi_task_t*              waittask;     /* task to mark end of parallel computation */
   int volatile               startflag;    /* set to 1 when threads should starts */
-  int volatile               step;         /* iteration step */
+  int volatile               step;         /* current iteration step */
+  int                        maxstep;      /* max iteration step or -1 if not known */
+  int                        flag;         /* some flag to pass info (save / not save) */
   kaapi_frame_t              mainframe;    /* save/restore main thread */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
   
-  /* not yet used: to be used for iterative compt */
-  kaapi_task_t*              save_mainthread;
-  kaapi_frame_t              save_maintopframe;
-  int                        size_mainthread;
-  kaapi_task_t**             save_workerthreads;
-  kaapi_frame_t*             save_workertopframe;
-  int*                       size_workerthreads;
+  /* used for iterative execution: only save the tasklist data structure */
+  char**                     save_readylists;
+  size_t*                    size_readylists;
   
   /* state of the thread group */
   kaapi_threadgroup_state_t  state;        /* state */
@@ -646,42 +647,9 @@ static inline void kaapi_threadgroup_deallocate_dataversion( kaapi_threadgroup_t
   thgrp->free_dataversion_list = dv;
 }
 
-#if !defined(KAAPI_USE_STATICSCHED)
-/* defined body because they was used in other part of the runtime */
-
-/* task recv body
-*/
-static inline void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread ) {}
-
-/* task tbcast body 
-*/
-static inline void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread ) {}
-
-/* task to signal end of a step
-*/
-static inline void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread ) {}
-
-#else
-/* task recv body
-*/
-void kaapi_taskrecv_body( void* sp, kaapi_thread_t* thread );
-
-/* task tbcast body 
-*/
-void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread );
-
-/* task recv body 
-*/
-void kaapi_taskrecvbcast_body( void* sp, kaapi_thread_t* thread );
-
-/* task to signal end of a step
-*/
-void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread );
-
 /* task to wait end of a step
 */
 void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread );
-#endif
 
 /**/
 static inline int kaapi_activationlist_isempty( kaapi_activationlist_t* al )
@@ -806,6 +774,11 @@ static inline kaapi_comrecv_t* kaapi_tasklist_ready_popsignal( kaapi_tasklist_t*
   retval->next = 0;
   return retval;
 }
+
+
+/**
+*/
+extern int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com);
 
 /**
 */

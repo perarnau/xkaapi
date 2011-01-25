@@ -43,95 +43,27 @@
  */
 #include "kaapi_impl.h"
 
-
-/*
-*/
-void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
+/* */
+int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com)
 {
-#warning "TODO"
-#if 0
-  /* thread[-1]->pc is the executing task (pc of the upper frame) */
-  /* kaapi_task_t*          self = thread[-1].pc;*/
-  kaapi_taskbcast_arg_t* arg  = sp;
-  kaapi_com_t* comlist;
-
-  if (arg->common.original_body != 0)
-  { /* encapsulation of the taskbcast on top of an existing task */
-    (*arg->common.original_body)(arg->common.original_sp,thread);
-  }
-  
-  /* write memory barrier to ensure that other threads will view the data produced */
-  kaapi_mem_barrier();
-
-  /* signal all readers */
-  comlist = &arg->head;
-  while(comlist != 0) 
+  kaapi_comsend_raddr_t* lraddr;
+  while (com != 0)
   {
-    kaapi_comentry_t* entry; 
-    for ( entry = comlist->entry; entry !=0; entry = entry->next)
+    lraddr = &com->front;
+    while (lraddr !=0)
     {
-      kaapi_task_t* task = entry->task;
-      kaapi_task_body_t task_body = kaapi_task_getbody( task );
-      kaapi_assert( ((task_body == kaapi_taskrecv_body) || (task_body == kaapi_taskbcast_body)) 
-                  && kaapi_task_state_issteal(kaapi_task_getstate(task)) );
-      kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)task->sp;
+      /* copy (com->data, com->size) to (lraddr->raddr, lraddr->rsize) */
+      memcpy( (void*)lraddr->raddr, (const void*)com->data, com->size );
+
+      /* memory barrier if required */
+      kaapi_writemem_barrier();
       
-      if (kaapi_threadgroup_decrcounter(argrecv) ==0)
-      {
-        void* newsp;
-        kaapi_task_body_t newbody;
-        if (task_body == kaapi_taskrecv_body)
-        {
-          newbody = argrecv->original_body;
-          newsp   = argrecv->original_sp;
-        }
-        else 
-        {
-          newbody = task_body;
-          newsp   = task->sp;
-        }
-      
-        /* if signaled thread was suspended, move it to the local queue */
-        kaapi_wsqueuectxt_cell_t* wcs = (kaapi_wsqueuectxt_cell_t*)argrecv->wcs;
-        if (wcs != 0) /* means thread has been suspended */
-        { 
-          kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
-          if (kthread !=0)
-          {
-            kaapi_wsqueuectxt_finish_steal_cell( wcs );
-            kaapi_processor_t* kproc = kthread->proc;
-            kaapi_assert_debug( kaapi_cpuset_has(kthread->affinity, kproc->kid) || kaapi_cpuset_empty(kthread->affinity) );
-            kaapi_sched_lock( &kproc->lock );
-            /* signal the task : also reset the state to init 
-               Do not change the body and keep the recvbody or recvbcast body that
-               will directly call the user function (one more indirection).
-               Else the assertion in kaapi_thread_isready and the way to test if a
-               thread is ready should be adapted to consider 0 as a ready state (initial state).
-            */
-            kaapi_writemem_barrier();
-            kaapi_task_setbody(task, task_body);
-            kaapi_sched_pushready( kproc, kthread );
-            kaapi_sched_unlock( &kproc->lock );
-          }
-          else {
-            /* signal the task : also reset the state to init 
-               See comment above.
-            */
-            kaapi_writemem_barrier();
-            kaapi_task_setbody(task, task_body);
-          }
-        }
-        else {
-          kaapi_writemem_barrier();
-          /* signal the task : also reset the state to init 
-             See comment above.
-          */
-          kaapi_task_setbody(task, task_body);
-        }
-//        printf("Task: %p signaled to: %p  =%p\n", (void*)task, (void*)task_body, (void*)task->u.body ); fflush(stdout);
-      }
+      /* signal remote thread in lraddr->asid */
+      kaapi_tasklist_ready_pushsignal( thgrp->threadctxts[lraddr->asid]->readytasklist, lraddr->rsignal );
+
+      lraddr = lraddr->next;
     }
-    comlist = comlist->next;
+    com = com->next;
   }
-#endif
+  return 0;
 }

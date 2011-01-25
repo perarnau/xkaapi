@@ -44,30 +44,6 @@
 #include "kaapi_impl.h"
 
 
-/* */
-static int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com)
-{
-  kaapi_comsend_raddr_t* lraddr;
-  while (com != 0)
-  {
-    lraddr = &com->front;
-    while (lraddr !=0)
-    {
-      /* copy (com->data, com->size) to (lraddr->raddr, lraddr->rsize) */
-      memcpy( (void*)lraddr->raddr, (const void*)com->data, com->size );
-
-      /* memory barrier if required */
-      kaapi_writemem_barrier();
-      
-      /* signal remote thread in lraddr->asid */
-      kaapi_tasklist_ready_pushsignal( thgrp->threadctxts[lraddr->asid]->readytasklist, lraddr->rsignal );
-
-      lraddr = lraddr->next;
-    }
-    com = com->next;
-  }
-  return 0;
-}
 
 /** kaapi_threadgroup_execframe
     Use the list of ready task to execute program.
@@ -205,8 +181,22 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
   kaapi_threadgroup_t thgrp = thread->the_thgrp;
   if (thgrp ==0) return 0;
 
+  /* signal end of step if no more recv (and then no ready task activated) */
   if (KAAPI_ATOMIC_READ(&readytasklist->count_recv) == 0) 
   {
+    /* restore before signaling end of execution */
+    if (((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0))
+    {
+      if (thgrp->maxstep != -1) 
+      {
+        /* avoir restore for the last step */
+        if (thgrp->step + 1 <thgrp->maxstep)
+          kaapi_threadgroup_restore_thread(thgrp, thread->partid);
+      }
+      else 
+        kaapi_threadgroup_restore_thread(thgrp, thread->partid);
+    }
+    
     if (thread != thgrp->threadctxts[-1])
     { 
       if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)

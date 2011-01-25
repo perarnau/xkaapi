@@ -104,7 +104,9 @@ static inline void kaapi_threadgroup_add_recvtask(
       bcast->front.tag         = ver->tag;
       bcast->front.ith         = -1;  /* no parameter */
       bcast->front.data        = ver->writer.addr;
-      bcast->front.size        = ver->writer.size;
+      bcast->front.size        = (ver->writer.ith == -1 ? 
+                                      kaapi_format_get_size_param(fmt, ith, task->task->sp) 
+                                    : ver->writer.size);
       bcast->front.next        = 0;
       bcast->front.front.asid  = asid;
       bcast->front.front.raddr = 0;
@@ -131,7 +133,9 @@ static inline void kaapi_threadgroup_add_recvtask(
         comd->tag               = ver->tag;
         comd->ith               = -1;  /* here: ith of the parameter of the writer task */
         comd->data              = ver->writer.addr;
-        comd->size              = ver->writer.size;
+        comd->size              = (ver->writer.ith == -1 ? 
+                                        kaapi_format_get_size_param(fmt, ith, task->task->sp) 
+                                      : ver->writer.size);
         comd->next              = 0;
         comd->front.asid        = asid;
         comd->front.rsignal     = 0;
@@ -191,7 +195,7 @@ static inline void kaapi_threadgroup_add_recvtask(
     a.data = wc->data;
   }
 
-  /* */
+  /* push the task into the activation link of the comrecv data structure */
   kaapi_activationlist_pushback( thgrp, &wc->list, task );
   kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
 
@@ -242,7 +246,10 @@ static inline int kaapi_version_add_reader(
     dv_reader->task = task; 
     dv_reader->ith  = ith; 
     dv_reader->addr = over->addr; 
-    dv_reader->size = over->size;
+    dv_reader->size = (over->ith == -1 ? 
+                            kaapi_format_get_size_param(fmt, ith, task->task->sp) 
+                          : over->size);
+
 
     kaapi_access_t a; /* to store data access and allocate */
     a.data = over->addr;
@@ -251,11 +258,15 @@ static inline int kaapi_version_add_reader(
     /* link it into list of copies */
     kaapi_data_version_list_add(&ver->copies, dv_reader );
     
-    /* add the task to the list of activated task of the writer task */
-    kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
-    kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->readytasklist;
-    kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
-    return 0;
+    /* add the task to the list of activated task of the writer task if it is not a dummy version */
+    if (ver->writer.task !=0)
+    {
+      kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->readytasklist;
+      kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
+      return 0;
+    }
+    return 1;
   }
   
   /* mute the task field of over to points to the last task */

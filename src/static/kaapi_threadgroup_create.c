@@ -124,15 +124,15 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
 
   /* ok */
   
+  thgrp->maxstep            = -1;
   thgrp->step               = -1;
   thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;
+  thgrp->flag               = 0;
   thgrp->tag_count          = 0;
   kaapi_assert( kaapi_allocator_init(&thgrp->allocator) ==0);
   thgrp->free_dataversion_list=0;
-  thgrp->save_mainthread    = 0;
-  thgrp->size_mainthread    = 0;
-  thgrp->save_workerthreads = 0;
-  thgrp->size_workerthreads = 0;
+  thgrp->save_readylists    = 0;
+  thgrp->size_readylists    = 0;
   *pthgrp                   = thgrp;
   return 0;
 
@@ -156,3 +156,13 @@ return_error_1:
 return_error_0:
   return error;  
 }
+
+
+/**
+*/
+int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep )
+{
+  thgrp->maxstep = maxstep;
+  return 0;
+}
+

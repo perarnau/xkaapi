@@ -46,7 +46,7 @@
 
 /**
 */
-int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
+int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
 {
   kaapi_processor_t* kproc;
 
@@ -70,15 +70,10 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp )
   kaapi_sched_lock(&kproc->lock);
   thgrp->threadctxts[-1]->unstealable = 1;
   kaapi_sched_unlock(&kproc->lock);
-    
-#if 0
-  fprintf(stdout, "Save frame:: pc:%p, sp:%p, spd:%p\n", 
-    (void*)thgrp->mainframe.pc, 
-    (void*)thgrp->mainframe.sp, 
-    (void*)thgrp->mainframe.sp_data 
-  );
-#endif
-
+  
+  kaapi_assert_debug( (flag == 0) || (flag == KAAPI_THGRP_SAVE_FLAG) );
+  thgrp->flag = flag;
+  
   return 0;
 }
 
@@ -89,20 +84,9 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
 {
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) 
     return EINVAL;
-  kaapi_task_t* task;
 
-  /* update remote reference */
+  /* save if required and update remote reference */
   kaapi_threadgroup_barrier_partition( thgrp );
-    
-  /* for all threads add a signalend task in order to signal end of iteration 
-     and to detach the thread.
-  */
-  for (int i=0; i<thgrp->group_size; ++i)
-  {
-    task = kaapi_thread_toptask( thgrp->threads[i] );
-    kaapi_task_init_with_state( task, kaapi_tasksignalend_body, KAAPI_MASK_BODY_TERM, thgrp );
-    kaapi_thread_pushtask(thgrp->threads[i]);    
-  }
   
   /* */
   kaapi_threadgroup_print( stdout, thgrp );

@@ -50,7 +50,7 @@ void kaapi_taskwaitend_body( void* sp, kaapi_thread_t* thread )
   kaapi_assert(0);
 }
 
-
+#if 0
 /*
 */
 void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
@@ -93,3 +93,4 @@ void kaapi_tasksignalend_body( void* sp, kaapi_thread_t* thread )
   fflush(stdout);
 #endif
 }
+#endif

@@ -88,6 +88,37 @@ kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver,
 }
 
 
+
+/**/
+kaapi_data_version_t* kaapi_version_findtodelrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid )
+{
+  if (ver ==0) return 0;
+  kaapi_data_version_t* curr = ver->todel.front;
+  kaapi_data_version_t* prev = curr;
+  while (curr !=0)
+  {
+    if (curr->asid == asid) 
+    {
+      if (prev == curr) 
+      {
+        ver->todel.front = curr->next;
+        if (ver->todel.front == 0) ver->todel.back = 0;
+        prev = ver->todel.front;
+        curr->next = 0;
+        return curr;
+      }
+
+      prev->next = curr->next;
+      if (ver->todel.back == curr) ver->todel.front = prev;
+      return curr;
+    }
+    prev = curr;
+    curr = curr->next;
+  }
+  return 0;
+}
+
+
 /**/
 kaapi_comsend_t* kaapi_sendcomlist_find_tag( kaapi_taskbcast_arg_t* bcast, kaapi_comtag_t tag )
 {

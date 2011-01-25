@@ -79,6 +79,9 @@ static int kaapi_threadgroup_update_recv( kaapi_threadgroup_t thgrp, int tid, ka
 int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
 {
   /* this version is only for multicore machine */
+  if ((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0)
+    kaapi_threadgroup_save(thgrp);
+
   for (int i=-1; i<thgrp->group_size; ++i)
   {
     kaapi_threadgroup_resolved_for( thgrp, i, thgrp->threadctxts[i]->list_send );

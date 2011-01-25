@@ -67,6 +67,9 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   kaapi_assert( ver != 0 );
   ver->writer_thread = -1; /* main thread */
   ver->writer.asid = thgrp->tid2asid[ver->writer_thread];
+  ver->writer.addr = access->data;
+  ver->writer.size = 0;  /* in fact unknown size, should be set by the task param */
+  ver->writer.ith  = -1; /* in fact unknown ith, should be set by the task param */
   return entry;
 }
 

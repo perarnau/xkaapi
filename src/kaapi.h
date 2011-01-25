@@ -1345,7 +1345,13 @@ extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size );
 
 /**
 */
-extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp );
+#define KAAPI_THGRP_DEFAULT_FLAG  0
+#define KAAPI_THGRP_SAVE_FLAG     0x1
+extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag );
+
+/**
+*/
+extern int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep );
 
 /** Check and compute dependencies if task 'task' is pushed into the i-th partition
     \return EINVAL if task does not have format
