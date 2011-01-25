@@ -85,15 +85,12 @@ extern "C" {
 
 
 /** A faire:
-    - relire et completer les fonctions d'allocation dans newreader / newwriter
-      - allocation des objets d'execution != des objets de construction du graphe (del après partition)
-      - allocation persistant (version ?)
-    - faire la partie writer (code + fonction helper + fonction allocation structure de données)
-    - ajout des flags pointer sur data ou handle pour les arguments des tâches
-      - début dans newreader
-    - modification du print du thread group pour 1/ afficher les listes ready + list d'activation
-    - ecriture du execframe + virtualisation du exec frame (pointer sur thread, default: normal exec frame).
-    
+    - suppression des datas
+    - save/restore des threads + list ready
+    - utilisation de l'interface d'allocation
+      * allocation GPU ? -> thread gpu
+      * partie partition_barrier distribuée entre thread + data allouée à ce moment
+    - test static + poisson3D
 */
 
 /* fwd decl */
@@ -223,8 +220,8 @@ typedef struct kaapi_data_version_t {
   kaapi_address_space_t        asid;                /* address space of the access (r)   */
   kaapi_taskdescr_t*           task;                /* the last reader tasks that owns a reference to the data */
   int                          ith;                 /* index of the argument wich has read access */
-  int                          flag;                /* ==0 addr points to the data; ==1 it is an handler */
   void*                        addr;                /* address of data */
+  size_t                       size;                /* size of data */
   struct kaapi_data_version_t* next;                /* next kaapi_data_version_t */
 } kaapi_data_version_t;
 
@@ -234,8 +231,8 @@ static inline int kaapi_data_version_clear( kaapi_data_version_t* dv )
   dv->asid = 0;
   dv->task = 0;
   dv->ith  = -1;
-  dv->flag = 0;
   dv->addr = 0;
+  dv->size = 0;
   dv->next = 0;
   return 0;
 }

@@ -103,8 +103,8 @@ static inline void kaapi_threadgroup_add_recvtask(
       bcast = (kaapi_taskbcast_arg_t*)kaapi_tasklist_allocate( tasklist, sizeof(kaapi_taskbcast_arg_t));
       bcast->front.tag         = ver->tag;
       bcast->front.ith         = -1;  /* no parameter */
-      bcast->front.data        = access->data;
-      bcast->front.size        = kaapi_format_get_size_param(fmt, ith, task->task->sp);
+      bcast->front.data        = ver->writer.addr;
+      bcast->front.size        = ver->writer.size;
       bcast->front.next        = 0;
       bcast->front.front.asid  = asid;
       bcast->front.front.raddr = 0;
@@ -130,8 +130,8 @@ static inline void kaapi_threadgroup_add_recvtask(
         comd = (kaapi_comsend_t*)kaapi_tasklist_allocate( tasklist, sizeof(kaapi_comsend_t));
         comd->tag               = ver->tag;
         comd->ith               = -1;  /* here: ith of the parameter of the writer task */
-        comd->data              = access->data;
-        comd->size              = kaapi_format_get_size_param(fmt, ith, task->task->sp);
+        comd->data              = ver->writer.addr;
+        comd->size              = ver->writer.size;
         comd->next              = 0;
         comd->front.asid        = asid;
         comd->front.rsignal     = 0;
@@ -204,8 +204,8 @@ static inline void kaapi_threadgroup_add_recvtask(
   dv_reader->asid = asid; 
   dv_reader->task = task; 
   dv_reader->ith  = ith; 
-  dv_reader->flag = 0;
   dv_reader->addr = a.data; 
+  dv_reader->size = kaapi_format_get_size_param(fmt, ith, task->task->sp);
   
   /* link it into list of copies */
   kaapi_data_version_list_add(&ver->copies, dv_reader );
@@ -241,8 +241,12 @@ static inline int kaapi_version_add_reader(
     dv_reader->asid = over->asid; 
     dv_reader->task = task; 
     dv_reader->ith  = ith; 
-    dv_reader->flag = 0;
-    dv_reader->addr = access->data; 
+    dv_reader->addr = over->addr; 
+    dv_reader->size = over->size;
+
+    kaapi_access_t a; /* to store data access and allocate */
+    a.data = over->addr;
+    kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
     
     /* link it into list of copies */
     kaapi_data_version_list_add(&ver->copies, dv_reader );

@@ -125,7 +125,9 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   {
     fmt->_size_params = malloc( sizeof(size_t)*count );
     kaapi_assert( fmt->_size_params !=0);
-    memcpy(fmt->_size_params, size_param, sizeof(size_t)*count );
+    /* cast value size_t -> uint32_t */
+    for (int i=0; i<count; ++i)
+      fmt->_size_params[i] = size_param[i];
   }
 
   if (reducor_param !=0)

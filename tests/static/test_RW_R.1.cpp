@@ -10,6 +10,7 @@ struct TaskBodyCPU<TaskRW> {
   {
     std::cout << "In Task RW=" << *d << ", @:" << (int*)d << std::endl;
     *d += 10;
+    std::cout << "In Task RW=" << *d << ", @:" << (int*)d << std::endl;
   }
 };
 

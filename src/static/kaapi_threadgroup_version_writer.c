@@ -86,10 +86,15 @@ int kaapi_threadgroup_version_newwriter(
   ver->writer.asid   = asid;
   ver->writer.task   = task;
   ver->writer.ith    = ith;
-  ver->writer.flag   = 0;
-  ver->writer.addr   = 0;
+
+  ver->writer.addr   = (dv !=0 ? dv->addr : access->data);
+  ver->writer.size   = (dv !=0 ? dv->size : kaapi_format_get_size_param(fmt, ith, task->task->sp));
   ver->writer.next   = 0;
   ver->writer_thread = tid;
+
+  kaapi_access_t a;          /* to store data access and allocate */
+  a.data = ver->writer.addr;
+  kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
 
   if (dv !=0)
   {
