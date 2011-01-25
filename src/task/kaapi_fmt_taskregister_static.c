@@ -127,7 +127,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
     kaapi_assert( fmt->_size_params !=0);
     /* cast value size_t -> uint32_t */
     for (int i=0; i<count; ++i)
-      fmt->_size_params[i] = size_param[i];
+      fmt->_size_params[i] = (uint32_t)size_param[i];
   }
 
   if (reducor_param !=0)
