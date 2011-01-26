@@ -70,9 +70,9 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
   if (cond_thread !=0)
   {
     if ( ((cond_thread->sfp->pc ==cond_task) && kaapi_thread_isready(cond_thread))
-      || ((cond_thread->readytasklist !=0) && !kaapi_tasklist_ready_isempty(cond_thread->readytasklist) ) )
-//             ((cond_thread->readytasklist->recvlist!=0) 
-//          || (KAAPI_ATOMIC_READ(&cond_thread->readytasklist->count_recv) ==0))
+      || ((cond_thread->tasklist !=0) && !kaapi_tasklist_isempty(cond_thread->tasklist) ) )
+//             ((cond_thread->tasklist->recvlist!=0) 
+//          || (KAAPI_ATOMIC_READ(&cond_thread->tasklist->count_recv) ==0))
 //         )
 //       )
     {
@@ -127,9 +127,10 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     
     /* add affinity here because in dfg the signal of suspended thread does not move it to ready list */
     if ((thread !=0) && kaapi_cpuset_has(thread->affinity, kproc_thiefid) 
-          && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))
+      &&  (((thread->tasklist ==0) && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell)))
+       || (((thread->tasklist !=0) && !kaapi_tasklist_isempty(thread->tasklist)) && (thread == kaapi_wsqueuectxt_steal_cell(cell))))
        ) 
-//        || ((thread !=0) && !kaapi_tasklist_ready_isempty(thread->readytasklist)) 
+//        || ((thread !=0) && !kaapi_tasklist_isempty(thread->tasklist)) 
     {
       kaapi_wsqueuectxt_finish_steal_cell(cell);
       return thread;

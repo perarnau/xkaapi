@@ -64,7 +64,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
   uintptr_t	                 state;
   kaapi_frame_t*             fp;
   kaapi_frame_t*             save_fp;
-  kaapi_tasklist_t*          readytasklist;
+  kaapi_tasklist_t*          tasklist;
   kaapi_comrecv_t*           recv;
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
@@ -72,7 +72,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
-  readytasklist = thread->readytasklist;
+  tasklist = thread->tasklist;
   
   fp = (kaapi_frame_t*)thread->sfp;
 
@@ -90,10 +90,10 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
   
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-  while (!kaapi_tasklist_ready_isempty( readytasklist ))
+  while (!kaapi_tasklist_isempty( tasklist ))
   {
     kaapi_assert_debug( thread->sfp == save_fp);
-    td = kaapi_tasklist_ready_pop( readytasklist );
+    td = kaapi_tasklist_pop( tasklist );
 
     /* execute td->task */
     if (td !=0)
@@ -146,12 +146,12 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     }
     
     /* recv ? */
-    recv = kaapi_tasklist_ready_popsignal( readytasklist );
+    recv = kaapi_tasklist_popsignal( tasklist );
     if ( recv != 0 ) /* here may be a while loop */
     {
-      kaapi_taskready_merge_activationlist( readytasklist, &recv->list );
-      --readytasklist->count_recv;
-      //recv = kaapi_tasklist_ready_popsignal( readytasklist );
+      kaapi_tasklist_merge_activationlist( tasklist, &recv->list );
+      --tasklist->count_recv;
+      //recv = kaapi_tasklist_popsignal( tasklist );
     }
     
     /* bcast? management of the communication */
@@ -170,7 +170,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
       
       if (!kaapi_activationlist_isempty(&td->list))
       { /* push in the front the activated tasks */
-        kaapi_taskready_merge_activationlist( readytasklist, &td->list );
+        kaapi_tasklist_merge_activationlist( tasklist, &td->list );
       }
     }
     
@@ -183,7 +183,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
   if (thgrp ==0) return 0;
 
   /* signal end of step if no more recv (and then no ready task activated) */
-  if (readytasklist->count_recv == 0) 
+  if (tasklist->count_recv == 0) 
   {
     /* restore before signaling end of execution */
     if (((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0))
@@ -207,6 +207,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
         printf("Put waitting task to term\n");
       }
 
+      printf("Detach thread\n");
       /* detach the thread: may it should be put into the execframe function */
       kaapi_sched_lock(&thread->proc->lock);
       thread->proc->thread = 0;

@@ -59,7 +59,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   
   thread->execframe  = kaapi_thread_execframe;
   thread->the_thgrp  = 0;
-  thread->readytasklist= 0;
+  thread->tasklist= 0;
   thread->list_send  = 0;
   thread->list_recv  = 0;
   thread->unstealable= 0;

@@ -338,7 +338,7 @@ typedef struct kaapi_tasklist_t {
 
 
 /**/
-static inline int kaapi_tasklist_ready_clear( kaapi_tasklist_t* tl )
+static inline int kaapi_tasklist_clear( kaapi_tasklist_t* tl )
 {
   kaapi_sched_initlock(&tl->lock);
   tl->front      = tl->back = 0;
@@ -352,13 +352,13 @@ static inline int kaapi_tasklist_ready_clear( kaapi_tasklist_t* tl )
 
 
 /**/
-static inline int kaapi_tasklist_ready_isempty( kaapi_tasklist_t* tl )
+static inline int kaapi_tasklist_isempty( kaapi_tasklist_t* tl )
 {
   return (tl ==0) || ((tl->front ==0) && (tl->recvlist ==0));
 }
 
 /**/
-static inline kaapi_taskdescr_t* kaapi_tasklist_ready_pop( kaapi_tasklist_t* tl )
+static inline kaapi_taskdescr_t* kaapi_tasklist_pop( kaapi_tasklist_t* tl )
 {
   kaapi_taskdescr_t* retval = tl->front;
   if (retval ==0) return 0;
@@ -565,7 +565,7 @@ static inline int kaapi_threadgroup_asid2tid( kaapi_threadgroup_t thgrp, kaapi_a
 }
 
 /* Initialize the ith thread of the thread group 
-   - create readytasklist 
+   - create tasklist 
    - create the thread data specific allocator
 */
 int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int ith );
@@ -678,7 +678,7 @@ static inline int kaapi_activationlist_isempty( kaapi_activationlist_t* al )
 }
 
 /**/
-static inline int kaapi_taskready_merge_activationlist( kaapi_tasklist_t* tl, kaapi_activationlist_t* al )
+static inline int kaapi_tasklist_merge_activationlist( kaapi_tasklist_t* tl, kaapi_activationlist_t* al )
 {
   kaapi_activationlink_t* curr = al->front;
   while (curr !=0)
@@ -772,7 +772,7 @@ extern int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgr );
 /** Manage synchronisation between several tid 
     Each thread may communicate between them through FIFO queue to signal incomming data
 */
-static inline int kaapi_tasklist_ready_pushsignal( kaapi_tasklist_t* tl, kaapi_pointer_t rsignal )
+static inline int kaapi_tasklist_pushsignal( kaapi_tasklist_t* tl, kaapi_pointer_t rsignal )
 {
   kaapi_sched_lock(&tl->lock);
   kaapi_comrecv_t* recv = (kaapi_comrecv_t*)rsignal;
@@ -784,7 +784,7 @@ static inline int kaapi_tasklist_ready_pushsignal( kaapi_tasklist_t* tl, kaapi_p
 
 /** Only call by the owner
 */
-static inline kaapi_comrecv_t* kaapi_tasklist_ready_popsignal( kaapi_tasklist_t* tl )
+static inline kaapi_comrecv_t* kaapi_tasklist_popsignal( kaapi_tasklist_t* tl )
 {
   kaapi_comrecv_t* retval;
   if (tl->recvlist ==0) return 0;

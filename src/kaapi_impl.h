@@ -592,7 +592,7 @@ typedef struct kaapi_thread_context_t {
   /* the way to execute task inside a thread, if ==0 uses kaapi_thread_execframe */
   int (*execframe)( struct kaapi_thread_context_t* thread );
   kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
-  struct kaapi_tasklist_t*       readytasklist;  /* Not null -> list of ready task, see static_sched.h */
+  struct kaapi_tasklist_t*       tasklist;  /* Not null -> list of ready task, see static_sched.h */
   struct kaapi_comlink_t*        list_send;      /* send and recv list of comsend or comrecv descriptor */
   struct kaapi_comlink_t*        list_recv;
   int                            unstealable;    /* !=0 -> cannot be stolen */
@@ -1775,9 +1775,9 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
   /* if ready list: use it as state of the thread */
-  if (thread->readytasklist !=0)
+  if (thread->tasklist !=0)
   {
-    if (!kaapi_tasklist_ready_isempty(thread->readytasklist)) return 1;
+    if (!kaapi_tasklist_isempty(thread->tasklist)) return 1;
   }
 
 #if (SIZEOF_VOIDP == 4)

@@ -96,7 +96,7 @@ int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com)
       int tid = kaapi_threadgroup_asid2tid( thgrp, lraddr->asid );
       if (thgrp->tid2gid[tid] == thgrp->localgid)
       {
-        kaapi_tasklist_ready_pushsignal( thgrp->threadctxts[tid]->readytasklist, lraddr->rsignal );
+        kaapi_tasklist_pushsignal( thgrp->threadctxts[tid]->tasklist, lraddr->rsignal );
       }
       else {
         //communication

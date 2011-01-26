@@ -94,7 +94,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
       thgrp->threadctxts[i]->unstealable = 1;/* do not allow threads to steal tasks inside ??? */
 
 //printf("Push thread: %i, %p, on processor kid:%i\n", i, (void*)thgrp->threadctxts[i], victim_kproc->kid);
-      if (!kaapi_tasklist_ready_isempty(thgrp->threadctxts[i]->readytasklist))
+      if (!kaapi_tasklist_isempty(thgrp->threadctxts[i]->tasklist))
       {
         kaapi_sched_lock( &victim_kproc->lock ); 
         kaapi_sched_pushready( victim_kproc, thgrp->threadctxts[i] );

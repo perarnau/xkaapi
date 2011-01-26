@@ -71,7 +71,7 @@ static int kaapi_threadgroup_update_recv( kaapi_threadgroup_t thgrp, int tid, ka
 {
   while (cl !=0)
   {
-    ++thgrp->threadctxts[tid]->readytasklist->count_recv;
+    ++thgrp->threadctxts[tid]->tasklist->count_recv;
     cl = cl->next;
   }
   return 0;

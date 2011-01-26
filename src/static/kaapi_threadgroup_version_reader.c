@@ -60,7 +60,7 @@ static inline void kaapi_threadgroup_add_recvtask(
   if (ver->tag == 0) ver->tag = ++thgrp->tag_count;
   
   /* look if the writer task has been defined: this code should be executed on the owner of the writer task */
-  kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->readytasklist;
+  kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
 
   if (ver->writer.task ==0) 
   {     
@@ -265,7 +265,7 @@ static inline int kaapi_version_add_reader(
     if (ver->writer.task !=0)
     {
       kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
-      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->readytasklist;
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
       kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
       return 0;
     }
@@ -283,7 +283,7 @@ static inline int kaapi_version_add_reader(
   if ((ver->writer.task != 0) && (over->asid == ver->writer.asid))
   {
     kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
-    kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->readytasklist;
+    kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
     kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
   }
   else {

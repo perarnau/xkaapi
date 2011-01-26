@@ -55,7 +55,7 @@ int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
   tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_assert( tl !=0);  
 
-  kaapi_tasklist_ready_clear(tl);
+  kaapi_tasklist_clear(tl);
   tl->stack = malloc( kaapi_default_param.stacksize ); /* last three == stack */
   kaapi_assert( tl->stack != 0 );
   tl->sp    = 0;
@@ -63,7 +63,7 @@ int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
 
   thgrp->threadctxts[i]->execframe     = kaapi_threadgroup_execframe;
   thgrp->threadctxts[i]->the_thgrp     = thgrp;
-  thgrp->threadctxts[i]->readytasklist = tl;
+  thgrp->threadctxts[i]->tasklist = tl;
   thgrp->threadctxts[i]->list_send     = 0;
   thgrp->threadctxts[i]->list_recv     = 0;
   return error;  
