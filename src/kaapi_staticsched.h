@@ -326,14 +326,14 @@ static inline int kaapi_version_clear( kaapi_version_t* v )
     the end of the list.
 */
 typedef struct kaapi_tasklist_t {
-  kaapi_atomic_t     lock;     /* protect recvlist */
-  kaapi_taskdescr_t* front;    /* readylist of task descriptor */
-  kaapi_taskdescr_t* back;     /* readylist of task descriptor */
-  char*              stack;    /* where to push taskdecr or activationlink */
-  uintptr_t          sp;       /* stack pointer */
-  size_t             size;     /* size of the stack */
-  kaapi_comrecv_t*   recvlist; /* put by pushsignal into ready list to signal incomming data */
-  kaapi_atomic_t     count_recv; 
+  kaapi_atomic_t     lock;       /* protect recvlist */
+  kaapi_taskdescr_t* front;      /* readylist of task descriptor */
+  kaapi_taskdescr_t* back;       /* readylist of task descriptor */
+  char*              stack;      /* where to push taskdecr or activationlink */
+  uintptr_t          sp;         /* stack pointer */
+  size_t             size;       /* size of the stack */
+  uint32_t           count_recv; 
+  kaapi_comrecv_t*   recvlist;   /* put by pushsignal into ready list to signal incomming data */
 } kaapi_tasklist_t;
 
 
@@ -346,7 +346,7 @@ static inline int kaapi_tasklist_ready_clear( kaapi_tasklist_t* tl )
   tl->sp         = 0;
   tl->size       = 0;
   tl->recvlist   = 0;
-  KAAPI_ATOMIC_WRITE(&tl->count_recv, 0);
+  tl->count_recv = 0;
   return 0;
 }
 
@@ -550,6 +550,19 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_dataforversion_allocator_t allocator; /* used to allocate both version and version data */
 } kaapi_threadgrouprep_t;
 
+
+/** Manage mapping from threadid in a group and address space
+*/
+static inline kaapi_address_space_t kaapi_threadgroup_tid2asid( kaapi_threadgroup_t thgrp, int tid )
+{
+  return (uint32_t)(thgrp->tid2gid[tid] << 16) | (uint32_t)((1+tid) / thgrp->nodecount);
+}
+
+static inline int kaapi_threadgroup_asid2tid( kaapi_threadgroup_t thgrp, kaapi_address_space_t asid )
+{
+  int tid = (asid & 0xFF) * thgrp->nodecount + (asid >> 16) - 1;
+  return tid;
+}
 
 /* Initialize the ith thread of the thread group 
    - create readytasklist 

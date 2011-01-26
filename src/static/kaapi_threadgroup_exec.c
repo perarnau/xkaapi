@@ -91,7 +91,6 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
       kaapi_cpuset_clear( &thgrp->threadctxts[i]->affinity);
       kaapi_cpuset_set( &thgrp->threadctxts[i]->affinity, victim_procid );
       thgrp->threadctxts[i]->proc = victim_kproc;
-      thgrp->threadctxts[i]->partid = i;
       thgrp->threadctxts[i]->unstealable = 1;/* do not allow threads to steal tasks inside ??? */
 
 //printf("Push thread: %i, %p, on processor kid:%i\n", i, (void*)thgrp->threadctxts[i], victim_kproc->kid);

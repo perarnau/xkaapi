@@ -49,9 +49,11 @@ int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com)
   kaapi_comsend_raddr_t* lraddr;
   while (com != 0)
   {
+    printf("Bcast tag:%llu\n", com->tag);
     lraddr = &com->front;
     while (lraddr !=0)
     {
+
       /* copy (com->data, com->size) to (lraddr->raddr, lraddr->rsize) */
       /* this code should be in the memory library */
       kaapi_assert_debug (kaapi_memory_view_size(&com->view) == kaapi_memory_view_size(&lraddr->rview));
@@ -91,7 +93,14 @@ int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com)
       kaapi_writemem_barrier();
       
       /* signal remote thread in lraddr->asid */
-      kaapi_tasklist_ready_pushsignal( thgrp->threadctxts[lraddr->asid]->readytasklist, lraddr->rsignal );
+      int tid = kaapi_threadgroup_asid2tid( thgrp, lraddr->asid );
+      if (thgrp->tid2gid[tid] == thgrp->localgid)
+      {
+        kaapi_tasklist_ready_pushsignal( thgrp->threadctxts[tid]->readytasklist, lraddr->rsignal );
+      }
+      else {
+        //communication
+      }
 
       lraddr = lraddr->next;
     }

@@ -1281,18 +1281,6 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
   return 0;
 }
 
-/** Call only on thread that has the top task theft.
-*/
-static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
-{
-#if (SIZEOF_VOIDP == 4)
-//  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->state) );
-  return kaapi_task_state_isready(thread->sfp->pc->state);
-#else
-//  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->u.state) );
-  return kaapi_task_state_isready(thread->sfp->pc->u.state);
-#endif
-}
 
 /** Note on scheduler lock:
   KAAPI_SCHED_LOCK_CAS -> lock state == 1 iff lock is taken, else 0
@@ -1780,6 +1768,25 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 }
 
 #include "kaapi_staticsched.h"
+
+
+/** Call only on thread that has the top task theft.
+*/
+static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
+{
+  /* if ready list: use it as state of the thread */
+  if (thread->readytasklist !=0)
+  {
+    if (!kaapi_tasklist_ready_isempty(thread->readytasklist)) return 1;
+  }
+
+#if (SIZEOF_VOIDP == 4)
+  return kaapi_task_state_isready(thread->sfp->pc->state);
+#else
+  return kaapi_task_state_isready(thread->sfp->pc->u.state);
+#endif
+}
+
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/

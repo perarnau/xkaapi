@@ -53,6 +53,7 @@
     prior to other tasks.
 */
 
+
 /*
 */
 int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
@@ -149,7 +150,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     if ( recv != 0 ) /* here may be a while loop */
     {
       kaapi_taskready_merge_activationlist( readytasklist, &recv->list );
-      KAAPI_ATOMIC_DECR( &readytasklist->count_recv );
+      --readytasklist->count_recv;
       //recv = kaapi_tasklist_ready_popsignal( readytasklist );
     }
     
@@ -182,7 +183,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
   if (thgrp ==0) return 0;
 
   /* signal end of step if no more recv (and then no ready task activated) */
-  if (KAAPI_ATOMIC_READ(&readytasklist->count_recv) == 0) 
+  if (readytasklist->count_recv == 0) 
   {
     /* restore before signaling end of execution */
     if (((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0))
@@ -203,6 +204,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
       {
         KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->countend, 0 );
         kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
+        printf("Put waitting task to term\n");
       }
 
       /* detach the thread: may it should be put into the execframe function */

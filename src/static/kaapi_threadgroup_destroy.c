@@ -68,6 +68,10 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   --thgrp->threadctxts;
   free( thgrp->threadctxts );
   thgrp->threadctxts = 0;
+  
+  --thgrp->threads;
+  free(thgrp->threads);
+  thgrp->threads=0;
 
   --thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
   --thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */

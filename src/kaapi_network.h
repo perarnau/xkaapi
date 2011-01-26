@@ -53,6 +53,23 @@ extern "C" {
 /** This file is the header file to the C++ network implementation
 */
 
+#if !defined(KAAPI_USE_NETWORK)
+/**
+*/
+static inline kaapi_globalid_t kaapi_network_get_current_globalid(void)
+{
+  return 0;
+}
+
+/**
+*/
+static inline uint32_t kaapi_network_get_count(void)
+{
+  return 1;
+}
+
+#else /* network support defined */
+
 /** Return the local global id 
 */
 extern kaapi_globalid_t kaapi_network_get_current_globalid(void);
@@ -60,6 +77,8 @@ extern kaapi_globalid_t kaapi_network_get_current_globalid(void);
 /** Return the number of the nodes in the network
 */
 extern uint32_t kaapi_network_get_count(void);
+
+#endif //KAAPI_USE_NETWORK
 
 #if defined(__cplusplus)
 }

@@ -42,21 +42,27 @@
 ** 
 */
 #include "kaapi_network.h"
+#include "kanet_network.h"
 
 extern "C" {
+
+#if defined(KAAPI_USE_NETWORK)
 
 /**
 */
 kaapi_globalid_t kaapi_network_get_current_globalid(void)
 {
-  return 0;
+  return ka::Network::object.local_gid();
 }
+
 
 /** Return the number of the nodes in the network
 */
 uint32_t kaapi_network_get_count(void)
 {
-  return 1;
+  return (uint32_t)ka::Network::object.size();
 }
+
+#endif // KAAPI_USE_NETWORK
 
 }

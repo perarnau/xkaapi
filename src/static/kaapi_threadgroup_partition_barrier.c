@@ -53,7 +53,8 @@ static int kaapi_threadgroup_resolved_for( kaapi_threadgroup_t thgrp, int tid, k
     lraddr = &com->front;
     while (lraddr !=0)
     {
-      kaapi_comrecv_t* recv = kaapi_recvcomlist_find_tag( thgrp->threadctxts[lraddr->asid]->list_recv, com->tag );
+      int rtid = kaapi_threadgroup_asid2tid( thgrp, lraddr->asid );
+      kaapi_comrecv_t* recv = kaapi_recvcomlist_find_tag( thgrp->threadctxts[rtid]->list_recv, com->tag );
       kaapi_assert_debug( recv != 0);
       lraddr->rsignal = (kaapi_pointer_t)recv;
       lraddr->raddr   = (kaapi_pointer_t)recv->data;
@@ -70,7 +71,7 @@ static int kaapi_threadgroup_update_recv( kaapi_threadgroup_t thgrp, int tid, ka
 {
   while (cl !=0)
   {
-    KAAPI_ATOMIC_INCR( &thgrp->threadctxts[tid]->readytasklist->count_recv );
+    ++thgrp->threadctxts[tid]->readytasklist->count_recv;
     cl = cl->next;
   }
   return 0;

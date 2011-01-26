@@ -84,7 +84,7 @@ int kaapi_threadgroup_version_newwriter(
     retval = 0;
     if (dv->task !=0)
     {
-      kaapi_tasklist_t* tasklist = thgrp->threadctxts[asid]->readytasklist;
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->readytasklist;
       kaapi_taskdescr_push_successor( tasklist, dv->task, task );
     }
   }
@@ -105,7 +105,7 @@ int kaapi_threadgroup_version_newwriter(
 
       if (dv->task !=0)
       {
-        kaapi_tasklist_t* tasklist = thgrp->threadctxts[asid]->readytasklist;
+        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->readytasklist;
         kaapi_taskdescr_push_successor( tasklist, dv->task, task );
       }
     }

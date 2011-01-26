@@ -237,8 +237,10 @@ static inline int kaapi_version_add_reader(
   kaapi_assert( (ver->tag != 0) || (&ver->writer == over) );
   kaapi_assert( over != 0);
 
-  if (&ver->writer == over)
+  if (&ver->writer == over) 
   {
+    kaapi_assert_debug(ver->writer.asid == over->asid);
+
     /* the returned kaapi_data_version_t is the writer:
        - allocate a new reader entry
     */
@@ -273,14 +275,28 @@ static inline int kaapi_version_add_reader(
   /* mute the task field of over to points to the last task */
   over->task = task;
   over->ith  = ith;
-  if (ver->writer.task != 0) /* means writer == access not ready (writer -> read) */
+  kaapi_access_t a; /* to store data access and allocate */
+  a.data = over->addr;
+  kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
+
+  /* means writer == access not ready (writer -> read) */
+  if ((ver->writer.task != 0) && (over->asid == ver->writer.asid))
   {
     kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
     kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->readytasklist;
     kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
-    return 0;
   }
-  return 1;
+  else {
+    kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->threadctxts[tid]->list_recv, ver->tag );
+    kaapi_assert_debug(wc !=0);
+    /* one more external synchronisation: add bcast */
+    KAAPI_ATOMIC_INCR(&task->counter);
+    /* push the task into the activation link of the comrecv data structure */
+    kaapi_activationlist_pushback( thgrp, &wc->list, task );
+  }
+
+  /* access not ready: add taks in receiver list */
+  return 0;
 }
 
 

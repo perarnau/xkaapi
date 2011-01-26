@@ -125,7 +125,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   {
     fmt->_view_params = malloc( sizeof(kaapi_memory_view_t)*count );
     kaapi_assert( fmt->_view_params !=0);
-    memcpy(fmt->_view_params, view_param, sizeof(kaapi_memory_view_t*)*count );
+    memcpy(fmt->_view_params, view_param, sizeof(kaapi_memory_view_t)*count );
   }
 
   if (reducor_param !=0)

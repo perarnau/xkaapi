@@ -79,7 +79,6 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
 
   thgrp->threadctxts[0] = proc->thread;
   thgrp->threadctxts[0]->partid = -1;
-  ++thgrp->threadctxts; /* shift, because -1 ==> main thread */
   
   thgrp->threads    = malloc( (1+size)* sizeof(kaapi_thread_t*) );
   kaapi_assert(thgrp->threads !=0);
@@ -95,44 +94,49 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   ++thgrp->threads;
   ++thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
   ++thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */
+  ++thgrp->threadctxts; /* shift, because -1 ==> main thread */
   
-  /* here allocate thread -1 == main thread */
-  if (mygid == 0)
+  /* map threads onto globalid */
+  for (i=-1; i<size; ++i)
   {
-    kaapi_threadgroup_initthread( thgrp, -1 );
+    /* map thread i on processor node count */
+    thgrp->tid2gid[i]  = (kaapi_globalid_t)( (1+i) % nodecount);
+    /* assigned address space identifier for thread i */
+    thgrp->tid2asid[i] = kaapi_threadgroup_tid2asid( thgrp, i);
+    //(uint32_t)(thgrp->tid2gid[i] << 16) | (uint32_t)((1+i) / nodecount);
+    printf("Tid: %i as asid: %i\n", i, thgrp->tid2asid[i] );
+  }
+
+  /* here allocate thread -1 == main thread */
+  if (mygid == thgrp->tid2gid[-1])
+  {
     thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
     thgrp->threads[-1] = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
+    kaapi_threadgroup_initthread( thgrp, -1 );
   }
-  thgrp->tid2asid[-1] = 0;
-  thgrp->tid2gid[-1]  = 0;
 
   /* here may be dispatch allocation of all processors */
   for (i=0; i<size; ++i)
   {
-    /* map thread i on processor node count */
-    thgrp->tid2gid[i]  = (kaapi_globalid_t)(i % nodecount);
-    /* assigned address space identifier for thread i */
-    thgrp->tid2asid[i] = (uint32_t)(thgrp->tid2gid[i] << 16) | (uint32_t)(i / nodecount);
-    
     if (mygid == thgrp->tid2gid[i]) 
     {
       thgrp->threadctxts[i] = kaapi_context_alloc( proc );
       kaapi_assert(thgrp->threadctxts[i] != 0);
       
       /* init the thread from the thread context */
-      kaapi_threadgroup_initthread( thgrp, i );
       thgrp->threadctxts[i]->partid = i;
       thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
+      kaapi_threadgroup_initthread( thgrp, i );
     }
     else 
       thgrp->threadctxts[i] = 0;
   }
   
   error =pthread_mutex_init(&thgrp->mutex, 0);
-  kaapi_assert(error !=0);
+  kaapi_assert(error ==0);
 
   error =pthread_cond_init(&thgrp->cond, 0);
-  kaapi_assert (error !=0);
+  kaapi_assert (error ==0);
 
   /* ok */
   thgrp->maxstep            = -1;
