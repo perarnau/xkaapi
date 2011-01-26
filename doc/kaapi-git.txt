@@ -37,10 +37,10 @@ Getting a working copy of KAAPI developement tree
 -------------------------------------------------
 
 Read-only access:
-  git clone git://git.ligforge.imag.fr/git/kaapi/kaapi.git
+  git clone git://git.ligforge.imag.fr/git/kaapi/xkaapi.git
 Read-write access (for people with account on the forge and in the kaapi
 project):
-  git clone ssh://git.ligforge.imag.fr/git/kaapi/kaapi.git
+  git clone ssh://git.ligforge.imag.fr/git/kaapi/xkaapi.git
 
 Note: due to the distributed nature of Git, it is probably better to checkout
 with a read-only access and later push in the official repo with another
@@ -91,7 +91,7 @@ a few trusted people.
 
 To publish some commit, the easiest way is to create a "remote" config
 such as:
-  git remote add ligforge ssh://git.ligforge.imag.fr/git/kaapi/kaapi.git
+  git remote add ligforge ssh://git.ligforge.imag.fr/git/kaapi/xkaapi.git
 
 And then, you should add to the configuration (in the [remote "ligforge"]
 section of .git/config) some lines such as (replace $forge_login by your
