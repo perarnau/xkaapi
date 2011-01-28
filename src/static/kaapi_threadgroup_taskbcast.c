@@ -43,6 +43,7 @@
  */
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_USE_NETWORK)
 /* network service to push ready list */
 static void kaapi_threadgroup_signalservice(int err, kaapi_globalid_t source, void* buffer, size_t sz_buffer )
 {
@@ -52,6 +53,7 @@ static void kaapi_threadgroup_signalservice(int err, kaapi_globalid_t source, vo
   memcpy(&rsignal, buffer, sizeof(rsignal));
   kaapi_tasklist_pushsignal( rsignal );
 }
+#endif
 
 /* */
 int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_t asid_src, kaapi_comsend_t* com)

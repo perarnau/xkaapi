@@ -216,7 +216,11 @@ int kaapi_memory_copy(
           if (dest_gid == localgid)
             kaapi_memory_write2cpu( dest, view_dest, (const void*)src, view_src ); 
           else 
+#if defined(KAAPI_USE_NETWORK)
             kaapi_network_rdma( dest_gid, dest, view_dest, (const void*)src, view_src ); 
+#else
+            return EINVAL;
+#endif
           break;
         case KAAPI_MEM_TYPE_CUDA:
           break;
