@@ -554,7 +554,8 @@ static inline void* kaapi_allocator_allocate( kaapi_allocator_t* va, size_t size
 }
 
 
-
+/* ============================= Simple C API for network ============================ */
+#include "kaapi_network.h"
 
 
 /* ============================= The structure for handling suspendended thread ============================ */
@@ -1327,6 +1328,9 @@ static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
     ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
     if (ok) break;
     kaapi_slowdown_cpu();
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
   } while (1);
   /* implicit barrier in KAAPI_ATOMIC_CAS */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
@@ -1335,7 +1339,12 @@ static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
 acquire:
   if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
   while (KAAPI_ATOMIC_READ(lock) <=0)
-    kaapi_slowdown_cpu(); 
+  {
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
+    kaapi_slowdown_cpu();
+  }
   goto acquire;
 #endif
 }

@@ -307,10 +307,10 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
 /** Processor type
 */
-#define KAAPI_PROC_TYPE_HOST    0x0
-#define KAAPI_PROC_TYPE_CUDA    0x1
-#define KAAPI_PROC_TYPE_MPSOC   0x2
-#define KAAPI_PROC_TYPE_MAX     3
+#define KAAPI_PROC_TYPE_HOST    0x1
+#define KAAPI_PROC_TYPE_CUDA    0x2
+#define KAAPI_PROC_TYPE_MPSOC   0x3
+#define KAAPI_PROC_TYPE_MAX     0x4
 #define KAAPI_PROC_TYPE_CPU     KAAPI_PROC_TYPE_HOST
 #define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
 #define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_HOST
@@ -1353,8 +1353,10 @@ extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag
 */
 extern int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep );
 
-/** Check and compute dependencies if task 'task' is pushed into the i-th partition
-    \return EINVAL if task does not have format
+/** Check and compute dependencies for task 'task' to be pushed into the i-th partition.
+    On return the task is pushed into the partition if it is local for the execution.
+    
+    \return EINVAL if the task is not pushed 
 */
 extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int partitionid, kaapi_task_t* task);
 

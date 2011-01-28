@@ -42,7 +42,57 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "kaapi_network.h"
+
+
+#if !defined(KAAPI_USE_NETWORK)
+
+/**
+*/
+int kaapi_network_init()
+{  
+  return 0;
+}
+
+/**
+*/
+int kaapi_network_finalize()
+{  
+  return 0;
+}
+
+
+/**
+*/
+kaapi_globalid_t kaapi_network_get_current_globalid(void)
+{
+  return 0;
+}
+
+/**
+*/
+uint32_t kaapi_network_get_count(void)
+{
+  return 1;
+}
+
+/** Return a pointer in a memory region which is rdmable
+*/
+kaapi_pointer_t kaapi_network_allocate_rdma(size_t size)
+{
+  return (kaapi_pointer_t)malloc(size);
+}
+
+void kaapi_network_poll()
+{
+}
+
+void kaapi_network_barrier(void)
+{
+}
+
+#else /* network support defined */
+#endif //KAAPI_USE_NETWORK
+
 
 /** Collective operation:
     - the threads are mapped with round robin mapping among the processors
@@ -53,8 +103,9 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
 {
   int i;
   int error = 0;
-  kaapi_threadgroup_t thgrp = 0;
-  kaapi_processor_t*   proc = 0;
+  kaapi_threadgroup_t     thgrp = 0;
+  kaapi_processor_t*      proc = 0;
+  kaapi_thread_context_t* dummy_thread =0;
 
   kaapi_globalid_t     mygid;
   uint32_t             nodecount;
@@ -74,13 +125,13 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   thgrp->startflag   = 0;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
   thgrp->waittask    = 0;
-  thgrp->threadctxts = malloc( (1+size)* sizeof(kaapi_thread_context_t*) );
+  thgrp->threadctxts = malloc( (1+size) * sizeof(kaapi_thread_context_t*) );
   kaapi_assert(thgrp->threadctxts !=0);
 
   thgrp->threadctxts[0] = proc->thread;
   thgrp->threadctxts[0]->partid = -1;
   
-  thgrp->threads    = malloc( (1+size)* sizeof(kaapi_thread_t*) );
+  thgrp->threads    = malloc( (1+size) * sizeof(kaapi_thread_t*) );
   kaapi_assert(thgrp->threads !=0);
   
   /* create mapping 
@@ -101,13 +152,18 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   {
     /* map thread i on processor node count */
     thgrp->tid2gid[i]  = (kaapi_globalid_t)( (1+i) % nodecount);
+
     /* assigned address space identifier for thread i */
-    thgrp->tid2asid[i] = kaapi_threadgroup_tid2asid( thgrp, i);
+    thgrp->tid2asid[i] = kaapi_memory_address_space_create( i, thgrp->tid2gid[i], KAAPI_MEM_TYPE_CPU);
+    
     //(uint32_t)(thgrp->tid2gid[i] << 16) | (uint32_t)((1+i) / nodecount);
-    printf("Tid: %i as asid: %i\n", i, thgrp->tid2asid[i] );
+    printf("tid: %i into asid:", i );
+    kaapi_memory_address_space_fprintf( stdout, thgrp->tid2asid[i] );
+    printf(",  onto gid : %u\n", thgrp->tid2gid[i] );
   }
 
-  /* here allocate thread -1 == main thread */
+
+  /* here allocate thread -1 == main thread       */
   if (mygid == thgrp->tid2gid[-1])
   {
     thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
@@ -115,7 +171,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
     kaapi_threadgroup_initthread( thgrp, -1 );
   }
 
-  /* here may be dispatch allocation of all processors */
+  /* Allocate the thread for the local view of the group
+     Threads that do not map to local thread group are pointed to 
+     a same dummy thread that let tasks and data to be allocated (but not pushed,
+     see end of comput dependencies).
+     - here may be dispatch allocation of all processors ? 
+  */
   for (i=0; i<size; ++i)
   {
     if (mygid == thgrp->tid2gid[i]) 
@@ -128,8 +189,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
       thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
       kaapi_threadgroup_initthread( thgrp, i );
     }
-    else 
-      thgrp->threadctxts[i] = 0;
+    else  {
+      if (dummy_thread ==0) 
+        dummy_thread = kaapi_context_alloc( proc );
+      thgrp->threadctxts[i] = dummy_thread;
+      thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
+    }
   }
   
   error =pthread_mutex_init(&thgrp->mutex, 0);
@@ -139,6 +204,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   kaapi_assert (error ==0);
 
   /* ok */
+  thgrp->dummy_thread       = dummy_thread;
   thgrp->maxstep            = -1;
   thgrp->step               = -1;
   thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;

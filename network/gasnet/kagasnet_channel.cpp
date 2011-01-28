@@ -67,7 +67,7 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
   /* */
 
 //  ka::logfile() << "In " << __PRETTY_FUNCTION__ << " " << last-first << std::endl;
-  std::cout << ka::System::local_gid << "::[OutChannel::flush] begin" << std::endl << std::flush;    
+//  std::cout << ka::System::local_gid << "::[OutChannel::flush] begin" << std::endl << std::flush;    
   ka::Instruction* curr = first;
   int err;
   while (curr != last)
@@ -92,8 +92,10 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
         uintptr_t handler = curr->i_am.handler;
         gasnet_handlerarg_t handlerH = handler >> 32UL;
         gasnet_handlerarg_t handlerL = handler & 4294967295UL;
+#if 1
         std::cout << ka::System::local_gid << "::[OutChannel::flush] send AM to:" << _dest << ", size:" << curr->i_am.size 
                   << ", service:(" << handlerH << "," << handlerL << ")=" << (void*)curr->i_am.handler << std::endl << std::flush;
+#endif
         err = gasnet_AMRequestMedium2( _dest, kaapi_gasnet_service_call_id, 
             (void*)curr->i_am.lptr, curr->i_am.size,
             handlerH, handlerL
@@ -105,7 +107,9 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
       } break;
 
       case ka::Instruction::INST_RWDMA:
+#if 1
         std::cout << ka::System::local_gid << "::[OutChannel::flush] send RDMA to:" << _dest << ", size:" << curr->i_rw.size << std::endl << std::flush;    
+#endif
         /* send header: first 2 fields */
         gasnet_put_bulk( _dest, (void*)curr->i_rw.dptr, (void*)curr->i_rw.lptr, curr->i_rw.size );
 

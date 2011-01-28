@@ -24,7 +24,7 @@ struct doit {
     ka::auto_pointer<int> a      = ka::Alloca<int>(1);
     *a = 123;
     ka::auto_pointer<int> b      = ka::Alloca<int>(1);
-    *a = 246;
+    *b = 246;
 
     threadgroup.begin_partition();
 

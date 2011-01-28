@@ -43,32 +43,33 @@
 */
 #ifndef _KAAPI_NETWORK_C_H_
 #define _KAAPI_NETWORK_C_H_ 1
-#include "kaapi_impl.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-/* ........................................ Implementation notes ........................................*/
-/** This file is the header file to the C++ network implementation
+// --------------------------------------------------------------------
+/** Implementation note.
+    - The network interface allows to use multiple networks.
+    (but the current network of XKaapi only use GASNET).
+    - The rest of Kaapi try to load the network shared library at runtime
+    iff the environnement variable KAAPI_NETWORK is defined (and its value
+    is used to initialize the correct device). It call kaapinet_init in 
+    the loaded shared library libkanet.
+    - The current implementation declare only use a network service to steal
+    on the local node: once an active message incomes, the network thread 
+    post a request to a random selected thread and wait the result.
+    Thus the remote requests are serialized due to the service.
 */
 
-#if !defined(KAAPI_USE_NETWORK)
+
+/** This file is the C header file to the C++ network implementation
+*/
+typedef void (*kaapi_service_t)(int errocode, kaapi_globalid_t source, void* buffer, size_t size);
+
+/** To be called prior to any other calls to network
+*/
+int kaapi_network_init();
+
 /**
 */
-static inline kaapi_globalid_t kaapi_network_get_current_globalid(void)
-{
-  return 0;
-}
-
-/**
-*/
-static inline uint32_t kaapi_network_get_count(void)
-{
-  return 1;
-}
-
-#else /* network support defined */
+int kaapi_network_finalize();
 
 /** Return the local global id 
 */
@@ -78,10 +79,35 @@ extern kaapi_globalid_t kaapi_network_get_current_globalid(void);
 */
 extern uint32_t kaapi_network_get_count(void);
 
-#endif //KAAPI_USE_NETWORK
+/** Return a pointer in a memory region which is rdmable
+*/
+extern kaapi_pointer_t kaapi_network_allocate_rdma(size_t size);
 
-#if defined(__cplusplus)
-}
-#endif
+/** Deallocate a pointer in a memory region which is rdmable
+*/
+extern void kaapi_network_deallocate_rdma(kaapi_pointer_t, size_t size);
+
+/** Make progress of communication
+*/
+extern void kaapi_network_poll();
+
+/**
+*/
+extern void kaapi_network_barrier(void);
+
+/** Do blocking remote  write 
+*/
+extern int kaapi_network_rdma(
+  kaapi_globalid_t gid_dest, 
+  kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+  const void* src, const kaapi_memory_view_t* view_src 
+);
+
+/* synchronous am */
+extern int kaapi_network_am(
+  kaapi_globalid_t gid_dest, 
+  kaapi_service_t service, const void* data, size_t size 
+);
+
 
 #endif /* _KAAPI_NETWORK_C_H_ */

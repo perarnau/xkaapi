@@ -57,18 +57,11 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
   kaapi_hashmap_init( &thgrp->ws_khm, 0 );
 
   /* same the main thread frame to restore it at the end of parallel computation */
-  if (thgrp->localgid == 0)
+  if (thgrp->localgid == thgrp->tid2gid[-1])
   {
     kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
+
     /* avoid thief to steal the main thread will tasks are added */
-    thgrp->threadctxts[-1]->unstealable = 1;
-  }
-  
-  kaapi_mem_barrier();
-  
-  /* wait thief get out the thread */
-  if (thgrp->localgid == 0)
-  {
     kproc = thgrp->threadctxts[-1]->proc;
     kaapi_sched_lock(&kproc->lock);
     thgrp->threadctxts[-1]->unstealable = 1;

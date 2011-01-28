@@ -57,8 +57,10 @@ void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, si
   handler = handler << (uintptr_t)32UL;
   handler = handler | (uintptr_t)handlerL;
   ka::Service_fnc service = (ka::Service_fnc)handler;
+#if 1
   std::cout << ka::System::local_gid << "::[Device::kaapi_gasnet_service_call] recv message from:" << src << ", fnc:(" 
             << handlerH << "," << handlerL << ")=" << (void*)handler << std::endl << std::flush;    
+#endif
   service(0, src, buffer_am, sz_buffer_am );
 }
 
@@ -68,7 +70,7 @@ void* Device::skeleton( void* arg )
 {
   ka::logfile() << "In " << __PRETTY_FUNCTION__ << std::endl;
   Device* device = (Device*)arg;
-  device->skel();
+//  device->skel();
   device->_state.write( Device::S_FINISHED );
   ka::logfile() << "Out " << __PRETTY_FUNCTION__ << std::endl;
   return 0;
@@ -79,7 +81,7 @@ void* Device::skeleton( void* arg )
 int Device::skel()
 {
   int err;
-  while (1)
+  while (!_ack_term)
   {
     err = gasnet_AMPoll();    
     kaapi_assert( (err == GASNET_OK) );

@@ -158,7 +158,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     if (td !=0) 
     {
       if (td->bcast !=0) 
-        kaapi_threadgroup_bcast( thread->the_thgrp, &td->bcast->front );      
+        kaapi_threadgroup_bcast( thread->the_thgrp, kaapi_threadgroup_tid2asid(thread->the_thgrp, thread->partid), &td->bcast->front );      
 
       /* post execution: new tasks created ??? */
       if (unlikely(fp->sp > thread->sfp->sp))
@@ -216,6 +216,9 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     }
     return 0;
   }
+#if defined(KAAPI_USE_NETWORK)
+  kaapi_network_poll();
+#endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;

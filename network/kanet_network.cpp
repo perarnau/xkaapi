@@ -147,6 +147,25 @@ void Network::terminate () throw (RuntimeError)
 }
 
 
+// ---------------------------------------------------------------------------
+void Network::poll( )
+{
+  std::vector<Device*>::iterator ibeg = _all_devices.begin();
+  std::vector<Device*>::iterator iend = _all_devices.end();
+  while (ibeg != iend)
+  {
+    (*ibeg)->poll();
+    ++ibeg;
+  }
+}
+
+// ---------------------------------------------------------------------------
+void Network::barrier()
+{
+  _default_device->barrier();
+}
+
+
 #ifdef MACOSX_EDITOR
 #pragma mark --- routing table
 #endif

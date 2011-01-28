@@ -37,7 +37,7 @@ struct doit {
     threadgroup.begin_partition();
 
     threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
 
     threadgroup.end_partition();
 

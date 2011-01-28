@@ -46,6 +46,7 @@
 */
 #include "kaapi_impl.h"
 
+
 /* this version is close to the kaapi_sched_idle, except that a condition of
    wakeup is to test that suspended condition is false
 */
@@ -83,6 +84,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_wsqueuectxt_push( kproc, thread_condition );
 
   do {
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
+
     /* wakeup a context: either a ready thread (first) or a suspended thread.
        Precise the suspended thread 'thread_condition' in order to wakeup it first and task_condition.
     */

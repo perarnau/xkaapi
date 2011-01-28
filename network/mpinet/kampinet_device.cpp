@@ -138,7 +138,7 @@ int Device::terminate()
       fflush(stdout);
     }
   }
-  printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
+  printf("%i::all devices have leaved the barrier\n", ka::System::local_gid);
   fflush(stdout);
   
   err = pthread_join(_tid, 0);
@@ -161,6 +161,20 @@ int Device::abort()
   return 0;
 }
 
+
+// --------------------------------------------------------------------
+void Device::poll() 
+{
+  int err =0;
+  kaapi_assert( (err == 0) );
+}
+
+// --------------------------------------------------------------------
+void Device::barrier() 
+{
+  int err =0;
+  kaapi_assert( (err == 0) );
+}
 
 // --------------------------------------------------------------------
 ka::OutChannel* Device::open_channel( const char* url )

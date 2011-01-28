@@ -104,6 +104,9 @@ redo_select:
     if (kaapi_reply_test( reply ) ) 
       goto return_value;
 
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
     kaapi_slowdown_cpu();
   }
 #else /* cannot rely on kaapi_sched_trylock... */
@@ -113,6 +116,9 @@ acquire:
   {
     if (kaapi_reply_test( reply )) 
       goto return_value;
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
     kaapi_slowdown_cpu();
   }
   goto acquire;

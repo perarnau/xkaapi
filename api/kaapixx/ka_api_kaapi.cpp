@@ -96,11 +96,7 @@ Community System::initialize_community( int& argc, char**& argv )
   throw (RuntimeError, RestartException, ServerException)
 {
   static bool is_called = false; if (is_called) return Community(0); is_called = true;
-  
-  /** Init should not have been called by InitKaapiCXX
-  */
-  kaapi_assert(kaapi_init() == 0 );
-  
+    
   System::saved_argc = argc;
   System::saved_argv = new char*[argc];
   for (int i=0; i<argc; ++i)
@@ -139,6 +135,10 @@ Community System::initialize_community( int& argc, char**& argv )
 
   if (KaapiComponentManager::initialize( argc, argv ) != 0)
     Exception_throw( RuntimeError("[ka::System::initialize], Kaapi not initialized") );
+
+  /** Init should not have been called by InitKaapiCXX
+  */
+  kaapi_assert(kaapi_init() == 0 );
 
   return Community(0);
 }

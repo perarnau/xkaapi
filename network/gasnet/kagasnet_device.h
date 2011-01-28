@@ -45,7 +45,9 @@
 
 #include "kaapi++"
 #include "kanet_device.h"
-#define GASNET_PAR 1
+
+#define GASNET_PAR              1
+#define GASNET_ALIGNED_SEGMENTS 1
 #include <gasnet.h>
 
 namespace GASNET {
@@ -104,6 +106,22 @@ public:
   */
   int abort();
 
+  /**
+  */
+  void poll();
+  
+  /**
+  */
+  void barrier();
+
+  /**
+  */
+  void* allocate( size_t size );
+  
+  /**
+  */
+  void deallocate( void* addr );
+
   /** 
   */
   ka::OutChannel* open_channel( const char* url );
@@ -127,8 +145,11 @@ protected:
   static void kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, gasnet_handlerarg_t handlerH, gasnet_handlerarg_t handlerL);
   
 protected:
-  int                       _wcom_rank;  ///< my rank
+  int                       _wcom_rank;  ///< my rank 
   int                       _wcom_size;  ///< number of nodes
+  void*                     _segaddr;    ///< Segment base address
+  uintptr_t                 _segsize;    ///< Segment size
+  uintptr_t                 _segsp;      ///< next position for allocation
   ka::atomic_t<32>          _state;      ///< state of the device
   volatile int              _ack_term;   ///< On node 0
   pthread_t                 _tid;        ///< Thread that wait incomming message

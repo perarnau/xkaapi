@@ -63,7 +63,10 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
   do {
-
+#if defined(KAAPI_USE_NETWORK)
+      kaapi_network_poll();
+#endif
+    
     /* terminaison ? */
     if (kaapi_isterminated())
     {
@@ -128,6 +131,10 @@ redo_execute:
 
     if (err == EWOULDBLOCK) 
     {
+#if defined(KAAPI_USE_NETWORK)
+      kaapi_network_poll();
+#endif
+
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif

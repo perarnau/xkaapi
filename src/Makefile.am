@@ -49,6 +49,7 @@ libkaapi_la_SOURCES=\
   machine/common/kaapi_hwtopo.c \
   machine/common/kaapi_hw_selftopo.c \
   memory/kaapi_memory.h \
+  memory/kaapi_memory.c \
   memory/kaapi_mem.h \
   memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \

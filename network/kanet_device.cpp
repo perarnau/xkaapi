@@ -65,6 +65,7 @@ void DeviceFactory::destroy( Device* dev )
   }
 }
 
+
 // --------------------------------------------------------------------
 int DeviceFactory::register_factory( const char* name, DeviceFactory* df )
 {

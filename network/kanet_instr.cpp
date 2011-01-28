@@ -126,7 +126,10 @@ void InstructionStream::sync()
 {
 redo:
   while (_tosend._state != SB_FREE)
+  {
+    kaapi_network_poll();
     kaapi_slowdown_cpu();
+  }
   kaapi_sched_lock(&_lock);
   if (_tosend._state != SB_FREE) 
   {

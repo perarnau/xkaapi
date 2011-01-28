@@ -65,11 +65,11 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   entry->u.value.last_version = 0;
   ver = entry->u.version      = kaapi_threadgroup_allocate_version( thgrp );
   kaapi_assert( ver != 0 );
-  ver->writer_thread = -1; /* main thread */
-  ver->writer.asid = thgrp->tid2asid[ver->writer_thread];
-  ver->writer.addr = access->data;
+  ver->writer_thread          = -1; /* main thread */
+  ver->writer.asid            = thgrp->tid2asid[ver->writer_thread];
+  ver->writer.addr            = access->data;
   kaapi_memory_view_clear( &ver->writer.view);  /* in fact unknown size, should be set by the task param */
-  ver->writer.ith  = -1; /* in fact unknown ith, should be set by the task param */
+  ver->writer.ith             = -1; /* in fact unknown ith, should be set by the task param */
   return entry;
 }
 

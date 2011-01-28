@@ -86,6 +86,14 @@ public:
   */
   int abort();
 
+  /**
+  */
+  void poll();
+
+  /**
+  */
+  void barrier();
+
   /** 
   */
   ka::OutChannel* open_channel( const char* url );
@@ -97,6 +105,14 @@ public:
   /** 
   */
   const char* get_urlconnect( ) const;
+
+  /**
+  */
+  void* allocate( size_t size );
+  
+  /**
+  */
+  void deallocate( void* addr );
 
 protected:
   /** Infinite loop to read incomming message */

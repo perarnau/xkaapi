@@ -25,11 +25,13 @@ include_HEADERS=\
 	kanet_device.h
 
 libkanet_la_SOURCES=\
-	kaapi_network.cpp \
 	kanet_instr.cpp \
 	kanet_channel.cpp \
 	kanet_device.cpp \
 	kanet_network.cpp \
+	kanet_init.cpp \
+	kanet_alloc.cpp \
+	kaapi_network.cpp \
 	$(include_HEADERS)
 
 endif

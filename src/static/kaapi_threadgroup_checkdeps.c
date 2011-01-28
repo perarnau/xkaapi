@@ -47,21 +47,25 @@
 /** task is the top task not yet pushed.
     This function is called is task is pushed into a specific thread using
     the C++ ka::SetPartition(site) attribut or the thread group access.
+    
  */
 int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadindex, kaapi_task_t* task)
 {
-  kaapi_thread_t*         thread;
   kaapi_format_t*         task_fmt;
   kaapi_task_body_t       task_body;
-  kaapi_taskdescr_t*      taskdescr;
-  kaapi_tasklist_t*       tasklist;
+  kaapi_taskdescr_t*      taskdescr =0;
+  kaapi_thread_t*         thread =0;
+  kaapi_tasklist_t*       tasklist =0;
   kaapi_hashentries_t*    entry;
   size_t                  cnt_notready;
   int                     isparamready;
   kaapi_version_t*        version;
-  
+  kaapi_taskdescr_t       dummy_taskdescr;
+
   /* pass in parameter ? cf C++ thread interface */
   kaapi_assert_debug( (threadindex >=-1) && (threadindex < thgrp->group_size) );
+
+  kaapi_globalid_t gid = kaapi_threadgroup_tid2gid( thgrp, threadindex );
 
   task_body = kaapi_task_getbody( task );
   if (task_body!=0)
@@ -71,12 +75,21 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
 
   if (task_fmt ==0) return EINVAL;
   
-  /* get the thread where to push the task */
-  thread = kaapi_threadgroup_thread( thgrp, threadindex );
-  
-  /* allocate a new task descriptor for this task */
-  tasklist =  thgrp->threadctxts[threadindex]->tasklist;
-  taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
+  if (thgrp->localgid == gid)
+  {
+    /* get the thread where to push the task */
+    thread = kaapi_threadgroup_thread( thgrp, threadindex );
+    
+    /* allocate a new task descriptor for this task */
+    tasklist =  thgrp->threadctxts[threadindex]->tasklist;
+    taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
+  } 
+  else 
+  {
+    taskdescr = &dummy_taskdescr;
+    kaapi_taskdescr_init(taskdescr, task);
+  }
+
   
   /* find the last writer for each args and in which partition id it  
      -> if all writers are in the same partition do nothing, push the task in the i-th partition
@@ -112,10 +125,6 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     {
       /* no entry -> new version object: no writer */
       entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, &access );
-#if 0
-      if (KAAPI_ACCESS_IS_READ(m))
-        kaapi_threadgroup_version_addfirstreader(thgrp, &thgrp->ws_vect_input, threadindex, taskdescr, task_fmt, i, &access);
-#endif
     }
 
     /* have a look at the version and detect dependency or not etc... */
@@ -139,7 +148,15 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     
   } /* end for all arguments of the task */
 
-  if (cnt_notready ==0) 
-    kaapi_tasklist_pushback_ready(tasklist, taskdescr);
-  return 0;
+  if (thgrp->localgid == gid)
+  {
+    if (cnt_notready ==0) 
+      kaapi_tasklist_pushback_ready(tasklist, taskdescr);
+    
+    /* always push the task for local storage */
+    kaapi_thread_pushtask( thgrp->threads[threadindex] );
+    return 0;
+  }
+  printf("Task not pushed !\n");
+  return EINTR;
 }

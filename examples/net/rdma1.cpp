@@ -81,12 +81,7 @@ int main(int argc, char** argv)
        when launching the program by a1run.
     */
     ka::System::join_community( argc, argv );
-    
-    /*
-    */
-    ka::Network::object.initialize();
-    ka::Network::object.commit();
-    
+        
     /*
     */
     if (ka::Network::object.size() ==2)
@@ -101,16 +96,17 @@ int main(int argc, char** argv)
         
         for (int i=0; i<10; ++i)
         {
-          while (cnt_msg == i) sleep(1);
+          while (cnt_msg == i) 
+            ka::Network::object.poll();
           std::cout << "Recv message:" << buffer_message << std::endl;
         }
-        
       } 
       else
       {
         char msg[128];
 
-        while (remote_ptr ==0) sleep(1);
+        while (remote_ptr ==0) 
+          ka::Network::object.poll();
         std::cout << "Recv remote address:" << (void*)remote_ptr << std::endl;
         
         /* remote write on node 0 */

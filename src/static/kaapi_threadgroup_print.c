@@ -149,7 +149,7 @@ static void kaapi_threadgroup_printinputoutputdata(
 static int kaapi_thread_recv_comlist_print( FILE* file, kaapi_comlink_t* cl )
 {
   kaapi_activationlink_t* al;
-  if (cl != 0)
+  while (cl != 0)
   {
     fprintf(file, "[tag:%llu laddr:%p lsize:(%lu x %lu) ->", 
             cl->u.recv->tag, 
@@ -168,6 +168,7 @@ static int kaapi_thread_recv_comlist_print( FILE* file, kaapi_comlink_t* cl )
       al = al->next;
     }
     fprintf(file, ")\n");
+    cl = cl->next;
   }
   return 0;
 }
@@ -178,7 +179,7 @@ static int kaapi_thread_send_comaddr_print( FILE* file, kaapi_comsend_raddr_t* l
 {
   while (lraddr !=0)
   {
-    fprintf(file, "(asid:%i, rsignal:%p,  raddr:%p, rsize:(%lu x %lu) ) ", 
+    fprintf(file, "(asid:%llu, rsignal:%p,  raddr:%p, rsize:(%lu x %lu) ) ", 
         lraddr->asid, 
         (void*)lraddr->rsignal, 
         (void*)lraddr->raddr, 
@@ -287,13 +288,14 @@ int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
   {
     if (thgrp->localgid == thgrp->tid2gid[i])
     {
-      fprintf(file, "\n\nPartition %i/%i, on gid:u\n", i, thgrp->group_size, thgrp->localgid);
+      fprintf(file, "\n\nPartition %i/%i, on gid:%u\n", i, thgrp->group_size, thgrp->localgid);
       kaapi_thread_print( file, thgrp->threadctxts[i] );
       kaapi_thread_readylist_print( file, thgrp->threadctxts[i]->tasklist );
       fprintf(file, "\n*** Send on thread %i/%i:\n", i, thgrp->group_size);
       kaapi_thread_send_comlist_print( file, thgrp->threadctxts[i]->list_send );
       fprintf(file, "\n*** Recv on thread %i/%i:\n", i, thgrp->group_size);
       kaapi_thread_recv_comlist_print( file, thgrp->threadctxts[i]->list_recv );
+      fflush(file);
     }
   }
 #if 0

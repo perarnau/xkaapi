@@ -41,10 +41,10 @@
 ** terms.
 ** 
 */
-#include "kaapi_network.h"
+#include "kaapi_impl.h"
 #include "kanet_network.h"
 
-extern "C" {
+extern "C" { /* minimal C interface to network */
 
 #if defined(KAAPI_USE_NETWORK)
 
@@ -55,12 +55,120 @@ kaapi_globalid_t kaapi_network_get_current_globalid(void)
   return ka::Network::object.local_gid();
 }
 
-
-/** Return the number of the nodes in the network
+/**
 */
 uint32_t kaapi_network_get_count(void)
 {
   return (uint32_t)ka::Network::object.size();
+}
+
+
+/**
+*/
+void kaapi_network_poll()
+{
+  ka::Network::object.poll();
+}
+
+
+/** Return a pointer in a memory region which is rdmable
+*/
+kaapi_pointer_t kaapi_network_allocate_rdma(size_t size)
+{
+  return (kaapi_pointer_t)ka::Network::object.allocate(size);
+}
+
+
+/**
+*/
+void kaapi_network_barrier(void)
+{
+  ka::Network::object.barrier();
+}
+
+
+/**
+*/
+int kaapi_network_rdma(
+  kaapi_globalid_t gid_dest, 
+  kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+  const void* src, const kaapi_memory_view_t* view_src 
+)
+{
+  switch (view_src->type) 
+  {
+    case KAAPI_MEM_VIEW_1D:
+    {
+      if (view_dest->type != KAAPI_MEM_VIEW_1D) return EINVAL;
+      if (view_dest->size[0] != view_src->size[0]) return EINVAL;
+
+      ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
+      if (channel == 0) return EINVAL;
+
+      channel->insert_rwdma( dest, src, view_src->size[0] );
+      channel->sync();
+
+      return 0;
+    } break;
+
+    case KAAPI_MEM_VIEW_2D:
+    {
+      kaapi_pointer_t laddr;
+      kaapi_pointer_t raddr;
+      size_t size;
+
+      if (view_dest->type != KAAPI_MEM_VIEW_2D) return EINVAL;
+
+      if (view_dest->size[0] != view_src->size[0]) return EINVAL;
+      size = view_src->size[0] * view_src->size[1];
+      if (size != view_dest->size[0] * view_dest->size[1]) return EINVAL;
+      
+      ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
+      if (channel == 0) return EINVAL;
+
+      laddr = (kaapi_pointer_t)src;
+      raddr = (kaapi_pointer_t)dest;
+      
+      if (kaapi_memory_view_iscontiguous(view_src) && kaapi_memory_view_iscontiguous(view_dest))
+      {
+        channel->insert_rwdma( raddr, (const void*)laddr, size );
+      }
+      else 
+      {
+        kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
+        size_t i;
+        size_t llda;
+        size_t rlda;
+        llda  = view_src->lda;
+        rlda  = view_dest->lda;
+        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
+          channel->insert_rwdma( raddr, (const void*)laddr, view_src->size[1] );
+      }
+      channel->sync();
+      return 0;
+      break;
+    }
+    default:
+      return EINVAL;
+      break;
+  }
+}
+
+
+/**
+*/
+int kaapi_network_am(
+  kaapi_globalid_t gid_dest, 
+  kaapi_service_t service, const void* data, size_t size 
+)
+{
+  ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
+  if (channel == 0)
+    return EINVAL;
+
+  channel->insert_am( service, data, size );
+  channel->sync();
+  return 0;
 }
 
 #endif // KAAPI_USE_NETWORK

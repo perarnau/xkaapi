@@ -46,6 +46,13 @@
 #include "kanet_network.h" // this is the new C++ interface for Kaapi
 
 /*
+   xkaapi config: 
+   ../xkaapi/configure  --prefix=/Users/thierry/Developpment/KAAPI/kaapi/install/xkaapi --enable-mode=debug --disable-static --with-gasnet=/usr/local/gasnet/include/udp-conduit/udp-par.mak --enable-network
+  runing
+> KAAPI_NETWORK=gasnet SSH_SERVERS=localhost,localhost ./ping_xx 2
+
+*/
+/*
 */
 volatile int isrecv = 0;
 static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer )
@@ -68,24 +75,24 @@ int main(int argc, char** argv)
     
     /*
     */
-    ka::Network::object.initialize();
-    ka::Network::object.commit();
-    
-    /*
-    */
     ka::Network::object.dump_info();
     std::cout << "My local_gid is:" << ka::System::local_gid << std::endl << std::flush;    
 
     if (ka::System::local_gid == 0)
     {
-      ka::OutChannel* channel = ka::Network::object.get_default_local_route(1);
-      kaapi_assert(channel != 0);
-      const char* msg = "Ceci est un message de 0";
-      channel->insert_am( service, msg, strlen(msg)+1 );
-      channel->sync();
+      for (unsigned int i=1; i<ka::Network::object.size(); ++i)
+      {
+        ka::OutChannel* channel = ka::Network::object.get_default_local_route(i);
+        kaapi_assert(channel != 0);
+        const char* msg = "Ceci est un message de 0";
+      
+        channel->insert_am( service, msg, strlen(msg)+1 );
+        channel->sync();
+      }
     }
     else {
-      while (isrecv ==0) sleep(1);
+      while (isrecv ==0) 
+        ka::Network::object.poll();
     }
     ka::Network::object.dump_info();
 

@@ -1,8 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
@@ -10,7 +9,7 @@
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
-** threadctxts.
+** threads.
 ** 
 ** This software is governed by the CeCILL-C license under French law
 ** and abiding by the rules of distribution of free software.  You can
@@ -41,30 +40,18 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#include "kagasnet_device.h"
 
-/**
-*/
-int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
+
+// --------------------------------------------------------------------
+void* Device::allocate( size_t size )
 {
-  int error = 0;
-  kaapi_tasklist_t* tl;
-  
-  kaapi_assert(thgrp->localgid == thgrp->tid2gid[i]);
+  static GASNET::DeviceFactory theFactoryObject;
+  return &theFactoryObject;
+}
 
-  tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_assert( tl !=0);  
 
-  kaapi_tasklist_clear(tl);
-  tl->stack = malloc( kaapi_default_param.stacksize ); /* last three == stack */
-  kaapi_assert( tl->stack != 0 );
-  tl->sp    = 0;
-  tl->size  = kaapi_default_param.stacksize;
-
-  thgrp->threadctxts[i]->execframe     = kaapi_threadgroup_execframe;
-  thgrp->threadctxts[i]->the_thgrp     = thgrp;
-  thgrp->threadctxts[i]->tasklist = tl;
-  thgrp->threadctxts[i]->list_send     = 0;
-  thgrp->threadctxts[i]->list_recv     = 0;
-  return error;  
+// --------------------------------------------------------------------
+void Device::deallocate( void* addr )
+{
 }

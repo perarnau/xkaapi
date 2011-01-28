@@ -43,63 +43,45 @@
  */
 #include "kaapi_impl.h"
 
+/* network service to push ready list */
+static void kaapi_threadgroup_signalservice(int err, kaapi_globalid_t source, void* buffer, size_t sz_buffer )
+{
+  printf("Super! I'm receive signal tag\n"); fflush(stdout);
+  kaapi_pointer_t rsignal;
+  kaapi_assert_debug( sizeof(rsignal) == sz_buffer );
+  memcpy(&rsignal, buffer, sizeof(rsignal));
+  kaapi_tasklist_pushsignal( rsignal );
+}
+
 /* */
-int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_comsend_t* com)
+int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_t asid_src, kaapi_comsend_t* com)
 {
   kaapi_comsend_raddr_t* lraddr;
   while (com != 0)
   {
-    printf("Bcast tag:%llu\n", com->tag);
+    printf("Bcast tag:%llu\n", com->tag); fflush(stdout);
     lraddr = &com->front;
     while (lraddr !=0)
     {
 
       /* copy (com->data, com->size) to (lraddr->raddr, lraddr->rsize) */
-      /* this code should be in the memory library */
-      kaapi_assert_debug (kaapi_memory_view_size(&com->view) == kaapi_memory_view_size(&lraddr->rview));
-      switch (com->view.type) 
-      {
-        case KAAPI_MEM_VIEW_1D:
-        {
-          memcpy( (void*)lraddr->raddr, (const void*)com->data, com->view.size[0] );
-        } break;
+      /* warning for GPU device -> communication to the device, that will post transfert */
+      kaapi_memory_copy( lraddr->asid, lraddr->raddr, &lraddr->rview, asid_src, (kaapi_pointer_t)com->data, &com->view );
 
-        case KAAPI_MEM_VIEW_2D:
-        {
-          size_t i;
-          size_t llda  = com->view.lda;
-          size_t rlda  = lraddr->rview.lda;
-          const char* laddr = (const char*)com->data;
-          char* raddr = (char*)lraddr->raddr;
-          
-          if (kaapi_memory_view_iscontiguous(&com->view) && kaapi_memory_view_iscontiguous(&lraddr->rview))
-          {
-              memcpy( raddr, laddr, kaapi_memory_view_size( &com->view) );
-          }
-          else 
-          {
-            for (i=0; i<com->view.size[0]; ++i, laddr += llda, raddr += rlda)
-              memcpy( raddr, laddr, com->view.size[1] );
-          }
-
-          break;
-        }
-        default:
-          kaapi_assert(0);
-          break;
-      }
-
-      /* memory barrier if required */
-      kaapi_writemem_barrier();
-      
       /* signal remote thread in lraddr->asid */
       int tid = kaapi_threadgroup_asid2tid( thgrp, lraddr->asid );
       if (thgrp->tid2gid[tid] == thgrp->localgid)
       {
-        kaapi_tasklist_pushsignal( thgrp->threadctxts[tid]->tasklist, lraddr->rsignal );
+        kaapi_tasklist_pushsignal( lraddr->rsignal );
       }
       else {
-        //communication
+        printf("Remote signal tag:%llu\n", com->tag); fflush(stdout);
+        /* remote address space -> communication */
+        kaapi_network_am(
+            kaapi_memory_address_space_getgid(lraddr->asid),
+            kaapi_threadgroup_signalservice, 
+            &lraddr->rsignal, sizeof(kaapi_pointer_t) 
+        );
       }
 
       lraddr = lraddr->next;

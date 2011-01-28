@@ -56,7 +56,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
 
-  if (thgrp->localgid == 0)
+  if (thgrp->localgid == thgrp->tid2gid[-1])
   {
     /* Push the task that will mark synchronisation on the main thread */
     threadctxtmain = thgrp->threadctxts[-1];
@@ -149,7 +149,15 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
     }
   }
   else {
-    kaapi_assert(0); // global barrier 
+    int err;
+    while (1)
+    {
+      for (int i=-1; i<thgrp->group_size; ++i)
+      {
+        if (thgrp->localgid == thgrp->tid2gid[i])
+          err = kaapi_threadgroup_execframe( thgrp->threadctxts[i] );
+      }
+    }
   }
 
   /* counter reset by THE waittask */

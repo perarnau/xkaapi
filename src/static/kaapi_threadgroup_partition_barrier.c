@@ -55,10 +55,15 @@ static int kaapi_threadgroup_resolved_for( kaapi_threadgroup_t thgrp, int tid, k
     {
       int rtid = kaapi_threadgroup_asid2tid( thgrp, lraddr->asid );
       kaapi_comrecv_t* recv = kaapi_recvcomlist_find_tag( thgrp->threadctxts[rtid]->list_recv, com->tag );
-      kaapi_assert_debug( recv != 0);
-      lraddr->rsignal = (kaapi_pointer_t)recv;
-      lraddr->raddr   = (kaapi_pointer_t)recv->data;
-      lraddr->rview   = recv->view;
+      if (recv != 0)
+      {
+        lraddr->rsignal = (kaapi_pointer_t)recv;
+        lraddr->raddr   = (kaapi_pointer_t)recv->data;
+        lraddr->rview   = recv->view;
+      }
+      else {
+        printf("Tag resolution failed for asid:%llu\n", com->tag );
+      }
       lraddr = lraddr->next;
     }
     cl = cl->next;
@@ -66,7 +71,7 @@ static int kaapi_threadgroup_resolved_for( kaapi_threadgroup_t thgrp, int tid, k
   return 0;
 }
 
-
+#if 0
 static int kaapi_threadgroup_update_recv( kaapi_threadgroup_t thgrp, int tid, kaapi_comlink_t* cl )
 {
   while (cl !=0)
@@ -76,6 +81,7 @@ static int kaapi_threadgroup_update_recv( kaapi_threadgroup_t thgrp, int tid, ka
   }
   return 0;
 }
+#endif
 
 int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
 {
@@ -83,10 +89,23 @@ int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
   if ((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0)
     kaapi_threadgroup_save(thgrp);
 
-  for (int i=-1; i<thgrp->group_size; ++i)
+  for (int tid=-1; tid<thgrp->group_size; ++tid)
   {
-    kaapi_threadgroup_resolved_for( thgrp, i, thgrp->threadctxts[i]->list_send );
-    kaapi_threadgroup_update_recv( thgrp, i, thgrp->threadctxts[i]->list_recv );
+    if (kaapi_threadgroup_tid2gid( thgrp, tid ) == thgrp->localgid)
+    {
+      kaapi_threadgroup_resolved_for( thgrp, tid, thgrp->threadctxts[tid]->list_send );
+    }
   }
+
+  /* exchange remote addr between every participating nodes */
+
+  /* report remote address to send list */
+
+  /* barrier between every nodes:
+     - after the barrier any nodes may write the correct location using remote dma
+  */
+  kaapi_memory_global_barrier();
+  printf("%i::[gasnet] end partition barrier\n", kaapi_network_get_current_globalid()); fflush(stdout);
+  
   return 0;
 }

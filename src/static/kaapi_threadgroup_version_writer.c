@@ -58,60 +58,85 @@ int kaapi_threadgroup_version_newwriter(
     kaapi_access_t*       access
 )
 {
-  void*  data;
+  void* data =0;
   kaapi_memory_view_t view;
   int retval;
+  int delprevwriter;
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
   kaapi_assert_debug( !KAAPI_ACCESS_IS_CUMULWRITE(mode) );
+
+  kaapi_globalid_t gid_writer = kaapi_threadgroup_tid2gid( thgrp, tid );
 
   /* retval = 1: assume access is ready */
   retval = 1;
   
+  /* delete previous writer info */
+  delprevwriter = 1;
+  
   /* asid for the target thread */
   kaapi_address_space_t asid = thgrp->tid2asid[tid];
 
-  /* find the data info in the map attached to the version and remove it from list if found, else return 0 */
-  kaapi_data_version_t* dv = kaapi_version_findcopiesrmv_asid_in( ver, asid );
-  if (dv !=0) 
+  /* allocate or reuse new version and store it into data: only for writer thread */
+  if (gid_writer == thgrp->localgid)
   {
-    data = dv->addr;
-    view = dv->view;
-    dv->addr = 0;
-    /* recycle the data version */
-    kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
+    /* find the data info in the map attached to the version and remove it from list if found, else return 0 */
+    kaapi_data_version_t* dv = kaapi_version_findcopiesrmv_asid_in( ver, asid );
     
-    /* avoid WAR here: may be solved at runtime */
-    retval = 0;
-    if (dv->task != task)
-    {
-      kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
-      kaapi_taskdescr_push_successor( tasklist, dv->task, task );
-    }
-  }
-  else 
-  {
-    dv = kaapi_version_findtodelrmv_asid_in( ver, asid );
-    view = kaapi_format_get_view_param(fmt, ith, task->task->sp);
-    if ((dv !=0) 
-     && (kaapi_memory_view_size(&dv->view) == kaapi_memory_view_size(&view)) )
+    if (dv !=0) 
     {
       data = dv->addr;
+      view = dv->view;
       dv->addr = 0;
+
       /* recycle the data version */
       kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
       
-    /* avoid WAR here: may be solved at runtime */
+      /* avoid WAR here: may be solved at runtime */
       retval = 0;
-
-      if (dv->task !=0)
+      if (dv->task != task)
       {
         kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
         kaapi_taskdescr_push_successor( tasklist, dv->task, task );
       }
     }
     else 
-      data = malloc(kaapi_memory_view_size(&view))  ;
-  }
+    {
+      dv = kaapi_version_findtodelrmv_asid_in( ver, asid );
+      view = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+      if ((dv !=0) 
+       && (kaapi_memory_view_size(&dv->view) == kaapi_memory_view_size(&view)) )
+      {
+        data = dv->addr;
+        dv->addr = 0;
+        /* recycle the data version */
+        kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
+        
+      /* avoid WAR here: may be solved at runtime */
+        retval = 0;
+
+        if (dv->task !=0)
+        {
+          kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+          kaapi_taskdescr_push_successor( tasklist, dv->task, task );
+        }
+      }
+      else if (ver->writer.asid == asid) 
+      { /* WAW: put new writer into successor of previous one, without reallocation */
+        data = ver->writer.addr;
+        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+        kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
+        retval = 0;
+        delprevwriter = 0;
+      }
+      else {
+        /* cannot reuse data: allocate a new one */
+        data = (void*)kaapi_memory_allocate( 
+              kaapi_threadgroup_tid2asid(thgrp, tid), 
+              &view,
+              KAAPI_MEM_SHARABLE );
+      }
+    }
+  } /* if local */
   
   /* data already exist: multiple cases must be considered.
      1- if it exists readers (>=1), then copies are invalidated 
@@ -122,13 +147,21 @@ int kaapi_threadgroup_version_newwriter(
         space, so the WAW dependencies is solved.
         The copies are marked 'deleted'.
       3- All readers are deleted and copies, except in the same asid, are deleted.
-
   */
   /* mark copies as deleted except in asid for thread tid 
   */
   kaapi_data_version_list_append( &ver->todel, &ver->copies );
 
-  /* update the writer of the version */
+  /* mark past version to delete */
+  if (delprevwriter)
+  {
+    kaapi_data_version_t* dv = kaapi_threadgroup_allocate_dataversion(thgrp);
+    *dv = ver->writer;
+    kaapi_data_version_list_add( &ver->todel, dv );
+  }
+  
+  /* mute the writer of the version */
+  ver->writer_thread = tid;
   ver->writer.asid   = asid;
   ver->writer.task   = task;
   ver->writer.ith    = ith;
@@ -136,12 +169,14 @@ int kaapi_threadgroup_version_newwriter(
   ver->writer.addr   = data;
   ver->writer.view   = view;
   ver->writer.next   = 0;
-  ver->writer_thread = tid;
 
-  kaapi_access_t a;          /* to store data access and allocate */
-  a.data = ver->writer.addr;
-  kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
-
+  if (gid_writer == thgrp->localgid)
+  {
+    kaapi_access_t a;          /* to store data access and allocate */
+    a.data = ver->writer.addr;
+    kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
+  }
+  
   /* reset the tag for the version */
   ver->tag = 0;
 

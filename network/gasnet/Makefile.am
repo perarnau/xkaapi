@@ -26,6 +26,7 @@ libkadev_gasnet_la_SOURCES=\
 	kagasnet_channel.h \
 	kagasnet_channel.cpp \
 	kagasnet_skel.cpp \
+	kagasnet_alloc.cpp \
 	$(include_HEADERS)
 endif
 

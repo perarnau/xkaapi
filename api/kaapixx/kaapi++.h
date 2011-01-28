@@ -2058,20 +2058,22 @@ namespace ka {
 //ConvertEffective2InClosure<E$1,F$1,inclosure$1_t>(&arg->f$1, &e$1)
 
   // --------------------------------------------------------------------  
+  /* WARNING WARNING WARNING
+     Attribut is responsible for pushing or not closure into the stack thread 
+  */
   class DefaultAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
-    { return clo; }
+    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { kaapi_thread_pushtask(thread); }
   };
   extern DefaultAttribut SetDefault;
   
   /* */
   class UnStealableAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-      //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
-      return clo;
+      kaapi_thread_pushtask(thread);
     }
   };
   inline UnStealableAttribut SetUnStealable()
@@ -2080,10 +2082,9 @@ namespace ka {
   /* like default attribut: not yet distributed computation */
   class SetLocalAttribut {
   public:
-    kaapi_task_t* operator()( kaapi_thread_t*, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-      //kaapi_task_setflags( clo, KAAPI_TASK_STICKY );
-      return clo; 
+      kaapi_thread_pushtask(thread);
     }
   };
   extern SetLocalAttribut SetLocal;
@@ -2369,8 +2370,8 @@ namespace ka {
       { 
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
+        /* attribut is reponsible for pushing */
         _attr(_thread, clo);
-        kaapi_thread_pushtask( _thread);    
       }
 
 #include "ka_api_spawn.h"
@@ -2755,8 +2756,8 @@ namespace ka {
       { 
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
+        /* attribut is reponsible for pushing */
         _attr(_thread, clo);
-        kaapi_thread_pushtask( _thread);    
       }
 
 #include "ka_api_spawn.h"

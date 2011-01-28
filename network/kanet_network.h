@@ -129,7 +129,34 @@ public:
   void terminate () throw (RuntimeError);
   //@}
 
+  // -----------------------------------------------------------------------
+  //! \name Communication advance
+  // -----------------------------------------------------------------------
+  void poll();
 
+  // -----------------------------------------------------------------------
+  //! \name Synchronization
+  // -----------------------------------------------------------------------
+  void barrier();
+
+  // -----------------------------------------------------------------------
+  //! \name Memory allocation for DMA operation
+  // -----------------------------------------------------------------------
+  /** Allocate memory for rdma operation through this device.
+      \param size the size in byte of the request memory region
+      \return a pointer to a memory region that contains at least size bytes.
+      \return 0 iff no memory of that size can be allocated
+      \see deallocate
+  */
+  void* allocate( size_t size );
+  
+  /** Deallocate a memory region allocated by 'allocate'
+      \param addr to the memory to deallocate
+      \see allocate
+  */
+  void deallocate( void* addr );
+  //@}
+  
   // -----------------------------------------------------------------------
   //! \name Routing
   // -----------------------------------------------------------------------
