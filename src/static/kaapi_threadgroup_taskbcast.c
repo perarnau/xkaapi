@@ -75,6 +75,7 @@ int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_t as
         kaapi_tasklist_pushsignal( lraddr->rsignal );
       }
       else {
+#if defined(KAAPI_USE_NETWORK)
         printf("Remote signal tag:%llu\n", com->tag); fflush(stdout);
         /* remote address space -> communication */
         kaapi_network_am(
@@ -82,6 +83,9 @@ int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_t as
             kaapi_threadgroup_signalservice, 
             &lraddr->rsignal, sizeof(kaapi_pointer_t) 
         );
+#else
+        kaapi_assert_debug( 0 );
+#endif
       }
 
       lraddr = lraddr->next;
