@@ -88,7 +88,7 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
         break;
 
       case ka::Instruction::INST_AM:
-#if defined(TRACE_THIS_FILE)
+#if 1//defined(TRACE_THIS_FILE)
 printf("%i::Send AM message to %i, handler=%p, size=%i\n", ka::System::local_gid, _dest, (void*)curr->i_am.handler, (int)curr->i_am.size);
 fflush(stdout);
 #endif
@@ -100,7 +100,7 @@ fflush(stdout);
         /* here use asynchronous send if available... */
         if (curr->i_am.size >0)
         {
-#if defined(TRACE_THIS_FILE)
+#if 1//defined(TRACE_THIS_FILE)
 printf("%i::Send AM message data to %i, pointer=%p, size=%i\n", ka::System::local_gid, _dest, *(void**)curr->i_am.lptr, (int)curr->i_am.size);
 fflush(stdout);
 #endif

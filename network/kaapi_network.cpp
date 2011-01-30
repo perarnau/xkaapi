@@ -62,6 +62,15 @@ uint32_t kaapi_network_get_count(void)
   return (uint32_t)ka::Network::object.size();
 }
 
+/**
+*/
+int kaapi_network_get_seginfo( kaapi_address_space_t* retval, kaapi_globalid_t gid )
+{
+  ka::SegmentInfo seginfo = ka::Network::object.get_seginfo( gid );
+  retval->segaddr = seginfo.segaddr;
+  retval->segsize = seginfo.segsize;
+  return 0;
+}
 
 /**
 */
@@ -73,9 +82,9 @@ void kaapi_network_poll()
 
 /** Return a pointer in a memory region which is rdmable
 */
-kaapi_pointer_t kaapi_network_allocate_rdma(size_t size)
+kaapi_pointer_t kaapi_network_rdma2vas(kaapi_pointer_t addr, size_t size)
 {
-  return (kaapi_pointer_t)ka::Network::object.allocate(size);
+  return (kaapi_pointer_t)ka::Network::object.bind(addr, size);
 }
 
 
@@ -84,6 +93,26 @@ kaapi_pointer_t kaapi_network_allocate_rdma(size_t size)
 void kaapi_network_barrier(void)
 {
   ka::Network::object.barrier();
+}
+
+
+/** 
+*/
+kaapi_pointer_t kaapi_network_allocate_rdma(size_t size)
+{
+#if 0
+  printf("%i:[kaapi_memory_allocate] IN memory allocate\n", ka::Network::object.local_gid());
+  fflush(stdout);
+#endif
+  kaapi_pointer_t ptr = (kaapi_pointer_t)ka::Network::object.allocate(size);
+#if 0
+  printf("%i:[kaapi_memory_allocate] OUT memory allocate @:%p, size:%lu\n", 
+      ka::Network::object.local_gid(),
+      (void*)ptr,
+      size 
+  );
+#endif
+  return ptr;
 }
 
 
@@ -113,8 +142,8 @@ int kaapi_network_rdma(
 
     case KAAPI_MEM_VIEW_2D:
     {
-      kaapi_pointer_t laddr;
-      kaapi_pointer_t raddr;
+      kaapi_pointer_t laddr; /* local address */
+      kaapi_pointer_t raddr; /* remote addr */
       size_t size;
 
       if (view_dest->type != KAAPI_MEM_VIEW_2D) return EINVAL;

@@ -44,13 +44,37 @@
 
 namespace GASNET {
 
+// --------------------------------------------------------------------
+void* Device::bind( uintptr_t addr, size_t size )
+{
+  return (void*) (((char*)_segaddr)+addr);
+}
 
 // --------------------------------------------------------------------
 void* Device::allocate( size_t size )
 {
+#if 0
+  printf("%i:[GASNET::Device::allocate] IN memory allocate, addr@:%p, sp:%lu, size:%lu\n", 
+      _wcom_rank,
+      (void*)_segaddr,
+      _segsp,
+      _segsize
+  );
+  fflush(stdout);
+#endif
+
   uintptr_t sp = _segsp;
   if (sp + size >= _segsize) return 0;
   _segsp = (_segsp + size + sizeof(double)) & ~(sizeof(double)-1);
+
+#if 0
+  printf("%i:[GASNET::Device::allocate] allocate @:%p, size:%lu\n", 
+      _wcom_rank,
+      (void*) (((char*)_segaddr)+sp),
+      size
+  );
+  fflush(stdout);
+#endif
   return (void*) (((char*)_segaddr)+sp);
 }
 
@@ -59,5 +83,16 @@ void* Device::allocate( size_t size )
 void Device::deallocate( void* addr )
 {
 }
+
+
+// --------------------------------------------------------------------
+ka::SegmentInfo Device::get_seginfo( ka::GlobalId gid ) const
+{
+  if (gid >= (ka::GlobalId)_wcom_size) 
+    return ka::SegmentInfo();
+  
+  return ka::SegmentInfo( (uintptr_t)_seginfo[gid].addr, _seginfo[gid].size );
+}
+
 
 } // - namespace Net...

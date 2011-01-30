@@ -49,6 +49,10 @@ namespace ka {
 // --------------------------------------------------------------------
 void* Network::allocate( size_t sz )
 {
+#if 0
+  printf("%i:[ka::Network::allocate] IN memory allocate, device@:%p\n", ka::Network::object.local_gid(), _default_device);
+  fflush(stdout);
+#endif
   void* retval;
   if (_default_device ==0) 
     retval = malloc(sz);
@@ -63,6 +67,22 @@ void Network::deallocate( void* addr )
 {
   if (_default_device ==0) return;
   _default_device->deallocate(addr);
+}
+
+
+// --------------------------------------------------------------------
+void* Network::bind( kaapi_pointer_t addr, size_t sz )
+{
+  if (_default_device ==0) return 0;
+  return _default_device->bind( addr, sz );
+}
+
+
+// --------------------------------------------------------------------
+SegmentInfo Network::get_seginfo( GlobalId gid ) const
+{
+  if (_default_device ==0) return SegmentInfo();
+  return _default_device->get_seginfo( gid );
 }
 
 } // - namespace ka...

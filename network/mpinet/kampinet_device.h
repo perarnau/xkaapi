@@ -114,6 +114,14 @@ public:
   */
   void deallocate( void* addr );
 
+  /** 
+  */
+  void* bind( uintptr_t addr, size_t size );
+
+  /**
+  */  
+  ka::SegmentInfo get_seginfo( ka::GlobalId gid ) const;
+
 protected:
   /** Infinite loop to read incomming message */
   int skel();

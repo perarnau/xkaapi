@@ -149,12 +149,25 @@ public:
       \see deallocate
   */
   void* allocate( size_t size );
+
+  /** Translate an address of a logical address space to the virtual address space
+      \param the address in the logical address space
+      \param size the size in byte of the request memory region
+      \return a pointer to a memory region that contains at least size bytes.
+      \return 0 iff no memory of that size can be allocated
+      \see deallocate
+  */
+  void* bind( uintptr_t addr, size_t size );
   
   /** Deallocate a memory region allocated by 'allocate'
       \param addr to the memory to deallocate
       \see allocate
   */
   void deallocate( void* addr );
+
+  /** Return the segment info for the RDMA memory on gid 
+  */  
+  SegmentInfo get_seginfo( GlobalId gid ) const;
   //@}
   
   // -----------------------------------------------------------------------

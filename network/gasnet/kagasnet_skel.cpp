@@ -57,9 +57,11 @@ void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, si
   handler = handler << (uintptr_t)32UL;
   handler = handler | (uintptr_t)handlerL;
   ka::Service_fnc service = (ka::Service_fnc)handler;
-#if 1
+#if 0
   std::cout << ka::System::local_gid << "::[Device::kaapi_gasnet_service_call] recv message from:" << src << ", fnc:(" 
-            << handlerH << "," << handlerL << ")=" << (void*)handler << std::endl << std::flush;    
+            << handlerH << "," << handlerL << ")=" << (void*)handler 
+            << ", buffer size:" << sz_buffer_am
+            << std::endl << std::flush;    
 #endif
   service(0, src, buffer_am, sz_buffer_am );
 }

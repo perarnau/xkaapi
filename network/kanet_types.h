@@ -71,6 +71,14 @@ typedef void (*Service_fnc)(int errocode, GlobalId source, void* buffer, size_t 
 
 
 // -------------------------------------------------------------------------
+struct SegmentInfo {
+  SegmentInfo() : segaddr(0), segsize((size_t)-1) {}
+  SegmentInfo(uintptr_t addr, size_t size) : segaddr(addr), segsize(size) {}
+  uintptr_t   segaddr;    /* base address allocation */
+  size_t      segsize;    /* size of address space */
+};
+
+// -------------------------------------------------------------------------
 /*
  * inline definitions
  */

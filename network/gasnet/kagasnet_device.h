@@ -124,6 +124,14 @@ public:
 
   /** 
   */
+  void* bind( uintptr_t addr, size_t size );
+
+  /**
+  */  
+  ka::SegmentInfo get_seginfo( ka::GlobalId gid ) const;
+
+  /** 
+  */
   ka::OutChannel* open_channel( const char* url );
   
   /**
@@ -142,8 +150,14 @@ protected:
   static void* skeleton( void* arg );
 
   /* */
-  static void kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, gasnet_handlerarg_t handlerH, gasnet_handlerarg_t handlerL);
+  static void kaapi_gasnet_service_call(
+      gasnet_token_t token, 
+      void *buffer_am, 
+      size_t sz_buffer_am, 
+      gasnet_handlerarg_t handlerH, 
+      gasnet_handlerarg_t handlerL);
   
+  friend class OutChannel;
 protected:
   int                       _wcom_rank;  ///< my rank 
   int                       _wcom_size;  ///< number of nodes
@@ -153,7 +167,8 @@ protected:
   ka::atomic_t<32>          _state;      ///< state of the device
   volatile int              _ack_term;   ///< On node 0
   pthread_t                 _tid;        ///< Thread that wait incomming message
-  
+  gasnet_seginfo_t*         _seginfo;    ///< Segment info for other nodes
+    
   enum DeviceState {
     S_CREATE,
     S_INIT,

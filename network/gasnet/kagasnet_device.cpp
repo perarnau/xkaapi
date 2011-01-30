@@ -94,6 +94,7 @@ int Device::initialize()
     seg_size = atoi(sseg_size);
     
   }
+
   /* multiple of GASNET_PAGESIZE */
   seg_size = ((seg_size + GASNET_PAGESIZE-1)/GASNET_PAGESIZE) * GASNET_PAGESIZE;
 
@@ -101,17 +102,18 @@ int Device::initialize()
                             seg_size, KAAPI_MINHEAPOFFSET));
 
   /* Get base address for all segments (gasnet configure is GASNET_ALIGN_SEGMENTS ==1) */
-  gasnet_seginfo_t* seginfo = new gasnet_seginfo_t[gasnet_nodes()];
-  gasnet_getSegmentInfo( seginfo, gasnet_nodes());
-  _segaddr = seginfo[gasnet_mynode()].addr;
-  _segsize = seginfo[gasnet_mynode()].size;
-#if 1
+  _seginfo = new gasnet_seginfo_t[gasnet_nodes()];
+  gasnet_getSegmentInfo( _seginfo, gasnet_nodes());
+  _segaddr = _seginfo[gasnet_mynode()].addr;
+  _segsize = _seginfo[gasnet_mynode()].size;
+  _segsp   = 0;
+
+#if 0
   std::cout << gasnet_mynode() << "::[gasnet] #nodes :" << gasnet_nodes() << std::endl;
-  std::cout << gasnet_mynode() << "::[gasnet] seginfo @:" << seginfo[gasnet_mynode()].addr
-            << ", size:" << seginfo[gasnet_mynode()].size 
+  std::cout << gasnet_mynode() << "::[gasnet] seginfo @:" << _segaddr
+            << ", size:" << _segsize
             << std::endl;
 #endif
-  delete []seginfo;
   
   _state.write(S_INIT);
 
@@ -149,7 +151,9 @@ int Device::commit()
 int Device::terminate()
 {
   int err;
+#if 0
   printf("%i::[gasnet] begin terminate\n", _wcom_rank); fflush(stdout);
+#endif
   
   barrier();
 
@@ -164,7 +168,9 @@ int Device::terminate()
   }
 
   barrier();
+#if 0
   printf("%i::[gasnet] end terminate\n", _wcom_rank); fflush(stdout);
+#endif
 
 //  err = pthread_join(_tid, 0);
 //  kaapi_assert(err ==0);
@@ -188,10 +194,12 @@ int Device::abort()
 void Device::poll() 
 {
   int err;
+#if 0
   if (_wcom_rank !=0)
   {
     printf("%i::[gasnet] poll\n", _wcom_rank); fflush(stdout);
   }
+#endif
   err = gasnet_AMPoll();    
   kaapi_assert( (err == GASNET_OK) );
 }
