@@ -60,7 +60,6 @@ extern "C" {
 #include "config.h"
 #include "kaapi.h"
 #include "kaapi_error.h"
-#include "kaapi_memory.h"
 #include <string.h>
 
 #include "kaapi_defs.h"
@@ -83,6 +82,11 @@ extern "C" {
    The threads in ready list may be stolen by other processors.
 */
 #define KAAPI_USE_READYLIST 1
+
+/** Current implementation relies on isoaddress allocation to avoid
+    communication during synchronization at the end of partitionning.
+*/
+//#define KAAPI_ADDRSPACE_ISOADDRESS 1
 
 /* Flags to define method to manage concurrency between victim and thieves
    - CAS: based on atomic modify update
@@ -147,6 +151,8 @@ extern "C" {
 #    define EWOULDBLOCK     EAGAIN
 #  endif 
 #endif 
+
+#include "kaapi_memory.h"
 
 
 /** This is the new version on top of X-Kaapi
@@ -594,8 +600,6 @@ typedef struct kaapi_thread_context_t {
   int (*execframe)( struct kaapi_thread_context_t* thread );
   kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
   struct kaapi_tasklist_t*       tasklist;  /* Not null -> list of ready task, see static_sched.h */
-  struct kaapi_comlink_t*        list_send;      /* send and recv list of comsend or comrecv descriptor */
-  struct kaapi_comlink_t*        list_recv;
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
 

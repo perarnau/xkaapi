@@ -134,24 +134,48 @@ static inline int kaapi_memory_view_iscontiguous( const kaapi_memory_view_t* kmv
 /** Represent the address space of a remote (or local) memory.
     This data structure is valid for both the CPU, remote CPU or GPU, or any kind of device.
     The address space identifier should be registered to the system.
+    If the Kaapi is configured as isoaddress allocation, the writer thread may known without
+    communication the remote address where to store data. In that case, the writer maintains 
+    allocation state of all remotes allocation. 
     Return the address space identifier in case of success.
     Return 0 in case of error.
 */
-typedef uint64_t kaapi_address_space_t;
 #define KAAPI_MEM_TYPE_CPU   KAAPI_PROC_TYPE_HOST        /* virtual address space of a processus */
 #define KAAPI_MEM_TYPE_CUDA  KAAPI_PROC_TYPE_CUDA        /* CUDA allocation scheme */
-extern kaapi_address_space_t kaapi_memory_address_space_create(int user, kaapi_globalid_t gid, int type );
 
-static inline int kaapi_memory_address_space_gettype( kaapi_address_space_t kasid )
-{ return (int)(kasid >> 56UL); }
+typedef struct kaapi_address_space_t {
+  uint64_t    asid;
+  uintptr_t   segaddr;    /* base address allocation */
+  uintptr_t   segsp;      /* next free position case of iso address allocation */
+  uintptr_t   segsize;    /* size of address space */
+} kaapi_address_space_t;
 
-static inline kaapi_globalid_t kaapi_memory_address_space_getgid( kaapi_address_space_t kasid )
-{ return (kaapi_globalid_t)((kasid & 0x00FFFFFF00000000UL)>> 32UL); }
+/** Identifier 
+*/
+typedef kaapi_address_space_t*  kaapi_address_space_id_t;
 
-static inline int kaapi_memory_address_space_getuser( kaapi_address_space_t kasid )
-{ return (int)(kasid & 0x00000000FFFFFFFFUL); }
 
-static inline int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_t kasid )
+static inline int kaapi_memory_address_space_isequal( kaapi_address_space_id_t kasid1, kaapi_address_space_id_t kasid2)
+{
+  return kasid1->asid == kasid2->asid;
+}
+
+extern kaapi_address_space_id_t kaapi_memory_address_space_create(int user, kaapi_globalid_t gid, int type, size_t size );
+
+static inline int kaapi_memory_address_space_gettype( kaapi_address_space_id_t kasid )
+{ return (int)(kasid->asid >> 56UL); }
+
+static inline kaapi_globalid_t kaapi_memory_address_space_getgid( kaapi_address_space_id_t kasid )
+{ return (kaapi_globalid_t)((kasid->asid & 0x00FFFFFF00000000UL)>> 32UL); }
+
+static inline int kaapi_memory_address_space_getuser( kaapi_address_space_id_t kasid )
+{ return (int)(kasid->asid & 0x00000000FFFFFFFFUL); }
+
+
+
+/** Print info about address space
+*/
+static inline int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_id_t kasid )
 { 
   return fprintf(file, "[%i, %u, %i]", 
     kaapi_memory_address_space_gettype(kasid),
@@ -180,7 +204,13 @@ static inline int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_
 #define KAAPI_MEM_LOCAL      0x1
 #define KAAPI_MEM_SHARABLE   0x2
 extern kaapi_pointer_t kaapi_memory_allocate( 
-    kaapi_address_space_t kasid, 
+    kaapi_address_space_id_t kasid, 
+    size_t size, 
+    int flag 
+);
+
+extern kaapi_pointer_t kaapi_memory_allocate_view( 
+    kaapi_address_space_id_t kasid, 
     kaapi_memory_view_t* view, 
     int flag 
 );
@@ -196,14 +226,14 @@ extern void kaapi_memory_global_barrier(void);
     If no data resides in klm, then do nothing.
     Else the data is free.
 */
-extern void kaapi_mem_deallocate( kaapi_address_space_t kasid, kaapi_metadata_info_t* kdmi );
+extern void kaapi_mem_deallocate( kaapi_address_space_id_t kasid, kaapi_metadata_info_t* kdmi );
 
 
 /** Bind an address of the calling virtual space of the process in the address space data structure kasid.
     Once binded the memory will be deallocated if the sticky flag is not set in flag.
     Return the pointer.
 */
-extern kaapi_pointer_t kaapi_mem_bind( kaapi_address_space_t kasid, kaapi_metadata_info_t* kdmi, int flag, void* ptr, size_t size );
+extern kaapi_pointer_t kaapi_mem_bind( kaapi_address_space_id_t kasid, kaapi_metadata_info_t* kdmi, int flag, void* ptr, size_t size );
 #define KAAPI_MEM_DEFAULT_FLAG 0x0
 #define KAAPI_MEM_STICKY_FLAG 0x1
 
@@ -213,7 +243,7 @@ extern kaapi_pointer_t kaapi_mem_bind( kaapi_address_space_t kasid, kaapi_metada
     If the data does not exist in the address space kasid, then the method do nothing, even if the data
     resides in other address spaces. 
 */
-extern void* kaapi_mem_unbind( kaapi_address_space_t kasid, kaapi_metadata_info_t* kdmi );
+extern void* kaapi_mem_unbind( kaapi_address_space_id_t kasid, kaapi_metadata_info_t* kdmi );
 
 
 #endif
@@ -222,8 +252,8 @@ extern void* kaapi_mem_unbind( kaapi_address_space_t kasid, kaapi_metadata_info_
     \retval 0 in case of success
 */
 extern int kaapi_memory_copy( 
-  kaapi_address_space_t kasid_dest, kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-  kaapi_address_space_t kasid_src, kaapi_pointer_t src, const kaapi_memory_view_t* view_src 
+  kaapi_address_space_id_t kasid_dest, kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+  kaapi_address_space_id_t kasid_src, kaapi_pointer_t src, const kaapi_memory_view_t* view_src 
 );
 
 
@@ -234,8 +264,8 @@ extern int kaapi_memory_copy(
 */
 extern int kaapi_memory_asyncopy( 
   kaapi_handle_t request,
-  kaapi_address_space_t kasid_dest, void* dest, const kaapi_memory_view_t* view_dest,
-  kaapi_address_space_t kasid_src, const void* src, const kaapi_memory_view_t* view_src 
+  kaapi_address_space_id_t kasid_dest, void* dest, const kaapi_memory_view_t* view_dest,
+  kaapi_address_space_id_t kasid_src, const void* src, const kaapi_memory_view_t* view_src 
 );
 #endif
 
@@ -260,7 +290,7 @@ typedef struct kaapi_metadata_info_t {
 
 
 typedef struct kaapi_address_space_rep_t {
-  kaapi_address_space_t asid;                                        /* address space identifier */
+  kaapi_address_space_id_t asid;                                        /* address space identifier */
   uintptr_t            (*allocate)(size_t size);                     /* allocate memory */
   void                 (*deallocate)(uintptr_t, size_t size);        /* free allocated memory */
 } kaapi_address_space_rep_t;
@@ -277,13 +307,13 @@ typedef struct kaapi_address_space_rep_t {
     
     MANQUE LE FORMAT ICI pour une copie asid -> asid
 */
-extern void kaapi_mem_asyncfetch( kaapi_address_space_t kasid, kaapi_metadata_info_t* kdmi, void (*callback)(void*), void* argcallback );
+extern void kaapi_mem_asyncfetch( kaapi_address_space_id_t kasid, kaapi_metadata_info_t* kdmi, void (*callback)(void*), void* argcallback );
 
 /** Mark as dirty all copies except the copy into kasid.
     If no copy exists into kasid, then an error code is returned. All copies in other addresspace space than kasid
     are marked invalid.
 */
-extern int kaapi_mem_setdirty_except( kaapi_metadata_info_t* kdmi, kaapi_address_space_t kasid );
+extern int kaapi_mem_setdirty_except( kaapi_metadata_info_t* kdmi, kaapi_address_space_id_t kasid );
 
 /** Return the meta data associated to a virtual address @ in the host.
     Return 0 if no meta data is attached.
