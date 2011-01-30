@@ -364,7 +364,11 @@ int kaapi_sched_stealstack
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
   
-  if ((thread ==0) || (thread->unstealable != 0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
+  if ((thread ==0) || (thread->unstealable != 0)
+       /* || kaapi_frame_isempty( thread->sfp)*/
+       || (thread->tasklist !=0) /* cannot steal yet into ready task list */
+     ) 
+  return 0;
   replycount = 0;
   
   /* be carrefull, the map should be clear before used */
