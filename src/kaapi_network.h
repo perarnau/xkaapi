@@ -58,7 +58,6 @@
     Thus the remote requests are serialized due to the service.
 */
 
-
 /** This file is the C header file to the C++ network implementation
 */
 typedef void (*kaapi_service_t)(int errocode, kaapi_globalid_t source, void* buffer, size_t size);
@@ -79,13 +78,22 @@ extern kaapi_globalid_t kaapi_network_get_current_globalid(void);
 */
 extern uint32_t kaapi_network_get_count(void);
 
-/** Return a pointer in a memory region which is rdmable
+/** Allocate data that can be used into rdma operation
 */
 extern kaapi_pointer_t kaapi_network_allocate_rdma(size_t size);
+
+/** Translate rdma pointer in the address space in the local node to a virtual
+    address space pointer.
+*/
+extern kaapi_pointer_t kaapi_network_rdma2vas(kaapi_pointer_t addr, size_t size);
 
 /** Deallocate a pointer in a memory region which is rdmable
 */
 extern void kaapi_network_deallocate_rdma(kaapi_pointer_t, size_t size);
+
+/** Get the segment info for gid 
+*/
+int kaapi_network_get_seginfo( kaapi_address_space_t* retval, kaapi_globalid_t gid );
 
 /** Make progress of communication
 */
