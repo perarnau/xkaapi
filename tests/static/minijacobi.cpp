@@ -7,40 +7,57 @@ enum Direction {
 };
 
 // --------------------------------------------------------------------
-struct TaskUpdate: public ka::Task<3>::Signature<int, ka::R<double>, ka::W<double> > {};
+struct TaskInit: public ka::Task<3>::Signature<int, ka::W<double>, double > {};
 template<>
-struct TaskBodyCPU<TaskUpdate> {
-  void operator() ( int bloc, ka::pointer_r<double> oD, ka::pointer_w<double> nD )
+struct TaskBodyCPU<TaskInit> {
+  void operator() ( int pos, ka::pointer_w<double> D, double v )
   {
+    *D = v;
+    std::cout << ka::System::local_gid << "::[TaskInit] pos:" << pos << ", D: 1.0" << std::endl;
   }
 };
 
+
 // --------------------------------------------------------------------
-struct TaskSwap: public ka::Task<3>::Signature<int, ka::R<double>, ka::W<double> > {};
+struct TaskPrint: public ka::Task<2>::Signature<int, ka::R<double> > {};
 template<>
-struct TaskBodyCPU<TaskSwap> {
-  void operator() ( int bloc, ka::pointer_r<double> oD, ka::pointer_w<double> F )
+struct TaskBodyCPU<TaskPrint> {
+  void operator() ( int pos, ka::pointer_r<double> D )
   {
+    std::cout << ka::System::local_gid << "::[TaskPrint] pos:" << pos 
+              << ", newV: " << *D
+              << std::endl;
   }
 };
 
+
 // --------------------------------------------------------------------
-struct TaskExtractF: public ka::Task<4>::Signature<Direction, int, ka::R<double>, ka::W<double> > {};
+struct TaskUpdate3: public ka::Task<4>::Signature<int, ka::RW<double>, ka::R<double>, ka::R<double> > {};
+template<>
+struct TaskBodyCPU<TaskUpdate3> {
+  void operator() ( int pos, ka::pointer_rw<double> D, ka::pointer_r<double> f1, ka::pointer_r<double> f2 )
+  {
+    double old = *D;
+    *D = *D*0.5 + *f1*0.25 + *f2*0.25;
+    std::cout << ka::System::local_gid << "::[TaskUpdate3] pos:" << pos 
+                << ", oldv: " << old << ", f1:" << *f1 << ", f2:" << *f2 << ", newV:" << *D
+              << std::endl;
+  }
+};
+
+
+// --------------------------------------------------------------------
+struct TaskExtractF: public ka::Task<3>::Signature<int, ka::W<double>, ka::R<double> > {};
 template<>
 struct TaskBodyCPU<TaskExtractF> {
-  void operator() ( Direction d, int bloc, ka::pointer_r<double> oD, ka::pointer_w<double> F )
+  void operator() ( int pos, ka::pointer_w<double> F, ka::pointer_r<double> D )
   {
+    double v = *D;
+    *F = v;
+    std::cout << ka::System::local_gid << "::[TaskExtractF] pos:" << pos << ", F:" << v << std::endl;
   }
 };
 
-// --------------------------------------------------------------------
-struct TaskUpdateFontier: public ka::Task<4>::Signature<Direction, int, ka::RW<double>, ka::R<double> > {};
-template<>
-struct TaskBodyCPU<TaskUpdateFontier> {
-  void operator() ( Direction d, int bloc, ka::pointer_rw<double> nD, ka::pointer_r<double> f )
-  {
-  }
-};
 
 
 /* Main of the program
@@ -49,52 +66,43 @@ struct doit {
   void operator()(int argc, char** argv )
   {
     std::cout << "My pid=" << getpid() << std::endl;
-    int size = 4;
+    int size = 10;
     int bloc = 1;
-    if (argc >1)
-      size = atoi(argv[1]);
-    if (argc >2)
-      bloc = atoi(argv[2]);
+//    if (argc >1)
+//      size = atoi(argv[1]);
+//    if (argc >2)
+//      bloc = atoi(argv[2]);
 
     int n = size*bloc;
-    ka::ThreadGroup threadgroup( size );
-    std::vector<double> oD(n);      /* bloc cyclic mapping */
-    std::vector<double> nD(n);      /* bloc cyclic mapping */
-    std::vector<double> Fr[2];
-    Fr[0].resize(size-1); 
-    Fr[1].resize(size-1); 
-    std::vector<double> Fl[2];
-    Fl[0].resize(size-1); 
-    Fl[1].resize(size-1); 
+    ka::ThreadGroup threadgroup( 10 );
+    std::vector<double> D(n);      /* domaine */
+    std::vector<double> F(n);
 
-    threadgroup.begin_partition();
+    threadgroup.begin_partition(); //KAAPI_THGRP_SAVE_FLAG);
 
-    for (int step = 0; step <1; ++step)
+    for (int i=0; i<size; ++i)
+    {
+      ka::Spawn<TaskInit> (ka::SetPartition(i))  ( i, &D[i], ((i==0) || (i==size-1)) ? 1.0 : 0.0 );
+    }
+
+
+    for (int step = 0; step < 8; ++step)
     {
       for (int i=0; i<size; ++i)
       {
-        if (i != (size-1)) /* right fontier */
-          threadgroup.Spawn<TaskExtractF> (ka::SetPartition(i))  ( RIGHT, bloc, &oD[(i*bloc)], &Fr[step%2][i] );
-        if (i != 0) /* left fontier */
-          threadgroup.Spawn<TaskExtractF> (ka::SetPartition(i))  ( LEFT, bloc, &oD[(i*bloc)], &Fl[step%2][i-1] );
+        ka::Spawn<TaskExtractF> (ka::SetPartition(i))  ( i, &F[i], &D[i] );
       }
       for (int i=0; i<size; ++i)
       {
-        threadgroup.Spawn<TaskUpdate>   (ka::SetPartition(i))  ( bloc, &oD[(i*bloc)], &nD[(i*bloc)] );
+        if ((i !=0) && (i !=size-1))
+          ka::Spawn<TaskUpdate3>   (ka::SetPartition(i))  ( bloc, &D[i], &F[i-1], &F[i+1] );
       }
       for (int i=0; i<size; ++i)
       {
-        if ( i != size-1)
-          threadgroup.Spawn<TaskUpdateFontier>(ka::SetPartition(i))  ( RIGHT, bloc, &nD[(i*bloc)], &Fl[step%2][i] );
-        if ( i != 0)
-          threadgroup.Spawn<TaskUpdateFontier>(ka::SetPartition(i))  ( LEFT, bloc, &nD[(i*bloc)], &Fr[step%2][i-1] );
-      }
-      for (int i=0; i<size; ++i)
-      {
-        threadgroup.Spawn<TaskSwap>(ka::SetPartition(i))  ( bloc, &nD[(i*bloc)], &oD[(i*bloc)] );
+        ka::Spawn<TaskPrint> (ka::SetPartition(i))  ( i, &D[i] );
       }
     }
-    threadgroup.print();    
+
     threadgroup.end_partition();
     threadgroup.execute();
   }
