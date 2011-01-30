@@ -44,29 +44,29 @@
 #include "kaapi_impl.h"
 
 /**/
-kaapi_data_version_t* kaapi_version_findasid_in( kaapi_version_t* ver, kaapi_address_space_t asid )
+kaapi_data_version_t* kaapi_version_findasid_in( kaapi_version_t* ver, kaapi_address_space_id_t asid )
 {
   if (ver ==0) return 0;
   kaapi_data_version_t* curr = ver->copies.front;
   while (curr !=0)
   {
-    if (curr->asid == asid) return curr;
+    if (kaapi_memory_address_space_isequal(curr->asid, asid)) return curr;
     curr = curr->next;
   }
-  if (ver->writer.asid == asid) return &ver->writer;
+  if (kaapi_memory_address_space_isequal(ver->writer.asid, asid)) return &ver->writer;
   return 0;
 }
 
 
 /**/
-kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid )
+kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_id_t asid )
 {
   if (ver ==0) return 0;
   kaapi_data_version_t* curr = ver->copies.front;
   kaapi_data_version_t* prev = curr;
   while (curr !=0)
   {
-    if (curr->asid == asid) 
+    if (kaapi_memory_address_space_isequal(curr->asid, asid)) 
     {
       if (prev == curr) 
       {
@@ -90,14 +90,14 @@ kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver,
 
 
 /**/
-kaapi_data_version_t* kaapi_version_findtodelrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid )
+kaapi_data_version_t* kaapi_version_findtodelrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_id_t asid )
 {
   if (ver ==0) return 0;
   kaapi_data_version_t* curr = ver->todel.front;
   kaapi_data_version_t* prev = curr;
   while (curr !=0)
   {
-    if (curr->asid == asid) 
+    if (kaapi_memory_address_space_isequal(curr->asid, asid)) 
     {
       if (prev == curr) 
       {
@@ -125,18 +125,19 @@ kaapi_comsend_t* kaapi_sendcomlist_find_tag( kaapi_taskbcast_arg_t* bcast, kaapi
   kaapi_comsend_t* curr = &bcast->front;
   while (curr !=0)
   {
-    if (curr->tag == tag) return curr;
+    if (curr->vertag == tag) return curr;
     curr = curr->next;
   }
   return 0;
 }
 
-kaapi_comsend_raddr_t* kaapi_sendcomlist_find_asid( kaapi_comsend_t* com, kaapi_address_space_t asid )
+kaapi_comsend_raddr_t* kaapi_sendcomlist_find_asid( kaapi_comsend_t* com, kaapi_address_space_id_t asid )
 {
   kaapi_comsend_raddr_t* curr = &com->front;
   while (curr !=0)
   {
-    if (curr->asid == asid) return curr;
+    if (kaapi_memory_address_space_isequal(curr->asid, asid)) 
+      return curr;
     curr = curr->next;
   }
   return 0;
@@ -150,6 +151,19 @@ kaapi_comrecv_t* kaapi_recvcomlist_find_tag( kaapi_comlink_t* recvl, kaapi_comta
   {
     if (recvl->u.recv->tag == tag) return recvl->u.recv;
     recvl = recvl->next;
+  }
+  return 0;
+}
+
+/**
+*/
+kaapi_comsend_raddr_t* kaapi_threadgroup_findsend_tagtid( kaapi_comaddrlink_t* list, kaapi_comtag_t tag, int tid )
+{
+  while (list !=0)
+  {
+    if ((tag == list->tag) && (kaapi_memory_address_space_getuser(list->send->asid) == tid)) 
+      return list->send;
+    list = list->next;
   }
   return 0;
 }

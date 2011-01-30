@@ -64,7 +64,5 @@ int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
   thgrp->threadctxts[i]->execframe     = kaapi_threadgroup_execframe;
   thgrp->threadctxts[i]->the_thgrp     = thgrp;
   thgrp->threadctxts[i]->tasklist = tl;
-  thgrp->threadctxts[i]->list_send     = 0;
-  thgrp->threadctxts[i]->list_recv     = 0;
   return error;  
 }

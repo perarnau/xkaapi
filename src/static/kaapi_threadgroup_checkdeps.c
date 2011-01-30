@@ -157,6 +157,6 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     kaapi_thread_pushtask( thgrp->threads[threadindex] );
     return 0;
   }
-  printf("Task not pushed !\n");
+//  printf("Task not pushed !\n");
   return EINTR;
 }

@@ -43,7 +43,63 @@
 */
 #include "kaapi_impl.h"
 
+/* fwd decl 
+*/
+static void kaapi_threadgroup_signalend_tid( kaapi_threadgroup_t thgrp );
 
+#if defined(KAAPI_USE_NETWORK)
+/* network service to signal end of iteration of one tid */
+static void kaapi_threadgroup_signalend_service(int err, kaapi_globalid_t source, void* buffer, size_t sz_buffer )
+{
+#if 0
+  printf("[kaapi_threadgroup_signalend_service] begin receive signal tag\n"); fflush(stdout);
+#endif
+  int32_t grpid;
+  kaapi_threadgroup_t thgrp;
+  memcpy(&grpid, buffer, sizeof(int32_t));
+  thgrp = kaapi_all_threadgroups[grpid];
+
+  kaapi_threadgroup_signalend_tid( thgrp );
+
+#if 0
+  printf("[kaapi_threadgroup_signalend_service] end receive signal tag\n"); fflush(stdout);
+#endif
+}
+#endif
+
+static void kaapi_threadgroup_signalend_tid( kaapi_threadgroup_t thgrp )
+{
+  if (thgrp->tid2gid[-1] == thgrp->localgid)
+  {
+    if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
+    {
+      KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->countend, 0 );
+      kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
+#if 0
+      printf("Put waitting task to term\n");
+#endif
+    }
+  }
+  else 
+  {
+#if defined(KAAPI_USE_NETWORK)
+    /* remote signal */
+#if 0
+    printf("Will do remote signal of the end\n");
+#endif
+    /* remote address space -> communication */
+    kaapi_network_am(
+        thgrp->tid2gid[-1],
+        kaapi_threadgroup_signalend_service, 
+        &thgrp->grpid, sizeof(thgrp->grpid)
+    );
+#else
+    /* where is the maste threadgroup ? */
+    kaapi_assert_debug( 0 );
+#endif
+  }
+  ++thgrp->signal_step;
+}
 
 /** kaapi_threadgroup_execframe
     Use the list of ready task to execute program.
@@ -198,21 +254,18 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
         kaapi_threadgroup_restore_thread(thgrp, thread->partid);
     }
     
-    if (thread != thgrp->threadctxts[-1])
+    if ((thread != thgrp->threadctxts[-1]) && (thgrp->signal_step != thgrp->step))
     { 
-      if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
-      {
-        KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->countend, 0 );
-        kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
-        printf("Put waitting task to term\n");
-      }
+      kaapi_threadgroup_signalend_tid( thgrp );
 
-      printf("Detach thread\n");
+#if 1
+      printf("%i::[Detach thread] tid:%i\n", thgrp->localgid, thread->partid);
+#endif
       /* detach the thread: may it should be put into the execframe function */
       kaapi_sched_lock(&thread->proc->lock);
       thread->proc->thread = 0;
       kaapi_sched_unlock(&thread->proc->lock);
-      return EINTR;
+      return ECHILD;
     }
     return 0;
   }

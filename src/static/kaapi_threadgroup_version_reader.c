@@ -49,18 +49,24 @@ static inline void kaapi_threadgroup_add_recvtask(
     kaapi_threadgroup_t   thgrp, 
     kaapi_version_t*      ver, 
     int                   tid, 
-    kaapi_address_space_t asid,
+    kaapi_address_space_id_t asid,
     kaapi_taskdescr_t*    task, 
     const kaapi_format_t* fmt,
     int                   ith,
     kaapi_access_t*       access 
 )
 {
+  kaapi_taskbcast_arg_t* bcast   = 0;
+  kaapi_comsend_t*       comd    = 0;
+  kaapi_comsend_raddr_t* comasid = 0;
+  
   /* allocate the tag if is == 0 */
   if (ver->tag == 0) ver->tag = ++thgrp->tag_count;
 
   kaapi_globalid_t gid_writer = kaapi_threadgroup_tid2gid( thgrp, ver->writer_thread );
+#if !defined(KAAPI_ADDRSPACE_ISOADDRESS)
   kaapi_globalid_t gid_reader = kaapi_threadgroup_tid2gid( thgrp, tid );
+#endif
 
   /* look if the writer task has been defined: this code should be executed on the owner of the writer task */
   kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
@@ -73,13 +79,23 @@ static inline void kaapi_threadgroup_add_recvtask(
          - allocate a new task descriptor without any associated task that will send data to the reader
       */
       kaapi_taskdescr_t* writer_task = kaapi_tasklist_allocate_td( tasklist, 0 );
-      kaapi_taskbcast_arg_t* bcast = (kaapi_taskbcast_arg_t*)kaapi_tasklist_allocate( tasklist, sizeof(kaapi_taskbcast_arg_t));
-      bcast->front.tag             = ver->tag;
+      bcast = (kaapi_taskbcast_arg_t*)kaapi_tasklist_allocate( tasklist, sizeof(kaapi_taskbcast_arg_t));
+      bcast->front.vertag          = ver->tag;
       bcast->front.ith             = -1;  /* no parameter */
       bcast->front.data            = access->data;
       bcast->front.view            = kaapi_format_get_view_param(fmt, ith, task->task->sp);
       bcast->front.next            = 0;
+
+#if 0
+printf("Add (1) sendaddr to asid:");
+kaapi_memory_address_space_fprintf(stdout, asid);
+printf("\n"); 
+fflush(stdout);
+#endif
+
+      bcast->front.front.tag       = ver->tag;
       bcast->front.front.asid      = asid;
+      bcast->front.front.rsignal   = 0;
       bcast->front.front.raddr     = 0;
       kaapi_memory_view_clear( &bcast->front.front.rview );
       bcast->front.front.next      = 0;
@@ -97,51 +113,74 @@ static inline void kaapi_threadgroup_add_recvtask(
 
       /* push the bcast task into the ready list of task */
       kaapi_tasklist_pushback_ready(tasklist, writer_task);
+
+      comd = &bcast->front;
+      comasid = &comd->front;
     }
     else {
       /* the writer task already exists on w_asid address space:
          - register a remote reader into the bcast arg list 
       */
-      kaapi_taskbcast_arg_t* bcast = ver->writer.task->bcast;
+      bcast = ver->writer.task->bcast;
       if (bcast ==0) 
       {
         bcast = (kaapi_taskbcast_arg_t*)kaapi_tasklist_allocate( tasklist, sizeof(kaapi_taskbcast_arg_t));
-        bcast->front.tag         = ver->tag;
-        bcast->front.ith         = -1;  /* no parameter */
-        bcast->front.data        = ver->writer.addr;
-        bcast->front.view        = (ver->writer.ith == -1 ? 
+        bcast->front.vertag        = ver->tag;
+        bcast->front.ith           = -1;  /* no parameter */
+        bcast->front.data          = ver->writer.addr;
+        bcast->front.view          = (ver->writer.ith == -1 ? 
                                         kaapi_format_get_view_param(fmt, ith, task->task->sp) 
                                       : ver->writer.view);
-        bcast->front.next        = 0;
-        bcast->front.front.asid  = asid;
-        bcast->front.front.raddr = 0;
-        kaapi_memory_view_clear( &bcast->front.front.rview );
-        bcast->front.front.next  = 0;
-        bcast->front.back        = &bcast->front.front;
+        bcast->front.next          = 0;
 
-        bcast->back              = &bcast->front;
+#if 0
+printf("Add (2) sendaddr to asid:");
+kaapi_memory_address_space_fprintf(stdout, asid);
+printf("\n"); 
+fflush(stdout);
+#endif
+        bcast->front.front.tag     = ver->tag;
+        bcast->front.front.asid    = asid;
+        bcast->front.front.rsignal = 0;
+        bcast->front.front.raddr   = 0;
+        kaapi_memory_view_clear( &bcast->front.front.rview );
+        bcast->front.front.next    = 0;
+        bcast->front.back          = &bcast->front.front;
+
+        bcast->back                = &bcast->front;
         
-        ver->writer.task->bcast  = bcast;
+        ver->writer.task->bcast    = bcast;
         
         /* register the kaapi_comsend_t structure into the global table of tid writer_thread  
            In order to exchange address between memory space.
         */
         kaapi_threadgroup_comsend_register( thgrp, ver->writer_thread, ver->tag, &bcast->front );  
+
+        comd = &bcast->front;
+        comasid = &comd->front;
       }
       else 
       {
         /* find tag ver->tag into writer_task bcast information */
-        kaapi_comsend_t* comd = kaapi_sendcomlist_find_tag( bcast, ver->tag );
+        comd = kaapi_sendcomlist_find_tag( bcast, ver->tag );
         if (comd ==0) 
         { /* no found, push a new comonedata info */
           comd = (kaapi_comsend_t*)kaapi_tasklist_allocate( tasklist, sizeof(kaapi_comsend_t));
-          comd->tag               = ver->tag;
+          comd->vertag            = ver->tag;
           comd->ith               = -1;  /* here: ith of the parameter of the writer task */
           comd->data              = ver->writer.addr;
           comd->view              = (ver->writer.ith == -1 ? 
                                           kaapi_format_get_view_param(fmt, ith, task->task->sp) 
                                         : ver->writer.view);
           comd->next              = 0;
+
+#if 0
+printf("Add (3) sendaddr to asid:");
+kaapi_memory_address_space_fprintf(stdout, asid);
+printf("\n"); 
+fflush(stdout);
+#endif
+          comd->front.tag         = ver->tag;
           comd->front.asid        = asid;
           comd->front.rsignal     = 0;
           comd->front.raddr       = 0;
@@ -156,52 +195,126 @@ static inline void kaapi_threadgroup_add_recvtask(
              In order to exchange address between memory space.
           */
           kaapi_threadgroup_comsend_register( thgrp, ver->writer_thread, ver->tag, comd );  
+          
+          comasid = &comd->front;
         }
-        else {
+        else  /* else comd != 0 */
+        {
           /* comd if found, look at com to asid */
-          kaapi_comsend_raddr_t* comasid = kaapi_sendcomlist_find_asid( comd, asid );
+          comasid = kaapi_sendcomlist_find_asid( comd, asid );
           if (comasid == 0)
           {
+#if 0
+printf("Add (4) sendaddr to asid:");
+kaapi_memory_address_space_fprintf(stdout, asid);
+printf("\n"); 
+fflush(stdout);
+#endif
+
             comasid = (kaapi_comsend_raddr_t*)kaapi_allocator_allocate( &thgrp->allocator, sizeof(kaapi_comsend_raddr_t));
+            comasid->tag     = ver->tag;
             comasid->asid    = asid;
             comasid->rsignal = 0;
             comasid->raddr   = 0;
             kaapi_memory_view_clear( &comasid->rview );
-            comasid->next    = 0;
-
+            
             /* push it at the end: always back exist */
+            comasid->next      = 0;
             comd->back->next   = comasid;
+            comd->back         = comasid;
           }
           else {
             /* only register recv task */
+#if 0
+printf("Sendaddr to asid:");
+kaapi_memory_address_space_fprintf(stdout, asid);
+printf(" already exist\n"); 
+fflush(stdout);
+#endif
           }
         }
       }
     }
+    
+    
+    /* also link globally for matching with recv if recv is not local */
+    if ((comasid !=0) && (kaapi_memory_address_space_getgid(asid) != thgrp->localgid))
+    {
+      kaapi_comaddrlink_t* cal = (kaapi_comaddrlink_t*)kaapi_allocator_allocate( &thgrp->allocator, sizeof(kaapi_comaddrlink_t));
+      cal->tag = comd->vertag;
+      cal->send = comasid;
+      cal->next = thgrp->all_sendaddr;
+      thgrp->all_sendaddr = cal;
+#if 0
+      printf("%i:[kaapi_threadgroup_add_recvtask] register send com to %i tag:%i, tid_reader:%i, comsend:%p\n", 
+          thgrp->localgid,
+          (int)kaapi_memory_address_space_getgid(cal->send->asid),
+          (int)cal->tag,
+          (int)kaapi_memory_address_space_getuser(cal->send->asid), //ver->writer_thread,
+          (void*)cal
+      );
+      fflush(stdout);
+#endif
+    }
+
   } /* if local writer */
   
+#if defined(KAAPI_ADDRSPACE_ISOADDRESS)
+  /* in that configuration all threads maintain remote address allocation
+     event if they do not participate in the communication
+  */
+  if (1)
+#else
   if (gid_reader == thgrp->localgid)
+#endif
   {
     /* ok here is the receive side of the communication 
        - allocate the kaapi_comrecv_t 
        - register it into global table for the thread tid.
        - this is a persistant data structure
     */
-    kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->threadctxts[tid]->list_recv, ver->tag );
+    kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->lists_recv[tid], ver->tag );
     kaapi_access_t a; /* to store data access and allocate */
     if (wc ==0)
     {
+#if defined(KAAPI_ADDRSPACE_ISOADDRESS)
+      wc = (kaapi_comrecv_t*)kaapi_memory_allocate( 
+                      kaapi_threadgroup_tid2asid(thgrp, tid), 
+                      sizeof(kaapi_comrecv_t),
+                      KAAPI_MEM_SHARABLE );
+#else
       wc = (kaapi_comrecv_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_comrecv_t));
+#endif
       wc->tag        = ver->tag;
+      wc->from       = kaapi_memory_address_space_getgid(ver->writer.asid);
+      wc->tid        = tid;
       wc->tasklist   = thgrp->threadctxts[tid]->tasklist;
       wc->list.front = 0;
       wc->list.back  = 0;
       wc->view       = kaapi_format_get_view_param(fmt, ith, task->task->sp);
-      wc->data       = a.data = (void*) kaapi_memory_allocate( 
+      
+      /* this instruction should executed by every body 
+         Only the owner of thread tid allocate data.
+         Other threads only compute address.
+      */
+      wc->data       = a.data = (void*) kaapi_memory_allocate_view( 
               kaapi_threadgroup_tid2asid(thgrp, tid), 
               &wc->view,
               KAAPI_MEM_SHARABLE );
       wc->next       = 0;
+
+#if 0
+      printf("%i:[kaapi_threadgroup_add_recvtask] allocate new recv synchro tag:%i, tid:%i rsignal:%p, data@:%p, size: %lu\n", 
+          thgrp->localgid,
+          (int)wc->tag,
+          (int)wc->tid,
+          (void*)wc,
+          (void*)wc->data,
+          kaapi_memory_view_size(&wc->view)
+      );
+      fflush(stdout);
+#endif
+
     }
     else {
       a.data = wc->data;
@@ -246,14 +359,15 @@ static inline int kaapi_version_add_reader(
     kaapi_access_t*       access
 )
 {
-  kaapi_assert( (ver->tag != 0) || (&ver->writer == over) );
+  kaapi_assert( (ver->tag != 0) || (&ver->writer == over) 
+      || kaapi_memory_address_space_isequal(ver->writer.asid, over->asid) );
   kaapi_assert( over != 0);
 
   int retval = 0;
   
   if (&ver->writer == over) 
   {
-    kaapi_assert_debug(ver->writer.asid == over->asid);
+    kaapi_assert_debug(kaapi_memory_address_space_isequal(ver->writer.asid, over->asid));
 
     /* the returned kaapi_data_version_t is the writer:
        - allocate a new reader entry
@@ -288,20 +402,23 @@ static inline int kaapi_version_add_reader(
   a.data = over->addr;
   kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
 
-  /* means writer == access not ready (writer -> read) */
-  if ((ver->writer.task != 0) && (over->asid == ver->writer.asid))
+  if (kaapi_memory_address_space_getgid(over->asid) == thgrp->localgid)
   {
-    kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
-    kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
-    kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
-  }
-  else {
-    kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->threadctxts[tid]->list_recv, ver->tag );
-    kaapi_assert_debug(wc !=0);
-    /* one more external synchronisation: add bcast */
-    KAAPI_ATOMIC_INCR(&task->counter);
-    /* push the task into the activation link of the comrecv data structure */
-    kaapi_activationlist_pushback( thgrp, &wc->list, task );
+    /* means writer == access not ready (writer -> read) */
+    if ((ver->writer.task != 0) && (kaapi_memory_address_space_isequal(over->asid, ver->writer.asid)))
+    {
+      kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
+      kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
+    }
+    else {
+      kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->lists_recv[tid], ver->tag );
+      kaapi_assert_debug(wc !=0);
+      /* one more external synchronisation: add bcast */
+      KAAPI_ATOMIC_INCR(&task->counter);
+      /* push the task into the activation link of the comrecv data structure */
+      kaapi_activationlist_pushback( thgrp, &wc->list, task );
+    }
   }
 
   /* */
@@ -325,7 +442,7 @@ int kaapi_threadgroup_version_newreader(
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
 
   /* asid for the target thread */
-  kaapi_address_space_t asid = kaapi_threadgroup_tid2asid(thgrp, tid);
+  kaapi_address_space_id_t asid = kaapi_threadgroup_tid2asid(thgrp, tid);
   
   /* find the data info in the map attached to the version */
   kaapi_data_version_t* tov = kaapi_version_findasid_in( ver, asid );

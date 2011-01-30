@@ -56,6 +56,9 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
 
+  if (thgrp->localgid ==0)
+    printf("%i::[kaapi_threadgroup] begin step : %i\n", thgrp->localgid, 1+thgrp->step);
+
   if (thgrp->localgid == thgrp->tid2gid[-1])
   {
     /* Push the task that will mark synchronisation on the main thread */
@@ -150,15 +153,29 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   }
   else {
     int err;
-    while (1)
+    do
     {
+      err = 0;
       for (int i=-1; i<thgrp->group_size; ++i)
       {
         if (thgrp->localgid == thgrp->tid2gid[i])
-          err = kaapi_threadgroup_execframe( thgrp->threadctxts[i] );
+        {
+          int retval = kaapi_threadgroup_execframe( thgrp->threadctxts[i] );
+          if (retval != ECHILD) err |= retval;
+#if 0
+          if (retval !=0) {
+            printf("%i::[threadgroup exec frame] err: %i\n", thgrp->localgid, retval);
+          }
+#endif
+        }
       }
-    }
+    } while (err !=0);
   }
+#if defined(KAAPI_USE_NETWORK)
+  kaapi_memory_global_barrier();
+  if (thgrp->localgid ==0)
+    printf("%i::[kaapi_threadgroup] end step : %i\n", thgrp->localgid, thgrp->step);
+#endif
 
   /* counter reset by THE waittask */
   kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->countend) == 0 );

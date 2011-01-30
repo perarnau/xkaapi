@@ -45,8 +45,6 @@
 #ifndef _KAAPI_STATICSCHED_H
 #define _KAAPI_STATICSCHED_H 1
 
-#include "kaapi_memory.h"
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -143,6 +141,8 @@ typedef uint64_t kaapi_taskarg_descr_t;
 */
 typedef struct kaapi_comrecv_t {
   kaapi_comtag_t            tag;          /* tag */
+  kaapi_globalid_t          from;         /* who is the send data */
+  int                       tid;          /* who is the reader data */
   struct kaapi_tasklist_t*  tasklist;     /* points to the data structure where to store activated tasks */
   void*                     data;         /* where to store incomming data */
   kaapi_memory_view_t       view;         /* view */
@@ -154,7 +154,8 @@ typedef struct kaapi_comrecv_t {
 /** Information where to send data to a remote address space
 */
 typedef struct kaapi_comsend_raddr_t {
-  kaapi_address_space_t         asid;          /* address space id in the group */
+  kaapi_comtag_t                tag;
+  kaapi_address_space_id_t      asid;          /* address space id in the group for the receiver */
   kaapi_pointer_t               rsignal;       /* remote kaapi_comrecv_t data structure */
   kaapi_pointer_t               raddr;         /* remote data address */
   kaapi_memory_view_t           rview;         /* remote data view */
@@ -165,11 +166,11 @@ typedef struct kaapi_comsend_raddr_t {
 /** List of remote address space where to send a data
 */
 typedef struct kaapi_comsend_t {
-  kaapi_comtag_t                tag;
+  kaapi_comtag_t                vertag;
   void*                         data;          /* used if not task attached */
   kaapi_memory_view_t           view;          /* used if not task attached */
   int                           ith;           /* the parameter of the task that will be send */
-  struct kaapi_comsend_t*       next;          /* next kaapi_comonedata_t for an other tag for the same task*/
+  struct kaapi_comsend_t*       next;          /* next kaapi_comsend_t for an other tag for the same task*/
   struct kaapi_comsend_raddr_t  front;         /* list of readers */
   struct kaapi_comsend_raddr_t* back;          /* list of readers */
 } kaapi_comsend_t;
@@ -193,6 +194,16 @@ typedef struct kaapi_comlink_t {
   } u;
   struct kaapi_comlink_t*    next;
 } kaapi_comlink_t;
+
+
+/** Used for matching recv & send
+    * 
+*/
+typedef struct kaapi_comaddrlink_t {
+  kaapi_comtag_t                tag;
+  struct kaapi_comsend_raddr_t* send;
+  struct kaapi_comaddrlink_t*   next;
+} kaapi_comaddrlink_t;
 
 
 /** TaskDescriptor
@@ -228,7 +239,7 @@ typedef struct kaapi_taskdescr_t {
     This structure is only used during partitionning step, not at runtime.
 */
 typedef struct kaapi_data_version_t {
-  kaapi_address_space_t        asid;                /* address space of the access (r)   */
+  kaapi_address_space_id_t     asid;                /* address space of the access (r)   */
   kaapi_taskdescr_t*           task;                /* the last reader tasks that owns a reference to the data */
   int                          ith;                 /* index of the argument wich has read access */
   void*                        addr;                /* address of data */
@@ -344,10 +355,10 @@ typedef struct kaapi_tasklist_t {
   kaapi_atomic_t     lock;       /* protect recvlist */
   kaapi_taskdescr_t* front;      /* readylist of task descriptor */
   kaapi_taskdescr_t* back;       /* readylist of task descriptor */
+  uintptr_t          count_recv; 
   char*              stack;      /* where to push taskdecr or activationlink */
   uintptr_t          sp;         /* stack pointer */
   size_t             size;       /* size of the stack */
-  uint32_t           count_recv; 
   kaapi_comrecv_t*   recvlist;   /* put by pushsignal into ready list to signal incomming data */
 } kaapi_tasklist_t;
 
@@ -479,15 +490,15 @@ static inline int kaapi_taskargdescr_ishandle( kaapi_taskdescr_t* td, int ith )
 
 
 /**/
-extern kaapi_data_version_t* kaapi_version_findasid_in( kaapi_version_t* ver, kaapi_address_space_t asid );
+extern kaapi_data_version_t* kaapi_version_findasid_in( kaapi_version_t* ver, kaapi_address_space_id_t asid );
 
 
 /* find in list of copies and unlink entry (if found) before return it */
-extern kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid );
+extern kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_id_t asid );
 
 
 /* find in list of data to dele and unlink entry (if found) before return it */
-extern kaapi_data_version_t* kaapi_version_findtodelrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_t asid );
+extern kaapi_data_version_t* kaapi_version_findtodelrmv_asid_in( kaapi_version_t* ver, kaapi_address_space_id_t asid );
 
 
 /** New typedef for data structure required to manage version 
@@ -535,15 +546,19 @@ typedef enum {
     of the data structure in kaapi.h
 */
 typedef struct kaapi_threadgrouprep_t {
-  /* public part */
+  /* public part: to be the same in kaapi.h */
   kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
-  int                        group_size;   /* number of threads in the group */
+  int32_t                    grpid;        /* group identifier */
+  int32_t                    group_size;   /* number of threads in the group */
    
-  /* executive part */
+  /* private part: not exported to application */
   kaapi_globalid_t           localgid;     /* local gid of this thread group rep */
-  uint32_t                   nodecount;    /* number of nodes */
+  uint32_t                   nodecount;    /* number of nodes = number of copies of thread group */
   kaapi_globalid_t*          tid2gid;      /* mapping of threads onto the unix processes */
-  kaapi_address_space_t*     tid2asid;     /* mapping of threads onto address spaces */
+  kaapi_address_space_id_t*  tid2asid;     /* mapping of threads onto address spaces */
+
+  /* */
+  uint32_t                   localthreads; /* number of threads local to thgrp->localgid */
 
   kaapi_atomic_t             countend;     /* warn: alignement ! */
 
@@ -551,15 +566,21 @@ typedef struct kaapi_threadgrouprep_t {
   int volatile               startflag;    /* set to 1 when threads should starts */
   int volatile               step;         /* current iteration step */
   int                        maxstep;      /* max iteration step or -1 if not known */
+  int                        signal_step;  /* current step marked as signaled of the end of iteration */
   int                        flag;         /* some flag to pass info (save / not save) */
   kaapi_frame_t              mainframe;    /* save/restore main thread */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */
   
-  kaapi_thread_context_t*    dummy_thread; /* for graph partitionning */
+  kaapi_thread_context_t*    dummy_thread; /* thread used to temporally store tasks if thread is not local */
   
+  kaapi_comlink_t**          lists_send;   /* send and recv list of comsend or comrecv descriptor */
+  kaapi_comlink_t**          lists_recv;
+  kaapi_comaddrlink_t*       all_sendaddr;
+
   /* used for iterative execution: only save the tasklist data structure */
   char**                     save_readylists;
   size_t*                    size_readylists;
+
   
   /* state of the thread group */
   kaapi_threadgroup_state_t  state;        /* state */
@@ -577,14 +598,22 @@ typedef struct kaapi_threadgrouprep_t {
 } kaapi_threadgrouprep_t;
 
 
+/** All threadgroups are registerd into this global table.
+    kaapi_threadgroup_count is the index of the next created threadgroup
+*/
+#define KAAPI_MAX_THREADGROUP 32
+extern kaapi_threadgroup_t kaapi_all_threadgroups[KAAPI_MAX_THREADGROUP];
+extern uint32_t kaapi_threadgroup_count;
+
+
 /** Manage mapping from threadid in a group and address space
 */
-static inline kaapi_address_space_t kaapi_threadgroup_tid2asid( kaapi_threadgroup_t thgrp, int tid )
+static inline kaapi_address_space_id_t kaapi_threadgroup_tid2asid( kaapi_threadgroup_t thgrp, int tid )
 {
   return thgrp->tid2asid[tid];
 }
 
-static inline int kaapi_threadgroup_asid2tid( kaapi_threadgroup_t thgrp, kaapi_address_space_t asid )
+static inline int kaapi_threadgroup_asid2tid( kaapi_threadgroup_t thgrp, kaapi_address_space_id_t asid )
 {
   return (int)kaapi_memory_address_space_getuser(asid);
 }
@@ -594,7 +623,7 @@ static inline kaapi_globalid_t kaapi_threadgroup_tid2gid( kaapi_threadgroup_t th
   return thgrp->tid2gid[tid];
 }
 
-static inline kaapi_globalid_t kaapi_threadgroup_asid2gid( kaapi_threadgroup_t thgrp, kaapi_address_space_t asid )
+static inline kaapi_globalid_t kaapi_threadgroup_asid2gid( kaapi_threadgroup_t thgrp, kaapi_address_space_id_t asid )
 {
   return kaapi_memory_address_space_getgid(asid);
 }
@@ -611,7 +640,7 @@ int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int ith );
 static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
+  kaapi_assert_debug( (partitionid>=-1) && (partitionid < thgrp->group_size) );
   {
     kaapi_thread_t* thread = thgrp->threads[partitionid];
     return thread;
@@ -756,12 +785,19 @@ extern kaapi_comsend_t* kaapi_sendcomlist_find_tag( kaapi_taskbcast_arg_t* bcast
 
 /**
 */
-extern kaapi_comsend_raddr_t* kaapi_sendcomlist_find_asid( kaapi_comsend_t* com, kaapi_address_space_t asid );
+extern kaapi_comsend_raddr_t* kaapi_sendcomlist_find_asid( kaapi_comsend_t* com, kaapi_address_space_id_t asid );
+
+/**
+*/
+extern kaapi_comsend_raddr_t* kaapi_sendcomlist_find_gidtid( kaapi_comsend_t* com, kaapi_globalid_t gid, int tid );
 
 /**
 */
 extern kaapi_comrecv_t* kaapi_recvcomlist_find_tag( kaapi_comlink_t* recvl, kaapi_comtag_t tag );
 
+/**
+*/
+extern kaapi_comsend_raddr_t* kaapi_threadgroup_findsend_tagtid( kaapi_comaddrlink_t* list, kaapi_comtag_t tag, int tid );
 
 /** Register the tag as an out data send by a bcast task on thread tidwriter
 */
@@ -775,8 +811,8 @@ static inline int kaapi_threadgroup_comsend_register(
   kaapi_comlink_t* cl = (kaapi_comlink_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_comlink_t));
   kaapi_assert_debug(cl !=0);
   cl->u.send = com;
-  cl->next = thgrp->threadctxts[tidwriter]->list_send;
-  thgrp->threadctxts[tidwriter]->list_send = cl;
+  cl->next = thgrp->lists_send[tidwriter];
+  thgrp->lists_send[tidwriter] = cl;
   return 0;
 }
 
@@ -793,9 +829,10 @@ static inline int kaapi_threadgroup_comrecv_register(
   kaapi_comlink_t* cl = (kaapi_comlink_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_comlink_t));
   kaapi_assert_debug(cl !=0);
   cl->u.recv = com;
-  cl->next = thgrp->threadctxts[tidreader]->list_recv;
-  thgrp->threadctxts[tidreader]->list_recv = cl;
-  ++thgrp->threadctxts[tidreader]->tasklist->count_recv;
+  cl->next = thgrp->lists_recv[tidreader];
+  thgrp->lists_recv[tidreader] = cl;
+  if (thgrp->tid2gid[tidreader] == thgrp->localgid)
+    ++thgrp->threadctxts[tidreader]->tasklist->count_recv;
   return 0;
 }
 
@@ -836,7 +873,7 @@ static inline kaapi_comrecv_t* kaapi_tasklist_popsignal( kaapi_tasklist_t* tl )
 
 /**
 */
-extern int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_t asid_src, kaapi_comsend_t* com);
+extern int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_id_t asid_src, kaapi_comsend_t* com);
 
 /**
 */

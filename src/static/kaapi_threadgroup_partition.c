@@ -82,11 +82,14 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) 
     return EINVAL;
 
+  /* */
+//  kaapi_threadgroup_print( stdout, thgrp );
+  
   /* save if required and update remote reference */
   kaapi_threadgroup_barrier_partition( thgrp );
   
   /* */
-  kaapi_threadgroup_print( stdout, thgrp );
+//  kaapi_threadgroup_print( stdout, thgrp );
   
   /* free hash map entries: they are destroy by destruction of the version allocator */
   kaapi_hashmap_destroy( &thgrp->ws_khm );

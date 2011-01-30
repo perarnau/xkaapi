@@ -480,7 +480,8 @@ typedef struct kaapi_thread_context_t {
 struct kaapi_threadgrouprep_t {
   /* public part */
   kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
-  int                        group_size;   /* number of threads in the group */
+  int32_t                    grpid;        /* group identifier */
+  int32_t                    group_size;   /* number of threads in the group */
 };
 #else
 struct kaapi_threadgrouprep_t;

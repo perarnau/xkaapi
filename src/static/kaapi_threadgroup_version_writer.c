@@ -74,7 +74,7 @@ int kaapi_threadgroup_version_newwriter(
   delprevwriter = 1;
   
   /* asid for the target thread */
-  kaapi_address_space_t asid = thgrp->tid2asid[tid];
+  kaapi_address_space_id_t asid = thgrp->tid2asid[tid];
 
   /* allocate or reuse new version and store it into data: only for writer thread */
   if (gid_writer == thgrp->localgid)
@@ -120,7 +120,7 @@ int kaapi_threadgroup_version_newwriter(
           kaapi_taskdescr_push_successor( tasklist, dv->task, task );
         }
       }
-      else if (ver->writer.asid == asid) 
+      else if (kaapi_memory_address_space_isequal(ver->writer.asid, asid)) 
       { /* WAW: put new writer into successor of previous one, without reallocation */
         data = ver->writer.addr;
         kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
@@ -130,10 +130,10 @@ int kaapi_threadgroup_version_newwriter(
       }
       else {
         /* cannot reuse data: allocate a new one */
-        data = (void*)kaapi_memory_allocate( 
+        data = (void*)kaapi_memory_allocate_view( 
               kaapi_threadgroup_tid2asid(thgrp, tid), 
               &view,
-              KAAPI_MEM_SHARABLE );
+              KAAPI_MEM_LOCAL );
       }
     }
   } /* if local */

@@ -43,6 +43,15 @@
 */
 #include "kaapi_impl.h"
 
+/** All threadgroups are registerd into this global table
+*/
+kaapi_threadgroup_t kaapi_all_threadgroups[KAAPI_MAX_THREADGROUP] = {
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0
+};
+uint32_t kaapi_threadgroup_count = 0;
 
 #if !defined(KAAPI_USE_NETWORK)
 
@@ -77,7 +86,7 @@ uint32_t kaapi_network_get_count(void)
 
 /** Return a pointer in a memory region which is rdmable
 */
-kaapi_pointer_t kaapi_network_allocate_rdma(size_t size)
+kaapi_pointer_t kaapi_network_rdma2vas(kaapi_pointer_t addr, size_t size)
 {
   return (kaapi_pointer_t)malloc(size);
 }
@@ -88,6 +97,13 @@ void kaapi_network_poll()
 
 void kaapi_network_barrier(void)
 {
+}
+
+int kaapi_network_get_seginfo( kaapi_address_space_t* retval, kaapi_globalid_t gid )
+{
+  retval->segaddr = 0;
+  retval->segsize = (size_t)-1;
+  return 0;
 }
 
 #else /* network support defined */
@@ -120,7 +136,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   nodecount = kaapi_network_get_count();
   thgrp->localgid = mygid;
   thgrp->nodecount = nodecount;
-
+  
   thgrp->group_size  = size;
   thgrp->startflag   = 0;
   KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
@@ -138,14 +154,27 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   */
   thgrp->tid2gid  = (kaapi_globalid_t*)malloc( (1+size) * sizeof(kaapi_globalid_t) );
   kaapi_assert(thgrp->tid2gid !=0);
-  thgrp->tid2asid = (kaapi_address_space_t*)malloc( (1+size) * sizeof(kaapi_address_space_t) );
+  thgrp->tid2asid = (kaapi_address_space_id_t*)malloc( (1+size) * sizeof(kaapi_address_space_id_t) );
   kaapi_assert(thgrp->tid2asid !=0);
+  thgrp->lists_send= (kaapi_comlink_t**)malloc( (1+size)* sizeof(kaapi_comlink_t*) );
+  kaapi_assert(thgrp->lists_send !=0);
+  thgrp->lists_recv= (kaapi_comlink_t**)malloc( (1+size)* sizeof(kaapi_comlink_t*) );
+  kaapi_assert(thgrp->lists_recv !=0);
 
   /* shift +1, -1 == main thread */
   ++thgrp->threads;
   ++thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
   ++thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */
   ++thgrp->threadctxts; /* shift, because -1 ==> main thread */
+  ++thgrp->lists_send;
+  ++thgrp->lists_recv;
+
+  uintptr_t seg_size = 4194304;
+  const char* sseg_size = getenv("KAAPI_NETWORK_SEGMENT");
+  if (sseg_size !=0)
+  {
+    seg_size = atoi(sseg_size);
+  }
   
   /* map threads onto globalid */
   for (i=-1; i<size; ++i)
@@ -154,14 +183,21 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
     thgrp->tid2gid[i]  = (kaapi_globalid_t)( (1+i) % nodecount);
 
     /* assigned address space identifier for thread i */
-    thgrp->tid2asid[i] = kaapi_memory_address_space_create( i, thgrp->tid2gid[i], KAAPI_MEM_TYPE_CPU);
+    thgrp->tid2asid[i] = 
+        kaapi_memory_address_space_create( i, thgrp->tid2gid[i], KAAPI_MEM_TYPE_CPU, seg_size);
     
     //(uint32_t)(thgrp->tid2gid[i] << 16) | (uint32_t)((1+i) / nodecount);
-    printf("tid: %i into asid:", i );
-    kaapi_memory_address_space_fprintf( stdout, thgrp->tid2asid[i] );
-    printf(",  onto gid : %u\n", thgrp->tid2gid[i] );
+    if (thgrp->localgid == 0)
+    {
+      printf("tid: %i into asid:", i );
+      kaapi_memory_address_space_fprintf( stdout, thgrp->tid2asid[i] );
+      printf(", map to gid : %u\n", thgrp->tid2gid[i] );
+    }
+    
+    thgrp->lists_send[i] = 0;
+    thgrp->lists_recv[i] = 0;
   }
-
+  thgrp->all_sendaddr = 0;
 
   /* here allocate thread -1 == main thread       */
   if (mygid == thgrp->tid2gid[-1])
@@ -207,6 +243,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   thgrp->dummy_thread       = dummy_thread;
   thgrp->maxstep            = -1;
   thgrp->step               = -1;
+  thgrp->signal_step        = -1;
   thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;
   thgrp->flag               = 0;
   thgrp->tag_count          = 0;
@@ -215,6 +252,11 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   thgrp->save_readylists    = 0;
   thgrp->size_readylists    = 0;
   *pthgrp                   = thgrp;
+ 
+  /* register the thread group */
+  thgrp->grpid = kaapi_threadgroup_count++;
+  kaapi_all_threadgroups[thgrp->grpid] = thgrp;
+  
   return 0;
 }
 
