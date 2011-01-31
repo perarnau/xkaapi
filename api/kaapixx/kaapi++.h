@@ -2697,6 +2697,16 @@ namespace ka {
 
 
   // --------------------------------------------------------------------
+  template<typename Mapper>
+  struct WrapperMapping {
+    static kaapi_globalid_t mapping_function( void* arg, int nodecount, int tid )
+    {
+      Mapper* mapper = static_cast<Mapper*> (arg);
+      return (kaapi_globalid_t)(*mapper)(nodecount, tid);
+    }
+  };
+
+  // --------------------------------------------------------------------
   /* API: 
      * threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args )
      * threadgroup[i]->Spawn<TASK>
@@ -2719,7 +2729,26 @@ namespace ka {
     /* begin to partition task */
     void begin_partition( int flag =KAAPI_THGRP_DEFAULT_FLAG)
     {
-      if (!_created) { kaapi_threadgroup_create( &_threadgroup, (uint32_t)_size ); _created = true; }
+      if (!_created) 
+      { 
+        kaapi_threadgroup_create( &_threadgroup, (uint32_t)_size, 
+                0, 0 ); 
+        _created = true; 
+      }
+      kaapi_threadgroup_begin_partition( _threadgroup, flag );
+      kaapi_set_threadgroup(_threadgroup);
+    }
+
+    template<typename Mapping>
+    void begin_partition( Mapping& mapobj, int flag =KAAPI_THGRP_DEFAULT_FLAG)
+    {
+      if (!_created) 
+      { 
+        kaapi_threadgroup_create( &_threadgroup, (uint32_t)_size, 
+                &WrapperMapping<Mapping>::mapping_function, 
+                &mapobj ); 
+        _created = true; 
+      }
       kaapi_threadgroup_begin_partition( _threadgroup, flag );
       kaapi_set_threadgroup(_threadgroup);
     }

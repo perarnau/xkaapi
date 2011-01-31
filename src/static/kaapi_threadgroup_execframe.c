@@ -93,7 +93,7 @@ static void kaapi_threadgroup_signalend_tid( kaapi_threadgroup_t thgrp )
     /* remote signal */
     if (KAAPI_ATOMIC_INCR(&thgrp->endlocalthread) == (int)thgrp->localthreads)
     {
-#if 1
+#if 0
       printf("%i::[kaapi_threadgroup_signalend_tid] signalend to master thread group: counter:%i should be:%i\n", thgrp->localgid, KAAPI_ATOMIC_READ(&thgrp->endlocalthread), (int)thgrp->localthreads);
 #endif
       /* remote address space -> communication */
@@ -217,8 +217,13 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     {
       kaapi_tasklist_merge_activationlist( tasklist, &recv->list );
       --tasklist->count_recv;
-      printf("%i::[kaapi_threadgroup_execframe] tid:%i, recv input data, #wc_recv:%i\n", thread->the_thgrp->localgid, thread->partid, tasklist->count_recv);
-      //recv = kaapi_tasklist_popsignal( tasklist );
+#if 0
+      printf("%i::[kaapi_threadgroup_execframe] tid:%i, recv input data, #wc_recv:%i\n", 
+          thread->the_thgrp->localgid, 
+          thread->partid, 
+          tasklist->count_recv
+      );
+#endif
     }
     
     /* bcast? management of the output communication after puting input comm */
@@ -248,12 +253,14 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
   /* pop frame */
   --thread->sfp;
 
+#if 0
   printf("%i::[kaapi_threadgroup_execframe] end tid:%i, #task:%p, #recvlist:%p, #wc_recv:%i\n", 
     thread->the_thgrp->localgid, 
     thread->partid, 
     (void*)tasklist->front,
     (void*)tasklist->recvlist,
     tasklist->count_recv);
+#endif
   
   kaapi_threadgroup_t thgrp = thread->the_thgrp;
   if (thgrp ==0) return 0;
@@ -279,7 +286,7 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     if (thread->partid != -1)
     { 
        kaapi_threadgroup_signalend_tid( thgrp );
-#if 1
+#if 0
       printf("%i::[Detach thread] tid:%i\n", thgrp->localgid, thread->partid);
 #endif
 

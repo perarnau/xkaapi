@@ -1340,9 +1340,19 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /* ========================================================================= */
 
 /** Create a thread group with size threads. 
+    Mapping function should be set at creation step. 
+    For each thread tid of the group, the function mapping is called with:
+      mapping(ctxt_mapping, nodecount, tid) -> gid
+    in order to defines the site gid that will executes the thread tid.
+    The value ctxt_mapping is a user defined data structure that can be used to hold
+    parameter for computing the mapping.
+    If mapping ==0, then the default runtime mapping if a 1-block cyclic distribution scheme (round robin).
     Return 0 in case of success or the error code.
 */
-extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size );
+extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size, 
+  kaapi_globalid_t (*mapping)(void*, int, int),
+  void* ctxt_mapping
+);
 
 /**
 */

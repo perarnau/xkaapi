@@ -139,13 +139,19 @@ static int kaapi_threadgroup_exec_alllocal_frame(kaapi_threadgroup_t thgrp )
     {
       if ((thgrp->localgid == thgrp->tid2gid[i]) && (thgrp->threadctxts[i]->partid >= -1))
       {
+#if 0
         printf("%i::[threadgroup exec] begin exec thread: %i\n", thgrp->localgid, i);
+#endif
         int retval = kaapi_threadgroup_execframe( thgrp->threadctxts[i] );
+#if 0
         printf("%i::[threadgroup exec] end exec thread: %i, err: %i\n", thgrp->localgid, i, retval);
+#endif
         if (retval != ECHILD) err |= retval;
         else {
           thgrp->threadctxts[i]->partid = -10-i; /* marked as finished */
+#if 0
           printf("%i::[threadgroup exec] mark exec thread: %i\n", thgrp->localgid, i);
+#endif
         }
 #if 0
         if (retval !=0) {
@@ -166,7 +172,9 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
+#if 0
   printf("%i::[threadgroup exec] begin execution on #local threads: %i\n", thgrp->localgid, thgrp->localthreads);
+#endif
   if (thgrp->localgid == thgrp->tid2gid[-1])
   {
     err = kaapi_threadgroup_exec_alllocal_frame( thgrp );
@@ -198,10 +206,12 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
     /* counter reset by THE waittask */
     if (KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) !=0)
     {
+#if 0
       int state = kaapi_task_state2int(kaapi_task_getstate( thgrp->waittask ));
       /* print state of waittask */
       printf("%i::[kaapi_threadgroup_exec] end step :%i, countend:%i, waittask state:%i\n", 
           thgrp->localgid, thgrp->step, KAAPI_ATOMIC_READ(&thgrp->endglobalgroup), state );
+#endif
     }
     kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) == 0 );    
   }
@@ -210,6 +220,8 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   }
 #if defined(KAAPI_USE_NETWORK)
   kaapi_memory_global_barrier();
+#endif
+#if 1
   if (thgrp->localgid ==0)
     printf("%i::[kaapi_threadgroup_exec] end step :%i, countend:%i\n", 
         thgrp->localgid, thgrp->step, KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) );

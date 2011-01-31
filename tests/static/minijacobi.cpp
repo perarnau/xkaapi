@@ -59,6 +59,19 @@ struct TaskBodyCPU<TaskExtractF> {
 };
 
 
+struct MyBlockCyclicMapping {
+  MyBlockCyclicMapping( int size, int bloc )
+   : _size(size), _bloc(bloc)
+  {}
+  int operator()(int nodecount, int tid)
+  {
+    int gid = (tid / _bloc)%nodecount;
+    return gid;
+  }
+private:
+  int _size; 
+  int _bloc;
+};
 
 /* Main of the program
 */
@@ -66,7 +79,7 @@ struct doit {
   void operator()(int argc, char** argv )
   {
     std::cout << "My pid=" << getpid() << std::endl;
-    int size = 10;
+    int size = 4;
     int bloc = 1;
 //    if (argc >1)
 //      size = atoi(argv[1]);
@@ -74,11 +87,12 @@ struct doit {
 //      bloc = atoi(argv[2]);
 
     int n = size*bloc;
-    ka::ThreadGroup threadgroup( 10 );
+    ka::ThreadGroup threadgroup( 4 );
     std::vector<double> D(n);      /* domaine */
     std::vector<double> F(n);
 
-    threadgroup.begin_partition(); //KAAPI_THGRP_SAVE_FLAG);
+    MyBlockCyclicMapping map(2, 2);
+    threadgroup.begin_partition( map ); //KAAPI_THGRP_SAVE_FLAG);
 
     for (int i=0; i<size; ++i)
     {

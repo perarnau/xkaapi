@@ -228,7 +228,9 @@ static int kaapi_threadgroup_update_recv(
 
 int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
 {
+#if 0
   printf("%i::[kaapi_threadgroup_barrier_partition] begin\n", thgrp->localgid);
+#endif
 #if defined(KAAPI_USE_NETWORK)
   kaapi_memory_global_barrier();
   
@@ -339,6 +341,8 @@ int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
      - after the barrier any nodes may write the correct location using remote dma
   */
   kaapi_memory_global_barrier();
-  printf("%i::[kaapi_threadgroup_barrier_partition] begin\n", thgrp->localgid);
+#if 0
+  printf("%i::[kaapi_threadgroup_barrier_partition] end\n", thgrp->localgid);
+#endif
   return 0;
 }
