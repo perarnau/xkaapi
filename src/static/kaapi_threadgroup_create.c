@@ -115,7 +115,10 @@ int kaapi_network_get_seginfo( kaapi_address_space_t* retval, kaapi_globalid_t g
     - the thread i is on processor i % #procs.
     - the master thread is on the globalid 0.
 */
-int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
+int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size, 
+  kaapi_globalid_t (*mapping)(void*, int, int),
+  void* ctxt_mapping
+)
 {
   int i;
   int error = 0;
@@ -134,13 +137,15 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   proc  = kaapi_get_current_processor();
   mygid = kaapi_network_get_current_globalid();
   nodecount = kaapi_network_get_count();
-  thgrp->localgid = mygid;
+  thgrp->localgid  = mygid;
   thgrp->nodecount = nodecount;
-  
   thgrp->group_size  = size;
+  thgrp->localthreads= 0;
+  KAAPI_ATOMIC_WRITE(&thgrp->endlocalthread, 0);
   thgrp->startflag   = 0;
-  KAAPI_ATOMIC_WRITE(&thgrp->countend, 0);
+  KAAPI_ATOMIC_WRITE(&thgrp->endglobalgroup, 0);
   thgrp->waittask    = 0;
+  
   thgrp->threadctxts = malloc( (1+size) * sizeof(kaapi_thread_context_t*) );
   kaapi_assert(thgrp->threadctxts !=0);
 
@@ -180,7 +185,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
   for (i=-1; i<size; ++i)
   {
     /* map thread i on processor node count */
-    thgrp->tid2gid[i]  = (kaapi_globalid_t)( (1+i) % nodecount);
+    if (mapping ==0)
+      thgrp->tid2gid[i]  = (kaapi_globalid_t)( (1+i) % nodecount);
+    else {
+      if (i ==-1) thgrp->tid2gid[i] = 0;
+      else thgrp->tid2gid[i]  = (*mapping)(ctxt_mapping, nodecount, i);
+    }
 
     /* assigned address space identifier for thread i */
     thgrp->tid2asid[i] = 
@@ -205,6 +215,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
     thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
     thgrp->threads[-1] = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
     kaapi_threadgroup_initthread( thgrp, -1 );
+    ++thgrp->localthreads;
   }
 
   /* Allocate the thread for the local view of the group
@@ -224,8 +235,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size )
       thgrp->threadctxts[i]->partid = i;
       thgrp->threads[i] = kaapi_threadcontext2thread(thgrp->threadctxts[i]);
       kaapi_threadgroup_initthread( thgrp, i );
+      ++thgrp->localthreads;
     }
     else  {
+      /* allocate the dummy thread that help to spawn task into it, 
+         it its attribute partition if not local
+      */
       if (dummy_thread ==0) 
         dummy_thread = kaapi_context_alloc( proc );
       thgrp->threadctxts[i] = dummy_thread;

@@ -59,11 +59,14 @@ static void kaapi_threadgroup_signalend_service(int err, kaapi_globalid_t source
   memcpy(&grpid, buffer, sizeof(int32_t));
   thgrp = kaapi_all_threadgroups[grpid];
 
-  kaapi_threadgroup_signalend_tid( thgrp );
-
-#if 0
-  printf("[kaapi_threadgroup_signalend_service] end receive signal tag\n"); fflush(stdout);
+  if (KAAPI_ATOMIC_INCR( &thgrp->endglobalgroup ) == (int)thgrp->nodecount)
+  {
+    KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endglobalgroup, 0 );
+    kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
+#if 1
+    printf("%i::[kaapi_threadgroup_signalend_service] set waitting task to term\n", thgrp->localgid);
 #endif
+  }
 }
 #endif
 
@@ -71,28 +74,35 @@ static void kaapi_threadgroup_signalend_tid( kaapi_threadgroup_t thgrp )
 {
   if (thgrp->tid2gid[-1] == thgrp->localgid)
   {
-    if (KAAPI_ATOMIC_INCR( &thgrp->countend ) == thgrp->group_size)
+    if (KAAPI_ATOMIC_INCR(&thgrp->endlocalthread) == (int)thgrp->localthreads);
     {
-      KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->countend, 0 );
-      kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
+      if (KAAPI_ATOMIC_INCR( &thgrp->endglobalgroup ) == (int)thgrp->nodecount)
+      {
+        KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endglobalgroup, 0 );
+        kaapi_task_orstate( thgrp->waittask, KAAPI_MASK_BODY_TERM );
 #if 0
-      printf("Put waitting task to term\n");
+        printf("Put waitting task to term\n");
 #endif
+      }
+      KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endlocalthread, 0 );
     }
   }
   else 
   {
 #if defined(KAAPI_USE_NETWORK)
     /* remote signal */
+    if (KAAPI_ATOMIC_INCR(&thgrp->endlocalthread) == (int)thgrp->localthreads)
+    {
 #if 0
-    printf("Will do remote signal of the end\n");
+      printf("%i::[kaapi_threadgroup_signalend_tid] signalend to master thread group: counter:%i should be:%i\n", thgrp->localgid, KAAPI_ATOMIC_READ(&thgrp->endlocalthread), (int)thgrp->localthreads);
 #endif
-    /* remote address space -> communication */
-    kaapi_network_am(
-        thgrp->tid2gid[-1],
-        kaapi_threadgroup_signalend_service, 
-        &thgrp->grpid, sizeof(thgrp->grpid)
-    );
+      /* remote address space -> communication */
+      kaapi_network_am(
+          thgrp->tid2gid[-1],
+          kaapi_threadgroup_signalend_service, 
+          &thgrp->grpid, sizeof(thgrp->grpid)
+      );
+    }
 #else
     /* where is the maste threadgroup ? */
     kaapi_assert_debug( 0 );
@@ -134,8 +144,8 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
 
   /* push the frame for the next task to execute */
   thread->sfp[1].sp_data = fp->sp_data;
-  thread->sfp[1].pc = fp->sp;
-  thread->sfp[1].sp = fp->sp;
+  thread->sfp[1].pc      = fp->sp;
+  thread->sfp[1].sp      = fp->sp;
   
   /* force previous write before next write */
   kaapi_writemem_barrier();
@@ -207,14 +217,22 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     {
       kaapi_tasklist_merge_activationlist( tasklist, &recv->list );
       --tasklist->count_recv;
-      //recv = kaapi_tasklist_popsignal( tasklist );
+#if 0
+      printf("%i::[kaapi_threadgroup_execframe] tid:%i, recv input data, #wc_recv:%i\n", 
+          thread->the_thgrp->localgid, 
+          thread->partid, 
+          tasklist->count_recv
+      );
+#endif
     }
     
-    /* bcast? management of the communication */
+    /* bcast? management of the output communication after puting input comm */
     if (td !=0) 
     {
       if (td->bcast !=0) 
-        kaapi_threadgroup_bcast( thread->the_thgrp, kaapi_threadgroup_tid2asid(thread->the_thgrp, thread->partid), &td->bcast->front );      
+        kaapi_threadgroup_bcast( thread->the_thgrp, 
+                                 kaapi_threadgroup_tid2asid(thread->the_thgrp, thread->partid), 
+                                 &td->bcast->front );      
 
       /* post execution: new tasks created ??? */
       if (unlikely(fp->sp > thread->sfp->sp))
@@ -234,11 +252,22 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
 
   /* pop frame */
   --thread->sfp;
+
+#if 0
+  printf("%i::[kaapi_threadgroup_execframe] end tid:%i, #task:%p, #recvlist:%p, #wc_recv:%i\n", 
+    thread->the_thgrp->localgid, 
+    thread->partid, 
+    (void*)tasklist->front,
+    (void*)tasklist->recvlist,
+    tasklist->count_recv);
+#endif
   
   kaapi_threadgroup_t thgrp = thread->the_thgrp;
   if (thgrp ==0) return 0;
 
-  /* signal end of step if no more recv (and then no ready task activated) */
+  /* signal the end of the step for the thread
+     - if no more recv (and then no ready task activated)
+  */
   if (tasklist->count_recv == 0) 
   {
     /* restore before signaling end of execution */
@@ -254,20 +283,20 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
         kaapi_threadgroup_restore_thread(thgrp, thread->partid);
     }
     
-    if ((thread != thgrp->threadctxts[-1]) && (thgrp->signal_step != thgrp->step))
+    if (thread->partid != -1)
     { 
-      kaapi_threadgroup_signalend_tid( thgrp );
-
-#if 1
+       kaapi_threadgroup_signalend_tid( thgrp );
+#if 0
       printf("%i::[Detach thread] tid:%i\n", thgrp->localgid, thread->partid);
 #endif
+
       /* detach the thread: may it should be put into the execframe function */
       kaapi_sched_lock(&thread->proc->lock);
       thread->proc->thread = 0;
       kaapi_sched_unlock(&thread->proc->lock);
       return ECHILD;
     }
-    return 0;
+    return ECHILD;
   }
 #if defined(KAAPI_USE_NETWORK)
   kaapi_network_poll();

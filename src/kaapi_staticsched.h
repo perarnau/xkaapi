@@ -558,9 +558,9 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_address_space_id_t*  tid2asid;     /* mapping of threads onto address spaces */
 
   /* */
-  uint32_t                   localthreads; /* number of threads local to thgrp->localgid */
-
-  kaapi_atomic_t             countend;     /* warn: alignement ! */
+  uint32_t                   localthreads;   /* number of threads local to thgrp->localgid */
+  kaapi_atomic_t             endlocalthread; /* count the number of local threads that have finished */
+  kaapi_atomic_t             endglobalgroup; /* count the number of remote thread group that have finished */
 
   kaapi_task_t*              waittask;     /* task to mark end of parallel computation */
   int volatile               startflag;    /* set to 1 when threads should starts */
