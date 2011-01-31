@@ -177,7 +177,25 @@ redo_execution:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
+
+#if defined(KAAPI_USE_CUDA)
+    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+    {
+      if (kproc->thread->execframe == kaapi_thread_execframe)
+      {
+	err = kaapi_cuda_execframe( kproc->thread );
+      }
+      else /* assumed kaapi_threadgroup_execframe */
+      {
+	kaapi_assert_debug
+	  (kproc->thread->execframe == kaapi_threadgroup_execframe);
+	err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+      }
+    }
+    else
+#endif /* KAAPI_USE_CUDA */
     err = (*kproc->thread->execframe)(kproc->thread );
+
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif

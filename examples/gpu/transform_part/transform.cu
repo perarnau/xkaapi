@@ -17,7 +17,7 @@ typedef float double_type;
 #define CONFIG_LEAF_COUNT 1024 // stops the recursion
 #define CONFIG_ELEM_COUNT (CONFIG_LEAF_COUNT * 1000)
 #define CONFIG_RANGE_COUNT 3
-#define CONFIG_RANGE_CHECK 0
+#define CONFIG_RANGE_CHECK 1
 
 // task signature
 struct TaskAddone : public ka::Task<1>::Signature
@@ -74,6 +74,8 @@ template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range1d_rw<double_type> range)
   {
+    printf("gpuTask::operator()\n");
+
     // we are the big one, can handle the work alone. dont recurse.
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
@@ -118,6 +120,7 @@ struct doit {
 
       // check it
 #if CONFIG_RANGE_CHECK
+      printf(":: checking range\n");
       for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
       {
 	double_type* const array = arrays[count];

@@ -74,9 +74,6 @@ kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
 }
 
 
-#if 0 /* BIG_TODO */
-
-
 /* get processor memory map */
 
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
@@ -190,6 +187,18 @@ static inline void set_access_data_at
 { get_access_at(f, i, p)->data = d; }
 
 
+/* retrieve the ith parameter size */
+
+static size_t get_size_param
+(kaapi_format_t* f, unsigned int i, void* p)
+{
+  kaapi_memory_view_t kmv = f->get_view_param(f, i, p);
+  const size_t size = kaapi_memory_view_size(&kmv);
+  printf("get_size: %lx\n", size);
+  return size;
+}
+
+
 /* prepare task args memory */
 
 static void prepare_task
@@ -220,7 +229,7 @@ static void prepare_task
     hostptr = access.data;
 
     /* get parameter size */
-    size = format->get_size_param(format, i, sp);
+    size = get_size_param(format, i, sp);
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
@@ -326,7 +335,7 @@ static void __attribute__((unused)) prepare_task2
     hostptr = access->data;
 
     /* get parameter size */
-    size = format->get_size_param(format, i, sp);
+    size = get_size_param(format, i, sp);
 
     /* create a mapping on host if not exist */
     kaapi_mem_map_find_or_insert
@@ -414,7 +423,7 @@ static void finalize_task
 
     /* get data, size */
     devptr = (kaapi_mem_addr_t)access.data;
-    size = format->get_size_param(format, i, sp);
+    size = get_size_param(format, i, sp);
 
     /* sync host memory */
     kaapi_mem_synchronize(devptr, size);
@@ -435,6 +444,9 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 
   return 0;
 }
+
+
+#if 0 /* BIG_TODO */
 
 
 /* cuda device taskbcast body.
@@ -983,11 +995,21 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 }
 #endif
 
+#else
+
+int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
+{
+  printf("%s: not implemented\n", __FUNCTION__);
+  return -1;
+}
+
 int kaapi_cuda_exectask
 (kaapi_thread_context_t* thread, void* data, kaapi_format_t* format)
 {
   kaapi_processor_t* const kproc = thread->proc;
   int res = -1;
+
+  printf("kaapi_cuda_exectask()\n");
 
   pthread_mutex_lock(&kproc->cuda_proc.ctx_lock);
 
@@ -1015,14 +1037,5 @@ int kaapi_cuda_exectask
 
   return res;
 }
-
-#else
-
-int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
-{ return -1; }
-int kaapi_cuda_exectask
-(kaapi_thread_context_t* thread, void* data, kaapi_format_t* format)
-{ return -1; }
-
 
 #endif /* BIG_TODO */
