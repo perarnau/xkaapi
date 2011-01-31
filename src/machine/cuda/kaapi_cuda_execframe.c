@@ -54,6 +54,9 @@
 #include "../../memory/kaapi_mem.h"
 
 
+#if 0 /* BIG_TODO */
+
+
 /* get processor memory map */
 
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
@@ -1011,3 +1014,14 @@ int kaapi_cuda_exectask
 
   return res;
 }
+
+#else
+
+int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
+{ return -1; }
+int kaapi_cuda_exectask
+(kaapi_thread_context_t* thread, void* data, kaapi_format_t* format)
+{ return -1; }
+
+
+#endif /* BIG_TODO */

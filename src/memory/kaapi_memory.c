@@ -44,7 +44,7 @@
 #include "kaapi_impl.h"
 
 #if defined(KAAPI_USE_CUDA)
-#include "kaapi_cuda.h"
+#include "../cuda/kaapi_cuda.h"
 #endif
 
 /** Address space are 64 bits identifier decomposed in (from higher bit to lower):
@@ -165,7 +165,7 @@ kaapi_pointer_t kaapi_memory_allocate(
     case KAAPI_MEM_TYPE_CUDA:
     {
       /* should be able to allocate iff the current cuda context attached to a device */
-      return (kaapi_pointer_t)
+      return (kaapi_pointer_t)NULL;
     }
 #endif
     default:
@@ -197,7 +197,7 @@ kaapi_pointer_t kaapi_memory_allocate_view(
     case KAAPI_MEM_TYPE_CUDA:
     {
       /* should be able to allocate iff the current cuda context attached to a device */
-      return (kaapi_pointer_t)
+      return (kaapi_pointer_t)NULL;
     }
 #endif
     default:

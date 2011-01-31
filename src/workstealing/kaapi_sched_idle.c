@@ -120,7 +120,18 @@ redo_execute:
 
 #if defined(KAAPI_USE_CUDA)
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
-      err = kaapi_cuda_execframe( kproc->thread );
+    {
+      if (kproc->thread->execframe == kaapi_thread_execframe)
+      {
+	err = kaapi_cuda_execframe( kproc->thread );
+      }
+      else /* assumed kaapi_threadgroup_execframe */
+      {
+	kaapi_assert_debug
+	  (kproc->thread->execframe == kaapi_threadgroup_execframe);
+	err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+      }
+    }
     else
 #endif /* KAAPI_USE_CUDA */
     err = (*kproc->thread->execframe)( kproc->thread );
