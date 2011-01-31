@@ -1854,7 +1854,7 @@ namespace ka {
     { return _size; }
 
     /** */
-    array1d_rep_with_readwrite() : _data(0), _size(size) {}
+    array1d_rep_with_readwrite() : _data(0), _size(0) {}
     /** */
     array1d_rep_with_readwrite(T* ptr, size_t sz) : _data(ptr), _size(sz) {}
     /** */

@@ -54,6 +54,26 @@
 #include "../../memory/kaapi_mem.h"
 
 
+/* exported */
+kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
+{
+  /* todo, asid_to_kproc[asid] -> kproc */
+
+  kaapi_processor_t** kproc = kaapi_all_kprocessors;
+  size_t count = kaapi_count_kprocessors;
+
+  while (count)
+  {
+    if ((*kproc)->mem_map.asid == asid)
+      return (*kproc);
+    --count;
+    ++kproc;
+  }
+
+  return NULL;
+}
+
+
 #if 0 /* BIG_TODO */
 
 
@@ -83,25 +103,6 @@ static inline kaapi_mem_asid_t get_host_asid(void)
 {
   return get_host_mem_map()->asid;
 }
-
-kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
-{
-  /* todo, asid_to_kproc[asid] -> kproc */
-
-  kaapi_processor_t** kproc = kaapi_all_kprocessors;
-  size_t count = kaapi_count_kprocessors;
-
-  while (count)
-  {
-    if ((*kproc)->mem_map.asid == asid)
-      return (*kproc);
-    --count;
-    ++kproc;
-  }
-
-  return NULL;
-}
-
 
 /* device memory allocation */
 

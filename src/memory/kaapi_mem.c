@@ -47,7 +47,6 @@
 #include "kaapi_mem.h"
 
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
 
 #include <cuda.h>
 #include "../machine/cuda/kaapi_cuda_error.h"
@@ -108,7 +107,7 @@ static inline kaapi_mem_map_t* get_self_mem_map(void)
   return get_proc_mem_map(kaapi_get_current_processor());
 }
 
-static int kaapi_mem_map_find_with_asid
+int kaapi_mem_map_find_with_asid
 (kaapi_mem_map_t* map, kaapi_mem_addr_t addr,
  kaapi_mem_asid_t asid, kaapi_mem_mapping_t** mapping)
 {
@@ -133,7 +132,66 @@ static int kaapi_mem_map_find_with_asid
   return -1;
 }
 
-#endif
+static kaapi_cuda_proc_t* get_cu_context(void)
+{
+  size_t count = kaapi_count_kprocessors;
+  kaapi_processor_t** proc = kaapi_all_kprocessors;
+  CUresult res;
+
+  for (; count; --count, ++proc)
+  {
+    if ((*proc)->proc_type == KAAPI_PROC_TYPE_CUDA)
+    {
+      kaapi_cuda_proc_t* const cu_proc = &(*proc)->cuda_proc;
+
+      pthread_mutex_lock(&cu_proc->ctx_lock);
+      res = cuCtxPushCurrent(cu_proc->ctx);
+      if (res == CUDA_SUCCESS) return cu_proc;
+      pthread_mutex_unlock(&cu_proc->ctx_lock);
+    }
+  }
+
+  return NULL;
+}
+
+static void put_cu_context(kaapi_cuda_proc_t* cu_proc)
+{
+  cuCtxPopCurrent(&cu_proc->ctx);
+  pthread_mutex_unlock(&cu_proc->ctx_lock);
+}
+
+void* kaapi_mem_alloc_host(size_t size)
+{
+  /* allocate host memory needed for async transfers.
+     the first cuda mem asid is used since a context
+     is needed to perform the allocation.
+     todo: create a dedicated one for the host
+   */
+
+  kaapi_cuda_proc_t* const cu_proc = get_cu_context();
+
+  void* hostptr;
+  CUresult res;
+
+  if (cu_proc == NULL) return NULL;
+
+  res = cuMemHostAlloc(&hostptr, size, CU_MEMHOSTALLOC_PORTABLE);
+
+  put_cu_context(cu_proc);
+
+  if (res != CUDA_SUCCESS) return NULL;
+
+  return hostptr;
+}
+
+void kaapi_mem_free_host(void* hostptr)
+{
+  kaapi_cuda_proc_t* const cu_proc = get_cu_context();
+  if (cu_proc == NULL) return ;
+  cuMemFreeHost(hostptr);
+  put_cu_context(cu_proc);
+}
+
 #endif /* KAAPI_USE_CUDA */
 
 
