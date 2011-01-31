@@ -48,7 +48,7 @@
 int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
 {
   int i;
-  if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->countend) < thgrp->group_size))
+  if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) < thgrp->group_size))
     return EBUSY;
 
   if (thgrp->localgid == thgrp->tid2gid[-1])
