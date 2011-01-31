@@ -44,10 +44,9 @@
 #include "kaapi_impl.h"
 #include "kaapi_staticsched.h"
 
-
 /* Add a new writer and update the list of tasks for all the impacted threads.
 */
-int kaapi_threadgroup_version_newwriter( 
+static int kaapi_threadgroup_version_newwriter_onlywrite( 
     kaapi_threadgroup_t   thgrp, 
     kaapi_version_t*      ver, 
     int                   tid, 
@@ -60,6 +59,7 @@ int kaapi_threadgroup_version_newwriter(
 {
   void* data =0;
   kaapi_memory_view_t view;
+  kaapi_taskdescr_t* dv_task =0;
   int retval;
   int delprevwriter;
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
@@ -86,6 +86,7 @@ int kaapi_threadgroup_version_newwriter(
     {
       data = dv->addr;
       view = dv->view;
+      dv_task = dv->task;
       dv->addr = 0;
 
       /* recycle the data version */
@@ -93,10 +94,10 @@ int kaapi_threadgroup_version_newwriter(
       
       /* avoid WAR here: may be solved at runtime */
       retval = 0;
-      if (dv->task != task)
+      if (dv_task != task)
       {
         kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
-        kaapi_taskdescr_push_successor( tasklist, dv->task, task );
+        kaapi_taskdescr_push_successor( tasklist, dv_task, task );
       }
     }
     else 
@@ -108,16 +109,18 @@ int kaapi_threadgroup_version_newwriter(
       {
         data = dv->addr;
         dv->addr = 0;
+        dv_task = dv->task;
+
         /* recycle the data version */
         kaapi_threadgroup_deallocate_dataversion(thgrp, dv);
         
-      /* avoid WAR here: may be solved at runtime */
+        /* avoid WAR here: may be solved at runtime */
         retval = 0;
 
-        if (dv->task !=0)
+        if (dv_task !=0)
         {
           kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
-          kaapi_taskdescr_push_successor( tasklist, dv->task, task );
+          kaapi_taskdescr_push_successor( tasklist, dv_task, task );
         }
       }
       else if (kaapi_memory_address_space_isequal(ver->writer.asid, asid)) 
@@ -162,6 +165,7 @@ int kaapi_threadgroup_version_newwriter(
   
   /* mute the writer of the version */
   ver->writer_thread = tid;
+  ver->writer_mode   = mode;
   ver->writer.asid   = asid;
   ver->writer.task   = task;
   ver->writer.ith    = ith;
@@ -182,4 +186,23 @@ int kaapi_threadgroup_version_newwriter(
 
   /* return 1: the access is ready ! */
   return retval;
+}
+
+
+int kaapi_threadgroup_version_newwriter( 
+    kaapi_threadgroup_t   thgrp, 
+    kaapi_version_t*      ver, 
+    int                   tid, 
+    kaapi_access_mode_t   mode,
+    kaapi_taskdescr_t*    task, 
+    const kaapi_format_t* fmt,
+    int                   ith,
+    kaapi_access_t*       access
+)
+{
+  if (KAAPI_ACCESS_IS_CUMULWRITE(mode))
+    return kaapi_threadgroup_version_newwriter_cumulwrite(thgrp, ver, tid, mode, task, fmt, ith, access );
+  else {
+    return kaapi_threadgroup_version_newwriter_onlywrite(thgrp, ver, tid, mode, task, fmt, ith, access );
+  }
 }

@@ -384,6 +384,7 @@ typedef struct kaapi_format_t {
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
   kaapi_memory_view_t   (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
+  kaapi_reducor_t       (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -478,6 +479,17 @@ void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsig
   }
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
   (*fmt->reducor)(fmt, ith, sp, result, value);
+}
+
+static inline 
+kaapi_reducor_t kaapi_format_get_reducor (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp )
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+  {
+    return fmt->_reducor_params[ith];
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_reducor)(fmt, ith, sp);
 }
 
 

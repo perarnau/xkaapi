@@ -215,6 +215,24 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     recv = kaapi_tasklist_popsignal( tasklist );
     if ( recv != 0 ) /* here may be a while loop */
     {
+      /* is cw ? (associative + cumulative) */
+      if (recv->reduce_fnc !=0)
+      {
+#if 0
+        printf("%i::[do recv CW]: oldvalue: %i, incr: %i\n", 
+            thread->the_thgrp->localgid,
+            *(int*)recv->result,
+            *(int*)recv->data
+        );
+#endif
+        recv->reduce_fnc( recv->result, recv->data );
+#if 0
+        printf("%i::[do recv CW]: value: %i\n", 
+            thread->the_thgrp->localgid,
+            *(int*)recv->result
+        );
+#endif
+      }
       kaapi_tasklist_merge_activationlist( tasklist, &recv->list );
       --tasklist->count_recv;
 #if 0

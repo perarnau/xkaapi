@@ -141,8 +141,10 @@ typedef uint64_t kaapi_taskarg_descr_t;
 */
 typedef struct kaapi_comrecv_t {
   kaapi_comtag_t            tag;          /* tag */
-  kaapi_globalid_t          from;         /* who is the send data */
-  int                       tid;          /* who is the reader data */
+  kaapi_globalid_t          from;         /* who is the send the data */
+  int                       tid;          /* who is the recv the data */
+  kaapi_reducor_t           reduce_fnc;   /* if !=0 then it is a recv with reduction */
+  void*                     result;       /* result of the reduce_fnc */
   struct kaapi_tasklist_t*  tasklist;     /* points to the data structure where to store activated tasks */
   void*                     data;         /* where to store incomming data */
   kaapi_memory_view_t       view;         /* view */
@@ -226,7 +228,6 @@ typedef struct kaapi_comaddrlink_t {
 */
 typedef struct kaapi_taskdescr_t {
   kaapi_atomic_t                counter;
-  kaapi_taskarg_descr_t         flags;     /* see data structure */
   kaapi_task_t*                 task;
   kaapi_taskbcast_arg_t*        bcast;
   struct kaapi_taskdescr_t*     next;
@@ -244,6 +245,7 @@ typedef struct kaapi_data_version_t {
   int                          ith;                 /* index of the argument wich has read access */
   void*                        addr;                /* address of data */
   kaapi_memory_view_t          view;                /* view of data */
+  kaapi_reducor_t              reducor;             /* if access is cw */
   struct kaapi_data_version_t* next;                /* next kaapi_data_version_t */
 } kaapi_data_version_t;
 
@@ -251,12 +253,13 @@ typedef struct kaapi_data_version_t {
 /**/
 static inline int kaapi_data_version_clear( kaapi_data_version_t* dv )
 {
-  dv->asid = 0;
-  dv->task = 0;
-  dv->ith  = -1;
-  dv->addr = 0;
+  dv->asid    = 0;
+  dv->task    = 0;
+  dv->ith     = -1;
+  dv->addr    = 0;
   kaapi_memory_view_clear(&dv->view);
-  dv->next = 0;
+  dv->reducor = 0;
+  dv->next    = 0;
   return 0;
 }
 
@@ -319,11 +322,12 @@ static inline int kaapi_data_version_list_append( kaapi_data_version_list_t* l1,
 /** Allow to maintain meta information about version of data.
 */
 typedef struct kaapi_version_t {
-  kaapi_comtag_t              tag;                 /* the tag (thread group wide) identifier of the data */
-  kaapi_data_version_t        writer;              /* address space of the writer   */
-  int                         writer_thread;       /* index of the last thread that writes the data, -1 if outside the group*/
-  kaapi_data_version_list_t   copies;              /* list of copies */
-  kaapi_data_version_list_t   todel;               /* list of data to delete */
+  kaapi_comtag_t              tag;             /* the tag (thread group wide) identifier of the data */
+  kaapi_data_version_t        writer;          /* address space of the writer   */
+  kaapi_access_mode_t         writer_mode;     /* writer access mode :W or CW */
+  int                         writer_thread;   /* index of the last thread that writes the data, -1 if outside the group*/
+  kaapi_data_version_list_t   copies;          /* list of copies */
+  kaapi_data_version_list_t   todel;           /* list of data to delete */
 } kaapi_version_t;
 
 
@@ -400,7 +404,6 @@ static inline kaapi_taskdescr_t* kaapi_tasklist_pop( kaapi_tasklist_t* tl )
 static inline void kaapi_taskdescr_init( kaapi_taskdescr_t* td, kaapi_task_t* task )
 {
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
-  td->flags = 0;
   td->task  = task;
   td->bcast = 0;
   td->next  = 0;
@@ -454,14 +457,17 @@ static inline void kaapi_tasklist_pushback_ready( kaapi_tasklist_t* tl, kaapi_ta
 
 
 /**/
-static inline void kaapi_taskdescr_push_successor( kaapi_tasklist_t* tl, kaapi_taskdescr_t* td, kaapi_taskdescr_t* toactivate)
+static inline void kaapi_taskdescr_push_successor( 
+    kaapi_tasklist_t* tl, 
+    kaapi_taskdescr_t* td, 
+    kaapi_taskdescr_t* toactivate
+)
 {
   kaapi_activationlink_t* al = kaapi_tasklist_allocate_al(tl);
 
   /* one more synchronisation  */
   KAAPI_ATOMIC_INCR(&toactivate->counter);
 
-  td->next = 0;
   al->td   = toactivate;
   al->next = 0;
   if (td->list.back ==0)
@@ -473,6 +479,7 @@ static inline void kaapi_taskdescr_push_successor( kaapi_tasklist_t* tl, kaapi_t
 }
 
 
+#if 0
 /* Set the i-thbit to 1
 */
 static inline void kaapi_taskargdescr_sethandle( kaapi_taskdescr_t* td, int ith )
@@ -487,7 +494,7 @@ static inline int kaapi_taskargdescr_ishandle( kaapi_taskdescr_t* td, int ith )
   kaapi_assert_debug((ith>=0) && (ith < 32));
   return (td->flags & (1<<ith)) != 0; 
 }
-
+#endif
 
 /**/
 extern kaapi_data_version_t* kaapi_version_findasid_in( kaapi_version_t* ver, kaapi_address_space_id_t asid );
@@ -692,6 +699,28 @@ extern int kaapi_threadgroup_version_newwriter(
     int                   ith,
     kaapi_access_t*       access
 );
+
+
+/* Cumulative write is a mix of reader / writer task creation
+*/
+extern int kaapi_threadgroup_version_newwriter_cumulwrite( 
+    kaapi_threadgroup_t   thgrp, 
+    kaapi_version_t*      ver, 
+    int                   tid, 
+    kaapi_access_mode_t   mode,
+    kaapi_taskdescr_t*    task, 
+    const kaapi_format_t* fmt,
+    int                   ith,
+    kaapi_access_t*       access
+);
+
+/* Code to finalize reduction between gid
+*/
+extern int kaapi_threadgroup_version_finalize_cw(
+    kaapi_threadgroup_t   thgrp, 
+    kaapi_version_t*      ver
+);
+
 
 /* Allocate a new version
 */

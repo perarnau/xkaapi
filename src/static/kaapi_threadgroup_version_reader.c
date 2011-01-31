@@ -288,6 +288,8 @@ fflush(stdout);
       wc->tag        = ver->tag;
       wc->from       = kaapi_memory_address_space_getgid(ver->writer.asid);
       wc->tid        = tid;
+      wc->reduce_fnc = 0;
+      wc->result     = 0; // debug only
       wc->tasklist   = thgrp->threadctxts[tid]->tasklist;
       wc->list.front = 0;
       wc->list.back  = 0;
@@ -440,6 +442,9 @@ int kaapi_threadgroup_version_newreader(
 )
 {
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
+  
+  if ((ver->writer_mode != KAAPI_ACCESS_MODE_VOID) && KAAPI_ACCESS_IS_CUMULWRITE(ver->writer_mode))
+    kaapi_threadgroup_version_finalize_cw( thgrp, ver );
 
   /* asid for the target thread */
   kaapi_address_space_id_t asid = kaapi_threadgroup_tid2asid(thgrp, tid);

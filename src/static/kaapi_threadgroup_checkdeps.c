@@ -89,7 +89,6 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     taskdescr = &dummy_taskdescr;
     kaapi_taskdescr_init(taskdescr, task);
   }
-
   
   /* find the last writer for each args and in which partition id it  
      -> if all writers are in the same partition do nothing, push the task in the i-th partition
@@ -112,9 +111,6 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
       continue;
     }
     
-    /* assert to avoid cumulative write */
-    kaapi_assert_debug( !KAAPI_ACCESS_IS_CUMULWRITE(m) );
-    
     /* its an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
     entry = 0;
@@ -130,18 +126,23 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     /* have a look at the version and detect dependency or not etc... */
     version = entry->u.version;
     isparamready = 0;
-    if (KAAPI_ACCESS_IS_READ(m))
+    if (KAAPI_ACCESS_IS_CUMULWRITE(m))
+      isparamready = kaapi_threadgroup_version_newwriter_cumulwrite( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
+    else 
     {
-      isparamready = kaapi_threadgroup_version_newreader( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
-    }
-    if (KAAPI_ACCESS_IS_WRITE(m))
-    {
-      int retval = kaapi_threadgroup_version_newwriter( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
-      /* else: responsability of the read part (just above) to compute readyness */
-      if (KAAPI_ACCESS_IS_READWRITE(m))
-        isparamready = isparamready && retval;
-      else 
-        isparamready = retval;
+      if (KAAPI_ACCESS_IS_READ(m))
+      {
+        isparamready = kaapi_threadgroup_version_newreader( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
+      }
+      if (KAAPI_ACCESS_IS_WRITE(m))
+      {
+        int retval = kaapi_threadgroup_version_newwriter( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
+        /* else: responsability of the read part (just above) to compute readyness */
+        if (KAAPI_ACCESS_IS_READWRITE(m))
+          isparamready = isparamready && retval;
+        else 
+          isparamready = retval;
+      }
     }
     
     if (isparamready) --cnt_notready;
