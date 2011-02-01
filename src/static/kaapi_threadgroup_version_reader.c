@@ -387,16 +387,22 @@ static inline int kaapi_version_add_reader(
     kaapi_data_version_list_add(&ver->copies, dv_reader );
     
     /* set the return value */
-    if (ver->writer.task !=0)
-      retval = 0;
-    else
+    if (ver->writer.task ==0)
       retval = 1;
   }
   else {
-    retval = 0;
-    /* mute the task field of over to points to the last task */
-    over->task = task;
-    over->ith  = ith;
+    /* writer is not in the same address space or they are not writer
+       - 
+    */
+    if (ver->writer.task ==0)
+    {
+      retval = 1;
+    }
+    else {    
+      /* mute the task field of over to points to the last task */
+      over->task = task;
+      over->ith  = ith;
+    }
   }
 
   
@@ -407,13 +413,19 @@ static inline int kaapi_version_add_reader(
   if (kaapi_memory_address_space_getgid(over->asid) == thgrp->localgid)
   {
     /* means writer == access not ready (writer -> read) */
-    if ((ver->writer.task != 0) && (kaapi_memory_address_space_isequal(over->asid, ver->writer.asid)))
+    if ( (ver->writer.task != 0)
+      && (kaapi_memory_address_space_isequal(over->asid, ver->writer.asid)))
     {
       kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
       kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
       kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
     }
-    else {
+    else if (ver->writer_mode == KAAPI_ACCESS_MODE_VOID)
+    {
+      kaapi_assert_debug( retval == 1);
+    }
+    else 
+    {
       kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->lists_recv[tid], ver->tag );
       kaapi_assert_debug(wc !=0);
       /* one more external synchronisation: add bcast */

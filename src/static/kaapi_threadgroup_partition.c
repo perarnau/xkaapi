@@ -42,6 +42,59 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "misc/kaapi_hashmap.h"
+
+static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
+{
+  for (int i=-1; i<thgrp->group_size; ++i)
+  {
+    /* delete comlink */
+    thgrp->lists_send[i] = 0;
+    thgrp->lists_recv[i] = 0;
+
+
+    if (thgrp->localgid == thgrp->tid2gid[i]) 
+    {
+      /* init the thread from the thread context */
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[i]->tasklist;
+      kaapi_thread_clear( thgrp->threadctxts[i] );
+      
+      /* reset the task list */
+      tasklist->sp    = 0;
+      tasklist->front = 0;
+      tasklist->back  = 0;
+      thgrp->threadctxts[i]->tasklist = tasklist;
+      thgrp->threadctxts[i]->partid   = i;
+      thgrp->threadctxts[i]->the_thgrp = thgrp;
+    }
+  }
+  /* delete allocator: free all temporary memory used by managing activation list and communication */
+  kaapi_allocator_destroy(&thgrp->allocator);
+  
+  /* update the list of version in the hashmap to suppress reference to previously executed task */
+  for (int i=0; i<KAAPI_HASHMAP_SIZE; ++i)
+  {
+    kaapi_hashentries_t* entry = _get_hashmap_entry(&thgrp->ws_khm, i);
+    while (entry != 0)
+    {
+      kaapi_version_t* ver = entry->u.version;
+      ver->writer_mode = KAAPI_ACCESS_MODE_VOID;
+      ver->writer.task = 0;
+      ver->writer.ith  = -1;
+      kaapi_data_version_list_append( &ver->todel, &ver->copies );
+      entry = entry->next;
+    }
+  }
+
+  thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;
+  thgrp->flag               = 0;
+  thgrp->tag_count          = 0;
+  thgrp->maxstep            = -1;
+  thgrp->step               = -1;
+  thgrp->signal_step        = -1;
+ 
+  return 0;
+}
 
 
 /**
@@ -50,12 +103,19 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
 {
   kaapi_processor_t* kproc;
 
+  if (thgrp->state == KAAPI_THREAD_GROUP_MP_S)
+  {
+    /* the previous execution is finish: clear all entries as if the thread group was created */
+    kaapi_threadgroup_clear( thgrp );
+  }
+  else {
+    /* do not init the hash map if previous execution of the thread group */
+    kaapi_hashmap_init( &thgrp->ws_khm, 0 );
+  }
+
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   
-  /* be carrefull, the map should be clear before used */
-  kaapi_hashmap_init( &thgrp->ws_khm, 0 );
-
   /* same the main thread frame to restore it at the end of parallel computation */
   if (thgrp->localgid == thgrp->tid2gid[-1])
   {
@@ -89,11 +149,8 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   kaapi_threadgroup_barrier_partition( thgrp );
   
   /* */
-//  kaapi_threadgroup_print( stdout, thgrp );
+  kaapi_threadgroup_print( stdout, thgrp );
   
-  /* free hash map entries: they are destroy by destruction of the version allocator */
-  kaapi_hashmap_destroy( &thgrp->ws_khm );
-
   kaapi_mem_barrier();
   
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;

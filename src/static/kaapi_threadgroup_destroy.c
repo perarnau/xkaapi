@@ -51,6 +51,9 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) < thgrp->group_size))
     return EBUSY;
 
+  /* free hash map entries: they are destroy by destruction of the version allocator */
+  kaapi_hashmap_destroy( &thgrp->ws_khm );
+
   if (thgrp->localgid == thgrp->tid2gid[-1])
     /* reset stealing attribute on the main thread */
     thgrp->threadctxts[-1]->unstealable = 0;
@@ -81,6 +84,7 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   thgrp->tid2asid = 0;
   
   kaapi_assert( kaapi_allocator_destroy(&thgrp->allocator) ==0);
+  kaapi_assert( kaapi_allocator_destroy(&thgrp->allocator_version) ==0);
   
   free(thgrp->save_readylists);
   free(thgrp->size_readylists);

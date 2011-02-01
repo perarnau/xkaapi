@@ -167,44 +167,13 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
       pc = td->task;
       if (pc !=0)
       {
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
-        body = pc->body;
-
-#if (SIZEOF_VOIDP == 4)
-        state = pc->state;
-#else
-        state = kaapi_task_body2state(body);
-#endif
-
-        kaapi_assert_debug( body != kaapi_exec_body);
-        pc->body = kaapi_exec_body;
-        /* task execution */
-        kaapi_assert_debug(pc == thread->sfp[-1].pc);
-        kaapi_assert_debug( kaapi_isvalid_body( body ) );
-
-        /* here... sequential call */
-        body( pc->sp, (kaapi_thread_t*)thread->sfp );      
-
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-        state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
-
-#if (SIZEOF_VOIDP == 4)
-        body = pc->body;
-#else
-        body = kaapi_task_state2body( state );
-#endif /* SIZEOF_VOIDP */
-
+#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
+        body = kaapi_task_getbody(pc);
 #endif /* KAAPI_USE_EXECTASK_METHOD */
 
-        if (likely( kaapi_task_state_isnormal(state) ))
-        {
-          /* here... call the task*/
-          body( pc->sp, (kaapi_thread_t*)thread->sfp );
+        /* here... call the task*/
+        body( pc->sp, (kaapi_thread_t*)thread->sfp );
     //      printf("e:%p\n", (void*)pc); fflush(stdout);
-        }
-        else {
-          exit(1);
-        }
       }    
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++cnt_tasks;

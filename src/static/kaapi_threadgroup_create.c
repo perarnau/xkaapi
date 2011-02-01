@@ -263,6 +263,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   thgrp->flag               = 0;
   thgrp->tag_count          = 0;
   kaapi_assert( kaapi_allocator_init(&thgrp->allocator) ==0);
+  kaapi_assert( kaapi_allocator_init(&thgrp->allocator_version) ==0);
   thgrp->free_dataversion_list=0;
   thgrp->save_readylists    = 0;
   thgrp->size_readylists    = 0;

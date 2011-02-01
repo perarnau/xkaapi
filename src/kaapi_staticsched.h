@@ -601,7 +601,8 @@ typedef struct kaapi_threadgrouprep_t {
   /* persistant data among several execution of threadgroup */
   long                             tag_count;
   kaapi_data_version_t*            free_dataversion_list;
-  kaapi_dataforversion_allocator_t allocator; /* used to allocate both version and version data */
+  kaapi_dataforversion_allocator_t allocator_version; /* used to allocate both version and version data */
+  kaapi_dataforversion_allocator_t allocator; /* used to allocate comm data structure */
 } kaapi_threadgrouprep_t;
 
 
@@ -726,7 +727,7 @@ extern int kaapi_threadgroup_version_finalize_cw(
 */
 static inline kaapi_version_t* kaapi_threadgroup_allocate_version( kaapi_threadgroup_t thgrp )
 {
-  kaapi_version_t* retval = (kaapi_version_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_version_t));
+  kaapi_version_t* retval = (kaapi_version_t*)kaapi_allocator_allocate(&thgrp->allocator_version, sizeof(kaapi_version_t));
   kaapi_assert_debug( retval != 0);
   kaapi_version_clear( retval );
   return retval;
@@ -744,7 +745,7 @@ static inline kaapi_data_version_t* kaapi_threadgroup_allocate_dataversion( kaap
   }
   else 
   {
-    retval = (kaapi_data_version_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_data_version_t));
+    retval = (kaapi_data_version_t*)kaapi_allocator_allocate(&thgrp->allocator_version, sizeof(kaapi_data_version_t));
     kaapi_assert_debug( retval != 0);
   }
   kaapi_data_version_clear( retval );

@@ -253,6 +253,8 @@ int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
   }
 
 
+  /* exchange remote addr between every participating nodes */
+
   size_t localgid = thgrp->localgid;
   for (size_t gid=0; gid<kaapi_network_get_count(); ++gid)
   {
@@ -321,10 +323,7 @@ int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
   kaapi_memory_global_barrier();
 #endif
 
-  /* this version is only for multicore machine */
-  if ((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0)
-    kaapi_threadgroup_save(thgrp);
-
+  /* report remote address to send list */
   for (int tid=-1; tid<thgrp->group_size; ++tid)
   {
     if (kaapi_threadgroup_tid2gid( thgrp, tid ) == thgrp->localgid)
@@ -333,9 +332,10 @@ int kaapi_threadgroup_barrier_partition( kaapi_threadgroup_t thgrp )
     }
   }
 
-  /* exchange remote addr between every participating nodes */
 
-  /* report remote address to send list */
+  /* this version is only for multicore machine */
+  if ((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0)
+    kaapi_threadgroup_save(thgrp);
 
   /* barrier between every nodes:
      - after the barrier any nodes may write the correct location using remote dma

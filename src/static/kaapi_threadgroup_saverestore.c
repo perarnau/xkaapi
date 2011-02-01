@@ -53,8 +53,8 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
 
   if (thgrp->save_readylists ==0)
   {
-    thgrp->save_readylists = (char**)malloc( thgrp->group_size * sizeof(char*) );
-    thgrp->size_readylists = (size_t*)malloc( thgrp->group_size * sizeof(size_t) );
+    thgrp->save_readylists = (char**)malloc( (1+thgrp->group_size) * sizeof(char*) );
+    thgrp->size_readylists = (size_t*)malloc( (1+thgrp->group_size) * sizeof(size_t) );
     ++thgrp->save_readylists;
     ++thgrp->size_readylists;
   }
