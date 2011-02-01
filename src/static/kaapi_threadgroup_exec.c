@@ -166,6 +166,7 @@ static int kaapi_threadgroup_exec_alllocal_frame(kaapi_threadgroup_t thgrp )
 int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 {
   int err;
+  kaapi_frame_t* fp;
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
@@ -187,7 +188,10 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 
     /* pop pushed wait task frame */
     --thgrp->threadctxts[-1]->sfp;
+    fp = (kaapi_frame_t*)thgrp->threadctxts[-1]->sfp;
+    *fp = thgrp->mainframe;
 
+#if 0
     if (((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0))
     {
       if (thgrp->maxstep != -1) 
@@ -199,6 +203,7 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
       else 
         kaapi_threadgroup_restore_thread(thgrp, -1);
     }
+#endif    
 
     /* counter reset by THE waittask */
     if (KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) !=0)
@@ -236,6 +241,6 @@ int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
 {
   kaapi_threadgroup_end_step(thgrp);
   
-  thgrp->state = KAAPI_THREAD_GROUP_CREATE_S;
+  thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;
 }

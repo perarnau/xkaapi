@@ -25,7 +25,7 @@ struct TaskBodyCPU<TaskPrint> {
   void operator() ( int pos, ka::pointer_r<double> D )
   {
     std::cout << ka::System::local_gid << "::[TaskPrint] pos:" << pos 
-              << ", newV: " << *D
+              << ", newV: @:" << &*D << ", v:" << *D
               << std::endl;
   }
 };
@@ -40,7 +40,9 @@ struct TaskBodyCPU<TaskUpdate3> {
     double old = *D;
     *D = *D*0.5 + *f1*0.25 + *f2*0.25;
     std::cout << ka::System::local_gid << "::[TaskUpdate3] pos:" << pos 
-                << ", oldv: " << old << ", f1:" << *f1 << ", f2:" << *f2 << ", newV:" << *D
+              << ", oldv: @:" << &*D << ", v:" << old 
+              << ", f1: @" << &*f1 << ", v:" << *f1 
+              << ", f2: @" << &*f2 << ", v:" << *f2 << ", newV: @:" << &*D << " v:" << *D
               << std::endl;
   }
 };
@@ -92,15 +94,19 @@ struct doit {
     std::vector<double> F(n);
 
     MyBlockCyclicMapping map(2, 2);
-    threadgroup.begin_partition( map ); //KAAPI_THGRP_SAVE_FLAG);
+    threadgroup.begin_partition( map );
 
     for (int i=0; i<size; ++i)
     {
       ka::Spawn<TaskInit> (ka::SetPartition(i))  ( i, &D[i], ((i==0) || (i==size-1)) ? 1.0 : 0.0 );
     }
+    threadgroup.end_partition();
+
+    threadgroup.execute();
 
 
-    for (int step = 0; step < 8; ++step)
+    threadgroup.begin_partition( map, KAAPI_THGRP_SAVE_FLAG );
+    for (int step = 0; step < 2; ++step)
     {
       for (int i=0; i<size; ++i)
       {
@@ -109,16 +115,21 @@ struct doit {
       for (int i=0; i<size; ++i)
       {
         if ((i !=0) && (i !=size-1))
-          ka::Spawn<TaskUpdate3>   (ka::SetPartition(i))  ( bloc, &D[i], &F[i-1], &F[i+1] );
+          ka::Spawn<TaskUpdate3>   (ka::SetPartition(i))  ( i, &D[i], &F[i-1], &F[i+1] );
       }
       for (int i=0; i<size; ++i)
       {
         ka::Spawn<TaskPrint> (ka::SetPartition(i))  ( i, &D[i] );
       }
     }
-
     threadgroup.end_partition();
+
+    threadgroup.set_iteration_step( 2 );
     threadgroup.execute();
+    
+    printf("\n\n***********\n\n");
+    threadgroup.execute();
+
   }
 };
 

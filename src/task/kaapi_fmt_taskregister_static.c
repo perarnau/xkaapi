@@ -80,6 +80,10 @@ static void kaapi_format_default_reduce_param
     (const struct kaapi_format_t* f, unsigned int i, const void* sp, void* result, const void* value)
 { (*f->_reducor_params[i])(result, value); }
 
+static kaapi_reducor_t kaapi_format_default_get_reducor 
+    (const struct kaapi_format_t* f, unsigned int i, const void* sp )
+{ return f->_reducor_params[i]; }
+
 
 /**
 */
@@ -144,6 +148,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->get_fmt_param    = kaapi_format_default_get_fmt_param;
   fmt->get_view_param   = kaapi_format_default_get_view_param;
   fmt->reducor          = kaapi_format_default_reduce_param;
+  fmt->get_reducor      = kaapi_format_default_get_reducor;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   

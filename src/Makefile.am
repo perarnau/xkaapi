@@ -96,6 +96,7 @@ libkaapi_la_SOURCES+=\
   static/kaapi_threadgroup_version_find.c\
   static/kaapi_threadgroup_version_reader.c\
   static/kaapi_threadgroup_version_writer.c\
+  static/kaapi_threadgroup_version_cumulwriter.c\
   static/kaapi_threadgroup_create.c\
   static/kaapi_threadgroup_initthread.c\
   static/kaapi_threadgroup_destroy.c\
