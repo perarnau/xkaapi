@@ -112,6 +112,8 @@ static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
     return -1;
   }
 
+  printf("devptr == 0x%x\n", (uintptr_t)*devptr);
+
   return 0;
 }
 
@@ -184,7 +186,10 @@ static inline void* get_access_data_at
 
 static inline void set_access_data_at
 (kaapi_format_t* f, unsigned int i, void* p, void* d)
-{ get_access_at(f, i, p)->data = d; }
+{
+  printf("set_access %lx\n", (uintptr_t)d);
+  get_access_at(f, i, p)->data = d;
+}
 
 
 /* retrieve the ith parameter size */
@@ -194,7 +199,6 @@ static size_t get_size_param
 {
   kaapi_memory_view_t kmv = f->get_view_param(f, i, p);
   const size_t size = kaapi_memory_view_size(&kmv);
-  printf("get_size: %lx\n", size);
   return size;
 }
 
@@ -288,6 +292,7 @@ static void prepare_task
 #endif
 
 	/* copy from host to device */
+	printf("syncing to: %lx, %lx, %lx\n", (uintptr_t)hostptr, devptr, size);
 	memcpy_htod(proc, devptr, hostptr, size);
 
 	/* validate remote memory */
@@ -1008,8 +1013,6 @@ int kaapi_cuda_exectask
 {
   kaapi_processor_t* const kproc = thread->proc;
   int res = -1;
-
-  printf("kaapi_cuda_exectask()\n");
 
   pthread_mutex_lock(&kproc->cuda_proc.ctx_lock);
 

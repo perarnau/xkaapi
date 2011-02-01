@@ -197,12 +197,14 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
         kaapi_memory_address_space_create( i, thgrp->tid2gid[i], KAAPI_MEM_TYPE_CPU, seg_size);
     
     //(uint32_t)(thgrp->tid2gid[i] << 16) | (uint32_t)((1+i) / nodecount);
+#if 0
     if (thgrp->localgid == 0)
     {
       printf("tid: %i into asid:", i );
       kaapi_memory_address_space_fprintf( stdout, thgrp->tid2asid[i] );
       printf(", map to gid : %u\n", thgrp->tid2gid[i] );
     }
+#endif
     
     thgrp->lists_send[i] = 0;
     thgrp->lists_recv[i] = 0;

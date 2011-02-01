@@ -56,9 +56,6 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
 
-  if (thgrp->localgid ==0)
-    printf("%i::[kaapi_threadgroup] begin step : %i\n", thgrp->localgid, 1+thgrp->step);
-
   /* reset counter for the next iteration */
   KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endlocalthread, 0 );
 
@@ -221,7 +218,7 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 #if defined(KAAPI_USE_NETWORK)
   kaapi_memory_global_barrier();
 #endif
-#if 1
+#if 0
   if (thgrp->localgid ==0)
     printf("%i::[kaapi_threadgroup_exec] end step :%i, countend:%i\n", 
         thgrp->localgid, thgrp->step, KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) );

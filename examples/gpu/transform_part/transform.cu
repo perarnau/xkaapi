@@ -13,7 +13,7 @@ extern "C" void kaapi_mem_free_host(void*);
 typedef float double_type;
 
 // static configuration
-#define CONFIG_ITER_COUNT 50
+#define CONFIG_ITER_COUNT 1
 #define CONFIG_LEAF_COUNT 1024 // stops the recursion
 #define CONFIG_ELEM_COUNT (CONFIG_LEAF_COUNT * 1000)
 #define CONFIG_RANGE_COUNT 3
@@ -26,7 +26,6 @@ struct TaskAddone : public ka::Task<1>::Signature
 // cuda kernel
 __global__ void addone(double_type* array, unsigned int size)
 {
-#if 0
   const unsigned int per_thread = size / blockDim.x;
   unsigned int i = threadIdx.x * per_thread;
 
@@ -34,7 +33,6 @@ __global__ void addone(double_type* array, unsigned int size)
   if (threadIdx.x != (blockDim.x - 1)) j = i + per_thread;
 
   for (; i < j; ++i) ++array[i];
-#endif
 }
 
 // cpu implementation
@@ -74,8 +72,6 @@ template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range1d_rw<double_type> range)
   {
-    printf("gpuTask::operator()\n");
-
     // we are the big one, can handle the work alone. dont recurse.
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
@@ -89,6 +85,7 @@ struct doit {
   {
     double_type* arrays[CONFIG_RANGE_COUNT];
     const size_t total_size = CONFIG_ELEM_COUNT * sizeof(double_type);
+    printf("total_size: %lx\n", total_size);
 
     double t0,t1, sum = 0.f;
 
@@ -127,7 +124,7 @@ struct doit {
 	size_t i; for (i = 0; i < CONFIG_ELEM_COUNT; ++i)
 	  if (array[i] != 1.f) break;
 	if (i != CONFIG_ELEM_COUNT)
-	  printf("invalid @%u\n", i);
+	  printf("invalid @%lx,%u::%u == %lf\n", (uintptr_t)array, count, i, array[i]);
       }
 #endif
 
