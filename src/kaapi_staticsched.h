@@ -573,7 +573,6 @@ typedef struct kaapi_threadgrouprep_t {
   int volatile               startflag;    /* set to 1 when threads should starts */
   int volatile               step;         /* current iteration step */
   int                        maxstep;      /* max iteration step or -1 if not known */
-  int                        signal_step;  /* current step marked as signaled of the end of iteration */
   int                        flag;         /* some flag to pass info (save / not save) */
   kaapi_frame_t              mainframe;    /* save/restore main thread */
   kaapi_thread_context_t**   threadctxts;  /* the threads (internal) */

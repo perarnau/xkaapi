@@ -454,6 +454,7 @@ typedef struct kaapi_thread_t {
     struct kaapi_task_t* pc;
     struct kaapi_task_t* sp;
     char*                sp_data;
+    int (*execframe)( struct kaapi_thread_context_t* );
 } kaapi_thread_t;
 
 
@@ -465,6 +466,7 @@ typedef struct kaapi_frame_t {
     struct kaapi_task_t* pc;
     struct kaapi_task_t* sp;
     char*                sp_data;
+    int (*execframe)( struct kaapi_thread_context_t* );
 } kaapi_frame_t;
 
 

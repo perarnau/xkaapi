@@ -609,7 +609,6 @@ typedef struct kaapi_thread_context_t {
 #endif
 
   /* the way to execute task inside a thread, if ==0 uses kaapi_thread_execframe */
-  int (*execframe)( struct kaapi_thread_context_t* thread );
   kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
   struct kaapi_tasklist_t*       tasklist;  /* Not null -> list of ready task, see static_sched.h */
   int                            unstealable;    /* !=0 -> cannot be stolen */
@@ -1178,6 +1177,28 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_bloc_t* allallocatedbloc;
   uint32_t entry_map;                 /* type size must at least KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
+
+/*
+*/
+static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key)
+{
+  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
+
+  if (khm->entry_map & (1 << key))
+    return khm->entries[key];
+
+  return 0;
+}
+
+
+/*
+*/
+static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
+{
+  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
+  khm->entries[key] = entries;
+  khm->entry_map |= 1 << key;
+}
 
 
 /*

@@ -50,8 +50,6 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 {
   int nproc;
   int i;
-  kaapi_frame_t* fp;
-  kaapi_thread_context_t* threadctxtmain;
   
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
@@ -61,31 +59,15 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 
   /* reset counter for the next iteration */
   KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endlocalthread, 0 );
-
-  if (thgrp->localgid == thgrp->tid2gid[-1])
-  {
-    /* Push the task that will mark synchronisation on the main thread */
-    threadctxtmain = thgrp->threadctxts[-1];
-    threadctxtmain->partid = -1;
-
-    /* push the frame for the next task to execute */
-    fp = (kaapi_frame_t*)threadctxtmain->sfp;
-    threadctxtmain->sfp[1].sp_data = fp->sp_data;
-    threadctxtmain->sfp[1].pc = fp->sp;
-    threadctxtmain->sfp[1].sp = fp->sp;
-    ++threadctxtmain->sfp;
-
-    thgrp->waittask = kaapi_thread_toptask( kaapi_threadcontext2thread(threadctxtmain) );
-    kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
-    kaapi_thread_pushtask( kaapi_threadcontext2thread(threadctxtmain) );    
-  }
     
   ++thgrp->step;
   kaapi_mem_barrier();
   
   thgrp->startflag = 1;
   
-  /* dispatch each thread context on the local gid to processor (i/nodecount)%nproc */
+  /* dispatch each thread context on the local gid to processor (i/nodecount)%nproc 
+     Here a better and finer mapping should be given by the user
+  */
   nproc = kaapi_count_kprocessors;
   
   for (i=0; i<thgrp->group_size; ++i)
@@ -101,7 +83,6 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
       thgrp->threadctxts[i]->partid      = i;
       thgrp->threadctxts[i]->unstealable = 1;/* do not allow threads to steal tasks inside ??? */
 
-//printf("Push thread: %i, %p, on processor kid:%i\n", i, (void*)thgrp->threadctxts[i], victim_kproc->kid);
       if (!kaapi_tasklist_isempty(thgrp->threadctxts[i]->tasklist))
       {
         kaapi_sched_lock( &victim_kproc->lock ); 
@@ -110,12 +91,11 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
       }
       else {
         /* put thread into waiting queue of the kproc and initialize the wcs field */
-  //printf("First task not ready, push in suspended list\n");
         kaapi_wsqueuectxt_push( victim_kproc, thgrp->threadctxts[i] );
       }
     }
   }
-  
+
   return 0;
 }
 
@@ -168,29 +148,24 @@ static int kaapi_threadgroup_exec_alllocal_frame(kaapi_threadgroup_t thgrp )
 */
 int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 {
-  int err;
   kaapi_frame_t* fp;
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
-#if 0
-  printf("%i::[threadgroup exec] begin execution on #local threads: %i\n", thgrp->localgid, thgrp->localthreads);
+#if 1
+  printf("%i::[threadgroup exec] begin execution on #local threads: %i, kid=%i\n", thgrp->localgid, thgrp->localthreads, kaapi_get_current_processor()->kid);
 #endif
   if (thgrp->localgid == thgrp->tid2gid[-1])
   {
-    err = kaapi_threadgroup_exec_alllocal_frame( thgrp );
+    /* execute task into the readylist */
+    kaapi_sched_sync();
+    /* pop frame for task in the ready list */
+    --thgrp->threadctxts[-1]->sfp;
 
-    /* because we execute different threads onto kproc, we reset the mainthread before sync */
-    kaapi_processor_t* kproc = kaapi_get_current_processor();
-    kaapi_sched_lock(&kproc->lock);
-    kproc->thread = thgrp->threadctxts[-1];
-    kaapi_sched_unlock(&kproc->lock);
-
-    /* wait global terminaison */
+    /* wait global terminaison and execution of waitend */
     kaapi_sched_sync();
 
-    /* pop pushed wait task frame */
-    --thgrp->threadctxts[-1]->sfp;
+    /* restore saved frame */
     fp = (kaapi_frame_t*)thgrp->threadctxts[-1]->sfp;
     *fp = thgrp->mainframe;
 

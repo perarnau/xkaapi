@@ -110,9 +110,9 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 push_frame:
   fp = (kaapi_frame_t*)thread->sfp;
   /* push the frame for the next task to execute */
-  thread->sfp[1].sp_data = fp->sp_data;
-  thread->sfp[1].pc = fp->sp;
-  thread->sfp[1].sp = fp->sp;
+  thread->sfp[1].sp_data   = fp->sp_data;
+  thread->sfp[1].pc        = fp->sp;
+  thread->sfp[1].sp        = fp->sp;
   
   /* force previous write before next write */
   kaapi_writemem_barrier();
