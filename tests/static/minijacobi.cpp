@@ -82,53 +82,59 @@ struct doit {
   {
     std::cout << "My pid=" << getpid() << std::endl;
     int size = 4;
-    int bloc = 1;
-//    if (argc >1)
-//      size = atoi(argv[1]);
-//    if (argc >2)
-//      bloc = atoi(argv[2]);
+    int npart = size;
+    int iter = 1;
+    if (argc >1)
+      size = atoi(argv[1]);
+    if (argc >2)
+      npart = atoi(argv[2]);
+    if (argc >3)
+      iter = atoi(argv[3]);
 
-    int n = size*bloc;
-    ka::ThreadGroup threadgroup( 4 );
-    std::vector<double> D(n);      /* domaine */
+    int n = size*npart;
+    ka::ThreadGroup threadgroup( npart );
+    std::vector<double> D(n);      /* domain */
     std::vector<double> F(n);
 
     MyBlockCyclicMapping map(2, 2);
     threadgroup.begin_partition( map );
 
-    for (int i=0; i<size; ++i)
+    for (int i=0; i<n; ++i)
     {
-      ka::Spawn<TaskInit> (ka::SetPartition(i))  ( i, &D[i], ((i==0) || (i==size-1)) ? 1.0 : 0.0 );
+      ka::Spawn<TaskInit> (ka::SetPartition(i / size ))  ( i, &D[i], ((i==0) || (i==n-1)) ? 1.0 : 0.0 );
     }
     threadgroup.end_partition();
 
     threadgroup.execute();
 
 
-    threadgroup.begin_partition( map, KAAPI_THGRP_SAVE_FLAG );
+    threadgroup.begin_partition( KAAPI_THGRP_SAVE_FLAG );
     for (int step = 0; step < 2; ++step)
     {
-      for (int i=0; i<size; ++i)
+      for (int i=0; i<n; ++i)
       {
-        ka::Spawn<TaskExtractF> (ka::SetPartition(i))  ( i, &F[i], &D[i] );
+        ka::Spawn<TaskExtractF> (ka::SetPartition(i / size))  ( i, &F[i], &D[i] );
       }
-      for (int i=0; i<size; ++i)
+      for (int i=0; i<n; ++i)
       {
-        if ((i !=0) && (i !=size-1))
-          ka::Spawn<TaskUpdate3>   (ka::SetPartition(i))  ( i, &D[i], &F[i-1], &F[i+1] );
+        if ((i !=0) && (i !=n-1))
+          ka::Spawn<TaskUpdate3>   (ka::SetPartition(i / size))  ( i, &D[i], &F[i-1], &F[i+1] );
       }
-      for (int i=0; i<size; ++i)
+      for (int i=0; i<n; ++i)
       {
-        ka::Spawn<TaskPrint> (ka::SetPartition(i))  ( i, &D[i] );
+        ka::Spawn<TaskPrint> (ka::SetPartition(i / size))  ( i, &D[i] );
       }
     }
     threadgroup.end_partition();
 
-    threadgroup.set_iteration_step( 2 );
-    threadgroup.execute();
+    threadgroup.set_iteration_step( iter );
     
-    printf("\n\n***********\n\n");
-    threadgroup.execute();
+    for (int k=0; k<iter; ++k)
+    {
+      threadgroup.execute();
+      
+      printf("\n\n***********\n\n");
+    }
 
   }
 };
