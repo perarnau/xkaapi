@@ -2760,6 +2760,12 @@ namespace ka {
       kaapi_threadgroup_set_iteration_step( _threadgroup, maxstep );
     }
 
+    void force_archtype(unsigned int part, unsigned int type)
+    {
+      if (_created == false) printf("NOTcreated\n");
+      kaapi_threadgroup_force_archtype(_threadgroup, part, type);
+    }
+
     /* internal class required for spawn method */
     class AttributComputeDependencies {
     public:

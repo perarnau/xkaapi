@@ -128,7 +128,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
 
   kaapi_globalid_t     mygid;
   uint32_t             nodecount;
-  
+
   if (pthgrp ==0) return EINVAL;
   thgrp = (kaapi_threadgroup_t)malloc(sizeof(kaapi_threadgrouprep_t));
   kaapi_assert(thgrp !=0);
@@ -286,3 +286,13 @@ int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep 
   return 0;
 }
 
+
+void kaapi_threadgroup_force_archtype
+(kaapi_threadgroup_t group, unsigned int part, unsigned int type)
+{
+#ifndef KAAPI_ASID_MASK_ARCH
+# define KAAPI_ASID_MASK_ARCH 0xFF00000000000000UL
+#endif
+  group->tid2asid[part]->asid &= ~KAAPI_ASID_MASK_ARCH;
+  group->tid2asid[part]->asid |= (uint64_t)type << 56;
+}

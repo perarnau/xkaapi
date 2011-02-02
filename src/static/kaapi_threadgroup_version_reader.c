@@ -268,6 +268,8 @@ fflush(stdout);
   if (gid_reader == thgrp->localgid)
 #endif
   {
+    printf("gid_reader == thgrp->localgid\n");
+
     /* ok here is the receive side of the communication 
        - allocate the kaapi_comrecv_t 
        - register it into global table for the thread tid.
@@ -299,6 +301,9 @@ fflush(stdout);
          Only the owner of thread tid allocate data.
          Other threads only compute address.
       */
+
+      printf("kaapi_memory_allocate_view\n");
+
       wc->data       = a.data = (void*) kaapi_memory_allocate_view( 
               kaapi_threadgroup_tid2asid(thgrp, tid), 
               &wc->view,

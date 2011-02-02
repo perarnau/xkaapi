@@ -105,10 +105,12 @@ struct doit {
       ka::ThreadGroup threadgroup(2);
 
       threadgroup.begin_partition();
+      threadgroup.force_archtype(1, KAAPI_PROC_TYPE_CUDA);
 
       for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
       {
 	double_type* const array = (double_type*)kaapi_mem_alloc_host(total_size);
+
 	memset(array, 0, total_size);
 	ka::range1d<double_type> range(array, array + CONFIG_ELEM_COUNT);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);

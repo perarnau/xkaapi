@@ -197,6 +197,7 @@ kaapi_pointer_t kaapi_memory_allocate_view(
     case KAAPI_MEM_TYPE_CUDA:
     {
       /* should be able to allocate iff the current cuda context attached to a device */
+      printf("%s: KAAPI_MEM_TYPE_CUDA\n", __FUNCTION__);
       return (kaapi_pointer_t)NULL;
     }
 #endif

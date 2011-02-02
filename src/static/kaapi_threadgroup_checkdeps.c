@@ -161,3 +161,43 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
 //  printf("Task not pushed !\n");
   return EINTR;
 }
+
+#if 0
+int kaapi_threadgroup_add_mem_entry
+(kaapi_threadgroup_t group, uintptr_t addr, size_t size)
+{
+  /* make the data valid in the address space
+     of all the group threads (ie. partition)
+   */
+
+  int tid; /* thread index */
+
+  /* foreach thread */
+  for (tid = 0; tid < group->group_size; ++tid)
+  {
+    kaapi_access_t access;
+    kaapi_hashentries_t* entry;
+    kaapi_version_t* version;
+
+    entry = kaapi_hashmap_find(&group->ws_khm, access.data);
+    if (entry != NULL) continue ;
+
+    /* create if not already in thread as */
+    access.data = (void*)addr;
+    entry = kaapi_threadgroup_newversion
+      (group, &group->ws_khm, tid, &access);
+    kaapi_assert_debug(entry != NULL);
+
+    kaapi_address_space_id_t asid = kaapi_threadgroup_tid2asid(thgrp, tid);
+
+    /* from version_new_reader */
+
+    fail kaapi_version_findasid_in( ver, asid );
+    kaapi_data_version_t* tov;
+
+    version = entry->u.version;
+  }
+
+  return 0;
+}
+#endif
