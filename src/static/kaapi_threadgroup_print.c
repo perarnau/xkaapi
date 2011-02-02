@@ -263,7 +263,7 @@ static int kaapi_task_descriptor_print( FILE* file, kaapi_taskdescr_t* td )
 
 /**
 */
-static int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
+int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
 {
   kaapi_taskdescr_t* curr = tl->front;
   while (curr != 0)
@@ -292,7 +292,6 @@ int kaapi_threadgroup_print( FILE* file, kaapi_threadgroup_t thgrp )
     {
       fprintf(file, "\n\nPartition %i/%i, on gid:%u\n", i, thgrp->group_size, thgrp->localgid);
       kaapi_thread_print( file, thgrp->threadctxts[i] );
-      kaapi_thread_readylist_print( file, thgrp->threadctxts[i]->tasklist );
       fprintf(file, "\n*** Send on thread %i/%i:\n", i, thgrp->group_size);
       kaapi_thread_send_comlist_print( file, thgrp->lists_send[i] );
       fprintf(file, "\n*** Recv on thread %i/%i:\n", i, thgrp->group_size);

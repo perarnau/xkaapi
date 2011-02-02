@@ -137,7 +137,8 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
-  tasklist = thread->tasklist;
+  tasklist = thread->sfp->tasklist;
+  kaapi_assert_debug( tasklist != 0);
   
   fp = (kaapi_frame_t*)thread->sfp;
 
@@ -215,18 +216,19 @@ int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread )
     /* bcast? management of the output communication after puting input comm */
     if (td !=0) 
     {
-      if (td->bcast !=0) 
-        kaapi_threadgroup_bcast( thread->the_thgrp, 
-                                 kaapi_threadgroup_tid2asid(thread->the_thgrp, thread->partid), 
-                                 &td->bcast->front );      
-
-      /* post execution: new tasks created ??? */
+      /* post execution: new tasks created */
       if (unlikely(fp->sp > thread->sfp->sp))
       {
         int err = kaapi_thread_execframe( thread );
         if ((err == EWOULDBLOCK) || (err == EINTR)) return err;
         kaapi_assert_debug( err == 0 );
       }
+
+      /* do bcast after child execution (they can produce output data) */
+      if (td->bcast !=0) 
+        kaapi_threadgroup_bcast( thread->the_thgrp, 
+                                 kaapi_threadgroup_tid2asid(thread->the_thgrp, thread->partid), 
+                                 &td->bcast->front );      
       
       if (!kaapi_activationlist_isempty(&td->list))
       { /* push in the front the activated tasks */

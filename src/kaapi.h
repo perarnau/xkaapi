@@ -116,7 +116,8 @@ struct kaapi_format_t;
 struct kaapi_processor_t;
 struct kaapi_request_t;
 struct kaapi_reply_t;
-
+struct kaapi_tasklist_t;
+  
 /** Atomic type
 */
 typedef struct kaapi_atomic32_t {
@@ -451,10 +452,10 @@ extern struct kaapi_format_t* kaapi_double_format;
     We only expose the field to push task or data.
 */
 typedef struct kaapi_thread_t {
-    struct kaapi_task_t* pc;
-    struct kaapi_task_t* sp;
-    char*                sp_data;
-    int (*execframe)( struct kaapi_thread_context_t* );
+    struct kaapi_task_t*     pc;
+    struct kaapi_task_t*     sp;
+    char*                    sp_data;
+    struct kaapi_tasklist_t* tasklist;  /* Not null -> list of ready task, see static_sched.h */
 } kaapi_thread_t;
 
 
@@ -463,10 +464,10 @@ typedef struct kaapi_thread_t {
    Same structure as kaapi_thread_t but we keep different type names to avoid automatic conversion.
 */
 typedef struct kaapi_frame_t {
-    struct kaapi_task_t* pc;
-    struct kaapi_task_t* sp;
-    char*                sp_data;
-    int (*execframe)( struct kaapi_thread_context_t* );
+    struct kaapi_task_t*     pc;
+    struct kaapi_task_t*     sp;
+    char*                    sp_data;
+    struct kaapi_tasklist_t* tasklist;  /* Not null -> list of ready task, see static_sched.h */
 } kaapi_frame_t;
 
 
@@ -1787,40 +1788,44 @@ extern kaapi_format_id_t kaapi_format_register(
     \param mode_param, an array of size count given the access mode for each param
     \param offset_param, an array of size count given the offset of the data from the pointer to the argument of the task
     \param offset_version, an array of size count given the offset of the version (if any)
+    \param offset_cwflag, an array of size count given the offset of the cw special flag (if any)
     \param fmt_param, an array of size count given the format of each param
     \param size_param, an array of size count given the size of each parameter.
 */
 extern kaapi_format_id_t kaapi_format_taskregister_static( 
-        struct kaapi_format_t*      fmt,
-        kaapi_task_body_t           body,
-        const char*                 name,
-        size_t                      size,
-        int                         count,
-        const kaapi_access_mode_t   mode_param[],
-        const kaapi_offset_t        offset_param[],
-        const kaapi_offset_t        offset_version[],
-        const struct kaapi_format_t*fmt_param[],
-        const kaapi_memory_view_t   size_param[],
-        const kaapi_reducor_t       reducor_param[]
+    struct kaapi_format_t*      fmt,
+    kaapi_task_body_t           body,
+    const char*                 name,
+    size_t                      size,
+    int                         count,
+    const kaapi_access_mode_t   mode_param[],
+    const kaapi_offset_t        offset_param[],
+    const kaapi_offset_t        offset_version[],
+    const kaapi_offset_t        offset_cwflag[],
+    const struct kaapi_format_t*fmt_param[],
+    const kaapi_memory_view_t   size_param[],
+    const kaapi_reducor_t       reducor_param[]
 );
 
 /** \ingroup TASK
     Register a task format with dynamic definition
 */
 extern kaapi_format_id_t kaapi_format_taskregister_func( 
-        struct kaapi_format_t*       fmt, 
-        kaapi_task_body_t            body,
-        const char*                  name,
-        size_t                       size,
-        size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
-        kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-        void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
-        void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
-        const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-        void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-        kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
+    struct kaapi_format_t*       fmt, 
+    kaapi_task_body_t            body,
+    const char*                  name,
+    size_t                       size,
+    size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
+    kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+    int*                        (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*),
+    kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+    void                        (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int ),
+    const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+    kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
+    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK

@@ -364,10 +364,7 @@ int kaapi_sched_stealstack
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
   
-  if ((thread ==0) || (thread->unstealable != 0)
-       /* || kaapi_frame_isempty( thread->sfp)*/
-       || (thread->tasklist !=0) /* cannot steal yet into ready task list */
-     ) 
+  if ((thread ==0) || (thread->unstealable != 0)) 
   return 0;
   replycount = 0;
   
@@ -380,7 +377,8 @@ int kaapi_sched_stealstack
   {
     /* void frame ? */
     if (top_frame->pc == top_frame->sp) continue;
-    kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
+    if (top_frame->tasklist == 0)
+      kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
   }
   
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

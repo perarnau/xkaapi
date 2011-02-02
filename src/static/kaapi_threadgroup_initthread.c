@@ -45,14 +45,9 @@
 
 /**
 */
-int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
+int kaapi_threadgroup_allocatetasklist( kaapi_frame_t* frame )
 {
-  int error = 0;
-  kaapi_tasklist_t* tl;
-  
-  kaapi_assert(thgrp->localgid == thgrp->tid2gid[i]);
-
-  tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_t* tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_assert( tl !=0);  
 
   kaapi_tasklist_clear(tl);
@@ -60,9 +55,16 @@ int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
   kaapi_assert( tl->stack != 0 );
   tl->sp    = 0;
   tl->size  = kaapi_default_param.stacksize;
+  frame->tasklist = tl;
+  return 0;
+}
 
-  thgrp->threadctxts[i]->sfp->execframe = kaapi_threadgroup_execframe;
+/**
+*/
+int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
+{
+  int error = 0;
   thgrp->threadctxts[i]->the_thgrp      = thgrp;
-  thgrp->threadctxts[i]->tasklist       = tl;
+  error = kaapi_threadgroup_allocatetasklist(thgrp->threadctxts[i]->sfp);
   return error;  
 }

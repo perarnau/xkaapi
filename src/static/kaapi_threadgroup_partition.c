@@ -54,17 +54,17 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
     if (thgrp->localgid == thgrp->tid2gid[i]) 
     {
       /* init the thread from the thread context */
-      kaapi_tasklist_t* tasklist = thgrp->threadctxts[i]->tasklist;
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[i]->sfp->tasklist;
+      kaapi_assert_debug(tasklist != 0);
       kaapi_thread_clear( thgrp->threadctxts[i] );
       
       /* reset the task list */
       tasklist->sp    = 0;
       tasklist->front = 0;
       tasklist->back  = 0;
-      thgrp->threadctxts[i]->sfp->execframe = kaapi_threadgroup_execframe;
-      thgrp->threadctxts[i]->tasklist  = tasklist;
-      thgrp->threadctxts[i]->partid    = i;
-      thgrp->threadctxts[i]->the_thgrp = thgrp;
+      thgrp->threadctxts[i]->sfp->tasklist  = tasklist;
+      thgrp->threadctxts[i]->partid         = i;
+      thgrp->threadctxts[i]->the_thgrp      = thgrp;
     }
   }
   /* delete allocator: free all temporary memory used by managing activation list and communication */
@@ -136,7 +136,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
     threadctxtmain->sfp[1].sp_data   = fp->sp_data;
     threadctxtmain->sfp[1].pc        = fp->sp;
     threadctxtmain->sfp[1].sp        = fp->sp;
-    threadctxtmain->sfp[1].execframe = 0;
+    threadctxtmain->sfp[1].tasklist  = 0;
 
     fp = (kaapi_frame_t*)++threadctxtmain->sfp;
     thgrp->waittask = kaapi_thread_toptask( kaapi_threadcontext2thread(threadctxtmain) );
@@ -147,7 +147,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
     threadctxtmain->sfp[1].sp_data   = fp->sp_data;
     threadctxtmain->sfp[1].pc        = fp->sp;
     threadctxtmain->sfp[1].sp        = fp->sp;
-    threadctxtmain->sfp[1].execframe = &kaapi_threadgroup_execframe;
+    kaapi_threadgroup_allocatetasklist( &threadctxtmain->sfp[1] );
     ++threadctxtmain->sfp;
   }
   

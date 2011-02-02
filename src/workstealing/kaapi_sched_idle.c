@@ -124,10 +124,10 @@ redo_execute:
       err = kaapi_cuda_execframe( kproc->thread );
     else
 #endif /* KAAPI_USE_CUDA */
-    if (kproc->thread->sfp->execframe ==0)
+    if (kproc->thread->sfp->tasklist ==0)
       err = kaapi_thread_execframe(kproc->thread);
     else
-      err = (*kproc->thread->sfp->execframe)( kproc->thread );
+      err = kaapi_threadgroup_execframe( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );

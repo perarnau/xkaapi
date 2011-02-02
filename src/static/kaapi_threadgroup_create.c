@@ -280,6 +280,11 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
 */
 int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep )
 {
+  if ((maxstep >1) && ((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) ==0))
+  {
+    KAAPI_DEBUG_INST( printf("******Cannot do several iteration steps if flag 'KAAPI_THGRP_SAVE_FLAG' is not set before\n") );
+    return EINVAL;
+  }
   thgrp->maxstep = maxstep;
   return 0;
 }

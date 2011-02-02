@@ -78,6 +78,8 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
   kaapi_memory_view_t view;
   kaapi_taskdescr_t* dv_task =0;
   int retval;
+  int is_first_access_asid = 0;
+
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
   kaapi_assert_debug( KAAPI_ACCESS_IS_CUMULWRITE(mode) );
 
@@ -88,10 +90,15 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
 
   /* a priori: access is not ready */
   retval = 0;
-  
+ 
   /* it is the first cw access ? */
   if ( !KAAPI_ACCESS_IS_CUMULWRITE(ver->writer_mode) )
   {
+  
+    /* delete copies */
+    kaapi_data_version_list_append( &ver->todel, &ver->copies );
+    is_first_access_asid = 1;
+
     /* find data version with same asid: 1/ in copies (WAR) 2/ in writer (WAW) */
     kaapi_data_version_t* dv = kaapi_version_findcopiesrmv_asid_in( ver, asid );
     if ((dv ==0) && (ver->writer.asid == asid))
@@ -99,8 +106,8 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
 
     if (dv != 0)
     {
-      data = dv->addr;
-      view = dv->view;
+      data    = dv->addr;
+      view    = dv->view;
       dv_task = dv->task;
 
       /* recycle the data version if != ver->writer */
@@ -110,12 +117,6 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
       if (dv_task ==0) 
       {
         /* first access: mute the origin and the task is set as ready, keep data */
-        ver->writer_thread = tid;
-        kaapi_assert_debug(ver->writer.asid == asid);
-        ver->writer.task   = task;
-        ver->writer.ith    = ith;
-        ver->writer.view   = kaapi_format_get_view_param(fmt, ith, task->task->sp);
-        ver->writer.reducor= 0;
         retval = 1;
       }
       else if (dv_task != task)
@@ -123,18 +124,26 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
         if (gid_writer == thgrp->localgid)
         {
           /* avoid WAW (if dv=writer) or WAR (dv=a copy) */
-          kaapi_taskdescr_push_successor( thgrp->threadctxts[tid]->tasklist, dv_task, task );
+          kaapi_taskdescr_push_successor( thgrp->threadctxts[tid]->sfp->tasklist, dv_task, task );
         }
       }
+      ver->writer.asid   = asid;
+      ver->writer_thread = tid;
+      kaapi_assert_debug(ver->writer.asid == asid);
+      ver->writer.task   = task;
+      ver->writer.ith    = ith;
+      ver->writer.view   = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+      ver->writer.reducor= 0;
     } 
     else /* else case: no find data version in the same asid */
     {
       /* mute the writer */
       ver->writer.asid   = asid;
       ver->writer_thread = tid;
-      ver->writer.asid   = asid;
       ver->writer.ith    = ith;
       ver->writer.view   = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+      ver->writer.reducor= 0;
+//      is_first_access_asid = 1;
 
       retval = 1;
 
@@ -164,7 +173,7 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
       kaapi_assert_debug( data != 0 );
       kaapi_access_t a;
       a.data = data;
-      kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
+      kaapi_format_set_cwaccess_param(fmt, ith, task->task->sp, &a, is_first_access_asid );
     }
 
     ver->writer_mode   = mode;
@@ -183,6 +192,8 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
 
   /* find the data info in the map attached to the version and remove it from list if found, else return 0 */
   kaapi_data_version_t* dv = kaapi_version_findcopiesrmv_asid_in( ver, asid );
+  if ((dv ==0) && (ver->writer.asid == asid))
+    dv = &ver->writer;
     
   if (dv !=0) 
   {
@@ -200,12 +211,13 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
     if (gid_writer == thgrp->localgid)
     {
       /* push the task as a successor of the task attached to the data version */
-      kaapi_taskdescr_push_successor( thgrp->threadctxts[tid]->tasklist, dv_task, task );
+      kaapi_taskdescr_push_successor( thgrp->threadctxts[tid]->sfp->tasklist, dv_task, task );
     }
     retval = 0;
   }
   else 
   {
+    is_first_access_asid = 1;
     /* this is a new access on asid : find data into todel ? */
     dv = kaapi_version_findtodelrmv_asid_in( ver, asid );
     data =0;
@@ -222,7 +234,7 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
 
         if ((dv_task !=0) && (gid_writer == thgrp->localgid))
         { /* avoid WAW or WAR */
-          kaapi_taskdescr_push_successor( thgrp->threadctxts[tid]->tasklist, dv_task, task );
+          kaapi_taskdescr_push_successor( thgrp->threadctxts[tid]->sfp->tasklist, dv_task, task );
         }
       }
       else {
@@ -262,11 +274,12 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
     kaapi_assert_debug( data != 0 );
     kaapi_access_t a;
     a.data = data;
-    kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
+    kaapi_format_set_cwaccess_param(fmt, ith, task->task->sp, &a, is_first_access_asid );
   }
 
   /* link it into list of copies */
-  kaapi_data_version_list_add(&ver->copies, dv );
+  if (dv != &ver->writer)
+    kaapi_data_version_list_add(&ver->copies, dv );
 
   /* return 1: the access is ready ! */
   return retval;
@@ -291,7 +304,8 @@ int kaapi_threadgroup_version_finalize_cw(
   */
   
   kaapi_globalid_t gid_writer = kaapi_threadgroup_tid2gid( thgrp, ver->writer_thread );
-  kaapi_taskdescr_t* td_finalizer = kaapi_tasklist_allocate_td( thgrp->threadctxts[ver->writer_thread]->tasklist, 0 );
+  kaapi_taskdescr_t* td_finalizer = 
+    kaapi_tasklist_allocate_td( thgrp->threadctxts[ver->writer_thread]->sfp->tasklist, 0 );
 
   kaapi_data_version_t* curr = ver->copies.front;
   while (curr !=0)
@@ -306,7 +320,7 @@ int kaapi_threadgroup_version_finalize_cw(
       wc->tag        = tag;
       wc->from       = gid_sender;
       wc->tid        = ver->writer_thread;
-      wc->tasklist   = thgrp->threadctxts[ver->writer_thread]->tasklist;
+      wc->tasklist   = thgrp->threadctxts[ver->writer_thread]->sfp->tasklist;
       wc->list.front = 0;
       wc->list.back  = 0;
       wc->view       = curr->view;
@@ -333,7 +347,7 @@ int kaapi_threadgroup_version_finalize_cw(
       /* add bcast info on the last task that do cw */
       kaapi_taskbcast_arg_t* bcast;
       curr->task->bcast = bcast = 
-        (kaapi_taskbcast_arg_t*)kaapi_tasklist_allocate( thgrp->threadctxts[gid_sender]->tasklist, 
+        (kaapi_taskbcast_arg_t*)kaapi_tasklist_allocate( thgrp->threadctxts[gid_sender]->sfp->tasklist, 
                                                          sizeof(kaapi_taskbcast_arg_t));
       bcast->front.vertag          = tag;
       bcast->front.ith             = curr->ith;  /* no parameter */
@@ -356,11 +370,18 @@ int kaapi_threadgroup_version_finalize_cw(
   }
 
   /* add the finalizer as dependend of access of ver->writer.task */
-  kaapi_taskdescr_push_successor( thgrp->threadctxts[ver->writer_thread]->tasklist, ver->writer.task, td_finalizer );
+  kaapi_taskdescr_push_successor( 
+    thgrp->threadctxts[ver->writer_thread]->sfp->tasklist, 
+    ver->writer.task, 
+    td_finalizer 
+  );
   
   /* update writer to be the finalizer task */
   ver->writer_mode = KAAPI_ACCESS_MODE_RW;
   ver->writer.task = td_finalizer;
+  
+  /* delete copies */
+  kaapi_data_version_list_append( &ver->todel, &ver->copies );
   
   /* reset tag to regenerate communication with new tag */
   ver->tag = 0;

@@ -105,10 +105,10 @@ int kaapi_sched_sync(void)
   kaapi_mem_barrier();
   
 redo:
-  if (thread->sfp->execframe == 0) 
+  if (thread->sfp->tasklist == 0) 
     err = kaapi_thread_execframe(thread);
   else
-    err = (*thread->sfp->execframe)(thread);
+    err = kaapi_threadgroup_execframe(thread);
 
   if (err == EWOULDBLOCK)
   {

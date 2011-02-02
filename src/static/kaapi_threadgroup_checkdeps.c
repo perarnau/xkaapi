@@ -81,7 +81,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     thread = kaapi_threadgroup_thread( thgrp, threadindex );
     
     /* allocate a new task descriptor for this task */
-    tasklist =  thgrp->threadctxts[threadindex]->tasklist;
+    tasklist =  thgrp->threadctxts[threadindex]->sfp->tasklist;
     taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
   } 
   else 

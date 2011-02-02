@@ -96,7 +96,7 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
       retval = 0;
       if (dv_task != task)
       {
-        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
         kaapi_taskdescr_push_successor( tasklist, dv_task, task );
       }
     }
@@ -119,14 +119,14 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
 
         if (dv_task !=0)
         {
-          kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+          kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
           kaapi_taskdescr_push_successor( tasklist, dv_task, task );
         }
       }
       else if (kaapi_memory_address_space_isequal(ver->writer.asid, asid)) 
       { /* WAW: put new writer into successor of previous one, without reallocation */
         data = ver->writer.addr;
-        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
         kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
         retval = 0;
         delprevwriter = 0;

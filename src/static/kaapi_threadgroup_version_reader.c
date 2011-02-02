@@ -69,7 +69,7 @@ static inline void kaapi_threadgroup_add_recvtask(
 #endif
 
   /* look if the writer task has been defined: this code should be executed on the owner of the writer task */
-  kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
+  kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->sfp->tasklist;
 
   if (gid_writer == thgrp->localgid)
   {
@@ -105,6 +105,7 @@ fflush(stdout);
       
       writer_task->bcast           = bcast;
       ver->writer.task             = writer_task;
+      ver->writer_mode             = KAAPI_ACCESS_MODE_RW;
       
       /* register the kaapi_comsend_t structure into the global table of tid writer_thread  
          In order to exchange address between memory space.
@@ -290,7 +291,7 @@ fflush(stdout);
       wc->tid        = tid;
       wc->reduce_fnc = 0;
       wc->result     = 0; // debug only
-      wc->tasklist   = thgrp->threadctxts[tid]->tasklist;
+      wc->tasklist   = thgrp->threadctxts[tid]->sfp->tasklist;
       wc->list.front = 0;
       wc->list.back  = 0;
       wc->view       = kaapi_format_get_view_param(fmt, ith, task->task->sp);
@@ -354,6 +355,7 @@ static inline int kaapi_version_add_reader(
     kaapi_threadgroup_t   thgrp, 
     kaapi_version_t*      ver, 
     int                   tid, 
+    kaapi_access_mode_t   mode,
     kaapi_data_version_t* over,
     kaapi_taskdescr_t*    task, 
     const kaapi_format_t* fmt,
@@ -417,12 +419,13 @@ static inline int kaapi_version_add_reader(
       && (kaapi_memory_address_space_isequal(over->asid, ver->writer.asid)))
     {
       kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
-      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->sfp->tasklist;
       kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
     }
     else if (ver->writer_mode == KAAPI_ACCESS_MODE_VOID)
     {
       kaapi_assert_debug( retval == 1);
+      ver->writer_mode = mode;
     }
     else 
     {
@@ -480,5 +483,5 @@ int kaapi_threadgroup_version_newreader(
      - add the reader, if tov is the writer and return 0 (not ready access)
      - return value is 1 iff the access is ready
   */
-  return kaapi_version_add_reader( thgrp, ver, tid, tov, task, fmt, ith, access );  
+  return kaapi_version_add_reader( thgrp, ver, tid, mode, tov, task, fmt, ith, access );  
 }

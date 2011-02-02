@@ -229,6 +229,7 @@ typedef struct kaapi_comaddrlink_t {
 typedef struct kaapi_taskdescr_t {
   kaapi_atomic_t                counter;
   kaapi_task_t*                 task;
+  
   kaapi_taskbcast_arg_t*        bcast;
   struct kaapi_taskdescr_t*     next;
   kaapi_activationlist_t        list;
@@ -636,10 +637,14 @@ static inline kaapi_globalid_t kaapi_threadgroup_asid2gid( kaapi_threadgroup_t t
 }
 
 /* Initialize the ith thread of the thread group 
+   - initialize some fields
    - create tasklist 
-   - create the thread data specific allocator
 */
-int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int ith );
+extern int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int ith );
+
+/** Allocate and reset the tasklist into the top frame of the thread
+*/
+extern int kaapi_threadgroup_allocatetasklist( kaapi_frame_t* frame );
 
 
 /** WARNING: also duplicated in kaapi.h for the API. Redefined here during compilation of the sources
@@ -653,6 +658,10 @@ static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgr
     return thread;
   }
 }
+
+/**
+*/
+extern int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl );
 
 
 /* ============================= internal interface to manage version ============================ */
@@ -788,7 +797,11 @@ static inline int kaapi_tasklist_merge_activationlist( kaapi_tasklist_t* tl, kaa
 
 
 /**/
-static inline void kaapi_activationlist_pushback( kaapi_threadgroup_t thgrp, kaapi_activationlist_t* al, kaapi_taskdescr_t* td)
+static inline void kaapi_activationlist_pushback( 
+    kaapi_threadgroup_t thgrp, 
+    kaapi_activationlist_t* al, 
+    kaapi_taskdescr_t* td
+)
 {
   kaapi_activationlink_t* l 
     = (kaapi_activationlink_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_activationlink_t));
@@ -861,7 +874,7 @@ static inline int kaapi_threadgroup_comrecv_register(
   cl->next = thgrp->lists_recv[tidreader];
   thgrp->lists_recv[tidreader] = cl;
   if (thgrp->tid2gid[tidreader] == thgrp->localgid)
-    ++thgrp->threadctxts[tidreader]->tasklist->count_recv;
+    ++thgrp->threadctxts[tidreader]->sfp->tasklist->count_recv;
   return 0;
 }
 

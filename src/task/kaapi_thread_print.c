@@ -160,6 +160,11 @@ int kaapi_task_print(
           (*fmt_param->print)(file, access.version );
         }
 #endif
+        if (KAAPI_ACCESS_IS_CUMULWRITE(m))
+        {
+          int wa = *kaapi_format_get_cwflag( fmt, i, sp);
+          fprintf(file, ", cw_iswrite=%s", (wa !=0 ? "yes" : "no") );
+        }
       }
       if (i < count_params-1)
       {
@@ -201,7 +206,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
   {
     fprintf(file, "%i: --------frame:: pc:%p, sp:%p, spd:%p, type: '%s'\n", 
         iframe, (void*)frame->pc, (void*)frame->sp, (void*)frame->sp_data,
-        (frame->execframe == 0 ? "DFG" : "Static")
+        (frame->tasklist == 0 ? "DFG" : "Static")
     );
     task_top = frame->sp;
     while ( task_bot > task_top)
@@ -269,6 +274,9 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
       --task_bot;
     }
     task_bot = task_top;
+    if (frame->tasklist !=0)
+      kaapi_thread_readylist_print( file, frame->tasklist );
+
     ++frame;
     ++iframe;
   } while (frame <= thread->sfp);

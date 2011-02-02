@@ -368,6 +368,7 @@ typedef struct kaapi_format_t {
   kaapi_access_mode_t        *_mode_params;                            /* only consider value with mask 0xF0 */
   kaapi_offset_t             *_off_params;                             /* access to the i-th parameter: a value or a shared */
   kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
+  kaapi_offset_t             *_off_cwflag;                             /* cw special flag of the i-th parameter: a value or a shared */
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
   kaapi_memory_view_t        *_view_params;                            /* sizeof of each params */
   kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
@@ -379,8 +380,10 @@ typedef struct kaapi_format_t {
   size_t                (*get_count_params)(const struct kaapi_format_t*, const void*);
   kaapi_access_mode_t   (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void*                 (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*);
+  int*                  (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*);
   kaapi_access_t        (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*);
+  void                  (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int wa);
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
   kaapi_memory_view_t   (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
@@ -440,6 +443,17 @@ kaapi_access_t         kaapi_format_get_access_param  (const struct kaapi_format
 }
 
 static inline 
+int*         kaapi_format_get_cwflag  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    return (int*)(fmt->_off_cwflag[ith] + (char*)sp);
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_cwflag)(fmt, ith, sp);
+}
+
+static inline 
 void         kaapi_format_set_access_param  (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_access_t* a)
 {
   kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
@@ -451,6 +465,22 @@ void         kaapi_format_set_access_param  (const struct kaapi_format_t* fmt, u
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
   (*fmt->set_access_param)(fmt, ith, sp, a);
 }
+
+
+static inline 
+void         kaapi_format_set_cwaccess_param  (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_access_t* a, int wa)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    *(void**)(fmt->_off_params[ith] + (char*)sp) = a->data;
+    *(void**)(fmt->_off_versions[ith] + (char*)sp) = a->version;
+    *(int*)(fmt->_off_cwflag[ith] + (char*)sp) = wa;
+    return;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  (*fmt->set_cwaccess_param)(fmt, ith, sp, a, wa);
+}
+
 
 static inline 
 const struct kaapi_format_t* kaapi_format_get_fmt_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
@@ -610,7 +640,6 @@ typedef struct kaapi_thread_context_t {
 
   /* the way to execute task inside a thread, if ==0 uses kaapi_thread_execframe */
   kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
-  struct kaapi_tasklist_t*       tasklist;  /* Not null -> list of ready task, see static_sched.h */
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
 
@@ -1821,9 +1850,10 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
   /* if ready list: use it as state of the thread */
-  if (thread->tasklist !=0)
+  if (thread->sfp->tasklist !=0)
   {
-    if (!kaapi_tasklist_isempty(thread->tasklist)) return 1;
+    if (!kaapi_tasklist_isempty(thread->sfp->tasklist)) return 1;
+    return 0;
   }
 
 #if (SIZEOF_VOIDP == 4)
