@@ -599,7 +599,6 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_atomic_t             endglobalgroup; /* count the number of remote thread group that have finished */
 
   kaapi_task_t*              waittask;     /* task to mark end of parallel computation */
-  int volatile               startflag;    /* set to 1 when threads should starts */
   int volatile               step;         /* current iteration step */
   int                        maxstep;      /* max iteration step or -1 if not known */
   int                        flag;         /* some flag to pass info (save / not save) */

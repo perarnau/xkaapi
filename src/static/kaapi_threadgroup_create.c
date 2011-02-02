@@ -142,7 +142,6 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   thgrp->group_size  = size;
   thgrp->localthreads= 0;
   KAAPI_ATOMIC_WRITE(&thgrp->endlocalthread, 0);
-  thgrp->startflag   = 0;
   KAAPI_ATOMIC_WRITE(&thgrp->endglobalgroup, 0);
   thgrp->waittask    = 0;
   
@@ -209,12 +208,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   }
   thgrp->all_sendaddr = 0;
 
-  /* here allocate thread -1 == main thread       */
+  /* here allocate thread -1 == main thread */
   if (mygid == thgrp->tid2gid[-1])
   {
     thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
-    thgrp->threads[-1] = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
-    thgrp->tasklist_main = kaapi_threadgroup_allocatetasklist( );
+    thgrp->threads[-1]     = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
+    thgrp->tasklist_main   = kaapi_threadgroup_allocatetasklist( );
     ++thgrp->localthreads;
   }
 

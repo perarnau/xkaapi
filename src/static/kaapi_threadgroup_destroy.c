@@ -48,8 +48,7 @@
 int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
 {
   int i;
-  if ((thgrp->startflag ==1) && (KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) < thgrp->group_size))
-    return EBUSY;
+  if (thgrp->state == KAAPI_THREAD_GROUP_EXEC_S) return EBUSY;
 
   /* free hash map entries: they are destroy by destruction of the version allocator */
   kaapi_hashmap_destroy( &thgrp->ws_khm );

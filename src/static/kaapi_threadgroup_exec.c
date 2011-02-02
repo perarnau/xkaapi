@@ -67,9 +67,6 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
 #endif
 
   ++thgrp->step;
-  kaapi_mem_barrier();
-  
-  thgrp->startflag = 1;
   
   /* dispatch each thread context on the local gid to processor (i/nodecount)%nproc 
      Here a better and finer mapping should be given by the user
@@ -84,7 +81,8 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
     kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
     kaapi_thread_pushtask( kaapi_threadcontext2thread(thread_slavecurrent) );    
   }
-  
+  kaapi_mem_barrier();
+    
   for (i=0; i<thgrp->group_size; ++i)
   {
     if (thgrp->localgid == thgrp->tid2gid[i])
@@ -193,7 +191,6 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 #endif
 #endif
 
-  thgrp->startflag = 0;
   thgrp->state = KAAPI_THREAD_GROUP_WAIT_S;
   return 0;
 }
@@ -203,6 +200,7 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 */
 int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp )
 {
+  if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   kaapi_threadgroup_end_step(thgrp);
   
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;

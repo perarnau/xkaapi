@@ -72,19 +72,12 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
       thgrp->threadctxts[i]->partid         = i;
       thgrp->threadctxts[i]->the_thgrp      = thgrp;
       
-#if 0
-      if (i == -1)
-      {
-        /* pop frame for waitend task */
-        --thgrp->threadctxts[i]->sfp;
-      }
-#endif
     }
   }
   /* delete allocator: free all temporary memory used by managing activation list and communication */
-//  kaapi_allocator_destroy(&thgrp->allocator);
+  kaapi_allocator_destroy(&thgrp->allocator);
   
-  /* update the list of version in the hashmap to suppress reference to previously executed task */
+  /* update the list of version in the hashmap to suppress reference to previously executed tasks */
   for (int i=0; i<KAAPI_HASHMAP_SIZE; ++i)
   {
     kaapi_hashentries_t* entry = _get_hashmap_entry(&thgrp->ws_khm, i);
@@ -150,7 +143,7 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
     /* save the main thread frame to restore at the end of parallel computation */
     kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
 
-    /* avoid thief to steal the main thread will tasks are added */
+    /* avoid thief to steal the main thread while tasks are added */
     threadctxtmain = thgrp->threadctxts[-1];
     kproc = threadctxtmain->proc;
     kaapi_sched_lock(&kproc->lock);
