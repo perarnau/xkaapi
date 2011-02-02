@@ -98,7 +98,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* steal request */
     kaapi_assert_debug( kproc->thread !=0 );
     ctxt = kproc->thread;
-    thread = kaapi_sched_emitsteal( kproc );
+    thread =0;
+    //thread = kaapi_sched_emitsteal( kproc );
 
     if (thread ==0) 
       continue;
@@ -124,20 +125,25 @@ redo_execute:
 #if defined(KAAPI_USE_CUDA)
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
-      if (kproc->thread->execframe == kaapi_thread_execframe)
+      if (kproc->thread->sfp->execframe == kaapi_thread_execframe)
       {
 	err = kaapi_cuda_execframe( kproc->thread );
       }
       else /* assumed kaapi_threadgroup_execframe */
       {
 	kaapi_assert_debug
-	  (kproc->thread->execframe == kaapi_threadgroup_execframe);
+	  (kproc->thread->sfp->execframe == kaapi_threadgroup_execframe);
 	err = kaapi_cuda_threadgroup_execframe(kproc->thread);
       }
     }
     else
 #endif /* KAAPI_USE_CUDA */
-    err = (*kproc->thread->execframe)( kproc->thread );
+    {
+      if (kproc->thread->sfp->execframe ==0)
+	err = kaapi_thread_execframe(kproc->thread);
+      else
+	err = (*kproc->thread->sfp->execframe)( kproc->thread );
+    }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
@@ -177,7 +183,7 @@ redo_execute:
        from a thread at the end of an iteration. See kaapi_thread_execframe kaapi_tasksignalend_body
        Previous code: without the test else if () {... }
     */
-    else if (err == EINTR) 
+    else if ((err == ECHILD) || (err == EINTR))
     {
       /* used to detach the thread of the processor in order to reuse it ... */
       ctxt = kaapi_context_alloc(kproc);

@@ -42,7 +42,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "misc/kaapi_hashmap.h"
 
 static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
 {
@@ -51,7 +50,6 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
     /* delete comlink */
     thgrp->lists_send[i] = 0;
     thgrp->lists_recv[i] = 0;
-
 
     if (thgrp->localgid == thgrp->tid2gid[i]) 
     {
@@ -63,8 +61,9 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
       tasklist->sp    = 0;
       tasklist->front = 0;
       tasklist->back  = 0;
-      thgrp->threadctxts[i]->tasklist = tasklist;
-      thgrp->threadctxts[i]->partid   = i;
+      thgrp->threadctxts[i]->sfp->execframe = kaapi_threadgroup_execframe;
+      thgrp->threadctxts[i]->tasklist  = tasklist;
+      thgrp->threadctxts[i]->partid    = i;
       thgrp->threadctxts[i]->the_thgrp = thgrp;
     }
   }
@@ -91,7 +90,6 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
   thgrp->tag_count          = 0;
   thgrp->maxstep            = -1;
   thgrp->step               = -1;
-  thgrp->signal_step        = -1;
  
   return 0;
 }
@@ -102,6 +100,8 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
 int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
 {
   kaapi_processor_t* kproc;
+  kaapi_frame_t* fp;
+  kaapi_thread_context_t* threadctxtmain;
 
   if (thgrp->state == KAAPI_THREAD_GROUP_MP_S)
   {
@@ -113,19 +113,42 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
     kaapi_hashmap_init( &thgrp->ws_khm, 0 );
   }
 
-  if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) return EINVAL;
+  if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) 
+    return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   
-  /* same the main thread frame to restore it at the end of parallel computation */
   if (thgrp->localgid == thgrp->tid2gid[-1])
   {
+    /* save the main thread frame to restore at the end of parallel computation */
     kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
 
     /* avoid thief to steal the main thread will tasks are added */
-    kproc = thgrp->threadctxts[-1]->proc;
+    threadctxtmain = thgrp->threadctxts[-1];
+    kproc = threadctxtmain->proc;
     kaapi_sched_lock(&kproc->lock);
-    thgrp->threadctxts[-1]->unstealable = 1;
+    threadctxtmain->unstealable = 1;
     kaapi_sched_unlock(&kproc->lock);
+    threadctxtmain->partid = -1;
+
+    fp = (kaapi_frame_t*)threadctxtmain->sfp;
+
+    /* Push the task that will be active when parallel computation will finish */
+    threadctxtmain->sfp[1].sp_data   = fp->sp_data;
+    threadctxtmain->sfp[1].pc        = fp->sp;
+    threadctxtmain->sfp[1].sp        = fp->sp;
+    threadctxtmain->sfp[1].execframe = 0;
+
+    fp = (kaapi_frame_t*)++threadctxtmain->sfp;
+    thgrp->waittask = kaapi_thread_toptask( kaapi_threadcontext2thread(threadctxtmain) );
+    kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
+    kaapi_thread_pushtask( kaapi_threadcontext2thread(threadctxtmain) );    
+
+    /* push the frame for the tasks to be executed using ready list */
+    threadctxtmain->sfp[1].sp_data   = fp->sp_data;
+    threadctxtmain->sfp[1].pc        = fp->sp;
+    threadctxtmain->sfp[1].sp        = fp->sp;
+    threadctxtmain->sfp[1].execframe = &kaapi_threadgroup_execframe;
+    ++threadctxtmain->sfp;
   }
   
   kaapi_assert_debug( (flag == 0) || (flag == KAAPI_THGRP_SAVE_FLAG) );

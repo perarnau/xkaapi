@@ -61,8 +61,8 @@ int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
   tl->sp    = 0;
   tl->size  = kaapi_default_param.stacksize;
 
-  thgrp->threadctxts[i]->execframe     = kaapi_threadgroup_execframe;
-  thgrp->threadctxts[i]->the_thgrp     = thgrp;
-  thgrp->threadctxts[i]->tasklist = tl;
+  thgrp->threadctxts[i]->sfp->execframe = kaapi_threadgroup_execframe;
+  thgrp->threadctxts[i]->the_thgrp      = thgrp;
+  thgrp->threadctxts[i]->tasklist       = tl;
   return error;  
 }

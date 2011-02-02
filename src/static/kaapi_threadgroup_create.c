@@ -260,7 +260,6 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   thgrp->dummy_thread       = dummy_thread;
   thgrp->maxstep            = -1;
   thgrp->step               = -1;
-  thgrp->signal_step        = -1;
   thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;
   thgrp->flag               = 0;
   thgrp->tag_count          = 0;

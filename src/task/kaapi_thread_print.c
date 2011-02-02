@@ -199,9 +199,12 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
   do 
   {
-    fprintf(file, "%i: --------frame:: pc:%p, sp:%p, spd:%p\n", iframe, (void*)frame->pc, (void*)frame->sp, (void*)frame->sp_data );
+    fprintf(file, "%i: --------frame:: pc:%p, sp:%p, spd:%p, type: '%s'\n", 
+        iframe, (void*)frame->pc, (void*)frame->sp, (void*)frame->sp_data,
+        (frame->execframe == 0 ? "DFG" : "Static")
+    );
     task_top = frame->sp;
-    while (task_bot != task_top)
+    while ( task_bot > task_top)
     {
       body = kaapi_task_getbody(task_bot);
       fmt = kaapi_format_resolvebybody( body );
@@ -223,6 +226,8 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "steal";
         else if (body == kaapi_aftersteal_body) 
           fname = "aftersteal";
+        else if (body == kaapi_taskwaitend_body) 
+          fname = "waitend";
           
         state_type_t state;
         kaapi_getstatename(task_bot, state);
@@ -249,10 +254,6 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fprintf(file, ", steal/under task:" );
           kaapi_task_print(file, task_bot );
         }
-#if 0
-        else if (body == kaapi_taskbcast_body) 
-          kaapi_print_bcasttask( file, task_bot );
-#endif
         fputc('\n', file);
         ++count;
 

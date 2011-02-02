@@ -20,7 +20,6 @@ libkaapi_la_SOURCES=\
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \
   misc/kaapi_hashvalue.c \
-  misc/kaapi_hashmap.h\
   misc/kaapi_hashmap.c \
   misc/kaapi_hashmap_find.c \
   misc/kaapi_hashmap_insert.c \

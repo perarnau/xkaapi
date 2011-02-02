@@ -59,7 +59,9 @@ kaapi_globalid_t kaapi_network_get_current_globalid(void)
 */
 uint32_t kaapi_network_get_count(void)
 {
-  return (uint32_t)ka::Network::object.size();
+  uint32_t nodecount= (uint32_t)ka::Network::object.size();
+  if (nodecount == 0) return 1;
+  return nodecount;
 }
 
 /**
