@@ -289,8 +289,6 @@ fflush(stdout);
       wc->tag        = ver->tag;
       wc->from       = kaapi_memory_address_space_getgid(ver->writer.asid);
       wc->tid        = tid;
-      wc->reduce_fnc = 0;
-      wc->result     = 0; // debug only
       wc->tasklist   = thgrp->threadctxts[tid]->sfp->tasklist;
       wc->list.front = 0;
       wc->list.back  = 0;
@@ -428,13 +426,20 @@ static inline int kaapi_version_add_reader(
       ver->writer_mode = mode;
     }
     else 
-    {
+    { /* has a recv task ? */
       kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->lists_recv[tid], ver->tag );
-      kaapi_assert_debug(wc !=0);
-      /* one more external synchronisation: add bcast */
-      KAAPI_ATOMIC_INCR(&task->counter);
-      /* push the task into the activation link of the comrecv data structure */
-      kaapi_activationlist_pushback( thgrp, &wc->list, task );
+      if (wc !=0)
+      {
+        /* one more external synchronisation: add bcast */
+        KAAPI_ATOMIC_INCR(&task->counter);
+        /* push the task into the activation link of the comrecv data structure */
+        kaapi_activationlist_pushback( thgrp, &wc->list, task );
+      }
+      else {
+        /* mute the task field of over to points to the last task */
+        over->task = task;
+        over->ith  = ith;
+      }
     }
   }
 

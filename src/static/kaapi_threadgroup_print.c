@@ -151,7 +151,7 @@ static int kaapi_thread_recv_comlist_print( FILE* file, kaapi_comlink_t* cl )
   kaapi_activationlink_t* al;
   while (cl != 0)
   {
-    fprintf(file, "[rsignal: %p, tag:%llu tid:%i laddr:%p lsize:(%lu x %lu) ->", 
+    fprintf(file, "[rsignal: %p, tag:%llu tid:%i laddr:%p lsize:(%lu x %lu) -> ",
             (void*)cl->u.recv,
             cl->u.recv->tag,
             cl->u.recv->tid,
@@ -159,6 +159,7 @@ static int kaapi_thread_recv_comlist_print( FILE* file, kaapi_comlink_t* cl )
             cl->u.recv->view.size[0],
             cl->u.recv->view.size[1]
     );
+
     al = cl->u.recv->list.front;
     while (al !=0)
     {

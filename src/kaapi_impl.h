@@ -1850,9 +1850,11 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
   /* if ready list: use it as state of the thread */
-  if (thread->sfp->tasklist !=0)
+  kaapi_tasklist_t* tl = thread->sfp->tasklist;
+  if (tl !=0)
   {
-    if (!kaapi_tasklist_isempty(thread->sfp->tasklist)) return 1;
+    if ((tl->count_recv ==0) && kaapi_tasklist_isempty(tl)) return 1; 
+    if (!kaapi_tasklist_isempty(tl)) return 1;
     return 0;
   }
 

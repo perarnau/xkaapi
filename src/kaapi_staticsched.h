@@ -101,6 +101,7 @@ extern "C" {
 */
 
 /* fwd decl */
+struct kaapi_version_t;
 struct kaapi_taskdescr_t;
 struct kaapi_tasklist_t;
 
@@ -143,8 +144,6 @@ typedef struct kaapi_comrecv_t {
   kaapi_comtag_t            tag;          /* tag */
   kaapi_globalid_t          from;         /* who is the send the data */
   int                       tid;          /* who is the recv the data */
-  kaapi_reducor_t           reduce_fnc;   /* if !=0 then it is a recv with reduction */
-  void*                     result;       /* result of the reduce_fnc */
   struct kaapi_tasklist_t*  tasklist;     /* points to the data structure where to store activated tasks */
   void*                     data;         /* where to store incomming data */
   kaapi_memory_view_t       view;         /* view */
@@ -231,9 +230,35 @@ typedef struct kaapi_taskdescr_t {
   kaapi_task_t*                 task;
   
   kaapi_taskbcast_arg_t*        bcast;
+  kaapi_reducor_t               reduce_fnc;   /* if !=0 then it is a recv with reduction */
+  void*                         context;      /* context for reduce_fnc */
+  void*                         value;        /* value for reduce_fnc */
+
   struct kaapi_taskdescr_t*     next;
   kaapi_activationlist_t        list;
 } kaapi_taskdescr_t;
+
+
+
+/**
+*/
+typedef struct kaapi_data_t {
+  kaapi_address_space_id_t     asid;                /* address space of the access (r)   */
+  void*                        addr;                /* address of data */
+  kaapi_memory_view_t          view;                /* view of data */
+  struct kaapi_version_t*      ver;                 /* next */
+  struct kaapi_data_t*         next;                /* next */
+} kaapi_data_t;
+
+/**/
+static inline int kaapi_data_clear( kaapi_data_t* d )
+{
+  d->asid    = 0;
+  d->addr    = 0;
+  kaapi_memory_view_clear(&d->view);
+  d->next    = 0;
+  return 0;
+}
 
 
 /** \ingroup DFG
@@ -319,7 +344,6 @@ static inline int kaapi_data_version_list_append( kaapi_data_version_list_t* l1,
   return 0;
 }
 
-
 /** Allow to maintain meta information about version of data.
 */
 typedef struct kaapi_version_t {
@@ -327,6 +351,7 @@ typedef struct kaapi_version_t {
   kaapi_data_version_t        writer;          /* address space of the writer   */
   kaapi_access_mode_t         writer_mode;     /* writer access mode :W or CW */
   int                         writer_thread;   /* index of the last thread that writes the data, -1 if outside the group*/
+  kaapi_data_t                orig;            /* original copy */
   kaapi_data_version_list_t   copies;          /* list of copies */
   kaapi_data_version_list_t   todel;           /* list of data to delete */
 } kaapi_version_t;
@@ -405,10 +430,13 @@ static inline kaapi_taskdescr_t* kaapi_tasklist_pop( kaapi_tasklist_t* tl )
 static inline void kaapi_taskdescr_init( kaapi_taskdescr_t* td, kaapi_task_t* task )
 {
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
-  td->task  = task;
-  td->bcast = 0;
-  td->next  = 0;
-  td->list.front = 0;
+  td->task       = task;
+  td->bcast      = 0;
+  td->reduce_fnc = 0;
+  td->context    = 0; // debug
+  td->value      = 0; // debug
+  td->next       = 0; // debug: set when insert
+  td->list.front = 0; 
   td->list.back  = 0;
 }
 
@@ -583,8 +611,13 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_comlink_t**          lists_send;   /* send and recv list of comsend or comrecv descriptor */
   kaapi_comlink_t**          lists_recv;
   kaapi_comaddrlink_t*       all_sendaddr;
+  
+  kaapi_data_t*              list_data;     /* list of data to synchronize */
 
   /* used for iterative execution: only save the tasklist data structure */
+  kaapi_frame_t*             sfp_main;
+  kaapi_frame_t              fp2_main[2];  /* sfp[0] contains the waitend, sfp[2] the ready list of the main thread*/
+  kaapi_tasklist_t*          tasklist_main;
   char**                     save_readylists;
   size_t*                    size_readylists;
 
@@ -644,7 +677,7 @@ extern int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int ith );
 
 /** Allocate and reset the tasklist into the top frame of the thread
 */
-extern int kaapi_threadgroup_allocatetasklist( kaapi_frame_t* frame );
+extern kaapi_tasklist_t* kaapi_threadgroup_allocatetasklist(void);
 
 
 /** WARNING: also duplicated in kaapi.h for the API. Redefined here during compilation of the sources
@@ -667,7 +700,14 @@ extern int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl );
 /* ============================= internal interface to manage version ============================ */
 /*
 */
-kaapi_hashentries_t* kaapi_threadgroup_newversion( kaapi_threadgroup_t thgrp, kaapi_hashmap_t* hmap, int tid, kaapi_access_t* a );
+kaapi_hashentries_t* kaapi_threadgroup_newversion
+(
+    kaapi_threadgroup_t  thgrp, 
+    kaapi_hashmap_t*     hmap, 
+    int                  tid, 
+    kaapi_access_t*      access, 
+    kaapi_memory_view_t* view
+);
 
 /*
 */

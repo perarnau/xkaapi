@@ -104,9 +104,7 @@ kaapi_pointer_t kaapi_memory_allocate(
     size_t size, 
     int flag 
 )
-{
-  kaapi_pointer_t ptr;
-  
+{  
   switch (kaapi_memory_address_space_gettype(kasid))
   {
     case KAAPI_MEM_TYPE_CPU:
@@ -120,6 +118,7 @@ kaapi_pointer_t kaapi_memory_allocate(
 #if defined(KAAPI_USE_NETWORK)
       if (flag & KAAPI_MEM_SHARABLE) 
       {
+        kaapi_pointer_t ptr;
 #if defined(KAAPI_ADDRSPACE_ISOADDRESS)
         uintptr_t segaddr = kasid->segaddr;
         /* test if enough space is possible */

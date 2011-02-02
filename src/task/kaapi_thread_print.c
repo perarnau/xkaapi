@@ -204,8 +204,8 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
   do 
   {
-    fprintf(file, "%i: --------frame:: pc:%p, sp:%p, spd:%p, type: '%s'\n", 
-        iframe, (void*)frame->pc, (void*)frame->sp, (void*)frame->sp_data,
+    fprintf(file, "%i: --------frame: @:%p  :: pc:%p, sp:%p, spd:%p, type: '%s'\n", 
+        iframe, (void*)frame, (void*)frame->pc, (void*)frame->sp, (void*)frame->sp_data,
         (frame->tasklist == 0 ? "DFG" : "Static")
     );
     task_top = frame->sp;

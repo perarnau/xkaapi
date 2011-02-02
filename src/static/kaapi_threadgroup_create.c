@@ -214,7 +214,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   {
     thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
     thgrp->threads[-1] = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
-    kaapi_threadgroup_initthread( thgrp, -1 );
+    thgrp->tasklist_main = kaapi_threadgroup_allocatetasklist( );
     ++thgrp->localthreads;
   }
 

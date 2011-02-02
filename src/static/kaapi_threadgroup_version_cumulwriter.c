@@ -84,7 +84,7 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
   kaapi_assert_debug( KAAPI_ACCESS_IS_CUMULWRITE(mode) );
 
   /* asid for the target thread */
-  kaapi_address_space_id_t asid = thgrp->tid2asid[tid];
+  kaapi_address_space_id_t asid = kaapi_threadgroup_tid2asid(thgrp, tid);
 
   kaapi_globalid_t gid_writer = kaapi_threadgroup_tid2gid( thgrp, tid );
 
@@ -102,7 +102,9 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
     /* find data version with same asid: 1/ in copies (WAR) 2/ in writer (WAW) */
     kaapi_data_version_t* dv = kaapi_version_findcopiesrmv_asid_in( ver, asid );
     if ((dv ==0) && (ver->writer.asid == asid))
+    {
       dv = &ver->writer;
+    }
 
     if (dv != 0)
     {
@@ -316,6 +318,10 @@ int kaapi_threadgroup_version_finalize_cw(
     int tid_receiver = kaapi_memory_address_space_getgid(ver->writer.asid);
     if (gid_writer == thgrp->localgid)
     {
+      kaapi_taskdescr_t* td_reduce = 
+          kaapi_tasklist_allocate_td(thgrp->threadctxts[ver->writer_thread]->sfp->tasklist, 0);
+      td_reduce->reduce_fnc = curr->reducor;
+      td_reduce->context    = ver->writer.addr;
       kaapi_comrecv_t* wc = (kaapi_comrecv_t*)kaapi_allocator_allocate(&thgrp->allocator, sizeof(kaapi_comrecv_t));
       wc->tag        = tag;
       wc->from       = gid_sender;
@@ -324,19 +330,32 @@ int kaapi_threadgroup_version_finalize_cw(
       wc->list.front = 0;
       wc->list.back  = 0;
       wc->view       = curr->view;
-      wc->reduce_fnc = curr->reducor;
-      wc->result     = ver->writer.addr;
       wc->data       = (void*) kaapi_memory_allocate_view( 
               kaapi_threadgroup_tid2asid(thgrp, tid_receiver), 
               &wc->view,
               KAAPI_MEM_SHARABLE );
+
+      td_reduce->value      = wc->data;
       
+      /* push the reducer as a successor of the last cw writer task */
+      kaapi_taskdescr_push_successor( 
+        thgrp->threadctxts[ver->writer_thread]->sfp->tasklist,
+        ver->writer.task,
+        td_reduce
+      );
 
       /* increment counter for external synchronisation : should be done into function push ? */
-      KAAPI_ATOMIC_INCR(&td_finalizer->counter);
+      KAAPI_ATOMIC_INCR(&td_reduce->counter);
     
-      /* push the task into the activation link of the comrecv data structure */
-      kaapi_activationlist_pushback( thgrp, &wc->list, td_finalizer );
+      /* push the task reduce into the activation link of the comrecv data structure */
+      kaapi_activationlist_pushback( thgrp, &wc->list, td_reduce );
+
+      /* push the finalizer as a successor of the reduction task */
+      kaapi_taskdescr_push_successor( 
+        thgrp->threadctxts[ver->writer_thread]->sfp->tasklist, 
+        td_reduce, 
+        td_finalizer 
+      );
 
       /* register it into global table */
       kaapi_threadgroup_comrecv_register( thgrp, ver->writer_thread, tag, wc );
@@ -369,13 +388,6 @@ int kaapi_threadgroup_version_finalize_cw(
     curr = curr->next;
   }
 
-  /* add the finalizer as dependend of access of ver->writer.task */
-  kaapi_taskdescr_push_successor( 
-    thgrp->threadctxts[ver->writer_thread]->sfp->tasklist, 
-    ver->writer.task, 
-    td_finalizer 
-  );
-  
   /* update writer to be the finalizer task */
   ver->writer_mode = KAAPI_ACCESS_MODE_RW;
   ver->writer.task = td_finalizer;

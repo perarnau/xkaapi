@@ -54,21 +54,35 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
     if (thgrp->localgid == thgrp->tid2gid[i]) 
     {
       /* init the thread from the thread context */
-      kaapi_tasklist_t* tasklist = thgrp->threadctxts[i]->sfp->tasklist;
+      kaapi_tasklist_t* tasklist;
+      if (i == -1) 
+        tasklist = thgrp->tasklist_main;
+      else 
+        tasklist = thgrp->threadctxts[i]->sfp->tasklist;
       kaapi_assert_debug(tasklist != 0);
-      kaapi_thread_clear( thgrp->threadctxts[i] );
+      if (i != -1)
+        kaapi_thread_clear( thgrp->threadctxts[i] );
       
       /* reset the task list */
       tasklist->sp    = 0;
       tasklist->front = 0;
       tasklist->back  = 0;
-      thgrp->threadctxts[i]->sfp->tasklist  = tasklist;
+      if (i != -1)
+        thgrp->threadctxts[i]->sfp->tasklist  = tasklist;
       thgrp->threadctxts[i]->partid         = i;
       thgrp->threadctxts[i]->the_thgrp      = thgrp;
+      
+#if 0
+      if (i == -1)
+      {
+        /* pop frame for waitend task */
+        --thgrp->threadctxts[i]->sfp;
+      }
+#endif
     }
   }
   /* delete allocator: free all temporary memory used by managing activation list and communication */
-  kaapi_allocator_destroy(&thgrp->allocator);
+//  kaapi_allocator_destroy(&thgrp->allocator);
   
   /* update the list of version in the hashmap to suppress reference to previously executed task */
   for (int i=0; i<KAAPI_HASHMAP_SIZE; ++i)
@@ -103,18 +117,32 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
   kaapi_frame_t* fp;
   kaapi_thread_context_t* threadctxtmain;
 
+#if 0
+  printf("\n\n>>>>>>>>>>>>> Begin partition \n");
+  kaapi_thread_print(stdout, thgrp->threadctxts[-1]);
+#endif
+
   if (thgrp->state == KAAPI_THREAD_GROUP_MP_S)
   {
-    /* the previous execution is finish: clear all entries as if the thread group was created */
+    /* the previous execution is finished: clear all entries as if the thread group was created */
     kaapi_threadgroup_clear( thgrp );
+
+    /* restore the current frame pointer of the main thread */
+    if (thgrp->localgid == thgrp->tid2gid[-1])
+      thgrp->threadctxts[-1]->sfp = thgrp->sfp_main; 
   }
   else {
     /* do not init the hash map if previous execution of the thread group */
     kaapi_hashmap_init( &thgrp->ws_khm, 0 );
+    
+    /* save the current frame pointer of the main thread */
+    if (thgrp->localgid == thgrp->tid2gid[-1])
+      thgrp->sfp_main = thgrp->threadctxts[-1]->sfp;
   }
 
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) 
     return EINVAL;
+
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   
   if (thgrp->localgid == thgrp->tid2gid[-1])
@@ -143,17 +171,23 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
     kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
     kaapi_thread_pushtask( kaapi_threadcontext2thread(threadctxtmain) );    
 
-    /* push the frame for the tasks to be executed using ready list */
+    /* push the frame to store the ready list of spawned task */
     threadctxtmain->sfp[1].sp_data   = fp->sp_data;
     threadctxtmain->sfp[1].pc        = fp->sp;
     threadctxtmain->sfp[1].sp        = fp->sp;
-    kaapi_threadgroup_allocatetasklist( &threadctxtmain->sfp[1] );
+    threadctxtmain->sfp[1].tasklist  = thgrp->tasklist_main;
+    threadctxtmain->the_thgrp = thgrp;
     ++threadctxtmain->sfp;
   }
   
   kaapi_assert_debug( (flag == 0) || (flag == KAAPI_THGRP_SAVE_FLAG) );
   thgrp->flag = flag;
-  
+
+#if 0
+  /* */
+  printf("\n\n----------- Begin partition \n");
+  kaapi_thread_print(stdout, thgrp->threadctxts[-1]);
+#endif
   return 0;
 }
 
@@ -172,10 +206,14 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   kaapi_threadgroup_barrier_partition( thgrp );
   
   /* */
-  kaapi_threadgroup_print( stdout, thgrp );
+//  kaapi_threadgroup_print( stdout, thgrp );
   
-  kaapi_mem_barrier();
-  
+#if 0
+  printf("\n\n<<<<<<<<<<<<< End partition \n");
+  kaapi_thread_print(stdout, thgrp->threadctxts[-1]);
+  printf("\n\n\n");
+#endif
+
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;
 }

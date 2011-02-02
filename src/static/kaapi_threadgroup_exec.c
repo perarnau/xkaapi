@@ -60,6 +60,10 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   /* reset counter for the next iteration */
   KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endlocalthread, 0 );
     
+#if 1
+  kaapi_threadgroup_print( stdout, thgrp );
+#endif
+
   ++thgrp->step;
   kaapi_mem_barrier();
   
@@ -69,6 +73,15 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
      Here a better and finer mapping should be given by the user
   */
   nproc = kaapi_count_kprocessors;
+  
+  if (thgrp->localgid != thgrp->tid2gid[-1])
+  {
+    /* if I'm a slave, push a waittask signaled by the master process */
+    kaapi_thread_context_t* thread_slavecurrent = kaapi_get_current_processor()->thread;
+    thgrp->waittask = kaapi_thread_toptask( kaapi_threadcontext2thread(thread_slavecurrent) );
+    kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
+    kaapi_thread_pushtask( kaapi_threadcontext2thread(thread_slavecurrent) );    
+  }
   
   for (i=0; i<thgrp->group_size; ++i)
   {
@@ -83,7 +96,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
       thgrp->threadctxts[i]->partid      = i;
       thgrp->threadctxts[i]->unstealable = 1;/* do not allow threads to steal tasks inside ??? */
 
-      if (!kaapi_thread_isready(thgrp->threadctxts[i]))
+      if (kaapi_thread_isready(thgrp->threadctxts[i]))
       {
         kaapi_sched_lock( &victim_kproc->lock ); 
         kaapi_sched_pushready( victim_kproc, thgrp->threadctxts[i] );
@@ -109,68 +122,45 @@ int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp )
 }
 
 
-static int kaapi_threadgroup_exec_alllocal_frame(kaapi_threadgroup_t thgrp )
-{
-  int err;
-  do
-  {
-    err = 0;
-    for (int i=-1; i<thgrp->group_size; ++i)
-    {
-      if ((thgrp->localgid == thgrp->tid2gid[i]) && (thgrp->threadctxts[i]->partid >= -1))
-      {
-#if 0
-        printf("%i::[threadgroup exec] begin exec thread: %i\n", thgrp->localgid, i);
-#endif
-        int retval = kaapi_threadgroup_execframe( thgrp->threadctxts[i] );
-#if 0
-        printf("%i::[threadgroup exec] end exec thread: %i, err: %i\n", thgrp->localgid, i, retval);
-#endif
-        if (retval != ECHILD) err |= retval;
-        else {
-          thgrp->threadctxts[i]->partid = -10-i; /* marked as finished */
-#if 0
-          printf("%i::[threadgroup exec] mark exec thread: %i\n", thgrp->localgid, i);
-#endif
-        }
-#if 0
-        if (retval !=0) {
-          printf("%i::[threadgroup exec] err: %i\n", thgrp->localgid, retval);
-        }
-#endif
-      }
-    }
-  } while (err !=0);
-  return 0;
-}
-
 /**
 */
 int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
 {
-  kaapi_frame_t* fp;
+  kaapi_thread_context_t* threadctxtmain;
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
+  
 #if 1
   printf("%i::[threadgroup exec] begin execution on #local threads: %i, kid=%i\n", thgrp->localgid, thgrp->localthreads, kaapi_get_current_processor()->kid);
+#if 0
+  /* */
+  kaapi_thread_print(stdout, thgrp->threadctxts[-1]);
+#endif
 #endif
   if (thgrp->localgid == thgrp->tid2gid[-1])
   {
+    threadctxtmain = thgrp->threadctxts[-1];
+    
     /* execute task into the readylist */
     kaapi_sched_sync();
+
     /* pop frame for task in the ready list */
-    --thgrp->threadctxts[-1]->sfp;
+    --threadctxtmain->sfp;
 
     /* wait global terminaison and execution of waitend */
     kaapi_sched_sync();
 
-    /* restore saved frame */
-    fp = (kaapi_frame_t*)thgrp->threadctxts[-1]->sfp;
-    *fp = thgrp->mainframe;
+    /* pop frame for task in the ready list */
+    --threadctxtmain->sfp;
 
-#if 0
-    if (((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0))
+    /* counter reset by THE waittask */
+    kaapi_assert_debug(KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) ==0);
+
+    kaapi_mem_barrier();
+    
+    /* reset main thread */
+    if ((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) !=0)
     {
       if (thgrp->maxstep != -1) 
       {
@@ -181,22 +171,11 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
       else 
         kaapi_threadgroup_restore_thread(thgrp, -1);
     }
-#endif    
 
-    /* counter reset by THE waittask */
-    if (KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) !=0)
-    {
-#if 0
-      int state = kaapi_task_state2int(kaapi_task_getstate( thgrp->waittask ));
-      /* print state of waittask */
-      printf("%i::[kaapi_threadgroup_exec] end step :%i, countend:%i, waittask state:%i\n", 
-          thgrp->localgid, thgrp->step, KAAPI_ATOMIC_READ(&thgrp->endglobalgroup), state );
-#endif
-    }
-    kaapi_assert( KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) == 0 );    
   }
   else {
-    kaapi_threadgroup_exec_alllocal_frame( thgrp );
+    /* wait terminaison of the waiting task of the local main thread */
+    kaapi_sched_sync();
   }
 #if defined(KAAPI_USE_NETWORK)
   kaapi_memory_global_barrier();
@@ -205,6 +184,11 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   if (thgrp->localgid ==0)
     printf("%i::[kaapi_threadgroup_exec] end step :%i, countend:%i\n", 
         thgrp->localgid, thgrp->step, KAAPI_ATOMIC_READ(&thgrp->endglobalgroup) );
+#if 0
+    kaapi_threadgroup_print( stdout, thgrp );
+  /* */
+  kaapi_thread_print(stdout, thgrp->threadctxts[-1]);
+#endif
 #endif
 
   thgrp->startflag = 0;
