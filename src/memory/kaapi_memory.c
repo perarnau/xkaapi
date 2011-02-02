@@ -223,14 +223,7 @@ static int kaapi_memory_write2cpu(
   const void* src, const kaapi_memory_view_t* view_src 
 )
 {
-  printf("%s %lx -> %lx\n", __FUNCTION__, (uintptr_t)src, (uintptr_t)dest);
-
-  if ((dest ==0) || (src == 0)) 
-  {
-    printf("[kaapi_memory_write2cpu] null argument\n");
-    fflush(stdout);
-    return EINVAL;
-  }
+  if ((dest ==0) || (src == 0)) return EINVAL;
   
   switch (view_src->type) 
   {
@@ -292,8 +285,6 @@ int kaapi_memory_copy(
   kaapi_globalid_t dest_gid;
   kaapi_globalid_t localgid = kaapi_network_get_current_globalid();
 
-  printf("----> kaapi_memory_copy\n");
-
 #if 0
   printf("[kaapi_memory_copy] copy dest@:%p, src@:%p, size:%lu\n", (void*)dest, (void*)src, kaapi_memory_view_size(view_src)); 
   fflush(stdout);
@@ -310,8 +301,6 @@ int kaapi_memory_copy(
   type_dest = kaapi_memory_address_space_gettype(kasid_dest);
   type_src  = kaapi_memory_address_space_gettype(kasid_src);
   dest_gid  = kaapi_memory_address_space_getgid(kasid_dest);
-
-  printf("types: %u -> %u\n", type_src, type_dest);
 
   switch (type_dest) 
   {

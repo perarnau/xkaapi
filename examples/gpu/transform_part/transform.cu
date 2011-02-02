@@ -11,7 +11,7 @@ extern "C" void kaapi_mem_free_host(void*);
 extern "C" void* kaapi_mem_find_host_addr(kaapi_mem_addr_t);
 
 // typedefed to float since gtx280 has no double
-typedef float double_type;
+typedef unsigned int double_type;
 
 // static configuration
 #define CONFIG_ITER_COUNT 1
@@ -53,7 +53,6 @@ template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range1d_rw<double_type> range)
   {
-    // we are the big one, can handle the work alone. dont recurse.
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
   }
@@ -68,8 +67,7 @@ template<> struct TaskBodyCPU<TaskFetch>
 {
   void operator() (uintptr_t dest, ka::range1d_r<double_type> src)
   {
-    const size_t range_size = src.size();
-    for (size_t i = 0; i < range_size; ++i)
+    for (size_t i = 0; i < src.size(); ++i)
       ((double_type*)dest)[i] = src[i];
   }
 };
@@ -80,15 +78,10 @@ template<> struct TaskBodyGPU<TaskFetch>
   void operator()
   (ka::gpuStream stream, uintptr_t dest, ka::range1d_r<double_type> src)
   {
-    const double* const addr = (const double*)
+    const double_type* const addr = (const double_type*)
       kaapi_mem_find_host_addr((kaapi_mem_addr_t)src.begin());
 
-    if (addr == NULL) printf("invalidAddr for %lx\n", (uintptr_t)src.begin());
-
-    printf("TaskFetch(%lx, %lx)\n", dest, addr);
-
-    const size_t range_size = src.size();
-    for (size_t i = 0; i < range_size; ++i)
+    for (size_t i = 0; i < src.size(); ++i)
       ((double_type*)dest)[i] = addr[i];
   }
 };
@@ -101,7 +94,6 @@ struct doit {
   {
     double_type* arrays[CONFIG_RANGE_COUNT];
     const size_t total_size = CONFIG_ELEM_COUNT * sizeof(double_type);
-    printf("total_size: %lx\n", total_size);
 
     double t0,t1, sum = 0.f;
 
@@ -119,7 +111,6 @@ struct doit {
 	double_type* const array = (double_type*)kaapi_mem_alloc_host(total_size);
 	memset(array, 0, total_size);
 	ka::range1d<double_type> range(array, array + CONFIG_ELEM_COUNT);
-	printf("forking 0x%lx\n", (uintptr_t)array);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
 	threadgroup.Spawn<TaskFetch>(ka::SetPartition(1))((uintptr_t)array, range);
 	arrays[count] = array;
@@ -135,15 +126,14 @@ struct doit {
       // check it
 #if CONFIG_RANGE_CHECK
       printf(">>> checking range\n");
-	while (1) ;
       for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
       {
 	double_type* const array = arrays[count];
-	printf("[%u] %lx\n", count, (uintptr_t)array);
 	size_t i; for (i = 0; i < CONFIG_ELEM_COUNT; ++i)
 	  if (array[i] != 1.f) break;
 	if (i != CONFIG_ELEM_COUNT)
-	  printf("invalid @%lx,%u::%u == %lf\n", (uintptr_t)array, count, i, array[i]);
+	  printf("invalid @%lx,%u::%u == %u\n",
+		 (uintptr_t)array, count, i, array[i]);
       }
       printf("<<< checking range\n");
 #endif

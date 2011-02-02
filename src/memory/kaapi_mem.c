@@ -412,8 +412,6 @@ void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
   kaapi_mem_map_find_with_asid(host_map, devptr, self_asid, &mapping);
   hostptr = kaapi_mem_mapping_get_addr(mapping, host_asid);
 
-  printf("syncing back: %lx, %lx, %lx\n", (uintptr_t)hostptr, devptr, size);
-
   memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
 }
 
