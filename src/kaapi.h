@@ -1407,6 +1407,11 @@ extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
 */
 extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp );
 
+
+/** Memory synchronization with copies to the original memory
+*/
+extern int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp );
+
 /**
     \retval 0 in case of success
     \retval EBUSY if threads are already attached to the group

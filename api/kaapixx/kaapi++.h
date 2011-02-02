@@ -589,7 +589,7 @@ namespace ka {
     }
   protected:
     T*   _ptr;
-    bool _wa;
+    int  _wa;
   };
   
 
@@ -3081,6 +3081,12 @@ namespace ka {
     void restore()
     {
       kaapi_threadgroup_restore( _threadgroup );
+    }
+    
+    /* memory synchronize */
+    void synchronize()
+    { 
+      kaapi_threadgroup_synchronize(_threadgroup );
     }
 
     void print()
