@@ -43,7 +43,22 @@ struct doit {
     threadgroup.Spawn<TaskCW> (ka::SetPartition(3))  ( a );
     threadgroup.Spawn<TaskCW> (ka::SetPartition(1))  ( a );
     threadgroup.Spawn<TaskCW> (ka::SetPartition(2))  ( a );
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(3))  ( a );
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(2))  ( a );
     threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(2))  ( a );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(3))  ( a );
+
+#if 1
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(2))  ( a );
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(3))  ( a );
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskCW> (ka::SetPartition(2))  ( a );
+    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
+#endif
 
     threadgroup.end_partition();
 

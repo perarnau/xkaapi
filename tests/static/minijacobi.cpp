@@ -13,7 +13,7 @@ struct TaskBodyCPU<TaskInit> {
   void operator() ( int pos, ka::pointer_w<double> D, double v )
   {
     *D = v;
-    std::cout << ka::System::local_gid << "::[TaskInit] pos:" << pos << ", D: 1.0" << std::endl;
+//    std::cout << ka::System::local_gid << "::[TaskInit] pos:" << pos << ", D: 1.0" << std::endl;
   }
 };
 
@@ -39,11 +39,13 @@ struct TaskBodyCPU<TaskUpdate3> {
   {
     double old = *D;
     *D = *D*0.5 + *f1*0.25 + *f2*0.25;
+#if 0
     std::cout << ka::System::local_gid << "::[TaskUpdate3] pos:" << pos 
               << ", oldv: @:" << &*D << ", v:" << old 
               << ", f1: @" << &*f1 << ", v:" << *f1 
               << ", f2: @" << &*f2 << ", v:" << *f2 << ", newV: @:" << &*D << " v:" << *D
               << std::endl;
+#endif
   }
 };
 
@@ -56,7 +58,7 @@ struct TaskBodyCPU<TaskExtractF> {
   {
     double v = *D;
     *F = v;
-    std::cout << ka::System::local_gid << "::[TaskExtractF] pos:" << pos << ", F:" << v << std::endl;
+//    std::cout << ka::System::local_gid << "::[TaskExtractF] pos:" << pos << ", F:" << v << std::endl;
   }
 };
 
@@ -81,8 +83,8 @@ struct doit {
   void operator()(int argc, char** argv )
   {
     std::cout << "My pid=" << getpid() << std::endl;
-    int size = 4;
-    int npart = size;
+    int size = 1;
+    int npart = 4;
     int iter = 1;
     if (argc >1)
       size = atoi(argv[1]);
@@ -107,7 +109,6 @@ struct doit {
 
     threadgroup.execute();
 
-
     threadgroup.begin_partition( KAAPI_THGRP_SAVE_FLAG );
     for (int step = 0; step < 2; ++step)
     {
@@ -120,10 +121,6 @@ struct doit {
         if ((i !=0) && (i !=n-1))
           ka::Spawn<TaskUpdate3>   (ka::SetPartition(i / size))  ( i, &D[i], &F[i-1], &F[i+1] );
       }
-      for (int i=0; i<n; ++i)
-      {
-        ka::Spawn<TaskPrint> (ka::SetPartition(i / size))  ( i, &D[i] );
-      }
     }
     threadgroup.end_partition();
 
@@ -133,7 +130,17 @@ struct doit {
     {
       threadgroup.execute();
       
-      printf("\n\n***********\n\n");
+      /* memory synchronize */
+      threadgroup.synchronize( );
+      if (k % 2 == 0)
+      {
+        printf("\n\n*********** Value at step %i\n", k);
+        for (int i=0; i<n; ++i)
+        {
+          printf("%3.9e \n", D[i]);
+        }
+        printf("\n\n");
+      }
     }
 
   }
