@@ -149,7 +149,7 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   kaapi_threadgroup_barrier_partition( thgrp );
   
   /* */
-  kaapi_threadgroup_print( stdout, thgrp );
+  /* kaapi_threadgroup_print( stdout, thgrp ); */
   
   kaapi_mem_barrier();
   

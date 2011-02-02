@@ -243,6 +243,10 @@ static void prepare_task
     if (!kaapi_mem_mapping_has_addr(mapping, self_asid))
     {
       allocate_device_mem(&devptr, size);
+
+      printf("allocating devptr == %lx for hostptr == %lx\n",
+	     (uintptr_t)hostptr, (uintptr_t)devptr);
+
       kaapi_mem_mapping_set_addr(mapping, self_asid, (kaapi_mem_addr_t)devptr);
       kaapi_mem_mapping_set_dirty(mapping, self_asid);
     }

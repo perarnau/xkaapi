@@ -8,6 +8,7 @@ typedef uintptr_t kaapi_mem_addr_t;
 extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 extern "C" void* kaapi_mem_alloc_host(size_t);
 extern "C" void kaapi_mem_free_host(void*);
+extern "C" void* kaapi_mem_find_host_addr(kaapi_mem_addr_t);
 
 // typedefed to float since gtx280 has no double
 typedef float double_type;
@@ -41,28 +42,8 @@ template<> struct TaskBodyCPU<TaskAddone>
   void operator() (ka::range1d_rw<double_type> range)
   {
     const size_t range_size = range.size();
-
-#if 0
-    // reached the leaf size
-    if (range_size <= CONFIG_LEAF_COUNT)
-    {
-#endif
-      for (size_t i = 0; i < range_size; ++i)
-	range[i] += 1;
-      return ;
-#if 0
-    }
-
-    // recurse by spawning 2 tasks with 1/2 range each
-
-    double_type* const lend = range.begin() + range_size / 2;
-
-    ka::range1d<double_type> l(range.begin(), lend);
-    ka::range1d<double_type> r(lend, range_size - l.size());
-
-    ka::Spawn<TaskAddone>()(l);
-    ka::Spawn<TaskAddone>()(r);
-#endif
+    for (size_t i = 0; i < range_size; ++i)
+      range[i] += 1;
   }
 
 };
@@ -77,6 +58,41 @@ template<> struct TaskBodyGPU<TaskAddone>
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
   }
 };
+
+
+// fetch memory back to original cpu
+struct TaskFetch : public ka::Task<2>::Signature
+<uintptr_t, ka::R<ka::range1d<double_type> > > {};
+
+template<> struct TaskBodyCPU<TaskFetch>
+{
+  void operator() (uintptr_t dest, ka::range1d_r<double_type> src)
+  {
+    const size_t range_size = src.size();
+    for (size_t i = 0; i < range_size; ++i)
+      ((double_type*)dest)[i] = src[i];
+  }
+};
+
+// gpu implementation
+template<> struct TaskBodyGPU<TaskFetch>
+{
+  void operator()
+  (ka::gpuStream stream, uintptr_t dest, ka::range1d_r<double_type> src)
+  {
+    const double* const addr = (const double*)
+      kaapi_mem_find_host_addr((kaapi_mem_addr_t)src.begin());
+
+    if (addr == NULL) printf("invalidAddr for %lx\n", (uintptr_t)src.begin());
+
+    printf("TaskFetch(%lx, %lx)\n", dest, addr);
+
+    const size_t range_size = src.size();
+    for (size_t i = 0; i < range_size; ++i)
+      ((double_type*)dest)[i] = addr[i];
+  }
+};
+
 
 /* Main of the program
 */
@@ -100,11 +116,12 @@ struct doit {
 
       for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
       {
-	double_type* const array = (double_type*)
-	  kaapi_mem_alloc_host(total_size);
+	double_type* const array = (double_type*)kaapi_mem_alloc_host(total_size);
 	memset(array, 0, total_size);
 	ka::range1d<double_type> range(array, array + CONFIG_ELEM_COUNT);
+	printf("forking 0x%lx\n", (uintptr_t)array);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
+	threadgroup.Spawn<TaskFetch>(ka::SetPartition(1))((uintptr_t)array, range);
 	arrays[count] = array;
       }
 
@@ -117,15 +134,18 @@ struct doit {
 
       // check it
 #if CONFIG_RANGE_CHECK
-      printf(":: checking range\n");
+      printf(">>> checking range\n");
+	while (1) ;
       for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
       {
 	double_type* const array = arrays[count];
+	printf("[%u] %lx\n", count, (uintptr_t)array);
 	size_t i; for (i = 0; i < CONFIG_ELEM_COUNT; ++i)
 	  if (array[i] != 1.f) break;
 	if (i != CONFIG_ELEM_COUNT)
 	  printf("invalid @%lx,%u::%u == %lf\n", (uintptr_t)array, count, i, array[i]);
       }
+      printf("<<< checking range\n");
 #endif
 
       for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)

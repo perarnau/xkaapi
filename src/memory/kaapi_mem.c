@@ -510,3 +510,32 @@ int kaapi_mem_synchronize3(kaapi_mem_mapping_t* mapping, size_t size)
 }
 
 #endif /* KAAPI_USE_CUDA */
+
+
+#if 1 /* TEMP_FUNCTIONS */
+
+void* kaapi_mem_find_host_addr(kaapi_mem_addr_t addr)
+{
+  /* addr the address a mapping is looked for in the host */
+
+  /* self info */
+  kaapi_processor_t* const self_proc = kaapi_get_current_processor();
+  kaapi_mem_map_t* const self_map = get_proc_mem_map(self_proc);
+  const kaapi_mem_asid_t self_asid = self_map->asid;
+
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+
+  kaapi_mem_mapping_t* pos;
+  for (pos = host_map->head; pos != NULL; pos = pos->next)
+  {
+    if (kaapi_mem_mapping_has_addr(pos, self_asid))
+    {
+      if (kaapi_mem_mapping_get_addr(pos, self_asid) == addr)
+	return (void*)kaapi_mem_mapping_get_addr(pos, host_map->asid);
+    }
+  }
+
+  return NULL;
+}
+
+#endif /* TEMP_FUNCTIONS */

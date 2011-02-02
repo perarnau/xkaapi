@@ -274,7 +274,7 @@ namespace ka {
       const struct kaapi_format_t*(*get_fmt_param) (const struct kaapi_format_t*, unsigned int, const void*),
       kaapi_memory_view_t       (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
       void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-      kaapi_reducor_t           (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*)
+      kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
     );
   };
   

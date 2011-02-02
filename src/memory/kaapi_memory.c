@@ -311,6 +311,8 @@ int kaapi_memory_copy(
   type_src  = kaapi_memory_address_space_gettype(kasid_src);
   dest_gid  = kaapi_memory_address_space_getgid(kasid_dest);
 
+  printf("types: %u -> %u\n", type_src, type_dest);
+
   switch (type_dest) 
   {
     case KAAPI_MEM_TYPE_CPU:
