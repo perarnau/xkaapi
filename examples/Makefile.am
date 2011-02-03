@@ -23,6 +23,7 @@ include fibo.am
 include find.am
 include for_each.am
 include hello.am
+include jacobi2D.am
 include listranking.am
 include matrixproduct.am
 include net.am
@@ -39,6 +40,7 @@ USER_MAKEFILES=\
 	fibo/Makefile \
 	find/Makefile \
 	for_each/Makefile \
+	jacobi2D/Makefile \
 	listranking/Makefile \
 	hello/Makefile \
 	matrixproduct/Makefile \
