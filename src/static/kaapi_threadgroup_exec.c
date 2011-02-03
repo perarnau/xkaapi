@@ -54,7 +54,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
 
-#if 1
+#if 0
   if (thgrp->localgid ==0)
     printf("%i::[kaapi_threadgroup] begin step : %i\n", thgrp->localgid, 1+thgrp->step);
 #endif
@@ -62,7 +62,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   /* reset counter for the next iteration */
   KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endlocalthread, 0 );
     
-#if 1
+#if 0
   kaapi_threadgroup_print( stdout, thgrp );
 #endif
 
@@ -144,11 +144,19 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
     /* execute task into the readylist */
     kaapi_sched_sync();
 
+#if 0
+  printf("%i::[threadgroup exec] master thread finished execute local ready list\n", thgrp->localgid);
+#endif
+
     /* pop frame for task in the ready list */
     --threadctxtmain->sfp;
 
     /* wait global terminaison and execution of waitend */
     kaapi_sched_sync();
+
+#if 0
+  printf("%i::[threadgroup exec] master thread finished execute local wait term task\n", thgrp->localgid);
+#endif
 
     /* pop frame for task in the ready list */
     --threadctxtmain->sfp;
@@ -170,14 +178,49 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
       else 
         kaapi_threadgroup_restore_thread(thgrp, -1);
     }
-
+#if defined(KAAPI_USE_NETWORK)
+    for (int gid=0; gid < thgrp->nodecount; ++gid)
+    {
+      if (gid != thgrp->localgid)
+      {
+#if 0
+        printf("%i::[kaapi_threadgroup_signalend_service] master send signal end to:%i\n", thgrp->localgid, gid);
+        fflush(stdout);
+#endif
+        /* remote address space -> communication, return end */
+        kaapi_network_am(
+            gid,
+            kaapi_threadgroup_signalend_service, 
+            &thgrp->grpid, sizeof(thgrp->grpid)
+        );
+#if 0
+        printf("%i::[kaapi_threadgroup_signalend_service] master end send signal end to:%i\n", thgrp->localgid, gid);
+        fflush(stdout);
+#endif
+      }
+    }
+#endif // KAAPI_USE_NETWORK
   }
   else {
+#if 0
+  printf("%i::[threadgroup exec] slave thread begin execute threads\n", thgrp->localgid);
+#endif
     /* wait terminaison of the waiting task of the local main thread */
     kaapi_sched_sync();
+#if 0
+  printf("%i::[threadgroup exec] end thread begin execute threads\n", thgrp->localgid);
+#endif
   }
 #if defined(KAAPI_USE_NETWORK)
+#if 0
+  printf("%i::[threadgroup exec] begin barrier\n", thgrp->localgid);
+  fflush(stdout);
+#endif
   kaapi_memory_global_barrier();
+#if 0
+  printf("%i::[threadgroup exec] end barrier\n", thgrp->localgid);
+  fflush(stdout);
+#endif
 #endif
 #if 0
   if (thgrp->localgid ==0)

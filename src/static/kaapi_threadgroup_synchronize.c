@@ -43,6 +43,29 @@
 */
 #include "kaapi_impl.h"
 
+#if 0//defined(KAAPI_USE_NETWORK)
+typedef struct kaapi_rdma_data_t {
+  kaapi_pointer_t     raddr;
+  kaapi_memory_view_t view;
+} kaapi_rdma_data_t;
+static void kaapi_threadgroup_synchronizeservice(int err, kaapi_globalid_t source, void* buffer, size_t sz_buffer )
+{
+  kaapi_rdma_data_t rd;
+  memcpy(&rd, buffer, sizeof(rd));
+  const void* src;
+  kaapi_memory_view_t view_src;
+
+  printf("%i::[kaapi_memory_receive request] (@raddr:%p, size:%lu)\n", 
+      kaapi_network_get_current_globalid(),
+      rd.raddr, kaapi_memory_view_size(&rd.view) 
+  );
+
+//  kaapi_network_rdma( source, rd.raddr, &rd.view, (const void*)src, &view_src ); 
+}
+#endif
+
+
+
 /**
 */
 int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp )
@@ -58,10 +81,30 @@ int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp )
       {
         kaapi_address_space_id_t asid = kaapi_threadgroup_tid2asid(thgrp, -1);
 
-printf("Synchronize: copie: src:%p, size:%u -> dest:%p, size:%u\n",
+printf("%i::Synchronize: copie: src:%p, size:%u -> dest:%p, size:%u, asid_src:",
+    kaapi_network_get_current_globalid(),
     (void*)ver->writer.addr, kaapi_memory_view_size(&ver->writer.view),
     (void*)ver->orig.addr, kaapi_memory_view_size(&ver->orig.view) );
+kaapi_memory_address_space_fprintf( stdout, ver->writer.asid );
+printf("tag:%i \n", (int)ver->tag);
 
+#if 0// defined(KAAPI_USE_NETWORK)
+        if (kaapi_memory_address_space_getgid(ver->writer.asid) != kaapi_network_get_current_globalid())
+        {
+          /* remote address space -> communication */
+
+          kaapi_rdma_data_t rd;
+          rd.raddr = (kaapi_pointer_t)dest;
+          rd.view  = *view_src;
+
+          kaapi_network_am(
+              kaapi_memory_address_space_getgid(ver->writer.asid),
+              kaapi_threadgroup_synchronizeservice, 
+              &rd, sizeof(rd) 
+          );
+          return 0;
+        }
+#endif
         /* */
         kaapi_memory_copy( asid, (kaapi_pointer_t)ver->orig.addr, &ver->orig.view, 
                            ver->writer.asid, (kaapi_pointer_t)ver->writer.addr, &ver->writer.view );
@@ -69,4 +112,7 @@ printf("Synchronize: copie: src:%p, size:%u -> dest:%p, size:%u\n",
       entry = entry->next;
     }
   }
+#if defined(KAAPI_USE_NETWORK)
+  kaapi_memory_global_barrier();
+#endif
 }

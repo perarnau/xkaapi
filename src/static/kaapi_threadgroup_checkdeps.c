@@ -153,7 +153,8 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
 
   if (thgrp->localgid == gid)
   {
-    if (cnt_notready ==0) 
+//    if (cnt_notready ==0) 
+    if (KAAPI_ATOMIC_READ(&taskdescr->counter) == 0)
       kaapi_tasklist_pushback_ready(tasklist, taskdescr);
     
     /* always push the task for local storage */

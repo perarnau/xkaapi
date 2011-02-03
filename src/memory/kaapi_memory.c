@@ -47,6 +47,8 @@
 #include "kaapi_cuda.h"
 #endif
 
+
+
 /** Address space are 64 bits identifier decomposed in (from higher bit to lower):
     - 8 bits: type/architecture
     - 24 bits (16777216 values): for gid

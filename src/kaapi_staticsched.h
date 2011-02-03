@@ -963,6 +963,10 @@ extern int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid 
 
 /**
 */
+#if defined(KAAPI_USE_NETWORK)
+/* network service to signal end of iteration of one tid */
+void kaapi_threadgroup_signalend_service(int err, kaapi_globalid_t source, void* buffer, size_t sz_buffer );
+#endif
 
 #if defined(__cplusplus)
 }

@@ -86,7 +86,9 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
     if (dv !=0) 
     {
       data = dv->addr;
-      view = dv->view;
+      /* here always takes the view of the master writer */
+//      view = dv->view;
+      view = ver->writer.view;
       dv_task = dv->task;
       dv_prevtask = dv->prevtask;
       dv->addr = 0;
@@ -154,6 +156,10 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
       }
     }
   } /* if local */
+  else {
+    /* get the view (at least ?) */
+    view = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+  }
   
   /* data already exist: multiple cases must be considered.
      1- if it exists readers (>=1), then copies are invalidated 

@@ -136,7 +136,7 @@ int kaapi_network_rdma(
       ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
       if (channel == 0) return EINVAL;
 
-      channel->insert_rwdma( dest, src, view_src->size[0] );
+      channel->insert_rwdma( dest, src, view_src->size[0]*view_src->wordsize );
       channel->sync();
 
       return 0;
@@ -162,18 +162,17 @@ int kaapi_network_rdma(
       
       if (kaapi_memory_view_iscontiguous(view_src) && kaapi_memory_view_iscontiguous(view_dest))
       {
-        channel->insert_rwdma( raddr, (const void*)laddr, size );
+        channel->insert_rwdma( raddr, (const void*)laddr, size*view_src->wordsize );
       }
       else 
       {
         kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
         size_t i;
-        size_t llda;
-        size_t rlda;
-        llda  = view_src->lda;
-        rlda  = view_dest->lda;
+        size_t size_row = view_src->size[1]*view_src->wordsize;
+        size_t llda     = view_src->lda*view_src->wordsize;
+        size_t rlda     = view_dest->lda*view_src->wordsize;
         for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
-          channel->insert_rwdma( raddr, (const void*)laddr, view_src->size[1] );
+          channel->insert_rwdma( raddr, (const void*)laddr, size_row );
       }
       channel->sync();
       return 0;

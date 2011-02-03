@@ -366,7 +366,8 @@ static inline int kaapi_version_add_reader(
   kaapi_assert( over != 0);
 
   int retval = 0;
-  
+  kaapi_data_version_t* dv_reader = 0;  
+
   if (&ver->writer == over) 
   {
     kaapi_assert_debug(kaapi_memory_address_space_isequal(ver->writer.asid, over->asid));
@@ -374,7 +375,7 @@ static inline int kaapi_version_add_reader(
     /* the returned kaapi_data_version_t is the writer:
        - allocate a new reader entry
     */
-    kaapi_data_version_t* dv_reader = kaapi_threadgroup_allocate_dataversion( thgrp );
+    dv_reader = kaapi_threadgroup_allocate_dataversion( thgrp );
     dv_reader->asid = over->asid; 
     dv_reader->task = task; 
     dv_reader->ith  = ith; 
@@ -439,6 +440,7 @@ static inline int kaapi_version_add_reader(
       }
       else {
         /* mute the task field of over to points to the last task */
+        over->prevtask = over->task;
         over->task = task;
         over->ith  = ith;
       }

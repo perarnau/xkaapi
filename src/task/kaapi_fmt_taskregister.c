@@ -89,7 +89,7 @@ kaapi_task_body_t kaapi_format_taskregister_body(
   if (archi == KAAPI_PROC_TYPE_DEFAULT)
     fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = fmt->default_body = body;
 
-#if defined(KAAPI_DEBUG)
+#if 0//defined(KAAPI_DEBUG)
   fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)(uintptr_t)body, fmt->name );
   fflush(stdout);
 #endif
