@@ -54,7 +54,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_MP_S) return EINVAL;
   thgrp->state = KAAPI_THREAD_GROUP_EXEC_S;
 
-#if 0
+#if 1
   if (thgrp->localgid ==0)
     printf("%i::[kaapi_threadgroup] begin step : %i\n", thgrp->localgid, 1+thgrp->step);
 #endif
@@ -62,7 +62,7 @@ int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp )
   /* reset counter for the next iteration */
   KAAPI_ATOMIC_WRITE_BARRIER( &thgrp->endlocalthread, 0 );
     
-#if 0
+#if 1
   kaapi_threadgroup_print( stdout, thgrp );
 #endif
 
@@ -130,7 +130,6 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
   if (thgrp->state != KAAPI_THREAD_GROUP_EXEC_S) return EINVAL;
   if (thgrp->state == KAAPI_THREAD_GROUP_WAIT_S) return 0;
 
-  
 #if 0
   printf("%i::[threadgroup exec] begin execution on #local threads: %i, kid=%i\n", thgrp->localgid, thgrp->localthreads, kaapi_get_current_processor()->kid);
 #if 0

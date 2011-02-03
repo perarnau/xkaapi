@@ -231,21 +231,21 @@ static int kaapi_memory_write2cpu(
   
   switch (view_src->type) 
   {
-    case KAAPI_MEM_VIEW_1D:
+    case KAAPI_MEMORY_VIEW_1D:
     {
-      if (view_dest->type != KAAPI_MEM_VIEW_1D) return EINVAL;
+      if (view_dest->type != KAAPI_MEMORY_VIEW_1D) return EINVAL;
       if (view_dest->size[0] != view_src->size[0]) return EINVAL;
-      memcpy( (void*)dest, (const void*)src, view_src->size[0] );
+      memcpy( (void*)dest, (const void*)src, view_src->size[0]*view_src->wordsize );
       return 0;
     } break;
 
-    case KAAPI_MEM_VIEW_2D:
+    case KAAPI_MEMORY_VIEW_2D:
     {
       const char* laddr;
       char* raddr;
       size_t size;
 
-      if (view_dest->type != KAAPI_MEM_VIEW_2D) return EINVAL;
+      if (view_dest->type != KAAPI_MEMORY_VIEW_2D) return EINVAL;
 
       if (view_dest->size[0] != view_src->size[0]) return EINVAL;
       size = view_src->size[0] * view_src->size[1];
@@ -256,18 +256,17 @@ static int kaapi_memory_write2cpu(
       
       if (kaapi_memory_view_iscontiguous(view_src) && kaapi_memory_view_iscontiguous(view_dest))
       {
-          memcpy( raddr, laddr, size );
+          memcpy( raddr, laddr, size*view_src->wordsize );
       }
       else 
       {
         kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
         size_t i;
-        size_t llda;
-        size_t rlda;
-        llda  = view_src->lda;
-        rlda  = view_dest->lda;
+        size_t size_row = view_src->size[1]*view_src->wordsize;
+        size_t llda     = view_src->lda*view_src->wordsize;
+        size_t rlda     = view_dest->lda*view_src->wordsize;
         for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
-          memcpy( raddr, laddr, view_src->size[1] );
+          memcpy( raddr, laddr, size_row );
       }
       return 0;
       break;

@@ -119,18 +119,10 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
   {
     /* the previous execution is finished: clear all entries as if the thread group was created */
     kaapi_threadgroup_clear( thgrp );
-
-    /* restore the current frame pointer of the main thread */
-    if (thgrp->localgid == thgrp->tid2gid[-1])
-      thgrp->threadctxts[-1]->sfp = thgrp->sfp_main; 
   }
   else {
     /* do not init the hash map if previous execution of the thread group */
-    kaapi_hashmap_init( &thgrp->ws_khm, 0 );
-    
-    /* save the current frame pointer of the main thread */
-    if (thgrp->localgid == thgrp->tid2gid[-1])
-      thgrp->sfp_main = thgrp->threadctxts[-1]->sfp;
+    kaapi_hashmap_init( &thgrp->ws_khm, 0 );    
   }
 
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) 

@@ -176,6 +176,7 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
       kaapi_access_t a;
       a.data = data;
       kaapi_format_set_cwaccess_param(fmt, ith, task->task->sp, &a, is_first_access_asid );
+      kaapi_format_set_view_param(    fmt, ith, task->task->sp, &ver->writer.view );
     }
 
     ver->writer_mode   = mode;
@@ -277,6 +278,7 @@ int kaapi_threadgroup_version_newwriter_cumulwrite(
     kaapi_access_t a;
     a.data = data;
     kaapi_format_set_cwaccess_param(fmt, ith, task->task->sp, &a, is_first_access_asid );
+    kaapi_format_set_view_param(  fmt, ith, task->task->sp, &dv->view );
   }
 
   /* link it into list of copies */

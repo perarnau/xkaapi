@@ -62,6 +62,7 @@ kaapi_format_id_t kaapi_format_taskregister_func(
     void                        (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int),
     const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
     kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
     kaapi_reducor_t             (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*)
 )
@@ -82,6 +83,7 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->set_cwaccess_param = set_cwaccess_param;
   fmt->get_fmt_param    = get_fmt_param;
   fmt->get_view_param   = get_view_param;
+  fmt->set_view_param   = set_view_param;
   fmt->reducor          = reducor;
   fmt->get_reducor      = get_reducor;
   

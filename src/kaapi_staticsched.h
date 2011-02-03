@@ -268,6 +268,7 @@ static inline int kaapi_data_clear( kaapi_data_t* d )
 typedef struct kaapi_data_version_t {
   kaapi_address_space_id_t     asid;                /* address space of the access (r)   */
   kaapi_taskdescr_t*           task;                /* the last reader tasks that owns a reference to the data */
+  kaapi_taskdescr_t*           prevtask;            /* the previous task of this data version. Hack for RW */
   int                          ith;                 /* index of the argument wich has read access */
   void*                        addr;                /* address of data */
   kaapi_memory_view_t          view;                /* view of data */
@@ -281,6 +282,7 @@ static inline int kaapi_data_version_clear( kaapi_data_version_t* dv )
 {
   dv->asid    = 0;
   dv->task    = 0;
+  dv->prevtask= 0;
   dv->ith     = -1;
   dv->addr    = 0;
   kaapi_memory_view_clear(&dv->view);
@@ -614,8 +616,6 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_data_t*              list_data;     /* list of data to synchronize */
 
   /* used for iterative execution: only save the tasklist data structure */
-  kaapi_frame_t*             sfp_main;
-  kaapi_frame_t              fp2_main[2];  /* sfp[0] contains the waitend, sfp[2] the ready list of the main thread*/
   kaapi_tasklist_t*          tasklist_main;
   char**                     save_readylists;
   size_t*                    size_readylists;

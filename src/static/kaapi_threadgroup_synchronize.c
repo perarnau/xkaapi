@@ -57,6 +57,11 @@ int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp )
       if (ver->writer_mode != KAAPI_ACCESS_MODE_VOID)
       {
         kaapi_address_space_id_t asid = kaapi_threadgroup_tid2asid(thgrp, -1);
+
+printf("Synchronize: copie: src:%p, size:%u -> dest:%p, size:%u\n",
+    (void*)ver->writer.addr, kaapi_memory_view_size(&ver->writer.view),
+    (void*)ver->orig.addr, kaapi_memory_view_size(&ver->orig.view) );
+
         /* */
         kaapi_memory_copy( asid, (kaapi_pointer_t)ver->orig.addr, &ver->orig.view, 
                            ver->writer.asid, (kaapi_pointer_t)ver->writer.addr, &ver->writer.view );

@@ -1737,21 +1737,23 @@ extern size_t kaapi_perf_counter_num(void);
       one row to the next one.
     The base (kaapi_pointer_t) is not part of the view description
 */
-#define KAAPI_MEM_VIEW_1D 1
-#define KAAPI_MEM_VIEW_2D 2  /* assume row major */
-#define KAAPI_MEM_VIEW_3D 3
+#define KAAPI_MEMORY_VIEW_1D 1
+#define KAAPI_MEMORY_VIEW_2D 2  /* assume row major */
+#define KAAPI_MEMORY_VIEW_3D 3
 typedef struct kaapi_memory_view_t {
   int    type;
   size_t size[2];
   size_t lda;
+  size_t wordsize;
 } kaapi_memory_view_t;
 
 
-static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size)
+static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t wordsize)
 {
   kaapi_memory_view_t retval;
-  retval.type = KAAPI_MEM_VIEW_1D;
-  retval.size[0] = size;
+  retval.type     = KAAPI_MEMORY_VIEW_1D;
+  retval.size[0]  = size;
+  retval.wordsize = wordsize;
 #if defined(KAAPI_DEBUG)
   retval.size[1] = 0;
   retval.lda = 0;
@@ -1759,13 +1761,14 @@ static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size)
   return retval;
 }
 
-static inline kaapi_memory_view_t kaapi_memory_view_make2d(size_t n, size_t m, size_t lda)
+static inline kaapi_memory_view_t kaapi_memory_view_make2d(size_t n, size_t m, size_t lda, size_t wordsize)
 {
   kaapi_memory_view_t retval;
-  retval.type = KAAPI_MEM_VIEW_2D;
-  retval.size[0] = n;
-  retval.size[1] = m;
-  retval.lda = lda;
+  retval.type     = KAAPI_MEMORY_VIEW_2D;
+  retval.size[0]  = n;
+  retval.size[1]  = m;
+  retval.lda      = lda;
+  retval.wordsize = wordsize;
   return retval;
 }
 
@@ -1808,7 +1811,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_static(
     const kaapi_offset_t        offset_version[],
     const kaapi_offset_t        offset_cwflag[],
     const struct kaapi_format_t*fmt_param[],
-    const kaapi_memory_view_t   size_param[],
+    const kaapi_memory_view_t   view_param[],
     const kaapi_reducor_t       reducor_param[]
 );
 
@@ -1829,6 +1832,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
     void                        (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int ),
     const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
     kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
     kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
 );

@@ -128,9 +128,9 @@ int kaapi_network_rdma(
 {
   switch (view_src->type) 
   {
-    case KAAPI_MEM_VIEW_1D:
+    case KAAPI_MEMORY_VIEW_1D:
     {
-      if (view_dest->type != KAAPI_MEM_VIEW_1D) return EINVAL;
+      if (view_dest->type != KAAPI_MEMORY_VIEW_1D) return EINVAL;
       if (view_dest->size[0] != view_src->size[0]) return EINVAL;
 
       ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
@@ -142,13 +142,13 @@ int kaapi_network_rdma(
       return 0;
     } break;
 
-    case KAAPI_MEM_VIEW_2D:
+    case KAAPI_MEMORY_VIEW_2D:
     {
       kaapi_pointer_t laddr; /* local address */
       kaapi_pointer_t raddr; /* remote addr */
       size_t size;
 
-      if (view_dest->type != KAAPI_MEM_VIEW_2D) return EINVAL;
+      if (view_dest->type != KAAPI_MEMORY_VIEW_2D) return EINVAL;
 
       if (view_dest->size[0] != view_src->size[0]) return EINVAL;
       size = view_src->size[0] * view_src->size[1];

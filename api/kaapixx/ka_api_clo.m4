@@ -301,7 +301,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     return 0;
   }
   
-  static kaapi_memory_view_t get_view_param(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
+  static kaapi_memory_view_t get_view_param( const struct kaapi_format_t*, unsigned int ith, const void* _taskarg )
   {
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
     size_t count __attribute__((unused)) = 0;
@@ -310,6 +310,16 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     ', ` ', `
     ')
     return kaapi_memory_view_t(); /* empty new view */
+  }
+
+  static void set_view_param( const struct kaapi_format_t*, unsigned int ith, void* _taskarg, const kaapi_memory_view_t* view )
+  {
+    TaskArg_t* taskarg = static_cast<TaskArg_t*>(_taskarg);
+    size_t count __attribute__((unused)) = 0;
+   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
+    if (ith < count) return TraitFormalParam$1::set_view_param(&taskarg->f$1, ith, view);
+    ', ` ', `
+    ')
   }
 
   static void reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg, void* result, const void* value)
@@ -349,6 +359,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
           &set_cwaccess_param,
           &get_fmt_param,
           &get_view_param,
+          &set_view_param,
           &reducor,
           &get_reducor
     );
@@ -363,7 +374,10 @@ template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) :
   public KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<
     TASK M4_PARAM(`,TraitFormalParam$1', `', ` '),
+    false /* do not use static format for C++ interface */
+/*
     KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>')::is_static
+*/
   >
 {
   static kaapi_bodies_t default_bodies;
