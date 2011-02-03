@@ -43,9 +43,253 @@
 */
 #include "kaapi_impl.h"
 
+
+/* memory write view switch */
+typedef int (*write_func_t)(void*, void*, const void*, size_t);
+
+static int kaapi_memory_write_view
+(
+ kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+ const void* src, const kaapi_memory_view_t* view_src,
+ write_func_t write_fn, void* write_ctx
+)
+{
+  int error = EINVAL;
+
+  switch (view_src->type)
+  {
+    case KAAPI_MEM_VIEW_1D:
+    {
+      if (view_dest->type != KAAPI_MEM_VIEW_1D) goto on_error;
+      if (view_dest->size[0] != view_src->size[0]) goto on_error;
+      error = write_fn(write_ctx, (void*)dest, src, view_src->size[0]);
+    } break;
+
+    case KAAPI_MEM_VIEW_2D:
+    {
+      const char* laddr;
+      char* raddr;
+      size_t size;
+
+      if (view_dest->type != KAAPI_MEM_VIEW_2D) goto on_error;
+      if (view_dest->size[0] != view_src->size[0]) goto on_error;
+
+      size = view_src->size[0] * view_src->size[1];
+      if (size != view_dest->size[0] * view_dest->size[1]) goto on_error;
+      
+      laddr = (const char*)src;
+      raddr = (char*)dest;
+      
+      if (kaapi_memory_view_iscontiguous(view_src) &&
+	  kaapi_memory_view_iscontiguous(view_dest))
+      {
+	error = write_fn(write_ctx, raddr, laddr, size);
+	if (error) goto on_error;
+      }
+      else 
+      {
+        size_t i;
+        size_t llda;
+        size_t rlda;
+
+        kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
+
+        llda  = view_src->lda;
+        rlda  = view_dest->lda;
+
+        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
+	{
+	  error = write_fn(write_ctx, raddr, laddr, view_src->size[1]);
+	  if (error) goto on_error;
+	}
+      }
+      break;
+    }
+
+    default: goto on_error; break;
+  }
+
+  /* success */
+  error = 0;
+ on_error:
+  return error;
+}
+
 #if defined(KAAPI_USE_CUDA)
+
 #include "../cuda/kaapi_cuda.h"
+#include "../machine/cuda/kaapi_cuda_error.h"
+
+static kaapi_cuda_proc_t* kasid_to_cuda_proc
+(kaapi_address_space_id_t kasid)
+{
+  size_t count = kaapi_count_kprocessors;
+  kaapi_processor_t** proc = kaapi_all_kprocessors;
+
+  for (; count; --count, ++proc)
+  {
+    if ((*proc)->proc_type == KAAPI_PROC_TYPE_CUDA)
+      return &(*proc)->cuda_proc;
+  }
+
+  return NULL;
+}
+
+#if 0
+static inline unsigned int is_self_cu_proc
+(kaapi_cuda_proc_t* cu_proc)
+{
+  if (cu_proc == &kaapi_get_current_processor()->cu_proc)
+    return 1;
+  return 0;
+}
 #endif
+
+static kaapi_cuda_proc_t* get_cu_context
+(kaapi_address_space_id_t kasid)
+{
+  kaapi_cuda_proc_t* const cu_proc = kasid_to_cuda_proc(kasid);
+  CUresult res;
+
+  if (cu_proc == NULL) return NULL;
+
+#if 0 /* todo */
+  /* self proc, dont acquire */
+  if (is_self_cu_proc(cu_proc)) return cu_proc;
+#endif
+
+  pthread_mutex_lock(&cu_proc->ctx_lock);
+  res = cuCtxPushCurrent(cu_proc->ctx);
+  if (res == CUDA_SUCCESS) return cu_proc;
+  pthread_mutex_unlock(&cu_proc->ctx_lock);
+  return NULL;
+}
+
+static void put_cu_context(kaapi_cuda_proc_t* cu_proc)
+{
+  cuCtxPopCurrent(&cu_proc->ctx);
+  pthread_mutex_unlock(&cu_proc->ctx_lock);
+}
+
+static inline int allocate_cu_mem(CUdeviceptr* devptr, size_t size)
+{
+  const CUresult res = cuMemAlloc(devptr, size);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemAlloc", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+static inline void free_cu_mem(CUdeviceptr devptr)
+{
+  cuMemFree(devptr);
+}
+
+static inline int memcpy_cu_htod
+(kaapi_cuda_proc_t* cu_proc, CUdeviceptr devptr, const void* hostptr, size_t size)
+{
+#if 0 /* async version */
+  const CUresult res = cuMemcpyHtoDAsync
+    (devptr, hostptr, size, cu_proc->stream);
+#else
+  const CUresult res = cuMemcpyHtoD
+    (devptr, hostptr, size);
+#endif
+
+#if 0
+  printf("htod(%lx, %lx, %lx)\n", (uintptr_t)devptr, (uintptr_t)hostptr, size);
+#endif
+
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyHToDAsync", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+static inline int memcpy_cu_dtoh
+(kaapi_cuda_proc_t* cu_proc, void* hostptr, CUdeviceptr devptr, size_t size)
+{
+#if 0 /* async version */
+  const CUresult res = cuMemcpyDtoHAsync
+    (hostptr, devptr, size, cu_proc->stream);
+#else
+  const CUresult res = cuMemcpyDtoH
+    (hostptr, devptr, size);
+#endif
+
+#if 0
+  printf("dtoh(%lx, %lx, %lx)\n", (uintptr_t)hostptr, (uintptr_t)devptr, size);
+#endif
+
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyDToHAsync", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+static inline int kaapi_memory_write_cu2cpu
+(
+ kaapi_address_space_id_t kasid_dest,
+ kaapi_pointer_t dest,
+ const kaapi_memory_view_t* view_dest,
+ kaapi_address_space_id_t kasid_src, 
+ const void* src,
+ const kaapi_memory_view_t* view_src
+)
+{
+  kaapi_cuda_proc_t* cu_proc = NULL;
+  int error = EINVAL;
+
+  if ((dest ==0) || (src == 0)) return EINVAL;
+
+  cu_proc = get_cu_context(kasid_src);
+  if (cu_proc == NULL) return EINVAL;
+
+  error = kaapi_memory_write_view
+    (dest, view_dest, src, view_src, (write_func_t)memcpy_cu_dtoh, (void*)cu_proc);
+
+  put_cu_context(cu_proc);
+
+  return error;
+}
+
+static int kaapi_memory_write_cpu2cu
+(
+ kaapi_address_space_id_t kasid_dest,
+ kaapi_pointer_t dest,
+ const kaapi_memory_view_t* view_dest,
+ kaapi_address_space_id_t kasid_src, 
+ const void* src,
+ const kaapi_memory_view_t* view_src
+)
+{
+  kaapi_cuda_proc_t* cu_proc = NULL;
+  int error = EINVAL;
+
+  if ((dest ==0) || (src == 0)) return EINVAL;
+
+  cu_proc = get_cu_context(kasid_dest);
+  if (cu_proc == NULL) return EINVAL;
+
+  error = kaapi_memory_write_view
+    (dest, view_dest, src, view_src, (write_func_t)memcpy_cu_htod, (void*)cu_proc);
+
+  put_cu_context(cu_proc);
+
+  return error;
+}
+
+#endif /* KAAPI_USE_CUDA */
+
 
 /** Address space are 64 bits identifier decomposed in (from higher bit to lower):
     - 8 bits: type/architecture
@@ -105,8 +349,6 @@ kaapi_pointer_t kaapi_memory_allocate(
     int flag 
 )
 {
-  kaapi_pointer_t ptr;
-  
   switch (kaapi_memory_address_space_gettype(kasid))
   {
     case KAAPI_MEM_TYPE_CPU:
@@ -164,9 +406,20 @@ kaapi_pointer_t kaapi_memory_allocate(
 #if defined(KAAPI_USE_CUDA)
     case KAAPI_MEM_TYPE_CUDA:
     {
-      /* should be able to allocate iff the current cuda context attached to a device */
-      return (kaapi_pointer_t)NULL;
-    }
+      /* todo: wont work on multigpu, need asid to proc */
+
+      kaapi_cuda_proc_t* const cu_proc = get_cu_context(kasid);
+      CUdeviceptr devptr;
+      int error;
+
+      if (cu_proc == NULL) return 0;
+      error = allocate_cu_mem(&devptr, size);
+      put_cu_context(cu_proc);
+
+      if (error == -1) return 0;
+      return (kaapi_pointer_t)devptr;
+
+    } break;
 #endif
     default:
       return 0;
@@ -193,14 +446,15 @@ kaapi_pointer_t kaapi_memory_allocate_view(
       kaapi_memory_view_reallocated(view);
       return kaapi_memory_allocate( kasid, size, flag );
     } break;
+
 #if defined(KAAPI_USE_CUDA)
     case KAAPI_MEM_TYPE_CUDA:
     {
-      /* should be able to allocate iff the current cuda context attached to a device */
-      printf("%s: KAAPI_MEM_TYPE_CUDA\n", __FUNCTION__);
-      return (kaapi_pointer_t)NULL;
-    }
+      kaapi_memory_view_reallocated(view);
+      return kaapi_memory_allocate(kasid, size, flag);
+    } break ;
 #endif
+
     default:
       return 0;
   }
@@ -219,60 +473,23 @@ void kaapi_memory_global_barrier(void)
 
 /**
 */
-static int kaapi_memory_write2cpu( 
-  kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-  const void* src, const kaapi_memory_view_t* view_src 
+
+static int memcpy_wrapper
+(void* dummy, void* dst, const void* src, size_t size)
+{
+  memcpy(dst, src, size);
+  return 0;
+}
+
+static int kaapi_memory_write2cpu
+(
+ kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+ const void* src, const kaapi_memory_view_t* view_src
 )
 {
   if ((dest ==0) || (src == 0)) return EINVAL;
-  
-  switch (view_src->type) 
-  {
-    case KAAPI_MEM_VIEW_1D:
-    {
-      if (view_dest->type != KAAPI_MEM_VIEW_1D) return EINVAL;
-      if (view_dest->size[0] != view_src->size[0]) return EINVAL;
-      memcpy( (void*)dest, (const void*)src, view_src->size[0] );
-      return 0;
-    } break;
-
-    case KAAPI_MEM_VIEW_2D:
-    {
-      const char* laddr;
-      char* raddr;
-      size_t size;
-
-      if (view_dest->type != KAAPI_MEM_VIEW_2D) return EINVAL;
-
-      if (view_dest->size[0] != view_src->size[0]) return EINVAL;
-      size = view_src->size[0] * view_src->size[1];
-      if (size != view_dest->size[0] * view_dest->size[1]) return EINVAL;
-      
-      laddr = (const char*)src;
-      raddr = (char*)dest;
-      
-      if (kaapi_memory_view_iscontiguous(view_src) && kaapi_memory_view_iscontiguous(view_dest))
-      {
-          memcpy( raddr, laddr, size );
-      }
-      else 
-      {
-        kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
-        size_t i;
-        size_t llda;
-        size_t rlda;
-        llda  = view_src->lda;
-        rlda  = view_dest->lda;
-        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
-          memcpy( raddr, laddr, view_src->size[1] );
-      }
-      return 0;
-      break;
-    }
-    default:
-      return EINVAL;
-      break;
-  }
+  return kaapi_memory_write_view
+    (dest, view_dest, src, view_src, memcpy_wrapper, NULL);
 }
 
 
@@ -325,19 +542,27 @@ int kaapi_memory_copy(
             return EINVAL;
 #endif
           break;
+
+#if defined(KAAPI_USE_CUDA)
         case KAAPI_MEM_TYPE_CUDA:
-	  printf("---> SRC_CUDA\n");
-          break;
+	{
+	  return kaapi_memory_write_cu2cpu
+	    ( kasid_dest, dest, view_dest, kasid_src, (const void*)src, view_src ); 
+	} break ;
+#endif /* KAAPI_USE_CUDA */
+
         default:
-	  printf("---> SRC_EINVAL\n");
           return EINVAL;
       }
     } return 0;
 
+#if defined(KAAPI_USE_CUDA)
     case KAAPI_MEM_TYPE_CUDA:
     {
-      printf("---> DST_CUDA\n");
-    } return 0;
+      return kaapi_memory_write_cpu2cu
+	( kasid_dest, dest, view_dest, kasid_src, (const void*)src, view_src ); 
+    } break ;
+#endif
     
     default:
       printf("UNKNOWN DEST\n");

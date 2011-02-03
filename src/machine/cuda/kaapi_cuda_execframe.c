@@ -281,6 +281,8 @@ static void prepare_task
 	  kaapi_mem_mapping_clear_dirty(mapping, host_asid);
 	}
 
+	printf("-----> memcpy_htod %lx -> %lx\n", (uintptr_t)devptr, (uintptr_t)hostptr);
+
 #if defined (KAAPI_DEBUG)
 	printf("memcpy_htod(%u:%p -> %u:%p, %lu)\n",
 	       0, (void*)hostptr, self_asid, (void*)(uintptr_t)devptr, size);
@@ -288,6 +290,8 @@ static void prepare_task
 
 	/* copy from host to device */
 	memcpy_htod(proc, devptr, hostptr, size);
+
+	printf("----- memcpy_htod\n");
 
 	/* validate remote memory */
 	kaapi_mem_mapping_clear_dirty(mapping, self_asid);
@@ -1010,10 +1014,15 @@ int kaapi_cuda_exectask
     const cuda_task_body_t cuda_body = (cuda_task_body_t)
       format->entrypoint[KAAPI_PROC_TYPE_CUDA];
 
-    prepare_task(kproc, data, format);
+    /* already prepared in case of partitioning */
+    if (thread->the_thgrp == NULL)
+      prepare_task(kproc, data, format);
+
     cuda_body(data, kproc->cuda_proc.stream);
     synchronize_processor(kproc);
-    finalize_task(kproc, data, format);
+
+    if (thread->the_thgrp == NULL)
+      finalize_task(kproc, data, format);
 
     cuCtxPopCurrent(&kproc->cuda_proc.ctx);
     

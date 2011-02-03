@@ -53,8 +53,10 @@ template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range1d_rw<double_type> range)
   {
+    printf(">>> kudaAddone %lx, %lx\n", (uintptr_t)range.begin(), range.size());
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
+    printf("<<< kudaAddone %lx, %lx\n", (uintptr_t)range.begin(), range.size());
   }
 };
 
@@ -65,24 +67,11 @@ struct TaskFetch : public ka::Task<2>::Signature
 
 template<> struct TaskBodyCPU<TaskFetch>
 {
-  void operator() (uintptr_t dest, ka::range1d_r<double_type> src)
+  void operator()(uintptr_t fubar, ka::range1d_r<double_type> range)
   {
-    for (size_t i = 0; i < src.size(); ++i)
-      ((double_type*)dest)[i] = src[i];
-  }
-};
-
-// gpu implementation
-template<> struct TaskBodyGPU<TaskFetch>
-{
-  void operator()
-  (ka::gpuStream stream, uintptr_t dest, ka::range1d_r<double_type> src)
-  {
-    const double_type* const addr = (const double_type*)
-      kaapi_mem_find_host_addr((kaapi_mem_addr_t)src.begin());
-
-    for (size_t i = 0; i < src.size(); ++i)
-      ((double_type*)dest)[i] = addr[i];
+    double_type* const addr = (double_type*)fubar;
+    for (size_t i = 0; i < range.size(); ++i)
+      addr[i] = range[i];
   }
 };
 
@@ -114,7 +103,7 @@ struct doit {
 	memset(array, 0, total_size);
 	ka::range1d<double_type> range(array, array + CONFIG_ELEM_COUNT);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
-	threadgroup.Spawn<TaskFetch>(ka::SetPartition(1))((uintptr_t)array, range);
+	threadgroup.Spawn<TaskFetch>(ka::SetPartition(0))((uintptr_t)array, range);
 	arrays[count] = array;
       }
 
