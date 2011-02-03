@@ -179,7 +179,7 @@ int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp )
         kaapi_threadgroup_restore_thread(thgrp, -1);
     }
 #if defined(KAAPI_USE_NETWORK)
-    for (int gid=0; gid < thgrp->nodecount; ++gid)
+    for (kaapi_globalid_t gid=0; gid < thgrp->nodecount; ++gid)
     {
       if (gid != thgrp->localgid)
       {

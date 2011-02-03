@@ -83,7 +83,6 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->set_cwaccess_param = set_cwaccess_param;
   fmt->get_fmt_param    = get_fmt_param;
   fmt->get_view_param   = get_view_param;
-  fmt->set_view_param   = set_view_param;
   fmt->reducor          = reducor;
   fmt->get_reducor      = get_reducor;
   
