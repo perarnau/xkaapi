@@ -291,7 +291,6 @@ static int kaapi_memory_write_cpu2cu
 
 #endif /* KAAPI_USE_CUDA */
 
-
 /** Address space are 64 bits identifier decomposed in (from higher bit to lower):
     - 8 bits: type/architecture
     - 24 bits (16777216 values): for gid
@@ -349,7 +348,7 @@ kaapi_pointer_t kaapi_memory_allocate(
     size_t size, 
     int flag 
 )
-{
+{  
   switch (kaapi_memory_address_space_gettype(kasid))
   {
     case KAAPI_MEM_TYPE_CPU:
@@ -363,6 +362,7 @@ kaapi_pointer_t kaapi_memory_allocate(
 #if defined(KAAPI_USE_NETWORK)
       if (flag & KAAPI_MEM_SHARABLE) 
       {
+        kaapi_pointer_t ptr;
 #if defined(KAAPI_ADDRSPACE_ISOADDRESS)
         uintptr_t segaddr = kasid->segaddr;
         /* test if enough space is possible */
@@ -491,6 +491,66 @@ static int kaapi_memory_write2cpu
   if ((dest ==0) || (src == 0)) return EINVAL;
   return kaapi_memory_write_view
     (dest, view_dest, src, view_src, memcpy_wrapper, NULL);
+}
+
+static int kaapi_memory_write2cpu( 
+  kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+  const void* src, const kaapi_memory_view_t* view_src 
+)
+{
+  if ((dest ==0) || (src == 0)) 
+  {
+    printf("[kaapi_memory_write2cpu] null argument\n");
+    fflush(stdout);
+    return EINVAL;
+  }
+  
+  switch (view_src->type) 
+  {
+    case KAAPI_MEMORY_VIEW_1D:
+    {
+      if (view_dest->type != KAAPI_MEMORY_VIEW_1D) return EINVAL;
+      if (view_dest->size[0] != view_src->size[0]) return EINVAL;
+      memcpy( (void*)dest, (const void*)src, view_src->size[0]*view_src->wordsize );
+      return 0;
+    } break;
+
+    case KAAPI_MEMORY_VIEW_2D:
+    {
+      const char* laddr;
+      char* raddr;
+      size_t size;
+
+      if (view_dest->type != KAAPI_MEMORY_VIEW_2D) return EINVAL;
+
+      if (view_dest->size[0] != view_src->size[0]) return EINVAL;
+      size = view_src->size[0] * view_src->size[1];
+      if (size != view_dest->size[0] * view_dest->size[1]) return EINVAL;
+      
+      laddr = (const char*)src;
+      raddr = (char*)dest;
+      
+      if (kaapi_memory_view_iscontiguous(view_src) && kaapi_memory_view_iscontiguous(view_dest))
+      {
+          memcpy( raddr, laddr, size*view_src->wordsize );
+      }
+      else 
+      {
+        kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
+        size_t i;
+        size_t size_row = view_src->size[1]*view_src->wordsize;
+        size_t llda     = view_src->lda*view_src->wordsize;
+        size_t rlda     = view_dest->lda*view_src->wordsize;
+        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
+          memcpy( raddr, laddr, size_row );
+      }
+      return 0;
+      break;
+    }
+    default:
+      return EINVAL;
+      break;
+  }
 }
 
 

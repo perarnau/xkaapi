@@ -81,7 +81,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     thread = kaapi_threadgroup_thread( thgrp, threadindex );
     
     /* allocate a new task descriptor for this task */
-    tasklist =  thgrp->threadctxts[threadindex]->tasklist;
+    tasklist =  thgrp->threadctxts[threadindex]->sfp->tasklist;
     taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
   } 
   else 
@@ -107,7 +107,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
     if (m == KAAPI_ACCESS_MODE_V) 
     {
-      --cnt_notready;    
+      --cnt_notready;
       continue;
     }
     
@@ -119,8 +119,10 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
     entry = kaapi_hashmap_find(&thgrp->ws_khm, access.data);
     if (entry ==0)
     {
+      kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, taskdescr->task->sp);
+
       /* no entry -> new version object: no writer */
-      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, &access );
+      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, &access, &view );
     }
 
     /* have a look at the version and detect dependency or not etc... */
@@ -151,7 +153,8 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadi
 
   if (thgrp->localgid == gid)
   {
-    if (cnt_notready ==0) 
+//    if (cnt_notready ==0) 
+    if (KAAPI_ATOMIC_READ(&taskdescr->counter) == 0)
       kaapi_tasklist_pushback_ready(tasklist, taskdescr);
     
     /* always push the task for local storage */

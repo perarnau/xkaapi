@@ -142,7 +142,6 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   thgrp->group_size  = size;
   thgrp->localthreads= 0;
   KAAPI_ATOMIC_WRITE(&thgrp->endlocalthread, 0);
-  thgrp->startflag   = 0;
   KAAPI_ATOMIC_WRITE(&thgrp->endglobalgroup, 0);
   thgrp->waittask    = 0;
   
@@ -211,12 +210,12 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   }
   thgrp->all_sendaddr = 0;
 
-  /* here allocate thread -1 == main thread       */
+  /* here allocate thread -1 == main thread */
   if (mygid == thgrp->tid2gid[-1])
   {
     thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
-    thgrp->threads[-1] = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
-    kaapi_threadgroup_initthread( thgrp, -1 );
+    thgrp->threads[-1]     = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
+    thgrp->tasklist_main   = kaapi_threadgroup_allocatetasklist( );
     ++thgrp->localthreads;
   }
 
@@ -282,6 +281,11 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
 */
 int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep )
 {
+  if ((maxstep >1) && ((thgrp->flag & KAAPI_THGRP_SAVE_FLAG) ==0))
+  {
+    KAAPI_DEBUG_INST( printf("******Cannot do several iteration steps if flag 'KAAPI_THGRP_SAVE_FLAG' is not set before\n") );
+    return EINVAL;
+  }
   thgrp->maxstep = maxstep;
   return 0;
 }

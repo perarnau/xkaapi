@@ -181,25 +181,17 @@ redo_execution:
 #if defined(KAAPI_USE_CUDA)
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
-      if (kproc->thread->sfp->execframe == kaapi_thread_execframe)
-      {
+      if (kproc->thread->sfp->tasklist == 0)
 	err = kaapi_cuda_execframe( kproc->thread );
-      }
       else /* assumed kaapi_threadgroup_execframe */
-      {
-	kaapi_assert_debug
-	  (kproc->thread->sfp->execframe == kaapi_threadgroup_execframe);
 	err = kaapi_cuda_threadgroup_execframe(kproc->thread);
-      }
     }
     else
 #endif /* KAAPI_USE_CUDA */
-    {
-      if (kproc->thread->sfp->execframe == 0)
-	err = kaapi_thread_execframe(kproc->thread);
-      else
-	err = (*kproc->thread->sfp->execframe)( kproc->thread );
-    }
+    if (kproc->thread->sfp->tasklist ==0)
+      err = kaapi_thread_execframe(kproc->thread);
+    else
+      err = kaapi_threadgroup_execframe(kproc->thread);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );

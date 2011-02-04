@@ -61,7 +61,8 @@ static inline void kaapi_threadgroup_add_recvtask(
   kaapi_comsend_raddr_t* comasid = 0;
   
   /* allocate the tag if is == 0 */
-  if (ver->tag == 0) ver->tag = ++thgrp->tag_count;
+  if (ver->tag == 0) 
+    ver->tag = ++thgrp->tag_count;
 
   kaapi_globalid_t gid_writer = kaapi_threadgroup_tid2gid( thgrp, ver->writer_thread );
 #if !defined(KAAPI_ADDRSPACE_ISOADDRESS)
@@ -69,7 +70,7 @@ static inline void kaapi_threadgroup_add_recvtask(
 #endif
 
   /* look if the writer task has been defined: this code should be executed on the owner of the writer task */
-  kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
+  kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->sfp->tasklist;
 
   if (gid_writer == thgrp->localgid)
   {
@@ -100,11 +101,10 @@ fflush(stdout);
       kaapi_memory_view_clear( &bcast->front.front.rview );
       bcast->front.front.next      = 0;
       bcast->front.back            = &bcast->front.front;
-
       bcast->back                  = &bcast->front;
-      
       writer_task->bcast           = bcast;
       ver->writer.task             = writer_task;
+      ver->writer_mode             = KAAPI_ACCESS_MODE_RW;
       
       /* register the kaapi_comsend_t structure into the global table of tid writer_thread  
          In order to exchange address between memory space.
@@ -219,9 +219,9 @@ fflush(stdout);
             kaapi_memory_view_clear( &comasid->rview );
             
             /* push it at the end: always back exist */
-            comasid->next      = 0;
-            comd->back->next   = comasid;
-            comd->back         = comasid;
+            comasid->next    = 0;
+            comd->back->next = comasid;
+            comd->back       = comasid;
           }
           else {
             /* only register recv task */
@@ -241,10 +241,10 @@ fflush(stdout);
     if ((comasid !=0) && (kaapi_memory_address_space_getgid(asid) != thgrp->localgid))
     {
       kaapi_comaddrlink_t* cal = (kaapi_comaddrlink_t*)kaapi_allocator_allocate( &thgrp->allocator, sizeof(kaapi_comaddrlink_t));
-      cal->tag = comd->vertag;
-      cal->send = comasid;
-      cal->next = thgrp->all_sendaddr;
-      thgrp->all_sendaddr = cal;
+      cal->tag                 = comd->vertag;
+      cal->send                = comasid;
+      cal->next                = thgrp->all_sendaddr;
+      thgrp->all_sendaddr      = cal;
 #if 0
       printf("%i:[kaapi_threadgroup_add_recvtask] register send com to %i tag:%i, tid_reader:%i, comsend:%p\n", 
           thgrp->localgid,
@@ -267,9 +267,7 @@ fflush(stdout);
 #else
   if (gid_reader == thgrp->localgid)
 #endif
-  {
-    printf("gid_reader == thgrp->localgid\n");
-
+  {        
     /* ok here is the receive side of the communication 
        - allocate the kaapi_comrecv_t 
        - register it into global table for the thread tid.
@@ -290,12 +288,10 @@ fflush(stdout);
       wc->tag        = ver->tag;
       wc->from       = kaapi_memory_address_space_getgid(ver->writer.asid);
       wc->tid        = tid;
-      wc->reduce_fnc = 0;
-      wc->result     = 0; // debug only
-      wc->tasklist   = thgrp->threadctxts[tid]->tasklist;
+      wc->tasklist   = thgrp->threadctxts[tid]->sfp->tasklist;
       wc->list.front = 0;
       wc->list.back  = 0;
-      wc->view       = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+      wc->view       = ver->writer.view;
       
       /* this instruction should executed by every body 
          Only the owner of thread tid allocate data.
@@ -317,7 +313,7 @@ fflush(stdout);
           (int)wc->tid,
           (void*)wc,
           (void*)wc->data,
-          kaapi_memory_view_size(&wc->view)
+          kaapi_memory_view_size(&view)
       );
       fflush(stdout);
 #endif
@@ -329,8 +325,9 @@ fflush(stdout);
 
     /* push the task into the activation link of the comrecv data structure */
     kaapi_activationlist_pushback( thgrp, &wc->list, task );
-    kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
-
+    kaapi_format_set_access_param( fmt, ith, task->task->sp, &a );
+    kaapi_format_set_view_param(   fmt, ith, task->task->sp, &wc->view );
+    
     /* one more external synchronisation: add bcast */
     KAAPI_ATOMIC_INCR(&task->counter);
     
@@ -341,7 +338,7 @@ fflush(stdout);
     dv_reader->task = task; 
     dv_reader->ith  = ith; 
     dv_reader->addr = a.data; 
-    dv_reader->view = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+    dv_reader->view = wc->view; // kaapi_format_get_view_param(fmt, ith, task->task->sp);
     
     /* link it into list of copies */
     kaapi_data_version_list_add(&ver->copies, dv_reader );
@@ -359,6 +356,7 @@ static inline int kaapi_version_add_reader(
     kaapi_threadgroup_t   thgrp, 
     kaapi_version_t*      ver, 
     int                   tid, 
+    kaapi_access_mode_t   mode,
     kaapi_data_version_t* over,
     kaapi_taskdescr_t*    task, 
     const kaapi_format_t* fmt,
@@ -371,7 +369,8 @@ static inline int kaapi_version_add_reader(
   kaapi_assert( over != 0);
 
   int retval = 0;
-  
+  kaapi_data_version_t* dv_reader = 0;  
+
   if (&ver->writer == over) 
   {
     kaapi_assert_debug(kaapi_memory_address_space_isequal(ver->writer.asid, over->asid));
@@ -379,7 +378,7 @@ static inline int kaapi_version_add_reader(
     /* the returned kaapi_data_version_t is the writer:
        - allocate a new reader entry
     */
-    kaapi_data_version_t* dv_reader = kaapi_threadgroup_allocate_dataversion( thgrp );
+    dv_reader = kaapi_threadgroup_allocate_dataversion( thgrp );
     dv_reader->asid = over->asid; 
     dv_reader->task = task; 
     dv_reader->ith  = ith; 
@@ -405,6 +404,7 @@ static inline int kaapi_version_add_reader(
     }
     else {    
       /* mute the task field of over to points to the last task */
+      over->prevtask = over->task;
       over->task = task;
       over->ith  = ith;
     }
@@ -414,6 +414,7 @@ static inline int kaapi_version_add_reader(
   kaapi_access_t a; /* to store data access and allocate */
   a.data = over->addr;
   kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
+  kaapi_format_set_view_param( fmt, ith, task->task->sp, &ver->writer.view );
 
   if (kaapi_memory_address_space_getgid(over->asid) == thgrp->localgid)
   {
@@ -422,21 +423,30 @@ static inline int kaapi_version_add_reader(
       && (kaapi_memory_address_space_isequal(over->asid, ver->writer.asid)))
     {
       kaapi_assert_debug( (ver->writer_thread >= -1) && (ver->writer_thread < thgrp->group_size) );
-      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->tasklist;
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[ver->writer_thread]->sfp->tasklist;
       kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
     }
     else if (ver->writer_mode == KAAPI_ACCESS_MODE_VOID)
     {
       kaapi_assert_debug( retval == 1);
+      ver->writer_mode = mode;
     }
     else 
-    {
+    { /* has a recv task ? */
       kaapi_comrecv_t* wc = kaapi_recvcomlist_find_tag( thgrp->lists_recv[tid], ver->tag );
-      kaapi_assert_debug(wc !=0);
-      /* one more external synchronisation: add bcast */
-      KAAPI_ATOMIC_INCR(&task->counter);
-      /* push the task into the activation link of the comrecv data structure */
-      kaapi_activationlist_pushback( thgrp, &wc->list, task );
+      if (wc !=0)
+      {
+        /* one more external synchronisation: add bcast */
+        KAAPI_ATOMIC_INCR(&task->counter);
+        /* push the task into the activation link of the comrecv data structure */
+        kaapi_activationlist_pushback( thgrp, &wc->list, task );
+      }
+      else {
+        /* mute the task field of over to points to the last task */
+        over->prevtask = over->task;
+        over->task = task;
+        over->ith  = ith;
+      }
     }
   }
 
@@ -485,5 +495,5 @@ int kaapi_threadgroup_version_newreader(
      - add the reader, if tov is the writer and return 0 (not ready access)
      - return value is 1 iff the access is ready
   */
-  return kaapi_version_add_reader( thgrp, ver, tid, tov, task, fmt, ith, access );  
+  return kaapi_version_add_reader( thgrp, ver, tid, mode, tov, task, fmt, ith, access );  
 }

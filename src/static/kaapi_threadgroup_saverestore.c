@@ -42,13 +42,16 @@
 ** 
 */
 #include "kaapi_impl.h"
-
+#include <stdint.h>
 
 /**
 */
 int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
 {
+  char* buffer;
+#if 0
   printf("%i::[kaapi_threadgroup_save] begin\n", thgrp->localgid);
+#endif
   if (thgrp->state != KAAPI_THREAD_GROUP_PARTITION_S) return EINVAL;
 
   if (thgrp->save_readylists ==0)
@@ -63,30 +66,50 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
   {
     if (thgrp->localgid == thgrp->tid2gid[i])
     {
-      thgrp->size_readylists[i] = thgrp->threadctxts[i]->tasklist->sp;
-      thgrp->save_readylists[i] = malloc( thgrp->size_readylists[i] + 2*sizeof(void*) + sizeof(uintptr_t) );
-      memcpy( thgrp->save_readylists[i], 
-              thgrp->threadctxts[i]->tasklist->stack,
-              thgrp->size_readylists[i] 
-      );
+      kaapi_tasklist_t* tasklist = thgrp->threadctxts[i]->sfp->tasklist; 
+      thgrp->size_readylists[i] = tasklist->sp;
+      ptrdiff_t sz_alloc = thgrp->size_readylists[i] + 2*sizeof(void*) + sizeof(uintptr_t);
+      if (i == -1) 
+      {
+        /* also save sfp, sfp[0] and sfp[-1] */
+        sz_alloc += sizeof(kaapi_frame_t)*2 + sizeof(kaapi_frame_t*);
+      }
+
+      thgrp->save_readylists[i] = buffer = malloc( sz_alloc );
+      
+      if (i == -1)
+      {
+        memcpy( buffer, (const void*)&thgrp->threadctxts[-1]->sfp, sizeof(kaapi_frame_t*) );
+        buffer += sizeof(kaapi_frame_t*);
+        kaapi_assert_debug( (buffer - thgrp->save_readylists[i]) < sz_alloc );
+
+        memcpy( buffer, &thgrp->threadctxts[-1]->sfp[-1], 2*sizeof(kaapi_frame_t) );
+        buffer += 2*sizeof(kaapi_frame_t);
+        kaapi_assert_debug( (buffer - thgrp->save_readylists[i]) < sz_alloc );
+      }
+      
+      memcpy( buffer, tasklist->stack, thgrp->size_readylists[i] );
+      buffer += thgrp->size_readylists[i];
+      kaapi_assert_debug( (buffer - thgrp->save_readylists[i]) < sz_alloc );
       
       /* save head and tail of the list */
-      memcpy( thgrp->save_readylists[i] + thgrp->size_readylists[i], 
-              &thgrp->threadctxts[i]->tasklist->front,
-              2*sizeof(void*)
-      );
+      memcpy( buffer,  &tasklist->front, 2*sizeof(void*) );
+      buffer += 2*sizeof(void*);
+      kaapi_assert_debug( (buffer - thgrp->save_readylists[i]) < sz_alloc );
 
       /* save the count recv */
-      memcpy( thgrp->save_readylists[i] + thgrp->size_readylists[i]+2*sizeof(void*), 
-              &thgrp->threadctxts[i]->tasklist->count_recv,
-              sizeof(uintptr_t)
-      );
+      memcpy( buffer, &tasklist->count_recv, sizeof(uintptr_t) );
+      buffer += sizeof(uintptr_t);
+      kaapi_assert_debug( (buffer - thgrp->save_readylists[i]) == sz_alloc );
     }
     else {
+      thgrp->size_readylists[i] = 0;
       thgrp->save_readylists[i] = 0;
     }
   }
+#if 0
   printf("%i::[kaapi_threadgroup_save] end\n", thgrp->localgid);
+#endif
   return 0;
 }
 
@@ -95,29 +118,41 @@ int kaapi_threadgroup_save(kaapi_threadgroup_t thgrp )
 */
 int kaapi_threadgroup_restore_thread( kaapi_threadgroup_t thgrp, int tid )
 {
+  char* buffer;
+  kaapi_tasklist_t* tasklist;
+  
+#if 0
   printf("%i::[kaapi_threadgroup_restore_thread] tid:%i begin\n", thgrp->localgid, tid);
+#endif
   kaapi_assert( (tid >=-1) && (tid < thgrp->group_size) );
   kaapi_assert_debug(thgrp->localgid == thgrp->tid2gid[tid]);
 
-  memcpy( thgrp->threadctxts[tid]->tasklist->stack,
-          thgrp->save_readylists[tid], 
-          thgrp->size_readylists[tid] 
-  );
+  buffer = thgrp->save_readylists[tid];
+  if (tid == -1)
+  {
+    memcpy( (void*)&thgrp->threadctxts[-1]->sfp, buffer, sizeof(kaapi_frame_t*) );
+    buffer += sizeof(kaapi_frame_t*);
+    memcpy( &thgrp->threadctxts[-1]->sfp[-1], buffer, 2*sizeof(kaapi_frame_t) );
+    buffer += 2*sizeof(kaapi_frame_t);
+
+    /* do not forget to reset the waittask with correct state */
+    kaapi_task_init_with_state( thgrp->waittask, kaapi_taskwaitend_body, KAAPI_MASK_BODY_STEAL, thgrp );
+  }
+  
+  tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
+  memcpy( tasklist->stack, buffer, thgrp->size_readylists[tid] );
+  buffer += thgrp->size_readylists[tid];
 
   /* restore head and tail of the list */
-  memcpy( &thgrp->threadctxts[tid]->tasklist->front,
-          thgrp->save_readylists[tid] + thgrp->size_readylists[tid],
-          2*sizeof(void*)
-  );
+  memcpy( &tasklist->front, buffer, 2*sizeof(void*) );
+  buffer += 2*sizeof(void*);
 
-  memcpy( &thgrp->threadctxts[tid]->tasklist->count_recv,
-          thgrp->save_readylists[tid] + thgrp->size_readylists[tid] + 2*sizeof(void*),
-          sizeof(uintptr_t)
-  );
+  memcpy( &tasklist->count_recv, buffer, sizeof(uintptr_t) );
+  buffer += sizeof(uintptr_t);
 
-  thgrp->threadctxts[tid]->tasklist->sp = thgrp->size_readylists[tid];
-  thgrp->threadctxts[tid]->tasklist->recvlist = 0;
+#if 0
   printf("%i::[kaapi_threadgroup_restore_thread] tid:%i end\n", thgrp->localgid, tid);
+#endif
   return 0;
 }
 

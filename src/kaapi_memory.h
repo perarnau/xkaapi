@@ -56,34 +56,15 @@ typedef uintptr_t kaapi_pointer_t;
 */
 typedef kaapi_pointer_t* kaapi_handle_t;
 
-#if 0 /* definition moved into kaapi.h for public interface */
-/** Type of allowed memory view for the memory interface:
-    - 1D array (base, size)
-      simple contiguous 1D array
-    - 2D array (base, size[2], lda)
-      assume a row major storage of the memory : the 2D array has
-      size[0] rows of size[1] rowwidth. lda is used to pass from
-      one row to the next one.
-    The base (kaapi_pointer_t) is not part of the view description
-*/
-#define KAAPI_MEM_VIEW_1D 1
-#define KAAPI_MEM_VIEW_2D 2  /* assume row major */
-#define KAAPI_MEM_VIEW_3D 3
-typedef struct kaapi_memory_view_t {
-  int    type;
-  size_t size[2];
-  size_t lda;
-} kaapi_memory_view_t;
-#endif
-
 /** Clear the view
 */
 static inline void kaapi_memory_view_clear( kaapi_memory_view_t* kmv )
 {
   kmv->type = -1;
 #if defined(KAAPI_DEBUG)
-  kmv->size[0] = kmv->size[0] = 0;
-  kmv->lda = 0;
+  kmv->size[0]  = kmv->size[0] = 0;
+  kmv->lda      = 0;
+  kmv->wordsize = 0;
 #endif
 }
 
@@ -93,8 +74,8 @@ static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* kmv )
 {
   switch (kmv->type) 
   {
-    case KAAPI_MEM_VIEW_1D: return kmv->size[0];
-    case KAAPI_MEM_VIEW_2D: return kmv->size[0]*kmv->size[1];
+    case KAAPI_MEMORY_VIEW_1D: return kmv->size[0]*kmv->wordsize;
+    case KAAPI_MEMORY_VIEW_2D: return kmv->size[0]*kmv->size[1]*kmv->wordsize;
     default:
       kaapi_assert(0);
       break;
@@ -109,8 +90,8 @@ static inline void kaapi_memory_view_reallocated( kaapi_memory_view_t* kmv )
 {
   switch (kmv->type) 
   {
-    case KAAPI_MEM_VIEW_1D: return;
-    case KAAPI_MEM_VIEW_2D: kmv->lda = kmv->size[1]; return;
+    case KAAPI_MEMORY_VIEW_1D: return;
+    case KAAPI_MEMORY_VIEW_2D: kmv->lda = kmv->size[1]; return;
     default:
       kaapi_assert(0);
       break;
@@ -122,8 +103,8 @@ static inline void kaapi_memory_view_reallocated( kaapi_memory_view_t* kmv )
 static inline int kaapi_memory_view_iscontiguous( const kaapi_memory_view_t* kmv )
 {
   switch (kmv->type) {
-    case KAAPI_MEM_VIEW_1D: return 1;
-    case KAAPI_MEM_VIEW_2D: return  kmv->lda == kmv->size[1]; /* row major storage */
+    case KAAPI_MEMORY_VIEW_1D: return 1;
+    case KAAPI_MEMORY_VIEW_2D: return  kmv->lda == kmv->size[1]; /* row major storage */
     default:
       break;
   } 

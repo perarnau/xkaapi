@@ -359,10 +359,18 @@ public:
     return *this;
   }
   
-  // return the view
+  /* return the view in byte unit */
   kaapi_memory_view_t get_view() const
-  { return kaapi_memory_view_make1d(_size*sizeof(T)); }
-  
+  { return kaapi_memory_view_make1d(_size, sizeof(T)); }
+
+  /* set a new view in word */
+  void set_view( const kaapi_memory_view_t* view )
+  { 
+    kaapi_assert_debug( view->type == KAAPI_MEMORY_VIEW_1D );
+    kaapi_assert_debug( view->wordsize == sizeof(T) );
+    _size   = view->size[0];
+  }
+
 protected:
   T*      _data;
   index_t _size;
@@ -483,9 +491,20 @@ public:
     }
     return *this;
   }
-
+   
+  /* return the view in word */
   kaapi_memory_view_t get_view() const
-  { return kaapi_memory_view_make2d(_n,_m*sizeof(T),_lda); }
+  { return kaapi_memory_view_make2d(_n,_m,_lda,sizeof(T)); }
+
+  /* set a new view in word */
+  void set_view( const kaapi_memory_view_t* view )
+  { 
+    kaapi_assert_debug( view->type == KAAPI_MEMORY_VIEW_2D );
+    kaapi_assert_debug( view->wordsize == sizeof(T) );
+    _n   = view->size[0];
+    _m   = view->size[1];
+    _lda = view->lda;
+  }
 
 protected:
   T*      _data;
@@ -661,6 +680,12 @@ public:
     std::swap( array_rep<2,T>::_lda,  a._lda );
   }
   
+  // Subarray extraction
+  T& operator() (const index_t& i, const index_t& j)  
+  {
+    return array_rep<2,T>::operator()( i, j );
+  }
+
   // Subarray extraction
   array<2,T> operator() (const range& ri, const range& rj)  
   {

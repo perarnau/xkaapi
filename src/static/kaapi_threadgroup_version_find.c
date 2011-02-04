@@ -79,6 +79,7 @@ kaapi_data_version_t* kaapi_version_findcopiesrmv_asid_in( kaapi_version_t* ver,
 
       prev->next = curr->next;
       if (ver->copies.back == curr) ver->copies.front = prev;
+      curr->next = 0;
       return curr;
     }
     prev = curr;

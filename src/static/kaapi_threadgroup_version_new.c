@@ -50,10 +50,11 @@
    The method declare in the hash map a newversion 
 */
 kaapi_hashentries_t* kaapi_threadgroup_newversion( 
-    kaapi_threadgroup_t thgrp, 
-    kaapi_hashmap_t*    hmap, 
-    int                 tid, 
-    kaapi_access_t*     access 
+    kaapi_threadgroup_t  thgrp, 
+    kaapi_hashmap_t*     hmap, 
+    int                  tid, 
+    kaapi_access_t*      access, 
+    kaapi_memory_view_t* view
 )
 {
   kaapi_hashentries_t* entry;
@@ -73,6 +74,9 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion(
   ver->writer.addr            = access->data;
   kaapi_memory_view_clear( &ver->writer.view);  /* in fact unknown size, should be set by the task param */
   ver->writer.next            = 0;  /* for debug: set when pushed into list */
+  ver->orig.asid              = ver->writer.asid;
+  ver->orig.addr              = access->data;
+  ver->orig.view              = *view;
   return entry;
 }
 

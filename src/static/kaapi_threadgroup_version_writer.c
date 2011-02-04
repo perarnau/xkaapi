@@ -60,6 +60,7 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
   void* data =0;
   kaapi_memory_view_t view;
   kaapi_taskdescr_t* dv_task =0;
+  kaapi_taskdescr_t* dv_prevtask =0;
   int retval;
   int delprevwriter;
   kaapi_assert_debug( (-1 <= tid) && (tid < thgrp->group_size) );
@@ -85,8 +86,11 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
     if (dv !=0) 
     {
       data = dv->addr;
-      view = dv->view;
+      /* here always takes the view of the master writer */
+//      view = dv->view;
+      view = ver->writer.view;
       dv_task = dv->task;
+      dv_prevtask = dv->prevtask;
       dv->addr = 0;
 
       /* recycle the data version */
@@ -96,8 +100,20 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
       retval = 0;
       if (dv_task != task)
       {
-        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
         kaapi_taskdescr_push_successor( tasklist, dv_task, task );
+      } 
+      else {
+        if (mode == KAAPI_ACCESS_MODE_RW)
+        {
+          /* should be put as the successor of the previous task ... */
+          if (dv_prevtask !=0)
+          {
+            kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
+            kaapi_taskdescr_push_successor( tasklist, dv_prevtask, task );
+            dv->prevtask = 0;
+          }
+        }
       }
     }
     else 
@@ -119,14 +135,14 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
 
         if (dv_task !=0)
         {
-          kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+          kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
           kaapi_taskdescr_push_successor( tasklist, dv_task, task );
         }
       }
       else if (kaapi_memory_address_space_isequal(ver->writer.asid, asid)) 
       { /* WAW: put new writer into successor of previous one, without reallocation */
         data = ver->writer.addr;
-        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->tasklist;
+        kaapi_tasklist_t* tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
         kaapi_taskdescr_push_successor( tasklist, ver->writer.task, task );
         retval = 0;
         delprevwriter = 0;
@@ -140,6 +156,10 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
       }
     }
   } /* if local */
+  else {
+    /* get the view (at least ?) */
+    view = kaapi_format_get_view_param(fmt, ith, task->task->sp);
+  }
   
   /* data already exist: multiple cases must be considered.
      1- if it exists readers (>=1), then copies are invalidated 
@@ -179,6 +199,7 @@ static int kaapi_threadgroup_version_newwriter_onlywrite(
     kaapi_access_t a;          /* to store data access and allocate */
     a.data = ver->writer.addr;
     kaapi_format_set_access_param(fmt, ith, task->task->sp, &a);
+    kaapi_format_set_view_param(  fmt, ith, task->task->sp, &ver->writer.view );
   }
   
   /* reset the tag for the version */
