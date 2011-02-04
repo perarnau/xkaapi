@@ -427,7 +427,7 @@ struct doit {
     std::cout << "My pid=" << getpid() << " -> my rank:" << ka::System::local_gid << std::endl;
     unsigned dn = 4;    /* size of the subdomain */
     unsigned nbloc = 2; /* number of the bloc in each direction */
-    unsigned iter = 2;
+    unsigned iter = 10;
 #if 0
     if (argc >1)
       dn = atoi(argv[1]);
@@ -484,7 +484,7 @@ struct doit {
 
     threadgroup.execute();
     
-#if 0
+#if 1
     /* test synchronization: only for multicore... */
     threadgroup.synchronize( );
     printf("\n\n*********** After initialisation\n");
@@ -577,7 +577,7 @@ struct doit {
       
 #if 1
       /* memory synchronize : only D !!! */
-//      threadgroup.synchronize( );
+      threadgroup.synchronize( );
       if (k % 1 == 0)
       {
         printf("\n\n%i::*********** Value at step %i\n", ka::System::local_gid, k);
