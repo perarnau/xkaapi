@@ -75,7 +75,7 @@ int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_id_t
 
       /* copy (com->data, com->size) to (lraddr->raddr, lraddr->rsize) */
       /* warning for GPU device -> communication to the device, that will post transfert */
-#if 1
+#if 0
       printf("%i::[bcast] memory copy dest@:%p, src@:%p, size:%lu, asid_dest:",
           kaapi_network_get_current_globalid(),
           (void*)lraddr->raddr, 

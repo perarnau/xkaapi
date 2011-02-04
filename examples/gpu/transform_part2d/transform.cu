@@ -16,8 +16,8 @@ typedef unsigned int double_type;
 
 // static configuration
 #define CONFIG_ITER_COUNT 1
-#define CONFIG_ROW_COUNT 8
-#define CONFIG_COL_COUNT 32
+#define CONFIG_ROW_COUNT 16
+#define CONFIG_COL_COUNT 16
 #define CONFIG_RANGE_COUNT 1
 #define CONFIG_RANGE_CHECK 1
 
@@ -26,27 +26,9 @@ struct TaskAddone : public ka::Task<1>::Signature
 <ka::RW<ka::range2d<double_type> > > {};
 
 // cuda kernel
-__global__ void addone
-(double_type* array, unsigned int rows, unsigned int cols)
+__global__ void addone(double_type* array)
 {
-  const unsigned int col_per_thread = cols / blockDim.x;
-  unsigned int col = threadIdx.x * col_per_thread;
-  unsigned int last_col = cols;
-  if (threadIdx.x != (blockDim.x - 1)) last_col = col + col_per_thread;
-
-  const unsigned int row_per_thread = rows / blockDim.y;
-  unsigned int row = threadIdx.y * row_per_thread;
-  unsigned int last_row = rows;
-  if (threadIdx.y != (blockDim.y - 1)) last_row = row + row_per_thread;
-
-  __syncthreads();
-
-  array[0] = 42;
-
-  for (; row < last_row; ++row)
-    for (; col < last_col; ++col)
-      array[0] = 42;
-      // ++array[row * cols + col];
+  ++array[threadIdx.y * blockDim.x + threadIdx.x];
 }
 
 
@@ -79,14 +61,12 @@ template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range2d_rw<double_type> range)
   {
-    printf(">>> kudaAddone %lx, %u %u\n",
-	   (uintptr_t)&range(0, 0), rows(range), cols(range));
+    printf(">>> kudaAddone %lx\n", (uintptr_t)&range(0, 0));
 
     const CUstream custream = (CUstream)stream.stream;
 
-    static const dim3 fubar(256, 256, 1);
-    addone<<<1, fubar, 0, custream>>>
-      (&range(0, 0), rows(range), cols(range));
+    static const dim3 fubar(16, 16);
+    addone<<<1, fubar, 0, custream>>>(&range(0, 0));
   }
 };
 
@@ -99,6 +79,8 @@ template<> struct TaskBodyCPU<TaskInit>
 {
   void operator() (ka::range2d_w<double_type> range)
   {
+    printf(">>> TaskInit %lx\n", (uintptr_t)&range(0, 0));
+
     for (size_t row = 0; row < rows(range); ++row)
       for (size_t col = 0; col < cols(range); ++col)
 	range(row, col) = 0;
@@ -120,7 +102,7 @@ template<> struct TaskBodyCPU<TaskFetch>
 
 #if 0 // uncomment if valid
     const size_t size = rows(range) * cols(range) * sizeof(double_type);
-    memcpy(addr, range.begin(), size);
+    memcpy(addr, (void*)&range(0, 0), size);
 #else
     for (size_t row = 0; row < rows(range); ++row)
       for (size_t col = 0; col < cols(range); ++col)
@@ -155,6 +137,8 @@ struct doit {
       {
 	double_type* const array = (double_type*)kaapi_mem_alloc_host(total_size);
 
+	printf("Spawn(%lx)\n", (uintptr_t)array);
+
 	memset(array, 0, total_size);
 	ka::range2d<double_type> range
 	  (array, CONFIG_ROW_COUNT, CONFIG_COL_COUNT, CONFIG_COL_COUNT);
@@ -183,8 +167,9 @@ struct doit {
 	    const double_type value = array[row * CONFIG_COL_COUNT + col];
 	    if (value != 1)
 	    {
-	      printf("invalid @%u(%u,%u)::%u == %u\n", count, row, col, value);
+	      printf("invalid @%u(%u,%u) == %u\n", count, row, col, value);
 	      row = CONFIG_ROW_COUNT - 1;
+	      count = CONFIG_RANGE_COUNT - 1;
 	      break;
 	    }
 	  }

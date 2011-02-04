@@ -97,7 +97,6 @@ static int kaapi_memory_write_view
 
         for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
 	{
-	  printf("cpu2gpu: %lx, %lx %lx\n", (uintptr_t)raddr, (uintptr_t)laddr, (uintptr_t)view_src->size[1]);
 	  error = write_fn(write_ctx, raddr, laddr, size_row);
 	  if (error) goto on_error;
 	}
@@ -435,7 +434,6 @@ kaapi_pointer_t kaapi_memory_allocate_view(
   int flag 
 )
 {
-  printf("VIEW: %lx\n", (uintptr_t)view);
   size_t size = kaapi_memory_view_size( view );
   
   switch (kaapi_memory_address_space_gettype(kasid))
@@ -565,7 +563,6 @@ int kaapi_memory_copy(
 #endif
     
     default:
-      printf("UNKNOWN DEST\n");
       /* bad architecture, unknown */
       KAAPI_DEBUG_INST( printf("Unknown remote address space architecture\n") );
       return EINVAL;
