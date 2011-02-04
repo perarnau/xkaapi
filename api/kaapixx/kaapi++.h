@@ -1570,7 +1570,7 @@ namespace ka {
     range2d_r<T> operator() (const rangeindex& ri, const rangeindex& rj)  
     { return range2d_r<T>( range2d_r<T>(array<2,T>::operator()(ri,rj) ) ); }
     T& operator()(int i, int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
-    T& operator()(unsigned i, unsigned j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    T& operator()(size_t i, size_t j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
   };
 
 
@@ -1650,7 +1650,7 @@ namespace ka {
     range2d_rw<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
     { return range2d_rw<T>( array<2,T>::operator()(ri,rj) ); }
     T& operator()(int i, int j)  { return array<2,T>::operator()(i,j); }
-    T& operator()(unsigned i, unsigned j) { return array<2,T>::operator()(i,j); }
+    T& operator()(size_t i, size_t j) { return array<2,T>::operator()(i,j); }
     void operator=(const T& value) { array_rep<2,T>::operator=(value); }
   };
 
