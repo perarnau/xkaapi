@@ -99,6 +99,7 @@ static int kaapi_memory_write_view
 
         for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
 	{
+	  printf("cpu2gpu: %lx, %lx %lx\n", (uintptr_t)raddr, (uintptr_t)laddr, (uintptr_t)view_src->size[1]);
 	  error = write_fn(write_ctx, raddr, laddr, view_src->size[1]);
 	  if (error) goto on_error;
 	}

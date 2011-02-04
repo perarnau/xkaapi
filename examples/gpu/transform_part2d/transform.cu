@@ -23,7 +23,7 @@ typedef unsigned int double_type;
 
 // task signature
 struct TaskAddone : public ka::Task<1>::Signature
-<ka::W<ka::range2d<double_type> > > {};
+<ka::RW<ka::range2d<double_type> > > {};
 
 // cuda kernel
 __global__ void addone
@@ -41,9 +41,12 @@ __global__ void addone
 
   __syncthreads();
 
+  array[0] = 42;
+
   for (; row < last_row; ++row)
     for (; col < last_col; ++col)
-      ++array[row * cols + col];
+      array[0] = 42;
+      // ++array[row * cols + col];
 }
 
 
@@ -62,7 +65,7 @@ inline static size_t cols(const barfu& o)
 
 template<> struct TaskBodyCPU<TaskAddone>
 {
-  void operator()(ka::range2d_w<double_type> range)
+  void operator()(ka::range2d_rw<double_type> range)
   {
     for (size_t row = 0; row < rows(range); ++row)
       for (size_t col = 0; col < cols(range); ++col)
@@ -74,18 +77,16 @@ template<> struct TaskBodyCPU<TaskAddone>
 // gpu implementation
 template<> struct TaskBodyGPU<TaskAddone>
 {
-  void operator()(ka::gpuStream stream, ka::range2d_w<double_type> range)
+  void operator()(ka::gpuStream stream, ka::range2d_rw<double_type> range)
   {
-#if 0
     printf(">>> kudaAddone %lx, %u %u\n",
-	   (uintptr_t)range(0, 0), rows(range), cols(range));
+	   (uintptr_t)&range(0, 0), rows(range), cols(range));
 
     const CUstream custream = (CUstream)stream.stream;
 
-    static const dim3 fubar(1, 1, 1);
+    static const dim3 fubar(256, 256, 1);
     addone<<<1, fubar, 0, custream>>>
-      (range(0, 0), rows(range), cols(range));
-#endif
+      (&range(0, 0), rows(range), cols(range));
   }
 };
 
@@ -99,6 +100,9 @@ template<> struct TaskBodyCPU<TaskFetch>
   void operator()(uintptr_t fubar, ka::range2d_r<double_type> range)
   {
     double_type* const addr = (double_type*)fubar;
+
+    printf(">>> TaskFetch %lx <- %lx\n", addr, (uintptr_t)&range(0, 0));
+
 #if 0 // uncomment if valid
     const size_t size = rows(range) * cols(range) * sizeof(double_type);
     memcpy(addr, range.begin(), size);
@@ -140,6 +144,7 @@ struct doit {
 	ka::range2d<double_type> range
 	  (array, CONFIG_ROW_COUNT, CONFIG_COL_COUNT, CONFIG_COL_COUNT);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
+	printf("spawn(%u, %lx)\n", count, (uintptr_t)array);
 	threadgroup.Spawn<TaskFetch>(ka::SetPartition(0))((uintptr_t)array, range);
 	arrays[count] = array;
       }
@@ -161,10 +166,10 @@ struct doit {
 	  for (size_t col = 0; col < CONFIG_COL_COUNT; ++col)
 	  {
 	    const double_type value = array[row * CONFIG_COL_COUNT + col];
-	    if (value != 1.f)
+	    if (value != 1)
 	    {
-	      row = CONFIG_ROW_COUNT - 1;
 	      printf("invalid @%u(%u,%u)::%u == %u\n", count, row, col, value);
+	      row = CONFIG_ROW_COUNT - 1;
 	      break;
 	    }
 	  }

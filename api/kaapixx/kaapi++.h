@@ -1514,6 +1514,7 @@ namespace ka {
     explicit range2d_rw( array<2,T>& a ) : pointer_rw<array<2,T> >(a) {}
     range2d_rw<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
     { return range2d_rw<T>( array<2,T>::operator()(ri,rj) ); }
+    T& operator()(size_t i, size_t j)  { return array_rep<2,T>::operator()(i,j); }
   };
 
 
