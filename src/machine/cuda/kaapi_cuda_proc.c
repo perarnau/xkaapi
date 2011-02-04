@@ -44,6 +44,7 @@
 ** 
 */
 #include "kaapi_cuda_proc.h"
+#include "kaapi_cuda_kasid.h"
 #include "kaapi_cuda_error.h"
 
 
@@ -126,6 +127,8 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
     kaapi_cuda_error("pthread_mutex_init", 0);
     return -1;
   }
+
+  proc->kasid_user = KAAPI_CUDA_KASID_USER_BASE + idev;
 
   proc->is_initialized = 1;
 

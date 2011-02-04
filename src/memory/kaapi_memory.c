@@ -116,21 +116,16 @@ static int kaapi_memory_write_view
 #if defined(KAAPI_USE_CUDA)
 
 #include "../cuda/kaapi_cuda.h"
+#include "../cuda/kaapi_cuda_kasid.h"
 #include "../machine/cuda/kaapi_cuda_error.h"
 
-static kaapi_cuda_proc_t* kasid_to_cuda_proc
+static inline kaapi_cuda_proc_t* kasid_to_cuda_proc
 (kaapi_address_space_id_t kasid)
 {
-  size_t count = kaapi_count_kprocessors;
-  kaapi_processor_t** proc = kaapi_all_kprocessors;
-
-  for (; count; --count, ++proc)
-  {
-    if ((*proc)->proc_type == KAAPI_PROC_TYPE_CUDA)
-      return &(*proc)->cuda_proc;
-  }
-
-  return NULL;
+  kaapi_cuda_proc_t* const cu_proc =
+    kaapi_cuda_get_proc_by_kasid(kasid);
+  kaapi_assert_debug(cu_proc);
+  return cu_proc;
 }
 
 #if 0

@@ -51,13 +51,15 @@
 #include <sys/types.h>
 
 
-#define KAAPI_CUDA_KASID_USER_BASE 0xf00f
+/* should be randomized but runtime limitations */
+#define KAAPI_CUDA_KASID_USER_BASE 0x1
 
 struct kaapi_cuda_proc;
 struct kaapi_address_space_t;
 
 unsigned int kaapi_cuda_get_kasid_user(size_t);
-struct kaapi_cuda_proc* kaapi_cuda_get_proc_by_kasid(struct kaapi_address_space_t*);
+struct kaapi_cuda_proc* kaapi_cuda_get_proc_by_kasid
+(struct kaapi_address_space_t*);
 
 
 #endif /* ! KAAPI_CUDA_KASID_H_INCLUDED */

@@ -1369,6 +1369,10 @@ void kaapi_threadgroup_force_archtype(kaapi_threadgroup_t group, unsigned int pa
 
 /**
 */
+void kaapi_threadgroup_force_kasid(kaapi_threadgroup_t group, unsigned int part, unsigned int arch, unsigned int user);
+
+/**
+*/
 extern int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep );
 
 /** Check and compute dependencies for task 'task' to be pushed into the i-th partition.

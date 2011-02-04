@@ -140,7 +140,8 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_execframe.h \
   machine/cuda/kaapi_cuda_execframe.c \
   machine/cuda/kaapi_cuda_threadgroup_execframe.h \
-  machine/cuda/kaapi_cuda_threadgroup_execframe.c
+  machine/cuda/kaapi_cuda_threadgroup_execframe.c \
+  machine/cuda/kaapi_cuda_kasid.c
 endif
 
 include_HEADERS=\

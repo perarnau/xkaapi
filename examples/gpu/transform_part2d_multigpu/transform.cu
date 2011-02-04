@@ -18,10 +18,10 @@ typedef unsigned int double_type;
 #define CONFIG_ITER_COUNT 1
 #define CONFIG_ROW_COUNT 16
 #define CONFIG_COL_COUNT 16
-#define CONFIG_RANGE_COUNT 1
 #define CONFIG_RANGE_CHECK 1
 #define CONFIG_GPU_LO 1 // inclusive range
 #define CONFIG_GPU_HI 2
+#define CONFIG_RANGE_COUNT (CONFIG_GPU_HI - CONFIG_GPU_LO + 1)
 
 // task signature
 struct TaskAddone : public ka::Task<1>::Signature
@@ -130,12 +130,12 @@ struct doit {
       t0 = kaapi_get_elapsedns();
 
       // prepare partitions
-      ka::ThreadGroup threadgroup(1 + (CONFIG_GPU_HI - CONFIG_GPU_LO));
+      ka::ThreadGroup threadgroup(1 + (CONFIG_GPU_HI - CONFIG_GPU_LO + 1));
 
       threadgroup.begin_partition();
 
       // set kasid users to handle multi gpus
-      for (size_t cu_part = CONFIG_GPU_LO; i < CONFIG_GPU_HI; ++i)
+      for (size_t cu_part = CONFIG_GPU_LO; cu_part <= CONFIG_GPU_HI; ++cu_part)
       {
 	const unsigned int kasid_user =
 	  kaapi_cuda_get_kasid_user(cu_part - CONFIG_GPU_LO);
@@ -152,7 +152,7 @@ struct doit {
 	ka::range2d<double_type> range
 	  (array, CONFIG_ROW_COUNT, CONFIG_COL_COUNT, CONFIG_COL_COUNT);
 	threadgroup.Spawn<TaskInit>(ka::SetPartition(0))(range);
-	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
+	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1 + count))(range);
 	threadgroup.Spawn<TaskFetch>(ka::SetPartition(0))((uintptr_t)array, range);
 	arrays[count] = array;
       }

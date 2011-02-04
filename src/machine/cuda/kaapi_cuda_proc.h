@@ -61,6 +61,8 @@ typedef struct kaapi_cuda_proc
 
   int is_initialized;
 
+  unsigned int kasid_user;
+
 } kaapi_cuda_proc_t;
 
 

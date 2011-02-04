@@ -297,6 +297,21 @@ void kaapi_threadgroup_force_archtype
 #ifndef KAAPI_ASID_MASK_ARCH
 # define KAAPI_ASID_MASK_ARCH 0xFF00000000000000UL
 #endif
+
   group->tid2asid[part]->asid &= ~KAAPI_ASID_MASK_ARCH;
   group->tid2asid[part]->asid |= (uint64_t)type << 56;
+}
+
+
+void kaapi_threadgroup_force_kasid
+(kaapi_threadgroup_t group, unsigned int part, unsigned int arch, unsigned int user)
+{
+  /* force the kasid info for a given partition */
+
+#ifndef KAAPI_ASID_MASK_USER
+# define KAAPI_ASID_MASK_USER 0x00000000FFFFFFFFUL
+#endif
+
+  group->tid2asid[part]->asid &= ~(KAAPI_ASID_MASK_USER | KAAPI_ASID_MASK_ARCH);
+  group->tid2asid[part]->asid |= ((uint64_t)arch << 56) | ((uint64_t)user << 0);
 }

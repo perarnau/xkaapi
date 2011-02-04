@@ -2975,6 +2975,11 @@ namespace ka {
       kaapi_threadgroup_force_archtype(_threadgroup, part, type);
     }
 
+    void force_kasid(unsigned int part, unsigned int arch, unsigned int user)
+    {
+      kaapi_threadgroup_force_kasid(_threadgroup, part, arch, user);
+    }
+
     /* destroy */
     void destroy( )
     {
