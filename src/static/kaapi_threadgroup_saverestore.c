@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stddef.h> /* ptrdiff_t */
 #include <stdint.h>
 
 /**
