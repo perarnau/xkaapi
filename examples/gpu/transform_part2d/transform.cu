@@ -91,6 +91,21 @@ template<> struct TaskBodyGPU<TaskAddone>
 };
 
 
+// init task. needed because of a bug in the runtime.
+struct TaskInit : public ka::Task<1>::Signature
+<ka::W<ka::range2d<double_type> > > {};
+
+template<> struct TaskBodyCPU<TaskInit>
+{
+  void operator() (ka::range2d_w<double_type> range)
+  {
+    for (size_t row = 0; row < rows(range); ++row)
+      for (size_t col = 0; col < cols(range); ++col)
+	range(row, col) = 0;
+  }
+};
+
+
 // fetch memory back to original cpu
 struct TaskFetch : public ka::Task<2>::Signature
 <uintptr_t, ka::R<ka::range2d<double_type> > > {};
@@ -143,8 +158,8 @@ struct doit {
 	memset(array, 0, total_size);
 	ka::range2d<double_type> range
 	  (array, CONFIG_ROW_COUNT, CONFIG_COL_COUNT, CONFIG_COL_COUNT);
+	threadgroup.Spawn<TaskInit>(ka::SetPartition(0))(range);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
-	printf("spawn(%u, %lx)\n", count, (uintptr_t)array);
 	threadgroup.Spawn<TaskFetch>(ka::SetPartition(0))((uintptr_t)array, range);
 	arrays[count] = array;
       }

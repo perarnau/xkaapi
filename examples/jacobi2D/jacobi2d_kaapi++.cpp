@@ -577,7 +577,7 @@ struct doit {
       
 #if 1
       /* memory synchronize : only D !!! */
-//      threadgroup.synchronize( );
+     threadgroup.synchronize( );
       if (k % 1 == 0)
       {
         printf("\n\n%i::*********** Value at step %i\n", ka::System::local_gid, k);

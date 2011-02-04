@@ -20,11 +20,10 @@ typedef unsigned int double_type;
 #define CONFIG_RANGE_COUNT 3
 #define CONFIG_RANGE_CHECK 1
 
-// task signature
+// addone task
 struct TaskAddone : public ka::Task<1>::Signature
 <ka::RW<ka::range1d<double_type> > > {};
 
-// cuda kernel
 __global__ void addone(double_type* array, unsigned int size)
 {
   const unsigned int per_thread = size / blockDim.x;
@@ -36,7 +35,6 @@ __global__ void addone(double_type* array, unsigned int size)
   for (; i < j; ++i) ++array[i];
 }
 
-// cpu implementation
 template<> struct TaskBodyCPU<TaskAddone>
 {
   void operator() (ka::range1d_rw<double_type> range)
@@ -45,10 +43,8 @@ template<> struct TaskBodyCPU<TaskAddone>
     for (size_t i = 0; i < range_size; ++i)
       range[i] += 1;
   }
-
 };
 
-// gpu implementation
 template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range1d_rw<double_type> range)
@@ -60,6 +56,19 @@ template<> struct TaskBodyGPU<TaskAddone>
   }
 };
 
+// init task. needed because of a bug in the runtime.
+struct TaskInit : public ka::Task<1>::Signature
+<ka::W<ka::range1d<double_type> > > {};
+
+template<> struct TaskBodyCPU<TaskInit>
+{
+  void operator() (ka::range1d_w<double_type> range)
+  {
+    const size_t range_size = range.size();
+    for (size_t i = 0; i < range_size; ++i)
+      range[i] = 0;
+  }
+};
 
 // fetch memory back to original cpu
 struct TaskFetch : public ka::Task<2>::Signature
@@ -102,6 +111,7 @@ struct doit {
 
 	memset(array, 0, total_size);
 	ka::range1d<double_type> range(array, array + CONFIG_ELEM_COUNT);
+	threadgroup.Spawn<TaskInit>(ka::SetPartition(0))(range);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
 	threadgroup.Spawn<TaskFetch>(ka::SetPartition(0))((uintptr_t)array, range);
 	arrays[count] = array;

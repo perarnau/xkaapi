@@ -175,7 +175,7 @@ int kaapi_cuda_threadgroup_execframe( kaapi_thread_context_t* thread )
 
   /* update the current frame */
   ++thread->sfp;
-  KAAPI_DEBUG_INST(save_fp = (kaapi_frame_t*)thread->sfp);
+  /* KAAPI_DEBUG_INST(save_fp = (kaapi_frame_t*)thread->sfp); */
   
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 

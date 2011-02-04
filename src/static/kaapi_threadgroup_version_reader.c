@@ -298,8 +298,6 @@ fflush(stdout);
          Other threads only compute address.
       */
 
-      printf("kaapi_memory_allocate_view\n");
-
       wc->data       = a.data = (void*) kaapi_memory_allocate_view( 
               kaapi_threadgroup_tid2asid(thgrp, tid), 
               &wc->view,
