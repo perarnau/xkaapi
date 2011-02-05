@@ -257,7 +257,7 @@ template<>
 struct TaskBodyCPU<TaskUpdateInternal> {
   void operator() ( int bi, int bj, ka::range2d_rw<double> D )
   {
-#if 1
+#if 0
     std::cout << ka::System::local_gid << "::TaskUpdateInternal (" << bi << "," << bj << ")" << std::endl;
 #endif
     unsigned i,j;
@@ -428,7 +428,7 @@ struct doit {
     unsigned dn = 4;    /* size of the subdomain */
     unsigned nbloc = 2; /* number of the bloc in each direction */
     unsigned iter = 10;
-#if 0
+#if 1
     if (argc >1)
       dn = atoi(argv[1]);
     if (argc >2)
@@ -476,15 +476,17 @@ struct doit {
         range rj(j*dn, (j+1)*dn);
         ka::Spawn<TaskInit> (ka::SetPartition( setpart(i,j) ))  
                             ( i, j, dir, D(ri,rj) );
+#if 0
         ka::Spawn<TaskPrint> (ka::SetPartition( setpart(i,j) ))  
                              ( i, j, D(ri,rj) );
+#endif
       }
     }
     threadgroup.end_partition();
 
     threadgroup.execute();
     
-#if 1
+#if 0
     /* test synchronization: only for multicore... */
     threadgroup.synchronize( );
     printf("\n\n*********** After initialisation\n");
@@ -501,6 +503,7 @@ struct doit {
 
     threadgroup.begin_partition( KAAPI_THGRP_SAVE_FLAG );
 
+#if 0
     for (unsigned i=0; i<nbloc; ++i)
     {
       range ri(i*dn, (i+1)*dn);
@@ -511,6 +514,7 @@ struct doit {
                              ( i, j, D(ri,rj) );
       }
     }
+#endif
 
     for (unsigned i=0; i<nbloc; ++i)
     {
@@ -575,11 +579,12 @@ struct doit {
       printf("\n\n*********** Step %i\n", k);
       threadgroup.execute();
       
-#if 1
-      /* memory synchronize : only D !!! */
-      threadgroup.synchronize( );
-      if (k % 1 == 0)
+#if 0
+      if (k == iter-1)
       {
+        /* memory synchronize : only D !!! */
+        threadgroup.synchronize( );
+
         printf("\n\n%i::*********** Value at step %i\n", ka::System::local_gid, k);
         for (unsigned i=0; i<n; ++i)
         {

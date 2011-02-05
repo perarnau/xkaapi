@@ -11,9 +11,9 @@ endif
 
 check_PROGRAMS+=$(JACOBI2D_PRGS)
 
-all-hello: $(JACOBI2D_PRGS)
+all-jacobi: $(JACOBI2D_PRGS)
 
-jacobi2d_kaapi___SOURCES=jacobi2d/jacobi2d_kaapi++.cpp
+jacobi2d_kaapi___SOURCES=jacobi2D/jacobi2d_kaapi++.cpp
 
 jacobi2d_kaapi___CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 jacobi2d_kaapi___CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)
