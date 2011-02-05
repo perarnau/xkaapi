@@ -52,6 +52,7 @@
 #include <vector>
 #include <typeinfo>
 #include <iterator>
+#include <stdexcept>
 
 /** Version number for the API
   * v1: task with dependencies + spawn
@@ -59,6 +60,18 @@
 */
 #define KAAPIXX_API_VERSION 1
 namespace ka {
+
+  /** Log file for this process
+      \ingroup atha
+      If not set_logfile, then return the std::cout stream.
+  */
+  extern std::ostream& logfile();
+
+//@{
+/** Return an system wide identifier of the type of an expression
+*/
+#define kaapi_get_swid(EXPR) kaapi_hash_value(typeid(EXPR).name())
+//@}
 
   /* take a constant... should be adjusted */
   enum { STACK_ALLOC_THRESHOLD = KAAPI_MAX_DATA_ALIGNMENT };  
@@ -70,117 +83,7 @@ namespace ka {
     kaapi_task_body_t gpu_body;
     kaapi_task_body_t default_body;
   };
-  
-  /* C++ atomics encapsulation, low level memory routines 
-     * only specialized for signed 32 bits and 64 bits integer
-  */
-  template<int bits>
-  struct atomic_t;
-  
-  template<>
-  class atomic_t<32> {
-  public:
-    atomic_t<32>(int32_t value =0)
-    { 
-#if defined(__i386__)||defined(__x86_64)
-      kaapi_assert_debug( ((unsigned long)&_atom & (32/8-1)) == 0 ); 
-#endif
-      KAAPI_ATOMIC_WRITE(&_atom, value);
-    }
-
-    int32_t read() const 
-    { return KAAPI_ATOMIC_READ(&_atom); }
-
-    void write( int32_t value ) 
-    { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    void write_barrier( int32_t value ) 
-    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
-    
-    bool cas( int32_t oldvalue, int32_t newvalue )
-    { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
-
-    int32_t incr( )
-    { return KAAPI_ATOMIC_INCR( &_atom ); }
-
-    int32_t sub( int32_t v )
-    { return KAAPI_ATOMIC_SUB( &_atom, v ); }
-
-    int32_t fetch_and_or( int32_t mask )
-    { return KAAPI_ATOMIC_OR_ORIG( &_atom, mask ); }
-
-    int32_t fetch_and_and( int32_t mask )
-    { return KAAPI_ATOMIC_AND_ORIG( &_atom, mask ); }
-
-    int32_t fetch_and_xor( int32_t mask )
-    { return KAAPI_ATOMIC_XOR_ORIG( &_atom, mask ); }
-
-    int32_t or_and_fetch( int32_t mask )
-    { return KAAPI_ATOMIC_OR( &_atom, mask ); }
-
-    int32_t and_and_fetch( int32_t mask )
-    { return KAAPI_ATOMIC_AND( &_atom, mask ); }
-
-    int32_t xor_and_fetch( int32_t mask )
-    { return KAAPI_ATOMIC_XOR( &_atom, mask ); }
-
-  protected:
-    kaapi_atomic32_t _atom;
-  };
-
-
-  template<>
-  class atomic_t<64> {
-  public:
-    atomic_t<64>(int64_t value =0)
-    { 
-      KAAPI_ATOMIC_WRITE(&_atom, value);
-#if defined(__i386__)||defined(__x86_64)
-      kaapi_assert_debug( ((unsigned long)this & (64/8-1)) == 0 ); 
-#endif
-    }
-
-    int64_t read() const 
-    { return KAAPI_ATOMIC_READ(&_atom); }
-
-    void write( int64_t value )
-    { KAAPI_ATOMIC_WRITE(&_atom, value); }
-    
-    void write_barrier( int64_t value ) 
-    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
-        
-    bool cas( int64_t oldvalue, int64_t newvalue )
-    { return KAAPI_ATOMIC_CAS64( &_atom, oldvalue, newvalue ); }
-
-    int64_t incr( )
-    { return KAAPI_ATOMIC_INCR64( &_atom ); }
-
-    int64_t sub( int64_t v )
-    { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
-
-    int64_t fetch_and_or( int64_t mask )
-    { return KAAPI_ATOMIC_OR64_ORIG( &_atom, mask ); }
-
-    int64_t fetch_and_and( int64_t mask )
-    { return KAAPI_ATOMIC_AND64_ORIG( &_atom, mask ); }
-
-    int64_t fetch_and_xor( int64_t mask )
-    { return KAAPI_ATOMIC_XOR64_ORIG( &_atom, mask ); }
-
-    int64_t or_and_fetch( int64_t mask )
-    { return KAAPI_ATOMIC_OR64( &_atom, mask ); }
-
-    int64_t and_and_fetch( int64_t mask )
-    { return KAAPI_ATOMIC_AND64( &_atom, mask ); }
-
-    int64_t xor_and_fetch( int64_t mask )
-    { return KAAPI_ATOMIC_XOR64( &_atom, mask ); }
-
-  protected:
-    kaapi_atomic64_t _atom;
-  };
-  
-  
   /* Kaapi C++ thread <-> Kaapi C thread */
   class Thread;
 
@@ -400,13 +303,13 @@ namespace ka {
   class System {
   public:
     static Community join_community()
-      throw (RuntimeError,RestartException,ServerException);
+      throw (std::runtime_error);
 
     static Community join_community( int& argc, char**& argv )
-      throw (RuntimeError,RestartException,ServerException);
+      throw (std::runtime_error);
 
     static Community initialize_community( int& argc, char**& argv )
-      throw (RuntimeError,RestartException,ServerException);
+      throw (std::runtime_error);
 
     static Thread* get_current_thread();
 
@@ -3355,10 +3258,6 @@ namespace ka {
   template<class T>
   auto_pointer<T>::~auto_pointer()
   { SpawnDelete<TraitNoDeleteTask<T>::value>::doit(*this); }
-
-
-  // --------------------------------------------------------------------
-  extern std::ostream& logfile();
 
   // --------------------------------------------------------------------
   class SyncGuard {
