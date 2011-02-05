@@ -49,6 +49,7 @@
 #include "ka_timer.h"
 #include <map>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <vector>
 
@@ -169,7 +170,7 @@ std::ostream& logfile()
       {
         std::ostringstream msg;
         msg << "[ka::Statistics::initialize] cannot create directory: " << pwdlog << std::endl;
-        Exception_throw( ka::PosixError(msg.str(),errno) );
+        throw std::runtime_error(msg.str()); //,errno) );
       }
       std::ostringstream sname;
       sname << pwdlog << "/cout." << ka::System::local_gid << "." << self << "." << getpid();
@@ -201,7 +202,7 @@ std::ostream& logfile()
     {
       std::ostringstream msg;
       msg << "[ka::Statistics::initialize] cannot create directory: " << pwdlog << std::endl;
-      Exception_throw( ka::PosixError(msg.str(),errno) );
+      throw std::runtime_error(msg.str()); //,errno) );
     }
     std::ostringstream sname; 
     sname << pwdlog << "/cout." << ka::System::local_gid << "." << getpid();

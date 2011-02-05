@@ -43,7 +43,6 @@
 #ifndef _MPINET_DEVICE_H_
 #define _MPINET_DEVICE_H_
 
-#include "kaapi++"
 #include "kanet_device.h"
 #include <mpi.h>
 
@@ -72,7 +71,7 @@ public:
 
   /**
   */
-  int initialize();
+  int initialize(int* argc, char*** argv);
 
   /**
   */

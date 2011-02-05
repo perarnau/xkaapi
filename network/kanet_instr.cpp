@@ -40,8 +40,7 @@
 ** terms.
 ** 
 */
-#include <iostream>
-#include "kaapi_impl.h"
+#include "kaapi_impl.h"  // sched_lock routines
 #include "kanet_instr.h"
 
 namespace ka {

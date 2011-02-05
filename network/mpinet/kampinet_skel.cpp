@@ -40,9 +40,9 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 #include "kampinet_channel.h"
 #include "kampinet_device.h"
+#include "kanet_network.h"
 #include <mpi.h>
 
 namespace MPINET {
@@ -60,19 +60,15 @@ void Device::ack_term()
   uint64_t handler[2] = { (uint64_t)&Device::service_term, 0 };
   err = MPI_Send( &handler, 2*sizeof(uint64_t), MPI_BYTE, 0, 1, _comm );
   kaapi_assert(err == MPI_SUCCESS);
-  printf("%i::Send ack term message to:0\n", ka::System::local_gid );
-  fflush(stdout);
 }
 
 
 // --------------------------------------------------------------------
 void* Device::skeleton( void* arg )
 {
-  ka::logfile() << "In " << __PRETTY_FUNCTION__ << std::endl;
   Device* device = (Device*)arg;
   device->skel();
   device->_state.write( Device::S_FINISHED );
-  ka::logfile() << "Out " << __PRETTY_FUNCTION__ << std::endl;
   return 0;
 }
 
@@ -118,9 +114,7 @@ int Device::skel()
         service = (ka::Service_fnc)header.am.handler;
         if (service == Device::service_term) 
         {
-          printf("%i::Recv term message from:0\n", ka::System::local_gid,  status.MPI_SOURCE);
-          fflush(stdout);
-          if (ka::System::local_gid ==0)
+          if (ka::Network::object.local_gid() ==0)
           {
             if (++_ack_term == _wcom_size-1) return 0;
           }
@@ -142,7 +136,7 @@ int Device::skel()
         break;
 
       default:
-        kaapi_assert_m(false, "bad tag");
+        kaapi_assert(false); // "bad tag"
         break;
     }
   }

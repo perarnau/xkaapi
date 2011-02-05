@@ -49,6 +49,7 @@
 #include <fstream>
 #include <string>
 #include <map>
+#include <stdexcept>
 #include "ka_error.h"
 
 namespace ka {
@@ -79,13 +80,13 @@ public:
   /** Load the file with name 'file'
       \exception IOError if cannot load the file
   */
-  virtual void load( const std::string& filename ) throw(IOError);
+  virtual void load( const std::string& filename ) throw(std::runtime_error);
 
   /** Store the file
       \exception IOError if cannot store the file
   */
   virtual void store( const std::string& filename, 
-              const std::string& header = "" ) const throw(IOError);
+              const std::string& header = "" ) const throw(std::runtime_error);
 
   /** Print the set of parameters for the simulation
   */

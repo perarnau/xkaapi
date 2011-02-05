@@ -40,7 +40,6 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 #include "kagasnet_channel.h"
 #include "kagasnet_device.h"
 
@@ -58,7 +57,7 @@ void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, si
   handler = handler | (uintptr_t)handlerL;
   ka::Service_fnc service = (ka::Service_fnc)handler;
 #if 0
-  std::cout << ka::System::local_gid << "::[Device::kaapi_gasnet_service_call] recv message from:" << src << ", fnc:(" 
+  std::cout << ka::Network::object.local_gid() << "::[Device::kaapi_gasnet_service_call] recv message from:" << src << ", fnc:(" 
             << handlerH << "," << handlerL << ")=" << (void*)handler 
             << ", buffer size:" << sz_buffer_am
             << std::endl << std::flush;    
@@ -70,11 +69,9 @@ void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, si
 // --------------------------------------------------------------------
 void* Device::skeleton( void* arg )
 {
-  ka::logfile() << "In " << __PRETTY_FUNCTION__ << std::endl;
   Device* device = (Device*)arg;
 //  device->skel();
   device->_state.write( Device::S_FINISHED );
-  ka::logfile() << "Out " << __PRETTY_FUNCTION__ << std::endl;
   return 0;
 }
 

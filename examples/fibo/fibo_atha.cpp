@@ -177,14 +177,8 @@ int main(int argc, char** argv)
     /* */
     a1::System::terminate();
   }
-  catch (const a1::InvalidArgumentError& E) {
-    Util::logfile() << "Catch invalid arg" << std::endl;
-  }
-  catch (const a1::BadAlloc& E) {
-    Util::logfile() << "Catch bad alloc" << std::endl;
-  }
-  catch (const a1::Exception& E) {
-    Util::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const std::exception& E) {
+    Util::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {
     Util::logfile() << "Catch unknown exception: " << std::endl;

@@ -29,7 +29,6 @@ libkanet_la_SOURCES=\
 	kanet_channel.cpp \
 	kanet_device.cpp \
 	kanet_network.cpp \
-	kanet_init.cpp \
 	kanet_alloc.cpp \
 	kaapi_network.cpp \
 	$(include_HEADERS)

@@ -40,7 +40,6 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 #include "kanet_network.h"
 #include "kanet_device.h"
 
@@ -71,7 +70,7 @@ void Network::deallocate( void* addr )
 
 
 // --------------------------------------------------------------------
-void* Network::bind( kaapi_pointer_t addr, size_t sz )
+void* Network::bind( uintptr_t addr, size_t sz )
 {
   if (_default_device ==0) return 0;
   return _default_device->bind( addr, sz );

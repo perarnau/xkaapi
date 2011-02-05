@@ -49,8 +49,8 @@ int main( int argc, char** argv )
 
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const std::exception& E) {
+    ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;

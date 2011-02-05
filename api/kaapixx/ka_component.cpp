@@ -190,7 +190,7 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
       filename = name;
       filename = filename + "/kaapi.rc";
       KaapiComponentManager::prop.load( filename );
-    } catch (const IOError& e) { 
+    } catch (const std::runtime_error& e) { 
     }
   }
 
@@ -201,7 +201,7 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
       filename = name;
       filename = filename + "/kaapi.rc";
       KaapiComponentManager::prop.load( filename );
-    } catch (const IOError& e) { 
+    } catch (const std::runtime_error& e) { 
     }
     free( name );
   }
@@ -237,7 +237,7 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
     {
       logfile() << "[KaapiComponentManager::initialize] cannot create directory: " << rootdir << std::endl;
       perror(0);
-      Exception_throw( PosixError(rootdir,errno) );
+      throw std::runtime_error( rootdir ); //,errno) );
     }
     /* verify that the path is a directory */
     struct stat stat_pwd;
@@ -246,7 +246,7 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
     {
       logfile() << "[KaapiComponentManager::initialize] not a directory: '" << rootdir << "'" << std::endl;
       perror(0);
-      Exception_throw( PosixError(rootdir,errno) );
+      throw std::runtime_error( rootdir ); //,errno) );
     }
     KaapiComponentManager::prop["util.rootdir"] = rootdir;  
   }

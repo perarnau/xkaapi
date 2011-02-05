@@ -84,18 +84,6 @@ namespace a1 {
   class OStream; /* fwd decl */
   using ka::ODotStream;
 
-  using ka::Exception;
-  using ka::RuntimeError;
-  using ka::InvalidArgumentError;
-  using ka::RestartException;
-  using ka::ServerException;
-  using ka::NoFound;
-  using ka::BadAlloc;
-  using ka::IOError;
-  using ka::ComFailure;
-  using ka::BadURL;
-
-
   using ka::System;
   using ka::Community;
 

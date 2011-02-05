@@ -96,7 +96,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     kaapi_assert_debug( kproc->thread !=0 );
     ctxt = kproc->thread;
     thread =0;
-    //thread = kaapi_sched_emitsteal( kproc );
+    thread = kaapi_sched_emitsteal( kproc );
 
     if (thread ==0) 
       continue;

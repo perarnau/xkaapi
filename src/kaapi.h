@@ -255,7 +255,7 @@ static inline void kaapi_mem_barrier()
    \retval 0 in case of sucsess
    \retval EALREADY if already called
 */
-extern int kaapi_init(void);
+extern int kaapi_init(int* argc, char*** argv);
 
 /* Kaapi finalization. 
    After call to this functions all other kaapi function calls may not success.

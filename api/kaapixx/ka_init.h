@@ -67,10 +67,6 @@ public:
   */
   static bool enable_trace;
 
-  /** Global variable that defines the architecture for this processor
-  */
-  static Architecture local_archi;
-
   /** The global id of this process
   */
   static uint32_t local_gid;

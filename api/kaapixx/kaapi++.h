@@ -1472,8 +1472,9 @@ namespace ka {
     explicit range2d_r(  const array<2,T>& a ) : pointer_r<array<2,T> >(a) {}
     range2d_r<T> operator() (const rangeindex& ri, const rangeindex& rj)  
     { return range2d_r<T>( range2d_r<T>(array<2,T>::operator()(ri,rj) ) ); }
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
-    T& operator()(unsigned i, unsigned j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    const T& operator()(int i, int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    const T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    const T& operator()(size_t i, size_t j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
   };
 
 
@@ -1483,7 +1484,7 @@ namespace ka {
   public:
     typedef T                        value_type;
     typedef size_t                   difference_type;
-    typedef pointer_w<array<2,T> > Self_t;
+    typedef pointer_w<array<2,T> >   Self_t;
 
     pointer_w() : array<2,T>() {}
     pointer_w( const array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
@@ -1508,12 +1509,14 @@ namespace ka {
   /* alias: ka::range2d_w<T> in place of pointer_w<array<2,T> > */
   template<typename T>
   struct range2d_w : public pointer_w<array<2,T> > {
+    typedef typename array<2,T>::index_t index_t;
     range2d_w( range2d<T>& a ) : pointer_w<array<2,T> >(a) {}
     explicit range2d_w( const array<2,T>& a ) : pointer_w<array<2,T> >(a) {}
     range2d_w<T> operator() (const rangeindex& ri, const rangeindex& rj) 
     { return range2d_w<T>( array<2,T>::operator()(ri,rj) ); }
-    T& operator()(int i, int j)  { return array<2,T>::operator()(i,j); }
-    T& operator()(unsigned i, unsigned j)  { return array<2,T>::operator()(i,j); }
+    T& operator()(int i, int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    T& operator()(size_t i, size_t j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
     void operator=(const T& value)  { array_rep<2,T>::operator=(value); }
   };
 
@@ -1548,12 +1551,14 @@ namespace ka {
   /* alias: ka::range2d_rw<T> in place of pointer_rw<array<2,T> > */
   template<typename T>
   struct range2d_rw : public pointer_rw<array<2,T> > {
+    typedef typename array<2,T>::index_t index_t;
     range2d_rw( range2d<T>& a ) : pointer_rw<array<2,T> >(a) {}
     explicit range2d_rw( array<2,T>& a ) : pointer_rw<array<2,T> >(a) {}
     range2d_rw<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
     { return range2d_rw<T>( array<2,T>::operator()(ri,rj) ); }
-    T& operator()(int i, int j)  { return array<2,T>::operator()(i,j); }
-    T& operator()(unsigned i, unsigned j) { return array<2,T>::operator()(i,j); }
+    T& operator()(int i, int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    T& operator()(size_t i, size_t j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
     void operator=(const T& value) { array_rep<2,T>::operator=(value); }
   };
 

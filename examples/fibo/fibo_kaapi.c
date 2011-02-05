@@ -183,7 +183,7 @@ int main(int argc, char** argv)
   else 
     niter = 1;
 
-  kaapi_init();
+  kaapi_init(&argc, &argv);
   thread = kaapi_self_thread();
   kaapi_thread_save_frame(thread, &frame);
   

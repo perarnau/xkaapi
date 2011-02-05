@@ -121,7 +121,7 @@ int main(int argc, char** argv)
     /* */
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
+  catch (const std::exception& E) {
     ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {

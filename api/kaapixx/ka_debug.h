@@ -95,20 +95,6 @@ namespace ka {
   */
   extern void unlock_logfile();
   
-  /** Function call by KAAPI_ASSERT before throwing a Kaapi exception
-      The main goal of this function is to be able to capture and exception
-      during debuging the program. All exception throwed by Kaapi make a call
-      to this function.
-      \see KAAPI_ASSERT
-  */ 
-  void __Exception_throw( const Exception& err );
-
-  /** Function call by macro to throw a Kaapi exception
-      \see KAAPI_ASSERT
-  */ 
-  template<class T>
-  void Exception_throw( const T& ex ) throw(T);
-
 // -----------------------------------------------------------------------
 /*! \def KAAPI_XVALTOSTR(msg)
     \ingroup atha

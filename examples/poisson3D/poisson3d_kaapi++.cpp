@@ -571,7 +571,7 @@ int main( int argc, char** argv )
     com.leave();
     ka::System::terminate();
   }
-  catch (ka::Exception& ex) {
+  catch (const std::exception& ex) {
     std::cerr << "[main] catch exception: " << ex.what() << std::endl;
   }
   catch (...) {

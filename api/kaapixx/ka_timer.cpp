@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "ka_types.h"
 #include "ka_init.h"
 #include "ka_timer.h"
 #include "ka_error.h"

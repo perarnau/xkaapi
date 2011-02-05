@@ -64,7 +64,7 @@ typedef void (*kaapi_service_t)(int errocode, kaapi_globalid_t source, void* buf
 
 /** To be called prior to any other calls to network
 */
-int kaapi_network_init();
+int kaapi_network_init(int* argc, char*** argv);
 
 /**
 */
