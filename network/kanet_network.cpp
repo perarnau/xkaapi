@@ -43,7 +43,9 @@
 #include "kanet_network.h"
 #include "kanet_channel.h"
 #include "kanet_device.h"
-#include "ka_parser.h"   // parsing of the list of string
+#if 0   // parsing of the list of strings of network name
+#include "ka_parser.h" 
+#endif
 #include "kaapi_error.h" // assert 
 #include <iostream>
 #include <sstream>
@@ -79,6 +81,7 @@ void Network::initialize( int* argc, char*** argv )
   const char* lnet = getenv("KAAPI_NETWORK");
   if (lnet)
   {
+#if 0 // avoid depdendencies with parser
     std::string str_list_net = std::string(lnet);
     std::list<std::string> list_of_net;
     ka::Parser::String2lstStr( list_of_net, str_list_net );
@@ -100,6 +103,23 @@ void Network::initialize( int* argc, char*** argv )
       }
       ++ibeg;
     }
+#else // #if 0
+/* do not try to parse the list of name in KAAPI_NETWORK: 
+   we only assume here that just one name is set
+*/
+    DeviceFactory* df = DeviceFactory::resolve_factory(lnet);
+#if defined(KAAPI_DEBUG)
+    if (df ==0)
+      std::cerr << "Unknown network name: '" << lnet << "'" << std::endl;
+#endif
+    if (df !=0)
+    {
+      Device* device = df->create(argc, argv);
+      kaapi_assert( device != 0);
+      _all_devices.push_back( device );
+      _name2device.insert( std::make_pair(device->get_name(), device) );
+    }
+#endif
   }
   if (!_all_devices.empty())
     _default_device = *_all_devices.begin();
