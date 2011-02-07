@@ -281,6 +281,52 @@ static int kaapi_memory_write_cpu2cu
   return error;
 }
 
+static int kaapi_memory_write_cu2cu
+(
+ kaapi_address_space_id_t kasid_dest,
+ kaapi_pointer_t dest,
+ const kaapi_memory_view_t* view_dest,
+ kaapi_address_space_id_t kasid_src, 
+ const void* src,
+ const kaapi_memory_view_t* view_src
+)
+{
+  /* use the host to make the tmp copy for now.
+     assume dest_size == src_size.
+     assume correctness regarding the tmp view
+   */
+
+  int error = 0;
+
+  kaapi_cuda_proc_t* cu_proc;
+
+  const size_t size = kaapi_memory_view_size(view_dest);
+  void* tmp_buffer = malloc(size);
+  if (tmp_buffer == NULL) return EINVAL;
+
+  /* make the tmp view eq to one of */
+
+  /* cu2cpu(tmp, src) */
+  cu_proc = get_cu_context(kasid_src);
+  if (cu_proc == NULL) goto on_error;
+  error = kaapi_memory_write_view
+    ((kaapi_pointer_t)tmp_buffer, view_dest, src, view_src, (write_func_t)memcpy_cu_dtoh, (void*)cu_proc);
+  put_cu_context(cu_proc);
+  if (error) goto on_error;
+
+  /* cpu2cu(dst, tmp) */
+  cu_proc = get_cu_context(kasid_dest);
+  if (cu_proc == NULL) goto on_error;
+  error = kaapi_memory_write_view
+    (dest, view_dest, tmp_buffer, view_dest, (write_func_t)memcpy_cu_htod, (void*)cu_proc);
+  put_cu_context(cu_proc);
+  if (error) goto on_error;
+
+ on_error:
+  free(tmp_buffer);
+  return error;
+}
+
 #endif /* KAAPI_USE_CUDA */
 
 
@@ -552,8 +598,22 @@ int kaapi_memory_copy(
 #if defined(KAAPI_USE_CUDA)
     case KAAPI_MEM_TYPE_CUDA:
     {
-      return kaapi_memory_write_cpu2cu
-	( kasid_dest, dest, view_dest, kasid_src, (const void*)src, view_src ); 
+      switch (type_src)
+      {
+      case KAAPI_MEM_TYPE_CPU:
+	return kaapi_memory_write_cpu2cu
+	  ( kasid_dest, dest, view_dest, kasid_src, (const void*)src, view_src ); 
+	break;
+
+      case KAAPI_MEM_TYPE_CUDA:
+	return kaapi_memory_write_cu2cu
+	  ( kasid_dest, dest, view_dest, kasid_src, (const void*)src, view_src ); 
+	break;
+
+      default:
+	return EINVAL;
+	break;
+      }
     } break ;
 #endif
     
