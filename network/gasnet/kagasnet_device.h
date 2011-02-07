@@ -43,7 +43,6 @@
 #ifndef _GASNET_DEVICE_H_
 #define _GASNET_DEVICE_H_
 
-#include "kaapi++"
 #include "kanet_device.h"
 
 #define GASNET_PAR              1
@@ -92,7 +91,7 @@ public:
 
   /**
   */
-  int initialize();
+  int initialize(int* argc, char*** argv);
 
   /**
   */

@@ -40,13 +40,13 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
 #include "kagasnet_device.h"
 #include "kagasnet_channel.h"
 #include "kanet_network.h"
 #include "ka_init.h"
 #include <string.h>
 #include <stdlib.h>
+#include <sstream>
 #include <stdint.h>
 
 namespace GASNET {
@@ -73,7 +73,7 @@ Device::~Device()
 }
 
 // --------------------------------------------------------------------
-int Device::initialize()
+int Device::initialize(int* argc, char*** argv)
 {
   int err;
 
@@ -83,7 +83,7 @@ int Device::initialize()
     { kaapi_gasnet_service_call_id,     (void (*)())kaapi_gasnet_service_call  }
   };
   
-  err = gasnet_init(&ka::System::saved_argc, (char***)&ka::System::saved_argv);
+  err = gasnet_init(argc, argv);
   GASNET_SAFE( err );
   
   /* segment size: default 4MBytes */
@@ -108,7 +108,7 @@ int Device::initialize()
   _segsize = _seginfo[gasnet_mynode()].size;
   _segsp   = 0;
 
-#if 1
+#if 0
   std::cout << gasnet_mynode() << "::[gasnet] #nodes :" << gasnet_nodes() << std::endl;
   std::cout << gasnet_mynode() << "::[gasnet] seginfo @:" << _segaddr
             << ", size:" << _segsize
@@ -157,7 +157,7 @@ int Device::terminate()
   
   barrier();
 
-  if (ka::System::local_gid ==0)
+  if (_wcom_rank ==0)
   {
     for (int i=1; i<_wcom_size; ++i)
     {

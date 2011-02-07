@@ -48,6 +48,28 @@ extern "C" { /* minimal C interface to network */
 
 #if defined(KAAPI_USE_NETWORK)
 
+// --------------------------------------------------------------------
+int kaapi_network_init(int* argc, char*** argv)
+{
+  /*
+  */
+  ka::Network::object.initialize(argc, argv);
+  ka::Network::object.commit();
+    
+  return 0;
+}
+
+
+// --------------------------------------------------------------------
+int kaapi_network_finalize()
+{
+  /*
+  */
+  ka::Network::object.terminate();
+  return 0;
+}
+
+
 /**
 */
 kaapi_globalid_t kaapi_network_get_current_globalid(void)

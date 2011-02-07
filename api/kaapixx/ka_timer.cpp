@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "ka_types.h"
 #include "ka_init.h"
 #include "ka_timer.h"
 #include "ka_error.h"
@@ -197,7 +198,6 @@ void HighResTimer::calibrate()
   /* open cpuinfo and scan cpu Mhz: */
   FILE* file = fopen("/proc/cpuinfo","r");
   double mhz = 1.0;
-  KAAPI_ASSERT_M(file !=0, "Cannot open /proc/cpuinfo");
 
   int retval =0;
   char line[256];

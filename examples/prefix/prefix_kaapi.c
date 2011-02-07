@@ -356,7 +356,7 @@ int main(int ac, char** av)
   static double oarray[ITEM_COUNT];
 
   /* initialize the runtime */
-  kaapi_init();
+  kaapi_init(&ac, &av);
 
   for (ac = 0; ac < 100; ++ac)
   {

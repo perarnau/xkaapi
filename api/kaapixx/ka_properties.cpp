@@ -84,12 +84,12 @@ void Properties::clear()
 
 
 // ---------------------------------------------------------------------------
-void Properties::load(const std::string& fileName) throw (IOError)
+void Properties::load(const std::string& fileName) throw (std::runtime_error)
 {
   std::ifstream file;
   file.open( fileName.c_str() );
-  if (!file.is_open()) Exception_throw(IOError("file not open") );
-  if (!file.good()) Exception_throw(IOError("file not good") );
+  if (!file.is_open()) throw std::runtime_error("file not open");
+  if (!file.good()) throw std::runtime_error("file not good");
 
   std::string line;
   std::string key;
@@ -151,11 +151,11 @@ void Properties::load(const std::string& fileName) throw (IOError)
 //
 void Properties::store(
   const std::string& filename, 
-  const std::string& header) const throw (IOError)
+  const std::string& header) const throw (std::runtime_error)
 {
   std::ofstream file;
   file.open( filename.c_str(), std::ios::out );
-  if (!file.good()) Exception_throw( IOError() );
+  if (!file.good()) throw std::runtime_error("bad file name");
 
   file << "# " << header << std::endl;
   print( file );

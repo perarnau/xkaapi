@@ -386,7 +386,7 @@ typedef struct kaapi_format_t {
   void                  (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int wa);
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
   kaapi_memory_view_t   (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*);
-  void (*set_view_param)  (const struct kaapi_format_t*, unsigned int, const void*, const kaapi_memory_view_t* );
+  void (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t* );
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
   kaapi_reducor_t       (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*);
 
@@ -500,7 +500,7 @@ kaapi_memory_view_t kaapi_format_get_view_param (const struct kaapi_format_t* fm
 }
 
 static inline 
-void kaapi_format_set_view_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, const kaapi_memory_view_t* view)
+void kaapi_format_set_view_param (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_memory_view_t* view)
 {
   if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
   {

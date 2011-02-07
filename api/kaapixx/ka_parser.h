@@ -44,8 +44,8 @@
 #ifndef _ATHA_PARSER_H_
 #define _ATHA_PARSER_H_
 
-#include "kaapi.h"
 #include "ka_properties.h"
+#include <stdexcept>
 #include <map>
 #include <list>
 
@@ -233,7 +233,7 @@ public:
       \exception throw InvalidArgumentError if module has no name
   */
   void add_module( const Module* mod, Properties* prop)
-    throw(InvalidArgumentError);
+    throw(std::invalid_argument);
 
   /** Declare a new module with a name 
       \param name the module name 
@@ -241,7 +241,7 @@ public:
       \exception throw InvalidArgumentError if module is already added
   */
   void add_module(const std::string& name, Properties* prop)
-    throw(InvalidArgumentError);
+    throw(std::invalid_argument);
 
   /** Display usage informations about all added modules
   */
@@ -260,7 +260,7 @@ public:
 
   /** Convert a string to a bool
   */
-  static bool String2Bool( const std::string& s) throw(InvalidArgumentError);
+  static bool String2Bool( const std::string& s) throw(std::out_of_range);
 
   /** Convert a long to a string
   */
@@ -268,7 +268,7 @@ public:
 
   /** Convert a string to a long
   */
-  static long String2Long( const std::string& s) throw(InvalidArgumentError);
+  static long String2Long( const std::string& s) throw(std::out_of_range);
 
   /** Convert an unsigned long bool to a string
   */
@@ -276,7 +276,7 @@ public:
 
   /** Convert a string to an unsigned long
   */
-  static unsigned long String2ULong( const std::string& s) throw(InvalidArgumentError);
+  static unsigned long String2ULong( const std::string& s) throw(std::out_of_range);
 
   /** Convert an unsigned long bool to a string
   */
@@ -284,7 +284,7 @@ public:
 
   /** Convert a string to an unsigned long long
   */
-  static unsigned long long String2ULLong( const std::string& s) throw(InvalidArgumentError);
+  static unsigned long long String2ULLong( const std::string& s) throw(std::out_of_range);
 
   /** Convert a double to a string
   */
@@ -296,7 +296,7 @@ public:
 
   /** Convert a string to a double
   */
-  static double String2Double( const std::string& s) throw(InvalidArgumentError);
+  static double String2Double( const std::string& s) throw(std::out_of_range);
   //@}
   
   

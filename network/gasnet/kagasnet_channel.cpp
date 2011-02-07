@@ -72,8 +72,6 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
   rmtsegaddr = (uintptr_t)gasnetdev->_segaddr;
 #endif
 
-//  ka::logfile() << "In " << __PRETTY_FUNCTION__ << " " << last-first << std::endl;
-//  std::cout << ka::System::local_gid << "::[OutChannel::flush] begin" << std::endl << std::flush;    
   ka::Instruction* curr = first;
   int err;
   while (curr != last)
@@ -106,7 +104,7 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
         kaapi_assert(err == GASNET_OK);
 
 #if 0
-        std::cout << ka::System::local_gid << "::[OutChannel::flush] send AM to:" << _dest << ", size:" << curr->i_am.size 
+        std::cout << ka::Network::object.local_gid() << "::[OutChannel::flush] send AM to:" << _dest << ", size:" << curr->i_am.size 
                   << ", service:(" << handlerH << "," << handlerL << ")=" << (void*)curr->i_am.handler << std::endl << std::flush;
 #endif
 
@@ -116,7 +114,7 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
 
       case ka::Instruction::INST_RWDMA:
 #if 0
-        std::cout << ka::System::local_gid << "::[OutChannel::flush] send RDMA to:" << _dest 
+        std::cout << ka::Network::object.local_gid() << "::[OutChannel::flush] send RDMA to:" << _dest 
                   << ", @:" << (void*)(curr->i_rw.dptr) 
                   << ", size:" << curr->i_rw.size 
                   << std::endl << std::flush;    

@@ -24,7 +24,6 @@ libkaapi_la_SOURCES=\
   misc/kaapi_hashmap_find.c \
   misc/kaapi_hashmap_insert.c \
   misc/kaapi_hashmap_findinsert.c \
-  misc/kaapi_thread_clear.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_wq_slowpop.c\
   misc/kaapi_wq_set.c\
@@ -67,9 +66,10 @@ libkaapi_la_SOURCES=\
 
 #Libtask
 libkaapi_la_SOURCES+=\
-  task/kaapi_thread_print.c \
-  task/kaapi_thread_execframe.c \
-  task/kaapi_thread_saveframe.c \
+  thread/kaapi_thread_print.c \
+  thread/kaapi_thread_execframe.c \
+  thread/kaapi_thread_saveframe.c \
+  thread/kaapi_thread_clear.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \

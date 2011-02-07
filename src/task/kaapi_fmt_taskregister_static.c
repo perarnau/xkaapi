@@ -121,9 +121,13 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   kaapi_assert( fmt->_off_versions !=0);
   memcpy(fmt->_off_versions, offset_version, sizeof(kaapi_offset_t)*count );
 
-  fmt->_off_cwflag = malloc( sizeof(kaapi_offset_t)*count );
-  kaapi_assert( fmt->_off_cwflag !=0);
-  memcpy(fmt->_off_cwflag, offset_cwflag, sizeof(kaapi_offset_t)*count );
+  fmt->_off_cwflag = 0;
+  if (offset_cwflag != 0)
+  {
+    fmt->_off_cwflag = malloc( sizeof(kaapi_offset_t)*count );
+    kaapi_assert( fmt->_off_cwflag !=0);
+    memcpy(fmt->_off_cwflag, offset_cwflag, sizeof(kaapi_offset_t)*count );
+  }
   
   fmt->_fmt_params = malloc( sizeof(kaapi_format_t*)*count );
   kaapi_assert( fmt->_fmt_params !=0);

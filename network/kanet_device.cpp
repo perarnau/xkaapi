@@ -41,10 +41,12 @@
 ** 
 */
 #include "kanet_device.h" 
+#include <errno.h>
 #include <string.h>
 #include <map>
 #include <dlfcn.h>
 #include <iostream>
+#include <sstream>
 
 namespace ka {
 

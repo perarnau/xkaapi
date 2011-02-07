@@ -72,8 +72,8 @@ int main(int argc, char** argv)
   catch (const ka::BadAlloc& E) {
     ka::logfile() << "Catch bad alloc" << std::endl;
   }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const std::exception& E) {
+    ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;

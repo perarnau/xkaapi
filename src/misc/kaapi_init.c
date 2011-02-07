@@ -195,7 +195,7 @@ void kaapi_init_basicformat(void)
 
 /**
 */
-int kaapi_init(void)
+int kaapi_init(int* argc, char*** argv)
 {
   static int iscalled = 0;
   if (iscalled !=0) return EALREADY;
@@ -207,7 +207,7 @@ int kaapi_init(void)
   kaapi_assert_m( 0 == kaapi_setup_param(), "kaapi_setup_param" );
   
 #if defined(KAAPI_USE_NETWORK)
-  kaapi_network_init();
+  kaapi_network_init(argc, argv);
 #endif
 
   int err = kaapi_mt_init();

@@ -63,10 +63,10 @@ const char* DeviceFactory::get_name() const
 
 
 // --------------------------------------------------------------------
-ka::Device* DeviceFactory::create( )
+ka::Device* DeviceFactory::create( int* argc, char*** argv )
 { 
   Device* dev = new MPINET::Device();
-  if (dev->initialize() !=0) 
+  if (dev->initialize(argc, argv) !=0) 
   {
     delete dev;
     return 0;

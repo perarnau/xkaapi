@@ -54,10 +54,11 @@ kaapi_threadgroup_t kaapi_all_threadgroups[KAAPI_MAX_THREADGROUP] = {
 uint32_t kaapi_threadgroup_count = 0;
 
 #if !defined(KAAPI_USE_NETWORK)
-
+/* This is dummy function to avoid dependencies with C interface to network
+*/
 /**
 */
-int kaapi_network_init()
+int kaapi_network_init(int* argc, char*** argv)
 {  
   return 0;
 }

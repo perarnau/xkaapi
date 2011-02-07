@@ -88,10 +88,6 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
         break;
 
       case ka::Instruction::INST_AM:
-#if 1//defined(TRACE_THIS_FILE)
-printf("%i::Send AM message to %i, handler=%p, size=%i\n", ka::System::local_gid, _dest, (void*)curr->i_am.handler, (int)curr->i_am.size);
-fflush(stdout);
-#endif
         /* send header: first 2 fields */
         err = MPI_Send( &curr->i_am.handler, 2*sizeof(uint64_t), MPI_BYTE, _dest, 1, _comm );
         kaapi_assert(err == MPI_SUCCESS);
@@ -100,10 +96,6 @@ fflush(stdout);
         /* here use asynchronous send if available... */
         if (curr->i_am.size >0)
         {
-#if 1//defined(TRACE_THIS_FILE)
-printf("%i::Send AM message data to %i, pointer=%p, size=%i\n", ka::System::local_gid, _dest, *(void**)curr->i_am.lptr, (int)curr->i_am.size);
-fflush(stdout);
-#endif
           err = MPI_Send( (void*)curr->i_am.lptr, (int)curr->i_am.size, MPI_BYTE, _dest, 3, _comm );
           kaapi_assert(err == MPI_SUCCESS);
         }
@@ -112,10 +104,6 @@ fflush(stdout);
       break;
 
       case ka::Instruction::INST_RWDMA:
-#if defined(TRACE_THIS_FILE)
-printf("%i::Send rDMA message to %i, @=%p, size=%i\n", ka::System::local_gid, _dest, (void*)curr->i_rw.dptr, (int)curr->i_rw.size);
-fflush(stdout);
-#endif
         /* send header: first 2 fields */
         err = MPI_Send( &curr->i_rw.dptr, 2*sizeof(uint64_t), MPI_BYTE, _dest, 2, _comm );
         kaapi_assert(err == MPI_SUCCESS);
