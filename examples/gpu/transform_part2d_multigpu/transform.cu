@@ -10,6 +10,8 @@ extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 extern "C" void* kaapi_mem_alloc_host(size_t);
 extern "C" void kaapi_mem_free_host(void*);
 extern "C" unsigned int kaapi_cuda_get_kasid_user(size_t);
+extern "C" size_t kaapi_cuda_get_proc_count(void);
+extern "C" unsigned int kaapi_cuda_get_first_kid(void);
 
 // typedefed to float since gtx280 has no double
 typedef unsigned int double_type;
@@ -19,9 +21,6 @@ typedef unsigned int double_type;
 #define CONFIG_ROW_COUNT 16
 #define CONFIG_COL_COUNT 16
 #define CONFIG_RANGE_CHECK 1
-#define CONFIG_GPU_LO 1 // inclusive range
-#define CONFIG_GPU_HI 2
-#define CONFIG_RANGE_COUNT (CONFIG_GPU_HI - CONFIG_GPU_LO + 1)
 
 // task signature
 struct TaskAddone : public ka::Task<1>::Signature
@@ -119,7 +118,10 @@ template<> struct TaskBodyCPU<TaskFetch>
 struct doit {
   void operator()(int argc, char** argv )
   {
-    double_type* arrays[CONFIG_RANGE_COUNT];
+    const size_t gpu_count = kaapi_cuda_get_proc_count();
+    const size_t& array_count = gpu_count;
+
+    double_type* arrays[array_count];
     const size_t total_size =
       CONFIG_ROW_COUNT * CONFIG_COL_COUNT * sizeof(double_type);
 
@@ -130,19 +132,22 @@ struct doit {
       t0 = kaapi_get_elapsedns();
 
       // prepare partitions
-      ka::ThreadGroup threadgroup(1 + (CONFIG_GPU_HI - CONFIG_GPU_LO + 1));
+      ka::ThreadGroup threadgroup(1 + gpu_count);
 
       threadgroup.begin_partition();
 
       // set kasid users to handle multi gpus
-      for (size_t cu_part = CONFIG_GPU_LO; cu_part <= CONFIG_GPU_HI; ++cu_part)
+      const unsigned int first_kid = kaapi_cuda_get_first_kid();
+      const unsigned int last_kid = first_kid + gpu_count;
+
+      for (size_t cu_part = first_kid; cu_part < last_kid; ++cu_part)
       {
 	const unsigned int kasid_user =
-	  kaapi_cuda_get_kasid_user(cu_part - CONFIG_GPU_LO);
+	  kaapi_cuda_get_kasid_user(cu_part - first_kid);
 	threadgroup.force_kasid(cu_part, KAAPI_PROC_TYPE_CUDA, kasid_user);
       }
 
-      for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
+      for (size_t count = 0; count < array_count; ++count)
       {
 	double_type* const array = (double_type*)kaapi_mem_alloc_host(total_size);
 
@@ -167,7 +172,7 @@ struct doit {
       // check it
 #if CONFIG_RANGE_CHECK
       printf(">>> checking range\n");
-      for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
+      for (size_t count = 0; count < array_count; ++count)
       {
 	double_type* const array = arrays[count];
 	for (size_t row = 0; row < CONFIG_ROW_COUNT; ++row)
@@ -178,7 +183,7 @@ struct doit {
 	    {
 	      printf("invalid @%u(%u,%u) == %u\n", count, row, col, value);
 	      row = CONFIG_ROW_COUNT - 1;
-	      count = CONFIG_RANGE_COUNT - 1;
+	      count = array_count - 1;
 	      break;
 	    }
 	  }
@@ -186,7 +191,7 @@ struct doit {
       printf("<<< checking range\n");
 #endif
 
-      for (size_t count = 0; count < CONFIG_RANGE_COUNT; ++count)
+      for (size_t count = 0; count < array_count; ++count)
       {
 	kaapi_mem_delete_host_mappings
 	  ((kaapi_mem_addr_t)arrays[count], total_size);
