@@ -119,6 +119,12 @@ struct doit {
   void operator()(int argc, char** argv )
   {
     const size_t gpu_count = kaapi_cuda_get_proc_count();
+    if (gpu_count <= 1)
+    {
+      printf("invalid gpu count\n");
+      exit(-1);
+    }
+
     const size_t& array_count = gpu_count;
 
     double_type* arrays[array_count];
