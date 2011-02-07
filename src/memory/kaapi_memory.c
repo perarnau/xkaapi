@@ -294,6 +294,7 @@ static int kaapi_memory_write_cu2cu
   /* use the host to make the tmp copy for now.
      assume dest_size == src_size.
      assume correctness regarding the tmp view
+     todo: cuMemcpyDtoD(). warning, async function
    */
 
   int error = 0;
@@ -303,8 +304,6 @@ static int kaapi_memory_write_cu2cu
   const size_t size = kaapi_memory_view_size(view_dest);
   void* tmp_buffer = malloc(size);
   if (tmp_buffer == NULL) return EINVAL;
-
-  /* make the tmp view eq to one of */
 
   /* cu2cpu(tmp, src) */
   cu_proc = get_cu_context(kasid_src);
