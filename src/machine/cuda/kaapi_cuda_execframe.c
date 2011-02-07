@@ -281,8 +281,6 @@ static void prepare_task
 	  kaapi_mem_mapping_clear_dirty(mapping, host_asid);
 	}
 
-	printf("-----> memcpy_htod %lx -> %lx\n", (uintptr_t)devptr, (uintptr_t)hostptr);
-
 #if defined (KAAPI_DEBUG)
 	printf("memcpy_htod(%u:%p -> %u:%p, %lu)\n",
 	       0, (void*)hostptr, self_asid, (void*)(uintptr_t)devptr, size);
@@ -290,8 +288,6 @@ static void prepare_task
 
 	/* copy from host to device */
 	memcpy_htod(proc, devptr, hostptr, size);
-
-	printf("----- memcpy_htod\n");
 
 	/* validate remote memory */
 	kaapi_mem_mapping_clear_dirty(mapping, self_asid);
@@ -444,8 +440,7 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
 }
 
 
-#if 0 /* BIG_TODO */
-
+#if 0 /* unused tasks */
 
 /* cuda device taskbcast body.
    this is the same as kaapi_taskbcast_body
@@ -666,6 +661,8 @@ static void cuda_taskrecv_body
 {
 }
 
+#endif /* unused tasks */
+
 /* unwrap a wrapped task
  */
 
@@ -677,6 +674,7 @@ static inline void unwrap_task
      original_sp the current sp. updated to point the original sp.
    */
 
+#if 0
   if (*original_body == kaapi_taskbcast_body)
   {
     kaapi_taskbcast_arg_t* const arg = (kaapi_taskbcast_arg_t*)*original_sp;
@@ -691,6 +689,7 @@ static inline void unwrap_task
     *original_sp = arg->original_sp;
     *cuda_body = cuda_taskrecv_body;
   }
+#endif
   /* else, nonwrapped task */
 }
 
@@ -711,7 +710,6 @@ static const char* get_body_name(kaapi_task_body_t body)
   NAME_CASE(kaapi_taskrecv_body);
   NAME_CASE(kaapi_tasksteal_body);
   NAME_CASE(kaapi_aftersteal_body);
-  NAME_CASE(kaapi_tasksignalend_body);
 
   return name;
 }
@@ -719,7 +717,7 @@ static const char* get_body_name(kaapi_task_body_t body)
 
 
 /* exported */
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
+#if ((KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD))
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
   kaapi_processor_t* const proc = thread->proc;
@@ -862,14 +860,6 @@ push_frame:
         kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
       }
       else if ( kaapi_task_state_isterm( state ) ){
-#if defined(KAAPI_USE_STATICSCHED)
-        body = kaapi_task_getbody(pc);
-        if (body == kaapi_tasksignalend_body) 
-        {
-          kaapi_tasksignalend_body(pc->sp, (kaapi_thread_t*)thread->sfp );
-          return EINTR;
-        }
-#endif        
         /* means that task has been steal */
         kaapi_assert_debug( kaapi_task_state_issteal( state ) );
       }
@@ -991,15 +981,7 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 {
   return 0;
 }
-#endif
-
-#else
-
-int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
-{
-  printf("%s: not implemented\n", __FUNCTION__);
-  return -1;
-}
+#endif /* KAAPI_EXEC_METHOD */
 
 int kaapi_cuda_exectask
 (kaapi_thread_context_t* thread, void* data, kaapi_format_t* format)
@@ -1038,5 +1020,3 @@ int kaapi_cuda_exectask
 
   return res;
 }
-
-#endif /* BIG_TODO */
