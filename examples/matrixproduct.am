@@ -5,13 +5,20 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-MATPROD_PRGS=matprod_kaapi++
+MATPROD_PRGS=matprod_rec_kaapi++ matprod_iter_kaapi++
 check_PROGRAMS+=$(MATPROD_PRGS)
 all-matrixproduct: $(MATPROD_PRGS)
 
-matprod_kaapi___SOURCES=matrixproduct/matprod_kaapi++.cpp
+matprod_rec_kaapi___SOURCES=matrixproduct/matprod_rec_kaapi++.cpp
+matprod_iter_kaapi___SOURCES=matrixproduct/matprod_iter_kaapi++.cpp
 
-matprod_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-matprod_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-matprod_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-matprod_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+matprod_rec_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+matprod_rec_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matprod_rec_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+matprod_rec_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+
+matprod_iter_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+matprod_iter_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matprod_iter_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+matprod_iter_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
