@@ -28,24 +28,27 @@
 #include <iostream>
 #include <string>
 #include "kaapi++" // this is the new C++ interface for Kaapi
+#if 0
 #include <cblas.h>
+#endif
 
-#define THRESHOLD 2
+#define BLOCSIZE 4
 
-struct TaskMatProduct: public ka::Task<3>::Signature<
+struct TaskSeqMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double> >, /* A */
       ka::R<ka::range2d<double> >,  /* B */
-      ka::W<ka::range2d<double> >   /* C */
+      ka::RW<ka::range2d<double> >   /* C */
 >{};
 
 template<>
-struct TaskBodyCPU<TaskMatProduct> {
-  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_w<double> C )
+struct TaskBodyCPU<TaskSeqMatProduct> {
+  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rw<double> C )
   {
     size_t M = A.dim(0);
     size_t N = B.dim(0);
     size_t K = C.dim(1);
-    
+
+#if 0    
     /* a call to blas should be more performant here */
     cblas_dgemm(
         CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -55,7 +58,41 @@ struct TaskBodyCPU<TaskMatProduct> {
         1.0, 
         C.ptr(), C.lda()
     );
+#endif
+  }
+};
 
+
+struct TaskMatProduct: public ka::Task<3>::Signature<
+      ka::R<ka::range2d<double> >, /* A */
+      ka::R<ka::range2d<double> >,  /* B */
+      ka::RPWP<ka::range2d<double> >   /* C */
+>{};
+
+template<>
+struct TaskBodyCPU<TaskMatProduct> {
+  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rpwp<double> C )
+  {
+    size_t M = A.dim(0);
+    size_t K = B.dim(0);
+    size_t N = B.dim(1);
+    int bloc = BLOCSIZE;
+    
+    for (size_t i=0; i<M; i += bloc)
+    {
+      ka::rangeindex ri(i, i+bloc);
+      for (size_t j=0; j<N; j += bloc)
+      {
+        ka::rangeindex rj(j, j+bloc);
+        for (size_t k=0; k<K; k += bloc)
+        {
+          ka::rangeindex rk(k, k+bloc);
+          ka::Spawn<TaskSeqMatProduct>()( A(ri,rk), B(rk,rj), C(ri,rj) );
+        }
+      }
+    }
+    
+    kaapi_sched_computereadylist();
   }
 };
 
@@ -90,7 +127,7 @@ struct TaskBodyCPU<TaskPrintMatrix> {
 struct doit {
   void operator()(int argc, char** argv )
   {
-    int n = 2*THRESHOLD;
+    int n = 2*BLOCSIZE;
     if (argc > 1) {
         n = atoi(argv[1]);
     }
