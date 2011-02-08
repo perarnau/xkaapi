@@ -1415,9 +1415,11 @@ namespace ka {
     /* public interface */
     array<1,T>& operator*() { return *this; }
     array<1,T>* operator->() { return this; }
+#if 0
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
+#endif
     size_t size() const { return array<1,T>::size(); }
 
     Self_t operator[] (const rangeindex& r) const 
@@ -1440,26 +1442,23 @@ namespace ka {
   class pointer_r<array<2,T> > : protected array<2,T> {
     friend class array_inclosure_t<2,T>;
   public:
-    typedef T      value_type;
-    typedef size_t difference_type;
-    typedef pointer_r<array<2,T> > Self_t;
+    typedef T                            value_type;
+    typedef size_t                       difference_type;
+    typedef typename array<2,T>::index_t index_t;
+    typedef pointer_r<array<2,T> >       Self_t;
 
     pointer_r() : array<2,T>() {}
     pointer_r( const array<2,T>& a ) : array<2,T>(a) {}
     /* cstor call on closure creation */
     explicit pointer_r( array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
+
     /* use in spawn effective -> in closure */
     operator array_inclosure_t<2,T>() const { return array_inclosure_t<2,T>(*this); }
     
     /* public interface */
     array<2,T>& operator*() { return *this; }
     array<2,T>* operator->() { return this; }
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
-
-    Self_t operator() (const rangeindex& ri, const rangeindex& rj) 
+    Self_t operator() (const rangeindex& ri, const rangeindex& rj) const
     { return Self_t( array<2,T>::operator()(ri,rj) ); }
   };
 
@@ -1467,13 +1466,26 @@ namespace ka {
   template<typename T>
   class range2d_r : public pointer_r<array<2,T> > {
   public:
-    typedef typename array<2,T>::index_t index_t;
+    typedef pointer_r<array<2,T> >           Self_t;
+    typedef typename Self_t::value_type      value_type;
+    typedef typename Self_t::difference_type difference_type;
+    typedef typename Self_t::index_t         index_t;
+
     range2d_r( range2d<T>& a ) : pointer_r<array<2,T> >(a) {}
     explicit range2d_r(  const array<2,T>& a ) : pointer_r<array<2,T> >(a) {}
-    range2d_r<T> operator() (const rangeindex& ri, const rangeindex& rj)  
-    { return range2d_r<T>( range2d_r<T>(array<2,T>::operator()(ri,rj) ) ); }
+
+    const T& operator()(int i, int j) const { return array_rep<2,T>::operator()(i,j); }
+    const T& operator()(long i, long j) const { return array_rep<2,T>::operator()(i,j); }
+    const T& operator()(difference_type i, difference_type j) const { return array_rep<2,T>::operator()(i,j); }
     template<typename first_type, typename second_type>
-    T& operator()(first_type i, second_type j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+    const T& operator()(first_type i, second_type j) const { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+
+    const T* ptr() const { return array_rep<2,T>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
+    size_t lda() const { return array_rep<2,T>::lda(); }
+
+    range2d_r<T> operator()(const rangeindex& ri, const rangeindex& rj)  const 
+    { return range2d_r<T>( range2d_r<T>(array<2,T>::operator()(ri,rj) ) ); }
   };
 
 
@@ -1481,9 +1493,10 @@ namespace ka {
   class pointer_w<array<2,T> > : protected array<2,T> {
     friend class array_inclosure_t<2,T>;
   public:
-    typedef T                        value_type;
-    typedef size_t                   difference_type;
-    typedef pointer_w<array<2,T> >   Self_t;
+    typedef T                            value_type;
+    typedef size_t                       difference_type;
+    typedef typename array<2,T>::index_t index_t;
+    typedef pointer_w<array<2,T> >       Self_t;
 
     pointer_w() : array<2,T>() {}
     pointer_w( const array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
@@ -1495,27 +1508,36 @@ namespace ka {
     /* public interface */
     array<2,T>& operator*() { return *this; }
     array<2,T>* operator->() { return this; }
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(unsigned i, unsigned j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
-
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) 
     { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
   };
 
+
   /* alias: ka::range2d_w<T> in place of pointer_w<array<2,T> > */
   template<typename T>
-  struct range2d_w : public pointer_w<array<2,T> > {
-    typedef typename array<2,T>::index_t index_t;
+  struct range2d_w : public pointer_w<array<2,T> > 
+  {
+    typedef pointer_w<array<2,T> >           Self_t;
+    typedef typename Self_t::value_type      value_type;
+    typedef typename Self_t::difference_type difference_type;
+    typedef typename Self_t::index_t         index_t;
+
     range2d_w( range2d<T>& a ) : pointer_w<array<2,T> >(a) {}
     explicit range2d_w( const array<2,T>& a ) : pointer_w<array<2,T> >(a) {}
 
-    range2d_w<T> operator() (const rangeindex& ri, const rangeindex& rj) 
-    { return range2d_w<T>( array<2,T>::operator()(ri,rj) ); }
+    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
     template<typename first_type, typename second_type>
     T& operator()(first_type i, second_type j)  { return array<2,T>::operator()((index_t)i,(index_t)j); }
+
+    T* ptr() { return array_rep<2,T>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
+    size_t lda() const { return array_rep<2,T>::lda(); }
+
+    range2d_w<T> operator() (const rangeindex& ri, const rangeindex& rj) 
+    { return range2d_w<T>( array<2,T>::operator()(ri,rj) ); }
+
     void operator=(const T& value)  { array_rep<2,T>::operator=(value); }
   };
 
@@ -1524,9 +1546,10 @@ namespace ka {
   class pointer_rw<array<2,T> > : protected array<2,T> {
     friend class array_inclosure_t<2,T>;
   public:
-    typedef T                        value_type;
-    typedef size_t                   difference_type;
-    typedef pointer_rw<array<2,T> > Self_t;
+    typedef T                            value_type;
+    typedef size_t                       difference_type;
+    typedef typename array<2,T>::index_t index_t;
+    typedef pointer_rw<array<2,T> >      Self_t;
 
     pointer_rw() : array<2,T>() {}
     pointer_rw( const array<2,T>& a ) : array<2,T>(a) {}
@@ -1538,10 +1561,6 @@ namespace ka {
     /* public interface */
     array<2,T>& operator*() { return *this; }
     array<2,T>* operator->() { return this; }
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
 
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 
     { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
@@ -1549,14 +1568,29 @@ namespace ka {
 
   /* alias: ka::range2d_rw<T> in place of pointer_rw<array<2,T> > */
   template<typename T>
-  struct range2d_rw : public pointer_rw<array<2,T> > {
-    typedef typename array<2,T>::index_t index_t;
+  struct range2d_rw : public pointer_rw<array<2,T> > 
+  {
+    typedef pointer_rw<array<2,T> >          Self_t;
+    typedef typename Self_t::value_type      value_type;
+    typedef typename Self_t::difference_type difference_type;
+    typedef typename Self_t::index_t         index_t;
+
     range2d_rw( range2d<T>& a ) : pointer_rw<array<2,T> >(a) {}
-    explicit range2d_rw( array<2,T>& a ) : pointer_rw<array<2,T> >(a) {}
+    explicit range2d_rw( const array<2,T>& a ) : pointer_rw<array<2,T> >(a) {}
+
+    T& operator()(int i, int j) { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
+    template<typename first_type, typename second_type>
+    T& operator()(first_type i, second_type j) { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+
+    T* ptr() { return array_rep<2,T>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
+    size_t lda() const { return array_rep<2,T>::lda(); }
+
     range2d_rw<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
     { return range2d_rw<T>( array<2,T>::operator()(ri,rj) ); }
-    template<typename first_type, typename second_type>
-    T& operator()(first_type i, second_type j)  { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
+
     void operator=(const T& value) { array_rep<2,T>::operator=(value); }
   };
 
@@ -1579,10 +1613,6 @@ namespace ka {
     /* public interface */
     array<2,T>& operator*() { return *this; }
     array<2,T>* operator->() { return this; }
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
 
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 
     { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
@@ -1590,10 +1620,21 @@ namespace ka {
 
   /* alias: ka::range2d_rpwp<T> in place of pointer_rw<array<2,T> > */
   template<typename T>
-  struct range2d_rpwp : public pointer_rpwp<array<2,T> > {
+  struct range2d_rpwp : public pointer_rpwp<array<2,T> > 
+  {
+    typedef pointer_rpwp<array<2,T> >        Self_t;
+    typedef typename Self_t::value_type      value_type;
+    typedef typename Self_t::difference_type difference_type;
+    typedef typename Self_t::index_t         index_t;
+
     range2d_rpwp( range2d<T>& a ) : pointer_rpwp<array<2,T> >(a) {}
-    explicit range2d_rpwp( array<2,T>& a ) : pointer_rpwp<array<2,T> >(a) {}
-    range2d_rpwp<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
+    explicit range2d_rpwp( const array<2,T>& a ) : pointer_rpwp<array<2,T> >(a) {}
+
+    T* ptr() { return array_rep<2,T>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
+    size_t lda() const { return array_rep<2,T>::lda(); }
+
+    range2d_rpwp<T> operator() (const rangeindex& ri, const rangeindex& rj) const
     { return range2d_rpwp<T>( array<2,T>::operator()(ri,rj) ); }
   };
 
@@ -1620,6 +1661,7 @@ namespace ka {
     T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
     T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(size_t i, size_t j) { return array_rep<2,T>::operator()(i,j); }
     size_t dim(int i) const { return array_rep<2,T>::dim(i); }
 
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 

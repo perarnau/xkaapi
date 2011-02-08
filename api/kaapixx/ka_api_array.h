@@ -687,12 +687,27 @@ public:
   }
 
   // Subarray extraction
+  const T& operator() (const index_t& i, const index_t& j) const
+  {
+    return array_rep<2,T>::operator()( i, j );
+  }
+
+  // Subarray extraction
   array<2,T> operator() (const range& ri, const range& rj)  
   {
     if (ri.isfull() && rj.isfull()) return *this;
     if (ri.isfull()) return array<2,T>(&array_rep<2,T>::operator()(0, rj[0]), this->dim(0), rj.size(), array_rep<2,T>::_lda );
     if (rj.isfull()) return array<2,T>(&array_rep<2,T>::operator()(ri[0], 0), ri.size(), this->dim(1), array_rep<2,T>::_lda );
     return array<2,T>(&array_rep<2,T>::operator()(ri[0], rj[0]), ri.size(), rj.size(), array_rep<2,T>::_lda );
+  }
+
+  // Subarray extraction
+  array<2,T> operator() (const range& ri, const range& rj) const  
+  {
+    if (ri.isfull() && rj.isfull()) return *this;
+    if (ri.isfull()) return array<2,T>((T*)&array_rep<2,T>::operator()(0, rj[0]), this->dim(0), rj.size(), array_rep<2,T>::_lda );
+    if (rj.isfull()) return array<2,T>((T*)&array_rep<2,T>::operator()(ri[0], 0), ri.size(), this->dim(1), array_rep<2,T>::_lda );
+    return array<2,T>((T*)&array_rep<2,T>::operator()(ri[0], rj[0]), ri.size(), rj.size(), array_rep<2,T>::_lda );
   }
 
   // Return the i-th col
