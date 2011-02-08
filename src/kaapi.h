@@ -963,6 +963,9 @@ extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 */
 extern int kaapi_sched_sync( void );
 
+/**
+*/
+extern int kaapi_sched_computereadylist( );
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */

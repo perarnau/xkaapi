@@ -52,9 +52,6 @@
 */
 typedef uintptr_t kaapi_pointer_t;
 
-/** Handle to (opaque) data 
-*/
-typedef kaapi_pointer_t* kaapi_handle_t;
 
 /** Clear the view
 */
@@ -238,7 +235,7 @@ extern int kaapi_memory_copy(
 );
 
 
-#if 1
+#if 0
 /** Copy a view of a data to an other view in a remote address space.
     Source and destination memory region cannot overlap.
     \retval 0 in case of success

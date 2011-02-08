@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
+ ** Created on Tue Feb 23 16:56:43 2010
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -10,7 +10,7 @@
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
- ** threadctxts.
+ ** threads.
  ** 
  ** This software is governed by the CeCILL-C license under French law
  ** and abiding by the rules of distribution of free software.  You can
@@ -43,65 +43,12 @@
  */
 #include "kaapi_impl.h"
 
-static void kaapi_print_pad(FILE* file, int pad)
+/* */
+void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 {
-  for (int i=0; i<pad; ++i)
-    fputc(' ', file);
-}
-/**
-*/
-static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* td )
-{
-  kaapi_activationlink_t* lk;
-  kaapi_activationlist_t* bcast;
-
-  kaapi_print_pad(file, pad);
-  fprintf(file, "td: %p task->%p:", (void*)td, (void*)td->task);
-
-  /* activation list */
-  lk = td->list.front;
-  if (lk !=0) 
-  {
-    kaapi_taskdescr_t* tda;
-    fprintf(file, " activate: ");
-    while (lk !=0)
-    {
-      tda = lk->td;
-      fprintf(file, "(td: %p, wc: %i, task: %p) ", (void*)tda, KAAPI_ATOMIC_READ(&tda->counter), (void*)tda->task);
-      lk = lk->next;
-    }
-  }
+  kaapi_move_arg_t* bcast = (kaapi_move_arg_t*)sp;
   
-  /* bcast list */
-  bcast = td->bcast;
-  if (bcast !=0)
-  {
-    kaapi_taskdescr_t* tda;
-    lk = bcast->front;
-    fprintf(file, "bcast:\n");
-    while (lk !=0)
-    {
-      tda = lk->td;
-      kaapi_task_descriptor_print(file, 2+pad, tda);
-      lk = lk->next;
-    }
-  }
-  fprintf(file, "\n");
-  return 0;
+  /* on multiprocessor: move data from XXX to YYY */
+  bcast->dest->addr = bcast->src_data;
+  bcast->dest->view = bcast->src_view;
 }
-
-
-/**
-*/
-int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
-{
-  kaapi_taskdescr_t* curr = tl->front;
-  while (curr != 0)
-  {
-    fprintf(file, "ready ");
-    kaapi_task_descriptor_print(file, 0, curr);
-    curr = curr->next;
-  }
-  return 0;
-}
-

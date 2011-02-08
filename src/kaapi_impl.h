@@ -1854,7 +1854,8 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 #endif
 }
 
-#include "kaapi_staticsched.h"
+#include "kaapi_tasklist.h"
+//#include "kaapi_staticsched.h"
 
 
 /** Call only on thread that has the top task theft.
@@ -1876,6 +1877,13 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
   return kaapi_task_state_isready(thread->sfp->pc->u.state);
 #endif
 }
+
+#if !defined(KAAPI_USE_STATICSCHED)
+static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid )
+{
+  return 0; 
+}
+#endif
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
