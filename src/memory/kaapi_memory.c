@@ -387,6 +387,7 @@ kaapi_pointer_t kaapi_memory_allocate(
     int flag 
 )
 {
+  kaapi_pointer_t ptr;
   switch (kaapi_memory_address_space_gettype(kasid))
   {
     case KAAPI_MEM_TYPE_CPU:

@@ -45,11 +45,13 @@
 
 /**
 */
-int kaapi_sched_computereadylist( )
+int kaapi_sched_computereadylist( void )
 {
+  int err;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
-  return kaapi_thread_computereadylist( thread );
+  err= kaapi_thread_computereadylist( thread );
+  return err;
 }
 
 
@@ -62,6 +64,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
 {
   kaapi_frame_t*          frame;
   kaapi_task_t*           task_top;
+  kaapi_task_t*           task_bottom;
   kaapi_format_t*         task_fmt;
   kaapi_task_body_t       task_body;
   kaapi_taskdescr_t*      taskdescr =0;
@@ -74,6 +77,9 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
   frame    = thread->sfp;
   tasklist = frame->tasklist;
   kaapi_assert_debug( (tasklist==0) || (kaapi_tasklist_isempty(tasklist)) );
+  
+  if (tasklist == 0) 
+    frame->tasklist = tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist, frame );
   
   /* new history of visited data */
@@ -82,15 +88,20 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
   kaapi_hashmap_init( &dep_khm, &stackbloc );
   
   /* iteration over all tasks of the current top frame thread->sfp */
-  task_top  = frame->pc;
-  while (task_top > frame->sp)
+  task_top    = frame->pc;
+  task_bottom = frame->sp;
+  while (task_top > task_bottom)
   {
     task_body = kaapi_task_getbody(task_top);
     if (task_body!=0)
       task_fmt= kaapi_format_resolvebybody(task_body);
     else
       task_fmt = 0;
-    if (task_fmt ==0) return EINVAL;
+    if (task_fmt ==0) 
+    {
+      
+      return EINVAL;
+    }
 
     /* new task descriptor */
     taskdescr = kaapi_tasklist_allocate_td( tasklist, task_top );
@@ -117,13 +128,13 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
         kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, task_top->sp);
 
         /* no entry -> new version object: no writer */
-        entry->u.version = kaapi_thread_newversion( access.data, &view );
+        entry->u.version = version = kaapi_thread_newversion( access.data, &view );
       }
       else {
         /* have a look at the version and detect dependency or not etc... */
         version = entry->u.version;
-        kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
       }
+      kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
       
       /* change the data in the task by the handle */
       access.data = version->handle;
@@ -140,6 +151,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
 
     --task_top;
   } /* end while task */
-  
+
+  kaapi_thread_print( stdout, thread );  
   return 0;
 }

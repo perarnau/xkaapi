@@ -57,18 +57,22 @@ int kaapi_thread_computeready_access(
   {
     if (KAAPI_ACCESS_IS_READ(m))
     {
-      version->is_ready = 1;
       /* push a bcast task into list of bcast of the task 'task' */
+      kaapi_taskdescr_t* td_move;
+      kaapi_task_t* task_move;
       kaapi_move_arg_t* argmove = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
       argmove->src_data  = version->orig.addr;
       argmove->src_view  = version->orig.view;
       argmove->dest      = version->handle;
-      kaapi_tasklist_push_task( tl, kaapi_taskmove_body, argmove);
+      task_move = kaapi_tasklist_push_task( tl, kaapi_taskmove_body, argmove);
+      td_move =  kaapi_tasklist_allocate_td( tl, task_move );
+      version->writer_task= td_move;
+      version->is_ready = 0;
+      kaapi_tasklist_push_successor( tl, td_move, task );
+      kaapi_tasklist_pushback_ready( tl, td_move);
     }
-    if (KAAPI_ACCESS_IS_WRITE(m))
+    else if (KAAPI_ACCESS_IS_WRITE(m))
       version->writer_task = task;
-    if (KAAPI_ACCESS_IS_READ(m))
-      version->is_ready = 1;    
   }
   else if (KAAPI_ACCESS_IS_CONCURRENT(m, version->last_mode))
   {

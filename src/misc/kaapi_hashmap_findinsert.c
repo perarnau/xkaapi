@@ -71,8 +71,8 @@ kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr )
   
   entry = &khm->currentbloc->data[khm->currentbloc->pos];
   entry->key = ptr;
-  entry->u.value.last_version = 0;
-  entry->u.value.last_mode = KAAPI_ACCESS_MODE_VOID;
+  memset(&entry->u.value, 0, sizeof(entry->u.value) );
+
   if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
   {
     khm->currentbloc = 0;

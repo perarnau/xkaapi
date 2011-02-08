@@ -965,7 +965,7 @@ extern int kaapi_sched_sync( void );
 
 /**
 */
-extern int kaapi_sched_computereadylist( );
+extern int kaapi_sched_computereadylist( void );
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
