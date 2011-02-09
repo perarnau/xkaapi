@@ -1602,7 +1602,7 @@ static inline int kaapi_workqueue_pop(
 /** This function should only be called into a splitter to ensure correctness
     the lock of the victim kprocessor is assumed to be locked to handle conflict.
     Return 0 in case of success 
-    Return ERANGE is the queue is empty or less than requested size.
+    Return ERANGE if the queue is empty or less than requested size.
  */
 static inline int kaapi_workqueue_steal(
   kaapi_workqueue_t* kwq, 

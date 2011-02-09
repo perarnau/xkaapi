@@ -48,6 +48,8 @@ static void kaapi_print_pad(FILE* file, int pad)
   for (int i=0; i<pad; ++i)
     fputc(' ', file);
 }
+
+
 /**
 */
 static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* td )
@@ -67,7 +69,9 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
     while (lk !=0)
     {
       tda = lk->td;
-      fprintf(file, "(td: %p, wc: %i, task: %p) ", (void*)tda, KAAPI_ATOMIC_READ(&tda->counter), (void*)tda->task);
+      fprintf(file, "(td: %p, wc: %i, task: %p) ", 
+            (void*)tda, KAAPI_ATOMIC_READ(&tda->counter), 
+            (void*)tda->task);
       lk = lk->next;
     }
   }
