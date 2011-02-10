@@ -362,6 +362,7 @@ typedef struct kaapi_format_t {
   /* only if it is a format of a task  */
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
+  kaapi_task_body_t          entrypoint_wh[KAAPI_PROC_TYPE_MAX];      /* same as entrypoint, except that shared params are handle to memory location */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
   int                         _count_params;                           /* number of parameters */
@@ -1188,6 +1189,13 @@ typedef struct kaapi_gd_t {
 */
 struct kaapi_version_t;
 
+/** pair of pointer,int 
+    Used to display tasklist
+*/
+typedef struct kaapi_pair_ptrint_t {
+  void*     ptr;
+  uintptr_t tag;
+} kaapi_pair_ptrint_t;
 
 /* ============================= Hash table for WS ============================ */
 /*
@@ -1196,6 +1204,7 @@ typedef struct kaapi_hashentries_t {
   union { /* depending of the kind of hash table... */
     kaapi_gd_t                value;
     struct kaapi_version_t*   version;     /* for static scheduling */
+    kaapi_pair_ptrint_t       data;        /* used for print tasklist */
   } u;
   void*                       key;
   struct kaapi_hashentries_t* next; 
