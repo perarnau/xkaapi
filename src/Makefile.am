@@ -68,6 +68,7 @@ libkaapi_la_SOURCES=\
 libkaapi_la_SOURCES+=\
   thread/kaapi_thread_dfg_print.c \
   thread/kaapi_thread_rdl_print.c \
+  thread/kaapi_thread_dfgdot_print.c \
   thread/kaapi_thread_execframe.c \
   thread/kaapi_thread_saveframe.c \
   thread/kaapi_thread_clear.c \
@@ -82,9 +83,9 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_steal.c \
   task/kaapi_task_splitter_dfg.c \
   task/kaapi_task_splitter_adapt.c \
-  task/kaapi_task_pushstealcontext.c\
-  task/kaapi_task_adapt_allocateresult.c\
-  task/kaapi_task_adapt_deallocateresult.c\
+  task/kaapi_task_pushstealcontext.c \
+  task/kaapi_task_adapt_allocateresult.c \
+  task/kaapi_task_adapt_deallocateresult.c \
   task/kaapi_task_adap_body.c \
   task/kaapi_task_initadap.c \
   task/kaapi_task_reqreply.c \
@@ -92,7 +93,7 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preempt_tail.c \
   task/kaapi_task_preempt_thief.c \
   task/kaapi_task_preemptpoint.c \
-  task/kaapi_task_finalize.c\
+  task/kaapi_task_finalize.c \
   static/kaapi_stsched_tasksetstatic.c
 
 if KAAPI_TARGET_STATICSCHED

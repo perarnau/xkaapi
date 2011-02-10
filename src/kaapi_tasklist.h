@@ -401,6 +401,9 @@ extern int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread );
 */
 extern int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl );
 
+/** Generate the tasks of a frame in the dot format to display the data flow graph
+*/
+extern int kaapi_frame_print_dot  ( FILE* file, kaapi_frame_t* frame );
 
 
 /**/
