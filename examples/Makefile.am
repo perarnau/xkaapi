@@ -25,7 +25,7 @@ include for_each.am
 include hello.am
 include jacobi2D.am
 include listranking.am
-include matrixproduct.am
+include matrix.am
 include net.am
 include nqueens.am
 include poisson3D.am
