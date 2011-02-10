@@ -713,7 +713,7 @@ namespace ka {
     typedef pointer_cw<T> Self_t;
 
     pointer_cw() : base_pointer<T>(), _wa(false) {}
-//    pointer_cw( value_type* ptr ) : base_pointer<T>(ptr) {}
+    pointer_cw( value_type* ptr ) : base_pointer<T>(ptr) {}
     /* to call user define task */
     explicit pointer_cw( kaapi_accesscw_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)), _wa(ptr._wa) {}
     pointer_cw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
@@ -1187,7 +1187,7 @@ namespace ka {
     typedef ACCESS_MODE_CW   mode_t; 
     typedef AccessCW         type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
-    static pointer_cw<T,OP>  handle2data( type_inclosure_t* a) { return *(T**)a->data; }
+    static pointer_cw<T,OP>  handle2data( type_inclosure_t* a) { return (pointer_cw<T,OP>)*(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return &a->_wa; }
@@ -1706,7 +1706,7 @@ namespace ka {
     typedef T                         type_t;
     static const bool                 is_static = false;
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1732,7 +1732,7 @@ namespace ka {
     typedef T                         type_t;
     static const bool                 is_static = false;
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1758,7 +1758,7 @@ namespace ka {
     typedef T                         type_t;
     static const bool                 is_static = false;
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1784,7 +1784,7 @@ namespace ka {
     typedef T                         type_t;
     static const bool                 is_static = false;
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1820,7 +1820,7 @@ namespace ka {
     typedef range1d_r<T>    formal_t; 
     typedef R<range1d <T> > signature_t; 
     static formal_t         handle2data( type_inclosure_t* a) 
-    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam<range1d_w<T> > : public TraitFormalParam<pointer_w<array<1,T> > > {
@@ -1829,7 +1829,7 @@ namespace ka {
     typedef range1d_w<T>    formal_t; 
     typedef W<range1d<T> >  signature_t; 
     static formal_t         handle2data( type_inclosure_t* a) 
-    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam<range1d_rw<T> > : public TraitFormalParam<pointer_rw<array<1,T> > > {
@@ -1838,7 +1838,7 @@ namespace ka {
     typedef range1d_rw<T>   formal_t; 
     typedef RW<range1d<T> > signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam<range1d_rpwp<T> > : public TraitFormalParam<pointer_rpwp<array<1,T> > > {
@@ -1847,7 +1847,7 @@ namespace ka {
     typedef range1d_rpwp<T>   formal_t; 
     typedef RPWP<range1d<T> > signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam< R<range1d<T> > > : public TraitFormalParam<range1d_r<T> > {};
