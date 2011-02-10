@@ -65,11 +65,13 @@ typedef uint64_t kaapi_comtag_t;
 
 /** Data shared between address space and task
     Such data structure is referenced through the pointer arguments of tasks using a handle.
+
+    Warning: The addr should be the first field of the data structure.
 */
 typedef struct kaapi_data_t {
-  kaapi_address_space_id_t     asid;                /* address space of the access (r)   */
   void*                        addr;                /* address of data */
   kaapi_memory_view_t          view;                /* view of data */
+  kaapi_address_space_id_t     asid;                /* address space of the access (r)   */
 } kaapi_data_t;
 
 
@@ -101,12 +103,11 @@ typedef struct kaapi_activationlist_t {
 
 /**
 */
-typedef struct kaapi_comrecv_t {
-  kaapi_comtag_t            tag;          /* tag */
-  struct kaapi_tasklist_t*  tasklist;     /* points to the data structure where to store activated tasks */
+typedef struct kaapi_syncrecv_t {
+  struct kaapi_tasklist_t*  tasklist;     /* points to the data structure where to store activated tasks.. */
   kaapi_activationlist_t    list;         /* list of tasks to activate */
-  struct kaapi_comrecv_t*   next;         /* used to push in recv list of a tasklist */
-} kaapi_comrecv_t;
+  struct kaapi_syncrecv_t*  next;         /* used to push in recv list of a tasklist */
+} kaapi_syncrecv_t;
 
 
 /**
@@ -116,6 +117,7 @@ typedef struct kaapi_move_arg_t {
   kaapi_memory_view_t src_view;
   kaapi_handle_t      dest;
 } kaapi_move_arg_t;
+
 
 /** Task with kaapi_move_arg_t as parameter
 */
@@ -141,7 +143,8 @@ extern void kaapi_taskmove_body( void*, kaapi_thread_t* );
 */
 typedef struct kaapi_taskdescr_t {
   kaapi_atomic_t                counter;   /* concurrent decr to test if task is ready */
-  uint32_t                      date;      /* minimal logical date of production */
+  uint64_t                      date;      /* minimal logical date of production */
+  kaapi_format_t*               fmt;       /* format of the task */
   kaapi_task_t*                 task;      /* the task to executed */
   kaapi_activationlist_t*       bcast;     /* list of bcast tasks activated to send data produced by this task */
   kaapi_activationlist_t        list;      /* list of tasks descr. activated after bcast list */     
@@ -171,9 +174,10 @@ typedef struct kaapi_tasklist_t {
   kaapi_taskdescr_t*      front;      /* readylist of task descriptor */
   kaapi_taskdescr_t*      back;       /* readylist of task descriptor */
   uintptr_t               count_recv; /* number of extern synchronization to receive before detecting end of execution */
-  kaapi_comrecv_t*        recvlist;   /* put by pushsignal into ready list to signal incomming data */
+  kaapi_syncrecv_t*       recvlist;   /* put by pushsignal into ready list to signal incomming data */
   kaapi_frame_t*          frame;      /* where to push task descriptor and other data structure */
 } kaapi_tasklist_t;
+
 
 
 /**
@@ -181,7 +185,7 @@ typedef struct kaapi_tasklist_t {
 typedef struct kaapi_version_t {
   kaapi_data_t        orig;              /* original data + original view */
   kaapi_handle_t      handle;            /* @data + view */
-  uint32_t            date;              /* minimal logical date of production */
+  uint64_t            date;              /* minimal logical date of production */
   kaapi_access_mode_t last_mode;         /* */
   kaapi_taskdescr_t*  last_task;         /* task attached to last access */
   int                 is_ready;          /* */
@@ -197,7 +201,7 @@ static inline kaapi_version_t* kaapi_thread_newversion( void* data, kaapi_memory
   version->orig.addr    = data;
   version->orig.view    = *view;  
   version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
-  version->handle->addr = data;
+  version->handle->addr = 0; /* or data.... if no move task is pushed */
   version->handle->view = *view;
   version->date         = 0;
   version->last_mode    = KAAPI_ACCESS_MODE_VOID;
@@ -417,7 +421,7 @@ static inline void kaapi_activationlist_pushback(
 */
 static inline int kaapi_tasklist_pushsignal( kaapi_pointer_t rsignal )
 {
-  kaapi_comrecv_t* recv = (kaapi_comrecv_t*)rsignal;
+  kaapi_syncrecv_t* recv = (kaapi_syncrecv_t*)rsignal;
   kaapi_tasklist_t* tl  = recv->tasklist;
   kaapi_sched_lock(&tl->lock);
   recv->next = tl->recvlist;
@@ -428,9 +432,9 @@ static inline int kaapi_tasklist_pushsignal( kaapi_pointer_t rsignal )
 
 /** Only call by the owner
 */
-static inline kaapi_comrecv_t* kaapi_tasklist_popsignal( kaapi_tasklist_t* tl )
+static inline kaapi_syncrecv_t* kaapi_tasklist_popsignal( kaapi_tasklist_t* tl )
 {
-  kaapi_comrecv_t* retval;
+  kaapi_syncrecv_t* retval;
   if (tl->recvlist ==0) return 0;
   kaapi_sched_lock(&tl->lock);
   retval = tl->recvlist;

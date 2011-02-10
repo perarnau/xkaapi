@@ -58,7 +58,8 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
   kaapi_task_body_t          body;
   kaapi_frame_t*             fp;
   kaapi_tasklist_t*          tasklist;
-  kaapi_comrecv_t*           recv;
+  kaapi_syncrecv_t*          recv;
+  unsigned int               proc_type;
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
 #endif
@@ -68,6 +69,9 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
   tasklist = thread->sfp->tasklist;
   kaapi_assert_debug( tasklist != 0);
   
+  /* get the processor type to select correct entry point */
+  proc_type = thread->proc->proc_type;
+    
   fp = (kaapi_frame_t*)thread->sfp;
 
   /* push the frame for the next task to execute */
@@ -93,7 +97,16 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
       pc = td->task;
       if (pc !=0)
       {
-        body = kaapi_task_getbody(pc);
+        /* get the correct body for the proc type */
+        if (td->fmt ==0)
+        { /* currently some internal tasks do not have format */
+          body = kaapi_task_getuserbody( td->task );
+        }
+        else 
+        {
+          body = td->fmt->entrypoint_wh[proc_type];
+        }
+        kaapi_assert_debug(body != 0);
 
         /* here... call the task*/
         body( pc->sp, (kaapi_thread_t*)thread->sfp );
@@ -148,9 +161,6 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
     (int)tasklist->count_recv);
 #endif
   
-  kaapi_threadgroup_t thgrp = thread->the_thgrp;
-  kaapi_assert_debug (thgrp !=0);
-
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)
   */
@@ -158,6 +168,7 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
   {
     kaapi_thread_signalend_exec( thread );
 
+#if 0
     if (thread->partid != -1)
     { 
       /* detach the thread: may it should be put into the execframe function */
@@ -165,6 +176,7 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
       thread->proc->thread = 0;
       kaapi_sched_unlock(&thread->proc->lock);
     }
+#endif
 
     return ECHILD;
   }

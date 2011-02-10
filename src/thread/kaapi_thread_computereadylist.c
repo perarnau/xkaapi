@@ -72,7 +72,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
   kaapi_hashentries_t*    entry;
   kaapi_hashentries_bloc_t stackbloc;
   kaapi_version_t*        version;
-
+  
   /* assume no task list or task list is empty */
   frame    = thread->sfp;
   tasklist = frame->tasklist;
@@ -99,7 +99,6 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
       task_fmt = 0;
     if (task_fmt ==0) 
     {
-      
       return EINVAL;
     }
 
@@ -140,8 +139,8 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
       access.data = version->handle;
       kaapi_format_set_access_param(task_fmt, i, task_top->sp, &access);
 
-      /* change body by handle's body version */
-#warning "      kaapi_task_setbody(task_top, kaapi_format_get_handle_body(task_fmt) ); "
+      /* store the format to avoid lookup */
+      taskdescr->fmt = task_fmt;
       
     } /* end for all arguments of the task */
     
