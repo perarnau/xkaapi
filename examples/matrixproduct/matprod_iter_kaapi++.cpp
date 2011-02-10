@@ -92,7 +92,7 @@ struct TaskBodyCPU<TaskMatProduct> {
       }
     }
     
-    kaapi_sched_computereadylist();
+//    kaapi_sched_computereadylist();
   }
 };
 
@@ -155,7 +155,7 @@ struct doit {
     ka::array<2,double> C(dC, n, n, n);
     // Multiply to get A = B*C 
     double t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskMatProduct>()( A, B, C );
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
     double t1 = kaapi_get_elapsedtime();
 
