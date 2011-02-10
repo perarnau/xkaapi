@@ -1491,8 +1491,6 @@ namespace ka {
     const T& operator()(int i, int j) const { return array_rep<2,T>::operator()(i,j); }
     const T& operator()(long i, long j) const { return array_rep<2,T>::operator()(i,j); }
     const T& operator()(difference_type i, difference_type j) const { return array_rep<2,T>::operator()(i,j); }
-    template<typename first_type, typename second_type>
-    const T& operator()(first_type i, second_type j) const { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
 
     const T* ptr() const { return array_rep<2,T>::ptr(); }
     size_t dim(int i) const { return array_rep<2,T>::dim(i); }
@@ -1542,8 +1540,6 @@ namespace ka {
     T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
     T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
-    template<typename first_type, typename second_type>
-    T& operator()(first_type i, second_type j)  { return array<2,T>::operator()((index_t)i,(index_t)j); }
 
     T* ptr() { return array_rep<2,T>::ptr(); }
     size_t dim(int i) const { return array_rep<2,T>::dim(i); }
@@ -1595,8 +1591,6 @@ namespace ka {
     T& operator()(int i, int j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
     T& operator()(difference_type i, difference_type j) { return array_rep<2,T>::operator()(i,j); }
-    template<typename first_type, typename second_type>
-    T& operator()(first_type i, second_type j) { return array_rep<2,T>::operator()((index_t)i,(index_t)j); }
 
     T* ptr() { return array_rep<2,T>::ptr(); }
     size_t dim(int i) const { return array_rep<2,T>::dim(i); }
