@@ -122,11 +122,13 @@ int kaapi_thread_computeready_access(
     }
     else 
     { /* potential WAR or WAW : allocate a new data and insert it into hash map */
-      printf("Task: td:%p -> task:%p has WA{RW} dependency with td:%p -> task:%p\n",
+      printf("Task: td:%p -> task:%p has WA{RW} dependency with td:%p -> task:%p on handle: H@:%p\n",
           (void*)task, (void*)task->task,
-          (void*)version->last_task, (void*)version->last_task->task
+          (void*)version->last_task, 
+          (void*)version->last_task->task,
+          (void*)version->handle
       );
-      kaapi_assert(0);
+//      kaapi_assert(0);
     }
     version->writer_task = task;
     version->is_ready = 0;

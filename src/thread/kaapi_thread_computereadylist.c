@@ -72,7 +72,12 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
   kaapi_hashentries_t*    entry;
   kaapi_hashentries_bloc_t stackbloc;
   kaapi_version_t*        version;
-  kaapi_version_t**       all_versions;
+  kaapi_version_t*        all_versions[32];
+
+#define KAAPI_USE_PERFCOUNTER 1
+#if defined(KAAPI_USE_PERFCOUNTER)
+  size_t cnt_tasks = 0;
+#endif
   
   /* assume no task list or task list is empty */
   frame    = thread->sfp;
@@ -105,15 +110,17 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
 
     /* new task descriptor */
     taskdescr = kaapi_tasklist_allocate_td( tasklist, task_top );
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++cnt_tasks;
+#endif
     
     /* compute if the i-th access is ready or not.
        If all accesses of the task are ready then push it into readylist.
     */
     void* sp = task_top->sp;
     size_t count_params = kaapi_format_get_count_params(task_fmt, sp );
-
-    all_versions = (kaapi_version_t**)alloca(sizeof(kaapi_version_t*) * count_params);
-
+    kaapi_assert( count_params <= 32 );
+    
     for (unsigned int i=0; i < count_params; i++) 
     {
       kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
@@ -170,6 +177,11 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
     --task_top;
   } /* end while task */
 
-  kaapi_thread_print( stdout, thread );  
+  kaapi_hashmap_destroy( &dep_khm );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  printf("[tasklist] #task:%lu\n", cnt_tasks);
+#endif
+
   return 0;
 }
