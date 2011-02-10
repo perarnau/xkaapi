@@ -130,7 +130,7 @@ FormatTask::FormatTask(
     fmt = new kaapi_format_t;
     kaapi_format_taskregister_static( 
           fmt,
-          0, 
+          0, 0,
           name.c_str(),
           size,
           count,
@@ -168,7 +168,7 @@ FormatTask::FormatTask(
     fmt = new kaapi_format_t;
     kaapi_format_taskregister_func( 
           fmt,
-          0, 
+          0, 0,
           name.c_str(),
           size,
           get_count_params,

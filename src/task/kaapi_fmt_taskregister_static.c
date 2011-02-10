@@ -90,6 +90,7 @@ static kaapi_reducor_t kaapi_format_default_get_reducor
 kaapi_format_id_t kaapi_format_taskregister_static( 
         kaapi_format_t*             fmt,
         kaapi_task_body_t           body,
+        kaapi_task_body_t           bodywh,
         const char*                 name,
         size_t                      size,
         int                         count,
@@ -162,6 +163,6 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   
   if (body !=0)
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);
+    kaapi_format_taskregister_body(fmt, body, bodywh, KAAPI_PROC_TYPE_CPU);
   return fmt->fmtid;
 }

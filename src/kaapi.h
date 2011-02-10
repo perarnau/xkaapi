@@ -503,14 +503,17 @@ typedef struct kaapi_task_t {
 #if (__SIZEOF_POINTER__ == 4)
   kaapi_task_bodyid_t     body;      /** task body  */
   volatile uintptr_t      state;     /** bit */
+#define kaapi_task_getuserbody( t ) (t)->body
 #else
   union task_and_body {
     kaapi_task_bodyid_t   body;      /** task body  */
     volatile uintptr_t    state;     /** bit */
   } u;
+#define kaapi_task_getuserbody( t ) (t)->u.body
 #endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
+
 
 
 /* ========================================================================= */
@@ -1348,23 +1351,27 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
     For each thread tid of the group, the function mapping is called with:
-      mapping(ctxt_mapping, nodecount, tid) -> gid
-    in order to defines the site gid that will executes the thread tid.
+      mapping(ctxt_mapping, nodecount, tid) -> (gid, proctype)
+    in order to defines the site gid and the kind of architecture that will executes the thread tid.
     The value ctxt_mapping is a user defined data structure that can be used to hold
     parameter for computing the mapping.
     If mapping ==0, then the default runtime mapping if a 1-block cyclic distribution scheme (round robin).
     Return 0 in case of success or the error code.
+    
+A REVOIR: quid si (gid) n'a pas une architecture cible
 */
 extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size, 
-  kaapi_globalid_t (*mapping)(void*, int, int),
+  void (*mapping)(void*, int /*nodecount*/, int /*tid*/, kaapi_globalid_t* /*gid*/, unsigned int /*proctype*/),
   void* ctxt_mapping
 );
+
 
 /**
 */
 #define KAAPI_THGRP_DEFAULT_FLAG  0
 #define KAAPI_THGRP_SAVE_FLAG     0x1
 extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag );
+
 
 /**
 */
@@ -1378,21 +1385,22 @@ void kaapi_threadgroup_force_kasid(kaapi_threadgroup_t group, unsigned int part,
 */
 extern int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep );
 
-/** Check and compute dependencies for task 'task' to be pushed into the i-th partition.
+/** Check and compute dependencies for task 'task' to be pushed into the tid-th partition.
     On return the task is pushed into the partition if it is local for the execution.
-    
-    \return EINVAL if the task is not pushed 
+    \return ESRCH if the task is not pushed because the tid-th partition is not local
+    \return 0 in case of success
+    \return other value due to error
 */
-extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int partitionid, kaapi_task_t* task);
+extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, kaapi_task_t* task);
 
 #if !defined(KAAPI_COMPILE_SOURCE)
 /**
 */
-static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
+static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int tid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  kaapi_assert_debug( (tid>=-1) && (tid<thgrp->group_size) );
+  kaapi_thread_t* thread = thgrp->threads[tid];
   return thread;
 }
 #endif /* !defined(KAAPI_COMPILE_SOURCE) */
@@ -1408,20 +1416,19 @@ extern int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp );
 
 /**
 */
-extern int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp );
-
-/**
-*/
-extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
-
-/**
-*/
 extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp );
 
 
 /** Memory synchronization with copies to the original memory
 */
 extern int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp );
+
+#if 0
+/** Memory synchronization with copies to the original memory for a
+    specific set of data
+*/
+extern int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp );
+#endif
 
 /**
     \retval 0 in case of success
@@ -1466,6 +1473,16 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 
 
+/** Body of the task in charge of finalize of adaptive task
+    \ingroup TASK
+*/
+typedef struct kaapi_staticschedtask_arg_t {
+  void*               sub_sp;   /* encapsulated task */
+  kaapi_task_bodyid_t sub_body; /* encapsulated body */
+  int                 npart;    /* number of partition */
+} kaapi_staticschedtask_arg_t;
+
+extern void kaapi_staticschedtask_body( void*, kaapi_thread_t* );
 
 /* ========================================================================= */
 /* THE workqueue to be used with adaptive interface                          */
@@ -1814,6 +1831,7 @@ extern kaapi_format_id_t kaapi_format_register(
 extern kaapi_format_id_t kaapi_format_taskregister_static( 
     struct kaapi_format_t*      fmt,
     kaapi_task_body_t           body,
+    kaapi_task_body_t           bodywh,
     const char*                 name,
     size_t                      size,
     int                         count,
@@ -1832,6 +1850,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_static(
 extern kaapi_format_id_t kaapi_format_taskregister_func( 
     struct kaapi_format_t*       fmt, 
     kaapi_task_body_t            body,
+    kaapi_task_body_t            bodywh,
     const char*                  name,
     size_t                       size,
     size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
@@ -1855,11 +1874,19 @@ extern void kaapi_format_set_task_body
 (struct kaapi_format_t*, unsigned int, kaapi_task_body_t);
 
 /** \ingroup TASK
-    Register a task body into its format
+    Register a task body into its format.
+    A task may have multiple implementation this function specifies in 'archi'
+    the target archicture for the body.
+    
+    Internally, in case of caching task, it may be necessary to call the
+    entry of a task with parameter that does not directly points to a data,
+    but to a handle that points to the data. 
+    This body (bodywh) is automatically generated in the C++ interface.
 */
 extern kaapi_task_body_t kaapi_format_taskregister_body( 
         struct kaapi_format_t*      fmt,
         kaapi_task_body_t           body,
+        kaapi_task_body_t           bodywh, /* or 0 */
         int                         archi
 );
 

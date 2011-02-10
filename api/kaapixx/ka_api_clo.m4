@@ -50,6 +50,11 @@ struct KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitForma
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
+  static void bodywithhandle(void* taskarg, kaapi_thread_t* thread)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( M4_PARAM(`TraitFormalParam$1::handle2data(&args->f$1)', `', `,'));
+  }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyCPU<TASK> KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
@@ -66,6 +71,11 @@ struct KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitForma
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (Thread*)thread M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
+  static void bodywithhandle(void* taskarg, kaapi_thread_t* thread)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (Thread*)thread M4_PARAM(`,TraitFormalParam$1::handle2data(&args->f$1)', `', `'));
+  }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyCPU<TASK> KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
@@ -81,6 +91,11 @@ struct KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`, TraitForma
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (StealContext*)sc M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
+  }
+  static void bodywithhandle(void* taskarg, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (StealContext*)sc M4_PARAM(`,TraitFormalParam$1::handle2data(&args->f$1)', `', `'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
@@ -104,6 +119,11 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitForma
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
+  static void bodywithhandle(void* taskarg, kaapi_gpustream_t gpustream)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( M4_PARAM(`TraitFormalParam$1::handle2data(&args->f$1)', `', `,'));
+  }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyGPU<TASK>  KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
@@ -122,6 +142,11 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitForma
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (gpuStream)gpustream M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
+  }
+  static void bodywithhandle(void* taskarg, kaapi_gpustream_t gpustream)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (gpuStream)gpustream M4_PARAM(`, TraitFormalParam$1::handle2data(&args->f$1)', `', `'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
@@ -413,7 +438,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -424,7 +450,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     if ((type_default_t)method == f_default) return 0;
 
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -434,7 +461,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -452,7 +480,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_GPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -463,7 +492,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_GPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 

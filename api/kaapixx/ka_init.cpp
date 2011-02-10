@@ -66,13 +66,15 @@ void __kaapi_free( void* p )
 { return free(p); }
 #endif
  
+#if 0
+// DEAD CODE ?
 // --------------------------------------------------------------------
 static void kaapi_at_exit()
 {
   KaapiComponentManager::terminate();
   KAAPI_ASSERT_M( false, "[kaapi_at_exit] should never be here ????"); 
 }
-
+#endif
 
 
 // --------------------------------------------------------------------

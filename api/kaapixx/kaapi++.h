@@ -898,6 +898,8 @@ namespace ka {
        *  TraitFormalParam<T>::type_inclosure_t gives type of C++ object store in the task argument
        *  TraitFormalParam<T>::is_static retuns true or false if the type does not contains a dynamic set 
        of pointer access.
+       *  TraitFormalParam<T>::handl2data used when pointer to data for shared object are pointer to pointer
+       to data. Should return a type formal_t after interpretation of the type in closure.
        
        *  TraitFormalParam<T>::get_data return the address in the task argument data structure of 
        the i-th data parameter
@@ -925,6 +927,7 @@ namespace ka {
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
+    static T&                handle2data( type_inclosure_t* a) { return *a; }
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -947,6 +950,7 @@ namespace ka {
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
+    static T&                handle2data( type_inclosure_t* a) { return *a; }
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -969,6 +973,7 @@ namespace ka {
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
+    static const T&          handle2data( type_inclosure_t* a) { return *a; }
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -991,6 +996,7 @@ namespace ka {
     typedef ACCESS_MODE_V    mode_t; 
     typedef T                type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
+    static const T&          handle2data( type_inclosure_t* a) { return *a; }
     static void*             get_data   ( type_inclosure_t* a, unsigned int i ) { return a; }
     static void*             get_version( type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1043,6 +1049,7 @@ namespace ka {
     typedef ACCESS_MODE_R    mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_r<T>      handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
@@ -1065,6 +1072,7 @@ namespace ka {
     typedef ACCESS_MODE_RP   mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_rp<T>     handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1087,6 +1095,7 @@ namespace ka {
     typedef ACCESS_MODE_W    mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_w<T>      handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1109,6 +1118,7 @@ namespace ka {
     typedef ACCESS_MODE_WP   mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_wp<T>     handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1131,6 +1141,7 @@ namespace ka {
     typedef ACCESS_MODE_RW   mode_t; 
     typedef Access           type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_rw<T>     handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1153,6 +1164,7 @@ namespace ka {
     typedef ACCESS_MODE_RPWP mode_t; 
     typedef Access           type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_rpwp<T>   handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1175,6 +1187,7 @@ namespace ka {
     typedef ACCESS_MODE_CW   mode_t; 
     typedef AccessCW         type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_cw<T,OP>  handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return &a->_wa; }
@@ -1205,6 +1218,7 @@ namespace ka {
     typedef ACCESS_MODE_CWP  mode_t; 
     typedef Access           type_inclosure_t; 
     static const bool        is_static = TraitIsStatic<T>::value;
+    static pointer_cwp<T>    handle2data( type_inclosure_t* a) { return *(T**)a->data; }
     static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
     static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
     static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1270,8 +1284,8 @@ namespace ka {
   class pointer_r<array<1,T> > : protected array<1,T> {
     friend class array_inclosure_t<1,T>;
   public:
-    typedef T      value_type;
-    typedef size_t difference_type;
+    typedef T                      value_type;
+    typedef size_t                 difference_type;
     typedef pointer_r<array<1,T> > Self_t;
 
     pointer_r() : array<1,T>() {}
@@ -1691,6 +1705,8 @@ namespace ka {
     typedef ACCESS_MODE_R             mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
+    static formal_t                   handle2data( type_inclosure_t* a) 
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1715,6 +1731,8 @@ namespace ka {
     typedef ACCESS_MODE_W             mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
+    static formal_t                   handle2data( type_inclosure_t* a) 
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1739,6 +1757,8 @@ namespace ka {
     typedef ACCESS_MODE_RW            mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
+    static formal_t                   handle2data( type_inclosure_t* a) 
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1763,6 +1783,8 @@ namespace ka {
     typedef ACCESS_MODE_RPWP          mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
+    static formal_t                   handle2data( type_inclosure_t* a) 
+    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1793,23 +1815,39 @@ namespace ka {
   struct TraitFormalParam<range1d<T> > : public TraitFormalParam<array<1,T> > { };
   template<typename T>
   struct TraitFormalParam<range1d_r<T> > : public TraitFormalParam<pointer_r<array<1,T> > > { 
+    typedef TraitFormalParam<pointer_r<array<1,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range1d_r<T>    formal_t; 
     typedef R<range1d <T> > signature_t; 
+    static formal_t         handle2data( type_inclosure_t* a) 
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
   };
   template<typename T>
   struct TraitFormalParam<range1d_w<T> > : public TraitFormalParam<pointer_w<array<1,T> > > {
+    typedef TraitFormalParam<pointer_w<array<1,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range1d_w<T>    formal_t; 
     typedef W<range1d<T> >  signature_t; 
+    static formal_t         handle2data( type_inclosure_t* a) 
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
   };
   template<typename T>
   struct TraitFormalParam<range1d_rw<T> > : public TraitFormalParam<pointer_rw<array<1,T> > > {
+    typedef TraitFormalParam<pointer_rw<array<1,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range1d_rw<T>   formal_t; 
     typedef RW<range1d<T> > signature_t; 
+    static formal_t           handle2data( type_inclosure_t* a) 
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
   };
   template<typename T>
   struct TraitFormalParam<range1d_rpwp<T> > : public TraitFormalParam<pointer_rpwp<array<1,T> > > {
+    typedef TraitFormalParam<pointer_rpwp<array<1,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range1d_rpwp<T>   formal_t; 
     typedef RPWP<range1d<T> > signature_t; 
+    static formal_t           handle2data( type_inclosure_t* a) 
+    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return retval; }
   };
   template<typename T>
   struct TraitFormalParam< R<range1d<T> > > : public TraitFormalParam<range1d_r<T> > {};
@@ -1825,23 +1863,39 @@ namespace ka {
   struct TraitFormalParam<range2d<T> > : public TraitFormalParam<array<2,T> > { };
   template<typename T>
   struct TraitFormalParam<range2d_r<T> > : public TraitFormalParam<pointer_r<array<2,T> > > { 
+    typedef TraitFormalParam<pointer_r<array<2,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range2d_r<T>    formal_t; 
     typedef R<range2d <T> > signature_t; 
+    static formal_t         handle2data( type_inclosure_t* a) 
+    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam<range2d_w<T> > : public TraitFormalParam<pointer_w<array<2,T> > > {
+    typedef TraitFormalParam<pointer_w<array<2,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range2d_w<T>    formal_t; 
     typedef W<range2d<T> >  signature_t; 
+    static formal_t         handle2data( type_inclosure_t* a) 
+    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam<range2d_rw<T> > : public TraitFormalParam<pointer_rw<array<2,T> > > {
+    typedef TraitFormalParam<pointer_rw<array<2,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range2d_rw<T>   formal_t; 
     typedef RW<range2d<T> > signature_t; 
+    static formal_t         handle2data( type_inclosure_t* a) 
+    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam<range2d_rpwp<T> > : public TraitFormalParam<pointer_rpwp<array<2,T> > > {
+    typedef TraitFormalParam<pointer_rpwp<array<2,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
     typedef range2d_rpwp<T>   formal_t; 
     typedef RPWP<range2d<T> > signature_t; 
+    static formal_t           handle2data( type_inclosure_t* a) 
+    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
   template<typename T>
   struct TraitFormalParam< R<range2d<T> > > : public TraitFormalParam<range2d_r<T> > {};
@@ -2256,16 +2310,24 @@ namespace ka {
   /* do nothing */
   class SetStaticSchedAttribut {
     int _npart;
-    int _niter;
   public:
-    SetStaticSchedAttribut( int n, int m  ) 
-     : _npart(n), _niter(m) {}
-    template<class A1_CLO>
-    kaapi_task_t* operator()( kaapi_thread_t*, A1_CLO*& clo) const
-    { return clo; }
+    SetStaticSchedAttribut( int n )
+     : _npart(n) {}
+    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      /* push a task that will encapsulated the execution of the top task */
+      kaapi_task_t* task = kaapi_thread_toptask(thread);
+      kaapi_staticschedtask_arg_t* arg 
+        = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
+      arg->sub_sp   = task->sp;
+      arg->sub_body = kaapi_task_getuserbody(task);
+      arg->npart    = _npart;
+      kaapi_task_initdfg(task, kaapi_staticschedtask_body, arg);
+      kaapi_thread_pushtask(thread);
+    }
   };
-  inline SetStaticSchedAttribut SetStaticSched(int npart, int iter = 1 )
-  { return SetStaticSchedAttribut(npart, iter); }
+  inline SetStaticSchedAttribut SetStaticSched(int npart = -1 )
+  { return SetStaticSchedAttribut(npart); }
 
   // --------------------------------------------------------------------
   template<class F>
@@ -2521,7 +2583,7 @@ namespace ka {
       { 
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
-        /* attribut is reponsible for pushing */
+        /* attribut is reponsible for pushing task into the thread */
         _attr(_thread, clo);
       }
 
@@ -3108,24 +3170,6 @@ namespace ka {
     {
       kaapi_threadgroup_begin_execute( _threadgroup );
       kaapi_threadgroup_end_execute  ( _threadgroup );
-    }
-
-    /* asynchronous start */
-    void start_execute()
-    {
-      kaapi_threadgroup_begin_step( _threadgroup );
-    }
-
-    /* synchronous call to wait end of execution */
-    void wait_execute()
-    {
-      kaapi_threadgroup_end_step( _threadgroup );
-    }
-
-    /* synchronous call say to kernel that this partion is finished to be executed */
-    void end_execute()
-    {
-      kaapi_threadgroup_end_execute( _threadgroup );
     }
 
     /* save */

@@ -76,6 +76,7 @@ kaapi_format_t* kaapi_all_format_bybody[256] =
 kaapi_task_body_t kaapi_format_taskregister_body( 
         kaapi_format_t*             fmt,
         kaapi_task_body_t           body,
+        kaapi_task_body_t           bodywithhandle,
         int                         archi
 )
 {
@@ -85,10 +86,14 @@ kaapi_task_body_t kaapi_format_taskregister_body(
   if (body ==0) return fmt->entrypoint[archi];
   
   if (fmt->entrypoint[archi] ==body) return fmt->entrypoint[archi];
-  fmt->entrypoint[archi] = body;
+  fmt->entrypoint[archi]    = body;
+  fmt->entrypoint_wh[archi] = bodywithhandle;
   if (archi == KAAPI_PROC_TYPE_DEFAULT)
-    fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT] = fmt->default_body = body;
-
+  {
+    fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT]    = fmt->default_body = body;
+    fmt->entrypoint_wh[KAAPI_PROC_TYPE_DEFAULT] = bodywithhandle;
+  }
+  
 #if 0//defined(KAAPI_DEBUG)
   fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)(uintptr_t)body, fmt->name );
   fflush(stdout);
