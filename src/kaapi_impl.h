@@ -1284,6 +1284,33 @@ extern kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t ke
 extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries);
 
 
+/* Big hashmap_big
+   Used for bulding readylist
+*/
+#define KAAPI_HASHMAP_BIG_SIZE 128
+
+/*
+*/
+typedef struct kaapi_hashmap_big_t {
+  kaapi_hashentries_t* entries[KAAPI_HASHMAP_BIG_SIZE];
+  kaapi_hashentries_bloc_t* currentbloc;
+  kaapi_hashentries_bloc_t* allallocatedbloc;
+} kaapi_hashmap_big_t;
+
+/*
+*/
+extern int kaapi_hashmap_big_init( kaapi_hashmap_big_t* khm, kaapi_hashentries_bloc_t* initbloc );
+
+/*
+*/
+extern int kaapi_hashmap_big_destroy( kaapi_hashmap_big_t* khm );
+
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_hashmap_big_findinsert( kaapi_hashmap_big_t* khm, void* ptr );
+
+
 /* ============================= Commun function for server side (no public) ============================ */
 /** lighter than kaapi_thread_clear and used during the steal emit request function
 */
