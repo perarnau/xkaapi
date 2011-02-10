@@ -43,7 +43,7 @@ USER_MAKEFILES=\
 	jacobi2D/Makefile \
 	listranking/Makefile \
 	hello/Makefile \
-	matrixproduct/Makefile \
+	matrix/Makefile \
 	net/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
