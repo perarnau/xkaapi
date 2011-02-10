@@ -115,6 +115,30 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
 
 /**
 */
+static int kaapi_insert_unvisited_td( kaapi_hashmap_t* khm, kaapi_activationlink_t* lk)
+{
+  kaapi_hashentries_t* entry;
+
+  if (lk ==0) return 0;
+  kaapi_taskdescr_t* tda;
+  while (lk !=0)
+  {
+    tda = lk->td;
+    entry = kaapi_hashmap_findinsert(khm, tda);
+    if (entry->u.data.tag ==0)
+    {
+      entry->u.data.tag = 1; /* task inserted */
+      entry->u.data.ptr = tda;
+      if (tda->list.front !=0)
+        kaapi_insert_unvisited_td(khm, tda->list.front);
+    }
+    lk = lk->next;
+  }
+  return 0;
+}
+
+/**
+*/
 int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
 {
   /* new history of visited data */
@@ -133,22 +157,11 @@ int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
     if (entry->u.data.tag ==0)
     { /* first time I visit it: print and insert activated task descr into the hashmap */
       kaapi_task_descriptor_print(file, 0, td);
-      entry->u.data.tag = 1 + td->date; 
+      entry->u.data.tag = 2; /* task print */
       entry->u.data.ptr = td; 
 
       /* add other td */
-      lk = td->list.front;
-      if (lk !=0) 
-      {
-        kaapi_taskdescr_t* tda;
-        while (lk !=0)
-        {
-          tda = lk->td;
-          entry = kaapi_hashmap_findinsert(&visit_khm, tda);
-          entry->u.data.ptr = tda; 
-          lk = lk->next;
-        }
-      }
+      kaapi_insert_unvisited_td( &visit_khm, td->list.front );
     }
     td = td->next;
   }
@@ -160,8 +173,11 @@ int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
     entry = _get_hashmap_entry(&visit_khm, i);
     while (entry != 0)
     {
-      if (entry->u.data.tag ==0)
+      if (entry->u.data.tag ==1)
+      {
+        entry->u.data.tag = 2; /* task print */
         kaapi_task_descriptor_print(file, 0, (kaapi_taskdescr_t*)entry->u.data.ptr);
+      }
       entry = entry->next;
     }
   }
