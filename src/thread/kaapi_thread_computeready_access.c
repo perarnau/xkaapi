@@ -43,9 +43,6 @@
  */
 #include "kaapi_impl.h"
 
-static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
-{ return (d1 < d2 ? d2 : d1); }
-
 /** 
 */
 int kaapi_thread_computeready_access( 
@@ -76,7 +73,6 @@ int kaapi_thread_computeready_access(
     }
     else if (KAAPI_ACCESS_IS_WRITE(m))
       version->writer_task = task;
-    task->date = _kaapi_max( task->date, 1);
   }
   else if (KAAPI_ACCESS_IS_CONCURRENT(m, version->last_mode))
   {
@@ -86,9 +82,8 @@ int kaapi_thread_computeready_access(
       if (version->last_task != 0) 
       {
         kaapi_tasklist_push_successor( tl, version->last_task, task );
-        task->date = _kaapi_max(task->date, 1+version->last_task->date);
       }
-#warning "TODO: date + indep CW, mais ordre à respecter"
+#warning "TODO: indep CW, mais ordre à respecter"
       version->writer_task = task;
     }
     else 
@@ -97,10 +92,6 @@ int kaapi_thread_computeready_access(
       {
         kaapi_assert_debug(!version->is_ready);
         kaapi_tasklist_push_successor( tl, version->writer_task, task );
-        task->date = _kaapi_max( task->date, 1+version->writer_task->date);
-      }
-      else {
-        task->date = _kaapi_max( task->date, 1);
       }
     }
 
@@ -111,23 +102,31 @@ int kaapi_thread_computeready_access(
     {
       kaapi_tasklist_push_successor( tl, version->last_task, task );
       version->is_ready    = 0;
-      task->date = _kaapi_max(task->date, 1+version->last_task->date);
     }
     else 
     {
       kaapi_assert_debug( version->last_mode == KAAPI_ACCESS_MODE_VOID);
-      task->date = _kaapi_max( task->date, 1);
     }
     version->writer_task = task;
   }
   else if (KAAPI_ACCESS_IS_WRITE(m)) /* cw or w */
   {
     /* WAR or WAW */
-    if (version->date < task->date)
+    kaapi_assert_debug( version->last_task !=0 ); //* else mode == VOID !!! */
+    if (version->last_task->date < task->date)
     { /* not a true WAR or WAW */
+      printf("Task: td:%p -> task:%p has a false WA{RW} dependency with td:%p -> task:%p\n",
+          (void*)task, (void*)task->task,
+          (void*)version->last_task, (void*)version->last_task->task
+      );
     }
     else 
     { /* potential WAR or WAW : allocate a new data and insert it into hash map */
+      printf("Task: td:%p -> task:%p has WA{RW} dependency with td:%p -> task:%p\n",
+          (void*)task, (void*)task->task,
+          (void*)version->last_task, (void*)version->last_task->task
+      );
+      kaapi_assert(0);
     }
     version->writer_task = task;
     version->is_ready = 0;
@@ -136,7 +135,6 @@ int kaapi_thread_computeready_access(
   { /* means previous is a w or rw or cw */
     kaapi_tasklist_push_successor( tl, version->last_task, task );
     version->is_ready = 0;
-    task->date = _kaapi_max( task->date, 1+version->last_task->date);
   }
   
   version->last_mode = m;

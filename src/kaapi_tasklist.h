@@ -373,6 +373,13 @@ static inline void kaapi_tasklist_push_successor(
 */
 extern int kaapi_thread_computereadylist( kaapi_thread_context_t* thread );
 
+/** Compute the minimal date of execution of the task 
+*/
+extern int kaapi_thread_computeready_date( 
+    const kaapi_version_t* version, 
+    kaapi_taskdescr_t*     task,
+    kaapi_access_mode_t    m 
+);
 
 /**
 */

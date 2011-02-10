@@ -72,6 +72,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
   kaapi_hashentries_t*    entry;
   kaapi_hashentries_bloc_t stackbloc;
   kaapi_version_t*        version;
+  kaapi_version_t**       all_versions;
   
   /* assume no task list or task list is empty */
   frame    = thread->sfp;
@@ -110,6 +111,9 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
     */
     void* sp = task_top->sp;
     size_t count_params = kaapi_format_get_count_params(task_fmt, sp );
+
+    all_versions = (kaapi_version_t**)alloca(sizeof(kaapi_version_t*) * count_params);
+
     for (unsigned int i=0; i < count_params; i++) 
     {
       kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
@@ -133,14 +137,29 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
         /* have a look at the version and detect dependency or not etc... */
         version = entry->u.version;
       }
-      kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
-      
+      all_versions[i] = version;
+
+      /* compute the deepth (locagical date) to avoid some WAR or WAW */
+      kaapi_thread_computeready_date( version, taskdescr, m );
+
       /* change the data in the task by the handle */
       access.data = version->handle;
       kaapi_format_set_access_param(task_fmt, i, task_top->sp, &access);
 
       /* store the format to avoid lookup */
       taskdescr->fmt = task_fmt;
+    }
+
+    for (unsigned int i=0; i < count_params; i++) 
+    {
+      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
+      if (m == KAAPI_ACCESS_MODE_V) 
+        continue;
+      
+      /* get version of the i-th parameter find in the previous iteration over args */
+      version = all_versions[i];
+
+      kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
       
     } /* end for all arguments of the task */
     

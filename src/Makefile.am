@@ -75,6 +75,7 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_thread_signalend_exec.c \
   thread/kaapi_thread_computereadylist.c \
   thread/kaapi_thread_computeready_access.c \
+  thread/kaapi_thread_compute_date.c \
   thread/kaapi_thread_taskbcast.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
