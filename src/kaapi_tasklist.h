@@ -185,7 +185,6 @@ typedef struct kaapi_tasklist_t {
 typedef struct kaapi_version_t {
   kaapi_data_t        orig;              /* original data + original view */
   kaapi_handle_t      handle;            /* @data + view */
-  uint64_t            date;              /* minimal logical date of production */
   kaapi_access_mode_t last_mode;         /* */
   kaapi_taskdescr_t*  last_task;         /* task attached to last access */
   int                 is_ready;          /* */
@@ -203,7 +202,6 @@ static inline kaapi_version_t* kaapi_thread_newversion( void* data, kaapi_memory
   version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
   version->handle->addr = 0; /* or data.... if no move task is pushed */
   version->handle->view = *view;
-  version->date         = 0;
   version->last_mode    = KAAPI_ACCESS_MODE_VOID;
   version->last_task    = 0;
   version->is_ready     = 1;
