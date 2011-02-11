@@ -341,7 +341,9 @@ kaapi_address_space_id_t kaapi_memory_address_space_create(int tid, kaapi_global
 {
   kaapi_address_space_t* retval = (kaapi_address_space_t*)malloc(sizeof(kaapi_address_space_t));
   retval->asid    = 0;
+#if defined(KAAPI_USE_NETWORK
   kaapi_network_get_seginfo( retval, _gid );
+#endif  
   if (retval->segsize > size) retval->segsize = size;
   
 #if 0
