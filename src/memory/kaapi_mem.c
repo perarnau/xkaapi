@@ -92,6 +92,7 @@ static inline void put_cuda_context_by_asid
   /* todo, lock */
 }
 
+#if 0 //* does not compile with default configure
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
 {
   return &proc->mem_map;
@@ -106,6 +107,7 @@ static inline kaapi_mem_map_t* get_self_mem_map(void)
 {
   return get_proc_mem_map(kaapi_get_current_processor());
 }
+#endif
 
 int kaapi_mem_map_find_with_asid
 (kaapi_mem_map_t* map, kaapi_mem_addr_t addr,
