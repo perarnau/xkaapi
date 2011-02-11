@@ -29,7 +29,7 @@
 ** reproducing the software by the user in light of its specific
 ** status of free software, that may mean that it is complicated to
 ** manipulate, and that also therefore means that it is reserved for
-** developers and experienced professionals having in-depth computer
+** devel_pers and experienced professionals having in-depth computer
 ** knowledge. Users are therefore encouraged to load and test the
 ** software's suitability as regards their requirements in conditions
 ** enabling the security of their systems and/or data to be ensured
@@ -66,8 +66,6 @@ struct TaskBodyCPU<TaskInit> {
     std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
     for (size_t i=0; i < sz; ++i)
       array[i] = 1;
-    
-    std::for_each( array.begin(), array.end(), op_rand<int>() );
   }
 };
 
