@@ -99,7 +99,7 @@ struct doit {
     std::vector<double> F(n);
 
     MyBlockCyclicMapping map(2, 2);
-    threadgroup.begin_partition( map );
+    threadgroup.begin_partition( /* map */ );
 
     for (int i=0; i<n; ++i)
     {

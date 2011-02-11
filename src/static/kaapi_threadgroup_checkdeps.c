@@ -49,158 +49,76 @@
     the C++ ka::SetPartition(site) attribut or the thread group access.
     
  */
-int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int threadindex, kaapi_task_t* task)
+int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, kaapi_task_t* task)
 {
+  kaapi_frame_t*          frame;
   kaapi_format_t*         task_fmt;
   kaapi_task_body_t       task_body;
   kaapi_taskdescr_t*      taskdescr =0;
-  kaapi_thread_t*         thread =0;
   kaapi_tasklist_t*       tasklist =0;
   kaapi_hashentries_t*    entry;
-  size_t                  cnt_notready;
-  int                     isparamready;
+  kaapi_hashentries_bloc_t stackbloc;
   kaapi_version_t*        version;
-  kaapi_taskdescr_t       dummy_taskdescr;
 
   /* pass in parameter ? cf C++ thread interface */
-  kaapi_assert_debug( (threadindex >=-1) && (threadindex < thgrp->group_size) );
+  kaapi_assert_debug( (tid >=-1) && (tid < thgrp->group_size) );
 
-  kaapi_globalid_t gid = kaapi_threadgroup_tid2gid( thgrp, threadindex );
+  tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
 
-  task_body = kaapi_task_getbody( task );
+  task_body = kaapi_task_getbody(task);
   if (task_body!=0)
     task_fmt= kaapi_format_resolvebybody(task_body);
   else
     task_fmt = 0;
 
-  if (task_fmt ==0) return EINVAL;
+  if (task_fmt ==0) 
+    return EINVAL;
+
+  /* new task descriptor */
+  taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
   
-  if (thgrp->localgid == gid)
-  {
-    /* get the thread where to push the task */
-    thread = kaapi_threadgroup_thread( thgrp, threadindex );
-    
-    /* allocate a new task descriptor for this task */
-    tasklist =  thgrp->threadctxts[threadindex]->sfp->tasklist;
-    taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
-  } 
-  else 
-  {
-    taskdescr = &dummy_taskdescr;
-    kaapi_taskdescr_init(taskdescr, task);
-  }
-  
-  /* find the last writer for each args and in which partition id it  
-     -> if all writers are in the same partition do nothing, push the task in the i-th partition
-     -> if one of the writer is in a different partition, then change the body of the writer
-     in order to add information to signal the task that are waiting for parameter
-     
-    ASSUMPTIONS:
-    1- all the threads in the group are inactive and not subject to steal operation
-    2- we only consider R,W and RW dependencies, not yet CW that implies multiple writers
+  /* compute if the i-th access is ready or not.
+     If all accesses of the task are ready then push it into readylist.
+     Not that this code is very similar to compute accesslist, except
+     that we intercept non local access before calling kaapi_thread_computeready_access.
   */
   void* sp = task->sp;
   size_t count_params = kaapi_format_get_count_params(task_fmt, sp );
-  cnt_notready = count_params;
   for (unsigned int i=0; i < count_params; i++) 
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
     if (m == KAAPI_ACCESS_MODE_V) 
-    {
-      --cnt_notready;
       continue;
-    }
     
     /* its an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
     entry = 0;
 
     /* find the version info of the data using the hash map */
-    entry = kaapi_hashmap_find(&thgrp->ws_khm, access.data);
-    if (entry ==0)
+    entry = kaapi_hashmap_findinsert(&dep_khm, access.data);
+    if (entry->u.version ==0)
     {
-      kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, taskdescr->task->sp);
+      kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, task->sp);
 
       /* no entry -> new version object: no writer */
-      entry = kaapi_threadgroup_newversion( thgrp, &thgrp->ws_khm, threadindex, &access, &view );
+      entry->u.version = version = kaapi_thread_newversion( access.data, &view );
     }
-
-    /* have a look at the version and detect dependency or not etc... */
-    version = entry->u.version;
-    isparamready = 0;
-    if (KAAPI_ACCESS_IS_CUMULWRITE(m))
-      isparamready = kaapi_threadgroup_version_newwriter_cumulwrite( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
-    else 
-    {
-      if (KAAPI_ACCESS_IS_READ(m))
-      {
-        isparamready = kaapi_threadgroup_version_newreader( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
-      }
-      if (KAAPI_ACCESS_IS_WRITE(m))
-      {
-        int retval = kaapi_threadgroup_version_newwriter( thgrp, version, threadindex, m, taskdescr, task_fmt, i, &access );
-        /* else: responsability of the read part (just above) to compute readyness */
-        if (KAAPI_ACCESS_IS_READWRITE(m))
-          isparamready = isparamready && retval;
-        else 
-          isparamready = retval;
-      }
+    else {
+      /* have a look at the version and detect dependency or not etc... */
+      version = entry->u.version;
     }
+    kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
     
-    if (isparamready) --cnt_notready;
+    /* change the data in the task by the handle */
+    access.data = version->handle;
+    kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
+
+    /* store the format to avoid lookup */
+    taskdescr->fmt = task_fmt;
     
   } /* end for all arguments of the task */
-
-  if (thgrp->localgid == gid)
-  {
-//    if (cnt_notready ==0) 
-    if (KAAPI_ATOMIC_READ(&taskdescr->counter) == 0)
-      kaapi_tasklist_pushback_ready(tasklist, taskdescr);
-    
-    /* always push the task for local storage */
-    kaapi_thread_pushtask( thgrp->threads[threadindex] );
-    return 0;
-  }
-//  printf("Task not pushed !\n");
-  return EINTR;
+  
+  /* if counter ==0, push the task into the ready list */
+  if (KAAPI_ATOMIC_READ(&taskdescr->counter) == 0)
+    kaapi_tasklist_pushback_ready(tasklist, taskdescr);
 }
-
-#if 0
-int kaapi_threadgroup_add_mem_entry
-(kaapi_threadgroup_t group, uintptr_t addr, size_t size)
-{
-  /* make the data valid in the address space
-     of all the group threads (ie. partition)
-   */
-
-  int tid; /* thread index */
-
-  /* foreach thread */
-  for (tid = 0; tid < group->group_size; ++tid)
-  {
-    kaapi_access_t access;
-    kaapi_hashentries_t* entry;
-    kaapi_version_t* version;
-
-    entry = kaapi_hashmap_find(&group->ws_khm, access.data);
-    if (entry != NULL) continue ;
-
-    /* create if not already in thread as */
-    access.data = (void*)addr;
-    entry = kaapi_threadgroup_newversion
-      (group, &group->ws_khm, tid, &access);
-    kaapi_assert_debug(entry != NULL);
-
-    kaapi_address_space_id_t asid = kaapi_threadgroup_tid2asid(thgrp, tid);
-
-    /* from version_new_reader */
-
-    fail kaapi_version_findasid_in( ver, asid );
-    kaapi_data_version_t* tov;
-
-    version = entry->u.version;
-  }
-
-  return 0;
-}
-#endif

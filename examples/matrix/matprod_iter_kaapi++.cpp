@@ -34,18 +34,47 @@
 
 #define BLOCSIZE 4
 
+/* Task Print
+ * this task prints the sum of the entries of an array 
+ * each entries is view as a pointer object:
+    array<1,R<int> > means that each entry may be read by the task
+ */
+struct TaskPrintMatrix : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
+
+template<>
+struct TaskBodyCPU<TaskPrintMatrix> {
+  void operator() ( std::string msg, ka::range2d_r<double> A  )
+  {
+    size_t d0 = A.dim(0);
+    size_t d1 = A.dim(1);
+    std::cout << msg << " [" << std::endl;
+    for (size_t i=0; i < d0; ++i)
+    {
+      std::cout << "[";
+      for (size_t j=0; j < d1; ++j)
+      {
+        std::cout << A(i,j) << (j == d1-1 ? "" : ", ");
+      }
+      std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
+    }
+    std::cout << "]" << std::endl;
+  }
+};
+
+/**
+*/
 struct TaskSeqMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double> >, /* A */
       ka::R<ka::range2d<double> >,  /* B */
-      ka::RW<ka::range2d<double> >   /* C */
+      ka::CW<ka::range2d<double> >   /* C */
 >{};
 
 template<>
 struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rw<double> C )
+  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_cw<double> C )
   {
-    size_t M = A.dim(0);
-    size_t N = B.dim(0);
+    size_t N = A.dim(0);
+    size_t M = B.dim(0);
     size_t K = C.dim(1);
 
 #if 0    
@@ -58,6 +87,11 @@ struct TaskBodyCPU<TaskSeqMatProduct> {
         1.0, 
         C.ptr(), C.lda()
     );
+#else
+    for (size_t i =0; i<N;++i)
+      for (size_t j =0; j<M; ++j)
+        for (size_t k =0; k<K; ++k)
+          C(i,j) += A(i,k)*B(k,j);
 #endif
   }
 };
@@ -91,34 +125,19 @@ struct TaskBodyCPU<TaskMatProduct> {
         }
       }
     }
-    
-//    kaapi_sched_computereadylist();
-  }
-};
 
-
-/* Task Print
- * this task prints the sum of the entries of an array 
- * each entries is view as a pointer object:
-    array<1,R<int> > means that each entry may be read by the task
- */
-struct TaskPrintMatrix : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
-
-template<>
-struct TaskBodyCPU<TaskPrintMatrix> {
-  void operator() ( std::string msg, ka::range2d_r<double> A  )
-  {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
-    std::cout << msg << std::endl;
-    for (size_t i=0; i < d0; ++i)
+    for (size_t i=0; i<M; i += bloc)
     {
-      for (size_t j=0; j < d1; ++j)
-        std::cout << A(i,j) << " ";
-      std::cout << std::endl;
+      ka::rangeindex ri(i, i+bloc);
+      for (size_t j=0; j<N; j += bloc)
+      {
+        ka::rangeindex rj(j, j+bloc);
+        ka::Spawn<TaskPrintMatrix>()( "C", C(ri,rj) );
+      }
     }
   }
 };
+
 
 
 
@@ -147,13 +166,15 @@ struct doit {
         dB[i] = (float) ((i * i) % 1024 - 512) / 512;
     }
     for(int i = 0; i < n * n; ++i) {
-        dC[i] = (float) (((i + 1) * i) % 1024 - 512) / 512;
+        dA[i] = (float) (((i + 1) * i) % 1024 - 512) / 512;
     }
+    memset(dC, 0, n*n*sizeof(double) );
 
     ka::array<2,double> A(dA, n, n, n);
     ka::array<2,double> B(dB, n, n, n);
     ka::array<2,double> C(dC, n, n, n);
-    // Multiply to get A = B*C 
+
+    // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
