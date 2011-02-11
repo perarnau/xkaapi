@@ -82,7 +82,6 @@ struct TaskBodyCPU<TaskPrint> {
     std::cout << "In TaskPrint/CPU, size of array = " << sz << std::endl;
     for (size_t i=0; i < sz; ++i)
       std::cout << array[i] << std::endl;
->>>>>>> origin/thierry/partition
   }
 };
 

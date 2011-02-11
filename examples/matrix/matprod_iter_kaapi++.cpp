@@ -168,7 +168,9 @@ struct doit {
     for(int i = 0; i < n * n; ++i) {
         dA[i] = (float) (((i + 1) * i) % 1024 - 512) / 512;
     }
-    memset(dC, 0, n*n*sizeof(double) );
+    for(int i = 0; i < n * n; ++i) {
+        dC[i] = 0.0;
+    }
 
     ka::array<2,double> A(dA, n, n, n);
     ka::array<2,double> B(dB, n, n, n);
