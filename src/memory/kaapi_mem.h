@@ -155,9 +155,14 @@ typedef struct kaapi_mem_map
   kaapi_mem_mapping_t* head;
 } kaapi_mem_map_t;
 
-/*
+/* Put here to avoid conflict in processor mapping
 */
-int kaapi_mem_map_initialize(kaapi_mem_map_t*, kaapi_mem_asid_t);
+static inline int kaapi_mem_map_initialize(kaapi_mem_map_t* map, kaapi_mem_asid_t asid)
+{
+  map->asid = asid;
+  map->head = NULL;
+  return 0;
+}
 
 /*
 */

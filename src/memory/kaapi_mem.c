@@ -197,13 +197,6 @@ void kaapi_mem_free_host(void* hostptr)
 
 /* exported */
 
-int kaapi_mem_map_initialize(kaapi_mem_map_t* map, kaapi_mem_asid_t asid)
-{
-  map->asid = asid;
-  map->head = NULL;
-  return 0;
-}
-
 void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
 {
   kaapi_mem_mapping_t* pos = map->head;
