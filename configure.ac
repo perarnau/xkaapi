@@ -353,8 +353,9 @@ AS_CASE([$with_perfcounter],
 
 # Select compilation of static scheduling as part of the library
 # Default is to compile it
-AC_ARG_ENABLE([partitioning],[AS_HELP_STRING([--disable-partitioning],
-	[Disable to not compile static scheduling code, default: enable])]
+AC_ARG_ENABLE([partitioning],[AS_HELP_STRING([--enable-partitioning],
+	[Disable to not compile static scheduling code, default: disable])],[],
+  [enable_partitioning=no]
 )
 AS_IF([test "x$enable_partitioning" != "xno"], 
   [dnl Do the stuff needed for enabling the feature
