@@ -51,7 +51,6 @@ libkaapi_la_SOURCES=\
   kaapi_memory.h \
   memory/kaapi_memory.c \
   memory/kaapi_mem.h \
-  memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_rand_f0.c \
   workstealing/kaapi_sched_select_workload_rand.c \
@@ -65,6 +64,9 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_criticalsteal.c \
   workstealing/kaapi_sched_lready.c \
   workstealing/kaapi_sched_wsqueue.c 
+
+#  memory/kaapi_mem.c 
+
 
 #Libtask
 libkaapi_la_SOURCES+=\
