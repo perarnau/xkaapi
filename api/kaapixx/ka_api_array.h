@@ -92,12 +92,6 @@ public:
       return (_end-_begin);
     }
     
-    /** return the length of the range, ie end-begin */
-    index_t length() const 
-    {  
-      return (_end-_begin);
-    }
-    
     /** first entry, (index_t)-1U if full range */
     index_t first() const 
     { return _begin; }
@@ -427,10 +421,10 @@ public:
   }
 
   /** */
-  const_reference_t operator()(size_t i, size_t j) const
+  reference_t operator()(unsigned int i, unsigned int j)
   { 
-    kaapi_assert_debug( (i < (size_t)_n) );
-    kaapi_assert_debug( (j < (size_t)_m) );
+    kaapi_assert_debug( (i>=(unsigned)0) && (i < (unsigned)_n) );
+    kaapi_assert_debug( (j>=(unsigned)0) && (j < (unsigned)_m) );
     return _data[i*_lda+j]; 
   }
 
@@ -450,6 +444,22 @@ public:
     return _data[i*_lda+j]; 
   }
   
+  /** */
+  const_reference_t operator()(unsigned int i, unsigned int j) const
+  { 
+    kaapi_assert_debug( (i>=(unsigned)0) && (i < (unsigned)_n) );
+    kaapi_assert_debug( (j>=(unsigned)0) && (j < (unsigned)_m) );
+    return _data[i*_lda+j]; 
+  }
+
+  /** */
+  const_reference_t operator()(size_t i, size_t j) const
+  { 
+    kaapi_assert_debug( (i < (size_t)_n) );
+    kaapi_assert_debug( (j < (size_t)_m) );
+    return _data[i*_lda+j]; 
+  }
+
   // Set the (i) element to value
   void set (index_t i, index_t j, reference_t value) 
   {
