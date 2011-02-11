@@ -98,7 +98,7 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_finalize.c \
   static/kaapi_stsched_tasksetstatic.c \
   static/kaapi_threadgroup_nothgrp.c \
-  network/kaapi_network.cpp
+  ../network/kaapi_network.cpp
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
