@@ -1193,8 +1193,9 @@ struct kaapi_version_t;
     Used to display tasklist
 */
 typedef struct kaapi_pair_ptrint_t {
-  void*     ptr;
-  uintptr_t tag;
+  void*               ptr;
+  uintptr_t           tag;
+  kaapi_access_mode_t last_mode;
 } kaapi_pair_ptrint_t;
 
 /* ============================= Hash table for WS ============================ */

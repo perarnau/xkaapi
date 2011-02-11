@@ -46,9 +46,25 @@
 /* */
 void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 {
-  kaapi_move_arg_t* bcast = (kaapi_move_arg_t*)sp;
+  kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
   
   /* on multiprocessor: move data from XXX to YYY */
-  bcast->dest->addr = bcast->src_data;
-  bcast->dest->view = bcast->src_view;
+  arg->dest->addr = arg->src_data;
+  arg->dest->view = arg->src_view;
 }
+
+/* */
+void kaapi_taskalloc_body( void* sp, kaapi_thread_t* thread )
+{
+  kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
+  /* on multiprocessor: move data from XXX to YYY */
+  arg->dest->addr = arg->src_data;
+  arg->dest->view = arg->src_view;
+}
+
+/* */
+void kaapi_taskfinalizer_body( void* sp, kaapi_thread_t* thread )
+{
+//  kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
+}
+

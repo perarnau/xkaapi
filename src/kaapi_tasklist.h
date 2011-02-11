@@ -119,9 +119,20 @@ typedef struct kaapi_move_arg_t {
 } kaapi_move_arg_t;
 
 
-/** Task with kaapi_move_arg_t as parameter
+/** Task with kaapi_move_arg_t as parameter in order to initialize a first R access
+    from the original data in memory.
 */
 extern void kaapi_taskmove_body( void*, kaapi_thread_t* );
+
+/** Task with kaapi_move_arg_t as parameter in order to allocate data for a first CW access
+    from the original data in memory.
+*/
+extern void kaapi_taskalloc_body( void*, kaapi_thread_t* );
+
+/** Task with kaapi_move_arg_t as parameter in order to mark synchronization at the end of 
+    a chain of CW access. It is the task that logically produce the data.
+*/
+extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 
 /** TaskDescriptor
     This data structure is add more information about task (kaapi_task_t)

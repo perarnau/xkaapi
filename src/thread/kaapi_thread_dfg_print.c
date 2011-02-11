@@ -233,6 +233,8 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "aftersteal";
         else if (body == kaapi_taskmove_body) 
           fname = "move";
+        else if (body == kaapi_taskalloc_body) 
+          fname = "alloc";
           
         state_type_t state;
         kaapi_getstatename(task_bot, state);
@@ -261,7 +263,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
         }
         fputc('\n', file);
         
-        if (body == kaapi_taskmove_body)
+        if ((body == kaapi_taskmove_body) || (body == kaapi_taskalloc_body))
         {
           kaapi_move_arg_t* arg = kaapi_task_getargst( task_bot, kaapi_move_arg_t );
           fprintf( file, "\t\t\t [0]?:r<____>  @:%p\n", arg->src_data );

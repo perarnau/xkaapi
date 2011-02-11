@@ -58,7 +58,7 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
           0,
           0
       );
-    kaapi_format_taskregister_body( task_fmt.get_c_format(), Self_t::body, KAAPI_PROC_TYPE_CPU );
+    kaapi_format_taskregister_body( task_fmt.get_c_format(), Self_t::body, 0, KAAPI_PROC_TYPE_CPU );
       
     return task_fmt.get_c_format();
   }

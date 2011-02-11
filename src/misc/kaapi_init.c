@@ -60,7 +60,7 @@
 */
 kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0,
-   .stacksize   = 64*4096,
+   .stacksize   = 64*4096, /**/
    .cpucount    = 0,
    .kproc_list  = 0,
    .kid2cpu     = 0,

@@ -67,13 +67,15 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
   else {
     if (body == kaapi_taskmove_body)
       name = "move";
+    else if (body == kaapi_taskalloc_body)
+      name = "alloc";
     else 
       name = "<undef>";
   }
     
 
   kaapi_print_pad(file, pad);
-  fprintf(file, "td:%p  date:%lu  task->%p  name:%s", 
+  fprintf(file, "td:%p  date:%llu  task->%p  name:%s", 
     (void*)td, td->date, (void*)td->task,
     name
   );
@@ -137,6 +139,7 @@ static int kaapi_insert_unvisited_td( kaapi_hashmap_t* khm, kaapi_activationlink
   return 0;
 }
 
+
 /**
 */
 int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
@@ -144,7 +147,6 @@ int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
   /* new history of visited data */
   kaapi_hashmap_t visit_khm;
   kaapi_hashentries_t* entry;
-  kaapi_activationlink_t* lk;
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &visit_khm, 0 );

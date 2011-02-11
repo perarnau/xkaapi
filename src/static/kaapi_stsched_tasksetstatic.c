@@ -64,8 +64,17 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   arg->sub_body( arg->sub_sp, uthread );
   
   /* currently: that all, do not compute other things */
+  double t0 = kaapi_get_elapsedtime();
   kaapi_sched_computereadylist();
+  double t1 = kaapi_get_elapsedtime();
+  
+  printf("Scheduling in %e (s)\n",t1-t0);
   thread->unstealable = save_state;
+
+//  kaapi_thread_print( stdout, thread ); 
+  FILE* filedot = fopen("/tmp/graph.dot", "w");
+  kaapi_frame_print_dot( filedot, thread->sfp );
+  fclose(filedot);
   
   /* exec the spawned subtasks */
   kaapi_thread_execframe_readylist( thread );

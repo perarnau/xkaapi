@@ -71,72 +71,75 @@ int kaapi_thread_computeready_access(
       kaapi_tasklist_push_successor( tl, td_move, task );
       kaapi_tasklist_pushback_ready( tl, td_move);
     }
-    else if (KAAPI_ACCESS_IS_WRITE(m))
-      version->writer_task = task;
-  }
-  else if (KAAPI_ACCESS_IS_CONCURRENT(m, version->last_mode))
-  {
-    if (KAAPI_ACCESS_IS_CUMULWRITE(m))
-    { /* concurrent => last_mode is also a CW, writer is the futur writer */
-      /* cw access are link together */
-      if (version->last_task != 0) 
+    if (KAAPI_ACCESS_IS_WRITE(m) || KAAPI_ACCESS_IS_CUMULWRITE(m)) 
+    {
+      if (version->writer_task ==0) /* avoid case RW that allready put a td_move */
       {
-        kaapi_tasklist_push_successor( tl, version->last_task, task );
+        kaapi_taskdescr_t* td_alloc;
+        kaapi_task_t* task_alloc;
+        kaapi_move_arg_t* argalloc 
+            = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+        argalloc->src_data  = version->orig.addr;
+        argalloc->src_view  = version->orig.view;
+        argalloc->dest      = version->handle;
+        task_alloc = kaapi_tasklist_push_task( tl, kaapi_taskalloc_body, argalloc);
+        td_alloc =  kaapi_tasklist_allocate_td( tl, task_alloc );
+        if (KAAPI_ACCESS_IS_WRITE(m))
+          version->writer_task= td_alloc;
+        version->is_ready = 0;
+        kaapi_tasklist_push_successor( tl, td_alloc, task );
+        kaapi_tasklist_pushback_ready( tl, td_alloc);
       }
-#warning "TODO: indep CW, mais ordre à respecter"
-      version->writer_task = task;
-    }
-    else 
-    { /* its a r */
-      if (version->writer_task !=0)
-      {
-        kaapi_assert_debug(!version->is_ready);
-        kaapi_tasklist_push_successor( tl, version->writer_task, task );
+      if (KAAPI_ACCESS_IS_WRITE(m))
+        version->writer_task = task;
+      else {
+        /* in case of cw: all concurrent cw are put 'concurrent' together 
+           and the writer task is the task that produce the final result 
+        */
+        kaapi_taskdescr_t* td_finalizer;
+        kaapi_task_t* task_finalizer;
+        kaapi_move_arg_t* arg 
+            = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+        arg->src_data  = version->orig.addr;
+        arg->src_view  = version->orig.view;
+        arg->dest      = version->handle;
+        task_finalizer = kaapi_tasklist_push_task( tl, kaapi_taskfinalizer_body, arg);
+        td_finalizer =  kaapi_tasklist_allocate_td( tl, task_finalizer );
+        version->writer_task= td_finalizer;
+        version->is_ready = 0;
+        kaapi_tasklist_push_successor( tl, task, td_finalizer );
       }
     }
+    version->last_mode = m;
+    version->last_task = task;
 
+    return 0;
   }
-  else if (KAAPI_ACCESS_IS_READWRITE(m)) /* rw */
+  
+  /* here is not the initial case */
+  kaapi_assert_debug( version->last_mode != KAAPI_ACCESS_MODE_VOID);
+  kaapi_assert_debug( version->last_task != 0);
+  kaapi_assert_debug( version->writer_task != 0);
+
+  if (KAAPI_ACCESS_IS_READ(m)) /* r or rw */
+  { 
+    kaapi_tasklist_push_successor( tl, version->writer_task, task );
+  }
+  if (KAAPI_ACCESS_IS_WRITE(m)) /* w or rw */
   {
-    if (version->last_task !=0) /* whatever is the previous task, do link */
-    {
-      kaapi_tasklist_push_successor( tl, version->last_task, task );
-      version->is_ready    = 0;
-    }
-    else 
-    {
-      kaapi_assert_debug( version->last_mode == KAAPI_ACCESS_MODE_VOID);
-    }
+    printf("Task: td:%p -> task:%p has WA{RW} dependency with td:%p -> task:%p on handle: H@:%p\n",
+        (void*)task, (void*)task->task,
+        (void*)version->last_task, 
+        (void*)version->last_task->task,
+        (void*)version->handle
+    );
+    /* WAR or WAW dependencies ! */
     version->writer_task = task;
   }
-  else if (KAAPI_ACCESS_IS_WRITE(m)) /* cw or w */
+  else if (KAAPI_ACCESS_IS_CUMULWRITE(m))
   {
-    /* WAR or WAW */
-    kaapi_assert_debug( version->last_task !=0 ); //* else mode == VOID !!! */
-    if (version->last_task->date < task->date)
-    { /* not a true WAR or WAW */
-      printf("Task: td:%p -> task:%p has a false WA{RW} dependency with td:%p -> task:%p\n",
-          (void*)task, (void*)task->task,
-          (void*)version->last_task, (void*)version->last_task->task
-      );
-    }
-    else 
-    { /* potential WAR or WAW : allocate a new data and insert it into hash map */
-      printf("Task: td:%p -> task:%p has WA{RW} dependency with td:%p -> task:%p on handle: H@:%p\n",
-          (void*)task, (void*)task->task,
-          (void*)version->last_task, 
-          (void*)version->last_task->task,
-          (void*)version->handle
-      );
-//      kaapi_assert(0);
-    }
-    version->writer_task = task;
-    version->is_ready = 0;
-  }
-  else if (KAAPI_ACCESS_IS_READ(m)) /* r (rw already test) */
-  { /* means previous is a w or rw or cw */
-    kaapi_tasklist_push_successor( tl, version->last_task, task );
-    version->is_ready = 0;
+    /* cw has successor the writer !*/
+    kaapi_tasklist_push_successor( tl, task, version->writer_task );
   }
   
   version->last_mode = m;
