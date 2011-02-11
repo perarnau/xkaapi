@@ -48,9 +48,19 @@
 void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 {
   int save_state;
+  kaapi_frame_t* fp;
+
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
+
   kaapi_assert( thread->sfp == (kaapi_frame_t*)uthread );
+  
+  /* Push a new frame */
+  fp = (kaapi_frame_t*)thread->sfp;
+  /* push the frame for the next task to execute */
+  thread->sfp[1] = *fp;
+  ++thread->sfp;
+  
   
   /* unset steal capability and wait no more thief 
      lock the kproc: it ensure that no more thief has reference on it 
@@ -78,6 +88,9 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   
   /* exec the spawned subtasks */
   kaapi_thread_execframe_readylist( thread );
+
+  /* Pop & restore the frame */
+  --thread->sfp;
 }
 
 
