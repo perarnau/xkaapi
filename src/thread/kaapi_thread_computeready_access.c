@@ -70,10 +70,11 @@ int kaapi_thread_computeready_access(
       version->is_ready = 0;
       kaapi_tasklist_push_successor( tl, td_move, task );
       kaapi_tasklist_pushback_ready( tl, td_move);
+      version->last_task = task;
     }
     if (KAAPI_ACCESS_IS_WRITE(m) || KAAPI_ACCESS_IS_CUMULWRITE(m)) 
     {
-      if (version->writer_task ==0) /* avoid case RW that allready put a td_move */
+      if (version->writer_task ==0) /* avoid case RW that a ready task td_move was inserted */
       {
         kaapi_taskdescr_t* td_alloc;
         kaapi_task_t* task_alloc;
@@ -84,18 +85,23 @@ int kaapi_thread_computeready_access(
         argalloc->dest      = version->handle;
         task_alloc = kaapi_tasklist_push_task( tl, kaapi_taskalloc_body, argalloc);
         td_alloc =  kaapi_tasklist_allocate_td( tl, task_alloc );
-        if (KAAPI_ACCESS_IS_WRITE(m))
-          version->writer_task= td_alloc;
+        version->writer_task= td_alloc;
         version->is_ready = 0;
         kaapi_tasklist_push_successor( tl, td_alloc, task );
         kaapi_tasklist_pushback_ready( tl, td_alloc);
       }
+      version->last_task = task;
       if (KAAPI_ACCESS_IS_WRITE(m))
         version->writer_task = task;
       else {
         /* in case of cw: all concurrent cw are put 'concurrent' together 
-           and the writer task is the task that produce the final result 
+           and the writer_task is the task that produce the final result 
+           and during while access is cw, last_task points to the alloc or
+           the previous task that the first dependency on the chain of cw
         */
+        /* save td alloc or the previous writer */
+        version->last_task= version->writer_task;
+
         kaapi_taskdescr_t* td_finalizer;
         kaapi_task_t* task_finalizer;
         kaapi_move_arg_t* arg 
@@ -111,7 +117,6 @@ int kaapi_thread_computeready_access(
       }
     }
     version->last_mode = m;
-    version->last_task = task;
 
     return 0;
   }
@@ -124,6 +129,7 @@ int kaapi_thread_computeready_access(
   if (KAAPI_ACCESS_IS_READ(m)) /* r or rw */
   { 
     kaapi_tasklist_push_successor( tl, version->writer_task, task );
+    version->last_task = task;
   }
   if (KAAPI_ACCESS_IS_WRITE(m)) /* w or rw */
   {
@@ -135,15 +141,22 @@ int kaapi_thread_computeready_access(
     );
     /* WAR or WAW dependencies ! */
     version->writer_task = task;
+    version->last_task = task;
   }
   else if (KAAPI_ACCESS_IS_CUMULWRITE(m))
   {
-    /* cw has successor the writer !*/
+    if (KAAPI_ACCESS_IS_ONLYWRITE(version->last_mode))
+    {
+      version->last_task = version->writer_task;
+    } /* ealse last_task is correct */
+    
+    /* cw has successor the finalizer (!=0) and as last_task the previous writer if non null !*/
     kaapi_tasklist_push_successor( tl, task, version->writer_task );
+    if (version->last_task !=0)
+      kaapi_tasklist_push_successor( tl, version->last_task, task );
   }
   
   version->last_mode = m;
-  version->last_task = task;
   
   return 0;
 }
