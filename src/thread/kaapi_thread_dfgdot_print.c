@@ -47,6 +47,9 @@
 #include <stdio.h>
 
 
+static int noprint_activationlink = 0;
+static int noprint_versionlink = 0;
+
 /**/
 static inline void _kaapi_print_data( FILE* file, const void* ptr, unsigned long version)
 {
@@ -67,29 +70,34 @@ static inline void _kaapi_print_task(
 )
 {
   kaapi_activationlink_t* lk;
+  kaapi_activationlink_t* lk_finalizer;
   kaapi_taskdescr_t* tda;
 
   if (td ==0) 
   {
-    fprintf( file, "%lu \[label=\"%s\\n task=%p\", shape=%s, style=filled, color=orange];\n", 
+    fprintf( file, "%lu [label=\"%s\\n task=%p\", shape=%s, style=filled, color=orange];\n", 
       (uintptr_t)task, fname, (void*)task, shape
     );
     return;
   }
 
-  fprintf( file, "%lu \[label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
+  fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
     (uintptr_t)task, fname, (void*)task, 
     td->date, 
     (int)KAAPI_ATOMIC_READ(&td->counter),
     shape
   );
   
+
   /* display activation link */
   lk = td->list.front;
   while (lk !=0)
   {
     tda = lk->td;
-    fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", (uintptr_t)task, (uintptr_t)tda->task );
+    if (!noprint_activationlink)
+      fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
+        (uintptr_t)task, (uintptr_t)tda->task );
+
     /* print the finalizer only once */
     if (kaapi_task_getbody(tda->task) == kaapi_taskfinalizer_body)
     {
@@ -101,11 +109,11 @@ static inline void _kaapi_print_task(
       if (entry->u.data.tag ==1)
       {
         entry->u.data.tag = 2;
-        fprintf( file, "%lu \[label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
+        fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
           (uintptr_t)td_finalizer->task, "finalizer", (void*)td_finalizer->task, 
           td_finalizer->date, 
           (int)KAAPI_ATOMIC_READ(&td_finalizer->counter),
-          shape
+          "invtrapezium"
         );
         
         /* display also an array to the data */
@@ -118,8 +126,23 @@ static inline void _kaapi_print_task(
         fprintf(file,"%lu00%lu -> %lu;\n", entry->u.data.tag, (uintptr_t)entry->key,
            (uintptr_t)td_finalizer->task 
         );
-        fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
-            entry->u.data.tag, (uintptr_t)entry->key, entry->u.data.tag+1, (uintptr_t)entry->key );
+
+        if (!noprint_versionlink)
+          fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
+              entry->u.data.tag, (uintptr_t)entry->key, entry->u.data.tag+1, (uintptr_t)entry->key );
+
+        /* display the activation link for the finalizer */
+        if (!noprint_activationlink)
+        {
+          lk_finalizer = tda->list.front;
+          while (lk_finalizer !=0)
+          {
+            kaapi_taskdescr_t* tda_finalizer = lk_finalizer->td;
+            fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
+                (uintptr_t)td_finalizer->task, (uintptr_t)tda_finalizer->task );
+            lk_finalizer = lk_finalizer->next;
+          }
+        }
       }
     }
     lk = lk->next;
@@ -149,10 +172,14 @@ static inline void _kaapi_print_write_edge(
   else 
     fprintf(file,"%lu -> %lu00%lu;\n", (uintptr_t)task, version, (uintptr_t)ptr );
 
-  /* add version edge */
-  if (version >1)
-    fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
-        version-1, (uintptr_t)ptr, version, (uintptr_t)ptr );
+  if (!noprint_versionlink)
+  {
+    /* add version edge */
+    if (version >1)
+      fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
+          version-1, (uintptr_t)ptr, version, (uintptr_t)ptr );
+  }
+
 }
 
 /**/
@@ -239,6 +266,9 @@ static int kaapi_frame_print_dot_tasklist  ( FILE* file, kaapi_frame_t* frame )
   kaapi_hashmap_t td_khm;             /* store the ready task descriptor */
   
   if (frame ==0) return 0;
+
+  noprint_activationlink = (0 != getenv("KAAPI_DOT_NOACTIVATION_LINK"));
+  noprint_versionlink = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &visit_khm, 0 );
