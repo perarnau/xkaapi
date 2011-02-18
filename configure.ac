@@ -178,6 +178,7 @@ AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
   AC_MSG_ERROR([The '__SIZEOF_POINTER__' macro must be defined by the compiler. Try a recent version of gcc for example])
 ])
 
+<<<<<<< HEAD
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
@@ -248,6 +249,11 @@ KAAPI_FEATURE([api-atha], [compile Athapascan-1 API],
       FEATURE_ENABLE
     fi
   ])
+=======
+dnl ----------------------------------------------------------------
+dnl Force flag to be empty...
+dnl ----------------------------------------------------------------
+>>>>>>> 347b31d... [build] check whether the compiler defines __SIZEOF_* macros
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kastl"
