@@ -62,6 +62,7 @@ struct TaskBodyCPU<TaskPrintMatrix> {
   }
 };
 
+
 /**
 */
 struct TaskSeqMatProduct: public ka::Task<3>::Signature<
@@ -122,9 +123,9 @@ struct TaskBodyCPU<TaskMatProduct> {
         for (size_t k=0; k<K; k += bloc)
         {
           ka::rangeindex rk(k, k+bloc);
-          ka::Spawn<TaskSeqMatProduct>()( A(ri,rk), B(rk,rj), C(ri,rj) );
+          ka::Spawn<TaskSeqMatProduct>(ka::SetPartition(i*N+j))( A(ri,rk), B(rk,rj), C(ri,rj) );
         }
-      }
+      } 
     }
 
     for (size_t i=0; i<M; i += bloc)
@@ -133,7 +134,7 @@ struct TaskBodyCPU<TaskMatProduct> {
       for (size_t j=0; j<N; j += bloc)
       {
         ka::rangeindex rj(j, j+bloc);
-        ka::Spawn<TaskPrintMatrix>()( "C", C(ri,rj) );
+        ka::Spawn<TaskPrintMatrix>(ka::SetPartition(i*N+j))( "C", C(ri,rj) );
       }
     }
   }
