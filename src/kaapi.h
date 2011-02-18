@@ -150,7 +150,7 @@ typedef struct kaapi_atomic64_t {
 #  include <libkern/OSAtomic.h>
 static inline void kaapi_writemem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
@@ -162,7 +162,7 @@ static inline void kaapi_writemem_barrier()
 
 static inline void kaapi_readmem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
@@ -175,7 +175,7 @@ static inline void kaapi_readmem_barrier()
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
@@ -1531,7 +1531,7 @@ typedef struct {
 */
 static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
 {
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)
   kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
   kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
 #else

@@ -295,7 +295,7 @@ static inline void kaapi_memory_view_clear( kaapi_memory_view_t* kmv )
 {
   kmv->type = -1;
 #if defined(KAAPI_DEBUG)
-  kmv->size[0]  = kmv->size[0] = 0;
+  kmv->size[0]  = kmv->size[1] = 0;
   kmv->lda      = 0;
   kmv->wordsize = 0;
 #endif
