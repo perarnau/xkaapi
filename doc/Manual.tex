@@ -136,7 +136,7 @@ Below is a list of the most important ones:
 Select the target platform. Defaults to 'mt', for pthread.
 \item \verb+--enable-mode=debug+ or \verb+release+\newline
 Choose the compilation mode of the library. Defaults to release.
-\item \verb+-with-steal=cas+ or \verb+hybrid+ or \verb+dijkstra+: (default is \verb+dijkstra+). Select the work stealing strategy to execute program. The \verb+cas+ is based on compare and swap atomic instruction. \verb+ dijkstra+ is based on Dijkstra protocol to garante coherency without lock in most of the case (like the Cilk T.H.E. protocol). \verb+hybrid+ is a  mix of \verb+cas+ and \verb+dijkstra+.
+%\item \verb+-with-steal=cas+ or \verb+hybrid+ or \verb+dijkstra+: (default is \verb+dijkstra+). Select the work stealing strategy to execute program. The \verb+cas+ is based on compare and swap atomic instruction. \verb+ dijkstra+ is based on Dijkstra protocol to garante coherency without lock in most of the case (like the Cilk T.H.E. protocol). \verb+hybrid+ is a  mix of \verb+cas+ and \verb+dijkstra+.
 \item \verb+--with-perfcounter+\newline
 Enable performance counters support.
 \item \verb+--with-papi+\newline
@@ -208,28 +208,26 @@ to the \kaapi programming interfaces.
 
 \subsection{Examples}
 The directory \textit{examples/} contains sample applications using \kaapi.
+Each sub directory contains code and its variations for each example. 
 Both C and C++ are used. Some direclty lies on top of the core runtime,
 while other make use of higher level interfaces. Below is a short
 description for some of them:
 \begin{itemize}
-\item fibo\_xkaapi\_adapt.c\newline
-Implementation of the Fibonacci sequence generation using adaptive
-task stealing.
-\item fibo\_xkaapi.c\newline
-Same as above, using DFG tasks.
-\item fibo\_kaapixx.cpp, fibo\_kaapixx\_opt.cpp\newline
+\item fibo\_kaapi.c\newline
+Recursive Fibonacci number computation, using data flow graph of tasks. C version.
+\item fibo\_kaapi++.cpp, fibo\_kaapi++\_opt.cpp\newline
 Same as above, using the \textit{ka} C++ interface.
 \item fibo\_atha.cpp\newline
-Same as above, using the \textit{Athapascan} interface.
-\item nqueens\_apikaapi\newline
+Same as above, using the \textit{Athapascan} interface [deprecated interface].
+\item nqueens\_kaapi++.cpp\newline
 Nqueens problem implementation using \textit{ka} C++ interface.
-\item nqueens\_apiatha\newline
+\item nqueens\_atha.cpp\newline
 Same as above, using the \textit{Athapascan} interface.
-\item poisson3d-kaapi.cpp\newline
-3 dimension Poisson solver implemented using the \textit{ka}
-C++ interface.
-\item matrix\_multiply\_cilk2kaapi.cpp\newline
-Matrix multiplication using loop parallelization. Implemented using
+%\item poisson3d-kaapi.cpp\newline
+%3 dimension Poisson solver implemented using the \textit{ka}
+%C++ interface.
+\item matrix\_multiply\_kaapi++.cpp\newline
+Matrix multiplication based from a Cilk code. Implemented using
 the \textit{ka} C++ interface.
 \end{itemize}
 
