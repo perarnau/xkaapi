@@ -70,6 +70,7 @@ struct doit {
     ka::auto_pointer<int> a      = ka::Alloca<int>(1);
     *a = 1;
 
+#warning "BUG: bad dependencies"
     threadgroup.begin_partition();
 
     threadgroup.Spawn<TaskW1> (ka::SetPartition(0))  ( a, 10 );

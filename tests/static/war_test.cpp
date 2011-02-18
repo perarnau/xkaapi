@@ -74,7 +74,7 @@ template<>
 struct TaskBodyCPU<TaskKernel> {
   void operator() ( int n, ka::range1d_rw<double> D, ka::range1d_rw<double> Fright, ka::range1d_rw<double> Fleft )
   {
-    for (int step = 0; step < 10; ++step)
+    for (int step = 0; step < 1; ++step)
     {
       for (int i=0; i<n; ++i)
       {
@@ -104,7 +104,7 @@ struct doit {
   void operator()(int argc, char** argv )
   {
     std::cout << "My pid=" << getpid() << std::endl;
-    int n = 100;
+    int n = 10;
     int iter = 1;
     if (argc >1)
       n = atoi(argv[1]);

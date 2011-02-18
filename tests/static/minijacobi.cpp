@@ -131,7 +131,7 @@ struct doit {
       threadgroup.execute();
       
       /* memory synchronize */
-      threadgroup.synchronize( );
+//      threadgroup.synchronize( );
       if (k % 1000 == 0)
       {
         printf("\n\n*********** Value at step %i\n", k);
