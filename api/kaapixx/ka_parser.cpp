@@ -45,6 +45,7 @@
 */
 #include <iostream>
 #include <sstream>
+#include <stdlib.h>
 #include "ka_parser.h"
 
 namespace ka {
@@ -269,7 +270,7 @@ void Parser::parse( Properties& initialprop, int& argc, char**& argv )
           mode_option ='w';
           separator = "";
           module_info->print_usage(std::cout);
-          exit(EXIT_SUCCESS);
+          exit(0);
         }
         else {
           std::cerr << "module " << module_name << "is unknown" << std::endl;
@@ -278,7 +279,7 @@ void Parser::parse( Properties& initialprop, int& argc, char**& argv )
 
       // display generic help
       this->print_usage(std::cout);
-      exit(EXIT_SUCCESS);
+      exit(0);
 
     }
 
@@ -286,7 +287,7 @@ void Parser::parse( Properties& initialprop, int& argc, char**& argv )
     {
       std::ofstream file("dump.rc");
       this->dump_rc(file);
-      exit(EXIT_SUCCESS);
+      exit(0);
     }
 
     /* very special options have been managed. Let's go with normal options
@@ -603,15 +604,15 @@ std::string Parser::ULong2String( unsigned long v )
 
 
 // --------------------------------------------------------------------
-unsigned long long Parser::String2ULLong( const std::string& s) throw(std::out_of_range)
+uint64_t Parser::String2ULLong( const std::string& s) throw(std::out_of_range)
 {
-  unsigned long long v;
+  uint64_t v;
   std::istringstream tmp(s); 
   tmp >> std::ws >> v;
   return v;
 }
 
-std::string Parser::ULLong2String( unsigned long long v )
+std::string Parser::ULLong2String( uint64_t v )
 {
   std::ostringstream tmp; tmp << v;
   return tmp.str();

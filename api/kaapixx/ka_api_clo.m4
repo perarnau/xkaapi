@@ -187,7 +187,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ',`', `')
     M4_PARAM(`array_offset_cwflag[$1-1] = (char*)TraitFormalParam$1::get_cwflag( &dummy->f$1, 0 ) - (char*)dummy;
     ',`', `')
-    M4_PARAM(`array_format[$1-1] = WrapperFormat<typename TraitFormalParam$1::type_t>::format.get_c_format();
+    M4_PARAM(`array_format[$1-1] = WrapperFormat<typename TraitFormalParam$1::type_t>::get_c_format();
     ',`', `')
     M4_PARAM(`array_view[$1-1]   = TraitFormalParam$1::get_view_param(&dummy->f$1, $1-1);
     ',`', `')

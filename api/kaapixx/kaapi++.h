@@ -3508,8 +3508,6 @@ inline ka::OStream& operator<< (ka::OStream& s_out, int c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, long c )
 { return s_out; }
-inline ka::OStream& operator<< (ka::OStream& s_out, long long c )
-{ return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned char c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned short c )
@@ -3517,8 +3515,6 @@ inline ka::OStream& operator<< (ka::OStream& s_out, unsigned short c )
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned int c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned long c )
-{ return s_out; }
-inline ka::OStream& operator<< (ka::OStream& s_out, unsigned long long c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, float c )
 { return s_out; }
@@ -3533,8 +3529,6 @@ inline ka::IStream& operator>> (ka::IStream& s_in, int& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, long& c )
 { return s_in; }
-inline ka::IStream& operator>> (ka::IStream& s_in, long long& c )
-{ return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned char& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned short& c )
@@ -3542,8 +3536,6 @@ inline ka::IStream& operator>> (ka::IStream& s_in, unsigned short& c )
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned int& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned long& c )
-{ return s_in; }
-inline ka::IStream& operator>> (ka::IStream& s_in, unsigned long long& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, float& c )
 { return s_in; }

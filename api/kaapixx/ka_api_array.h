@@ -278,7 +278,7 @@ public:
   { return _data; }
 
   /** */
-  pointer_t const ptr() const
+  pointer_t ptr() const
   { return _data; }
 
   /** */
@@ -405,7 +405,7 @@ public:
   { return _data; }
 
   /** */
-  pointer_t const ptr() const
+  pointer_t ptr() const
   { return _data; }
 
   /** */

@@ -57,13 +57,11 @@
 #  include <winnt.h>
 #endif
 
-#if !defined(__SIZEOF_POINTER__)
-#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__) || defined(__x86_64__)
-#    define __SIZEOF_POINTER__ 8
-#  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc64__))
-#    define __SIZEOF_POINTER__ 4
+#if (__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)
+#  if !defined(__SIZEOF_POINTER__)
+#    error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
 #  else
-#    error KAAPI not ready for this architechture. Report to developpers.
+#    error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
 #  endif
 #endif
 
@@ -152,7 +150,7 @@ typedef struct kaapi_atomic64_t {
 #  include <libkern/OSAtomic.h>
 static inline void kaapi_writemem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
@@ -164,7 +162,7 @@ static inline void kaapi_writemem_barrier()
 
 static inline void kaapi_readmem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
@@ -177,7 +175,7 @@ static inline void kaapi_readmem_barrier()
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
@@ -935,6 +933,19 @@ static inline int kaapi_task_init
   return 0;
 }
 
+
+/** \ingroup TASK
+    The function clear the contents of a frame
+    \retval EINVAL invalid argument: bad pointer.
+*/
+static inline int kaapi_frame_clear( kaapi_frame_t* fp)
+{
+  fp->pc = fp->sp = 0;
+  fp->sp_data = 0;
+  fp->tasklist = 0;
+  return 0;
+}
+
 /** \ingroup TASK
     The function kaapi_thread_save_frame() saves the current frame of a stack into
     the frame data structure.
@@ -1533,7 +1544,7 @@ typedef struct {
 */
 static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
 {
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)
   kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
   kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
 #else
