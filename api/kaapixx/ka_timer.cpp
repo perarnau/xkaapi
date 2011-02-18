@@ -103,7 +103,7 @@ const std::string& LogicalTimer::unit()
 // --------------------------------------------------------------------
 HighResTimer::type HighResTimer::gettick()
 {
-#if defined(__PPC__) || defined(__PPC64__)
+#if defined(__ppc__) || defined(__PPC__) || defined(__PPC64__)
   /* Linux or Mac */
   register unsigned long t_u;
   register unsigned long t_l;

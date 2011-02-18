@@ -72,7 +72,7 @@ extern "C" {
 #endif
 
 #if !(defined(__i386__) || defined(__x86_64__) || defined(__ia64__) || \
-	 defined(__PPC__) || defined(__PPC64__) || defined(__arm__))
+	 defined(__ppc__) || defined(__PPC__) || defined(__PPC64__) || defined(__arm__))
 #  error "Unsupported Architecture"
 #endif
 

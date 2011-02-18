@@ -280,11 +280,11 @@ public:
 
   /** Convert an unsigned long bool to a string
   */
-  static std::string ULLong2String( unsigned long long v );
+  static std::string ULLong2String( uint64_t v );
 
-  /** Convert a string to an unsigned long long
+  /** Convert a string to an unsigned uint64_t
   */
-  static unsigned long long String2ULLong( const std::string& s) throw(std::out_of_range);
+  static uint64_t String2ULLong( const std::string& s) throw(std::out_of_range);
 
   /** Convert a double to a string
   */

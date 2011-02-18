@@ -933,6 +933,19 @@ static inline int kaapi_task_init
   return 0;
 }
 
+
+/** \ingroup TASK
+    The function clear the contents of a frame
+    \retval EINVAL invalid argument: bad pointer.
+*/
+static inline int kaapi_frame_clear( kaapi_frame_t* fp)
+{
+  fp->pc = fp->sp = 0;
+  fp->sp_data = 0;
+  fp->tasklist = 0;
+  return 0;
+}
+
 /** \ingroup TASK
     The function kaapi_thread_save_frame() saves the current frame of a stack into
     the frame data structure.
@@ -1736,7 +1749,7 @@ static inline int kaapi_workqueue_steal(
 
 /* Counter type
 */
-typedef long long kaapi_perf_counter_t;
+typedef int64_t kaapi_perf_counter_t;
 
 /* Value
 */

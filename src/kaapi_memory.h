@@ -123,9 +123,9 @@ extern kaapi_address_space_id_t kaapi_memory_address_space_create(
   size_t size 
 );
 
-#define KAAPI_ASID_MASK_LID   0x00000000FFFFFFFFUL
-#define KAAPI_ASID_MASK_GID   0x00FFFFFF00000000UL
-#define KAAPI_ASID_MASK_ARCH  0xF000000000000000UL
+#define KAAPI_ASID_MASK_LID   0x00000000FFFFFFFFULL
+#define KAAPI_ASID_MASK_GID   0x00FFFFFF00000000ULL
+#define KAAPI_ASID_MASK_ARCH  0xF000000000000000ULL
 
 /** Return true iff two address space points to the same memory
 */

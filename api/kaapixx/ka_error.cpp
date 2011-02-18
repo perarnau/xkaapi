@@ -48,8 +48,17 @@
 #include <iostream>
 #include <iomanip> // setfill
 #include <signal.h>
-#if not defined(_WIN32)
-#include <execinfo.h>
+#include <stdlib.h> // abort
+#if defined(_WIN32)
+#    define KAAPI_NOT_USE_EXECINFO 1
+#elif defined(__APPLE__)
+#  if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ > 1040)
+#    include <execinfo.h>
+#  else
+#    define KAAPI_NOT_USE_EXECINFO 1
+#  endif
+#else 
+#  include <execinfo.h>
 #endif
 #include <cxxabi.h>
 #include <cstring>
@@ -59,7 +68,7 @@ namespace ka {
 // --------------------------------------------------------------------
 void print_backtrace_c()
 {
-#if not defined(__APPLE__)  && not defined(_WIN32)
+#if not defined(__APPLE__) && not defined(_WIN32)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size;

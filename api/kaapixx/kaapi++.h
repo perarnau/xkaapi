@@ -775,16 +775,14 @@ namespace ka {
   };
 
   /* user may specialize this trait to avoid spawn of delete for some object */
-  template<> struct TraitNoDeleteTask<char> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<short> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<int> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<long long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned char> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned short> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned int> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned long long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int8_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int16_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int32_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int64_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint8_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint16_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint32_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint64_t> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<float> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
 
@@ -3510,8 +3508,6 @@ inline ka::OStream& operator<< (ka::OStream& s_out, int c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, long c )
 { return s_out; }
-inline ka::OStream& operator<< (ka::OStream& s_out, long long c )
-{ return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned char c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned short c )
@@ -3519,8 +3515,6 @@ inline ka::OStream& operator<< (ka::OStream& s_out, unsigned short c )
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned int c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, unsigned long c )
-{ return s_out; }
-inline ka::OStream& operator<< (ka::OStream& s_out, unsigned long long c )
 { return s_out; }
 inline ka::OStream& operator<< (ka::OStream& s_out, float c )
 { return s_out; }
@@ -3535,8 +3529,6 @@ inline ka::IStream& operator>> (ka::IStream& s_in, int& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, long& c )
 { return s_in; }
-inline ka::IStream& operator>> (ka::IStream& s_in, long long& c )
-{ return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned char& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned short& c )
@@ -3544,8 +3536,6 @@ inline ka::IStream& operator>> (ka::IStream& s_in, unsigned short& c )
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned int& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, unsigned long& c )
-{ return s_in; }
-inline ka::IStream& operator>> (ka::IStream& s_in, unsigned long long& c )
 { return s_in; }
 inline ka::IStream& operator>> (ka::IStream& s_in, float& c )
 { return s_in; }
