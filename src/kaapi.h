@@ -1738,7 +1738,7 @@ static inline int kaapi_workqueue_steal(
 
 /* Counter type
 */
-typedef long long kaapi_perf_counter_t;
+typedef int64_t kaapi_perf_counter_t;
 
 /* Value
 */

@@ -775,16 +775,14 @@ namespace ka {
   };
 
   /* user may specialize this trait to avoid spawn of delete for some object */
-  template<> struct TraitNoDeleteTask<char> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<short> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<int> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<long long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned char> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned short> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned int> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned long long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int8_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int16_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int32_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int64_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint8_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint16_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint32_t> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<uint64_t> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<float> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
 
