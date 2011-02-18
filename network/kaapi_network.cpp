@@ -107,14 +107,6 @@ void kaapi_network_poll()
 }
 
 
-/** Return a pointer in a memory region which is rdmable
-*/
-kaapi_pointer_t kaapi_network_rdma2vas(kaapi_pointer_t addr, size_t size)
-{
-  return (kaapi_pointer_t)ka::Network::object.bind(addr, size);
-}
-
-
 /**
 */
 void kaapi_network_barrier(void)
@@ -125,13 +117,13 @@ void kaapi_network_barrier(void)
 
 /** 
 */
-kaapi_pointer_t kaapi_network_allocate_rdma(size_t size)
+void* kaapi_network_allocate_rdma(size_t size)
 {
 #if 0
   printf("%i:[kaapi_memory_allocate] IN memory allocate\n", ka::Network::object.local_gid());
   fflush(stdout);
 #endif
-  kaapi_pointer_t ptr = (kaapi_pointer_t)ka::Network::object.allocate(size);
+  void* ptr = ka::Network::object.allocate(size);
 #if 0
   printf("%i:[kaapi_memory_allocate] OUT memory allocate @:%p, size:%lu\n", 
       ka::Network::object.local_gid(),
@@ -161,7 +153,7 @@ int kaapi_network_rdma(
       ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
       if (channel == 0) return EINVAL;
 
-      channel->insert_rwdma( dest, src, view_src->size[0]*view_src->wordsize );
+      channel->insert_rwdma( kaapi_pointer2uintptr(dest), src, view_src->size[0]*view_src->wordsize );
       channel->sync();
 
       return 0;
@@ -169,7 +161,7 @@ int kaapi_network_rdma(
 
     case KAAPI_MEMORY_VIEW_2D:
     {
-      kaapi_pointer_t laddr; /* local address */
+      uintptr_t laddr; /* local address */
       kaapi_pointer_t raddr; /* remote addr */
       size_t size;
 
@@ -182,12 +174,12 @@ int kaapi_network_rdma(
       ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
       if (channel == 0) return EINVAL;
 
-      laddr = (kaapi_pointer_t)src;
+      laddr = (uintptr_t)src;
       raddr = (kaapi_pointer_t)dest;
       
       if (kaapi_memory_view_iscontiguous(view_src) && kaapi_memory_view_iscontiguous(view_dest))
       {
-        channel->insert_rwdma( raddr, (const void*)laddr, size*view_src->wordsize );
+        channel->insert_rwdma( kaapi_pointer2uintptr(raddr), (const void*)laddr, size*view_src->wordsize );
       }
       else 
       {
@@ -196,8 +188,8 @@ int kaapi_network_rdma(
         size_t size_row = view_src->size[1]*view_src->wordsize;
         size_t llda     = view_src->lda*view_src->wordsize;
         size_t rlda     = view_dest->lda*view_src->wordsize;
-        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
-          channel->insert_rwdma( raddr, (const void*)laddr, size_row );
+        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr.ptr += rlda)
+          channel->insert_rwdma( kaapi_pointer2uintptr(raddr), (const void*)laddr, size_row );
       }
       channel->sync();
       return 0;
@@ -260,12 +252,6 @@ uint32_t kaapi_network_get_count(void)
   return 1;
 }
 
-/** Return a pointer in a memory region which is rdmable
-*/
-kaapi_pointer_t kaapi_network_rdma2vas(kaapi_pointer_t addr, size_t size)
-{
-  return (kaapi_pointer_t)malloc(size);
-}
 
 void kaapi_network_poll()
 {
