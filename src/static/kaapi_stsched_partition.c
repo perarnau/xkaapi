@@ -45,6 +45,7 @@
 
 static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
 {
+#if 0
   for (int i=-1; i<thgrp->group_size; ++i)
   {
     /* delete comlink */
@@ -97,10 +98,9 @@ static int kaapi_threadgroup_clear( kaapi_threadgroup_t thgrp )
   thgrp->tag_count          = 0;
   thgrp->maxstep            = -1;
   thgrp->step               = -1;
- 
+#endif
   return 0;
 }
-
 
 /**
 */
@@ -120,17 +120,13 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
     /* the previous execution is finished: clear all entries as if the thread group was created */
     kaapi_threadgroup_clear( thgrp );
   }
-  else {
-    /* do not init the hash map if previous execution of the thread group */
-    kaapi_hashmap_init( &thgrp->ws_khm, 0 );    
-  }
 
   if (thgrp->state != KAAPI_THREAD_GROUP_CREATE_S) 
     return EINVAL;
 
   thgrp->state = KAAPI_THREAD_GROUP_PARTITION_S;
   
-  if (thgrp->localgid == thgrp->tid2gid[-1])
+  if (thgrp->localgid == kaapi_threadgroup_tid2gid(thgrp, -1))
   {
     /* save the main thread frame to restore at the end of parallel computation */
     kaapi_thread_save_frame(thgrp->threads[-1], &thgrp->mainframe);
@@ -160,9 +156,8 @@ int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag)
     threadctxtmain->sfp[1].sp_data   = fp->sp_data;
     threadctxtmain->sfp[1].pc        = fp->sp;
     threadctxtmain->sfp[1].sp        = fp->sp;
-    threadctxtmain->sfp[1].tasklist  = thgrp->tasklist_main;
-    threadctxtmain->the_thgrp = thgrp;
     ++threadctxtmain->sfp;
+    kaapi_threadgroup_initthread(thgrp, -1);
   }
   
   kaapi_assert_debug( (flag == 0) || (flag == KAAPI_THGRP_SAVE_FLAG) );
@@ -187,16 +182,30 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   /* */
 //  kaapi_threadgroup_print( stdout, thgrp );
   
+#if 0
   /* save if required and update remote reference */
   kaapi_threadgroup_barrier_partition( thgrp );
+#endif
   
   /* */
   
-#if 0
+#if 1
   printf("\n\n<<<<<<<<<<<<< End partition \n");
   kaapi_thread_print(stdout, thgrp->threadctxts[-1]);
   printf("\n\n\n");
 #endif
+
+char filename[128];
+sprintf(filename, "/tmp/graph.dot");
+FILE* filedot = fopen(filename, "w");
+//  kaapi_thread_print( stdout, thread );
+fprintf( filedot, "digraph G {\n" );
+for (int i=-1; i<thgrp->group_size; ++i)
+{
+  kaapi_frame_print_dot( filedot, thgrp->threadctxts[i]->sfp, 1 );
+}
+fprintf( filedot, "\n\n}\n" );
+fclose(filedot);
 
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;

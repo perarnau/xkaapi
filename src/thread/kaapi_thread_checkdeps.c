@@ -43,47 +43,61 @@
  */
 #include "kaapi_impl.h"
 
+static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
+{ return (d1 < d2 ? d2 : d1); }
 
-/** task is the top task not yet pushed.
-    This function is called is task is pushed into a specific thread using
-    the C++ ka::SetPartition(site) attribut or the thread group access.
-    
- */
-int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, kaapi_task_t* task)
+/** Call by attribut of the user level C++ ka::SetPartition
+    The task should be pushed into the thread.
+*/
+int kaapi_thread_online_computedep(kaapi_thread_t* frame, int pid, kaapi_task_t* task)
 {
-  kaapi_frame_t*          frame;
+  int err;
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  if (thread ==0) return EINVAL;
+  err = kaapi_thread_computedep_task( thread, (kaapi_frame_t*)frame, task );
+  if (err ==0)
+    kaapi_thread_pushtask(frame);
+  return err;
+}
+
+#define KAAPI_USE_PERFCOUNTER 1
+/**
+*/
+int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_frame_t* frame, kaapi_task_t* task)
+{
   kaapi_format_t*         task_fmt;
   kaapi_task_body_t       task_body;
   kaapi_taskdescr_t*      taskdescr =0;
   kaapi_tasklist_t*       tasklist =0;
-  kaapi_hashentries_t*    entry;
-  kaapi_hashentries_bloc_t stackbloc;
+  kaapi_metadata_info_t*  mdi;
   kaapi_version_t*        version;
+  kaapi_version_t*        all_versions[32];
 
-  /* pass in parameter ? cf C++ thread interface */
-  kaapi_assert_debug( (tid >=-1) && (tid < thgrp->group_size) );
-
-  tasklist = thgrp->threadctxts[tid]->sfp->tasklist;
-
+  tasklist = frame->tasklist; /* user level thread are more or less frame */
+  /* assume task list  */
+  kaapi_assert( tasklist != 0);
+  
   task_body = kaapi_task_getbody(task);
   if (task_body!=0)
     task_fmt= kaapi_format_resolvebybody(task_body);
   else
     task_fmt = 0;
-
   if (task_fmt ==0) 
+  {
     return EINVAL;
+  }
 
   /* new task descriptor */
   taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
+  ++tasklist->cnt_tasks;
   
   /* compute if the i-th access is ready or not.
      If all accesses of the task are ready then push it into readylist.
-     Not that this code is very similar to compute accesslist, except
-     that we intercept non local access before calling kaapi_thread_computeready_access.
   */
   void* sp = task->sp;
   size_t count_params = kaapi_format_get_count_params(task_fmt, sp );
+  kaapi_assert( count_params <= 32 );
+  
   for (unsigned int i=0; i < count_params; i++) 
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
@@ -92,33 +106,50 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
     
     /* its an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
-    entry = 0;
 
     /* find the version info of the data using the hash map */
-    entry = kaapi_hashmap_findinsert(&dep_khm, access.data);
-    if (entry->u.version ==0)
+    mdi = kaapi_mem_findinsert_metadata( access.data );
+    if ( !_kaapi_metadata_info_is_valid(mdi, thread->asid) )
     {
       kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, task->sp);
-
-      /* no entry -> new version object: no writer */
-      entry->u.version = version = kaapi_thread_newversion( access.data, &view );
+      _kaapi_metadata_info_bind_data( mdi, thread->asid, access.data, &view );
+      /* no version -> new version object: no writer */
+      mdi->version[0] = version = kaapi_thread_newversion( mdi, thread->asid, access.data, &view );
     }
     else {
       /* have a look at the version and detect dependency or not etc... */
-      version = entry->u.version;
+      version = mdi->version[0];
     }
-    kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
-    
+    all_versions[i] = version;
+
+    /* compute the deepth (locagical date) to avoid some WAR or WAW */
+    kaapi_thread_computeready_date( version, taskdescr, m );
+
     /* change the data in the task by the handle */
     access.data = version->handle;
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
 
     /* store the format to avoid lookup */
     taskdescr->fmt = task_fmt;
+  }
+  
+  tasklist->t_infinity = _kaapi_max(taskdescr->date, tasklist->t_infinity);
+
+  for (unsigned int i=0; i < count_params; i++) 
+  {
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
+    if (m == KAAPI_ACCESS_MODE_V) 
+      continue;
     
+    /* get version of the i-th parameter find in the previous iteration over args */
+    version = all_versions[i];
+
+    kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
   } /* end for all arguments of the task */
   
-  /* if counter ==0, push the task into the ready list */
-  if (KAAPI_ATOMIC_READ(&taskdescr->counter) == 0)
+  /* if wc ==0, push the task into the ready list */
+  if (taskdescr->wc == 0)
     kaapi_tasklist_pushback_ready(tasklist, taskdescr);
+
+  return 0;
 }

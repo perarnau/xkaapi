@@ -152,20 +152,20 @@ int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
   kaapi_hashmap_init( &visit_khm, 0 );
 
   fprintf(file, "*** ready task:\n");
-  kaapi_taskdescr_t* td = tl->front;
-  while (td != 0)
+  kaapi_activationlink_t* curr = tl->readylist.front;
+  while (curr != 0)
   {
-    entry = kaapi_hashmap_findinsert(&visit_khm, td);
+    entry = kaapi_hashmap_findinsert(&visit_khm, curr->td);
     if (entry->u.data.tag ==0)
     { /* first time I visit it: print and insert activated task descr into the hashmap */
-      kaapi_task_descriptor_print(file, 0, td);
+      kaapi_task_descriptor_print(file, 0, curr->td);
       entry->u.data.tag = 2; /* task print */
-      entry->u.data.ptr = td; 
+      entry->u.data.ptr = curr->td; 
 
       /* add other td */
-      kaapi_insert_unvisited_td( &visit_khm, td->list.front );
+      kaapi_insert_unvisited_td( &visit_khm, curr->td->list.front );
     }
-    td = td->next;
+    curr = curr->next;
   }
   
   /* now print all non printed task descriptor */

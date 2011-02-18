@@ -139,7 +139,7 @@ redo_execute:
     if (kproc->thread->sfp->tasklist ==0)
       err = kaapi_thread_execframe(kproc->thread);
     else
-      err = kaapi_thread_execframe_readylist( kproc->thread );
+      err = kaapi_thread_execframe_tasklist( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );

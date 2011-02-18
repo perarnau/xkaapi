@@ -210,6 +210,7 @@ int kaapi_init(int* argc, char*** argv)
   kaapi_network_init(argc, argv);
 #endif
 
+  kaapi_memory_init();
   int err = kaapi_mt_init();
   return err;
 }
@@ -219,6 +220,8 @@ int kaapi_init(int* argc, char*** argv)
 */
 int kaapi_finalize(void)
 {
+  kaapi_memory_destroy();
+
   kaapi_mt_finalize();
 
 #if defined(KAAPI_USE_NETWORK)

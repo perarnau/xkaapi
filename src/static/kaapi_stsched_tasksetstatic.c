@@ -43,13 +43,16 @@
 */
 #include "kaapi_impl.h"
 
+
 /* 
 */
 void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 {
   int save_state;
   kaapi_frame_t* fp;
-
+  double t0;
+  double t1;
+  
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
 
@@ -61,7 +64,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   thread->sfp[1] = *fp;
   ++thread->sfp;
   
-  
   /* unset steal capability and wait no more thief 
      lock the kproc: it ensure that no more thief has reference on it 
   */
@@ -70,24 +72,42 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   thread->unstealable = 1;
   kaapi_sched_unlock(&thread->proc->lock);
 
-  /* the embedded task cannot be steal because it was not visible to thieves */
-  arg->sub_body( arg->sub_sp, uthread );
+  /* allocate the tasklist for this task
+  */
+  thread->sfp->tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( thread->sfp->tasklist );
+
+  if (arg->npart == -1)
+  {    
+    /* the embedded task cannot be steal because it was not visible to thieves */
+    arg->sub_body( arg->sub_sp, uthread );
   
-  /* currently: that all, do not compute other things */
-  double t0 = kaapi_get_elapsedtime();
-  kaapi_sched_computereadylist();
-  double t1 = kaapi_get_elapsedtime();
+    /* currently: that all, do not compute other things */
+    t0 = kaapi_get_elapsedtime();
+    kaapi_sched_computereadylist();
+    t1 = kaapi_get_elapsedtime();
+  }
+  else 
+  {
+    /* here we assume that all subtasks will be forked using SetPartition attribute:
+       - after each forked task, the attribut will call kaapi_thread_online_computedep
+       that directly call dependencies analysis
+    */
+    arg->sub_body( arg->sub_sp, uthread );
+  }
   
-  printf("Scheduling in %e (s)\n",t1-t0);
+  printf("[tasklist] T1:%llu\n", thread->sfp->tasklist->cnt_tasks);
+  printf("[tasklist] Tinf:%llu\n", thread->sfp->tasklist->t_infinity);
+  printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
   thread->unstealable = save_state;
 
 //  kaapi_thread_print( stdout, thread ); 
   FILE* filedot = fopen("/tmp/graph.dot", "w");
-  kaapi_frame_print_dot( filedot, thread->sfp );
+  kaapi_frame_print_dot( filedot, thread->sfp, 0 );
   fclose(filedot);
   
   /* exec the spawned subtasks */
-  kaapi_thread_execframe_readylist( thread );
+  kaapi_thread_execframe_tasklist( thread );
 
   /* Pop & restore the frame */
   --thread->sfp;

@@ -108,7 +108,7 @@ redo:
   if (thread->sfp->tasklist == 0) 
     err = kaapi_thread_execframe(thread);
   else
-    err = kaapi_thread_execframe_readylist(thread);
+    err = kaapi_thread_execframe_tasklist(thread);
 
   if (err == EWOULDBLOCK)
   {

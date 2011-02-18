@@ -80,12 +80,7 @@ extern uint32_t kaapi_network_get_count(void);
 
 /** Allocate data that can be used into rdma operation
 */
-extern kaapi_pointer_t kaapi_network_allocate_rdma(size_t size);
-
-/** Translate rdma pointer in the address space in the local node to a virtual
-    address space pointer.
-*/
-extern kaapi_pointer_t kaapi_network_rdma2vas(kaapi_pointer_t addr, size_t size);
+extern void* kaapi_network_allocate_rdma(size_t size);
 
 /** Deallocate a pointer in a memory region which is rdmable
 */

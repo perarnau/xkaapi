@@ -1,12 +1,12 @@
 /*
- ** kaapi_task_checkdenpendencies.c
  ** xkaapi
  ** 
- ** Created on Tue Feb 23 16:56:43 2010
- ** Copyright 2009 INRIA.
+ ** Copyright 2010 INRIA.
  **
  ** Contributors :
- ** thierry.gautier@imag.fr
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@imag.fr
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -43,42 +43,20 @@
  */
 #include "kaapi_impl.h"
 
-/**
+
+/* A better choice to choose the closest may be good
 */
-int kaapi_sched_computereadylist( void )
+kaapi_version_t* _kaapi_metadata_info_find_onewriter(
+    kaapi_metadata_info_t* kmdi,
+    kaapi_address_space_id_t kasid
+)
 {
-  int err;
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  if (thread ==0) return EINVAL;
-  err= kaapi_thread_computereadylist( thread );
-  return err;
-}
+  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
+  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
 
-
-/** task is the top task not yet pushed.
-    This function is called is after all task has been pushed into a specific frame.
- */
-int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
-{
-  kaapi_frame_t*          frame;
-  kaapi_task_t*           task_top;
-  kaapi_task_t*           task_bottom;
+  int idx = __builtin_ffsll( kmdi->validbits );
+  kaapi_version_t* ver = kmdi->version[idx-1];
+  if (ver !=0) return ver;
   
-  /* assume no task list or task list is empty */
-  frame    = thread->sfp;
-  
-  /* iteration over all tasks of the current top frame thread->sfp */
-  task_top    = frame->pc;
-  task_bottom = frame->sp;
-  while (task_top > task_bottom)
-  {
-    kaapi_thread_computedep_task( thread, frame, task_top );
-    --task_top;
-  } /* end while task */
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[tasklist] #task:%lu\n", cnt_tasks);
-#endif
-
-  return 0;
+  return ver;
 }

@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "kaapi_partition.h"
 
 /** All threadgroups are registerd into this global table
 */
@@ -60,12 +61,11 @@ uint32_t kaapi_threadgroup_count = 0;
     - the master thread is on the globalid 0.
 */
 int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size, 
-  kaapi_globalid_t (*mapping)(void*, int, int),
+  kaapi_address_space_id_t (*mapping)(void*, int /*nodecount*/, int /*tid*/),
   void* ctxt_mapping
 )
 {
   int i;
-  int error = 0;
   kaapi_threadgroup_t     thgrp = 0;
   kaapi_processor_t*      proc = 0;
   kaapi_thread_context_t* dummy_thread =0;
@@ -85,6 +85,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   thgrp->nodecount = nodecount;
   thgrp->group_size  = size;
   thgrp->localthreads= 0;
+  thgrp->count_tag   = 0;
   KAAPI_ATOMIC_WRITE(&thgrp->endlocalthread, 0);
   KAAPI_ATOMIC_WRITE(&thgrp->endglobalgroup, 0);
   thgrp->waittask    = 0;
@@ -100,18 +101,18 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   
   /* create mapping 
   */
-  thgrp->tid2gid  = (kaapi_globalid_t*)malloc( (1+size) * sizeof(kaapi_globalid_t) );
-  kaapi_assert(thgrp->tid2gid !=0);
   thgrp->tid2asid = (kaapi_address_space_id_t*)malloc( (1+size) * sizeof(kaapi_address_space_id_t) );
   kaapi_assert(thgrp->tid2asid !=0);
+
+#if 0
   thgrp->lists_send= (kaapi_comlink_t**)malloc( (1+size)* sizeof(kaapi_comlink_t*) );
   kaapi_assert(thgrp->lists_send !=0);
   thgrp->lists_recv= (kaapi_comlink_t**)malloc( (1+size)* sizeof(kaapi_comlink_t*) );
   kaapi_assert(thgrp->lists_recv !=0);
+#endif
 
   /* shift +1, -1 == main thread */
   ++thgrp->threads;
-  ++thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
   ++thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */
   ++thgrp->threadctxts; /* shift, because -1 ==> main thread */
   ++thgrp->lists_send;
@@ -129,38 +130,36 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   {
     /* map thread i on processor node count */
     if (mapping ==0)
-      thgrp->tid2gid[i]  = (kaapi_globalid_t)( (1+i) % nodecount);
+      thgrp->tid2asid[i]  
+          = kaapi_memory_address_space_create((kaapi_globalid_t)( (1+i) % nodecount), KAAPI_MEM_TYPE_CPU, seg_size);
     else {
-      if (i ==-1) thgrp->tid2gid[i] = 0;
-      else thgrp->tid2gid[i]  = (*mapping)(ctxt_mapping, nodecount, i);
+      if (i ==-1) thgrp->tid2asid[i] = kaapi_memory_address_space_create(thgrp->localgid,KAAPI_MEM_TYPE_CPU, seg_size);
+      else thgrp->tid2asid[i]  = (*mapping)(ctxt_mapping, nodecount, i);
     }
-
-    /* assigned address space identifier for thread i */
-    thgrp->tid2asid[i] = 
-        kaapi_memory_address_space_create( i, thgrp->tid2gid[i], KAAPI_MEM_TYPE_CPU, seg_size);
     
-    //(uint32_t)(thgrp->tid2gid[i] << 16) | (uint32_t)((1+i) / nodecount);
-#if 0
+#if 1
     if (thgrp->localgid == 0)
     {
       printf("tid: %i into asid:", i );
       kaapi_memory_address_space_fprintf( stdout, thgrp->tid2asid[i] );
-      printf(", map to gid : %u\n", thgrp->tid2gid[i] );
+      printf(", map to gid : %u\n", kaapi_threadgroup_tid2gid(thgrp, i) );
     }
 #endif
     
+#if 0
     thgrp->lists_send[i] = 0;
     thgrp->lists_recv[i] = 0;
+#endif
   }
-  thgrp->all_sendaddr = 0;
+//  thgrp->all_sendaddr = 0;
 
   /* here allocate thread -1 == main thread */
-  if (mygid == thgrp->tid2gid[-1])
+  if (mygid == kaapi_threadgroup_tid2gid(thgrp, -1))
   {
     thgrp->threadctxts[-1] = kaapi_get_current_processor()->thread;
     thgrp->threads[-1]     = kaapi_threadcontext2thread(thgrp->threadctxts[-1]);
-    thgrp->tasklist_main   = kaapi_threadgroup_allocatetasklist( );
     ++thgrp->localthreads;
+    thgrp->threadctxts[-1]->asid = thgrp->tid2asid[-1];
   }
 
   /* Allocate the thread for the local view of the group
@@ -171,7 +170,7 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
   */
   for (i=0; i<size; ++i)
   {
-    if (mygid == thgrp->tid2gid[i]) 
+    if (mygid == kaapi_threadgroup_tid2gid(thgrp,i)) 
     {
       thgrp->threadctxts[i] = kaapi_context_alloc( proc );
       kaapi_assert(thgrp->threadctxts[i] != 0);
@@ -193,24 +192,13 @@ int kaapi_threadgroup_create(kaapi_threadgroup_t* pthgrp, int size,
     }
   }
   
-  error =pthread_mutex_init(&thgrp->mutex, 0);
-  kaapi_assert(error ==0);
-
-  error =pthread_cond_init(&thgrp->cond, 0);
-  kaapi_assert (error ==0);
-
   /* ok */
   thgrp->dummy_thread       = dummy_thread;
   thgrp->maxstep            = -1;
   thgrp->step               = -1;
   thgrp->state              = KAAPI_THREAD_GROUP_CREATE_S;
   thgrp->flag               = 0;
-  thgrp->tag_count          = 0;
-  kaapi_assert( kaapi_allocator_init(&thgrp->allocator) ==0);
-  kaapi_assert( kaapi_allocator_init(&thgrp->allocator_version) ==0);
-  thgrp->free_dataversion_list=0;
-  thgrp->save_readylists    = 0;
-  thgrp->size_readylists    = 0;
+
   *pthgrp                   = thgrp;
  
   /* register the thread group */
@@ -238,24 +226,6 @@ int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep 
 void kaapi_threadgroup_force_archtype
 (kaapi_threadgroup_t group, unsigned int part, unsigned int type)
 {
-#ifndef KAAPI_ASID_MASK_ARCH
-# define KAAPI_ASID_MASK_ARCH 0xFF00000000000000UL
-#endif
-
-  group->tid2asid[part]->asid &= ~KAAPI_ASID_MASK_ARCH;
-  group->tid2asid[part]->asid |= (uint64_t)type << 56;
-}
-
-
-void kaapi_threadgroup_force_kasid
-(kaapi_threadgroup_t group, unsigned int part, unsigned int arch, unsigned int user)
-{
-  /* force the kasid info for a given partition */
-
-#ifndef KAAPI_ASID_MASK_USER
-# define KAAPI_ASID_MASK_USER 0x00000000FFFFFFFFUL
-#endif
-
-  group->tid2asid[part]->asid &= ~(KAAPI_ASID_MASK_USER | KAAPI_ASID_MASK_ARCH);
-  group->tid2asid[part]->asid |= ((uint64_t)arch << 56) | ((uint64_t)user << 0);
+  group->tid2asid[part] &= ~KAAPI_ASID_MASK_ARCH;
+  group->tid2asid[part] |= (uint64_t)type << 56;
 }

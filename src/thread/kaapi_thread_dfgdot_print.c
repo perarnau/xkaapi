@@ -59,96 +59,16 @@ static inline void _kaapi_print_data( FILE* file, const void* ptr, unsigned long
 }
 
 /**/
-static inline void _kaapi_print_task( 
-    FILE* file, 
-    kaapi_hashmap_t* khm,
-    kaapi_hashmap_t* khm_data,
-    kaapi_task_t* task, 
-    const char* fname, 
-    const kaapi_taskdescr_t* td, 
-    const char* shape
+static inline void _kaapi_print_activation_link(
+    FILE* file,
+    const kaapi_taskdescr_t* td_src,
+    const kaapi_taskdescr_t* td_dest
 )
 {
-  kaapi_activationlink_t* lk;
-  kaapi_activationlink_t* lk_finalizer;
-  kaapi_taskdescr_t* tda;
-
-  if (td ==0) 
-  {
-    fprintf( file, "%lu [label=\"%s\\n task=%p\", shape=%s, style=filled, color=orange];\n", 
-      (uintptr_t)task, fname, (void*)task, shape
-    );
-    return;
-  }
-
-  fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
-    (uintptr_t)task, fname, (void*)task, 
-    td->date, 
-    (int)KAAPI_ATOMIC_READ(&td->counter),
-    shape
-  );
-  
-
-  /* display activation link */
-  lk = td->list.front;
-  while (lk !=0)
-  {
-    tda = lk->td;
-    if (!noprint_activationlink)
-      fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
-        (uintptr_t)task, (uintptr_t)tda->task );
-
-    /* print the finalizer only once */
-    if (kaapi_task_getbody(tda->task) == kaapi_taskfinalizer_body)
-    {
-      kaapi_hashentries_t* entry;
-      kaapi_taskdescr_t* td_finalizer;
-      entry = kaapi_hashmap_find( khm, tda->task );
-      kaapi_assert(entry !=0);
-      td_finalizer = (kaapi_taskdescr_t*)entry->u.data.ptr;
-      if (entry->u.data.tag ==1)
-      {
-        entry->u.data.tag = 2;
-        fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
-          (uintptr_t)td_finalizer->task, "finalizer", (void*)td_finalizer->task, 
-          td_finalizer->date, 
-          (int)KAAPI_ATOMIC_READ(&td_finalizer->counter),
-          "invtrapezium"
-        );
-        
-        /* display also an array to the data */
-        kaapi_move_arg_t* arg = (kaapi_move_arg_t*)td_finalizer->task->sp;
-        entry = kaapi_hashmap_find( khm_data, arg->dest );
-        kaapi_assert( entry !=0 );
-        _kaapi_print_data(file, entry->key, entry->u.data.tag+1);
-        fprintf(file,"%lu -> %lu00%lu;\n", 
-          (uintptr_t)td_finalizer->task, entry->u.data.tag+1, (uintptr_t)entry->key );
-        fprintf(file,"%lu00%lu -> %lu;\n", entry->u.data.tag, (uintptr_t)entry->key,
-           (uintptr_t)td_finalizer->task 
-        );
-
-        if (!noprint_versionlink)
-          fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
-              entry->u.data.tag, (uintptr_t)entry->key, entry->u.data.tag+1, (uintptr_t)entry->key );
-
-        /* display the activation link for the finalizer */
-        if (!noprint_activationlink)
-        {
-          lk_finalizer = tda->list.front;
-          while (lk_finalizer !=0)
-          {
-            kaapi_taskdescr_t* tda_finalizer = lk_finalizer->td;
-            fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
-                (uintptr_t)td_finalizer->task, (uintptr_t)tda_finalizer->task );
-            lk_finalizer = lk_finalizer->next;
-          }
-        }
-      }
-    }
-    lk = lk->next;
-  }  
+  if (!noprint_activationlink)
+    fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
+      (uintptr_t)td_src->task, (uintptr_t)td_dest->task );
 }
-
 
 
 /**/
@@ -197,390 +117,300 @@ static inline void _kaapi_print_read_edge(
     fprintf(file,"%lu00%lu -> %lu;\n", version, (uintptr_t)ptr, (uintptr_t)task );
 }
 
-
-
-/** Visit tasklist data structure to keep correspondance between
-    kaapi_task_t and kaapi_taskdesc_t
-*/
-/**
-*/
-static int _kaapi_add_unvisited_td( kaapi_hashmap_t* khm, kaapi_activationlink_t* lk)
+/**/
+static inline void _kaapi_print_tag_node( 
+    FILE* file, 
+    unsigned long tag
+)
 {
-  kaapi_hashentries_t* entry;
+  fprintf(file,"tag_%lu [shape=Mcircle, label=\"%lu\"];\n", tag, tag );
+}
 
-  if (lk ==0) return 0;
+
+/**/
+static inline void _kaapi_print_task( 
+    FILE* file, 
+    kaapi_hashmap_t* data_khm,
+    kaapi_task_t* task, 
+    const kaapi_taskdescr_t* td,
+    const char* sec_name
+)
+{
+  kaapi_activationlink_t* lk;
   kaapi_taskdescr_t* tda;
+  char bname[128];
+  const char* fname = "<empty format>";
+  const char* shape = "ellipse";
+  const kaapi_format_t* fmt;
+  kaapi_task_body_t body;
+
+  void* sp = task->sp;
+  body = kaapi_task_getbody(task);
+  if ((td !=0) && (td->fmt !=0))
+  {
+    fmt = td->fmt;
+    fname = fmt->name;
+  } 
+  else 
+  {
+    fmt = kaapi_format_resolvebybody( body );
+    if (fmt !=0)
+      fname = fmt->name;
+  }
+  /* specialize shape / name for some well knowns tasks */
+  if (body == kaapi_taskstartup_body)
+  {
+      fname = "startup";
+      shape = "tripleoctagon";
+  } 
+  else if (body == kaapi_taskmain_body)
+  {
+      fname = "maintask";
+      shape = "doubleoctagon";
+  } 
+  else if (body == kaapi_taskfinalizer_body)
+  {
+      fname = "finalizer";
+      shape = "invtrapezium";
+  }
+  else if ((body == kaapi_taskmove_body) || (body == kaapi_taskalloc_body))
+  {
+    shape = "diamond";
+    if (body == kaapi_taskmove_body)
+      fname = "move";
+    else if (body == kaapi_taskalloc_body)
+      fname = "alloc";
+    kaapi_move_arg_t* argtask = (kaapi_move_arg_t*)sp;
+    kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, argtask->dest);
+    if (entry->u.data.tag ==0)
+    {
+      /* display the node */
+      entry->u.data.tag = 1;
+      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+    }
+  }
+  else if (body == kaapi_taskbcast_body)
+  {
+    shape = "octagon";
+    kaapi_bcast_arg_t* argtask = (kaapi_bcast_arg_t*)sp;
+    snprintf(bname, 128, "bcast\\ntag:%lu", (unsigned long)argtask->tag );
+    fname = bname;
+    kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, argtask->src);
+    if (entry->u.data.tag ==0)
+    {
+      /* display the node */
+      entry->u.data.tag = 1;
+      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+    }
+    _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_R );
+//    fprintf(file,"%lu -> tag_%lu  [style=bold, color=blue, label=\"tag:%lu\"];\n", 
+//      (uintptr_t)task, (uintptr_t)argtask->tag, (unsigned long)argtask->tag );
+   if (sec_name !=0)
+     fprintf(file,"}\n");
+    _kaapi_print_tag_node(file, argtask->tag);
+    fprintf(file,"%lu -> tag_%lu  [style=bold, color=blue];\n", 
+      (uintptr_t)task, (uintptr_t)argtask->tag );
+   if (sec_name !=0)
+     fprintf(file, "%s", sec_name);
+  }
+  else if (body == kaapi_taskrecv_body)
+  {
+    shape = "invtrapezium";
+    kaapi_recv_arg_t* argtask = (kaapi_recv_arg_t*)sp;
+    snprintf(bname, 128, "recv\\ntag:%lu", (unsigned long)argtask->tag );
+    fname = bname;
+    kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, argtask->dest);
+    if (entry->u.data.tag ==0)
+    {
+      /* display the node */
+      entry->u.data.tag = 1;
+      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+    }
+    _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+//    fprintf(file,"tag_%lu -> %lu [style=bold, color=blue, label=\"tag:%lu\"];\n", 
+//      (uintptr_t)argtask->tag, (uintptr_t)task, (unsigned long)argtask->tag );
+   if (sec_name !=0)
+     fprintf(file,"}\n");
+    _kaapi_print_tag_node(file, argtask->tag);
+    fprintf(file,"tag_%lu -> %lu [style=bold, color=blue];\n", 
+      (uintptr_t)argtask->tag, (uintptr_t)task );
+   if (sec_name !=0)
+     fprintf(file, "%s", sec_name);
+  }
+
+  if (td ==0) 
+  {
+    fprintf( file, "%lu [label=\"%s\\n task=%p\", shape=%s, style=filled, color=orange];\n", 
+      (uintptr_t)task, fname, (void*)task, shape
+    );
+    return;
+  }
+
+  fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
+    (uintptr_t)task, fname, (void*)task, 
+    td->date, 
+    (int)KAAPI_ATOMIC_READ(&td->counter),
+    shape
+  );
+
+  /* display activation link */
+  lk = td->list.front;
   while (lk !=0)
   {
     tda = lk->td;
-    entry = kaapi_hashmap_findinsert(khm, tda->task);
+    _kaapi_print_activation_link( file, td, tda );
+    lk = lk->next;
+  }  
+
+  /* display bcast link */
+  if (td->bcast !=0)
+  {
+    lk = td->bcast->front;
+    while (lk !=0)
+    {
+      tda = lk->td;
+      _kaapi_print_activation_link( file, td, tda );
+      lk = lk->next;
+    }
+  }
+
+  if (fmt ==0)
+    return;
+  
+  size_t count_params = kaapi_format_get_count_params(fmt, sp );
+
+  for (unsigned int i=0; i < count_params; i++) 
+  {
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp) );
+    if (m == KAAPI_ACCESS_MODE_V) 
+      continue;
+    
+    /* its an access */
+    kaapi_access_t access = kaapi_format_get_access_param(fmt, i, sp);
+
+    /* find the version info of the data using the hash map */
+    kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, access.data);
     if (entry->u.data.tag ==0)
     {
-      entry->u.data.tag = 1; /* task inserted */
-      entry->u.data.ptr = tda;
-      if (tda->list.front !=0)
-        _kaapi_add_unvisited_td(khm, tda->list.front);
+      /* display the node */
+      entry->u.data.tag = 1;
+      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
     }
-    lk = lk->next;
+    
+    /* display arrow */
+    if (KAAPI_ACCESS_IS_READ(m))
+    {
+      _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag, m  );
+    }
+    if (KAAPI_ACCESS_IS_WRITE(m))
+    {
+      entry->u.data.tag++;
+      /* display new version */
+      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
+    }
+    if (KAAPI_ACCESS_IS_CUMULWRITE(m))
+    {
+      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
+    }
   }
-  return 0;
+  
 }
+
 
 /**
 */
-static int _kaapi_add_td( kaapi_hashmap_t* khm, kaapi_tasklist_t* tl )
+typedef struct {
+  kaapi_hashmap_t data_khm;
+  FILE*           file;
+  const char*     sec_name;
+} _kaapi_print_context;
+
+
+/**
+*/
+static void _kaapi_print_task_executor( kaapi_taskdescr_t* td, void* arg )
 {
-  /* new history of visited data */
-  kaapi_hashentries_t* entry;
-
-  kaapi_taskdescr_t* td = tl->front;
-  while (td != 0)
-  {
-    entry = kaapi_hashmap_findinsert(khm, td->task);
-    if (entry->u.data.tag ==0)
-    { /* first time I visit it: print and insert activated task descr into the hashmap */
-      entry->u.data.tag = 1; /* task print */
-      entry->u.data.ptr = td; 
-
-      /* add other td */
-      _kaapi_add_unvisited_td( khm, td->list.front );
-    }
-    td = td->next;
-  }
-  return 0;  
+  _kaapi_print_context* ctxt = (_kaapi_print_context*)arg;
+  _kaapi_print_task( ctxt->file, &ctxt->data_khm, td->task, td, ctxt->sec_name );
 }
 
 
 /** 
 */
-static int kaapi_frame_print_dot_tasklist  ( FILE* file, kaapi_frame_t* frame )
+static int kaapi_frame_print_dot_tasklist  ( FILE* file, const kaapi_frame_t* frame, int clusterflags )
 {
-  kaapi_task_t*  task_top;
-  kaapi_task_t*  task_bot;
-  kaapi_task_body_t body;
-  const kaapi_format_t* fmt;
-  const char* fname;
-  kaapi_taskdescr_t* td = 0;
-  kaapi_hashentries_t* entry;
-  kaapi_hashmap_t visit_khm;
-  kaapi_hashmap_t td_khm;             /* store the ready task descriptor */
+  _kaapi_print_context the_hash_map;
+  char sec_name[128];
   
   if (frame ==0) return 0;
+  kaapi_assert(frame->tasklist !=0);
 
   noprint_activationlink = (0 != getenv("KAAPI_DOT_NOACTIVATION_LINK"));
   noprint_versionlink = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
 
   /* be carrefull, the map should be clear before used */
-  kaapi_hashmap_init( &visit_khm, 0 );
-  
-  kaapi_assert(frame->tasklist !=0);
-  kaapi_hashmap_init( &td_khm, 0 );
-  _kaapi_add_td( &td_khm, frame->tasklist );
+  kaapi_hashmap_init( &the_hash_map.data_khm, 0 );
+  the_hash_map.file = file;
+  the_hash_map.sec_name =0;
 
-  fprintf(file, "digraph G {\n");
-  
-  /* search if task move or alloc are in the stack 
-     Print them before because they are at the begining of each chain shared data
-  */
-  fname = "";
-  task_top = frame->pc;
-  task_bot = frame->sp;
-  while (task_top > task_bot)
+  if (clusterflags !=0)
   {
-    body = kaapi_task_getbody(task_top);
-    if ((body == kaapi_taskmove_body) || (body == kaapi_taskalloc_body))
-    {
-      if (body == kaapi_taskmove_body)
-        fname = "move";
-      else if (body == kaapi_taskalloc_body)
-        fname = "alloc";
-
-      td = 0;
-      entry = kaapi_hashmap_find( &td_khm, task_top );
-      kaapi_assert(entry !=0);
-      td = (kaapi_taskdescr_t*)entry->u.data.ptr;
-      _kaapi_print_task( file, 0, 0, task_top, fname, td, "diamond" );
-
-      kaapi_move_arg_t* arg= (kaapi_move_arg_t*)task_top->sp;
-      entry = kaapi_hashmap_findinsert(&visit_khm, arg->dest);
-      if (entry->u.data.tag ==0)
-      {
-        /* display the node */
-        entry->u.data.tag = 1;
-        entry->u.data.last_mode = KAAPI_ACCESS_MODE_W;
-        _kaapi_print_data( file, entry->key, entry->u.data.tag  );
-      }
-      /* display the edge */
-      _kaapi_print_write_edge( file, task_top, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W  );
-    }
-    --task_top;
+    sprintf(sec_name, "subgraph cluster_%lu {\n",(uintptr_t)frame->tasklist);
+    the_hash_map.sec_name = sec_name;
+    fprintf(file, "%s\n", sec_name);
   }
-  
-  
-  /* print the rest of the dfg */
-  task_top = frame->pc;
-  task_bot = frame->sp;
-  while (task_top > task_bot) 
-  {
-    body = kaapi_task_getbody(task_top);
-    
-    /* do not print as normal task these tasks because they are pushed at the end of the stack
-       and we cannot use the creation order (order in the stack) to detect dependencies
-    */
-    if ((kaapi_task_getbody(task_top) == kaapi_taskmove_body) ||
-        (kaapi_task_getbody(task_top) == kaapi_taskalloc_body) ||
-        (kaapi_task_getbody(task_top) == kaapi_taskfinalizer_body) )
-    {
-      --task_top;
-      continue;
-    }
-    
-    fmt = kaapi_format_resolvebybody( body );
-    
-    if (fmt ==0) 
-    {
-      fname = "<empty format>";
-      if (body == kaapi_nop_body) 
-        fname = "nop";
-      else if (body == kaapi_taskstartup_body) 
-      {
-        fname = "startup";
-        _kaapi_print_task( file, 0, 0, task_top, fname, 0, "tripleoctagon" );
-      }
-      else if ( body == kaapi_taskmain_body) 
-      {
-        fname = "maintask";
-        _kaapi_print_task( file, 0, 0, task_top, fname, 0, "doubleoctagon" );
-      }
-      --task_top;
-      continue;
-    }
-    else {
-        fname = fmt->name;
-    }
+  else
+    fprintf(file, "digraph G {\n");
 
-    entry = kaapi_hashmap_find( &td_khm, task_top );
-    kaapi_assert(entry !=0);
-    td = (kaapi_taskdescr_t*)entry->u.data.ptr;
 
-    /* create the node with the task */
-    _kaapi_print_task( file, &td_khm, &visit_khm, task_top, fname, td, "ellipse" );
+  kaapi_thread_abstractexec_readylist( frame->tasklist, _kaapi_print_task_executor, &the_hash_map );
 
-    
-    /* display dependency of the task with its shared arguments */
-    void* sp = task_top->sp;
-    size_t count_params = kaapi_format_get_count_params(fmt, sp );
-
-    for (unsigned int i=0; i < count_params; i++) 
-    {
-      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp) );
-      if (m == KAAPI_ACCESS_MODE_V) 
-        continue;
-      
-      /* its an access */
-      kaapi_access_t access = kaapi_format_get_access_param(fmt, i, sp);
-
-      /* find the version info of the data using the hash map */
-      entry = kaapi_hashmap_findinsert(&visit_khm, access.data);
-      if (entry->u.data.tag ==0)
-      {
-        /* display the node */
-        entry->u.data.tag = 1;
-        entry->u.data.last_mode = m;
-        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-      }
-      
-      /* display arrow */
-      if (KAAPI_ACCESS_IS_READ(m))
-      {
-        if (KAAPI_ACCESS_IS_CUMULWRITE(entry->u.data.last_mode))
-        {
-          entry->u.data.tag++;
-          _kaapi_print_data( file, entry->key, (int)entry->u.data.tag);
-        }
-        _kaapi_print_read_edge( file, task_top, entry->key, entry->u.data.tag, m  );
-      }
-      if (KAAPI_ACCESS_IS_WRITE(m))
-      {
-        if (KAAPI_ACCESS_IS_CUMULWRITE(entry->u.data.last_mode))
-        {
-          entry->u.data.tag++;
-          _kaapi_print_data( file, entry->key, (int)entry->u.data.tag);
-        }
-        entry->u.data.tag++;
-        /* display new version */
-        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-        _kaapi_print_write_edge( file, task_top, entry->key, entry->u.data.tag, m );
-      }
-      else if (KAAPI_ACCESS_IS_CUMULWRITE(m))
-      {
-        /* write a cumul edge to the next version */
-        _kaapi_print_write_edge( file, task_top, entry->key, entry->u.data.tag, m );        
-      }
-      entry->u.data.last_mode = m;
-    }
-
-    --task_top;
-  }
-  fprintf(file, "\n}\n");
+  fprintf(file, "\n\n}\n");
   fflush(file);
 
-  kaapi_hashmap_destroy(&visit_khm);
-  kaapi_hashmap_destroy(&td_khm);
+  kaapi_hashmap_destroy(&the_hash_map.data_khm);
   return 0;
 }
 
 
 /** Print the frame without taking into account the tasklist
 */
-static int kaapi_frame_print_dot_notasklist  ( FILE* file, kaapi_frame_t* frame )
+static int kaapi_frame_print_dot_notasklist  ( FILE* file, const kaapi_frame_t* frame )
 {
   kaapi_task_t*  task_top;
   kaapi_task_t*  task_bot;
-  kaapi_task_body_t body;
-  const kaapi_format_t* fmt;
-  const char* fname;
-  kaapi_hashentries_t* entry;
-  kaapi_hashmap_t visit_khm;
+  kaapi_hashmap_t data_khm;
   
   if (frame ==0) return 0;
 
   /* be carrefull, the map should be clear before used */
-  kaapi_hashmap_init( &visit_khm, 0 );
+  kaapi_hashmap_init( &data_khm, 0 );
   
   fprintf(file, "digraph G {\n");
-  
-  /* search if task move are in the stack */
-  fname = "";
-  task_top = frame->pc;
-  task_bot = frame->sp;
-  while (task_top > task_bot)
-  {
-    body = kaapi_task_getbody(task_top);
-    if ((body == kaapi_taskmove_body) || (body == kaapi_taskalloc_body))
-    {
-      if (body == kaapi_taskmove_body)
-        fname = "move";
-      else if (body == kaapi_taskalloc_body)
-        fname = "alloc";
-
-      _kaapi_print_task( file, 0, 0, task_top, fname, 0, "diamond" );
-
-      kaapi_move_arg_t* arg= (kaapi_move_arg_t*)task_top->sp;
-      entry = kaapi_hashmap_findinsert(&visit_khm, arg->dest);
-      if (entry->u.data.tag ==0)
-      {
-        /* display the node */
-        entry->u.data.tag = 1;
-        _kaapi_print_data( file, entry->key, entry->u.data.tag  );
-      }
-      /* display the edge */
-      _kaapi_print_write_edge( file, task_top, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W  );
-    }
-    --task_top;
-  }
-  
   
   task_top = frame->pc;
   task_bot = frame->sp;
   while (task_top > task_bot) 
   {
-    body = kaapi_task_getbody(task_top);
-    
-    if ((kaapi_task_getbody(task_top) != kaapi_taskmove_body) &&
-        (kaapi_task_getbody(task_top) != kaapi_taskalloc_body) )
-    {
-      --task_top;
-      continue;
-    }
-    
-    fmt = kaapi_format_resolvebybody( body );
-    
-    if (fmt ==0) 
-    {
-      fname = "<empty format>";
-      if (body == kaapi_nop_body) 
-        fname = "nop";
-      else if (body == kaapi_taskstartup_body) 
-      {
-        fname = "startup";
-        _kaapi_print_task( file, 0, 0, task_top, fname, 0, "tripleoctagon" );
-      }
-      else if ( body == kaapi_taskmain_body) 
-      {
-        fname = "maintask";
-        _kaapi_print_task( file, 0, 0, task_top, fname, 0, "doubleoctagon" );
-      }
-      else if ( body == kaapi_taskfinalizer_body) 
-      {
-        fname = "finalizer";
-        _kaapi_print_task( file, 0, 0, task_top, fname, 0, "invtrapezium" );
-      }
-      --task_top;
-      continue;
-    }
-    else {
-        fname = fmt->name;
-    }
-    /* create the node with the task */
-    _kaapi_print_task( file, 0, 0, task_top, fname, 0, "ellipse" );
-
-    /* display dependency of the task with its shared arguments */
-    void* sp = task_top->sp;
-    size_t count_params = kaapi_format_get_count_params(fmt, sp );
-
-    for (unsigned int i=0; i < count_params; i++) 
-    {
-      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp) );
-      if (m == KAAPI_ACCESS_MODE_V) 
-        continue;
-      
-      /* its an access */
-      kaapi_access_t access = kaapi_format_get_access_param(fmt, i, sp);
-
-      /* find the version info of the data using the hash map */
-      entry = kaapi_hashmap_findinsert(&visit_khm, access.data);
-      if (entry->u.data.tag ==0)
-      {
-        /* display the node */
-        entry->u.data.tag = 1;
-        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-      }
-      
-      /* display arrow */
-      if (KAAPI_ACCESS_IS_READ(m))
-      {
-        _kaapi_print_read_edge( file, task_top, entry->key, entry->u.data.tag, m  );
-      }
-      if (KAAPI_ACCESS_IS_WRITE(m))
-      {
-        entry->u.data.tag++;
-        /* display new version */
-        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-        _kaapi_print_write_edge( file, task_top, entry->key, entry->u.data.tag, m );
-      }
-      if (KAAPI_ACCESS_IS_CUMULWRITE(m))
-      {
-        _kaapi_print_write_edge( file, task_top, entry->key, entry->u.data.tag, m );
-      }
-    }
-
+    _kaapi_print_task( file, &data_khm, task_top, 0, 0 );
     --task_top;
   }
   fprintf(file, "\n}\n");
   fflush(file);
 
-  kaapi_hashmap_destroy(&visit_khm);
+  kaapi_hashmap_destroy(&data_khm);
   return 0;
 }
 
 
 /** 
 */
-int kaapi_frame_print_dot  ( FILE* file, kaapi_frame_t* frame )
+int kaapi_frame_print_dot  ( FILE* file, const kaapi_frame_t* frame, int flag )
 {
   if ((file ==0) || (frame ==0)) return EINVAL;
   if (frame->tasklist !=0) 
-    return kaapi_frame_print_dot_tasklist(file, frame);
+    return kaapi_frame_print_dot_tasklist(file, frame, flag);
   return kaapi_frame_print_dot_notasklist(file, frame);
 }

@@ -43,7 +43,37 @@
  */
 #include "kaapi_impl.h"
 
-#if defined(KAAPI_USE_NETWORK)
+
+/* */
+void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
+{
+  kaapi_bcast_arg_t* arg = (kaapi_bcast_arg_t*)sp;
+
+  kaapi_bcast_onedest_t* curr = &arg->front;
+  
+  while (curr !=0)
+  {
+    /* send arg->src to curr->dest with the same view.... */
+    kaapi_memory_asyncopy(
+      curr->dest, &arg->src->view, 
+      arg->src->ptr, &arg->src->view,
+      (void(*)(void*))&kaapi_tasklist_doactivationlist, arg->td_bcast
+    );
+    
+    /*
+        kaapi_network_am(
+            kaapi_memory_address_space_getgid(lraddr->asid),
+            kaapi_threadgroup_signalservice, 
+            &lraddr->rsignal, sizeof(kaapi_pointer_t) 
+        );
+    */
+    curr = curr->next;
+  }
+  
+}
+
+
+#if 0 // defined(KAAPI_USE_NETWORK)
 /* network service to push ready list */
 static void kaapi_threadgroup_signalservice(int err, kaapi_globalid_t source, void* buffer, size_t sz_buffer )
 {
@@ -59,63 +89,3 @@ static void kaapi_threadgroup_signalservice(int err, kaapi_globalid_t source, vo
 #endif
 }
 #endif
-
-/* */
-int kaapi_threadgroup_bcast( kaapi_threadgroup_t thgrp, kaapi_address_space_id_t asid_src, kaapi_comsend_t* com)
-{
-  kaapi_comsend_raddr_t* lraddr;
-  while (com != 0)
-  {
-#if 0
-    printf("Bcast data:%p\n", com->data); fflush(stdout);
-#endif
-    lraddr = &com->front;
-    while (lraddr !=0)
-    {
-
-      /* copy (com->data, com->size) to (lraddr->raddr, lraddr->rsize) */
-      /* warning for GPU device -> communication to the device, that will post transfert */
-#if 0
-      printf("%i::[bcast] memory copy dest@:%p, src@:%p, size:%lu, asid_dest:",
-          kaapi_network_get_current_globalid(),
-          (void*)lraddr->raddr, 
-          (void*)com->data, 
-          kaapi_memory_view_size(&com->view)); 
-      kaapi_memory_address_space_fprintf( stdout, lraddr->asid );
-      printf(", asid_src:");
-      kaapi_memory_address_space_fprintf( stdout, asid_src ); 
-      printf("\n");
-      fflush(stdout);
-#endif
-      
-      kaapi_memory_copy( lraddr->asid, lraddr->raddr, &lraddr->rview, 
-                         asid_src, (kaapi_pointer_t)com->data, &com->view );
-
-      /* signal remote thread in lraddr->asid */
-      int tid = kaapi_memory_address_space_getuser( lraddr->asid );
-      if (thgrp->tid2gid[tid] == thgrp->localgid)
-      {
-        kaapi_tasklist_pushsignal( lraddr->rsignal );
-      }
-      else {
-#if defined(KAAPI_USE_NETWORK)
-#if 0
-        printf("Remote signal raddr:%p\n", (void*)lraddr->raddr); fflush(stdout);
-#endif
-        /* remote address space -> communication */
-        kaapi_network_am(
-            kaapi_memory_address_space_getgid(lraddr->asid),
-            kaapi_threadgroup_signalservice, 
-            &lraddr->rsignal, sizeof(kaapi_pointer_t) 
-        );
-#else
-        kaapi_assert_debug( 0 );
-#endif
-      }
-
-      lraddr = lraddr->next;
-    }
-    com = com->next;
-  }
-  return 0;
-}

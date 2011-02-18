@@ -27,6 +27,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_hashmap_big.c \
   misc/kaapi_hashmap_big_findinsert.c \
   misc/kaapi_malloc_align.c \
+  misc/kaapi_allocator_allocate.c \
   misc/kaapi_wq_slowpop.c\
   misc/kaapi_wq_set.c\
   misc/kaapi_cpuset2str.c\
@@ -50,6 +51,11 @@ libkaapi_la_SOURCES=\
   machine/common/kaapi_hw_selftopo.c \
   kaapi_memory.h \
   memory/kaapi_memory.c \
+  memory/kaapi_memory_copy.c \
+  memory/kaapi_memory_allocate.c \
+  memory/kaapi_memory_bind.c \
+  memory/kaapi_memory_get_version.c \
+  memory/kaapi_memory_find_writer.c \
   memory/kaapi_mem.h \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_rand_f0.c \
@@ -70,18 +76,22 @@ libkaapi_la_SOURCES=\
 
 #Libtask
 libkaapi_la_SOURCES+=\
+  kaapi_tasklist.h\
+  thread/kaapi_tasklist.c \
   thread/kaapi_thread_dfg_print.c \
   thread/kaapi_thread_rdl_print.c \
   thread/kaapi_thread_dfgdot_print.c \
-  thread/kaapi_thread_execframe.c \
   thread/kaapi_thread_saveframe.c \
   thread/kaapi_thread_clear.c \
-  thread/kaapi_thread_readylist_execframe.c \
+  thread/kaapi_thread_execframe.c \
+  thread/kaapi_thread_execframe_tasklist.c \
+  thread/kaapi_thread_readylist_generic_execframe.c \
   thread/kaapi_thread_signalend_exec.c \
   thread/kaapi_thread_computereadylist.c \
   thread/kaapi_thread_computeready_access.c \
   thread/kaapi_thread_compute_date.c \
-  thread/kaapi_thread_taskbcast.c \
+  thread/kaapi_thread_checkdeps.c \
+  thread/kaapi_thread_taskmovealloc.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
@@ -105,26 +115,29 @@ libkaapi_la_SOURCES+=\
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
 libkaapi_la_SOURCES+=\
-  static/kaapi_threadgroup_checkdeps.c\
+  kaapi_partition.h\
+  static/kaapi_stsched_create.c\
+  static/kaapi_stsched_destroy.c\
+  static/kaapi_stsched_initthread.c\
+  static/kaapi_stsched_checkdeps.c\
+  static/kaapi_stsched_taskrecv.c\
+  static/kaapi_stsched_taskbcast.c\
+  static/kaapi_stsched_partition.c\
+  static/kaapi_stsched_tasksignal.c
+endif
+
+# static/kaapi_threadgroup_partition_barrier.c\
   static/kaapi_threadgroup_version_new.c\
   static/kaapi_threadgroup_version_find.c\
   static/kaapi_threadgroup_version_reader.c\
   static/kaapi_threadgroup_version_writer.c\
   static/kaapi_threadgroup_version_cumulwriter.c\
-  static/kaapi_threadgroup_create.c\
-  static/kaapi_threadgroup_initthread.c\
-  static/kaapi_threadgroup_destroy.c\
-  static/kaapi_threadgroup_partition.c\
-  static/kaapi_threadgroup_partition_barrier.c\
   static/kaapi_threadgroup_exec.c\
   static/kaapi_threadgroup_execframe.c\
   static/kaapi_threadgroup_print.c\
   static/kaapi_threadgroup_saverestore.c\
-  static/kaapi_threadgroup_taskbcast.c\
-  static/kaapi_threadgroup_tasksignal.c\
-  static/kaapi_threadgroup_synchronize.c\
-  kaapi_staticsched.h
-endif
+  static/kaapi_threadgroup_synchronize.c
+
 
 if KAAPI_TARGET_MT
 libkaapi_la_SOURCES+=\

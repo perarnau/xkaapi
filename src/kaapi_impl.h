@@ -64,11 +64,14 @@ extern "C" {
 
 #include "kaapi_defs.h"
 
-/* Maximal number of recursive call used to store the stack of frames.
-   This is used to use a stack of frame.
-   Some optimization may have been done by avoiding using this structure.
+/* Maximal number of recursive calls used to store the stack of frames.
+   The value indicates the maximal number of frames that can be pushed
+   into the stackframe for each thread.
+   
+   If an assertion is thrown at runtime, and if this macro appears then
+   it is necessary to increase the maximal number of frames in a stack.
 */
-#define KAAPI_MAX_RECCALL 1024
+#define KAAPI_MAX_RECCALL 256
 
 /* Define if ready list is used
    This flag activates :
@@ -183,7 +186,7 @@ extern int kaapi_mt_finalize(void);
     Based on hwloc library.
     Return 0 in case of success else an error code
 */
-extern int kaapi_hw_init();
+extern int kaapi_hw_init(void);
 
 /* Fwd declaration 
 */
@@ -592,26 +595,26 @@ static inline int kaapi_allocator_destroy( kaapi_allocator_t* va )
   return 0;
 }
 
+/* Here size is size in Bytes
+*/
+extern void* _kaapi_allocator_allocate_slowpart( kaapi_allocator_t* va, size_t size );
+
+
 /**/
 static inline void* kaapi_allocator_allocate( kaapi_allocator_t* va, size_t size )
 {
-  void* entry;
+  void* retval;
   /* round size to double size */
   size = (size+sizeof(double)-1)/sizeof(double);
   const size_t sz_max = KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(kaapi_allocator_bloc_t*);
-  if ((va->currentbloc == 0) || (va->currentbloc->pos + size >= sz_max))
+  if ((va->currentbloc != 0) && (va->currentbloc->pos + size < sz_max))
   {
-    kaapi_assert_debug( sizeof(kaapi_allocator_bloc_t) > size );
-    va->currentbloc = (kaapi_allocator_bloc_t*)malloc( sizeof(kaapi_allocator_bloc_t) );
-    va->currentbloc->next = va->allocatedbloc;
-    va->allocatedbloc = va->currentbloc;
-    va->currentbloc->pos = 0;
+    retval = &va->currentbloc->data[va->currentbloc->pos];
+    va->currentbloc->pos += size;
+    KAAPI_DEBUG_INST( memset( retval, 0, size*sizeof(double) ) );
+    return retval;
   }
-  
-  entry = &va->currentbloc->data[va->currentbloc->pos];
-  va->currentbloc->pos += size;
-  KAAPI_DEBUG_INST( memset( entry, 0, size*sizeof(double) ) );
-  return entry;
+  return _kaapi_allocator_allocate_slowpart(va, size);
 }
 
 
@@ -662,7 +665,7 @@ typedef struct kaapi_thread_context_t {
 #if defined(KAAPI_USE_CUDA)
   kaapi_atomic_t                 lock;           /** */ 
 #endif
-
+  kaapi_address_space_id_t       asid;           /* the address where is the thread */
   kaapi_cpuset_t                 affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
@@ -1188,6 +1191,7 @@ typedef struct kaapi_gd_t {
 /* fwd decl
 */
 struct kaapi_version_t;
+struct kaapi_metadata_info_t;
 
 /** pair of pointer,int 
     Used to display tasklist
@@ -1203,12 +1207,13 @@ typedef struct kaapi_pair_ptrint_t {
 */
 typedef struct kaapi_hashentries_t {
   union { /* depending of the kind of hash table... */
-    kaapi_gd_t                value;
-    struct kaapi_version_t*   version;     /* for static scheduling */
-    kaapi_pair_ptrint_t       data;        /* used for print tasklist */
+    kaapi_gd_t                    value;
+    struct kaapi_version_t*       version;     /* for static scheduling */
+    kaapi_pair_ptrint_t           data;        /* used for print tasklist */
+    struct kaapi_metadata_info_t* mdi;     /* store of metadata info */
   } u;
-  void*                       key;
-  struct kaapi_hashentries_t* next; 
+  void*                           key;
+  struct kaapi_hashentries_t*     next; 
 } kaapi_hashentries_t;
 
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
@@ -1892,8 +1897,10 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 }
 
 #include "kaapi_tasklist.h"
-//#include "kaapi_staticsched.h"
 
+#if defined(KAAPI_USE_STATICSCHED)
+#include "kaapi_partition.h"
+#endif
 
 /** Call only on thread that has the top task theft.
 */

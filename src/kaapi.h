@@ -966,7 +966,11 @@ extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 */
 extern int kaapi_sched_sync( void );
 
-/**
+/** Change rerepresentation of the task inside a frame in order
+    to build a tasklist that contains ready tasks and tasks that will
+    be activated by ready tasks.
+    The execution of the frame should then be only be considered using
+    kaapi_thread_execframe_tasklist
 */
 extern int kaapi_sched_computereadylist( void );
 
@@ -1347,6 +1351,10 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /* ========================================================================= */
 /* API for graph partitioning                                                */
 /* ========================================================================= */
+/** Identifier to an address space id
+*/
+typedef uint64_t  kaapi_address_space_id_t;
+
 
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
@@ -1361,7 +1369,7 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 A REVOIR: quid si (gid) n'a pas une architecture cible
 */
 extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size, 
-  void (*mapping)(void*, int /*nodecount*/, int /*tid*/, kaapi_globalid_t* /*gid*/, unsigned int /*proctype*/),
+  kaapi_address_space_id_t (*mapping)(void*, int /*nodecount*/, int /*tid*/),
   void* ctxt_mapping
 );
 
@@ -1392,6 +1400,14 @@ extern int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int m
     \return other value due to error
 */
 extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, kaapi_task_t* task);
+
+/** Check and compute dependencies for task 'task' to be pushed into the tid-th partition.
+    On return the task is pushed into the partition if it is local for the execution.
+    \return ESRCH if the task is not pushed because the tid-th partition is not local
+    \return 0 in case of success
+    \return other value due to error
+*/
+extern int kaapi_thread_online_computedep(kaapi_thread_t* thread, int tid, kaapi_task_t* task);
 
 #if !defined(KAAPI_COMPILE_SOURCE)
 /**
@@ -1566,6 +1582,29 @@ static inline unsigned int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
 {
   kaapi_workqueue_index_t size = kwq->end - kwq->beg;
   return size <= 0;
+}
+
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    The function push work into the workqueue.
+    Assuming that before the call, the workqueue is [beg,end).
+    After the successful call to the function the workqueu becomes [newbeg,end).
+    newbeg is assumed to be less than beg. Else it is a pop operation, see kaapi_workqueue_pop.
+    Return 0 in case of success 
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapi_workqueue_push(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t newbeg
+)
+{
+  if ( kwq->beg  > newbeg )
+  {
+    kaapi_mem_barrier();
+    kwq->beg = newbeg;
+    return 0;
+  }
+  return EINVAL;
 }
 
 

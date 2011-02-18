@@ -50,20 +50,15 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   int i;
   if (thgrp->state == KAAPI_THREAD_GROUP_EXEC_S) return EBUSY;
 
-  /* free hash map entries: they are destroy by destruction of the version allocator */
-  kaapi_hashmap_destroy( &thgrp->ws_khm );
-
-  if (thgrp->localgid == thgrp->tid2gid[-1])
+  if (thgrp->localgid == kaapi_threadgroup_tid2gid(thgrp,-1))
     /* reset stealing attribute on the main thread */
     thgrp->threadctxts[-1]->unstealable = 0;
     
   for (i=0; i<thgrp->group_size; ++i)
   {
-    if (thgrp->localgid == thgrp->tid2gid[i])
+    if (thgrp->localgid == kaapi_threadgroup_tid2gid(thgrp,i))
     {
       kaapi_context_free(thgrp->threadctxts[i]);
-      if (thgrp->save_readylists[i] !=0)
-        free( thgrp->save_readylists[i] );
     }
   }
 
@@ -75,21 +70,9 @@ int kaapi_threadgroup_destroy(kaapi_threadgroup_t thgrp )
   free(thgrp->threads);
   thgrp->threads=0;
 
-  --thgrp->tid2gid;     /* shift such that -1 == index 0 of allocate array */
   --thgrp->tid2asid;    /* shift such that -1 == index 0 of allocate array */
-  free( thgrp->tid2gid );
   free( thgrp->tid2asid );
-  thgrp->tid2gid  = 0;
   thgrp->tid2asid = 0;
-  
-  kaapi_assert( kaapi_allocator_destroy(&thgrp->allocator) ==0);
-  kaapi_assert( kaapi_allocator_destroy(&thgrp->allocator_version) ==0);
-  
-  free(thgrp->save_readylists);
-  free(thgrp->size_readylists);
-
-  pthread_mutex_destroy(&thgrp->mutex);
-  pthread_cond_destroy(&thgrp->cond);
   
   thgrp->group_size = 0;
 

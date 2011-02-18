@@ -44,26 +44,33 @@
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
 
-/** kaapi_threadgroup_execframe
-    Use the list of ready task to execute program.
-    Once a task has been executed from the ready list, then call execframe
-    of the possible created tasks.
-    If a task activates new ready task, then beguns by executes these tasks
-    prior to other tasks.
+/** Use the readylist and list of task to execute tasks.
+    If the list doesnot have ready tasks but all the tasks
+    are note executed, then return EWOULDBLOCK.
+    At the begining of the algorithm, if the td_ready container is
+    not allocated, the function allocated it. It is a stack
+    ready tasks : each time a task becomes ready, it is pushed on the
+    top of the task. 
+    The stack can be steal : the workqueue ensure consistency between
+    push/pop and steal operations.
+    
+    If the execution of a task creates new tasks, then the function execute
+    then using the standard DFG execframe function.
 */
-int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
+int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
   kaapi_task_t*              pc;      /* cache */
-  kaapi_taskdescr_t*         td;      /* cache */
+  kaapi_taskdescr_t**        td_top; 
+  kaapi_workqueue_index_t    local_beg, local_end;
+  kaapi_tasklist_t*          tasklist;
+  kaapi_taskdescr_t*         td;
   kaapi_task_body_t          body;
   kaapi_frame_t*             fp;
-  kaapi_tasklist_t*          tasklist;
-  kaapi_syncrecv_t*          recv;
+  kaapi_activationlink_t*    curr;
   unsigned int               proc_type;
-#if defined(KAAPI_USE_PERFCOUNTER)
-  uint32_t                   cnt_tasks = 0;
-#endif
-
+  int                        task_pushed = 0;
+  int                        err;
+  
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
   tasklist = thread->sfp->tasklist;
@@ -72,9 +79,39 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
   /* get the processor type to select correct entry point */
   proc_type = thread->proc->proc_type;
     
-  fp = (kaapi_frame_t*)thread->sfp;
+  /* alloc to much tasks descr ? -> */
+  if (tasklist->td_ready == 0)
+  {
+    tasklist->td_ready = 
+      (kaapi_taskdescr_t**)malloc( sizeof(kaapi_taskdescr_t*) * tasklist->cnt_tasks );
+    kaapi_workqueue_index_t ntasks = 0;
+
+    tasklist->recv = tasklist->recvlist.front;
+
+    curr = tasklist->readylist.front;
+    /* WARNING: the task pushed into the ready list should be in the push in the front 
+       if we want to ensure at least creation order 
+    */
+    td_top = tasklist->td_ready + tasklist->cnt_tasks;
+    while (curr !=0)
+    {
+      *--td_top = curr->td;
+      ++ntasks;
+      curr = curr->next;
+    }
+    /* the initial workqueue is [-ntasks, 0) at the begining of td_top; */
+    kaapi_workqueue_init(&tasklist->wq_ready, -ntasks, 0);
+  }
+
+  /* here we assume that execframe was already called (if return from EWOULDBLOCK)
+     - only reset td_top
+  */
+  td_top = tasklist->td_ready + tasklist->cnt_tasks;
+  if (tasklist->chkpt == 1)
+    goto redo_frameexecution;
 
   /* push the frame for the next task to execute */
+  fp = (kaapi_frame_t*)thread->sfp;
   thread->sfp[1].sp_data = fp->sp_data;
   thread->sfp[1].pc      = fp->sp;
   thread->sfp[1].sp      = fp->sp;
@@ -84,16 +121,17 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
 
   /* update the current frame */
   ++thread->sfp;
-  
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-    td = kaapi_tasklist_pop( tasklist );
-
-    /* execute td->task */
-    if (td !=0)
+    if (kaapi_workqueue_pop(&tasklist->wq_ready, &local_beg, &local_end,1))
     {
+      task_pushed = 0;
+      td = td_top[local_beg];
+      kaapi_assert_debug( td != 0);
+      KAAPI_DEBUG_INST( td_top[local_beg] = 0 );
+
       pc = td->task;
       if (pc !=0)
       {
@@ -110,41 +148,66 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
 
         /* here... call the task*/
         body( pc->sp, (kaapi_thread_t*)thread->sfp );
+
+        /* new tasks created ? */
+        if (unlikely(fp->sp > thread->sfp->sp))
+        {
+redo_frameexecution:
+          err = kaapi_thread_execframe( thread );
+          if ((err == EWOULDBLOCK) || (err == EINTR)) 
+          {
+            tasklist->chkpt = 1;
+            return err;
+          }
+          kaapi_assert_debug( err == 0 );
+        }
       }
-#if defined(KAAPI_USE_PERFCOUNTER)
-      ++cnt_tasks;
-#endif
+
+      /* push in the front the activated tasks */
+      if (!kaapi_activationlist_isempty(&td->list))
+      {
+        kaapi_activationlink_t* curr_activated = td->list.front;
+        while (curr_activated !=0)
+        {
+          if (kaapi_taskdescr_activated(curr_activated->td))
+          { /* if non local -> push on remote queue ? */
+            td_top[local_beg--] = curr_activated->td;
+          }
+          curr_activated = curr_activated->next;
+        }
+        task_pushed |= 1;
+      }
+
+      /* do bcast after child execution (they can produce output data) */
+      if (td->bcast !=0) 
+      {
+        kaapi_activationlink_t* curr_activated = td->bcast->front;
+        while (curr_activated !=0)
+        {
+          /* bcast task are always ready */
+          td_top[local_beg--] = curr_activated->td;
+          curr_activated = curr_activated->next;
+        }
+        task_pushed |= 1;
+      }      
     }
     
     /* recv incomming synchronisation 
        - process it before the activation list of the executed
        in order to force directly activated task to be executed first.
     */
-    recv = kaapi_tasklist_popsignal( tasklist );
-    if ( recv != 0 ) /* here may be a while loop */
+    if (tasklist->recv !=0)
     {
-      kaapi_tasklist_merge_activationlist( tasklist, &recv->list );
-      --tasklist->count_recv;
+      td_top[local_beg--] = tasklist->recv->td;
+      tasklist->recv = tasklist->recv->next;
+      task_pushed |= 1;
     }
-    
-    /* bcast? management of the output communication after puting input comm */
-    if (td !=0) 
+
+    /* ok, now push pushed task into the wq */
+    if (task_pushed)
     {
-      /* post execution: new tasks created */
-      if (unlikely(fp->sp > thread->sfp->sp))
-      {
-        int err = kaapi_thread_execframe( thread );
-        if ((err == EWOULDBLOCK) || (err == EINTR)) return err;
-        kaapi_assert_debug( err == 0 );
-      }
-
-      /* push in the front the activated tasks */
-      if (!kaapi_activationlist_isempty(&td->list))
-        kaapi_tasklist_merge_activationlist( tasklist, &td->list );
-
-      /* do bcast after child execution (they can produce output data) */
-      if (td->bcast !=0) 
-        kaapi_tasklist_merge_activationlist( tasklist, td->bcast );      
+      kaapi_workqueue_push(&tasklist->wq_ready, 1+local_beg);
+      task_pushed = 0;
     }
     
   } /* while */
@@ -177,12 +240,13 @@ int kaapi_thread_execframe_readylist( kaapi_thread_context_t* thread )
       kaapi_sched_unlock(&thread->proc->lock);
     }
 #endif
-
+    tasklist->chkpt = 0;
     return ECHILD;
   }
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
+  tasklist->chkpt = 0;
   return EWOULDBLOCK;
 }

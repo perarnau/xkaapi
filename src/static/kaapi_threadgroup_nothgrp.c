@@ -46,7 +46,7 @@
 
 #if !defined(KAAPI_USE_STATICSCHED)
 int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size, 
-  void (*mapping)(void*, int /*nodecount*/, int /*tid*/, kaapi_globalid_t* /*gid*/, unsigned int /*proctype*/),
+  kaapi_address_space_id_t (*mapping)(void*, int /*nodecount*/, int /*tid*/),
   void* ctxt_mapping
 )
 {

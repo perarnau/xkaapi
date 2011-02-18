@@ -2407,8 +2407,10 @@ namespace ka {
   public:
     AttributSetPartition( int s ) : _partition(s) {}
     int get_partition() const { return _partition; }
-    kaapi_task_t* operator()( kaapi_threadgroup_t*, kaapi_task_t* clo) const
-    { return clo; }
+    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      kaapi_thread_online_computedep(thread, _partition, clo);
+    }
   };
 
   inline AttributSetPartition SetPartition( int s )
@@ -2419,7 +2421,8 @@ namespace ka {
     int _npart;
   public:
     SetStaticSchedAttribut( int n )
-     : _npart(n) {}
+     : _npart(n) 
+    {}
     void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
       /* push a task that will encapsulated the execution of the top task */
@@ -3019,10 +3022,10 @@ namespace ka {
   // --------------------------------------------------------------------
   template<typename Mapper>
   struct WrapperMapping {
-    static kaapi_globalid_t mapping_function( void* arg, int nodecount, int tid )
+    static kaapi_address_space_id_t mapping_function( void* arg, int nodecount, int tid )
     {
       Mapper* mapper = static_cast<Mapper*> (arg);
-      return (kaapi_globalid_t)(*mapper)(nodecount, tid);
+      return (kaapi_address_space_id_t)(*mapper)(nodecount, tid);
     }
   };
 
@@ -3076,7 +3079,7 @@ namespace ka {
     /* begin to partition task */
     void set_iteration_step( int maxstep )
     {
-      kaapi_threadgroup_set_iteration_step( _threadgroup, maxstep );
+//      kaapi_threadgroup_set_iteration_step( _threadgroup, maxstep );
     }
 
     void force_archtype(unsigned int part, unsigned int type)
@@ -3275,14 +3278,14 @@ namespace ka {
     /* execute the threads */
     void execute()
     {
-      kaapi_threadgroup_begin_execute( _threadgroup );
-      kaapi_threadgroup_end_execute  ( _threadgroup );
+//      kaapi_threadgroup_begin_execute( _threadgroup );
+//      kaapi_threadgroup_end_execute  ( _threadgroup );
     }
 
     /* save */
     void save()
     {
-      kaapi_threadgroup_save( _threadgroup );
+//      kaapi_threadgroup_save( _threadgroup );
     }
 
     /* restore */
@@ -3312,14 +3315,6 @@ namespace ka {
   template<class TASK>
   Thread::Spawner<TASK, DefaultAttribut> Spawn() 
   { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut()); }
-
-  template<class TASK>
-  ThreadGroup::Spawner<TASK> Spawn(const AttributSetPartition& a) 
-  { return ThreadGroup::Spawner<TASK>(
-                ThreadGroup::AttributComputeDependencies(kaapi_self_threadgroup(), a.get_partition()),
-                kaapi_threadgroup_thread(kaapi_self_threadgroup(), a.get_partition())
-            ); 
-  }
 
   template<class TASK, class Attr>
   Thread::Spawner<TASK, Attr> Spawn(const Attr& a) 

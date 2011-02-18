@@ -145,7 +145,7 @@ static void kaapi_hw_standardinit(void)
     After the selection of the set of CPU (KAAPI_CPUSET) defined by
     the user, we build a restricted topology to used cores.
 */
-int kaapi_hw_init()
+int kaapi_hw_init(void)
 {
 #if defined(KAAPI_USE_HWLOC)
   hwloc_topology_t topology;

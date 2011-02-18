@@ -49,9 +49,7 @@ void kaapi_taskrecv_body(
   kaapi_thread_t* thread __attribute__((unused))
 )
 {
-#warning "TODO"
-#if 0
-  kaapi_taskrecv_arg_t* argrecv = (kaapi_taskrecv_arg_t*)sp;
-  argrecv->original_body( argrecv->original_sp, thread);
-#endif
+  kaapi_recv_arg_t* arg = (kaapi_recv_arg_t*)sp;
+  /* on multiprocessor: move data from XXX to YYY */
+  arg->dest->ptr.ptr  = (uintptr_t)arg->data;
 }

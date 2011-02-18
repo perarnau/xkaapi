@@ -50,13 +50,10 @@ kaapi_tasklist_t* kaapi_threadgroup_allocatetasklist( void )
   kaapi_tasklist_t* tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_assert( tl !=0);  
 
-  kaapi_tasklist_clear(tl);
-  tl->stack = malloc( kaapi_default_param.stacksize ); /* last three == stack */
-  kaapi_assert( tl->stack != 0 );
-  tl->sp    = 0;
-  tl->size  = kaapi_default_param.stacksize;
+  kaapi_tasklist_init(tl);
   return tl;
 }
+
 
 /**
 */
@@ -64,6 +61,8 @@ int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int i )
 {
   int error = 0;
   thgrp->threadctxts[i]->the_thgrp     = thgrp;
+  thgrp->threadctxts[i]->asid = thgrp->tid2asid[i];
+  kaapi_assert_debug(thgrp->threadctxts[i]->sfp->tasklist == 0);
   thgrp->threadctxts[i]->sfp->tasklist = kaapi_threadgroup_allocatetasklist();
   if (thgrp->threadctxts[i]->sfp ==0) error = ENOMEM;
   return error;  
