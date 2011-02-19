@@ -775,6 +775,19 @@ namespace ka {
   };
 
   /* user may specialize this trait to avoid spawn of delete for some object */
+  template<> struct TraitNoDeleteTask<char> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<short> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<int> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned char> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned short> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned int> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<unsigned long> { enum { value = true}; };
+#if defined(__LONG_LONG_MAX__)  
+  template<> struct TraitNoDeleteTask<unsigned long long> { enum { value = true}; };
+  template<> struct TraitNoDeleteTask<long long> { enum { value = true}; };
+#endif
+#if 0 /* it seems that these types are defined on top of char/short/int and long long, not long */
   template<> struct TraitNoDeleteTask<int8_t> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<int16_t> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<int32_t> { enum { value = true}; };
@@ -783,9 +796,13 @@ namespace ka {
   template<> struct TraitNoDeleteTask<uint16_t> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<uint32_t> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<uint64_t> { enum { value = true}; };
+#endif
   template<> struct TraitNoDeleteTask<float> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
 
+  /* autopointer: like a pointer, except that it spawn delete task
+     at the end of the definition cope
+  */
   template<class T>
   class auto_pointer : public pointer<T> {
   public:
@@ -3418,8 +3435,11 @@ namespace ka {
   // --------------------------------------------------------------------
   template<class T>
   struct TaskDelete : public Task<1>::Signature<RW<T> > { };
+  // --------------------------------------------------------------------
+  template<class T>
+  struct TaskDestroy : public Task<1>::Signature<RW<T> > { };
 
-} // namespace a1
+} // namespace ka
 
   // --------------------------------------------------------------------
   template<typename TASK>
@@ -3427,30 +3447,25 @@ namespace ka {
     typedef typename TASK::Signature View; /* here should be defined using default interpretation of args */
   };
 
-  template<class T>
-  struct TaskBodyCPU<ka::TaskDelete<T> > : public ka::TaskDelete<T> {
+  template<class T> struct TaskBodyCPU<ka::TaskDelete<T> > {
     void operator() ( ka::Thread* thread, ka::pointer_rw<T> res )
-    {
-      delete *res;
-    }
+    { delete &*res; }
+  };
+
+  template<class T> struct TaskBodyCPU<ka::TaskDestroy<T> > {
+    void operator() ( ka::Thread* thread, ka::pointer_rw<T> res )
+    { res->T::~T(); }
   };
   
 namespace ka {
   
-  template<bool noneedtaskdelete>
+  template<bool noneedtaskdelete=false>
   struct SpawnDelete {
-    template<class T> static void doit( auto_pointer<T>& ap ) 
+    template<class T> static void doit( pointer<T>& ap ) 
     { 
-      Spawn<TaskDelete<T> >(ap); 
+      Spawn<TaskDelete<T> >()(ap); 
 #if !defined(KAAPI_NDEBUG)
       ap.ptr(0); 
-#endif
-    }
-    template<class T> static void doit( auto_variable<T>& av ) 
-    { 
-      Spawn<TaskDelete<T> >(&av); 
-#if !defined(KAAPI_NDEBUG)
-      av.clear(); 
 #endif
     }
   };
@@ -3462,6 +3477,20 @@ namespace ka {
       ap.ptr(0);
 #endif
     }
+  };
+
+  template<bool noneedtaskdelete>
+  struct SpawnDestroy {
+    template<class T> static void doit( auto_variable<T>& av ) 
+    { 
+      Spawn<TaskDestroy<T> >()(&av); 
+#if !defined(KAAPI_NDEBUG)
+      av.clear(); 
+#endif
+    }
+  };
+  template<>
+  struct SpawnDestroy<true> {
     template<class T> static void doit( auto_variable<T>& av ) 
     { 
 #if !defined(KAAPI_NDEBUG)
@@ -3470,13 +3499,14 @@ namespace ka {
     }
   };
 
+
   template<class T>
   auto_pointer<T>::~auto_pointer()
-  { SpawnDelete<TraitNoDeleteTask<T>::value>::doit(*this); }
+  { SpawnDelete<>::doit(*this); }
 
   template<class T>
   auto_variable<T>::~auto_variable()
-  { SpawnDelete<TraitNoDeleteTask<T>::value>::doit(*this); }
+  { SpawnDestroy<TraitNoDeleteTask<T>::value>::doit(*this); }
 
 
   // --------------------------------------------------------------------
