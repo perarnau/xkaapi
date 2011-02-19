@@ -59,7 +59,11 @@
 
 #if (__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)
 #  if !defined(__SIZEOF_POINTER__)
-#    error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
+#    if defined(__LP64__)
+#      define __SIZEOF_POINTER__ 8
+#    else
+#      error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
+#    endif
 #  else
 #    error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
 #  endif
@@ -499,19 +503,20 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 */
 typedef struct kaapi_task_t {
 #if (__SIZEOF_POINTER__ == 4)
-  kaapi_task_bodyid_t     body;      /** task body  */
-  volatile uintptr_t      state;     /** bit */
-#define kaapi_task_getuserbody( t ) (t)->body
+  struct task_and_body {
+    kaapi_task_bodyid_t     body;      /** task body  */
+    kaapi_atomic32_t        state;     /** bit */
+  } u;
 #else
   union task_and_body {
     kaapi_task_bodyid_t   body;      /** task body  */
-    volatile uintptr_t    state;     /** bit */
+    kaapi_atomic64_t      state;     /** bit */
   } u;
-#define kaapi_task_getuserbody( t ) (t)->u.body
 #endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
+#define kaapi_task_getuserbody( t ) (t)->u.body
 
 
 /* ========================================================================= */

@@ -896,10 +896,10 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 #else /* SIZEOF_VOIDP == 8 */
 
 #define kaapi_task_getstate(task)\
-      (task)->u.state
+      KAAPI_ATOMIC_READ(&(task)->u.state)
 
 #define kaapi_task_setstate(task, value)\
-      (task)->u.state = (value)
+      KAAPI_ATOMIC_WRITE(&(task)->u.state,(value))
 
 #define kaapi_task_setstate_barrier(task, value)\
       { kaapi_writemem_barrier(); (task)->u.state = (value); }
@@ -967,7 +967,7 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 {
-  return kaapi_task_state2body( task->u.state & ~KAAPI_MASK_BODY );
+  return kaapi_task_state2body( kaapi_task_getstate(task) & ~KAAPI_MASK_BODY );
 }
 /**@} */
 
@@ -1024,12 +1024,7 @@ static inline uintptr_t kaapi_task_orstate( kaapi_task_t* task, uintptr_t state 
 static inline int kaapi_task_teststate( kaapi_task_t* task, uintptr_t state )
 {
   /* assume a mem barrier has been done */
-  return
-#if (SIZEOF_VOIDP == 4)
-    (task->state & state) != 0;
-#else
-    (task->u.state & state) != 0;
-#endif
+  return (kaapi_task_getstate( task ) & state) !=0;
 }
 
 inline static void kaapi_task_lock_adaptive_steal(kaapi_stealcontext_t* sc)
@@ -1897,10 +1892,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 }
 
 #include "kaapi_tasklist.h"
-
-#if defined(KAAPI_USE_STATICSCHED)
 #include "kaapi_partition.h"
-#endif
 
 /** Call only on thread that has the top task theft.
 */
@@ -1915,19 +1907,8 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
     return 0;
   }
 
-#if (SIZEOF_VOIDP == 4)
-  return kaapi_task_state_isready(thread->sfp->pc->state);
-#else
-  return kaapi_task_state_isready(thread->sfp->pc->u.state);
-#endif
+  return kaapi_task_state_isready( kaapi_task_getstate(thread->sfp->pc) );
 }
-
-#if !defined(KAAPI_USE_STATICSCHED)
-static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid )
-{
-  return 0; 
-}
-#endif
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
