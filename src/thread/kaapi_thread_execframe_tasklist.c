@@ -103,12 +103,21 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
     kaapi_workqueue_init(&tasklist->wq_ready, -ntasks, 0);
   }
 
-  /* here we assume that execframe was already called (if return from EWOULDBLOCK)
+  /* here we assume that execframe was already called 
      - only reset td_top
   */
   td_top = tasklist->td_ready + tasklist->cnt_tasks;
-  if (tasklist->chkpt == 1)
-    goto redo_frameexecution;
+  
+  /* jump to previous state if return from suspend (if previous return from EWOULDBLOCK)
+  */
+  switch (tasklist->context.chkpt) {
+    case 1:
+      td = tasklist->context.td;
+      fp = tasklist->context.fp;
+      goto redo_frameexecution;
+    default:
+      break;
+  };
 
   /* push the frame for the next task to execute */
   fp = (kaapi_frame_t*)thread->sfp;
@@ -125,7 +134,8 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-    if (kaapi_workqueue_pop(&tasklist->wq_ready, &local_beg, &local_end,1))
+    err = kaapi_workqueue_pop(&tasklist->wq_ready, &local_beg, &local_end, 1);
+    if (err ==0)
     {
       task_pushed = 0;
       td = td_top[local_beg];
@@ -156,7 +166,9 @@ redo_frameexecution:
           err = kaapi_thread_execframe( thread );
           if ((err == EWOULDBLOCK) || (err == EINTR)) 
           {
-            tasklist->chkpt = 1;
+            tasklist->context.chkpt = 1;
+            tasklist->context.td = td;
+            tasklist->context.fp = fp;
             return err;
           }
           kaapi_assert_debug( err == 0 );
@@ -229,24 +241,15 @@ redo_frameexecution:
   */
   if (kaapi_tasklist_isempty(tasklist))
   {
-    kaapi_thread_signalend_exec( thread );
-
-#if 0
-    if (thread->partid != -1)
-    { 
-      /* detach the thread: may it should be put into the execframe function */
-      kaapi_sched_lock(&thread->proc->lock);
-      thread->proc->thread = 0;
-      kaapi_sched_unlock(&thread->proc->lock);
-    }
-#endif
-    tasklist->chkpt = 0;
+    tasklist->context.chkpt = 0;
+#if defined(KAAPI_DEBUG)
+    tasklist->context.td = 0;
+    tasklist->context.fp = 0;
+#endif    
     return ECHILD;
   }
-#if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
-  cnt_tasks = 0;
-#endif
-  tasklist->chkpt = 0;
+  tasklist->context.chkpt = 2;
+  tasklist->context.td = 0;
+  tasklist->context.fp = 0;
   return EWOULDBLOCK;
 }

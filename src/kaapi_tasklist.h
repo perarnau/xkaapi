@@ -183,7 +183,11 @@ typedef struct kaapi_tasklist_t {
   kaapi_workqueue_t       wq_ready;   /* workqueue for ready tasks, used during runtime */
   kaapi_taskdescr_t**     td_ready;   /* container for the workqueue, used during runtime */
   kaapi_recvactlink_t*    recv;       /* next entry to receive */
-  int                     chkpt;      /* see execframe for task list */
+  struct context_t {
+    int                   chkpt;      /* see execframe for task list */
+    kaapi_taskdescr_t*    td;
+    kaapi_frame_t*        fp;
+  } context;
 
   /* constant state (after creation) */
   kaapi_activationlist_t  readylist;  /* readylist of task descriptor */
@@ -312,9 +316,14 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
 {
   kaapi_sched_initlock(&tl->lock);
   kaapi_workqueue_init(&tl->wq_ready, 0, 0);
-  tl->td_ready   = 0;
-  tl->recv       = 0;
-  tl->count_recv = 0;
+  tl->td_ready      = 0;
+  tl->recv          = 0;
+  tl->context.chkpt = 0;
+#if defined(KAAPI_DEBUG)  
+  tl->context.fp    = 0;
+  tl->context.td    = 0;
+#endif  
+  tl->count_recv    = 0;
   kaapi_activationlist_clear( &tl->readylist );
   kaapi_recvlist_clear(&tl->recvlist);
   kaapi_allocator_init( &tl->allocator );
