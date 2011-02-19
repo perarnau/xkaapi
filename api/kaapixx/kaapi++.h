@@ -796,8 +796,35 @@ namespace ka {
     ~auto_pointer();
     auto_pointer( value_type* ptr ) : pointer<T>(ptr) {}
     operator value_type*() { return pointer<T>::ptr(); }
+    operator const value_type*() const { return pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
+  };
+
+  template<class T>
+  class auto_variable {
+    T* _var;
+  public:
+    typedef T value_type;
+    typedef auto_variable<T> Self_t;
+    auto_variable() 
+    {
+       void* data = kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T) );
+       _var = new (data) T;
+    }
+    auto_variable(const T& value) 
+    {
+       void* data = kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T) );
+       _var = new (data) T(value);
+    }
+    ~auto_variable();
+    operator const T&() const { return *_var; }
+    operator T&() { return *_var; }
+    T& operator=( const T& value) { *_var = value; return *_var; }
+    T* operator&() { return _var; }
+
+    /* clear variable: used for debug only */
+    void clear() { _var = 0; }    
   };
 
 
@@ -3343,84 +3370,54 @@ namespace ka {
     }
   };
   
-  template<class TASK>
+  template<class TASK, class Attr>
   struct SpawnerMain
   {
-    SpawnerMain() 
-    { }
+    SpawnerMain(kaapi_thread_t* t, const Attr& a)  : _thread(t), _attr(a) {}
 
     void operator()( int argc, char** argv)
     {
-      kaapi_thread_t* thread = kaapi_self_thread();
-      kaapi_task_t* clo = kaapi_thread_toptask( thread );
-      kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
-      kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
+      kaapi_task_t* clo = kaapi_thread_toptask( _thread );
+      kaapi_taskmain_arg_t* arg = 
+        (kaapi_taskmain_arg_t*)kaapi_thread_pushdata(_thread, sizeof(kaapi_taskmain_arg_t) );
       arg->argc = argc;
       arg->argv = argv;
       arg->mainentry = &MainTaskBodyArgcv<TASK>::body;
-      kaapi_thread_pushtask( thread);    
+      kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, arg );
+      _attr( _thread, clo );    
     }
 
     void operator()()
     {
-      kaapi_thread_t* thread = kaapi_self_thread();
-      kaapi_task_t* clo = kaapi_thread_toptask( thread );
-      kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, kaapi_thread_pushdata(thread, sizeof(kaapi_taskmain_arg_t)) );
-      kaapi_taskmain_arg_t* arg = kaapi_task_getargst( clo, kaapi_taskmain_arg_t);
+      kaapi_task_t* clo = kaapi_thread_toptask( _thread );
+      kaapi_taskmain_arg_t* arg = 
+        (kaapi_taskmain_arg_t*)kaapi_thread_pushdata(_thread, sizeof(kaapi_taskmain_arg_t) );
       arg->argc = 0;
       arg->argv = 0;
       arg->mainentry = &MainTaskBodyNoArgcv<TASK>::body;
-      kaapi_thread_pushtask( thread );    
+      kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, arg );
+      _attr( _thread, clo );    
     }
+
+    protected:
+      kaapi_thread_t* _thread;
+      const Attr&     _attr;
   };
 
   template<class TASK>
-  SpawnerMain<TASK> SpawnMain()
+  SpawnerMain<TASK, DefaultAttribut> SpawnMain()
   { 
-    return SpawnerMain<TASK>();
+    return SpawnerMain<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut());
+  }
+  template<class TASK, class Attr>
+  SpawnerMain<TASK, Attr> SpawnMain(const Attr& a)
+  { 
+    return SpawnerMain<TASK, Attr>(kaapi_self_thread(), a);
   }
     
-
-#if 0
-  // --------------------------------------------------------------------
-#include "ka_api_tuple.h"
-
-  template<int dim, typename T>
-  class ArrayType {};
-
-  template<typename T>
-  class ArrayType<1,T> {
-  public:
-    void bind( T* a, size_t d ) { _addr = a; _dim = d; }
-    T* addr() const { return _addr; }
-    size_t count() const { return _dim; }
-  protected:
-    T*     _addr;
-    size_t _dim;
-  };
-
-  template<typename T>
-  class ArrayType<2,T> {
-  public:
-    void bind( T* a, size_t l, size_t d1, size_t d2 ) { _addr = a; _ld = l; _dim1 = d1; _dim2 = d2; }
-    void bind( T* a, size_t d1, size_t d2 ) { _addr = a; _ld = d2; _dim1 = d1; _dim2 = d2; }
-    T* addr() const { return _addr; }
-    size_t count() const { return _dim1*_dim2; }
-    size_t dim1() const { return _dim1; }
-    size_t dim2() const { return _dim2; }
-  protected:
-    T*     _addr;
-    size_t _ld;
-    size_t _dim1;
-    size_t _dim2;
-  };
-#endif
-
-
   // --------------------------------------------------------------------
   template<class T>
   struct TaskDelete : public Task<1>::Signature<RW<T> > { };
-
 
 } // namespace a1
 
@@ -3442,7 +3439,20 @@ namespace ka {
   
   template<bool noneedtaskdelete>
   struct SpawnDelete {
-    template<class T> static void doit( auto_pointer<T>& ap ) { Spawn<TaskDelete<T> >(ap); ap.ptr(0); }
+    template<class T> static void doit( auto_pointer<T>& ap ) 
+    { 
+      Spawn<TaskDelete<T> >(ap); 
+#if !defined(KAAPI_NDEBUG)
+      ap.ptr(0); 
+#endif
+    }
+    template<class T> static void doit( auto_variable<T>& av ) 
+    { 
+      Spawn<TaskDelete<T> >(&av); 
+#if !defined(KAAPI_NDEBUG)
+      av.clear(); 
+#endif
+    }
   };
   template<>
   struct SpawnDelete<true> {
@@ -3452,21 +3462,33 @@ namespace ka {
       ap.ptr(0);
 #endif
     }
+    template<class T> static void doit( auto_variable<T>& av ) 
+    { 
+#if !defined(KAAPI_NDEBUG)
+      av.clear();
+#endif
+    }
   };
 
   template<class T>
   auto_pointer<T>::~auto_pointer()
   { SpawnDelete<TraitNoDeleteTask<T>::value>::doit(*this); }
 
+  template<class T>
+  auto_variable<T>::~auto_variable()
+  { SpawnDelete<TraitNoDeleteTask<T>::value>::doit(*this); }
+
+
   // --------------------------------------------------------------------
   class SyncGuard {
-    kaapi_thread_t*         _thread;
-    kaapi_frame_t           _frame;
+    kaapi_thread_t*  _thread;
+    kaapi_frame_t    _frame;
   public:
     SyncGuard();
 
     ~SyncGuard();
   };
+  
   
   // --------------------------------------------------------------------
   // Should be defined for real distributed computation

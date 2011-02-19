@@ -735,7 +735,7 @@ namespace a1 {
 
   // --------------------------------------------------------------------
   template<class TASK>
-  struct ForkerMain : ka::SpawnerMain<TASK> {
+  struct ForkerMain : ka::SpawnerMain<TASK, ka::DefaultAttribut> {
   };
 
   template<class TASK>
