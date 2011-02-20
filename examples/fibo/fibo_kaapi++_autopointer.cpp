@@ -101,30 +101,28 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 /* Implementation for CPU machine 
 */
 template<>
-struct TaskBodyCPU<TaskFibo> 
+struct TaskBodyCPU<TaskFibo>
 {
   void operator() ( ka::pointer_w<long> ptr, const long n )
   {  
-    if (n < 2) {
-      *ptr = n;
+    if (n < 2){ 
+      *ptr = n; 
+      return;
     }
     else {
-      ka::auto_variable<long> res1;
-      ka::auto_variable<long> res2;
+      ka::auto_pointer<long> ptr1 = new long;
+      ka::auto_pointer<long> ptr2 = new long;
 
       /* the Spawn keyword is used to spawn new task
-       * new task is executed in parallel as long as dependencies are respected
+       * new tasks are executed in parallel as long as dependencies are respected
        */
-      ka::Spawn<TaskFibo>() ( &res1, n-2);
-      
-      /* here call in sequential the second recursive call
-      */
-      TaskBodyCPU<TaskFibo>()( &res2, n-1);
+      ka::Spawn<TaskFibo>() ( ptr1, n-1 );
+      ka::Spawn<TaskFibo>() ( ptr2, n-2 );
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished
        */
-      ka::Spawn<TaskSum>() ( ptr, &res1, &res2 );
+      ka::Spawn<TaskSum>() ( ptr, ptr1, ptr2 );      
     }
   }
 };
@@ -147,9 +145,11 @@ struct doit {
     long* res_value = ka::Alloca<long>(1);
     *res_value = rand();
     ka::pointer<long> res = res_value;
+
     long* res2_value = ka::Alloca<long>(1);
     *res2_value = rand();
     ka::pointer<long> res2 = res2_value;
+
     for (cutoff=2; cutoff<3; ++cutoff)
     {
       ka::Spawn<TaskFibo>()( res2, n );

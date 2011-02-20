@@ -834,6 +834,16 @@ namespace ka {
        void* data = kaapi_thread_pushdata( kaapi_self_thread(), sizeof(T) );
        _var = new (data) T(value);
     }
+    auto_variable( Thread* thread ) 
+    {
+       void* data = kaapi_thread_pushdata( (kaapi_thread_t*)thread, sizeof(T) );
+       _var = new (data) T;
+    }
+    auto_variable( Thread* thread, const T& value) 
+    {
+       void* data = kaapi_thread_pushdata( (kaapi_thread_t*)thread, sizeof(T) );
+       _var = new (data) T(value);
+    }
     ~auto_variable();
     operator const T&() const { return *_var; }
     operator T&() { return *_var; }

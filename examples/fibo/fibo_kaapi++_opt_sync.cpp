@@ -76,7 +76,7 @@ long fiboseq_On(const long n){
 struct TaskSum : public ka::Task<3>::Signature<ka::W<long>, ka::R<long>, ka::R<long> > {};
 
 template<>
-struct TaskBodyCPU<TaskSum> : public TaskSum
+struct TaskBodyCPU<TaskSum> 
 {
   void operator() ( ka::pointer_w<long> res, 
                     ka::pointer_r<long> a, 
@@ -101,7 +101,8 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 /* Implementation for CPU machine 
 */
 template<>
-struct TaskBodyCPU<TaskFibo> : public TaskFibo {
+struct TaskBodyCPU<TaskFibo>
+{
   void operator() ( ka::Thread* thread, ka::pointer_w<long> res, const long n )
   {  
     if (n < 2) {

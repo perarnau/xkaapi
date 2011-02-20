@@ -76,7 +76,7 @@ long fiboseq_On(const long n){
 struct TaskSum : public ka::Task<3>::Signature<ka::W<long>, ka::R<long>, ka::R<long> > {};
 
 template<>
-struct TaskBodyCPU<TaskSum>
+struct TaskBodyCPU<TaskSum> 
 {
   void operator() ( ka::pointer_w<long> r, 
                     ka::pointer_r<long> a, 
@@ -101,30 +101,30 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 /* Implementation for CPU machine 
 */
 template<>
-struct TaskBodyCPU<TaskFibo> 
+struct TaskBodyCPU<TaskFibo>
 {
-  void operator() ( ka::pointer_w<long> ptr, const long n )
+  void operator() ( ka::Thread* thread, ka::pointer_w<long> ptr, const long n )
   {  
     if (n < 2) {
       *ptr = n;
     }
     else {
-      ka::auto_variable<long> res1;
-      ka::auto_variable<long> res2;
+      ka::auto_variable<long> res1(thread);
+      ka::auto_variable<long> res2(thread);
 
       /* the Spawn keyword is used to spawn new task
        * new task is executed in parallel as long as dependencies are respected
        */
-      ka::Spawn<TaskFibo>() ( &res1, n-2);
+      thread->Spawn<TaskFibo>() ( &res1, n-2);
       
       /* here call in sequential the second recursive call
       */
-      TaskBodyCPU<TaskFibo>()( &res2, n-1);
+      (*this) ( thread, &res2, n-1 );
 
       /* the Sum task depends on res1 and res2 which are written by previous tasks
        * it must wait until thoses tasks are finished
        */
-      ka::Spawn<TaskSum>() ( ptr, &res1, &res2 );
+      thread->Spawn<TaskSum>() ( ptr, &res1, &res2 );
     }
   }
 };
