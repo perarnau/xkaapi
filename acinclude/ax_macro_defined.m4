@@ -50,7 +50,7 @@ VAR,[VAR="no"
  AC_COMPILE_IFELSE(
      [AC_LANG_PROGRAM([$2
 #if !defined($1)
-#error $1 not defined
+#warning $1 not defined
 #endif
 ],[[return 0;]])],
      [VAR="yes"])
