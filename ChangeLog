@@ -1,6 +1,272 @@
-Version 1.0rc1
+Version 1.0rc4
 ==============
-* First official release of X-Kaapi
+Vincent Danjean (3):
+      [doc] fix typo in ChangeLog
+      [build] manage Extended Regular Expression with sed
+      [release] update ChangeLog and bump version
+
+Version 1.0rc3
+==============
+Fabien Le Mentec (65):
+      [fix] cpuset parsing error due to changed semantic.
+      [fix] cpuset parsing error due to changed semantic.
+      [update] preemption related macros to static inlines
+      [update] KAAPI_SC_AGGREGATE
+      [update] KAAPI_SC_AGGREGATE
+      [fix] 32bits portability
+      [fix] 64bits missing casts
+      [update] master does the initial split
+      [fix] warnings, missing victimid initialisation
+      [fix] AC_PROG_LIBTOOL missing
+      [missing] pthread.mk
+      [update] kastl uses KAAPI_SC_AGGREGATE
+      [fix] redundant definitions
+      [update, fix] hash function. invalid not keyword in preprocessing directive.
+      [fix] invalid function name
+      [add] for_each kastl example
+      [fix] compilation warning
+      [fix] initialize kaapi_Default_param.kproc_list before registering kprocs
+      [fix] minor
+      [add] bfs example
+      [add] kaapi_get_self_kid
+      [add] missing bfs README
+      [fix] lost thieves of thieves
+      [fix] make cuda enabled runtime compile
+      [fix] define KAAPI_TARGET_CUDA correctly, since could be --with-cuda=<path>
+      [wip, add] make cuda enabled runtime compile. add transform_heter example.
+      [wip]
+      [fix] affect cuda kids in register_kproc
+      [wip] use new task formatting methods in kaapi_cuda_execframe
+      [wip] make transform_heter.c compile in both static and adaptive modes
+      [update] kaapi_cuda_exectask called from task_adapt_body.
+      [fix] transform_heter kernel is tight to ELEM_COUNT
+      [fix, wip] change the way cuda kernel is invoked
+      [update] finalize_task after calling cuda_body to sync the host mm
+      [minor] transform_heter gpu example
+      [update] view range in transform_heter as a single param
+      [update] transform_heter, memset then add1 adaptive task
+      [fix] use kproc->proc_type instead of kproc->kpi->proc_type
+      [update] add kaapi_cuda_func_push_float. printf in debug mode only
+      [mv] examples/gpu/transform_heter_xxx to examples/gpu/transform/
+      [add] saxpy
+      [fix] apply execframe fixes to kaapi_cuda_execframe
+      [minor]
+      [update] kaapi_mem_delete_host_mappings
+      [update] export get_proc_by_asid
+      [fix] make kaapixx compile with cuda
+      [add] transform++ gpu example
+      [update] deallocate remote memory for readonly mappings
+      [fix] unused warning
+      [fix] make transform++ gpu example compile
+      [update] default functions for statically registered formats
+      [fix] remove protected attribute from gpuStream::stream
+      [wip] ka_api_clo
+      [update] gpu transform++ working version
+      [update] transform++ uses pointer, size
+      [minor]
+      [fix] uninitialized warning
+      [fix] memset invalid size
+      [update] transform++ uses ka::range1d
+      [fix] remove comment from get_param_size in m4 file.
+      [fix] cuda task didnot match the generated C++ dummy routines
+      [fix] gpu/transform compile. adaptive mode does not work
+      [fix] gpu transform example. works.
+      [fix] kaapi_gpustream_t must be of type uint64_t
+      [add] transform_spawn
+
+Thierry Gautier (158):
+      Add initial support for network
+      [syntax] suppress warning, add end of line at the end
+      [syntax] Already defined in kaapi_impl.h
+      [bug] correction pb with kaapi_sched_sync that may wakeup wrong thread
+      [add] new fibo_opt_sync = optimization + sync
+      Update network part
+      [syntax/bug] allows better support for C90 without mixing code and declaration
+      [fix] Suppress warnings. Suppress deadcode.
+      [fix] better support for network on top of MPI. Will be tested soon...     Add support for socket based network, but it will not be available soon...
+      [fix] correct warning.
+      [fix] Suppress warnings. Suppress deadcode.
+      [syntax/bug] allows better support for C90 without mixing code and declaration
+      [fix] correct warning.
+      [network] add saving of argc, argv
+      [fix] move local_gid into ka::System class
+      [network] add support for MPI ONLY.
+      [fix] Correct bug if ka::logfile() is used out the context of a Kaapi thread
+      [source] add pint_mt_xx: multiple process send/recv messages     rename 'ping' directory to 'net'
+      [fix] try to resolve terminaison problem but it seens to be due     to multithread usage of MPI (OpenMPI 1.4.3)     Update network
+      [fix/add] add rdma examples + fix code for ping_xx.cpp
+      [fix] conditional compilation for trace + standard header for files
+      [bug] avoid to use collection operation with MPI
+      [syntaxic suggar]
+      [fix] compilation of TBB fibo bench
+      [bug fix] correct implementations for 32, 64 and upto 128 processors.
+      [add] Update configure for use hwloc.
+      [syntax] rename kaapi_affinity_XX type & functions to kaapi_cpuset_
+      [warn] rename struct kaapi_procinfo with the same name as the     typedef to avoid warning...
+      [warning]
+      [fix] rename typdef with the name of the struct
+      Extended cpu range
+      [update] memory topology encoding
+      Update
+      [correct] topo initialisation
+      [fix] topo
+      Update
+      [fix] topo
+      U
+      [fix] interface
+      U
+      [fix] topo
+      [fix] topology information
+      [fix] add issing file
+      [fix] lib topo. It remains a pb on the computation of the hierarchy if no KAAPI_CPUSET was given
+      u
+      [fix] correct init with only a number of CPU (without CPUSET)
+      [fix] count ncpu
+      [fix] initialization of object
+      [fix] initialization of data sruture
+      [fix] suppress output
+      [fix] suppress output
+      [fix] in order to have same recursion as for cilk
+      [fix] suppress explicit ref to libhwloc
+      [add] push feed back selector interface.
+      [inprogress] add gasnet support in configure.ac
+      [fix] some problems with C++ compilation
+      [add] hierarchical victim selector
+      [add] gasnet support
+      [update] network
+      [fix] gasnet implem. seems ok.
+      [fix] suppress trace
+      [add] support for variable size task
+      [fix] compilation of network support if required.
+      [fix] suppress kaapi_int's types utilization
+      [fix] correct local_gid definition
+      [fix] warning
+      [bug] fix problem if 0 is passed as array of size.
+      [fix] correct wrong copy & paste
+      [fix] add support to dissociate data and version field of access data structure.
+      [fix] update fibo_kaapi.c for new registration of format.
+      [add] begin to add support for array
+      [fix] fix problem with interface specification for array.
+      [add] exemples for array
+      [add] 2 examples for array
+      [fix] add missing files in makefile for make distcheck; suppress warning for make distcheck
+      U
+      U
+      [fix] suppress display
+      [fix] format definition
+      [update] array examples
+      [fix] some probleme with static scheduling
+      [add] missing file
+      [add] add missng rule: fibo_opt_sync for kaapi++ version
+      [supp] usage of pointer...
+      [fix] conditional compilation of network examples
+      [fix] add default value to KAAPI_WSSELECT 'rand' for default random selection method
+      [fix] warning during compilation
+      [syntaxic suggar]
+      [fix] potential bug
+      [fix] definition of type for counting_iterator
+      [add] kastl exemple for for_each
+      [add] list ranking set of examples
+      [fix] sequential list ranking with computation of the head of the list
+      [add] jaja versions of the list ranking (sequential)
+      [fix] avoid automatic initialization of the library with C++ program
+      [add] dependencies on lr_list.h
+      [fix] add interface to be random iterator
+      [add] kastl exemple for for_each
+      [syntax] syntaxic suggar
+      [del] suppress counting_iterator from kastl. It is already in kaapi++
+      [fix] suppress double initialization
+      [del] from target not yet ready example
+      [bug] delete defaut generic version, always use host for max-processor.
+      [fix] Update data structure to try to align them correctly
+      [fix] move initialization of generic functions for bitmap outside the hwloc initialization that only detect hw topology.
+      [syntaxic] suggar
+      [fix] force aligment of allocated object.
+      [fix] use lready list after end of steal operation
+      [fix] suppress warning
+      [fix] bug on rare used function
+      [fix] warning during compilation
+      [syntaxic] suggar
+      [update] partition. Seems ok on basic tests (tests/static).
+      [fix] write the kid of the thief in the request
+      [fix] avoid infinite loop if the thread is in the ready list has no affinity with the thief
+      [syntaxic] suggar
+      [add] assertion
+      [fix] signalisation of the bcast
+      [add] comment
+      [fix] problem to wakeup suspended thread that becomes ready and moved to ready list
+      [syntax] suppress traces
+      [fix] correct synchronization at the end of thread group execution
+      [syntaxic] suggar
+      Hack to compile
+      [fix] concurrent modification & read of suspended thread cell list
+      ??
+      [fix] concurrent modification & read of suspended thread cell list
+      local commit
+      [fix] increase max partition
+      [fix] increase max part number
+      [fix] suppress warning
+      [fix] suppress warning
+      Before merge
+      [update] array/partition
+      Update poisson
+      Fix assert
+      [fix] correct restore of thread (assume here that only one frame/thread).     [fix] optimize impl to have distributed restore
+      [fix] delete trace
+      [add] sequential poisson3D
+      [add] fibo with cumulative write
+      [add] fibo with cumulative write
+      [add] support for cumulative write. Not supported in C     (see KAAPI_REGISTER_TASKFORMAT where reduction operators are     not passed to the runtime).
+      [add] fibo with cumulative write examples
+      [fix] warning
+      [add] support for ka::R/W/RW<ka::array<...> >
+      [fix] get size param for kaapi++
+      [fix] bug on using -> over pointer_cw
+      [fix] interface for Array 1D
+      [add] optimized version of fibo with cumul
+      Local commit for new poisson3D
+      [fix] rename api_array.cc to api_array.cpp
+      [fix] finish to debug array2d
+      [add] exemples with array2d (rang3_kaapi++ and range4_kaapi++)
+      [update] c++ interface for array
+      [fix] suppress cuda_procs_register.h from makefile
+      [fix] array manipulation
+      [fix] array examples
+      [add] buggy matrix product
+
+Vincent Danjean (32):
+      [Fix 11429] no directory information into generated Makefile
+      [build] check whether the compiler defines __SIZEOF_* macros
+      [powerpc] add allignement constaints as on x86
+      [example] fix for_each_0xx_lambda example
+      [build] Allow parallel build
+      [powerpc] cleanup ka_timer.cpp
+      [build] allows a compilation with -Werror
+      Fix bug: C++ constructors must repeat class name
+      [cleanup] update proprocessor indentation and remove warnings
+      [API] get rid of ka(api)_uint8 and others
+      [cleanup] remove unused source file in poisson3D example
+      [example] use a common naming for all examples
+      [build] allow build on old compilers such as gcc-4.2 (and perhaps previous)
+      [doc] add an entry in .mailmap for texane@dell.fbx.proxad.net
+      [build] fix typo to allow compilation on powerpc
+      [build] allow to select the maximum number of processors at configure time
+      [build] allow compilation without C++ compiler
+      [doc] fix typo in configure messages
+      [cleanup] remove dead-code
+      [cleanup] remove lots of KAAPI_USE_(system or arch)
+      [cleanup] remove dead-code, in particular KAAPI_USE_IRIX
+      [build] distribute and use kastl lib
+      [build] add support for "make installcheck"
+      fix
+      [build] distribute and use kastl lib
+      [build] add support for "make installcheck"
+      [build] fix various build failure and minor bugs
+      [build] allow to choose maximum number of processors at runtime
+      [build] get rid of last KAAPI_MAX_PROCESSORS macro
+      [examples] comment-out unused examples in *.am files
+      [examples] fix includes when using std::for_each
+      [release] update ChangeLog and bump version
 
 Version 1.0rc2
 ==============
@@ -49,4 +315,8 @@ Vincent Danjean (10):
       [doc] fix typo and version in the announce text
       [build] refresh autoconf files
       [doc] update ChangeLog using "git shortlog"
+
+Version 1.0rc1
+==============
+* First official release of X-Kaapi
 

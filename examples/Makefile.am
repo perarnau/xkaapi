@@ -64,55 +64,55 @@ EXTRA_DIST=gen-Makefile.m4
 pkgconfigdir = $(libdir)/pkgconfig
 
 %/Makefile: gen-Makefile.m4 gen-%.am.m4
-	$(AM_V_GEN)m4 $^ > $@
-	$(AM_V_at)sed -i -e "s|^PKGCONFIG=$$|PKG_CONFIG=env PKG_CONFIG_PATH=$(pkgconfigdir) pkg-config|" $@
-	$(AM_V_at)sed -i -e "s|^CC=$$|CC=$(CC)|" $@
-	$(AM_V_at)sed -i -e "s|^CXX=$$|CXX=$(CXX)|" $@
+	$(AM_V_GEN)m4 $^ \
+		| $(SED) -e "s|^PKGCONFIG=$$|PKG_CONFIG=env PKG_CONFIG_PATH=$(pkgconfigdir) pkg-config|" \
+		| $(SED) -e "s|^CC=$$|CC=$(CC)|" \
+		| $(SED) -e "s|^CXX=$$|CXX=$(CXX)|" > $@
 
 SEP=
 S=$(SEP) 	$(SEP)
 gen-%.am.m4.info: %.am
-	$(AM_V_GEN)sed < $< -e :a -e '/\\$$/N; s/\\\n//; ta' \
-	  | sed -e '/^[$S]*#/d' \
-	  | sed -e '/^[^=]\+_\(SOURCES\|PRGS\|\(C\(PP\|XX\|\)\|LD\)FLAGS\|LDADD\)[$S]*=/p;d' \
+	$(AM_V_GEN)$(SED) < $< -e :a -e '/\\$$/N; s/\\\n//; ta' \
+	  | $(SED) -e '/^[$S]*#/d' \
+	  | $(ESED) -e '/^[^=]+_(SOURCES|PRGS|(C(PP|XX)?|LD)FLAGS|LDADD)[$S]*=/p;d' \
 	  > $@
 	
 MAKE_VAR=$(MAKE) -s --no-print-directory
 gen-%.am.m4: gen-%.am.m4.info Makefile
 	$(AM_V_GEN)echo 'define([DIR],[$*])dnl' > $@
-	+$(AM_V_at)sed < $< -e \
+	+$(AM_V_at)$(SED) < $< -e \
 		's/^[$S]*\([^$S][^=]*_PRGS\)[$S]*=[$S]*\(.*\)$$/\1/p;d' \
 	  | while read VAR ; do \
 	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" .get-var)" ; \
 	    echo "define([PROGS],[$$VALUE])dnl" ; \
 	  done >> $@
-	+$(AM_V_at)sed < $< -e \
+	+$(AM_V_at)$(SED) < $< -e \
 		'/^[$S]*\([^$S][^=]*_SOURCES\)[$S]*=[$S]*\(.*\)$$/p;d' \
 	  | while read EQ ; do \
-	    VAR=$$(echo "$$EQ" | sed -e 's/=.*//' -e 's/[$S]//g' ) ;\
+	    VAR=$$(echo "$$EQ" | $(SED) -e 's/=.*//' -e 's/[$S]//g' ) ;\
 	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
-	+$(AM_V_at)sed < $< -e \
-		'/^[$S]*\([^$S][^=]*_[^_]\+FLAGS\)[$S]*=[$S]*\(.*\)$$/p;d' \
-	  | sed -e 's/$$(\(AM\|[A-Z]*_BUILD\)_[^_]\+FLAGS)//g' \
+	+$(AM_V_at)$(ESED) < $< -e \
+		'/^[$S]*\([^$S][^=]*_[^_]+FLAGS\)[$S]*=[$S]*\(.*\)$$/p;d' \
+	  | $(ESED) -e 's/$$\((AM|[A-Z]*_BUILD)_[^_]+FLAGS\)//g' \
 	  | while read EQ ; do \
-	    VAR=$$(echo "$$EQ" | sed -e 's/=.*//' -e 's/[$S]//g' ) ;\
+	    VAR=$$(echo "$$EQ" | $(SED) -e 's/=.*//' -e 's/[$S]//g' ) ;\
 	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
-	+$(AM_V_at)sed < $< -e \
+	+$(AM_V_at)$(SED) < $< -e \
 		'/^[$S]*\([^$S][^=]*_LDADD\)[$S]*=[$S]*\(.*\)$$/p;d' \
-	  | sed -e 's/$$(\(\|[A-Z]*_BUILD_\)LIBS)//g' \
+	  | $(ESED) -e 's/$$\(([A-Z]*_BUILD_)?LIBS\)//g' \
 	  | while read EQ ; do \
-	    VAR=$$(echo "$$EQ" | sed -e 's/=.*//' -e 's/[$S]//g' ) ;\
+	    VAR=$$(echo "$$EQ" | $(SED) -e 's/=.*//' -e 's/[$S]//g' ) ;\
 	    VALUE="$$($(MAKE_VAR) VAR="$$VAR" "$$EQ" .get-var)" ; \
 	    echo "define([$$VAR],[$$VALUE])dnl" ; \
 	  done >> $@
-	$(AM_V_at)sed < $< -e \
+	$(AM_V_at)$(SED) < $< -e \
 		'/^[$S]*\([^$S][^=]*_LDADD\)[$S]*=[$S]*\(.*\)$$/p;d' \
 	  | while read EQ ; do \
-	    VAR=$$(echo "$$EQ" | sed -e 's/_LDADD[$S]*=.*//' -e 's/[$S]//g' ) ;\
+	    VAR=$$(echo "$$EQ" | $(SED) -e 's/_LDADD[$S]*=.*//' -e 's/[$S]//g' ) ;\
 	    VALUE="" ; \
 	    case " $$EQ " in *'$$(KAAPIPROGS_BUILD_LIBS)'*) \
 		VALUE="$$VALUE kaapi" ;; esac ; \

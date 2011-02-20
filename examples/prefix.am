@@ -12,15 +12,15 @@ all-prefix: $(PREFIX_PRGS)
 
 #Find STL algorithm
 prefix_kaapi_SOURCES=prefix/prefix_kaapi.c
-prefix_kaapi___SOURCES=prefix/prefix_kaapi++.cpp
+#prefix_kaapi___SOURCES=prefix/prefix_kaapi++.cpp
 
 prefix_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 prefix_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
 prefix_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
 prefix_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS)
 
-prefix_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-prefix_kaapi___CFLAGS  =$(AM_CFLAGS)   $(KAAPIXXPROGS_BUILD_CFLAGS)
-prefix_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-prefix_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+#prefix_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+#prefix_kaapi___CFLAGS  =$(AM_CFLAGS)   $(KAAPIXXPROGS_BUILD_CFLAGS)
+#prefix_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+#prefix_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
