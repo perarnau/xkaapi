@@ -20,18 +20,11 @@ struct doit {
   {
     std::cout << "My pid=" << getpid() << std::endl;
 
-    ka::ThreadGroup threadgroup( 2 );
-    ka::auto_pointer<int> a      = ka::Alloca<int>(1);
+    ka::auto_pointer<int> a = ka::Alloca<int>(1);
     *a = 123;
 
-    threadgroup.begin_partition();
-
-    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
-
-    threadgroup.end_partition();
-
-    threadgroup.execute();
+    ka::Spawn<TaskR> (ka::SetPartition(0))  ( a );
+    ka::Spawn<TaskR> (ka::SetPartition(1))  ( a );
   }
 };
 
@@ -43,7 +36,7 @@ int main( int argc, char** argv )
   try {
     ka::Community com = ka::System::join_community( argc, argv );
     
-    ka::SpawnMain<doit>()(argc, argv); 
+    ka::SpawnMain<doit>(ka::SetStaticSched(2))(argc, argv); 
           
     com.leave();
 

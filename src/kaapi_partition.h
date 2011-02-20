@@ -439,4 +439,4 @@ void kaapi_threadgroup_signalend_service(int err, kaapi_globalid_t source, void*
 }
 #endif
 
-#endif /* _KAAPI_STATICSCHED_H */
+#endif /* _KAAPI_PARTITION_H */

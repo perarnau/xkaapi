@@ -168,18 +168,20 @@ static inline void _kaapi_print_task(
       fname = "maintask";
       shape = "doubleoctagon";
   } 
-  else if (body == kaapi_taskfinalizer_body)
+  else if ((body == kaapi_taskmove_body) || (body == kaapi_taskalloc_body) || (body == kaapi_taskfinalizer_body))
   {
+    if (body == kaapi_taskfinalizer_body)
+    {
       fname = "finalizer";
       shape = "invtrapezium";
-  }
-  else if ((body == kaapi_taskmove_body) || (body == kaapi_taskalloc_body))
-  {
-    shape = "diamond";
-    if (body == kaapi_taskmove_body)
-      fname = "move";
-    else if (body == kaapi_taskalloc_body)
-      fname = "alloc";
+    }
+    else {
+      shape = "diamond";
+      if (body == kaapi_taskmove_body)
+        fname = "move";
+      else if (body == kaapi_taskalloc_body)
+        fname = "alloc";
+    }
     kaapi_move_arg_t* argtask = (kaapi_move_arg_t*)sp;
     kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, argtask->dest);
     if (entry->u.data.tag ==0)
@@ -187,8 +189,25 @@ static inline void _kaapi_print_task(
       /* display the node */
       entry->u.data.tag = 1;
       _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+    }
+    if (body != kaapi_taskfinalizer_body)
+    {
       _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
     }
+    else {
+      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag+1 );
+      if (!noprint_versionlink)
+      {
+        /* add version edge */
+        fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
+              (unsigned long)entry->u.data.tag, (uintptr_t)entry->key, (unsigned long)entry->u.data.tag+1, (uintptr_t)entry->key );
+      }
+      _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag+1, KAAPI_ACCESS_MODE_R );
+      entry->u.data.tag += 2;
+      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+    }
+    
   }
   else if (body == kaapi_taskbcast_body)
   {

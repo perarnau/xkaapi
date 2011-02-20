@@ -95,3 +95,15 @@ void kaapi_memory_global_barrier(void)
   kaapi_network_barrier();
 #endif  
 }
+
+
+/**
+*/
+int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_id_t kasid )
+{ 
+  return fprintf(file, "[%i, %u]", 
+    kaapi_memory_address_space_gettype(kasid),
+    kaapi_memory_address_space_getgid(kasid)
+  );
+}
+

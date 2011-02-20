@@ -269,7 +269,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fprintf( file, "\t\t\t [0]?:r<____>  @:%p\n", (void*)arg->src_data->ptr.ptr );
           fprintf( file, "\t\t\t [1]?:v<view>  type:%i, size:%lu\n", arg->src_data->view.type, 
                 kaapi_memory_view_size(&arg->src_data->view) );
-          fprintf( file, "\t\t\t [2]?:w<____>  H@:p\n", arg->dest );
+          fprintf( file, "\t\t\t [2]?:w<____>  H@:%p\n", (void*)arg->dest );
         }
         ++count;
 

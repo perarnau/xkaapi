@@ -45,12 +45,56 @@
 #define _KAAPI_MEMORY_H_ 1
 #include <stdint.h>
 
+
+/** Create a new address space and returns the identifier.
+    The address space identifier contains the major information:
+    - the site where is the data.
+    - the type (CPU or CUDA) in order to drive allocation, 
+    copies etc..
+    - the size of the address space.
+    
+    Several address spaces exist prior to the execution:
+    - each kprocessor has its own address space
+    - each detected level in the memory hierarchy has its own address 
+    space. Each L2, or L3 has a specific address space and address space
+    identifier.
+    - each GPU has its own address space.
+
+    The type of the address space drives some capabilities:
+    - CPU type: transfert from CPU to CPU may be asynchronous 
+    if the destination of the address is a remote site (asynchrony 
+    comes from asynchrony in the communication layer).
+    Else, if both address spaces are located into the same machine, 
+    copy is synchronous.
+    - GPU type: copy from and copy to GPU pass through the main 
+    memory of the CPU and may be asynchronous, depending of 
+    the hardward capability.
+    
+    Two address spaces share data if it exists an address space at
+    an upper level that contains them.
+    Data shared by two address spaces can be accessed directly by
+    tasks. Coherency of memory between address spaces is guaranteed between
+    writers and readers.
+    A task that reads data in a different address space than the task
+    that writes the data will view the correct value write.
+    On current non sequential consistency multicore, the implementation
+    relies on memory barrier before signaling the synchronisation.
+*/
+
 #define KAAPI_MAX_ADDRESS_SPACE 32
 
+/** Initialize global hashmap
+*/
 extern void kaapi_memory_init(void);
+
+/**
+*/
 extern void kaapi_memory_destroy(void);
 
+/**
+*/
 struct kaapi_metadata_info_t;
+
 
 /** Represent the address space of a remote (or local) memory.
 */
@@ -78,6 +122,13 @@ typedef struct kaapi_pointer_t {
 
 /** Data shared between address space and task
     Such data structure is referenced through the pointer arguments of tasks using a handle.
+    All tasks, after construction of tasklist, have effective parameter a handle to a data
+    in place of pointer to a data: Before creation of a tasklist data structure, a task
+    has a direct access through a pointer to object in the shared address space of the process.
+    After tasklist creation, each pointer parameter is replaced by a pointer to a kaapi_data_t
+    that points to the data and the view of the data.
+    
+    The data also stores a pointer to the meta data information for fast lookup.
     Warning: The ptr should be the first field of the data structure.
 */
 typedef struct kaapi_data_t {
@@ -88,34 +139,23 @@ typedef struct kaapi_data_t {
 
 
 /** Handle to data.
-    During generation of tasklist, each pointer parameter is replaced by a handle
-    to a kaapi_data that stores the data.
-    In this, way we can express dependencies between tasks independently of the memory
-    allocation used for exection.
+    See comments in kaapi_data_t structure.
 */
 typedef kaapi_data_t* kaapi_handle_t;
 
 
-/** Create a new address space and returns the identifier.
-    The address space identifier contains the major information:
-    - the site where is the data.
-    - the type (CPU or CUDA) in order to drive allocation, copies etc..
-    - the size of the address space.
-
-    This address space data structure is valid for both the CPU, remote CPU or GPU, or any kind of device.
-    If the Kaapi is configured as isoaddress allocation, the writer thread may known without
-    communication the remote address where to store data iff the sequence of allocation is same 
-    for all processes that participate to do allocation (each process must maintain
-    an allocation state of all remotes allocation to any other processes).
-
-    The type of address space may drive some capabilities:
-    - CPU type: transfert from CPU to CPU may be asynchronous if the destination address
-    is a remote site (asynchrony comes from asynchrony in the communication layer).
-    Else, if both address spaces are located into the same machine, copy is synchronous.
-    - GPU type: copy from - to GPU pass through the main memory of the CPU and may
-    be asynchronous.
-
-WARNING: This function should be put into the public interface of kaapi.
+/* Create a new address space.
+   The user is invited to use predefined address space identifier
+   in place of creating a new address space.  
+   The function takes the globalid, the type and the size of an
+   address space. On return a new address space is created. 
+   The newly created address space is not equal to any other created
+   address space.
+   
+   \param gid  [IN] the global identifier of the process
+   \param type [IN] the type of the address space (CPU or GPU)
+   \param size [IN] the declared size of the address space.
+   \return the address space identifier
 */
 extern kaapi_address_space_id_t kaapi_memory_address_space_create(
   kaapi_globalid_t gid, 
@@ -128,6 +168,9 @@ extern kaapi_address_space_id_t kaapi_memory_address_space_create(
 #define KAAPI_ASID_MASK_ARCH  0xF000000000000000ULL
 
 /** Return true iff two address space points to the same memory
+    \param kasid1 [IN] an address space identifier
+    \param kasid2 [IN] an address space identifier
+    \return 0 iff the two address spaces are equals
 */
 static inline int kaapi_memory_address_space_isequal( 
   kaapi_address_space_id_t kasid1, 
@@ -139,31 +182,39 @@ static inline int kaapi_memory_address_space_isequal(
 
 
 /** Return the type of the address space location.
+    \param kasid [IN] an address space identifier
+    \return the type encoded into the address space identifier
 */
 static inline int kaapi_memory_address_space_gettype( kaapi_address_space_id_t kasid )
 { return (int)(kasid >> 56UL); }
 
 
 /** Return the gid of the address space
+    \param kasid [IN] an address space identifier
+    \return the gid encoded into the address space identifier
 */
 static inline kaapi_globalid_t kaapi_memory_address_space_getgid( kaapi_address_space_id_t kasid )
 { return (kaapi_globalid_t)((kasid & KAAPI_ASID_MASK_GID)>> 32UL); }
 
 
-/**
+/** Return the local index of the address space
+    This is not a public function.
+    \param kasid [IN] an address space identifier
+    \return the local index of the address space identifier
 */
-static inline uint16_t kaapi_memory_address_space_getlid( kaapi_address_space_id_t kasid )
+static inline uint16_t _kaapi_memory_address_space_getlid( kaapi_address_space_id_t kasid )
 { return (kasid & KAAPI_ASID_MASK_LID); }
 
+
 /** Print info about address space
+    The format of the output is [<type>, <gid>], the type is the type of the address space
+    and gid the global identifier of the process that handles the address space.
+    \param file [IN/OUT] the file descriptor where to dump the representation of the address
+    space identifier.
+    \param kasid [IN] an address space identifier
+    \return the return value of the fprintf.
 */
-static inline int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_id_t kasid )
-{ 
-  return fprintf(file, "[%i, %u]", 
-    kaapi_memory_address_space_gettype(kasid),
-    kaapi_memory_address_space_getgid(kasid)
-  );
-}
+extern int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_id_t kasid );
 
 
 /** Allocate in the address space kasid a contiguous array of size bytes.
@@ -178,8 +229,8 @@ static inline int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_
     
     \param kasid [IN] address space identifier
     \param size [IN] the size in bytes
-    \param flag [IN] either LOCAL or SHARABLE
-    \retval the pointer into the address space.
+    \param flag [IN] either KAAPI_MEM_LOCAL or KAAPI_MEM_SHARABLE
+    \retval the pointer into the address space or null pointer if the allocation failed.
 */
 #define KAAPI_MEM_LOCAL      0x1
 #define KAAPI_MEM_SHARABLE   0x2
@@ -193,10 +244,11 @@ extern kaapi_pointer_t kaapi_memory_allocate(
 /** Allocate a memory region enough to store a view.
     The view is passed in input to allocate enough bytes for the data. 
     In output, the view is updated to fit the new allocation.
+
     \param kasid [IN] address space identifier
     \param view [IN/OUT] the view in bytes of the memory region    
-    \param flag [IN] either LOCAL or SHARABLE
-    \retval the pointer into the address space.
+    \param flag [IN] either KAAPI_MEM_LOCAL or KAAPI_MEM_SHARABLE
+    \retval the pointer into the address space or null pointer if the allocation failed.
 */
 extern kaapi_pointer_t kaapi_memory_allocate_view( 
     kaapi_address_space_id_t kasid, 
@@ -211,9 +263,14 @@ extern kaapi_pointer_t kaapi_memory_allocate_view(
 extern void kaapi_memory_global_barrier(void);
 
 
-/** Deallocate in the address space kasid the array referenced by kdi.
-    If no data resides in klm, then do nothing.
-    Else the data is free.
+/** Deallocate the data pointed by the pointer
+    The function can only deallocated pointer allocated on the local process.
+    If pointer points to a data not in the same process, then the return 
+    value of the function is EINVAL.
+
+    \param ptr [IN/OUT] the pointer to the data to delete
+    \return 0 in case of success
+    \return EINVAL iff the pointer points to a non local data 
 */
 extern int kaapi_memory_deallocate( 
   kaapi_pointer_t ptr 
@@ -434,7 +491,7 @@ static inline kaapi_data_t* _kaapi_metadata_info_get_data(
     kaapi_address_space_id_t kasid
 )
 {
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
+  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
   return &kmdi->data[lid];
 }
@@ -445,7 +502,7 @@ static inline int _kaapi_metadata_info_is_valid(
     kaapi_address_space_id_t kasid
 )
 { 
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
+  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
   return (kmdi->validbits & (1UL<<lid)) !=0;
 }
@@ -464,7 +521,7 @@ static inline void _kaapi_metadata_info_set_writer(
     kaapi_address_space_id_t kasid
 )
 { 
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
+  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
   kmdi->validbits = 1UL << lid;
 }
@@ -490,7 +547,7 @@ static inline struct kaapi_version_t** _kaapi_metadata_info_copy_data(
     const kaapi_memory_view_t* view    
 )
 {
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
+  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
   kmdi->validbits |= 1UL << lid;
   kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, 0);
   kmdi->data[lid].view = *view;
