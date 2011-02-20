@@ -108,7 +108,7 @@ struct doit {
     double t = Util::WallTimer::gettime();
     int ref_value = fiboseq_On(n);
     double delay = Util::WallTimer::gettime() - t;
-    Util::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
+    Util::logfile() << "[fibo_atha] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
 
     double start_time;

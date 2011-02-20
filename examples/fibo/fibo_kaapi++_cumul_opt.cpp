@@ -109,7 +109,7 @@ struct doit {
     double t = ka::WallTimer::gettime();
     int ref_value = fiboseq_On(n);
     double delay = ka::WallTimer::gettime() - t;
-    ka::logfile() << "[fibo_apiatha] Sequential value for n = " << n << " : " << ref_value 
+    ka::logfile() << "[fibo] Sequential value for n = " << n << " : " << ref_value 
                     << " (computed in " << delay << " s)" << std::endl;
       
     long* res_value = ka::Alloca<long>(1);

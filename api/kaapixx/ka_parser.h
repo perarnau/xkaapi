@@ -45,6 +45,7 @@
 #define _ATHA_PARSER_H_
 
 #include "ka_properties.h"
+#include <stdint.h>
 #include <stdexcept>
 #include <map>
 #include <list>
