@@ -46,6 +46,12 @@
 */
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_USE_CUDA)
+# include "../machine/cuda/kaapi_cuda_execframe.h"
+# include "../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
+#endif
+
+
 /* this version is close to the kaapi_sched_idle, except that a condition of
    wakeup is to test that suspended condition is false
 */
@@ -83,6 +89,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_wsqueuectxt_push( kproc, thread_condition );
 
   do {
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
+
     /* wakeup a context: either a ready thread (first) or a suspended thread.
        Precise the suspended thread 'thread_condition' in order to wakeup it first and task_condition.
     */
@@ -172,7 +182,22 @@ redo_execution:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif
-    err = kaapi_thread_execframe( kproc->thread );
+
+#if defined(KAAPI_USE_CUDA)
+    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+    {
+      if (kproc->thread->sfp->tasklist == 0)
+	err = kaapi_cuda_execframe( kproc->thread );
+      else /* assumed kaapi_threadgroup_execframe */
+	err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+    }
+    else
+#endif /* KAAPI_USE_CUDA */
+    if (kproc->thread->sfp->tasklist ==0)
+      err = kaapi_thread_execframe(kproc->thread);
+    else
+      err = kaapi_thread_execframe_tasklist(kproc->thread);
+
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif

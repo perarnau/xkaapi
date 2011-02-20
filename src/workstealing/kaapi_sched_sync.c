@@ -76,14 +76,16 @@ int kaapi_sched_sync(void)
   kaapi_thread_context_t* thread;
   kaapi_task_t*           savepc;
   int                     err;
-  kaapi_cpuset_t        save_affinity;
+  kaapi_cpuset_t          save_affinity;
   kaapi_frame_t*          save_esfp;
 #if defined(KAAPI_DEBUG)
   kaapi_frame_t*          save_fp;
 #endif
 
+  /* If pure DFG frame and empty return */
   thread = kaapi_self_thread_context();
-  if (kaapi_frame_isempty( thread->sfp ) ) return 0;
+  if ((thread->sfp == 0) && kaapi_frame_isempty( thread->sfp ) ) 
+    return 0;
 
   /* here affinity should be deleted (not scalable concept) 
      - use localkid to enforce execution into one specific
@@ -103,7 +105,11 @@ int kaapi_sched_sync(void)
   kaapi_mem_barrier();
   
 redo:
-  err = kaapi_thread_execframe(thread);
+  if (thread->sfp->tasklist == 0) 
+    err = kaapi_thread_execframe(thread);
+  else
+    err = kaapi_thread_execframe_tasklist(thread);
+
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );

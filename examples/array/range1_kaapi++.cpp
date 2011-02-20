@@ -29,7 +29,7 @@
 ** reproducing the software by the user in light of its specific
 ** status of free software, that may mean that it is complicated to
 ** manipulate, and that also therefore means that it is reserved for
-** developers and experienced professionals having in-depth computer
+** devel_pers and experienced professionals having in-depth computer
 ** knowledge. Users are therefore encouraged to load and test the
 ** software's suitability as regards their requirements in conditions
 ** enabling the security of their systems and/or data to be ensured
@@ -53,7 +53,7 @@ struct op_rand {
 };
 
 /* Task Init
- * this task initialize each entries of the array to 1
+ * this task initialize each entries of the array to its i-th position
  * each entries is view as a pointer object:
     array<1,W<int> > means that each entry may be write by the task
  */
@@ -66,9 +66,23 @@ struct TaskBodyCPU<TaskInit> {
     size_t sz = array.size();
     std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
     for (size_t i=0; i < sz; ++i)
-      array[i] = 1;
-    
-    std::for_each( array.begin(), array.end(), op_rand<int>() );
+      array[i] = i;    
+  }
+};
+
+
+/* Task Print
+ */
+struct TaskPrint : public ka::Task<1>::Signature<ka::R<ka::range1d<int> > > {};
+
+template<>
+struct TaskBodyCPU<TaskPrint> {
+  void operator() ( ka::range1d_r<int> array )
+  {
+    size_t sz = array.size();
+    std::cout << "In TaskPrint/CPU, size of array = " << sz << std::endl;
+    for (size_t i=0; i < sz; ++i)
+      std::cout << array[i] << std::endl;
   }
 };
 
@@ -99,20 +113,31 @@ struct doit {
     int n= 10;
     if (argc >1) n = atoi(argv[1]);
 
-    int* data = new int[n];
+    int* data1 = new int[n];
+    int* data2 = new int[n];
+    
+    for (int i=0; i<n; ++i)
+    {
+      data1[i] = i;
+      data2[i] = 0;
+    }
     
     /* form a view of data as an 1-dimensional array */
-    ka::range1d<int> arr(data, n); 
+    ka::range1d<int> arr1(data1, n); 
+    ka::range1d<int> arr2(data1, n); ;
+    arr2[ka::rangeindex(5,10)] = arr1[ka::rangeindex(0,5)];
     int res = 0;
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
-    ka::Spawn<TaskInit>()( arr );
+//ka::Spawn<TaskInit>()( arr1 );
+    ka::Spawn<TaskPrint>()( arr1 );
+    ka::Spawn<TaskPrint>()( arr2 );
     
     /* Here the dependencies is accross each entries of the array arr
     */
-    ka::Spawn<TaskAccumulate>()( &res, arr );
+    ka::Spawn<TaskAccumulate>()( &res, arr1 );
     ka::Sync();
     std::cout << "Res = " << res << std::endl;
   }
@@ -140,7 +165,7 @@ int main(int argc, char** argv)
     /* */
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
+  catch (const std::exception& E) {
     ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {

@@ -93,14 +93,10 @@ void Community::leave()
 
 // --------------------------------------------------------------------
 Community System::initialize_community( int& argc, char**& argv )
-  throw (RuntimeError, RestartException, ServerException)
+  throw (std::runtime_error)
 {
   static bool is_called = false; if (is_called) return Community(0); is_called = true;
-  
-  /** Init should not have been called by InitKaapiCXX
-  */
-  kaapi_assert(kaapi_init() == 0 );
-  
+    
   System::saved_argc = argc;
   System::saved_argv = new char*[argc];
   for (int i=0; i<argc; ++i)
@@ -120,7 +116,7 @@ Community System::initialize_community( int& argc, char**& argv )
       filename = name;
       filename = filename + "/.kaapirc";
       KaapiComponentManager::prop.load( filename );
-    } catch (const IOError& e) { 
+    } catch (const std::exception& e) { 
     } catch (...) { 
     }
   }
@@ -132,13 +128,17 @@ Community System::initialize_community( int& argc, char**& argv )
       filename = name;
       filename = filename + "/.kaapirc";
       KaapiComponentManager::prop.load( filename );
-    } catch (const IOError& e) { 
+    } catch (const std::exception& e) { 
     } catch (...) { 
     }
   }
 
   if (KaapiComponentManager::initialize( argc, argv ) != 0)
-    Exception_throw( RuntimeError("[ka::System::initialize], Kaapi not initialized") );
+    throw std::runtime_error("[ka::System::initialize], Kaapi not initialized");
+
+  /** Init should not have been called by InitKaapiCXX
+  */
+  kaapi_assert(kaapi_init(&argc, &argv) == 0 );
 
   return Community(0);
 }
@@ -146,7 +146,7 @@ Community System::initialize_community( int& argc, char**& argv )
 
 // --------------------------------------------------------------------
 Community System::join_community( int& argc, char**& argv )
-  throw (RuntimeError, RestartException, ServerException)
+  throw (std::runtime_error)
 {
   Community thecom = System::initialize_community( argc, argv);
   thecom.commit();
@@ -156,7 +156,7 @@ Community System::join_community( int& argc, char**& argv )
 
 // --------------------------------------------------------------------
 Community System::join_community( )
-  throw (RuntimeError, RestartException, ServerException)
+  throw (std::runtime_error)
 {
   int argc = 1;
   const char* targv[] = {"kaapi"};

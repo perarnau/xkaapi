@@ -10,7 +10,6 @@
 #define _NETWORK_TYPES_H_
 
 #include <iosfwd>
-#include "ka_types.h"
 #include <list>
 #include <set>
 
@@ -26,10 +25,17 @@
 #include <inttypes.h>
 #endif
 
+#include <stdexcept>
+#include "ka_types.h"     // use only atomic
+
 namespace ka {
 class Channel;
 class OutChannel;
 
+// -------------------------------------------------------------------------
+/** Compatibility with kaapi type kaapi_globalid_t
+*/
+typedef uint32_t GlobalId;
 
 // ----------------------------------------------------------------------
 /** \name Protocol definition
@@ -68,6 +74,109 @@ typedef void (*Callback_fnc)(int errocode, Channel* ch, void* userarg);
 
 // -------------------------------------------------------------------------
 typedef void (*Service_fnc)(int errocode, GlobalId source, void* buffer, size_t size);
+
+
+// -------------------------------------------------------------------------
+struct SegmentInfo {
+  SegmentInfo() : segaddr(0), segsize((size_t)-1) {}
+  SegmentInfo(uintptr_t addr, size_t size) : segaddr(addr), segsize(size) {}
+  uintptr_t   segaddr;    /* base address allocation */
+  size_t      segsize;    /* size of address space */
+};
+
+
+// --------------------------------------------------------------------
+/** IOComFailure: 
+*/
+class ComFailure: public std::runtime_error {
+public:
+  /// Error Code
+  enum  Code {
+    /// No error return value
+    OK  = 0,
+    ///
+    FAIL,
+    ///
+    ABORT,
+    ///
+    TRUNCATED,
+    ///
+    NOT_FILLED,
+    ///
+    FATAL,
+    ///
+    NOROUTE,
+    ///
+    NULL_SERVICE,
+    ///
+    PANIC,
+    ///
+    BAD_REQUEST,
+    ///
+    NOT_IMPLEMENTED,
+    ///
+    BAD_ADDRESS,
+    ///
+    NO_CONNECTION,
+    ///
+    BAD_PROTOCOL,
+    /// operation has reach a timedout before finishing
+    TIMEOUT,
+    /// Socket is closed or was closed during operation
+    ERR_PIPE,
+    /// Host unreachable
+    HOST_UNREACH,
+    /// Host is not found 
+    HOST_NOTFOUND,
+    /// Host is found but has no associated address
+    HOST_NOTADDRESS,
+    /// Asynchronous post, used by asynchronous I/O
+    ASYNC_POST,
+    /// 1 + last error code
+    LAST_CODE
+  };
+public:
+  /// Cstor
+  ComFailure( Code e );
+
+  /// Cstor
+  ComFailure(const char* msg, Code e=OK);
+
+  /// Return a string about the exception code
+  const char* what() const throw();
+
+private:
+  Code _code;
+};
+
+
+
+
+// --------------------------------------------------------------------
+/** Bad url
+*/
+class BadURL: public ComFailure {
+public:
+  BadURL( );
+};
+
+
+// --------------------------------------------------------------------
+/** AlreadyBind
+*/
+class AlreadyBind: public ComFailure {
+public:
+  AlreadyBind( const std::string& msg = "object is already bind");
+};
+
+
+// --------------------------------------------------------------------
+/** NoFound
+*/
+class NoFound: public ComFailure {
+public:
+  NoFound( const std::string& msg = "name no found");
+};
 
 
 // -------------------------------------------------------------------------

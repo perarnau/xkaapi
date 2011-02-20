@@ -133,7 +133,7 @@ static size_t kaapi_task_computeready(
   return wc;
 }
 
-
+#if 0 // OLD CODE 
 /* Mark non ready data that are waiting.
    Only call in case of static scheduling.
    This is the same code as computeready except the mutation of r access mode.
@@ -225,6 +225,7 @@ static size_t kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_has
   }
   return wc;
 }
+#endif
 
 
 /** Steal task in the frame [frame->pc:frame->sp)
@@ -304,11 +305,13 @@ static int kaapi_sched_stealframe
        * not that recv body is an empty function to serve as a mark. It could
        be put into the nonpartitioning code...
     */
+#if 0 // OLD, SEE STATIC
     if (task_body == &kaapi_taskrecv_body)
     {
       kaapi_task_markready_recv( task_top, kaapi_task_getargs(task_top), map );
     }
     else 
+#endif
     {
       task_fmt = kaapi_format_resolvebybody( task_body );
       if (task_fmt !=0)
@@ -361,7 +364,8 @@ int kaapi_sched_stealstack
   kaapi_hashmap_t          access_to_gd;
   kaapi_hashentries_bloc_t stackbloc;
   
-  if ((thread ==0) || (thread->unstealable != 0) /*|| kaapi_frame_isempty( thread->sfp)*/) return 0;
+  if ((thread ==0) || (thread->unstealable != 0)) 
+  return 0;
   replycount = 0;
   
   /* be carrefull, the map should be clear before used */
@@ -373,7 +377,8 @@ int kaapi_sched_stealstack
   {
     /* void frame ? */
     if (top_frame->pc == top_frame->sp) continue;
-    kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
+    if (top_frame->tasklist == 0)
+      kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
   }
   
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

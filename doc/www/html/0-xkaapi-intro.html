@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+    <meta name="description" content="XKaapi- Quick user’s guide -installation, running and basic informations about XKaapi 21-02-2011 Thierry Gautier, INRIA  Objectives XKaapi is an open source library for parallel computing http://kaapi.gforge.inria.fr This tutorial is part of the following tutorials XKaapi: programming with data flow graph XKaapi: Low Level Adaptive Application Interface XKaapi: KaSTL API XKaapi: Fortran Interface XKaapi: internal representation &amp; execution  soon available on the web site  What is Kaapi ? C/C++ Library for parallel programming Target architecture: multicore + GPU + cluster Ultimate goal Simplify the development of parallel application architecture abstraction Automatic dynamic load balancing theoretically &amp; practically performances  Work Stealing based algorithms Design Kernel runtime for API (or compiler) work stealing internal scheduling C language, fine grain implementation... APIs for different programming models Data Flow Graph: DFG Athapascan (deprecated), Kaapi++ Parallel STL like: KaSTL Adaptive Algorithms Interface: AAI Fortran Interface: KaFOR Quick user’s guide Source development http://kaapi.gforge.inria.fr  tarball of the master (rcxx) GIT: ligforge url = ssh://git.ligforge.imag.fr/git/kaapi/xkaapi.gitUsage of branches origin/master: the official master branch origin/&lt;username&gt;/&lt;branch name&gt;: an user branch The owner is responsible of its branches The user MUST ONLY commit on its own branches Mailing list: kaapi-leaders@lists.gforge.inria.fr http://lists.gforge.inria.fr/cgi-bin/mailman/listinfo/kaapi-leaders Installation automake / autotools etc... ../xkaapi/configure --help ../xkaapi/configure --prefix=&lt;totodir&gt;  Usefull options:  --enable-mode=release for performances --enable-mode=debug for more assertions in the user level API --enable-static: enable static library (default no) --enable-shared: enable shared library (default yes) Compilation make Basic check make check  Installation (cont.) Installation make install (in the --prefix directory, see step 1) &lt;totodir&gt;/include; &lt;totodir&gt;/lib etc.. use pkgconfig to retreive CCFLAGS, LDFLAGS etc &lt;totodir&gt;/shared/doc/xkaapi/examples all examples are put here + makefile to compile them &lt;totodir&gt;/shared/doc/slides/ several subjects are presented as slides (pdf) quick user’s guide: this presentation dfg programming: how to program with macro data flow graph ... List of examples Examples sub directory cd examples;  make examples : build all examples make &lt;prog&gt;, e.g. make for_each_rec_xx  Have a look of subdirectories in &lt;topsrcdir&gt;/examples !  hello hello_world.cpp  for_each for_each_rec_kaapi++.cpp :  recursive C++ version for_each_0_kaapi++.cpp :  basic adaptive C++ version for_each_0_kaapi.c :  basic adaptive C version for_each_1_kaapi++.cpp :  adaptive C++ version, enable steal of thief for_each_2_kaapi++.cpp :  idem + preemption for_each_0_kaapi++_lambda.cpp : adaptive C++ version with lambda for_each_kastl.cpp: call to STL kastl implementation Cont. Fibo fibo_kaapi.c : low level C version fibo_atha.cpp :  old Athapascan C++ API version fibo_kaapi++.cpp : Kaapi C++ API version fibo_kaapi++_autopointer.cpp : Kaapi C++ API with autopointers fibo_kaapi++_autovar.cpp: Kaapi C++ API with Kaapi’s automatic variables fibo_kaapi++_opt.cpp: simple optimization to avoid one recursive spawn fibo_kaapi++_opt_thread.cpp: optimization to avoid lookup of current thread fibo_kaapi++_cumul.cpp : Kaapi C++ API version with cumulative write fibo_kaapixx_cumul_opt.cpp : Kaapi C++ API version with optimized task creation fibo_kaapi++_sync.cpp: usage of synch. to avoid sum’ task creation &gt; make fibo_kaapi fibo_kaapi++ fibo_atha... NQueens nqueens_atha / nqueens_kaapi++ Cilk two examples from Cilk distribution (matrix computation/qsort) Cont. Matrix basic example to illustrate use of 2D range matrix product matprod_rec_kaapi++.cpp : recursive matrix product matprod_iter_kaapi++.cpp: classic nested loops LU factorization matlu_kaapi++.cpp BFS breadth first search ListRanking Jaja &amp; Helman based list ranking algorithm Poisson3D stencil computation on 3D Poisson problem Compilation of examples Use pkg-config gautier@idkoiff:~$ export PKG_CONFIG_PATH=&lt;kaapi install dir&gt;/lib/pkgconfig  gautier@idkoiff:~$ pkg-config --cflags kaapi++-I/home/gautier/KAAPI/install/xkaapi/include  gautier@idkoiff:~$ pkg-config --libs kaapi++-L/home/gautier/KAAPI/install/xkaapi/lib -lkaapi++ -lkaapi   Typical use: gautier@idkoiff:~$ g++ -o mytest mytest.cpp `pkg-config --cflags kaapi++` `pkg-config --libs kaapi++` That all ! Running example KAAPI_CPUCOUNT=1 ./fibo_kaapi++ 30   KAAPI_CPUCOUNT=2 ./fibo_kaapi++ 30   KAAPI_CPUSET=0:4,6 ./fibo_kaapi++ 30 use cores 0,1,2,3,4 and 6 of the machine Fibo(30)=832040Time: 4.326541e-01 Fibo(30)=832040Time: 2.143562e-01 Sources organization xkaapi/src everything about workstealing / graph representation is here xkaapi/examples user level examples xkaapi/api Athapascan C++ interface [deprecated] Kaapi C++ interface [Fortran interface] etc.. http://kaapi.gforge.inria.fr Kaapi is a software developped at http://moais.imag.fr"/>
+    <title></title>
+    <script type="text/javascript" language="javascript">
+//      <![CDATA[
+            var images = new Array (15);
+            images[0] = "0-xkaapi-intro.html_files/0-xkaapi-intro.001.png";
+            images[1] = "0-xkaapi-intro.html_files/0-xkaapi-intro.002.png";
+            images[2] = "0-xkaapi-intro.html_files/0-xkaapi-intro.003.png";
+            images[3] = "0-xkaapi-intro.html_files/0-xkaapi-intro.004.png";
+            images[4] = "0-xkaapi-intro.html_files/0-xkaapi-intro.005.png";
+            images[5] = "0-xkaapi-intro.html_files/0-xkaapi-intro.006.png";
+            images[6] = "0-xkaapi-intro.html_files/0-xkaapi-intro.007.png";
+            images[7] = "0-xkaapi-intro.html_files/0-xkaapi-intro.008.png";
+            images[8] = "0-xkaapi-intro.html_files/0-xkaapi-intro.009.png";
+            images[9] = "0-xkaapi-intro.html_files/0-xkaapi-intro.010.png";
+            images[10] = "0-xkaapi-intro.html_files/0-xkaapi-intro.011.png";
+            images[11] = "0-xkaapi-intro.html_files/0-xkaapi-intro.012.png";
+            images[12] = "0-xkaapi-intro.html_files/0-xkaapi-intro.013.png";
+            images[13] = "0-xkaapi-intro.html_files/0-xkaapi-intro.014.png";
+            images[14] = "0-xkaapi-intro.html_files/0-xkaapi-intro.015.png";
+            var index = 0;
+            function WindowLoaded(evt)
+            {
+                document.body.onselectstart = function () { return false; };
+            }
+            function Step(i)
+            {
+                GoTo(index + i)
+            }
+            function GoTo(newIndex)
+            {
+                if(newIndex >= 0 && newIndex < images.length)
+                {
+                    index = newIndex;
+                    document.Slideshow.src = images[index];
+                }
+            }
+//      ]]>
+    </script>
+</head>
+<body bgcolor="black" onload='WindowLoaded(event);'>
+    <p align="center">
+        <br/>
+        <br/>
+        <img name="Slideshow" alt="" src="0-xkaapi-intro.html_files/0-xkaapi-intro.001.png" onclick="Step(1)"/>
+    </p>
+</body>
+</html>

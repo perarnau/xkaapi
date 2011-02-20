@@ -78,7 +78,7 @@ public:
   
   /** Load .so and return a new device 
   */
-  virtual Device* create() =0;
+  virtual Device* create(int* argc, char*** argv) =0;
 
   /** Destroy a created device 
   */
@@ -122,7 +122,7 @@ public:
       \exception InvalidArgumentError bad parameters passed in properties
       \exception RuntimeError kind of exception is thrown in case of error      
   */
-  virtual int initialize() = 0;
+  virtual int initialize(int* argc, char*** argv) = 0;
 
   /** Second stage of initialization of a device
       Terminate the initialization process, accept incomming message and local node
@@ -145,6 +145,36 @@ public:
   //! \name Management of Device
   // -----------------------------------------------------------------------
   //@{
+  /** Allocate memory for rdma operation through this device.
+      \param size the size in byte of the request memory region
+      \return a pointer to a memory region that contains at least size bytes.
+      \return 0 iff no memory of that size can be allocated
+      \see deallocate
+  */
+  virtual void* allocate( size_t size ) =0;
+  
+  /** Deallocate a memory region allocated by 'allocate'
+      \param addr to the memory to deallocate
+      \see allocate
+  */
+  virtual void deallocate( void* addr ) =0;
+
+  /** Translate an address of a logical address space to the virtual address space
+      \param the address in the logical address space
+      \param size the size in byte of the request memory region
+      \return a pointer to a memory region that contains at least size bytes.
+      \return 0 iff no memory of that size can be allocated
+      \see deallocate
+  */
+  virtual void* bind( uintptr_t addr, size_t size ) = 0;
+
+
+  /** Return the segment info for the RDMA memory on gid 
+  */  
+  virtual SegmentInfo get_seginfo( GlobalId gid ) const =0;
+  //@}
+
+  //@{
   /** Open a channel to a given url
       \param gid of the node on which to open channel
       \return channel to the node or 0 if route cannot be open.
@@ -159,6 +189,14 @@ public:
       \see open_channel
   */
   virtual int close_channel(OutChannel* channel) =0;
+
+  /** Poll for incomming message.
+  */
+  virtual void poll() = 0;
+
+  /** Global barrier
+  */
+  virtual void barrier() = 0;
   //@}
 
   // -----------------------------------------------------------------------

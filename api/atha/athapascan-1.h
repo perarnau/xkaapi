@@ -69,8 +69,10 @@ namespace a1 {
     KAAPI_DECL_EXT_FORMAT(unsigned short, UShort)
     KAAPI_DECL_EXT_FORMAT(long, Long)
     KAAPI_DECL_EXT_FORMAT(unsigned long, ULong)
+#if 0
     KAAPI_DECL_EXT_FORMAT(long long, LLong)
     KAAPI_DECL_EXT_FORMAT(unsigned long long, ULLong)
+#endif
     KAAPI_DECL_EXT_FORMAT(float, Float)
     KAAPI_DECL_EXT_FORMAT(double, Double)
     KAAPI_DECL_EXT_FORMAT(long double, LDouble)
@@ -83,18 +85,6 @@ namespace a1 {
   class IStream; /* fwd decl */
   class OStream; /* fwd decl */
   using ka::ODotStream;
-
-  using ka::Exception;
-  using ka::RuntimeError;
-  using ka::InvalidArgumentError;
-  using ka::RestartException;
-  using ka::ServerException;
-  using ka::NoFound;
-  using ka::BadAlloc;
-  using ka::IOError;
-  using ka::ComFailure;
-  using ka::BadURL;
-
 
   using ka::System;
   using ka::Community;
@@ -745,7 +735,7 @@ namespace a1 {
 
   // --------------------------------------------------------------------
   template<class TASK>
-  struct ForkerMain : ka::SpawnerMain<TASK> {
+  struct ForkerMain : ka::SpawnerMain<TASK, ka::DefaultAttribut> {
   };
 
   template<class TASK>
@@ -946,8 +936,10 @@ namespace a1 {
   inline OStream& operator<< (OStream& m, const unsigned int v )  { return m; }
   inline OStream& operator<< (OStream& m, const long v )  { return m; }
   inline OStream& operator<< (OStream& m, const unsigned long v )  { return m; }
+#if 0
   inline OStream& operator<< (OStream& m, const long long v )  { return m; }
   inline OStream& operator<< (OStream& m, const unsigned long long v )  { return m; }
+#endif
   inline OStream& operator<< (OStream& m, const float v )  { return m; }
   inline OStream& operator<< (OStream& m, const double v )  { return m; }
   inline OStream& operator<< (OStream& m, const long double v )  { return m; }
@@ -974,8 +966,10 @@ namespace a1 {
   inline IStream& operator>> (IStream& m, unsigned int& v )  { return m; }
   inline IStream& operator>> (IStream& m, long& v )  { return m; }
   inline IStream& operator>> (IStream& m, unsigned long& v )  { return m; }
+#if 0
   inline IStream& operator>> (IStream& m, long long& v )  { return m; }
   inline IStream& operator>> (IStream& m, unsigned long long& v )  { return m; }
+#endif
   inline IStream& operator>> (IStream& m, float& v )  { return m; }
   inline IStream& operator>> (IStream& m, double& v )  { return m; }
   inline IStream& operator>> (IStream& m, long double& v )  { return m; }

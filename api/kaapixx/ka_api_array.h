@@ -92,12 +92,6 @@ public:
       return (_end-_begin);
     }
     
-    /** return the length of the range, ie end-begin */
-    index_t length() const 
-    {  
-      return (_end-_begin);
-    }
-    
     /** first entry, (index_t)-1U if full range */
     index_t first() const 
     { return _begin; }
@@ -264,7 +258,7 @@ public:
   array_rep<1,T>() : _data(0) {}
 
   /** */
-  array_rep<1,T>(T* p, index_t size) : _data(p), _size(size) {}
+  array_rep<1,T>(T* p, index_t sz) : _data(p), _size(sz) {}
 
   /** */
 #if 0  
@@ -284,7 +278,7 @@ public:
   { return _data; }
 
   /** */
-  pointer_t const ptr() const
+  pointer_t ptr() const
   { return _data; }
 
   /** */
@@ -359,6 +353,18 @@ public:
     return *this;
   }
   
+  /* return the view in byte unit */
+  kaapi_memory_view_t get_view() const
+  { return kaapi_memory_view_make1d(_size, sizeof(T)); }
+
+  /* set a new view in word */
+  void set_view( const kaapi_memory_view_t* view )
+  { 
+    kaapi_assert_debug( view->type == KAAPI_MEMORY_VIEW_1D );
+    kaapi_assert_debug( view->wordsize == sizeof(T) );
+    _size   = view->size[0];
+  }
+
 protected:
   T*      _data;
   index_t _size;
@@ -381,7 +387,7 @@ public:
   array_rep<2,T>() : _data(0), _n(0), _m(0), _lda(0) {}
 
   /** */
-  array_rep<2,T>(T* p, index_t n, index_t m, index_t lda) : _data(p), _n(n), _m(m), _lda(lda) {}
+  array_rep<2,T>(T* p, index_t n, index_t m, index_t l) : _data(p), _n(n), _m(m), _lda(l) {}
 
   // Range of the array
   size_t dim(int d) const
@@ -399,7 +405,7 @@ public:
   { return _data; }
 
   /** */
-  pointer_t const ptr() const
+  pointer_t ptr() const
   { return _data; }
 
   /** */
@@ -415,10 +421,10 @@ public:
   }
 
   /** */
-  const_reference_t operator()(size_t i, size_t j) const
+  reference_t operator()(unsigned int i, unsigned int j)
   { 
-    kaapi_assert_debug( (i < (size_t)_n) );
-    kaapi_assert_debug( (j < (size_t)_m) );
+    kaapi_assert_debug( (i>=(unsigned)0) && (i < (unsigned)_n) );
+    kaapi_assert_debug( (j>=(unsigned)0) && (j < (unsigned)_m) );
     return _data[i*_lda+j]; 
   }
 
@@ -438,6 +444,22 @@ public:
     return _data[i*_lda+j]; 
   }
   
+  /** */
+  const_reference_t operator()(unsigned int i, unsigned int j) const
+  { 
+    kaapi_assert_debug( (i>=(unsigned)0) && (i < (unsigned)_n) );
+    kaapi_assert_debug( (j>=(unsigned)0) && (j < (unsigned)_m) );
+    return _data[i*_lda+j]; 
+  }
+
+  /** */
+  const_reference_t operator()(size_t i, size_t j) const
+  { 
+    kaapi_assert_debug( (i < (size_t)_n) );
+    kaapi_assert_debug( (j < (size_t)_m) );
+    return _data[i*_lda+j]; 
+  }
+
   // Set the (i) element to value
   void set (index_t i, index_t j, reference_t value) 
   {
@@ -478,6 +500,20 @@ public:
         dest[j] = value;
     }
     return *this;
+  }
+   
+  /* return the view in word */
+  kaapi_memory_view_t get_view() const
+  { return kaapi_memory_view_make2d(_n,_m,_lda,sizeof(T)); }
+
+  /* set a new view in word */
+  void set_view( const kaapi_memory_view_t* view )
+  { 
+    kaapi_assert_debug( view->type == KAAPI_MEMORY_VIEW_2D );
+    kaapi_assert_debug( view->wordsize == sizeof(T) );
+    _n   = view->size[0];
+    _m   = view->size[1];
+    _lda = view->lda;
   }
 
 protected:
@@ -655,12 +691,33 @@ public:
   }
   
   // Subarray extraction
+  T& operator() (const index_t& i, const index_t& j)  
+  {
+    return array_rep<2,T>::operator()( i, j );
+  }
+
+  // Subarray extraction
+  const T& operator() (const index_t& i, const index_t& j) const
+  {
+    return array_rep<2,T>::operator()( i, j );
+  }
+
+  // Subarray extraction
   array<2,T> operator() (const range& ri, const range& rj)  
   {
     if (ri.isfull() && rj.isfull()) return *this;
     if (ri.isfull()) return array<2,T>(&array_rep<2,T>::operator()(0, rj[0]), this->dim(0), rj.size(), array_rep<2,T>::_lda );
     if (rj.isfull()) return array<2,T>(&array_rep<2,T>::operator()(ri[0], 0), ri.size(), this->dim(1), array_rep<2,T>::_lda );
     return array<2,T>(&array_rep<2,T>::operator()(ri[0], rj[0]), ri.size(), rj.size(), array_rep<2,T>::_lda );
+  }
+
+  // Subarray extraction
+  array<2,T> operator() (const range& ri, const range& rj) const  
+  {
+    if (ri.isfull() && rj.isfull()) return *this;
+    if (ri.isfull()) return array<2,T>((T*)&array_rep<2,T>::operator()(0, rj[0]), this->dim(0), rj.size(), array_rep<2,T>::_lda );
+    if (rj.isfull()) return array<2,T>((T*)&array_rep<2,T>::operator()(ri[0], 0), ri.size(), this->dim(1), array_rep<2,T>::_lda );
+    return array<2,T>((T*)&array_rep<2,T>::operator()(ri[0], rj[0]), ri.size(), rj.size(), array_rep<2,T>::_lda );
   }
 
   // Return the i-th col

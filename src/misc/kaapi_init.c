@@ -60,8 +60,11 @@
 */
 kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0,
-   .stacksize   = 64*4096,
+   .stacksize   = 64*4096, /**/
    .cpucount    = 0,
+   .kproc_list  = 0,
+   .kid2cpu     = 0,
+   .cpu2kid     = 0
 };
 
 
@@ -192,7 +195,7 @@ void kaapi_init_basicformat(void)
 
 /**
 */
-int kaapi_init(void)
+int kaapi_init(int* argc, char*** argv)
 {
   static int iscalled = 0;
   if (iscalled !=0) return EALREADY;
@@ -203,6 +206,11 @@ int kaapi_init(void)
   /* set up runtime parameters */
   kaapi_assert_m( 0 == kaapi_setup_param(), "kaapi_setup_param" );
   
+#if defined(KAAPI_USE_NETWORK)
+  kaapi_network_init(argc, argv);
+#endif
+
+  kaapi_memory_init();
   int err = kaapi_mt_init();
   return err;
 }
@@ -212,5 +220,13 @@ int kaapi_init(void)
 */
 int kaapi_finalize(void)
 {
-  return kaapi_mt_finalize();
+  kaapi_memory_destroy();
+
+  kaapi_mt_finalize();
+
+#if defined(KAAPI_USE_NETWORK)
+  kaapi_network_finalize();
+#endif
+
+  return 0;
 }

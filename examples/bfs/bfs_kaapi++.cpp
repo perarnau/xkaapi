@@ -6,7 +6,6 @@
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -927,12 +926,12 @@ static void __attribute__((unused)) peek_random_pair
 }
 
 
-static void initialize_stuff(void)
+static void initialize_stuff(int* ac, char*** av)
 {
   srand(getpid() * time(0));
 
 #if CONFIG_PARALLEL
-  kaapi_init();
+  kaapi_init(ac, av);
 #endif
 }
 
@@ -952,7 +951,7 @@ int main(int ac, char** av)
   node_t* to;
   struct timeval tms[3];
 
-  initialize_stuff();
+  initialize_stuff(&ac, &av);
 
 #if !(CONFIG_PARALLEL || CONFIG_SEQUENTIAL)
   // generate and store a random graph

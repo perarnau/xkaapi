@@ -95,7 +95,6 @@ int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_vic
   do {
     err = kaapi_select_victim_workload( kproc, victim );
     if (err ==0) return 0;
-        
   } while(1);
 }
 
@@ -115,7 +114,9 @@ void kaapi_set_self_workload(uint32_t workload)
 }
 
 
+#if 0
 void kaapi_set_workload_by_kid(kaapi_processor_id_t kid, uint32_t workload)
 {
   kaapi_set_workload(kaapi_all_kprocessors[kid], workload);
 }
+#endif

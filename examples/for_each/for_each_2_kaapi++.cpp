@@ -85,7 +85,7 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
     {
       /* apply w->op foreach item in [pos, end[ */
       std::for_each( beg, end, op );
-      if (sc->is_preempted()) 
+      if (sc->is_preempted())
       {
         /* copy back the work state to the output state for the master */
         std::pair<T*, T*>& thief_context = sc->arg_preemption<std::pair<T*, T*> >();
@@ -215,7 +215,7 @@ int main(int argc, char** argv)
     /* */
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
+  catch (const std::exception& E) {
     ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {

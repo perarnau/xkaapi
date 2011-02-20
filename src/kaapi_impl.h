@@ -64,11 +64,14 @@ extern "C" {
 
 #include "kaapi_defs.h"
 
-/* Maximal number of recursive call used to store the stack of frames.
-   This is used to use a stack of frame.
-   Some optimization may have been done by avoiding using this structure.
+/* Maximal number of recursive calls used to store the stack of frames.
+   The value indicates the maximal number of frames that can be pushed
+   into the stackframe for each thread.
+   
+   If an assertion is thrown at runtime, and if this macro appears then
+   it is necessary to increase the maximal number of frames in a stack.
 */
-#define KAAPI_MAX_RECCALL 1024
+#define KAAPI_MAX_RECCALL 256
 
 /* Define if ready list is used
    This flag activates :
@@ -82,6 +85,11 @@ extern "C" {
    The threads in ready list may be stolen by other processors.
 */
 #define KAAPI_USE_READYLIST 1
+
+/** Current implementation relies on isoaddress allocation to avoid
+    communication during synchronization at the end of partitionning.
+*/
+//#define KAAPI_ADDRSPACE_ISOADDRESS 1
 
 /* Flags to define method to manage concurrency between victim and thieves
    - CAS: based on atomic modify update
@@ -116,9 +124,11 @@ extern "C" {
 #  define KAAPI_LOG(l, fmt, ...) \
       do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
 
+#  define KAAPI_DEBUG_INST(inst) inst
 #else
 #  define kaapi_assert_debug_m(cond, msg)
 #  define KAAPI_LOG(l, fmt, ...) 
+#  define KAAPI_DEBUG_INST(inst)
 #endif /* defined(KAAPI_DEBUG)*/
 
 #define kaapi_assert_m(cond, msg) \
@@ -144,6 +154,8 @@ extern "C" {
 #    define EWOULDBLOCK     EAGAIN
 #  endif 
 #endif 
+
+#include "kaapi_memory.h"
 
 
 /** This is the new version on top of X-Kaapi
@@ -174,12 +186,17 @@ extern int kaapi_mt_finalize(void);
     Based on hwloc library.
     Return 0 in case of success else an error code
 */
-extern int kaapi_hw_init();
+extern int kaapi_hw_init(void);
 
 /* Fwd declaration 
 */
 struct kaapi_listrequest_t;
 struct kaapi_procinfo_list_t;
+
+/* Fwd declaration
+*/
+struct kaapi_tasklist_t;
+struct kaapi_comlink_t;
 
 /* ============================= Processor list ============================ */
 
@@ -236,7 +253,7 @@ typedef enum kaapi_selecvictim_flag_t {
 typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi_victim_t*, kaapi_selecvictim_flag_t flag );
 
 
-/* ============================= Default parameters ============================ */
+/* =======vvvvvvvvvvvvvvvvvv===================== Default parameters ============================ */
 /** Initialise default formats
 */
 extern void kaapi_init_basicformat(void);
@@ -348,14 +365,16 @@ typedef struct kaapi_format_t {
   /* only if it is a format of a task  */
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
+  kaapi_task_body_t          entrypoint_wh[KAAPI_PROC_TYPE_MAX];      /* same as entrypoint, except that shared params are handle to memory location */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
   int                         _count_params;                           /* number of parameters */
   kaapi_access_mode_t        *_mode_params;                            /* only consider value with mask 0xF0 */
   kaapi_offset_t             *_off_params;                             /* access to the i-th parameter: a value or a shared */
   kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
+  kaapi_offset_t             *_off_cwflag;                             /* cw special flag of the i-th parameter: a value or a shared */
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
-  uint32_t                   *_size_params;                            /* sizeof of each params */
+  kaapi_memory_view_t        *_view_params;                            /* sizeof of each params */
   kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
@@ -365,11 +384,15 @@ typedef struct kaapi_format_t {
   size_t                (*get_count_params)(const struct kaapi_format_t*, const void*);
   kaapi_access_mode_t   (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void*                 (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*);
+  int*                  (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*);
   kaapi_access_t        (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*);
+  void                  (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int wa);
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
-  size_t                (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+  kaapi_memory_view_t   (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*);
+  void (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t* );
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
+  kaapi_reducor_t       (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -425,6 +448,17 @@ kaapi_access_t         kaapi_format_get_access_param  (const struct kaapi_format
 }
 
 static inline 
+int*         kaapi_format_get_cwflag  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    return (int*)(fmt->_off_cwflag[ith] + (char*)sp);
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_cwflag)(fmt, ith, sp);
+}
+
+static inline 
 void         kaapi_format_set_access_param  (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_access_t* a)
 {
   kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
@@ -437,6 +471,22 @@ void         kaapi_format_set_access_param  (const struct kaapi_format_t* fmt, u
   (*fmt->set_access_param)(fmt, ith, sp, a);
 }
 
+
+static inline 
+void         kaapi_format_set_cwaccess_param  (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_access_t* a, int wa)
+{
+  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+    *(void**)(fmt->_off_params[ith] + (char*)sp) = a->data;
+    *(void**)(fmt->_off_versions[ith] + (char*)sp) = a->version;
+    *(int*)(fmt->_off_cwflag[ith] + (char*)sp) = wa;
+    return;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  (*fmt->set_cwaccess_param)(fmt, ith, sp, a, wa);
+}
+
+
 static inline 
 const struct kaapi_format_t* kaapi_format_get_fmt_param  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
 {
@@ -446,13 +496,24 @@ const struct kaapi_format_t* kaapi_format_get_fmt_param  (const struct kaapi_for
 }
 
 static inline 
-size_t          kaapi_format_get_size_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
+kaapi_memory_view_t kaapi_format_get_view_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
 {
-  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_size_params[ith];
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->_view_params[ith];
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
-  return (*fmt->get_size_param)(fmt, ith, sp);
+  return (*fmt->get_view_param)(fmt, ith, sp);
 }
 
+static inline 
+void kaapi_format_set_view_param (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_memory_view_t* view)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+  {
+    kaapi_assert(0);
+    return;
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  (*fmt->set_view_param)(fmt, ith, sp, view);
+}
 
 static inline 
 void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, void* result, const void* value)
@@ -466,12 +527,24 @@ void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsig
   (*fmt->reducor)(fmt, ith, sp, result, value);
 }
 
+static inline 
+kaapi_reducor_t kaapi_format_get_reducor (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp )
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+  {
+    return fmt->_reducor_params[ith];
+  }
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_reducor)(fmt, ith, sp);
+}
+
 
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */
 /*
 */
 #define KAAPI_BLOCENTRIES_SIZE 32
+#define KAAPI_BLOCALLOCATOR_SIZE 4096
 
 /*
 */
@@ -482,6 +555,71 @@ typedef struct NAME {\
   struct NAME* next; /* link list of bloc */\
   void*        ptr;  /* memory pointer of allocated bloc */\
 } NAME
+
+
+/* Macro to define a generic bloc allocator of byte.
+*/
+typedef struct kaapi_allocator_bloc_t {
+  double                           data[KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(struct kaapi_allocator_bloc_t*)];
+  uintptr_t                        pos;  /* next free in data */
+  struct kaapi_allocator_bloc_t*   next; /* link list of bloc */
+} kaapi_allocator_bloc_t;
+
+typedef struct kaapi_allocator_t {
+  kaapi_allocator_bloc_t* currentbloc;
+  kaapi_allocator_bloc_t* allocatedbloc;
+} kaapi_allocator_t;
+
+#define KAAPI_DECLARE_GENBLOCENTRIES(ALLOCATORNAME) \
+  typedef kaapi_allocator_t ALLOCATORNAME
+
+/**/
+static inline int kaapi_allocator_init( kaapi_allocator_t* va ) 
+{
+  va->allocatedbloc = 0;
+  va->currentbloc = 0;
+  return 0;
+}
+
+/**/
+static inline int kaapi_allocator_destroy( kaapi_allocator_t* va )
+{
+  while (va->allocatedbloc !=0)
+  {
+    kaapi_allocator_bloc_t* curr = va->allocatedbloc;
+    va->allocatedbloc = curr->next;
+    free (curr);
+  }
+  va->allocatedbloc = 0;
+  va->currentbloc = 0;
+  return 0;
+}
+
+/* Here size is size in Bytes
+*/
+extern void* _kaapi_allocator_allocate_slowpart( kaapi_allocator_t* va, size_t size );
+
+
+/**/
+static inline void* kaapi_allocator_allocate( kaapi_allocator_t* va, size_t size )
+{
+  void* retval;
+  /* round size to double size */
+  size = (size+sizeof(double)-1)/sizeof(double);
+  const size_t sz_max = KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(kaapi_allocator_bloc_t*);
+  if ((va->currentbloc != 0) && (va->currentbloc->pos + size < sz_max))
+  {
+    retval = &va->currentbloc->data[va->currentbloc->pos];
+    va->currentbloc->pos += size;
+    KAAPI_DEBUG_INST( memset( retval, 0, size*sizeof(double) ) );
+    return retval;
+  }
+  return _kaapi_allocator_allocate_slowpart(va, size);
+}
+
+
+/* ============================= Simple C API for network ============================ */
+#include "kaapi_network.h"
 
 
 /* ============================= The structure for handling suspendended thread ============================ */
@@ -516,6 +654,8 @@ typedef struct kaapi_thread_context_t {
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif
 
+  /* the way to execute task inside a thread, if ==0 uses kaapi_thread_execframe */
+  kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
 
@@ -525,7 +665,7 @@ typedef struct kaapi_thread_context_t {
 #if defined(KAAPI_USE_CUDA)
   kaapi_atomic_t                 lock;           /** */ 
 #endif
-
+  kaapi_address_space_id_t       asid;           /* the address where is the thread */
   kaapi_cpuset_t                 affinity;       /* bit i == 1 -> can run on procid i */
 
   void*                          alloc_ptr;      /** pointer really allocated */
@@ -535,7 +675,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
   /* statically allocated reply */
-  kaapi_reply_t			              static_reply;
+  kaapi_reply_t			             static_reply;
   /* enough space to store a stealcontext that begins at static_reply->udata+static_reply->offset */
   char	                         sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
@@ -756,10 +896,10 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 #else /* SIZEOF_VOIDP == 8 */
 
 #define kaapi_task_getstate(task)\
-      (task)->u.state
+      KAAPI_ATOMIC_READ(&(task)->u.state)
 
 #define kaapi_task_setstate(task, value)\
-      (task)->u.state = (value)
+      KAAPI_ATOMIC_WRITE(&(task)->u.state,(value))
 
 #define kaapi_task_setstate_barrier(task, value)\
       { kaapi_writemem_barrier(); (task)->u.state = (value); }
@@ -827,7 +967,7 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 {
-  return kaapi_task_state2body( task->u.state & ~KAAPI_MASK_BODY );
+  return kaapi_task_state2body( kaapi_task_getstate(task) & ~KAAPI_MASK_BODY );
 }
 /**@} */
 
@@ -884,12 +1024,7 @@ static inline uintptr_t kaapi_task_orstate( kaapi_task_t* task, uintptr_t state 
 static inline int kaapi_task_teststate( kaapi_task_t* task, uintptr_t state )
 {
   /* assume a mem barrier has been done */
-  return
-#if (SIZEOF_VOIDP == 4)
-    (task->state & state) != 0;
-#else
-    (task->u.state & state) != 0;
-#endif
+  return (kaapi_task_getstate( task ) & state) !=0;
 }
 
 inline static void kaapi_task_lock_adaptive_steal(kaapi_stealcontext_t* sc)
@@ -1051,18 +1186,29 @@ typedef struct kaapi_gd_t {
 /* fwd decl
 */
 struct kaapi_version_t;
+struct kaapi_metadata_info_t;
 
+/** pair of pointer,int 
+    Used to display tasklist
+*/
+typedef struct kaapi_pair_ptrint_t {
+  void*               ptr;
+  uintptr_t           tag;
+  kaapi_access_mode_t last_mode;
+} kaapi_pair_ptrint_t;
 
 /* ============================= Hash table for WS ============================ */
 /*
 */
 typedef struct kaapi_hashentries_t {
   union { /* depending of the kind of hash table... */
-    kaapi_gd_t                value;
-    struct kaapi_version_t*   dfginfo;     /* list of tasks to wakeup at the end */
+    kaapi_gd_t                    value;
+    struct kaapi_version_t*       version;     /* for static scheduling */
+    kaapi_pair_ptrint_t           data;        /* used for print tasklist */
+    struct kaapi_metadata_info_t* mdi;     /* store of metadata info */
   } u;
-  void*                       key;
-  struct kaapi_hashentries_t* next; 
+  void*                           key;
+  struct kaapi_hashentries_t*     next; 
 } kaapi_hashentries_t;
 
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
@@ -1082,6 +1228,28 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_bloc_t* allallocatedbloc;
   uint32_t entry_map;                 /* type size must at least KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
+
+/*
+*/
+static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key)
+{
+  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
+
+  if (khm->entry_map & (1 << key))
+    return khm->entries[key];
+
+  return 0;
+}
+
+
+/*
+*/
+static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
+{
+  kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
+  khm->entries[key] = entries;
+  khm->entry_map |= 1 << key;
+}
 
 
 /*
@@ -1115,6 +1283,33 @@ extern kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t ke
 /*
 */
 extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries);
+
+
+/* Big hashmap_big
+   Used for bulding readylist
+*/
+#define KAAPI_HASHMAP_BIG_SIZE 128
+
+/*
+*/
+typedef struct kaapi_hashmap_big_t {
+  kaapi_hashentries_t* entries[KAAPI_HASHMAP_BIG_SIZE];
+  kaapi_hashentries_bloc_t* currentbloc;
+  kaapi_hashentries_bloc_t* allallocatedbloc;
+} kaapi_hashmap_big_t;
+
+/*
+*/
+extern int kaapi_hashmap_big_init( kaapi_hashmap_big_t* khm, kaapi_hashentries_bloc_t* initbloc );
+
+/*
+*/
+extern int kaapi_hashmap_big_destroy( kaapi_hashmap_big_t* khm );
+
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_hashmap_big_findinsert( kaapi_hashmap_big_t* khm, void* ptr );
 
 
 /* ============================= Commun function for server side (no public) ============================ */
@@ -1202,18 +1397,6 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
   return 0;
 }
 
-/** Call only on thread that has the top task theft.
-*/
-static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
-{
-#if (SIZEOF_VOIDP == 4)
-//  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->state) );
-  return kaapi_task_state_isready(thread->sfp->pc->state);
-#else
-//  kaapi_assert_debug( kaapi_task_state_issteal(thread->sfp->pc->u.state) );
-  return kaapi_task_state_isready(thread->sfp->pc->u.state);
-#endif
-}
 
 /** Note on scheduler lock:
   KAAPI_SCHED_LOCK_CAS -> lock state == 1 iff lock is taken, else 0
@@ -1260,6 +1443,9 @@ static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
     ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
     if (ok) break;
     kaapi_slowdown_cpu();
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
   } while (1);
   /* implicit barrier in KAAPI_ATOMIC_CAS */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
@@ -1268,7 +1454,12 @@ static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
 acquire:
   if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
   while (KAAPI_ATOMIC_READ(lock) <=0)
-    kaapi_slowdown_cpu(); 
+  {
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
+    kaapi_slowdown_cpu();
+  }
   goto acquire;
 #endif
 }
@@ -1372,6 +1563,18 @@ extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
     \retval EINTR the execution of the stack is interupt and the thread is detached to the kprocessor.
 */
 extern int kaapi_thread_execframe( kaapi_thread_context_t* thread );
+
+/** \ingroup TASK
+    The function kaapi_threadgroup_execframe() execute all the tasks in the thread' stack following
+    using the list of ready tasks.
+    If successful, the kaapi_threadgroup_execframe() function will return zero and the stack is empty.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer.
+    \retval EWOULDBLOCK the execution of the stack will block the control flow.
+    \retval EINTR the execution of the stack is interupt and the thread is detached to the kprocessor.
+*/
+extern int kaapi_threadgroup_execframe( kaapi_thread_context_t* thread );
 
 /** Useful
 */
@@ -1650,15 +1853,13 @@ extern void kaapi_set_workload( kaapi_processor_t*, uint32_t workload );
 /* */
 extern void kaapi_set_self_workload( uint32_t workload );
 
-#include "kaapi_staticsched.h"
-
 
 /** \ingroup TASK
     The function kaapi_task_body_isstealable() will return non-zero value iff the task body may be stolen.
     All user tasks are stealable.
     \param body IN a task body
 */
-inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
+static inline int kaapi_task_body_isstealable(kaapi_task_body_t body)
 { 
   return (body != kaapi_taskstartup_body) 
       && (body != kaapi_nop_body)
@@ -1666,10 +1867,6 @@ inline static int kaapi_task_body_isstealable(kaapi_task_body_t body)
       && (body != kaapi_taskwrite_body)
       && (body != kaapi_taskfinalize_body) 
       && (body != kaapi_adapt_body)
-      && (body != kaapi_tasksignalend_body)
-      && (body != kaapi_taskbcast_body)
-      && (body != kaapi_taskrecv_body)
-      && (body != kaapi_taskwaitend_body)
       ;
 }
 
@@ -1692,6 +1889,25 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
     kaapi_task_body_isstealable(kaapi_task_state2body(state));
 
 #endif
+}
+
+#include "kaapi_tasklist.h"
+#include "kaapi_partition.h"
+
+/** Call only on thread that has the top task theft.
+*/
+static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
+{
+  /* if ready list: use it as state of the thread */
+  kaapi_tasklist_t* tl = thread->sfp->tasklist;
+  if (tl !=0)
+  {
+    if ((tl->count_recv ==0) && kaapi_tasklist_isempty(tl)) return 1; 
+    if (!kaapi_tasklist_isempty(tl)) return 1;
+    return 0;
+  }
+
+  return kaapi_task_state_isready( kaapi_task_getstate(thread->sfp->pc) );
 }
 
 

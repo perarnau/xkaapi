@@ -8,8 +8,8 @@ template<>
 struct TaskBodyCPU<TaskRW> {
   void operator() ( ka::pointer_rw<int> d )
   {
-    std::cout << "In Task RW=" << *d << ", @:" << (int*)d << std::endl;
     *d += 10;
+    std::cout << "In Task RW=" << *d << ", @:" << (int*)d << std::endl;
   }
 };
 
@@ -36,10 +36,8 @@ struct doit {
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskRW> (ka::SetPartition(-1))  ( a );
+    threadgroup.Spawn<TaskRW> (ka::SetPartition(1))  ( a );
     threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( a );
-
-    threadgroup.print();    
 
     threadgroup.end_partition();
 
@@ -61,8 +59,8 @@ int main( int argc, char** argv )
 
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const std::exception& E) {
+    ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;

@@ -40,8 +40,7 @@
 ** terms.
 ** 
 */
-#include <iostream>
-#include "kaapi_impl.h"
+#include "kaapi_impl.h"  // sched_lock routines
 #include "kanet_instr.h"
 
 namespace ka {
@@ -126,7 +125,10 @@ void InstructionStream::sync()
 {
 redo:
   while (_tosend._state != SB_FREE)
+  {
+    kaapi_network_poll();
     kaapi_slowdown_cpu();
+  }
   kaapi_sched_lock(&_lock);
   if (_tosend._state != SB_FREE) 
   {

@@ -43,7 +43,6 @@
 #ifndef _KANETWORK_NETWORK_H_
 #define _KANETWORK_NETWORK_H_
 
-#include "ka_error.h"
 #include "kanet_types.h"
 #include "kanet_device.h"
 #include "kanet_channel.h"
@@ -109,8 +108,8 @@ public:
       \exception InvalidArgumentError bad parameters passed in properties
       \exception RuntimeError kind of exception is thrown in case of error      
   */
-  void initialize()
-    throw (RuntimeError);
+  void initialize(int* argc, char*** argv)
+    throw (std::runtime_error);
 
   /** Second stage of initialization of a network
       Terminate the initialization process, accept incomming message and local node
@@ -120,16 +119,56 @@ public:
       \exception RuntimeError kind of exception is thrown in case of error      
   */
   void commit( )
-    throw (RuntimeError);
+    throw (std::runtime_error);
 
   /** Terminate a network
     This function is automatically called at termination of the network 
     layer for each network.
   */
-  void terminate () throw (RuntimeError);
+  void terminate () throw (std::runtime_error);
   //@}
 
+  // -----------------------------------------------------------------------
+  //! \name Communication advance
+  // -----------------------------------------------------------------------
+  void poll();
 
+  // -----------------------------------------------------------------------
+  //! \name Synchronization
+  // -----------------------------------------------------------------------
+  void barrier();
+
+  // -----------------------------------------------------------------------
+  //! \name Memory allocation for DMA operation
+  // -----------------------------------------------------------------------
+  /** Allocate memory for rdma operation through this device.
+      \param size the size in byte of the request memory region
+      \return a pointer to a memory region that contains at least size bytes.
+      \return 0 iff no memory of that size can be allocated
+      \see deallocate
+  */
+  void* allocate( size_t size );
+
+  /** Translate an address of a logical address space to the virtual address space
+      \param the address in the logical address space
+      \param size the size in byte of the request memory region
+      \return a pointer to a memory region that contains at least size bytes.
+      \return 0 iff no memory of that size can be allocated
+      \see deallocate
+  */
+  void* bind( uintptr_t addr, size_t size );
+  
+  /** Deallocate a memory region allocated by 'allocate'
+      \param addr to the memory to deallocate
+      \see allocate
+  */
+  void deallocate( void* addr );
+
+  /** Return the segment info for the RDMA memory on gid 
+  */  
+  SegmentInfo get_seginfo( GlobalId gid ) const;
+  //@}
+  
   // -----------------------------------------------------------------------
   //! \name Routing
   // -----------------------------------------------------------------------
@@ -191,11 +230,21 @@ public:
   /** Return the number of known node
   */
   size_t size() const;
+
+  /** Return the identifier of the running process
+  */
+  GlobalId local_gid() const
+  { return _local_gid; }
+
+  /** Return the identifier of the running process
+  */
+  void set_local_gid(GlobalId  gid)
+  { _local_gid = gid; }
   
   /** Return the url to be broadcast if other node want to connect to this node
   */
   const char* get_urlconnect( ) const
-       throw (IOError);
+       throw (ComFailure);
 
   /** Return the device of the address
   */
@@ -205,9 +254,10 @@ public:
   */
   static Network object;
 
-//protected:
+protected:
   typedef std::set<const char*>  ListUrls; 
-  
+
+  GlobalId                       _local_gid;
   std::map<GlobalId,ListUrls*>   _gid2urls;       ///< global to list of its url
   std::map<GlobalId,OutChannel*> _gid2channel;    ///< global to default channel lookup table
   std::map<std::string,Device*>  _name2device;    ///< map name->device

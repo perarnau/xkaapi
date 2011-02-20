@@ -40,19 +40,20 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
 #include "kagasnet_device.h"
 #include "kagasnet_channel.h"
 #include "kanet_network.h"
 #include "ka_init.h"
 #include <string.h>
 #include <stdlib.h>
+#include <sstream>
+#include <stdint.h>
 
 namespace GASNET {
 
 // --------------------------------------------------------------------
 
-#define KAAPI_SEGSZ_REQUEST 4096
+#define KAAPI_SEGSZ_REQUEST  GASNET_PAGESIZE
 #define KAAPI_MINHEAPOFFSET 4096*128
 
 // --------------------------------------------------------------------
@@ -72,25 +73,52 @@ Device::~Device()
 }
 
 // --------------------------------------------------------------------
-int Device::initialize()
+int Device::initialize(int* argc, char*** argv)
 {
   int err;
 
+  _ack_term = 0;
+  
   gasnet_handlerentry_t htable[] = { 
     { kaapi_gasnet_service_call_id,     (void (*)())kaapi_gasnet_service_call  }
   };
   
-  err = gasnet_init(&ka::System::saved_argc, (char***)&ka::System::saved_argv);
+  err = gasnet_init(argc, argv);
   GASNET_SAFE( err );
+  
+  /* segment size: default 4MBytes */
+  uintptr_t seg_size = 4194304;
+  const char* sseg_size = gasnet_getenv("KAAPI_NETWORK_SEGMENT");
+  if (sseg_size !=0)
+  {
+    seg_size = atoi(sseg_size);
+    
+  }
 
+  /* multiple of GASNET_PAGESIZE */
+  seg_size = ((seg_size + GASNET_PAGESIZE-1)/GASNET_PAGESIZE) * GASNET_PAGESIZE;
 
   GASNET_SAFE(gasnet_attach(htable, sizeof(htable)/sizeof(gasnet_handlerentry_t),
-                            KAAPI_SEGSZ_REQUEST, KAAPI_MINHEAPOFFSET));
+                            seg_size, KAAPI_MINHEAPOFFSET));
 
+  /* Get base address for all segments (gasnet configure is GASNET_ALIGN_SEGMENTS ==1) */
+  _seginfo = new gasnet_seginfo_t[gasnet_nodes()];
+  gasnet_getSegmentInfo( _seginfo, gasnet_nodes());
+  _segaddr = _seginfo[gasnet_mynode()].addr;
+  _segsize = _seginfo[gasnet_mynode()].size;
+  _segsp   = 0;
+
+#if 0
+  std::cout << gasnet_mynode() << "::[gasnet] #nodes :" << gasnet_nodes() << std::endl;
+  std::cout << gasnet_mynode() << "::[gasnet] seginfo @:" << _segaddr
+            << ", size:" << _segsize
+            << std::endl;
+#endif
+  
   _state.write(S_INIT);
 
-  err = pthread_create(&_tid, 0, &Device::skeleton, this);
-  kaapi_assert(err ==0);
+//  err = pthread_create(&_tid, 0, &Device::skeleton, this);
+//  kaapi_assert(err ==0);
 
   return 0;
 }
@@ -113,9 +141,8 @@ int Device::commit()
   
   ka::Init::set_local_gid( _wcom_rank );
   
-  gasnet_barrier_notify (1, GASNET_BARRIERFLAG_ANONYMOUS );
-  err = gasnet_barrier_wait (1, GASNET_BARRIERFLAG_ANONYMOUS );
-  GASNET_SAFE( err );
+  barrier();
+
   return 0;
 }
 
@@ -124,32 +151,29 @@ int Device::commit()
 int Device::terminate()
 {
   int err;
-  printf("%i::Device should stop\n", ka::System::local_gid);
-  fflush(stdout);
+#if 0
+  printf("%i::[gasnet] begin terminate\n", _wcom_rank); fflush(stdout);
+#endif
   
-  gasnet_barrier_notify (1, GASNET_BARRIERFLAG_ANONYMOUS );
-  err = gasnet_barrier_wait (1, GASNET_BARRIERFLAG_ANONYMOUS );
-  GASNET_SAFE( err );
+  barrier();
 
-  printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
-  fflush(stdout);
-  
-  if (ka::System::local_gid ==0)
+  if (_wcom_rank ==0)
   {
     for (int i=1; i<_wcom_size; ++i)
     {
       ka::OutChannel* channel = ka::Network::object.get_default_local_route(i);
       kaapi_assert( channel != 0 );
       channel->sync();
-      printf("%i::Send term message to:%s\n", ka::System::local_gid,  channel->get_peer_url());
-      fflush(stdout);
     }
   }
-  printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
-  fflush(stdout);
-  
-  err = pthread_join(_tid, 0);
-  kaapi_assert(err ==0);
+
+  barrier();
+#if 0
+  printf("%i::[gasnet] end terminate\n", _wcom_rank); fflush(stdout);
+#endif
+
+//  err = pthread_join(_tid, 0);
+//  kaapi_assert(err ==0);
   _state.write(S_TERM);
   
   gasnet_exit(0);
@@ -163,6 +187,29 @@ int Device::abort()
   _state.write(S_ERROR);
   gasnet_exit( EINTR );
   return 0;
+}
+
+
+// --------------------------------------------------------------------
+void Device::poll() 
+{
+  int err;
+#if 0
+  if (_wcom_rank !=0)
+  {
+    printf("%i::[gasnet] poll\n", _wcom_rank); fflush(stdout);
+  }
+#endif
+  err = gasnet_AMPoll();    
+  kaapi_assert( (err == GASNET_OK) );
+}
+
+
+// --------------------------------------------------------------------
+void Device::barrier() 
+{
+  gasnet_barrier_notify(0,GASNET_BARRIERFLAG_ANONYMOUS);  
+  GASNET_SAFE(gasnet_barrier_wait(0,GASNET_BARRIERFLAG_ANONYMOUS));
 }
 
 

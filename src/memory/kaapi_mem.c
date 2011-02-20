@@ -47,7 +47,6 @@
 #include "kaapi_mem.h"
 
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
 
 #include <cuda.h>
 #include "../machine/cuda/kaapi_cuda_error.h"
@@ -93,6 +92,7 @@ static inline void put_cuda_context_by_asid
   /* todo, lock */
 }
 
+#if 0 //* does not compile with default configure
 static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
 {
   return &proc->mem_map;
@@ -107,8 +107,9 @@ static inline kaapi_mem_map_t* get_self_mem_map(void)
 {
   return get_proc_mem_map(kaapi_get_current_processor());
 }
+#endif
 
-static int kaapi_mem_map_find_with_asid
+int kaapi_mem_map_find_with_asid
 (kaapi_mem_map_t* map, kaapi_mem_addr_t addr,
  kaapi_mem_asid_t asid, kaapi_mem_mapping_t** mapping)
 {
@@ -133,18 +134,70 @@ static int kaapi_mem_map_find_with_asid
   return -1;
 }
 
-#endif
+static kaapi_cuda_proc_t* get_cu_context(void)
+{
+  size_t count = kaapi_count_kprocessors;
+  kaapi_processor_t** proc = kaapi_all_kprocessors;
+  CUresult res;
+
+  for (; count; --count, ++proc)
+  {
+    if ((*proc)->proc_type == KAAPI_PROC_TYPE_CUDA)
+    {
+      kaapi_cuda_proc_t* const cu_proc = &(*proc)->cuda_proc;
+
+      pthread_mutex_lock(&cu_proc->ctx_lock);
+      res = cuCtxPushCurrent(cu_proc->ctx);
+      if (res == CUDA_SUCCESS) return cu_proc;
+      pthread_mutex_unlock(&cu_proc->ctx_lock);
+    }
+  }
+
+  return NULL;
+}
+
+static void put_cu_context(kaapi_cuda_proc_t* cu_proc)
+{
+  cuCtxPopCurrent(&cu_proc->ctx);
+  pthread_mutex_unlock(&cu_proc->ctx_lock);
+}
+
+void* kaapi_mem_alloc_host(size_t size)
+{
+  /* allocate host memory needed for async transfers.
+     the first cuda mem asid is used since a context
+     is needed to perform the allocation.
+     todo: create a dedicated one for the host
+   */
+
+  kaapi_cuda_proc_t* const cu_proc = get_cu_context();
+
+  void* hostptr;
+  CUresult res;
+
+  if (cu_proc == NULL) return NULL;
+
+  res = cuMemHostAlloc(&hostptr, size, CU_MEMHOSTALLOC_PORTABLE);
+
+  put_cu_context(cu_proc);
+
+  if (res != CUDA_SUCCESS) return NULL;
+
+  return hostptr;
+}
+
+void kaapi_mem_free_host(void* hostptr)
+{
+  kaapi_cuda_proc_t* const cu_proc = get_cu_context();
+  if (cu_proc == NULL) return ;
+  cuMemFreeHost(hostptr);
+  put_cu_context(cu_proc);
+}
+
 #endif /* KAAPI_USE_CUDA */
 
 
 /* exported */
-
-int kaapi_mem_map_initialize(kaapi_mem_map_t* map, kaapi_mem_asid_t asid)
-{
-  map->asid = asid;
-  map->head = NULL;
-  return 0;
-}
 
 void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
 {
@@ -331,7 +384,6 @@ void kaapi_mem_delete_host_mappings
 }
 
 #if defined(KAAPI_USE_CUDA)
-#if KAAPI_USE_CUDA
 
 void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
 {
@@ -450,5 +502,33 @@ int kaapi_mem_synchronize3(kaapi_mem_mapping_t* mapping, size_t size)
   return 0;
 }
 
-#endif
 #endif /* KAAPI_USE_CUDA */
+
+
+#if 1 /* TEMP_FUNCTIONS */
+
+void* kaapi_mem_find_host_addr(kaapi_mem_addr_t addr)
+{
+  /* addr the address a mapping is looked for in the host */
+
+  /* self info */
+  kaapi_processor_t* const self_proc = kaapi_get_current_processor();
+  kaapi_mem_map_t* const self_map = get_proc_mem_map(self_proc);
+  const kaapi_mem_asid_t self_asid = self_map->asid;
+
+  kaapi_mem_map_t* const host_map = get_host_mem_map();
+
+  kaapi_mem_mapping_t* pos;
+  for (pos = host_map->head; pos != NULL; pos = pos->next)
+  {
+    if (kaapi_mem_mapping_has_addr(pos, self_asid))
+    {
+      if (kaapi_mem_mapping_get_addr(pos, self_asid) == addr)
+	return (void*)kaapi_mem_mapping_get_addr(pos, host_map->asid);
+    }
+  }
+
+  return NULL;
+}
+
+#endif /* TEMP_FUNCTIONS */

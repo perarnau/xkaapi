@@ -61,6 +61,8 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
+  if (kaapi_count_kprocessors <2) return 0;
+  
   /* allocate reply data on the stack */
   reply = &kproc->thread->static_reply;
   
@@ -102,6 +104,9 @@ redo_select:
     if (kaapi_reply_test( reply ) ) 
       goto return_value;
 
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
     kaapi_slowdown_cpu();
   }
 #else /* cannot rely on kaapi_sched_trylock... */
@@ -111,6 +116,9 @@ acquire:
   {
     if (kaapi_reply_test( reply )) 
       goto return_value;
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
     kaapi_slowdown_cpu();
   }
   goto acquire;

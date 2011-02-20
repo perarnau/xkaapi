@@ -40,15 +40,13 @@ struct doit {
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskWRW> (ka::SetPartition(0)) ( a,b );
-    threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( a );
-    threadgroup.Spawn<TaskR>  (ka::SetPartition(1))  ( b );
+    threadgroup.Spawn<TaskWRW> (ka::SetPartition(0)) ( a, b );
+    threadgroup.Spawn<TaskR>   (ka::SetPartition(1)) ( a );
+    threadgroup.Spawn<TaskR>   (ka::SetPartition(1)) ( b );
 
-    threadgroup.Spawn<TaskWRW> (ka::SetPartition(1)) ( a,b );
-    threadgroup.Spawn<TaskR>  (ka::SetPartition(0))  ( a );
-    threadgroup.Spawn<TaskR>  (ka::SetPartition(0))  ( b );
-
-    threadgroup.print();    
+    threadgroup.Spawn<TaskWRW> (ka::SetPartition(1)) ( a, b );
+    threadgroup.Spawn<TaskR>   (ka::SetPartition(0)) ( a );
+    threadgroup.Spawn<TaskR>   (ka::SetPartition(0)) ( b );
 
     threadgroup.end_partition();
 
@@ -70,8 +68,8 @@ int main( int argc, char** argv )
 
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const std::exception& E) {
+    ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;

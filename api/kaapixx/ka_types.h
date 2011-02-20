@@ -41,420 +41,131 @@
 ** terms.
 ** 
 */
-#ifndef _ATHA_TYPES_H_
-#define _ATHA_TYPES_H_
+#ifndef _KAAPI_XX__TYPES_H_
+#define _KAAPI_XX__TYPES_H_
 
 #include "kaapi.h"
 #include "ka_error.h"
 #include "ka_debug.h"
-#include <typeinfo>
-#include <iosfwd>
-#if not defined (_WIN32)
-#include <sys/uio.h>
-#include <arpa/inet.h>
-#endif
-
-#if defined(HAVE_NETINET_IN_H)
-#include <netinet/in.h>
-#endif
 
 /** \namespace ka
     \brief The atha namespace contains definitions to port the library onto an operating system
 */
 namespace ka {
 
-//@{
-
-/** Return an system wide identifier of the type of an expression
-*/
-#define kaapi_get_swid(EXPR) kaapi_hash_value(typeid(EXPR).name())
-//@}
-
-
 // -------------------------------------------------------------------------
-/** Compatibility
+/** Compatibility with kaapi type kaapi_globalid_t
 */
-typedef uint32_t GlobalId;
+typedef kaapi_globalid_t GlobalId;
 
-
-// -------------------------------------------------------------------------
-/** \name Pointer
-    \author T. Gautier 
-    \brief Type for a global pointer
-    \ingroup Misc
-    
-    Util::Pointer is the type to represent a generic pointer into one of
-    the address space of a set of process on differents architecture. 
-    The size in bits of the Util::Pointer is at least enough to represent any 
-    of the LocalPointer of the architecture.
-    The current implementation is to represent any pointer as a 64 bits long
-    integer. Thus a remote pointer is close to an 64 bits integer.
-*/
-class Pointer {
-public:
-  /** Default constructor 
+  /* C++ atomics encapsulation, low level memory routines 
+     * only specialized for signed 32 bits and 64 bits integer
   */
-  Pointer() : ptr(0) {}
-
-  /** Constructor from an 64 bits unsigned integer
-  */
-  Pointer(uint64_t v) : ptr(v) {}
-
-  /** return 64 bits unsigned integer
-  */
-  operator uint64_t() const { return ptr; }
-
-  /** Test operators 
-  */
-  //@{
-  /** Return true if remote pointer is equal to an integer
-  */
-  bool operator==(const unsigned long long v) const
-  { return (ptr == v); }
+  template<int bits>
+  struct atomic_t;
   
-  /** Return true if remote pointer is not equal to an integer
-  */
-  bool operator!=(const unsigned long long v) const
-  { return (ptr != v); }
-
-  /** Return true if remote pointer is equal to an integer
-  */
-  bool operator==(const unsigned long v) const
-  { return (ptr == v); }
-  
-  /** Return true if remote pointer is not equal to an integer
-  */
-  bool operator!=(const unsigned long v) const
-  { return (ptr != v); }
-
-  /** Return true if remote pointer is equal to an integer
-  */
-  bool operator==(const unsigned int v) const
-  { return (ptr == v); }
-  
-  /** Return true if remote pointer is not equal to an integer
-  */
-  bool operator!=(const unsigned int v) const
-  { return (ptr != v); }
-
-  /** Return true if remote pointer is equal to a local pointer
-  */
-  bool operator==(const void* lp) const
-  { return (ptr == (uintptr_t)lp); }
-  
-  /** Return true if remote pointer is not equal to a local pointer
-  */
-  bool operator!=(const void* lp) const
-  { return (ptr != (uintptr_t)lp); }
-  
-  /** Return true if two remote pointers are equals.
-  */
-  bool operator==(const Pointer& rp) const
-  { return (ptr == rp.ptr); }
-  
-  /** Return true if two remote pointers are not equals.
-  */
-  bool operator!=(const Pointer& rp) const
-  { return (ptr != rp.ptr); }
-
-  /** Return true if two remote pointers are equals.
-  */
-  bool operator<(const Pointer& rp) const
-  { return ptr < rp.ptr; }
-  //@}
-  
-  
-  /** Arithmetic operators
-  */
-  //@{
-  /** 
-  */
-  Pointer& operator+=( const unsigned long long v )
-  { ptr += v; return *this; }
-  Pointer& operator+=( const long long v )
-  { ptr += v; return *this; }
-  Pointer& operator+=( const unsigned long v )
-  { ptr += v; return *this; }
-  Pointer& operator+=( const long v )
-  { ptr += v; return *this; }
-  Pointer& operator+=( const unsigned int v )
-  { ptr += v; return *this; }
-  Pointer& operator+=( const int v )
-  { ptr += v; return *this; }
-
-  /** 
-  */
-  Pointer operator+( const unsigned long long v ) const
-  { Pointer retval = ptr + v; return retval; }
-  Pointer operator+( const long long v ) const
-  { Pointer retval = ptr + v; return retval; }
-  Pointer operator+( const unsigned long v ) const
-  { Pointer retval = ptr + v; return retval; }
-  Pointer operator+( const long v ) const
-  { Pointer retval = ptr + v; return retval; }
-  Pointer operator+( const unsigned int v ) const
-  { Pointer retval = ptr + v; return retval; }
-  Pointer operator+( const int v ) const
-  { Pointer retval = ptr + v; return retval; }
-
-  /** 
-  */
-  Pointer& operator-=( const unsigned long long v )
-  { ptr -= v; return *this; }
-  Pointer& operator-=( const long long v )
-  { ptr -= v; return *this; }
-  Pointer& operator-=( const unsigned long v )
-  { ptr -= v; return *this; }
-  Pointer& operator-=( const long v )
-  { ptr -= v; return *this; }
-  Pointer& operator-=( const unsigned int v )
-  { ptr -= v; return *this; }
-  Pointer& operator-=( const int v )
-  { ptr -= v; return *this; }
-
-  /** 
-  */
-  Pointer operator-( const unsigned long long v ) const
-  { Pointer retval = ptr - v; return retval; }
-  Pointer operator-( const long long v ) const
-  { Pointer retval = ptr - v; return retval; }
-  Pointer operator-( const unsigned long v ) const
-  { Pointer retval = ptr - v; return retval; }
-  Pointer operator-( const long v ) const
-  { Pointer retval = ptr - v; return retval; }
-  Pointer operator-( const unsigned int v ) const
-  { Pointer retval = ptr - v; return retval; }
-  Pointer operator-( const int v ) const
-  { Pointer retval = ptr - v; return retval; }
-
-  /** 
-  */
-  unsigned long long operator-( const Pointer& p ) const
-  { unsigned long long retval = ptr - p.ptr; return retval; }
-  //@}
-  
-  /** 
-  */
-  Pointer& operator=(void* l)
-  { 
-    ptr = (uintptr_t)l;
-    return *this; 
-  }
-
-  /** 
-  */
-  void from_local( void* l)
-  {
-    ptr = (uintptr_t)l;
-  }
-
-  /** Return local pointer */
-  void* to_local()
-  {
-    return (void*)(uintptr_t)ptr;
-  }
-
-  /** Return local pointer */
-  const void* to_local() const
-  { 
-    return (void*)(uintptr_t)ptr; 
-  }  
-public:
-  uint64_t ptr;
-};
-
-inline Pointer operator+( const unsigned long long v, const Pointer& p )
-{ Pointer retval = v + p.ptr; return retval; }
-inline Pointer operator+( const long long v, const Pointer& p )
-{ Pointer retval = v + p.ptr; return retval; }
-inline Pointer operator+( const unsigned long v, const Pointer& p )
-{ Pointer retval = v + p.ptr; return retval; }
-inline Pointer operator+( const long v, const Pointer& p )
-{ Pointer retval = v + p.ptr; return retval; }
-inline Pointer operator+( const unsigned int v, const Pointer& p )
-{ Pointer retval = v + p.ptr; return retval; }
-inline Pointer operator+( const int v, const Pointer& p )
-{ Pointer retval = v + p.ptr; return retval; }
-
-inline Pointer operator-( const unsigned long long v, const Pointer& p )
-{ Pointer retval = v - p.ptr; return retval; }
-inline Pointer operator-( const long long v, const Pointer& p )
-{ Pointer retval = v - p.ptr; return retval; }
-inline Pointer operator-( const unsigned long v, const Pointer& p )
-{ Pointer retval = v - p.ptr; return retval; }
-inline Pointer operator-( const long v, const Pointer& p )
-{ Pointer retval = v - p.ptr; return retval; }
-inline Pointer operator-( const unsigned int v, const Pointer& p )
-{ Pointer retval = v - p.ptr; return retval; }
-inline Pointer operator-( const int v, const Pointer& p )
-{ Pointer retval = v - p.ptr; return retval; }
-
-
-
-// -------------------------------------------------------------------------
-// --------- Conversion of long double -------------------------------------
-
-#define MANTISSA_MAXSIZE 14 // bytes ( 14 minimum for ieee quadruple)
-typedef int32_t exptype;
-
-enum LongDoubleFormat {
-  IEEE_DOUBLE      = 0,
-  IEEE_EXTENDED_12 = 1,
-  IEEE_EXTENDED_16 = 2,
-  IEEE_QUADRUPLE   = 3,
-  PPC_QUADWORD     = 4,
-  NB_FORMAT        = 5 // leave in last position = number of format
-};
-
-
-class Sign {
-  friend class LongDouble;
-  private:
-    bool _positive; 
-    
-    void get(LongDoubleFormat f, unsigned char *r);
-    void set(LongDoubleFormat f, unsigned char *r);
-};
-
-
-class Exponent {
-  friend class LongDouble;
-  private:
-    exptype _exp;  
-    
-    void get(LongDoubleFormat f, unsigned char *r);
-    void set(LongDoubleFormat f, unsigned char *r);
-};
-
-
-class Mantissa {
-  friend class LongDouble;
-  private:
-    unsigned char _mant[MANTISSA_MAXSIZE];
-    
-    void get(LongDoubleFormat f, unsigned char *r);
-    void set(LongDoubleFormat f, unsigned char *r);
-    void clear();
-    void shift_left();
-    void shift_right(bool b);
-};
-
-enum LongDoubleType {
-  LD_NORMAL,
-  LD_INFINITY,
-  LD_NAN,
-  LD_ZERO
-};
-
-class LongDouble {
-  private:
-    LongDoubleType _type;
-    Sign _sign;
-    Exponent _exp;
-    Mantissa _mant;
-
-    static LongDoubleFormat local_format;
-    static LongDoubleFormat compute_local_format();
-    
-    void get(LongDoubleFormat f, unsigned char *r);
-    void set(LongDoubleFormat f, unsigned char *r);
-
-    void debug(const char *s);
-  
+  template<>
+  class atomic_t<32> {
   public:
-    static LongDoubleFormat get_local_format();
-    static size_t get_size(LongDoubleFormat f);
+    atomic_t<32>(int32_t value =0)
+    { 
+#if defined(__i386__)||defined(__x86_64)
+      kaapi_assert_debug( ((unsigned long)&_atom & (32/8-1)) == 0 ); 
+#endif
+      KAAPI_ATOMIC_WRITE(&_atom, value);
+    }
+
+    int32_t read() const 
+    { return KAAPI_ATOMIC_READ(&_atom); }
+
+    void write( int32_t value ) 
+    { KAAPI_ATOMIC_WRITE(&_atom, value); }
     
-    static void conversion(LongDoubleFormat from, LongDoubleFormat to, unsigned char *r);
-    static void conversion_from_local_to(LongDoubleFormat to, unsigned char *r);
-    static void conversion_to_local_from(LongDoubleFormat to, unsigned char *r);
-};
-
-inline LongDoubleFormat LongDouble::get_local_format()
-{
-  return local_format;
-}
-
-
-// ----------------------------------------------------------------------
-/** \brief Defines the characteristics of the processor usefull for heterogeneous data transfer.
-    \ingroup Serialization
-*/
-class Architecture {
-public:
-  uint8_t _archi;
-
-  Architecture(uint8_t a = 0) : _archi(a) {};
-
-  operator uint8_t() const {
-    return _archi;
-  }
-
-  uint8_t operator()() const {
-    return _archi;
-  }
-  
-  void set_local();
-  
-  bool is_bigendian();
-
-  int get_sizeof_long();
-
-  int get_sizeof_bool();
-
-/* TODO
-  LongDoubleFormat get_formatof_longdouble();
-*/
-};
-
-
-// --------------------------------------------------------------------
-/** Interface to alloctor used by allocate method
-*/
-class InterfaceAllocator {
-public:
-  virtual ~InterfaceAllocator();
-  virtual void* allocate( size_t ) =0;
-};
-
-/** Interface to dealloctor used by deallocate method
-*/
-class InterfaceDeallocator {
-public:
-  virtual ~InterfaceDeallocator();
-  virtual void deallocate( void* ) =0;
-};
-
-
-// --------------------------------------------------------------------
-/*   
- *
- */
-inline bool Architecture::is_bigendian()
-{ return ((_archi & 0x01) == 0x01); }
-
-inline int Architecture::get_sizeof_long()
-{
-  if ((_archi & 0x02) == 0x02) {
-    return 8;
-  } else {
-    return 4;
-  }
-}
-
-inline int Architecture::get_sizeof_bool()
-{
-  if ((_archi & 0x04) == 0x04) {
-    return 4;
-  } else {
-    return 1;
-  }
-}
+    void write_barrier( int32_t value ) 
+    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
     
-/* TODO
-inline LongDoubleFormat Architecture::get_formatof_longdouble()
-{ return (LongDoubleFormat)(_archi >> 3); }
-*/
+    bool cas( int32_t oldvalue, int32_t newvalue )
+    { return KAAPI_ATOMIC_CAS( &_atom, oldvalue, newvalue ); }
 
+    int32_t incr( )
+    { return KAAPI_ATOMIC_INCR( &_atom ); }
+
+    int32_t sub( int32_t v )
+    { return KAAPI_ATOMIC_SUB( &_atom, v ); }
+
+    int32_t fetch_and_or( int32_t mask )
+    { return KAAPI_ATOMIC_OR_ORIG( &_atom, mask ); }
+
+    int32_t fetch_and_and( int32_t mask )
+    { return KAAPI_ATOMIC_AND_ORIG( &_atom, mask ); }
+
+    int32_t fetch_and_xor( int32_t mask )
+    { return KAAPI_ATOMIC_XOR_ORIG( &_atom, mask ); }
+
+    int32_t or_and_fetch( int32_t mask )
+    { return KAAPI_ATOMIC_OR( &_atom, mask ); }
+
+    int32_t and_and_fetch( int32_t mask )
+    { return KAAPI_ATOMIC_AND( &_atom, mask ); }
+
+    int32_t xor_and_fetch( int32_t mask )
+    { return KAAPI_ATOMIC_XOR( &_atom, mask ); }
+
+  protected:
+    kaapi_atomic32_t _atom;
+  };
+
+
+  template<>
+  class atomic_t<64> {
+  public:
+    atomic_t<64>(int64_t value =0)
+    { 
+      KAAPI_ATOMIC_WRITE(&_atom, value);
+#if defined(__i386__)||defined(__x86_64)
+      kaapi_assert_debug( ((unsigned long)this & (64/8-1)) == 0 ); 
+#endif
+    }
+
+    int64_t read() const 
+    { return KAAPI_ATOMIC_READ(&_atom); }
+
+    void write( int64_t value )
+    { KAAPI_ATOMIC_WRITE(&_atom, value); }
+    
+    void write_barrier( int64_t value ) 
+    { KAAPI_ATOMIC_WRITE_BARRIER(&_atom, value); }
+        
+    bool cas( int64_t oldvalue, int64_t newvalue )
+    { return KAAPI_ATOMIC_CAS64( &_atom, oldvalue, newvalue ); }
+
+    int64_t incr( )
+    { return KAAPI_ATOMIC_INCR64( &_atom ); }
+
+    int64_t sub( int64_t v )
+    { return KAAPI_ATOMIC_SUB64( &_atom, v ); }
+
+    int64_t fetch_and_or( int64_t mask )
+    { return KAAPI_ATOMIC_OR64_ORIG( &_atom, mask ); }
+
+    int64_t fetch_and_and( int64_t mask )
+    { return KAAPI_ATOMIC_AND64_ORIG( &_atom, mask ); }
+
+    int64_t fetch_and_xor( int64_t mask )
+    { return KAAPI_ATOMIC_XOR64_ORIG( &_atom, mask ); }
+
+    int64_t or_and_fetch( int64_t mask )
+    { return KAAPI_ATOMIC_OR64( &_atom, mask ); }
+
+    int64_t and_and_fetch( int64_t mask )
+    { return KAAPI_ATOMIC_AND64( &_atom, mask ); }
+
+    int64_t xor_and_fetch( int64_t mask )
+    { return KAAPI_ATOMIC_XOR64( &_atom, mask ); }
+
+  protected:
+    kaapi_atomic64_t _atom;
+  };
+  
 }
 #endif

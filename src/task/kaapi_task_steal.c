@@ -289,10 +289,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
         if ((war_param & (1<<i)) !=0)
         { 
           /* allocate new data */
+          kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, orig_task_args);
 #if defined(KAAPI_DEBUG)
-          copy_access_param.data    = calloc(1, kaapi_format_get_size_param(fmt, i, orig_task_args));
+          copy_access_param.data    = calloc(1, kaapi_memory_view_size(&view));
 #else
-          copy_access_param.data    = malloc(kaapi_format_get_size_param(fmt, i, orig_task_args));
+          copy_access_param.data    = malloc(kaapi_memory_view_size(&view));
 #endif
           if (fmt_param->cstor !=0) {
             (*fmt_param->cstor)(copy_access_param.data);

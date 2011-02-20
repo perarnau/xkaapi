@@ -40,11 +40,10 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
 #include "kampinet_device.h"
 #include "kampinet_channel.h"
 #include "kanet_network.h"
-#include "ka_init.h"
+#include <sstream>
 #include <string.h>
 #include <stdlib.h>
 #include <mpi.h>
@@ -70,18 +69,16 @@ Device::~Device()
 }
 
 // --------------------------------------------------------------------
-int Device::initialize()
+int Device::initialize(int* argc, char*** argv)
 {
   int err;
 #if 0 
-  err = MPI_Init(&ka::System::saved_argc, (char***)&ka::System::saved_argv);
+  err = MPI_Init(argc, argv);
 #else
   int provided;
-  err= MPI_Init_thread(&ka::System::saved_argc, (char***)&ka::System::saved_argv, MPI_THREAD_MULTIPLE, &provided);
+  err= MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided != MPI_THREAD_MULTIPLE)
-  {
-    std::cerr << "****Warning the MPI implementation may not work with multithreaded process" << std::endl;
-  }
+    return ENXIO;
 #endif
   kaapi_assert( err == MPI_SUCCESS);
   _comm = MPI_COMM_WORLD;    
@@ -111,7 +108,7 @@ int Device::commit()
     ka::Network::object.add_node(i, surl.str().c_str());
   }
   
-  ka::Init::set_local_gid( _wcom_rank );
+  ka::Network::object.set_local_gid( _wcom_rank );
   return 0;
 }
 
@@ -120,13 +117,7 @@ int Device::commit()
 int Device::terminate()
 {
   int err;
-  printf("%i::Device should stop\n", ka::System::local_gid);
-  fflush(stdout);
-  
-  printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
-  fflush(stdout);
-  
-  if (ka::System::local_gid ==0)
+  if (_wcom_rank ==0)
   {
     for (int i=1; i<_wcom_size; ++i)
     {
@@ -134,13 +125,9 @@ int Device::terminate()
       kaapi_assert( channel != 0 );
       channel->insert_am( &service_term, 0, 0);
       channel->sync();
-      printf("%i::Send term message to:%s\n", ka::System::local_gid,  channel->get_peer_url());
-      fflush(stdout);
     }
   }
-  printf("%i::all devices have reach the barrier\n", ka::System::local_gid);
-  fflush(stdout);
-  
+    
   err = pthread_join(_tid, 0);
   kaapi_assert(err ==0);
   _state.write(S_TERM);
@@ -161,6 +148,20 @@ int Device::abort()
   return 0;
 }
 
+
+// --------------------------------------------------------------------
+void Device::poll() 
+{
+  int err =0;
+  kaapi_assert( (err == 0) );
+}
+
+// --------------------------------------------------------------------
+void Device::barrier() 
+{
+  int err =0;
+  kaapi_assert( (err == 0) );
+}
 
 // --------------------------------------------------------------------
 ka::OutChannel* Device::open_channel( const char* url )

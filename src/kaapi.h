@@ -57,13 +57,15 @@
 #  include <winnt.h>
 #endif
 
-#if !defined(__SIZEOF_POINTER__)
-#  if defined(__ILP64__) || defined(__LP64__) || defined(__P64__) || defined(__x86_64__)
-#    define __SIZEOF_POINTER__ 8
-#  elif defined(__i386__) || (defined(__powerpc__) && !defined(__powerpc64__))
-#    define __SIZEOF_POINTER__ 4
+#if (__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)
+#  if !defined(__SIZEOF_POINTER__)
+#    if defined(__LP64__)
+#      define __SIZEOF_POINTER__ 8
+#    else
+#      error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
+#    endif
 #  else
-#    error KAAPI not ready for this architechture. Report to developpers.
+#    error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
 #  endif
 #endif
 
@@ -95,6 +97,7 @@ extern "C" {
 
 /* Kaapi types.
  */
+typedef uint32_t kaapi_globalid_t;
 typedef uint32_t kaapi_processor_id_t;
 typedef uint64_t kaapi_affinity_t;
 typedef uint32_t kaapi_format_id_t;
@@ -115,7 +118,8 @@ struct kaapi_format_t;
 struct kaapi_processor_t;
 struct kaapi_request_t;
 struct kaapi_reply_t;
-
+struct kaapi_tasklist_t;
+  
 /** Atomic type
 */
 typedef struct kaapi_atomic32_t {
@@ -150,7 +154,7 @@ typedef struct kaapi_atomic64_t {
 #  include <libkern/OSAtomic.h>
 static inline void kaapi_writemem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
@@ -162,7 +166,7 @@ static inline void kaapi_writemem_barrier()
 
 static inline void kaapi_readmem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
@@ -175,7 +179,7 @@ static inline void kaapi_readmem_barrier()
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
-#  ifdef __PPC
+#  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
@@ -253,7 +257,7 @@ static inline void kaapi_mem_barrier()
    \retval 0 in case of sucsess
    \retval EALREADY if already called
 */
-extern int kaapi_init(void);
+extern int kaapi_init(int* argc, char*** argv);
 
 /* Kaapi finalization. 
    After call to this functions all other kaapi function calls may not success.
@@ -306,10 +310,10 @@ typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
 /** Processor type
 */
-#define KAAPI_PROC_TYPE_HOST    0x0
-#define KAAPI_PROC_TYPE_CUDA    0x1
-#define KAAPI_PROC_TYPE_MPSOC   0x2
-#define KAAPI_PROC_TYPE_MAX     3
+#define KAAPI_PROC_TYPE_HOST    0x1
+#define KAAPI_PROC_TYPE_CUDA    0x2
+#define KAAPI_PROC_TYPE_MPSOC   0x3
+#define KAAPI_PROC_TYPE_MAX     0x4
 #define KAAPI_PROC_TYPE_CPU     KAAPI_PROC_TYPE_HOST
 #define KAAPI_PROC_TYPE_GPU     KAAPI_PROC_TYPE_CUDA
 #define KAAPI_PROC_TYPE_DEFAULT KAAPI_PROC_TYPE_HOST
@@ -450,9 +454,10 @@ extern struct kaapi_format_t* kaapi_double_format;
     We only expose the field to push task or data.
 */
 typedef struct kaapi_thread_t {
-    struct kaapi_task_t* pc;
-    struct kaapi_task_t* sp;
-    char*                sp_data;
+    struct kaapi_task_t*     pc;
+    struct kaapi_task_t*     sp;
+    char*                    sp_data;
+    struct kaapi_tasklist_t* tasklist;  /* Not null -> list of ready task, see static_sched.h */
 } kaapi_thread_t;
 
 
@@ -461,9 +466,10 @@ typedef struct kaapi_thread_t {
    Same structure as kaapi_thread_t but we keep different type names to avoid automatic conversion.
 */
 typedef struct kaapi_frame_t {
-    struct kaapi_task_t* pc;
-    struct kaapi_task_t* sp;
-    char*                sp_data;
+    struct kaapi_task_t*     pc;
+    struct kaapi_task_t*     sp;
+    char*                    sp_data;
+    struct kaapi_tasklist_t* tasklist;  /* Not null -> list of ready task, see static_sched.h */
 } kaapi_frame_t;
 
 
@@ -479,7 +485,8 @@ typedef struct kaapi_thread_context_t {
 struct kaapi_threadgrouprep_t {
   /* public part */
   kaapi_thread_t**           threads;      /* array on top frame of each threadctxt, array[-1] = mainthread */
-  int                        group_size;   /* number of threads in the group */
+  int32_t                    grpid;        /* group identifier */
+  int32_t                    group_size;   /* number of threads in the group */
 };
 #else
 struct kaapi_threadgrouprep_t;
@@ -496,16 +503,20 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 */
 typedef struct kaapi_task_t {
 #if (__SIZEOF_POINTER__ == 4)
-  kaapi_task_bodyid_t     body;      /** task body  */
-  volatile uintptr_t      state;     /** bit */
+  struct task_and_body {
+    kaapi_task_bodyid_t     body;      /** task body  */
+    kaapi_atomic32_t        state;     /** bit */
+  } u;
 #else
   union task_and_body {
     kaapi_task_bodyid_t   body;      /** task body  */
-    volatile uintptr_t    state;     /** bit */
+    kaapi_atomic64_t      state;     /** bit */
   } u;
 #endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
+
+#define kaapi_task_getuserbody( t ) (t)->u.body
 
 
 /* ========================================================================= */
@@ -927,6 +938,19 @@ static inline int kaapi_task_init
   return 0;
 }
 
+
+/** \ingroup TASK
+    The function clear the contents of a frame
+    \retval EINVAL invalid argument: bad pointer.
+*/
+static inline int kaapi_frame_clear( kaapi_frame_t* fp)
+{
+  fp->pc = fp->sp = 0;
+  fp->sp_data = 0;
+  fp->tasklist = 0;
+  return 0;
+}
+
 /** \ingroup TASK
     The function kaapi_thread_save_frame() saves the current frame of a stack into
     the frame data structure.
@@ -958,6 +982,13 @@ extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 */
 extern int kaapi_sched_sync( void );
 
+/** Change rerepresentation of the task inside a frame in order
+    to build a tasklist that contains ready tasks and tasks that will
+    be activated by ready tasks.
+    The execution of the frame should then be only be considered using
+    kaapi_thread_execframe_tasklist
+*/
+extern int kaapi_sched_computereadylist( void );
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
@@ -1336,58 +1367,76 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /* ========================================================================= */
 /* API for graph partitioning                                                */
 /* ========================================================================= */
+/** Identifier to an address space id
+*/
+typedef uint64_t  kaapi_address_space_id_t;
+
 
 /** Create a thread group with size threads. 
+    Mapping function should be set at creation step. 
+    For each thread tid of the group, the function mapping is called with:
+      mapping(ctxt_mapping, nodecount, tid) -> (gid, proctype)
+    in order to defines the site gid and the kind of architecture that will executes the thread tid.
+    The value ctxt_mapping is a user defined data structure that can be used to hold
+    parameter for computing the mapping.
+    If mapping ==0, then the default runtime mapping if a 1-block cyclic distribution scheme (round robin).
     Return 0 in case of success or the error code.
+    
+A REVOIR: quid si (gid) n'a pas une architecture cible
 */
-extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size );
+extern int kaapi_threadgroup_create(kaapi_threadgroup_t* thgrp, int size, 
+  kaapi_address_space_id_t (*mapping)(void*, int /*nodecount*/, int /*tid*/),
+  void* ctxt_mapping
+);
+
 
 /**
 */
-extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp );
+#define KAAPI_THGRP_DEFAULT_FLAG  0
+#define KAAPI_THGRP_SAVE_FLAG     0x1
+extern int kaapi_threadgroup_begin_partition(kaapi_threadgroup_t thgrp, int flag );
 
-/** Check and compute dependencies if task 'task' is pushed into the i-th partition
-    \return EINVAL if task does not have format
+
+/**
 */
-extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int partitionid, kaapi_task_t* task);
+void kaapi_threadgroup_force_archtype(kaapi_threadgroup_t group, unsigned int part, unsigned int type);
+
+/**
+*/
+void kaapi_threadgroup_force_kasid(kaapi_threadgroup_t group, unsigned int part, unsigned int arch, unsigned int user);
+
+/**
+*/
+extern int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int maxstep );
+
+/** Check and compute dependencies for task 'task' to be pushed into the tid-th partition.
+    On return the task is pushed into the partition if it is local for the execution.
+    \return ESRCH if the task is not pushed because the tid-th partition is not local
+    \return 0 in case of success
+    \return other value due to error
+*/
+extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, kaapi_task_t* task);
+
+/** Check and compute dependencies for task 'task' to be pushed into the tid-th partition.
+    On return the task is pushed into the partition if it is local for the execution.
+    \return ESRCH if the task is not pushed because the tid-th partition is not local
+    \return 0 in case of success
+    \return other value due to error
+*/
+extern int kaapi_thread_online_computedep(kaapi_thread_t* thread, int tid, kaapi_task_t* task);
 
 #if !defined(KAAPI_COMPILE_SOURCE)
 /**
 */
-static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int partitionid ) 
+static inline kaapi_thread_t* kaapi_threadgroup_thread( kaapi_threadgroup_t thgrp, int tid ) 
 {
   kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
+  kaapi_assert_debug( (tid>=-1) && (tid<thgrp->group_size) );
+  kaapi_thread_t* thread = thgrp->threads[tid];
   return thread;
 }
-
-/** Equiv to kaapi_thread_toptask( thread ) 
-*/
-static inline kaapi_task_t* kaapi_threadgroup_toptask( kaapi_threadgroup_t thgrp, int partitionid ) 
-{
-  kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
-
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
-  return kaapi_thread_toptask(thread);
-}
-
-static inline int kaapi_threadgroup_pushtask( kaapi_threadgroup_t thgrp, int partitionid )
-{
-  kaapi_assert_debug( thgrp !=0 );
-  kaapi_assert_debug( (partitionid>=-1) && (partitionid<thgrp->group_size) );
-  kaapi_thread_t* thread = thgrp->threads[partitionid];
-  kaapi_assert_debug( thread !=0 );
-  
-  /* la tache a pousser est pointee par thread->sp, elle n'est pas encore pousser et l'on peut
-     calculer les dépendances (appel au bon code)
-  */
-  kaapi_threadgroup_computedependencies( thgrp, partitionid, thread->sp );
-  
-  return kaapi_thread_pushtask(thread);
-}
 #endif /* !defined(KAAPI_COMPILE_SOURCE) */
+
 
 /**
 */
@@ -1399,15 +1448,19 @@ extern int kaapi_threadgroup_begin_execute(kaapi_threadgroup_t thgrp );
 
 /**
 */
-extern int kaapi_threadgroup_begin_step(kaapi_threadgroup_t thgrp );
-
-/**
-*/
-extern int kaapi_threadgroup_end_step(kaapi_threadgroup_t thgrp );
-
-/**
-*/
 extern int kaapi_threadgroup_end_execute(kaapi_threadgroup_t thgrp );
+
+
+/** Memory synchronization with copies to the original memory
+*/
+extern int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp );
+
+#if 0
+/** Memory synchronization with copies to the original memory for a
+    specific set of data
+*/
+extern int kaapi_threadgroup_synchronize(kaapi_threadgroup_t thgrp );
+#endif
 
 /**
     \retval 0 in case of success
@@ -1452,6 +1505,16 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 
 
+/** Body of the task in charge of finalize of adaptive task
+    \ingroup TASK
+*/
+typedef struct kaapi_staticschedtask_arg_t {
+  void*               sub_sp;   /* encapsulated task */
+  kaapi_task_bodyid_t sub_body; /* encapsulated body */
+  int                 npart;    /* number of partition */
+} kaapi_staticschedtask_arg_t;
+
+extern void kaapi_staticschedtask_body( void*, kaapi_thread_t* );
 
 /* ========================================================================= */
 /* THE workqueue to be used with adaptive interface                          */
@@ -1486,7 +1549,7 @@ typedef struct {
 */
 static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
 {
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)
   kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
   kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
 #else
@@ -1535,6 +1598,29 @@ static inline unsigned int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
 {
   kaapi_workqueue_index_t size = kwq->end - kwq->beg;
   return size <= 0;
+}
+
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    The function push work into the workqueue.
+    Assuming that before the call, the workqueue is [beg,end).
+    After the successful call to the function the workqueu becomes [newbeg,end).
+    newbeg is assumed to be less than beg. Else it is a pop operation, see kaapi_workqueue_pop.
+    Return 0 in case of success 
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapi_workqueue_push(
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t newbeg
+)
+{
+  if ( kwq->beg  > newbeg )
+  {
+    kaapi_mem_barrier();
+    kwq->beg = newbeg;
+    return 0;
+  }
+  return EINVAL;
 }
 
 
@@ -1588,7 +1674,7 @@ static inline int kaapi_workqueue_pop(
 /** This function should only be called into a splitter to ensure correctness
     the lock of the victim kprocessor is assumed to be locked to handle conflict.
     Return 0 in case of success 
-    Return ERANGE is the queue is empty or less than requested size.
+    Return ERANGE if the queue is empty or less than requested size.
  */
 static inline int kaapi_workqueue_steal(
   kaapi_workqueue_t* kwq, 
@@ -1668,7 +1754,7 @@ static inline int kaapi_workqueue_steal(
 
 /* Counter type
 */
-typedef long long kaapi_perf_counter_t;
+typedef int64_t kaapi_perf_counter_t;
 
 /* Value
 */
@@ -1725,6 +1811,51 @@ extern size_t kaapi_perf_counter_num(void);
 /* ========================================================================= */
 /* Format declaration & registration                                         */
 /* ========================================================================= */
+/** Type of allowed memory view for the memory interface:
+    - 1D array (base, size)
+      simple contiguous 1D array
+    - 2D array (base, size[2], lda)
+      assume a row major storage of the memory : the 2D array has
+      size[0] rows of size[1] rowwidth. lda is used to pass from
+      one row to the next one.
+    The base (kaapi_pointer_t) is not part of the view description
+*/
+#define KAAPI_MEMORY_VIEW_1D 1
+#define KAAPI_MEMORY_VIEW_2D 2  /* assume row major */
+#define KAAPI_MEMORY_VIEW_3D 3
+typedef struct kaapi_memory_view_t {
+  int    type;
+  size_t size[2];
+  size_t lda;
+  size_t wordsize;
+} kaapi_memory_view_t;
+
+
+static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t wordsize)
+{
+  kaapi_memory_view_t retval;
+  retval.type     = KAAPI_MEMORY_VIEW_1D;
+  retval.size[0]  = size;
+  retval.wordsize = wordsize;
+#if defined(KAAPI_DEBUG)
+  retval.size[1] = 0;
+  retval.lda = 0;
+#endif
+  return retval;
+}
+
+static inline kaapi_memory_view_t kaapi_memory_view_make2d(size_t n, size_t m, size_t lda, size_t wordsize)
+{
+  kaapi_memory_view_t retval;
+  retval.type     = KAAPI_MEMORY_VIEW_2D;
+  retval.size[0]  = n;
+  retval.size[1]  = m;
+  retval.lda      = lda;
+  retval.wordsize = wordsize;
+  return retval;
+}
+
+
 /** \ingroup TASK
     Allocate a new format data
 */
@@ -1748,39 +1879,47 @@ extern kaapi_format_id_t kaapi_format_register(
     \param mode_param, an array of size count given the access mode for each param
     \param offset_param, an array of size count given the offset of the data from the pointer to the argument of the task
     \param offset_version, an array of size count given the offset of the version (if any)
+    \param offset_cwflag, an array of size count given the offset of the cw special flag (if any)
     \param fmt_param, an array of size count given the format of each param
     \param size_param, an array of size count given the size of each parameter.
 */
 extern kaapi_format_id_t kaapi_format_taskregister_static( 
-        struct kaapi_format_t*      fmt,
-        kaapi_task_body_t           body,
-        const char*                 name,
-        size_t                      size,
-        int                         count,
-        const kaapi_access_mode_t   mode_param[],
-        const kaapi_offset_t        offset_param[],
-        const kaapi_offset_t        offset_version[],
-        const struct kaapi_format_t*fmt_param[],
-        const size_t                size_param[],
-        const kaapi_reducor_t       reducor_param[]
+    struct kaapi_format_t*      fmt,
+    kaapi_task_body_t           body,
+    kaapi_task_body_t           bodywh,
+    const char*                 name,
+    size_t                      size,
+    int                         count,
+    const kaapi_access_mode_t   mode_param[],
+    const kaapi_offset_t        offset_param[],
+    const kaapi_offset_t        offset_version[],
+    const kaapi_offset_t        offset_cwflag[],
+    const struct kaapi_format_t*fmt_param[],
+    const kaapi_memory_view_t   view_param[],
+    const kaapi_reducor_t       reducor_param[]
 );
 
 /** \ingroup TASK
     Register a task format with dynamic definition
 */
 extern kaapi_format_id_t kaapi_format_taskregister_func( 
-        struct kaapi_format_t*       fmt, 
-        kaapi_task_body_t            body,
-        const char*                  name,
-        size_t                       size,
-        size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
-        kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-        void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
-        void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
-        const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-        size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-        void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
+    struct kaapi_format_t*       fmt, 
+    kaapi_task_body_t            body,
+    kaapi_task_body_t            bodywh,
+    const char*                  name,
+    size_t                       size,
+    size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
+    kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+    int*                        (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*),
+    kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+    void                        (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int ),
+    const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+    kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
+    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
+    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
 );
 
 /** \ingroup TASK
@@ -1790,11 +1929,19 @@ extern void kaapi_format_set_task_body
 (struct kaapi_format_t*, unsigned int, kaapi_task_body_t);
 
 /** \ingroup TASK
-    Register a task body into its format
+    Register a task body into its format.
+    A task may have multiple implementation this function specifies in 'archi'
+    the target archicture for the body.
+    
+    Internally, in case of caching task, it may be necessary to call the
+    entry of a task with parameter that does not directly points to a data,
+    but to a handle that points to the data. 
+    This body (bodywh) is automatically generated in the C++ interface.
 */
 extern kaapi_task_body_t kaapi_format_taskregister_body( 
         struct kaapi_format_t*      fmt,
         kaapi_task_body_t           body,
+        kaapi_task_body_t           bodywh, /* or 0 */
         int                         archi
 );
 
@@ -1835,7 +1982,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister_static( formatobject(), fnc_body, name, ##__VA_ARGS__, 0 /* for reduction operators not supported in C */);\
+    kaapi_format_taskregister_static( formatobject(), fnc_body, 0, name, ##__VA_ARGS__,  0 /* for reduction operators not supported in C */);\
   }
 
 

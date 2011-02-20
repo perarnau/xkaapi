@@ -20,13 +20,14 @@ libkaapi_la_SOURCES=\
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \
   misc/kaapi_hashvalue.c \
-  misc/kaapi_hashmap.h\
   misc/kaapi_hashmap.c \
   misc/kaapi_hashmap_find.c \
   misc/kaapi_hashmap_insert.c \
   misc/kaapi_hashmap_findinsert.c \
-  misc/kaapi_thread_clear.c \
+  misc/kaapi_hashmap_big.c \
+  misc/kaapi_hashmap_big_findinsert.c \
   misc/kaapi_malloc_align.c \
+  misc/kaapi_allocator_allocate.c \
   misc/kaapi_wq_slowpop.c\
   misc/kaapi_wq_set.c\
   misc/kaapi_cpuset2str.c\
@@ -43,12 +44,19 @@ libkaapi_la_SOURCES=\
   kaapi_machine.h \
   kaapi.h \
   kaapi_impl.h \
+  kaapi_network.h \
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \
   machine/common/kaapi_hw_selftopo.c \
+  kaapi_memory.h \
+  memory/kaapi_memory.c \
+  memory/kaapi_memory_copy.c \
+  memory/kaapi_memory_allocate.c \
+  memory/kaapi_memory_bind.c \
+  memory/kaapi_memory_get_version.c \
+  memory/kaapi_memory_find_writer.c \
   memory/kaapi_mem.h \
-  memory/kaapi_mem.c \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_rand_f0.c \
   workstealing/kaapi_sched_select_workload_rand.c \
@@ -63,19 +71,35 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_lready.c \
   workstealing/kaapi_sched_wsqueue.c 
 
+#  memory/kaapi_mem.c 
+
+
 #Libtask
 libkaapi_la_SOURCES+=\
-  task/kaapi_thread_print.c \
-  task/kaapi_thread_execframe.c \
-  task/kaapi_thread_saveframe.c \
+  kaapi_tasklist.h\
+  thread/kaapi_tasklist.c \
+  thread/kaapi_thread_dfg_print.c \
+  thread/kaapi_thread_rdl_print.c \
+  thread/kaapi_thread_dfgdot_print.c \
+  thread/kaapi_thread_saveframe.c \
+  thread/kaapi_thread_clear.c \
+  thread/kaapi_thread_execframe.c \
+  thread/kaapi_thread_execframe_tasklist.c \
+  thread/kaapi_thread_readylist_generic_execframe.c \
+  thread/kaapi_thread_signalend_exec.c \
+  thread/kaapi_thread_computereadylist.c \
+  thread/kaapi_thread_computeready_access.c \
+  thread/kaapi_thread_compute_date.c \
+  thread/kaapi_thread_checkdeps.c \
+  thread/kaapi_thread_taskmovealloc.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
   task/kaapi_task_splitter_dfg.c \
   task/kaapi_task_splitter_adapt.c \
-  task/kaapi_task_pushstealcontext.c\
-  task/kaapi_task_adapt_allocateresult.c\
-  task/kaapi_task_adapt_deallocateresult.c\
+  task/kaapi_task_pushstealcontext.c \
+  task/kaapi_task_adapt_allocateresult.c \
+  task/kaapi_task_adapt_deallocateresult.c \
   task/kaapi_task_adap_body.c \
   task/kaapi_task_initadap.c \
   task/kaapi_task_reqreply.c \
@@ -83,27 +107,37 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preempt_tail.c \
   task/kaapi_task_preempt_thief.c \
   task/kaapi_task_preemptpoint.c \
-  task/kaapi_task_finalize.c
+  task/kaapi_task_finalize.c \
+  static/kaapi_stsched_tasksetstatic.c \
+  static/kaapi_threadgroup_nothgrp.c \
+  ../network/kaapi_network.cpp
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
 libkaapi_la_SOURCES+=\
-  static/kaapi_threadgroup_checkdeps.c\
-  static/kaapi_threadgroup_version.c\
-  static/kaapi_threadgroup_veralloc.c\
-  static/kaapi_threadgroup_taskbcast.c\
-  static/kaapi_threadgroup_taskrecv.c\
-  static/kaapi_threadgroup_taskrecvbcast.c\
-  static/kaapi_threadgroup_tasksignal.c\
-  static/kaapi_threadgroup_create.c\
-  static/kaapi_threadgroup_destroy.c\
-  static/kaapi_threadgroup_partition.c\
-  static/kaapi_threadgroup_exec.c\
-  static/kaapi_threadgroup_saverestore.c\
-  static/kaapi_threadgroup_print.c\
-  static/kaapi_threadgroup_vect.c\
-  kaapi_staticsched.h 
+  kaapi_partition.h\
+  static/kaapi_stsched_create.c\
+  static/kaapi_stsched_destroy.c\
+  static/kaapi_stsched_initthread.c\
+  static/kaapi_stsched_checkdeps.c\
+  static/kaapi_stsched_taskrecv.c\
+  static/kaapi_stsched_taskbcast.c\
+  static/kaapi_stsched_partition.c\
+  static/kaapi_stsched_tasksignal.c
 endif
+
+# static/kaapi_threadgroup_partition_barrier.c\
+  static/kaapi_threadgroup_version_new.c\
+  static/kaapi_threadgroup_version_find.c\
+  static/kaapi_threadgroup_version_reader.c\
+  static/kaapi_threadgroup_version_writer.c\
+  static/kaapi_threadgroup_version_cumulwriter.c\
+  static/kaapi_threadgroup_exec.c\
+  static/kaapi_threadgroup_execframe.c\
+  static/kaapi_threadgroup_print.c\
+  static/kaapi_threadgroup_saverestore.c\
+  static/kaapi_threadgroup_synchronize.c
+
 
 if KAAPI_TARGET_MT
 libkaapi_la_SOURCES+=\
@@ -132,7 +166,10 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_func.h \
   machine/cuda/kaapi_cuda_func.c \
   machine/cuda/kaapi_cuda_execframe.h \
-  machine/cuda/kaapi_cuda_execframe.c
+  machine/cuda/kaapi_cuda_execframe.c \
+  machine/cuda/kaapi_cuda_threadgroup_execframe.h \
+  machine/cuda/kaapi_cuda_threadgroup_execframe.c \
+  machine/cuda/kaapi_cuda_kasid.c
 endif
 
 include_HEADERS=\

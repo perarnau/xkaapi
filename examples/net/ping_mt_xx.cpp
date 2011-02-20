@@ -78,11 +78,6 @@ int main(int argc, char** argv)
     
     /*
     */
-    ka::Network::object.initialize();
-    ka::Network::object.commit();
-    
-    /*
-    */
     ka::Network::object.dump_info();
     std::cout << "My local_gid is:" << ka::System::local_gid << std::endl << std::flush;    
 
@@ -98,8 +93,10 @@ int main(int argc, char** argv)
       }
       
       /* wait reception of all messages */
-      while (cnt_msg != 20)
+      while (cnt_msg != 20) {
+        ka::Network::object.poll();
         sleep(1);
+      }
     }
       
     ka::Network::object.dump_info();
@@ -111,7 +108,7 @@ int main(int argc, char** argv)
     /* */
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
+  catch (const std::exception& E) {
     ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {

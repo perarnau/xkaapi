@@ -44,7 +44,6 @@
 #define _KANETWORK_INSTR_H
 
 #include "kanet_types.h"
-#include "kaapi++.h"
 
 namespace ka {
 
@@ -84,7 +83,7 @@ struct Callback {
 struct RWInstruction {
   uint64_t     dptr;  /// remote pointer / displacement where to write
   uint64_t     size;  /// size in bytes of the pointed memory
-  const void*        lptr;  /// pointer on the local bloc to send
+  const void*  lptr;  /// pointer on the local bloc to send
 };
 
 
@@ -96,7 +95,7 @@ struct RWInstruction {
 struct AMInstruction {
   uint64_t     handler;  /// handler of the service (function to call)
   uint64_t     size;     /// size in byte of the pointed memory
-  const void*        lptr;     /// points on the bloc of data for the AM
+  const void*  lptr;     /// points on the bloc of data for the AM
 };
 
 
@@ -166,8 +165,8 @@ public:
   */
   void insert_rwdma(   
       uint64_t     dptr,  /// remote pointer / displacement where to write
-      const void*        lptr,  /// pointer on the local bloc to send
-      uint32_t     size   /// size in bytes of the pointed memory
+      const void*  lptr,  /// pointer on the local bloc to send
+      size_t       size   /// size in bytes of the pointed memory
   );
 
   /** Insert a Remote Write DMA operation with callback
@@ -175,28 +174,28 @@ public:
   */
   void insert_rwdma(   
       uint64_t     dptr,  /// remote pointer / displacement where to write
-      const void*        lptr,  /// pointer on the local bloc to send
-      uint32_t     size,  /// size in bytes of the pointed memory
-      Callback_fnc       cbk,   /// Type of the call back function
-      void*              arg    /// The argument of the callback function 
+      const void*  lptr,  /// pointer on the local bloc to send
+      size_t       size,  /// size in bytes of the pointed memory
+      Callback_fnc cbk,   /// Type of the call back function
+      void*        arg    /// The argument of the callback function 
   );
   
   /** Insert a AM operation.
   */
   void insert_am(   
-      Service_fnc        handler,/// handler of the service (function to call)
-      const void*        lptr,   /// points on the bloc of data for the AM
-      uint32_t     size    /// size in byte of the pointed memory
+      Service_fnc  handler,/// handler of the service (function to call)
+      const void*  lptr,   /// points on the bloc of data for the AM
+      size_t       size    /// size in byte of the pointed memory
   );
 
   /** Insert a AM operation with call back
   */
   void insert_am(   
-      Service_fnc        handler,/// handler of the service (function to call)
-      const void*        lptr,   /// points on the bloc of data for the AM
-      uint32_t     size,   /// size in byte of the pointed memory
-      Callback_fnc       cbk,    /// Type of the call back function
-      void*              arg     /// The argument of the callback function 
+      Service_fnc  handler,/// handler of the service (function to call)
+      const void*  lptr,   /// points on the bloc of data for the AM
+      size_t       size,   /// size in byte of the pointed memory
+      Callback_fnc cbk,    /// Type of the call back function
+      void*        arg     /// The argument of the callback function 
   );
 
   /** Insert a Write Memory Barrier: disable write ops posted after the barrier to be
@@ -207,8 +206,8 @@ public:
   /** Insert a Write Memory Barrier with callback
   */
   void insert_wb(   
-      Callback_fnc    cbk,    /// Type of the call back function
-      void*           arg     /// The argument of the callback function 
+      Callback_fnc cbk,    /// Type of the call back function
+      void*        arg     /// The argument of the callback function 
   );
 
   /** Insert a nop
@@ -218,8 +217,8 @@ public:
   /** Insert a nop with callback
   */
   void insert_nop(   
-      Callback_fnc    cbk,    /// Type of the call back function
-      void*           arg     /// The argument of the callback function 
+      Callback_fnc cbk,    /// Type of the call back function
+      void*        arg     /// The argument of the callback function 
   );
 
   /** Synchronize the stream
@@ -260,29 +259,30 @@ protected:
   };
   
   struct FlipFlopBloc {
-    StateBuffer_t            _state;      /// state
-    Instruction*             _start;      /// first instruction in the buffer
-    Instruction*             _last;       /// past the last instruction in the buffer
+    StateBuffer_t      _state;      /// state
+    Instruction*       _start;      /// first instruction in the buffer
+    Instruction*       _last;       /// past the last instruction in the buffer
     int32_t            _pos_w;      /// next position for writing an entry in _start
     int32_t            _pos_r;      /// next position to read
+
     void swap( InstructionStream& is )
     {
       std::swap(_start,    is._start);
       std::swap(_last,     is._last);
       std::swap(_pos_r,    is._pos_r);
       int32_t pos_w_tmp = _pos_w;
-      _pos_w                  = is._pos_w.read();
+      _pos_w            = is._pos_w.read();
       kaapi_writemem_barrier();
       is._pos_w.write(pos_w_tmp);
     }
   };
   
-  kaapi_atomic_t           _lock;       ///
-  FlipFlopBloc             _tosend;     /// cpy of data member of instruction to sent
-  Instruction*             _start;      /// first instruction in the buffer
-  Instruction*             _last;       /// past the last instruction in the buffer
+  kaapi_atomic_t     _lock;       ///
+  FlipFlopBloc       _tosend;     /// cpy of data member of instruction to sent
+  Instruction*       _start;      /// first instruction in the buffer
+  Instruction*       _last;       /// past the last instruction in the buffer
   int32_t            _capacity;   /// capacity of the circular buffer
-  ka::atomic_t<32>         _pos_w __attribute__((aligned(64/8))); /// next position for writing an entry in _start
+  ka::atomic_t<32>   _pos_w __attribute__((aligned(64/8))); /// next position for writing an entry in _start
   int32_t            _pos_r;      /// next position to read
 };
 
@@ -297,8 +297,8 @@ inline bool InstructionStream::isfull() const
 
 inline void InstructionStream::insert_rwdma(   
       uint64_t     dptr,
-      const void*        lptr,
-      uint32_t     size 
+      const void*  lptr,
+      size_t       size 
   )
 {
   if (isfull()) switch_buffer();
@@ -316,10 +316,10 @@ inline void InstructionStream::insert_rwdma(
 
 inline void InstructionStream::insert_rwdma(   
       uint64_t     dptr,
-      const void*        lptr,
-      uint32_t     size, 
-      Callback_fnc       cbk,
-      void*              arg 
+      const void*  lptr,
+      size_t       size, 
+      Callback_fnc cbk,
+      void*        arg 
   )
 {
   if (isfull()) switch_buffer();
@@ -336,9 +336,9 @@ inline void InstructionStream::insert_rwdma(
 }
 
 inline void InstructionStream::insert_am(   
-      Service_fnc        handler,
-      const void*        lptr,
-      uint32_t     size
+      Service_fnc  handler,
+      const void*  lptr,
+      size_t       size
   )
 {
   if (isfull()) switch_buffer();
@@ -355,11 +355,11 @@ inline void InstructionStream::insert_am(
 }
 
 inline void InstructionStream::insert_am(   
-      Service_fnc        handler,
-      const void*        lptr,
-      uint32_t     size, 
-      Callback_fnc       cbk,
-      void*              arg 
+      Service_fnc  handler,
+      const void*  lptr,
+      size_t       size, 
+      Callback_fnc cbk,
+      void*        arg 
   )
 {
   if (isfull()) switch_buffer();

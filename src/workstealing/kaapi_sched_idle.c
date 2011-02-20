@@ -45,6 +45,10 @@
 ** 
 */
 #include "kaapi_impl.h"
+#if defined(KAAPI_USE_CUDA)
+# include "../../machine/cuda/kaapi_cuda_execframe.h"
+# include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
+#endif
 
 /* \TODO: voir ici si les fonctions (a adapter si besoin): makecontext, getcontext, setcontext 
    seront suffisante dans le cas d'un suspend durant l'execution d'une tâche.
@@ -63,7 +67,10 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
   do {
-
+#if defined(KAAPI_USE_NETWORK)
+      kaapi_network_poll();
+#endif
+    
     /* terminaison ? */
     if (kaapi_isterminated())
     {
@@ -80,7 +87,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       {
         /* push kproc context into free list */
         kaapi_sched_lock(&kproc->lock);
-        kaapi_lfree_push( kproc, kproc->thread );
+	if (kproc->thread) kaapi_lfree_push( kproc, kproc->thread );
         kaapi_sched_unlock(&kproc->lock);
 
         /* set new context to the kprocessor */
@@ -89,9 +96,13 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       }
     }
 
+#warning "TODO: thread is detached"
+    if (kproc->thread == 0) continue ;
+
     /* steal request */
     kaapi_assert_debug( kproc->thread !=0 );
     ctxt = kproc->thread;
+    thread =0;
     thread = kaapi_sched_emitsteal( kproc );
 
     if (thread ==0) 
@@ -117,10 +128,18 @@ redo_execute:
 
 #if defined(KAAPI_USE_CUDA)
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
-      err = kaapi_cuda_execframe( kproc->thread );
+    {
+      if (kproc->thread->sfp->tasklist == 0)
+	err = kaapi_cuda_execframe( kproc->thread );
+      else /* assumed kaapi_threadgroup_execframe */
+	err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+    }
     else
 #endif /* KAAPI_USE_CUDA */
-    err = kaapi_thread_execframe( kproc->thread );
+    if (kproc->thread->sfp->tasklist ==0)
+      err = kaapi_thread_execframe(kproc->thread);
+    else
+      err = kaapi_thread_execframe_tasklist( kproc->thread );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
@@ -128,6 +147,10 @@ redo_execute:
 
     if (err == EWOULDBLOCK) 
     {
+#if defined(KAAPI_USE_NETWORK)
+      kaapi_network_poll();
+#endif
+
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
@@ -156,7 +179,7 @@ redo_execute:
        from a thread at the end of an iteration. See kaapi_thread_execframe kaapi_tasksignalend_body
        Previous code: without the test else if () {... }
     */
-    else if (err == EINTR) 
+    else if ((err == ECHILD) || (err == EINTR))
     {
       /* used to detach the thread of the processor in order to reuse it ... */
       ctxt = kaapi_context_alloc(kproc);

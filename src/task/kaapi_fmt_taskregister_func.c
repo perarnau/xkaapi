@@ -51,16 +51,21 @@
 kaapi_format_id_t kaapi_format_taskregister_func( 
     struct kaapi_format_t*        fmt, 
     kaapi_task_body_t             body,
+    kaapi_task_body_t             bodywh,
     const char*                   name,
     size_t                        size,
     size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
     kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+    int*                        (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*),
     kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+    void                        (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int),
     const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-    size_t                      (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
+    kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
+    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
+    kaapi_reducor_t             (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*)
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();
@@ -73,15 +78,19 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->get_count_params = get_count_params;
   fmt->get_mode_param   = get_mode_param;
   fmt->get_off_param    = get_off_param;
+  fmt->get_cwflag       = get_cwflag;
   fmt->get_access_param = get_access_param;
   fmt->set_access_param = set_access_param;
+  fmt->set_cwaccess_param = set_cwaccess_param;
   fmt->get_fmt_param    = get_fmt_param;
-  fmt->get_size_param   = get_size_param;
+  fmt->get_view_param   = get_view_param;
+  fmt->set_view_param   = set_view_param;
   fmt->reducor          = reducor;
+  fmt->get_reducor      = get_reducor;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   
   if (body !=0)
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);
+    kaapi_format_taskregister_body(fmt, body, bodywh, KAAPI_PROC_TYPE_CPU);
   return fmt->fmtid;
 }

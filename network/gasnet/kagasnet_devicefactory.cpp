@@ -62,10 +62,10 @@ const char* DeviceFactory::get_name() const
 
 
 // --------------------------------------------------------------------
-ka::Device* DeviceFactory::create( )
+ka::Device* DeviceFactory::create(int* argc, char*** argv )
 { 
   ka::Device* dev = new GASNET::Device;
-  if (dev->initialize() !=0) {
+  if (dev->initialize(argc, argv) !=0) {
     delete dev;
     return 0;
   }

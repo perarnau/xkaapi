@@ -139,6 +139,10 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #endif
     return 0;
   }
+  for (int i=0; i<KAAPI_MAX_RECCALL; ++i)
+  {
+    kaapi_frame_clear( &ctxt->stackframe[i] );
+  }
 
   kaapi_thread_clear(ctxt);
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

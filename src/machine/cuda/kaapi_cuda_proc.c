@@ -43,7 +43,9 @@
 ** terms.
 ** 
 */
+#include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
+#include "kaapi_cuda_kasid.h"
 #include "kaapi_cuda_error.h"
 
 
@@ -127,6 +129,8 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
     return -1;
   }
 
+  proc->kasid_user = KAAPI_CUDA_KASID_USER_BASE + idev;
+
   proc->is_initialized = 1;
 
   return 0;
@@ -148,4 +152,29 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
   proc->is_initialized = 0;
 
   return 0;
+}
+
+
+size_t kaapi_cuda_get_proc_count(void)
+{
+  /* returns the number of kproc being of cuda type */
+  /* todo: dont walk the kproc list every time, ok for now */
+  kaapi_processor_t** pos = kaapi_all_kprocessors;
+  size_t count = 0;
+  size_t i;
+  for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+    if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA)
+      ++count;
+  return count;
+}
+
+
+unsigned int kaapi_cuda_get_first_kid(void)
+{
+  kaapi_processor_t** pos = kaapi_all_kprocessors;
+  size_t i;
+  for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+    if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA)
+      return (*pos)->kid;
+  return (unsigned int)-1;
 }

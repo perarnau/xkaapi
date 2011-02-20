@@ -71,14 +71,18 @@ static const struct kaapi_format_t* kaapi_format_default_get_fmt_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
 { return f->_fmt_params[i]; }
 
-static size_t kaapi_format_default_get_size_param
+static kaapi_memory_view_t kaapi_format_default_get_view_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
-{ return f->_size_params[i]; }
+{ return f->_view_params[i]; }
 
 
 static void kaapi_format_default_reduce_param 
     (const struct kaapi_format_t* f, unsigned int i, const void* sp, void* result, const void* value)
 { (*f->_reducor_params[i])(result, value); }
+
+static kaapi_reducor_t kaapi_format_default_get_reducor 
+    (const struct kaapi_format_t* f, unsigned int i, const void* sp )
+{ return f->_reducor_params[i]; }
 
 
 /**
@@ -86,14 +90,16 @@ static void kaapi_format_default_reduce_param
 kaapi_format_id_t kaapi_format_taskregister_static( 
         kaapi_format_t*             fmt,
         kaapi_task_body_t           body,
+        kaapi_task_body_t           bodywh,
         const char*                 name,
         size_t                      size,
         int                         count,
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
         const kaapi_offset_t        offset_version[],
+        const kaapi_offset_t        offset_cwflag[],
         const kaapi_format_t*       fmt_param[],
-        const size_t                size_param[],
+        const kaapi_memory_view_t   view_param[],
         const kaapi_reducor_t       reducor_param[]
 )
 {
@@ -115,17 +121,25 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->_off_versions = malloc( sizeof(kaapi_offset_t)*count );
   kaapi_assert( fmt->_off_versions !=0);
   memcpy(fmt->_off_versions, offset_version, sizeof(kaapi_offset_t)*count );
+
+  fmt->_off_cwflag = 0;
+  if (offset_cwflag != 0)
+  {
+    fmt->_off_cwflag = malloc( sizeof(kaapi_offset_t)*count );
+    kaapi_assert( fmt->_off_cwflag !=0);
+    memcpy(fmt->_off_cwflag, offset_cwflag, sizeof(kaapi_offset_t)*count );
+  }
   
   fmt->_fmt_params = malloc( sizeof(kaapi_format_t*)*count );
   kaapi_assert( fmt->_fmt_params !=0);
   memcpy(fmt->_fmt_params, fmt_param, sizeof(kaapi_format_t*)*count );
 
-  fmt->_size_params = 0;
-  if (size_param !=0)
+  fmt->_view_params = 0;
+  if (view_param !=0)
   {
-    fmt->_size_params = malloc( sizeof(size_t)*count );
-    kaapi_assert( fmt->_size_params !=0);
-    memcpy(fmt->_size_params, size_param, sizeof(size_t)*count );
+    fmt->_view_params = malloc( sizeof(kaapi_memory_view_t)*count );
+    kaapi_assert( fmt->_view_params !=0);
+    memcpy(fmt->_view_params, view_param, sizeof(kaapi_memory_view_t)*count );
   }
 
   if (reducor_param !=0)
@@ -142,12 +156,13 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->get_access_param = kaapi_format_default_get_access_param;
   fmt->set_access_param = kaapi_format_default_set_access_param;
   fmt->get_fmt_param    = kaapi_format_default_get_fmt_param;
-  fmt->get_size_param   = kaapi_format_default_get_size_param;
+  fmt->get_view_param   = kaapi_format_default_get_view_param;
   fmt->reducor          = kaapi_format_default_reduce_param;
+  fmt->get_reducor      = kaapi_format_default_get_reducor;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   
   if (body !=0)
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU);
+    kaapi_format_taskregister_body(fmt, body, bodywh, KAAPI_PROC_TYPE_CPU);
   return fmt->fmtid;
 }

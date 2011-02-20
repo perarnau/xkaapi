@@ -119,26 +119,30 @@ FormatTask::FormatTask(
   const kaapi_access_mode_t   mode_param[],
   const kaapi_offset_t        offset_param[],
   const kaapi_offset_t        offset_version[],
+  const kaapi_offset_t        offset_cwflag[],
   const kaapi_format_t*       fmt_param[],
-  const size_t                size_param[],
+  const kaapi_memory_view_t   view_param[],
   const kaapi_reducor_t       reducor_param[]
 ) : Format(0)
 {
   if (fmt ==0)
+  {
     fmt = new kaapi_format_t;
-  kaapi_format_taskregister_static( 
-        fmt,
-        0, 
-        name.c_str(),
-        size,
-        count,
-        mode_param,
-        offset_param,
-        offset_version,
-        fmt_param,
-        size_param,
-        reducor_param
-  );
+    kaapi_format_taskregister_static( 
+          fmt,
+          0, 0,
+          name.c_str(),
+          size,
+          count,
+          mode_param,
+          offset_param,
+          offset_version,
+          offset_cwflag,
+          fmt_param,
+          view_param,
+          reducor_param
+    );
+  }
 }
 
 
@@ -149,29 +153,38 @@ FormatTask::FormatTask(
   size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
   kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
   void*                     (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
+  int*                      (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*),
   kaapi_access_t            (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
   void                      (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
+  void                      (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int),
   const kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-  size_t                    (*get_size_param)  (const struct kaapi_format_t*, unsigned int, const void*),
-  void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*)
+  kaapi_memory_view_t       (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+  void                      (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
+  void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
+  kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
 ) : Format(0)
 {
-  if (fmt ==0)
+  if (fmt ==0) {
     fmt = new kaapi_format_t;
-  kaapi_format_taskregister_func( 
-        fmt,
-        0, 
-        name.c_str(),
-        size,
-        get_count_params,
-        get_mode_param,
-        get_off_param,
-        get_access_param,
-        set_access_param,
-        get_fmt_param,
-/**/    get_size_param,
-        reducor
-  );
+    kaapi_format_taskregister_func( 
+          fmt,
+          0, 0,
+          name.c_str(),
+          size,
+          get_count_params,
+          get_mode_param,
+          get_off_param,
+          get_cwflag,
+          get_access_param,
+          set_access_param,
+          set_cwaccess_param,
+          get_fmt_param,
+  /**/    get_view_param,
+  /**/    set_view_param,
+          reducor,
+          get_reducor
+    );
+  }
 }
 
 

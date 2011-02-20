@@ -31,13 +31,11 @@
     }
 
     template<M4_PARAM(`class E$1', `', `,')>
-    kaapi_task_t* operator()( M4_PARAM(`const E$1& e$1', `', `, ') )
+    void operator()( M4_PARAM(`const E$1& e$1', `', `, ') )
     {
       kaapi_task_t* clo = 
       KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
       _attr(_thread, clo );
-      kaapi_thread_pushtask( _thread );
-      return clo; 
     }

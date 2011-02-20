@@ -66,7 +66,7 @@ public:
   
   /** Return a new device
   */
-  ka::Device* create();
+  ka::Device* create(int* argc, char*** argv);
 };
 
 

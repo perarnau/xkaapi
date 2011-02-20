@@ -45,12 +45,20 @@
 */
 #include "ka_error.h"
 #include "ka_debug.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <iostream>
-#include <iomanip>
-#if not defined(_WIN32)
-#include <execinfo.h>
+#include <iomanip> // setfill
+#include <signal.h>
+#include <stdlib.h> // abort
+#if defined(_WIN32)
+#    define KAAPI_NOT_USE_EXECINFO 1
+#elif defined(__APPLE__)
+#  if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ > 1040)
+#    include <execinfo.h>
+#  else
+#    define KAAPI_NOT_USE_EXECINFO 1
+#  endif
+#else 
+#  include <execinfo.h>
 #endif
 #include <cxxabi.h>
 #include <cstring>
@@ -60,7 +68,7 @@ namespace ka {
 // --------------------------------------------------------------------
 void print_backtrace_c()
 {
-#if not defined(__APPLE__)  && not defined(_WIN32)
+#if not defined(__APPLE__) && not defined(_WIN32)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size;
@@ -181,204 +189,6 @@ void System_abort( const std::string& msg )
   std::cerr << "Abort" << std::endl;
   abort(); // signal SIGABRT, exit and create a core (if allowed)
 }
-
-// --------------------------------------------------------------------
-Exception::Exception() 
- : _code(0) 
-{}
-
-
-// --------------------------------------------------------------------
-Exception::Exception(int errorcode) 
- : _code(errorcode) 
-{}
-
-
-// --------------------------------------------------------------------
-Exception::~Exception() 
-{}
-
-
-// --------------------------------------------------------------------
-std::ostream& Exception::print( std::ostream& o ) const
-{ 
-  return o << this->what(); 
-}
-
-
-// --------------------------------------------------------------------
-const char* Exception::what () const
-{ return "Unknown exception"; }
-
-
-// --------------------------------------------------------------------
-int Exception::code() const
-{ return _code; }
-
-
-// --------------------------------------------------------------------
-RestartException::RestartException()
- : Exception(0)
-{}
-
-// --------------------------------------------------------------------
-ServerException::ServerException()
- : Exception(0)
-{}
-
-// --------------------------------------------------------------------
-RuntimeError::RuntimeError(const std::string& msg, int errorcode) 
- : Exception(errorcode), _msg(msg)
-{}
-
-
-// --------------------------------------------------------------------
-const char* RuntimeError::what () const
-{
-  static char tmp[1024];
-  sprintf(tmp,"%s, code=%i", _msg.c_str(), _code);
-  return tmp;
-}
-
-// --------------------------------------------------------------------
-PosixError::PosixError( const std::string& msg, int errorcode )
- : RuntimeError(msg, errorcode) {}
-
-// --------------------------------------------------------------------
-const char* PosixError::what () const
-{
-  static char tmp[1024];
-  sprintf(tmp,"[Msg=%s, Posix code=%i, Posix msg='%s']", 
-  _msg.c_str(), _code, strerror(_code) );
-  return tmp;
-}
-
-
-// --------------------------------------------------------------------
-#if defined(KAAPI_DEBUG)
-void __Exception_throw(  const Exception& err ) 
-{ 
- // std::cout << "[atha::throw] called:" << err.what() << std::endl;
-}
-#else
-void __Exception_throw(  const Exception& ) 
-{ 
-}
-#endif
-
-
-// --------------------------------------------------------------------
-RangeError::RangeError(const std::string& msg)
- : RuntimeError(msg)
-{}
-
-// --------------------------------------------------------------------
-LogicError::LogicError(const std::string& msg, int errorcode) 
- : Exception(errorcode), _msg(msg) 
-{}
-
-// --------------------------------------------------------------------
-const char* LogicError::what () const
-{ return _msg.c_str(); }
-
-
-// --------------------------------------------------------------------
-InvalidArgumentError::InvalidArgumentError(const std::string& msg, int errorcode)
- : LogicError(msg, errorcode) 
-{}
-
-// --------------------------------------------------------------------
-LengthError::LengthError(const std::string& msg)
- : LogicError(msg) 
-{}
-
-// --------------------------------------------------------------------
-OutOfRangeError::OutOfRangeError(const std::string& msg)
- : LogicError(msg) 
-{}
-
-// --------------------------------------------------------------------
-NoMoreResource::NoMoreResource(const std::string& msg)
- : LogicError(msg) 
-{}
-
-// --------------------------------------------------------------------
-BadAlloc::BadAlloc(const std::string& )
- : NoMoreResource() 
-{}
-
-
-// --------------------------------------------------------------------
-IOError::IOError( const std::string& msg, int errorcode) 
- : RuntimeError(msg, errorcode) 
-{}
-
-// --------------------------------------------------------------------
-EndOfFile::EndOfFile()
- : IOError("End of file", 0)
-{}
-
-// --------------------------------------------------------------------
-ComFailure::ComFailure( Code e )
- : IOError("ComFailure ::", e)
-{ }
-
-
-// --------------------------------------------------------------------
-ComFailure::ComFailure(const char* msg, Code e)
- : IOError(msg,e)
-{}
-
-
-//-------------------------------------------------------------------------
-static const char*  ComErrorErrorMsg []= {
-  "OK", 
-  "FAIL ",
-  "ABORT ",
-  "TRUNCATED ",
-  "NOT_FILLED ",
-  "FATAL ",
-  "NOROUTE ",
-  "NULL_SERVICE ",
-  "BAD OR NULL REQUEST  ",
-  "PANIC ",
-  "NOT_IMPLEMENTED ",
-  "BAD_ADDRESS ",
-  "NO_CONNECTION ",
-  "BAD_PROTOCOL ",
-  "TIMEOUT "
-  "ERR_PIPE ",
-  "HOST_UNREACH ",
-  "HOST_NOTFOUND ",
-  "HOST_NOTADDRESS "
-};
-
-
-//-------------------------------------------------------------------------
-const char* ComFailure::what() const
-{
-  if ( (Code(_code)>=0) && (Code(_code) < LAST_CODE) ) 
-    return ComErrorErrorMsg[_code];
-  else  
-    return "UNDEFINED COMFAILURE ERROR CODE ";  
-}
-
-
-//-------------------------------------------------------------------------
-BadURL::BadURL( )
- : IOError("Bad url of object") 
-{}
-
-
-//-------------------------------------------------------------------------
-AlreadyBind::AlreadyBind( const std::string& msg)
- : InvalidArgumentError( msg ) 
-{}
-
-//-------------------------------------------------------------------------
-NoFound::NoFound( const std::string& msg)
- : InvalidArgumentError( msg ) 
-{}
 
 
 } // - namespace

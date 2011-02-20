@@ -44,6 +44,8 @@
 ** 
 */
 #include <iostream>
+#include <sstream>
+#include <stdlib.h>
 #include "ka_parser.h"
 
 namespace ka {
@@ -268,7 +270,7 @@ void Parser::parse( Properties& initialprop, int& argc, char**& argv )
           mode_option ='w';
           separator = "";
           module_info->print_usage(std::cout);
-          exit(EXIT_SUCCESS);
+          exit(0);
         }
         else {
           std::cerr << "module " << module_name << "is unknown" << std::endl;
@@ -277,7 +279,7 @@ void Parser::parse( Properties& initialprop, int& argc, char**& argv )
 
       // display generic help
       this->print_usage(std::cout);
-      exit(EXIT_SUCCESS);
+      exit(0);
 
     }
 
@@ -285,7 +287,7 @@ void Parser::parse( Properties& initialprop, int& argc, char**& argv )
     {
       std::ofstream file("dump.rc");
       this->dump_rc(file);
-      exit(EXIT_SUCCESS);
+      exit(0);
     }
 
     /* very special options have been managed. Let's go with normal options
@@ -467,31 +469,31 @@ void Parser::add_parser(const Parser& p)
 
 // --------------------------------------------------------------------
 void Parser::add_module(const Parser::Module* mod, Properties* prop)
-    throw(InvalidArgumentError)
+    throw(std::invalid_argument)
 {
   if (mod == 0) return;
   if (prop == 0) return;
   std::string m = mod->get_name();
   if (m == "")
-    Exception_throw( InvalidArgumentError("[Parser::add_module] module has no name") );
+    throw std::invalid_argument("[Parser::add_module] module has no name");
   std::string nm = "--" + m;
   AllModules::iterator curr = _lookup.find(nm);
   ModuleInfo* mi =0;
   if (curr != _lookup.end())
-    Exception_throw( InvalidArgumentError("[Parser::add_module] module already exist") );
+    throw std::invalid_argument("[Parser::add_module] module already exist");
   _lookup.insert( std::make_pair( nm, mi = new ModuleInfo(*mod,prop) ) );
 }
 
 // --------------------------------------------------------------------
 void Parser::add_module(const std::string& m, Properties* prop )
-    throw(InvalidArgumentError)
+    throw(std::invalid_argument)
 {
   if (prop == 0) return;
   std::string nm = "--" + m;
   AllModules::iterator curr = _lookup.find(nm);
   ModuleInfo* mi =0;
   if (curr != _lookup.end())
-    Exception_throw( InvalidArgumentError("[Parser::add_module] module already exist") );
+    throw std::invalid_argument("[Parser::add_module] module already exist");
   _lookup.insert( std::make_pair( nm, mi = new ModuleInfo(prop) ) );
 }
 
@@ -541,11 +543,11 @@ const std::string& Parser::Bool2String( bool v )
   else return s_false;
 }
 
-bool Parser::String2Bool( const std::string& s) throw(InvalidArgumentError)
+bool Parser::String2Bool( const std::string& s) throw(std::out_of_range)
 {
   if (s == "true") return true;
   if (s == "false") return false;
-  Exception_throw( InvalidArgumentError("[String2Bool]") );
+  throw std::out_of_range("string 2 bool");
   return false;
 }
 
@@ -571,7 +573,7 @@ void Parser::String2lstStr( std::list<std::string>& lst, const std::string& s, c
 }
 
 // --------------------------------------------------------------------
-long Parser::String2Long( const std::string& s) throw(InvalidArgumentError)
+long Parser::String2Long( const std::string& s) throw(std::out_of_range)
 {
   long v;
   std::istringstream tmp(s); 
@@ -586,7 +588,7 @@ std::string Parser::Long2String( long v )
 }
 
 // --------------------------------------------------------------------
-unsigned long Parser::String2ULong( const std::string& s) throw(InvalidArgumentError)
+unsigned long Parser::String2ULong( const std::string& s) throw(std::out_of_range)
 {
   unsigned long v;
   std::istringstream tmp(s); 
@@ -602,15 +604,15 @@ std::string Parser::ULong2String( unsigned long v )
 
 
 // --------------------------------------------------------------------
-unsigned long long Parser::String2ULLong( const std::string& s) throw(InvalidArgumentError)
+uint64_t Parser::String2ULLong( const std::string& s) throw(std::out_of_range)
 {
-  unsigned long long v;
+  uint64_t v;
   std::istringstream tmp(s); 
   tmp >> std::ws >> v;
   return v;
 }
 
-std::string Parser::ULLong2String( unsigned long long v )
+std::string Parser::ULLong2String( uint64_t v )
 {
   std::ostringstream tmp; tmp << v;
   return tmp.str();
@@ -618,7 +620,7 @@ std::string Parser::ULLong2String( unsigned long long v )
 
 
 // --------------------------------------------------------------------
-double Parser::String2Double( const std::string& s) throw(InvalidArgumentError)
+double Parser::String2Double( const std::string& s) throw(std::out_of_range)
 {
   double v;
   std::istringstream tmp(s); 

@@ -42,6 +42,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "ka_types.h"
 #include "ka_init.h"
 #include "ka_timer.h"
 #include "ka_error.h"
@@ -102,7 +103,7 @@ const std::string& LogicalTimer::unit()
 // --------------------------------------------------------------------
 HighResTimer::type HighResTimer::gettick()
 {
-#if defined(__PPC__) || defined(__PPC64__)
+#if defined(__ppc__) || defined(__PPC__) || defined(__PPC64__)
   /* Linux or Mac */
   register unsigned long t_u;
   register unsigned long t_l;
@@ -117,6 +118,7 @@ HighResTimer::type HighResTimer::gettick()
   __asm__ volatile ( "rdtsc" : "=a" ( lo ) , "=d" ( hi ) );
   return (uint64_t)hi << 32UL | lo;
 #elif defined(__ia64__)
+#elif defined(KAAPI_USE_ARCH_ITA)
   register unsigned long ret;
   __asm__ __volatile__ ("mov %0=ar.itc" : "=r"(ret));
   return ret;
@@ -197,7 +199,6 @@ void HighResTimer::calibrate()
   /* open cpuinfo and scan cpu Mhz: */
   FILE* file = fopen("/proc/cpuinfo","r");
   double mhz = 1.0;
-  KAAPI_ASSERT_M(file !=0, "Cannot open /proc/cpuinfo");
 
   int retval =0;
   char line[256];

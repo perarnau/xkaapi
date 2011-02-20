@@ -52,7 +52,6 @@ int kaapi_versionallocator_init( kaapi_version_allocator_t* va )
   return 0;
 }
 
-
 /**
 */
 int kaapi_versionallocator_destroy( kaapi_version_allocator_t* va )
@@ -96,7 +95,7 @@ kaapi_version_t* kaapi_versionallocator_allocate( kaapi_version_allocator_t* va 
 
 /**
 */
-int kaapi_part_datainfo_allocator_init( kaapi_part_datainfo_allocator_t* va )
+int kaapi_data_version_allocator_init( kaapi_data_version_allocator_t* va )
 {
   va->allallocatedbloc = 0;
   va->currentbloc = 0;
@@ -106,11 +105,11 @@ int kaapi_part_datainfo_allocator_init( kaapi_part_datainfo_allocator_t* va )
 
 /**
 */
-int kaapi_part_datainfo_allocator_destroy( kaapi_part_datainfo_allocator_t* va )
+int kaapi_data_version_allocator_destroy( kaapi_data_version_allocator_t* va )
 {
   while (va->allallocatedbloc !=0)
   {
-    kaapi_part_datainfo_bloc_t* curr = va->allallocatedbloc;
+    kaapi_data_version_bloc_t* curr = va->allallocatedbloc;
     va->allallocatedbloc = curr->next;
     free (curr);
   }
@@ -122,19 +121,19 @@ int kaapi_part_datainfo_allocator_destroy( kaapi_part_datainfo_allocator_t* va )
 
 /**
 */
-kaapi_part_datainfo_t* kaapi_part_datainfo_allocate(kaapi_threadgroup_t thgrp)
+kaapi_data_version_t* kaapi_data_version_allocate(kaapi_threadgroup_t thgrp)
 {
-  kaapi_part_datainfo_allocator_t* va = &thgrp->part_datainfo_allocator;
+  kaapi_data_version_allocator_t* va = &thgrp->data_version_allocator;
   /* allocate new entry */
   if (va->currentbloc == 0) 
   {
-    va->currentbloc = malloc( sizeof(kaapi_part_datainfo_bloc_t) );
+    va->currentbloc = malloc( sizeof(kaapi_data_version_bloc_t) );
     va->currentbloc->next = va->allallocatedbloc;
     va->allallocatedbloc = va->currentbloc;
     va->currentbloc->pos = 0;
   }
   
-  kaapi_part_datainfo_t* entry = &va->currentbloc->data[va->currentbloc->pos];
+  kaapi_data_version_t* entry = &va->currentbloc->data[va->currentbloc->pos];
   if (++va->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
   {
     va->currentbloc = 0;

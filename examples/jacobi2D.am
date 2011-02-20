@@ -1,0 +1,26 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+
+if KAAPI_API_KAAPIXX
+JACOBI2D_PRGS=jacobi2d_kaapi++
+endif
+
+check_PROGRAMS+=$(JACOBI2D_PRGS)
+
+all-jacobi: $(JACOBI2D_PRGS)
+
+jacobi2d_kaapi___SOURCES=jacobi2D/jacobi2d_kaapi++.cpp
+
+jacobi2d_kaapi___CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+jacobi2d_kaapi___CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+jacobi2d_kaapi___LDFLAGS =$(AM_LDFLAGS)   $(KAAPIXXPROGS_BUILD_LDFLAGS)
+jacobi2d_kaapi___LDADD   =$(LIBS)         $(KAAPIXXPROGS_BUILD_LIBS)
+
+#jacobi2d_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KANETPROGS_BUILD_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+#jacobi2d_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KANETPROGS_BUILD_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+#jacobi2d_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KANETPROGS_BUILD_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+#jacobi2d_kaapi___LDADD   =$(LIBS)        $(KANETPROGS_BUILD_LIBS)     $(KAAPIXXPROGS_BUILD_LIBS)

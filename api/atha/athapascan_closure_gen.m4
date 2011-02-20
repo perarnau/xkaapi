@@ -53,11 +53,12 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_data'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_version'),
+          0,
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format'),
           0,
           0
       );
-    kaapi_format_taskregister_body( task_fmt.get_c_format(), Self_t::body, KAAPI_PROC_TYPE_CPU );
+    kaapi_format_taskregister_body( task_fmt.get_c_format(), Self_t::body, 0, KAAPI_PROC_TYPE_CPU );
       
     return task_fmt.get_c_format();
   }

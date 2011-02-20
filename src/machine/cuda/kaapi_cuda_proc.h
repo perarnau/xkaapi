@@ -48,6 +48,7 @@
 
 
 #include <pthread.h>
+#include <sys/types.h>
 #include <cuda.h>
 
 
@@ -61,11 +62,15 @@ typedef struct kaapi_cuda_proc
 
   int is_initialized;
 
+  unsigned int kasid_user;
+
 } kaapi_cuda_proc_t;
 
 
 int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t*, unsigned int);
 int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t*);
+size_t kaapi_cuda_get_proc_count(void);
+unsigned int kaapi_cuda_get_first_kid(void);
 
 
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

@@ -43,7 +43,6 @@
 #ifndef _MPINET_DEVICE_H_
 #define _MPINET_DEVICE_H_
 
-#include "kaapi++"
 #include "kanet_device.h"
 #include <mpi.h>
 
@@ -72,7 +71,7 @@ public:
 
   /**
   */
-  int initialize();
+  int initialize(int* argc, char*** argv);
 
   /**
   */
@@ -86,6 +85,14 @@ public:
   */
   int abort();
 
+  /**
+  */
+  void poll();
+
+  /**
+  */
+  void barrier();
+
   /** 
   */
   ka::OutChannel* open_channel( const char* url );
@@ -97,6 +104,22 @@ public:
   /** 
   */
   const char* get_urlconnect( ) const;
+
+  /**
+  */
+  void* allocate( size_t size );
+  
+  /**
+  */
+  void deallocate( void* addr );
+
+  /** 
+  */
+  void* bind( uintptr_t addr, size_t size );
+
+  /**
+  */  
+  ka::SegmentInfo get_seginfo( ka::GlobalId gid ) const;
 
 protected:
   /** Infinite loop to read incomming message */

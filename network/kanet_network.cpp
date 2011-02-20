@@ -40,16 +40,15 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 #include "kanet_network.h"
 #include "kanet_channel.h"
 #include "kanet_device.h"
-#include "ka_parser.h"
+#if 0   // parsing of the list of strings of network name
+#include "ka_parser.h" 
+#endif
+#include "kaapi_error.h" // assert 
 #include <iostream>
-#include <iomanip>
-#include <string>
-#include <map>
-#include <vector>
+#include <sstream>
 
 
 namespace ka {
@@ -69,8 +68,8 @@ Network::~Network()
 }
 
 // ---------------------------------------------------------------------------
-void Network::initialize( )
-    throw (RuntimeError)
+void Network::initialize( int* argc, char*** argv )
+    throw (std::runtime_error)
 {
   _gid2channel.clear();
   _name2device.clear();
@@ -82,6 +81,7 @@ void Network::initialize( )
   const char* lnet = getenv("KAAPI_NETWORK");
   if (lnet)
   {
+#if 0 // avoid depdendencies with parser
     std::string str_list_net = std::string(lnet);
     std::list<std::string> list_of_net;
     ka::Parser::String2lstStr( list_of_net, str_list_net );
@@ -96,13 +96,30 @@ void Network::initialize( )
 #endif
       if (df !=0)
       {
-        Device* device = df->create();
+        Device* device = df->create(argc, argv);
         kaapi_assert( device != 0);
         _all_devices.push_back( device );
         _name2device.insert( std::make_pair(device->get_name(), device) );
       }
       ++ibeg;
     }
+#else // #if 0
+/* do not try to parse the list of name in KAAPI_NETWORK: 
+   we only assume here that just one name is set
+*/
+    DeviceFactory* df = DeviceFactory::resolve_factory(lnet);
+#if defined(KAAPI_DEBUG)
+    if (df ==0)
+      std::cerr << "Unknown network name: '" << lnet << "'" << std::endl;
+#endif
+    if (df !=0)
+    {
+      Device* device = df->create(argc, argv);
+      kaapi_assert( device != 0);
+      _all_devices.push_back( device );
+      _name2device.insert( std::make_pair(device->get_name(), device) );
+    }
+#endif
   }
   if (!_all_devices.empty())
     _default_device = *_all_devices.begin();
@@ -110,7 +127,7 @@ void Network::initialize( )
 
 // ---------------------------------------------------------------------------
 void Network::commit( )
-    throw (RuntimeError)
+    throw (std::runtime_error)
 {
   std::vector<Device*>::iterator ibeg = _all_devices.begin();
   std::vector<Device*>::iterator iend = _all_devices.end();
@@ -122,7 +139,7 @@ void Network::commit( )
 }
 
 // ---------------------------------------------------------------------------
-void Network::terminate () throw (RuntimeError)
+void Network::terminate () throw (std::runtime_error)
 {
   std::vector<Device*>::iterator ibeg = _all_devices.begin();
   std::vector<Device*>::iterator iend = _all_devices.end();
@@ -144,6 +161,25 @@ void Network::terminate () throw (RuntimeError)
     ++ibeg;
   }
   _all_devices.clear();
+}
+
+
+// ---------------------------------------------------------------------------
+void Network::poll( )
+{
+  std::vector<Device*>::iterator ibeg = _all_devices.begin();
+  std::vector<Device*>::iterator iend = _all_devices.end();
+  while (ibeg != iend)
+  {
+    (*ibeg)->poll();
+    ++ibeg;
+  }
+}
+
+// ---------------------------------------------------------------------------
+void Network::barrier()
+{
+  _default_device->barrier();
 }
 
 
@@ -175,7 +211,7 @@ void Network::add_route(GlobalId gid, OutChannel* channel)
 
   /* look if route exist to ni */
   std::map<GlobalId,OutChannel*>::iterator curr = _gid2channel.find( gid );
-  kaapi_assert_m( curr == _gid2channel.end(), "route already exist" );
+  kaapi_assert( curr == _gid2channel.end() ) ; // "route already exist";
 
   _gid2channel.insert( std::make_pair(gid, channel) );
 }
@@ -308,14 +344,6 @@ void Network::dump_info()
   
   std::ostringstream buff2;
   print_route(buff2); buff2 << std::endl;
-
-#if 0
-  printf("%i::Node info:\n%s\n%i::Node route info:\n%s\n", 
-    ka::System::local_gid, buff1.str().c_str(), 
-    ka::System::local_gid, buff2.str().c_str() 
-  );
-  fflush(stdout);
-#endif
 }
 
 
@@ -329,9 +357,9 @@ size_t Network::size() const
 }
 
 // --------------------------------------------------------------------
-const char* Network::get_urlconnect( ) const throw (IOError)
+const char* Network::get_urlconnect( ) const throw (ComFailure)
 {
-  if (_default_device ==0) ka::Exception_throw( IOError("no default device") );
+  if (_default_device ==0) throw ComFailure("no default device");
   return _default_device->get_urlconnect();
 }
 
@@ -349,17 +377,6 @@ Device* Network::get_device_from_url( const std::string& url_peer ) throw ()
   if (curr != _name2device.end())
   {
     return curr->second;
-  }
-
-  /* try to create a new device from a registered factory */
-  DeviceFactory* df = DeviceFactory::resolve_factory( name_device );
-  if (df !=0)
-  {
-    Device* device = df->create();
-    kaapi_assert( device != 0);
-    _all_devices.push_back( device );
-    _name2device.insert( std::make_pair(device->get_name(), device) );
-    return device;
   }
   return 0;
 }

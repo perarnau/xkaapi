@@ -50,6 +50,11 @@ struct KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitForma
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
+  static void bodywithhandle(void* taskarg, kaapi_thread_t* thread)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( M4_PARAM(`TraitFormalParam$1::handle2data(&args->f$1)', `', `,'));
+  }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyCPU<TASK> KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
@@ -66,6 +71,11 @@ struct KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitForma
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (Thread*)thread M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
   }
+  static void bodywithhandle(void* taskarg, kaapi_thread_t* thread)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (Thread*)thread M4_PARAM(`,TraitFormalParam$1::handle2data(&args->f$1)', `', `'));
+  }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyCPU<TASK> KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
@@ -81,6 +91,11 @@ struct KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`, TraitForma
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (StealContext*)sc M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
+  }
+  static void bodywithhandle(void* taskarg, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (StealContext*)sc M4_PARAM(`,TraitFormalParam$1::handle2data(&args->f$1)', `', `'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
@@ -104,6 +119,11 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitForma
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( M4_PARAM(`(formal$1_t)args->f$1', `', `,'));
   }
+  static void bodywithhandle(void* taskarg, kaapi_gpustream_t gpustream)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( M4_PARAM(`TraitFormalParam$1::handle2data(&args->f$1)', `', `,'));
+  }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyGPU<TASK>  KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
@@ -122,6 +142,11 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitForma
   {
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
     dummy( (gpuStream)gpustream M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
+  }
+  static void bodywithhandle(void* taskarg, kaapi_gpustream_t gpustream)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (gpuStream)gpustream M4_PARAM(`, TraitFormalParam$1::handle2data(&args->f$1)', `', `'));
   }
 };
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
@@ -149,21 +174,24 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_data[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_version[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_cwflag[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static size_t                array_size[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_memory_view_t   array_view[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_reducor_t       array_reducor[KAAPI_NUMBER_PARAMS];')
     TaskArg_t* dummy =0;
     M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)TraitFormalParam$1::mode_t::value;
     ',`', `')
-    M4_PARAM(`array_offset_data[$1-1] = (char*)TraitFormalParam$1::get_data( &dummy->f$1, 0 ) - (char*)dummy; // BUG ? offsetof(TaskArg_t, f$1);
+    M4_PARAM(`array_offset_data[$1-1] = (char*)TraitFormalParam$1::get_data( &dummy->f$1, 0 ) - (char*)dummy; 
     ',`', `')
-    M4_PARAM(`array_offset_version[$1-1] = (char*)TraitFormalParam$1::get_version( &dummy->f$1, 0 ) - (char*)dummy; // BUG ? offsetof(TaskArg_t, f$1);
+    M4_PARAM(`array_offset_version[$1-1] = (char*)TraitFormalParam$1::get_version( &dummy->f$1, 0 ) - (char*)dummy;
     ',`', `')
-    M4_PARAM(`array_format[$1-1] = WrapperFormat<typename TraitFormalParam$1::type_t>::format.get_c_format();
+    M4_PARAM(`array_offset_cwflag[$1-1] = (char*)TraitFormalParam$1::get_cwflag( &dummy->f$1, 0 ) - (char*)dummy;
     ',`', `')
-    M4_PARAM(`array_size[$1-1] = 0;
+    M4_PARAM(`array_format[$1-1] = WrapperFormat<typename TraitFormalParam$1::type_t>::get_c_format();
     ',`', `')
-    M4_PARAM(`array_reducor[$1-1] = &TraitFormalParam$1::reducor_fnc;
+    M4_PARAM(`array_view[$1-1]   = TraitFormalParam$1::get_view_param(&dummy->f$1, $1-1);
+    ',`', `')
+    M4_PARAM(`array_reducor[$1-1]= &TraitFormalParam$1::reducor_fnc;
     ',`', `')
     static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
     static FormatTask task_fmt( 
@@ -173,8 +201,9 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_data'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_version'),
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_cwflag'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format'),
-          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_size'),
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_view'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_reducor')
     );
       
@@ -225,6 +254,18 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     return 0;
   }
 
+  static int* get_cwflag(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
+  {
+    TaskArg_t* taskarg = static_cast<TaskArg_t*>((void*)_taskarg);
+    size_t countp __attribute__((unused)) = 0, count __attribute__((unused)) = 0;
+   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
+    if (ith < count) return TraitFormalParam$1::get_cwflag(&taskarg->f$1, ith-countp);
+    countp = count; 
+    ', ` ', `
+    ')
+    return 0;
+  }
+
   static kaapi_access_t get_access_param(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
   {
     kaapi_access_t retval = {0, 0};
@@ -259,6 +300,21 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     ')
   }
 
+  static void set_cwaccess_param(const struct kaapi_format_t*, unsigned int ith, void* _taskarg, const kaapi_access_t* a, int flag)
+  {
+    TaskArg_t* taskarg = static_cast<TaskArg_t*>(_taskarg);
+    size_t countp __attribute__((unused)) = 0, count __attribute__((unused)) = 0;
+   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
+    if (ith < count) 
+    {
+      TraitFormalParam$1::set_cwaccess(&taskarg->f$1, ith-countp, a, flag);
+      return;
+    }
+    countp = count; 
+    ', ` ', `
+    ')
+  }
+
   static const kaapi_format_t* get_fmt_param(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
   {
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
@@ -270,15 +326,25 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     return 0;
   }
   
-  static size_t get_size_param(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
+  static kaapi_memory_view_t get_view_param( const struct kaapi_format_t*, unsigned int ith, const void* _taskarg )
   {
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
     size_t count __attribute__((unused)) = 0;
    M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
-    if (ith < count) return TraitFormalParam$1::get_size_param(&taskarg->f$1, ith);
+    if (ith < count) return TraitFormalParam$1::get_view_param(&taskarg->f$1, ith);
     ', ` ', `
     ')
-    return 0;
+    return kaapi_memory_view_t(); /* empty new view */
+  }
+
+  static void set_view_param( const struct kaapi_format_t*, unsigned int ith, void* _taskarg, const kaapi_memory_view_t* view )
+  {
+    TaskArg_t* taskarg = static_cast<TaskArg_t*>(_taskarg);
+    size_t count __attribute__((unused)) = 0;
+   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
+    if (ith < count) return TraitFormalParam$1::set_view_param(&taskarg->f$1, ith, view);
+    ', ` ', `
+    ')
   }
 
   static void reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg, void* result, const void* value)
@@ -291,6 +357,17 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     ')
   }
 
+  static kaapi_reducor_t get_reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
+  {
+    const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
+    size_t count __attribute__((unused)) = 0;
+   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
+    if (ith < count) { return TraitFormalParam$1::reducor_fnc; }
+    ', ` ', `
+    ')
+    return 0;
+  }
+
   static kaapi_format_t* registerformat()
   {
     // here we assume no concurrency during startup calls of the library that initialize format objects
@@ -301,11 +378,15 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
           &get_count_params,
           &get_mode_param,
           &get_off_param,
+          &get_cwflag,
           &get_access_param,
           &set_access_param,
+          &set_cwaccess_param,
           &get_fmt_param,
-          &get_size_param,
-          &reducor
+          &get_view_param,
+          &set_view_param,
+          &reducor,
+          &get_reducor
     );
       
     return task_fmt.get_c_format();
@@ -318,7 +399,10 @@ template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 struct KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS) :
   public KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<
     TASK M4_PARAM(`,TraitFormalParam$1', `', ` '),
+    false /* do not use static format for C++ interface */
+/*
     KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>')::is_static
+*/
   >
 {
   static kaapi_bodies_t default_bodies;
@@ -354,7 +438,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -365,7 +450,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     if ((type_default_t)method == f_default) return 0;
 
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -375,7 +461,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_CPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -393,7 +480,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_GPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 
@@ -404,7 +492,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     type_default_t f_default = &TASK::operator();
     if ((type_default_t)method == f_default) return 0;
     kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_format_taskregister_body(fmt, body, KAAPI_PROC_TYPE_GPU );
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
 

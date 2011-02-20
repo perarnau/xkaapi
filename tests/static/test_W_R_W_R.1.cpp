@@ -3,23 +3,44 @@
 
 
 // --------------------------------------------------------------------
-struct TaskW: public ka::Task<2>::Signature<ka::W<int>, int > {};
+struct TaskW1: public ka::Task<2>::Signature<ka::W<int>, int > {};
 template<>
-struct TaskBodyCPU<TaskW> {
+struct TaskBodyCPU<TaskW1> {
   void operator() ( ka::pointer_w<int> d, int value )
   {
-    std::cout << "In Task W=" << value << ", @:" << (int*)d << std::endl;
+    std::cout << "In Task W1=" << value << ", @:" << (int*)d << std::endl;
     *d = value;
   }
 };
 
 // --------------------------------------------------------------------
-struct TaskR: public ka::Task<1>::Signature<ka::R<int> > {};
+struct TaskR1: public ka::Task<1>::Signature<ka::R<int> > {};
 template<>
-struct TaskBodyCPU<TaskR> {
+struct TaskBodyCPU<TaskR1> {
   void operator() ( ka::pointer_r<int> d )
   {
-    std::cout << "In Task R=" << *d << ", @:" << (int*)d << std::endl;
+    std::cout << "In Task R1=" << *d << ", @:" << (int*)d << std::endl;
+  }
+};
+
+// --------------------------------------------------------------------
+struct TaskW2: public ka::Task<2>::Signature<ka::W<int>, int > {};
+template<>
+struct TaskBodyCPU<TaskW2> {
+  void operator() ( ka::pointer_w<int> d, int value )
+  {
+    std::cout << "In Task W2=" << value << ", @:" << (int*)d << std::endl;
+    *d = value;
+  }
+};
+
+// --------------------------------------------------------------------
+struct TaskR2: public ka::Task<1>::Signature<ka::R<int> > {};
+template<>
+struct TaskBodyCPU<TaskR2> {
+  void operator() ( ka::pointer_r<int> d )
+  {
+    std::cout << "In Task R2=" << *d << ", @:" << (int*)d << std::endl;
   }
 };
 
@@ -36,12 +57,10 @@ struct doit {
 
     threadgroup.begin_partition();
 
-    threadgroup.Spawn<TaskW> (ka::SetPartition(0))  ( a, 10 );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(1))  ( a );
-    threadgroup.Spawn<TaskW> (ka::SetPartition(1))  ( a, 20 );
-    threadgroup.Spawn<TaskR> (ka::SetPartition(0))  ( a );
-
-    threadgroup.print();    
+    threadgroup.Spawn<TaskW1> (ka::SetPartition(0))  ( a, 10 );
+    threadgroup.Spawn<TaskR1> (ka::SetPartition(1))  ( a );
+    threadgroup.Spawn<TaskW2> (ka::SetPartition(1))  ( a, 20 );
+    threadgroup.Spawn<TaskR2> (ka::SetPartition(0))  ( a );
 
     threadgroup.end_partition();
 
@@ -63,8 +82,8 @@ int main( int argc, char** argv )
 
     ka::System::terminate();
   }
-  catch (const ka::Exception& E) {
-    ka::logfile() << "Catch : "; E.print(std::cout); std::cout << std::endl;
+  catch (const std::exception& E) {
+    ka::logfile() << "Catch : " << E.what() << std::endl;
   }
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;
