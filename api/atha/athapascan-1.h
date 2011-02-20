@@ -736,6 +736,9 @@ namespace a1 {
   // --------------------------------------------------------------------
   template<class TASK>
   struct ForkerMain : ka::SpawnerMain<TASK, ka::DefaultAttribut> {
+    ForkerMain() 
+      : ka::SpawnerMain<TASK, ka::DefaultAttribut>(kaapi_self_thread(), DefaultAttribut())
+    {}
   };
 
   template<class TASK>
@@ -936,6 +939,8 @@ namespace a1 {
   inline OStream& operator<< (OStream& m, const unsigned int v )  { return m; }
   inline OStream& operator<< (OStream& m, const long v )  { return m; }
   inline OStream& operator<< (OStream& m, const unsigned long v )  { return m; }
+  inline OStream& operator<< (OStream& m, const int64_t v )  { return m; }
+  inline OStream& operator<< (OStream& m, const uint64_t v )  { return m; }
 #if 0
   inline OStream& operator<< (OStream& m, const long long v )  { return m; }
   inline OStream& operator<< (OStream& m, const unsigned long long v )  { return m; }
@@ -966,6 +971,8 @@ namespace a1 {
   inline IStream& operator>> (IStream& m, unsigned int& v )  { return m; }
   inline IStream& operator>> (IStream& m, long& v )  { return m; }
   inline IStream& operator>> (IStream& m, unsigned long& v )  { return m; }
+  inline IStream& operator>> (IStream& m, int64_t& v )  { return m; }
+  inline IStream& operator>> (IStream& m, uint64_t& v )  { return m; }
 #if 0
   inline IStream& operator>> (IStream& m, long long& v )  { return m; }
   inline IStream& operator>> (IStream& m, unsigned long long& v )  { return m; }
