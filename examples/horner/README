@@ -1,0 +1,13 @@
+This example implements arbitrary degree
+polynom evaluation in a given point using
+the Horner scheme. A prefix algorithm is
+used for parallelization.
+XKAAPI low level adpative interface is used
+to distribute the work amongst thieves.
+Adaptive mode is set to concurrent, and
+a kaapi_workqueue_t is used to handle concurrent
+access between the sequential and the parallel
+code.
+Preemption is used to preempt a thief. A reduction
+routine is called to reduce the processed work
+and retrieve the thief continuation.

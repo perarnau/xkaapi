@@ -29,6 +29,7 @@ include net.am
 include nqueens.am
 include poisson3D.am
 include prefix.am
+include horner.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
