@@ -305,8 +305,8 @@ AS_CASE([$enable_mode],
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_DEBUG"
     CFLAGS=""
     CXXFLAGS=""
-    AM_CFLAGS="$AM_CFLAGS -ggdb"
-    AM_CXXFLAGS="$AM_CXXFLAGS -ggdb"
+    AM_CFLAGS="$AM_CFLAGS -g"
+    AM_CXXFLAGS="$AM_CXXFLAGS -g"
   ], [release], [dnl
     AC_MSG_NOTICE([Using release compile mode])
     # using CFLAGS and not AM_CFLAGS as the user must be able to overwrite

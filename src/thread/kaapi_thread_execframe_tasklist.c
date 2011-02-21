@@ -83,7 +83,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   if (tasklist->td_ready == 0)
   {
     tasklist->td_ready = 
-      (kaapi_taskdescr_t**)malloc( sizeof(kaapi_taskdescr_t*) * tasklist->cnt_tasks );
+      (kaapi_taskdescr_t**)malloc( (size_t) (sizeof(kaapi_taskdescr_t*) * tasklist->cnt_tasks) );
     kaapi_workqueue_index_t ntasks = 0;
 
     tasklist->recv = tasklist->recvlist.front;

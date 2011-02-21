@@ -760,7 +760,7 @@ push_frame:
 #if 0 /* unimplemented */
     body = pc->body;
 
-#if (SIZEOF_VOIDP == 4)
+#if (__SIZEOF_POINTER__ == 4)
     state = pc->state;
 #else
     state = kaapi_task_body2state(body);
@@ -780,11 +780,11 @@ push_frame:
 
     state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
 
-#if (SIZEOF_VOIDP == 4)
+#if (__SIZEOF_POINTER__ == 4)
     body = pc->body;
 #else
     body = kaapi_task_state2body( state );
-#endif /* SIZEOF_VOIDP */
+#endif /* __SIZEOF_POINTER__ */
 
 #endif /* KAAPI_USE_EXECTASK_METHOD */
 

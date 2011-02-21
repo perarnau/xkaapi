@@ -227,9 +227,9 @@ static inline void _kaapi_print_task(
 //      (uintptr_t)task, (uintptr_t)argtask->tag, (unsigned long)argtask->tag );
    if (sec_name !=0)
      fprintf(file,"}\n");
-    _kaapi_print_tag_node(file, argtask->tag);
-    fprintf(file,"%lu -> tag_%lu  [style=bold, color=blue];\n", 
-      (uintptr_t)task, (uintptr_t)argtask->tag );
+  _kaapi_print_tag_node(file, (unsigned long)argtask->tag);
+  fprintf(file,"%lu -> tag_%lu  [style=bold, color=blue];\n", 
+    (uintptr_t)task, (uintptr_t)argtask->tag );
    if (sec_name !=0)
      fprintf(file, "%s", sec_name);
   }

@@ -744,7 +744,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
     Other reserved bits are :
     - 0010 : the task is terminated. This state if only put for debugging.
 */
-#if (SIZEOF_VOIDP == 4)
+#if (__SIZEOF_POINTER__ == 4)
 #  define KAAPI_MASK_BODY_TERM    (0x1)
 #  define KAAPI_MASK_BODY_PREEMPT (0x2) /* must be different from term */
 #  define KAAPI_MASK_BODY_AFTER   (0x2)
@@ -763,7 +763,7 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 #  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
     KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (uint32_t)v)
 
-#elif (SIZEOF_VOIDP == 8)
+#elif (__SIZEOF_POINTER__ == 8)
 #  define KAAPI_MASK_BODY_TERM    (0x1UL << 60UL)
 #  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 60UL) /* must be different from term */
 #  define KAAPI_MASK_BODY_AFTER   (0x2UL << 60UL)
@@ -790,22 +790,21 @@ extern void kaapi_adapt_body( void*, kaapi_thread_t* );
 */
 /**@{ */
 
-#if (SIZEOF_VOIDP == 4)
+#if (__SIZEOF_POINTER__ == 4)
 
 static inline uintptr_t kaapi_task_getstate(const kaapi_task_t* task)
 {
-  return task->state;
+  return KAAPI_ATOMIC_READ(&task->u.state);
 }
 
 static inline void kaapi_task_setstate(kaapi_task_t* task, uintptr_t state)
 {
-  task->state = state;
+  KAAPI_ATOMIC_WRITE(&task->u.state, state);
 }
 
 static inline void kaapi_task_setstate_barrier(kaapi_task_t* task, uintptr_t state)
 {
-  kaapi_writemem_barrier();
-  task->state = state;
+  KAAPI_ATOMIC_WRITE_BARRIER(&task->u.state, state);
 }
 
 static inline uintptr_t kaapi_task_state_get(uintptr_t state)
@@ -853,8 +852,7 @@ static inline unsigned int kaapi_task_state_isready(uintptr_t state)
   return (state & (KAAPI_MASK_BODY_AFTER | KAAPI_MASK_BODY_TERM)) != 0;
 }
 
-static inline unsigned int kaapi_task_state_isstealable
-(uintptr_t state)
+static inline unsigned int kaapi_task_state_isstealable(uintptr_t state)
 {
   return (state & (KAAPI_MASK_BODY_STEAL | KAAPI_MASK_BODY_EXEC)) == 0;
 }
@@ -881,8 +879,8 @@ static inline unsigned int kaapi_task_state2int(uintptr_t state)
 */
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t body)
 {
-  task->state = 0;
-  task->body  = body;
+  KAAPI_ATOMIC_WRITE(&task->u.state, 0);
+  task->u.body  = body;
 }
 
 /** \ingroup TASK
@@ -890,11 +888,10 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_bodyid_t bo
 */
 static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 {
-  return task->body;
+  return task->u.body;
 }
 
-#else /* SIZEOF_VOIDP == 8 */
-
+#elif (__SIZEOF_POINTER__ ==8) /* __SIZEOF_POINTER__ == 8 */
 #define kaapi_task_getstate(task)\
       KAAPI_ATOMIC_READ(&(task)->u.state)
 
@@ -971,7 +968,9 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 }
 /**@} */
 
-#endif /* SIZEOF_VOIDP == 8 */
+#else /* __SIZEOF_POINTER__ == 8 */
+#error "I'm here"
+#endif 
 
 
 /** \ingroup TASK
@@ -995,11 +994,7 @@ static inline void* _kaapi_thread_pushdata( kaapi_thread_context_t* thread, uint
 static inline uintptr_t kaapi_task_andstate( kaapi_task_t* task, uintptr_t state )
 {
   const uintptr_t retval =
-#if (SIZEOF_VOIDP == 4)
-    KAAPI_ATOMIC_ANDPTR_ORIG(&task->state, state);
-#else /* (SIZEOF_VOIDP == 8) */
-    KAAPI_ATOMIC_ANDPTR_ORIG(&task->u.state, state);
-#endif
+  KAAPI_ATOMIC_ANDPTR_ORIG(&task->u.state, state);
   return retval;
 }
 
@@ -1012,11 +1007,7 @@ static inline uintptr_t kaapi_task_orstate( kaapi_task_t* task, uintptr_t state 
 #endif
 
   const uintptr_t retval =
-#if (SIZEOF_VOIDP == 4)
-    KAAPI_ATOMIC_ORPTR_ORIG(&task->state, state);
-#else
-    KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
-#endif
+  KAAPI_ATOMIC_ORPTR_ORIG(&task->u.state, state);
 
   return retval;
 }
@@ -1749,7 +1740,7 @@ static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
   \retval KAAPI_REQUEST_S_FAIL steal request has failed
   \retval KAAPI_REQUEST_S_QUIT process should terminate
 */
-static inline unsigned long kaapi_reply_status( kaapi_reply_t* ksr ) 
+static inline uint64_t kaapi_reply_status( kaapi_reply_t* ksr ) 
 { return ksr->status; }
 
 /** Return true iff the request has been posted
@@ -1877,12 +1868,12 @@ static inline int kaapi_task_body_isstealable(kaapi_task_body_t body)
 */
 inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 {
-#if (SIZEOF_VOIDP == 4)
+#if (__SIZEOF_POINTER__ == 4)
 
-  return kaapi_task_state_isstealable(task->state) &&
-   kaapi_task_body_isstealable(task->body);
+  return kaapi_task_state_isstealable(kaapi_task_getstate(task)) &&
+   kaapi_task_body_isstealable(task->u.body);
 
-#else /* SIZEOF_VOIDP == 8 */
+#else /* __SIZEOF_POINTER__ == 8 */
 
   const uintptr_t state = (uintptr_t)task->u.body;
   return kaapi_task_state_isstealable(state) &&

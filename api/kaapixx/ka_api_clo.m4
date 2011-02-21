@@ -193,9 +193,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ',`', `')
     M4_PARAM(`array_reducor[$1-1]= &TraitFormalParam$1::reducor_fnc;
     ',`', `')
-    static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
     static FormatTask task_fmt( 
-          task_name,
+          typeid(TASK).name(),
           sizeof(TaskArg_t),
           KAAPI_NUMBER_PARAMS,
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
@@ -371,9 +370,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
   static kaapi_format_t* registerformat()
   {
     // here we assume no concurrency during startup calls of the library that initialize format objects
-    static std::string task_name = std::string("__Z")+std::string(typeid(TASK).name());
-    static FormatTask task_fmt( 
-          task_name,
+    static FormatTask task_fmt(
+          typeid(TASK).name(),
           sizeof(TaskArg_t),
           &get_count_params,
           &get_mode_param,

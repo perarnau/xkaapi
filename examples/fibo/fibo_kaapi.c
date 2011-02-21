@@ -74,7 +74,7 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
 void sum_body( void* taskarg, kaapi_thread_t* thread )
 {
   sum_arg_t* arg0 = (sum_arg_t*)taskarg;
-  *KAAPI_DATA(int, arg0->result) = *KAAPI_DATA(int, arg0->subresult1) + *KAAPI_DATA(int, arg0->subresult2);
+  *kaapi_data(int, &arg0->result) = *kaapi_data(int, &arg0->subresult1) + *kaapi_data(int, &arg0->subresult2);
 }
 
 typedef struct fibo_arg_t {
@@ -100,7 +100,7 @@ void fibo_body( void* taskarg, kaapi_thread_t* thread )
   fibo_arg_t* arg0 = (fibo_arg_t*)taskarg;
   if (arg0->n < 2)
   {
-    *KAAPI_DATA(int, arg0->result) = arg0->n; //fiboseq(arg0->n);
+    *kaapi_data(int, &arg0->result) = arg0->n; //fiboseq(arg0->n);
   }
   else {
     fibo_arg_t* argf1;
@@ -157,7 +157,7 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
 void print_body( void* taskarg, kaapi_thread_t* thread )
 {
   print_arg_t* arg0 = (print_arg_t*)taskarg;
-  printf("Fibo(%i)=%i\n", arg0->n, *KAAPI_DATA(int, arg0->result));
+  printf("Fibo(%i)=%i\n", arg0->n, *kaapi_data(int, &arg0->result));
   printf("Time: %g\n", arg0->delay/arg0->niter);
 }
 

@@ -50,7 +50,7 @@ namespace ka {
 
 // --------------------------------------------------------------------------
 Format::Format( 
-        const std::string& name,
+        const char*        name,
         size_t             size,
         void             (*cstor)( void* dest),
         void             (*dstor)( void* dest),
@@ -102,7 +102,7 @@ const struct kaapi_format_t* Format::get_c_format() const
 
 // --------------------------------------------------------------------------
 FormatUpdateFnc::FormatUpdateFnc( 
-  const std::string& name,
+  const char* name,
   int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                    const void* value, const struct kaapi_format_t* fmtvalue )
 ) : Format::Format(name, 0, 0, 0, 0, 0, 0, 0)
@@ -113,7 +113,7 @@ FormatUpdateFnc::FormatUpdateFnc(
 
 // --------------------------------------------------------------------------
 FormatTask::FormatTask( 
-  const std::string&          name,
+  const char*                 name,
   size_t                      size,
   int                         count,
   const kaapi_access_mode_t   mode_param[],
@@ -123,15 +123,16 @@ FormatTask::FormatTask(
   const kaapi_format_t*       fmt_param[],
   const kaapi_memory_view_t   view_param[],
   const kaapi_reducor_t       reducor_param[]
-) : Format(0)
+) : Format((kaapi_format_t*)0)
 {
+  static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
   if (fmt ==0)
   {
     fmt = new kaapi_format_t;
     kaapi_format_taskregister_static( 
           fmt,
           0, 0,
-          name.c_str(),
+          strdup(fmt_name.c_str()),
           size,
           count,
           mode_param,
@@ -148,7 +149,7 @@ FormatTask::FormatTask(
 
 // --------------------------------------------------------------------------
 FormatTask::FormatTask( 
-  const std::string&          name,
+  const char*                 name,
   size_t                      size,
   size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
   kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
@@ -162,14 +163,15 @@ FormatTask::FormatTask(
   void                      (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
   void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
   kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
-) : Format(0)
+) : Format((kaapi_format_t*)0)
 {
+  static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
   if (fmt ==0) {
     fmt = new kaapi_format_t;
     kaapi_format_taskregister_func( 
           fmt,
           0, 0,
-          name.c_str(),
+          strdup(fmt_name.c_str()),
           size,
           get_count_params,
           get_mode_param,

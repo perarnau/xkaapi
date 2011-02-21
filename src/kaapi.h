@@ -57,16 +57,19 @@
 #  include <winnt.h>
 #endif
 
-#if (__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)
-#  if !defined(__SIZEOF_POINTER__)
-#    if defined(__LP64__)
-#      define __SIZEOF_POINTER__ 8
-#    else
-#      error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
-#    endif
+
+#if !defined(__SIZEOF_POINTER__)
+#  if defined(__LP64__) || defined(__x86_64__)
+#    define __SIZEOF_POINTER__ 8
+#  elif defined(__i386__) || defined(__ppc__)
+#    define __SIZEOF_POINTER__ 4
 #  else
-#    error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
+#    error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
 #  endif
+#endif
+
+#if ((__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)) 
+#  error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
 #endif
 
 #include <stdint.h>
@@ -140,6 +143,180 @@ typedef struct kaapi_atomic64_t {
 #endif
 } kaapi_atomic64_t;
 
+/* ========================= Low level memory barrier, inline for perf... so ============================= */
+/** Implementation note
+    - all functions or macros without _ORIG return the new value after apply the operation.
+    - all functions or macros with ORIG return the old value before applying the operation.
+*/
+#if defined(KAAPI_DEBUG)
+static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
+{
+  kaapi_assert( (((uintptr_t)a) & ((unsigned long)byte - 1)) == 0 );
+  return 1;
+}
+#  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
+      (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? (instruction) : 0)
+#else
+#  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
+      (instruction)
+#endif
+
+#define KAAPI_ATOMIC_READ(a) \
+  __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter)
+
+#define KAAPI_ATOMIC_WRITE(a, value) \
+  __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
+
+#define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
+
+#if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
+|| defined(__INTEL_COMPILER))
+/* Note: ICC seems to also support these builtins functions */
+#  if defined(__INTEL_COMPILER)
+#    warning Using ICC. Please, check if icc really support atomic operations
+/* ia64 impl using compare and exchange */
+/*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
+#  endif
+
+#  define KAAPI_ATOMIC_CAS(a, o, n) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
+
+/* functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ))
+
+#  define KAAPI_ATOMIC_DECR(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ))
+
+#  define KAAPI_ATOMIC_SUB(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ))
+
+#  define KAAPI_ATOMIC_AND(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_OR(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
+
+/* linux functions which return old value */
+#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
+
+/* linux 64 bit versions */
+#  define KAAPI_ATOMIC_CAS64(a, o, n) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
+
+/* linux functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR64(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ) )
+
+#  define KAAPI_ATOMIC_DECR64(a) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ) )
+
+#  define KAAPI_ATOMIC_SUB64(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ) )
+
+#  define KAAPI_ATOMIC_AND64(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_OR64(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR64(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
+
+/* functions which return old value */
+#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
+
+#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
+
+
+#elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
+
+#  include <libkern/OSAtomic.h>
+
+#  define KAAPI_ATOMIC_CAS(a, o, n) \
+    OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
+
+/* functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR(a) \
+    OSAtomicIncrement32Barrier( &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_DECR32(a) \
+    OSAtomicDecrement32Barrier(&((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_SUB(a, value) \
+    OSAtomicAdd32Barrier( -value, &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_AND(a, o) \
+    OSAtomicAnd32Barrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_OR(a, o) \
+    OSAtomicOr32Barrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_XOR(a, o) \
+    OSAtomicXor32Barrier( o, &((a)->_counter) )
+
+/* functions which return old value */
+#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
+    OSAtomicAnd32OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
+    OSAtomicOr32OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
+    OSAtomicXor32OrigBarrier( o, &((a)->_counter) )
+
+/* 64 bit versions */
+#  define KAAPI_ATOMIC_CAS64(a, o, n) \
+    OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
+
+/* functions which return new value (NV) */
+#  define KAAPI_ATOMIC_INCR64(a) \
+    OSAtomicIncrement64Barrier( &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_DECR64(a) \
+    OSAtomicDecrement64Barrier(&((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_SUB64(a, value) \
+    OSAtomicAdd64Barrier( -value, &((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_AND64(a, o) \
+    OSAtomicAnd64Barrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_OR64(a, o) \
+    OSAtomicOr64Barrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_XOR64(a, o) \
+    OSAtomicXor64Barrier( o, &((a)->_counter) )
+
+/* functions which return old value */
+#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
+    OSAtomicAnd64OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
+    OSAtomicOr64OrigBarrier( o, &((a)->_counter) )
+
+#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
+    OSAtomicXor64OrigBarrier( o, &((a)->_counter) )
+#else
+#  error "Please add support for atomic operations on this system/architecture"
+#endif /* GCC > 4.1 */
+
 
 #if defined(__i386__)||defined(__x86_64)
 #  define kaapi_slowdown_cpu() \
@@ -196,8 +373,11 @@ static inline void kaapi_writemem_barrier()
 #  if defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
   __asm__ __volatile__ ("":::"memory");
-#  else
+#  elif defined(__GNUC__)
   __sync_synchronize();
+#  else
+#  error "Compiler not supported"
+/* xlC ->__lwsync() / bultin */  
 #  endif
 }
 
@@ -736,12 +916,20 @@ typedef struct kaapi_access_t {
   void*                  version; /* used to set the data to access (R/W/RW/CW) if steal, used to store output after steal */
 } kaapi_access_t;
 
-#define kaapi_data(type, a)\
-  ((type*)(a)->data)
+/* specialization of kaapi_accesscw_t for cumulative write
+*/
+typedef struct kaapi_accesscw_t {
+  kaapi_access_t a;               /* its an access */
+  int wa;                         /* set to 1 iff the first += should be a write */
+} kaapi_accesscw_t;
 
+#define kaapi_data(type, a)\
+  ((type*)((kaapi_access_t*)(a))->data)
+
+#if 0
 #define KAAPI_DATA(type, a)\
   ((type*)a.data)
-
+#endif
 
 /* ========================================================================= */
 /* Interface                                                                 */
@@ -905,8 +1093,8 @@ static inline void kaapi_task_initdfg_with_state
   task->sp = arg;
 
 #if (__SIZEOF_POINTER__ == 4)
-  task->state = state;
-  task->body = body;
+  KAAPI_ATOMIC_WRITE(&task->u.state, state);
+  task->u.body = body;
 #else
   task->u.body = (kaapi_task_body_t)((uintptr_t)body | state);
 #endif
@@ -924,8 +1112,8 @@ static inline void kaapi_task_initdfg
   task->sp = arg;
 
 #if (__SIZEOF_POINTER__ == 4)
-  task->state = 0;
-  task->body = body;
+  KAAPI_ATOMIC_WRITE(&task->u.state, 0);
+  task->u.body = body;
 #else
   task->u.body = body;
 #endif
@@ -1837,10 +2025,8 @@ static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t w
   retval.type     = KAAPI_MEMORY_VIEW_1D;
   retval.size[0]  = size;
   retval.wordsize = wordsize;
-#if defined(KAAPI_DEBUG)
   retval.size[1] = 0;
   retval.lda = 0;
-#endif
   return retval;
 }
 
@@ -1999,181 +2185,6 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     isinit = 1;\
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
-
-
-/* ========================= Low level memory barrier, inline for perf... so ============================= */
-/** Implementation note
-    - all functions or macros without _ORIG return the new value after apply the operation.
-    - all functions or macros with ORIG return the old value before applying the operation.
-*/
-#if defined(KAAPI_DEBUG)
-static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
-{
-  kaapi_assert( (((uintptr_t)a) & ((unsigned long)byte - 1)) == 0 );
-  return 1;
-}
-#  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
-      (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? (instruction) : 0)
-#else
-#  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
-      (instruction)
-#endif
-
-#define KAAPI_ATOMIC_READ(a) \
-  __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter)
-
-#define KAAPI_ATOMIC_WRITE(a, value) \
-  __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
-
-#define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
-
-#if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
-|| defined(__INTEL_COMPILER))
-/* Note: ICC seems to also support these builtins functions */
-#  if defined(__INTEL_COMPILER)
-#    warning Using ICC. Please, check if icc really support atomic operations
-/* ia64 impl using compare and exchange */
-/*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
-#  endif
-
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
-
-/* functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ))
-
-#  define KAAPI_ATOMIC_DECR(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ))
-
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ))
-
-#  define KAAPI_ATOMIC_AND(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
-
-/* linux functions which return old value */
-#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
-
-/* linux 64 bit versions */
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
-
-/* linux functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR64(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ) )
-
-#  define KAAPI_ATOMIC_DECR64(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ) )
-
-#  define KAAPI_ATOMIC_SUB64(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ) )
-
-#  define KAAPI_ATOMIC_AND64(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR64(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR64(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
-
-/* functions which return old value */
-#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
-
-
-#elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
-
-#  include <libkern/OSAtomic.h>
-
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
-
-/* functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR(a) \
-    OSAtomicIncrement32Barrier( &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_DECR32(a) \
-    OSAtomicDecrement32Barrier(&((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    OSAtomicAdd32Barrier( -value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_AND(a, o) \
-    OSAtomicAnd32Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR(a, o) \
-    OSAtomicOr32Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR(a, o) \
-    OSAtomicXor32Barrier( o, &((a)->_counter) )
-
-/* functions which return old value */
-#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
-    OSAtomicAnd32OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
-    OSAtomicOr32OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
-    OSAtomicXor32OrigBarrier( o, &((a)->_counter) )
-
-/* 64 bit versions */
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
-
-/* functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR64(a) \
-    OSAtomicIncrement64Barrier( &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_DECR64(a) \
-    OSAtomicDecrement64Barrier(&((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_SUB64(a, value) \
-    OSAtomicAdd64Barrier( -value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_AND64(a, o) \
-    OSAtomicAnd64Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR64(a, o) \
-    OSAtomicOr64Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR64(a, o) \
-    OSAtomicXor64Barrier( o, &((a)->_counter) )
-
-/* functions which return old value */
-#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
-    OSAtomicAnd64OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
-    OSAtomicOr64OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
-    OSAtomicXor64OrigBarrier( o, &((a)->_counter) )
-#else
-#  error "Please add support for atomic operations on this system/architecture"
-#endif /* GCC > 4.1 */
 
 #ifdef __cplusplus
 }

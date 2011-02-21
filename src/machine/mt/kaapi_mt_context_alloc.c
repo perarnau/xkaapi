@@ -84,7 +84,7 @@
 kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 {
   kaapi_thread_context_t* ctxt;
-  uint64_t size_data;
+  size_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
 

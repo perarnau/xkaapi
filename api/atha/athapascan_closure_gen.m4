@@ -45,9 +45,8 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
     M4_PARAM(`array_format[$1-1] = Trait_ParamClosure<F$1>::get_format();
     ',`', `')
     
-    static std::string task_name = std::string("__ATHA__Z")+std::string(typeid(TASK).name());
     static ka::FormatTask task_fmt( 
-          task_name,
+          typeid(TASK).name(),
           sizeof(Self_t),
           KAAPI_NUMBER_PARAMS,
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),

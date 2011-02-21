@@ -199,33 +199,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   /**/
   war_param = arg->war_param;
   
-#if 0
-  if (war_param)
-  {
-    printf( "[tasksteal] exec task '%s', steal with WAR dependencies: @=%p, thread: @=%p\n", fmt->name, (void*)arg->origin_task, (void*)thread);
-    fflush(stdout);
-  }
-#endif
-
-#if 0
-  /* If it exist a W or CW access then recreate a new structure 
-     of input arguments to execute the stolen task.
-     Args passed by value are copied again into the stack.
-  */
-  push_write  = 0;
-  w_param     = 0;
-  for (i=0; i<count_params; ++i)
-  {
-    if (KAAPI_ACCESS_IS_ONLYWRITE(KAAPI_ACCESS_GET_MODE(fmt->mode_params[i])))
-    {
-      w_param = 1;
-      if ((war_param & (1<<i)) !=0) 
-        push_write=1;
-      break;
-    }
-  }
-#endif
-
   if (!war_param)
   {
     /* Execute the orinal body function with the original args */
@@ -235,32 +208,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     task = kaapi_thread_toptask( thread );
     kaapi_task_init( task, kaapi_taskwrite_body, arg );
     kaapi_thread_pushtask( thread );
-
-#if 0
-    /* if no barrier here: only read data signal the task */
-    if (w_param != 0)
-    {
-      for (i=0; i<count_params; ++i)
-      {
-        mode_param      = KAAPI_ACCESS_GET_MODE(fmt->mode_params[i]);
-        if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param))
-        {
-          data_param      = (void*)(fmt->off_params[i] + (char*)orig_task_args);
-          fmt_param       = fmt->fmt_params[i];
-          access_param    = (kaapi_access_t*)(data_param);
-          access_param->version = access_param->data;
-        }
-      }
-      kaapi_writemem_barrier();
-    }
-#endif
   }
   else /* it exists at least one w parameter with war dependency */
   {
-#if 0
-    printf("Execute task after recopy some args\n");
-    fflush(stdout);
-#endif
     copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;

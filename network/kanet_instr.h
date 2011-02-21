@@ -303,7 +303,7 @@ inline void InstructionStream::insert_rwdma(
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_rw.dptr = dptr;
   _start[posw].i_rw.lptr = lptr;
   _start[posw].i_rw.size = size;
@@ -324,7 +324,7 @@ inline void InstructionStream::insert_rwdma(
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_rw.dptr = dptr;
   _start[posw].i_rw.lptr = lptr;
   _start[posw].i_rw.size = size;
@@ -343,7 +343,7 @@ inline void InstructionStream::insert_am(
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_am.handler = (uintptr_t)handler;
   _start[posw].i_am.lptr    = lptr;
   _start[posw].i_am.size    = size;
@@ -364,7 +364,7 @@ inline void InstructionStream::insert_am(
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_am.handler = (uintptr_t)handler;
   _start[posw].i_am.lptr    = lptr;
   _start[posw].i_am.size    = size;
@@ -379,7 +379,7 @@ inline void InstructionStream::insert_wb()
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_cbk.cbk    = 0;
   _start[posw].i_cbk.arg    = 0;
   kaapi_writemem_barrier();
@@ -394,7 +394,7 @@ inline void InstructionStream::insert_wb(
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_cbk.cbk    = cbk;
   _start[posw].i_cbk.arg    = arg;
   kaapi_writemem_barrier();
@@ -406,7 +406,7 @@ inline void InstructionStream::insert_nop()
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_cbk.cbk    = 0;
   _start[posw].i_cbk.arg    = 0;
   kaapi_writemem_barrier();
@@ -421,7 +421,7 @@ inline void InstructionStream::insert_nop(
 {
   if (isfull()) switch_buffer();
   uint32_t posw = _pos_w.incr() -1; /* increment (atomic) and get the previous value */
-  kaapi_assert( posw < _last-_start);
+  kaapi_assert( _start+posw < _last);
   _start[posw].i_cbk.cbk    = cbk;
   _start[posw].i_cbk.arg    = arg;
   kaapi_writemem_barrier();

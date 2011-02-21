@@ -72,6 +72,7 @@ kaapi_pointer_t kaapi_memory_allocate(
 {
   kaapi_pointer_t retval;
   retval.asid = kasid;
+  retval.ptr  = 0;
   switch (kaapi_memory_address_space_gettype(kasid))
   {
     case KAAPI_MEM_TYPE_CPU:

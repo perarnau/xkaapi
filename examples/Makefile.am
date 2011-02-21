@@ -31,6 +31,7 @@ include nqueens.am
 include poisson3D.am
 include prefix.am
 include horner.am
+include variance.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \

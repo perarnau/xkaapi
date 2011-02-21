@@ -1,0 +1,3 @@
+Compute the variance of a given sequence using the
+the future (but yet not integrated) c++ apadtive
+interface to handle linear work adaptive processing.

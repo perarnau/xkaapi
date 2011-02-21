@@ -131,7 +131,7 @@ push_frame:
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
     body = pc->body;
 
-#if (SIZEOF_VOIDP == 4)
+#if (__SIZEOF_POINTER__ == 4)
     state = pc->state;
 #else
     state = kaapi_task_body2state(body);
@@ -149,12 +149,14 @@ push_frame:
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
 
     state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
-
-#if (SIZEOF_VOIDP == 4)
-    body = pc->body;
+#if (__SIZEOF_POINTER__ == 4)
+    body = pc->u.body;
 #else
     body = kaapi_task_state2body( state );
-#endif /* SIZEOF_VOIDP */
+#endif /* __SIZEOF_POINTER__ */
+
+
+#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
 
 #endif /* KAAPI_USE_EXECTASK_METHOD */
 
@@ -165,7 +167,6 @@ push_frame:
 
       /* here... */
       body( pc->sp, (kaapi_thread_t*)thread->sfp );
-//      printf("e:%p\n", (void*)pc); fflush(stdout);
     }
     else
     { 

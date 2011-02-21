@@ -117,7 +117,7 @@ namespace ka {
   class Format {
   public:
     Format( 
-        const std::string& name = "empty",
+        const char*        name = "empty",
         size_t             size = 0,
         void             (*cstor)( void* dest) = 0,
         void             (*dstor)( void* dest) = 0,
@@ -142,7 +142,7 @@ namespace ka {
   class FormatUpdateFnc : public Format {
   public:
     FormatUpdateFnc( 
-      const std::string& name,
+      const char* name,
       int (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
                        const void* value, const struct kaapi_format_t* fmtvalue )
     );
@@ -154,7 +154,7 @@ namespace ka {
   public:
     /* task with static format */
     FormatTask( 
-      const std::string&          name,
+      const char*                 name,
       size_t                      size,
       int                         count,
       const kaapi_access_mode_t   mode_param[],
@@ -168,7 +168,7 @@ namespace ka {
 
     /* task with dynamic format */
     FormatTask( 
-      const std::string&          name,
+      const char*                 name,
       size_t                      size,
       size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
       kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
@@ -475,24 +475,15 @@ namespace ka {
   };
 
   /* capture cumulative write */
-  template<class T>
+  template<class T,class OP>
   class cumul_value_ref {
   public:
-    cumul_value_ref( T* p, bool wa ) : _ptr(p), _wa(wa) {}
-    void operator+=( const T& value ) 
-    { 
-      if (_wa) { *_ptr = value; _wa = false; }
-      else *_ptr += value; 
-    }
-    template<typename OP>
-    void cumul( const T& value ) 
-    {
-      if (_wa)  { *_ptr = value; _wa = false; }
-      else OP()(*_ptr,value);
-    }
+    cumul_value_ref( pointer_cw<T,OP>& p ) : _ptr(p) {}
+    void operator+=( const T& value );
+    template<typename OP2>
+    void cumul( const T& value );
   protected:
-    T*   _ptr;
-    int  _wa;
+    pointer_cw<T,OP>& _ptr; /* the order of field should correspond to order of pointer_cw */
   };
   
 
@@ -692,20 +683,17 @@ namespace ka {
     pointer_cwp( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cwp( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cwp( const pointer_cwp<T>& ptr ) : base_pointer<T>(ptr) {}
-//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
 
 
-  // --------------------------------------------------------------------
-  struct kaapi_accesscw_t : public kaapi_access_t {
-    int _wa;
-  };
-  
+  // --------------------------------------------------------------------  
   template<class T, typename OP >
   class pointer_cw: public base_pointer<T> {
-    int   _wa; /* must write the first access */
+    void* _opaque; /* in fact verison field of kaapi_access_t */
+    int   _wa;     /* must write the first access */
+    friend class cumul_value_ref<T,OP>;
   public:
     typedef T value_type;
     typedef size_t difference_type;
@@ -714,30 +702,35 @@ namespace ka {
     pointer_cw() : base_pointer<T>(), _wa(false) {}
     pointer_cw( value_type* ptr ) : base_pointer<T>(ptr) {}
     /* to call user define task */
-    explicit pointer_cw( kaapi_accesscw_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)), _wa(ptr._wa) {}
+    explicit pointer_cw( kaapi_accesscw_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)), _wa(ptr.wa) {}
     pointer_cw( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
-//    pointer_cw( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_cw( const pointer_cwp<T>& ptr ) : base_pointer<T>(ptr), _wa(ptr._wa)  {}
     template<class OP2>
     pointer_cw( const pointer_cw<T, OP2>& ptr ) : base_pointer<T>(ptr), _wa(ptr._wa) {}
-//    operator value_type*() { return base_pointer<T>::ptr(); }
 
-    cumul_value_ref<T>& operator*() 
-    { return *(cumul_value_ref<T>*)(this); }
-    cumul_value_ref<T>* operator->() 
-    { return (cumul_value_ref<T>*)(this); }
+    /* be carrefull here: pointer_cw and cumul_value_ref should be identic */
+    cumul_value_ref<T,OP> operator*() 
+    { return cumul_value_ref<T,OP>(*this); }
+    cumul_value_ref<T,OP>* operator->() 
+    { cumul_value_ref<T,OP>(*this); }
 
-#if 0
-    cumul_value_ref<T> operator[](int i) 
-    { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
-    cumul_value_ref<T> operator[](long i) 
-    { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
-    cumul_value_ref<T> operator[](difference_type i) 
-    { return cumul_value_ref<T>(base_pointer<T>::ptr()+i); }
-#endif
-    
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
+
+  template<class T, typename OP >
+  void cumul_value_ref<T,OP>::operator+=( const T& value ) 
+  { 
+    if (_ptr._wa) { *_ptr.ptr() = value; _ptr._wa = 0; }
+    else *_ptr.ptr() += value; 
+  }
+  template<class T, typename OP >
+  template<typename OP2>
+  void cumul_value_ref<T,OP>::cumul( const T& value ) 
+  {
+    if (_ptr._wa)  { *_ptr.ptr() = value; _ptr._wa = 0; }
+    else OP2()(*_ptr.ptr(),value);
+  }
+
 
   // --------------------------------------------------------------------  
   /* here requires to distinguish pointer to object from pointer to function */
@@ -783,19 +776,10 @@ namespace ka {
   template<> struct TraitNoDeleteTask<unsigned short> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<unsigned int> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<unsigned long> { enum { value = true}; };
-#if defined(__LONG_LONG_MAX__)  
+#if defined(__APPLE__) && defined(__ppc__) && defined(__GNUC__)
+#else  
   template<> struct TraitNoDeleteTask<unsigned long long> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<long long> { enum { value = true}; };
-#endif
-#if 0 /* it seems that these types are defined on top of char/short/int and long long, not long */
-  template<> struct TraitNoDeleteTask<int8_t> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<int16_t> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<int32_t> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<int64_t> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<uint8_t> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<uint16_t> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<uint32_t> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<uint64_t> { enum { value = true}; };
 #endif
   template<> struct TraitNoDeleteTask<float> { enum { value = true}; };
   template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
@@ -898,33 +882,33 @@ namespace ka {
      : kaapi_accesscw_t(access)
     { }
 
-#if 1
     template<typename pointer>
     explicit AccessCW( pointer* p )
     { 
-      kaapi_access_init(this, p); 
-      kaapi_accesscw_t::_wa = 0; 
+      kaapi_access_init((kaapi_access_t*)this, p); 
+      kaapi_accesscw_t::wa = 0; 
     }
 
     template<typename pointer>
     explicit AccessCW( const pointer* p ) 
     {
-      kaapi_access_init(this, (void*)p); 
-      kaapi_accesscw_t::_wa = 0; 
+      kaapi_access_init((kaapi_access_t*)this, (void*)p); 
+      kaapi_accesscw_t::wa = 0; 
     }
-#endif
 
     template<typename T>
     explicit AccessCW( const base_pointer<T>& p )
     { 
-      kaapi_access_init(this, p.ptr());  
-      kaapi_accesscw_t::_wa = 0; 
+      kaapi_access_init((kaapi_access_t*)this, p.ptr());  
+      kaapi_accesscw_t::wa = 1; 
     }
 
     operator kaapi_access_t&() 
     { return *this; }
-    void operator=( const kaapi_access_t& a)
-    { data = a.data; version = a.version; }
+    void operator=( const kaapi_access_t& access)
+    { kaapi_accesscw_t::a.data = access.data; 
+      kaapi_accesscw_t::a.version = access.version; 
+    }
   };
   
   
@@ -1238,21 +1222,21 @@ namespace ka {
     typedef ACCESS_MODE_CW   mode_t; 
     typedef AccessCW         type_inclosure_t;  /* could be only one pointer without version */
     static const bool        is_static = TraitIsStatic<T>::value;
-    static pointer_cw<T,OP>  handle2data( type_inclosure_t* a) { return (pointer_cw<T,OP>)*(T**)a->data; }
-    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
-    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
-    static int*              get_cwflag( type_inclosure_t* a, unsigned int i ) { return &a->_wa; }
-    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
-    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    static pointer_cw<T,OP>  handle2data( type_inclosure_t* a) { return (pointer_cw<T,OP>)*(T**)a->a.data; }
+    static const void*       get_data   ( const type_inclosure_t* p, unsigned int i ) { return &p->a.data; }
+    static const void*       get_version( const type_inclosure_t* p, unsigned int i ) { return &p->a.version; }
+    static int*              get_cwflag ( type_inclosure_t* p, unsigned int i ) { return &p->wa; }
+    static size_t            get_nparam ( const type_inclosure_t* p ) { return 1; }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* p, unsigned int i ) 
     { return kaapi_memory_view_make1d( 1, sizeof(type_inclosure_t) ); }
-    static void              set_view_param( type_inclosure_t* a, unsigned int i, const kaapi_memory_view_t*  view ) 
+    static void              set_view_param( type_inclosure_t* p, unsigned int i, const kaapi_memory_view_t*  view ) 
     { }
-    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
-    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
-    static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) 
+    static void              get_access  ( const type_inclosure_t* p, unsigned int i, kaapi_access_t* r ) { *r = p->a; }
+    static void              set_access  ( type_inclosure_t* p, unsigned int i, const kaapi_access_t* r ) { p->a = *r; }
+    static void              set_cwaccess( type_inclosure_t* p, unsigned int i, const kaapi_access_t* r, int f ) 
     {
-      *a = *r;
-      a->_wa = f;
+      p->a  = *r;
+      p->wa = f;
     }
     static void              reducor_fnc(void* result, const void* value) 
     { T* r = static_cast<T*> (result); 

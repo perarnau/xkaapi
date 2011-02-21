@@ -939,9 +939,8 @@ namespace a1 {
   inline OStream& operator<< (OStream& m, const unsigned int v )  { return m; }
   inline OStream& operator<< (OStream& m, const long v )  { return m; }
   inline OStream& operator<< (OStream& m, const unsigned long v )  { return m; }
-  inline OStream& operator<< (OStream& m, const int64_t v )  { return m; }
-  inline OStream& operator<< (OStream& m, const uint64_t v )  { return m; }
-#if 0
+#if defined(__APPLE__) && defined(__ppc__) && defined(__GNUC__)
+#else  
   inline OStream& operator<< (OStream& m, const long long v )  { return m; }
   inline OStream& operator<< (OStream& m, const unsigned long long v )  { return m; }
 #endif
@@ -971,9 +970,8 @@ namespace a1 {
   inline IStream& operator>> (IStream& m, unsigned int& v )  { return m; }
   inline IStream& operator>> (IStream& m, long& v )  { return m; }
   inline IStream& operator>> (IStream& m, unsigned long& v )  { return m; }
-  inline IStream& operator>> (IStream& m, int64_t& v )  { return m; }
-  inline IStream& operator>> (IStream& m, uint64_t& v )  { return m; }
-#if 0
+#if defined(__APPLE__) && defined(__ppc__) && defined(__GNUC__)
+#else  
   inline IStream& operator>> (IStream& m, long long& v )  { return m; }
   inline IStream& operator>> (IStream& m, unsigned long long& v )  { return m; }
 #endif
