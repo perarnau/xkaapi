@@ -1,0 +1,29 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+
+LINEARWORK_PRGS=horner_kaapi horner_kaapi++ variance_kaapi++
+check_PROGRAMS+=$(LINEARWORK_PRGS)
+all-lw: $(LINEARWORK_PRGS)
+
+horner_kaapi_SOURCES=linearwork/horner_kaapi.c linearwork/modp.h
+horner_kaapi___SOURCES=linearwork/horner_kaapi++.cpp linearwork/modp.h linearwork/kaLinearWork.hh
+variance_kaapi___SOURCES=linearwork/variance_kaapi++.cpp linearwork/kaLinearWork.hh
+
+horner_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
+horner_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
+horner_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
+horner_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS)
+
+horner_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+horner_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+horner_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+horner_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+variance_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+variance_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+variance_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+variance_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)

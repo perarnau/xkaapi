@@ -24,14 +24,13 @@ include find.am
 include for_each.am
 include hello.am
 include jacobi2D.am
+include linearwork.am
 include listranking.am
 include matrix.am
 include net.am
 include nqueens.am
 include poisson3D.am
 include prefix.am
-include horner.am
-include variance.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
@@ -43,6 +42,7 @@ USER_MAKEFILES=\
 	find/Makefile \
 	for_each/Makefile \
 	jacobi2D/Makefile \
+  linearwork/Makefile \
 	listranking/Makefile \
 	hello/Makefile \
 	matrix/Makefile \
