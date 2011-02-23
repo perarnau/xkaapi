@@ -102,7 +102,12 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   thread->unstealable = save_state;
 
 //  kaapi_thread_print( stdout, thread ); 
-  FILE* filedot = fopen("/tmp/graph.dot", "w");
+  char filename[128]; 
+  if (getenv("USER") !=0)
+    sprintf(filename,"/tmp/graph.%s.dot", getenv("USER") );
+  else
+    sprintf(filename,"/tmp/graph.dot");
+  FILE* filedot = fopen(filename, "w");
   kaapi_frame_print_dot( filedot, thread->sfp, 0 );
   fclose(filedot);
   

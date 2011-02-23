@@ -33,7 +33,7 @@
 #include <cblas.h>
 #endif
 
-#define BLOCSIZE 4
+#define BLOCSIZE 32
 
 /* Task Print
  * this task prints the sum of the entries of an array 
