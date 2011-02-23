@@ -118,7 +118,7 @@ static double var(const double* x, size_t n)
 
 int main(int ac, char** av)
 {
-  ka::linearWork::toRemove::initialize();
+  ka::linearWork::toRemove::initialize(ac,av);
 
   // generate a random vector
   const size_t n = 1024 * 1024;

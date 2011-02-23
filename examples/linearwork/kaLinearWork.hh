@@ -314,8 +314,8 @@ static void execute(work_type& work)
 
 namespace toRemove {
 // kaapi runtime constructors
-static void initialize(int ac = 0, char** av = 0)
-{ kaapi_init(); }
+static void initialize(int& ac, char**& av)
+{ kaapi_init(&ac,&av); }
 
 static void finalize()
 { kaapi_finalize(); }

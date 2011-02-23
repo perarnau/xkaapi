@@ -114,7 +114,7 @@ int main(int ac, char** av)
   unsigned long* const a = make_rand_polynom(n);
   static const unsigned long x = 2;
 
-  ka::linearWork::toRemove::initialize();
+  ka::linearWork::toRemove::initialize(ac,av);
 
   volatile unsigned long sum_par = 0;
 

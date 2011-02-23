@@ -372,7 +372,7 @@ int main(int ac, char** av)
   double seq_time, par_time;
   size_t iter;
 
-  kaapi_init();
+  kaapi_init(&ac, &av);
 
   start = kaapi_get_elapsedns();
   for (sum = 0, iter = 0; iter < 100; ++iter)
