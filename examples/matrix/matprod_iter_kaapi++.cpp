@@ -33,7 +33,7 @@
 #include <cblas.h>
 #endif
 
-#define BLOCSIZE 32
+#define BLOCSIZE 64
 
 /* Task Print
  * this task prints the sum of the entries of an array 
@@ -175,9 +175,9 @@ struct doit {
         dC[i] = 0.0;
     }
 
-    ka::array<2,double> A(dA, n, n, n);
-    ka::array<2,double> B(dB, n, n, n);
-    ka::array<2,double> C(dC, n, n, n);
+    ka::array<2, double> A(dA, n, n, n);
+    ka::array<2, double> B(dB, n, n, n);
+    ka::array<2, double> C(dC, n, n, n);
 
     // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
@@ -188,7 +188,8 @@ struct doit {
     std::cout << " Matrix Multiply took " << t1-t0 << " seconds." << std::endl;
 
     // If n is small, print the results
-    if (n <= 16) {
+    if (n <= 16) 
+    {
       ka::Spawn<TaskPrintMatrix>()( std::string("A"), A );
       ka::Sync();
       ka::Spawn<TaskPrintMatrix>()( std::string("B"), B );
