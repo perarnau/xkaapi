@@ -101,15 +101,20 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
   thread->unstealable = save_state;
 
-//  kaapi_thread_print( stdout, thread ); 
-  char filename[128]; 
-  if (getenv("USER") !=0)
-    sprintf(filename,"/tmp/graph.%s.dot", getenv("USER") );
-  else
-    sprintf(filename,"/tmp/graph.dot");
-  FILE* filedot = fopen(filename, "w");
-  kaapi_frame_print_dot( filedot, thread->sfp, 0 );
-  fclose(filedot);
+#if defined(KAAPI_DEBUG)
+  if (getenv("KAAPI_DUMP_GRAPH") !=0)
+  {
+    static uint32_t counter = 0;
+    char filename[128]; 
+    if (getenv("USER") !=0)
+      sprintf(filename,"/tmp/graph.%s.%i.dot", getenv("USER"), counter++ );
+    else
+      sprintf(filename,"/tmp/graph.%i.dot",counter++);
+    FILE* filedot = fopen(filename, "w");
+    kaapi_frame_print_dot( filedot, thread->sfp, 0 );
+    fclose(filedot);
+  }
+#endif
   
   /* exec the spawned subtasks */
   kaapi_thread_execframe_tasklist( thread );
