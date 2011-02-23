@@ -5,7 +5,7 @@
 // just a small for now. will change as soon as the
 // linear work adaptive interface gets integrated
 
-#include "../horner/kaLinearWork.hh"
+#include "kaLinearWork.hh"
 
 class varWork;
 
