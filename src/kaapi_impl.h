@@ -307,6 +307,7 @@ typedef struct kaapi_rtparam_t {
   unsigned int		         use_affinity;                    /* use cpu affinity */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   uint64_t                 startuptime;                     /* time at the end of kaapi_init */
+  int                      alarmperiod;                     /* period for alarm */
 
   struct kaapi_procinfo_list_t* kproc_list;                 /* list of kprocessors to initialized */
   kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
@@ -1904,6 +1905,11 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
+
+/* Possible signal handler to dump the state of the internal kprocessors
+*/
+extern void _kaapi_signal_dump_state(int);
+
 
 #if defined(__cplusplus)
 }

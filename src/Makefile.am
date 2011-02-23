@@ -151,6 +151,7 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_alloc.c \
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
+  machine/mt/kaapi_mt_signal.c \
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_perf.c \
   machine/mt/kaapi_mt_register_procs.c

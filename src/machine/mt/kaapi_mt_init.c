@@ -47,6 +47,11 @@
 #include <inttypes.h> 
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_DEBUG)
+#  include <unistd.h>
+#  include <sys/time.h>
+#  include <signal.h>
+#endif
 
 
 /*
@@ -229,6 +234,27 @@ int kaapi_mt_init(void)
   }
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
+  
+  /* */
+#if defined(KAAPI_DEBUG)
+  /* set alarm */
+  if (getenv("KAAPI_DUMP_PERIOD") !=0)
+  {
+    kaapi_default_param.alarmperiod = atoi(getenv("KAAPI_DUMP_PERIOD"));
+    if (kaapi_default_param.alarmperiod <0) return EINVAL;
+    if (kaapi_default_param.alarmperiod ==0) return 0;
+    
+    /* set signal handler on SIGALRM + set alarm */
+    struct sigaction sa;
+    sa.sa_handler = _kaapi_signal_dump_state;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset (&sa.sa_mask);
+    sigaction(SIGALRM , &sa, NULL);
+
+    /* set periodic alarm */
+    alarm( kaapi_default_param.alarmperiod );
+  }
+#endif  
   
   return 0;
 }
