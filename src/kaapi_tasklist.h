@@ -115,21 +115,6 @@ typedef struct kaapi_move_arg_t {
 } kaapi_move_arg_t;
 
 
-/** Task with kaapi_move_arg_t as parameter in order to initialize a first R access
-    from the original data in memory.
-*/
-extern void kaapi_taskmove_body( void*, kaapi_thread_t* );
-
-/** Task with kaapi_move_arg_t as parameter in order to allocate data for a first CW access
-    from the original data in memory.
-*/
-extern void kaapi_taskalloc_body( void*, kaapi_thread_t* );
-
-/** Task with kaapi_move_arg_t as parameter in order to mark synchronization at the end of 
-    a chain of CW access. It is the task that logically produce the data.
-*/
-extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
-
 /** TaskDescriptor
     This data structure is add more information about task (kaapi_task_t)
     and it is pushed into the stack of each list of stack.
@@ -179,8 +164,9 @@ typedef struct kaapi_taskdescr_t {
 typedef struct kaapi_tasklist_t {
   kaapi_atomic_t          lock;       /* protect recvlist */
 
-  /* executive part */
+  /* execution state for ready task using tasklist */
   kaapi_workqueue_t       wq_ready;   /* workqueue for ready tasks, used during runtime */
+  kaapi_taskdescr_t**     td_top;     /* pointer to the next task to execute in td_ready container */ 
   kaapi_taskdescr_t**     td_ready;   /* container for the workqueue, used during runtime */
   kaapi_recvactlink_t*    recv;       /* next entry to receive */
   struct context_t {
@@ -317,6 +303,7 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
   kaapi_sched_initlock(&tl->lock);
   kaapi_workqueue_init(&tl->wq_ready, 0, 0);
   tl->td_ready      = 0;
+  tl->td_top        = 0;
   tl->recv          = 0;
   tl->context.chkpt = 0;
 #if defined(KAAPI_DEBUG)  
@@ -336,7 +323,11 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
 /**/
 static inline int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
 {
+  tl->td_top = 0;
+  kaapi_workqueue_destroy( &tl->wq_ready );
   kaapi_allocator_destroy( &tl->allocator );
+  if (tl->td_ready !=0) free(tl->td_ready);
+  tl->td_ready = 0;
   return 0;
 }
 
@@ -486,14 +477,14 @@ extern void kaapi_tasklist_push_broadcasttask(
     Both computereadylist and online_computedef call this function.
     \retval 0 in case of success
 */
-extern int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_frame_t* frame, kaapi_task_t* task);
+extern int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist, kaapi_task_t* task);
 
 
 /** Compute the readylist of the topframe of a thread
     \retval 0 in case of success
     \retval EBUSY if a ready list already exist for the thread
 */
-extern int kaapi_thread_computereadylist( kaapi_thread_context_t* thread );
+extern int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist );
 
 /** Compute the minimal date of execution of the task 
 */

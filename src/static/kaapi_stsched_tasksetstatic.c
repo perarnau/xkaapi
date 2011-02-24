@@ -50,6 +50,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 {
   int save_state;
   kaapi_frame_t* fp;
+  kaapi_tasklist_t* tasklist;
   double t0;
   double t1;
   
@@ -74,8 +75,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 
   /* allocate the tasklist for this task
   */
-  thread->sfp->tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( thread->sfp->tasklist );
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
 
   if (arg->npart == -1)
   {    
@@ -84,7 +85,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   
     /* currently: that all, do not compute other things */
     t0 = kaapi_get_elapsedtime();
-    kaapi_sched_computereadylist();
+    kaapi_thread_computereadylist(thread, tasklist);
     t1 = kaapi_get_elapsedtime();
   }
   else 
@@ -96,11 +97,14 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
     arg->sub_body( arg->sub_sp, uthread );
   }
   
-  printf("[tasklist] T1:%llu\n", thread->sfp->tasklist->cnt_tasks);
-  printf("[tasklist] Tinf:%llu\n", thread->sfp->tasklist->t_infinity);
+  printf("[tasklist] T1:%llu\n", tasklist->cnt_tasks);
+  printf("[tasklist] Tinf:%llu\n", tasklist->t_infinity);
   printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
   thread->unstealable = save_state;
 
+  kaapi_writemem_barrier();
+  thread->sfp->tasklist = tasklist;
+  
 #if defined(KAAPI_DEBUG)
   if (getenv("KAAPI_DUMP_GRAPH") !=0)
   {
@@ -118,6 +122,10 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   
   /* exec the spawned subtasks */
   kaapi_thread_execframe_tasklist( thread );
+  thread->sfp->tasklist = 0;
+
+  kaapi_tasklist_destroy( tasklist );
+  free(tasklist);
 
   /* Pop & restore the frame */
   --thread->sfp;

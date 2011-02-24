@@ -254,7 +254,7 @@ int kaapi_mt_init(void)
     /* set periodic alarm */
     alarm( kaapi_default_param.alarmperiod );
   }
-#endif  
+#endif
   
   return 0;
 }

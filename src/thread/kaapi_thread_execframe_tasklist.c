@@ -60,9 +60,9 @@
 int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
   kaapi_task_t*              pc;      /* cache */
-  kaapi_taskdescr_t**        td_top; 
   kaapi_workqueue_index_t    local_beg, local_end;
   kaapi_tasklist_t*          tasklist;
+  kaapi_taskdescr_t**        td_top;  /*cache of tasklist->td_top */
   kaapi_taskdescr_t*         td;
   kaapi_task_body_t          body;
   kaapi_frame_t*             fp;
@@ -100,13 +100,16 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
       curr = curr->next;
     }
     /* the initial workqueue is [-ntasks, 0) at the begining of td_top; */
+    kaapi_writemem_barrier();
+    tasklist->td_top = tasklist->td_ready + tasklist->cnt_tasks;
+    kaapi_writemem_barrier();
     kaapi_workqueue_init(&tasklist->wq_ready, -ntasks, 0);
   }
 
   /* here we assume that execframe was already called 
      - only reset td_top
   */
-  td_top = tasklist->td_ready + tasklist->cnt_tasks;
+  td_top = tasklist->td_top;
   
   /* jump to previous state if return from suspend (if previous return from EWOULDBLOCK)
   */

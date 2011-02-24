@@ -197,6 +197,7 @@ struct kaapi_procinfo_list_t;
 */
 struct kaapi_tasklist_t;
 struct kaapi_comlink_t;
+struct kaapi_taskdescr_t;
 
 /* ============================= Processor list ============================ */
 
@@ -646,11 +647,13 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_thread_execframe */
 
+  /* execution state for stack of task */
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
   kaapi_task_t*         volatile pc      __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the task the thief wants to steal */
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
   kaapi_task_t*         volatile thiefpc;        /** pointer to the task the thief wants to steal */
-#endif
+#endif  
+
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif
@@ -717,6 +720,12 @@ extern void kaapi_exec_body( void*, kaapi_thread_t*);
 */
 extern void kaapi_tasksteal_body( void*, kaapi_thread_t* );
 
+/** Body of task steal created on thief stack to execute a task
+    theft from ready tasklist
+    \ingroup TASK
+*/
+extern void kaapi_taskstealready_body( void*, kaapi_thread_t* );
+
 /** Write result after a steal 
     \ingroup TASK
 */
@@ -731,6 +740,22 @@ extern void kaapi_aftersteal_body( void*, kaapi_thread_t* );
     \ingroup TASK
 */
 extern void kaapi_adapt_body( void*, kaapi_thread_t* );
+
+
+/** Task with kaapi_move_arg_t as parameter in order to initialize a first R access
+    from the original data in memory.
+*/
+extern void kaapi_taskmove_body( void*, kaapi_thread_t* );
+
+/** Task with kaapi_move_arg_t as parameter in order to allocate data for a first CW access
+    from the original data in memory.
+*/
+extern void kaapi_taskalloc_body( void*, kaapi_thread_t* );
+
+/** Task with kaapi_move_arg_t as parameter in order to mark synchronization at the end of 
+    a chain of CW access. It is the task that logically produce the data.
+*/
+extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 
 
 /* ============================= Implementation method ============================ */
@@ -1052,6 +1077,8 @@ static inline int kaapi_isvalid_body( kaapi_task_body_t body)
       || (body == kaapi_taskwrite_body)
       || (body == kaapi_aftersteal_body)
       || (body == kaapi_nop_body)
+      || (body == kaapi_taskmove_body)
+      || (body == kaapi_taskalloc_body)
   ;
 }
 #else
@@ -1703,6 +1730,18 @@ extern int kaapi_task_splitter_adapt(
 );
 
 
+/** \ingroup WS
+    Splitter arround tasklist stealing
+*/
+extern int kaapi_task_splitter_readylist( 
+  kaapi_thread_context_t*       thread, 
+  struct kaapi_tasklist_t*      tasklist,
+  struct kaapi_taskdescr_t**    task_beg,
+  struct kaapi_taskdescr_t**    task_end,
+  kaapi_listrequest_t*          lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+);
+
 /** \ingroup ADAPTIVE
      Disable steal on stealcontext and wait not more thief is stealing.
  */
@@ -1778,6 +1817,14 @@ typedef struct kaapi_tasksteal_arg_t {
   unsigned int            war_param;         /* bit i=1 iff it is a w mode with war dependency */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
+
+/** Args for taskstealready
+*/
+typedef struct kaapi_taskstealready_arg_t {
+  kaapi_thread_context_t*   origin_thread;   /* stack where task was stolen */
+  struct kaapi_tasklist_t*  origin_tasklist; /* the original task list */
+  struct kaapi_taskdescr_t* origin_td;       /* the stolen task into origin_stack */
+} kaapi_taskstealready_arg_t;
 
 
 /** User task + args for kaapi_adapt_body. 

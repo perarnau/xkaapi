@@ -45,12 +45,12 @@
 
 /**
 */
-int kaapi_sched_computereadylist( void )
+int kaapi_sched_computereadylist(  )
 {
   int err;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
-  err= kaapi_thread_computereadylist( thread );
+  err= kaapi_thread_computereadylist( thread, thread->sfp->tasklist );
   return err;
 }
 
@@ -58,7 +58,7 @@ int kaapi_sched_computereadylist( void )
 /** task is the top task not yet pushed.
     This function is called is after all task has been pushed into a specific frame.
  */
-int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
+int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist )
 {
   kaapi_frame_t*          frame;
   kaapi_task_t*           task_top;
@@ -72,7 +72,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread )
   task_bottom = frame->sp;
   while (task_top > task_bottom)
   {
-    kaapi_thread_computedep_task( thread, frame, task_top );
+    kaapi_thread_computedep_task( thread, tasklist, task_top );
     --task_top;
   } /* end while task */
 

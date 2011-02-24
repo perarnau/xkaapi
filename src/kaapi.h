@@ -1748,6 +1748,13 @@ static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_
   return 0;
 }
 
+/** destroy 
+*/
+static inline int kaapi_workqueue_destroy( kaapi_workqueue_t* kwq )
+{
+  return 0;
+}
+
 /** This function set new bounds for the workqueue.
     The only garantee is that is a concurrent thread tries
     to access to the size of the queue while a thread set the workqueue, 

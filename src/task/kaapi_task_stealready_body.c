@@ -1,8 +1,8 @@
 /*
-** kaapi_thread_clear.c
+** kaapi_task_steal.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,39 +43,40 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <strings.h>
-#include <stddef.h>
+#include <stdio.h>
+
 
 /**
 */
-int kaapi_thread_clear( kaapi_thread_context_t* thread )
+void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* thread  )
 {
-  kaapi_assert_debug( thread != 0);
+  kaapi_taskstealready_arg_t* arg;
+  kaapi_frame_t*         frame;
+  kaapi_tasklist_t*      tasklist;
 
-  thread->sfp        = thread->stackframe;
-  thread->esfp       = thread->stackframe;
-  thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
-  thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
-  thread->sfp->tasklist= 0;
+  /* get information of the task to execute */
+  arg = (kaapi_taskstealready_arg_t*)taskarg;
+  
+  /* Execute the orinal body function with the original args */
+  frame = (kaapi_frame_t*)thread;
 
-  thread->the_thgrp  = 0;
-  thread->unstealable= 0;
-  thread->partid     = -10; /* out of bound value */
+  /* create a new tasklist: should be very fast allocation,
+     its a root tasklist for this thread. 
+     May allocated it at thread creation time
+  */
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
+  kaapi_tasklist_pushback_ready( tasklist, arg->origin_td );
+  
+  /* reserve the tasklist for 32 tasks (at most) */
+  tasklist->cnt_tasks = 32;
 
-  thread->_next      = 0;
-  thread->_prev      = 0;
-  thread->asid       = 0;
-  thread->affinity[0]= ~0UL;
-  thread->affinity[1]= ~0UL;
+  kaapi_writemem_barrier();
+  frame->tasklist = tasklist;
 
-  thread->wcs        = 0;
-
-  /* zero all bytes from static_reply until end of sc_data */
-  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
-
-#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  thread->thgrp      = 0;
-#endif
-  return 0;
+  /* exec the spawned subtasks */
+  kaapi_thread_execframe_tasklist( kaapi_self_thread_context() );
+  frame->tasklist = 0;
+  kaapi_tasklist_destroy( tasklist );
+  free(tasklist);
 }
-
