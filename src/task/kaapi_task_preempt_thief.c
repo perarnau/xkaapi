@@ -104,8 +104,8 @@ int kaapi_preempt_thief_helper
  )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t t1;
   uint64_t t0;
+  uint64_t t1;
 #endif
   
   uintptr_t state;
@@ -142,10 +142,10 @@ int kaapi_preempt_thief_helper
   kaapi_remove_finishedthief(sc, ktr);
   
 #if defined(KAAPI_USE_PERFCOUNTER)
-#warning TODO
   t1 = kaapi_get_elapsedns();
+#if 0 /* TODO */
   sc->ctxtthread->proc->t_preempt += (double)(t1-t0)*1e-9;
-  //  printf("Delay preempt:%15f, Total=%15f\n", (double)(t1-t0)*1e-9, stc->ctxtthread->proc->t_preempt );
+#endif
 #endif
   
   return 1;

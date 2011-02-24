@@ -17,6 +17,14 @@ static unsigned int papi_event_count = 0;
 
 
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
+
+static inline int get_event_code(char* name, int* code)
+{
+  if (PAPI_event_name_to_code(name, code) != PAPI_OK)
+    return -1;
+  return 0;
+}
+
 static int get_papi_events(void)
 {
   /* todo: [u|k]:EVENT_NAME */
@@ -69,13 +77,13 @@ void kaapi_perf_global_init(void)
   int error;
 
   error = PAPI_library_init(PAPI_VER_CURRENT);
-  kaapi_assert_m(error, PAPI_VER_CURRENT, "PAPI_library_init()");
+  kaapi_assert_m(error == PAPI_VER_CURRENT, "PAPI_library_init()");
   
   error = PAPI_thread_init(pthread_self);
-  kaapi_assert_m(error, PAPI_OK, "PAPI_thread_init()");
+  kaapi_assert_m(error == PAPI_OK, "PAPI_thread_init()");
 
   error = get_papi_events();
-  kaapi_assert_m(0, error, "get_papi_events()");
+  kaapi_assert_m(0 == error, "get_papi_events()");
 #endif
 }
 
@@ -109,25 +117,25 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
     /* create event set */
     kproc->papi_event_set = PAPI_NULL;
     err = PAPI_create_eventset(&kproc->papi_event_set);
-    kaapi_assert_m(PAPI_OK, err, "PAPI_create_eventset()\n");
+    kaapi_assert_m(PAPI_OK == err, "PAPI_create_eventset()\n");
 
     /* thread granularity */
     memset(&opt, 0, sizeof(opt));
     opt.granularity.eventset = kproc->papi_event_set;
     opt.granularity.granularity = PAPI_GRN_THR;
     err = PAPI_set_opt(PAPI_GRANUL, &opt);
-    kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_grn()");
+    kaapi_assert_m(PAPI_OK == err, "PAPI_set_opt_grn()");
 
     /* user domain */
     memset(&opt, 0, sizeof(opt));
     opt.domain.eventset = kproc->papi_event_set;
     opt.domain.domain = PAPI_DOM_USER;
     err = PAPI_set_opt(PAPI_DOMAIN, &opt);
-    kaapi_assert_m(PAPI_OK, err, "PAPI_set_opt_dom()");
+    kaapi_assert_m(PAPI_OK == err, "PAPI_set_opt_dom()");
 
     err = PAPI_add_events
       (kproc->papi_event_set, papi_event_codes, papi_event_count);
-    kaapi_assert_m(PAPI_OK, err, "PAPI_add_events()\n");
+    kaapi_assert_m(PAPI_OK == err, "PAPI_add_events()\n");
 
     kproc->papi_event_count = papi_event_count;
   }
@@ -165,7 +173,7 @@ void kaapi_perf_thread_start(kaapi_processor_t* kproc)
        cost to this thread wait all intialization of other threads, set setconcurrency.
        After this call we assume that we are counting.
     */
-    kaapi_assert_m( PAPI_OK, PAPI_reset(kproc->papi_event_set), "PAPI_reset" );
+    kaapi_assert_m(PAPI_OK == PAPI_reset(kproc->papi_event_set), "PAPI_reset" );
   }
 #endif
   kproc->start_t[KAAPI_GET_THREAD_STATE(kproc)] = kaapi_get_elapsedns();
@@ -181,8 +189,15 @@ void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
   if (papi_event_count)
   {
-    /* in fact here we accumulate papi counter: the thread do not restart counting */
-    kaapi_assert_m( PAPI_OK, PAPI_accum(kproc->papi_event_set, kproc->curr_perf_regs+KAAPI_PERF_ID_PAPI_BASE), "PAPI_accum" );
+    /* in fact here we accumulate papi counter:
+       the thread do not restart counting
+    */
+    const int err = PAPI_accum
+    (
+     kproc->papi_event_set,
+     (long_long*)(kproc->curr_perf_regs + KAAPI_PERF_ID_PAPI_BASE)
+    );
+    kaapi_assert_m(PAPI_OK == err, "PAPI_accum");
   }
 #endif
   mode = KAAPI_GET_THREAD_STATE(kproc);
@@ -219,8 +234,16 @@ void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
     if (papi_event_count)
     {
-      /* we accumulate papi counter in previous mode; do not reset as in kaapi_perf_thread_start because PAPI_accu do that */
-      kaapi_assert_m( PAPI_OK, PAPI_accum(kproc->papi_event_set, kproc->curr_perf_regs+KAAPI_PERF_ID_PAPI_BASE), "PAPI_accum" );
+      /* we accumulate papi counter in previous mode
+	 do not reset as in kaapi_perf_thread_start
+	 because PAPI_accum does that
+      */
+      const int err = PAPI_accum
+      (
+       kproc->papi_event_set,
+       (long_long*)(kproc->curr_perf_regs + KAAPI_PERF_ID_PAPI_BASE)
+      );
+      kaapi_assert_m(PAPI_OK == err, "PAPI_accum");
     }
 #endif
     kproc->curr_perf_regs = kproc->perf_regs[isuser]; 

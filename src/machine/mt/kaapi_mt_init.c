@@ -300,9 +300,9 @@ int kaapi_mt_finalize(void)
 
 # ifndef PRI64
 /* #   if (sizeof(unsigned long) == sizeof(uint64_t)) */
-/* #     define PRI64 "ld" */
+#     define PRI64 "ld"
 /* #   else */
-#     define PRI64 "lld"
+/* #     define PRI64 "lld" */
 /* #   endif */
 # endif 
 
