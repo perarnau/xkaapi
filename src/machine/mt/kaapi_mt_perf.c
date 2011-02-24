@@ -119,8 +119,12 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
     err = PAPI_create_eventset(&kproc->papi_event_set);
     kaapi_assert_m(PAPI_OK == err, "PAPI_create_eventset()\n");
 
+    /* set the default component. mandatory in newer interfaces. */
+    PAPI_assign_eventset_component(kproc->papi_event_set, 0);
+
     /* thread granularity */
     memset(&opt, 0, sizeof(opt));
+    opt.granularity.def_cidx = kproc->papi_event_set;
     opt.granularity.eventset = kproc->papi_event_set;
     opt.granularity.granularity = PAPI_GRN_THR;
     err = PAPI_set_opt(PAPI_GRANUL, &opt);

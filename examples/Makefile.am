@@ -31,6 +31,7 @@ include net.am
 include nqueens.am
 include poisson3D.am
 include prefix.am
+include papi.am
 
 USER_MAKEFILES=\
 	accumulate/Makefile \
@@ -80,7 +81,7 @@ gen-%.am.m4.info: %.am
 	  | $(SED) -e '/^[$S]*#/d' \
 	  | $(ESED) -e '/^[^=]+_(SOURCES|PRGS|(C(PP|XX)?|LD)FLAGS|LDADD)[$S]*=/p;d' \
 	  > $@
-	
+
 MAKE_VAR=$(MAKE) -s --no-print-directory
 gen-%.am.m4: gen-%.am.m4.info Makefile
 	$(AM_V_GEN)echo 'define([DIR],[$*])dnl' > $@
