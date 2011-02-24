@@ -1903,10 +1903,6 @@ static inline int kaapi_workqueue_steal(
 /** \ingroup PERF
     performace counters
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
-# include <papi.h>
-#endif
-
 #define KAAPI_PERF_ID_USER_POS (31)
 #define KAAPI_PERF_ID_USER_MASK (1 << KAAPI_PERF_ID_USER_POS)
 
