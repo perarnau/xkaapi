@@ -87,7 +87,6 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
 
   /* new task descriptor */
   taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
-  ++tasklist->cnt_tasks;
   
   /* compute if the i-th access is ready or not.
      If all accesses of the task are ready then push it into readylist.

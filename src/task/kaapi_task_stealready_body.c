@@ -48,17 +48,22 @@
 
 /**
 */
-void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* thread  )
+void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 {
+  kaapi_thread_context_t*     thread;
   kaapi_taskstealready_arg_t* arg;
-  kaapi_frame_t*         frame;
-  kaapi_tasklist_t*      tasklist;
+  kaapi_frame_t*              frame;
+  kaapi_tasklist_t*           tasklist;
+  int err;
 
+  thread = kaapi_self_thread_context();
+  
   /* get information of the task to execute */
   arg = (kaapi_taskstealready_arg_t*)taskarg;
   
   /* Execute the orinal body function with the original args */
-  frame = (kaapi_frame_t*)thread;
+  frame = (kaapi_frame_t*)uthread;
+  kaapi_assert_debug( frame == thread->sfp );
 
   /* create a new tasklist: should be very fast allocation,
      its a root tasklist for this thread. 
@@ -75,8 +80,23 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* thread  )
   frame->tasklist = tasklist;
 
   /* exec the spawned subtasks */
-  kaapi_thread_execframe_tasklist( kaapi_self_thread_context() );
+  err = kaapi_thread_execframe_tasklist( thread );
+  kaapi_assert( (err == 0) || (err == ECHILD) );
+
+  KAAPI_ATOMIC_ADD( &arg->origin_tasklist->count_exec, 
+      tasklist->cnt_exectasks );
+
+#if 0
+  printf("%i::[subtasklist] exec tasks: %llu\n", 
+      kaapi_get_self_kid(), tasklist->cnt_exectasks 
+  );
+  fflush(stdout);
+#endif
+
+  kaapi_sched_lock(&thread->proc->lock);
   frame->tasklist = 0;
+  kaapi_sched_unlock(&thread->proc->lock);
+  
   kaapi_tasklist_destroy( tasklist );
   free(tasklist);
 }

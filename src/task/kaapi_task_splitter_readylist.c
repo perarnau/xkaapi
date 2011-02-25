@@ -82,7 +82,8 @@ int kaapi_task_splitter_readylist(
     */
     argsteal = (kaapi_taskstealready_arg_t*)stealreply->udata;
     argsteal->origin_thread         = thread;
-    argsteal->origin_tasklist       = tasklist;
+    argsteal->origin_tasklist       = 
+        (tasklist->master == 0 ? tasklist : tasklist->master);
     argsteal->origin_td             = (*taskdescr_beg);
     stealreply->u.s_task.body       = kaapi_taskstealready_body;
 

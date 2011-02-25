@@ -163,12 +163,16 @@ typedef struct kaapi_taskdescr_t {
 */
 typedef struct kaapi_tasklist_t {
   kaapi_atomic_t          lock;       /* protect recvlist */
+  kaapi_atomic_t          count_exec; /* should be == cnt_tasks at terminaison */
 
   /* execution state for ready task using tasklist */
   kaapi_workqueue_t       wq_ready;   /* workqueue for ready tasks, used during runtime */
   kaapi_taskdescr_t**     td_top;     /* pointer to the next task to execute in td_ready container */ 
   kaapi_taskdescr_t**     td_ready;   /* container for the workqueue, used during runtime */
+  struct kaapi_tasklist_t*master;     /* master tasklist */
   kaapi_recvactlink_t*    recv;       /* next entry to receive */
+
+  /* context to restart from suspend */
   struct context_t {
     int                   chkpt;      /* see execframe for task list */
     kaapi_taskdescr_t*    td;
@@ -177,10 +181,11 @@ typedef struct kaapi_tasklist_t {
 
   /* constant state (after creation) */
   kaapi_activationlist_t  readylist;  /* readylist of task descriptor */
-  uintptr_t               count_recv; /* number of extern synchron    ization to receive before detecting end of execution */
+  uintptr_t               count_recv; /* number of extern synchronization to receive before detecting end of execution */
   kaapi_recv_list_t       recvlist;   /* put by pushsignal into ready list to signal incomming data */
   kaapi_allocator_t       allocator;  /* where to push task descriptor and other data structure */
-  uint64_t                cnt_tasks;  /* number of task in the tasklist */
+  uint64_t                cnt_tasks;  /* number of tasks in the tasklist */
+  uint64_t                cnt_exectasks;  /* number of tasks executed in the tasklist */
   uint64_t                t_infinity; /* length path in the graph of tasks */
 } kaapi_tasklist_t;
 
@@ -301,9 +306,11 @@ static inline int kaapi_taskdescr_activated( kaapi_taskdescr_t* td)
 static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
 {
   kaapi_sched_initlock(&tl->lock);
+  KAAPI_ATOMIC_WRITE(&tl->count_exec, 0);
   kaapi_workqueue_init(&tl->wq_ready, 0, 0);
   tl->td_ready      = 0;
   tl->td_top        = 0;
+  tl->master        = 0;
   tl->recv          = 0;
   tl->context.chkpt = 0;
 #if defined(KAAPI_DEBUG)  
@@ -314,8 +321,9 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
   kaapi_activationlist_clear( &tl->readylist );
   kaapi_recvlist_clear(&tl->recvlist);
   kaapi_allocator_init( &tl->allocator );
-  tl->cnt_tasks  = 0;
-  tl->t_infinity = 0;
+  tl->cnt_tasks     = 0;
+  tl->cnt_exectasks = 0;
+  tl->t_infinity    = 0;
   return 0;
 }
 
@@ -349,6 +357,7 @@ static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td( kaapi_tasklist_t* t
   kaapi_taskdescr_t* retval = 
       (kaapi_taskdescr_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_taskdescr_t) );
   kaapi_taskdescr_init(retval, task);
+  ++tl->cnt_tasks;
   return retval;
 }
 
