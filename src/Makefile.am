@@ -45,6 +45,7 @@ libkaapi_la_SOURCES=\
   kaapi.h \
   kaapi_impl.h \
   kaapi_network.h \
+  kaapi_compiler.h \
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \
