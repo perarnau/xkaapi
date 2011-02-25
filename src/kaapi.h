@@ -189,6 +189,9 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 #  define KAAPI_ATOMIC_DECR(a) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ))
 
+#  define KAAPI_ATOMIC_ADD(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), value ))
+
 #  define KAAPI_ATOMIC_SUB(a, value) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ))
 
@@ -221,6 +224,9 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 
 #  define KAAPI_ATOMIC_DECR64(a) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ) )
+
+#  define KAAPI_ATOMIC_ADD64(a, value) \
+    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), value ) )
 
 #  define KAAPI_ATOMIC_SUB64(a, value) \
     __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ) )
@@ -259,6 +265,9 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 #  define KAAPI_ATOMIC_DECR32(a) \
     OSAtomicDecrement32Barrier(&((a)->_counter) ) 
 
+#  define KAAPI_ATOMIC_ADD(a, value) \
+    OSAtomicAdd32Barrier( value, &((a)->_counter) ) 
+
 #  define KAAPI_ATOMIC_SUB(a, value) \
     OSAtomicAdd32Barrier( -value, &((a)->_counter) ) 
 
@@ -291,6 +300,9 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 
 #  define KAAPI_ATOMIC_DECR64(a) \
     OSAtomicDecrement64Barrier(&((a)->_counter) ) 
+
+#  define KAAPI_ATOMIC_ADD64(a, value) \
+    OSAtomicAdd64Barrier( value, &((a)->_counter) ) 
 
 #  define KAAPI_ATOMIC_SUB64(a, value) \
     OSAtomicAdd64Barrier( -value, &((a)->_counter) ) 
@@ -1745,6 +1757,13 @@ static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_
 #endif
   kwq->beg = b;
   kwq->end = e;
+  return 0;
+}
+
+/** destroy 
+*/
+static inline int kaapi_workqueue_destroy( kaapi_workqueue_t* kwq )
+{
   return 0;
 }
 

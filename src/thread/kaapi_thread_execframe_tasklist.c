@@ -60,9 +60,9 @@
 int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
   kaapi_task_t*              pc;      /* cache */
-  kaapi_taskdescr_t**        td_top; 
   kaapi_workqueue_index_t    local_beg, local_end;
   kaapi_tasklist_t*          tasklist;
+  kaapi_taskdescr_t**        td_top;  /*cache of tasklist->td_top */
   kaapi_taskdescr_t*         td;
   kaapi_task_body_t          body;
   kaapi_frame_t*             fp;
@@ -70,11 +70,12 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   unsigned int               proc_type;
   int                        task_pushed = 0;
   int                        err;
+  uint32_t                   cnt_exec = 0;
   
-  kaapi_assert_debug(thread->sfp >= thread->stackframe);
-  kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
+  kaapi_assert_debug( thread->sfp >= thread->stackframe );
+  kaapi_assert_debug( thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL );
   tasklist = thread->sfp->tasklist;
-  kaapi_assert_debug( tasklist != 0);
+  kaapi_assert_debug( tasklist != 0 );
   
   /* get the processor type to select correct entry point */
   proc_type = thread->proc->proc_type;
@@ -83,7 +84,9 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   if (tasklist->td_ready == 0)
   {
     tasklist->td_ready = 
-      (kaapi_taskdescr_t**)malloc( (size_t) (sizeof(kaapi_taskdescr_t*) * tasklist->cnt_tasks) );
+      (kaapi_taskdescr_t**)malloc( 
+            (size_t) (sizeof(kaapi_taskdescr_t*) * tasklist->cnt_tasks) 
+    );
     kaapi_workqueue_index_t ntasks = 0;
 
     tasklist->recv = tasklist->recvlist.front;
@@ -100,15 +103,19 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
       curr = curr->next;
     }
     /* the initial workqueue is [-ntasks, 0) at the begining of td_top; */
+    kaapi_writemem_barrier();
+    tasklist->td_top = tasklist->td_ready + tasklist->cnt_tasks;
+    kaapi_writemem_barrier();
     kaapi_workqueue_init(&tasklist->wq_ready, -ntasks, 0);
   }
 
   /* here we assume that execframe was already called 
      - only reset td_top
   */
-  td_top = tasklist->td_ready + tasklist->cnt_tasks;
+  td_top = tasklist->td_top;
   
-  /* jump to previous state if return from suspend (if previous return from EWOULDBLOCK)
+  /* jump to previous state if return from suspend 
+     (if previous return from EWOULDBLOCK)
   */
   switch (tasklist->context.chkpt) {
     case 1:
@@ -158,7 +165,8 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
         /* here... call the task*/
         body( pc->sp, (kaapi_thread_t*)thread->sfp );
-
+        ++cnt_exec;
+        
         /* new tasks created ? */
         if (unlikely(fp->sp > thread->sfp->sp))
         {
@@ -166,9 +174,10 @@ redo_frameexecution:
           err = kaapi_thread_execframe( thread );
           if ((err == EWOULDBLOCK) || (err == EINTR)) 
           {
-            tasklist->context.chkpt = 1;
-            tasklist->context.td = td;
-            tasklist->context.fp = fp;
+            tasklist->context.chkpt  = 1;
+            tasklist->context.td     = td;
+            tasklist->context.fp     = fp;
+            tasklist->cnt_exectasks += cnt_exec;
             return err;
           }
           kaapi_assert_debug( err == 0 );
@@ -182,9 +191,8 @@ redo_frameexecution:
         while (curr_activated !=0)
         {
           if (kaapi_taskdescr_activated(curr_activated->td))
-          { /* if non local -> push on remote queue ? */
+            /* if non local -> push on remote queue ? */
             td_top[local_beg--] = curr_activated->td;
-          }
           curr_activated = curr_activated->next;
         }
         task_pushed |= 1;
@@ -198,7 +206,7 @@ redo_frameexecution:
         {
           /* bcast task are always ready */
           td_top[local_beg--] = curr_activated->td;
-          curr_activated = curr_activated->next;
+          curr_activated      = curr_activated->next;
         }
         task_pushed |= 1;
       }      
@@ -211,8 +219,8 @@ redo_frameexecution:
     if (tasklist->recv !=0)
     {
       td_top[local_beg--] = tasklist->recv->td;
-      tasklist->recv = tasklist->recv->next;
-      task_pushed |= 1;
+      tasklist->recv      = tasklist->recv->next;
+      task_pushed        |= 1;
     }
 
     /* ok, now push pushed task into the wq */
@@ -221,20 +229,13 @@ redo_frameexecution:
       kaapi_workqueue_push(&tasklist->wq_ready, 1+local_beg);
       task_pushed = 0;
     }
-    
   } /* while */
 
   /* pop frame */
   --thread->sfp;
 
-#if 0
-  printf("%i::[kaapi_threadgroup_execframe] end tid:%i, #task:%p, #recvlist:%p, #wc_recv:%i\n", 
-    thread->the_thgrp->localgid, 
-    thread->partid, 
-    (void*)tasklist->front,
-    (void*)tasklist->recvlist,
-    (int)tasklist->count_recv);
-#endif
+  /* update executed tasks */
+  tasklist->cnt_exectasks += cnt_exec;
   
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)

@@ -54,7 +54,7 @@ int kaapi_thread_online_computedep(kaapi_thread_t* frame, int pid, kaapi_task_t*
   int err;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
-  err = kaapi_thread_computedep_task( thread, (kaapi_frame_t*)frame, task );
+  err = kaapi_thread_computedep_task( thread, frame->tasklist, task );
   if (err ==0)
     kaapi_thread_pushtask(frame);
   return err;
@@ -63,17 +63,15 @@ int kaapi_thread_online_computedep(kaapi_thread_t* frame, int pid, kaapi_task_t*
 #define KAAPI_USE_PERFCOUNTER 1
 /**
 */
-int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_frame_t* frame, kaapi_task_t* task)
+int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist, kaapi_task_t* task)
 {
   kaapi_format_t*         task_fmt;
   kaapi_task_body_t       task_body;
   kaapi_taskdescr_t*      taskdescr =0;
-  kaapi_tasklist_t*       tasklist =0;
   kaapi_metadata_info_t*  mdi;
   kaapi_version_t*        version;
   kaapi_version_t*        all_versions[32];
 
-  tasklist = frame->tasklist; /* user level thread are more or less frame */
   /* assume task list  */
   kaapi_assert( tasklist != 0);
   
@@ -89,7 +87,6 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_frame_t* 
 
   /* new task descriptor */
   taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
-  ++tasklist->cnt_tasks;
   
   /* compute if the i-th access is ready or not.
      If all accesses of the task are ready then push it into readylist.

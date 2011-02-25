@@ -1,8 +1,8 @@
 /*
-** kaapi_thread_clear.c
+** kaapi_task_steal.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,39 +43,60 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <strings.h>
-#include <stddef.h>
+#include <stdio.h>
+
 
 /**
 */
-int kaapi_thread_clear( kaapi_thread_context_t* thread )
+void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 {
-  kaapi_assert_debug( thread != 0);
+  kaapi_thread_context_t*     thread;
+  kaapi_taskstealready_arg_t* arg;
+  kaapi_frame_t*              frame;
+  kaapi_tasklist_t*           tasklist;
+  int err;
 
-  thread->sfp        = thread->stackframe;
-  thread->esfp       = thread->stackframe;
-  thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
-  thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
-  thread->sfp->tasklist= 0;
+  thread = kaapi_self_thread_context();
+  
+  /* get information of the task to execute */
+  arg = (kaapi_taskstealready_arg_t*)taskarg;
+  
+  /* Execute the orinal body function with the original args */
+  frame = (kaapi_frame_t*)uthread;
+  kaapi_assert_debug( frame == thread->sfp );
 
-  thread->the_thgrp  = 0;
-  thread->unstealable= 0;
-  thread->partid     = -10; /* out of bound value */
+  /* create a new tasklist: should be very fast allocation,
+     its a root tasklist for this thread. 
+     May allocated it at thread creation time
+  */
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
+  kaapi_tasklist_pushback_ready( tasklist, arg->origin_td );
+  
+  /* reserve the tasklist for 32 tasks (at most) */
+  tasklist->cnt_tasks = 32;
 
-  thread->_next      = 0;
-  thread->_prev      = 0;
-  thread->asid       = 0;
-  thread->affinity[0]= ~0UL;
-  thread->affinity[1]= ~0UL;
+  kaapi_writemem_barrier();
+  frame->tasklist = tasklist;
 
-  thread->wcs        = 0;
+  /* exec the spawned subtasks */
+  err = kaapi_thread_execframe_tasklist( thread );
+  kaapi_assert( (err == 0) || (err == ECHILD) );
 
-  /* zero all bytes from static_reply until end of sc_data */
-  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
+  KAAPI_ATOMIC_ADD( &arg->origin_tasklist->count_exec, 
+      tasklist->cnt_exectasks );
 
-#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  thread->thgrp      = 0;
+#if 0
+  printf("%i::[subtasklist] exec tasks: %llu\n", 
+      kaapi_get_self_kid(), tasklist->cnt_exectasks 
+  );
+  fflush(stdout);
 #endif
-  return 0;
-}
 
+  kaapi_sched_lock(&thread->proc->lock);
+  frame->tasklist = 0;
+  kaapi_sched_unlock(&thread->proc->lock);
+  
+  kaapi_tasklist_destroy( tasklist );
+  free(tasklist);
+}
