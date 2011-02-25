@@ -42,6 +42,7 @@
  ** 
  */
 #include "kaapi_impl.h"
+#include <inttypes.h>
 
 static void kaapi_print_pad(FILE* file, int pad)
 {
@@ -75,7 +76,7 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
     
 
   kaapi_print_pad(file, pad);
-  fprintf(file, "td:%p  date:%llu  task->%p  name:%s", 
+  fprintf(file, "td:%p  date:%" PRIu64 "  task->%p  name:%s", 
     (void*)td, td->date, (void*)td->task,
     name
   );
