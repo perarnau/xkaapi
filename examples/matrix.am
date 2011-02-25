@@ -5,12 +5,13 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-MATPROG_PRGS=matprod_rec_kaapi++ matprod_iter_kaapi++ matprod_iter_part_kaapi++ matlu_kaapi++
+MATPROG_PRGS=matprod_rec_kaapi++ matprod_bloc_kaapi++ matprod_rowcol_kaapi++ matprod_iter_part_kaapi++ matlu_kaapi++
 check_PROGRAMS+=$(MATPROG_PRGS)
 all-matrix: $(MATPROG_PRGS)
 
 matprod_rec_kaapi___SOURCES=matrix/matprod_rec_kaapi++.cpp
-matprod_iter_kaapi___SOURCES=matrix/matprod_iter_kaapi++.cpp
+matprod_bloc_kaapi___SOURCES=matrix/matprod_bloc_kaapi++.cpp
+matprod_rowcol_kaapi___SOURCES=matrix/matprod_rowcol_kaapi++.cpp
 matprod_iter_part_kaapi___SOURCES=matrix/matprod_iter_part_kaapi++.cpp
 matlu_kaapi___SOURCES=matrix/matlu_kaapi++.cpp
 
@@ -19,10 +20,15 @@ matprod_rec_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 matprod_rec_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 matprod_rec_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
-matprod_iter_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
-matprod_iter_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-matprod_iter_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
-matprod_iter_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+matprod_bloc_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
+matprod_bloc_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matprod_bloc_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
+matprod_bloc_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+matprod_rowcol_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
+matprod_rowcol_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matprod_rowcol_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
+matprod_rowcol_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 matprod_iter_part_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 matprod_iter_part_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

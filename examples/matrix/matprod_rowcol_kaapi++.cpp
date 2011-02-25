@@ -93,23 +93,28 @@ struct TaskBodyCPU<TaskError> {
 
 /**
 */
-struct TaskSeqMatProduct: public ka::Task<3>::Signature<
+struct TaskSeqMatProduct: public ka::Task<5>::Signature<
+      size_t, size_t, 
       ka::R<ka::range2d<double> >, /* A */
       ka::R<ka::range2d<double> >,  /* B */
-      ka::RW<ka::range2d<double> >   /* C */
+      ka::W<ka::range2d<double> >   /* C */
 >{};
 
 template<>
 struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rw<double> C )
+  void operator()( size_t i, size_t j,
+                   ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_w<double> C )
   {
     size_t M = A.dim(0);
     size_t K = B.dim(0);
     size_t N = B.dim(1);
-#if 0
-    std::cout << kaapi_get_self_kid() << "::In TaskSeqMul A:" << A.ptr() << " dim: " << M << 'x' << K 
-              << ", B:" << B.ptr() << " dim: " << K << 'x' << N
-              << ", C:" << C.ptr()
+#if 1
+    i /= BLOCSIZE;
+    j /= BLOCSIZE;
+    std::cout << kaapi_get_self_kid() << "::In TaskSeqMul" 
+              << "  A(" << i << ", *):" << A.ptr() << " dim: " << M << 'x' << K 
+              << ", B(*," << j << "):" << B.ptr() << " dim: " << K << 'x' << N
+              << ", C(" << i << "," << j << "):" << C.ptr()
               << std::endl;
 #endif
               
@@ -121,7 +126,7 @@ struct TaskBodyCPU<TaskSeqMatProduct> {
         M, N, K, 1.0, 
         A.ptr(), A.lda(),
         B.ptr(), B.lda(),
-        1.0, 
+        0.0, 
         C.ptr(), C.lda()
     );
 #else
@@ -148,18 +153,15 @@ struct TaskBodyCPU<TaskMatProduct> {
     size_t K = B.dim(0);
     size_t N = B.dim(1);
     int bloc = BLOCSIZE;
-    
+
+    ka::rangeindex rall(0, K);
     for (size_t i=0; i<M; i += bloc)
     {
       ka::rangeindex ri(i, i+bloc);
       for (size_t j=0; j<N; j += bloc)
       {
         ka::rangeindex rj(j, j+bloc);
-        for (size_t k=0; k<K; k += bloc)
-        {
-          ka::rangeindex rk(k, k+bloc);
-          ka::Spawn<TaskSeqMatProduct>()( A(ri,rk), B(rk,rj), C(ri,rj) );
-        }
+        ka::Spawn<TaskSeqMatProduct>()( i,j, A(ri,rall), B(rall,rj), C(ri,rj) );
       }
     }
   }
@@ -233,7 +235,7 @@ struct doit {
           n, n, n, 1.0, 
           dA, n,
           dB, n,
-          1.0, 
+          0.0, 
           dCv, n
       );
 #endif
