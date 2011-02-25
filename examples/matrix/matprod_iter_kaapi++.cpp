@@ -96,17 +96,23 @@ struct TaskBodyCPU<TaskError> {
 struct TaskSeqMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double> >, /* A */
       ka::R<ka::range2d<double> >,  /* B */
-      ka::CW<ka::range2d<double> >   /* C */
+      ka::RW<ka::range2d<double> >   /* C */
 >{};
 
 template<>
 struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_cw<double> C )
+  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rw<double> C )
   {
     size_t M = A.dim(0);
     size_t K = B.dim(0);
     size_t N = B.dim(1);
-
+#if 0
+    std::cout << kaapi_get_self_kid() << "::In TaskSeqMul A:" << A.ptr() << " dim: " << M << 'x' << K 
+              << ", B:" << B.ptr() << " dim: " << K << 'x' << N
+              << ", C:" << C.ptr()
+              << std::endl;
+#endif
+              
 #if defined(USE_CBLAS)
     /* a call to blas should be more performant here */
     cblas_dgemm(
@@ -205,7 +211,7 @@ struct doit {
     ka::Sync();
     double t1 = kaapi_get_elapsedtime();
 
-    std::cout << " Matrix Multiply took " << t1-t0 << " seconds." << std::endl;
+    std::cout << " Matrix Multiply " << n << 'x' << n << " took " << t1-t0 << " seconds." << std::endl;
 
     // If n is small, print the results
     if (n <= 64) 
@@ -220,6 +226,7 @@ struct doit {
       /* a call to blas to verify */
       double* dCv = (double*) calloc(n* n, sizeof(double));
       double t0 = kaapi_get_elapsedtime();
+#if defined(USE_CBLAS)
       cblas_dgemm(
           CblasRowMajor, 
           CblasNoTrans, CblasNoTrans,
@@ -229,6 +236,7 @@ struct doit {
           1.0, 
           dCv, n
       );
+#endif
       double t1 = kaapi_get_elapsedtime();
       std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
 
