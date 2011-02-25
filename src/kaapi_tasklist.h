@@ -372,19 +372,21 @@ static inline kaapi_task_t* kaapi_tasklist_push_task( kaapi_tasklist_t* tl, kaap
 }
 
 
-/**/
+/* Push task in the front: the execution with revert it at the begining
+*/
 static inline void kaapi_tasklist_pushback_ready( kaapi_tasklist_t* tl, kaapi_taskdescr_t* td)
 {
   kaapi_activationlink_t* al =
       (kaapi_activationlink_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_activationlink_t) );
   al->td    = td;
   al->queue = 0;
-  al->next  = 0;
-  if (tl->readylist.back ==0)
+  if (tl->readylist.front ==0)
+  {
+    al->next  = 0;
     tl->readylist.front = tl->readylist.back = al;
-  else {
-    tl->readylist.back->next = al;
-    tl->readylist.back = al;
+  } else {
+    al->next = tl->readylist.front;
+    tl->readylist.front = al;
   }
 }
 
