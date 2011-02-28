@@ -92,7 +92,9 @@ void kaapi_perf_global_init(void)
 */
 void kaapi_perf_global_fini(void)
 {
+#if defined(KAAPI_USE_PAPIPERFCOUNTER)
   PAPI_shutdown();
+#endif
 }
 
 
