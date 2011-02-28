@@ -50,8 +50,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 {
   int save_state;
   kaapi_frame_t* fp;
-  double t0;
-  double t1;
+  double t0 = 0;
+  double t1 = 0;
   
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
@@ -96,8 +96,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
     arg->sub_body( arg->sub_sp, uthread );
   }
   
-  printf("[tasklist] T1:%llu\n", thread->sfp->tasklist->cnt_tasks);
-  printf("[tasklist] Tinf:%llu\n", thread->sfp->tasklist->t_infinity);
+  printf("[tasklist] T1:%llu\n", (unsigned long long)thread->sfp->tasklist->cnt_tasks);
+  printf("[tasklist] Tinf:%llu\n", (unsigned long long)thread->sfp->tasklist->t_infinity);
   printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
   thread->unstealable = save_state;
 

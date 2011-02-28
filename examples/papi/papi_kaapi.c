@@ -42,14 +42,13 @@
  ** 
  */
 
-/* see examples/for_each for more information
+/* see README for info related to the papi usage in kaapi
+   see examples/for_each for general code information
  */
 
 #include "kaapi.h"
 #include <string.h>
 #include <math.h>
-
-static kaapi_perf_idset_t perfids;
 
 typedef struct work
 {
@@ -70,11 +69,12 @@ static void thief_entrypoint(void*, kaapi_thread_t*);
 
 
 /* parallel work splitter */
-static int splitter (
-                     kaapi_stealcontext_t* sc, 
-                     int nreq, kaapi_request_t* req, 
-                     void* args
-                     )
+static int splitter
+(
+ kaapi_stealcontext_t* sc, 
+ int nreq, kaapi_request_t* req, 
+ void* args
+)
 {
   /* victim work */
   work_t* const vw = (work_t*)args;
@@ -145,26 +145,32 @@ static int extract_seq(work_t* w, double** pos, double** end)
 
 /** thief entrypoint 
  */
+
+static void inline common_entry
+(double* beg, double* end, void (*op)(double*))
+{
+  for (; beg != end; ++beg) op(beg);
+}
+
 static void thief_entrypoint(void* args, kaapi_thread_t* thread)
 {
   /* process the work */
   thief_work_t* const thief_work = (thief_work_t*)args;
   
   /* range to process */
-  double* beg = thief_work->beg;
-  double* end = thief_work->end;
+  double* const beg = thief_work->beg;
+  double* const end = thief_work->end;
   
   /* apply w->op foreach item in [pos, end[ */
-  for (; beg != end; ++beg)
-    thief_work->op(beg);
+  common_entry(beg, end, thief_work->op);
 }
-
-
 
 
 /* For each main function */
 static void for_each( double* array, size_t size, void (*op)(double*) )
 {
+  const int sc_flags = KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION;
+
   kaapi_thread_t* thread;
   kaapi_stealcontext_t* sc;
   work_t  work;
@@ -180,24 +186,15 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   work.array = array;
   
   /* push an adaptive task */
-  sc = kaapi_task_begin_adaptive(
-                                 thread, 
-                                 KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION, 
-                                 splitter, 
-                                 &work     /* arg for splitter = work to split */
-                                 );
+  sc = kaapi_task_begin_adaptive
+    (thread, sc_flags, splitter, &work);
   
   /* while there is sequential work to do*/
   while (!extract_seq(&work, &pos, &end))
-  {
-    /* apply w->op foreach item in [pos, end[ */
-    for (; pos != end; ++pos)
-      op(pos);
-  }
+    common_entry(pos, end, op);
   
   /* wait for thieves */
   kaapi_task_end_adaptive(sc);
-  /* here: 1/ all thieves have finish their result */
 }
 
 
@@ -219,6 +216,7 @@ int main(int ac, char** av)
   size_t iter;
 
   /* at most 3 papi counters */
+  kaapi_perf_idset_t perfids;
   kaapi_perf_counter_t counters[3] = {0, 0, 0};
   
 #define ITEM_COUNT 100000
@@ -258,7 +256,7 @@ int main(int ac, char** av)
 
   printf("done: %lf (ms)\n", sum / 100);
 
-  /* report counters */
+  /* accumulate all the processors counters and report */
   kaapi_perf_accum_counters(&perfids, counters);
   printf("perf_counters: %lu, %lu, %lu\n",
 	 counters[0], counters[1], counters[2]);

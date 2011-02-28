@@ -92,6 +92,7 @@ void kaapi_perf_global_init(void)
 */
 void kaapi_perf_global_fini(void)
 {
+  PAPI_shutdown();
 }
 
 
@@ -114,13 +115,18 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
     int err;
     PAPI_option_t opt;
 
+    /* register the thread */
+    err = PAPI_register_thread();
+    kaapi_assert_m(PAPI_OK == err, "PAPI_register_thread()\n");
+
     /* create event set */
     kproc->papi_event_set = PAPI_NULL;
     err = PAPI_create_eventset(&kproc->papi_event_set);
     kaapi_assert_m(PAPI_OK == err, "PAPI_create_eventset()\n");
 
-    /* set the default component. mandatory in newer interfaces. */
-    PAPI_assign_eventset_component(kproc->papi_event_set, 0);
+    /* set cpu as the default component. mandatory in newer interfaces. */
+    err = PAPI_assign_eventset_component(kproc->papi_event_set, 0);
+    kaapi_assert_m(PAPI_OK == err, "PAPI_assign_eventset_component()\n");
 
     /* thread granularity */
     memset(&opt, 0, sizeof(opt));
@@ -142,6 +148,9 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
     kaapi_assert_m(PAPI_OK == err, "PAPI_add_events()\n");
 
     kproc->papi_event_count = papi_event_count;
+
+    err = PAPI_start(kproc->papi_event_set);
+    kaapi_assert_m(PAPI_OK == err, "PAPI_start()\n");
   }
 #endif
 }
@@ -157,6 +166,9 @@ void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
     PAPI_stop(kproc->papi_event_set, NULL);
     PAPI_cleanup_eventset(kproc->papi_event_set);
     PAPI_destroy_eventset(&kproc->papi_event_set);
+    kproc->papi_event_set = PAPI_NULL;
+    kproc->papi_event_count = 0;
+    PAPI_unregister_thread();
   }
 }
 #else
@@ -171,7 +183,7 @@ void kaapi_perf_thread_fini(kaapi_processor_t* kproc __attribute__((unused)) )
 void kaapi_perf_thread_start(kaapi_processor_t* kproc)
 {
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
-  if (papi_event_count)
+  if (kproc->papi_event_count)
   {
     /* not that event counts between kaapi_perf_thread_init and here represent the
        cost to this thread wait all intialization of other threads, set setconcurrency.
@@ -191,7 +203,7 @@ void kaapi_perf_thread_stop(kaapi_processor_t* kproc)
   int mode;
   kaapi_perf_counter_t delay;
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
-  if (papi_event_count)
+  if (kproc->papi_event_count)
   {
     /* in fact here we accumulate papi counter:
        the thread do not restart counting
