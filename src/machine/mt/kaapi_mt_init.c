@@ -290,26 +290,6 @@ int kaapi_mt_finalize(void)
   {
 #if defined(KAAPI_USE_PERFCOUNTER)
 
-# ifndef PRIu64
-#   if (sizeof(unsigned long) == sizeof(uint64_t))
-#     define PRIu64 "lu"
-#   else
-#     define PRIu64 "llu"
-#   endif
-# endif
-
-# ifndef PRI64
-/* #   if (sizeof(unsigned long) == sizeof(uint64_t)) */
-#     define PRI64 "ld"
-/* #   else */
-/* #     define PRI64 "lld" */
-/* #   endif */
-# endif 
-
-# ifndef PRIu32
-#   define PRIu32 "u"
-# endif
-
   cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
   cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
   cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
