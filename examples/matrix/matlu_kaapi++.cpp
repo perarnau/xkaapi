@@ -29,10 +29,12 @@
 #include <string>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 #include <cblas.h>
+#include "lapacke.h"
 
 
 #if CONFIG_USE_GSL
 
+#include <math.h>
 #include <sys/types.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_permutation.h>
@@ -58,7 +60,8 @@ static void free_gsl_matrix(gsl_matrix* m)
 }
 
 __attribute__((unused))
-static gsl_matrix* create_gsl_matrix(ka::array<2, double> array)
+static gsl_matrix* create_gsl_matrix
+(const ka::array<2, double>& array)
 {
   gsl_matrix* const m = allocate_gsl_matrix(array.dim(0));
 
@@ -101,8 +104,40 @@ static void print_gsl_matrix(const gsl_matrix* m)
   printf("\n");
 }
 
+static int compare_matrices
+(const gsl_matrix* a, const ka::array<2, double>& b)
+{
+  for (size_t i = 0; i < a->size1; ++i)
+    for (size_t j = 0; j < a->size2; ++j)
+    {
+      const double d = b(i, j) - gsl_matrix_get(a, i, j);
+      if (fabs(d) > 0.0001) return -1;
+    }
+
+  return 0;
+}
+
 #endif // CONFIG_USE_GSL
 
+
+template<typename range_type>
+static inline int get_lda(const range_type& range)
+{
+  // assuming row major order, lda is the column count.
+  return (int)range.dim(1);
+}
+
+template<typename range_type>
+static inline int get_order(const range_type& range)
+{ return (int)range.dim(0); }
+
+template<typename range_type>
+static inline int get_rows(const range_type& range)
+{ return (int)range.dim(0); }
+
+template<typename range_type>
+static inline int get_cols(const range_type& range)
+{ return (int)range.dim(1); }
 
 struct TaskDPOTRF: public ka::Task<1>::Signature<
       ka::RW<ka::range2d<double> > /* A */
@@ -111,6 +146,22 @@ template<>
 struct TaskBodyCPU<TaskDPOTRF> {
   void operator()( ka::range2d_rw<double> A )
   {
+    // dpotrf(uplo, n, a, lda, info)
+    // compute the cholesky factorization
+    // A = U**T * U,  if UPLO = 'U', or
+    // A = L  * L**T,  if UPLO = 'L'
+
+    double* const a = A.ptr();
+    const int lda = get_lda(A);
+    const int n = get_order(A); // matrix order
+
+    printf("--\n");
+    printf("dpotrf A(%lu, %lu)\n", A.dim(0), A.dim(1));
+    printf("%lf %lf\n", A(0, 0), A(0, 1));
+    printf("%lf %lf\n", A(1, 0), A(1, 1));
+    printf("--\n");
+
+    LAPACKE_dpotrf(LAPACK_ROW_MAJOR, 'L', n, a, lda);
   }
 };
 
@@ -122,7 +173,7 @@ template<>
 struct TaskBodyCPU<TaskDTRSM> {
   void operator()( ka::range2d_r<double> Akk, ka::range2d_rw<double> Amk )
   {
-    // dtrsm(side, uplo, transa, diag, m, n, alpha, lda, ldb)
+    // dtrsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
     //
     // solve the following eq.
     // op(A) * X = alpha * B (0) or
@@ -134,6 +185,20 @@ struct TaskBodyCPU<TaskDTRSM> {
     // diag: 'u' or 'n' if a is assumed to be unit triangular or not
     //
     // the matrix X is overwritten on B
+
+    const double* const a = Akk.ptr();
+    const int lda = get_lda(Akk);
+
+    double* const b = Amk.ptr();
+    const int ldb = get_lda(Amk);
+    const int m = get_rows(Amk); // b.rows();
+    const int n = get_cols(Amk); // b.cols();
+
+    cblas_dtrsm
+    (
+     CblasRowMajor, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit,
+     m, n, 1., a, lda, b, ldb
+    );
   }
 };
 
@@ -148,6 +213,26 @@ struct TaskBodyCPU<TaskDSYRK> {
     // dsyrk(uplo, tran, n, k, alpha, lda, beta, c, ldc)
     //
     // C = alpha * A * A' + beta * C
+
+    const double* const a = Akk.ptr();
+    double* const c = Amk.ptr();
+
+    const int lda = get_lda(Akk);
+    const int ldc = Amk.dim(0);
+
+    const int n = get_cols(Amk); // C matrix order
+    const int k = get_cols(Akk);
+
+#if 0
+    printf("A: %lu,%lu\n", Akk.dim(0), Akk.dim(1));
+    printf("C: %lu,%lu\n", Amk.dim(0), Amk.dim(1));
+#endif
+
+    cblas_dsyrk
+    (
+     CblasRowMajor, CblasUpper, CblasNoTrans,
+     n, k, 1., a, lda, 1., c, ldc
+    );
   }
 };
 
@@ -158,11 +243,34 @@ struct TaskDGEMM: public ka::Task<3>::Signature<
 >{};
 template<>
 struct TaskBodyCPU<TaskDGEMM> {
-  void operator()( ka::range2d_r<double> Amk, ka::range2d_r<double> Ank, ka::range2d_rw<double> Amn )
+  void operator()
+  (
+   ka::range2d_r<double> Amk,
+   ka::range2d_r<double> Ank,
+   ka::range2d_rw<double> Amn
+  )
   {
     // dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
     //
     // C = alpha * op(A) * op(B) + beta * C
+
+    const double* const a = Amk.ptr();
+    const double* const b = Ank.ptr();
+    double* const c = Amn.ptr();
+
+    const int m = get_rows(Amk); // Amk.rows();
+    const int n = get_cols(Ank); // Amk.cols();
+    const int k = get_cols(Amk); // eq. to Ank.rows();
+
+    const int lda = get_lda(Amk);
+    const int ldb = get_lda(Ank);
+    const int ldc = get_lda(Amn);
+
+    cblas_dgemm
+    (
+     CblasRowMajor, CblasNoTrans, CblasNoTrans,
+     m, n, k, 1., a, lda, b, ldb, 1., c, ldc
+    );
   }
 };
 
@@ -303,6 +411,11 @@ struct doit {
       print_gsl_matrix(gslA);
 #endif
     }
+
+#if CONFIG_USE_GSL
+    if (compare_matrices(gslA, A) == -1)
+      printf("gslA != A\n");
+#endif
 
 #if CONFIG_USE_GSL
     free_gsl_matrix(gslA);
