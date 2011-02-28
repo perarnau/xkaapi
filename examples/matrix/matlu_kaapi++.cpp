@@ -28,9 +28,80 @@
 #include <iostream>
 #include <string>
 #include "kaapi++" // this is the new C++ interface for Kaapi
-#if 0
 #include <cblas.h>
-#endif
+
+
+#define CONFIG_USE_GSL 1
+#if CONFIG_USE_GSL
+
+#include <sys/types.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_permutation.h>
+#include <gsl/gsl_linalg.h>
+
+static void do_gsl_lufact(gsl_matrix* a)
+{
+  gsl_permutation* const p = gsl_permutation_alloc(a->size1);
+  int s;
+  gsl_linalg_LU_decomp(a, p, &s);
+  gsl_permutation_free(p);
+}
+
+static gsl_matrix* allocate_gsl_matrix(size_t w)
+{
+  gsl_matrix* const m = gsl_matrix_alloc(w, w);
+  return m;
+}
+
+static void free_gsl_matrix(gsl_matrix* m)
+{
+  gsl_matrix_free(m);
+}
+
+__attribute__((unused))
+static gsl_matrix* create_gsl_matrix(ka::array<2, double> array)
+{
+  gsl_matrix* const m = allocate_gsl_matrix(array.dim(0));
+
+  for (size_t i = 0; i < m->size1; ++i)
+    for (size_t j = 0; j < m->size2; ++j)
+      gsl_matrix_set(m, i, j, array(i, j));
+
+  return m;
+}
+
+static gsl_matrix* create_gsl_matrix
+(const double* array, size_t w)
+{
+  gsl_matrix* const m = allocate_gsl_matrix(w);
+
+  for (size_t i = 0; i < m->size1; ++i)
+    for (size_t j = 0; j < m->size2; ++j)
+      gsl_matrix_set(m, i, j, array[i * w + j]);
+
+  return m;
+}
+
+__attribute__((unused))
+static void fill_gsl_matrix(gsl_matrix* m)
+{
+  for (size_t i = 0; i < m->size1; ++i)
+    for (size_t j = 0; j < m->size2; ++j)
+      gsl_matrix_set(m, i, j, 1.);
+}
+
+static void print_gsl_matrix(const gsl_matrix* m)
+{
+  for (size_t i = 0; i < m->size1; ++i)
+  {
+    for (size_t j = 0; j < m->size2; ++j)
+      printf("%lf ", gsl_matrix_get(m, i, j));
+    printf("\n");
+  }
+  printf("\n");
+}
+
+#endif // CONFIG_USE_GSL
 
 
 struct TaskDPOTRF: public ka::Task<1>::Signature<
@@ -51,6 +122,18 @@ template<>
 struct TaskBodyCPU<TaskDTRSM> {
   void operator()( ka::range2d_r<double> Akk, ka::range2d_rw<double> Amk )
   {
+    // dtrsm(side, uplo, transa, diag, m, n, alpha, lda, ldb)
+    //
+    // solve the following eq.
+    // op(A) * X = alpha * B (0) or
+    // X * op(A) = alpha * B (1)
+    //
+    // side: 'l' or 'r' for (0) or (1)
+    // uplo: 'u' or 'l' for upper or lower matrix
+    // transa: 'n' or 't' for transposed or not
+    // diag: 'u' or 'n' if a is assumed to be unit triangular or not
+    //
+    // the matrix X is overwritten on B
   }
 };
 
@@ -62,6 +145,9 @@ template<>
 struct TaskBodyCPU<TaskDSYRK> {
   void operator()( ka::range2d_r<double> Akk, ka::range2d_rw<double> Amk )
   {
+    // dsyrk(uplo, tran, n, k, alpha, lda, beta, c, ldc)
+    //
+    // C = alpha * A * A' + beta * C
   }
 };
 
@@ -74,6 +160,9 @@ template<>
 struct TaskBodyCPU<TaskDGEMM> {
   void operator()( ka::range2d_r<double> Amk, ka::range2d_r<double> Ank, ka::range2d_rw<double> Amn )
   {
+    // dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+    //
+    // C = alpha * op(A) * op(B) + beta * C
   }
 };
 
@@ -155,7 +244,7 @@ struct TaskBodyCPU<TaskPrintMatrix> {
 struct doit {
   void operator()(int argc, char** argv )
   {
-    int n = 128;
+    int n = 8;
     int nbloc = 2;
     int blocsize = n / nbloc;
 
@@ -177,6 +266,10 @@ struct doit {
       return;
     }
 
+#if CONFIG_USE_GSL
+    gsl_matrix* gslA = create_gsl_matrix(dA, n);
+#endif
+
     // Populate B and C pseudo-randomly - 
     // The matrices are populated with random numbers in the range (-1.0, +1.0)
     for(int i = 0; i < n * n; ++i) {
@@ -187,11 +280,16 @@ struct doit {
 
     std::cout << "Start LU with " << nbloc << 'x' << nbloc << " blocs of matrix of size " << n << 'x' << n << std::endl;
 
-    // LU factorization of A
+    // LU factorization of A using ka::
     double t0 = kaapi_get_elapsedtime();
     ka::Spawn<TaskLU>(ka::SetStaticSched())( blocsize, A );
     ka::Sync();
     double t1 = kaapi_get_elapsedtime();
+
+#if CONFIG_USE_GSL
+    // LU factorization of A using gsl
+    do_gsl_lufact(gslA);
+#endif
 
     std::cout << " LU took " << t1-t0 << " seconds." << std::endl;
 
@@ -199,7 +297,15 @@ struct doit {
     if (n <= 16) {
       ka::Spawn<TaskPrintMatrix>()( std::string("A="), A );
       ka::Sync();
+
+#if CONFIG_USE_GSL
+      print_gsl_matrix(gslA);
+#endif
     }
+
+#if CONFIG_USE_GSL
+    free_gsl_matrix(gslA);
+#endif
 
     free(dA);
   }
