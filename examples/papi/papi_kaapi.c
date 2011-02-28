@@ -256,7 +256,9 @@ int main(int ac, char** av)
 
   printf("done: %lf (ms)\n", sum / 100);
 
-  /* accumulate all the processors counters and report */
+  /* accumulate all the processors counters and report
+     counters[i] where i in KAAPI_PERF_PAPIES[i]
+   */
   kaapi_perf_accum_counters(&perfids, counters);
   printf("perf_counters: %lu, %lu, %lu\n",
 	 counters[0], counters[1], counters[2]);
