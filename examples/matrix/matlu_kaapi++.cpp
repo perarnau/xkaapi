@@ -29,7 +29,11 @@
 #include <string>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 #include <cblas.h>
-#include "lapacke.h"
+
+// ...
+extern "C" {
+#include <atlas/clapack.h>
+}
 
 
 #if CONFIG_USE_GSL
@@ -111,7 +115,7 @@ static int compare_matrices
     for (size_t j = 0; j < a->size2; ++j)
     {
       const double d = b(i, j) - gsl_matrix_get(a, i, j);
-      if (fabs(d) > 0.0001) return -1;
+      if (fabs(d) > 0.001) return -1;
     }
 
   return 0;
@@ -155,13 +159,21 @@ struct TaskBodyCPU<TaskDPOTRF> {
     const int lda = get_lda(A);
     const int n = get_order(A); // matrix order
 
-    printf("--\n");
+#if 0
+    printf(">>\n");
     printf("dpotrf A(%lu, %lu)\n", A.dim(0), A.dim(1));
     printf("%lf %lf\n", A(0, 0), A(0, 1));
     printf("%lf %lf\n", A(1, 0), A(1, 1));
-    printf("--\n");
+#endif
 
-    LAPACKE_dpotrf(LAPACK_ROW_MAJOR, 'L', n, a, lda);
+    clapack_dpotrf(CblasRowMajor, CblasLower, n, a, lda);
+
+#if 0
+    printf("-->\n");
+    printf("%lf %lf\n", A(0, 0), A(0, 1));
+    printf("%lf %lf\n", A(1, 0), A(1, 1));
+    printf("<<\n");
+#endif
   }
 };
 

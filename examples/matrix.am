@@ -32,12 +32,19 @@ matprod_iter_part_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 # matlu
 matlu_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 matlu_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) \
-			 -DCONFIG_USE_GSL=1 -I$(HOME)/install/include
-matlu_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) \
-			 -L$(HOME)/install/lib
+			-DCONFIG_USE_GSL=1
+matlu_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 matlu_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) \
-			-lgsl -lcblas \
-			$(HOME)/install/lib/lapacke.a \
-			$(HOME)/install/lib/lapack_LINUX.a \
-			$(HOME)/install/lib/blas_LINUX.a \
-			$(HOME)/install/lib/libf2c.a
+			-lgsl -lcblas -latlas -llapack_atlas
+
+# matlu_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+# matlu_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) \
+# 			 -DCONFIG_USE_GSL=1 -I$(HOME)/install/include
+# matlu_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) \
+# 			 -L$(HOME)/install/lib
+# matlu_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) \
+# 			-lgsl -lcblas \
+# 			$(HOME)/install/lib/lapacke.a \
+#			$(HOME)/install/lib/lapack_LINUX.a \
+#			$(HOME)/install/lib/blas_LINUX.a \
+#			$(HOME)/install/lib/libf2c.a
