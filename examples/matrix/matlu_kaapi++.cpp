@@ -31,7 +31,6 @@
 #include <cblas.h>
 
 
-#define CONFIG_USE_GSL 1
 #if CONFIG_USE_GSL
 
 #include <sys/types.h>
@@ -70,6 +69,7 @@ static gsl_matrix* create_gsl_matrix(ka::array<2, double> array)
   return m;
 }
 
+__attribute__((unused))
 static gsl_matrix* create_gsl_matrix
 (const double* array, size_t w)
 {
@@ -266,17 +266,17 @@ struct doit {
       return;
     }
 
-#if CONFIG_USE_GSL
-    gsl_matrix* gslA = create_gsl_matrix(dA, n);
-#endif
-
     // Populate B and C pseudo-randomly - 
-    // The matrices are populated with random numbers in the range (-1.0, +1.0)
+    // The matrices are populated with random numbers in the range (0.0, +1.0)
     for(int i = 0; i < n * n; ++i) {
-        dA[i] = (float) (((i + 1) * i) % 1024 - 512) / 512;
+        dA[i] = (float) (((i + 1) * i) % 1024) / 1024;
     }
 
     ka::array<2,double> A(dA, n, n, n);
+
+#if CONFIG_USE_GSL
+    gsl_matrix* gslA = create_gsl_matrix(A);
+#endif
 
     std::cout << "Start LU with " << nbloc << 'x' << nbloc << " blocs of matrix of size " << n << 'x' << n << std::endl;
 
@@ -299,6 +299,7 @@ struct doit {
       ka::Sync();
 
 #if CONFIG_USE_GSL
+      printf("--\n");
       print_gsl_matrix(gslA);
 #endif
     }

@@ -95,16 +95,19 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
     */
     arg->sub_body( arg->sub_sp, uthread );
   }
-  
+
+  thread->unstealable = save_state;
+
+#if 0  
   printf("[tasklist] T1:%llu\n", (unsigned long long)thread->sfp->tasklist->cnt_tasks);
   printf("[tasklist] Tinf:%llu\n", (unsigned long long)thread->sfp->tasklist->t_infinity);
   printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
-  thread->unstealable = save_state;
 
 //  kaapi_thread_print( stdout, thread ); 
   FILE* filedot = fopen("/tmp/graph.dot", "w");
   kaapi_frame_print_dot( filedot, thread->sfp, 0 );
   fclose(filedot);
+#endif
   
   /* exec the spawned subtasks */
   kaapi_thread_execframe_tasklist( thread );
