@@ -1,0 +1,48 @@
+
+* Available environment variables:
+
+KAAPI_CPUSET: 
+  CPUSET for mapping kprocessors to CPU.
+KAAPI_CPUCOUNT: 
+  Number of CPU to used into the CPUSET.
+  If CPUSET is not defined, then the OS maps 
+  kprocessors to CPU.
+
+KAAPI_GPUSET: 
+  CPUSET for mapping kprocessors that manage GPU. 
+
+KAAPI_STACKSIZE: 
+  Stack size to store tasks and task' arguments. 
+
+KAAPI_NETWORK:
+  Name of the network to used.
+    - taknet: implemented in KAAPI, not yet reported in XKAAPI
+    - socknet: implemented in KAAPI, not yet reported in XKAAPI
+    - gasnet: implemented in XKAAPI
+    - mpinet: partially implemented in XKAAPI. Not operational.
+    
+KAAPI_NETWORK_SEGMENT:
+    - Size of memory reserved for remote DMA operation.
+    Pass to the gasnet initialization. No impact for tcp / taknet
+    network.
+
+
+KAAPI_DISPLAY_PERF:
+KAAPI_PERF_PAPIES:
+
+KAAPI_DOT_NOACTIVATION_LINK:
+  Do not print activation link between tasks when graph is dump into 
+  the dot format.
+
+KAAPI_DOT_NOVERSION_LINK:
+  Do not print link between version of data when graph is dump into 
+  the dot format.
+
+KAAPI_DUMP_GRAPH:
+  Dump the graph after spawning task with SetStaticSched attribut
+  is used. Only operational if XKaapi library is compiled with
+  '--enable-mode=debug'.
+  
+KAAPI_DUMP_PERIOD:
+  Dump the internal state at given period (in second).
+  Only work with debug library.

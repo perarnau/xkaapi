@@ -42,16 +42,19 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <inttypes.h>
 
 
 /* 
 */
 void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 {
+  int err;
   int save_state;
   kaapi_frame_t* fp;
-  double t0 = 0;
-  double t1 = 0;
+  kaapi_tasklist_t* tasklist;
+  double t0=0.0;
+  double t1=0.0;
   
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
@@ -74,8 +77,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 
   /* allocate the tasklist for this task
   */
-  thread->sfp->tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( thread->sfp->tasklist );
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
 
   if (arg->npart == -1)
   {    
@@ -84,7 +87,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   
     /* currently: that all, do not compute other things */
     t0 = kaapi_get_elapsedtime();
-    kaapi_sched_computereadylist();
+    kaapi_thread_computereadylist(thread, tasklist);
     t1 = kaapi_get_elapsedtime();
   }
   else 
@@ -96,21 +99,61 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
     arg->sub_body( arg->sub_sp, uthread );
   }
   
-  printf("[tasklist] T1:%llu\n", (unsigned long long)thread->sfp->tasklist->cnt_tasks);
-  printf("[tasklist] Tinf:%llu\n", (unsigned long long)thread->sfp->tasklist->t_infinity);
+  printf("[tasklist] T1:%" PRIu64 "\n", tasklist->cnt_tasks);
+  printf("[tasklist] Tinf:%" PRIu64 "\n", tasklist->t_infinity);
   printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
   thread->unstealable = save_state;
 
-//  kaapi_thread_print( stdout, thread ); 
-  FILE* filedot = fopen("/tmp/graph.dot", "w");
-  kaapi_frame_print_dot( filedot, thread->sfp, 0 );
-  fclose(filedot);
+  kaapi_writemem_barrier();
+  thread->sfp->tasklist = tasklist;
+  
+#if defined(KAAPI_DEBUG)
+  if (getenv("KAAPI_DUMP_GRAPH") !=0)
+  {
+    static uint32_t counter = 0;
+    char filename[128]; 
+    if (getenv("USER") !=0)
+      sprintf(filename,"/tmp/graph.%s.%i.dot", getenv("USER"), counter++ );
+    else
+      sprintf(filename,"/tmp/graph.%i.dot",counter++);
+    FILE* filedot = fopen(filename, "w");
+    kaapi_frame_print_dot( filedot, thread->sfp, 0 );
+    fclose(filedot);
+  }
+#endif
   
   /* exec the spawned subtasks */
-  kaapi_thread_execframe_tasklist( thread );
-
+  err = kaapi_thread_execframe_tasklist( thread );
+  kaapi_assert( (err == 0) || (err == ECHILD) );
+  
   /* Pop & restore the frame */
+  kaapi_sched_lock(&thread->proc->lock);
+  thread->sfp->tasklist = 0;
   --thread->sfp;
+  kaapi_sched_unlock(&thread->proc->lock);
+
+  KAAPI_ATOMIC_ADD( &tasklist->count_exec, tasklist->cnt_exectasks );
+  /* here we wait that all tasks of the tasklist have been executed 
+     - is may be better to try to steal extra tasks for other threads
+     by forking a non ready task that will be updated when condition
+     becomes true.
+     - this tasks will have an aftersteal method to delete the tasklist
+  */
+  while (KAAPI_ATOMIC_READ(&tasklist->count_exec) != (signed)tasklist->cnt_tasks)
+   kaapi_slowdown_cpu();
+  kaapi_assert( KAAPI_ATOMIC_READ(&tasklist->count_exec) == (signed)tasklist->cnt_tasks );
+
+#if 0
+  printf("%i::[tasklist] exec tasks: %llu\n", 
+    kaapi_get_self_kid(),
+    tasklist->cnt_exectasks 
+  );
+  fflush(stdout);
+#endif
+  
+  kaapi_tasklist_destroy( tasklist );
+  free(tasklist);
+
 }
 
 

@@ -1,13 +1,13 @@
 /*
-** kaapi_thread_clear.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+** Created on Tue Mar 31 15:19:09 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,39 +43,55 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <strings.h>
-#include <stddef.h>
+#include "kaapi_network.h"
+#include "kaapi_compiler.h"
+
+/* Weak symbols that will be overloaded by libkanet when
+ * linked with it
+ */
 
 /**
 */
-int kaapi_thread_clear( kaapi_thread_context_t* thread )
-{
-  kaapi_assert_debug( thread != 0);
-
-  thread->sfp        = thread->stackframe;
-  thread->esfp       = thread->stackframe;
-  thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
-  thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
-  thread->sfp->tasklist= 0;
-
-  thread->the_thgrp  = 0;
-  thread->unstealable= 0;
-  thread->partid     = -10; /* out of bound value */
-
-  thread->_next      = 0;
-  thread->_prev      = 0;
-  thread->asid       = 0;
-  thread->affinity[0]= ~0UL;
-  thread->affinity[1]= ~0UL;
-
-  thread->wcs        = 0;
-
-  /* zero all bytes from static_reply until end of sc_data */
-  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
-
-#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  thread->thgrp      = 0;
-#endif
+__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv)
+{  
   return 0;
 }
 
+/**
+*/
+__KA_COMPILER_WEAK int kaapi_network_finalize()
+{  
+  return 0;
+}
+
+
+/**
+*/
+__KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void)
+{
+  return 0;
+}
+
+/**
+*/
+__KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
+{
+  return 1;
+}
+
+
+__KA_COMPILER_WEAK void kaapi_network_poll()
+{
+}
+
+__KA_COMPILER_WEAK void kaapi_network_barrier(void)
+{
+}
+
+__KA_COMPILER_WEAK int kaapi_network_get_seginfo(kaapi_address_space_t* retval,
+			      kaapi_globalid_t gid )
+{
+  retval->segaddr = 0;
+  retval->segsize = (size_t)-1;
+  return 0;
+}

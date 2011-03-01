@@ -1,13 +1,12 @@
 /*
-** kaapi_thread_clear.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
-** Copyright 2009 INRIA.
+** Created on Thu Feb 24 15:35:09 2011
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
+** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,40 +41,21 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include <strings.h>
-#include <stddef.h>
+#ifndef _KAAPI_COMPILER_H_
+#define _KAAPI_COMPILER_H_ 1
 
-/**
+/** Implementation note.
+    - This file should list all feature depending on the used compiler
+    - This file is private (should not be included in public headers)
 */
-int kaapi_thread_clear( kaapi_thread_context_t* thread )
-{
-  kaapi_assert_debug( thread != 0);
 
-  thread->sfp        = thread->stackframe;
-  thread->esfp       = thread->stackframe;
-  thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
-  thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
-  thread->sfp->tasklist= 0;
 
-  thread->the_thgrp  = 0;
-  thread->unstealable= 0;
-  thread->partid     = -10; /* out of bound value */
-
-  thread->_next      = 0;
-  thread->_prev      = 0;
-  thread->asid       = 0;
-  thread->affinity[0]= ~0UL;
-  thread->affinity[1]= ~0UL;
-
-  thread->wcs        = 0;
-
-  /* zero all bytes from static_reply until end of sc_data */
-  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
-
-#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  thread->thgrp      = 0;
+/** weak symbols */
+#ifdef __GNUC__
+#  define __KA_COMPILER_WEAK __attribute__((weak))
+#else
+#  error No weak symbols defined for this compiler
 #endif
-  return 0;
-}
 
+
+#endif /* _KAAPI_COMPILER_H_ */

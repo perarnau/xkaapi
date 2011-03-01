@@ -43,13 +43,11 @@
 */
 #include "kaapi_impl.h"
 
-#if defined(KAAPI_USE_NETWORK)
+#include "kaapi_network.h"
+
 #include "kanet_network.h"
-#endif
 
 extern "C" { /* minimal C interface to network */
-
-#if defined(KAAPI_USE_NETWORK)
 
 // --------------------------------------------------------------------
 int kaapi_network_init(int* argc, char*** argv)
@@ -218,57 +216,5 @@ int kaapi_network_am(
   return 0;
 }
 
-
-#else // if defined(KAAPI_USE_NETWORK)
-
-/* This is dummy function to avoid dependencies with C interface to network
-*/
-/**
-*/
-int kaapi_network_init(int* argc, char*** argv)
-{  
-  return 0;
-}
-
-/**
-*/
-int kaapi_network_finalize()
-{  
-  return 0;
-}
-
-
-/**
-*/
-kaapi_globalid_t kaapi_network_get_current_globalid(void)
-{
-  return 0;
-}
-
-/**
-*/
-uint32_t kaapi_network_get_count(void)
-{
-  return 1;
-}
-
-
-void kaapi_network_poll()
-{
-}
-
-void kaapi_network_barrier(void)
-{
-}
-
-int kaapi_network_get_seginfo( kaapi_address_space_t* retval, kaapi_globalid_t gid )
-{
-  retval->segaddr = 0;
-  retval->segsize = (size_t)-1;
-  return 0;
-}
-
-
-#endif // KAAPI_USE_NETWORK
 
 } // end extern C
