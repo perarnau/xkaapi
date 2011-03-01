@@ -32,6 +32,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_wq_set.c\
   misc/kaapi_cpuset2str.c\
   misc/kaapi_get_self_kid.c\
+  misc/kaapi_default_netapi.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_taskregister_static.c \
@@ -112,8 +113,7 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
   static/kaapi_stsched_tasksetstatic.c \
-  static/kaapi_threadgroup_nothgrp.c \
-  kaapi_network.c
+  static/kaapi_threadgroup_nothgrp.c
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
