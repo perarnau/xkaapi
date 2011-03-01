@@ -27,8 +27,10 @@
  */
 #include <iostream>
 #include <string>
-#include "kaapi++" // this is the new C++ interface for Kaapi
 #include <cblas.h>
+#include <math.h>
+#include <sys/types.h>
+#include "kaapi++" // this is the new C++ interface for Kaapi
 
 // ...
 extern "C" {
@@ -57,8 +59,6 @@ extern "C" {
 
 #if CONFIG_USE_GSL
 
-#include <math.h>
-#include <sys/types.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
@@ -127,7 +127,7 @@ static void print_gsl_matrix(const gsl_matrix* m)
   for (size_t i = 0; i < m->size1; ++i)
   {
     for (size_t j = 0; j < m->size2; ++j)
-      printf("%lf ", gsl_matrix_get(m, i, j));
+      printf("%.02lf ", gsl_matrix_get(m, i, j));
     printf("\n");
   }
   printf("\n");
@@ -171,7 +171,7 @@ static void generate_matrix(double* c, size_t m)
     for (size_t j = 0; j <= i; ++j)
     {
       const size_t k = i * m + j;
-      a[k] = (double)(k + 1) / 1000.;
+      a[k] = (double)(k + 1) / 10.;
     }
 
   // multiply with its transpose
@@ -196,11 +196,7 @@ static void generate_matrix(double* c, size_t m)
 
 template<typename range_type>
 static inline int get_lda(const range_type& range)
-{
-  // assuming row major order, lda is the column count.
-  return (int)range.dim(1);
-  // return (int)range.lda();
-}
+{ return (int)range.lda(); }
 
 template<typename range_type>
 static inline int get_order(const range_type& range)
@@ -233,11 +229,12 @@ static void print_matrix(matrix_type& m)
 // tasks
 
 struct TaskDPOTRF: public ka::Task<1>::Signature<
-      ka::RW<ka::range2d<double> > /* A */
+  ka::RW<ka::range2d<double> > /* A */
 >{};
 template<>
 struct TaskBodyCPU<TaskDPOTRF> {
-  void operator()( ka::range2d_rw<double> A )
+  void operator()
+  ( ka::range2d_rw<double> A )
   {
     // dpotrf(uplo, n, a, lda, info)
     // compute the cholesky factorization
@@ -398,6 +395,7 @@ struct TaskBodyCPU<TaskLU> {
       {
         ka::rangeindex rn(n, n+blocsize);
         ka::Spawn<TaskDSYRK>()(A(rn,rk), A(rn,rn));
+
         for (size_t m=n+blocsize; m<N; m += blocsize)
         {
           ka::rangeindex rm(m, m+blocsize);
@@ -439,19 +437,14 @@ struct TaskBodyCPU<TaskPrintMatrix> {
 struct doit {
   void operator()(int argc, char** argv )
   {
-    int n = 8;
-    int nbloc = 2;
-    int blocsize = n / nbloc;
+    // matrix dimension
+    int n = atoi(argv[1]);
 
-    if (argc > 1) {
-        nbloc = atoi(argv[1]);
-    }
-    if (argc > 2) {
-        blocsize = atoi(argv[2]);
-        n = nbloc*blocsize;
-    }
-    n = ((n+nbloc-1)/nbloc)*nbloc;
-    blocsize = n/nbloc;
+    // block count
+    const int block_count = atoi(argv[2]);
+
+    const int block_size = n / block_count;
+    n = block_count * block_size;
 
     double* dA = (double*) calloc(n* n, sizeof(double));
     if (0 == dA) 
@@ -467,13 +460,14 @@ struct doit {
 
 #if CONFIG_USE_GSL
     gsl_matrix* gslA = create_gsl_matrix(A);
+    print_gsl_matrix(gslA);
 #endif
 
-    std::cout << "Start LU with " << nbloc << 'x' << nbloc << " blocs of matrix of size " << n << 'x' << n << std::endl;
+    std::cout << "Start LU with " << block_count << 'x' << block_count << " blocs of matrix of size " << n << 'x' << n << std::endl;
 
     // LU factorization of A using ka::
     double t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskLU>(ka::SetStaticSched())( blocsize, A );
+    ka::Spawn<TaskLU>(ka::SetStaticSched())(block_size, A);
     ka::Sync();
     double t1 = kaapi_get_elapsedtime();
 
