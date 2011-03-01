@@ -171,7 +171,7 @@ static void generate_matrix(double* c, size_t m)
     for (size_t j = 0; j <= i; ++j)
     {
       const size_t k = i * m + j;
-      a[k] = (double)(k + 1) / 100.;
+      a[k] = (double)(k + 1) / 1000.;
     }
 
   // multiply with its transpose
@@ -485,7 +485,7 @@ struct doit {
     std::cout << " LU took " << t1-t0 << " seconds." << std::endl;
 
     // If n is small, print the results
-    if (n <= 16) {
+    if (n <= 24) {
       ka::Spawn<TaskPrintMatrix>()( std::string("A="), A );
       ka::Sync();
 
