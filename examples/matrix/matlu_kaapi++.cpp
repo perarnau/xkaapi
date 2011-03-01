@@ -36,6 +36,25 @@ extern "C" {
 }
 
 
+// . questions and notes
+// .. for the cholesky factorization, a has to
+// be a positive definite matrix:
+// x' A x > 0 for any vector x
+// .. this can be ensured by having
+// A = L * L' (a lower triangular time its transpose)
+// in case of one block
+// .. this algorithm is not a lu factorization but
+// a cholesky decomposition. dont compare the result
+// with a lu factorisation and follow the input
+// requirements (ie. symmetric and positive definite)
+// . cublas routines avail
+// .. cublas dsyrk [x]
+// .. cublas dtrsm [x]
+// .. cublas dgemm [x]
+// .. cublas dpotrf [!]
+// .. segfault in the runtime, exectasklist
+
+
 #if CONFIG_USE_GSL
 
 #include <math.h>
@@ -44,12 +63,18 @@ extern "C" {
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
 
+__attribute__((unused))
 static void do_gsl_lufact(gsl_matrix* a)
 {
   gsl_permutation* const p = gsl_permutation_alloc(a->size1);
   int s;
   gsl_linalg_LU_decomp(a, p, &s);
   gsl_permutation_free(p);
+}
+
+static void do_gsl_cholesky(gsl_matrix* a)
+{
+  gsl_linalg_cholesky_decomp(a);
 }
 
 static gsl_matrix* allocate_gsl_matrix(size_t w)
@@ -111,8 +136,9 @@ static void print_gsl_matrix(const gsl_matrix* m)
 static int compare_matrices
 (const gsl_matrix* a, const ka::array<2, double>& b)
 {
+  // compare only the lower triangular part
   for (size_t i = 0; i < a->size1; ++i)
-    for (size_t j = 0; j < a->size2; ++j)
+    for (size_t j = 0; j <= i; ++j)
     {
       const double d = b(i, j) - gsl_matrix_get(a, i, j);
       if (fabs(d) > 0.001) return -1;
@@ -121,14 +147,59 @@ static int compare_matrices
   return 0;
 }
 
+static void generate_matrix(double* c, size_t m)
+{
+  // generate a symmetric positive definite m x m matrix
+
+#if 0
+  const double fubar[] =
+    { 2, -1, 0, -1, 2, -1, 0, -1, 2 };
+  for (int i = 0; i < (m * m); ++i)
+    c[i] = fubar[i];
+#else
+
+  // tmp matrix, dgemm can be performed in place?
+
+  const size_t mm = m * m;
+  const int lda = (int)m;
+
+  double* const a = (double*)malloc(mm * sizeof(double));
+
+  // generate a down triangular matrix
+  for (size_t i = 0; i < mm; ++i) a[i] = 0.;
+  for (size_t i = 0; i < m; ++i)
+    for (size_t j = 0; j <= i; ++j)
+    {
+      const size_t k = i * m + j;
+      a[k] = (double)(k + 1) / 100.;
+    }
+
+  // multiply with its transpose
+  // in place allowed?
+  cblas_dgemm
+  (
+   CblasRowMajor, CblasNoTrans, CblasTrans,
+   m, m, m,
+   1., a, lda, a, lda, 0., c, lda
+  );
+
+  free(a);
+    
+#endif
+
+}
+
 #endif // CONFIG_USE_GSL
 
+
+// wrappers
 
 template<typename range_type>
 static inline int get_lda(const range_type& range)
 {
   // assuming row major order, lda is the column count.
   return (int)range.dim(1);
+  // return (int)range.lda();
 }
 
 template<typename range_type>
@@ -142,6 +213,24 @@ static inline int get_rows(const range_type& range)
 template<typename range_type>
 static inline int get_cols(const range_type& range)
 { return (int)range.dim(1); }
+
+
+// temporary routines
+
+template<typename matrix_type>
+static void print_matrix(matrix_type& m)
+{
+  printf("---\n");
+  for (size_t i = 0; i < m.dim(0); ++i)
+  {
+    for (size_t j = 0; j < m.dim(1); ++j)
+      printf("%lf ", m(i, j));
+    printf("\n");
+  }
+}
+
+
+// tasks
 
 struct TaskDPOTRF: public ka::Task<1>::Signature<
       ka::RW<ka::range2d<double> > /* A */
@@ -159,21 +248,12 @@ struct TaskBodyCPU<TaskDPOTRF> {
     const int lda = get_lda(A);
     const int n = get_order(A); // matrix order
 
-#if 0
-    printf(">>\n");
-    printf("dpotrf A(%lu, %lu)\n", A.dim(0), A.dim(1));
-    printf("%lf %lf\n", A(0, 0), A(0, 1));
-    printf("%lf %lf\n", A(1, 0), A(1, 1));
-#endif
-
-    clapack_dpotrf(CblasRowMajor, CblasLower, n, a, lda);
-
-#if 0
-    printf("-->\n");
-    printf("%lf %lf\n", A(0, 0), A(0, 1));
-    printf("%lf %lf\n", A(1, 0), A(1, 1));
-    printf("<<\n");
-#endif
+    const int err = clapack_dpotrf(CblasRowMajor, CblasLower, n, a, lda);
+    if (err)
+    {
+      printf("!!! clapack_dpotrf == %d\n", err);
+      print_matrix(A);
+    }
   }
 };
 
@@ -208,7 +288,7 @@ struct TaskBodyCPU<TaskDTRSM> {
 
     cblas_dtrsm
     (
-     CblasRowMajor, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit,
+     CblasRowMajor, CblasLeft, CblasLower, CblasNoTrans, CblasNonUnit,
      m, n, 1., a, lda, b, ldb
     );
   }
@@ -230,19 +310,14 @@ struct TaskBodyCPU<TaskDSYRK> {
     double* const c = Amk.ptr();
 
     const int lda = get_lda(Akk);
-    const int ldc = Amk.dim(0);
+    const int ldc = get_lda(Amk);
 
-    const int n = get_cols(Amk); // C matrix order
+    const int n = get_order(Amk); // C matrix order
     const int k = get_cols(Akk);
-
-#if 0
-    printf("A: %lu,%lu\n", Akk.dim(0), Akk.dim(1));
-    printf("C: %lu,%lu\n", Amk.dim(0), Amk.dim(1));
-#endif
 
     cblas_dsyrk
     (
-     CblasRowMajor, CblasUpper, CblasNoTrans,
+     CblasRowMajor, CblasLower, CblasNoTrans,
      n, k, 1., a, lda, 1., c, ldc
     );
   }
@@ -386,11 +461,7 @@ struct doit {
       return;
     }
 
-    // Populate B and C pseudo-randomly - 
-    // The matrices are populated with random numbers in the range (0.0, +1.0)
-    for(int i = 0; i < n * n; ++i) {
-        dA[i] = (float) (((i + 1) * i) % 1024) / 1024;
-    }
+    generate_matrix(dA, n);
 
     ka::array<2,double> A(dA, n, n, n);
 
@@ -408,7 +479,7 @@ struct doit {
 
 #if CONFIG_USE_GSL
     // LU factorization of A using gsl
-    do_gsl_lufact(gslA);
+    do_gsl_cholesky(gslA);
 #endif
 
     std::cout << " LU took " << t1-t0 << " seconds." << std::endl;
