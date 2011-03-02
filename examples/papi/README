@@ -1,0 +1,25 @@
+-- purpose
+. This example shows how to use papi performance counters
+to measure performance event on a foreach algorithm.
+
+-- building
+. currently there is a problem in the build system and the
+user has to give the path of the papi library when compiling
+its code, if it does not reside in a system wide location.
+
+-- running
+. the KAAPI_PERF_PAPIES environment variable is used to
+tell the runtime which papi counter we want to measure. 
+. example for l1 cache misses, total cycles and fpu ops count:
+KAAPI_PERF_PAPIES=PAPI_L1_DCM,PAPI_TOT_CYC,PAPI_FP_OPS ./a.out
+
+-- limitation and notes
+. up to 3 KAAPI_PERF_ID_PAPI_x counters
+. man papi_avail(3) for a list of supported events
+. when using kaapi_perf_accum_counters and equivalent routines, the buffer
+ size must equal the cardinalty of the corresponding perf_idset
+. there is currently no way for the user to define measurment sections
+. it is not posisble to dynamically change the event set to measure
+. due to some temporary limitations in the build system, build.sh and
+run.sh scripts are provided as examples of how to build and run a program
+using performance counters

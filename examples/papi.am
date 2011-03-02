@@ -1,0 +1,17 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+
+PAPI_PRGS=papi_kaapi
+check_PROGRAMS+=$(PAPI_PRGS)
+all-papi: $(PAPI_PRGS)
+
+papi_kaapi_SOURCES=papi/papi_kaapi.c
+
+papi_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
+papi_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
+papi_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
+papi_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS)

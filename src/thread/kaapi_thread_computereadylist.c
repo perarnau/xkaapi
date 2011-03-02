@@ -76,9 +76,5 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
     --task_top;
   } /* end while task */
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  printf("[tasklist] #task:%lu\n", cnt_tasks);
-#endif
-
   return 0;
 }
