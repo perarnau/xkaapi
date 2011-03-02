@@ -48,7 +48,15 @@
 
 
 struct kaapi_thread_context_t;
+
 int kaapi_cuda_execframe(struct kaapi_thread_context_t*);
+
+static inline int kaapi_cuda_thread_execframe
+(struct kaapi_thread_context_t* thread)
+{ return kaapi_cuda_execframe(thread); }
+
+int kaapi_cuda_thread_execframe_tasklist
+(struct kaapi_thread_context_t*);
 
 
 #endif /* ! KAAPI_CUDA_EXECFRAME_H_INCLUDED */

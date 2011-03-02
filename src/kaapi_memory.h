@@ -306,7 +306,7 @@ static inline kaapi_pointer_t kaapi_make_pointer( kaapi_address_space_id_t asid,
 
 /** Make a null pointer object
 */
-static inline kaapi_pointer_t kaapi_make_nullpointer( )
+static inline kaapi_pointer_t kaapi_make_nullpointer(void)
 { kaapi_pointer_t p = {0, (uintptr_t)0}; return p; }
 
 /** Make a null pointer object

@@ -58,6 +58,8 @@ unsigned int kaapi_cuda_get_kasid_user(size_t i)
 kaapi_cuda_proc_t* kaapi_cuda_get_proc_by_kasid
 (kaapi_address_space_id_t kasid)
 {
+#if 0 /* not_implemented */
+
   /* the kasid user we are looking for */
   const unsigned int kasid_user = (unsigned int)
     kaapi_memory_address_space_getuser(kasid);
@@ -70,6 +72,8 @@ kaapi_cuda_proc_t* kaapi_cuda_get_proc_by_kasid
     if (kproc->proc_type != KAAPI_PROC_TYPE_CUDA) continue;
     if (kproc->cuda_proc.kasid_user == kasid_user) return &kproc->cuda_proc;
   }
+
+#endif
 
   return NULL;
 }

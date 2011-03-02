@@ -76,12 +76,12 @@ kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
 
 /* get processor memory map */
 
-static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
+kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
 {
   return &proc->mem_map;
 }
 
-static inline kaapi_mem_map_t* get_host_mem_map(void)
+kaapi_mem_map_t* get_host_mem_map(void)
 {
   return get_proc_mem_map(kaapi_all_kprocessors[0]);
 }

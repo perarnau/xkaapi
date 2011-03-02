@@ -129,10 +129,11 @@ on_error:
 #include "../cuda/kaapi_cuda_kasid.h"
 #include "../machine/cuda/kaapi_cuda_error.h"
 
-static inline kaapi_cuda_proc_t* kasid_to_cuda_proc(kaapi_address_space_id_t kasid)
+static inline kaapi_cuda_proc_t* kasid_to_cuda_proc
+(kaapi_address_space_id_t kasid)
 {
   kaapi_cuda_proc_t* const cu_proc =
-  kaapi_cuda_get_proc_by_kasid(kasid);
+    kaapi_cuda_get_proc_by_kasid(kasid);
   kaapi_assert_debug(cu_proc);
   return cu_proc;
 }
@@ -147,7 +148,7 @@ static inline unsigned int is_self_cu_proc
 }
 #endif
 
-static kaapi_cuda_proc_t* get_cu_context
+kaapi_cuda_proc_t* get_cu_context
 (kaapi_address_space_id_t kasid)
 {
   kaapi_cuda_proc_t* const cu_proc = kasid_to_cuda_proc(kasid);
@@ -167,7 +168,7 @@ static kaapi_cuda_proc_t* get_cu_context
   return NULL;
 }
 
-static void put_cu_context(kaapi_cuda_proc_t* cu_proc)
+void put_cu_context(kaapi_cuda_proc_t* cu_proc)
 {
   cuCtxPopCurrent(&cu_proc->ctx);
   pthread_mutex_unlock(&cu_proc->ctx_lock);
@@ -233,8 +234,9 @@ static inline int kaapi_memory_write_cu2cpu
 {
   kaapi_cuda_proc_t* cu_proc = NULL;
   int error = EINVAL;
-  
-  if ((dest ==0) || (src == 0)) return EINVAL;
+
+  if (kaapi_pointer_isnull(dest)) return EINVAL;
+  else if (src == NULL) return EINVAL;
   
   cu_proc = get_cu_context(kasid_src);
   if (cu_proc == NULL) return EINVAL;
@@ -259,8 +261,9 @@ static int kaapi_memory_write_cpu2cu
 {
   kaapi_cuda_proc_t* cu_proc = NULL;
   int error = EINVAL;
-  
-  if ((dest ==0) || (src == 0)) return EINVAL;
+
+  if (kaapi_pointer_isnull(dest)) return EINVAL;
+  else if (src == NULL) return EINVAL;
   
   cu_proc = get_cu_context(kasid_dest);
   if (cu_proc == NULL) return EINVAL;
@@ -291,27 +294,38 @@ static int kaapi_memory_write_cu2cu
    */
   
   int error = 0;
+  kaapi_pointer_t tmp_pointer;
   
   kaapi_cuda_proc_t* cu_proc;
   
   const size_t size = kaapi_memory_view_size(view_dest);
   void* tmp_buffer = malloc(size);
   if (tmp_buffer == NULL) return EINVAL;
+
+  tmp_pointer = kaapi_make_pointer(0, tmp_buffer);
   
   /* cu2cpu(tmp, src) */
   cu_proc = get_cu_context(kasid_src);
   if (cu_proc == NULL) goto on_error;
+
   error = kaapi_memory_write_view
-  ((kaapi_pointer_t)tmp_buffer, view_dest, src, view_src, (contiguous_write_func_t)memcpy_cu_dtoh, (void*)cu_proc);
+    (tmp_pointer, view_dest, src, view_src,
+     (contiguous_write_func_t)memcpy_cu_dtoh, (void*)cu_proc);
+
   put_cu_context(cu_proc);
+
   if (error) goto on_error;
   
   /* cpu2cu(dst, tmp) */
   cu_proc = get_cu_context(kasid_dest);
   if (cu_proc == NULL) goto on_error;
+
   error = kaapi_memory_write_view
-  (dest, view_dest, tmp_buffer, view_dest, (contiguous_write_func_t)memcpy_cu_htod, (void*)cu_proc);
+    (dest, view_dest, tmp_buffer, view_dest,
+     (contiguous_write_func_t)memcpy_cu_htod, (void*)cu_proc);
+
   put_cu_context(cu_proc);
+
   if (error) goto on_error;
   
 on_error:

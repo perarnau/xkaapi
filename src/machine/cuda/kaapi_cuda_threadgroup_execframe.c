@@ -44,6 +44,10 @@
 #include "kaapi_impl.h"
 #include "kaapi_cuda_execframe.h"
 
+
+#if 0 /* not_implemented */
+
+
 #if defined(KAAPI_USE_NETWORK)
 /* network service to signal end of iteration of one tid */
 void kaapi_threadgroup_signalend_service(int err, kaapi_globalid_t source, void* buffer, size_t sz_buffer )
@@ -292,5 +296,15 @@ int kaapi_cuda_threadgroup_execframe( kaapi_thread_context_t* thread )
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
+
   return EWOULDBLOCK;
 }
+
+#else /* not_implemented */
+
+int kaapi_cuda_threadgroup_execframe(kaapi_thread_context_t* thread)
+{
+  return EWOULDBLOCK;
+}
+
+#endif /* not_implemented */

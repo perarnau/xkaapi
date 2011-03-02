@@ -96,13 +96,23 @@ template<> struct TaskBodyCPU<TaskAddone>
 };
 
 // gpu implementation
+
+extern "C" CUstream kaapi_cuda_kernel_stream(void);
+
 template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range1d_rw<double_type> range)
   {
-    // we are the big one, can handle the work alone. dont recurse.
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
+  }
+
+  void operator()(ka::range1d_rw<double_type> range)
+  {
+    // helper to bypass a bug in code generation
+    ka::gpuStream gpustream
+      ((kaapi_gpustream_t)kaapi_cuda_kernel_stream());
+    (*this)(gpustream, range);
   }
 };
 
@@ -130,8 +140,10 @@ struct doit {
       ka::Spawn<TaskAddone>()(range);
       ka::Sync();
 
+#if 0 // todo
       kaapi_mem_delete_host_mappings
 	((kaapi_mem_addr_t)array, sizeof(double_type) * size);
+#endif
 
       t1 = kaapi_get_elapsedns();
 

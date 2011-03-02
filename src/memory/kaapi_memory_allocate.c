@@ -44,6 +44,14 @@
 #include "kaapi_impl.h"
 
 #if defined(KAAPI_USE_CUDA)
+
+#include "../machine/cuda/kaapi_cuda_error.h"
+
+/* in kaapi_memory_copy.c */
+
+extern kaapi_cuda_proc_t* get_cu_context(const kaapi_address_space_id_t*);
+extern void put_cu_context(kaapi_cuda_proc_t*);
+
 static inline int allocate_cu_mem(CUdeviceptr* devptr, size_t size)
 {
   const CUresult res = cuMemAlloc(devptr, size);
@@ -117,20 +125,23 @@ kaapi_pointer_t kaapi_memory_allocate(
     {
       /* todo: wont work on multigpu, need asid to proc */
 
-      kaapi_cuda_proc_t* const cu_proc = get_cu_context(kasid);
+      kaapi_cuda_proc_t* const cu_proc = get_cu_context(&kasid);
       CUdeviceptr devptr;
       int error;
 
-      if (cu_proc == NULL) return 0;
+      if (cu_proc == NULL) return kaapi_make_nullpointer();
+
       error = allocate_cu_mem(&devptr, size);
       put_cu_context(cu_proc);
 
-      if (error == -1) return 0;
+      if (error == -1) return kaapi_make_nullpointer();
+
       retval.ptr = (uintptr_t)devptr;
       return retval;
 
     } break;
-#endif
+#endif /* KAAPI_USE_CUDA */
+
     default:
     {
       retval.asid = 0;

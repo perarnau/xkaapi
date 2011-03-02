@@ -56,6 +56,7 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_bind.c \
   memory/kaapi_memory_get_version.c \
   memory/kaapi_memory_find_writer.c \
+  memory/kaapi_mem.c \
   memory/kaapi_mem.h \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_rand_f0.c \
@@ -70,9 +71,6 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_criticalsteal.c \
   workstealing/kaapi_sched_lready.c \
   workstealing/kaapi_sched_wsqueue.c 
-
-#  memory/kaapi_mem.c 
-
 
 #Libtask
 libkaapi_la_SOURCES+=\
@@ -167,6 +165,7 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_func.c \
   machine/cuda/kaapi_cuda_execframe.h \
   machine/cuda/kaapi_cuda_execframe.c \
+  machine/cuda/kaapi_cuda_thread_execframe_tasklist.c \
   machine/cuda/kaapi_cuda_threadgroup_execframe.h \
   machine/cuda/kaapi_cuda_threadgroup_execframe.c \
   machine/cuda/kaapi_cuda_kasid.c
