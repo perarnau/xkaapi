@@ -43,6 +43,8 @@
 */
 #include "test_main.h"
 #include "test_task.h"
+#include "kaapi++"
+
 
 /* Main of the program
 */

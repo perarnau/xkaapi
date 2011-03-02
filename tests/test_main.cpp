@@ -41,9 +41,8 @@
 ** terms.
 ** 
 */
-#include "test_task.h"
 #include "test_main.h"
-
+#include "kaapi++"
 
 /* main entry point : Kaapi initialization
 */
@@ -65,12 +64,6 @@ int main(int argc, char** argv)
 
     /* */
     ka::System::terminate();
-  }
-  catch (const ka::InvalidArgumentError& E) {
-    ka::logfile() << "Catch invalid arg" << std::endl;
-  }
-  catch (const ka::BadAlloc& E) {
-    ka::logfile() << "Catch bad alloc" << std::endl;
   }
   catch (const std::exception& E) {
     ka::logfile() << "Catch : " << E.what() << std::endl;
