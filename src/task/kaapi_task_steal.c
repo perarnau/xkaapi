@@ -213,7 +213,14 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     /* Execute the orinal body function with the original args */
 #if defined(KAAPI_USE_CUDA)
     if (self_proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+    {
+      /* todo_remove */
+      if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
+	body(orig_task_args, thread);
+      else
+      /* todo_remove */
       kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
+    }
     else
 #endif
     body(orig_task_args, thread);
@@ -277,7 +284,14 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     /* call directly the stolen body function */
 #if defined(KAAPI_USE_CUDA)
     if (self_proc->proc_type == KAAPI_PROC_TYPE_CUDA)
-      kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
+    {
+      /* todo_remove */
+      if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
+	body(copy_task_args, thread);
+      else
+      /* todo_remove */
+      kaapi_cuda_exectask(self_thread, copy_task_args, fmt);
+    }
     else
 #endif
     body( copy_task_args, thread);

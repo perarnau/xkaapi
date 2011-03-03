@@ -110,27 +110,24 @@ struct TaskBodyCPU<TaskSeqMatProduct> {
 
 __global__ void mulKernel
 (
- const double_type* a,
- const double_type* b,
- double_type* c,
- unsigned int lda,
+ const double_type* a, unsigned int lda,
+ const double_type* b, unsigned int ldb,
+ double_type* c, unsigned int ldc,
  unsigned int m
 )
 {
-  // compute ai * bj = ck;
+  // compute a * b = c;
   // a, b, c of size m x m
-  // lda leading dimension
-
-  const unsigned int k = threadIdx.y * lda + threadIdx.x;
+  // ldN the leading dimension
 
   a = a + threadIdx.y * lda;
   b = b + threadIdx.x;
 
   double_type res = 0.;
-  for (unsigned int i = 0; i < m; ++i, ++a, b += lda)
+  for (unsigned int i = 0; i < m; ++i, ++a, b += ldb)
     res += (*a) * (*b);
 
-  c[k] = res;
+  c[threadIdx.y * ldc + threadIdx.x] = res;
 }
 
 extern "C" CUstream kaapi_cuda_kernel_stream(void);
@@ -147,12 +144,15 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
   {
     const CUstream custream = (CUstream)stream.stream;
 
+    const unsigned int m = A.dim(0);
+
     const double_type* const a = A.ptr();
     const double_type* const b = B.ptr();
     double_type* const c = C.ptr();
 
-    static const dim3 dim(BLOCSIZE, BLOCSIZE);
-    mulKernel<<<1, dim, 0, custream>>>(a, b, c, A.lda(), BLOCSIZE);
+    static const dim3 dim(m, m);
+    mulKernel<<<1, dim, 0, custream>>>
+      (a, A.lda(), b, B.lda(), c, C.lda(), m);
   }
 
   void operator()
@@ -194,6 +194,7 @@ struct TaskBodyCPU<TaskMatProduct> {
         {
           ka::rangeindex rk(k, k+bloc);
           ka::Spawn<TaskSeqMatProduct>()( A(ri,rk), B(rk,rj), C(ri,rj) );
+	  waitabit(); // gpu task scheduled
         }
       }
     }
@@ -253,7 +254,6 @@ struct doit {
     // Multiply to get C = A*B 
     double_type t0 = kaapi_get_elapsedtime();
     ka::Spawn<TaskMatProduct>()( A, B, C );
-    waitabit(); // gpu task scheduled
     ka::Sync();
     double_type t1 = kaapi_get_elapsedtime();
 
