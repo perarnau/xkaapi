@@ -54,6 +54,7 @@ template<>
 struct TaskBodyCPU<TaskPrintMatrix> {
   void operator() ( std::string msg, ka::range2d_r<double_type> A  )
   {
+#if 0 // unused
     size_t d0 = A.dim(0);
     size_t d1 = A.dim(1);
     std::cout << msg << " :=matrix( [" << std::endl;
@@ -67,6 +68,7 @@ struct TaskBodyCPU<TaskPrintMatrix> {
       std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
     }
     std::cout << "]);" << std::endl;
+#endif
   }
 };
 
@@ -75,12 +77,12 @@ struct TaskBodyCPU<TaskPrintMatrix> {
 struct TaskSeqMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double_type> >, /* A */
       ka::R<ka::range2d<double_type> >,  /* B */
-      ka::CW<ka::range2d<double_type> >   /* C */
+      ka::W<ka::range2d<double_type> >   /* C */
 >{};
 
 template<>
 struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_cw<double_type> C )
+  void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_w<double_type> C )
   {
     size_t N = A.dim(0);
     size_t M = B.dim(0);
@@ -139,7 +141,7 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
    ka::gpuStream stream,
    ka::range2d_r<double_type> A,
    ka::range2d_r<double_type> B,
-   ka::range2d_cw<double_type> C
+   ka::range2d_w<double_type> C
   )
   {
     const CUstream custream = (CUstream)stream.stream;
@@ -150,6 +152,11 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
     const double_type* const b = B.ptr();
     double_type* const c = C.ptr();
 
+    printf("mulKernel(%lx, %lx, %lx)\n",
+	   (uintptr_t)A.ptr(),
+	   (uintptr_t)B.ptr(),
+	   (uintptr_t)C.ptr());
+
     static const dim3 dim(m, m);
     mulKernel<<<1, dim, 0, custream>>>
       (a, A.lda(), b, B.lda(), c, C.lda(), m);
@@ -159,7 +166,7 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
   (
    ka::range2d_r<double_type> A,
    ka::range2d_r<double_type> B,
-   ka::range2d_cw<double_type> C
+   ka::range2d_w<double_type> C
   )
   {
     // helper to bypass a bug in code generation
@@ -210,9 +217,6 @@ struct TaskBodyCPU<TaskMatProduct> {
     }
   }
 };
-
-
-
 
 /* Main of the program
 */

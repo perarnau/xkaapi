@@ -419,6 +419,10 @@ static void finalize_task
     devptr = (kaapi_mem_addr_t)access.data;
     size = get_size_param(format, i, sp);
 
+#if defined(KAAPI_DEBUG)
+    printf("kaapi_mem_synchronize(%lx, %lu)\n", (uintptr_t)devptr, size);
+#endif
+
     /* sync host memory */
     kaapi_mem_synchronize(devptr, size);
   }

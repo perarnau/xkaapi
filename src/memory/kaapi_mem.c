@@ -407,6 +407,11 @@ void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
   kaapi_mem_map_find_with_asid(host_map, devptr, self_asid, &mapping);
   hostptr = kaapi_mem_mapping_get_addr(mapping, host_asid);
 
+#if defined(KAAPI_DEBUG)
+  printf("memcpy_dtoh(%lx, %lx, %u)\n",
+	 (uintptr_t)hostptr, (uintptr_t)devptr, size);
+#endif
+
   memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
 }
 
