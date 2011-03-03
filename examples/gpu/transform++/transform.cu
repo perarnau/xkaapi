@@ -73,13 +73,14 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
   {
     printf("cpuTask(0x%lx, %lu)\n",
 	   (uintptr_t)range.begin(), range.size());
-    fflush(stdout);
 
     T* const beg = range.begin();
     T* const end = beg + range.size();
     std::for_each( beg, end, op );
   }
 };
+
+extern "C" CUstream kaapi_cuda_kernel_stream(void);
 
 template<typename T, typename OP>
 struct TaskBodyGPU<TaskThief<T, OP> > {
@@ -88,13 +89,18 @@ struct TaskBodyGPU<TaskThief<T, OP> > {
   {
     const CUstream custream = (CUstream)stream.stream;
 
-    T* const base = range.begin();
-
     printf("cudaTask(0x%lx 0x%lx, %lu)\n",
-	   (uintptr_t)custream, (uintptr_t)base, range.size());
-    fflush(stdout);
+	   (uintptr_t)custream, (uintptr_t)range.begin(), range.size());
 
-    add1<<<1, 256, 0, custream>>>(base, range.size());
+    add1<<<1, 256, 0, custream>>>(range.begin(), range.size());
+  }
+
+  void operator()(ka::range1d_rw<T> range, OP op)
+  {
+    // helper to bypass a bug in code generation
+    ka::gpuStream gpustream
+      ((kaapi_gpustream_t)kaapi_cuda_kernel_stream());
+    (*this)(gpustream, range, op);
   }
 };
 
@@ -110,15 +116,9 @@ static void for_each( T* beg, T* end, OP op )
   Work<T,OP> work(beg, end, op);
 
   /* push an adaptive task */
-  sc = ka::TaskBeginAdaptive(
-        /* flag: concurrent which means concurrence between extrac_seq & splitter executions */
-          KAAPI_SC_CONCURRENT 
-        /* flag: no preemption which means that not preemption will be available (few ressources) */
-        | KAAPI_SC_NOPREEMPTION, 
-        /* use a wrapper to specify the method to used during parallel split */
-        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
-        &work
-  );
+  const int flags = KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION;
+  sc = ka::TaskBeginAdaptive
+    (flags, &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>, &work);
   
   /* while there is sequential work to do*/
   while (work.extract_seq(beg, end))
