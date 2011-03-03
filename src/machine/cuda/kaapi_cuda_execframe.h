@@ -48,8 +48,12 @@
 
 
 struct kaapi_thread_context_t;
+struct kaapi_format_t;
 
 int kaapi_cuda_execframe(struct kaapi_thread_context_t*);
+
+int kaapi_cuda_exectask
+(struct kaapi_thread_context_t*, void*, struct kaapi_format_t*);
 
 static inline int kaapi_cuda_thread_execframe
 (struct kaapi_thread_context_t* thread)
