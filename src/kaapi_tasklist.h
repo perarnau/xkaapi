@@ -287,6 +287,7 @@ static inline int kaapi_data_clear( kaapi_data_t* d )
 static inline void kaapi_taskdescr_init( kaapi_taskdescr_t* td, kaapi_task_t* task )
 {
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
+  td->fmt 	 = 0;
   td->wc         = 0;
   td->date       = 0;
   td->task       = task;
