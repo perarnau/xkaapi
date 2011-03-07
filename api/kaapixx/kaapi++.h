@@ -851,17 +851,6 @@ namespace ka {
     explicit Access( const base_pointer<T>& p )
     { kaapi_access_init(this, p.ptr()); }
 
-#if 0
-    template<typename object>
-    explicit Access( object& p )
-    { kaapi_access_init(this, (void*)&p); }
-
-    template<typename object>
-    explicit Access<const object&>( const object& p )
-    { kaapi_access_init(this, (void*)&p); }
-#endif
-
-#if 1
     template<typename pointer>
     explicit Access( pointer* p )
     { kaapi_access_init(this, p); }
@@ -869,7 +858,6 @@ namespace ka {
     template<typename pointer>
     explicit Access( const pointer* p )
     { kaapi_access_init(this, (void*)p); }
-#endif
 
     operator kaapi_access_t&() 
     { return *this; }
@@ -2355,6 +2343,7 @@ namespace ka {
 //  struct TraitFormalParam<pointer_rw<T>& > : public TraitFormalParam<pointer_rw<T> > { 
 //  };
 
+#if 0 // no more used: detection of correct passing rule using both effective and formal type.
   template<bool isfunc, class UserType> struct __kaapi_pointer_switcher {};
 
   template<class UserType> struct __kaapi_pointer_switcher<false, const UserType*> {
@@ -2384,25 +2373,13 @@ namespace ka {
     __kaapi_pointer_switcher< __kaapi_is_function<UserType*>::value, UserType*>::tfp_t
   {
   };
+#endif
 
   /* used to initialize representation into a closure from effective parameter */
   template<class E, class F, class InClosure>
   struct ConvertEffective2InClosure {
     static void doit(InClosure* inclo, const E& e) { new (inclo) InClosure(e); }
   };
-
-#if 0
-  template<class F, int dim, class T>
-  struct ConvertEffective2InClosure<array<dim,T>, F, Access> {
-    static void doit(Access* inclo, const array<dim,T>& e) 
-    { new (inclo) Access(&e); }
-  };
-#endif
-
-//  template<class E, class F, class InClosure>
-//  void ConvertEffective2InClosure(InClosure* inclo, const E* e) { new (inclo) InClosure(*e); };
-  
-//ConvertEffective2InClosure<E$1,F$1,inclosure$1_t>(&arg->f$1, &e$1)
 
 
   // --------------------------------------------------------------------  
@@ -2496,83 +2473,98 @@ namespace ka {
   struct FOR_TASKNAME {};
   
   /* ME: effectif -> MF: formal */
-  template<class ME, class MF, class PARAM, class TASK>
+  template<class ME, class MF, class E, class F, class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE {
 //    static void IS_COMPATIBLE();
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_V, ACCESS_MODE_V, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_V, ACCESS_MODE_V, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_R, ACCESS_MODE_R, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_R, ACCESS_MODE_R, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK> /* this rule is only valid for terminal fork... */
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_W, ACCESS_MODE_W, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK> /* this rule is only valid for terminal fork... */
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_W, ACCESS_MODE_W, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CW, ACCESS_MODE_CW, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CW, ACCESS_MODE_CW, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RPWP, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RPWP, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RW, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RW, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_WP, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_WP, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_W, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_W, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_CWP, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_CWP, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_CW, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_CW, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_R, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_R, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RP, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_RP, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RP, ACCESS_MODE_RP, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RP, ACCESS_MODE_RP, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RP, ACCESS_MODE_R, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RP, ACCESS_MODE_R, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_WP, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_WP, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_W, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_WP, ACCESS_MODE_W, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CW, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CW, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
-  template<class PARAM, class TASK>
-  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CWP, PARAM, TASK> {
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CWP, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
 
+  /* specialization if effective mode is C++ pointer + formal is kaapi pointer */
+  template<class MF, class T, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_V, MF, T*, F, PARAM, TASK> 
+    : WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, MF, T*, F, PARAM, TASK> 
+  {
+  };
+
+  /* specialization if effective mode is C++ pointer + formal parameter is a C++ pointer */
+  template<class T, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_V, ACCESS_MODE_V, T*, T*, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+
+  /* required for most of stl like parallel algorithm
+  */
   template <typename type >
   class counting_iterator : public std::iterator< std::random_access_iterator_tag,     /* category */
                                            const type  /* element type */                                            
@@ -3538,10 +3530,6 @@ namespace ka {
   struct InitKaapiCXX {
     InitKaapiCXX();
   };
-#if 0 
-  static InitKaapiCXX stroumph;
-#endif
-  
 } // namespace ka
 
 

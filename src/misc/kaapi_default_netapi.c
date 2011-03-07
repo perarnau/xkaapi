@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+** Created on Tue Mar 31 15:19:09 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,47 +42,56 @@
 ** terms.
 ** 
 */
-#include "test_main.h"
-#include "test_task.h"
-#include "kaapi++"
+#include "kaapi_impl.h"
+#include "kaapi_network.h"
+#include "kaapi_compiler.h"
 
-/* Main of the program
+/* Weak symbols that will be overloaded by libkanet when
+ * linked with it
+ */
+
+/**
 */
-void doit::operator()(int argc, char** argv )
+__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv)
+{  
+  return 0;
+}
+
+/**
+*/
+__KA_COMPILER_WEAK int kaapi_network_finalize()
+{  
+  return 0;
+}
+
+
+/**
+*/
+__KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void)
 {
-   /* rpwp -> all other modes */
-   ka::pointer<int> p1;
-   ka::Spawn<TaskR<int> >()(p1);
-   ka::Spawn<TaskW<int> >()(p1);
-   ka::Spawn<TaskRW<int> >()(p1);
-   ka::Spawn<TaskRp<int> >()(p1);
-   ka::Spawn<TaskWp<int> >()(p1);
-   ka::Spawn<TaskRpWp<int> >()(p1);
+  return 0;
+}
 
-   /* rpwp -> all other modes */
-   ka::pointer_rpwp<int> p2;
-   ka::Spawn<TaskR<int> >()(p2);
-   ka::Spawn<TaskW<int> >()(p2);
-   ka::Spawn<TaskRW<int> >()(p2);
-   ka::Spawn<TaskRp<int> >()(p2);
-   ka::Spawn<TaskWp<int> >()(p2);
-   ka::Spawn<TaskRpWp<int> >()(p2);
+/**
+*/
+__KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
+{
+  return 1;
+}
 
-   /* rp -> r / rp */
-   ka::pointer_rp<int> p3;
-   ka::Spawn<TaskR<int> >()(p3);
-   ka::Spawn<TaskRp<int> >()(p3);
 
-   /* wp -> w / wp */
-   ka::pointer_wp<int> p4;
-   ka::Spawn<TaskW<int> >()(p4);
-   ka::Spawn<TaskWp<int> >()(p4);
+__KA_COMPILER_WEAK void kaapi_network_poll()
+{
+}
 
-   /* r -> r */
-   ka::pointer_r<int> p5;
-   ka::Spawn<TaskR<int> >()(p5);
+__KA_COMPILER_WEAK void kaapi_network_barrier(void)
+{
+}
 
-   /* w -> w, only if terminal */ 
-   ka::pointer_w<int> p6;
-   ka::Spawn<TaskW<int> >()(p6);
+__KA_COMPILER_WEAK int kaapi_network_get_seginfo(kaapi_address_space_t* retval,
+			      kaapi_globalid_t gid )
+{
+  retval->segaddr = 0;
+  retval->segsize = (size_t)-1;
+  return 0;
 }

@@ -32,6 +32,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_wq_set.c\
   misc/kaapi_cpuset2str.c\
   misc/kaapi_get_self_kid.c\
+  misc/kaapi_default_netapi.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_taskregister_static.c \
@@ -45,6 +46,7 @@ libkaapi_la_SOURCES=\
   kaapi.h \
   kaapi_impl.h \
   kaapi_network.h \
+  kaapi_compiler.h \
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \
@@ -93,8 +95,10 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
+  task/kaapi_task_stealready_body.c \
   task/kaapi_task_splitter_dfg.c \
   task/kaapi_task_splitter_adapt.c \
+  task/kaapi_task_splitter_readylist.c \
   task/kaapi_task_pushstealcontext.c \
   task/kaapi_task_adapt_allocateresult.c \
   task/kaapi_task_adapt_deallocateresult.c \
@@ -107,8 +111,7 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
   static/kaapi_stsched_tasksetstatic.c \
-  static/kaapi_threadgroup_nothgrp.c \
-  ../network/kaapi_network.cpp
+  static/kaapi_threadgroup_nothgrp.c
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
@@ -149,6 +152,7 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_context_alloc.c \
   machine/mt/kaapi_mt_context_free.c \
   machine/mt/kaapi_mt_init.c \
+  machine/mt/kaapi_mt_signal.c \
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_perf.c \
   machine/mt/kaapi_mt_register_procs.c

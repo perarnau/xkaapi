@@ -1,4 +1,5 @@
 /*
+** kaapi_task_steal.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -41,47 +42,61 @@
 ** terms.
 ** 
 */
-#include "test_main.h"
-#include "test_task.h"
-#include "kaapi++"
+#include "kaapi_impl.h"
+#include <stdio.h>
 
-/* Main of the program
+
+/**
 */
-void doit::operator()(int argc, char** argv )
+void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 {
-   /* rpwp -> all other modes */
-   ka::pointer<int> p1;
-   ka::Spawn<TaskR<int> >()(p1);
-   ka::Spawn<TaskW<int> >()(p1);
-   ka::Spawn<TaskRW<int> >()(p1);
-   ka::Spawn<TaskRp<int> >()(p1);
-   ka::Spawn<TaskWp<int> >()(p1);
-   ka::Spawn<TaskRpWp<int> >()(p1);
+  kaapi_thread_context_t*     thread;
+  kaapi_taskstealready_arg_t* arg;
+  kaapi_frame_t*              frame;
+  kaapi_tasklist_t*           tasklist;
+  int err;
 
-   /* rpwp -> all other modes */
-   ka::pointer_rpwp<int> p2;
-   ka::Spawn<TaskR<int> >()(p2);
-   ka::Spawn<TaskW<int> >()(p2);
-   ka::Spawn<TaskRW<int> >()(p2);
-   ka::Spawn<TaskRp<int> >()(p2);
-   ka::Spawn<TaskWp<int> >()(p2);
-   ka::Spawn<TaskRpWp<int> >()(p2);
+  thread = kaapi_self_thread_context();
+  
+  /* get information of the task to execute */
+  arg = (kaapi_taskstealready_arg_t*)taskarg;
+  
+  /* Execute the orinal body function with the original args */
+  frame = (kaapi_frame_t*)uthread;
+  kaapi_assert_debug( frame == thread->sfp );
 
-   /* rp -> r / rp */
-   ka::pointer_rp<int> p3;
-   ka::Spawn<TaskR<int> >()(p3);
-   ka::Spawn<TaskRp<int> >()(p3);
+  /* create a new tasklist: should be very fast allocation,
+     its a root tasklist for this thread. 
+     May allocated it at thread creation time
+  */
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
+  kaapi_tasklist_pushback_ready( tasklist, arg->origin_td );
+  
+  /* reserve the tasklist for 32 tasks (at most) */
+  tasklist->cnt_tasks = 32;
 
-   /* wp -> w / wp */
-   ka::pointer_wp<int> p4;
-   ka::Spawn<TaskW<int> >()(p4);
-   ka::Spawn<TaskWp<int> >()(p4);
+  kaapi_writemem_barrier();
+  frame->tasklist = tasklist;
 
-   /* r -> r */
-   ka::pointer_r<int> p5;
-   ka::Spawn<TaskR<int> >()(p5);
+  /* exec the spawned subtasks */
+  err = kaapi_thread_execframe_tasklist( thread );
+  kaapi_assert( (err == 0) || (err == ECHILD) );
 
-   /* w -> w, only if terminal */ 
-   ka::pointer_w<int> p6;
-   ka::Spawn<TaskW<int> >()(p6);
+  KAAPI_ATOMIC_ADD( &arg->origin_tasklist->count_exec, 
+      tasklist->cnt_exectasks );
+
+#if 0
+  printf("%i::[subtasklist] exec tasks: %llu\n", 
+      kaapi_get_self_kid(), tasklist->cnt_exectasks 
+  );
+  fflush(stdout);
+#endif
+
+  kaapi_sched_lock(&thread->proc->lock);
+  frame->tasklist = 0;
+  kaapi_sched_unlock(&thread->proc->lock);
+  
+  kaapi_tasklist_destroy( tasklist );
+  free(tasklist);
 }

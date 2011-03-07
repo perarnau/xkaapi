@@ -199,7 +199,7 @@ int Init::initialize() throw()
     HighResTimer::calibrate();
   
     /* set the cpu id if mask is defined by environment */
-    KaapiComponentManager::prop["util.thread.cpuset"] = getenv("KAAPI_CPU_SET");
+    KaapiComponentManager::prop["util.thread.cpuset"] = getenv("KAAPI_CPUSET");
     
     /* Global Id */
     if (KaapiComponentManager::prop["util.globalid"] == "") 

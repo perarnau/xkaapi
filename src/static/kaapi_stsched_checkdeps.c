@@ -330,7 +330,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
       version->writer_task     = taskdescr;
       version->writer_tasklist = tasklist;
       _kaapi_metadata_info_set_writer( mdi, thread->asid );
-#warning "delete all copies"      
+#pragma message ("warning: delete all copies")
     }
 
     /* change the data in the task by the handle */

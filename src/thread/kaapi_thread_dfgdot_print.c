@@ -45,6 +45,7 @@
 */
 #include "kaapi_impl.h"
 #include <stdio.h>
+#include <inttypes.h>
 
 
 static int noprint_activationlink = 0;
@@ -266,7 +267,8 @@ static inline void _kaapi_print_task(
     return;
   }
 
-  fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%llu\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
+  fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%" PRIu64
+           "\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
     (uintptr_t)task, fname, (void*)task, 
     td->date, 
     (int)KAAPI_ATOMIC_READ(&td->counter),

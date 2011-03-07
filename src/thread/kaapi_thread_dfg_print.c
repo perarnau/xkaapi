@@ -126,7 +126,7 @@ int kaapi_task_print(
         (void*)task, 
         state[3], state[2], state[1], state[0],
         fmt->name, 
-        tab_bit[st],
+        ( ((st>=0) && (st<16)) ? tab_bit[st] : "<OB>" ),
         sp,
 	(unsigned int)count_params );
         

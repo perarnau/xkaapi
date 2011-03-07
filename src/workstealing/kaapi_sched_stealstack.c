@@ -133,99 +133,6 @@ static size_t kaapi_task_computeready(
   return wc;
 }
 
-#if 0 // OLD CODE 
-/* Mark non ready data that are waiting.
-   Only call in case of static scheduling.
-   This is the same code as computeready except the mutation of r access mode.
-*/
-static size_t kaapi_task_markready_recv( kaapi_task_t* task, void* sp, kaapi_hashmap_t* map )
-{
-  unsigned int i;
-  size_t wc, count_params;
-  const kaapi_format_t* task_fmt;
-  const kaapi_taskrecv_arg_t* arg;
-
-  arg = (kaapi_taskrecv_arg_t*)sp;
-  task_fmt = kaapi_format_resolvebybody( arg->original_body );
-
-  sp = arg->original_sp;
-
-  count_params = wc = kaapi_format_get_count_params(task_fmt, sp); 
-  for (i=0; i<count_params; ++i)
-  {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) ); 
-    if (m == KAAPI_ACCESS_MODE_V) 
-    {
-      --wc;
-      continue;
-    }
-    /* mute r mode to be w, while the body is recv_task, the r or rw are not ready */
-    if (KAAPI_ACCESS_IS_READ(m))
-    {
-      if (kaapi_threadgroup_paramiswait( task, i )) 
-      {
-        m = KAAPI_ACCESS_MODE_W;
-/*        printf("->>> recv task: %p, mute r mode to w\n",task); */
-      }
-    }
-    kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
-    
-    /* */
-    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access.data )->u.value;
-    
-    /* compute readyness of access */
-    if (   KAAPI_ACCESS_IS_ONLYWRITE(m)
-        || (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
-        || (KAAPI_ACCESS_IS_CONCURRENT(m, gd->last_mode))
-       )
-    {
-      --wc;
-    }
-    /* optimization: break from enclosest loop here */
-    
-    /* update map information for next access if no set */
-    if (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
-      gd->last_mode = m;
-    
-    /* currently, datas produced by aftersteal_task are visible to thief in order to augment
-     the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R could
-     be used (the middle R->W is splitted -renaming is also used in other context-).
-     But we do not take into account of this extra parallelism.
-     
-     The problem that remains to solve:
-     - if task_bot is kaapi_aftersteal_body task, then it corresponds to a stolen task already
-     finished (before the victim thread is trying to execute it, else we will see an nop_body. 
-     In this task:
-     - each access->data points to the original data in the victim thread
-     - each access->version points either to 0 (no new data produced) either to an heap allocated
-     data value != access->data that may be used for next reader.
-     This situation is only all the case W, CW access mode accesses.
-     - this task_bot is considered as terminated and W, CW or RW data value 'access->version' may be consumed but
-     - access->version (for W or CW) may be released if the victim thread executes the task 'aftersteal'
-     - in the same time, this pointed data may be read by the stolen closure (if all its access are ready, 
-     here we do not know about this fact: we need to wait after looking for all others parameters of the current task)
-     
-     A solution is to store references to accesses to last version in gd table:
-     - if a closure is found to be ready:
-     - we assume than gd map will store a pointer to the version to read (or write).
-     - the victim will made a call to 'cas(access->version, access->version, 0)' to delete version
-     1/ if ok -> the victim copy the data into the gd an set to 0 its version
-     2/ if nok -> the victim only copy the version to the gd, 2 versions of the data will 
-     be alive until the next aftersteal (that cannot be executed because the victim if currently
-     under executing a first (previous) after steal).
-     - the thief will made a call to 'cas(gd->access->version, gd->version, 0)' to keep the owner ship 
-     on the data gd->access->version.
-     1/ if ok -> the thief get the owner ship of data which will be deleted during the aftersteal
-     of the under stealing closure
-     2/ ifnok -> the victim has executed the aftersteal, then the victim may read gd->data as the correct version
-     (this guarantee has to be written to ensure than reading gd->data is yet valid)
-     (no other tasks have modified the shared between the 1rst aftersteal the task detected to be stolen)
-     - seems good... with more details
-     */
-  }
-  return wc;
-}
-#endif
 
 
 /** Steal task in the frame [frame->pc:frame->sp)
@@ -342,7 +249,53 @@ static int kaapi_sched_stealframe
   return replycount;
 }
   
+
+/** Steal ready task in tasklist 
+*/
+static void kaapi_sched_steal_tasklist( 
+  kaapi_thread_context_t*       thread, 
+  kaapi_frame_t*                frame, 
+  kaapi_listrequest_t*          lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
+{
+  int                     err;
+  kaapi_tasklist_t*       tasklist;
+  kaapi_workqueue_index_t size_ws;
+  kaapi_workqueue_index_t steal_beg;
+  kaapi_workqueue_index_t steal_end;
+
+  tasklist= frame->tasklist;  
+  size_ws = kaapi_workqueue_size( &tasklist->wq_ready );
+
+  /* try to steal ready one task for each stealers */
+  kaapi_workqueue_index_t count_req = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+  if (count_req > size_ws) count_req = size_ws;
   
+  /* else try to steal count_req */
+  while (count_req >0)
+  {
+    err = kaapi_workqueue_steal( &tasklist->wq_ready, &steal_beg, &steal_end, count_req);
+    if (err ==0)
+    {
+      /* steal ok: reply */
+      kaapi_task_splitter_readylist( 
+          thread,
+          tasklist,
+          tasklist->td_top + steal_beg,
+          tasklist->td_top + steal_end,
+          lrequests, 
+          lrrange
+      );
+      return;
+    }
+
+    /* else try with half less requests */
+    count_req /= 2;
+  }
+}
+
+
 /** Steal task in the stack from the bottom to the top.
  Do not steal curr if !=0 (current running adaptive task) in case of cooperative WS.
  This signature is the same as a splitter function.
@@ -378,7 +331,11 @@ int kaapi_sched_stealstack
     /* void frame ? */
     if (top_frame->pc == top_frame->sp) continue;
     if (top_frame->tasklist == 0)
+       /* classical steal */
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
+    else 
+      /* */
+      kaapi_sched_steal_tasklist( thread, top_frame, lrequests, lrrange );
   }
   
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

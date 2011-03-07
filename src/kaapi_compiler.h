@@ -1,12 +1,12 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** Created on Thu Feb 24 15:35:09 2011
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
+** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,47 +41,21 @@
 ** terms.
 ** 
 */
-#include "test_main.h"
-#include "test_task.h"
-#include "kaapi++"
+#ifndef _KAAPI_COMPILER_H_
+#define _KAAPI_COMPILER_H_ 1
 
-/* Main of the program
+/** Implementation note.
+    - This file should list all feature depending on the used compiler
+    - This file is private (should not be included in public headers)
 */
-void doit::operator()(int argc, char** argv )
-{
-   /* rpwp -> all other modes */
-   ka::pointer<int> p1;
-   ka::Spawn<TaskR<int> >()(p1);
-   ka::Spawn<TaskW<int> >()(p1);
-   ka::Spawn<TaskRW<int> >()(p1);
-   ka::Spawn<TaskRp<int> >()(p1);
-   ka::Spawn<TaskWp<int> >()(p1);
-   ka::Spawn<TaskRpWp<int> >()(p1);
 
-   /* rpwp -> all other modes */
-   ka::pointer_rpwp<int> p2;
-   ka::Spawn<TaskR<int> >()(p2);
-   ka::Spawn<TaskW<int> >()(p2);
-   ka::Spawn<TaskRW<int> >()(p2);
-   ka::Spawn<TaskRp<int> >()(p2);
-   ka::Spawn<TaskWp<int> >()(p2);
-   ka::Spawn<TaskRpWp<int> >()(p2);
 
-   /* rp -> r / rp */
-   ka::pointer_rp<int> p3;
-   ka::Spawn<TaskR<int> >()(p3);
-   ka::Spawn<TaskRp<int> >()(p3);
+/** weak symbols */
+#ifdef __GNUC__
+#  define __KA_COMPILER_WEAK __attribute__((weak))
+#else
+#  error No weak symbols defined for this compiler
+#endif
 
-   /* wp -> w / wp */
-   ka::pointer_wp<int> p4;
-   ka::Spawn<TaskW<int> >()(p4);
-   ka::Spawn<TaskWp<int> >()(p4);
 
-   /* r -> r */
-   ka::pointer_r<int> p5;
-   ka::Spawn<TaskR<int> >()(p5);
-
-   /* w -> w, only if terminal */ 
-   ka::pointer_w<int> p6;
-   ka::Spawn<TaskW<int> >()(p6);
-}
+#endif /* _KAAPI_COMPILER_H_ */

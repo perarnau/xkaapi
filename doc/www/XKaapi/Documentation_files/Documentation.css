@@ -89,6 +89,9 @@
     text-indent: 0px;
     text-transform: none;
 }
+.style_External_630_50 {
+    position: relative;
+}
 .paragraph_style_4 {
     color: rgb(88, 77, 77);
     font-family: 'ArialMT', 'Arial', sans-serif;
@@ -133,8 +136,19 @@
     text-indent: 0px;
     text-transform: none;
 }
+.style_SkipStroke {
+    background: transparent;
+    opacity: 1.00;
+}
+.style_SkipStroke_1 {
+    background: transparent;
+    opacity: 1.00;
+}
 .style_1 {
     padding: 0px;
+}
+.style_External_446_321 {
+    position: relative;
 }
 .paragraph_style_6 {
     color: rgb(16, 16, 16);
@@ -210,41 +224,13 @@
     font-weight: 400;
     line-height: 18px;
 }
-.style_SkipStroke {
-    background: transparent;
-    opacity: 1.00;
-}
-.style_SkipStroke_1 {
-    background: transparent;
-    opacity: 1.00;
-}
-.style_External_446_379 {
-    position: relative;
-}
 .style_SkipStroke_2 {
     background: transparent;
-    float: right;
-    margin-bottom: 6px;
-    margin-left: 6px;
-    margin-right: 0px;
-    margin-top: 6px;
     opacity: 1.00;
 }
 .style_SkipStroke_3 {
     background: transparent;
     opacity: 1.00;
-}
-.style_SkipStroke_4 {
-    background: transparent;
-    float: left;
-    margin-bottom: 6px;
-    margin-left: 0px;
-    margin-right: 6px;
-    margin-top: 6px;
-    opacity: 1.00;
-}
-.style_External_630_50 {
-    position: relative;
 }
 .Bold {
     font-family: 'Arial-BoldMT', 'Arial', sans-serif;
@@ -323,10 +309,10 @@
 .Normal {
     padding: 4px;
 }
-.Normal_External_446_379 {
+.Normal_External_630_50 {
     position: relative;
 }
-.Normal_External_630_50 {
+.Normal_External_446_321 {
     position: relative;
 }
 .Sidebar_Body {
@@ -361,11 +347,6 @@
 }
 .graphic_image_style_default_SkipStroke {
     background: transparent;
-    float: left;
-    margin-bottom: 6px;
-    margin-left: 0px;
-    margin-right: 6px;
-    margin-top: 6px;
     opacity: 1.00;
 }
 .graphic_textbox_layout_style_default {
@@ -403,10 +384,6 @@ ol  {
           border: none;          
         }
 .bumper {
-    font-size: 1px;
-    line-height: 1px;
-}
-.tinyText {
     font-size: 1px;
     line-height: 1px;
 }
