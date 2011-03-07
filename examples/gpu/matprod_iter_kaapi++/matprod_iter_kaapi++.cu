@@ -52,17 +52,25 @@ struct TaskBodyCPU<TaskPrintMatrix> {
   {
     size_t d0 = A.dim(0);
     size_t d1 = A.dim(1);
-    std::cout << msg << " :=matrix( [" << std::endl;
-    for (size_t i=0; i < d0; ++i)
+
+    for (size_t i = 0; i < d0; ++i)
     {
-      std::cout << "[";
-      for (size_t j=0; j < d1; ++j)
-      {
-        std::cout << std::setw(18) << std::setprecision(15) << std::scientific << A(i,j) << (j == d1-1 ? "" : ", ");
-      }
-      std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
+      for (size_t j = 0; j < d1; ++j)
+	printf(" %.2f", A(i, j));
+      printf("\n");
     }
-    std::cout << "]);" << std::endl;
+    printf("\n");
+  }
+};
+
+
+// revalidate host memory
+struct TaskFetch : public ka::Task<1>::Signature< ka::R<ka::range2d<double_type> > > {};
+
+template<> struct TaskBodyCPU<TaskFetch> {
+  void operator() ( ka::range2d_r<double_type> A  )
+  {
+    printf("fetching\n");
   }
 };
 
@@ -71,12 +79,12 @@ struct TaskBodyCPU<TaskPrintMatrix> {
 struct TaskSeqMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double_type> >, /* A */
       ka::R<ka::range2d<double_type> >,  /* B */
-      ka::W<ka::range2d<double_type> >   /* C */
+      ka::RW<ka::range2d<double_type> >   /* C */
 >{};
 
 template<>
 struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_w<double_type> C )
+  void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_rw<double_type> C )
   {
     size_t N = A.dim(0);
     size_t M = B.dim(0);
@@ -116,6 +124,8 @@ __global__ void mulKernel
   // a, b, c of size m x m
   // ldN the leading dimension
 
+#if 0
+
   a = a + threadIdx.y * lda;
   b = b + threadIdx.x;
 
@@ -123,7 +133,19 @@ __global__ void mulKernel
   for (unsigned int i = 0; i < m; ++i, ++a, b += ldb)
     res += (*a) * (*b);
 
-  c[threadIdx.y * ldc + threadIdx.x] = res;
+  c[threadIdx.y * ldc + threadIdx.x] += res;
+
+#else
+
+  if ((threadIdx.x == 0) && (threadIdx.y == 0))
+  {
+    for (unsigned int i = 0; i < m; ++i)
+      for (unsigned int j = 0; j < m; ++j)
+	for (unsigned int k = 0; k < m; ++k)
+	  c[i * m + j] += a[i * m + k] * b[k * m + j];
+  }
+
+#endif
 }
 
 template<>
@@ -133,9 +155,15 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
    ka::gpuStream stream,
    ka::range2d_r<double_type> A,
    ka::range2d_r<double_type> B,
-   ka::range2d_w<double_type> C
+   ka::range2d_rw<double_type> C
   )
   {
+    printf("mulKernel(%lx, %lx, %lx) %d\n",
+	   (uintptr_t)A.ptr(),
+	   (uintptr_t)B.ptr(),
+	   (uintptr_t)C.ptr(),
+	   A.dim(0));
+
     const CUstream custream = (CUstream)stream.stream;
 
     const unsigned int m = A.dim(0);
@@ -144,13 +172,7 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
     const double_type* const b = B.ptr();
     double_type* const c = C.ptr();
 
-    printf("mulKernel(%lx, %lx, %lx)\n",
-	   (uintptr_t)A.ptr(),
-	   (uintptr_t)B.ptr(),
-	   (uintptr_t)C.ptr());
-
-    static const dim3 dim(m, m);
-    mulKernel<<<1, dim, 0, custream>>>
+    mulKernel<<<1, dim3(m, m), 0, custream>>>
       (a, A.lda(), b, B.lda(), c, C.lda(), m);
   }
 };
@@ -165,6 +187,9 @@ template<>
 struct TaskBodyCPU<TaskMatProduct> {
   void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_rpwp<double_type> C )
   {
+    printf("%lx -- %lx\n", (uintptr_t)C.ptr(),
+	   (uintptr_t)(C.ptr() + C.dim(0) * C.dim(1)));
+
     size_t M = A.dim(0);
     size_t K = B.dim(0);
     size_t N = B.dim(1);
@@ -179,22 +204,10 @@ struct TaskBodyCPU<TaskMatProduct> {
         for (size_t k=0; k<K; k += bloc)
         {
           ka::rangeindex rk(k, k+bloc);
-          ka::Spawn<TaskSeqMatProduct>()( A(ri,rk), B(rk,rj), C(ri,rj) );
+          ka::Spawn<TaskSeqMatProduct>()(A(ri,rk), B(rk,rj), C(ri,rj));
         }
       }
     }
-
-#if 0
-    for (size_t i=0; i<M; i += bloc)
-    {
-      ka::rangeindex ri(i, i+bloc);
-      for (size_t j=0; j<N; j += bloc)
-      {
-        ka::rangeindex rj(j, j+bloc);
-        ka::Spawn<TaskPrintMatrix>()( "C", C(ri,rj) );
-      }
-    }
-#endif
   }
 };
 
@@ -236,10 +249,10 @@ struct doit {
     ka::array<2,double_type> C(dC, n, n, n);
 
     // Multiply to get C = A*B 
-    double_type t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskMatProduct>()( A, B, C );
+    double t0 = kaapi_get_elapsedtime();
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
-    double_type t1 = kaapi_get_elapsedtime();
+    double t1 = kaapi_get_elapsedtime();
 
     std::cout << " Matrix Multiply took " << t1-t0 << " seconds." << std::endl;
 
