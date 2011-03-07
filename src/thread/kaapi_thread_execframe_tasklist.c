@@ -79,7 +79,6 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   
   /* get the processor type to select correct entry point */
   proc_type = thread->proc->proc_type;
-  proc_type = KAAPI_PROC_TYPE_GPU;
     
   /* alloc to much tasks descr ? -> */
   if (tasklist->td_ready == 0)
