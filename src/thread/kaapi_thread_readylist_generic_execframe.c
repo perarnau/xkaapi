@@ -87,6 +87,8 @@ int kaapi_thread_abstractexec_readylist(
   kaapi_activationlist_t     readylist;
   kaapi_allocator_t          allocator;
   kaapi_activationlink_t     free_al;
+
+  printf("%s\n", __FUNCTION__);
     
   if ((tasklist == 0) || (taskdescr_executor ==0)) 
     return EINVAL;

@@ -106,7 +106,7 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
-  
+
 push_frame:
   fp = (kaapi_frame_t*)thread->sfp;
   /* push the frame for the next task to execute */

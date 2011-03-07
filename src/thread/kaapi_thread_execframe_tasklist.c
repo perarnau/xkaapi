@@ -70,6 +70,8 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   unsigned int               proc_type;
   int                        task_pushed = 0;
   int                        err;
+
+  printf(">>> %s\n", __FUNCTION__);
   
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);

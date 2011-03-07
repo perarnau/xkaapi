@@ -12,6 +12,7 @@ extern "C" void kaapi_mem_free_host(void*);
 extern "C" unsigned int kaapi_cuda_get_kasid_user(size_t);
 extern "C" size_t kaapi_cuda_get_proc_count(void);
 extern "C" unsigned int kaapi_cuda_get_first_kid(void);
+extern "C" CUstream kaapi_cuda_kernel_stream(void);
 
 // typedefed to float since gtx280 has no double
 typedef unsigned int double_type;
@@ -68,6 +69,13 @@ template<> struct TaskBodyGPU<TaskAddone>
 
     static const dim3 fubar(16, 16);
     addone<<<1, fubar, 0, custream>>>(&range(0, 0));
+  }
+
+  void operator()(ka::range2d_rw<double_type> range)
+  {
+    ka::gpuStream gpustream
+      ((kaapi_gpustream_t)kaapi_cuda_kernel_stream());
+    (*this)(gpustream, range);
   }
 };
 
@@ -170,6 +178,7 @@ struct doit {
 
       threadgroup.end_partition();
 
+      usleep(10000);
       threadgroup.execute();
 
       t1 = kaapi_get_elapsedns();
