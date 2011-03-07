@@ -34,10 +34,6 @@
 #include <cblas.h>
 #endif
 
-#include <unistd.h>
-static void waitabit(void)
-{ usleep(10000); }
-
 #define BLOCSIZE 4
 
 // no double type on gtx280
@@ -54,7 +50,6 @@ template<>
 struct TaskBodyCPU<TaskPrintMatrix> {
   void operator() ( std::string msg, ka::range2d_r<double_type> A  )
   {
-#if 0 // unused
     size_t d0 = A.dim(0);
     size_t d1 = A.dim(1);
     std::cout << msg << " :=matrix( [" << std::endl;
@@ -68,7 +63,6 @@ struct TaskBodyCPU<TaskPrintMatrix> {
       std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
     }
     std::cout << "]);" << std::endl;
-#endif
   }
 };
 
@@ -132,8 +126,6 @@ __global__ void mulKernel
   c[threadIdx.y * ldc + threadIdx.x] = res;
 }
 
-extern "C" CUstream kaapi_cuda_kernel_stream(void);
-
 template<>
 struct TaskBodyGPU<TaskSeqMatProduct> {
   void operator()
@@ -188,11 +180,11 @@ struct TaskBodyCPU<TaskMatProduct> {
         {
           ka::rangeindex rk(k, k+bloc);
           ka::Spawn<TaskSeqMatProduct>()( A(ri,rk), B(rk,rj), C(ri,rj) );
-	  waitabit(); // gpu task scheduled
         }
       }
     }
 
+#if 0
     for (size_t i=0; i<M; i += bloc)
     {
       ka::rangeindex ri(i, i+bloc);
@@ -202,6 +194,7 @@ struct TaskBodyCPU<TaskMatProduct> {
         ka::Spawn<TaskPrintMatrix>()( "C", C(ri,rj) );
       }
     }
+#endif
   }
 };
 

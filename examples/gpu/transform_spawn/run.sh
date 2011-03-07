@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-export LD_LIBRARY_PATH=/usr/local/stow/cuda-3.2/cuda/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/local/stow/cuda-4.0/cuda/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib:$LD_LIBRARY_PATH
 
 # CONFIG_USE_STATIC == 1
