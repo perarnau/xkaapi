@@ -45,6 +45,10 @@
 #include "kaapi_impl.h"
 #include <stdio.h>
 
+#if defined(KAAPI_USE_CUDA)
+# include "../machine/cuda/kaapi_cuda_execframe.h"
+#endif
+
 
 /**
 */
@@ -156,6 +160,11 @@ void kaapi_taskwrite_body(
 */
 void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
+#if defined(KAAPI_USE_CUDA)
+  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
+  kaapi_processor_t* const self_proc = self_thread->proc;
+#endif
+
   unsigned int           i;
   size_t                 count_params;
 #if 0 /* remove unused warning */
@@ -202,6 +211,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   if (!war_param)
   {
     /* Execute the orinal body function with the original args */
+#if defined(KAAPI_USE_CUDA)
+    if (self_proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+      kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
+    else
+#endif
     body(orig_task_args, thread);
 
     /* push task that will be executed after all created task by the user task */
@@ -261,6 +275,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     kaapi_thread_pushtask( thread );
 
     /* call directly the stolen body function */
+#if defined(KAAPI_USE_CUDA)
+    if (self_proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+      kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
+    else
+#endif
     body( copy_task_args, thread);
 
     /* push task that will be executed after all created task by the user task */

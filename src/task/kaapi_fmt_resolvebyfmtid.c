@@ -51,15 +51,9 @@ kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key)
   uint8_t         entry = (uint8_t)(key & (kaapi_format_id_t)0xFFUL);
   kaapi_format_t* head =  kaapi_all_format_byfmtid[entry];
 
-  if (head ==0) return 0;
-  
-  while (head !=0)
-  {
+  for (; head; head = head->next_byfmtid)
     if (head->fmtid == key)
-    {
       return head;
-    }
-    head = head->next_byfmtid;
-  }
+
   return 0;
 }
