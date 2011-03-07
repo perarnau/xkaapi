@@ -126,12 +126,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   err = kaapi_thread_execframe_tasklist( thread );
   kaapi_assert( (err == 0) || (err == ECHILD) );
   
-  /* Pop & restore the frame */
-  kaapi_sched_lock(&thread->proc->lock);
-  thread->sfp->tasklist = 0;
-  --thread->sfp;
-  kaapi_sched_unlock(&thread->proc->lock);
-
   KAAPI_ATOMIC_ADD( &tasklist->count_exec, tasklist->cnt_exectasks );
   /* here we wait that all tasks of the tasklist have been executed 
      - is may be better to try to steal extra tasks for other threads
@@ -140,7 +134,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
      - this tasks will have an aftersteal method to delete the tasklist
   */
   while (KAAPI_ATOMIC_READ(&tasklist->count_exec) != (signed)tasklist->cnt_tasks)
-   kaapi_slowdown_cpu();
+    kaapi_slowdown_cpu();
   kaapi_assert( KAAPI_ATOMIC_READ(&tasklist->count_exec) == (signed)tasklist->cnt_tasks );
 
 #if 0
@@ -150,6 +144,12 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   );
   fflush(stdout);
 #endif
+
+  /* Pop & restore the frame */
+  kaapi_sched_lock(&thread->proc->lock);
+  thread->sfp->tasklist = 0;
+  --thread->sfp;
+  kaapi_sched_unlock(&thread->proc->lock);
   
   kaapi_tasklist_destroy( tasklist );
   free(tasklist);
