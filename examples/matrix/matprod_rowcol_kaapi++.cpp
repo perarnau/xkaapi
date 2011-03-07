@@ -32,6 +32,7 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 #define USE_CBLAS 1
+// export VECLIB_MAXIMUM_THREADS=1
 #if defined(USE_CBLAS)
 #include <cblas.h>
 #endif
@@ -108,7 +109,7 @@ struct TaskBodyCPU<TaskSeqMatProduct> {
     size_t M = A.dim(0);
     size_t K = B.dim(0);
     size_t N = B.dim(1);
-#if 1
+#if 0
     i /= BLOCSIZE;
     j /= BLOCSIZE;
     std::cout << kaapi_get_self_kid() << "::In TaskSeqMul" 
