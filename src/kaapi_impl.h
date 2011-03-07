@@ -1933,7 +1933,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 #include "kaapi_tasklist.h"
 #include "kaapi_partition.h"
 
-/** Call only on thread that has the top task theft.
+/** Call only on thread in list of suspended threads.
 */
 static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 {
@@ -1941,8 +1941,10 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
   kaapi_tasklist_t* tl = thread->sfp->tasklist;
   if (tl !=0)
   {
-    if ((tl->count_recv ==0) && kaapi_tasklist_isempty(tl)) return 1; 
-    if (!kaapi_tasklist_isempty(tl)) return 1;
+    if (  kaapi_tasklist_isempty(tl) && 
+         (KAAPI_ATOMIC_READ(&tl->count_exec) != (signed)tl->cnt_tasks)
+       ) 
+      return 1; 
     return 0;
   }
 
