@@ -117,7 +117,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
     if (kproc->thread == thread_condition) 
     {
-      kaapi_assert(kproc->thread->sfp->pc == task_condition);
+      kaapi_assert((tasklist !=0) || (kproc->thread->sfp->pc == task_condition));
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif

@@ -47,10 +47,10 @@
 #include "kaapi_impl.h"
 
 kaapi_thread_context_t* kaapi_sched_wakeup ( 
-    kaapi_processor_t* kproc, 
-    kaapi_processor_id_t kproc_thiefid, 
+    kaapi_processor_t*      kproc, 
+    kaapi_processor_id_t    kproc_thiefid, 
     kaapi_thread_context_t* cond_thread,
-    kaapi_task_t* cond_task 
+    kaapi_task_t*           cond_task 
   )
 {
   kaapi_thread_context_t* thread;
@@ -69,7 +69,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
   */ 
   if (cond_thread !=0)
   {
-    if ( ((cond_thread->sfp->pc ==cond_task) && kaapi_thread_isready(cond_thread)) )
+    if ( ( ((cond_task ==0) || (cond_thread->sfp->pc ==cond_task)) && kaapi_thread_isready(cond_thread)) )
 //      || ((cond_thread->tasklist !=0) && !kaapi_tasklist_isempty(cond_thread->tasklist) ) )
 //             ((cond_thread->tasklist->recvlist!=0) 
 //          || (KAAPI_ATOMIC_READ(&cond_thread->tasklist->count_recv) ==0))
