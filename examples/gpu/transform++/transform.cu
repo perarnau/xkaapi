@@ -53,7 +53,6 @@ typedef uintptr_t kaapi_mem_addr_t;
 extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 typedef float double_type;
 
-
 __global__ void add1(double_type* array, unsigned int size)
 {
   const unsigned int per_thread = size / blockDim.x;
