@@ -15,7 +15,7 @@
       ', `', `')
       M4_PARAM(`typedef typename TraitFormalParam<E$1>::mode_t mode_effective$1_t;
       ', `', `')
-      M4_PARAM(`WARNING_UNDEFINED_PASSING_RULE<mode_effective$1_t, mode_formal$1_t, FOR_ARG<$1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
+      M4_PARAM(`WARNING_UNDEFINED_PASSING_RULE<mode_effective$1_t, mode_formal$1_t, E$1, F$1, FOR_ARG<$1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
       ', `', `')
 #endif
 

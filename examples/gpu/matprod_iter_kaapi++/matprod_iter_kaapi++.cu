@@ -161,19 +161,6 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
     mulKernel<<<1, dim, 0, custream>>>
       (a, A.lda(), b, B.lda(), c, C.lda(), m);
   }
-
-  void operator()
-  (
-   ka::range2d_r<double_type> A,
-   ka::range2d_r<double_type> B,
-   ka::range2d_w<double_type> C
-  )
-  {
-    // helper to bypass a bug in code generation
-    ka::gpuStream gpustream
-      ((kaapi_gpustream_t)kaapi_cuda_kernel_stream());
-    (*this)(gpustream, A, B, C);
-  }
 };
 
 struct TaskMatProduct: public ka::Task<3>::Signature<
