@@ -42,9 +42,7 @@
 ** 
 */
 #include "kaapi_impl.h"
-
 #include "kaapi_network.h"
-
 #include "kanet_network.h"
 
 extern "C" { /* minimal C interface to network */

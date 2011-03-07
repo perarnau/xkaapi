@@ -30,6 +30,7 @@ libkanet_la_SOURCES=\
 	kanet_device.cpp \
 	kanet_network.cpp \
 	kanet_alloc.cpp \
+	kanet_error.cpp \
 	kaapi_network.cpp \
 	$(include_HEADERS)
 

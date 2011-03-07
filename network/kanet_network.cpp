@@ -43,12 +43,10 @@
 #include "kanet_network.h"
 #include "kanet_channel.h"
 #include "kanet_device.h"
-#if 0   // parsing of the list of strings of network name
-#include "ka_parser.h" 
-#endif
 #include "kaapi_error.h" // assert 
 #include <iostream>
 #include <sstream>
+#include <string.h> // strdup
 
 
 namespace ka {
@@ -107,6 +105,10 @@ void Network::initialize( int* argc, char*** argv )
 /* do not try to parse the list of name in KAAPI_NETWORK: 
    we only assume here that just one name is set
 */
+#if defined(KAAPI_DEBUG)
+    std::cerr << "Try to initialize network name: '" << lnet << "'" << std::endl;
+#endif
+
     DeviceFactory* df = DeviceFactory::resolve_factory(lnet);
 #if defined(KAAPI_DEBUG)
     if (df ==0)
