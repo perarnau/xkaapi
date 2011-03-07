@@ -44,6 +44,7 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 #include "kanet_network.h" // this is the new C++ interface for Kaapi
+#include <string.h>
 
 
 /*
