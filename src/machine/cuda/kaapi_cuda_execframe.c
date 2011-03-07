@@ -715,7 +715,6 @@ static const char* get_body_name(kaapi_task_body_t body)
 }
 #endif /* todo, remove */
 
-
 /* exported */
 #if ((KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD))
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
@@ -835,9 +834,8 @@ push_frame:
 
 	pthread_mutex_unlock(&proc->cuda_proc.ctx_lock);
       }
-      else
+      else /* format == NULL || entry[cuda] == NULL */
       {
-	/* here... */
 	body( pc->sp, (kaapi_thread_t*)thread->sfp );
       }
     }

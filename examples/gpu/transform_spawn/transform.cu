@@ -46,6 +46,10 @@
 #include <cuda.h>
 #include "kaapi++"
 
+#include <unistd.h>
+static void waitabit(void)
+{ usleep(10000); }
+
 // missing decls
 typedef uintptr_t kaapi_mem_addr_t;
 extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
@@ -70,8 +74,11 @@ __global__ void addone(double_type* array, unsigned int size)
 // cpu implementation
 template<> struct TaskBodyCPU<TaskAddone>
 {
+#if 0 // todo_recursive
   void operator() (ka::range1d_rw<double_type> range)
   {
+    printf("cpuTask %u\n", kaapi_get_self_kid());
+
     const size_t range_size = range.size();
 
     // reached the leaf size
@@ -92,17 +99,41 @@ template<> struct TaskBodyCPU<TaskAddone>
     ka::Spawn<TaskAddone>()(l);
     ka::Spawn<TaskAddone>()(r);
   }
+#else // todo_recursive
+  void operator() (ka::range1d_rw<double_type> range)
+  {
+    printf("cpuTask %u\n", kaapi_get_self_kid());
+
+    const size_t range_size = range.size();
+    for (size_t i = 0; i < range_size; ++i)
+      range[i] += 1;
+  }
+#endif // todo_recursive
 
 };
 
 // gpu implementation
+
+extern "C" CUstream kaapi_cuda_kernel_stream(void);
+
 template<> struct TaskBodyGPU<TaskAddone>
 {
   void operator()(ka::gpuStream stream, ka::range1d_rw<double_type> range)
   {
-    // we are the big one, can handle the work alone. dont recurse.
+    printf("[%u] gpuTask (%lx, %lu)\n",
+	   kaapi_get_self_kid(),
+	   (uintptr_t)range.begin(), range.size());
+
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
+  }
+
+  void operator()(ka::range1d_rw<double_type> range)
+  {
+    // helper to bypass a bug in code generation
+    ka::gpuStream gpustream
+      ((kaapi_gpustream_t)kaapi_cuda_kernel_stream());
+    (*this)(gpustream, range);
   }
 };
 
@@ -117,7 +148,7 @@ struct doit {
     
     double_type* array = new double_type[size];
 
-    for (int iter = 0; iter < 100; ++iter)
+    for (int iter = 0; iter < 1; ++iter)
     {
       // initialize, apply, check
       for (size_t i = 0; i < size; ++i)
@@ -127,7 +158,9 @@ struct doit {
 
       // fork the root task
       ka::range1d<double_type> range(array, size);
+      // ka::Spawn<TaskAddone>(ka::SetStaticSched())(range);
       ka::Spawn<TaskAddone>()(range);
+      waitabit(); // gpu task scheduled
       ka::Sync();
 
       kaapi_mem_delete_host_mappings
