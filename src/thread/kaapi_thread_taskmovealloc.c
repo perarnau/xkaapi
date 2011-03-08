@@ -47,7 +47,15 @@
 void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 {
   kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
-  
+
+#if 0
+  printf("[%u] kaapi_taskmove_body(%lx:%lx -> %lx:%lx:%lx)\n",
+	 kaapi_get_current_kid(),
+	 arg->src_data->ptr.asid, arg->src_data->ptr.ptr,
+	 arg->dest->ptr.asid, arg->dest->ptr.ptr,
+	 (uintptr_t)arg->dest->mdi);
+#endif
+
   /* on multiprocessor: move data from XXX to YYY */
   arg->dest->ptr  = arg->src_data->ptr;
 }
@@ -56,6 +64,15 @@ void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 void kaapi_taskalloc_body( void* sp, kaapi_thread_t* thread )
 {
   kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
+
+#if 0
+  printf("[%u] kaapi_taskalloc_body(%lx:%lx -> %lx:%lx:%lx)\n",
+	 kaapi_get_current_kid(),
+	 arg->src_data->ptr.asid, arg->src_data->ptr.ptr,
+	 arg->dest->ptr.asid, arg->dest->ptr.ptr,
+	 (uintptr_t)arg->dest->mdi);
+#endif
+
   /* on multiprocessor: move data from XXX to YYY */
   arg->dest->ptr  = arg->src_data->ptr;
 }

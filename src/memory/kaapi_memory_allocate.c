@@ -162,6 +162,7 @@ kaapi_pointer_t kaapi_memory_allocate_view(
 )
 {
   size_t size = kaapi_memory_view_size( view );
+
   switch (kaapi_memory_address_space_gettype(kasid))
   {
     case KAAPI_MEM_TYPE_CPU:

@@ -61,6 +61,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_thread_context_t* ctxt;
   kaapi_thread_context_t* thread_condition;
   kaapi_task_t*           task_condition;
+  kaapi_tasklist_t*       tasklist;
   kaapi_thread_context_t* thread;
 
   kaapi_assert_debug( kproc !=0 );
@@ -75,8 +76,15 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   thread_condition = kproc->thread;
   kaapi_assert_debug( kproc == thread_condition->proc);
 
-  task_condition = thread_condition->sfp->pc;
-  if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) return 0;
+  /* first look if tasklist is built on this frame */
+  tasklist = thread_condition->sfp->tasklist;
+  if (tasklist !=0) 
+    task_condition =0;
+    if (kaapi_thread_isready( thread_condition ) ) return 0;
+  else {
+    task_condition = thread_condition->sfp->pc;
+    if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) return 0;
+  }
 
   /* such threads are sticky: the control flow is on return to this call and
      without thread user context switch, only this activation frame could wakeup
@@ -109,7 +117,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
     if (kproc->thread == thread_condition) 
     {
-      kaapi_assert(kproc->thread->sfp->pc == task_condition);
+      kaapi_assert((tasklist !=0) || (kproc->thread->sfp->pc == task_condition));
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
 #endif

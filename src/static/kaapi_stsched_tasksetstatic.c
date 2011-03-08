@@ -98,9 +98,11 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
     */
     arg->sub_body( arg->sub_sp, uthread );
   }
+#if defined(KAAPI_DEBUG)
   printf("[tasklist] T1:%" PRIu64 "\n", tasklist->cnt_tasks);
   printf("[tasklist] Tinf:%" PRIu64 "\n", tasklist->t_infinity);
   printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
+#endif
   thread->unstealable = save_state;
   kaapi_writemem_barrier();
   thread->sfp->tasklist = tasklist;
@@ -124,12 +126,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   err = kaapi_thread_execframe_tasklist( thread );
   kaapi_assert( (err == 0) || (err == ECHILD) );
   
-  /* Pop & restore the frame */
-  kaapi_sched_lock(&thread->proc->lock);
-  thread->sfp->tasklist = 0;
-  --thread->sfp;
-  kaapi_sched_unlock(&thread->proc->lock);
-
   KAAPI_ATOMIC_ADD( &tasklist->count_exec, tasklist->cnt_exectasks );
   /* here we wait that all tasks of the tasklist have been executed 
      - is may be better to try to steal extra tasks for other threads
@@ -148,6 +144,12 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   );
   fflush(stdout);
 #endif
+
+  /* Pop & restore the frame */
+  kaapi_sched_lock(&thread->proc->lock);
+  thread->sfp->tasklist = 0;
+  --thread->sfp;
+  kaapi_sched_unlock(&thread->proc->lock);
   
   kaapi_tasklist_destroy( tasklist );
   free(tasklist);

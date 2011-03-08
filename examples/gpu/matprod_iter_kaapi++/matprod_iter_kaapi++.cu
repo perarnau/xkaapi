@@ -63,17 +63,6 @@ struct TaskBodyCPU<TaskPrintMatrix> {
   }
 };
 
-
-// revalidate host memory
-struct TaskFetch : public ka::Task<1>::Signature< ka::R<ka::range2d<double_type> > > {};
-
-template<> struct TaskBodyCPU<TaskFetch> {
-  void operator() ( ka::range2d_r<double_type> A  )
-  {
-    printf("fetching\n");
-  }
-};
-
 /**
 */
 struct TaskSeqMatProduct: public ka::Task<3>::Signature<
@@ -135,7 +124,7 @@ __global__ void mulKernel
 
   c[threadIdx.y * ldc + threadIdx.x] += res;
 
-#else
+#elif 0
 
   if ((threadIdx.x == 0) && (threadIdx.y == 0))
   {

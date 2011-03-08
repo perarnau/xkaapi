@@ -57,7 +57,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   int err;
 
   thread = kaapi_self_thread_context();
-  
+
   /* get information of the task to execute */
   arg = (kaapi_taskstealready_arg_t*)taskarg;
   

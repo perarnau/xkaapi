@@ -441,7 +441,8 @@ int kaapi_memory_copy(
   kaapi_signature_memcpy_func_t fnc;
   
 #if 0
-  printf("[kaapi_memory_copy] copy dest@:%p, src@:%p, size:%lu\n", (void*)dest, (void*)src, kaapi_memory_view_size(view_src)); 
+  printf("[kaapi_memory_copy] copy dest@:%p, src@:%p, size:%lu\n",
+	 (void*)dest.ptr, (void*)src.ptr, kaapi_memory_view_size(view_src)); 
   fflush(stdout);
 #endif
   

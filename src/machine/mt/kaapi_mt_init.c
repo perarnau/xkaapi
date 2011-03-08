@@ -114,7 +114,7 @@ int kaapi_mt_init(void)
 {
   kaapi_thread_context_t* thread;
   kaapi_task_t*   task;
-  const char*     version;
+  const char* volatile version __attribute__((unused));
 
   static int iscalled = 0;
   if (iscalled !=0) return EALREADY;

@@ -1941,8 +1941,10 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
   kaapi_tasklist_t* tl = thread->sfp->tasklist;
   if (tl !=0)
   {
-    if ((tl->count_recv ==0) && kaapi_tasklist_isempty(tl)) return 1; 
-    if (!kaapi_tasklist_isempty(tl)) return 1;
+    if (  kaapi_tasklist_isempty(tl) && 
+	  (KAAPI_ATOMIC_READ(&tl->count_exec) != tl->cnt_tasks)
+	  ) 
+      return 1; 
     return 0;
   }
 
