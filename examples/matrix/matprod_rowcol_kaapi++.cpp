@@ -140,28 +140,32 @@ struct TaskBodyCPU<TaskSeqMatProduct> {
 };
 
 
-struct TaskMatProduct: public ka::Task<3>::Signature<
-      ka::R<ka::range2d<double> >, /* A */
-      ka::R<ka::range2d<double> >,  /* B */
+struct TaskMatProduct: public ka::Task<4>::Signature<
+      int, 
+      ka::R<ka::range2d<double> >,     /* A */
+      ka::R<ka::range2d<double> >,     /* B */
       ka::RPWP<ka::range2d<double> >   /* C */
 >{};
 
 template<>
 struct TaskBodyCPU<TaskMatProduct> {
-  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rpwp<double> C )
+  void operator()( int nbloc, ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rpwp<double> C )
   {
     size_t M = A.dim(0);
     size_t K = B.dim(0);
     size_t N = B.dim(1);
-    int bloc = BLOCSIZE;
+    
+    /* assume perfect division */
+    int bloc_i = M/nbloc; 
+    int bloc_j = N/nbloc;
 
     ka::rangeindex rall(0, K);
-    for (size_t i=0; i<M; i += bloc)
+    for (size_t i=0; i<M; i += bloc_i)
     {
-      ka::rangeindex ri(i, i+bloc);
-      for (size_t j=0; j<N; j += bloc)
+      ka::rangeindex ri(i, i+bloc_i);
+      for (size_t j=0; j<N; j += bloc_j)
       {
-        ka::rangeindex rj(j, j+bloc);
+        ka::rangeindex rj(j, j+bloc_j);
         ka::Spawn<TaskSeqMatProduct>()( i,j, A(ri,rall), B(rall,rj), C(ri,rj) );
       }
     }
@@ -176,11 +180,16 @@ struct TaskBodyCPU<TaskMatProduct> {
 struct doit {
   void operator()(int argc, char** argv )
   {
-    int n = 2;
-    if (argc > 1) {
+    int n     = 8;  // matrix dimension
+    int nbloc = 2;  // number of blocs
+
+    if (argc > 1)
         n = atoi(argv[1]);
-    }
-    n *= BLOCSIZE;
+    if (argc > 2)
+        nbloc = atoi(argv[2]);
+    
+    if ((n / nbloc) ==0) n = nbloc;
+    n = (n/nbloc)*nbloc;
 
     double* dA = (double*) calloc(n* n, sizeof(double));
     double* dB = (double*) calloc(n* n, sizeof(double));
@@ -210,11 +219,12 @@ struct doit {
 
     // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( nbloc, A, B, C );
     ka::Sync();
     double t1 = kaapi_get_elapsedtime();
 
-    std::cout << " Matrix Multiply " << n << 'x' << n << " took " << t1-t0 << " seconds." << std::endl;
+    std::cout << " Matrix Multiply " << n << 'x' << n 
+              << " #row,#col = " << nbloc << " took " << t1-t0 << " seconds." << std::endl;
 
     // If n is small, print the results
     if (n <= 64) 

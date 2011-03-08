@@ -40,18 +40,27 @@
 ** terms.
 ** 
 */
+#include "config.h"
 #include "kanet_device.h" 
 #include <errno.h>
 #include <string.h>
 #include <map>
+#if defined(__pic__) && defined(__GNUC__)
 #include <dlfcn.h>
+#endif
 #include <iostream>
 #include <sstream>
 
 namespace ka {
 
 // --------------------------------------------------------------------
-static std::map<const char*,DeviceFactory*> all_devicefact;
+struct string_less_compare
+{
+  bool operator()(const char* s1, const char* s2) const
+  { return strcmp(s1, s2) < 0; }
+};
+
+static std::map<const char*,DeviceFactory*, string_less_compare> all_devicefact;
 
 
 // --------------------------------------------------------------------
@@ -80,10 +89,11 @@ int DeviceFactory::register_factory( const char* name, DeviceFactory* df )
 // --------------------------------------------------------------------
 DeviceFactory* DeviceFactory::resolve_factory( const char* name )
 {
-  std::map<const char*,DeviceFactory*>::const_iterator iterator = all_devicefact.find(name);
+  std::map<const char*,DeviceFactory*,string_less_compare>::const_iterator iterator = all_devicefact.find(name);
   if (iterator != all_devicefact.end()) 
     return iterator->second;
-  
+
+#if defined(__pic__) && defined(__GNUC__)
   /* else try to load the shared library */
   std::ostringstream sh_path;
   sh_path << "libkadev_" << name;
@@ -118,6 +128,9 @@ DeviceFactory* DeviceFactory::resolve_factory( const char* name )
   ka::DeviceFactory* df = (*fnc)();
   register_factory(name, df );
   return df;
+#else // if pic
+  return 0;
+#endif
 }
 
 

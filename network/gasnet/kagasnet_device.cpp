@@ -49,6 +49,8 @@
 #include <sstream>
 #include <stdint.h>
 
+#include <iostream>
+
 namespace GASNET {
 
 // --------------------------------------------------------------------
@@ -108,7 +110,7 @@ int Device::initialize(int* argc, char*** argv)
   _segsize = _seginfo[gasnet_mynode()].size;
   _segsp   = 0;
 
-#if 0
+#if defined(KAAPI_DEBUG)
   std::cout << gasnet_mynode() << "::[gasnet] #nodes :" << gasnet_nodes() << std::endl;
   std::cout << gasnet_mynode() << "::[gasnet] seginfo @:" << _segaddr
             << ", size:" << _segsize

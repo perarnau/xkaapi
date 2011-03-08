@@ -40,16 +40,20 @@
 ** terms.
 ** 
 */
+#include "config.h"
 #include "kanet_network.h"
 #include "kanet_channel.h"
 #include "kanet_device.h"
-#if 0   // parsing of the list of strings of network name
-#include "ka_parser.h" 
-#endif
 #include "kaapi_error.h" // assert 
 #include <iostream>
 #include <sstream>
+#include <string.h> // strdup
 
+#if !defined(__pic__) && defined(__GNUC__)
+#  if defined(KAAPI_USE_GASNET)
+#    include "gasnet/kagasnet_init.h"
+#  endif
+#endif
 
 namespace ka {
 
@@ -75,6 +79,17 @@ void Network::initialize( int* argc, char*** argv )
   _name2device.clear();
   _all_devices.clear();  
 
+#if !defined(__pic__) && defined(__GNUC__)
+#  if defined(KAAPI_USE_GASNET)
+#pragma message "Static link with gasnet"
+    { /* link statically with gasnet */
+      ka::DeviceFactory* df_gasnet = gasnet_factory();
+      int err = DeviceFactory::register_factory(df_gasnet->get_name(), df_gasnet );
+      if (err !=0) std::cerr << "[Network::initialize] failed to register factory '" << df_gasnet->get_name() << "'" << std::endl;
+    }
+#  endif
+#endif
+
   /* initialize devices: use the environment variable KAAPI_NETWORK
      that should define a list of device to used.
    */
@@ -92,7 +107,7 @@ void Network::initialize( int* argc, char*** argv )
       DeviceFactory* df = DeviceFactory::resolve_factory(ibeg->c_str());
 #if defined(KAAPI_DEBUG)
       if (df ==0)
-        std::cerr << "Unknown network name: '" << *ibeg << "'" << std::endl;
+        std::cerr << "[Network::initialize] Unknown network name: '" << *ibeg << "'" << std::endl;
 #endif
       if (df !=0)
       {
@@ -107,10 +122,14 @@ void Network::initialize( int* argc, char*** argv )
 /* do not try to parse the list of name in KAAPI_NETWORK: 
    we only assume here that just one name is set
 */
+#if defined(KAAPI_DEBUG)
+    std::cerr << "[Network::initialize] Try to initialize network name: '" << lnet << "'" << std::endl;
+#endif
+
     DeviceFactory* df = DeviceFactory::resolve_factory(lnet);
 #if defined(KAAPI_DEBUG)
     if (df ==0)
-      std::cerr << "Unknown network name: '" << lnet << "'" << std::endl;
+      std::cerr << "[Network::initialize] Unknown network name: '" << lnet << "'" << std::endl;
 #endif
     if (df !=0)
     {
@@ -118,6 +137,9 @@ void Network::initialize( int* argc, char*** argv )
       kaapi_assert( device != 0);
       _all_devices.push_back( device );
       _name2device.insert( std::make_pair(device->get_name(), device) );
+#if defined(KAAPI_DEBUG)
+      std::cerr << "Device created: '" << device << "'" << std::endl;
+#endif
     }
 #endif
   }

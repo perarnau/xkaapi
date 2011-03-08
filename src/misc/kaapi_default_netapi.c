@@ -53,7 +53,8 @@
 /**
 */
 __KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv)
-{  
+{
+  printf("Use default weak symbol...\n");
   return 0;
 }
 
