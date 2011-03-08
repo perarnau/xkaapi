@@ -600,7 +600,7 @@ AS_CASE([$with_gasnet],
     # not using AC*DEFINE as we want this available for examples too
     AC_DEFINE([KAAPI_USE_GASNET],1,[Use with GASNet])
     KAAPI_USE_GASNET=yes
-    tmpfilename=`mktemp -t kaapi`
+    tmpfilename=`mktemp -t kaapi_XXXXXX`
     make -f $srcdir/acinclude/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
     source $tmpfilename
     KAGASNETLIB_BUILD_CPPFLAGS=$GASNET_CPPFLAGS
@@ -691,7 +691,6 @@ AC_CONFIG_FILES([
 	api/kastl/Makefile
 	examples/Makefile
 	network/Makefile
-	network/mpinet/Makefile
 	network/gasnet/Makefile
 	src/Makefile
 	tests/static/Makefile

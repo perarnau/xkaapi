@@ -1,0 +1,62 @@
+
+
+* SOME NOT ON USING GASNET with KAAPI
+
+*************** Using gasnet on Grid500
+
+I/ CONFIGURATION OF GASNET
+- Gasnet needs to be compile with -fPIC options. This option
+is passed as compiler option using such configure of gasnet:
+> CC="gcc -fPIC" CXX="g++ -fPIC" ../GASNet-1.16.0/configure  --prefix=/home/tgautier/gasnet --with-mpi-cflags=-fPIC --disable-mpi --disable-seq --disable-parsync --disable-mpi-compat --disable-aligned-segments 
+The --disable-aligned-segments option is required due to warning on linux.
+It seems that segment between process is not aligned: TO BE VERIFY
+
+II/ CONFIGURATION OF KAAPI
+Once compiled and installed, Kaapi should be configured with options to indicate 
+that network should be activated and the device gasnet should be specified 
+the conduit to used. KAAPI uses the PAR mode of GASNET (multiple threads  may 
+concurrently invoke gasnet primitives to send messages).
+
+The typicall command line to configure KAAPI is:
+> ../xkaapi/configure --prefix=/home/tgautier/KAAPI/install/xkaapi --enable-network --with-gasnet=/home/tgautier/gasnet/include/ibv-conduit/ibv-par.mak
+
+the --with-gasnet should defined the conduit to used for Kaapi. Currently we cannot used several GASNET conduit
+inside one KAAPI process. 
+
+
+III/ ENVIRONMENT VARIABLES REQUIRED FOR KAAPI
+KAAPI is based on dynamic loading of network device:
+- GASNet network is name 'gasnet' and should be defined with environment variable
+  KAAPI_NETWORK=gasnet
+> export KAAPI_NETWORK=gasnet
+
+Moreover, this variable is required to be defined on every node:
+YOU SHOULD PUT IT INTO YOUR ~/.bashrc file. 
+May be is can be redefined with a specific spawner for Kaapi.
+
+Note that by default KAAPI created a number of threads equals to the number of cores,
+so it may be desirable to set this number to 1 in the same maner as for KAAPI_NETWORK.
+
+IV/ RUNNING EXAMPLE FOR KAAPI
+
+Launching examples:
+> GASNET_SSH_SERVERS=adonis-12,adonis-2 ~/gasnet/bin/gasnetrun_ibv  -spawner=ssh -n 2 ./ping_xx 
+
+Typicall output is (debug mode)
+  KAAPI_CPUCOUNT=1 GASNET_SSH_SERVERS=adonis-12,adonis-2 ~/gasnet/bin/gasnetrun_ibv  -spawner=ssh  -n 2  -E KAAPI_CPUCOUNT ./ping_xx 
+    gasnetrun: unable to locate a GASNet program in '/home/tgautier/KAAPI/xkaapi/build-release/examples/./ping_xx'
+  Device created: '0xd626b0'
+  Device created: '0x128b6b0'
+  My local_gid is:1
+  My local_gid is:0
+  1::1::[82.603000]: : local_gid:1, receive msg= 'Ceci est un message de 0'
+
+The warning displayed by gasnetrun seems to due to the fact that 1/ ping_xx is a script
+and gasnet cannot find gasnet symbol....
+
+
+V/ TODO LIST
+1- avoid definition of KAAPI_NETWORK in the .bashrc: it seems that gasnet used combination
+of fork/exec/ssh to spawn several processes. If the environment variable is not defined on
+the local process that launch command gasnetrun_ibv, then it does not work.
+2- definition of a generic karun 

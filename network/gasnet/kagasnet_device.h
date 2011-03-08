@@ -46,7 +46,7 @@
 #include "kanet_device.h"
 
 #define GASNET_PAR              1
-#define GASNET_ALIGNED_SEGMENTS 1
+//#define GASNET_ALIGNED_SEGMENTS 1
 #include <gasnet.h>
 
 namespace GASNET {

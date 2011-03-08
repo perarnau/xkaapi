@@ -126,21 +126,13 @@ struct kaapi_tasklist_t;
 /** Atomic type
 */
 typedef struct kaapi_atomic32_t {
-#if defined(__APPLE__)
-  volatile int32_t  _counter;
-#else
   volatile uint32_t _counter;
-#endif
 } kaapi_atomic32_t;
 typedef kaapi_atomic32_t kaapi_atomic_t;
 
 
 typedef struct kaapi_atomic64_t {
-#if defined(__APPLE__)
-  volatile int64_t  _counter;
-#else
   volatile uint64_t _counter;
-#endif
 } kaapi_atomic64_t;
 
 /* ========================= Low level memory barrier, inline for perf... so ============================= */
