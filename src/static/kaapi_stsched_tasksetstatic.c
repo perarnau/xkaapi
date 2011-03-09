@@ -44,6 +44,11 @@
 #include "kaapi_impl.h"
 #include <inttypes.h>
 
+#if defined(KAAPI_USE_CUDA)
+# include "../machine/cuda/kaapi_cuda_execframe.h"
+# include "../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
+#endif
+
 
 /* 
 */
@@ -123,6 +128,11 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 #endif
   
   /* exec the spawned subtasks */
+#if defined(KAAPI_USE_CUDA)
+  if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+    err = kaapi_cuda_thread_execframe_tasklist( thread );
+  else
+#endif
   err = kaapi_thread_execframe_tasklist( thread );
   kaapi_assert( (err == 0) || (err == ECHILD) );
   

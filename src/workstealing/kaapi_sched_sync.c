@@ -44,6 +44,11 @@
 */
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_USE_CUDA)
+# include "../../machine/cuda/kaapi_cuda_execframe.h"
+# include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
+#endif
+
 
 /** kaapi_sched_sync
     Here the stack frame is organised like this, task1 is the running task.
@@ -105,6 +110,16 @@ int kaapi_sched_sync(void)
   kaapi_mem_barrier();
   
 redo:
+#if defined(KAAPI_USE_CUDA)
+    if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+    {
+      if (thread->sfp->tasklist == 0)
+	err = kaapi_thread_execframe(thread);
+      else
+	err = kaapi_cuda_thread_execframe_tasklist(thread);
+    }
+    else
+#endif /* KAAPI_USE_CUDA */
   if (thread->sfp->tasklist == 0) 
     err = kaapi_thread_execframe(thread);
   else

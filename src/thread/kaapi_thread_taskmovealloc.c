@@ -43,17 +43,52 @@
  */
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_USE_CUDA)
+
+static void kaapi_cuda_taskmove_body(void* sp, kaapi_thread_t* thread)
+{
+  kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
+
+  kaapi_processor_t* const proc = kaapi_get_current_processor();
+
+  printf("%s: [%u:%u] (%lx:%lx -> %lx:%lx) %lx\n",
+	 __FUNCTION__,
+	 proc->kid, proc->proc_type,
+	 arg->src_data->ptr.asid, (uintptr_t)arg->src_data->ptr.ptr,
+	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
+	 (uintptr_t)arg->dest->mdi);
+
+}
+
+static void kaapi_cuda_taskalloc_body(void* sp, kaapi_thread_t* thread)
+{
+  kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
+
+  kaapi_processor_t* const proc = kaapi_get_current_processor();
+
+  printf("%s: [%u:%u] (%lx:%lx -> %lx:%lx) %lx\n",
+	 __FUNCTION__,
+	 proc->kid, proc->proc_type,
+	 arg->src_data->ptr.asid, (uintptr_t)arg->src_data->ptr.ptr,
+	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
+	 (uintptr_t)arg->dest->mdi);
+
+}
+
+#endif /* KAAPI_USE_CUDA */
+
 /* */
 void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 {
   kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
 
-#if 0
-  printf("[%u] kaapi_taskmove_body(%lx:%lx -> %lx:%lx:%lx)\n",
-	 kaapi_get_current_kid(),
-	 arg->src_data->ptr.asid, arg->src_data->ptr.ptr,
-	 arg->dest->ptr.asid, arg->dest->ptr.ptr,
-	 (uintptr_t)arg->dest->mdi);
+#if defined(KAAPI_USE_CUDA)
+  /* todo: kaapi_cuda_taskmove_body should be directly pushed instead */
+  if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    kaapi_cuda_taskmove_body(sp, thread);
+    return ;
+  }
 #endif
 
   /* on multiprocessor: move data from XXX to YYY */
@@ -65,12 +100,13 @@ void kaapi_taskalloc_body( void* sp, kaapi_thread_t* thread )
 {
   kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
 
-#if 0
-  printf("[%u] kaapi_taskalloc_body(%lx:%lx -> %lx:%lx:%lx)\n",
-	 kaapi_get_current_kid(),
-	 arg->src_data->ptr.asid, arg->src_data->ptr.ptr,
-	 arg->dest->ptr.asid, arg->dest->ptr.ptr,
-	 (uintptr_t)arg->dest->mdi);
+#if defined(KAAPI_USE_CUDA)
+  /* todo: kaapi_cuda_taskalloc_body should be directly pushed instead */
+  if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    kaapi_cuda_taskalloc_body(sp, thread);
+    return ;
+  }
 #endif
 
   /* on multiprocessor: move data from XXX to YYY */

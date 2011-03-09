@@ -12,6 +12,6 @@ export LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib:$LD_LIBRARY_PATH
 
 # export KAAPI_CPUSET=0
 export KAAPI_CPUSET=
-export KAAPI_GPUSET='1~0'
+export KAAPI_GPUSET='0~0'
 
 ./a.out 2
