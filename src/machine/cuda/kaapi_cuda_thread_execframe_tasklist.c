@@ -44,10 +44,15 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <cuda.h>
 #include <sys/types.h>
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
 #include "kaapi_cuda_error.h"
+
+
+/* cuda task body */
+typedef void (*cuda_task_body_t)(void*, CUstream);
 
 
 /* wait fifo.
@@ -217,13 +222,13 @@ static int wait_port_create(wait_port_t* wp)
   return 0;
 }
 
-static int wait_port_next(wait_port_t* wp, void** data)
+static int wait_port_next(wait_port_t* wp, kaapi_taskdescr_t** td)
 {
   /* return 0 if something ready, -1 otherwise */
 
-  if ((*data = wait_fifo_next(&wp->input_fifo))) return 0;
-  else if ((*data = wait_fifo_next(&wp->output_fifo))) return 0;
-  else if ((*data = wait_fifo_next(&wp->kernel_fifo))) return 0;
+  if ((*td = wait_fifo_next(&wp->input_fifo))) return 0;
+  else if ((*td = wait_fifo_next(&wp->output_fifo))) return 0;
+  else if ((*td = wait_fifo_next(&wp->kernel_fifo))) return 0;
   return -1;
 }
 
@@ -236,6 +241,41 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
       if (wait_fifo_is_empty(&wp->output_fifo))
 	return 1;
 
+  return 0;
+}
+
+
+/* inlined internal bodies
+ */
+
+static int taskmove_body
+(wait_port_t* wp, kaapi_taskdescr_t* td, void* sp, kaapi_thread_t* thread)
+{
+  kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
+
+  kaapi_processor_t* const proc = kaapi_get_current_processor();
+
+  printf("%s: [%u:%u] (%lx:%lx -> %lx:%lx) %lx\n",
+	 __FUNCTION__,
+	 proc->kid, proc->proc_type,
+	 arg->src_data->ptr.asid, (uintptr_t)arg->src_data->ptr.ptr,
+	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
+	 (uintptr_t)arg->dest->mdi);
+
+  return 0;
+}
+
+static int taskalloc_body
+(wait_port_t* wp, kaapi_taskdescr_t* td, void* sp, kaapi_thread_t* thread)
+{
+  printf("%s\n", __FUNCTION__);
+  return 0;
+}
+
+static int taskfinalizer_body
+(wait_port_t* wp, kaapi_taskdescr_t* td, void* sp, kaapi_thread_t* thread)
+{
+  printf("%s\n", __FUNCTION__);
   return 0;
 }
 
@@ -262,9 +302,6 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* the task to process */
   kaapi_task_t* pc;
-
-  /* pc->body[proc_type] */
-  kaapi_task_body_t body;
 
   /* tasks are in the ready queue */
   unsigned int has_ready;
@@ -294,6 +331,10 @@ int kaapi_cuda_thread_execframe_tasklist
   /* toremove */
   printf("%s\n", __FUNCTION__);
   /* toremove */
+
+  /* todo_remove, move in kproc */
+  if (cuCtxPushCurrent(thread->proc->cuda_proc.ctx) != CUDA_SUCCESS)
+    return -1;
 
   /* todo: should be done once per proc */
   if (wait_port_create(&wp) == -1) return -1;
@@ -347,6 +388,8 @@ int kaapi_cuda_thread_execframe_tasklist
       return err;
     }
 
+    has_ready = 0;
+
     goto do_activation;
   }
   
@@ -379,13 +422,36 @@ int kaapi_cuda_thread_execframe_tasklist
     /* next ready task */
     pc = td->task;
 
-    /* get the correct body for the proc type */
-    body = kaapi_task_getuserbody(pc);
-    if (td->fmt != NULL)
-      body = td->fmt->entrypoint_wh[proc_type];
-    kaapi_assert_debug(body);
+    if (td->fmt != NULL) /* cuda user task */
+    {
+      cuda_task_body_t body = (cuda_task_body_t)
+	td->fmt->entrypoint_wh[proc_type];
+      kaapi_assert_debug(body);
 
-    body(pc->sp, (kaapi_thread_t*)thread->sfp);
+      err = wait_fifo_push(&wp.kernel_fifo, (void*)td);
+      kaapi_assert_debug(err != -1);
+
+      body(pc->sp, wp.kernel_fifo.stream);
+    }
+    else /* internal task */
+    {
+      kaapi_task_body_t body = kaapi_task_getuserbody(pc);
+      kaapi_assert_debug(body);
+
+      /* currently, inline those tasks. minor modifs
+	 are needed to execute the body directly, ie.
+	 passing the taskdescr and wait port.
+       */
+      if (body == kaapi_taskmove_body)
+	taskmove_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+      else if (body == kaapi_taskalloc_body)
+	taskalloc_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+      else if (body == kaapi_taskfinalizer_body)
+	taskfinalizer_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+      else
+	body(pc->sp, (kaapi_thread_t*)thread->sfp);
+    }
+
     ++cnt_exec;
   } /* while_ready */
 
@@ -406,7 +472,7 @@ int kaapi_cuda_thread_execframe_tasklist
   while (wait_port_is_empty(&wp) == 0)
   {
     /* event pump, wait for next to complete */
-    while (wait_port_next(&wp, (void**)&td) == -1)
+    while (wait_port_next(&wp, &td) == -1)
     {
       /* nothing completed, and ready available */
       if (has_ready) goto do_ready;
@@ -456,6 +522,9 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* todo: move in kproc */
   wait_port_destroy(&wp);
+
+  /* todo_remove */
+  cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
 
   /* pop frame */
   --thread->sfp;
