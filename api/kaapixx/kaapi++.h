@@ -2566,9 +2566,10 @@ namespace ka {
   /* required for most of stl like parallel algorithm
   */
   template <typename type >
-  class counting_iterator : public std::iterator< std::random_access_iterator_tag,     /* category */
-                                           const type  /* element type */                                            
-                                        >
+  class counting_iterator : public std::iterator< 
+      std::random_access_iterator_tag,     /* category */
+      const type                           /* element type */                                            
+  >
   {
   public:
       typedef type value_type;
@@ -2644,7 +2645,7 @@ namespace ka {
       reference operator*() 
       { return _rep; }
 
-      pointer* operator->() 
+      pointer operator->() 
       { return &_rep; }
 
   private:
