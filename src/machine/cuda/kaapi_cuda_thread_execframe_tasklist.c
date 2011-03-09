@@ -248,6 +248,36 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 /* inlined internal bodies
  */
 
+static inline int memcpy_htod
+(CUdeviceptr devptr, void* hostptr, size_t size, CUstream* stream)
+{
+  CUresult res = cuMemcpyHtoDAsync(devptr, hostptr, size, *stream);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyHToDAsync", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
+{
+  const CUresult res = cuMemAlloc(devptr, size);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemAlloc", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+static inline void free_device_mem(CUdeviceptr devptr)
+{
+  cuMemFree(devptr);
+}
+
 static int taskmove_body
 (wait_port_t* wp, kaapi_taskdescr_t* td, void* sp, kaapi_thread_t* thread)
 {
@@ -261,6 +291,12 @@ static int taskmove_body
 	 arg->src_data->ptr.asid, (uintptr_t)arg->src_data->ptr.ptr,
 	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
 	 (uintptr_t)arg->dest->mdi);
+
+  static const size_t fubar_size = 16;
+  CUdeviceptr fubar_devptr;
+  allocate_device_mem(&fubar_devptr, fubar_size);
+  memcpy_htod(fubar_devptr, (void*)arg->src_data->ptr.ptr, fubar_size, &wp->input_fifo.stream);
+  wait_fifo_push(&wp->input_fifo, (void*)td);
 
   return 0;
 }
@@ -408,6 +444,9 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* execute all the ready tasks */
  do_ready:
+
+  printf("> do_ready()\n");
+
   while (kaapi_workqueue_isempty(&tl->wq_ready) == 0)
   {
     err = kaapi_workqueue_pop(&tl->wq_ready, &local_beg, &local_end, 1);
@@ -427,6 +466,8 @@ int kaapi_cuda_thread_execframe_tasklist
       cuda_task_body_t body = (cuda_task_body_t)
 	td->fmt->entrypoint_wh[proc_type];
       kaapi_assert_debug(body);
+
+      printf("> wait_fifo_push(%lx)\n", (uintptr_t)td);
 
       err = wait_fifo_push(&wp.kernel_fifo, (void*)td);
       kaapi_assert_debug(err != -1);
@@ -471,6 +512,8 @@ int kaapi_cuda_thread_execframe_tasklist
 /*  do_wait: */
   while (wait_port_is_empty(&wp) == 0)
   {
+    printf("> wait_port_next()\n");
+
     /* event pump, wait for next to complete */
     while (wait_port_next(&wp, &td) == -1)
     {
@@ -479,6 +522,9 @@ int kaapi_cuda_thread_execframe_tasklist
     }
 
   do_activation:
+
+    printf("> do_activation()\n");
+
     /* assume no task pushed */
     has_pushed = 0;
 
@@ -487,8 +533,12 @@ int kaapi_cuda_thread_execframe_tasklist
     {
       for (al = td->list.front; al != NULL; al = al->next)
       {
+	printf("activating(%lx)\n", (uintptr_t)al->td);
+
 	if (kaapi_taskdescr_activated(al->td))
 	{
+	  printf("activated(%lx)\n", (uintptr_t)al->td);
+
 	  td_top[local_beg--] = al->td;
 	  has_pushed = 1;
 	}
