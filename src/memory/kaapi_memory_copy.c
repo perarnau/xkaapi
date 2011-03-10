@@ -443,7 +443,12 @@ int kaapi_memory_copy(
   type_dest = kaapi_memory_address_space_gettype(kaapi_pointer2asid(dest))-1;
   type_src  = kaapi_memory_address_space_gettype(kaapi_pointer2asid(src))-1;
   dest_gid  = kaapi_pointer2gid(dest);
-  
+
+#if 1 /* to_fix: we enter here with kasid == 0... */
+  if (type_dest == -1) ++type_dest;
+  if (type_src == -1) ++type_src;
+#endif
+
   fnc = the_good_choice_is[(dest_gid == localgid ? 0: 1)][type_dest][type_src];
   return fnc( dest, view_dest, kaapi_pointer2void(src), view_src );
 }

@@ -255,63 +255,6 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 }
 
 
-/* temporary memory synchronization list
-   remove when metadata information avail
- */
-
-typedef struct msync_node
-{
-  struct msync_node* next;
-
-  CUdeviceptr devptr;
-  void* hostptr;
-
-  size_t block_count;
-  size_t block_size;
-  size_t stride_size;
-
-} msync_node_t;
-
-static inline int memcpy_dtoh_sync(void*, CUdeviceptr, size_t);
-static inline void free_device_mem(CUdeviceptr);
-
-static void msync_synchronize(msync_node_t* pos)
-{
-  size_t i;
-
-  /* synchronize and destroy the list */
-  while (pos)
-  {
-    msync_node_t* const tmp = pos;
-    pos = pos->next;
-
-    /* sync the host memory back. see htod code. */
-    for (i = 0; i < tmp->block_count; ++i)
-    {
-      memcpy_dtoh_sync
-      (
-       (void*)((uintptr_t)tmp->hostptr + i * tmp->stride_size),
-       tmp->devptr + i * tmp->block_size,
-       tmp->block_size
-       );
-    }
-
-    free_device_mem(tmp->devptr);
-
-    free(tmp);
-  }
-}
-
-static inline void msync_push(msync_node_t** head)
-{
-  msync_node_t* const node = malloc(sizeof(msync_node_t));
-  if (node == NULL) return ;
-
-  node->next = *head;
-  *head = node;
-}
-
-
 /* inlined internal bodies
  */
 
@@ -372,7 +315,6 @@ static inline void free_device_mem(CUdeviceptr devptr)
 static int taskmove_body
 (
  kaapi_thread_context_t* thread,
- msync_node_t** ms,
  wait_port_t* wp,
  kaapi_taskdescr_t* td,
  void* sp, kaapi_thread_t* unused
@@ -466,14 +408,6 @@ static int taskmove_body
     mdi->data[gid].view = *dview;
   }
 
-  /* to_remove, add to mem sync list */
-  msync_push(ms);
-  (*ms)->devptr = devptr;
-  (*ms)->hostptr = hostptr;
-  (*ms)->block_count = nblocks;
-  (*ms)->block_size = blocksize;
-  (*ms)->stride_size = stridesize;
-
   return 0;
 }
 
@@ -536,9 +470,6 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* proc->proc_type */
   const unsigned int proc_type = thread->proc->proc_type;
-
-  /* memory sync list */
-  msync_node_t* ms = NULL;
 
   /* completion port */
   wait_port_t wp;
@@ -674,7 +605,7 @@ int kaapi_cuda_thread_execframe_tasklist
 	 passing the taskdescr and wait port.
        */
       if (body == kaapi_taskmove_body)
-	taskmove_body(thread, &ms, &wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+	taskmove_body(thread, &wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskalloc_body)
 	taskalloc_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskfinalizer_body)
@@ -770,9 +701,6 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* todo: move in kproc */
   wait_port_destroy(&wp);
-
-  /* todo_remove */
-  msync_synchronize(ms);
 
   /* todo_remove */
   cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);

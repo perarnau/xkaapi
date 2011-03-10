@@ -111,7 +111,6 @@ int kaapi_memory_synchronize(void)
 	     mdi->data[valid_id].view.lda);
 #endif /* to_remove */
 
-#if 0 /* todo */
       error = kaapi_memory_copy
       (
        mdi->data[host_gid].ptr,
@@ -121,8 +120,6 @@ int kaapi_memory_synchronize(void)
       );
 
       if (error) return -1;
-#endif /* todo */
-
     }
   }
 
