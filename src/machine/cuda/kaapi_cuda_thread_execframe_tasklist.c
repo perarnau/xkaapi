@@ -321,7 +321,7 @@ static inline int memcpy_htod
   const CUresult res = cuMemcpyHtoDAsync
     (devptr, hostptr, size, stream);
 
-#if 1
+#if 0
   printf("htod(%lx, %lx, %lx)\n", (uintptr_t)devptr, (uintptr_t)hostptr, size);
 #endif
   
@@ -339,7 +339,7 @@ static inline int memcpy_dtoh_sync
 {
   const CUresult res = cuMemcpyDtoH(hostptr, devptr, size);
 
-#if 1
+#if 0
   printf("dtoh(%lx, %lx, %lx)\n", (uintptr_t)hostptr, (uintptr_t)devptr, size);
 #endif
 
@@ -371,25 +371,36 @@ static inline void free_device_mem(CUdeviceptr devptr)
 
 static int taskmove_body
 (
+ kaapi_thread_context_t* thread,
  msync_node_t** ms,
  wait_port_t* wp,
  kaapi_taskdescr_t* td,
- void* sp, kaapi_thread_t* thread
+ void* sp, kaapi_thread_t* unused
 )
 {
   kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
 
+#if 0
   kaapi_processor_t* const proc = kaapi_get_current_processor();
+#endif
 
+#if 0
   printf("%s: [%u:%u] (%lx:%lx -> %lx:%lx) %lx\n",
 	 __FUNCTION__,
 	 proc->kid, proc->proc_type,
 	 arg->src_data->ptr.asid, (uintptr_t)arg->src_data->ptr.ptr,
 	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
 	 (uintptr_t)arg->dest->mdi);
+#endif
 
   kaapi_memory_view_t* const sview = &arg->src_data->view;
   kaapi_memory_view_t* const dview = &arg->dest->view;
+
+  /* memory information */
+  kaapi_metadata_info_t* mdi;
+  kaapi_access_mode_t mode;
+
+  /* for the copy */
   const size_t hostsize = kaapi_memory_view_size(sview);
   void* const hostptr = (void*)arg->src_data->ptr.ptr;
   CUdeviceptr devptr;
@@ -405,8 +416,6 @@ static int taskmove_body
   nblocks = hostsize / (sview->size[1] * sview->wordsize);
   blocksize = sview->size[1] * sview->wordsize;
   stridesize = sview->lda * sview->wordsize;
-
-  printf("devptr: %lx, nblocks: %lu\n", (uintptr_t)devptr, nblocks);
 
   for (i = 0; i < nblocks; ++i)
   {
@@ -432,6 +441,30 @@ static int taskmove_body
   /* update the task args */
   arg->dest->ptr.ptr = (uintptr_t)devptr;
   arg->dest->ptr.asid = 0;
+  arg->dest->mdi = arg->src_data->mdi;
+
+  /* update memory information */
+  mdi = arg->src_data->mdi;
+  mode = mdi->version[0]->last_mode;
+
+  if (KAAPI_ACCESS_IS_READ(mode))
+  {
+#if 0
+    printf("read_mode: %lx, %lx\n", arg->src_data->ptr.ptr, (uintptr_t)devptr);
+#endif
+  }
+
+  if (KAAPI_ACCESS_IS_WRITE(mode))
+  {
+    const kaapi_globalid_t gid = kaapi_memory_address_space_getgid(thread->asid);
+#if 0
+    printf("write_mode: %lx, %lx\n", arg->src_data->ptr.ptr, (uintptr_t)devptr);
+#endif
+    _kaapi_metadata_info_set_writer(mdi, thread->asid);
+    mdi->data[gid].ptr.ptr = (uintptr_t)devptr;
+    mdi->data[gid].ptr.asid = thread->asid;
+    mdi->data[gid].view = *dview;
+  }
 
   /* to_remove, add to mem sync list */
   msync_push(ms);
@@ -510,9 +543,16 @@ int kaapi_cuda_thread_execframe_tasklist
   /* completion port */
   wait_port_t wp;
 
-  /* toremove */
+  /* to_remove: create a new address space
+     so that data are considered to be present
+     on the cpu (ie. ptr.asid == 0)
+   */
+  thread->asid = kaapi_memory_address_space_create
+    (0x1, KAAPI_MEM_TYPE_CUDA, 0x100000000UL);
+  
+  /* to_remove */
   printf("%s\n", __FUNCTION__);
-  /* toremove */
+  /* to_remove */
 
   /* todo_remove, move in kproc */
   if (cuCtxPushCurrent(thread->proc->cuda_proc.ctx) != CUDA_SUCCESS)
@@ -591,7 +631,9 @@ int kaapi_cuda_thread_execframe_tasklist
   /* execute all the ready tasks */
  do_ready:
 
+#if 0
   printf("> do_ready()\n");
+#endif
 
   while (kaapi_workqueue_isempty(&tl->wq_ready) == 0)
   {
@@ -613,7 +655,9 @@ int kaapi_cuda_thread_execframe_tasklist
 	td->fmt->entrypoint_wh[proc_type];
       kaapi_assert_debug(body);
 
+#if 0
       printf("> wait_fifo_push(%lx)\n", (uintptr_t)td);
+#endif
 
       err = wait_fifo_push(&wp.kernel_fifo, (void*)td, 1);
       kaapi_assert_debug(err != -1);
@@ -630,7 +674,7 @@ int kaapi_cuda_thread_execframe_tasklist
 	 passing the taskdescr and wait port.
        */
       if (body == kaapi_taskmove_body)
-	taskmove_body(&ms, &wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+	taskmove_body(thread, &ms, &wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskalloc_body)
 	taskalloc_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskfinalizer_body)
@@ -658,7 +702,9 @@ int kaapi_cuda_thread_execframe_tasklist
 /*  do_wait: */
   while (wait_port_is_empty(&wp) == 0)
   {
+#if 0
     printf("> wait_port_next()\n");
+#endif
 
     /* event pump, wait for next to complete */
     while (wait_port_next(&wp, &td) == -1)
@@ -669,7 +715,9 @@ int kaapi_cuda_thread_execframe_tasklist
 
   do_activation:
 
+#if 0
     printf("> do_activation()\n");
+#endif
 
     /* assume no task pushed */
     has_pushed = 0;
@@ -679,11 +727,15 @@ int kaapi_cuda_thread_execframe_tasklist
     {
       for (al = td->list.front; al != NULL; al = al->next)
       {
+#if 0
 	printf("activating(%lx)\n", (uintptr_t)al->td);
+#endif
 
 	if (kaapi_taskdescr_activated(al->td))
 	{
+#if 0
 	  printf("activated(%lx)\n", (uintptr_t)al->td);
+#endif
 
 	  td_top[local_beg--] = al->td;
 	  has_pushed = 1;

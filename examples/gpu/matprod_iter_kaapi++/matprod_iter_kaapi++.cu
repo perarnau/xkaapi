@@ -34,6 +34,9 @@
 #include <cblas.h>
 #endif
 
+// missing definition
+extern "C" int kaapi_memory_synchronize(void);
+
 #define BLOCSIZE 4
 
 // no double type on gtx280
@@ -147,11 +150,11 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
    ka::range2d_rw<double_type> C
   )
   {
-    printf("mulKernel(%lx, %lx, %lx) %d\n",
+    printf("mulKernel(%lx, %lx, %lx) %d %d %d\n",
 	   (uintptr_t)A.ptr(),
 	   (uintptr_t)B.ptr(),
 	   (uintptr_t)C.ptr(),
-	   A.dim(0));
+	   C.dim(0), C.dim(1), C.lda());
 
     const CUstream custream = (CUstream)stream.stream;
 
@@ -241,6 +244,10 @@ struct doit {
     double t0 = kaapi_get_elapsedtime();
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
+
+    // synchronize host memory
+    kaapi_memory_synchronize();
+
     double t1 = kaapi_get_elapsedtime();
 
     std::cout << " Matrix Multiply took " << t1-t0 << " seconds." << std::endl;

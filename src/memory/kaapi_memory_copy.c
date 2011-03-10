@@ -126,32 +126,22 @@ on_error:
 #if defined(KAAPI_USE_CUDA)
 
 #include "../cuda/kaapi_cuda.h"
-#include "../cuda/kaapi_cuda_kasid.h"
 #include "../machine/cuda/kaapi_cuda_error.h"
-
-static inline kaapi_cuda_proc_t* kasid_to_cuda_proc
-(kaapi_address_space_id_t kasid)
-{
-  kaapi_cuda_proc_t* const cu_proc =
-    kaapi_cuda_get_proc_by_kasid(kasid);
-  kaapi_assert_debug(cu_proc);
-  return cu_proc;
-}
 
 #if 0
 static inline unsigned int is_self_cu_proc
 (kaapi_cuda_proc_t* cu_proc)
 {
-  if (cu_proc == &kaapi_get_current_processor()->cu_proc)
+  if (cu_proc == &kaapi_get_current_processor()->cuda_proc)
     return 1;
   return 0;
 }
 #endif
 
-kaapi_cuda_proc_t* get_cu_context
-(kaapi_address_space_id_t kasid)
+kaapi_cuda_proc_t* get_cu_context(void)
 {
-  kaapi_cuda_proc_t* const cu_proc = kasid_to_cuda_proc(kasid);
+  kaapi_cuda_proc_t* const cu_proc =
+    &kaapi_get_current_processor()->cuda_proc;
   CUresult res;
   
   if (cu_proc == NULL) return NULL;
@@ -224,12 +214,10 @@ static inline int memcpy_cu_dtoh
 
 static inline int kaapi_memory_write_cu2cpu
 (
-   kaapi_address_space_id_t kasid_dest,
-   kaapi_pointer_t dest,
-   const kaapi_memory_view_t* view_dest,
-   kaapi_address_space_id_t kasid_src, 
-   const void* src,
-   const kaapi_memory_view_t* view_src
+ kaapi_pointer_t dest,
+ const kaapi_memory_view_t* view_dest,
+ const void* src,
+ const kaapi_memory_view_t* view_src
 )
 {
   kaapi_cuda_proc_t* cu_proc = NULL;
@@ -238,7 +226,7 @@ static inline int kaapi_memory_write_cu2cpu
   if (kaapi_pointer_isnull(dest)) return EINVAL;
   else if (src == NULL) return EINVAL;
   
-  cu_proc = get_cu_context(kasid_src);
+  cu_proc = get_cu_context();
   if (cu_proc == NULL) return EINVAL;
   
   error = kaapi_memory_write_view
@@ -251,12 +239,10 @@ static inline int kaapi_memory_write_cu2cpu
 
 static int kaapi_memory_write_cpu2cu
 (
-  kaapi_address_space_id_t kasid_dest,
-  kaapi_pointer_t dest,
-  const kaapi_memory_view_t* view_dest,
-  kaapi_address_space_id_t kasid_src, 
-  const void* src,
-  const kaapi_memory_view_t* view_src
+ kaapi_pointer_t dest,
+ const kaapi_memory_view_t* view_dest,
+ const void* src,
+ const kaapi_memory_view_t* view_src
 )
 {
   kaapi_cuda_proc_t* cu_proc = NULL;
@@ -265,7 +251,7 @@ static int kaapi_memory_write_cpu2cu
   if (kaapi_pointer_isnull(dest)) return EINVAL;
   else if (src == NULL) return EINVAL;
   
-  cu_proc = get_cu_context(kasid_dest);
+  cu_proc = get_cu_context();
   if (cu_proc == NULL) return EINVAL;
   
   error = kaapi_memory_write_view
@@ -279,13 +265,11 @@ static int kaapi_memory_write_cpu2cu
 
 static int kaapi_memory_write_cu2cu
 (
- kaapi_address_space_id_t kasid_dest,
  kaapi_pointer_t dest,
  const kaapi_memory_view_t* view_dest,
- kaapi_address_space_id_t kasid_src, 
  const void* src,
  const kaapi_memory_view_t* view_src
- )
+)
 {
   /* use the host to make the tmp copy for now.
    assume dest_size == src_size.
@@ -305,7 +289,7 @@ static int kaapi_memory_write_cu2cu
   tmp_pointer = kaapi_make_pointer(0, tmp_buffer);
   
   /* cu2cpu(tmp, src) */
-  cu_proc = get_cu_context(kasid_src);
+  cu_proc = get_cu_context();
   if (cu_proc == NULL) goto on_error;
 
   error = kaapi_memory_write_view
@@ -317,7 +301,7 @@ static int kaapi_memory_write_cu2cu
   if (error) goto on_error;
   
   /* cpu2cu(dst, tmp) */
-  cu_proc = get_cu_context(kasid_dest);
+  cu_proc = get_cu_context();
   if (cu_proc == NULL) goto on_error;
 
   error = kaapi_memory_write_view
@@ -445,7 +429,8 @@ int kaapi_memory_copy(
 	 (void*)dest.ptr, (void*)src.ptr, kaapi_memory_view_size(view_src)); 
   fflush(stdout);
 #endif
-  
+
+#if !defined(KAAPI_USE_CUDA)  
   /* cannot initiate copy if source is not local */
   if (kaapi_pointer2gid(src) != localgid)
   {
@@ -453,6 +438,7 @@ int kaapi_memory_copy(
     fflush(stdout);
     return EINVAL;
   }
+#endif
   
   type_dest = kaapi_memory_address_space_gettype(kaapi_pointer2asid(dest))-1;
   type_src  = kaapi_memory_address_space_gettype(kaapi_pointer2asid(src))-1;

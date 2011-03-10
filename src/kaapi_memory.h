@@ -93,6 +93,10 @@ extern void kaapi_memory_destroy(void);
 
 /**
 */
+extern int kaapi_memory_synchronize(void);
+
+/**
+*/
 struct kaapi_metadata_info_t;
 
 
