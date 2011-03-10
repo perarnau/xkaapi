@@ -124,7 +124,7 @@ __global__ void mulKernel
 
   c[threadIdx.y * ldc + threadIdx.x] += res;
 
-#elif 0
+#elif 1
 
   if ((threadIdx.x == 0) && (threadIdx.y == 0))
   {

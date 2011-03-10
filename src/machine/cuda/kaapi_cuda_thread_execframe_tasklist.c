@@ -60,11 +60,15 @@ typedef void (*cuda_task_body_t)(void*, CUstream);
    data back to the user, so we need a
    way to associate a stream event with
    some app specific data.
+   a refn is used since we may want to
+   associate a node with 3 cuda event
+   completion (see taskmove).
  */
 
 typedef struct wait_node
 {
   void* data;
+  unsigned int refn;
   struct wait_node* prev;
   struct wait_node* next;
 } wait_node_t;
@@ -110,7 +114,8 @@ static inline int wait_fifo_destroy(wait_fifo_t* fifo)
   return 0;
 }
 
-static int wait_fifo_push(wait_fifo_t* fifo, void* data)
+static int wait_fifo_push
+(wait_fifo_t* fifo, void* data, unsigned int refn)
 {
   /* todo: fifo specific allocator */
   wait_node_t* const node = malloc(sizeof(wait_node_t));
@@ -126,6 +131,7 @@ static int wait_fifo_push(wait_fifo_t* fifo, void* data)
   fifo->head = node;
 
   node->data = data;
+  node->refn = refn;
 
   return 0;
 }
@@ -177,6 +183,10 @@ static inline void* wait_fifo_next(wait_fifo_t* fifo)
   /* return NULL if empty or not ready */
   if (wait_fifo_is_empty(fifo)) return NULL;
   else if (wait_fifo_is_ready(fifo) == 0) return NULL;
+
+  /* node not yet ready */
+  if (--fifo->tail->refn) return NULL;
+
   return wait_fifo_pop(fifo);
 }
 
@@ -245,19 +255,100 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 }
 
 
+/* temporary memory synchronization list
+   remove when metadata information avail
+ */
+
+typedef struct msync_node
+{
+  struct msync_node* next;
+
+  CUdeviceptr devptr;
+  void* hostptr;
+
+  size_t block_count;
+  size_t block_size;
+  size_t stride_size;
+
+} msync_node_t;
+
+static inline int memcpy_dtoh_sync(void*, CUdeviceptr, size_t);
+static inline void free_device_mem(CUdeviceptr);
+
+static void msync_synchronize(msync_node_t* pos)
+{
+  size_t i;
+
+  /* synchronize and destroy the list */
+  while (pos)
+  {
+    msync_node_t* const tmp = pos;
+    pos = pos->next;
+
+    /* sync the host memory back. see htod code. */
+    for (i = 0; i < tmp->block_count; ++i)
+    {
+      memcpy_dtoh_sync
+      (
+       (void*)((uintptr_t)tmp->hostptr + i * tmp->stride_size),
+       tmp->devptr + i * tmp->block_size,
+       tmp->block_size
+       );
+    }
+
+    free_device_mem(tmp->devptr);
+
+    free(tmp);
+  }
+}
+
+static inline void msync_push(msync_node_t** head)
+{
+  msync_node_t* const node = malloc(sizeof(msync_node_t));
+  if (node == NULL) return ;
+
+  node->next = *head;
+  *head = node;
+}
+
+
 /* inlined internal bodies
  */
 
 static inline int memcpy_htod
-(CUdeviceptr devptr, void* hostptr, size_t size, CUstream* stream)
+(CUstream stream, CUdeviceptr devptr, const void* hostptr, size_t size)
 {
-  CUresult res = cuMemcpyHtoDAsync(devptr, hostptr, size, *stream);
+  const CUresult res = cuMemcpyHtoDAsync
+    (devptr, hostptr, size, stream);
+
+#if 1
+  printf("htod(%lx, %lx, %lx)\n", (uintptr_t)devptr, (uintptr_t)hostptr, size);
+#endif
+  
   if (res != CUDA_SUCCESS)
   {
     kaapi_cuda_error("cuMemcpyHToDAsync", res);
     return -1;
   }
+  
+  return 0;
+}
 
+static inline int memcpy_dtoh_sync
+(void* hostptr, CUdeviceptr devptr, size_t size)
+{
+  const CUresult res = cuMemcpyDtoH(hostptr, devptr, size);
+
+#if 1
+  printf("dtoh(%lx, %lx, %lx)\n", (uintptr_t)hostptr, (uintptr_t)devptr, size);
+#endif
+
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyDToHSync", res);
+    return -1;
+  }
+  
   return 0;
 }
 
@@ -279,7 +370,12 @@ static inline void free_device_mem(CUdeviceptr devptr)
 }
 
 static int taskmove_body
-(wait_port_t* wp, kaapi_taskdescr_t* td, void* sp, kaapi_thread_t* thread)
+(
+ msync_node_t** ms,
+ wait_port_t* wp,
+ kaapi_taskdescr_t* td,
+ void* sp, kaapi_thread_t* thread
+)
 {
   kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
 
@@ -292,11 +388,58 @@ static int taskmove_body
 	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
 	 (uintptr_t)arg->dest->mdi);
 
-  static const size_t fubar_size = 16;
-  CUdeviceptr fubar_devptr;
-  allocate_device_mem(&fubar_devptr, fubar_size);
-  memcpy_htod(fubar_devptr, (void*)arg->src_data->ptr.ptr, fubar_size, &wp->input_fifo.stream);
-  wait_fifo_push(&wp->input_fifo, (void*)td);
+  kaapi_memory_view_t* const sview = &arg->src_data->view;
+  kaapi_memory_view_t* const dview = &arg->dest->view;
+  const size_t hostsize = kaapi_memory_view_size(sview);
+  void* const hostptr = (void*)arg->src_data->ptr.ptr;
+  CUdeviceptr devptr;
+  size_t nblocks;
+  size_t blocksize;
+  size_t stridesize;
+  size_t i;
+
+  /* start the async copy */
+  if (allocate_device_mem(&devptr, hostsize)) return -1;
+
+  /* assume a 2d case */
+  nblocks = hostsize / (sview->size[1] * sview->wordsize);
+  blocksize = sview->size[1] * sview->wordsize;
+  stridesize = sview->lda * sview->wordsize;
+
+  printf("devptr: %lx, nblocks: %lu\n", (uintptr_t)devptr, nblocks);
+
+  for (i = 0; i < nblocks; ++i)
+  {
+    memcpy_htod
+    (
+     wp->input_fifo.stream,
+     devptr + i * blocksize,
+     (void*)((uintptr_t)hostptr + i * stridesize),
+     blocksize
+    );
+  }
+  
+  /* add to completion port */
+  wait_fifo_push(&wp->input_fifo, (void*)td, nblocks);
+
+  /* dest view */
+  dview->type = sview->type;
+  dview->size[0] = sview->size[0];
+  dview->size[1] = sview->size[1];
+  dview->lda = sview->size[1];
+  dview->wordsize = sview->wordsize;
+
+  /* update the task args */
+  arg->dest->ptr.ptr = (uintptr_t)devptr;
+  arg->dest->ptr.asid = 0;
+
+  /* to_remove, add to mem sync list */
+  msync_push(ms);
+  (*ms)->devptr = devptr;
+  (*ms)->hostptr = hostptr;
+  (*ms)->block_count = nblocks;
+  (*ms)->block_size = blocksize;
+  (*ms)->stride_size = stridesize;
 
   return 0;
 }
@@ -360,6 +503,9 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* proc->proc_type */
   const unsigned int proc_type = thread->proc->proc_type;
+
+  /* memory sync list */
+  msync_node_t* ms = NULL;
 
   /* completion port */
   wait_port_t wp;
@@ -469,7 +615,7 @@ int kaapi_cuda_thread_execframe_tasklist
 
       printf("> wait_fifo_push(%lx)\n", (uintptr_t)td);
 
-      err = wait_fifo_push(&wp.kernel_fifo, (void*)td);
+      err = wait_fifo_push(&wp.kernel_fifo, (void*)td, 1);
       kaapi_assert_debug(err != -1);
 
       body(pc->sp, wp.kernel_fifo.stream);
@@ -484,7 +630,7 @@ int kaapi_cuda_thread_execframe_tasklist
 	 passing the taskdescr and wait port.
        */
       if (body == kaapi_taskmove_body)
-	taskmove_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+	taskmove_body(&ms, &wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskalloc_body)
 	taskalloc_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskfinalizer_body)
@@ -572,6 +718,9 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* todo: move in kproc */
   wait_port_destroy(&wp);
+
+  /* todo_remove */
+  msync_synchronize(ms);
 
   /* todo_remove */
   cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
