@@ -120,6 +120,9 @@ int kaapi_memory_synchronize(void)
       );
 
       if (error) return -1;
+
+      /* mark as valid */
+      mdi->validbits |= 1UL << host_gid;
     }
   }
 
