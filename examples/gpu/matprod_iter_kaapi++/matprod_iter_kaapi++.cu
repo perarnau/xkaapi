@@ -37,7 +37,7 @@
 // missing definition
 extern "C" int kaapi_memory_synchronize(void);
 
-#define BLOCSIZE 4
+#define BLOCSIZE 32
 
 // no double type on gtx280
 typedef float double_type;
@@ -150,11 +150,13 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
    ka::range2d_rw<double_type> C
   )
   {
+#if 0
     printf("mulKernel(%lx, %lx, %lx) %d %d %d\n",
 	   (uintptr_t)A.ptr(),
 	   (uintptr_t)B.ptr(),
 	   (uintptr_t)C.ptr(),
 	   C.dim(0), C.dim(1), C.lda());
+#endif
 
     const CUstream custream = (CUstream)stream.stream;
 
@@ -179,9 +181,6 @@ template<>
 struct TaskBodyCPU<TaskMatProduct> {
   void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_rpwp<double_type> C )
   {
-    printf("%lx -- %lx\n", (uintptr_t)C.ptr(),
-	   (uintptr_t)(C.ptr() + C.dim(0) * C.dim(1)));
-
     size_t M = A.dim(0);
     size_t K = B.dim(0);
     size_t N = B.dim(1);

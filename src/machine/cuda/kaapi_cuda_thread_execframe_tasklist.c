@@ -474,16 +474,16 @@ int kaapi_cuda_thread_execframe_tasklist
   /* completion port */
   wait_port_t wp;
 
+#if 0 /* to_remove */
+  printf("%s\n", __FUNCTION__);
+#endif /* to_remove */
+
   /* to_remove: create a new address space
      so that data are considered to be present
      on the cpu (ie. ptr.asid == 0)
    */
   thread->asid = kaapi_memory_address_space_create
     (0x1, KAAPI_MEM_TYPE_CUDA, 0x100000000UL);
-  
-  /* to_remove */
-  printf("%s\n", __FUNCTION__);
-  /* to_remove */
 
   /* todo_remove, move in kproc */
   if (cuCtxPushCurrent(thread->proc->cuda_proc.ctx) != CUDA_SUCCESS)
