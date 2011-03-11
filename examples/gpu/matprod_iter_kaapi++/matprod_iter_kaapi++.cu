@@ -116,7 +116,7 @@ __global__ void mulKernel
   // a, b, c of size m x m
   // ldN the leading dimension
 
-#if 0
+#if 1
 
   a = a + threadIdx.y * lda;
   b = b + threadIdx.x;
@@ -127,7 +127,7 @@ __global__ void mulKernel
 
   c[threadIdx.y * ldc + threadIdx.x] += res;
 
-#elif 1
+#elif 0
 
   if ((threadIdx.x == 0) && (threadIdx.y == 0))
   {

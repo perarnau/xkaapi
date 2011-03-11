@@ -1567,9 +1567,66 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /* ========================================================================= */
 /* API for graph partitioning                                                */
 /* ========================================================================= */
+/** Type of allowed memory view for the memory interface:
+    - 1D array (base, size)
+      simple contiguous 1D array
+    - 2D array (base, size[2], lda)
+      assume a row major storage of the memory : the 2D array has
+      size[0] rows of size[1] rowwidth. lda is used to pass from
+      one row to the next one.
+    The base (kaapi_pointer_t) is not part of the view description
+*/
+#define KAAPI_MEMORY_VIEW_1D 1
+#define KAAPI_MEMORY_VIEW_2D 2  /* assume row major */
+#define KAAPI_MEMORY_VIEW_3D 3
+typedef struct kaapi_memory_view_t {
+  int    type;
+  size_t size[2];
+  size_t lda;
+  size_t wordsize;
+} kaapi_memory_view_t;
+
+
 /** Identifier to an address space id
 */
 typedef uint64_t  kaapi_address_space_id_t;
+
+/** Type of pointer for all address spaces.
+    The pointer encode both the pointer (field ptr) and the location of the address space
+    in asid.
+    Pointer arithmetic is allowed on this type on the ptr field.
+*/
+typedef struct kaapi_pointer_t { 
+  kaapi_address_space_id_t asid;
+  uintptr_t                ptr;
+} kaapi_pointer_t;
+
+static inline void* __kaapi_pointer2void(kaapi_pointer_t p)
+{ return (void*)p.ptr; }
+
+
+/** Data shared between address space and task
+    Such data structure is referenced through the pointer arguments of tasks using a handle.
+    All tasks, after construction of tasklist, have effective parameter a handle to a data
+    in place of pointer to a data: Before creation of a tasklist data structure, a task
+    has a direct access through a pointer to object in the shared address space of the process.
+    After tasklist creation, each pointer parameter is replaced by a pointer to a kaapi_data_t
+    that points to the data and the view of the data.
+    
+    The data also stores a pointer to the meta data information for fast lookup.
+    Warning: The ptr should be the first field of the data structure.
+*/
+typedef struct kaapi_data_t {
+  kaapi_pointer_t               ptr;                /* address of data */
+  kaapi_memory_view_t           view;               /* view of data */
+  struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
+} kaapi_data_t;
+
+
+/** Handle to data.
+    See comments in kaapi_data_t structure.
+*/
+typedef kaapi_data_t* kaapi_handle_t;
 
 
 /** Create a thread group with size threads. 
@@ -2014,25 +2071,6 @@ extern size_t kaapi_perf_counter_num(void);
 /* ========================================================================= */
 /* Format declaration & registration                                         */
 /* ========================================================================= */
-/** Type of allowed memory view for the memory interface:
-    - 1D array (base, size)
-      simple contiguous 1D array
-    - 2D array (base, size[2], lda)
-      assume a row major storage of the memory : the 2D array has
-      size[0] rows of size[1] rowwidth. lda is used to pass from
-      one row to the next one.
-    The base (kaapi_pointer_t) is not part of the view description
-*/
-#define KAAPI_MEMORY_VIEW_1D 1
-#define KAAPI_MEMORY_VIEW_2D 2  /* assume row major */
-#define KAAPI_MEMORY_VIEW_3D 3
-typedef struct kaapi_memory_view_t {
-  int    type;
-  size_t size[2];
-  size_t lda;
-  size_t wordsize;
-} kaapi_memory_view_t;
-
 
 static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t wordsize)
 {

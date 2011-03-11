@@ -113,41 +113,6 @@ typedef struct kaapi_address_space_t {
 } kaapi_address_space_t;
 
 
-/** Type of pointer for all address spaces.
-    The pointer encode both the pointer (field ptr) and the location of the address space
-    in asid.
-    Pointer arithmetic is allowed on this type on the ptr field.
-*/
-typedef struct kaapi_pointer_t { 
-  uintptr_t                ptr;
-  kaapi_address_space_id_t asid;
-} kaapi_pointer_t ;
-
-
-/** Data shared between address space and task
-    Such data structure is referenced through the pointer arguments of tasks using a handle.
-    All tasks, after construction of tasklist, have effective parameter a handle to a data
-    in place of pointer to a data: Before creation of a tasklist data structure, a task
-    has a direct access through a pointer to object in the shared address space of the process.
-    After tasklist creation, each pointer parameter is replaced by a pointer to a kaapi_data_t
-    that points to the data and the view of the data.
-    
-    The data also stores a pointer to the meta data information for fast lookup.
-    Warning: The ptr should be the first field of the data structure.
-*/
-typedef struct kaapi_data_t {
-  kaapi_pointer_t               ptr;                /* address of data */
-  kaapi_memory_view_t           view;               /* view of data */
-  struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
-} kaapi_data_t;
-
-
-/** Handle to data.
-    See comments in kaapi_data_t structure.
-*/
-typedef kaapi_data_t* kaapi_handle_t;
-
-
 /* Create a new address space.
    The user is invited to use predefined address space identifier
    in place of creating a new address space.  
