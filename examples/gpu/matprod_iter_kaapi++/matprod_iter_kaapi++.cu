@@ -37,7 +37,7 @@
 // missing definition
 extern "C" int kaapi_memory_synchronize(void);
 
-#define BLOCSIZE 32
+static int BLOCSIZE = 0;
 
 // no double type on gtx280
 typedef float double_type;
@@ -105,12 +105,7 @@ struct TaskBodyCPU<TaskSeqMatProduct> {
 // TaskSeqMatProduct gpu implementation
 
 __global__ void mulKernel
-(
- const double_type* a, unsigned int lda,
- const double_type* b, unsigned int ldb,
- double_type* c, unsigned int ldc,
- unsigned int m
-)
+(const double_type* a, const double_type* b, double_type* c, unsigned int m)
 {
   // compute a * b = c;
   // a, b, c of size m x m
@@ -118,14 +113,33 @@ __global__ void mulKernel
 
 #if 1
 
-  a = a + threadIdx.y * lda;
-  b = b + threadIdx.x;
+  const unsigned int mm = m * m;
 
-  double_type res = 0.;
-  for (unsigned int i = 0; i < m; ++i, ++a, b += ldb)
-    res += (*a) * (*b);
+  const unsigned int per_thread = mm / blockDim.x;
 
-  c[threadIdx.y * ldc + threadIdx.x] += res;
+  unsigned int i = threadIdx.x * per_thread;
+
+  double_type* cpos = c + i;
+  double_type* cend = cpos + per_thread;
+
+  if (threadIdx.x == (blockDim.x - 1)) cend = c + mm;
+
+  __syncthreads();
+
+  // foreach c elem
+  for (; cpos != cend; ++cpos, ++i)
+  {
+    const double_type* apos = a + (i / m) * m; // i / m rounded...
+    const double_type* bpos = b + i % m;
+
+    // ... res = innerprod(aik, bkj);
+    double_type res = 0;
+    for (unsigned int k = 0; k < m; ++k, ++apos, bpos += m)
+      res += (*apos) * (*bpos);
+
+    // update c
+    *cpos += res;
+  }
 
 #elif 0
 
@@ -160,14 +174,11 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
 
     const CUstream custream = (CUstream)stream.stream;
 
-    const unsigned int m = A.dim(0);
+    size_t mm = A.dim(0) * A.dim(0);
+    const size_t thread_count = mm < 512 ? mm : 512;
 
-    const double_type* const a = A.ptr();
-    const double_type* const b = B.ptr();
-    double_type* const c = C.ptr();
-
-    mulKernel<<<1, dim3(m, m), 0, custream>>>
-      (a, A.lda(), b, B.lda(), c, C.lda(), m);
+    mulKernel<<<1, dim3(thread_count), 0, custream>>>
+      (A.ptr(), B.ptr(), C.ptr(), A.dim(0));
   }
 };
 
@@ -205,13 +216,16 @@ struct TaskBodyCPU<TaskMatProduct> {
 /* Main of the program
 */
 struct doit {
-  void operator()(int argc, char** argv )
+  void operator()(int ac, char** av)
   {
-    int n = 2;
-    if (argc > 1) {
-        n = atoi(argv[1]);
-    }
-    n *= BLOCSIZE;
+    // av[1] = matrix_size
+    // av[2] = block_count
+
+    const int matrix_size = atoi(av[1]);
+    const int block_count = atoi(av[2]);
+    BLOCSIZE = matrix_size / block_count;
+
+    const int n = matrix_size;
 
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
     double_type* dB = (double_type*) calloc(n* n, sizeof(double_type));
@@ -252,7 +266,7 @@ struct doit {
     std::cout << " Matrix Multiply took " << t1-t0 << " seconds." << std::endl;
 
     // If n is small, print the results
-    if (n <= 16) {
+    if (n <= 32) {
       ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
       ka::Sync();
     }

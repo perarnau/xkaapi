@@ -14,4 +14,5 @@ export LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib:$LD_LIBRARY_PATH
 export KAAPI_CPUSET=
 export KAAPI_GPUSET='0~0'
 
-KAAPI_STACKSIZE=260046848 ./a.out 32
+# ./a.out matrix_size bloc_count
+KAAPI_STACKSIZE=260046848 ./a.out 256 1
