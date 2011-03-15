@@ -48,7 +48,6 @@
 #include "kaapi_cuda.h"
 #include "../common/kaapi_procinfo.h"
 
-
 /* exported */
 int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 {

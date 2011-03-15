@@ -34,8 +34,40 @@
 #include <cblas.h>
 #endif
 
+#if CONFIG_USE_CUBLAS
+#include <cublas_v2.h>
+#endif // CONFIG_USE_CUBLAS
+
 // missing definition
 extern "C" int kaapi_memory_synchronize(void);
+
+// cublas
+#if CONFIG_USE_CUBLAS
+
+// by ref values
+static float alpha = 1.;
+static float beta = 1.;
+
+static cublasHandle_t cublas_handle;
+
+static int initialize_cublas(void) 
+{
+  const cublasStatus_t status = cublasCreate(&cublas_handle);
+  if (status != CUBLAS_STATUS_SUCCESS)
+  {
+    printf("cublasCreate() == %u\n", status);
+    return -1;
+  }
+  return 0;
+}
+
+static void finalize_cublas(void)
+{
+  cublasDestroy(cublas_handle);
+}
+
+#endif // CONFIG_USE_CUBLAS
+
 
 static int BLOCSIZE = 0;
 
@@ -177,8 +209,38 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
     size_t mm = A.dim(0) * A.dim(0);
     const size_t thread_count = mm < 512 ? mm : 512;
 
+#if CONFIG_USE_CUBLAS
+    cublasStatus_t status;
+
+    status = cublasSetStream(cublas_handle, custream);
+    if (status != CUBLAS_STATUS_SUCCESS)
+    {
+      printf("cublasSetStream() == %u\n", status);
+      return ;
+    }
+
+    const int mnk = A.dim(0);
+
+    // warning: cublas use col major order
+    // CUBLAS_OP_N then transpose
+    status = cublasSgemm
+    (
+     cublas_handle,
+     CUBLAS_OP_N, CUBLAS_OP_N,
+     mnk, mnk, mnk,
+     &alpha, A.ptr(), A.dim(0), B.ptr(), B.dim(0),
+     &beta, C.ptr(), C.dim(0)
+    );
+
+    if (status != CUBLAS_STATUS_SUCCESS)
+    {
+      printf("cublasDgemm() == %u\n", status);
+      return ;
+    }
+#else // CONFIG_USE_CUBLAS == 0
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
       (A.ptr(), B.ptr(), C.ptr(), A.dim(0));
+#endif
   }
 };
 
@@ -253,6 +315,10 @@ struct doit {
     ka::array<2,double_type> B(dB, n, n, n);
     ka::array<2,double_type> C(dC, n, n, n);
 
+#if CONFIG_USE_CUBLAS
+    if (initialize_cublas() == -1) return ;
+#endif
+
     // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
@@ -273,6 +339,10 @@ struct doit {
       ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
       ka::Sync();
     }
+#endif
+
+#if CONFIG_USE_CUBLAS
+    finalize_cublas();
 #endif
 
     free(dA);

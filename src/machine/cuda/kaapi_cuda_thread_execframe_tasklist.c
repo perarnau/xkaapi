@@ -369,9 +369,16 @@ static int taskmove_body
      blocksize
     );
   }
-  
+
   /* add to completion port */
   wait_fifo_push(&wp->input_fifo, (void*)td, nblocks);
+
+#if 0 /* cublas_v2 */
+  cublasSetMatrixAsync
+    (sview->size[0], sview->size[1], sview->wordsize,
+     hostptr, sview->lda, (void*)devptr, sview->size[1], wp->input_fifo.stream);
+  wait_fifo_push(&wp->input_fifo, (void*)td, 1);
+#endif
 
   /* dest view */
   dview->type = sview->type;
