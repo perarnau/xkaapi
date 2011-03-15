@@ -51,6 +51,9 @@
 #include "kaapi_cuda_error.h"
 
 
+#define CONFIG_USE_EVENT 0
+
+
 /* cuda task body */
 typedef void (*cuda_task_body_t)(void*, CUstream);
 
@@ -68,7 +71,13 @@ typedef void (*cuda_task_body_t)(void*, CUstream);
 typedef struct wait_node
 {
   void* data;
+
+#if CONFIG_USE_EVENT
+  CUevent event;
+#else
   unsigned int refn;
+#endif
+
   struct wait_node* prev;
   struct wait_node* next;
 } wait_node_t;
@@ -130,8 +139,17 @@ static int wait_fifo_push
   node->next = fifo->head;
   fifo->head = node;
 
-  node->data = data;
+#if CONFIG_USE_EVENT
+  CUresult res;
+  res = cuEventCreate(&node->event, CU_EVENT_DISABLE_TIMING);
+  if (res!=CUDA_SUCCESS) printf("cuEventCreate\n");
+  res = cuEventRecord(node->event, fifo->stream);
+  if (res!=CUDA_SUCCESS) printf("cuEventCreate\n");
+#else
   node->refn = refn;
+#endif
+
+  node->data = data;
 
   return 0;
 }
@@ -149,6 +167,10 @@ static void* wait_fifo_pop(wait_fifo_t* fifo)
   else
     fifo->tail->next = NULL;
 
+#if CONFIG_USE_EVENT
+  cuEventDestroy(node->event);
+#endif
+
   free(node);
 
   return data;
@@ -162,7 +184,11 @@ static inline unsigned int wait_fifo_is_empty(wait_fifo_t* fifo)
 static inline unsigned int wait_fifo_is_ready(wait_fifo_t* fifo)
 {
   /* return 1 if the top node is ready */
+#if CONFIG_USE_EVENT
+  const CUresult res = cuEventQuery(fifo->head->event);
+#else
   const CUresult res = cuStreamQuery(fifo->stream);
+#endif
 
   /* query and mark as empty is signaled */
   if (res == CUDA_SUCCESS) return 1;
@@ -184,8 +210,9 @@ static inline void* wait_fifo_next(wait_fifo_t* fifo)
   if (wait_fifo_is_empty(fifo)) return NULL;
   else if (wait_fifo_is_ready(fifo) == 0) return NULL;
 
-  /* node not yet ready */
+#if (CONFIG_USE_EVENT == 0)
   if (--fifo->tail->refn) return NULL;
+#endif
 
   return wait_fifo_pop(fifo);
 }
@@ -379,6 +406,7 @@ static int taskmove_body
      hostptr, sview->lda, (void*)devptr, sview->size[1], wp->input_fifo.stream);
   wait_fifo_push(&wp->input_fifo, (void*)td, 1);
 #endif
+  
 
   /* dest view */
   dview->type = sview->type;
