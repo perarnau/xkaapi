@@ -38,6 +38,11 @@
 #include <cublas_v2.h>
 #endif // CONFIG_USE_CUBLAS
 
+#if CONFIG_USE_VOLKOV
+extern "C" void volkov_sgemm
+(CUstream, char, char, int, int, int, float, const float*, int, const float*, int, float, float*, int);
+#endif
+
 // missing definition
 extern "C" int kaapi_memory_synchronize(void);
 
@@ -58,6 +63,13 @@ static int initialize_cublas(void)
     printf("cublasCreate() == %u\n", status);
     return -1;
   }
+
+#if 0
+  cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE);
+#else
+  cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_HOST);
+#endif
+
   return 0;
 }
 
@@ -237,7 +249,17 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
       printf("cublasDgemm() == %u\n", status);
       return ;
     }
-#else // CONFIG_USE_CUBLAS == 0
+#elif CONFIG_USE_VOLKOV
+    const int mnk = A.dim(0);
+    volkov_sgemm
+    (
+     custream,
+     'n', 'n',
+     mnk, mnk, mnk,
+     1, A.ptr(), A.dim(0), B.ptr(), B.dim(0),
+     1, C.ptr(), C.dim(0)
+    );
+#else
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
       (A.ptr(), B.ptr(), C.ptr(), A.dim(0));
 #endif
@@ -315,10 +337,6 @@ struct doit {
     ka::array<2,double_type> B(dB, n, n, n);
     ka::array<2,double_type> C(dC, n, n, n);
 
-#if CONFIG_USE_CUBLAS
-    if (initialize_cublas() == -1) return ;
-#endif
-
     // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
@@ -341,10 +359,6 @@ struct doit {
     }
 #endif
 
-#if CONFIG_USE_CUBLAS
-    finalize_cublas();
-#endif
-
     free(dA);
     free(dB);
     free(dC);
@@ -356,6 +370,11 @@ struct doit {
 */
 int main(int argc, char** argv)
 {
+#if CONFIG_USE_CUBLAS
+  if (initialize_cublas() == -1) return ;
+  printf("bar\n");
+#endif
+
   try {
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
@@ -379,6 +398,10 @@ int main(int argc, char** argv)
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;
   }
+
+#if CONFIG_USE_CUBLAS
+  finalize_cublas();
+#endif
   
   return 0;
 }

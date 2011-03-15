@@ -14,8 +14,9 @@ export LD_LIBRARY_PATH=/home/lementec/install/xkaapi_gpu/lib:$LD_LIBRARY_PATH
 export KAAPI_CPUSET=
 export KAAPI_GPUSET='0~0'
 
-bsizes="1 2 4 8 16 32 64" ;
-msizes="8 64 128 256 512 1024 2048" ;
+# volkov configuration
+bsizes="1 2 4 8 16 32" ;
+msizes="2048" ;
 
 echo -n '# blocSize' ;
 for m in $msizes ; do
