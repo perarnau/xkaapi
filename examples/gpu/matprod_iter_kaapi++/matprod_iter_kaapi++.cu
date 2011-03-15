@@ -258,18 +258,22 @@ struct doit {
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
 
+    // dont time memory sync for the benchmarks since
+    // it does not reflect the execution pipeline
+    double t1 = kaapi_get_elapsedtime();
+
     // synchronize host memory
     kaapi_memory_synchronize();
 
-    double t1 = kaapi_get_elapsedtime();
-
-    std::cout << " Matrix Multiply took " << t1-t0 << " seconds." << std::endl;
+    std::cout << t1 - t0; // seconds
 
     // If n is small, print the results
+#if 0
     if (n <= 32) {
       ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
       ka::Sync();
     }
+#endif
 
     free(dA);
     free(dB);
