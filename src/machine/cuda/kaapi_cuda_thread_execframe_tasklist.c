@@ -51,7 +51,7 @@
 #include "kaapi_cuda_error.h"
 
 
-#define CONFIG_USE_EVENT 0
+#define CONFIG_USE_EVENT 1
 
 
 /* cuda task body */

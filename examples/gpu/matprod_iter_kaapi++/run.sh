@@ -16,7 +16,7 @@ export KAAPI_GPUSET='0~0'
 
 # volkov configuration
 bsizes="1 2 4 8 16 32" ;
-msizes="2048" ;
+msizes="2048 4096 8192" ;
 
 echo -n '# blocSize' ;
 for m in $msizes ; do

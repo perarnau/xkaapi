@@ -25,6 +25,15 @@
  * negligence, tort, or otherwise.
  *
  */
+
+// todo:
+// . verifier les resultats (numeriquement)
+// -> semblent meilleurs avec les events... qqchose de rate?
+// -> sinon utiliser les events plutot que refn
+// . implementer ka::Sync(@i)
+// . optimiser le pipeline (allocations bornees...)
+// -> voir les gains
+
 #include <iostream>
 #include <iomanip>
 #include <string>
