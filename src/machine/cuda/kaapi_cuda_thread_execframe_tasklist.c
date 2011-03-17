@@ -51,7 +51,16 @@
 #include "kaapi_cuda_error.h"
 
 
-#define CONFIG_USE_EVENT 0
+/* notes on using event:
+   if we dont use events, we use refcount.
+   Querying refcount is faster than querying
+   event BUT querying streams is much slower
+   than querying events (at least with cuda4.0).
+   If we use events, we dont need query streams.
+   An additionnal reason for using event is if
+   the user code queues more than one stuff.
+ */
+#define CONFIG_USE_EVENT 1
 
 
 /* cuda task body */
@@ -124,7 +133,11 @@ static inline int wait_fifo_destroy(wait_fifo_t* fifo)
 }
 
 static int wait_fifo_push
+#if CONFIG_USE_EVENT
+wait_fifo_t* fifo, void* data)
+#else
 (wait_fifo_t* fifo, void* data, unsigned int refn)
+#endif
 {
   /* todo: fifo specific allocator */
   wait_node_t* const node = malloc(sizeof(wait_node_t));
@@ -395,7 +408,11 @@ static int taskmove_body
   }
 
   /* add to completion port */
+#if CONFIG_USE_EVENT
+  wait_fifo_push(&wp->input_fifo, (void*)td);
+#else
   wait_fifo_push(&wp->input_fifo, (void*)td, nblocks);
+#endif
 
 #elif 1 /* 2d copy api */
 
@@ -462,14 +479,22 @@ static int taskmove_body
     return -1;
   }
 
+#if CONFIG_USE_EVENT
+  wait_fifo_push(&wp->input_fifo, (void*)td);
+#else
   wait_fifo_push(&wp->input_fifo, (void*)td, 1);
+#endif
 
 #elif 0 /* cublas_v2 */
 
   cublasSetMatrixAsync
     (sview->size[0], sview->size[1], sview->wordsize,
      hostptr, sview->lda, (void*)devptr, sview->size[1], wp->input_fifo.stream);
+#if CONFIG_USE_EVENT
+  wait_fifo_push(&wp->input_fifo, (void*)td);
+#else
   wait_fifo_push(&wp->input_fifo, (void*)td, 1);
+#endif
 
 #endif
   
@@ -682,11 +707,11 @@ int kaapi_cuda_thread_execframe_tasklist
 	td->fmt->entrypoint_wh[proc_type];
       kaapi_assert_debug(body);
 
-#if 0
-      printf("> wait_fifo_push(%lx)\n", (uintptr_t)td);
-#endif
-
+#if CONFIG_USE_EVENT
+      err = wait_fifo_push(&wp.kernel_fifo, (void*)td);
+#else
       err = wait_fifo_push(&wp.kernel_fifo, (void*)td, 1);
+#endif
       kaapi_assert_debug(err != -1);
 
       body(pc->sp, wp.kernel_fifo.stream);

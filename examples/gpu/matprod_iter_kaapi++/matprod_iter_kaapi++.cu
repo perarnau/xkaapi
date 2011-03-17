@@ -26,14 +26,6 @@
  *
  */
 
-// todo:
-// . utiliser les fonctions de copie 2d
-// . averaged running times
-// -> necessite liberation sur la carte
-// . implementer ka::Sync(@i)
-// . optimiser le pipeline (allocations bornees...)
-// -> voir les gains
-
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -97,7 +89,7 @@ typedef float double_type;
 
 
 // check results
-#define CONFIG_DO_CHECK 1
+#define CONFIG_DO_CHECK 0
 #if CONFIG_DO_CHECK
 
 # include <stdlib.h>
@@ -305,11 +297,13 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
       return ;
     }
 #elif CONFIG_USE_VOLKOV
+
     volkov_sgemm
     (
      custream,
      C.ptr(), A.ptr(), B.ptr(), A.dim(0), A.dim(1), B.dim(1)
     );
+
 #else
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
       (A.ptr(), B.ptr(), C.ptr(), A.dim(0));
