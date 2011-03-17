@@ -51,7 +51,7 @@
 #include "kaapi_cuda_error.h"
 
 
-#define CONFIG_USE_EVENT 1
+#define CONFIG_USE_EVENT 0
 
 
 /* cuda task body */
@@ -407,7 +407,6 @@ static int taskmove_body
   wait_fifo_push(&wp->input_fifo, (void*)td, 1);
 #endif
   
-
   /* dest view */
   dview->type = sview->type;
   dview->size[0] = sview->size[0];
@@ -424,12 +423,12 @@ static int taskmove_body
   mdi = arg->src_data->mdi;
   mode = mdi->version[0]->last_mode;
 
+#if 0
   if (KAAPI_ACCESS_IS_READ(mode))
   {
-#if 0
     printf("read_mode: %lx, %lx\n", arg->src_data->ptr.ptr, (uintptr_t)devptr);
-#endif
   }
+#endif
 
   if (KAAPI_ACCESS_IS_WRITE(mode))
   {

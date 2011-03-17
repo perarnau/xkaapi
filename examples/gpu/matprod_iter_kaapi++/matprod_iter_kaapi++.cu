@@ -27,9 +27,8 @@
  */
 
 // todo:
-// . verifier les resultats (numeriquement)
-// -> semblent meilleurs avec les events... qqchose de rate?
-// -> sinon utiliser les events plutot que refn
+// . averaged running times
+// -> necessite liberation sur la carte
 // . implementer ka::Sync(@i)
 // . optimiser le pipeline (allocations bornees...)
 // -> voir les gains
@@ -94,6 +93,59 @@ static int BLOCSIZE = 0;
 
 // no double type on gtx280
 typedef float double_type;
+
+
+// check results
+#define CONFIG_DO_CHECK 1
+#if CONFIG_DO_CHECK
+
+# include <stdlib.h>
+
+static int do_check
+(const double_type* a, const double_type* b, const double_type* c, unsigned int n)
+{
+  // a, b, c nxn matrices
+
+  double_type* const tmp = (double_type*)
+    malloc(n * n * sizeof(double_type));
+  if (tmp == NULL) return -1;
+
+  unsigned int i, j, k;
+
+  for (i = 0; i < n; ++i)
+  {
+    for (j = 0; j < n; ++j)
+    {
+      tmp[i * n +  j] = 0.;
+      for (k = 0; k < n; ++k)
+	tmp[i * n +  j] += a[i * n + k] * b[k * n + j];
+    }
+  }
+
+  int res = -1;
+
+  for (i = 0; i < n; ++i)
+  {
+    for (j = 0; j < n; ++j)
+    {
+      k = i * n + j;
+      if (abs(c[k] - tmp[k]) >= 0.001)
+      {
+	printf("invalid @%u,%u %f != %f\n", i, j, c[k], tmp[k]);
+	goto on_error;
+      }
+    }
+  }
+
+  res = 0;
+
+ on_error:
+  free(tmp);
+
+  return res;
+}
+#endif // CONFIG_DO_CHECK
+
 
 /* Task Print
  * this task prints the sum of the entries of an array 
@@ -217,14 +269,6 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
    ka::range2d_rw<double_type> C
   )
   {
-#if 0
-    printf("mulKernel(%lx, %lx, %lx) %d %d %d\n",
-	   (uintptr_t)A.ptr(),
-	   (uintptr_t)B.ptr(),
-	   (uintptr_t)C.ptr(),
-	   C.dim(0), C.dim(1), C.lda());
-#endif
-
     const CUstream custream = (CUstream)stream.stream;
 
     size_t mm = A.dim(0) * A.dim(0);
@@ -265,8 +309,8 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
      custream,
      'n', 'n',
      mnk, mnk, mnk,
-     1, A.ptr(), A.dim(0), B.ptr(), B.dim(0),
-     1, C.ptr(), C.dim(0)
+     1, A.ptr(), A.dim(1), B.ptr(), B.dim(1),
+     1, C.ptr(), C.dim(1)
     );
 #else
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
@@ -368,6 +412,11 @@ struct doit {
     }
 #endif
 
+#if CONFIG_DO_CHECK
+    if (do_check(dA, dB, dC, n) == -1)
+      printf("invalid matrix\n");
+#endif
+
     free(dA);
     free(dB);
     free(dC);
@@ -381,7 +430,6 @@ int main(int argc, char** argv)
 {
 #if CONFIG_USE_CUBLAS
   if (initialize_cublas() == -1) return ;
-  printf("bar\n");
 #endif
 
   try {
