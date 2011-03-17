@@ -27,6 +27,7 @@
  */
 
 // todo:
+// . utiliser les fonctions de copie 2d
 // . averaged running times
 // -> necessite liberation sur la carte
 // . implementer ka::Sync(@i)
@@ -47,8 +48,8 @@
 #endif // CONFIG_USE_CUBLAS
 
 #if CONFIG_USE_VOLKOV
-extern "C" void volkov_sgemm
-(CUstream, char, char, int, int, int, float, const float*, int, const float*, int, float, float*, int);
+extern void  volkov_sgemm
+(CUstream, float*, const float*, const float*, int, int, int);
 #endif
 
 // missing definition
@@ -112,11 +113,12 @@ static int do_check
 
   unsigned int i, j, k;
 
+  for (i = 0; i < n * n; ++i) tmp[i] = 0.;
+
   for (i = 0; i < n; ++i)
   {
     for (j = 0; j < n; ++j)
     {
-      tmp[i * n +  j] = 0.;
       for (k = 0; k < n; ++k)
 	tmp[i * n +  j] += a[i * n + k] * b[k * n + j];
     }
@@ -303,14 +305,10 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
       return ;
     }
 #elif CONFIG_USE_VOLKOV
-    const int mnk = A.dim(0);
     volkov_sgemm
     (
      custream,
-     'n', 'n',
-     mnk, mnk, mnk,
-     1, A.ptr(), A.dim(1), B.ptr(), B.dim(1),
-     1, C.ptr(), C.dim(1)
+     C.ptr(), A.ptr(), B.ptr(), A.dim(0), A.dim(1), B.dim(1)
     );
 #else
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
@@ -374,16 +372,21 @@ struct doit {
         return;
     }
 
-    // Populate B and C pseudo-randomly - 
-    // The matrices are populated with random numbers in the range (-1.0, +1.0)
     for(int i = 0; i < n * n; ++i) {
-        dB[i] = (float) ((i * i) % 1024 - 512) / 512;
-    }
-    for(int i = 0; i < n * n; ++i) {
-        dA[i] = (float) (((i + 1) * i) % 1024 - 512) / 512;
-    }
-    for(int i = 0; i < n * n; ++i) {
-        dC[i] = 0.0;
+      const double_type aval =
+	(double_type) (((i + 1) * i) % 1024 - 512) / 512;
+      const double_type bval =
+	(double_type)((i * i) % 1024 - 512) / 512;
+
+#if CONFIG_USE_VOLKOV // transpose if col major order 
+      const unsigned int index = ((i / n) * n) + i % n;
+#else
+      const unsigned int index = i;
+#endif
+
+      dA[index] = aval;
+      dB[index] = aval;
+      dC[index] = 0.;
     }
 
     ka::array<2,double_type> A(dA, n, n, n);
@@ -406,10 +409,8 @@ struct doit {
 
     // If n is small, print the results
 #if 0
-    if (n <= 32) {
-      ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
-      ka::Sync();
-    }
+    ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
+    ka::Sync();
 #endif
 
 #if CONFIG_DO_CHECK
