@@ -349,18 +349,7 @@ static int taskmove_body
 {
   kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
 
-#if 0
-  kaapi_processor_t* const proc = kaapi_get_current_processor();
-#endif
-
-#if 0
-  printf("%s: [%u:%u] (%lx:%lx -> %lx:%lx) %lx\n",
-	 __FUNCTION__,
-	 proc->kid, proc->proc_type,
-	 arg->src_data->ptr.asid, (uintptr_t)arg->src_data->ptr.ptr,
-	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
-	 (uintptr_t)arg->dest->mdi);
-#endif
+  /* todo: THIS CODE ASSUMES A 2d VIEW */
 
   kaapi_memory_view_t* const sview = &arg->src_data->view;
   kaapi_memory_view_t* const dview = &arg->dest->view;
@@ -370,16 +359,24 @@ static int taskmove_body
   kaapi_access_mode_t mode;
 
   /* for the copy */
-  const size_t hostsize = kaapi_memory_view_size(sview);
   void* const hostptr = (void*)arg->src_data->ptr.ptr;
+
+  const size_t devsize = sview->lda * sview->size[1] * sview->wordsize;
   CUdeviceptr devptr;
+
+  if (allocate_device_mem(&devptr, devsize)) return -1;
+
+  /* todo: optimize for equal transfers */
+
+#if 0 /* blocked transfer */
+
+  const size_t hostsize = kaapi_memory_view_size(sview);
+
+  /* start the async copy */
   size_t nblocks;
   size_t blocksize;
   size_t stridesize;
   size_t i;
-
-  /* start the async copy */
-  if (allocate_device_mem(&devptr, hostsize)) return -1;
 
   /* assume a 2d case */
   nblocks = hostsize / (sview->size[1] * sview->wordsize);
@@ -400,11 +397,80 @@ static int taskmove_body
   /* add to completion port */
   wait_fifo_push(&wp->input_fifo, (void*)td, nblocks);
 
-#if 0 /* cublas_v2 */
+#elif 1 /* 2d copy api */
+
+  CUresult res;
+  CUDA_MEMCPY2D m;
+
+#if 1 /* non registered memory (working) */
+
+  m.srcMemoryType = CU_MEMORYTYPE_HOST;
+  m.srcHost = hostptr;
+  m.srcPitch = sview->lda * sview->wordsize;
+  m.srcXInBytes = 0;
+  m.srcY = 0;
+
+#else /* register the host memory (not working) */
+
+  static const uintptr_t page_size = 0x1000UL;
+  static const uintptr_t lo_mask = 0x1000UL - 1UL;
+  static const uintptr_t hi_mask = ~(0x1000UL - 1UL);
+
+  uintptr_t aligned_addr = (uintptr_t)hostptr;
+  size_t aligned_size = hostsize;
+
+  /* addr may be misaligned */
+  if (aligned_addr & lo_mask)
+  {
+    aligned_addr = (uintptr_t)hostptr & hi_mask;
+    aligned_size = hostsize + (uintptr_t)hostptr - aligned_addr;
+  }
+
+  /* size may be misaligned */
+  if (aligned_size & lo_mask)
+    aligned_size = (aligned_size & hi_mask) + page_size;
+
+  res = cuMemHostRegister
+    ((void*)aligned_addr, aligned_size, CU_MEMHOSTREGISTER_PORTABLE);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemHostRegister", res);
+    return -1;
+  }
+
+  m.srcMemoryType = CU_MEMORYTYPE_HOST;
+  m.srcHost = (void*)aligned_addr;
+  m.srcPitch = sview->lda * sview->wordsize;
+  m.srcXInBytes = (uintptr_t)hostptr - (uintptr_t)aligned_addr;
+  m.srcY = 0;
+
+#endif /* register host memory */
+
+  m.dstXInBytes = 0;
+  m.dstY = 0;
+  m.dstMemoryType = CU_MEMORYTYPE_DEVICE;
+  m.dstDevice = devptr;
+  m.dstPitch = sview->size[1] * sview->wordsize;
+
+  m.WidthInBytes = sview->size[1] * sview->wordsize;
+  m.Height = sview->size[0];
+
+  res = cuMemcpy2DAsync(&m, wp->input_fifo.stream);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpy2DAsync", res);
+    return -1;
+  }
+
+  wait_fifo_push(&wp->input_fifo, (void*)td, 1);
+
+#elif 0 /* cublas_v2 */
+
   cublasSetMatrixAsync
     (sview->size[0], sview->size[1], sview->wordsize,
      hostptr, sview->lda, (void*)devptr, sview->size[1], wp->input_fifo.stream);
   wait_fifo_push(&wp->input_fifo, (void*)td, 1);
+
 #endif
   
   /* dest view */
@@ -423,19 +489,15 @@ static int taskmove_body
   mdi = arg->src_data->mdi;
   mode = mdi->version[0]->last_mode;
 
-#if 0
+#if 0 /* todo: revalidate as memory */
   if (KAAPI_ACCESS_IS_READ(mode))
   {
-    printf("read_mode: %lx, %lx\n", arg->src_data->ptr.ptr, (uintptr_t)devptr);
   }
 #endif
 
   if (KAAPI_ACCESS_IS_WRITE(mode))
   {
     const kaapi_globalid_t gid = kaapi_memory_address_space_getgid(thread->asid);
-#if 0
-    printf("write_mode: %lx, %lx\n", arg->src_data->ptr.ptr, (uintptr_t)devptr);
-#endif
     _kaapi_metadata_info_set_writer(mdi, thread->asid);
     mdi->data[gid].ptr.ptr = (uintptr_t)devptr;
     mdi->data[gid].ptr.asid = thread->asid;
