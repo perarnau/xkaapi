@@ -134,7 +134,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   else
 #endif
   err = kaapi_thread_execframe_tasklist( thread );
-  kaapi_assert( (err == 0) || (err == ECHILD) );
+  kaapi_assert( (err == 0) || (err == ECHILD) || (err == EWOULDBLOCK));
   
   KAAPI_ATOMIC_ADD( &tasklist->count_exec, tasklist->cnt_exectasks );
   /* here we wait that all tasks of the tasklist have been executed 

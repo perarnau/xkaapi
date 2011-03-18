@@ -297,13 +297,11 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
       return ;
     }
 #elif CONFIG_USE_VOLKOV
-
     volkov_sgemm
     (
      custream,
      C.ptr(), A.ptr(), B.ptr(), A.dim(0), A.dim(1), B.dim(1)
     );
-
 #else
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
       (A.ptr(), B.ptr(), C.ptr(), A.dim(0));
@@ -386,6 +384,11 @@ struct doit {
     ka::array<2,double_type> A(dA, n, n, n);
     ka::array<2,double_type> B(dB, n, n, n);
     ka::array<2,double_type> C(dC, n, n, n);
+
+    // TOREMOVE <-- running twice does not work
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
+    ka::Sync();
+    // TOREMOVE
 
     // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();

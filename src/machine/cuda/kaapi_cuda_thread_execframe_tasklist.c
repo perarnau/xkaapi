@@ -134,7 +134,7 @@ static inline int wait_fifo_destroy(wait_fifo_t* fifo)
 
 static int wait_fifo_push
 #if CONFIG_USE_EVENT
-wait_fifo_t* fifo, void* data)
+(wait_fifo_t* fifo, void* data)
 #else
 (wait_fifo_t* fifo, void* data, unsigned int refn)
 #endif
@@ -619,6 +619,15 @@ int kaapi_cuda_thread_execframe_tasklist
   kaapi_assert_debug(thread->sfp->tasklist != 0);
   tl = thread->sfp->tasklist;
 
+#if 0 /* TOREMOVE */
+  {
+    printf("-- readylist: (%lu, %lx)\n", tl->cnt_tasks, tl->td_ready);
+    for (al = tl->readylist.front; al != NULL; al = al->next)
+      printf("%lx, ", (uintptr_t)al);
+    printf("\n");
+  }
+#endif /* TOREMOVE */
+
   if (tl->td_ready == 0)
   {
     kaapi_workqueue_index_t ntasks = 0;
@@ -659,6 +668,12 @@ int kaapi_cuda_thread_execframe_tasklist
       tl->context.td = td;
       tl->context.fp = fp;
       tl->cnt_exectasks += cnt_exec;
+
+#if 0 /* TOREMOVE */
+      free(tl->td_ready);
+      tl->td_ready = 0;
+#endif /* TOREMOVE */
+
       return err;
     }
 
@@ -803,6 +818,15 @@ int kaapi_cuda_thread_execframe_tasklist
 	/* bcast task are always ready */
 	td_top[local_beg--] = al->td;
 	has_pushed = 1;
+
+#if 0 /* TOREMOVE */
+	if ((al == td->bcast->back) && (al->next != NULL))
+	{
+	  /* bug here: end of list but next non null */
+	  printf("%s: %d\n", __FUNCTION__, __LINE__);
+	  break ;
+	}
+#endif /* TOREMOVE */
       }
     }
 
@@ -831,6 +855,11 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* update executed tasks */
   tl->cnt_exectasks += cnt_exec;
+
+#if 0 /* TOREMOVE */
+  free(tl->td_ready);
+  tl->td_ready = 0;
+#endif /* TOREMOVE */
   
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)
