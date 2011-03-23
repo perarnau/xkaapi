@@ -89,7 +89,7 @@ typedef float double_type;
 
 
 // check results
-#define CONFIG_DO_CHECK 0
+#define CONFIG_DO_CHECK 1
 #if CONFIG_DO_CHECK
 
 # include <stdlib.h>
@@ -139,6 +139,17 @@ static int do_check
   return res;
 }
 #endif // CONFIG_DO_CHECK
+
+
+// fetching task
+struct TaskMatFetch : public ka::Task<1>::Signature<
+  ka::RW<ka::range2d<double_type> > // C
+>{};
+
+template<>
+struct TaskBodyCPU<TaskMatFetch> {
+  void operator()( ka::range2d_rw<double_type>) {}
+};
 
 
 /* Task Print
@@ -334,6 +345,9 @@ struct TaskBodyCPU<TaskMatProduct> {
         {
           ka::rangeindex rk(k, k+bloc);
           ka::Spawn<TaskSeqMatProduct>()(A(ri,rk), B(rk,rj), C(ri,rj));
+#if 0 // taskfetch
+          ka::Spawn<TaskMatFetch>()(C(ri,rj));
+#endif // taskfetch
         }
       }
     }
@@ -385,10 +399,10 @@ struct doit {
     ka::array<2,double_type> B(dB, n, n, n);
     ka::array<2,double_type> C(dC, n, n, n);
 
-    // TOREMOVE <-- running twice does not work
+#if 0 // TOREMOVE <-- running twice does not work
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
-    // TOREMOVE
+#endif // TOREMOVE
 
     // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
@@ -399,7 +413,6 @@ struct doit {
     // it does not reflect the execution pipeline
     double t1 = kaapi_get_elapsedtime();
 
-    // synchronize host memory
     kaapi_memory_synchronize();
 
     std::cout << t1 - t0; // seconds

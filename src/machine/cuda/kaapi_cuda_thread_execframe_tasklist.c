@@ -132,17 +132,9 @@ static inline int wait_fifo_destroy(wait_fifo_t* fifo)
   return 0;
 }
 
-static int wait_fifo_push
-#if CONFIG_USE_EVENT
-(wait_fifo_t* fifo, void* data)
-#else
-(wait_fifo_t* fifo, void* data, unsigned int refn)
-#endif
+static void wait_fifo_push
+(wait_fifo_t* fifo, wait_node_t* node)
 {
-  /* todo: fifo specific allocator */
-  wait_node_t* const node = malloc(sizeof(wait_node_t));
-  if (node == NULL) return -1;
-
   if (fifo->tail == NULL)
     fifo->tail = node;
   else
@@ -151,20 +143,18 @@ static int wait_fifo_push
   node->prev = NULL;
   node->next = fifo->head;
   fifo->head = node;
+}
+
+static void wait_fifo_destroy_node
+(wait_fifo_t* fifo, wait_node_t* node)
+{
+  /* fifo unused */
 
 #if CONFIG_USE_EVENT
-  CUresult res;
-  res = cuEventCreate(&node->event, CU_EVENT_DISABLE_TIMING);
-  if (res!=CUDA_SUCCESS) printf("cuEventCreate\n");
-  res = cuEventRecord(node->event, fifo->stream);
-  if (res!=CUDA_SUCCESS) printf("cuEventCreate\n");
-#else
-  node->refn = refn;
+  cuEventDestroy(node->event);
 #endif
 
-  node->data = data;
-
-  return 0;
+  free(node);
 }
 
 static void* wait_fifo_pop(wait_fifo_t* fifo)
@@ -180,13 +170,72 @@ static void* wait_fifo_pop(wait_fifo_t* fifo)
   else
     fifo->tail->next = NULL;
 
-#if CONFIG_USE_EVENT
-  cuEventDestroy(node->event);
-#endif
-
-  free(node);
+  wait_fifo_destroy_node(fifo, node);
 
   return data;
+}
+
+static wait_node_t* wait_fifo_create_node
+#if CONFIG_USE_EVENT
+(wait_fifo_t* fifo, void* data)
+#else
+(wait_fifo_t* fifo, void* data, unsigned int refn)
+#endif
+{
+#if CONFIG_USE_EVENT
+  CUresult res;
+#endif
+
+  wait_node_t* const node = malloc(sizeof(wait_node_t));
+  if (node == NULL) return NULL;
+
+#if CONFIG_USE_EVENT
+  res = cuEventCreate(&node->event, CU_EVENT_DISABLE_TIMING);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuStreamCreate", res);
+    return NULL;
+  }
+
+  res = cuEventRecord(node->event, fifo->stream);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuEventRecord", res);
+    cuEventDestroy(node->event);
+    return NULL;
+  }
+#else
+  node->refn = refn;
+#endif
+
+  node->data = data;
+
+  node->prev = NULL;
+  node->next = NULL;
+
+  return node;
+}
+
+static int wait_fifo_create_push
+#if CONFIG_USE_EVENT
+(wait_fifo_t* fifo, void* data)
+#else
+(wait_fifo_t* fifo, void* data, unsigned int refn)
+#endif
+{
+  /* create and push a node */
+
+  wait_node_t* const node = wait_fifo_create_node
+#if CONFIG_USE_EVENT
+    (fifo, data);
+#else
+    (fifo, data, refn);
+#endif
+  if (node == NULL) return -1;
+
+  wait_fifo_push(fifo, node);
+
+  return 0;
 }
 
 static inline unsigned int wait_fifo_is_empty(wait_fifo_t* fifo)
@@ -295,45 +344,8 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 }
 
 
-/* inlined internal bodies
+/* inlined internal task bodies
  */
-
-static inline int memcpy_htod
-(CUstream stream, CUdeviceptr devptr, const void* hostptr, size_t size)
-{
-  const CUresult res = cuMemcpyHtoDAsync
-    (devptr, hostptr, size, stream);
-
-#if 0
-  printf("htod(%lx, %lx, %lx)\n", (uintptr_t)devptr, (uintptr_t)hostptr, size);
-#endif
-  
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuMemcpyHToDAsync", res);
-    return -1;
-  }
-  
-  return 0;
-}
-
-static inline int memcpy_dtoh_sync
-(void* hostptr, CUdeviceptr devptr, size_t size)
-{
-  const CUresult res = cuMemcpyDtoH(hostptr, devptr, size);
-
-#if 0
-  printf("dtoh(%lx, %lx, %lx)\n", (uintptr_t)hostptr, (uintptr_t)devptr, size);
-#endif
-
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuMemcpyDToHSync", res);
-    return -1;
-  }
-  
-  return 0;
-}
 
 static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
 {
@@ -352,37 +364,40 @@ static inline void free_device_mem(CUdeviceptr devptr)
   cuMemFree(devptr);
 }
 
-static int taskmove_body
-(
- kaapi_thread_context_t* thread,
- wait_port_t* wp,
- kaapi_taskdescr_t* td,
- void* sp, kaapi_thread_t* unused
-)
+
+#if 0 /* UNUSED, block transfer */
+
+static inline int memcpy_htod
+(CUstream stream, CUdeviceptr devptr, const void* hostptr, size_t size)
 {
-  kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
+  const CUresult res = cuMemcpyHtoDAsync
+    (devptr, hostptr, size, stream);
 
-  /* todo: THIS CODE ASSUMES A 2d VIEW */
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyHToDAsync", res);
+    return -1;
+  }
+  
+  return 0;
+}
 
-  kaapi_memory_view_t* const sview = &arg->src_data->view;
-  kaapi_memory_view_t* const dview = &arg->dest->view;
+static inline int memcpy_dtoh_sync
+(void* hostptr, CUdeviceptr devptr, size_t size)
+{
+  const CUresult res = cuMemcpyDtoH(hostptr, devptr, size);
 
-  /* memory information */
-  kaapi_metadata_info_t* mdi;
-  kaapi_access_mode_t mode;
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemcpyDToHSync", res);
+    return -1;
+  }
+  
+  return 0;
+}
 
-  /* for the copy */
-  void* const hostptr = (void*)arg->src_data->ptr.ptr;
-
-  const size_t devsize = sview->lda * sview->size[1] * sview->wordsize;
-  CUdeviceptr devptr;
-
-  if (allocate_device_mem(&devptr, devsize)) return -1;
-
-  /* todo: optimize for equal transfers */
-
-#if 0 /* blocked transfer */
-
+static void block_transfer_example(void)
+{
   const size_t hostsize = kaapi_memory_view_size(sview);
 
   /* start the async copy */
@@ -409,25 +424,19 @@ static int taskmove_body
 
   /* add to completion port */
 #if CONFIG_USE_EVENT
-  wait_fifo_push(&wp->input_fifo, (void*)td);
+  wait_fifo_create_push(&wp->input_fifo, (void*)td);
 #else
-  wait_fifo_push(&wp->input_fifo, (void*)td, nblocks);
+  wait_fifo_create_push(&wp->input_fifo, (void*)td, nblocks);
 #endif
+}
 
-#elif 1 /* 2d copy api */
+#endif /* UNUSED, block transfer */
 
-  CUresult res;
-  CUDA_MEMCPY2D m;
 
-#if 1 /* non registered memory (working) */
+#if 0 /* UNUSED, not working with 2d */
 
-  m.srcMemoryType = CU_MEMORYTYPE_HOST;
-  m.srcHost = hostptr;
-  m.srcPitch = sview->lda * sview->wordsize;
-  m.srcXInBytes = 0;
-  m.srcY = 0;
-
-#else /* register the host memory (not working) */
+static void register_memory_example(void)
+{
 
   static const uintptr_t page_size = 0x1000UL;
   static const uintptr_t lo_mask = 0x1000UL - 1UL;
@@ -460,71 +469,240 @@ static int taskmove_body
   m.srcPitch = sview->lda * sview->wordsize;
   m.srcXInBytes = (uintptr_t)hostptr - (uintptr_t)aligned_addr;
   m.srcY = 0;
+}
+#endif /* UNUSED, not working with 2d */
 
-#endif /* register host memory */
 
-  m.dstXInBytes = 0;
-  m.dstY = 0;
-  m.dstMemoryType = CU_MEMORYTYPE_DEVICE;
-  m.dstDevice = devptr;
-  m.dstPitch = sview->size[1] * sview->wordsize;
+/* TODO: replace xxx_ with kaapi_ */
 
-  m.WidthInBytes = sview->size[1] * sview->wordsize;
-  m.Height = sview->size[0];
+static int xxx_memory_cast_view
+(
+ kaapi_memory_view_t* dview,
+ const kaapi_memory_view_t* sview
+)
+{
+  /* TODO: asid as arguments.
+     assume dview on gpu, sview on cpu.
+  */
 
-  res = cuMemcpy2DAsync(&m, wp->input_fifo.stream);
-  if (res != CUDA_SUCCESS)
+  switch (sview->type)
   {
-    kaapi_cuda_error("cuMemcpy2DAsync", res);
+  case KAAPI_MEMORY_VIEW_1D:
+    {
+      dview->type = sview->type;
+      dview->size[0] = sview->size[0];
+      dview->lda = sview->size[0];
+      dview->wordsize = sview->wordsize;
+      break ;
+    }
+
+  case KAAPI_MEMORY_VIEW_2D:
+    {
+      dview->type = sview->type;
+      dview->size[0] = sview->size[0];
+      dview->size[1] = sview->size[1];
+      dview->lda = sview->size[1];
+      dview->wordsize = sview->wordsize;
+      break ;
+    }
+
+  default:
+    {
+      /* TODO */
+      kaapi_assert(0);
+      return -1;
+      break ;
+    }
+  }
+
+  return 0;
+}
+
+typedef struct async_context
+{
+  /* context for gpu to host async copy */
+  wait_port_t* wp;
+  kaapi_taskdescr_t* td;
+} async_context_t;
+
+static int xxx_memory_async_copy
+(
+ kaapi_pointer_t dkptr,
+ const kaapi_memory_view_t* dview,
+ const void* sptr,
+ const kaapi_memory_view_t* sview,
+ void* opaak_data
+)
+{
+  /* assume host to cpu transfer
+   */
+
+  /* assume dkptr allocated
+     aussme dview initialized
+   */
+
+  async_context_t* const ac = opaak_data;
+  const uintptr_t dptr = dkptr.ptr;
+  wait_node_t* node;
+
+  /* push before copying, so that failure is recoverable */
+
+  node = wait_fifo_create_node
+#if CONFIG_USE_EVENT
+    (&ac->wp->input_fifo, (void*)ac->td);
+#else
+    (&ac->wp->input_fifo, (void*)ac->td, 1);
+#endif
+  if (node == NULL) return -1;
+
+  switch (sview->type)
+  {
+  case KAAPI_MEMORY_VIEW_1D:
+    {
+      const size_t size = sview->size[0] * sview->wordsize;
+
+      const CUresult res = cuMemcpyHtoDAsync
+	((CUdevice)dptr, sptr, size, ac->wp->input_fifo.stream);
+      if (res != CUDA_SUCCESS)
+      {
+	kaapi_cuda_error("cuMemcpy2DAsync", res);
+	goto on_error;
+      }
+
+      break ;
+    }
+
+  case KAAPI_MEMORY_VIEW_2D:
+    {
+      /* TODO: optimize for contiguous case */
+
+      CUresult res;
+      CUDA_MEMCPY2D m;
+
+      m.srcMemoryType = CU_MEMORYTYPE_HOST;
+      m.srcHost = sptr;
+      m.srcPitch = sview->lda * sview->wordsize;
+      m.srcXInBytes = 0;
+      m.srcY = 0;
+
+      m.dstXInBytes = 0;
+      m.dstY = 0;
+      m.dstMemoryType = CU_MEMORYTYPE_DEVICE;
+      m.dstDevice = dptr;
+      m.dstPitch = sview->size[1] * sview->wordsize;
+
+      m.WidthInBytes = sview->size[1] * sview->wordsize;
+      m.Height = sview->size[0];
+
+      res = cuMemcpy2DAsync(&m, ac->wp->input_fifo.stream);
+      if (res != CUDA_SUCCESS)
+      {
+	kaapi_cuda_error("cuMemcpy2DAsync", res);
+	goto on_error;
+      }
+
+      break ;
+    }
+
+    /* not supported */
+  default:
+    {
+      kaapi_assert(0);
+      goto on_error;
+      break ;
+    }
+  }
+
+  /* on success, pushes a new node in fifo */
+  wait_fifo_push(&ac->wp->input_fifo, node);
+  return 0;
+
+ on_error:
+  wait_fifo_destroy_node(&ac->wp->input_fifo, node);
+  return -1;
+}
+
+static int taskmove_body
+(
+ kaapi_thread_context_t* thread,
+ wait_port_t* wp,
+ kaapi_taskdescr_t* td,
+ void* sp, kaapi_thread_t* unused
+)
+{
+  kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
+
+  kaapi_memory_view_t* const sview = &arg->src_data->view;
+  kaapi_memory_view_t* const dview = &arg->dest->view;
+
+  /* memory information */
+  kaapi_metadata_info_t* mdi;
+  kaapi_access_mode_t mode;
+
+  /* for the copy */
+  void* const sptr = (void*)arg->src_data->ptr.ptr;
+
+  const size_t dsize = sview->lda * sview->size[1] * sview->wordsize;
+  void* dptr;
+  kaapi_pointer_t dkptr;
+
+  async_context_t ac;
+
+  /* cast the sview to dview */
+
+  if (xxx_memory_cast_view(dview, sview))
+    return -1;
+
+  /* allocate destination memory */
+
+#if 1 /* TODO: use memory layer */
+  if (allocate_device_mem((CUdeviceptr*)&dptr, dsize))
+    return -1;
+#endif /* TODO */
+
+  /* cast to kaapi pointer */
+
+  dkptr.asid = thread->asid;
+  dkptr.ptr = (uintptr_t)dptr;
+
+  /* starts an async transfer */
+
+  ac.wp = wp;
+  ac.td = td;
+
+  if (xxx_memory_async_copy(dkptr, dview, sptr, sview, (void*)&ac))
+  {
+#if 1 /* TODO: use memory layer */
+    free_device_mem((CUdeviceptr)dptr);
+#endif /* TODO */
     return -1;
   }
 
-#if CONFIG_USE_EVENT
-  wait_fifo_push(&wp->input_fifo, (void*)td);
-#else
-  wait_fifo_push(&wp->input_fifo, (void*)td, 1);
-#endif
-
-#elif 0 /* cublas_v2 */
-
-  cublasSetMatrixAsync
-    (sview->size[0], sview->size[1], sview->wordsize,
-     hostptr, sview->lda, (void*)devptr, sview->size[1], wp->input_fifo.stream);
-#if CONFIG_USE_EVENT
-  wait_fifo_push(&wp->input_fifo, (void*)td);
-#else
-  wait_fifo_push(&wp->input_fifo, (void*)td, 1);
-#endif
-
-#endif
-  
-  /* dest view */
-  dview->type = sview->type;
-  dview->size[0] = sview->size[0];
-  dview->size[1] = sview->size[1];
-  dview->lda = sview->size[1];
-  dview->wordsize = sview->wordsize;
-
   /* update the task args */
-  arg->dest->ptr.ptr = (uintptr_t)devptr;
-  arg->dest->ptr.asid = 0;
+
+  arg->dest->ptr = dkptr;
   arg->dest->mdi = arg->src_data->mdi;
 
   /* update memory information */
+
   mdi = arg->src_data->mdi;
   mode = mdi->version[0]->last_mode;
 
-#if 0 /* todo: revalidate as memory */
+#if 0 /* TODO: revalidate as memory */
   if (KAAPI_ACCESS_IS_READ(mode))
   {
   }
-#endif
+#endif /* TODO */
+
+  /* validate as */
 
   if (KAAPI_ACCESS_IS_WRITE(mode))
   {
-    const kaapi_globalid_t gid = kaapi_memory_address_space_getgid(thread->asid);
+    const kaapi_globalid_t gid =
+      kaapi_memory_address_space_getgid(thread->asid);
+
     _kaapi_metadata_info_set_writer(mdi, thread->asid);
-    mdi->data[gid].ptr.ptr = (uintptr_t)devptr;
+    mdi->data[gid].ptr.ptr = (uintptr_t)dptr;
     mdi->data[gid].ptr.asid = thread->asid;
     mdi->data[gid].view = *dview;
   }
@@ -535,14 +713,18 @@ static int taskmove_body
 static int taskalloc_body
 (wait_port_t* wp, kaapi_taskdescr_t* td, void* sp, kaapi_thread_t* thread)
 {
+#if 0 /* TOREMOVE */
   printf("%s\n", __FUNCTION__);
+#endif
   return 0;
 }
 
 static int taskfinalizer_body
 (wait_port_t* wp, kaapi_taskdescr_t* td, void* sp, kaapi_thread_t* thread)
 {
+#if 0 /* TOREMOVE */
   printf("%s\n", __FUNCTION__);
+#endif
   return 0;
 }
 
@@ -595,9 +777,9 @@ int kaapi_cuda_thread_execframe_tasklist
   /* completion port */
   wait_port_t wp;
 
-#if 0 /* to_remove */
+#if 0 /* TOREMOVE */
   printf("%s\n", __FUNCTION__);
-#endif /* to_remove */
+#endif /* TOREMOVE */
 
   /* to_remove: create a new address space
      so that data are considered to be present
@@ -720,12 +902,13 @@ int kaapi_cuda_thread_execframe_tasklist
     {
       cuda_task_body_t body = (cuda_task_body_t)
 	td->fmt->entrypoint_wh[proc_type];
+
       kaapi_assert_debug(body);
 
 #if CONFIG_USE_EVENT
-      err = wait_fifo_push(&wp.kernel_fifo, (void*)td);
+      err = wait_fifo_create_push(&wp.kernel_fifo, (void*)td);
 #else
-      err = wait_fifo_push(&wp.kernel_fifo, (void*)td, 1);
+      err = wait_fifo_create_push(&wp.kernel_fifo, (void*)td, 1);
 #endif
       kaapi_assert_debug(err != -1);
 

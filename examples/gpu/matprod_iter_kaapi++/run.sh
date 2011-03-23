@@ -15,8 +15,8 @@ export KAAPI_CPUSET=
 export KAAPI_GPUSET='1~0'
 
 # small test configuration
-bsizes="1" ;
-msizes="32" ;
+# bsizes="1" ;
+# msizes="32" ;
 
 # volkov configuration
 # bsizes="1 2 4 8 16 32" ;
@@ -25,6 +25,9 @@ msizes="32" ;
 # test configuration
 # bsizes="1 2 4 8 16 32" ;
 # msizes="32 64 256 512" ;
+
+bsizes="1 2 4 8 16 32" ;
+msizes="32 64 256" ;
 
 echo -n '# blocSize' ;
 for m in $msizes ; do
@@ -36,7 +39,7 @@ for b in $bsizes; do
     echo -n $b;
     for m in $msizes ; do
 	echo -n ' ' ;
-	KAAPI_STACKSIZE=260046848 gdb ./a.out $m $b ;
+	KAAPI_STACKSIZE=260046848 ./a.out $m $b ;
     done
     echo ;
 done
