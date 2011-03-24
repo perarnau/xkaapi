@@ -44,6 +44,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <cuda.h>
 #include <sys/types.h>
 #include "kaapi_impl.h"
@@ -67,14 +68,21 @@
 typedef void (*cuda_task_body_t)(void*, CUstream);
 
 
-/* wait fifo.
+/* . wait node
+   item contained by a fifo used to associate
+   cuda event and context.
+   . wait fifo
    cuda stream notifications dont pass
    data back to the user, so we need a
    way to associate a stream event with
    some app specific data.
-   a refn is used since we may want to
-   associate a node with 3 cuda event
+   a refn may be useful when not using
+   event since we may want to associate
+   a node with more than one cuda event
    completion (see taskmove).
+   . wait port
+   a wait port consists of 3 wait fifos
+   for input, kernel and output streams.
  */
 
 typedef struct wait_node
@@ -83,9 +91,11 @@ typedef struct wait_node
 
 #if CONFIG_USE_EVENT
   CUevent event;
-#else
-  unsigned int refn;
 #endif
+
+#if 0 /* UNUSED_REFN, see above comment */
+  unsigned int refn;
+#endif /* UNUSED_REFN */
 
   struct wait_node* prev;
   struct wait_node* next;
@@ -97,6 +107,25 @@ typedef struct wait_fifo
   wait_node_t* head;
   wait_node_t* tail;
 } wait_fifo_t;
+
+
+typedef struct wait_port
+{
+  wait_fifo_t input_fifo;
+  wait_fifo_t output_fifo;
+  wait_fifo_t kernel_fifo;
+
+  /* node allocator */
+
+#if defined(KAAPI_DEBUG)
+  unsigned int node_count;
+#endif
+
+  unsigned int node_pos;
+  wait_node_t nodes[1];
+
+} wait_port_t;
+
 
 static inline int wait_fifo_create(wait_fifo_t* fifo)
 {
@@ -113,6 +142,14 @@ static inline int wait_fifo_create(wait_fifo_t* fifo)
   return 0;
 }
 
+static void wait_fifo_destroy_node
+(wait_node_t* node)
+{
+#if CONFIG_USE_EVENT
+  cuEventDestroy(node->event);
+#endif
+}
+
 static inline int wait_fifo_destroy(wait_fifo_t* fifo)
 {
   wait_node_t* pos = fifo->head;
@@ -121,7 +158,7 @@ static inline int wait_fifo_destroy(wait_fifo_t* fifo)
   {
     wait_node_t* const tmp = pos;
     pos = pos->next;
-    free(tmp);
+    wait_fifo_destroy_node(tmp);
   }
 
   fifo->head = NULL;
@@ -145,18 +182,6 @@ static void wait_fifo_push
   fifo->head = node;
 }
 
-static void wait_fifo_destroy_node
-(wait_fifo_t* fifo, wait_node_t* node)
-{
-  /* fifo unused */
-
-#if CONFIG_USE_EVENT
-  cuEventDestroy(node->event);
-#endif
-
-  free(node);
-}
-
 static void* wait_fifo_pop(wait_fifo_t* fifo)
 {
   /* assume fifo not empty */
@@ -170,30 +195,30 @@ static void* wait_fifo_pop(wait_fifo_t* fifo)
   else
     fifo->tail->next = NULL;
 
-  wait_fifo_destroy_node(fifo, node);
+  wait_fifo_destroy_node(node);
 
   return data;
 }
 
 static wait_node_t* wait_fifo_create_node
-#if CONFIG_USE_EVENT
-(wait_fifo_t* fifo, void* data)
-#else
-(wait_fifo_t* fifo, void* data, unsigned int refn)
-#endif
+(wait_port_t* wp, wait_fifo_t* fifo, void* data)
 {
 #if CONFIG_USE_EVENT
   CUresult res;
 #endif
 
-  wait_node_t* const node = malloc(sizeof(wait_node_t));
-  if (node == NULL) return NULL;
+  wait_node_t* const node = &wp->nodes[wp->node_pos];
+
+  kaapi_assert_debug(wp->node_pos < wp->node_count);
+
+  ++wp->node_pos;
 
 #if CONFIG_USE_EVENT
   res = cuEventCreate(&node->event, CU_EVENT_DISABLE_TIMING);
   if (res != CUDA_SUCCESS)
   {
     kaapi_cuda_error("cuStreamCreate", res);
+    --wp->node_pos;
     return NULL;
   }
 
@@ -201,10 +226,13 @@ static wait_node_t* wait_fifo_create_node
   if (res != CUDA_SUCCESS)
   {
     kaapi_cuda_error("cuEventRecord", res);
+    --wp->node_pos;
     cuEventDestroy(node->event);
     return NULL;
   }
-#else
+#endif
+
+#if 0 /* UNUSED_REFN */
   node->refn = refn;
 #endif
 
@@ -217,20 +245,11 @@ static wait_node_t* wait_fifo_create_node
 }
 
 static int wait_fifo_create_push
-#if CONFIG_USE_EVENT
-(wait_fifo_t* fifo, void* data)
-#else
-(wait_fifo_t* fifo, void* data, unsigned int refn)
-#endif
+(wait_port_t* wp, wait_fifo_t* fifo, void* data)
 {
   /* create and push a node */
 
-  wait_node_t* const node = wait_fifo_create_node
-#if CONFIG_USE_EVENT
-    (fifo, data);
-#else
-    (fifo, data, refn);
-#endif
+  wait_node_t* const node = wait_fifo_create_node(wp, fifo, data);
   if (node == NULL) return -1;
 
   wait_fifo_push(fifo, node);
@@ -272,7 +291,7 @@ static inline void* wait_fifo_next(wait_fifo_t* fifo)
   if (wait_fifo_is_empty(fifo)) return NULL;
   else if (wait_fifo_is_ready(fifo) == 0) return NULL;
 
-#if (CONFIG_USE_EVENT == 0)
+#if 0 /* UNUSED_REFN */
   if (--fifo->tail->refn) return NULL;
 #endif
 
@@ -280,17 +299,8 @@ static inline void* wait_fifo_next(wait_fifo_t* fifo)
 }
 
 
-/* wait port.
-   a wait port consists of 3 wait fifos
-   for input, kernel and output streams.
+/* wait port routines.
  */
-
-typedef struct wait_port
-{
-  wait_fifo_t input_fifo;
-  wait_fifo_t output_fifo;
-  wait_fifo_t kernel_fifo;
-} wait_port_t;
 
 static void wait_port_destroy(wait_port_t* wp)
 {
@@ -298,27 +308,46 @@ static void wait_port_destroy(wait_port_t* wp)
   wait_fifo_destroy(&wp->input_fifo);
   wait_fifo_destroy(&wp->output_fifo);
   wait_fifo_destroy(&wp->kernel_fifo);
+
+  free(wp);
 }
 
-static int wait_port_create(wait_port_t* wp)
+static wait_port_t* wait_port_create(unsigned int node_count)
 {
+  /* node_count the max number of allocatable nodes */
+
+  const size_t total_size =
+    offsetof(wait_port_t, nodes) + node_count * sizeof(wait_node_t);
+
+  wait_port_t* const wp = malloc(total_size);
+  if (wp == NULL) return NULL;
+
+#if defined(KAAPI_DEBUG)
+  wp->node_count = node_count;
+#endif
+  wp->node_pos = 0;
+
   if (wait_fifo_create(&wp->input_fifo))
-  {
-    return -1;
-  }
+    goto on_error;
+
   if (wait_fifo_create(&wp->output_fifo))
   {
     wait_fifo_destroy(&wp->input_fifo);
-    return -1;
+    goto on_error;
   }
-  else if (wait_fifo_create(&wp->kernel_fifo))
+
+  if (wait_fifo_create(&wp->kernel_fifo))
   {
     wait_fifo_destroy(&wp->input_fifo);
     wait_fifo_destroy(&wp->output_fifo);
-    return -1;
+    goto on_error;
   }
 
-  return 0;
+  return wp;
+
+ on_error:
+  free(wp);
+  return NULL;
 }
 
 static int wait_port_next(wait_port_t* wp, kaapi_taskdescr_t** td)
@@ -422,12 +451,8 @@ static void block_transfer_example(void)
     );
   }
 
-  /* add to completion port */
-#if CONFIG_USE_EVENT
-  wait_fifo_create_push(&wp->input_fifo, (void*)td);
-#else
-  wait_fifo_create_push(&wp->input_fifo, (void*)td, nblocks);
-#endif
+  /* add to completion port. pass nblocks if refn used. */
+  wait_fifo_create_push(wp, &wp->input_fifo, (void*)td);
 }
 
 #endif /* UNUSED, block transfer */
@@ -548,11 +573,7 @@ static int xxx_memory_async_copy
   /* push before copying, so that failure is recoverable */
 
   node = wait_fifo_create_node
-#if CONFIG_USE_EVENT
-    (&ac->wp->input_fifo, (void*)ac->td);
-#else
-    (&ac->wp->input_fifo, (void*)ac->td, 1);
-#endif
+    (ac->wp, &ac->wp->input_fifo, (void*)ac->td);
   if (node == NULL) return -1;
 
   switch (sview->type)
@@ -618,7 +639,7 @@ static int xxx_memory_async_copy
   return 0;
 
  on_error:
-  wait_fifo_destroy_node(&ac->wp->input_fifo, node);
+  wait_fifo_destroy_node(node);
   return -1;
 }
 
@@ -775,7 +796,7 @@ int kaapi_cuda_thread_execframe_tasklist
   const unsigned int proc_type = thread->proc->proc_type;
 
   /* completion port */
-  wait_port_t wp;
+  wait_port_t* wp = NULL;
 
 #if 0 /* TOREMOVE */
   printf("%s\n", __FUNCTION__);
@@ -792,14 +813,19 @@ int kaapi_cuda_thread_execframe_tasklist
   if (cuCtxPushCurrent(thread->proc->cuda_proc.ctx) != CUDA_SUCCESS)
     return -1;
 
-  /* todo: should be done once per proc */
-  if (wait_port_create(&wp) == -1) return -1;
-
   /* bootstrap the readylist */
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe + KAAPI_MAX_RECCALL);
   kaapi_assert_debug(thread->sfp->tasklist != 0);
   tl = thread->sfp->tasklist;
+
+  /* todo: should be done once per proc */
+  wp = wait_port_create(tl->cnt_tasks);
+  if (wp == NULL)
+  {
+    cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
+    return -1;
+  }
 
 #if 0 /* TOREMOVE */
   {
@@ -905,14 +931,12 @@ int kaapi_cuda_thread_execframe_tasklist
 
       kaapi_assert_debug(body);
 
-#if CONFIG_USE_EVENT
-      err = wait_fifo_create_push(&wp.kernel_fifo, (void*)td);
-#else
-      err = wait_fifo_create_push(&wp.kernel_fifo, (void*)td, 1);
-#endif
+      err = wait_fifo_create_push
+	(wp, &wp->kernel_fifo, (void*)td);
+
       kaapi_assert_debug(err != -1);
 
-      body(pc->sp, wp.kernel_fifo.stream);
+      body(pc->sp, wp->kernel_fifo.stream);
     }
     else /* internal task */
     {
@@ -924,11 +948,11 @@ int kaapi_cuda_thread_execframe_tasklist
 	 passing the taskdescr and wait port.
        */
       if (body == kaapi_taskmove_body)
-	taskmove_body(thread, &wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+	taskmove_body(thread, wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskalloc_body)
-	taskalloc_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+	taskalloc_body(wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskfinalizer_body)
-	taskfinalizer_body(&wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+	taskfinalizer_body(wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else
 	body(pc->sp, (kaapi_thread_t*)thread->sfp);
     }
@@ -950,14 +974,14 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* wait for any completion */
 /*  do_wait: */
-  while (wait_port_is_empty(&wp) == 0)
+  while (wait_port_is_empty(wp) == 0)
   {
 #if 0
     printf("> wait_port_next()\n");
 #endif
 
     /* event pump, wait for next to complete */
-    while (wait_port_next(&wp, &td) == -1)
+    while (wait_port_next(wp, &td) == -1)
     {
       /* nothing completed, and ready available */
       if (has_ready) goto do_ready;
@@ -1028,7 +1052,7 @@ int kaapi_cuda_thread_execframe_tasklist
  /* do_return: */
 
   /* todo: move in kproc */
-  wait_port_destroy(&wp);
+  wait_port_destroy(wp);
 
   /* todo_remove */
   cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
