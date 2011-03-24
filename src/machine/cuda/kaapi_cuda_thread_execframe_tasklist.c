@@ -69,6 +69,93 @@
 typedef void (*cuda_task_body_t)(void*, CUstream);
 
 
+#define CONFIG_USE_SBA 0
+
+#if CONFIG_USE_SBA
+
+/* simple block allocator. block grain is 0x1000.
+   NOTE: it is less performant than using cuda
+   routines for a small number of task. this would
+   probably work better with a pagesize of 0x10000,
+   but the allocate becomes more complex (ie. wasting
+   space is not allowed as block count increases).
+   More importantly, the final kaapi_mem_sync does not
+   work when using a large block...
+ */
+
+static const unsigned long page_size = 0x1000UL;
+static const unsigned long page_mask = 0x1000UL - 1UL;
+
+static uintptr_t sba_saved_base;
+static uintptr_t sba_base;
+static size_t sba_size;
+
+static int sba_init(void)
+{
+  static const size_t devsize = 512 * 1024 * 1024;
+
+  CUdeviceptr devptr;
+
+  const CUresult res = cuMemAlloc(&devptr, devsize);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemAlloc", res);
+    return -1;
+  }
+
+  if ((uintptr_t)devptr & page_mask)
+  {
+    /* TODO: align on pagesize, dont fail */
+    cuMemFree(devptr);
+    return -1;
+  }
+
+  sba_saved_base = (uintptr_t)devptr;
+  sba_base = (uintptr_t)devptr;
+  sba_size = devsize;
+
+  return 0;
+}
+
+static void sba_fini(void)
+{
+  cuMemFree((CUdeviceptr)sba_saved_base);
+  sba_size = 0;
+}
+
+static uintptr_t sba_malloc(size_t size)
+{
+  static unsigned int alloc_count = 0;
+
+  uintptr_t addr;
+
+  if (size & page_mask)
+    size = (size + page_size) & ~(page_mask);
+
+  if (size > sba_size)
+  {
+    printf("sba_malloc(%lu, %u)\n", size, alloc_count);
+    return (uintptr_t)0;
+  }
+
+  ++alloc_count;
+
+  addr = sba_base;
+
+  sba_base += size;
+  sba_size -= size;
+
+  return addr;
+}
+
+static void sba_free(uintptr_t fubar)
+{
+  fubar = fubar;
+}
+
+#endif /* CONFIG_USE_SBA */
+
+
 /* . wait node
    item contained by a fifo used to associate
    cuda event and context.
@@ -379,15 +466,27 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 
 static inline CUresult allocate_device_mem(CUdeviceptr* devptr, size_t size)
 {
+#if CONFIG_USE_SBA
+  const uintptr_t res = sba_malloc(size);
+  if (res == (uintptr_t)0)
+    return CUDA_ERROR_OUT_OF_MEMORY;
+  *devptr = (CUdeviceptr)(void*)res;
+  return CUDA_SUCCESS;
+#else
   const CUresult res = cuMemAlloc(devptr, size);
   if (res != CUDA_SUCCESS)
     kaapi_cuda_error("cuMemAlloc", res);
   return res;
+#endif
 }
 
 static inline void free_device_mem(CUdeviceptr devptr)
 {
+#if CONFIG_USE_SBA
+  sba_free((uintptr_t)devptr);
+#else
   cuMemFree(devptr);
+#endif
 }
 
 
@@ -698,7 +797,6 @@ static int taskmove_body
   /* for the copy */
   void* const sptr = (void*)arg->src_data->ptr.ptr;
 
-  const size_t dsize = sview->lda * sview->size[1] * sview->wordsize;
   void* dptr;
   kaapi_pointer_t dkptr;
 
@@ -714,7 +812,8 @@ static int taskmove_body
   /* allocate destination memory */
 
 #if 1 /* TODO_MEMLAYER */
-  res = allocate_device_mem((CUdeviceptr*)&dptr, dsize);
+  res = allocate_device_mem
+    ((CUdeviceptr*)&dptr, kaapi_memory_view_size(dview));
   if (res != CUDA_SUCCESS)
   {
 #if 0
@@ -870,6 +969,15 @@ int kaapi_cuda_thread_execframe_tasklist
   if (cuCtxPushCurrent(thread->proc->cuda_proc.ctx) != CUDA_SUCCESS)
     return -1;
 
+#if CONFIG_USE_SBA
+  if (sba_init() == -1)
+  {
+    printf("sba_init() == -1\n");
+    cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
+    return -1;
+  }
+#endif
+
   /* bootstrap the readylist */
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe + KAAPI_MAX_RECCALL);
@@ -880,6 +988,9 @@ int kaapi_cuda_thread_execframe_tasklist
   wp = wait_port_create(tl->cnt_tasks);
   if (wp == NULL)
   {
+#if CONFIG_USE_SBA
+    sba_fini();
+#endif
     cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
     return -1;
   }
@@ -1110,6 +1221,10 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* todo: move in kproc */
   wait_port_destroy(wp);
+
+#if CONFIG_USE_SBA
+  sba_fini();
+#endif
 
   /* todo_remove */
   cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);

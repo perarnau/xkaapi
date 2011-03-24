@@ -665,7 +665,7 @@ public:
   // lda is the leading dimension in order to pass to the next line
   // in each dimension
   array<2,T>(T* data, const kaapi_memory_view_t* view)
-   : array_rep<2,T>(data, view->size[0], view->size[0], view->lda)
+   : array_rep<2,T>(data, view->size[0], view->size[1], view->lda)
   {}
   
 #if 0
