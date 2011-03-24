@@ -67,7 +67,9 @@ void kaapi_memory_destroy(void)
 
 /**
 */
-int kaapi_memory_synchronize(void)
+
+static int synchronize_with_flags
+(unsigned int do_release)
 {
   /* todo: use self thread asid */
   const kaapi_address_space_id_t host_asid = 0UL;
@@ -93,7 +95,7 @@ int kaapi_memory_synchronize(void)
       if (mdi->data[host_gid].ptr.ptr == (uintptr_t)NULL) continue ;
       else if (mdi->validbits & (1UL << host_gid)) continue ;
 
-      /* todo_optimize */
+      /* TODO_OPTIMIZE */
       /* find a valid copy and revalidate host */
       for (valid_id = 0; valid_id < KAAPI_MAX_ADDRESS_SPACE; ++valid_id)
 	if (mdi->validbits & (1UL << valid_id)) break ;
@@ -129,6 +131,15 @@ int kaapi_memory_synchronize(void)
   return 0;
 }
 
+int kaapi_memory_synchronize(void)
+{
+  return synchronize_with_flags(0);
+}
+
+int kaapi_memory_synchronize_release(void)
+{
+  return synchronize_with_flags(1);
+}
 
 /**
 */

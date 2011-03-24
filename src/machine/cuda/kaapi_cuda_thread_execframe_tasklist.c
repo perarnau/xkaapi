@@ -7,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -376,16 +377,12 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 /* inlined internal task bodies
  */
 
-static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
+static inline CUresult allocate_device_mem(CUdeviceptr* devptr, size_t size)
 {
   const CUresult res = cuMemAlloc(devptr, size);
   if (res != CUDA_SUCCESS)
-  {
     kaapi_cuda_error("cuMemAlloc", res);
-    return -1;
-  }
-
-  return 0;
+  return res;
 }
 
 static inline void free_device_mem(CUdeviceptr devptr)
@@ -643,6 +640,44 @@ static int xxx_memory_async_copy
   return -1;
 }
 
+
+#if 0 /* UNUSED_OOM */
+
+typedef struct oom_context
+{
+  /* the local execution context */
+  kaapi_workqueue_index_t local_beg;
+  kaapi_workqueue_index_t local_end;
+  kaapi_tasklist_t* tl;
+
+  /* the size that made the allocation fail */
+  size_t needed_size;
+
+} oom_context_t;
+
+static int handle_oom_error
+(const oom_context_t* c)
+{
+  /* out of memory default error handler.
+     needed_size the size that resulted in oom.
+     return -1 if error cannot be handled further.
+   */
+
+  /* we cannot just back some memory to host
+     and release on device since it would
+     invalidate ready tasks. we have to walk
+     the list of completed taskmove and see
+     if there is one activated task in the
+     readylist. if this is not the cast, we
+     can release the mapping allocated for it.
+  */
+
+
+}
+
+#endif /* UNUSED_OOM */
+
+
 static int taskmove_body
 (
  kaapi_thread_context_t* thread,
@@ -669,6 +704,8 @@ static int taskmove_body
 
   async_context_t ac;
 
+  CUresult res;
+
   /* cast the sview to dview */
 
   if (xxx_memory_cast_view(dview, sview))
@@ -676,10 +713,30 @@ static int taskmove_body
 
   /* allocate destination memory */
 
-#if 1 /* TODO: use memory layer */
-  if (allocate_device_mem((CUdeviceptr*)&dptr, dsize))
-    return -1;
-#endif /* TODO */
+#if 1 /* TODO_MEMLAYER */
+  res = allocate_device_mem((CUdeviceptr*)&dptr, dsize);
+  if (res != CUDA_SUCCESS)
+  {
+#if 0
+    if (res == CUDA_ERROR_OUT_OF_MEMORY)
+    {
+      printf("[!] outamem, syncing\n");
+
+      if (kaapi_memory_synchronize_release() == -1)
+	return -1;
+
+      /* retry the allocation but really fail on error */
+      res = allocate_device_mem((CUdeviceptr*)&dptr, dsize);
+      if (res == CUDA_ERROR_OUT_OF_MEMORY)
+	return -1;
+    }
+    else
+#endif
+    {
+      return -1;
+    }
+  }
+#endif /* TODO_MEMLAYER */
 
   /* cast to kaapi pointer */
 
@@ -693,9 +750,9 @@ static int taskmove_body
 
   if (xxx_memory_async_copy(dkptr, dview, sptr, sview, (void*)&ac))
   {
-#if 1 /* TODO: use memory layer */
+#if 1 /* TODO_MEMLAYER */
     free_device_mem((CUdeviceptr)dptr);
-#endif /* TODO */
+#endif /* TODO_MEMLAYER */
     return -1;
   }
 
