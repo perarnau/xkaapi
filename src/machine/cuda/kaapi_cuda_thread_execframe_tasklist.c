@@ -691,27 +691,38 @@ static int xxx_memory_async_copy
 
   case KAAPI_MEMORY_VIEW_2D:
     {
-      /* TODO: optimize for contiguous case */
-
       CUresult res;
-      CUDA_MEMCPY2D m;
 
-      m.srcMemoryType = CU_MEMORYTYPE_HOST;
-      m.srcHost = sptr;
-      m.srcPitch = sview->lda * sview->wordsize;
-      m.srcXInBytes = 0;
-      m.srcY = 0;
+      /* contiguous case, dont use 2D */
+      if (sview->size[1] == sview->lda)
+      {
+	const size_t size =
+	  sview->size[0] * sview->size[1] * sview->wordsize;
+	res = cuMemcpyHtoDAsync
+	  ((CUdevice)dptr, sptr, size, ac->wp->input_fifo.stream);
+      }
+      else /* non contiguous */
+      {
+	CUDA_MEMCPY2D m;
 
-      m.dstXInBytes = 0;
-      m.dstY = 0;
-      m.dstMemoryType = CU_MEMORYTYPE_DEVICE;
-      m.dstDevice = dptr;
-      m.dstPitch = sview->size[1] * sview->wordsize;
+	m.srcMemoryType = CU_MEMORYTYPE_HOST;
+	m.srcHost = sptr;
+	m.srcPitch = sview->lda * sview->wordsize;
+	m.srcXInBytes = 0;
+	m.srcY = 0;
 
-      m.WidthInBytes = sview->size[1] * sview->wordsize;
-      m.Height = sview->size[0];
+	m.dstXInBytes = 0;
+	m.dstY = 0;
+	m.dstMemoryType = CU_MEMORYTYPE_DEVICE;
+	m.dstDevice = dptr;
+	m.dstPitch = sview->size[1] * sview->wordsize;
 
-      res = cuMemcpy2DAsync(&m, ac->wp->input_fifo.stream);
+	m.WidthInBytes = sview->size[1] * sview->wordsize;
+	m.Height = sview->size[0];
+
+	res = cuMemcpy2DAsync(&m, ac->wp->input_fifo.stream);
+      }
+
       if (res != CUDA_SUCCESS)
       {
 	kaapi_cuda_error("cuMemcpy2DAsync", res);
