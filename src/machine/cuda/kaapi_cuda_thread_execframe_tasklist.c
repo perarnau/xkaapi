@@ -777,6 +777,15 @@ static int handle_oom_error
 #endif /* UNUSED_OOM */
 
 
+#if defined(KAAPI_DEBUG)
+static inline unsigned int is_cuda_asid
+(kaapi_address_space_id_t kasid)
+{
+  return kaapi_memory_address_space_gettype(kasid) == KAAPI_MEM_TYPE_CUDA;
+}
+#endif /* KAAPI_DEBUG */
+
+
 static int taskmove_body
 (
  kaapi_thread_context_t* thread,
@@ -790,97 +799,118 @@ static int taskmove_body
   kaapi_memory_view_t* const sview = &arg->src_data->view;
   kaapi_memory_view_t* const dview = &arg->dest->view;
 
+  const kaapi_globalid_t gid =
+    kaapi_memory_address_space_getgid(thread->asid);
+
   /* memory information */
-  kaapi_metadata_info_t* mdi;
   kaapi_access_mode_t mode;
+
+  unsigned int has_allocated = 0;
 
   /* for the copy */
   void* const sptr = (void*)arg->src_data->ptr.ptr;
 
-  void* dptr;
-  kaapi_pointer_t dkptr;
-
+  /* async copy context */
   async_context_t ac;
 
   CUresult res;
 
-  /* cast the sview to dview */
+  /* dep analysis pass does not inform the dest asid */
+  arg->dest->ptr.asid = thread->asid;
 
-  if (xxx_memory_cast_view(dview, sview))
-    return -1;
+  /* from here dest->ptr.asid is assumed to be set. this given,
+     pointer initialization is done whenever ptr == NULL. it
+     includes the following:
+     . destination view is casted from source
+     . memory is allocated on dest as
+     . dest->asid is set to thread->asid
+     . mdi is affected
+     . task args are updated
+   */
 
-  /* allocate destination memory */
-
-#if 1 /* TODO_MEMLAYER */
-  res = allocate_device_mem
-    ((CUdeviceptr*)&dptr, kaapi_memory_view_size(dview));
-  if (res != CUDA_SUCCESS)
+  if (arg->dest->ptr.ptr == (uintptr_t)NULL)
   {
-#if 0
-    if (res == CUDA_ERROR_OUT_OF_MEMORY)
+    /* assume dest asid is CUDA */
+    kaapi_assert_debug(is_cuda_asid(arg->dest->ptr.asid));
+    kaapi_assert_debug(arg->src_data->mdi);
+
+    /* cast the sview to dview */
+    if (xxx_memory_cast_view(dview, sview))
+      return -1;
+
+    res = allocate_device_mem
+      ((CUdeviceptr*)&arg->dest->ptr.ptr, kaapi_memory_view_size(dview));
+    if (res != CUDA_SUCCESS)
     {
-      printf("[!] outamem, syncing\n");
-
-      if (kaapi_memory_synchronize_release() == -1)
-	return -1;
-
-      /* retry the allocation but really fail on error */
-      res = allocate_device_mem((CUdeviceptr*)&dptr, dsize);
+#if 1 /* TODO_OUT_OF_MEM */
       if (res == CUDA_ERROR_OUT_OF_MEMORY)
-	return -1;
-    }
-    else
-#endif
-    {
+	printf("[!] TODO_OUT_OF_MEM\n");
+#endif /* TODO_OUT_OF_MEM */
       return -1;
     }
-  }
-#endif /* TODO_MEMLAYER */
 
-  /* cast to kaapi pointer */
+    arg->dest->mdi = arg->src_data->mdi;
 
-  dkptr.asid = thread->asid;
-  dkptr.ptr = (uintptr_t)dptr;
-
-  /* starts an async transfer */
-
-  ac.wp = wp;
-  ac.td = td;
-
-  if (xxx_memory_async_copy(dkptr, dview, sptr, sview, (void*)&ac))
-  {
-#if 1 /* TODO_MEMLAYER */
-    free_device_mem((CUdeviceptr)dptr);
-#endif /* TODO_MEMLAYER */
-    return -1;
+    /* for rollback */
+    has_allocated = 1;
   }
 
-  /* update the task args */
+  /* check if the data already valid in the host as.
+     this can occur even if only one taskmove is generated
+     by the depanalyzer, since the graph can be reused.
+   */
 
-  arg->dest->ptr = dkptr;
-  arg->dest->mdi = arg->src_data->mdi;
+  if (_kaapi_metadata_info_is_valid(arg->dest->mdi, arg->dest->ptr.asid))
+    return 0;
 
-  /* update memory information */
-
-  mdi = arg->src_data->mdi;
-  mode = mdi->version[0]->last_mode;
-
-#if 0 /* TODO: revalidate as memory */
+  /* from here the data is allocated. validate on read access. */
+  mode = arg->dest->mdi->version[0]->last_mode;
   if (KAAPI_ACCESS_IS_READ(mode))
   {
+    /* starts an async transfer */
+    ac.wp = wp;
+    ac.td = td;
+
+    if (xxx_memory_async_copy(arg->dest->ptr, dview, sptr, sview, (void*)&ac))
+    {
+#if 1 /* TODO_MEMLAYER */
+      if (has_allocated)
+      {
+	/* rollback */
+	free_device_mem((CUdeviceptr)arg->dest->ptr.ptr);
+	arg->dest->ptr.ptr = (uintptr_t)NULL;
+	arg->dest->mdi = NULL;
+      }
+#endif /* TODO_MEMLAYER */
+      return -1;
+    }
+
+    /* write access handled after */
+    if (KAAPI_ACCESS_IS_WRITE(mode) == 0)
+    {
+      const uint16_t lid =
+	_kaapi_memory_address_space_getlid(arg->dest->ptr.asid);
+
+      kaapi_metadata_info_t* const mdi = arg->dest->mdi;
+
+      /* ored for non exclusive */
+      mdi->validbits |= 1UL << lid;
+      mdi->data[gid].ptr = arg->dest->ptr;
+      mdi->data[gid].view = *dview;
+    }
   }
-#endif /* TODO */
 
-  /* validate as */
-
+  /* exclusive mem ownership on write access */
   if (KAAPI_ACCESS_IS_WRITE(mode))
   {
-    const kaapi_globalid_t gid =
-      kaapi_memory_address_space_getgid(thread->asid);
+    const uint16_t lid =
+      _kaapi_memory_address_space_getlid(arg->dest->ptr.asid);
 
-    _kaapi_metadata_info_set_writer(mdi, thread->asid);
-    mdi->data[gid].ptr.ptr = (uintptr_t)dptr;
-    mdi->data[gid].ptr.asid = thread->asid;
+      kaapi_metadata_info_t* const mdi = arg->dest->mdi;
+
+    /* eq excludes other as */
+    mdi->validbits = 1UL << lid;
+    mdi->data[gid].ptr = arg->dest->ptr;
     mdi->data[gid].view = *dview;
   }
 
