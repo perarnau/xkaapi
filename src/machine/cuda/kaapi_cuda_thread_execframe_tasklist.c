@@ -201,7 +201,17 @@ typedef struct wait_port
 {
   wait_fifo_t input_fifo;
   wait_fifo_t output_fifo;
+
+#define CONFIG_USE_CONCURRENT_KERNELS 1
+
+#if CONFIG_USE_CONCURRENT_KERNELS
+  /* round robin allocator */
+  unsigned int kernel_fifo_pos;
+  unsigned int kernel_fifo_count;
+  wait_fifo_t kernel_fifos[16];
+#else
   wait_fifo_t kernel_fifo;
+#endif
 
   /* node allocator */
 
@@ -393,9 +403,17 @@ static inline void* wait_fifo_next(wait_fifo_t* fifo)
 static void wait_port_destroy(wait_port_t* wp)
 {
   /* assume wait_port_create() returned 0 */
+
+#if CONFIG_USE_CONCURRENT_KERNELS
+  unsigned int i;
+  for (i = 0; i < wp->kernel_fifo_count; ++i)
+    wait_fifo_destroy(&wp->kernel_fifos[i]);
+#else
+  wait_fifo_destroy(&wp->kernel_fifo);
+#endif
+
   wait_fifo_destroy(&wp->input_fifo);
   wait_fifo_destroy(&wp->output_fifo);
-  wait_fifo_destroy(&wp->kernel_fifo);
 
   free(wp);
 }
@@ -424,12 +442,32 @@ static wait_port_t* wait_port_create(unsigned int node_count)
     goto on_error;
   }
 
+#if CONFIG_USE_CONCURRENT_KERNELS
+  /* TODO: query for conc support */
+
+  wp->kernel_fifo_count =
+    sizeof(wp->kernel_fifos) / sizeof(wp->kernel_fifos[0]);
+  wp->kernel_fifo_pos = 0;
+
+  unsigned int i;
+  for (i = 0; i < wp->kernel_fifo_count; ++i)
+  {
+    if (wait_fifo_create(&wp->kernel_fifos[i]))
+    {
+      /* TODO: destroy created fifos */
+      wait_fifo_destroy(&wp->input_fifo);
+      wait_fifo_destroy(&wp->output_fifo);
+      goto on_error;
+    }
+  }
+#else /* ! CONFIG_USE_CONCURRENT_KERNELS */
   if (wait_fifo_create(&wp->kernel_fifo))
   {
     wait_fifo_destroy(&wp->input_fifo);
     wait_fifo_destroy(&wp->output_fifo);
     goto on_error;
   }
+#endif /* CONFIG_USE_CONCURRENT_KERNELS */
 
   return wp;
 
@@ -444,7 +482,18 @@ static int wait_port_next(wait_port_t* wp, kaapi_taskdescr_t** td)
 
   if ((*td = wait_fifo_next(&wp->input_fifo))) return 0;
   else if ((*td = wait_fifo_next(&wp->output_fifo))) return 0;
+#if (CONFIG_USE_CONCURRENT_KERNELS == 0)
   else if ((*td = wait_fifo_next(&wp->kernel_fifo))) return 0;
+#else /* (CONFIG_USE_CONCURRENT_KERNELS == 1) */
+  else
+  {
+    unsigned int i;
+    for (i = 0; i < wp->kernel_fifo_count; ++i)
+      if ((*td = wait_fifo_next(&wp->kernel_fifos[i])))
+	return 0;
+  }
+#endif /* CONFIG_USE_CONCURRENT_KERNELS */
+
   return -1;
 }
 
@@ -452,12 +501,24 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 {
   /* return 1 if all fifos empty */
 
-  if (wait_fifo_is_empty(&wp->input_fifo))
-    if (wait_fifo_is_empty(&wp->kernel_fifo))
-      if (wait_fifo_is_empty(&wp->output_fifo))
-	return 1;
+  if (wait_fifo_is_empty(&wp->input_fifo) == 0)
+    return 0;
+  else if (wait_fifo_is_empty(&wp->output_fifo) == 0)
+    return 0;
+#if (CONFIG_USE_CONCURRENT_KERNELS == 0)
+  else if (wait_fifo_is_empty(&wp->kernel_fifo) == 0)
+    return 0;
+#else /* (CONFIG_USE_CONCURRENT_KERNELS == 1) */
+  else
+  {
+    unsigned int i;
+    for (i = 0; i < wp->kernel_fifo_count; ++i)
+      if (wait_fifo_is_empty(&wp->kernel_fifos[i]) == 0)
+	return 0;
+  }
+#endif /* CONFIG_USE_CONCURRENT_KERNELS */
 
-  return 0;
+  return 1;
 }
 
 
@@ -947,6 +1008,19 @@ static int taskfinalizer_body
 }
 
 
+static inline wait_fifo_t* get_kernel_fifo(wait_port_t* wp)
+{
+#if CONFIG_USE_CONCURRENT_KERNELS
+  /* round robin allocator */
+  wait_fifo_t* const fifo = &wp->kernel_fifos[wp->kernel_fifo_pos];
+  wp->kernel_fifo_pos = (wp->kernel_fifo_pos + 1) % wp->kernel_fifo_count;
+  return fifo;
+#else
+  return &wp->kernel_fifo;
+#endif
+}
+
+
 /* refer to kaapi_thread_execframe_tasklist.c
    for general comments.
    todos:
@@ -1035,15 +1109,6 @@ int kaapi_cuda_thread_execframe_tasklist
     cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
     return -1;
   }
-
-#if 0 /* TOREMOVE */
-  {
-    printf("-- readylist: (%lu, %lx)\n", tl->cnt_tasks, tl->td_ready);
-    for (al = tl->readylist.front; al != NULL; al = al->next)
-      printf("%lx, ", (uintptr_t)al);
-    printf("\n");
-  }
-#endif /* TOREMOVE */
 
   if (tl->td_ready == 0)
   {
@@ -1138,14 +1203,14 @@ int kaapi_cuda_thread_execframe_tasklist
       cuda_task_body_t body = (cuda_task_body_t)
 	td->fmt->entrypoint_wh[proc_type];
 
+      wait_fifo_t* const kernel_fifo = get_kernel_fifo(wp);
+
       kaapi_assert_debug(body);
 
-      err = wait_fifo_create_push
-	(wp, &wp->kernel_fifo, (void*)td);
-
+      err = wait_fifo_create_push(wp, kernel_fifo, (void*)td);
       kaapi_assert_debug(err != -1);
 
-      body(pc->sp, wp->kernel_fifo.stream);
+      body(pc->sp, kernel_fifo->stream);
     }
     else /* internal task */
     {
@@ -1234,15 +1299,6 @@ int kaapi_cuda_thread_execframe_tasklist
 	/* bcast task are always ready */
 	td_top[local_beg--] = al->td;
 	has_pushed = 1;
-
-#if 0 /* TOREMOVE */
-	if ((al == td->bcast->back) && (al->next != NULL))
-	{
-	  /* bug here: end of list but next non null */
-	  printf("%s: %d\n", __FUNCTION__, __LINE__);
-	  break ;
-	}
-#endif /* TOREMOVE */
       }
     }
 
