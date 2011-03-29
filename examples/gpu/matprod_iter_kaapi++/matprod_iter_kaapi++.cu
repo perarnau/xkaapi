@@ -123,7 +123,7 @@ static int do_check
     for (j = 0; j < n; ++j)
     {
       k = i * n + j;
-      if (abs(c[k] - tmp[k]) >= 0.001)
+      if (abs(c[k] - tmp[k]) >= 0.01)
       {
 	printf("invalid @%u,%u %f != %f\n", i, j, c[k], tmp[k]);
 	goto on_error;

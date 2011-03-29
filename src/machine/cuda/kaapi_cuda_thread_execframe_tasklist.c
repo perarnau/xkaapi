@@ -53,6 +53,72 @@
 #include "kaapi_cuda_error.h"
 
 
+/* in non 1d contiguous, contiguous memory
+   can be copied using only one transfer
+   instead of using the 2d API. At the cost
+   of a memory registration, required by the
+   cuMemcpyHtoDAsync routine.
+   WARNING: unregister before freeing memory.
+ */
+#define CONFIG_USE_CONTIGUOUS 0
+
+#if CONFIG_USE_CONTIGUOUS
+
+static int register_host_mem
+(uintptr_t hostptr, size_t hostsize)
+{
+  static const uintptr_t page_size = 0x1000UL;
+  static const uintptr_t lo_mask = 0x1000UL - 1UL;
+  static const uintptr_t hi_mask = ~(0x1000UL - 1UL);
+
+  uintptr_t aligned_addr = (uintptr_t)hostptr;
+  size_t aligned_size = hostsize;
+
+  CUresult res;
+
+  /* addr may be misaligned */
+  if (aligned_addr & lo_mask)
+  {
+    aligned_addr = (uintptr_t)hostptr & hi_mask;
+    aligned_size = hostsize + (uintptr_t)hostptr - aligned_addr;
+  }
+
+  /* size may be misaligned */
+  if (aligned_size & lo_mask)
+    aligned_size = (aligned_size & hi_mask) + page_size;
+
+  res = cuMemHostRegister((void*)aligned_addr, aligned_size, 0);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemHostRegister", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+static int unregister_host_mem(uintptr_t aligned_addr)
+{
+  static const uintptr_t hi_mask = ~(0x1000UL - 1UL);
+
+  CUresult res;
+
+  /* addr may be misaligned */
+  aligned_addr &= hi_mask;
+
+  res = cuMemHostUnregister((void*)aligned_addr);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuMemHostUnregister", res);
+    return -1;
+  }
+
+  return 0;
+}
+
+#endif /* CONFIG_USE_CONTIGUOUS */
+
+
 /* notes on using event:
    if we dont use events, we use refcount.
    Querying refcount is faster than querying
@@ -525,19 +591,24 @@ static unsigned int wait_port_is_empty(wait_port_t* wp)
 /* inlined internal task bodies
  */
 
-static inline CUresult allocate_device_mem(CUdeviceptr* devptr, size_t size)
+static inline CUresult allocate_device_mem
+(CUdeviceptr* devptr, size_t size)
 {
 #if CONFIG_USE_SBA
+
   const uintptr_t res = sba_malloc(size);
   if (res == (uintptr_t)0)
     return CUDA_ERROR_OUT_OF_MEMORY;
   *devptr = (CUdeviceptr)(void*)res;
   return CUDA_SUCCESS;
-#else
+
+#else /* default memory */
+
   const CUresult res = cuMemAlloc(devptr, size);
   if (res != CUDA_SUCCESS)
     kaapi_cuda_error("cuMemAlloc", res);
   return res;
+
 #endif
 }
 
@@ -545,7 +616,7 @@ static inline void free_device_mem(CUdeviceptr devptr)
 {
 #if CONFIG_USE_SBA
   sba_free((uintptr_t)devptr);
-#else
+#else /* default memory */
   cuMemFree(devptr);
 #endif
 }
@@ -716,7 +787,7 @@ static int xxx_memory_async_copy
  void* opaak_data
 )
 {
-  /* assume host to cpu transfer
+  /* assume host to gpu transfer
    */
 
   /* assume dkptr allocated
@@ -733,11 +804,14 @@ static int xxx_memory_async_copy
     (ac->wp, &ac->wp->input_fifo, (void*)ac->td);
   if (node == NULL) return -1;
 
-  switch (sview->type)
+  kaapi_assert_debug(sview->type == dview->type);
+  kaapi_assert_debug(sview->wordsize == dview->wordsize);
+
+  switch (dview->type)
   {
   case KAAPI_MEMORY_VIEW_1D:
     {
-      const size_t size = sview->size[0] * sview->wordsize;
+      const size_t size = dview->size[0] * dview->wordsize;
 
       const CUresult res = cuMemcpyHtoDAsync
 	((CUdevice)dptr, sptr, size, ac->wp->input_fifo.stream);
@@ -754,15 +828,23 @@ static int xxx_memory_async_copy
     {
       CUresult res;
 
+#if CONFIG_USE_CONTIGUOUS
       /* contiguous case, dont use 2D */
       if (sview->size[1] == sview->lda)
       {
 	const size_t size =
-	  sview->size[0] * sview->size[1] * sview->wordsize;
+	  dview->size[0] * dview->size[1] * dview->wordsize;
+
+	if (register_host_mem((uintptr_t)sptr, size) == -1)
+	  goto on_error;
+
 	res = cuMemcpyHtoDAsync
 	  ((CUdevice)dptr, sptr, size, ac->wp->input_fifo.stream);
+	if (res != CUDA_SUCCESS)
+	  unregister_host_mem((uintptr_t)sptr);
       }
       else /* non contiguous */
+#endif /* CONFIG_USE_CONTIGUOUS */
       {
 	CUDA_MEMCPY2D m;
 

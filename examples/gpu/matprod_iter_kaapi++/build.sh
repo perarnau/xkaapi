@@ -8,7 +8,7 @@ CUDADIR=/usr/local/stow/cuda-4.0/cuda
 CUBLAS_CFLAGS=
 CUBLAS_LFLAGS=
 
-# VOLKOV_CFLAGS="-DCONFIG_USE_VOLKOV=1 -maxrregcount 32"
+#VOLKOV_CFLAGS="-DCONFIG_USE_VOLKOV=1 -maxrregcount 32"
 VOLKOV_CFLAGS=
 
 $CUDADIR/bin/nvcc -w \
