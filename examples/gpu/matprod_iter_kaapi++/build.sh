@@ -12,6 +12,7 @@ CUBLAS_LFLAGS=
 VOLKOV_CFLAGS=
 
 $CUDADIR/bin/nvcc -w \
+    -arch=compute_20 \
     -I$XKAAPIDIR/include \
     -I$CUDADIR/include \
     $CUBLAS_CFLAGS \

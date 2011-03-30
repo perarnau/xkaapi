@@ -274,7 +274,7 @@ typedef struct wait_port
   /* round robin allocator */
   unsigned int kernel_fifo_pos;
   unsigned int kernel_fifo_count;
-  wait_fifo_t kernel_fifos[16];
+  wait_fifo_t kernel_fifos[4];
 #else
   wait_fifo_t kernel_fifo;
 #endif
@@ -484,7 +484,8 @@ static void wait_port_destroy(wait_port_t* wp)
   free(wp);
 }
 
-static wait_port_t* wait_port_create(unsigned int node_count)
+static wait_port_t* wait_port_create
+(unsigned int node_count, kaapi_cuda_proc_t* proc)
 {
   /* node_count the max number of allocatable nodes */
 
@@ -509,10 +510,18 @@ static wait_port_t* wait_port_create(unsigned int node_count)
   }
 
 #if CONFIG_USE_CONCURRENT_KERNELS
-  /* TODO: query for conc support */
+  /* use the cached attribute to know if the device
+     support concurrent kernel execution. the number
+     of streams is then fixed to 16 (ie. cuda doc)
+  */
+  wp->kernel_fifo_count = 1;
 
-  wp->kernel_fifo_count =
-    sizeof(wp->kernel_fifos) / sizeof(wp->kernel_fifos[0]);
+  if (proc->attr_concurrent_kernels)
+  {
+    wp->kernel_fifo_count =
+      sizeof(wp->kernel_fifos) / sizeof(wp->kernel_fifos[0]);
+  }
+
   wp->kernel_fifo_pos = 0;
 
   unsigned int i;
@@ -1182,7 +1191,7 @@ int kaapi_cuda_thread_execframe_tasklist
   tl = thread->sfp->tasklist;
 
   /* todo: should be done once per proc */
-  wp = wait_port_create(tl->cnt_tasks);
+  wp = wait_port_create(tl->cnt_tasks, &thread->proc->cuda_proc);
   if (wp == NULL)
   {
 #if CONFIG_USE_SBA
@@ -1336,12 +1345,12 @@ int kaapi_cuda_thread_execframe_tasklist
     printf("> wait_port_next()\n");
 #endif
 
+    /* process ready if available */
+    if (has_ready) goto do_ready;
+
     /* event pump, wait for next to complete */
     while (wait_port_next(wp, &td) == -1)
-    {
-      /* nothing completed, and ready available */
-      if (has_ready) goto do_ready;
-    }
+      ;
 
   do_activation:
 

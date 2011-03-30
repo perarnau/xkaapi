@@ -89,7 +89,7 @@ typedef float double_type;
 
 
 // check results
-#define CONFIG_DO_CHECK 0
+#define CONFIG_DO_CHECK 1
 #if CONFIG_DO_CHECK
 
 # include <stdlib.h>
