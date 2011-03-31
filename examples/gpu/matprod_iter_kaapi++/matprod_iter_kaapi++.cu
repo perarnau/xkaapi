@@ -89,7 +89,7 @@ typedef float double_type;
 
 
 // check results
-#define CONFIG_DO_CHECK 1
+#define CONFIG_DO_CHECK 0
 #if CONFIG_DO_CHECK
 
 # include <stdlib.h>
@@ -123,9 +123,9 @@ static int do_check
     for (j = 0; j < n; ++j)
     {
       k = i * n + j;
-      if (abs(c[k] - tmp[k]) >= 0.01)
+      if (fabsf(c[k] - tmp[k]) >= 0.01)
       {
-	printf("invalid @%u,%u %f != %f\n", i, j, c[k], tmp[k]);
+	printf("invalid @%lx,%u,%u %f != %f\n", (uintptr_t)c, i, j, c[k], tmp[k]);
 	goto on_error;
       }
     }
@@ -261,6 +261,10 @@ __global__ void mulKernel
 	  c[i * m + j] += a[i * m + k] * b[k * m + j];
   }
 
+#elif 0
+
+  c[0] = 42.f;
+
 #endif
 }
 
@@ -277,7 +281,6 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
     const CUstream custream = (CUstream)stream.stream;
 
     size_t mm = A.dim(0) * A.dim(0);
-    const size_t thread_count = mm < 512 ? mm : 512;
 
 #if CONFIG_USE_CUBLAS
     cublasStatus_t status;
@@ -314,6 +317,7 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
      C.ptr(), A.ptr(), B.ptr(), A.dim(0), A.dim(1), B.dim(1)
     );
 #else
+    const size_t thread_count = mm < 512 ? mm : 512;
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
       (A.ptr(), B.ptr(), C.ptr(), A.dim(0));
 #endif

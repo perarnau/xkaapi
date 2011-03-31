@@ -11,8 +11,11 @@ CUBLAS_LFLAGS=
 #VOLKOV_CFLAGS="-DCONFIG_USE_VOLKOV=1 -maxrregcount 32"
 VOLKOV_CFLAGS=
 
+# use this flag for atomic instruction 
+# does not work on gtx280
+# -arch=compute_20
+
 $CUDADIR/bin/nvcc -w \
-    -arch=compute_20 \
     -I$XKAAPIDIR/include \
     -I$CUDADIR/include \
     $CUBLAS_CFLAGS \

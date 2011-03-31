@@ -32,8 +32,8 @@ export KAAPI_GPUSET='1~0'
 # test configuration
 # bsizes="4" ;
 # bsizes="1 2 4" ;
-# bsizes="1 2 4 8 16 32 64" ;
-bsizes="16" ;
+bsizes="1 2 4 8 16 32 64" ;
+# bsizes="16" ;
 msizes="512" ;
 # msizes="2048" ;
 # msizes="128" ;
