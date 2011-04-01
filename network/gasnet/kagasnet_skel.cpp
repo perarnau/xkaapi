@@ -40,22 +40,23 @@
 ** terms.
 ** 
 */
+#include "kanet_network.h"
 #include "kagasnet_channel.h"
 #include "kagasnet_device.h"
 
 namespace GASNET {
 
 // --------------------------------------------------------------------
-void Device::kaapi_gasnet_service_call(gasnet_token_t token, void *buffer_am, size_t sz_buffer_am, 
-  gasnet_handlerarg_t handlerH, gasnet_handlerarg_t handlerL)
+void Device::kaapi_gasnet_service_call(
+  gasnet_token_t token, 
+  void *buffer_am, size_t sz_buffer_am, 
+  gasnet_handlerarg_t handler
+)
 {
   gasnet_node_t src;
   int err = gasnet_AMGetMsgSource( token, &src );
   kaapi_assert( err == GASNET_OK );
-  uintptr_t handler = (uintptr_t)handlerH;
-  handler = handler << (uintptr_t)32UL;
-  handler = handler | (uintptr_t)handlerL;
-  ka::Service_fnc service = (ka::Service_fnc)handler;
+  ka::Service_fnc service = ka::Network::resolve_service( (uint8_t)handler );
 #if 0
   std::cout << ka::Network::object.local_gid() << "::[Device::kaapi_gasnet_service_call] recv message from:" << src << ", fnc:(" 
             << handlerH << "," << handlerL << ")=" << (void*)handler 

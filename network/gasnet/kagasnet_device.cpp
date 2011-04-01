@@ -129,7 +129,6 @@ int Device::initialize(int* argc, char*** argv)
 // --------------------------------------------------------------------
 int Device::commit()
 {
-  int err;
   _wcom_rank = gasnet_mynode();
   _wcom_size = gasnet_nodes();
   
@@ -152,7 +151,6 @@ int Device::commit()
 // --------------------------------------------------------------------
 int Device::terminate()
 {
-  int err;
 #if 0
   printf("%i::[gasnet] begin terminate\n", _wcom_rank); fflush(stdout);
 #endif
@@ -184,7 +182,7 @@ int Device::terminate()
 
 
 // --------------------------------------------------------------------
-int Device::abort()
+int Device::finalize()
 {
   _state.write(S_ERROR);
   gasnet_exit( EINTR );

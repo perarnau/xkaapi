@@ -64,16 +64,23 @@ int OutChannel::terminate() throw()
 void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
 {
   GASNET_BEGIN_FUNCTION();
-  /* */
-  
+  int err;
+  int has_put_cbk; 
   uintptr_t rmtsegaddr;
+  gasnet_handle_t nbi_handle;
+  
 #if !defined(KAAPI_ADDRSPACE_ISOADDRESS)
   Device* gasnetdev = (Device*)_device;
   rmtsegaddr = (uintptr_t)gasnetdev->_segaddr;
 #endif
 
   ka::Instruction* curr = first;
-  int err;
+  
+  /* try to aggregate all non blocking function inside a nbi access region */
+  ka::Instruction* beg = first;
+  has_put_cbk = 0;
+  gasnet_begin_nbi_accessregion ();
+
   while (curr != last)
   {
     switch (curr->type) {
@@ -81,53 +88,72 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
         break;
 
       case ka::Instruction::INST_NOP:
-        if (curr->i_cbk.cbk !=0)
+        if (curr->i_cbk.cbk !=0)        
           (*curr->i_cbk.cbk)(0, this, curr->i_cbk.arg);
         break;
 
       case ka::Instruction::INST_WB:
+      {
+        nbi_handle = gasnet_end_nbi_accessregion();  
+        gasnet_wait_syncnb(nbi_handle);
+
+        /* call all INST_RWDMA from beg to curr */
+        if (has_put_cbk)
+        {
+          while (beg != curr)
+          {
+            if ((beg->type == ka::Instruction::INST_RWDMA) && (beg->i_cbk.cbk !=0))
+              (*beg->i_cbk.cbk)(0, this, beg->i_cbk.arg);
+            ++beg;
+          }
+        }
+        /* call cbk with writer barrier */
         if (curr->i_cbk.cbk !=0)
           (*curr->i_cbk.cbk)(0, this, curr->i_cbk.arg);
-        break;
+
+        /* restart for the next region of put_nbi */
+        gasnet_begin_nbi_accessregion ();
+        beg = curr;
+        has_put_cbk = 0;
+      } break;
 
       case ka::Instruction::INST_AM:
       {
         /* send header: first 2 fields */
-        uintptr_t handler = curr->i_am.handler;
-        gasnet_handlerarg_t handlerH = handler >> 32UL;
-        gasnet_handlerarg_t handlerL = handler & 4294967295UL;
-
-        err = gasnet_AMRequestMedium2( _dest, kaapi_gasnet_service_call_id, 
+        gasnet_handlerarg_t handler = curr->i_am.handler;
+        err = gasnet_AMRequestMedium1( _dest, kaapi_gasnet_service_call_id, 
             (void*)curr->i_am.lptr, curr->i_am.size,
-            handlerH, handlerL
+            handler
         );
-        kaapi_assert(err == GASNET_OK);
-
-#if 0
-        std::cout << ka::Network::object.local_gid() << "::[OutChannel::flush] send AM to:" << _dest << ", size:" << curr->i_am.size 
-                  << ", service:(" << handlerH << "," << handlerL << ")=" << (void*)curr->i_am.handler << std::endl << std::flush;
-#endif
+        
+        /* debug mode: assert during communication */
+        kaapi_assert_debug(err == GASNET_OK);
 
         if (curr->i_cbk.cbk !=0)
           (*curr->i_cbk.cbk)(err, this, curr->i_cbk.arg);
       } break;
 
       case ka::Instruction::INST_RWDMA:
-#if 0
-        std::cout << ka::Network::object.local_gid() << "::[OutChannel::flush] send RDMA to:" << _dest 
-                  << ", @:" << (void*)(curr->i_rw.dptr) 
-                  << ", size:" << curr->i_rw.size 
-                  << std::endl << std::flush;    
-#endif
-        /* send header: first 2 fields */
-        gasnet_put_bulk( _dest, (void*)curr->i_rw.dptr, (void*)curr->i_rw.lptr, curr->i_rw.size );
-
-        if (curr->i_cbk.cbk !=0)
-          (*curr->i_cbk.cbk)(err, this, curr->i_cbk.arg);
+        /* send asynchronously, with implicit nbi region, the data  */
+        gasnet_put_nbi_bulk( _dest, (void*)curr->i_rw.dptr, (void*)curr->i_rw.lptr, curr->i_rw.size );
+        if (!has_put_cbk && (curr->i_cbk.cbk !=0)) has_put_cbk = 1;
       break;
     };
     ++curr;
   }
+
+  nbi_handle = gasnet_end_nbi_accessregion();  
+  gasnet_wait_syncnb(nbi_handle);
+  if (has_put_cbk == 1)
+  {
+    while (beg != curr)
+    {
+      if ((beg->type == ka::Instruction::INST_RWDMA) && (beg->i_cbk.cbk !=0))
+        (*beg->i_cbk.cbk)(0, this, beg->i_cbk.arg);
+      ++beg;
+    }
+  }
+
 //  ka::logfile() << "In " << __PRETTY_FUNCTION__ << std::endl;
   return;
 }
