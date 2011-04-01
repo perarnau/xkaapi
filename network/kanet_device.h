@@ -138,7 +138,7 @@ public:
   /** Abort the device
     This function is automatically called in case of abortion of the process
   */
-  virtual int abort() = 0;
+  virtual int finalize() = 0;
   //@}
 
   // -----------------------------------------------------------------------

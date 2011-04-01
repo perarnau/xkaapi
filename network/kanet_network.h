@@ -225,6 +225,21 @@ public:
   //@}
 
   // -----------------------------------------------------------------------
+  //! \name Service registration
+  // -----------------------------------------------------------------------
+  /** Register a service handler 'handler' with identifier 'sid'
+      \retval 0 in case of success
+      \retval EBUSY if service identifier is already bound to a handler
+  */
+  static int register_service( ServiceId sid, Service_fnc handler );
+  
+  /** Resolve a handler from a service identifier
+      \retval the handler of the service identifier 'sid'
+      \retval 0 if the service was not registered
+  */
+  static Service_fnc resolve_service( ServiceId sid );
+
+  // -----------------------------------------------------------------------
   //! \name Misc
   // -----------------------------------------------------------------------
   /** Return the number of known node
@@ -263,13 +278,25 @@ protected:
   std::map<std::string,Device*>  _name2device;    ///< map name->device
   std::vector<Device*>           _all_devices;    ///< all devices
   Device*                        _default_device; ///< default device
-
+  static Service_fnc             _services[256];  ///< All services
   /* somes counters */
 public:  
   friend class IODaemon;
   friend class IOInstructionStream;
 }; // -- end class network
 
+
+inline int Network::register_service( ServiceId sid, Service_fnc handler )
+{
+  if (_services[sid] !=0) return EBUSY;
+  _services[sid] = handler;
+  return 0;
+}
+
+inline Service_fnc Network::resolve_service( ServiceId sid )
+{
+  return _services[sid];
+}
 
 } // end namespace 
 #endif 

@@ -58,6 +58,18 @@
 namespace ka {
 
 // --------------------------------------------------------------------
+Service_fnc Network::_services[256] = {
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
+
+// --------------------------------------------------------------------
 Network Network::object;
 
 // --------------------------------------------------------------------
@@ -123,13 +135,13 @@ void Network::initialize( int* argc, char*** argv )
    we only assume here that just one name is set
 */
 #if defined(KAAPI_DEBUG)
-    std::cerr << "[Network::initialize] Try to initialize network name: '" << lnet << "'" << std::endl;
+    std::cout << "[Network::initialize] Try to initialize network name: '" << lnet << "'" << std::endl;
 #endif
 
     DeviceFactory* df = DeviceFactory::resolve_factory(lnet);
 #if defined(KAAPI_DEBUG)
     if (df ==0)
-      std::cerr << "[Network::initialize] Unknown network name: '" << lnet << "'" << std::endl;
+      std::cout << "[Network::initialize] Unknown network name: '" << lnet << "'" << std::endl;
 #endif
     if (df !=0)
     {
@@ -138,7 +150,7 @@ void Network::initialize( int* argc, char*** argv )
       _all_devices.push_back( device );
       _name2device.insert( std::make_pair(device->get_name(), device) );
 #if defined(KAAPI_DEBUG)
-      std::cerr << "Device created: '" << device << "'" << std::endl;
+      std::cout << "Device created: '" << device << "'" << std::endl;
 #endif
     }
 #endif
@@ -158,6 +170,9 @@ void Network::commit( )
     (*ibeg)->commit();
     ++ibeg;
   }
+#if defined(KAAPI_DEBUG)
+  std::cout << "[Network::commit] all network committed" << std::endl;
+#endif
 }
 
 // ---------------------------------------------------------------------------

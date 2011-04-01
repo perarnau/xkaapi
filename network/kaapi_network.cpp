@@ -202,7 +202,7 @@ int kaapi_network_rdma(
 */
 int kaapi_network_am(
   kaapi_globalid_t gid_dest, 
-  kaapi_service_t service, const void* data, size_t size 
+  kaapi_service_id_t service, const void* data, size_t size 
 )
 {
   ka::OutChannel* channel = ka::Network::object.get_default_local_route( gid_dest );
