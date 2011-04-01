@@ -9,6 +9,7 @@ extern "C" void kaapi_mem_delete_host_mappings(kaapi_mem_addr_t, size_t);
 extern "C" void* kaapi_mem_alloc_host(size_t);
 extern "C" void kaapi_mem_free_host(void*);
 extern "C" void* kaapi_mem_find_host_addr(kaapi_mem_addr_t);
+extern "C" CUstream kaapi_cuda_kernel_stream(void);
 
 // typedefed to float since gtx280 has no double
 typedef unsigned int double_type;
@@ -53,6 +54,13 @@ template<> struct TaskBodyGPU<TaskAddone>
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
     printf("<<< kudaAddone %lx, %lx\n", (uintptr_t)range.begin(), range.size());
+  }
+
+  void operator()(ka::range1d_rw<double_type> range)
+  {
+    ka::gpuStream gpustream
+      ((kaapi_gpustream_t)kaapi_cuda_kernel_stream());
+    (*this)(gpustream, range);
   }
 };
 
@@ -111,14 +119,20 @@ struct doit {
 
 	memset(array, 0, total_size);
 	ka::range1d<double_type> range(array, array + CONFIG_ELEM_COUNT);
+
+#if 0
 	threadgroup.Spawn<TaskInit>(ka::SetPartition(0))(range);
 	threadgroup.Spawn<TaskAddone>(ka::SetPartition(1))(range);
 	threadgroup.Spawn<TaskFetch>(ka::SetPartition(0))((uintptr_t)array, range);
+#else
+	threadgroup[1]->Spawn<TaskInit>()(range);
+	threadgroup[1]->Spawn<TaskAddone>()(range);
+	threadgroup[1]->Spawn<TaskFetch>()((uintptr_t)array, range);
+#endif
 	arrays[count] = array;
       }
 
       threadgroup.end_partition();
-
       threadgroup.execute();
 
       t1 = kaapi_get_elapsedns();

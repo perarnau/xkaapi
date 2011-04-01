@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 XKAAPIDIR=$HOME/install/xkaapi_gpu
-CUDADIR=/usr/local/stow/cuda-3.2/cuda
+CUDADIR=/usr/local/stow/cuda-4.0/cuda
 
 $CUDADIR/bin/nvcc --ptx saxpy_kernel.cu
 
