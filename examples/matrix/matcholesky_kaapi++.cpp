@@ -381,7 +381,7 @@ struct doit {
     printf("size   #threads #bs    time      GFlop/s   Deviation\n");
     for (int k=n; k<nmax; k += incr )
     {
-      doone_exp( n, block_count, niter, verif );
+      doone_exp( k, block_count, niter, verif );
     }
   }
 
