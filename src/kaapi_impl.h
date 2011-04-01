@@ -546,9 +546,9 @@ kaapi_reducor_t kaapi_format_get_reducor (const struct kaapi_format_t* fmt, unsi
 /*
 */
 #define KAAPI_BLOCENTRIES_SIZE 32
-#define KAAPI_BLOCALLOCATOR_SIZE 4096
+#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
 
-/*
+/* Generic blocs with KAAPI_BLOCENTRIES_SIZE entries
 */
 #define KAAPI_DECLARE_BLOCENTRIES(NAME, TYPE) \
 typedef struct NAME {\
@@ -1248,6 +1248,7 @@ typedef struct kaapi_hashmap_t {
   uint32_t entry_map;                 /* type size must at least KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
+
 /*
 */
 static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key)
@@ -1304,31 +1305,36 @@ extern kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t ke
 extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries);
 
 
+
 /* Big hashmap_big
    Used for bulding readylist
 */
-#define KAAPI_HASHMAP_BIG_SIZE 128
+#define KAAPI_HASHMAP_BIG_SIZE 8192
 
 /*
 */
-typedef struct kaapi_hashmap_big_t {
+typedef struct kaapi_big_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_BIG_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
-} kaapi_hashmap_big_t;
-
-/*
-*/
-extern int kaapi_hashmap_big_init( kaapi_hashmap_big_t* khm, kaapi_hashentries_bloc_t* initbloc );
-
-/*
-*/
-extern int kaapi_hashmap_big_destroy( kaapi_hashmap_big_t* khm );
+} kaapi_big_hashmap_t;
 
 
 /*
 */
-extern kaapi_hashentries_t* kaapi_hashmap_big_findinsert( kaapi_hashmap_big_t* khm, void* ptr );
+extern int kaapi_big_hashmap_init( kaapi_big_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc );
+
+/*
+*/
+extern int kaapi_big_hashmap_destroy( kaapi_big_hashmap_t* khm );
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* khm, void* ptr );
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_big_hashmap_find( kaapi_big_hashmap_t* khm, void* ptr );
 
 
 /* ============================= Commun function for server side (no public) ============================ */
@@ -1525,13 +1531,21 @@ static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
 static inline void kaapi_sched_waitlock(kaapi_atomic_t* lock)
 {
   /* wait until reaches the unlocked state */
-
 #if defined(KAAPI_SCHED_LOCK_CAS)
   while (KAAPI_ATOMIC_READ(lock))
 #else
   while (KAAPI_ATOMIC_READ(lock) == 0)
 #endif
     kaapi_slowdown_cpu();
+}
+
+static inline int kaapi_sched_islocked( kaapi_atomic_t* lock )
+{
+#if defined(KAAPI_SCHED_LOCK_CAS)
+  return KAAPI_ATOMIC_READ(lock) != 0;
+#else
+  return KAAPI_ATOMIC_READ(lock) != 1;
+#endif
 }
 
 /** steal/pop (no distinction) a thread to thief with kid
@@ -1579,7 +1593,7 @@ extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
-    \retval EINTR the execution of the stack is interupt and the thread is detached to the kprocessor.
+    \retval 0 the execution of the stack frame is completed
 */
 extern int kaapi_thread_execframe( kaapi_thread_context_t* thread );
 
@@ -1635,7 +1649,15 @@ extern void kaapi_sched_idle ( kaapi_processor_t* proc );
     \retval EINTR in case of termination detection
     \TODO reprendre specs
 */
-int kaapi_sched_suspend ( kaapi_processor_t* kproc );
+extern int kaapi_sched_suspend ( kaapi_processor_t* kproc );
+
+/** \ingroup WS
+    Synchronize the current control flow until all the task in the current frame have been executed.
+    \param thread [IN/OUT] the thread that stores the current frame
+    \retval 0 in case of success
+    \retval !=0 in case of no recoverable error
+*/
+extern int kaapi_sched_sync_(kaapi_thread_context_t* thread);
 
 /** \ingroup WS
     The method starts a work stealing operation and return until a sucessfull steal
@@ -1739,7 +1761,8 @@ extern int kaapi_task_splitter_readylist(
   struct kaapi_taskdescr_t**    task_beg,
   struct kaapi_taskdescr_t**    task_end,
   kaapi_listrequest_t*          lrequests, 
-  kaapi_listrequest_iterator_t* lrrange
+  kaapi_listrequest_iterator_t* lrrange,
+  size_t                        countreq
 );
 
 /** \ingroup ADAPTIVE
@@ -1821,9 +1844,11 @@ typedef struct kaapi_tasksteal_arg_t {
 /** Args for taskstealready
 */
 typedef struct kaapi_taskstealready_arg_t {
-  kaapi_thread_context_t*   origin_thread;   /* stack where task was stolen */
-  struct kaapi_tasklist_t*  origin_tasklist; /* the original task list */
-  struct kaapi_taskdescr_t* origin_td;       /* the stolen task into origin_stack */
+  kaapi_thread_context_t*    origin_thread;   /* stack where task was stolen */
+  struct kaapi_tasklist_t*   origin_tasklist; /* the original task list */
+  size_t                     origin_cnttasks; /* maximal number of tasks */
+  struct kaapi_taskdescr_t** origin_td_beg;   /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** origin_td_end;   /* range of stolen task into origin_tasklist */
 } kaapi_taskstealready_arg_t;
 
 
@@ -1932,6 +1957,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 
 #include "kaapi_tasklist.h"
 #include "kaapi_partition.h"
+#include "kaapi_event.h"
 
 /** Call only on thread in list of suspended threads.
 */
@@ -1941,9 +1967,7 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
   kaapi_tasklist_t* tl = thread->sfp->tasklist;
   if (tl !=0)
   {
-    if (  kaapi_tasklist_isempty(tl) && 
-         (KAAPI_ATOMIC_READ(&tl->count_exec) != tl->cnt_tasks)
-       ) 
+    if ( kaapi_tasklist_isempty(tl) && (KAAPI_ATOMIC_READ(&tl->count_thief) == 0))
       return 1; 
     return 0;
   }
@@ -1955,9 +1979,20 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
 
-/* Possible signal handler to dump the state of the internal kprocessors
+/* Signal handler to dump the state of the internal kprocessors
+   This signal handler is attached to SIGALARM when KAAPI_DUMP_PERIOD env. var. is defined.
 */
 extern void _kaapi_signal_dump_state(int);
+
+/* Signal handler attached to:
+    - SIGINT
+    - SIGQUIT
+    - SIGABRT
+    - SIGTERM
+    - SIGSTOP
+  when the library is configured with --with-perfcounter in order to flush some counters.
+*/
+extern void _kaapi_signal_dump_counters(int);
 
 
 #if defined(__cplusplus)

@@ -44,6 +44,11 @@
 */
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_USE_CUDA)
+# include "../../machine/cuda/kaapi_cuda_execframe.h"
+# include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
+#endif
+
 
 /** kaapi_sched_sync
     Here the stack frame is organised like this, task1 is the running task.
@@ -71,9 +76,8 @@
                | x x x  |
                | ....   |
 */
-int kaapi_sched_sync(void)
+int kaapi_sched_sync_(kaapi_thread_context_t* thread)
 {
-  kaapi_thread_context_t* thread;
   kaapi_task_t*           savepc;
   int                     err;
   kaapi_cpuset_t          save_affinity;
@@ -83,8 +87,7 @@ int kaapi_sched_sync(void)
 #endif
 
   /* If pure DFG frame and empty return */
-  thread = kaapi_self_thread_context();
-  if ((thread->sfp == 0) && kaapi_frame_isempty( thread->sfp ) ) 
+  if ((thread->sfp->tasklist == 0) && kaapi_frame_isempty( thread->sfp ) ) 
     return 0;
 
   /* here affinity should be deleted (not scalable concept) 
@@ -105,6 +108,16 @@ int kaapi_sched_sync(void)
   kaapi_mem_barrier();
   
 redo:
+#if defined(KAAPI_USE_CUDA)
+  if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    if (thread->sfp->tasklist == 0)
+      err = kaapi_thread_execframe(thread);
+    else
+      err = kaapi_cuda_thread_execframe_tasklist(thread);
+  }
+  else
+#endif /* KAAPI_USE_CUDA */
   if (thread->sfp->tasklist == 0) 
     err = kaapi_thread_execframe(thread);
   else
@@ -132,4 +145,13 @@ redo:
   thread->esfp = save_esfp;
 
   return err;
+}
+
+
+/**
+*/
+int kaapi_sched_sync()
+{
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  return kaapi_sched_sync_(thread);
 }

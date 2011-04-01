@@ -189,11 +189,10 @@ int kaapi_threadgroup_end_partition(kaapi_threadgroup_t thgrp )
   
   /* */
   
-#if 1
+#if 0 /* ... */
   printf("\n\n<<<<<<<<<<<<< End partition \n");
   kaapi_thread_print(stdout, thgrp->threadctxts[-1]);
   printf("\n\n\n");
-#endif
 
 char filename[128];
 sprintf(filename, "/tmp/graph.dot");
@@ -206,6 +205,7 @@ for (int i=-1; i<thgrp->group_size; ++i)
 }
 fprintf( filedot, "\n\n}\n" );
 fclose(filedot);
+#endif /* ... */
 
   thgrp->state = KAAPI_THREAD_GROUP_MP_S;
   return 0;

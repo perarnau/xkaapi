@@ -78,7 +78,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     {
       /* should be atomic ? */
       cell = cond_thread->wcs;
-      if (cell !=0) {
+      if (cell !=0) 
+      {
         cell->thread = 0;
         cond_thread->wcs = 0;
         KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);

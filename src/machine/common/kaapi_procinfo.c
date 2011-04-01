@@ -411,13 +411,17 @@ int kaapi_procinfo_list_parse_string
   /* parse string */
   if (init_parser(&parser, procset_str, max_count))
     return -1;
-  if (parse_string(&parser)) {
-    ret=-1;
-    goto free_parser;
+
+  if (procset_str[0]) { /* non empty string */
+    if (parse_string(&parser)) {
+      ret=-1;
+      goto free_parser;
+    }
   }
   
   /* turn to kpl */
   count = parser.proc_count;
+
   for (i = 0; count && (i < max_count); ++i)
   {
     /* not usable */

@@ -60,7 +60,9 @@ int kaapi_thread_online_computedep(kaapi_thread_t* frame, int pid, kaapi_task_t*
   return err;
 }
 
+#ifndef KAAPI_USE_PERFCOUNTER
 #define KAAPI_USE_PERFCOUNTER 1
+#endif
 /**
 */
 int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist, kaapi_task_t* task)
@@ -70,7 +72,7 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
   kaapi_taskdescr_t*      taskdescr =0;
   kaapi_metadata_info_t*  mdi;
   kaapi_version_t*        version;
-  kaapi_version_t*        all_versions[32];
+  kaapi_version_t*        all_versions[32]; // see assert in the code
 
   /* assume task list  */
   kaapi_assert( tasklist != 0);
@@ -81,9 +83,7 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
   else
     task_fmt = 0;
   if (task_fmt ==0) 
-  {
     return EINVAL;
-  }
 
   /* new task descriptor */
   taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
@@ -99,7 +99,12 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
     if (m == KAAPI_ACCESS_MODE_V) 
+    {
+#if defined(KAAPI_DEBUG)      
+      all_versions[i] = 0;
+#endif
       continue;
+    }
     
     /* its an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);

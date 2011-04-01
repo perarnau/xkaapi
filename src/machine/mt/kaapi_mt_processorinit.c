@@ -94,6 +94,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kproc->fnc_selecarg[3] = 0;
   kproc->fnc_select      = kaapi_default_param.wsselect;
   
+  kproc->eventbuffer     = 0;
+  
   /* workload */
   kproc->workload._counter= 0;
 

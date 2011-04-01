@@ -47,9 +47,9 @@
 
 /*
 */
-kaapi_hashentries_t* kaapi_hashmap_big_findinsert( kaapi_hashmap_big_t* khm, void* ptr )
+kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* khm, void* ptr )
 {
-  uint32_t hkey = kaapi_hash_ulong7( (uintptr_t)ptr );
+  uint32_t hkey = kaapi_hash_ulong( (uintptr_t)ptr );
 
   hkey = hkey % KAAPI_HASHMAP_BIG_SIZE;
   kaapi_hashentries_t* list_hash = khm->entries[hkey];
@@ -78,5 +78,6 @@ kaapi_hashentries_t* kaapi_hashmap_big_findinsert( kaapi_hashmap_big_t* khm, voi
     khm->currentbloc = 0;
   }
   entry->next = list_hash;
+  khm->entries[hkey] = entry;
   return entry;
 }

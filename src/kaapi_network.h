@@ -44,6 +44,11 @@
 #ifndef _KAAPI_NETWORK_C_H_
 #define _KAAPI_NETWORK_C_H_ 1
 
+#include "kaapi_compiler.h"
+
+#undef __KA_COMPILER_WEAK
+#define __KA_COMPILER_WEAK  
+
 // --------------------------------------------------------------------
 /** Implementation note.
     - The network interface allows to use multiple networks.
@@ -61,56 +66,60 @@
 /** This file is the C header file to the C++ network implementation
 */
 typedef void (*kaapi_service_t)(int errocode, kaapi_globalid_t source, void* buffer, size_t size);
+typedef uint8_t kaapi_service_id_t;
 
 /** To be called prior to any other calls to network
 */
-int kaapi_network_init(int* argc, char*** argv);
+extern __KA_COMPILER_WEAK int kaapi_network_init(int* argc, char*** argv);
 
 /**
 */
-int kaapi_network_finalize();
+extern __KA_COMPILER_WEAK int kaapi_network_finalize(void);
 
 /** Return the local global id 
 */
-extern kaapi_globalid_t kaapi_network_get_current_globalid(void);
+extern __KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void);
 
 /** Return the number of the nodes in the network
 */
-extern uint32_t kaapi_network_get_count(void);
+extern __KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void);
 
 /** Allocate data that can be used into rdma operation
 */
-extern void* kaapi_network_allocate_rdma(size_t size);
+extern __KA_COMPILER_WEAK void* kaapi_network_allocate_rdma(size_t size);
 
 /** Deallocate a pointer in a memory region which is rdmable
 */
-extern void kaapi_network_deallocate_rdma(kaapi_pointer_t, size_t size);
+extern __KA_COMPILER_WEAK void kaapi_network_deallocate_rdma(kaapi_pointer_t, size_t size);
 
 /** Get the segment info for gid 
 */
-int kaapi_network_get_seginfo( kaapi_address_space_t* retval, kaapi_globalid_t gid );
+extern __KA_COMPILER_WEAK int kaapi_network_get_seginfo( kaapi_address_space_t* retval, kaapi_globalid_t gid );
 
 /** Make progress of communication
 */
-extern void kaapi_network_poll();
+extern __KA_COMPILER_WEAK void kaapi_network_poll(void);
 
 /**
 */
-extern void kaapi_network_barrier(void);
+extern __KA_COMPILER_WEAK void kaapi_network_barrier(void);
 
 /** Do blocking remote  write 
 */
-extern int kaapi_network_rdma(
+extern __KA_COMPILER_WEAK int kaapi_network_rdma(
   kaapi_globalid_t gid_dest, 
   kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
   const void* src, const kaapi_memory_view_t* view_src 
 );
 
 /* synchronous am */
-extern int kaapi_network_am(
+extern __KA_COMPILER_WEAK int kaapi_network_am(
   kaapi_globalid_t gid_dest, 
-  kaapi_service_t service, const void* data, size_t size 
+  kaapi_service_id_t service, const void* data, size_t size 
 );
+
+#undef __KA_COMPILER_WEAK
+#  define __KA_COMPILER_WEAK __attribute__((weak))
 
 
 #endif /* _KAAPI_NETWORK_C_H_ */

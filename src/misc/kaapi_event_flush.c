@@ -1,5 +1,4 @@
 /*
-** kaapi_fmt_predef.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -43,56 +42,62 @@
 ** 
 */
 #include "kaapi_impl.h"
-//#include <string.h>
-
-kaapi_format_t* kaapi_all_format_byfmtid[256] = 
-{
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-};
-
+#include "kaapi_event.h"
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 /**
 */
-kaapi_format_id_t kaapi_format_register( 
-        kaapi_format_t*           fmt,
-        const char*               name
-)
+void kaapi_event_flushbuffer( kaapi_processor_t* kproc )
 {
-  uint8_t        entry;
-  kaapi_format_t* head;
-
-  memset( fmt, 0, sizeof(kaapi_format_t) );
-  fmt->fmtid = kaapi_hash_value( name );
-  fmt->name         = strdup(name); /* TODO: strdup ? */
-  fmt->isinit       = 1;
-
-  /* register it into hashmap: fmtid -> fmt */
-  entry = (uint8_t) (fmt->fmtid & (kaapi_format_id_t)0xFFUL);
-  head =  kaapi_all_format_byfmtid[entry];
-  fmt->next_byfmtid = head;
-  kaapi_all_format_byfmtid[entry] = fmt;
+  kaapi_event_buffer_t* evb = kproc->eventbuffer;
+  if (kproc->eventbuffer ==0) return;
   
-  return fmt->fmtid;
+  /* open if not yet opened */
+  if (evb->fd == -1)
+  {
+    char filename[128]; 
+    if (getenv("USER") !=0)
+      sprintf(filename,"/tmp/events.%s.%i.evt", getenv("USER"), kproc->kid );
+    else
+      sprintf(filename,"/tmp/events.%i.evt", kproc->kid );
+
+    /* open it */
+    evb->fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
+    kaapi_assert( evb->fd != -1 );
+    fchmod( evb->fd, S_IRUSR|S_IWUSR);
+  }
+  
+  /* write the buffer [0, pos) */
+  ssize_t sz_write = write(evb->fd, evb->buffer, sizeof(kaapi_event_t)*evb->pos);
+  kaapi_assert( sz_write == (ssize_t)(sizeof(kaapi_event_t)*evb->pos) );
+  evb->pos = 0;
 }
+
+
+/*
+*/
+void kaapi_event_closebuffer( kaapi_processor_t* kproc )
+{
+  kaapi_event_buffer_t* evb = kproc->eventbuffer;
+  if (evb ==0) return;
+
+  kaapi_event_flushbuffer(kproc);
+  if (evb->fd != -1) close(evb->fd);
+  evb->fd = -1;
+}
+
 
 /**
 */
-kaapi_format_t* kaapi_format_allocate( )
+void _kaapi_signal_dump_counters(int xxdummy)
 {
-  return malloc( sizeof(kaapi_format_t) );
+  for (uint32_t i=0; i<kaapi_count_kprocessors; ++i)
+  {
+    kaapi_event_closebuffer( kaapi_all_kprocessors[i] );
+  }
+  _exit(0);
 }
+

@@ -230,11 +230,13 @@ void* kaapi_sched_run_processor( void* arg )
 
   /* processor initialization */
   kaapi_assert( 0 == kaapi_processor_init( kproc, kpi) );
+  kaapi_assert( kproc->thread != 0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_init(kproc, KAAPI_PERF_SCHEDULE_STATE);
 #endif
+  kaapi_assert( kproc->thread != 0 );
 
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
@@ -260,6 +262,7 @@ void* kaapi_sched_run_processor( void* arg )
 #endif
 
   /* main work stealing loop */
+  kaapi_assert( kproc->thread != 0 );
   kaapi_sched_idle( kproc );
 
   kaapi_assert_debug( kaapi_isterminated() );

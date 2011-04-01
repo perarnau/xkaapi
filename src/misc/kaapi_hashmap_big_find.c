@@ -1,13 +1,14 @@
 /*
-** kaapi_fmt_predef.c
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,56 +44,20 @@
 ** 
 */
 #include "kaapi_impl.h"
-//#include <string.h>
 
-kaapi_format_t* kaapi_all_format_byfmtid[256] = 
-{
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-};
-
-
-/**
+/*
 */
-kaapi_format_id_t kaapi_format_register( 
-        kaapi_format_t*           fmt,
-        const char*               name
-)
+kaapi_hashentries_t* kaapi_big_hashmap_find( kaapi_big_hashmap_t* khm, void* ptr )
 {
-  uint8_t        entry;
-  kaapi_format_t* head;
+  uint32_t hkey = kaapi_hash_ulong( (uintptr_t)ptr );
 
-  memset( fmt, 0, sizeof(kaapi_format_t) );
-  fmt->fmtid = kaapi_hash_value( name );
-  fmt->name         = strdup(name); /* TODO: strdup ? */
-  fmt->isinit       = 1;
-
-  /* register it into hashmap: fmtid -> fmt */
-  entry = (uint8_t) (fmt->fmtid & (kaapi_format_id_t)0xFFUL);
-  head =  kaapi_all_format_byfmtid[entry];
-  fmt->next_byfmtid = head;
-  kaapi_all_format_byfmtid[entry] = fmt;
-  
-  return fmt->fmtid;
-}
-
-/**
-*/
-kaapi_format_t* kaapi_format_allocate( )
-{
-  return malloc( sizeof(kaapi_format_t) );
+  hkey = hkey % KAAPI_HASHMAP_BIG_SIZE;
+  kaapi_hashentries_t* list_hash = khm->entries[hkey];
+  kaapi_hashentries_t* entry = list_hash;
+  while (entry != 0)
+  {
+    if (entry->key == ptr) return entry;
+    entry = entry->next;
+  }
+  return 0;
 }

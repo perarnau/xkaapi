@@ -160,7 +160,9 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
   __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
 
 #define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
+    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_mem_barrier(), (a)->_counter = value))
+
+//BEFORE:    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
 
 #if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
 || defined(__INTEL_COMPILER))
@@ -483,6 +485,7 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, uintptr_t align)
     See internal doc in order to have better documentation of invariant between the task and the thread.
 */
 typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread or stream */);
+typedef void (*kaapi_task_vararg_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread or stream */, ...);
 /* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
@@ -1559,10 +1562,71 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
 /* ========================================================================= */
 /* API for graph partitioning                                                */
 /* ========================================================================= */
+/** Type of allowed memory view for the memory interface:
+    - 1D array (base, size)
+      simple contiguous 1D array
+    - 2D array (base, size[2], lda)
+      assume a row major storage of the memory : the 2D array has
+      size[0] rows of size[1] rowwidth. lda is used to pass from
+      one row to the next one.
+    The base (kaapi_pointer_t) is not part of the view description
+*/
+#define KAAPI_MEMORY_VIEW_1D 1
+#define KAAPI_MEMORY_VIEW_2D 2  /* assume row major */
+#define KAAPI_MEMORY_VIEW_3D 3
+typedef struct kaapi_memory_view_t {
+  int    type;
+  size_t size[2];
+  size_t lda;
+  size_t wordsize;
+} kaapi_memory_view_t;
+
+
 /** Identifier to an address space id
 */
 typedef uint64_t  kaapi_address_space_id_t;
 
+/** Type of pointer for all address spaces.
+    The pointer encode both the pointer (field ptr) and the location of the address space
+    in asid.
+    Pointer arithmetic is allowed on this type on the ptr field.
+*/
+typedef struct kaapi_pointer_t { 
+  kaapi_address_space_id_t asid;
+  uintptr_t                ptr;
+} kaapi_pointer_t;
+
+static inline void* __kaapi_pointer2void(kaapi_pointer_t p)
+{ return (void*)p.ptr; }
+
+
+/** Data shared between address space and task
+    Such data structure is referenced through the pointer arguments of tasks using a handle.
+    All tasks, after construction of tasklist, have effective parameter a handle to a data
+    in place of pointer to a data: Before creation of a tasklist data structure, a task
+    has a direct access through a pointer to object in the shared address space of the process.
+    After tasklist creation, each pointer parameter is replaced by a pointer to a kaapi_data_t
+    that points to the data and the view of the data.
+    
+    The data also stores a pointer to the meta data information for fast lookup.
+    Warning: The ptr should be the first field of the data structure.
+*/
+typedef struct kaapi_data_t {
+  kaapi_pointer_t               ptr;                /* address of data */
+  kaapi_memory_view_t           view;               /* view of data */
+  struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
+} kaapi_data_t;
+
+
+/** Handle to data.
+    See comments in kaapi_data_t structure.
+*/
+typedef kaapi_data_t* kaapi_handle_t;
+
+
+/** Synchronize all shared memory in the local address space to the up-to-date value.
+*/
+extern int kaapi_memory_synchronize(void);
 
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
@@ -1697,13 +1761,25 @@ extern void kaapi_taskmain_body( void*, kaapi_thread_t* );
 extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
 
 
+/** Scheduler information pass by the runtime to task forked
+    with set static attribut
+    - array nkproc have the same dimension of number of static
+    proc types. nkproc[i] == number of proc type i (i+1== KAAPI_PROC_TYPE_HOST|GPU|MPSOC)
+    used for static scheduling.
+    - bitmap may be also pass here.
+*/
+typedef struct kaapi_staticschedinfo_t {
+  uint32_t  nkproc[KAAPI_PROC_TYPE_MAX-1]; 
+} kaapi_staticschedinfo_t;
+
 /** Body of the task in charge of finalize of adaptive task
     \ingroup TASK
 */
 typedef struct kaapi_staticschedtask_arg_t {
-  void*               sub_sp;   /* encapsulated task */
-  kaapi_task_bodyid_t sub_body; /* encapsulated body */
-  int                 npart;    /* number of partition */
+  void*                    sub_sp;    /* encapsulated task */
+  kaapi_task_vararg_body_t sub_body;  /* encapsulated body */
+  intptr_t                 key;
+  kaapi_staticschedinfo_t  schedinfo; /* number of partition */
 } kaapi_staticschedtask_arg_t;
 
 extern void kaapi_staticschedtask_body( void*, kaapi_thread_t* );
@@ -1738,9 +1814,11 @@ typedef struct {
 
 
 /** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
 */
 static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
 {
+  kaapi_mem_barrier();
 #if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)
   kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
   kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
@@ -1804,7 +1882,8 @@ static inline unsigned int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
     The function push work into the workqueue.
     Assuming that before the call, the workqueue is [beg,end).
     After the successful call to the function the workqueu becomes [newbeg,end).
-    newbeg is assumed to be less than beg. Else it is a pop operation, see kaapi_workqueue_pop.
+    newbeg is assumed to be less than beg. Else it is a pop operation, 
+    see kaapi_workqueue_pop.
     Return 0 in case of success 
     Return EINVAL if invalid arguments
 */
@@ -1838,7 +1917,7 @@ extern int kaapi_workqueue_slowpop(
 
 /** This function should be called by the current kaapi thread that own the workqueue.
     Return 0 in case of success 
-    Return EBUSY is the queue is empty.
+    Return EBUSY is the queue is empty
     Return EINVAL if invalid arguments
     Return ESRCH if the current thread is not a kaapi thread.
 */
@@ -2006,25 +2085,6 @@ extern size_t kaapi_perf_counter_num(void);
 /* ========================================================================= */
 /* Format declaration & registration                                         */
 /* ========================================================================= */
-/** Type of allowed memory view for the memory interface:
-    - 1D array (base, size)
-      simple contiguous 1D array
-    - 2D array (base, size[2], lda)
-      assume a row major storage of the memory : the 2D array has
-      size[0] rows of size[1] rowwidth. lda is used to pass from
-      one row to the next one.
-    The base (kaapi_pointer_t) is not part of the view description
-*/
-#define KAAPI_MEMORY_VIEW_1D 1
-#define KAAPI_MEMORY_VIEW_2D 2  /* assume row major */
-#define KAAPI_MEMORY_VIEW_3D 3
-typedef struct kaapi_memory_view_t {
-  int    type;
-  size_t size[2];
-  size_t lda;
-  size_t wordsize;
-} kaapi_memory_view_t;
-
 
 static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t wordsize)
 {

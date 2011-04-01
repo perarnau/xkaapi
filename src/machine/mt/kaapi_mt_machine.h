@@ -74,7 +74,7 @@
 
 /* ========================================================================== */
 struct kaapi_procinfo_t;
-
+struct kaapi_event_buffer_t;
 
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
@@ -603,6 +603,9 @@ typedef struct kaapi_processor_t {
 
   /* proc info */
   const struct kaapi_procinfo_t* kpi;
+  
+  /* event buffer */
+  struct kaapi_event_buffer_t* eventbuffer;
 
   /* workload */
   kaapi_atomic_t	         workload;

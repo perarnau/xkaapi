@@ -155,7 +155,7 @@ static int kaapi_setup_param()
     kaapi_default_param.display_perfcounter = 0;
 
   if (getenv("KAAPI_STACKSIZE") !=0)
-    kaapi_default_param.stacksize = atoi(getenv("KAAPI_STACKSIZE"));
+    kaapi_default_param.stacksize = atoll(getenv("KAAPI_STACKSIZE"));
 
   /* workstealing selection function */
   wsselect = getenv("KAAPI_WSSELECT");

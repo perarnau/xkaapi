@@ -77,7 +77,7 @@ static inline void _kaapi_free_link( kaapi_activationlink_t* freelist, kaapi_act
     consider that they are ready.
 */
 int kaapi_thread_abstractexec_readylist( 
-  kaapi_tasklist_t* tasklist, 
+  const kaapi_tasklist_t* tasklist, 
   void (*taskdescr_executor)(kaapi_taskdescr_t*, void*),
   void* arg_executor
 )
@@ -87,7 +87,7 @@ int kaapi_thread_abstractexec_readylist(
   kaapi_activationlist_t     readylist;
   kaapi_allocator_t          allocator;
   kaapi_activationlink_t     free_al;
-    
+
   if ((tasklist == 0) || (taskdescr_executor ==0)) 
     return EINVAL;
   

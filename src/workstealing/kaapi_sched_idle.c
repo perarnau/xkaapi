@@ -45,6 +45,7 @@
  ** 
  */
 #include "kaapi_impl.h"
+
 #if defined(KAAPI_USE_CUDA)
 # include "../../machine/cuda/kaapi_cuda_execframe.h"
 # include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
@@ -65,7 +66,9 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
+  kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
+
   do {
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
@@ -74,6 +77,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* terminaison ? */
     if (kaapi_isterminated())
     {
+      kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
       return;
     }
     
@@ -124,8 +128,9 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
+    kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
-    
+
 #if defined(KAAPI_USE_CUDA)
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
@@ -142,6 +147,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
         err = kaapi_thread_execframe_tasklist( kproc->thread );
     
 #if defined(KAAPI_USE_PERFCOUNTER)
+    kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
     
