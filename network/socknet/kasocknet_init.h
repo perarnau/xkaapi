@@ -10,54 +10,33 @@
 
 namespace SOCKNET {
 
-// ---------------------------------------------------------------------------
-/** Declaration of the component SOCKNET
+// --------------------------------------------------------------------
+// --------------------------------------------------------------------
+/** Design Pattern: factory of device over socknet
 */
-class Init : public Util::KaapiComponent {
+class DeviceFactory : public ka::DeviceFactory {
 public:
-  static Init component;
-
-  /** Global variable = true iff verbose mode if on for Util library level
-      Default value is false.
+  /**
   */
-  static bool verboseon;
-
-  /** Global variable size of the send buffer for each socket
+  DeviceFactory();
+  
+  /** Virtual dstor 
   */
-  static size_t sendbuffersize;
-
-  /** Global variable size of the receive buffer for each socket
+  ~DeviceFactory();
+  
+  /** Return the name of the type of created network 
   */
-  static size_t recvbuffersize;
-
-  /** List of local AF_INET interface that are up and not loopback 
-      first: name
-      second: network address
+  const char* get_name() const;
+  
+  /** Return a new device
   */
-  static std::map<std::string, std::string> local_interfaces; 
-
-  /** Default constructor: assign the priority to 20
-  */
-  Init();
-
-  /** Initialization of the network library and return the default network
-  */
-  int initialize() throw();
-
-  /** Terminaison of the network library 
-  */
-  int terminate() throw();
-
-  /** Add the options for this Kaapi' Component
-  */
-  void add_options( Util::Parser* parser, Util::Properties* global_prop );
-
-  /** Declare dependencies with other component
-  */
-  void declare_dependencies();
+  ka::Device* create(int* argc, char*** argv);
 };
 
 
 } // namespace
+
+/* exported name for the shared library */
+extern "C" ka::DeviceFactory* socknet_factory();
 
 #endif

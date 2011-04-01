@@ -123,7 +123,7 @@ int Device::terminate()
     {
       ka::OutChannel* channel = ka::Network::object.get_default_local_route(i);
       kaapi_assert( channel != 0 );
-      channel->insert_am( &service_term, 0, 0);
+      channel->insert_am( &Device::service_term, 0, 0);
       channel->sync();
     }
   }

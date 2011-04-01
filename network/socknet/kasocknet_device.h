@@ -48,30 +48,6 @@
 namespace SOCKNET {
 
 // --------------------------------------------------------------------
-/** Design Pattern: factory of device over socknet
-*/
-class DeviceFactory : public ka::DeviceFactory {
-public:
-  /** Virtual dstor 
-  */
-  ~DeviceFactory();
-  
-  /** Return the name of the type of created network 
-  */
-  const char* get_name() const;
-  
-  /** Return a new device
-  */
-  ka::Device* create();
-
-  /** Destroy a created network 
-  */
-  void destroy( ka::Device* );
-};
-
-
-
-// --------------------------------------------------------------------
 /** \name Channel
 */
 class Device : public ka::Device {
@@ -99,6 +75,10 @@ public:
   /** 
   */
   int abort();
+
+  /**
+  */
+  void poll();
 
   /** 
   */
