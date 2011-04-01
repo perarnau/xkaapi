@@ -51,6 +51,12 @@
 # include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
 #endif
 
+#define KAAPI_USE_BACKOFF 1
+#if defined(KAAPI_USE_BACKOFF)
+static inline unsigned int min( unsigned int a, unsigned int b )
+{ if (a<b) return a; else return b; }
+#endif
+
 /* \TODO: voir ici si les fonctions (a adapter si besoin): makecontext, getcontext, setcontext 
  seront suffisante dans le cas d'un suspend durant l'execution d'une tâche.
  */
@@ -60,6 +66,12 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_thread_context_t* thread;
   int err;
   
+#if defined(KAAPI_USE_BACKOFF)
+  unsigned int backoff = 10;
+  unsigned int backoff_factor = 2*8;
+  unsigned int backoff_capacity = 20000;
+#endif  
+
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   kaapi_assert_debug( kproc->thread !=0 );
@@ -110,7 +122,24 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     thread = kaapi_sched_emitsteal( kproc );
     
     if (thread ==0) 
+    {
+#if defined(KAAPI_USE_BACKOFF)
+        for(unsigned int i = 0; i < backoff; i++)
+          kaapi_slowdown_cpu();
+        /* Increase backoff  */
+        backoff = min((backoff * backoff_factor), backoff_capacity);
+        
+        //kaapi_sched_advance(kproc);
+        pthread_yield_np();
+#endif
       continue;
+    }
+    else
+    {
+#if defined(KAAPI_USE_BACKOFF)
+        backoff = 10;
+#endif
+    }
     
     if (thread != ctxt)
     {
