@@ -19,7 +19,7 @@ int PajeGenerator::initTrace (
   int linkTypeNbr, 
   int varNbr)
 {
-    int i, j, k;
+    int i;
     _dest = fopen (name.c_str(), "w");
     if (_dest ==0) return -1;
 

@@ -114,7 +114,6 @@ void OutChannel::flush( ka::Instruction* first, ka::Instruction* last )
 
       case ka::Instruction::INST_RWDMA:
       {
-        iovec iov[2];
         Header header;
         header.opcode   = 'D';
         header.size     = curr->i_rw.size;
