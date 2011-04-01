@@ -53,7 +53,7 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
-#if 0
+#if 1
 /* Generate a random matrix symetric definite positive matrix of size m x m 
    - it will be also interesting to generate symetric diagonally dominant 
    matrices which are known to be definite postive.
@@ -62,8 +62,11 @@ static void generate_matrix(double* A, size_t m)
 {
   // 
   for (size_t i = 0; i< m; ++i)
+  {
     for (size_t j = 0; j< m; ++j)
       A[i*m+j] = 1.0 / (1.0+i+j);
+    A[i*m+i] = m*1.0; 
+  }
 }
 #else
 /* Generate a random matrix symetric definite positive matrix of size m x m 
@@ -281,6 +284,7 @@ struct doit {
     double sumgf2 = 0.0;
     double sd;
     double gflops;
+    double gflops_max = 0.0;
 
     /* formula used by plasma in time_dpotrf.c */
     double fp_per_mul = 1;
@@ -300,6 +304,7 @@ struct doit {
       t1 = kaapi_get_elapsedtime();
 
       gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
+      if (gflops > gflops_max) gflops_max = gflops;
       
       sumt += double(t1-t0);
       sumgf += gflops;
@@ -347,7 +352,7 @@ struct doit {
     else
       sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
     
-    printf("%6d %5d %5d %9.3f %9.3f %9.3f\n", (int)n, (int)kaapi_getconcurrency(), (int)(n/global_blocsize), sumt/niter, gflops, sd );
+    printf("%6d %5d %5d %9.3f %9.3f %9.3f %9.3f\n", (int)n, (int)kaapi_getconcurrency(), (int)(n/global_blocsize), sumt/niter, gflops, sd, gflops_max );
 
     free(dA);
     if (verif)
@@ -376,12 +381,11 @@ struct doit {
     if (argc >4)
       verif = atoi(argv[4]);
     
-    int incr = 512;
-    int nmax = n+8*incr;
+    //int nmax = n+16*incr;
     printf("size   #threads #bs    time      GFlop/s   Deviation\n");
-    for (int k=n; k<nmax; k += incr )
+    for (int k=0; k<1; ++k, ++n )
     {
-      doone_exp( k, block_count, niter, verif );
+      doone_exp( n, block_count, niter, verif );
     }
   }
 
