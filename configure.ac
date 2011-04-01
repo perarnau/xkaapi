@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.60])
 
-AC_INIT([X-KAAPI],[1.0-rc5],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI],[1.0-rc6],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
@@ -606,7 +606,7 @@ AS_CASE([$with_gasnet],
     KAGASNETLIB_BUILD_CPPFLAGS=$GASNET_CPPFLAGS
     KAGASNETLIB_BUILD_CFLAGS=$GASNET_CFLAGS
     KAGASNETLIB_BUILD_LDFLAGS=$GASNET_LDFLAGS
-    KAGASNETLIB_BUILD_LIBS="$GASNET_LIBS -lmpi"
+    KAGASNETLIB_BUILD_LIBS="$GASNET_LIBS"
     AC_MSG_NOTICE([KAGASNETLIB_BUILD_CPPFLAGS=$KAGASNETLIB_BUILD_CPPFLAGS])
     AC_MSG_NOTICE([KAGASNETLIB_BUILD_CFLAGS=$KAGASNETLIB_BUILD_CFLAGS])
     AC_MSG_NOTICE([KAGASNETLIB_BUILD_LDFLAGS=$KAGASNETLIB_BUILD_LDFLAGS])
@@ -618,6 +618,42 @@ AC_SUBST(KAGASNETLIB_BUILD_CFLAGS)
 AC_SUBST(KAGASNETLIB_BUILD_LDFLAGS)
 AC_SUBST(KAGASNETLIB_BUILD_LIBS)
 AM_CONDITIONAL([KAAPI_TARGET_GASNET],[test x"$KAAPI_USE_GASNET" = x"yes"])
+
+
+
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-taknet"
+dnl -----------------------------------------------------------------------
+AC_ARG_WITH([taknet],[AS_HELP_STRING([--with-taknet=<conduit>],
+		 [choose taknet Network support based on TakTuk])],
+     [],
+     [with_taknet=no]
+)
+
+AS_CASE([$with_taknet],
+  [no], [dnl
+  ], 
+  [*], [dnl
+    AC_MSG_NOTICE([Adding taknet support '$with_taknet'])
+    # not using AC*DEFINE as we want this available for examples too
+    AC_DEFINE([KAAPI_USE_TAKNET],1,[Use with GASNet])
+    KAAPI_USE_TAKNET=yes
+    KATAKNETLIB_BUILD_CPPFLAGS=-I$with_taknet/include
+    KATAKNETLIB_BUILD_CFLAGS=
+    KATAKNETLIB_BUILD_LDFLAGS=-L$with_taknet/lib
+    KATAKNETLIB_BUILD_LIBS="-ltaktuk"
+    AC_MSG_NOTICE([KATAKNETLIB_BUILD_CPPFLAGS=$KATAKNETLIB_BUILD_CPPFLAGS])
+    AC_MSG_NOTICE([KATAKNETLIB_BUILD_CFLAGS=$KATAKNETLIB_BUILD_CFLAGS])
+    AC_MSG_NOTICE([KATAKNETLIB_BUILD_LDFLAGS=$KATAKNETLIB_BUILD_LDFLAGS])
+    AC_MSG_NOTICE([KATAKNETLIB_BUILD_LIBS=$KATAKNETLIB_BUILD_LIBS])
+  ]
+)
+AC_SUBST(KATAKNETLIB_BUILD_CPPFLAGS)
+AC_SUBST(KATAKNETLIB_BUILD_CFLAGS)
+AC_SUBST(KATAKNETLIB_BUILD_LDFLAGS)
+AC_SUBST(KATAKNETLIB_BUILD_LIBS)
+AM_CONDITIONAL([KAAPI_TARGET_TAKNET],[test x"$KAAPI_USE_TAKNET" = x"yes"])
 
 
 
@@ -692,7 +728,9 @@ AC_CONFIG_FILES([
 	examples/Makefile
 	network/Makefile
 	network/gasnet/Makefile
+	network/taknet/Makefile
 	src/Makefile
+	bin/Makefile
 	tests/static/Makefile
 
 	atha.pc
