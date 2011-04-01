@@ -268,10 +268,12 @@ struct doit {
 
     ka::array<2,double> A(dA, n, n, n);
 
+#if 0
     std::cout << "Start Cholesky with " 
               << block_count << 'x' << block_count 
               << " blocs of matrix of size " << n << 'x' << n 
               << std::endl;
+#endif
               
     // Cholesky factorization of A 
     double sumt = 0.0;
@@ -345,9 +347,7 @@ struct doit {
     else
       sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
     
-    printf("size   #threads #bs    time      GFlop/s   Deviation\n");
     printf("%6d %5d %5d %9.3f %9.3f %9.3f\n", (int)n, (int)kaapi_getconcurrency(), (int)(n/global_blocsize), sumt/niter, gflops, sd );
-    std::cout << " TaskCholesky took " << t1-t0 << " seconds   " <<  gflops << " GFlops" << std::endl;
 
     free(dA);
     if (verif)
@@ -378,6 +378,7 @@ struct doit {
     
     int incr = 512;
     int nmax = n+8*incr;
+    printf("size   #threads #bs    time      GFlop/s   Deviation\n");
     for (int k=n; k<nmax; k += incr )
     {
       doone_exp( n, block_count, niter, verif );
