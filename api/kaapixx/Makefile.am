@@ -43,7 +43,7 @@ $(M4_BUILT_FILES): stamp-m4_generator
 
 .INTERMEDIATE: stamp-m4_generator
 stamp-m4_generator: $(M4_SRCS)
-	cd $(srcdir) && ./m4_generator 10
+	cd $(srcdir) && ./m4_generator 20
 	touch $@
 
 clean-local:

@@ -102,6 +102,28 @@ template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyCPU<TASK> KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<3, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
 
 
+// Kaapi binder to call task with static sched info args
+template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
+struct KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')> {
+  typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>') TaskArg_t;
+  M4_PARAM(`typedef typename TraitFormalParam$1::formal_t formal$1_t;
+  ', ` ', `')
+  static TaskBodyCPU<TASK> dummy;
+  static void body(void* taskarg, kaapi_thread_t* thread, kaapi_staticschedinfo_t* ssi)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (StaticSchedInfo*)ssi M4_PARAM(`, (formal$1_t)args->f$1', `', `'));
+  }
+  static void bodywithhandle(void* taskarg, kaapi_thread_t* thread, kaapi_staticschedinfo_t* ssi)
+  {
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`TaskArg_t* args = (TaskArg_t*)taskarg;')
+    dummy( (StaticSchedInfo*)ssi M4_PARAM(`,TraitFormalParam$1::handle2data(&args->f$1)', `', `'));
+  }
+};
+template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
+TaskBodyCPU<TASK> KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
+
+
 template<int type, class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS) {};
 
@@ -464,6 +486,28 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     return body;
   }
 
+  static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( StaticSchedInfo* M4_PARAM(`, formal$1_t', `', `') ) )
+  {
+    typedef void (TASK::*type_default_t)(THIS_TYPE_IS_USED_ONLY_INTERNALLY M4_PARAM(`, signature$1_t', `', `'));
+    type_default_t f_default = &TASK::operator();
+    if ((type_default_t)method == f_default) return 0;
+    kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
+    return body;
+  }
+
+  static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( const StaticSchedInfo* M4_PARAM(`, formal$1_t', `', `') ) )
+  {
+    typedef void (TASK::*type_default_t)(THIS_TYPE_IS_USED_ONLY_INTERNALLY M4_PARAM(`, signature$1_t', `', `'));
+    type_default_t f_default = &TASK::operator();
+    if ((type_default_t)method == f_default) return 0;
+    kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
+    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
+    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
+    return body;
+  }
+
   /* GPU registration */
 
   /* trap function for undefined body */
@@ -503,6 +547,8 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     return retval;
   }
 };
+
+
 
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 kaapi_bodies_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::default_bodies =

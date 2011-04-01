@@ -261,15 +261,6 @@ public:
   array_rep<1,T>(T* p, index_t sz) : _data(p), _size(sz) {}
 
   /** */
-#if 0  
-  array_rep<1,T>& operator=(T* p) 
-  { 
-    _data = p; 
-    return *this;
-  }
-#endif
-
-  /** */
   void setptr( pointer_t p) 
   { _data =p; }
 
@@ -562,6 +553,10 @@ public:
   {
   }
   
+  array<1,T>(T* data, const kaapi_memory_view_t* view)
+   : array_rep<1,T>(data, view->size[0])
+  {}
+
 #if 0
   // Cstor, used to convert type in closure to formal parameter type
   template<class InternalRep>
@@ -655,6 +650,13 @@ public:
   // in each dimension
   array<2,T>(T* data, index_t n, index_t m, index_t lda)
    : array_rep<2,T>(data, n, m, lda)
+  {}
+
+  // Cstor of a 2-D array from a pointer 'data' of size 'count1'x 'count2'
+  // lda is the leading dimension in order to pass to the next line
+  // in each dimension
+  array<2,T>(T* data, const kaapi_memory_view_t* view)
+   : array_rep<2,T>(data, view->size[0], view->size[1], view->lda)
   {}
   
 #if 0

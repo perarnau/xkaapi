@@ -1,3 +1,4 @@
+
     // KAAPI_NUMBER_PARAMS is the number of possible parameters
     template<class SIGNATURE, M4_PARAM(`class E$1, class F$1', `', `, ')>
     kaapi_task_t* KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)( void (SIGNATURE::*)( Thread* M4_PARAM(`, F$1', `', `') ), M4_PARAM(`const E$1& e$1', `', `,') )
@@ -29,13 +30,14 @@
       ', `', `')
       return clo;
     }
+    
 
     template<M4_PARAM(`class E$1', `', `,')>
-    void operator()( M4_PARAM(`const E$1& e$1', `', `, ') )
+    void* operator()( M4_PARAM(`const E$1& e$1', `', `, ') )
     {
       kaapi_task_t* clo = 
       KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
-      _attr(_thread, clo );
+      return _attr(_thread, clo );
     }
