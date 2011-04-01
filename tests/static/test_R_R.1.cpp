@@ -36,7 +36,7 @@ int main( int argc, char** argv )
   try {
     ka::Community com = ka::System::join_community( argc, argv );
     
-    ka::SpawnMain<doit>(ka::SetStaticSched(2))(argc, argv); 
+    ka::SpawnMain<doit>(ka::SetStaticSched(ka::SetnCPU(2)))(argc, argv); 
           
     com.leave();
 
