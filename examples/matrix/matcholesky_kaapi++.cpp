@@ -53,8 +53,8 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
+#if 0
 /* Generate a random matrix symetric definite positive matrix of size m x m 
-   - generate in fact a Hilbert matrix A(i,j) = 1/(1+i+j)
    - it will be also interesting to generate symetric diagonally dominant 
    matrices which are known to be definite postive.
 */
@@ -65,6 +65,35 @@ static void generate_matrix(double* A, size_t m)
     for (size_t j = 0; j< m; ++j)
       A[i*m+j] = 1.0 / (1.0+i+j);
 }
+#else
+/* Generate a random matrix symetric definite positive matrix of size m x m 
+*/
+static void generate_matrix(double* A, size_t N)
+{
+  double* L = new double[N*N];
+  // Lower random part
+  for (size_t i = 0; i< N; ++i)
+  {  
+    size_t j;
+    for (j = 0; j< i+1; ++j)
+      L[i*N+j] = drand48();
+    for (; j< N; ++j)
+      L[i*N+j] = 0.0;
+    L[i*N+i] = N; /* add dominant diagonal, else very ill conditionning */
+  }
+
+  TaskBodyCPU<TaskDGEMM>()(
+      CblasNoTrans,CblasTrans,
+      1.0,
+      ka::range2d_r<double>(ka::range2d<double>(L, N, N, N)),
+      ka::range2d_r<double>(ka::range2d<double>(L, N, N, N)),
+      0.0,
+      ka::range2d_rw<double>(ka::range2d<double>(A, N, N, N))
+  );
+  
+  delete []L;
+}
+#endif
 
 
 /* Task Print Matrix LLt
@@ -98,12 +127,13 @@ struct TaskBodyCPU<TaskPrintMatrixLLt> {
       std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
     }
     std::cout << "]);" << std::endl;
-    std::cout << "evalm( L &* U  - A);" << std::endl;
+//    std::cout << "evalm( transpose(L) &* L    - A);" << std::endl;
+    std::cout << "evalm( L &* transpose(L) - A);" << std::endl;
   }
 };
 
 
-/* Compute the norm || A - L*U ||infinity
+/* Compute the norm || A - L*Lt ||infinity
  * The norm value serves to detec an error in the computation
  */
 struct TaskNormMatrix: public ka::Task<3>::Signature<
@@ -134,26 +164,19 @@ struct TaskBodyCPU<TaskNormMatrix> {
       double* Lik = L+i*N;
       for (j=0; j < i; ++j, ++Lik, ++ALik)
         *Lik = *ALik;
-      *Lik = 1.0; /* diag entry */
-      ++Lik; 
+      *Lik = *ALik; /* diag entry */
+      ++Lik;
+      ++ALik;
       ++j;
       for ( ; j<N; ++j, ++Lik)
-        *Lik = 0.0;
-      
-      /* copy U */
-      const double* AUik = dLU+i*lda_LU + i;
-      double* Uik = U+i*N;
-      for (j=0; j < i; ++j, ++Uik)
-        *Uik = 0.0;
-      for ( ; j < N; ++j, ++Uik, ++AUik)
-        *Uik = *AUik;
+        *Lik = 0.0;      
     }
 
     TaskBodyCPU<TaskDGEMM>()(
-        CblasNoTrans,CblasNoTrans,
+        CblasNoTrans,CblasTrans,
         1.0,
         ka::range2d_r<double>(ka::range2d<double>(L, M, N, N)),
-        ka::range2d_r<double>(ka::range2d<double>(U, M, N, N)),
+        ka::range2d_r<double>(ka::range2d<double>(L, M, N, N)),
         -1.0,
         A
     );
@@ -229,46 +252,53 @@ struct doit {
     if (argc > 2)
       block_count = atoi(argv[2]);
       
+    // Number of iterations
+    int niter = 1;
+    if (argc >3)
+      niter = atoi(argv[3]);
+
     // Make verification ?
     int verif = 0;
-    if (argc >3)
-      verif = atoi(argv[3]);
+    if (argc >4)
+      verif = atoi(argv[4]);
 
     global_blocsize = n / block_count;
     n = block_count * global_blocsize;
 
     double t0, t1;
     double* dA = (double*) calloc(n* n, sizeof(double));
-    double* dAcopy = (double*) calloc(n* n, sizeof(double));
-    if ((0 == dA) || (dAcopy ==0))
+    if (0 == dA)
     {
-      std::cout << "Fatal Error. Cannot allocate matrices A, "
+      std::cout << "Fatal Error. Cannot allocate matrice A "
                 << std::endl;
       return;
     }
 
-    generate_matrix(dA, n);
-    /* copy the matrix to compute the norm */
-    memcpy(dAcopy, dA, n*n*sizeof(double) );
+    double* dAcopy = 0;
+    if (verif)
+    {
+      dAcopy = (double*) calloc(n* n, sizeof(double));
+      if (dAcopy ==0)
+      {
+        std::cout << "Fatal Error. Cannot allocate matrice Acopy "
+                  << std::endl;
+        return;
+      }
+    }
 
     ka::array<2,double> A(dA, n, n, n);
 
-    if (n <= 32) 
-    {
-      /* output respect the Maple format */
-      ka::Spawn<TaskPrintMatrix<double> >()("A", A);
-      ka::Sync();
-    }
-
-    std::cout << "Start LU with " 
+    std::cout << "Start Cholesky with " 
               << block_count << 'x' << block_count 
               << " blocs of matrix of size " << n << 'x' << n 
               << std::endl;
               
     // Cholesky factorization of A 
-    for (int i=0; i<5; ++i)
+    for (int i=0; i<niter; ++i)
     {
       generate_matrix(dA, n);
+      if (verif)
+        memcpy(dAcopy, dA, n*n*sizeof(double) );
 
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskCholesky>(ka::SetStaticSched())(A);
@@ -278,36 +308,50 @@ struct doit {
       /* formula used by plasma */
       double fp_per_mul = 1;
       double fp_per_add = 1;
-      double fmuls = (n * (1.0 / 3.0 * n )      * n);
-      double fadds = (n * (1.0 / 3.0 * n - 0.5) * n);
+      double fmuls = (n * (1.0 / 6.0 * n + 0.5 ) * n);
+      double fadds = (n * (1.0 / 6.0 * n ) * n);
       double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       std::cout << " TaskCholesky took " << t1-t0 << " seconds   " <<  gflops << " GFlops" << std::endl;
-    }
 
-    if (verif)
-    {
-      /* If n is small, print the results */
-      if (n <= 32) 
+      if (verif)
       {
-        ka::Spawn<TaskPrintMatrixLLt>()( std::string(""), A );
+#if 0
+        generate_matrix(dA, n);
+        if (verif)
+          memcpy(dAcopy, dA, n*n*sizeof(double) );
+
+        ka::Spawn<TaskDPOTRF>()( CblasLower, A );
         ka::Sync();
-      }
-      // /* compute the norm || A - L*U ||inf */
-      {
-        double norm;
-        t0 = kaapi_get_elapsedtime();
-        ka::Spawn<TaskNormMatrix>()( &norm, ka::array<2,double>(dAcopy, n, n, n), A );
-        ka::Sync();
-        t1 = kaapi_get_elapsedtime();
-        
-        std::cout << "Error ||A-LU||inf :" << norm 
-                  << ", in " << (t1-t0) << " seconds." 
-                  << std::endl;
+#endif
+
+        /* If n is small, print the results */
+        if (n <= 32) 
+        {
+          /* output respect the Maple format */
+          ka::Spawn<TaskPrintMatrix<double> >()("A", ka::range2d<double>(dAcopy, n, n, n));
+          ka::Sync();
+
+          ka::Spawn<TaskPrintMatrixLLt>()( std::string(""), A );
+          ka::Sync();
+        }
+        // /* compute the norm || A - L*U ||inf */
+        {
+          double norm;
+          t0 = kaapi_get_elapsedtime();
+          ka::Spawn<TaskNormMatrix>()( &norm, ka::array<2,double>(dAcopy, n, n, n), A );
+          ka::Sync();
+          t1 = kaapi_get_elapsedtime();
+          
+          std::cout << "Error ||A-LU||inf :" << norm 
+                    << ", in " << (t1-t0) << " seconds." 
+                    << std::endl;
+        }
       }
     }
 
     free(dA);
-    free(dAcopy);
+    if (verif)
+      free(dAcopy);
   }
 };
 
