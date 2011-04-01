@@ -29,48 +29,18 @@
 #include <iomanip>
 #include <string>
 #include <math.h>
+#include "matrix.h"
 #include "kaapi++" // this is the new C++ interface for Kaapi
-
-#define USE_CBLAS 1
-// export VECLIB_MAXIMUM_THREADS=1
-#if defined(USE_CBLAS)
-#include <cblas.h>
-#endif
-
 #define BLOCSIZE 256
-
-/* Task Print
- * this task prints the sum of the entries of an array 
- * each entries is view as a pointer object:
-    array<1,R<int> > means that each entry may be read by the task
- */
-struct TaskPrintMatrix : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
-
-template<>
-struct TaskBodyCPU<TaskPrintMatrix> {
-  void operator() ( std::string msg, ka::range2d_r<double> A  )
-  {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
-    std::cout << msg << " :=matrix( [" << std::endl;
-    for (size_t i=0; i < d0; ++i)
-    {
-      std::cout << "[";
-      for (size_t j=0; j < d1; ++j)
-      {
-        std::cout << std::setw(18) << std::setprecision(15) << std::scientific << A(i,j) << (j == d1-1 ? "" : ", ");
-      }
-      std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
-    }
-    std::cout << "]);" << std::endl;
-  }
-};
 
 
 /* Task Error
- * Compute the || ||2 matrix norm of A-B
+ * Display the || ||2 matrix norm of A-B
  */
-struct TaskError : public ka::Task<2>::Signature<ka::R<ka::range2d<double> >, ka::R<ka::range2d<double> > > {};
+struct TaskError : public ka::Task<2>::Signature<
+      ka::R<ka::range2d<double> >, 
+      ka::R<ka::range2d<double> > 
+> {};
 
 template<>
 struct TaskBodyCPU<TaskError> {
@@ -92,56 +62,9 @@ struct TaskBodyCPU<TaskError> {
 };
 
 
-/**
+/** Compute A*B -> C
 */
-struct TaskSeqMatProduct: public ka::Task<5>::Signature<
-      size_t, size_t, 
-      ka::R<ka::range2d<double> >, /* A */
-      ka::R<ka::range2d<double> >,  /* B */
-      ka::W<ka::range2d<double> >   /* C */
->{};
-
-template<>
-struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( size_t i, size_t j,
-                   ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_w<double> C )
-  {
-    size_t M = A.dim(0);
-    size_t K = B.dim(0);
-    size_t N = B.dim(1);
-#if 0
-    i /= BLOCSIZE;
-    j /= BLOCSIZE;
-    std::cout << kaapi_get_self_kid() << "::In TaskSeqMul" 
-              << "  A(" << i << ", *):" << A.ptr() << " dim: " << M << 'x' << K 
-              << ", B(*," << j << "):" << B.ptr() << " dim: " << K << 'x' << N
-              << ", C(" << i << "," << j << "):" << C.ptr()
-              << std::endl;
-#endif
-              
-#if defined(USE_CBLAS)
-    /* a call to blas should be more performant here */
-    cblas_dgemm(
-        CblasRowMajor, 
-        CblasNoTrans, CblasNoTrans,
-        M, N, K, 1.0, 
-        A.ptr(), A.lda(),
-        B.ptr(), B.lda(),
-        0.0, 
-        C.ptr(), C.lda()
-    );
-#else
-    for (size_t i =0; i<N;++i)
-      for (size_t j =0; j<M; ++j)
-        for (size_t k =0; k<K; ++k)
-          C(i,j) += A(i,k)*B(k,j);
-#endif
-  }
-};
-
-
-struct TaskMatProduct: public ka::Task<4>::Signature<
-      int, 
+struct TaskMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double> >,     /* A */
       ka::R<ka::range2d<double> >,     /* B */
       ka::RPWP<ka::range2d<double> >   /* C */
@@ -149,24 +72,27 @@ struct TaskMatProduct: public ka::Task<4>::Signature<
 
 template<>
 struct TaskBodyCPU<TaskMatProduct> {
-  void operator()( int nbloc, ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rpwp<double> C )
+  void operator()( const ka::StaticSchedInfo* info, 
+                   ka::range2d_r<double> A, ka::range2d_r<double> B, 
+                   ka::range2d_rpwp<double> C )
   {
     size_t M = A.dim(0);
     size_t K = B.dim(0);
     size_t N = B.dim(1);
     
     /* assume perfect division */
-    int bloc_i = M/nbloc; 
-    int bloc_j = N/nbloc;
+    int sqn = (int)sqrt( (double)info->count_cpu() );
+    int bloc_i = M / (2*sqn); // 
+    int bloc_j = N / (2*sqn); // /(info->count_cpu()); ///nbloc;
 
     ka::rangeindex rall(0, K);
-    for (size_t i=0; i<M; i += bloc_i)
+    for (size_t j=0; j<N; j += bloc_j)
     {
-      ka::rangeindex ri(i, i+bloc_i);
-      for (size_t j=0; j<N; j += bloc_j)
+      ka::rangeindex rj(j, j+bloc_j);
+      for (size_t i=0; i<M; i += bloc_i)
       {
-        ka::rangeindex rj(j, j+bloc_j);
-        ka::Spawn<TaskSeqMatProduct>()( i,j, A(ri,rall), B(rall,rj), C(ri,rj) );
+        ka::rangeindex ri(i, i+bloc_i);
+        ka::Spawn<TaskDGEMM>()(  CblasNoTrans, CblasNoTrans, 1.0, A(ri,rall), B(rall,rj), 1.0, C(ri,rj) );
       }
     }
   }
@@ -180,6 +106,7 @@ struct TaskBodyCPU<TaskMatProduct> {
 struct doit {
   void operator()(int argc, char** argv )
   {
+    double t0, t1;
     int n     = 8;  // matrix dimension
     int nbloc = 2;  // number of blocs
 
@@ -194,6 +121,12 @@ struct doit {
     double* dA = (double*) calloc(n* n, sizeof(double));
     double* dB = (double*) calloc(n* n, sizeof(double));
     double* dC = (double*) calloc(n* n, sizeof(double));
+    double* dCv = (double*) calloc(n* n, sizeof(double));
+
+   //kaapi_assert_debug( __kaapi_isaligned( dA, 16 ) );
+   //kaapi_assert_debug( __kaapi_isaligned( dB, 16 ) );
+   //kaapi_assert_debug( __kaapi_isaligned( dC, 16 ) );
+
     if (0 == dA || 0 == dB || 0 == dC) 
     {
         std::cout << "Fatal Error. Cannot allocate matrices A, B, and C."
@@ -211,57 +144,82 @@ struct doit {
     }
     for(int i = 0; i < n * n; ++i) {
         dC[i] = 0.0;
+        dCv[i] = 0.0;
     }
 
     ka::array<2, double> A(dA, n, n, n);
     ka::array<2, double> B(dB, n, n, n);
     ka::array<2, double> C(dC, n, n, n);
+    ka::array<2, double> Cv(dCv, n, n, n);
 
-    // Multiply to get C = A*B 
-    double t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( nbloc, A, B, C );
+#if 0
+    /* a call to blas to verify */
+    t0 = kaapi_get_elapsedtime();
+    ka::Spawn<TaskSeqMatProduct>() ( A, B, Cv );
     ka::Sync();
-    double t1 = kaapi_get_elapsedtime();
+    t1 = kaapi_get_elapsedtime();
+    std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
+#endif
+
+std::cout << "-----\n";
+#if 1
+    // Multiply to get C = A*B 
+    t0 = kaapi_get_elapsedtime();
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPUType))( A, B, C );
+    ka::Sync();
+    t1 = kaapi_get_elapsedtime();
+
+    std::cout << " Matrix Multiply " << n << 'x' << n 
+              << " #row,#col = " << nbloc << " took " << t1-t0 << " seconds." << std::endl;
+#else
+    ka::InCache key;
+    t0 = kaapi_get_elapsedtime();
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPUType, key ))( A, B, C );
+    ka::Sync();
+    t1 = kaapi_get_elapsedtime();
 
     std::cout << " Matrix Multiply " << n << 'x' << n 
               << " #row,#col = " << nbloc << " took " << t1-t0 << " seconds." << std::endl;
 
+    t0 = kaapi_get_elapsedtime();
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPUType, key ))( A, B, C );
+    ka::Sync();
+    t1 = kaapi_get_elapsedtime();
+
+    std::cout << " Matrix Multiply " << n << 'x' << n 
+              << " #row,#col = " << nbloc << " took " << t1-t0 << " seconds." << std::endl;
+#endif
+
     // If n is small, print the results
     if (n <= 64) 
     {
-      ka::Spawn<TaskPrintMatrix>()( std::string("A"), A );
+      ka::Spawn<TaskPrintMatrix<double> >()( std::string("A"), A );
       ka::Sync();
-      ka::Spawn<TaskPrintMatrix>()( std::string("B"), B );
+      ka::Spawn<TaskPrintMatrix<double> >()( std::string("B"), B );
       ka::Sync();
-      ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
+      ka::Spawn<TaskPrintMatrix<double> >()( std::string("C"), C );
       ka::Sync();
-    } else {
-      /* a call to blas to verify */
-      double* dCv = (double*) calloc(n* n, sizeof(double));
-      double t0 = kaapi_get_elapsedtime();
-#if defined(USE_CBLAS)
-      cblas_dgemm(
-          CblasRowMajor, 
-          CblasNoTrans, CblasNoTrans,
-          n, n, n, 1.0, 
-          dA, n,
-          dB, n,
-          0.0, 
-          dCv, n
-      );
-#endif
-      double t1 = kaapi_get_elapsedtime();
-      std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
+    } 
 
-      ka::array<2, double> Cv(dCv, n, n, n);
-      ka::Spawn<TaskError>()( Cv, C );
+    /* a call to blas to verify */
+    t0 = kaapi_get_elapsedtime();
+    ka::Spawn<TaskDGEMM>() (CblasNoTrans, CblasNoTrans, 1.0, A, B, 1.0, Cv );
+    ka::Sync();
+    t1 = kaapi_get_elapsedtime();
+    std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
+
+    if (n <= 64) 
+    {
+      ka::Spawn<TaskPrintMatrix<double> >()( std::string("CSEQ"), Cv );
       ka::Sync();
     }
-
+    ka::Spawn<TaskError>()( Cv, C );
+    ka::Sync();
 
     free(dA);
     free(dB);
     free(dC);
+    free(dCv);
   }
 };
 

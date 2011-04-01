@@ -53,67 +53,42 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
-/* Generate a random matrix of size m x m */
-static void generate_matrix(double* c, size_t m)
+/* Generate a random matrix symetric definite positive matrix of size m x m 
+   - generate in fact a Hilbert matrix A(i,j) = 1/(1+i+j)
+   - it will be also interesting to generate symetric diagonally dominant 
+   matrices which are known to be definite postive.
+*/
+static void generate_matrix(double* A, size_t m)
 {
-  srand48(0);
-  // generate a random matrix
-  const size_t mm = m * m;
-
-  // generate a down triangular matrix
-  for (size_t i = 0; i < mm; ++i) c[i] = drand48()*1000.0;
+  // 
+  for (size_t i = 0; i< m; ++i)
+    for (size_t j = 0; j< m; ++j)
+      A[i*m+j] = 1.0 / (1.0+i+j);
 }
 
 
-
-/* Task Print Matrix LU
- * assume that the matrix stores an LU decomposition with L lower triangular matrix with unit diagonal
-   and U upper triangular matrix, then print both L and U using the Maple matrix format.
+/* Task Print Matrix LLt
+ * assume that the matrix stores an LLt decomposition with L lower triangular matrix with unit diagonal
+   and U upper triangular matrix, then print both L and Lt using the Maple matrix format.
  */
-struct TaskPrintMatrixLU : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
+struct TaskPrintMatrixLLt : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
 template<>
-struct TaskBodyCPU<TaskPrintMatrixLU> {
+struct TaskBodyCPU<TaskPrintMatrixLLt> {
   void operator() ( std::string msg, ka::range2d_r<double> A  )
   {
     size_t d0 = A.dim(0);
     size_t d1 = A.dim(1);
-    std::cout << "U :=matrix( [" << std::endl;
-    for (size_t i=0; i < d0; ++i)
-    {
-      std::cout << "[";
-      for (size_t j=0; j<i; ++j)
-      {
-        std::cout << std::setw(18) 
-                  << std::setprecision(15) 
-                  << std::scientific 
-                  << 0 << (j == d1-1 ? "" : ", ");
-      }
-      for (size_t j=i; j < d1; ++j)
-      {
-        std::cout << std::setw(18) 
-                  << std::setprecision(15) 
-                  << std::scientific 
-                  << A(i,j) << (j == d1-1 ? "" : ", ");
-      }
-      std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
-    }
-    std::cout << "]);" << std::endl;
-
     std::cout << "L :=matrix( [" << std::endl;
     for (size_t i=0; i < d0; ++i)
     {
       std::cout << "[";
-      for (size_t j=0; j < i; ++j)
+      for (size_t j=0; j < i+1; ++j)
       {
         std::cout << std::setw(18) 
                   << std::setprecision(15) 
                   << std::scientific 
                   << A(i,j) << (j == d1-1 ? "" : ", ");
       }
-      std::cout << std::setw(18) 
-                << std::setprecision(15) 
-                << std::scientific 
-                << 1 << (i == d1-1 ? "" : ", ");
       for (size_t j=i+1; j<d1; ++j)
       {
         std::cout << std::setw(18) 
@@ -124,62 +99,6 @@ struct TaskBodyCPU<TaskPrintMatrixLU> {
     }
     std::cout << "]);" << std::endl;
     std::cout << "evalm( L &* U  - A);" << std::endl;
-  }
-};
-
-
-
-/* Compute inplace LU factorization of A, ie L and U such that A = L * U
-   with L lower triangular, with unit diagonal and U upper triangular.
-*/
-struct TaskDGETRFNoPiv: public ka::Task<1>::Signature<
-  ka::RW<ka::range2d<double> > /* A */
->{};
-template<>
-struct TaskBodyCPU<TaskDGETRFNoPiv> {
-  void operator()
-  ( ka::range2d_rw<double> A )
-  {
-    int N = A.dim(0);
-    int M = A.dim(1);
-    int k_stop = std::min(N, M);
-
-#if 0
-    /* Simple code: correct ||L*U -A || very small */
-    for ( int k = 0; k < k_stop; ++k )
-    {
-      double pivot = 1.0 / A(k,k);
-      for (int i = k+1 ; i < N ; ++i )
-        A(i,k) *= pivot;
-      for (int i= k+1 ; i < N; ++i)
-        for (int j= k+1 ; j < M; ++j)
-          A(i,j) -=  A(i,k)*A(k,j);
-    }
-#else
-    /* More optimized code: correct ||L*U -A || very small */
-    double* dk = A.ptr(); /* &A(k,0) */
-    int lda = A.lda();
-    
-    for ( int k = 0; k < k_stop; ++k, dk += lda )
-    {
-      double pivot = 1.0 / dk[k];
-
-      /* column normalization */
-      double* dik = dk+k+lda; /* A(i,k) i=k+1 */
-      for (int i = k+1 ; i < N ; ++i, dik += lda )
-        *dik *= pivot;
-
-      /* submatrix update */
-      dik = dk+k+lda; /* A(i,k) i=k+1 */
-      for (int i= k+1 ; i < N; ++i, dik += lda)
-      {
-        double* dij = dik+1;
-        double* dkj = dk+k+1;
-        for (int j= k+1 ; j < M; ++j, ++dij,++dkj)
-          *dij -=  *dik * *dkj;
-      } 
-    }
-#endif
   }
 };
 
@@ -252,14 +171,15 @@ struct TaskBodyCPU<TaskNormMatrix> {
 };
 
 
-/* Block LU factorization
+/* Block Cholesky factorization A <- L * L^t
+   Lower triangular matrix, with the diagonal, stores the Cholesky factor.
 */
-struct TaskLU: public ka::Task<1>::Signature<
+struct TaskCholesky: public ka::Task<1>::Signature<
       ka::RPWP<ka::range2d<double> > /* A */
 >{};
 static size_t global_blocsize = 2;
 template<>
-struct TaskBodyCPU<TaskLU> {
+struct TaskBodyCPU<TaskCholesky> {
   void operator()( const ka::StaticSchedInfo* info, ka::range2d_rpwp<double> A )
   {
     //int ncpu = info->count_cpu();
@@ -267,39 +187,25 @@ struct TaskBodyCPU<TaskLU> {
     size_t N = A.dim(0);
     size_t blocsize = global_blocsize;
 
-#if 0
-    std::cout << kaapi_get_self_kid() << "::" << __PRETTY_FUNCTION__ 
-              << "-> blocsize " << blocsize
-              << std::endl;
-#endif
-
-    for (size_t k=0; k<N; k += blocsize)
+    for (size_t k=0; k < N; k += blocsize)
     {
       ka::rangeindex rk(k, k+blocsize);
-      // A(rk,rk) = L(rk,rk) * U(rk,rk) <- LU( A(rk,rk) 
-      ka::Spawn<TaskDGETRFNoPiv>()( A(rk,rk) );
+      ka::Spawn<TaskDPOTRF>()( CblasLower, A(rk,rk) );
 
-      for (size_t j=k+blocsize; j<N; j += blocsize)
+      for (size_t m=k+blocsize; m < N; m += blocsize)
       {
-        ka::rangeindex rj(j, j+blocsize);
-        // A(rk,rj) <- L(rk,rk)^-1 * A(rk,rj) 
-        ka::Spawn<TaskDTRSM>()(CblasLeft, CblasLower, CblasNoTrans, CblasUnit, 1.0, A(rk,rk), A(rk,rj));
-      }
-      for (size_t i=k+blocsize; i<N; i += blocsize)
-      {
-        ka::rangeindex ri(i, i+blocsize);
-        // A(ri,rk) <- A(ri,rk) * U(rk,rk)^-1
-        ka::Spawn<TaskDTRSM>()(CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, A(rk,rk), A(ri,rk));
+        ka::rangeindex rm(m, m+blocsize);
+        ka::Spawn<TaskDTRSM>()(CblasRight, CblasLower, CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rm,rk));
       }
 
-      for (size_t i=k+blocsize; i<N; i += blocsize)
+      for (size_t m=k+blocsize; m < N; m += blocsize)
       {
-        ka::rangeindex ri(i, i+blocsize);
-        for (size_t j=k+blocsize; j<N; j += blocsize)
+        ka::rangeindex rm(m, m+blocsize);
+        ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, A(rm,rk), 1.0, A(rm,rm));
+        for (size_t n=k+blocsize; n < m; n += blocsize)
         {
-          ka::rangeindex rj(j, j+blocsize);
-          // A(ri,rj) <- A(ri,rj) - A(ri,rk)*A(rk,rj)
-          ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasNoTrans, -1.0, A(ri,rk), A(rk,rj), 1.0, A(ri,rj));
+          ka::rangeindex rn(n, n+blocsize);
+          ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, A(rm,rk), A(rn,rk), 1.0, A(rm,rn));
         }
       }
     }
@@ -323,15 +229,10 @@ struct doit {
     if (argc > 2)
       block_count = atoi(argv[2]);
       
-    // Number of iterations
-    int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
-
     // Make verification ?
     int verif = 0;
-    if (argc >4)
-      verif = atoi(argv[4]);
+    if (argc >3)
+      verif = atoi(argv[3]);
 
     global_blocsize = n / block_count;
     n = block_count * global_blocsize;
@@ -364,15 +265,13 @@ struct doit {
               << " blocs of matrix of size " << n << 'x' << n 
               << std::endl;
               
-    // LU factorization of A using ka::
-    double ggflops = 0;
-    double gtime = 0;
-    for (int i=0; i<niter; ++i)
+    // Cholesky factorization of A 
+    for (int i=0; i<5; ++i)
     {
       generate_matrix(dA, n);
 
       t0 = kaapi_get_elapsedtime();
-      ka::Spawn<TaskLU>(ka::SetStaticSched())(A);
+      ka::Spawn<TaskCholesky>(ka::SetStaticSched())(A);
       ka::Sync();
       t1 = kaapi_get_elapsedtime();
 
@@ -382,18 +281,15 @@ struct doit {
       double fmuls = (n * (1.0 / 3.0 * n )      * n);
       double fadds = (n * (1.0 / 3.0 * n - 0.5) * n);
       double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
-      gtime += t1-t0;
-      ggflops += gflops;
-      std::cout << " LU took " << t1-t0 << " seconds   " <<  gflops << " GFlops" << std::endl;
+      std::cout << " TaskCholesky took " << t1-t0 << " seconds   " <<  gflops << " GFlops" << std::endl;
     }
-    std::cout << "*** Average LU took " << gtime/niter << " seconds   " <<  ggflops/niter << " GFlops" << std::endl;
 
     if (verif)
     {
       /* If n is small, print the results */
       if (n <= 32) 
       {
-        ka::Spawn<TaskPrintMatrixLU>()( std::string(""), A );
+        ka::Spawn<TaskPrintMatrixLLt>()( std::string(""), A );
         ka::Sync();
       }
       // /* compute the norm || A - L*U ||inf */

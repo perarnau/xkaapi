@@ -32,8 +32,7 @@
 #include "matrix.h"
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-static int BLOCSIZE = 0;
-
+#define BLOCSIZE 128
 
 /* Task Error
  * Compute the || ||2 matrix norm of A-B
@@ -60,7 +59,45 @@ struct TaskBodyCPU<TaskError> {
 };
 
 
-/** Parallel bloc matrix product
+/** Compute A*B -> C
+*/
+struct TaskSeqMatProduct: public ka::Task<3>::Signature<
+      ka::R<ka::range2d<double> >,   /* A */
+      ka::R<ka::range2d<double> >,   /* B */
+      ka::RW<ka::range2d<double> >   /* C */
+>{};
+
+template<>
+struct TaskBodyCPU<TaskSeqMatProduct> {
+  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rw<double> C )
+  {
+    size_t M = A.dim(0);
+    size_t K = B.dim(0);
+    size_t N = B.dim(1);
+                  
+#if defined(USE_CBLAS)
+    /* a call to blas should be more performant here */
+    cblas_dgemm(
+        CblasRowMajor, 
+        CblasNoTrans, CblasNoTrans,
+        M, N, K, 1.0, 
+        A.ptr(), A.lda(),
+        B.ptr(), B.lda(),
+        1.0, 
+        C.ptr(), C.lda()
+    );
+#else
+    for (size_t i =0; i<N;++i)
+      for (size_t j =0; j<M; ++j)
+        for (size_t k =0; k<K; ++k)
+          C(i,j) += A(i,k)*B(k,j);
+#endif
+  }
+};
+
+
+/** Compute A*B -> C
+    Using bloc decomposition 
 */
 struct TaskMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double> >, /* A */
@@ -77,6 +114,8 @@ struct TaskBodyCPU<TaskMatProduct> {
     size_t N = B.dim(1);
     int bloc = BLOCSIZE;
     
+    ka::Mapping2D<ka::BlockCyclic>::map( C, bloc, bloc );
+    
     for (size_t i=0; i<M; i += bloc)
     {
       ka::rangeindex ri(i, i+bloc);
@@ -86,7 +125,7 @@ struct TaskBodyCPU<TaskMatProduct> {
         for (size_t k=0; k<K; k += bloc)
         {
           ka::rangeindex rk(k, k+bloc);
-          ka::Spawn<TaskDGEMM>()(  CblasNoTrans, CblasNoTrans, 1.0, A(ri,rk), B(rk,rj), 1.0, C(ri,rj) );
+          ka::Spawn<TaskSeqMatProduct>(ka::OCR(C(ri,rj)))( A(ri,rk), B(rk,rj), C(ri,rj) );
         }
       }
     }
@@ -102,15 +141,10 @@ struct doit {
   void operator()(int argc, char** argv )
   {
     int n = 2;
-    int nb = 1;
     if (argc > 1) {
         n = atoi(argv[1]);
     }
-    if (argc > 2) {
-        nb = atoi(argv[2]);
-    }
-    BLOCSIZE = n / nb;
-//    n *= BLOCSIZE;
+    n *= BLOCSIZE;
 
     double* dA = (double*) calloc(n* n, sizeof(double));
     double* dB = (double*) calloc(n* n, sizeof(double));
@@ -160,12 +194,11 @@ struct doit {
     /* a call to blas to verify */
     double* dCv = (double*)calloc(n* n, sizeof(double));
     ka::array<2, double> Cv(dCv, n, n, n);
-
+    
     t0 = kaapi_get_elapsedtime();
     ka::Spawn<TaskDGEMM>() (CblasNoTrans, CblasNoTrans, 1.0, A, B, 1.0, Cv );
     ka::Sync();
     t1 = kaapi_get_elapsedtime();
-
     std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
 
     ka::Spawn<TaskError>()( Cv, C );
