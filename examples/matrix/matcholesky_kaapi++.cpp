@@ -240,28 +240,8 @@ struct TaskBodyCPU<TaskCholesky> {
 /* Main of the program
 */
 struct doit {
-  void operator()(int argc, char** argv )
+  void doone_exp( int n, int block_count, int niter, int verif )
   {
-    // matrix dimension
-    int n = 32;
-    if (argc > 1)
-      n = atoi(argv[1]);
-
-    // block count
-    int block_count = 2;
-    if (argc > 2)
-      block_count = atoi(argv[2]);
-      
-    // Number of iterations
-    int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
-
-    // Make verification ?
-    int verif = 0;
-    if (argc >4)
-      verif = atoi(argv[4]);
-
     global_blocsize = n / block_count;
     n = block_count * global_blocsize;
 
@@ -294,6 +274,18 @@ struct doit {
               << std::endl;
               
     // Cholesky factorization of A 
+    double sumt = 0.0;
+    double sumgf = 0.0;
+    double sumgf2 = 0.0;
+    double sd;
+    double gflops;
+
+    /* formula used by plasma in time_dpotrf.c */
+    double fp_per_mul = 1;
+    double fp_per_add = 1;
+    double fmuls = (n * (1.0 / 6.0 * n + 0.5 ) * n);
+    double fadds = (n * (1.0 / 6.0 * n ) * n);
+        
     for (int i=0; i<niter; ++i)
     {
       generate_matrix(dA, n);
@@ -305,13 +297,11 @@ struct doit {
       ka::Sync();
       t1 = kaapi_get_elapsedtime();
 
-      /* formula used by plasma */
-      double fp_per_mul = 1;
-      double fp_per_add = 1;
-      double fmuls = (n * (1.0 / 6.0 * n + 0.5 ) * n);
-      double fadds = (n * (1.0 / 6.0 * n ) * n);
-      double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
-      std::cout << " TaskCholesky took " << t1-t0 << " seconds   " <<  gflops << " GFlops" << std::endl;
+      gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
+      
+      sumt += double(t1-t0);
+      sumgf += gflops;
+      sumgf2 += gflops*gflops;
 
       if (verif)
       {
@@ -349,10 +339,51 @@ struct doit {
       }
     }
 
+    gflops = sumgf/niter;
+    if (niter ==1) 
+      sd = 0.0;
+    else
+      sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
+    
+    printf("size   #threads #bs    time      GFlop/s   Deviation\n");
+    printf("%6d %5d %5d %9.3f %9.3f %9.3f\n", (int)n, (int)kaapi_getconcurrency(), (int)(n/global_blocsize), sumt/niter, gflops, sd );
+    std::cout << " TaskCholesky took " << t1-t0 << " seconds   " <<  gflops << " GFlops" << std::endl;
+
     free(dA);
     if (verif)
       free(dAcopy);
   }
+
+  void operator()(int argc, char** argv )
+  {
+    // matrix dimension
+    int n = 32;
+    if (argc > 1)
+      n = atoi(argv[1]);
+
+    // block count
+    int block_count = 2;
+    if (argc > 2)
+      block_count = atoi(argv[2]);
+      
+    // Number of iterations
+    int niter = 1;
+    if (argc >3)
+      niter = atoi(argv[3]);
+
+    // Make verification ?
+    int verif = 0;
+    if (argc >4)
+      verif = atoi(argv[4]);
+    
+    int incr = 512;
+    int nmax = n+8*incr;
+    for (int k=n; k<nmax; k += incr )
+    {
+      doone_exp( n, block_count, niter, verif );
+    }
+  }
+
 };
 
 
