@@ -76,12 +76,12 @@ kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
 
 /* get processor memory map */
 
-static inline kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
+kaapi_mem_map_t* get_proc_mem_map(kaapi_processor_t* proc)
 {
   return &proc->mem_map;
 }
 
-static inline kaapi_mem_map_t* get_host_mem_map(void)
+kaapi_mem_map_t* get_host_mem_map(void)
 {
   return get_proc_mem_map(kaapi_all_kprocessors[0]);
 }
@@ -418,6 +418,10 @@ static void finalize_task
     /* get data, size */
     devptr = (kaapi_mem_addr_t)access.data;
     size = get_size_param(format, i, sp);
+
+#if defined(KAAPI_DEBUG)
+    printf("kaapi_mem_synchronize(%lx, %lu)\n", (uintptr_t)devptr, size);
+#endif
 
     /* sync host memory */
     kaapi_mem_synchronize(devptr, size);

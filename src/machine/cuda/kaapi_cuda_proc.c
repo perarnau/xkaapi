@@ -178,3 +178,11 @@ unsigned int kaapi_cuda_get_first_kid(void)
       return (*pos)->kid;
   return (unsigned int)-1;
 }
+
+
+CUstream kaapi_cuda_kernel_stream(void)
+{
+  kaapi_processor_t* const self_proc =
+    kaapi_get_current_processor();
+  return self_proc->cuda_proc.stream;
+}

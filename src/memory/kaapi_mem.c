@@ -407,6 +407,11 @@ void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
   kaapi_mem_map_find_with_asid(host_map, devptr, self_asid, &mapping);
   hostptr = kaapi_mem_mapping_get_addr(mapping, host_asid);
 
+#if defined(KAAPI_DEBUG)
+  printf("memcpy_dtoh(%lx, %lx, %u)\n",
+	 (uintptr_t)hostptr, (uintptr_t)devptr, size);
+#endif
+
   memcpy_dtoh(self_proc, (void*)hostptr, devptr, size);
 }
 
@@ -505,7 +510,7 @@ int kaapi_mem_synchronize3(kaapi_mem_mapping_t* mapping, size_t size)
 #endif /* KAAPI_USE_CUDA */
 
 
-#if 1 /* TEMP_FUNCTIONS */
+#if 0 /* TEMP_FUNCTIONS */
 
 void* kaapi_mem_find_host_addr(kaapi_mem_addr_t addr)
 {
