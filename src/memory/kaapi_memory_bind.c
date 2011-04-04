@@ -87,11 +87,18 @@ int kaapi_memory_synchronize(void)
   const kaapi_globalid_t host_gid =
     kaapi_memory_address_space_getgid(host_asid);
 
+#ifdef SMALL_HASH
+  static const uint32_t map_size = KAAPI_HASHMAP_SIZE;
+#else
+  static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
+#endif
+
   kaapi_hashentries_t* entry;
   uint32_t i;
 
-  for (i = 0; i < KAAPI_HASHMAP_SIZE; ++i)
+  for (i = 0; i < map_size; ++i)
   {
+
 #ifdef SMALL_HASH
     if ((kmdi_hm.entry_map & (1 << i)) == 0)
       continue ;

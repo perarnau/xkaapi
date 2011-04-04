@@ -214,6 +214,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   *thread->sfp = save_fp;
   kaapi_sched_unlock(&thread->proc->lock);
 
+#if 0 /* TOREMOVE (confirm with thierry) */
   /* no cached : destroy */
   if (arg->key ==0)
   {
@@ -222,6 +223,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
     kaapi_memory_destroy();
     kaapi_memory_init();
   }
+#endif /* TOREMOVE */
 }
 
 

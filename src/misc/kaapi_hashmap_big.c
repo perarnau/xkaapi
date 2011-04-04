@@ -49,7 +49,7 @@
 */
 int kaapi_big_hashmap_init( kaapi_big_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc )
 {
-  memset(&khm->entries, 0, sizeof(khm->entries) );
+  memset(khm->entries, 0, sizeof(khm->entries) );
   khm->allallocatedbloc = 0;
   khm->currentbloc = initbloc;
   if (initbloc !=0)
