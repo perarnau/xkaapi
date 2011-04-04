@@ -46,7 +46,7 @@
 #include "kanet_device.h"
 
 #define GASNET_PAR              1
-#define GASNET_ALIGNED_SEGMENTS 1
+//#define GASNET_ALIGNED_SEGMENTS 1
 #include <gasnet.h>
 
 namespace GASNET {
@@ -103,7 +103,7 @@ public:
 
   /** 
   */
-  int abort();
+  int finalize();
 
   /**
   */
@@ -153,8 +153,7 @@ protected:
       gasnet_token_t token, 
       void *buffer_am, 
       size_t sz_buffer_am, 
-      gasnet_handlerarg_t handlerH, 
-      gasnet_handlerarg_t handlerL);
+      gasnet_handlerarg_t handler);
   
   friend class OutChannel;
 protected:

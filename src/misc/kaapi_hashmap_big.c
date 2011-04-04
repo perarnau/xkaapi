@@ -47,7 +47,7 @@
 
 /*
 */
-int kaapi_hashmap_big_init( kaapi_hashmap_big_t* khm, kaapi_hashentries_bloc_t* initbloc )
+int kaapi_big_hashmap_init( kaapi_big_hashmap_t* khm, kaapi_hashentries_bloc_t* initbloc )
 {
   memset(&khm->entries, 0, sizeof(khm->entries) );
   khm->allallocatedbloc = 0;
@@ -60,7 +60,7 @@ int kaapi_hashmap_big_init( kaapi_hashmap_big_t* khm, kaapi_hashentries_bloc_t* 
 
 /*
 */
-int kaapi_hashmap_big_destroy( kaapi_hashmap_big_t* khm )
+int kaapi_big_hashmap_destroy( kaapi_big_hashmap_t* khm )
 {
   while (khm->allallocatedbloc !=0)
   {

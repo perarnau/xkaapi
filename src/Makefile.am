@@ -21,10 +21,11 @@ libkaapi_la_SOURCES=\
   misc/kaapi_time_elapsedns.c \
   misc/kaapi_hashvalue.c \
   misc/kaapi_hashmap.c \
-  misc/kaapi_hashmap_find.c \
   misc/kaapi_hashmap_insert.c \
+  misc/kaapi_hashmap_find.c \
   misc/kaapi_hashmap_findinsert.c \
   misc/kaapi_hashmap_big.c \
+  misc/kaapi_hashmap_big_find.c \
   misc/kaapi_hashmap_big_findinsert.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_allocator_allocate.c \
@@ -33,6 +34,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_cpuset2str.c\
   misc/kaapi_get_self_kid.c\
   misc/kaapi_default_netapi.c\
+  misc/kaapi_event_flush.c\
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_taskregister_static.c \
@@ -47,6 +49,7 @@ libkaapi_la_SOURCES=\
   kaapi_impl.h \
   kaapi_network.h \
   kaapi_compiler.h \
+  kaapi_event.h\
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \

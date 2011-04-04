@@ -50,25 +50,40 @@
 #endif
 
 
+static kaapi_tasklist_t* cached_tasklist[32] = {
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0
+};
+
 /* 
 */
 void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 {
-  int err;
   int save_state;
   kaapi_frame_t* fp;
+  kaapi_frame_t save_fp;
   kaapi_tasklist_t* tasklist;
+#if defined(KAAPI_USE_PERFCOUNTER)
   double t0=0.0;
   double t1=0.0;
+  double t0_exec=0.0;
+  double t1_exec=0.0;
+#endif
   
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
 
   kaapi_assert( thread->sfp == (kaapi_frame_t*)uthread );
+
+  /* here... begin execute frame tasklist*/
+  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_BEG );
   
   /* Push a new frame */
   fp = (kaapi_frame_t*)thread->sfp;
   /* push the frame for the next task to execute */
+  save_fp = *fp;
   thread->sfp[1] = *fp;
   ++thread->sfp;
   
@@ -82,37 +97,71 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 
   /* allocate the tasklist for this task
   */
-  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist );
-
-  if (arg->npart == -1)
-  {    
-    /* the embedded task cannot be steal because it was not visible to thieves */
-    arg->sub_body( arg->sub_sp, uthread );
-  
-    /* currently: that all, do not compute other things */
-    t0 = kaapi_get_elapsedtime();
-    kaapi_thread_computereadylist(thread, tasklist);
-    t1 = kaapi_get_elapsedtime();
-  }
-  else 
+  if ((arg->key ==0) || (cached_tasklist[arg->key] ==0))
   {
-    /* here we assume that all subtasks will be forked using SetPartition attribute:
-       - after each forked task, the attribut will call kaapi_thread_online_computedep
-       that directly call dependencies analysis
-    */
-    arg->sub_body( arg->sub_sp, uthread );
-  }
-#if defined(KAAPI_DEBUG)
-  printf("[tasklist] T1:%" PRIu64 "\n", tasklist->cnt_tasks);
-  printf("[tasklist] Tinf:%" PRIu64 "\n", tasklist->t_infinity);
-  printf("[tasklist] analysis dependency time %e (s)\n",t1-t0);
+    tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+    kaapi_tasklist_init( tasklist );
+
+    /* some information to pass to the task : TODO */
+    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_MPSOC-1] = 0;
+
+    /* */
+    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == (uint32_t)-1)
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
+
+    /* */
+    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == (uint32_t)-1)
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] = 0;
+
+    /* test if at least one ressource */
+    if ( (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == 0) &&
+         (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == 0) )
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
+
+    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+
+    /* the embedded task cannot be steal because it was not visible to thieves */
+    arg->sub_body( arg->sub_sp, uthread, &arg->schedinfo );
+
+    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_END );
+
+    /* currently: that all, do not compute other things */
+#if defined(KAAPI_USE_PERFCOUNTER)
+    t0 = kaapi_get_elapsedtime();
 #endif
-  thread->unstealable = save_state;
-  kaapi_writemem_barrier();
-  thread->sfp->tasklist = tasklist;
-  
+    kaapi_thread_computereadylist(thread, tasklist);
+#if defined(KAAPI_USE_PERFCOUNTER)
+    t1 = kaapi_get_elapsedtime();
+#endif
+    KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
+    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_END );
+    cached_tasklist[arg->key] = tasklist;
+  } // non cached value
+  else 
+  { 
+    kaapi_assert( (arg->key >0) && (arg->key <32) );
+    tasklist = cached_tasklist[arg->key];
 #if defined(KAAPI_DEBUG)
+    /* ok this not the first time we schedule this computation: reset exec_date */
+    kaapi_activationlink_t* curr_activated = tasklist->allocated_td.front;
+    while (curr_activated !=0)
+    {
+      curr_activated->td->exec_date =0;
+      KAAPI_ATOMIC_WRITE(&curr_activated->td->counter,0);
+      curr_activated = curr_activated->next;
+    }
+#endif
+    /* reset executed tasks */
+    KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
+    /* force re-push of ready task */
+    tasklist->td_ready = 0;
+  }
+
+  /* allows other thread to steal the tasklist */
+  kaapi_mem_barrier();
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /* here sfp is initialized, dump graph if required */
   if (getenv("KAAPI_DUMP_GRAPH") !=0)
   {
     static uint32_t counter = 0;
@@ -122,31 +171,34 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
     else
       sprintf(filename,"/tmp/graph.%i.dot",counter++);
     FILE* filedot = fopen(filename, "w");
-    kaapi_frame_print_dot( filedot, thread->sfp, 0 );
+    kaapi_thread_tasklist_print_dot( filedot, tasklist, 0 );
     fclose(filedot);
   }
 #endif
   
-  /* exec the spawned subtasks */
-#if defined(KAAPI_USE_CUDA)
-  if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
-    err = kaapi_cuda_thread_execframe_tasklist( thread );
-  else
-#endif
-  err = kaapi_thread_execframe_tasklist( thread );
-  kaapi_assert( (err == 0) || (err == ECHILD) || (err == EWOULDBLOCK));
+  /* restore state */
+  thread->unstealable = save_state;
+  thread->sfp->tasklist = tasklist;
   
-  KAAPI_ATOMIC_ADD( &tasklist->count_exec, tasklist->cnt_exectasks );
-  /* here we wait that all tasks of the tasklist have been executed 
-     - is may be better to try to steal extra tasks for other threads
-     by forking a non ready task that will be updated when condition
-     becomes true.
-     - this tasks will have an aftersteal method to delete the tasklist
-  */
-  while (KAAPI_ATOMIC_READ(&tasklist->count_exec) != (signed)tasklist->cnt_tasks)
-   kaapi_slowdown_cpu();
-  kaapi_assert( KAAPI_ATOMIC_READ(&tasklist->count_exec) == (signed)tasklist->cnt_tasks );
+//  kaapi_print_state_tasklist( tasklist );
+//  printf("----------->>> before execution\n\n");
 
+  /* exec the spawned subtasks */
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t0_exec = kaapi_get_elapsedtime();
+#endif
+  kaapi_sched_sync_(thread);
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t1_exec = kaapi_get_elapsedtime();
+#endif
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  printf("[tasklist] T1                      : %" PRIu64 "\n", tasklist->cnt_tasks);
+  printf("[tasklist] Tinf                    : %" PRIu64 "\n", tasklist->t_infinity);
+  printf("[tasklist] dependency analysis time: %e (s)\n",t1-t0);
+  printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
+#endif
 #if 0
   printf("%i::[tasklist] exec tasks: %llu\n", 
     kaapi_get_self_kid(),
@@ -159,11 +211,17 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   kaapi_sched_lock(&thread->proc->lock);
   thread->sfp->tasklist = 0;
   --thread->sfp;
+  *thread->sfp = save_fp;
   kaapi_sched_unlock(&thread->proc->lock);
-  
-  kaapi_tasklist_destroy( tasklist );
-  free(tasklist);
 
+  /* no cached : destroy */
+  if (arg->key ==0)
+  {
+    kaapi_tasklist_destroy( tasklist );
+    free(tasklist);
+    kaapi_memory_destroy();
+    kaapi_memory_init();
+  }
 }
 
 

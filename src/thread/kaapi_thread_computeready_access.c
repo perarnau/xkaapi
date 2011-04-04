@@ -64,7 +64,7 @@ int kaapi_thread_computeready_access(
       argmove->src_data  = version->orig;
       argmove->dest      = version->handle;
       task_move = kaapi_tasklist_push_task( tl, kaapi_taskmove_body, argmove);
-      td_move =  kaapi_tasklist_allocate_td( tl, task_move );
+      td_move   = kaapi_tasklist_allocate_td( tl, task_move );
       version->writer_task= td_move;
       version->writer_tasklist = tl;
       kaapi_tasklist_push_successor( tl, td_move, task );
@@ -84,7 +84,7 @@ int kaapi_thread_computeready_access(
         argalloc->src_data  = version->orig;
         argalloc->dest      = version->handle;
         task_alloc = kaapi_tasklist_push_task( tl, kaapi_taskalloc_body, argalloc);
-        td_alloc =  kaapi_tasklist_allocate_td( tl, task_alloc );
+        td_alloc   = kaapi_tasklist_allocate_td( tl, task_alloc );
         version->writer_task= td_alloc;
         version->writer_tasklist = tl;
         kaapi_tasklist_push_successor( tl, td_alloc, task );
@@ -115,7 +115,7 @@ int kaapi_thread_computeready_access(
         arg->src_data  = version->orig;
         arg->dest      = version->handle;
         task_finalizer = kaapi_tasklist_push_task( tl, kaapi_taskfinalizer_body, arg);
-        td_finalizer =  kaapi_tasklist_allocate_td( tl, task_finalizer );
+        td_finalizer   = kaapi_tasklist_allocate_td( tl, task_finalizer );
         version->writer_task= td_finalizer;
         version->writer_tasklist= tl;
         kaapi_tasklist_push_successor( tl, task, td_finalizer );
@@ -160,7 +160,7 @@ int kaapi_thread_computeready_access(
       argalloc->src_data  = version->orig;
       argalloc->dest      = version->handle;
       task_alloc          = kaapi_tasklist_push_task( tl, kaapi_taskalloc_body, argalloc);
-      td_alloc            =  kaapi_tasklist_allocate_td( tl, task_alloc );
+      td_alloc            = kaapi_tasklist_allocate_td( tl, task_alloc );
       version->writer_task= td_alloc;
       version->writer_tasklist = tl;
       kaapi_tasklist_pushback_ready( tl, td_alloc);

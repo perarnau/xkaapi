@@ -1,6 +1,4 @@
-/* KAAPI public interface */
 /*
-** athapascan-2.h
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -55,8 +53,7 @@
 #include <stdexcept>
 
 /** Version number for the API
-  * v1: task with dependencies + spawn
-  * v2: v1+static graph partitioning 
+    - v1: new API for DFG with pointer interface.
 */
 #define KAAPIXX_API_VERSION 1
 namespace ka {
@@ -1378,6 +1375,11 @@ namespace ka {
     typedef size_t difference_type;
     range1d_r( range1d<T>& a ) : pointer_r<array<1,T> >(a) {}
     explicit range1d_r( array<1,T>& a ) : pointer_r<array<1,T> >(a) {}
+
+    const T* ptr() { return array_rep<1,T>::ptr(); }
+    const T* ptr() const { return array_rep<1,T>::ptr(); }
+    size_t size() const { return array_rep<1,T>::size(); }
+
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
     T& operator()(difference_type i) { return array<1,T>::operator[](i); }
   };
@@ -1427,6 +1429,11 @@ namespace ka {
     typedef size_t                   difference_type;
     range1d_w( range1d<T>& a ) : pointer_w<array<1,T> >(a) {}
     explicit range1d_w( array<1,T>& a ) : pointer_w<array<1,T> >(a) {}
+
+    T* ptr() { return array_rep<1,T>::ptr(); }
+    T* ptr() const { return array_rep<1,T>::ptr(); }
+    size_t size() const { return array_rep<1,T>::size(); }
+
     T& operator[](difference_type i) { return pointer_w<array<1,T> >::operator[](i); }
     T& operator()(difference_type i) { return pointer_w<array<1,T> >::operator()(i); }
   };
@@ -1471,6 +1478,11 @@ namespace ka {
     typedef size_t                   difference_type;
     range1d_rw( range1d<T>& a ) : pointer_rw<array<1,T> >(a) {}
     explicit range1d_rw( array<1,T>& a ) : pointer_rw<array<1,T> >(a) {}
+
+    T* ptr() { return array_rep<1,T>::ptr(); }
+    const T* ptr() const { return array_rep<1,T>::ptr(); }
+    size_t size() const { return array_rep<1,T>::size(); }
+
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
     T& operator()(difference_type i) { return array<1,T>::operator[](i); }
   };
@@ -1551,6 +1563,11 @@ namespace ka {
     typedef size_t                   difference_type;
     range1d_cw( range1d<T>& a ) : pointer_cw<array<1,T> >(a) {}
     explicit range1d_cw( array<1,T>& a ) : pointer_cw<array<1,T> >(a) {}
+
+    T* ptr() { return array_rep<1,T>::ptr(); }
+    T* ptr() const { return array_rep<1,T>::ptr(); }
+    size_t size() const { return array_rep<1,T>::size(); }
+
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
     T& operator()(difference_type i) { return array<1,T>::operator[](i); }
   };
@@ -1585,7 +1602,7 @@ namespace ka {
     { return Self_t( array<2,T>::operator()(ri,rj) ); }
   };
 
-  /* alias: ka::range1d_r<T> in place of pointer_r<array<2,T> > */
+  /* alias: ka::range2d_r<T> in place of pointer_r<array<2,T> > */
   template<typename T>
   class range2d_r : public pointer_r<array<2,T> > {
   public:
@@ -1835,7 +1852,8 @@ namespace ka {
     static const bool                 is_static = false;
     static const void*                ptr( const pointer_r<array<dim,T> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
@@ -1864,7 +1882,8 @@ namespace ka {
     static const bool                 is_static = false;
     static const void*                ptr( const pointer_w<array<dim,T> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
@@ -1895,7 +1914,8 @@ namespace ka {
     static const bool                 is_static = false;
     static const void*                ptr( const pointer_rw<array<dim,T> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
@@ -1926,7 +1946,8 @@ namespace ka {
     static const bool                 is_static = false;
     static const void*                ptr( const pointer_rpwp<array<dim,T> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
@@ -1957,7 +1978,8 @@ namespace ka {
     static const bool                 is_static = false;
     static const void*                ptr( const pointer_cw<array<dim,T> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
@@ -1999,7 +2021,8 @@ namespace ka {
     typedef range1d_r<T>    formal_t; 
     typedef R<range1d <T> > signature_t; 
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t         handle2data( type_inclosure_t* a) 
@@ -2012,7 +2035,8 @@ namespace ka {
     typedef range1d_w<T>    formal_t; 
     typedef W<range1d<T> >  signature_t; 
     static formal_t         handle2data( type_inclosure_t* a) 
-    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2024,7 +2048,8 @@ namespace ka {
     typedef range1d_rw<T>   formal_t; 
     typedef RW<range1d<T> > signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2036,7 +2061,8 @@ namespace ka {
     typedef range1d_rpwp<T>   formal_t; 
     typedef RPWP<range1d<T> > signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2048,7 +2074,8 @@ namespace ka {
     typedef range1d_cw<T>     formal_t; 
     typedef RPWP<range1d<T> > signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<1,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2074,7 +2101,8 @@ namespace ka {
     typedef range2d_r<T>    formal_t; 
     typedef R<range2d <T> > signature_t; 
     static formal_t         handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2086,7 +2114,8 @@ namespace ka {
     typedef range2d_w<T>    formal_t; 
     typedef W<range2d<T> >  signature_t; 
     static formal_t         handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2098,7 +2127,8 @@ namespace ka {
     typedef range2d_rw<T>   formal_t; 
     typedef RW<range2d<T> > signature_t; 
     static formal_t         handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2110,7 +2140,8 @@ namespace ka {
     typedef range2d_rpwp<T>   formal_t; 
     typedef RPWP<range2d<T> > signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2122,7 +2153,8 @@ namespace ka {
     typedef range2d_cw<T>     formal_t; 
     typedef CW<range2d<T> >   signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), &(kaapi_handle_t(a->ptr()))->view);
+    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
@@ -2484,6 +2516,249 @@ namespace ka {
     static void doit(InClosure* inclo, const E& e) { new (inclo) InClosure(e); }
   };
 
+
+  // --------------------------------------------------------------------  
+  /* WARNING WARNING WARNING
+     Attribut is responsible for pushing or not closure into the stack thread 
+  */
+  class DefaultAttribut {
+  public:
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      kaapi_thread_pushtask(thread); 
+      return 0; 
+    }
+  };
+  extern DefaultAttribut SetDefault;
+  
+  /* */
+  class UnStealableAttribut {
+  public:
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      kaapi_thread_pushtask(thread);
+      return 0;
+    }
+  };
+  inline UnStealableAttribut SetUnStealable()
+  { return UnStealableAttribut(); }
+
+  /* like default attribut: not yet distributed computation */
+  class SetLocalAttribut {
+  public:
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      kaapi_thread_pushtask(thread);
+      return 0;
+    }
+  };
+  extern SetLocalAttribut SetLocal;
+
+  /* do nothing... not yet distributed implementation */
+  class AttributSetPartition {
+    int _partition;
+  public:
+    AttributSetPartition( int s ) : _partition(s) {}
+    int get_partition() const { return _partition; }
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      kaapi_thread_online_computedep(thread, _partition, clo);
+      return 0;
+    }
+  };
+
+  inline AttributSetPartition SetPartition( int s )
+  { return AttributSetPartition(s); }
+  
+  // --------------------------------------------------------------------
+  // A task forked with SetStaticSched attribut may have first formal
+  // parameter a StaticSchedInfo returned by the runtime
+  class StaticSchedInfo : public kaapi_staticschedinfo_t {
+  public:
+    StaticSchedInfo() {}
+
+    /* return the total number of core */
+    size_t count() const 
+    { size_t retval = 0;
+      for (int i=0; i<KAAPI_PROC_TYPE_MAX-1; ++i)
+        retval += nkproc[i];
+      return retval;
+    }
+    
+    /* return the number of cpu */
+    size_t count_cpu() const { return nkproc[KAAPI_PROC_TYPE_CPU-1]; }
+    
+    /* return the number of gpu */
+    size_t count_gpu() const { return nkproc[KAAPI_PROC_TYPE_GPU-1]; }
+  };
+
+  // --------------------------------------------------------------------
+  /* do nothing */
+  class SetStaticSchedAttribut {
+    intptr_t _key;
+    int16_t  _ncpu;
+    int16_t  _ngpu;
+  public:
+    SetStaticSchedAttribut( intptr_t key, int nc, int ng )
+     : _key(key), _ncpu(nc), _ngpu(ng)
+    {}
+    SetStaticSchedAttribut( int nc, int ng )
+     : _key(0), _ncpu(nc), _ngpu(ng)
+    {}
+    SetStaticSchedAttribut( intptr_t key )
+     : _key(key), _ncpu(-1), _ngpu(-1)
+    {}
+    SetStaticSchedAttribut( )
+     : _key(0), _ncpu(-1), _ngpu(-1)
+    {}
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      /* push a task that will encapsulated the execution of the top task */
+      kaapi_task_t* task = kaapi_thread_toptask(thread);
+      kaapi_staticschedtask_arg_t* arg 
+        = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
+      arg->sub_sp   = task->sp;
+      arg->sub_body = (kaapi_task_vararg_body_t)kaapi_task_getuserbody(task);
+      arg->key      = _key;
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = (uint32_t)_ncpu;
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] = (uint32_t)_ngpu;
+      kaapi_task_initdfg(task, kaapi_staticschedtask_body, arg);
+      kaapi_thread_pushtask(thread);
+      return (void*)_key;
+    }
+  };
+  
+  /* user level attribut definition */
+  inline SetStaticSchedAttribut SetStaticSched()
+  { return SetStaticSchedAttribut(); }
+
+  /* user level attribut definition */
+  
+  /* */
+  struct _KaapiCPU_Encode {
+    _KaapiCPU_Encode() : ncpu(-1) {}
+    _KaapiCPU_Encode( int16_t nc ) : ncpu(nc) {}
+    int16_t ncpu;
+  };
+
+  /* */
+  struct _KaapiGPU_Encode {
+    _KaapiGPU_Encode() : ngpu(-1) {}
+    _KaapiGPU_Encode( int16_t ng ) : ngpu(ng) {}
+    int16_t ngpu;
+  };
+
+  /* */
+  struct _KaapiCPUGPU_Encode : public _KaapiCPU_Encode, public _KaapiGPU_Encode {
+    _KaapiCPUGPU_Encode() {}
+    _KaapiCPUGPU_Encode( _KaapiCPU_Encode nc ) 
+     : _KaapiCPU_Encode(nc) {}
+    _KaapiCPUGPU_Encode( _KaapiGPU_Encode ng ) 
+     : _KaapiGPU_Encode(ng) {}
+    _KaapiCPUGPU_Encode( _KaapiCPU_Encode nc, _KaapiGPU_Encode ng ) 
+     : _KaapiCPU_Encode(nc), _KaapiGPU_Encode(ng) {}
+  };
+
+  static const _KaapiCPU_Encode AllCPUType = _KaapiCPU_Encode();
+  static const _KaapiGPU_Encode AllGPUType = _KaapiGPU_Encode();
+  inline _KaapiCPU_Encode SetnCPU(int nc) { return _KaapiCPU_Encode(nc); }
+  inline _KaapiGPU_Encode SetnGPU(int ng) { return _KaapiGPU_Encode(ng); }
+
+  inline _KaapiCPUGPU_Encode operator|( const _KaapiCPU_Encode nc, const _KaapiGPU_Encode ng )
+  { return _KaapiCPUGPU_Encode(nc,ng); }
+  inline _KaapiCPUGPU_Encode operator|( const _KaapiGPU_Encode ng, const _KaapiCPU_Encode nc )
+  { return _KaapiCPUGPU_Encode(nc,ng); }
+
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPU_Encode xx )
+  { return SetStaticSchedAttribut(xx.ncpu, 0); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiGPU_Encode xx )
+  { return SetStaticSchedAttribut(0, xx.ngpu); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPUGPU_Encode xx )
+  { return SetStaticSchedAttribut(xx.ncpu, xx.ngpu); }
+  
+  /* to cache scheduling */
+  class InCache {
+  public:
+    InCache();
+    
+    intptr_t value() const 
+    { return _key; }
+  protected:
+    intptr_t _key;
+  };
+
+  inline SetStaticSchedAttribut SetStaticSched( InCache key )
+  { return SetStaticSchedAttribut(key.value()); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPU_Encode xx, InCache key )
+  { return SetStaticSchedAttribut(key.value(), xx.ncpu, 0); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiGPU_Encode xx, InCache key )
+  { return SetStaticSchedAttribut(key.value(), 0, xx.ngpu); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPUGPU_Encode xx, InCache key )
+  { return SetStaticSchedAttribut(key.value(), xx.ncpu, xx.ngpu); }
+
+
+  // --------------------------------------------------------------------
+  /* Mapping of data into logical set of partitions
+  */
+  struct BlockCyclic {
+  };
+  struct Block {
+  };
+
+  template<typename DIST, typename T, bool isaccess>
+  struct Mapping2DHelper {
+  };
+
+  template<typename T>
+  struct Mapping2DHelper<Block,T,true> 
+  {
+    /* assume that T implements the range2D interface */
+    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
+    {
+      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
+      int dim0 __attribute__((unused))= C.dim(0);
+      int dim1 __attribute__((unused))= C.dim(1);
+    }
+  };
+
+  template<typename T>
+  struct Mapping2DHelper<BlockCyclic,T,true> 
+  {
+    /* assume that T implements the range2D interface */
+    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
+    {
+      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
+      int dim0 __attribute__((unused))= C.dim(0);
+      int dim1 __attribute__((unused))= C.dim(1);
+    }
+  };
+
+  template<typename DIST>
+  struct Mapping2D {
+  };
+
+  template<>
+  struct Mapping2D<Block> 
+  {
+    /* assume that T implements the range2D interface */
+    template<class T>
+    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
+    {
+      Mapping2DHelper<Block,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, n_bloc_i, n_bloc_j );
+    }
+  };
+
+  template<>
+  struct Mapping2D<BlockCyclic> 
+  {
+    /* assume that T implements the range2D interface */
+    template<class T>
+    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
+    {
+      Mapping2DHelper<BlockCyclic,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, sz_bloc_i, sz_bloc_j );
+    }
+  };
+
   // --------------------------------------------------------------------
   /* OwnerComputeRule attribut: specify, during fork that a task should
      have the same site location than the site location of a data.
@@ -2497,20 +2772,27 @@ namespace ka {
 
   template<typename T>  
   struct OCRAttribut<T,true> {
+    const void* _ptr;
     OCRAttribut<T,true>(const T* a)
     { 
       /* determine the site for the data pointed bvy ptr */
-      const void* ptr __attribute__((unused)) = a->ptr(); //TraitFormalParam<T>::ptr( a );
+      _ptr  = a->ptr(); //TraitFormalParam<T>::ptr( a );
     }
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { kaapi_thread_pushtask(thread); }
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      //kaapi_thread_online_computedep_ocr(thread, _ptr, clo);
+      kaapi_thread_pushtask(thread); 
+      return 0;
+    }
   };
 
   template<typename T>  
   struct OCRAttribut<T,false> {
     OCRAttribut<T,false>(const T* a) {}
     void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { kaapi_thread_pushtask(thread); }
+    { 
+      kaapi_thread_pushtask(thread); 
+    }
   };
 
   template<typename T>  
@@ -2521,7 +2803,9 @@ namespace ka {
       const void* ptr __attribute__((unused)) = *a;
     }    
     void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { kaapi_thread_pushtask(thread); }
+    { 
+      kaapi_thread_pushtask(thread); 
+    }
   };
   template<typename T>  
   struct OCRAttribut<const T*,false> {
@@ -2531,83 +2815,15 @@ namespace ka {
       const void* ptr __attribute__((unused)) = *a;
     }    
     void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { kaapi_thread_pushtask(thread); }
+    { 
+      kaapi_thread_pushtask(thread); 
+    }
   };
   
   template<typename T>
   inline OCRAttribut<T, IsAccessMode<typename TraitFormalParam<T>::mode_t>::value > OCR( const T& a )
   { return OCRAttribut<T, IsAccessMode<typename TraitFormalParam<T>::mode_t>::value >(&a); }
 
-
-  // --------------------------------------------------------------------  
-  /* WARNING WARNING WARNING
-     Attribut is responsible for pushing or not closure into the stack thread 
-  */
-  class DefaultAttribut {
-  public:
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { kaapi_thread_pushtask(thread); }
-  };
-  extern DefaultAttribut SetDefault;
-  
-  /* */
-  class UnStealableAttribut {
-  public:
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { 
-      kaapi_thread_pushtask(thread);
-    }
-  };
-  inline UnStealableAttribut SetUnStealable()
-  { return UnStealableAttribut(); }
-
-  /* like default attribut: not yet distributed computation */
-  class SetLocalAttribut {
-  public:
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { 
-      kaapi_thread_pushtask(thread);
-    }
-  };
-  extern SetLocalAttribut SetLocal;
-
-  /* do nothing... not yet distributed implementation */
-  class AttributSetPartition {
-    int _partition;
-  public:
-    AttributSetPartition( int s ) : _partition(s) {}
-    int get_partition() const { return _partition; }
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { 
-      kaapi_thread_online_computedep(thread, _partition, clo);
-    }
-  };
-
-  inline AttributSetPartition SetPartition( int s )
-  { return AttributSetPartition(s); }
-  
-  /* do nothing */
-  class SetStaticSchedAttribut {
-    int _npart;
-  public:
-    SetStaticSchedAttribut( int n )
-     : _npart(n) 
-    {}
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { 
-      /* push a task that will encapsulated the execution of the top task */
-      kaapi_task_t* task = kaapi_thread_toptask(thread);
-      kaapi_staticschedtask_arg_t* arg 
-        = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
-      arg->sub_sp   = task->sp;
-      arg->sub_body = kaapi_task_getuserbody(task);
-      arg->npart    = _npart;
-      kaapi_task_initdfg(task, kaapi_staticschedtask_body, arg);
-      kaapi_thread_pushtask(thread);
-    }
-  };
-  inline SetStaticSchedAttribut SetStaticSched(int npart = -1 )
-  { return SetStaticSchedAttribut(npart); }
 
   // --------------------------------------------------------------------
   template<class F>
@@ -2723,9 +2939,10 @@ namespace ka {
   /* required for most of stl like parallel algorithm
   */
   template <typename type >
-  class counting_iterator : public std::iterator< std::random_access_iterator_tag,     /* category */
-                                           const type  /* element type */                                            
-                                        >
+  class counting_iterator : public std::iterator< 
+      std::random_access_iterator_tag,     /* category */
+      const type                           /* element type */                                            
+  >
   {
   public:
       typedef type value_type;
@@ -2801,7 +3018,7 @@ namespace ka {
       reference operator*() 
       { return _rep; }
 
-      pointer* operator->() 
+      pointer operator->() 
       { return &_rep; }
 
   private:
@@ -2874,12 +3091,12 @@ namespace ka {
 
       /**
       **/      
-      void operator()()
+      void* operator()()
       { 
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
         /* attribut is reponsible for pushing task into the thread */
-        _attr(_thread, clo);
+        return _attr(_thread, clo);
       }
 
 #include "ka_api_spawn.h"
@@ -3289,8 +3506,11 @@ namespace ka {
       AttributComputeDependencies( kaapi_threadgroup_t thgrp, int thid ) 
        : _threadgroup(thgrp), _threadindex(thid) 
       {}
-      void operator()(kaapi_thread_t* thread, kaapi_task_t* task)
-      { kaapi_threadgroup_computedependencies( _threadgroup, _threadindex, task ); }
+      void* operator()(kaapi_thread_t* thread, kaapi_task_t* task)
+      { 
+        kaapi_threadgroup_computedependencies( _threadgroup, _threadindex, task );
+        return 0;
+      }
     public:
       kaapi_threadgroup_t _threadgroup;
       int                 _threadindex;
@@ -3305,12 +3525,12 @@ namespace ka {
 
       /**
       **/      
-      void operator()()
+      void* operator()()
       { 
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
         /* attribut is reponsible for pushing */
-        _attr(_thread, clo);
+        return _attr(_thread, clo);
       }
 
 #include "ka_api_spawn.h"
@@ -3512,6 +3732,26 @@ namespace ka {
   /** Wait execution of all forked tasks of the running task */
   extern void Sync();
 
+  // --------------------------------------------------------------------
+  /** Move into the local address space all global memory ops */
+  extern void MemorySync();
+
+  template<typename mode_t, typename T> 
+  struct MemorySyncFuncClass { 
+    static void doit(const T*a) 
+    { kaapi_memory_synchronize(); } // HERE MUST CALL SPECIFIC FUNCTION WITH PTR 
+  };
+
+  /* specialization for non shared object */
+  template<typename T> 
+  struct MemorySyncFuncClass<ACCESS_MODE_V,T> { 
+    static void doit(const T*a) 
+    { }
+  };
+
+  template<typename T>
+  extern void MemorySync(const T& a)
+  { MemorySyncFuncClass<typename TraitFormalParam<T>::mode_t, T>::doit(&a); }
 
   // --------------------------------------------------------------------
   /* Main task */
@@ -3739,4 +3979,3 @@ using namespace ka;
 #endif
 
 #endif
-

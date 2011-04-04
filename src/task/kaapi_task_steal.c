@@ -99,7 +99,7 @@ void kaapi_taskwrite_body(
 
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || KAAPI_ACCESS_IS_CUMULWRITE(mode_param))
       {
-        fmt_param         = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
+        //fmt_param         = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
         access_param      = kaapi_format_get_access_param(fmt, i, orig_task_args); 
         copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args); 
 
@@ -148,7 +148,7 @@ void kaapi_taskwrite_body(
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
-  uintptr_t oldstate;
+  uintptr_t oldstate __attribute__((unused));
   if (war_param ==0)
     oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
   else
@@ -216,10 +216,10 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     {
       /* todo_remove */
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
-	body(orig_task_args, thread);
+        body(orig_task_args, thread);
       else
-      /* todo_remove */
-      kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
+        /* todo_remove */
+        kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
     }
     else
 #endif
@@ -287,10 +287,10 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     {
       /* todo_remove */
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
-	body(copy_task_args, thread);
+        body(copy_task_args, thread);
       else
-      /* todo_remove */
-      kaapi_cuda_exectask(self_thread, copy_task_args, fmt);
+        /* todo_remove */
+        kaapi_cuda_exectask(self_thread, copy_task_args, fmt);
     }
     else
 #endif

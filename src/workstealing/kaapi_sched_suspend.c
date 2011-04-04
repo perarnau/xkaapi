@@ -58,11 +58,11 @@
 int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 {
   int err;
-  kaapi_thread_context_t* ctxt;
+  kaapi_thread_context_t* thread;
   kaapi_thread_context_t* thread_condition;
   kaapi_task_t*           task_condition;
   kaapi_tasklist_t*       tasklist;
-  kaapi_thread_context_t* thread;
+  kaapi_thread_context_t* ctxt;
 
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
@@ -70,6 +70,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
+  kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
 
   /* here is the reason of suspension */
@@ -79,11 +80,27 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   /* first look if tasklist is built on this frame */
   tasklist = thread_condition->sfp->tasklist;
   if (tasklist !=0) 
+  {
     task_condition =0;
-    if (kaapi_thread_isready( thread_condition ) ) return 0;
+    if (kaapi_thread_isready( thread_condition ) ) 
+    {
+#if defined(KAAPI_USE_PERFCOUNTER)
+      kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
+      kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+#endif
+      return 0;
+    }
+  } 
   else {
     task_condition = thread_condition->sfp->pc;
-    if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) return 0;
+    if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) 
+    {
+#if defined(KAAPI_USE_PERFCOUNTER)
+      kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
+      kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+#endif
+      return 0;
+    }
   }
 
   /* such threads are sticky: the control flow is on return to this call and
@@ -120,6 +137,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_assert((tasklist !=0) || (kproc->thread->sfp->pc == task_condition));
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
+      kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
       return 0;
     }
@@ -189,15 +207,16 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 redo_execution:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
+    kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
 
 #if defined(KAAPI_USE_CUDA)
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
       if (kproc->thread->sfp->tasklist == 0)
-	err = kaapi_cuda_execframe( kproc->thread );
+        err = kaapi_cuda_execframe( kproc->thread );
       else /* assumed kaapi_threadgroup_execframe */
-	err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+        err = kaapi_cuda_threadgroup_execframe(kproc->thread);
     }
     else
 #endif /* KAAPI_USE_CUDA */
@@ -207,6 +226,7 @@ redo_execution:
       err = kaapi_thread_execframe_tasklist(kproc->thread);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+    kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
     kaapi_assert( err != EINVAL);
@@ -236,5 +256,6 @@ redo_execution:
       kaapi_sched_unlock(&kproc->lock);
     }
   } while (1);
+  
   return EINTR;
 }

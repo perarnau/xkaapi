@@ -47,10 +47,10 @@
 #include "kaapi_impl.h"
 
 kaapi_thread_context_t* kaapi_sched_wakeup ( 
-    kaapi_processor_t* kproc, 
-    kaapi_processor_id_t kproc_thiefid, 
+    kaapi_processor_t*      kproc, 
+    kaapi_processor_id_t    kproc_thiefid, 
     kaapi_thread_context_t* cond_thread,
-    kaapi_task_t* cond_task 
+    kaapi_task_t*           cond_task 
   )
 {
   kaapi_thread_context_t* thread;
@@ -78,7 +78,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     {
       /* should be atomic ? */
       cell = cond_thread->wcs;
-      if (cell !=0) {
+      if (cell !=0) 
+      {
         cell->thread = 0;
         cond_thread->wcs = 0;
         KAAPI_ATOMIC_WRITE(&cell->state, KAAPI_WSQUEUECELL_OUTLIST);

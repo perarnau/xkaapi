@@ -100,4 +100,3 @@ int kaapi_hashmap_destroy( kaapi_hashmap_t* khm )
   khm->currentbloc = 0;
   return 0;
 }
-

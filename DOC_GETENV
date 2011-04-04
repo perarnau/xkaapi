@@ -23,13 +23,24 @@ KAAPI_NETWORK:
     
 KAAPI_NETWORK_SEGMENT:
     - Size of memory reserved for remote DMA operation.
-    Pass to the gasnet initialization. No impact for tcp / taknet
-    network.
+    Pass to the gasnet initialization. 
+    Users by taknet network to create a memory mapping.
+
+KAAPI_NETWORK_BASE_ADDR:
+    - Address where all processus will try to map segment.
+    - Used currently only in the taknet network.
 
 
 KAAPI_DISPLAY_PERF:
+KAAPI_RECORD_TRACE: defined to generate trace of events at runtime.
+  Only available if the library was configured with --with-perfcounter
 KAAPI_PERF_PAPIES:
 
+KAAPI_DUMP_GRAPH:
+  Dump the graph after spawning task with SetStaticSched attribut
+  is used. Only operational if XKaapi library is compiled with
+  '--with-perfcounter=debug'.
+  
 KAAPI_DOT_NOACTIVATION_LINK:
   Do not print activation link between tasks when graph is dump into 
   the dot format.
@@ -38,11 +49,6 @@ KAAPI_DOT_NOVERSION_LINK:
   Do not print link between version of data when graph is dump into 
   the dot format.
 
-KAAPI_DUMP_GRAPH:
-  Dump the graph after spawning task with SetStaticSched attribut
-  is used. Only operational if XKaapi library is compiled with
-  '--enable-mode=debug'.
-  
 KAAPI_DUMP_PERIOD:
   Dump the internal state at given period (in second).
   Only work with debug library.

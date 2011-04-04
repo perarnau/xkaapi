@@ -143,7 +143,7 @@ static int kaapi_insert_unvisited_td( kaapi_hashmap_t* khm, kaapi_activationlink
 
 /**
 */
-int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
+int kaapi_thread_tasklist_print( FILE* file, kaapi_tasklist_t* tl )
 {
   /* new history of visited data */
   kaapi_hashmap_t visit_khm;

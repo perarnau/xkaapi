@@ -68,9 +68,9 @@
 */
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( ka::StealContext* sc, ka::pointer_rw<T> first, ka::pointer_rw<T> last, OP op )
+  void operator() ( ka::StealContext* sc, ka::range1d_rw<T> range, OP op )
   {
-    Work<T,OP> work(first, last, op);
+    Work<T,OP> work(range.begin(), range.end(), op);
     T* beg;
     T* end;
 

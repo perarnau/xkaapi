@@ -43,7 +43,8 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <stdio.h>
+#include <stdio.h> // debug 
+#include <inttypes.h>
 
 
 /**
@@ -54,49 +55,79 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   kaapi_taskstealready_arg_t* arg;
   kaapi_frame_t*              frame;
   kaapi_tasklist_t*           tasklist;
-  int err;
+  kaapi_taskdescr_t**         td_top;  /*cache of tasklist->td_top */
+  kaapi_workqueue_index_t     ntasks = 0;
 
   thread = kaapi_self_thread_context();
 
   /* get information of the task to execute */
   arg = (kaapi_taskstealready_arg_t*)taskarg;
   
+  kaapi_assert(arg->origin_td_beg < arg->origin_td_end);
+
   /* Execute the orinal body function with the original args */
   frame = (kaapi_frame_t*)uthread;
   kaapi_assert_debug( frame == thread->sfp );
 
-  /* create a new tasklist: should be very fast allocation,
-     its a root tasklist for this thread. 
-     May allocated it at thread creation time
+  thread->sfp[1] = *frame;
+  frame = ++thread->sfp;
+
+  /* create a new tasklist on the stack of the running thread
   */
-  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist );
-  kaapi_tasklist_pushback_ready( tasklist, arg->origin_td );
+  tasklist->master    = arg->origin_tasklist;
+  tasklist->cnt_tasks = 0;
+
+  /* Fill the task list with ready stolen tasks.
+     Because we do not have cactus stack, we recopy
+     stolen tasks into the new stacks (only pointer to
+     tasks).
+     Not that from this task list execution entry,
+     we do not store ready tasks into linked list:
+     - they are directly pushed into the workqueue.
+  */
+  tasklist->td_top = (kaapi_taskdescr_t**)frame->sp;
+  tasklist->td_ready = tasklist->td_top; /* unused ? */
+  tasklist->recv = 0; /* no recv after stealing */
+  td_top = tasklist->td_top;
   
-  /* reserve the tasklist for 32 tasks (at most) */
-  tasklist->cnt_tasks = 32;
+  while (arg->origin_td_beg != arg->origin_td_end)
+  {
+    kaapi_assert_debug((char*)td_top > (char*)frame->sp_data);
+    *--td_top = *arg->origin_td_beg;
+    ++arg->origin_td_beg;
+    ++ntasks;
+  }
 
-  kaapi_writemem_barrier();
-  frame->tasklist = tasklist;
+  /* keep the first task to execute outside the workqueue */
+  tasklist->context.local_beg = -ntasks;
+  tasklist->context.chkpt = 2; /* begin by execution with keeped first task */
 
-  /* exec the spawned subtasks */
-  err = kaapi_thread_execframe_tasklist( thread );
-  kaapi_assert( (err == 0) || (err == ECHILD) );
-
-  KAAPI_ATOMIC_ADD( &arg->origin_tasklist->count_exec, 
-      tasklist->cnt_exectasks );
-
-#if 0
-  printf("%i::[subtasklist] exec tasks: %llu\n", 
-      kaapi_get_self_kid(), tasklist->cnt_exectasks 
-  );
-  fflush(stdout);
+#if 1//defined(KAAPI_DEBUG)
+  kaapi_sched_lock( &thread->proc->lock );
 #endif
+  kaapi_workqueue_init(&tasklist->wq_ready, -ntasks+1, 0);
+  kaapi_assert_debug(frame->tasklist ==0);
+#if 0//!defined(KAAPI_DEBUG)  /* to allow other thread to steal myself after updating the workqueue */
+  kaapi_mem_barrier();
+#endif
+  frame->tasklist = tasklist;
+#if 1//defined(KAAPI_DEBUG)
+  kaapi_sched_unlock( &thread->proc->lock );
+#endif
+
+  /* start execution */
+  kaapi_sched_sync_(thread);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
   kaapi_sched_lock(&thread->proc->lock);
   frame->tasklist = 0;
-  kaapi_sched_unlock(&thread->proc->lock);
+  /* one thief less */
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->master->count_thief) >0 );
+  KAAPI_ATOMIC_DECR( &tasklist->master->count_thief );
+  kaapi_sched_unlock( &thread->proc->lock );
   
   kaapi_tasklist_destroy( tasklist );
-  free(tasklist);
+  --thread->sfp;
 }

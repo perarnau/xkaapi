@@ -101,28 +101,6 @@ kaapi_version_t* kaapi_thread_copyversion(
 }
 
 
-#if 0
-/**/
-int kaapi_tasklist_merge_activationlist( kaapi_tasklist_t* tl, kaapi_activationlist_t* al )
-{
-  kaapi_activationlink_t* curr = al->front;
-  while (curr !=0)
-  {
-    if (KAAPI_ATOMIC_INCR(&curr->td->counter) % curr->td->wc == 0)
-    {
-      if (curr->queue == tl)
-        kaapi_tasklist_pushback_ready( tl, curr->td );
-      else {
-        kaapi_assert(0); // todo: push into non local queue curr->queue
-      }
-    }
-    curr = curr->next;
-  }
-
-  return 0;
-}
-#endif
-
 /* activate and push all ready tasks in the activation list to their allocated queue
 */
 int kaapi_tasklist_doactivationlist( kaapi_activationlist_t* al )
@@ -166,39 +144,31 @@ void kaapi_tasklist_push_broadcasttask(
 
 
 
-#if 0
-/** Manage synchronisation between two threads 
-    Each thread may communicate between them through FIFO queue to signal incomming data.
-    A signal is only a task descriptor.
-*/
-int kaapi_tasklist_pushsignal( kaapi_pointer_t rsignal )
+#if defined(KAAPI_DEBUG)
+void kaapi_print_state_tasklist( kaapi_tasklist_t* tl )
 {
-#warning "todo"
-  kaapi_syncrecv_t* recv = (kaapi_syncrecv_t*)kaapi_pointer2void(rsignal);
-  kaapi_tasklist_t* tl  = recv->tasklist;
-  kaapi_sched_lock(&tl->lock);
-  recv->next = tl->recvlist;
-  tl->recvlist = recv;
-  kaapi_sched_unlock(&tl->lock);
-  return 0;
+  kaapi_activationlink_t* curr_activated = tl->allocated_td.front;
+  const char* str;
+  while (curr_activated !=0)
+  {
+    uint64_t date = 0;
+    if (curr_activated->td->exec_date !=0)
+      date =  curr_activated->td->exec_date-kaapi_default_param.startuptime;
+    if (curr_activated->td->wc ==0)
+      str = "";
+    else if ((KAAPI_ATOMIC_READ(&curr_activated->td->counter) % curr_activated->td->wc ==0) && (date ==0) )
+      str = " -- ready";
+    else 
+      str = "";
+    printf("td: %p task: %p, counter:%li wc:%li, date:%llu  %s\n", 
+        (void*)curr_activated->td, (void*)curr_activated->td->task, 
+        (long)KAAPI_ATOMIC_READ(&curr_activated->td->counter),
+        (long)curr_activated->td->wc,
+        date, 
+        str
+    );
+    curr_activated = curr_activated->next;
+  }
 }
 #endif
 
-
-#if 0
-/** Only call by the owner
-*/
-kaapi_syncrecv_t* kaapi_tasklist_popsignal( kaapi_tasklist_t* tl )
-{
-#warning "todo"
-  kaapi_syncrecv_t* retval;
-  if (tl->recvlist ==0) return 0;
-  kaapi_sched_lock(&tl->lock);
-  retval = tl->recvlist;
-  tl->recvlist = retval->next;
-  kaapi_sched_unlock(&tl->lock);
-  retval->next = 0;
-  return retval;
-  return 0;
-}
-#endif

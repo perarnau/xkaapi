@@ -167,7 +167,7 @@ enter:
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( victim_hlr, &lri );
     kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
-
+    
     while (request !=0)
     {
       _kaapi_request_reply(request, KAAPI_REPLY_S_NOK);

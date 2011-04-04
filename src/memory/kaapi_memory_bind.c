@@ -46,14 +46,22 @@
 
 /** Global Hash map of all mapping
 */
+#ifdef SMALL_HASH
 static kaapi_hashmap_t kmdi_hm;
+#else
+static kaapi_big_hashmap_t kmdi_hm;
+#endif
 
 
 /*
 */
 void kaapi_memory_init(void)
 {
+#ifdef SMALL_HASH
   kaapi_hashmap_init( &kmdi_hm, 0 );  
+#else
+  kaapi_big_hashmap_init( &kmdi_hm, 0 );  
+#endif
 }
 
 
@@ -61,15 +69,17 @@ void kaapi_memory_init(void)
 */
 void kaapi_memory_destroy(void)
 {
+#ifdef SMALL_HASH
   kaapi_hashmap_destroy( &kmdi_hm );
+#else
+  kaapi_big_hashmap_destroy( &kmdi_hm );
+#endif
 }
 
 
 /**
 */
-
-static int synchronize_with_flags
-(unsigned int do_release)
+int kaapi_memory_synchronize(void)
 {
   /* todo: use self thread asid */
   const kaapi_address_space_id_t host_asid = 0UL;
@@ -82,8 +92,10 @@ static int synchronize_with_flags
 
   for (i = 0; i < KAAPI_HASHMAP_SIZE; ++i)
   {
+#ifdef SMALL_HASH
     if ((kmdi_hm.entry_map & (1 << i)) == 0)
       continue ;
+#endif
 
     for (entry = kmdi_hm.entries[i]; entry != NULL; entry = entry->next)
     {
@@ -95,7 +107,7 @@ static int synchronize_with_flags
       if (mdi->data[host_gid].ptr.ptr == (uintptr_t)NULL) continue ;
       else if (mdi->validbits & (1UL << host_gid)) continue ;
 
-      /* TODO_OPTIMIZE */
+      /* todo_optimize */
       /* find a valid copy and revalidate host */
       for (valid_id = 0; valid_id < KAAPI_MAX_ADDRESS_SPACE; ++valid_id)
 	if (mdi->validbits & (1UL << valid_id)) break ;
@@ -131,15 +143,6 @@ static int synchronize_with_flags
   return 0;
 }
 
-int kaapi_memory_synchronize(void)
-{
-  return synchronize_with_flags(0);
-}
-
-int kaapi_memory_synchronize_release(void)
-{
-  return synchronize_with_flags(1);
-}
 
 /**
 */
@@ -147,7 +150,11 @@ kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr )
 {
   kaapi_hashentries_t* entry;
   
+#ifdef SMALL_HASH
   entry = kaapi_hashmap_find(&kmdi_hm, ptr);
+#else
+  entry = kaapi_big_hashmap_find(&kmdi_hm, ptr);
+#endif
   if (entry ==0) return 0;
   return entry->u.mdi;
 }
@@ -174,7 +181,11 @@ kaapi_metadata_info_t* kaapi_mem_findinsert_metadata( void* ptr )
 {
   kaapi_hashentries_t* entry;
   
+#ifdef SMALL_HASH
   entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
+#else
+  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
+#endif
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
   return entry->u.mdi;
@@ -210,7 +221,11 @@ kaapi_metadata_info_t* kaapi_memory_bind(
 {
   kaapi_hashentries_t* entry;
   
+#ifdef SMALL_HASH
   entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
+#else
+  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
+#endif
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
 
@@ -232,7 +247,11 @@ kaapi_metadata_info_t* kaapi_memory_bind_view(
 {
   kaapi_hashentries_t* entry;
   
+#ifdef SMALL_HASH
   entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
+#else
+  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
+#endif
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
 

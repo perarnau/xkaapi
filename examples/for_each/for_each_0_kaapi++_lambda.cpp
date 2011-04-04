@@ -102,8 +102,8 @@ static void for_each( T* ibeg, T* iend, OP op )
             
             /* thief work: create a task */
             for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
-              req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(beg_theft+size_theft), op );
-            req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(end_theft), op );
+              req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, size_theft), op );
+            req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, end_theft-beg_theft), op );
           }
   );
 

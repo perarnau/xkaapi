@@ -229,12 +229,9 @@ typedef struct kaapi_threadgrouprep_t {
   kaapi_comtag_t             count_tag;    /* counter of tag relatively to the thread group */
   kaapi_comsend_raddr_t**    lists_send;   /* send and recv list of comsend or comrecv descriptor */
   kaapi_comsend_raddr_t**    lists_recv;
-//  kaapi_comaddrlink_t*       all_sendaddr;
   
   kaapi_data_t*              list_data;     /* list of data to synchronize */
-
 } kaapi_threadgrouprep_t;
-
 
 /** All threadgroups are registerd into this global table.
     kaapi_threadgroup_count is the index of the next created threadgroup
@@ -243,7 +240,6 @@ typedef struct kaapi_threadgrouprep_t {
 extern kaapi_threadgroup_t kaapi_all_threadgroups[KAAPI_MAX_THREADGROUP];
 extern uint32_t kaapi_threadgroup_count;
 
-
 /** Manage mapping from threadid in a group and address space
 */
 static inline kaapi_address_space_id_t kaapi_threadgroup_tid2asid( kaapi_threadgroup_t thgrp, int tid )
@@ -251,12 +247,14 @@ static inline kaapi_address_space_id_t kaapi_threadgroup_tid2asid( kaapi_threadg
   return thgrp->tid2asid[tid];
 }
 
+/**
+*/
 static inline kaapi_globalid_t kaapi_threadgroup_tid2gid( kaapi_threadgroup_t thgrp, int tid )
 {
   return kaapi_memory_address_space_getgid(thgrp->tid2asid[tid]);
 }
 
-/* Initialize the ith thread of the thread group 
+/** Initialize the ith thread of the thread group 
    - initialize internal fields
    - create tasklist on the top frame of each threads
 */
@@ -265,7 +263,6 @@ extern int kaapi_threadgroup_initthread( kaapi_threadgroup_t thgrp, int ith );
 /** Allocate and reset the tasklist into the top frame of the thread
 */
 extern kaapi_tasklist_t* kaapi_threadgroup_allocatetasklist(void);
-
 
 /** WARNING: also duplicated in kaapi.h for the API. Redefined here during compilation of the sources
 */
@@ -285,7 +282,8 @@ extern int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl );
 
 
 /* ============================= internal interface to manage version ============================ */
-/*
+
+/**
 */
 kaapi_hashentries_t* kaapi_threadgroup_newversion
 (
@@ -296,16 +294,16 @@ kaapi_hashentries_t* kaapi_threadgroup_newversion
     kaapi_memory_view_t* view
 );
 
-/*
+/**
 */
 void kaapi_threadgroup_deleteversion( kaapi_threadgroup_t thgrp, kaapi_version_t* ver );
 
-/* Detect dependencies implies by the read access (R or RW) and update the list of tasks of
-   the impacted threads.
+/** Detect dependencies implies by the read access (R or RW) and update the list of tasks of
+    the impacted threads.
    
-   On success, the method returns 1 iff the access is ready.
-   Else the method returns 0 if the access is not ready.
-   Else the method returns a negative integer indicating an error.
+    On success, the method returns 1 iff the access is ready.
+    Else the method returns 0 if the access is not ready.
+    Else the method returns a negative integer indicating an error.
 */
 extern int kaapi_threadgroup_version_newreader( 
     kaapi_threadgroup_t   thgrp, 

@@ -44,6 +44,7 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 #include "kanet_network.h" // this is the new C++ interface for Kaapi
+#include <string.h>
 
 
 /*
@@ -69,19 +70,28 @@ static void service_ack(int err, ka::GlobalId source, void* buffer, size_t sz_bu
   ++cnt_msg;
 }
 
+enum {
+  service_id     = 128,
+  service_ack_id = 129
+};
+
+
 
 /* main entry point : Kaapi initialization
 */
 int main(int argc, char** argv)
 {
   try {
-    buffer_message = new char[256];
-    
+    ka::Network::register_service( service_id,       &service );
+    ka::Network::register_service( service_ack_id,   &service_ack );
+
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */
     ka::System::join_community( argc, argv );
         
+    buffer_message = new (ka::Network::object.allocate(256)) char[256];
+    
     /*
     */
     if (ka::Network::object.size() ==2)
@@ -91,13 +101,17 @@ int main(int argc, char** argv)
         ka::OutChannel* channel = ka::Network::object.get_default_local_route( 1 );
         kaapi_assert(channel !=0);
         std::cout << "Send message handler:" << (void*)service << ", data:" << (void*)buffer_message << std::endl;
-        channel->insert_am( service, &buffer_message, sizeof( void* ) );
+        channel->insert_am( service_id, &buffer_message, sizeof( void* ) );
         channel->sync();
         
         for (int i=0; i<10; ++i)
         {
           while (cnt_msg == i) 
+          {
             ka::Network::object.poll();
+            sleep(1);
+          }
+
           std::cout << "Recv message:" << buffer_message << std::endl;
         }
       } 
@@ -116,7 +130,7 @@ int main(int argc, char** argv)
         {
           sprintf(msg, " Ceci est le message numero %i de %i", i, ka::System::local_gid);
           channel->insert_rwdma(remote_ptr, msg, strlen(msg)+1);
-          channel->insert_am( service_ack, 0, 0 );
+          channel->insert_am( service_ack_id, 0, 0 );
           channel->sync();
           sleep(1);
         }

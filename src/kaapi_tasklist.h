@@ -137,6 +137,9 @@ typedef struct kaapi_taskdescr_t {
   kaapi_atomic_t                counter;   /* concurrent decr to test if task is ready */
   uint32_t                      wc;        /* value of counter before task becomes ready */
   uint64_t                      date;      /* minimal logical date of production */
+#if defined(KAAPI_DEBUG)
+  uint64_t                      exec_date;      /* execution date, debug only */
+#endif
   kaapi_format_t*               fmt;       /* format of the task */
   kaapi_task_t*                 task;      /* the task to executed */
   kaapi_activationlist_t*       bcast;     /* list of bcast tasks activated to send data produced by this task */
@@ -162,8 +165,8 @@ typedef struct kaapi_taskdescr_t {
     New data structures needed for execution are pushed into the stack of the attached thread.
 */
 typedef struct kaapi_tasklist_t {
-  kaapi_atomic_t          lock;       /* protect recvlist */
-  kaapi_atomic_t          count_exec; /* should be == cnt_tasks at terminaison */
+  kaapi_atomic_t          lock;        /* protect recvlist */
+  kaapi_atomic_t          count_thief; /* count the number of thiefs == */
 
   /* execution state for ready task using tasklist */
   kaapi_workqueue_t       wq_ready;   /* workqueue for ready tasks, used during runtime */
@@ -174,18 +177,21 @@ typedef struct kaapi_tasklist_t {
 
   /* context to restart from suspend */
   struct context_t {
-    int                   chkpt;      /* see execframe for task list */
-    kaapi_taskdescr_t*    td;
-    kaapi_frame_t*        fp;
+    int                     chkpt;      /* see execframe for task list */
+    kaapi_taskdescr_t*      td;
+    kaapi_frame_t*          fp;
+    kaapi_workqueue_index_t local_beg;
   } context;
 
   /* constant state (after creation) */
   kaapi_activationlist_t  readylist;  /* readylist of task descriptor */
+#if defined(KAAPI_DEBUG)
+  kaapi_activationlist_t  allocated_td;  /* list of all allocated tasks, debug only */
+#endif
   uintptr_t               count_recv; /* number of extern synchronization to receive before detecting end of execution */
   kaapi_recv_list_t       recvlist;   /* put by pushsignal into ready list to signal incomming data */
   kaapi_allocator_t       allocator;  /* where to push task descriptor and other data structure */
   uint64_t                cnt_tasks;  /* number of tasks in the tasklist */
-  uint64_t                cnt_exectasks;  /* number of tasks executed in the tasklist */
   uint64_t                t_infinity; /* length path in the graph of tasks */
 } kaapi_tasklist_t;
 
@@ -230,11 +236,13 @@ static inline void kaapi_activationlist_clear( kaapi_activationlist_t* al )
   al->front = al->back = 0;
 }
 
+
 /**/
 static inline int kaapi_activationlist_isempty( const kaapi_activationlist_t* al )
 {
   return (al->front ==0);
 }
+
 
 /**/
 static inline void kaapi_activationlist_pushback( kaapi_activationlist_t* al, kaapi_activationlink_t* l )
@@ -287,9 +295,10 @@ static inline int kaapi_data_clear( kaapi_data_t* d )
 static inline void kaapi_taskdescr_init( kaapi_taskdescr_t* td, kaapi_task_t* task )
 {
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
-  td->fmt 	 = 0;
+  td->fmt 	     = 0;
   td->wc         = 0;
   td->date       = 0;
+  KAAPI_DEBUG_INST(td->exec_date = 0);
   td->task       = task;
   td->bcast      = 0;
   td->list.front = 0; 
@@ -307,7 +316,7 @@ static inline int kaapi_taskdescr_activated( kaapi_taskdescr_t* td)
 static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
 {
   kaapi_sched_initlock(&tl->lock);
-  KAAPI_ATOMIC_WRITE(&tl->count_exec, 0);
+  KAAPI_ATOMIC_WRITE(&tl->count_thief, 0);
   kaapi_workqueue_init(&tl->wq_ready, 0, 0);
   tl->td_ready      = 0;
   tl->td_top        = 0;
@@ -320,14 +329,15 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
 #endif  
   tl->count_recv    = 0;
   kaapi_activationlist_clear( &tl->readylist );
+#if defined(KAAPI_DEBUG)
+  kaapi_activationlist_clear( &tl->allocated_td );
+#endif
   kaapi_recvlist_clear(&tl->recvlist);
   kaapi_allocator_init( &tl->allocator );
   tl->cnt_tasks     = 0;
-  tl->cnt_exectasks = 0;
   tl->t_infinity    = 0;
   return 0;
 }
-
 
 /**/
 static inline int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
@@ -335,7 +345,7 @@ static inline int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
   tl->td_top = 0;
   kaapi_workqueue_destroy( &tl->wq_ready );
   kaapi_allocator_destroy( &tl->allocator );
-  if (tl->td_ready !=0) free(tl->td_ready);
+//Now it is into the thread' stack  if (tl->td_ready !=0) free(tl->td_ready);
   tl->td_ready = 0;
   return 0;
 }
@@ -351,6 +361,14 @@ static inline int kaapi_tasklist_isempty( kaapi_tasklist_t* tl )
     );
 }
 
+/**/
+static inline kaapi_activationlink_t* kaapi_tasklist_allocate_al( kaapi_tasklist_t* tl)
+{
+  kaapi_activationlink_t* retval =
+      (kaapi_activationlink_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_activationlink_t) );
+  return retval;
+}
+
 
 /**/
 static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td( kaapi_tasklist_t* tl, kaapi_task_t* task )
@@ -358,10 +376,23 @@ static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td( kaapi_tasklist_t* t
   kaapi_taskdescr_t* retval = 
       (kaapi_taskdescr_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_taskdescr_t) );
   kaapi_taskdescr_init(retval, task);
+#if defined(KAAPI_DEBUG)
+  kaapi_activationlink_t* al = kaapi_tasklist_allocate_al( tl );
+  al->td = retval;
+  al->queue = 0;
+  if (tl->allocated_td.back == 0)
+  {
+    al->next  = 0;
+    tl->allocated_td.front = tl->allocated_td.back = al;
+  } else {
+    al->next = 0;
+    tl->allocated_td.back->next = al;
+    tl->allocated_td.back = al;
+  }
+#endif  
   ++tl->cnt_tasks;
   return retval;
 }
-
 
 /**/
 static inline kaapi_task_t* kaapi_tasklist_push_task( kaapi_tasklist_t* tl, kaapi_task_bodyid_t body, void* arg )
@@ -371,7 +402,6 @@ static inline kaapi_task_t* kaapi_tasklist_push_task( kaapi_tasklist_t* tl, kaap
   kaapi_task_init(task, body, arg);
   return task;
 }
-
 
 /* Push task in the front: the execution with revert it at the begining
 */
@@ -392,23 +422,9 @@ static inline void kaapi_tasklist_pushback_ready( kaapi_tasklist_t* tl, kaapi_ta
 }
 
 
-#if 0
-/**/
-extern int kaapi_tasklist_merge_activationlist( kaapi_tasklist_t* tl, kaapi_activationlist_t* al );
-#endif
-
 /* activate and push all ready tasks in the activation list to their allocated queue
 */
 extern int kaapi_tasklist_doactivationlist( kaapi_activationlist_t* al );
-
-
-/**/
-static inline kaapi_activationlink_t* kaapi_tasklist_allocate_al( kaapi_tasklist_t* tl)
-{
-  kaapi_activationlink_t* retval =
-      (kaapi_activationlink_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_activationlink_t) );
-  return retval;
-}
 
 
 /**/
@@ -525,14 +541,18 @@ extern int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread );
 /**
 */
 extern int kaapi_thread_abstractexec_readylist( 
-  kaapi_tasklist_t* tasklist, 
+  const kaapi_tasklist_t* tasklist, 
   void (*taskdescr_executor)(kaapi_taskdescr_t*, void*),
   void* arg_executor
 );
 
 /**
 */
-extern int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl );
+extern int kaapi_thread_tasklist_print( FILE* file, kaapi_tasklist_t* tl );
+
+/*
+*/
+extern int kaapi_thread_tasklist_print_dot ( FILE* file, const kaapi_tasklist_t* tasklist, int clusterflags );
 
 /** Generate the tasks of a frame in the dot format to display the data flow graph
     \param file the output file
@@ -549,10 +569,8 @@ extern int kaapi_frame_print_dot  ( FILE* file, const kaapi_frame_t* frame, int 
 extern int kaapi_tasklist_pushsignal( kaapi_pointer_t rsignal );
 
 
-#if 0
-/** Only call by the owner
-*/
-extern kaapi_syncrecv_t* kaapi_tasklist_popsignal( kaapi_tasklist_t* tl );
+#if defined(KAAPI_DEBUG)
+extern void kaapi_print_state_tasklist( kaapi_tasklist_t* tl );
 #endif
 
 

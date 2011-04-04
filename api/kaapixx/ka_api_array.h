@@ -261,15 +261,6 @@ public:
   array_rep<1,T>(T* p, index_t sz) : _data(p), _size(sz) {}
 
   /** */
-#if 0  
-  array_rep<1,T>& operator=(T* p) 
-  { 
-    _data = p; 
-    return *this;
-  }
-#endif
-
-  /** */
   void setptr( pointer_t p) 
   { _data =p; }
 

@@ -76,9 +76,8 @@
                | x x x  |
                | ....   |
 */
-int kaapi_sched_sync(void)
+int kaapi_sched_sync_(kaapi_thread_context_t* thread)
 {
-  kaapi_thread_context_t* thread;
   kaapi_task_t*           savepc;
   int                     err;
   kaapi_cpuset_t          save_affinity;
@@ -88,8 +87,7 @@ int kaapi_sched_sync(void)
 #endif
 
   /* If pure DFG frame and empty return */
-  thread = kaapi_self_thread_context();
-  if ((thread->sfp == 0) && kaapi_frame_isempty( thread->sfp ) ) 
+  if ((thread->sfp->tasklist == 0) && kaapi_frame_isempty( thread->sfp ) ) 
     return 0;
 
   /* here affinity should be deleted (not scalable concept) 
@@ -111,14 +109,14 @@ int kaapi_sched_sync(void)
   
 redo:
 #if defined(KAAPI_USE_CUDA)
-    if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
-    {
-      if (thread->sfp->tasklist == 0)
-	err = kaapi_thread_execframe(thread);
-      else
-	err = kaapi_cuda_thread_execframe_tasklist(thread);
-    }
+  if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    if (thread->sfp->tasklist == 0)
+      err = kaapi_thread_execframe(thread);
     else
+      err = kaapi_cuda_thread_execframe_tasklist(thread);
+  }
+  else
 #endif /* KAAPI_USE_CUDA */
   if (thread->sfp->tasklist == 0) 
     err = kaapi_thread_execframe(thread);
@@ -147,4 +145,13 @@ redo:
   thread->esfp = save_esfp;
 
   return err;
+}
+
+
+/**
+*/
+int kaapi_sched_sync()
+{
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  return kaapi_sched_sync_(thread);
 }

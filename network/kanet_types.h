@@ -75,6 +75,9 @@ typedef void (*Callback_fnc)(int errocode, Channel* ch, void* userarg);
 // -------------------------------------------------------------------------
 typedef void (*Service_fnc)(int errocode, GlobalId source, void* buffer, size_t size);
 
+// -------------------------------------------------------------------------
+typedef uint8_t ServiceId;
+
 
 // -------------------------------------------------------------------------
 struct SegmentInfo {

@@ -58,9 +58,9 @@
 */
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op)
+  void operator() ( ka::range1d_rw<T> range, OP op)
   {
-    std::for_each( beg, end, op );
+    std::for_each( range.begin(), range.end(), op );
   }
 };
 

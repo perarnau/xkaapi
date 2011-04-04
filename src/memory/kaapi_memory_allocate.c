@@ -89,6 +89,9 @@ kaapi_pointer_t kaapi_memory_allocate(
       if (flag & KAAPI_MEM_LOCAL) 
       {
         kaapi_assert_debug( kaapi_memory_address_space_getgid(kasid) == kaapi_network_get_current_globalid() );
+#warning "TG force alignment à 16bit"
+//        retval.ptr = (uintptr_t)malloc(size+15);
+//        retval.ptr &= ~0xF;
         retval.ptr = (uintptr_t)malloc(size);
       }
 #if defined(KAAPI_USE_NETWORK)

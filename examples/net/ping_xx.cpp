@@ -44,6 +44,7 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 #include "kanet_network.h" // this is the new C++ interface for Kaapi
+#include <string.h>
 
 /*
    xkaapi config: 
@@ -61,6 +62,9 @@ static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer
   ka::logfile() << ": local_gid:" << ka::System::local_gid << ", receive msg= '" << msg << "'" << std::endl;
   isrecv = 1;
 }
+enum {
+  service_id = 128
+};
 
 
 /* main entry point : Kaapi initialization
@@ -68,6 +72,8 @@ static void service(int err, ka::GlobalId source, void* buffer, size_t sz_buffer
 int main(int argc, char** argv)
 {
   try {
+    ka::Network::register_service( service_id,       &service );
+
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */
@@ -86,7 +92,7 @@ int main(int argc, char** argv)
         kaapi_assert(channel != 0);
         const char* msg = "Ceci est un message de 0";
       
-        channel->insert_am( service, msg, strlen(msg)+1 );
+        channel->insert_am( service_id, msg, strlen(msg)+1 );
         channel->sync();
       }
     }

@@ -262,6 +262,7 @@ static int kaapi_task_descriptor_print( FILE* file, kaapi_taskdescr_t* td )
 }
 
 
+#if 0
 /**
 */
 int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
@@ -275,7 +276,7 @@ int kaapi_thread_readylist_print( FILE* file, kaapi_tasklist_t* tl )
   }
   return 0;
 }
-
+#endif
 
 
 /**

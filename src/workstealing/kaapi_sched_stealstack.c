@@ -156,7 +156,6 @@ static int kaapi_sched_stealframe
     
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
-  task_body  = kaapi_nop_body;
   task_top   = frame->pc;
   task_exec  = 0;
   replycount = 0;
@@ -261,23 +260,38 @@ static void kaapi_sched_steal_tasklist(
 {
   int                     err;
   kaapi_tasklist_t*       tasklist;
-  kaapi_workqueue_index_t size_ws;
   kaapi_workqueue_index_t steal_beg;
   kaapi_workqueue_index_t steal_end;
-
+  size_t size_steal;
+  
   tasklist= frame->tasklist;  
+  kaapi_workqueue_index_t count_req 
+      = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+#if 1
+  kaapi_workqueue_index_t size_ws;
   size_ws = kaapi_workqueue_size( &tasklist->wq_ready );
-
+  if (size_ws ==0) return;
+//printf("%i::[steal] victim'queue size:%i, #req=%i\n", kaapi_get_self_kid(), (int)size_ws, (int)count_req );
   /* try to steal ready one task for each stealers */
-  kaapi_workqueue_index_t count_req = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-  if (count_req > size_ws) count_req = size_ws;
+  if (count_req+1 > size_ws) 
+    count_req = size_ws;
+  
+  size_steal = (count_req*size_ws) / (count_req + 1);
+  if (size_steal ==0) size_steal = 1;
+#else
   
   /* else try to steal count_req */
-  while (count_req >0)
+  size_steal = count_req;
+#endif
+
+//#warning "Only for debug here"
+  while (size_steal >0)
   {
-    err = kaapi_workqueue_steal( &tasklist->wq_ready, &steal_beg, &steal_end, count_req);
+    kaapi_assert_debug( kaapi_sched_islocked( &thread->proc->lock ) );
+    err = kaapi_workqueue_steal( &tasklist->wq_ready, &steal_beg, &steal_end, size_steal);
     if (err ==0)
     {
+//printf("%i::[steal] steal size:%i\n", kaapi_get_self_kid(), (int)(steal_end - steal_beg) );
       /* steal ok: reply */
       kaapi_task_splitter_readylist( 
           thread,
@@ -285,13 +299,14 @@ static void kaapi_sched_steal_tasklist(
           tasklist->td_top + steal_beg,
           tasklist->td_top + steal_end,
           lrequests, 
-          lrrange
+          lrrange,
+          count_req
       );
       return;
     }
 
     /* else try with half less requests */
-    count_req /= 2;
+    size_steal /= 2;
   }
 }
 
@@ -326,14 +341,17 @@ int kaapi_sched_stealstack
   
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)  
   /* try to steal in each frame */
-  for (top_frame =thread->stackframe; (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame)
+  for (  top_frame =thread->stackframe; 
+        (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
+         ++top_frame)
   {
     /* void frame ? */
-    if (top_frame->pc == top_frame->sp) continue;
     if (top_frame->tasklist == 0)
+    {
        /* classical steal */
+      if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
-    else 
+    } else 
       /* */
       kaapi_sched_steal_tasklist( thread, top_frame, lrequests, lrrange );
   }

@@ -4,8 +4,8 @@
 ##
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
-SUBDIRS= . mpinet gasnet
-#socknet 
+SUBDIRS= . gasnet taknet
+#socknet mpinet 
 
 if KAAPI_TARGET_KANET
 
@@ -15,7 +15,8 @@ libkanet_la_CPPFLAGS=$(AM_CPPFLAGS) -I$(top_srcdir)/api/kaapixx $(KANETLIB_BUILD
 libkanet_la_CFLAGS=$(AM_CFLAGS) $(KANETLIB_BUILD_CFLAGS)
 libkanet_la_CXXFLAGS=$(AM_CXXFLAGS) $(KANETLIB_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
 libkanet_la_LDFLAGS = -version-info 1:0:1 $(KANETLIB_BUILD_LDFLAGS)
-#libkanet_la_LIBADD=../../src/libxkaapi.la $(KANETLIB_BUILD_LIBS)
+libkanet_la_LIBADD=-ldl 
+#../../src/libxkaapi.la $(KANETLIB_BUILD_LIBS)
 
 include_HEADERS=\
 	kanet_instr.h \
@@ -30,6 +31,7 @@ libkanet_la_SOURCES=\
 	kanet_device.cpp \
 	kanet_network.cpp \
 	kanet_alloc.cpp \
+	kanet_error.cpp \
 	kaapi_network.cpp \
 	$(include_HEADERS)
 

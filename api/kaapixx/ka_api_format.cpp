@@ -60,7 +60,7 @@ Format::Format(
         void             (*print)( FILE* file, const void* src)
 )
 {
-  static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
+  std::string fmt_name = std::string("__Z4TypeI")+name;
   if (fmt ==0) 
     fmt = new kaapi_format_t;
   kaapi_format_register( fmt, strdup(fmt_name.c_str()));
@@ -125,7 +125,7 @@ FormatTask::FormatTask(
   const kaapi_reducor_t       reducor_param[]
 ) : Format((kaapi_format_t*)0)
 {
-  static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
+  std::string fmt_name = std::string("__Z4TypeI")+name;
   if (fmt ==0)
   {
     fmt = new kaapi_format_t;
@@ -165,7 +165,7 @@ FormatTask::FormatTask(
   kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
 ) : Format((kaapi_format_t*)0)
 {
-  static std::string fmt_name = std::string("__Z4TypeI")+name+"E";
+  std::string fmt_name = std::string("__Z4TypeI")+name;
   if (fmt ==0) {
     fmt = new kaapi_format_t;
     kaapi_format_taskregister_func( 

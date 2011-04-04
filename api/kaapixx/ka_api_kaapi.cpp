@@ -87,7 +87,6 @@ bool Community::is_leader() const
 void Community::leave() 
 { 
   Sync();
-  kaapi_finalize();
 }
 
 
@@ -170,6 +169,8 @@ Community System::join_community( )
 // --------------------------------------------------------------------
 void System::terminate()
 {
+  Sync();
+  kaapi_finalize();
   KaapiComponentManager::terminate();
 }
 
@@ -188,11 +189,27 @@ void Sync()
 }
 
 
+// --------------------------------------------------------------------
+static kaapi_atomic_t counter_incache = { 0 };
+InCache::InCache()
+{
+  _key = (intptr_t)KAAPI_ATOMIC_INCR(&counter_incache);
+}
+
+// --------------------------------------------------------------------
+void MemorySync()
+{
+  kaapi_memory_synchronize();
+}
+
+
+// --------------------------------------------------------------------
 SyncGuard::SyncGuard() : _thread( kaapi_self_thread() )
 {
   kaapi_thread_save_frame( _thread, &_frame );
 }
 
+// --------------------------------------------------------------------
 SyncGuard::~SyncGuard()
 {
   kaapi_sched_sync( );

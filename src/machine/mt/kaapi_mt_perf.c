@@ -4,6 +4,7 @@
 #include <papi.h>
 #endif
 #include "kaapi_impl.h"
+#include "kaapi_event.h"
 
 /* internal */
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
@@ -103,12 +104,18 @@ void kaapi_perf_global_fini(void)
 void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
 {
   kaapi_assert( (isuser ==0)||(isuser==1) );
+
+  if (getenv("KAAPI_RECORD_TRACE") !=0)
+  {
+    kproc->eventbuffer = (kaapi_event_buffer_t*)malloc(sizeof(kaapi_event_buffer_t));
+    kproc->eventbuffer->pos = 0;
+    kproc->eventbuffer->fd  = -1;
+  }
   
   memset( kproc->perf_regs, 0, sizeof( kproc->perf_regs) );
   kproc->start_t[0] = kproc->start_t[1] = 0;
-
   kproc->curr_perf_regs = kproc->perf_regs[isuser]; 
-
+  
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)
   kproc->papi_event_count = 0;
 

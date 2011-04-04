@@ -210,7 +210,7 @@ int kaapi_hw_init(void)
         kaapi_default_param.memory.levels[memdepth].count = 1;
         kaapi_default_param.memory.levels[memdepth].affinity = (kaapi_affinityset_t*)calloc( 1, sizeof(kaapi_affinityset_t) );
         kaapi_default_param.memory.levels[memdepth].affinity[0].mem_size = (size_t)obj->memory.total_memory;
-        kaapi_default_param.memory.levels[memdepth].affinity[0].ncpu = ncpu = hwloc_cpuset_weight( obj->cpuset );
+        kaapi_default_param.memory.levels[memdepth].affinity[0].ncpu = ncpu;
         kaapi_default_param.memory.levels[memdepth].affinity[0].type = KAAPI_MEM_NODE;
         kaapi_hwcpuset2affinity(
             &kaapi_default_param.memory.levels[memdepth].affinity[0].who,
@@ -235,7 +235,8 @@ int kaapi_hw_init(void)
         else
           kaapi_default_param.memory.levels[memdepth].affinity[idx].mem_size = (size_t)obj->attr->cache.size;
 
-        kaapi_default_param.memory.levels[memdepth].affinity[idx].ncpu = ncpu = hwloc_cpuset_weight( obj->cpuset );
+        ncpu = hwloc_cpuset_weight( obj->cpuset );
+        kaapi_default_param.memory.levels[memdepth].affinity[idx].ncpu = ncpu;
         kaapi_default_param.memory.levels[memdepth].affinity[idx].type = (obj->type == HWLOC_OBJ_CACHE ? KAAPI_MEM_CACHE : KAAPI_MEM_NODE);
         kaapi_hwcpuset2affinity(
             &kaapi_default_param.memory.levels[memdepth].affinity[idx].who,

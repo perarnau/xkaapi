@@ -29,41 +29,10 @@
 #include <iomanip>
 #include <string>
 #include <math.h>
+#include "matrix.h"
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-#define USE_CBLAS 1
-#if defined(USE_CBLAS)
-#include <cblas.h>
-#endif
-
-#define BLOCSIZE 256
-
-/* Task Print
- * this task prints the sum of the entries of an array 
- * each entries is view as a pointer object:
-    array<1,R<int> > means that each entry may be read by the task
- */
-struct TaskPrintMatrix : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
-
-template<>
-struct TaskBodyCPU<TaskPrintMatrix> {
-  void operator() ( std::string msg, ka::range2d_r<double> A  )
-  {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
-    std::cout << msg << " :=matrix( [" << std::endl;
-    for (size_t i=0; i < d0; ++i)
-    {
-      std::cout << "[";
-      for (size_t j=0; j < d1; ++j)
-      {
-        std::cout << std::setw(18) << std::setprecision(15) << std::scientific << A(i,j) << (j == d1-1 ? "" : ", ");
-      }
-      std::cout << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
-    }
-    std::cout << "]);" << std::endl;
-  }
-};
+static int BLOCSIZE = 0;
 
 
 /* Task Error
@@ -91,55 +60,8 @@ struct TaskBodyCPU<TaskError> {
 };
 
 
-/**
+/** Parallel bloc matrix product
 */
-struct TaskSeqMatProduct: public ka::Task<6>::Signature<
-      size_t, size_t, size_t,
-      ka::R<ka::range2d<double> >, /* A */
-      ka::R<ka::range2d<double> >,  /* B */
-      ka::RW<ka::range2d<double> >   /* C */
->{};
-
-template<>
-struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( size_t i, size_t j, size_t k,
-                   ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rw<double> C )
-  {
-    size_t M = A.dim(0);
-    size_t K = B.dim(0);
-    size_t N = B.dim(1);
-#if 1
-    i /= BLOCSIZE;
-    j /= BLOCSIZE;
-    k /= BLOCSIZE;
-    std::cout << kaapi_get_self_kid() << "::In TaskSeqMul" 
-              << "  A(" << i << "," << k << "):" << A.ptr() << " dim: " << M << 'x' << K 
-              << ", B(" << k << "," << j << "):" << B.ptr() << " dim: " << K << 'x' << N
-              << ", C(" << i << "," << j << "):" << C.ptr()
-              << std::endl;
-#endif
-              
-#if defined(USE_CBLAS)
-    /* a call to blas should be more performant here */
-    cblas_dgemm(
-        CblasRowMajor, 
-        CblasNoTrans, CblasNoTrans,
-        M, N, K, 1.0, 
-        A.ptr(), A.lda(),
-        B.ptr(), B.lda(),
-        1.0, 
-        C.ptr(), C.lda()
-    );
-#else
-    for (size_t i =0; i<N;++i)
-      for (size_t j =0; j<M; ++j)
-        for (size_t k =0; k<K; ++k)
-          C(i,j) += A(i,k)*B(k,j);
-#endif
-  }
-};
-
-
 struct TaskMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<double> >, /* A */
       ka::R<ka::range2d<double> >,  /* B */
@@ -164,7 +86,7 @@ struct TaskBodyCPU<TaskMatProduct> {
         for (size_t k=0; k<K; k += bloc)
         {
           ka::rangeindex rk(k, k+bloc);
-          ka::Spawn<TaskSeqMatProduct>()( i,j,k, A(ri,rk), B(rk,rj), C(ri,rj) );
+          ka::Spawn<TaskDGEMM>()(  CblasNoTrans, CblasNoTrans, 1.0, A(ri,rk), B(rk,rj), 1.0, C(ri,rj) );
         }
       }
     }
@@ -180,10 +102,15 @@ struct doit {
   void operator()(int argc, char** argv )
   {
     int n = 2;
+    int nb = 1;
     if (argc > 1) {
         n = atoi(argv[1]);
     }
-    n *= BLOCSIZE;
+    if (argc > 2) {
+        nb = atoi(argv[2]);
+    }
+    BLOCSIZE = n / nb;
+//    n *= BLOCSIZE;
 
     double* dA = (double*) calloc(n* n, sizeof(double));
     double* dB = (double*) calloc(n* n, sizeof(double));
@@ -222,35 +149,27 @@ struct doit {
     // If n is small, print the results
     if (n <= 64) 
     {
-      ka::Spawn<TaskPrintMatrix>()( std::string("A"), A );
+      ka::Spawn<TaskPrintMatrix<double> >()( std::string("A"), A );
       ka::Sync();
-      ka::Spawn<TaskPrintMatrix>()( std::string("B"), B );
+      ka::Spawn<TaskPrintMatrix<double> >()( std::string("B"), B );
       ka::Sync();
-      ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
+      ka::Spawn<TaskPrintMatrix<double> >()( std::string("C"), C );
       ka::Sync();
-    } else {
-      /* a call to blas to verify */
-      double* dCv = (double*) calloc(n* n, sizeof(double));
-      double t0 = kaapi_get_elapsedtime();
-#if defined(USE_CBLAS)
-      cblas_dgemm(
-          CblasRowMajor, 
-          CblasNoTrans, CblasNoTrans,
-          n, n, n, 1.0, 
-          dA, n,
-          dB, n,
-          1.0, 
-          dCv, n
-      );
-#endif
-      double t1 = kaapi_get_elapsedtime();
-      std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
+    } 
+    
+    /* a call to blas to verify */
+    double* dCv = (double*)calloc(n* n, sizeof(double));
+    ka::array<2, double> Cv(dCv, n, n, n);
 
-      ka::array<2, double> Cv(dCv, n, n, n);
-      ka::Spawn<TaskError>()( Cv, C );
-      ka::Sync();
-    }
+    t0 = kaapi_get_elapsedtime();
+    ka::Spawn<TaskDGEMM>() (CblasNoTrans, CblasNoTrans, 1.0, A, B, 1.0, Cv );
+    ka::Sync();
+    t1 = kaapi_get_elapsedtime();
 
+    std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
+
+    ka::Spawn<TaskError>()( Cv, C );
+    ka::Sync();
 
     free(dA);
     free(dB);

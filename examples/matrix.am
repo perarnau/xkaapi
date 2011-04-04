@@ -5,15 +5,22 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-MATPROG_PRGS=matprod_rec_kaapi++ matprod_bloc_kaapi++ matprod_rowcol_kaapi++ matprod_iter_part_kaapi++ matlu_kaapi++
+MATPROG_PRGS=matprod_rec_kaapi++ matprod_bloc_kaapi++ matprod_rowcol_kaapi++\
+  matprod_iter_part_kaapi++ \
+  matlu_kaapi++\
+  matcholesky_kaapi++\
+  matprod_bloc_mapping_kaapi++
+  
 check_PROGRAMS+=$(MATPROG_PRGS)
 all-matrix: $(MATPROG_PRGS)
 
-matprod_rec_kaapi___SOURCES=matrix/matprod_rec_kaapi++.cpp
-matprod_bloc_kaapi___SOURCES=matrix/matprod_bloc_kaapi++.cpp
-matprod_rowcol_kaapi___SOURCES=matrix/matprod_rowcol_kaapi++.cpp
-matprod_iter_part_kaapi___SOURCES=matrix/matprod_iter_part_kaapi++.cpp
-matlu_kaapi___SOURCES=matrix/matlu_kaapi++.cpp
+matprod_rec_kaapi___SOURCES=matrix/matprod_rec_kaapi++.cpp matrix/matrix.h
+matprod_bloc_kaapi___SOURCES=matrix/matprod_bloc_kaapi++.cpp matrix/matrix.h
+matprod_bloc_mapping_kaapi___SOURCES=matrix/matprod_bloc_mapping_kaapi++.cpp matrix/matrix.h
+matprod_rowcol_kaapi___SOURCES=matrix/matprod_rowcol_kaapi++.cpp matrix/matrix.h
+matprod_iter_part_kaapi___SOURCES=matrix/matprod_iter_part_kaapi++.cpp matrix/matrix.h
+matlu_kaapi___SOURCES=matrix/matlu_kaapi++.cpp matrix/matrix.h
+matcholesky_kaapi___SOURCES=matrix/matcholesky_kaapi++.cpp matrix/matrix.h
 
 matprod_rec_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 matprod_rec_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
@@ -24,6 +31,11 @@ matprod_bloc_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CB
 matprod_bloc_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 matprod_bloc_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
 matprod_bloc_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+matprod_bloc_mapping_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
+matprod_bloc_mapping_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matprod_bloc_mapping_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
+matprod_bloc_mapping_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 matprod_rowcol_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
 matprod_rowcol_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
@@ -36,20 +48,14 @@ matprod_iter_part_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 matprod_iter_part_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 # matlu
-matlu_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-matlu_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) \
-			-DCONFIG_USE_GSL=1
-matlu_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-matlu_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) $(CBLAS_LDFLAGS)
+matlu_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
+matlu_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matlu_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
+matlu_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) 
 
-# matlu_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-# matlu_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) \
-# 			 -DCONFIG_USE_GSL=1 -I$(HOME)/install/include
-# matlu_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) \
-# 			 -L$(HOME)/install/lib
-# matlu_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) \
-# 			-lgsl -lcblas \
-# 			$(HOME)/install/lib/lapacke.a \
-#			$(HOME)/install/lib/lapack_LINUX.a \
-#			$(HOME)/install/lib/blas_LINUX.a \
-#			$(HOME)/install/lib/libf2c.a
+# matcholesky
+matcholesky_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
+matcholesky_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matcholesky_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
+matcholesky_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) 
+

@@ -93,7 +93,7 @@ struct RWInstruction {
     This is an active message.
 */
 struct AMInstruction {
-  uint64_t     handler;  /// handler of the service (function to call)
+  ServiceId    handler;  /// handler of the service (function to call)
   uint64_t     size;     /// size in byte of the pointed memory
   const void*  lptr;     /// points on the bloc of data for the AM
 };
@@ -183,7 +183,7 @@ public:
   /** Insert a AM operation.
   */
   void insert_am(   
-      Service_fnc  handler,/// handler of the service (function to call)
+      ServiceId    handler,/// handler of the service (function to call)
       const void*  lptr,   /// points on the bloc of data for the AM
       size_t       size    /// size in byte of the pointed memory
   );
@@ -191,7 +191,7 @@ public:
   /** Insert a AM operation with call back
   */
   void insert_am(   
-      Service_fnc  handler,/// handler of the service (function to call)
+      ServiceId    handler,/// handler of the service (function to call)
       const void*  lptr,   /// points on the bloc of data for the AM
       size_t       size,   /// size in byte of the pointed memory
       Callback_fnc cbk,    /// Type of the call back function
@@ -336,7 +336,7 @@ inline void InstructionStream::insert_rwdma(
 }
 
 inline void InstructionStream::insert_am(   
-      Service_fnc  handler,
+      ServiceId    handler,
       const void*  lptr,
       size_t       size
   )
@@ -355,7 +355,7 @@ inline void InstructionStream::insert_am(
 }
 
 inline void InstructionStream::insert_am(   
-      Service_fnc  handler,
+      ServiceId    handler,
       const void*  lptr,
       size_t       size, 
       Callback_fnc cbk,

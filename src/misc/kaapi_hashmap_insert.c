@@ -52,7 +52,7 @@ kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr )
   uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
   hkey = hkey % KAAPI_HASHMAP_SIZE;
   kaapi_hashentries_t* list_hash = _get_hashmap_entry( khm, hkey );
-  kaapi_hashentries_t* entry = list_hash;
+  kaapi_hashentries_t* entry;
 
   /* allocate new entry */
   if (khm->currentbloc == 0) 

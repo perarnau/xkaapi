@@ -78,7 +78,7 @@ kaapi_format_id_t kaapi_format_register(
 
   memset( fmt, 0, sizeof(kaapi_format_t) );
   fmt->fmtid = kaapi_hash_value( name );
-  fmt->name         = name; /* TODO: strdup ? */
+  fmt->name         = strdup(name); /* TODO: strdup ? */
   fmt->isinit       = 1;
 
   /* register it into hashmap: fmtid -> fmt */

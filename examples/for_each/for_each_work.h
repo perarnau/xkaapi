@@ -131,7 +131,7 @@ protected:
     CPU implementation: see different implementations
 */
 template<typename T, typename OP>
-struct TaskThief : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
+struct TaskThief : public ka::Task<2>::Signature<ka::RW<ka::range1d<T> >, OP> {};
 
 
 /* name of the method should be splitter !!! split work and reply to requests */
@@ -153,11 +153,11 @@ void Work<T,OP>::split (
   /* thief work: create a task */
   for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
   {
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(beg_theft+size_theft), _op );
+    req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, size_theft), _op );
 //    printf("reply: [%p, %p)\n", beg_theft, beg_theft+size_theft);
 //    fflush(stdout);
   }
-  req->Spawn<TaskThief<T,OP> >(sc)( ka::pointer<T>(beg_theft), ka::pointer<T>(end_theft), _op );
+  req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, end_theft-beg_theft), _op );
 //  printf("reply: [%p, %p)\n", beg_theft, end_theft);
 //  fflush(stdout);
 }

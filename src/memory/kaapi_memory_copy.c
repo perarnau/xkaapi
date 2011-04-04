@@ -62,14 +62,16 @@ static int kaapi_memory_write_view
    contiguous_write_func_t write_fn, void* write_arg
 )
 {
-  int error = EINVAL;
+  int error = 0;
   
   switch (view_src->type)
   {
     case KAAPI_MEMORY_VIEW_1D:
     {
-      if (view_dest->type != KAAPI_MEMORY_VIEW_1D) goto on_error;
-      if (view_dest->size[0] != view_src->size[0]) goto on_error;
+      kaapi_assert(view_dest->type == KAAPI_MEMORY_VIEW_1D);
+      if (view_dest->size[0] != view_src->size[0]) 
+        return EINVAL;
+
       error = write_fn(write_arg, kaapi_pointer2void(dest), src, view_src->size[0]*view_src->wordsize );
     } break;
       
@@ -79,11 +81,14 @@ static int kaapi_memory_write_view
       char* raddr;
       size_t size;
       
-      if (view_dest->type != KAAPI_MEMORY_VIEW_2D) goto on_error;
-      if (view_dest->size[0] != view_src->size[0]) goto on_error;
+      kaapi_assert(view_dest->type == KAAPI_MEMORY_VIEW_2D);
+      if (view_dest->size[0] != view_src->size[0]) 
+        /* this case may be implemented */
+        return EINVAL;
       
       size = view_src->size[0] * view_src->size[1];
-      if (size != view_dest->size[0] * view_dest->size[1]) goto on_error;
+      if (view_src->size[1] != view_dest->size[1]) 
+        return EINVAL;
       
       laddr = (const char*)src;
       raddr = (char*)kaapi_pointer2void(dest);
@@ -92,7 +97,6 @@ static int kaapi_memory_write_view
           kaapi_memory_view_iscontiguous(view_dest))
       {
         error = write_fn(write_arg, raddr, laddr, size * view_src->wordsize);
-        if (error) goto on_error;
       }
       else 
       {
@@ -106,18 +110,17 @@ static int kaapi_memory_write_view
         for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
         {
           error = write_fn(write_arg, raddr, laddr, size_row);
-          if (error) goto on_error;
+          if (error) break;
         }
       }
       break;
     }
       
-    default: goto on_error; break;
-  }
-  
-  /* success */
-  error = 0;
-on_error:
+    default: 
+    {
+      error = EINVAL;
+    } break;
+  }  
   return error;
 }
 

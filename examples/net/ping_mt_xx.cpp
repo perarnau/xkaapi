@@ -44,6 +44,7 @@
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 #include "kanet_network.h" // this is the new C++ interface for Kaapi
+#include <string.h>
 
 
 /*
@@ -63,7 +64,10 @@ static void service2(int err, ka::GlobalId source, void* buffer, size_t sz_buffe
   fflush(stdout);
   ++cnt_msg;
 }
-
+enum {
+  service_id1 = 128,
+  service_id2 = 129,
+};
 
 /* main entry point : Kaapi initialization
 */
@@ -71,6 +75,9 @@ int main(int argc, char** argv)
 {
   const char* msg = "Ceci est un message de...";
   try {
+    ka::Network::register_service( service_id1,       &service1 );
+    ka::Network::register_service( service_id2,       &service2 );
+
     /* Join the initial group of computation : it is defining
        when launching the program by a1run.
     */
@@ -85,10 +92,11 @@ int main(int argc, char** argv)
     {
       for (int i=0; i<10; ++i)
       {
-        ka::OutChannel* channel = ka::Network::object.get_default_local_route( (ka::System::local_gid+1) % ka::Network::object.size() );
+        ka::OutChannel* channel = 
+            ka::Network::object.get_default_local_route( (ka::System::local_gid+1) % ka::Network::object.size() );
         kaapi_assert(channel !=0);
-        channel->insert_am( service1, msg, strlen(msg)+1 );
-        channel->insert_am( service2, &i, sizeof(i) );
+        channel->insert_am( service_id1, msg, strlen(msg)+1 );
+        channel->insert_am( service_id2, &i, sizeof(i) );
         channel->sync();
       }
       

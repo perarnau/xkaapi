@@ -52,7 +52,8 @@ int kaapi_task_splitter_readylist(
   kaapi_taskdescr_t**           taskdescr_beg,
   kaapi_taskdescr_t**           taskdescr_end,
   kaapi_listrequest_t*          lrequests, 
-  kaapi_listrequest_iterator_t* lrrange
+  kaapi_listrequest_iterator_t* lrrange,
+  size_t                        countreq
 )
 {
   kaapi_request_t*            request    = 0;
@@ -62,7 +63,7 @@ int kaapi_task_splitter_readylist(
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
 #endif
-//  printf("In here !!!!!, steal %lu tasks", taskdescr_end-taskdescr_beg);
+  size_t blocsize = (taskdescr_end-taskdescr_beg+countreq-1)/countreq;
   
   /* find the first request in the list */
   while (taskdescr_beg != taskdescr_end)
@@ -73,29 +74,37 @@ int kaapi_task_splitter_readylist(
     stealreply = kaapi_request_getreply(request);
   
     /* - create the task steal that will execute the stolen task
-       The task stealtask stores:
+      The task stealtask stores:
          - the original thread
          - the original task pointer
          - the pointer to shared data with R / RW access data
          - and at the end it reserve enough space to store original task arguments
-       The original body is saved as the extra body of the original task data structure.
+      The original body is saved as the extra body of the original task data structure.
     */
     argsteal = (kaapi_taskstealready_arg_t*)stealreply->udata;
     argsteal->origin_thread         = thread;
-    argsteal->origin_tasklist       = 
-        (tasklist->master == 0 ? tasklist : tasklist->master);
-    argsteal->origin_td             = (*taskdescr_beg);
+    argsteal->origin_tasklist       = tasklist;
+//        (tasklist->master == 0 ? tasklist : tasklist->master);
+    argsteal->origin_cnttasks       = tasklist->cnt_tasks;
+    argsteal->origin_td_beg         = taskdescr_beg;
+    taskdescr_beg += blocsize;
+    if (taskdescr_beg > taskdescr_end)
+    {
+      argsteal->origin_td_end       = taskdescr_end;
+      taskdescr_beg                 = taskdescr_end;
+    } else
+      argsteal->origin_td_end       = taskdescr_beg;
+
     stealreply->u.s_task.body       = kaapi_taskstealready_body;
+    
+    /* one more thief */
+    KAAPI_ATOMIC_INCR(&tasklist->count_thief);
 
     _kaapi_request_reply( request, KAAPI_REPLY_S_TASK); /* success of steal */
   
     /* update next request to process */
-    kaapi_listrequest_iterator_next( lrequests, lrrange );
-    
-    ++taskdescr_beg;
+    kaapi_listrequest_iterator_next( lrequests, lrrange );    
   }
-
-//  printf("In here !!!!!");
 
   return 1;
 }

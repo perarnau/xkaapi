@@ -52,14 +52,15 @@
 
 /**
 */
-__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv)
-{  
+__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv) 
+{
+  printf("Use default weak symbol...\n");
   return 0;
 }
 
 /**
 */
-__KA_COMPILER_WEAK int kaapi_network_finalize()
+__KA_COMPILER_WEAK int kaapi_network_finalize(void)
 {  
   return 0;
 }
@@ -72,6 +73,7 @@ __KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void)
   return 0;
 }
 
+
 /**
 */
 __KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
@@ -80,7 +82,7 @@ __KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
 }
 
 
-__KA_COMPILER_WEAK void kaapi_network_poll()
+__KA_COMPILER_WEAK void kaapi_network_poll(void)
 {
 }
 

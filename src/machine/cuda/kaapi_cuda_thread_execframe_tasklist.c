@@ -1148,9 +1148,6 @@ int kaapi_cuda_thread_execframe_tasklist
   /* current frame */
   kaapi_frame_t* fp;
 
-  /* executed task counter */
-  uint32_t cnt_exec = 0;
-
   /* temporary error */
   int err;
 
@@ -1190,7 +1187,7 @@ int kaapi_cuda_thread_execframe_tasklist
   kaapi_assert_debug(thread->sfp->tasklist != 0);
   tl = thread->sfp->tasklist;
 
-  /* todo: should be done once per proc */
+  /* create a waitport for at mos tl->cnt_tasks*/
   wp = wait_port_create(tl->cnt_tasks, &thread->proc->cuda_proc);
   if (wp == NULL)
   {
@@ -1204,87 +1201,77 @@ int kaapi_cuda_thread_execframe_tasklist
   if (tl->td_ready == 0)
   {
     kaapi_workqueue_index_t ntasks = 0;
+    fp = (kaapi_frame_t*)thread->sfp;
 
     tl->td_ready = malloc(sizeof(kaapi_taskdescr_t*) * tl->cnt_tasks);
-    kaapi_assert_debug(tl->td_ready != NULL);
 
     tl->recv = tl->recvlist.front;
-    
-    td_top = tl->td_ready + tl->cnt_tasks;
 
+    tl->td_top = (kaapi_taskdescr_t**)fp->sp;
+    td_top = (kaapi_taskdescr_t**)fp->sp;
     for (al = tl->readylist.front; al != NULL; al = al->next)
     {
+      kaapi_assert_debug((char*)td_top > (char*)fp->sp_data);
       *--td_top = al->td;
       ++ntasks;
     }
 
     /* the initial workqueue is td_top[-ntasks, 0) */
-    kaapi_writemem_barrier();
-    tl->td_top = tl->td_ready + tl->cnt_tasks;
-    kaapi_writemem_barrier();
+    kaapi_sched_lock( &thread->proc->lock );
     kaapi_workqueue_init(&tl->wq_ready, -ntasks, 0);
+    kaapi_sched_unlock( &thread->proc->lock );
   }
 
   /* assume execframe was already called, only reset td_top */
   td_top = tl->td_top;
 
   /* jump to previous state if return from suspend (EWOULDBLOCK) */
-  if (tl->context.chkpt == 1)
+  switch (tl->context.chkpt)
   {
-    td = tl->context.td;
-    fp = tl->context.fp;
-
-    err = kaapi_thread_execframe(thread);
-    if ((err == EWOULDBLOCK) || (err == EINTR)) 
+  case 1:
     {
-      tl->context.chkpt = 1;
-      tl->context.td = td;
-      tl->context.fp = fp;
-      tl->cnt_exectasks += cnt_exec;
-
-#if 0 /* TOREMOVE */
-      free(tl->td_ready);
-      tl->td_ready = 0;
-#endif /* TOREMOVE */
-
-      return err;
+      td        = tl->context.td;
+      fp        = tl->context.fp;
+      local_beg = tl->context.local_beg;
+      goto redo_frameexecution;
+      break ;
     }
 
-    has_ready = 0;
+  case 2:
+    {
+      err = 0;
+      local_beg = tl->context.local_beg;
+      goto execute_first;
+      break ;
+    }
 
-    goto do_activation;
+  default:
+    break ;
   }
   
-  /* push the frame for the next task to execute */
-  fp = (kaapi_frame_t*)thread->sfp;
-  thread->sfp[1].sp_data = fp->sp_data;
-  thread->sfp[1].pc = fp->sp;
-  thread->sfp[1].sp = fp->sp;
-  
-  /* force previous write before next write */
-  kaapi_writemem_barrier();
-
-  /* update the current frame */
-  ++thread->sfp;
-  kaapi_assert_debug(thread->sfp - thread->stackframe < KAAPI_MAX_RECCALL);
-
   /* execute all the ready tasks */
  do_ready:
-
-#if 0
-  printf("> do_ready()\n");
-#endif
-
   while (kaapi_workqueue_isempty(&tl->wq_ready) == 0)
   {
     err = kaapi_workqueue_pop(&tl->wq_ready, &local_beg, &local_end, 1);
     if (err) continue ;
 
-    td = td_top[local_beg];
+  execute_first:
+    has_ready = 0;
 
+    /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
+    fp = (kaapi_frame_t*)thread->sfp;
+    thread->sfp[1].sp = (kaapi_task_t*)(((uintptr_t)td_top+local_beg-sizeof(kaapi_task_t)+1) & ~0xF);
+    thread->sfp[1].pc = thread->sfp[1].sp;
+    thread->sfp[1].sp_data = fp->sp_data;
+    kaapi_writemem_barrier();
+    fp = ++thread->sfp;
+    kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
+    kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
+
+    td = td_top[local_beg];
     kaapi_assert_debug(td != NULL);
     kaapi_assert_debug(td->task != NULL);
-    KAAPI_DEBUG_INST(td_top[local_beg] = NULL);
 
     /* next ready task */
     pc = td->task;
@@ -1322,9 +1309,34 @@ int kaapi_cuda_thread_execframe_tasklist
 	body(pc->sp, (kaapi_thread_t*)thread->sfp);
     }
 
-    ++cnt_exec;
+    /* force memory barrier to ensure correct view of output data to
+       activated tasks that can be theft
+    */
+    kaapi_mem_barrier();
+
+    /* new tasks created ? */
+    if (unlikely(fp->sp > thread->sfp->sp))
+    {
+    redo_frameexecution:
+      err = kaapi_thread_execframe( thread );
+      if (err == EWOULDBLOCK)
+      {
+	tl->context.chkpt     = 1;
+	tl->context.td        = td;
+	tl->context.fp        = fp;
+	tl->context.local_beg = local_beg;
+	return EWOULDBLOCK;
+      }
+
+      kaapi_assert_debug( err == 0 );
+    }
+
+    /* pop the frame, even if not used */
+    fp = --thread->sfp;
+
   } /* while_ready */
 
+  /* has ready updated if new ready tasks */
   has_ready = 0;
 
   /* receive incoming sync */
@@ -1341,22 +1353,12 @@ int kaapi_cuda_thread_execframe_tasklist
 /*  do_wait: */
   while (wait_port_is_empty(wp) == 0)
   {
-#if 0
-    printf("> wait_port_next()\n");
-#endif
-
     /* process ready if available */
     if (has_ready) goto do_ready;
 
     /* event pump, wait for next to complete */
     while (wait_port_next(wp, &td) == -1)
       ;
-
-  do_activation:
-
-#if 0
-    printf("> do_activation()\n");
-#endif
 
     /* assume no task pushed */
     has_pushed = 0;
@@ -1366,16 +1368,8 @@ int kaapi_cuda_thread_execframe_tasklist
     {
       for (al = td->list.front; al != NULL; al = al->next)
       {
-#if 0
-	printf("activating(%lx)\n", (uintptr_t)al->td);
-#endif
-
 	if (kaapi_taskdescr_activated(al->td))
 	{
-#if 0
-	  printf("activated(%lx)\n", (uintptr_t)al->td);
-#endif
-
 	  td_top[local_beg--] = al->td;
 	  has_pushed = 1;
 	}
@@ -1388,6 +1382,7 @@ int kaapi_cuda_thread_execframe_tasklist
       for (al = td->bcast->front; al != NULL; al = al->next)
       {
 	/* bcast task are always ready */
+	kaapi_assert_debug((char*)&td_top[local_beg] > (char*)fp->sp_data);
 	td_top[local_beg--] = al->td;
 	has_pushed = 1;
       }
@@ -1396,8 +1391,16 @@ int kaapi_cuda_thread_execframe_tasklist
     /* enqueue the pushed tasks */
     if (has_pushed)
     {
+      /* keep last pushed task */
+      ++local_beg;
+
+      /* continue ready tasks execution */
       has_ready = 1;
+
+      /* ABA problem here if we suppress lock/unlock? seems to be true */
+      kaapi_sched_lock(&thread->proc->lock);
       kaapi_workqueue_push(&tl->wq_ready, 1 + local_beg);
+      kaapi_sched_unlock(&thread->proc->lock);
     }
 
   } /* while_wait_port */
@@ -1406,8 +1409,6 @@ int kaapi_cuda_thread_execframe_tasklist
   if (has_ready) goto do_ready;
 
  /* do_return: */
-
-  /* todo: move in kproc */
   wait_port_destroy(wp);
 
 #if CONFIG_USE_SBA
@@ -1417,29 +1418,38 @@ int kaapi_cuda_thread_execframe_tasklist
   /* todo_remove */
   cuCtxPopCurrent(&thread->proc->cuda_proc.ctx);
 
-  /* pop frame */
-  --thread->sfp;
-
-  /* update executed tasks */
-  tl->cnt_exectasks += cnt_exec;
-
-#if 0 /* TOREMOVE */
-  free(tl->td_ready);
-  tl->td_ready = 0;
-#endif /* TOREMOVE */
-  
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)
   */
   if (kaapi_tasklist_isempty(tl))
   {
+    int retval, i;
+
     tl->context.chkpt = 0;
 #if defined(KAAPI_DEBUG)
     tl->context.td = 0;
     tl->context.fp = 0;
-#endif    
-    return ECHILD;
+#endif
+
+    /* else: main tasklist, wait a little before return EWOULDBLOCK */
+    for (i = 0; (KAAPI_ATOMIC_READ(&tl->count_thief) != 0) && (i < 1000); ++i)
+      kaapi_slowdown_cpu();
+
+    kaapi_sched_lock(&thread->proc->lock);
+    retval = KAAPI_ATOMIC_READ(&tl->count_thief);
+    kaapi_sched_unlock(&thread->proc->lock);
+
+    if (retval == 0) return 0;
+    
+    /* they are no more ready task, 
+       the tasklist is not completed, 
+       then return EWOULDBLOCK 
+    */
+    return EWOULDBLOCK;
   }
+
+  /* should only occurs with partitioning: incomming recv task ! */
+  kaapi_assert(0);
   tl->context.chkpt = 2;
   tl->context.td = 0;
   tl->context.fp = 0;

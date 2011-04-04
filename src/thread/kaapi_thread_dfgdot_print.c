@@ -268,9 +268,10 @@ static inline void _kaapi_print_task(
   }
 
   fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%" PRIu64
-           "\\n wc=%i\", shape=%s, style=filled, color=orange];\n", 
+           "\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
     (uintptr_t)task, fname, (void*)task, 
     td->date, 
+    (int)td->wc,
     (int)KAAPI_ATOMIC_READ(&td->counter),
     shape
   );
@@ -360,13 +361,12 @@ static void _kaapi_print_task_executor( kaapi_taskdescr_t* td, void* arg )
 
 /** 
 */
-static int kaapi_frame_print_dot_tasklist  ( FILE* file, const kaapi_frame_t* frame, int clusterflags )
+int kaapi_thread_tasklist_print_dot  ( FILE* file, const kaapi_tasklist_t* tasklist, int clusterflags )
 {
   _kaapi_print_context the_hash_map;
   char sec_name[128];
   
-  if (frame ==0) return 0;
-  kaapi_assert(frame->tasklist !=0);
+  if (tasklist ==0) return 0;
 
   noprint_activationlink = (0 != getenv("KAAPI_DOT_NOACTIVATION_LINK"));
   noprint_versionlink = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
@@ -378,7 +378,7 @@ static int kaapi_frame_print_dot_tasklist  ( FILE* file, const kaapi_frame_t* fr
 
   if (clusterflags !=0)
   {
-    sprintf(sec_name, "subgraph cluster_%lu {\n",(uintptr_t)frame->tasklist);
+    sprintf(sec_name, "subgraph cluster_%lu {\n",(uintptr_t)tasklist);
     the_hash_map.sec_name = sec_name;
     fprintf(file, "%s\n", sec_name);
   }
@@ -386,7 +386,7 @@ static int kaapi_frame_print_dot_tasklist  ( FILE* file, const kaapi_frame_t* fr
     fprintf(file, "digraph G {\n");
 
 
-  kaapi_thread_abstractexec_readylist( frame->tasklist, _kaapi_print_task_executor, &the_hash_map );
+  kaapi_thread_abstractexec_readylist( tasklist, _kaapi_print_task_executor, &the_hash_map );
 
   fprintf(file, "\n\n}\n");
   fflush(file);
@@ -432,6 +432,6 @@ int kaapi_frame_print_dot  ( FILE* file, const kaapi_frame_t* frame, int flag )
 {
   if ((file ==0) || (frame ==0)) return EINVAL;
   if (frame->tasklist !=0) 
-    return kaapi_frame_print_dot_tasklist(file, frame, flag);
+    return kaapi_thread_tasklist_print_dot(file, frame->tasklist, flag);
   return kaapi_frame_print_dot_notasklist(file, frame);
 }
