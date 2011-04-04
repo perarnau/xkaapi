@@ -1069,7 +1069,7 @@ static int taskmove_body
     const uint16_t lid =
       _kaapi_memory_address_space_getlid(arg->dest->ptr.asid);
 
-      kaapi_metadata_info_t* const mdi = arg->dest->mdi;
+    kaapi_metadata_info_t* const mdi = arg->dest->mdi;
 
     /* eq excludes other as */
     mdi->validbits = 1UL << lid;
@@ -1203,8 +1203,6 @@ int kaapi_cuda_thread_execframe_tasklist
     kaapi_workqueue_index_t ntasks = 0;
     fp = (kaapi_frame_t*)thread->sfp;
 
-    tl->td_ready = malloc(sizeof(kaapi_taskdescr_t*) * tl->cnt_tasks);
-
     tl->recv = tl->recvlist.front;
 
     tl->td_top = (kaapi_taskdescr_t**)fp->sp;
@@ -1215,6 +1213,8 @@ int kaapi_cuda_thread_execframe_tasklist
       *--td_top = al->td;
       ++ntasks;
     }
+
+    tl->td_ready = tl->td_top; /* unused ? */
 
     /* the initial workqueue is td_top[-ntasks, 0) */
     kaapi_sched_lock( &thread->proc->lock );
@@ -1370,10 +1370,14 @@ int kaapi_cuda_thread_execframe_tasklist
       {
 	if (kaapi_taskdescr_activated(al->td))
 	{
+	  /* if non local -> push on remote queue ? */
+	  kaapi_assert_debug((char*)&td_top[local_beg] > (char*)fp->sp_data);
 	  td_top[local_beg--] = al->td;
 	  has_pushed = 1;
 	}
       }
+      /* force barrier such that activated tasks that have produce result may be read */
+      kaapi_mem_barrier();
     }
 
     /* do bcast after child execution */
@@ -1394,13 +1398,11 @@ int kaapi_cuda_thread_execframe_tasklist
       /* keep last pushed task */
       ++local_beg;
 
-      /* continue ready tasks execution */
-      has_ready = 1;
-
       /* ABA problem here if we suppress lock/unlock? seems to be true */
       kaapi_sched_lock(&thread->proc->lock);
       kaapi_workqueue_push(&tl->wq_ready, 1 + local_beg);
       kaapi_sched_unlock(&thread->proc->lock);
+      goto execute_first;
     }
 
   } /* while_wait_port */
