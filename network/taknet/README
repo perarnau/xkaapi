@@ -1,0 +1,17 @@
+
+
+* SOME NOT ON USING TAKNET with KAAPI
+
+*************** Using taknet
+
+Taknet is the Kaapi network build on top of TakTuk Communication library, see man taktukcomm.
+TakTuk could be download at http://taktuk.gforge.inria.fr.
+
+The Kaapi network name is 'taken'. To launch program with taknet, the environment variable
+KAAPI_NETWORK should be set to 'taknet' (even on remote process spawn by taktuk).
+The taknet Kaapi network is not a high performance network but more a control network that
+allow easily to pass firewall.
+
+To launch program with taktuk, see man taktuk.
+For instance:
+> taktuk -m machine1 -m machine b e [ $PWD/ping_xx ]

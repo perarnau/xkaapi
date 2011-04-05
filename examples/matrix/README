@@ -1,0 +1,21 @@
+
+
+The repository contains several examples about linear algebra:
+- matrix prodcut
+- LU factorization
+- Cholesky facotization
+
+All these examples are based on C BLAS and C LAPACK (ATLAS interface),
+and they cannot be compiled without definition of following environment
+variables:
+CBLAS_LDFLAGS: should includes libraries for cblas and clapack, for
+  instance, if ATLAS was installed into /usr/local/atlas:
+      > export CBLAS_LDFLAGS="-L/usr/local/atlas/lib -llapack -lcblas -latlas"
+CBLAS_CPPFLAGS: directory of include file cblas.h and clapack.h, for
+  instance, if ATLAS was installed into /usr/local/atlas:
+    > export CBLAS_CPPFLAGS="-I/usr/local/atlas/include"
+
+If ATLAS in into system path for finding includes or libs, then these
+environment variables are useless.
+
+Thierry
