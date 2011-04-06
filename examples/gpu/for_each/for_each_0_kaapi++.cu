@@ -76,8 +76,6 @@ __global__ void cuda_kernel( double_type* p, size_t n )
   // assume one thread
   for (size_t i = 0; i < n; ++i, ++p)
     *p += cos(*p);
-
-  *p = 42;
 }
 
 template<typename T, typename OP>
