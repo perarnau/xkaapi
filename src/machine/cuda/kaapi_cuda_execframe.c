@@ -985,11 +985,16 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 }
 #endif /* KAAPI_EXEC_METHOD */
 
+
+#if 0 /* OLD_UNUSED */
+
 int kaapi_cuda_exectask
 (kaapi_thread_context_t* thread, void* data, kaapi_format_t* format)
 {
   kaapi_processor_t* const kproc = thread->proc;
   int res = -1;
+
+  printf("%s\n", __FUNCTION__);
 
   pthread_mutex_lock(&kproc->cuda_proc.ctx_lock);
 
@@ -1022,3 +1027,424 @@ int kaapi_cuda_exectask
 
   return res;
 }
+
+#elif 0 /* NEW_WIP */
+
+#include "kaapi_tasklist.h"
+
+int kaapi_cuda_exectask
+(kaapi_thread_context_t* thread, void* sp, kaapi_format_t* format)
+{
+  /* todo: refer to kaapi_thread_checkdeps.c
+     . faire moteur basique: donnees ne sont pas sur gpu, pas
+     besoin d une map. un for + check du mode suffi. pas d overlapping,
+     inutile. les fonctions de copy + cast sont dispo dans le moteur
+     d execution asynchrone.
+     
+     . make deps computing lighter: can be assumed the data
+     are not on the gpu.
+     . push an activation link
+   */
+
+  /* build a tasklist turn and call execframe_tasklist */
+
+  size_t param_count;
+  unsigned int counter;
+  size_t i;
+  int res;
+  int prev_state;
+  kaapi_frame_t prev_frame;
+  kaapi_move_arg_t* ma;
+  kaapi_taskdescr_t* td;
+  kaapi_tasklist_t tl;
+  kaapi_access_t access;
+  kaapi_access_mode_t mode;
+  kaapi_metadata_info_t* mdi;
+  kaapi_memory_view_t view;
+
+  /* make as unstealable and save states */
+  kaapi_sched_lock(&thread->proc->lock);
+  prev_state = thread->unstealable;
+  thread->unstealable = 1;
+  kaapi_sched_unlock(&thread->proc->lock);
+  kaapi_thread_save_frame((kaapi_thread_t*)thread->sfp, &prev_frame);
+
+  /* initialize the thread ready tasklist */
+  res = kaapi_tasklist_init(&tl);
+  kaapi_assert_debug(res == 0);
+  thread->sfp->tasklist = &tl;
+
+  /* allocate move tasks */
+  param_count = format->get_count_params(format, sp);
+  kaapi_assert_debug(param_count <= 32);
+  for (counter = 0, i = 0; i < param_count; ++i)
+  {
+    mode = format->get_mode_param(format, i, sp);
+    if (mode & KAAPI_ACCESS_MODE_V) continue ;
+
+    td = kaapi_tasklist_allocate_td(tl, task);
+    kaapi_assert_debug(td != NULL);
+
+    /* it is an access */
+    access = kaapi_format_get_access_param(format, i, sp);
+    kaapi_assert_debug(access != NULL);
+
+    mdi = kaapi_mem_findinsert_metadata(access.data);
+    kaapi_assert_debug(mdi != NULL);
+
+    if (!_kaapi_metadata_info_is_valid(mdi, thread->asid))
+    {
+      view = kaapi_format_get_view_param(format, i, task->sp);
+      _kaapi_metadata_info_bind_data(mdi, thread->asid, access.data, &view);
+      mdi->version[0] = kaapi_thread_newversion
+	(mdi, thread->asid, access.data, &view);
+    }
+
+#if 0 /* unused date */
+    kaapi_thread_computeready_date(mdi->version[0], td, mode);
+#endif
+
+    /* change the data in the task by the handle */
+    access.data = version->handle;
+    kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
+
+    /* push a move task */
+    ma = kaapi_task_pushdata(sizeof(kaapi_move_arg_t));
+    kaapi_task_init(kaapi_thread_toptask(thread), kaapi_taskmove_body, ma);
+
+    ma->src_data->ptr.asid = 0; /* assume cpu asid */
+    ma->src_data->ptr.ptr = access.data;
+    ma->view = view;
+    ma->mdi = mdi;
+
+    ma->dest->ptr.ptr = (uintptr_t)NULL;
+    ma->dest->ptr.asid = 0;
+    ma->dest->view.type = -1;
+    ma->dest->mdi = NULL;
+
+    td = kaapi_tasklist_allocate_td(tl, mt);
+    kaapi_assert_debug(td != NULL);
+
+    kaapi_tasklist_pushback_ready(tl, td);
+
+    /* incr activation counter */
+    ++counter;
+  }
+
+  /* initialize the task descriptor */
+  td->counter = counter;
+  td->fmt = format;
+
+  /* call the tasklist executor */
+  res = kaapi_cuda_execframe_tasklist(thread);
+  if (res == -1) goto on_error;
+  kaapi_assert_debug(res == 0);
+
+  /* fetch back and finalize data */
+  kaapi_memory_synchronize();
+
+ on_error:
+  /* restore previous states */
+  kaapi_thread_restore_frame((kaapi_thread_t*)thread->sfp, &prev_frame);
+  kaapi_sched_lock(&thread->proc->lock);
+  prev_state = thread->unstealable;
+  thread->unstealable = 1;
+  kaapi_sched_unlock(&thread->proc->lock);
+
+  /* release tasklist */
+  kaapi_tasklist_destroy(tl);
+
+  return res;
+}
+
+#else /* NEW_WIP2 */
+
+static int cast_memory_view
+(kaapi_memory_view_t* dview, const kaapi_memory_view_t* sview)
+{
+  switch (sview->type)
+  {
+  case KAAPI_MEMORY_VIEW_1D:
+    {
+      dview->type = sview->type;
+      dview->size[0] = sview->size[0];
+      dview->lda = sview->size[0];
+      dview->wordsize = sview->wordsize;
+      break ;
+    }
+
+  case KAAPI_MEMORY_VIEW_2D:
+    {
+      dview->type = sview->type;
+      dview->size[0] = sview->size[0];
+      dview->size[1] = sview->size[1];
+      dview->lda = sview->size[1];
+      dview->wordsize = sview->wordsize;
+      break ;
+    }
+
+  default:
+    {
+      /* TODO */
+      kaapi_assert(0);
+      return -1;
+      break ;
+    }
+  }
+
+  return 0;
+}
+
+enum copy_direction{ DIR_HTOD, DIR_DTOH };
+
+static int viewcopy_xtox
+(
+ uintptr_t dptr, const kaapi_memory_view_t* dview,
+ uintptr_t sptr, const kaapi_memory_view_t* sview,
+ enum copy_direction dir
+)
+{
+  /* synchronous copy from host to device.
+     dptr, dview the destnation pair.
+     sptr, sview the source pair.
+     return -1 on failure.
+   */
+
+  CUresult res = CUDA_SUCCESS;
+  size_t size;
+
+  kaapi_assert_debug(sview->type == dview->type);
+  kaapi_assert_debug(sview->wordsize == dview->wordsize);
+
+  switch (dview->type)
+  {
+  case KAAPI_MEMORY_VIEW_1D:
+    {
+      size = dview->size[0] * dview->wordsize;
+
+    view_1d_case:
+      if (dir == DIR_HTOD)
+	res = cuMemcpyHtoD((CUdeviceptr)dptr, (const void*)sptr, size);
+      else
+	res = cuMemcpyDtoH((void*)dptr, (CUdeviceptr)sptr, size);
+
+      break ;
+    }
+
+  case KAAPI_MEMORY_VIEW_2D:
+    {
+      /* contiguous case, dont use 2D */
+      if (sview->size[1] == sview->lda)
+      {
+	/* update size and go to 1d case */
+	size = dview->size[0] * dview->size[1] * dview->wordsize;
+	goto view_1d_case;
+      }
+      else /* non contiguous */
+      {
+	CUDA_MEMCPY2D m;
+
+	if (dir == DIR_HTOD)
+	{
+	  m.srcMemoryType = CU_MEMORYTYPE_HOST;
+	  m.srcHost = (void*)sptr;
+	  m.srcPitch = sview->lda * sview->wordsize;
+
+	  m.dstMemoryType = CU_MEMORYTYPE_DEVICE;
+	  m.dstDevice = (CUdeviceptr)dptr;
+	  m.dstPitch = sview->size[1] * sview->wordsize;
+	}
+	else /* if (dir == DIR_DTOH) */
+	{
+	  m.srcMemoryType = CU_MEMORYTYPE_DEVICE;
+	  m.srcDevice = (CUdeviceptr)sptr;
+	  m.srcPitch = sview->size[1] * sview->wordsize;
+
+	  m.dstMemoryType = CU_MEMORYTYPE_HOST;
+	  m.dstHost = (void*)dptr;
+	  m.dstPitch = sview->lda * sview->wordsize;
+	}
+
+	m.srcXInBytes = 0;
+	m.srcY = 0;
+	m.dstXInBytes = 0;
+	m.dstY = 0;
+
+	m.WidthInBytes = sview->size[1] * sview->wordsize;
+	m.Height = sview->size[0];
+
+	res = cuMemcpy2D(&m);
+	if (res != CUDA_SUCCESS) goto on_error;
+      }
+
+      break ;
+    }
+
+    /* not implemented */
+  default:
+    {
+      kaapi_assert(0);
+      goto on_error;
+      break ;
+    }
+  }
+
+  /* success */
+  return 0;
+
+ on_error:
+  kaapi_cuda_error("cuMemcpyXtoX", res);
+  return -1;
+}
+
+static inline int viewcopy_htod
+(
+ CUdeviceptr dptr, const kaapi_memory_view_t* dview,
+ const void* sptr, const kaapi_memory_view_t* sview
+)
+{
+  return viewcopy_xtox
+    ((uintptr_t)dptr, dview, (uintptr_t)sptr, sview, DIR_HTOD);
+}
+
+static inline int viewcopy_dtoh
+(
+ const void* dptr, const kaapi_memory_view_t* dview,
+ CUdeviceptr sptr, const kaapi_memory_view_t* sview
+)
+{
+  return viewcopy_xtox
+    ((uintptr_t)dptr, dview, (uintptr_t)sptr, sview, DIR_DTOH);
+}
+
+int kaapi_cuda_exectask
+(kaapi_thread_context_t* thread, void* sp, kaapi_format_t* format)
+{
+  /* simple synchronous executor. a copy is made for each task
+     argument, no matter if it is already present on the device.
+   */
+
+  kaapi_processor_t* const proc = thread->proc;
+
+  int error;
+  kaapi_access_mode_t mode;
+  kaapi_access_t access;
+  CUresult res;
+  CUdeviceptr devptr;
+  void* hostptr;
+  size_t param_count;
+  size_t alloc_count;
+  size_t i;
+  cuda_task_body_t body;
+  kaapi_memory_view_t* sview;
+  kaapi_memory_view_t dview;
+
+  kaapi_memory_view_t saved_views[32];
+  void* saved_hostptrs[32];
+  CUdeviceptr devptrs[32];
+
+  /* assume error */
+  error = -1;
+
+  /* track the device allocation count */
+  alloc_count = 0;
+
+  /* set default context */
+  res = cuCtxPushCurrent(proc->cuda_proc.ctx);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuCtxPushCurrent", res);
+    goto on_error;
+  }
+
+  /* send read params to device */
+  param_count = format->get_count_params(format, sp);
+  kaapi_assert_debug(param_count <= 32);
+  for (i = 0; i < param_count; ++i)
+  {
+    mode = format->get_mode_param(format, i, sp);
+    if (mode & KAAPI_ACCESS_MODE_V) continue ;
+
+    access = format->get_access_param(format, i, sp);
+
+    /* capture hostptr, view */
+    saved_hostptrs[i] = access.data;
+    saved_views[i] = format->get_view_param(format, i, sp);
+
+    hostptr = saved_hostptrs[i];
+    sview = &saved_views[i];
+
+    /* cast view and allocate device memory */
+    if (cast_memory_view(&dview, sview))
+      goto on_error;
+
+    /* allocate device memory */
+    if (allocate_device_mem(&devptr, kaapi_memory_view_size(&dview)))
+      return -1;
+
+    /* track device allocated pointers */
+    devptrs[alloc_count++] = devptr;
+
+    /* assume no pointer exists on the device */
+    if (KAAPI_ACCESS_IS_READ(mode))
+    {
+      /* synchronous copy */
+      if (viewcopy_htod(devptr, &dview, hostptr, sview))
+	goto on_error;
+    }
+
+    /* update param addr */
+    access.data = (void*)(uintptr_t)devptr;
+    format->set_access_param(format, i, sp, &access);
+
+    /* update view param */
+    format->set_view_param(format, i, sp, &dview);
+  }
+
+  /* execute the task */
+  body = (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA];
+  kaapi_assert_debug(body != NULL);
+  body(sp, proc->cuda_proc.stream);
+
+  /* wait for kernel completion */
+  res = cuStreamSynchronize(proc->cuda_proc.stream);
+  if (res != CUDA_SUCCESS)
+  {
+    kaapi_cuda_error("cuStreamSynchronize", res);
+    goto on_error;
+  }
+
+  /* get write params from card */
+  for (i = 0; i < param_count; ++i)
+  {
+    mode = format->get_mode_param(format, i, sp);
+    if (mode & KAAPI_ACCESS_MODE_V) continue ;
+    if (KAAPI_ACCESS_IS_WRITE(mode) == 0) continue ;
+
+    /* retrieve, could be avoided */
+    access = format->get_access_param(format, i, sp);
+    devptr = (CUdeviceptr)access.data;
+    dview = format->get_view_param(format, i, sp);
+    hostptr = saved_hostptrs[i];
+    sview = &saved_views[i];
+
+    /* synchronous copy */
+    if (viewcopy_dtoh(hostptr, sview, devptr, &dview))
+      goto on_error;
+  }
+
+  /* here, success */
+  error = 0;
+
+ on_error:
+  /* release device memory in a separate loop */
+  for (i = 0; i < alloc_count; ++i)
+    free_device_mem(devptrs[i]);
+
+  /* pop current context */
+  cuCtxPopCurrent(&proc->cuda_proc.ctx);
+
+  return 0;
+}
+
+#endif /* NEW_WIP */

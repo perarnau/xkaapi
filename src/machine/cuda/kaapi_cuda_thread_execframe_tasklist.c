@@ -1114,8 +1114,6 @@ static inline wait_fifo_t* get_kernel_fifo(wait_port_t* wp)
 
 /* refer to kaapi_thread_execframe_tasklist.c
    for general comments.
-   todos:
-   . newly created tasks not implemented
  */
 int kaapi_cuda_thread_execframe_tasklist
 (kaapi_thread_context_t* thread)
