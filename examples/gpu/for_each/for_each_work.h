@@ -84,37 +84,41 @@ public:
   }
   
   /* extract parallel work for nreq. Return the unit size */
-  bool extract_par( int& nreq, T*& beg, T*& end)
+  bool extract_par
+  (int& nreq, T*& beg, T*& end, size_t& unit_size)
   {
 #define GRID_DIM 32
 #define BLOCK_DIM 256
-#define CONFIG_PAR_GRAIN 128
+#define CONFIG_PAR_GRAIN 4096
     kaapi_workqueue_index_t steal_size, i,j;
     kaapi_workqueue_index_t range_size = kaapi_workqueue_size(&wq);
+
     if (range_size <= CONFIG_PAR_GRAIN) return false;
 
-    // for gpu, size must be rounded on a multiple of
-    // GRID_DIM * BLOCK_DIM and distributed evenly amongst thieves
-    steal_size = range_size * nreq / (nreq + 1);
-    if (steal_size == 0)
+    unit_size = range_size / (nreq + 1);
+    if (unit_size == 0)
     {
       nreq = (range_size / CONFIG_PAR_GRAIN) - 1;
-      steal_size = nreq*CONFIG_PAR_GRAIN;
+      unit_size = CONFIG_PAR_GRAIN;
     }
 
-    const size_t rem = steal_size % (GRID_DIM * BLOCK_DIM);
-    if (rem) steal_size -= rem;
-    if (steal_size <= CONFIG_PAR_GRAIN) return false;
+    if (nreq == 0) return false;
 
-    /* perform the actual steal. if the range
-       changed size in between, redo the steal
-     */
+    // size must be rounded on a multiple of GRID_DIM * BLOCK_DIM
+    // and distributed evenly amongst thieves
+
+    unit_size -= unit_size % (GRID_DIM * BLOCK_DIM);
+
+    if (unit_size == 0) return false;
+
+    steal_size = unit_size * nreq;
+
     if (kaapi_workqueue_steal(&wq, &i, &j, steal_size))
       return false;
-//    printf("Steal: [%li, %li)\n", i, j);
-//    fflush(stdout);
+
     beg = _array + i;
     end = _array + j;
+
     return true;
   }
   
@@ -152,21 +156,16 @@ void Work<T,OP>::split (
   /* stolen range */
   T* beg_theft;
   T* end_theft;
-  size_t size_theft;
+  size_t unit_size;
 
-  if (!extract_par( nreq, beg_theft, end_theft )) return;
-  size_theft = (end_theft-beg_theft)/nreq;
-  
-  /* thief work: create a task */
-  for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
+  if (extract_par(nreq, beg_theft, end_theft, unit_size) == false)
+    return;
+
+  for (; nreq; --nreq, ++req, beg_theft += unit_size)
   {
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, size_theft), _op );
-//     printf("reply: [%p, %p)\n", beg_theft, beg_theft+size_theft);
-//     fflush(stdout);
+    req->Spawn<TaskThief<T,OP> >(sc)
+      (ka::array<1,T>(beg_theft, unit_size), _op);
   }
-  req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, end_theft-beg_theft), _op );
-//   printf("reply: [%p, %p)\n", beg_theft, end_theft);
-//   fflush(stdout);
 }
 
 #endif
