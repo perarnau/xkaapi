@@ -73,9 +73,40 @@ struct TaskBodyCPU<TaskThief<T, OP> > {
 
 __global__ void cuda_kernel( double_type* p, size_t n )
 {
-  // assume one thread
-  for (size_t i = 0; i < n; ++i, ++p)
+  // p the array base
+  // n the elem count
+#define THREAD_COUNT (GRID_DIM * BLOCK_DIM)
+
+  const size_t per_thread = n / THREAD_COUNT;
+  const size_t thread_idx = blockIdx.x * BLOCK_DIM + threadIdx.x;
+
+  const size_t stride = THREAD_COUNT;
+
+  double_type* const saved_p = p;
+
+  size_t i = thread_idx;
+  size_t j = thread_idx + stride * per_thread;
+
+  syncthreads();
+
+  for (p = p + i; i < j; i += stride, p += stride)
     *p += cos(*p);
+
+#if 0 // UNUSED
+  // use if the sizes are not congruent modulo
+  // BLOCK_DIM * GRID_DIM. this is currently done
+  // in the splitter
+
+  // avoid disturbing memory accesses at latencies costs
+  syncthreads();
+
+  if (thread_idx == (THREAD_COUNT - 1))
+  {
+    i = THREAD_COUNT * stride * per_thread;
+    for (p = saved_p + i; i < n; ++i, ++p)
+      *p += cos(*p);
+  }
+#endif // UNUSED
 }
 
 template<typename T, typename OP>
@@ -83,7 +114,7 @@ struct TaskBodyGPU<TaskThief<T, OP> > {
   void operator() ( ka::gpuStream stream, ka::range1d_rw<T> range, OP)
   {
     const CUstream custream = (CUstream)stream.stream;
-    cuda_kernel<<<1, dim3(1), 0, custream>>>(range.ptr(), range.size());
+    cuda_kernel<<<GRID_DIM, BLOCK_DIM, 0, custream>>>(range.ptr(), range.size());
   }
 };
 
