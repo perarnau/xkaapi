@@ -273,7 +273,7 @@ typedef uint64_t kaapi_cpuset_t[2];
 /**
 */
 typedef struct kaapi_affinityset_t {
-    kaapi_cpuset_t        who;
+    kaapi_cpuset_t        who; /* who is in this set */
     size_t                ncpu;
     size_t                mem_size;
     short                 type;
@@ -288,9 +288,9 @@ typedef struct kaapi_hierarchy_one_level_t {
 
 /** Memory hierarchy of the local machine
     * memory.depth: depth of the hierarchy
-    * memory.levels[i].count: number of kind of memory at level i
-    * memory.levels[i].who[k]: cpu set of which PU is contains by memory k at level i
-    * memory.levels[i].size[k]: size of the k memory  at level i
+    * memory.levels[i].affinity.ncpu: number of cpu that share this memory at level i
+    * memory.levels[i].affinity.who: cpu set of which PU is contains by memory k at level i
+    * memory.levels[i].affinity.mem_size: size of the k memory  at level i
 */
 typedef struct kaapi_hierarchy_t {
   unsigned short               depth;
@@ -1224,7 +1224,8 @@ typedef struct kaapi_hashentries_t {
     kaapi_gd_t                    value;
     struct kaapi_version_t*       version;     /* for static scheduling */
     kaapi_pair_ptrint_t           data;        /* used for print tasklist */
-    struct kaapi_metadata_info_t* mdi;     /* store of metadata info */
+    struct kaapi_metadata_info_t* mdi;         /* store of metadata info */
+    struct kaapi_taskdescr_t*     td;          /* */
   } u;
   void*                           key;
   struct kaapi_hashentries_t*     next; 
@@ -1309,7 +1310,7 @@ extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashent
 /* Big hashmap_big
    Used for bulding readylist
 */
-#define KAAPI_HASHMAP_BIG_SIZE 8192
+#define KAAPI_HASHMAP_BIG_SIZE 32768
 
 /*
 */
