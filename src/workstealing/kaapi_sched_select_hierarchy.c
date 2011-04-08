@@ -51,6 +51,8 @@ typedef struct kaapi_hier_arg {
 } kaapi_hier_arg;
 
 
+static kaapi_atomic_t thelock = { 1 };
+ 
 /** Do rand selection 
 */
 int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag )
@@ -62,58 +64,73 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   kaapi_assert_debug( sizeof(kaapi_hier_arg) <= sizeof(kproc->fnc_selecarg) );
 
   if (kproc->hlevel.depth ==0) 
+  { /* no hierarchy: do random flat selection */
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
+  }
 
   kaapi_assert_debug( sizeof(kaapi_hier_arg)  <= sizeof(kproc->fnc_selecarg) );
   arg = (kaapi_hier_arg*)&kproc->fnc_selecarg;
 
   if (flag == KAAPI_STEAL_FAILED)
   {
+    /* success: try next to time on lower depth */
     level = &kproc->hlevel.levels[arg->depth];
-    if (++arg->index >= level->nkids)
+//    if (++arg->index >= level->nkids)
     {
       ++arg->depth;
       arg->index = 0;
       if (arg->depth == kproc->hlevel.depth) 
-        arg->depth = arg->depth_min-1;
+        arg->depth = arg->depth_min;
     }
     return 0;
   }
+
   if (flag == KAAPI_STEAL_SUCCESS)
   {
-    arg->depth = arg->depth_min-1;
+    /* success: try next to time on lower depth */
+    arg->depth = arg->depth_min; 
     arg->index = 0;
+    return 0;
   }
 
-  if (arg->depth_min ==-1) 
-    return kaapi_sched_select_victim_rand(kproc, victim, flag );
 
-  if (flag != KAAPI_SELECT_VICTIM) 
-    return 0;
+  if (arg->depth_min ==-1) 
+  { /* no hierarchy */
+    return kaapi_sched_select_victim_rand(kproc, victim, flag );
+  }
+
+  
+  kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
 
   if (arg->depth_min ==0) 
   {
-    unsigned int i;
     arg->seed = rand();
     level = &kproc->hlevel.levels[arg->depth_min];
     /* set to the min level where at least 2 threads */
     while (level->nkids ==1)
     {
       ++arg->depth_min;
-      if (arg->depth_min >= kproc->hlevel.depth)
+      if (arg->depth_min > kproc->hlevel.depth)
       {
         arg->depth_min = -1;
         break;
       }
       level = &kproc->hlevel.levels[arg->depth_min];
     }
-    printf("kid:%i, cpu:%i mindepth:%i ", kproc->kid, kproc->cpuid, arg->depth_min);
+    arg->depth = arg->depth_min;
+
+#if 0
+{
+    int i;
+    kaapi_sched_lock( &thelock );
+    printf("\n--------> kid:%i, cpu:%i mindepth:%i ", kproc->kid, kproc->cpuid, arg->depth_min);
     for (i=0; i<level->nkids; ++i)
       printf(", kid: %i ", level->kids[i] ); 
     printf("\n");
     fflush(stdout);
-    /* always used with -1 */
-    ++arg->depth_min;
+    kaapi_sched_unlock( &thelock );
+}    
+#endif
   }
 
 redo_select:

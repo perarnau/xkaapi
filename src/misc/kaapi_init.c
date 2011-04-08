@@ -115,7 +115,6 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")
     \retval 0 in case of success 
     \retval EINVAL because of error when parsing then KAAPI_CPUSET string
     \retval E2BIG because of a cpu index too high in KAAPI_CPUSET
-    
 */
 static int kaapi_setup_param()
 {
@@ -161,7 +160,7 @@ static int kaapi_setup_param()
   wsselect = getenv("KAAPI_WSSELECT");
   kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
   if ((wsselect != 0) && (strcmp(wsselect, "rand") ==0))
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
   else if ((wsselect != 0) && (strcmp(wsselect, "workload") ==0))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
   else if ((wsselect != 0) && (strcmp(wsselect, "first0") ==0))

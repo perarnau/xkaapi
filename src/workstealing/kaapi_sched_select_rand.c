@@ -45,7 +45,11 @@
 
 /** Do rand selection 
 */
-int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag )
+int kaapi_sched_select_victim_rand( 
+  kaapi_processor_t* kproc, 
+  kaapi_victim_t* victim, 
+  kaapi_selecvictim_flag_t flag 
+)
 {
   int nbproc, victimid;
   

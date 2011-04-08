@@ -88,7 +88,11 @@ static int kaapi_select_victim_workload(
 
 /** Do workload then rand selection 
  */
-int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag )
+int kaapi_sched_select_victim_workload_rand( 
+  kaapi_processor_t* kproc, 
+  kaapi_victim_t* victim, 
+  kaapi_selecvictim_flag_t flag 
+)
 {
   int err;
   if (flag != KAAPI_SELECT_VICTIM) return 0;  
