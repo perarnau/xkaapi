@@ -50,6 +50,7 @@
 
 static int noprint_activationlink = 0;
 static int noprint_versionlink = 0;
+static int noprint_data = 0;
 
 /**/
 static inline void _kaapi_print_data( FILE* file, const void* ptr, unsigned long version)
@@ -66,9 +67,8 @@ static inline void _kaapi_print_activation_link(
     const kaapi_taskdescr_t* td_dest
 )
 {
-  if (!noprint_activationlink)
-    fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
-      (uintptr_t)td_src->task, (uintptr_t)td_dest->task );
+  fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
+    (uintptr_t)td_src->task, (uintptr_t)td_dest->task );
 }
 
 
@@ -183,32 +183,37 @@ static inline void _kaapi_print_task(
       else if (body == kaapi_taskalloc_body)
         fname = "alloc";
     }
-    kaapi_move_arg_t* argtask = (kaapi_move_arg_t*)sp;
-    kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, argtask->dest);
-    if (entry->u.data.tag ==0)
+    if (!noprint_data)
     {
-      /* display the node */
-      entry->u.data.tag = 1;
-      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-    }
-    if (body != kaapi_taskfinalizer_body)
-    {
-      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
-    }
-    else {
-      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag+1 );
-      if (!noprint_versionlink)
+      kaapi_move_arg_t* argtask = (kaapi_move_arg_t*)sp;
+      kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, argtask->dest);
+      if (entry->u.data.tag ==0)
       {
-        /* add version edge */
-        fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
-              (unsigned long)entry->u.data.tag, (uintptr_t)entry->key, (unsigned long)entry->u.data.tag+1, (uintptr_t)entry->key );
+        /* display the node */
+        entry->u.data.tag = 1;
+        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
       }
-      _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag+1, KAAPI_ACCESS_MODE_R );
-      entry->u.data.tag += 2;
-      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
-      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+      if (body != kaapi_taskfinalizer_body)
+      {
+        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+      }
+      else {
+        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag+1 );
+        if (!noprint_versionlink)
+        {
+          /* add version edge */
+          fprintf(file,"%lu00%lu -> %lu00%lu [style=dotted];\n", 
+                (unsigned long)entry->u.data.tag, 
+                (uintptr_t)entry->key, 
+                (unsigned long)entry->u.data.tag+1, 
+                (uintptr_t)entry->key );
+        }
+        _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag+1, KAAPI_ACCESS_MODE_R );
+        entry->u.data.tag += 2;
+        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+      }
     }
-    
   }
   else if (body == kaapi_taskbcast_body)
   {
@@ -216,6 +221,7 @@ static inline void _kaapi_print_task(
     kaapi_bcast_arg_t* argtask = (kaapi_bcast_arg_t*)sp;
     snprintf(bname, 128, "bcast\\ntag:%lu", (unsigned long)argtask->tag );
     fname = bname;
+    
     kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, argtask->src);
     if (entry->u.data.tag ==0)
     {
@@ -267,77 +273,84 @@ static inline void _kaapi_print_task(
     return;
   }
 
+  /* print the task */
   fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%" PRIu64
-           "\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
+           ", ct=%i\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
     (uintptr_t)task, fname, (void*)task, 
     td->date, 
+    td->ct, 
     (int)td->wc,
     (int)KAAPI_ATOMIC_READ(&td->counter),
     shape
   );
 
-  /* display activation link */
-  lk = td->list.front;
-  while (lk !=0)
+  if (!noprint_activationlink)
   {
-    tda = lk->td;
-    _kaapi_print_activation_link( file, td, tda );
-    lk = lk->next;
-  }  
-
-  /* display bcast link */
-  if (td->bcast !=0)
-  {
-    lk = td->bcast->front;
+    /* display activation link */
+    lk = td->list.front;
     while (lk !=0)
     {
       tda = lk->td;
       _kaapi_print_activation_link( file, td, tda );
       lk = lk->next;
+    }  
+
+    /* display bcast link */
+    if (td->bcast !=0)
+    {
+      lk = td->bcast->front;
+      while (lk !=0)
+      {
+        tda = lk->td;
+        _kaapi_print_activation_link( file, td, tda );
+        lk = lk->next;
+      }
     }
   }
 
   if (fmt ==0)
     return;
   
-  size_t count_params = kaapi_format_get_count_params(fmt, sp );
-
-  for (unsigned int i=0; i < count_params; i++) 
+  if (!noprint_data)
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp) );
-    if (m == KAAPI_ACCESS_MODE_V) 
-      continue;
-    
-    /* its an access */
-    kaapi_access_t access = kaapi_format_get_access_param(fmt, i, sp);
+    size_t count_params = kaapi_format_get_count_params(fmt, sp );
 
-    /* find the version info of the data using the hash map */
-    kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, access.data);
-    if (entry->u.data.tag ==0)
+    for (unsigned int i=0; i < count_params; i++) 
     {
-      /* display the node */
-      entry->u.data.tag = 1;
-      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-    }
-    
-    /* display arrow */
-    if (KAAPI_ACCESS_IS_READ(m))
-    {
-      _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag, m  );
-    }
-    if (KAAPI_ACCESS_IS_WRITE(m))
-    {
-      entry->u.data.tag++;
-      /* display new version */
-      _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
-    }
-    if (KAAPI_ACCESS_IS_CUMULWRITE(m))
-    {
-      _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
+      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp) );
+      if (m == KAAPI_ACCESS_MODE_V) 
+        continue;
+      
+      /* its an access */
+      kaapi_access_t access = kaapi_format_get_access_param(fmt, i, sp);
+
+      /* find the version info of the data using the hash map */
+      kaapi_hashentries_t* entry = kaapi_hashmap_findinsert(data_khm, access.data);
+      if (entry->u.data.tag ==0)
+      {
+        /* display the node */
+        entry->u.data.tag = 1;
+        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+      }
+      
+      /* display arrow */
+      if (KAAPI_ACCESS_IS_READ(m))
+      {
+        _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag, m  );
+      }
+      if (KAAPI_ACCESS_IS_WRITE(m))
+      {
+        entry->u.data.tag++;
+        /* display new version */
+        _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
+        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
+      }
+      if (KAAPI_ACCESS_IS_CUMULWRITE(m))
+      {
+        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
+      }
     }
   }
-  
 }
 
 
@@ -369,7 +382,8 @@ int kaapi_thread_tasklist_print_dot  ( FILE* file, const kaapi_tasklist_t* taskl
   if (tasklist ==0) return 0;
 
   noprint_activationlink = (0 != getenv("KAAPI_DOT_NOACTIVATION_LINK"));
-  noprint_versionlink = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
+  noprint_versionlink    = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
+  noprint_data           = (0 != getenv("KAAPI_DOT_NODATA_LINK"));
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &the_hash_map.data_khm, 0 );
