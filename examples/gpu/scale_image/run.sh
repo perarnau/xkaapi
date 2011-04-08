@@ -20,7 +20,6 @@ case `hostname` in
 	;;
 esac
 
-export KAAPI_GPUSET=''
-#export KAAPI_GPUSET="0~6" ;
+# export KAAPI_GPUSET=''
 
 KAAPI_STACKSIZE=260046848 ./a.out

@@ -65,8 +65,11 @@
 #define CONFIG_OUTPUT_DIM 32
 
 // split is done on an output row basis
-// otherwise, split done on a cell basis
-#define CONFIG_USE_ROW 0
+// otherwise, split done on a cell basis.
+// non row mode should be used to tests 2d
+// copy memory transfers since it bypass
+// the contiguous optimization case.
+#define CONFIG_USE_ROW 1
 
 
 // image helpers
@@ -301,7 +304,7 @@ __global__ void ScaleKernelCuda
 
   // each thread sum its column in shared_sum[x]
   pixel_type local_sum = 0;
-  for (size_t i = 0; i < CONFIG_OUTPUT_DIM; ++i, in += CONFIG_INPUT_DIM)
+  for (size_t i = 0; i < CONFIG_OUTPUT_DIM; ++i, in += CONFIG_OUTPUT_DIM)
     local_sum += *in;
   shared_sums[threadIdx.x] = local_sum;
 
