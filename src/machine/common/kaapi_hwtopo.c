@@ -216,7 +216,7 @@ int kaapi_hw_init(void)
             &kaapi_default_param.memory.levels[memdepth].affinity[0].who,
             KAAPI_MAX_PROCESSOR, 
             obj->cpuset 
-      );
+        );
       }
     }
     else if ((obj->type == HWLOC_OBJ_NODE) || (obj->type == HWLOC_OBJ_CACHE))
@@ -266,7 +266,7 @@ int kaapi_hw_init(void)
   printf("Whole CPU SET:'%s'\n",kaapi_cpuset2string(kaapi_default_param.syscpucount, kaapi_default_param.usedcpu));
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
-    printf("level[%i]: #memory:%i \t", depth, kaapi_default_param.memory.levels[depth].count );
+    printf("level[%i]: #memory:%i \t", depth, (int)kaapi_default_param.memory.levels[depth].count );
     for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
       if (kaapi_cpuset_intersect(kaapi_default_param.memory.levels[depth].affinity[i].who, kaapi_default_param.usedcpu))

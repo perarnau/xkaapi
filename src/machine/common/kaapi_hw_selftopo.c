@@ -73,7 +73,7 @@ static int kaapi_cpuset2kids(
   return cnt;
 }
 
-#if defined(KAAPI_DEBUG)
+#if 1//defined(KAAPI_DEBUG)
 __attribute__((unused)) static const char* kaapi_kids2string
 (int nkids, kaapi_processor_id_t* kids)
 {
@@ -222,11 +222,14 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   
   /* ok: here we have the current running processor :
     - we recompute the stack of affinity_set from the memory hierarchy
+    by filtering non present kprocessor, moreover we want to provide
+    an kprocessor centric view of the hierarchy: all nodes without brothers
+    are discarded from the hierarchy
   */
   kproc->cpuid = processor;
   kaapi_default_param.cpu2kid[processor]  = kproc->kid;
   kaapi_default_param.kid2cpu[kproc->kid] = processor;
-  kaapi_assert_m(kaapi_default_param.memory.depth <ENCORE_UNE_MACRO_DETAILLE, "To increase..." );
+  kaapi_assert_m(kaapi_default_param.memory.depth <ENCORE_UNE_MACRO_DETAILLEE, "To increase..." );
 
   kproc->hlevel.depth = 0;
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
@@ -241,18 +244,24 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
         ncpu = kproc->hlevel.levels[depth].set->ncpu;
         if (ncpu > kproc->hlevel.levels[depth].nsize) 
         {
-          if (kproc->hlevel.levels[depth].kids !=0)
-            free(kproc->hlevel.levels[depth].kids);
-          kproc->hlevel.levels[depth].kids = 0;
+          kaapi_processor_id_t* newkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
+          memcpy( newkids, kproc->hlevel.levels[depth].kids, kproc->hlevel.levels[depth].nsize * sizeof(kaapi_processor_id_t) );
+          free(kproc->hlevel.levels[depth].kids);
+          kproc->hlevel.levels[depth].nsize = ncpu;
+          kproc->hlevel.levels[depth].kids  = newkids;
         }
-        if (kproc->hlevel.levels[depth].kids == 0)
+        else if (kproc->hlevel.levels[depth].kids == 0)
         {
           kproc->hlevel.levels[depth].nsize = ncpu;
-          kproc->hlevel.levels[depth].kids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
+          kproc->hlevel.levels[depth].kids  = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
         }
         
         /* compute the kids array for this processor */
-        kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(&kproc->hlevel.levels[depth].set->who, kproc->hlevel.levels[depth].kids, kaapi_default_param.cpucount);
+        kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(
+            &kproc->hlevel.levels[depth].set->who, 
+            kproc->hlevel.levels[depth].kids, 
+            kaapi_default_param.cpucount
+        );
         break;
       }
     }
