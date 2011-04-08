@@ -64,6 +64,10 @@
 #define CONFIG_INPUT_DIM 1024
 #define CONFIG_OUTPUT_DIM 32
 
+// split is done on an output row basis
+// otherwise, split done on a cell basis
+#define CONFIG_USE_ROW 1
+
 
 // image helpers
 
@@ -82,8 +86,6 @@ static void create_images
 
   for (size_t i = 0; i < (isize / sizeof(pixel_type)); ++i)
     in[i] = i & 0xff;
-//   for (size_t i = 0; i < (isize / sizeof(pixel_type)); ++i)
-//     in[i] = 1;
 
   out_par = (pixel_type*)malloc(osize);
   out_seq = (pixel_type*)malloc(osize);
@@ -160,39 +162,56 @@ public:
   ScaleWork(pixel_type* in, pixel_type* out)
     : _in(in), _out(out)
   {
+#if CONFIG_USE_ROW
     // output row count
     const size_t orows = CONFIG_OUTPUT_DIM;
     kaapi_workqueue_init(&_wq, 0, orows);
+#else
+    kaapi_workqueue_init
+      (&_wq, 0, CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM);
+#endif
   }
 
-  bool extractPar(size_t& row)
+  bool extractPar(size_t& unit)
   {
-    // extract one ouput row
-
     kaapi_workqueue_index_t i, j;
     if (kaapi_workqueue_steal(&_wq, &i, &j, 1)) return false;
-    row = i;
+    unit = i;
     return true;
   }
 
-  bool extractSeq(size_t& row)
+  bool extractSeq(size_t& unit)
   {
-    // extract one output row
     kaapi_workqueue_index_t i, j;
     if (kaapi_workqueue_pop(&_wq, &i, &j, 1)) return false;
-    row = i;
+    unit = i;
     return true;
   }
 
-  pixel_type* row_to_in_pointer(size_t row)
+  ka::array<2, pixel_type> unit_to_iarr(size_t unit)
   {
-    // row an OUTPUT row
-    return _in + row * CONFIG_INPUT_DIM * CONFIG_OUTPUT_DIM;
+#if CONFIG_USE_ROW
+    // unit an OUTPUT row
+    pixel_type* const p = _in + unit * CONFIG_INPUT_DIM * CONFIG_OUTPUT_DIM;
+    return ka::array<2, pixel_type>
+      (p, CONFIG_OUTPUT_DIM, CONFIG_INPUT_DIM, CONFIG_INPUT_DIM);
+#else
+    // unit an OUTPUT cell
+    pixel_type* const p = _in + unit * CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM;
+    return ka::array<2, pixel_type>
+      (p, CONFIG_OUTPUT_DIM, CONFIG_OUTPUT_DIM, CONFIG_INPUT_DIM);
+#endif
   }
 
-  pixel_type* row_to_out_pointer(size_t row)
+  ka::array<1, pixel_type> unit_to_oarr(size_t unit)
   {
-    return _out + row * CONFIG_OUTPUT_DIM;
+#if CONFIG_USE_ROW
+    const size_t col_count = CONFIG_OUTPUT_DIM;
+#else
+    const size_t col_count = 1;
+#endif
+    pixel_type* const p = _out + unit * CONFIG_OUTPUT_DIM;
+    return ka::array<1, pixel_type>(p, col_count);
   }
 
   void split(ka::StealContext*, int, ka::Request*);
@@ -217,7 +236,10 @@ struct TaskBodyCPU<ScaleTask>
   }
 };
 
-__global__ void ScaleKernel
+
+#if CONFIG_USE_ROW
+
+__global__ void ScaleKernelCuda
 (const pixel_type* in, pixel_type* out)
 {
   // out the output row to compute
@@ -248,6 +270,58 @@ __global__ void ScaleKernel
   }
 }
 
+static void ScaleKernelCpu
+(const pixel_type* in, pixel_type* out)
+{
+  static const size_t w = CONFIG_OUTPUT_DIM;
+  static const pixel_type ww = CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM;
+
+  for (size_t i = 0; i < w; ++i, ++out, in += w)
+    *out = sum_block_pixels(in) / ww;
+}
+
+#else // ! CONFIG_USE_ROW
+
+__global__ void ScaleKernelCuda
+(const pixel_type* in, pixel_type* out)
+{
+  // out the output row to compute
+  // inthe 2d matrix
+
+  __shared__ pixel_type shared_sums[CONFIG_OUTPUT_DIM];
+
+  // each cuda block works on it own input
+  in = in + threadIdx.x;
+
+  // each thread sum its column in shared_sum[x]
+  pixel_type local_sum = 0;
+  for (size_t i = 0; i < CONFIG_OUTPUT_DIM; ++i, in += CONFIG_INPUT_DIM)
+    local_sum += *in;
+  shared_sums[threadIdx.x] = local_sum;
+
+  syncthreads();
+
+  if (threadIdx.x == 0)
+  {
+    const pixel_type ww = CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM;
+
+    local_sum = 0;
+    for (size_t i = 0; i < CONFIG_OUTPUT_DIM; ++i)
+      local_sum += shared_sums[i];
+
+    *out = local_sum / ww;
+  }
+}
+
+static void ScaleKernelCpu
+(const pixel_type* in, pixel_type* out)
+{
+  static const pixel_type ww = CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM;
+  *out = sum_block_pixels(in) / ww;
+}
+
+#endif // CONFIG_USE_ROW
+
 template<>
 struct TaskBodyGPU<ScaleTask>
 {
@@ -261,8 +335,14 @@ struct TaskBodyGPU<ScaleTask>
     // 1 input block per SM
     // 1 thread per input block col
 
+#if CONFIG_USE_ROW
+    static const size_t block_count = CONFIG_OUTPUT_DIM;
+#else
+    static const size_t block_count = 1;
+#endif
+
     const CUstream custream = (CUstream)stream.stream;
-    ScaleKernel<<<CONFIG_OUTPUT_DIM, CONFIG_OUTPUT_DIM, 0, custream>>>
+    ScaleKernelCuda<<<block_count, CONFIG_OUTPUT_DIM, 0, custream>>>
       (in.ptr(), out.ptr());
   }
 };
@@ -270,20 +350,14 @@ struct TaskBodyGPU<ScaleTask>
 
 void ScaleWork::split(ka::StealContext* sc, int nreq, ka::Request* req)
 {
-  // input rows per output row
-  static const size_t h = CONFIG_OUTPUT_DIM;
-
-  size_t row;
+  size_t unit;
 
   for (; nreq; --nreq, ++req)
   {
-    if (extractPar(row) == false) return ;
+    if (extractPar(unit) == false) return ;
 
-    ka::array<2, pixel_type> iarr
-      (row_to_in_pointer(row), h, CONFIG_INPUT_DIM, CONFIG_INPUT_DIM);
-
-    ka::array<1, pixel_type> oarr
-      (row_to_out_pointer(row), CONFIG_OUTPUT_DIM);
+    ka::array<2, pixel_type> iarr = unit_to_iarr(unit);
+    ka::array<1, pixel_type> oarr = unit_to_oarr(unit);
 
     req->Spawn<ScaleTask>(sc)(iarr, oarr);
   }
@@ -303,17 +377,13 @@ static void scale_image_par(pixel_type* in, pixel_type* out)
    &work
   );
 
-  size_t row;
-  while (work.extractSeq(row))
+  size_t unit;
+
+  while (work.extractSeq(unit))
   {
-    static const size_t w = CONFIG_OUTPUT_DIM;
-    static const pixel_type ww = CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM;
-
-    pixel_type* oup = work.row_to_out_pointer(row);
-    pixel_type* inp = work.row_to_in_pointer(row);
-
-    for (size_t i = 0; i < w; ++i, ++oup, inp += w)
-      *oup = sum_block_pixels(inp) / ww;
+    ka::array<2, pixel_type> iarr = work.unit_to_iarr(unit);
+    ka::array<1, pixel_type> oarr = work.unit_to_oarr(unit);
+    ScaleKernelCpu(iarr.ptr(), oarr.ptr());
   }
 
   ka::TaskEndAdaptive(sc);
