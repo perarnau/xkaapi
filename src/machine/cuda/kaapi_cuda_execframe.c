@@ -994,8 +994,6 @@ int kaapi_cuda_exectask
   kaapi_processor_t* const kproc = thread->proc;
   int res = -1;
 
-  printf("%s\n", __FUNCTION__);
-
   pthread_mutex_lock(&kproc->cuda_proc.ctx_lock);
 
   if (cuCtxPushCurrent(kproc->cuda_proc.ctx) == CUDA_SUCCESS)
@@ -1227,6 +1225,8 @@ static int viewcopy_xtox
 	res = cuMemcpyHtoD((CUdeviceptr)dptr, (const void*)sptr, size);
       else
 	res = cuMemcpyDtoH((void*)dptr, (CUdeviceptr)sptr, size);
+
+      if (res != CUDA_SUCCESS) goto on_error;
 
       break ;
     }
