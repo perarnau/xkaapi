@@ -66,7 +66,7 @@
 
 // split is done on an output row basis
 // otherwise, split done on a cell basis
-#define CONFIG_USE_ROW 1
+#define CONFIG_USE_ROW 0
 
 
 // image helpers
@@ -197,7 +197,13 @@ public:
       (p, CONFIG_OUTPUT_DIM, CONFIG_INPUT_DIM, CONFIG_INPUT_DIM);
 #else
     // unit an OUTPUT cell
-    pixel_type* const p = _in + unit * CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM;
+
+    const size_t row = unit / CONFIG_OUTPUT_DIM;
+    const size_t col = unit % CONFIG_OUTPUT_DIM;
+
+    pixel_type* const p =
+      _in + (row * CONFIG_INPUT_DIM + col) * CONFIG_OUTPUT_DIM;
+
     return ka::array<2, pixel_type>
       (p, CONFIG_OUTPUT_DIM, CONFIG_OUTPUT_DIM, CONFIG_INPUT_DIM);
 #endif
@@ -210,7 +216,7 @@ public:
 #else
     const size_t col_count = 1;
 #endif
-    pixel_type* const p = _out + unit * CONFIG_OUTPUT_DIM;
+    pixel_type* const p = _out + unit * col_count;
     return ka::array<1, pixel_type>(p, col_count);
   }
 
@@ -316,8 +322,7 @@ __global__ void ScaleKernelCuda
 static void ScaleKernelCpu
 (const pixel_type* in, pixel_type* out)
 {
-  static const pixel_type ww = CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM;
-  *out = sum_block_pixels(in) / ww;
+  *out = sum_block_pixels(in) / (CONFIG_OUTPUT_DIM * CONFIG_OUTPUT_DIM);
 }
 
 #endif // CONFIG_USE_ROW
