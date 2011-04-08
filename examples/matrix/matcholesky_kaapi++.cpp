@@ -53,6 +53,8 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
+double _cholesky_global_time;
+
 #if 1
 /* Generate a random matrix symetric definite positive matrix of size m x m 
    - it will be also interesting to generate symetric diagonally dominant 
@@ -208,6 +210,7 @@ template<>
 struct TaskBodyCPU<TaskCholesky> {
   void operator()( const ka::StaticSchedInfo* info, ka::range2d_rpwp<double> A )
   {
+#if 0
     //int ncpu = info->count_cpu();
     //int sncpu = (int)sqrt( (double)ncpu );
     size_t N = A.dim(0);
@@ -236,6 +239,57 @@ struct TaskBodyCPU<TaskCholesky> {
       }
     }
   }
+#else
+    //int ncpu = info->count_cpu();
+    //int sncpu = (int)sqrt( (double)ncpu );
+    size_t N = A.dim(0);
+    size_t blocsize = global_blocsize;
+    size_t nbloc   = (N+blocsize-1)/blocsize;
+    size_t index_bound[ 1+nbloc ];
+    index_bound[0] = 0;
+    double d = 0.0;
+    for (size_t i=1; i<nbloc; ++i)
+    {
+//      d += ((0.32e2 + 0.32e2 * (double(N) / 0.15872e5 - 0.2e1 / 0.31e2) * double(i))); 
+//      d += 64.0+256.0*exp( -(i-16.0)*(i-16.0)/21.0 );
+//#>48 uniform      d += 128.0+256.0*exp( -(i-24.0)*(i-24.0)/20.0);
+//#48  d += 128.0+384.0*exp( -(i-24.0)*(i-24.0)/8.0);
+      //d += 64.0+384.0*exp( -(i-16.0)*(i-16.0)*(i-16.0)*(i-16.0)/1250.0);
+      //index_bound[i] = 64.0*round(d/64.0);
+      index_bound[i] = N*i/nbloc; 
+    }
+    index_bound[nbloc] = N;
+#if 0
+    std::cout << "Splitting: d =" << d << " ... " << ceil(d/32.0) << std::endl;
+    for (size_t i=0; i<nbloc; ++i)
+      std::cout << i << "  [" << index_bound[i] << "," << index_bound[i+1] << "]=  " << index_bound[i+1]- index_bound[i] << std::endl;
+    std::cout << std::endl;
+#endif
+
+    for (size_t k=0; k < nbloc; ++k)
+    {
+      ka::rangeindex rk( index_bound[k], index_bound[k+1]);
+      ka::Spawn<TaskDPOTRF>()( CblasLower, A(rk,rk) );
+
+      for (size_t m=k+1; m < nbloc; ++m)
+      {
+        ka::rangeindex rm(index_bound[m], index_bound[m+1]);
+        ka::Spawn<TaskDTRSM>()(CblasRight, CblasLower, CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rm,rk));
+      }
+
+      for (size_t m=k+1; m < nbloc; ++m)
+      {
+        ka::rangeindex rm(index_bound[m], index_bound[m+1]);
+        ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, A(rm,rk), 1.0, A(rm,rm));
+        for (size_t n=k+1; n < m; ++n)
+        {
+          ka::rangeindex rn(index_bound[n], index_bound[n+1]);
+          ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, A(rm,rk), A(rn,rk), 1.0, A(rm,rn));
+        }
+      }
+    }
+  }
+#endif
 };
 
 
@@ -246,7 +300,7 @@ struct doit {
   void doone_exp( int n, int block_count, int niter, int verif )
   {
     global_blocsize = n / block_count;
-    n = block_count * global_blocsize;
+    //n = block_count * global_blocsize;
 
     double t0, t1;
     double* dA = (double*) calloc(n* n, sizeof(double));
@@ -283,8 +337,14 @@ struct doit {
     double sumgf = 0.0;
     double sumgf2 = 0.0;
     double sd;
+    double sumt_exec = 0.0;
+    double sumgf_exec = 0.0;
+    double sumgf2_exec = 0.0;
+    double sd_exec;
     double gflops;
     double gflops_max = 0.0;
+    double gflops_exec;
+    double gflops_exec_max = 0.0;
 
     /* formula used by plasma in time_dpotrf.c */
     double fp_per_mul = 1;
@@ -292,12 +352,14 @@ struct doit {
     double fmuls = (n * (1.0 / 6.0 * n + 0.5 ) * n);
     double fadds = (n * (1.0 / 6.0 * n ) * n);
         
+    printf("%6d %5d %5d ", (int)n, (int)kaapi_getconcurrency(), (int)(n/global_blocsize) );
     for (int i=0; i<niter; ++i)
     {
       generate_matrix(dA, n);
       if (verif)
         memcpy(dAcopy, dA, n*n*sizeof(double) );
 
+      _cholesky_global_time = 0;
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskCholesky>(ka::SetStaticSched())(A);
       ka::Sync();
@@ -305,10 +367,17 @@ struct doit {
 
       gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       if (gflops > gflops_max) gflops_max = gflops;
-      
+
       sumt += double(t1-t0);
       sumgf += gflops;
       sumgf2 += gflops*gflops;
+
+      gflops_exec = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / _cholesky_global_time;
+      if (gflops_exec > gflops_exec_max) gflops_exec_max = gflops_exec;
+      
+      sumt_exec += double(_cholesky_global_time);
+      sumgf_exec += gflops_exec;
+      sumgf2_exec += gflops_exec*gflops_exec;
 
       if (verif)
       {
@@ -347,12 +416,17 @@ struct doit {
     }
 
     gflops = sumgf/niter;
+    gflops_exec = sumgf_exec/niter;
     if (niter ==1) 
+    {
       sd = 0.0;
-    else
+      sd_exec = 0.0;
+    } else {
       sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
+      sd_exec = sqrt((sumgf2_exec - (sumgf_exec*sumgf_exec)/niter)/niter);
+    }
     
-    printf("%6d %5d %5d %9.3f %9.3f %9.3f %9.3f\n", (int)n, (int)kaapi_getconcurrency(), (int)(n/global_blocsize), sumt/niter, gflops, sd, gflops_max );
+    printf("%9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f\n", sumt/niter, gflops, sd, sumt_exec/niter, gflops_exec, sd_exec, gflops_max, gflops_exec_max );
 
     free(dA);
     if (verif)
@@ -383,8 +457,9 @@ struct doit {
     
     //int nmax = n+16*incr;
     printf("size   #threads #bs    time      GFlop/s   Deviation\n");
-    for (int k=0; k<1; ++k, ++n )
+    //for (int k=9; k<15; ++k, ++n )
     {
+      //doone_exp( 1<<k, block_count, niter, verif );
       doone_exp( n, block_count, niter, verif );
     }
   }

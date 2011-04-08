@@ -176,9 +176,9 @@ struct TaskBodyCPU<TaskDGEMM> {
     const double* const b = Akj.ptr();
     double* const c       = Aij.ptr();
 
-    const int m = Aik.dim(0); 
-    const int n = Aik.dim(1); // eq. to Akj.rows();
-    const int k = Akj.dim(1); 
+    const int m = Aij.dim(0); 
+    const int n = Aij.dim(1);
+    const int k = (transA == CblasNoTrans ? Aik.dim(1) : Aik.dim(0) );
 
     const int lda = Aik.lda();
     const int ldb = Akj.lda();
