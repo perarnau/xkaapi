@@ -1317,6 +1317,13 @@ static inline int viewcopy_dtoh
     ((uintptr_t)dptr, dview, (uintptr_t)sptr, sview, DIR_DTOH);
 }
 
+
+#define CONFIG_USE_TIME 1
+
+#if CONFIG_USE_TIME
+# include <sys/time.h>
+#endif
+
 int kaapi_cuda_exectask
 (kaapi_thread_context_t* thread, void* sp, kaapi_format_t* format)
 {
@@ -1342,6 +1349,11 @@ int kaapi_cuda_exectask
   kaapi_memory_view_t saved_views[32];
   void* saved_hostptrs[32];
   CUdeviceptr devptrs[32];
+
+#if CONFIG_USE_TIME
+  struct timeval start, stop, diff;
+  unsigned long usec;
+#endif
 
   /* assume error */
   error = -1;
@@ -1388,9 +1400,20 @@ int kaapi_cuda_exectask
     /* assume no pointer exists on the device */
     if (KAAPI_ACCESS_IS_READ(mode))
     {
+#if CONFIG_USE_TIME
+      gettimeofday(&start, NULL);
+#endif
+
       /* synchronous copy */
       if (viewcopy_htod(devptr, &dview, hostptr, sview))
 	goto on_error;
+
+#if CONFIG_USE_TIME
+      gettimeofday(&stop, NULL);
+      timersub(&stop, &start, &diff);
+      usec = diff.tv_sec * 1000000 + diff.tv_usec;
+      printf("cuda_htod: %lu, %lu\n", usec, kaapi_memory_view_size(&dview));
+#endif
     }
 
     /* update param addr */
@@ -1404,6 +1427,11 @@ int kaapi_cuda_exectask
   /* execute the task */
   body = (cuda_task_body_t)format->entrypoint[KAAPI_PROC_TYPE_CUDA];
   kaapi_assert_debug(body != NULL);
+
+#if CONFIG_USE_TIME
+  gettimeofday(&start, NULL);
+#endif
+
   body(sp, proc->cuda_proc.stream);
 
   /* wait for kernel completion */
@@ -1413,6 +1441,13 @@ int kaapi_cuda_exectask
     kaapi_cuda_error("cuStreamSynchronize", res);
     goto on_error;
   }
+
+#if CONFIG_USE_TIME
+  gettimeofday(&stop, NULL);
+  timersub(&stop, &start, &diff);
+  usec = diff.tv_sec * 1000000 + diff.tv_usec;
+  printf("cuda_exec: %lu, %lu\n", usec, kaapi_memory_view_size(&dview));
+#endif
 
   /* get write params from card */
   for (i = 0; i < param_count; ++i)
@@ -1428,9 +1463,20 @@ int kaapi_cuda_exectask
     hostptr = saved_hostptrs[i];
     sview = &saved_views[i];
 
+#if CONFIG_USE_TIME
+    gettimeofday(&start, NULL);
+#endif
+
     /* synchronous copy */
     if (viewcopy_dtoh(hostptr, sview, devptr, &dview))
       goto on_error;
+
+#if CONFIG_USE_TIME
+    gettimeofday(&stop, NULL);
+    timersub(&stop, &start, &diff);
+    usec = diff.tv_sec * 1000000 + diff.tv_usec;
+    printf("cuda_dtoh: %lu, %lu\n", usec, kaapi_memory_view_size(&dview));
+#endif
   }
 
   /* here, success */
