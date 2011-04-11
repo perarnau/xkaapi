@@ -8,7 +8,6 @@ export KAAPI_GPUSET=''
 
 case `hostname` in
     "idgraf")
-	echo "idgraf" ;
 	export KAAPI_GPUSET="$KAAPI_GPUSET,0~6" ;
 	export KAAPI_GPUSET="$KAAPI_GPUSET,1~1" ;
 	export KAAPI_GPUSET="$KAAPI_GPUSET,3~3" ;

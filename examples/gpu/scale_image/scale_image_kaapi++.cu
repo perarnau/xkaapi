@@ -61,15 +61,26 @@
 // static configuration
 // output must be square root of input dim
 // otherwise the following code does not work 
+#if 0
 #define CONFIG_INPUT_DIM 1024
 #define CONFIG_OUTPUT_DIM 32
+#else
+#define CONFIG_INPUT_DIM 4096
+#define CONFIG_OUTPUT_DIM 64
+#endif
 
 // split is done on an output row basis
 // otherwise, split done on a cell basis.
 // non row mode should be used to tests 2d
 // copy memory transfers since it bypass
 // the contiguous optimization case.
-#define CONFIG_USE_ROW 1
+#define CONFIG_USE_ROW 0
+
+// compare with seq result
+#define CONFIG_USE_CHECK 0
+
+// time executions
+#define CONFIG_USE_TIME 1
 
 
 // image helpers
@@ -102,6 +113,7 @@ static void destroy_images
   free((void*)out_seq);
 }
 
+#if CONFIG_USE_CHECK
 static int compare_images
 (const pixel_type* a, const pixel_type* b)
 {
@@ -122,6 +134,7 @@ static int compare_images
   }
   return 0;
 }
+#endif // CONFIG_USE_CHECK
 
 static pixel_type sum_block_pixels(const pixel_type* in)
 {
@@ -407,12 +420,41 @@ struct doit
     pixel_type* out_seq;
     pixel_type* out_par;
 
+#if CONFIG_USE_TIME
+    double t0, t1;
+#endif
+
     create_images(in, out_par, out_seq);
-    scale_image_par(in, out_par);
+
+#if CONFIG_USE_TIME
+    t0 = kaapi_get_elapsedtime();
+#endif
+
     scale_image_seq(in, out_seq);
 
-    if (compare_images(out_par, out_seq))
-      printf("invalid\n");
+#if CONFIG_USE_TIME
+    t1 = kaapi_get_elapsedtime();
+    std::cout << t1 - t0 << std::endl; // seconds
+#endif
+
+    for (size_t iter = 0; iter < 10; ++iter)
+    {
+#if CONFIG_USE_TIME
+      t0 = kaapi_get_elapsedtime();
+#endif
+
+      scale_image_par(in, out_par);
+
+#if CONFIG_USE_TIME
+      t1 = kaapi_get_elapsedtime();
+      std::cout << t1 - t0 << std::endl; // seconds
+#endif
+
+#if CONFIG_USE_CHECK
+      if (compare_images(out_par, out_seq))
+	printf("invalid\n");
+#endif
+    }
 
     destroy_images(in, out_par, out_seq);
   }
