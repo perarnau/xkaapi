@@ -2759,6 +2759,7 @@ namespace ka {
     }
   };
 
+
   // --------------------------------------------------------------------
   /* OwnerComputeRule attribut: specify, during fork that a task should
      have the same site location than the site location of a data.
@@ -2789,7 +2790,7 @@ namespace ka {
   template<typename T>  
   struct OCRAttribut<T,false> {
     OCRAttribut<T,false>(const T* a) {}
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
       kaapi_thread_pushtask(thread); 
       return 0;
@@ -2803,7 +2804,7 @@ namespace ka {
       /* determine the site for the data pointed bvy ptr */
       const void* ptr __attribute__((unused)) = *a;
     }    
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
       kaapi_thread_pushtask(thread); 
       return 0;
@@ -2816,7 +2817,7 @@ namespace ka {
       /* determine the site for the data pointed bvy ptr */
       const void* ptr __attribute__((unused)) = *a;
     }    
-    void operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
       kaapi_thread_pushtask(thread); 
       return 0;

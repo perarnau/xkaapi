@@ -51,12 +51,6 @@
 # include "../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
 #endif
 
-#define KAAPI_USE_BACKOFF 1
-#if defined(KAAPI_USE_BACKOFF)
-static inline unsigned int min( unsigned int a, unsigned int b )
-{ if (a<b) return a; else return b; }
-#endif
-
 
 /* this version is close to the kaapi_sched_idle, except that a condition of
    wakeup is to test that suspended condition is false
@@ -69,12 +63,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_task_t*           task_condition;
   kaapi_tasklist_t*       tasklist;
   kaapi_thread_context_t* ctxt;
-
-#if defined(KAAPI_USE_BACKOFF)
-  unsigned int backoff = 10;
-  unsigned int backoff_factor = 2*8;
-  unsigned int backoff_capacity = 20000;
-#endif  
 
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
@@ -208,22 +196,9 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         kaapi_lfree_push( kproc, ctxt );
         kaapi_sched_unlock(&kproc->lock);
       }
-      if (thread ==0) 
-      {
-#if defined(KAAPI_USE_BACKOFF)
-        for(unsigned int i = 0; i < backoff; i++)
-          kaapi_slowdown_cpu();
-        /* Increase backoff  */
-        backoff = min((backoff * backoff_factor), backoff_capacity);
-        
+      if (thread ==0) {
         //kaapi_sched_advance(kproc);
-        pthread_yield_np();
-#endif
         continue;
-      } else {
-#if defined(KAAPI_USE_BACKOFF)
-        backoff = 10;
-#endif
       }
 
       kaapi_setcontext(kproc, thread);
