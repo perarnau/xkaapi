@@ -62,6 +62,9 @@ typedef struct kaapi_cuda_proc
 
   int is_initialized;
 
+  /* cached attribtues */
+  unsigned int attr_concurrent_kernels;
+
   unsigned int kasid_user;
 
 } kaapi_cuda_proc_t;

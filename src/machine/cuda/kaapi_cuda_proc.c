@@ -111,6 +111,21 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
     return -1;
   }
 
+  /* cache the device attributes
+   */
+  proc->attr_concurrent_kernels = 0;
+  res = cuDeviceGetAttribute
+  (
+   (int*)&proc->attr_concurrent_kernels,
+   CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS,
+   proc->dev
+  );
+
+#if defined(KAAPI_DEBUG)
+  if (res != CUDA_SUCCESS)
+    kaapi_cuda_error("cuGetDeviceAttribute", res);
+#endif
+
   /* pop the context to make it floating. doing
      so allow another thread to use it, such
      as the main one with kaapi_mem_synchronize2

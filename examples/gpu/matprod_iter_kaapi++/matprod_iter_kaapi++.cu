@@ -25,6 +25,7 @@
  * negligence, tort, or otherwise.
  *
  */
+
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -39,8 +40,8 @@
 #endif // CONFIG_USE_CUBLAS
 
 #if CONFIG_USE_VOLKOV
-extern "C" void volkov_sgemm
-(CUstream, char, char, int, int, int, float, const float*, int, const float*, int, float, float*, int);
+extern void  volkov_sgemm
+(CUstream, float*, const float*, const float*, int, int, int);
 #endif
 
 // missing definition
@@ -85,6 +86,71 @@ static int BLOCSIZE = 0;
 
 // no double type on gtx280
 typedef float double_type;
+
+
+// check results
+#define CONFIG_DO_CHECK 1
+#if CONFIG_DO_CHECK
+
+# include <stdlib.h>
+
+static int do_check
+(const double_type* a, const double_type* b, const double_type* c, unsigned int n)
+{
+  // a, b, c nxn matrices
+
+  double_type* const tmp = (double_type*)
+    malloc(n * n * sizeof(double_type));
+  if (tmp == NULL) return -1;
+
+  unsigned int i, j, k;
+
+  for (i = 0; i < n * n; ++i) tmp[i] = 0.;
+
+  for (i = 0; i < n; ++i)
+  {
+    for (j = 0; j < n; ++j)
+    {
+      for (k = 0; k < n; ++k)
+	tmp[i * n +  j] += a[i * n + k] * b[k * n + j];
+    }
+  }
+
+  int res = -1;
+
+  for (i = 0; i < n; ++i)
+  {
+    for (j = 0; j < n; ++j)
+    {
+      k = i * n + j;
+      if (fabsf(c[k] - tmp[k]) >= 0.01)
+      {
+	printf("invalid @%lx,%u,%u %f != %f\n", (uintptr_t)c, i, j, c[k], tmp[k]);
+	goto on_error;
+      }
+    }
+  }
+
+  res = 0;
+
+ on_error:
+  free(tmp);
+
+  return res;
+}
+#endif // CONFIG_DO_CHECK
+
+
+// fetching task
+struct TaskMatFetch : public ka::Task<1>::Signature<
+  ka::RW<ka::range2d<double_type> > // C
+>{};
+
+template<>
+struct TaskBodyCPU<TaskMatFetch> {
+  void operator()( ka::range2d_rw<double_type>) {}
+};
+
 
 /* Task Print
  * this task prints the sum of the entries of an array 
@@ -195,6 +261,10 @@ __global__ void mulKernel
 	  c[i * m + j] += a[i * m + k] * b[k * m + j];
   }
 
+#elif 0
+
+  c[0] = 42.f;
+
 #endif
 }
 
@@ -208,18 +278,9 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
    ka::range2d_rw<double_type> C
   )
   {
-#if 0
-    printf("mulKernel(%lx, %lx, %lx) %d %d %d\n",
-	   (uintptr_t)A.ptr(),
-	   (uintptr_t)B.ptr(),
-	   (uintptr_t)C.ptr(),
-	   C.dim(0), C.dim(1), C.lda());
-#endif
-
     const CUstream custream = (CUstream)stream.stream;
 
     size_t mm = A.dim(0) * A.dim(0);
-    const size_t thread_count = mm < 512 ? mm : 512;
 
 #if CONFIG_USE_CUBLAS
     cublasStatus_t status;
@@ -250,16 +311,13 @@ struct TaskBodyGPU<TaskSeqMatProduct> {
       return ;
     }
 #elif CONFIG_USE_VOLKOV
-    const int mnk = A.dim(0);
     volkov_sgemm
     (
      custream,
-     'n', 'n',
-     mnk, mnk, mnk,
-     1, A.ptr(), A.dim(0), B.ptr(), B.dim(0),
-     1, C.ptr(), C.dim(0)
+     C.ptr(), A.ptr(), B.ptr(), A.dim(0), A.dim(1), B.dim(1)
     );
 #else
+    const size_t thread_count = mm < 512 ? mm : 512;
     mulKernel<<<1, dim3(thread_count), 0, custream>>>
       (A.ptr(), B.ptr(), C.ptr(), A.dim(0));
 #endif
@@ -291,6 +349,9 @@ struct TaskBodyCPU<TaskMatProduct> {
         {
           ka::rangeindex rk(k, k+bloc);
           ka::Spawn<TaskSeqMatProduct>()(A(ri,rk), B(rk,rj), C(ri,rj));
+#if 0 // taskfetch
+          ka::Spawn<TaskMatFetch>()(C(ri,rj));
+#endif // taskfetch
         }
       }
     }
@@ -321,21 +382,31 @@ struct doit {
         return;
     }
 
-    // Populate B and C pseudo-randomly - 
-    // The matrices are populated with random numbers in the range (-1.0, +1.0)
     for(int i = 0; i < n * n; ++i) {
-        dB[i] = (float) ((i * i) % 1024 - 512) / 512;
-    }
-    for(int i = 0; i < n * n; ++i) {
-        dA[i] = (float) (((i + 1) * i) % 1024 - 512) / 512;
-    }
-    for(int i = 0; i < n * n; ++i) {
-        dC[i] = 0.0;
+      const double_type aval =
+	(double_type) (((i + 1) * i) % 1024 - 512) / 512;
+      const double_type bval =
+	(double_type)((i * i) % 1024 - 512) / 512;
+
+#if CONFIG_USE_VOLKOV // transpose if col major order 
+      const unsigned int index = ((i / n) * n) + i % n;
+#else
+      const unsigned int index = i;
+#endif
+
+      dA[index] = aval;
+      dB[index] = aval;
+      dC[index] = 0.;
     }
 
     ka::array<2,double_type> A(dA, n, n, n);
     ka::array<2,double_type> B(dB, n, n, n);
     ka::array<2,double_type> C(dC, n, n, n);
+
+#if 0 // TOREMOVE <-- running twice does not work
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
+    ka::Sync();
+#endif // TOREMOVE
 
     // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
@@ -346,17 +417,19 @@ struct doit {
     // it does not reflect the execution pipeline
     double t1 = kaapi_get_elapsedtime();
 
-    // synchronize host memory
     kaapi_memory_synchronize();
 
     std::cout << t1 - t0; // seconds
 
     // If n is small, print the results
 #if 0
-    if (n <= 32) {
-      ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
-      ka::Sync();
-    }
+    ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
+    ka::Sync();
+#endif
+
+#if CONFIG_DO_CHECK
+    if (do_check(dA, dB, dC, n) == -1)
+      printf("invalid matrix\n");
 #endif
 
     free(dA);
@@ -372,7 +445,6 @@ int main(int argc, char** argv)
 {
 #if CONFIG_USE_CUBLAS
   if (initialize_cublas() == -1) return ;
-  printf("bar\n");
 #endif
 
   try {
