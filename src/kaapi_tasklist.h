@@ -394,8 +394,9 @@ static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td( kaapi_tasklist_t* t
   return retval;
 }
 
+
 /**/
-static inline kaapi_task_t* kaapi_tasklist_push_task( kaapi_tasklist_t* tl, kaapi_task_bodyid_t body, void* arg )
+static inline kaapi_task_t* kaapi_tasklist_allocate_task( kaapi_tasklist_t* tl, kaapi_task_bodyid_t body, void* arg )
 {
   kaapi_task_t* task = 
       (kaapi_task_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_thread_t) );

@@ -58,7 +58,7 @@ static int kaapi_threadgroup_create_initialtask(
         = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
     argmove->src_data  = version->orig;
     argmove->dest      = version->handle;
-    task_move = kaapi_tasklist_push_task( tl, kaapi_taskmove_body, argmove);
+    task_move = kaapi_tasklist_allocate_task( tl, kaapi_taskmove_body, argmove);
     td_move =  kaapi_tasklist_allocate_td( tl, task_move );
     version->writer_task= td_move;
     version->writer_tasklist = tl;
@@ -74,7 +74,7 @@ static int kaapi_threadgroup_create_initialtask(
         = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
     argalloc->src_data  = version->orig;
     argalloc->dest      = version->handle;
-    task_alloc = kaapi_tasklist_push_task( tl, kaapi_taskalloc_body, argalloc);
+    task_alloc = kaapi_tasklist_allocate_task( tl, kaapi_taskalloc_body, argalloc);
     td_alloc =  kaapi_tasklist_allocate_td( tl, task_alloc );
     version->writer_task= td_alloc;
     version->writer_tasklist = tl;
@@ -101,7 +101,7 @@ static int kaapi_threadgroup_create_initialtask(
           = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
       arg->src_data  = version->orig;
       arg->dest      = version->handle;
-      task_finalizer = kaapi_tasklist_push_task( tl, kaapi_taskfinalizer_body, arg);
+      task_finalizer = kaapi_tasklist_allocate_task( tl, kaapi_taskfinalizer_body, arg);
       td_finalizer =  kaapi_tasklist_allocate_td( tl, task_finalizer );
       version->writer_task= td_finalizer;
       version->writer_tasklist= tl;
@@ -216,7 +216,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
         argrecv->from        = kaapi_memory_address_space_getgid(version_writer->writer_asid);
         argrecv->data        = 0; /* to allocate on remote site */
         argrecv->dest        = version->handle;
-        task_recv            = kaapi_tasklist_push_task( tasklist, kaapi_taskrecv_body, argrecv);
+        task_recv            = kaapi_tasklist_allocate_task( tasklist, kaapi_taskrecv_body, argrecv);
         td_recv              = kaapi_tasklist_allocate_td( tasklist, task_recv );
         
         version->last_mode   = KAAPI_ACCESS_MODE_W;
@@ -246,7 +246,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
           argbcast->front.rsignal   = 0; /* exchange to known receiver task */
           argbcast->front.next      = 0;
           argbcast->back            = &argbcast->front;
-          task_bcast                = kaapi_tasklist_push_task( tasklist, kaapi_taskbcast_body, argbcast);
+          task_bcast                = kaapi_tasklist_allocate_task( tasklist, kaapi_taskbcast_body, argbcast);
           td_bcast               /* to allocate writer tasklist */
             = kaapi_tasklist_allocate_td( version_writer->writer_tasklist, task_bcast );
           argbcast->td_bcast        = td_bcast;
@@ -310,7 +310,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
             = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tasklist, sizeof(kaapi_move_arg_t) );
         argalloc->src_data  = version->orig;
         argalloc->dest      = version->handle;
-        task_alloc = kaapi_tasklist_push_task( tasklist, kaapi_taskalloc_body, argalloc);
+        task_alloc = kaapi_tasklist_allocate_task( tasklist, kaapi_taskalloc_body, argalloc);
         td_alloc =  kaapi_tasklist_allocate_td( tasklist, task_alloc );
         version->writer_task= td_alloc;
 
