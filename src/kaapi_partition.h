@@ -81,6 +81,12 @@ extern "C" {
    their scheduling data structure.
 */
 
+/** Update a tasklist data flow graph representation to compute the critical path of each tasks,
+    i.e. the longest path to the output tasks
+*/
+extern int kaapi_staticschedtask_critical_path( kaapi_tasklist_t* tasklist );
+
+
 /** fwd decl
 */
 struct kaapi_partid_version_t;
