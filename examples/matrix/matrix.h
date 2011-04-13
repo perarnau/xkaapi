@@ -293,7 +293,7 @@ struct TaskBodyCPU<TaskDGETRF> {
     const int n        = A.dim(0); 
     const int lda      = A.lda();
     double* const a    = A.ptr();
-    int* const ipiv = piv.ptr();
+    int* const ipiv    = piv.ptr();
 
     clapack_dgetrf(
       CblasRowMajor, m, n, a, lda, ipiv

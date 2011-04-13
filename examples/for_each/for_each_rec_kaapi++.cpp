@@ -59,33 +59,34 @@
 
 /* task signature */
 template<typename T, typename OP>
-struct TaskForEachTerminal : public ka::Task<3>::Signature<ka::RW<T>, ka::RW<T>, OP> {};
+struct TaskForEachTerminal : public ka::Task<2>::Signature<ka::RW<ka::range1d<T> >, OP> {};
 
 /* CPU implementation */
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskForEachTerminal<T, OP> > {
-  void operator() ( ka::pointer_rw<T> beg, ka::pointer_rw<T> end, OP op) 
+  void operator() ( ka::range1d_rw<T> range, OP op) 
   {
-    std::for_each( beg, end, op );
+    std::for_each( range.begin(), range.end(), op );
   }
 };
 
 /* task signature */
 template<typename T, typename OP>
-struct TaskForEach : public ka::Task<3>::Signature<ka::RPWP<T>, ka::RPWP<T>, OP> {};
+struct TaskForEach : public ka::Task<2>::Signature< ka::RPWP<ka::range1d<T> >, OP> {};
 
 /* CPU implementation */
 template<typename T, typename OP>
 struct TaskBodyCPU<TaskForEach<T, OP> > {
-  void operator() ( ka::pointer_rpwp<T> beg, ka::pointer_rpwp<T> end, OP op) 
+  void operator() ( ka::range1d_rpwp<T> range, OP op) 
   {
+    int size = range.size();
 #define CONFIG_SEQ_GRAIN 256
-    if (end-beg < CONFIG_SEQ_GRAIN)
-      ka::Spawn<TaskForEachTerminal<T,OP> >()( beg, end, op );
+    if (size < CONFIG_SEQ_GRAIN)
+      ka::Spawn<TaskForEachTerminal<T,OP> >()( range, op );
     else {
-      int med = (end-beg)/2;
-      ka::Spawn<TaskForEach<T,OP> >()( beg, beg+med, op );
-      ka::Spawn<TaskForEach<T,OP> >()( beg+med, end, op );
+      int med = size/2;
+      ka::Spawn<TaskForEach<T,OP> >()( range(ka::rangeindex(0,med)), op );
+      ka::Spawn<TaskForEach<T,OP> >()( range(ka::rangeindex(med,size)), op );
     }
   }
 };
@@ -95,7 +96,7 @@ struct TaskBodyCPU<TaskForEach<T, OP> > {
 template<typename T, class OP>
 void for_each( T* beg, T* end, OP op )
 {
-  ka::Spawn<TaskForEach<T,OP> >()(beg, end, op);
+  ka::Spawn<TaskForEach<T,OP> >()( ka::range1d<T>(beg, end-beg), op);
 
   /* here: wait all thieves have finish their result */
   ka::Sync();
