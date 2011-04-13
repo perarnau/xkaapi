@@ -274,11 +274,10 @@ static inline void _kaapi_print_task(
   }
 
   /* print the task */
-  fprintf( file, "%lu [label=\"%s\\n task=%p\\n depth=%" PRIu64
-           ", ct=%i\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
+  fprintf( file, "%lu [label=\"%s\\n task=%p\\n date=%" PRIu64
+           "\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
     (uintptr_t)task, fname, (void*)task, 
     td->date, 
-    td->ct, 
     (int)td->wc,
     (int)KAAPI_ATOMIC_READ(&td->counter),
     shape

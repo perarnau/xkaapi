@@ -136,7 +136,7 @@ typedef struct kaapi_move_arg_t {
 typedef struct kaapi_taskdescr_t {
   kaapi_atomic_t                counter;   /* concurrent decr to test if task is ready */
   uint32_t                      wc;        /* value of counter before task becomes ready */
-  uint64_t                      date;      /* minimal logical date of production */
+  uint64_t                      date;      /* minimal logical date of production or critical path */
 #if defined(KAAPI_DEBUG)
   uint64_t                      exec_date;      /* execution date, debug only */
 #endif
