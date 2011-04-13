@@ -31,9 +31,11 @@ include net.am
 include nqueens.am
 include poisson3D.am
 include prefix.am
+include mergesort.am
 # include papi.am
 
 USER_MAKEFILES=\
+	mergesort/Makefile \
 	accumulate/Makefile \
 	array/Makefile \
 	bfs/Makefile \

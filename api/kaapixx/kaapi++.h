@@ -1509,6 +1509,7 @@ namespace ka {
     const array<1,T>& operator*() const { return *this; }
     const array<1,T>* operator->() const { return this; }
     size_t size() const { return array<1,T>::size(); }
+    const T* ptr() const { return array<1, T>::ptr(); }
 
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_rpwp( array<1,T>::operator()(r) ); }

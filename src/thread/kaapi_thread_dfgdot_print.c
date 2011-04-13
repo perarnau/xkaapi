@@ -278,7 +278,7 @@ static inline void _kaapi_print_task(
            ", ct=%i\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
     (uintptr_t)task, fname, (void*)task, 
     td->date, 
-    td->ct, 
+	   0, /* todo: td->ct undefined */
     (int)td->wc,
     (int)KAAPI_ATOMIC_READ(&td->counter),
     shape
