@@ -196,17 +196,17 @@ typedef struct kaapi_tasklist_t {
 } kaapi_tasklist_t;
 
 
-/**
+/** Serves to detect: W -> R dependency or R -> W dependency
 */
 typedef struct kaapi_version_t {
-  kaapi_data_t*            orig;         /* original data + original view points to the data in the metadatainfo */
-  kaapi_handle_t           handle;       /* @data + view */
-  kaapi_comtag_t           tag;          /* tag to use for communication */
-  kaapi_access_mode_t      last_mode;    /* */
-  kaapi_taskdescr_t*       last_task;    /* task attached to last access */
-  kaapi_tasklist_t*        last_tasklist;/* the tasklist that stores the last task */
-  kaapi_taskdescr_t*       writer_task;  /* last writer task of the version, 0 if no indentify task (input data) */
-  kaapi_address_space_id_t writer_asid;  /* used in partitionning, else it is always == orig->ptr.asid */ 
+  kaapi_data_t*            orig;            /* original data + original view points to the data in the metadatainfo */
+  kaapi_handle_t           handle;          /* @data + view */
+  kaapi_comtag_t           tag;             /* tag to use for communication */
+  kaapi_access_mode_t      last_mode;       /* */
+  kaapi_taskdescr_t*       last_task;       /* task attached to last access */
+  kaapi_tasklist_t*        last_tasklist;   /* the tasklist that stores the last task */
+  kaapi_taskdescr_t*       writer_task;     /* last writer task of the version, 0 if no indentify task (input data) */
+  kaapi_address_space_id_t writer_asid;     /* used in partitionning, else it is always == orig->ptr.asid */ 
   kaapi_tasklist_t*        writer_tasklist; /* the tasklist that stores the writer task */
   struct kaapi_version_t*  next;
 } kaapi_version_t;
