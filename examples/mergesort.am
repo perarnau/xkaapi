@@ -1,0 +1,20 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+
+if KAAPI_API_KAAPIXX
+MERGESORT_PRGS=mergesort_kaapi++
+endif
+
+check_PROGRAMS+=$(MERGESORT_PRGS)
+all-mergesort: $(MERGESORT_PRGS)
+
+mergesort_kaapi___SOURCES=mergesort/mergesort_kaapi++.cpp
+
+mergesort_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+mergesort_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+mergesort_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+mergesort_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
