@@ -1338,7 +1338,6 @@ namespace ka {
   /* ------ formal parameter of type _r, _w and _rw and rpwp over array */
   template<typename T>
   class pointer_r<array<1,T> > : protected array<1,T> {
-    friend class array_inclosure_t<1,T>;
   public:
     typedef T                      value_type;
     typedef size_t                 difference_type;
@@ -1356,42 +1355,50 @@ namespace ka {
     array<1,T>* operator->() { return this; }
     const array<1,T>& operator*() const { return *this; }
     const array<1,T>* operator->() const { return this; }
-    T& operator[](int i)  { return array<1,T>::operator[](i); }
-    T& operator[](long i) { return array<1,T>::operator[](i); }
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
-    size_t size() const { return array<1,T>::size(); }
 
+    size_t size() const { return array<1,T>::size(); }
+    const T* ptr() const { return array<1,T>::ptr(); }
     const T* begin() const { return array<1,T>::ptr(); }
     const T* end() const { return array<1,T>::ptr()+array<1,T>::size(); }
-    Self_t operator[] (const rangeindex& r) const 
-    { return pointer_r( array<1,T>::operator()(r) ); }
-    Self_t operator() (const rangeindex& r) const 
-    { return pointer_r( array<1,T>::operator()(r) ); }
+
+    const T& operator[](int i) const { return array<1,T>::operator[](i); }
+    const T& operator[](unsigned i) const { return array<1,T>::operator[](i); }
+    const T& operator[](long i) const { return array<1,T>::operator[](i); }
+    const T& operator[](difference_type i) const { return array<1,T>::operator[](i); }
+
+    const T& operator()(int i) const { return array<1,T>::operator[](i); }
+    const T& operator()(unsigned i) const { return array<1,T>::operator[](i); }
+    const T& operator()(long i) const { return array<1,T>::operator[](i); }
+    const T& operator()(difference_type i) const { return array<1,T>::operator[](i); }
   };
 
   /* alias: ka::range1d_r<T> in place of pointer_r<array<1,T> > */
   template<typename T>
   struct range1d_r : public pointer_r<array<1,T> > {
-    typedef size_t difference_type;
+    typedef size_t                   difference_type;
+    typedef range1d_r<T>             Self_t;
+
     range1d_r( range1d<T>& a ) : pointer_r<array<1,T> >(a) {}
     explicit range1d_r( array<1,T>& a ) : pointer_r<array<1,T> >(a) {}
+    explicit range1d_r( const array<1,T>& a ) : pointer_r<array<1,T> >(a) {}
 
-    const T* ptr() { return array_rep<1,T>::ptr(); }
-    const T* ptr() const { return array_rep<1,T>::ptr(); }
-    size_t size() const { return array_rep<1,T>::size(); }
+    const T& operator[](difference_type i) const { return array<1,T>::operator[](i); }
+    const T& operator()(difference_type i) const { return array<1,T>::operator[](i); }
 
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
-    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+    Self_t operator[] (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
   };
 
-
+  /* */
   template<typename T>
   class pointer_w<array<1,T> > : protected array<1,T> {
     friend class array_inclosure_t<1,T>;
   public:
     typedef T                        value_type;
     typedef size_t                   difference_type;
-    typedef pointer_w<array<1,T> > Self_t;
+    typedef pointer_w<array<1,T> >   Self_t;
 
     pointer_w() : array<1,T>() {}
     pointer_w( const array_inclosure_t<1,T>& a ) : array<1,T>(a) {}
@@ -1405,18 +1412,22 @@ namespace ka {
     array<1,T>* operator->() { return this; }
     const array<1,T>& operator*() const { return *this; }
     const array<1,T>* operator->() const { return this; }
+
+    size_t size() const { return array<1,T>::size(); }
+    T* ptr() { return array<1,T>::ptr(); }
+    T* begin() { return array<1,T>::ptr(); }
+    T* end() { return array<1,T>::ptr()+array<1,T>::size(); }
+
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](unsigned i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
-    size_t size() const { return array<1,T>::size(); }
+
     T& operator()(int i)  { return array<1,T>::operator[](i); }
     T& operator()(unsigned i)  { return array<1,T>::operator[](i); }
     T& operator()(long i) { return array<1,T>::operator[](i); }
     T& operator()(difference_type i) { return array<1,T>::operator[](i); }
 
-    T* begin() { return array<1,T>::ptr(); }
-    T* end() { return array<1,T>::ptr()+array<1,T>::size(); }
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_w( array<1,T>::operator()(r) ); }
     Self_t operator() (const rangeindex& r) const 
@@ -1426,19 +1437,22 @@ namespace ka {
   /* alias: ka::range1d_w<T> in place of pointer_w<array<1,T> > */
   template<typename T>
   struct range1d_w : public pointer_w<array<1,T> > {
+    typedef range1d_w<T>             Self_t;
     typedef size_t                   difference_type;
+
     range1d_w( range1d<T>& a ) : pointer_w<array<1,T> >(a) {}
     explicit range1d_w( array<1,T>& a ) : pointer_w<array<1,T> >(a) {}
 
-    T* ptr() { return array_rep<1,T>::ptr(); }
-    T* ptr() const { return array_rep<1,T>::ptr(); }
-    size_t size() const { return array_rep<1,T>::size(); }
+    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
+    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
 
-    T& operator[](difference_type i) { return pointer_w<array<1,T> >::operator[](i); }
-    T& operator()(difference_type i) { return pointer_w<array<1,T> >::operator()(i); }
+    Self_t operator[] (const rangeindex& r) 
+    { return Self_t( array<1,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) 
+    { return Self_t( array<1,T>::operator()(r) ); }
   };
 
-
+  /**/
   template<typename T>
   class pointer_rw<array<1,T> > : protected array<1,T> {
     friend class array_inclosure_t<1,T>;
@@ -1459,13 +1473,22 @@ namespace ka {
     array<1,T>* operator->() { return this; }
     const array<1,T>& operator*() const { return *this; }
     const array<1,T>* operator->() const { return this; }
-    T& operator[](int i)  { return array<1,T>::operator[](i); }
-    T& operator[](long i) { return array<1,T>::operator[](i); }
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
-    size_t size() const { return array<1,T>::size(); }
 
+    size_t size() const { return array<1,T>::size(); }
+    T* ptr() { return array<1,T>::ptr(); }
     T* begin() { return array<1,T>::ptr(); }
     T* end() { return array<1,T>::ptr()+array<1,T>::size(); }
+
+    T& operator[](int i)  { return array<1,T>::operator[](i); }
+    T& operator[](unsigned i)  { return array<1,T>::operator[](i); }
+    T& operator[](long i) { return array<1,T>::operator[](i); }
+    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
+
+    T& operator()(int i)  { return array<1,T>::operator[](i); }
+    T& operator()(unsigned i)  { return array<1,T>::operator[](i); }
+    T& operator()(long i) { return array<1,T>::operator[](i); }
+    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_rw( array<1,T>::operator()(r) ); }
     Self_t operator() (const rangeindex& r) const 
@@ -1475,16 +1498,19 @@ namespace ka {
   /* alias: ka::range1d_rw<T> in place of pointer_rw<array<1,T> > */
   template<typename T>
   struct range1d_rw : public pointer_rw<array<1,T> > {
+    typedef range1d_rw<T>            Self_t;
     typedef size_t                   difference_type;
+
     range1d_rw( range1d<T>& a ) : pointer_rw<array<1,T> >(a) {}
     explicit range1d_rw( array<1,T>& a ) : pointer_rw<array<1,T> >(a) {}
 
-    T* ptr() { return array_rep<1,T>::ptr(); }
-    const T* ptr() const { return array_rep<1,T>::ptr(); }
-    size_t size() const { return array_rep<1,T>::size(); }
-
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
     T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+
+    Self_t operator[] (const rangeindex& r) 
+    { return Self_t( array<1,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) 
+    { return Self_t( array<1,T>::operator()(r) ); }
   };
 
 
@@ -1508,7 +1534,11 @@ namespace ka {
     array<1,T>* operator->() { return this; }
     const array<1,T>& operator*() const { return *this; }
     const array<1,T>* operator->() const { return this; }
+
     size_t size() const { return array<1,T>::size(); }
+    const T* ptr() const { return array<1,T>::ptr(); }
+    const T* begin() const { return array<1,T>::ptr(); }
+    const T* end() const { return array<1,T>::ptr()+array<1,T>::size(); }
 
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_rpwp( array<1,T>::operator()(r) ); }
@@ -1519,8 +1549,16 @@ namespace ka {
   /* alias: ka::range1d_rpwp<T> in place of pointer_rw<array<1,T> > */
   template<typename T>
   struct range1d_rpwp : public pointer_rpwp<array<1,T> > {
+    typedef range1d_rpwp<T>             Self_t;
+
     range1d_rpwp( range1d<T>& a ) : pointer_rpwp<array<1,T> >(a) {}
     explicit range1d_rpwp( array<1,T>& a ) : pointer_rpwp<array<1,T> >(a) {}
+    explicit range1d_rpwp( const array<1,T>& a ) : pointer_rpwp<array<1,T> >(a) {}
+
+    Self_t operator[] (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
   };
 
 
@@ -1544,13 +1582,22 @@ namespace ka {
     array<1,T>* operator->() { return this; }
     const array<1,T>& operator*() const { return *this; }
     const array<1,T>* operator->() const { return this; }
-    T& operator[](int i)  { return array<1,T>::operator[](i); }
-    T& operator[](long i) { return array<1,T>::operator[](i); }
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
-    size_t size() const { return array<1,T>::size(); }
 
+    size_t size() const { return array<1,T>::size(); }
+    T* ptr() { return array<1,T>::ptr(); }
     T* begin() { return array<1,T>::ptr(); }
     T* end() { return array<1,T>::ptr()+array<1,T>::size(); }
+
+    T& operator[](int i)  { return array<1,T>::operator[](i); }
+    T& operator[](unsigned i)  { return array<1,T>::operator[](i); }
+    T& operator[](long i) { return array<1,T>::operator[](i); }
+    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
+
+    T& operator()(int i)  { return array<1,T>::operator[](i); }
+    T& operator()(unsigned i)  { return array<1,T>::operator[](i); }
+    T& operator()(long i) { return array<1,T>::operator[](i); }
+    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_cw( array<1,T>::operator()(r) ); }
     Self_t operator() (const rangeindex& r) const 
@@ -1560,16 +1607,15 @@ namespace ka {
   /* alias: ka::range1d_cw<T> in place of pointer_cw<array<1,T> > */
   template<typename T>
   struct range1d_cw : public pointer_cw<array<1,T> > {
-    typedef size_t                   difference_type;
+    typedef range1d_cw<T>             Self_t;
+
     range1d_cw( range1d<T>& a ) : pointer_cw<array<1,T> >(a) {}
     explicit range1d_cw( array<1,T>& a ) : pointer_cw<array<1,T> >(a) {}
 
-    T* ptr() { return array_rep<1,T>::ptr(); }
-    T* ptr() const { return array_rep<1,T>::ptr(); }
-    size_t size() const { return array_rep<1,T>::size(); }
-
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
-    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+    Self_t operator[] (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
   };
 
 
