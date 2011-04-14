@@ -59,19 +59,14 @@
 */
 int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
-  kaapi_task_t*              pc;      /* cache */
-  kaapi_workqueue_index_t    local_beg, local_end;
+  kaapi_task_t*              pc;         /* cache */
   kaapi_tasklist_t*          tasklist;
-  kaapi_taskdescr_t**        td_top;  /*cache of tasklist->td_top */
   kaapi_taskdescr_t*         td;
   kaapi_task_body_t          body;
   kaapi_frame_t*             fp;
-  kaapi_activationlink_t*    curr;
   unsigned int               proc_type;
-  int                        task_pushed = 0;
   int                        err =0;
   uint32_t                   cnt_exec = 0; /* executed tasks during one call of execframe_tasklist */
-  kaapi_workqueue_index_t    ntasks = 0;
 
   kaapi_assert_debug( thread->sfp >= thread->stackframe );
   kaapi_assert_debug( thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL );
@@ -84,61 +79,26 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   /* get the processor type to select correct entry point */
   proc_type = thread->proc->proc_type;
     
-  /* td_ready is an array of pointers to task descriptor which
-     uses the current thread's execution stack:
-     - sp and pc are not used for executing task in the ready list
-     - td_top has the same value as sp (first free task)
-     - the workqueue refers interval [beg,end), beg <= end <=0. which points
-     to all task descriptors td_top[i] for all i in [beg,end)
-     - when thread pop a task, it increases beg
-     - when thief steals tasks, it decreases the end of the work queue 'end'
+  /*
   */
   if (tasklist->td_ready == 0)
   {
-    fp = (kaapi_frame_t*)thread->sfp;
-
-    tasklist->recv = tasklist->recvlist.front;
-    curr = tasklist->readylist.front;
-    /* WARNING: the task pushed into the ready list should be in the push in the front 
-       if we want to ensure at least creation order 
-    */
-    tasklist->td_top = td_top = (kaapi_taskdescr_t**)fp->sp;
-    while (curr !=0)
-    {
-      kaapi_assert_debug((char*)td_top > (char*)fp->sp_data);
-      *--td_top = curr->td;
-      ++ntasks;
-      curr = curr->next;
-    }
-    tasklist->td_ready = tasklist->td_top; /* unused ? */
-
-    /* the initial workqueue is [-ntasks, 0) relative to td_top; 
-       td_top[0] serves as a marker of the end
-    */
-    kaapi_sched_lock( &thread->proc->lock );
-    kaapi_workqueue_init(&tasklist->wq_ready, -ntasks, 0);
-    kaapi_sched_unlock( &thread->proc->lock );
-    /* here thieves can steal wq */
+    kaapi_thread_tasklist_pushready_init( tasklist, thread );
+    kaapi_thread_tasklist_commit_ready( tasklist );
+    goto execute_first;
   }
-
-  /* here we assume that execframe was already called 
-     - only reset td_top
-  */
-  td_top = tasklist->td_top;
   
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
   */
   switch (tasklist->context.chkpt) {
     case 1:
-      td        = tasklist->context.td;
-      fp        = tasklist->context.fp;
-      local_beg = tasklist->context.local_beg;
+      td = tasklist->context.td;
+      fp = tasklist->context.fp;
       goto redo_frameexecution;
 
     case 2:
-      err = 0;
-      local_beg = tasklist->context.local_beg;
+      /* nothing to restart: the state of the tasklist should ok */
       goto execute_first;
 
     default:
@@ -150,14 +110,11 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-    err = kaapi_workqueue_pop(&tasklist->wq_ready, &local_beg, &local_end, 1);
+    err = kaapi_thread_tasklist_pop( tasklist );
     if (err ==0)
     {
 execute_first:
-      task_pushed = 0;
-      td = td_top[local_beg];
-      kaapi_assert_debug( td != 0);
-
+      td = kaapi_thread_tasklist_getpoped( tasklist );
       pc = td->task;
       if (pc !=0)
       {
@@ -174,7 +131,7 @@ execute_first:
 
         /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
         fp = (kaapi_frame_t*)thread->sfp;
-        thread->sfp[1].sp = (kaapi_task_t*)(((uintptr_t)td_top+local_beg-sizeof(kaapi_task_t)+1) & ~0xF);
+        thread->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist); 
         thread->sfp[1].pc = thread->sfp[1].sp;
         thread->sfp[1].sp_data = fp->sp_data;
         kaapi_writemem_barrier();
@@ -190,11 +147,6 @@ execute_first:
         KAAPI_DEBUG_INST( td->exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
 
-        /* force memory barrier to ensure correct view of output data to
-           activated tasks that can be theft
-        */
-        kaapi_mem_barrier();
-
         /* new tasks created ? */
         if (unlikely(fp->sp > thread->sfp->sp))
         {
@@ -205,7 +157,6 @@ redo_frameexecution:
             tasklist->context.chkpt     = 1;
             tasklist->context.td        = td;
             tasklist->context.fp        = fp;
-            tasklist->context.local_beg = local_beg;
             return EWOULDBLOCK;
           }
           kaapi_assert_debug( err == 0 );
@@ -217,37 +168,11 @@ redo_frameexecution:
 
       /* push in the front the activated tasks */
       if (!kaapi_activationlist_isempty(&td->list))
-      {
-        kaapi_activationlink_t* curr_activated = td->list.front;
-        kaapi_assert_debug( curr_activated != 0 );
-        while (curr_activated !=0)
-        {
-          if (kaapi_taskdescr_activated(curr_activated->td))
-          {
-            /* if non local -> push on remote queue ? */
-            kaapi_assert_debug((char*)&td_top[local_beg] > (char*)fp->sp_data);
-            td_top[local_beg--] = curr_activated->td;
-            task_pushed = 1;
-          }
-          curr_activated = curr_activated->next;
-        }
-        /* force barrier such that activated tasks that have produce result may be read */
-        kaapi_mem_barrier();
-      }
+        kaapi_thread_tasklist_pushready( tasklist, td->list.front );
 
       /* do bcast after child execution (they can produce output data) */
       if (td->bcast !=0) 
-      {
-        kaapi_activationlink_t* curr_activated = td->bcast->front;
-        while (curr_activated !=0)
-        {
-          /* bcast task are always ready */
-          kaapi_assert_debug((char*)&td_top[local_beg] > (char*)fp->sp_data);
-          td_top[local_beg--] = curr_activated->td;
-          curr_activated      = curr_activated->next;
-        }
-        task_pushed = 1;
-      }      
+        kaapi_thread_tasklist_pushready( tasklist, td->bcast->front );
     }
     
     /* recv incomming synchronisation 
@@ -256,23 +181,12 @@ redo_frameexecution:
     */
     if (tasklist->recv !=0)
     {
-      td_top[local_beg--] = tasklist->recv->td;
-      tasklist->recv      = tasklist->recv->next;
-      task_pushed        |= 1;
     }
 
     /* ok, now push pushed task into the wq */
-    if (task_pushed)
-    {
-      /* keep last pushed task */
-      ++local_beg;
-      
-      /* ABA problem here if we suppress lock/unlock? seems to be true */
-      kaapi_sched_lock( &thread->proc->lock );
-      kaapi_workqueue_push(&tasklist->wq_ready, local_beg+1); /* push last indice == local_beg +1 */
-      kaapi_sched_unlock( &thread->proc->lock );
+    if (kaapi_thread_tasklist_commit_ready( tasklist ))
       goto execute_first;
-    }
+            
   } /* while */
 
   /* here... end execute frame tasklist*/

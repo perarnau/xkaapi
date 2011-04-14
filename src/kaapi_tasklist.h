@@ -149,30 +149,32 @@ typedef struct kaapi_taskdescr_t {
 
 
 /** TaskList
-    This data structure is attached to a frame that has been attached to an acceleratrice data structure.
-    During the partitionning of threads, the algorithm built a tasklist for each generated thread.
-    The data structure stores the list of ready tasks. 
-    During execution, the list is managed as a LIFO queue of task descriptor: the most recent pushed
-    task descriptor is poped first.
-    All other data (non ready task descriptor or activationlink) are stores
-    into the stack and will be activated at runtime by beging pushed in the front of the list.
-    After each task execution, the activated tasks are pushed into the list
-    of ready tasks. During execution the list is managed as a LIFO list.
+    This data structure is attached to a frame and must be considered as an acceleratrice data structure
+    in place of the standard FIFO queue of tasks into a frame.
+    The tasklist data structure stores the list of ready tasks as well as tasks that will becomes
+    ready on completion of previous tasks.
+    At runntime, the list is managed as a LIFO queue of task descriptor: the most recent pushed
+    task descriptor is poped first. When the completion of a task activate another tasks, they are
+    pushed into the ready list.
+    All data (task descriptors or activationlinks) are stores in allocator and are deallocated
+    in group at the end.
     
-    By construction, the execution of tasks may depend on the execution located onto other threads.
-    The synchronisation between two threads is based on a FIFO queue of tasks to activate.
-    
-    New data structures needed for execution are pushed into the stack of the attached thread.
+    The tasklist_t has an workqueue interface: push/pop and steal.
 */
 typedef struct kaapi_tasklist_t {
   kaapi_atomic_t          lock;        /* protect recvlist */
   kaapi_atomic_t          count_thief; /* count the number of thiefs == */
 
   /* execution state for ready task using tasklist */
-  kaapi_workqueue_t       wq_ready;   /* workqueue for ready tasks, used during runtime */
+  kaapi_workqueue_index_t next_exec;  /* next task to execute, set after poping fron the work queue */
+  int                     task_pushed; /* == 1 if at least one task has been pushed after calling kaapi_thread_tasklist_pushready */
   kaapi_taskdescr_t**     td_top;     /* pointer to the next task to execute in td_ready container */ 
   kaapi_taskdescr_t**     td_ready;   /* container for the workqueue, used during runtime */
-  struct kaapi_tasklist_t*master;     /* master tasklist */
+  kaapi_workqueue_t       wq_ready;   /* workqueue for ready tasks, used during runtime */
+
+  kaapi_thread_context_t* thread;     /* thread that execute the task list */
+  
+  struct kaapi_tasklist_t*master;     /* master tasklist to signal at the end */
   kaapi_recvactlink_t*    recv;       /* next entry to receive */
 
   /* context to restart from suspend */
@@ -317,9 +319,12 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
 {
   kaapi_sched_initlock(&tl->lock);
   KAAPI_ATOMIC_WRITE(&tl->count_thief, 0);
-  kaapi_workqueue_init(&tl->wq_ready, 0, 0);
+  tl->next_exec     = 0;
+  tl->task_pushed   = 0;
   tl->td_ready      = 0;
   tl->td_top        = 0;
+  kaapi_workqueue_init(&tl->wq_ready, 0, 0);
+
   tl->master        = 0;
   tl->recv          = 0;
   tl->context.chkpt = 0;
@@ -532,6 +537,152 @@ extern int kaapi_thread_computeready_access(
     kaapi_taskdescr_t*  task,
     kaapi_access_mode_t m 
 );
+
+
+/** To pop the next ready tasks
+    Return 0 if case of success, else return non null value.
+*/
+static inline int kaapi_thread_tasklist_pop( kaapi_tasklist_t* tasklist )
+{
+  kaapi_workqueue_index_t local_end;
+  int err = kaapi_workqueue_pop(&tasklist->wq_ready, &tasklist->next_exec, &local_end, 1);
+  return err;
+}
+
+/** Return the next task to execute: this function must only be called after a successfull call
+    to kaapi_thread_tasklist_pop (with return value ==0) or in the case where kaapi_thread_tasklist_commit_ready
+    have really pushed task (return value != 0).
+*/
+static inline kaapi_taskdescr_t* kaapi_thread_tasklist_getpoped( kaapi_tasklist_t* tasklist )
+{
+  kaapi_taskdescr_t* td;
+  return td = tasklist->td_top[tasklist->next_exec];
+}
+
+/* Return the sp stack pointer of the tasklist that can be used to push a new frame
+   before executing a task.
+   The current implementation is based on pushing task descriptor into the stack of the thread,
+   so the method return the sp as the 0xF aligned pointer before current executed td.
+*/
+static inline kaapi_task_t* kaapi_thread_tasklist_getsp( kaapi_tasklist_t* tasklist )
+{
+  return (kaapi_task_t*)(((uintptr_t)(&tasklist->td_top[tasklist->next_exec] -1)-sizeof(kaapi_task_t)+1) & ~0xF);
+}
+
+/** Activate and push ready tasks of an activation link.
+    Return 1 if at least one ready task has been pushed into ready queue.
+    Else return 0.
+*/
+static inline int kaapi_thread_tasklist_pushready( kaapi_tasklist_t* tasklist, kaapi_activationlink_t* head )
+{
+  kaapi_taskdescr_t** td_top = tasklist->td_top;
+  kaapi_workqueue_index_t local_beg = tasklist->next_exec; /* reuse the position of the previous executed task */
+  int task_pushed = 0;
+  while (head !=0)
+  {
+    if (kaapi_taskdescr_activated(head->td))
+    {
+      /* if non local -> push on remote queue ? */
+      kaapi_assert_debug((char*)&td_top[local_beg] > (char*)tasklist->thread->sfp->sp_data);
+      td_top[local_beg--] = head->td;
+      task_pushed = 1;
+    }
+    head = head->next;
+  }
+  tasklist->next_exec = local_beg+1;   /* position of the last pushed task (next to execute) */
+  tasklist->task_pushed = task_pushed;
+  tasklist->td_ready = td_top;
+  return task_pushed;
+}
+
+/** Initialize the tasklist with a set of stolen task descriptor
+*/
+static inline int kaapi_thread_tasklist_push_stealready_init( 
+    kaapi_tasklist_t* tasklist, 
+    kaapi_thread_context_t* thread, 
+    kaapi_taskdescr_t** begin, 
+    kaapi_taskdescr_t** end 
+)
+{
+  kaapi_taskdescr_t** td_top;
+  kaapi_workqueue_index_t local_beg = 0; /* */
+
+  tasklist->thread = thread;
+  tasklist->recv   = 0;
+  tasklist->td_top = td_top = (kaapi_taskdescr_t**)thread->sfp->sp;
+  if (begin == end) 
+    tasklist->task_pushed = 0;
+  else {
+    while (begin != end)
+    {
+      kaapi_assert_debug((char*)td_top > (char*)thread->sfp->sp_data);
+      td_top[--local_beg] = *begin;
+      ++begin;
+    }
+    tasklist->task_pushed = 1;
+  }
+
+  tasklist->next_exec = local_beg;
+  tasklist->td_ready  = td_top;
+  return tasklist->task_pushed;
+}
+
+
+/** Push initial ready tasks list into the thread.
+    Return 1 if at least one ready task has been pushed into ready queue.
+    Else return 0.
+*/
+static inline int kaapi_thread_tasklist_pushready_init( kaapi_tasklist_t* tasklist, kaapi_thread_context_t* thread)
+{
+  kaapi_activationlink_t* head;
+  kaapi_taskdescr_t** td_top;
+  kaapi_workqueue_index_t local_beg = 0; /* never push in position 0 */
+
+  tasklist->thread = thread;
+  tasklist->recv   = tasklist->recvlist.front;
+  tasklist->td_top = td_top = (kaapi_taskdescr_t**)thread->sfp->sp;
+  head = tasklist->readylist.front;
+  tasklist->task_pushed = (head !=0);
+
+  while (head !=0)
+  {
+    /* if non local -> push on remote queue ? */
+    kaapi_assert_debug((char*)&td_top[local_beg] > (char*)thread->sfp->sp_data);
+    td_top[--local_beg] = head->td;
+    head = head->next;
+  }
+  tasklist->next_exec   = local_beg;
+  return tasklist->task_pushed;
+}
+
+
+static inline int kaapi_thread_tasklist_init( kaapi_tasklist_t* tasklist, kaapi_thread_context_t* thread)
+{
+  tasklist->thread = thread;
+  tasklist->recv   = tasklist->recvlist.front;
+  tasklist->td_top = (kaapi_taskdescr_t**)thread->sfp->sp;
+  return 0;
+}
+
+/** Commit all previous pushed task descriptor to the other thieves.
+    Return !=0 value is at least one task has been pushed, else return 0.
+    In case tasks have been pushed, the function reserves the last pushed task
+    for local execution and the caller must directly call kaapi_thread_tasklist_getpoped
+    to get access to the reserved task.
+*/
+static inline int kaapi_thread_tasklist_commit_ready( kaapi_tasklist_t* tasklist )
+{
+  if (tasklist->task_pushed)
+  {
+    /* ABA problem here if we suppress lock/unlock? seems to be true */
+    kaapi_sched_lock( &tasklist->thread->proc->lock );
+    kaapi_workqueue_push(&tasklist->wq_ready, 1+tasklist->next_exec); /* keep tasklist->next_exec for local exec */
+    kaapi_sched_unlock( &tasklist->thread->proc->lock );
+    tasklist->task_pushed = 0;
+    return 1;
+  }
+  return 0;
+}
 
 
 /** How to execute task with readylist

@@ -55,8 +55,6 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   kaapi_taskstealready_arg_t* arg;
   kaapi_frame_t*              frame;
   kaapi_tasklist_t*           tasklist;
-  kaapi_taskdescr_t**         td_top;  /*cache of tasklist->td_top */
-  kaapi_workqueue_index_t     ntasks = 0;
 
   thread = kaapi_self_thread_context();
 
@@ -76,8 +74,8 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   */
   tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist );
+  kaapi_thread_tasklist_init( tasklist, thread );
   tasklist->master    = arg->origin_tasklist;
-  tasklist->cnt_tasks = 0;
 
   /* Fill the task list with ready stolen tasks.
      Because we do not have cactus stack, we recopy
@@ -87,33 +85,17 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
      we do not store ready tasks into linked list:
      - they are directly pushed into the workqueue.
   */
-  tasklist->td_top = (kaapi_taskdescr_t**)frame->sp;
-  tasklist->td_ready = tasklist->td_top; /* unused ? */
-  tasklist->recv = 0; /* no recv after stealing */
-  td_top = tasklist->td_top;
+  kaapi_thread_tasklist_push_stealready_init( tasklist, thread, arg->origin_td_beg, arg->origin_td_end);
+  kaapi_thread_tasklist_commit_ready( tasklist );
   
-  while (arg->origin_td_beg != arg->origin_td_end)
-  {
-    kaapi_assert_debug((char*)td_top > (char*)frame->sp_data);
-    *--td_top = *arg->origin_td_beg;
-    ++arg->origin_td_beg;
-    ++ntasks;
-  }
-
   /* keep the first task to execute outside the workqueue */
-  tasklist->context.local_beg = -ntasks;
-  tasklist->context.chkpt = 2; /* begin by execution with keeped first task */
+  tasklist->context.chkpt = 2;
 
-#if 1//defined(KAAPI_DEBUG)
+#if 0//defined(KAAPI_DEBUG)
   kaapi_sched_lock( &thread->proc->lock );
 #endif
-  kaapi_workqueue_init(&tasklist->wq_ready, -ntasks+1, 0);
-  kaapi_assert_debug(frame->tasklist ==0);
-#if 0//!defined(KAAPI_DEBUG)  /* to allow other thread to steal myself after updating the workqueue */
-  kaapi_mem_barrier();
-#endif
   frame->tasklist = tasklist;
-#if 1//defined(KAAPI_DEBUG)
+#if 0//defined(KAAPI_DEBUG)
   kaapi_sched_unlock( &thread->proc->lock );
 #endif
 

@@ -1119,10 +1119,7 @@ int kaapi_cuda_thread_execframe_tasklist
 (kaapi_thread_context_t* thread)
 {
   /* thread->sfp->tasklist */
-  kaapi_tasklist_t* tl;
-
-  /* tl->td_top */
-  kaapi_taskdescr_t** td_top;
+  kaapi_tasklist_t* tasklist;
 
   /* the current task descriptor */
   kaapi_taskdescr_t* td;
@@ -1138,10 +1135,6 @@ int kaapi_cuda_thread_execframe_tasklist
 
   /* tasks have been pushed */
   unsigned int has_pushed;
-
-  /* local workqueue bounds */
-  kaapi_workqueue_index_t local_beg;
-  kaapi_workqueue_index_t local_end;
 
   /* current frame */
   kaapi_frame_t* fp;
@@ -1183,10 +1176,10 @@ int kaapi_cuda_thread_execframe_tasklist
   kaapi_assert_debug(thread->sfp >= thread->stackframe);
   kaapi_assert_debug(thread->sfp < thread->stackframe + KAAPI_MAX_RECCALL);
   kaapi_assert_debug(thread->sfp->tasklist != 0);
-  tl = thread->sfp->tasklist;
+  tasklist = thread->sfp->tasklist;
 
   /* create a waitport for at mos tl->cnt_tasks*/
-  wp = wait_port_create(tl->cnt_tasks, &thread->proc->cuda_proc);
+  wp = wait_port_create(tasklist->cnt_tasks, &thread->proc->cuda_proc);
   if (wp == NULL)
   {
 #if CONFIG_USE_SBA
@@ -1196,70 +1189,45 @@ int kaapi_cuda_thread_execframe_tasklist
     return -1;
   }
 
-  if (tl->td_ready == 0)
+  if (tasklist->td_ready == 0)
   {
-    kaapi_workqueue_index_t ntasks = 0;
-    fp = (kaapi_frame_t*)thread->sfp;
-
-    tl->recv = tl->recvlist.front;
-
-    tl->td_top = (kaapi_taskdescr_t**)fp->sp;
-    td_top = (kaapi_taskdescr_t**)fp->sp;
-    for (al = tl->readylist.front; al != NULL; al = al->next)
-    {
-      kaapi_assert_debug((char*)td_top > (char*)fp->sp_data);
-      *--td_top = al->td;
-      ++ntasks;
-    }
-
-    tl->td_ready = tl->td_top; /* unused ? */
-
-    /* the initial workqueue is td_top[-ntasks, 0) */
-    kaapi_sched_lock( &thread->proc->lock );
-    kaapi_workqueue_init(&tl->wq_ready, -ntasks, 0);
-    kaapi_sched_unlock( &thread->proc->lock );
+    kaapi_thread_tasklist_pushready_init( tasklist, thread );
+    kaapi_thread_tasklist_commit_ready( tasklist );
+    goto execute_first;
   }
 
   /* assume execframe was already called, only reset td_top */
-  td_top = tl->td_top;
+  td_top = tasklist->td_top;
 
   /* jump to previous state if return from suspend (EWOULDBLOCK) */
-  switch (tl->context.chkpt)
+  switch (tasklist->context.chkpt)
   {
-  case 1:
-    {
-      td        = tl->context.td;
-      fp        = tl->context.fp;
-      local_beg = tl->context.local_beg;
+    case 1:
+      td = tasklist->context.td;
+      fp = tasklist->context.fp;
       goto redo_frameexecution;
-      break ;
-    }
 
-  case 2:
-    {
+    case 2:
       err = 0;
-      local_beg = tl->context.local_beg;
       goto execute_first;
-      break ;
-    }
 
-  default:
-    break ;
+    default:
+      break ;
   }
   
   /* execute all the ready tasks */
  do_ready:
-  while (kaapi_workqueue_isempty(&tl->wq_ready) == 0)
+  while (!kaapi_tasklist_isempty(tasklist))
   {
-    err = kaapi_workqueue_pop(&tl->wq_ready, &local_beg, &local_end, 1);
-    if (err) continue ;
+    err = kaapi_thread_tasklist_pop( tasklist );
+    if (err) continue;
 
   execute_first:
     has_ready = 0;
 
     /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
     fp = (kaapi_frame_t*)thread->sfp;
-    thread->sfp[1].sp = (kaapi_task_t*)(((uintptr_t)td_top+local_beg-sizeof(kaapi_task_t)+1) & ~0xF);
+    thread->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist);
     thread->sfp[1].pc = thread->sfp[1].sp;
     thread->sfp[1].sp_data = fp->sp_data;
     kaapi_writemem_barrier();
@@ -1267,7 +1235,7 @@ int kaapi_cuda_thread_execframe_tasklist
     kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
     kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
 
-    td = td_top[local_beg];
+    td = kaapi_thread_tasklist_getpoped( tasklist );
     kaapi_assert_debug(td != NULL);
     kaapi_assert_debug(td->task != NULL);
 
@@ -1277,7 +1245,7 @@ int kaapi_cuda_thread_execframe_tasklist
     if (td->fmt != NULL) /* cuda user task */
     {
       cuda_task_body_t body = (cuda_task_body_t)
-	td->fmt->entrypoint_wh[proc_type];
+      td->fmt->entrypoint_wh[proc_type];
 
       wait_fifo_t* const kernel_fifo = get_kernel_fifo(wp);
 
@@ -1294,23 +1262,18 @@ int kaapi_cuda_thread_execframe_tasklist
       kaapi_assert_debug(body);
 
       /* currently, inline those tasks. minor modifs
-	 are needed to execute the body directly, ie.
-	 passing the taskdescr and wait port.
+        are needed to execute the body directly, ie.
+        passing the taskdescr and wait port.
        */
       if (body == kaapi_taskmove_body)
-	taskmove_body(thread, wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+        taskmove_body(thread, wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskalloc_body)
-	taskalloc_body(wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+        taskalloc_body(wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else if (body == kaapi_taskfinalizer_body)
-	taskfinalizer_body(wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
+        taskfinalizer_body(wp, td, pc->sp, (kaapi_thread_t*)thread->sfp);
       else
-	body(pc->sp, (kaapi_thread_t*)thread->sfp);
+        body(pc->sp, (kaapi_thread_t*)thread->sfp);
     }
-
-    /* force memory barrier to ensure correct view of output data to
-       activated tasks that can be theft
-    */
-    kaapi_mem_barrier();
 
     /* new tasks created ? */
     if (unlikely(fp->sp > thread->sfp->sp))
@@ -1319,11 +1282,10 @@ int kaapi_cuda_thread_execframe_tasklist
       err = kaapi_thread_execframe( thread );
       if (err == EWOULDBLOCK)
       {
-	tl->context.chkpt     = 1;
-	tl->context.td        = td;
-	tl->context.fp        = fp;
-	tl->context.local_beg = local_beg;
-	return EWOULDBLOCK;
+        tasklist->context.chkpt     = 1;
+        tasklist->context.td        = td;
+        tasklist->context.fp        = fp;
+        return EWOULDBLOCK;
       }
 
       kaapi_assert_debug( err == 0 );
@@ -1341,14 +1303,16 @@ int kaapi_cuda_thread_execframe_tasklist
 /*  do_recv: */
   if (tl->recv != NULL)
   {
+/*
     td_top[local_beg--] = tl->recv->td;
     tl->recv = tl->recv->next;
     kaapi_workqueue_push(&tl->wq_ready, 1 + local_beg);
+*/
     has_ready = 1;
   }
 
   /* wait for any completion */
-/*  do_wait: */
+  /*  do_wait: */
   while (wait_port_is_empty(wp) == 0)
   {
     /* process ready if available */
@@ -1363,46 +1327,15 @@ int kaapi_cuda_thread_execframe_tasklist
 
     /* does the completed task activate others */
     if (!kaapi_activationlist_isempty(&td->list))
-    {
-      for (al = td->list.front; al != NULL; al = al->next)
-      {
-	if (kaapi_taskdescr_activated(al->td))
-	{
-	  /* if non local -> push on remote queue ? */
-	  kaapi_assert_debug((char*)&td_top[local_beg] > (char*)fp->sp_data);
-	  td_top[local_beg--] = al->td;
-	  has_pushed = 1;
-	}
-      }
-      /* force barrier such that activated tasks that have produce result may be read */
-      kaapi_mem_barrier();
-    }
+      kaapi_thread_tasklist_pushready( tasklist, td->list.front );
 
     /* do bcast after child execution */
     if (td->bcast != 0)
-    {
-      for (al = td->bcast->front; al != NULL; al = al->next)
-      {
-	/* bcast task are always ready */
-	kaapi_assert_debug((char*)&td_top[local_beg] > (char*)fp->sp_data);
-	td_top[local_beg--] = al->td;
-	has_pushed = 1;
-      }
-    }
+      kaapi_thread_tasklist_pushready( tasklist, td->bcast->front );
 
     /* enqueue the pushed tasks */
-    if (has_pushed)
-    {
-      /* keep last pushed task */
-      ++local_beg;
-
-      /* ABA problem here if we suppress lock/unlock? seems to be true */
-      kaapi_sched_lock(&thread->proc->lock);
-      kaapi_workqueue_push(&tl->wq_ready, 1 + local_beg);
-      kaapi_sched_unlock(&thread->proc->lock);
+    if (kaapi_thread_tasklist_commit_ready( tasklist ))
       goto execute_first;
-    }
-
   } /* while_wait_port */
 
   /* execute tasks made ready */
