@@ -3143,8 +3143,9 @@ namespace ka {
       **/      
       void* operator()()
       { 
+        typedef FormatClosure0<TASK> KaapiFormatTask_t;
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
-        kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
+        kaapi_task_initdfg( clo, KaapiFormatTask_t::default_bodies.cpu_body, 0 );
         /* attribut is reponsible for pushing task into the thread */
         return _attr(_thread, clo);
       }
