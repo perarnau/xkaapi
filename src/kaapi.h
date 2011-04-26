@@ -2193,6 +2193,11 @@ extern void kaapi_fmt_set_access_param
 extern void* kaapi_fmt_get_off_param
 (const struct kaapi_format_t* f, size_t i, const void* p);
 
+/** \ingroup TASK
+    format accessor
+*/
+extern int* kaapi_fmt_get_off_cwflag
+(const struct kaapi_format_t* f, size_t i, const void* p);
 
 
 /** \ingroup TASK

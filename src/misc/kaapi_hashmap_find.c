@@ -49,8 +49,8 @@
 */
 kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr )
 {
-  uint32_t hkey = kaapi_hash_ulong( (unsigned long)ptr );
-  hkey = hkey % KAAPI_HASHMAP_SIZE;
+  const uint32_t hkey = kaapi_hash_ulong7((unsigned long)ptr) % KAAPI_HASHMAP_SIZE;
+
   kaapi_hashentries_t* list_hash = _get_hashmap_entry(khm, hkey);
   kaapi_hashentries_t* entry = list_hash;
   while (entry != 0)

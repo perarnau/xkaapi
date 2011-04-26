@@ -59,6 +59,10 @@ static void* kaapi_format_default_get_off_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
 { return (void*)((uintptr_t)p + f->_off_params[i]); }
 
+static int* kaapi_format_default_get_cwflag
+(const struct kaapi_format_t* f, unsigned int i, const void* p)
+{ return (int*)((uintptr_t)p + f->_off_cwflag[i]); }
+
 static kaapi_access_t kaapi_format_default_get_access_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
 { return *(kaapi_access_t*)((uintptr_t)p + f->_off_params[i]); }
@@ -74,7 +78,6 @@ static const struct kaapi_format_t* kaapi_format_default_get_fmt_param
 static kaapi_memory_view_t kaapi_format_default_get_view_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
 { return f->_view_params[i]; }
-
 
 static void kaapi_format_default_reduce_param 
     (const struct kaapi_format_t* f, unsigned int i, const void* sp, void* result, const void* value)
@@ -153,6 +156,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->get_count_params = kaapi_format_default_get_count_params;
   fmt->get_mode_param   = kaapi_format_default_get_mode_param;
   fmt->get_off_param    = kaapi_format_default_get_off_param;
+  fmt->get_cwflag	= kaapi_format_default_get_cwflag;
   fmt->get_access_param = kaapi_format_default_get_access_param;
   fmt->set_access_param = kaapi_format_default_set_access_param;
   fmt->get_fmt_param    = kaapi_format_default_get_fmt_param;

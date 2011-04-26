@@ -236,6 +236,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
+    /* there are possibly non formated params  */
+    memcpy(copy_task_args, orig_task_args, fmt->size);
+
     for (i=0; i<count_params; ++i)
     {
       mode_param      = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, orig_task_args) ); 
