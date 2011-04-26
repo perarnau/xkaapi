@@ -210,7 +210,7 @@ template<>
 struct TaskBodyCPU<TaskCholesky> {
   void operator()( const ka::StaticSchedInfo* info, ka::range2d_rpwp<double> A )
   {
-#if 0
+#if 1
     //int ncpu = info->count_cpu();
     //int sncpu = (int)sqrt( (double)ncpu );
     size_t N = A.dim(0);
@@ -239,57 +239,6 @@ struct TaskBodyCPU<TaskCholesky> {
       }
     }
   }
-#else
-    //int ncpu = info->count_cpu();
-    //int sncpu = (int)sqrt( (double)ncpu );
-    size_t N = A.dim(0);
-    size_t blocsize = global_blocsize;
-    size_t nbloc   = (N+blocsize-1)/blocsize;
-    size_t index_bound[ 1+nbloc ];
-    index_bound[0] = 0;
-    double d = 0.0;
-    for (size_t i=1; i<nbloc; ++i)
-    {
-//      d += ((0.32e2 + 0.32e2 * (double(N) / 0.15872e5 - 0.2e1 / 0.31e2) * double(i))); 
-//      d += 64.0+256.0*exp( -(i-16.0)*(i-16.0)/21.0 );
-//#>48 uniform      d += 128.0+256.0*exp( -(i-24.0)*(i-24.0)/20.0);
-//#48  d += 128.0+384.0*exp( -(i-24.0)*(i-24.0)/8.0);
-      //d += 64.0+384.0*exp( -(i-16.0)*(i-16.0)*(i-16.0)*(i-16.0)/1250.0);
-      //index_bound[i] = 64.0*round(d/64.0);
-      index_bound[i] = N*i/nbloc; 
-    }
-    index_bound[nbloc] = N;
-#if 0
-    std::cout << "Splitting: d =" << d << " ... " << ceil(d/32.0) << std::endl;
-    for (size_t i=0; i<nbloc; ++i)
-      std::cout << i << "  [" << index_bound[i] << "," << index_bound[i+1] << "]=  " << index_bound[i+1]- index_bound[i] << std::endl;
-    std::cout << std::endl;
-#endif
-
-    for (size_t k=0; k < nbloc; ++k)
-    {
-      ka::rangeindex rk( index_bound[k], index_bound[k+1]);
-      ka::Spawn<TaskDPOTRF>()( CblasLower, A(rk,rk) );
-
-      for (size_t m=k+1; m < nbloc; ++m)
-      {
-        ka::rangeindex rm(index_bound[m], index_bound[m+1]);
-        ka::Spawn<TaskDTRSM>()(CblasRight, CblasLower, CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rm,rk));
-      }
-
-      for (size_t m=k+1; m < nbloc; ++m)
-      {
-        ka::rangeindex rm(index_bound[m], index_bound[m+1]);
-        ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, A(rm,rk), 1.0, A(rm,rm));
-        for (size_t n=k+1; n < m; ++n)
-        {
-          ka::rangeindex rn(index_bound[n], index_bound[n+1]);
-          ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, A(rm,rk), A(rn,rk), 1.0, A(rm,rn));
-        }
-      }
-    }
-  }
-#endif
 };
 
 

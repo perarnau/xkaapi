@@ -9,6 +9,7 @@ MATPROG_PRGS=matprod_rec_kaapi++ matprod_bloc_kaapi++ matprod_rowcol_kaapi++\
   matprod_iter_part_kaapi++ \
   matlu_nopiv_kaapi++\
   matcholesky_kaapi++\
+  matcholesky_bloc_kaapi++\
   matprod_bloc_mapping_kaapi++
   
 check_PROGRAMS+=$(MATPROG_PRGS)
@@ -21,6 +22,7 @@ matprod_rowcol_kaapi___SOURCES=matrix/matprod_rowcol_kaapi++.cpp matrix/matrix.h
 matprod_iter_part_kaapi___SOURCES=matrix/matprod_iter_part_kaapi++.cpp matrix/matrix.h
 matlu_nopiv_kaapi___SOURCES=matrix/matlu_nopiv_kaapi++.cpp matrix/matrix.h
 matcholesky_kaapi___SOURCES=matrix/matcholesky_kaapi++.cpp matrix/matrix.h
+matcholesky_bloc_kaapi___SOURCES=matrix/matcholesky_bloc_kaapi++.cpp 
 
 matprod_rec_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 matprod_rec_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
@@ -58,4 +60,10 @@ matcholesky_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBL
 matcholesky_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 matcholesky_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
 matcholesky_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) 
+
+# matcholesky
+matcholesky_bloc_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
+matcholesky_bloc_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+matcholesky_bloc_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
+matcholesky_bloc_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) 
 
