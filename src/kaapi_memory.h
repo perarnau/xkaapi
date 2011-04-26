@@ -162,7 +162,8 @@ static inline kaapi_globalid_t kaapi_memory_address_space_getgid( kaapi_address_
 { return (kaapi_globalid_t)((kasid & KAAPI_ASID_MASK_GID)>> 32UL); }
 
 
-/** Return the local index of the address space
+/** Return the local index of the address space.
+    The number returned is between 0 ... N-1, where N is the maximal local address space.
     This is not a public function.
     \param kasid [IN] an address space identifier
     \return the local index of the address space identifier

@@ -43,6 +43,85 @@
  */
 #include "kaapi_impl.h"
 
+
+int kaapi_thread_initialize_first_access( 
+    kaapi_tasklist_t*   tl, 
+    kaapi_version_t*    version,
+    kaapi_access_mode_t m,
+    void*               srcdata
+)
+{
+  kaapi_assert_debug(version->last_mode == KAAPI_ACCESS_MODE_VOID);
+
+  if (KAAPI_ACCESS_IS_READ(m))
+  {
+    /* push a move task to insert the data into the task list */
+    kaapi_taskdescr_t* td_move;
+    kaapi_task_t* task_move;
+    kaapi_move_arg_t* argmove 
+        = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+    argmove->src_data        = srcdata;
+    argmove->dest            = version->handle;
+    task_move                = kaapi_tasklist_allocate_task( tl, kaapi_taskmove_body, argmove);
+    td_move                  = kaapi_tasklist_allocate_td( tl, task_move );
+    version->writer_task     = td_move;
+    version->writer_tasklist = tl;
+    version->last_task       = td_move;
+    version->last_tasklist   = tl;
+    version->last_mode       = KAAPI_ACCESS_MODE_W;
+
+    kaapi_tasklist_pushback_ready( tl, td_move);
+  }
+  else if (KAAPI_ACCESS_IS_WRITE(m) || KAAPI_ACCESS_IS_CUMULWRITE(m)) 
+  {
+    kaapi_taskdescr_t* td_alloc;
+    kaapi_task_t* task_alloc;
+    kaapi_move_arg_t* argalloc 
+        = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+    argalloc->src_data       = srcdata;
+    argalloc->dest           = version->handle;
+    task_alloc               = kaapi_tasklist_allocate_task( tl, kaapi_taskalloc_body, argalloc);
+    td_alloc                 = kaapi_tasklist_allocate_td( tl, task_alloc );
+    version->writer_task     = td_alloc;
+    version->writer_tasklist = tl;
+    
+    if (KAAPI_ACCESS_IS_WRITE(m))
+    {
+      version->last_task       = td_alloc;
+      version->last_tasklist   = tl;
+      version->last_mode       = KAAPI_ACCESS_MODE_W;
+      kaapi_tasklist_pushback_ready( tl, td_alloc);
+    }
+    else /* if (KAAPI_ACCESS_IS_CUMULWRITE(m)) */
+    {
+      /* in case of cw: all concurrent cw are put 'concurrent' together 
+         and the writer_task is the task that produce the final result 
+         and during while access is cw, last_task points to the alloc or
+         the previous task that the first dependency on the chain of cw
+      */
+      /* save td alloc or the previous writer */
+      version->last_task     = version->writer_task;
+      version->last_tasklist = version->writer_tasklist;
+
+      kaapi_taskdescr_t* td_finalizer;
+      kaapi_task_t* task_finalizer;
+      kaapi_finalizer_arg_t* arg 
+          = (kaapi_finalizer_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_finalizer_arg_t) );
+      arg->dest                = version->handle;
+      task_finalizer           = kaapi_tasklist_allocate_task( tl, kaapi_taskfinalizer_body, arg);
+      td_finalizer             = kaapi_tasklist_allocate_td( tl, task_finalizer );
+      version->writer_task     = td_finalizer;
+      version->writer_tasklist = tl;
+      version->last_mode       = KAAPI_ACCESS_MODE_CW;
+
+      kaapi_tasklist_pushback_ready( tl, version->last_task);
+      /* after that all CW tasks will be successor of this 
+    }
+  }
+  
+  return 0;
+}
+
 /** 
 */
 int kaapi_thread_computeready_access( 
@@ -52,79 +131,6 @@ int kaapi_thread_computeready_access(
     kaapi_access_mode_t m 
 )
 {
-  if (version->last_mode == KAAPI_ACCESS_MODE_VOID)
-  {
-    if (KAAPI_ACCESS_IS_READ(m))
-    {
-      /* push a move task to insert the data into the task list */
-      kaapi_taskdescr_t* td_move;
-      kaapi_task_t* task_move;
-      kaapi_move_arg_t* argmove 
-          = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
-      argmove->src_data  = version->orig;
-      argmove->dest      = version->handle;
-      task_move = kaapi_tasklist_allocate_task( tl, kaapi_taskmove_body, argmove);
-      td_move   = kaapi_tasklist_allocate_td( tl, task_move );
-      version->writer_task= td_move;
-      version->writer_tasklist = tl;
-      kaapi_tasklist_push_successor( tl, td_move, task );
-      kaapi_tasklist_pushback_ready( tl, td_move);
-      version->last_task = task;
-      version->last_tasklist = tl;
-    }
-
-    if (KAAPI_ACCESS_IS_WRITE(m) || KAAPI_ACCESS_IS_CUMULWRITE(m)) 
-    {
-      if (version->writer_task ==0) /* avoid case RW that a ready task td_move was inserted */
-      {
-        kaapi_taskdescr_t* td_alloc;
-        kaapi_task_t* task_alloc;
-        kaapi_move_arg_t* argalloc 
-            = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
-        argalloc->src_data  = version->orig;
-        argalloc->dest      = version->handle;
-        task_alloc = kaapi_tasklist_allocate_task( tl, kaapi_taskalloc_body, argalloc);
-        td_alloc   = kaapi_tasklist_allocate_td( tl, task_alloc );
-        version->writer_task= td_alloc;
-        version->writer_tasklist = tl;
-        kaapi_tasklist_push_successor( tl, td_alloc, task );
-        kaapi_tasklist_pushback_ready( tl, td_alloc);
-      }
-      version->last_task = task;
-      version->last_tasklist = tl;
-      
-      if (KAAPI_ACCESS_IS_WRITE(m))
-      {
-        version->writer_task = task;
-        version->writer_tasklist = tl;
-      }
-      else {
-        /* in case of cw: all concurrent cw are put 'concurrent' together 
-           and the writer_task is the task that produce the final result 
-           and during while access is cw, last_task points to the alloc or
-           the previous task that the first dependency on the chain of cw
-        */
-        /* save td alloc or the previous writer */
-        version->last_task= version->writer_task;
-        version->last_tasklist = version->writer_tasklist;
-
-        kaapi_taskdescr_t* td_finalizer;
-        kaapi_task_t* task_finalizer;
-        kaapi_move_arg_t* arg 
-            = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
-        arg->src_data  = version->orig;
-        arg->dest      = version->handle;
-        task_finalizer = kaapi_tasklist_allocate_task( tl, kaapi_taskfinalizer_body, arg);
-        td_finalizer   = kaapi_tasklist_allocate_td( tl, task_finalizer );
-        version->writer_task= td_finalizer;
-        version->writer_tasklist= tl;
-        kaapi_tasklist_push_successor( tl, task, td_finalizer );
-      }
-    }
-    version->last_mode = m;
-
-    return 0;
-  }
   
   /* here is not the initial case */
   kaapi_assert_debug( version->last_mode != KAAPI_ACCESS_MODE_VOID);
@@ -148,6 +154,7 @@ int kaapi_thread_computeready_access(
           (void*)version->last_task->task,
           (void*)version->handle
       );
+      /* new handle == new version */
       kaapi_memory_view_t* view = &version->handle->view;
       version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
       version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */

@@ -72,7 +72,6 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
   kaapi_taskdescr_t*      taskdescr =0;
   kaapi_metadata_info_t*  mdi;
   kaapi_version_t*        version;
-  kaapi_version_t*        all_versions[32]; // see assert in the code
 
   /* assume task list  */
   kaapi_assert( tasklist != 0);
@@ -100,9 +99,6 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
     if (m == KAAPI_ACCESS_MODE_V) 
     {
-#if defined(KAAPI_DEBUG)      
-      all_versions[i] = 0;
-#endif
       continue;
     }
     
@@ -117,38 +113,30 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
       _kaapi_metadata_info_bind_data( mdi, thread->asid, access.data, &view );
       /* no version -> new version object: no writer */
       mdi->version[0] = version = kaapi_thread_newversion( mdi, thread->asid, access.data, &view );
+      
+      /* initialize first version depending of the first access mode */
+      kaapi_thread_initialize_first_access( tasklist, version, m, access.data );
     }
     else {
       /* have a look at the version and detect dependency or not etc... */
       version = mdi->version[0];
     }
-    all_versions[i] = version;
 
-    /* compute the deepth (locagical date) to avoid some WAR or WAW */
-    kaapi_thread_computeready_date( version, taskdescr, m );
+    /* compute the readyness of the task */
+    kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
     /* change the data in the task by the handle */
     access.data = version->handle;
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
-
-    /* store the format to avoid lookup */
-    taskdescr->fmt = task_fmt;
   }
   
+#if 0
   tasklist->t_infinity = _kaapi_max(taskdescr->date, tasklist->t_infinity);
-
-  for (unsigned int i=0; i < count_params; i++) 
-  {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
-    if (m == KAAPI_ACCESS_MODE_V) 
-      continue;
-    
-    /* get version of the i-th parameter find in the previous iteration over args */
-    version = all_versions[i];
-
-    kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
-  } /* end for all arguments of the task */
+#endif
   
+  /* store the format to avoid lookup */
+  taskdescr->fmt = task_fmt;
+
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)
     kaapi_tasklist_pushback_ready(tasklist, taskdescr);

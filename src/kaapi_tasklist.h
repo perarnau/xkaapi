@@ -115,6 +115,13 @@ typedef struct kaapi_move_arg_t {
 } kaapi_move_arg_t;
 
 
+/**
+*/
+typedef struct kaapi_finalizer_arg_t {
+  kaapi_handle_t      dest;
+} kaapi_move_arg_t;
+
+
 /** TaskDescriptor
     This data structure is add more information about task (kaapi_task_t)
     and it is pushed into the stack of each list of stack.
@@ -204,12 +211,11 @@ typedef struct kaapi_version_t {
   kaapi_data_t*            orig;            /* original data + original view points to the data in the metadatainfo */
   kaapi_handle_t           handle;          /* @data + view */
   kaapi_comtag_t           tag;             /* tag to use for communication */
+  kaapi_taskdescr_t*       writer_task;     /* last writer task of the version, 0 if no indentify task (input data) */
+  kaapi_tasklist_t*        writer_tasklist; /* the tasklist that stores the writer task */
   kaapi_access_mode_t      last_mode;       /* */
   kaapi_taskdescr_t*       last_task;       /* task attached to last access */
   kaapi_tasklist_t*        last_tasklist;   /* the tasklist that stores the last task */
-  kaapi_taskdescr_t*       writer_task;     /* last writer task of the version, 0 if no indentify task (input data) */
-  kaapi_address_space_id_t writer_asid;     /* used in partitionning, else it is always == orig->ptr.asid */ 
-  kaapi_tasklist_t*        writer_tasklist; /* the tasklist that stores the writer task */
   struct kaapi_version_t*  next;
 } kaapi_version_t;
 
@@ -538,6 +544,16 @@ extern int kaapi_thread_computeready_access(
     kaapi_access_mode_t m 
 );
 
+/** Initialize task on the new declared version depending of the first access mode made by task
+    For each new created version a first dummy task is pushed to create (allocated) or to allocate
+    data for next tasks.
+*/
+extern int kaapi_thread_initialize_first_access( 
+    kaapi_tasklist_t*   tl, 
+    kaapi_version_t*    version, 
+    kaapi_access_mode_t m,
+    void*               srcdata    
+);
 
 /** To pop the next ready tasks
     Return 0 if case of success, else return non null value.
