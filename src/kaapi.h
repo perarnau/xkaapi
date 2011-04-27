@@ -2086,6 +2086,34 @@ extern size_t kaapi_perf_counter_num(void);
 /* Format declaration & registration                                         */
 /* ========================================================================= */
 
+/** return the size of the view
+*/
+static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* kmv )
+{
+  switch (kmv->type) 
+  {
+    case KAAPI_MEMORY_VIEW_1D: return kmv->size[0]*kmv->wordsize;
+    case KAAPI_MEMORY_VIEW_2D: return kmv->size[0]*kmv->size[1]*kmv->wordsize;
+    default:
+      kaapi_assert(0);
+      break;
+  }
+  return 0;
+}
+
+/** Return non null value iff the view is contiguous
+*/
+static inline int kaapi_memory_view_iscontiguous( const kaapi_memory_view_t* kmv )
+{
+  switch (kmv->type) {
+    case KAAPI_MEMORY_VIEW_1D: return 1;
+    case KAAPI_MEMORY_VIEW_2D: return  kmv->lda == kmv->size[1]; /* row major storage */
+    default:
+      break;
+  } 
+  return 0;
+}
+
 static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t wordsize)
 {
   kaapi_memory_view_t retval;

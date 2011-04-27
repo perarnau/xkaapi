@@ -333,7 +333,7 @@ static int memcpy_wrapper( void* arg, void* dest, const void* src, size_t size )
 
 /* CPU to CPU copy
 */
-static int kaapi_memory_write_cpu2cpu
+int kaapi_memory_write_cpu2cpu
 (
   kaapi_pointer_t dest,
   const kaapi_memory_view_t* view_dest,

@@ -361,7 +361,7 @@ typedef struct kaapi_format_t {
   void                       (*dstor)( void* dest);
   void                       (*cstorcopy)( void* dest, const void* src);
   void                       (*copy)( void* dest, const void* src);
-  void                       (*assign)( void* dest, const void* src);
+  void                       (*assign)( void* dest, const kaapi_memory_view_t* view_dest, const void* src, const kaapi_memory_view_t* view_src);
   void                       (*print)( FILE* file, const void* src);
 
   /* only if it is a format of a task  */

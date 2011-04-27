@@ -52,12 +52,12 @@ namespace ka {
 Format::Format( 
         const char*        name,
         size_t             size,
-        void             (*cstor)( void* dest),
-        void             (*dstor)( void* dest),
-        void             (*cstorcopy)( void* dest, const void* src),
-        void             (*copy)( void* dest, const void* src),
-        void             (*assign)( void* dest, const void* src),
-        void             (*print)( FILE* file, const void* src)
+        void             (*cstor)( void* ),
+        void             (*dstor)( void* ),
+        void             (*cstorcopy)( void*, const void* ),
+        void             (*copy)( void*, const void*),
+        void             (*assign)( void*, const kaapi_memory_view_t*, const void*, const kaapi_memory_view_t*),
+        void             (*print)( FILE*, const void*)
 )
 {
   std::string fmt_name = std::string("__Z4TypeI")+name;
