@@ -128,9 +128,9 @@ extern kaapi_address_space_id_t kaapi_memory_address_space_create(
   size_t size 
 );
 
-#define KAAPI_ASID_MASK_LID   0x00000000FFFFFFFFULL
-#define KAAPI_ASID_MASK_GID   0x00FFFFFF00000000ULL
-#define KAAPI_ASID_MASK_ARCH  0xF000000000000000ULL
+#define KAAPI_ASID_MASK_LID   0x000000000000FFFFULL /* shift = 0 */
+#define KAAPI_ASID_MASK_GID   0x00FFFFFFFFFF0000ULL /* shift = 16 */
+#define KAAPI_ASID_MASK_ARCH  0xF000000000000000ULL /* shift = 56 */
 
 /** Return true iff two address space points to the same memory
     \param kasid1 [IN] an address space identifier
@@ -159,7 +159,7 @@ static inline int kaapi_memory_address_space_gettype( kaapi_address_space_id_t k
     \return the gid encoded into the address space identifier
 */
 static inline kaapi_globalid_t kaapi_memory_address_space_getgid( kaapi_address_space_id_t kasid )
-{ return (kaapi_globalid_t)((kasid & KAAPI_ASID_MASK_GID)>> 32UL); }
+{ return (kaapi_globalid_t)((kasid & KAAPI_ASID_MASK_GID)>> 16ULL); }
 
 
 /** Return the local index of the address space.

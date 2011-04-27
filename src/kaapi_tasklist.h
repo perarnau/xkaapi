@@ -119,7 +119,7 @@ typedef struct kaapi_move_arg_t {
 */
 typedef struct kaapi_finalizer_arg_t {
   kaapi_handle_t      dest;
-} kaapi_move_arg_t;
+} kaapi_finalizer_arg_t;
 
 
 /** TaskDescriptor
@@ -170,7 +170,7 @@ typedef struct kaapi_taskdescr_t {
 */
 typedef struct kaapi_tasklist_t {
   kaapi_atomic_t          lock;        /* protect recvlist */
-  kaapi_atomic_t          count_thief; /* count the number of thiefs == */
+  kaapi_atomic_t          count_thief; /* count the number of thiefs for terminaison */
 
   /* execution state for ready task using tasklist */
   kaapi_workqueue_index_t next_exec;  /* next task to execute, set after poping fron the work queue */
@@ -208,9 +208,7 @@ typedef struct kaapi_tasklist_t {
 /** Serves to detect: W -> R dependency or R -> W dependency
 */
 typedef struct kaapi_version_t {
-  kaapi_data_t*            orig;            /* original data + original view points to the data in the metadatainfo */
-  kaapi_handle_t           handle;          /* @data + view */
-  kaapi_comtag_t           tag;             /* tag to use for communication */
+  kaapi_handle_t           handle;          /* @data + view of the last access */
   kaapi_taskdescr_t*       writer_task;     /* last writer task of the version, 0 if no indentify task (input data) */
   kaapi_tasklist_t*        writer_tasklist; /* the tasklist that stores the writer task */
   kaapi_access_mode_t      last_mode;       /* */
@@ -224,8 +222,7 @@ typedef struct kaapi_version_t {
 */
 extern kaapi_version_t* kaapi_thread_newversion( 
     kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid,
-    void* data, const kaapi_memory_view_t* view 
+    const kaapi_memory_view_t* view 
 );
 
 
@@ -541,7 +538,8 @@ extern int kaapi_thread_computeready_access(
     kaapi_tasklist_t*   tl, 
     kaapi_version_t*    version, 
     kaapi_taskdescr_t*  task,
-    kaapi_access_mode_t m 
+    kaapi_access_mode_t m,
+    void*               srcdata
 );
 
 /** Initialize task on the new declared version depending of the first access mode made by task

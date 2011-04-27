@@ -69,18 +69,18 @@ kaapi_address_space_id_t kaapi_memory_address_space_create(
 #else  
   if (_type & ~0x0F) return -1UL;
 #endif
-  type = ((uint64_t)_type) << 56;
+  type = ((uint64_t)_type) << 56ULL;
   
 #if defined(KAAPI_DEBUG)
-  kaapi_assert_debug(0 == (_gid & ~0xFFFFFF));
+  kaapi_assert_debug(0 == (_gid & ~0xFFFFFFFFFFUL));
 #else  
-  if (_gid & ~0xFFFFFF) return -1UL;
+  if (_gid & ~0xFFFFFFFFFFUL) return -1UL;
 #endif
-  gid = ((uint64_t)_gid) << 32;
+  gid = ((uint64_t)_gid) << 16ULL;
 
   lid = (uint64_t)KAAPI_ATOMIC_INCR( &count_localid );
 
-  /* store type in 8 bits */
+  /* store type in the 8 highest bits */
   asid   = type | gid | lid;
   return (kaapi_address_space_id_t)asid;
 }

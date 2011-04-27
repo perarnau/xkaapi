@@ -55,7 +55,6 @@ kaapi_version_t* _kaapi_metadata_info_get_version(
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
 
   kaapi_version_t* version = kmdi->version[lid];
-  kaapi_assert( version->writer_asid == kasid );
   return version;
 }
 

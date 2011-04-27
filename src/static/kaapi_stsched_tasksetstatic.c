@@ -50,13 +50,6 @@
 #endif
 
 
-static kaapi_tasklist_t* cached_tasklist[32] = {
- 0, 0, 0, 0, 0, 0, 0, 0,
- 0, 0, 0, 0, 0, 0, 0, 0,
- 0, 0, 0, 0, 0, 0, 0, 0,
- 0, 0, 0, 0, 0, 0, 0, 0
-};
-
 /* 
 */
 void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
@@ -65,6 +58,9 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   kaapi_frame_t* fp;
   kaapi_frame_t save_fp;
   kaapi_tasklist_t* tasklist;
+  int16_t ngpu = 0;
+  int16_t ncpu = 0;
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   double t0=0.0;
   double t1=0.0;
@@ -97,65 +93,78 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 
   /* allocate the tasklist for this task
   */
-  if ((arg->key ==0) || (cached_tasklist[arg->key] ==0))
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
+
+  /* some information to pass to the task : TODO */
+  arg->schedinfo.nkproc[KAAPI_PROC_TYPE_MPSOC] = 0;
+
+  /* Here, either:
+     - nkproc[0] is !=-1 and represents annonymous ressources
+       then nkproc[CPU] and nkproc[GPU] == -1.
+     - nkproc[CPU] == nkproc[GPU] == nkproc[0] = -1, means auto detect
+     - nkproc[CPU] or nkproc[GPU] == -2, means all ressources of ginve type
+     - nkproc[CPU] or nkproc[GPU] is set to a user requested number
+  */
+
+  if (arg->schedinfo.nkproc[0] != -1)
   {
-    tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-    kaapi_tasklist_init( tasklist );
+    kaapi_assert_debug(arg->schedinfo.nkproc[0] >0);
 
-    /* some information to pass to the task : TODO */
-    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_MPSOC-1] = 0;
-
-    /* */
-    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == (uint32_t)-1)
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
-
-    /* */
-    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == (uint32_t)-1)
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] = 0;
-
-    /* test if at least one ressource */
-    if ( (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == 0) &&
-         (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == 0) )
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
-
-    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
-
-    /* the embedded task cannot be steal because it was not visible to thieves */
-    arg->sub_body( arg->sub_sp, uthread, &arg->schedinfo );
-
-    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_END );
-
-    /* currently: that all, do not compute other things */
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
+    /* first take all GPUs ressources, then complet with CPU ressources */
+#if defined(KAAPI_USE_CUDA)
+    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = ngpu = kaapi_cuda_get_proc_count();
 #endif
-    kaapi_thread_computereadylist(thread, tasklist);
-#if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime();
-#endif
-    KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
-    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_END );
-    cached_tasklist[arg->key] = tasklist;
-  } // non cached value
-  else 
-  { 
-    kaapi_assert( (arg->key >0) && (arg->key <32) );
-    tasklist = cached_tasklist[arg->key];
-#if defined(KAAPI_DEBUG)
-    /* ok this not the first time we schedule this computation: reset exec_date */
-    kaapi_activationlink_t* curr_activated = tasklist->allocated_td.front;
-    while (curr_activated !=0)
+    if (ngpu < arg->schedinfo.nkproc[0])
     {
-      curr_activated->td->exec_date =0;
-      KAAPI_ATOMIC_WRITE(&curr_activated->td->counter,0);
-      curr_activated = curr_activated->next;
+      ncpu = arg->schedinfo.nkproc[0] - ngpu;
+      if (ncpu > (int16_t)kaapi_count_kprocessors)
+        ncpu = kaapi_count_kprocessors;
     }
-#endif
-    /* reset executed tasks */
-    KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
-    /* force re-push of ready task */
-    tasklist->td_ready = 0;
+    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU] = ncpu;
+    arg->schedinfo.nkproc[0] = ngpu + ncpu;
   }
+  else 
+  {
+    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU] <0)
+    { /* do not separate the case -1 and -2 (autodetec and all ressources) because
+         the runtime is unable to return the available idle ressources
+      */
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU] = kaapi_count_kprocessors;
+    }
+      
+#if defined(KAAPI_USE_CUDA)
+    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] <0)
+    { /* do not separate the case -1 and -2 (autodetec and all ressources) because
+         the runtime is unable to return the available idle ressources
+      */
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = kaapi_cuda_get_proc_count();
+    }
+#else
+    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = 0;
+#endif
+
+    arg->schedinfo.nkproc[0] = arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU] 
+        + arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU];
+  }
+
+  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+
+  /* the embedded task cannot be steal because it was not visible to thieves */
+  arg->sub_body( arg->sub_sp, uthread, &arg->schedinfo );
+
+  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_END );
+
+  /* currently: that all, do not compute other things */
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t0 = kaapi_get_elapsedtime();
+#endif
+  kaapi_thread_computereadylist(thread, tasklist);
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t1 = kaapi_get_elapsedtime();
+#endif
+  KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
+  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_END );
 
   /* allows other thread to steal the tasklist */
   kaapi_mem_barrier();

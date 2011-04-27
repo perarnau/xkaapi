@@ -112,7 +112,7 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
       kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, task->sp);
       _kaapi_metadata_info_bind_data( mdi, thread->asid, access.data, &view );
       /* no version -> new version object: no writer */
-      mdi->version[0] = version = kaapi_thread_newversion( mdi, thread->asid, access.data, &view );
+      mdi->version[0] = version = kaapi_thread_newversion( mdi, &view );
       
       /* initialize first version depending of the first access mode */
       kaapi_thread_initialize_first_access( tasklist, version, m, access.data );
@@ -123,7 +123,7 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
     }
 
     /* compute the readyness of the task */
-    kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
+    kaapi_thread_computeready_access( tasklist, version, taskdescr, m, access.data );
 
     /* change the data in the task by the handle */
     access.data = version->handle;

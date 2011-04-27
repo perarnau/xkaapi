@@ -80,7 +80,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 }
 
 
-
+/* TG: here put it into the API, used by SMPss Xkaapi based runtime */
 void kaapi_set_unstealable(unsigned int fu)
 {
   kaapi_thread_context_t* const c = kaapi_self_thread_context();

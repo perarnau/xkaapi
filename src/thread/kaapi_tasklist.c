@@ -48,22 +48,18 @@
 /**
 */
 kaapi_version_t* kaapi_thread_newversion( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid,
-    void* data, const kaapi_memory_view_t* view 
+    kaapi_metadata_info_t*     kmdi, 
+    const kaapi_memory_view_t* view 
 )
 {
   kaapi_version_t* version = (kaapi_version_t*)malloc( sizeof(kaapi_version_t) );
-  version->orig         = _kaapi_metadata_info_get_data( kmdi, kasid);
   version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
   version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */
   version->handle->view = *view;
-  version->tag          = 0;
   version->last_mode    = KAAPI_ACCESS_MODE_VOID;
   version->last_task    = 0;
   version->last_tasklist= 0;
   version->writer_task  = 0;
-  version->writer_asid  = kasid;
   version->writer_tasklist = 0;
 #if defined(KAAPI_DEBUG)
   version->next         = 0;
@@ -71,34 +67,6 @@ kaapi_version_t* kaapi_thread_newversion(
   return version;
 }
 
-
-/**
-*/
-kaapi_version_t* kaapi_thread_copyversion( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid,
-    kaapi_version_t* src
-)
-{
-  kaapi_version_t* version = (kaapi_version_t*)malloc( sizeof(kaapi_version_t) );
-  version->orig         = _kaapi_metadata_info_get_data( kmdi, kasid );
-  version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
-  version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */
-  version->handle->view = src->orig->view;
-  version->tag          = src->tag;
-  version->last_mode    = KAAPI_ACCESS_MODE_VOID;
-  version->last_task    = 0;
-  version->last_tasklist = src->last_tasklist;
-  version->writer_task  = 0;
-  version->writer_asid  = kasid;
-  version->writer_tasklist = 0;
-
-  /* link copy in from of mdi */
-  version->next         = 0;
-  src->next             = version;
-  
-  return version;
-}
 
 
 /* activate and push all ready tasks in the activation list to their allocated queue

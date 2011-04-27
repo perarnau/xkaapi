@@ -1769,7 +1769,7 @@ extern void kaapi_taskfinalize_body( void*, kaapi_thread_t* );
     - bitmap may be also pass here.
 */
 typedef struct kaapi_staticschedinfo_t {
-  uint32_t  nkproc[KAAPI_PROC_TYPE_MAX-1]; 
+  int16_t  nkproc[KAAPI_PROC_TYPE_MAX]; 
 } kaapi_staticschedinfo_t;
 
 /** Body of the task in charge of finalize of adaptive task
