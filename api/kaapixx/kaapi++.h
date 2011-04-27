@@ -2571,13 +2571,16 @@ namespace ka {
   public:
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-      kaapi_thread_pushtask(thread); 
+      if (thread->tasklist ==0)
+        kaapi_thread_pushtask(thread); 
+      else
+        kaapi_thread_online_computedep(thread, 0, clo);
       return 0; 
     }
   };
   extern DefaultAttribut SetDefault;
   
-  /* */
+#if 0 // DEPRECATED   /* */
   class UnStealableAttribut {
   public:
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
@@ -2588,7 +2591,9 @@ namespace ka {
   };
   inline UnStealableAttribut SetUnStealable()
   { return UnStealableAttribut(); }
+#endif
 
+#if 0 // DEPRECATED   /* */
   /* like default attribut: not yet distributed computation */
   class SetLocalAttribut {
   public:
@@ -2599,6 +2604,7 @@ namespace ka {
     }
   };
   extern SetLocalAttribut SetLocal;
+#endif
 
   /* do nothing... not yet distributed implementation */
   class AttributSetPartition {
@@ -2608,6 +2614,13 @@ namespace ka {
     int get_partition() const { return _partition; }
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
+#if !defined(KAAPI_NDEBUG)
+      if (thread->tasklist ==0) 
+      {
+        std::cerr << "**** Invalid argument" << std::endl;
+        return (void*)-1;
+      }
+#endif
       kaapi_thread_online_computedep(thread, _partition, clo);
       return 0;
     }
@@ -2639,23 +2652,54 @@ namespace ka {
   };
 
   // --------------------------------------------------------------------
-  /* do nothing */
+  /* Static Sched attribut pass to the runtime
+     Allows the user to specified number of ressources (at least 
+     number threads) which may be scheduled on typed ressources.
+     - 4 kinds of constraints that can be specify by the user:
+      1. total number of ressources: anonymous ressources that can be scheduled
+      on CPU or GPU.
+        The user asks for a given number of threads that will be scheduled
+        on the available ressources (CPU or GPU) depending of its tasks and
+        available ressources at runtime. 
+      2. total number of CPUs and (not inclusive) total number of GPUs.
+        In that case, the user asks for a fixed number of Ncpus threads and Ngpus threads
+        that will be scheduled on the specified architecture.
+        Because if CPU is always available, it is possible that no GPU is available.
+        It is strongly recommanded that the user tests the number of ressources passed from
+        the runtime to the user if it declares its tasks with SchedInfo attribute.
+      3. AutoCPU | AutoGPU: detection by the runtime of the number of available ressources.
+        Using this specification, the user will received in its schedinfo task's parameter
+        the number of available ressources for its task's execution. The number of ressources
+        given by the runtime will never exeed the physical number of ressources.
+      4. No specification: is equivalent to AutoCPU | AutoGPU.
+
+      In all the cases, if the physical ressources are less than the requested number, then the user's 
+      threads will be scheduled non preemptively on the physical ressources.
+      
+      All requested ressources or the ressources allocated by the runtime are lineary numbered
+      from 0 to N-1, where N is the total number of ressources. The first set of ressources
+      from 0 to Ncpu-1 corresponds to the CPU ressources. The second set of ressources from
+      Ncpu to Ngpu+Ncpu-1 corresponds to the GPU ressources. Both Ncpu and Ngpu are accessible
+      through the sched info data structure.
+      
+      Implementation note.
+      -1: means auto detect ressources
+      -2: means all ressources of the given type
+  */
   class SetStaticSchedAttribut {
-    intptr_t _key;
-    int16_t  _ncpu;
-    int16_t  _ngpu;
+    int16_t  _nress;  /* N ressources are requested by the user, -1: fixed by the runtime */
+    int16_t  _ncpu;   /* N CPU requested by the user, -1 fixed by the runtime */
+    int16_t  _ngpu;   /* N GPU requested by the user, -1 fixed by the runtime */
   public:
-    SetStaticSchedAttribut( intptr_t key, int nc, int ng )
-     : _key(key), _ncpu(nc), _ngpu(ng)
-    {}
     SetStaticSchedAttribut( int nc, int ng )
-     : _key(0), _ncpu(nc), _ngpu(ng)
+     : _nress(-1), _ncpu(nc), _ngpu(ng)
     {}
-    SetStaticSchedAttribut( intptr_t key )
-     : _key(key), _ncpu(-1), _ngpu(-1)
+    /* format for N ressources */
+    SetStaticSchedAttribut( int n )
+     : _nress(n), _ncpu(-1), _ngpu(-1)
     {}
     SetStaticSchedAttribut( )
-     : _key(0), _ncpu(-1), _ngpu(-1)
+     : _nress(-1), _ncpu(-1), _ngpu(-1)
     {}
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
@@ -2665,20 +2709,14 @@ namespace ka {
         = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
       arg->sub_sp   = task->sp;
       arg->sub_body = (kaapi_task_vararg_body_t)kaapi_task_getuserbody(task);
-      arg->key      = _key;
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = (uint32_t)_ncpu;
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] = (uint32_t)_ngpu;
+      arg->schedinfo.nkproc[0]                   = (uint32_t)_nress;
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
       kaapi_task_initdfg(task, kaapi_staticschedtask_body, arg);
       kaapi_thread_pushtask(thread);
-      return (void*)_key;
+      return 0;
     }
   };
-  
-  /* user level attribut definition */
-  inline SetStaticSchedAttribut SetStaticSched()
-  { return SetStaticSchedAttribut(); }
-
-  /* user level attribut definition */
   
   /* */
   struct _KaapiCPU_Encode {
@@ -2705,8 +2743,10 @@ namespace ka {
      : _KaapiCPU_Encode(nc), _KaapiGPU_Encode(ng) {}
   };
 
-  static const _KaapiCPU_Encode AllCPUType = _KaapiCPU_Encode();
-  static const _KaapiGPU_Encode AllGPUType = _KaapiGPU_Encode();
+  static const _KaapiCPU_Encode AutoCPU = _KaapiCPU_Encode();
+  static const _KaapiGPU_Encode AutoGPU = _KaapiGPU_Encode();
+  static const _KaapiCPU_Encode AllCPU  = _KaapiCPU_Encode(-2);
+  static const _KaapiGPU_Encode AllGPU  = _KaapiGPU_Encode(-2);
   inline _KaapiCPU_Encode SetnCPU(int nc) { return _KaapiCPU_Encode(nc); }
   inline _KaapiGPU_Encode SetnGPU(int ng) { return _KaapiGPU_Encode(ng); }
 
@@ -2715,32 +2755,17 @@ namespace ka {
   inline _KaapiCPUGPU_Encode operator|( const _KaapiGPU_Encode ng, const _KaapiCPU_Encode nc )
   { return _KaapiCPUGPU_Encode(nc,ng); }
 
+  /* user level attribut definition */
+  inline SetStaticSchedAttribut SetStaticSched(int n)
+  { return SetStaticSchedAttribut(n); }
   inline SetStaticSchedAttribut SetStaticSched( _KaapiCPU_Encode xx )
   { return SetStaticSchedAttribut(xx.ncpu, 0); }
   inline SetStaticSchedAttribut SetStaticSched( _KaapiGPU_Encode xx )
   { return SetStaticSchedAttribut(0, xx.ngpu); }
   inline SetStaticSchedAttribut SetStaticSched( _KaapiCPUGPU_Encode xx )
   { return SetStaticSchedAttribut(xx.ncpu, xx.ngpu); }
-  
-  /* to cache scheduling */
-  class InCache {
-  public:
-    InCache();
-    
-    intptr_t value() const 
-    { return _key; }
-  protected:
-    intptr_t _key;
-  };
-
-  inline SetStaticSchedAttribut SetStaticSched( InCache key )
-  { return SetStaticSchedAttribut(key.value()); }
-  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPU_Encode xx, InCache key )
-  { return SetStaticSchedAttribut(key.value(), xx.ncpu, 0); }
-  inline SetStaticSchedAttribut SetStaticSched( _KaapiGPU_Encode xx, InCache key )
-  { return SetStaticSchedAttribut(key.value(), 0, xx.ngpu); }
-  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPUGPU_Encode xx, InCache key )
-  { return SetStaticSchedAttribut(key.value(), xx.ncpu, xx.ngpu); }
+  inline SetStaticSchedAttribut SetStaticSched()
+  { return SetStaticSchedAttribut(); }
 
 
   // --------------------------------------------------------------------

@@ -340,10 +340,12 @@ namespace a1 {
   // --------------------------------------------------------------------  
   using ka::DefaultAttribut;
   using ka::SetDefault;
+#if 0 // DEPRECATED   /* */
   using ka::UnStealableAttribut;
   using ka::SetUnStealable;
   using ka::SetLocalAttribut;
   using ka::SetLocal;
+#endif
   using ka::AttributSetPartition;
   using ka::SetPartition;
   

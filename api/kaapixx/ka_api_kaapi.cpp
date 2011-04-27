@@ -51,8 +51,12 @@ namespace ka {
 SetStickyC SetSticky;
 SetStack SetInStack;
 SetHeap SetInHeap;
+#if 0 // DEPRECATED   /* */
 SetLocalAttribut SetLocal;
+#endif
+#if 0 // DEPRECATED   /* */
 DefaultAttribut SetDefault;
+#endif
 FlagReplyHead ReplyHead;
 FlagReplyTail ReplyTail;
 
@@ -190,11 +194,6 @@ void Sync()
 
 
 // --------------------------------------------------------------------
-static kaapi_atomic_t counter_incache = { 0 };
-InCache::InCache()
-{
-  _key = (intptr_t)KAAPI_ATOMIC_INCR(&counter_incache);
-}
 
 // --------------------------------------------------------------------
 void MemorySync()
