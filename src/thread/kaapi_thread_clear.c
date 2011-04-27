@@ -79,3 +79,11 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   return 0;
 }
 
+
+
+void kaapi_set_unstealable(unsigned int fu)
+{
+  kaapi_thread_context_t* const c = kaapi_self_thread_context();
+  kaapi_mem_barrier();
+  c->unstealable = fu;
+}

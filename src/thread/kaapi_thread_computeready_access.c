@@ -99,6 +99,9 @@ int kaapi_thread_initialize_first_access(
          and during while access is cw, last_task points to the alloc or
          the previous task that the first dependency on the chain of cw
       */
+      printf("Not yet implemented\n");
+      exit(1);
+#if 0      
       /* save td alloc or the previous writer */
       version->last_task     = version->writer_task;
       version->last_tasklist = version->writer_tasklist;
@@ -115,12 +118,15 @@ int kaapi_thread_initialize_first_access(
       version->last_mode       = KAAPI_ACCESS_MODE_CW;
 
       kaapi_tasklist_pushback_ready( tl, version->last_task);
-      /* after that all CW tasks will be successor of this 
+      /* after that all CW tasks will be successor of this */
+#endif
     }
   }
   
   return 0;
 }
+
+
 
 /** 
 */
@@ -128,7 +134,8 @@ int kaapi_thread_computeready_access(
     kaapi_tasklist_t*   tl, 
     kaapi_version_t*    version, 
     kaapi_taskdescr_t*  task,
-    kaapi_access_mode_t m 
+    kaapi_access_mode_t m,
+    void*               srcdata
 )
 {
   
@@ -145,16 +152,17 @@ int kaapi_thread_computeready_access(
   }
   if (KAAPI_ACCESS_IS_WRITE(m)) /* w or rw */
   {
-    /* WAR or WAW dependencies ! */
+    /* WAR or WAW dependencies: avoid case of rw where r mode is processed just above as dependent */
     if (version->last_task != task)
     {
+#if 0
       printf("Task: td:%p -> task:%p has WA{RW} dependency with td:%p -> task:%p on handle: H@:%p\n",
           (void*)task, (void*)task->task,
           (void*)version->last_task, 
           (void*)version->last_task->task,
           (void*)version->handle
       );
-      /* new handle == new version */
+#endif
       kaapi_memory_view_t* view = &version->handle->view;
       version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
       version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */
@@ -164,7 +172,7 @@ int kaapi_thread_computeready_access(
       kaapi_task_t* task_alloc;
       kaapi_move_arg_t* argalloc 
           = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
-      argalloc->src_data  = version->orig;
+      argalloc->src_data  = srcdata;
       argalloc->dest      = version->handle;
       task_alloc          = kaapi_tasklist_allocate_task( tl, kaapi_taskalloc_body, argalloc);
       td_alloc            = kaapi_tasklist_allocate_td( tl, task_alloc );
@@ -179,6 +187,9 @@ int kaapi_thread_computeready_access(
   }
   else if (KAAPI_ACCESS_IS_CUMULWRITE(m))
   {
+      printf("Not yet implemented\n");
+      exit(1);
+#if 0      
     if (KAAPI_ACCESS_IS_ONLYWRITE(version->last_mode))
     {
       version->last_task     = version->writer_task;
@@ -209,6 +220,7 @@ int kaapi_thread_computeready_access(
     */
     kaapi_tasklist_push_successor( tl, task, version->writer_task );
     kaapi_tasklist_push_successor( version->last_tasklist, version->last_task, task );
+#endif
   }
   
   version->last_mode = m;
