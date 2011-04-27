@@ -1,14 +1,13 @@
 /*
-** kaapi_hashmap.c
+** kaapi_fmtresolve.c
 ** xkaapi
 ** 
-** 
-** Copyright 2010 INRIA.
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -45,32 +44,26 @@
 */
 #include "kaapi_impl.h"
 
-/*
-*/
-kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr )
+kaapi_access_mode_t kaapi_fmt_get_mode_param
+(const kaapi_format_t* f, size_t i, const void* p)
 {
-  const uint32_t hkey = kaapi_hash_ulong7((unsigned long)ptr) % KAAPI_HASHMAP_SIZE;
+  return f->get_mode_param(f, i, p);
+}
 
-  kaapi_hashentries_t* list_hash = _get_hashmap_entry( khm, hkey );
-  kaapi_hashentries_t* entry;
+void kaapi_fmt_set_access_param
+(const kaapi_format_t* f, size_t i, void* p, const kaapi_access_t* a)
+{
+  f->set_access_param(f, i, p, a);
+}
 
-  /* allocate new entry */
-  if (khm->currentbloc == 0) 
-  {
-    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
-    khm->currentbloc->next = khm->allallocatedbloc;
-    khm->allallocatedbloc = khm->currentbloc;
-    khm->currentbloc->pos = 0;
-  }
-  
-  entry = &khm->currentbloc->data[khm->currentbloc->pos];
-  entry->key = ptr;
-  memset( &entry->u, 0, sizeof(entry->u) );
-  if (++khm->currentbloc->pos == KAAPI_BLOCENTRIES_SIZE)
-  {
-    khm->currentbloc = 0;
-  }
-  entry->next = list_hash;
-  set_hashmap_entry(khm, hkey, entry);
-  return entry;
+void* kaapi_fmt_get_off_param
+(const kaapi_format_t* f, size_t i, const void* p)
+{
+  return f->get_off_param(f, i, p);
+}
+
+int* kaapi_fmt_get_off_cwflag
+(const kaapi_format_t* f, size_t i, const void* p)
+{
+  return f->get_cwflag(f, i, p);
 }

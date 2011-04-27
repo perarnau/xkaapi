@@ -2176,6 +2176,31 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
 );
 
 /** \ingroup TASK
+    format accessor
+*/
+extern kaapi_access_mode_t kaapi_fmt_get_mode_param
+(const struct kaapi_format_t* f, size_t i, const void* p);
+
+/** \ingroup TASK
+    format accessor
+*/
+extern void kaapi_fmt_set_access_param
+(const struct kaapi_format_t* f, size_t i, void* p, const kaapi_access_t* a);
+
+/** \ingroup TASK
+    format accessor
+*/
+extern void* kaapi_fmt_get_off_param
+(const struct kaapi_format_t* f, size_t i, const void* p);
+
+/** \ingroup TASK
+    format accessor
+*/
+extern int* kaapi_fmt_get_off_cwflag
+(const struct kaapi_format_t* f, size_t i, const void* p);
+
+
+/** \ingroup TASK
     Register a task format 
 */
 extern void kaapi_format_set_task_body

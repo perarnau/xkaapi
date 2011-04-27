@@ -142,12 +142,14 @@ int kaapi_thread_computeready_access(
     /* WAR or WAW dependencies ! */
     if (version->last_task != task)
     {
+#if 0
       printf("Task: td:%p -> task:%p has WA{RW} dependency with td:%p -> task:%p on handle: H@:%p\n",
           (void*)task, (void*)task->task,
           (void*)version->last_task, 
           (void*)version->last_task->task,
           (void*)version->handle
       );
+#endif
       kaapi_memory_view_t* view = &version->handle->view;
       version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
       version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */

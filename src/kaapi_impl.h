@@ -1238,7 +1238,10 @@ KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
    Warning in kapai_hashmap_t, entry_map type should have a size that is
    equal to KAAPI_HASHMAP_SIZE.
 */
-#define KAAPI_HASHMAP_SIZE 32
+#define KAAPI_HASHMAP_SIZE 64
+
+static inline uint64_t _key_to_mask(uint32_t k)
+{ return ((uint64_t)1) << k; }
 
 /*
 */
@@ -1246,17 +1249,18 @@ typedef struct kaapi_hashmap_t {
   kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
   kaapi_hashentries_bloc_t* currentbloc;
   kaapi_hashentries_bloc_t* allallocatedbloc;
-  uint32_t entry_map;                 /* type size must at least KAAPI_HASHMAP_SIZE */
+  uint64_t entry_map; /* type size must at least KAAPI_HASHMAP_SIZE */
 } kaapi_hashmap_t;
 
 
 /*
 */
-static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key)
+static inline kaapi_hashentries_t* _get_hashmap_entry
+(kaapi_hashmap_t* khm, uint32_t key)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
 
-  if (khm->entry_map & (1 << key))
+  if (khm->entry_map & _key_to_mask(key))
     return khm->entries[key];
 
   return 0;
@@ -1265,11 +1269,12 @@ static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uin
 
 /*
 */
-static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
+static inline void _set_hashmap_entry
+(kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
   khm->entries[key] = entries;
-  khm->entry_map |= 1 << key;
+  khm->entry_map |= _key_to_mask(key);
 }
 
 

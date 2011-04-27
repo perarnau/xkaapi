@@ -94,7 +94,14 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
            required to be dstor.
         */
         if (!KAAPI_ACCESS_IS_CUMULWRITE(m))
-          (*fmt_param->assign)( access_param.data, access_param.version );
+	{
+          kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, taskarg);
+#if 0 /* TODO: pass view as parm */
+          (*fmt_param->assign)( access_param.data, access_param.version, view );
+#else
+          memcpy( access_param.data, access_param.version, kaapi_memory_view_size(&view) );
+#endif
+	}
         else {
           kaapi_format_reduce_param( fmt, i, taskarg, access_param.data, access_param.version );
         }

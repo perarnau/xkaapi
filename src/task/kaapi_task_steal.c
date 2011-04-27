@@ -202,7 +202,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   
   /* the the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
-  count_params    = kaapi_format_get_count_params(fmt, arg->origin_task); 
+  count_params    = kaapi_format_get_count_params(fmt, orig_task_args); 
   arg->copy_task_args = 0;
   
   /**/
@@ -235,6 +235,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
+
+    /* there are possibly non formated params  */
+    memcpy(copy_task_args, orig_task_args, fmt->size);
 
     for (i=0; i<count_params; ++i)
     {

@@ -47,10 +47,14 @@
 */
 int kaapi_sched_computereadylist(  )
 {
+  kaapi_tasklist_t* tasklist;
   int err;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
-  err= kaapi_thread_computereadylist( thread, thread->sfp->tasklist );
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
+  err= kaapi_thread_computereadylist( thread, tasklist  );
+  thread->sfp->tasklist = tasklist;
   return err;
 }
 
