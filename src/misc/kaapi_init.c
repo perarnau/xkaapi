@@ -77,7 +77,7 @@ kaapi_rtparam_t kaapi_default_param = {
   static void formatobject##_dstor(void* dest) { *(type*)dest = 0; }\
   static void formatobject##_cstorcopy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
   static void formatobject##_copy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
-  static void formatobject##_assign( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
+  static void formatobject##_assign( void* dest, const kaapi_memory_view_t* dview, const void* src, const kaapi_memory_view_t* sview) { *(type*)dest = *(type*)src; } \
   static void formatobject##_print( FILE* file, const void* src) { fprintf(file, fmt, *(type*)src); } \
   static kaapi_format_t* fnc_##formatobject(void) \
   {\
@@ -106,6 +106,54 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long, "%lu")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
+
+/* void pointer format */
+static void voidp_type_cstor(void* addr)
+{
+  /* printf("%s\n", __FUNCTION__); */
+  *(void**)addr = 0;
+}
+
+static void voidp_type_dstor(void* addr)
+{
+  /* printf("%s\n", __FUNCTION__); */
+  *(void**)addr = 0;
+}
+
+static void voidp_type_cstorcopy(void* daddr, const void* saddr)
+{
+  /* TODO: missing views */
+  /* printf("%s\n", __FUNCTION__); */
+}
+
+static void voidp_type_copy(void* daddr, const void* saddr)
+{
+  /* TODO: missing views */
+  /* printf("%s\n", __FUNCTION__); */
+}
+
+static void voidp_type_assign
+(
+ void* daddr, const kaapi_memory_view_t* dview,
+ const void* saddr, const kaapi_memory_view_t* sview
+)
+{
+  memcpy(daddr, saddr, kaapi_memory_view_size(dview));
+}
+
+static void voidp_type_printf(FILE* fil, const void* addr)
+{
+  fprintf(fil, "0x%lx", (uintptr_t)addr);
+}
+
+static kaapi_format_t kaapi_voidp_object;
+static kaapi_format_t* voidp_type_fnc(void)
+{
+  /* printf("%s\n", __FUNCTION__); */
+  return &kaapi_voidp_object;
+}
+
+kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_object;
 
 
 /** \ingroup WS
@@ -189,6 +237,19 @@ void kaapi_init_basicformat(void)
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
+
+  kaapi_format_structregister
+  ( 
+   voidp_type_fnc,
+   "voidp_type",
+   sizeof(void*),
+   voidp_type_cstor,
+   voidp_type_dstor,
+   voidp_type_cstorcopy,
+   voidp_type_copy,
+   voidp_type_assign,
+   voidp_type_printf
+  );
 }
 
 

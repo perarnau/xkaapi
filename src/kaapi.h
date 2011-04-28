@@ -630,6 +630,7 @@ extern struct kaapi_format_t* kaapi_ulong_format;
 extern struct kaapi_format_t* kaapi_ulonglong_format;
 extern struct kaapi_format_t* kaapi_float_format;
 extern struct kaapi_format_t* kaapi_double_format;
+extern struct kaapi_format_t* kaapi_voidp_format;
 /*@}*/
 
 
@@ -2262,7 +2263,7 @@ extern kaapi_format_id_t kaapi_format_structregister(
         void                       (*dstor)( void* ),
         void                       (*cstorcopy)( void*, const void*),
         void                       (*copy)( void*, const void*),
-        void                       (*assign)( void*, const void*),
+        void                       (*assign)( void*, const kaapi_memory_view_t*, const void*, const kaapi_memory_view_t*),
         void                       (*print)( FILE* file, const void* src)
 );
 
