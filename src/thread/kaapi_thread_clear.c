@@ -84,7 +84,8 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 */
 void kaapi_thread_set_unstealable(unsigned int fu)
 {
-  kaapi_thread_context_t* const c = kaapi_self_thread_context();
-  kaapi_mem_barrier();
-  c->unstealable = fu;
+  kaapi_thread_context_t* const thread = kaapi_self_thread_context();
+  kaapi_sched_lock(&thread->proc->lock);
+  thread->unstealable = fu;
+  kaapi_sched_lock(&thread->proc->lock);
 }
