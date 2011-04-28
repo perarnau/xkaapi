@@ -1169,6 +1169,15 @@ extern int kaapi_thread_save_frame( kaapi_thread_t*, kaapi_frame_t*);
 */
 extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 
+
+/** \ingroup TASK
+    The function kaapi_thread_set_unstealable() changes the stealable state of 
+    the current executing thread. If the argument is not 0, then the state of the
+    current thread changes to unstealable state. If the argument is 0, then the
+    statte changes to 'stealable' state, allowing thief to steal the current thread.
+*/
+extern void kaapi_thread_set_unstealable(unsigned int);
+
 /** \ingroup TASK
     The function kaapi_sched_sync() execute all childs tasks of the current running task.
     If successful, the kaapi_sched_sync() function will return zero.
@@ -1178,13 +1187,22 @@ extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 */
 extern int kaapi_sched_sync( void );
 
-/** Change rerepresentation of the task inside a frame in order
+/** Change rerepresentation of the tasks inside the current frame in order
     to build a tasklist that contains ready tasks and tasks that will
     be activated by ready tasks.
     The execution of the frame should then be only be considered using
     kaapi_thread_execframe_tasklist
+    \retval EINVAL invalid current thread
+    \retval 0 in case of success
 */
 extern int kaapi_sched_computereadylist( void );
+
+/** Clear the tasklist of the current frame that has been previously 
+    computed by 'kaapi_sched_computereadylist'
+    \retval EINVAL invalid current thread
+    \retval 0 in case of success
+*/
+extern int kaapi_sched_clearreadylist( void );
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */

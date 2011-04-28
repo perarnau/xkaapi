@@ -46,7 +46,7 @@
 
 /**
 */
-int kaapi_sched_computereadylist(  )
+int kaapi_sched_computereadylist( void )
 {
   kaapi_tasklist_t* tasklist;
   int err;
@@ -57,6 +57,21 @@ int kaapi_sched_computereadylist(  )
   err= kaapi_thread_computereadylist( thread, tasklist  );
   thread->sfp->tasklist = tasklist;
   return err;
+}
+
+
+/**
+*/
+int kaapi_sched_clearreadylist( void )
+{
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  if (thread ==0) return EINVAL;
+  kaapi_tasklist_t* tasklist = thread->sfp->tasklist;
+  kaapi_sched_lock(&thread->proc->lock);
+  thread->sfp->tasklist = 0;
+  kaapi_sched_unlock(&thread->proc->lock);
+  free( tasklist );
+  return 0;
 }
 
 
