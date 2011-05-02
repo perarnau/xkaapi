@@ -113,6 +113,5 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   kaapi_sched_unlock( &thread->proc->lock );
   
   kaapi_tasklist_destroy( tasklist );
-//  free(tasklist);
   --thread->sfp;
 }
