@@ -219,8 +219,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   free(tasklist);
 //HERE: hack to do loop over SetStaticSched because memory state
 // is leaved in inconsistant state.
-//  kaapi_memory_destroy();
-//  kaapi_memory_init();
+  kaapi_memory_destroy();
+  kaapi_memory_init();
 #endif /* TODO */
 }
 

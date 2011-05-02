@@ -1193,6 +1193,7 @@ extern int kaapi_sched_sync( void );
     The execution of the frame should then be only be considered using
     kaapi_thread_execframe_tasklist
     \retval EINVAL invalid current thread
+    \retval ENOENT if current thread does not has any tasks
     \retval 0 in case of success
 */
 extern int kaapi_sched_computereadylist( void );
