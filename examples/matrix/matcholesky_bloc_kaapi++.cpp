@@ -233,7 +233,7 @@ static void generate_matrix(double* A, size_t m)
 
 /*
 */
-#define DIM 128
+#define DIM 256
 static void convert_to_blocks(long NB, long N, double *Alin, double* A[DIM][DIM] )
 {
   for (long i = 0; i < N; i++)
