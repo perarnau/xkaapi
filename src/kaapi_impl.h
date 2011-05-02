@@ -1526,7 +1526,7 @@ static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
 {
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(lock) == (unsigned)(1) );
-  /* mplicit barrier in KAAPI_ATOMIC_WRITE_BARRIER */
+  /* implicit barrier in KAAPI_ATOMIC_WRITE_BARRIER */
   KAAPI_ATOMIC_WRITE_BARRIER(lock, 0);
 #else
   KAAPI_ATOMIC_WRITE_BARRIER(lock, 1);
