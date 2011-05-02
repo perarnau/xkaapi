@@ -230,7 +230,7 @@ static void kaapi_sched_steal_tasklist(
   tasklist= frame->tasklist;  
   kaapi_workqueue_index_t count_req 
       = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-#if 0
+#if 1
   kaapi_workqueue_index_t size_ws;
   size_ws = kaapi_workqueue_size( &tasklist->wq_ready );
   if (size_ws ==0) return;

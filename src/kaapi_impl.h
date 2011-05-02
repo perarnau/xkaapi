@@ -1315,7 +1315,7 @@ extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashent
 /* Big hashmap_big
    Used for bulding readylist
 */
-#define KAAPI_HASHMAP_BIG_SIZE 4096
+#define KAAPI_HASHMAP_BIG_SIZE 32768
 
 /*
 */
