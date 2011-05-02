@@ -161,7 +161,7 @@ void kaapi_print_state_tasklist( kaapi_tasklist_t* tl )
     else 
       str = "";
     printf("td: %p task: %p, counter:%li wc:%li, date:%llu  %s\n", 
-        (void*)curr_activated->td, (void*)curr_activated->td->task, 
+        (void*)curr_activated->td, (void*)&curr_activated->td->task, 
         (long)KAAPI_ATOMIC_READ(&curr_activated->td->counter),
         (long)curr_activated->td->wc,
         date, 

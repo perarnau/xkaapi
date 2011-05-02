@@ -262,7 +262,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
           kaapi_assert( onebcast != 0)
           while (onebcast != 0)
           {
-            argbcast = (kaapi_bcast_arg_t*)onebcast->td->task->sp;
+            argbcast = (kaapi_bcast_arg_t*)onebcast->td->task.sp;
             if (argbcast->src == version_writer->handle) break;
             onebcast = onebcast->next;
           }

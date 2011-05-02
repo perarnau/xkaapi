@@ -115,13 +115,13 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
     {
 execute_first:
       td = kaapi_thread_tasklist_getpoped( tasklist );
-      pc = td->task;
+      pc = &td->task;
       if (pc !=0)
       {
         /* get the correct body for the proc type */
         if (td->fmt ==0)
         { /* currently some internal tasks do not have format */
-          body = kaapi_task_getuserbody( td->task );
+          body = kaapi_task_getuserbody( pc );
         }
         else 
         {

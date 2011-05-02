@@ -141,7 +141,7 @@ typedef struct kaapi_taskdescr_t {
   uint64_t                      exec_date;      /* execution date, debug only */
 #endif
   kaapi_format_t*               fmt;       /* format of the task */
-  kaapi_task_t*                 task;      /* the task to executed */
+  kaapi_task_t                  task;      /* the task to executed */
   kaapi_activationlist_t*       bcast;     /* list of bcast tasks activated to send data produced by this task */
   kaapi_activationlist_t        list;      /* list of tasks descr. activated after bcast list */     
 } kaapi_taskdescr_t;
@@ -301,7 +301,7 @@ static inline void kaapi_taskdescr_init( kaapi_taskdescr_t* td, kaapi_task_t* ta
   td->wc         = 0;
   td->date       = 0;
   KAAPI_DEBUG_INST(td->exec_date = 0);
-  td->task       = task;
+  td->task       = *task;
   td->bcast      = 0;
   td->list.front = 0; 
   td->list.back  = 0;
