@@ -165,8 +165,6 @@ typedef struct kaapi_tasklist_t {
   kaapi_atomic_t          lock;        /* protect recvlist */
   kaapi_atomic_t          count_thief; /* count the number of thiefs == */
 
-  int                     marker;
-
   /* execution state for ready task using tasklist */
   kaapi_workqueue_index_t next_exec;  /* next task to execute, set after poping fron the work queue */
   int                     task_pushed; /* == 1 if at least one task has been pushed after calling kaapi_thread_tasklist_pushready */
@@ -326,7 +324,6 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
   tl->td_ready      = 0;
   tl->td_top        = 0;
   kaapi_workqueue_init(&tl->wq_ready, 0, 0);
-  tl->marker        = 123456789;
   tl->master        = 0;
   tl->recv          = 0;
   tl->context.chkpt = 0;
