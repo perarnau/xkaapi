@@ -70,6 +70,7 @@ int kaapi_sched_clearreadylist( void )
   kaapi_sched_lock(&thread->proc->lock);
   thread->sfp->tasklist = 0;
   kaapi_sched_unlock(&thread->proc->lock);
+  kaapi_tasklist_destroy(tasklist);
   free( tasklist );
   return 0;
 }

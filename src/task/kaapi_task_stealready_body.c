@@ -72,7 +72,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 
   /* create a new tasklist on the stack of the running thread
   */
-  tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist );
   kaapi_thread_tasklist_init( tasklist, thread );
   tasklist->master    = arg->origin_tasklist;
@@ -111,5 +111,6 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   kaapi_sched_unlock( &thread->proc->lock );
   
   kaapi_tasklist_destroy( tasklist );
+  free(tasklist);
   --thread->sfp;
 }
