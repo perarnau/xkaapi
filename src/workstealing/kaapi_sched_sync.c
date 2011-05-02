@@ -155,3 +155,4 @@ int kaapi_sched_sync()
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   return kaapi_sched_sync_(thread);
 }
+
