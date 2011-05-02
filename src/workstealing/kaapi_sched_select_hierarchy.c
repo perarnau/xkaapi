@@ -44,6 +44,7 @@
 #include "kaapi_impl.h"
 
 typedef struct kaapi_hier_arg {
+  short         nfailed;
   short         depth;
   short         depth_min;
   unsigned int  index;
@@ -75,7 +76,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   {
     /* success: try next to time on lower depth */
     level = &kproc->hlevel.levels[arg->depth];
-//    if (++arg->index >= level->nkids)
+    if (++arg->index >= level->nkids)
     {
       ++arg->depth;
       arg->index = 0;
