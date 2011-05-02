@@ -68,14 +68,14 @@ static inline void _kaapi_print_activation_link(
 )
 {
   fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
-    (uintptr_t)td_src->task, (uintptr_t)td_dest->task );
+    (uintptr_t)&td_src->task, (uintptr_t)&td_dest->task );
 }
 
 
 /**/
 static inline void _kaapi_print_write_edge( 
     FILE* file, 
-    kaapi_task_t* task, 
+    const kaapi_task_t* task, 
     const void* ptr, 
     unsigned long version, 
     kaapi_access_mode_t m
@@ -106,7 +106,7 @@ static inline void _kaapi_print_write_edge(
 /**/
 static inline void _kaapi_print_read_edge( 
     FILE* file, 
-    kaapi_task_t* task, 
+    const kaapi_task_t* task, 
     const void* ptr, 
     unsigned long version, 
     kaapi_access_mode_t m
@@ -195,7 +195,7 @@ static inline void _kaapi_print_task(
       }
       if (body != kaapi_taskfinalizer_body)
       {
-        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
       }
       else {
         _kaapi_print_data( file, entry->key, (int)entry->u.data.tag+1 );
@@ -208,9 +208,9 @@ static inline void _kaapi_print_task(
                 (unsigned long)entry->u.data.tag+1, 
                 (uintptr_t)entry->key );
         }
-        _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag+1, KAAPI_ACCESS_MODE_R );
+        _kaapi_print_read_edge( file, &td->task, entry->key, entry->u.data.tag+1, KAAPI_ACCESS_MODE_R );
         entry->u.data.tag += 2;
-        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
         _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
       }
     }
@@ -229,7 +229,7 @@ static inline void _kaapi_print_task(
       entry->u.data.tag = 1;
       _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
     }
-    _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_R );
+    _kaapi_print_read_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_R );
 //    fprintf(file,"%lu -> tag_%lu  [style=bold, color=blue, label=\"tag:%lu\"];\n", 
 //      (uintptr_t)task, (uintptr_t)argtask->tag, (unsigned long)argtask->tag );
    if (sec_name !=0)
@@ -253,7 +253,7 @@ static inline void _kaapi_print_task(
       entry->u.data.tag = 1;
       _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
     }
-    _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+    _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
 //    fprintf(file,"tag_%lu -> %lu [style=bold, color=blue, label=\"tag:%lu\"];\n", 
 //      (uintptr_t)argtask->tag, (uintptr_t)task, (unsigned long)argtask->tag );
    if (sec_name !=0)
@@ -335,18 +335,18 @@ static inline void _kaapi_print_task(
       /* display arrow */
       if (KAAPI_ACCESS_IS_READ(m))
       {
-        _kaapi_print_read_edge( file, td->task, entry->key, entry->u.data.tag, m  );
+        _kaapi_print_read_edge( file, &td->task, entry->key, entry->u.data.tag, m  );
       }
       if (KAAPI_ACCESS_IS_WRITE(m))
       {
         entry->u.data.tag++;
         /* display new version */
         _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
+        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, m );
       }
       if (KAAPI_ACCESS_IS_CUMULWRITE(m))
       {
-        _kaapi_print_write_edge( file, td->task, entry->key, entry->u.data.tag, m );
+        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, m );
       }
     }
   }
@@ -367,7 +367,7 @@ typedef struct {
 static void _kaapi_print_task_executor( kaapi_taskdescr_t* td, void* arg )
 {
   _kaapi_print_context* ctxt = (_kaapi_print_context*)arg;
-  _kaapi_print_task( ctxt->file, &ctxt->data_khm, td->task, td, ctxt->sec_name );
+  _kaapi_print_task( ctxt->file, &ctxt->data_khm, &td->task, td, ctxt->sec_name );
 }
 
 

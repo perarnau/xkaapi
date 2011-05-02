@@ -79,8 +79,6 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   /* get the processor type to select correct entry point */
   proc_type = thread->proc->proc_type;
     
-
-  //tasklist->marker = 0xbeef;
   /*
   */
   if (tasklist->td_ready == 0)
@@ -117,13 +115,13 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
     {
 execute_first:
       td = kaapi_thread_tasklist_getpoped( tasklist );
-      pc = td->task;
+      pc = &td->task;
       if (pc !=0)
       {
         /* get the correct body for the proc type */
         if (td->fmt ==0)
         { /* currently some internal tasks do not have format */
-          body = kaapi_task_getuserbody( td->task );
+          body = kaapi_task_getuserbody( pc );
         }
         else 
         {
@@ -170,9 +168,7 @@ redo_frameexecution:
 
       /* push in the front the activated tasks */
       if (!kaapi_activationlist_isempty(&td->list))
-      {
         kaapi_thread_tasklist_pushready( tasklist, td->list.front );
-      }
 
       /* do bcast after child execution (they can produce output data) */
       if (td->bcast !=0) 
@@ -188,13 +184,8 @@ redo_frameexecution:
     }
 
     /* ok, now push pushed task into the wq */
-    kaapi_assert_debug(tasklist->marker == 123456789);
     if (kaapi_thread_tasklist_commit_ready( tasklist ))
-    {
-      kaapi_assert_debug(tasklist->marker == 123456789);
       goto execute_first;
-    }
-    kaapi_assert_debug(tasklist->marker == 123456789);
             
   } /* while */
 

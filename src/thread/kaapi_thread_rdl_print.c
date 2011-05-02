@@ -61,7 +61,7 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
   const kaapi_format_t* fmt;
   kaapi_task_body_t body;
 
-  body = kaapi_task_getbody(td->task);
+  body = kaapi_task_getbody(&td->task);
   fmt = kaapi_format_resolvebybody( body );
   if (fmt !=0) 
     name = fmt->name;
@@ -77,7 +77,7 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
 
   kaapi_print_pad(file, pad);
   fprintf(file, "td:%p  date:%" PRIu64 "  task->%p  name:%s", 
-    (void*)td, td->date, (void*)td->task,
+    (void*)td, td->date, (void*)&td->task,
     name
   );
 
@@ -92,7 +92,7 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
       tda = lk->td;
       fprintf(file, "(td: %p, wc: %i, task: %p) ", 
             (void*)tda, KAAPI_ATOMIC_READ(&tda->counter), 
-            (void*)tda->task);
+            (void*)&tda->task);
       lk = lk->next;
     }
   }

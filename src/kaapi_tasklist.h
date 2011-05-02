@@ -141,7 +141,7 @@ typedef struct kaapi_taskdescr_t {
   uint64_t                      exec_date;      /* execution date, debug only */
 #endif
   kaapi_format_t*               fmt;       /* format of the task */
-  kaapi_task_t*                 task;      /* the task to executed */
+  kaapi_task_t                  task;      /* the task to executed */
   kaapi_activationlist_t*       bcast;     /* list of bcast tasks activated to send data produced by this task */
   kaapi_activationlist_t        list;      /* list of tasks descr. activated after bcast list */     
 } kaapi_taskdescr_t;
@@ -164,8 +164,6 @@ typedef struct kaapi_taskdescr_t {
 typedef struct kaapi_tasklist_t {
   kaapi_atomic_t          lock;        /* protect recvlist */
   kaapi_atomic_t          count_thief; /* count the number of thiefs == */
-
-  int                     marker;
 
   /* execution state for ready task using tasklist */
   kaapi_workqueue_index_t next_exec;  /* next task to execute, set after poping fron the work queue */
@@ -303,7 +301,7 @@ static inline void kaapi_taskdescr_init( kaapi_taskdescr_t* td, kaapi_task_t* ta
   td->wc         = 0;
   td->date       = 0;
   KAAPI_DEBUG_INST(td->exec_date = 0);
-  td->task       = task;
+  td->task       = *task;
   td->bcast      = 0;
   td->list.front = 0; 
   td->list.back  = 0;
@@ -326,7 +324,6 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl )
   tl->td_ready      = 0;
   tl->td_top        = 0;
   kaapi_workqueue_init(&tl->wq_ready, 0, 0);
-  tl->marker        = 123456789;
   tl->master        = 0;
   tl->recv          = 0;
   tl->context.chkpt = 0;
