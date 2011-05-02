@@ -134,7 +134,7 @@ execute_first:
         thread->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist); 
         thread->sfp[1].pc = thread->sfp[1].sp;
         thread->sfp[1].sp_data = fp->sp_data;
-        kaapi_writemem_barrier();
+        //kaapi_writemem_barrier();
         fp = ++thread->sfp;
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
         kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);

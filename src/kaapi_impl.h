@@ -1141,7 +1141,7 @@ extern uint32_t kaapi_hash_value(const char * data);
 static inline uint32_t kaapi_hash_ulong(uint64_t ptr)
 {
 #if 1
-  return kaapi_hash_value_len(&ptr, sizeof(ptr));
+  return kaapi_hash_value_len((const char*)&ptr, sizeof(ptr));
 #else  /* */
   uint64_t val = ptr >> 3;
   val = (val & 0xFFFF) ^ (val>>32);
