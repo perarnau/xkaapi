@@ -90,10 +90,10 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   /* unset steal capability and wait no more thief 
      lock the kproc: it ensure that no more thief has reference on it 
   */
-  kaapi_sched_lock(&thread->proc->lock);
   save_state = thread->unstealable;
-  thread->unstealable = 1;
-  kaapi_sched_unlock(&thread->proc->lock);
+  kaapi_thread_set_unstealable(1);
+//  kaapi_sched_lock(&thread->proc->lock);
+//  kaapi_sched_unlock(&thread->proc->lock);
 
   /* allocate the tasklist for this task
   */
@@ -177,7 +177,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 #endif
   
   /* restore state */
-  thread->unstealable = save_state;
+  kaapi_thread_set_unstealable(save_state);
   thread->sfp->tasklist = tasklist;
   
 //  kaapi_print_state_tasklist( tasklist );
@@ -214,16 +214,14 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   *thread->sfp = save_fp;
   kaapi_sched_unlock(&thread->proc->lock);
 
-#if 0 /* TOREMOVE (confirm with thierry) */
-  /* no cached : destroy */
-  if (arg->key ==0)
-  {
-    kaapi_tasklist_destroy( tasklist );
-    free(tasklist);
-    kaapi_memory_destroy();
-    kaapi_memory_init();
-  }
-#endif /* TOREMOVE */
+#if 1 /* TODO: do not allocate if multiple uses of tasklist */
+  kaapi_tasklist_destroy( tasklist );
+  free(tasklist);
+//HERE: hack to do loop over SetStaticSched because memory state
+// is leaved in inconsistant state.
+//  kaapi_memory_destroy();
+//  kaapi_memory_init();
+#endif /* TODO */
 }
 
 
