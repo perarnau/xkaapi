@@ -76,7 +76,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   {
     /* success: try next to time on lower depth */
     level = &kproc->hlevel.levels[arg->depth];
-    if (++arg->index >= 4) //level->nkids)
+    if (++arg->index >= 2)//level->nkids/4)
     {
       ++arg->depth;
       arg->index = 0;
@@ -95,6 +95,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   }
 
 
+do_select:
   if (arg->depth_min ==-1) 
   { /* no hierarchy */
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
@@ -114,7 +115,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
       if (arg->depth_min > kproc->hlevel.depth)
       {
         arg->depth_min = -1;
-        break;
+        goto do_select;
       }
       level = &kproc->hlevel.levels[arg->depth_min];
     }
