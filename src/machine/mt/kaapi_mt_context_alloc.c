@@ -78,7 +78,6 @@
   The stack is full when sfp->sp_data == sfp->sp.
 */
 
-static kaapi_atomic_t lock_mbind __attribute__((aligned(8))) = {1};
 
 /** 
 */
@@ -115,7 +114,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #  if defined (_WIN32)
   ctxt = (kaapi_thread_context_t*) VirtualAlloc(0, k_stacksize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 #  else
-  ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, (off_t)0 );
+  ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
 #  endif
   if (ctxt == (kaapi_thread_context_t*)-1) 
   {
@@ -127,9 +126,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 
 #if defined(KAAPI_USE_NUMA)
   /* do local mapping of all pages */
-  //kaapi_sched_lock( &lock_mbind );
   err = mbind( ctxt, k_stacksize, MPOL_PREFERRED, 0, 0, MPOL_MF_STRICT );
-  //kaapi_sched_unlock( &lock_mbind );
   if (err !=0)
   {
     int err __attribute__((unused)) = errno;

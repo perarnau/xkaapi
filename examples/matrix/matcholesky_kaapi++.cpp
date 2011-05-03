@@ -303,19 +303,25 @@ struct doit {
     //n = block_count * global_blocsize;
 
     double t0, t1;
-    double* dA = (double*) calloc(n* n, sizeof(double));
-    if (0 == dA)
+    double* dA = 0;
+    if (0 != posix_memalign((void**)&dA, 4096, n*n*sizeof(double)))
     {
-      std::cout << "Fatal Error. Cannot allocate matrice A "
+      std::cout << "Fatal Error. Cannot allocate matrice A, errno: " << errno
                 << std::endl;
       return;
     }
+#if 1
+    if (0 != kaapi_numa_bind_bloc1dcyclic( dA, n*n*sizeof(double), global_blocsize*sizeof(double) ))
+    {
+      std::cout << "Cannot bind memory of matrix A, errno: " << errno << std::endl;  
+      return;
+    }
+#endif
 
     double* dAcopy = 0;
     if (verif)
     {
-      dAcopy = (double*) calloc(n* n, sizeof(double));
-      if (dAcopy ==0)
+      if (0 != posix_memalign((void**)&dAcopy, 4096, n*n*sizeof(double)))
       {
         std::cout << "Fatal Error. Cannot allocate matrice Acopy "
                   << std::endl;
@@ -356,6 +362,21 @@ struct doit {
     for (int i=0; i<niter; ++i)
     {
       generate_matrix(dA, n);
+#if 1
+{ // display the memory mapping
+      std::cout << "Memory mapping for A:" << std::endl;
+      for (int i=0; i<n; i+= global_blocsize)
+      {
+        for (int j=0; j<n; j+= global_blocsize)
+        {
+           double* addr = &dA[i*n+j];
+           int node = kaapi_numa_get_page_node( addr );
+           std::cout << " @:" << addr  << " " << node << ",  ";
+        }
+        std::cout << std::endl;
+      }
+}
+#endif
       if (verif)
         memcpy(dAcopy, dA, n*n*sizeof(double) );
 
