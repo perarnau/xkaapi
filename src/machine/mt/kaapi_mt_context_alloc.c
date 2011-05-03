@@ -78,6 +78,8 @@
   The stack is full when sfp->sp_data == sfp->sp.
 */
 
+static kaapi_atomic_t lock_mbind __attribute__((aligned(8))) = {1};
+
 /** 
 */
 kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
@@ -115,17 +117,24 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #  else
   ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, (off_t)0 );
 #  endif
-  if (ctxt == (kaapi_thread_context_t*)-1) {
-    err __attribute__((unused)) = errno;
+  if (ctxt == (kaapi_thread_context_t*)-1) 
+  {
+    int err __attribute__((unused)) = errno;
     return 0;
   }
+  /* test page size alignment (4KBytes page) */
   kaapi_assert_debug( __kaapi_isaligned(ctxt, 0x1000) ==1 );
+
 #if defined(KAAPI_USE_NUMA)
   /* do local mapping of all pages */
-  err = mbind( ctxt, k_stacksize, MPOL_PREFERRED, 0, 0, 0 );
+  //kaapi_sched_lock( &lock_mbind );
+  err = mbind( ctxt, k_stacksize, MPOL_PREFERRED, 0, 0, MPOL_MF_STRICT );
+  //kaapi_sched_unlock( &lock_mbind );
   if (err !=0)
   {
-    err __attribute__((unused)) = errno;
+    int err __attribute__((unused)) = errno;
+    printf("Kproc id: %i on cpuid: %i failed to call mbind, numanode:%i, error:%i,  @:%p, size:%lu\n", kproc->kid, kproc->cpuid, numa_node_of_cpu(kproc->cpuid), err, (void*)ctxt, (unsigned long)k_stacksize);
+    fflush(stdout);
     munmap( ctxt, ctxt->size );
     return 0;
   }
