@@ -1636,6 +1636,15 @@ extern int kaapi_numa_bind_bloc1dcyclic
  (const void* addr, size_t size, size_t blocsize);
 
 
+/** Bind pages from address between addr and addr+size on the numa node node
+    In case of success, the function returns 0.
+    Else it returns -1 and set errno to the error code.
+    See mbind to interpret error code on linux system other than:
+    * ENOENT: function not available on this configuration
+*/
+extern int kaapi_numa_bind(const void* addr, size_t size, int node);
+
+
 /** Type of pointer for all address spaces.
     The pointer encode both the pointer (field ptr) and the location of the address space
     in asid.

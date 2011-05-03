@@ -120,22 +120,24 @@ int kaapi_numa_bind_bloc1dcyclic
 }
 
 
-
-#if 0
-int kaapi_numa_initialize(void)
-{
-  numa_set_bind_policy(1);
-  numa_set_strict(1);
-  return 0;
-}
-
-
-int kaapi_numa_bind
-(const void* addr, size_t size, kaapi_numaid_t id)
+/*
+*/
+int kaapi_numa_bind(const void* addr, size_t size, int node)
 {
   const int mode = MPOL_BIND;
   const unsigned int flags = MPOL_MF_STRICT | MPOL_MF_MOVE;
   const unsigned long maxnode = KAAPI_MAX_PROCESSOR;
+  
+  if ((size & 0xfff) !=0) /* should be divisible by 4096 */
+  {
+    errno = EINVAL;
+    return -1;
+  }
+  if (((uintptr_t)addr & 0xfff) !=0) /* should aligned on page boundary */
+  {
+    errno = EFAULT;
+    return -1;
+  }
   
   unsigned long nodemask
     [KAAPI_MAX_PROCESSOR / (8 * sizeof(unsigned long))];
@@ -150,6 +152,18 @@ int kaapi_numa_bind
 
   return 0;
 }
+
+
+
+#if 0
+int kaapi_numa_initialize(void)
+{
+  numa_set_bind_policy(1);
+  numa_set_strict(1);
+  return 0;
+}
+
+
 
 int kaapi_numa_alloc(void** addr, size_t size, kaapi_numaid_t id)
 {
@@ -207,4 +221,9 @@ int kaapi_numa_bind_bloc1dcyclic
   return -1; 
 }
 
+int kaapi_numa_bind(const void* addr, size_t size, int node)
+{
+  errno = ENOENT;
+  return -1; 
+}
 #endif // if defined(KAAPI_USE_NUMA)
