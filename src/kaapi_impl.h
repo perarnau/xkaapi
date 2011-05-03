@@ -645,7 +645,8 @@ typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
-  kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_thread_execframe */
+  void*                          pad;            /** a padding */
+  kaapi_frame_t                  stackframe[KAAPI_MAX_RECCALL];  /** for execution, see kaapi_thread_execframe */
 
   /* execution state for stack of task */
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
@@ -1141,7 +1142,7 @@ extern uint32_t kaapi_hash_value(const char * data);
 static inline uint32_t kaapi_hash_ulong(uint64_t ptr)
 {
 #if 1
-  return kaapi_hash_value_len(&ptr, sizeof(ptr));
+  return kaapi_hash_value_len((const char*)&ptr, sizeof(ptr));
 #else  /* */
   uint64_t val = ptr >> 3;
   val = (val & 0xFFFF) ^ (val>>32);
@@ -1319,7 +1320,7 @@ extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashent
 /* Big hashmap_big
    Used for bulding readylist
 */
-#define KAAPI_HASHMAP_BIG_SIZE 4096
+#define KAAPI_HASHMAP_BIG_SIZE 32768
 
 /*
 */

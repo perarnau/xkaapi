@@ -149,6 +149,11 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 #  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
       (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? (instruction) : 0)
 #else
+static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
+{
+  if ((((uintptr_t)a) & ((unsigned long)byte - 1)) == 0 ) return 1;
+  return 0;
+}
 #  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
       (instruction)
 #endif

@@ -87,6 +87,9 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   size_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
+#if defined(KAAPI_USE_NUMA)
+  int err;
+#endif
 
   /* already allocated ? */
   if (!kaapi_lfree_isempty(kproc)) 
@@ -109,15 +112,25 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #endif
   count_pages = (size_data + sizeof(kaapi_thread_context_t) + pagesize -1 ) / pagesize;
   k_stacksize = count_pages*pagesize;
-#if defined (_WIN32)
+
+#  if defined (_WIN32)
   ctxt = (kaapi_thread_context_t*) VirtualAlloc(0, k_stacksize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-#else
+#  else
   ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
-#endif
+#  endif
   if (ctxt == (kaapi_thread_context_t*)-1) {
     int err __attribute__((unused)) = errno;
     return 0;
   }
+#if 0//defined(KAAPI_USE_NUMA)
+  /* do local mapping ! */
+  err = mbind( ctxt, k_stacksize, MPOL_PREFERRED, 0, 0, 0 );
+  if (err !=0)
+  {
+    int err __attribute__((unused)) = errno;
+    return 0;
+  }
+#endif
 
 #if !defined (_WIN32) /*VirtualAlloc initializes memory to zero*/
   memset(ctxt, 0, sizeof(kaapi_thread_context_t) ); 
@@ -129,8 +142,8 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   ctxt->size = (uint32_t)k_stacksize;
 
   /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
-  ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
-  kaapi_assert_m( (((uintptr_t)ctxt->stackframe) & 0x3F)== 0, "StackFrame pointer not aligned to 64 bit boundary");
+  //ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
+  kaapi_assert_m( __kaapi_isaligned( &ctxt->stackframe, 8), "StackFrame pointer not aligned to 64 bit boundary");
   if (ctxt->stackframe ==0) {
 #if defined (_WIN32)
     VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
@@ -139,10 +152,13 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #endif
     return 0;
   }
+
+#if defined(KAAPI_DEBUG)
   for (int i=0; i<KAAPI_MAX_RECCALL; ++i)
   {
     kaapi_frame_clear( &ctxt->stackframe[i] );
   }
+#endif
 
   kaapi_thread_clear(ctxt);
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
