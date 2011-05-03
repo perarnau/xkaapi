@@ -113,10 +113,10 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #  if defined (_WIN32)
   ctxt = (kaapi_thread_context_t*) VirtualAlloc(0, k_stacksize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 #  else
-  ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, (off_t)0 );
+  ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
 #  endif
   if (ctxt == (kaapi_thread_context_t*)-1) {
-    err __attribute__((unused)) = errno;
+    int err __attribute__((unused)) = errno;
     return 0;
   }
   kaapi_assert_debug( __kaapi_isaligned(ctxt, 0x1000) ==1 );

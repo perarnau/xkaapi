@@ -1611,6 +1611,31 @@ typedef struct kaapi_memory_view_t {
 */
 typedef uint64_t  kaapi_address_space_id_t;
 
+
+
+/** Returns the numa node (>=0 value) that stores address addr
+    Return -1 in case of failure and set errno to the error code.
+    Possible error is:
+    * ENOENT: function not available on this configuration
+    * EINVAL: invalid argument
+*/
+extern int kaapi_numa_get_page_node(const void* addr);
+
+/** Bind pages of an array [addr, size) on all numa nodes using
+    a bloc cyclic strategy of bloc size equals to blocsize. 
+    addr should be aligned to page boundary. 
+    blocsize should be multiple of the page size.
+    Returns 0 in case of success
+    Returns -1 in case of failure and set errno to the error code.
+    Possible error is:
+    * ENOENT: function not available on this configuration
+    * EINVAL: invalid argument blocsize
+    * EFAULT: invalid address addr
+*/
+extern int kaapi_numa_bind_bloc1dcyclic
+ (const void* addr, size_t size, size_t blocsize);
+
+
 /** Type of pointer for all address spaces.
     The pointer encode both the pointer (field ptr) and the location of the address space
     in asid.
