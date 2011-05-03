@@ -305,7 +305,14 @@ struct doit {
     double* dAbloc[DIM][DIM];
     for (long i = 0; i < DIM; i++)
       for (long j = 0; j < DIM; j++)
+      {
        dAbloc[i][j] = (double *) malloc(NB*NB*sizeof(double));
+       if (kaapi_numa_bind( dAbloc[i][j], (i*DIM+j)%8 ) != 0)
+       {
+         std::cout << "Error cannot bind addr: " << dAbloc[i][j] << " on node " << (i*DIM+j)%8 << std::endl;
+         return -1;
+       }
+      }
 
 
               
