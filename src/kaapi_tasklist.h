@@ -271,11 +271,13 @@ static inline kaapi_activationlink_t* kaapi_activationlist_popfront( kaapi_activ
   return retval;
 }
 
+
 /**/
 static inline void kaapi_recvlist_clear( kaapi_recv_list_t* al )
 {
   al->front = al->back = 0;
 }
+
 
 /**/
 static inline int kaapi_recvlist_isempty( const kaapi_recv_list_t* al )
