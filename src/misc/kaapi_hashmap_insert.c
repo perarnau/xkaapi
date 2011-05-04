@@ -57,7 +57,11 @@ kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr )
   /* allocate new entry */
   if (khm->currentbloc == 0) 
   {
+#if defined(KAAPI_USE_NUMA)
+    khm->currentbloc = numa_alloc_local( sizeof(kaapi_hashentries_bloc_t) );
+#else
     khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
+#endif
     khm->currentbloc->next = khm->allallocatedbloc;
     khm->allallocatedbloc = khm->currentbloc;
     khm->currentbloc->pos = 0;
