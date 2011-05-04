@@ -53,9 +53,14 @@ kaapi_version_t* kaapi_thread_newversion(
     void* data, const kaapi_memory_view_t* view 
 )
 {
+#if defined(KAAPI_USE_NUMA)
+  kaapi_version_t* version = (kaapi_version_t*)numa_alloc_local( sizeof(kaapi_version_t) );
+  version->handle       = (kaapi_data_t*)numa_alloc_local(sizeof(kaapi_data_t));
+#else
   kaapi_version_t* version = (kaapi_version_t*)malloc( sizeof(kaapi_version_t) );
-  version->orig         = _kaapi_metadata_info_get_data( kmdi, kasid);
   version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
+#endif
+  version->orig         = _kaapi_metadata_info_get_data( kmdi, kasid);
   version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */
   version->handle->view = *view;
   version->tag          = 0;
