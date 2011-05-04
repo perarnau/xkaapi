@@ -1136,21 +1136,6 @@ extern uint32_t kaapi_hash_value_len(const char * data, size_t len);
 */
 extern uint32_t kaapi_hash_value(const char * data);
 
-/** Hash value for pointer.
-    Used for data flow dependencies
-*/
-static inline uint32_t kaapi_hash_ulong(uint64_t ptr)
-{
-#if 1
-  return kaapi_hash_value_len((const char*)&ptr, sizeof(ptr));
-#else  /* */
-  uint64_t val = ptr >> 3;
-  val = (val & 0xFFFF) ^ (val>>32);
-  return (uint32_t)val;
-#endif
-}
-
-
 
 /**
  * Compression 64 -> 7 bits
@@ -1159,11 +1144,11 @@ static inline uint32_t kaapi_hash_ulong(uint64_t ptr)
  */
 static inline uint32_t kaapi_hash_ulong7(uint64_t v)
 {
-    v ^= (v >> 32);
-    v ^= (v >> 16);
-    v ^= (v >> 8);
-    if (v & 0x00000080) v ^= 0x00000009;
-    return (uint32_t) (v&0x0000007F);
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  if (v & 0x00000080) v ^= 0x00000009;
+  return (uint32_t) (v&0x0000007F);
 }
 
 
@@ -1174,12 +1159,12 @@ static inline uint32_t kaapi_hash_ulong7(uint64_t v)
  */
 static inline uint32_t kaapi_hash_ulong6(uint64_t v)
 {
-    v ^= (v >> 32);
-    v ^= (v >> 16);
-    v ^= (v >> 8);
-    if (v & 0x00000040) v ^= 0x00000003;
-    if (v & 0x00000080) v ^= 0x00000006;
-    return (uint32_t) (v&0x0000003F);
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  if (v & 0x00000040) v ^= 0x00000003;
+  if (v & 0x00000080) v ^= 0x00000006;
+  return (uint32_t) (v&0x0000003F);
 }
 
 /**
@@ -1189,13 +1174,31 @@ static inline uint32_t kaapi_hash_ulong6(uint64_t v)
  */
 static inline uint32_t kaapi_hash_ulong5(uint64_t v)
 {
-    v ^= (v >> 32);
-    v ^= (v >> 16);
-    v ^= (v >> 8);
-    if (v & 0x00000020) v ^= 0x00000005;
-    if (v & 0x00000040) v ^= 0x0000000A;
-    if (v & 0x00000080) v ^= 0x00000014;
-    return (uint32_t) (v&0x0000001F);
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  if (v & 0x00000020) v ^= 0x00000005;
+  if (v & 0x00000040) v ^= 0x0000000A;
+  if (v & 0x00000080) v ^= 0x00000014;
+  return (uint32_t) (v&0x0000001F);
+}
+
+
+/** Hash value for pointer.
+    Used for data flow dependencies
+*/
+static inline uint32_t kaapi_hash_ulong(uint64_t v)
+{
+#if 1
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  return (uint32_t) ( v & 0x0000FFFF);
+#else  /* */
+  uint64_t val = v >> 3;
+  v = (v & 0xFFFF) ^ (v>>32);
+  return (uint32_t)v;
+#endif
 }
 
 

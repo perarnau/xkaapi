@@ -310,7 +310,7 @@ struct doit {
                 << std::endl;
       return;
     }
-#if 1
+#if 0
     if (0 != kaapi_numa_bind_bloc1dcyclic( dA, n*n*sizeof(double), global_blocsize*sizeof(double) ))
     {
       std::cout << "Cannot bind memory of matrix A, errno: " << errno << std::endl;  
@@ -362,7 +362,7 @@ struct doit {
     for (int i=0; i<niter; ++i)
     {
       generate_matrix(dA, n);
-#if 1
+#if 0
 { // display the memory mapping
       std::cout << "Memory mapping for A:" << std::endl;
       for (int i=0; i<n; i+= global_blocsize)

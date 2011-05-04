@@ -56,7 +56,7 @@ int kaapi_numa_get_page_node(const void* addr)
   kaapi_bitmap_value_t nodemask;
   kaapi_bitmap_value_clear( &nodemask );
   const int err = get_mempolicy
-    (NULL, (unsigned long*)&nodemask, KAAPI_MAX_PROCESSOR, (void*)addr, flags);
+    (NULL, (unsigned long*)&nodemask, 64, (void*)addr, flags);
 
   if (err || kaapi_bitmap_value_empty(&nodemask))
   {
@@ -140,15 +140,20 @@ int kaapi_numa_bind(const void* addr, size_t size, int node)
   }
   
   unsigned long nodemask
-    [KAAPI_MAX_PROCESSOR / (8 * sizeof(unsigned long))];
+    [(KAAPI_MAX_PROCESSOR + (8 * sizeof(unsigned long) -1))/ (8 * sizeof(unsigned long))];
 
   memset(nodemask, 0, sizeof(nodemask));
 
-  nodemask[id / (8 * sizeof(unsigned long))] |=
-    1UL << (id % (8 * sizeof(unsigned long)));
+  nodemask[node / (8 * sizeof(unsigned long))] |=
+    1UL << (node % (8 * sizeof(unsigned long)));
 
   if (mbind((void*)addr, size, mode, nodemask, maxnode, flags))
     return -1;
+
+#if 0
+  printf("***mbind address: %p, size:%i on node:%i\n", (void*)addr, (int)size, node );
+  fflush(stdout);
+#endif
 
   return 0;
 }
