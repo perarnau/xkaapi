@@ -53,7 +53,7 @@ kaapi_version_t* kaapi_thread_newversion(
     void* data, const kaapi_memory_view_t* view 
 )
 {
-#if defined(KAAPI_USE_NUMA)
+#if 0//defined(KAAPI_USE_NUMA)
   kaapi_version_t* version = (kaapi_version_t*)numa_alloc_local( sizeof(kaapi_version_t) );
   version->handle       = (kaapi_data_t*)numa_alloc_local(sizeof(kaapi_data_t));
 #else

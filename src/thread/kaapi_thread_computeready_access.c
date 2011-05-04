@@ -151,7 +151,7 @@ int kaapi_thread_computeready_access(
       );
 #endif
       kaapi_memory_view_t* view = &version->handle->view;
-#if defined(KAAPI_USE_NUMA)
+#if 0//defined(KAAPI_USE_NUMA)
       version->handle       = (kaapi_data_t*)numa_alloc_local(sizeof(kaapi_data_t));
 #else
       version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
