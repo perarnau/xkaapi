@@ -223,8 +223,8 @@ static void kaapi_sched_steal_tasklist(
 {
   int                     err;
   kaapi_tasklist_t*       tasklist;
-  kaapi_workqueue_index_t steal_beg;
-  kaapi_workqueue_index_t steal_end;
+  kaapi_taskdescr_t**     steal_td_beg;
+  kaapi_taskdescr_t**     steal_td_end;
   size_t size_steal;
   
   tasklist= frame->tasklist;  
@@ -251,7 +251,7 @@ static void kaapi_sched_steal_tasklist(
   while (size_steal >0)
   {
     kaapi_assert_debug( kaapi_sched_islocked( &thread->proc->lock ) );
-    err = kaapi_workqueue_steal( &tasklist->wq_ready, &steal_beg, &steal_end, size_steal);
+    err = kaapi_thread_tasklistready_steal( &tasklist->rtl, &steal_td_beg, &steal_td_end, size_steal);
     if (err ==0)
     {
 //printf("%i::[steal] steal size:%i\n", kaapi_get_self_kid(), (int)(steal_end - steal_beg) );
@@ -259,8 +259,8 @@ static void kaapi_sched_steal_tasklist(
       kaapi_task_splitter_readylist( 
           thread,
           tasklist,
-          tasklist->td_top + steal_beg,
-          tasklist->td_top + steal_end,
+          steal_td_beg,
+          steal_td_end,
           lrequests, 
           lrrange,
           count_req

@@ -52,8 +52,6 @@ typedef struct kaapi_hier_arg {
 } kaapi_hier_arg;
 
 
-static kaapi_atomic_t thelock = { 1 };
- 
 /** Do rand selection 
 */
 int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag )

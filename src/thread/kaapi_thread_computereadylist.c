@@ -54,7 +54,7 @@ int kaapi_sched_computereadylist( void )
   if (thread ==0) return EINVAL;
   if (kaapi_frame_isempty(thread->sfp)) return ENOENT;
   tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist );
+  kaapi_tasklist_init( tasklist, thread );
   err= kaapi_thread_computereadylist( thread, tasklist  );
   thread->sfp->tasklist = tasklist;
   return err;

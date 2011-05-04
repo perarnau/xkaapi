@@ -66,8 +66,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   /* create a new tasklist on the stack of the running thread
   */
   tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist );
-  kaapi_thread_tasklist_init( tasklist, thread );
+  kaapi_tasklist_init( tasklist, thread );
 
   /* Execute the orinal body function with the original args */
   frame = (kaapi_frame_t*)uthread;
@@ -87,7 +86,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
      we do not store ready tasks into linked list:
      - they are directly pushed into the workqueue.
   */
-  kaapi_thread_tasklist_push_stealready_init( tasklist, thread, arg->origin_td_beg, arg->origin_td_end);
+  kaapi_thread_tasklistready_push_init_fromsteal( &tasklist->rtl, arg->origin_td_beg, arg->origin_td_end);
   kaapi_thread_tasklist_commit_ready( tasklist );
   
   /* keep the first task to execute outside the workqueue */

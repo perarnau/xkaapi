@@ -49,14 +49,6 @@
 # include "../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
 #endif
 
-
-static kaapi_tasklist_t* cached_tasklist[32] = {
- 0, 0, 0, 0, 0, 0, 0, 0,
- 0, 0, 0, 0, 0, 0, 0, 0,
- 0, 0, 0, 0, 0, 0, 0, 0,
- 0, 0, 0, 0, 0, 0, 0, 0
-};
-
 /* 
 */
 void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
@@ -92,73 +84,52 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   */
   save_state = thread->unstealable;
   kaapi_thread_set_unstealable(1);
-//  kaapi_sched_lock(&thread->proc->lock);
-//  kaapi_sched_unlock(&thread->proc->lock);
+
+  /* some information to pass to the task : TODO */
+  arg->schedinfo.nkproc[KAAPI_PROC_TYPE_MPSOC-1] = 0;
+
+  /* */
+  if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == (uint32_t)-1)
+    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
+
+  /* */
+  if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == (uint32_t)-1)
+    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] = 0;
+
+  /* test if at least one ressource */
+  if ( (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == 0) &&
+       (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == 0) )
+    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
+
+  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+
+  /* the embedded task cannot be steal because it was not visible to thieves */
+  arg->sub_body( arg->sub_sp, uthread, &arg->schedinfo );
+
+  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_END );
 
   /* allocate the tasklist for this task
   */
-  if ((arg->key ==0) || (cached_tasklist[arg->key] ==0))
-  {
-    tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-    kaapi_tasklist_init( tasklist );
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist, thread );
 
-    /* some information to pass to the task : TODO */
-    arg->schedinfo.nkproc[KAAPI_PROC_TYPE_MPSOC-1] = 0;
-
-    /* */
-    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == (uint32_t)-1)
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
-
-    /* */
-    if (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == (uint32_t)-1)
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] = 0;
-
-    /* test if at least one ressource */
-    if ( (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] == 0) &&
-         (arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU-1] == 0) )
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU-1] = kaapi_count_kprocessors;
-
-    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
-
-    /* the embedded task cannot be steal because it was not visible to thieves */
-    arg->sub_body( arg->sub_sp, uthread, &arg->schedinfo );
-
-    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_END );
-
-    /* currently: that all, do not compute other things */
+  /* currently: that all, do not compute other things */
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t0 = kaapi_get_elapsedtime();
+  t0 = kaapi_get_elapsedtime();
 #endif
-    kaapi_thread_computereadylist(thread, tasklist);
+  kaapi_thread_computereadylist(thread, tasklist);
 #if defined(KAAPI_USE_PERFCOUNTER)
-    t1 = kaapi_get_elapsedtime();
+  t1 = kaapi_get_elapsedtime();
 #endif
-    KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
-    kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_END );
-    cached_tasklist[arg->key] = tasklist;
-  } // non cached value
-  else 
-  { 
-    kaapi_assert( (arg->key >0) && (arg->key <32) );
-    tasklist = cached_tasklist[arg->key];
-#if defined(KAAPI_DEBUG)
-    /* ok this not the first time we schedule this computation: reset exec_date */
-    kaapi_activationlink_t* curr_activated = tasklist->allocated_td.front;
-    while (curr_activated !=0)
-    {
-      curr_activated->td->exec_date =0;
-      KAAPI_ATOMIC_WRITE(&curr_activated->td->counter,0);
-      curr_activated = curr_activated->next;
-    }
-#endif
-    /* reset executed tasks */
-    KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
-    /* force re-push of ready task */
-    tasklist->td_ready = 0;
-  }
+  KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
+  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_END );
 
-  /* allows other thread to steal the tasklist */
-  kaapi_mem_barrier();
+  /* populate tasklist with initial ready tasks */
+  kaapi_thread_tasklistready_push_init( &tasklist->rtl, &tasklist->readylist );
+  kaapi_thread_tasklist_commit_ready( tasklist );
+
+  /* keep the first task to execute outside the workqueue */
+  tasklist->context.chkpt = 2;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* here sfp is initialized, dump graph if required */

@@ -78,15 +78,6 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   /* get the processor type to select correct entry point */
   proc_type = thread->proc->proc_type;
-
-  /*
-  */
-  if (tasklist->td_ready == 0)
-  {
-    kaapi_thread_tasklist_pushready_init( tasklist, thread );
-    kaapi_thread_tasklist_commit_ready( tasklist );
-    goto execute_first;
-  }
   
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
@@ -110,11 +101,11 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-    err = kaapi_thread_tasklist_pop( tasklist );
+    err = kaapi_thread_tasklistready_pop( &tasklist->rtl );
     if (err ==0)
     {
 execute_first:
-      td = kaapi_thread_tasklist_getpoped( tasklist );
+      td = kaapi_thread_tasklistready_getpoped( &tasklist->rtl );
       pc = &td->task;
       if (pc !=0)
       {
@@ -168,11 +159,11 @@ redo_frameexecution:
 
       /* push in the front the activated tasks */
       if (!kaapi_activationlist_isempty(&td->list))
-	kaapi_thread_tasklist_pushready( tasklist, td->list.front );
+        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->list.front );
 
       /* do bcast after child execution (they can produce output data) */
       if (td->bcast !=0) 
-        kaapi_thread_tasklist_pushready( tasklist, td->bcast->front );
+        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->bcast->front );
     }
     
     /* recv incomming synchronisation 

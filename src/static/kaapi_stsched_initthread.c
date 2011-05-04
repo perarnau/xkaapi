@@ -50,7 +50,7 @@ kaapi_tasklist_t* kaapi_threadgroup_allocatetasklist( void )
   kaapi_tasklist_t* tl = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_assert( tl !=0);  
 
-  kaapi_tasklist_init(tl);
+  kaapi_tasklist_init(tl, 0);
   return tl;
 }
 

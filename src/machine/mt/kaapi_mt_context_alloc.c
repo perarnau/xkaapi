@@ -87,7 +87,6 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   size_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
-  int err;
 
   /* already allocated ? */
   if (!kaapi_lfree_isempty(kproc)) 
@@ -117,10 +116,8 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
 #  endif
   if (ctxt == (kaapi_thread_context_t*)-1) 
-  {
-    int err __attribute__((unused)) = errno;
     return 0;
-  }
+
   /* test page size alignment (4KBytes page) */
   kaapi_assert_debug( __kaapi_isaligned(ctxt, 0x1000) ==1 );
 
@@ -129,7 +126,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   err = mbind( ctxt, k_stacksize, MPOL_PREFERRED, 0, 0, MPOL_MF_STRICT );
   if (err !=0)
   {
-    int err __attribute__((unused)) = errno;
+    int err  = errno;
     printf("Kproc id: %i on cpuid: %i failed to call mbind, numanode:%i, error:%i,  @:%p, size:%lu\n", kproc->kid, kproc->cpuid, numa_node_of_cpu(kproc->cpuid), err, (void*)ctxt, (unsigned long)k_stacksize);
     fflush(stdout);
     munmap( ctxt, ctxt->size );
