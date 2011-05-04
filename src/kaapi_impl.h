@@ -545,7 +545,7 @@ kaapi_reducor_t kaapi_format_get_reducor (const struct kaapi_format_t* fmt, unsi
 /* ============================= Helper for bloc allocation of individual entries ============================ */
 /*
 */
-#define KAAPI_BLOCENTRIES_SIZE 32
+#define KAAPI_BLOCENTRIES_SIZE 2048
 #define KAAPI_BLOCALLOCATOR_SIZE 8*4096
 
 /* Generic blocs with KAAPI_BLOCENTRIES_SIZE entries

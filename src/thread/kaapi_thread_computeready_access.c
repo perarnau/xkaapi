@@ -151,7 +151,11 @@ int kaapi_thread_computeready_access(
       );
 #endif
       kaapi_memory_view_t* view = &version->handle->view;
+#if defined(KAAPI_USE_NUMA)
+      version->handle       = (kaapi_data_t*)numa_alloc_local(sizeof(kaapi_data_t));
+#else
       version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
+#endif
       version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */
       version->handle->view = *view;
 

@@ -171,7 +171,11 @@ kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr )
 */
 static inline kaapi_metadata_info_t* _kaapi_memory_allocate_mdi()
 {
+#if defined(KAAPI_USE_NUMA)
+  kaapi_metadata_info_t* mdi = numa_alloc_local( sizeof(kaapi_metadata_info_t) );
+#else
   kaapi_metadata_info_t* mdi = malloc( sizeof(kaapi_metadata_info_t) );
+#endif
   if (mdi ==0) return 0;
   mdi->validbits = 0;
 #if defined(KAAPI_DEBUG)
