@@ -110,7 +110,7 @@ typedef struct kaapi_syncrecv_t {
 /**
 */
 typedef struct kaapi_move_arg_t {
-  kaapi_data_t*       src_data;
+  kaapi_data_t        src_data;
   kaapi_handle_t      dest;
 } kaapi_move_arg_t;
 
@@ -179,23 +179,14 @@ typedef struct kaapi_tasklist_t {
   /* execution state for ready task using tasklist */
   kaapi_readytasklist_t   rtl;        /* the workqueue of ready tasks */
 
-#if 0
-  kaapi_workqueue_index_t next_exec;  /* next task to execute, set after poping fron the work queue */
-  int                     task_pushed; /* == 1 if at least one task has been pushed after calling kaapi_thread_tasklist_pushready */
-  kaapi_taskdescr_t**     td_top;     /* pointer to the next task to execute in td_ready container */ 
-  kaapi_taskdescr_t**     td_ready;   /* container for the workqueue, used during runtime */
-  kaapi_workqueue_t       wq_ready;   /* workqueue for ready tasks, used during runtime */
-#endif
-
-
   kaapi_thread_context_t* thread;     /* thread that execute the task list */
   
   struct kaapi_tasklist_t*master;     /* master tasklist to signal at the end */
   kaapi_recvactlink_t*    recv;       /* next entry to receive */
 
-  /* context to restart from suspend */
+  /* context to start or restart execution from suspend state */
   struct context_t {
-    int                     chkpt;      /* see execframe for task list */
+    int                     chkpt;      /* see execframe_tasklist  */
     kaapi_taskdescr_t*      td;
     kaapi_frame_t*          fp;
     kaapi_workqueue_index_t local_beg;
@@ -214,30 +205,44 @@ typedef struct kaapi_tasklist_t {
 } kaapi_tasklist_t;
 
 
-/** Serves to detect: W -> R dependency or R -> W dependency
+/** Serves to detect: W -> R dependency or R -> W dependency but not cw...
 */
 typedef struct kaapi_version_t {
-  kaapi_data_t*            orig;            /* original data + original view points to the data in the metadatainfo */
-  kaapi_handle_t           handle;          /* @data + view */
-  kaapi_comtag_t           tag;             /* tag to use for communication */
   kaapi_access_mode_t      last_mode;       /* */
-  kaapi_taskdescr_t*       last_task;       /* task attached to last access */
-  kaapi_tasklist_t*        last_tasklist;   /* the tasklist that stores the last task */
+  kaapi_data_t*            handle;             /* */
   kaapi_taskdescr_t*       writer_task;     /* last writer task of the version, 0 if no indentify task (input data) */
-  kaapi_address_space_id_t writer_asid;     /* used in partitionning, else it is always == orig->ptr.asid */ 
   kaapi_tasklist_t*        writer_tasklist; /* the tasklist that stores the writer task */
-  struct kaapi_version_t*  next;
 } kaapi_version_t;
 
 
-/**
+/** Find the version object associated to the addr.
+    If not find, then insert into the table a new
+    with last_mode == KAAPI_ACCESS_MODE_VOID.
+    The returned object should be initialized correctly
+    with the first initial access.
 */
-extern kaapi_version_t* kaapi_thread_newversion( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid,
-    void* data, const kaapi_memory_view_t* view 
+extern kaapi_version_t* kaapi_version_findinsert( 
+    kaapi_thread_context_t* thread,
+    kaapi_tasklist_t*       tl,
+    const void*             addr 
 );
 
+/** Add a new version for futur tasks in the tasklist tl.
+    The new version is associated with an initial task which
+    dependent on the initial access mode (m=R|RM -> task move,
+    m=W|CW -> task alloc).
+    The version is already allocated and inserted into the thread
+    hash map, but it is not initialized.
+*/
+extern int kaapi_version_add_initialaccess( 
+    kaapi_version_t*           ver, 
+    kaapi_tasklist_t*          tl,
+    kaapi_access_mode_t        m,
+    void*                      data, 
+    const kaapi_memory_view_t* view 
+);
+
+#if 0
 
 /**
 */
@@ -246,7 +251,7 @@ extern kaapi_version_t* kaapi_thread_copyversion(
     kaapi_address_space_id_t kasid,
     kaapi_version_t* src
 );
-
+#endif
 
 /**/
 static inline void kaapi_activationlist_clear( kaapi_activationlist_t* al )
@@ -308,21 +313,6 @@ static inline int kaapi_data_clear( kaapi_data_t* d )
   kaapi_pointer_setnull(&d->ptr);
   kaapi_memory_view_clear(&d->view);
   return 0;
-}
-
-
-/**/
-static inline void kaapi_taskdescr_init( kaapi_taskdescr_t* td, kaapi_task_t* task )
-{
-  KAAPI_ATOMIC_WRITE(&td->counter, 0);
-  td->fmt 	     = 0;
-  td->wc         = 0;
-  td->date       = 0;
-  KAAPI_DEBUG_INST(td->exec_date = 0);
-  td->task       = *task;
-  td->bcast      = 0;
-  td->list.front = 0; 
-  td->list.back  = 0;
 }
 
 
@@ -394,14 +384,28 @@ static inline kaapi_activationlink_t* kaapi_tasklist_allocate_al( kaapi_tasklist
 
 
 /**/
-static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td( kaapi_tasklist_t* tl, kaapi_task_t* task )
+static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td( 
+    kaapi_tasklist_t* tl, 
+    kaapi_task_t* task, 
+    kaapi_format_t* task_fmt 
+)
 {
-  kaapi_taskdescr_t* retval = 
+  kaapi_taskdescr_t* td = 
       (kaapi_taskdescr_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_taskdescr_t) );
-  kaapi_taskdescr_init(retval, task);
+  KAAPI_ATOMIC_WRITE(&td->counter, 0);
+  td->fmt 	     = task_fmt;
+  td->wc         = 0;
+  td->date       = 0;
+  KAAPI_DEBUG_INST(td->exec_date = 0);
+  td->task       = *task;
+  td->bcast      = 0;
+  td->list.front = 0; 
+  td->list.back  = 0;
+
 #if defined(KAAPI_DEBUG)
+  /* in debug mode, add the task in the list of all tasks... */
   kaapi_activationlink_t* al = kaapi_tasklist_allocate_al( tl );
-  al->td = retval;
+  al->td = td;
   al->queue = 0;
   if (tl->allocated_td.back == 0)
   {
@@ -414,7 +418,47 @@ static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td( kaapi_tasklist_t* t
   }
 #endif  
   ++tl->cnt_tasks;
-  return retval;
+  return td;
+}
+
+
+/**/
+static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td_withbody( 
+    kaapi_tasklist_t* tl, 
+    kaapi_format_t*   task_fmt,
+    kaapi_task_body_t body,
+    void*             sp
+)
+{
+  kaapi_taskdescr_t* td = 
+      (kaapi_taskdescr_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_taskdescr_t) );
+  KAAPI_ATOMIC_WRITE(&td->counter, 0);
+  td->fmt 	     = task_fmt;
+  td->wc         = 0;
+  td->date       = 0;
+  KAAPI_DEBUG_INST(td->exec_date = 0);
+  kaapi_task_initdfg(&td->task, body, sp );
+  td->bcast      = 0;
+  td->list.front = 0; 
+  td->list.back  = 0;
+
+#if defined(KAAPI_DEBUG)
+  /* in debug mode, add the task in the list of all tasks... */
+  kaapi_activationlink_t* al = kaapi_tasklist_allocate_al( tl );
+  al->td = td;
+  al->queue = 0;
+  if (tl->allocated_td.back == 0)
+  {
+    al->next  = 0;
+    tl->allocated_td.front = tl->allocated_td.back = al;
+  } else {
+    al->next = 0;
+    tl->allocated_td.back->next = al;
+    tl->allocated_td.back = al;
+  }
+#endif  
+  ++tl->cnt_tasks;
+  return td;
 }
 
 
@@ -529,27 +573,27 @@ extern void kaapi_tasklist_push_broadcasttask(
     Both computereadylist and online_computedef call this function.
     \retval 0 in case of success
 */
-extern int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist, kaapi_task_t* task);
+extern int kaapi_thread_computedep_task(
+  kaapi_thread_context_t* thread, 
+  kaapi_tasklist_t*       tasklist, 
+  kaapi_task_t* task
+);
 
 
 /** Compute the readylist of the topframe of a thread
     \retval 0 in case of success
     \retval EBUSY if a ready list already exist for the thread
 */
-extern int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist );
-
-/** Compute the minimal date of execution of the task 
-*/
-extern int kaapi_thread_computeready_date( 
-    const kaapi_version_t* version, 
-    kaapi_taskdescr_t*     task,
-    kaapi_access_mode_t    m 
+extern int kaapi_thread_computereadylist( 
+    kaapi_thread_context_t* thread, 
+    kaapi_tasklist_t* tasklist 
 );
+
 
 /** Compute the synchronisation while pushing the task accessing with mode m to the data referenced
     by version into the tasklist tl.
 */
-extern int kaapi_thread_computeready_access( 
+extern kaapi_data_t* kaapi_thread_computeready_access( 
     kaapi_tasklist_t*   tl, 
     kaapi_version_t*    version, 
     kaapi_taskdescr_t*  task,

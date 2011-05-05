@@ -109,6 +109,8 @@ typedef struct kaapi_address_space_t {
 } kaapi_address_space_t;
 
 
+#define KAAPI_EMPTY_ADDRESS_SPACE_ID 0ULL
+
 /* Create a new address space.
    The user is invited to use predefined address space identifier
    in place of creating a new address space.  
@@ -472,11 +474,13 @@ static inline void _kaapi_metadata_info_set_writer(
   kmdi->validbits = 1UL << lid;
 }
 
+#if 0
 /**/
 extern struct kaapi_version_t* _kaapi_metadata_info_get_version( 
     kaapi_metadata_info_t* kmdi,
     kaapi_address_space_id_t kasid
 );
+#endif
 
 /** Return a version that handle a valid copy in order to make a copy to kasid 
 */

@@ -92,7 +92,7 @@ void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 #endif
 
   /* on multiprocessor: move data from XXX to YYY */
-  arg->dest->ptr  = arg->src_data->ptr;
+  arg->dest->ptr  = arg->src_data.ptr;
 }
 
 /* */
@@ -110,8 +110,9 @@ void kaapi_taskalloc_body( void* sp, kaapi_thread_t* thread )
 #endif
 
   /* on multiprocessor: move data from XXX to YYY */
-  arg->dest->ptr  = arg->src_data->ptr;
+  arg->dest->ptr  = arg->src_data.ptr;
 }
+
 
 /* */
 void kaapi_taskfinalizer_body( void* sp, kaapi_thread_t* thread )

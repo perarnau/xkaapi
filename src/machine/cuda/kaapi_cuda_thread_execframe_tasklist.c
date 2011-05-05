@@ -1191,7 +1191,7 @@ int kaapi_cuda_thread_execframe_tasklist
 
   if (tasklist->td_ready == 0)
   {
-    kaapi_thread_tasklist_pushready_init( tasklist, thread );
+    kaapi_thread_tasklistready_push_init( tasklist, thread );
     kaapi_thread_tasklist_commit_ready( tasklist );
     goto execute_first;
   }
@@ -1327,11 +1327,11 @@ int kaapi_cuda_thread_execframe_tasklist
 
     /* does the completed task activate others */
     if (!kaapi_activationlist_isempty(&td->list))
-      kaapi_thread_tasklist_pushready( tasklist, td->list.front );
+      kaapi_thread_tasklistready_pushactivated tasklist, td->list.front );
 
     /* do bcast after child execution */
     if (td->bcast != 0)
-      kaapi_thread_tasklist_pushready( tasklist, td->bcast->front );
+      kaapi_thread_tasklistready_pushactivated tasklist, td->bcast->front );
 
     /* enqueue the pushed tasks */
     if (kaapi_thread_tasklist_commit_ready( tasklist ))

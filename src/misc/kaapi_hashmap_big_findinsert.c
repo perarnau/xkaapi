@@ -64,13 +64,13 @@ kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* khm, voi
   if (khm->currentbloc == 0) 
   {
 #if defined(KAAPI_USE_NUMA)
-    khm->currentbloc = numa_alloc_local( sizeof(kaapi_hashentries_bloc_t) );
+    khm->currentbloc       = numa_alloc_local( sizeof(kaapi_hashentries_bloc_t) );
 #else
-    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
+    khm->currentbloc       = malloc( sizeof(kaapi_hashentries_bloc_t) );
 #endif
     khm->currentbloc->next = khm->allallocatedbloc;
-    khm->allallocatedbloc = khm->currentbloc;
-    khm->currentbloc->pos = 0;
+    khm->allallocatedbloc  = khm->currentbloc;
+    khm->currentbloc->pos  = 0;
   }
   
   entry = &khm->currentbloc->data[khm->currentbloc->pos];

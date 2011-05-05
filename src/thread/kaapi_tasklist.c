@@ -45,37 +45,7 @@
 */
 #include "kaapi_impl.h"
 
-/**
-*/
-kaapi_version_t* kaapi_thread_newversion( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid,
-    void* data, const kaapi_memory_view_t* view 
-)
-{
-#if 0//defined(KAAPI_USE_NUMA)
-  kaapi_version_t* version = (kaapi_version_t*)numa_alloc_local( sizeof(kaapi_version_t) );
-  version->handle       = (kaapi_data_t*)numa_alloc_local(sizeof(kaapi_data_t));
-#else
-  kaapi_version_t* version = (kaapi_version_t*)malloc( sizeof(kaapi_version_t) );
-  version->handle       = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
-#endif
-  version->orig         = _kaapi_metadata_info_get_data( kmdi, kasid);
-  version->handle->ptr  = kaapi_make_nullpointer(); /* or data.... if no move task is pushed */
-  version->handle->view = *view;
-  version->tag          = 0;
-  version->last_mode    = KAAPI_ACCESS_MODE_VOID;
-  version->last_task    = 0;
-  version->last_tasklist= 0;
-  version->writer_task  = 0;
-  version->writer_asid  = kasid;
-  version->writer_tasklist = 0;
-#if defined(KAAPI_DEBUG)
-  version->next         = 0;
-#endif  
-  return version;
-}
-
+#if 0
 
 /**
 */
@@ -105,6 +75,7 @@ kaapi_version_t* kaapi_thread_copyversion(
   return version;
 }
 
+#endif
 
 /* activate and push all ready tasks in the activation list to their allocated queue
 */
