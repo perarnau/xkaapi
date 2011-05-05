@@ -233,7 +233,7 @@ static void generate_matrix(double* A, size_t m)
 
 /*
 */
-#define DIM 32
+#define DIM 16
 static void convert_to_blocks(long NB, long N, double *Alin, double* A[DIM][DIM] )
 {
   for (long i = 0; i < N; i++)
@@ -307,7 +307,7 @@ struct doit {
       for (long j = 0; j < DIM; j++)
       {
        dAbloc[i][j] = 0;
-#if 0
+#if 1
        posix_memalign( (void**)&(dAbloc[i][j]), 128, NB*NB*sizeof(double));
 #else
        posix_memalign( (void**)&(dAbloc[i][j]), 4096, NB*NB*sizeof(double));

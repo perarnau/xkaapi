@@ -87,6 +87,9 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   size_t size_data;
   size_t k_stacksize;
   size_t pagesize, count_pages;
+#if defined(KAAPI_USE_NUMA)
+  int err;
+#endif
 
   /* already allocated ? */
   if (!kaapi_lfree_isempty(kproc)) 
