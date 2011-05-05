@@ -56,6 +56,10 @@ int kaapi_sched_computereadylist( void )
   tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist, thread );
   err= kaapi_thread_computereadylist( thread, tasklist  );
+  kaapi_thread_tasklistready_push_init( &tasklist->rtl, &tasklist->readylist );
+  kaapi_thread_tasklist_commit_ready( tasklist );
+  /* keep the first task to execute outside the workqueue */
+  tasklist->context.chkpt = 2;
   thread->sfp->tasklist = tasklist;
   return err;
 }
