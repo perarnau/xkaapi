@@ -47,7 +47,7 @@
 
 /*
 */
-kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr )
+kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, const void* ptr )
 {
   const uint32_t hkey = kaapi_hash_ulong7((unsigned long)ptr) % KAAPI_HASHMAP_SIZE;
 

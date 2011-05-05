@@ -272,7 +272,7 @@ typedef struct kaapi_hashentries_t {
     struct kaapi_metadata_info_t* mdi;         /* store of metadata info */
     struct kaapi_taskdescr_t*     td;          /* */
   } u;
-  void*                           key;
+  const void*                     key;
   struct kaapi_hashentries_t*     next; 
 } kaapi_hashentries_t;
 
@@ -1319,15 +1319,15 @@ extern int kaapi_hashmap_destroy( kaapi_hashmap_t* khm );
 
 /*
 */
-extern kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, void* ptr );
+extern kaapi_hashentries_t* kaapi_hashmap_findinsert( kaapi_hashmap_t* khm, const void* ptr );
 
 /*
 */
-extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, void* ptr );
+extern kaapi_hashentries_t* kaapi_hashmap_find( kaapi_hashmap_t* khm, const void* ptr );
 
 /*
 */
-extern kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, void* ptr );
+extern kaapi_hashentries_t* kaapi_hashmap_insert( kaapi_hashmap_t* khm, const void* ptr );
 
 /*
 */
@@ -1347,11 +1347,11 @@ extern int kaapi_big_hashmap_destroy( kaapi_big_hashmap_t* khm );
 
 /*
 */
-extern kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* khm, void* ptr );
+extern kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* khm, const void* ptr );
 
 /*
 */
-extern kaapi_hashentries_t* kaapi_big_hashmap_find( kaapi_big_hashmap_t* khm, void* ptr );
+extern kaapi_hashentries_t* kaapi_big_hashmap_find( kaapi_big_hashmap_t* khm, const void* ptr );
 
 
 /* ============================= Commun function for server side (no public) ============================ */
