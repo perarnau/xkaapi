@@ -47,7 +47,7 @@
 
 /*
 */
-kaapi_hashentries_t* kaapi_big_hashmap_find( kaapi_big_hashmap_t* khm, void* ptr )
+kaapi_hashentries_t* kaapi_big_hashmap_find( kaapi_big_hashmap_t* khm, const void* ptr )
 {
   uint32_t hkey = kaapi_hash_ulong((unsigned long)ptr);
 
