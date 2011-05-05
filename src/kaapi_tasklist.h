@@ -604,8 +604,7 @@ extern kaapi_data_t* kaapi_thread_computeready_access(
     kaapi_tasklist_t*   tl, 
     kaapi_version_t*    version, 
     kaapi_taskdescr_t*  task,
-    kaapi_access_mode_t m,
-    void*               srcdata
+    kaapi_access_mode_t m
 );
 
 /** Initialize task on the new declared version depending of the first access mode made by task
