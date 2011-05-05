@@ -307,7 +307,7 @@ struct doit {
       for (long j = 0; j < DIM; j++)
       {
        dAbloc[i][j] = 0;
-#if 0
+#if 1
        posix_memalign( (void**)&(dAbloc[i][j]), 128, NB*NB*sizeof(double));
 #else
        posix_memalign( (void**)&(dAbloc[i][j]), 4096, NB*NB*sizeof(double));
