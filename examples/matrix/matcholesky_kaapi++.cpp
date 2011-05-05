@@ -210,7 +210,6 @@ template<>
 struct TaskBodyCPU<TaskCholesky> {
   void operator()( const ka::StaticSchedInfo* info, ka::range2d_rpwp<double> A )
   {
-#if 1
     //int ncpu = info->count_cpu();
     //int sncpu = (int)sqrt( (double)ncpu );
     size_t N = A.dim(0);
