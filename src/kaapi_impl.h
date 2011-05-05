@@ -221,6 +221,97 @@ extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list_t*);
 extern void kaapi_procinfo_list_free(struct kaapi_procinfo_list_t*);
 
 
+/* ============================= Basic type ============================ */
+/** \ingroup DFG
+*/
+typedef struct kaapi_gd_t {
+  kaapi_access_mode_t         last_mode;    /* last access mode to the data */
+  void*                       last_version; /* last verion of the data, 0 if not ready */
+} kaapi_gd_t;
+
+/* fwd decl
+*/
+struct kaapi_version_t;
+struct kaapi_metadata_info_t;
+
+/** pair of pointer,int 
+    Used to display tasklist
+*/
+typedef struct kaapi_pair_ptrint_t {
+  void*               ptr;
+  uintptr_t           tag;
+  kaapi_access_mode_t last_mode;
+} kaapi_pair_ptrint_t;
+
+
+/* ============================= Hash table for WS ============================ */
+
+/*
+*/
+#define KAAPI_BLOCENTRIES_SIZE 2048
+#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
+
+/* Generic blocs with KAAPI_BLOCENTRIES_SIZE entries
+*/
+#define KAAPI_DECLARE_BLOCENTRIES(NAME, TYPE) \
+typedef struct NAME {\
+  TYPE         data[KAAPI_BLOCENTRIES_SIZE]; \
+  uintptr_t    pos;  /* next free in data */\
+  struct NAME* next; /* link list of bloc */\
+  void*        ptr;  /* memory pointer of allocated bloc */\
+} NAME
+
+
+/*
+*/
+typedef struct kaapi_hashentries_t {
+  union { /* depending of the kind of hash table... */
+    kaapi_gd_t                    value;
+    struct kaapi_version_t*       version;     /* for static scheduling */
+    kaapi_pair_ptrint_t           data;        /* used for print tasklist */
+    struct kaapi_metadata_info_t* mdi;         /* store of metadata info */
+    struct kaapi_taskdescr_t*     td;          /* */
+  } u;
+  void*                           key;
+  struct kaapi_hashentries_t*     next; 
+} kaapi_hashentries_t;
+
+KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
+
+
+/* Hashmap default size.
+   Warning in kapai_hashmap_t, entry_map type should have a size that is
+   equal to KAAPI_HASHMAP_SIZE.
+*/
+#define KAAPI_HASHMAP_SIZE 64
+
+static inline uint64_t _key_to_mask(uint32_t k)
+{ return ((uint64_t)1) << k; }
+
+/*
+*/
+typedef struct kaapi_hashmap_t {
+  kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
+  kaapi_hashentries_bloc_t* currentbloc;
+  kaapi_hashentries_bloc_t* allallocatedbloc;
+  uint64_t entry_map; /* type size must at least KAAPI_HASHMAP_SIZE */
+} kaapi_hashmap_t;
+
+/* Big hashmap_big
+   Used for bulding readylist
+*/
+#define KAAPI_HASHMAP_BIG_SIZE 32768
+
+/*
+*/
+typedef struct kaapi_big_hashmap_t {
+  kaapi_hashentries_t* entries[KAAPI_HASHMAP_BIG_SIZE];
+  kaapi_hashentries_bloc_t* currentbloc;
+  kaapi_hashentries_bloc_t* allallocatedbloc;
+} kaapi_big_hashmap_t;
+
+
+
 /* ============================= A VICTIM ============================ */
 /** \ingroup WS
     This data structure should contains all necessary informations to post a request to a selected node.
@@ -361,7 +452,7 @@ typedef struct kaapi_format_t {
   void                       (*dstor)( void* dest);
   void                       (*cstorcopy)( void* dest, const void* src);
   void                       (*copy)( void* dest, const void* src);
-  void                       (*assign)( void* dest, const void* src);
+  void                       (*assign)( void* dest, const kaapi_memory_view_t* view_dest, const void* src, const kaapi_memory_view_t* view_src);
   void                       (*print)( FILE* file, const void* src);
 
   /* only if it is a format of a task  */
@@ -543,26 +634,12 @@ kaapi_reducor_t kaapi_format_get_reducor (const struct kaapi_format_t* fmt, unsi
 
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */
-/*
-*/
-#define KAAPI_BLOCENTRIES_SIZE 32
-#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
-
-/* Generic blocs with KAAPI_BLOCENTRIES_SIZE entries
-*/
-#define KAAPI_DECLARE_BLOCENTRIES(NAME, TYPE) \
-typedef struct NAME {\
-  TYPE         data[KAAPI_BLOCENTRIES_SIZE]; \
-  uintptr_t    pos;  /* next free in data */\
-  struct NAME* next; /* link list of bloc */\
-  void*        ptr;  /* memory pointer of allocated bloc */\
-} NAME
-
 
 /* Macro to define a generic bloc allocator of byte.
 */
 typedef struct kaapi_allocator_bloc_t {
-  double                           data[KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(struct kaapi_allocator_bloc_t*)];
+  double                           data[KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)
+                                        - sizeof(uintptr_t) - sizeof(struct kaapi_allocator_bloc_t*)];
   uintptr_t                        pos;  /* next free in data */
   struct kaapi_allocator_bloc_t*   next; /* link list of bloc */
 } kaapi_allocator_bloc_t;
@@ -645,7 +722,8 @@ typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
-  kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_thread_execframe */
+  void*                          pad;            /** a padding */
+  kaapi_frame_t                  stackframe[KAAPI_MAX_RECCALL];  /** for execution, see kaapi_thread_execframe */
 
   /* execution state for stack of task */
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
@@ -662,7 +740,8 @@ typedef struct kaapi_thread_context_t {
   kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
-
+  kaapi_big_hashmap_t            kversion_hm;    /* used by static scheduling */
+  
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
@@ -1135,17 +1214,6 @@ extern uint32_t kaapi_hash_value_len(const char * data, size_t len);
 */
 extern uint32_t kaapi_hash_value(const char * data);
 
-/** Hash value for pointer.
-    Used for data flow dependencies
-*/
-static inline uint32_t kaapi_hash_ulong(uint64_t ptr)
-{
-  /* */
-  uint64_t val = ptr >> 3;
-  val = (val & 0xFFFF) ^ (val>>32);
-  return (uint32_t)val;
-}
-
 
 /**
  * Compression 64 -> 7 bits
@@ -1154,11 +1222,11 @@ static inline uint32_t kaapi_hash_ulong(uint64_t ptr)
  */
 static inline uint32_t kaapi_hash_ulong7(uint64_t v)
 {
-    v ^= (v >> 32);
-    v ^= (v >> 16);
-    v ^= (v >> 8);
-    if (v & 0x00000080) v ^= 0x00000009;
-    return (uint32_t) (v&0x0000007F);
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  if (v & 0x00000080) v ^= 0x00000009;
+  return (uint32_t) (v&0x0000007F);
 }
 
 
@@ -1169,12 +1237,12 @@ static inline uint32_t kaapi_hash_ulong7(uint64_t v)
  */
 static inline uint32_t kaapi_hash_ulong6(uint64_t v)
 {
-    v ^= (v >> 32);
-    v ^= (v >> 16);
-    v ^= (v >> 8);
-    if (v & 0x00000040) v ^= 0x00000003;
-    if (v & 0x00000080) v ^= 0x00000006;
-    return (uint32_t) (v&0x0000003F);
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  if (v & 0x00000040) v ^= 0x00000003;
+  if (v & 0x00000080) v ^= 0x00000006;
+  return (uint32_t) (v&0x0000003F);
 }
 
 /**
@@ -1184,79 +1252,42 @@ static inline uint32_t kaapi_hash_ulong6(uint64_t v)
  */
 static inline uint32_t kaapi_hash_ulong5(uint64_t v)
 {
-    v ^= (v >> 32);
-    v ^= (v >> 16);
-    v ^= (v >> 8);
-    if (v & 0x00000020) v ^= 0x00000005;
-    if (v & 0x00000040) v ^= 0x0000000A;
-    if (v & 0x00000080) v ^= 0x00000014;
-    return (uint32_t) (v&0x0000001F);
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  if (v & 0x00000020) v ^= 0x00000005;
+  if (v & 0x00000040) v ^= 0x0000000A;
+  if (v & 0x00000080) v ^= 0x00000014;
+  return (uint32_t) (v&0x0000001F);
 }
 
 
-/* ======================== Dependencies resolution function ========================*/
-/** \ingroup DFG
+/** Hash value for pointer.
+    Used for data flow dependencies
 */
-typedef struct kaapi_gd_t {
-  kaapi_access_mode_t         last_mode;    /* last access mode to the data */
-  void*                       last_version; /* last verion of the data, 0 if not ready */
-} kaapi_gd_t;
+static inline uint32_t kaapi_hash_ulong(uint64_t v)
+{
+#if 1
+  v ^= (v >> 32);
+  v ^= (v >> 16);
+  v ^= (v >> 8);
+  return (uint32_t) ( v & 0x0000FFFF);
+#else  /* */
+  uint64_t val = v >> 3;
+  v = (v & 0xFFFF) ^ (v>>32);
+  return (uint32_t)v;
+#endif
+}
 
-/* fwd decl
-*/
-struct kaapi_version_t;
-struct kaapi_metadata_info_t;
-
-/** pair of pointer,int 
-    Used to display tasklist
-*/
-typedef struct kaapi_pair_ptrint_t {
-  void*               ptr;
-  uintptr_t           tag;
-  kaapi_access_mode_t last_mode;
-} kaapi_pair_ptrint_t;
 
 /* ============================= Hash table for WS ============================ */
 /*
 */
-typedef struct kaapi_hashentries_t {
-  union { /* depending of the kind of hash table... */
-    kaapi_gd_t                    value;
-    struct kaapi_version_t*       version;     /* for static scheduling */
-    kaapi_pair_ptrint_t           data;        /* used for print tasklist */
-    struct kaapi_metadata_info_t* mdi;         /* store of metadata info */
-    struct kaapi_taskdescr_t*     td;          /* */
-  } u;
-  void*                           key;
-  struct kaapi_hashentries_t*     next; 
-} kaapi_hashentries_t;
-
-KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);
-
-
-/* Hashmap default size.
-   Warning in kapai_hashmap_t, entry_map type should have a size that is
-   equal to KAAPI_HASHMAP_SIZE.
-*/
-#define KAAPI_HASHMAP_SIZE 32
-
-/*
-*/
-typedef struct kaapi_hashmap_t {
-  kaapi_hashentries_t* entries[KAAPI_HASHMAP_SIZE];
-  kaapi_hashentries_bloc_t* currentbloc;
-  kaapi_hashentries_bloc_t* allallocatedbloc;
-  uint32_t entry_map;                 /* type size must at least KAAPI_HASHMAP_SIZE */
-} kaapi_hashmap_t;
-
-
-/*
-*/
-static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key)
+static inline kaapi_hashentries_t* _get_hashmap_entry(kaapi_hashmap_t* khm, uint32_t key)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
 
-  if (khm->entry_map & (1 << key))
+  if (khm->entry_map & _key_to_mask(key))
     return khm->entries[key];
 
   return 0;
@@ -1265,11 +1296,12 @@ static inline kaapi_hashentries_t* _get_hashmap_entry( kaapi_hashmap_t* khm, uin
 
 /*
 */
-static inline void _set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
+static inline void _set_hashmap_entry
+(kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries)
 {
   kaapi_assert_debug(key < (8 * sizeof(khm->entry_map)));
   khm->entries[key] = entries;
-  khm->entry_map |= 1 << key;
+  khm->entry_map |= _key_to_mask(key);
 }
 
 
@@ -1304,22 +1336,6 @@ extern kaapi_hashentries_t* get_hashmap_entry( kaapi_hashmap_t* khm, uint32_t ke
 /*
 */
 extern void set_hashmap_entry( kaapi_hashmap_t* khm, uint32_t key, kaapi_hashentries_t* entries);
-
-
-
-/* Big hashmap_big
-   Used for bulding readylist
-*/
-#define KAAPI_HASHMAP_BIG_SIZE 32768
-
-/*
-*/
-typedef struct kaapi_big_hashmap_t {
-  kaapi_hashentries_t* entries[KAAPI_HASHMAP_BIG_SIZE];
-  kaapi_hashentries_bloc_t* currentbloc;
-  kaapi_hashentries_bloc_t* allallocatedbloc;
-} kaapi_big_hashmap_t;
-
 
 /*
 */
@@ -1521,7 +1537,7 @@ static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
 {
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(lock) == (unsigned)(1) );
-  /* mplicit barrier in KAAPI_ATOMIC_WRITE_BARRIER */
+  /* implicit barrier in KAAPI_ATOMIC_WRITE_BARRIER */
   KAAPI_ATOMIC_WRITE_BARRIER(lock, 0);
 #else
   KAAPI_ATOMIC_WRITE_BARRIER(lock, 1);

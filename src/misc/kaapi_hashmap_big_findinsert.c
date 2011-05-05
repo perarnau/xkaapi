@@ -49,7 +49,7 @@
 */
 kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* khm, void* ptr )
 {
-  uint32_t hkey = kaapi_hash_ulong( (uintptr_t)ptr );
+  uint32_t hkey = kaapi_hash_ulong((unsigned long)ptr);
 
   hkey = hkey % KAAPI_HASHMAP_BIG_SIZE;
   kaapi_hashentries_t* list_hash = khm->entries[hkey];
@@ -63,10 +63,14 @@ kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* khm, voi
   /* allocate new entry */
   if (khm->currentbloc == 0) 
   {
-    khm->currentbloc = malloc( sizeof(kaapi_hashentries_bloc_t) );
+#if defined(KAAPI_USE_NUMA)
+    khm->currentbloc       = numa_alloc_local( sizeof(kaapi_hashentries_bloc_t) );
+#else
+    khm->currentbloc       = malloc( sizeof(kaapi_hashentries_bloc_t) );
+#endif
     khm->currentbloc->next = khm->allallocatedbloc;
-    khm->allallocatedbloc = khm->currentbloc;
-    khm->currentbloc->pos = 0;
+    khm->allallocatedbloc  = khm->currentbloc;
+    khm->currentbloc->pos  = 0;
   }
   
   entry = &khm->currentbloc->data[khm->currentbloc->pos];

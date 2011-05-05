@@ -181,6 +181,8 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (kproc->thread ==0)
     {
       ctxt = kaapi_context_alloc(kproc);
+      kaapi_assert_debug( ctxt != 0 );
+
       kaapi_setcontext(kproc, ctxt);
 
       /* on return, either a new thread has been stolen, either a task as been put into ctxt or thread ==0 */

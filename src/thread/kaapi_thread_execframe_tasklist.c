@@ -78,15 +78,6 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   /* get the processor type to select correct entry point */
   proc_type = thread->proc->proc_type;
-    
-  /*
-  */
-  if (tasklist->td_ready == 0)
-  {
-    kaapi_thread_tasklist_pushready_init( tasklist, thread );
-    kaapi_thread_tasklist_commit_ready( tasklist );
-    goto execute_first;
-  }
   
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
@@ -110,18 +101,18 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-    err = kaapi_thread_tasklist_pop( tasklist );
+    err = kaapi_thread_tasklistready_pop( &tasklist->rtl );
     if (err ==0)
     {
 execute_first:
-      td = kaapi_thread_tasklist_getpoped( tasklist );
-      pc = td->task;
+      td = kaapi_thread_tasklistready_getpoped( &tasklist->rtl );
+      pc = &td->task;
       if (pc !=0)
       {
         /* get the correct body for the proc type */
         if (td->fmt ==0)
         { /* currently some internal tasks do not have format */
-          body = kaapi_task_getuserbody( td->task );
+          body = kaapi_task_getuserbody( pc );
         }
         else 
         {
@@ -134,7 +125,7 @@ execute_first:
         thread->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist); 
         thread->sfp[1].pc = thread->sfp[1].sp;
         thread->sfp[1].sp_data = fp->sp_data;
-        kaapi_writemem_barrier();
+        //kaapi_writemem_barrier();
         fp = ++thread->sfp;
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
         kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
@@ -168,11 +159,11 @@ redo_frameexecution:
 
       /* push in the front the activated tasks */
       if (!kaapi_activationlist_isempty(&td->list))
-        kaapi_thread_tasklist_pushready( tasklist, td->list.front );
+        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->list.front );
 
       /* do bcast after child execution (they can produce output data) */
       if (td->bcast !=0) 
-        kaapi_thread_tasklist_pushready( tasklist, td->bcast->front );
+        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->bcast->front );
     }
     
     /* recv incomming synchronisation 

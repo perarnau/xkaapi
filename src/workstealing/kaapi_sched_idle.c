@@ -176,6 +176,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       
       /* else reallocate a context */
       ctxt = kaapi_context_alloc(kproc);
+      kaapi_assert_debug( ctxt != 0 );
       
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);
@@ -189,6 +190,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     {
       /* used to detach the thread of the processor in order to reuse it ... */
       ctxt = kaapi_context_alloc(kproc);
+      kaapi_assert_debug( ctxt != 0 );
       
       /* set new context to the kprocessor */
       kaapi_setcontext(kproc, ctxt);

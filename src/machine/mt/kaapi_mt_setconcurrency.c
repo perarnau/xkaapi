@@ -50,11 +50,11 @@ static void* kaapi_sched_run_processor( void* arg );
 
 /**
 */
-static kaapi_atomic_t barrier_init = {0};
+static kaapi_atomic_t barrier_init __attribute__((aligned(8))) = {0};
 
 /**
 */
-static kaapi_atomic_t barrier_init2 = {0};
+static kaapi_atomic_t barrier_init2 __attribute__((aligned(8))) = {0};
 
 /** Create and initialize and start concurrency kernel thread to execute user threads
     TODO: faire une implementation dynamique

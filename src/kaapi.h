@@ -149,6 +149,11 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 #  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
       (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? (instruction) : 0)
 #else
+static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
+{
+  if ((((uintptr_t)a) & ((unsigned long)byte - 1)) == 0 ) return 1;
+  return 0;
+}
 #  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
       (instruction)
 #endif
@@ -630,6 +635,7 @@ extern struct kaapi_format_t* kaapi_ulong_format;
 extern struct kaapi_format_t* kaapi_ulonglong_format;
 extern struct kaapi_format_t* kaapi_float_format;
 extern struct kaapi_format_t* kaapi_double_format;
+extern struct kaapi_format_t* kaapi_voidp_format;
 /*@}*/
 
 
@@ -1168,6 +1174,15 @@ extern int kaapi_thread_save_frame( kaapi_thread_t*, kaapi_frame_t*);
 */
 extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 
+
+/** \ingroup TASK
+    The function kaapi_thread_set_unstealable() changes the stealable state of 
+    the current executing thread. If the argument is not 0, then the state of the
+    current thread changes to unstealable state. If the argument is 0, then the
+    statte changes to 'stealable' state, allowing thief to steal the current thread.
+*/
+extern void kaapi_thread_set_unstealable(unsigned int);
+
 /** \ingroup TASK
     The function kaapi_sched_sync() execute all childs tasks of the current running task.
     If successful, the kaapi_sched_sync() function will return zero.
@@ -1177,13 +1192,23 @@ extern int kaapi_thread_restore_frame( kaapi_thread_t*, const kaapi_frame_t*);
 */
 extern int kaapi_sched_sync( void );
 
-/** Change rerepresentation of the task inside a frame in order
+/** Change rerepresentation of the tasks inside the current frame in order
     to build a tasklist that contains ready tasks and tasks that will
     be activated by ready tasks.
     The execution of the frame should then be only be considered using
     kaapi_thread_execframe_tasklist
+    \retval EINVAL invalid current thread
+    \retval ENOENT if current thread does not has any tasks
+    \retval 0 in case of success
 */
 extern int kaapi_sched_computereadylist( void );
+
+/** Clear the tasklist of the current frame that has been previously 
+    computed by 'kaapi_sched_computereadylist'
+    \retval EINVAL invalid current thread
+    \retval 0 in case of success
+*/
+extern int kaapi_sched_clearreadylist( void );
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
@@ -1585,6 +1610,40 @@ typedef struct kaapi_memory_view_t {
 /** Identifier to an address space id
 */
 typedef uint64_t  kaapi_address_space_id_t;
+
+
+
+/** Returns the numa node (>=0 value) that stores address addr
+    Return -1 in case of failure and set errno to the error code.
+    Possible error is:
+    * ENOENT: function not available on this configuration
+    * EINVAL: invalid argument
+*/
+extern int kaapi_numa_get_page_node(const void* addr);
+
+/** Bind pages of an array [addr, size) on all numa nodes using
+    a bloc cyclic strategy of bloc size equals to blocsize. 
+    addr should be aligned to page boundary. 
+    blocsize should be multiple of the page size.
+    Returns 0 in case of success
+    Returns -1 in case of failure and set errno to the error code.
+    Possible error is:
+    * ENOENT: function not available on this configuration
+    * EINVAL: invalid argument blocsize
+    * EFAULT: invalid address addr
+*/
+extern int kaapi_numa_bind_bloc1dcyclic
+ (const void* addr, size_t size, size_t blocsize);
+
+
+/** Bind pages from address between addr and addr+size on the numa node node
+    In case of success, the function returns 0.
+    Else it returns -1 and set errno to the error code.
+    See mbind to interpret error code on linux system other than:
+    * ENOENT: function not available on this configuration
+*/
+extern int kaapi_numa_bind(const void* addr, size_t size, int node);
+
 
 /** Type of pointer for all address spaces.
     The pointer encode both the pointer (field ptr) and the location of the address space
@@ -2086,6 +2145,34 @@ extern size_t kaapi_perf_counter_num(void);
 /* Format declaration & registration                                         */
 /* ========================================================================= */
 
+/** return the size of the view
+*/
+static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* kmv )
+{
+  switch (kmv->type) 
+  {
+    case KAAPI_MEMORY_VIEW_1D: return kmv->size[0]*kmv->wordsize;
+    case KAAPI_MEMORY_VIEW_2D: return kmv->size[0]*kmv->size[1]*kmv->wordsize;
+    default:
+      kaapi_assert(0);
+      break;
+  }
+  return 0;
+}
+
+/** Return non null value iff the view is contiguous
+*/
+static inline int kaapi_memory_view_iscontiguous( const kaapi_memory_view_t* kmv )
+{
+  switch (kmv->type) {
+    case KAAPI_MEMORY_VIEW_1D: return 1;
+    case KAAPI_MEMORY_VIEW_2D: return  kmv->lda == kmv->size[1]; /* row major storage */
+    default:
+      break;
+  } 
+  return 0;
+}
+
 static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t wordsize)
 {
   kaapi_memory_view_t retval;
@@ -2234,7 +2321,7 @@ extern kaapi_format_id_t kaapi_format_structregister(
         void                       (*dstor)( void* ),
         void                       (*cstorcopy)( void*, const void*),
         void                       (*copy)( void*, const void*),
-        void                       (*assign)( void*, const void*),
+        void                       (*assign)( void*, const kaapi_memory_view_t*, const void*, const kaapi_memory_view_t*),
         void                       (*print)( FILE* file, const void* src)
 );
 

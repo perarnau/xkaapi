@@ -120,7 +120,7 @@ namespace ka {
         void             (*dstor)( void* dest) = 0,
         void             (*cstorcopy)( void* dest, const void* src) = 0,
         void             (*copy)( void* dest, const void* src) = 0,
-        void             (*assign)( void* dest, const void* src) = 0,
+        void             (*assign)( void*, const kaapi_memory_view_t*, const void*, const kaapi_memory_view_t*) =0,
         void             (*print)( FILE* file, const void* src) = 0
     );
   struct kaapi_format_t* get_c_format();
@@ -195,7 +195,43 @@ namespace ka {
     static void dstor( void* dest) { T* d = (T*)dest; d->T::~T(); } 
     static void cstorcopy( void* dest, const void* src) { T* s = (T*)src; new (dest) T(*s); } 
     static void copy( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
-    static void assign( void* dest, const void* src) { T* d = (T*)dest; T* s = (T*)src; *d = *s; } 
+    static void assign( 
+            void* dest, const kaapi_memory_view_t* view_dest, 
+            const void* src, const kaapi_memory_view_t* view_src) 
+    { 
+      T* d = (T*)dest; T* s = (T*)src; 
+#if !defined(KAAPI_NDEBUG)
+      if (view_dest->type != view_src->type)
+      {
+        std::cerr << "*** Format, bad assignment of views with different types " << std::endl;
+        exit(1);
+      }
+#endif
+      if (kaapi_memory_view_iscontiguous(view_dest) && kaapi_memory_view_iscontiguous(view_src))
+      {
+        /* size in byte */
+        size_t size = kaapi_memory_view_size(view_dest) / sizeof(T);
+        for (size_t i=0; i < size; ++i)
+          d[i] = s[i];
+      }
+      else if (view_src->type == KAAPI_MEMORY_VIEW_2D)
+      {
+        /* size per dimension is in sizeof(T) unit */
+        size_t size_i = view_src->size[0];
+        size_t size_j = view_src->size[1];
+        for (size_t i=0; i < size_i; ++i)
+        {
+          for (size_t j=0; j < size_j; ++j)
+            d[j] = s[j];
+          d += view_dest->lda;
+          s += view_src->lda;
+        }
+      }
+      else {
+        std::cerr << "*** Format, bad assignment of unimplemented views" << std::endl;
+        exit(1);
+      }
+    } 
     static void print( FILE* file, const void* src) { } 
   };
   

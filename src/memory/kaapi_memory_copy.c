@@ -268,10 +268,10 @@ static int kaapi_memory_write_cpu2cu
 
 static int kaapi_memory_write_cu2cu
 (
- kaapi_pointer_t dest,
- const kaapi_memory_view_t* view_dest,
- const void* src,
- const kaapi_memory_view_t* view_src
+  kaapi_pointer_t dest,
+  const kaapi_memory_view_t* view_dest,
+  const void* src,
+  const kaapi_memory_view_t* view_src
 )
 {
   /* use the host to make the tmp copy for now.
@@ -333,7 +333,7 @@ static int memcpy_wrapper( void* arg, void* dest, const void* src, size_t size )
 
 /* CPU to CPU copy
 */
-static int kaapi_memory_write_cpu2cpu
+int kaapi_memory_write_cpu2cpu
 (
   kaapi_pointer_t dest,
   const kaapi_memory_view_t* view_dest,

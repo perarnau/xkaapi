@@ -233,7 +233,7 @@ static void generate_matrix(double* A, size_t m)
 
 /*
 */
-#define DIM 128
+#define DIM 32
 static void convert_to_blocks(long NB, long N, double *Alin, double* A[DIM][DIM] )
 {
   for (long i = 0; i < N; i++)
@@ -305,7 +305,19 @@ struct doit {
     double* dAbloc[DIM][DIM];
     for (long i = 0; i < DIM; i++)
       for (long j = 0; j < DIM; j++)
-       dAbloc[i][j] = (double *) malloc(NB*NB*sizeof(double));
+      {
+       dAbloc[i][j] = 0;
+#if 0
+       posix_memalign( (void**)&(dAbloc[i][j]), 128, NB*NB*sizeof(double));
+#else
+       posix_memalign( (void**)&(dAbloc[i][j]), 4096, NB*NB*sizeof(double));
+       if (kaapi_numa_bind( dAbloc[i][j], NB*NB*sizeof(double), (j < i ? i-j : j-i)%8 ) != 0)
+       {
+         std::cout << "Error cannot bind addr: " << dAbloc[i][j] << " on node " << (i+j)%8 << std::endl;
+         return;
+       }
+#endif
+      }
 
 
               
@@ -330,10 +342,27 @@ struct doit {
     double fadds = (n * (1.0 / 6.0 * n ) * n);
         
     printf("%6d %5d %5d ", (int)n, (int)kaapi_getconcurrency(), (int)(n/NB) );
+
+    generate_matrix( dA, n );
+    convert_to_blocks(NB, n, dA, dAbloc);
     for (int i=0; i<niter; ++i)
     {
-      generate_matrix( dA, n );
-      convert_to_blocks(NB, n, dA, dAbloc);
+#if 0
+{ // display the memory mapping
+      std::cout << "Memory mapping for A:" << std::endl;
+      for (int i=0; i<DIM; ++i)
+      {
+        for (int j=0; j<DIM; ++j)
+        {
+           double* addr = dAbloc[i][j];
+           int node = kaapi_numa_get_page_node( addr );
+           //std::cout << " @:" << addr  << " " << node << ",  ";
+           std::cout << node << ",  ";
+        }
+        std::cout << std::endl;
+      }
+}
+#endif
 
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskCholesky>(ka::SetStaticSched())(block_count, NB, (uintptr_t)&dAbloc);

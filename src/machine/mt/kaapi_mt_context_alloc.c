@@ -50,7 +50,6 @@
 #endif
 #include <string.h>
 
-
 /** kaapi_context_alloc
     Initialize the Kaapi thread context data structure.
     The stack of the thread is organized in two parts : the first, from address 0 to sp_data,
@@ -78,6 +77,7 @@
   
   The stack is full when sfp->sp_data == sfp->sp.
 */
+
 
 /** 
 */
@@ -109,28 +109,43 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
 #endif
   count_pages = (size_data + sizeof(kaapi_thread_context_t) + pagesize -1 ) / pagesize;
   k_stacksize = count_pages*pagesize;
-#if defined (_WIN32)
+
+#  if defined (_WIN32)
   ctxt = (kaapi_thread_context_t*) VirtualAlloc(0, k_stacksize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-#else
+#  else
   ctxt = (kaapi_thread_context_t*) mmap( 0, k_stacksize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, (off_t)0 );
-#endif
-  if (ctxt == (kaapi_thread_context_t*)-1) {
-    int err __attribute__((unused)) = errno;
+#  endif
+  if (ctxt == (kaapi_thread_context_t*)-1) 
+    return 0;
+
+  /* test page size alignment (4KBytes page) */
+  kaapi_assert_debug( __kaapi_isaligned(ctxt, 0x1000) ==1 );
+
+#if defined(KAAPI_USE_NUMA)
+  /* do local mapping of all pages */
+  err = mbind( ctxt, k_stacksize, MPOL_PREFERRED, 0, 0, MPOL_MF_STRICT );
+  if (err !=0)
+  {
+    int err  = errno;
+    printf("Kproc id: %i on cpuid: %i failed to call mbind, numanode:%i, error:%i,  @:%p, size:%lu\n", kproc->kid, kproc->cpuid, numa_node_of_cpu(kproc->cpuid), err, (void*)ctxt, (unsigned long)k_stacksize);
+    fflush(stdout);
+    munmap( ctxt, ctxt->size );
     return 0;
   }
+#endif
 
 #if !defined (_WIN32) /*VirtualAlloc initializes memory to zero*/
   memset(ctxt, 0, sizeof(kaapi_thread_context_t) ); 
 #endif
 
-  /* force alignment of ctxt->task to be aligned on 64 bits boundary */
+  /* force alignment of ctxt->task to be aligned on 64 bytes boundary */
   ctxt->task = (kaapi_task_t*)((((uintptr_t)ctxt) + k_stacksize - sizeof(kaapi_task_t) - 0x3FUL) & ~0x3FUL);
-  kaapi_assert_m( (((uintptr_t)ctxt->task) & 0x3FUL)== 0, "Stack of task not aligned to 64 bit boundary");
+  kaapi_assert_m( (((uintptr_t)ctxt->task) & 0x3FUL)== 0, "Stack of task not aligned to 64 bytes boundary");
   ctxt->size = (uint32_t)k_stacksize;
 
   /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
-  ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
-  kaapi_assert_m( (((uintptr_t)ctxt->stackframe) & 0x3F)== 0, "StackFrame pointer not aligned to 64 bit boundary");
+  //ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
+  kaapi_assert_m( __kaapi_isaligned( &ctxt->stackframe, 8), "StackFrame pointer not aligned to 64 bits boundary");
   if (ctxt->stackframe ==0) {
 #if defined (_WIN32)
     VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
@@ -138,10 +153,6 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     munmap( ctxt, ctxt->size );
 #endif
     return 0;
-  }
-  for (int i=0; i<KAAPI_MAX_RECCALL; ++i)
-  {
-    kaapi_frame_clear( &ctxt->stackframe[i] );
   }
 
   kaapi_thread_clear(ctxt);

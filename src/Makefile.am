@@ -60,8 +60,8 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_copy.c \
   memory/kaapi_memory_allocate.c \
   memory/kaapi_memory_bind.c \
-  memory/kaapi_memory_get_version.c \
   memory/kaapi_memory_find_writer.c \
+  memory/kaapi_numa.c \
   memory/kaapi_mem.c \
   memory/kaapi_mem.h \
   workstealing/kaapi_sched_select_rand.c \
@@ -93,9 +93,10 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_thread_signalend_exec.c \
   thread/kaapi_thread_computereadylist.c \
   thread/kaapi_thread_computeready_access.c \
-  thread/kaapi_thread_compute_date.c \
   thread/kaapi_thread_checkdeps.c \
   thread/kaapi_thread_taskmovealloc.c \
+  thread/kaapi_version_find.c \
+  thread/kaapi_version_addaccess.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
@@ -115,18 +116,19 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
   static/kaapi_stsched_tasksetstatic.c \
-  static/kaapi_threadgroup_nothgrp.c
+  static/kaapi_threadgroup_nothgrp.c\
+  static/kaapi_stsched_taskrecv.c\
+  static/kaapi_stsched_taskbcast.c
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
 libkaapi_la_SOURCES+=\
+  memory/kaapi_memory_get_version.c \
   kaapi_partition.h\
   static/kaapi_stsched_create.c\
   static/kaapi_stsched_destroy.c\
   static/kaapi_stsched_initthread.c\
   static/kaapi_stsched_checkdeps.c\
-  static/kaapi_stsched_taskrecv.c\
-  static/kaapi_stsched_taskbcast.c\
   static/kaapi_stsched_partition.c\
   static/kaapi_stsched_tasksignal.c
 endif

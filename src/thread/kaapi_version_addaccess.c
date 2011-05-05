@@ -43,52 +43,54 @@
  */
 #include "kaapi_impl.h"
 
-static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
-{ return (d1 < d2 ? d2 : d1); }
-
-/**  
+/*
 */
-int kaapi_thread_computeready_date( 
-    const kaapi_version_t* version, 
-    kaapi_taskdescr_t*     task,
-    kaapi_access_mode_t    m 
+int kaapi_version_add_initialaccess( 
+    kaapi_version_t*           version, 
+    kaapi_tasklist_t*          tl,
+    kaapi_access_mode_t        m,
+    void*                      data, 
+    const kaapi_memory_view_t* view 
 )
 {
-  if (version->last_mode == KAAPI_ACCESS_MODE_VOID)
+  kaapi_assert_debug(version->last_mode == KAAPI_ACCESS_MODE_VOID)
+
+  version->handle = (kaapi_data_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_data_t) );
+  version->handle->ptr  = kaapi_make_pointer(KAAPI_EMPTY_ADDRESS_SPACE_ID, 0);  
+  version->handle->view = *view;
+  
+  if (KAAPI_ACCESS_IS_READ(m))
   {
-    task->date = _kaapi_max( task->date, 1);
+    /* push a move task to insert the data into the task list */
+    kaapi_taskdescr_t* td_move;
+    kaapi_move_arg_t*  argmove 
+        = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+    argmove->src_data.ptr    = kaapi_make_pointer(KAAPI_EMPTY_ADDRESS_SPACE_ID, data);
+    argmove->src_data.view   = *view;
+    argmove->dest            = version->handle;
+    td_move                  = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskmove_body, argmove);
+    version->writer_task     = td_move;
+    version->writer_tasklist = tl;    
+    kaapi_tasklist_pushback_ready( tl, td_move);
   }
-  else if (KAAPI_ACCESS_IS_CONCURRENT(m, version->last_mode))
+  else if (KAAPI_ACCESS_IS_WRITE(m))
   {
-    if (KAAPI_ACCESS_IS_READ(m))
-    { /* its a r */
-      if (version->writer_task !=0)
-      {
-        task->date = _kaapi_max( task->date, 1+version->writer_task->date);
-      }
-      else {
-        task->date = _kaapi_max( task->date, 1);
-      }
-    }
+    kaapi_taskdescr_t* td_alloc;
+    kaapi_move_arg_t*  argalloc 
+        = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+    argalloc->src_data.ptr   = kaapi_make_pointer(KAAPI_EMPTY_ADDRESS_SPACE_ID, data);
+    argalloc->src_data.view  = *view;
+    argalloc->dest           = version->handle;
+    td_alloc                 = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskalloc_body, argalloc );
+    version->writer_task     = td_alloc;
+    version->writer_tasklist = tl;
+    kaapi_tasklist_pushback_ready( tl, td_alloc);
+  } else {
+    /* not yet implemented || KAAPI_ACCESS_IS_CUMULWRITE(m)) */
+    kaapi_assert(0);
   }
-  else if (KAAPI_ACCESS_IS_READWRITE(m)) /* rw */
-  {
-    if (version->last_task !=0) /* whatever is the previous task, do link */
-    {
-      task->date = _kaapi_max(task->date, 1+version->last_task->date);
-    }
-    else 
-    {
-      kaapi_assert_debug( version->last_mode == KAAPI_ACCESS_MODE_VOID);
-      task->date = _kaapi_max( task->date, 1);
-    }
-  }
-  else if (KAAPI_ACCESS_IS_READ(m)) /* r (rw already test) */
-  { /* means previous is a w or rw or cw */
-    task->date = _kaapi_max( task->date, 1+version->last_task->date);
-  }
-  else if (KAAPI_ACCESS_IS_WRITE(m)) /* cw or w */
-  {
-  }
+
+  version->last_mode = KAAPI_ACCESS_MODE_W;
+
   return 0;
 }

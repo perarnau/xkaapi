@@ -108,6 +108,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kaapi_processor_computetopo( kproc );  
 
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
+  kaapi_assert(ctxt !=0);
 
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);

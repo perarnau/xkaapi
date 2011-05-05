@@ -46,8 +46,7 @@
 static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
 { return (d1 < d2 ? d2 : d1); }
 
-/** Call by attribut of the user level C++ ka::SetPartition
-    The task should be pushed into the thread.
+/** Call by attribut ka::SetPartition of the user level C++ 
 */
 int kaapi_thread_online_computedep(kaapi_thread_t* frame, int pid, kaapi_task_t* task)
 {
@@ -55,8 +54,6 @@ int kaapi_thread_online_computedep(kaapi_thread_t* frame, int pid, kaapi_task_t*
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
   err = kaapi_thread_computedep_task( thread, frame->tasklist, task );
-  if (err ==0)
-    kaapi_thread_pushtask(frame);
   return err;
 }
 
@@ -69,8 +66,8 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
 {
   kaapi_format_t*         task_fmt;
   kaapi_task_body_t       task_body;
-  kaapi_taskdescr_t*      taskdescr =0;
-  kaapi_metadata_info_t*  mdi;
+  kaapi_taskdescr_t*      taskdescr;
+  kaapi_handle_t          handle;
   kaapi_version_t*        version;
 
   /* assume task list  */
@@ -84,55 +81,46 @@ int kaapi_thread_computedep_task(kaapi_thread_context_t* thread, kaapi_tasklist_
   if (task_fmt ==0) 
     return EINVAL;
 
-  /* new task descriptor */
-  taskdescr = kaapi_tasklist_allocate_td( tasklist, task );
+  /* new task descriptor in the task list */
+  taskdescr = kaapi_tasklist_allocate_td( tasklist, task, task_fmt );
   
-  /* compute if the i-th access is ready or not.
-     If all accesses of the task are ready then push it into readylist.
+  /* Compute for each access i if it is ready or not.
+     If all accesses of the task are ready then the taskdescr is pushed into readylist
+     of the tasklist.
   */
   void* sp = task->sp;
   size_t count_params = kaapi_format_get_count_params(task_fmt, sp );
-  kaapi_assert( count_params <= 32 );
   
   for (unsigned int i=0; i < count_params; i++) 
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
     if (m == KAAPI_ACCESS_MODE_V) 
-    {
       continue;
-    }
     
-    /* its an access */
+    /* it is an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
 
-    /* find the version info of the data using the hash map */
-    mdi = kaapi_mem_findinsert_metadata( access.data );
-    if ( !_kaapi_metadata_info_is_valid(mdi, thread->asid) )
+    /* find the version info of the data using a thread specific hash map 
+       If no access exists, then add in the tasklist a task to move or allocate
+       initial data for all the remainding tasks on the same tasklist.
+    */
+    version = kaapi_version_findinsert( thread, tasklist, access.data );
+    if (version->last_mode == KAAPI_ACCESS_MODE_VOID)
     {
       kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, task->sp);
-      _kaapi_metadata_info_bind_data( mdi, thread->asid, access.data, &view );
-      /* no version -> new version object: no writer */
-      mdi->version[0] = version = kaapi_thread_newversion( mdi, &view );
-      
-      /* initialize first version depending of the first access mode */
-      kaapi_thread_initialize_first_access( tasklist, version, m, access.data );
-    }
-    else {
-      /* have a look at the version and detect dependency or not etc... */
-      version = mdi->version[0];
+      kaapi_version_add_initialaccess( version, tasklist, m, access.data, &view );
     }
 
-    /* compute the readyness of the task */
-    kaapi_thread_computeready_access( tasklist, version, taskdescr, m, access.data );
+    /* compute readiness of the access and return the handle to assign to the global data 
+       to assign to the task
+    */
+    handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
-    /* change the data in the task by the handle */
-    access.data = version->handle;
+    /* replace the pointer to the data in the task argument by the pointer to the global data */
+    access.data = handle;
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
-  }
-  
-#if 0
-  tasklist->t_infinity = _kaapi_max(taskdescr->date, tasklist->t_infinity);
-#endif
+
+  } /* end for all arguments of the task */
   
   /* store the format to avoid lookup */
   taskdescr->fmt = task_fmt;

@@ -43,68 +43,32 @@
  */
 #include "kaapi_impl.h"
 
-
-/**
+/*
 */
-int kaapi_sched_computereadylist( void )
+kaapi_version_t* kaapi_version_findinsert( 
+    kaapi_thread_context_t* thread,
+    kaapi_tasklist_t*       tl,
+    const void*             addr 
+)
 {
-  kaapi_tasklist_t* tasklist;
-  int err;
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  if (thread ==0) return EINVAL;
-  if (kaapi_frame_isempty(thread->sfp)) return ENOENT;
-  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist, thread );
-  err= kaapi_thread_computereadylist( thread, tasklist  );
-  thread->sfp->tasklist = tasklist;
-  return err;
-}
-
-
-/**
-*/
-int kaapi_sched_clearreadylist( void )
-{
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  if (thread ==0) return EINVAL;
-  kaapi_tasklist_t* tasklist = thread->sfp->tasklist;
-  kaapi_sched_lock(&thread->proc->lock);
-  thread->sfp->tasklist = 0;
-  kaapi_sched_unlock(&thread->proc->lock);
-  kaapi_tasklist_destroy(tasklist);
-  free( tasklist );
-//HERE: hack to do loop over SetStaticSched because memory state
-// is leaved in inconsistant state.
-  kaapi_memory_destroy();
-  kaapi_memory_init();
-  return 0;
-}
-
-
-/** task is the top task not yet pushed.
-    This function is called is after all task has been pushed into a specific frame.
- */
-int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist )
-{
-  kaapi_frame_t*          frame;
-  kaapi_task_t*           task_top;
-  kaapi_task_t*           task_bottom;
+  kaapi_hashentries_t* entry;
+  kaapi_version_t* version;
   
-  /* assume no task list or task list is empty */
-  frame    = thread->sfp;
-  
-  /* initialize hashmap for version */
-  kaapi_big_hashmap_init( &thread->kversion_hm, 0 );  
-  
-  /* iteration over all tasks of the current top frame thread->sfp */
-  task_top    = frame->pc;
-  task_bottom = frame->sp;
-  while (task_top > task_bottom)
-  {
-    kaapi_thread_computedep_task( thread, tasklist, task_top );
-    --task_top;
-  } /* end while task */
+  entry   = kaapi_big_hashmap_findinsert( &thread->kversion_hm, addr );
+  version = entry->u.version;
+  if (version !=0)
+    return version;
 
- kaapi_big_hashmap_destroy( &thread->kversion_hm );  
- return 0;
+  version = entry->u.version
+      = (kaapi_version_t*)kaapi_tasklist_allocate( tl, sizeof(kaapi_version_t) );
+
+  version->last_mode       = KAAPI_ACCESS_MODE_VOID;
+
+#if defined(KAAPI_DEBUG)
+  version->handle          = 0;
+  version->writer_task     = 0;
+  version->writer_tasklist = 0;
+#endif
+  
+  return entry->u.version;
 }

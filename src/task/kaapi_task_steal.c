@@ -202,7 +202,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   
   /* the the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
-  count_params    = kaapi_format_get_count_params(fmt, arg->origin_task); 
+  count_params    = kaapi_format_get_count_params(fmt, orig_task_args); 
   arg->copy_task_args = 0;
   
   /**/
@@ -269,10 +269,13 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 #else
           copy_access_param.data    = malloc(kaapi_memory_view_size(&view));
 #endif
-          if (fmt_param->cstor !=0) {
+          if (fmt_param->cstor !=0) 
             (*fmt_param->cstor)(copy_access_param.data);
-            kaapi_format_set_access_param(fmt, i, copy_task_args, &copy_access_param );
-          }
+          
+          /* set new data to copy of the data with new view */
+          kaapi_format_set_access_param(fmt, i, copy_task_args, &copy_access_param );
+          kaapi_memory_view_reallocated( &view );
+          kaapi_format_set_view_param( fmt, i, copy_task_args, &view );
         }
       }
     }

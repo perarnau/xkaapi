@@ -106,7 +106,7 @@ static int kaapi_explore_successor(
           (kaapi_taskdescr_t*)kaapi_allocator_allocate( allocator, sizeof(kaapi_taskdescr_t) );
       /* store in ->task the original td */
       memset( tdsucc_predgraph, 0, sizeof(kaapi_taskdescr_t) );
-      tdsucc_predgraph->task = (kaapi_task_t*)tdsucc;
+      tdsucc_predgraph->task = *(kaapi_task_t*)tdsucc;
       entry->u.td = tdsucc_predgraph;
       visited = 0;
     }
@@ -179,7 +179,7 @@ memset(ctp, 0, sizeof(ctp) );
     
     /* store in ->task the original td */
     memset( td_predgraph, 0, sizeof(kaapi_taskdescr_t) );
-    td_predgraph->task = (kaapi_task_t*)td;
+    td_predgraph->task = *(kaapi_task_t*)td;
 
     err = kaapi_explore_successor( &task2task_khm, &rootlist, &free_al, &allocator, td, td_predgraph );
     if (err == ESRCH) 
@@ -201,7 +201,7 @@ memset(ctp, 0, sizeof(ctp) );
     /* process td  */
     if (td_predgraph !=0) 
     {
-      td        = (kaapi_taskdescr_t*)td_predgraph->task;
+      td        = (kaapi_taskdescr_t*)&td_predgraph->task;
       td->date  = td_predgraph->date;
 #if 0
       ++ctp[ kaapi_tasklist_getpriority(td) ];

@@ -94,7 +94,26 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
            required to be dstor.
         */
         if (!KAAPI_ACCESS_IS_CUMULWRITE(m))
-          (*fmt_param->assign)( access_param.data, access_param.version );
+        {
+          kaapi_memory_view_t view_dest = kaapi_format_get_view_param(fmt, i, taskarg);
+          kaapi_memory_view_t view_src;
+          
+          /* in case of WAR resolution, view_src is == to reallocation of view_src */
+          view_src = view_dest;
+          kaapi_memory_view_reallocated( &view_src );
+
+          /* here we assume that if no assignment, then this is a pod type, so we use memcpy version for cpu2cpu
+             If version is produced remotely... version should store the location...
+          */
+          if (fmt_param->assign ==0)
+          {
+            kaapi_pointer_t     ptr_dest;
+            kaapi_void2pointer(&ptr_dest, access_param.data);
+            kaapi_memory_write_cpu2cpu(ptr_dest, &view_dest, access_param.version, &view_src);
+          }
+          else
+            (*fmt_param->assign)( access_param.data, &view_dest, access_param.version, &view_src );
+        }
         else {
           kaapi_format_reduce_param( fmt, i, taskarg, access_param.data, access_param.version );
         }

@@ -66,7 +66,11 @@ int kaapi_big_hashmap_destroy( kaapi_big_hashmap_t* khm )
   {
     kaapi_hashentries_bloc_t* curr = khm->allallocatedbloc;
     khm->allallocatedbloc = curr->next;
+#if defined(KAAPI_USE_NUMA)
+    numa_free (curr, sizeof(kaapi_hashentries_bloc_t));
+#else
     free (curr);
+#endif
   }
   khm->allallocatedbloc = 0;
   khm->currentbloc = 0;

@@ -109,6 +109,8 @@ typedef struct kaapi_address_space_t {
 } kaapi_address_space_t;
 
 
+#define KAAPI_EMPTY_ADDRESS_SPACE_ID 0ULL
+
 /* Create a new address space.
    The user is invited to use predefined address space identifier
    in place of creating a new address space.  
@@ -253,6 +255,16 @@ extern int kaapi_memory_copy(
   kaapi_pointer_t src,  const kaapi_memory_view_t* view_src 
 );
 
+/** Expose copy from cpu2cpu
+*/
+extern int kaapi_memory_write_cpu2cpu
+(
+  kaapi_pointer_t dest,
+  const kaapi_memory_view_t* view_dest,
+  const void* src,
+  const kaapi_memory_view_t* view_src
+);
+
 
 /** Copy a view of a data to an other view in a remote address space.
     Source and destination memory region cannot overlap.
@@ -325,22 +337,6 @@ static inline void kaapi_memory_view_clear( kaapi_memory_view_t* kmv )
 }
 
 
-/** return the size of the view
-*/
-static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* kmv )
-{
-  switch (kmv->type) 
-  {
-    case KAAPI_MEMORY_VIEW_1D: return kmv->size[0]*kmv->wordsize;
-    case KAAPI_MEMORY_VIEW_2D: return kmv->size[0]*kmv->size[1]*kmv->wordsize;
-    default:
-      kaapi_assert(0);
-      break;
-  }
-  return 0;
-}
-
-
 /** assume that now the view points to a new allocate view
 */
 static inline void kaapi_memory_view_reallocated( kaapi_memory_view_t* kmv )
@@ -355,19 +351,6 @@ static inline void kaapi_memory_view_reallocated( kaapi_memory_view_t* kmv )
   }
 }
 
-
-/** Return non null value iff the view is contiguous
-*/
-static inline int kaapi_memory_view_iscontiguous( const kaapi_memory_view_t* kmv )
-{
-  switch (kmv->type) {
-    case KAAPI_MEMORY_VIEW_1D: return 1;
-    case KAAPI_MEMORY_VIEW_2D: return  kmv->lda == kmv->size[1]; /* row major storage */
-    default:
-      break;
-  } 
-  return 0;
-}
 
 
 /** Meta data attached to a pointer and its remote copies on a set of address spaces.
@@ -492,11 +475,13 @@ static inline void _kaapi_metadata_info_set_writer(
   kmdi->validbits = 1UL << lid;
 }
 
+#if 0
 /**/
 extern struct kaapi_version_t* _kaapi_metadata_info_get_version( 
     kaapi_metadata_info_t* kmdi,
     kaapi_address_space_id_t kasid
 );
+#endif
 
 /** Return a version that handle a valid copy in order to make a copy to kasid 
 */

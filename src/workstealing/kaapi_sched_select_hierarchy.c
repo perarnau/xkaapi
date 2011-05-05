@@ -44,6 +44,7 @@
 #include "kaapi_impl.h"
 
 typedef struct kaapi_hier_arg {
+  short         nfailed;
   short         depth;
   short         depth_min;
   unsigned int  index;
@@ -51,8 +52,6 @@ typedef struct kaapi_hier_arg {
 } kaapi_hier_arg;
 
 
-static kaapi_atomic_t thelock = { 1 };
- 
 /** Do rand selection 
 */
 int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag )
@@ -75,7 +74,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   {
     /* success: try next to time on lower depth */
     level = &kproc->hlevel.levels[arg->depth];
-//    if (++arg->index >= level->nkids)
+    if (++arg->index >= 2)//level->nkids/4)
     {
       ++arg->depth;
       arg->index = 0;
@@ -94,6 +93,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   }
 
 
+do_select:
   if (arg->depth_min ==-1) 
   { /* no hierarchy */
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
@@ -113,7 +113,7 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
       if (arg->depth_min > kproc->hlevel.depth)
       {
         arg->depth_min = -1;
-        break;
+        goto do_select;
       }
       level = &kproc->hlevel.levels[arg->depth_min];
     }

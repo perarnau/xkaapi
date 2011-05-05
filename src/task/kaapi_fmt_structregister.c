@@ -55,7 +55,7 @@ kaapi_format_id_t kaapi_format_structregister(
         void                       (*dstor)( void* dest),
         void                       (*cstorcopy)( void* dest, const void* src),
         void                       (*copy)( void* dest, const void* src),
-        void                       (*assign)( void* dest, const void* src),
+        void                       (*assign)( void* dest, const kaapi_memory_view_t* dview, const void* src, const kaapi_memory_view_t* sview),
         void                       (*print)( FILE* file, const void* src)
 )
 {

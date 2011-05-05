@@ -488,6 +488,7 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #      error No implementation available
 #    endif
 #    define kaapi_bitmap_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_clear)(b)
+#    define kaapi_bitmap_value_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_clear)(b)
 #    define kaapi_bitmap_value_empty(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_empty)(b)
 #    define kaapi_bitmap_value_set(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_set)((b),(i))
 #    define kaapi_bitmap_value_copy(r,b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_copy)((r),(b))
