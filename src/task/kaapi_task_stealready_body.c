@@ -66,6 +66,8 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   /* create a new tasklist on the stack of the running thread
   */
   tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
+  kaapi_tasklist_init( tasklist );
+  kaapi_thread_tasklist_init( tasklist, thread );
 
   /* Execute the orinal body function with the original args */
   frame = (kaapi_frame_t*)uthread;
@@ -74,8 +76,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   thread->sfp[1] = *frame;
   frame = ++thread->sfp;
 
-  kaapi_tasklist_init( tasklist );
-  kaapi_thread_tasklist_init( tasklist, thread );
+  /* link tasklist together for terminaison */
   tasklist->master    = arg->origin_tasklist;
 
   /* Fill the task list with ready stolen tasks.

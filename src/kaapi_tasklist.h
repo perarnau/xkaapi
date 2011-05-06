@@ -566,7 +566,7 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_getpoped( kaapi_tasklist_
 */
 static inline kaapi_task_t* kaapi_thread_tasklist_getsp( kaapi_tasklist_t* tasklist )
 {
-  return (kaapi_task_t*)(((uintptr_t)(&tasklist->td_top[tasklist->next_exec] -1)-sizeof(kaapi_task_t)+1) & ~0xF);
+  return (kaapi_task_t*)(((uintptr_t)(&tasklist->td_top[tasklist->next_exec] -1)-sizeof(kaapi_task_t)+1) & ~0x7ULL);
 }
 
 /** Activate and push ready tasks of an activation link.
