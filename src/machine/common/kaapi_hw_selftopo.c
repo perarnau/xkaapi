@@ -55,7 +55,7 @@
 /* Return the size of the kids array
 */
 static int kaapi_cpuset2kids( 
-  kaapi_cpuset_t*       cpuset, 
+  const kaapi_cpuset_t* cpuset, 
   kaapi_processor_id_t* kids, 
   int nproc
 )
@@ -264,8 +264,26 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
             kproc->hlevel.levels[depth].kids, 
             kaapi_default_param.cpucount
         );
-        break;
-      }
+        
+        /* compute notself set */
+        if (depth +1 < kaapi_default_param.memory.depth)
+        {
+          ncpu = kproc->hlevel.levels[depth].nnotself 
+              = kproc->hlevel.levels[depth+1].set->ncpu - kproc->hlevel.levels[depth].set->ncpu;
+          if (ncpu >0)
+          {
+            kaapi_processor_id_t* notselfkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
+            cpuset = kproc->hlevel.levels[depth+1].set->who;
+            kaapi_cpuset_notand( &cpuset, kproc->hlevel.levels[depth].set->who );
+            kproc->hlevel.levels[depth].nnotself = kaapi_cpuset2kids(
+                &cpuset,
+                kproc->hlevel.levels[depth].notself, 
+                kaapi_default_param.cpucount
+            );
+          }
+        }
+
+      } // if kaapi_cpuset_has
     }
   }
   kproc->hlevel.depth = depth;

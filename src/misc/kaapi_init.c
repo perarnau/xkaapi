@@ -215,7 +215,8 @@ static int kaapi_setup_param()
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand_first0;
   else if ((wsselect != 0) && (strcmp(wsselect, "hierarchical") ==0))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_hierarchy;
-  
+  else if ((wsselect != 0) && (strcmp(wsselect, "pws") ==0))
+    kaapi_default_param.wsselect = &kaapi_sched_select_victim_pws;
   
   return 0;
 }

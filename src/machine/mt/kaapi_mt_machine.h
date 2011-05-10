@@ -575,7 +575,9 @@ typedef struct kaapi_listrequest_t {
 typedef struct kaapi_onelevel_t {
   size_t                nkids;   /* number of neighboors that shared memory at this level */
   size_t                nsize;   /* allocation size of kids */
-  kaapi_processor_id_t* kids;    /* kids[0..nkids-1] == kprocessor id */
+  kaapi_processor_id_t* kids;    /* kids[0..nkids-1] == kprocessor id in this hierarchy level */
+  size_t                nnotself;/* allocation size for notself */
+  kaapi_processor_id_t* notself; /* kids[0..nnotself-1] == kid that shared parent set but not self set */
   kaapi_affinityset_t*  set;     /* set[i] set used to by kids[i] */
 } kaapi_onelevel_t;
 
