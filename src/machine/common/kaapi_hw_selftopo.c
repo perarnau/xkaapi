@@ -74,6 +74,8 @@ static int kaapi_cpuset2kids(
 }
 
 #if 1//defined(KAAPI_DEBUG)
+static kaapi_atomic_t print_lock = { 1 };
+
 __attribute__((unused)) static const char* kaapi_kids2string
 (int nkids, kaapi_processor_id_t* kids)
 {
@@ -268,12 +270,13 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   }
   kproc->hlevel.depth = depth;
   
-#if 0
+#if 1
+  kaapi_sched_lock( &print_lock );
   printf("\nNew topo for K-processor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
     const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth].set->who);
-    printf("cpu:%i, kid:%i, level:%i [size:%lu, cpuset:'%s', kids: '%s', type:%u] \n", processor, kproc->kid, depth, 
+    printf("cpu:%3i, kid:%3i, level:%i [size:%14lu, cpuset:'%s', kids: '%s', type:%u] \n", processor, kproc->kid, depth, 
     (unsigned long)kproc->hlevel.levels[depth].set->mem_size,
     str, 
     kaapi_kids2string(
@@ -282,6 +285,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
     (unsigned int)kproc->hlevel.levels[depth].set->type
     );
   }
+  kaapi_sched_unlock( &print_lock );
 #endif
 
   return 0;
