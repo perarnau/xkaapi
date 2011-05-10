@@ -1412,7 +1412,7 @@ static inline int kaapi_cpuset_set(kaapi_cpuset_t* affinity, kaapi_processor_id_
 
 /**
 */
-static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, kaapi_cpuset_t* src )
+static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, const kaapi_cpuset_t* src )
 {
   (*dest)[0] = (*src)[0];
   (*dest)[1] = (*src)[1];

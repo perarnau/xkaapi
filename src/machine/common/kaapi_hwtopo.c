@@ -58,7 +58,7 @@ static void kaapi_hwcpuset2affinity(
   kaapi_cpuset_clear( affinity );
   for (int i=0; i<nproc; ++i)
   {
-    if (hwloc_cpuset_isset(cpuset, i))
+    if (hwloc_cpuset_isset(cpuset, i) && kaapi_cpuset_has(kaapi_default_param.usedcpu, i))
       kaapi_cpuset_set(affinity, i);
   }
 }
@@ -196,7 +196,8 @@ int kaapi_hw_init(void)
   }
 
   kaapi_default_param.memory.depth  = memdepth;
-  kaapi_default_param.memory.levels = (kaapi_hierarchy_one_level_t*)calloc( memdepth, sizeof(kaapi_hierarchy_one_level_t) );
+  kaapi_default_param.memory.levels 
+    = (kaapi_hierarchy_one_level_t*)calloc( memdepth, sizeof(kaapi_hierarchy_one_level_t) );
   for (depth = 0; depth < topodepth; depth++) 
   {
     obj = hwloc_get_obj_by_depth(topology, depth, 0);
