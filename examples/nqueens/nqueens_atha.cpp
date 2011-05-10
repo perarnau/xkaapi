@@ -349,7 +349,7 @@ struct bt2
           bitmap ^= BOARD[y] = bit;
           a1::Shared<res_t> a1TOTALt;
           a1::Fork< bt2 >() (1+y, (left | bit) << 1, down | bit,(right | bit) >> 1,LASTMASK, BOUND1,ENDBIT,  BOARD, a1TOTALt);
-          a1::Fork<cumulinplace>(a1::SetLocal)(a1TOTALc,a1TOTALt);
+          a1::Fork<cumulinplace>()(a1TOTALc,a1TOTALt);
         } while(bitmap);
         a1::Fork< ::copy >()(a1TOTAL,a1TOTALc);
       }
@@ -384,7 +384,7 @@ struct bt1 {
 
           a1::Shared<res_t> a1TOTALt;
           a1::Fork< bt1 >() (y + 1, (left | bit) << 1, down | bit,(right | bit) >> 1, BOUND1, BOARD, a1TOTALt);
-          a1::Fork<cumulinplace>(a1::SetLocal)(a1TOTALc,a1TOTALt);
+          a1::Fork<cumulinplace>()(a1TOTALc,a1TOTALt);
         } while(bitmap);
         a1::Fork< ::copy >()(a1TOTAL,a1TOTALc);
 
@@ -426,7 +426,7 @@ struct COMMAND(NQueens)
       BOARD[1] = bit;
       a1::Shared<res_t> TOTAL;
       a1::Fork< bt1 >()(2, (2 | bit) << 1, 1 | bit, bit >> 1, BOUND1, BOARD,  TOTAL);
-      a1::Fork< cumulinplace >(a1::SetLocal) (a1TOTAL,TOTAL); 
+      a1::Fork< cumulinplace >() (a1TOTAL,TOTAL); 
     }
 
     /*
@@ -441,7 +441,7 @@ struct COMMAND(NQueens)
       BOARD[0] = bit;
       a1::Shared<res_t> TOTAL;
       a1::Fork < bt2 > ()(1, bit << 1, bit, bit >> 1, LASTMASK, BOUND1, ENDBIT, BOARD,TOTAL);
-      a1::Fork< cumulinplace >(a1::SetLocal) (a1TOTAL,TOTAL);
+      a1::Fork< cumulinplace >() (a1TOTAL,TOTAL);
       LASTMASK |= LASTMASK >> 1 | LASTMASK << 1;
       ENDBIT >>= 1;
     }

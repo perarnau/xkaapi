@@ -117,20 +117,20 @@ struct doit {
     a1::Shared<int> res(0);
     for (long cutoff=2; cutoff<3; ++cutoff)
     {
-      a1::Fork<Fibo>(a1::SetLocal)( res, n );
+      a1::Fork<Fibo>()( res, n );
       /* */
       a1::Sync();
       start_time= ka::WallTimer::gettime();
       for (unsigned int i = 0 ; i < iter ; ++i)
       {   
-        a1::Fork<Fibo>(a1::SetLocal)( res, n );
+        a1::Fork<Fibo>()( res, n );
         /* */
         a1::Sync();
       }
       stop_time= ka::WallTimer::gettime();
 
       /* a1::SetLocal ensures that the task is executed locally (cannot be stolen) */
-      a1::Fork<Print<int> >(a1::SetLocal)(res, ref_value, (stop_time-start_time)/iter );
+      a1::Fork<Print<int> >()(res, ref_value, (stop_time-start_time)/iter );
     }
   }
 

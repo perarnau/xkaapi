@@ -165,7 +165,7 @@ std::cout << "-----\n";
 #if 1
     // Multiply to get C = A*B 
     t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPUType))( A, B, C );
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPU))( A, B, C );
     ka::Sync();
     t1 = kaapi_get_elapsedtime();
 
@@ -174,7 +174,7 @@ std::cout << "-----\n";
 #else
     ka::InCache key;
     t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPUType, key ))( A, B, C );
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPU, key ))( A, B, C );
     ka::Sync();
     t1 = kaapi_get_elapsedtime();
 
@@ -182,7 +182,7 @@ std::cout << "-----\n";
               << " #row,#col = " << nbloc << " took " << t1-t0 << " seconds." << std::endl;
 
     t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPUType, key ))( A, B, C );
+    ka::Spawn<TaskMatProduct>(ka::SetStaticSched(ka::AllCPU, key ))( A, B, C );
     ka::Sync();
     t1 = kaapi_get_elapsedtime();
 

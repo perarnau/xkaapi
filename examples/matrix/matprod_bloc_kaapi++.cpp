@@ -162,7 +162,7 @@ struct doit {
     ka::array<2, double> Cv(dCv, n, n, n);
 
     t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskDGEMM>() (CblasNoTrans, CblasNoTrans, 1.0, A, B, 1.0, Cv );
+    ka::Spawn<TaskDGEMM>(ka::SetStaticSched()) (CblasNoTrans, CblasNoTrans, 1.0, A, B, 1.0, Cv );
     ka::Sync();
     t1 = kaapi_get_elapsedtime();
 
