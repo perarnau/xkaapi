@@ -245,7 +245,9 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
         if (ncpu > kproc->hlevel.levels[depth].nsize) 
         {
           kaapi_processor_id_t* newkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
-          memcpy( newkids, kproc->hlevel.levels[depth].kids, kproc->hlevel.levels[depth].nsize * sizeof(kaapi_processor_id_t) );
+          memcpy( newkids, 
+                  kproc->hlevel.levels[depth].kids, 
+                  kproc->hlevel.levels[depth].nsize * sizeof(kaapi_processor_id_t) );
           free(kproc->hlevel.levels[depth].kids);
           kproc->hlevel.levels[depth].nsize = ncpu;
           kproc->hlevel.levels[depth].kids  = newkids;
