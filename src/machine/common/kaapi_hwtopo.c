@@ -215,7 +215,7 @@ int kaapi_hw_init(void)
         kaapi_default_param.memory.levels[memdepth].affinity[0].type = KAAPI_MEM_NODE;
         kaapi_hwcpuset2affinity(
             &kaapi_default_param.memory.levels[memdepth].affinity[0].who,
-            ncpu, 
+            ncpu,
             obj->cpuset 
         );
       }
@@ -257,7 +257,7 @@ int kaapi_hw_init(void)
   /* end of detection of memory hierarchy */
   
   
-#if 0
+#if 1
 {
   unsigned int i;
   /* display result... */
