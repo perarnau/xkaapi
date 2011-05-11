@@ -68,14 +68,13 @@ int kaapi_sched_stealprocessor(
   /* steal binding queues first */
   while (request != NULL)
   {
-    const unsigned long binding = (unsigned long)kaapi_request_getthiefid(request);
+    const unsigned long binding = (unsigned long)
+      kaapi_numa_get_kid_binding(kaapi_request_getthiefid(request));
 
     kaapi_reply_t* const stealreply = kaapi_request_getreply(request);
     kaapi_tasksteal_arg_t* const stealarg = (void*)&stealreply->udata;
 
     if (pop_bound_task(binding, stealarg) == -1) break ;
-
-    printf("POP_BOUND_TASK(%lu)\n", binding);
 
     /* remove the binding to avoid recursing */
     stealarg->origin_task->binding = (unsigned long)-1;

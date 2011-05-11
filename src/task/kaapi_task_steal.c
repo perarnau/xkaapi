@@ -286,7 +286,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     /* if same binding, execute on the local core */
     if (kaapi_numa_get_self_binding() != arg->origin_task->binding)
     {
-      printf("PUSH_BOUND_TASK(%lu)\n", arg->origin_task->binding);
       push_bound_task(arg->origin_task->binding, arg);
       return ;
     }

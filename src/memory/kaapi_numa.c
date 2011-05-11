@@ -11,10 +11,14 @@ typedef unsigned long kaapi_numaid_t;
 typedef unsigned long kaapi_procid_t;
 
 
+static unsigned int numa_node_count;
+
 int kaapi_numa_initialize(void)
 {
   numa_set_bind_policy(1);
   numa_set_strict(1);
+  numa_node_count = (unsigned int)numa_max_node() + 1;
+
   return 0;
 }
 
@@ -93,8 +97,6 @@ kaapi_numaid_t kaapi_numa_get_page_node(uintptr_t addr)
 
 /* exported numa allocator */
 
-#define IDKOIFF_NUMA_SIZE 8
-
 static uintptr_t base_addr = 0;
 
 void* kaapi_numa_alloc_interleaved(size_t size)
@@ -114,7 +116,7 @@ void* kaapi_numa_alloc_interleaved(size_t size)
   for (off = 0; off < size; off += 0x1000)
   {
     kaapi_numa_bind((const void*)((uintptr_t)addr + off), 0x1000, numaid);
-    numaid = (numaid + 1) % IDKOIFF_NUMA_SIZE;
+    numaid = (numaid + 1) % numa_node_count;
   }
 
   /* update only the first allocation. this is very
@@ -140,7 +142,7 @@ kaapi_numaid_t kaapi_numa_get_addr_binding(void* addr)
    */
 
   const size_t off = ((uintptr_t)addr - base_addr) / 0x1000;
-  return off % IDKOIFF_NUMA_SIZE;
+  return off % numa_node_count;
 }
 
 
@@ -155,4 +157,10 @@ kaapi_numaid_t kaapi_numa_get_kid_binding(unsigned int kid)
 kaapi_numaid_t kaapi_numa_get_self_binding(void)
 {
   return kaapi_numa_get_kid_binding(kaapi_get_self_kid());
+}
+
+kaapi_procid_t kaapi_get_self_cpuid(void)
+{
+  return (kaapi_procid_t)
+    kaapi_default_param.kid2cpu[kaapi_get_self_kid()];
 }
