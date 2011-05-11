@@ -156,6 +156,77 @@ void kaapi_taskwrite_body(
 }
 
 
+/* bound tasks
+ */
+
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct bound_task
+{
+  kaapi_tasksteal_arg_t arg;
+  struct bound_task* next;
+} bound_task_t;
+
+static bound_task_t* volatile bound_task_head = NULL;
+static kaapi_atomic_t bound_task_lock = {0};
+
+static inline void acquire_bound_task_lock(void)
+{
+  kaapi_atomic_t* const lock = &bound_task_lock;
+
+  while (1)
+  {
+    if ((KAAPI_ATOMIC_READ(lock) == 0) && KAAPI_ATOMIC_CAS(lock, 0, 1))
+      break ;
+    kaapi_slowdown_cpu();
+  }
+}
+
+static inline void release_bound_task_lock(void)
+{
+  KAAPI_ATOMIC_WRITE(&bound_task_lock, 0);
+}
+
+static void push_bound_task(kaapi_tasksteal_arg_t* arg)
+{
+  bound_task_t* const bt = malloc(sizeof(bound_task_t));
+  bt->next = NULL;
+  memcpy(&bt->arg, arg, sizeof(kaapi_tasksteal_arg_t));
+
+  acquire_bound_task_lock();
+
+  bt->next = bound_task_head;
+  bound_task_head = bt;
+  __sync_synchronize();
+
+  release_bound_task_lock();
+}
+
+int pop_bound_task(kaapi_tasksteal_arg_t* arg)
+{
+  /* assume kproc locked */
+
+  bound_task_t* head;
+
+  acquire_bound_task_lock();
+
+  head = bound_task_head;
+  if (head == NULL)
+  {
+    release_bound_task_lock();
+    return -1;
+  }
+
+  bound_task_head = head->next;
+  release_bound_task_lock();
+
+  memcpy(arg, &head->arg, sizeof(kaapi_tasksteal_arg_t));
+  free(head);
+
+  return 0;
+}
+
 /**
 */
 void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
@@ -188,11 +259,24 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   void*                  copy_data_param;
   kaapi_access_t         copy_access_param;
 
-  
   /* get information of the task to execute */
   arg = (kaapi_tasksteal_arg_t*)taskarg;
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
 
+  /* short the execution path. push this task in the bound
+     task list instead and execute it on the affine core.
+  */
+  if (arg->origin_task->binding != (unsigned long)-1)
+  {
+    /* TODO: not bound to the local core */
+    if (1)
+    {
+      printf("TODO: BINDING\n");
+      push_bound_task(arg);
+      return ;
+    }
+  }
+  
   /* format of the original stolen task */  
   body            = kaapi_task_getbody(arg->origin_task);
   kaapi_assert_debug( kaapi_isvalid_body( body ) );

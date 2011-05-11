@@ -45,6 +45,9 @@
 */
 #include "kaapi_impl.h"
 
+
+int pop_bound_task(kaapi_tasksteal_arg_t*);
+
 /** Most important assumption here:
     kaapi_sched_lock was locked.
 */
@@ -61,6 +64,25 @@ int kaapi_sched_stealprocessor(
   
   /* first request */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
+
+  /* steal binding queues first */
+  while (request != NULL)
+  {
+    kaapi_reply_t* const stealreply = kaapi_request_getreply(request);
+    kaapi_tasksteal_arg_t* const stealarg = (void*)&stealreply->udata;
+
+    if (pop_bound_task(stealarg) == -1) break ;
+
+    printf("GOT BOUND TASK, replying\n");
+
+    /* remove the binding to avoid recursing */
+    stealarg->origin_task->binding = (unsigned long)-1;
+
+    stealreply->u.s_task.body = kaapi_tasksteal_body;
+    _kaapi_request_reply( request, KAAPI_REPLY_S_TASK);
+
+    request = kaapi_listrequest_iterator_next( lrequests, lrrange );
+  }
 
   /* try to steal ready threads until nore more request is available */
   while ((request !=0) && !kaapi_sched_readyempty(kproc))
