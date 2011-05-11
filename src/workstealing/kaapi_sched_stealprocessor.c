@@ -46,7 +46,7 @@
 #include "kaapi_impl.h"
 
 
-int pop_bound_task(kaapi_tasksteal_arg_t*);
+int pop_bound_task(unsigned long, kaapi_tasksteal_arg_t*);
 
 /** Most important assumption here:
     kaapi_sched_lock was locked.
@@ -68,12 +68,14 @@ int kaapi_sched_stealprocessor(
   /* steal binding queues first */
   while (request != NULL)
   {
+    const unsigned long binding = (unsigned long)kaapi_request_getthiefid(request);
+
     kaapi_reply_t* const stealreply = kaapi_request_getreply(request);
     kaapi_tasksteal_arg_t* const stealarg = (void*)&stealreply->udata;
 
-    if (pop_bound_task(stealarg) == -1) break ;
+    if (pop_bound_task(binding, stealarg) == -1) break ;
 
-    printf("GOT BOUND TASK, replying\n");
+    printf("POP_BOUND_TASK(%lu)\n", binding);
 
     /* remove the binding to avoid recursing */
     stealarg->origin_task->binding = (unsigned long)-1;

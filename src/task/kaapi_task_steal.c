@@ -49,6 +49,9 @@
 # include "../machine/cuda/kaapi_cuda_execframe.h"
 #endif
 
+/* missing decl */
+extern unsigned long kaapi_numa_get_self_binding(void);
+
 
 /**
 */
@@ -168,12 +171,18 @@ typedef struct bound_task
   struct bound_task* next;
 } bound_task_t;
 
-static bound_task_t* volatile bound_task_head = NULL;
-static kaapi_atomic_t bound_task_lock = {0};
-
-static inline void acquire_bound_task_lock(void)
+typedef struct bound_tasklist
 {
-  kaapi_atomic_t* const lock = &bound_task_lock;
+  kaapi_atomic_t lock;
+  bound_task_t* volatile head;
+  double pad[64 - 2 * 8];
+} bound_tasklist_t;
+
+static bound_tasklist_t bound_tasklists[8] = {{{0}, }, }; /* at most 8 numa levels */
+
+static inline void lock_bound_tasklist(bound_tasklist_t* bl)
+{
+  kaapi_atomic_t* const lock = &bl->lock;
 
   while (1)
   {
@@ -183,43 +192,49 @@ static inline void acquire_bound_task_lock(void)
   }
 }
 
-static inline void release_bound_task_lock(void)
+static inline void unlock_bound_tasklist(bound_tasklist_t* bl)
 {
-  KAAPI_ATOMIC_WRITE(&bound_task_lock, 0);
+  kaapi_atomic_t* const lock = &bl->lock;
+  KAAPI_ATOMIC_WRITE(lock, 0);
 }
 
-static void push_bound_task(kaapi_tasksteal_arg_t* arg)
+static void push_bound_task(unsigned long binding, kaapi_tasksteal_arg_t* arg)
 {
+  bound_tasklist_t* const bl = &bound_tasklists[binding];
+
   bound_task_t* const bt = malloc(sizeof(bound_task_t));
   bt->next = NULL;
   memcpy(&bt->arg, arg, sizeof(kaapi_tasksteal_arg_t));
 
-  acquire_bound_task_lock();
+  lock_bound_tasklist(bl);
 
-  bt->next = bound_task_head;
-  bound_task_head = bt;
+  bt->next = bl->head;
+  bl->head = bt;
   __sync_synchronize();
 
-  release_bound_task_lock();
+  unlock_bound_tasklist(bl);
 }
 
-int pop_bound_task(kaapi_tasksteal_arg_t* arg)
+int pop_bound_task(unsigned long binding, kaapi_tasksteal_arg_t* arg)
 {
   /* assume kproc locked */
 
+  bound_tasklist_t* const bl = &bound_tasklists[binding];
+
   bound_task_t* head;
 
-  acquire_bound_task_lock();
+  lock_bound_tasklist(bl);
 
-  head = bound_task_head;
+  head = bl->head;
   if (head == NULL)
   {
-    release_bound_task_lock();
+    unlock_bound_tasklist(bl);
     return -1;
   }
 
-  bound_task_head = head->next;
-  release_bound_task_lock();
+  bl->head = head->next;
+
+  unlock_bound_tasklist(bl);
 
   memcpy(arg, &head->arg, sizeof(kaapi_tasksteal_arg_t));
   free(head);
@@ -268,11 +283,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   */
   if (arg->origin_task->binding != (unsigned long)-1)
   {
-    /* TODO: not bound to the local core */
-    if (1)
+    /* if same binding, execute on the local core */
+    if (kaapi_numa_get_self_binding() != arg->origin_task->binding)
     {
-      printf("TODO: BINDING\n");
-      push_bound_task(arg);
+      printf("PUSH_BOUND_TASK(%lu)\n", arg->origin_task->binding);
+      push_bound_task(arg->origin_task->binding, arg);
       return ;
     }
   }

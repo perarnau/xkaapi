@@ -62,6 +62,7 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_bind.c \
   memory/kaapi_memory_get_version.c \
   memory/kaapi_memory_find_writer.c \
+  memory/kaapi_numa.c \
   memory/kaapi_mem.c \
   memory/kaapi_mem.h \
   workstealing/kaapi_sched_select_rand.c \
