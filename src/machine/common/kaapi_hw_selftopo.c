@@ -55,7 +55,7 @@
 /* Return the size of the kids array
 */
 static int kaapi_cpuset2kids( 
-  const kaapi_cpuset_t* cpuset, 
+  kaapi_cpuset_t* const cpuset, 
   kaapi_processor_id_t* kids, 
   int nproc
 )
@@ -75,11 +75,13 @@ static int kaapi_cpuset2kids(
 
 #if 1//defined(KAAPI_DEBUG)
 static kaapi_atomic_t print_lock = { 1 };
-
-__attribute__((unused)) static const char* kaapi_kids2string
-(int nkids, kaapi_processor_id_t* kids)
+// warning about buffer overflow: buffer should has at least 1024 entries
+__attribute__((unused)) const char* kaapi_kids2string
+(
+  char* buffer,
+  int nkids, kaapi_processor_id_t* kids
+)
 {
-  static char buffer[1024];
   int i, err, size;
   size = 0;
   
@@ -106,8 +108,9 @@ __attribute__((unused)) static const char* kaapi_kids2string
  */
 int kaapi_processor_computetopo(kaapi_processor_t* kproc)
 {
-  int	processor;
+  int processor;
   int depth;
+  kaapi_cpuset_t cpuset; 
 
 #if defined(__linux__)
   int	pid;
@@ -267,48 +270,58 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
             kaapi_default_param.cpucount
         );
         
-        /* compute notself set */
-        if (depth +1 < kaapi_default_param.memory.depth)
-        {
-          ncpu = kproc->hlevel.levels[depth].nnotself 
-              = kproc->hlevel.levels[depth+1].set->ncpu - kproc->hlevel.levels[depth].set->ncpu;
-          if (ncpu >0)
-          {
-            kaapi_processor_id_t* notselfkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
-            kaapi_cpuset_t cpuset;
-            kaapi_cpuset_copy( &cpuset, &kproc->hlevel.levels[depth+1].set->who );
-            kaapi_cpuset_notand( &cpuset, kproc->hlevel.levels[depth].set->who );
-            kproc->hlevel.levels[depth].nnotself = kaapi_cpuset2kids(
-                &cpuset,
-                kproc->hlevel.levels[depth].notself, 
-                kaapi_default_param.cpucount
-            );
-          }
-        }
-
       } // if kaapi_cpuset_has
     }
   }
   kproc->hlevel.depth = depth;
+
+  for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
+  {
+    size_t ncpu;
+
+    /* compute notself set */
+    if (depth +1 < kaapi_default_param.memory.depth)
+    {
+      ncpu = kproc->hlevel.levels[depth].nnotself 
+           = kproc->hlevel.levels[depth+1].nkids - kproc->hlevel.levels[depth].nkids;
+      if (ncpu >0)
+      {
+        kaapi_processor_id_t* notselfkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
+        kaapi_cpuset_copy( &cpuset, kproc->hlevel.levels[depth+1].set->who );
+        kaapi_cpuset_notand( &cpuset, kproc->hlevel.levels[depth].set->who );
+        kproc->hlevel.levels[depth].nnotself = kaapi_cpuset2kids(
+            &cpuset,
+            notselfkids,
+            kaapi_default_param.cpucount
+        );
+        kproc->hlevel.levels[depth].notself = notselfkids;
+      }
+    }
+  }
   
 #if 1
   kaapi_sched_lock( &print_lock );
+  char buffer1[1024];
+  char buffer2[1024];
   printf("\nNew topo for K-processor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
     const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth].set->who);
     printf("cpu:%3i, kid:%3i, level:%i [size:%14lu, cpuset:'%s', kids: '%s', notself: '%s', type:%u] \n", processor, kproc->kid, depth, 
-    (unsigned long)kproc->hlevel.levels[depth].set->mem_size,
-    str, 
-    kaapi_kids2string(
+      (unsigned long)kproc->hlevel.levels[depth].set->mem_size,
+      str, 
+      kaapi_kids2string(
+        buffer1,
         kproc->hlevel.levels[depth].nkids, 
         kproc->hlevel.levels[depth].kids), 
-    (kproc->hlevel.levels[depth].nnotself == 0 ? "":
-      kaapi_kids2string(
-        kproc->hlevel.levels[depth].nnotself, 
-        kproc->hlevel.levels[depth].notself) ), 
-    (unsigned int)kproc->hlevel.levels[depth].set->type
+      (kproc->hlevel.levels[depth].nnotself == 0 ? "":
+        kaapi_kids2string(
+          buffer2,
+          kproc->hlevel.levels[depth].nnotself, 
+          kproc->hlevel.levels[depth].notself) ), 
+      (unsigned int)kproc->hlevel.levels[depth].set->type
     );
+    fflush(stdout);
   }
   kaapi_sched_unlock( &print_lock );
 #endif

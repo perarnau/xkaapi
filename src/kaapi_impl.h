@@ -1422,7 +1422,7 @@ static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, const kaapi_cpuset_t* 
 
 /** Return non 0 iff th as affinity with kid
 */
-static inline int kaapi_cpuset_has(kaapi_cpuset_t affinity, kaapi_processor_id_t kid )
+static inline int kaapi_cpuset_has(const kaapi_cpuset_t affinity, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
@@ -1435,8 +1435,8 @@ static inline int kaapi_cpuset_has(kaapi_cpuset_t affinity, kaapi_processor_id_t
 */
 static inline void kaapi_cpuset_notand(kaapi_cpuset_t* dest, const kaapi_cpuset_t* mask )
 {
-  (*dest)[0] &= ~(*mask)[0];
-  (*dest)[1] &= ~(*mask)[1];
+  (*dest)[0] ^= (*mask)[0];
+  (*dest)[1] ^= (*mask)[1];
 }
 
 /**
