@@ -275,7 +275,8 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
           if (ncpu >0)
           {
             kaapi_processor_id_t* notselfkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
-            cpuset = kproc->hlevel.levels[depth+1].set->who;
+            kaapi_cpuset_t cpuset;
+            kaapi_cpuset_copy( &cpuset, &kproc->hlevel.levels[depth+1].set->who );
             kaapi_cpuset_notand( &cpuset, kproc->hlevel.levels[depth].set->who );
             kproc->hlevel.levels[depth].nnotself = kaapi_cpuset2kids(
                 &cpuset,
@@ -296,12 +297,16 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
     const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth].set->who);
-    printf("cpu:%3i, kid:%3i, level:%i [size:%14lu, cpuset:'%s', kids: '%s', type:%u] \n", processor, kproc->kid, depth, 
+    printf("cpu:%3i, kid:%3i, level:%i [size:%14lu, cpuset:'%s', kids: '%s', notself: '%s', type:%u] \n", processor, kproc->kid, depth, 
     (unsigned long)kproc->hlevel.levels[depth].set->mem_size,
     str, 
     kaapi_kids2string(
         kproc->hlevel.levels[depth].nkids, 
         kproc->hlevel.levels[depth].kids), 
+    (kproc->hlevel.levels[depth].nnotself == 0 ? "":
+      kaapi_kids2string(
+        kproc->hlevel.levels[depth].nnotself, 
+        kproc->hlevel.levels[depth].notself) ), 
     (unsigned int)kproc->hlevel.levels[depth].set->type
     );
   }

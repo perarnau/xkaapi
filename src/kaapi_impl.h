@@ -1433,7 +1433,7 @@ static inline int kaapi_cpuset_has(kaapi_cpuset_t affinity, kaapi_processor_id_t
 
 /** Return *dest &= ~mask
 */
-static inline int kaapi_cpuset_notand(kaapi_cpuset_t* dest, const kaapi_cpuset_t mask )
+static inline void kaapi_cpuset_notand(kaapi_cpuset_t* dest, const kaapi_cpuset_t* mask )
 {
   (*dest)[0] &= ~(*mask)[0];
   (*dest)[1] &= ~(*mask)[1];
