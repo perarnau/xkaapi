@@ -118,16 +118,18 @@ kaapi_numaid_t kaapi_numa_get_page_node(uintptr_t addr)
 
 /* exported numa allocator */
 
-static uintptr_t base_addr = 0;
-static size_t base_stride;
+static uintptr_t saved_addr = 0;
+static size_t saved_stride_size;
 
 void* kaapi_numa_alloc_interleaved(size_t size, size_t stride)
 {
-  /* stride in page count */
+  /* stride the striding page count */
+
+  const size_t stride_size = 0x1000 * stride;
 
   kaapi_numaid_t numaid;
-  size_t off;
   void* addr;
+  size_t off;
 
   if (posix_memalign(&addr, 0x1000, size))
   {
@@ -137,9 +139,9 @@ void* kaapi_numa_alloc_interleaved(size_t size, size_t stride)
 
   /* bind interleaved */
   numaid = 0;
-  for (off = 0; off < size; off += (stride * 0x1000))
+  for (off = 0; off < size; off += stride_size)
   {
-    kaapi_numa_bind((const void*)((uintptr_t)addr + off), 0x1000, numaid);
+    kaapi_numa_bind((const void*)((uintptr_t)addr + off), stride_size, numaid);
     numaid = (numaid + 1) % numa_node_count;
   }
 
@@ -147,10 +149,10 @@ void* kaapi_numa_alloc_interleaved(size_t size, size_t stride)
      ephemeral, since we should not need this global
      pointer when views are available.
    */
-  if (base_addr == 0)
+  if (saved_addr == 0)
   {
-    base_addr = (uintptr_t)addr;
-    base_stride = stride;
+    saved_addr = (uintptr_t)addr;
+    saved_stride_size = stride_size;
   }
 
   return addr;
@@ -170,7 +172,7 @@ kaapi_numaid_t kaapi_numa_get_addr_binding(void* addr)
    */
 
 #if 1
-  const size_t off = ((uintptr_t)addr - base_addr) / (base_stride * 0x1000);
+  const size_t off = ((uintptr_t)addr - saved_addr) / saved_stride_size;
   return off % numa_node_count;
 #else
   return kaapi_numa_get_page_node((uintptr_t)addr);
