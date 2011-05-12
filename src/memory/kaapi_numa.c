@@ -111,10 +111,7 @@ kaapi_numaid_t kaapi_numa_get_page_node(uintptr_t addr)
     (NULL, nodemask, sizeof(nodemask) * 8, (void*)addr, flags);
 
   if (err || is_bitmap_empty(nodemask))
-  {
-    printf("invalid: %lx %u\n", addr, is_bitmap_empty(nodemask));
     return (unsigned long)-1;
-  }
 
   return scan_bitmap(nodemask, 0);
 }
@@ -172,8 +169,12 @@ kaapi_numaid_t kaapi_numa_get_addr_binding(void* addr)
      the previous allocation.
    */
 
+#if 1
   const size_t off = ((uintptr_t)addr - base_addr) / (base_stride * 0x1000);
   return off % numa_node_count;
+#else
+  return kaapi_numa_get_page_node((uintptr_t)addr);
+#endif
 }
 
 
