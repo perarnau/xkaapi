@@ -175,7 +175,8 @@ typedef struct bound_tasklist
 {
   kaapi_atomic_t lock;
   bound_task_t* volatile head;
-  double pad[64 - 2 * 8];
+  volatile unsigned long count;
+  double pad[64 - 3 * 8];
 } bound_tasklist_t;
 
 static bound_tasklist_t bound_tasklists[8] = {{{0}, }, }; /* at most 8 numa levels */
@@ -210,6 +211,7 @@ static void push_bound_task(unsigned long binding, kaapi_tasksteal_arg_t* arg)
 
   bt->next = bl->head;
   bl->head = bt;
+  ++bl->count;
   __sync_synchronize();
 
   unlock_bound_tasklist(bl);
@@ -233,6 +235,7 @@ int pop_bound_task(unsigned long binding, kaapi_tasksteal_arg_t* arg)
   }
 
   bl->head = head->next;
+  --bl->count;
 
   unlock_bound_tasklist(bl);
 
@@ -240,6 +243,13 @@ int pop_bound_task(unsigned long binding, kaapi_tasksteal_arg_t* arg)
   free(head);
 
   return 0;
+}
+
+unsigned int has_bound_task(unsigned long binding)
+{
+  /* may not be coherent */
+  bound_tasklist_t* const bl = &bound_tasklists[binding];
+  return bl->head != NULL;
 }
 
 /**

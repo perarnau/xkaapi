@@ -38,7 +38,10 @@ int kaapi_numa_bind
     1UL << (id % (8 * sizeof(unsigned long)));
 
   if (mbind((void*)addr, size, mode, nodemask, maxnode, flags))
+  {
+    perror("mbind");
     return -1;
+  }
 
   return 0;
 }
@@ -78,29 +81,53 @@ int kaapi_numa_alloc_with_procid
   return kaapi_numa_alloc(addr, size, numaid);
 }
 
+#endif /* UNUSED */
+
+static inline unsigned int is_bitmap_empty
+(const unsigned long* bitmap)
+{
+  return (bitmap[0] + bitmap[1]) == 0;
+}
+
+static inline size_t scan_bitmap
+(const unsigned long* bitmap, size_t i)
+{
+  const size_t j = i / (8 * sizeof(unsigned long));
+
+  const unsigned long mask =
+    ~((1UL << (i % (8 * sizeof(unsigned long)))) - 1UL);
+
+  /* mask the lower bits and scan */
+  return (j * 8 * sizeof(unsigned long)) +
+    __builtin_ffsl(bitmap[j] & mask) - 1;
+}
+
 kaapi_numaid_t kaapi_numa_get_page_node(uintptr_t addr)
 {
   const unsigned long flags = MPOL_F_NODE | MPOL_F_ADDR;
-  kaapi_bitmap_t nodemask;
+  unsigned long nodemask[2] = {0, 0};
 
   const int err = get_mempolicy
-    (NULL, nodemask.bits, KAAPI_MAX_PROCESSOR, (void*)addr, flags);
+    (NULL, nodemask, sizeof(nodemask) * 8, (void*)addr, flags);
 
-  if (err || kaapi_bitmap_is_empty(&nodemask))
-    return KAAPI_INVALID_PROCID;
+  if (err || is_bitmap_empty(nodemask))
+  {
+    printf("invalid: %lx %u\n", addr, is_bitmap_empty(nodemask));
+    return (unsigned long)-1;
+  }
 
-  return kaapi_bitmap_scan(&nodemask, 0);
+  return scan_bitmap(nodemask, 0);
 }
-
-#endif /* unused */
-
 
 /* exported numa allocator */
 
 static uintptr_t base_addr = 0;
+static size_t base_stride;
 
-void* kaapi_numa_alloc_interleaved(size_t size)
+void* kaapi_numa_alloc_interleaved(size_t size, size_t stride)
 {
+  /* stride in page count */
+
   kaapi_numaid_t numaid;
   size_t off;
   void* addr;
@@ -113,7 +140,7 @@ void* kaapi_numa_alloc_interleaved(size_t size)
 
   /* bind interleaved */
   numaid = 0;
-  for (off = 0; off < size; off += 0x1000)
+  for (off = 0; off < size; off += (stride * 0x1000))
   {
     kaapi_numa_bind((const void*)((uintptr_t)addr + off), 0x1000, numaid);
     numaid = (numaid + 1) % numa_node_count;
@@ -123,7 +150,11 @@ void* kaapi_numa_alloc_interleaved(size_t size)
      ephemeral, since we should not need this global
      pointer when views are available.
    */
-  if (base_addr == 0) base_addr = (uintptr_t)addr;
+  if (base_addr == 0)
+  {
+    base_addr = (uintptr_t)addr;
+    base_stride = stride;
+  }
 
   return addr;
 }
@@ -141,7 +172,7 @@ kaapi_numaid_t kaapi_numa_get_addr_binding(void* addr)
      the previous allocation.
    */
 
-  const size_t off = ((uintptr_t)addr - base_addr) / 0x1000;
+  const size_t off = ((uintptr_t)addr - base_addr) / (base_stride * 0x1000);
   return off % numa_node_count;
 }
 
