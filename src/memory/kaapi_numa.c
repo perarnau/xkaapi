@@ -54,7 +54,7 @@ int kaapi_numa_alloc(void** addr, size_t size, kaapi_numaid_t id)
   if (posix_memalign(addr, 0x1000, size) == 0)
   {
     if (kaapi_numa_bind(*addr, size, id))
-    { free(addr); *addr = NULL; }
+    { free(*addr); *addr = NULL; }
   }
 #else
   *addr = numa_alloc_onnode(size, (int)id);
