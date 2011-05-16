@@ -32,24 +32,27 @@
 // Use the Quick Sort algorithm, using recursive divide and conquer.
 // This function is NOT the same as the Standard C Library qsort() function.
 // This implementation is pure C++ code before Cilk++ conversion.
-struct Task_QSort : public ka::Task<2>::Signature<ka::RPWP<int>, ka::RPWP<int> > {};
+struct Task_QSort : public ka::Task<1>::Signature<ka::RW< ka::range1d<int> > > {};
 
 template<>
 struct TaskBodyCPU<Task_QSort>
 {
-  void operator()(ka::pointer_rpwp<int> begin, ka::pointer_rpwp<int> end)
+  void operator()(ka::range1d_rw<int> range)
   {
+    int* begin = range.begin();
+    int* end   = range.end();
     if (begin != end) 
     {
         --end;  // Exclude last element (pivot) from partition
         
         // required explicit cast to int*
-        ka::pointer_rpwp<int> middle 
+        int* middle 
             = std::partition( (int*)begin, (int*)end, 
                               std::bind2nd(std::less<int>(), *end));
         std::swap(*end, *middle);    // move pivot to middle
-        ka::Spawn<Task_QSort> ()(begin, middle);
-        (*this)(++middle, ++end); // Exclude pivot and restore end
+        ka::Spawn<Task_QSort> ()( ka::array<1,int>(begin, middle-begin) );
+        (*this)( ka::range1d<int>(middle+1, end-middle) );
+//        (*this)(++middle, ++end); // Exclude pivot and restore end
     }
   }
 };
@@ -57,7 +60,7 @@ struct TaskBodyCPU<Task_QSort>
 // A simple test harness 
 int qmain(int n)
 {
-    ka::pointer_rpwp<int> a = new int[n];
+    int* a = new int[n];
 
     for (int i = 0; i < n; ++i)
         a[i] = i;
@@ -66,7 +69,7 @@ int qmain(int n)
     std::cout << "Sorting " << n << " integers" << std::endl;
 
     double t0 = kaapi_get_elapsedtime();
-    ka::Spawn<Task_QSort>()(a, a + n);
+    ka::Spawn<Task_QSort>()( ka::array<1,int>(a, n) );
     ka::Sync();
     double t1 = kaapi_get_elapsedtime();
 

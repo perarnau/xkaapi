@@ -42,19 +42,20 @@
 ** 
 */
 #include <iostream>
+#include <string>
 #include <stdlib.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 /* Task Hello
  * this task takes an integer n and write the value to the std::cout stream.
  */
-struct TaskHello : public ka::Task<1>::Signature<double> {};
+struct TaskHello : public ka::Task<2>::Signature<std::string, double> {};
 
 template<>
 struct TaskBodyCPU<TaskHello> {
-  void operator() ( double n )
+  void operator() ( std::string msg, double n )
   {
-    std::cout << "Hello World !, n=" << n << std::endl;
+    std::cout << "Hello World !, msg=" << msg << ", n=" << n << std::endl;
   }
 };
 
@@ -66,7 +67,7 @@ struct doit {
   {
     double n = 3.1415;
     if (argc >1) n = atof(argv[1]);
-    ka::Spawn<TaskHello>()( n );
+    ka::Spawn<TaskHello>()( "toto", n );
   }
 };
 

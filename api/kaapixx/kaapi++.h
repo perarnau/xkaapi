@@ -344,6 +344,10 @@ namespace ka {
     static Community initialize_community( int& argc, char**& argv )
       throw (std::runtime_error);
 
+    static Community initialize( int& argc, char**& argv )
+      throw (std::runtime_error)
+    { return System::initialize_community(argc, argv); }
+
     static Thread* get_current_thread();
 
     static int getRank();
@@ -477,8 +481,8 @@ namespace ka {
 
 namespace ka {
 
-  template<int dim, class T> 
-  struct TraitIsStatic<array<dim,T> > { static const bool value = false; };
+  template<int dim, class T, Storage2DClass S> 
+  struct TraitIsStatic<array<dim,T,S> > { static const bool value = false; };
 
   // --------------------------------------------------------------------
   template<class T>
@@ -582,7 +586,7 @@ namespace ka {
     pointer_rpwp() : base_pointer<T>() {}
     pointer_rpwp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rpwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-    operator value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };
@@ -647,7 +651,7 @@ namespace ka {
     pointer_r( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const pointer_rp<T>& ptr ) : base_pointer<T>(ptr) {}
     const T* operator->() { return base_pointer<T>::ptr(); }
-    operator value_type*() { return base_pointer<T>::ptr(); }
+    operator const value_type*() const { return base_pointer<T>::ptr(); }
     const T& operator*() const { return *base_pointer<T>::ptr(); }
     const T* operator->() const { return base_pointer<T>::ptr(); }
     const T& operator[](int i) const { return base_pointer<T>::ptr()[i]; }
@@ -1330,12 +1334,12 @@ namespace ka {
 
   /* ------ rep of range of contiguous array of data: pointer_XX<array<dim, T> >
   */
-  template<int d, typename T>
-  struct array_inclosure_t : public array<d,T> {
-    array_inclosure_t() : array<d,T>(), version(0) {}
-    array_inclosure_t(const array<d,T>& a) : array<d,T>(a), version(0) {}
+  template<int d, typename T, Storage2DClass S>
+  struct array_inclosure_t : public array<d,T,S> {
+    array_inclosure_t() : array<d,T,S>(), version(0) {}
+    array_inclosure_t(const array<d,T,S>& a) : array<d,T,S>(a), version(0) {}
     template<typename P>
-    array_inclosure_t( const P& p ) : array<d,T>(p) {}
+    array_inclosure_t( const P& p ) : array<d,T,S>(p) {}
     
     void* version;
   };
@@ -1357,16 +1361,16 @@ namespace ka {
     }
   };
 
-  /* alias ka::range2d<T> in place of array<2,T> */
-  template<typename T>
-  struct range2d : public array<2,T> {
-    range2d( T* beg, size_t n, size_t m, size_t lda ) : array<2,T>(beg, n, m, lda ) {}
-    range2d( const array<2,T>& a ) : array<2,T>(a) {}
+  /* alias ka::range2d<T> in place of array<2,T,S> */
+  template<typename T,Storage2DClass S=RowMajor>
+  struct range2d : public array<2,T,S> {
+    range2d( T* beg, size_t n, size_t m, size_t lda ) : array<2,T,S>(beg, n, m, lda ) {}
+    range2d( const array<2,T,S>& a ) : array<2,T,S>(a) {}
     range2d operator() (const rangeindex& ri, const rangeindex& rj) 
-    { return range2d( array<2,T>::operator()(ri,rj) ); }
-    range2d& operator=( const array<2,T>& a )
+    { return range2d( array<2,T,S>::operator()(ri,rj) ); }
+    range2d& operator=( const array<2,T,S>& a )
     { 
-      array<2,T>::operator=( a );
+      array<2,T,S>::operator=( a );
       return *this;
     }
   };
@@ -1382,9 +1386,9 @@ namespace ka {
     pointer_r() : array<1,T>() {}
     pointer_r( const array<1,T>& a ) : array<1,T>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_r( array_inclosure_t<1,T>& a ) : array<1,T>(a) {}
+    explicit pointer_r( array_inclosure_t<1,T,RowMajor>& a ) : array<1,T>(a) {}
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<1,T>() const { return array_inclosure_t<1,T>(*this); }
+    operator array_inclosure_t<1,T,RowMajor>() const { return array_inclosure_t<1,T,RowMajor>(*this); }
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
@@ -1430,14 +1434,14 @@ namespace ka {
   /* */
   template<typename T>
   class pointer_w<array<1,T> > : protected array<1,T> {
-    friend class array_inclosure_t<1,T>;
+    friend class array_inclosure_t<1,T,RowMajor>;
   public:
     typedef T                        value_type;
     typedef size_t                   difference_type;
     typedef pointer_w<array<1,T> >   Self_t;
 
     pointer_w() : array<1,T>() {}
-    pointer_w( const array_inclosure_t<1,T>& a ) : array<1,T>(a) {}
+    pointer_w( const array_inclosure_t<1,T,RowMajor>& a ) : array<1,T>(a) {}
     /* cstor call on closure creation */
     explicit pointer_w( array<1,T>& a ) : array<1,T>(a) {}
     /* use in spawn effective -> in closure */
@@ -1491,7 +1495,7 @@ namespace ka {
   /**/
   template<typename T>
   class pointer_rw<array<1,T> > : protected array<1,T> {
-    friend class array_inclosure_t<1,T>;
+    friend class array_inclosure_t<1,T,RowMajor>;
   public:
     typedef T                        value_type;
     typedef size_t                   difference_type;
@@ -1500,9 +1504,9 @@ namespace ka {
     pointer_rw() : array<1,T>() {}
     pointer_rw( const array<1,T>& a ) : array<1,T>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_rw( array_inclosure_t<1,T>& a ) : array<1,T>(a) {}
+    explicit pointer_rw( array_inclosure_t<1,T,RowMajor>& a ) : array<1,T>(a) {}
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<1,T>() const { return array_inclosure_t<1,T>(*this); }
+    operator array_inclosure_t<1,T,RowMajor>() const { return array_inclosure_t<1,T,RowMajor>(*this); }
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
@@ -1538,7 +1542,9 @@ namespace ka {
     typedef size_t                   difference_type;
 
     range1d_rw( range1d<T>& a ) : pointer_rw<array<1,T> >(a) {}
+    range1d_rw( const range1d<T>& a ) : pointer_rw<array<1,T> >(a) {}
     explicit range1d_rw( array<1,T>& a ) : pointer_rw<array<1,T> >(a) {}
+    explicit range1d_rw( const array<1,T>& a ) : pointer_rw<array<1,T> >(a) {}
 
     T& operator[](difference_type i) { return array<1,T>::operator[](i); }
     T& operator()(difference_type i) { return array<1,T>::operator[](i); }
@@ -1552,7 +1558,7 @@ namespace ka {
 
   template<typename T>
   class pointer_rpwp<array<1,T> > : protected array<1,T> {
-    friend class array_inclosure_t<1,T>;
+    friend class array_inclosure_t<1,T,RowMajor>;
   public:
     typedef T                        value_type;
     typedef size_t                   difference_type;
@@ -1561,9 +1567,9 @@ namespace ka {
     pointer_rpwp() : array<1,T>() {}
     pointer_rpwp( const array<1,T>& a ) : array<1,T>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_rpwp( array_inclosure_t<1,T>& a ) : array<1,T>(a) {}
+    explicit pointer_rpwp( array_inclosure_t<1,T,RowMajor>& a ) : array<1,T>(a) {}
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<1,T>() const { return array_inclosure_t<1,T>(*this); }
+    operator array_inclosure_t<1,T,RowMajor>() const { return array_inclosure_t<1,T,RowMajor>(*this); }
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
@@ -1600,7 +1606,7 @@ namespace ka {
 
   template<typename T>
   class pointer_cw<array<1,T> > : protected array<1,T> {
-    friend class array_inclosure_t<1,T>;
+    friend class array_inclosure_t<1,T,RowMajor>;
   public:
     typedef T                        value_type;
     typedef size_t                   difference_type;
@@ -1609,9 +1615,9 @@ namespace ka {
     pointer_cw() : array<1,T>() {}
     pointer_cw( const array<1,T>& a ) : array<1,T>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_cw( array_inclosure_t<1,T>& a ) : array<1,T>(a) {}
+    explicit pointer_cw( array_inclosure_t<1,T,RowMajor>& a ) : array<1,T>(a) {}
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<1,T>() const { return array_inclosure_t<1,T>(*this); }
+    operator array_inclosure_t<1,T,RowMajor>() const { return array_inclosure_t<1,T,RowMajor>(*this); }
     
     /* public interface */
     array<1,T>& operator*() { return *this; }
@@ -1658,283 +1664,283 @@ namespace ka {
 
   /* same for 2d range */
   /* ------ formal parameter of type _r, _w and _rw and rpwp over array */
-  template<typename T>
-  class pointer_r<array<2,T> > : protected array<2,T> {
-    friend class array_inclosure_t<2,T>;
+  template<typename T, Storage2DClass S>
+  class pointer_r<array<2,T,S> > : protected array<2,T,S> {
+    friend class array_inclosure_t<2,T,S>;
   public:
-    typedef T                            value_type;
-    typedef size_t                       difference_type;
-    typedef typename array<2,T>::index_t index_t;
-    typedef pointer_r<array<2,T> >       Self_t;
+    typedef T                              value_type;
+    typedef size_t                         difference_type;
+    typedef typename array<2,T,S>::index_t index_t;
+    typedef pointer_r<array<2,T,S> >       Self_t;
 
-    pointer_r() : array<2,T>() {}
-    pointer_r( const array<2,T>& a ) : array<2,T>(a) {}
+    pointer_r() : array<2,T,S>() {}
+    pointer_r( const array<2,T,S>& a ) : array<2,T,S>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_r( array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
+    explicit pointer_r( array_inclosure_t<2,T,S>& a ) : array<2,T,S>(a) {}
 
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<2,T>() const { return array_inclosure_t<2,T>(*this); }
+    operator array_inclosure_t<2,T,S>() const { return array_inclosure_t<2,T,S>(*this); }
     
     /* public interface */
-    array<2,T>& operator*() { return *this; }
-    array<2,T>* operator->() { return this; }
-    const array<2,T>& operator*() const { return *this; }
-    const array<2,T>* operator->() const { return this; }
+    array<2,T,S>& operator*() { return *this; }
+    array<2,T,S>* operator->() { return this; }
+    const array<2,T,S>& operator*() const { return *this; }
+    const array<2,T,S>* operator->() const { return this; }
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) const
-    { return Self_t( array<2,T>::operator()(ri,rj) ); }
+    { return Self_t( array<2,T,S>::operator()(ri,rj) ); }
   };
 
-  /* alias: ka::range2d_r<T> in place of pointer_r<array<2,T> > */
-  template<typename T>
-  class range2d_r : public pointer_r<array<2,T> > {
+  /* alias: ka::range2d_r<T,S> in place of pointer_r<array<2,T,S> > */
+  template<typename T, Storage2DClass S = RowMajor>
+  class range2d_r : public pointer_r<array<2,T,S> > {
   public:
-    typedef pointer_r<array<2,T> >           Self_t;
+    typedef pointer_r<array<2,T,S> >           Self_t;
     typedef typename Self_t::value_type      value_type;
     typedef typename Self_t::difference_type difference_type;
     typedef typename Self_t::index_t         index_t;
 
-    range2d_r( range2d<T>& a ) : pointer_r<array<2,T> >(a) {}
-    explicit range2d_r(  const array<2,T>& a ) : pointer_r<array<2,T> >(a) {}
+    range2d_r( range2d<T>& a ) : pointer_r<array<2,T,S> >(a) {}
+    explicit range2d_r(  const array<2,T,S>& a ) : pointer_r<array<2,T,S> >(a) {}
 
-    const T& operator()(int i, int j) const { return array_rep<2,T>::operator()(i,j); }
-    const T& operator()(unsigned int i, unsigned int j) const { return array_rep<2,T>::operator()(i,j); }
-    const T& operator()(long i, long j) const { return array_rep<2,T>::operator()(i,j); }
-    const T& operator()(unsigned long i, unsigned long j) const { return array_rep<2,T>::operator()(i,j); }
+    const T& operator()(int i, int j) const { return array_rep<2,T,S>::operator()(i,j); }
+    const T& operator()(unsigned int i, unsigned int j) const { return array_rep<2,T,S>::operator()(i,j); }
+    const T& operator()(long i, long j) const { return array_rep<2,T,S>::operator()(i,j); }
+    const T& operator()(unsigned long i, unsigned long j) const { return array_rep<2,T,S>::operator()(i,j); }
 
-    const T* ptr() { return array_rep<2,T>::ptr(); }
-    const T* ptr() const { return array_rep<2,T>::ptr(); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
-    size_t lda() const { return array_rep<2,T>::lda(); }
+    const T* ptr() { return array_rep<2,T,S>::ptr(); }
+    const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+    size_t lda() const { return array_rep<2,T,S>::lda(); }
 
-    range2d_r<T> operator()(const rangeindex& ri, const rangeindex& rj)  const 
-    { return range2d_r<T>( range2d_r<T>(array<2,T>::operator()(ri,rj) ) ); }
+    range2d_r<T,S> operator()(const rangeindex& ri, const rangeindex& rj)  const 
+    { return range2d_r<T,S>( range2d_r<T,S>(array<2,T,S>::operator()(ri,rj) ) ); }
   };
 
 
-  template<typename T>
-  class pointer_w<array<2,T> > : protected array<2,T> {
-    friend class array_inclosure_t<2,T>;
+  template<typename T, Storage2DClass S>
+  class pointer_w<array<2,T,S> > : protected array<2,T,S> {
+    friend class array_inclosure_t<2,T,S>;
   public:
     typedef T                            value_type;
     typedef size_t                       difference_type;
-    typedef typename array<2,T>::index_t index_t;
-    typedef pointer_w<array<2,T> >       Self_t;
+    typedef typename array<2,T,S>::index_t index_t;
+    typedef pointer_w<array<2,T,S> >       Self_t;
 
-    pointer_w() : array<2,T>() {}
-    pointer_w( const array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
+    pointer_w() : array<2,T,S>() {}
+    pointer_w( const array_inclosure_t<2,T,S>& a ) : array<2,T,S>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_w( array<2,T>& a ) : array<2,T>(a) {}
+    explicit pointer_w( array<2,T,S>& a ) : array<2,T,S>(a) {}
     /* use in spawn effective -> in closure */
-    operator array<2,T>() const { return *this; }
+    operator array<2,T,S>() const { return *this; }
     
     /* public interface */
-    array<2,T>& operator*() { return *this; }
-    array<2,T>* operator->() { return this; }
-    const array<2,T>& operator*() const { return *this; }
-    const array<2,T>* operator->() const { return this; }
+    array<2,T,S>& operator*() { return *this; }
+    array<2,T,S>* operator->() { return this; }
+    const array<2,T,S>& operator*() const { return *this; }
+    const array<2,T,S>* operator->() const { return this; }
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) 
-    { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
+    { return Self_t( array_rep<2,T,S>::operator()(ri,rj) ); }
   };
 
 
-  /* alias: ka::range2d_w<T> in place of pointer_w<array<2,T> > */
-  template<typename T>
-  struct range2d_w : public pointer_w<array<2,T> > 
+  /* alias: ka::range2d_w<T,S> in place of pointer_w<array<2,T,S> > */
+  template<typename T, Storage2DClass S = RowMajor>
+  struct range2d_w : public pointer_w<array<2,T,S> > 
   {
-    typedef pointer_w<array<2,T> >           Self_t;
+    typedef pointer_w<array<2,T,S> >           Self_t;
     typedef typename Self_t::value_type      value_type;
     typedef typename Self_t::difference_type difference_type;
     typedef typename Self_t::index_t         index_t;
 
-    range2d_w( range2d<T>& a ) : pointer_w<array<2,T> >(a) {}
-    explicit range2d_w( const array<2,T>& a ) : pointer_w<array<2,T> >(a) {}
+    range2d_w( range2d<T>& a ) : pointer_w<array<2,T,S> >(a) {}
+    explicit range2d_w( const array<2,T,S>& a ) : pointer_w<array<2,T,S> >(a) {}
 
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(int i, int j)  { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(long i, long j) { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T,S>::operator()(i,j); }
 
-    T* ptr() { return array_rep<2,T>::ptr(); }
-    const T* ptr() const { return array_rep<2,T>::ptr(); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
-    size_t lda() const { return array_rep<2,T>::lda(); }
+    T* ptr() { return array_rep<2,T,S>::ptr(); }
+    const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+    size_t lda() const { return array_rep<2,T,S>::lda(); }
 
-    range2d_w<T> operator() (const rangeindex& ri, const rangeindex& rj) 
-    { return range2d_w<T>( array<2,T>::operator()(ri,rj) ); }
+    range2d_w<T,S> operator() (const rangeindex& ri, const rangeindex& rj) 
+    { return range2d_w<T,S>( array<2,T,S>::operator()(ri,rj) ); }
 
-    void operator=(const T& value)  { array_rep<2,T>::operator=(value); }
+    void operator=(const T& value)  { array_rep<2,T,S>::operator=(value); }
   };
 
 
-  template<typename T>
-  class pointer_rw<array<2,T> > : protected array<2,T> {
-    friend class array_inclosure_t<2,T>;
+  template<typename T, Storage2DClass S>
+  class pointer_rw<array<2,T,S> > : protected array<2,T,S> {
+    friend class array_inclosure_t<2,T,S>;
   public:
     typedef T                            value_type;
     typedef size_t                       difference_type;
-    typedef typename array<2,T>::index_t index_t;
-    typedef pointer_rw<array<2,T> >      Self_t;
+    typedef typename array<2,T,S>::index_t index_t;
+    typedef pointer_rw<array<2,T,S> >      Self_t;
 
-    pointer_rw() : array<2,T>() {}
-    pointer_rw( const array<2,T>& a ) : array<2,T>(a) {}
+    pointer_rw() : array<2,T,S>() {}
+    pointer_rw( const array<2,T,S>& a ) : array<2,T,S>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_rw( array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
+    explicit pointer_rw( array_inclosure_t<2,T,S>& a ) : array<2,T,S>(a) {}
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<2,T>() const { return array_inclosure_t<2,T>(*this); }
+    operator array_inclosure_t<2,T,S>() const { return array_inclosure_t<2,T,S>(*this); }
     
     /* public interface */
-    array<2,T>& operator*() { return *this; }
-    array<2,T>* operator->() { return this; }
-    const array<2,T>& operator*() const { return *this; }
-    const array<2,T>* operator->() const { return this; }
+    array<2,T,S>& operator*() { return *this; }
+    array<2,T,S>* operator->() { return this; }
+    const array<2,T,S>& operator*() const { return *this; }
+    const array<2,T,S>* operator->() const { return this; }
 
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 
-    { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
+    { return Self_t( array_rep<2,T,S>::operator()(ri,rj) ); }
   };
 
-  /* alias: ka::range2d_rw<T> in place of pointer_rw<array<2,T> > */
-  template<typename T>
-  struct range2d_rw : public pointer_rw<array<2,T> > 
+  /* alias: ka::range2d_rw<T,S> in place of pointer_rw<array<2,T,S> > */
+  template<typename T, Storage2DClass S = RowMajor>
+  struct range2d_rw : public pointer_rw<array<2,T,S> > 
   {
-    typedef pointer_rw<array<2,T> >          Self_t;
+    typedef pointer_rw<array<2,T,S> >          Self_t;
     typedef typename Self_t::value_type      value_type;
     typedef typename Self_t::difference_type difference_type;
     typedef typename Self_t::index_t         index_t;
 
-    range2d_rw( range2d<T>& a ) : pointer_rw<array<2,T> >(a) {}
-    explicit range2d_rw( const array<2,T>& a ) : pointer_rw<array<2,T> >(a) {}
+    range2d_rw( range2d<T>& a ) : pointer_rw<array<2,T,S> >(a) {}
+    explicit range2d_rw( const array<2,T,S>& a ) : pointer_rw<array<2,T,S> >(a) {}
 
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(int i, int j)  { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(long i, long j) { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T,S>::operator()(i,j); }
 
-    T* ptr() { return array_rep<2,T>::ptr(); }
-    const T* ptr() const { return array_rep<2,T>::ptr(); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
-    size_t lda() const { return array_rep<2,T>::lda(); }
+    T* ptr() { return array_rep<2,T,S>::ptr(); }
+    const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+    size_t lda() const { return array_rep<2,T,S>::lda(); }
 
-    range2d_rw<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
-    { return range2d_rw<T>( array<2,T>::operator()(ri,rj) ); }
+    range2d_rw<T,S> operator() (const rangeindex& ri, const rangeindex& rj) const 
+    { return range2d_rw<T,S>( array<2,T,S>::operator()(ri,rj) ); }
 
-    void operator=(const T& value) { array_rep<2,T>::operator=(value); }
+    void operator=(const T& value) { array_rep<2,T,S>::operator=(value); }
   };
 
 
-  template<typename T>
-  class pointer_rpwp<array<2,T> > : protected array<2,T> {
-    friend class array_inclosure_t<2,T>;
+  template<typename T, Storage2DClass S>
+  class pointer_rpwp<array<2,T,S> > : protected array<2,T,S> {
+    friend class array_inclosure_t<2,T,S>;
   public:
     typedef T                         value_type;
     typedef size_t                    difference_type;
-    typedef pointer_rpwp<array<2,T> > Self_t;
+    typedef pointer_rpwp<array<2,T,S> > Self_t;
 
-    pointer_rpwp() : array<2,T>() {}
-    pointer_rpwp( const array<2,T>& a ) : array<2,T>(a) {}
+    pointer_rpwp() : array<2,T,S>() {}
+    pointer_rpwp( const array<2,T,S>& a ) : array<2,T,S>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_rpwp( array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
+    explicit pointer_rpwp( array_inclosure_t<2,T,S>& a ) : array<2,T,S>(a) {}
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<2,T>() const { return array_inclosure_t<2,T>(*this); }
+    operator array_inclosure_t<2,T,S>() const { return array_inclosure_t<2,T,S>(*this); }
     
     /* public interface */
-    array<2,T>& operator*() { return *this; }
-    array<2,T>* operator->() { return this; }
-    const array<2,T>& operator*() const { return *this; }
-    const array<2,T>* operator->() const { return this; }
+    array<2,T,S>& operator*() { return *this; }
+    array<2,T,S>* operator->() { return this; }
+    const array<2,T,S>& operator*() const { return *this; }
+    const array<2,T,S>* operator->() const { return this; }
 
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 
-    { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
+    { return Self_t( array_rep<2,T,S>::operator()(ri,rj) ); }
   };
 
-  /* alias: ka::range2d_rpwp<T> in place of pointer_rw<array<2,T> > */
-  template<typename T>
-  struct range2d_rpwp : public pointer_rpwp<array<2,T> > 
+  /* alias: ka::range2d_rpwp<T> in place of pointer_rw<array<2,T,S> > */
+  template<typename T, Storage2DClass S = RowMajor>
+  struct range2d_rpwp : public pointer_rpwp<array<2,T,S> > 
   {
-    typedef pointer_rpwp<array<2,T> >        Self_t;
+    typedef pointer_rpwp<array<2,T,S> >        Self_t;
     typedef typename Self_t::value_type      value_type;
     typedef typename Self_t::difference_type difference_type;
     typedef typename Self_t::index_t         index_t;
 
-    range2d_rpwp( range2d<T>& a ) : pointer_rpwp<array<2,T> >(a) {}
-    explicit range2d_rpwp( const array<2,T>& a ) : pointer_rpwp<array<2,T> >(a) {}
+    range2d_rpwp( range2d<T>& a ) : pointer_rpwp<array<2,T,S> >(a) {}
+    explicit range2d_rpwp( const array<2,T,S>& a ) : pointer_rpwp<array<2,T,S> >(a) {}
 
-    T* ptr() { return array_rep<2,T>::ptr(); }
-    const T* ptr() const { return array_rep<2,T>::ptr(); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
-    size_t lda() const { return array_rep<2,T>::lda(); }
+    T* ptr() { return array_rep<2,T,S>::ptr(); }
+    const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+    size_t lda() const { return array_rep<2,T,S>::lda(); }
 
     range2d_rpwp<T> operator() (const rangeindex& ri, const rangeindex& rj) const
-    { return range2d_rpwp<T>( array<2,T>::operator()(ri,rj) ); }
+    { return range2d_rpwp<T>( array<2,T,S>::operator()(ri,rj) ); }
   };
 
 
-  template<typename T>
-  class pointer_cw<array<2,T> > : protected array<2,T> {
-    friend class array_inclosure_t<2,T>;
+  template<typename T, Storage2DClass S>
+  class pointer_cw<array<2,T,S> > : protected array<2,T,S> {
+    friend class array_inclosure_t<2,T,S>;
   public:
     typedef T                            value_type;
     typedef size_t                       difference_type;
-    typedef typename array<2,T>::index_t index_t;
-    typedef pointer_cw<array<2,T> >      Self_t;
+    typedef typename array<2,T,S>::index_t index_t;
+    typedef pointer_cw<array<2,T,S> >      Self_t;
 
-    pointer_cw() : array<2,T>() {}
-    pointer_cw( const array<2,T>& a ) : array<2,T>(a) {}
+    pointer_cw() : array<2,T,S>() {}
+    pointer_cw( const array<2,T,S>& a ) : array<2,T,S>(a) {}
     /* cstor call on closure creation */
-    explicit pointer_cw( array_inclosure_t<2,T>& a ) : array<2,T>(a) {}
+    explicit pointer_cw( array_inclosure_t<2,T,S>& a ) : array<2,T,S>(a) {}
     /* use in spawn effective -> in closure */
-    operator array_inclosure_t<2,T>() const { return array_inclosure_t<2,T>(*this); }
+    operator array_inclosure_t<2,T,S>() const { return array_inclosure_t<2,T,S>(*this); }
     
     /* public interface */
-    array<2,T>& operator*() { return *this; }
-    array<2,T>* operator->() { return this; }
-    const array<2,T>& operator*() const { return *this; }
-    const array<2,T>* operator->() const { return this; }
+    array<2,T,S>& operator*() { return *this; }
+    array<2,T,S>* operator->() { return this; }
+    const array<2,T,S>& operator*() const { return *this; }
+    const array<2,T,S>* operator->() const { return this; }
 
     Self_t operator() (const rangeindex& ri, const rangeindex& rj) const 
-    { return Self_t( array_rep<2,T>::operator()(ri,rj) ); }
+    { return Self_t( array_rep<2,T,S>::operator()(ri,rj) ); }
   };
 
-  /* alias: ka::range2d_cw<T> in place of pointer_cw<array<2,T> > */
-  template<typename T>
-  struct range2d_cw : public pointer_cw<array<2,T> > 
+  /* alias: ka::range2d_cw<T,S> in place of pointer_cw<array<2,T,S> > */
+  template<typename T, Storage2DClass S = RowMajor>
+  struct range2d_cw : public pointer_cw<array<2,T,S> > 
   {
-    typedef pointer_cw<array<2,T> >          Self_t;
+    typedef pointer_cw<array<2,T,S> >          Self_t;
     typedef typename Self_t::value_type      value_type;
     typedef typename Self_t::difference_type difference_type;
     typedef typename Self_t::index_t         index_t;
 
-    range2d_cw( range2d<T>& a ) : pointer_cw<array<2,T> >(a) {}
-    explicit range2d_cw( const array<2,T>& a ) : pointer_cw<array<2,T> >(a) {}
+    range2d_cw( range2d<T>& a ) : pointer_cw<array<2,T,S> >(a) {}
+    explicit range2d_cw( const array<2,T,S>& a ) : pointer_cw<array<2,T,S> >(a) {}
 
-    T& operator()(int i, int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(long i, long j) { return array_rep<2,T>::operator()(i,j); }
-    T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T>::operator()(i,j); }
+    T& operator()(int i, int j)  { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(unsigned int i, unsigned int j)  { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(long i, long j) { return array_rep<2,T,S>::operator()(i,j); }
+    T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T,S>::operator()(i,j); }
 
-    T* ptr() { return array_rep<2,T>::ptr(); }
-    const T* ptr() const { return array_rep<2,T>::ptr(); }
-    size_t dim(int i) const { return array_rep<2,T>::dim(i); }
-    size_t lda() const { return array_rep<2,T>::lda(); }
+    T* ptr() { return array_rep<2,T,S>::ptr(); }
+    const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+    size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+    size_t lda() const { return array_rep<2,T,S>::lda(); }
 
-    range2d_cw<T> operator() (const rangeindex& ri, const rangeindex& rj) const 
-    { return range2d_cw<T>( array<2,T>::operator()(ri,rj) ); }
+    range2d_cw<T,S> operator() (const rangeindex& ri, const rangeindex& rj) const 
+    { return range2d_cw<T,S>( array<2,T,S>::operator()(ri,rj) ); }
 
-    void operator=(const T& value) { array_rep<2,T>::operator=(value); }
+    void operator=(const T& value) { array_rep<2,T,S>::operator=(value); }
   };
 
 
   /* trait */    
-  template<int dim, typename T>
-  struct TraitFormalParam<pointer_r<array<dim,T> > > { 
-    typedef array_inclosure_t<dim,T>  type_inclosure_t;
-    typedef R<array<dim,T> >          signature_t; 
-    typedef pointer_r<array<dim,T> >  formal_t; 
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam<pointer_r<array<dim,T,S> > > { 
+    typedef array_inclosure_t<dim,T,S>  type_inclosure_t;
+    typedef R<array<dim,T,S> >          signature_t; 
+    typedef pointer_r<array<dim,T,S> >  formal_t; 
     typedef ACCESS_MODE_R             mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                ptr( const pointer_r<array<dim,T> >* a ) { return a->ptr(); }
+    static const void*                ptr( const pointer_r<array<dim,T,S> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    { array<dim,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
@@ -1954,22 +1960,22 @@ namespace ka {
     static void                       reducor_fnc(void*, const void*) {}
    };
 
-  template<int dim, typename T>
-  struct TraitFormalParam<pointer_w<array<dim,T> > > { 
-    typedef array_inclosure_t<dim,T>  type_inclosure_t;
-    typedef W<array<dim,T> >          signature_t; 
-    typedef pointer_w<array<dim,T> >  formal_t; 
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam<pointer_w<array<dim,T,S> > > { 
+    typedef array_inclosure_t<dim,T,S>  type_inclosure_t;
+    typedef W<array<dim,T,S> >          signature_t; 
+    typedef pointer_w<array<dim,T,S> >  formal_t; 
     typedef ACCESS_MODE_W             mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                ptr( const pointer_w<array<dim,T> >* a ) { return a->ptr(); }
+    static const void*                ptr( const pointer_w<array<dim,T,S> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    { array<dim,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
-//    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
+//    { array<dim,T,S> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -1986,22 +1992,22 @@ namespace ka {
     static void                       reducor_fnc(void*, const void*) {}
   };
 
-  template<int dim, typename T>
-  struct TraitFormalParam<pointer_rw<array<dim,T> > > { 
-    typedef array_inclosure_t<dim,T>  type_inclosure_t;
-    typedef RW<array<dim,T> >         signature_t; 
-    typedef pointer_rw<array<dim,T> > formal_t; 
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam<pointer_rw<array<dim,T,S> > > { 
+    typedef array_inclosure_t<dim,T,S>  type_inclosure_t;
+    typedef RW<array<dim,T,S> >         signature_t; 
+    typedef pointer_rw<array<dim,T,S> > formal_t; 
     typedef ACCESS_MODE_RW            mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                ptr( const pointer_rw<array<dim,T> >* a ) { return a->ptr(); }
+    static const void*                ptr( const pointer_rw<array<dim,T,S> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    { array<dim,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
-//    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
+//    { array<dim,T,S> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -2018,22 +2024,22 @@ namespace ka {
     static void                       reducor_fnc(void*, const void*) {}
   };   
 
-  template<int dim, typename T>
-  struct TraitFormalParam<pointer_rpwp<array<dim,T> > > { 
-    typedef array_inclosure_t<dim,T>  type_inclosure_t;
-    typedef RPWP<array<dim,T> >       signature_t; 
-    typedef pointer_rpwp<array<dim,T> > formal_t; 
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam<pointer_rpwp<array<dim,T,S> > > { 
+    typedef array_inclosure_t<dim,T,S>  type_inclosure_t;
+    typedef RPWP<array<dim,T,S> >       signature_t; 
+    typedef pointer_rpwp<array<dim,T,S> > formal_t; 
     typedef ACCESS_MODE_RPWP          mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                ptr( const pointer_rpwp<array<dim,T> >* a ) { return a->ptr(); }
+    static const void*                ptr( const pointer_rpwp<array<dim,T,S> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    { array<dim,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
-//    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
+//    { array<dim,T,S> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -2050,22 +2056,22 @@ namespace ka {
     static void                       reducor_fnc(void*, const void*) {}
   };   
 
-  template<int dim, typename T>
-  struct TraitFormalParam<pointer_cw<array<dim,T> > > { 
-    typedef array_inclosure_t<dim,T>  type_inclosure_t;
-    typedef CW<array<dim,T> >         signature_t; 
-    typedef pointer_cw<array<dim,T> > formal_t; 
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam<pointer_cw<array<dim,T,S> > > { 
+    typedef array_inclosure_t<dim,T,S>  type_inclosure_t;
+    typedef CW<array<dim,T,S> >         signature_t; 
+    typedef pointer_cw<array<dim,T,S> > formal_t; 
     typedef ACCESS_MODE_CW            mode_t; 
     typedef T                         type_t;
     static const bool                 is_static = false;
-    static const void*                ptr( const pointer_cw<array<dim,T> >* a ) { return a->ptr(); }
+    static const void*                ptr( const pointer_cw<array<dim,T,S> >* a ) { return a->ptr(); }
     static formal_t                   handle2data( type_inclosure_t* a) 
-    { array<dim,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    { array<dim,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
 //    static formal_t                   handle2data( type_inclosure_t* a) 
-//    { array<dim,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
+//    { array<dim,T,S> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
     static const void*                get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
     static int*                       get_cwflag( type_inclosure_t* a, unsigned int i ) { return 0; }
     static void                       get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
@@ -2083,16 +2089,16 @@ namespace ka {
   };   
 
 
-  template<int dim, typename T>
-  struct TraitFormalParam< R<array<dim,T> > > : public TraitFormalParam<pointer_r<array<dim,T> > > {};
-  template<int dim, typename T>
-  struct TraitFormalParam< W<array<dim,T> > > : public TraitFormalParam<pointer_w<array<dim,T> > > {};
-  template<int dim, typename T>
-  struct TraitFormalParam< RW<array<dim,T> > > : public TraitFormalParam<pointer_rw<array<dim,T> > > {};
-  template<int dim, typename T>
-  struct TraitFormalParam< RPWP<array<dim,T> > > : public TraitFormalParam<pointer_rpwp<array<dim,T> > > {};
-  template<int dim, typename T>
-  struct TraitFormalParam< CW<array<dim,T> > > : public TraitFormalParam<pointer_cw<array<dim,T> > > {};
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam< R<array<dim,T,S> > > : public TraitFormalParam<pointer_r<array<dim,T,S> > > {};
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam< W<array<dim,T,S> > > : public TraitFormalParam<pointer_w<array<dim,T,S> > > {};
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam< RW<array<dim,T,S> > > : public TraitFormalParam<pointer_rw<array<dim,T,S> > > {};
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam< RPWP<array<dim,T,S> > > : public TraitFormalParam<pointer_rpwp<array<dim,T,S> > > {};
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam< CW<array<dim,T,S> > > : public TraitFormalParam<pointer_cw<array<dim,T,S> > > {};
   
   template<typename T>
   struct TraitFormalParam<range1d<T> > : public TraitFormalParam<array<1,T> > { };
@@ -2174,111 +2180,112 @@ namespace ka {
   struct TraitFormalParam< CW<range1d<T> > > : public TraitFormalParam<range1d_cw<T> > {};
 
 
-  template<typename T>
-  struct TraitFormalParam<range2d<T> > : public TraitFormalParam<array<2,T> > { };
-  template<typename T>
-  struct TraitFormalParam<range2d_r<T> > : public TraitFormalParam<pointer_r<array<2,T> > > { 
-    typedef TraitFormalParam<pointer_r<array<2,T> > > inherited_t;
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam<range2d<T,S> > : public TraitFormalParam<array<2,T,S> > { };
+
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam<range2d_r<T,S> > : public TraitFormalParam<pointer_r<array<2,T,S> > > { 
+    typedef TraitFormalParam<pointer_r<array<2,T,S> > > inherited_t;
     typedef typename inherited_t::type_inclosure_t type_inclosure_t;
-    typedef range2d_r<T>    formal_t; 
-    typedef R<range2d <T> > signature_t; 
-    static formal_t         handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    typedef range2d_r<T,S>   formal_t; 
+    typedef R<range2d<T,S> > signature_t; 
+    static formal_t          handle2data( type_inclosure_t* a) 
+    { array<2,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
-//    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
-  template<typename T>
-  struct TraitFormalParam<range2d_w<T> > : public TraitFormalParam<pointer_w<array<2,T> > > {
-    typedef TraitFormalParam<pointer_w<array<2,T> > > inherited_t;
+
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam<range2d_w<T,S> > : public TraitFormalParam<pointer_w<array<2,T,S> > > {
+    typedef TraitFormalParam<pointer_w<array<2,T,S> > > inherited_t;
     typedef typename inherited_t::type_inclosure_t type_inclosure_t;
-    typedef range2d_w<T>    formal_t; 
-    typedef W<range2d<T> >  signature_t; 
-    static formal_t         handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
-                          &(kaapi_handle_t(a->ptr()))->view);
-      return (formal_t)retval; 
-    }
-//    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
-  };
-  template<typename T>
-  struct TraitFormalParam<range2d_rw<T> > : public TraitFormalParam<pointer_rw<array<2,T> > > {
-    typedef TraitFormalParam<pointer_rw<array<2,T> > > inherited_t;
-    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
-    typedef range2d_rw<T>   formal_t; 
-    typedef RW<range2d<T> > signature_t; 
-    static formal_t         handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
-                          &(kaapi_handle_t(a->ptr()))->view);
-      return (formal_t)retval; 
-    }
-//    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
-  };
-  template<typename T>
-  struct TraitFormalParam<range2d_rpwp<T> > : public TraitFormalParam<pointer_rpwp<array<2,T> > > {
-    typedef TraitFormalParam<pointer_rpwp<array<2,T> > > inherited_t;
-    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
-    typedef range2d_rpwp<T>   formal_t; 
-    typedef RPWP<range2d<T> > signature_t; 
+    typedef range2d_w<T,S>    formal_t; 
+    typedef W<range2d<T,S> >  signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    { array<2,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
-//    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
-  template<typename T>
-  struct TraitFormalParam<range2d_cw<T> > : public TraitFormalParam<pointer_cw<array<2,T> > > {
-    typedef TraitFormalParam<pointer_cw<array<2,T> > > inherited_t;
+
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam<range2d_rw<T,S> > : public TraitFormalParam<pointer_rw<array<2,T,S> > > {
+    typedef TraitFormalParam<pointer_rw<array<2,T,S> > > inherited_t;
     typedef typename inherited_t::type_inclosure_t type_inclosure_t;
-    typedef range2d_cw<T>     formal_t; 
+    typedef range2d_rw<T,S>   formal_t; 
+    typedef RW<range2d<T,S> > signature_t; 
+    static formal_t           handle2data( type_inclosure_t* a) 
+    { array<2,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
+      return (formal_t)retval; 
+    }
+  };
+
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam<range2d_rpwp<T,S> > : public TraitFormalParam<pointer_rpwp<array<2,T,S> > > {
+    typedef TraitFormalParam<pointer_rpwp<array<2,T,S> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
+    typedef range2d_rpwp<T,S>   formal_t; 
+    typedef RPWP<range2d<T,S> > signature_t; 
+    static formal_t             handle2data( type_inclosure_t* a) 
+    { array<2,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
+      return (formal_t)retval; 
+    }
+  };
+
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam<range2d_cw<T,S> > : public TraitFormalParam<pointer_cw<array<2,T,S> > > {
+    typedef TraitFormalParam<pointer_cw<array<2,T,S> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
+    typedef range2d_cw<T,S>     formal_t; 
     typedef CW<range2d<T> >   signature_t; 
     static formal_t           handle2data( type_inclosure_t* a) 
-    { array<2,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+    { array<2,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
                           &(kaapi_handle_t(a->ptr()))->view);
       return (formal_t)retval; 
     }
-//    { array<2,T> retval(*a); retval.setptr( *(T**)a->ptr() ); return (formal_t)retval; }
   };
-  template<typename T>
-  struct TraitFormalParam< R<range2d<T> > > : public TraitFormalParam<range2d_r<T> > {};
-  template<typename T>
-  struct TraitFormalParam< W<range2d<T> > > : public TraitFormalParam<range2d_w<T> > {};
-  template<typename T>
-  struct TraitFormalParam< RW<range2d<T> > > : public TraitFormalParam<range2d_rw<T> > {};
-  template<typename T>
-  struct TraitFormalParam< RPWP<range2d<T> > > : public TraitFormalParam<range2d_rpwp<T> > {};
-  template<typename T>
-  struct TraitFormalParam< CW<range2d<T> > > : public TraitFormalParam<range2d_cw<T> > {};
+
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam< R<range2d<T,S> > > : public TraitFormalParam<range2d_r<T,S> > {};
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam< W<range2d<T,S> > > : public TraitFormalParam<range2d_w<T,S> > {};
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam< RW<range2d<T,S> > > : public TraitFormalParam<range2d_rw<T,S> > {};
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam< RPWP<range2d<T,S> > > : public TraitFormalParam<range2d_rpwp<T,S> > {};
+  template<typename T, Storage2DClass S>
+  struct TraitFormalParam< CW<range2d<T,S> > > : public TraitFormalParam<range2d_cw<T,S> > {};
 
 
   /* ------ rep of array into a closure      
   */
-  template<int dim, typename T>
+  template<int dim, typename T, Storage2DClass S=RowMajor>
   struct arraytype_inclosure_t;
 
-  template<typename T>
-  struct arraytype_inclosure_t<1,T> {
-    arraytype_inclosure_t<1,T>( const array<1, T>& a ) : _data(a), _version() {}
+  template<typename T, Storage2DClass S>
+  struct arraytype_inclosure_t<1,T,S> {
+    arraytype_inclosure_t<1,T,S>( const array<1,T,S>& a ) : _data(a), _version() {}
 
     int size() const { return _data.size(); }
 
-    array_rep<1,T>              _data;
-    array_rep<1,T*>             _version; /* only used if the task is stolen */
+    array_rep<1,T,S>              _data;
+    array_rep<1,T*,S>             _version; /* only used if the task is stolen */
   private:
-    arraytype_inclosure_t<1,T>() {}
+    arraytype_inclosure_t<1,T,S>() {}
   };
 
-  template<typename T>
-  struct arraytype_inclosure_t<2,T> {
-    arraytype_inclosure_t<2,T>( const array<2, T>& a ) : _data(a), _version() { }
+  template<typename T,Storage2DClass S>
+  struct arraytype_inclosure_t<2,T,S> {
+    arraytype_inclosure_t<2,T,S>( const array<2,T,S>& a ) : _data(a), _version() { }
     size_t size() const { return _data.dim(0)*_data.dim(1); }
 
-    array_rep<2,T>              _data;
-    array_rep<2,T*>             _version; /* only used if the task is stolen */
+    array_rep<2,T,S>              _data;
+    array_rep<2,T*,S>             _version; /* only used if the task is stolen */
   private:
-    arraytype_inclosure_t<2,T>() {}
+    arraytype_inclosure_t<2,T,S>() {}
   };
 
   /* ------ specialisation of representation of array */
@@ -2423,9 +2430,9 @@ namespace ka {
   
   /* specialisation of array representation */
   template<typename T>
-  class array_rep<1,pointer_r<T> > : public array1d_rep_with_read<T> {
+  class array_rep<1,pointer_r<T>,RowMajor> : public array1d_rep_with_read<T> {
   public:
-    array_rep<1,pointer_r<T> >( arraytype_inclosure_t<1,T>& arg_clo )
+    array_rep<1,pointer_r<T>,RowMajor>( arraytype_inclosure_t<1,T,RowMajor>& arg_clo )
      : array1d_rep_with_read<T>( arg_clo._data.ptr(), arg_clo._data.size() ) 
     {
     }
@@ -2433,9 +2440,9 @@ namespace ka {
 
   /* specialisation of array representation */
   template<typename T>
-  class array_rep<1,pointer_w<T> > : public array1d_rep_with_write<T> {
+  class array_rep<1,pointer_w<T>,RowMajor > : public array1d_rep_with_write<T> {
   public:    
-    array_rep<1,pointer_w<T> >( arraytype_inclosure_t<1,T>& arg_clo )
+    array_rep<1,pointer_w<T>,RowMajor >( arraytype_inclosure_t<1,T>& arg_clo )
      : array1d_rep_with_write<T>( arg_clo._data.ptr(), arg_clo._data.size() ) 
     {
     }
@@ -2443,9 +2450,9 @@ namespace ka {
 
   /* specialisation of array representation */
   template<typename T>
-  class array_rep<1,pointer_rw<T> > : public array1d_rep_with_readwrite<T> {
+  class array_rep<1,pointer_rw<T>,RowMajor > : public array1d_rep_with_readwrite<T> {
   public:    
-    array_rep<1,pointer_rw<T> >( arraytype_inclosure_t<1,T>& arg_clo )
+    array_rep<1,pointer_rw<T>,RowMajor >( arraytype_inclosure_t<1,T>& arg_clo )
      : array1d_rep_with_readwrite<T>( arg_clo._data.ptr(), arg_clo._data.size() ) 
     {
     }
@@ -2616,32 +2623,6 @@ namespace ka {
   };
   extern DefaultAttribut SetDefault;
   
-#if 0 // DEPRECATED   /* */
-  class UnStealableAttribut {
-  public:
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { 
-      kaapi_thread_pushtask(thread);
-      return 0;
-    }
-  };
-  inline UnStealableAttribut SetUnStealable()
-  { return UnStealableAttribut(); }
-#endif
-
-#if 0 // DEPRECATED   /* */
-  /* like default attribut: not yet distributed computation */
-  class SetLocalAttribut {
-  public:
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { 
-      kaapi_thread_pushtask(thread);
-      return 0;
-    }
-  };
-  extern SetLocalAttribut SetLocal;
-#endif
-
   /* do nothing... not yet distributed implementation */
   class AttributSetPartition {
     int _partition;
@@ -2650,13 +2631,6 @@ namespace ka {
     int get_partition() const { return _partition; }
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-#if !defined(KAAPI_NDEBUG)
-      if (thread->tasklist ==0) 
-      {
-        std::cerr << "**** Invalid argument" << std::endl;
-        return (void*)-1;
-      }
-#endif
       kaapi_thread_online_computedep(thread, _partition, clo);
       return 0;
     }
