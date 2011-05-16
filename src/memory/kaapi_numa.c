@@ -116,10 +116,19 @@ kaapi_numaid_t kaapi_numa_get_page_node(uintptr_t addr)
   return scan_bitmap(nodemask, 0);
 }
 
-/* exported numa allocator */
+/* set the allocator page tracking info */
 
 static uintptr_t saved_addr = 0;
-static size_t saved_stride_size;
+static size_t saved_stride;
+
+void kaapi_numa_set_addr_stride
+(uintptr_t saved_addr_, size_t saved_stride_)
+{
+  saved_addr = saved_addr_;
+  saved_stride = 0x1000 * saved_stride_;
+}
+
+/* exported numa allocator */
 
 void* kaapi_numa_alloc_interleaved(size_t size, size_t stride)
 {
@@ -145,16 +154,6 @@ void* kaapi_numa_alloc_interleaved(size_t size, size_t stride)
     numaid = (numaid + 1) % numa_node_count;
   }
 
-  /* update only the first allocation. this is very
-     ephemeral, since we should not need this global
-     pointer when views are available.
-   */
-  if (saved_addr == 0)
-  {
-    saved_addr = (uintptr_t)addr;
-    saved_stride_size = stride_size;
-  }
-
   return addr;
 }
 
@@ -172,9 +171,10 @@ kaapi_numaid_t kaapi_numa_get_addr_binding(void* addr)
    */
 
 #if 1
-  const size_t off = ((uintptr_t)addr - saved_addr) / saved_stride_size;
+  const size_t off = ((uintptr_t)addr - saved_addr) / saved_stride;
   return off % numa_node_count;
 #else
+  /* if cost can be amortized, avoid aux info for retrieval */
   return kaapi_numa_get_page_node((uintptr_t)addr);
 #endif
 }
