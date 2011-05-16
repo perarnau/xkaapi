@@ -1,15 +1,18 @@
-\documentclass{article}
+\documentclass{report}[12pt]
 \usepackage[utf8x]{inputenc}
 
 \usepackage{url} \urlstyle{sf}
 \usepackage[a4paper,margin=1.9cm]{geometry}
 \usepackage{xspace}
-\usepackage[american]{babel}
+%\usepackage[american]{babel}
 \usepackage{palatino}
 \usepackage{bibtopic}
-%\usepackage{graphicx}
+\usepackage{boxit}
 %\usepackage{enumitem}
 %\usepackage{dot2texi}
+
+
+\newcommand{\refpage}[1]{\ref{#1} page~\pageref{#1}}
 
 \newcommand{\kaapi}{\textsc{X}-Kaapi\xspace}
 %%%\newcommand{\new}{\hspace*{10ex}\textbf{\textsc{New in \kaapi.}~\\}\xspace}
@@ -32,296 +35,101 @@
 
 \begin{document}
 
-\title{\kaapi installation and user guide}
-\author{Vincent Danjean, Thierry Gautier, Christophe Laferrière, Fabien Le Mentec}
-\date{\today}
+\title{\hfill{\textbf{\kaapi}}
+%\hfill{\rule{0pt}{0pt}}\\%
+\rule{\textwidth}{1.5mm}\\[1mm]%
+%\hfill{\normalsize \aun\ Team}\\[-3mm]%
+\hfill{\normalsize Vincent Danjean, Thierry Gautier, Fabien Le Mentec, Jean-Louis Roch\\
+\hfill MOAIS project
+} \\[-3mm]%
+\hfill{\normalsize \today}
+}
+\date{}
 \maketitle
 \tableofcontents
 \newpage
 
-%% intro
-\section{Overview}
+\chapter*{Foreword}
+\kaapi is developed by the INRIA MOAIS team \url{http://moais.imag.fr}.
+ The \kaapi project is still under development.  We do our best to produce as good documentation and  software as possible.  
+ Please inform us of any bug, malfunction, question, or comment that may arrise. \\ 
+~\\
+~\\
+This documentation presents the \kaapi C, C++ interface for Kaapi. \kaapi is a library with several API. The C interface is the lowest interface to program directly on top of the runtime. The C++ interface is an extension of Athapascan-1 interface with new features to avoid explicit declaration of shared variable. \kaapi may also be used with C++ through a parallel STL implementation.
 
-\subsection{\kaapi runtime}
-\kaapi is a runtime high performance parallelism targeting multicore and
-distributed architectures.
-It relies on workstealing paradigms.
-The core library comes with a full set of complementary programming interfaces,
-allowing for different abstraction levels.
-The following documents the install process, runtime options, as well as a
-description of APIs lying on top of the runtime and a set of examples.
+Moreover, \kaapi has been used as the runtime support for SMPss~\url{http://www.bsc.es} compiler from BSC, Barcelona.
 
-\subsection{Supported Platforms}
-\kaapi targets essentially SMP and NUMA platforms. The runtime should run
-on every system providing:
+\newpage
+
+\chapter*{About \kaapi}
+
+\kaapi  is a \textbf{``high level''}  interface in the sense that no reference is made to the execution support.  
+The synchronization, communication, and scheduling of operations are fully controlled by the software. 
+   \kaapi is an  \textbf{explicit parallelism language}: the programmer indicates the parallelism of the algorithm through \kaapi's one, easy-to-learn  template functions, \texttt{Spawn} to create tasks.   The programming semantics are similar to those of a sequential 
+ execution in that each ``read'' executed in parallel returns the value it would have returned had the ``read'' been executed  sequentially. 
+ 
+ \kaapi comes from Athapascan interface defined in 1998 and updated in the INRIA technical report RT-276.
+It is composed by one runtime and several application programming interface (API). The high level interfaces are:  an easy-to-use C++ interface that allows to create tasks with dependencies computed automatically by the runtome; a STL C++ interface for algorithms over sequence; and the use of SMPss programming model. 
+   A low level C/C++ interface exports low level functions defined by the runtime. Especially, with the low level interface, it is possible to write very efficient adaptive algorithm. Moreover, \kaapi has a compatibility interface for the old Athapascan' programs.
+
+  The C++ Kaapi interface as well as the SMPss API provides \textbf{a data-flow language}.
+  The program execution is data driven and determined by the availability of the shared data, 
+  according to the access made. In other words, a task requesting a read access on shared data will  wait until the previous task processing a write operation to this data has ended. 
+
+   \kaapi is \textbf{portable and efficient}.  
+The portability is inherited from the use of a subset of POSIX functions which exists on top of most of the up-to-date operating system.
+
+The efficiency with which \kaapi  program runs has been both tested and 
+theoretically proven.  The \kaapi  programming interface is related to a cost model that enables an easy evaluation of the cost of a program in terms of work (number of operations performed), depth (minimal parallel time) and communication volume (maximum number of accesses to remote data). 
+\kaapi  has been developed in such a way that one does not have to worry about specific machine architecture or optimization of load balancing between processors. 
+Therefore, it is much simpler (and faster) to use \kaapi  to write parallel applications than it would be to use with POSIX thread library.
+
+%However,  at this time, some C++ constructions are not recognized
+%by any compiler.
+%In order to ensure the portability of the code,
+%a preprocessor has been developped
+%that directly suppresses complex template annotations in order to generate
+%either a sequential C++ code (the one that is recognized by your favorite
+%C++ compiler) or a parallel C++ code that uses the parallel library.
+%With the current upgrade of most C++ compilers, this preprocessor is becoming
+%unuseful and will be suppressed .
+
+
+% ---------------------------------------------------------------
+\newpage
+\section*{Reading this Document}
+% ---------------------------------------------------------------
+This document is a user's manual designed to teach one how to install and use the \kaapi's APIs.  Its main goal is not to explain the way \kaapi  is built. \\
+
+If new to \kaapi, it is recommened to read all of the remaining text.  However, if the goal is to immediately begin writing programs with \kaapi , feel free to skip the next two chapters.  They simply provide an overview of:
 \begin{itemize}
-\item a GNU toolchain (4.3),
-\item the pthread library.
-\end{itemize}
-It has been extensively tested on the following operating systems:
-\begin{itemize}
-\item GNU-Linux/x86\_64,
-\item MacOSX/PowerPC.
-\end{itemize}
-There is no version for Windows yet.
-
-\subsection{\kaapi Contacts}
-If you whish to contact the XKaapi team you can send a mail to \verb+thierry.gautier <dot> inrialpes.fr+, \verb+vincent.danjean <dot> imag.fr+, \verb+fabien.lementec <dot> gmail.com+ or \verb+christophe.laferriere <dot> imag.fr>+.
-
-\noindent Please also visit the www of the research project MOAIS at  \url{http://moais.imag.fr}.
-
-
-%% installation
-\section{Installation}
-
-There are 2 ways to install \kaapi:
-\begin{itemize}
-\item using the debian packages,
-\item installing from source.
-\end{itemize}
-
-%% sub
-\subsection{Using the debian packages}
-Below is a list of the Debian packages provided for
-using and programming with \kaapi. A brief description
-is given for each of them:
-\begin{itemize}
-\item{xkaapi-doc}\newline
-\kaapi library documentation.
-\item{libxkaapi0}\newline
-\kaapi shared libraries.
-\item{libxkaapi-dev}\newline
-\kaapi development files for the low level C runtime.
-\item{libxkaapi-dbg}\newline
-\kaapi debug symbols for the above libraries.
-\item{libkaapixx0}\newline
-\kaapi C++ higher level interfaces standing on top of
-the \kaapi core library.
-\item{libkaapixx-dev}\newline
-\kaapi C++ interfaces development files.
-\end{itemize}
-
-%% sub
-\subsection{Installing from sources}
-
-\subsubsection{Retrieving the sources}
-There are 2 ways to retrieve the sources:
-\begin{itemize}
-\item download a release snapshot at the following url:\newline
-\url{https://gforge.inria.fr/frs/?group_id=94}.
-\item clone the project git repository:\newline
-\verb+> git clone git://git.ligforge.imag.fr/git/kaapi/xkaapi.git xkaapi+
+\item how to install \kaapi's librairies, include files, and scripts (Chapter \ref{chap:install}),
+\item how to test the installation performed (Chapter \ref{chap:install_2.0}),
+\item the C++ tasks API (Chapter \ref{chap:api_cpp}).
+\item the SMPss programming model (Chapter \ref{chap:api_smpss}).
+\item the low level programming model (Chapter \ref{chap:api_low}).
 \end{itemize}
 
-\subsubsection{Configuration}
-The build system uses GNU Autotools.
-In case you cloned the project repository, you first have to bootstrap the
-configuration process by running the following script:
-\begin{verbatim}
-$> ./bootstrap
-\end{verbatim}
-The \textit{configure} file should be present. It is used to create the
-\textit{Makefile} accordingly to your system configuration. Command line
-options can be used to modify the default behavior. You can have a complete
-list of the available options by running:
-\begin{verbatim}
-$> ./configure --help
-\end{verbatim}
-
-
-
-Below is a list of the most important ones:
-\begin{itemize} %% option list
-\item \verb+--enable-target=mt+\newline
-Select the target platform. Defaults to 'mt', for pthread.
-\item \verb+--enable-mode=debug+ or \verb+release+\newline
-Choose the compilation mode of the library. Defaults to release.
-%\item \verb+-with-steal=cas+ or \verb+hybrid+ or \verb+dijkstra+: (default is \verb+dijkstra+). Select the work stealing strategy to execute program. The \verb+cas+ is based on compare and swap atomic instruction. \verb+ dijkstra+ is based on Dijkstra protocol to garante coherency without lock in most of the case (like the Cilk T.H.E. protocol). \verb+hybrid+ is a  mix of \verb+cas+ and \verb+dijkstra+.
-\item \verb+--with-perfcounter+\newline
-Enable performance counters support.
-\item \verb+--with-papi+\newline
-Enable the PAPI library for low level performance counting.
-More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
-\item \verb+--prefix=+\newline
-Overload the default installation path.
-\end{itemize} %% option list
-Example:
-
-\begin{verbatim}
-./configure --enable-mode=release --enable-target=mt --prefix=$HOME/install
-\end{verbatim}
-If there are errors during the configuration process, you have to solve
-them before going further. It is likely there is a missing dependency on your
-system, in which case the log gives you the name of the software to install.
-
-\subsubsection{Compilation and installation}
-On success, the configuration process generates a Makefile. the 2 following
-commands build and install the \kaapi runtime:
-\begin{verbatim}
-$> make
-$> make install
-\end{verbatim}
-
-\subsubsection{Checking the installation}
-The following checks the runtime is correctly installed on your system:
-\begin{verbatim}
-$> make check
-\end{verbatim}
-
-\subsubsection{Compilation of the examples}
-The following compiles the sample applications:
-\begin{verbatim}
-$> cd examples; make examples
-\end{verbatim}
-
-\section{Programming with \kaapi}
-\subsection{\kaapi integration}
-Integrating \kaapi in your project requires the following steps:
+~\\~\\The other sections will delve deeper into \kaapi' API, so that the user can benefit from all of its functionalities. They explain: 
 \begin{itemize}
-\item include the header files in your source code. Example:
-\begin{verbatim} 
-#include <kaapi.h> /* C version */
-#include <kaapi++> // C++ version
-\end{verbatim}
-\item add compilation options to your project using pkg-config.
-Note that if you changed the default install directory during
-the configuration process, the PKG\_CONFIG\_PATH environment
-variable must point to \textit{install\_dir/pkgconfig/}.
-Example:
-\begin{verbatim} 
-# for C applications
-gcc -o main `pkg-config --flags kaapi` main.c `pkg-config --libs kaapi`
-# for C++ applications
-g++ -o main `pkg-config --flags kaapixx` main.c `pkg-config --libs kaapixx`
-\end{verbatim}
-\item the following preprocessor macro must be defined to fully disable
-the debugging code. It can improve the generated code:
-\begin{verbatim}
--DNDEBUG
-\end{verbatim}
-
-
-
-\end{itemize}
-Refer to the API documentation for information relative
-to the \kaapi programming interfaces.
-
-\subsection{Examples}
-The directory \textit{examples/} contains sample applications using \kaapi.
-Each sub directory contains code and its variations for each example. 
-Both C and C++ are used. Some direclty lies on top of the core runtime,
-while other make use of higher level interfaces. Below is a short
-description for some of them:
-\begin{itemize}
-\item fibo\_kaapi.c\newline
-Recursive Fibonacci number computation, using data flow graph of tasks. C version.
-\item fibo\_kaapi++.cpp, fibo\_kaapi++\_opt.cpp\newline
-Same as above, using the \textit{ka} C++ interface.
-\item fibo\_atha.cpp\newline
-Same as above, using the \textit{Athapascan} interface [deprecated interface].
-\item nqueens\_kaapi++.cpp\newline
-Nqueens problem implementation using \textit{ka} C++ interface.
-\item nqueens\_atha.cpp\newline
-Same as above, using the \textit{Athapascan} interface.
-%\item poisson3d-kaapi.cpp\newline
-%3 dimension Poisson solver implemented using the \textit{ka}
-%C++ interface.
-\item matrix\_multiply\_kaapi++.cpp\newline
-Matrix multiplication based from a Cilk code. Implemented using
-the \textit{ka} C++ interface.
+\item the concepts of ``tasks'' and ``shared memory'' (Chapters \ref{sec:threads} and \ref{sec:shared}, respectively);
+\item how to write the code of desired tasks (Chapter \ref{sec:threads});
+\item how to make shared types communicable to other processors (Chapter \ref{sec:comm_type});
+\item which type of access right to shared memory should be used (Section \ref{sec:shd_rights});
+\item how to design parallel programs through complex examples (Chapter \ref{chap:examples});
+\item how to select the proper scheduling algorithm for specific programs (Appendix \ref{sec:scheduling});
+\item how to debug programs using special debugging and visualizing tools (Appendix \ref{chap:visu}).
 \end{itemize}
 
-\section{Running \kaapi}
-\subsection{Runtime environment variables}
-The runtime behavior can be driven by using the following
-optionnal environment variables.
 
-\begin{itemize} %% env var enumeration
+\input{introduction.tex}
 
-%% KAAPI_CPUCOUNT
-\item \verb+KAAPI_CPUCOUNT+\newline
-The number of process unit to be used by the runtime.
-No assumption is made regarding which unit is used.
-Example:
-\begin{verbatim}
- KAAPI_CPUCOUNT=3 ./transform 100000
-\end{verbatim}
+\input{cpp_api.tex}
 
-%% KAAPI_CPUSET
-\item \verb+KAAPI_CPUSET+\newline
-The set of CPU to be used. It consists of a comma
-separated list of cpu indices, first index starting
-at 0. By default, and if no KAAPI\_CPUCOUNT is given,
-all the host cpus are used.
-Example:
-\begin{verbatim}
- #use cores 3, 4, 5, 6 and 9 only:
- KAAPI_CPUSET=3,4,5,6,9 ./transform 100000
-\end{verbatim}
+\input{smpss_api.tex}
 
-An index range can be used via the ':' token.
-Example:
-\begin{verbatim}
- #same as above using the range syntax:
- KAAPI_CPUSET=3:6,9 ./transform 100000
-\end{verbatim}
+\input{low_api.tex}
 
-You may exclude a cpu from the set by appending the '!' token.
-Example:
-\begin{verbatim}
- #this will uses cores from 3 to 9, but not 4:
- KAAPI_CPUSET=3:9,!4 ./transform 100000
-\end{verbatim}
-
-%% KAAPI_STACKSIZE
-\item \verb+KAAPI_STACKSIZE+\newline
-Size of the per thread stack, in bytes. By default, this size
-is set to 64 kilo bytes.
-Example:
-\begin{verbatim}
- KAAPI_STACKSIZE=4096 ./transform 100000
-\end{verbatim}
-
-%% KAAPI_WSSELECT
-\item \verb+KAAPI_WSSELECT+\newline
-Name of the victim processor selection algorithm to use.
-\begin{itemize}
-\item "workload":
-Use a user defined workload to driver the vicitm selection algorithm.
-\item any other value: falls back to the default random victim selection
-algorithm.
-\end{itemize}
-Example:
-\begin{verbatim}
- KAAPI_WSSELECT=workload ./transform 100000
-\end{verbatim}
-\end{itemize} %% env var enumeration
-
-\subsection{Monitoring performances}
-If configured by \url{--with-perfcounter}, the \kaapi library allows to
-output performance counters.
-
-\begin{itemize}
-\item \verb+KAAPI_DISPLAY_PERF+\newline
-If defined, then performance counters are displayed at the end of the execution.
-Example:
-\begin{verbatim}
- KAAPI_DISPLAY_PERF=1 ./fibo 30
-\end{verbatim}
-
-\item \verb+KAAPI_PERF_PAPIES+\newline
-Assuming \kaapi was configured using --with-papi, this variable contains a
-comma separated list of the PAPI performance counters to use.
-Both counter symbolic names and numeric hexadecimal constants can be used.
-More information can be found on the PAPI website
-(http://icl.cs.utk.edu/papi/).
-Note that counter list cannot exceed 3 elements.
-Example:
-\begin{verbatim}
- KAAPI_PERF_PAPIES=PAPI_TOT_INS,0x80002230,PAPI_L1_DCM ./fibo 30
-\end{verbatim}
-
-\end{itemize}
-
+\input{appendix.tex}
 
 \end{document}

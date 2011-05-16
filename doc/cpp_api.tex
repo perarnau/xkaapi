@@ -1,0 +1,1302 @@
+\chapter{Kaapi C++ API}
+\label{chap:api_cpp}
+
+This chapter will browse the C++ API of \kaapi to create tasks with dependencies.
+
+\section{Overview}
+The programmer that want to parallelize its program with \kaapi C++ API must first identify the tasks of its program. A task is a procedure call, \textit{i.e} a function call without return value. The creation of a task is a non blocking operation: the callee continues its execution without waiting the execution of the task.
+The second step is to determine for each task, the way it accesses to the memory through its parameters: if the task read, write or update (read and write) memory referenced by its parameters. Once identified, the execution of the program generates a sequence of tasks.
+
+With these informations (task and access mode), the \kaapi runtime is able to detect dependencies between a sequence of tasks. \textit{Read after Write} dependency, or true dependency, corresponds to the case a first task writes a memory region while a second task reads this memory region. 
+
+A memory region in \kaapi is represented by a pointer and a view object which describes the whole set of addresses accessed from the pointer. A pointer represents a specific memory region.  For instance, a programer that want to write a \kaapi's task sharing a double floating point number with an other task, may pass a pointer to this floating point.
+%To detect data flow dependencies, \kaapi identifies if two regions intersect or are equal only the comparing the pointers attached to each memory region.
+
+\textit{Read after Write} dependencies, also called \textit{true dependencies}, correspond to the data flow of the program: at runtime \kaapi is free to schedule tasks in any order that respect the \textit{true dependencies}.
+Write after write or write after read are called \textit{false dependencies}. \kaapi may or may not respect these dependencies\footnote{May be at the expense of memory allocation in order to rename variable to break such dependencies.}.
+~\\
+
+Let us assume, we want to create a task for a C++ procedure \verb+F+ that takes in input \verb+d+ a double floating point,  and that returns $d^{\, 2}+1$. The first step is to specify the signature of the task in the same way a C++ function has a signature. 
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{1}{|c|}{C++ function signature} &
+\multicolumn{1}{|c|}{\kaapi task Signature} \\\hline
+\rule{0mm}{3mm}%
+\begin{minipage}[t]{56mm}
+\begin{verbatim}
+void F( 
+  double n, 
+  double* result
+);
+\end{verbatim}
+\end{minipage}%
+\rule[-13mm]{0mm}{10mm}
+&
+\begin{minipage}[t]{107mm}
+\begin{verbatim}
+struct TaskF: public ka::Task<2>::Signature<
+  double,         /* input parameter */
+  ka::W<double>   /* output parameter */
+> {}; 
+\end{verbatim}
+\end{minipage}
+\\\hline
+\end{tabular}
+\label{fig:task_creation}
+\end{center}
+Most of the verbosity of the C++ API is due because \kaapi C++ API is a pure C++ library with template expression.
+~\\
+
+The implementation of the function \verb+F+ corresponds to the C++ function definition concept. In \kaapi, it is called \textit{task body specialization} that allow to give a specific code for different architectures. Currently \kaapi recognizes two architectures: the CPU and GPU architecture. In C++, the \kaapi \textit{task body specialization} is a template specialization of the class \verb+TaskBodyCPU+ or \verb+TaskBodyGPU+.
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{1}{|c|}{C++ function definition} &
+\multicolumn{1}{|c|}{\kaapi task body specialization} \\\hline
+\rule{0mm}{3mm}%
+\begin{minipage}[t]{56mm}
+\begin{verbatim}
+
+void F ( 
+  double n, 
+  double* result
+)
+{
+  *result = n*n+1;
+}
+\end{verbatim}
+\end{minipage}%
+\rule[-13mm]{0mm}{10mm}
+&
+\begin{minipage}[t]{107mm}
+\begin{verbatim}
+template<> struct TaskBodyCPU<TaskF> {
+  void operator() (
+    double n,   
+    ka::pointer_w<double> result
+  )
+  {
+    *result = n*n+1;
+  }
+};
+\end{verbatim}
+\end{minipage}
+\\\hline
+\end{tabular}
+\label{fig:task_creation}
+\end{center}
+
+In the same way, the reader can write both the task signature and the task body specialization of a task that to print the result produced by \verb+TaskF+.
+\begin{center}
+%\small
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{1}{|c|}{C++ function definition} &
+\multicolumn{1}{|c|}{\kaapi task body specialization} \\\hline
+\rule{0mm}{3mm}%
+\begin{minipage}[t]{75mm}
+\begin{verbatim}
+
+void Print ( 
+  const double* result
+)
+{
+  std::cout << "The result is :" 
+            << *result << std::endl;
+}
+\end{verbatim}
+\end{minipage}%
+\rule[-13mm]{0mm}{10mm}
+&
+\begin{minipage}[t]{88mm}
+\begin{verbatim}
+template<> struct TaskBodyCPU<TaskPrint> {
+  void operator() (
+    ka::pointer_r<double> result
+  )
+  {
+    std::cout << "The result is :" 
+              << *result << std::endl;
+  }
+};
+\end{verbatim}
+\end{minipage}
+\\\hline
+\end{tabular}
+\label{fig:task_creation}
+\end{center}
+
+Now, it is time to write the main program that describes the whole computation. First, it is necessary to initialize the \kaapi library with a call to \verb+ka::System::initialize+ and to terminate the use of \kaapi at the end of the execution.
+\begin{center}
+%\small
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{1}{|c|}{C++ main} &
+\multicolumn{1}{|c|}{\kaapi main} \\\hline
+\rule{0mm}{3mm}%
+\begin{minipage}[t]{75mm}
+\begin{verbatim}
+int main(int argc, char** argv)
+{
+
+
+  double n = atod(argv[0]);
+  double result;
+  
+  F(n, &result);
+  Print(&result);
+  
+  
+  return 0;
+}
+\end{verbatim}
+\end{minipage}%
+\rule[-13mm]{0mm}{10mm}
+&
+\begin{minipage}[t]{88mm}
+\begin{verbatim}
+int main(int argc, char** argv)
+{
+  ka::System::initialize( &argc, &argv );
+
+  double n = atod(argv[0]);
+  double result;
+  
+  ka::Spawn<TaskF>()(n, &result);
+  ka::Spawn<TaskPrint>()(&result);
+
+  ka::System::terminate();
+  return 0;
+}
+\end{verbatim}
+\end{minipage}
+\\\hline
+\end{tabular}
+\label{fig:task_creation}
+\end{center}
+On terminaison, the \kaapi runtime wait the execution of all previously spawned tasks: it is not necessary to add an extra synchronization point in the previous code in order to wait execution of \verb+TaskF+ and \verb+TaskPrint+.
+~\\
+~\\
+~\\
+
+The next sections will present in details the C++ API: task model and the C++ object to program in \kaapi.
+
+
+% ---------------------------------------------------------------
+\newpage
+\section{Memory region}\label{sec:memory}
+% ---------------------------------------------------------------
+In order to allow parallel computation within existing application data structure, it is necessary to specify the memory region of a data structure or a sub region of an existing data structure.
+In \kaapi, the API allows to define array based memory region of an existing application data structure.
+In the current implementation only 1 dimensional (1D) and 2 dimensional (2D) data structures are allowed.
+
+Using a definition of the memory region permits to the runtime to access in concurrence to distinct sub parts of an array. The array memory region is like a simple array with accessor to sub elements, definition of a sub memory region and assignment. In all cases, no copy of array is made.
+
+\subsection{One dimensional array}
+
+\subsection{Multi dimensional array}
+
+
+% ---------------------------------------------------------------
+\newpage
+\section{Tasks}\label{sec:task}
+% ---------------------------------------------------------------
+
+The granularity of an algorithm is explicitly given by the programmer through the \textbf{creation} of \textbf{tasks} that will be \textbf{asynchronously} executed. 
+A task is an object representing the association of a procedure and effective parameters. Tasks are dynamically created at run time. A task (creation + execution) in \kaapi  can be 
+seen as a standard procedure call. 
+The only difference is that the created task's execution is fully asynchronous, meaning 
+the creator is not automatically blocked during the execution of the created task to finish to continue with its own execution. The creator that want to wait until the completion of executed tasks must call explicitly synchronization points.
+
+A task is defined by three components: a name, a signature and its implementation on CPU or GPU.
+
+% ---------------------------------------------------------------
+\subsection{Task's Signature Definition}
+% ---------------------------------------------------------------
+
+A task must have a \textit{signature} which specify the type and access mode the task mades to its effective parameters.
+\begin{center}
+\begin{boxit}
+\begin{verbatim}
+  struct UserTaskName : public ka::Task<N>::Signature< 
+            [...types and access modes...] 
+   > 
+   {};
+\end{verbatim}
+\end{boxit}
+\end{center}
+The number of effective parameters must be specify: here it is \verb+N+.
+The types and access modes is a list of specifications of each formal parameter.
+The specification is either:
+\begin{itemize}
+\item A C++ type such as \verb+int+ or \verb+double+, or any user defined type.
+\item A typed access mode that specify:
+  \begin{itemize}
+  \item an access mode: 
+	  \begin{itemize}
+	  \item \verb+ka::W<T>+ for write access mode, meaning that the task will write a new value of type T.
+	  \item \verb+ka::R<T>+ for read access mode, meaning that the task will only read the previous value of type T, without possibility to modify the data.
+	  \item \verb+ka::RW<T>+ for exclusive access mode, meaning that the task will read or write value of type T.
+	  \item \verb+ka::CW<T>+ for concurrent write access mode, meaning that the task will write value of type T with accumulation law.
+	  \end{itemize}
+  \item a C++ type that should be defined between \verb+<+ and \verb+>+ in the previous access mode.
+  \end{itemize}
+\end{itemize}
+
+Let us assume we want to define a task that will print a result (double floating point value) within a string. The result will be produced by an other task.
+The task has two parameters: one for the string and one for the result. 
+The string is passed by value and it is not necessary to defined an access mode.
+\begin{center}
+\begin{boxit}
+\begin{verbatim}
+struct TaskPrint : public ka::Task<2>::Signature< 
+      std::string,         // type of the first formal parameter
+      ka::R<double>        // the second parameter is read. type is a double.
+   > 
+{};
+\end{verbatim}
+\end{boxit}
+\end{center}
+
+Once defined, the task signature can be used to implement the body of the task. This step is called the \textit{task body definition}.
+
+% ---------------------------------------------------------------
+\subsection{Task's Body Definition}
+% ---------------------------------------------------------------
+A task corresponds to the execution of a C++ function object,
+{\it i.e.} an object from a class having the \verb!void operator()!
+defined, specialized for a given architecture.
+Currently, \kaapi only defines two architectures: CPU and GPU.
+Thanks to the task signature definition, the programmer must 
+specializes one of the CPU or GPU body (procedure).
+
+This specialization for a given architecture correspond to a template 
+specialization of the \verb+TaskBodyCPU+ or (not excluive) \verb+TaskBodyGPU+ classes.
+The template classes must be specialized with the \verb+UserTaskName+, \textit{i.e.} the name of the class that has been used to defined the signature.
+
+The types and the number of parameters must match the task' signature.
+For instance:
+\begin{center}
+\begin{boxit}
+\begin{verbatim}
+template<>
+struct TaskBodyCPU<TaskPrint> 
+{
+  void operator() ( std::string msg, double d )
+  {
+    std::cout << msg << d << std::endl;
+  }
+};
+\end{verbatim}
+\end{boxit}
+\end{center}
+The type of  the formal parameters must match the type defined in the signature of the tasks. 
+Else, during the compilation, the C++ compiler will reports\footnote{Note that in that case, the output message may be not easily readable.} an error.
+
+
+% ---------------------------------------------------------------
+\subsubsection{Formal parameters in task's body definition}
+
+The figure~\ref{fig:task_signature} resumes the conversion rules between task' signature definition and the task's boy definition.
+\begin{figure}[htbp]
+\begin{center}
+\begin{tabular}[t]{|l|l|}\hline
+\multicolumn{1}{|c|}{type of {\em signature parameter}} &
+\multicolumn{1}{|c|}{required type for the {\em body definition's parameter}} \\\hline
+\verb!             T  ! & \verb!                         T  !\\\hline
+\verb!             T  ! & \verb!               const     T&  !\\\hline
+ \hline
+\verb!ka::R[P]   < T >! & \verb!ka::pointer_r[p]       < T >!\\\hline
+\verb!ka::W[P]   < T >! & \verb!ka::pointer_w[p]       < T >!\\\hline
+\verb!ka::RW[P]  < T >! & \verb!ka::pointer_r[p]w[p]   < T >!\\\hline
+\verb!ka::CW[P]  < T >! & \verb!ka::pointer_cw[p]      < T >!\\\hline\hline
+
+\verb!ka::W    < ka::range1d< T > >! & \verb!ka::range1d_w          < T >!\\\hline
+\verb!ka::R    < ka::range1d< T > >! & \verb!ka::range1d_r          < T >!\\\hline
+\verb!ka::RW   < ka::range1d< T > >! & \verb!ka::range1d_rw         < T >!\\\hline
+\verb!ka::RPWP < ka::range1d< T > >! & \verb!ka::range1d_rpwp       < T >!\\\hline\hline
+
+\verb!ka::W    < ka::range2d< T > >! & \verb!ka::range2d_w          < T >!\\\hline
+\verb!ka::R    < ka::range2d< T > >! & \verb!ka::range2d_r          < T >!\\\hline
+\verb!ka::RW   < ka::range2d< T > >! & \verb!ka::range2d_rw         < T >!\\\hline
+\verb!ka::RPWP < ka::range2d< T > >! & \verb!ka::range2d_rpwp       < T >!\\\hline
+\end{tabular}
+\end{center}
+\caption{Conversion rules between task' signature definition and the definition of the task' body.}
+\label{fig:task_signature}
+\end{figure}
+The section~\ref{sec:pointer} will presents the available operators and type members for pointer's types, including the special case for  the types \verb+range1d+ and \verb+range2d+
+
+% ---------------------------------------------------------------
+\subsection{Task's Creation}
+% ---------------------------------------------------------------
+The type of  the effective parameters must match the type of the 
+corresponding formal parameters. The precise matching rules are defined in section~\ref{sec:matching}.
+For example, a value cannot be used if the formal parameter requires a shared data;
+a task that declares a write access parameter cannot be access if the effective parameter is declared as a read access mode parameter.
+
+A task is an object of a user-defined type that is instantiated with \verb+Spawn+:
+\begin{center}
+\begin{boxit}
+\begin{verbatim}
+    ka::Spawn< UserTaskName > ()  ( [... effective parameters ...] ) ;
+      // TaskBodyCPU<UserTaskName>::operator() is executed asynchronously.
+      // The synchronizations are defined by the access on
+      // a shared the memory region ; the semantic respects the
+      // reference order.
+\end{verbatim}
+\end{boxit}
+\end{center}
+
+\paragraph{Example} The task {\tt hello\_world} displays a message on the
+standard output:
+\begin{center}
+\begin{boxit}
+\begin{verbatim}
+// task' signature
+struct hello_world : ka::Task<0>::Signature { };
+  
+// CPU task's body
+template<>
+struct TaskBodyCPU<hello_world> 
+{
+  void operator() ( ) 
+  {
+    cout << "Hello world !" << endl ;
+  }
+};  
+
+int main( int argc, char**argv ) 
+{
+  ka::System::initialize(&argc, &argv);
+  
+  ka::Spawn< hello_world >() (); // non blocking call
+
+  ka::System::terminate(); // blocking call: wait completion of all created tasks
+  return 0;
+}
+\end{verbatim}
+\end{boxit}
+\end{center}
+
+
+% ---------------------------------------------------------------
+\subsection{Task Execution}\label{sec:task_exec}
+% ---------------------------------------------------------------
+
+The control flow that creates a task does not block until the completion ofthe task.
+The task execution is ensured by the \kaapi system. The following
+properties are respected:
+\begin{itemize}
+\item The task execution will respect the synchronization constraints due to the shared memory access;
+\item All the created tasks will be executed once and once only,
+\item The \kaapi system guarantees that every shared data accessed 
+for either reading or updating is available in the local memory before the execution
+of the task begins.
+
+\end{itemize}
+
+
+% ---------------------------------------------------------------
+\section{Pointer type} \label{sec:pointer}
+% ---------------------------------------------------------------
+
+A pointer with access mode is restricted to some operators: write access mode allows to write value of the pointed value, while read access mode allows to read the pointed value. In all the case, it is permitted to do arithmetics with pointers of the same mode.
+
+\subsection{Pointer creation}
+
+\subsection{Arithmetics with pointer}
+
+Let us note by \verb!X! the type of the pointer \verb+p+ or \verb+q+, and by \verb+v+ an integral type.
+For instance, \verb!X! may be a \verb!ka::pointer<T>! or a \verb!ka::pointer_wp<T>!.
+\begin{figure}[htbp]
+\begin{center}
+\begin{tabular}[t]{|l|l|l|l|}\hline
+name & expression & type requirements & return type \\ \hline\hline
+addition & \verb!p += v! & \verb!v! integral type& \verb+X&+ \\  \hline
+addition & \verb!p + v!  & ~~~~~~''~~~~~'' & \verb+X+ \\ \hline
+increment & \verb!p++!  & ~~~~~~''~~~~~''  & \verb+X+ \\ \hline
+increment & \verb!++p!  & ~~~~~~''~~~~~'' & \verb+X&+ \\ \hline
+subtraction & \verb!p -= v! & ~~~~~~''~~~~~'' & \verb+X&+ \\  \hline
+subtraction & \verb!p - v!  & ~~~~~~''~~~~~'' & \verb+X+ \\ \hline
+decrement & \verb!p--!  & ~~~~~~''~~~~~'' & \verb+X+ \\ \hline
+decrement & \verb!--p!  & ~~~~~~''~~~~~'' & \verb+X&+ \\ \hline
+subtraction & \verb!p-q!  & \verb!p,q! of type \verb!X! & \verb+difference_type+ \\ \hline
+\end{tabular}
+\end{center}
+\caption{List of operators available for \kaapi's pointer arithmetics.}
+\label{fig:task_signature}
+\end{figure}
+
+\subsection{Pointer with access rights}
+
+
+\subsubsection{ka::pointer\_r$<$T$>$ }
+
+\subsubsection{ka::pointer\_w$<$T$>$ }
+
+\subsubsection{ka::pointer\_rw$<$T$>$ }
+
+\subsubsection{ka::pointer\_cw$<$T$>$ }
+
+% ---------------------------------------------------------------
+\section{Synchronization and memory barrier}
+% ---------------------------------------------------------------
+
+Each \kaapi task can access three levels of memory:
+\begin{itemize}
+\item
+the \textbf{stack}, a local memory private to the task. This local
+memory contains the parameters and local variables (it is the classical
+C or C++ stack). \\
+This stack is automatically deallocated at the end of the task.
+\item
+The \textbf{heap}, the  local memory of the node (Unix process) that executes
+the task. Objects are allocated or deallocated in or from the heap directly
+using C/C++ primitives:
+\texttt{malloc}, \texttt{free}, \texttt{new}, \texttt{delete}... \\
+Therefore, all tasks executed on a given node
+share one common heap\footnote{In the current implementation, the
+execution of a task on a node is supported by a set of threads that share the
+heap of a same heavy process representing the node.}: consequently, if a task does not properly deallocate the objects
+located in its heap,
+then some future tasks may run short of memory on this node.
+
+\item
+The \textbf{shared memory}, accessed concurrently by different tasks.
+The shared memory in \kaapi is a non-overlapping  collection of physical
+objects (of communicables types) managed by the system.
+\end{itemize}
+
+
+
+
+% ---------------------------------------------------------------
+\section{Optimization}
+% ---------------------------------------------------------------
+
+\subsection{\kaapi stack allocation}
+
+\subsection{Task's body definition with contextual information}
+
+
+% ---------------------------------------------------------------
+\section{Hybrid programming with \kaapi}
+% ---------------------------------------------------------------
+
+% ---------------------------------------------------------------
+%\section{\texttt{Param\_array} type}\label{sec:param_array}
+% ---------------------------------------------------------------
+
+%Since typing information are used by \kaapi  system in order to determine
+%the tasks' synchronizations, every parameter has necessarily to be typed.
+%The container \texttt{Param\_array} has been designed to allow a task
+%to access a non-fixed number of typed parameters
+%(such as \texttt{Shared}, see section \refpage{sec:type_param}).
+%It is used  as follows:
+%\begin{itemize}
+%\item Declaration: \texttt{Param\_array< P > x( size );}\\
+%It defines an array that can
+%contain \verb!size! parameters of type \verb!P!. The type \verb!P! has to be
+% among \verb!Param_array!,
+%or \verb!a1::Shared! (see section \refpage{sec:shared} for details).
+%The only  extra  space that is allocated is the one necessary to store
+%pointers to the parameters ;
+% the parameters themselves are not copied.
+%Therefore, each entry of the array has to be initialized with the parameter
+%it is pointing to.
+%\item \texttt{Param\_array< P > x ( size ) ;}:
+%declaration of  an array containing {\tt size} parameters.
+%\item \texttt{x[i]}: provides access to the {\tt i}th entry of the array.
+%This enables both the initialization of the entry with the effective parameter
+%(before task creation)
+%and the consultation of the parameter (during task execution).
+%\end{itemize}
+%The execution of the program presented in
+%Figure \refpage{fig:array_shd} gives an example of the use
+% of {\tt Param\_array} on a simple example. An execution of {\tt test(5)}
+%produces the following output:
+%\begin{verbatim}
+%0 1 2 3 4 5
+%100 1 2 3 4 200
+%\end{verbatim}
+
+%\begin{figure}[htbp]
+%\begin{center}
+%\begin{tabular}{|c|}
+%\hline
+%\rule{0mm}{4mm}%
+%\begin{minipage}[t]{124mm}
+%\small
+%\begin{verbatim}
+%struct W {
+%  void operator() ( a1::Shared_w< int > a, a1::Shared_w< int > b) {
+%    a.write( new int( 100 ) );
+%    b.write( new int( 200 ) );
+%  }
+%};
+%
+%struct R{
+%  void operator() ( Param_array< a1::Shared_r< int > > x ) {
+%     for( int i=0; i<x.size(); i++ )
+%        cout << x[i].read() << " ";
+%     cout << endl;
+%  }
+%};
+%void test( int argc )
+%{
+%   Param_array< a1::Shared< int > > x( argc )
+%   for( int i=0; i<x.size(); i++ )
+%      x[ i ] = a1::Shared< int >( new int( i ) );
+%   a1::Fork<R> () ( x );
+%   a1::Fork<W> () ( x[0], x[ x.size()-1 ] );
+%   a1::Fork<R> () ( x );
+%}
+%\end{verbatim}
+%\end{minipage}
+%%\rule[-103mm]{0mm}{10mm}
+%\\\hline
+%\end{tabular}
+%\end{center}
+%\caption{The use of the \texttt{array} container allows a task to have an
+%arbitrary number of typed parameters.}
+%\label{fig:array_shd}
+%\end{figure}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
+
+
+% ---------------------------------------------------------------
+\newpage
+\section{Shared Memory: \textit{Access Rights} and \textit{Access Modes}}\label{sec:shared}
+% ---------------------------------------------------------------
+
+Shared memory is accessed through typed references. One possible type is
+\verb!Shared!. The consistency associated with the shared memory access is
+that each ``read'' sees the last ``write'' according to the lexicographic order.
+%(see section \refpage{sec:semantic}).
+
+Tasks \textbf{do not make any side effects}
+on the shared memory of type \verb!Shared!.  Therefore they can only access the shared data on which possess a
+reference. This reference comes either from the declaration of some
+ shared data or
+from some effective parameter. A reference to some shared data is
+an object with the following type:
+ \verb!a1::Shared_RM < T >!.
+ The type \verb!T! of the shared data must be communicable (see Section
+\refpage{sec:comm_type}). The suffix \verb!RM! indicates the access right
+on
+the shared object (read --~\verb+r+~--,  write --~\verb+w+~-- or
+cumul --~\verb+c+~--) and the access mode (local  or postponed
+--~\verb+p+~--)
+\verb+RM+ can be one of the following suffixes:  \\
+{ \verb!r!,
+\verb!rp!,
+\verb!w!,
+\verb!wp!,
+\verb!cw!,
+\verb!cwp!,
+\verb!r_w! and
+\verb!rp_wp!.} \\
+Access rights and modes are respectively described in section
+\refpage{sec:shd_rights} and \refpage{sec:shd_modes}.
+
+
+% ---------------------------------------------------------------
+\section{Declaration of Shared Objects }\label{sec:shd_decl}
+% ---------------------------------------------------------------
+
+If \verb!T! is a communicable type,
+the declaration of an object of type \verb+a1::Shared<T>+
+creates a new shared datum (in the shared memory managed by the
+system) and returns a reference to it.
+
+Depending on whether the shared object is initialized or not,
+three kinds of declarations are allowed:
+\begin{itemize}
+\item 
+\verb!a1::Shared< T > x( new T( ... ) );!\\
+The reference \verb!x! is initialized
+with the value pointed to by the constructor parameter.
+Note that the memory being pointed to will be deallocated by the system and
+should not be accessed anymore by the program.   \verb!x! can not be
+accessed by the task that creates it.
+It is only possible to Fork other tasks with \verb+x+ as an effective parameter.\\
+Example:
+\begin{boxit}
+\begin{verbatim}
+a1::Shared<int> x ( new int( 3 ) );
+  // x is initialized with the value 3.
+
+double* v = new double ( 3.14 );
+a1::Shared<double> sv ( v );
+  // sv is initialized with the value v;
+  // v can not  be used anymore in the program
+  // and will be deleted by the system.
+\end{verbatim}
+\end{boxit}
+
+\item
+\verb!a1::Shared< T > x;!\\
+The reference \verb!x! is declared but not initialized. Thus, the first task that will be forked with \verb+x+ as parameter will 
+have to initialize it, using a write statement (\refpage{sec:shd_rights}).  
+Otherwise if a task recieves this reference as a 
+parameter and attempts to read a value from it, the returned value is a value built from
+the default constructor of the communicable type T. \\
+% because the related version will never contain any data
+%and will therefore never be ready. \\
+Example:
+\begin{boxit}
+\begin{verbatim}
+a1::Shared<int> a (new int(0) );
+  // a is a shared object initialized with the value 0.
+a1::Shared<int> x ( 0 );
+  // x is a NON initialized shared object.
+\end{verbatim}
+\end{boxit}
+
+\item
+\verb!a1::Shared< T > x;!\\
+The reference \verb!x!  is only declared as a reference, with no related value. \verb!X! 
+therefore has to be assigned  to another shared object before forking a task 
+with \verb!x!  as a parameter. 
+Such an assignment is symbolic, having the same semantics as pointer assignment with delegation, \textit{i.e.} the right value of the operand will being a not initialized shared.\\
+Example:
+\begin{boxit}
+\begin{verbatim}
+a1::Shared<int> x;
+  // x is just a reference, not initialized.
+a1::Shared<int> a (new int(0) );
+  // a is a shared object initialized with the value 0.
+x = a;
+  // x points to the same shared object as a.
+\end{verbatim}
+\end{boxit}
+\end{itemize}
+An other declaration with \textbf{copy} is provided for convenience:
+\begin{itemize}
+\item 
+\verb!a1::Shared< T > x( src  );!\\
+The reference \verb!x! is initialized
+with the value \verb+src+ to by the constructor parameter.
+Note that the memory being references by \verb+src+ is copied onto an object
+allocated into the heap which will be deallocated 
+by the system. The value associated to  \verb!x! can not be
+accessed by the task that creates it.
+It is only possible to Fork other tasks with \verb+x+ as an effective parameter.\\
+Example:
+\begin{boxit}
+\begin{verbatim}
+a1::Shared<int> x ( 3 );
+  // x is initialized with the value 3 after a copy
+
+std::vector<double> v(120367);
+// here initialisation of v
+a1::Shared<double> sv ( v );
+  // sv is initialized with the value v after a copy
+
+std::vector<double>* pv = new std::vector<double>(120367);
+// here initialisation of pv
+a1::Shared<double> sv ( pv );
+  // sv is initialized with the value pv and take the owner ship of pv
+  // pv can not  be used anymore in the program 
+  // and will be garbaged by the system.
+\end{verbatim}
+\end{boxit}
+\end{itemize}
+
+The following operations are allowed on an object of type \verb!Shared!:
+\begin{itemize}
+\item Declaration in the stack, as presented above.
+% in \refpage{sec:shd_decl}.
+\item Declaration in the heap, using the operator \verb!new! to create a new shared object. In the current implementation, 
+the ``link'' between a task and a shared data version is made through the C++ constructor and destructor of the 
+shared object. So, to each construction must correspond a destruction, else dead-lock may occur. Therefore, in the case 
+of allocation in the heap, the \verb!delete! operator corresponding to the already exectured \verb!new! has to be performed. 
+\item Affectation: a shared object can be affected from one to another. This affectation is symbolic, having the same semantics 
+as pointer affectation.  The ``real'' shared object is then accessed through two distinct references. 
+\end{itemize}
+
+% ---------------------------------------------------------------
+\section{Shared Access Rights}\label{sec:shd_rights}
+% ---------------------------------------------------------------
+
+In order to respect the sequential consistency (lexicographic order semantic), \kaapi  has to identify 
+the value related to a shared object for each read performed. Parallelism detection is easily possible in 
+the context that any task specifies the shared data objects that it will access during its execution 
+(on-the-fly detection of independent tasks), and which type of access it will perform on them (on-the-fly detection 
+of a task's precedence). Therefore, an \kaapi  task can not perform side effects.  All manipulated shared data must 
+be declared in the prototype of the task. Moreover, to detect the synchronizations between tasks, according to lexicographic 
+semantic, any shared parameter of a task is tagged in the prototype of \verb!t! according to the access performed by \verb!t! on it.  
+This tag indicates what kind of manipulation the task (and, due to the lexicographic order semantics, all the sub-tasks 
+it will fork) is allowed to perform on the shared object. This tag is called the access right; it appears in the 
+prototype of the task as a suffix of the type of any shared parameter. Four rights can be distinguished and are presented 
+below: read, write, update and accumulation. 
+
+
+\subsection{Read Right: \texttt{Shared\_r} }
+\verb+a1::Shared_r< T >+ is the type of a parameter thats value
+can only be read.
+ This reading can be concurrent with other tasks referencing this
+ shared object in the same mode.
+
+ In the prototype of a task, the related type is: \\
+ { \verb+a1::Shared_r< T > x+ } \\
+ Such an object gets the method: \\
+ { \verb+const T& read () const; + } \\
+ that returns a constant reference to the value related to the shared object
+ \verb!x!.
+
+For example, using the Class \verb!complex! that is defined in \ref{fig:comm_type}:\\
+\begin{center}
+\begin{tabular}{|c|}
+\hline
+\rule{0mm}{4mm}%
+\begin{minipage}[t]{124mm}
+\begin{verbatim}
+class print {
+  void operator() ( a1::Shared_r< complex > z ) {
+     cout << z.read().x << " + i." << (z.read()).y;
+  }
+};
+\end{verbatim}
+\end{minipage} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Write Right: \texttt{Shared\_w} }
+\verb+a1::Shared_w< T >+ is the type of a parameter whose value can only be written. This writing can be 
+concurrent with other tasks referencing this shared data in the same mode. The final value is the 
+last one according to the reference order. In the prototype of a task, the related type is:  \\
+ { \verb+a1::Shared_w< T > x+ } \\
+ Such an object gets the method: \\
+ { \verb+void write ( T* address ); +} \\
+ that assigns the value pointed to by {\verb+address+}  to the shared object.
+ 
+ This method assigns the value pointed to by {\verb+address+} to the shared object. No copy is made: 
+ the data pointed by <address> must be considered as lost by the programmer. Further access via 
+ this address are no more valid (in particular, the deallocation of the pointer: it will be performed by the system itself). 
+ 
+Example:\\
+\begin{center}
+\begin{tabular}{|c|}
+\hline
+\rule{0mm}{4mm}%
+\begin{minipage}[t]{124mm}
+\begin{verbatim}
+class read_complex {
+  void operator() ( a1::Shared_w< complex > z ) {
+     complex* a = new complex;
+     cin >> a.x >> a.y;
+     z.write ( a );
+  }
+};
+\end{verbatim}
+\end{minipage} \\
+\hline
+\end{tabular}
+\end{center}
+
+\noindent \textbf{Note}
+\noindent  To clarify the rule that each \texttt{read} "sees" the last \texttt{write} 
+due to lexicographical order being observed, follow the example below:
+
+\begin{boxit}
+%\lgrindfile{src/write.tex}
+%
+\begin{verbatim}
+1. #include <athapascan-1>
+2. #include <iostream>
+3.
+4. struct my_read {
+5.   void operator()( a1::Shared_r<int> x ) {
+6.     std::cout << "x=" << x.read() << std::endl;
+7.  }
+8. };
+9. struct my_write {
+10.  void operator()( a1::Shared_w<int> x, int val ) {
+11.    x.write( new int(val) );
+12.  }
+13.};
+14.int doir( int argc, char** argv ) {
+15.  a1::Shared<int> i( new int( 1 ) );
+16.  a1::Fork<my_write>()( i, 1 ); 
+17.  a1::Fork<my_read>()( i );
+18.  a1::Fork<my_write>()( i, 2 );
+19.  a1::Fork<my_read>()( i );  
+20.  a1::Fork<my_write>()( i, 3 );
+21.  a1::Fork<my_read>()( i ); 
+22.  return 0;
+23.}
+\end{verbatim}
+\end{boxit}
+It is possible that the operations in line \texttt{20} and then in line \texttt{21} will 
+execute before the preceeding lines because the rule described above is not 
+broken. So do not be surprised to see the following result on the screen: 
+\begin{verbatim}
+  x=3
+  x=2
+  x=1
+\end{verbatim}
+Keep this in mind, especially when measuring the time of computations.  
+In that case of adding some extra synchronization variables to the code.  But be
+careful because this can decrease the efficiency with which the program runs.
+
+\subsection{Update Right: \texttt{Shared\_r\_w} }
+\verb+a1::Shared_r_w< T >+ is the type of a parameter thats value
+can be updated in place;
+the related value  can be read
+  and/or written. Such an object represents a critical section for the task.
+This
+  mode is the only one where the address of the physical object related to the
+  shared object is available. It enables the user to call sequential codes
+  working directly with this pointer.
+
+ In the prototype of a task, the related type is:
+ { \verb+a1::Shared_r_w< T > x+ }.
+ Such an object gets the method: 
+ { \verb+T&  access ( ); +}, 
+that returns a reference on the data contained by
+  the shared referenced by \verb!x!.  Note that \verb!&(x.access())!
+  is constant during all the execution of the task and can not be
+  changed by the user.
+
+Example:
+\begin{boxit}
+\begin{verbatim}
+class incr_1  {
+  void operator() ( a1::Shared_r_w< int > n ) {
+     n.access() = n.access() + 1;
+  }
+}
+\end{verbatim}
+\end{boxit}
+
+
+\subsection{Accumulation Right: \texttt{Shared\_cw}  }
+\verb+a1::Shared_c< T >+ is the type of a parameter whose value
+can only be accumulated with respect to the user defined function class
+\verb+F+.
+\verb+F+ is required to have the prototype:
+\begin{verbatim}
+struct cumul_fn {
+  void operator() ( T& x, const T& y ) {
+    ... // body to perform x <-- accu(x, y)
+  }
+};
+\end{verbatim}
+Example:
+\begin{boxit}
+\begin{verbatim}
+ struct add {
+    void operator () (int& x, int& y) {
+       x+=y;
+    }
+ };
+\end{verbatim}
+\end{boxit}
+
+The resulting value of the concurrent write is an accumulation of all other values 
+written by a call to this function. After the first accumulation operation is executed, 
+the initial value of x becomes either the previous value or remains the current value, 
+depending on the lexicographic access order. If the shared object has not been initialized, 
+then no initial value is considered. Since an accumulation enables a concurrent update of 
+some shared object, the accumulation function \verb+F+ is assumed to be both \emph{associative} and \emph{commutative}.
+  Note that only the accumulations performed with respect to a same law F can 
+be concurrent.  If different accumulation functions are used on a single shared datum, 
+the sequence of resulting values obeys the lexicographic order semantics. 
+
+
+%(section \refpage{sec:semantic}).
+
+ In the prototype of a task, the related type is: 
+ { \verb!a1::Shared_cw< F,  T > x! }.
+Such an object gets the method:  { \verb+void cumul (T& v ); +} 
+that accumulates (according to the accumulation
+  function \verb!F!) \verb!v! in the shared data referenced by \verb!x!. For
+  the first accumulation a copy of \verb!v! may be taken if the shared data
+  version does not contain  some valid data yet.
+
+Example:
+\begin{boxit}
+\begin{verbatim}
+// A generic function class that performs
+// the multiplication of two values.
+template < class T >
+class multiply {
+  void operator( T& x, const T& val ) {
+    x = x * y;
+  }
+};
+
+// A task that multiplies by 2 a shared object
+class mult_by_2  { //
+  void operator() ( a1::Shared_cw< multiply<int>,  int > x) {
+     x.cumul ( new int(2) );
+  }
+};
+\end{verbatim}
+\end{boxit}
+%\newpage
+\noindent \textbf{Note}: Keep in mind that a program written in \kaapi can benefit at run-time from 
+the associative and communative properties of the accumulation function \texttt{F}.  
+It is therefore possible that the execution of the following code:
+%%\begin{figure}[h]
+\begin{boxit}
+%%\lgrindfile{src/cumul.tex}
+\begin{verbatim}
+#include <athapascan-1>
+#include <iostream>
+struct F {
+  void operator()( int & x, const int & val ) {
+    std::cout << " x=" << x << ", val="  val << std::endl;
+    x += val;
+  }
+};
+struct add {
+  void operator()( a1::Shared_cw<F,int> x, int val ) {
+    x.cumul( val );
+  }
+};
+int doit( int argc, char** argv ) {
+  a1::Shared<int> i( new int( 1 ) );
+  a1::Fork<add>()( i, 2 );
+  a1::Fork<add>()( i, 3 );
+  return 0;
+}
+\end{verbatim}
+\end{boxit}
+will result in:
+\begin{verbatim}
+  x=3 val=2
+  x=5 val=1
+\end{verbatim}
+
+%\caption{Demonstration   of   associativity   and   commutativity
+%of cumulative mode} \label{fig:cumul-1}
+%\end{figure}
+
+It may seem as though the program was implemented according to the sequential depth-first algorithm:
+\begin{verbatim}
+    ......
+    a1::Shared<int> i( new int( 3 ) );
+    a1::Fork<add>()( i, 2 );
+    a1::Fork<add>()( i, 1 );
+    ......
+\end{verbatim}
+This is not the case.  Naturally the above code is semantically correct as well and could produce the same 
+result as the previous program. 
+It is therefore important to realize that since the function \verb!F! is 
+associative and commutative, the precise manner in which the reductions 
+are performed cannot be predicted, even in the case where initial values are known. 
+
+
+
+%\noindent which seems  as if program  in Figure~\ref{fig:cumul-1}
+%would  be like this:
+% (according to a sequential depth-first
+%execution), which is semantically correct too:
+%\begin{verbatim}
+%    ......
+%    a1::Shared<int> i( new int( 3 ) );
+%    a1::Fork<add>()( i, 2 );
+%    a1::Fork<add>()( i, 1 );
+%    ......
+%\end{verbatim}
+
+%\noindent this  is not  an error  since function  \texttt{F} is
+%associative and commutative."
+
+\newpage
+% ---------------------------------------------------------------
+\section{Shared Access Modes}\label{sec:shd_modes}
+% ---------------------------------------------------------------
+In order to improve the parallelism of a program when only a reference to a value is required - and not 
+the value itself - \kaapi  refines its access rights to include \textit{access modes}.  An access mode categorizes 
+data by restricting certain types of access to the data.  By default the access mode of a shared data object 
+is ``immediate'', meaning that the task may access the object using any of the {\tt write, read, access} or {\tt cumul} 
+methods during its execution.  An access is said to be ``postponed'' (access right suffixed by p) if the 
+procedure will not directly perform an access on the shared data, but will instead create other tasks that 
+may access the shared data.  In functional languages, such a parallelism appears when handling a reference 
+to a future value. 
+
+With this refinement to the access rigths, \kaapi  is able to decide with greater precision whether or not 
+two procedures have a precedence relation.  A procedure requiring a shared parameter with a direct read access,
+\texttt{r}, has a precedence relation with the last procedure to take this same shared parameter with a write access.  
+However, a procedure taking some shared parameter with a postponed read access, \texttt{rp} , has no precedence relation.  
+It is guaranteed by the access mode that no access to the data will be made during the execution of this task.  
+The precedence will be delayed to a sub-task created with a type \texttt{r} . In essence, the type Shared can be seen as 
+a synonym for the type \verb!a1::Shared_rp_wp<T>!; it denotes a shared datum with a read-write access right, but on 
+which no access can be locally performed. An object of such a data type can thus only be passed as an argument 
+to another procedure. 
+
+
+% ---------------------------------------------------------------
+\subsection{Conversion Rules}\label{sec:shd_conv}
+% ---------------------------------------------------------------
+
+When forking a task {\tt t}  with a shared object {\tt x}  as an effective parameter, the access right required by the task 
+{\tt t}  has to be owned by the caller.	More precisely, the Figure \refpage{fig:shd_compat} enumerates the compatibility, 
+at task creation, between a reference on a shared object type and the formal type required by the task procedure 
+declaration. Note that this is available only for task creation, and not for standard function calls where the C++ 
+standard rules have to be applied. 
+
+\begin{figure}[htbp]
+\begin{center}
+\begin{tabular}[t]{|l|l|}\hline
+\multicolumn{1}{|c|}{type of {\em formal parameter}} &
+\multicolumn{1}{|c|}{required type for the {\em effective parameter}} \\\hline
+\verb!a1::Shared_r[p]   < T >! & \verb!a1::Shared_r[p]       < T >!\\
+                            & \verb!a1::Shared_rp_wp      < T >!\\
+                            & \verb!a1::Shared< T >!\\\hline
+\verb!a1::Shared_w[p]   < T >! & \verb!a1::Shared_w[p]       < T >!\\
+                            & \verb!a1::Shared_rp_wp      < T >!\\
+                            & \verb!a1::Shared< T >!\\\hline
+\verb!a1::Shared_cw[p]< F,T >!
+                            & \verb!a1::Shared_cw[p]  < F,  T >!\\
+                            & \verb!a1::Shared_rp_wp      < T >!\\
+                            & \verb!a1::Shared< T >!\\\hline
+\verb!a1::Shared_rp_wp  < T >! & \verb!a1::Shared_rp_wp      < T >!\\
+                            & \verb!a1::Shared< T >!\\\hline
+\verb!a1::Shared_r_w    < T >!  & \verb!a1::Shared_rp_wp      < T >!\\
+                            & \verb!a1::Shared< T >!\\\hline
+\end{tabular}
+\end{center}
+\caption{Compatibility rules to pass a
+reference on some shared data as a parameter to a task.}
+\label{fig:shd_compat}
+\end{figure}
+
+% ---------------------------------------------------------------
+%\subsection{Restriction of Access Modes}
+% ---------------------------------------------------------------
+%-- NOT IMPLEMENTED YET --
+
+%The access mode of a shared object {\bf can not be changed} during the
+%execution of a task. But this access can be restricted ({\em postponed}) to
+%the children, by applying to the shared object an appropriate function. The
+%possible restrictions are shown in the figure \refpage{fig:shd_rest_acc}. These
+%restrictions of access allow the user to pass as parameter a reference on a
+%shared data whose old access mode forbade the task creation. For example, if
+%a reference \verb!x! has a \verb!r_w! access mode, then no task can be
+%created with this reference, but after a restriction such as
+%\verb!x.change_to_rp_wp()!, this reference can be used (see figure
+%\refpage{fig:shd_compat} for compatibility rules).
+
+%\begin{figure}[htbp]
+%\begin{center}
+%\begin{tabular}[t]{|l|l|l|}\hline
+%\multicolumn{1}{|c|}{previous access} &
+%\multicolumn{1}{|c|}{new access (restricted)} &
+%\multicolumn{1}{|c|}{function to apply} \\\hline
+%\verb!a1::Shared_r       < T >! & \verb!a1::Shared_rp       < T >!
+ %& \verb!change_to_rp()! \\\hline
+%\verb!a1::Shared_w       < T >! & \verb!a1::Shared_wp       < T >!
+ %& \verb!change_to_wp()! \\\hline
+%\verb!a1::Shared_cw  < F,  T >! & \verb!a1::Shared_cwp   < F, T >!
+ %& \verb!change_to_cwp()! \\\hline
+%\verb!a1::Shared_r_w     < T >! & \verb!a1::Shared_rp_wp    < T >!
+ %& \verb!change_to_rp_wp()! \\\hline
+%\end{tabular}
+%\end{center}
+%\caption{Restriction of access mode.}
+%\label{fig:shd_rest_acc}
+%\end{figure}
+%
+
+
+% ---------------------------------------------------------------
+\subsection{\texttt{Shared} Type Summary}
+% ---------------------------------------------------------------
+Figure \refpage{fig:shd_types} summarizes the basic properties
+of references on shared data.
+
+\begin{figure}[htbp]
+\begin{center}
+\small
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{Reference type}
+ & decl. & formal P & effectif P & read & write & cumul & modif & concurrent
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_r     < T >!
+\end{minipage}
+ &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           & & $\bullet$
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_rp    < T >!
+\end{minipage}
+ &           & $\bullet$ & $\bullet$ & $\circ$   &           &           & & $\bullet$
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_w     < T >!
+\end{minipage}
+ &           & $\bullet$ & $\bullet$ &           & $\bullet$ &           & &
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_wp    < T >!
+\end{minipage}
+ &           & $\bullet$ & $\bullet$ &           & $\circ$   &           & &
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_cw    < F,T >!
+\end{minipage}
+ &           & $\bullet$ & $\bullet$ &           &           & $\bullet$ & & $\bullet$
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_cwp   < F,T >!
+\end{minipage}
+ &           & $\bullet$ & $\bullet$ &           &           & $\circ$   & & $\bullet$
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_r_w   < T >!
+\end{minipage}
+ &           & $\bullet$ &           & $\bullet$ & $\bullet$ &           & $\bullet$ &
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared_rp_wp < T >!
+\end{minipage}
+ &           & $\bullet$ & $\bullet$ & $\circ$   & $\circ$   &           & $\circ$   &
+\\\hline
+\begin{minipage}[c]{44mm}
+\verb!a1::Shared       < T >!
+\end{minipage}
+ & $\bullet$ &           & $\bullet$ & $\circ$   & $\circ$   &           & $\circ$   &
+\\\hline
+\end{tabular}
+\end{center}
+\caption{ Figure 6.3: Available types (and possible usages) for references on shared data. A$\bullet$ 
+stands for a direct property and a $\circ$ for a postponed one. \textit{formal P} denotes 
+formal parameters (type given at task declaration) and \textit{effective P} denotes effective ones (type of object given 
+at the task creation). \textit{concurrent} means that more than one task may refer to the same shared data version.
+}
+\label{fig:shd_types}
+\end{figure}
+
+%\section{Passing parameters by value: classical C++ type or class}
+
+%When declaring a task you can use a C++ class you made. But this
+%type should be a communicable one (see the beginning of
+%this chapter for a definition of a communicable type).
+
+\newpage
+
+
+% ---------------------------------------------------------------
+\section{Example: A Class Embedding \kaapi Code}\label{sec:shd_example}
+% ---------------------------------------------------------------
+A good way to write \kaapi  applications is to hide \kaapi  code in the data structures. 
+Proceeding that way will allow you to keep your main program free from parallel instructions 
+(making it easier to write and understand).  
+%In Section~\ref{sec:com} 
+%we wrote a communicable class implementing a resizable, communicable 
+%array called std::vector. 
+We are now going to write a shared  data structure on top of the \verb+std::vector+ class. 
+\\
+\begin{boxit}
+%\lgrindfile{src/sharedArray.tex}
+\begin{verbatim}
+#include <athapascan-1>
+#include <vector>
+/**
+        class shared_vector is a class hiding Athapascan code so that
+        the main code of the application could be written as if it was
+        sequential. It is based upon the std::vector class
+*/
+// resize the shared vector
+template<class T>
+struct resize_shared_vector {
+  void operator() (a1::Shared_r_w<std::vector<T > > v, unsigned int size) 
+  { v.access().resize(size); }
+};
+// assignment 
+template<class T>
+struct assign_shared_vector {
+  void operator() (a1::Shared_w<std::vector<T > > dest, const std::vector<T>& src) 
+  { *dest.access() = src; }
+};
+// swap two elements of a shared vector
+template<class T>
+struct swap_shared_vector {
+  void operator() (a1::Shared_r_w<std::vector<T > > shv, int i1, int i2) {
+    std::vector<T>& v = *shv.access();
+    T tmp = v[i1]; v[i1] = v[i2]; v[i2] = tmp;
+  }
+};
+// print the data of a shared vector to standard output
+template<class T>
+struct ostream_shared_vector {
+  void operator() (a1::Shared_r<std::vector<T > > shv) {
+    unsigned int size = v.read().size;
+    for (int i=0; i<size; i++) std::cout << shv.read().elts[i] << " ";
+  }
+};
+
+template<class T>
+class shared_vector : public Shared<std::vector<T > > {
+public:
+  //constructors
+  shared_vector() 
+   : Shared<std::vector<T > >(new std::vector<T>()) {}
+  shared_vector(unsigned int size) 
+   : Shared<std::vector<T > >(new std::vector<T>(size)) {}
+  void resize(unsigned int size) 
+  { Fork<resize_shared_vector<T> >() (*this, size); }
+  void operator= (const std::vector<T> &a) 
+  { Fork<assign_shared_vector<T> >() (*this, a ); }       
+  void swap(int i1, int i2) 
+  { Fork<swap_shared_vector<T> > () (*this, i1, i2); }
+};
+// ostream operator
+template<class T >
+ostream& operator<<( ostream& out, const shared_vector<T>& z ) {
+   Fork<ostream_shared_vector<T> > () ((Shared<std::vector<T> >) z);
+        return out;
+}
+\end{verbatim}
+\end{boxit}
+
+The following main file tests the shared class. As you can see,
+there is no more reference to specific parallel code.
+\begin{boxit}
+%\lgrindfile{src/mainSharedArray.tex}
+\begin{verbatim}
+#include <athapascan-1>
+#include <sharedVector.h>
+
+#define SIZE 100
+
+int doit( int argc, char** argv ) {
+  shared_vector<int> t1(10), t2(20);
+  std::vector<int> v(SIZE);
+
+  //fill the array
+  for (int i(0); i< SIZE; i++) {
+    v[i] = i;
+  }
+
+  // resize the shared vector to test the methods
+  t1.resize(SIZE);
+
+  // move the data to the shared vector
+  t1 = v;
+
+  // try to swap a data
+  t1.swap(2, 27);
+
+  return 0;
+}
+\end{verbatim}
+\end{boxit}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "athapascan1"
+%%% End:
