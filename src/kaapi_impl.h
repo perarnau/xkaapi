@@ -378,6 +378,7 @@ typedef struct kaapi_format_t {
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
   kaapi_memory_view_t        *_view_params;                            /* sizeof of each params */
   kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
+  kaapi_task_binding_t       _task_binding;
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
      - the unsigned int argument is the index of the parameter 
@@ -395,6 +396,7 @@ typedef struct kaapi_format_t {
   void (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t* );
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
   kaapi_reducor_t       (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*);
+  void			(*get_task_binding)(const struct kaapi_format_t*, const void*, kaapi_task_binding_t*);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -1743,6 +1745,17 @@ extern int kaapi_task_splitter_dfg(
   unsigned int                  war_param, 
   kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
+);
+
+/** \ingroup TASK
+    Splitter for a single DFG
+*/
+extern void kaapi_task_splitter_dfg_single
+(
+  kaapi_thread_context_t*       thread, 
+  kaapi_task_t*                 task, 
+  unsigned int                  war_param, 
+  kaapi_request_t*		request
 );
 
 /** \ingroup WS

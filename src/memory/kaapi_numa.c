@@ -7,8 +7,8 @@
 #include "kaapi_impl.h"
 
 
-typedef unsigned long kaapi_numaid_t;
-typedef unsigned long kaapi_procid_t;
+typedef unsigned int kaapi_numaid_t;
+typedef unsigned int kaapi_procid_t;
 
 
 static unsigned int numa_node_count;
@@ -111,7 +111,7 @@ kaapi_numaid_t kaapi_numa_get_page_node(uintptr_t addr)
     (NULL, nodemask, sizeof(nodemask) * 8, (void*)addr, flags);
 
   if (err || is_bitmap_empty(nodemask))
-    return (unsigned long)-1;
+    return (unsigned int)-1;
 
   return scan_bitmap(nodemask, 0);
 }
@@ -162,7 +162,7 @@ void kaapi_numa_free_interleaved(void* addr)
   free(addr);
 }
 
-kaapi_numaid_t kaapi_numa_get_addr_binding(void* addr)
+kaapi_numaid_t kaapi_numa_get_addr_binding(uintptr_t addr)
 {
   /* return the numa node addr is allocated on.
      we know the base address from a previous

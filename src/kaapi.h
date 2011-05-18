@@ -702,10 +702,47 @@ typedef struct kaapi_task_t {
   } u;
 #endif
   void*                   sp;        /** data stack pointer of the data frame for the task  */
-  unsigned long		  binding; 
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 #define kaapi_task_getuserbody( t ) (t)->u.body
+
+
+/* ========================================================================= */
+/* Task binding
+   \ingroup TASK
+   Tasks can be bound on a resource (logical or physical).
+   Binding is retrieved by the runtime using the task format.
+ */
+
+typedef struct kaapi_task_binding
+{
+  enum
+  {
+    ANY = 0, /* bound to any core */
+    OCR, /* bound to one or more addr */
+  } type;
+
+  union
+  {
+    struct
+    {
+#define KAAPI_TASK_BINDING_ADDR_COUNT 3
+      unsigned int count;
+      uintptr_t addrs[KAAPI_TASK_BINDING_ADDR_COUNT];
+    } ocr; /* owner compute rule */
+      
+  } u;
+
+} kaapi_task_binding_t;
+
+struct kaapi_tasksteal_arg_t;
+
+unsigned int kaapi_task_binding_is_local(const kaapi_task_binding_t*);
+void kaapi_push_bound_task_numaid
+(unsigned int, struct kaapi_thread_context_t*, kaapi_task_t*, unsigned int);
+int kaapi_pop_bound_task_numaid
+(unsigned int, struct kaapi_thread_context_t**, kaapi_task_t**, unsigned int*);
+unsigned int kaapi_task_binding_numaid(const kaapi_task_binding_t*);
 
 
 /* ========================================================================= */
@@ -1099,7 +1136,6 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
 static inline void kaapi_task_initdfg_with_state
 (kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
 {
-  task->binding = (unsigned long)-1;
   task->sp = arg;
 
 #if (__SIZEOF_POINTER__ == 4)
@@ -1119,7 +1155,6 @@ static inline void kaapi_task_init_with_state
 static inline void kaapi_task_initdfg
 (kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
-  task->binding = (unsigned long)-1;
   task->sp = arg;
 
 #if (__SIZEOF_POINTER__ == 4)
@@ -2199,7 +2234,8 @@ extern kaapi_format_id_t kaapi_format_taskregister_static(
     const kaapi_offset_t        offset_cwflag[],
     const struct kaapi_format_t*fmt_param[],
     const kaapi_memory_view_t   view_param[],
-    const kaapi_reducor_t       reducor_param[]
+    const kaapi_reducor_t       reducor_param[],
+    const kaapi_task_binding_t* task_binding
 );
 
 /** \ingroup TASK
@@ -2222,7 +2258,8 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
     kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
+    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*),
+    void			(*get_task_binding)(const struct kaapi_format_t*, const void*, kaapi_task_binding_t*)
 );
 
 /** \ingroup TASK

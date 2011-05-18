@@ -44,30 +44,17 @@
 */
 #include "kaapi_impl.h"
 
-/** Return the number of splitted parts (at most 1 if the task may be steal)
-*/
-int kaapi_task_splitter_dfg( 
+
+void kaapi_task_splitter_dfg_single
+(
   kaapi_thread_context_t* thread, 
   kaapi_task_t* task, 
   unsigned int war_param, 
-  kaapi_listrequest_t* lrequests, 
-  kaapi_listrequest_iterator_t* lrrange
+  kaapi_request_t* request
 )
 {
-  kaapi_request_t*        request    = 0;
   kaapi_tasksteal_arg_t*  argsteal;
   kaapi_reply_t*          stealreply;
-
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
-#endif
-  kaapi_assert_debug( task !=0 );
-  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( task) ) );
-
-//printf("Task: %p steal in thread: %p\n", (void*)task, (void*)thread ); fflush(stdout);
-  /* find the first request in the list */
-  request = kaapi_listrequest_iterator_get( lrequests, lrrange );
-  kaapi_assert(request !=0);
 
   stealreply = kaapi_request_getreply(request);
   
@@ -86,6 +73,33 @@ int kaapi_task_splitter_dfg(
   stealreply->u.s_task.body       = kaapi_tasksteal_body;
 
   _kaapi_request_reply( request, KAAPI_REPLY_S_TASK); /* success of steal */
+}
+
+
+/** Return the number of splitted parts (at most 1 if the task may be steal)
+*/
+int kaapi_task_splitter_dfg( 
+  kaapi_thread_context_t* thread, 
+  kaapi_task_t* task, 
+  unsigned int war_param, 
+  kaapi_listrequest_t* lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
+{
+  kaapi_request_t*        request    = 0;
+
+#if defined(KAAPI_SCHED_LOCK_CAS)
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
+#endif
+  kaapi_assert_debug( task !=0 );
+  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( task) ) );
+
+//printf("Task: %p steal in thread: %p\n", (void*)task, (void*)thread ); fflush(stdout);
+  /* find the first request in the list */
+  request = kaapi_listrequest_iterator_get( lrequests, lrrange );
+  kaapi_assert(request !=0);
+
+  kaapi_task_splitter_dfg_single(thread, task, war_param, request);
   
   /* update next request to process */
   kaapi_listrequest_iterator_next( lrequests, lrrange );

@@ -49,10 +49,6 @@
 # include "../machine/cuda/kaapi_cuda_execframe.h"
 #endif
 
-/* missing decl */
-extern unsigned long kaapi_numa_get_self_binding(void);
-
-
 /**
 */
 void kaapi_taskwrite_body( 
@@ -158,100 +154,6 @@ void kaapi_taskwrite_body(
     oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 }
 
-
-/* bound tasks
- */
-
-#include <stdlib.h>
-#include <string.h>
-
-typedef struct bound_task
-{
-  kaapi_tasksteal_arg_t arg;
-  struct bound_task* next;
-} bound_task_t;
-
-typedef struct bound_tasklist
-{
-  kaapi_atomic_t lock;
-  bound_task_t* volatile head;
-  volatile unsigned long count;
-  double pad[64 - 3 * 8];
-} bound_tasklist_t;
-
-static bound_tasklist_t bound_tasklists[8] = {{{0}, }, }; /* at most 8 numa levels */
-
-static inline void lock_bound_tasklist(bound_tasklist_t* bl)
-{
-  kaapi_atomic_t* const lock = &bl->lock;
-
-  while (1)
-  {
-    if ((KAAPI_ATOMIC_READ(lock) == 0) && KAAPI_ATOMIC_CAS(lock, 0, 1))
-      break ;
-    kaapi_slowdown_cpu();
-  }
-}
-
-static inline void unlock_bound_tasklist(bound_tasklist_t* bl)
-{
-  kaapi_atomic_t* const lock = &bl->lock;
-  KAAPI_ATOMIC_WRITE(lock, 0);
-}
-
-static void push_bound_task(unsigned long binding, kaapi_tasksteal_arg_t* arg)
-{
-  bound_tasklist_t* const bl = &bound_tasklists[binding];
-
-  bound_task_t* const bt = malloc(sizeof(bound_task_t));
-  bt->next = NULL;
-  memcpy(&bt->arg, arg, sizeof(kaapi_tasksteal_arg_t));
-
-  lock_bound_tasklist(bl);
-
-  bt->next = bl->head;
-  bl->head = bt;
-  ++bl->count;
-  __sync_synchronize();
-
-  unlock_bound_tasklist(bl);
-}
-
-int pop_bound_task(unsigned long binding, kaapi_tasksteal_arg_t* arg)
-{
-  /* assume kproc locked */
-
-  bound_tasklist_t* const bl = &bound_tasklists[binding];
-
-  bound_task_t* head;
-
-  lock_bound_tasklist(bl);
-
-  head = bl->head;
-  if (head == NULL)
-  {
-    unlock_bound_tasklist(bl);
-    return -1;
-  }
-
-  bl->head = head->next;
-  --bl->count;
-
-  unlock_bound_tasklist(bl);
-
-  memcpy(arg, &head->arg, sizeof(kaapi_tasksteal_arg_t));
-  free(head);
-
-  return 0;
-}
-
-unsigned int has_bound_task(unsigned long binding)
-{
-  /* may not be coherent */
-  bound_tasklist_t* const bl = &bound_tasklists[binding];
-  return bl->head != NULL;
-}
-
 /**
 */
 void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
@@ -286,30 +188,44 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
   /* get information of the task to execute */
   arg = (kaapi_tasksteal_arg_t*)taskarg;
-  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
-
-  /* short the execution path. push this task in the bound
-     task list instead and execute it on the affine core.
-  */
-  if (arg->origin_task->binding != (unsigned long)-1)
-  {
-    /* if same binding, execute on the local core */
-    if (kaapi_numa_get_self_binding() != arg->origin_task->binding)
-    {
-      push_bound_task(arg->origin_task->binding, arg);
-      return ;
-    }
-  }
-  
+ 
   /* format of the original stolen task */  
   body            = kaapi_task_getbody(arg->origin_task);
   kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
   fmt             = kaapi_format_resolvebybody( body );
   kaapi_assert_debug( fmt !=0 );
-  
+
   /* the the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
+
+#if 0 /* no more handled here */
+
+  /* short the execution path if task not bounded locally.
+     push the task in the bound task list instead and execute
+     it on the affine core.
+  */
+
+  kaapi_task_binding_t binding;
+
+  kaapi_assert_debug(fmt->get_task_binding);
+
+  fmt->get_task_binding(fmt, orig_task_args, &binding);
+
+  /* not bound on the local resource */
+  if (kaapi_task_binding_is_local(&binding) == 0)
+  {
+    const unsigned int numaid = kaapi_task_binding_numaid(&binding);
+    kaapi_push_bound_task_numaid(numaid, arg);
+    return ;
+  }
+
+#endif /* no more handled here */
+
+  kaapi_assert_debug
+    ( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
+
+  /* not a bound task */
   count_params    = kaapi_format_get_count_params(fmt, orig_task_args); 
   arg->copy_task_args = 0;
   

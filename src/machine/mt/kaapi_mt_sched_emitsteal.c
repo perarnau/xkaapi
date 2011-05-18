@@ -48,6 +48,9 @@
 #define KAAPI_USE_AGGREGATION
 
 #if defined(KAAPI_USE_AGGREGATION)
+
+extern unsigned int kaapi_numa_get_kid_binding(unsigned int);
+
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_victim_t          victim;
@@ -56,10 +59,43 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   kaapi_listrequest_t*    victim_hlr;
   int                     err;
   kaapi_listrequest_iterator_t lri;
+  kaapi_thread_context_t* thread;
+  kaapi_task_t* bound_task;
+  unsigned int war_param;
+  unsigned int numa_id;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
+
+  /* steal in the local queue first */
+  numa_id = kaapi_numa_get_kid_binding(kproc->kid);
+  if (kaapi_pop_bound_task_numaid(numa_id, &thread, &bound_task, &war_param) != -1)
+  {
+    /* todo: this bypasses the default stealing path. */
+    kaapi_tasksteal_arg_t* arg;
+
+    /* allocate reply data on the stack */
+    reply = &kproc->thread->static_reply;
+    reply->offset = 0;
+
+    arg = (kaapi_tasksteal_arg_t*)reply->udata;
+    arg->origin_thread = thread;
+    arg->origin_task = bound_task;
+    arg->war_param = war_param;  
+
+    /* push a tasksteal task */
+    self_thread =
+      kaapi_threadcontext2thread(kproc->thread);
+    kaapi_task_init
+      (kaapi_thread_toptask(self_thread), kaapi_tasksteal_body, arg);
+    kaapi_thread_pushtask(self_thread);
+
+    /* mark as not stealing */
+    kproc->issteal = 1;
+
+    return kproc->thread;
+  }
 
   if (kaapi_count_kprocessors <2) return 0;
   

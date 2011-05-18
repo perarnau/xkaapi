@@ -47,8 +47,6 @@
 
 
 extern unsigned long kaapi_numa_get_kid_binding(unsigned int);
-extern int pop_bound_task(unsigned long, kaapi_tasksteal_arg_t*);
-extern unsigned int has_bound_task(unsigned long);
 
 /** Most important assumption here:
     kaapi_sched_lock was locked.
@@ -63,8 +61,11 @@ int kaapi_sched_stealprocessor(
   kaapi_reply_t* reply;
   kaapi_tasksteal_arg_t* stealarg;
   kaapi_wsqueuectxt_cell_t* cell;
-  unsigned long binding;
+  kaapi_thread_context_t* thread;
+  kaapi_task_t* task;
+  unsigned int war;
   unsigned int thiefid;
+  unsigned int numaid;
 
   /* test should be done before calling the function */
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
@@ -72,30 +73,19 @@ int kaapi_sched_stealprocessor(
   /* first request */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
 
-  /* steal binding queues first */
+  /* steal victim local queue first */
  steal_bound_task:
   if (request == 0) return 0;
 
   thiefid = kaapi_request_getthiefid(request);
-  binding = (unsigned long)kaapi_numa_get_kid_binding(thiefid);
+  numaid = (unsigned int)kaapi_numa_get_kid_binding(kproc->kid);
   reply = kaapi_request_getreply(request);
   stealarg = (void*)&reply->udata;
 
-  if (has_bound_task(binding) == 0)
-  {
+  if (kaapi_pop_bound_task_numaid(numaid, &thread, &task, &war) == -1)
     goto steal_readylist;
-  }
 
-  if (pop_bound_task(binding, stealarg) == -1)
-  {
-    goto steal_readylist;
-  }
-
-  /* remove the binding to avoid recursing */
-  stealarg->origin_task->binding = (unsigned long)-1;
-
-  reply->u.s_task.body = kaapi_tasksteal_body;
-  _kaapi_request_reply( request, KAAPI_REPLY_S_TASK);
+  kaapi_task_splitter_dfg_single(NULL, task, war, request);
 
   request = kaapi_listrequest_iterator_next( lrequests, lrrange );
 
