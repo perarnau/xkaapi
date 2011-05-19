@@ -85,7 +85,7 @@ int kaapi_sched_stealprocessor(
   if (kaapi_pop_bound_task_numaid(numaid, &thread, &task, &war) == -1)
     goto steal_readylist;
 
-  kaapi_task_splitter_dfg_single(NULL, task, war, request);
+  kaapi_task_splitter_dfg_single(thread, task, war, request);
 
   request = kaapi_listrequest_iterator_next( lrequests, lrrange );
 

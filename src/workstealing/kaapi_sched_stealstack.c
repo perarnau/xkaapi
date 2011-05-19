@@ -117,24 +117,25 @@ static kaapi_request_t* find_clear_numaid
  unsigned int numaid
 )
 {
-  unsigned int count = kaapi_listrequest_iterator_count(lri_);
-
   /* to optimize, working copy of lri_ */
   kaapi_listrequest_iterator_t lri = *lri_;
-  kaapi_request_t* req;
 
-  req = kaapi_listrequest_iterator_get(lr, &lri);
-  for (; count; --count)
+  while (!kaapi_listrequest_iterator_empty(&lri))
   {
+    kaapi_request_t* const req = kaapi_listrequest_iterator_get(lr, &lri);
     const unsigned int kid = kaapi_request_getthiefid(req);
     if (kaapi_numa_get_kid_binding(kid) == numaid)
     {
       /* clear in the previous lri */
-      kaapi_listrequest_iterator_unset_at(lri_, lri.idcurr);
+      if (lri_->idcurr == lri.idcurr)
+	kaapi_listrequest_iterator_next(lr, lri_);
+      else
+	kaapi_listrequest_iterator_unset_at(lri_, lri.idcurr);
+
       return req;
     }
 
-    req = kaapi_listrequest_iterator_next(lr, &lri);
+    kaapi_listrequest_iterator_next(lr, &lri);
   }
 
   /* not found */
@@ -243,8 +244,8 @@ static int kaapi_sched_stealframe
 	      const unsigned int numaid = kaapi_task_binding_numaid(&binding);
 
 	      /* find a request bound to this numaid */
-	      kaapi_request_t* const req = find_clear_numaid
-		(lrequests, lrrange, numaid);
+	      kaapi_request_t* const req =
+		find_clear_numaid(lrequests, lrrange, numaid);
 
 	      if (req != NULL)
 	      {

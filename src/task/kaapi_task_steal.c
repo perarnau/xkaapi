@@ -199,29 +199,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   /* the the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
 
-#if 0 /* no more handled here */
-
-  /* short the execution path if task not bounded locally.
-     push the task in the bound task list instead and execute
-     it on the affine core.
-  */
-
-  kaapi_task_binding_t binding;
-
-  kaapi_assert_debug(fmt->get_task_binding);
-
-  fmt->get_task_binding(fmt, orig_task_args, &binding);
-
-  /* not bound on the local resource */
-  if (kaapi_task_binding_is_local(&binding) == 0)
-  {
-    const unsigned int numaid = kaapi_task_binding_numaid(&binding);
-    kaapi_push_bound_task_numaid(numaid, arg);
-    return ;
-  }
-
-#endif /* no more handled here */
-
   kaapi_assert_debug
     ( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
 
