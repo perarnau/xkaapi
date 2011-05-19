@@ -128,6 +128,8 @@ static inline unsigned int has_bound_task(unsigned int binding)
 /* exported
  */
 
+#if 0 /* UNIMPLEMENTED */
+
 unsigned int kaapi_task_binding_is_local
 (const kaapi_task_binding_t* binding)
 {
@@ -146,6 +148,8 @@ unsigned int kaapi_task_binding_is_local
 
   return is_local;
 }
+
+#endif /* UNIMPLEMENTED */
 
 
 #if 0 /* UNUSED */
@@ -193,10 +197,56 @@ int kaapi_pop_bound_task_numaid
   return -1;
 }
 
+
+static void count_range_pages
+(unsigned int* counts, uintptr_t addr, size_t size)
+{
+  if (addr & (0x1000 - 1))
+  {
+    addr &= ~(0x1000 - 1);
+    size += 0x1000;
+  }
+
+  if (size & (0x1000 - 1))
+    size = (size + 0x1000) & ~(0x1000 - 1);
+
+  for (; size; size -= 0x1000, addr += 0x1000)
+    ++counts[(size_t)kaapi_numa_get_addr_binding(addr)];
+}
+
 unsigned int kaapi_task_binding_numaid
 (const kaapi_task_binding_t* binding)
 {
   /* temp, assume valid to do so. */
+
+#if 1
+
+  unsigned int page_counts[8] = {0, };
+  size_t i;
+  size_t max;
+
+  /* count per node pages */
+  for (i = 0; i < binding->u.ocr.count; ++i)
+  {
+    count_range_pages
+      (page_counts, binding->u.ocr.addrs[i], binding->u.ocr.sizes[i]);
+  }
+
+  /* find the biggest page count */
+  max = 0;
+  for (i = 1; i < 8; ++i)
+  {
+    if (page_counts[max] < page_counts[i])
+      max = i;
+  }
+
+  return (unsigned int)max;
+
+#else
+  /* simple strict mapping */
+
   return (unsigned int)
     kaapi_numa_get_addr_binding(binding->u.ocr.addrs[0]);
+
+#endif
 }

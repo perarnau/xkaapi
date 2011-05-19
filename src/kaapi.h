@@ -729,6 +729,7 @@ typedef struct kaapi_task_binding
 #define KAAPI_TASK_BINDING_ADDR_COUNT 3
       unsigned int count;
       uintptr_t addrs[KAAPI_TASK_BINDING_ADDR_COUNT];
+      size_t sizes[KAAPI_TASK_BINDING_ADDR_COUNT];
     } ocr; /* owner compute rule */
       
   } u;
