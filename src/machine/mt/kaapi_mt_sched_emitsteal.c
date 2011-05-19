@@ -92,7 +92,7 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
     kaapi_thread_pushtask(self_thread);
 
     /* mark as not stealing */
-    kproc->issteal = 1;
+    kproc->issteal = 0;
 
     return kproc->thread;
   }
