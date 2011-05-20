@@ -171,11 +171,11 @@ kaapi_numaid_t kaapi_numa_get_addr_binding(uintptr_t addr)
    */
 
 #if 1
-  const size_t off = ((uintptr_t)addr - saved_addr) / saved_stride;
+  const size_t off = (addr - saved_addr) / saved_stride;
   return off % numa_node_count;
 #else
   /* if cost can be amortized, avoid aux info for retrieval */
-  return kaapi_numa_get_page_node((uintptr_t)addr);
+  return kaapi_numa_get_page_node(addr & ~(0x1000 - 1));
 #endif
 }
 

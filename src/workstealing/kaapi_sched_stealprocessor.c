@@ -86,9 +86,7 @@ int kaapi_sched_stealprocessor(
     goto steal_readylist;
 
   kaapi_task_splitter_dfg_single(thread, task, war, request);
-
   request = kaapi_listrequest_iterator_next( lrequests, lrrange );
-
   goto steal_bound_task;
 
  steal_readylist:
