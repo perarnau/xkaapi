@@ -365,8 +365,8 @@ typedef uint64_t kaapi_cpuset_t[2];
 */
 typedef struct kaapi_affinityset_t {
     kaapi_cpuset_t        who; /* who is in this set */
-    size_t                ncpu;
     size_t                mem_size;
+    int                   ncpu;
     short                 type;
 } kaapi_affinityset_t;
 
@@ -1352,6 +1352,10 @@ extern kaapi_hashentries_t* kaapi_big_hashmap_findinsert( kaapi_big_hashmap_t* k
 /*
 */
 extern kaapi_hashentries_t* kaapi_big_hashmap_find( kaapi_big_hashmap_t* khm, const void* ptr );
+
+/*
+*/
+extern kaapi_hashentries_t* kaapi_big_hashmap_insert( kaapi_big_hashmap_t* khm, const void* ptr );
 
 
 /* ============================= Commun function for server side (no public) ============================ */

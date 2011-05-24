@@ -70,7 +70,6 @@ int kaapi_version_add_initialaccess(
     argmove->dest            = version->handle;
     td_move                  = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskmove_body, argmove);
     version->writer_task     = td_move;
-    version->writer_tasklist = tl;    
     kaapi_tasklist_pushback_ready( tl, td_move);
   }
   else if (KAAPI_ACCESS_IS_WRITE(m))
@@ -83,7 +82,6 @@ int kaapi_version_add_initialaccess(
     argalloc->dest           = version->handle;
     td_alloc                 = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskalloc_body, argalloc );
     version->writer_task     = td_alloc;
-    version->writer_tasklist = tl;
     kaapi_tasklist_pushback_ready( tl, td_alloc);
   } else {
     /* not yet implemented || KAAPI_ACCESS_IS_CUMULWRITE(m)) */

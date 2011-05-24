@@ -54,19 +54,18 @@ kaapi_data_t* kaapi_thread_computeready_access(
 {
   kaapi_assert_debug( version->last_mode != KAAPI_ACCESS_MODE_VOID);
   kaapi_assert_debug( version->writer_task != 0);
-  kaapi_assert_debug( version->writer_tasklist != 0);
   kaapi_assert_debug( version->handle != 0);
 
   if (KAAPI_ACCESS_IS_READWRITE(m))
   {
-    kaapi_tasklist_push_successor( version->writer_tasklist, version->writer_task, task );
+    kaapi_tasklist_push_successor( tl, version->writer_task, task );
     version->writer_task = task;
     version->last_mode   = m;
     return version->handle;
   } 
   else if (KAAPI_ACCESS_IS_READ(m)) 
   {
-    kaapi_tasklist_push_successor( version->writer_tasklist, version->writer_task, task );
+    kaapi_tasklist_push_successor( tl, version->writer_task, task );
     return version->handle;
   }
   else if (KAAPI_ACCESS_IS_WRITE(m)) /* w or rw */
@@ -74,7 +73,7 @@ kaapi_data_t* kaapi_thread_computeready_access(
     /* look if it is a WAR or WAW dependencies (do not consider initial access) */
     if (kaapi_task_getbody(&version->writer_task->task) == kaapi_taskalloc_body)
     {
-      kaapi_tasklist_push_successor( version->writer_tasklist, version->writer_task, task );
+      kaapi_tasklist_push_successor( tl, version->writer_task, task );
       version->writer_task = task;
       version->last_mode   = m;
       return version->handle;
@@ -85,7 +84,7 @@ kaapi_data_t* kaapi_thread_computeready_access(
         - either rename variable at low cost (i.e: fast memory allocation / liberation)
         - either rename variable when stealing the task
     */
-    kaapi_tasklist_push_successor( version->writer_tasklist, version->writer_task, task );
+    kaapi_tasklist_push_successor( tl, version->writer_task, task );
     version->writer_task = task;
     version->last_mode   = m;
     return version->handle;

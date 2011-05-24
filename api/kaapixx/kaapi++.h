@@ -2617,27 +2617,28 @@ namespace ka {
       if (thread->tasklist ==0)
         kaapi_thread_pushtask(thread); 
       else
-        kaapi_thread_online_computedep(thread, 0, clo);
+        kaapi_thread_pushtask_withpartitionid(thread, -1);
       return 0; 
     }
   };
   extern DefaultAttribut SetDefault;
   
-  /* do nothing... not yet distributed implementation */
-  class AttributSetPartition {
-    int _partition;
+  /* The only attribut that can be passed to task creation:
+  
+  */
+  class AttributSchedTask {
+    int   _partition;   // logical partition id
   public:
-    AttributSetPartition( int s ) : _partition(s) {}
-    int get_partition() const { return _partition; }
+    AttributSchedTask( int s ) : _partition(s) {}
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-      kaapi_thread_online_computedep(thread, _partition, clo);
+      kaapi_thread_pushtask_withpartitionid(thread, _partition);
       return 0;
     }
   };
 
-  inline AttributSetPartition SetPartition( int s )
-  { return AttributSetPartition(s); }
+  inline AttributSchedTask SetPartition( int s )
+  { return AttributSchedTask(s); }
   
   // --------------------------------------------------------------------
   // A task forked with SetStaticSched attribut may have first formal
@@ -2856,14 +2857,12 @@ namespace ka {
   struct OCRAttribut<T,true> {
     const void* _ptr;
     OCRAttribut<T,true>(const T* a)
+     : _ptr( (a == 0 ? 0 : a->ptr()) )
     { 
-      /* determine the site for the data pointed bvy ptr */
-      _ptr  = a->ptr(); //TraitFormalParam<T>::ptr( a );
     }
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-      //kaapi_thread_online_computedep_ocr(thread, _ptr, clo);
-      kaapi_thread_pushtask(thread); 
+      kaapi_thread_pushtask_withocr(thread, _ptr); 
       return 0;
     }
   };
@@ -2880,27 +2879,25 @@ namespace ka {
 
   template<typename T>  
   struct OCRAttribut<T*,false> {
+    const void* _ptr;
     OCRAttribut<T*,false>(const T* const* a)
-    { 
-      /* determine the site for the data pointed bvy ptr */
-      const void* ptr __attribute__((unused)) = *a;
-    }    
+     : _ptr( (const void*)a )
+    { }    
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-      kaapi_thread_pushtask(thread); 
+      kaapi_thread_pushtask_withocr(thread, _ptr); 
       return 0;
     }
   };
   template<typename T>  
   struct OCRAttribut<const T*,false> {
+    const void* _ptr;
     OCRAttribut<const T*,false>(const T* const* a)
-    { 
-      /* determine the site for the data pointed bvy ptr */
-      const void* ptr __attribute__((unused)) = *a;
-    }    
+     : _ptr( (const void*)a )
+    { }    
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
-      kaapi_thread_pushtask(thread); 
+      kaapi_thread_pushtask_withocr(thread, _ptr); 
       return 0;
     }
   };
@@ -3629,10 +3626,10 @@ namespace ka {
 
     /* Interface: threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
     template<class TASK>
-    Spawner<TASK> Spawn(const AttributSetPartition& a) 
+    Spawner<TASK> Spawn(const AttributSchedTask& a) 
     { return Spawner<TASK>(
-                  AttributComputeDependencies(_threadgroup, a.get_partition()),
-                  kaapi_threadgroup_thread(_threadgroup, a.get_partition())
+                  AttributComputeDependencies(_threadgroup, a._partition),
+                  kaapi_threadgroup_thread(_threadgroup, a._partition)
               ); 
     }
 

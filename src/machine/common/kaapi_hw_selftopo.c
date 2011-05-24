@@ -73,10 +73,10 @@ static int kaapi_cpuset2kids(
   return cnt;
 }
 
-#if 1//defined(KAAPI_DEBUG)
+#if defined(KAAPI_DEBUG)
 static kaapi_atomic_t print_lock = { 1 };
 // warning about buffer overflow: buffer should has at least 1024 entries
-__attribute__((unused)) const char* kaapi_kids2string
+static const char* kaapi_kids2string
 (
   char* buffer,
   int nkids, kaapi_processor_id_t* kids
@@ -240,7 +240,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
     int i;
-    size_t ncpu;
+    int ncpu;
     for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
       if (kaapi_cpuset_has(kaapi_default_param.memory.levels[depth].affinity[i].who, kproc->cpuid))
@@ -287,8 +287,8 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
       if (ncpu >0)
       {
         kaapi_processor_id_t* notselfkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
-        kaapi_cpuset_copy( &cpuset, kproc->hlevel.levels[depth+1].set->who );
-        kaapi_cpuset_notand( &cpuset, kproc->hlevel.levels[depth].set->who );
+        kaapi_cpuset_copy( &cpuset, &(kproc->hlevel.levels[depth+1].set->who) );
+        kaapi_cpuset_notand( &cpuset, &(kproc->hlevel.levels[depth].set->who) );
         kproc->hlevel.levels[depth].nnotself = kaapi_cpuset2kids(
             &cpuset,
             notselfkids,

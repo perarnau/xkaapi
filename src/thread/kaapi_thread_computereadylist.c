@@ -99,6 +99,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
   
   /* initialize hashmap for version */
   kaapi_big_hashmap_init( &thread->kversion_hm, 0 );  
+  kaapi_big_hashmap_init( &tasklist->kversion_hm, 0 );  
   
   /* iteration over all tasks of the current top frame thread->sfp */
   task_top    = frame->pc;
@@ -110,5 +111,6 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
   } /* end while task */
 
  kaapi_big_hashmap_destroy( &thread->kversion_hm );  
+ kaapi_big_hashmap_destroy( &tasklist->kversion_hm );  
  return 0;
 }

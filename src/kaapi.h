@@ -1097,6 +1097,30 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   return 0;
 }
 
+
+/** \ingroup TASK
+    The function kaapi_thread_pushtask_withpartitionid() pushes the top task into a stack
+    attached to the partitionid pid.
+    Check and compute dependencies for the top task to be pushed into the tid-th partition.
+    On return the task is pushed into a partition.
+    If successful, the kaapi_thread_pushtask_withpartitionid() function will return zero.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer.
+*/
+extern int kaapi_thread_pushtask_withpartitionid(kaapi_thread_t* thread, int pid);
+
+/** \ingroup TASK
+    The function kaapi_thread_pushtask_withocr() pushes the top task into a stack
+    attached to the same partition id than the (numa)node that stores ptr.
+    If successful, the kaapi_thread_pushtask_withocr() function will return zero.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer.
+*/
+extern int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const void* ptr);
+
+
 /** \ingroup TASK
     Task initialization routines
 */
@@ -1732,13 +1756,6 @@ extern int kaapi_threadgroup_set_iteration_step(kaapi_threadgroup_t thgrp, int m
 */
 extern int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, kaapi_task_t* task);
 
-/** Check and compute dependencies for task 'task' to be pushed into the tid-th partition.
-    On return the task is pushed into the partition if it is local for the execution.
-    \return ESRCH if the task is not pushed because the tid-th partition is not local
-    \return 0 in case of success
-    \return other value due to error
-*/
-extern int kaapi_thread_online_computedep(kaapi_thread_t* thread, int tid, kaapi_task_t* task);
 
 #if !defined(KAAPI_COMPILE_SOURCE)
 /**

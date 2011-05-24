@@ -100,7 +100,6 @@ do_select:
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
   }
 
-  
   kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
 
   if (arg->depth_min ==0) 

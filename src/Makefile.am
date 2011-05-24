@@ -27,6 +27,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_hashmap_big.c \
   misc/kaapi_hashmap_big_find.c \
   misc/kaapi_hashmap_big_findinsert.c \
+  misc/kaapi_hashmap_big_insert.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_allocator_allocate.c \
   misc/kaapi_wq_slowpop.c\

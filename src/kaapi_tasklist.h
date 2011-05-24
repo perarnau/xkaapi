@@ -200,9 +200,10 @@ typedef struct kaapi_tasklist_t {
   } context;
 
   /* constant state (after creation) */
-  kaapi_activationlist_t  readylist;  /* readylist of task descriptor */
+  kaapi_big_hashmap_t     kversion_hm; /* tasklist specific hashmap */
+  kaapi_activationlist_t  readylist;   /* readylist of task descriptor */
 #if defined(KAAPI_DEBUG)
-  kaapi_activationlist_t  allocated_td;  /* list of all allocated tasks, debug only */
+  kaapi_activationlist_t  allocated_td; /* list of all allocated tasks, debug only */
 #endif
   uintptr_t               count_recv; /* number of extern synchronization to receive before detecting end of execution */
   kaapi_recv_list_t       recvlist;   /* put by pushsignal into ready list to signal incomming data */
@@ -212,13 +213,24 @@ typedef struct kaapi_tasklist_t {
 } kaapi_tasklist_t;
 
 
-/** Serves to detect: W -> R dependency or R -> W dependency but not cw...
+struct kaapi_version_t;
+
+/** Link replicats of the same version
+*/
+typedef struct kaapi_link_version_t {
+  struct kaapi_version_t*       version;        /* the version */
+  struct kaapi_link_version_t*  next;           /* the next replicat version */
+  kaapi_tasklist_t*             tl;             /* the container of task that acceed the version */
+} kaapi_link_version_t;
+
+
+/** Serves to detect: W -> R dependency or R -> W dependency but not yet cw...
 */
 typedef struct kaapi_version_t {
   kaapi_access_mode_t      last_mode;       /* */
-  kaapi_data_t*            handle;             /* */
+  kaapi_data_t*            handle;          /* */
+  kaapi_link_version_t*    master;          /* points to the master or 0 */
   kaapi_taskdescr_t*       writer_task;     /* last writer task of the version, 0 if no indentify task (input data) */
-  kaapi_tasklist_t*        writer_tasklist; /* the tasklist that stores the writer task */
 } kaapi_version_t;
 
 
@@ -229,6 +241,7 @@ typedef struct kaapi_version_t {
     with the first initial access.
 */
 extern kaapi_version_t* kaapi_version_findinsert( 
+    int* islocal,
     kaapi_thread_context_t* thread,
     kaapi_tasklist_t*       tl,
     const void*             addr 
@@ -249,16 +262,30 @@ extern int kaapi_version_add_initialaccess(
     const kaapi_memory_view_t* view 
 );
 
-#if 0
 
 /**
 */
-extern kaapi_version_t* kaapi_thread_copyversion( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid,
-    kaapi_version_t* src
+extern kaapi_version_t* kaapi_version_createreplicat( 
+    kaapi_tasklist_t*       tl,
+    kaapi_version_t*        master_version
 );
-#endif
+
+
+/** Insert a synchronization points between the version and the master version
+*/
+extern int kaapi_thread_insert_synchro( 
+    kaapi_tasklist_t*    tl,
+    kaapi_version_t*     version, 
+    kaapi_access_mode_t  m
+);
+
+
+/** Invalidate all replicats, except version
+*/
+extern int kaapi_version_invalidatereplicat( 
+    kaapi_version_t*        version
+);
+
 
 /**/
 static inline void kaapi_activationlist_clear( kaapi_activationlist_t* al )

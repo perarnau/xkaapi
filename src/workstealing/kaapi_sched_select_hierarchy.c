@@ -102,6 +102,7 @@ do_select:
   
   kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
 
+  /* compute depth_min: minimal degree where at least two kids */
   if (arg->depth_min ==0) 
   {
     arg->seed = rand();

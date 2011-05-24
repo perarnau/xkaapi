@@ -346,7 +346,7 @@ namespace a1 {
   using ka::SetLocalAttribut;
   using ka::SetLocal;
 #endif
-  using ka::AttributSetPartition;
+  using ka::AttributSchedTask;
   using ka::SetPartition;
   
 #if 0
